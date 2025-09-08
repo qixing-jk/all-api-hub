@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="generator" content="VuePress 2.0.0-rc.20" />
+    <style>
+      :root {
+        --vp-c-bg: #fff;
+      }
+
+      [data-theme='dark'] {
+        --vp-c-bg: #1b1b1f;
+      }
+
+      html,
+      body {
+        background-color: var(--vp-c-bg);
+      }
+    </style>
+    <script>
+      const useChoice = localStorage.getItem('vuepress-color-scheme')
+      const systemStatus =
+        'matchMedia' in window
+          ? window.matchMedia('(prefers-color-scheme: dark)').matches
+          : false
+
+      if (useChoice === 'light') {
+        document.documentElement.dataset.theme = 'light'
+      } else if (useChoice === 'dark' || systemStatus) {
+        document.documentElement.dataset.theme = 'dark'
+      }
+    </script>
+    <title>All API Hub - 中转站管理器</title><meta name="description" content="一个开源的浏览器插件，聚合管理AI中转站账号的余额、模型和密钥，告别繁琐登录。">
+    <link rel="preload" href="/all-api-hub/assets/style-BsZ12dbE.css" as="style"><link rel="stylesheet" href="/all-api-hub/assets/style-BsZ12dbE.css">
+    <link rel="modulepreload" href="/all-api-hub/assets/app-Ck1KqZ4d.js"><link rel="modulepreload" href="/all-api-hub/assets/404.html-DQKg_5yb.js">
+    <link rel="prefetch" href="/all-api-hub/assets/index.html-D_tFDv-3.js" as="script"><link rel="prefetch" href="/all-api-hub/assets/faq.html-BqRXUZW1.js" as="script"><link rel="prefetch" href="/all-api-hub/assets/get-started.html-BGF5k0Sh.js" as="script">
+  </head>
+  <body>
+    <div id="app"><!--[--><div class="vp-theme-container" vp-container data-v-a334f36c><main class="page" data-v-a334f36c><div vp-content data-v-a334f36c><h1 data-v-a334f36c>404</h1><blockquote data-v-a334f36c>There&#39;s nothing here.</blockquote><a class="route-link" href="/all-api-hub/" data-v-a334f36c>Take me home</a></div></main></div><!--[--><!----><!--]--><!--]--></div>
+    <script type="module" src="/all-api-hub/assets/app-Ck1KqZ4d.js" defer></script>
+  </body>
+</html>
