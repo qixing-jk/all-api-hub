@@ -42,30 +42,20 @@ jobs:
       # 构建项目（生成 build 文件夹）
       - name: Build dist
         if: ${{ steps.release.outputs.release_created }}
-        run: pnpm run build
+        run: pnpm run build:all
 
       # 打包扩展（例如生成 build/chrome-mv3-prod.zip）
       - name: Package the extension
         if: ${{ steps.release.outputs.release_created }}
-        run: pnpm package
-
-      # 将打包产物提交到 release PR（简化 commit/push）
-      - name: Commit dist to release PR
-        if: ${{ steps.release.outputs.release_created }}
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "chore: build dist for release ${{ steps.release.outputs.tag_name }}"
-          branch: ${{ steps.release.outputs.pr-branch }}
+        run: pnpm package:all
 
       # 上传打包文件到 GitHub Release
       - name: Upload Release Artifact
         if: ${{ steps.release.outputs.release_created }}
-        uses: actions/upload-release-asset@v1
-        with:
-          upload_url: ${{ steps.release.outputs.upload_url }}
-          asset_path: build/chrome-mv3-prod.zip
-          asset_name: chrome-mv3-prod.zip
-          asset_content_type: application/zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload ${{ steps.release.outputs.tag_name }} buil/*.zip
 
       # （可选）自动提交到浏览器商店
       # - name: Browser Platform Publish
