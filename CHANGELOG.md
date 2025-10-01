@@ -35,6 +35,18 @@
 
 
 
+## [1.3.0](https://github.com/qixing-jk/all-api-hub/compare/v1.2.0...v1.3.0) (2025-10-01)
+
+
+### Features
+
+* add WebDAV backup and sync functionality ([c81faa8](https://github.com/qixing-jk/all-api-hub/commit/c81faa87244cabd22a499b3bfc6ed9d0408a93f5))
+
+
+### Bug Fixes
+
+* ensure WebDAV backup directory creation before file upload ([a338574](https://github.com/qixing-jk/all-api-hub/commit/a33857460da6281c073d8265e3177ac74046df80))
+
 ## [1.2.0](https://github.com/qixing-jk/all-api-hub/compare/v1.1.1...v1.2.0) (2025-10-01)
 
 
