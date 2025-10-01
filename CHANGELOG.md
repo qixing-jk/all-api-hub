@@ -35,6 +35,13 @@
 
 
 
+## [1.3.1](https://github.com/qixing-jk/all-api-hub/compare/v1.3.0...v1.3.1) (2025-10-01)
+
+
+### Bug Fixes
+
+* **ci:** update release PR workflow config ([77d76c9](https://github.com/qixing-jk/all-api-hub/commit/77d76c9bd02db9b1e17fef5de654ee4a6a7b9672))
+
 ## [1.3.0](https://github.com/qixing-jk/all-api-hub/compare/v1.2.0...v1.3.0) (2025-10-01)
 
 
