@@ -25,19 +25,19 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }} # 默认 GITHUB_TOKEN 即可
           release-type: node # 适配 Node.js 项目
 
-      # 安装并启用 pnpm，固定版本更可控
-      - uses: pnpm/action-setup@v4
-        if: ${{ steps.release.outputs.release_created }}
-        with:
-          version: 10 # 建议固定 pnpm 主版本
-          run_install: true # 自动运行 pnpm install
-
       # 设置 Node.js 环境，并启用 pnpm 缓存
       - uses: actions/setup-node@v4
         if: ${{ steps.release.outputs.release_created }}
         with:
           node-version: 22
           cache: pnpm
+
+      # 安装并启用 pnpm，固定版本更可控
+      - uses: pnpm/action-setup@v4
+        if: ${{ steps.release.outputs.release_created }}
+        with:
+          version: 10 # 建议固定 pnpm 主版本
+          run_install: true # 自动运行 pnpm install
 
       # 构建项目（生成 build 文件夹）
       - name: Build dist
