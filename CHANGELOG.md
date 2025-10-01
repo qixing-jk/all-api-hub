@@ -35,6 +35,13 @@
 
 
 
+## [1.2.1](https://github.com/qixing-jk/all-api-hub/compare/v1.2.0...v1.2.1) (2025-10-01)
+
+
+### Bug Fixes
+
+* **ci:** move pnpm setup before Node.js configuration ([dab2a41](https://github.com/qixing-jk/all-api-hub/commit/dab2a418d3db2b76ccb3f7c30cb99cb75439ef01))
+
 ## [1.2.0](https://github.com/qixing-jk/all-api-hub/compare/v1.1.1...v1.2.0) (2025-10-01)
 
 
