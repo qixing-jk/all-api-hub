@@ -35,6 +35,23 @@
 
 
 
+## [1.5.0](https://github.com/qixing-jk/all-api-hub/compare/v1.4.1...v1.5.0) (2025-10-02)
+
+
+### Features
+
+* add program name placeholder to WebDAV settings input ([d4f570f](https://github.com/qixing-jk/all-api-hub/commit/d4f570fadf69b52ebc2024de91e549d9dcf6a5b6))
+* ensure consistent height ([668ff53](https://github.com/qixing-jk/all-api-hub/commit/668ff53e83370487528064205eda8804281af735))
+* hide scrollbar while maintaining scroll functionality ([a4b98ea](https://github.com/qixing-jk/all-api-hub/commit/a4b98eadd8ea798f75d944b2a8e21afbd29f36c3))
+* **ui:** adjust ControlPanel layout and spacing ([7164a88](https://github.com/qixing-jk/all-api-hub/commit/7164a888468310a69df91f0aea98b3c5da23aac9))
+* **ui:** adjust item spacing and remove redundant wrapper ([a9e60e6](https://github.com/qixing-jk/all-api-hub/commit/a9e60e63c0536487d20b3d999e4969a66aced712))
+* **ui:** align action button with form controls visually ([1e85f7a](https://github.com/qixing-jk/all-api-hub/commit/1e85f7adbdf9a3f1940610bb2cc749d74da51794))
+
+
+### Performance Improvements
+
+* **ModelList:** replace static render with Virtuoso for optimized list performance ([a7d4655](https://github.com/qixing-jk/all-api-hub/commit/a7d4655aa4c0c6ae26c9aea8dee0ff5d7aa20d68))
+
 ## [1.4.1](https://github.com/qixing-jk/all-api-hub/compare/v1.4.0...v1.4.1) (2025-10-02)
 
 
