@@ -35,6 +35,14 @@
 
 
 
+## [1.4.1](https://github.com/qixing-jk/all-api-hub/compare/v1.4.0...v1.4.1) (2025-10-02)
+
+
+### Bug Fixes
+
+* correct ModelDisplay props type and missing newline ([9316eca](https://github.com/qixing-jk/all-api-hub/commit/9316ecaa8ad0fa65b3b6b3f80e26260a5ad363a9))
+* reset detected account state when no existing account found ([9e4c552](https://github.com/qixing-jk/all-api-hub/commit/9e4c5525c89fc3f846c57161e902c24b709f62ad))
+
 ## [1.4.0](https://github.com/qixing-jk/all-api-hub/compare/v1.3.1...v1.4.0) (2025-10-02)
 
 
