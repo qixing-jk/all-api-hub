@@ -35,6 +35,24 @@
 
 
 
+## [1.4.0](https://github.com/qixing-jk/all-api-hub/compare/v1.3.1...v1.4.0) (2025-10-02)
+
+
+### Features
+
+* add copy model names functionality to control panel ([45326fb](https://github.com/qixing-jk/all-api-hub/commit/45326fbdb490fd4088a150a55a5093c8e86b3ab6))
+* **model-list:** add state comments and set default values for visibility ([632deca](https://github.com/qixing-jk/all-api-hub/commit/632deca4759494a38ec60d3336e12c92c13c5685))
+* **model:** add support for additional AI providers ([13ebd9a](https://github.com/qixing-jk/all-api-hub/commit/13ebd9a9013b592fe12941301cbbcbced06589dc))
+* **ModelList:** sort providers in descending order by filtered count ([aa82688](https://github.com/qixing-jk/all-api-hub/commit/aa82688988afb00b8e5d35e8bce5187889e00345))
+* **models:** add Baidu and Yi model providers ([aa204a2](https://github.com/qixing-jk/all-api-hub/commit/aa204a266bad314306c216fbbb1966e58f90a047))
+* **models:** add DeepMind provider and update OpenAI patterns ([421e210](https://github.com/qixing-jk/all-api-hub/commit/421e21022499dcd99f740067c771c70aa60067b8))
+* **ProviderTabs:** add horizontal scroll on wheel event ([41e142f](https://github.com/qixing-jk/all-api-hub/commit/41e142f82a13862c621faf59478708c14d51d26a))
+
+
+### Bug Fixes
+
+* add children prop to ProviderTabs for nested Tab.Panels rendering ([5a3b251](https://github.com/qixing-jk/all-api-hub/commit/5a3b25194aa4ea52a1c5f6e80bc687e0c42bf589))
+
 ## [1.3.1](https://github.com/qixing-jk/all-api-hub/compare/v1.3.0...v1.3.1) (2025-10-01)
 
 
