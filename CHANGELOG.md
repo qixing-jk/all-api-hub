@@ -35,6 +35,14 @@
 
 
 
+## [1.6.0](https://github.com/qixing-jk/all-api-hub/compare/v1.5.0...v1.6.0) (2025-10-03)
+
+
+### Features
+
+* **account:** add notes field support for account management ([86be441](https://github.com/qixing-jk/all-api-hub/commit/86be44149e2a6cbd7b1396e072b1f3e091452ccc)), closes [#11](https://github.com/qixing-jk/all-api-hub/issues/11)
+* **ui:** add user icon to site username display ([0ed4362](https://github.com/qixing-jk/all-api-hub/commit/0ed4362752e046aaae2f80f41154e5e2cb5404ed))
+
 ## [1.5.0](https://github.com/qixing-jk/all-api-hub/compare/v1.4.1...v1.5.0) (2025-10-02)
 
 
