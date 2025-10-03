@@ -35,6 +35,13 @@
 
 
 
+## [1.7.1](https://github.com/qixing-jk/all-api-hub/compare/v1.7.0...v1.7.1) (2025-10-03)
+
+
+### Bug Fixes
+
+* **api:** correct check-in support detection using site status ([572fb38](https://github.com/qixing-jk/all-api-hub/commit/572fb385ac92d9298b387e7a6763e6edc4afc505))
+
 ## [1.7.0](https://github.com/qixing-jk/all-api-hub/compare/v1.6.0...v1.7.0) (2025-10-03)
 
 
