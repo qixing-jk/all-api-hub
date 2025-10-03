@@ -35,6 +35,14 @@
 
 
 
+## [1.7.0](https://github.com/qixing-jk/all-api-hub/compare/v1.6.0...v1.7.0) (2025-10-03)
+
+
+### Features
+
+* add check-in support detection and toggle functionality ([645e3d6](https://github.com/qixing-jk/all-api-hub/commit/645e3d69a414a571bd3c5a9be7c765907419ce9c))
+* **api:** add check-in status support for accounts ([e8048e8](https://github.com/qixing-jk/all-api-hub/commit/e8048e834e56f03df93b0209454c0502b869af2d))
+
 ## [1.6.0](https://github.com/qixing-jk/all-api-hub/compare/v1.5.0...v1.6.0) (2025-10-03)
 
 
