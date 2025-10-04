@@ -35,6 +35,24 @@
 
 
 
+## [1.8.0](https://github.com/qixing-jk/all-api-hub/compare/v1.7.1...v1.8.0) (2025-10-04)
+
+
+### Features
+
+* **account:** add site type support for account management ([e8ee5e9](https://github.com/qixing-jk/all-api-hub/commit/e8ee5e99f853154ac00c9c143c38c404c2ff6243))
+* add site type detection and improve auto-detect site flow ([348a3ae](https://github.com/qixing-jk/all-api-hub/commit/348a3ae19de04dfef7c2935c6e7394557cc7aeec))
+* add site type detection functionality ([f33529e](https://github.com/qixing-jk/all-api-hub/commit/f33529e34307cf38a3373aa4ae9cfc3884af1d00))
+* **api:** refactor site override handling & implement oneHub pricing ([2be1dfe](https://github.com/qixing-jk/all-api-hub/commit/2be1dfe4cc6955c2e7bfb10b8bedae421b2b7d56))
+* **model-pricing:** support complex per-call pricing structure ([f09f985](https://github.com/qixing-jk/all-api-hub/commit/f09f9853a94d10888ebcd3d2930dd6099b9de459))
+
+
+### Bug Fixes
+
+* **account:** include siteType in stored account data ([624cef4](https://github.com/qixing-jk/all-api-hub/commit/624cef48c2b93ea90d6965833f1804c47ab90775))
+* **detectSiteType:** return title from fetch and use URL in getSiteType ([19ea199](https://github.com/qixing-jk/all-api-hub/commit/19ea19936b4b24b17cae855811071ee9faf08138))
+* **siteType:** add word boundaries to regex patterns to prevent false matches ([0f0639f](https://github.com/qixing-jk/all-api-hub/commit/0f0639f7e6b4084b6d659e17c8c8bf1beec53c7e))
+
 ## [1.7.1](https://github.com/qixing-jk/all-api-hub/compare/v1.7.0...v1.7.1) (2025-10-03)
 
 
