@@ -12,6 +12,21 @@
 * replace inline account object with DisplaySiteData type ([9048f2a](https://github.com/qixing-jk/all-api-hub/commit/9048f2a16ef4aeca0a49040818c55db2c53d2ce7))
 * **site:** add site-specific API usage paths and URL utilities ([e307f92](https://github.com/qixing-jk/all-api-hub/commit/e307f92be31ea5d3734ecefe5c85e1c021808d72))
 
+## [1.10.0](https://github.com/qixing-jk/all-api-hub/compare/v1.9.0...v1.10.0) (2025-10-07)
+
+
+### Features
+
+* **copy-key:** add Cherry Studio integration for API keys ([48765f7](https://github.com/qixing-jk/all-api-hub/commit/48765f7f75044e910d2351937e0ddcd03432b34c)), closes [#25](https://github.com/qixing-jk/all-api-hub/issues/25)
+
+
+### Bug Fixes
+
+* **account:** adjust exchange rate input step to 0.01 precision ([df94748](https://github.com/qixing-jk/all-api-hub/commit/df9474850f7835b4a563cae872e1cf78673b8354)), closes [#27](https://github.com/qixing-jk/all-api-hub/issues/27)
+* **account:** restore auto-refresh on plugin open functionality ([e9d7113](https://github.com/qixing-jk/all-api-hub/commit/e9d7113c71ac72fd56b229dc82386cdde4d1798b))
+* prevent infinite execution in account data loading ([eae4f6e](https://github.com/qixing-jk/all-api-hub/commit/eae4f6ec5d69b92808c5e4c682b212c15e5ca778))
+* **types:** correct `siteType` property casing and remove duplicate field ([606a1be](https://github.com/qixing-jk/all-api-hub/commit/606a1be7a8806edd6a1927564c2462536860f937))
+
 ## [1.8.0](https://github.com/qixing-jk/all-api-hub/compare/v1.7.1...v1.8.0) (2025-10-04)
 
 
