@@ -12,6 +12,30 @@
 * replace inline account object with DisplaySiteData type ([9048f2a](https://github.com/qixing-jk/all-api-hub/commit/9048f2a16ef4aeca0a49040818c55db2c53d2ce7))
 * **site:** add site-specific API usage paths and URL utilities ([e307f92](https://github.com/qixing-jk/all-api-hub/commit/e307f92be31ea5d3734ecefe5c85e1c021808d72))
 
+## [1.11.0](https://github.com/qixing-jk/all-api-hub/compare/v1.10.0...v1.11.0) (2025-10-08)
+
+
+### Features
+
+* **account:** enhance refresh functionality with detailed status tracking ([e0997c6](https://github.com/qixing-jk/all-api-hub/commit/e0997c664e8b6e199602860a4336c41f85886529))
+* **account:** implement minimum refresh interval to prevent frequent requests ([b87d710](https://github.com/qixing-jk/all-api-hub/commit/b87d710d7a9873cd8984d513abae42c8cf8944a4))
+* **account:** improve refresh logic and return updated account data ([b6a1f13](https://github.com/qixing-jk/all-api-hub/commit/b6a1f1324572ec2ee31946cb3e357b4041773976))
+* **api:** add generic fetch utility and refactor OneHub service ([21b7e21](https://github.com/qixing-jk/all-api-hub/commit/21b7e21ecb9b380dee7a05fbcb3dfee37e80f6bb))
+* **navigation:** update account manager URL to reflect icon functionality ([c2d885d](https://github.com/qixing-jk/all-api-hub/commit/c2d885d4382b0785a71ee549277828872a5569df))
+* **ui:** add account management page header with icon and description ([854bc1b](https://github.com/qixing-jk/all-api-hub/commit/854bc1b2d6cdff956a7fe29e496df7ed388b146f))
+* **ui:** adjust component borders and spacing for visual consistency ([c1fddfe](https://github.com/qixing-jk/all-api-hub/commit/c1fddfe8e721ab82eb5a4320931ee1c44a1bf53f))
+* **ui:** adjust form layout and styling consistency ([748f493](https://github.com/qixing-jk/all-api-hub/commit/748f493aa218dc06dd79df4ebd7adaf5d102bffa))
+* **ui:** adjust padding and spacing in BalanceSection and AccountDialog ([a8071ca](https://github.com/qixing-jk/all-api-hub/commit/a8071cae91bdb06912b0412672af79d73f759a9d))
+* **ui:** remove horizontal spacing between account action buttons ([bb83579](https://github.com/qixing-jk/all-api-hub/commit/bb835792da8012fd0ad3bd64668c258118125323))
+* **ui:** standardize typography and spacing across components ([b0c090f](https://github.com/qixing-jk/all-api-hub/commit/b0c090f65e4c4ecf2562bac60856e0ca93108ee2))
+
+
+### Bug Fixes
+
+* **AccountDialog:** correct conditional rendering of URL input options ([e84a243](https://github.com/qixing-jk/all-api-hub/commit/e84a243cb7e064f52779db82e36b9da4cd234fd6))
+* **account:** prevent missing tab check on account data updates ([1499982](https://github.com/qixing-jk/all-api-hub/commit/1499982818cd63256fd9f2d00d1d514ccf243132))
+* **url-input:** prevent current tab option when URL is auto-detected ([d6b61e2](https://github.com/qixing-jk/all-api-hub/commit/d6b61e29f6fdb3cf41399f0f2267ecc5002ad04a))
+
 ## [1.10.0](https://github.com/qixing-jk/all-api-hub/compare/v1.9.0...v1.10.0) (2025-10-07)
 
 
