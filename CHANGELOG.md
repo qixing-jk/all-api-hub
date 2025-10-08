@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.12.0](https://github.com/qixing-jk/all-api-hub/compare/v1.11.0...v1.12.0) (2025-10-08)
+
+
+### Features
+
+* **account:** add health status priority to account sorting ([01a156c](https://github.com/qixing-jk/all-api-hub/commit/01a156cdeac6370a7cb295644bbe9278ab27900f))
+* **account:** refactor health status to object with reason details ([e01232b](https://github.com/qixing-jk/all-api-hub/commit/e01232bde3b0bea77a597221e223f541380a393f))
+
+
+### Bug Fixes
+
+* **account:** move tooltip position to right for better visibility ([57934fe](https://github.com/qixing-jk/all-api-hub/commit/57934fe8012a3521b01e31c70110449b79a4a041))
+* **account:** replace `health_status` with nested `health.status` object ([4efc8e0](https://github.com/qixing-jk/all-api-hub/commit/4efc8e047556afd954f4f569c360f0e02ca6d2dd))
+* **changelog:** reorganize and complete changelog structure ([b1f0ebd](https://github.com/qixing-jk/all-api-hub/commit/b1f0ebdda24126bb57b38466015b78009b86d61e))
+
 ## [1.11.0](https://github.com/qixing-jk/all-api-hub/compare/v1.10.0...v1.11.0) (2025-10-08)
 
 
