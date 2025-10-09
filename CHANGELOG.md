@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.12.1](https://github.com/qixing-jk/all-api-hub/compare/v1.12.0...v1.12.1) (2025-10-09)
+
+
+### Bug Fixes
+
+* **preferences:** move default sort values to UserPreferencesContext ([00ba755](https://github.com/qixing-jk/all-api-hub/commit/00ba75557abef6988f5d1b95ce050d74100ed438))
+* prevent rendering while preferences are loading ([a8ae1b0](https://github.com/qixing-jk/all-api-hub/commit/a8ae1b0c3dbad7a1d6f34b4690fff88ff75db26b))
+
+
+### Performance Improvements
+
+* **AccountDataContext:** remove redundant preferences loading check ([c362111](https://github.com/qixing-jk/all-api-hub/commit/c362111e6f432de90c16534076f5325f8b012b59))
+
 ## [1.12.0](https://github.com/qixing-jk/all-api-hub/compare/v1.11.0...v1.12.0) (2025-10-08)
 
 
