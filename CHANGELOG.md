@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.13.0](https://github.com/qixing-jk/all-api-hub/compare/v1.12.1...v1.13.0) (2025-10-09)
+
+
+### Features
+
+* **api:** add createBaseRequest utility and enhance auth request creators ([0d391ff](https://github.com/qixing-jk/all-api-hub/commit/0d391ff45c2006e5a26d52fcf1beff4c8ac0dc99))
+* **api:** add New API integration for token import ([860cea1](https://github.com/qixing-jk/all-api-hub/commit/860cea1b91ef6512b2b2c714fd607424195b8128))
+* **api:** add upstream models fallback for new API service ([ebc9537](https://github.com/qixing-jk/all-api-hub/commit/ebc95370061d573986bd7edf0d6484646ac2cd82))
+* **api:** add upstream models fetching functionality ([78fe703](https://github.com/qixing-jk/all-api-hub/commit/78fe703d1472a34847bf7c39dc7c554148511bbb))
+* **api:** enhance error handling with response message ([36d7810](https://github.com/qixing-jk/all-api-hub/commit/36d7810a0b89bf34a1b116d7cea45f3993c76883))
+* **api:** implement controlled form inputs with local state to prevent frequently saving input values ([98411df](https://github.com/qixing-jk/all-api-hub/commit/98411dfe88932e69aa6ec9d02dc92a483f80a91f))
+* **api:** make userId optional with null default in auth requests ([02d81d9](https://github.com/qixing-jk/all-api-hub/commit/02d81d96d8c635705e84d0fabcb3a73deddfc434))
+* **api:** support more account types in fetchAvailableModels ([8f30aaa](https://github.com/qixing-jk/all-api-hub/commit/8f30aaa5ae4c7b049b34936a6c08861e1299c58a))
+* **NewApiSettings:** add toggle visibility for admin token input ([7a323d4](https://github.com/qixing-jk/all-api-hub/commit/7a323d47fdf5542075d521d3263d91f3b882ec50))
+* **preferences:** add New API integration settings ([4471b60](https://github.com/qixing-jk/all-api-hub/commit/4471b6032e6db980d2cd4a462af1033c442b1605))
+* **ui:** add password visibility toggle functionality ([122ea23](https://github.com/qixing-jk/all-api-hub/commit/122ea234622ba1dc9533671df2c997afec4f808a))
+* **ui:** restructure token list item layout for better usability ([3ff3c6e](https://github.com/qixing-jk/all-api-hub/commit/3ff3c6e58fe49a32f6a8cf4fd1f3b30898a6cec1))
+* **ui:** restructure token list item layout for better usability ([f2377bc](https://github.com/qixing-jk/all-api-hub/commit/f2377bc289981366a00def095fdaf52e43368015))
+
 ## [1.12.1](https://github.com/qixing-jk/all-api-hub/compare/v1.12.0...v1.12.1) (2025-10-09)
 
 
