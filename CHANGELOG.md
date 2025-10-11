@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.15.0](https://github.com/qixing-jk/all-api-hub/compare/v1.14.0...v1.15.0) (2025-10-11)
+
+
+### Features
+
+* **account:** centralize toaster in AccountManagementProvider ([c61ed38](https://github.com/qixing-jk/all-api-hub/commit/c61ed38a85c311f876e255287ae1620ccd4dec5a))
+* **ui:** wrap token form in container with vertical spacing ([9434f1f](https://github.com/qixing-jk/all-api-hub/commit/9434f1fae093735b67e1adc36ddfdfd75b405fdf))
+
+
+### Bug Fixes
+
+* **ui:** prevent unnecessary updates and notifications when values remain unchanged ([9328a9f](https://github.com/qixing-jk/all-api-hub/commit/9328a9f022143e478ef1d05d67b68d077adc587d))
+
 ## [1.14.0](https://github.com/qixing-jk/all-api-hub/compare/v1.13.0...v1.14.0) (2025-10-11)
 
 
