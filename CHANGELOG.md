@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.14.0](https://github.com/qixing-jk/all-api-hub/compare/v1.13.0...v1.14.0) (2025-10-11)
+
+
+### Features
+
+* **account:** add tab activation & update listeners for auto-check ([e829502](https://github.com/qixing-jk/all-api-hub/commit/e829502b4f9d1b7cdd39e3d330ad594341c29841))
+* **ui:** add text alignment and overflow handling ([f79ec94](https://github.com/qixing-jk/all-api-hub/commit/f79ec943f9adbbc00944603464bf9ca82e41d548))
+
 ## [1.13.0](https://github.com/qixing-jk/all-api-hub/compare/v1.12.1...v1.13.0) (2025-10-09)
 
 
