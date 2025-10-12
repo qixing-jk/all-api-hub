@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.17.0](https://github.com/qixing-jk/all-api-hub/compare/v1.16.0...v1.17.0) (2025-10-12)
+
+
+### Features
+
+* **account:** add authentication type selection support ([09d26fe](https://github.com/qixing-jk/all-api-hub/commit/09d26feabb23ad9553ac20e515a6c55d7b043fef))
+* **account:** add conditional rendering for access token field based on auth type ([b4e54d6](https://github.com/qixing-jk/all-api-hub/commit/b4e54d644b4c29ade07980650c294cf53a7abb71))
+* **account:** rename UrlInput to SiteInfoInput and improve auth type labeling ([453783d](https://github.com/qixing-jk/all-api-hub/commit/453783d26f999e69fbb6be854bbebe7ddc7efcb1))
+* **api:** add generic fetchApi utility and update channel creation ([b00fb0d](https://github.com/qixing-jk/all-api-hub/commit/b00fb0d7519e37d2eea9de85c1de7c89fec5aa0b))
+* **api:** add support for 'none' auth type and refactor auth options ([43561b4](https://github.com/qixing-jk/all-api-hub/commit/43561b4067bb49c7fe6fa81a848103f88794ad2c))
+* **api:** modify all API calls to accept optional authType parameter ([cf568b8](https://github.com/qixing-jk/all-api-hub/commit/cf568b8df813acfa3c3494cb5fafa3365cd304b9))
+* **siteType:** add UNKNOWN_SITE constant and rule ([1324203](https://github.com/qixing-jk/all-api-hub/commit/1324203ed5191c24adce3b82b3a404f4fff36980))
+* **tooltip:** migrate to react-tooltip library to resolve overflow issues ([447a52b](https://github.com/qixing-jk/all-api-hub/commit/447a52b94c98d1306ab7d3b7841024d1a48531f3))
+* **ui:** add popup dimension constants and refactor tooltip positioning ([92fd6d2](https://github.com/qixing-jk/all-api-hub/commit/92fd6d2dcf4525b21da32454c932a55f690ef45c))
+
+
+### Bug Fixes
+
+* **siteType:** correct default usage path from /log to /console/log ([5f32eda](https://github.com/qixing-jk/all-api-hub/commit/5f32eda87bf9a8e2cbc3884dba5d737d73f6581d))
+
 ## [1.16.0](https://github.com/qixing-jk/all-api-hub/compare/v1.15.0...v1.16.0) (2025-10-12)
 
 
