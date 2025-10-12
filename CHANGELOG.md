@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.16.0](https://github.com/qixing-jk/all-api-hub/compare/v1.15.0...v1.16.0) (2025-10-12)
+
+
+### Features
+
+* **account:** add auto-configuration to New API feature ([c5da075](https://github.com/qixing-jk/all-api-hub/commit/c5da0757aecf311814999f3be7ad6de07d2a1083))
+* **account:** add check-in functionality for site accounts ([76c5b59](https://github.com/qixing-jk/all-api-hub/commit/76c5b596286bbc916bc5fc10c8852f6fa033c6f1))
+* **account:** add check-in priority to account sorting logic ([3dd6615](https://github.com/qixing-jk/all-api-hub/commit/3dd6615330b8569ec020db048e50748576c4bba4))
+* **account:** support single account conversion in convertToDisplayData ([ce5638e](https://github.com/qixing-jk/all-api-hub/commit/ce5638ea9e1bda2121dc5ca4952120e3bc43ff57))
+* **deps:** add [@dnd-kit](https://github.com/dnd-kit) packages for drag-and-drop functionality ([5489fe7](https://github.com/qixing-jk/all-api-hub/commit/5489fe733166d8630c981f11753a8493445def9e))
+* **sorting:** implement customizable sorting priority system ([40e0884](https://github.com/qixing-jk/all-api-hub/commit/40e0884b2e78401f60082c68501467952488e6e2))
+* **ui:** standardize dialog width using container class ([8d6a777](https://github.com/qixing-jk/all-api-hub/commit/8d6a777f0b32ae977c71c3bec8d5725abfe0d721))
+* **ui:** update auto-config text to specify New API target ([4286f70](https://github.com/qixing-jk/all-api-hub/commit/4286f70b22e220b56c10ce8e2519f952b0498851))
+
 ## [1.15.0](https://github.com/qixing-jk/all-api-hub/compare/v1.14.0...v1.15.0) (2025-10-11)
 
 
