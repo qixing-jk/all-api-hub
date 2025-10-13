@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.19.0](https://github.com/qixing-jk/all-api-hub/compare/v1.18.0...v1.19.0) (2025-10-13)
+
+
+### Features
+
+* add dark mode support to all components ([5e88dfd](https://github.com/qixing-jk/all-api-hub/commit/5e88dfd1a39c8a3ae7f0136a068f3dc5fab26c55))
+* add theme toggle components for display settings ([393e8a6](https://github.com/qixing-jk/all-api-hub/commit/393e8a6116ce78d0fd7fc60e01a2c1fbfdbaa11e))
+* **api:** enhance API proxy with type safety and external hints ([e44a131](https://github.com/qixing-jk/all-api-hub/commit/e44a131a0327da5d66b068cfe933eb18b4669794))
+* implement theme system with dark/light/system mode support ([32efede](https://github.com/qixing-jk/all-api-hub/commit/32efedec9eb8bff58c568cea48fbfd86a8ad449f))
+* **manifest:** add sidebar action configuration ([b925d05](https://github.com/qixing-jk/all-api-hub/commit/b925d05b2b23555296a946435393951e66faa269))
+* optimize token data loading with useCallback ([17dbb91](https://github.com/qixing-jk/all-api-hub/commit/17dbb911e68b4c43fe010cc3ae0390ca0809154e))
+* **styles:** add dark mode support and extended color palette ([c08f0ec](https://github.com/qixing-jk/all-api-hub/commit/c08f0eca0dfd8a9072d5cef4f9938223cb546237))
+* **theme:** enhance theme toggle components with descriptions & UI polish ([698cd94](https://github.com/qixing-jk/all-api-hub/commit/698cd94bbf5c28f14bba189b237d1bf784898a90))
+* **toast:** introduce theme-aware toaster component ([44966e5](https://github.com/qixing-jk/all-api-hub/commit/44966e5607e8e48a577b80479da05d905051598f))
+* **types:** enforce required `authType` in API config interface ([c60b47e](https://github.com/qixing-jk/all-api-hub/commit/c60b47eae130a6e32ae63290aa8f74c0fa4bf246))
+
 ## [1.18.0](https://github.com/qixing-jk/all-api-hub/compare/v1.17.0...v1.18.0) (2025-10-13)
 
 
