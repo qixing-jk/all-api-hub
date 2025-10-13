@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.18.0](https://github.com/qixing-jk/all-api-hub/compare/v1.17.0...v1.18.0) (2025-10-13)
+
+
+### Features
+
+* **account:** add custom check-in button with Yen icon ([538b784](https://github.com/qixing-jk/all-api-hub/commit/538b784d7e38ce4d3e6cc5f47a960cb47d4c481d))
+* **account:** replace boolean check-in flag with comprehensive CheckInConfig ([a007916](https://github.com/qixing-jk/all-api-hub/commit/a007916c2dd2202391a6288adb9ec82b7f954716))
+* **config:** implement versioned configuration migration system ([01ec27f](https://github.com/qixing-jk/all-api-hub/commit/01ec27fdae6480e05a18cf6cd32e4fad87168819))
+* implement refresh mechanism via URL hash parameter ([a816312](https://github.com/qixing-jk/all-api-hub/commit/a816312dcb7bb1bc0b386a555e9f421fc30a8bc3))
+* **navigation:** implement reusable Chrome API wrapper functions ([2ccdda5](https://github.com/qixing-jk/all-api-hub/commit/2ccdda5169bf838c9d0d28bbf8950e05bceb7ba8)), closes [#43](https://github.com/qixing-jk/all-api-hub/issues/43)
+* **sorting:** add custom check-in URL sorting criteria ([6c3a113](https://github.com/qixing-jk/all-api-hub/commit/6c3a113845c46e7940843c492e17c8960be3621b))
+* **tooltip:** center children content in container ([d299bbc](https://github.com/qixing-jk/all-api-hub/commit/d299bbc0114c2e4bbbbcc1065e0b9258b304c04d))
+* **ui:** standardize dialog width using max-w-md class ([10f7f45](https://github.com/qixing-jk/all-api-hub/commit/10f7f451b647b8553850eecee19be7e40faf9ca3))
+
+
+### Bug Fixes
+
+* **account:** correct check-in detection logic and default state ([8e5a960](https://github.com/qixing-jk/all-api-hub/commit/8e5a960b5fb1938f4376da47351a576fedb2709e))
+* **account:** pass custom check-in URL to openCheckInPage handler ([039f114](https://github.com/qixing-jk/all-api-hub/commit/039f114cd3e489f087950288bd3604bebf628d38)), closes [#46](https://github.com/qixing-jk/all-api-hub/issues/46)
+* **Tooltip:** ensure tooltip visibility by adding high z-index default ([0489f08](https://github.com/qixing-jk/all-api-hub/commit/0489f0808e8e0fa3e21249e782c4eae4593d9193))
+
 ## [1.17.0](https://github.com/qixing-jk/all-api-hub/compare/v1.16.0...v1.17.0) (2025-10-12)
 
 
