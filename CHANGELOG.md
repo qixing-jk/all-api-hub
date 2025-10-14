@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.21.0](https://github.com/qixing-jk/all-api-hub/compare/v1.20.0...v1.21.0) (2025-10-14)
+
+
+### Features
+
+* add favicon and extension icons to popup, options and sidepanel ([7f4f28b](https://github.com/qixing-jk/all-api-hub/commit/7f4f28b59345f70ceb2c43e39d645f8281559d93)), closes [#40](https://github.com/qixing-jk/all-api-hub/issues/40)
+* **api:** replace Proxy with direct function wrapping to avoid background errors ([0d6654b](https://github.com/qixing-jk/all-api-hub/commit/0d6654bf7eb2a7147873ca404a0d4b594a9e5026))
+* **config:** add keyboard shortcuts for sidebar and popup actions ([79f3817](https://github.com/qixing-jk/all-api-hub/commit/79f381763f55bdb2cc5bb0a0e3a81d9b4f626b9e)), closes [#42](https://github.com/qixing-jk/all-api-hub/issues/42)
+* migrate from Plasmo to WXT framework ([9abe559](https://github.com/qixing-jk/all-api-hub/commit/9abe559d7d04492d3232b75788ea5d32109731b7))
+* **ui:** update page titles for popup, options and sidepanel entrypoints ([de304e2](https://github.com/qixing-jk/all-api-hub/commit/de304e224c0fa7dc1fde8189581321ae58836c69))
+
+
+### Bug Fixes
+
+* **content:** correct script type and import path for API service ([c221e63](https://github.com/qixing-jk/all-api-hub/commit/c221e638f09d85316cf502ddc1cb974745655016))
+
 ## [1.20.0](https://github.com/qixing-jk/all-api-hub/compare/v1.19.0...v1.20.0) (2025-10-14)
 
 
