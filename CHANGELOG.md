@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.20.0](https://github.com/qixing-jk/all-api-hub/compare/v1.19.0...v1.20.0) (2025-10-14)
+
+
+### Features
+
+* **account-mgmt:** add refresh functionality to balance and health indicators ([a2e9c59](https://github.com/qixing-jk/all-api-hub/commit/a2e9c59125a5adb70c3e444e09761dc98073862d))
+* **account:** add wrapperClassName to Tooltip for consistent icon alignment ([cb414cd](https://github.com/qixing-jk/all-api-hub/commit/cb414cde087af7a929fc8e505ce603f9fb86b664))
+* **account:** simplify menu item labels and adjust menu width ([66800d3](https://github.com/qixing-jk/all-api-hub/commit/66800d3fb7c766cb81660a8399a5edcd3557d5d4))
+* **newApiService:** enhance channel import with model list comparison ([a1b2040](https://github.com/qixing-jk/all-api-hub/commit/a1b2040c5d4111fe3fe8e3196cbfa8da03e616ee))
+* **newApiService:** update groups type and add error handling ([edd3465](https://github.com/qixing-jk/all-api-hub/commit/edd34652cc57fdde4c3524384836b188a65ada74))
+* **Tooltip:** add wrapperClassName prop and reorder imports ([32ef60c](https://github.com/qixing-jk/all-api-hub/commit/32ef60c63f8caa434209306ce2735dffb8764655))
+* **Tooltip:** improve Tooltip with better ID generation and element type ([c4ff71b](https://github.com/qixing-jk/all-api-hub/commit/c4ff71bb2f79a9d77b261885fbadccfa21ff1932))
+* **ui:** refactor action buttons with unified UI and smart key handling ([83df337](https://github.com/qixing-jk/all-api-hub/commit/83df337029aa233729720a4b40028478322b87a7)), closes [#44](https://github.com/qixing-jk/all-api-hub/issues/44) [#45](https://github.com/qixing-jk/all-api-hub/issues/45)
+
 ## [1.19.0](https://github.com/qixing-jk/all-api-hub/compare/v1.18.0...v1.19.0) (2025-10-13)
 
 
