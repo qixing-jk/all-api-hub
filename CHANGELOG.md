@@ -1,5 +1,40 @@
 # Changelog
 
+## [1.23.0](https://github.com/qixing-jk/all-api-hub/compare/v1.22.0...v1.23.0) (2025-10-15)
+
+
+### Features
+
+* **about:** remove all features and conditionally render feature section ([e62dc49](https://github.com/qixing-jk/all-api-hub/commit/e62dc4966d0cf8e130ae81b4edd7a7cc89692487))
+* **api:** improve channel naming logic and default token generation ([498a7d5](https://github.com/qixing-jk/all-api-hub/commit/498a7d5fe50c01b66260768fb55c1aa7e2436fa1))
+* **i18n:** add Chinese and English localization support ([dc65dfc](https://github.com/qixing-jk/all-api-hub/commit/dc65dfc144308d1b18d1d3533c4a2751c56855d4))
+* **i18n:** add comprehensive localization support for UI components ([a39f2e3](https://github.com/qixing-jk/all-api-hub/commit/a39f2e3f79e75d17b5c5bf1643a10ce4896dc0ca))
+* **i18n:** add comprehensive localization support for UI components ([3963116](https://github.com/qixing-jk/all-api-hub/commit/39631162638bfa9bf1639d053cec832fc95173d3))
+* **i18n:** add dynamic page title support for all entry points ([4fb4d43](https://github.com/qixing-jk/all-api-hub/commit/4fb4d43b777c08016f8a7ecb01a9fc7e6b0eb44f))
+* **i18n:** add internationalization support ([d388a57](https://github.com/qixing-jk/all-api-hub/commit/d388a574bda25701e7dd38bfa59ba98d4705d8b8))
+* **i18n:** add internationalization support ([17be2ef](https://github.com/qixing-jk/all-api-hub/commit/17be2ef083755b2ebef2bb013496edc6fed47346))
+* **i18n:** add internationalization support ([c2d2f9b](https://github.com/qixing-jk/all-api-hub/commit/c2d2f9be4f276ac086b6e9d884533e553500d8ec))
+* **i18n:** add internationalization support for account dialog and related ([e95b20a](https://github.com/qixing-jk/all-api-hub/commit/e95b20a1968a7572628e0019339f97beb7929846))
+* **i18n:** add internationalization support for account management ([25c9b8e](https://github.com/qixing-jk/all-api-hub/commit/25c9b8e747fc9b084c1fcb825f685ef984981233))
+* **i18n:** add internationalization support for manifest ([b8226d3](https://github.com/qixing-jk/all-api-hub/commit/b8226d3720a44ec1c8c852e6847719f255c1c6c5))
+* **i18n:** add internationalization support for settings and about pages ([1488cc5](https://github.com/qixing-jk/all-api-hub/commit/1488cc5d06b8d27335c7b984f75b4c35ab1e3a2f))
+* **i18n:** add language switching support with Suspense loading ([71aa893](https://github.com/qixing-jk/all-api-hub/commit/71aa893150fe5d157bad3248c1f4116dc85119a5))
+* **i18n:** restructure about page tech stack section and update intro ([27537f0](https://github.com/qixing-jk/all-api-hub/commit/27537f0805aaf795103651804ab9e3d056de6908))
+* improve internationalization for About page and billing modes ([33414a8](https://github.com/qixing-jk/all-api-hub/commit/33414a8c1d593bbfd54073165a876a648df04ad7))
+
+
+### Bug Fixes
+
+* **account:** ensure checkSupport fallback and remove unused param in token gen ([d99a9eb](https://github.com/qixing-jk/all-api-hub/commit/d99a9eb4404ccef46ffcaa76442dca7dfaf0a2d3))
+* **account:** include today_income in AccountData and sync operations ([2b7dc8e](https://github.com/qixing-jk/all-api-hub/commit/2b7dc8e0447d4ce7c6d2620dbb62b73dd692afef))
+* **api:** improve auth handling and error logging ([ee3c63a](https://github.com/qixing-jk/all-api-hub/commit/ee3c63a1b02b962c75bc67dd3ab2d46153e360cc))
+* complete internationalization for remaining hardcoded text ([efe28dc](https://github.com/qixing-jk/all-api-hub/commit/efe28dc57a4e1a3b8c2944e62874d6c069a598d1))
+* **config:** add empty descriptions to browser and sidebar action commands ([3a0c227](https://github.com/qixing-jk/all-api-hub/commit/3a0c2279405905b8ae5e5acd8f60f994ad7bc4ae))
+* prevent success message when no accounts are refreshed ([3053d42](https://github.com/qixing-jk/all-api-hub/commit/3053d42ef04cf6617833edf37bdf3efba2d76154))
+* remove unused translation params in model list components ([4b7d5b6](https://github.com/qixing-jk/all-api-hub/commit/4b7d5b6785ebda6d2e859f75b4209c0853a6d51e))
+* **tooltip:** prevent horizontal overflow by limiting max width to 90vw ([37e5eae](https://github.com/qixing-jk/all-api-hub/commit/37e5eae10b3f54b10b4dabff5bdb7f70e98d7728))
+* **ui:** restore incorrect style changes made during i18n process ([674cdfe](https://github.com/qixing-jk/all-api-hub/commit/674cdfeeb7c3f13191214ffb312b403f2634b280))
+
 ## [1.22.0](https://github.com/qixing-jk/all-api-hub/compare/v1.21.0...v1.22.0) (2025-10-15)
 
 
