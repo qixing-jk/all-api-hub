@@ -1,5 +1,29 @@
 # Changelog
 
+## [1.22.0](https://github.com/qixing-jk/all-api-hub/compare/v1.21.0...v1.22.0) (2025-10-15)
+
+
+### Features
+
+* **account:** add today_total_income field and income display UI ([f96af58](https://github.com/qixing-jk/all-api-hub/commit/f96af581b7e682deea42358da22d86a79a1a346b))
+* **account:** add today's income display with animated value component ([76420f4](https://github.com/qixing-jk/all-api-hub/commit/76420f4b5ab63a15162931ad8d80a3145620247f)), closes [#50](https://github.com/qixing-jk/all-api-hub/issues/50)
+* **account:** support redemption code type recharge ([93cca65](https://github.com/qixing-jk/all-api-hub/commit/93cca65c20294845d47d42903512c36ce1c35f52))
+* **api:** add LogType enum and update log-related interfaces ([07828ac](https://github.com/qixing-jk/all-api-hub/commit/07828ac90af9a78e5659be24222fab35e8a548c2))
+* **api:** add today income tracking and amount extraction utility ([4835a33](https://github.com/qixing-jk/all-api-hub/commit/4835a33d3f80eaaecb0d612f54d3063e20521533))
+* **api:** add today income tracking and refactor type definitions ([736a5da](https://github.com/qixing-jk/all-api-hub/commit/736a5dae9199614f7a01531aee146394fea9df05))
+* **api:** narrow query scope to consume logs only ([56fa0f2](https://github.com/qixing-jk/all-api-hub/commit/56fa0f243e845b4a151d5fa3eb164518b6177ce0))
+* **config:** remove default keybindings and descriptions for commands ([5ab5a69](https://github.com/qixing-jk/all-api-hub/commit/5ab5a695403ce4c9727cb19837541ce80f81e253))
+* **ui:** adjust AccountListItem padding and height ([86da034](https://github.com/qixing-jk/all-api-hub/commit/86da0349d854c02a5397d1e5c46f6b11d8d3d91c))
+* **ui:** improve layout responsiveness and text truncation ([ac6c2d4](https://github.com/qixing-jk/all-api-hub/commit/ac6c2d4588e14d43116dfaf4fa311a43f0dd82f6))
+
+
+### Bug Fixes
+
+* **account:** correct check-in UI rendering logic for custom URLs ([9d1cd98](https://github.com/qixing-jk/all-api-hub/commit/9d1cd988432a616c61188e2deaadac63d59f214e))
+* **api:** correct checkin field name and return structure ([8e4e2f3](https://github.com/qixing-jk/all-api-hub/commit/8e4e2f31abd20350c27e7c6625c91ff3b65bb40e))
+* resolve spinner and currency suffix overlap in recharge ratio input ([19a92d9](https://github.com/qixing-jk/all-api-hub/commit/19a92d9f286364cfa5835f30378531d2e2b75d38))
+* **tooltip:** prevent tooltip overflow by adding max-width constraint ([d1cf0b4](https://github.com/qixing-jk/all-api-hub/commit/d1cf0b42388d8cac74d7fdd8e6ddb6fb98fe0288))
+
 ## [1.21.0](https://github.com/qixing-jk/all-api-hub/compare/v1.20.0...v1.21.0) (2025-10-14)
 
 
