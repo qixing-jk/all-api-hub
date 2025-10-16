@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.24.0](https://github.com/qixing-jk/all-api-hub/compare/v1.23.2...v1.24.0) (2025-10-16)
+
+
+### Features
+
+* **i18n:** add health status translation keys and refactor error messages ([d3ea168](https://github.com/qixing-jk/all-api-hub/commit/d3ea168f1accc753f63701511dc34a4663a95535))
+* **i18n:** add refresh partial skipped status message ([31d3d27](https://github.com/qixing-jk/all-api-hub/commit/31d3d27ad220cf1cd6df000a5c9d4c1183f10d22))
+* **i18n:** add translations for site info health status and current site ([15d8bed](https://github.com/qixing-jk/all-api-hub/commit/15d8bed5d040c8493ea67b0aeae42807af97d2e0))
+* **i18n:** add translations for site info health status and current site ([be14335](https://github.com/qixing-jk/all-api-hub/commit/be14335392576903852e11abc714b20a6ff0297d))
+* **i18n:** implement i18n for toast messages and function return values ([b622d5e](https://github.com/qixing-jk/all-api-hub/commit/b622d5e315841c0e6cf6fea15ae1928aa7591332))
+* **i18n:** integrate dayjs locale with language switching ([e40a642](https://github.com/qixing-jk/all-api-hub/commit/e40a642f6fe6c72ecbad1f527d53bd1901d39cde))
+
 ## [1.23.2](https://github.com/qixing-jk/all-api-hub/compare/v1.23.1...v1.23.2) (2025-10-16)
 
 
