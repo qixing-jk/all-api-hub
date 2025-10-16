@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.23.2](https://github.com/qixing-jk/all-api-hub/compare/v1.23.1...v1.23.2) (2025-10-16)
+
+
+### Bug Fixes
+
+* **api:** correct currency conversion logic for CNY ([daebcc0](https://github.com/qixing-jk/all-api-hub/commit/daebcc026d90cfe5c6bee8d5e4ae5406bd6a66b8))
+
 ## [1.23.1](https://github.com/qixing-jk/all-api-hub/compare/v1.23.0...v1.23.1) (2025-10-16)
 
 
