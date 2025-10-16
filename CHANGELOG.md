@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.23.1](https://github.com/qixing-jk/all-api-hub/compare/v1.23.0...v1.23.1) (2025-10-16)
+
+
+### Bug Fixes
+
+* **api:** add exchange rate support for amount extraction ([a7ce101](https://github.com/qixing-jk/all-api-hub/commit/a7ce101780bb33e07c6ad35d7f36417128d005ae))
+
 ## [1.23.0](https://github.com/qixing-jk/all-api-hub/compare/v1.22.0...v1.23.0) (2025-10-15)
 
 
