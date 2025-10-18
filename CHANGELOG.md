@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.25.0](https://github.com/qixing-jk/all-api-hub/compare/v1.24.0...v1.25.0) (2025-10-18)
+
+
+### Features
+
+* improve WebDAV settings form accessibility ([3948a2a](https://github.com/qixing-jk/all-api-hub/commit/3948a2a73b6aa6c7c9e6fe65771700fe355ba71b))
+* **model-list:** hide empty providers in model selection ([a30a1ba](https://github.com/qixing-jk/all-api-hub/commit/a30a1ba8b94ca02ccf9b660062854dd6e5555e93))
+
+
+### Bug Fixes
+
+* **i18n:** Replace hardcoded Chinese string in TokenHeader toast with translation key ([ea53487](https://github.com/qixing-jk/all-api-hub/commit/ea534873a291b6a8dfeb5e748e881604790b0d3e))
+* **i18n:** Replace hardcoded Chinese strings in cherryStudio.ts with proper i18n keys ([2a88ffc](https://github.com/qixing-jk/all-api-hub/commit/2a88ffcd47ef37ffdd49c3406c08e57d2468c151))
+* **i18n:** Replace hardcoded toast strings with translation keys in useImportExport hook ([89a1605](https://github.com/qixing-jk/all-api-hub/commit/89a1605cc87c1115a95d4da0d741296972fe6f03))
+* **i18n:** update success and failure messages in WebDAV and AddTokenDialog components; add new translations for copy URL and exporting ([05b6b6b](https://github.com/qixing-jk/all-api-hub/commit/05b6b6bc4c51806e3345664cc22e50414a16ee23))
+* incorrect i18n key in AddTokenDialog component ([37d38e1](https://github.com/qixing-jk/all-api-hub/commit/37d38e1f1c9023488340d2a0b457b61845512029))
+* replace hardcoded Chinese strings with i18n translation keys in accountOperations.ts ([eef6b27](https://github.com/qixing-jk/all-api-hub/commit/eef6b27cf09bb6879c84e80e416fb7dd7599b499))
+* Replace hardcoded toast strings with translation keys in WebDAVSettings.tsx ([03cf97c](https://github.com/qixing-jk/all-api-hub/commit/03cf97c533799c11dfddde7adbf8845fe1230c09))
+
 ## [1.24.0](https://github.com/qixing-jk/all-api-hub/compare/v1.23.2...v1.24.0) (2025-10-16)
 
 
