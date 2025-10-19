@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.26.0](https://github.com/qixing-jk/all-api-hub/compare/v1.25.0...v1.26.0) (2025-10-19)
+
+
+### Features
+
+* add unified service response type definitions ([d7a3bbe](https://github.com/qixing-jk/all-api-hub/commit/d7a3bbe85b7392c84bb36cc4949e8cef6eb37404))
+
+
+### Bug Fixes
+
+* **account:** add i18n support for error messages ([4be6b46](https://github.com/qixing-jk/all-api-hub/commit/4be6b46aee8a3d3d846b9b7a7864f05a5d77f151))
+* **account:** update default token generation logic ([56d5b41](https://github.com/qixing-jk/all-api-hub/commit/56d5b41327fcb8210fa29a44df442f2f8092a975))
+* **i18n:** replace hardcoded Chinese strings with i18n keys in newApiService ([aa51099](https://github.com/qixing-jk/all-api-hub/commit/aa51099d3274b54976993a6298f73900300eb180))
+* **i18n:** replace hardcoded Chinese strings with i18n keys in newApiService and autoDetectUtils ([60b847c](https://github.com/qixing-jk/all-api-hub/commit/60b847c1219e8f34bc7a25667839ebe67924f5f9))
+
 ## [1.25.0](https://github.com/qixing-jk/all-api-hub/compare/v1.24.0...v1.25.0) (2025-10-18)
 
 
