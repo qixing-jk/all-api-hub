@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.27.0](https://github.com/qixing-jk/all-api-hub/compare/v1.26.0...v1.27.0) (2025-10-20)
+
+
+### Features
+
+* auto-close AccountDialog after successful auto-config to New API ([d98f9f7](https://github.com/qixing-jk/all-api-hub/commit/d98f9f7328f51300d3b7105881b5b65b85a3e15b))
+* **i18n:** add error details to account update failure messages ([0bb746a](https://github.com/qixing-jk/all-api-hub/commit/0bb746aea3c4288f37a4f976de3645938a5758bd))
+* **i18n:** implement dynamic locale resource loading ([6f78249](https://github.com/qixing-jk/all-api-hub/commit/6f7824904763ab1262443c06ebbdffae4a8d8f43))
+* **ModelItem:** add aria attributes to expand button ([8dd34ea](https://github.com/qixing-jk/all-api-hub/commit/8dd34ea22416f162b9fc3ec281c74fa598df6db8))
+
+
+### Bug Fixes
+
+* **account:** add error handling utility import ([20adedb](https://github.com/qixing-jk/all-api-hub/commit/20adedb3da032baec6a98d8af30b4e94733adf4b))
+* **account:** replace hardcoded error messages with i18n translations ([20dee02](https://github.com/qixing-jk/all-api-hub/commit/20dee025e051e63bf33bec14572fc49b074c101d))
+* **account:** replace hardcoded validation messages with i18n keys ([bfce6b8](https://github.com/qixing-jk/all-api-hub/commit/bfce6b8b4c9c9c615d0cc6c8c677b72946033d97))
+* add i18n internationalization to accountOperations.ts service ([27e31f6](https://github.com/qixing-jk/all-api-hub/commit/27e31f6380fe0c6d89def9b75c18dbf3d8dfbea9))
+* **i18n:** add internationalization support for error messages ([3d85dd4](https://github.com/qixing-jk/all-api-hub/commit/3d85dd404368cbd9a03831474c40d6621496eeef))
+* **i18n:** add missing "resetting" translation key in en and zh_CN locales ([21073e4](https://github.com/qixing-jk/all-api-hub/commit/21073e44a5294b95a8f8d0a9e4a78096ccab9f44))
+* **locales:** correct currency switch template syntax for en/zh_CN ([fcb8c4b](https://github.com/qixing-jk/all-api-hub/commit/fcb8c4b59ae4d90ab5a6f5e72b790207e6f43d60))
+
 ## [1.26.0](https://github.com/qixing-jk/all-api-hub/compare/v1.25.0...v1.26.0) (2025-10-19)
 
 
