@@ -1,5 +1,41 @@
 # Changelog
 
+## [1.28.0](https://github.com/qixing-jk/all-api-hub/compare/v1.27.0...v1.28.0) (2025-10-21)
+
+
+### Features
+
+* **auto-detect:** improve tab detection by using active tab as fallback ([91099d6](https://github.com/qixing-jk/all-api-hub/commit/91099d612bd4c51d33d37d3e461ac1920b29a65b))
+* **browser:** enhance browser API fallback with chrome preference ([ee1c1cd](https://github.com/qixing-jk/all-api-hub/commit/ee1c1cd171cfec08e08c69d919ddaf71db11f960))
+* **device:** add DeviceContext for responsive device detection ([7ccc0f0](https://github.com/qixing-jk/all-api-hub/commit/7ccc0f0cb9adfce06f42636b01a40407eab4d9bd))
+* **drag-drop:** enhance mobile touch support and remove unused CSS ([416be3a](https://github.com/qixing-jk/all-api-hub/commit/416be3a706cba608660ebdf0ff671542dc462bc8))
+* implement cross-platform auto-detect with smart fallback logic ([94c822b](https://github.com/qixing-jk/all-api-hub/commit/94c822bcdfc6803e861edd98775fd864eaf236da))
+* migrate from chrome.* to browser.* API with improved error handling ([945ed4c](https://github.com/qixing-jk/all-api-hub/commit/945ed4c1890220c13c515ca274abdb14712477e9))
+* **mobile:** Ensure compatibility with mobile devices in terms of features and user interface design ([#62](https://github.com/qixing-jk/all-api-hub/issues/62)) ([f95bcd4](https://github.com/qixing-jk/all-api-hub/commit/f95bcd49c75f9762ddcef40e80ab8ebe017ff4c4))
+* **mobile:** implement responsive design improvements across UI ([f702eb0](https://github.com/qixing-jk/all-api-hub/commit/f702eb01b5e734390f03b9aae07a2fa0ac1bf527))
+* **mobile:** improve responsive layout for model and key components ([1aa6fad](https://github.com/qixing-jk/all-api-hub/commit/1aa6fadc86e98a9aa4ff524d18ffa36eadd6f787))
+* **mobile:** improve SortingCriteriaItem mobile responsiveness ([e210c8a](https://github.com/qixing-jk/all-api-hub/commit/e210c8ab8712fffd156ed1fa618d3c635d0e76fd))
+* **mobile:** improve touch device support in account management ([1484577](https://github.com/qixing-jk/all-api-hub/commit/1484577df1cb6778c725c69347e5c0d9ee8f06ff))
+* restrict Firefox account warning to desktop only ([1938d2c](https://github.com/qixing-jk/all-api-hub/commit/1938d2c1293a389b138e5f7b503b8d08c1cc9506))
+* **ui:** improve responsive layout for account list items ([1dfb05b](https://github.com/qixing-jk/all-api-hub/commit/1dfb05bd017cb066ff337ff593d0cfa46d6fd709))
+
+
+### Bug Fixes
+
+* **account-dialog:** ensure async handling of login tab opening ([cfe4e6a](https://github.com/qixing-jk/all-api-hub/commit/cfe4e6a31f007feb9729384639a1dac0d377590f))
+* **browser:** improve error handling and type consistency in API utils ([6133ca3](https://github.com/qixing-jk/all-api-hub/commit/6133ca30a1ec7384adb85f56cd95d53b1c3c3896))
+* **config:** enable minification in production builds ([78ab9ca](https://github.com/qixing-jk/all-api-hub/commit/78ab9ca230acfe0ce02b0c27a3ce9644bf0d2cc8))
+* correct responsive padding regression in ThemeToggle ([9ac8481](https://github.com/qixing-jk/all-api-hub/commit/9ac8481bc7a567ef9367f684a10324db332f2c27))
+* **device:** align breakpoint with Tailwind's responsive utilities ([2d44555](https://github.com/qixing-jk/all-api-hub/commit/2d4455563d1f58874d2bfcc0065546b2da1d5997))
+* **eslint:** correct file pattern to exclude non-TypeScript files ([56a86c2](https://github.com/qixing-jk/all-api-hub/commit/56a86c2827a0f5ce5d6c4aa74fe774ca11ff5381))
+* handle undefined userData in background service ([0e21a5d](https://github.com/qixing-jk/all-api-hub/commit/0e21a5db326213a19a1a5a3db8ea6d8e5b906c82))
+* **i18n:** correct translation key path in help button label ([a5a12e0](https://github.com/qixing-jk/all-api-hub/commit/a5a12e0018d09da273cfc761f740854b7c524259))
+* prevent unnecessary re-renders in UserPreferencesContext ([a6aaaa6](https://github.com/qixing-jk/all-api-hub/commit/a6aaaa6063427581237d39aa85ee0906e4111170))
+* reliably resolve tabId after window creation ([64961c1](https://github.com/qixing-jk/all-api-hub/commit/64961c16879a097f99ac8841ca94c5853cafcd35))
+* remove undefined union type from sendResponse parameter ([9002db9](https://github.com/qixing-jk/all-api-hub/commit/9002db9fe9ceae1e82927155cecefc1d02229da5))
+* remove unnecessary dependency in account data cleanup effect ([5a2e6a3](https://github.com/qixing-jk/all-api-hub/commit/5a2e6a30d282b87cb847d5af730db6c07c081132))
+* **ui:** prevent button border spin during refresh ([80da861](https://github.com/qixing-jk/all-api-hub/commit/80da861f43469405a8f590c2283046585b29f932))
+
 ## [1.27.0](https://github.com/qixing-jk/all-api-hub/compare/v1.26.0...v1.27.0) (2025-10-20)
 
 
