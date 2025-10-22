@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.29.0](https://github.com/qixing-jk/all-api-hub/compare/v1.28.0...v1.29.0) (2025-10-22)
+
+
+### Features
+
+* **navigation:** add popup detection and auto-close functionality ([2ce9a49](https://github.com/qixing-jk/all-api-hub/commit/2ce9a49a01548737ac646d192e0ce19f8ec714f4))
+* **popup:** add mobile responsive layout to prevent zoom requirement ([91f7ffa](https://github.com/qixing-jk/all-api-hub/commit/91f7ffa77ca9248c5bfea13e902d09a5c2f5eede))
+
 ## [1.28.0](https://github.com/qixing-jk/all-api-hub/compare/v1.27.0...v1.28.0) (2025-10-21)
 
 
