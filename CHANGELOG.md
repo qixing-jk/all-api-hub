@@ -1,5 +1,33 @@
 # Changelog
 
+## [1.31.0](https://github.com/qixing-jk/all-api-hub/compare/v1.30.0...v1.31.0) (2025-10-24)
+
+
+### Features
+
+* **account:** add account creation button and restructure layout ([c433b7d](https://github.com/qixing-jk/all-api-hub/commit/c433b7d377b63f3a0d7f9c8ca424444366469534)), closes [#60](https://github.com/qixing-jk/all-api-hub/issues/60)
+* **account:** add siteName support to account detection flow ([ffa2b8a](https://github.com/qixing-jk/all-api-hub/commit/ffa2b8aababcb579eaa898817b659130a694afed))
+* **account:** add usage log feature to account management ([8bd878b](https://github.com/qixing-jk/all-api-hub/commit/8bd878b1c265ebd940e71500ec2f55e47a7be5d9))
+* **account:** adjust balance display width to improve responsiveness ([beaff87](https://github.com/qixing-jk/all-api-hub/commit/beaff873cb7c9e353bbd12b72477fd57e04f3aa3))
+* add missing i18n translation dependencies to useEffect hooks ([fd71410](https://github.com/qixing-jk/all-api-hub/commit/fd71410f308d51062fd6312aafafa0fd5e8a8c11))
+* **api:** enhance user info handling with fallback mechanism ([30b5cd0](https://github.com/qixing-jk/all-api-hub/commit/30b5cd0762b9e906b03a3b660d408c6f1c50a5dc))
+* **SortingPrioritySettings:** auto-save on drag end & remove save button ([8847cc2](https://github.com/qixing-jk/all-api-hub/commit/8847cc2c969824e6a890f4e0ccb904ff34ed51ce))
+* **ui:** streamline ImportExport layout with consistent spacing ([4040ca2](https://github.com/qixing-jk/all-api-hub/commit/4040ca211e73cda2ebf57fd381175acc29fa8ba9))
+
+
+### Bug Fixes
+
+* **account:** update SiteInfo IconButton sizes and aria-labels ([89ae2c9](https://github.com/qixing-jk/all-api-hub/commit/89ae2c93ad4a710680cbb1d6679f1cd59e9f3b74))
+* **card:** correct padding props and password toggle button styling ([57b8c3b](https://github.com/qixing-jk/all-api-hub/commit/57b8c3b6ec646297680f49e7de790aa33d79310e))
+* **import:** adjust card content padding to 'md' for better spacing ([105fadf](https://github.com/qixing-jk/all-api-hub/commit/105fadf655ce264e0a4678f4ea3132e69b846acd))
+* **import:** adjust import section UI spacing and textarea height ([11bd49a](https://github.com/qixing-jk/all-api-hub/commit/11bd49ad6739d43648c347423dd642c704385efd))
+* **locales:** add missing translations for visibility toggle and descriptions ([a2a10b6](https://github.com/qixing-jk/all-api-hub/commit/a2a10b681c1094929f3ba351307dc855cd46ec5d))
+
+
+### Performance Improvements
+
+* **account:** extend parallel fetches for check-in support and site name ([e98c555](https://github.com/qixing-jk/all-api-hub/commit/e98c55551b1b7cb42a7a44d1728bbfbee9bb38a2))
+
 ## [1.30.0](https://github.com/qixing-jk/all-api-hub/compare/v1.29.0...v1.30.0) (2025-10-23)
 
 
