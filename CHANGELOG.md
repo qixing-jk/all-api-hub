@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.33.0](https://github.com/qixing-jk/all-api-hub/compare/v1.32.1...v1.33.0) (2025-10-25)
+
+
+### Features
+
+* **layout:** introduce reusable AppLayout component ([d12b83c](https://github.com/qixing-jk/all-api-hub/commit/d12b83c0de094c4e691dc1e32481ba7690eaee4e))
+
 ## [1.32.1](https://github.com/qixing-jk/all-api-hub/compare/v1.32.0...v1.32.1) (2025-10-25)
 
 
