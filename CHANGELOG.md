@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.32.1](https://github.com/qixing-jk/all-api-hub/compare/v1.32.0...v1.32.1) (2025-10-25)
+
+
+### Bug Fixes
+
+* **card:** correct right content container width on small screens ([641bf07](https://github.com/qixing-jk/all-api-hub/commit/641bf07556b1de1f204bf459ee90637d37d5a4d4))
+
 ## [1.32.0](https://github.com/qixing-jk/all-api-hub/compare/v1.31.0...v1.32.0) (2025-10-25)
 
 
