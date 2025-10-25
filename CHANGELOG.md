@@ -1,5 +1,28 @@
 # Changelog
 
+## [1.32.0](https://github.com/qixing-jk/all-api-hub/compare/v1.31.0...v1.32.0) (2025-10-25)
+
+
+### Features
+
+* **account:** improve UI layout and responsiveness ([6b3868a](https://github.com/qixing-jk/all-api-hub/commit/6b3868ad08856446bc6149052565c20783b76053))
+* **config:** extract React DevTools auto-injection into dedicated plugin ([2b243b2](https://github.com/qixing-jk/all-api-hub/commit/2b243b27e8563122aa050d8bd4c48686de4632bf))
+* **plugins:** add configurable react-devtools auto plugin with cache ([3264c1c](https://github.com/qixing-jk/all-api-hub/commit/3264c1c0e75a00ba5edc6d155f42e5b617a53e27))
+* **react-devtools:** enhance plugin with env vars and force fetch support ([95b2126](https://github.com/qixing-jk/all-api-hub/commit/95b21264e607abb95640e153b4b06fdd0672bafa))
+* **ui:** improve CardItem responsive layout ([8f2baee](https://github.com/qixing-jk/all-api-hub/commit/8f2baee12f661260ea7544e26fa46825abfba87d))
+
+
+### Bug Fixes
+
+* remove redundant width classes from input fields ([9be8a8c](https://github.com/qixing-jk/all-api-hub/commit/9be8a8cfc86dff0c3cbf9b4c6f300599d013e0cc))
+* **sidebar:** correct mobile overlay z-index to ensure proper layering ([bc57532](https://github.com/qixing-jk/all-api-hub/commit/bc57532f8b3391e3eb570d4c42cef396bd2a9347))
+* **ui:** adjust button sizes with responsive scaling for mobile ([817c501](https://github.com/qixing-jk/all-api-hub/commit/817c501093e364f1161c77cf28c71cb4e9e52269))
+* **ui:** correct z-index stacking order in Sidebar component ([77938db](https://github.com/qixing-jk/all-api-hub/commit/77938dbc5c48699dddc5fe524896c2045dc92259))
+* **ui:** ensure consistent CardContent usage across components ([d0e8d25](https://github.com/qixing-jk/all-api-hub/commit/d0e8d25a2c548c31c504e01b2f63681f8fc67b11))
+* **ui:** implement responsive sizing for buttons, cards and icons ([eb6d10e](https://github.com/qixing-jk/all-api-hub/commit/eb6d10e9a8d0fd5ce108a09d2699758d1eb24789))
+* **ui:** refactor password input fields to use `rightIcon` prop ([5d2d1ad](https://github.com/qixing-jk/all-api-hub/commit/5d2d1ad4b8f6eedce448d97e7eb6efdb62ed3b5a))
+* **ui:** wrap card content in CardContent component for consistency ([f23e1f7](https://github.com/qixing-jk/all-api-hub/commit/f23e1f7244e596f4b12e2d1b20dad1872069616a))
+
 ## [1.31.0](https://github.com/qixing-jk/all-api-hub/compare/v1.30.0...v1.31.0) (2025-10-24)
 
 
