@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.35.0](https://github.com/qixing-jk/all-api-hub/compare/v1.34.0...v1.35.0) (2025-10-26)
+
+
+### Features
+
+* **account:** replace check-in icons with CurrencyYenIcon ([475b0a2](https://github.com/qixing-jk/all-api-hub/commit/475b0a21f476439744769c96411b98de912390f2)), closes [#68](https://github.com/qixing-jk/all-api-hub/issues/68)
+
+
+### Bug Fixes
+
+* **check-in:** auto-reset custom check-in accounts daily ([6382ff4](https://github.com/qixing-jk/all-api-hub/commit/6382ff44fb3afb3a0eb7e4afa396bfaddeba5fae))
+* **check-in:** correct default value for `isCheckedInToday` flag ([90359f6](https://github.com/qixing-jk/all-api-hub/commit/90359f683063d01ac0d973b7cecbbc47bd8fdaf0))
+* correct default `isCheckedInToday` value in documentation ([1b70a65](https://github.com/qixing-jk/all-api-hub/commit/1b70a65b2b93ca7255dc3eeb2971f71f5eb6ce67))
+* **i18n:** add 'more' action translation ([c47807f](https://github.com/qixing-jk/all-api-hub/commit/c47807fdcfa5d9fa59cc1d2587e6bf86cc73b811))
+
 ## [1.34.0](https://github.com/qixing-jk/all-api-hub/compare/v1.33.0...v1.34.0) (2025-10-26)
 
 
