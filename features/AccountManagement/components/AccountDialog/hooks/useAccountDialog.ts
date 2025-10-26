@@ -51,7 +51,8 @@ export function useAccountDialog({
     enableDetection: false,
     isCheckedInToday: false,
     customCheckInUrl: "",
-    customRedeemPath: ""
+    customRedeemPath: "",
+    openRedeemWithCheckIn: true
   })
   const [siteType, setSiteType] = useState("unknown")
   const [authType, setAuthType] = useState(AuthTypeEnum.AccessToken)
@@ -77,7 +78,8 @@ export function useAccountDialog({
       enableDetection: false,
       isCheckedInToday: false,
       customCheckInUrl: "",
-      customRedeemPath: ""
+      customRedeemPath: "",
+      openRedeemWithCheckIn: true
     })
     setSiteType("unknown")
     setAuthType(AuthTypeEnum.AccessToken)
@@ -100,7 +102,9 @@ export function useAccountDialog({
             enableDetection: siteAccount.checkIn?.enableDetection ?? false,
             isCheckedInToday: siteAccount.checkIn?.isCheckedInToday ?? false,
             customCheckInUrl: siteAccount.checkIn?.customCheckInUrl ?? "",
-            customRedeemPath: siteAccount.checkIn?.customRedeemPath ?? ""
+            customRedeemPath: siteAccount.checkIn?.customRedeemPath ?? "",
+            openRedeemWithCheckIn:
+              siteAccount.checkIn?.openRedeemWithCheckIn ?? true
           })
           setSiteType(siteAccount.site_type || "")
           setAuthType(siteAccount.authType || AuthTypeEnum.AccessToken)
@@ -200,7 +204,9 @@ export function useAccountDialog({
           enableDetection: resultData.checkIn?.enableDetection ?? false,
           isCheckedInToday: resultData.checkIn?.isCheckedInToday ?? false,
           customCheckInUrl: resultData.checkIn?.customCheckInUrl ?? "",
-          customRedeemPath: resultData.checkIn?.customRedeemPath ?? ""
+          customRedeemPath: resultData.checkIn?.customRedeemPath ?? "",
+          openRedeemWithCheckIn:
+            resultData.checkIn?.openRedeemWithCheckIn ?? true
         })
 
         if (resultData.exchangeRate) {

@@ -114,6 +114,15 @@ export interface CheckInConfig {
    * Default value from SITE_API_ROUTER is used when not provided.
    */
   customRedeemPath?: string
+
+  /**
+   * Whether to open the redeem page when opening a custom check-in URL.
+   * Only applicable when customCheckInUrl is set.
+   * When true, both the custom check-in URL and redeem page will be opened.
+   * When false, only the custom check-in URL will be opened.
+   * Default: true (for backward compatibility)
+   */
+  openRedeemWithCheckIn?: boolean
 }
 
 // 存储配置

@@ -57,6 +57,7 @@
     "customCheckInDesc": "如果设置，将禁用自动签到状态检测。用于具有自定义签到端点的站点",
     "customRedeemPath": "自定义充值页面路径（可选）",
     "customRedeemPathDesc": "充值/续费页面的相对路径，默认值：console/topup",
+    "openRedeemWithCheckIn": "使用自定义签到时同时打开充值页面",
     "notes": "备注",
     "notesPlaceholder": "选填，输入备注信息"
   },

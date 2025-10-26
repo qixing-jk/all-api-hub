@@ -215,6 +215,36 @@ export default function AccountForm({
         />
       </FormField>
 
+      {/* Open Redeem with Check-in Toggle - Only shown when custom check-in URL is set */}
+      {checkIn.customCheckInUrl && (
+        <div className="flex w-full items-center justify-between">
+          <label
+            htmlFor="open-redeem-with-checkin"
+            className="text-sm font-medium text-gray-700 dark:text-dark-text-secondary">
+            {t("form.openRedeemWithCheckIn")}
+          </label>
+          <Switch
+            checked={checkIn.openRedeemWithCheckIn ?? true}
+            onChange={(openRedeemWithCheckIn) =>
+              onCheckInChange({ ...checkIn, openRedeemWithCheckIn })
+            }
+            id="open-redeem-with-checkin"
+            className={`${
+              checkIn.openRedeemWithCheckIn ?? true
+                ? "bg-green-600"
+                : "bg-gray-200"
+            } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2`}>
+            <span
+              className={`${
+                checkIn.openRedeemWithCheckIn ?? true
+                  ? "translate-x-6"
+                  : "translate-x-1"
+              } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+            />
+          </Switch>
+        </div>
+      )}
+
       {/* Custom Redeem Path */}
       <FormField
         label={t("form.customRedeemPath")}

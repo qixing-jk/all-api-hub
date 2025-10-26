@@ -138,7 +138,8 @@ export async function autoDetectAccount(
           enableDetection: checkSupport ?? false,
           isCheckedInToday: false,
           customCheckInUrl: "",
-          customRedeemPath: ""
+          customRedeemPath: "",
+          openRedeemWithCheckIn: true
         },
         siteType: siteType
       }
