@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.37.0](https://github.com/qixing-jk/all-api-hub/compare/v1.36.0...v1.37.0) (2025-10-27)
+
+
+### Features
+
+* **account-search:** implement composite multi-field account search across UI surfaces ([603a04d](https://github.com/qixing-jk/all-api-hub/commit/603a04dd6e788d4fdf9200c5169977497aea4a68))
+* **account:** adjust search input size to small for better UI fit ([c944a64](https://github.com/qixing-jk/all-api-hub/commit/c944a64845fdd4c66e016d87b34e7be828fe7134))
+* add side panel open functionality ([ad90a8a](https://github.com/qixing-jk/all-api-hub/commit/ad90a8a467625cc7502d9fd1aac28c299a52f079))
+* **ui:** adjust balance tab currency display font size in compact mode ([47a13f9](https://github.com/qixing-jk/all-api-hub/commit/47a13f94f0a28e25ffd15a2d0aeb4232df13f7d0))
+* **ui:** restructure balance section layout and spacing ([af5df7b](https://github.com/qixing-jk/all-api-hub/commit/af5df7b061ab25875043d37ae3fa270077e99253))
+* **ui:** simplify BalanceTabs layout by removing redundant wrapper div ([85863f3](https://github.com/qixing-jk/all-api-hub/commit/85863f399244fb98dd7e447df7056d0529239ba5))
+* **ui:** update action buttons size from sm to default ([cba5edc](https://github.com/qixing-jk/all-api-hub/commit/cba5edcbab3553186aa36170eef9ed7972592e27))
+
+
+### Bug Fixes
+
+* **account:** prevent default and stop propagation on Escape key press ([d7b5668](https://github.com/qixing-jk/all-api-hub/commit/d7b56685e96701f82710c1f8cbd2f09dda2ea9cd))
+* **i18n:** add 'clear' action translation and update usage ([122be7c](https://github.com/qixing-jk/all-api-hub/commit/122be7c510233eb03be3509b838334731c035c13))
+
 ## [1.36.0](https://github.com/qixing-jk/all-api-hub/compare/v1.35.0...v1.36.0) (2025-10-26)
 
 
