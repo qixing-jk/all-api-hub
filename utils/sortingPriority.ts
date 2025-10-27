@@ -15,6 +15,7 @@ import {
  * It contains the data-only configuration for sorting criteria, without UI text.
  */
 export const DEFAULT_SORTING_PRIORITY_CONFIG: SortingPriorityConfig = {
+  version: 1,
   criteria: [
     {
       id: SortingCriteriaType.CURRENT_SITE,
@@ -22,17 +23,17 @@ export const DEFAULT_SORTING_PRIORITY_CONFIG: SortingPriorityConfig = {
       priority: 0
     },
     {
-      id: SortingCriteriaType.CHECK_IN_REQUIREMENT,
+      id: SortingCriteriaType.HEALTH_STATUS,
       enabled: true,
       priority: 1
     },
     {
-      id: SortingCriteriaType.MATCHED_OPEN_TABS,
+      id: SortingCriteriaType.CHECK_IN_REQUIREMENT,
       enabled: true,
       priority: 2
     },
     {
-      id: SortingCriteriaType.HEALTH_STATUS,
+      id: SortingCriteriaType.USER_SORT_FIELD,
       enabled: true,
       priority: 3
     },
@@ -43,12 +44,12 @@ export const DEFAULT_SORTING_PRIORITY_CONFIG: SortingPriorityConfig = {
     },
     {
       id: SortingCriteriaType.CUSTOM_REDEEM_URL,
-      enabled: true,
+      enabled: false,
       priority: 5
     },
     {
-      id: SortingCriteriaType.USER_SORT_FIELD,
-      enabled: true,
+      id: SortingCriteriaType.MATCHED_OPEN_TABS,
+      enabled: false,
       priority: 6
     }
   ],

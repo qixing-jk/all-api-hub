@@ -19,6 +19,7 @@ export interface SortingFieldConfig {
 
 // Complete sorting configuration
 export interface SortingPriorityConfig {
+  version?: number // For future migrations (defaults to 0 if undefined)
   criteria: SortingFieldConfig[]
   lastModified: number // Timestamp
 }
