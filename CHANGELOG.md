@@ -1,5 +1,28 @@
 # Changelog
 
+## [1.38.0](https://github.com/qixing-jk/all-api-hub/compare/v1.37.0...v1.38.0) (2025-10-27)
+
+
+### Features
+
+* **account-sorting:** pin accounts with custom check-in or redeem URLs to top ([#80](https://github.com/qixing-jk/all-api-hub/issues/80)) ([2207440](https://github.com/qixing-jk/all-api-hub/commit/22074409c955d139e7a9f6076864ccd14ae981b1))
+* **account:** add total count display in account list header ([5ee0822](https://github.com/qixing-jk/all-api-hub/commit/5ee082218b78bb62e1bd066cf07af7ec88d68e35))
+* **account:** disable sort buttons and always show header during search ([5f0ac59](https://github.com/qixing-jk/all-api-hub/commit/5f0ac59bb9fc27d2a61825362fe4a0e575e7e37b))
+* **sort:** add custom redeem and open tab match as sort rules ([8fe2951](https://github.com/qixing-jk/all-api-hub/commit/8fe2951aaa491babf40a6048232527863e084899))
+* **testing:** add Vitest, MSW, browser API mock, and CI for extension apps ([721c5cf](https://github.com/qixing-jk/all-api-hub/commit/721c5cfc51d05cfe882f4d2302fb484516ca1a7e))
+
+
+### Bug Fixes
+
+* **account:** correct tab matching logic and add score parameter ([c40f8a3](https://github.com/qixing-jk/all-api-hub/commit/c40f8a348e2220bc3087f66746c5753fe1c9bc6e))
+* **config:** correct sorting config migration logic strictness ([8df55de](https://github.com/qixing-jk/all-api-hub/commit/8df55de18ca5f675dba6182254ff9b80d524c674))
+* **config:** ensure deep copy of default sorting criteria ([6d7da69](https://github.com/qixing-jk/all-api-hub/commit/6d7da69ccb26b7b3ae9e9d2cd32bde582d7d0399))
+* **config:** resolve path alias using `rootDir` in vitest config ([72e444b](https://github.com/qixing-jk/all-api-hub/commit/72e444b05a3c330c546f340f4d3c36b65b9919e2))
+* **sorting:** migrate and default new criteria to disabled ([24632ae](https://github.com/qixing-jk/all-api-hub/commit/24632aec12381347af6b5b7b8984dd44a78e5c3c))
+* **sorting:** remove obsolete version field from config interfaces ([4171abc](https://github.com/qixing-jk/all-api-hub/commit/4171abc5cd3c61d20436ecd00ec1c13cd3eb2b84))
+* **sorting:** remove redundant click handler for toggle switch ([ea6fdd3](https://github.com/qixing-jk/all-api-hub/commit/ea6fdd3c8a57f437c0a536ea2ad5a988e84c76aa))
+* use migratedPrefs in migration loop condition ([04c0c4a](https://github.com/qixing-jk/all-api-hub/commit/04c0c4a4347f4215658c28d4166b536acaee19fe))
+
 ## [1.37.0](https://github.com/qixing-jk/all-api-hub/compare/v1.36.0...v1.37.0) (2025-10-27)
 
 
