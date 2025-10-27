@@ -20,9 +20,11 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "test": "vitest",
     "test:watch": "vitest --watch",
-    "test:ci": "vitest --run --coverage"
+    "test:ci": "vitest --run --coverage",
+    "prepare": "husky"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -70,6 +72,7 @@
     "@wxt-dev/module-react": "^1.1.3",
     "eslint": "^9.38.0",
     "eslint-plugin-react-hooks": "^5.2.0",
+    "husky": "^9.1.7",
     "jsdom": "^27.0.1",
     "msw": "^2.11.6",
     "prettier": "3.2.4",

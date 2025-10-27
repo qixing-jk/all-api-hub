@@ -176,6 +176,9 @@ pnpm lint:fix
 
 # Format code with Prettier
 pnpm format
+
+# Check formatting without modifying files
+pnpm format:check
 ```
 
 ### Type Checking
@@ -184,6 +187,35 @@ pnpm format
 # Run TypeScript compiler without emitting files
 pnpm compile
 ```
+
+### Git Hooks
+
+This project uses [Husky](https://typicode.github.io/husky) to enforce code quality through Git hooks:
+
+- **pre-commit**: Automatically checks code formatting and linting before each commit
+  - Runs `pnpm format:check` to verify code formatting
+  - Runs `pnpm lint` to check for linting issues
+  - If issues are found, it will attempt to auto-fix and require you to review and stage changes
+  
+- **pre-push**: Ensures code quality before pushing to remote
+  - Runs `pnpm test:ci` to execute all tests with coverage
+  - Runs `pnpm compile` to verify TypeScript type checking
+
+The hooks are automatically set up when you run `pnpm install` (via the `prepare` script).
+
+#### Skipping Hooks (Not Recommended)
+
+In rare cases where you need to bypass hooks:
+
+```bash
+# Skip pre-commit hook
+git commit --no-verify
+
+# Skip pre-push hook
+git push --no-verify
+```
+
+⚠️ **Warning**: Only skip hooks if you have a valid reason, as they ensure code quality and prevent common issues.
 
 ## Building
 

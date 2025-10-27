@@ -167,6 +167,34 @@ pnpm test:ci
 
 GitHub Actions automatically runs `pnpm test:ci` on pull requests and uploads coverage reports as workflow artifacts.
 
+### Git Hooks
+
+We use [Husky](https://typicode.github.io/husky) to enforce basic workflows via Git hooks.
+
+- **pre-commit**: runs `pnpm format:check` and `pnpm lint`
+  - If formatting or lint errors are detected, the hook will attempt to fix them and abort the commit so you can review and stage the changes
+- **pre-push**: runs `pnpm test:ci` and `pnpm compile` to make sure tests and type checks pass before pushing
+
+> Running `pnpm install` after cloning automatically enables Husky via the `prepare` script.
+
+Useful commands:
+
+```bash
+# Check formatting
+pnpm format:check
+
+# Format code
+pnpm format
+
+# Lint the project
+pnpm lint
+pnpm lint:fix
+
+# Run tests and type checks
+pnpm test:ci
+pnpm compile
+```
+
 ### Building for Production
 
 ```bash

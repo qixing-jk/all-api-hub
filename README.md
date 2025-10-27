@@ -162,6 +162,34 @@ pnpm test:ci
 
 GitHub Actions 会在每次 Pull Request 上自动运行 `pnpm test:ci` 并上传覆盖率报告。
 
+### Git Hooks
+
+项目使用 [Husky](https://typicode.github.io/husky) 管理 Git Hooks，自动执行基础工作流。
+
+- **pre-commit**：运行 `pnpm format:check` 和 `pnpm lint`
+  - 如果存在格式或 lint 问题，会尝试自动修复，并阻止提交，提示开发者手动确认与暂存变更
+- **pre-push**：在推送前执行 `pnpm test:ci` 和 `pnpm compile`，确保测试与类型检查通过
+
+> 初次克隆仓库后执行 `pnpm install` 会自动触发 Husky 的安装（通过 `prepare` 脚本）。
+
+常用命令：
+
+```bash
+# 手动检查格式
+pnpm format:check
+
+# 自动格式化
+pnpm format
+
+# 运行 eslint
+pnpm lint
+pnpm lint:fix
+
+# 运行测试与类型检查
+pnpm test:ci
+pnpm compile
+```
+
 ### 构建生产版本
 
 ```bash
