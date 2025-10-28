@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import * as apiCommon from "~/services/apiService/common"
+import * as apiUtils from "~/services/apiService/common/utils"
 import { AuthTypeEnum, type CheckInConfig } from "~/types"
 
 vi.mock("i18next", () => ({
@@ -13,33 +14,43 @@ const USER_ID = 42
 const TOKEN = "token-42"
 const AUTH_TYPE = AuthTypeEnum.AccessToken
 
-const defaultUsage = {
-  today_quota_consumption: 12,
-  today_prompt_tokens: 6,
-  today_completion_tokens: 3,
-  today_requests_count: 2
-}
-
-const defaultIncome = {
-  today_income: 8
-}
-
 afterEach(() => {
   vi.restoreAllMocks()
 })
 
-function setupCommonMocks() {
-  vi.spyOn(apiCommon, "fetchAccountQuota").mockResolvedValue(1000)
-  vi.spyOn(apiCommon, "fetchTodayUsage").mockResolvedValue(defaultUsage)
-  vi.spyOn(apiCommon, "fetchTodayIncome").mockResolvedValue(defaultIncome)
-  const checkInSpy = vi.spyOn(apiCommon, "fetchCheckInStatus")
+function mockFetchApiData({
+  quota = 1000,
+  canCheckIn
+}: {
+  quota?: number
+  canCheckIn?: boolean
+} = {}) {
+  return vi
+    .spyOn(apiUtils, "fetchApiData")
+    .mockImplementation(async (params) => {
+      const endpoint = params.endpoint
 
-  return { checkInSpy }
+      if (endpoint.startsWith("/api/user/self")) {
+        return { quota }
+      }
+
+      if (endpoint.startsWith("/api/user/check_in_status")) {
+        return typeof canCheckIn === "boolean"
+          ? { can_check_in: canCheckIn }
+          : {}
+      }
+
+      if (endpoint.startsWith("/api/log/self")) {
+        return { items: [], total: 0 }
+      }
+
+      return {}
+    })
 }
 
 describe("fetchAccountData", () => {
   it("skips check-in status lookup when detection is disabled", async () => {
-    const { checkInSpy } = setupCommonMocks()
+    const fetchApiMock = mockFetchApiData({ quota: 1000 })
     const checkInConfig: CheckInConfig = {
       enableDetection: false,
       isCheckedInToday: false,
@@ -54,19 +65,18 @@ describe("fetchAccountData", () => {
       AUTH_TYPE
     )
 
-    expect(checkInSpy).not.toHaveBeenCalled()
-    expect(result.quota).toBe(1000)
-    expect(result.today_quota_consumption).toBe(
-      defaultUsage.today_quota_consumption
+    const checkInCalls = fetchApiMock.mock.calls.filter(([params]) =>
+      (params as any).endpoint.includes("check_in_status")
     )
-    expect(result.today_income).toBe(defaultIncome.today_income)
+
+    expect(checkInCalls).toHaveLength(0)
+    expect(result.quota).toBe(1000)
     expect(result.checkIn.enableDetection).toBe(false)
     expect(result.checkIn.isCheckedInToday).toBe(false)
   })
 
   it("invokes check-in status lookup when detection is enabled", async () => {
-    const { checkInSpy } = setupCommonMocks()
-    checkInSpy.mockResolvedValueOnce(true)
+    const fetchApiMock = mockFetchApiData({ quota: 2000, canCheckIn: true })
 
     const checkInConfig: CheckInConfig = {
       enableDetection: true,
@@ -82,13 +92,17 @@ describe("fetchAccountData", () => {
       AUTH_TYPE
     )
 
-    expect(checkInSpy).toHaveBeenCalledWith(BASE_URL, USER_ID, TOKEN, AUTH_TYPE)
+    const checkInCalls = fetchApiMock.mock.calls.filter(([params]) =>
+      (params as any).endpoint.includes("check_in_status")
+    )
+
+    expect(checkInCalls).toHaveLength(1)
+    expect(result.quota).toBe(2000)
     expect(result.checkIn.isCheckedInToday).toBe(false)
   })
 
   it("marks the account as checked in when remote status returns false", async () => {
-    const { checkInSpy } = setupCommonMocks()
-    checkInSpy.mockResolvedValueOnce(false)
+    const fetchApiMock = mockFetchApiData({ canCheckIn: false })
 
     const checkInConfig: CheckInConfig = {
       enableDetection: true,
@@ -104,11 +118,16 @@ describe("fetchAccountData", () => {
       AUTH_TYPE
     )
 
+    const checkInCalls = fetchApiMock.mock.calls.filter(([params]) =>
+      (params as any).endpoint.includes("check_in_status")
+    )
+
+    expect(checkInCalls).toHaveLength(1)
     expect(result.checkIn.isCheckedInToday).toBe(true)
   })
 
   it("respects custom check-in URLs and preserves related fields", async () => {
-    const { checkInSpy } = setupCommonMocks()
+    const fetchApiMock = mockFetchApiData({ quota: 1500 })
     const checkInConfig: CheckInConfig = {
       enableDetection: true,
       isCheckedInToday: true,
@@ -126,7 +145,12 @@ describe("fetchAccountData", () => {
       AUTH_TYPE
     )
 
-    expect(checkInSpy).not.toHaveBeenCalled()
+    const checkInCalls = fetchApiMock.mock.calls.filter(([params]) =>
+      (params as any).endpoint.includes("check_in_status")
+    )
+
+    expect(checkInCalls).toHaveLength(0)
+    expect(result.quota).toBe(1500)
     expect(result.checkIn.customCheckInUrl).toBe("https://custom-checkin")
     expect(result.checkIn.customRedeemUrl).toBe("https://custom-redeem")
     expect(result.checkIn.openRedeemWithCheckIn).toBe(false)
