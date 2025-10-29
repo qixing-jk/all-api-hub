@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.1.0](https://github.com/qixing-jk/all-api-hub/compare/v2.0.0...v2.1.0) (2025-10-29)
+
+
+### Features
+
+* **account:** add username search and highlighting support ([c084b33](https://github.com/qixing-jk/all-api-hub/commit/c084b33110ee84aa92b1128b509229c93606bffe))
+
+
+### Bug Fixes
+
+* **empty-results:** add config validation warning for missing API settings ([e4237a5](https://github.com/qixing-jk/all-api-hub/commit/e4237a56e9defd0d667c400cc93d96841f8e04bf))
+* enable i18n support for background service ([3abf0e0](https://github.com/qixing-jk/all-api-hub/commit/3abf0e0cb4238774bc864563401e4a2bb6aeca3c))
+* **new-api:** add config validation helper and i18n error messages ([6faa545](https://github.com/qixing-jk/all-api-hub/commit/6faa545754f1a4f0b576f2c573d938742197dd08))
+
 ## [2.0.0](https://github.com/qixing-jk/all-api-hub/compare/v1.38.0...v2.0.0) (2025-10-29)
 
 
