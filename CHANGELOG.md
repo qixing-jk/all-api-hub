@@ -1,5 +1,45 @@
 # Changelog
 
+## [2.0.0](https://github.com/qixing-jk/all-api-hub/compare/v1.38.0...v2.0.0) (2025-10-29)
+
+
+### Features
+
+* **assets:** migrate to @wxt-dev/auto-icons for centralized icon handling ([4ba680a](https://github.com/qixing-jk/all-api-hub/commit/4ba680a8f5042e0c224a1264b8cfe4412d6d768f))
+* **background:** refactor service initialization logic ([64bc88e](https://github.com/qixing-jk/all-api-hub/commit/64bc88edb07dbc494ba6e24b49b3b45e97dd1387))
+* **devops:** add Husky git hooks for lint, format, test, and type check workflows ([#89](https://github.com/qixing-jk/all-api-hub/issues/89)) ([fbedd5c](https://github.com/qixing-jk/all-api-hub/commit/fbedd5ccb0550dae29ee255827daf8afe58a8325))
+* **i18n:** remove duplicate 'saveFailed' translation key ([956988e](https://github.com/qixing-jk/all-api-hub/commit/956988e8f5fb34319ecb35f418e55ce43c46fa50))
+* **new-api-model-sync:** enhance filter bar with execution statistics ([d564f97](https://github.com/qixing-jk/all-api-hub/commit/d564f9754ef10f8a6af6e68c7bce0785be5281ea))
+* **newApiModelSync:** per-row sync action button on results table ([594ae34](https://github.com/qixing-jk/all-api-hub/commit/594ae34da9a8cbd63b9d424cf4be86e55fb0b583))
+* **options/newApiModelSync:** implement New API模型同步 initial service, background, and settings UI ([fef6091](https://github.com/qixing-jk/all-api-hub/commit/fef609148783daa8ad452a24605b5abd1b546c73))
+* **options:** implement execution & results UI for New API model sync ([557f823](https://github.com/qixing-jk/all-api-hub/commit/557f8233db69e9c94edf4fd2dca9cc79f63e896d))
+* **ui:** update application logo ([45019f8](https://github.com/qixing-jk/all-api-hub/commit/45019f8baa5245b4aaf0eb72c62caa49243c93c3))
+
+
+### Bug Fixes
+
+* correct navigation URL by removing redundant slash ([a91ae4f](https://github.com/qixing-jk/all-api-hub/commit/a91ae4f95a14a166ab12c8f903d579c9681c90f4))
+* **FilterBar:** replace padding class with magnifying glass icon ([dd8e294](https://github.com/qixing-jk/all-api-hub/commit/dd8e2940418973c4a9b7be9415cb1378a1ab50dd))
+* handle undefined `finishedAt` in ResultsTable timestamp display ([0a7fc86](https://github.com/qixing-jk/all-api-hub/commit/0a7fc8613c5428986232dd7ef70fb0fa16533530))
+* **locales:** add missing 'newApiModelSync' translation key ([ab35b0e](https://github.com/qixing-jk/all-api-hub/commit/ab35b0eef4b03d55773a60f2848759d55dd4cf1d))
+* **new-api-model-sync:** row retry only updates target & progress UI ([a12742d](https://github.com/qixing-jk/all-api-hub/commit/a12742d7f1e0dc9f4df7591bdde420def38d2a31))
+* **new-api-model-sync:** update channel list response handling and types ([c7b0fc8](https://github.com/qixing-jk/all-api-hub/commit/c7b0fc871398cc3572f3db03527f92958e31fa00))
+* **NewApiModelSync:** add search icon to input field ([da838f0](https://github.com/qixing-jk/all-api-hub/commit/da838f07748c8a8f75dd4800fc4ab0800f068ea6))
+* **rate-limiter:** add input validation and prevent zero intervals ([822513a](https://github.com/qixing-jk/all-api-hub/commit/822513ae729a1d2c39d34c7ad45f8b63434d5026))
+* **scheduler:** ensure progress cleanup on batch sync errors ([fbaa2b8](https://github.com/qixing-jk/all-api-hub/commit/fbaa2b87561f97918eac2512e3b4a4103746d99d))
+* **ui:** adjust ProgressCard layout spacing and alignment ([1a66a4c](https://github.com/qixing-jk/all-api-hub/commit/1a66a4c36dd7379a698d5b0cc27a0e0c94ed0935))
+
+
+### Performance Improvements
+
+* **pre-commit:** improve auto-fix workflow and error handling ([74a6a91](https://github.com/qixing-jk/all-api-hub/commit/74a6a9189da5c6d81665d9707000965df26c1e38))
+* **pre-commit:** optimize checks with lint-staged integration ([3f586c3](https://github.com/qixing-jk/all-api-hub/commit/3f586c3c73c095b29f8a4fc09aa96fac12a9c0be))
+
+
+### Miscellaneous Chores
+
+* release 2.0.0 ([6d2de2e](https://github.com/qixing-jk/all-api-hub/commit/6d2de2e073b14c9e1d12521e87a1a17ff02cdbd5))
+
 ## [1.38.0](https://github.com/qixing-jk/all-api-hub/compare/v1.37.0...v1.38.0) (2025-10-27)
 
 
