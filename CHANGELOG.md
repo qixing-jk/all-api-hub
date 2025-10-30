@@ -1,5 +1,32 @@
 # Changelog
 
+## [2.2.0](https://github.com/qixing-jk/all-api-hub/compare/v2.1.0...v2.2.0) (2025-10-30)
+
+
+### Features
+
+* add auto check-in result/history UI, adjust default and ux ([c7494d9](https://github.com/qixing-jk/all-api-hub/commit/c7494d9d9c41f85ac49662cd7ce36ad0791a07bf))
+* add document assistant tools for automated translation and maintenance ([f5ee7d1](https://github.com/qixing-jk/all-api-hub/commit/f5ee7d1f381ec5fbfd9943a27248fb70c9ec59a4))
+* **auto-checkin:** implement daily site auto check-in with time window and status UI ([233ba0d](https://github.com/qixing-jk/all-api-hub/commit/233ba0dc56e26639f36ceb00d6a68a434622b422))
+* **ci:** add auto-translate documentation GitHub Actions workflow ([f3574de](https://github.com/qixing-jk/all-api-hub/commit/f3574deca4dabaa8d8a876ee6399e6e5456d8fca))
+* **i18n:** add Japanese language support to docs ([f8811c5](https://github.com/qixing-jk/all-api-hub/commit/f8811c595023daa060c6948f865f6d82b6724bdc))
+* **options:** refactor options basic settings page to use fixed tabs and mobile overflow menu ([17b08fc](https://github.com/qixing-jk/all-api-hub/commit/17b08fc62ec183932b72490c8ac9eb5722f1bb1a))
+* **sidebar:** add conditional rendering for autoCheckin menu item ([7261d02](https://github.com/qixing-jk/all-api-hub/commit/7261d0285d8f093fb401987057ee45ae4d96131c))
+
+
+### Bug Fixes
+
+* **auto-checkin:** handle case sensitivity in check-in status detection ([3ca324a](https://github.com/qixing-jk/all-api-hub/commit/3ca324aa6e1f649ec845059e36f3916139f7a93a))
+* **auto-checkin:** handle edge cases for time window calculation ([e760a28](https://github.com/qixing-jk/all-api-hub/commit/e760a28fc6c725b3276370df42c9b036db08a320))
+* **basic-settings:** ensure accurate mobile tab overflow menu ([35a826a](https://github.com/qixing-jk/all-api-hub/commit/35a826a833a6129b7cc1642fcfa6f62fa034c349))
+* **BasicSettings:** remove redundant provider wrapper and unused import ([fd0f93d](https://github.com/qixing-jk/all-api-hub/commit/fd0f93d36625b49ca22aeab7507a6db5ca1ab2df))
+* **locales:** add missing 'autoCheckin' translation for en and zh_CN UI ([d4cf957](https://github.com/qixing-jk/all-api-hub/commit/d4cf957c9c3414561ab18843599ad3eb7a58396a))
+* **options:** improve tabs overflow menu and language icon ([2eab863](https://github.com/qixing-jk/all-api-hub/commit/2eab863410d580c05c8f9862ef1ebbb823df6813))
+* Remove redundant clearTimeout call. ([ac0a3d4](https://github.com/qixing-jk/all-api-hub/commit/ac0a3d425bf9a878ca258e74398086a26e1c3f18))
+* **StatusCard:** handle invalid date strings in status display ([d514979](https://github.com/qixing-jk/all-api-hub/commit/d514979443b1300622b62702e3fef0399f3f25be))
+* **StatusCard:** wrap content in CardContent for proper component structure ([8ebe279](https://github.com/qixing-jk/all-api-hub/commit/8ebe279ed87c1eb711096df336b89aeb55ddc3e0))
+* **translate:** correct docs directory path to point to nested docs folder ([14a2d26](https://github.com/qixing-jk/all-api-hub/commit/14a2d264080214051dcaebbe78efa0c03d7ab5aa))
+
 ## [2.1.0](https://github.com/qixing-jk/all-api-hub/compare/v2.0.0...v2.1.0) (2025-10-29)
 
 
