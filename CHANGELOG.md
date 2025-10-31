@@ -1,5 +1,27 @@
 # Changelog
 
+## [2.3.0](https://github.com/qixing-jk/all-api-hub/compare/v2.2.1...v2.3.0) (2025-10-31)
+
+
+### Features
+
+* **account-pinning:** implement account pin/unpin and top-priority sorting ([e651b79](https://github.com/qixing-jk/all-api-hub/commit/e651b797d1f03b41075519a59eb50ae16613e07d))
+* **account:** adjust SiteInfo layout and pin button visibility ([5e9303f](https://github.com/qixing-jk/all-api-hub/commit/5e9303fe35722d0190cb18a84cb5c5ad33238694))
+* **account:** align site info components and icons ([88f8224](https://github.com/qixing-jk/all-api-hub/commit/88f8224c03694b7889dbd30009c4d821d02dd67c))
+* convert Tooltip wrapper from span to div for flex alignment ([38c4f66](https://github.com/qixing-jk/all-api-hub/commit/38c4f6679d628d72ea50e306da285c9a94e98565))
+* **eslint:** add Node.js globals configuration ([1e231ba](https://github.com/qixing-jk/all-api-hub/commit/1e231babcc9978b4f668f241a801a7627f39c554))
+* **eslint:** integrate prettier config to avoid style conflicts ([08a484e](https://github.com/qixing-jk/all-api-hub/commit/08a484e16378aa1c28a61ea750f093c29a6d5b5c))
+
+
+### Bug Fixes
+
+* **account-list, migration:** shrink pin icon and fix config migration version ([d1270d8](https://github.com/qixing-jk/all-api-hub/commit/d1270d8747f0f212d6e64d18f65e712cf07ad35c))
+* add missing braces to switch cases for eslint compliance ([dd0fcbf](https://github.com/qixing-jk/all-api-hub/commit/dd0fcbf7024ac14cfcbf015c46ea786dbe0a52b4))
+* **apiService:** correct parameter name and usage in fetchApi ([d0f0805](https://github.com/qixing-jk/all-api-hub/commit/d0f0805ca636d923428d6ad0ddd3e63cfc4d6331))
+* **config-migration:** ensure new criteria default to disabled ([daaf8eb](https://github.com/qixing-jk/all-api-hub/commit/daaf8eb85a8363e35f3d44a77cce550095e2c3ac))
+* **sorting:** prioritize current site criteria in sorting config ([e063863](https://github.com/qixing-jk/all-api-hub/commit/e0638637e4131ab92a5b9d98fd5705766c4075ca))
+* **ui:** style and placement of pin indicator in account list ([338ba1c](https://github.com/qixing-jk/all-api-hub/commit/338ba1c0c0976d379a34bbee6e971f2b441088fb))
+
 ## [2.2.1](https://github.com/qixing-jk/all-api-hub/compare/v2.2.0...v2.2.1) (2025-10-31)
 
 
