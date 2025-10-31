@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.2.1](https://github.com/qixing-jk/all-api-hub/compare/v2.2.0...v2.2.1) (2025-10-31)
+
+
+### Bug Fixes
+
+* **account-dialog:** remove isDetected check for auto-config button ([8d0a248](https://github.com/qixing-jk/all-api-hub/commit/8d0a248ebdabf7f0c55e956d2308d30b6ba9ec7b))
+* **account:** ensure account detection refreshes with display data changes ([c94f71b](https://github.com/qixing-jk/all-api-hub/commit/c94f71b9108318c8d67eadfd954a5ad2674fe088))
+* **account:** remove accessToken requirement for cookie auth type ([20af9c5](https://github.com/qixing-jk/all-api-hub/commit/20af9c5e68f7ab0794535b00ac661f5fe6e9923a))
+
 ## [2.2.0](https://github.com/qixing-jk/all-api-hub/compare/v2.1.0...v2.2.0) (2025-10-30)
 
 
