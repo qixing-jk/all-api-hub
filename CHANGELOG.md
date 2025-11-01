@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.4.1](https://github.com/qixing-jk/all-api-hub/compare/v2.4.0...v2.4.1) (2025-11-01)
+
+
+### Bug Fixes
+
+* **options:** ensure options page opens in new tab ([04ac041](https://github.com/qixing-jk/all-api-hub/commit/04ac04145ebb25c04f17b3c83b9e42d3f95b0c5e))
+
 ## [2.4.0](https://github.com/qixing-jk/all-api-hub/compare/v2.3.0...v2.4.0) (2025-11-01)
 
 
