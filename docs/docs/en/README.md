@@ -6,7 +6,7 @@ heroText: All API Hub - Relay Station Manager
 tagline: An open-source AI relay station account management plugin
 actions:
   - text: Get Started
-    link: /get-started.html # 建议修改为您的实际文档路径，例如 /guide/
+    link: /en/get-started.html # 建议修改为您的实际文档路径，例如 /guide/
     type: primary
     
   - text: Chrome Web Store

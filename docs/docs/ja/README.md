@@ -6,7 +6,7 @@ heroText: All API Hub - リレーハブマネージャー
 tagline: オープンソースのAIリレーハブアカウント管理プラグイン
 actions:
   - text: 使用を開始する
-    link: /get-started.html # 実際のドキュメントパス（例：/guide/）に変更することをお勧めします
+    link: /ja/get-started.html # 実際のドキュメントパス（例：/guide/）に変更することをお勧めします
     type: primary
     
   - text: Chrome ウェブストア
