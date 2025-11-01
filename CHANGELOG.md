@@ -1,5 +1,48 @@
 # Changelog
 
+## [2.4.0](https://github.com/qixing-jk/all-api-hub/compare/v2.3.0...v2.4.0) (2025-11-01)
+
+
+### Features
+
+* **account:** integrate New API channel dialog into auto-import ([f5530d5](https://github.com/qixing-jk/all-api-hub/commit/f5530d56ed3baa9ad57cc8eda69ce3d36d6d8464))
+* **api:** add basic RIX_API support ([0f67e77](https://github.com/qixing-jk/all-api-hub/commit/0f67e7768e769a65832a8c0c6bbf5ebcf1357c85))
+* **channel-management:** unify New API channel creation defaults & introduce dialog UI ([77c0f43](https://github.com/qixing-jk/all-api-hub/commit/77c0f4303196fa1868646424f86113fae406e3dd))
+* **MultiSelect:** support collapsible selected section & improve input UX ([f38aca8](https://github.com/qixing-jk/all-api-hub/commit/f38aca8e85b70d74e47aa2594ff07edf60c03805))
+* **site-detection:** enhance type detection with user ID fallback ([4d35b75](https://github.com/qixing-jk/all-api-hub/commit/4d35b7560b99c87fbe95c923bb69ee5e72ed2f9f))
+* **toaster:** add dismiss button to non-loading toast notifications ([c095aa1](https://github.com/qixing-jk/all-api-hub/commit/c095aa15c39f3c269b59eb32cb8b27b32636774d))
+
+
+### Bug Fixes
+
+* **account:** resolve auto-config errors and token handling ([bf73c34](https://github.com/qixing-jk/all-api-hub/commit/bf73c34f515d6a6871efa1db9462fc262d7013c0))
+* **api:** improve retry mechanism with user feedback ([957424e](https://github.com/qixing-jk/all-api-hub/commit/957424ead6509be745387b307e41a5984c0ae59a))
+* **api:** remove redundant type and fix response handling ([4448b1e](https://github.com/qixing-jk/all-api-hub/commit/4448b1ec3449b4c8d6947edf29d85d8e6815a17d))
+* **api:** restore original logic in fetchApi and _fetchApi functions ([7048aef](https://github.com/qixing-jk/all-api-hub/commit/7048aefbfd3240d1c060abf9e6afb6bc48393fc9))
+* **channel:** add update functionality and improve type safety ([e29b2ff](https://github.com/qixing-jk/all-api-hub/commit/e29b2ff9e94700f34c5f27a8a1906f1da91a946b))
+* **channel:** remove redundant fallback model suggestions ([4d0f5a7](https://github.com/qixing-jk/all-api-hub/commit/4d0f5a7b5500b1f66e0f0587bc358b976ea08501))
+* **channel:** reorganize imports and clean up unused types ([996ccb8](https://github.com/qixing-jk/all-api-hub/commit/996ccb805a0c87ed547046fadafa7c6352e222da))
+* correct translation keys and improve code formatting ([d26e770](https://github.com/qixing-jk/all-api-hub/commit/d26e7705d5b5d66bdea661c0b01c919de2dccb50))
+* **eslint:** move global configs after ignores and spread TS recommended ([e6bf040](https://github.com/qixing-jk/all-api-hub/commit/e6bf040c78802a5defa01fed5b42e09b9b699a68))
+* handle unknown channel type with explicit fallback value ([8dda18c](https://github.com/qixing-jk/all-api-hub/commit/8dda18cfcf6e728e8cf2a017a4f47abefb3807ce))
+* **MultiSelect:** optimize performance with large selections ([6e26250](https://github.com/qixing-jk/all-api-hub/commit/6e262507c1f5bb82b59f28d01b877825388bc327))
+* **MultiSelect:** use official `immediate` prop to open combobox on focus ([58a4359](https://github.com/qixing-jk/all-api-hub/commit/58a43595e1c94461bacded897fc47b590d051660))
+* **newApi:** ensure group string format compatibility with API ([5a5d6c8](https://github.com/qixing-jk/all-api-hub/commit/5a5d6c8a205f54db9842f2c86be1a1ff9977d475))
+* **newApiService:** prevent nested object mutation in channel creation ([fae0d19](https://github.com/qixing-jk/all-api-hub/commit/fae0d19af9862bc9cb79335030422db916824dd6))
+* **newApiService:** wrap model fetches in try-catch to handle errors gracefully ([27e18d4](https://github.com/qixing-jk/all-api-hub/commit/27e18d41671798f7ea5c202a049e6d1dc3b0bf6c))
+* **newapi:** unify and enhance detected account import as channels ([58338d4](https://github.com/qixing-jk/all-api-hub/commit/58338d42ec983cdf3e7ad6b22b568fdde5cac900))
+* prevent stale callback in ChannelDialog success handler ([9c89ce1](https://github.com/qixing-jk/all-api-hub/commit/9c89ce1568c463914843ecef6b30321025902651))
+* remove channel defaults config and update imports ([4cd6850](https://github.com/qixing-jk/all-api-hub/commit/4cd6850f0d734f82e454b3f11569b721c5fc0fdc))
+* remove meaningless disabled check in virtual config ([c8472a4](https://github.com/qixing-jk/all-api-hub/commit/c8472a4cd17d5ae87661e68c506306b30e6f6fc3))
+* replace `fetchUserGroups` with `fetchSiteUserGroups` ([cb540a0](https://github.com/qixing-jk/all-api-hub/commit/cb540a0f839d7e146bed81c5ba590303bc015b98))
+* **siteType:** ensure default config merged with site-specific overrides ([2e808f7](https://github.com/qixing-jk/all-api-hub/commit/2e808f78fd7b42075c463c094cc44c3a54e1b4bb))
+* **toast:** prevent empty message display in toast notifications ([0cb3617](https://github.com/qixing-jk/all-api-hub/commit/0cb36176cb7eabb0a007e66614158ba2df879bf6))
+
+
+### Performance Improvements
+
+* **multi-select:** improve rendering performance with virtual scrolling ([1ab1a5f](https://github.com/qixing-jk/all-api-hub/commit/1ab1a5fc4fe3d910ef2851de6976b67b2f20835d))
+
 ## [2.3.0](https://github.com/qixing-jk/all-api-hub/compare/v2.2.1...v2.3.0) (2025-10-31)
 
 
