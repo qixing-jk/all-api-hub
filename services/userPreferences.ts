@@ -7,6 +7,7 @@ import {
 } from "~/services/configMigration/preferencesMigration"
 import type { BalanceType, CurrencyType, SortField, SortOrder } from "~/types"
 import type { AutoCheckinPreferences } from "~/types/autoCheckin"
+import type { ModelRedirectSettings } from "~/types/modelRedirect"
 import type { SortingPriorityConfig } from "~/types/sorting"
 import type { ThemeMode } from "~/types/theme"
 import { DEFAULT_SORTING_PRIORITY_CONFIG } from "~/utils/sortingPriority"
@@ -56,6 +57,8 @@ export interface UserPreferences {
     }
   }
 
+  modelRedirect?: ModelRedirectSettings
+
   sortingPriorityConfig?: SortingPriorityConfig
   themeMode: ThemeMode
   language?: string // Added language preference
@@ -102,6 +105,12 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
       requestsPerMinute: 20, // 每分钟20个请求
       burst: 5 // 允许5个突发请求
     }
+  },
+  modelRedirect: {
+    enabled: false,
+    standardModels: [],
+    autoGenerateMapping: true,
+    mappings: []
   },
   autoCheckin: {
     globalEnabled: false,
@@ -162,8 +171,27 @@ class UserPreferencesService {
       const {
         newApiModelSync: newSyncConfig,
         autoCheckin: autoCheckinConfig,
+        modelRedirect: modelRedirectConfig,
         ...rest
       } = preferences
+
+      const mergedModelRedirect = modelRedirectConfig
+        ? {
+            ...(currentPreferences.modelRedirect ??
+              DEFAULT_PREFERENCES.modelRedirect!),
+            ...modelRedirectConfig,
+            standardModels:
+              modelRedirectConfig.standardModels !== undefined
+                ? modelRedirectConfig.standardModels
+                : currentPreferences.modelRedirect?.standardModels ??
+                  DEFAULT_PREFERENCES.modelRedirect!.standardModels,
+            mappings:
+              modelRedirectConfig.mappings !== undefined
+                ? modelRedirectConfig.mappings
+                : currentPreferences.modelRedirect?.mappings ??
+                  DEFAULT_PREFERENCES.modelRedirect!.mappings
+          }
+        : currentPreferences.modelRedirect ?? DEFAULT_PREFERENCES.modelRedirect!
 
       const updatedPreferences: UserPreferences = {
         ...currentPreferences,
@@ -182,6 +210,7 @@ class UserPreferencesService {
               ...autoCheckinConfig
             }
           : currentPreferences.autoCheckin,
+        modelRedirect: mergedModelRedirect,
         lastUpdated: Date.now(),
         preferencesVersion: CURRENT_PREFERENCES_VERSION
       }
@@ -399,6 +428,34 @@ class UserPreferencesService {
    */
   async setLanguage(language: string): Promise<boolean> {
     return this.savePreferences({ language })
+  }
+
+  async getModelRedirectSettings(): Promise<ModelRedirectSettings> {
+    const preferences = await this.getPreferences()
+    return (
+      preferences.modelRedirect ?? DEFAULT_PREFERENCES.modelRedirect!
+    )
+  }
+
+  async updateModelRedirectSettings(
+    updates: Partial<ModelRedirectSettings>
+  ): Promise<boolean> {
+    const preferences = await this.getPreferences()
+    const baseSettings =
+      preferences.modelRedirect ?? DEFAULT_PREFERENCES.modelRedirect!
+
+    const nextSettings: ModelRedirectSettings = {
+      ...baseSettings,
+      ...updates,
+      standardModels:
+        updates.standardModels !== undefined
+          ? updates.standardModels
+          : baseSettings.standardModels,
+      mappings:
+        updates.mappings !== undefined ? updates.mappings : baseSettings.mappings
+    }
+
+    return this.savePreferences({ modelRedirect: nextSettings })
   }
 }
 

@@ -12,10 +12,12 @@ import { DATA_TYPE_CONSUMPTION } from "~/constants"
 import { UI_CONSTANTS } from "~/constants/ui"
 import {
   userPreferences,
-  type UserPreferences
+  type UserPreferences,
+  DEFAULT_PREFERENCES
 } from "~/services/userPreferences"
 import type { BalanceType, CurrencyType, SortField, SortOrder } from "~/types"
 import type { AutoCheckinPreferences } from "~/types/autoCheckin"
+import type { ModelRedirectSettings } from "~/types/modelRedirect"
 import type { SortingPriorityConfig } from "~/types/sorting"
 import type { ThemeMode } from "~/types/theme"
 import { sendRuntimeMessage } from "~/utils/browserApi"
@@ -40,6 +42,7 @@ interface UserPreferencesContextType {
   newApiAdminToken: string
   newApiUserId: string
   themeMode: ThemeMode
+  modelRedirect: ModelRedirectSettings
 
   updateActiveTab: (activeTab: BalanceType) => Promise<boolean>
   updateDefaultTab: (activeTab: BalanceType) => Promise<boolean>
@@ -61,6 +64,9 @@ interface UserPreferencesContextType {
   updateThemeMode: (themeMode: ThemeMode) => Promise<boolean>
   updateAutoCheckin: (
     updates: Partial<AutoCheckinPreferences>
+  ) => Promise<boolean>
+  updateModelRedirectSettings: (
+    updates: Partial<ModelRedirectSettings>
   ) => Promise<boolean>
   updateNewApiModelSync: (
     updates: Partial<UserNewApiModelSyncConfig>
@@ -279,6 +285,42 @@ export const UserPreferencesProvider = ({
     []
   )
 
+  const updateModelRedirectSettings = useCallback(
+    async (updates: Partial<ModelRedirectSettings>) => {
+      const success = await userPreferences.updateModelRedirectSettings(updates)
+      if (success) {
+        setPreferences((prev) => {
+          if (!prev) return null
+          const currentModelRedirect =
+            prev.modelRedirect ?? DEFAULT_PREFERENCES.modelRedirect!
+          const updatedModelRedirect: ModelRedirectSettings = {
+            ...currentModelRedirect,
+            ...updates,
+            standardModels:
+              updates.standardModels !== undefined
+                ? updates.standardModels
+                : currentModelRedirect.standardModels,
+            mappings:
+              updates.mappings !== undefined
+                ? updates.mappings
+                : currentModelRedirect.mappings
+          }
+          return {
+            ...prev,
+            modelRedirect: updatedModelRedirect
+          }
+        })
+
+        await sendRuntimeMessage({
+          action: "modelRedirect:updateSettings",
+          settings: updates
+        })
+      }
+      return success
+    },
+    []
+  )
+
   const updateNewApiModelSync = useCallback(
     async (updates: Partial<UserNewApiModelSyncConfig>) => {
       const currentPrefs = await userPreferences.getPreferences()
@@ -342,6 +384,8 @@ export const UserPreferencesProvider = ({
       newApiAdminToken: preferences?.newApiAdminToken || "",
       newApiUserId: preferences?.newApiUserId || "",
       themeMode: preferences?.themeMode || "system",
+      modelRedirect:
+        preferences?.modelRedirect ?? DEFAULT_PREFERENCES.modelRedirect!,
       updateActiveTab,
       updateDefaultTab,
       updateCurrencyType,
@@ -356,6 +400,7 @@ export const UserPreferencesProvider = ({
       updateNewApiUserId,
       updateThemeMode,
       updateAutoCheckin,
+      updateModelRedirectSettings,
       updateNewApiModelSync,
       resetToDefaults,
       loadPreferences
@@ -377,6 +422,7 @@ export const UserPreferencesProvider = ({
       updateNewApiUserId,
       updateThemeMode,
       updateAutoCheckin,
+      updateModelRedirectSettings,
       updateNewApiModelSync,
       resetToDefaults,
       loadPreferences
@@ -411,6 +457,7 @@ export const useUserPreferencesContext = () => {
     !context.updateNewApiUserId ||
     !context.updateThemeMode ||
     !context.updateAutoCheckin ||
+    !context.updateModelRedirectSettings ||
     !context.updateNewApiModelSync ||
     !context.resetToDefaults
   ) {

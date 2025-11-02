@@ -3,11 +3,12 @@
  * Handles version-based migrations for UserPreferences configurations
  */
 
+import type { ModelMappingEntry, ModelRedirectSettings } from "~/types/modelRedirect"
 import type { UserPreferences } from "../userPreferences"
 import { migrateSortingConfig } from "./sortingConfigMigration"
 
 // Current version of the preferences schema
-export const CURRENT_PREFERENCES_VERSION = 2
+export const CURRENT_PREFERENCES_VERSION = 3
 
 /**
  * Migration function type
@@ -54,6 +55,87 @@ const migrations: Record<number, PreferencesMigrationFunction> = {
       ...prefs,
       sortingPriorityConfig: migratedSortingConfig,
       preferencesVersion: 2
+    }
+  },
+
+  // Version 2 -> 3: Introduce model redirect preferences block
+  3: (prefs: UserPreferences): UserPreferences => {
+    console.log(
+      "[PreferencesMigration] Migrating preferences from v2 to v3 (model redirect settings)"
+    )
+
+    const defaultModelRedirect: ModelRedirectSettings = {
+      enabled: false,
+      standardModels: [],
+      autoGenerateMapping: true,
+      mappings: []
+    }
+
+    // Check if modelRedirect already exists
+    if (prefs.modelRedirect) {
+      // Ensure all required fields are present with defaults
+      const existingModelRedirect = prefs.modelRedirect
+      const mergedSettings: ModelRedirectSettings = {
+        enabled:
+          typeof existingModelRedirect.enabled === "boolean"
+            ? existingModelRedirect.enabled
+            : defaultModelRedirect.enabled,
+        standardModels: Array.isArray(existingModelRedirect.standardModels)
+          ? existingModelRedirect.standardModels
+          : defaultModelRedirect.standardModels,
+        autoGenerateMapping:
+          typeof existingModelRedirect.autoGenerateMapping === "boolean"
+            ? existingModelRedirect.autoGenerateMapping
+            : defaultModelRedirect.autoGenerateMapping,
+        mappings: Array.isArray(existingModelRedirect.mappings)
+          ? existingModelRedirect.mappings
+          : defaultModelRedirect.mappings
+      }
+
+      return {
+        ...prefs,
+        modelRedirect: mergedSettings,
+        preferencesVersion: 3
+      }
+    }
+
+    // Check for legacy keys (gracefully handle when absent)
+    const prefsAny = prefs as Record<string, unknown>
+    const legacyEnabled = prefsAny.modelRedirectEnabled
+    const legacyStandardModels = prefsAny.modelRedirectStandardModels
+    const legacyAutoGenerate = prefsAny.modelRedirectAutoGenerate
+    const legacyMappings = prefsAny.modelRedirectMappings
+
+    const migratedSettings: ModelRedirectSettings = {
+      enabled:
+        typeof legacyEnabled === "boolean"
+          ? legacyEnabled
+          : defaultModelRedirect.enabled,
+      standardModels: Array.isArray(legacyStandardModels)
+        ? legacyStandardModels
+        : defaultModelRedirect.standardModels,
+      autoGenerateMapping:
+        typeof legacyAutoGenerate === "boolean"
+          ? legacyAutoGenerate
+          : defaultModelRedirect.autoGenerateMapping,
+      mappings: Array.isArray(legacyMappings)
+        ? (legacyMappings as ModelMappingEntry[])
+        : defaultModelRedirect.mappings
+    }
+
+    // Remove legacy keys if present
+    const {
+      modelRedirectEnabled: _legacyEnabled,
+      modelRedirectStandardModels: _legacyStandardModels,
+      modelRedirectAutoGenerate: _legacyAutoGenerate,
+      modelRedirectMappings: _legacyMappings,
+      ...rest
+    } = prefsAny
+
+    return {
+      ...(rest as UserPreferences),
+      modelRedirect: migratedSettings,
+      preferencesVersion: 3
     }
   }
 }

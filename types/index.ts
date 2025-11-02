@@ -244,3 +244,6 @@ export type {
 
 // New API Types
 export * from "./newapi"
+
+// Model Redirect Types
+export * from "./modelRedirect"
