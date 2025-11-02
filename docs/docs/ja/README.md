@@ -7,7 +7,7 @@ heroText: All API Hub - AIアグリゲーション中継ステーションマネ
 tagline: オープンソースのブラウザ拡張機能。すべてのAIアグリゲーション中継ステーションアカウントを自動で識別・管理し、残高の確認、モデルの同期、キーの管理が可能。クロスプラットフォームとクラウドバックアップに対応。
 actions:
   - text: 使用を開始する
-    link: /get-started.html # 建議修改為您的實際文檔路徑，例如 /guide/
+    link: /jp/get-started.html # 建議修改為您的實際文檔路徑，例如 /guide/
     type: primary
     
   - text: Chrome ウェブストア

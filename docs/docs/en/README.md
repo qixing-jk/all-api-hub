@@ -6,7 +6,7 @@ heroText: All API Hub - AI Aggregation Relay Manager
 tagline: Open-source browser extension that automatically identifies and manages all AI aggregation relay accounts, view balances, synchronize models, manage keys, and supports cross-platform and cloud backup.
 actions:
   - text: Get Started
-    link: /get-started.html # 建议修改为您的实际文档路径，例如 /guide/
+    link: /en/get-started.html # 建议修改为您的实际文档路径，例如 /guide/
     type: primary
     
   - text: Chrome Web Store
