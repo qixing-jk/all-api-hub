@@ -31,7 +31,11 @@
     "testConnection": "Test Connection",
     "testing": "Testing...",
     "testSuccess": "Connection successful",
-    "testFailed": "Connection failed: {{error}}"
+    "testFailed": "Connection failed: {{error}}",
+    "save": "Save Configuration",
+    "saving": "Saving...",
+    "unsavedNotice": "You have unsaved changes.",
+    "validationError": "Invalid configuration: {{error}}"
   },
   "mappingRules": {
     "title": "Mapping Rules",
@@ -48,7 +52,8 @@
     "noModelsSelected": "Please select at least one standard model",
     "featureDisabled": "Model redirect feature is disabled",
     "alreadyGenerating": "Mapping generation already in progress",
-    "aiConfigMissing": "Please configure OpenAI API first",
+    "aiConfigMissing": "Please configure OpenAI API (endpoint, key, model)",
+    "aiConfigUnsaved": "Please save your AI configuration before generating mappings.",
     "apiKeyRequired": "Please enter API key",
     "endpointRequired": "Please enter API endpoint",
     "modelRequired": "Please enter model name"

@@ -1,5 +1,5 @@
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline"
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
@@ -20,10 +20,23 @@ export default function ModelRedirectSettings() {
   const [isRegenerating, setIsRegenerating] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
   const [isTesting, setIsTesting] = useState(false)
+  const [isSavingAIConfig, setIsSavingAIConfig] = useState(false)
   const [showApiKey, setShowApiKey] = useState(false)
 
   const modelRedirect = preferences?.modelRedirect
   const aiConfig = modelRedirect?.aiConfig || DEFAULT_OPENAI_CONFIG
+
+  const [pendingAIConfig, setPendingAIConfig] = useState<OpenAIConfig>({
+    ...aiConfig
+  })
+
+  useEffect(() => {
+    setPendingAIConfig({ ...aiConfig })
+  }, [aiConfig])
+
+  const hasUnsavedAIConfigChanges = useMemo(() => {
+    return JSON.stringify(pendingAIConfig) !== JSON.stringify(aiConfig)
+  }, [pendingAIConfig, aiConfig])
 
   const modelOptions = ALL_PRESET_STANDARD_MODELS.map((model) => ({
     value: model,
@@ -49,48 +62,57 @@ export default function ModelRedirectSettings() {
     }
   }
 
-  const handleAIConfigUpdate = async (updates: Partial<OpenAIConfig>) => {
-    const mergedConfig: OpenAIConfig = {
-      ...aiConfig,
-      ...updates
+  const restoreOpenAIServiceConfig = (config: OpenAIConfig | undefined) => {
+    if (config?.apiKey && config?.endpoint && config?.model) {
+      try {
+        OpenAIService.getInstance(config)
+        return
+      } catch (error) {
+        console.error(
+          "[ModelRedirectSettings] Failed to restore OpenAIService configuration",
+          error
+        )
+      }
     }
+    OpenAIService.resetInstance()
+  }
 
-    const success = await handleUpdate({
-      aiConfig: mergedConfig
-    })
-
-    if (!success) {
-      return
-    }
-
-    if (!mergedConfig.apiKey || !mergedConfig.endpoint || !mergedConfig.model) {
-      OpenAIService.resetInstance()
-      return
-    }
-
+  const handleSaveAIConfig = async () => {
+    setIsSavingAIConfig(true)
     try {
-      OpenAIService.getInstance(mergedConfig)
+      const service = OpenAIService.getInstance(pendingAIConfig)
+      const normalizedConfig = service.getConfig()
+      setPendingAIConfig(normalizedConfig)
+
+      const success = await handleUpdate({
+        aiConfig: normalizedConfig
+      })
+
+      if (!success) {
+        restoreOpenAIServiceConfig(aiConfig)
+        setPendingAIConfig({ ...aiConfig })
+      }
     } catch (error) {
-      console.error(
-        "[ModelRedirectSettings] Failed to refresh OpenAIService configuration",
-        error
-      )
+      const message = error instanceof Error ? error.message : "Unknown error"
+      toast.error(t("aiConfig.validationError", { error: message }))
+    } finally {
+      setIsSavingAIConfig(false)
     }
   }
 
   const handleTestConnection = async () => {
-    if (!aiConfig.apiKey) {
+    if (!pendingAIConfig.apiKey) {
       toast.error(t("messages.apiKeyRequired"))
       return
     }
-    if (!aiConfig.endpoint) {
+    if (!pendingAIConfig.endpoint) {
       toast.error(t("messages.endpointRequired"))
       return
     }
 
     try {
       setIsTesting(true)
-      const service = OpenAIService.getInstance(aiConfig)
+      const service = OpenAIService.getInstance(pendingAIConfig)
       const result = await service.testConnection()
 
       if (result.success) {
@@ -106,11 +128,19 @@ export default function ModelRedirectSettings() {
       )
     } finally {
       setIsTesting(false)
+      if (hasUnsavedAIConfigChanges) {
+        restoreOpenAIServiceConfig(aiConfig)
+      }
     }
   }
 
   const handleRegenerateMapping = async () => {
-    if (!aiConfig.apiKey || !aiConfig.endpoint) {
+    if (hasUnsavedAIConfigChanges) {
+      toast.error(t("messages.aiConfigUnsaved"))
+      return
+    }
+
+    if (!aiConfig.apiKey || !aiConfig.endpoint || !aiConfig.model) {
       toast.error(t("messages.aiConfigMissing"))
       return
     }
@@ -185,12 +215,15 @@ export default function ModelRedirectSettings() {
                 </label>
                 <input
                   type="text"
-                  value={aiConfig.endpoint}
+                  value={pendingAIConfig.endpoint}
                   onChange={(e) =>
-                    handleAIConfigUpdate({ endpoint: e.target.value })
+                    setPendingAIConfig((prev) => ({
+                      ...prev,
+                      endpoint: e.target.value
+                    }))
                   }
                   placeholder={t("aiConfig.endpointPlaceholder")}
-                  disabled={isUpdating}
+                  disabled={isSavingAIConfig}
                   className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-dark-bg-primary dark:text-dark-text-primary"
                 />
                 <p className="mt-1 text-sm text-gray-500 dark:text-dark-text-secondary">
@@ -206,12 +239,15 @@ export default function ModelRedirectSettings() {
                 <div className="relative mt-1">
                   <input
                     type={showApiKey ? "text" : "password"}
-                    value={aiConfig.apiKey}
+                    value={pendingAIConfig.apiKey}
                     onChange={(e) =>
-                      handleAIConfigUpdate({ apiKey: e.target.value })
+                      setPendingAIConfig((prev) => ({
+                        ...prev,
+                        apiKey: e.target.value
+                      }))
                     }
                     placeholder={t("aiConfig.apiKeyPlaceholder")}
-                    disabled={isUpdating}
+                    disabled={isSavingAIConfig}
                     className="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 pr-10 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-dark-bg-primary dark:text-dark-text-primary"
                   />
                   <button
@@ -237,12 +273,15 @@ export default function ModelRedirectSettings() {
                 </label>
                 <input
                   type="text"
-                  value={aiConfig.model}
+                  value={pendingAIConfig.model}
                   onChange={(e) =>
-                    handleAIConfigUpdate({ model: e.target.value })
+                    setPendingAIConfig((prev) => ({
+                      ...prev,
+                      model: e.target.value
+                    }))
                   }
                   placeholder={t("aiConfig.modelPlaceholder")}
-                  disabled={isUpdating}
+                  disabled={isSavingAIConfig}
                   className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-dark-bg-primary dark:text-dark-text-primary"
                 />
                 <p className="mt-1 text-sm text-gray-500 dark:text-dark-text-secondary">
@@ -256,15 +295,17 @@ export default function ModelRedirectSettings() {
                   {t("aiConfig.customPrompt")}
                 </label>
                 <textarea
-                  value={aiConfig.customPrompt || ""}
-                  onChange={(e) =>
-                    handleAIConfigUpdate({
-                      customPrompt: e.target.value || undefined
-                    })
-                  }
+                  value={pendingAIConfig.customPrompt ?? ""}
+                  onChange={(e) => {
+                    const value = e.target.value
+                    setPendingAIConfig((prev) => ({
+                      ...prev,
+                      customPrompt: value.length > 0 ? value : undefined
+                    }))
+                  }}
                   placeholder={t("aiConfig.customPromptPlaceholder")}
-                  disabled={isUpdating}
                   rows={4}
+                  disabled={isSavingAIConfig}
                   className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-dark-bg-primary dark:text-dark-text-primary"
                 />
                 <p className="mt-1 text-sm text-gray-500 dark:text-dark-text-secondary">
@@ -272,17 +313,38 @@ export default function ModelRedirectSettings() {
                 </p>
               </div>
 
-              {/* Test Connection Button */}
-              <div>
+              {/* Actions */}
+              <div className="flex flex-wrap items-center gap-3">
                 <button
                   type="button"
                   onClick={handleTestConnection}
-                  disabled={isTesting || !aiConfig.apiKey || !aiConfig.endpoint}
-                  className="inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-dark-bg-secondary dark:text-dark-text-primary dark:hover:bg-dark-bg-tertiary">
+                  disabled={
+                    isTesting ||
+                    !pendingAIConfig.apiKey ||
+                    !pendingAIConfig.endpoint ||
+                    !pendingAIConfig.model
+                  }
+                  className="inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-dark-bg-secondary dark:text-dark-text-primary dark:hover:bg-dark-bg-tertiary"
+                >
                   {isTesting
                     ? t("aiConfig.testing")
                     : t("aiConfig.testConnection")}
                 </button>
+                <button
+                  type="button"
+                  onClick={handleSaveAIConfig}
+                  disabled={
+                    !hasUnsavedAIConfigChanges || isUpdating || isSavingAIConfig
+                  }
+                  className="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600"
+                >
+                  {isSavingAIConfig ? t("aiConfig.saving") : t("aiConfig.save")}
+                </button>
+                {hasUnsavedAIConfigChanges && (
+                  <span className="text-xs text-amber-600 dark:text-amber-400">
+                    {t("aiConfig.unsavedNotice")}
+                  </span>
+                )}
               </div>
             </div>
 
@@ -331,7 +393,8 @@ export default function ModelRedirectSettings() {
                   isRegenerating ||
                   !aiConfig.apiKey ||
                   !aiConfig.endpoint ||
-                  !aiConfig.model
+                  !aiConfig.model ||
+                  hasUnsavedAIConfigChanges
                 }
                 onClick={handleRegenerateMapping}
                 className="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600">

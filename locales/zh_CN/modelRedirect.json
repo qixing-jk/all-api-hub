@@ -31,7 +31,11 @@
     "testConnection": "测试连接",
     "testing": "正在测试…",
     "testSuccess": "连接成功",
-    "testFailed": "连接失败：{{error}}"
+    "testFailed": "连接失败：{{error}}",
+    "save": "保存配置",
+    "saving": "正在保存…",
+    "unsavedNotice": "存在未保存的修改",
+    "validationError": "配置无效：{{error}}"
   },
   "mappingRules": {
     "title": "映射规则说明",
@@ -48,7 +52,8 @@
     "noModelsSelected": "请至少选择一个标准模型",
     "featureDisabled": "模型重定向功能未启用",
     "alreadyGenerating": "映射生成正在进行中",
-    "aiConfigMissing": "请先配置 OpenAI API",
+    "aiConfigMissing": "请先完整配置 OpenAI API（端点、密钥、模型）",
+    "aiConfigUnsaved": "请先保存 AI 配置，然后再生成映射",
     "apiKeyRequired": "请输入 API 密钥",
     "endpointRequired": "请输入 API 端点",
     "modelRequired": "请输入模型名称"
