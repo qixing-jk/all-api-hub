@@ -12,6 +12,7 @@ import {
   ALL_PRESET_STANDARD_MODELS,
   DEFAULT_OPENAI_CONFIG
 } from "~/types/modelRedirect"
+import type { OpenAIConfig } from "~/types/modelRedirect"
 
 export default function ModelRedirectSettings() {
   const { t } = useTranslation("modelRedirect")
@@ -30,29 +31,51 @@ export default function ModelRedirectSettings() {
   }))
 
   const handleUpdate = async (updates: Record<string, unknown>) => {
+    setIsUpdating(true)
     try {
-      setIsUpdating(true)
       const success = await updateModelRedirect(updates)
       if (!success) {
         toast.error(t("messages.updateFailed"))
-        return
+        return false
       }
       toast.success(t("messages.updateSuccess"))
+      return true
     } catch (error) {
       console.error("[ModelRedirectSettings] Failed to update preferences", error)
       toast.error(t("messages.updateFailed"))
+      return false
     } finally {
       setIsUpdating(false)
     }
   }
 
-  const handleAIConfigUpdate = async (updates: Record<string, unknown>) => {
-    await handleUpdate({
-      aiConfig: {
-        ...aiConfig,
-        ...updates
-      }
+  const handleAIConfigUpdate = async (updates: Partial<OpenAIConfig>) => {
+    const mergedConfig: OpenAIConfig = {
+      ...aiConfig,
+      ...updates
+    }
+
+    const success = await handleUpdate({
+      aiConfig: mergedConfig
     })
+
+    if (!success) {
+      return
+    }
+
+    if (!mergedConfig.apiKey || !mergedConfig.endpoint || !mergedConfig.model) {
+      OpenAIService.resetInstance()
+      return
+    }
+
+    try {
+      OpenAIService.getInstance(mergedConfig)
+    } catch (error) {
+      console.error(
+        "[ModelRedirectSettings] Failed to refresh OpenAIService configuration",
+        error
+      )
+    }
   }
 
   const handleTestConnection = async () => {
