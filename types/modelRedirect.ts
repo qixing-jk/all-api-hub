@@ -3,6 +3,14 @@
  */
 
 /**
+ * Rate limiting configuration for OpenAI API
+ */
+export interface OpenAIRateLimit {
+  requestsPerMinute: number // Maximum requests per minute
+  burst: number // Maximum burst size (token bucket capacity)
+}
+
+/**
  * OpenAI API configuration for AI-powered model mapping
  */
 export interface OpenAIConfig {
@@ -10,6 +18,7 @@ export interface OpenAIConfig {
   apiKey: string // OpenAI API key
   model: string // Model name (e.g., gpt-4o, gpt-4-turbo)
   customPrompt?: string // Optional custom prompt template
+  rateLimit?: OpenAIRateLimit // Rate limiting configuration
 }
 
 /**
@@ -23,13 +32,23 @@ export interface ModelRedirectPreferences {
 }
 
 /**
+ * Default rate limiting configuration for OpenAI API
+ * Conservative defaults to avoid hitting rate limits
+ */
+export const DEFAULT_OPENAI_RATE_LIMIT: OpenAIRateLimit = {
+  requestsPerMinute: 20, // 20 requests per minute
+  burst: 5 // Allow burst of 5 requests
+}
+
+/**
  * Default OpenAI configuration
  */
 export const DEFAULT_OPENAI_CONFIG: OpenAIConfig = {
   endpoint: "https://api.openai.com/v1",
   apiKey: "",
   model: "gpt-4o",
-  customPrompt: undefined
+  customPrompt: undefined,
+  rateLimit: { ...DEFAULT_OPENAI_RATE_LIMIT }
 }
 
 /**

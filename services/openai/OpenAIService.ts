@@ -4,6 +4,8 @@
  */
 
 import type { OpenAIConfig } from "~/types/modelRedirect"
+import { DEFAULT_OPENAI_RATE_LIMIT } from "~/types/modelRedirect"
+import { RateLimiter } from "~/utils/RateLimiter"
 
 /**
  * Default prompt template for model mapping generation
@@ -103,9 +105,15 @@ export class OpenAIService {
   private static instance: OpenAIService | null = null
 
   private config: NormalizedOpenAIConfig
+  private rateLimiter: RateLimiter
 
   private constructor(config: OpenAIConfig) {
     this.config = OpenAIService.validateAndNormalizeConfig(config)
+    const rateLimit = config.rateLimit || DEFAULT_OPENAI_RATE_LIMIT
+    this.rateLimiter = new RateLimiter(
+      rateLimit.requestsPerMinute,
+      rateLimit.burst
+    )
   }
 
   /**
@@ -149,6 +157,11 @@ export class OpenAIService {
    */
   updateConfig(config: OpenAIConfig): void {
     this.config = OpenAIService.validateAndNormalizeConfig(config)
+    const rateLimit = config.rateLimit || DEFAULT_OPENAI_RATE_LIMIT
+    this.rateLimiter = new RateLimiter(
+      rateLimit.requestsPerMinute,
+      rateLimit.burst
+    )
   }
 
   /**
@@ -244,6 +257,8 @@ export class OpenAIService {
    * Call OpenAI API with structured outputs
    */
   private async callOpenAI(prompt: string): Promise<OpenAIResponse> {
+    await this.rateLimiter.acquire()
+
     const endpoint = `${this.config.endpoint}/chat/completions`
 
     const requestBody = {

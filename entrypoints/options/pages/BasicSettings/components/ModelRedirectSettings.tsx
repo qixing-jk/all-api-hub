@@ -306,6 +306,89 @@ export default function ModelRedirectSettings() {
                 </p>
               </div>
 
+              {/* Rate Limiting */}
+              <details className="rounded-lg border border-gray-200 p-3 dark:border-gray-600">
+                <summary className="cursor-pointer text-sm font-medium text-gray-700 dark:text-dark-text-primary">
+                  {t("aiConfig.rateLimit")}
+                </summary>
+                <div className="mt-3 space-y-4">
+                  <p className="text-xs text-gray-500 dark:text-dark-text-secondary">
+                    {t("aiConfig.rateLimitDesc")}
+                  </p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-primary">
+                        {t("aiConfig.requestsPerMinute")}
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="1000"
+                        value={localAIConfig.rateLimit?.requestsPerMinute ?? 20}
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value) || 20
+                          setLocalAIConfig((prev) => ({
+                            ...prev,
+                            rateLimit: {
+                              ...prev.rateLimit,
+                              requestsPerMinute: value,
+                              burst: prev.rateLimit?.burst ?? 5
+                            }
+                          }))
+                        }}
+                        onBlur={(e) => {
+                          const value = parseInt(e.target.value) || 20
+                          saveAIConfigField("rateLimit", {
+                            requestsPerMinute: value,
+                            burst: localAIConfig.rateLimit?.burst ?? 5
+                          } as any)
+                        }}
+                        disabled={isUpdating}
+                        className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-dark-bg-primary dark:text-dark-text-primary"
+                      />
+                      <p className="mt-1 text-xs text-gray-500 dark:text-dark-text-secondary">
+                        {t("aiConfig.requestsPerMinuteDesc")}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-dark-text-primary">
+                        {t("aiConfig.burst")}
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="100"
+                        value={localAIConfig.rateLimit?.burst ?? 5}
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value) || 5
+                          setLocalAIConfig((prev) => ({
+                            ...prev,
+                            rateLimit: {
+                              requestsPerMinute:
+                                prev.rateLimit?.requestsPerMinute ?? 20,
+                              burst: value
+                            }
+                          }))
+                        }}
+                        onBlur={(e) => {
+                          const value = parseInt(e.target.value) || 5
+                          saveAIConfigField("rateLimit", {
+                            requestsPerMinute:
+                              localAIConfig.rateLimit?.requestsPerMinute ?? 20,
+                            burst: value
+                          } as any)
+                        }}
+                        disabled={isUpdating}
+                        className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-dark-bg-primary dark:text-dark-text-primary"
+                      />
+                      <p className="mt-1 text-xs text-gray-500 dark:text-dark-text-secondary">
+                        {t("aiConfig.burstDesc")}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </details>
+
               {/* Test Connection Button */}
               <div>
                 <button
