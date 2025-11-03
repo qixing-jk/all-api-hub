@@ -1,7 +1,10 @@
+import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline"
+import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
   Button,
+  IconButton,
   Input,
   Label,
   Modal,
@@ -34,6 +37,7 @@ export function ChannelDialog({
   initialGroups
 }: ChannelDialogProps) {
   const { t } = useTranslation(["channelDialog", "common"])
+  const [showKey, setShowKey] = useState(false)
 
   const {
     formData,
@@ -56,6 +60,25 @@ export function ChannelDialog({
     initialModels,
     initialGroups
   })
+
+  const handleSelectAllModels = () => {
+    updateField(
+      "models",
+      availableModels.map((m) => m.value)
+    )
+  }
+
+  const handleInverseModels = () => {
+    const currentModels = new Set(formData.models)
+    const invertedModels = availableModels
+      .map((m) => m.value)
+      .filter((value) => !currentModels.has(value))
+    updateField("models", invertedModels)
+  }
+
+  const handleDeselectAllModels = () => {
+    updateField("models", [])
+  }
 
   const header = (
     <div>
@@ -153,12 +176,31 @@ export function ChannelDialog({
           </Label>
           <Input
             id="channel-key"
-            type="password"
+            type={showKey ? "text" : "password"}
             value={formData.key}
             onChange={(e) => updateField("key", e.target.value)}
             placeholder={t("channelDialog:fields.key.placeholder")}
             disabled={isSaving}
             required
+            rightIcon={
+              <IconButton
+                variant="ghost"
+                size="xs"
+                onClick={() => setShowKey(!showKey)}
+                aria-label={
+                  showKey
+                    ? t("channelDialog:actions.hideKey", "Hide Key")
+                    : t("channelDialog:actions.showKey", "Show Key")
+                }
+                type="button"
+                disabled={isSaving}>
+                {showKey ? (
+                  <EyeSlashIcon className="h-4 w-4" />
+                ) : (
+                  <EyeIcon className="h-4 w-4" />
+                )}
+              </IconButton>
+            }
           />
         </div>
 
@@ -180,8 +222,44 @@ export function ChannelDialog({
 
         {/* Models */}
         <div>
+          <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <Label className="mb-0">
+              {t("channelDialog:fields.models.label", "Models")}
+            </Label>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSelectAllModels}
+                disabled={
+                  isSaving || isLoadingModels || availableModels.length === 0
+                }
+                type="button">
+                {t("channelDialog:actions.selectAll", "Select All")}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleInverseModels}
+                disabled={
+                  isSaving || isLoadingModels || availableModels.length === 0
+                }
+                type="button">
+                {t("channelDialog:actions.inverse", "Inverse")}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDeselectAllModels}
+                disabled={
+                  isSaving || isLoadingModels || formData.models.length === 0
+                }
+                type="button">
+                {t("channelDialog:actions.deselectAll", "Deselect All")}
+              </Button>
+            </div>
+          </div>
           <MultiSelect
-            label={t("channelDialog:fields.models.label", "Models")}
             options={availableModels}
             selected={formData.models}
             onChange={(models) => updateField("models", models)}
@@ -284,7 +362,10 @@ export function ChannelDialog({
                 id="channel-status"
                 value={formData.status}
                 onChange={(e) =>
-                  updateField("status", parseInt(e.target.value))
+                  updateField(
+                    "status",
+                    parseInt(e.target.value) as CHANNEL_STATUS
+                  )
                 }
                 disabled={isSaving}>
                 <option value={CHANNEL_STATUS.Enable}>

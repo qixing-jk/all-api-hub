@@ -9,7 +9,12 @@
   },
   "actions": {
     "create": "Create Channel",
-    "update": "Save Changes"
+    "update": "Save Changes",
+    "showKey": "Show Key",
+    "hideKey": "Hide Key",
+    "selectAll": "Select All",
+    "inverse": "Inverse",
+    "deselectAll": "Deselect All"
   },
   "messages": {
     "createSuccess": "Channel created successfully.",

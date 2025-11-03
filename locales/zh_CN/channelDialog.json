@@ -9,7 +9,12 @@
   },
   "actions": {
     "create": "创建渠道",
-    "update": "保存更改"
+    "update": "保存更改",
+    "showKey": "显示密钥",
+    "hideKey": "隐藏密钥",
+    "selectAll": "全选",
+    "inverse": "反选",
+    "deselectAll": "全不选"
   },
   "messages": {
     "createSuccess": "渠道创建成功。",
