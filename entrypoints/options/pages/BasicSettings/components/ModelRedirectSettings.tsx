@@ -1,5 +1,5 @@
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
@@ -25,6 +25,14 @@ export default function ModelRedirectSettings() {
   const modelRedirect = preferences?.modelRedirect
   const aiConfig = modelRedirect?.aiConfig || DEFAULT_OPENAI_CONFIG
 
+  const [localAIConfig, setLocalAIConfig] = useState<OpenAIConfig>({
+    ...aiConfig
+  })
+
+  useEffect(() => {
+    setLocalAIConfig({ ...aiConfig })
+  }, [aiConfig])
+
   const modelOptions = ALL_PRESET_STANDARD_MODELS.map((model) => ({
     value: model,
     label: model
@@ -49,10 +57,10 @@ export default function ModelRedirectSettings() {
     }
   }
 
-  const handleAIConfigUpdate = async (updates: Partial<OpenAIConfig>) => {
+  const saveAIConfigField = async (field: keyof OpenAIConfig, value: string | undefined) => {
     const mergedConfig: OpenAIConfig = {
       ...aiConfig,
-      ...updates
+      [field]: value
     }
 
     const success = await handleUpdate({
@@ -60,6 +68,7 @@ export default function ModelRedirectSettings() {
     })
 
     if (!success) {
+      setLocalAIConfig({ ...aiConfig })
       return
     }
 
@@ -79,18 +88,22 @@ export default function ModelRedirectSettings() {
   }
 
   const handleTestConnection = async () => {
-    if (!aiConfig.apiKey) {
+    if (!localAIConfig.apiKey) {
       toast.error(t("messages.apiKeyRequired"))
       return
     }
-    if (!aiConfig.endpoint) {
+    if (!localAIConfig.endpoint) {
       toast.error(t("messages.endpointRequired"))
+      return
+    }
+    if (!localAIConfig.model) {
+      toast.error(t("messages.modelRequired"))
       return
     }
 
     try {
       setIsTesting(true)
-      const service = OpenAIService.getInstance(aiConfig)
+      const service = OpenAIService.getInstance(localAIConfig)
       const result = await service.testConnection()
 
       if (result.success) {
@@ -106,11 +119,12 @@ export default function ModelRedirectSettings() {
       )
     } finally {
       setIsTesting(false)
+      OpenAIService.getInstance(aiConfig)
     }
   }
 
   const handleRegenerateMapping = async () => {
-    if (!aiConfig.apiKey || !aiConfig.endpoint) {
+    if (!aiConfig.apiKey || !aiConfig.endpoint || !aiConfig.model) {
       toast.error(t("messages.aiConfigMissing"))
       return
     }
@@ -185,10 +199,14 @@ export default function ModelRedirectSettings() {
                 </label>
                 <input
                   type="text"
-                  value={aiConfig.endpoint}
+                  value={localAIConfig.endpoint}
                   onChange={(e) =>
-                    handleAIConfigUpdate({ endpoint: e.target.value })
+                    setLocalAIConfig((prev) => ({
+                      ...prev,
+                      endpoint: e.target.value
+                    }))
                   }
+                  onBlur={(e) => saveAIConfigField("endpoint", e.target.value)}
                   placeholder={t("aiConfig.endpointPlaceholder")}
                   disabled={isUpdating}
                   className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-dark-bg-primary dark:text-dark-text-primary"
@@ -206,10 +224,14 @@ export default function ModelRedirectSettings() {
                 <div className="relative mt-1">
                   <input
                     type={showApiKey ? "text" : "password"}
-                    value={aiConfig.apiKey}
+                    value={localAIConfig.apiKey}
                     onChange={(e) =>
-                      handleAIConfigUpdate({ apiKey: e.target.value })
+                      setLocalAIConfig((prev) => ({
+                        ...prev,
+                        apiKey: e.target.value
+                      }))
                     }
+                    onBlur={(e) => saveAIConfigField("apiKey", e.target.value)}
                     placeholder={t("aiConfig.apiKeyPlaceholder")}
                     disabled={isUpdating}
                     className="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 pr-10 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-dark-bg-primary dark:text-dark-text-primary"
@@ -237,10 +259,14 @@ export default function ModelRedirectSettings() {
                 </label>
                 <input
                   type="text"
-                  value={aiConfig.model}
+                  value={localAIConfig.model}
                   onChange={(e) =>
-                    handleAIConfigUpdate({ model: e.target.value })
+                    setLocalAIConfig((prev) => ({
+                      ...prev,
+                      model: e.target.value
+                    }))
                   }
+                  onBlur={(e) => saveAIConfigField("model", e.target.value)}
                   placeholder={t("aiConfig.modelPlaceholder")}
                   disabled={isUpdating}
                   className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-dark-bg-primary dark:text-dark-text-primary"
@@ -256,11 +282,19 @@ export default function ModelRedirectSettings() {
                   {t("aiConfig.customPrompt")}
                 </label>
                 <textarea
-                  value={aiConfig.customPrompt || ""}
-                  onChange={(e) =>
-                    handleAIConfigUpdate({
-                      customPrompt: e.target.value || undefined
-                    })
+                  value={localAIConfig.customPrompt || ""}
+                  onChange={(e) => {
+                    const value = e.target.value
+                    setLocalAIConfig((prev) => ({
+                      ...prev,
+                      customPrompt: value.length > 0 ? value : undefined
+                    }))
+                  }}
+                  onBlur={(e) =>
+                    saveAIConfigField(
+                      "customPrompt",
+                      e.target.value || undefined
+                    )
                   }
                   placeholder={t("aiConfig.customPromptPlaceholder")}
                   disabled={isUpdating}
@@ -277,7 +311,12 @@ export default function ModelRedirectSettings() {
                 <button
                   type="button"
                   onClick={handleTestConnection}
-                  disabled={isTesting || !aiConfig.apiKey || !aiConfig.endpoint}
+                  disabled={
+                    isTesting ||
+                    !localAIConfig.apiKey ||
+                    !localAIConfig.endpoint ||
+                    !localAIConfig.model
+                  }
                   className="inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-dark-bg-secondary dark:text-dark-text-primary dark:hover:bg-dark-bg-tertiary">
                   {isTesting
                     ? t("aiConfig.testing")
