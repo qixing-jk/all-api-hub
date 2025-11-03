@@ -67,7 +67,7 @@ export default function ModelRedirectSettings() {
 
     try {
       setIsTesting(true)
-      const service = new OpenAIService(aiConfig)
+      const service = OpenAIService.getInstance(aiConfig)
       const result = await service.testConnection()
 
       if (result.success) {

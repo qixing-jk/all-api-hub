@@ -74,11 +74,33 @@ export class ModelRedirectService {
         }
       }
 
+      if (!modelRedirectPrefs.aiConfig?.model) {
+        return {
+          success: false,
+          updatedChannels: 0,
+          errors: ["OpenAI model is not configured"],
+          message: "OpenAI model is not configured"
+        }
+      }
+
       const standardModels = modelRedirectPrefs.standardModels.length
         ? modelRedirectPrefs.standardModels
         : ALL_PRESET_STANDARD_MODELS
 
-      const openAIService = new OpenAIService(modelRedirectPrefs.aiConfig)
+      let openAIService: OpenAIService
+      try {
+        openAIService = OpenAIService.getInstance(modelRedirectPrefs.aiConfig)
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Failed to initialize OpenAIService"
+        return {
+          success: false,
+          updatedChannels: 0,
+          errors: [message],
+          message
+        }
+      }
+
       const newApiService = new NewApiModelSyncService(
         prefs.newApiBaseUrl,
         prefs.newApiAdminToken,

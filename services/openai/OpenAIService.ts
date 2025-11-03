@@ -90,13 +90,65 @@ export interface ModelMappingResult {
 }
 
 /**
+ * Normalized OpenAI configuration used internally by the service
+ */
+type NormalizedOpenAIConfig = Required<
+  Pick<OpenAIConfig, "endpoint" | "apiKey" | "model">
+> & { customPrompt?: string }
+
+/**
  * OpenAI Service for generating model mappings
  */
 export class OpenAIService {
-  private config: OpenAIConfig
+  private static instance: OpenAIService | null = null
 
-  constructor(config: OpenAIConfig) {
-    this.config = config
+  private config: NormalizedOpenAIConfig
+
+  private constructor(config: OpenAIConfig) {
+    this.config = OpenAIService.validateAndNormalizeConfig(config)
+  }
+
+  /**
+   * Retrieve a global shared instance of the service.
+   * Passing a configuration will initialize or refresh the underlying instance.
+   */
+  static getInstance(config?: OpenAIConfig): OpenAIService {
+    if (!OpenAIService.instance) {
+      if (!config) {
+        throw new Error(
+          "OpenAIService has not been initialized. Provide configuration on first use."
+        )
+      }
+      OpenAIService.instance = new OpenAIService(config)
+      return OpenAIService.instance
+    }
+
+    if (config) {
+      OpenAIService.instance.updateConfig(config)
+    }
+
+    return OpenAIService.instance
+  }
+
+  /**
+   * Reset the singleton instance (mainly for testing or forcing reinitialization).
+   */
+  static resetInstance(): void {
+    OpenAIService.instance = null
+  }
+
+  /**
+   * Expose the current configuration (as a shallow clone to avoid external mutation).
+   */
+  getConfig(): OpenAIConfig {
+    return { ...this.config }
+  }
+
+  /**
+   * Update configuration for the current instance.
+   */
+  updateConfig(config: OpenAIConfig): void {
+    this.config = OpenAIService.validateAndNormalizeConfig(config)
   }
 
   /**
@@ -104,15 +156,6 @@ export class OpenAIService {
    */
   async testConnection(): Promise<{ success: boolean; error?: string }> {
     try {
-      if (!this.config.apiKey) {
-        return { success: false, error: "API key is required" }
-      }
-
-      if (!this.config.endpoint) {
-        return { success: false, error: "API endpoint is required" }
-      }
-
-      // Make a simple request to test the connection
       const response = await fetch(`${this.config.endpoint}/models`, {
         method: "GET",
         headers: {
@@ -145,27 +188,36 @@ export class OpenAIService {
     standardModels: string[],
     availableModels: string[]
   ): Promise<ModelMappingResult> {
-    if (!this.config.apiKey) {
-      throw new Error("OpenAI API key is not configured")
-    }
+    const sanitizedStandardModels = this.sanitizeModelList(
+      standardModels,
+      "standardModels"
+    )
+    const sanitizedAvailableModels = this.sanitizeModelList(
+      availableModels,
+      "availableModels"
+    )
 
-    if (!this.config.endpoint) {
-      throw new Error("OpenAI API endpoint is not configured")
-    }
-
-    if (standardModels.length === 0) {
+    if (sanitizedStandardModels.length === 0) {
       return { mappings: {} }
     }
 
-    if (availableModels.length === 0) {
+    if (sanitizedAvailableModels.length === 0) {
       return { mappings: {} }
     }
 
-    const prompt = this.buildPrompt(standardModels, availableModels)
+    const modelsToMap = sanitizedStandardModels.filter(
+      (model) => !sanitizedAvailableModels.includes(model)
+    )
+
+    if (modelsToMap.length === 0) {
+      return { mappings: {} }
+    }
+
+    const prompt = this.buildPrompt(modelsToMap, sanitizedAvailableModels)
 
     try {
       const response = await this.callOpenAI(prompt)
-      return this.parseResponse(response, availableModels)
+      return this.parseResponse(response, sanitizedAvailableModels)
     } catch (error) {
       console.error("[OpenAIService] Failed to generate mapping:", error)
       throw new Error(
@@ -251,29 +303,45 @@ export class OpenAIService {
       throw new Error("Empty response from OpenAI API")
     }
 
-    let parsedContent: { mappings: Record<string, string> }
+    let parsedContent: { mappings: Record<string, unknown> }
     try {
       parsedContent = JSON.parse(content)
     } catch (error) {
       throw new Error(`Failed to parse OpenAI response as JSON: ${content}`)
     }
 
-    if (!parsedContent.mappings || typeof parsedContent.mappings !== "object") {
+    if (
+      !parsedContent.mappings ||
+      typeof parsedContent.mappings !== "object" ||
+      Array.isArray(parsedContent.mappings)
+    ) {
       throw new Error("Invalid response format: missing or invalid 'mappings'")
     }
 
-    // Validate that all mapped models exist in available models
     const validatedMappings: Record<string, string> = {}
     const availableSet = new Set(availableModels)
 
     for (const [standardModel, targetModel] of Object.entries(
       parsedContent.mappings
     )) {
-      if (availableSet.has(targetModel)) {
-        validatedMappings[standardModel] = targetModel
+      if (typeof standardModel !== "string" || !standardModel.trim()) {
+        continue
+      }
+
+      if (typeof targetModel !== "string") {
+        continue
+      }
+
+      const trimmedTarget = targetModel.trim()
+      if (!trimmedTarget) {
+        continue
+      }
+
+      if (availableSet.has(trimmedTarget)) {
+        validatedMappings[standardModel.trim()] = trimmedTarget
       } else {
         console.warn(
-          `[OpenAIService] Skipping invalid mapping: ${standardModel} -> ${targetModel} (target not in available models)`
+          `[OpenAIService] Skipping invalid mapping: ${standardModel} -> ${trimmedTarget} (target not in available models)`
         )
       }
     }
@@ -281,6 +349,72 @@ export class OpenAIService {
     return {
       mappings: validatedMappings,
       usage: response.usage
+    }
+  }
+
+  /**
+   * Normalize and validate model lists to ensure they contain usable strings
+   */
+  private sanitizeModelList(models: unknown[], label: string): string[] {
+    if (!Array.isArray(models)) {
+      throw new Error(`Invalid ${label}: expected an array of strings`)
+    }
+
+    const sanitized = models
+      .map((model) => (typeof model === "string" ? model.trim() : ""))
+      .filter((model) => model.length > 0)
+
+    return Array.from(new Set(sanitized))
+  }
+
+  /**
+   * Validate and normalize OpenAI configuration to enforce invariants
+   */
+  private static validateAndNormalizeConfig(
+    config: OpenAIConfig
+  ): NormalizedOpenAIConfig {
+    if (!config) {
+      throw new Error("OpenAI configuration is required")
+    }
+
+    const endpoint = (config.endpoint ?? "").trim()
+    if (!endpoint) {
+      throw new Error("OpenAI API endpoint is required")
+    }
+
+    let endpointUrl: URL
+    try {
+      endpointUrl = new URL(endpoint)
+    } catch (error) {
+      throw new Error("OpenAI API endpoint must be a valid URL")
+    }
+
+    if (!["http:", "https:"].includes(endpointUrl.protocol)) {
+      throw new Error("OpenAI API endpoint must use HTTP or HTTPS")
+    }
+
+    const normalizedEndpoint = endpoint.replace(/\/+$/, "")
+
+    const apiKey = (config.apiKey ?? "").trim()
+    if (!apiKey) {
+      throw new Error("OpenAI API key is required")
+    }
+
+    const model = (config.model ?? "").trim()
+    if (!model) {
+      throw new Error("OpenAI model is required")
+    }
+
+    const customPrompt =
+      typeof config.customPrompt === "string" && config.customPrompt.trim()
+        ? config.customPrompt.trim()
+        : undefined
+
+    return {
+      endpoint: normalizedEndpoint,
+      apiKey,
+      model,
+      customPrompt
     }
   }
 }
