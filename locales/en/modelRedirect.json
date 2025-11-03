@@ -1,45 +1,56 @@
 {
   "title": "Model Redirect",
-  "description": "Configure automatic model redirect mapping with weighted channel selection",
+  "description": "Use AI (OpenAI API) to generate intelligent model name redirect mappings from standard models to available models",
   "enable": "Enable Model Redirect",
-  "enableDesc": "Automatically redirect standard model requests to optimal channels based on priority and weight",
+  "enableDesc": "Use AI to automatically generate model redirect mappings, matching standard model names to channel-supported models",
   "standardModels": "Standard Models",
   "standardModelsDesc": "Select the standard models to generate redirect mappings for",
   "standardModelsPlaceholder": "Select models...",
-  "regenerateButton": "Regenerate Mapping Now",
-  "regenerating": "Regenerating...",
+  "regenerateButton": "Generate Mappings with AI",
+  "regenerating": "Generating mappings...",
   "lastUpdated": "Last Updated",
   "never": "Never",
   "noMapping": "No mapping generated yet",
-  "mappingTable": {
-    "title": "Current Model Mapping",
-    "standardModel": "Standard Model",
-    "targetModel": "Target Model",
-    "channel": "Channel",
-    "reason": "Decision Factors",
-    "decidedAt": "Decided At"
+  "aiConfig": {
+    "title": "AI Configuration",
+    "description": "Configure OpenAI API for generating model mappings (supports OpenAI-compatible endpoints)",
+    "endpoint": "API Endpoint",
+    "endpointPlaceholder": "https://api.openai.com/v1",
+    "endpointDesc": "OpenAI API endpoint URL, supports OpenAI-compatible third-party services",
+    "apiKey": "API Key",
+    "apiKeyPlaceholder": "sk-...",
+    "apiKeyDesc": "OpenAI API key, will be securely stored locally",
+    "showApiKey": "Show Key",
+    "hideApiKey": "Hide Key",
+    "model": "Model",
+    "modelPlaceholder": "gpt-4o",
+    "modelDesc": "Model name for generating mappings (recommended: gpt-4o or gpt-4-turbo)",
+    "customPrompt": "Custom Prompt",
+    "customPromptPlaceholder": "Leave empty to use default prompt template",
+    "customPromptDesc": "Custom prompt template, use {standardModels} and {availableModels} as placeholders",
+    "testConnection": "Test Connection",
+    "testing": "Testing...",
+    "testSuccess": "Connection successful",
+    "testFailed": "Connection failed: {{error}}"
   },
-  "advanced": {
-    "title": "Advanced Scoring",
-    "epsilonP": "Priority Epsilon (εP)",
-    "epsilonPDesc": "Near-equal threshold for priority comparison (default: 1)",
-    "usedQuotaScale": "Used Quota Scale",
-    "usedQuotaScaleDesc": "Divisor for used quota penalty calculation (default: 0.25)",
-    "usedQuotaCap": "Used Quota Cap",
-    "usedQuotaCapDesc": "Maximum adjustment value for used quota penalty (default: 1.5)"
-  },
-  "dev": {
-    "title": "Development & Testing",
-    "useMockData": "Use Mock Data",
-    "useMockDataDesc": "Enable mock channel data for testing without live New API credentials"
+  "mappingRules": {
+    "title": "Mapping Rules",
+    "allowed": "Allowed Mapping Types",
+    "allowedList": "Date suffix changes, naming format changes, prefix/org differences",
+    "forbidden": "Forbidden Mapping Types",
+    "forbiddenList": "Version changes, spec changes (e.g. -mini, -70B), variant changes"
   },
   "messages": {
-    "regenerateSuccess": "Model mapping regenerated successfully",
-    "regenerateFailed": "Failed to regenerate model mapping: {{error}}",
+    "regenerateSuccess": "Successfully generated mappings for {{count}} channels",
+    "regenerateFailed": "Failed to generate model mappings: {{error}}",
     "updateSuccess": "Model redirect settings updated",
     "updateFailed": "Failed to update model redirect settings",
     "noModelsSelected": "Please select at least one standard model",
     "featureDisabled": "Model redirect feature is disabled",
-    "alreadyGenerating": "Mapping generation already in progress"
+    "alreadyGenerating": "Mapping generation already in progress",
+    "aiConfigMissing": "Please configure OpenAI API first",
+    "apiKeyRequired": "Please enter API key",
+    "endpointRequired": "Please enter API endpoint",
+    "modelRequired": "Please enter model name"
   }
 }

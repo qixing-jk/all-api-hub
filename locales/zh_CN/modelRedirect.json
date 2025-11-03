@@ -1,45 +1,56 @@
 {
   "title": "模型重定向",
-  "description": "配置自动模型重定向映射，根据优先级与权重选择最佳渠道",
+  "description": "使用 AI (OpenAI API) 生成模型名称重定向映射，智能匹配标准模型到实际可用模型",
   "enable": "启用模型重定向",
-  "enableDesc": "根据优先级与权重自动将标准模型请求重定向到最佳渠道",
+  "enableDesc": "使用 AI 自动生成模型重定向映射，将标准模型名称映射到渠道实际支持的模型",
   "standardModels": "标准模型",
   "standardModelsDesc": "选择需要生成重定向映射的标准模型",
   "standardModelsPlaceholder": "请选择模型…",
-  "regenerateButton": "立即重新生成映射",
-  "regenerating": "正在重新生成…",
+  "regenerateButton": "使用 AI 生成映射",
+  "regenerating": "正在生成映射…",
   "lastUpdated": "上次更新",
   "never": "暂无",
   "noMapping": "尚未生成任何映射",
-  "mappingTable": {
-    "title": "当前映射",
-    "standardModel": "标准模型",
-    "targetModel": "目标模型",
-    "channel": "渠道",
-    "reason": "决策因素",
-    "decidedAt": "决策时间"
+  "aiConfig": {
+    "title": "AI 配置",
+    "description": "配置 OpenAI API 用于生成模型映射（支持兼容 OpenAI 格式的端点）",
+    "endpoint": "API 端点",
+    "endpointPlaceholder": "https://api.openai.com/v1",
+    "endpointDesc": "OpenAI API 端点地址，支持兼容格式的第三方服务",
+    "apiKey": "API 密钥",
+    "apiKeyPlaceholder": "sk-...",
+    "apiKeyDesc": "OpenAI API 密钥，将安全存储在本地",
+    "showApiKey": "显示密钥",
+    "hideApiKey": "隐藏密钥",
+    "model": "模型",
+    "modelPlaceholder": "gpt-4o",
+    "modelDesc": "用于生成映射的模型名称（推荐 gpt-4o 或 gpt-4-turbo）",
+    "customPrompt": "自定义提示词",
+    "customPromptPlaceholder": "留空使用默认提示词模板",
+    "customPromptDesc": "自定义提示词模板，使用 {standardModels} 和 {availableModels} 作为占位符",
+    "testConnection": "测试连接",
+    "testing": "正在测试…",
+    "testSuccess": "连接成功",
+    "testFailed": "连接失败：{{error}}"
   },
-  "advanced": {
-    "title": "高级评分",
-    "epsilonP": "优先级容差 (εP)",
-    "epsilonPDesc": "用于比较优先级的近似阈值（默认：1）",
-    "usedQuotaScale": "用量比例缩放",
-    "usedQuotaScaleDesc": "用量惩罚计算的除数（默认：0.25）",
-    "usedQuotaCap": "用量惩罚上限",
-    "usedQuotaCapDesc": "用量惩罚的最大调整值（默认：1.5）"
-  },
-  "dev": {
-    "title": "开发与调试",
-    "useMockData": "使用模拟数据",
-    "useMockDataDesc": "启用本地模拟渠道数据，无需真实 New API 凭证即可测试"
+  "mappingRules": {
+    "title": "映射规则说明",
+    "allowed": "允许的映射类型",
+    "allowedList": "日期后缀变化、命名格式变化、前缀/组织名差异",
+    "forbidden": "禁止的映射类型",
+    "forbiddenList": "跨版本映射、跨规格映射（如 -mini、-70B）、跨变体映射"
   },
   "messages": {
-    "regenerateSuccess": "模型映射已成功重新生成",
-    "regenerateFailed": "重新生成模型映射失败：{{error}}",
+    "regenerateSuccess": "成功生成 {{count}} 个渠道的模型映射",
+    "regenerateFailed": "生成模型映射失败：{{error}}",
     "updateSuccess": "模型重定向设置已更新",
     "updateFailed": "更新模型重定向设置失败",
     "noModelsSelected": "请至少选择一个标准模型",
     "featureDisabled": "模型重定向功能未启用",
-    "alreadyGenerating": "映射生成正在进行中"
+    "alreadyGenerating": "映射生成正在进行中",
+    "aiConfigMissing": "请先配置 OpenAI API",
+    "apiKeyRequired": "请输入 API 密钥",
+    "endpointRequired": "请输入 API 端点",
+    "modelRequired": "请输入模型名称"
   }
 }

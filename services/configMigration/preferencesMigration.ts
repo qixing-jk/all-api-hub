@@ -4,10 +4,12 @@
  */
 
 import type { UserPreferences } from "../userPreferences"
+import { DEFAULT_OPENAI_CONFIG } from "~/types/modelRedirect"
+
 import { migrateSortingConfig } from "./sortingConfigMigration"
 
 // Current version of the preferences schema
-export const CURRENT_PREFERENCES_VERSION = 2
+export const CURRENT_PREFERENCES_VERSION = 3
 
 /**
  * Migration function type
@@ -54,6 +56,32 @@ const migrations: Record<number, PreferencesMigrationFunction> = {
       ...prefs,
       sortingPriorityConfig: migratedSortingConfig,
       preferencesVersion: 2
+    }
+  },
+
+  // Version 2 -> 3: Migrate model redirect to use AI configuration
+  3: (prefs: UserPreferences): UserPreferences => {
+    console.log(
+      "[PreferencesMigration] Migrating preferences from v2 to v3 (model redirect AI config)"
+    )
+
+    // If modelRedirect exists but doesn't have aiConfig, add default AI config
+    if (prefs.modelRedirect && !prefs.modelRedirect.aiConfig) {
+      return {
+        ...prefs,
+        modelRedirect: {
+          ...prefs.modelRedirect,
+          aiConfig: { ...DEFAULT_OPENAI_CONFIG },
+          version: 2
+        },
+        preferencesVersion: 3
+      }
+    }
+
+    // If modelRedirect doesn't exist, no changes needed
+    return {
+      ...prefs,
+      preferencesVersion: 3
     }
   }
 }

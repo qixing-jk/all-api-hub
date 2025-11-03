@@ -3,25 +3,13 @@
  */
 
 /**
- * Used quota adjustment mode
+ * OpenAI API configuration for AI-powered model mapping
  */
-export type UsedQuotaMode = "ratio"
-
-/**
- * Used quota scoring configuration
- */
-export interface UsedQuotaScoring {
-  mode: UsedQuotaMode
-  scale: number // Divisor for ratio calculation (default: 0.25)
-  cap: number // Maximum adjustment value (default: 1.5)
-}
-
-/**
- * Scoring configuration for model redirect
- */
-export interface ModelRedirectScoring {
-  epsilonP: number // Near-equal threshold for priority (default: 1)
-  usedQuota: UsedQuotaScoring
+export interface OpenAIConfig {
+  endpoint: string // OpenAI API endpoint (e.g., https://api.openai.com/v1)
+  apiKey: string // OpenAI API key
+  model: string // Model name (e.g., gpt-4o, gpt-4-turbo)
+  customPrompt?: string // Optional custom prompt template
 }
 
 /**
@@ -30,20 +18,18 @@ export interface ModelRedirectScoring {
 export interface ModelRedirectPreferences {
   enabled: boolean
   standardModels: string[]
-  scoring: ModelRedirectScoring
+  aiConfig?: OpenAIConfig // AI configuration for generating mappings
   version: number
 }
 
 /**
- * Default scoring configuration
+ * Default OpenAI configuration
  */
-export const DEFAULT_MODEL_REDIRECT_SCORING: ModelRedirectScoring = {
-  epsilonP: 1,
-  usedQuota: {
-    mode: "ratio",
-    scale: 0.25,
-    cap: 1.5
-  }
+export const DEFAULT_OPENAI_CONFIG: OpenAIConfig = {
+  endpoint: "https://api.openai.com/v1",
+  apiKey: "",
+  model: "gpt-4o",
+  customPrompt: undefined
 }
 
 /**
@@ -70,6 +56,6 @@ export const ALL_PRESET_STANDARD_MODELS = Object.values(
 export const DEFAULT_MODEL_REDIRECT_PREFERENCES: ModelRedirectPreferences = {
   enabled: false,
   standardModels: [...ALL_PRESET_STANDARD_MODELS],
-  scoring: { ...DEFAULT_MODEL_REDIRECT_SCORING },
-  version: 1
+  aiConfig: { ...DEFAULT_OPENAI_CONFIG },
+  version: 2
 }
