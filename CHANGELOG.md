@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.5.0](https://github.com/qixing-jk/all-api-hub/compare/v2.4.1...v2.5.0) (2025-11-03)
+
+
+### Features
+
+* **account:** add autoFocus to AccountSearchInput component ([72f3065](https://github.com/qixing-jk/all-api-hub/commit/72f30655022e49bb97852cfea7ee114997e58ed7))
+* **api:** add support for neo-api site type ([295a426](https://github.com/qixing-jk/all-api-hub/commit/295a426266d545cbb7b7f8773a2f24c020c1eddc))
+
+
+### Bug Fixes
+
+* correct Base64 encoding for CherryStudio URL generation ([c065a87](https://github.com/qixing-jk/all-api-hub/commit/c065a873a35582fed7e38a81b4e6bac43a5a7a1d)), closes [#118](https://github.com/qixing-jk/all-api-hub/issues/118)
+* ensure account token exists before channel creation dialog ([1c81c97](https://github.com/qixing-jk/all-api-hub/commit/1c81c9792883940a298a1c7a1b1c96c8a42f7c75))
+* **newApiService:** only fetch model names instead of full model data ([e349be9](https://github.com/qixing-jk/all-api-hub/commit/e349be924e9107adee8d7f3ca164ce1e1fe466f6))
+* remove redundant account fetching and token validation in channel dialog ([939b1c4](https://github.com/qixing-jk/all-api-hub/commit/939b1c4411ba0bd4a71be18dc333a97e701e9bfb)), closes [#119](https://github.com/qixing-jk/all-api-hub/issues/119)
+
 ## [2.4.1](https://github.com/qixing-jk/all-api-hub/compare/v2.4.0...v2.4.1) (2025-11-01)
 
 
