@@ -10,31 +10,67 @@ import { RateLimiter } from "~/utils/RateLimiter"
 /**
  * Default prompt template for model mapping generation
  */
-export const DEFAULT_MAPPING_PROMPT = `You are a model name mapping expert. Given a list of standard model names and a list of available model names, create a JSON mapping that redirects standard names to available names.
+export const DEFAULT_MAPPING_PROMPT = `You are a **model name analysis and mapping expert**.
 
-Rules:
-1. ALLOWED mappings:
-   - Date suffix changes: "claude-3.5-sonnet" → "claude-3-5-sonnet-20241022"
-   - Format changes: "anthropic/claude-3.5-sonnet" → "claude-sonnet-3-5" or "claude-sonnet-3.5"
-   - Prefix/org changes: "glm-4.6" → "zai-org/GLM-4.6"
-   - Case changes: "GPT-4" → "gpt-4"
+Your job is to generate a JSON mapping between **standard model names** and **available model names**, ensuring both semantic and performance equivalence.
 
-2. FORBIDDEN mappings (DO NOT create these):
-   - Version changes: "claude-sonnet-3-5" ✗ "claude-sonnet-3-7"
-   - Size/spec changes: "claude-sonnet-3-5" ✗ "claude-sonnet-3-5-70B"
-   - Variant changes: "claude-sonnet-3-5" ✗ "claude-sonnet-3-5-mini", "gpt-4o" ✗ "gpt-4o-mini"
-   - Different model families: "gpt-4" ✗ "claude-3"
+---
 
-3. Only map to models that exist in the available models list.
-4. If no suitable match exists, omit that mapping.
-5. Prioritize exact matches or closest naming conventions.
+### 🧠 Step 1: Understand the naming pattern
+Each model name is composed of segments separated by "-", "_", or "/".  
+Common elements include:
+- Family name or vendor (e.g., "gpt", "claude", "gemini", "qwen", "mistral")
+- Version numbers (e.g., "3", "3.5", "4.1", "2.5.1")
+- Variant names (e.g., "sonnet", "pro", "flash", "turbo", "mini", "air")
+- Quantization or parameter indicators (e.g., "70B", "8x7B", "32k")
+- Optional date/version suffix (e.g., "20241022", "240718")
+- Extensions like "preview", "think", "api", "instruct"
+
+**Do not assume all names follow the same pattern.**  
+Instead, detect meaning from alphanumeric structure, word position, and known patterns.
+
+---
+
+### ✅ Step 2: Allowed mappings
+A mapping is allowed only if:
+1. Both names share the same **family/vendor prefix**.
+2. They represent the **same capability and purpose** (variant and quantization must match).
+3. Version differences are minor (e.g., 4 → 4.1 or 3.5 → 3.5.1).
+4. Date suffixes may be **added, removed, or updated** in either direction.
+5. Extensions like \`preview\`, \`think\`, or \`instruct\` may be added or removed.
+6. The final mapping must not change the model’s meaning or performance class.
+
+---
+
+### ❌ Step 3: Forbidden mappings
+1. Cross-family (e.g., “gpt” → “claude”).
+2. Cross-performance (e.g., “mini” ↔ “pro”).
+3. Cross-quantization (e.g., “70B” ↔ “8x7B”).
+4. Any invented or non-existing model names.
+5. Mapping that alters capability, size, or type.
+
+---
+
+### 🧾 Step 4: Output
+Return a **strict JSON** object mapping standard names to available names.
+the key and value must a string, can't be a Array or other type.
+If no valid mapping exists, don't output that key.
 
 Standard models: 
 {standardModels}
 Available models:
 {availableModels}
 
-Return a JSON object with format: { "standard-model-name": "available-model-name", ... }`
+Return a JSON object with format: { "standard-model-name": "available-model-name", ... }\`
+
+Example:
+{
+  "claude-3.5-sonnet-20241022": "claude-3.5-sonnet",
+  "gpt-4o-preview": "gpt-4o",
+  "gemini-2.5-pro": "gemini-2.5-pro-20241101",
+  "qwen-2.5-70b-air": "qwen-2.5-70b-air",
+}
+`
 
 export interface ModelMapping {
   [key: string]: string
