@@ -3,6 +3,7 @@
  * Generates model redirect mappings using AI (OpenAI API)
  */
 
+import type { NewApiChannel } from "~/types"
 import { NewApiModelSyncService } from "~/services/newApiModelSync"
 import { OpenAIService } from "~/services/openai"
 import {
@@ -10,9 +11,29 @@ import {
   CHANNEL_STATUS,
   DEFAULT_MODEL_REDIRECT_PREFERENCES
 } from "~/types"
+import type { ModelRedirectPreferences } from "~/types/modelRedirect"
 
 import { hasValidNewApiConfig } from "../newApiService"
 import { userPreferences } from "../userPreferences"
+
+/**
+ * Result of model redirect generation and application
+ */
+export interface ModelRedirectResult {
+  success: boolean
+  updatedChannels: number
+  errors: string[]
+  message?: string
+}
+
+/**
+ * Configuration for model redirect generation
+ */
+export interface ModelRedirectGenerationConfig {
+  openAIService: OpenAIService
+  standardModels: string[]
+  newApiService: NewApiModelSyncService
+}
 
 /**
  * Model Redirect Service
@@ -20,138 +41,210 @@ import { userPreferences } from "../userPreferences"
  */
 export class ModelRedirectService {
   /**
-   * Run model redirect generation and apply mappings directly
+   * Prepare model redirect configuration from user preferences
+   * @returns Configuration object or error result
    */
-  static async applyModelRedirect(): Promise<{
-    success: boolean
-    updatedChannels: number
-    errors: string[]
-    message?: string
-  }> {
+  static async prepareModelRedirectConfig(): Promise<
+    ModelRedirectGenerationConfig | ModelRedirectResult
+  > {
+    const prefs = await userPreferences.getPreferences()
+
+    if (!hasValidNewApiConfig(prefs)) {
+      return {
+        success: false,
+        updatedChannels: 0,
+        errors: ["New API configuration is missing"],
+        message: "New API configuration is missing"
+      }
+    }
+
+    const modelRedirectPrefs = Object.assign(
+      {},
+      DEFAULT_MODEL_REDIRECT_PREFERENCES,
+      prefs.modelRedirect
+    )
+
+    if (!modelRedirectPrefs.enabled) {
+      return {
+        success: false,
+        updatedChannels: 0,
+        errors: ["Model redirect feature is disabled"],
+        message: "Model redirect feature is disabled"
+      }
+    }
+
+    // Validate AI configuration
+    if (!modelRedirectPrefs.aiConfig?.apiKey) {
+      return {
+        success: false,
+        updatedChannels: 0,
+        errors: ["OpenAI API key is not configured"],
+        message: "OpenAI API key is not configured"
+      }
+    }
+
+    if (!modelRedirectPrefs.aiConfig?.endpoint) {
+      return {
+        success: false,
+        updatedChannels: 0,
+        errors: ["OpenAI API endpoint is not configured"],
+        message: "OpenAI API endpoint is not configured"
+      }
+    }
+
+    if (!modelRedirectPrefs.aiConfig?.model) {
+      return {
+        success: false,
+        updatedChannels: 0,
+        errors: ["OpenAI model is not configured"],
+        message: "OpenAI model is not configured"
+      }
+    }
+
+    const standardModels = modelRedirectPrefs.standardModels.length
+      ? modelRedirectPrefs.standardModels
+      : ALL_PRESET_STANDARD_MODELS
+
+    let openAIService: OpenAIService
+    try {
+      openAIService = OpenAIService.getInstance(modelRedirectPrefs.aiConfig)
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to initialize OpenAIService"
+      return {
+        success: false,
+        updatedChannels: 0,
+        errors: [message],
+        message
+      }
+    }
+
+    const newApiService = new NewApiModelSyncService(
+      prefs.newApiBaseUrl,
+      prefs.newApiAdminToken,
+      prefs.newApiUserId
+    )
+
+    return {
+      openAIService,
+      standardModels,
+      newApiService
+    }
+  }
+
+  /**
+   * Check if model redirect is enabled and configured
+   */
+  static async isModelRedirectEnabled(): Promise<boolean> {
     try {
       const prefs = await userPreferences.getPreferences()
+      const modelRedirectPrefs =
+        prefs.modelRedirect ?? DEFAULT_MODEL_REDIRECT_PREFERENCES
 
-      if (!hasValidNewApiConfig(prefs)) {
-        return {
-          success: false,
-          updatedChannels: 0,
-          errors: ["New API configuration is missing"],
-          message: "New API configuration is missing"
-        }
-      }
-
-      const modelRedirectPrefs = Object.assign(
-        {},
-        DEFAULT_MODEL_REDIRECT_PREFERENCES,
-        prefs.modelRedirect
+      return (
+        modelRedirectPrefs.enabled &&
+        !!modelRedirectPrefs.aiConfig?.apiKey &&
+        !!modelRedirectPrefs.aiConfig?.endpoint &&
+        !!modelRedirectPrefs.aiConfig?.model
       )
+    } catch {
+      return false
+    }
+  }
 
-      if (!modelRedirectPrefs.enabled) {
-        return {
-          success: false,
-          updatedChannels: 0,
-          errors: ["Model redirect feature is disabled"],
-          message: "Model redirect feature is disabled"
-        }
+  /**
+   * Get model redirect preferences
+   */
+  static async getModelRedirectPreferences(): Promise<ModelRedirectPreferences> {
+    const prefs = await userPreferences.getPreferences()
+    return Object.assign(
+      {},
+      DEFAULT_MODEL_REDIRECT_PREFERENCES,
+      prefs.modelRedirect
+    )
+  }
+
+  /**
+   * Generate and apply model redirects for a list of channels
+   * This is the core function used by both manual button and automatic sync
+   */
+  static async generateAndApplyModelRedirects(
+    channels: NewApiChannel[],
+    config: ModelRedirectGenerationConfig
+  ): Promise<ModelRedirectResult> {
+    let successCount = 0
+    const errors: string[] = []
+
+    for (const channel of channels) {
+      // Skip disabled channels
+      if (
+        channel.status === CHANNEL_STATUS.ManuallyDisabled ||
+        channel.status === CHANNEL_STATUS.AutoDisabled
+      ) {
+        continue
       }
 
-      // Validate AI configuration
-      if (!modelRedirectPrefs.aiConfig?.apiKey) {
-        return {
-          success: false,
-          updatedChannels: 0,
-          errors: ["OpenAI API key is not configured"],
-          message: "OpenAI API key is not configured"
-        }
-      }
-
-      if (!modelRedirectPrefs.aiConfig?.endpoint) {
-        return {
-          success: false,
-          updatedChannels: 0,
-          errors: ["OpenAI API endpoint is not configured"],
-          message: "OpenAI API endpoint is not configured"
-        }
-      }
-
-      if (!modelRedirectPrefs.aiConfig?.model) {
-        return {
-          success: false,
-          updatedChannels: 0,
-          errors: ["OpenAI model is not configured"],
-          message: "OpenAI model is not configured"
-        }
-      }
-
-      const standardModels = modelRedirectPrefs.standardModels.length
-        ? modelRedirectPrefs.standardModels
-        : ALL_PRESET_STANDARD_MODELS
-
-      let openAIService: OpenAIService
       try {
-        openAIService = OpenAIService.getInstance(modelRedirectPrefs.aiConfig)
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "Failed to initialize OpenAIService"
-        return {
-          success: false,
-          updatedChannels: 0,
-          errors: [message],
-          message
-        }
-      }
+        const actualModels = channel.models
+          ? channel.models
+              .split(",")
+              .map((m) => m.trim())
+              .filter(Boolean)
+          : []
 
-      const newApiService = new NewApiModelSyncService(
-        prefs.newApiBaseUrl,
-        prefs.newApiAdminToken,
-        prefs.newApiUserId
-      )
-
-      const channelList = await newApiService.listChannels()
-
-      let successCount = 0
-      const errors: string[] = []
-
-      for (const channel of channelList.items) {
-        // Skip disabled channels
-        if (
-          channel.status === CHANNEL_STATUS.ManuallyDisabled ||
-          channel.status === CHANNEL_STATUS.AutoDisabled
-        ) {
-          continue
-        }
-
-        try {
-          const actualModels = channel.models
-            ? channel.models
-                .split(",")
-                .map((m) => m.trim())
-                .filter(Boolean)
-            : []
-
-          const modelMapping =
-            await ModelRedirectService.generateModelMappingForChannel(
-              openAIService,
-              standardModels,
-              actualModels
-            )
-
-          if (Object.keys(modelMapping).length > 0) {
-            await newApiService.updateChannelModelMapping(channel, modelMapping)
-            successCount += 1
-          }
-        } catch (error) {
-          errors.push(
-            `Channel ${channel.name} (${channel.id}): ${(error as Error).message || "Unknown error"}`
+        const modelMapping =
+          await ModelRedirectService.generateModelMappingForChannel(
+            config.openAIService,
+            config.standardModels,
+            actualModels
           )
+
+        if (Object.keys(modelMapping).length > 0) {
+          await config.newApiService.updateChannelModelMapping(
+            channel,
+            modelMapping
+          )
+          successCount += 1
         }
+      } catch (error) {
+        errors.push(
+          `Channel ${channel.name} (${channel.id}): ${(error as Error).message || "Unknown error"}`
+        )
+      }
+    }
+
+    return {
+      success: errors.length === 0,
+      updatedChannels: successCount,
+      errors
+    }
+  }
+
+  /**
+   * Run model redirect generation and apply mappings directly
+   * This method is used by the manual button trigger
+   */
+  static async applyModelRedirect(): Promise<ModelRedirectResult> {
+    try {
+      const configOrError = await ModelRedirectService.prepareModelRedirectConfig()
+
+      // Check if it's an error result
+      if ("success" in configOrError && !configOrError.success) {
+        return configOrError
       }
 
-      return {
-        success: errors.length === 0,
-        updatedChannels: successCount,
-        errors
-      }
+      const config = configOrError as ModelRedirectGenerationConfig
+
+      // Get all channels
+      const channelList = await config.newApiService.listChannels()
+
+      // Generate and apply redirects
+      return await ModelRedirectService.generateAndApplyModelRedirects(
+        channelList.items,
+        config
+      )
     } catch (error) {
       console.error("[ModelRedirect] Failed to apply redirect:", error)
       return {

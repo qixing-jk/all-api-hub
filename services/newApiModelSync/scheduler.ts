@@ -2,11 +2,7 @@ import { t } from "i18next"
 
 import { ModelRedirectService } from "~/services/modelRedirect"
 import { hasValidNewApiConfig } from "~/services/newApiService.ts"
-import {
-  ALL_PRESET_STANDARD_MODELS,
-  DEFAULT_MODEL_REDIRECT_PREFERENCES,
-  NewApiChannel
-} from "~/types"
+import { NewApiChannel } from "~/types"
 import { ExecutionProgress, ExecutionResult } from "~/types/newApiModelSync"
 import {
   clearAlarm,
@@ -175,14 +171,6 @@ class NewApiModelSyncScheduler {
       throw new Error("No channels to sync")
     }
 
-    // Placeholder for model redirect config, will generate after sync if enabled
-    const modelRedirectConfig =
-      prefs.modelRedirect ?? DEFAULT_MODEL_REDIRECT_PREFERENCES
-    const standardModels =
-      modelRedirectConfig.standardModels.length > 0
-        ? modelRedirectConfig.standardModels
-        : ALL_PRESET_STANDARD_MODELS
-
     // Update progress
     this.currentProgress = {
       isRunning: true,
@@ -221,62 +209,54 @@ class NewApiModelSyncScheduler {
       )
 
       // Generate and apply model redirect mappings if enabled
-      if (modelRedirectConfig.enabled && standardModels.length > 0) {
+      const isRedirectEnabled = await ModelRedirectService.isModelRedirectEnabled()
+      if (isRedirectEnabled) {
         console.log("[NewApiModelSync] Applying model redirect mappings")
         try {
-          // Re-list channels to get updated model lists
-          const updatedChannels = await service.listChannels()
+          // Prepare model redirect configuration
+          const redirectConfigOrError =
+            await ModelRedirectService.prepareModelRedirectConfig()
 
-          // For each channel that was successfully synced, generate and apply model redirect
-          let successCount = 0
-          let errorCount = 0
-
-          for (const item of result.items) {
-            if (!item.ok) continue // Skip failed channels
-
-            const channel = updatedChannels.items.find(
-              (c) => c.id === item.channelId
+          // Check if it's an error result
+          if (
+            "success" in redirectConfigOrError &&
+            !redirectConfigOrError.success
+          ) {
+            console.warn(
+              "[NewApiModelSync] Model redirect configuration invalid:",
+              redirectConfigOrError.message
             )
-            if (!channel) {
+          } else {
+            // Re-list channels to get updated model lists
+            const updatedChannels = await service.listChannels()
+
+            // Filter to only successfully synced channels
+            const syncedChannelIds = result.items
+              .filter((item) => item.ok)
+              .map((item) => item.channelId)
+
+            const channelsToRedirect = updatedChannels.items.filter((channel) =>
+              syncedChannelIds.includes(channel.id)
+            )
+
+            // Generate and apply redirects
+            const redirectResult =
+              await ModelRedirectService.generateAndApplyModelRedirects(
+                channelsToRedirect,
+                redirectConfigOrError
+              )
+
+            console.log(
+              `[NewApiModelSync] Model redirect mappings applied: ${redirectResult.updatedChannels} succeeded, ${redirectResult.errors.length} failed`
+            )
+
+            if (redirectResult.errors.length > 0) {
               console.warn(
-                `[NewApiModelSync] Channel ${item.channelId} not found after sync`
+                "[NewApiModelSync] Model redirect errors:",
+                redirectResult.errors
               )
-              continue
-            }
-
-            try {
-              const actualModels = channel.models
-                ? channel.models
-                    .split(",")
-                    .map((m) => m.trim())
-                    .filter(Boolean)
-                : []
-
-              const modelMapping =
-                ModelRedirectService.generateModelMappingForChannel(
-                  standardModels,
-                  actualModels
-                )
-
-              if (Object.keys(modelMapping).length > 0) {
-                await service.updateChannelModelMapping(channel, modelMapping)
-                successCount++
-                console.log(
-                  `[NewApiModelSync] Applied ${Object.keys(modelMapping).length} model redirects to channel ${channel.name}`
-                )
-              }
-            } catch (error) {
-              console.error(
-                `[NewApiModelSync] Failed to apply mapping for channel ${channel.name}:`,
-                error
-              )
-              errorCount++
             }
           }
-
-          console.log(
-            `[NewApiModelSync] Model redirect mappings applied: ${successCount} succeeded, ${errorCount} failed`
-          )
         } catch (error) {
           console.error(
             "[NewApiModelSync] Failed to apply model redirect mappings:",
