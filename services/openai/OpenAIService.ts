@@ -334,7 +334,7 @@ export class OpenAIService {
       throw new Error("Empty response from OpenAI API")
     }
 
-    let parsedContent: { mappings: Record<string, unknown> }
+    let parsedContent: ModelMapping
     try {
       const match = content.match(/```json\n([\s\S]*?)```/)
       parsedContent = match ? JSON.parse(match[1]) : JSON.parse(content)
@@ -343,20 +343,10 @@ export class OpenAIService {
       throw new Error(`Failed to parse OpenAI response as JSON: ${content}`)
     }
 
-    if (
-      !parsedContent.mappings ||
-      typeof parsedContent.mappings !== "object" ||
-      Array.isArray(parsedContent.mappings)
-    ) {
-      throw new Error("Invalid response format: missing or invalid 'mappings'")
-    }
-
     const validatedMappings: Record<string, string> = {}
     const availableSet = new Set(availableModels)
 
-    for (const [standardModel, targetModel] of Object.entries(
-      parsedContent.mappings
-    )) {
+    for (const [standardModel, targetModel] of Object.entries(parsedContent)) {
       if (typeof standardModel !== "string" || !standardModel.trim()) {
         continue
       }
