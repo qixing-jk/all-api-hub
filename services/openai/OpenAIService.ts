@@ -29,10 +29,16 @@ Rules:
 4. If no suitable match exists, omit that mapping.
 5. Prioritize exact matches or closest naming conventions.
 
-Standard models: {standardModels}
-Available models: {availableModels}
+Standard models: 
+{standardModels}
+Available models:
+{availableModels}
 
 Return a JSON object with format: { "standard-model-name": "available-model-name", ... }`
+
+export interface ModelMapping {
+  [key: string]: string
+}
 
 /**
  * JSON Schema for structured output
@@ -48,7 +54,8 @@ const MODEL_MAPPING_SCHEMA = {
         additionalProperties: {
           type: "string"
         },
-        description: "Mapping from standard model names to available model names"
+        description:
+          "Mapping from standard model names to available model names"
       }
     },
     required: ["mappings"],
@@ -59,18 +66,19 @@ const MODEL_MAPPING_SCHEMA = {
 /**
  * OpenAI API response type
  */
-interface OpenAIResponse {
+interface UniversalOpenAIResponse<T> {
   id: string
   object: string
   created: number
   model: string
   choices: Array<{
     index: number
+    finish_reason: string
     message: {
       role: string
-      content: string
+      content?: string
+      parsed?: T
     }
-    finish_reason: string
   }>
   usage?: {
     prompt_tokens: number
@@ -229,8 +237,11 @@ export class OpenAIService {
     const prompt = this.buildPrompt(modelsToMap, sanitizedAvailableModels)
 
     try {
-      const response = await this.callOpenAI(prompt)
-      return this.parseResponse(response, sanitizedAvailableModels)
+      const response = await this.callOpenAI<ModelMapping>(prompt)
+      return this.parseResponse<ModelMapping>(
+        response,
+        sanitizedAvailableModels
+      )
     } catch (error) {
       console.error("[OpenAIService] Failed to generate mapping:", error)
       throw new Error(
@@ -256,7 +267,9 @@ export class OpenAIService {
   /**
    * Call OpenAI API with structured outputs
    */
-  private async callOpenAI(prompt: string): Promise<OpenAIResponse> {
+  private async callOpenAI<T>(
+    prompt: string
+  ): Promise<UniversalOpenAIResponse<T>> {
     await this.rateLimiter.acquire()
 
     const endpoint = `${this.config.endpoint}/chat/completions`
@@ -297,22 +310,25 @@ export class OpenAIService {
       )
     }
 
-    const data = (await response.json()) as OpenAIResponse
-    return data
+    return await response.json()
   }
 
   /**
    * Parse OpenAI response and validate mappings
    */
-  private parseResponse(
-    response: OpenAIResponse,
+  private parseResponse<T>(
+    response: UniversalOpenAIResponse<T>,
     availableModels: string[]
   ): ModelMappingResult {
     if (!response.choices || response.choices.length === 0) {
       throw new Error("No response from OpenAI API")
     }
 
-    const content = response.choices[0].message.content
+    const { content, parsed } = response.choices[0].message
+
+    if (parsed) {
+      return { mappings: parsed }
+    }
 
     if (!content) {
       throw new Error("Empty response from OpenAI API")
@@ -320,8 +336,10 @@ export class OpenAIService {
 
     let parsedContent: { mappings: Record<string, unknown> }
     try {
-      parsedContent = JSON.parse(content)
+      const match = content.match(/```json\n([\s\S]*?)```/)
+      parsedContent = match ? JSON.parse(match[1]) : JSON.parse(content)
     } catch (error) {
+      console.error(error)
       throw new Error(`Failed to parse OpenAI response as JSON: ${content}`)
     }
 
