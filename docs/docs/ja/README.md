@@ -7,7 +7,7 @@ heroText: All API Hub - AIアグリゲーションプロキシマネージャー
 tagline: オープンソースのブラウザプラグイン。すべてのAIアグリゲーションプロキシサイトのアカウントを自動で識別・管理し、残高の確認、モデルの同期、キーの管理を行い、クロスプラットフォームとクラウドバックアップに対応します。
 actions:
   - text: 使用開始
-    link: /get-started.html # 建议修改为您的实际文档路径，例如 /guide/
+    link: /jp/get-started.html # 建议修改为您的实际文档路径，例如 /guide/
     type: primary
     
   - text: Chrome ウェブストア
