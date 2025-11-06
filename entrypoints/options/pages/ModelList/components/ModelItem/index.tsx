@@ -49,6 +49,7 @@ export default function ModelItem({
       toast.success(t("messages.modelNameCopied"))
     } catch (error) {
       toast.error(t("messages.copyFailed"))
+      console.error(error)
     }
   }
 

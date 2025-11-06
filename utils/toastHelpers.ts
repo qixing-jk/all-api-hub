@@ -8,15 +8,20 @@ type ToastParams =
 /**
  * Shows a toast notification based on the success status of an operation.
  */
-export function showSettingsToast(...args: ToastParams): void {
+export function showResultToast(...args: ToastParams): void {
   if (typeof args[0] === "boolean") {
     // 兼容旧逻辑
     const [success, successMsg, errorMsg = ""] = args
-    toast[success ? "success" : "error"](success ? successMsg : errorMsg)
+    const message = success ? successMsg : errorMsg
+    if (message) {
+      toast[success ? "success" : "error"](message)
+    }
   } else {
     // 支持对象参数
     const { success, message = "" } = args[0]
-    toast[success ? "success" : "error"](message)
+    if (message) {
+      toast[success ? "success" : "error"](message)
+    }
   }
 }
 
@@ -28,7 +33,7 @@ export function showSettingsToast(...args: ToastParams): void {
 export const showUpdateToast = (success: boolean, setting: string): void => {
   const successMsg = t("settings:messages.updateSuccess", { name: setting })
   const errorMsg = t("settings:messages.updateFailed", { name: setting })
-  showSettingsToast(success, successMsg, errorMsg)
+  showResultToast(success, successMsg, errorMsg)
 }
 
 /**
@@ -38,5 +43,5 @@ export const showUpdateToast = (success: boolean, setting: string): void => {
 export const showResetToast = (success: boolean): void => {
   const successMsg = t("settings:messages.updateSuccess")
   const errorMsg = t("settings:danger.resetFailed")
-  showSettingsToast(success, successMsg, errorMsg)
+  showResultToast(success, successMsg, errorMsg)
 }

@@ -9,6 +9,8 @@ import {
   UserIcon,
   XCircleIcon
 } from "@heroicons/react/24/outline"
+import { PinIcon } from "lucide-react"
+import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import Tooltip from "~/components/Tooltip"
@@ -59,19 +61,37 @@ function renderHighlightedFragments(
 
 export default function SiteInfo({ site, highlights }: SiteInfoProps) {
   const { t } = useTranslation("account")
-  const { detectedAccount } = useAccountDataContext()
+  const { t: tMessages } = useTranslation("messages")
+  const { detectedAccount, isAccountPinned, togglePinAccount } =
+    useAccountDataContext()
   const { handleRefreshAccount, refreshingAccountId, handleMarkAsCheckedIn } =
     useAccountActionsContext()
   const detectedAccountId = detectedAccount?.id
 
+  const isPinned = isAccountPinned(site.id)
+  const pinTooltipLabel = isPinned ? t("actions.unpin") : t("actions.pin")
   const isRefreshing = refreshingAccountId === site.id
+
+  const handlePinClick = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const success = await togglePinAccount(site.id)
+    if (success) {
+      const message = isPinned
+        ? tMessages("toast.success.accountUnpinned", {
+            accountName: site.name
+          })
+        : tMessages("toast.success.accountPinned", {
+            accountName: site.name
+          })
+      toast.success(message)
+    }
+  }
 
   const handleCheckIn = (customCheckInUrl?: string) => async () => {
     try {
       if (customCheckInUrl) {
         await handleMarkAsCheckedIn(site)
-        // Check if we should open redeem page with check-in
-        // Default to true for backward compatibility
         const shouldOpenRedeem = site.checkIn?.openRedeemWithCheckIn ?? true
         if (shouldOpenRedeem) {
           await openCheckInAndRedeem(site)
@@ -169,60 +189,77 @@ export default function SiteInfo({ site, highlights }: SiteInfoProps) {
     return null
   }
 
+  const checkInIndicator = renderCheckInIcon()
+
   const handleHealthClick = async () => {
     if (!isRefreshing) {
-      await handleRefreshAccount(site, true) // Force refresh
+      await handleRefreshAccount(site, true)
     }
   }
 
   return (
-    <div className="flex w-full min-w-0 items-center gap-2 sm:gap-3">
-      <div className="min-w-0 flex-1">
-        <div className="mb-0.5 flex items-center gap-1.5">
-          {/* Health Status Indicator */}
-          <Tooltip
-            content={
-              <div className="space-y-1">
+    <div className="flex w-full min-w-0 items-center gap-2">
+      <div className="flex flex-shrink-0 flex-col items-center justify-center gap-2 self-stretch">
+        <Tooltip
+          content={
+            <div className="space-y-1">
+              <p>
+                {t("list.site.status")}:{" "}
+                <span
+                  className={
+                    getHealthStatusDisplay(site.health?.status, t).color ||
+                    "text-gray-400"
+                  }>
+                  {getHealthStatusDisplay(site.health?.status, t).text ||
+                    t("list.site.unknown")}
+                </span>
+              </p>
+              {site.health?.reason && (
                 <p>
-                  {t("list.site.status")}:{" "}
-                  <span
-                    className={
-                      getHealthStatusDisplay(site.health?.status, t).color ||
-                      "text-gray-400"
-                    }>
-                    {getHealthStatusDisplay(site.health?.status, t).text ||
-                      t("list.site.unknown")}
-                  </span>
+                  {t("list.site.reason")}: {site.health.reason}
                 </p>
-                {site.health?.reason && (
-                  <p>
-                    {t("list.site.reason")}: {site.health.reason}
-                  </p>
-                )}
-                <p>
-                  {t("list.site.lastSync")}:{" "}
-                  {site.last_sync_time
-                    ? new Date(site.last_sync_time).toLocaleString()
-                    : t("list.site.notAvailable")}
-                </p>
-              </div>
-            }
-            position="right">
-            <button
-              className={`h-2 w-2 flex-shrink-0 rounded-full transition-all duration-200 ${
-                isRefreshing
-                  ? "animate-pulse opacity-60"
-                  : "cursor-pointer hover:scale-125"
-              } ${
-                getStatusIndicatorColor(site.health?.status) ||
-                UI_CONSTANTS.STYLES.STATUS_INDICATOR.UNKNOWN
-              }`}
-              onClick={handleHealthClick}
-              aria-label={t("list.site.refreshHealthStatus")}
-            />
-          </Tooltip>
+              )}
+              <p>
+                {t("list.site.lastSync")}:{" "}
+                {site.last_sync_time
+                  ? new Date(site.last_sync_time).toLocaleString()
+                  : t("list.site.notAvailable")}
+              </p>
+            </div>
+          }
+          position="right">
+          <button
+            className={`h-2 w-2 flex-shrink-0 rounded-full transition-all duration-200 ${
+              isRefreshing
+                ? "animate-pulse opacity-60"
+                : "cursor-pointer hover:scale-125"
+            } ${
+              getStatusIndicatorColor(site.health?.status) ||
+              UI_CONSTANTS.STYLES.STATUS_INDICATOR.UNKNOWN
+            }`}
+            onClick={handleHealthClick}
+            aria-label={t("list.site.refreshHealthStatus")}
+          />
+        </Tooltip>
 
-          {/* Current Site Badge */}
+        {isPinned && (
+          <Tooltip content={pinTooltipLabel} position="right">
+            <IconButton
+              onClick={handlePinClick}
+              variant="ghost"
+              size="none"
+              aria-label={pinTooltipLabel}>
+              <PinIcon
+                className="h-3 w-3 -rotate-12 text-gray-400 transition-colors dark:text-dark-text-tertiary"
+                aria-hidden="true"
+              />
+            </IconButton>
+          </Tooltip>
+        )}
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           {site.id === detectedAccountId && (
             <Tooltip content={t("list.site.currentSiteExists")} position="top">
               <Badge variant="warning" size="sm" className="whitespace-nowrap">
@@ -231,8 +268,7 @@ export default function SiteInfo({ site, highlights }: SiteInfoProps) {
             </Tooltip>
           )}
 
-          {/* Site Name Link */}
-          <div className="flex min-w-0 items-center gap-2">
+          <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
             <a
               href={site.baseUrl}
               target="_blank"
@@ -243,25 +279,24 @@ export default function SiteInfo({ site, highlights }: SiteInfoProps) {
                 {renderHighlightedFragments(highlights?.name, site.name)}
               </BodySmall>
             </a>
-          </div>
 
-          <div className="flex items-center gap-2">
-            {/* Inline check-in placed next to site name for tighter spacing */}
-            {renderCheckInIcon()}
+            {checkInIndicator && (
+              <div className="flex items-center">{checkInIndicator}</div>
+            )}
           </div>
         </div>
 
-        {/* Username */}
-        <div className="ml-3 flex min-w-0 items-start gap-1 sm:ml-4">
+        <div className="flex min-w-0 items-start gap-1">
           <UserIcon className="mt-0.5 h-3 w-3 flex-shrink-0 text-gray-400 dark:text-dark-text-tertiary" />
           <Caption className="truncate" title={site.username}>
-            {site.username}
+            {highlights?.username && site.username
+              ? renderHighlightedFragments(highlights.username, site.username)
+              : site.username}
           </Caption>
         </div>
 
-        {/* Highlighted Base URL */}
         {highlights?.baseUrl && (
-          <div className="ml-3 mt-0.5 flex min-w-0 items-start gap-1 sm:ml-4">
+          <div className="mt-0.5 flex min-w-0 items-start gap-1">
             <LinkIcon className="mt-0.5 h-3 w-3 flex-shrink-0 text-gray-400 dark:text-dark-text-tertiary" />
             <Caption className="truncate" title={site.baseUrl}>
               {renderHighlightedFragments(highlights.baseUrl, site.baseUrl)}
@@ -269,9 +304,8 @@ export default function SiteInfo({ site, highlights }: SiteInfoProps) {
           </div>
         )}
 
-        {/* Highlighted Custom Check-in URL */}
         {highlights?.customCheckInUrl && site.checkIn?.customCheckInUrl && (
-          <div className="ml-3 mt-0.5 flex min-w-0 items-start gap-1 sm:ml-4">
+          <div className="mt-0.5 flex min-w-0 items-start gap-1">
             <ArrowPathIcon className="mt-0.5 h-3 w-3 flex-shrink-0 text-gray-400 dark:text-dark-text-tertiary" />
             <Caption className="truncate" title={site.checkIn.customCheckInUrl}>
               {renderHighlightedFragments(
@@ -282,9 +316,8 @@ export default function SiteInfo({ site, highlights }: SiteInfoProps) {
           </div>
         )}
 
-        {/* Highlighted Custom Redeem URL */}
         {highlights?.customRedeemUrl && site.checkIn?.customRedeemUrl && (
-          <div className="ml-3 mt-0.5 flex min-w-0 items-start gap-1 sm:ml-4">
+          <div className="mt-0.5 flex min-w-0 items-start gap-1">
             <GiftIcon className="mt-0.5 h-3 w-3 flex-shrink-0 text-gray-400 dark:text-dark-text-tertiary" />
             <Caption className="truncate" title={site.checkIn.customRedeemUrl}>
               {renderHighlightedFragments(
@@ -295,9 +328,8 @@ export default function SiteInfo({ site, highlights }: SiteInfoProps) {
           </div>
         )}
 
-        {/* Notes */}
         {site.notes && (
-          <div className="ml-3 mt-0.5 flex min-w-0 items-start gap-1 sm:ml-4 sm:mt-1">
+          <div className="mt-0.5 flex min-w-0 items-start gap-1 sm:mt-1">
             <PencilSquareIcon className="mt-0.5 h-3 w-3 flex-shrink-0 text-gray-400 dark:text-dark-text-tertiary" />
             <Caption className="truncate" title={site.notes}>
               {site.notes}

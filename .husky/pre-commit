@@ -1,24 +1,8 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
+echo "🔍 Running lint-staged..."
 
-echo "🔍 Running pre-commit checks..."
-
-# Format check
-echo "📝 Checking code formatting..."
-pnpm format:check || {
-  echo "❌ Formatting issues found. Running auto-fix..."
-  pnpm format
-  echo "✅ Code formatted. Please review and stage the changes."
+pnpm lint-staged || {
+  echo "❌ Lint-staged checks failed"
   exit 1
 }
 
-# Lint check
-echo "🔎 Running linter..."
-pnpm lint || {
-  echo "❌ Linting issues found. Attempting to auto-fix..."
-  pnpm lint:fix
-  echo "⚠️  Please review the fixes and stage the changes."
-  exit 1
-}
-
-echo "✅ Pre-commit checks passed!"
+echo "✅ All checks passed!"

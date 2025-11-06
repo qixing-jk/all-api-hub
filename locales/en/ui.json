@@ -16,6 +16,8 @@
     "basic": "Basic Settings",
     "account": "Account Management",
     "models": "Model List",
+    "autoCheckin": "Auto Check-in",
+    "newApiModelSync": "New API Model Sync",
     "keys": "Key Management",
     "importExport": "Import/Export"
   },

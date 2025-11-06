@@ -21,6 +21,7 @@ import {
   Select,
   Switch
 } from "~/components/ui"
+import { WebDAVSettings } from "~/types"
 import { sendMessage } from "~/utils/browserApi"
 import { formatTimestamp } from "~/utils/formatters"
 
@@ -30,9 +31,8 @@ export default function WebDAVAutoSyncSettings() {
   // Auto-sync settings
   const [autoSyncEnabled, setAutoSyncEnabled] = useState(false)
   const [syncInterval, setSyncInterval] = useState(3600)
-  const [syncStrategy, setSyncStrategy] = useState<
-    "merge" | "upload_only" | "download_only"
-  >("merge")
+  const [syncStrategy, setSyncStrategy] =
+    useState<WebDAVSettings["syncStrategy"]>("merge")
 
   // Status
   const [isSyncing, setIsSyncing] = useState(false)
@@ -56,9 +56,9 @@ export default function WebDAVAutoSyncSettings() {
     try {
       const { userPreferences } = await import("~/services/userPreferences")
       const prefs = await userPreferences.getPreferences()
-      setAutoSyncEnabled(prefs.webdavAutoSync ?? false)
-      setSyncInterval(prefs.webdavSyncInterval ?? 3600)
-      setSyncStrategy(prefs.webdavSyncStrategy ?? "merge")
+      setAutoSyncEnabled(prefs.webdav.autoSync ?? false)
+      setSyncInterval(prefs.webdav.syncInterval ?? 3600)
+      setSyncStrategy(prefs.webdav.syncStrategy ?? "merge")
     } catch (error) {
       console.error("Failed to load auto-sync settings:", error)
     }
@@ -86,9 +86,9 @@ export default function WebDAVAutoSyncSettings() {
       const response = await sendMessage({
         action: "webdavAutoSync:updateSettings",
         settings: {
-          webdavAutoSync: autoSyncEnabled,
-          webdavSyncInterval: syncInterval,
-          webdavSyncStrategy: syncStrategy
+          autoSync: autoSyncEnabled,
+          syncInterval: syncInterval,
+          syncStrategy: syncStrategy
         }
       })
 
@@ -219,17 +219,17 @@ export default function WebDAVAutoSyncSettings() {
                 value={syncStrategy}
                 onChange={(e) =>
                   setSyncStrategy(
-                    e.target.value as "merge" | "upload_only" | "download_only"
+                    e.target.value as WebDAVSettings["syncStrategy"]
                   )
                 }>
                 <option value="merge">
                   {t("webdav.autoSync.strategyMerge")}
                 </option>
                 <option value="upload_only">
-                  {t("webdav.autoSync.strategyUploadOnly")}
+                  {t("webdav.autoSync.strategyLocalFirst")}
                 </option>
                 <option value="download_only">
-                  {t("webdav.autoSync.strategyDownloadOnly")}
+                  {t("webdav.autoSync.strategyRemoteFirst")}
                 </option>
               </Select>
             </FormField>

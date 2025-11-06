@@ -16,7 +16,7 @@ import { useAccountDataContext } from "~/features/AccountManagement/hooks/Accoun
 import {
   openFullAccountManagerPage,
   openSettingsPage,
-  openSidePanel
+  openSidePanelPage
 } from "~/utils/navigation"
 
 import CompactThemeToggle from "./ThemeToggle"
@@ -54,7 +54,7 @@ export default function HeaderSection() {
   }
 
   const handleOpenSidePanel = async () => {
-    await openSidePanel()
+    await openSidePanelPage()
   }
 
   return (

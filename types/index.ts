@@ -85,6 +85,16 @@ export interface CheckInConfig {
   enableDetection: boolean
 
   /**
+   * Whether to enable automatic daily check-in for this account.
+   * Only effective when:
+   * - enableDetection is true
+   * - Global auto check-in feature is enabled
+   * - Account has necessary credentials for check-in
+   * Default: false
+   */
+  autoCheckInEnabled?: boolean
+
+  /**
    * Today's check-in status.
    * - true: Can check in today (not yet checked in)
    * - false: Already checked in today
@@ -126,6 +136,7 @@ export interface CheckInConfig {
 // 存储配置
 export interface StorageConfig {
   accounts: SiteAccount[]
+  pinnedAccountIds?: string[] // IDs of pinned accounts, in order (newest pinned first)
   last_updated: number
 }
 
@@ -143,7 +154,7 @@ export interface AccountStats {
 export interface ApiResponse<T = any> {
   success: boolean
   data?: T
-  message?: string
+  message: string
 }
 
 // 用于排序的字段类型
@@ -228,5 +239,14 @@ export type {
   ServiceResponse,
   AccountValidationResponse,
   AccountSaveResponse,
-  NewApiResponse
+  AutoConfigToNewApiResponse
 } from "./serviceResponse"
+
+// New API Types
+export * from "./newapi"
+
+// Model Redirect Types
+export * from "./modelRedirect"
+
+// WebDAV Types
+export * from "./webdav"

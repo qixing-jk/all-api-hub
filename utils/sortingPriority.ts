@@ -17,39 +17,44 @@ import {
 export const DEFAULT_SORTING_PRIORITY_CONFIG: SortingPriorityConfig = {
   criteria: [
     {
-      id: SortingCriteriaType.CURRENT_SITE,
+      id: SortingCriteriaType.PINNED,
       enabled: true,
       priority: 0
     },
     {
-      id: SortingCriteriaType.CHECK_IN_REQUIREMENT,
+      id: SortingCriteriaType.CURRENT_SITE,
       enabled: true,
       priority: 1
     },
     {
-      id: SortingCriteriaType.MATCHED_OPEN_TABS,
+      id: SortingCriteriaType.CHECK_IN_REQUIREMENT,
       enabled: true,
       priority: 2
     },
     {
-      id: SortingCriteriaType.HEALTH_STATUS,
+      id: SortingCriteriaType.MATCHED_OPEN_TABS,
       enabled: true,
       priority: 3
     },
     {
-      id: SortingCriteriaType.CUSTOM_CHECK_IN_URL,
+      id: SortingCriteriaType.HEALTH_STATUS,
       enabled: true,
       priority: 4
     },
     {
-      id: SortingCriteriaType.CUSTOM_REDEEM_URL,
+      id: SortingCriteriaType.CUSTOM_CHECK_IN_URL,
       enabled: true,
       priority: 5
     },
     {
-      id: SortingCriteriaType.USER_SORT_FIELD,
+      id: SortingCriteriaType.CUSTOM_REDEEM_URL,
       enabled: true,
       priority: 6
+    },
+    {
+      id: SortingCriteriaType.USER_SORT_FIELD,
+      enabled: true,
+      priority: 7
     }
   ],
   lastModified: Date.now()
@@ -87,39 +92,59 @@ function applySortingCriteria(
   userSortField: SortField,
   currencyType: CurrencyType,
   sortOrder: "asc" | "desc",
-  matchedAccountScores: Record<string, number>
+  matchedAccountScores: Record<string, number>,
+  pinnedAccountIds: string[]
 ): number {
   switch (criteriaId) {
+    case SortingCriteriaType.PINNED: {
+      const indexA = pinnedAccountIds.indexOf(a.id)
+      const indexB = pinnedAccountIds.indexOf(b.id)
+      const isPinnedA = indexA !== -1
+      const isPinnedB = indexB !== -1
+
+      if (isPinnedA && isPinnedB) {
+        return indexA - indexB
+      }
+      if (isPinnedA) return -1
+      if (isPinnedB) return 1
+      return 0
+    }
+
     case SortingCriteriaType.CURRENT_SITE:
       if (a.id === detectedAccount?.id) return -1
       if (b.id === detectedAccount?.id) return 1
       return 0
 
-    case SortingCriteriaType.HEALTH_STATUS:
+    case SortingCriteriaType.HEALTH_STATUS: {
       const healthPriority = { error: 1, warning: 2, unknown: 3, healthy: 4 }
       const healthA = healthPriority[a.health?.status] || 4
       const healthB = healthPriority[b.health?.status] || 4
       return healthA - healthB
+    }
 
-    case SortingCriteriaType.CHECK_IN_REQUIREMENT:
+    case SortingCriteriaType.CHECK_IN_REQUIREMENT: {
       const checkInA = a?.checkIn?.isCheckedInToday === false ? 0 : 1
       const checkInB = b?.checkIn?.isCheckedInToday === false ? 0 : 1
       return checkInA - checkInB
+    }
 
-    case SortingCriteriaType.CUSTOM_CHECK_IN_URL:
+    case SortingCriteriaType.CUSTOM_CHECK_IN_URL: {
       const customCheckInA = a?.checkIn?.customCheckInUrl ? 1 : 0
       const customCheckInB = b?.checkIn?.customCheckInUrl ? 1 : 0
       return customCheckInB - customCheckInA
+    }
 
-    case SortingCriteriaType.CUSTOM_REDEEM_URL:
+    case SortingCriteriaType.CUSTOM_REDEEM_URL: {
       const customRedeemA = a?.checkIn?.customRedeemUrl ? 1 : 0
       const customRedeemB = b?.checkIn?.customRedeemUrl ? 1 : 0
       return customRedeemB - customRedeemA
+    }
 
-    case SortingCriteriaType.MATCHED_OPEN_TABS:
+    case SortingCriteriaType.MATCHED_OPEN_TABS: {
       const scoreA = matchedAccountScores[a.id] || 0
       const scoreB = matchedAccountScores[b.id] || 0
-      return scoreB - scoreA // Higher score = higher priority
+      return scoreB - scoreA
+    } // Higher score = higher priority
 
     case SortingCriteriaType.USER_SORT_FIELD:
       return compareByUserSortField(
@@ -143,6 +168,7 @@ function applySortingCriteria(
  * @param currencyType The currency type to use for sorting balance or consumption.
  * @param sortOrder The sort order ('asc' or 'desc').
  * @param matchedAccountScores
+ * @param pinnedAccountIds The list of pinned account IDs in order
  * @returns A comparator function for `Array.prototype.sort()`.
  */
 export function createDynamicSortComparator(
@@ -151,7 +177,8 @@ export function createDynamicSortComparator(
   userSortField: SortField,
   currencyType: CurrencyType,
   sortOrder: "asc" | "desc",
-  matchedAccountScores: Record<string, number> = {}
+  matchedAccountScores: Record<string, number> = {},
+  pinnedAccountIds: string[] = []
 ) {
   return (a: DisplaySiteData, b: DisplaySiteData): number => {
     const enabledCriteria = config.criteria
@@ -167,7 +194,8 @@ export function createDynamicSortComparator(
         userSortField,
         currencyType,
         sortOrder,
-        matchedAccountScores
+        matchedAccountScores,
+        pinnedAccountIds
       )
       if (comparison !== 0) return comparison
     }

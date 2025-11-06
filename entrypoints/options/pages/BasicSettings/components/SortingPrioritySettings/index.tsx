@@ -7,7 +7,7 @@ import { BodySmall, Card, CardContent, Heading4 } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { SortingCriteriaType, type SortingFieldConfig } from "~/types/sorting"
 
-import { showUpdateToast } from "../../utils/toastHelpers"
+import { showUpdateToast } from "../../../../../../utils/toastHelpers.ts"
 import { SortingPriorityDragList } from "./SortingPriorityDragList"
 
 // Maps sorting criteria IDs to their UI display text (label and description).
@@ -15,6 +15,10 @@ import { SortingPriorityDragList } from "./SortingPriorityDragList"
 const getSortingCriteriaUiText = (
   t: (key: string) => string
 ): Record<SortingCriteriaType, { label: string; description?: string }> => ({
+  [SortingCriteriaType.PINNED]: {
+    label: t("settings:sorting.pinnedPriority"),
+    description: t("settings:sorting.pinnedDesc")
+  },
   [SortingCriteriaType.CURRENT_SITE]: {
     label: t("settings:sorting.currentSitePriority"),
     description: t("settings:sorting.currentSiteDesc")

@@ -1,11 +1,8 @@
 import { DialogTitle } from "@headlessui/react"
 import { TrashIcon } from "@heroicons/react/24/outline"
-import type { FC } from "react"
 import { useTranslation } from "react-i18next"
 
-interface DialogHeaderProps {}
-
-export const DialogHeader: FC<DialogHeaderProps> = () => {
+export const DialogHeader = () => {
   const { t } = useTranslation("ui")
 
   return (

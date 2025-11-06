@@ -4,77 +4,15 @@ import { cleanup, configure } from "@testing-library/react"
 
 import "whatwg-fetch"
 
-import { afterAll, afterEach, beforeAll, vi } from "vitest"
-import { resetContext } from "vitest-webextension-mock"
-
-import "vitest-webextension-mock"
+import { afterAll, afterEach, beforeAll, beforeEach, vi } from "vitest"
+// Use WXT official fakeBrowser for WebExtension API mocking
+import { fakeBrowser } from "wxt/testing/fake-browser"
 
 import { server } from "./msw/server"
 
-// Provide an in-memory implementation of @plasmohq/storage
-const storageData = new Map<string, any>()
-
-vi.mock("@plasmohq/storage", () => {
-  class Storage {
-    async get(key: string) {
-      return storageData.get(key)
-    }
-
-    async set(key: string, value: any) {
-      storageData.set(key, value)
-    }
-
-    async remove(key: string) {
-      storageData.delete(key)
-    }
-
-    async clear() {
-      storageData.clear()
-    }
-
-    watch() {
-      return () => {}
-    }
-  }
-
-  return { Storage }
-})
-
-// Mock webextension-polyfill to use the global browser mock provided by
-// vitest-webextension-mock
-vi.mock("webextension-polyfill", () => ({
-  default: globalThis.browser,
-  ...globalThis.browser
-}))
-
-// Ensure the Chrome namespace exists for modules that rely on it
-const globalAny = globalThis as any
-if (!globalAny.chrome) {
-  globalAny.chrome = {
-    runtime: {
-      sendMessage: vi.fn(),
-      onMessage: {
-        addListener: vi.fn(),
-        removeListener: vi.fn(),
-        hasListener: vi.fn()
-      },
-      getURL: vi.fn((path: string) => `chrome-extension://mock-id/${path}`)
-    },
-    storage: {
-      local: {
-        get: vi.fn(),
-        set: vi.fn(),
-        remove: vi.fn(),
-        clear: vi.fn()
-      }
-    },
-    tabs: {
-      query: vi.fn(),
-      sendMessage: vi.fn(),
-      create: vi.fn()
-    }
-  }
-}
+// No need to manually mock @plasmohq/storage - WxtVitest handles browser.storage
+// No need to manually mock webextension-polyfill - WxtVitest provides it
+// No need to manually mock chrome API - fakeBrowser provides complete implementation
 
 // Polyfill APIs used in the app that are not present in jsdom
 Object.defineProperty(window, "matchMedia", {
@@ -90,6 +28,8 @@ Object.defineProperty(window, "matchMedia", {
     dispatchEvent: vi.fn()
   }))
 })
+
+const globalAny = globalThis as any
 
 globalAny.IntersectionObserver = class IntersectionObserver {
   disconnect() {}
@@ -112,11 +52,14 @@ beforeAll(() => {
   server.listen({ onUnhandledRequest: "warn" })
 })
 
+beforeEach(() => {
+  // Reset fakeBrowser state before each test
+  fakeBrowser.reset()
+})
+
 afterEach(() => {
   server.resetHandlers()
   cleanup()
-  storageData.clear()
-  resetContext()
   vi.clearAllMocks()
 })
 

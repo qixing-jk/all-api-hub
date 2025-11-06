@@ -1,0 +1,71 @@
+{
+  "description": "Automatically check in eligible accounts every day within a configurable time window.",
+  "settings": {
+    "title": "Auto Check-in",
+    "enable": "Enable auto check-in",
+    "enableDesc": "Toggle the global auto check-in feature. When disabled, no check-in tasks will run.",
+    "windowStart": "Time window start",
+    "windowStartDesc": "The earliest local time when the daily check-in can start.",
+    "windowEnd": "Time window end",
+    "windowEndDesc": "The latest local time when the daily check-in can start.",
+    "viewExecution": "Auto check-in history",
+    "viewExecutionDesc": "View detailed results and logs for each automatic check-in run.",
+    "viewExecutionButton": "Open results"
+  },
+  "status": {
+    "lastRun": "Last run",
+    "nextScheduled": "Next scheduled run",
+    "notScheduled": "Not scheduled",
+    "result": {
+      "success": "Success",
+      "partial": "Partial",
+      "failed": "Failed"
+    }
+  },
+  "execution": {
+    "title": "Auto Check-in History",
+    "runNow": "Run now",
+    "refresh": "Refresh",
+    "statistics": {
+      "result": "Result",
+      "accounts": "Accounts (Success / Failed / Total)"
+    },
+    "status": {
+      "success": "Success",
+      "alreadyChecked": "Already checked in",
+      "failed": "Failed"
+    },
+    "table": {
+      "accountName": "Account Name",
+      "status": "Status",
+      "message": "Message",
+      "time": "Time"
+    },
+    "filters": {
+      "all": "All",
+      "success": "Success",
+      "failed": "Failed",
+      "searchPlaceholder": "Search by account name or message..."
+    },
+    "empty": {
+      "noHistory": "No execution history",
+      "noHistoryDesc": "Click \"Run now\" to execute automatic check-in for all eligible accounts",
+      "noResults": "No matching results",
+      "noResultsDesc": "Try adjusting your filters or search query"
+    }
+  },
+  "messages": {
+    "error": {
+      "loadFailed": "Failed to load auto check-in settings: {{error}}",
+      "runFailed": "Failed to run auto check-in: {{error}}",
+      "invalidTimeWindow": "Invalid time window. Start and end cannot be the same."
+    },
+    "success": {
+      "settingsSaved": "Auto check-in settings have been saved.",
+      "runCompleted": "Auto check-in completed."
+    },
+    "loading": {
+      "running": "Running auto check-in..."
+    }
+  }
+}

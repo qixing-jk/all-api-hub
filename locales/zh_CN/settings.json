@@ -1,6 +1,16 @@
 {
   "title": "设置",
   "description": "管理插件的基本配置选项",
+  "tabs": {
+    "general": "通用",
+    "accountManagement": "账号管理",
+    "autoRefresh": "自动刷新",
+    "checkinRedeem": "签到与兑换",
+    "dataBackup": "数据与备份",
+    "newApi": "New API",
+    "more": "更多",
+    "select": "选择一个分组"
+  },
   "display": {
     "title": "显示设置",
     "description": "自定义插件的外观和显示偏好",
@@ -30,6 +40,8 @@
     "title": "排序优先级设置",
     "description": "定义账户列表的排序优先级，以组织账户的显示方式。",
     "priority": "优先级",
+    "pinnedPriority": "置顶优先",
+    "pinnedDesc": "将已置顶的账号按置顶顺序排在列表顶部",
     "currentSitePriority": "当前站点优先",
     "currentSiteDesc": "将当前访问的站点置于列表顶部",
     "healthStatus": "健康状态",
@@ -45,6 +57,27 @@
     "matchedOpenTabs": "匹配的打开标签页",
     "matchedOpenTabsDesc": "将与任意打开标签页（标题或URL）匹配的站点排在前面",
     "unknownSortRule": "未知排序规则"
+  },
+  "dataBackup": {
+    "title": "数据与备份",
+    "description": "管理备份、WebDAV 同步和导入/导出入口。",
+    "importExport": {
+      "title": "导入与导出",
+      "description": "访问专用的导入和导出数据页面。",
+      "openPage": "打开导入/导出页面",
+      "openImport": "前往导入区域",
+      "openExport": "前往导出区域",
+      "info": "导入/导出页面提供数据导入、导出为不同格式和备份管理的完整功能。"
+    }
+  },
+  "appearanceLanguage": {
+    "language": "语言",
+    "languageDesc": "选择您偏好的语言"
+  },
+  "accountManagement": {
+    "title": "账号管理",
+    "description": "在专用管理控制台中管理账号、余额、API 密钥并配置排序优先级。",
+    "openPage": "打开账号管理页面"
   },
   "newApi": {
     "title": "New API 集成设置",

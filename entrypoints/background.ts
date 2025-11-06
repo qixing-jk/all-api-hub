@@ -1,12 +1,23 @@
 import { t } from "i18next"
 
+import { initBackgroundI18n } from "~/utils/background-i18n.ts"
+
 import { accountStorage } from "../services/accountStorage"
+import {
+  autoCheckinScheduler,
+  handleAutoCheckinMessage
+} from "../services/autoCheckin/scheduler"
 import {
   autoRefreshService,
   handleAutoRefreshMessage
 } from "../services/autoRefreshService"
-import { migrateAccountsConfig } from "../services/configMigration/configMigration"
+import { migrateAccountsConfig } from "../services/configMigration/account/accountDataMigration.ts"
 import { getSiteType } from "../services/detectSiteType"
+import { modelMetadataService } from "../services/modelMetadata"
+import {
+  handleNewApiModelSyncMessage,
+  newApiModelSyncScheduler
+} from "../services/newApiModelSync"
 import { userPreferences } from "../services/userPreferences"
 import {
   handleWebdavAutoSyncMessage,
@@ -18,7 +29,6 @@ import {
   hasWindowsAPI,
   onInstalled,
   onRuntimeMessage,
-  onStartup,
   onTabRemoved,
   onWindowRemoved,
   removeTabOrWindow
@@ -30,27 +40,39 @@ export default defineBackground(() => {
   main()
 })
 
-function main() {
+async function main() {
   // 管理临时窗口的 Map
   const tempWindows = new Map<string, number>()
 
-  // 插件启动时初始化自动刷新服务和WebDAV自动同步服务
-  onStartup(async () => {
-    console.log("[Background] 插件启动，初始化自动刷新服务和WebDAV自动同步服务")
+  let servicesInitialized = false
+
+  async function initializeServices() {
+    if (servicesInitialized) {
+      console.log("[Background] 服务已初始化，跳过")
+      return
+    }
+
+    console.log("[Background] 初始化服务...")
+    await initBackgroundI18n()
+    await modelMetadataService.initialize().catch((error) => {
+      console.warn("[Background] Model metadata initialization failed:", error)
+    })
     await autoRefreshService.initialize()
     await webdavAutoSyncService.initialize()
+    await newApiModelSyncScheduler.initialize()
+    await autoCheckinScheduler.initialize()
 
-    // Ensure user preferences are migrated on startup
-    await userPreferences.getPreferences()
-  })
+    servicesInitialized = true
+  }
+
+  await initializeServices()
 
   // 插件安装时初始化自动刷新服务和WebDAV自动同步服务
   onInstalled(async (details) => {
     console.log(
       "[Background] 插件安装/更新，初始化自动刷新服务和WebDAV自动同步服务"
     )
-    await autoRefreshService.initialize()
-    await webdavAutoSyncService.initialize()
+    await initializeServices()
 
     if (details.reason === "install" || details.reason === "update") {
       console.log(`Extension ${details.reason}: triggering config migration`)
@@ -110,6 +132,18 @@ function main() {
       handleWebdavAutoSyncMessage(request, sendResponse)
       return true
     }
+
+    // 处理New API模型同步相关消息
+    if (request.action && request.action.startsWith("newApiModelSync:")) {
+      handleNewApiModelSyncMessage(request, sendResponse)
+      return true
+    }
+
+    // 处理Auto Check-in相关消息
+    if (request.action && request.action.startsWith("autoCheckin:")) {
+      handleAutoCheckinMessage(request, sendResponse)
+      return true
+    }
   })
 
   // 监听窗口/标签页关闭事件，清理记录
@@ -133,7 +167,10 @@ function main() {
   })
 
   // 打开临时窗口访问指定站点
-  async function handleOpenTempWindow(request: any, sendResponse: Function) {
+  async function handleOpenTempWindow(
+    request: any,
+    sendResponse: (response?: any) => void
+  ) {
     try {
       const { url, requestId } = request
 
@@ -177,7 +214,10 @@ function main() {
   }
 
   // 关闭临时窗口
-  async function handleCloseTempWindow(request: any, sendResponse: Function) {
+  async function handleCloseTempWindow(
+    request: any,
+    sendResponse: (response?: any) => void
+  ) {
     try {
       const { requestId } = request
       const id = tempWindows.get(requestId)
@@ -194,7 +234,10 @@ function main() {
   }
 
   // 自动检测站点信息
-  async function handleAutoDetectSite(request: any, sendResponse: Function) {
+  async function handleAutoDetectSite(
+    request: any,
+    sendResponse: (response?: any) => void
+  ) {
     const { url, requestId } = request
 
     try {
@@ -295,6 +338,7 @@ function main() {
         user: userResponse.data?.user
       }
     } catch (error) {
+      console.error(error)
       // 清理窗口或标签页
       const storedId = tempWindows.get(requestId)
       if (storedId) {

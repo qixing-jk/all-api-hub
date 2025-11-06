@@ -83,6 +83,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       toast.success(t("keyManagement:messages.keyCopied", { name }))
     } catch (error) {
       toast.error(t("keyManagement:messages.copyFailed"))
+      console.error(error)
     }
   }
 

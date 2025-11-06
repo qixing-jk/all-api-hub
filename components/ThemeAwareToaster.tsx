@@ -1,4 +1,5 @@
-import { Toaster } from "react-hot-toast"
+import { XMarkIcon } from "@heroicons/react/24/outline"
+import toast, { ToastBar, Toaster } from "react-hot-toast"
 
 import { useTheme } from "~/contexts/ThemeContext"
 
@@ -57,7 +58,24 @@ export const ThemeAwareToaster = ({
             secondary: resolvedTheme === "dark" ? "#1e293b" : "#fff"
           }
         }
-      }}
-    />
+      }}>
+      {(t) => (
+        <ToastBar toast={t}>
+          {({ icon, message }) => {
+            return (
+              <>
+                {icon}
+                {message}
+                {t.type !== "loading" && (
+                  <button onClick={() => toast.dismiss(t.id)}>
+                    <XMarkIcon className="h-4 w-4" />
+                  </button>
+                )}
+              </>
+            )
+          }}
+        </ToastBar>
+      )}
+    </Toaster>
   )
 }

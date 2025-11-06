@@ -73,7 +73,11 @@
     "keyManagement": "密钥管理",
     "modelManagement": "模型管理",
     "usageLog": "用量日志",
-    "redeemPage": "充值页面"
+    "redeemPage": "充值页面",
+    "pin": "置顶账号",
+    "unpin": "取消置顶",
+    "pinned": "已置顶",
+    "unpinned": "已取消置顶"
   },
   "search": {
     "placeholder": "搜索名称/地址/签到/兑换/令牌",

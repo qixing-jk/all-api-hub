@@ -1,6 +1,16 @@
 {
   "title": "Settings",
   "description": "Manage the basic configuration options of the plugin",
+  "tabs": {
+    "general": "General",
+    "accountManagement": "Account Management",
+    "autoRefresh": "Auto Refresh",
+    "checkinRedeem": "Check-in & Redeem",
+    "dataBackup": "Data & Backup",
+    "newApi": "New API",
+    "more": "More",
+    "select": "Select a tab"
+  },
   "display": {
     "title": "Display Settings",
     "description": "Customize the appearance and display preferences of the plugin",
@@ -30,6 +40,8 @@
     "title": "Sorting Priority Settings",
     "description": "Define the sorting priority of accounts in the list to organize the display of accounts",
     "priority": "Priority",
+    "pinnedPriority": "Pinned Priority",
+    "pinnedDesc": "Place pinned accounts at the top of the list in the order they were pinned",
     "currentSitePriority": "Current Site Priority",
     "currentSiteDesc": "Place the currently accessed site at the top of the list",
     "healthStatus": "Health Status",
@@ -45,6 +57,27 @@
     "matchedOpenTabs": "Matched Open Tabs",
     "matchedOpenTabsDesc": "Place sites that match any open tab (by title or URL) at the front",
     "unknownSortRule": "Unknown sorting rule"
+  },
+  "dataBackup": {
+    "title": "Data & Backup",
+    "description": "Manage backups, WebDAV sync, and import/export entry points.",
+    "importExport": {
+      "title": "Import & Export",
+      "description": "Access the dedicated page for importing and exporting data.",
+      "openPage": "Open Import / Export Page",
+      "openImport": "Go to Import Section",
+      "openExport": "Go to Export Section",
+      "info": "The Import/Export page provides full access to data import, exporting to different formats, and backup management."
+    }
+  },
+  "appearanceLanguage": {
+    "language": "Language",
+    "languageDesc": "Choose your preferred language"
+  },
+  "accountManagement": {
+    "title": "Account Management",
+    "description": "Manage accounts, balances, API keys, and configure sorting priorities in the dedicated management console.",
+    "openPage": "Open Account Management Page"
   },
   "newApi": {
     "title": "New API Integration Settings",

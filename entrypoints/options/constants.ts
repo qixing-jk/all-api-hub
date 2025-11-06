@@ -1,5 +1,7 @@
 import {
   ArrowPathIcon,
+  ArrowPathRoundedSquareIcon,
+  CheckBadgeIcon,
   CogIcon,
   CpuChipIcon,
   InformationCircleIcon,
@@ -9,10 +11,12 @@ import {
 
 import About from "./pages/About"
 import AccountManagement from "./pages/AccountManagement"
+import AutoCheckin from "./pages/AutoCheckin"
 import BasicSettings from "./pages/BasicSettings"
 import ImportExport from "./pages/ImportExport"
 import KeyManagement from "./pages/KeyManagement"
 import ModelList from "./pages/ModelList"
+import NewApiModelSync from "./pages/NewApiModelSync"
 
 // 菜单项类型定义
 export interface MenuItem {
@@ -37,6 +41,12 @@ export const menuItems: MenuItem[] = [
     component: AccountManagement
   },
   {
+    id: "autoCheckin",
+    name: "自动签到",
+    icon: CheckBadgeIcon,
+    component: AutoCheckin
+  },
+  {
     id: "models",
     name: "模型列表",
     icon: CpuChipIcon,
@@ -47,6 +57,12 @@ export const menuItems: MenuItem[] = [
     name: "密钥管理",
     icon: KeyIcon,
     component: KeyManagement
+  },
+  {
+    id: "newApiModelSync",
+    name: "模型同步",
+    icon: ArrowPathRoundedSquareIcon,
+    component: NewApiModelSync
   },
   {
     id: "importExport",

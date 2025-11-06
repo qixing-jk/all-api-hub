@@ -2,7 +2,7 @@
   "name": "all-api-hub-docs",
   "description": "A VuePress project",
   "version": "0.0.1",
-  "license": "MIT",
+  "license": "AGPL-3.0",
   "type": "module",
   "packageManager": "pnpm@9.0.0",
   "scripts": {

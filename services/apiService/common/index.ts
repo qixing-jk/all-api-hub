@@ -14,6 +14,7 @@ import {
   LogType,
   OpenAIAuthParams,
   PaginatedTokenResponse,
+  PaymentResponse,
   PricingResponse,
   RefreshAccountResult,
   SiteStatusInfo,
@@ -43,11 +44,7 @@ import {
 /**
  * 获取用户基本信息（用于账号检测） - 使用浏览器 cookie 认证
  */
-export const fetchUserInfo = async (
-  baseUrl: string,
-  userId?: number,
-  _authType?: AuthTypeEnum
-) => {
+export const fetchUserInfo = async (baseUrl: string, userId?: number) => {
   const userData = await fetchApiData<UserInfo>({
     baseUrl,
     endpoint: "/api/user/self",
@@ -121,7 +118,39 @@ export const extractDefaultExchangeRate = (
   if (statusInfo.PaymentUSDRate && statusInfo.PaymentUSDRate > 0) {
     return statusInfo.PaymentUSDRate
   }
+
   return null
+}
+
+/**
+ * 获取支付信息
+ * @note 此为 RIX_API 独有，放common为保证fallback
+ * @param baseUrl
+ * @param userId
+ * @param accessToken
+ * @param authType
+ */
+export const fetchPaymentInfo = async ({
+  baseUrl,
+  userId,
+  token: accessToken,
+  authType
+}: AuthTypeFetchParams): Promise<PaymentResponse> => {
+  try {
+    return await fetchApi<PaymentResponse>(
+      {
+        baseUrl,
+        endpoint: "/api/user/payment",
+        userId,
+        token: accessToken,
+        authType
+      },
+      true
+    )
+  } catch (error) {
+    console.error("获取支付信息失败:", error)
+    throw error
+  }
 }
 
 /**
@@ -510,7 +539,7 @@ export const fetchAccountTokens = async (
 /**
  * 获取可用模型列表
  */
-export const fetchAvailableModels = async ({
+export const fetchAccountAvailableModels = async ({
   baseUrl,
   userId,
   token: accessToken,
@@ -581,6 +610,36 @@ export const fetchUserGroups = async ({
     })
   } catch (error) {
     console.error("获取分组信息失败:", error)
+    throw error
+  }
+}
+
+/**
+ * 获取站点用户分组信息
+ * @param {AuthTypeFetchParams} params
+ * @param {string} params.baseUrl
+ * @param {number} params.userId
+ * @param {string} params.token
+ * @param {AuthTypeEnum} [params.authType=AuthTypeEnum.None]
+ * @returns {Promise<Array<string>>}
+ * @throws {ApiError}
+ */
+export const fetchSiteUserGroups = async ({
+  baseUrl,
+  userId,
+  token: accessToken,
+  authType
+}: AuthTypeFetchParams): Promise<Array<string>> => {
+  try {
+    return await fetchApiData<Array<string>>({
+      baseUrl,
+      endpoint: "/api/group",
+      userId,
+      token: accessToken,
+      authType
+    })
+  } catch (error) {
+    console.error("获取站点分组信息失败:", error)
     throw error
   }
 }

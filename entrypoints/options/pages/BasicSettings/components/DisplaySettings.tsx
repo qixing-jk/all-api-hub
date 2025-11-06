@@ -14,8 +14,7 @@ import { ANIMATIONS, COLORS } from "~/constants/designTokens"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import type { BalanceType, CurrencyType } from "~/types"
 
-import ThemeToggle from "../../../components/ThemeToggle"
-import { showUpdateToast } from "../utils/toastHelpers"
+import { showUpdateToast } from "../../../../../utils/toastHelpers.ts"
 
 export default function DisplaySettings() {
   const { t } = useTranslation("settings")
@@ -35,7 +34,7 @@ export default function DisplaySettings() {
   }
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6" id="general-display">
       <div className="space-y-1.5">
         <Heading3>{t("display.title")}</Heading3>
         <BodySmall>{t("display.description")}</BodySmall>
@@ -43,8 +42,6 @@ export default function DisplaySettings() {
 
       <Card padding="none">
         <CardList>
-          <ThemeToggle />
-
           <CardItem
             icon={
               <GlobeAltIcon className="h-5 w-5 text-green-600 dark:text-green-400" />

@@ -49,9 +49,9 @@ export default function WebDAVSettings() {
   useEffect(() => {
     ;(async () => {
       const prefs = await userPreferences.getPreferences()
-      setWebdavUrl(prefs.webdavUrl ?? "")
-      setWebdavUsername(prefs.webdavUsername ?? "")
-      setWebdavPassword(prefs.webdavPassword ?? "")
+      setWebdavUrl(prefs.webdav.url ?? "")
+      setWebdavUsername(prefs.webdav.username ?? "")
+      setWebdavPassword(prefs.webdav.password ?? "")
     })()
   }, [])
 
@@ -128,9 +128,9 @@ export default function WebDAVSettings() {
               setSaving(true)
               try {
                 await userPreferences.updateWebdavSettings({
-                  webdavUrl,
-                  webdavUsername,
-                  webdavPassword
+                  url: webdavUrl,
+                  username: webdavUsername,
+                  password: webdavPassword
                 })
                 toast.success(t("settings:messages.updateSuccess"))
               } catch (e) {
@@ -154,14 +154,14 @@ export default function WebDAVSettings() {
               setTesting(true)
               try {
                 await userPreferences.updateWebdavSettings({
-                  webdavUrl,
-                  webdavUsername,
-                  webdavPassword
+                  url: webdavUrl,
+                  username: webdavUsername,
+                  password: webdavPassword
                 })
                 await testWebdavConnection({
-                  webdavUrl,
-                  webdavUsername,
-                  webdavPassword
+                  url: webdavUrl,
+                  username: webdavUsername,
+                  password: webdavPassword
                 })
                 toast.success(t("settings:messages.updateSuccess"))
               } catch (e: any) {
@@ -195,9 +195,9 @@ export default function WebDAVSettings() {
                   preferences: preferencesData
                 }
                 await uploadBackup(JSON.stringify(exportData, null, 2), {
-                  webdavUrl,
-                  webdavUsername,
-                  webdavPassword
+                  url: webdavUrl,
+                  username: webdavUsername,
+                  password: webdavPassword
                 })
                 toast.success(t("export.dataExported"))
               } catch (e: any) {
@@ -223,9 +223,9 @@ export default function WebDAVSettings() {
               setDownloading(true)
               try {
                 const content = await downloadBackup({
-                  webdavUrl,
-                  webdavUsername,
-                  webdavPassword
+                  url: webdavUrl,
+                  username: webdavUsername,
+                  password: webdavPassword
                 })
                 const data = JSON.parse(content)
 

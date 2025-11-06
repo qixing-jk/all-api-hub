@@ -185,7 +185,14 @@ export default function AccountForm({
         <Switch
           checked={checkIn.enableDetection}
           onChange={(enableDetection) =>
-            onCheckInChange({ ...checkIn, enableDetection })
+            onCheckInChange({
+              ...checkIn,
+              enableDetection,
+              autoCheckInEnabled:
+                enableDetection && checkIn.autoCheckInEnabled !== false
+                  ? checkIn.autoCheckInEnabled ?? true
+                  : checkIn.autoCheckInEnabled
+            })
           }
           id="supports-check-in"
           className={`${
@@ -237,6 +244,41 @@ export default function AccountForm({
             <span
               className={`${
                 checkIn.openRedeemWithCheckIn ?? true
+                  ? "translate-x-6"
+                  : "translate-x-1"
+              } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+            />
+          </Switch>
+        </div>
+      )}
+
+      {/* 自动签到开关 */}
+      {checkIn.enableDetection && (
+        <div className="flex w-full items-center justify-between">
+          <div className="flex-1">
+            <label
+              htmlFor="auto-checkin-enabled"
+              className="text-sm font-medium text-gray-700 dark:text-dark-text-secondary">
+              {t("form.autoCheckInEnabled")}
+            </label>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              {t("form.autoCheckInEnabledDesc")}
+            </p>
+          </div>
+          <Switch
+            checked={checkIn.autoCheckInEnabled !== false}
+            onChange={(autoCheckInEnabled) =>
+              onCheckInChange({ ...checkIn, autoCheckInEnabled })
+            }
+            id="auto-checkin-enabled"
+            className={`${
+              checkIn.autoCheckInEnabled !== false
+                ? "bg-green-600"
+                : "bg-gray-200"
+            } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2`}>
+            <span
+              className={`${
+                checkIn.autoCheckInEnabled !== false
                   ? "translate-x-6"
                   : "translate-x-1"
               } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}

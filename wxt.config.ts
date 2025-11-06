@@ -9,7 +9,7 @@ export default defineConfig({
     name: "__MSG_manifest_name__",
     description: "__MSG_manifest_description__",
     default_locale: "zh_CN",
-    permissions: ["tabs", "storage", "sidePanel"],
+    permissions: ["tabs", "storage", "sidePanel", "alarms"],
     host_permissions: ["https://*/*"],
     browser_specific_settings: {
       gecko: {

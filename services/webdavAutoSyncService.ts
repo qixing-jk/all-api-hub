@@ -1,6 +1,6 @@
 import { t } from "i18next"
 
-import type { SiteAccount } from "~/types"
+import type { SiteAccount, WebDAVSettings } from "~/types"
 
 import { getErrorMessage } from "../utils/error"
 import { accountStorage } from "./accountStorage"
@@ -56,29 +56,29 @@ class WebdavAutoSyncService {
       // 获取用户偏好设置
       const preferences = await userPreferences.getPreferences()
 
-      if (!preferences.webdavAutoSync) {
+      if (!preferences.webdav.autoSync) {
         console.log("[WebdavAutoSync] 自动同步已关闭")
         return
       }
 
       // 检查WebDAV配置是否完整
       if (
-        !preferences.webdavUrl ||
-        !preferences.webdavUsername ||
-        !preferences.webdavPassword
+        !preferences.webdav.url ||
+        !preferences.webdav.username ||
+        !preferences.webdav.password
       ) {
         console.log("[WebdavAutoSync] WebDAV配置不完整，无法启动自动同步")
         return
       }
 
       // 启动定时同步
-      const intervalMs = (preferences.webdavSyncInterval || 3600) * 1000
+      const intervalMs = (preferences.webdav.syncInterval || 3600) * 1000
       this.syncTimer = setInterval(async () => {
         await this.performBackgroundSync()
       }, intervalMs)
 
       console.log(
-        `[WebdavAutoSync] 自动同步已启动，间隔: ${preferences.webdavSyncInterval || 3600}秒`
+        `[WebdavAutoSync] 自动同步已启动，间隔: ${preferences.webdav.syncInterval || 3600}秒`
       )
     } catch (error) {
       console.error("[WebdavAutoSync] 设置自动同步失败:", error)
@@ -165,7 +165,7 @@ class WebdavAutoSyncService {
     ])
 
     // 决定同步策略
-    const strategy = preferences.webdavSyncStrategy || "merge"
+    const strategy = preferences.webdav.syncStrategy || "merge"
 
     let accountsToSave: SiteAccount[]
     let preferencesToSave: UserPreferences
@@ -191,15 +191,15 @@ class WebdavAutoSyncService {
       preferencesToSave = mergeResult.preferences
       console.log(`[WebdavAutoSync] 合并完成: ${accountsToSave.length} 个账号`)
     } else if (strategy === "upload_only" || !remoteData) {
-      // 仅上传或远程无数据
+      // 覆盖策略或远程无数据
       accountsToSave = localAccountsConfig.accounts
       preferencesToSave = localPreferences
-      console.log("[WebdavAutoSync] 使用本地数据上传")
+      console.log("[WebdavAutoSync] 使用本地数据覆盖")
     } else {
-      // download_only
+      // 默认合并策略
       accountsToSave = remoteData?.accounts?.accounts || []
       preferencesToSave = remoteData?.preferences || localPreferences
-      console.log("[WebdavAutoSync] 使用远程数据下载")
+      console.log("[WebdavAutoSync] 使用远程数据")
     }
 
     // 保存合并后的数据到本地
@@ -354,12 +354,15 @@ class WebdavAutoSyncService {
    * 更新同步设置
    */
   async updateSettings(settings: {
-    webdavAutoSync?: boolean
-    webdavSyncInterval?: number
-    webdavSyncStrategy?: "merge" | "upload_only" | "download_only"
+    autoSync?: boolean
+    syncInterval?: number
+    syncStrategy?: WebDAVSettings["syncStrategy"]
   }) {
     try {
-      await userPreferences.updateWebdavAutoSyncSettings(settings)
+      // Update the nested webdav object
+      await userPreferences.savePreferences({
+        webdav: settings
+      })
       await this.setupAutoSync() // 重新设置定时器
       console.log("[WebdavAutoSync] 设置已更新:", settings)
     } catch (error) {
@@ -406,6 +409,7 @@ class WebdavAutoSyncService {
         })
     } catch (error) {
       // 静默处理错误，避免影响后台同步
+      console.error(error)
       console.warn("[WebdavAutoSync] 发送消息异常，可能前端未打开")
     }
   }
@@ -435,25 +439,28 @@ export const handleWebdavAutoSyncMessage = async (
         sendResponse({ success: true })
         break
 
-      case "webdavAutoSync:syncNow":
+      case "webdavAutoSync:syncNow": {
         const result = await webdavAutoSyncService.syncNow()
         sendResponse({ success: result.success, message: result.message })
         break
+      }
 
       case "webdavAutoSync:stop":
         webdavAutoSyncService.stopAutoSync()
         sendResponse({ success: true })
         break
 
-      case "webdavAutoSync:updateSettings":
+      case "webdavAutoSync:updateSettings": {
         await webdavAutoSyncService.updateSettings(request.settings)
         sendResponse({ success: true })
         break
+      }
 
-      case "webdavAutoSync:getStatus":
+      case "webdavAutoSync:getStatus": {
         const status = webdavAutoSyncService.getStatus()
         sendResponse({ success: true, data: status })
         break
+      }
 
       default:
         sendResponse({ success: false, error: "未知的操作" })

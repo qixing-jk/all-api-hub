@@ -117,7 +117,7 @@ export const fetchUserGroups = async ({
 /**
  * 获取可用模型列表
  */
-export const fetchAvailableModels = async (params: AuthFetchParams) => {
+export const fetchAccountAvailableModels = async (params: AuthFetchParams) => {
   const availableModel = await fetchAvailableModel(params)
   return Object.keys(availableModel)
 }

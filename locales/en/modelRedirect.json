@@ -1,0 +1,23 @@
+{
+  "title": "Model Redirect",
+  "description": "Automatic model redirect mapping, solving the problem of inability to uniformly call models due to model names",
+  "enable": "Enable Model Redirect",
+  "enableDesc": "Enable the model redirect mapping feature, which will run automatically during model synchronization and allow manual execution",
+  "standardModels": "Standard Models",
+  "standardModelsDesc": "Select the standard models to generate redirect mappings for",
+  "standardModelsPlaceholder": "Select models...",
+  "regenerateButton": "Regenerate Mapping Now",
+  "regenerating": "Regenerating...",
+  "lastUpdated": "Last Updated",
+  "never": "Never",
+  "noMapping": "No mapping generated yet",
+  "messages": {
+    "regenerateSuccess": "Model mapping regenerated successfully",
+    "regenerateFailed": "Failed to regenerate model mapping: {{error}}",
+    "updateSuccess": "Model redirect settings updated",
+    "updateFailed": "Failed to update model redirect settings",
+    "noModelsSelected": "Please select at least one standard model",
+    "featureDisabled": "Model redirect feature is disabled",
+    "alreadyGenerating": "Mapping generation already in progress"
+  }
+}

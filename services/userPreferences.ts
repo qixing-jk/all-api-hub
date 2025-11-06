@@ -4,51 +4,166 @@ import { DATA_TYPE_BALANCE, DATA_TYPE_CONSUMPTION } from "~/constants"
 import {
   CURRENT_PREFERENCES_VERSION,
   migratePreferences
-} from "~/services/configMigration/preferencesMigration"
-import type { BalanceType, CurrencyType, SortField, SortOrder } from "~/types"
+} from "~/services/configMigration/preferences/preferencesMigration.ts"
+import {
+  BalanceType,
+  CurrencyType,
+  DEFAULT_WEBDAV_SETTINGS,
+  SortField,
+  SortOrder,
+  WebDAVSettings
+} from "~/types"
+import {
+  AccountAutoRefresh,
+  DEFAULT_ACCOUNT_AUTO_REFRESH
+} from "~/types/accountAutoRefresh.ts"
+import type { AutoCheckinPreferences } from "~/types/autoCheckin"
+import {
+  DEFAULT_MODEL_REDIRECT_PREFERENCES,
+  type ModelRedirectPreferences
+} from "~/types/modelRedirect"
+import { DEFAULT_NEW_API_CONFIG, NewApiConfig } from "~/types/newApiConfig.ts"
 import type { SortingPriorityConfig } from "~/types/sorting"
 import type { ThemeMode } from "~/types/theme"
+import { DeepPartial } from "~/types/utils.ts"
+import { deepOverride } from "~/utils"
 import { DEFAULT_SORTING_PRIORITY_CONFIG } from "~/utils/sortingPriority"
 
 // 用户偏好设置类型定义
 export interface UserPreferences {
+  themeMode: ThemeMode
+  /**
+   * language preference
+   */
+  language?: string
+
   // BalanceSection 相关配置
-  activeTab: BalanceType // 金额标签页状态
-  currencyType: CurrencyType // 金额单位
+  /**
+   * 金额标签页状态
+   */
+  activeTab: BalanceType
+  /**
+   * 金额单位
+   */
+  currencyType: CurrencyType
 
   // AccountList 相关配置
-  sortField: SortField // 排序字段
-  sortOrder: SortOrder // 排序顺序
+  /**
+   * 用户自定义排序字段
+   */
+  sortField: SortField
+  /**
+   * 用户自定义排序顺序
+   */
+  sortOrder: SortOrder
 
   // 自动刷新相关配置
-  autoRefresh: boolean // 是否启用定时自动刷新
-  refreshInterval: number // 刷新间隔（秒）
-  minRefreshInterval: number // 最小刷新间隔（秒）
-  refreshOnOpen: boolean // 打开插件时自动刷新
-  showHealthStatus: boolean // 是否显示健康状态
+  accountAutoRefresh: AccountAutoRefresh
+
+  // 是否显示健康状态
+  showHealthStatus: boolean
 
   // WebDAV 备份/同步配置
-  webdavUrl: string // 远程备份文件完整URL（例如：https://dav.example.com/backups/all-api-hub.json）
-  webdavUsername: string // 用户名
-  webdavPassword: string // 密码
-  webdavAutoSync: boolean // 是否启用自动同步
-  webdavSyncInterval: number // 同步间隔（秒）
-  webdavSyncStrategy: "merge" | "upload_only" | "download_only" // 同步策略
-
-  // 其他配置可在此扩展
-  lastUpdated: number // 最后更新时间
+  webdav: WebDAVSettings
 
   // New API 相关配置
-  newApiBaseUrl?: string
-  newApiAdminToken?: string
-  newApiUserId?: string
+  newApi: NewApiConfig
 
+  // New API Model Sync 配置
+  newApiModelSync: {
+    enabled: boolean
+    // 同步间隔（毫秒）
+    interval: number
+    // 并发数量（单通道并发任务数）
+    concurrency: number
+    // 最大重试次数
+    maxRetries: number
+    rateLimit: {
+      // 每分钟请求次数限制
+      requestsPerMinute: number
+      // 瞬时突发请求数
+      burst: number
+    }
+  }
+
+  /**
+   * 自定义排序
+   */
   sortingPriorityConfig?: SortingPriorityConfig
-  themeMode: ThemeMode
-  language?: string // Added language preference
 
-  // Configuration version for migration tracking
+  // Auto Check-in 配置
+  autoCheckin: AutoCheckinPreferences
+
+  // Model Redirect 配置
+  modelRedirect: ModelRedirectPreferences
+
+  /**
+   * 最后更新时间
+   */
+  lastUpdated: number
+  /**
+   * Configuration version for migration tracking
+   */
   preferencesVersion?: number
+
+  /**
+   * 以下字段已废弃，仅保留供迁移使用
+   * @deprecated Use newApi object instead
+   */
+  newApiBaseUrl?: string
+  /**
+   * @deprecated Use newApi object instead
+   */
+  newApiAdminToken?: string
+  /**
+   * @deprecated Use newApi object instead
+   */
+  newApiUserId?: string
+  /**
+   * @deprecated Use accountAutoRefresh instead
+   */
+  autoRefresh?: boolean
+  /**
+   * @deprecated Use accountAutoRefresh.interval instead
+   */
+  refreshInterval?: number
+  /**
+   * @deprecated Use accountAutoRefresh.minInterval instead
+   */
+  minRefreshInterval?: number
+  /**
+   * @deprecated Use accountAutoRefresh.refreshOnOpen instead
+   */
+  refreshOnOpen?: boolean
+  /**
+   * 远程备份文件完整URL（例如：https://dav.example.com/backups/all-api-hub.json）
+   * @deprecated 请使用 webdav.url
+   */
+  webdavUrl?: string
+  /**
+   * WebDAV用户名
+   * @deprecated 请使用 webdav.username
+   */
+  webdavUsername?: string
+  /**
+   * @deprecated 请使用 webdav.password
+   */
+  webdavPassword?: string // 密码
+  /**
+   * 是否启用自动同步
+   * @deprecated 请使用 webdav.autoSync
+   */
+  webdavAutoSync?: boolean //
+  /**
+   * 自动同步间隔（秒）
+   * @deprecated 请使用 webdav.syncInterval
+   */
+  webdavSyncInterval?: number //
+  /**
+   *  同步策略
+   * @deprecated 请使用 webdav.syncStrategy
+   */
+  webdavSyncStrategy?: "merge" | "upload_only" | "download_only"
 }
 
 // 存储键名常量
@@ -57,26 +172,32 @@ const STORAGE_KEYS = {
 } as const
 
 // 默认配置
-const DEFAULT_PREFERENCES: UserPreferences = {
+export const DEFAULT_PREFERENCES: UserPreferences = {
   activeTab: DATA_TYPE_CONSUMPTION,
   currencyType: "USD",
   sortField: DATA_TYPE_BALANCE, // 与 UI_CONSTANTS.SORT.DEFAULT_FIELD 保持一致
   sortOrder: "desc", // 与 UI_CONSTANTS.SORT.DEFAULT_ORDER 保持一致
-  autoRefresh: true, // 默认启用自动刷新
-  refreshInterval: 360, // 默认360秒刷新间隔
-  minRefreshInterval: 60, // 默认60秒最小刷新间隔
-  refreshOnOpen: true, // 默认打开插件时自动刷新
+  accountAutoRefresh: DEFAULT_ACCOUNT_AUTO_REFRESH,
   showHealthStatus: true, // 默认显示健康状态
-  webdavUrl: "",
-  webdavUsername: "",
-  webdavPassword: "",
-  webdavAutoSync: false,
-  webdavSyncInterval: 3600,
-  webdavSyncStrategy: "merge",
+  webdav: DEFAULT_WEBDAV_SETTINGS,
   lastUpdated: Date.now(),
-  newApiBaseUrl: "",
-  newApiAdminToken: "",
-  newApiUserId: "",
+  newApi: DEFAULT_NEW_API_CONFIG,
+  newApiModelSync: {
+    enabled: false,
+    interval: 24 * 60 * 60 * 1000, // 24小时
+    concurrency: 2, // 降低并发数，避免触发速率限制
+    maxRetries: 2,
+    rateLimit: {
+      requestsPerMinute: 20, // 每分钟20个请求
+      burst: 5 // 允许5个突发请求
+    }
+  },
+  autoCheckin: {
+    globalEnabled: false,
+    windowStart: "09:00",
+    windowEnd: "18:00"
+  },
+  modelRedirect: DEFAULT_MODEL_REDIRECT_PREFERENCES,
   sortingPriorityConfig: undefined,
   themeMode: "system",
   language: undefined, // Default to undefined to trigger browser detection
@@ -123,17 +244,21 @@ class UserPreferencesService {
   /**
    * 保存用户偏好设置
    */
+
   async savePreferences(
-    preferences: Partial<UserPreferences>
+    preferences: DeepPartial<UserPreferences>
   ): Promise<boolean> {
     try {
       const currentPreferences = await this.getPreferences()
-      const updatedPreferences: UserPreferences = {
-        ...currentPreferences,
-        ...preferences,
-        lastUpdated: Date.now(),
-        preferencesVersion: CURRENT_PREFERENCES_VERSION
-      }
+
+      const updatedPreferences: UserPreferences = deepOverride(
+        currentPreferences,
+        preferences,
+        {
+          lastUpdated: Date.now(),
+          preferencesVersion: CURRENT_PREFERENCES_VERSION
+        }
+      )
 
       await this.storage.set(STORAGE_KEYS.USER_PREFERENCES, updatedPreferences)
       console.log("[UserPreferences] 偏好设置保存成功:", updatedPreferences)
@@ -169,46 +294,6 @@ class UserPreferencesService {
   }
 
   /**
-   * 更新自动刷新设置
-   */
-  async updateAutoRefreshSettings(settings: {
-    autoRefresh?: boolean
-    refreshInterval?: number
-    refreshOnOpen?: boolean
-    showHealthStatus?: boolean
-  }): Promise<boolean> {
-    return this.savePreferences(settings)
-  }
-
-  /**
-   * 更新自动刷新开关
-   */
-  async updateAutoRefresh(autoRefresh: boolean): Promise<boolean> {
-    return this.savePreferences({ autoRefresh })
-  }
-
-  /**
-   * 更新刷新间隔
-   */
-  async updateRefreshInterval(refreshInterval: number): Promise<boolean> {
-    return this.savePreferences({ refreshInterval })
-  }
-
-  /**
-   * 更新最小刷新间隔
-   */
-  async updateMinRefreshInterval(minRefreshInterval: number): Promise<boolean> {
-    return this.savePreferences({ minRefreshInterval })
-  }
-
-  /**
-   * 更新打开插件时自动刷新设置
-   */
-  async updateRefreshOnOpen(refreshOnOpen: boolean): Promise<boolean> {
-    return this.savePreferences({ refreshOnOpen })
-  }
-
-  /**
    * 更新健康状态显示设置
    */
   async updateShowHealthStatus(showHealthStatus: boolean): Promise<boolean> {
@@ -219,45 +304,26 @@ class UserPreferencesService {
    * 更新 WebDAV 设置
    */
   async updateWebdavSettings(settings: {
-    webdavUrl?: string
-    webdavUsername?: string
-    webdavPassword?: string
+    url?: string
+    username?: string
+    password?: string
   }): Promise<boolean> {
-    return this.savePreferences(settings)
+    return this.savePreferences({
+      webdav: settings
+    })
   }
 
   /**
    * 更新 WebDAV 自动同步设置
    */
   async updateWebdavAutoSyncSettings(settings: {
-    webdavAutoSync?: boolean
-    webdavSyncInterval?: number
-    webdavSyncStrategy?: "merge" | "upload_only" | "download_only"
+    autoSync?: boolean
+    syncInterval?: number
+    syncStrategy?: WebDAVSettings["syncStrategy"]
   }): Promise<boolean> {
-    return this.savePreferences(settings)
-  }
-
-  /**
-   * 更新 New API 设置
-   */
-  async updateNewApiSettings(settings: {
-    newApiBaseUrl?: string
-    newApiAdminToken?: string
-    newApiUserId?: string
-  }): Promise<boolean> {
-    return this.savePreferences(settings)
-  }
-
-  async updateNewApiBaseUrl(newApiBaseUrl: string): Promise<boolean> {
-    return this.savePreferences({ newApiBaseUrl })
-  }
-
-  async updateNewApiAdminToken(newApiAdminToken: string): Promise<boolean> {
-    return this.savePreferences({ newApiAdminToken })
-  }
-
-  async updateNewApiUserId(newApiUserId: string): Promise<boolean> {
-    return this.savePreferences({ newApiUserId })
+    return this.savePreferences({
+      webdav: settings
+    })
   }
 
   /**
@@ -330,6 +396,7 @@ class UserPreferencesService {
 
   async resetSortingPriorityConfig(): Promise<boolean> {
     const prefs = await this.getPreferences()
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { sortingPriorityConfig, ...rest } = prefs
     return this.savePreferences(rest as any)
   }

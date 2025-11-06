@@ -3,11 +3,15 @@
  * Handles version-based migrations for UserPreferences configurations
  */
 
-import type { UserPreferences } from "../userPreferences"
-import { migrateSortingConfig } from "./sortingConfigMigration"
+import { migrateAutoRefreshConfig } from "~/services/configMigration/preferences/autoRefreshConfigMigration.ts"
+import { migrateNewApiConfig } from "~/services/configMigration/preferences/newApiConfigMigration.ts"
+import { migrateWebDavConfig } from "~/services/configMigration/preferences/webDavConfigMigration.ts"
+
+import type { UserPreferences } from "../../userPreferences.ts"
+import { migrateSortingConfig } from "./sortingConfigMigration.ts"
 
 // Current version of the preferences schema
-export const CURRENT_PREFERENCES_VERSION = 1
+export const CURRENT_PREFERENCES_VERSION = 5
 
 /**
  * Migration function type
@@ -37,10 +41,67 @@ const migrations: Record<number, PreferencesMigrationFunction> = {
       sortingPriorityConfig: migratedSortingConfig,
       preferencesVersion: 1
     }
-  }
+  },
 
-  // Future migrations will be added here:
-  // 2: (prefs: UserPreferences): UserPreferences => { ... },
+  // Version 1 -> 2: Add PINNED sorting criterion
+  2: (prefs: UserPreferences): UserPreferences => {
+    console.log(
+      "[PreferencesMigration] Migrating preferences from v1 to v2 (add PINNED criterion)"
+    )
+
+    // Migrate sorting priority config to add PINNED criterion
+    const migratedSortingConfig = migrateSortingConfig(
+      prefs.sortingPriorityConfig
+    )
+
+    return {
+      ...prefs,
+      sortingPriorityConfig: migratedSortingConfig,
+      preferencesVersion: 2
+    }
+  },
+
+  // Version 2 -> 3: Migrate flat WebDAV fields to nested webdav object
+  3: (prefs: UserPreferences): UserPreferences => {
+    console.log(
+      "[PreferencesMigration] Migrating preferences from v2 to v3 (WebDAV settings migration)"
+    )
+
+    const migratedPrefs = migrateWebDavConfig(prefs)
+
+    return {
+      ...migratedPrefs,
+      preferencesVersion: 3
+    }
+  },
+
+  // Version 3 -> 4: Migrate flat auto-refresh fields to nested accountAutoRefresh object
+  4: (prefs: UserPreferences): UserPreferences => {
+    console.log(
+      "[PreferencesMigration] Migrating preferences from v3 to v4 (auto-refresh config migration)"
+    )
+
+    const migratedPrefs = migrateAutoRefreshConfig(prefs)
+
+    return {
+      ...migratedPrefs,
+      preferencesVersion: 4
+    }
+  },
+
+  // Version 4 -> 5: Migrate flat new-api fields to nested newApi object
+  5: (prefs: UserPreferences): UserPreferences => {
+    console.log(
+      "[PreferencesMigration] Migrating preferences from v4 to v5 (new-api config migration)"
+    )
+
+    const migratedPrefs = migrateNewApiConfig(prefs)
+
+    return {
+      ...migratedPrefs,
+      preferencesVersion: 5
+    }
+  }
 }
 
 /**

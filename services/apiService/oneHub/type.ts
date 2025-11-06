@@ -71,7 +71,7 @@ export interface OneHubModelPricingItem {
   }
 }
 
-// @ts-ignore
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 interface OneHubVendor {
   id: number
   name: string

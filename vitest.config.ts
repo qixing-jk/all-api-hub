@@ -33,6 +33,7 @@ export default defineConfig({
         "**/node_modules/**",
         "**/.wxt/**",
         "**/dist/**",
+        "**/.output/**",
         "**/e2e/**",
         "**/__tests__/**"
       ],
@@ -52,6 +53,7 @@ export default defineConfig({
       "**/node_modules/**",
       "**/.wxt/**",
       "**/dist/**",
+      "**/.output/**",
       "**/e2e/**",
       "**/*.config.*"
     ]

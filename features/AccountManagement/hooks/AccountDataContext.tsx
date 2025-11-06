@@ -46,6 +46,11 @@ interface AccountDataContextType {
   prevBalances: CurrencyAmountMap
   detectedAccount: SiteAccount | null
   isDetecting: boolean
+  pinnedAccountIds: string[]
+  isAccountPinned: (id: string) => boolean
+  pinAccount: (id: string) => Promise<boolean>
+  unpinAccount: (id: string) => Promise<boolean>
+  togglePinAccount: (id: string) => Promise<boolean>
   loadAccountData: () => Promise<void>
   handleRefresh: (
     force?: boolean
@@ -75,7 +80,7 @@ export const AccountDataProvider = ({
     sortOrder: initialSortOrder,
     updateSortConfig,
     sortingPriorityConfig,
-    preferences
+    refreshOnOpen
   } = useUserPreferencesContext()
   const [accounts, setAccounts] = useState<SiteAccount[]>([])
   const [displayData, setDisplayData] = useState<DisplaySiteData[]>([])
@@ -99,6 +104,7 @@ export const AccountDataProvider = ({
     null
   )
   const [isDetecting, setIsDetecting] = useState(true)
+  const [pinnedAccountIds, setPinnedAccountIds] = useState<string[]>([])
 
   const checkCurrentTab = useCallback(async () => {
     setIsDetecting(true)
@@ -117,7 +123,9 @@ export const AccountDataProvider = ({
     } finally {
       setIsDetecting(false)
     }
-  }, [])
+    // 确保展示数据刷新时，会重新检测
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [displayData])
 
   const loadAccountData = useCallback(async () => {
     try {
@@ -137,6 +145,12 @@ export const AccountDataProvider = ({
       setAccounts(allAccounts)
       setStats(accountStats)
       setDisplayData(displaySiteData)
+
+      const pinnedIds = await accountStorage.getPinnedList()
+      const validPinnedIds = pinnedIds.filter((id) =>
+        displaySiteData.some((site) => site.id === id)
+      )
+      setPinnedAccountIds(validPinnedIds)
 
       if (allAccounts.length > 0) {
         const latestSyncTime = Math.max(
@@ -187,7 +201,7 @@ export const AccountDataProvider = ({
       }
 
       // 检查是否启用了打开插件时自动刷新
-      if (preferences?.refreshOnOpen) {
+      if (refreshOnOpen) {
         hasRefreshedOnOpen.current = true // 标记已执行
         console.log("[Popup] 打开插件时自动刷新已启用，开始刷新")
         try {
@@ -230,7 +244,8 @@ export const AccountDataProvider = ({
     }
 
     handleRefreshOnOpen()
-  }, [handleRefresh, preferences?.refreshOnOpen, t])
+  }, [handleRefresh, refreshOnOpen, t])
+
   useEffect(() => {
     loadAccountData()
   }, [loadAccountData, refreshKey])
@@ -356,6 +371,40 @@ export const AccountDataProvider = ({
     }
   }, [checkOpenTabs])
 
+  const isAccountPinned = useCallback(
+    (id: string) => pinnedAccountIds.includes(id),
+    [pinnedAccountIds]
+  )
+
+  const pinAccount = useCallback(async (id: string) => {
+    const success = await accountStorage.pinAccount(id)
+    if (success) {
+      setPinnedAccountIds((prev) => [
+        id,
+        ...prev.filter((pinnedId) => pinnedId !== id)
+      ])
+    }
+    return success
+  }, [])
+
+  const unpinAccount = useCallback(async (id: string) => {
+    const success = await accountStorage.unpinAccount(id)
+    if (success) {
+      setPinnedAccountIds((prev) => prev.filter((pinnedId) => pinnedId !== id))
+    }
+    return success
+  }, [])
+
+  const togglePinAccount = useCallback(
+    async (id: string) => {
+      if (isAccountPinned(id)) {
+        return unpinAccount(id)
+      }
+      return pinAccount(id)
+    },
+    [isAccountPinned, pinAccount, unpinAccount]
+  )
+
   const sortedData = useMemo(() => {
     const comparator = createDynamicSortComparator(
       sortingPriorityConfig,
@@ -363,7 +412,8 @@ export const AccountDataProvider = ({
       sortField,
       currencyType,
       sortOrder,
-      matchedAccountScores
+      matchedAccountScores,
+      pinnedAccountIds
     )
     return [...displayData].sort(comparator)
   }, [
@@ -373,7 +423,8 @@ export const AccountDataProvider = ({
     sortField,
     currencyType,
     sortOrder,
-    matchedAccountScores
+    matchedAccountScores,
+    pinnedAccountIds
   ])
 
   const value = useMemo(
@@ -389,6 +440,11 @@ export const AccountDataProvider = ({
       prevBalances,
       detectedAccount,
       isDetecting,
+      pinnedAccountIds,
+      isAccountPinned,
+      pinAccount,
+      unpinAccount,
+      togglePinAccount,
       loadAccountData,
       handleRefresh,
       handleSort,
@@ -407,6 +463,11 @@ export const AccountDataProvider = ({
       prevBalances,
       detectedAccount,
       isDetecting,
+      pinnedAccountIds,
+      isAccountPinned,
+      pinAccount,
+      unpinAccount,
+      togglePinAccount,
       loadAccountData,
       handleRefresh,
       handleSort,

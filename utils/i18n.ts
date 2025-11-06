@@ -35,6 +35,7 @@ i18n
       "common",
       "account",
       "accountDialog",
+      "channelDialog",
       "keyManagement",
       "modelList",
       "settings",

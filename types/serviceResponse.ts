@@ -38,6 +38,7 @@ export interface AccountSaveResponse extends ServiceResponse<void> {
 /**
  * Response for New API operations
  */
-export interface NewApiResponse<T = void> extends ServiceResponse<T> {
+export interface AutoConfigToNewApiResponse<T = void>
+  extends ServiceResponse<T> {
   token?: ApiToken // Optional, for auto-config operations
 }

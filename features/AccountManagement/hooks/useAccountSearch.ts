@@ -17,6 +17,7 @@ export interface SearchResultWithHighlight extends SearchResult {
     baseUrl?: HighlightFragment[]
     customCheckInUrl?: HighlightFragment[]
     customRedeemUrl?: HighlightFragment[]
+    username?: HighlightFragment[]
   }
 }
 
@@ -179,6 +180,20 @@ function generateHighlights(
             customRedeemUrl,
             redeemTokens
           )
+        }
+      }
+    }
+
+    if (result.matchedFields.includes("username")) {
+      const { username } = result.account
+      if (username) {
+        const normalizedRedeem = normalizeForMatching(username)
+        const redeemTokens = tokenInfos.filter((token) =>
+          normalizedRedeem.includes(token.normalized)
+        )
+
+        if (redeemTokens.length > 0) {
+          highlights.username = createHighlightFragments(username, redeemTokens)
         }
       }
     }

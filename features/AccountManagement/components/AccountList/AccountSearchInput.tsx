@@ -27,6 +27,7 @@ export default function AccountSearchInput({
   return (
     <div className="relative">
       <Input
+        autoFocus={true}
         type="text"
         size="sm"
         value={value}

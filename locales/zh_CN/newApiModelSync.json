@@ -1,0 +1,93 @@
+{
+  "title": "New API 模型列表同步",
+  "description": "自动同步您New API站点所有渠道的模型列表，确保与上游保持一致",
+  "settings": {
+    "title": "模型列表同步设置",
+    "enable": "启用自动同步",
+    "enableDesc": "按照设定间隔自动执行模型列表同步",
+    "interval": "执行间隔",
+    "intervalDesc": "自动同步的时间间隔",
+    "intervalUnit": "小时",
+    "concurrency": "并发数量",
+    "concurrencyDesc": "同时处理的渠道任务数（建议1-3，避免触发速率限制）",
+    "maxRetries": "最大重试次数",
+    "maxRetriesDesc": "失败时自动重试的最大次数",
+    "requestsPerMinute": "每分钟请求数",
+    "requestsPerMinuteDesc": "速率限制：每分钟最多请求数（建议10-30）",
+    "burst": "突发请求上限",
+    "burstDesc": "令牌桶容量：允许短时间内的突发请求数",
+    "viewExecution": "查看执行与结果",
+    "viewExecutionDesc": "查看详细执行结果并手动触发同步",
+    "viewExecutionButton": "打开"
+  },
+  "execution": {
+    "title": "模型列表同步执行",
+    "lastExecution": "上一次执行",
+    "statistics": {
+      "total": "渠道总数",
+      "success": "成功数量",
+      "failed": "失败数量",
+      "duration": "耗时",
+      "startTime": "开始时间",
+      "endTime": "结束时间",
+      "nextRun": "下次计划时间"
+    },
+    "actions": {
+      "runAll": "执行全部",
+      "runSelected": "执行所选",
+      "retryFailed": "仅重试失败项",
+      "refresh": "刷新结果"
+    },
+    "filters": {
+      "all": "全部",
+      "success": "成功",
+      "failed": "失败",
+      "searchPlaceholder": "按渠道名称、ID 或错误信息搜索..."
+    },
+    "table": {
+      "select": "选择",
+      "channelId": "渠道 ID",
+      "channelName": "渠道名称",
+      "status": "状态",
+      "oldModels": "旧模型列表",
+      "newModels": "新模型列表",
+      "httpStatus": "HTTP 状态码",
+      "message": "错误信息",
+      "attempts": "尝试次数",
+      "finishedAt": "完成时间",
+      "actions": "操作",
+      "syncChannel": "同步此渠道"
+    },
+    "status": {
+      "success": "成功",
+      "failed": "失败",
+      "running": "执行中..."
+    },
+    "progress": {
+      "running": "同步进行中... {{completed}}/{{total}}",
+      "completed": "已完成"
+    },
+    "empty": {
+      "noData": "暂无执行记录",
+      "noDataDesc": "点击\"执行全部\"开始同步所有渠道",
+      "noResults": "没有匹配的结果",
+      "noResultsDesc": "尝试修改筛选条件或搜索关键字",
+      "configWarningDesc": "请先配置 New API 的基础 URL、管理员令牌和用户 ID，然后再执行模型列表同步",
+      "goToSettings": "前往设置"
+    }
+  },
+  "messages": {
+    "success": {
+      "syncCompleted": "同步完成：{{success}}/{{total}} 成功",
+      "settingsSaved": "设置保存成功"
+    },
+    "error": {
+      "configMissing": "请先完成 New API 配置",
+      "noChannels": "未获取到任何渠道",
+      "noFailedChannels": "没有失败渠道可重试",
+      "noSelection": "请至少选择一个渠道",
+      "syncFailed": "同步失败：{{error}}",
+      "loadFailed": "数据加载失败：{{error}}"
+    }
+  }
+}

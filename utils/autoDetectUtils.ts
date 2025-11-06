@@ -27,7 +27,10 @@ export enum AutoDetectErrorType {
   UNAUTHORIZED = "unauthorized",
   INVALID_RESPONSE = "invalid_response",
   NETWORK_ERROR = "network_error",
-  UNKNOWN = "unknown"
+  UNKNOWN = "unknown",
+  FORBIDDEN = "forbidden",
+  NOT_FOUND = "notFound",
+  SERVER_ERROR = "serverError"
 }
 
 // 自动识别错误信息
@@ -39,62 +42,89 @@ export interface AutoDetectError {
   helpDocUrl?: string
 }
 
+const ERROR_KEYWORDS: Record<string, string[]> = {
+  TIMEOUT: ["超时", "timeout", "请求超时", "request timeout", "timed out"],
+  UNAUTHORIZED: ["401", "未授权", "Unauthorized", "未登录", "login required"],
+  INVALID_RESPONSE: [
+    "格式",
+    "解析",
+    "JSON",
+    "数据不符合",
+    "无法获取",
+    "invalid response",
+    "parse error",
+    "malformed"
+  ],
+  NETWORK_ERROR: [
+    "网络",
+    "连接",
+    "Network",
+    "网络中断",
+    "connection lost",
+    "offline"
+  ],
+  FORBIDDEN: ["403", "禁止访问", "Forbidden"],
+  NOT_FOUND: ["404", "未找到", "Not Found"],
+  SERVER_ERROR: ["500", "服务器错误", "Internal Server Error", "server crash"]
+}
+
 // 分析错误并返回结构化错误信息
 export function analyzeAutoDetectError(error: any): AutoDetectError {
-  const errorMessage = getErrorMessage(error)
+  const errorMessage = getErrorMessage(error) || ""
 
-  // 超时错误
-  if (errorMessage.includes("超时") || errorMessage.includes("timeout")) {
-    return {
-      type: AutoDetectErrorType.TIMEOUT,
-      message: t("messages:autodetect.timeout"),
-      helpDocUrl: FAQ_URL
+  const msg = errorMessage.toLowerCase()
+
+  for (const [type, keywords] of Object.entries(ERROR_KEYWORDS)) {
+    if (keywords.some((k) => msg.includes(k.toLowerCase()))) {
+      switch (type) {
+        case "TIMEOUT":
+          return {
+            type: AutoDetectErrorType.TIMEOUT,
+            message: t("messages:autodetect.timeout"),
+            helpDocUrl: FAQ_URL
+          }
+        case "UNAUTHORIZED":
+          return {
+            type: AutoDetectErrorType.UNAUTHORIZED,
+            message: t("messages:autodetect.notLoggedIn"),
+            actionText: t("messages:autodetect.loginThisSite"),
+            helpDocUrl: FAQ_URL
+          }
+        case "INVALID_RESPONSE":
+          return {
+            type: AutoDetectErrorType.INVALID_RESPONSE,
+            message: t("messages:autodetect.unexpectedData"),
+            helpDocUrl: FAQ_URL
+          }
+        case "NETWORK_ERROR":
+          return {
+            type: AutoDetectErrorType.NETWORK_ERROR,
+            message: t("messages:autodetect.networkError"),
+            helpDocUrl: FAQ_URL
+          }
+        case "FORBIDDEN":
+          return {
+            type: AutoDetectErrorType.FORBIDDEN,
+            message: t("messages:autodetect.forbidden"),
+            helpDocUrl: FAQ_URL
+          }
+        case "NOT_FOUND":
+          return {
+            type: AutoDetectErrorType.NOT_FOUND,
+            message: t("messages:autodetect.notFound"),
+            helpDocUrl: FAQ_URL
+          }
+        case "SERVER_ERROR":
+          return {
+            type: AutoDetectErrorType.SERVER_ERROR,
+            message: t("messages:autodetect.serverError"),
+            helpDocUrl: FAQ_URL
+          }
+      }
     }
   }
 
-  // 401 认证错误
-  if (
-    errorMessage.includes("401") ||
-    errorMessage.includes("未授权") ||
-    errorMessage.includes("Unauthorized")
-  ) {
-    return {
-      type: AutoDetectErrorType.UNAUTHORIZED,
-      message: t("messages:autodetect.notLoggedIn"),
-      actionText: t("messages:autodetect.loginThisSite"),
-      helpDocUrl: FAQ_URL
-    }
-  }
-
-  // 响应格式错误
-  if (
-    errorMessage.includes("格式") ||
-    errorMessage.includes("解析") ||
-    errorMessage.includes("JSON") ||
-    errorMessage.includes("数据不符合") ||
-    errorMessage.includes("无法获取")
-  ) {
-    return {
-      type: AutoDetectErrorType.INVALID_RESPONSE,
-      message: t("messages:autodetect.unexpectedData"),
-      helpDocUrl: FAQ_URL
-    }
-  }
-
-  // 网络错误
-  if (
-    errorMessage.includes("网络") ||
-    errorMessage.includes("连接") ||
-    errorMessage.includes("Network")
-  ) {
-    return {
-      type: AutoDetectErrorType.NETWORK_ERROR,
-      message: t("messages:autodetect.networkError"),
-      helpDocUrl: FAQ_URL
-    }
-  }
-
-  // 未知错误
+  // 默认未知错误
   return {
     type: AutoDetectErrorType.UNKNOWN,
     message: t("messages:autodetect.failed") + errorMessage,

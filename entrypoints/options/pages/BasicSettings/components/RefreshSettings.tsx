@@ -13,7 +13,7 @@ import {
 } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 
-import { showUpdateToast } from "../utils/toastHelpers"
+import { showUpdateToast } from "../../../../../utils/toastHelpers.ts"
 
 export default function RefreshSettings() {
   const { t } = useTranslation("settings")

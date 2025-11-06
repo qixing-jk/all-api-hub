@@ -58,6 +58,8 @@
     "customRedeemUrl": "Custom recharge/redeem page URL (optional)",
     "customRedeemUrlDesc": "URL for recharge/exchange page",
     "openRedeemWithCheckIn": "Also open redeem page when using custom check-in",
+    "autoCheckInEnabled": "Enable daily automatic check-in",
+    "autoCheckInEnabledDesc": "When enabled, this account will be automatically checked in during the daily auto check-in window (requires global auto check-in feature enabled)",
     "notes": "Notes",
     "notesPlaceholder": "Optional, enter notes"
   },

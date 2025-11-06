@@ -73,7 +73,11 @@
     "keyManagement": "Key Management",
     "modelManagement": "Model Management",
     "usageLog": "Usage Log",
-    "redeemPage": "Redeem/Top-up"
+    "redeemPage": "Redeem/Top-up",
+    "pin": "Pin account",
+    "unpin": "Unpin account",
+    "pinned": "Pinned",
+    "unpinned": "Unpinned"
   },
   "search": {
     "placeholder": "Search name/URL/check-in/redeem/token",

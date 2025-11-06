@@ -1,12 +1,7 @@
 import { t } from "i18next"
 
 import { userPreferences } from "~/services/userPreferences"
-
-export interface WebdavConfig {
-  webdavUrl: string
-  webdavUsername: string
-  webdavPassword: string
-}
+import type { WebDAVConfig } from "~/types/webdav"
 
 function buildAuthHeader(username: string, password: string) {
   const token = btoa(`${username}:${password}`)
@@ -28,13 +23,6 @@ function ensureFilename(url: string, version: string = CONFIG_VERSION) {
   } catch {
     return url
   }
-}
-
-export function resolveTargetUrl(
-  url: string,
-  version: string = CONFIG_VERSION
-) {
-  return ensureFilename(url, version)
 }
 
 function getBackupDirUrl(targetUrl: string) {
@@ -90,28 +78,22 @@ async function ensureBackupDirectory(
   return true
 }
 
-async function getConfig(): Promise<WebdavConfig> {
+async function getWebDavConfig(): Promise<WebDAVConfig> {
   const prefs = await userPreferences.getPreferences()
-  const { webdavUrl, webdavUsername, webdavPassword } = prefs
-  return { webdavUrl, webdavUsername, webdavPassword }
+  return prefs.webdav
 }
 
-export async function getWebdavConfig(custom?: Partial<WebdavConfig>) {
-  const cfg = await getConfig()
-  return { ...cfg, ...custom }
-}
-
-export async function testWebdavConnection(custom?: Partial<WebdavConfig>) {
-  const cfg = { ...(await getConfig()), ...custom }
-  if (!cfg.webdavUrl || !cfg.webdavUsername || !cfg.webdavPassword) {
+export async function testWebdavConnection(custom?: Partial<WebDAVConfig>) {
+  const cfg = { ...(await getWebDavConfig()), ...custom }
+  if (!cfg.url || !cfg.username || !cfg.password) {
     throw new Error(t("messages:webdav.configIncomplete"))
   }
-  const targetUrl = ensureFilename(cfg.webdavUrl)
+  const targetUrl = ensureFilename(cfg.url)
 
   const res = await fetch(targetUrl, {
     method: "GET",
     headers: {
-      Authorization: buildAuthHeader(cfg.webdavUsername, cfg.webdavPassword)
+      Authorization: buildAuthHeader(cfg.username, cfg.password)
     }
   })
   // 200 存在；404 文件不存在但鉴权通过也视为连通
@@ -121,72 +103,22 @@ export async function testWebdavConnection(custom?: Partial<WebdavConfig>) {
   throw new Error(t("messages:webdav.connectionFailed", { status: res.status }))
 }
 
-export interface RemoteBackupFetchResult {
-  exists: boolean
-  content?: string
-  etag?: string | null
-  lastModified?: string | null
-  url: string
-}
-
-export async function fetchRemoteBackup(
-  custom?: Partial<WebdavConfig>
-): Promise<RemoteBackupFetchResult> {
-  const cfg = await getWebdavConfig(custom)
-  if (!cfg.webdavUrl || !cfg.webdavUsername || !cfg.webdavPassword) {
+export async function downloadBackup(custom?: Partial<WebDAVConfig>) {
+  const cfg = { ...(await getWebDavConfig()), ...custom }
+  if (!cfg.url || !cfg.username || !cfg.password) {
     throw new Error(t("messages:webdav.configIncomplete"))
   }
-  const targetUrl = ensureFilename(cfg.webdavUrl)
+  const targetUrl = ensureFilename(cfg.url)
 
   const res = await fetch(targetUrl, {
     method: "GET",
     headers: {
-      Authorization: buildAuthHeader(cfg.webdavUsername, cfg.webdavPassword),
-      Accept: "application/json"
-    }
-  })
-
-  if (res.status === 200) {
-    const content = await res.text()
-    return {
-      exists: true,
-      content,
-      etag: res.headers.get("ETag"),
-      lastModified: res.headers.get("Last-Modified"),
-      url: targetUrl
-    }
-  }
-
-  if (res.status === 404) {
-    return {
-      exists: false,
-      url: targetUrl
-    }
-  }
-
-  if (res.status === 401 || res.status === 403)
-    throw new Error(t("messages:webdav.authFailed"))
-
-  throw new Error(t("messages:webdav.downloadFailed", { status: res.status }))
-}
-
-export async function downloadBackup(custom?: Partial<WebdavConfig>) {
-  const cfg = { ...(await getConfig()), ...custom }
-  if (!cfg.webdavUrl || !cfg.webdavUsername || !cfg.webdavPassword) {
-    throw new Error(t("messages:webdav.configIncomplete"))
-  }
-  const targetUrl = ensureFilename(cfg.webdavUrl)
-
-  const res = await fetch(targetUrl, {
-    method: "GET",
-    headers: {
-      Authorization: buildAuthHeader(cfg.webdavUsername, cfg.webdavPassword),
+      Authorization: buildAuthHeader(cfg.username, cfg.password),
       Accept: "application/json"
     }
   })
   if (res.status === 200) {
-    const text = await res.text()
-    return text
+    return await res.text()
   }
   if (res.status === 404) throw new Error(t("messages:webdav.fileNotFound"))
   if (res.status === 401 || res.status === 403)
@@ -196,21 +128,21 @@ export async function downloadBackup(custom?: Partial<WebdavConfig>) {
 
 export async function uploadBackup(
   content: string,
-  custom?: Partial<WebdavConfig>
+  custom?: Partial<WebDAVConfig>
 ) {
-  const cfg = { ...(await getConfig()), ...custom }
-  if (!cfg.webdavUrl || !cfg.webdavUsername || !cfg.webdavPassword) {
+  const cfg = { ...(await getWebDavConfig()), ...custom }
+  if (!cfg.url || !cfg.username || !cfg.password) {
     throw new Error(t("messages:webdav.configIncomplete"))
   }
-  const targetUrl = ensureFilename(cfg.webdavUrl)
+  const targetUrl = ensureFilename(cfg.url)
 
   // Ensure backup directory exists when using folder-style input
-  await ensureBackupDirectory(targetUrl, cfg.webdavUsername, cfg.webdavPassword)
+  await ensureBackupDirectory(targetUrl, cfg.username, cfg.password)
 
   const res = await fetch(targetUrl, {
     method: "PUT",
     headers: {
-      Authorization: buildAuthHeader(cfg.webdavUsername, cfg.webdavPassword),
+      Authorization: buildAuthHeader(cfg.username, cfg.password),
       "Content-Type": "application/json"
     },
     body: content

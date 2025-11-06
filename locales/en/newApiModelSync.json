@@ -1,0 +1,93 @@
+{
+  "title": "New API Model List Sync",
+  "description": "Automatically synchronize model lists for all channels in your New API site, ensuring consistency with upstream",
+  "settings": {
+    "title": "Model List Sync Settings",
+    "enable": "Enable Auto-Sync",
+    "enableDesc": "Automatically sync model lists at specified intervals",
+    "interval": "Sync Interval",
+    "intervalDesc": "Time between automatic synchronizations",
+    "intervalUnit": "hours",
+    "concurrency": "Concurrency",
+    "concurrencyDesc": "Number of channels to process in parallel (recommend 1-3 to avoid rate limits)",
+    "maxRetries": "Max Retries",
+    "maxRetriesDesc": "Maximum automatic retry attempts on failure",
+    "requestsPerMinute": "Requests per Minute",
+    "requestsPerMinuteDesc": "Rate limit: maximum number of requests per minute (recommend 10-30)",
+    "burst": "Burst Capacity",
+    "burstDesc": "Token bucket size: allowed burst requests before throttling",
+    "viewExecution": "View Execution & Results",
+    "viewExecutionDesc": "View detailed execution results and trigger manual syncs",
+    "viewExecutionButton": "Open"
+  },
+  "execution": {
+    "title": "Model List Synchronization",
+    "lastExecution": "Last Execution",
+    "statistics": {
+      "total": "Total Channels",
+      "success": "Successful",
+      "failed": "Failed",
+      "duration": "Duration",
+      "startTime": "Start Time",
+      "endTime": "End Time",
+      "nextRun": "Next Scheduled Run"
+    },
+    "actions": {
+      "runAll": "Run All",
+      "runSelected": "Run Selected",
+      "retryFailed": "Retry Failed Only",
+      "refresh": "Refresh Results"
+    },
+    "filters": {
+      "all": "All",
+      "success": "Success",
+      "failed": "Failed",
+      "searchPlaceholder": "Search by channel name, ID, or error message..."
+    },
+    "table": {
+      "select": "Select",
+      "channelId": "Channel ID",
+      "channelName": "Channel Name",
+      "status": "Status",
+      "oldModels": "Old Model List",
+      "newModels": "New Model List",
+      "httpStatus": "HTTP Status",
+      "message": "Message",
+      "attempts": "Attempts",
+      "finishedAt": "Finished At",
+      "actions": "Actions",
+      "syncChannel": "Sync"
+    },
+    "status": {
+      "success": "Success",
+      "failed": "Failed",
+      "running": "Running..."
+    },
+    "progress": {
+      "running": "Syncing... {{completed}}/{{total}}",
+      "completed": "Completed"
+    },
+    "empty": {
+      "noData": "No execution history yet",
+      "noDataDesc": "Click \"Run All\" to start synchronizing all channels",
+      "noResults": "No matching results",
+      "noResultsDesc": "Try adjusting your filters or search query",
+      "configWarningDesc": "Please configure New API base URL, admin token, and user ID before running model list sync",
+      "goToSettings": "Go to Settings"
+    }
+  },
+  "messages": {
+    "success": {
+      "syncCompleted": "Sync completed: {{success}}/{{total}} succeeded",
+      "settingsSaved": "Settings saved successfully"
+    },
+    "error": {
+      "configMissing": "Please configure New API settings first",
+      "noChannels": "No channels found",
+      "noFailedChannels": "No failed channels to retry",
+      "noSelection": "Please select at least one channel",
+      "syncFailed": "Sync failed: {{error}}",
+      "loadFailed": "Failed to load data: {{error}}"
+    }
+  }
+}

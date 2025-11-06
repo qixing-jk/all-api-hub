@@ -35,7 +35,7 @@ const LinkCard = ({
             {title}
           </Heading5>
           <BodySmall className="mb-3">{description}</BodySmall>
-          <Button asChild variant={buttonVariant} size="sm">
+          <Button variant={buttonVariant} size="sm">
             <a href={href} target="_blank" rel="noopener noreferrer">
               {buttonText}
             </a>

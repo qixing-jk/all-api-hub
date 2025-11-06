@@ -12,7 +12,9 @@ describe("cn utility", () => {
   it("should handle conditional classes", () => {
     const result = cn(
       "base-class",
+      // eslint-disable-next-line no-constant-binary-expression
       true && "conditional-class",
+      // eslint-disable-next-line no-constant-binary-expression
       false && "hidden"
     )
     expect(result).toContain("base-class")

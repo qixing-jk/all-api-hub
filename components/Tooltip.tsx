@@ -1,6 +1,8 @@
 import { useId, type ReactElement, type ReactNode } from "react"
 import { Tooltip as ReactTooltip } from "react-tooltip"
 
+import { cn } from "~/utils/cn.ts"
+
 interface TooltipProps {
   content: ReactNode
   children: ReactElement
@@ -37,9 +39,14 @@ export default function Tooltip({
   const defaultClassName = `z-[9999] max-w-[90vw] bg-gray-900 dark:bg-dark-bg-tertiary text-white dark:text-dark-text-primary text-xs rounded-lg shadow-lg px-3 py-2 ${className}`
   return (
     <>
-      <span id={tooltipId} className={`inline-block ${wrapperClassName}`}>
+      <div
+        id={tooltipId}
+        className={cn(
+          "flex items-center justify-center gap-2",
+          wrapperClassName
+        )}>
         {children}
-      </span>
+      </div>
 
       {isString ? (
         <ReactTooltip

@@ -9,7 +9,7 @@
 
 # All API Hub
 
-**An open-source browser extension to aggregate and manage the balance, models, and keys of all your API hub accounts, saying goodbye to tedious logins.**
+**Open-source browser extension that auto-detects and manages all AI aggregation and relay site accounts. View balances, sync models, manage keys, with cross-platform and cloud backup support**
 
 <p align="center">
 <a href="https://github.com/qixing-jk/all-api-hub/releases">
@@ -30,77 +30,67 @@
 
 </div>
 
----
-
-> [!NOTE]  
-> This is an open-source project, developed based on [One API Hub](https://github.com/fxaxg/one-api-hub).
-
 ## 📖 Introduction
 
-There are too many AI-API relay sites on the market, and it's very troublesome to check information such as balance and supported model lists, requiring logging in one by one.
-
-This extension allows for convenient integrated management of AI relay station accounts based on the following projects:
+With numerous AI aggregation and relay sites available, checking balances, model lists, and keys requires logging into each site individually—a tedious process.
+This extension automatically detects and manages accounts from sites based on the following projects:
 
 - [one-api](https://github.com/songquanpeng/one-api)
 - [new-api](https://github.com/QuantumNous/new-api)
 - [Veloera](https://github.com/Veloera/Veloera)
 - [one-hub](https://github.com/MartialBE/one-hub)
 - [done-hub](https://github.com/deanxv/done-hub)
-- [VoAPI](https://github.com/VoAPI/VoAPI)
-- [Super-API](https://github.com/SuperAI-Api/Super-API)
-
-## 🧬 Feature Changes
-
-- 🌐 **Broader Site Support** - Added support for sites like VoAPI, Super-API, etc.
-- 🚀 **Quick Site Export** - Supports one-click export of site API configurations to [CherryStudio](https://github.com/CherryHQ/cherry-studio) and [New API](https://github.com/QuantumNous/new-api), simplifying the API management workflow.
-- ✅ **Site Check-in Status Detection** - Supports detecting whether a site supports check-in and its check-in status.
-- 🔄 **Duplicate Site Detection** - Prevent the repeated addition of the same site and quickly modify the currently added site.
-- ️🏷️ **Smart Site Name Fetching** - There are multiple ways to obtain the real site name, and the domain name method is used as the last resort.
-- ☁️ **WebDav Data Backup** - Supports backing up and restoring all accounts and settings via WebDav, ensuring data security and enabling cross-device synchronization.
-- 📝 **Manual Add** - Supports manually adding any relay site, preventing failures when automatic detection doesn't work.
-- 🌓 **Dark Mode** - Support automatic switching based on system theme
-- ⚙️ **Firefox Support** - The extension is now available for Firefox browsers.
-- 📱 **Mobile Support** - Use on mobile devices via Kiwi Browser or the mobile version of Firefox for a full feature experience.
-
-> [!NOTE]
-> Data is compatible with [One API Hub](https://github.com/fxaxg/one-api-hub) and can be imported directly.
+- Neo-API (closed source)
+- Super-API (closed source)
+- RIX_API (closed source, basic functionality supported)
+- VoAPI (closed source, old versions supported)
 
 ## ✨ Features
 
-- 🔍 **Auto-detect Relay Sites** - Automatically creates a system access token and adds it to the extension's site list.
-- 💰 **Auto-detect Top-up Ratios** - Intelligently parses site configuration information.
-- 👥 **Multi-account Management** - Add multiple accounts for each site, with support for account grouping and switching.
-- 📊 **Balance & Log Viewing** - Account balance and usage logs at a glance.
-- 🔑 **Token (Key) Management** - Convenient key viewing and management.
-- 🤖 **Model Information Viewing** - View supported model information and channels for each site.
-- ⚙️ **Data Import/Export** - Supports data backup and recovery in JSON format.
-- 🔒 **Fully Offline** - The extension works offline, protecting your privacy.
+- 🔍 **Smart Site Detection** - Automatically identify AI aggregation and relay sites, create access tokens, intelligently parse pricing ratios and configurations, with duplicate detection
+- 🏷️ **Site Information Management** - Multiple methods to retrieve real site names, check-in status detection and automatic check-in, manually add any AI aggregation and relay site
+- 👥 **Multi-Account Management** - Support multiple accounts per site, account grouping and quick switching, balance and usage logs at a glance
+- 🔑 **Token & Key Management** - Convenient API Key viewing and management, support quick copy and batch operations
+- 🤖 **View Model Information** - View the list of models supported by the site and pricing information.
+- 🔄 **New API System Management**
+    - Automatically synchronize the channel model list of New API and its fork projects, continuously staying in sync with the upstream model list.
+    - Automatically generate model redirects, eliminating manual searching and individual configuration, maximizing channel resource utilization, and enhancing model availability.
+- 🚀 **Quick Export Integration** - One-click export configurations to [CherryStudio](https://github.com/CherryHQ/cherry-studio) and [New API](https://github.com/QuantumNous/new-api), simplifying API usage workflow
+- ☁️ **Data Backup & Recovery** - Support JSON format import/export, WebDav cloud backup, cross-device data synchronization
+- 🌐 **Cross-Platform Compatible** - Support Chrome, Firefox browsers, works on mobile devices via Kiwi Browser, with automatic dark mode switching
+- 🔒 **Privacy & Security** - Fully offline operation, all data stored locally, protecting your privacy
+
+> [!NOTE]
+> Originally based on [One API Hub](https://github.com/fxaxg/one-api-hub), now significantly refactored and expanded. Data format remains compatible, supporting direct import
 
 ## 🖥️ Screenshots
 
 <div style="display: flex; justify-content: center; gap: 20px; box-sizing: border-box; flex-wrap: wrap;">
   <figure>
-    <img src="docs/docs/static/image/current-site-check.png" alt="current-site-check" style="width:49%;height:auto;">
-    <img src="docs/docs/static/image/try-add-existing-site.png" alt="try-add-existing-site" style="width:49%;height:auto;">
+    <img src="docs/docs/static/image/en/current-site-check.png" alt="current-site-check" style="width:49%;height:auto;">
+    <img src="docs/docs/static/image/en/try-add-existing-site.png" alt="try-add-existing-site" style="width:49%;height:auto;">
     <figcaption style="text-align:center;">Duplicate Site Detection</figcaption>
   </figure>
 </div>
-  <figure>
-    <img src="docs/docs/static/image/model-list.png" alt="model-list" style="height:auto;">
-    <figcaption style="text-align:center;">Model List</figcaption>
-  </figure>
-  <figure>
-    <img src="docs/docs/static/image/import-and-export-setting.png" alt="import-and-export-setting" style="height:auto;">
-    <figcaption style="text-align:center;">Data Import/Export</figcaption>
-  </figure>
-  <figure>
-    <img src="docs/docs/static/image/api-key-list.png" alt="api-key-list" style="height:auto;">
-    <figcaption style="text-align:center;">Key List</figcaption>
-  </figure>
-  <figure>
-    <img src="docs/docs/static/image/account-manage.png" alt="account-manage" style="height:auto;">
-    <figcaption style="text-align:center;">Account Management</figcaption>
-  </figure>
+<figure>
+<img src="docs/docs/static/image/en/account-manage.png" alt="account-manage" style="height:auto;">
+<figcaption style="text-align:center;">Account Management</figcaption>
+</figure>
+<figure>
+<img src="docs/docs/static/image/en/model-list.png" alt="model-list" style="height:auto;">
+<figcaption style="text-align:center;">Model list</figcaption>
+</figure>
+<figure>
+<img src="docs/docs/static/image/en/api-key-list.png" alt="api-key-list" style="height:auto;">
+<figcaption style="text-align:center;">Key list</figcaption>
+</figure>
+<figure>
+<img src="docs/docs/static/image/en/new-api-channel-sync.png" alt="new-api-channel-sync" style="height:auto;">
+<figcaption style="text-align:center;">New API Model Synchronization</figcaption>
+<figure>
+<img src="docs/docs/static/image/en/import-and-export-setting.png" alt="import-and-export-setting" style="height:auto;">
+<figcaption style="text-align:center;">Import/Export</figcaption>
+</figure>
 
 ## 🚀 Installation
 
@@ -125,86 +115,7 @@ This extension allows for convenient integrated management of AI relay station a
 
 ## 🛠️ Development Guide
 
-### Prerequisites
-
-- Node.js 20+
-- npm or pnpm
-
-### Local Development
-
-```bash
-# Clone the project
-git clone https://github.com/username/all-api-hub.git
-cd all-api-hub
-
-# Install dependencies
-pnpm install
-# or
-npm install
-
-# Start the development server
-pnpm dev
-# or
-npm run dev
-```
-
-Then, load the `build/chrome-mv3-dev` directory as an unpacked extension in your browser.
-
-### Testing
-
-The project uses Vitest for unit and component tests with a jsdom environment.
-
-```bash
-# Run all tests
-pnpm test
-
-# Watch mode for faster iteration
-pnpm test:watch
-
-# Run in CI mode with coverage
-pnpm test:ci
-```
-
-GitHub Actions automatically runs `pnpm test:ci` on pull requests and uploads coverage reports as workflow artifacts.
-
-### Git Hooks
-
-We use [Husky](https://typicode.github.io/husky) to enforce basic workflows via Git hooks.
-
-- **pre-commit**: runs `pnpm format:check` and `pnpm lint`
-  - If formatting or lint errors are detected, the hook will attempt to fix them and abort the commit so you can review and stage the changes
-- **pre-push**: runs `pnpm test:ci` and `pnpm compile` to make sure tests and type checks pass before pushing
-
-> Running `pnpm install` after cloning automatically enables Husky via the `prepare` script.
-
-Useful commands:
-
-```bash
-# Check formatting
-pnpm format:check
-
-# Format code
-pnpm format
-
-# Lint the project
-pnpm lint
-pnpm lint:fix
-
-# Run tests and type checks
-pnpm test:ci
-pnpm compile
-```
-
-### Building for Production
-
-```bash
-pnpm build
-# or 
-npm run build
-```
-
-This will create the production-ready extension package in the `build` directory.
-
+Please refer to the [CONTRIBUTING](CONTRIBUTING.md) for more information.
 
 ## 🏗️ Tech Stack
 
@@ -216,12 +127,10 @@ This will create the production-ready extension package in the `build` directory
 - **State Management**: React Context API
 - **Type Checking**: [TypeScript](https://typescriptlang.org)
 
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgements
 
+- Thanks to [@AngleNaris](https://github.com/AngleNaris) for designing the project logo 🎨
 - [WXT](https://wxt.dev) - The modern browser extension development framework.
 
 ---

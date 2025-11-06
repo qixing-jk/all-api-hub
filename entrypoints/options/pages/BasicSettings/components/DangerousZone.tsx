@@ -11,7 +11,7 @@ import {
 } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 
-import { showResetToast } from "../utils/toastHelpers"
+import { showResetToast } from "../../../../../utils/toastHelpers.ts"
 
 export default function DangerousZone() {
   const { t } = useTranslation("settings")

@@ -19,6 +19,11 @@ export { Label, labelVariants } from "./Label"
 export { Alert, AlertTitle, AlertDescription } from "./Alert"
 export { Badge, badgeVariants } from "./Badge"
 export { Select, selectVariants } from "./Select"
+export {
+  MultiSelect,
+  type MultiSelectOption,
+  type MultiSelectProps
+} from "./MultiSelect"
 export { Textarea, textareaVariants } from "./Textarea"
 export { IconButton, iconButtonVariants } from "./IconButton"
 export { Spinner, spinnerVariants } from "./Spinner"

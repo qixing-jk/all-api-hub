@@ -25,7 +25,7 @@ interface ExportSectionProps {
 const ExportSection = ({ isExporting, setIsExporting }: ExportSectionProps) => {
   const { t } = useTranslation("importExport")
   return (
-    <section className="flex h-full">
+    <section id="export-section" className="flex h-full">
       <Card padding="none" className="flex flex-1 flex-col">
         <CardHeader>
           <div className="flex items-center gap-2">

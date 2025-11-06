@@ -1,4 +1,6 @@
 // 站点名称常量
+import merge from "lodash-es/merge"
+
 export const ONE_API = "one-api"
 export const NEW_API = "new-api"
 export const VELOERA = "Veloera"
@@ -6,6 +8,8 @@ export const ONE_HUB = "one-hub"
 export const DONE_HUB = "done-hub"
 export const VO_API = "VoAPI"
 export const SUPER_API = "Super-API"
+export const RIX_API = "Rix-Api"
+export const NEO_API = "neo-Api"
 export const UNKNOWN_SITE = "unknown"
 
 export type SiteType = (typeof SITE_TITLE_RULES)[number]["name"]
@@ -19,6 +23,8 @@ export const SITE_TITLE_RULES = [
   { name: DONE_HUB, regex: makeTitleRegex(DONE_HUB) },
   { name: VO_API, regex: makeTitleRegex(VO_API) },
   { name: SUPER_API, regex: makeTitleRegex(SUPER_API) },
+  { name: RIX_API, regex: makeTitleRegex(RIX_API) },
+  { name: NEO_API, regex: makeTitleRegex(NEO_API) },
   { name: UNKNOWN_SITE, regex: makeTitleRegex(UNKNOWN_SITE) }
 ]
 
@@ -49,6 +55,7 @@ export const SITE_API_ROUTER: Record<string, any> = {
   },
   [ONE_HUB]: { usagePath: "/panel/log", redeemPath: "/panel/topup" },
   [DONE_HUB]: { usagePath: "/panel/log", redeemPath: "/panel/topup" },
+  [RIX_API]: { usagePath: "/log", checkInPath: "/panel", redeemPath: "/topup" },
   Default: {
     usagePath: DEFAULT_USAGE_PATH,
     checkInPath: DEFAULT_CHECKIN_PATH,
@@ -62,5 +69,5 @@ export const SITE_API_ROUTER: Record<string, any> = {
  * @returns 对应的 API 路由对象，否则返回 Default 的路由对象
  */
 export function getSiteApiRouter(key: string) {
-  return SITE_API_ROUTER[key] ?? SITE_API_ROUTER["Default"]
+  return merge({}, SITE_API_ROUTER["Default"], SITE_API_ROUTER[key])
 }

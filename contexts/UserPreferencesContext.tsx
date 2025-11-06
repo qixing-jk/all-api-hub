@@ -4,25 +4,30 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useMemo,
   useState
 } from "react"
 
 import { DATA_TYPE_CONSUMPTION } from "~/constants"
 import { UI_CONSTANTS } from "~/constants/ui"
 import {
+  DEFAULT_PREFERENCES,
   userPreferences,
   type UserPreferences
 } from "~/services/userPreferences"
 import type { BalanceType, CurrencyType, SortField, SortOrder } from "~/types"
+import type { AutoCheckinPreferences } from "~/types/autoCheckin"
+import type { ModelRedirectPreferences } from "~/types/modelRedirect"
 import type { SortingPriorityConfig } from "~/types/sorting"
 import type { ThemeMode } from "~/types/theme"
+import { deepOverride } from "~/utils"
 import { sendRuntimeMessage } from "~/utils/browserApi"
 import { DEFAULT_SORTING_PRIORITY_CONFIG } from "~/utils/sortingPriority"
 
+type UserNewApiModelSyncConfig = NonNullable<UserPreferences["newApiModelSync"]>
+
 // 1. 定义 Context 的值类型
 interface UserPreferencesContextType {
-  preferences: UserPreferences | null
+  preferences: UserPreferences
   isLoading: boolean
   activeTab: BalanceType
   currencyType: CurrencyType
@@ -56,6 +61,15 @@ interface UserPreferencesContextType {
   updateNewApiAdminToken: (token: string) => Promise<boolean>
   updateNewApiUserId: (userId: string) => Promise<boolean>
   updateThemeMode: (themeMode: ThemeMode) => Promise<boolean>
+  updateAutoCheckin: (
+    updates: Partial<AutoCheckinPreferences>
+  ) => Promise<boolean>
+  updateNewApiModelSync: (
+    updates: Partial<UserNewApiModelSyncConfig>
+  ) => Promise<boolean>
+  updateModelRedirect: (
+    updates: Partial<ModelRedirectPreferences>
+  ) => Promise<boolean>
   resetToDefaults: () => Promise<boolean>
   loadPreferences: () => Promise<void>
 }
@@ -150,77 +164,94 @@ export const UserPreferencesProvider = ({
   )
 
   const updateAutoRefresh = useCallback(async (enabled: boolean) => {
-    const success = await userPreferences.updateAutoRefresh(enabled)
+    const updates = {
+      accountAutoRefresh: { enabled: enabled }
+    }
+    const success = await userPreferences.savePreferences(updates)
     if (success) {
-      setPreferences((prev) =>
-        prev ? { ...prev, autoRefresh: enabled } : null
-      )
+      setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
       sendRuntimeMessage({
         action: "updateAutoRefreshSettings",
-        settings: { autoRefresh: enabled }
+        settings: updates
       })
     }
     return success
   }, [])
 
   const updateRefreshInterval = useCallback(async (interval: number) => {
-    const success = await userPreferences.updateRefreshInterval(interval)
+    const updates = {
+      accountAutoRefresh: { interval: interval }
+    }
+    const success = await userPreferences.savePreferences(updates)
     if (success) {
-      setPreferences((prev) =>
-        prev ? { ...prev, refreshInterval: interval } : null
-      )
+      setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
       sendRuntimeMessage({
         action: "updateAutoRefreshSettings",
-        settings: { refreshInterval: interval }
+        settings: updates
       })
     }
     return success
   }, [])
 
-  const updateMinRefreshInterval = useCallback(async (interval: number) => {
-    const success = await userPreferences.updateMinRefreshInterval(interval)
+  const updateMinRefreshInterval = useCallback(async (minInterval: number) => {
+    const updates = {
+      accountAutoRefresh: { minInterval: minInterval }
+    }
+    const success = await userPreferences.savePreferences(updates)
     if (success) {
-      setPreferences((prev) =>
-        prev ? { ...prev, minRefreshInterval: interval } : null
-      )
+      setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
+      sendRuntimeMessage({
+        action: "updateAutoRefreshSettings",
+        settings: updates
+      })
     }
     return success
   }, [])
 
-  const updateRefreshOnOpen = useCallback(async (enabled: boolean) => {
-    const success = await userPreferences.updateRefreshOnOpen(enabled)
+  const updateRefreshOnOpen = useCallback(async (refreshOnOpen: boolean) => {
+    const updates = {
+      accountAutoRefresh: { refreshOnOpen: refreshOnOpen }
+    }
+    const success = await userPreferences.savePreferences(updates)
     if (success) {
-      setPreferences((prev) =>
-        prev ? { ...prev, refreshOnOpen: enabled } : null
-      )
+      setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
+      sendRuntimeMessage({
+        action: "updateAutoRefreshSettings",
+        settings: updates
+      })
     }
     return success
   }, [])
 
-  const updateNewApiBaseUrl = useCallback(async (url: string) => {
-    const success = await userPreferences.updateNewApiBaseUrl(url)
+  const updateNewApiBaseUrl = useCallback(async (baseUrl: string) => {
+    const updates = {
+      newApi: { baseUrl }
+    }
+    const success = await userPreferences.savePreferences(updates)
     if (success) {
-      setPreferences((prev) => (prev ? { ...prev, newApiBaseUrl: url } : null))
+      setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
     }
     return success
   }, [])
 
-  const updateNewApiAdminToken = useCallback(async (token: string) => {
-    const success = await userPreferences.updateNewApiAdminToken(token)
+  const updateNewApiAdminToken = useCallback(async (adminToken: string) => {
+    const updates = {
+      newApi: { adminToken }
+    }
+    const success = await userPreferences.savePreferences(updates)
     if (success) {
-      setPreferences((prev) =>
-        prev ? { ...prev, newApiAdminToken: token } : null
-      )
+      setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
     }
     return success
   }, [])
 
   const updateNewApiUserId = useCallback(async (userId: string) => {
-    const success = await userPreferences.updateNewApiUserId(userId)
+    const updates = {
+      newApi: { userId }
+    }
+    const success = await userPreferences.savePreferences(updates)
     if (success) {
-      setPreferences((prev) =>
-        prev ? { ...prev, newApiUserId: userId } : null
-      )
+      setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
     }
     return success
   }, [])
@@ -233,6 +264,88 @@ export const UserPreferencesProvider = ({
     return success
   }, [])
 
+  const updateAutoCheckin = useCallback(
+    async (updates: Partial<AutoCheckinPreferences>) => {
+      const success = await userPreferences.savePreferences({
+        autoCheckin: updates
+      })
+
+      if (success) {
+        setPreferences((prev) => {
+          if (!prev) return null
+          const merged = deepOverride(
+            prev.autoCheckin ?? DEFAULT_PREFERENCES.autoCheckin,
+            updates
+          )
+          return {
+            ...prev,
+            autoCheckin: merged
+          }
+        })
+
+        // Notify background to update alarm
+        await sendRuntimeMessage({
+          action: "autoCheckin:updateSettings",
+          settings: updates
+        })
+      }
+      return success
+    },
+    []
+  )
+
+  const updateNewApiModelSync = useCallback(
+    async (updates: Partial<UserNewApiModelSyncConfig>) => {
+      const success = await userPreferences.savePreferences({
+        newApiModelSync: updates
+      })
+      if (success) {
+        setPreferences((prev) => {
+          if (!prev) return null
+          const merged = deepOverride(
+            prev.newApiModelSync ?? DEFAULT_PREFERENCES.newApiModelSync,
+            updates
+          )
+          return {
+            ...prev,
+            newApiModelSync: merged
+          }
+        })
+
+        // Notify background to update alarm
+        await sendRuntimeMessage({
+          action: "newApiModelSync:updateSettings",
+          settings: updates
+        })
+      }
+      return success
+    },
+    []
+  )
+
+  const updateModelRedirect = useCallback(
+    async (updates: Partial<ModelRedirectPreferences>) => {
+      const success = await userPreferences.savePreferences({
+        modelRedirect: updates
+      })
+      if (success) {
+        setPreferences((prev) => {
+          if (!prev) return null
+          const merged = deepOverride(
+            prev.modelRedirect ?? DEFAULT_PREFERENCES.modelRedirect,
+            updates
+          )
+          return {
+            ...prev,
+            modelRedirect: merged
+          }
+        })
+      }
+      return success
+    },
+    []
+  )
+
   const resetToDefaults = useCallback(async () => {
     const success = await userPreferences.resetToDefaults()
     if (success) {
@@ -241,63 +354,45 @@ export const UserPreferencesProvider = ({
     return success
   }, [loadPreferences])
 
-  const value = useMemo(
-    () => ({
-      preferences,
-      isLoading,
-      activeTab: preferences?.activeTab || DATA_TYPE_CONSUMPTION,
-      currencyType: preferences?.currencyType || "USD",
-      sortField: preferences?.sortField || UI_CONSTANTS.SORT.DEFAULT_FIELD,
-      sortOrder: preferences?.sortOrder || UI_CONSTANTS.SORT.DEFAULT_ORDER,
-      sortingPriorityConfig:
-        preferences?.sortingPriorityConfig || DEFAULT_SORTING_PRIORITY_CONFIG,
-      autoRefresh: preferences?.autoRefresh ?? true,
-      refreshInterval: preferences?.refreshInterval ?? 360,
-      minRefreshInterval: preferences?.minRefreshInterval ?? 60,
-      refreshOnOpen: preferences?.refreshOnOpen ?? true,
-      newApiBaseUrl: preferences?.newApiBaseUrl || "",
-      newApiAdminToken: preferences?.newApiAdminToken || "",
-      newApiUserId: preferences?.newApiUserId || "",
-      themeMode: preferences?.themeMode || "system",
-      updateActiveTab,
-      updateDefaultTab,
-      updateCurrencyType,
-      updateSortConfig,
-      updateSortingPriorityConfig,
-      updateAutoRefresh,
-      updateRefreshInterval,
-      updateMinRefreshInterval,
-      updateRefreshOnOpen,
-      updateNewApiBaseUrl,
-      updateNewApiAdminToken,
-      updateNewApiUserId,
-      updateThemeMode,
-      resetToDefaults,
-      loadPreferences
-    }),
-    [
-      preferences,
-      isLoading,
-      updateActiveTab,
-      updateDefaultTab,
-      updateCurrencyType,
-      updateSortConfig,
-      updateSortingPriorityConfig,
-      updateAutoRefresh,
-      updateRefreshInterval,
-      updateMinRefreshInterval,
-      updateRefreshOnOpen,
-      updateNewApiBaseUrl,
-      updateNewApiAdminToken,
-      updateNewApiUserId,
-      updateThemeMode,
-      resetToDefaults,
-      loadPreferences
-    ]
-  )
-
-  if (isLoading) {
+  if (isLoading || !preferences) {
     return null
+  }
+
+  const value = {
+    preferences,
+    isLoading,
+    activeTab: preferences?.activeTab || DATA_TYPE_CONSUMPTION,
+    currencyType: preferences?.currencyType || "USD",
+    sortField: preferences?.sortField || UI_CONSTANTS.SORT.DEFAULT_FIELD,
+    sortOrder: preferences?.sortOrder || UI_CONSTANTS.SORT.DEFAULT_ORDER,
+    sortingPriorityConfig:
+      preferences?.sortingPriorityConfig || DEFAULT_SORTING_PRIORITY_CONFIG,
+    autoRefresh: preferences?.accountAutoRefresh?.enabled ?? true,
+    refreshInterval: preferences?.accountAutoRefresh?.interval ?? 360,
+    minRefreshInterval: preferences?.accountAutoRefresh?.minInterval ?? 60,
+    refreshOnOpen: preferences?.accountAutoRefresh?.refreshOnOpen ?? true,
+    newApiBaseUrl: preferences?.newApi?.baseUrl || "",
+    newApiAdminToken: preferences?.newApi?.adminToken || "",
+    newApiUserId: preferences?.newApi?.userId || "",
+    themeMode: preferences?.themeMode || "system",
+    updateActiveTab,
+    updateDefaultTab,
+    updateCurrencyType,
+    updateSortConfig,
+    updateSortingPriorityConfig,
+    updateAutoRefresh,
+    updateRefreshInterval,
+    updateMinRefreshInterval,
+    updateRefreshOnOpen,
+    updateNewApiBaseUrl,
+    updateNewApiAdminToken,
+    updateNewApiUserId,
+    updateThemeMode,
+    updateAutoCheckin,
+    updateNewApiModelSync,
+    updateModelRedirect,
+    resetToDefaults,
+    loadPreferences
   }
 
   return (
@@ -310,23 +405,9 @@ export const UserPreferencesProvider = ({
 // 4. 创建自定义 Hook
 export const useUserPreferencesContext = () => {
   const context = useContext(UserPreferencesContext)
-  if (
-    context === undefined ||
-    !context.updateActiveTab ||
-    !context.updateCurrencyType ||
-    !context.updateSortConfig ||
-    !context.updateAutoRefresh ||
-    !context.updateRefreshInterval ||
-    !context.updateMinRefreshInterval ||
-    !context.updateRefreshOnOpen ||
-    !context.updateNewApiBaseUrl ||
-    !context.updateNewApiAdminToken ||
-    !context.updateNewApiUserId ||
-    !context.updateThemeMode ||
-    !context.resetToDefaults
-  ) {
+  if (!context) {
     throw new Error(
-      "useUserPreferencesContext 必须在 UserPreferencesProvider 中使用，并且必须提供所有必需的函数"
+      "useUserPreferencesContext 必须在 UserPreferencesProvider 中使用"
     )
   }
   return context

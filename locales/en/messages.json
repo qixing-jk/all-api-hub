@@ -20,7 +20,9 @@
       "keyCopied": "Key {{name}} copied to clipboard",
       "deleteKeySuccess": "Key {{name}} deleted successfully",
       "importedAccounts": "Imported and migrated {{migratedCount}} account(s)",
-      "importSuccess": "Import successful"
+      "importSuccess": "Import successful",
+      "accountPinned": "{{accountName}} pinned",
+      "accountUnpinned": "{{accountName}} unpinned"
     },
     "error": {
       "refreshAccount": "Failed to refresh {{accountName}}",
@@ -69,7 +71,8 @@
     "checkingApiKeys": "Checking API key...",
     "importingToNewApi": "Importing to New API...",
     "createTokenFailed": "Failed to create API token",
-    "tokenNotFound": "Failed to create or find an API token"
+    "tokenNotFound": "Failed to create or find an API token",
+    "retrying": "An error occurred, attempting retry #{{attempt}}"
   },
   "operations": {
     "account": {
@@ -98,6 +101,9 @@
     "loginThisSite": "Login to this site",
     "unexpectedData": "Auto-detection failed, site returned unexpected data. Please enter information manually or ensure you are logged in to the target site",
     "networkError": "Network connection failed, please check your network connection and try again",
+    "forbidden": "Access denied. Please confirm whether the website firewall is blocking the request",
+    "notFound": "Resource not found. Please confirm whether the site address entered is correct",
+    "serverError": "Server error. Please try again later",
     "failed": "Auto-detection failed: "
   },
   "webdav": {

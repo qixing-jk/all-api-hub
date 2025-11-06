@@ -49,7 +49,9 @@ export function reactDevToolsAuto(options: ReactDevToolsOptions = {}): Plugin {
       try {
         const res = await fetch(`http://localhost:${config.port}`)
         if (res.ok) return true
-      } catch {}
+      } catch (error) {
+        console.error(error)
+      }
       await new Promise((resolve) => setTimeout(resolve, 200))
     }
     return false

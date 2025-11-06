@@ -20,7 +20,9 @@
       "keyCopied": "密钥 {{name}} 已复制到剪贴板",
       "deleteKeySuccess": "密钥 {{name}} 删除成功",
       "importedAccounts": "已导入并迁移 {{migratedCount}} 个账号",
-      "importSuccess": "导入成功"
+      "importSuccess": "导入成功",
+      "accountPinned": "已置顶 {{accountName}}",
+      "accountUnpinned": "已取消置顶 {{accountName}}"
     },
     "error": {
       "refreshAccount": "刷新 {{accountName}} 失败",
@@ -69,7 +71,8 @@
     "checkingApiKeys": "正在检查 API 密钥...",
     "importingToNewApi": "正在导入到 New API...",
     "createTokenFailed": "创建 API 令牌失败",
-    "tokenNotFound": "无法创建或找到 API 令牌"
+    "tokenNotFound": "无法创建或找到 API 令牌",
+    "retrying": "出现错误，进行第{{attempt}}次重试"
   },
   "operations": {
     "account": {
@@ -98,6 +101,9 @@
     "loginThisSite": "登录此站点",
     "unexpectedData": "自动识别未成功,站点返回数据不符合预期,请手动输入信息或确保已在目标站点登录",
     "networkError": "网络连接失败,请检查网络连接后重试",
+    "forbidden": "访问被拒绝,请确认是否是网站防火墙是否阻止了相关请求",
+    "notFound": "未找到相关资源,请确认所填写的站点地址是否正确",
+    "serverError": "服务器错误,请稍后重试",
     "failed": "自动识别失败:"
   },
   "webdav": {

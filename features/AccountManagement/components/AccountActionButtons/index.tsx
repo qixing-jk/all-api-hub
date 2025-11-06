@@ -10,13 +10,14 @@ import {
   PencilIcon,
   TrashIcon
 } from "@heroicons/react/24/outline"
-import { ChartPieIcon } from "lucide-react"
+import { ChartPieIcon, PinIcon, PinOffIcon } from "lucide-react"
 import React, { useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { IconButton } from "~/components/ui"
 import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
+import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { useDialogStateContext } from "~/features/AccountManagement/hooks/DialogStateContext"
 import { fetchAccountTokens } from "~/services/apiService"
 import type { DisplaySiteData } from "~/types"
@@ -44,8 +45,29 @@ export default function AccountActionButtons({
   const { t } = useTranslation("account")
   const { refreshingAccountId, handleRefreshAccount } =
     useAccountActionsContext()
+  const { isAccountPinned, togglePinAccount } = useAccountDataContext()
   const { openEditAccount } = useDialogStateContext()
   const [isCheckingTokens, setIsCheckingTokens] = useState(false)
+
+  const isPinned = isAccountPinned(site.id)
+  const pinLabel = isPinned ? t("actions.unpin") : t("actions.pin")
+  const PinToggleIcon = isPinned ? PinOffIcon : PinIcon
+
+  const handleTogglePin = async (e?: React.MouseEvent) => {
+    e?.preventDefault()
+    e?.stopPropagation()
+    const success = await togglePinAccount(site.id)
+    if (success) {
+      const message = isPinned
+        ? t("messages:toast.success.accountUnpinned", {
+            accountName: site.name
+          })
+        : t("messages:toast.success.accountPinned", {
+            accountName: site.name
+          })
+      toast.success(message)
+    }
+  }
 
   // Smart copy key logic - check token count before deciding action
   const handleSmartCopyKey = async (e: React.MouseEvent) => {
@@ -195,6 +217,8 @@ export default function AccountActionButtons({
             label={t("actions.modelManagement")}
           />
 
+          <hr className="my-1 border-gray-200 dark:border-dark-bg-tertiary" />
+
           <AccountActionMenuItem
             onClick={handleNavigateToUsageManagement}
             icon={ChartPieIcon}
@@ -208,6 +232,13 @@ export default function AccountActionButtons({
           />
 
           <hr className="my-1 border-gray-200 dark:border-dark-bg-tertiary" />
+
+          {/* Pin/Unpin */}
+          <AccountActionMenuItem
+            onClick={handleTogglePin}
+            icon={PinToggleIcon}
+            label={pinLabel}
+          />
 
           <AccountActionMenuItem
             onClick={handleRefreshLocal}

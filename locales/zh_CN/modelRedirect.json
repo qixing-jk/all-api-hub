@@ -1,0 +1,23 @@
+{
+  "title": "模型重定向",
+  "description": "自动模型重定向映射，解决因模型名称导致无法统一调用的问题",
+  "enable": "启用模型重定向",
+  "enableDesc": "启用模型重定向映射功能，将在模型同步时自动运行并允许手动运行",
+  "standardModels": "标准模型",
+  "standardModelsDesc": "选择需要生成重定向映射的标准模型",
+  "standardModelsPlaceholder": "请选择模型…",
+  "regenerateButton": "立即重新生成映射",
+  "regenerating": "正在重新生成…",
+  "lastUpdated": "上次更新",
+  "never": "暂无",
+  "noMapping": "尚未生成任何映射",
+  "messages": {
+    "regenerateSuccess": "模型映射已成功重新生成",
+    "regenerateFailed": "重新生成模型映射失败：{{error}}",
+    "updateSuccess": "模型重定向设置已更新",
+    "updateFailed": "更新模型重定向设置失败",
+    "noModelsSelected": "请至少选择一个标准模型",
+    "featureDisabled": "模型重定向功能未启用",
+    "alreadyGenerating": "映射生成正在进行中"
+  }
+}

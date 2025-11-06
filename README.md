@@ -9,7 +9,7 @@
 
 # 中转站管理器 - All API Hub
 
-**一个开源的浏览器插件，聚合管理所有中转站账号的余额、模型和密钥，告别繁琐登录。**
+**开源浏览器插件，自动识别并管理所有 AI 聚合中转站账号，查看余额、同步模型、管理密钥，支持跨平台和云端备份**
 
 <p align="center">
 <a href="https://github.com/qixing-jk/all-api-hub/releases">
@@ -30,51 +30,39 @@
 
 </div>
 
----
-
-> [!NOTE]  
-> 本项目为开源项目，在[One API Hub](https://github.com/fxaxg/one-api-hub)的基础上进行二次开发
-
 ## 📖 介绍
 
-目前市面上有太多 AI-API 中转站点，每次查看余额和支持模型列表等信息都非常麻烦，需要逐个登录查看。
-
-本插件可以便捷的对基于以下项目的AI 中转站账号进行整合管理：
+目前市面上有大量 AI 聚合中转站点，每次查看余额、模型列表和密钥等信息都需要逐个登录，非常繁琐。
+本插件可以自动识别并整合管理基于以下项目的 AI 聚合中转站账号：
 
 - [one-api](https://github.com/songquanpeng/one-api)
 - [new-api](https://github.com/QuantumNous/new-api)
 - [Veloera](https://github.com/Veloera/Veloera)
 - [one-hub](https://github.com/MartialBE/one-hub)
 - [done-hub](https://github.com/deanxv/done-hub)
-- [VoAPI](https://github.com/VoAPI/VoAPI)
-- [Super-API](https://github.com/SuperAI-Api/Super-API)
-
-## 🧬 功能变化
-
-- 🌐 **更多站点支持** - 新增对 VoAPI、Super-API 等站点的支持
-- 🚀 **快速导出站点** - 支持一键将站点API配置导出到 [CherryStudio](https://github.com/CherryHQ/cherry-studio) 和 [New API](https://github.com/QuantumNous/new-api)，简化API使用流程
-- ✅ **站点签到状态检测** - 支持检测站点是否支持签到和签到状态
-- 🔄 **站点重复检测** - 防止重复添加相同站点，并快速修改当前已添加的站点
-- ️🏷️ **智能获取站点名称** - 多方式获取真实站点名称，域名方式作为最后的手段
-- ☁️ **WebDav 数据备份** - 支持通过 WebDav 备份和恢复所有账号与设置，保障数据安全，可跨设备同步
-- 📝 **手动添加** - 支持手动添加任意中转站点，防止只能自动识失败无法添加
-- 🌓 **深色模式** - 支持根据系统主题自动切换
-- ⚙️ **火狐支持** - 现在可以在 Firefox 浏览器中使用该插件
-- 📱 **移动端支持** - 通过 Kiwi或手机版Firefox 浏览器在 移动端设备上使用，完整功能体验
-
-> [!NOTE]
-> 与[One API Hub](https://github.com/fxaxg/one-api-hub)的数据兼容，可以直接导入使用
+- Neo-API（闭源）
+- Super-API（闭源）
+- RIX_API（闭源，基本功能支持）
+- VoAPI（闭源，老版本支持）
 
 ## ✨ 功能特性
 
-- 🔍 **自动识别中转站点** - 自动创建系统访问 token 并添加到插件的站点列表中
-- 💰 **自动识别中转站充值比例** - 智能解析站点配置信息
-- 👥 **多账号管理** - 每个站点可添加多个账号，支持账号分组与切换
-- 📊 **余额与日志查看** - 账号的余额、使用日志一目了然
-- 🔑 **令牌(key)管理** - 便捷的密钥查看与管理
-- 🤖 **模型信息查看** - 站点支持模型信息和渠道查看
-- ⚙️ **数据导入导出** - 支持 JSON 格式的数据备份与恢复
-- 🔒 **完全离线** - 插件无需联网，保护隐私安全
+- 🔍 **智能站点识别** - 自动识别 AI 聚合中转站点并创建访问 token，智能解析充值比例和站点配置，支持重复检测防止误添加
+- 🏷️ **站点信息管理** - 多方式获取真实站点名称，支持签到状态检测和自动签到，可手动添加任意 AI 聚合中转站点
+- 👥 **多账号管理** - 每个站点支持多个账号，账号分组与快速切换，余额和使用日志一目了然
+- 🔑 **令牌与密钥** - 便捷的 API Key 查看与管理，支持快速复制和批量操作
+- 🤖 **模型信息查看** - 查看站点支持的模型列表和价格信息
+- 🔄 **New API 类系统管理**
+    - 自动同步 New API 及其 fork 项目的渠道模型列表，持续与上游模型列表保持同步
+    - 自动生成模型重定向，免去手动搜索与逐个配置，最大化利用渠道资源，提升模型可用性
+- 🚀 **快速导出集成** - 一键导出配置到 [CherryStudio](https://github.com/CherryHQ/cherry-studio) 和 [New API](https://github.com/QuantumNous/new-api)，简化 API 使用流程
+- ☁️ **数据备份恢复** - 支持 JSON 格式导入导出，WebDav 云端备份，跨设备数据同步
+- 🌐 **全平台兼容** - 支持 Chrome、Firefox 浏览器，可在 Kiwi Browser 等移动端使用，支持深色模式自动切换
+- 🔒 **隐私与安全** - 完全离线运行，所有数据本地存储，保护您的隐私安全
+
+> [!NOTE]
+> 最初基于 [One API Hub](https://github.com/fxaxg/one-api-hub) 开发，现已大幅重构扩展。数据格式保持兼容，支持直接导入
+
 
 ## 🖥️ 截图展示
 
@@ -86,22 +74,25 @@
     <figcaption style="text-align:center;">站点重复检测</figcaption>
   </figure>
 </div>
-  <figure>
-    <img src="docs/docs/static/image/model-list.png" alt="model-list" style="height:auto;">
-    <figcaption style="text-align:center;">模型列表</figcaption>
-  </figure>
-  <figure>
-    <img src="docs/docs/static/image/import-and-export-setting.png" alt="import-and-export-setting" style="height:auto;">
-    <figcaption style="text-align:center;">数据导入导出</figcaption>
-  </figure>
-  <figure>
-    <img src="docs/docs/static/image/api-key-list.png" alt="api-key-list" style="height:auto;">
-    <figcaption style="text-align:center;">密钥列表</figcaption>
-  </figure>
-  <figure>
-    <img src="docs/docs/static/image/account-manage.png" alt="account-manage" style="height:auto;">
-    <figcaption style="text-align:center;">账户管理</figcaption>
-  </figure>
+<figure>
+<img src="docs/docs/static/image/account-manage.png" alt="account-manage" style="height:auto;">
+<figcaption style="text-align:center;">账户管理</figcaption>
+</figure>
+<figure>
+<img src="docs/docs/static/image/model-list.png" alt="model-list" style="height:auto;">
+<figcaption style="text-align:center;">模型列表</figcaption>
+</figure>
+<figure>
+<img src="docs/docs/static/image/api-key-list.png" alt="api-key-list" style="height:auto;">
+<figcaption style="text-align:center;">密钥列表</figcaption>
+</figure>
+<figure>
+<img src="docs/docs/static/image/new-api-channel-sync.png" alt="new-api-channel-sync" style="height:auto;">
+<figcaption style="text-align:center;">New API 模型同步</figcaption>
+<figure>
+<img src="docs/docs/static/image/import-and-export-setting.png" alt="import-and-export-setting" style="height:auto;">
+<figcaption style="text-align:center;">导入导出</figcaption>
+</figure>
 
 ## 🚀 安装使用
 
@@ -124,80 +115,7 @@
 
 ## 🛠️ 开发指南
 
-### 环境要求
-
-- Node.js 20+
-- pnpm
-
-### 本地开发
-
-```bash
-# 克隆项目
-git clone https://github.com/username/all-api-hub.git
-cd all-api-hub
-
-# 安装依赖
-pnpm install
-
-# 启动开发服务器
-pnpm dev
-```
-
-然后在浏览器中加载 `.output/chrome-mv3-dev` 目录作为扩展程序。
-
-### 测试
-
-Vitest 已集成用于单元测试与组件测试，默认在 jsdom 环境中运行。
-
-```bash
-# 运行全部测试
-pnpm test
-
-# 在 watch 模式下运行测试
-pnpm test:watch
-
-# 在 CI 中运行并生成覆盖率
-pnpm test:ci
-```
-
-GitHub Actions 会在每次 Pull Request 上自动运行 `pnpm test:ci` 并上传覆盖率报告。
-
-### Git Hooks
-
-项目使用 [Husky](https://typicode.github.io/husky) 管理 Git Hooks，自动执行基础工作流。
-
-- **pre-commit**：运行 `pnpm format:check` 和 `pnpm lint`
-  - 如果存在格式或 lint 问题，会尝试自动修复，并阻止提交，提示开发者手动确认与暂存变更
-- **pre-push**：在推送前执行 `pnpm test:ci` 和 `pnpm compile`，确保测试与类型检查通过
-
-> 初次克隆仓库后执行 `pnpm install` 会自动触发 Husky 的安装（通过 `prepare` 脚本）。
-
-常用命令：
-
-```bash
-# 手动检查格式
-pnpm format:check
-
-# 自动格式化
-pnpm format
-
-# 运行 eslint
-pnpm lint
-pnpm lint:fix
-
-# 运行测试与类型检查
-pnpm test:ci
-pnpm compile
-```
-
-### 构建生产版本
-
-```bash
-pnpm build
-```
-
-这将在 `.output` 目录中创建生产版本的扩展包。
-
+请参阅 [CONTRIBUTING](CONTRIBUTING.md) 以获取更多信息。
 
 ## 🏗️ 技术栈
 
@@ -209,12 +127,10 @@ pnpm build
 - **状态管理**: React Context API
 - **类型检查**: [TypeScript](https://typescriptlang.org)
 
-## 📄 许可证
-
-本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
 
 ## 🙏 致谢
 
+- 感谢 [@AngleNaris](https://github.com/AngleNaris) 设计了项目 Logo 🎨
 - [WXT](https://wxt.dev) - 现代化的浏览器扩展开发框架
 
 ---

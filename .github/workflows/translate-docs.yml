@@ -1,0 +1,153 @@
+name: Auto Translate Documentation
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "docs/docs/**/*.md"
+      - "!docs/docs/en/**"
+      - "!docs/docs/ja/**"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "翻译模式"
+        required: true
+        type: choice
+        default: "changed"
+        options:
+          - changed
+          - force_all
+          - missing_only
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  translate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 获取完整历史以便比较变更
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install "openai>=1.55.0" pyyaml
+
+      - name: Get files to translate
+        id: changed-files
+        run: |
+          MODE="${{ github.event.inputs.mode }}"
+
+          # 如果是 push 触发，默认为 changed 模式
+          if [ -z "$MODE" ]; then
+            MODE="changed"
+          fi
+
+          echo "翻译模式: $MODE"
+
+          # 检测手动翻译文件
+          echo "🔍 检测手动翻译文件..."
+          MANUAL_TRANSLATIONS=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E '^docs/(en|ja)/.*\.md$' | tr '\n' ' ')
+          if [ -n "$MANUAL_TRANSLATIONS" ]; then
+            echo "📝 检测到手动翻译文件: $MANUAL_TRANSLATIONS"
+          else
+            echo "📝 未检测到手动翻译文件"
+          fi
+
+          if [ "$MODE" = "force_all" ]; then
+            # 强制翻译所有文档
+            echo "📚 获取所有文档文件..."
+            CHANGED_FILES=$(find docs -name "*.md" -type f ! -path "docs/en/*" ! -path "docs/ja/*" | tr '\n' ' ')
+
+          elif [ "$MODE" = "missing_only" ]; then
+            # 只翻译缺失的文档
+            echo "🔍 检测缺失的翻译文件..."
+            python docs_assistant/find_missing.py
+            if [ -f /tmp/missing_files.txt ]; then
+              CHANGED_FILES=$(cat /tmp/missing_files.txt | tr '\n' ' ')
+            else
+              CHANGED_FILES=""
+            fi
+
+          else
+            # 正常模式：只翻译变更的文件
+            echo "📝 获取变更的文件..."
+            CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '^docs/.*\.md$' | grep -v '^docs/en/' | grep -v '^docs/ja/' | tr '\n' ' ')
+          fi
+
+          echo "待翻译文件: $CHANGED_FILES"
+          echo "files=$CHANGED_FILES" >> $GITHUB_OUTPUT
+          echo "manual_translations=$MANUAL_TRANSLATIONS" >> $GITHUB_OUTPUT
+
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "✅ 没有需要翻译的文档文件"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            FILE_COUNT=$(echo "$CHANGED_FILES" | wc -w | tr -d ' ')
+            echo "📊 共 $FILE_COUNT 个文件需要翻译"
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Translate documents
+        if: steps.changed-files.outputs.has_changes == 'true'
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
+          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
+          MAX_RETRIES: ${{ secrets.MAX_RETRIES || '3' }}
+          RETRY_DELAY: ${{ secrets.RETRY_DELAY || '2' }}
+          RETRY_BACKOFF: ${{ secrets.RETRY_BACKOFF || '2.0' }}
+          MAX_WORKERS: ${{ secrets.MAX_WORKERS || '10' }}
+          FORCE_TRANSLATE: ${{ github.event_name == 'push' && 'true' || 'false' }}
+        run: |
+          echo "手动翻译文件: ${{ steps.changed-files.outputs.manual_translations }}"
+          python docs_assistant/translate.py ${{ steps.changed-files.outputs.files }}
+
+      - name: Create Pull Request
+        if: steps.changed-files.outputs.has_changes == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: |
+            🌐 Auto-translate documentation
+
+            Files: ${{ steps.changed-files.outputs.files }}
+          branch: auto-translate-${{ github.run_id }}
+          delete-branch: true
+          title: "🌐 Auto-translate documentation"
+          body: |
+            ## 📝 自动翻译
+
+            此 PR 由 GitHub Actions 自动生成，包含文档的自动翻译。
+
+            ### 📊 翻译信息
+            - **触发方式**: ${{ github.event_name }}
+            - **翻译模式**: ${{ github.event.inputs.mode || 'changed' }}
+            - **工作流运行**: #${{ github.run_id }}
+
+            ### 📁 翻译文件
+            ```
+            ${{ steps.changed-files.outputs.files }}
+            ```
+
+            ### ✅ 检查项
+            - [ ] 翻译内容准确
+            - [ ] 格式保持完整
+            - [ ] 链接正常工作
+
+            ---
+            *Generated by [Auto Translate Workflow](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})*
+          labels: |
+            documentation
+            auto-translation
+          assignees: ${{ github.actor }}

@@ -13,7 +13,7 @@ import {
 } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 
-import { showUpdateToast } from "../utils/toastHelpers"
+import { showUpdateToast } from "../../../../../utils/toastHelpers.ts"
 
 export default function NewApiSettings() {
   const { t } = useTranslation("settings")
@@ -26,21 +26,21 @@ export default function NewApiSettings() {
     updateNewApiUserId
   } = useUserPreferencesContext()
 
-  const [localBaseUrl, setLocalBaseUrl] = useState(newApiBaseUrl ?? "")
-  const [localAdminToken, setLocalAdminToken] = useState(newApiAdminToken ?? "")
+  const [localBaseUrl, setLocalBaseUrl] = useState(newApiBaseUrl)
+  const [localAdminToken, setLocalAdminToken] = useState(newApiAdminToken)
   const [showAdminToken, setShowAdminToken] = useState(false)
-  const [localUserId, setLocalUserId] = useState(newApiUserId ?? "")
+  const [localUserId, setLocalUserId] = useState(newApiUserId)
 
   useEffect(() => {
-    setLocalBaseUrl(newApiBaseUrl ?? "")
+    setLocalBaseUrl(newApiBaseUrl)
   }, [newApiBaseUrl])
 
   useEffect(() => {
-    setLocalAdminToken(newApiAdminToken ?? "")
+    setLocalAdminToken(newApiAdminToken)
   }, [newApiAdminToken])
 
   useEffect(() => {
-    setLocalUserId(newApiUserId ?? "")
+    setLocalUserId(newApiUserId)
   }, [newApiUserId])
 
   const handleNewApiBaseUrlChange = async (url: string) => {

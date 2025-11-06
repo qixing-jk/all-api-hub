@@ -2,6 +2,7 @@ import { useEffect } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Heading3 } from "~/components/ui"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext.tsx"
 
 import { menuItems } from "../constants"
 
@@ -19,6 +20,7 @@ function Sidebar({
   onMobileClose
 }: SidebarProps) {
   const { t } = useTranslation("ui")
+  const { preferences } = useUserPreferencesContext()
 
   // 移动端打开时禁止背景滚动
   useEffect(() => {
@@ -55,6 +57,13 @@ function Sidebar({
             {menuItems.map((item) => {
               const Icon = item.icon
               const isActive = activeMenuItem === item.id
+
+              if (
+                item.id === "autoCheckin" &&
+                !preferences?.autoCheckin?.globalEnabled
+              ) {
+                return null
+              }
 
               return (
                 <li key={item.id}>

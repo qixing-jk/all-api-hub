@@ -2,8 +2,8 @@
 home: true
 title: 首页
 heroImage: https://github.com/qixing-jk/all-api-hub/blob/main/assets/icon.png?raw=true
-heroText: All API Hub - 中转站管理器
-tagline: 一个开源的 AI 中转站账号管理插件
+heroText: All API Hub - AI 聚合中转站管理器
+tagline: 开源浏览器插件，自动识别并管理所有 AI 聚合中转站账号，查看余额、同步模型、管理密钥，支持跨平台和云端备份
 actions:
   - text: 开始使用
     link: /get-started.html # 建议修改为您的实际文档路径，例如 /guide/
@@ -22,56 +22,42 @@ actions:
     type: secondary
 
 features:
-  - title: 站点自动识别
-    details: 自动识别并连接各类 AI 中转站点，一键创建并添加访问令牌（Token），简化初始设置流程。
-  - title: 充值比例识别
-    details: 自动识别并显示中转站的充值比例，帮助您清晰地评估和最大化资金利用率。
-  - title: 多账号支持
-    details: 支持在每个中转站点下添加和管理多个账号，支持账号分组与切换，轻松满足您的多账户使用与隔离需求。
-  - title: 余额与日志查询
-    details: 实时查询和展示各账号的余额信息，并提供详细的使用日志，让您全面掌握消费动态。
-  - title: 令牌(Key)管理
-    details: 提供便捷的令牌（Key）管理功能，包括查看、复制和刷新，确保操作的安全与高效。
-  - title: 模型与渠道信息
-    details: 清晰展示站点所支持的全部模型及其关联渠道的详细信息，助您做出最佳的模型选择。
-  - title: 数据导入导出
-    details: 支持 JSON 格式的数据备份与恢复，确保数据安全。
-  - title: 插件无需联网
-    details: 所有核心功能均可在本地离线运行，无需联网，有效保护您的数据隐私并保障使用稳定性。
-  - title: 快速导出站点
-    details: 支持一键将站点API配置导出到 CherryStudio 和 New API，简化API使用流程。
-  - title: 站点签到状态检测
-    details: 支持检测站点是否支持签到和签到状态。
-  - title: 站点重复检测
-    details: 在添加站点时自动进行重复检测，避免列表中出现重复的站点，保持数据整洁。
-  - title: 智能获取站点名称
-    details: 能够智能识别并获取站点的真实名称，而非简单显示域名，提升了可读性。
-  - title: WebDav 数据备份与恢复
-    details: 支持通过 WebDav 备份和恢复所有账号与设置，保障数据安全并实现跨设备同步。
-  - title: 移动端支持
-    details: 支持在移动设备上通过 Kiwi 浏览器或手机版 Firefox 使用，完整功能体验。
-  - title: 手动添加站点
-    details: 支持手动添加任意中转站点，解决了自动识别失败时无法添加的问题，增强了灵活性。
-  - title: 深色模式
-    details: 支持根据系统主题自动切换深色模式。
-  - title: Firefox 支持
-    details: 插件现已完全兼容 Firefox 浏览器，为火狐用户提供无缝的使用体验。
-  - title: 插件无需联网
-    details: 所有核心功能均可在本地离线运行，无需联网，有效保护您的数据隐私并保障使用稳定性。
+  - title: 智能站点管理
+    details: 自动识别 AI 聚合中转站点并创建访问令牌，智能获取站点名称和充值比例，支持重复检测和手动添加。
+  - title: 多账号体系
+    details: 支持每个站点添加多个账号，账号分组与快速切换，实时查看余额和详细使用日志。
+  - title: 令牌与密钥管理
+    details: 便捷管理所有 API Key，支持查看、复制、刷新和批量操作。
+  - title: 模型信息查看
+    details: 清晰展示站点支持的模型列表和价格信息。
+  - title: 签到状态监控
+    details: 自动检测站点是否支持签到功能，并显示当前签到状态。
+  - title: 快速导出集成
+    details: 一键导出配置到 CherryStudio 和 New API，简化 API 使用流程。
+  - title: New API 类系统管理
+    details: 自动同步渠道及其 fork 项目的模型列表，并生成模型重定向，免去手动配置，最大化提升模型可用性
+  - title: 数据备份恢复
+    details: 支持 JSON 格式导入导出和 WebDav 云端备份，实现跨设备数据同步。
+  - title: 全平台支持
+    details: 兼容 Chrome、Firefox 浏览器，支持 Kiwi Browser 等移动端浏览器，适配深色模式。
+  - title: 隐私与安全
+    details: 完全离线运行，所有数据本地存储，无需联网即可使用全部核心功能。
 
-footer: MIT Licensed | Copyright © 2025-present All API Hub
+footer: AGPL-3.0 Licensed | Copyright © 2025-present All API Hub
 ---
 
 ## 介绍
 
-目前市面上有太多 AI-API 中转站点，每次查看余额和支持模型列表等信息都非常麻烦，需要逐个登录查看。
+目前市面上有大量 AI 聚合中转站点，每次查看余额、模型列表和密钥等信息都需要逐个登录，非常繁琐。
 
-本插件可以便捷的对基于以下项目的AI 中转站账号进行整合管理：
+本插件可以自动识别并整合管理基于以下项目的 AI 聚合中转站账号：
 
 - [one-api](https://github.com/songquanpeng/one-api)
 - [new-api](https://github.com/QuantumNous/new-api)
 - [Veloera](https://github.com/Veloera/Veloera)
 - [one-hub](https://github.com/MartialBE/one-hub)
 - [done-hub](https://github.com/deanxv/done-hub)
-- [VoAPI](https://github.com/VoAPI/VoAPI)
-- [Super-API](https://github.com/SuperAI-Api/Super-API)
+- Neo-API（闭源）
+- Super-API（闭源）
+- RIX_API（闭源，基本功能支持）
+- VoAPI（闭源，老版本支持）

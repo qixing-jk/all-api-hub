@@ -189,6 +189,16 @@ export function searchAccounts(
         // Note: We don't add "token" to matchedFields as it should not be displayed/highlighted
       }
 
+      // Match against username
+      const usernameScore = scoreNameMatch(
+        normalizeString(account.username),
+        token
+      )
+      if (usernameScore > 0) {
+        tokenScore += usernameScore
+        tokenMatchedFields.add("username")
+      }
+
       // Only consider this token matched if it scored anything
       if (tokenScore > 0) {
         totalScore += tokenScore

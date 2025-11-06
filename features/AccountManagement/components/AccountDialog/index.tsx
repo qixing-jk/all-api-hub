@@ -106,32 +106,29 @@ export default function AccountDialog({
           />
 
           {(state.isDetected || state.showManualForm) && (
-            <>
-              <AccountForm
-                authType={state.authType}
-                siteName={state.siteName}
-                username={state.username}
-                userId={state.userId}
-                accessToken={state.accessToken}
-                exchangeRate={state.exchangeRate}
-                showAccessToken={state.showAccessToken}
-                onSiteNameChange={setters.setSiteName}
-                onUsernameChange={setters.setUsername}
-                onUserIdChange={setters.setUserId}
-                onAccessTokenChange={setters.setAccessToken}
-                onExchangeRateChange={setters.setExchangeRate}
-                onToggleShowAccessToken={() =>
-                  setters.setShowAccessToken(!state.showAccessToken)
-                }
-                notes={state.notes}
-                onNotesChange={setters.setNotes}
-                checkIn={state.checkIn}
-                onCheckInChange={setters.setCheckIn}
-                siteType={state.siteType}
-                onSiteTypeChange={setters.setSiteType}
-              />
-              {/* ActionButtons moved to Modal.footer for consistent layout */}
-            </>
+            <AccountForm
+              authType={state.authType}
+              siteName={state.siteName}
+              username={state.username}
+              userId={state.userId}
+              accessToken={state.accessToken}
+              exchangeRate={state.exchangeRate}
+              showAccessToken={state.showAccessToken}
+              onSiteNameChange={setters.setSiteName}
+              onUsernameChange={setters.setUsername}
+              onUserIdChange={setters.setUserId}
+              onAccessTokenChange={setters.setAccessToken}
+              onExchangeRateChange={setters.setExchangeRate}
+              onToggleShowAccessToken={() =>
+                setters.setShowAccessToken(!state.showAccessToken)
+              }
+              notes={state.notes}
+              onNotesChange={setters.setNotes}
+              checkIn={state.checkIn}
+              onCheckInChange={setters.setCheckIn}
+              siteType={state.siteType}
+              onSiteTypeChange={setters.setSiteType}
+            />
           )}
         </form>
       </div>

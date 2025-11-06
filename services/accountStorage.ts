@@ -24,7 +24,7 @@ import {
   migrateAccountConfig,
   migrateAccountsConfig,
   needsConfigMigration
-} from "./configMigration/configMigration"
+} from "./configMigration/account/accountDataMigration.ts"
 import { userPreferences } from "./userPreferences"
 
 // 存储键名常量
@@ -243,10 +243,100 @@ class AccountStorageService {
       }
 
       await this.saveAccounts(filteredAccounts)
+
+      // Clean up from pinned list if present
+      await this.unpinAccount(id)
+
       return true
     } catch (error) {
       console.error("删除账号失败:", error)
       throw error // 重新抛出错误，让调用者处理
+    }
+  }
+
+  /**
+   * 获取置顶账号ID列表
+   */
+  async getPinnedList(): Promise<string[]> {
+    try {
+      const config = await this.getStorageConfig()
+      return config.pinnedAccountIds || []
+    } catch (error) {
+      console.error("获取置顶账号列表失败:", error)
+      return []
+    }
+  }
+
+  /**
+   * 设置置顶账号ID列表
+   */
+  async setPinnedList(ids: string[]): Promise<boolean> {
+    try {
+      const config = await this.getStorageConfig()
+      const uniqueIds = Array.from(new Set(ids))
+      const validIds = uniqueIds.filter((id) =>
+        config.accounts.some((account) => account.id === id)
+      )
+      config.pinnedAccountIds = validIds
+      config.last_updated = Date.now()
+      await this.storage.set(STORAGE_KEYS.ACCOUNTS, config)
+      return true
+    } catch (error) {
+      console.error("设置置顶账号列表失败:", error)
+      return false
+    }
+  }
+
+  /**
+   * 置顶账号
+   */
+  async pinAccount(id: string): Promise<boolean> {
+    try {
+      const pinnedIds = await this.getPinnedList()
+
+      // If already pinned, move to front
+      const filteredIds = pinnedIds.filter((pinnedId) => pinnedId !== id)
+
+      // Add to front of the list
+      const newPinnedIds = [id, ...filteredIds]
+
+      return await this.setPinnedList(newPinnedIds)
+    } catch (error) {
+      console.error("置顶账号失败:", error)
+      return false
+    }
+  }
+
+  /**
+   * 取消置顶账号
+   */
+  async unpinAccount(id: string): Promise<boolean> {
+    try {
+      const pinnedIds = await this.getPinnedList()
+      const newPinnedIds = pinnedIds.filter((pinnedId) => pinnedId !== id)
+
+      // Only save if the list actually changed
+      if (newPinnedIds.length !== pinnedIds.length) {
+        return await this.setPinnedList(newPinnedIds)
+      }
+
+      return true
+    } catch (error) {
+      console.error("取消置顶账号失败:", error)
+      return false
+    }
+  }
+
+  /**
+   * 检查账号是否已置顶
+   */
+  async isPinned(id: string): Promise<boolean> {
+    try {
+      const pinnedIds = await this.getPinnedList()
+      return pinnedIds.includes(id)
+    } catch (error) {
+      console.error("检查账号置顶状态失败:", error)
+      return false
     }
   }
 
@@ -634,10 +724,14 @@ class AccountStorageService {
   /**
    * 导入数据
    */
-  async importData(data: { accounts?: SiteAccount[] }): Promise<{
+  async importData(data: {
+    accounts?: SiteAccount[]
+    pinnedAccountIds?: string[]
+  }): Promise<{
     migratedCount: number
   }> {
     const existingAccounts = await this.getAllAccounts()
+    const existingPinnedIds = await this.getPinnedList()
     try {
       const accountsToImport = data.accounts || []
 
@@ -652,6 +746,18 @@ class AccountStorageService {
 
       await this.saveAccounts(migratedAccounts)
 
+      // Import pinned account IDs if provided
+      if (data.pinnedAccountIds) {
+        // Clean up invalid IDs (accounts that don't exist)
+        const validPinnedIds = data.pinnedAccountIds.filter((id) =>
+          migratedAccounts.some((account) => account.id === id)
+        )
+        await this.setPinnedList(validPinnedIds)
+        console.log(
+          `[Import] Imported ${validPinnedIds.length} pinned account(s)`
+        )
+      }
+
       return { migratedCount }
     } catch (error) {
       console.error(
@@ -659,6 +765,7 @@ class AccountStorageService {
         error
       )
       await this.saveAccounts(existingAccounts)
+      await this.setPinnedList(existingPinnedIds)
       console.log("[Migration] Safety fallback: restored accounts from backup")
       throw error // Re-throw to inform caller of failure
     }
@@ -686,13 +793,20 @@ class AccountStorageService {
    */
   private async saveAccounts(accounts: SiteAccount[]): Promise<void> {
     console.log("[AccountStorage] 开始保存账号数据，数量:", accounts.length)
+    const existingConfig = await this.getStorageConfig()
+    const filteredPinnedIds = (existingConfig.pinnedAccountIds || []).filter(
+      (id) => accounts.some((account) => account.id === id)
+    )
     const config: StorageConfig = {
+      ...existingConfig,
       accounts,
+      pinnedAccountIds: filteredPinnedIds,
       last_updated: Date.now()
     }
 
     console.log("[AccountStorage] 保存的配置数据:", {
       accountCount: config.accounts.length,
+      pinnedCount: config.pinnedAccountIds?.length || 0,
       last_updated: config.last_updated,
       storageKey: STORAGE_KEYS.ACCOUNTS
     })
@@ -720,7 +834,7 @@ class AccountStorageService {
     }
 
     const preferences = await userPreferences.getPreferences()
-    const minIntervalMs = preferences.minRefreshInterval * 1000
+    const minIntervalMs = preferences.accountAutoRefresh.minInterval * 1000
     const timeSinceLastRefresh = Date.now() - (account.last_sync_time || 0)
 
     return timeSinceLastRefresh < minIntervalMs

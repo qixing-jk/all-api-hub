@@ -48,7 +48,7 @@ function main() {
         try {
           // 所有异步逻辑
           const userStr = localStorage.getItem("user")
-          let user = userStr
+          const user = userStr
             ? JSON.parse(userStr)
             : await fetchUserInfo(request.url)
 
@@ -99,6 +99,7 @@ async function waitForUserInfo(
       }
     } catch (error) {
       // 继续等待
+      console.error(error)
     }
 
     // 等待 100ms 后重试

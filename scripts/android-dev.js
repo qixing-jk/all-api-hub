@@ -12,7 +12,7 @@ try {
     }
   }
 } catch (e) {
-  console.error("请确保 adb 已经安装并连接设备")
+  console.error("请确保 adb 已经安装并连接设备", e)
   process.exit(1)
 }
 

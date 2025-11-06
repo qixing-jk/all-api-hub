@@ -11,11 +11,6 @@ Runs before each commit to ensure code quality:
 - **Linting**: Checks code with ESLint
   - If linting issues are found, it will attempt to auto-fix and require you to review and stage changes
 
-### pre-push
-Runs before pushing to remote to ensure code stability:
-- **Tests**: Runs the full test suite with coverage (`pnpm test:ci`)
-- **Type Checking**: Runs TypeScript compiler checks (`pnpm compile`)
-
 ## Manual Commands
 
 You can also run these checks manually:
@@ -33,11 +28,6 @@ pnpm lint
 # Fix linting issues
 pnpm lint:fix
 
-# Run tests
-pnpm test:ci
-
-# Type check
-pnpm compile
 ```
 
 ## Skipping Hooks (Not Recommended)
@@ -69,5 +59,5 @@ This will trigger the `prepare` script which sets up Husky.
 If you get permission errors:
 
 ```bash
-chmod +x .husky/pre-commit .husky/pre-push
+chmod +x .husky/pre-commit
 ```

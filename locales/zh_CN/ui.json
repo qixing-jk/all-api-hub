@@ -17,6 +17,8 @@
     "account": "账户管理",
     "models": "模型列表",
     "keys": "密钥管理",
+    "autoCheckin": "自动签到",
+    "newApiModelSync": "New API 模型同步",
     "importExport": "导入/导出"
   },
   "dialog": {

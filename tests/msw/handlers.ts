@@ -1,10 +1,10 @@
-import { http, HttpResponse } from "msw"
+import { http, HttpResponse, type HttpHandler } from "msw"
 
 /**
  * MSW handlers for mocking aggregator API endpoints
  * These are placeholder handlers that can be extended for specific tests
  */
-export const handlers = [
+export const handlers: HttpHandler[] = [
   // Mock account info endpoint (common pattern across aggregators)
   http.get("https://api.example.com/api/user/self", () => {
     return HttpResponse.json({

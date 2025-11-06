@@ -58,6 +58,8 @@
     "customRedeemUrl": "自定义充值/兑换页面 URL（可选）",
     "customRedeemUrlDesc": "充值/兑换页面的 URL",
     "openRedeemWithCheckIn": "使用自定义签到时同时打开充值页面",
+    "autoCheckInEnabled": "启用每日自动签到",
+    "autoCheckInEnabledDesc": "开启后，在全局自动签到功能生效时，此账号将自动参与每日签到",
     "notes": "备注",
     "notesPlaceholder": "选填，输入备注信息"
   },

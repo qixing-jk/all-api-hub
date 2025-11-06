@@ -98,7 +98,7 @@ export default function ActionButtons({
         </button>
       )}
 
-      {isAddMode && isDetected && (
+      {isAddMode && (
         <button
           type="button"
           onClick={onAutoConfig}

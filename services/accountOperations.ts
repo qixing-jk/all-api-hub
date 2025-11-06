@@ -13,8 +13,6 @@ import {
   fetchAccountTokens
 } from "~/services/apiService"
 import type { CreateTokenRequest } from "~/services/apiService/common/type"
-import { importToNewApi } from "~/services/newApiService"
-import { userPreferences } from "~/services/userPreferences"
 import {
   AccountValidationResponse,
   ApiToken,
@@ -24,10 +22,7 @@ import {
   type DisplaySiteData,
   type SiteAccount
 } from "~/types"
-import type {
-  AccountSaveResponse,
-  NewApiResponse
-} from "~/types/serviceResponse"
+import type { AccountSaveResponse } from "~/types/serviceResponse"
 import { analyzeAutoDetectError } from "~/utils/autoDetectUtils"
 
 import { getErrorMessage } from "../utils/error"
@@ -158,6 +153,30 @@ export async function autoDetectAccount(
   }
 }
 
+export function isValidAccount({
+  siteName,
+  username,
+  userId,
+  authType,
+  accessToken,
+  exchangeRate
+}: {
+  siteName: string
+  username: string
+  userId: string
+  authType: AuthTypeEnum
+  accessToken: string
+  exchangeRate: string
+}) {
+  return (
+    !!siteName.trim() &&
+    !!username.trim() &&
+    !!userId.trim() &&
+    isValidExchangeRate(exchangeRate) &&
+    (authType !== AuthTypeEnum.AccessToken || !!accessToken.trim())
+  )
+}
+
 // 验证并保存账号信息（用于新增）
 export async function validateAndSaveAccount(
   url: string,
@@ -173,10 +192,14 @@ export async function validateAndSaveAccount(
 ): Promise<AccountSaveResponse> {
   // 表单验证
   if (
-    !siteName.trim() ||
-    !username.trim() ||
-    !accessToken.trim() ||
-    !userId.trim()
+    !isValidAccount({
+      siteName,
+      username,
+      userId,
+      authType,
+      accessToken,
+      exchangeRate
+    })
   ) {
     return {
       success: false,
@@ -271,10 +294,14 @@ export async function validateAndUpdateAccount(
 ): Promise<AccountSaveResponse> {
   // 表单验证
   if (
-    !siteName.trim() ||
-    !username.trim() ||
-    !accessToken.trim() ||
-    !userId.trim()
+    !isValidAccount({
+      siteName,
+      username,
+      userId,
+      authType,
+      accessToken,
+      exchangeRate
+    })
   ) {
     return {
       success: false,
@@ -450,30 +477,6 @@ export function isValidExchangeRate(rate: string): boolean {
   return !isNaN(num) && num > 0 && num <= 100
 }
 
-// Helper function to validate New API configuration
-async function validateNewApiConfig(): Promise<{
-  valid: boolean
-  errors: string[]
-}> {
-  const prefs = await userPreferences.getPreferences()
-  const errors = []
-
-  if (!prefs.newApiBaseUrl) {
-    errors.push(t("messages:errors.validation.newApiBaseUrlRequired"))
-  }
-  if (!prefs.newApiAdminToken) {
-    errors.push(t("messages:errors.validation.newApiAdminTokenRequired"))
-  }
-  if (!prefs.newApiUserId) {
-    errors.push(t("messages:errors.validation.newApiUserIdRequired"))
-  }
-
-  return {
-    valid: errors.length === 0,
-    errors
-  }
-}
-
 /**
  * 生成默认的令牌信息
  *  该函数会返回一个 CreateTokenRequest 对象，用于生成一个默认的令牌
@@ -499,90 +502,38 @@ function generateDefaultToken(): CreateTokenRequest {
   }
 }
 
-export async function autoConfigToNewApi(
+export async function ensureAccountApiToken(
   account: SiteAccount,
+  displaySiteData: DisplaySiteData,
   toastId?: string
-): Promise<NewApiResponse<{ token?: ApiToken }>> {
-  const configValidation = await validateNewApiConfig()
-  if (!configValidation.valid) {
-    return { success: false, message: configValidation.errors.join(", ") }
-  }
+): Promise<ApiToken> {
+  toast.loading(t("messages:accountOperations.checkingApiKeys"), {
+    id: toastId
+  })
 
-  const displaySiteData = accountStorage.convertToDisplayData(
-    account
-  ) as DisplaySiteData
+  const tokens = await fetchAccountTokens(displaySiteData)
+  let apiToken: ApiToken | undefined = tokens[0]
 
-  let lastError: any
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    try {
-      toast.loading(t("messages:accountOperations.checkingApiKeys"), {
-        id: toastId
-      })
-      // 1. Check for existing API token
-      const tokens = await fetchAccountTokens(displaySiteData)
-      let apiToken: ApiToken | undefined = tokens[0]
+  if (!apiToken) {
+    const newTokenData = generateDefaultToken()
+    const createApiTokenResult = await createApiToken(
+      account.site_url,
+      account.account_info.id,
+      account.account_info.access_token,
+      newTokenData
+    )
 
-      // 2. Create a new token if one doesn't exist
-      if (!apiToken) {
-        const newTokenData = generateDefaultToken()
-        const createApiTokenRsult = await createApiToken(
-          account.site_url,
-          account.account_info.id,
-          account.account_info.access_token,
-          newTokenData
-        )
-        if (!createApiTokenRsult) {
-          return {
-            success: false,
-            message: t("messages:accountOperations.createTokenFailed")
-          }
-        }
-        // Re-fetch tokens to get the newly created one
-        const updatedTokens = await fetchAccountTokens(displaySiteData)
-        apiToken = updatedTokens.at(-1)
-      }
-
-      if (!apiToken) {
-        return {
-          success: false,
-          message: t("messages:accountOperations.tokenNotFound")
-        }
-      }
-
-      // 3. Import to New API as a channel
-      toast.loading(t("messages:accountOperations.importingToNewApi"), {
-        id: toastId
-      })
-      const importResult = await importToNewApi(displaySiteData, apiToken)
-
-      if (importResult.success) {
-        toast.success(importResult.message, { id: toastId })
-      } else {
-        throw new Error(importResult.message)
-      }
-
-      return {
-        success: importResult.success,
-        message: importResult.message,
-        data: { token: apiToken }
-      }
-    } catch (error) {
-      lastError = error
-      if (
-        error instanceof Error &&
-        (error.message.includes("network") ||
-          error.message.includes("Failed to fetch")) &&
-        attempt < 3
-      ) {
-        toast.error(getErrorMessage(lastError), { id: toastId })
-        await new Promise((resolve) => setTimeout(resolve, 1000 * attempt))
-        continue
-      }
-      throw error
+    if (!createApiTokenResult) {
+      throw new Error(t("messages:accountOperations.createTokenFailed"))
     }
+
+    const updatedTokens = await fetchAccountTokens(displaySiteData)
+    apiToken = updatedTokens.at(-1)
   }
-  return {
-    success: false,
-    message: lastError?.message || t("messages:errors.unknown")
+
+  if (!apiToken) {
+    throw new Error(t("messages:accountOperations.tokenNotFound"))
   }
+
+  return apiToken
 }

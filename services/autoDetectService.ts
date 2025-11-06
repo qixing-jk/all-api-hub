@@ -196,7 +196,7 @@ async function getUserDataFromCurrentTab(
     const tabId = tabs[0].id
 
     // 2. 通过 content script 获取用户信息
-    let userResponse = await browser.tabs.sendMessage(tabId, {
+    const userResponse = await browser.tabs.sendMessage(tabId, {
       action: "getUserFromLocalStorage",
       url: url
     })
@@ -255,7 +255,7 @@ export async function autoDetectSmart(url: string): Promise<AutoDetectResult> {
   if (capabilities.hasTabs) {
     try {
       // 手机 不支持 currentWindow，需要 fallback
-      let tabs = await getActiveOrAllTabs()
+      const tabs = await getActiveOrAllTabs()
       const currentTab = tabs.find((t) => t.active) ?? tabs[0]
 
       if (currentTab?.url) {

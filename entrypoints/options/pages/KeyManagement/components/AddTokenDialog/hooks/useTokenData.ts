@@ -2,7 +2,10 @@ import { useCallback, useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { fetchAvailableModels, fetchUserGroups } from "~/services/apiService"
+import {
+  fetchAccountAvailableModels,
+  fetchUserGroups
+} from "~/services/apiService"
 import type { UserGroupInfo } from "~/services/apiService/common/type"
 import type { DisplaySiteData } from "~/types"
 
@@ -24,7 +27,7 @@ export function useTokenData(
     setIsLoading(true)
     try {
       const [models, groupsData] = await Promise.all([
-        fetchAvailableModels(currentAccount),
+        fetchAccountAvailableModels(currentAccount),
         fetchUserGroups(currentAccount)
       ])
 

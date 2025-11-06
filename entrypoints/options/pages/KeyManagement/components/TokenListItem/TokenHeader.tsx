@@ -4,18 +4,15 @@ import {
   TrashIcon
 } from "@heroicons/react/24/outline"
 import { NewAPI } from "@lobehub/icons"
-import { useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { CherryIcon } from "~/components/icons/CherryIcon"
 import { Badge, Heading6, IconButton } from "~/components/ui"
-import { importToNewApi } from "~/services/newApiService"
+import { useChannelDialog } from "~/features/ChannelManagement"
 import type { DisplaySiteData } from "~/types"
 import { OpenInCherryStudio } from "~/utils/cherryStudio"
-import { getErrorMessage } from "~/utils/error"
 
-import { showSettingsToast } from "../../../BasicSettings/utils/toastHelpers"
+import { showResultToast } from "../../../../../../utils/toastHelpers.ts"
 import { AccountToken } from "../../type"
 
 interface TokenHeaderProps {
@@ -34,22 +31,12 @@ function TokenActionButtons({
   account
 }: TokenHeaderProps) {
   const { t } = useTranslation("keyManagement")
-  const [isImporting, setIsImporting] = useState(false)
+  const { openWithAccount } = useChannelDialog()
 
   const handleImportToNewApi = async () => {
-    setIsImporting(true)
-    try {
-      const ImportResult = await importToNewApi(account, token)
-      showSettingsToast(ImportResult)
-    } catch (error) {
-      toast.error(
-        t("messages:toast.error.importFailed", {
-          error: getErrorMessage(error)
-        })
-      )
-    } finally {
-      setIsImporting(false)
-    }
+    await openWithAccount(account, token, (result) => {
+      showResultToast(result)
+    })
   }
 
   return (
@@ -72,7 +59,6 @@ function TokenActionButtons({
         aria-label={t("actions.importToNewApi")}
         size="sm"
         variant="ghost"
-        loading={isImporting}
         onClick={handleImportToNewApi}>
         <NewAPI.Color className="h-4 w-4" />
       </IconButton>

@@ -12,9 +12,13 @@ interface CherryStudioExportData {
 
 function generateCherryStudioURL(data: CherryStudioExportData): string {
   const jsonString = JSON.stringify(data)
-  const base64String = btoa(jsonString)
-  const processedBase64 = encodeURIComponent(base64String)
-  return `cherrystudio://providers/api-keys?v=1&data=${processedBase64}`
+  // 转成 Base64（UTF-8 编码）
+  const base64String = btoa(
+    encodeURIComponent(jsonString).replace(/%([0-9A-F]{2})/g, (_, p1) =>
+      String.fromCharCode(parseInt(p1, 16))
+    )
+  )
+  return `cherrystudio://providers/api-keys?v=1&data=${base64String}`
 }
 
 export function OpenInCherryStudio(account: DisplaySiteData, token: ApiToken) {
