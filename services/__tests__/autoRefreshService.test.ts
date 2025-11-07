@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
-import { getErrorMessage } from "~/utils/error"
 
 import { accountStorage } from "../accountStorage"
 import {
@@ -13,7 +12,7 @@ import { userPreferences } from "../userPreferences"
 
 // Mock dependencies
 vi.mock("~/utils/error", () => ({
-  getErrorMessage: vi.fn((error) => `Error: ${String(error)}`)
+  getErrorMessage: vi.fn((error) => `${String(error)}`)
 }))
 
 vi.mock("../accountStorage", () => ({
@@ -499,7 +498,7 @@ describe("handleAutoRefreshMessage", () => {
 
       expect(mockSendResponse).toHaveBeenCalledWith({
         success: false,
-        error: "Error: Error: Refresh failed"
+        error: "Error: Refresh failed"
       })
     })
   })
