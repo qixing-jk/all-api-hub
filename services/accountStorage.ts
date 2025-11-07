@@ -844,6 +844,9 @@ class AccountStorageService {
 // 创建单例实例
 export const accountStorage = new AccountStorageService()
 
+// Export the class for testing
+export { AccountStorageService }
+
 // 工具函数
 export const AccountStorageUtils = {
   /**
