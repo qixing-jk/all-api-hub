@@ -1,5 +1,42 @@
 # Changelog
 
+## [2.6.1](https://github.com/qixing-jk/all-api-hub/compare/v2.6.0...v2.6.1) (2025-11-09)
+
+
+### ⚠ BREAKING CHANGES
+
+* **userPreferences:** The `newApiModelSync`, `autoCheckin`, and `modelRedirect` properties are now required in user preferences.
+
+### Features
+
+* **autodetect:** refactor error analysis and add new error types ([eafe357](https://github.com/qixing-jk/all-api-hub/commit/eafe3574c8beed202cdbf3379280162bb67be99e))
+
+
+### Bug Fixes
+
+* **autoRefreshService:** correct type for updateSettings parameter ([c5db30e](https://github.com/qixing-jk/all-api-hub/commit/c5db30eb2865f11e743f6f9bcfd5ae644b20c860))
+* **configMigration:** make migration checks more robust ([b0b7104](https://github.com/qixing-jk/all-api-hub/commit/b0b71047b450d0885d196928cec6bbd68e13c135))
+* **modelMetadata:** remove redundant case-insensitive flag ([e69fc31](https://github.com/qixing-jk/all-api-hub/commit/e69fc3160d50f36fd1fcd7b58e34803b93c173a0))
+* **newApiService:** handle missing newApi preference in config check ([4233c26](https://github.com/qixing-jk/all-api-hub/commit/4233c268122301cb715e4029a1bde1a298b666c0))
+* prevent unnecessary WebDAV config reset during migration ([3a57174](https://github.com/qixing-jk/all-api-hub/commit/3a571747fd62c1f3a9449b20c90d057cb4f2846d))
+* **sorting:** correct check-in requirement sorting logic ([805c218](https://github.com/qixing-jk/all-api-hub/commit/805c2182de0164f67df5a51438ee969b33204b88)), closes [#141](https://github.com/qixing-jk/all-api-hub/issues/141)
+
+
+### Reverts
+
+* revert incorrect part changes ([0b411ab](https://github.com/qixing-jk/all-api-hub/commit/0b411ab235515f95cb4f3cb0c8d4183945bb5c49))
+* revert incorrect part changes ([6c2a022](https://github.com/qixing-jk/all-api-hub/commit/6c2a022a8dffb29ddb29faaa81c0ca9dbf2c1c04))
+
+
+### Miscellaneous Chores
+
+* release 2.6.1 ([620f932](https://github.com/qixing-jk/all-api-hub/commit/620f9325bdd9dd0b27f3cdbf2b738b66189b8852))
+
+
+### Code Refactoring
+
+* **userPreferences:** make properties non-optional ([41813c3](https://github.com/qixing-jk/all-api-hub/commit/41813c398517b27c6b7c71782108cea220f3d8b3))
+
 ## [2.6.0](https://github.com/qixing-jk/all-api-hub/compare/v2.5.0...v2.6.0) (2025-11-05)
 
 
