@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.7.0](https://github.com/qixing-jk/all-api-hub/compare/v2.6.1...v2.7.0) (2025-11-10)
+
+
+### Features
+
+* **account-dialog:** dynamically update site data for new accounts ([b84371d](https://github.com/qixing-jk/all-api-hub/commit/b84371d39c2fb86877177cb4c3f92574f7f21d5e))
+* **api-sync:** support async progress callbacks and inline model mapping ([178b6a8](https://github.com/qixing-jk/all-api-hub/commit/178b6a86ffc5900f54de97f47e5830fa14c3fbce))
+* **model-redirect:** implement incremental model mapping merge logic ([6a184a8](https://github.com/qixing-jk/all-api-hub/commit/6a184a8a7f8dfabb7ca7459247da189cbff448dc))
+
+
+### Bug Fixes
+
+* **input:** hide password reveal button in Edge/IE ([38e56da](https://github.com/qixing-jk/all-api-hub/commit/38e56dae15ad01f4eb89e4a6fd548b36df5fef7b))
+
 ## [2.6.1](https://github.com/qixing-jk/all-api-hub/compare/v2.6.0...v2.6.1) (2025-11-09)
 
 
