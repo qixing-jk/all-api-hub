@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.7.1](https://github.com/qixing-jk/all-api-hub/compare/v2.7.0...v2.7.1) (2025-11-11)
+
+
+### Bug Fixes
+
+* **api-sync:** ensure redirected models exist in model list ([37f64eb](https://github.com/qixing-jk/all-api-hub/commit/37f64eb5f3623f65a69b37ad6cb4dbaec705db10))
+
 ## [2.7.0](https://github.com/qixing-jk/all-api-hub/compare/v2.6.1...v2.7.0) (2025-11-10)
 
 
