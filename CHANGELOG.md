@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.8.1](https://github.com/qixing-jk/all-api-hub/compare/v2.8.0...v2.8.1) (2025-11-16)
+
+
+### Bug Fixes
+
+* **model-name:** add support for mm-dd and mm_dd date suffix patterns ([1ccb96a](https://github.com/qixing-jk/all-api-hub/commit/1ccb96a0b39b7c5c7af604e7478f58ce8d2b77be))
+* **MultiSelect:** add dynamic dropdown positioning and accessibility improvements ([24d8163](https://github.com/qixing-jk/all-api-hub/commit/24d8163cc087f4c96ce8e8bc0e368e175bae75e7))
+
 ## [2.8.0](https://github.com/qixing-jk/all-api-hub/compare/v2.7.1...v2.8.0) (2025-11-16)
 
 
