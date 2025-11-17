@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.9.0](https://github.com/qixing-jk/all-api-hub/compare/v2.8.1...v2.9.0) (2025-11-17)
+
+
+### Features
+
+* **api:** add support for non-JSON response types in API service ([b7b375f](https://github.com/qixing-jk/all-api-hub/commit/b7b375fcde249ec3679477b7440bcd56527bec5b))
+* **api:** implement Cloudflare challenge detection and temp window fallback ([3c83583](https://github.com/qixing-jk/all-api-hub/commit/3c8358349b309858593b3e3ce792312171c0f929))
+* **api:** integrate fetchApi utilities for site detection ([eeeeb0c](https://github.com/qixing-jk/all-api-hub/commit/eeeeb0c350c00f7909fffdeef21ea6daa5150b48))
+* **background:** add temp window fetch handler and refactor context mgmt ([8057f4b](https://github.com/qixing-jk/all-api-hub/commit/8057f4b09f2397c4eed67987d6d13fb42c1c57ec))
+* **background:** implement temp context management system ([8f2f7ab](https://github.com/qixing-jk/all-api-hub/commit/8f2f7ab0d1438c75aad938eed0ab0b138de33de8))
+* **content:** add temporary window fetch handler with response parsing ([88d55c0](https://github.com/qixing-jk/all-api-hub/commit/88d55c07e57e21773fa29df4dc5012f7aba99a7d))
+* **content:** ensure fetch requests include credentials ([2c4c467](https://github.com/qixing-jk/all-api-hub/commit/2c4c467df6d4cf9a5ad14cf547de19f776f3e6f5))
+
+
+### Bug Fixes
+
+* wrap window/tab creation in try-catch for proper error cleanup ([cad78e1](https://github.com/qixing-jk/all-api-hub/commit/cad78e1cb21579ff9e3169027f141fc6c50b1aa2))
+
 ## [2.8.1](https://github.com/qixing-jk/all-api-hub/compare/v2.8.0...v2.8.1) (2025-11-16)
 
 
