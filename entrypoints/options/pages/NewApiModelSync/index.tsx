@@ -20,12 +20,13 @@ import ProgressCard from "./components/ProgressCard"
 import ResultsTable from "./components/ResultsTable"
 import StatisticsCard from "./components/StatisticsCard"
 
+const TAB_INDEX = {
+  history: 0,
+  manual: 1
+} as const
+
 export default function NewApiModelSync() {
   const { t } = useTranslation("newApiModelSync")
-  const TAB_INDEX = {
-    history: 0,
-    manual: 1
-  } as const
   const hasInitializedTab = useRef(false)
   const [lastExecution, setLastExecution] = useState<ExecutionResult | null>(
     null
@@ -141,12 +142,7 @@ export default function NewApiModelSync() {
     setSelectedTab(
       lastExecution?.items?.length ? TAB_INDEX.history : TAB_INDEX.manual
     )
-  }, [
-    TAB_INDEX.history,
-    TAB_INDEX.manual,
-    isLoading,
-    lastExecution?.items?.length
-  ])
+  }, [isLoading, lastExecution?.items?.length])
 
   useEffect(() => {
     if (
@@ -156,13 +152,7 @@ export default function NewApiModelSync() {
     ) {
       void loadChannels()
     }
-  }, [
-    channels.length,
-    isChannelsLoading,
-    loadChannels,
-    selectedTab,
-    TAB_INDEX.manual
-  ])
+  }, [channels.length, isChannelsLoading, loadChannels, selectedTab])
 
   const handleRunAll = async () => {
     try {
