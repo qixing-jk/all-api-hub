@@ -23,6 +23,10 @@
   "execution": {
     "title": "Model List Synchronization",
     "lastExecution": "Last Execution",
+    "tabs": {
+      "history": "Execution History",
+      "manual": "Manual Execution"
+    },
     "statistics": {
       "total": "Total Channels",
       "success": "Successful",
@@ -62,6 +66,16 @@
       "success": "Success",
       "failed": "Failed",
       "running": "Running..."
+    },
+    "manual": {
+      "description": "Choose channels below to trigger a one-off sync. Selections are not saved.",
+      "searchPlaceholder": "Search channels by name or ID...",
+      "loading": "Loading channels...",
+      "reload": "Reload Channels",
+      "empty": {
+        "title": "No channels available",
+        "description": "Refresh the list or adjust your filters to find channels."
+      }
     },
     "progress": {
       "running": "Syncing... {{completed}}/{{total}}",

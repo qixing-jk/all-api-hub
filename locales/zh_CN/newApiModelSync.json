@@ -23,6 +23,10 @@
   "execution": {
     "title": "模型列表同步执行",
     "lastExecution": "上一次执行",
+    "tabs": {
+      "history": "执行记录",
+      "manual": "手动执行"
+    },
     "statistics": {
       "total": "渠道总数",
       "success": "成功数量",
@@ -62,6 +66,16 @@
       "success": "成功",
       "failed": "失败",
       "running": "执行中..."
+    },
+    "manual": {
+      "description": "选择下方渠道即可立即执行一次同步，选择不会被保存。",
+      "searchPlaceholder": "按渠道名称或ID搜索...",
+      "loading": "正在加载渠道...",
+      "reload": "重新加载渠道",
+      "empty": {
+        "title": "暂无可用渠道",
+        "description": "请刷新列表或调整筛选条件后再试。"
+      }
     },
     "progress": {
       "running": "同步进行中... {{completed}}/{{total}}",

@@ -1,9 +1,13 @@
-import { useCallback, useEffect, useState } from "react"
+import { Tab } from "@headlessui/react"
+import { ArrowPathIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { Heading3 } from "~/components/ui"
+import { Button, EmptyState, Heading3, Input } from "~/components/ui"
+import type { NewApiChannel } from "~/types"
 import type {
+  ExecutionItemResult,
   ExecutionProgress,
   ExecutionResult
 } from "~/types/newApiModelSync"
@@ -18,15 +22,30 @@ import StatisticsCard from "./components/StatisticsCard"
 
 export default function NewApiModelSync() {
   const { t } = useTranslation("newApiModelSync")
+  const TAB_INDEX = {
+    history: 0,
+    manual: 1
+  } as const
+  const hasInitializedTab = useRef(false)
   const [lastExecution, setLastExecution] = useState<ExecutionResult | null>(
     null
   )
   const [progress, setProgress] = useState<ExecutionProgress | null>(null)
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all")
   const [searchKeyword, setSearchKeyword] = useState("")
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+  const [historySelectedIds, setHistorySelectedIds] = useState<Set<number>>(
+    new Set()
+  )
+  const [manualSelectedIds, setManualSelectedIds] = useState<Set<number>>(
+    new Set()
+  )
   const [isLoading, setIsLoading] = useState(true)
   const [runningChannelId, setRunningChannelId] = useState<number | null>(null)
+  const [selectedTab, setSelectedTab] = useState<number>(TAB_INDEX.history)
+  const [channels, setChannels] = useState<NewApiChannel[]>([])
+  const [isChannelsLoading, setIsChannelsLoading] = useState(false)
+  const [channelsError, setChannelsError] = useState<string | null>(null)
+  const [manualSearchKeyword, setManualSearchKeyword] = useState("")
 
   const loadLastExecution = useCallback(async () => {
     try {
@@ -59,6 +78,32 @@ export default function NewApiModelSync() {
     }
   }, [])
 
+  const loadChannels = useCallback(async () => {
+    try {
+      setIsChannelsLoading(true)
+      setChannelsError(null)
+      const response = await browser.runtime.sendMessage({
+        action: "newApiModelSync:listChannels"
+      })
+
+      if (response.success) {
+        setChannels(response.data?.items ?? [])
+      } else {
+        throw new Error(response.error)
+      }
+    } catch (error: any) {
+      const message = error?.message || "Unknown error"
+      setChannelsError(message)
+      toast.error(
+        t("messages.error.loadFailed", {
+          error: message
+        })
+      )
+    } finally {
+      setIsChannelsLoading(false)
+    }
+  }, [t])
+
   useEffect(() => {
     void loadLastExecution()
     void loadProgress()
@@ -87,6 +132,38 @@ export default function NewApiModelSync() {
     }
   }, [progress?.isRunning])
 
+  useEffect(() => {
+    if (isLoading || hasInitializedTab.current) {
+      return
+    }
+
+    hasInitializedTab.current = true
+    setSelectedTab(
+      lastExecution?.items?.length ? TAB_INDEX.history : TAB_INDEX.manual
+    )
+  }, [
+    TAB_INDEX.history,
+    TAB_INDEX.manual,
+    isLoading,
+    lastExecution?.items?.length
+  ])
+
+  useEffect(() => {
+    if (
+      selectedTab === TAB_INDEX.manual &&
+      channels.length === 0 &&
+      !isChannelsLoading
+    ) {
+      void loadChannels()
+    }
+  }, [
+    channels.length,
+    isChannelsLoading,
+    loadChannels,
+    selectedTab,
+    TAB_INDEX.manual
+  ])
+
   const handleRunAll = async () => {
     try {
       const response = await browser.runtime.sendMessage({
@@ -109,8 +186,11 @@ export default function NewApiModelSync() {
     }
   }
 
-  const handleRunSelected = async () => {
-    if (selectedIds.size === 0) {
+  const handleRunSelected = async (source: "history" | "manual") => {
+    const selectedSet =
+      source === "history" ? historySelectedIds : manualSelectedIds
+
+    if (selectedSet.size === 0) {
       toast.error(t("messages.error.noSelection"))
       return
     }
@@ -118,7 +198,7 @@ export default function NewApiModelSync() {
     try {
       const response = await browser.runtime.sendMessage({
         action: "newApiModelSync:triggerSelected",
-        channelIds: Array.from(selectedIds)
+        channelIds: Array.from(selectedSet)
       })
 
       if (response.success) {
@@ -129,7 +209,11 @@ export default function NewApiModelSync() {
           })
         )
         setLastExecution(response.data)
-        setSelectedIds(new Set())
+        if (source === "history") {
+          setHistorySelectedIds(new Set())
+        } else {
+          setManualSelectedIds(new Set())
+        }
       } else {
         toast.error(t("messages.error.syncFailed", { error: response.error }))
       }
@@ -225,22 +309,24 @@ export default function NewApiModelSync() {
     }
   }
 
-  const handleSelectAll = (checked: boolean) => {
+  const handleHistorySelectAll = (checked: boolean) => {
     if (checked && filteredItems) {
-      setSelectedIds(new Set(filteredItems.map((item) => item.channelId)))
+      setHistorySelectedIds(
+        new Set(filteredItems.map((item) => item.channelId))
+      )
     } else {
-      setSelectedIds(new Set())
+      setHistorySelectedIds(new Set())
     }
   }
 
-  const handleSelectItem = (channelId: number, checked: boolean) => {
-    const newSelected = new Set(selectedIds)
+  const handleHistorySelectItem = (channelId: number, checked: boolean) => {
+    const newSelected = new Set(historySelectedIds)
     if (checked) {
       newSelected.add(channelId)
     } else {
       newSelected.delete(channelId)
     }
-    setSelectedIds(newSelected)
+    setHistorySelectedIds(newSelected)
   }
 
   // Filter and search
@@ -262,12 +348,180 @@ export default function NewApiModelSync() {
     return true
   })
 
+  const manualItems: ExecutionItemResult[] = useMemo(() => {
+    const keyword = manualSearchKeyword.toLowerCase().trim()
+    const source = keyword
+      ? channels.filter(
+          (channel) =>
+            channel.name.toLowerCase().includes(keyword) ||
+            channel.id.toString().includes(keyword)
+        )
+      : channels
+
+    return source.map((channel) => ({
+      channelId: channel.id,
+      channelName: channel.name,
+      ok: true,
+      attempts: 0,
+      finishedAt: 0
+    }))
+  }, [channels, manualSearchKeyword])
+
   if (isLoading) {
     return <LoadingSkeleton />
   }
 
   const hasHistory = !!(lastExecution && lastExecution.items.length > 0)
   const hasResults = !!(filteredItems && filteredItems.length > 0)
+  const manualHasResults = manualItems.length > 0
+
+  const handleManualSelectAll = (checked: boolean) => {
+    if (checked) {
+      setManualSelectedIds(new Set(manualItems.map((item) => item.channelId)))
+    } else {
+      setManualSelectedIds(new Set())
+    }
+  }
+
+  const handleManualSelectItem = (channelId: number, checked: boolean) => {
+    const newSelected = new Set(manualSelectedIds)
+    if (checked) {
+      newSelected.add(channelId)
+    } else {
+      newSelected.delete(channelId)
+    }
+    setManualSelectedIds(newSelected)
+  }
+
+  const renderTabs = () => (
+    <Tab.Group selectedIndex={selectedTab} onChange={setSelectedTab}>
+      <Tab.List className="mb-4 flex space-x-2 rounded-xl bg-gray-100 p-1 dark:bg-gray-800">
+        {["history", "manual"].map((key) => (
+          <Tab
+            key={key}
+            className={({ selected }) =>
+              `flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                selected
+                  ? "bg-white text-blue-700 shadow dark:bg-gray-900 dark:text-blue-400"
+                  : "text-gray-600 hover:text-gray-900 dark:text-gray-300"
+              }`
+            }>
+            {t(`execution.tabs.${key as "history" | "manual"}`)}
+          </Tab>
+        ))}
+      </Tab.List>
+      <Tab.Panels>
+        <Tab.Panel>
+          <div className="space-y-4">
+            <ActionBar
+              isRunning={progress?.isRunning ?? false}
+              selectedCount={historySelectedIds.size}
+              failedCount={lastExecution?.statistics.failureCount ?? 0}
+              onRunAll={handleRunAll}
+              onRunSelected={() => handleRunSelected("history")}
+              onRetryFailed={handleRetryFailed}
+              onRefresh={handleRefresh}
+            />
+
+            {hasHistory && (
+              <div className="mt-2">
+                <FilterBar
+                  statistics={lastExecution.statistics}
+                  status={filterStatus}
+                  keyword={searchKeyword}
+                  onStatusChange={setFilterStatus}
+                  onKeywordChange={setSearchKeyword}
+                />
+              </div>
+            )}
+
+            {!hasResults ? (
+              <EmptyResults hasHistory={hasHistory} />
+            ) : (
+              <ResultsTable
+                items={filteredItems || []}
+                selectedIds={historySelectedIds}
+                onSelectAll={handleHistorySelectAll}
+                onSelectItem={handleHistorySelectItem}
+                onRunSingle={handleRunSingle}
+                isRunning={progress?.isRunning ?? false}
+                runningChannelId={runningChannelId}
+              />
+            )}
+          </div>
+        </Tab.Panel>
+        <Tab.Panel>
+          <div className="space-y-4">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {t("execution.manual.description")}
+              </p>
+              <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                <div className="md:w-64">
+                  <Input
+                    type="text"
+                    placeholder={
+                      t("execution.manual.searchPlaceholder") as string
+                    }
+                    value={manualSearchKeyword}
+                    onChange={(e) => setManualSearchKeyword(e.target.value)}
+                    leftIcon={<MagnifyingGlassIcon className="h-4 w-4" />}
+                  />
+                </div>
+                <Button
+                  onClick={() => handleRunSelected("manual")}
+                  variant="secondary"
+                  disabled={
+                    (progress?.isRunning ?? false) ||
+                    manualSelectedIds.size === 0
+                  }>
+                  {t("execution.actions.runSelected")} ({manualSelectedIds.size}
+                  )
+                </Button>
+                <Button
+                  onClick={() => void loadChannels()}
+                  variant="ghost"
+                  disabled={isChannelsLoading}>
+                  <ArrowPathIcon className="mr-2 h-4 w-4" />
+                  {t("execution.actions.refresh")}
+                </Button>
+              </div>
+            </div>
+
+            {isChannelsLoading ? (
+              <div className="rounded-lg border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                {t("execution.manual.loading")}
+              </div>
+            ) : manualHasResults ? (
+              <ResultsTable
+                items={manualItems}
+                selectedIds={manualSelectedIds}
+                onSelectAll={handleManualSelectAll}
+                onSelectItem={handleManualSelectItem}
+                onRunSingle={handleRunSingle}
+                isRunning={progress?.isRunning ?? false}
+                runningChannelId={runningChannelId}
+              />
+            ) : (
+              <EmptyState
+                title={t("execution.manual.empty.title")}
+                description={
+                  channelsError
+                    ? channelsError
+                    : (t("execution.manual.empty.description") as string)
+                }
+                icon={<MagnifyingGlassIcon className="h-12 w-12" />}
+                action={{
+                  label: t("execution.manual.reload"),
+                  onClick: () => void loadChannels()
+                }}
+              />
+            )}
+          </div>
+        </Tab.Panel>
+      </Tab.Panels>
+    </Tab.Group>
+  )
 
   return (
     <div className="p-6">
@@ -290,43 +544,7 @@ export default function NewApiModelSync() {
         </div>
       )}
 
-      <div className="mb-6">
-        <ActionBar
-          isRunning={progress?.isRunning ?? false}
-          selectedCount={selectedIds.size}
-          failedCount={lastExecution?.statistics.failureCount ?? 0}
-          onRunAll={handleRunAll}
-          onRunSelected={handleRunSelected}
-          onRetryFailed={handleRetryFailed}
-          onRefresh={handleRefresh}
-        />
-      </div>
-
-      {hasHistory && (
-        <div className="mb-4">
-          <FilterBar
-            statistics={lastExecution.statistics}
-            status={filterStatus}
-            keyword={searchKeyword}
-            onStatusChange={setFilterStatus}
-            onKeywordChange={setSearchKeyword}
-          />
-        </div>
-      )}
-
-      {!hasResults ? (
-        <EmptyResults hasHistory={hasHistory} />
-      ) : (
-        <ResultsTable
-          items={filteredItems || []}
-          selectedIds={selectedIds}
-          onSelectAll={handleSelectAll}
-          onSelectItem={handleSelectItem}
-          onRunSingle={handleRunSingle}
-          isRunning={progress?.isRunning ?? false}
-          runningChannelId={runningChannelId}
-        />
-      )}
+      {renderTabs()}
     </div>
   )
 }
