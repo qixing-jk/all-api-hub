@@ -17,6 +17,12 @@ interface ResultsTableProps {
   onRunSingle: (channelId: number) => void
   isRunning: boolean
   runningChannelId?: number | null
+  visibleColumns?: Partial<{
+    status: boolean
+    message: boolean
+    attempts: boolean
+    finishedAt: boolean
+  }>
 }
 
 export default function ResultsTable({
@@ -26,11 +32,18 @@ export default function ResultsTable({
   onSelectItem,
   onRunSingle,
   isRunning,
-  runningChannelId
+  runningChannelId,
+  visibleColumns
 }: ResultsTableProps) {
   const { t } = useTranslation("newApiModelSync")
 
   const allSelected = items.length > 0 && selectedIds.size === items.length
+  const columns = {
+    status: visibleColumns?.status ?? true,
+    message: visibleColumns?.message ?? true,
+    attempts: visibleColumns?.attempts ?? true,
+    finishedAt: visibleColumns?.finishedAt ?? true
+  }
 
   return (
     <Card padding="none">
@@ -46,24 +59,32 @@ export default function ResultsTable({
                   className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
               </th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
-                {t("execution.table.status")}
-              </th>
+              {columns.status && (
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {t("execution.table.status")}
+                </th>
+              )}
               <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
                 {t("execution.table.channelId")}
               </th>
               <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
                 {t("execution.table.channelName")}
               </th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
-                {t("execution.table.message")}
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
-                {t("execution.table.attempts")}
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
-                {t("execution.table.finishedAt")}
-              </th>
+              {columns.message && (
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {t("execution.table.message")}
+                </th>
+              )}
+              {columns.attempts && (
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {t("execution.table.attempts")}
+                </th>
+              )}
+              {columns.finishedAt && (
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {t("execution.table.finishedAt")}
+                </th>
+              )}
               <th className="px-4 py-3 text-right text-sm font-medium text-gray-700 dark:text-gray-300">
                 {t("execution.table.actions")}
               </th>
@@ -87,50 +108,58 @@ export default function ResultsTable({
                       className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
                   </td>
-                  <td className="px-4 py-3">
-                    {item.ok ? (
-                      <CheckCircleIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
-                    ) : (
-                      <ExclamationCircleIcon className="h-5 w-5 text-red-600 dark:text-red-400" />
-                    )}
-                  </td>
+                  {columns.status && (
+                    <td className="px-4 py-3">
+                      {item.ok ? (
+                        <CheckCircleIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
+                      ) : (
+                        <ExclamationCircleIcon className="h-5 w-5 text-red-600 dark:text-red-400" />
+                      )}
+                    </td>
+                  )}
                   <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
                     {item.channelId}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
                     {item.channelName}
                   </td>
-                  <td className="px-4 py-3">
-                    {item.ok ? (
-                      <Badge variant="success">
-                        {t("execution.status.success")}
-                      </Badge>
-                    ) : (
-                      <div>
-                        <Badge variant="destructive">
-                          {t("execution.status.failed")}
+                  {columns.message && (
+                    <td className="px-4 py-3">
+                      {item.ok ? (
+                        <Badge variant="success">
+                          {t("execution.status.success")}
                         </Badge>
-                        {item.message && (
-                          <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
-                            {item.message}
-                          </p>
-                        )}
-                        {item.httpStatus && (
-                          <p className="mt-1 text-xs text-gray-500">
-                            HTTP: {item.httpStatus}
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
-                    {item.attempts}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
-                    {item.finishedAt
-                      ? dayjs(item.finishedAt).format("HH:mm:ss")
-                      : "—"}
-                  </td>
+                      ) : (
+                        <div>
+                          <Badge variant="destructive">
+                            {t("execution.status.failed")}
+                          </Badge>
+                          {item.message && (
+                            <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                              {item.message}
+                            </p>
+                          )}
+                          {item.httpStatus && (
+                            <p className="mt-1 text-xs text-gray-500">
+                              HTTP: {item.httpStatus}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </td>
+                  )}
+                  {columns.attempts && (
+                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                      {item.attempts}
+                    </td>
+                  )}
+                  {columns.finishedAt && (
+                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                      {item.finishedAt
+                        ? dayjs(item.finishedAt).format("HH:mm:ss")
+                        : "—"}
+                    </td>
+                  )}
                   <td className="px-4 py-3 text-right">
                     <Button
                       size="sm"

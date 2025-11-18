@@ -501,6 +501,12 @@ export default function NewApiModelSync() {
                 onRunSingle={handleRunSingle}
                 isRunning={progress?.isRunning ?? false}
                 runningChannelId={runningChannelId}
+                visibleColumns={{
+                  status: false,
+                  message: false,
+                  attempts: false,
+                  finishedAt: false
+                }}
               />
             ) : (
               <EmptyState
