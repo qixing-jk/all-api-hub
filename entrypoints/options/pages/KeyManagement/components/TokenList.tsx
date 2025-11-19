@@ -143,7 +143,10 @@ export function TokenList({
         {filteredTokens.map((token) => {
           const account = displayData.find(
             (item) => item.name === token.accountName
-          ) as DisplaySiteData
+          )
+          if (!account) {
+            return null
+          }
 
           return (
             <TokenListItem

@@ -64,7 +64,7 @@ function TokenActionButtons({
           size="sm"
           variant="ghost"
           onClick={onOpenCCSwitchDialog}>
-          <CCSwitchIcon className="text-green-600 dark:text-green-400" />
+          <CCSwitchIcon />
         </IconButton>
       )}
       <IconButton
