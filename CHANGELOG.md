@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.10.0](https://github.com/qixing-jk/all-api-hub/compare/v2.9.0...v2.10.0) (2025-11-19)
+
+
+### Features
+
+* **browser:** add message retry mechanism with exponential backoff ([a04669e](https://github.com/qixing-jk/all-api-hub/commit/a04669e007472f1de562397ffa7a621e0421db02))
+* **browserApi:** introduce centralized message sending with retry logic ([d8ce38c](https://github.com/qixing-jk/all-api-hub/commit/d8ce38c47350bc7f72d387ad8d06ce2809935b01))
+* **model-sync:** add manual execution tab with channel selection ([#156](https://github.com/qixing-jk/all-api-hub/issues/156)) ([a94defe](https://github.com/qixing-jk/all-api-hub/commit/a94defeeab4178788a801399b36f66e2d022a579))
+
+
+### Bug Fixes
+
+* **browser-api:** replace deprecated `sendMessage` with `sendRuntimeMessage` ([9e42bdc](https://github.com/qixing-jk/all-api-hub/commit/9e42bdc38cf99c633ed0f4ebbc4479f92a024a33))
+* **browserApi:** ensure minimum retry attempt count of 1 ([7edc615](https://github.com/qixing-jk/all-api-hub/commit/7edc6157a6cae0f85fc1bfd09fb34580e3326c62))
+* **user-prefs:** ensure missing fields filled with defaults via deep merge ([#161](https://github.com/qixing-jk/all-api-hub/issues/161)) ([e73ce71](https://github.com/qixing-jk/all-api-hub/commit/e73ce713e40759f5bc1e7519e6bf674d2cb789bf))
+
 ## [2.9.0](https://github.com/qixing-jk/all-api-hub/compare/v2.8.1...v2.9.0) (2025-11-17)
 
 
