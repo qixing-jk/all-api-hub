@@ -1,3 +1,5 @@
+import { isEqual } from "lodash-es"
+
 import { Storage } from "@plasmohq/storage"
 
 import { DATA_TYPE_BALANCE, DATA_TYPE_CONSUMPTION } from "~/constants"
@@ -226,15 +228,17 @@ class UserPreferencesService {
       // Run migrations if needed
       const migratedPreferences = migratePreferences(preferences)
 
+      const finalPreferences = deepOverride(
+        DEFAULT_PREFERENCES,
+        migratedPreferences
+      )
+
       // If migration changed preferences, save the updated version
-      if (migratedPreferences !== storedPreferences) {
-        await this.storage.set(
-          STORAGE_KEYS.USER_PREFERENCES,
-          migratedPreferences
-        )
+      if (!isEqual(finalPreferences, storedPreferences)) {
+        await this.storage.set(STORAGE_KEYS.USER_PREFERENCES, finalPreferences)
       }
 
-      return migratedPreferences
+      return finalPreferences
     } catch (error) {
       console.error("获取用户偏好设置失败:", error)
       return DEFAULT_PREFERENCES

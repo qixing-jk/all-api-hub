@@ -67,6 +67,14 @@
     "attemptingRedirect": "Attempting to redirect to Cherry Studio",
     "unableToOpen": "Unable to open, please ensure Cherry Studio is installed"
   },
+  "ccswitch": {
+    "missingCredentials": "Missing required account or key information",
+    "invalidApp": "Unsupported CC Switch target app",
+    "invalidEndpoint": "Invalid or missing API endpoint",
+    "invalidHomepage": "Invalid or missing homepage URL",
+    "attemptingRedirect": "Attempting to redirect to CC Switch",
+    "unableToOpen": "Unable to open CC Switch, please ensure it is installed"
+  },
   "accountOperations": {
     "checkingApiKeys": "Checking API key...",
     "importingToNewApi": "Importing to New API...",

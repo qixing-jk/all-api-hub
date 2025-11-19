@@ -54,10 +54,38 @@
       "copied": "已复制",
       "copy": "复制",
       "useInCherry": "在Cherry Studio中使用",
-      "loadFailed": "获取密钥列表失败: {{error}}",
+      "loadFailed": "加载密钥列表失败: {{error}}",
       "keyCopied": "密钥已复制到剪贴板",
       "copyFailed": "复制失败: {{error}}",
-      "copyFailedManual": "复制失败，请手动复制"
+      "copyFailedManual": "复制失败，请手动复制",
+      "exportToCCSwitch": "导出到 CC Switch"
+    },
+    "ccswitch": {
+      "title": "导出到 CC Switch",
+      "description": "通过深链接一键导入当前站点配置到 CC Switch。",
+      "fields": {
+        "name": "供应商名称",
+        "homepage": "主页地址",
+        "endpoint": "接口地址",
+        "app": "目标应用",
+        "model": "默认模型（可选）",
+        "notes": "备注（可选）"
+      },
+      "placeholders": {
+        "name": "例如 Acme 中转",
+        "homepage": "https://example.com",
+        "endpoint": "https://example.com",
+        "model": "例如 claude-3-opus",
+        "notes": "添加导入说明"
+      },
+      "appOptions": {
+        "claude": "Claude",
+        "codex": "Codex",
+        "gemini": "Gemini"
+      },
+      "actions": {
+        "export": "导出"
+      }
     },
     "firefox": {
       "warningTitle": "功能限制提醒",

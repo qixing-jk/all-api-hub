@@ -16,6 +16,7 @@ interface TokenListItemProps {
   handleEditToken: (token: AccountToken) => void
   handleDeleteToken: (token: AccountToken) => void
   account: DisplaySiteData
+  onOpenCCSwitchDialog: (token: AccountToken, account: DisplaySiteData) => void
 }
 
 export function TokenListItem({
@@ -25,7 +26,8 @@ export function TokenListItem({
   copyKey,
   handleEditToken,
   handleDeleteToken,
-  account
+  account,
+  onOpenCCSwitchDialog
 }: TokenListItemProps) {
   const { t } = useTranslation("keyManagement")
 
@@ -39,6 +41,7 @@ export function TokenListItem({
             handleEditToken={handleEditToken}
             handleDeleteToken={handleDeleteToken}
             account={account}
+            onOpenCCSwitchDialog={() => onOpenCCSwitchDialog(token, account)}
           />
           <div className="min-w-0 flex-1">
             <div className="space-y-2 text-xs text-gray-600 dark:text-dark-text-secondary sm:text-sm">

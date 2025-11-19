@@ -1,6 +1,8 @@
 import { KeyIcon, PlusIcon } from "@heroicons/react/24/outline"
+import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import { CCSwitchExportDialog } from "~/components/CCSwitchExportDialog"
 import { Card, EmptyState } from "~/components/ui"
 import type { DisplaySiteData } from "~/types"
 
@@ -96,6 +98,21 @@ export function TokenList({
   displayData
 }: TokenListProps) {
   const { t } = useTranslation("keyManagement")
+  const [ccSwitchContext, setCCSwitchContext] = useState<{
+    token: AccountToken
+    account: DisplaySiteData
+  } | null>(null)
+
+  const handleOpenCCSwitchDialog = (
+    token: AccountToken,
+    account: DisplaySiteData
+  ) => {
+    setCCSwitchContext({ token, account })
+  }
+
+  const handleCloseCCSwitchDialog = () => {
+    setCCSwitchContext(null)
+  }
 
   if (!selectedAccount) {
     return (
@@ -121,23 +138,39 @@ export function TokenList({
   }
 
   return (
-    <div className="space-y-3">
-      {filteredTokens.map((token) => (
-        <TokenListItem
-          key={`${token.accountName}-${token.id}`}
-          token={token}
-          visibleKeys={visibleKeys}
-          toggleKeyVisibility={toggleKeyVisibility}
-          copyKey={copyKey}
-          handleEditToken={handleEditToken}
-          handleDeleteToken={handleDeleteToken}
-          account={
-            displayData.find(
-              (account) => account.name === token.accountName
-            ) as DisplaySiteData
-          }
+    <>
+      <div className="space-y-3">
+        {filteredTokens.map((token) => {
+          const account = displayData.find(
+            (item) => item.name === token.accountName
+          ) as DisplaySiteData
+
+          return (
+            <TokenListItem
+              key={`${token.accountName}-${token.id}`}
+              token={token}
+              visibleKeys={visibleKeys}
+              toggleKeyVisibility={toggleKeyVisibility}
+              copyKey={copyKey}
+              handleEditToken={handleEditToken}
+              handleDeleteToken={handleDeleteToken}
+              account={account}
+              onOpenCCSwitchDialog={() =>
+                handleOpenCCSwitchDialog(token, account)
+              }
+            />
+          )
+        })}
+      </div>
+
+      {ccSwitchContext && (
+        <CCSwitchExportDialog
+          isOpen={true}
+          onClose={handleCloseCCSwitchDialog}
+          account={ccSwitchContext.account}
+          token={ccSwitchContext.token}
         />
-      ))}
-    </div>
+      )}
+    </>
   )
 }

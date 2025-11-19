@@ -57,7 +57,35 @@
       "loadFailed": "Failed to load key list: {{error}}",
       "keyCopied": "Key copied to clipboard",
       "copyFailed": "Copy failed: {{error}}",
-      "copyFailedManual": "Copy failed, please copy manually"
+      "copyFailedManual": "Copy failed, please copy manually",
+      "exportToCCSwitch": "Export to CC Switch"
+    },
+    "ccswitch": {
+      "title": "Export to CC Switch",
+      "description": "Send this provider configuration directly to CC Switch via deep link.",
+      "fields": {
+        "name": "Provider name",
+        "homepage": "Homepage URL",
+        "endpoint": "API endpoint",
+        "app": "Target app",
+        "model": "Default model (optional)",
+        "notes": "Notes (optional)"
+      },
+      "placeholders": {
+        "name": "e.g. Acme Relay",
+        "homepage": "https://example.com",
+        "endpoint": "https://example.com",
+        "model": "e.g. claude-3-opus",
+        "notes": "Add import notes"
+      },
+      "appOptions": {
+        "claude": "Claude",
+        "codex": "Codex",
+        "gemini": "Gemini"
+      },
+      "actions": {
+        "export": "Export"
+      }
     },
     "firefox": {
       "warningTitle": "Feature Limitation Reminder",

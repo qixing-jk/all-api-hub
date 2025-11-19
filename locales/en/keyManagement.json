@@ -26,6 +26,7 @@
   "actions": {
     "copyKey": "Copy Key",
     "useInCherry": "Use in Cherry Studio",
+    "exportToCCSwitch": "Export to CC Switch",
     "importToNewApi": "Import to New API",
     "editKey": "Edit Key",
     "deleteKey": "Delete Key",

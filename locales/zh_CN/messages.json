@@ -67,6 +67,14 @@
     "attemptingRedirect": "正在尝试跳转到 Cherry Studio",
     "unableToOpen": "无法打开,请确保已安装 Cherry Studio"
   },
+  "ccswitch": {
+    "missingCredentials": "缺少必要的账户或密钥信息",
+    "invalidApp": "不支持的 CC Switch 目标应用",
+    "invalidEndpoint": "接口地址无效或未填写",
+    "invalidHomepage": "主页地址无效或未填写",
+    "attemptingRedirect": "正在尝试跳转到 CC Switch",
+    "unableToOpen": "无法打开 CC Switch，请确认已安装"
+  },
   "accountOperations": {
     "checkingApiKeys": "正在检查 API 密钥...",
     "importingToNewApi": "正在导入到 New API...",

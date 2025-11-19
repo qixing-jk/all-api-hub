@@ -6,6 +6,7 @@ import {
 import { NewAPI } from "@lobehub/icons"
 import { useTranslation } from "react-i18next"
 
+import { CCSwitchIcon } from "~/components/icons/CCSwitchIcon"
 import { CherryIcon } from "~/components/icons/CherryIcon"
 import { Badge, Heading6, IconButton } from "~/components/ui"
 import { useChannelDialog } from "~/features/ChannelManagement"
@@ -21,6 +22,7 @@ interface TokenHeaderProps {
   handleEditToken: (token: AccountToken) => void
   handleDeleteToken: (token: AccountToken) => void
   account: DisplaySiteData
+  onOpenCCSwitchDialog?: () => void
 }
 
 function TokenActionButtons({
@@ -28,7 +30,8 @@ function TokenActionButtons({
   copyKey,
   handleEditToken,
   handleDeleteToken,
-  account
+  account,
+  onOpenCCSwitchDialog
 }: TokenHeaderProps) {
   const { t } = useTranslation("keyManagement")
   const { openWithAccount } = useChannelDialog()
@@ -55,6 +58,15 @@ function TokenActionButtons({
         onClick={() => OpenInCherryStudio(account, token)}>
         <CherryIcon className="text-purple-500 dark:text-purple-400" />
       </IconButton>
+      {onOpenCCSwitchDialog && (
+        <IconButton
+          aria-label={t("actions.exportToCCSwitch")}
+          size="sm"
+          variant="ghost"
+          onClick={onOpenCCSwitchDialog}>
+          <CCSwitchIcon className="text-green-600 dark:text-green-400" />
+        </IconButton>
+      )}
       <IconButton
         aria-label={t("actions.importToNewApi")}
         size="sm"
@@ -85,7 +97,8 @@ export function TokenHeader({
   copyKey,
   handleEditToken,
   handleDeleteToken,
-  account
+  account,
+  onOpenCCSwitchDialog
 }: TokenHeaderProps) {
   const { t } = useTranslation("keyManagement")
   return (
@@ -112,6 +125,7 @@ export function TokenHeader({
         handleEditToken={handleEditToken}
         handleDeleteToken={handleDeleteToken}
         account={account}
+        onOpenCCSwitchDialog={onOpenCCSwitchDialog}
       />
     </div>
   )
