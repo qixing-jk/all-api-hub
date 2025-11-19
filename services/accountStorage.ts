@@ -396,7 +396,6 @@ class AccountStorageService {
         ) {
           // 日期已过，重置签到状态
           account.checkIn.isCheckedInToday = false
-          account.checkIn.lastCheckInDate = undefined
           needsSave = true
         }
       }
