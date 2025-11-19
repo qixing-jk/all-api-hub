@@ -13,6 +13,7 @@ interface TokenListProps {
   onToggleToken: (id: number) => void
   onCopyKey: (key: string) => void
   account: DisplaySiteData
+  onOpenCCSwitchDialog?: (token: ApiToken, account: DisplaySiteData) => void
 }
 
 export function TokenList({
@@ -21,7 +22,8 @@ export function TokenList({
   copiedKey,
   onToggleToken,
   onCopyKey,
-  account
+  account,
+  onOpenCCSwitchDialog
 }: TokenListProps) {
   const { t } = useTranslation("ui")
 
@@ -45,6 +47,7 @@ export function TokenList({
           onToggle={() => onToggleToken(token.id)}
           onCopyKey={onCopyKey}
           account={account}
+          onOpenCCSwitchDialog={onOpenCCSwitchDialog}
         />
       ))}
     </div>

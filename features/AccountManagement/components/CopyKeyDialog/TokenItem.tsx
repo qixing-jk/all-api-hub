@@ -18,6 +18,7 @@ interface TokenItemProps {
   onToggle: () => void
   onCopyKey: (key: string) => void
   account: DisplaySiteData
+  onOpenCCSwitchDialog?: (token: ApiToken, account: DisplaySiteData) => void
 }
 
 export function TokenItem({
@@ -26,7 +27,8 @@ export function TokenItem({
   copiedKey,
   onToggle,
   onCopyKey,
-  account
+  account,
+  onOpenCCSwitchDialog
 }: TokenItemProps) {
   const { t } = useTranslation("ui")
 
@@ -84,6 +86,7 @@ export function TokenItem({
           copiedKey={copiedKey}
           onCopyKey={onCopyKey}
           account={account}
+          onOpenCCSwitchDialog={onOpenCCSwitchDialog}
         />
       )}
     </Card>
