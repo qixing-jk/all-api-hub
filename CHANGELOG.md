@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.11.0](https://github.com/qixing-jk/all-api-hub/compare/v2.10.0...v2.11.0) (2025-11-19)
+
+
+### Features
+
+* **account-management:** enhance account management with search functionality and navigation improvements ([27ca2c4](https://github.com/qixing-jk/all-api-hub/commit/27ca2c4a32ae2058eddc38c25de3f7103d96cf0a))
+* add CC Switch export functionality [#145](https://github.com/qixing-jk/all-api-hub/issues/145) ([#162](https://github.com/qixing-jk/all-api-hub/issues/162)) ([2a56026](https://github.com/qixing-jk/all-api-hub/commit/2a560265061cd2589898779a47fb56a939476c47))
+* **copy-key:** add CC switch export functionality and improve token actions ([#165](https://github.com/qixing-jk/all-api-hub/issues/165)) ([975f761](https://github.com/qixing-jk/all-api-hub/commit/975f761db5d9cf1caa79ebb61aa14368f7a40cca))
+* **search:** add account ID matching and account link button ([963d62b](https://github.com/qixing-jk/all-api-hub/commit/963d62bad309f8b168ecae8027f5ceadf12cf9f4))
+
+
+### Bug Fixes
+
+* **auto-checkin:** correct check-in status logic ([#166](https://github.com/qixing-jk/all-api-hub/issues/166)) ([d0887b1](https://github.com/qixing-jk/all-api-hub/commit/d0887b158992e76a03ec824a4ab4736dfde6085e))
+
 ## [2.10.0](https://github.com/qixing-jk/all-api-hub/compare/v2.9.0...v2.10.0) (2025-11-19)
 
 
