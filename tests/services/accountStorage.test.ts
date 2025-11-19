@@ -354,7 +354,9 @@ describe("accountStorage core behaviors", () => {
     const updatedFresh = config?.accounts.find((acc) => acc.id === "fresh")
 
     expect(updatedStale?.checkIn?.isCheckedInToday).toBe(false)
-    expect(updatedStale?.checkIn?.lastCheckInDate).toBeUndefined()
+    expect(updatedStale?.checkIn?.lastCheckInDate).toBe(
+      staleAccount.checkIn.lastCheckInDate
+    )
     expect(updatedFresh?.checkIn?.isCheckedInToday).toBe(true)
     expect(updatedFresh?.checkIn?.lastCheckInDate).toBe(
       freshAccount.checkIn.lastCheckInDate

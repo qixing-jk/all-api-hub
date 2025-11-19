@@ -373,7 +373,7 @@ class AccountStorageService {
         }
       })
     } catch (error) {
-      console.error("标记账号为已签到:", error)
+      console.error("标记账号为已签到失败:", error)
       return false
     }
   }
