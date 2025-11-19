@@ -206,20 +206,20 @@ class AutoCheckinScheduler {
       const allAccounts = await accountStorage.getAllAccounts()
 
       // Reset isCheckedInToday for accounts whose lastCheckInDate !== today
-      // isCheckedInToday: false means already checked in (cannot check in again today)
-      // isCheckedInToday: true means can check in (not yet checked in today)
+      // isCheckedInToday: true means already checked in (skip until tomorrow)
+      // isCheckedInToday: false/undefined means can check in today
       const today = new Date().toISOString().split("T")[0]
       for (const account of allAccounts) {
         if (
           account.checkIn?.lastCheckInDate &&
           account.checkIn.lastCheckInDate !== today &&
-          account.checkIn.isCheckedInToday === false
+          account.checkIn.isCheckedInToday === true
         ) {
           // Date changed, reset status to allow check-in today
           await accountStorage.updateAccount(account.id, {
             checkIn: {
               ...account.checkIn,
-              isCheckedInToday: true // Can check in again (new day)
+              isCheckedInToday: false // New day -> not yet checked in
             }
           })
         }
@@ -230,6 +230,8 @@ class AutoCheckinScheduler {
         if (!account.checkIn?.enableDetection) return false
         // Default autoCheckInEnabled to true if not explicitly set to false
         if (account.checkIn?.autoCheckInEnabled === false) return false
+        // Skip accounts already checked in today
+        if (account.checkIn?.isCheckedInToday === true) return false
 
         const provider = resolveAutoCheckinProvider(account)
         return provider ? provider.canCheckIn(account) : false
@@ -279,15 +281,13 @@ class AutoCheckinScheduler {
 
           const result = await provider.checkIn(account)
 
-          const accountResult: CheckinAccountResult = {
+          results[account.id] = {
             accountId: account.id,
             accountName: account.site_name,
             status: result.status,
             message: result.message,
             timestamp: Date.now()
           }
-
-          results[account.id] = accountResult
 
           // Update account status if successful or already checked
           if (

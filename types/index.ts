@@ -100,8 +100,8 @@ export interface CheckInConfig {
 
   /**
    * Today's check-in status.
-   * - true: Can check in today (not yet checked in)
-   * - false: Already checked in today
+   * - true: Already checked in today
+   * - false: Can check in today (not yet checked in)
    * - undefined: Status unknown or detection not enabled
    *
    * This field is only meaningful when enableDetection is true.
