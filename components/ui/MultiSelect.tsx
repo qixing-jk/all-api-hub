@@ -114,9 +114,27 @@ export function MultiSelect({
     if (query === "") {
       return options
     }
-    return options.filter((option) =>
-      option.label.toLowerCase().includes(query.toLowerCase())
-    )
+
+    const q = query.toLowerCase()
+
+    return options
+      .filter((option) => option.label.toLowerCase().includes(q))
+      .sort((a, b) => {
+        const labelA = a.label.toLowerCase()
+        const labelB = b.label.toLowerCase()
+
+        // 匹配位置更靠前的优先
+        const posA = labelA.indexOf(q)
+        const posB = labelB.indexOf(q)
+        if (posA !== posB) return posA - posB
+
+        // 长度更短的优先
+        if (labelA.length !== labelB.length)
+          return labelA.length - labelB.length
+
+        // 保持原始排序（例如按名字）
+        return 0
+      })
   }, [options, query])
 
   const handleSelect = (newSelected: MultiSelectOption[]) => {
