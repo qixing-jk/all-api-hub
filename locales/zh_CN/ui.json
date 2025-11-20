@@ -19,7 +19,10 @@
     "keys": "密钥管理",
     "autoCheckin": "自动签到",
     "newApiModelSync": "New API 模型同步",
-    "importExport": "导入/导出"
+    "importExport": "导入/导出",
+    "collapseSidebar": "折叠侧边栏",
+    "expandSidebar": "展开侧边栏",
+    "sidebarCollapsedHint": "侧边栏已折叠，仅显示图标"
   },
   "dialog": {
     "delete": {

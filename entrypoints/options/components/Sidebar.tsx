@@ -1,8 +1,14 @@
+import {
+  ChevronDoubleLeftIcon,
+  ChevronDoubleRightIcon
+} from "@heroicons/react/24/outline"
+import { motion } from "framer-motion"
 import { useEffect } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Heading3 } from "~/components/ui"
+import { Button, Heading3, IconButton, Separator } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext.tsx"
+import { cn } from "~/utils/cn"
 
 import { menuItems } from "../constants"
 
@@ -11,16 +17,48 @@ interface SidebarProps {
   onMenuItemClick: (itemId: string) => void
   isMobileOpen?: boolean
   onMobileClose?: () => void
+  isCollapsed?: boolean
+  onCollapseToggle?: () => void
 }
+
+const DESKTOP_WIDTH = 256
+const COLLAPSED_WIDTH = 64
+const MOBILE_WIDTH = 256
 
 function Sidebar({
   activeMenuItem,
   onMenuItemClick,
   isMobileOpen,
-  onMobileClose
+  onMobileClose,
+  isCollapsed = false,
+  onCollapseToggle
 }: SidebarProps) {
   const { t } = useTranslation("ui")
   const { preferences } = useUserPreferencesContext()
+  const shouldShowCollapsedState = isCollapsed && !isMobileOpen
+  const targetWidth = isMobileOpen
+    ? MOBILE_WIDTH
+    : shouldShowCollapsedState
+      ? COLLAPSED_WIDTH
+      : DESKTOP_WIDTH
+  const navAriaLabel = shouldShowCollapsedState
+    ? t("navigation.sidebarCollapsedHint")
+    : t("navigation.settingsOptions")
+  const collapseButtonLabel = t(
+    `navigation.${shouldShowCollapsedState ? "expandSidebar" : "collapseSidebar"}`
+  )
+  const sidebarHeight = isMobileOpen
+    ? "100vh"
+    : "calc(100vh - var(--options-header-height))"
+  const sidebarTop = isMobileOpen ? undefined : "var(--options-header-height)"
+
+  const handleCollapseButtonClick = () => {
+    if (isMobileOpen && onMobileClose) {
+      onMobileClose()
+      return
+    }
+    onCollapseToggle?.()
+  }
 
   // 移动端打开时禁止背景滚动
   useEffect(() => {
@@ -45,52 +83,134 @@ function Sidebar({
       )}
 
       {/* 侧边栏 */}
-      <aside
-        className={`fixed inset-y-0 left-0 z-40 w-64 flex-shrink-0 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"} mt-0 md:mt-0`}>
-        <nav className="h-full overflow-hidden rounded-none border-r border-gray-200 bg-white shadow-sm dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary md:h-auto md:rounded-lg md:border">
-          <div className="border-b border-gray-100 p-3 dark:border-dark-bg-tertiary sm:p-4">
-            <Heading3 className="uppercase tracking-wide text-gray-500 dark:text-dark-text-tertiary">
-              {t("navigation.settingsOptions")}
-            </Heading3>
+      <motion.aside
+        initial={false}
+        animate={{ width: targetWidth }}
+        style={{ width: targetWidth, height: sidebarHeight, top: sidebarTop }}
+        className={cn(
+          "z-40 flex-shrink-0 transform transition-transform duration-300 ease-in-out",
+          isMobileOpen
+            ? "fixed inset-y-0 left-0 translate-x-0"
+            : "fixed inset-y-0 left-0 -translate-x-full md:translate-x-0",
+          "md:sticky md:inset-auto md:left-auto md:translate-x-0 md:self-start md:overflow-hidden"
+        )}>
+        <div className="flex h-full flex-col border-r border-gray-200 bg-white shadow-sm dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary">
+          <div
+            className={cn(
+              "flex h-16 items-center px-3 py-2",
+              shouldShowCollapsedState ? "justify-center" : "justify-between"
+            )}>
+            {!shouldShowCollapsedState && (
+              <div className="flex flex-1 items-center gap-2 overflow-hidden">
+                <Heading3
+                  aria-hidden={shouldShowCollapsedState}
+                  className={cn(
+                    "truncate text-sm font-semibold uppercase tracking-wide text-gray-500 transition-all duration-200 dark:text-dark-text-tertiary",
+                    shouldShowCollapsedState
+                      ? "max-w-0 opacity-0"
+                      : "max-w-[200px] opacity-100"
+                  )}>
+                  {t("navigation.settingsOptions")}
+                </Heading3>
+              </div>
+            )}
+            {(onCollapseToggle || isMobileOpen) && (
+              <Button
+                aria-label={collapseButtonLabel}
+                variant="outline"
+                size="icon"
+                className="hidden h-8 w-8 rounded-full border-gray-200 text-gray-600 dark:border-dark-bg-tertiary dark:text-dark-text-secondary md:inline-flex"
+                onClick={handleCollapseButtonClick}>
+                {shouldShowCollapsedState ? (
+                  <ChevronDoubleRightIcon className="h-4 w-4" />
+                ) : (
+                  <ChevronDoubleLeftIcon className="h-4 w-4" />
+                )}
+              </Button>
+            )}
           </div>
-          <ul className="max-h-[calc(100vh-8rem)] divide-y divide-gray-100 overflow-y-auto dark:divide-dark-bg-tertiary md:max-h-none">
-            {menuItems.map((item) => {
-              const Icon = item.icon
-              const isActive = activeMenuItem === item.id
 
-              if (
-                item.id === "autoCheckin" &&
-                !preferences?.autoCheckin?.globalEnabled
-              ) {
-                return null
-              }
+          <Separator className="mx-3" />
 
-              return (
-                <li key={item.id}>
-                  <button
-                    onClick={() => onMenuItemClick(item.id)}
-                    className={`flex w-full touch-manipulation items-center px-3 py-2.5 text-left transition-colors tap-highlight-transparent hover:bg-gray-50 dark:hover:bg-dark-bg-tertiary sm:px-4 sm:py-3 ${
-                      isActive
-                        ? "border-r-2 border-blue-600 bg-blue-50 text-blue-700 dark:border-blue-500 dark:bg-blue-900/20 dark:text-blue-400"
-                        : "text-gray-700 dark:text-dark-text-secondary"
-                    }`}>
-                    <Icon
-                      className={`mr-2 h-4 w-4 flex-shrink-0 sm:mr-3 sm:h-5 sm:w-5 ${
+          <nav aria-label={navAriaLabel} className="flex-1 py-4">
+            <ul className="space-y-1 px-2">
+              {menuItems.map((item) => {
+                const Icon = item.icon
+                const isActive = activeMenuItem === item.id
+                const label = t(`navigation.${item.id}`)
+
+                if (
+                  item.id === "autoCheckin" &&
+                  !preferences?.autoCheckin?.globalEnabled
+                ) {
+                  return null
+                }
+
+                return (
+                  <li key={item.id}>
+                    <button
+                      onClick={() => onMenuItemClick(item.id)}
+                      title={shouldShowCollapsedState ? label : undefined}
+                      aria-label={shouldShowCollapsedState ? label : undefined}
+                      className={cn(
+                        "group relative flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors",
+                        shouldShowCollapsedState && "justify-center px-0",
                         isActive
-                          ? "text-blue-600 dark:text-blue-500"
-                          : "text-gray-400 dark:text-dark-text-tertiary"
-                      }`}
-                    />
-                    <span className="text-sm sm:text-base">
-                      {t(`navigation.${item.id}`)}
-                    </span>
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
-        </nav>
-      </aside>
+                          ? "bg-blue-600 text-white dark:bg-blue-500"
+                          : "text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-dark-text-secondary dark:hover:bg-dark-bg-tertiary"
+                      )}>
+                      <Icon
+                        className={cn(
+                          "h-5 w-5 flex-shrink-0",
+                          isActive
+                            ? "text-white"
+                            : "text-gray-400 group-hover:text-gray-600 dark:text-dark-text-tertiary"
+                        )}
+                      />
+
+                      {!shouldShowCollapsedState && (
+                        <div
+                          className={cn(
+                            "flex-1 overflow-hidden text-sm font-medium transition-all duration-200 sm:text-base"
+                          )}
+                          aria-hidden={shouldShowCollapsedState}>
+                          <span className="block truncate">{label}</span>
+                        </div>
+                      )}
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          </nav>
+
+          <Separator className="mx-3" />
+
+          <div className="flex items-center justify-between px-3 py-3 sm:px-4">
+            <Heading3
+              className={cn(
+                "text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-dark-text-tertiary",
+                shouldShowCollapsedState && "sr-only"
+              )}>
+              {t("navigation.settings")}
+            </Heading3>
+            {(onCollapseToggle || isMobileOpen) && (
+              <IconButton
+                aria-label={collapseButtonLabel}
+                variant="ghost"
+                size="sm"
+                className="md:hidden"
+                onClick={handleCollapseButtonClick}>
+                {shouldShowCollapsedState ? (
+                  <ChevronDoubleRightIcon className="h-5 w-5" />
+                ) : (
+                  <ChevronDoubleLeftIcon className="h-5 w-5" />
+                )}
+              </IconButton>
+            )}
+          </div>
+        </div>
+      </motion.aside>
     </>
   )
 }

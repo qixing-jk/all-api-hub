@@ -19,7 +19,10 @@
     "autoCheckin": "Auto Check-in",
     "newApiModelSync": "New API Model Sync",
     "keys": "Key Management",
-    "importExport": "Import/Export"
+    "importExport": "Import/Export",
+    "collapseSidebar": "Collapse sidebar",
+    "expandSidebar": "Expand sidebar",
+    "sidebarCollapsedHint": "Sidebar collapsed, showing icons only"
   },
   "dialog": {
     "delete": {

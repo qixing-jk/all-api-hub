@@ -32,6 +32,7 @@ export { ToggleButton, toggleButtonVariants } from "./ToggleButton"
 export { Switch, switchVariants } from "./Switch"
 export { EmptyState } from "./EmptyState"
 export { Modal } from "./Dialog/Modal"
+export { Separator } from "./Separator"
 
 // Typography Components
 export {

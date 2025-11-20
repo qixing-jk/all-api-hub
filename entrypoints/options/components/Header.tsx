@@ -18,9 +18,9 @@ function Header({
 }: HeaderProps) {
   const { t } = useTranslation("ui")
   return (
-    <header className="sticky top-0 z-50 border-b border-gray-200 bg-white shadow-sm dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary">
-      <div className="mx-auto max-w-7xl px-2 sm:px-4 md:px-6 lg:px-8">
-        <div className="flex h-14 items-center justify-between sm:h-16">
+    <header className="sticky top-0 z-50 h-[var(--options-header-height)] border-b border-gray-200 bg-white shadow-sm dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary">
+      <div className="mx-auto h-full px-2 sm:px-4 md:px-6 lg:px-8">
+        <div className="flex h-full items-center justify-between">
           {/* 移动端菜单按钮 */}
           <IconButton
             onClick={onMenuToggle}

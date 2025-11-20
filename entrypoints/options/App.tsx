@@ -12,6 +12,7 @@ function OptionsPage() {
   const { activeMenuItem, routeParams, handleMenuItemChange, refreshKey } =
     useHashNavigation()
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
 
   // 获取当前活动的组件
   const ActiveComponent =
@@ -28,32 +29,34 @@ function OptionsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-dark-bg-primary">
+    <div className="flex min-h-screen flex-col bg-gray-50 dark:bg-dark-bg-primary">
       <Header
         onTitleClick={handleTitleClick}
         onMenuToggle={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
         isMobileSidebarOpen={isMobileSidebarOpen}
       />
 
-      <div className="mx-auto max-w-7xl px-2 py-2 sm:px-4 sm:py-4 md:px-6 md:py-8 lg:px-8">
-        <div className="flex flex-col gap-2 sm:gap-4 md:flex-row md:gap-8">
-          <Sidebar
-            activeMenuItem={activeMenuItem}
-            onMenuItemClick={handleMenuItemClick}
-            isMobileOpen={isMobileSidebarOpen}
-            onMobileClose={() => setIsMobileSidebarOpen(false)}
-          />
+      <div className="flex flex-1 flex-col bg-gray-50 dark:bg-dark-bg-primary md:flex-row">
+        <Sidebar
+          activeMenuItem={activeMenuItem}
+          onMenuItemClick={handleMenuItemClick}
+          isMobileOpen={isMobileSidebarOpen}
+          onMobileClose={() => setIsMobileSidebarOpen(false)}
+          isCollapsed={isSidebarCollapsed}
+          onCollapseToggle={() => setIsSidebarCollapsed((prev) => !prev)}
+        />
 
-          {/* 右侧内容区域 */}
-          <main className="min-w-0 flex-1">
-            <div className="min-h-[400px] rounded-lg border border-gray-200 bg-white shadow-sm dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary md:min-h-[600px]">
+        {/* 右侧内容区域 */}
+        <main className="flex-1">
+          <div className="mx-auto w-full max-w-7xl px-2 py-3 sm:px-4 sm:py-5 md:px-8 md:py-8 lg:px-10">
+            <div className="min-h-[400px] rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary md:min-h-[600px]">
               <ActiveComponent
                 routeParams={routeParams}
                 refreshKey={refreshKey}
               />
             </div>
-          </main>
-        </div>
+          </div>
+        </main>
       </div>
     </div>
   )
