@@ -18,6 +18,7 @@ import {
 import { getErrorMessage } from "~/utils/error"
 
 import { DEFAULT_PREFERENCES, userPreferences } from "../userPreferences"
+import { collectModelsFromExecution } from "./modelCollection"
 import { NewApiModelSyncService } from "./NewApiModelSyncService"
 import { newApiModelSyncStorage } from "./storage"
 
@@ -263,6 +264,14 @@ class NewApiModelSyncScheduler {
 
       // Save execution result
       await newApiModelSyncStorage.saveLastExecution(result)
+
+      // Cache upstream model options for allow-list selection
+      const collectedModels = collectModelsFromExecution(result)
+      if (collectedModels.length > 0) {
+        await newApiModelSyncStorage.saveChannelUpstreamModelOptions(
+          collectedModels
+        )
+      }
       console.log(
         `[NewApiModelSync] Execution completed: ${result.statistics.successCount}/${result.statistics.total} succeeded`
       )
@@ -430,6 +439,13 @@ export const handleNewApiModelSyncMessage = async (
       case "newApiModelSync:getPreferences": {
         const prefs = await newApiModelSyncStorage.getPreferences()
         sendResponse({ success: true, data: prefs })
+        break
+      }
+
+      case "newApiModelSync:getChannelUpstreamModelOptions": {
+        const upstreamOptions =
+          await newApiModelSyncStorage.getChannelUpstreamModelOptions()
+        sendResponse({ success: true, data: upstreamOptions })
         break
       }
 

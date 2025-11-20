@@ -19,6 +19,7 @@ import { modelMetadataService } from "~/services/modelMetadata"
 import type { ModelMetadata } from "~/services/modelMetadata/types"
 import { DEFAULT_PREFERENCES } from "~/services/userPreferences"
 import type { NewApiModelSyncPreferences } from "~/types/newApiModelSync"
+import { sendRuntimeMessage } from "~/utils/browserApi"
 
 type UserNewApiModelSyncConfig = NonNullable<
   typeof DEFAULT_PREFERENCES.newApiModelSync
@@ -42,9 +43,10 @@ export default function NewApiModelSyncSettings() {
     resetNewApiModelSyncConfig
   } = useUserPreferencesContext()
   const [isSaving, setIsSaving] = useState(false)
-  const [metadataLoading, setMetadataLoading] = useState(true)
-  const [metadataError, setMetadataError] = useState<string | null>(null)
-  const [modelMetadata, setModelMetadata] = useState<ModelMetadata[]>([])
+  const [channelUpstreamModelOptions, setChannelUpstreamModelOptions] =
+    useState<MultiSelectOption[]>([])
+  const [optionsLoading, setOptionsLoading] = useState(true)
+  const [optionsError, setOptionsError] = useState<string | null>(null)
 
   // Convert from UserPreferences.newApiModelSync to NewApiModelSyncPreferences format
   const rawPrefs = userPrefs?.newApiModelSync
@@ -72,29 +74,45 @@ export default function NewApiModelSyncSettings() {
 
   useEffect(() => {
     let isMounted = true
-    const loadMetadata = async () => {
+    const loadChannelUpstreamOptions = async () => {
       try {
-        setMetadataLoading(true)
-        setMetadataError(null)
+        setOptionsLoading(true)
+        setOptionsError(null)
+
+        const response = await sendRuntimeMessage({
+          action: "newApiModelSync:getChannelUpstreamModelOptions"
+        })
+
+        if (
+          response?.success &&
+          Array.isArray(response.data) &&
+          response.data.length > 0
+        ) {
+          if (isMounted) {
+            setChannelUpstreamModelOptions(buildOptionsFromIds(response.data))
+          }
+          return
+        }
+
         await modelMetadataService.initialize()
         const models = modelMetadataService.getAllMetadata()
         if (isMounted) {
-          setModelMetadata(models)
+          setChannelUpstreamModelOptions(buildModelOptions(models))
         }
       } catch (error: any) {
-        console.error("Failed to load model metadata", error)
+        console.error("Failed to load allowed model options", error)
         if (isMounted) {
-          setMetadataError(error?.message || "Unknown error")
-          setModelMetadata([])
+          setOptionsError(error?.message || "Unknown error")
+          setChannelUpstreamModelOptions([])
         }
       } finally {
         if (isMounted) {
-          setMetadataLoading(false)
+          setOptionsLoading(false)
         }
       }
     }
 
-    void loadMetadata()
+    void loadChannelUpstreamOptions()
 
     return () => {
       isMounted = false
@@ -318,7 +336,7 @@ export default function NewApiModelSyncSettings() {
             <div className="w-full space-y-2">
               <MultiSelect
                 allowCustom
-                options={buildModelOptions(modelMetadata)}
+                options={channelUpstreamModelOptions}
                 selected={preferences.allowedModels}
                 placeholder={t(
                   "newApiModelSync:settings.allowedModelsPlaceholder"
@@ -326,16 +344,16 @@ export default function NewApiModelSyncSettings() {
                 onChange={(values) => {
                   void savePreferences({ allowedModels: values })
                 }}
-                disabled={isSaving || metadataLoading}
+                disabled={isSaving || optionsLoading}
               />
-              {metadataLoading ? (
+              {optionsLoading ? (
                 <p className="text-xs text-gray-500">
                   {t("newApiModelSync:settings.allowedModelsLoading")}
                 </p>
-              ) : metadataError ? (
+              ) : optionsError ? (
                 <p className="text-xs text-red-500">
                   {t("newApiModelSync:settings.allowedModelsLoadFailed", {
-                    error: metadataError
+                    error: optionsError
                   })}
                 </p>
               ) : (
@@ -378,5 +396,17 @@ function buildModelOptions(metadata: ModelMetadata[]): MultiSelectOption[] {
     label: model.id,
     value: model.id
   }))
+  return options.sort((a, b) => a.label.localeCompare(b.label))
+}
+
+function buildOptionsFromIds(modelIds: string[]): MultiSelectOption[] {
+  const options = modelIds
+    .map((model) => model.trim())
+    .filter(Boolean)
+    .map((model) => ({
+      label: model,
+      value: model
+    }))
+
   return options.sort((a, b) => a.label.localeCompare(b.label))
 }

@@ -11,7 +11,8 @@ import { DEFAULT_PREFERENCES, userPreferences } from "../userPreferences"
  * Storage keys for New API Model Sync
  */
 const STORAGE_KEYS = {
-  LAST_EXECUTION: "newApiModelSync_lastExecution"
+  LAST_EXECUTION: "newApiModelSync_lastExecution",
+  CHANNEL_UPSTREAM_MODELS_CACHE: "newApiModelSync_channelUpstreamModelsCache"
 } as const
 
 /**
@@ -134,6 +135,59 @@ class NewApiModelSyncStorage {
       return true
     } catch (error) {
       console.error("[NewApiModelSync] Failed to clear last execution:", error)
+      return false
+    }
+  }
+
+  /**
+   * Get cached channel upstream model names collected from the last sync run
+   */
+  async getChannelUpstreamModelOptions(): Promise<string[]> {
+    try {
+      const stored = (await this.storage.get(
+        STORAGE_KEYS.CHANNEL_UPSTREAM_MODELS_CACHE
+      )) as string[] | undefined
+
+      if (!stored || stored.length === 0) {
+        return []
+      }
+
+      const normalized = Array.from(
+        new Set(stored.map((model) => model.trim()).filter(Boolean))
+      )
+
+      return normalized.sort((a, b) => a.localeCompare(b))
+    } catch (error) {
+      console.error(
+        "[NewApiModelSync] Failed to get channel upstream model cache:",
+        error
+      )
+      return []
+    }
+  }
+
+  /**
+   * Persist channel upstream model names cache after sync
+   */
+  async saveChannelUpstreamModelOptions(models: string[]): Promise<boolean> {
+    try {
+      const normalized = Array.from(
+        new Set(models.map((model) => model.trim()).filter(Boolean))
+      ).sort((a, b) => a.localeCompare(b))
+
+      await this.storage.set(
+        STORAGE_KEYS.CHANNEL_UPSTREAM_MODELS_CACHE,
+        normalized
+      )
+      console.log(
+        `[NewApiModelSync] Cached ${normalized.length} channel upstream models`
+      )
+      return true
+    } catch (error) {
+      console.error(
+        "[NewApiModelSync] Failed to save channel upstream model cache:",
+        error
+      )
       return false
     }
   }
