@@ -50,7 +50,8 @@ class NewApiModelSyncScheduler {
       newApiBaseUrl!,
       newApiAdminToken!,
       newApiUserId!,
-      config.rateLimit
+      config.rateLimit,
+      config.allowedModels
     )
   }
 
@@ -320,6 +321,7 @@ class NewApiModelSyncScheduler {
       requestsPerMinute?: number
       burst?: number
     }
+    allowedModels?: string[]
   }) {
     // Get current config and update
     const prefs = await userPreferences.getPreferences()
@@ -345,7 +347,11 @@ class NewApiModelSyncScheduler {
           : current.maxRetries,
       rateLimit: settings.rateLimit
         ? { ...current.rateLimit, ...settings.rateLimit }
-        : { ...current.rateLimit }
+        : { ...current.rateLimit },
+      allowedModels:
+        settings.allowedModels !== undefined
+          ? settings.allowedModels
+          : current.allowedModels
     }
 
     await userPreferences.savePreferences({ newApiModelSync: updated })

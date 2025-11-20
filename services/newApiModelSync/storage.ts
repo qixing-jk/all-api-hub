@@ -39,7 +39,8 @@ class NewApiModelSyncStorage {
         intervalMs: config.interval,
         concurrency: config.concurrency,
         maxRetries: config.maxRetries,
-        rateLimit: { ...config.rateLimit }
+        rateLimit: { ...config.rateLimit },
+        allowedModels: [...(config.allowedModels ?? [])]
       }
     } catch (error) {
       console.error("[NewApiModelSync] Failed to get preferences:", error)
@@ -77,7 +78,11 @@ class NewApiModelSyncStorage {
             : current.maxRetries,
         rateLimit: preferences.rateLimit
           ? { ...current.rateLimit, ...preferences.rateLimit }
-          : { ...current.rateLimit }
+          : { ...current.rateLimit },
+        allowedModels:
+          preferences.allowedModels !== undefined
+            ? [...preferences.allowedModels]
+            : [...(current.allowedModels ?? [])]
       }
 
       await userPreferences.savePreferences({ newApiModelSync: updated })
@@ -143,7 +148,8 @@ class NewApiModelSyncStorage {
       intervalMs: defaultConfig.interval,
       concurrency: defaultConfig.concurrency,
       maxRetries: defaultConfig.maxRetries,
-      rateLimit: { ...defaultConfig.rateLimit }
+      rateLimit: { ...defaultConfig.rateLimit },
+      allowedModels: [...(defaultConfig.allowedModels ?? [])]
     }
   }
 }

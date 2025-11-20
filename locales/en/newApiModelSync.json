@@ -16,6 +16,12 @@
     "requestsPerMinuteDesc": "Rate limit: maximum number of requests per minute (recommend 10-30)",
     "burst": "Burst Capacity",
     "burstDesc": "Token bucket size: allowed burst requests before throttling",
+    "allowedModels": "Allowed Model List",
+    "allowedModelsDesc": "Optional allow-list. Leave empty to sync all upstream models.",
+    "allowedModelsPlaceholder": "Search and select models, or type to add custom",
+    "allowedModelsHint": "Only models listed here will be written to each channel during sync.",
+    "allowedModelsLoading": "Loading model metadata...",
+    "allowedModelsLoadFailed": "Failed to load model metadata: {{error}}",
     "viewExecution": "View Execution & Results",
     "viewExecutionDesc": "View detailed execution results and trigger manual syncs",
     "viewExecutionButton": "Open"

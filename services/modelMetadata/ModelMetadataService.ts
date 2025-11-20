@@ -423,6 +423,13 @@ class ModelMetadataService {
     }
   }
 
+  getAllMetadata(): ModelMetadata[] {
+    if (!this.cache) {
+      return []
+    }
+    return [...this.cache.models]
+  }
+
   clearCache(): void {
     this.cache = null
     this.metadataMap.clear()

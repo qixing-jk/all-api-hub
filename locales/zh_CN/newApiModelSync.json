@@ -16,6 +16,12 @@
     "requestsPerMinuteDesc": "速率限制：每分钟最多请求数（建议10-30）",
     "burst": "突发请求上限",
     "burstDesc": "令牌桶容量：允许短时间内的突发请求数",
+    "allowedModels": "允许的模型列表",
+    "allowedModelsDesc": "可选的白名单。留空则同步所有上游模型。",
+    "allowedModelsPlaceholder": "搜索并选择模型，也可直接输入添加",
+    "allowedModelsHint": "同步时仅会将此处列出的模型写入渠道。",
+    "allowedModelsLoading": "正在加载模型元数据...",
+    "allowedModelsLoadFailed": "加载模型元数据失败：{{error}}",
     "viewExecution": "查看执行与结果",
     "viewExecutionDesc": "查看详细执行结果并手动触发同步",
     "viewExecutionButton": "打开"

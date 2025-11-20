@@ -54,6 +54,11 @@ export interface NewApiModelSyncPreferences {
     requestsPerMinute: number
     burst: number
   }
+  /**
+   * Optional allow-list of models that can be synced.
+   * Empty array = sync all upstream models.
+   */
+  allowedModels: string[]
 }
 
 /**

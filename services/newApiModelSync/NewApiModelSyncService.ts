@@ -26,12 +26,14 @@ export class NewApiModelSyncService {
   private token: string
   private userId?: string
   private rateLimiter: RateLimiter | null = null
+  private allowedModelSet: Set<string> | null = null
 
   constructor(
     baseUrl: string,
     token: string,
     userId?: string,
-    rateLimitConfig?: { requestsPerMinute: number; burst: number }
+    rateLimitConfig?: { requestsPerMinute: number; burst: number },
+    allowedModels?: string[]
   ) {
     this.baseUrl = baseUrl
     this.token = token
@@ -40,6 +42,11 @@ export class NewApiModelSyncService {
       this.rateLimiter = new RateLimiter(
         rateLimitConfig.requestsPerMinute,
         rateLimitConfig.burst
+      )
+    }
+    if (allowedModels && allowedModels.length > 0) {
+      this.allowedModelSet = new Set(
+        allowedModels.map((model) => model.trim()).filter(Boolean)
       )
     }
   }
@@ -236,14 +243,20 @@ export class NewApiModelSyncService {
     let attempts = 0
     let lastError: any = null
 
-    const oldModels = channel.models ? channel.models.split(",") : []
+    const oldModels = channel.models
+      ? channel.models
+          .split(",")
+          .map((model) => model.trim())
+          .filter(Boolean)
+      : []
 
     while (attempts <= maxRetries) {
       attempts++
 
       try {
         // Fetch new models
-        const newModels = await this.fetchChannelModels(channel.id)
+        const fetchedModels = await this.fetchChannelModels(channel.id)
+        const newModels = this.filterAllowedModels(fetchedModels)
 
         // Update channel if models changed
         if (
@@ -364,5 +377,24 @@ export class NewApiModelSyncService {
       items,
       statistics
     }
+  }
+
+  /**
+   * Apply the optional allow-list to the fetched model set.
+   * Always trims/normalizes input and removes duplicates so channel updates
+   * receive a clean, deterministic list.
+   */
+  private filterAllowedModels(models: string[]): string[] {
+    if (!this.allowedModelSet || this.allowedModelSet.size === 0) {
+      return Array.from(
+        new Set(models.map((model) => model.trim()).filter(Boolean))
+      )
+    }
+
+    const filtered = models
+      .map((model) => model.trim())
+      .filter((model) => model && this.allowedModelSet!.has(model))
+
+    return Array.from(new Set(filtered))
   }
 }

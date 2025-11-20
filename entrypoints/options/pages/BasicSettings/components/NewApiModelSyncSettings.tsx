@@ -1,5 +1,5 @@
 import { ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
@@ -10,9 +10,13 @@ import {
   CardItem,
   CardList,
   Input,
-  Switch
+  MultiSelect,
+  Switch,
+  type MultiSelectOption
 } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { modelMetadataService } from "~/services/modelMetadata"
+import type { ModelMetadata } from "~/services/modelMetadata/types"
 import { DEFAULT_PREFERENCES } from "~/services/userPreferences"
 import type { NewApiModelSyncPreferences } from "~/types/newApiModelSync"
 
@@ -28,6 +32,9 @@ export default function NewApiModelSyncSettings() {
     resetNewApiModelSyncConfig
   } = useUserPreferencesContext()
   const [isSaving, setIsSaving] = useState(false)
+  const [metadataLoading, setMetadataLoading] = useState(true)
+  const [metadataError, setMetadataError] = useState<string | null>(null)
+  const [modelMetadata, setModelMetadata] = useState<ModelMetadata[]>([])
 
   // Convert from UserPreferences.newApiModelSync to NewApiModelSyncPreferences format
   const rawPrefs = userPrefs?.newApiModelSync
@@ -37,7 +44,8 @@ export default function NewApiModelSyncSettings() {
         intervalMs: rawPrefs.interval,
         concurrency: rawPrefs.concurrency,
         maxRetries: rawPrefs.maxRetries,
-        rateLimit: rawPrefs.rateLimit
+        rateLimit: rawPrefs.rateLimit,
+        allowedModels: rawPrefs.allowedModels ?? []
       }
     : {
         enableSync: DEFAULT_PREFERENCES.newApiModelSync?.enabled ?? false,
@@ -48,8 +56,40 @@ export default function NewApiModelSyncSettings() {
         rateLimit: DEFAULT_PREFERENCES.newApiModelSync?.rateLimit ?? {
           requestsPerMinute: 20,
           burst: 5
+        },
+        allowedModels: DEFAULT_PREFERENCES.newApiModelSync?.allowedModels ?? []
+      }
+
+  useEffect(() => {
+    let isMounted = true
+    const loadMetadata = async () => {
+      try {
+        setMetadataLoading(true)
+        setMetadataError(null)
+        await modelMetadataService.initialize()
+        const models = modelMetadataService.getAllMetadata()
+        if (isMounted) {
+          setModelMetadata(models)
+        }
+      } catch (error: any) {
+        console.error("Failed to load model metadata", error)
+        if (isMounted) {
+          setMetadataError(error?.message || "Unknown error")
+          setModelMetadata([])
+        }
+      } finally {
+        if (isMounted) {
+          setMetadataLoading(false)
         }
       }
+    }
+
+    void loadMetadata()
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   const savePreferences = async (
     updates: Partial<NewApiModelSyncPreferences>
@@ -73,6 +113,9 @@ export default function NewApiModelSyncSettings() {
       }
       if (updates.rateLimit !== undefined) {
         userPrefsUpdate.rateLimit = updates.rateLimit
+      }
+      if (updates.allowedModels !== undefined) {
+        userPrefsUpdate.allowedModels = updates.allowedModels
       }
 
       const success = await updateNewApiModelSync(userPrefsUpdate)
@@ -258,6 +301,41 @@ export default function NewApiModelSyncSettings() {
             }
           />
 
+          {/* Allowed Models */}
+          <CardItem
+            title={t("newApiModelSync:settings.allowedModels")}
+            description={t("newApiModelSync:settings.allowedModelsDesc")}>
+            <div className="w-full space-y-2">
+              <MultiSelect
+                allowCustom
+                options={buildModelOptions(modelMetadata)}
+                selected={preferences.allowedModels}
+                placeholder={t(
+                  "newApiModelSync:settings.allowedModelsPlaceholder"
+                )}
+                onChange={(values) => {
+                  void savePreferences({ allowedModels: values })
+                }}
+                disabled={isSaving || metadataLoading}
+              />
+              {metadataLoading ? (
+                <p className="text-xs text-gray-500">
+                  {t("newApiModelSync:settings.allowedModelsLoading")}
+                </p>
+              ) : metadataError ? (
+                <p className="text-xs text-red-500">
+                  {t("newApiModelSync:settings.allowedModelsLoadFailed", {
+                    error: metadataError
+                  })}
+                </p>
+              ) : (
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {t("newApiModelSync:settings.allowedModelsHint")}
+                </p>
+              )}
+            </div>
+          </CardItem>
+
           {/* View Execution Button */}
           <CardItem
             title={t("newApiModelSync:settings.viewExecution")}
@@ -277,4 +355,12 @@ export default function NewApiModelSyncSettings() {
       </Card>
     </SettingSection>
   )
+}
+
+function buildModelOptions(metadata: ModelMetadata[]): MultiSelectOption[] {
+  const options = metadata.map((model) => ({
+    label: model.id,
+    value: model.id
+  }))
+  return options.sort((a, b) => a.label.localeCompare(b.label))
 }

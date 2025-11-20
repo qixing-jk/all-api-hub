@@ -86,6 +86,10 @@ export interface UserPreferences {
       // 瞬时突发请求数
       burst: number
     }
+    /**
+     * 限制可同步的模型列表，空数组表示同步全部
+     */
+    allowedModels: string[]
   }
 
   /**
@@ -192,7 +196,8 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
     rateLimit: {
       requestsPerMinute: 20, // 每分钟20个请求
       burst: 5 // 允许5个突发请求
-    }
+    },
+    allowedModels: []
   },
   autoCheckin: {
     globalEnabled: false,
