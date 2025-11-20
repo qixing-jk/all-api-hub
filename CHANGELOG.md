@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.12.0](https://github.com/qixing-jk/all-api-hub/compare/v2.11.0...v2.12.0) (2025-11-20)
+
+
+### Features
+
+* **MultiSelect:** enhance search with priority-based sorting ([428448f](https://github.com/qixing-jk/all-api-hub/commit/428448f8924e67e2d1b4b8085908e11e19c14389))
+* **new-api-model-sync:** add model allow-list filtering capability ([#169](https://github.com/qixing-jk/all-api-hub/issues/169)) ([d60b15d](https://github.com/qixing-jk/all-api-hub/commit/d60b15d988d7bdba75fc55e69c985a091b4b9817))
+* **new-api-model-sync:** implement channel upstream model options caching ([ccfb81f](https://github.com/qixing-jk/all-api-hub/commit/ccfb81f20893243ad346b8b92afb50968aa35e4b))
+* **ui:** implement collapsible sidebar with animation support ([#174](https://github.com/qixing-jk/all-api-hub/issues/174)) ([fd9caea](https://github.com/qixing-jk/all-api-hub/commit/fd9caeae068e0ec09d3786629dec27b2d90e3a6a))
+
 ## [2.11.0](https://github.com/qixing-jk/all-api-hub/compare/v2.10.0...v2.11.0) (2025-11-19)
 
 
