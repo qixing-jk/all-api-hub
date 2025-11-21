@@ -9,10 +9,10 @@ const CreditsCard = () => {
     <Card>
       <CardContent>
         <div className="flex items-start space-x-4">
-          <HeartIcon className="mt-1 h-6 w-6 flex-shrink-0 text-red-500 dark:text-red-400" />
+          <HeartIcon className="mt-1 h-6 w-6 shrink-0 text-red-500 dark:text-red-400" />
           <div className="flex-1">
             <Heading6 className="mb-2">{t("devMaintenance")}</Heading6>
-            <BodySmall className="mb-4 text-gray-600 dark:text-dark-text-secondary">
+            <BodySmall className="dark:text-dark-text-secondary mb-4 text-gray-600">
               {t("thanksDesc")}
             </BodySmall>
             <div className="flex flex-wrap gap-2">

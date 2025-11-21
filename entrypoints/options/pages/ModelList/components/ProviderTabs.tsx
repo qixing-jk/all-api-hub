@@ -100,17 +100,17 @@ export function ProviderTabs({
       }}>
       <Tab.List
         ref={tabListRef}
-        className={`flex space-x-1 rounded-xl ${COLORS.background.tertiary} mb-6 touch-pan-x overflow-x-auto p-1 scrollbar-hide`}>
+        className={`flex space-x-1 rounded-xl ${COLORS.background.tertiary} scrollbar-hide mb-6 touch-pan-x overflow-x-auto p-1`}>
         <Tab
           className={({ selected }) =>
-            `flex-shrink-0 rounded-lg px-4 py-2.5 text-sm font-medium leading-5 transition-all ${ANIMATIONS.transition.base} ${
+            `shrink-0 rounded-lg px-4 py-2.5 text-sm leading-5 font-medium transition-all ${ANIMATIONS.transition.base} ${
               selected
-                ? "bg-white text-blue-700 shadow dark:bg-dark-bg-secondary dark:text-blue-400"
-                : "text-gray-700 hover:bg-white/60 hover:text-gray-900 dark:text-dark-text-secondary dark:hover:bg-dark-bg-secondary/60 dark:hover:text-dark-text-primary"
+                ? "dark:bg-dark-bg-secondary bg-white text-blue-700 shadow dark:text-blue-400"
+                : "dark:text-dark-text-secondary dark:hover:bg-dark-bg-secondary/60 dark:hover:text-dark-text-primary text-gray-700 hover:bg-white/60 hover:text-gray-900"
             }`
           }>
           <div className="flex items-center justify-center space-x-2">
-            <CpuChipIcon className="h-4 w-4 text-gray-600 dark:text-dark-text-secondary" />
+            <CpuChipIcon className="dark:text-dark-text-secondary h-4 w-4 text-gray-600" />
             <span>{t("allProviders", { count: baseFilteredModelsCount })}</span>
           </div>
         </Tab>
@@ -123,10 +123,10 @@ export function ProviderTabs({
             <Tab
               key={provider}
               className={({ selected }) =>
-                `flex-shrink-0 rounded-lg px-4 py-2.5 text-sm font-medium leading-5 transition-all ${ANIMATIONS.transition.base} ${
+                `shrink-0 rounded-lg px-4 py-2.5 text-sm leading-5 font-medium transition-all ${ANIMATIONS.transition.base} ${
                   selected
-                    ? "bg-white text-blue-700 shadow dark:bg-dark-bg-secondary dark:text-blue-400"
-                    : "text-gray-700 hover:bg-white/60 hover:text-gray-900 dark:text-dark-text-secondary dark:hover:bg-dark-bg-secondary/60 dark:hover:text-dark-text-primary"
+                    ? "dark:bg-dark-bg-secondary bg-white text-blue-700 shadow dark:text-blue-400"
+                    : "dark:text-dark-text-secondary dark:hover:bg-dark-bg-secondary/60 dark:hover:text-dark-text-primary text-gray-700 hover:bg-white/60 hover:text-gray-900"
                 }`
               }>
               <div className="flex items-center justify-center space-x-2">

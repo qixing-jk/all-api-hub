@@ -36,7 +36,7 @@ export default function Tooltip({
 
   const isString = typeof content === "string"
 
-  const defaultClassName = `z-[9999] max-w-[90vw] bg-gray-900 dark:bg-dark-bg-tertiary text-white dark:text-dark-text-primary text-xs rounded-lg shadow-lg px-3 py-2 ${className}`
+  const defaultClassName = `z-9999 max-w-[90vw] bg-gray-900 dark:bg-dark-bg-tertiary text-white dark:text-dark-text-primary text-xs rounded-lg shadow-lg px-3 py-2 ${className}`
   return (
     <>
       <div

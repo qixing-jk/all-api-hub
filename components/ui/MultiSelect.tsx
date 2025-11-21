@@ -170,7 +170,7 @@ export function MultiSelect({
   return (
     <div className={cn("w-full", className)}>
       {label && (
-        <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-dark-text-primary">
+        <label className="dark:text-dark-text-primary mb-1 block text-sm font-medium text-gray-700">
           {label}
         </label>
       )}
@@ -186,7 +186,7 @@ export function MultiSelect({
         <div className="relative" ref={comboboxRef}>
           <div className="relative w-full">
             <Combobox.Input
-              className="w-full rounded-md border border-gray-300 bg-white py-2 pl-3 pr-10 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary dark:text-dark-text-primary"
+              className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary dark:text-dark-text-primary w-full rounded-md border border-gray-300 bg-white py-2 pr-10 pl-3 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
               placeholder={placeholder}
               onChange={(event) => setQuery(event.target.value)}
               onKeyDown={handleInputKeyDown}
@@ -209,14 +209,14 @@ export function MultiSelect({
             appear>
             <Combobox.Options
               className={cn(
-                "absolute z-10 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none dark:bg-dark-bg-secondary sm:text-sm",
+                "ring-opacity-5 dark:bg-dark-bg-secondary absolute z-10 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black focus:outline-none sm:text-sm",
                 dropdownPosition === "top"
                   ? "bottom-full mb-1"
                   : "top-full mt-1"
               )}>
               {({ option: option }) => {
                 return filteredOptions.length === 0 && query !== "" ? (
-                  <div className="relative cursor-default select-none px-4 py-2 text-gray-700 dark:text-dark-text-secondary">
+                  <div className="dark:text-dark-text-secondary relative cursor-default px-4 py-2 text-gray-700 select-none">
                     {allowCustom
                       ? "Press Enter to add custom value"
                       : "Nothing found."}
@@ -226,10 +226,10 @@ export function MultiSelect({
                     key={option.value}
                     className={({ active }) =>
                       cn(
-                        "relative cursor-default select-none py-2 pl-10 pr-4",
+                        "relative cursor-default py-2 pr-4 pl-10 select-none",
                         active
                           ? "bg-blue-600 text-white"
-                          : "text-gray-900 dark:text-dark-text-primary"
+                          : "dark:text-dark-text-primary text-gray-900"
                       )
                     }
                     value={option}>
@@ -266,14 +266,14 @@ export function MultiSelect({
         <div className="mt-2 space-y-2">
           <button
             type="button"
-            className="flex w-full items-center justify-between rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-left text-sm font-medium text-gray-700 transition hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary/60 dark:text-dark-text-primary dark:hover:bg-dark-bg-secondary"
+            className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary/60 dark:text-dark-text-primary dark:hover:bg-dark-bg-secondary flex w-full items-center justify-between rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-left text-sm font-medium text-gray-700 transition hover:bg-gray-100 focus:ring-2 focus:ring-blue-500 focus:outline-none"
             onClick={toggleSelectedExpanded}
             aria-expanded={isSelectedExpanded}
             aria-controls={`${uid}-selected-items`}>
             <span className="flex min-w-0 items-center gap-2">
               <ChevronDownIcon
                 className={cn(
-                  "h-4 w-4 flex-shrink-0 text-gray-500 transition-transform dark:text-dark-text-secondary",
+                  "dark:text-dark-text-secondary h-4 w-4 shrink-0 text-gray-500 transition-transform",
                   isSelectedExpanded ? "rotate-180" : ""
                 )}
               />
@@ -282,17 +282,17 @@ export function MultiSelect({
               </span>
             </span>
             {!isSelectedExpanded && (
-              <span className="ml-3 flex items-center gap-1 overflow-hidden text-xs text-gray-500 dark:text-dark-text-secondary">
+              <span className="dark:text-dark-text-secondary ml-3 flex items-center gap-1 overflow-hidden text-xs text-gray-500">
                 {previewOptions.map((option) => (
                   <span
                     key={`preview-${option.value}`}
-                    className="max-w-[100px] flex-shrink-0 truncate rounded-full bg-gray-200 px-2 py-0.5 text-xs text-gray-600 dark:bg-dark-bg-tertiary dark:text-dark-text-tertiary"
+                    className="dark:bg-dark-bg-tertiary dark:text-dark-text-tertiary max-w-[100px] shrink-0 truncate rounded-full bg-gray-200 px-2 py-0.5 text-xs text-gray-600"
                     title={option.label}>
                     {option.label}
                   </span>
                 ))}
                 {remainingPreviewCount > 0 && (
-                  <span className="flex-shrink-0 text-xs text-gray-400 dark:text-dark-text-tertiary">
+                  <span className="dark:text-dark-text-tertiary shrink-0 text-xs text-gray-400">
                     +{remainingPreviewCount}
                   </span>
                 )}
@@ -314,7 +314,7 @@ export function MultiSelect({
                     <button
                       type="button"
                       onClick={() => handleRemove(option.value)}
-                      className="inline-flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full text-blue-400 hover:bg-blue-200 hover:text-blue-500 focus:bg-blue-500 focus:text-white focus:outline-none dark:hover:bg-blue-800"
+                      className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-blue-400 hover:bg-blue-200 hover:text-blue-500 focus:bg-blue-500 focus:text-white focus:outline-none dark:hover:bg-blue-800"
                       aria-label={`Remove ${option.label}`}>
                       <XMarkIcon className="h-3 w-3" />
                     </button>

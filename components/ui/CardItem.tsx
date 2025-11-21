@@ -77,7 +77,7 @@ const CardItem = React.forwardRef<HTMLDivElement, CardSectionProps>(
           <>
             <div className="flex min-w-0 flex-1 items-center gap-3">
               {icon && (
-                <div className="flex-shrink-0 rounded-lg bg-gray-100 p-1 transition-colors dark:bg-dark-bg-tertiary sm:p-2">
+                <div className="dark:bg-dark-bg-tertiary shrink-0 rounded-lg bg-gray-100 p-1 transition-colors sm:p-2">
                   {icon}
                 </div>
               )}
@@ -85,12 +85,12 @@ const CardItem = React.forwardRef<HTMLDivElement, CardSectionProps>(
                 {title && (
                   <Typography
                     variant="h6"
-                    className="mb-0.5 text-gray-900 transition-colors dark:text-dark-text-primary">
+                    className="dark:text-dark-text-primary mb-0.5 text-gray-900 transition-colors">
                     {title}
                   </Typography>
                 )}
                 {description && (
-                  <BodySmall className="text-gray-500 dark:text-dark-text-tertiary">
+                  <BodySmall className="dark:text-dark-text-tertiary text-gray-500">
                     {description}
                   </BodySmall>
                 )}

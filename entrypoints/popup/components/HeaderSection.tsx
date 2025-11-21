@@ -59,26 +59,26 @@ export default function HeaderSection() {
 
   return (
     <header
-      className={`flex items-center justify-between px-3 py-2 sm:px-5 sm:py-3 ${COLORS.background.primary} ${COLORS.border.default} flex-shrink-0 border-b`}>
+      className={`flex items-center justify-between px-3 py-2 sm:px-5 sm:py-3 ${COLORS.background.primary} ${COLORS.border.default} shrink-0 border-b`}>
       {/* Logo and Title Section */}
       <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
         <img
           src={iconImage}
           alt={t("ui:app.name")}
-          className="h-6 w-6 flex-shrink-0 rounded-lg shadow-sm sm:h-7 sm:w-7"
+          className="h-6 w-6 shrink-0 rounded-lg shadow-sm sm:h-7 sm:w-7"
         />
         <div className="flex min-w-0 flex-1 flex-col">
           <BodySmall weight="semibold" className="truncate">
             {t("ui:app.name")}
           </BodySmall>
-          <Caption className="hidden truncate xs:block">
+          <Caption className="xs:block hidden truncate">
             {t("ui:app.description")}
           </Caption>
         </div>
       </div>
 
       {/* Action Buttons Section */}
-      <div className="flex flex-shrink-0 items-center gap-1 sm:gap-2">
+      <div className="flex shrink-0 items-center gap-1 sm:gap-2">
         <CompactThemeToggle />
 
         <Tooltip content={t("common:actions.refresh")}>

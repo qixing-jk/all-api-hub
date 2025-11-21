@@ -47,7 +47,7 @@ export default function ActionButtons({
           type="button"
           onClick={onAutoDetect}
           disabled={!url.trim() || isDetecting}
-          className="flex flex-1 items-center justify-center space-x-2 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50">
+          className="flex flex-1 items-center justify-center space-x-2 rounded-lg bg-linear-to-r from-blue-500 to-indigo-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:from-blue-600 hover:to-indigo-700 focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50">
           {isDetecting ? (
             <>
               <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
@@ -63,7 +63,7 @@ export default function ActionButtons({
         <button
           type="button"
           onClick={onShowManualForm}
-          className="flex flex-1 items-center justify-center space-x-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm transition-all duration-200 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary dark:text-dark-text-secondary dark:hover:bg-dark-bg-tertiary">
+          className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary dark:text-dark-text-secondary dark:hover:bg-dark-bg-tertiary flex flex-1 items-center justify-center space-x-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm transition-all duration-200 hover:bg-gray-50 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
           <PencilIcon className="h-4 w-4" />
           <span>{t("accountDialog:mode.manualAdd")}</span>
         </button>
@@ -76,7 +76,7 @@ export default function ActionButtons({
       <button
         type="button"
         onClick={onClose}
-        className="rounded-lg bg-gray-100 px-4 py-2.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 dark:bg-dark-bg-tertiary dark:text-dark-text-secondary dark:hover:bg-gray-700">
+        className="dark:bg-dark-bg-tertiary dark:text-dark-text-secondary rounded-lg bg-gray-100 px-4 py-2.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-200 focus:ring-2 focus:ring-gray-500 focus:outline-none dark:hover:bg-gray-700">
         {t("common:actions.cancel")}
       </button>
 
@@ -85,7 +85,7 @@ export default function ActionButtons({
           type="button"
           onClick={onAutoDetect}
           disabled={!url.trim() || isDetecting}
-          className="flex flex-1 items-center justify-center space-x-2 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50">
+          className="flex flex-1 items-center justify-center space-x-2 rounded-lg bg-linear-to-r from-blue-500 to-indigo-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:from-blue-600 hover:to-indigo-700 focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50">
           {isDetecting ? (
             <>
               <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
@@ -105,7 +105,7 @@ export default function ActionButtons({
           type="button"
           onClick={onAutoConfig}
           disabled={isAutoConfiguring || isSaving}
-          className="flex flex-1 items-center justify-center space-x-2 rounded-lg bg-gradient-to-r from-purple-500 to-pink-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:from-purple-600 hover:to-pink-700 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex flex-1 items-center justify-center space-x-2 rounded-lg bg-linear-to-r from-purple-500 to-pink-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:from-purple-600 hover:to-pink-700 focus:ring-2 focus:ring-purple-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
           aria-label={t("accountDialog:actions.autoConfigAriaLabel")}
           title={t("accountDialog:actions.autoConfigTitle")}>
           {isAutoConfiguring ? (
@@ -126,7 +126,7 @@ export default function ActionButtons({
         type="submit"
         {...(formId ? { form: formId } : {})}
         disabled={!isFormValid || isSaving || isAutoConfiguring}
-        className="flex flex-1 items-center justify-center space-x-2 rounded-lg bg-gradient-to-r from-green-500 to-emerald-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:cursor-not-allowed disabled:opacity-50">
+        className="flex flex-1 items-center justify-center space-x-2 rounded-lg bg-linear-to-r from-green-500 to-emerald-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:from-green-600 hover:to-emerald-700 focus:ring-2 focus:ring-green-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50">
         {isSaving ? (
           <>
             <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />

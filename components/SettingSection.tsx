@@ -76,7 +76,7 @@ export function SettingSection({
               onClick={handleResetClick}
               variant="outline"
               size="sm"
-              className="flex-shrink-0">
+              className="shrink-0">
               <ArrowPathIcon className="mr-2 h-4 w-4" />
               {resetButtonLabel || t("common:actions.reset")}
             </Button>
@@ -93,7 +93,7 @@ export function SettingSection({
         size="sm"
         header={
           <div className="pr-8">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-dark-text-primary">
+            <h3 className="dark:text-dark-text-primary text-lg font-semibold text-gray-900">
               {t("messages.confirmReset")}
             </h3>
           </div>
@@ -117,7 +117,7 @@ export function SettingSection({
             </Button>
           </div>
         }>
-        <p className="text-sm text-gray-600 dark:text-dark-text-secondary">
+        <p className="dark:text-dark-text-secondary text-sm text-gray-600">
           {t("messages.resetConfirmDesc", { name: title })}
         </p>
       </Modal>

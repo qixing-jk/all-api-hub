@@ -58,7 +58,7 @@ export default function InfoPanel({
   return (
     <div className={`${bgColor} border ${borderColor} rounded-lg p-3`}>
       <div className="flex">
-        <div className="flex-shrink-0">
+        <div className="shrink-0">
           <Icon className={`h-5 w-5 ${iconColor}`} />
         </div>
         <div className="ml-3">

@@ -19,10 +19,10 @@ export default function FirefoxAddAccountWarningDialog({
 
   const header = (
     <div className="flex items-center space-x-3">
-      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-r from-orange-500 to-amber-600">
+      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-r from-orange-500 to-amber-600">
         <ExclamationTriangleIcon className="h-4 w-4 text-white" />
       </div>
-      <div className="text-lg font-semibold text-gray-900 dark:text-dark-text-primary">
+      <div className="dark:text-dark-text-primary text-lg font-semibold text-gray-900">
         {t("dialog.firefox.warningTitle")}
       </div>
     </div>
@@ -33,11 +33,11 @@ export default function FirefoxAddAccountWarningDialog({
       <div className="text-center">
         <ExclamationTriangleIcon className="mx-auto h-12 w-12 text-orange-500" />
         <div className="mt-3">
-          <h3 className="text-base font-medium text-gray-900 dark:text-dark-text-primary">
+          <h3 className="dark:text-dark-text-primary text-base font-medium text-gray-900">
             {t("dialog.firefox.limitation")}
           </h3>
           <div className="mt-2">
-            <p className="text-sm text-gray-500 dark:text-dark-text-secondary">
+            <p className="dark:text-dark-text-secondary text-sm text-gray-500">
               {t("dialog.firefox.popupLimitation")}
             </p>
           </div>
@@ -46,7 +46,7 @@ export default function FirefoxAddAccountWarningDialog({
 
       <div className="rounded-lg border border-orange-100 bg-orange-50 p-3 dark:border-orange-900/30 dark:bg-orange-900/20">
         <div className="flex">
-          <div className="flex-shrink-0">
+          <div className="shrink-0">
             <ExclamationTriangleIcon className="h-5 w-5 text-orange-400 dark:text-orange-300" />
           </div>
           <div className="ml-3">

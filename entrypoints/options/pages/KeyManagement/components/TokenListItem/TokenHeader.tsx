@@ -43,13 +43,13 @@ function TokenActionButtons({
   }
 
   return (
-    <div className="flex flex-shrink-0 items-center gap-1 sm:gap-1.5">
+    <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
       <IconButton
         aria-label={t("common:actions.copyKey")}
         size="sm"
         variant="ghost"
         onClick={() => copyKey(token.key, token.name)}>
-        <DocumentDuplicateIcon className="h-4 w-4 text-gray-500 dark:text-dark-text-tertiary" />
+        <DocumentDuplicateIcon className="dark:text-dark-text-tertiary h-4 w-4 text-gray-500" />
       </IconButton>
       <IconButton
         aria-label={t("actions.useInCherry")}

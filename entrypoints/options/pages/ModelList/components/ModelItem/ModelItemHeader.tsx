@@ -32,8 +32,7 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
     <div className="min-w-0 flex-1">
       <div className="flex items-center gap-2 sm:gap-3">
         {/* 厂商图标 */}
-        <div
-          className={`flex-shrink-0 rounded-lg p-1.5 ${providerConfig.bgColor}`}>
+        <div className={`shrink-0 rounded-lg p-1.5 ${providerConfig.bgColor}`}>
           <IconComponent
             className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${providerConfig.color}`}
           />
@@ -43,8 +42,8 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
         <h3
           className={`truncate text-sm font-semibold sm:text-base md:text-lg ${
             isAvailableForUser
-              ? "text-gray-900 dark:text-dark-text-primary"
-              : "text-gray-500 dark:text-dark-text-tertiary"
+              ? "dark:text-dark-text-primary text-gray-900"
+              : "dark:text-dark-text-tertiary text-gray-500"
           }`}>
           {model.model_name}
         </h3>
@@ -56,12 +55,12 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
           onClick={handleCopyModelName}
           title={t("messages.modelNameCopied")}
           aria-label={t("messages.modelNameCopied")}
-          className="flex-shrink-0">
+          className="shrink-0">
           <DocumentDuplicateIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
         </IconButton>
 
         {/* 标签 */}
-        <div className="flex flex-shrink-0 items-center gap-1.5 sm:gap-2">
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           {/* 计费模式标签 */}
           <Badge
             variant={getBillingVariant(model.quota_type)}

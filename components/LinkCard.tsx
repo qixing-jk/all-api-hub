@@ -29,7 +29,7 @@ const LinkCard = ({
   return (
     <Card padding="md">
       <div className="flex items-start space-x-4">
-        <Icon className={`mt-1 h-6 w-6 flex-shrink-0 ${iconClass}`} />
+        <Icon className={`mt-1 h-6 w-6 shrink-0 ${iconClass}`} />
         <div className="flex-1">
           <Heading5 weight="medium" className="mb-2">
             {title}

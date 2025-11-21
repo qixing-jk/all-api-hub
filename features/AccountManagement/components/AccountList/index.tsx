@@ -111,7 +111,7 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
     <Card padding="none" className="flex flex-col overflow-hidden">
       <CardContent padding={"none"} spacing={"none"}>
         {/* Search Bar */}
-        <div className="border-b border-gray-200 bg-white px-3 py-2 dark:border-dark-bg-tertiary dark:bg-dark-bg-primary sm:px-5 sm:py-3">
+        <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-primary border-b border-gray-200 bg-white px-3 py-2 sm:px-5 sm:py-3">
           <AccountSearchInput
             value={query}
             onChange={setQuery}
@@ -121,7 +121,7 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
 
         {/* Header */}
         {
-          <div className="sticky top-0 z-10 border-b border-gray-200 bg-gray-50 px-3 py-2 dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary sm:px-5">
+          <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary sticky top-0 z-10 border-b border-gray-200 bg-gray-50 px-3 py-2 sm:px-5">
             <div className="flex items-center justify-between gap-2 sm:gap-4">
               {/* Account Name Column */}
               <div className="flex min-w-0 flex-1 gap-2">
@@ -132,17 +132,17 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
               </div>
 
               {/* Balance & Consumption Column */}
-              <div className="flex flex-shrink-0 items-end gap-0.5">
+              <div className="flex shrink-0 items-end gap-0.5">
                 <div className="flex items-center">
                   {renderSortButton(
                     DATA_TYPE_BALANCE,
                     t("account:list.header.balance")
                   )}
                 </div>
-                <div className="text-[10px] text-gray-400 dark:text-dark-text-tertiary sm:text-xs">
+                <div className="dark:text-dark-text-tertiary text-[10px] text-gray-400 sm:text-xs">
                   /
                 </div>
-                <div className="flex items-center text-[9px] text-gray-400 dark:text-dark-text-tertiary sm:text-[10px]">
+                <div className="dark:text-dark-text-tertiary flex items-center text-[9px] text-gray-400 sm:text-[10px]">
                   {renderSortButton(
                     DATA_TYPE_CONSUMPTION,
                     t("account:list.header.todayConsumption")

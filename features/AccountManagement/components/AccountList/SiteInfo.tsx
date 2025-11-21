@@ -50,7 +50,7 @@ function renderHighlightedFragments(
     fragment.highlighted ? (
       <mark
         key={`${fragment.text}-${index}`}
-        className="rounded bg-yellow-200 px-0.5 text-gray-900 dark:bg-yellow-500/30 dark:text-dark-text-primary">
+        className="dark:text-dark-text-primary rounded bg-yellow-200 px-0.5 text-gray-900 dark:bg-yellow-500/30">
         {fragment.text}
       </mark>
     ) : (
@@ -199,7 +199,7 @@ export default function SiteInfo({ site, highlights }: SiteInfoProps) {
 
   return (
     <div className="flex w-full min-w-0 items-center gap-2">
-      <div className="flex flex-shrink-0 flex-col items-center justify-center gap-2 self-stretch">
+      <div className="flex shrink-0 flex-col items-center justify-center gap-2 self-stretch">
         <Tooltip
           content={
             <div className="space-y-1">
@@ -229,7 +229,7 @@ export default function SiteInfo({ site, highlights }: SiteInfoProps) {
           }
           position="right">
           <button
-            className={`h-2 w-2 flex-shrink-0 rounded-full transition-all duration-200 ${
+            className={`h-2 w-2 shrink-0 rounded-full transition-all duration-200 ${
               isRefreshing
                 ? "animate-pulse opacity-60"
                 : "cursor-pointer hover:scale-125"
@@ -250,7 +250,7 @@ export default function SiteInfo({ site, highlights }: SiteInfoProps) {
               size="none"
               aria-label={pinTooltipLabel}>
               <PinIcon
-                className="h-3 w-3 -rotate-12 text-gray-400 transition-colors dark:text-dark-text-tertiary"
+                className="dark:text-dark-text-tertiary h-3 w-3 -rotate-12 text-gray-400 transition-colors"
                 aria-hidden="true"
               />
             </IconButton>
@@ -287,7 +287,7 @@ export default function SiteInfo({ site, highlights }: SiteInfoProps) {
         </div>
 
         <div className="flex min-w-0 items-start gap-1">
-          <UserIcon className="mt-0.5 h-3 w-3 flex-shrink-0 text-gray-400 dark:text-dark-text-tertiary" />
+          <UserIcon className="dark:text-dark-text-tertiary mt-0.5 h-3 w-3 shrink-0 text-gray-400" />
           <Caption className="truncate" title={site.username}>
             {highlights?.username && site.username
               ? renderHighlightedFragments(highlights.username, site.username)
@@ -297,7 +297,7 @@ export default function SiteInfo({ site, highlights }: SiteInfoProps) {
 
         {highlights?.baseUrl && (
           <div className="mt-0.5 flex min-w-0 items-start gap-1">
-            <LinkIcon className="mt-0.5 h-3 w-3 flex-shrink-0 text-gray-400 dark:text-dark-text-tertiary" />
+            <LinkIcon className="dark:text-dark-text-tertiary mt-0.5 h-3 w-3 shrink-0 text-gray-400" />
             <Caption className="truncate" title={site.baseUrl}>
               {renderHighlightedFragments(highlights.baseUrl, site.baseUrl)}
             </Caption>
@@ -306,7 +306,7 @@ export default function SiteInfo({ site, highlights }: SiteInfoProps) {
 
         {highlights?.customCheckInUrl && site.checkIn?.customCheckInUrl && (
           <div className="mt-0.5 flex min-w-0 items-start gap-1">
-            <ArrowPathIcon className="mt-0.5 h-3 w-3 flex-shrink-0 text-gray-400 dark:text-dark-text-tertiary" />
+            <ArrowPathIcon className="dark:text-dark-text-tertiary mt-0.5 h-3 w-3 shrink-0 text-gray-400" />
             <Caption className="truncate" title={site.checkIn.customCheckInUrl}>
               {renderHighlightedFragments(
                 highlights.customCheckInUrl,
@@ -318,7 +318,7 @@ export default function SiteInfo({ site, highlights }: SiteInfoProps) {
 
         {highlights?.customRedeemUrl && site.checkIn?.customRedeemUrl && (
           <div className="mt-0.5 flex min-w-0 items-start gap-1">
-            <GiftIcon className="mt-0.5 h-3 w-3 flex-shrink-0 text-gray-400 dark:text-dark-text-tertiary" />
+            <GiftIcon className="dark:text-dark-text-tertiary mt-0.5 h-3 w-3 shrink-0 text-gray-400" />
             <Caption className="truncate" title={site.checkIn.customRedeemUrl}>
               {renderHighlightedFragments(
                 highlights.customRedeemUrl,
@@ -330,7 +330,7 @@ export default function SiteInfo({ site, highlights }: SiteInfoProps) {
 
         {site.notes && (
           <div className="mt-0.5 flex min-w-0 items-start gap-1 sm:mt-1">
-            <PencilSquareIcon className="mt-0.5 h-3 w-3 flex-shrink-0 text-gray-400 dark:text-dark-text-tertiary" />
+            <PencilSquareIcon className="dark:text-dark-text-tertiary mt-0.5 h-3 w-3 shrink-0 text-gray-400" />
             <Caption className="truncate" title={site.notes}>
               {site.notes}
             </Caption>

@@ -14,8 +14,8 @@ export default function DialogHeader({ mode }: DialogHeaderProps) {
   const title = isAddMode ? t("title.add") : t("title.edit")
   const Icon = isAddMode ? SparklesIcon : PencilIcon
   const iconBgClass = isAddMode
-    ? "bg-gradient-to-r from-blue-500 to-indigo-600"
-    : "bg-gradient-to-r from-green-500 to-emerald-600"
+    ? "bg-linear-to-r from-blue-500 to-indigo-600"
+    : "bg-linear-to-r from-green-500 to-emerald-600"
 
   return (
     <div className="flex items-center justify-between">
@@ -24,7 +24,7 @@ export default function DialogHeader({ mode }: DialogHeaderProps) {
           className={`h-8 w-8 ${iconBgClass} flex items-center justify-center rounded-lg`}>
           <Icon className="h-4 w-4 text-white" />
         </div>
-        <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-dark-text-primary">
+        <DialogTitle className="dark:text-dark-text-primary text-lg font-semibold text-gray-900">
           {title}
         </DialogTitle>
       </div>

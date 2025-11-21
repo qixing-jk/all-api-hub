@@ -26,7 +26,7 @@ const FeatureList = ({ title, items, color }: FeatureListProps) => {
 
   return (
     <div>
-      <h3 className="mb-3 flex items-center text-base font-medium text-gray-800 dark:text-dark-text-primary">
+      <h3 className="dark:text-dark-text-primary mb-3 flex items-center text-base font-medium text-gray-800">
         <div className={`h-2 w-2 ${palette.dot} mr-2 rounded-full`}></div>
         {title}
       </h3>
@@ -37,7 +37,7 @@ const FeatureList = ({ title, items, color }: FeatureListProps) => {
               key={index}
               className={`flex items-start space-x-2 text-sm ${palette.text}`}>
               <div
-                className={`h-1.5 w-1.5 ${palette.bullet} mt-2 flex-shrink-0 rounded-full`}></div>
+                className={`h-1.5 w-1.5 ${palette.bullet} mt-2 shrink-0 rounded-full`}></div>
               <span>{feature}</span>
             </li>
           ))}

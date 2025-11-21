@@ -49,7 +49,7 @@ const AccountListItem: React.FC<AccountListItemProps> = React.memo(
 
           {/* 中间：操作按钮 */}
           <div
-            className={`flex-shrink-0 transition-opacity duration-200 ${revealButtonsClass}`}>
+            className={`shrink-0 transition-opacity duration-200 ${revealButtonsClass}`}>
             <AccountActionButtons
               site={site}
               onDeleteAccount={onDeleteWithDialog}

@@ -88,13 +88,13 @@ function Sidebar({
         animate={{ width: targetWidth }}
         style={{ width: targetWidth, height: sidebarHeight, top: sidebarTop }}
         className={cn(
-          "z-40 flex-shrink-0 transform transition-transform duration-300 ease-in-out",
+          "z-40 shrink-0 transform transition-transform duration-300 ease-in-out",
           isMobileOpen
             ? "fixed inset-y-0 left-0 translate-x-0"
             : "fixed inset-y-0 left-0 -translate-x-full md:translate-x-0",
           "md:sticky md:inset-auto md:left-auto md:translate-x-0 md:self-start md:overflow-hidden"
         )}>
-        <div className="flex h-full flex-col border-r border-gray-200 bg-white shadow-sm dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary">
+        <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary flex h-full flex-col border-r border-gray-200 bg-white shadow-sm">
           <div
             className={cn(
               "flex h-16 items-center px-3 py-2",
@@ -105,7 +105,7 @@ function Sidebar({
                 <Heading3
                   aria-hidden={shouldShowCollapsedState}
                   className={cn(
-                    "truncate text-sm font-semibold uppercase tracking-wide text-gray-500 transition-all duration-200 dark:text-dark-text-tertiary",
+                    "dark:text-dark-text-tertiary truncate text-sm font-semibold tracking-wide text-gray-500 uppercase transition-all duration-200",
                     shouldShowCollapsedState
                       ? "max-w-0 opacity-0"
                       : "max-w-[200px] opacity-100"
@@ -119,7 +119,7 @@ function Sidebar({
                 aria-label={collapseButtonLabel}
                 variant="outline"
                 size="icon"
-                className="hidden h-8 w-8 rounded-full border-gray-200 text-gray-600 dark:border-dark-bg-tertiary dark:text-dark-text-secondary md:inline-flex"
+                className="dark:border-dark-bg-tertiary dark:text-dark-text-secondary hidden h-8 w-8 rounded-full border-gray-200 text-gray-600 md:inline-flex"
                 onClick={handleCollapseButtonClick}>
                 {shouldShowCollapsedState ? (
                   <ChevronDoubleRightIcon className="h-4 w-4" />
@@ -157,14 +157,14 @@ function Sidebar({
                         shouldShowCollapsedState && "justify-center px-0",
                         isActive
                           ? "bg-blue-600 text-white dark:bg-blue-500"
-                          : "text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-dark-text-secondary dark:hover:bg-dark-bg-tertiary"
+                          : "dark:text-dark-text-secondary dark:hover:bg-dark-bg-tertiary text-gray-700 hover:bg-gray-100 hover:text-gray-900"
                       )}>
                       <Icon
                         className={cn(
-                          "h-5 w-5 flex-shrink-0",
+                          "h-5 w-5 shrink-0",
                           isActive
                             ? "text-white"
-                            : "text-gray-400 group-hover:text-gray-600 dark:text-dark-text-tertiary"
+                            : "dark:text-dark-text-tertiary text-gray-400 group-hover:text-gray-600"
                         )}
                       />
 
@@ -189,7 +189,7 @@ function Sidebar({
           <div className="flex items-center justify-between px-3 py-3 sm:px-4">
             <Heading3
               className={cn(
-                "text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-dark-text-tertiary",
+                "dark:text-dark-text-tertiary text-xs font-semibold tracking-wide text-gray-400 uppercase",
                 shouldShowCollapsedState && "sr-only"
               )}>
               {t("navigation.settings")}

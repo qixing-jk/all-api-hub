@@ -1,6 +1,184 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+/* ===== 主题配置 ===== */
+@theme {
+  /* 响应式断点 */
+  --breakpoint-xs: 360px;
+  --breakpoint-sm: 480px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+
+  /* 背景颜色 */
+  --color-dark-bg-primary: #0f172a;
+  --color-dark-bg-secondary: #1e293b;
+  --color-dark-bg-tertiary: #334155;
+
+  /* 文字颜色 */
+  --color-dark-text-primary: #f1f5f9;
+  --color-dark-text-secondary: #cbd5e1;
+  --color-dark-text-tertiary: #94a3b8;
+
+  /* 品牌颜色 */
+  --color-brand-blue: #3b82f6;
+  --color-brand-green: #10b981;
+  --color-brand-red: #ef4444;
+  --color-brand-yellow: #f59e0b;
+  --color-brand-purple: #a855f7;
+
+  /* 语义化颜色 - 成功 */
+  --color-semantic-success-50: #f0fdf4;
+  --color-semantic-success-100: #dcfce7;
+  --color-semantic-success-500: #22c55e;
+  --color-semantic-success-600: #16a34a;
+  --color-semantic-success-700: #15803d;
+  --color-semantic-success-800: #166534;
+  --color-semantic-success-900: #14532d;
+
+  /* 语义化颜色 - 警告 */
+  --color-semantic-warning-50: #fffbeb;
+  --color-semantic-warning-100: #fef3c7;
+  --color-semantic-warning-500: #f59e0b;
+  --color-semantic-warning-600: #d97706;
+  --color-semantic-warning-700: #b45309;
+  --color-semantic-warning-800: #92400e;
+  --color-semantic-warning-900: #78350f;
+
+  /* 语义化颜色 - 错误 */
+  --color-semantic-error-50: #fef2f2;
+  --color-semantic-error-100: #fee2e2;
+  --color-semantic-error-500: #ef4444;
+  --color-semantic-error-600: #dc2626;
+  --color-semantic-error-700: #b91c1c;
+  --color-semantic-error-800: #991b1b;
+  --color-semantic-error-900: #7f1d1d;
+
+  /* 语义化颜色 - 信息 */
+  --color-semantic-info-50: #eff6ff;
+  --color-semantic-info-100: #dbeafe;
+  --color-semantic-info-500: #3b82f6;
+  --color-semantic-info-600: #2563eb;
+  --color-semantic-info-700: #1d4ed8;
+  --color-semantic-info-800: #1e40af;
+  --color-semantic-info-900: #1e3a8a;
+
+  /* 字体大小 */
+  --font-size-xs: 0.75rem;
+  --font-size-xs--line-height: 1rem;
+  --font-size-sm: 0.875rem;
+  --font-size-sm--line-height: 1.25rem;
+  --font-size-base: 1rem;
+  --font-size-base--line-height: 1.5rem;
+  --font-size-lg: 1.125rem;
+  --font-size-lg--line-height: 1.75rem;
+  --font-size-xl: 1.25rem;
+  --font-size-xl--line-height: 1.75rem;
+  --font-size-2xl: 1.5rem;
+  --font-size-2xl--line-height: 2rem;
+  --font-size-3xl: 1.875rem;
+  --font-size-3xl--line-height: 2.25rem;
+  --font-size-4xl: 2.25rem;
+  --font-size-4xl--line-height: 2.5rem;
+  --font-size-5xl: 3rem;
+  --font-size-5xl--line-height: 1;
+  --font-size-6xl: 3.75rem;
+  --font-size-6xl--line-height: 1;
+
+  /* 字体粗细 */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* 圆角 */
+  --radius-sm: 0.125rem;
+  --radius: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.5rem;
+
+  /* 阴影 */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1),
+    0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1),
+    0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+  --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
+
+  /* 动画 */
+  --animate-fade-in: fadeIn 0.2s ease-in-out;
+  --animate-fade-out: fadeOut 0.2s ease-in-out;
+  --animate-slide-in: slideIn 0.3s ease-out;
+  --animate-slide-out: slideOut 0.3s ease-in;
+
+  /* 安全区域间距 */
+  --spacing-safe-top: env(safe-area-inset-top);
+  --spacing-safe-bottom: env(safe-area-inset-bottom);
+  --spacing-safe-left: env(safe-area-inset-left);
+  --spacing-safe-right: env(safe-area-inset-right);
+}
+
+/* ===== 关键帧动画 ===== */
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes slideIn {
+  0% {
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOut {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+}
+
+/* ===== 自定义工具类 ===== */
+@utility scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@utility tap-highlight-transparent {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ===== 深色模式支持 ===== */
+@custom-variant dark (&:where(.dark, .dark *));
 
 /* 隐藏滚动条，但仍可滚动 */
 .scrollbar-hide {

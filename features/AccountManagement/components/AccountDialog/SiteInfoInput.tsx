@@ -52,17 +52,17 @@ export default function SiteInfoInput({
       <div className="flex justify-between">
         <label
           htmlFor="site-url"
-          className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary">
+          className="dark:text-dark-text-secondary block text-sm font-medium text-gray-700">
           {t("siteInfo.siteUrl")}
         </label>
         <label
           htmlFor="auth-type"
-          className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary">
+          className="dark:text-dark-text-secondary block text-sm font-medium text-gray-700">
           {t("siteInfo.authMethod")}
         </label>
       </div>
       <div className="flex items-center gap-2">
-        <div className="relative flex-grow">
+        <div className="relative grow">
           <Input
             id="site-url"
             type="text"
@@ -90,7 +90,7 @@ export default function SiteInfoInput({
             id="auth-type"
             value={authType}
             onChange={(e) => onAuthTypeChange(e.target.value as AuthTypeEnum)}
-            className="block rounded-lg border border-gray-200 bg-white py-3 text-sm text-gray-900 placeholder-gray-400 transition-colors focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary dark:text-dark-text-primary dark:placeholder-gray-500"
+            className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary dark:text-dark-text-primary block rounded-lg border border-gray-200 bg-white py-3 text-sm text-gray-900 placeholder-gray-400 transition-colors focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none dark:placeholder-gray-500"
             disabled={isDetected}>
             <option value={AuthTypeEnum.AccessToken}>Access Token</option>
             <option value={AuthTypeEnum.Cookie}>Cookie</option>
@@ -101,7 +101,7 @@ export default function SiteInfoInput({
         {isCurrentSiteAdded && handleEditClick && (
           <div className="flex w-full items-center justify-between rounded-md bg-yellow-50 p-2 text-xs text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-300">
             <div className="flex items-center">
-              <ExclamationTriangleIcon className="mr-1.5 h-4 w-4 flex-shrink-0" />
+              <ExclamationTriangleIcon className="mr-1.5 h-4 w-4 shrink-0" />
               <span>{t("siteInfo.alreadyAdded")}</span>
             </div>
             <Button
