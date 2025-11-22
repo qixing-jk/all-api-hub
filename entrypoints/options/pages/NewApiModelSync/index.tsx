@@ -48,6 +48,8 @@ export default function NewApiModelSync() {
   const [isChannelsLoading, setIsChannelsLoading] = useState(false)
   const [channelsError, setChannelsError] = useState<string | null>(null)
   const [manualSearchKeyword, setManualSearchKeyword] = useState("")
+  const [hasAttemptedChannelsLoad, setHasAttemptedChannelsLoad] =
+    useState(false)
 
   const loadLastExecution = useCallback(async () => {
     try {
@@ -103,6 +105,7 @@ export default function NewApiModelSync() {
       )
     } finally {
       setIsChannelsLoading(false)
+      setHasAttemptedChannelsLoad(true)
     }
   }, [t])
 
@@ -149,11 +152,18 @@ export default function NewApiModelSync() {
     if (
       selectedTab === TAB_INDEX.manual &&
       channels.length === 0 &&
-      !isChannelsLoading
+      !isChannelsLoading &&
+      !hasAttemptedChannelsLoad
     ) {
       void loadChannels()
     }
-  }, [channels.length, isChannelsLoading, loadChannels, selectedTab])
+  }, [
+    channels.length,
+    hasAttemptedChannelsLoad,
+    isChannelsLoading,
+    loadChannels,
+    selectedTab
+  ])
 
   const handleRunAll = async () => {
     try {
