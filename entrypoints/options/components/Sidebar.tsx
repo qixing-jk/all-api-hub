@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next"
 
 import { Button, Heading3, IconButton, Separator } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext.tsx"
+import { hasValidNewApiConfig } from "~/services/newApiService/newApiService"
 import { cn } from "~/utils/cn"
 
 import { menuItems } from "../constants"
@@ -142,6 +143,13 @@ function Sidebar({
                 if (
                   item.id === "autoCheckin" &&
                   !preferences?.autoCheckin?.globalEnabled
+                ) {
+                  return null
+                }
+
+                if (
+                  item.id === "newApiModelSync" &&
+                  !hasValidNewApiConfig(preferences ?? null)
                 ) {
                   return null
                 }
