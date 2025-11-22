@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.12.1](https://github.com/qixing-jk/all-api-hub/compare/v2.12.0...v2.12.1) (2025-11-22)
+
+
+### Bug Fixes
+
+* prevent unnecessary channels reload on manual tab selection ([c5e607f](https://github.com/qixing-jk/all-api-hub/commit/c5e607f762979c115f10d2ba9c353f7104c450cc))
+* **sidebar:** hide new API model sync option when config is invalid ([fd646ab](https://github.com/qixing-jk/all-api-hub/commit/fd646abd9f65db44911dd862ef6eaab8f75be1c5))
+
 ## [2.12.0](https://github.com/qixing-jk/all-api-hub/compare/v2.11.0...v2.12.0) (2025-11-20)
 
 
