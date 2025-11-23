@@ -23,7 +23,14 @@ vi.mock("~/services/userPreferences", () => ({
     autoCheckin: {
       globalEnabled: true,
       windowStart: "08:00",
-      windowEnd: "10:00"
+      windowEnd: "10:00",
+      scheduleMode: "random",
+      deterministicTime: "08:00",
+      retryStrategy: {
+        enabled: false,
+        intervalMinutes: 30,
+        maxAttemptsPerDay: 3
+      }
     }
   },
   userPreferences: {

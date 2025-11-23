@@ -1,5 +1,5 @@
 import { ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
@@ -14,7 +14,11 @@ import {
 } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { DEFAULT_PREFERENCES } from "~/services/userPreferences"
-import type { AutoCheckinPreferences } from "~/types/autoCheckin"
+import {
+  AUTO_CHECKIN_SCHEDULE_MODE,
+  AutoCheckinPreferences,
+  AutoCheckinScheduleMode
+} from "~/types/autoCheckin"
 
 export default function AutoCheckinSettings() {
   const { t } = useTranslation(["autoCheckin", "settings"])
@@ -26,6 +30,25 @@ export default function AutoCheckinSettings() {
   const [isSaving, setIsSaving] = useState(false)
 
   const preferences = userPrefs?.autoCheckin ?? DEFAULT_PREFERENCES.autoCheckin!
+  const retryPreferences = preferences.retryStrategy ?? {
+    enabled: false,
+    intervalMinutes: 30,
+    maxAttemptsPerDay: 3
+  }
+
+  const scheduleModes = useMemo(
+    () => [
+      {
+        value: AUTO_CHECKIN_SCHEDULE_MODE.RANDOM,
+        label: t("autoCheckin:settings.scheduleModeRandom")
+      },
+      {
+        value: AUTO_CHECKIN_SCHEDULE_MODE.DETERMINISTIC,
+        label: t("autoCheckin:settings.scheduleModeDeterministic")
+      }
+    ],
+    [t]
+  )
 
   const savePreferences = async (updates: Partial<AutoCheckinPreferences>) => {
     try {
@@ -64,6 +87,29 @@ export default function AutoCheckinSettings() {
     }
 
     return true
+  }
+
+  const validateTimeFormat = (time: string): boolean => {
+    const [hour, minute] = time.split(":").map(Number)
+    return (
+      Number.isInteger(hour) &&
+      Number.isInteger(minute) &&
+      hour >= 0 &&
+      hour <= 23 &&
+      minute >= 0 &&
+      minute <= 59
+    )
+  }
+
+  const saveRetryPreferences = async (
+    updates: Partial<AutoCheckinPreferences["retryStrategy"]>
+  ) => {
+    await savePreferences({
+      retryStrategy: {
+        ...retryPreferences,
+        ...updates
+      }
+    })
   }
 
   return (
@@ -138,6 +184,122 @@ export default function AutoCheckinSettings() {
                   }
                 }}
                 disabled={isSaving}
+                className="w-32"
+              />
+            }
+          />
+
+          {/* Schedule Mode */}
+          <CardItem
+            title={t("autoCheckin:settings.scheduleModeTitle")}
+            description={t("autoCheckin:settings.scheduleModeDesc")}
+            rightContent={
+              <div className="flex gap-2">
+                {scheduleModes.map((mode) => (
+                  <button
+                    key={mode.value}
+                    type="button"
+                    onClick={() =>
+                      savePreferences({
+                        scheduleMode: mode.value as AutoCheckinScheduleMode
+                      })
+                    }
+                    disabled={isSaving}
+                    className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
+                      preferences.scheduleMode === mode.value
+                        ? "border-blue-500 bg-blue-50 text-blue-600 dark:border-blue-400 dark:bg-blue-400/10 dark:text-blue-200"
+                        : "border-gray-300 text-gray-600 hover:border-gray-400 dark:border-gray-700 dark:text-gray-300"
+                    }`}>
+                    {mode.label}
+                  </button>
+                ))}
+              </div>
+            }
+          />
+
+          {/* Deterministic Time */}
+          {preferences.scheduleMode ===
+            AUTO_CHECKIN_SCHEDULE_MODE.DETERMINISTIC && (
+            <CardItem
+              title={t("autoCheckin:settings.deterministicTimeTitle")}
+              description={t("autoCheckin:settings.deterministicTimeDesc")}
+              rightContent={
+                <Input
+                  type="time"
+                  value={
+                    preferences.deterministicTime ?? preferences.windowStart
+                  }
+                  onChange={(e) => {
+                    const newTime = e.target.value
+                    if (!validateTimeFormat(newTime)) {
+                      toast.error(
+                        t("autoCheckin:messages.error.invalidDeterministicTime")
+                      )
+                      return
+                    }
+                    void savePreferences({ deterministicTime: newTime })
+                  }}
+                  disabled={isSaving}
+                  className="w-32"
+                />
+              }
+            />
+          )}
+
+          {/* Retry Strategy */}
+          <CardItem
+            title={t("autoCheckin:settings.retryTitle")}
+            description={t("autoCheckin:settings.retryDesc")}
+            rightContent={
+              <Switch
+                checked={retryPreferences.enabled}
+                onChange={(checked) =>
+                  saveRetryPreferences({ enabled: checked })
+                }
+                disabled={isSaving}
+              />
+            }
+          />
+
+          <CardItem
+            title={t("autoCheckin:settings.retryInterval")}
+            description={t("autoCheckin:settings.retryIntervalDesc")}
+            rightContent={
+              <Input
+                type="number"
+                min={1}
+                value={retryPreferences.intervalMinutes}
+                onChange={(e) => {
+                  const value = Number(e.target.value)
+                  if (Number.isNaN(value) || value <= 0) {
+                    toast.error(t("autoCheckin:messages.error.invalidNumber"))
+                    return
+                  }
+                  void saveRetryPreferences({ intervalMinutes: value })
+                }}
+                disabled={isSaving || !retryPreferences.enabled}
+                className="w-32"
+              />
+            }
+          />
+
+          <CardItem
+            title={t("autoCheckin:settings.retryMaxAttempts")}
+            description={t("autoCheckin:settings.retryMaxAttemptsDesc")}
+            rightContent={
+              <Input
+                type="number"
+                min={1}
+                value={retryPreferences.maxAttemptsPerDay}
+                onChange={(e) => {
+                  const value = Number(e.target.value)
+                  if (Number.isNaN(value) || value <= 0) {
+                    toast.error(t("autoCheckin:messages.error.invalidNumber"))
+                    return
+                  }
+                  void saveRetryPreferences({ maxAttemptsPerDay: value })
+                }}
+                disabled={isSaving || !retryPreferences.enabled}
                 className="w-32"
               />
             }

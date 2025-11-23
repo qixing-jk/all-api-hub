@@ -1,11 +1,25 @@
+import { t } from "i18next"
+
 import { accountStorage } from "~/services/accountStorage"
 import {
   DEFAULT_PREFERENCES,
   userPreferences
 } from "~/services/userPreferences"
-import type {
+import type { SiteAccount } from "~/types"
+import {
+  AUTO_CHECKIN_RUN_RESULT,
+  AUTO_CHECKIN_SCHEDULE_MODE,
+  AUTO_CHECKIN_SKIP_REASON,
+  AutoCheckinAccountSnapshot,
+  AutoCheckinAttemptsTracker,
+  AutoCheckinPreferences,
   AutoCheckinRunResult,
-  CheckinAccountResult
+  AutoCheckinRunSummary,
+  AutoCheckinSkipReason,
+  AutoCheckinStatus,
+  CHECKIN_RESULT_STATUS,
+  type CheckinAccountResult,
+  type CheckinResultStatus
 } from "~/types/autoCheckin"
 import {
   clearAlarm,
@@ -26,6 +40,334 @@ import { autoCheckinStorage } from "./storage"
 class AutoCheckinScheduler {
   private static readonly ALARM_NAME = "autoCheckin"
   private isInitialized = false
+
+  private getToday(): string {
+    return new Date().toISOString().split("T")[0]
+  }
+
+  private parseTimeToMinutes(time: string): number | null {
+    const [hourStr, minuteStr] = time.split(":")
+    const hours = Number(hourStr)
+    const minutes = Number(minuteStr)
+    if (
+      Number.isNaN(hours) ||
+      Number.isNaN(minutes) ||
+      hours < 0 ||
+      hours > 23 ||
+      minutes < 0 ||
+      minutes > 59
+    ) {
+      return null
+    }
+    return hours * 60 + minutes
+  }
+
+  private isMinutesWithinWindow(
+    minutes: number,
+    windowStart: number,
+    windowEnd: number
+  ): boolean {
+    if (windowStart === windowEnd) {
+      return false
+    }
+
+    if (windowStart < windowEnd) {
+      return minutes >= windowStart && minutes <= windowEnd
+    }
+
+    // Window crosses midnight
+    return minutes >= windowStart || minutes <= windowEnd
+  }
+
+  private calculateDeterministicTrigger(
+    config: AutoCheckinPreferences,
+    now: Date
+  ): Date | null {
+    const deterministicMinutes = this.parseTimeToMinutes(
+      config.deterministicTime || config.windowStart
+    )
+    const windowStartMinutes = this.parseTimeToMinutes(config.windowStart)
+    const windowEndMinutes = this.parseTimeToMinutes(config.windowEnd)
+
+    if (
+      deterministicMinutes === null ||
+      windowStartMinutes === null ||
+      windowEndMinutes === null
+    ) {
+      return null
+    }
+
+    if (
+      !this.isMinutesWithinWindow(
+        deterministicMinutes,
+        windowStartMinutes,
+        windowEndMinutes
+      )
+    ) {
+      return null
+    }
+
+    const target = new Date(now)
+    target.setHours(
+      Math.floor(deterministicMinutes / 60),
+      deterministicMinutes % 60,
+      0,
+      0
+    )
+
+    if (target <= now) {
+      target.setDate(target.getDate() + 1)
+    }
+
+    return target
+  }
+
+  private calculateRandomTrigger(
+    windowStart: string,
+    windowEnd: string,
+    now: Date
+  ): Date {
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+
+    const [startHour, startMinute] = windowStart.split(":").map(Number)
+    const [endHour, endMinute] = windowEnd.split(":").map(Number)
+
+    const windowStartTime = new Date(today)
+    windowStartTime.setHours(startHour, startMinute, 0, 0)
+
+    const windowEndTime = new Date(today)
+    windowEndTime.setHours(endHour, endMinute, 0, 0)
+
+    const nowMinutes = now.getHours() * 60 + now.getMinutes()
+    const windowEndMinutes = endHour * 60 + endMinute
+    if (windowEndTime <= windowStartTime) {
+      windowEndTime.setDate(windowEndTime.getDate() + 1)
+      if (
+        now < windowStartTime &&
+        (endHour !== startHour || endMinute !== startMinute) &&
+        nowMinutes <= windowEndMinutes
+      ) {
+        windowStartTime.setDate(windowStartTime.getDate() - 1)
+        windowEndTime.setDate(windowEndTime.getDate() - 1)
+      }
+    }
+
+    if (now >= windowEndTime) {
+      windowStartTime.setDate(windowStartTime.getDate() + 1)
+      windowEndTime.setDate(windowEndTime.getDate() + 1)
+    } else if (now < windowStartTime) {
+      // use today's window as-is
+    } else {
+      windowStartTime.setTime(now.getTime())
+    }
+
+    const windowDuration = windowEndTime.getTime() - windowStartTime.getTime()
+    const randomOffset =
+      windowDuration <= 0 ? 0 : Math.random() * windowDuration
+    return new Date(windowStartTime.getTime() + randomOffset)
+  }
+
+  private computeRetryTrigger(
+    config: AutoCheckinPreferences,
+    status: AutoCheckinStatus | null,
+    now: Date
+  ): Date | null {
+    if (!config.retryStrategy?.enabled || !status?.pendingRetry) {
+      return null
+    }
+
+    const attempts = status.attempts
+    const today = this.getToday()
+    if (!attempts || attempts.date !== today) {
+      return null
+    }
+
+    if (attempts.attempts >= config.retryStrategy.maxAttemptsPerDay) {
+      return null
+    }
+
+    if (!status.lastRunAt) {
+      return null
+    }
+
+    const lastRun = new Date(status.lastRunAt)
+    if (Number.isNaN(lastRun.getTime())) {
+      return null
+    }
+
+    const retryTime = new Date(
+      lastRun.getTime() + config.retryStrategy.intervalMinutes * 60 * 1000
+    )
+
+    if (retryTime <= now) {
+      return new Date(now.getTime() + 15 * 1000)
+    }
+
+    return retryTime
+  }
+
+  /**
+   * Computes the next trigger time for auto-checkin based on the given configuration and status.
+   * If retry is enabled and the last run was not successful, it will return the retry time.
+   * If deterministic schedule mode is enabled and the current time is within the window, it will return the deterministic trigger time.
+   * If none of the above conditions are met, it will return a random trigger time within the configured window.
+   *
+   * @param config - The auto-checkin configuration.
+   * @param status - The auto-checkin status.
+   * @returns A Date object representing the next trigger time, or null if the configuration is invalid.
+   */
+  private computeNextTriggerTime(
+    config: AutoCheckinPreferences,
+    status: AutoCheckinStatus | null
+  ): Date {
+    const now = new Date()
+
+    const retryTime = this.computeRetryTrigger(config, status, now)
+    if (retryTime) {
+      return retryTime
+    }
+
+    if (config.scheduleMode === AUTO_CHECKIN_SCHEDULE_MODE.DETERMINISTIC) {
+      const deterministic = this.calculateDeterministicTrigger(config, now)
+      if (deterministic) {
+        return deterministic
+      }
+    }
+
+    return this.calculateRandomTrigger(
+      config.windowStart,
+      config.windowEnd,
+      now
+    )
+  }
+
+  private getUpdatedAttempts(
+    status: AutoCheckinStatus | null,
+    today: string
+  ): AutoCheckinAttemptsTracker {
+    if (status?.attempts?.date === today) {
+      return {
+        date: today,
+        attempts: status.attempts.attempts + 1
+      }
+    }
+
+    return {
+      date: today,
+      attempts: 1
+    }
+  }
+
+  /**
+   * Returns the localized, human-readable message for a skip reason code.
+   */
+  private getSkipReasonMessage(reason: AutoCheckinSkipReason): string {
+    return t(`autoCheckin:skipReasons.${reason}`, {
+      defaultValue: t("autoCheckin:skipReasons.unknown")
+    })
+  }
+
+  private buildAccountSnapshot(
+    account: SiteAccount
+  ): AutoCheckinAccountSnapshot {
+    const detectionEnabled = account.checkIn?.enableDetection ?? false
+    const autoCheckinEnabled = account.checkIn?.autoCheckInEnabled === true
+    const provider = resolveAutoCheckinProvider(account)
+    const providerAvailable = provider ? provider.canCheckIn(account) : false
+    const isCheckedInToday = account.checkIn?.isCheckedInToday === true
+
+    let skipReason: AutoCheckinSkipReason | undefined
+
+    if (!detectionEnabled) {
+      skipReason = AUTO_CHECKIN_SKIP_REASON.DETECTION_DISABLED
+    } else if (!autoCheckinEnabled) {
+      skipReason = AUTO_CHECKIN_SKIP_REASON.AUTO_CHECKIN_DISABLED
+    } else if (isCheckedInToday) {
+      skipReason = AUTO_CHECKIN_SKIP_REASON.ALREADY_CHECKED_TODAY
+    } else if (!provider) {
+      skipReason = AUTO_CHECKIN_SKIP_REASON.NO_PROVIDER
+    } else if (!providerAvailable) {
+      skipReason = AUTO_CHECKIN_SKIP_REASON.PROVIDER_NOT_READY
+    }
+
+    return {
+      accountId: account.id,
+      accountName: account.site_name,
+      siteType: account.site_type,
+      detectionEnabled,
+      autoCheckinEnabled,
+      providerAvailable,
+      isCheckedInToday: account.checkIn?.isCheckedInToday,
+      lastCheckInDate: account.checkIn?.lastCheckInDate,
+      skipReason
+    }
+  }
+
+  private attachResultsToSnapshots(
+    snapshots: AutoCheckinAccountSnapshot[],
+    results: Record<string, CheckinAccountResult>
+  ): AutoCheckinAccountSnapshot[] {
+    return snapshots.map((snapshot) => ({
+      ...snapshot,
+      lastResult: results[snapshot.accountId]
+    }))
+  }
+
+  private async runAccountCheckin(account: SiteAccount): Promise<{
+    result: CheckinAccountResult
+    successful: boolean
+  }> {
+    const buildResult = (
+      status: CheckinResultStatus,
+      message: string
+    ): CheckinAccountResult => ({
+      accountId: account.id,
+      accountName: account.site_name,
+      status,
+      message,
+      timestamp: Date.now()
+    })
+
+    try {
+      const provider = resolveAutoCheckinProvider(account)
+      if (!provider) {
+        const message = "No auto check-in provider available"
+        console.warn(`[AutoCheckin] ${account.site_name}: ${message}`)
+        return {
+          result: buildResult(CHECKIN_RESULT_STATUS.FAILED, message),
+          successful: false
+        }
+      }
+
+      const providerResult = await provider.checkIn(account)
+      const result = buildResult(providerResult.status, providerResult.message)
+
+      if (
+        providerResult.status === CHECKIN_RESULT_STATUS.SUCCESS ||
+        providerResult.status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED
+      ) {
+        await accountStorage.markAccountAsCheckedIn(account.id)
+        console.log(
+          `[AutoCheckin] ${account.site_name}: ${providerResult.status} - ${providerResult.message}`
+        )
+        return { result, successful: true }
+      }
+
+      console.error(
+        `[AutoCheckin] ${account.site_name}: failed - ${providerResult.message}`
+      )
+      return { result, successful: false }
+    } catch (error) {
+      const errorMessage = getErrorMessage(error)
+      console.error(
+        `[AutoCheckin] ${account.site_name}: error - ${errorMessage}`
+      )
+      return {
+        result: buildResult(CHECKIN_RESULT_STATUS.FAILED, errorMessage),
+        successful: false
+      }
+    }
+  }
 
   /**
    * Initialize the scheduler
@@ -89,11 +431,10 @@ class AutoCheckinScheduler {
       return
     }
 
-    // Calculate next trigger time within the window
-    const nextTriggerTime = this.calculateNextTrigger(
-      config.windowStart,
-      config.windowEnd
-    )
+    const currentStatus = await autoCheckinStorage.getStatus()
+
+    // Calculate next trigger time (retry or scheduled window)
+    const nextTriggerTime = this.computeNextTriggerTime(config, currentStatus)
 
     try {
       await createAlarm(AutoCheckinScheduler.ALARM_NAME, {
@@ -109,11 +450,11 @@ class AutoCheckinScheduler {
         })
 
         // Update status with next scheduled time
-        const currentStatus = await autoCheckinStorage.getStatus()
-        await autoCheckinStorage.saveStatus({
-          ...currentStatus,
+        const updatedStatus: AutoCheckinStatus = {
+          ...(currentStatus ?? {}),
           nextScheduledAt: nextTriggerTime.toISOString()
-        })
+        }
+        await autoCheckinStorage.saveStatus(updatedStatus)
       } else {
         console.warn("[AutoCheckin] Alarm was not created properly")
       }
@@ -128,53 +469,6 @@ class AutoCheckinScheduler {
    * @param windowEnd - End time in HH:mm format
    * @returns Date object for next trigger
    */
-  private calculateNextTrigger(windowStart: string, windowEnd: string): Date {
-    const now = new Date()
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-
-    // Parse start and end times
-    const [startHour, startMinute] = windowStart.split(":").map(Number)
-    const [endHour, endMinute] = windowEnd.split(":").map(Number)
-
-    const windowStartTime = new Date(today)
-    windowStartTime.setHours(startHour, startMinute, 0, 0)
-
-    const windowEndTime = new Date(today)
-    windowEndTime.setHours(endHour, endMinute, 0, 0)
-
-    const nowMinutes = now.getHours() * 60 + now.getMinutes()
-    const windowEndMinutes = endHour * 60 + endMinute
-    if (windowEndTime <= windowStartTime) {
-      windowEndTime.setDate(windowEndTime.getDate() + 1)
-      if (
-        now < windowStartTime &&
-        (endHour !== startHour || endMinute !== startMinute) &&
-        nowMinutes <= windowEndMinutes
-      ) {
-        windowStartTime.setDate(windowStartTime.getDate() - 1)
-        windowEndTime.setDate(windowEndTime.getDate() - 1)
-      }
-    }
-
-    // If window already passed today, schedule for tomorrow
-    if (now >= windowEndTime) {
-      windowStartTime.setDate(windowStartTime.getDate() + 1)
-      windowEndTime.setDate(windowEndTime.getDate() + 1)
-    } else if (now < windowStartTime) {
-      // Window hasn't started yet today, use today's window
-      // Keep the times as-is
-    } else {
-      // We're in the middle of today's window - use remaining time
-      windowStartTime.setTime(now.getTime())
-    }
-
-    // Calculate random time within window
-    const windowDuration = windowEndTime.getTime() - windowStartTime.getTime()
-    const randomOffset =
-      windowDuration <= 0 ? 0 : Math.random() * windowDuration
-    return new Date(windowStartTime.getTime() + randomOffset)
-  }
-
   /**
    * Handle alarm trigger - execute check-ins
    */
@@ -191,6 +485,9 @@ class AutoCheckinScheduler {
   async runCheckins(): Promise<void> {
     console.log("[AutoCheckin] Starting check-in execution")
     const startTime = Date.now()
+    const today = this.getToday()
+    const currentStatus = await autoCheckinStorage.getStatus()
+    const updatedAttempts = this.getUpdatedAttempts(currentStatus, today)
 
     try {
       // Get preferences
@@ -208,7 +505,6 @@ class AutoCheckinScheduler {
       // Reset isCheckedInToday for accounts whose lastCheckInDate !== today
       // isCheckedInToday: true means already checked in (skip until tomorrow)
       // isCheckedInToday: false/undefined means can check in today
-      const today = new Date().toISOString().split("T")[0]
       for (const account of allAccounts) {
         if (
           account.checkIn?.lastCheckInDate &&
@@ -225,117 +521,126 @@ class AutoCheckinScheduler {
         }
       }
 
-      // Filter eligible accounts
-      const eligibleAccounts = allAccounts.filter((account) => {
-        if (!account.checkIn?.enableDetection) return false
-        // Default autoCheckInEnabled to true if not explicitly set to false
-        if (account.checkIn?.autoCheckInEnabled === false) return false
-        // Skip accounts already checked in today
-        if (account.checkIn?.isCheckedInToday === true) return false
-
-        const provider = resolveAutoCheckinProvider(account)
-        return provider ? provider.canCheckIn(account) : false
-      })
-
-      console.log(
-        `[AutoCheckin] Found ${eligibleAccounts.length} eligible accounts`
+      // Filter accounts with detection enabled
+      const detectionEnabledAccounts = allAccounts.filter(
+        (account) => account.checkIn?.enableDetection
       )
 
-      if (eligibleAccounts.length === 0) {
-        // No accounts to check in
-        await autoCheckinStorage.saveStatus({
-          lastRunAt: new Date().toISOString(),
-          lastRunResult: "success",
-          perAccount: {},
-          nextScheduledAt: undefined // Will be set by scheduleNextRun
-        })
-        return
+      const accountSnapshots: AutoCheckinAccountSnapshot[] = []
+      const runnableAccounts: SiteAccount[] = []
+
+      // Build snapshots and determine runnable accounts
+      for (const account of detectionEnabledAccounts) {
+        const snapshot = this.buildAccountSnapshot(account)
+        accountSnapshots.push(snapshot)
+        if (!snapshot.skipReason) {
+          runnableAccounts.push(account)
+        }
       }
 
-      // Execute check-ins sequentially
       const results: Record<string, CheckinAccountResult> = {}
-      let successCount = 0
-      let failedCount = 0
+      const timestamp = Date.now()
 
-      for (const account of eligibleAccounts) {
-        try {
-          const provider = resolveAutoCheckinProvider(account)
-          if (!provider) {
-            failedCount++
-            const message = "No auto check-in provider available"
-            console.warn(`[AutoCheckin] ${account.site_name}: ${message}`)
-            results[account.id] = {
-              accountId: account.id,
-              accountName: account.site_name,
-              status: "failed",
-              message,
-              timestamp: Date.now()
-            }
-            continue
-          }
-
-          // Small delay to avoid rate limiting
-          await new Promise((resolve) =>
-            setTimeout(resolve, 1000 + Math.random() * 2000)
-          )
-
-          const result = await provider.checkIn(account)
-
-          results[account.id] = {
-            accountId: account.id,
-            accountName: account.site_name,
-            status: result.status,
-            message: result.message,
-            timestamp: Date.now()
-          }
-
-          // Update account status if successful or already checked
-          if (
-            result.status === "success" ||
-            result.status === "already_checked"
-          ) {
-            await accountStorage.markAccountAsCheckedIn(account.id)
-            successCount++
-            console.log(
-              `[AutoCheckin] ${account.site_name}: ${result.status} - ${result.message}`
-            )
-          } else {
-            failedCount++
-            console.error(
-              `[AutoCheckin] ${account.site_name}: failed - ${result.message}`
-            )
-          }
-        } catch (error) {
-          failedCount++
-          const errorMessage = getErrorMessage(error)
-          console.error(
-            `[AutoCheckin] ${account.site_name}: error - ${errorMessage}`
-          )
-
-          results[account.id] = {
-            accountId: account.id,
-            accountName: account.site_name,
-            status: "failed",
-            message: errorMessage,
-            timestamp: Date.now()
+      // Record skipped accounts to results
+      for (const snapshot of accountSnapshots) {
+        if (snapshot.skipReason) {
+          results[snapshot.accountId] = {
+            accountId: snapshot.accountId,
+            accountName: snapshot.accountName,
+            status: CHECKIN_RESULT_STATUS.SKIPPED,
+            message: this.getSkipReasonMessage(snapshot.skipReason),
+            reasonCode: snapshot.skipReason,
+            timestamp
           }
         }
       }
 
-      // Determine overall result
-      let overallResult: AutoCheckinRunResult = "success"
-      if (failedCount > 0 && successCount > 0) {
-        overallResult = "partial"
-      } else if (failedCount > 0) {
-        overallResult = "failed"
+      console.log(
+        `[AutoCheckin] Tracking ${detectionEnabledAccounts.length} accounts, runnable: ${runnableAccounts.length}`
+      )
+
+      // If no accounts to run, save status and exit
+      if (runnableAccounts.length === 0) {
+        const summary: AutoCheckinRunSummary = {
+          totalEligible: accountSnapshots.length,
+          executed: 0,
+          successCount: 0,
+          failedCount: 0,
+          skippedCount: accountSnapshots.length,
+          needsRetry: false
+        }
+
+        await autoCheckinStorage.saveStatus({
+          lastRunAt: new Date().toISOString(),
+          lastRunResult: AUTO_CHECKIN_RUN_RESULT.SUCCESS,
+          perAccount: results,
+          nextScheduledAt: undefined,
+          summary,
+          attempts: updatedAttempts,
+          pendingRetry: false,
+          accountsSnapshot: this.attachResultsToSnapshots(
+            accountSnapshots,
+            results
+          )
+        })
+        return
       }
 
-      // Save status
+      // Execute check-ins concurrently
+      let successCount = 0
+      let failedCount = 0
+
+      const checkinOutcomes = await Promise.all(
+        runnableAccounts.map((account) => this.runAccountCheckin(account))
+      )
+
+      for (const outcome of checkinOutcomes) {
+        results[outcome.result.accountId] = outcome.result
+        if (outcome.successful) {
+          successCount++
+        } else {
+          failedCount++
+        }
+      }
+
+      // Determine overall result
+      let overallResult: AutoCheckinRunResult = AUTO_CHECKIN_RUN_RESULT.SUCCESS
+      if (failedCount > 0 && successCount > 0) {
+        overallResult = AUTO_CHECKIN_RUN_RESULT.PARTIAL
+      } else if (failedCount > 0) {
+        overallResult = AUTO_CHECKIN_RUN_RESULT.FAILED
+      }
+
+      const skippedCount = accountSnapshots.length - runnableAccounts.length
+      const summaryNeedsRetry = failedCount > 0 && runnableAccounts.length > 0
+      const hasRetriesRemaining = !!(
+        config.retryStrategy?.enabled &&
+        updatedAttempts.attempts < config.retryStrategy.maxAttemptsPerDay
+      )
+
+      const summary: AutoCheckinRunSummary = {
+        totalEligible: accountSnapshots.length,
+        executed: runnableAccounts.length,
+        successCount,
+        failedCount,
+        skippedCount,
+        needsRetry: summaryNeedsRetry
+      }
+
+      const pendingRetry = summaryNeedsRetry && hasRetriesRemaining
+
       await autoCheckinStorage.saveStatus({
         lastRunAt: new Date().toISOString(),
         lastRunResult: overallResult,
         perAccount: results,
-        nextScheduledAt: undefined // Will be set by scheduleNextRun
+        nextScheduledAt: undefined,
+        summary,
+        attempts: updatedAttempts,
+        pendingRetry,
+        accountsSnapshot: this.attachResultsToSnapshots(
+          accountSnapshots,
+          results
+        )
       })
 
       const duration = Date.now() - startTime
@@ -346,9 +651,11 @@ class AutoCheckinScheduler {
       console.error("[AutoCheckin] Execution failed:", error)
       await autoCheckinStorage.saveStatus({
         lastRunAt: new Date().toISOString(),
-        lastRunResult: "failed",
+        lastRunResult: AUTO_CHECKIN_RUN_RESULT.FAILED,
         perAccount: {},
-        nextScheduledAt: undefined
+        nextScheduledAt: undefined,
+        attempts: updatedAttempts,
+        pendingRetry: false
       })
     }
   }
@@ -356,28 +663,31 @@ class AutoCheckinScheduler {
   /**
    * Update settings and reschedule alarm
    */
-  async updateSettings(settings: {
-    globalEnabled?: boolean
-    windowStart?: string
-    windowEnd?: string
-  }) {
+  async updateSettings(
+    settings: Partial<
+      Pick<
+        AutoCheckinPreferences,
+        | "globalEnabled"
+        | "windowStart"
+        | "windowEnd"
+        | "scheduleMode"
+        | "deterministicTime"
+      >
+    > & {
+      retryStrategy?: Partial<AutoCheckinPreferences["retryStrategy"]>
+    }
+  ) {
     // Get current config and update
     const prefs = await userPreferences.getPreferences()
     const current = prefs.autoCheckin ?? DEFAULT_PREFERENCES.autoCheckin!
 
-    const updated = {
-      globalEnabled:
-        settings.globalEnabled !== undefined
-          ? settings.globalEnabled
-          : current.globalEnabled,
-      windowStart:
-        settings.windowStart !== undefined
-          ? settings.windowStart
-          : current.windowStart,
-      windowEnd:
-        settings.windowEnd !== undefined
-          ? settings.windowEnd
-          : current.windowEnd
+    const updated: AutoCheckinPreferences = {
+      ...current,
+      ...settings,
+      retryStrategy: {
+        ...current.retryStrategy,
+        ...(settings.retryStrategy ?? {})
+      }
     }
 
     await userPreferences.savePreferences({ autoCheckin: updated })

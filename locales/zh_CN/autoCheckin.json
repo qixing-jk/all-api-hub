@@ -8,6 +8,19 @@
     "windowStartDesc": "允许每日自动签到开始的最早本地时间。",
     "windowEnd": "时间窗口结束",
     "windowEndDesc": "允许每日自动签到开始的最晚本地时间。",
+    "scheduleModeTitle": "计划模式",
+    "scheduleModeDesc": "选择在时间窗口内如何计算下一次运行时间。",
+    "scheduleModeRandom": "随机",
+    "scheduleModeDeterministic": "固定时间",
+    "deterministicTimeTitle": "固定时间",
+    "deterministicTimeDesc": "启用固定模式时，选择开始签到的具体时间（HH:mm）。",
+    "retryTitle": "重试策略",
+    "retryDesc": "在同一天内自动重试失败的账号。",
+    "retryEnable": "启用重试",
+    "retryInterval": "重试间隔（分钟）",
+    "retryIntervalDesc": "每次重试之间等待的时间。",
+    "retryMaxAttempts": "每日最大尝试次数",
+    "retryMaxAttemptsDesc": "每天允许的总运行次数（首次 + 重试）。",
     "viewExecution": "查看签到历史",
     "viewExecutionDesc": "查看每次自动签到的详细结果与日志。",
     "viewExecutionButton": "打开记录"
@@ -16,10 +29,19 @@
     "lastRun": "最近运行",
     "nextScheduled": "下次计划",
     "notScheduled": "未计划",
+    "pendingRetry": "等待重试",
     "result": {
       "success": "成功",
       "partial": "部分成功",
       "failed": "失败"
+    },
+    "summary": {
+      "title": "执行统计",
+      "eligible": "可参与",
+      "executed": "已执行",
+      "success": "成功",
+      "failed": "失败",
+      "skipped": "跳过"
     }
   },
   "execution": {
@@ -33,7 +55,8 @@
     "status": {
       "success": "成功",
       "alreadyChecked": "已签到",
-      "failed": "失败"
+      "failed": "失败",
+      "skipped": "已跳过"
     },
     "table": {
       "accountName": "账号名称",
@@ -45,6 +68,7 @@
       "all": "全部",
       "success": "成功",
       "failed": "失败",
+      "skipped": "已跳过",
       "searchPlaceholder": "搜索账号名称或消息..."
     },
     "empty": {
@@ -54,11 +78,42 @@
       "noResultsDesc": "尝试修改筛选条件或搜索关键字"
     }
   },
+  "snapshot": {
+    "title": "账号检测状态",
+    "description": "列出所有已启用检测的账号，帮助快速定位为什么某些账号会被跳过。",
+    "empty": "暂无启用检测的账号",
+    "emptyDesc": "为至少一个账号启用签到检测即可查看诊断信息。",
+    "table": {
+      "detection": "检测",
+      "autoCheckin": "自动签到",
+      "provider": "提供方",
+      "status": "状态",
+      "skipReason": "跳过原因",
+      "lastResult": "最近结果"
+    },
+    "badges": {
+      "enabled": "已启用",
+      "disabled": "未启用",
+      "providerAvailable": "可用",
+      "providerUnavailable": "不可用",
+      "pending": "待执行"
+    }
+  },
+  "skipReasons": {
+    "detection_disabled": "检测已关闭",
+    "auto_checkin_disabled": "自动签到已关闭",
+    "already_checked_today": "今日已签到",
+    "no_provider": "账号所属站点类型暂不支持签到",
+    "provider_not_ready": "账号配置暂不支持签到",
+    "unknown": "未知"
+  },
   "messages": {
     "error": {
       "loadFailed": "获取自动签到设置失败：{{error}}",
       "runFailed": "执行自动签到失败：{{error}}",
-      "invalidTimeWindow": "无效的时间窗口，开始时间和结束时间不能相同。"
+      "invalidTimeWindow": "无效的时间窗口，开始时间和结束时间不能相同。",
+      "invalidDeterministicTime": "请输入合法的 HH:mm 格式时间。",
+      "invalidNumber": "请输入有效的正数。"
     },
     "success": {
       "settingsSaved": "自动签到设置已保存。",

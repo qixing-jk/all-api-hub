@@ -6,7 +6,7 @@
 import { fetchApi } from "~/services/apiService/common/utils"
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
-import type { CheckinResultStatus } from "~/types/autoCheckin"
+import { CHECKIN_RESULT_STATUS, CheckinResultStatus } from "~/types/autoCheckin"
 
 import type { AutoCheckinProvider } from "./index"
 
@@ -49,7 +49,7 @@ async function checkinVeloera(account: SiteAccount): Promise<CheckinResult> {
       normalizedMessage.includes("already checked in")
     ) {
       return {
-        status: "already_checked",
+        status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
         message: responseMessage || "Already checked in today"
       }
     }
@@ -57,7 +57,7 @@ async function checkinVeloera(account: SiteAccount): Promise<CheckinResult> {
     // Success case
     if (response.success) {
       return {
-        status: "success",
+        status: CHECKIN_RESULT_STATUS.SUCCESS,
         message: responseMessage || "Check-in successful",
         data: response.data
       }
@@ -65,7 +65,7 @@ async function checkinVeloera(account: SiteAccount): Promise<CheckinResult> {
 
     // Other failure cases
     return {
-      status: "failed",
+      status: CHECKIN_RESULT_STATUS.FAILED,
       message: responseMessage || "Check-in failed"
     }
   } catch (error: any) {
@@ -79,7 +79,7 @@ async function checkinVeloera(account: SiteAccount): Promise<CheckinResult> {
       normalizedErrorMessage.includes("already checked in")
     ) {
       return {
-        status: "already_checked",
+        status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
         message: errorMessage
       }
     }
@@ -87,14 +87,14 @@ async function checkinVeloera(account: SiteAccount): Promise<CheckinResult> {
     // Handle 404 or endpoint not found
     if (error?.statusCode === 404 || errorMessage.includes("404")) {
       return {
-        status: "failed",
+        status: CHECKIN_RESULT_STATUS.FAILED,
         message: "Check-in endpoint not supported"
       }
     }
 
     // General failure
     return {
-      status: "failed",
+      status: CHECKIN_RESULT_STATUS.FAILED,
       message: errorMessage || "Unknown error occurred"
     }
   }

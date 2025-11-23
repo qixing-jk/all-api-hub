@@ -8,6 +8,19 @@
     "windowStartDesc": "The earliest local time when the daily check-in can start.",
     "windowEnd": "Time window end",
     "windowEndDesc": "The latest local time when the daily check-in can start.",
+    "scheduleModeTitle": "Schedule mode",
+    "scheduleModeDesc": "Choose how the next run time inside the window is calculated.",
+    "scheduleModeRandom": "Random",
+    "scheduleModeDeterministic": "Deterministic",
+    "deterministicTimeTitle": "Deterministic time",
+    "deterministicTimeDesc": "Pick the exact time (HH:mm) to start check-in when deterministic mode is enabled.",
+    "retryTitle": "Retry strategy",
+    "retryDesc": "Automatically retry failed accounts a few times during the same day.",
+    "retryEnable": "Enable retry",
+    "retryInterval": "Retry interval (minutes)",
+    "retryIntervalDesc": "How long to wait before the next retry attempt.",
+    "retryMaxAttempts": "Max attempts per day",
+    "retryMaxAttemptsDesc": "Total number of runs (initial + retries) allowed each day.",
     "viewExecution": "Auto check-in history",
     "viewExecutionDesc": "View detailed results and logs for each automatic check-in run.",
     "viewExecutionButton": "Open results"
@@ -16,10 +29,19 @@
     "lastRun": "Last run",
     "nextScheduled": "Next scheduled run",
     "notScheduled": "Not scheduled",
+    "pendingRetry": "Retry pending",
     "result": {
       "success": "Success",
       "partial": "Partial",
       "failed": "Failed"
+    },
+    "summary": {
+      "title": "Execution summary",
+      "eligible": "Eligible",
+      "executed": "Executed",
+      "success": "Success",
+      "failed": "Failed",
+      "skipped": "Skipped"
     }
   },
   "execution": {
@@ -33,7 +55,8 @@
     "status": {
       "success": "Success",
       "alreadyChecked": "Already checked in",
-      "failed": "Failed"
+      "failed": "Failed",
+      "skipped": "Skipped"
     },
     "table": {
       "accountName": "Account Name",
@@ -45,6 +68,7 @@
       "all": "All",
       "success": "Success",
       "failed": "Failed",
+      "skipped": "Skipped",
       "searchPlaceholder": "Search by account name or message..."
     },
     "empty": {
@@ -54,11 +78,42 @@
       "noResultsDesc": "Try adjusting your filters or search query"
     }
   },
+  "snapshot": {
+    "title": "Account readiness",
+    "description": "Every detection-enabled account is listed below so you can see why it might be skipped before the next run.",
+    "empty": "No detection-enabled accounts yet",
+    "emptyDesc": "Enable check-in detection for at least one account to see eligibility diagnostics.",
+    "table": {
+      "detection": "Detection",
+      "autoCheckin": "Auto check-in",
+      "provider": "Provider",
+      "status": "Status",
+      "skipReason": "Skip reason",
+      "lastResult": "Last result"
+    },
+    "badges": {
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "providerAvailable": "Available",
+      "providerUnavailable": "Unavailable",
+      "pending": "Pending"
+    }
+  },
+  "skipReasons": {
+    "detection_disabled": "Detection disabled",
+    "auto_checkin_disabled": "Auto check-in disabled",
+    "already_checked_today": "Already checked today",
+    "no_provider": "The account's site type currently does not support check-in",
+    "provider_not_ready": "Account configuration currently does not support check-in",
+    "unknown": "Unknown"
+  },
   "messages": {
     "error": {
       "loadFailed": "Failed to load auto check-in settings: {{error}}",
       "runFailed": "Failed to run auto check-in: {{error}}",
-      "invalidTimeWindow": "Invalid time window. Start and end cannot be the same."
+      "invalidTimeWindow": "Invalid time window. Start and end cannot be the same.",
+      "invalidDeterministicTime": "Please provide a valid deterministic time in HH:mm format.",
+      "invalidNumber": "Please enter a valid positive number."
     },
     "success": {
       "settingsSaved": "Auto check-in settings have been saved.",

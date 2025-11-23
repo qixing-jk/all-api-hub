@@ -17,6 +17,11 @@ const providers: Record<string, AutoCheckinProvider> = {
   [VELOERA]: veloeraProvider
 }
 
+/**
+ * Resolve the auto check-in provider based on the site type of the given account
+ * @param account - The site account to resolve the provider for
+ * @returns The resolved auto check-in provider, or null if no provider is found
+ */
 export function resolveAutoCheckinProvider(
   account: SiteAccount
 ): AutoCheckinProvider | null {

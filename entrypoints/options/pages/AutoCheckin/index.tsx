@@ -4,12 +4,16 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { PageHeader } from "~/entrypoints/options/components/PageHeader"
-import type { AutoCheckinStatus } from "~/types/autoCheckin"
+import { AutoCheckinStatus, CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { sendRuntimeMessage } from "~/utils/browserApi"
 
+import AccountSnapshotTable from "./components/AccountSnapshotTable"
 import ActionBar from "./components/ActionBar"
 import EmptyResults from "./components/EmptyResults"
-import FilterBar, { type FilterStatus } from "./components/FilterBar"
+import FilterBar, {
+  FILTER_STATUS,
+  type FilterStatus
+} from "./components/FilterBar"
 import LoadingSkeleton from "./components/LoadingSkeleton"
 import ResultsTable from "./components/ResultsTable"
 import StatusCard from "./components/StatusCard"
@@ -17,7 +21,9 @@ import StatusCard from "./components/StatusCard"
 export default function AutoCheckin() {
   const { t } = useTranslation("autoCheckin")
   const [status, setStatus] = useState<AutoCheckinStatus | null>(null)
-  const [filterStatus, setFilterStatus] = useState<FilterStatus>("all")
+  const [filterStatus, setFilterStatus] = useState<FilterStatus>(
+    FILTER_STATUS.ALL
+  )
   const [searchKeyword, setSearchKeyword] = useState("")
   const [isLoading, setIsLoading] = useState(true)
   const [isRunning, setIsRunning] = useState(false)
@@ -80,12 +86,21 @@ export default function AutoCheckin() {
   const filteredResults = accountResults.filter((result) => {
     // Filter by status
     if (
-      filterStatus === "success" &&
-      result.status !== "success" &&
-      result.status !== "already_checked"
+      filterStatus === FILTER_STATUS.SUCCESS &&
+      result.status !== CHECKIN_RESULT_STATUS.SUCCESS &&
+      result.status !== CHECKIN_RESULT_STATUS.ALREADY_CHECKED
     )
       return false
-    if (filterStatus === "failed" && result.status !== "failed") return false
+    if (
+      filterStatus === FILTER_STATUS.FAILED &&
+      result.status !== CHECKIN_RESULT_STATUS.FAILED
+    )
+      return false
+    if (
+      filterStatus === FILTER_STATUS.SKIPPED &&
+      result.status !== CHECKIN_RESULT_STATUS.SKIPPED
+    )
+      return false
 
     // Search by keyword
     if (searchKeyword) {
@@ -146,6 +161,20 @@ export default function AutoCheckin() {
         <EmptyResults hasHistory={hasHistory} />
       ) : (
         <ResultsTable results={filteredResults} />
+      )}
+
+      {status?.accountsSnapshot && status.accountsSnapshot.length > 0 && (
+        <div className="mt-6 space-y-3">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              {t("snapshot.title")}
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {t("snapshot.description")}
+            </p>
+          </div>
+          <AccountSnapshotTable snapshots={status.accountsSnapshot} />
+        </div>
       )}
     </div>
   )

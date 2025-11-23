@@ -8,9 +8,19 @@ import { ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Input } from "~/components/ui"
-import type { CheckinAccountResult } from "~/types/autoCheckin"
+import {
+  CHECKIN_RESULT_STATUS,
+  type CheckinAccountResult
+} from "~/types/autoCheckin"
 
-export type FilterStatus = "all" | "success" | "failed"
+export const FILTER_STATUS = {
+  ALL: "all",
+  SUCCESS: "success",
+  FAILED: "failed",
+  SKIPPED: "skipped"
+} as const
+
+export type FilterStatus = (typeof FILTER_STATUS)[keyof typeof FILTER_STATUS]
 
 interface FilterBarProps {
   accountResults: CheckinAccountResult[]
@@ -31,9 +41,16 @@ export default function FilterBar({
 
   const totalCount = accountResults.length
   const successCount = accountResults.filter(
-    (r) => r.status === "success" || r.status === "already_checked"
+    (r) =>
+      r.status === CHECKIN_RESULT_STATUS.SUCCESS ||
+      r.status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED
   ).length
-  const failedCount = accountResults.filter((r) => r.status === "failed").length
+  const failedCount = accountResults.filter(
+    (r) => r.status === CHECKIN_RESULT_STATUS.FAILED
+  ).length
+  const skippedCount = accountResults.filter(
+    (r) => r.status === CHECKIN_RESULT_STATUS.SKIPPED
+  ).length
 
   const renderFilterButton = (
     value: FilterStatus,
@@ -67,22 +84,28 @@ export default function FilterBar({
     <div className="flex flex-wrap gap-3">
       <div className="flex gap-2">
         {renderFilterButton(
-          "all",
+          FILTER_STATUS.ALL,
           "bg-blue-600",
           <ListBulletIcon className="h-4 w-4" />,
           totalCount
         )}
         {renderFilterButton(
-          "success",
+          FILTER_STATUS.SUCCESS,
           "bg-green-600",
           <CheckCircleIcon className="h-4 w-4" />,
           successCount
         )}
         {renderFilterButton(
-          "failed",
+          FILTER_STATUS.FAILED,
           "bg-red-600",
           <XCircleIcon className="h-4 w-4" />,
           failedCount
+        )}
+        {renderFilterButton(
+          FILTER_STATUS.SKIPPED,
+          "bg-yellow-600",
+          <ListBulletIcon className="h-4 w-4" />,
+          skippedCount
         )}
       </div>
       <div className="relative flex-1 md:max-w-xs">
