@@ -35,18 +35,18 @@ If a site has undergone secondary development, causing some critical interfaces 
 ## 3. Adding a Site
 
 ::: info Tip
-You must first log in to the target proxy station using your browser so that the extension's automatic recognition feature can obtain your account's [Access Token](#_3-2-手动添加) via cookies.
+You must first log in to the target proxy station using your browser so that the extension's automatic recognition feature can obtain your account's [Access Token](#_3-3-manual-addition) via cookies.
 :::
 
 ### 3.1 Automatic Recognition and Addition
 
 1. Open the extension's main page and click `Add Account`
 
-![Add Account](./static/image/add-account-btn.png)
+![Add Account](../static/image/add-account-btn.png)
 
 2. Enter the proxy station address and click `Auto-recognize`
 
-![Auto-recognize](./static/image/add-account-dialog-btn.png)
+![Auto-recognize](../static/image/add-account-dialog-btn.png)
 
 3. After confirming that the automatic recognition is correct, click `Confirm Add`
 
@@ -54,7 +54,7 @@ You must first log in to the target proxy station using your browser so that the
 The extension will automatically recognize various information about your account, such as:
 - Username
 - User ID
-- [Access Token](#_3-2-手动添加)
+- [Access Token](#_3-3-manual-addition)
 - Recharge amount ratio
 :::
 
@@ -72,7 +72,7 @@ The extension will automatically recognize various information about your accoun
 ::: info Tip
 If automatic recognition fails, you can manually add site accounts. You will need to obtain the following information first. (The UI may vary for each site, please find it yourself.)
 :::
-![User Information](./static/image/site-user-info.png)
+![User Information](../static/image/site-user-info.png)
 
 If the target site is a modified version (e.g., AnyRouter), please manually switch to **Cookie Mode** when adding the account, then perform automatic recognition or manual entry. When encountering strictly protected sites, you can also use it in conjunction with the Cloudflare Bypass Assistant. For details, please refer to [FAQ](./faq.md#anyrouter-网站报错怎么办).
 
