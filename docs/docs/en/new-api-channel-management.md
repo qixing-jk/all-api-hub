@@ -28,7 +28,7 @@
 
 ## Channel List View
 
-- ![New API Channel Management Interface](./static/image/new-api-channel-manage.png)
+- ![New API Channel Management Interface](../static/image/en/new-api-channel-manage.png)
 
 -   **Search Box**: Supports fuzzy search by name / Base URL / group keywords.
 -   **Status Filter**: The `Status` filter in the top right corner allows quick viewing of enabled, manually paused, or automatically disabled channels.

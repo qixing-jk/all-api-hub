@@ -2,7 +2,7 @@
 
 New API 管理者向けの自動化機能で、すべてのチャネルのモデルリストを自動的に同期し、上流のプロバイダーとの一貫性を保ち、手動での個別更新を不要にします。
 
-![モデルリスト同期インターフェース](../static/image/new-api-channel-sync.png)
+![モデルリスト同期インターフェース](../static/image/en/new-api-channel-sync.png)
 
 ## 機能概要
 

@@ -28,7 +28,7 @@
 
 ## チャネルリストビュー
 
-- ![New API 渠道管理界面](./static/image/new-api-channel-manage.png)
+- ![New API 渠道管理界面](../static/image/en/new-api-channel-manage.png)
 
 -   **検索ボックス**：名前 / ベースURL / グループキーワードによるあいまい検索をサポートします。
 -   **ステータスフィルター**：右上の `ステータス` フィルターで、有効、手動一時停止、または自動無効化されたチャネルを素早く確認できます。
