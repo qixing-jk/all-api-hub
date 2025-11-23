@@ -1,287 +1,292 @@
-# FAQ
+# Frequently Asked Questions
 
-A collection of frequently asked questions encountered while using the extension.
+A collection of common issues encountered while using the plugin.
 
-## 🔐 Authentication
+## 🔐 Authentication Methods
 
-### What’s the difference between Cookie mode and Access Token mode?
+### What is the difference between Cookie mode and Access Token method?
 
-The extension supports two authentication modes:
+The plugin supports two authentication methods:
 
-| Mode | Highlights | When to Use | Recommendation |
-|------|------------|-------------|----------------|
-| **Access Token** | ✅ Supports multiple accounts<br>✅ Never expires<br>✅ More secure and stable | Most standard relay sites | ⭐⭐⭐⭐⭐ Highly recommended |
-| **Cookie** | ⚠️ Single account only<br>⚠️ May expire<br>✅ Better compatibility | Sites that disable tokens<br>Heavily customized deployments | ⭐⭐⭐ Use for special cases |
+| Authentication Method | Features                                         | Applicable Scenarios                   | Recommendation Level |
+|-----------------------|--------------------------------------------------|----------------------------------------|----------------------|
+| **Access Token**      | ✅ Supports multiple accounts<br>✅ Permanently valid, does not expire<br>✅ More secure and stable | Most standard relay sites              | ⭐⭐⭐⭐⭐ Highly Recommended |
+| **Cookie**            | ⚠️ Single account<br>⚠️ May expire<br>✅ Good compatibility | Special sites with limited Token support<br>Modified sites | ⭐⭐⭐ Use in special cases |
 
-**Recommended:** Use the Access Token mode whenever possible, unless:
-- The site does not expose access tokens
-- You are using a heavily customized relay site
-- Token functionality is disabled by the site owner
+**It is recommended to use the Access Token method**, unless you encounter the following situations:
+- The site does not support Access Tokens
+- Using a modified version of the relay station
+- Token functionality is disabled
 
-### How do I switch the authentication mode?
+### How to switch authentication methods?
 
-When adding an account, choose the desired mode directly in the dialog:
-1. Click **“Add account”**
-2. Enter the site URL
-3. Choose `Access Token` or `Cookie` in **Authentication**
-4. Click **“Auto-detect”**
+When adding an account, select the corresponding authentication method in the account dialog:
+1. Click "Add Account"
+2. Enter the site address
+3. Select `Access Token` or `Cookie` in the "Authentication Method" dropdown
+4. Click "Auto-identify"
 
-## 🔧 Site-specific Issues
+## 🔧 Special Site Issues
 
-### AnyRouter keeps failing—what should I do?
+### What to do if the AnyRouter website reports an error?
 
-AnyRouter is a heavily customized relay site and does not support the standard Access Token workflow.
+AnyRouter is a modified relay station and does not support the standard Access Token method.
 
-**Solution:**
-1. Select **Cookie mode** when adding the account
-2. Log in to AnyRouter in your browser first
-3. Use the auto-detect flow afterward
+**Solution**:
+1. When adding an account, select **Cookie mode**
+2. First, log in to the AnyRouter site in your browser
+3. Then use the plugin's auto-identify function to add the account
 
-::: warning Heads-up
-Because AnyRouter has modified its API, some features may still not work. If issues remain, please contact the site administrator.
+::: warning Note
+Because AnyRouter has modified the API, some features may not function correctly. If you encounter issues, it is recommended to contact the site administrator.
 :::
 
-### Auto-detection fails—how can I fix it?
+### What to do if auto-identification fails?
 
-Try the following steps:
+If auto-identification fails, you can try the following methods:
 
-1. **Switch authentication mode:** Try Cookie mode if Access Token fails
-2. **Add manually:** Fill in the username, user ID, access token, and exchange rate manually
-3. **Check login state:** Ensure you have logged in to the site in this browser
-4. **Verify compatibility:** Confirm the site is based on a supported project (see below)
+1. **Switch authentication method**: Try switching from Access Token to Cookie mode
+2. **Manual addition**: After auto-identification fails, manually fill in the following information:
+   - Username
+   - User ID
+   - Access Token
+   - Top-up Ratio
+3. **Check login status**: Ensure you are logged in to the target site in your browser
+4. **Check site compatibility**: Confirm whether the site is based on supported projects (see below)
 
 ### Which sites might be incompatible?
 
-Sites that radically change core APIs (such as `/api/user`) may not work properly.
+If the site has undergone deep secondary development, modifying critical interfaces (e.g., `/api/user`), the plugin may not function correctly.
 
-Common incompatibilities include:
-- Custom user information endpoints
-- Access tokens disabled
-- Non-standard authentication flows
-- Different response formats compared to upstream projects
+Common incompatibility situations:
+- User information interface has been modified
+- Access Token functionality has been disabled
+- Custom authentication method
+- API response format has been modified
 
-## 🐛 Feature & Bug Questions
+## 🐛 Features and Bug-related Issues
 
-### I still see a bug or missing feature—what should I do?
+### What to do if you encounter feature issues or bugs?
 
-1. **Search existing issues:** Visit [GitHub Issues](https://github.com/qixing-jk/all-api-hub/issues)
-2. **Use the latest version:**
-   - Store releases take several days to update
-   - Prefer the GitHub release if a fix has already landed
-   - You can also build from the main branch for the latest features
+1. **Search Issues**: Go to [GitHub Issues](https://github.com/qixing-jk/all-api-hub/issues) to search if there are similar issues
+2. **Use the latest version**:
+   - Store versions update slowly; it is recommended to use the GitHub Release version
+   - Or directly use the development version from the main branch
 
-### Where can I download the latest version?
+### How to get the latest version?
 
-Different channels update at different speeds:
+The plugin is released on multiple platforms, with varying update speeds:
 
-| Channel | Update Speed              | Download |
-|---------|---------------------------|----------|
-| **GitHub Releases** | ⚡ Fastest                 | [Download](https://github.com/qixing-jk/all-api-hub/releases) |
-| **Chrome Web Store** | 🐌 Slow (3–5 days review) | [Install](https://chromewebstore.google.com/detail/lapnciffpekdengooeolaienkeoilfeo) |
-| **Edge Add-ons** | 🐌 Slow (2–3 days review) | [Install](https://microsoftedge.microsoft.com/addons/detail/pcokpjaffghgipcgjhapgdpeddlhblaa) |
-| **Firefox Add-ons** | ⚡ Fast (few hours review) | [Install](https://addons.mozilla.org/firefox/addon/{bc73541a-133d-4b50-b261-36ea20df0d24}) |
+| Platform            | Update Speed            | Get Version                                                                |
+|---------------------|-------------------------|----------------------------------------------------------------------------|
+| **GitHub Releases** | ⚡ Fastest              | [Go to download](https://github.com/qixing-jk/all-api-hub/releases)        |
+| **Chrome Web Store** | 🐌 Slower (3-5 days review) | [Go to install](https://chromewebstore.google.com/detail/lapnciffpekdengooeolaienkeoilfeo) |
+| **Edge Add-ons**    | 🐌 Slower (3-5 days review) | [Go to install](https://microsoftedge.microsoft.com/addons/detail/pcokpjaffghgipcgjhapgdpeddlhblaa) |
+| **Firefox Add-ons** | ⚡ Faster (a few hours review) | [Go to install](https://addons.mozilla.org/firefox/addon/{bc73541a-133d-4b50-b261-36ea20df0d24}) |
 
 ::: tip Recommendation
-If a bug has already been fixed, grab the latest GitHub release and install it manually.
+If you encounter a fixed bug, it is recommended to download the latest version from GitHub Releases and install it manually.
 :::
 
-## ⚙️ Using Key Features
+## ⚙️ Feature Usage Issues
 
-### How do I back up with WebDAV?
+### How to use WebDAV backup?
 
-WebDAV keeps your data synchronized across devices.
+WebDAV backup can help you synchronize data across multiple devices:
 
-1. **Configure WebDAV:**
-   - Open **Settings → WebDAV Backup**
-   - Enter the full WebDAV endpoint URL
-   - Provide your username and password
-   
-2. **Choose a sync strategy:**
-   - `merge` (recommended): intelligently merge local and remote data
-   - `upload only`: push local data to remote
-   - `download only`: pull remote data to local
+1.  **Configure WebDAV**:
+    -   Open "Settings" → "WebDAV Backup"
+    -   Fill in the WebDAV server address (full URL)
+    -   Fill in username and password
 
-3. **Enable auto-sync:**
-   - Check **“Enable auto sync”**
-   - Set the sync interval (default 3600 seconds / 1 hour)
+2.  **Choose synchronization strategy**:
+    -   `Merge` (recommended): Intelligently merges local and remote data
+    -   `Upload Only`: Only uploads local data to the server
+    -   `Download Only`: Only downloads data from the server
 
-::: tip Suggested services
-- [Nutstore](https://www.jianguoyun.com/) (fast for CN users)
-- Nextcloud (self-hosted)
-- Synology NAS
+3.  **Enable automatic synchronization**:
+    -   Check "Enable automatic synchronization"
+    -   Set synchronization interval (default 3600 seconds/1 hour)
+
+::: tip Recommended Services
+-   [Jianguoyun](https://www.jianguoyun.com/) (fast access in China)
+-   Nextcloud (self-hosted)
+-   Synology NAS
 :::
 
-### How do I export to CherryStudio or New API?
+### How to export to CherryStudio / New API?
 
-One-click export helps replicate site configuration in other tools.
+The quick export feature allows you to import site configurations to other platforms with one click:
 
-**Configuration:**
+**Configuration Steps**:
 
-1. **For New API:**
-   - Go to **Settings → Basic Settings**
-   - Set the New API base URL
-   - Input the admin token
-   - Provide the user ID
+1.  **For New API**:
+    -   Open "Settings" → "Basic Settings"
+    -   Configure New API server address
+    -   Fill in Admin Token
+    -   Fill in User ID
 
-2. **For CherryStudio:**
-   - No extra setup required
-   - Ensure CherryStudio is running locally
+2.  **For CherryStudio**:
+    -   No additional configuration required
+    -   Ensure CherryStudio is running
 
-**Export flow:**
+**Export Process**:
 
-1. Navigate to **Key Management**
-2. Find the site you want to export
-3. Open the action menu
-4. Choose **“Export to CherryStudio”** or **“Export to New API”**
+1.  Go to the "Key Management" page
+2.  Find the site to be exported
+3.  Click the action menu
+4.  Select "Export to CherryStudio" or "Export to New API"
 
-::: info Smart check
-When exporting to New API, the extension checks for duplicate channels (same `Base URL`) to avoid duplicates.
+::: info Smart Detection
+When exporting to New API, the plugin automatically detects if the same channel already exists to avoid duplication.
 :::
 
-### How does the daily check-in feature work?
+### How to use the site check-in feature?
 
-Some relay sites provide daily rewards via check-in.
+Some relay stations support daily check-ins to earn rewards:
 
-1. **Enable detection:**
-   - Edit the account
-   - Enable **“Check-in detection”**
+1.  **Enable check-in detection**:
+    -   Edit account
+    -   Check "Enable check-in detection"
 
-2. **Custom URLs (optional):**
-   - Provide a custom check-in URL if the site uses a non-standard path
-   - Add a custom redeem URL if needed
+2.  **Custom Check-in URL** (Optional):
+    -   If the site's check-in page is not a standard path
+    -   You can fill in "Custom Check-in URL"
+    -   Fill in "Custom Top-up URL" (Optional)
 
-3. **Perform check-in:**
-   - Accounts that need a check-in will display a badge
-   - Click the check-in icon to open the check-in page automatically
+3.  **Perform check-in**:
+    -   Accounts requiring check-in will display a check-in icon
+    -   Click the check-in button on the account card
+    -   Automatically open the check-in page
 
-### Can I customize account sorting?
+### How to customize account sorting?
 
-Yes—sorting priority is fully configurable.
+The plugin supports priority settings for multiple sorting methods:
 
-1. **Open the sorting settings:**
-   - Go to **Settings → Sorting Priority**
+1.  **Enter sorting settings**:
+    -   Open "Settings" → "Sort Priority Settings"
 
-2. **Adjust priority:**
-   - Drag to reorder criteria
-   - Toggle individual criteria on/off
+2.  **Adjust priority**:
+    -   Drag sorting conditions to adjust priority
+    -   Check/uncheck to enable/disable conditions
 
-3. **Available criteria include:**
-   - 📌 Pin the currently detected site
-   - 🏥 Health status ordering (Error → Warning → Unknown → Healthy)
-   - ✅ Pin accounts that require check-in
-   - 🔗 Pin accounts with custom check-in URLs
-   - 📊 User-defined sorting (balance / consumption / name)
+3.  **Available sorting conditions**:
+    -   📌 Current site pinned to top
+    -   🏥 Health status sorting (Error > Warning > Unknown > Normal)
+    -   ✅ Accounts requiring check-in pinned to top
+    -   🔗 Accounts with custom check-in URLs pinned to top
+    -   📊 User-defined field sorting (Balance/Consumption/Name)
 
-### How do I configure auto-refresh?
+### How to set up automatic refresh?
 
-Keep data up-to-date without manual refreshes.
+Automatic refresh keeps account data up-to-date:
 
-1. **Enable scheduled refresh:**
-   - Open **Settings → Auto Refresh**
-   - Check **“Enable scheduled refresh”**
+1.  **Enable automatic refresh**:
+    -   Open "Settings" → "Auto Refresh"
+    -   Check "Enable timed auto-refresh"
 
-2. **Set the interval:**
-   - Default: 360 seconds (6 minutes)
-   - Minimum: 60 seconds
-   - Adjust according to the number of sites
+2.  **Set refresh interval**:
+    -   Default: 360 seconds (6 minutes)
+    -   Minimum: 60 seconds (1 minute)
+    -   Adjust according to the number of sites
 
-3. **Additional options:**
-   - ✅ Refresh when the popup opens
-   - ✅ Show health status badges
+3.  **Other options**:
+    -   ✅ Auto-refresh when opening the plugin
+    -   ✅ Display health status
 
-::: warning Heads-up
-Excessively short intervals can trigger rate limits. Avoid setting below 60 seconds.
+::: warning Note
+Too short a refresh interval may lead to frequent requests; it is recommended to be no less than 60 seconds.
 :::
 
 ## 📱 Mobile Usage
 
-### Can I use the extension on mobile?
+### How to use on mobile?
 
-Yes—Android is fully supported via browsers that allow extensions.
+The plugin supports use on mobile devices:
 
-**Android:**
-1. Install [Kiwi Browser](https://play.google.com/store/apps/details?id=com.kiwibrowser.browser) (recommended)
-   - Full Chrome extension support
-   - All features available
+**Android Devices**:
+1.  Install [Kiwi Browser](https://play.google.com/store/apps/details?id=com.kiwibrowser.browser) (recommended)
+    -   Perfectly compatible with Chrome extensions
+    -   Supports all features
 
-2. Alternatively, use Firefox for Android
-   - Install directly from Firefox Add-ons
+2.  Or install Firefox for Android
+    -   Install from Firefox Add-ons
 
-**iOS:**
-- Currently unsupported due to platform limitations
+**iOS Devices**:
+-   Not currently supported (iOS limitations)
 
-### Mobile tips
+### Mobile Usage Recommendations
 
-1. **Use the side panel layout** for better usability on small screens
-2. **Enable auto refresh** to avoid manual refreshes
-3. **Turn on WebDAV sync** to share data with your desktop
+1.  **Use sidebar mode**: More suitable for mobile screens
+2.  **Enable automatic refresh**: Avoid frequent manual refreshes
+3.  **Configure WebDAV synchronization**: Synchronize data between computer and mobile phone
 
-## 🔒 Data Safety
+## 🔒 Data Security
 
-### Where is my data stored?
+### Where is the data stored?
 
-- **Local storage:** Everything is stored locally in your browser
-- **Offline first:** Core features work without any external network calls
-- **No uploads:** The extension never uploads your data to third-party servers
+-   **Local storage**: All data is saved in the browser's local storage
+-   **Completely offline**: The core functions of the plugin do not require an internet connection
+-   **No data upload**: No data is uploaded to any third-party servers
 
-### Could I lose my data?
+### Can data be lost?
 
-We recommend regular backups.
+It is recommended to back up data regularly:
 
-1. **JSON export:**
-   - Open **Settings → Data Management**
-   - Click **“Export Data”**
-   - Save the JSON file securely
+1.  **JSON Export**:
+    -   Go to "Settings" → "Data Management"
+    -   Click "Export Data"
+    -   Save JSON file
 
-2. **WebDAV sync (recommended):**
-   - Keep an automated cloud backup
-   - Sync across multiple devices
+2.  **WebDAV Synchronization** (recommended):
+    -   Automatic backup to the cloud
+    -   Supports multi-device synchronization
 
-## 🆘 Other Questions
+## 🆘 Other Issues
 
-### What is duplicate site detection?
+### What is site duplication detection?
 
-When adding a site, the extension checks if the same base URL already exists:
-- Detects duplicate URLs
-- Prompts you to update the existing entry instead
-- Keeps your list clean and tidy
+When adding a site, the plugin automatically detects if the same site already exists:
+-   Based on site URL
+-   If it already exists, it will prompt and allow quick modification
+-   Avoid adding duplicate sites
 
-### What do the health statuses mean?
+### What does "Health Status" mean?
 
-Each account shows a health badge:
+Health status indicates the availability of the account:
 
-| Status | Icon | Meaning |
-|--------|------|---------|
-| 🟢 Healthy | Healthy | Everything works normally |
-| 🟡 Warning | Warning | Needs attention (e.g., low balance) |
-| 🔴 Error | Error | API call failed or account unusable |
-| ⚪ Unknown | Unknown | Not yet checked or unavailable |
+| Status    | Icon    | Meaning                             |
+|-----------|---------|-------------------------------------|
+| 🟢 Normal  | Healthy | Account is operating normally       |
+| 🟡 Warning | Warning | Insufficient balance or needs attention |
+| 🔴 Error  | Error   | API call failed or account abnormality |
+| ⚪ Unknown | Unknown | Not yet detected or status cannot be obtained |
 
-### Does the extension consume much traffic?
+### Does the plugin consume data?
 
-- Only calls the site APIs during refresh
-- Each refresh is lightweight (a few KB per site)
-- We recommend auto-refreshing on Wi-Fi connections
+-   Only accesses site API when refreshing account data
+-   Request volume is very small (approx. a few KB per site)
+-   It is recommended to use auto-refresh in a WiFi environment
 
-### How can I contribute?
+### How to contribute code?
 
-We welcome contributions!
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Open a Pull Request
+Pull requests are welcome:
+1.  Fork the project repository
+2.  Create a feature branch
+3.  Commit your code
+4.  Submit a Pull Request
 
-See [CONTRIBUTING.md](https://github.com/qixing-jk/all-api-hub/blob/main/CONTRIBUTING.md) for details.
+For details, see: [CONTRIBUTING.md](https://github.com/qixing-jk/all-api-hub/blob/main/CONTRIBUTING.md)
 
 ---
 
-## 📚 Related Resources
+## 📚 Related Documentation
 
-- [Getting Started](./get-started.md)
-- [GitHub Repository](https://github.com/qixing-jk/all-api-hub)
-- [Issue Tracker](https://github.com/qixing-jk/all-api-hub/issues)
-- [Changelog](https://github.com/qixing-jk/all-api-hub/blob/main/CHANGELOG.md)
+-   [Usage Tutorial](./get-started.md)
+-   [GitHub Repository](https://github.com/qixing-jk/all-api-hub)
+-   [Issue Feedback](https://github.com/qixing-jk/all-api-hub/issues)
+-   [Changelog](https://github.com/qixing-jk/all-api-hub/blob/main/CHANGELOG.md)
 
-::: tip Still stuck?
-If you can’t find the answer here, feel free to open an issue on [GitHub](https://github.com/qixing-jk/all-api-hub/issues).
+::: tip Can't find an answer?
+If the above content does not resolve your issue, feel free to ask on [GitHub Issues](https://github.com/qixing-jk/all-api-hub/issues).
 :::
