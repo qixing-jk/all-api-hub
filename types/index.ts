@@ -94,7 +94,7 @@ export interface CheckInConfig {
    * - enableDetection is true
    * - Global auto check-in feature is enabled
    * - Account has necessary credentials for check-in
-   * Default: true for user configure, but be considered false when it is undefined.
+   * Default: true for user configure and be considered true when it is undefined.
    */
   autoCheckInEnabled?: boolean
 

@@ -271,7 +271,7 @@ class AutoCheckinScheduler {
     account: SiteAccount
   ): AutoCheckinAccountSnapshot {
     const detectionEnabled = account.checkIn?.enableDetection ?? false
-    const autoCheckinEnabled = account.checkIn?.autoCheckInEnabled === true
+    const autoCheckinEnabled = account.checkIn?.autoCheckInEnabled !== false
     const provider = resolveAutoCheckinProvider(account)
     const providerAvailable = provider ? provider.canCheckIn(account) : false
     const isCheckedInToday = account.checkIn?.isCheckedInToday === true
