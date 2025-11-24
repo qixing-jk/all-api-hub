@@ -3,6 +3,7 @@ import merge from "lodash-es/merge"
 
 import { Storage } from "@plasmohq/storage"
 
+import { UNKNOWN_SITE } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import {
   AuthTypeEnum,
@@ -17,6 +18,7 @@ import { DeepPartial } from "~/types/utils.ts"
 
 import { getErrorMessage } from "../utils/error" // 存储键名常量
 import {
+  fetchSupportCheckIn,
   fetchTodayIncome,
   refreshAccountData,
   validateAccountConnection
@@ -26,6 +28,7 @@ import {
   migrateAccountsConfig,
   needsConfigMigration
 } from "./configMigration/account/accountDataMigration.ts"
+import { getSiteType } from "./detectSiteType"
 import { userPreferences } from "./userPreferences"
 
 // 存储键名常量
@@ -414,11 +417,13 @@ class AccountStorageService {
    */
   async refreshAccount(id: string, force: boolean = false) {
     try {
-      const account = await this.getAccountById(id)
+      let account = await this.getAccountById(id)
 
       if (!account) {
         throw new Error(t("messages:storage.accountNotFound", { id }))
       }
+      account = await this.refreshSiteMetadataIfNeeded(account)
+
       const DisplaySiteData = accountStorage.convertToDisplayData(account)
 
       if (await this.shouldSkipRefresh(account, force)) {
@@ -837,6 +842,84 @@ class AccountStorageService {
     const timeSinceLastRefresh = Date.now() - (account.last_sync_time || 0)
 
     return timeSinceLastRefresh < minIntervalMs
+  }
+
+  private normalizeBaseUrl(url?: string): string | null {
+    if (!url) {
+      return null
+    }
+    try {
+      const parsed = new URL(url)
+      return `${parsed.protocol}//${parsed.host}`
+    } catch {
+      return null
+    }
+  }
+
+  private async refreshSiteMetadataIfNeeded(
+    account: SiteAccount
+  ): Promise<SiteAccount> {
+    const normalizedUrl = this.normalizeBaseUrl(account.site_url)
+    if (!normalizedUrl) {
+      return account
+    }
+
+    const needsSiteType =
+      !account.site_type || account.site_type === UNKNOWN_SITE
+    const needsCheckInDetection =
+      typeof account.checkIn?.enableDetection === "undefined" ||
+      account.checkIn.enableDetection === false
+
+    if (!needsSiteType && !needsCheckInDetection) {
+      return account
+    }
+
+    const updates: DeepPartial<SiteAccount> = {}
+
+    if (needsSiteType) {
+      try {
+        const detectedType = await getSiteType(normalizedUrl)
+        if (detectedType && detectedType !== UNKNOWN_SITE) {
+          updates.site_type = detectedType
+        }
+      } catch (error) {
+        console.warn(
+          `[AccountStorage] Failed to detect site type for ${normalizedUrl}:`,
+          error
+        )
+      }
+    }
+
+    if (needsCheckInDetection) {
+      try {
+        const support = await fetchSupportCheckIn(normalizedUrl)
+        if (typeof support === "boolean") {
+          updates.checkIn = {
+            ...(account.checkIn ?? {}),
+            enableDetection: support
+          }
+        }
+      } catch (error) {
+        console.warn(
+          `[AccountStorage] Failed to determine check-in support for ${normalizedUrl}:`,
+          error
+        )
+      }
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return account
+    }
+
+    const success = await this.updateAccount(account.id, updates)
+    if (success) {
+      const refreshed = await this.getAccountById(account.id)
+      if (refreshed) {
+        return refreshed
+      }
+    }
+
+    return merge({}, account, updates) as SiteAccount
   }
 }
 

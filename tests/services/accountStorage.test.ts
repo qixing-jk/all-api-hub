@@ -10,8 +10,18 @@ import {
 
 const storageData = new Map<string, StorageConfig>()
 const STORAGE_KEY = "site_accounts"
-const { mockValidateAccountConnection } = vi.hoisted(() => ({
-  mockValidateAccountConnection: vi.fn()
+const {
+  mockValidateAccountConnection,
+  mockFetchSupportCheckIn,
+  mockGetSiteType,
+  mockRefreshAccountData,
+  mockFetchTodayIncome
+} = vi.hoisted(() => ({
+  mockValidateAccountConnection: vi.fn(),
+  mockFetchSupportCheckIn: vi.fn(),
+  mockGetSiteType: vi.fn(),
+  mockRefreshAccountData: vi.fn(),
+  mockFetchTodayIncome: vi.fn()
 }))
 
 vi.mock("@plasmohq/storage", () => {
@@ -33,9 +43,14 @@ vi.mock("@plasmohq/storage", () => {
 })
 
 vi.mock("~/services/apiService", () => ({
-  fetchTodayIncome: vi.fn().mockResolvedValue({ today_income: 0 }),
-  refreshAccountData: vi.fn(),
-  validateAccountConnection: mockValidateAccountConnection
+  fetchTodayIncome: mockFetchTodayIncome,
+  refreshAccountData: mockRefreshAccountData,
+  validateAccountConnection: mockValidateAccountConnection,
+  fetchSupportCheckIn: mockFetchSupportCheckIn
+}))
+
+vi.mock("~/services/detectSiteType", () => ({
+  getSiteType: mockGetSiteType
 }))
 
 const seedStorage = (
@@ -87,6 +102,34 @@ describe("accountStorage core behaviors", () => {
   beforeEach(() => {
     storageData.clear()
     mockValidateAccountConnection.mockReset()
+    mockFetchSupportCheckIn.mockReset()
+    mockGetSiteType.mockReset()
+    mockRefreshAccountData.mockReset()
+    mockFetchTodayIncome.mockReset()
+
+    mockRefreshAccountData.mockResolvedValue({
+      success: true,
+      data: {
+        quota: 0,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_quota_consumption: 0,
+        today_requests_count: 0,
+        checkIn: {
+          enableDetection: true,
+          isCheckedInToday: false,
+          customCheckInUrl: "",
+          customRedeemUrl: "",
+          openRedeemWithCheckIn: true
+        }
+      },
+      healthStatus: {
+        status: SiteHealthStatus.Healthy,
+        message: ""
+      }
+    })
+
+    mockFetchTodayIncome.mockResolvedValue({ today_income: 0 })
   })
 
   it("convertToDisplayData should normalize currency values", () => {
@@ -361,6 +404,48 @@ describe("accountStorage core behaviors", () => {
     expect(updatedFresh?.checkIn?.lastCheckInDate).toBe(
       freshAccount.checkIn.lastCheckInDate
     )
+  })
+
+  it("refreshAccount should re-detect unknown site type and check-in support", async () => {
+    const account = createAccount({
+      id: "needs-detect",
+      site_url: "https://foo.example.com",
+      site_type: "unknown",
+      checkIn: {} as any
+    })
+    seedStorage([account])
+
+    mockGetSiteType.mockResolvedValue("one-api")
+    mockFetchSupportCheckIn.mockResolvedValue(true)
+
+    await accountStorage.refreshAccount("needs-detect", true)
+
+    const updatedAccount = await accountStorage.getAccountById("needs-detect")
+
+    expect(mockGetSiteType).toHaveBeenCalledWith("https://foo.example.com")
+    expect(mockFetchSupportCheckIn).toHaveBeenCalledWith(
+      "https://foo.example.com"
+    )
+    expect(updatedAccount?.site_type).toBe("one-api")
+    expect(updatedAccount?.checkIn?.enableDetection).toBe(true)
+  })
+
+  it("refreshAccount should skip re-detection when site metadata is complete", async () => {
+    const account = createAccount({
+      id: "known-site",
+      site_url: "https://bar.example.com",
+      site_type: "one-api",
+      checkIn: { enableDetection: true }
+    })
+    seedStorage([account])
+
+    await accountStorage.refreshAccount("known-site", true)
+
+    expect(mockGetSiteType).not.toHaveBeenCalled()
+    expect(mockFetchSupportCheckIn).not.toHaveBeenCalled()
+    const updatedAccount = await accountStorage.getAccountById("known-site")
+    expect(updatedAccount?.site_type).toBe("one-api")
+    expect(updatedAccount?.checkIn?.enableDetection).toBe(true)
   })
 })
 
