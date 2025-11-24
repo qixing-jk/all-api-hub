@@ -45,7 +45,7 @@
     }
   },
   "execution": {
-    "title": "自动签到历史",
+    "title": "自动签到",
     "runNow": "立即执行",
     "refresh": "刷新",
     "statistics": {
@@ -62,7 +62,12 @@
       "accountName": "账号名称",
       "status": "状态",
       "message": "消息",
-      "time": "时间"
+      "time": "时间",
+      "actions": "操作"
+    },
+    "actions": {
+      "retryAccount": "重新尝试",
+      "openManual": "打开手动签到"
     },
     "filters": {
       "all": "全部",
@@ -111,6 +116,8 @@
     "error": {
       "loadFailed": "获取自动签到设置失败：{{error}}",
       "runFailed": "执行自动签到失败：{{error}}",
+      "retryFailed": "重新尝试失败：{{error}}",
+      "openManualFailed": "打开手动签到页面失败：{{error}}",
       "invalidTimeWindow": "无效的时间窗口，开始时间和结束时间不能相同。",
       "invalidDeterministicTime": "请输入合法的 HH:mm 格式时间。",
       "deterministicTimeOutsideWindow": "固定时间必须位于配置的时间窗口内。",
@@ -118,7 +125,8 @@
     },
     "success": {
       "settingsSaved": "自动签到设置已保存。",
-      "runCompleted": "自动签到已完成。"
+      "runCompleted": "自动签到已完成。",
+      "retryCompleted": "重新尝试已完成。"
     },
     "loading": {
       "running": "正在执行自动签到..."

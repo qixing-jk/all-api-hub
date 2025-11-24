@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next"
 import { PageHeader } from "~/entrypoints/options/components/PageHeader"
 import { AutoCheckinStatus, CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { sendRuntimeMessage } from "~/utils/browserApi"
+import { openCheckInPage } from "~/utils/navigation"
 
 import AccountSnapshotTable from "./components/AccountSnapshotTable"
 import ActionBar from "./components/ActionBar"
@@ -27,6 +28,12 @@ export default function AutoCheckin() {
   const [searchKeyword, setSearchKeyword] = useState("")
   const [isLoading, setIsLoading] = useState(true)
   const [isRunning, setIsRunning] = useState(false)
+  const [retryingAccountId, setRetryingAccountId] = useState<string | null>(
+    null
+  )
+  const [openingManualAccountId, setOpeningManualAccountId] = useState<
+    string | null
+  >(null)
 
   const loadStatus = useCallback(async () => {
     try {
@@ -76,6 +83,52 @@ export default function AutoCheckin() {
 
   const handleRefresh = () => {
     void loadStatus()
+  }
+
+  const handleRetryAccount = async (accountId: string) => {
+    try {
+      setRetryingAccountId(accountId)
+      const response = await sendRuntimeMessage({
+        action: "autoCheckin:retryAccount",
+        accountId
+      })
+
+      if (response.success) {
+        toast.success(t("messages.success.retryCompleted"))
+        await loadStatus()
+      } else {
+        toast.error(
+          t("messages.error.retryFailed", { error: response.error ?? "" })
+        )
+      }
+    } catch (error: any) {
+      toast.error(t("messages.error.retryFailed", { error: error.message }))
+    } finally {
+      setRetryingAccountId(null)
+    }
+  }
+
+  const handleOpenManualSignIn = async (accountId: string) => {
+    try {
+      setOpeningManualAccountId(accountId)
+      const response = await sendRuntimeMessage({
+        action: "autoCheckin:getAccountInfo",
+        accountId
+      })
+
+      if (!response.success || !response.data) {
+        throw new Error(response.error || "Unknown error")
+      }
+
+      const displayData = response.data
+      await openCheckInPage(displayData)
+    } catch (error: any) {
+      toast.error(
+        t("messages.error.openManualFailed", { error: error.message })
+      )
+    } finally {
+      setOpeningManualAccountId(null)
+    }
   }
 
   // Filter and search results
@@ -160,7 +213,13 @@ export default function AutoCheckin() {
       {!hasResults ? (
         <EmptyResults hasHistory={hasHistory} />
       ) : (
-        <ResultsTable results={filteredResults} />
+        <ResultsTable
+          results={filteredResults}
+          retryingAccountId={retryingAccountId}
+          openingManualAccountId={openingManualAccountId}
+          onRetryAccount={handleRetryAccount}
+          onOpenManualSignIn={handleOpenManualSignIn}
+        />
       )}
 
       {status?.accountsSnapshot && status.accountsSnapshot.length > 0 && (

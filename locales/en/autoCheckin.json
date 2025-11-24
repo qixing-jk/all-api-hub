@@ -45,7 +45,7 @@
     }
   },
   "execution": {
-    "title": "Auto Check-in History",
+    "title": "Auto Check-in",
     "runNow": "Run now",
     "refresh": "Refresh",
     "statistics": {
@@ -62,7 +62,12 @@
       "accountName": "Account Name",
       "status": "Status",
       "message": "Message",
-      "time": "Time"
+      "time": "Time",
+      "actions": "Actions"
+    },
+    "actions": {
+      "retryAccount": "Retry",
+      "openManual": "Open manual sign-in"
     },
     "filters": {
       "all": "All",
@@ -111,6 +116,8 @@
     "error": {
       "loadFailed": "Failed to load auto check-in settings: {{error}}",
       "runFailed": "Failed to run auto check-in: {{error}}",
+      "retryFailed": "Retry failed: {{error}}",
+      "openManualFailed": "Failed to open manual sign-in page: {{error}}",
       "invalidTimeWindow": "Invalid time window. Start and end cannot be the same.",
       "invalidDeterministicTime": "Please provide a valid deterministic time in HH:mm format.",
       "deterministicTimeOutsideWindow": "The deterministic time must fall within the configured window.",
@@ -118,7 +125,8 @@
     },
     "success": {
       "settingsSaved": "Auto check-in settings have been saved.",
-      "runCompleted": "Auto check-in completed."
+      "runCompleted": "Auto check-in completed.",
+      "retryCompleted": "Retry completed."
     },
     "loading": {
       "running": "Running auto check-in..."

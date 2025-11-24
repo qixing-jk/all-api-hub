@@ -5,7 +5,7 @@ import {
   DEFAULT_PREFERENCES,
   userPreferences
 } from "~/services/userPreferences"
-import type { SiteAccount } from "~/types"
+import type { DisplaySiteData, SiteAccount } from "~/types"
 import {
   AUTO_CHECKIN_RUN_RESULT,
   AUTO_CHECKIN_SCHEDULE_MODE,
@@ -256,6 +256,62 @@ class AutoCheckinScheduler {
       date: today,
       attempts: 1
     }
+  }
+
+  private recalculateSummaryFromResults(
+    perAccount: Record<string, CheckinAccountResult>,
+    previousSummary?: AutoCheckinRunSummary
+  ): AutoCheckinRunSummary {
+    const values = Object.values(perAccount)
+    const successStatuses: CheckinResultStatus[] = [
+      CHECKIN_RESULT_STATUS.SUCCESS,
+      CHECKIN_RESULT_STATUS.ALREADY_CHECKED
+    ]
+    const successCount = values.filter((value) =>
+      successStatuses.includes(value.status)
+    ).length
+    const failedCount = values.filter(
+      (value) => value.status === CHECKIN_RESULT_STATUS.FAILED
+    ).length
+    const skippedCount = values.filter(
+      (value) => value.status === CHECKIN_RESULT_STATUS.SKIPPED
+    ).length
+
+    const executed = successCount + failedCount
+    const totalEligible =
+      previousSummary?.totalEligible ?? executed + skippedCount
+
+    return {
+      totalEligible,
+      executed,
+      successCount,
+      failedCount,
+      skippedCount,
+      needsRetry: failedCount > 0
+    }
+  }
+
+  private updateSnapshotWithResult(
+    snapshots: AutoCheckinAccountSnapshot[] | undefined,
+    result: CheckinAccountResult
+  ): AutoCheckinAccountSnapshot[] | undefined {
+    if (!snapshots || snapshots.length === 0) {
+      return snapshots
+    }
+
+    let updated = false
+    const nextSnapshots = snapshots.map((snapshot) => {
+      if (snapshot.accountId !== result.accountId) {
+        return snapshot
+      }
+      updated = true
+      return {
+        ...snapshot,
+        lastResult: result
+      }
+    })
+
+    return updated ? nextSnapshots : snapshots
   }
 
   /**
@@ -694,6 +750,77 @@ class AutoCheckinScheduler {
     await this.scheduleNextRun()
     console.log("[AutoCheckin] Settings updated:", updated)
   }
+
+  async retryAccount(accountId: string) {
+    const account = await accountStorage.getAccountById(accountId)
+
+    if (!account) {
+      throw new Error(t("messages:storage.accountNotFound", { id: accountId }))
+    }
+
+    const { result } = await this.runAccountCheckin(account)
+    const currentStatus = (await autoCheckinStorage.getStatus()) || {}
+
+    const perAccount: Record<string, CheckinAccountResult> = {
+      ...(currentStatus.perAccount ?? {}),
+      [result.accountId]: result
+    }
+
+    const summary = this.recalculateSummaryFromResults(
+      perAccount,
+      currentStatus.summary
+    )
+
+    const prefs = await userPreferences.getPreferences()
+    const config = prefs.autoCheckin ?? DEFAULT_PREFERENCES.autoCheckin!
+    const hasRetriesRemaining = !!(
+      config.retryStrategy?.enabled &&
+      (currentStatus.attempts?.attempts ?? 0) <
+        config.retryStrategy.maxAttemptsPerDay
+    )
+
+    let lastRunResult: AutoCheckinRunResult = AUTO_CHECKIN_RUN_RESULT.SUCCESS
+    if (summary.failedCount > 0 && summary.successCount > 0) {
+      lastRunResult = AUTO_CHECKIN_RUN_RESULT.PARTIAL
+    } else if (summary.failedCount > 0) {
+      lastRunResult = AUTO_CHECKIN_RUN_RESULT.FAILED
+    }
+
+    const pendingRetry = summary.failedCount > 0 && hasRetriesRemaining
+
+    const accountsSnapshot = this.updateSnapshotWithResult(
+      currentStatus.accountsSnapshot,
+      result
+    )
+
+    const updatedStatus: AutoCheckinStatus = {
+      ...currentStatus,
+      lastRunAt: new Date().toISOString(),
+      lastRunResult,
+      perAccount,
+      summary,
+      pendingRetry,
+      accountsSnapshot
+    }
+
+    await autoCheckinStorage.saveStatus(updatedStatus)
+
+    return {
+      result,
+      summary,
+      pendingRetry
+    }
+  }
+
+  async getAccountDisplayData(accountId: string): Promise<DisplaySiteData> {
+    const account = await accountStorage.getAccountById(accountId)
+
+    if (!account) {
+      throw new Error(t("messages:storage.accountNotFound", { id: accountId }))
+    }
+
+    return accountStorage.convertToDisplayData(account) as DisplaySiteData
+  }
 }
 
 // Create singleton instance
@@ -712,6 +839,27 @@ export const handleAutoCheckinMessage = async (
         await autoCheckinScheduler.runCheckins()
         sendResponse({ success: true })
         break
+
+      case "autoCheckin:retryAccount":
+        if (!request.accountId) {
+          sendResponse({ success: false, error: "Missing accountId" })
+          break
+        }
+        await autoCheckinScheduler.retryAccount(request.accountId)
+        sendResponse({ success: true })
+        break
+
+      case "autoCheckin:getAccountInfo": {
+        if (!request.accountId) {
+          sendResponse({ success: false, error: "Missing accountId" })
+          break
+        }
+        const displayData = await autoCheckinScheduler.getAccountDisplayData(
+          request.accountId
+        )
+        sendResponse({ success: true, data: displayData })
+        break
+      }
 
       case "autoCheckin:getStatus": {
         const status = await autoCheckinStorage.getStatus()
