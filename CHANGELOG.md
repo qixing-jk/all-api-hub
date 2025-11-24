@@ -1,5 +1,25 @@
 # Changelog
 
+## [2.14.0](https://github.com/qixing-jk/all-api-hub/compare/v2.13.0...v2.14.0) (2025-11-24)
+
+
+### Features
+
+* **account:** remove exchange rate upper limit validation ([c0fe8e6](https://github.com/qixing-jk/all-api-hub/commit/c0fe8e6fe28847a54662fcc86e7b4b6d374e09db))
+* **accountStorage:** add site metadata auto-detection during refresh ([#189](https://github.com/qixing-jk/all-api-hub/issues/189)) ([4f63faa](https://github.com/qixing-jk/all-api-hub/commit/4f63faaeb7c3ad7446e8e838d705d6dcb56d7bcf))
+* **auto-checkin:** add retry and manual sign-in actions for failed attempts ([e989915](https://github.com/qixing-jk/all-api-hub/commit/e9899157580e95ee3094719a52b23cb0ee52db7b))
+* **auto-checkin:** add validation for deterministic time within window ([c017b43](https://github.com/qixing-jk/all-api-hub/commit/c017b43035fad9c7106f49a334a36cbd50216744))
+* **auto-checkin:** enhance auto check-in with retry strategy, skip reasons and account snapshots ([2d159ed](https://github.com/qixing-jk/all-api-hub/commit/2d159ed0e281188897cef06328cfb0311d1dd65b))
+* **auto-checkin:** refactor check-in execution to concurrent processing ([ed1af45](https://github.com/qixing-jk/all-api-hub/commit/ed1af451a85eff4303e6301ab324cba3b546ddab))
+* **AutoCheckin:** simplify accounts snapshot rendering logic ([763622e](https://github.com/qixing-jk/all-api-hub/commit/763622e3d141b69082cb8b6f63107dda6f2afc2a))
+* **multi-select:** add copy selected values functionality ([8976227](https://github.com/qixing-jk/all-api-hub/commit/8976227afa8fab8db7669654d483ee9279bc6c46))
+
+
+### Bug Fixes
+
+* **auto-checkin:** correct default behavior for autoCheckInEnabled flag ([313d39c](https://github.com/qixing-jk/all-api-hub/commit/313d39c1552c0fd900120821d76e6f114e7f71f0))
+* **auto-checkin:** correct default behavior for undefined autoCheckInEnabled ([0b77283](https://github.com/qixing-jk/all-api-hub/commit/0b77283b9e84c8196bd40fb8075be3af18c375d5))
+
 ## [2.13.0](https://github.com/qixing-jk/all-api-hub/compare/v2.12.1...v2.13.0) (2025-11-23)
 
 
