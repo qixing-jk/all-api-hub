@@ -11,6 +11,7 @@ import {
   autoRefreshService,
   handleAutoRefreshMessage
 } from "../services/autoRefreshService"
+import { handleChannelConfigMessage } from "../services/channelConfigStorage"
 import { migrateAccountsConfig } from "../services/configMigration/account/accountDataMigration.ts"
 import { getSiteType } from "../services/detectSiteType"
 import { modelMetadataService } from "../services/modelMetadata"
@@ -165,6 +166,12 @@ async function main() {
     // 处理Auto Check-in相关消息
     if (request.action && request.action.startsWith("autoCheckin:")) {
       handleAutoCheckinMessage(request, sendResponse)
+      return true
+    }
+
+    // 处理Channel Config相关消息
+    if (request.action && request.action.startsWith("channelConfig:")) {
+      handleChannelConfigMessage(request, sendResponse)
       return true
     }
   })

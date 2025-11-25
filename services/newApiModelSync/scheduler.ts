@@ -17,6 +17,7 @@ import {
 } from "~/utils/browserApi"
 import { getErrorMessage } from "~/utils/error"
 
+import { channelConfigStorage } from "../channelConfigStorage"
 import { DEFAULT_PREFERENCES, userPreferences } from "../userPreferences"
 import { collectModelsFromExecution } from "./modelCollection"
 import { NewApiModelSyncService } from "./NewApiModelSyncService"
@@ -47,12 +48,15 @@ class NewApiModelSyncScheduler {
     const config =
       userPrefs.newApiModelSync ?? DEFAULT_PREFERENCES.newApiModelSync!
 
+    const channelConfigs = await channelConfigStorage.getAllConfigs()
+
     return new NewApiModelSyncService(
       newApiBaseUrl!,
       newApiAdminToken!,
       newApiUserId!,
       config.rateLimit,
-      config.allowedModels
+      config.allowedModels,
+      channelConfigs
     )
   }
 

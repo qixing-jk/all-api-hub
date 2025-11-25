@@ -53,6 +53,7 @@
       "edit": "Edit",
       "sync": "Sync models",
       "syncing": "Syncing...",
+      "filters": "Channel filters",
       "delete": "Delete"
     }
   },
@@ -74,5 +75,49 @@
     "syncFailed": "Model sync failed: {{error}}",
     "loadFailed": "Failed to load channels: {{error}}",
     "genericError": "Request failed: {{error}}"
+  },
+  "filters": {
+    "title": "Channel filters",
+    "subtitle": "Customize filtering rules for {{channel}}",
+    "loading": "Loading channel filters...",
+    "empty": {
+      "title": "No filters yet",
+      "description": "Add include/exclude rules with optional regex to control synced models."
+    },
+    "addRule": "Add filter rule",
+    "labels": {
+      "name": "Filter name",
+      "pattern": "Match pattern",
+      "description": "Description",
+      "action": "Action",
+      "enabled": "Enabled",
+      "regex": "Regex mode",
+      "delete": "Delete filter"
+    },
+    "placeholders": {
+      "name": "e.g. Allow GPT-4",
+      "pattern": "Exact string or regex pattern",
+      "description": "Optional notes about this rule"
+    },
+    "actionOptions": {
+      "include": "Include matching models",
+      "exclude": "Exclude matching models"
+    },
+    "hints": {
+      "regex": "Regex rules support advanced matching using JavaScript syntax.",
+      "substring": "Plain rules match case-sensitive substrings inside model names."
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "save": "Save filters"
+    },
+    "messages": {
+      "loadFailed": "Failed to load filters: {{error}}",
+      "saveFailed": "Failed to save filters: {{error}}",
+      "saved": "Filters saved",
+      "validationName": "Please provide a name for each filter.",
+      "validationPattern": "Filter pattern cannot be empty.",
+      "validationRegex": "Invalid regex pattern: {{error}}"
+    }
   }
 }

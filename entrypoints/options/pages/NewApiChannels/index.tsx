@@ -31,14 +31,16 @@ import {
   Loader2,
   Plus,
   RefreshCcw,
+  Settings2,
   Trash2
 } from "lucide-react"
+import { nanoid } from "nanoid"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { useChannelDialog } from "~/components/ChannelDialog"
-import { Input } from "~/components/ui"
+import { Input, Modal, Switch, Textarea } from "~/components/ui"
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/Alert"
 import {
   AlertDialog,
@@ -86,10 +88,12 @@ import {
 import { ChannelTypeNames } from "~/constants/newApi"
 import { PageHeader } from "~/entrypoints/options/components/PageHeader"
 import { cn } from "~/lib/utils"
+import { channelConfigStorage } from "~/services/channelConfigStorage"
 import {
   deleteChannel,
   getNewApiConfig
 } from "~/services/newApiService/newApiService"
+import type { ChannelFilterRule } from "~/types/channelFilters"
 import type { NewApiChannel } from "~/types/newapi"
 import { sendRuntimeMessage } from "~/utils/browserApi"
 import { getErrorMessage } from "~/utils/error"
@@ -100,7 +104,90 @@ type RowActionsLabels = {
   edit: string
   sync: string
   syncing: string
+  filters: string
   delete: string
+}
+
+/**
+ * Load channel filter rules for the given channel.
+ *
+ * 1. Prefer the background runtime handler (`channelConfig:get`) so the
+ *    authoritative storage inside the extension context is used.
+ * 2. When the options page is running outside the extension (e.g. dev server)
+ *    the runtime call fails—fall back to reading `channelConfigStorage`
+ *    locally so editing is still possible.
+ */
+async function fetchChannelFilters(
+  channelId: number
+): Promise<ChannelFilterRule[]> {
+  try {
+    const response = await sendRuntimeMessage({
+      action: "channelConfig:get",
+      channelId
+    })
+    if (response?.success) {
+      return response.data?.filters ?? []
+    }
+    throw new Error(response?.error || "Failed to load channel filters")
+  } catch (runtimeError) {
+    console.warn(
+      `[ChannelFilters] Runtime fetch failed for channel ${channelId}, using fallback storage`,
+      runtimeError
+    )
+    try {
+      const config = await channelConfigStorage.getConfig(channelId)
+      return config.filters ?? []
+    } catch (storageError) {
+      console.error(
+        `[ChannelFilters] Storage fallback failed for channel ${channelId}`,
+        storageError
+      )
+      throw storageError instanceof Error ? storageError : runtimeError
+    }
+  }
+}
+
+/**
+ * Persist channel filter rules for the given channel.
+ *
+ * Tries to update via runtime messaging first so the background copy stays in
+ * sync. If messaging is unavailable, we optimistically persist through the
+ * local `channelConfigStorage` as a best-effort fallback.
+ */
+async function saveChannelFilters(
+  channelId: number,
+  filters: ChannelFilterRule[]
+): Promise<void> {
+  try {
+    const response = await sendRuntimeMessage({
+      action: "channelConfig:upsertFilters",
+      channelId,
+      filters
+    })
+    if (!response?.success) {
+      throw new Error(response?.error || "Failed to save channel filters")
+    }
+  } catch (runtimeError) {
+    console.warn(
+      `[ChannelFilters] Runtime save failed for channel ${channelId}, persisting locally`,
+      runtimeError
+    )
+    try {
+      const success = await channelConfigStorage.upsertFilters(
+        channelId,
+        filters
+      )
+      if (!success) {
+        throw new Error("Failed to persist filters locally")
+      }
+    } catch (storageError) {
+      console.error(
+        `[ChannelFilters] Storage save failed for channel ${channelId}`,
+        storageError
+      )
+      throw storageError instanceof Error ? storageError : runtimeError
+    }
+  }
 }
 
 const STATUS_VARIANTS: Record<
@@ -175,6 +262,9 @@ export default function NewApiChannelsPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [syncingIds, setSyncingIds] = useState<Set<number>>(new Set())
+  const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false)
+  const [filterDialogChannel, setFilterDialogChannel] =
+    useState<ChannelRow | null>(null)
 
   const { openWithCustom } = useChannelDialog()
 
@@ -356,10 +446,21 @@ export default function NewApiChannelsPage() {
       edit: t("table.rowActions.edit"),
       sync: t("table.rowActions.sync"),
       syncing: t("table.rowActions.syncing"),
+      filters: t("table.rowActions.filters"),
       delete: t("table.rowActions.delete")
     }),
     [t]
   )
+
+  const handleOpenFilterDialog = useCallback((channel: ChannelRow) => {
+    setFilterDialogChannel(channel)
+    setIsFilterDialogOpen(true)
+  }, [])
+
+  const handleCloseFilterDialog = useCallback(() => {
+    setIsFilterDialogOpen(false)
+    setFilterDialogChannel(null)
+  }, [])
 
   const columns = useMemo<ColumnDef<ChannelRow, unknown>[]>(
     () => [
@@ -480,6 +581,7 @@ export default function NewApiChannelsPage() {
             onEdit={() => handleOpenEditDialog(row.original)}
             onDelete={() => scheduleDelete([row.original.id])}
             onSync={() => handleSyncChannels([row.original.id])}
+            onFilters={() => handleOpenFilterDialog(row.original)}
             isSyncing={syncingIds.has(row.original.id)}
             labels={rowActionLabels}
           />
@@ -491,6 +593,7 @@ export default function NewApiChannelsPage() {
     ],
     [
       handleOpenEditDialog,
+      handleOpenFilterDialog,
       handleSyncChannels,
       rowActionLabels,
       scheduleDelete,
@@ -898,6 +1001,12 @@ export default function NewApiChannelsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ChannelFilterDialog
+        channel={filterDialogChannel}
+        open={isFilterDialogOpen}
+        onClose={handleCloseFilterDialog}
+      />
     </div>
   )
 }
@@ -918,12 +1027,14 @@ function RowActions({
   onEdit,
   onDelete,
   onSync,
+  onFilters,
   isSyncing,
   labels
 }: {
   onEdit: () => void
   onDelete: () => void
   onSync: () => void
+  onFilters: () => void
   isSyncing: boolean
   labels: RowActionsLabels
 }) {
@@ -939,6 +1050,9 @@ function RowActions({
         <DropdownMenuItem onClick={onSync} disabled={isSyncing}>
           {isSyncing ? labels.syncing : labels.sync}
         </DropdownMenuItem>
+        <DropdownMenuItem onClick={onFilters}>
+          {labels.filters}
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
           className="text-destructive focus:text-destructive"
@@ -947,6 +1061,330 @@ function RowActions({
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+  )
+}
+
+interface ChannelFilterDialogProps {
+  channel: ChannelRow | null
+  open: boolean
+  onClose: () => void
+}
+
+type EditableFilter = ChannelFilterRule
+
+function ChannelFilterDialog({
+  channel,
+  open,
+  onClose
+}: ChannelFilterDialogProps) {
+  const { t } = useTranslation("newApiChannels")
+  const [filters, setFilters] = useState<EditableFilter[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+
+  const resetState = useCallback(() => {
+    setFilters([])
+    setIsLoading(false)
+    setIsSaving(false)
+  }, [])
+
+  const loadFilters = useCallback(async () => {
+    if (!channel) return
+    setIsLoading(true)
+    try {
+      const loadedFilters = await fetchChannelFilters(channel.id)
+      setFilters(loadedFilters)
+    } catch (error) {
+      toast.error(
+        t("filters.messages.loadFailed", { error: getErrorMessage(error) })
+      )
+      onClose()
+    } finally {
+      setIsLoading(false)
+    }
+  }, [channel, onClose, t])
+
+  useEffect(() => {
+    if (open && channel) {
+      void loadFilters()
+    } else {
+      resetState()
+    }
+  }, [channel, loadFilters, open, resetState])
+
+  if (!channel) {
+    return null
+  }
+
+  const handleFieldChange = (
+    filterId: string,
+    field: keyof EditableFilter,
+    value: EditableFilter[typeof field]
+  ) => {
+    setFilters((prev) =>
+      prev.map((filter) =>
+        filter.id === filterId
+          ? {
+              ...filter,
+              [field]: value,
+              updatedAt: Date.now()
+            }
+          : filter
+      )
+    )
+  }
+
+  const handleAddFilter = () => {
+    const timestamp = Date.now()
+    setFilters((prev) => [
+      ...prev,
+      {
+        id: nanoid(),
+        name: "",
+        description: "",
+        pattern: "",
+        isRegex: false,
+        action: "include",
+        enabled: true,
+        createdAt: timestamp,
+        updatedAt: timestamp
+      }
+    ])
+  }
+
+  const handleRemoveFilter = (filterId: string) => {
+    setFilters((prev) => prev.filter((filter) => filter.id !== filterId))
+  }
+
+  const validateFilters = () => {
+    for (const filter of filters) {
+      if (!filter.name.trim()) {
+        return t("filters.messages.validationName")
+      }
+      if (!filter.pattern.trim()) {
+        return t("filters.messages.validationPattern")
+      }
+      if (filter.isRegex) {
+        try {
+          new RegExp(filter.pattern.trim())
+        } catch (error) {
+          return t("filters.messages.validationRegex", {
+            error: (error as Error).message
+          })
+        }
+      }
+    }
+    return null
+  }
+
+  const handleSave = async () => {
+    const validationError = validateFilters()
+    if (validationError) {
+      toast.error(validationError)
+      return
+    }
+    setIsSaving(true)
+    try {
+      const payload = filters.map((filter) => ({
+        ...filter,
+        name: filter.name.trim(),
+        description: filter.description?.trim() || undefined,
+        pattern: filter.pattern.trim()
+      }))
+      await saveChannelFilters(channel.id, payload)
+      toast.success(t("filters.messages.saved"))
+      onClose()
+    } catch (error) {
+      toast.error(
+        t("filters.messages.saveFailed", { error: getErrorMessage(error) })
+      )
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const renderContent = () => {
+    if (isLoading) {
+      return (
+        <div className="text-muted-foreground flex min-h-[160px] items-center justify-center gap-2">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          {t("filters.loading")}
+        </div>
+      )
+    }
+
+    if (!filters.length) {
+      return (
+        <div className="text-center">
+          <div className="bg-muted mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full">
+            <Settings2 className="text-muted-foreground h-5 w-5" />
+          </div>
+          <p className="text-base font-semibold">{t("filters.empty.title")}</p>
+          <p className="text-muted-foreground mb-6 text-sm">
+            {t("filters.empty.description")}
+          </p>
+          <Button onClick={handleAddFilter}>{t("filters.addRule")}</Button>
+        </div>
+      )
+    }
+
+    return (
+      <div className="space-y-4">
+        {filters.map((filter) => (
+          <div
+            key={filter.id}
+            className="border-border space-y-5 rounded-lg border p-5">
+            <div className="grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto] md:items-end">
+              <div className="space-y-2">
+                <Label>{t("filters.labels.name")}</Label>
+                <Input
+                  value={filter.name}
+                  onChange={(event) =>
+                    handleFieldChange(filter.id, "name", event.target.value)
+                  }
+                  placeholder={t("filters.placeholders.name") ?? ""}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{t("filters.labels.enabled")}</Label>
+                <div className="border-input flex items-center justify-between rounded-lg border px-3 py-2 text-sm">
+                  <span className="text-muted-foreground">
+                    {filter.enabled
+                      ? t("common:status.enabled", "Enabled")
+                      : t("common:status.disabled", "Disabled")}
+                  </span>
+                  <Switch
+                    id={`filter-enabled-${filter.id}`}
+                    checked={filter.enabled}
+                    onChange={(value: boolean) =>
+                      handleFieldChange(filter.id, "enabled", value)
+                    }
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => handleRemoveFilter(filter.id)}
+                  aria-label={t("filters.labels.delete") ?? "Delete"}
+                  className="text-muted-foreground hover:text-destructive">
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(220px,0.45fr)]">
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <Label>{t("filters.labels.pattern")}</Label>
+                  <div className="text-muted-foreground flex items-center gap-2 text-sm">
+                    <span>{t("filters.labels.regex")}</span>
+                    <Switch
+                      size={"sm"}
+                      id={`filter-regex-${filter.id}`}
+                      checked={filter.isRegex}
+                      onChange={(value: boolean) =>
+                        handleFieldChange(filter.id, "isRegex", value)
+                      }
+                    />
+                  </div>
+                </div>
+                <Input
+                  value={filter.pattern}
+                  onChange={(event) =>
+                    handleFieldChange(filter.id, "pattern", event.target.value)
+                  }
+                  placeholder={t("filters.placeholders.pattern") ?? ""}
+                />
+                <p className="text-muted-foreground text-xs">
+                  {filter.isRegex
+                    ? t("filters.hints.regex")
+                    : t("filters.hints.substring")}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>{t("filters.labels.action")}</Label>
+                <Select
+                  value={filter.action}
+                  onValueChange={(value: "include" | "exclude") =>
+                    handleFieldChange(filter.id, "action", value)
+                  }>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="include">
+                      {t("filters.actionOptions.include")}
+                    </SelectItem>
+                    <SelectItem value="exclude">
+                      {t("filters.actionOptions.exclude")}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>{t("filters.labels.description")}</Label>
+              <Textarea
+                value={filter.description ?? ""}
+                onChange={(event) =>
+                  handleFieldChange(
+                    filter.id,
+                    "description",
+                    event.target.value
+                  )
+                }
+                placeholder={t("filters.placeholders.description") ?? ""}
+                rows={3}
+              />
+            </div>
+          </div>
+        ))}
+
+        <Button
+          type="button"
+          variant="outline"
+          onClick={handleAddFilter}
+          leftIcon={<Plus className="h-4 w-4" />}>
+          {t("filters.addRule")}
+        </Button>
+      </div>
+    )
+  }
+
+  return (
+    <Modal
+      isOpen={open}
+      onClose={onClose}
+      size="lg"
+      panelClassName="max-h-[85vh]"
+      header={
+        <div>
+          <p className="text-base font-semibold">{t("filters.title")}</p>
+          <p className="text-muted-foreground text-sm">
+            {t("filters.subtitle", { channel: channel.name })}
+          </p>
+        </div>
+      }
+      footer={
+        <div className="flex justify-end gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={onClose}
+            disabled={isSaving}>
+            {t("filters.actions.cancel")}
+          </Button>
+          <Button onClick={handleSave} disabled={isSaving} loading={isSaving}>
+            {t("filters.actions.save")}
+          </Button>
+        </div>
+      }>
+      {renderContent()}
+    </Modal>
   )
 }
 

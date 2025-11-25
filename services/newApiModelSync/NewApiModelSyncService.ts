@@ -8,6 +8,8 @@ import {
   NewApiChannelListData,
   UpdateChannelPayload
 } from "~/types"
+import type { ChannelConfigMap } from "~/types/channelConfig"
+import type { ChannelFilterRule } from "~/types/channelFilters"
 import {
   BatchExecutionOptions,
   ExecutionItemResult,
@@ -27,13 +29,15 @@ export class NewApiModelSyncService {
   private userId?: string
   private rateLimiter: RateLimiter | null = null
   private allowedModelSet: Set<string> | null = null
+  private channelConfigs: ChannelConfigMap | null = null
 
   constructor(
     baseUrl: string,
     token: string,
     userId?: string,
     rateLimitConfig?: { requestsPerMinute: number; burst: number },
-    allowedModels?: string[]
+    allowedModels?: string[],
+    channelConfigs?: ChannelConfigMap | null
   ) {
     this.baseUrl = baseUrl
     this.token = token
@@ -49,6 +53,13 @@ export class NewApiModelSyncService {
         allowedModels.map((model) => model.trim()).filter(Boolean)
       )
     }
+    if (channelConfigs) {
+      this.channelConfigs = channelConfigs
+    }
+  }
+
+  setChannelConfigs(configs: ChannelConfigMap | null) {
+    this.channelConfigs = configs
   }
 
   private async throttle() {
@@ -251,21 +262,21 @@ export class NewApiModelSyncService {
       : []
 
     while (attempts <= maxRetries) {
-      attempts++
+      attempts += 1
 
       try {
-        // Fetch new models
         const fetchedModels = await this.fetchChannelModels(channel.id)
-        const newModels = this.filterAllowedModels(fetchedModels)
+        const allowListedModels = this.filterAllowedModels(fetchedModels)
+        const channelScopedModels = this.applyChannelFilters(
+          channel.id,
+          allowListedModels
+        )
 
-        // Update channel if models changed
-        if (
-          JSON.stringify(oldModels.sort()) !== JSON.stringify(newModels.sort())
-        ) {
-          await this.updateChannelModels(channel, newModels)
+        if (this.haveModelsChanged(oldModels, channelScopedModels)) {
+          await this.updateChannelModels(channel, channelScopedModels)
+          channel.models = channelScopedModels.join(",")
         }
 
-        // Success
         return {
           channelId: channel.id,
           channelName: channel.name,
@@ -273,21 +284,25 @@ export class NewApiModelSyncService {
           attempts,
           finishedAt: Date.now(),
           oldModels,
-          newModels,
+          newModels: channelScopedModels,
           message: "Success"
         }
       } catch (error: any) {
         lastError = error
+        console.error(
+          `[NewApiModelSync] Unexpected error for channel ${channel.id}:`,
+          error
+        )
 
-        // If this is not the last attempt, wait with exponential backoff
-        if (attempts <= maxRetries) {
-          const backoffMs = Math.pow(2, attempts - 1) * 1000
-          await new Promise((resolve) => setTimeout(resolve, backoffMs))
+        if (attempts > maxRetries) {
+          break
         }
+
+        const backoffMs = Math.pow(2, attempts - 1) * 1000
+        await new Promise((resolve) => setTimeout(resolve, backoffMs))
       }
     }
 
-    // All retries failed
     return {
       channelId: channel.id,
       channelName: channel.name,
@@ -396,5 +411,96 @@ export class NewApiModelSyncService {
       .filter((model) => model && this.allowedModelSet!.has(model))
 
     return Array.from(new Set(filtered))
+  }
+
+  private haveModelsChanged(previous: string[], next: string[]): boolean {
+    if (previous.length !== next.length) {
+      return true
+    }
+
+    const prevSorted = [...previous].sort()
+    const nextSorted = [...next].sort()
+
+    for (let index = 0; index < prevSorted.length; index += 1) {
+      if (prevSorted[index] !== nextSorted[index]) {
+        return true
+      }
+    }
+
+    return false
+  }
+
+  /**
+   * Applies the per-channel include/exclude filters defined in channel configs.
+   *
+   * Steps:
+   * 1. Normalize incoming model names (trim + dedupe).
+   * 2. If no filters exist, return normalized models as-is.
+   * 3. Apply include rules (OR logic). At least one include must match when
+   *    include rules are present; otherwise the model is dropped.
+   * 4. Apply exclude rules (OR logic). Any match removes the model.
+   */
+  private applyChannelFilters(channelId: number, models: string[]): string[] {
+    const normalized = Array.from(
+      new Set(models.map((model) => model.trim()).filter(Boolean))
+    )
+    if (!normalized.length) {
+      return normalized
+    }
+
+    const filters = this.channelConfigs?.[channelId]?.filters?.filter(
+      (rule) => rule.enabled
+    )
+    if (!filters || filters.length === 0) {
+      return normalized
+    }
+
+    const includeRules = filters.filter((rule) => rule.action === "include")
+    const excludeRules = filters.filter((rule) => rule.action === "exclude")
+
+    let result = normalized
+
+    if (includeRules.length > 0) {
+      result = result.filter((model) =>
+        includeRules.some((rule) => this.matchesFilter(rule, model))
+      )
+    }
+
+    if (result.length === 0) {
+      return result
+    }
+
+    if (excludeRules.length > 0) {
+      result = result.filter(
+        (model) => !excludeRules.some((rule) => this.matchesFilter(rule, model))
+      )
+    }
+
+    return result
+  }
+
+  /**
+   * Evaluates a model name against a filter rule. Regex patterns are compiled
+   * with `new RegExp(pattern, "i")`, enforcing case-insensitive matching and
+   * avoiding custom flags for predictability across browsers.
+   */
+  private matchesFilter(rule: ChannelFilterRule, model: string): boolean {
+    const pattern = rule.pattern?.trim()
+    if (!pattern) return false
+
+    try {
+      if (rule.isRegex) {
+        const regex = new RegExp(pattern, "i")
+        return regex.test(model)
+      }
+
+      return model.toLowerCase().includes(pattern.toLowerCase())
+    } catch (error) {
+      console.warn(
+        `[NewApiModelSync] Invalid channel filter pattern for channel rule ${rule.id}:`,
+        error
+      )
+      return false
+    }
   }
 }

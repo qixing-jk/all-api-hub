@@ -56,6 +56,7 @@
       "edit": "编辑",
       "sync": "同步模型",
       "syncing": "正在同步…",
+      "filters": "渠道过滤规则",
       "delete": "删除"
     }
   },
@@ -77,5 +78,49 @@
     "syncFailed": "模型同步失败：{{error}}",
     "loadFailed": "渠道加载失败：{{error}}",
     "genericError": "请求失败：{{error}}"
+  },
+  "filters": {
+    "title": "渠道过滤规则",
+    "subtitle": "为 {{channel}} 配置包含/排除规则",
+    "loading": "正在加载渠道过滤规则…",
+    "empty": {
+      "title": "尚未添加规则",
+      "description": "新增包含或排除规则（可选正则）以控制同步到该渠道的模型。"
+    },
+    "addRule": "新增规则",
+    "labels": {
+      "name": "规则名称",
+      "pattern": "匹配模式",
+      "description": "描述",
+      "action": "执行动作",
+      "enabled": "启用",
+      "regex": "使用正则",
+      "delete": "删除规则"
+    },
+    "placeholders": {
+      "name": "如：仅允许 GPT-4",
+      "pattern": "精确字符串或正则表达式",
+      "description": "可选备注"
+    },
+    "actionOptions": {
+      "include": "包含匹配的模型",
+      "exclude": "排除匹配的模型"
+    },
+    "hints": {
+      "regex": "正则模式使用 JavaScript 语法，可实现更灵活的匹配。",
+      "substring": "普通模式将执行区分大小写的子串匹配。"
+    },
+    "actions": {
+      "cancel": "取消",
+      "save": "保存规则"
+    },
+    "messages": {
+      "loadFailed": "过滤规则加载失败：{{error}}",
+      "saveFailed": "保存过滤规则失败：{{error}}",
+      "saved": "过滤规则已保存",
+      "validationName": "请为每个规则填写名称。",
+      "validationPattern": "匹配模式不能为空。",
+      "validationRegex": "无效的正则表达式：{{error}}"
+    }
   }
 }
