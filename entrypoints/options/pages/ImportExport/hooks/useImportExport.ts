@@ -3,7 +3,9 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { accountStorage } from "~/services/accountStorage"
+import { channelConfigStorage } from "~/services/channelConfigStorage"
 import { userPreferences } from "~/services/userPreferences"
+import { getErrorMessage } from "~/utils/error"
 
 export const useImportExport = () => {
   const { t } = useTranslation()
@@ -42,6 +44,7 @@ export const useImportExport = () => {
       }
 
       let importSuccess = false
+      let importedChannelConfigs = 0
 
       // 根据数据类型进行导入
       if (data.accounts || !data.type) {
@@ -71,6 +74,20 @@ export const useImportExport = () => {
             importSuccess = true
             toast.success(t("importExport:import.importSuccess"))
           }
+        }
+      }
+
+      if (data.channelConfigs || data.type === "channelConfigs") {
+        const configsData = data.channelConfigs || data.data
+        if (configsData) {
+          importedChannelConfigs =
+            await channelConfigStorage.importConfigs(configsData)
+          importSuccess = true
+          toast.success(
+            t("importExport:import.channelConfigImported", {
+              count: importedChannelConfigs
+            })
+          )
         }
       }
 
@@ -109,6 +126,9 @@ export const useImportExport = () => {
           (data.type !== "preferences" && data.data)
         ),
         hasPreferences: !!(data.preferences || data.type === "preferences"),
+        hasChannelConfigs: !!(
+          data.channelConfigs || data.type === "channelConfigs"
+        ),
         timestamp: data.timestamp
           ? new Date(data.timestamp).toLocaleString()
           : t("common:labels.unknown")

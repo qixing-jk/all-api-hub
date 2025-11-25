@@ -2,6 +2,7 @@ import { t } from "i18next"
 import toast from "react-hot-toast"
 
 import { accountStorage } from "~/services/accountStorage"
+import { channelConfigStorage } from "~/services/channelConfigStorage"
 import { userPreferences } from "~/services/userPreferences"
 
 // 导出所有数据
@@ -11,17 +12,19 @@ export const handleExportAll = async (
   try {
     setIsExporting(true)
 
-    // 获取账号数据和用户偏好设置
-    const [accountData, preferencesData] = await Promise.all([
+    // 获取账号数据、用户偏好设置以及通道配置
+    const [accountData, preferencesData, channelConfigs] = await Promise.all([
       accountStorage.exportData(),
-      userPreferences.exportPreferences()
+      userPreferences.exportPreferences(),
+      channelConfigStorage.exportConfigs()
     ])
 
     const exportData = {
       version: "1.0",
       timestamp: Date.now(),
       accounts: accountData,
-      preferences: preferencesData
+      preferences: preferencesData,
+      channelConfigs
     }
 
     // 创建下载链接

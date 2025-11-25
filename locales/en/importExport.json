@@ -31,6 +31,7 @@
     "dataValid": "Data format is correct",
     "containsAccountData": "Contains account data",
     "containsUserSettings": "Contains user settings",
+    "containsChannelConfigs": "Contains channel configuration",
     "backupTime": "Backup Time",
     "dataInvalid": "Data format error, please check JSON format",
     "selectFileImport": "Please select file or input data to import",
@@ -39,6 +40,7 @@
     "importFailed": "Import failed: {{error}}",
     "formatError": "Data format error, please check JSON format",
     "importSuccess": "User settings imported successfully",
+    "channelConfigImported": "Imported {{count}} channel configuration(s)",
     "noImportableDataFound": "No importable data found",
     "downloadImportFailed": "Download/Import failed"
   },

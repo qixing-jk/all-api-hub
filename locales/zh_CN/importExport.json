@@ -31,6 +31,7 @@
     "dataValid": "数据格式正确",
     "containsAccountData": "包含账号数据",
     "containsUserSettings": "包含用户设置",
+    "containsChannelConfigs": "包含通道配置",
     "backupTime": "备份时间",
     "dataInvalid": "数据格式错误，请检查JSON格式",
     "selectFileImport": "请选择要导入的文件或输入数据",
@@ -39,6 +40,7 @@
     "importFailed": "导入失败: {{error}}",
     "formatError": "数据格式错误，请检查JSON格式",
     "importSuccess": "用户设置导入成功",
+    "channelConfigImported": "已导入 {{count}} 条通道配置",
     "noImportableDataFound": "没有找到可导入的数据",
     "downloadImportFailed": "下载/导入失败"
   },

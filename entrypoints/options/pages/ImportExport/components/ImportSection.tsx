@@ -23,6 +23,7 @@ interface ImportSectionProps {
     valid: boolean
     hasAccounts?: boolean
     hasPreferences?: boolean
+    hasChannelConfigs?: boolean
     timestamp?: string
   } | null
 }
@@ -84,6 +85,9 @@ const ImportSection = ({
                       )}
                       {validation.hasPreferences && (
                         <p>• {t("import.containsUserSettings")}</p>
+                      )}
+                      {validation.hasChannelConfigs && (
+                        <p>• {t("import.containsChannelConfigs")}</p>
                       )}
                       <p>
                         • {t("import.backupTime")}: {validation.timestamp}
