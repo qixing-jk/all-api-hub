@@ -9,7 +9,7 @@ import {
   UpdateChannelPayload
 } from "~/types"
 import type { ChannelConfigMap } from "~/types/channelConfig"
-import type { ChannelFilterRule } from "~/types/channelFilters"
+import type { ChannelModelFilterRule } from "~/types/channelModelFilters.ts"
 import {
   BatchExecutionOptions,
   ExecutionItemResult,
@@ -448,9 +448,9 @@ export class NewApiModelSyncService {
       return normalized
     }
 
-    const filters = this.channelConfigs?.[channelId]?.filters?.filter(
-      (rule) => rule.enabled
-    )
+    const filters = this.channelConfigs?.[
+      channelId
+    ]?.modelFilterSettings?.rules?.filter((rule) => rule.enabled)
     if (!filters || filters.length === 0) {
       return normalized
     }
@@ -484,7 +484,7 @@ export class NewApiModelSyncService {
    * with `new RegExp(pattern, "i")`, enforcing case-insensitive matching and
    * avoiding custom flags for predictability across browsers.
    */
-  private matchesFilter(rule: ChannelFilterRule, model: string): boolean {
+  private matchesFilter(rule: ChannelModelFilterRule, model: string): boolean {
     const pattern = rule.pattern?.trim()
     if (!pattern) return false
 

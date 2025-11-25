@@ -1,8 +1,13 @@
-import type { ChannelFilterRule } from "./channelFilters"
+import type { ChannelModelFilterRule } from "./channelModelFilters.ts"
+
+export interface ChannelModelFilterSettings {
+  rules: ChannelModelFilterRule[]
+  updatedAt: number
+}
 
 export interface ChannelConfig {
   channelId: number
-  filters: ChannelFilterRule[]
+  modelFilterSettings: ChannelModelFilterSettings
   createdAt: number
   updatedAt: number
 }
@@ -11,9 +16,13 @@ export type ChannelConfigMap = Record<number, ChannelConfig>
 
 export function createDefaultChannelConfig(channelId: number): ChannelConfig {
   const timestamp = Date.now()
+
   return {
     channelId,
-    filters: [],
+    modelFilterSettings: {
+      rules: [],
+      updatedAt: timestamp
+    },
     createdAt: timestamp,
     updatedAt: timestamp
   }

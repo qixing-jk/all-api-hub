@@ -5,12 +5,13 @@ import { Storage } from "@plasmohq/storage"
 import {
   createDefaultChannelConfig,
   type ChannelConfig,
-  type ChannelConfigMap
+  type ChannelConfigMap,
+  type ChannelModelFilterSettings
 } from "~/types/channelConfig"
 import type {
-  ChannelFilterInput,
-  ChannelFilterRule
-} from "~/types/channelFilters"
+  ChannelModelFilterInput,
+  ChannelModelFilterRule
+} from "~/types/channelModelFilters.ts"
 import { getErrorMessage } from "~/utils/error"
 
 const STORAGE_KEYS = {
@@ -61,26 +62,45 @@ class ChannelConfigStorage {
     }
   }
 
+  async exportConfigs(): Promise<ChannelConfigMap> {
+    return this.getAllConfigs()
+  }
+
+  async importConfigs(rawConfigs: unknown): Promise<number> {
+    const sanitized = sanitizeChannelConfigMap(rawConfigs)
+    await this.storage.set(STORAGE_KEYS.CHANNEL_CONFIGS, sanitized)
+    return Object.keys(sanitized).length
+  }
+
   async upsertFilters(
     channelId: number,
-    filters: ChannelConfig["filters"]
+    rules: ChannelModelFilterRule[]
   ): Promise<boolean> {
     const timestamp = Date.now()
     const current = await this.getConfig(channelId)
+    const previousSettings =
+      current.modelFilterSettings ??
+      createDefaultChannelConfig(channelId).modelFilterSettings
+
     const updated: ChannelConfig = {
       ...current,
-      filters,
       channelId,
+      modelFilterSettings: {
+        ...previousSettings,
+        rules,
+        updatedAt: timestamp
+      },
       updatedAt: timestamp,
       createdAt: current.createdAt || timestamp
     }
+
     return this.saveConfig(updated)
   }
 }
 
 export const channelConfigStorage = new ChannelConfigStorage()
 
-type IncomingChannelFilter = ChannelFilterInput & {
+type IncomingChannelFilter = ChannelModelFilterInput & {
   id?: string
   createdAt?: number
   updatedAt?: number
@@ -88,7 +108,7 @@ type IncomingChannelFilter = ChannelFilterInput & {
 
 function normalizeFilters(
   filters: IncomingChannelFilter[]
-): ChannelFilterRule[] {
+): ChannelModelFilterRule[] {
   if (!Array.isArray(filters)) {
     throw new Error("Filters must be an array")
   }
@@ -178,5 +198,135 @@ export async function handleChannelConfigMessage(
   } catch (error) {
     console.error("[ChannelConfig] Message handling failed:", error)
     sendResponse({ success: false, error: getErrorMessage(error) })
+  }
+}
+
+function sanitizeChannelConfigMap(rawConfigs: unknown): ChannelConfigMap {
+  if (!rawConfigs || typeof rawConfigs !== "object") {
+    return {}
+  }
+
+  const entries = Object.entries(rawConfigs as Record<string, unknown>)
+  return entries.reduce<ChannelConfigMap>((acc, [key, value]) => {
+    const channelId = Number(key)
+    if (!Number.isFinite(channelId) || channelId <= 0) {
+      return acc
+    }
+
+    acc[channelId] = sanitizeChannelConfig(value, channelId)
+    return acc
+  }, {})
+}
+
+function sanitizeChannelConfig(
+  value: unknown,
+  channelId: number
+): ChannelConfig {
+  const timestamp = Date.now()
+  const payload = (value ?? {}) as Partial<ChannelConfig> & {
+    filters?: unknown
+    modelFilterSettings?: Partial<ChannelModelFilterSettings> & {
+      rules?: unknown
+    }
+  }
+
+  const modelFilterSettings = sanitizeModelFilterSettings(
+    payload.modelFilterSettings,
+    payload.filters,
+    timestamp
+  )
+
+  return {
+    channelId,
+    modelFilterSettings,
+    createdAt:
+      typeof payload.createdAt === "number" && payload.createdAt > 0
+        ? payload.createdAt
+        : timestamp,
+    updatedAt:
+      typeof payload.updatedAt === "number" && payload.updatedAt > 0
+        ? payload.updatedAt
+        : modelFilterSettings.updatedAt
+  }
+}
+
+function sanitizeModelFilterSettings(
+  rawSettings:
+    | (Partial<ChannelModelFilterSettings> & { rules?: unknown })
+    | undefined,
+  legacyFilters: unknown,
+  fallbackTimestamp: number
+): ChannelModelFilterSettings {
+  if (rawSettings && typeof rawSettings === "object") {
+    const rules = Array.isArray(rawSettings.rules)
+      ? rawSettings.rules
+          .map((filter) => sanitizeFilter(filter, fallbackTimestamp))
+          .filter((filter): filter is ChannelModelFilterRule => Boolean(filter))
+      : []
+
+    const updatedAt =
+      typeof rawSettings.updatedAt === "number" && rawSettings.updatedAt > 0
+        ? rawSettings.updatedAt
+        : fallbackTimestamp
+
+    return {
+      rules,
+      updatedAt
+    }
+  }
+
+  const legacyRules = Array.isArray(legacyFilters)
+    ? legacyFilters
+        .map((filter) => sanitizeFilter(filter, fallbackTimestamp))
+        .filter((filter): filter is ChannelModelFilterRule => Boolean(filter))
+    : []
+
+  return {
+    rules: legacyRules,
+    updatedAt: fallbackTimestamp
+  }
+}
+
+function sanitizeFilter(
+  filter: unknown,
+  fallbackTimestamp: number
+): ChannelModelFilterRule | null {
+  if (!filter || typeof filter !== "object") {
+    return null
+  }
+
+  const payload = filter as Partial<ChannelModelFilterRule>
+  const name = typeof payload.name === "string" ? payload.name.trim() : ""
+  const pattern =
+    typeof payload.pattern === "string" ? payload.pattern.trim() : ""
+
+  if (!name || !pattern) {
+    return null
+  }
+
+  const description =
+    typeof payload.description === "string" && payload.description.trim()
+      ? payload.description.trim()
+      : undefined
+
+  return {
+    id:
+      typeof payload.id === "string" && payload.id.trim()
+        ? payload.id.trim()
+        : nanoid(),
+    name,
+    description,
+    pattern,
+    isRegex: Boolean(payload.isRegex),
+    action: payload.action === "exclude" ? "exclude" : "include",
+    enabled: payload.enabled !== false,
+    createdAt:
+      typeof payload.createdAt === "number" && payload.createdAt > 0
+        ? payload.createdAt
+        : fallbackTimestamp,
+    updatedAt:
+      typeof payload.updatedAt === "number" && payload.updatedAt > 0
+        ? payload.updatedAt
+        : fallbackTimestamp
   }
 }

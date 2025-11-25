@@ -93,7 +93,7 @@ import {
   deleteChannel,
   getNewApiConfig
 } from "~/services/newApiService/newApiService"
-import type { ChannelFilterRule } from "~/types/channelFilters"
+import type { ChannelModelFilterRule } from "~/types/channelModelFilters.ts"
 import type { NewApiChannel } from "~/types/newapi"
 import { sendRuntimeMessage } from "~/utils/browserApi"
 import { getErrorMessage } from "~/utils/error"
@@ -119,14 +119,14 @@ type RowActionsLabels = {
  */
 async function fetchChannelFilters(
   channelId: number
-): Promise<ChannelFilterRule[]> {
+): Promise<ChannelModelFilterRule[]> {
   try {
     const response = await sendRuntimeMessage({
       action: "channelConfig:get",
       channelId
     })
     if (response?.success) {
-      return response.data?.filters ?? []
+      return response.data?.modelFilterSettings?.rules ?? []
     }
     throw new Error(response?.error || "Failed to load channel filters")
   } catch (runtimeError) {
@@ -136,7 +136,7 @@ async function fetchChannelFilters(
     )
     try {
       const config = await channelConfigStorage.getConfig(channelId)
-      return config.filters ?? []
+      return config.modelFilterSettings?.rules ?? []
     } catch (storageError) {
       console.error(
         `[ChannelFilters] Storage fallback failed for channel ${channelId}`,
@@ -156,7 +156,7 @@ async function fetchChannelFilters(
  */
 async function saveChannelFilters(
   channelId: number,
-  filters: ChannelFilterRule[]
+  filters: ChannelModelFilterRule[]
 ): Promise<void> {
   try {
     const response = await sendRuntimeMessage({
@@ -1070,7 +1070,7 @@ interface ChannelFilterDialogProps {
   onClose: () => void
 }
 
-type EditableFilter = ChannelFilterRule
+type EditableFilter = ChannelModelFilterRule
 
 function ChannelFilterDialog({
   channel,

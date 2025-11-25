@@ -1,6 +1,6 @@
 export type ChannelFilterAction = "include" | "exclude"
 
-export interface ChannelFilterRule {
+export interface ChannelModelFilterRule {
   id: string
   name: string
   description?: string
@@ -12,8 +12,8 @@ export interface ChannelFilterRule {
   updatedAt: number
 }
 
-export type ChannelFilterInput = Omit<
-  ChannelFilterRule,
+export type ChannelModelFilterInput = Omit<
+  ChannelModelFilterRule,
   "id" | "createdAt" | "updatedAt"
 > & {
   id?: string
