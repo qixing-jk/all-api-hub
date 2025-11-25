@@ -262,8 +262,6 @@ export class NewApiModelSyncService {
       : []
 
     while (attempts <= maxRetries) {
-      attempts += 1
-
       try {
         const fetchedModels = await this.fetchChannelModels(channel.id)
         const allowListedModels = this.filterAllowedModels(fetchedModels)
@@ -294,6 +292,7 @@ export class NewApiModelSyncService {
           error
         )
 
+        attempts += 1
         if (attempts > maxRetries) {
           break
         }
