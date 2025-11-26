@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.15.0](https://github.com/qixing-jk/all-api-hub/compare/v2.14.0...v2.15.0) (2025-11-26)
+
+
+### Features
+
+* add comma-separated string parsing to MultiSelect component ([98f4f81](https://github.com/qixing-jk/all-api-hub/commit/98f4f81e7fe700213782caad860687944324e141))
+
+
+### Bug Fixes
+
+* ensure caching only occurs during full channel data sync ([2fa1309](https://github.com/qixing-jk/all-api-hub/commit/2fa1309f90b6187c1e9a0a86242187b59f3ec9ae))
+* **modal:** add missing `relative` class to panel base styles ([6b46279](https://github.com/qixing-jk/all-api-hub/commit/6b4627902ee819846a6f64464ce7821bc3a55082))
+
+
+### Performance Improvements
+
+* **scheduler:** optimize upstream model caching logic ([8d666b5](https://github.com/qixing-jk/all-api-hub/commit/8d666b5914d9ebe7535972802d6811b1904cb049))
+
 ## [2.14.0](https://github.com/qixing-jk/all-api-hub/compare/v2.13.0...v2.14.0) (2025-11-24)
 
 
