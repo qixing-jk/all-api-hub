@@ -44,14 +44,13 @@ export const useImportExport = () => {
       }
 
       let importSuccess = false
-      let importedChannelConfigs = 0
 
       // 根据数据类型进行导入
-      if (data.accounts || !data.type) {
-        const accountsToImport = data.accounts?.accounts || data.data?.accounts
+      if (data.accounts || data.type === "accounts") {
+        const accountsData = data.accounts?.accounts || data.data?.accounts
 
         const { migratedCount } = await accountStorage.importData({
-          accounts: accountsToImport
+          accounts: accountsData
         })
 
         importSuccess = true
@@ -78,14 +77,14 @@ export const useImportExport = () => {
       }
 
       if (data.channelConfigs || data.type === "channelConfigs") {
-        const configsData = data.channelConfigs || data.data
-        if (configsData) {
-          importedChannelConfigs =
-            await channelConfigStorage.importConfigs(configsData)
+        const channelConfigsData = data.channelConfigs || data.data
+        if (channelConfigsData) {
+          const importedChannelConfigsCount =
+            await channelConfigStorage.importConfigs(channelConfigsData)
           importSuccess = true
           toast.success(
             t("importExport:import.channelConfigImported", {
-              count: importedChannelConfigs
+              count: importedChannelConfigsCount
             })
           )
         }
@@ -121,14 +120,10 @@ export const useImportExport = () => {
       const data = JSON.parse(importData)
       return {
         valid: true,
-        hasAccounts: !!(
-          data.accounts ||
-          (data.type !== "preferences" && data.data)
-        ),
-        hasPreferences: !!(data.preferences || data.type === "preferences"),
-        hasChannelConfigs: !!(
-          data.channelConfigs || data.type === "channelConfigs"
-        ),
+        hasAccounts: data.accounts || data.type === "accounts",
+        hasPreferences: data.preferences || data.type === "preferences",
+        hasChannelConfigs:
+          data.channelConfigs || data.type === "channelConfigs",
         timestamp: data.timestamp
           ? new Date(data.timestamp).toLocaleString()
           : t("common:labels.unknown")
