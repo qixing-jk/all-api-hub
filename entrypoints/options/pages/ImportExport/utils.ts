@@ -166,7 +166,7 @@ async function importV1Backup(data: RawBackupData): Promise<ImportResult> {
 
   // preferences
   if (preferencesRequested) {
-    const preferencesData = data.preferences || data.data
+    const preferencesData = data.preferences || data.data?.preferences
     if (preferencesData) {
       const success = await userPreferences.importPreferences(preferencesData)
       if (success) {
@@ -181,7 +181,7 @@ async function importV1Backup(data: RawBackupData): Promise<ImportResult> {
 
   // channel configs: best-effort support if present in V1 backups
   if (channelConfigsRequested) {
-    const channelConfigsData = data.channelConfigs || data.data
+    const channelConfigsData = data.channelConfigs || data.data?.channelConfigs
     if (channelConfigsData) {
       await channelConfigStorage.importConfigs(channelConfigsData)
       channelConfigsImported = true
