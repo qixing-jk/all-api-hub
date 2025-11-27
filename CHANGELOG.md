@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.16.0](https://github.com/qixing-jk/all-api-hub/compare/v2.15.0...v2.16.0) (2025-11-27)
+
+
+### Features
+
+* **account:** adjust site info layout by removing gap classes ([6e86ab6](https://github.com/qixing-jk/all-api-hub/commit/6e86ab6ad914f7991cf82de486dc70009d82a888))
+* **AccountList:** add Firefox desktop warning for account creation in AccountList ([6026529](https://github.com/qixing-jk/all-api-hub/commit/6026529c2ecd5f3eec48fca9a064fb4e71ce6203))
+* implement channel filtering system for API model sync ([#192](https://github.com/qixing-jk/all-api-hub/issues/192)) ([88178b1](https://github.com/qixing-jk/all-api-hub/commit/88178b15d0fe8c1589583412301f73b8472161ac))
+
 ## [2.15.0](https://github.com/qixing-jk/all-api-hub/compare/v2.14.0...v2.15.0) (2025-11-26)
 
 
