@@ -187,8 +187,8 @@ class WebdavAutoSyncService {
     // 决定同步策略
     const strategy = preferences.webdav.syncStrategy || "merge"
 
-    let accountsToSave: SiteAccount[]
-    let preferencesToSave: UserPreferences
+    let accountsToSave: SiteAccount[] = localAccountsConfig.accounts
+    let preferencesToSave: UserPreferences = localPreferences
     let channelConfigsToSave: ChannelConfigMap = localChannelConfigs
 
     if (strategy === "merge" && remoteData) {
@@ -223,13 +223,18 @@ class WebdavAutoSyncService {
       preferencesToSave = localPreferences
       channelConfigsToSave = localChannelConfigs
       console.log("[WebdavAutoSync] 使用本地数据覆盖")
-    } else {
-      // 默认合并策略：直接使用远程数据（若存在），否则使用本地
+    } else if (strategy === "download_only") {
+      // 远程优先策略：直接使用远程数据（若存在），否则使用本地
       accountsToSave = normalizedRemote.accounts
       preferencesToSave = normalizedRemote.preferences || localPreferences
       channelConfigsToSave =
         normalizedRemote.channelConfigs || localChannelConfigs
       console.log("[WebdavAutoSync] 使用远程数据")
+    } else {
+      console.error(
+        `[WebdavAutoSync] 无效的同步策略: ${String(strategy)}, 将中止本次同步`
+      )
+      throw new Error(`Invalid WebDAV sync strategy: ${String(strategy)}`)
     }
 
     // 保存合并后的数据到本地
