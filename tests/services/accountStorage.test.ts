@@ -4,11 +4,11 @@ import { accountStorage, AccountStorageUtils } from "~/services/accountStorage"
 import {
   AuthTypeEnum,
   SiteHealthStatus,
-  type SiteAccount,
-  type StorageConfig
+  type AccountStorageConfig,
+  type SiteAccount
 } from "~/types"
 
-const storageData = new Map<string, StorageConfig>()
+const storageData = new Map<string, AccountStorageConfig>()
 const STORAGE_KEY = "site_accounts"
 const {
   mockValidateAccountConnection,
@@ -26,7 +26,7 @@ const {
 
 vi.mock("@plasmohq/storage", () => {
   class Storage {
-    async set(key: string, value: StorageConfig) {
+    async set(key: string, value: AccountStorageConfig) {
       storageData.set(key, value)
     }
 

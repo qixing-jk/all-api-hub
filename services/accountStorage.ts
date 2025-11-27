@@ -9,10 +9,10 @@ import {
   AuthTypeEnum,
   SiteHealthStatus,
   type AccountStats,
+  type AccountStorageConfig,
   type CurrencyType,
   type DisplaySiteData,
-  type SiteAccount,
-  type StorageConfig
+  type SiteAccount
 } from "~/types"
 import { DeepPartial } from "~/types/utils.ts"
 
@@ -32,14 +32,14 @@ import { getSiteType } from "./detectSiteType"
 import { userPreferences } from "./userPreferences"
 
 // 存储键名常量
-const STORAGE_KEYS = {
-  ACCOUNTS: "site_accounts",
-  CONFIG: "storage_config"
+const ACCOUNT_STORAGE_KEYS = {
+  ACCOUNTS: "site_accounts"
 } as const
 
 // 默认配置
-const DEFAULT_CONFIG: StorageConfig = {
+const DEFAULT_ACCOUNT_CONFIG: AccountStorageConfig = {
   accounts: [],
+  pinnedAccountIds: [],
   last_updated: Date.now()
 }
 
@@ -283,7 +283,7 @@ class AccountStorageService {
       )
       config.pinnedAccountIds = validIds
       config.last_updated = Date.now()
-      await this.storage.set(STORAGE_KEYS.ACCOUNTS, config)
+      await this.storage.set(ACCOUNT_STORAGE_KEYS.ACCOUNTS, config)
       return true
     } catch (error) {
       console.error("设置置顶账号列表失败:", error)
@@ -709,8 +709,7 @@ class AccountStorageService {
    */
   async clearAllData(): Promise<boolean> {
     try {
-      await this.storage.remove(STORAGE_KEYS.ACCOUNTS)
-      await this.storage.remove(STORAGE_KEYS.CONFIG)
+      await this.storage.remove(ACCOUNT_STORAGE_KEYS.ACCOUNTS)
       return true
     } catch (error) {
       console.error("清空数据失败:", error)
@@ -721,7 +720,7 @@ class AccountStorageService {
   /**
    * 导出数据
    */
-  async exportData(): Promise<StorageConfig> {
+  async exportData(): Promise<AccountStorageConfig> {
     return this.getStorageConfig()
   }
 
@@ -780,15 +779,15 @@ class AccountStorageService {
   /**
    * 获取存储配置
    */
-  private async getStorageConfig(): Promise<StorageConfig> {
+  private async getStorageConfig(): Promise<AccountStorageConfig> {
     try {
       const config = (await this.storage.get(
-        STORAGE_KEYS.ACCOUNTS
-      )) as StorageConfig
-      return config || DEFAULT_CONFIG
+        ACCOUNT_STORAGE_KEYS.ACCOUNTS
+      )) as AccountStorageConfig
+      return config || DEFAULT_ACCOUNT_CONFIG
     } catch (error) {
       console.error("获取存储配置失败:", error)
-      return DEFAULT_CONFIG
+      return DEFAULT_ACCOUNT_CONFIG
     }
   }
 
@@ -801,7 +800,7 @@ class AccountStorageService {
     const filteredPinnedIds = (existingConfig.pinnedAccountIds || []).filter(
       (id) => accounts.some((account) => account.id === id)
     )
-    const config: StorageConfig = {
+    const config: AccountStorageConfig = {
       ...existingConfig,
       accounts,
       pinnedAccountIds: filteredPinnedIds,
@@ -812,10 +811,10 @@ class AccountStorageService {
       accountCount: config.accounts.length,
       pinnedCount: config.pinnedAccountIds?.length || 0,
       last_updated: config.last_updated,
-      storageKey: STORAGE_KEYS.ACCOUNTS
+      storageKey: ACCOUNT_STORAGE_KEYS.ACCOUNTS
     })
 
-    await this.storage.set(STORAGE_KEYS.ACCOUNTS, config)
+    await this.storage.set(ACCOUNT_STORAGE_KEYS.ACCOUNTS, config)
     console.log("[AccountStorage] 账号数据保存完成")
   }
 

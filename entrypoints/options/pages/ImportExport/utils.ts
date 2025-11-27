@@ -5,7 +5,7 @@ import { accountStorage } from "~/services/accountStorage"
 import { channelConfigStorage } from "~/services/channelConfigStorage"
 import type { UserPreferences } from "~/services/userPreferences"
 import { userPreferences } from "~/services/userPreferences"
-import type { StorageConfig } from "~/types"
+import type { AccountStorageConfig } from "~/types"
 import type { ChannelConfigMap } from "~/types/channelConfig"
 
 /**
@@ -34,7 +34,7 @@ export interface ParsedBackupSummary {
 export interface BackupFullV2 {
   version: string
   timestamp: number
-  accounts: StorageConfig
+  accounts: AccountStorageConfig
   preferences: UserPreferences
   channelConfigs: ChannelConfigMap
 }
@@ -46,7 +46,7 @@ export interface BackupAccountsPartialV2 {
   version: string
   timestamp: number
   type: "accounts"
-  accounts: StorageConfig
+  accounts: AccountStorageConfig
 }
 
 /**
