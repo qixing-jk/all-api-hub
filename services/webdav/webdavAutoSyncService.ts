@@ -1,9 +1,12 @@
 import { t } from "i18next"
 
+import {
+  BACKUP_VERSION,
+  normalizeBackupForMerge
+} from "~/entrypoints/options/pages/ImportExport/utils.ts"
 import type { SiteAccount, WebDAVSettings } from "~/types"
+import { getErrorMessage } from "~/utils/error.ts"
 
-import { BACKUP_VERSION } from "../../entrypoints/options/pages/ImportExport/utils.ts"
-import { getErrorMessage } from "../../utils/error.ts"
 import { accountStorage } from "../accountStorage.ts"
 import { channelConfigStorage } from "../channelConfigStorage.ts"
 import { userPreferences, type UserPreferences } from "../userPreferences.ts"
@@ -123,7 +126,18 @@ class WebdavAutoSyncService {
   }
 
   /**
-   * 同步数据到WebDAV
+   * 同步数据到WebDAV。
+   *
+   * 流程：
+   * 1. 使用当前用户 WebDAV 配置测试连接。
+   * 2. 从远程下载备份并通过 normalizeBackupForMerge 按版本规范化
+   *    （兼容 V1 旧结构和当前 V2 扁平结构，未来版本可扩展）。
+   * 3. 根据 syncStrategy 决定合并方式：
+   *    - "merge": 调用 mergeData 基于时间戳双向合并本地 / 远程账号与偏好设置。
+   *    - "upload_only" 或远程无数据：使用本地数据覆盖远程。
+   *    - 默认：优先使用远程数据，否则回退到本地。
+   * 4. 将合并后的账号和偏好设置写回本地存储，并上传新的备份（始终使用
+   *    BACKUP_VERSION 与扁平结构，包含 channelConfigs 快照）。
    */
   async syncWithWebdav() {
     const preferences = await userPreferences.getPreferences()
@@ -137,12 +151,7 @@ class WebdavAutoSyncService {
     }
 
     // 下载远程数据
-    let remoteData: {
-      version: string
-      timestamp: number
-      accounts?: { accounts: SiteAccount[]; last_updated: number }
-      preferences?: UserPreferences
-    } | null = null
+    let remoteData: any | null = null
 
     try {
       const content = await downloadBackup()
@@ -168,13 +177,18 @@ class WebdavAutoSyncService {
         channelConfigStorage.exportConfigs()
       ])
 
+    const normalizedRemote = normalizeBackupForMerge(
+      remoteData,
+      localPreferences
+    )
+
     // 决定同步策略
     const strategy = preferences.webdav.syncStrategy || "merge"
 
     let accountsToSave: SiteAccount[]
     let preferencesToSave: UserPreferences
 
-    if (strategy === "merge" && remoteData) {
+    if (strategy === "merge" && remoteData && normalizedRemote.preferences) {
       // 合并策略
       const mergeResult = this.mergeData(
         {
@@ -184,10 +198,10 @@ class WebdavAutoSyncService {
           preferencesTimestamp: localPreferences.lastUpdated
         },
         {
-          accounts: remoteData.accounts?.accounts || [],
-          accountsTimestamp: remoteData.accounts?.last_updated || 0,
-          preferences: remoteData.preferences || localPreferences,
-          preferencesTimestamp: remoteData.preferences?.lastUpdated || 0
+          accounts: normalizedRemote.accounts,
+          accountsTimestamp: normalizedRemote.accountsTimestamp,
+          preferences: normalizedRemote.preferences,
+          preferencesTimestamp: normalizedRemote.preferences.lastUpdated || 0
         }
       )
 
@@ -200,9 +214,9 @@ class WebdavAutoSyncService {
       preferencesToSave = localPreferences
       console.log("[WebdavAutoSync] 使用本地数据覆盖")
     } else {
-      // 默认合并策略
-      accountsToSave = remoteData?.accounts?.accounts || []
-      preferencesToSave = remoteData?.preferences || localPreferences
+      // 默认合并策略：直接使用远程数据（若存在），否则使用本地
+      accountsToSave = normalizedRemote.accounts
+      preferencesToSave = normalizedRemote.preferences || localPreferences
       console.log("[WebdavAutoSync] 使用远程数据")
     }
 

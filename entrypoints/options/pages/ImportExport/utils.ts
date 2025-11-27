@@ -5,6 +5,15 @@ import { accountStorage } from "~/services/accountStorage"
 import { channelConfigStorage } from "~/services/channelConfigStorage"
 import { userPreferences } from "~/services/userPreferences"
 
+/**
+ * Current backup schema version.
+ *
+ * V1: legacy backups, may use nested structures (e.g. accounts.accounts, data.accounts).
+ * V2: flat structure with accounts / preferences / channelConfigs on the root object.
+ *
+ * When introducing V3+, prefer adding a dedicated import handler and updating
+ * importFromBackupObject + normalizeBackupForMerge dispatch logic.
+ */
 export const BACKUP_VERSION = "2.0"
 
 export interface ParsedBackupSummary {
@@ -15,6 +24,13 @@ export interface ParsedBackupSummary {
   timestamp: string
 }
 
+/**
+ * Raw backup payload as stored in files / WebDAV.
+ *
+ * This type intentionally captures both legacy (V1) and current (V2) shapes:
+ * - V1/legacy may use nested accounts.accounts and/or data.accounts / data.preferences.
+ * - V2 uses a flat structure with accounts / preferences / channelConfigs at root.
+ */
 interface RawBackupData {
   version?: string
   timestamp?: number | string
@@ -110,6 +126,93 @@ async function importV1Backup(data: RawBackupData) {
   return { imported: false }
 }
 
+/**
+ * Normalize a backup object for use in merge operations (e.g. WebDAV auto-sync).
+ *
+ * Returns a version-agnostic shape: { accounts, accountsTimestamp, preferences }.
+ * - For V2 (BACKUP_VERSION): assumes flat structure; tolerant of { accounts, last_updated }.
+ * - For V1 / unknown versions: tolerant of legacy shapes (accounts.accounts, data.accounts,
+ *   data.preferences, etc.) and falls back to localPreferences where needed.
+ *
+ * This helper is separate from importFromBackupObject because merge flows often
+ * treat remote data differently (e.g. two-way merge) compared to one-shot imports.
+ */
+export function normalizeBackupForMerge(
+  data: RawBackupData | null,
+  localPreferences: any
+): {
+  accounts: any[]
+  accountsTimestamp: number
+  preferences: any | null
+} {
+  if (!data) {
+    return {
+      accounts: [],
+      accountsTimestamp: 0,
+      preferences: null
+    }
+  }
+
+  const version = data.version ?? "1.0"
+
+  if (version === BACKUP_VERSION) {
+    return normalizeV2BackupForMerge(data, localPreferences)
+  }
+
+  // V1 and unknown versions: use tolerant legacy-normalization
+  return normalizeV1BackupForMerge(data, localPreferences)
+}
+
+function normalizeV2BackupForMerge(
+  data: RawBackupData,
+  localPreferences: any
+): {
+  accounts: any[]
+  accountsTimestamp: number
+  preferences: any | null
+} {
+  const accountsField: any = data.accounts
+  const accounts = Array.isArray(accountsField)
+    ? accountsField
+    : accountsField?.accounts || []
+
+  const accountsTimestamp =
+    accountsField?.last_updated || (data.timestamp as number) || 0
+
+  return {
+    accounts,
+    accountsTimestamp,
+    preferences: data.preferences || localPreferences
+  }
+}
+
+function normalizeV1BackupForMerge(
+  data: RawBackupData,
+  localPreferences: any
+): {
+  accounts: any[]
+  accountsTimestamp: number
+  preferences: any | null
+} {
+  const accountsField: any = data.accounts
+  const accounts =
+    accountsField?.accounts ||
+    (data.data as any)?.accounts ||
+    (Array.isArray(accountsField) ? accountsField : [])
+
+  const accountsTimestamp =
+    accountsField?.last_updated || (data.timestamp as number) || 0
+
+  const preferences =
+    data.preferences || (data.data as any)?.preferences || localPreferences
+
+  return {
+    accounts,
+    accountsTimestamp,
+    preferences
+  }
+}
+
 async function importV2Backup(data: RawBackupData) {
   let importSuccess = false
 
@@ -145,6 +248,17 @@ async function importV2Backup(data: RawBackupData) {
   return { imported: false }
 }
 
+/**
+ * Import a backup object into local storage in a version-aware way.
+ *
+ * Dispatches to specific handlers per version:
+ * - V1 (or missing version): tolerant of legacy shapes and tries to import
+ *   accounts, preferences and channelConfigs when present.
+ * - V2 (BACKUP_VERSION): expects a flat structure with accounts / preferences /
+ *   channelConfigs at root.
+ * - Future versions: currently fall back to V2 behavior; when adding V3+ define
+ *   an importV3Backup and extend this dispatcher.
+ */
 export async function importFromBackupObject(data: RawBackupData) {
   // timestamp is required for all versions; version is optional for backward compatibility
   if (!data.timestamp) {
