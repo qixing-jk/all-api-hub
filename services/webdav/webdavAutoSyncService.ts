@@ -6,6 +6,7 @@ import {
   type BackupFullV2
 } from "~/entrypoints/options/pages/ImportExport/utils.ts"
 import type { SiteAccount, WebDAVSettings } from "~/types"
+import { WEBDAV_SYNC_STRATEGIES } from "~/types"
 import type { ChannelConfigMap } from "~/types/channelConfig"
 import { getErrorMessage } from "~/utils/error.ts"
 
@@ -185,13 +186,14 @@ class WebdavAutoSyncService {
     )
 
     // 决定同步策略
-    const strategy = preferences.webdav.syncStrategy || "merge"
+    const strategy =
+      preferences.webdav.syncStrategy || WEBDAV_SYNC_STRATEGIES.MERGE
 
     let accountsToSave: SiteAccount[] = localAccountsConfig.accounts
     let preferencesToSave: UserPreferences = localPreferences
     let channelConfigsToSave: ChannelConfigMap = localChannelConfigs
 
-    if (strategy === "merge" && remoteData) {
+    if (strategy === WEBDAV_SYNC_STRATEGIES.MERGE && remoteData) {
       // 合并策略
       const mergeResult = this.mergeData(
         {
@@ -217,13 +219,13 @@ class WebdavAutoSyncService {
       preferencesToSave = mergeResult.preferences
       channelConfigsToSave = mergeResult.channelConfigs
       console.log(`[WebdavAutoSync] 合并完成: ${accountsToSave.length} 个账号`)
-    } else if (strategy === "upload_only" || !remoteData) {
+    } else if (strategy === WEBDAV_SYNC_STRATEGIES.UPLOAD_ONLY || !remoteData) {
       // 覆盖策略或远程无数据
       accountsToSave = localAccountsConfig.accounts
       preferencesToSave = localPreferences
       channelConfigsToSave = localChannelConfigs
       console.log("[WebdavAutoSync] 使用本地数据覆盖")
-    } else if (strategy === "download_only") {
+    } else if (strategy === WEBDAV_SYNC_STRATEGIES.DOWNLOAD_ONLY) {
       // 远程优先策略：直接使用远程数据（若存在），否则使用本地
       accountsToSave = normalizedRemote.accounts
       preferencesToSave = normalizedRemote.preferences || localPreferences

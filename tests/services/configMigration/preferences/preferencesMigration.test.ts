@@ -7,7 +7,7 @@ import {
   needsPreferencesMigration
 } from "~/services/configMigration/preferences/preferencesMigration"
 import type { UserPreferences } from "~/services/userPreferences"
-import { DEFAULT_WEBDAV_SETTINGS } from "~/types"
+import { DEFAULT_WEBDAV_SETTINGS, WEBDAV_SYNC_STRATEGIES } from "~/types"
 import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh.ts"
 import { DEFAULT_NEW_API_CONFIG } from "~/types/newApiConfig.ts"
 import { SortingCriteriaType } from "~/types/sorting.ts"
@@ -159,7 +159,7 @@ describe("preferencesMigration", () => {
         webdavPassword: "pass",
         webdavAutoSync: true,
         webdavSyncInterval: 3600,
-        webdavSyncStrategy: "merge" as const
+        webdavSyncStrategy: WEBDAV_SYNC_STRATEGIES.MERGE
       }) as UserPreferences
 
       const result = migratePreferences(prefs)
@@ -244,7 +244,7 @@ describe("preferencesMigration", () => {
         webdavPassword: "backuppass",
         webdavAutoSync: true,
         webdavSyncInterval: 7200,
-        webdavSyncStrategy: "upload_only" as const,
+        webdavSyncStrategy: WEBDAV_SYNC_STRATEGIES.UPLOAD_ONLY,
         autoRefresh: true,
         refreshInterval: 600,
         minRefreshInterval: 60,
@@ -272,7 +272,7 @@ describe("preferencesMigration", () => {
         password: "backuppass",
         autoSync: true,
         syncInterval: 7200,
-        syncStrategy: "upload_only"
+        syncStrategy: WEBDAV_SYNC_STRATEGIES.UPLOAD_ONLY
       })
 
       expect(result.accountAutoRefresh).toEqual({
@@ -377,7 +377,7 @@ describe("preferencesMigration", () => {
           password: "oldpass",
           autoSync: false,
           syncInterval: 3600,
-          syncStrategy: "merge" as const
+          syncStrategy: WEBDAV_SYNC_STRATEGIES.MERGE
         },
         webdavUrl: "https://new.com",
         webdavUsername: "newuser"
@@ -524,7 +524,7 @@ describe("preferencesMigration", () => {
         webdavPassword: "pass",
         webdavAutoSync: true,
         webdavSyncInterval: 3600,
-        webdavSyncStrategy: "merge" as const
+        webdavSyncStrategy: WEBDAV_SYNC_STRATEGIES.MERGE
       }) as UserPreferences
 
       const result = migratePreferences(prefs)

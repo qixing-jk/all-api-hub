@@ -13,7 +13,8 @@ import {
   DEFAULT_WEBDAV_SETTINGS,
   SortField,
   SortOrder,
-  WebDAVSettings
+  WebDAVSettings,
+  type WebDAVSyncStrategy
 } from "~/types"
 import {
   AccountAutoRefresh,
@@ -172,7 +173,7 @@ export interface UserPreferences {
    *  同步策略
    * @deprecated 请使用 webdav.syncStrategy
    */
-  webdavSyncStrategy?: "merge" | "upload_only" | "download_only"
+  webdavSyncStrategy?: WebDAVSyncStrategy
 }
 
 // 存储键名常量

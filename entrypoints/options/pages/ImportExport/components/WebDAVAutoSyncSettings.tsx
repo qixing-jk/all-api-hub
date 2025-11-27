@@ -25,7 +25,7 @@ import {
   SelectValue,
   Switch
 } from "~/components/ui"
-import { WebDAVSettings } from "~/types"
+import { WEBDAV_SYNC_STRATEGIES, WebDAVSettings } from "~/types"
 import { sendRuntimeMessage } from "~/utils/browserApi"
 import { formatTimestamp } from "~/utils/formatters"
 
@@ -35,8 +35,9 @@ export default function WebDAVAutoSyncSettings() {
   // Auto-sync settings
   const [autoSyncEnabled, setAutoSyncEnabled] = useState(false)
   const [syncInterval, setSyncInterval] = useState(3600)
-  const [syncStrategy, setSyncStrategy] =
-    useState<WebDAVSettings["syncStrategy"]>("merge")
+  const [syncStrategy, setSyncStrategy] = useState<
+    WebDAVSettings["syncStrategy"]
+  >(WEBDAV_SYNC_STRATEGIES.MERGE)
 
   // Status
   const [isSyncing, setIsSyncing] = useState(false)
@@ -62,7 +63,7 @@ export default function WebDAVAutoSyncSettings() {
       const prefs = await userPreferences.getPreferences()
       setAutoSyncEnabled(prefs.webdav.autoSync ?? false)
       setSyncInterval(prefs.webdav.syncInterval ?? 3600)
-      setSyncStrategy(prefs.webdav.syncStrategy ?? "merge")
+      setSyncStrategy(prefs.webdav.syncStrategy ?? WEBDAV_SYNC_STRATEGIES.MERGE)
     } catch (error) {
       console.error("Failed to load auto-sync settings:", error)
     }
@@ -230,13 +231,13 @@ export default function WebDAVAutoSyncSettings() {
                   />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="merge">
+                  <SelectItem value={WEBDAV_SYNC_STRATEGIES.MERGE}>
                     {t("webdav.autoSync.strategyMerge")}
                   </SelectItem>
-                  <SelectItem value="upload_only">
+                  <SelectItem value={WEBDAV_SYNC_STRATEGIES.UPLOAD_ONLY}>
                     {t("webdav.autoSync.strategyLocalFirst")}
                   </SelectItem>
-                  <SelectItem value="download_only">
+                  <SelectItem value={WEBDAV_SYNC_STRATEGIES.DOWNLOAD_ONLY}>
                     {t("webdav.autoSync.strategyRemoteFirst")}
                   </SelectItem>
                 </SelectContent>

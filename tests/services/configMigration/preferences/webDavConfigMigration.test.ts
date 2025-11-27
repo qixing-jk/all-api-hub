@@ -8,7 +8,7 @@ import {
   DEFAULT_PREFERENCES,
   type UserPreferences
 } from "~/services/userPreferences"
-import { DEFAULT_WEBDAV_SETTINGS } from "~/types"
+import { DEFAULT_WEBDAV_SETTINGS, WEBDAV_SYNC_STRATEGIES } from "~/types"
 import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
 import { DEFAULT_NEW_API_CONFIG } from "~/types/newApiConfig"
 
@@ -111,7 +111,7 @@ describe("webDavConfigMigration", () => {
 
     it("returns true when webdavSyncStrategy field exists", () => {
       const prefs = createPreferences({
-        webdavSyncStrategy: "merge",
+        webdavSyncStrategy: WEBDAV_SYNC_STRATEGIES.MERGE,
         themeMode: "dark"
       })
 
@@ -126,7 +126,7 @@ describe("webDavConfigMigration", () => {
         webdavPassword: "pass",
         webdavAutoSync: true,
         webdavSyncInterval: 3600,
-        webdavSyncStrategy: "merge",
+        webdavSyncStrategy: WEBDAV_SYNC_STRATEGIES.MERGE,
         themeMode: "dark"
       })
 
@@ -143,7 +143,7 @@ describe("webDavConfigMigration", () => {
         webdavPassword: "testpass",
         webdavAutoSync: true,
         webdavSyncInterval: 1800,
-        webdavSyncStrategy: "upload_only",
+        webdavSyncStrategy: WEBDAV_SYNC_STRATEGIES.UPLOAD_ONLY,
         themeMode: "dark"
       })
 
@@ -155,7 +155,7 @@ describe("webDavConfigMigration", () => {
         password: "testpass",
         autoSync: true,
         syncInterval: 1800,
-        syncStrategy: "upload_only"
+        syncStrategy: WEBDAV_SYNC_STRATEGIES.UPLOAD_ONLY
       })
     })
 
@@ -166,7 +166,7 @@ describe("webDavConfigMigration", () => {
         webdavPassword: "testpass",
         webdavAutoSync: true,
         webdavSyncInterval: 1800,
-        webdavSyncStrategy: "merge" as const,
+        webdavSyncStrategy: WEBDAV_SYNC_STRATEGIES.MERGE as const,
         themeMode: "dark"
       } as UserPreferences
 
@@ -217,7 +217,7 @@ describe("webDavConfigMigration", () => {
           password: "testpass",
           autoSync: true,
           syncInterval: 3600,
-          syncStrategy: "merge" as const
+          syncStrategy: WEBDAV_SYNC_STRATEGIES.MERGE
         },
         themeMode: "dark"
       } as UserPreferences
@@ -235,14 +235,14 @@ describe("webDavConfigMigration", () => {
           password: "oldpass",
           autoSync: false,
           syncInterval: 7200,
-          syncStrategy: "download_only"
+          syncStrategy: WEBDAV_SYNC_STRATEGIES.DOWNLOAD_ONLY
         },
         webdavUrl: "https://new.com",
         webdavUsername: "newuser",
         webdavPassword: "newpass",
         webdavAutoSync: true,
         webdavSyncInterval: 3600,
-        webdavSyncStrategy: "merge",
+        webdavSyncStrategy: WEBDAV_SYNC_STRATEGIES.MERGE,
         themeMode: "dark"
       })
 
@@ -254,7 +254,7 @@ describe("webDavConfigMigration", () => {
         password: "newpass",
         autoSync: true,
         syncInterval: 3600,
-        syncStrategy: "merge"
+        syncStrategy: WEBDAV_SYNC_STRATEGIES.MERGE
       })
 
       expect(result).not.toHaveProperty("webdavUrl")
@@ -281,7 +281,11 @@ describe("webDavConfigMigration", () => {
     })
 
     it("handles all sync strategies correctly", () => {
-      const strategies = ["merge", "upload_only", "download_only"] as const
+      const strategies = [
+        WEBDAV_SYNC_STRATEGIES.MERGE,
+        WEBDAV_SYNC_STRATEGIES.UPLOAD_ONLY,
+        WEBDAV_SYNC_STRATEGIES.DOWNLOAD_ONLY
+      ] as const
 
       strategies.forEach((strategy) => {
         const prefs = {
