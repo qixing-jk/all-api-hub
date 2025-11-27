@@ -260,3 +260,17 @@ export type UpstreamModelItem = {
 }
 
 export type UpstreamModelList = UpstreamModelItem[]
+
+// 兑换码相关类型
+export interface RedeemCodeRequest {
+  key: string
+}
+
+export interface RedeemCodeResponse {
+  success: boolean
+  message: string
+  /**
+   * 兑换获得的额度
+   */
+  data: number
+}

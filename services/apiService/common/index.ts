@@ -16,6 +16,7 @@ import {
   PaginatedTokenResponse,
   PaymentResponse,
   PricingResponse,
+  RedeemCodeRequest,
   RefreshAccountResult,
   SiteStatusInfo,
   TodayIncomeData,
@@ -806,6 +807,44 @@ export const fetchModelPricing = async ({
     )
   } catch (error) {
     console.error("获取模型定价失败:", error)
+    throw error
+  }
+}
+
+/**
+ * 兑换码充值
+ * @param baseUrl - 站点基础URL
+ * @param userId - 用户ID
+ * @param accessToken - 访问令牌
+ * @param redemptionCode - 兑换码
+ * @param authType - 认证类型
+ * @returns 兑换获得的额度
+ */
+export const redeemCode = async (
+  baseUrl: string,
+  userId: number,
+  accessToken: string,
+  redemptionCode: string,
+  authType?: AuthTypeEnum
+): Promise<number> => {
+  try {
+    const requestData: RedeemCodeRequest = {
+      key: redemptionCode
+    }
+
+    return await fetchApiData<number>({
+      baseUrl,
+      endpoint: "/api/user/topup",
+      userId,
+      token: accessToken,
+      authType,
+      options: {
+        method: "POST",
+        body: JSON.stringify(requestData)
+      }
+    })
+  } catch (error) {
+    console.error("兑换码充值失败:", error)
     throw error
   }
 }

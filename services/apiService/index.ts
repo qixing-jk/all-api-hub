@@ -101,6 +101,7 @@ export const {
   updateApiToken,
   deleteApiToken,
   fetchModelPricing,
+  redeemCode,
   determineHealthStatus
 } = exportedAPI
 
