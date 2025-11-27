@@ -39,7 +39,7 @@
     "noImportableData": "No importable data found",
     "importFailed": "Import failed: {{error}}",
     "formatError": "Data format error, please check JSON format",
-    "importSuccess": "User settings imported successfully",
+    "importSuccess": "Data imported successfully",
     "channelConfigImported": "Imported {{count}} channel configuration(s)",
     "noImportableDataFound": "No importable data found",
     "downloadImportFailed": "Download/Import failed"

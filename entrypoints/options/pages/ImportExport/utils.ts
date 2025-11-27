@@ -122,7 +122,9 @@ export function parseBackupSummary(
   }
 }
 
-async function importV1Backup(data: RawBackupData) {
+async function importV1Backup(
+  data: RawBackupData
+): Promise<{ imported: boolean }> {
   let importSuccess = false
 
   // accounts: support both legacy partial exports and older full exports
@@ -133,11 +135,10 @@ async function importV1Backup(data: RawBackupData) {
       data.accounts
 
     if (accountsData) {
-      const { migratedCount } = await accountStorage.importData({
+      await accountStorage.importData({
         accounts: accountsData
       })
       importSuccess = true
-      return { imported: true, migratedCount }
     }
   }
 
@@ -148,7 +149,6 @@ async function importV1Backup(data: RawBackupData) {
       const success = await userPreferences.importPreferences(preferencesData)
       if (success) {
         importSuccess = true
-        return { imported: true }
       }
     }
   }
@@ -157,10 +157,8 @@ async function importV1Backup(data: RawBackupData) {
   if (data.channelConfigs || data.type === "channelConfigs") {
     const channelConfigsData = data.channelConfigs || data.data
     if (channelConfigsData) {
-      const importedChannelConfigsCount =
-        await channelConfigStorage.importConfigs(channelConfigsData)
+      await channelConfigStorage.importConfigs(channelConfigsData)
       importSuccess = true
-      return { imported: true, importedChannelConfigsCount }
     }
   }
 
@@ -168,7 +166,7 @@ async function importV1Backup(data: RawBackupData) {
     throw new Error(t("importExport:import.noImportableData"))
   }
 
-  return { imported: false }
+  return { imported: true }
 }
 
 /**
@@ -278,7 +276,7 @@ function normalizeV1BackupForMerge(
   }
 }
 
-async function importV2Backup(data: BackupV2) {
+async function importV2Backup(data: BackupV2): Promise<{ imported: boolean }> {
   let importSuccess = false
 
   // V2 assumes flat structure: accounts / preferences / channelConfigs directly on root
@@ -287,11 +285,10 @@ async function importV2Backup(data: BackupV2) {
     const accountsConfig = (data as BackupFullV2 | BackupAccountsPartialV2)
       .accounts
 
-    const { migratedCount } = await accountStorage.importData({
+    await accountStorage.importData({
       accounts: accountsConfig.accounts
     })
     importSuccess = true
-    return { imported: true, migratedCount }
   }
 
   if ("preferences" in data) {
@@ -299,22 +296,21 @@ async function importV2Backup(data: BackupV2) {
     const success = await userPreferences.importPreferences(preferences)
     if (success) {
       importSuccess = true
-      return { imported: true }
     }
   }
 
-  if ("channelConfigs" in data && data.channelConfigs) {
-    const importedChannelConfigsCount =
-      await channelConfigStorage.importConfigs(data.channelConfigs)
+  if ("channelConfigs" in data && (data as BackupFullV2).channelConfigs) {
+    await channelConfigStorage.importConfigs(
+      (data as BackupFullV2).channelConfigs
+    )
     importSuccess = true
-    return { imported: true, importedChannelConfigsCount }
   }
 
   if (!importSuccess) {
     throw new Error(t("importExport:import.noImportableData"))
   }
 
-  return { imported: false }
+  return { imported: true }
 }
 
 /**
@@ -328,7 +324,9 @@ async function importV2Backup(data: BackupV2) {
  * - Future versions: currently fall back to V2 behavior; when adding V3+ define
  *   an importV3Backup and extend this dispatcher.
  */
-export async function importFromBackupObject(data: RawBackupData) {
+export async function importFromBackupObject(
+  data: RawBackupData
+): Promise<{ imported: boolean }> {
   // timestamp is required for all versions; version is optional for backward compatibility
   if (!data.timestamp) {
     throw new Error(t("importExport:import.formatNotCorrect"))

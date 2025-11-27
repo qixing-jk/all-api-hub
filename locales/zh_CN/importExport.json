@@ -39,7 +39,7 @@
     "noImportableData": "没有找到可导入的数据",
     "importFailed": "导入失败: {{error}}",
     "formatError": "数据格式错误，请检查JSON格式",
-    "importSuccess": "用户设置导入成功",
+    "importSuccess": "数据导入成功",
     "channelConfigImported": "已导入 {{count}} 条通道配置",
     "noImportableDataFound": "没有找到可导入的数据",
     "downloadImportFailed": "下载/导入失败"

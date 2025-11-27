@@ -37,34 +37,9 @@ export const useImportExport = () => {
 
       const data = JSON.parse(importData)
       const result = await importFromBackupObject(data)
-
       if (result.imported) {
-        if (typeof result.migratedCount === "number") {
-          if (result.migratedCount > 0) {
-            toast.success(
-              t("messages:toast.success.importedAccounts", {
-                migratedCount: result.migratedCount
-              })
-            )
-          } else {
-            toast.success(t("messages:toast.success.importSuccess"))
-          }
-        } else if (
-          typeof result.importedChannelConfigsCount === "number" &&
-          result.importedChannelConfigsCount > 0
-        ) {
-          toast.success(
-            t("importExport:import.channelConfigImported", {
-              count: result.importedChannelConfigsCount
-            })
-          )
-        } else {
-          toast.success(t("importExport:import.importSuccess"))
-        }
+        toast.success(t("importExport:import.importSuccess"))
       }
-
-      // 清空输入框
-      setImportData("")
     } catch (error) {
       console.error("导入失败:", error)
       if (error instanceof SyntaxError) {
