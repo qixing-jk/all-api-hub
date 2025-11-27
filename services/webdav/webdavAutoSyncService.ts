@@ -2,8 +2,10 @@ import { t } from "i18next"
 
 import type { SiteAccount, WebDAVSettings } from "~/types"
 
+import { BACKUP_VERSION } from "../../entrypoints/options/pages/ImportExport/utils.ts"
 import { getErrorMessage } from "../../utils/error.ts"
 import { accountStorage } from "../accountStorage.ts"
+import { channelConfigStorage } from "../channelConfigStorage.ts"
 import { userPreferences, type UserPreferences } from "../userPreferences.ts"
 import {
   downloadBackup,
@@ -159,10 +161,12 @@ class WebdavAutoSyncService {
     }
 
     // 获取本地数据
-    const [localAccountsConfig, localPreferences] = await Promise.all([
-      accountStorage.exportData(),
-      userPreferences.exportPreferences()
-    ])
+    const [localAccountsConfig, localPreferences, localChannelConfigs] =
+      await Promise.all([
+        accountStorage.exportData(),
+        userPreferences.exportPreferences(),
+        channelConfigStorage.exportConfigs()
+      ])
 
     // 决定同步策略
     const strategy = preferences.webdav.syncStrategy || "merge"
@@ -210,13 +214,14 @@ class WebdavAutoSyncService {
 
     // 上传到WebDAV
     const exportData = {
-      version: "1.0",
+      version: BACKUP_VERSION,
       timestamp: Date.now(),
       accounts: {
         accounts: accountsToSave,
         last_updated: Date.now()
       },
-      preferences: preferencesToSave
+      preferences: preferencesToSave,
+      channelConfigs: localChannelConfigs
     }
 
     await uploadBackup(JSON.stringify(exportData, null, 2))

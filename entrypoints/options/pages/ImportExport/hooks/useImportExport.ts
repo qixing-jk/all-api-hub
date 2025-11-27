@@ -2,10 +2,9 @@ import { useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { accountStorage } from "~/services/accountStorage"
-import { channelConfigStorage } from "~/services/channelConfigStorage"
-import { userPreferences } from "~/services/userPreferences"
 import { getErrorMessage } from "~/utils/error"
+
+import { importFromBackupObject, parseBackupSummary } from "../utils"
 
 export const useImportExport = () => {
   const { t } = useTranslation()
@@ -37,61 +36,31 @@ export const useImportExport = () => {
       setIsImporting(true)
 
       const data = JSON.parse(importData)
+      const result = await importFromBackupObject(data)
 
-      // 验证数据格式
-      if (!data.version || !data.timestamp) {
-        throw new Error(t("importExport:import.formatNotCorrect"))
-      }
-
-      let importSuccess = false
-
-      // 根据数据类型进行导入
-      if (data.accounts || data.type === "accounts") {
-        const accountsData = data.accounts?.accounts || data.data?.accounts
-
-        const { migratedCount } = await accountStorage.importData({
-          accounts: accountsData
-        })
-
-        importSuccess = true
-        if (migratedCount > 0) {
-          toast.success(
-            t("messages:toast.success.importedAccounts", { migratedCount })
-          )
-        } else {
-          toast.success(t("messages:toast.success.importSuccess"))
-        }
-      }
-
-      if (data.preferences || data.type === "preferences") {
-        // 导入用户设置
-        const preferencesData = data.preferences || data.data
-        if (preferencesData) {
-          const success =
-            await userPreferences.importPreferences(preferencesData)
-          if (success) {
-            importSuccess = true
-            toast.success(t("importExport:import.importSuccess"))
+      if (result.imported) {
+        if (typeof result.migratedCount === "number") {
+          if (result.migratedCount > 0) {
+            toast.success(
+              t("messages:toast.success.importedAccounts", {
+                migratedCount: result.migratedCount
+              })
+            )
+          } else {
+            toast.success(t("messages:toast.success.importSuccess"))
           }
-        }
-      }
-
-      if (data.channelConfigs || data.type === "channelConfigs") {
-        const channelConfigsData = data.channelConfigs || data.data
-        if (channelConfigsData) {
-          const importedChannelConfigsCount =
-            await channelConfigStorage.importConfigs(channelConfigsData)
-          importSuccess = true
+        } else if (
+          typeof result.importedChannelConfigsCount === "number" &&
+          result.importedChannelConfigsCount > 0
+        ) {
           toast.success(
             t("importExport:import.channelConfigImported", {
-              count: importedChannelConfigsCount
+              count: result.importedChannelConfigsCount
             })
           )
+        } else {
+          toast.success(t("importExport:import.importSuccess"))
         }
-      }
-
-      if (!importSuccess) {
-        throw new Error(t("importExport:import.noImportableData"))
       }
 
       // 清空输入框
@@ -117,17 +86,11 @@ export const useImportExport = () => {
     if (!importData.trim()) return null
 
     try {
-      const data = JSON.parse(importData)
-      return {
-        valid: true,
-        hasAccounts: data.accounts || data.type === "accounts",
-        hasPreferences: data.preferences || data.type === "preferences",
-        hasChannelConfigs:
-          data.channelConfigs || data.type === "channelConfigs",
-        timestamp: data.timestamp
-          ? new Date(data.timestamp).toLocaleString()
-          : t("common:labels.unknown")
+      const summary = parseBackupSummary(importData, t("common:labels.unknown"))
+      if (!summary || !("valid" in summary) || !summary.valid) {
+        return { valid: false }
       }
+      return summary
     } catch {
       return { valid: false }
     }
