@@ -106,6 +106,11 @@ export interface UserPreferences {
   // Model Redirect 配置
   modelRedirect: ModelRedirectPreferences
 
+  // Redemption Assist 配置
+  redemptionAssist?: {
+    enabled: boolean
+  }
+
   /**
    * 最后更新时间
    */
@@ -215,6 +220,9 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
     }
   },
   modelRedirect: DEFAULT_MODEL_REDIRECT_PREFERENCES,
+  redemptionAssist: {
+    enabled: true
+  },
   sortingPriorityConfig: undefined,
   themeMode: "system",
   language: undefined, // Default to undefined to trigger browser detection
@@ -487,6 +495,15 @@ class UserPreferencesService {
   async resetModelRedirectConfig(): Promise<boolean> {
     return this.savePreferences({
       modelRedirect: DEFAULT_PREFERENCES.modelRedirect
+    })
+  }
+
+  /**
+   * 重置兑换助手配置
+   */
+  async resetRedemptionAssist(): Promise<boolean> {
+    return this.savePreferences({
+      redemptionAssist: DEFAULT_PREFERENCES.redemptionAssist
     })
   }
 

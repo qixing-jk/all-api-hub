@@ -40,6 +40,7 @@ i18n
       "modelList",
       "settings",
       "messages",
+      "redemptionAssist",
       "ui",
       "importExport",
       "about"

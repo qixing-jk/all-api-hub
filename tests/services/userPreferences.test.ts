@@ -12,6 +12,7 @@ describe("userPreferences", () => {
       expect(DEFAULT_PREFERENCES.sortOrder).toBe("desc")
       expect(DEFAULT_PREFERENCES.showHealthStatus).toBe(true)
       expect(DEFAULT_PREFERENCES.themeMode).toBe("system")
+      expect(DEFAULT_PREFERENCES.redemptionAssist?.enabled).toBe(true)
     })
 
     it("has valid accountAutoRefresh config", () => {

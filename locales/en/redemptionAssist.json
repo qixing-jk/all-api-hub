@@ -1,0 +1,19 @@
+{
+  "description": "Assist with redeeming 32-character codes on supported check-in and redeem pages.",
+  "settings": {
+    "title": "Redemption Assist",
+    "enable": "Enable redemption assist",
+    "enableDesc": "Automatically detect redemption codes on supported pages and show a redeem prompt.",
+    "description": "Configure how the extension detects and assists with redeeming codes on supported pages."
+  },
+  "messages": {
+    "redeemSuccess": "Redeemed successfully. Credited amount: {{amount}}",
+    "redeemFailed": "Redemption failed. Please try again later.",
+    "success": {
+      "settingsSaved": "Redemption assist settings have been saved."
+    },
+    "error": {
+      "saveFailed": "Failed to save redemption assist settings."
+    }
+  }
+}

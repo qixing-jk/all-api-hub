@@ -35,7 +35,7 @@ export async function initBackgroundI18n() {
     resources,
     fallbackLng: DEFAULT_LANG,
     defaultNS: "common",
-    ns: ["common", "messages", "settings", "ui"], // 精简即可
+    ns: ["common", "messages", "settings", "ui", "redemptionAssist"], // 精简即可
     interpolation: { escapeValue: false },
     returnEmptyString: false
   })

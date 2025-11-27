@@ -70,12 +70,14 @@ interface UserPreferencesContextType {
   updateModelRedirect: (
     updates: Partial<ModelRedirectPreferences>
   ) => Promise<boolean>
+  updateRedemptionAssist: (updates: { enabled: boolean }) => Promise<boolean>
   resetToDefaults: () => Promise<boolean>
   resetDisplaySettings: () => Promise<boolean>
   resetAutoRefreshConfig: () => Promise<boolean>
   resetNewApiConfig: () => Promise<boolean>
   resetNewApiModelSyncConfig: () => Promise<boolean>
   resetAutoCheckinConfig: () => Promise<boolean>
+  resetRedemptionAssistConfig: () => Promise<boolean>
   resetModelRedirectConfig: () => Promise<boolean>
   resetWebdavConfig: () => Promise<boolean>
   resetThemeAndLanguage: () => Promise<boolean>
@@ -355,6 +357,38 @@ export const UserPreferencesProvider = ({
     []
   )
 
+  const updateRedemptionAssist = useCallback(
+    async (updates: { enabled: boolean }) => {
+      const success = await userPreferences.savePreferences({
+        redemptionAssist: updates
+      })
+
+      if (success) {
+        setPreferences((prev) => {
+          if (!prev) return null
+          const merged = {
+            ...(DEFAULT_PREFERENCES.redemptionAssist ?? { enabled: true }),
+            ...(prev.redemptionAssist ?? {}),
+            ...updates
+          }
+          return {
+            ...prev,
+            redemptionAssist: merged,
+            lastUpdated: Date.now()
+          }
+        })
+
+        await sendRuntimeMessage({
+          action: "redemptionAssist:updateSettings",
+          settings: updates
+        })
+      }
+
+      return success
+    },
+    []
+  )
+
   const resetToDefaults = useCallback(async () => {
     const success = await userPreferences.resetToDefaults()
     if (success) {
@@ -487,6 +521,28 @@ export const UserPreferencesProvider = ({
     return success
   }, [])
 
+  const resetRedemptionAssistConfig = useCallback(async () => {
+    const success = await userPreferences.resetRedemptionAssist()
+    if (success) {
+      const defaults = DEFAULT_PREFERENCES.redemptionAssist
+      setPreferences((prev) =>
+        prev
+          ? deepOverride(prev, {
+              redemptionAssist: defaults,
+              lastUpdated: Date.now()
+            })
+          : prev
+      )
+      if (defaults) {
+        void sendRuntimeMessage({
+          action: "redemptionAssist:updateSettings",
+          settings: defaults
+        })
+      }
+    }
+    return success
+  }, [])
+
   const resetModelRedirectConfig = useCallback(async () => {
     const success = await userPreferences.resetModelRedirectConfig()
     if (success) {
@@ -590,12 +646,14 @@ export const UserPreferencesProvider = ({
     updateAutoCheckin,
     updateNewApiModelSync,
     updateModelRedirect,
+    updateRedemptionAssist,
     resetToDefaults,
     resetDisplaySettings,
     resetAutoRefreshConfig,
     resetNewApiConfig,
     resetNewApiModelSyncConfig,
     resetAutoCheckinConfig,
+    resetRedemptionAssistConfig,
     resetModelRedirectConfig,
     resetWebdavConfig,
     resetThemeAndLanguage,

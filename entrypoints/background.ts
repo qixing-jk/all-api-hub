@@ -19,6 +19,10 @@ import {
   handleNewApiModelSyncMessage,
   newApiModelSyncScheduler
 } from "../services/newApiModelSync"
+import {
+  handleRedemptionAssistMessage,
+  redemptionAssistService
+} from "../services/redemptionAssist"
 import { userPreferences } from "../services/userPreferences"
 import {
   handleWebdavAutoSyncMessage,
@@ -80,6 +84,7 @@ async function main() {
     await webdavAutoSyncService.initialize()
     await newApiModelSyncScheduler.initialize()
     await autoCheckinScheduler.initialize()
+    await redemptionAssistService.initialize()
 
     servicesInitialized = true
   }
@@ -115,7 +120,7 @@ async function main() {
   })
 
   // 处理来自 popup 的消息
-  onRuntimeMessage((request, _sender, sendResponse) => {
+  onRuntimeMessage((request, sender, sendResponse) => {
     if (request.action === "openTempWindow") {
       handleOpenTempWindow(request, sendResponse)
       return true // 保持异步响应通道
@@ -166,6 +171,12 @@ async function main() {
     // 处理Auto Check-in相关消息
     if (request.action && request.action.startsWith("autoCheckin:")) {
       handleAutoCheckinMessage(request, sendResponse)
+      return true
+    }
+
+    // 处理 Redemption Assist 相关消息
+    if (request.action && request.action.startsWith("redemptionAssist:")) {
+      void handleRedemptionAssistMessage(request, sender, sendResponse)
       return true
     }
 
