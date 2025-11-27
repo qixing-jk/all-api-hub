@@ -2,7 +2,8 @@ import { t } from "i18next"
 
 import {
   BACKUP_VERSION,
-  normalizeBackupForMerge
+  normalizeBackupForMerge,
+  type BackupFullV2
 } from "~/entrypoints/options/pages/ImportExport/utils.ts"
 import type { SiteAccount, WebDAVSettings } from "~/types"
 import { getErrorMessage } from "~/utils/error.ts"
@@ -227,7 +228,7 @@ class WebdavAutoSyncService {
     ])
 
     // 上传到WebDAV
-    const exportData = {
+    const exportData: BackupFullV2 = {
       version: BACKUP_VERSION,
       timestamp: Date.now(),
       accounts: {

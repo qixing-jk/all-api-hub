@@ -27,7 +27,11 @@ import {
   uploadBackup
 } from "~/services/webdav/webdavService.ts"
 
-import { BACKUP_VERSION, importFromBackupObject } from "../utils"
+import {
+  BACKUP_VERSION,
+  importFromBackupObject,
+  type BackupFullV2
+} from "../utils"
 
 export default function WebDAVSettings() {
   const { t } = useTranslation("importExport")
@@ -193,7 +197,7 @@ export default function WebDAVSettings() {
                     userPreferences.exportPreferences(),
                     channelConfigStorage.exportConfigs()
                   ])
-                const exportData = {
+                const exportData: BackupFullV2 = {
                   version: BACKUP_VERSION,
                   timestamp: Date.now(),
                   accounts: accountData,

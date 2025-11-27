@@ -3,7 +3,10 @@ import toast from "react-hot-toast"
 
 import { accountStorage } from "~/services/accountStorage"
 import { channelConfigStorage } from "~/services/channelConfigStorage"
+import type { UserPreferences } from "~/services/userPreferences"
 import { userPreferences } from "~/services/userPreferences"
+import type { StorageConfig } from "~/types"
+import type { ChannelConfigMap } from "~/types/channelConfig"
 
 /**
  * Current backup schema version.
@@ -25,23 +28,65 @@ export interface ParsedBackupSummary {
 }
 
 /**
- * Raw backup payload as stored in files / WebDAV.
- *
- * This type intentionally captures both legacy (V1) and current (V2) shapes:
- * - V1/legacy may use nested accounts.accounts and/or data.accounts / data.preferences.
- * - V2 uses a flat structure with accounts / preferences / channelConfigs at root.
+ * V2 full backup payload (used by "export all" and WebDAV sync uploads).
+ * This is the primary canonical structure we write from the app.
  */
-interface RawBackupData {
+export interface BackupFullV2 {
+  version: string
+  timestamp: number
+  accounts: StorageConfig
+  preferences: UserPreferences
+  channelConfigs: ChannelConfigMap
+}
+
+/**
+ * V2 partial backup: accounts only.
+ */
+export interface BackupAccountsPartialV2 {
+  version: string
+  timestamp: number
+  type: "accounts"
+  data: StorageConfig
+}
+
+/**
+ * V2 partial backup: preferences only.
+ */
+export interface BackupPreferencesPartialV2 {
+  version: string
+  timestamp: number
+  type: "preferences"
+  data: UserPreferences
+}
+
+export type BackupV2 =
+  | BackupFullV2
+  | BackupAccountsPartialV2
+  | BackupPreferencesPartialV2
+
+/**
+ * Legacy / tolerant backup payload (primarily for V1 and older shapes).
+ * Kept broad on purpose to accept historical data from users.
+ */
+type LegacyBackupLike = {
   version?: string
   timestamp?: number | string
   type?: "accounts" | "preferences" | "channelConfigs" | string
-  // full backup shape
   accounts?: any
   preferences?: any
   channelConfigs?: any
-  // legacy partial export shape
   data?: any
 }
+
+/**
+ * Raw backup payload as stored in files / WebDAV.
+ *
+ * We keep this type deliberately tolerant (LegacyBackupLike) so that it can
+ * accept both canonical V2 exports (BackupV2) and historical/unknown shapes.
+ * The stricter V2 interfaces are still used at export call sites to guarantee
+ * that what we write conforms to the latest schema.
+ */
+export type RawBackupData = LegacyBackupLike
 
 export function parseBackupSummary(
   importData: string,
@@ -293,7 +338,7 @@ export const handleExportAll = async (
       channelConfigStorage.exportConfigs()
     ])
 
-    const exportData = {
+    const exportData: BackupFullV2 = {
       version: BACKUP_VERSION,
       timestamp: Date.now(),
       accounts: accountData,
@@ -331,7 +376,7 @@ export const handleExportAccounts = async (
     setIsExporting(true)
 
     const accountData = await accountStorage.exportData()
-    const exportData = {
+    const exportData: BackupAccountsPartialV2 = {
       version: BACKUP_VERSION,
       timestamp: Date.now(),
       type: "accounts",
@@ -367,7 +412,7 @@ export const handleExportPreferences = async (
     setIsExporting(true)
 
     const preferencesData = await userPreferences.exportPreferences()
-    const exportData = {
+    const exportData: BackupPreferencesPartialV2 = {
       version: BACKUP_VERSION,
       timestamp: Date.now(),
       type: "preferences",
