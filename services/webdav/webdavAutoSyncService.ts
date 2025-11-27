@@ -180,6 +180,20 @@ class WebdavAutoSyncService {
         channelConfigStorage.exportConfigs()
       ])
 
+    const localPinnedAccountIds = localAccountsConfig.pinnedAccountIds || []
+
+    let remotePinnedAccountIds: string[] = []
+
+    if (remoteData && remoteData.version === BACKUP_VERSION) {
+      const remoteAccountsField = (remoteData as BackupFullV2).accounts as any
+      if (
+        remoteAccountsField &&
+        Array.isArray(remoteAccountsField.pinnedAccountIds)
+      ) {
+        remotePinnedAccountIds = remoteAccountsField.pinnedAccountIds
+      }
+    }
+
     const normalizedRemote = normalizeBackupForMerge(
       remoteData,
       localPreferences
@@ -192,6 +206,7 @@ class WebdavAutoSyncService {
     let accountsToSave: SiteAccount[] = localAccountsConfig.accounts
     let preferencesToSave: UserPreferences = localPreferences
     let channelConfigsToSave: ChannelConfigMap = localChannelConfigs
+    let pinnedAccountIdsToSave: string[] = localPinnedAccountIds
 
     if (strategy === WEBDAV_SYNC_STRATEGIES.MERGE && remoteData) {
       // 合并策略
@@ -218,12 +233,31 @@ class WebdavAutoSyncService {
       accountsToSave = mergeResult.accounts
       preferencesToSave = mergeResult.preferences
       channelConfigsToSave = mergeResult.channelConfigs
+
+      const mergedPinnedIds = [
+        ...remotePinnedAccountIds,
+        ...localPinnedAccountIds
+      ]
+      const seenPinned = new Set<string>()
+      const uniqueMergedPinnedIds: string[] = []
+      for (const id of mergedPinnedIds) {
+        if (!seenPinned.has(id)) {
+          seenPinned.add(id)
+          uniqueMergedPinnedIds.push(id)
+        }
+      }
+      pinnedAccountIdsToSave = uniqueMergedPinnedIds.filter((id) =>
+        accountsToSave.some((account) => account.id === id)
+      )
       console.log(`[WebdavAutoSync] 合并完成: ${accountsToSave.length} 个账号`)
     } else if (strategy === WEBDAV_SYNC_STRATEGIES.UPLOAD_ONLY || !remoteData) {
       // 覆盖策略或远程无数据
       accountsToSave = localAccountsConfig.accounts
       preferencesToSave = localPreferences
       channelConfigsToSave = localChannelConfigs
+      pinnedAccountIdsToSave = localPinnedAccountIds.filter((id) =>
+        accountsToSave.some((account) => account.id === id)
+      )
       console.log("[WebdavAutoSync] 使用本地数据覆盖")
     } else if (strategy === WEBDAV_SYNC_STRATEGIES.DOWNLOAD_ONLY) {
       // 远程优先策略：直接使用远程数据（若存在），否则使用本地
@@ -231,6 +265,9 @@ class WebdavAutoSyncService {
       preferencesToSave = normalizedRemote.preferences || localPreferences
       channelConfigsToSave =
         normalizedRemote.channelConfigs || localChannelConfigs
+      pinnedAccountIdsToSave = remotePinnedAccountIds.filter((id) =>
+        accountsToSave.some((account) => account.id === id)
+      )
       console.log("[WebdavAutoSync] 使用远程数据")
     } else {
       console.error(
@@ -252,6 +289,7 @@ class WebdavAutoSyncService {
       timestamp: Date.now(),
       accounts: {
         accounts: accountsToSave,
+        pinnedAccountIds: pinnedAccountIdsToSave,
         last_updated: Date.now()
       },
       preferences: preferencesToSave,
