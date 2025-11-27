@@ -46,7 +46,7 @@ export interface BackupAccountsPartialV2 {
   version: string
   timestamp: number
   type: "accounts"
-  data: StorageConfig
+  accounts: StorageConfig
 }
 
 /**
@@ -56,7 +56,7 @@ export interface BackupPreferencesPartialV2 {
   version: string
   timestamp: number
   type: "preferences"
-  data: UserPreferences
+  preferences: UserPreferences
 }
 
 export type BackupV2 =
@@ -203,7 +203,8 @@ export function normalizeBackupForMerge(
   const version = data.version ?? "1.0"
 
   if (version === BACKUP_VERSION) {
-    return normalizeV2BackupForMerge(data, localPreferences)
+    // For V2, we expect the canonical full-backup shape
+    return normalizeV2BackupForMerge(data as BackupFullV2, localPreferences)
   }
 
   // V1 and unknown versions: use tolerant legacy-normalization
@@ -211,7 +212,7 @@ export function normalizeBackupForMerge(
 }
 
 function normalizeV2BackupForMerge(
-  data: RawBackupData,
+  data: BackupFullV2,
   localPreferences: any
 ): {
   accounts: any[]
@@ -277,28 +278,32 @@ function normalizeV1BackupForMerge(
   }
 }
 
-async function importV2Backup(data: RawBackupData) {
+async function importV2Backup(data: BackupV2) {
   let importSuccess = false
 
   // V2 assumes flat structure: accounts / preferences / channelConfigs directly on root
 
-  if (data.accounts) {
+  if ("accounts" in data) {
+    const accountsConfig = (data as BackupFullV2 | BackupAccountsPartialV2)
+      .accounts
+
     const { migratedCount } = await accountStorage.importData({
-      accounts: data.accounts
+      accounts: accountsConfig.accounts
     })
     importSuccess = true
     return { imported: true, migratedCount }
   }
 
-  if (data.preferences) {
-    const success = await userPreferences.importPreferences(data.preferences)
+  if ("preferences" in data) {
+    const { preferences } = data as BackupFullV2 | BackupPreferencesPartialV2
+    const success = await userPreferences.importPreferences(preferences)
     if (success) {
       importSuccess = true
       return { imported: true }
     }
   }
 
-  if (data.channelConfigs) {
+  if ("channelConfigs" in data && data.channelConfigs) {
     const importedChannelConfigsCount =
       await channelConfigStorage.importConfigs(data.channelConfigs)
     importSuccess = true
@@ -336,11 +341,11 @@ export async function importFromBackupObject(data: RawBackupData) {
   }
 
   if (version === BACKUP_VERSION) {
-    return importV2Backup(data)
+    return importV2Backup(data as BackupV2)
   }
 
-  // Unknown future version: use latest V2 behavior as best-effort
-  return importV2Backup(data)
+  // Unknown future version: fall back to tolerant V1-style import
+  return importV1Backup(data)
 }
 
 // 导出所有数据
@@ -399,7 +404,7 @@ export const handleExportAccounts = async (
       version: BACKUP_VERSION,
       timestamp: Date.now(),
       type: "accounts",
-      data: accountData
+      accounts: accountData
     }
 
     const blob = new Blob([JSON.stringify(exportData, null, 2)], {
@@ -435,7 +440,7 @@ export const handleExportPreferences = async (
       version: BACKUP_VERSION,
       timestamp: Date.now(),
       type: "preferences",
-      data: preferencesData
+      preferences: preferencesData
     }
 
     const blob = new Blob([JSON.stringify(exportData, null, 2)], {
