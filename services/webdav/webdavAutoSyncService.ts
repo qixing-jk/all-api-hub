@@ -278,7 +278,10 @@ class WebdavAutoSyncService {
 
     // 保存合并后的数据到本地
     await Promise.all([
-      accountStorage.importData({ accounts: accountsToSave }),
+      accountStorage.importData({
+        accounts: accountsToSave,
+        pinnedAccountIds: pinnedAccountIdsToSave
+      }),
       userPreferences.importPreferences(preferencesToSave),
       channelConfigStorage.importConfigs(channelConfigsToSave)
     ])

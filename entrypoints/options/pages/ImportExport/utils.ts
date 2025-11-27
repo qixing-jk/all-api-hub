@@ -315,8 +315,19 @@ async function importV2Backup(data: BackupV2): Promise<ImportResult> {
     const accountsConfig = (data as BackupFullV2 | BackupAccountsPartialV2)
       .accounts
 
+    const accounts = Array.isArray(accountsConfig)
+      ? accountsConfig
+      : accountsConfig?.accounts || []
+
+    const pinnedAccountIds =
+      !Array.isArray(accountsConfig) &&
+      Array.isArray((accountsConfig as AccountStorageConfig).pinnedAccountIds)
+        ? (accountsConfig as AccountStorageConfig).pinnedAccountIds
+        : []
+
     await accountStorage.importData({
-      accounts: accountsConfig.accounts
+      accounts,
+      pinnedAccountIds
     })
     accountsImported = true
   }
