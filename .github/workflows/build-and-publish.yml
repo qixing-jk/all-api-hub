@@ -13,8 +13,7 @@ on:
     # 每周一凌晨 2:00 UTC 自动运行 ''0 2 * * 1
     # 或者每天凌晨 2:00 UTC: '0 2 * * *'
     # 或者每月 1 号凌晨 2:00 UTC: '0 2 1 * *'
-    - cron: '0 2 * * *'
-
+    - cron: "0 2 * * *"
 
 permissions:
   contents: write # 上传构建产物到 Release 需要写权限

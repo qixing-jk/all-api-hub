@@ -257,3 +257,6 @@ export * from "./modelRedirect"
 
 // WebDAV Types
 export * from "./webdav"
+
+// Redemption Assist Types
+export * from "./redemptionAssist"

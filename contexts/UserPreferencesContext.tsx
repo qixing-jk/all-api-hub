@@ -17,6 +17,7 @@ import {
 import type { BalanceType, CurrencyType, SortField, SortOrder } from "~/types"
 import type { AutoCheckinPreferences } from "~/types/autoCheckin"
 import type { ModelRedirectPreferences } from "~/types/modelRedirect"
+import type { RedemptionAssistConfig } from "~/types/redemptionAssist"
 import type { SortingPriorityConfig } from "~/types/sorting"
 import type { ThemeMode } from "~/types/theme"
 import { deepOverride } from "~/utils"
@@ -42,6 +43,7 @@ interface UserPreferencesContextType {
   newApiAdminToken: string
   newApiUserId: string
   themeMode: ThemeMode
+  redemptionAssist: RedemptionAssistConfig
 
   updateActiveTab: (activeTab: BalanceType) => Promise<boolean>
   updateDefaultTab: (activeTab: BalanceType) => Promise<boolean>
@@ -64,6 +66,9 @@ interface UserPreferencesContextType {
   updateAutoCheckin: (
     updates: Partial<AutoCheckinPreferences>
   ) => Promise<boolean>
+  updateRedemptionAssist: (
+    updates: Partial<RedemptionAssistConfig>
+  ) => Promise<boolean>
   updateNewApiModelSync: (
     updates: Partial<UserNewApiModelSyncConfig>
   ) => Promise<boolean>
@@ -76,6 +81,7 @@ interface UserPreferencesContextType {
   resetNewApiConfig: () => Promise<boolean>
   resetNewApiModelSyncConfig: () => Promise<boolean>
   resetAutoCheckinConfig: () => Promise<boolean>
+  resetRedemptionAssist: () => Promise<boolean>
   resetModelRedirectConfig: () => Promise<boolean>
   resetWebdavConfig: () => Promise<boolean>
   resetThemeAndLanguage: () => Promise<boolean>
@@ -355,6 +361,29 @@ export const UserPreferencesProvider = ({
     []
   )
 
+  const updateRedemptionAssist = useCallback(
+    async (updates: Partial<RedemptionAssistConfig>) => {
+      const success = await userPreferences.savePreferences({
+        redemptionAssist: updates
+      })
+      if (success) {
+        setPreferences((prev) => {
+          if (!prev) return null
+          const merged = deepOverride(
+            prev.redemptionAssist ?? DEFAULT_PREFERENCES.redemptionAssist,
+            updates
+          )
+          return {
+            ...prev,
+            redemptionAssist: merged
+          }
+        })
+      }
+      return success
+    },
+    []
+  )
+
   const resetToDefaults = useCallback(async () => {
     const success = await userPreferences.resetToDefaults()
     if (success) {
@@ -503,6 +532,22 @@ export const UserPreferencesProvider = ({
     return success
   }, [])
 
+  const resetRedemptionAssist = useCallback(async () => {
+    const success = await userPreferences.resetRedemptionAssist()
+    if (success) {
+      const defaults = DEFAULT_PREFERENCES.redemptionAssist
+      setPreferences((prev) =>
+        prev
+          ? deepOverride(prev, {
+              redemptionAssist: defaults,
+              lastUpdated: Date.now()
+            })
+          : prev
+      )
+    }
+    return success
+  }, [])
+
   const resetWebdavConfig = useCallback(async () => {
     const success = await userPreferences.resetWebdavConfig()
     if (success) {
@@ -574,6 +619,8 @@ export const UserPreferencesProvider = ({
     newApiAdminToken: preferences?.newApi?.adminToken || "",
     newApiUserId: preferences?.newApi?.userId || "",
     themeMode: preferences?.themeMode || "system",
+    redemptionAssist:
+      preferences?.redemptionAssist || DEFAULT_PREFERENCES.redemptionAssist,
     updateActiveTab,
     updateDefaultTab,
     updateCurrencyType,
@@ -588,6 +635,7 @@ export const UserPreferencesProvider = ({
     updateNewApiUserId,
     updateThemeMode,
     updateAutoCheckin,
+    updateRedemptionAssist,
     updateNewApiModelSync,
     updateModelRedirect,
     resetToDefaults,
@@ -596,6 +644,7 @@ export const UserPreferencesProvider = ({
     resetNewApiConfig,
     resetNewApiModelSyncConfig,
     resetAutoCheckinConfig,
+    resetRedemptionAssist,
     resetModelRedirectConfig,
     resetWebdavConfig,
     resetThemeAndLanguage,

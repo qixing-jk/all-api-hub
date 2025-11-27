@@ -37,8 +37,8 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
         {/* 可用分组 */}
         <div>
           <div className="mb-2 flex items-center space-x-2">
-            <TagIcon className="h-4 w-4 text-gray-400 dark:text-dark-text-tertiary" />
-            <span className="font-medium text-gray-700 dark:text-dark-text-secondary">
+            <TagIcon className="dark:text-dark-text-tertiary h-4 w-4 text-gray-400" />
+            <span className="dark:text-dark-text-secondary font-medium text-gray-700">
               {t("availableGroups")}
             </span>
           </div>
@@ -75,12 +75,12 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
         {showEndpointTypes && (
           <div>
             <div className="mb-2 flex items-center space-x-2">
-              <ServerIcon className="h-4 w-4 text-gray-400 dark:text-dark-text-tertiary" />
-              <span className="font-medium text-gray-700 dark:text-dark-text-secondary">
+              <ServerIcon className="dark:text-dark-text-tertiary h-4 w-4 text-gray-400" />
+              <span className="dark:text-dark-text-secondary font-medium text-gray-700">
                 {t("endpointType")}
               </span>
             </div>
-            <div className="text-gray-600 dark:text-dark-text-secondary">
+            <div className="dark:text-dark-text-secondary text-gray-600">
               {getEndpointTypesText(model.supported_endpoint_types)}
             </div>
           </div>
@@ -90,31 +90,31 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
         {isTokenBillingType(model.quota_type) && (
           <div className="md:col-span-2">
             <div className="mb-2 flex items-center space-x-2">
-              <CurrencyDollarIcon className="h-4 w-4 text-gray-400 dark:text-dark-text-tertiary" />
-              <span className="font-medium text-gray-700 dark:text-dark-text-secondary">
+              <CurrencyDollarIcon className="dark:text-dark-text-tertiary h-4 w-4 text-gray-400" />
+              <span className="dark:text-dark-text-secondary font-medium text-gray-700">
                 {t("detailedPricing")}
               </span>
             </div>
             <div className="grid grid-cols-2 gap-4 text-xs">
               <div className="space-y-1">
-                <div className="text-gray-500 dark:text-dark-text-tertiary">
+                <div className="dark:text-dark-text-tertiary text-gray-500">
                   {t("input1MTokens")}
                 </div>
-                <div className="font-medium text-gray-900 dark:text-dark-text-primary">
+                <div className="dark:text-dark-text-primary font-medium text-gray-900">
                   USD: {formatPrice(calculatedPrice.inputUSD, "USD")}
                 </div>
-                <div className="font-medium text-gray-900 dark:text-dark-text-primary">
+                <div className="dark:text-dark-text-primary font-medium text-gray-900">
                   CNY: {formatPrice(calculatedPrice.inputCNY, "CNY")}
                 </div>
               </div>
               <div className="space-y-1">
-                <div className="text-gray-500 dark:text-dark-text-tertiary">
+                <div className="dark:text-dark-text-tertiary text-gray-500">
                   {t("output1MTokens")}
                 </div>
-                <div className="font-medium text-gray-900 dark:text-dark-text-primary">
+                <div className="dark:text-dark-text-primary font-medium text-gray-900">
                   USD: {formatPrice(calculatedPrice.outputUSD, "USD")}
                 </div>
-                <div className="font-medium text-gray-900 dark:text-dark-text-primary">
+                <div className="dark:text-dark-text-primary font-medium text-gray-900">
                   CNY: {formatPrice(calculatedPrice.outputCNY, "CNY")}
                 </div>
               </div>

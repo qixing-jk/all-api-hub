@@ -74,7 +74,7 @@ export default function DangerousZone() {
         size="sm"
         header={
           <div className="pr-8">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-dark-text-primary">
+            <h3 className="dark:text-dark-text-primary text-lg font-semibold text-gray-900">
               {t("messages.confirmReset")}
             </h3>
           </div>
@@ -98,7 +98,7 @@ export default function DangerousZone() {
             </Button>
           </div>
         }>
-        <p className="text-sm text-gray-600 dark:text-dark-text-secondary">
+        <p className="dark:text-dark-text-secondary text-sm text-gray-600">
           {t("messages.resetConfirmDesc", {
             name: t("danger.resetAllSettings")
           })}

@@ -28,6 +28,10 @@ import {
   type ModelRedirectPreferences
 } from "~/types/modelRedirect"
 import { DEFAULT_NEW_API_CONFIG, NewApiConfig } from "~/types/newApiConfig.ts"
+import {
+  DEFAULT_REDEMPTION_ASSIST_CONFIG,
+  type RedemptionAssistConfig
+} from "~/types/redemptionAssist"
 import type { SortingPriorityConfig } from "~/types/sorting"
 import type { ThemeMode } from "~/types/theme"
 import { DeepPartial } from "~/types/utils.ts"
@@ -102,6 +106,9 @@ export interface UserPreferences {
 
   // Auto Check-in 配置
   autoCheckin: AutoCheckinPreferences
+
+  // Redemption Assist 配置
+  redemptionAssist: RedemptionAssistConfig
 
   // Model Redirect 配置
   modelRedirect: ModelRedirectPreferences
@@ -214,6 +221,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
       maxAttemptsPerDay: 3
     }
   },
+  redemptionAssist: DEFAULT_REDEMPTION_ASSIST_CONFIG,
   modelRedirect: DEFAULT_MODEL_REDIRECT_PREFERENCES,
   sortingPriorityConfig: undefined,
   themeMode: "system",
@@ -487,6 +495,15 @@ class UserPreferencesService {
   async resetModelRedirectConfig(): Promise<boolean> {
     return this.savePreferences({
       modelRedirect: DEFAULT_PREFERENCES.modelRedirect
+    })
+  }
+
+  /**
+   * 重置兑换助手配置
+   */
+  async resetRedemptionAssist(): Promise<boolean> {
+    return this.savePreferences({
+      redemptionAssist: DEFAULT_PREFERENCES.redemptionAssist
     })
   }
 

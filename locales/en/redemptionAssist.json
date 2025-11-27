@@ -1,0 +1,32 @@
+{
+  "title": "Redemption Assist",
+  "description": "Automatically detect redemption codes and prompt with one-click redeem options.",
+  "enabled": "Enable Redemption Assist",
+  "enabledDesc": "Detect redemption codes on custom check-in pages",
+  "toast": {
+    "title": "Redemption code detected. Redeem now?",
+    "code": "Code",
+    "maskCode": "Hide code",
+    "showCode": "Show code",
+    "autoRedeem": "Auto Redeem",
+    "manualRedeem": "Manual Redeem",
+    "cancel": "Cancel",
+    "suppress": "Do not prompt again for 10 minutes"
+  },
+  "messages": {
+    "redeemSuccess": "Redeemed successfully",
+    "redeemSuccessWithSite": "Redeemed successfully for {{siteName}}",
+    "selectAccount": "Select account to redeem"
+  },
+  "errors": {
+    "accountNotFound": "Account not found",
+    "noAccessToken": "Account is missing an access token",
+    "redeemFailed": "Redeem failed",
+    "unknownError": "Unknown error"
+  },
+  "accountSelect": {
+    "title": "Select redemption account",
+    "description": "Multiple accounts match this page. Choose the account to redeem:",
+    "searchPlaceholder": "Search by name, URL, or username"
+  }
+}

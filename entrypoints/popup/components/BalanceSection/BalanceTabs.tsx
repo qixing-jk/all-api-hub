@@ -21,8 +21,8 @@ const StyledTab: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     className={({ selected }) =>
       `rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${ANIMATIONS.transition.base} ${
         selected
-          ? "bg-white text-gray-900 shadow-sm dark:bg-dark-bg-secondary dark:text-dark-text-primary"
-          : "text-gray-500 hover:text-gray-700 dark:text-dark-text-secondary dark:hover:text-dark-text-primary"
+          ? "dark:bg-dark-bg-secondary dark:text-dark-text-primary bg-white text-gray-900 shadow-sm"
+          : "dark:text-dark-text-secondary dark:hover:text-dark-text-primary text-gray-500 hover:text-gray-700"
       }`
     }>
     {children}
@@ -51,7 +51,7 @@ const BalanceDisplay: React.FC<{
     <div className="flex items-center space-x-1 break-all">
       <button
         onClick={onCurrencyToggle}
-        className={`${compact ? "text-2xl" : "text-4xl"} p-0 text-left font-bold tracking-tight text-gray-900 transition-colors hover:text-blue-600 dark:text-dark-text-primary`}
+        className={`${compact ? "text-2xl" : "text-4xl"} dark:text-dark-text-primary p-0 text-left font-bold tracking-tight text-gray-900 transition-colors hover:text-blue-600`}
         aria-label={t("currency.clickToSwitch", {
           currency:
             currencyType === "USD" ? t("currency.cny") : t("currency.usd")

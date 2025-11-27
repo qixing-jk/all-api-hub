@@ -1061,5 +1061,59 @@ export const AccountStorageUtils = {
     })
 
     return { valid, invalid }
+  },
+
+  /**
+   * Find accounts that match a given URL by custom check-in URL
+   * Matches by origin and path prefix
+   */
+  async getAccountsByCheckInUrl(url: string): Promise<SiteAccount[]> {
+    try {
+      const targetUrl = new URL(url)
+      const accounts = await this.getAllAccounts()
+
+      return accounts.filter((account) => {
+        const customCheckInUrl = account.checkIn?.customCheckInUrl
+        if (!customCheckInUrl) {
+          return false
+        }
+
+        try {
+          const checkInUrl = new URL(customCheckInUrl)
+
+          // Match origin (protocol + hostname + port)
+          if (targetUrl.origin !== checkInUrl.origin) {
+            return false
+          }
+
+          // Match path prefix
+          const targetPath = targetUrl.pathname
+          const checkInPath = checkInUrl.pathname
+
+          if (targetPath === checkInPath) {
+            return true
+          }
+
+          const normalizedCheckInPath = checkInPath.endsWith("/")
+            ? checkInPath
+            : `${checkInPath}/`
+
+          return targetPath.startsWith(normalizedCheckInPath)
+        } catch (error) {
+          console.warn(
+            `[AccountStorage] Invalid custom check-in URL for account ${account.id}:`,
+            customCheckInUrl,
+            error
+          )
+          return false
+        }
+      })
+    } catch (error) {
+      console.error(
+        "[AccountStorage] Error parsing URL in getAccountsByCheckInUrl:",
+        error
+      )
+      return []
+    }
   }
 }

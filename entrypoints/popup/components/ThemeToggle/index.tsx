@@ -64,7 +64,7 @@ const CompactThemeToggle = () => {
       onClick={handleThemeToggle}
       variant="ghost"
       size="default"
-      className={`relative rounded-full p-2.5 focus:outline-none focus:ring-2 focus:ring-offset-2 ${COLORS.background.tertiary} hover:${COLORS.background.secondary} shadow-sm hover:scale-105 hover:shadow-md focus:ring-blue-500 active:scale-95 dark:focus:ring-blue-400 ${ANIMATIONS.transition.base} `}
+      className={`relative rounded-full p-2.5 focus:ring-2 focus:ring-offset-2 focus:outline-none ${COLORS.background.tertiary} hover:${COLORS.background.secondary} shadow-sm hover:scale-105 hover:shadow-md focus:ring-blue-500 active:scale-95 dark:focus:ring-blue-400 ${ANIMATIONS.transition.base} `}
       title={
         t("theme.current", {
           theme: t(`theme.${currentTheme?.mode}`),

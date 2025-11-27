@@ -32,12 +32,14 @@ import DataBackupTab from "./components/DataBackupTab"
 import GeneralTab from "./components/GeneralTab"
 import LoadingSkeleton from "./components/LoadingSkeleton"
 import NewApiTab from "./components/NewApiTab"
+import RedemptionAssistTab from "./components/RedemptionAssistTab"
 
 type TabId =
   | "general"
   | "accountManagement"
   | "autoRefresh"
   | "checkinRedeem"
+  | "redemptionAssist"
   | "dataBackup"
   | "newApi"
 
@@ -51,6 +53,7 @@ const TAB_CONFIGS: TabConfig[] = [
   { id: "accountManagement", component: AccountManagementTab },
   { id: "autoRefresh", component: AutoRefreshTab },
   { id: "checkinRedeem", component: CheckinRedeemTab },
+  { id: "redemptionAssist", component: RedemptionAssistTab },
   { id: "dataBackup", component: DataBackupTab },
   { id: "newApi", component: NewApiTab }
 ]
@@ -67,6 +70,8 @@ const ANCHOR_TO_TAB: Record<string, TabId> = {
   refresh: "autoRefresh",
   "checkin-redeem": "checkinRedeem",
   checkin: "checkinRedeem",
+  "redemption-assist": "redemptionAssist",
+  redemption: "redemptionAssist",
   webdav: "dataBackup",
   "webdav-auto-sync": "dataBackup",
   "import-export-entry": "dataBackup",

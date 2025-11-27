@@ -36,11 +36,11 @@ export function TokenItem({
     <Card variant="interactive" padding="none">
       <CardContent
         padding="sm"
-        className="cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-dark-bg-tertiary"
+        className="dark:hover:bg-dark-bg-tertiary cursor-pointer transition-colors hover:bg-gray-50"
         onClick={onToggle}>
         <div className="flex items-center justify-between">
           <div className="min-w-0 flex-1 space-y-1.5">
-            <h4 className="truncate text-sm font-medium text-gray-900 dark:text-dark-text-primary">
+            <h4 className="dark:text-dark-text-primary truncate text-sm font-medium text-gray-900">
               {token.name}
             </h4>
             <div className="flex items-center space-x-1.5">

@@ -90,7 +90,7 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
         startValue={
           isInitialLoad ? 0 : prevBalances[site.id]?.[currencyType] || 0
         }
-        className="mb-0.5 text-sm font-semibold text-gray-900 dark:text-dark-text-primary sm:text-base md:text-lg"
+        className="dark:text-dark-text-primary mb-0.5 text-sm font-semibold text-gray-900 sm:text-base md:text-lg"
         title={t("list.balance.refreshBalance")}
         onClick={handleRefreshClick}
         isRefreshing={isRefreshing}
@@ -106,7 +106,7 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
           className={`text-[10px] sm:text-xs ${
             site.todayConsumption[currencyType] > 0
               ? "text-green-500"
-              : "text-gray-400 dark:text-dark-text-tertiary"
+              : "dark:text-dark-text-tertiary text-gray-400"
           }`}
           title={t("list.balance.refreshConsumption")}
           onClick={handleRefreshClick}
@@ -121,7 +121,7 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
           className={`text-[10px] sm:text-xs ${
             site.todayIncome[currencyType] > 0
               ? "text-blue-500"
-              : "text-gray-400 dark:text-dark-text-tertiary"
+              : "dark:text-dark-text-tertiary text-gray-400"
           }`}
           title={t("list.balance.refreshIncome")}
           onClick={handleRefreshClick}

@@ -91,10 +91,10 @@ export default function ModelRedirectSettings() {
         <CardContent>
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <p className="text-sm font-medium text-gray-700 dark:text-dark-text-primary">
+              <p className="dark:text-dark-text-primary text-sm font-medium text-gray-700">
                 {t("enable")}
               </p>
-              <p className="mt-1 text-sm text-gray-500 dark:text-dark-text-secondary">
+              <p className="dark:text-dark-text-secondary mt-1 text-sm text-gray-500">
                 {t("enableDesc")}
               </p>
             </div>
@@ -124,7 +124,7 @@ export default function ModelRedirectSettings() {
                   disabled={isUpdating}
                   allowCustom
                 />
-                <p className="mt-1 text-sm text-gray-500 dark:text-dark-text-secondary">
+                <p className="dark:text-dark-text-secondary mt-1 text-sm text-gray-500">
                   {t("standardModelsDesc")}
                 </p>
               </div>

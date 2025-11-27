@@ -1,0 +1,32 @@
+{
+  "title": "兑换助手",
+  "description": "自动检测并提示兑换码，支持一键兑换或手动打开兑换页面。",
+  "enabled": "启用兑换助手",
+  "enabledDesc": "在自定义签到页面自动检测兑换码",
+  "toast": {
+    "title": "检测到兑换码，是否兑换？",
+    "code": "兑换码",
+    "maskCode": "隐藏代码",
+    "showCode": "显示代码",
+    "autoRedeem": "自动兑换",
+    "manualRedeem": "手动兑换",
+    "cancel": "取消",
+    "suppress": "本代码10分钟内不再提示"
+  },
+  "messages": {
+    "redeemSuccess": "兑换成功",
+    "redeemSuccessWithSite": "已为 {{siteName}} 兑换成功",
+    "selectAccount": "请选择要兑换的账号"
+  },
+  "errors": {
+    "accountNotFound": "未找到指定账号",
+    "noAccessToken": "账号缺少访问令牌",
+    "redeemFailed": "兑换失败",
+    "unknownError": "未知错误"
+  },
+  "accountSelect": {
+    "title": "选择兑换账号",
+    "description": "检测到多个匹配的账号，请选择要兑换的账号：",
+    "searchPlaceholder": "搜索账号名称、URL或用户名"
+  }
+}

@@ -197,7 +197,7 @@ export default function AccountActionButtons({
 
         <MenuItems
           anchor="bottom end"
-          className="z-50 rounded-lg border border-gray-200 bg-white py-1 shadow-lg [--anchor-gap:4px] [--anchor-padding:8px] focus:outline-none dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary">
+          className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary z-50 rounded-lg border border-gray-200 bg-white py-1 shadow-lg [--anchor-gap:4px] [--anchor-padding:8px] focus:outline-none">
           {/* Secondary Menu Items */}
           <AccountActionMenuItem
             onClick={handleOpenKeyList}
@@ -217,7 +217,7 @@ export default function AccountActionButtons({
             label={t("actions.modelManagement")}
           />
 
-          <hr className="my-1 border-gray-200 dark:border-dark-bg-tertiary" />
+          <hr className="dark:border-dark-bg-tertiary my-1 border-gray-200" />
 
           <AccountActionMenuItem
             onClick={handleNavigateToUsageManagement}
@@ -231,7 +231,7 @@ export default function AccountActionButtons({
             label={t("actions.redeemPage")}
           />
 
-          <hr className="my-1 border-gray-200 dark:border-dark-bg-tertiary" />
+          <hr className="dark:border-dark-bg-tertiary my-1 border-gray-200" />
 
           {/* Pin/Unpin */}
           <AccountActionMenuItem

@@ -35,7 +35,7 @@ export const PriceView = ({
     <div className="flex items-center gap-6">
       {/* 输入价格 */}
       <div className="flex items-center space-x-2">
-        <span className="text-sm text-gray-600 dark:text-dark-text-primary">
+        <span className="dark:text-dark-text-primary text-sm text-gray-600">
           {t("input")}
         </span>
         <span
@@ -48,7 +48,7 @@ export const PriceView = ({
 
       {/* 输出价格 */}
       <div className="flex items-center space-x-2">
-        <span className="text-sm text-gray-600 dark:text-dark-text-primary">
+        <span className="dark:text-dark-text-primary text-sm text-gray-600">
           {t("output")}
         </span>
         <span

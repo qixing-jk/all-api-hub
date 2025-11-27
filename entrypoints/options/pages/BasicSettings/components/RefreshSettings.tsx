@@ -116,7 +116,7 @@ export default function RefreshSettings() {
                     placeholder="360"
                     className="w-24"
                   />
-                  <span className="text-sm text-gray-500 dark:text-dark-text-secondary">
+                  <span className="dark:text-dark-text-secondary text-sm text-gray-500">
                     {t("common:time.seconds")}
                   </span>
                 </div>
@@ -155,7 +155,7 @@ export default function RefreshSettings() {
                   placeholder="60"
                   className="w-24"
                 />
-                <span className="text-sm text-gray-500 dark:text-dark-text-secondary">
+                <span className="dark:text-dark-text-secondary text-sm text-gray-500">
                   {t("common:time.seconds")}
                 </span>
               </div>
