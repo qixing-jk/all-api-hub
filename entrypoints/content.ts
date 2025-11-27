@@ -1,9 +1,17 @@
 import { t } from "i18next"
+import * as React from "react"
+import { createRoot } from "react-dom/client"
+import toast from "react-hot-toast"
 
 import { fetchUserInfo } from "~/services/apiService"
 import { extractRedemptionCodesFromText } from "~/utils/redemptionAssist"
 
 import { getErrorMessage } from "../utils/error"
+import { ContentReactRoot } from "./content/ContentReactRoot"
+import {
+  RedemptionPromptToast,
+  type RedemptionPromptAction
+} from "./content/RedemptionPromptToast"
 
 export default defineContentScript({
   matches: ["<all_urls>"],
@@ -243,6 +251,71 @@ async function parseResponseData(
   }
 }
 
+// Redemption Assist toast UI
+
+let redemptionToastRoot: any | null = null
+
+function ensureRedemptionToastRoot() {
+  if (redemptionToastRoot) {
+    return
+  }
+
+  const existing = document.getElementById("all-api-hub-redemption-toast-root")
+  const container = existing || document.createElement("div")
+
+  if (!existing) {
+    container.id = "all-api-hub-redemption-toast-root"
+    container.style.position = "fixed"
+    container.style.zIndex = "2147483647"
+    container.style.top = "0"
+    container.style.left = "0"
+    container.style.width = "100%"
+    container.style.height = "0"
+    container.style.pointerEvents = "none"
+    document.documentElement.appendChild(container)
+  }
+
+  redemptionToastRoot = createRoot(container)
+  redemptionToastRoot.render(React.createElement(ContentReactRoot))
+}
+
+function showRedemptionPromptToast(
+  message: string
+): Promise<RedemptionPromptAction> {
+  ensureRedemptionToastRoot()
+
+  return new Promise((resolve) => {
+    let resolved = false
+
+    const handleResolve = (action: RedemptionPromptAction, toastId: string) => {
+      if (resolved) return
+      resolved = true
+      toast.dismiss(toastId)
+      resolve(action)
+    }
+
+    toast.custom((toastInstance) => {
+      const toastId = toastInstance.id
+      return React.createElement(RedemptionPromptToast, {
+        message,
+        onAction: (action: RedemptionPromptAction) =>
+          handleResolve(action, toastId)
+      })
+    })
+  })
+}
+
+function showRedeemResultToast(success: boolean, message: string) {
+  ensureRedemptionToastRoot()
+  if (!message) return
+
+  if (success) {
+    toast.success(message)
+  } else {
+    toast.error(message)
+  }
+}
+
 // Redemption Assist helpers
 
 function setupRedemptionAssistDetection() {
@@ -274,6 +347,7 @@ async function scanForRedemptionCodes() {
     const url = window.location.href
 
     for (const code of codes) {
+      console.log("[RedemptionAssist][Content] Detected code:", code, url)
       const shouldResp: any = await browser.runtime.sendMessage({
         action: "redemptionAssist:shouldPrompt",
         url,
@@ -284,15 +358,16 @@ async function scanForRedemptionCodes() {
         continue
       }
 
+      console.log("[RedemptionAssist][Content] Prompting for code:", code)
+
       const codePreview = maskCode(code)
       const confirmMessage = t("redemptionAssist:messages.promptConfirm", {
         code: codePreview,
         defaultValue:
           "检测到疑似兑换码：" + codePreview + "\n是否为当前站点尝试自动兑换？"
       })
-
-      const ok = window.confirm(confirmMessage)
-      if (!ok) continue
+      const action = await showRedemptionPromptToast(confirmMessage)
+      if (action !== "auto") continue
 
       const redeemResp: any = await browser.runtime.sendMessage({
         action: "redemptionAssist:autoRedeemByUrl",
@@ -304,13 +379,14 @@ async function scanForRedemptionCodes() {
         const fallbackMessage = t("redemptionAssist:messages.redeemFailed", {
           defaultValue: "兑换失败，请稍后重试。"
         })
-        alert(redeemResp?.error || fallbackMessage)
+        const msg = redeemResp?.error || fallbackMessage
+        showRedeemResultToast(false, msg)
         continue
       }
 
       const result = redeemResp.data
       if (result?.message) {
-        alert(result.message)
+        showRedeemResultToast(!!result.success, result.message)
       }
     }
   } catch (error) {
