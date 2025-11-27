@@ -83,6 +83,11 @@ async function getWebDavConfig(): Promise<WebDAVConfig> {
   return prefs.webdav
 }
 
+/**
+ * Test connectivity and authentication against the configured WebDAV
+ * endpoint. Treats 200 and 404 as success (404 means the backup file does
+ * not yet exist but auth is valid).
+ */
 export async function testWebdavConnection(custom?: Partial<WebDAVConfig>) {
   const cfg = { ...(await getWebDavConfig()), ...custom }
   if (!cfg.url || !cfg.username || !cfg.password) {
@@ -103,6 +108,11 @@ export async function testWebdavConnection(custom?: Partial<WebDAVConfig>) {
   throw new Error(t("messages:webdav.connectionFailed", { status: res.status }))
 }
 
+/**
+ * Download the current backup JSON from the configured WebDAV location.
+ * Returns the raw response body as text, or throws a localized error when
+ * the file is missing, auth fails or the request fails.
+ */
 export async function downloadBackup(custom?: Partial<WebDAVConfig>) {
   const cfg = { ...(await getWebDavConfig()), ...custom }
   if (!cfg.url || !cfg.username || !cfg.password) {
@@ -126,6 +136,11 @@ export async function downloadBackup(custom?: Partial<WebDAVConfig>) {
   throw new Error(t("messages:webdav.downloadFailed", { status: res.status }))
 }
 
+/**
+ * Upload a backup JSON string to the configured WebDAV location. When the
+ * user provided only a directory-like URL, a versioned filename under
+ * `all-api-hub-backup/` is generated automatically.
+ */
 export async function uploadBackup(
   content: string,
   custom?: Partial<WebDAVConfig>

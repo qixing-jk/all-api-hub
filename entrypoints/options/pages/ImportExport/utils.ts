@@ -97,6 +97,11 @@ export interface ImportResult {
   }
 }
 
+/**
+ * Parse a raw backup JSON string into a lightweight summary used by the
+ * import UI. This is tolerant of both legacy (V1) and V2 payload shapes and
+ * never throws: on invalid JSON it returns `{ valid: false }`.
+ */
 export function parseBackupSummary(
   importData: string,
   unknownLabel: string
@@ -205,6 +210,11 @@ async function importV1Backup(data: RawBackupData): Promise<ImportResult> {
   }
 }
 
+/**
+ * Normalize an arbitrary backup payload (V1/V2/unknown) into a canonical
+ * structure that `WebdavAutoSyncService` can merge. This is intentionally
+ * tolerant so that older backups do not break newer clients.
+ */
 export function normalizeBackupForMerge(
   data: RawBackupData | null,
   localPreferences: any
@@ -379,8 +389,9 @@ async function importV2Backup(data: BackupV2): Promise<ImportResult> {
  *   accounts, preferences and channelConfigs when present.
  * - V2 (BACKUP_VERSION): expects a flat structure with accounts / preferences /
  *   channelConfigs at root.
- * - Future versions: currently fall back to V2 behavior; when adding V3+ define
- *   an importV3Backup and extend this dispatcher.
+ * - Future versions: currently fall back to the tolerant V1-style import
+ *   (importV1Backup). When adding V3+, define an importV3Backup and extend
+ *   this dispatcher.
  */
 export async function importFromBackupObject(
   data: RawBackupData
@@ -405,6 +416,10 @@ export async function importFromBackupObject(
 }
 
 // 导出所有数据
+/**
+ * Export all persisted data (accounts, preferences, channelConfigs) as a
+ * full V2 backup file and trigger a browser download.
+ */
 export const handleExportAll = async (
   setIsExporting: (isExporting: boolean) => void
 ) => {
@@ -449,6 +464,10 @@ export const handleExportAll = async (
 }
 
 // 导出账号数据
+/**
+ * Export only account-related data as a partial V2 backup with
+ * `type: "accounts"`.
+ */
 export const handleExportAccounts = async (
   setIsExporting: (isExporting: boolean) => void
 ) => {
@@ -485,6 +504,10 @@ export const handleExportAccounts = async (
 }
 
 // 导出用户设置
+/**
+ * Export only user preference data as a partial V2 backup with
+ * `type: "preferences"`.
+ */
 export const handleExportPreferences = async (
   setIsExporting: (isExporting: boolean) => void
 ) => {
