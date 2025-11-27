@@ -239,7 +239,7 @@ export default function WebDAVSettings() {
                 })
                 const data = JSON.parse(content)
                 const result = await importFromBackupObject(data)
-                if (result.imported) {
+                if (result.allImported) {
                   toast.success(t("importExport:import.importSuccess"))
                 }
               } catch (e: any) {

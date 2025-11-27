@@ -37,7 +37,7 @@ export const useImportExport = () => {
 
       const data = JSON.parse(importData)
       const result = await importFromBackupObject(data)
-      if (result.imported) {
+      if (result.allImported) {
         toast.success(t("importExport:import.importSuccess"))
       }
     } catch (error) {

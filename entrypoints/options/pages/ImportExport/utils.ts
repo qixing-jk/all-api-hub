@@ -88,6 +88,15 @@ type LegacyBackupLike = {
  */
 export type RawBackupData = LegacyBackupLike
 
+export interface ImportResult {
+  allImported: boolean
+  sections: {
+    accounts: boolean
+    preferences: boolean
+    channelConfigs: boolean
+  }
+}
+
 export function parseBackupSummary(
   importData: string,
   unknownLabel: string
@@ -122,13 +131,21 @@ export function parseBackupSummary(
   }
 }
 
-async function importV1Backup(
-  data: RawBackupData
-): Promise<{ imported: boolean }> {
-  let importSuccess = false
+async function importV1Backup(data: RawBackupData): Promise<ImportResult> {
+  let accountsImported = false
+  let preferencesImported = false
+  let channelConfigsImported = false
+
+  const accountsRequested = Boolean(data.accounts || data.type === "accounts")
+  const preferencesRequested = Boolean(
+    data.preferences || data.type === "preferences"
+  )
+  const channelConfigsRequested = Boolean(
+    data.channelConfigs || data.type === "channelConfigs"
+  )
 
   // accounts: support both legacy partial exports and older full exports
-  if (data.accounts || data.type === "accounts") {
+  if (accountsRequested) {
     const accountsData =
       (data.accounts as any)?.accounts ??
       (data.data as any)?.accounts ??
@@ -138,48 +155,56 @@ async function importV1Backup(
       await accountStorage.importData({
         accounts: accountsData
       })
-      importSuccess = true
+      accountsImported = true
     }
   }
 
   // preferences
-  if (data.preferences || data.type === "preferences") {
+  if (preferencesRequested) {
     const preferencesData = data.preferences || data.data
     if (preferencesData) {
       const success = await userPreferences.importPreferences(preferencesData)
       if (success) {
-        importSuccess = true
+        preferencesImported = true
+      } else {
+        console.error(
+          "[Import] Failed to import user preferences from legacy backup"
+        )
       }
     }
   }
 
   // channel configs: best-effort support if present in V1 backups
-  if (data.channelConfigs || data.type === "channelConfigs") {
+  if (channelConfigsRequested) {
     const channelConfigsData = data.channelConfigs || data.data
     if (channelConfigsData) {
       await channelConfigStorage.importConfigs(channelConfigsData)
-      importSuccess = true
+      channelConfigsImported = true
     }
   }
 
-  if (!importSuccess) {
+  const anyImported =
+    accountsImported || preferencesImported || channelConfigsImported
+
+  if (!anyImported) {
     throw new Error(t("importExport:import.noImportableData"))
   }
 
-  return { imported: true }
+  const allImported =
+    (!accountsRequested || accountsImported) &&
+    (!preferencesRequested || preferencesImported) &&
+    (!channelConfigsRequested || channelConfigsImported)
+
+  return {
+    allImported,
+    sections: {
+      accounts: accountsImported,
+      preferences: preferencesImported,
+      channelConfigs: channelConfigsImported
+    }
+  }
 }
 
-/**
- * Normalize a backup object for use in merge operations (e.g. WebDAV auto-sync).
- *
- * Returns a version-agnostic shape: { accounts, accountsTimestamp, preferences }.
- * - For V2 (BACKUP_VERSION): assumes flat structure; tolerant of { accounts, last_updated }.
- * - For V1 / unknown versions: tolerant of legacy shapes (accounts.accounts, data.accounts,
- *   data.preferences, etc.) and falls back to localPreferences where needed.
- *
- * This helper is separate from importFromBackupObject because merge flows often
- * treat remote data differently (e.g. two-way merge) compared to one-shot imports.
- */
 export function normalizeBackupForMerge(
   data: RawBackupData | null,
   localPreferences: any
@@ -222,7 +247,6 @@ function normalizeV2BackupForMerge(
   const accounts = Array.isArray(accountsField)
     ? accountsField
     : accountsField?.accounts || []
-
   const accountsTimestamp =
     accountsField?.last_updated || (data.timestamp as number) || 0
 
@@ -254,7 +278,6 @@ function normalizeV1BackupForMerge(
     accountsField?.accounts ||
     (data.data as any)?.accounts ||
     (Array.isArray(accountsField) ? accountsField : [])
-
   const accountsTimestamp =
     accountsField?.last_updated || (data.timestamp as number) || 0
 
@@ -276,41 +299,65 @@ function normalizeV1BackupForMerge(
   }
 }
 
-async function importV2Backup(data: BackupV2): Promise<{ imported: boolean }> {
-  let importSuccess = false
+async function importV2Backup(data: BackupV2): Promise<ImportResult> {
+  let accountsImported = false
+  let preferencesImported = false
+  let channelConfigsImported = false
+
+  const accountsRequested = "accounts" in data
+  const preferencesRequested = "preferences" in data
+  const channelConfigsRequested =
+    "channelConfigs" in data && Boolean((data as BackupFullV2).channelConfigs)
 
   // V2 assumes flat structure: accounts / preferences / channelConfigs directly on root
 
-  if ("accounts" in data) {
+  if (accountsRequested) {
     const accountsConfig = (data as BackupFullV2 | BackupAccountsPartialV2)
       .accounts
 
     await accountStorage.importData({
       accounts: accountsConfig.accounts
     })
-    importSuccess = true
+    accountsImported = true
   }
 
-  if ("preferences" in data) {
+  if (preferencesRequested) {
     const { preferences } = data as BackupFullV2 | BackupPreferencesPartialV2
     const success = await userPreferences.importPreferences(preferences)
     if (success) {
-      importSuccess = true
+      preferencesImported = true
+    } else {
+      console.error("[Import] Failed to import user preferences from V2 backup")
     }
   }
 
-  if ("channelConfigs" in data && (data as BackupFullV2).channelConfigs) {
+  if (channelConfigsRequested) {
     await channelConfigStorage.importConfigs(
       (data as BackupFullV2).channelConfigs
     )
-    importSuccess = true
+    channelConfigsImported = true
   }
 
-  if (!importSuccess) {
+  const anyImported =
+    accountsImported || preferencesImported || channelConfigsImported
+
+  if (!anyImported) {
     throw new Error(t("importExport:import.noImportableData"))
   }
 
-  return { imported: true }
+  const allImported =
+    (!accountsRequested || accountsImported) &&
+    (!preferencesRequested || preferencesImported) &&
+    (!channelConfigsRequested || channelConfigsImported)
+
+  return {
+    allImported,
+    sections: {
+      accounts: accountsImported,
+      preferences: preferencesImported,
+      channelConfigs: channelConfigsImported
+    }
+  }
 }
 
 /**
@@ -326,7 +373,7 @@ async function importV2Backup(data: BackupV2): Promise<{ imported: boolean }> {
  */
 export async function importFromBackupObject(
   data: RawBackupData
-): Promise<{ imported: boolean }> {
+): Promise<ImportResult> {
   // timestamp is required for all versions; version is optional for backward compatibility
   if (!data.timestamp) {
     throw new Error(t("importExport:import.formatNotCorrect"))
