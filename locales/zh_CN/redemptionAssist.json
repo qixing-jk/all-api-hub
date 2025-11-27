@@ -9,6 +9,8 @@
   "messages": {
     "redeemSuccess": "兑换成功，到账额度：{{amount}}",
     "redeemFailed": "兑换失败，请稍后重试。",
+    "promptConfirm": "检测到疑似兑换码 {{code}}，是否为当前站点尝试自动兑换？",
+    "noAccountForUrl": "当前站点未在 All API Hub 中配置账号，请先在扩展中添加该站点后再试。",
     "success": {
       "settingsSaved": "兑换助手设置已保存。"
     },

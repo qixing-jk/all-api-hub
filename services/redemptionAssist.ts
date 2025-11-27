@@ -1,3 +1,6 @@
+import { t } from "i18next"
+
+import { accountStorage } from "~/services/accountStorage"
 import { redeemService } from "~/services/redeemService"
 import { userPreferences } from "~/services/userPreferences"
 import { getErrorMessage } from "~/utils/error"
@@ -111,6 +114,20 @@ class RedemptionAssistService {
     // Delegate to redeemService which handles i18n and error messages
     return redeemService.redeemCodeForAccount(accountId, code)
   }
+
+  async autoRedeemByUrl(url: string, code: string) {
+    await this.ensureInitialized()
+
+    const account = await accountStorage.checkUrlExists(url)
+    if (!account) {
+      return {
+        success: false,
+        message: t("redemptionAssist:messages.noAccountForUrl")
+      }
+    }
+
+    return redeemService.redeemCodeForAccount(account.id, code)
+  }
 }
 
 export const redemptionAssistService = new RedemptionAssistService()
@@ -150,6 +167,17 @@ export const handleRedemptionAssistMessage = async (
           break
         }
         const result = await redemptionAssistService.autoRedeem(accountId, code)
+        sendResponse({ success: true, data: result })
+        break
+      }
+
+      case "redemptionAssist:autoRedeemByUrl": {
+        const { url, code } = request
+        if (!url || !code) {
+          sendResponse({ success: false, error: "Missing url or code" })
+          break
+        }
+        const result = await redemptionAssistService.autoRedeemByUrl(url, code)
         sendResponse({ success: true, data: result })
         break
       }

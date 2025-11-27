@@ -1,6 +1,7 @@
 import { t } from "i18next"
 
 import { fetchUserInfo } from "~/services/apiService"
+import { extractRedemptionCodesFromText } from "~/utils/redemptionAssist"
 
 import { getErrorMessage } from "../utils/error"
 
@@ -141,6 +142,9 @@ function main() {
       return true
     }
   })
+
+  // 启用兑换助手检测
+  setupRedemptionAssistDetection()
 }
 
 // 等待用户信息可用
@@ -237,4 +241,85 @@ async function parseResponseData(
       }
     }
   }
+}
+
+// Redemption Assist helpers
+
+function setupRedemptionAssistDetection() {
+  let lastScan = 0
+  const SCAN_INTERVAL_MS = 2000
+
+  const triggerScan = () => {
+    const now = Date.now()
+    if (now - lastScan < SCAN_INTERVAL_MS) return
+    lastScan = now
+    void scanForRedemptionCodes()
+  }
+
+  window.addEventListener("load", triggerScan)
+  document.addEventListener("click", triggerScan, true)
+}
+
+async function scanForRedemptionCodes() {
+  try {
+    const body = document.body
+    if (!body) return
+
+    const text = body.innerText || ""
+    if (!text) return
+
+    const codes = extractRedemptionCodesFromText(text).slice(0, 3)
+    if (codes.length === 0) return
+
+    const url = window.location.href
+
+    for (const code of codes) {
+      const shouldResp: any = await browser.runtime.sendMessage({
+        action: "redemptionAssist:shouldPrompt",
+        url,
+        code
+      })
+
+      if (!shouldResp?.success || !shouldResp.shouldPrompt) {
+        continue
+      }
+
+      const codePreview = maskCode(code)
+      const confirmMessage = t("redemptionAssist:messages.promptConfirm", {
+        code: codePreview,
+        defaultValue:
+          "检测到疑似兑换码：" + codePreview + "\n是否为当前站点尝试自动兑换？"
+      })
+
+      const ok = window.confirm(confirmMessage)
+      if (!ok) continue
+
+      const redeemResp: any = await browser.runtime.sendMessage({
+        action: "redemptionAssist:autoRedeemByUrl",
+        url,
+        code
+      })
+
+      if (!redeemResp?.success) {
+        const fallbackMessage = t("redemptionAssist:messages.redeemFailed", {
+          defaultValue: "兑换失败，请稍后重试。"
+        })
+        alert(redeemResp?.error || fallbackMessage)
+        continue
+      }
+
+      const result = redeemResp.data
+      if (result?.message) {
+        alert(result.message)
+      }
+    }
+  } catch (error) {
+    console.error("[RedemptionAssist][Content] scan failed:", error)
+  }
+}
+
+function maskCode(code: string): string {
+  const trimmed = code.trim()
+  if (trimmed.length <= 8) return trimmed
+  return `${trimmed.slice(0, 4)}****${trimmed.slice(-4)}`
 }

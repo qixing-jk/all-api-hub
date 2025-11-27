@@ -9,6 +9,8 @@
   "messages": {
     "redeemSuccess": "Redeemed successfully. Credited amount: {{amount}}",
     "redeemFailed": "Redemption failed. Please try again later.",
+    "promptConfirm": "Detected a possible redemption code {{code}} on this page. Try auto redeem for this site?",
+    "noAccountForUrl": "No matching account found for this site. Please add the site as an account in All API Hub, then try again.",
     "success": {
       "settingsSaved": "Redemption assist settings have been saved."
     },
