@@ -19,6 +19,10 @@ import {
   handleNewApiModelSyncMessage,
   newApiModelSyncScheduler
 } from "../services/newApiModelSync"
+import {
+  handleRedemptionMessage,
+  initializeRedemptionAssist
+} from "../services/redemptionDetection/backgroundHandler"
 import { userPreferences } from "../services/userPreferences"
 import {
   handleWebdavAutoSyncMessage,
@@ -80,6 +84,7 @@ async function main() {
     await webdavAutoSyncService.initialize()
     await newApiModelSyncScheduler.initialize()
     await autoCheckinScheduler.initialize()
+    initializeRedemptionAssist()
 
     servicesInitialized = true
   }
@@ -172,6 +177,12 @@ async function main() {
     // 处理Channel Config相关消息
     if (request.action && request.action.startsWith("channelConfig:")) {
       handleChannelConfigMessage(request, sendResponse)
+      return true
+    }
+
+    // 处理 Redemption Assist 消息
+    if (request.type && request.type.startsWith("REDEMPTION_")) {
+      void handleRedemptionMessage(request, sendResponse)
       return true
     }
   })

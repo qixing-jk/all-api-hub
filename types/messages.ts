@@ -8,6 +8,40 @@ import type {
   RedemptionResult
 } from "./redemptionAssist"
 
+export type {
+  RedemptionAccountCandidate,
+  RedemptionAction,
+  RedemptionResult
+} from "./redemptionAssist"
+
+/**
+ * Message to check if redemption assist is enabled
+ * Sent from content script to background
+ */
+export interface RedemptionCheckEnabledMessage {
+  type: "REDEMPTION_CHECK_ENABLED"
+}
+
+/**
+ * Message for reporting detected redemption code
+ * Sent from content script to background
+ */
+export interface RedemptionCodeDetectedMessage {
+  type: "REDEMPTION_CODE_DETECTED"
+  url: string
+  code: string
+}
+
+/**
+ * Message for suppressing further prompts for a code within TTL
+ * Sent from content script to background
+ */
+export interface RedemptionSuppressMessage {
+  type: "REDEMPTION_SUPPRESS"
+  url: string
+  code: string
+}
+
 /**
  * Message type for prompting user about a detected redemption code
  * Sent from background to content script
@@ -50,6 +84,9 @@ export interface RedemptionResultMessage {
  * Union of all redemption-related messages
  */
 export type RedemptionMessage =
+  | RedemptionCheckEnabledMessage
+  | RedemptionCodeDetectedMessage
+  | RedemptionSuppressMessage
   | RedemptionPromptMessage
   | RedemptionDecisionMessage
   | RedemptionResultMessage

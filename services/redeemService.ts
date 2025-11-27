@@ -70,8 +70,6 @@ export async function redeemCodeForAccount(
       }
     }
 
-    const data = response.data
-
     return {
       status: "success",
       message: t("redemptionAssist:messages.redeemSuccess", {

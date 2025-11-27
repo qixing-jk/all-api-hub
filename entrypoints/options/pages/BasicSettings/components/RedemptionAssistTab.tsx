@@ -7,7 +7,6 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 
 export default function RedemptionAssistTab() {
   const { t } = useTranslation("redemptionAssist")
-  const { t: tSettings } = useTranslation("settings")
   const { redemptionAssist, updateRedemptionAssist, resetRedemptionAssist } =
     useUserPreferencesContext()
 
@@ -30,8 +29,7 @@ export default function RedemptionAssistTab() {
         id={sectionAnchorId}
         title={t("title")}
         description={t("description")}
-        onReset={handleReset}
-        resetName={t("title")}>
+        onReset={handleReset}>
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex-1">
@@ -47,7 +45,7 @@ export default function RedemptionAssistTab() {
             <Switch
               id="redemption-assist-enabled"
               checked={redemptionAssist.enabled}
-              onCheckedChange={handleEnabledChange}
+              onChange={handleEnabledChange}
             />
           </div>
         </div>
