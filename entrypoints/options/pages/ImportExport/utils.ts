@@ -189,12 +189,14 @@ export function normalizeBackupForMerge(
   accounts: any[]
   accountsTimestamp: number
   preferences: any | null
+  channelConfigs: ChannelConfigMap | null
 } {
   if (!data) {
     return {
       accounts: [],
       accountsTimestamp: 0,
-      preferences: null
+      preferences: null,
+      channelConfigs: null
     }
   }
 
@@ -215,6 +217,7 @@ function normalizeV2BackupForMerge(
   accounts: any[]
   accountsTimestamp: number
   preferences: any | null
+  channelConfigs: ChannelConfigMap | null
 } {
   const accountsField: any = data.accounts
   const accounts = Array.isArray(accountsField)
@@ -224,10 +227,17 @@ function normalizeV2BackupForMerge(
   const accountsTimestamp =
     accountsField?.last_updated || (data.timestamp as number) || 0
 
+  const rawChannelConfigs = data.channelConfigs
+  const channelConfigs: ChannelConfigMap | null =
+    rawChannelConfigs && typeof rawChannelConfigs === "object"
+      ? (rawChannelConfigs as ChannelConfigMap)
+      : null
+
   return {
     accounts,
     accountsTimestamp,
-    preferences: data.preferences || localPreferences
+    preferences: data.preferences || localPreferences,
+    channelConfigs
   }
 }
 
@@ -238,6 +248,7 @@ function normalizeV1BackupForMerge(
   accounts: any[]
   accountsTimestamp: number
   preferences: any | null
+  channelConfigs: ChannelConfigMap | null
 } {
   const accountsField: any = data.accounts
   const accounts =
@@ -251,10 +262,18 @@ function normalizeV1BackupForMerge(
   const preferences =
     data.preferences || (data.data as any)?.preferences || localPreferences
 
+  const rawChannelConfigs =
+    (data as any).channelConfigs || (data.data as any)?.channelConfigs
+  const channelConfigs: ChannelConfigMap | null =
+    rawChannelConfigs && typeof rawChannelConfigs === "object"
+      ? (rawChannelConfigs as ChannelConfigMap)
+      : null
+
   return {
     accounts,
     accountsTimestamp,
-    preferences
+    preferences,
+    channelConfigs
   }
 }
 

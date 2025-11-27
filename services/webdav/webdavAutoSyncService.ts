@@ -6,6 +6,7 @@ import {
   type BackupFullV2
 } from "~/entrypoints/options/pages/ImportExport/utils.ts"
 import type { SiteAccount, WebDAVSettings } from "~/types"
+import type { ChannelConfigMap } from "~/types/channelConfig"
 import { getErrorMessage } from "~/utils/error.ts"
 
 import { accountStorage } from "../accountStorage.ts"
@@ -188,43 +189,54 @@ class WebdavAutoSyncService {
 
     let accountsToSave: SiteAccount[]
     let preferencesToSave: UserPreferences
+    let channelConfigsToSave: ChannelConfigMap = localChannelConfigs
 
-    if (strategy === "merge" && remoteData && normalizedRemote.preferences) {
+    if (strategy === "merge" && remoteData) {
       // 合并策略
       const mergeResult = this.mergeData(
         {
           accounts: localAccountsConfig.accounts,
           accountsTimestamp: localAccountsConfig.last_updated,
           preferences: localPreferences,
-          preferencesTimestamp: localPreferences.lastUpdated
+          preferencesTimestamp: localPreferences.lastUpdated,
+          channelConfigs: localChannelConfigs
         },
         {
           accounts: normalizedRemote.accounts,
           accountsTimestamp: normalizedRemote.accountsTimestamp,
-          preferences: normalizedRemote.preferences,
-          preferencesTimestamp: normalizedRemote.preferences.lastUpdated || 0
+          preferences: normalizedRemote.preferences || localPreferences,
+          preferencesTimestamp:
+            (normalizedRemote.preferences &&
+              normalizedRemote.preferences.lastUpdated) ||
+            0,
+          channelConfigs: normalizedRemote.channelConfigs
         }
       )
 
       accountsToSave = mergeResult.accounts
       preferencesToSave = mergeResult.preferences
+      channelConfigsToSave = mergeResult.channelConfigs
       console.log(`[WebdavAutoSync] 合并完成: ${accountsToSave.length} 个账号`)
     } else if (strategy === "upload_only" || !remoteData) {
       // 覆盖策略或远程无数据
       accountsToSave = localAccountsConfig.accounts
       preferencesToSave = localPreferences
+      channelConfigsToSave = localChannelConfigs
       console.log("[WebdavAutoSync] 使用本地数据覆盖")
     } else {
       // 默认合并策略：直接使用远程数据（若存在），否则使用本地
       accountsToSave = normalizedRemote.accounts
       preferencesToSave = normalizedRemote.preferences || localPreferences
+      channelConfigsToSave =
+        normalizedRemote.channelConfigs || localChannelConfigs
       console.log("[WebdavAutoSync] 使用远程数据")
     }
 
     // 保存合并后的数据到本地
     await Promise.all([
       accountStorage.importData({ accounts: accountsToSave }),
-      userPreferences.importPreferences(preferencesToSave)
+      userPreferences.importPreferences(preferencesToSave),
+      channelConfigStorage.importConfigs(channelConfigsToSave)
     ])
 
     // 上传到WebDAV
@@ -236,7 +248,7 @@ class WebdavAutoSyncService {
         last_updated: Date.now()
       },
       preferences: preferencesToSave,
-      channelConfigs: localChannelConfigs
+      channelConfigs: channelConfigsToSave
     }
 
     await uploadBackup(JSON.stringify(exportData, null, 2))
@@ -253,16 +265,19 @@ class WebdavAutoSyncService {
       accountsTimestamp: number
       preferences: UserPreferences
       preferencesTimestamp: number
+      channelConfigs: ChannelConfigMap
     },
     remote: {
       accounts: SiteAccount[]
       accountsTimestamp: number
       preferences: UserPreferences
       preferencesTimestamp: number
+      channelConfigs: ChannelConfigMap | null
     }
   ): {
     accounts: SiteAccount[]
     preferences: UserPreferences
+    channelConfigs: ChannelConfigMap
   } {
     console.log(
       `[WebdavAutoSync] 开始合并数据 - 本地账号: ${local.accounts.length}, 远程账号: ${remote.accounts.length}`
@@ -312,17 +327,51 @@ class WebdavAutoSyncService {
         ? remote.preferences
         : local.preferences
 
+    // 合并通道配置
+    const localChannelConfigs = local.channelConfigs
+    const remoteChannelConfigs = remote.channelConfigs
+    const mergedChannelConfigs: ChannelConfigMap = { ...localChannelConfigs }
+
+    if (remoteChannelConfigs && typeof remoteChannelConfigs === "object") {
+      for (const [key, value] of Object.entries(remoteChannelConfigs)) {
+        const channelId = Number(key)
+        if (!Number.isFinite(channelId) || channelId <= 0) {
+          continue
+        }
+
+        const localConfig = localChannelConfigs[channelId]
+        const remoteConfig = value as ChannelConfigMap[number]
+
+        if (!localConfig) {
+          mergedChannelConfigs[channelId] = remoteConfig
+        } else {
+          const localUpdatedAt =
+            typeof localConfig.updatedAt === "number"
+              ? localConfig.updatedAt
+              : 0
+          const remoteUpdatedAt =
+            typeof remoteConfig.updatedAt === "number"
+              ? remoteConfig.updatedAt
+              : 0
+
+          mergedChannelConfigs[channelId] =
+            remoteUpdatedAt > localUpdatedAt ? remoteConfig : localConfig
+        }
+      }
+    }
+
     console.log(
       `[WebdavAutoSync] 合并完成 - 总账号数: ${mergedAccounts.length}, 使用${
         remote.preferencesTimestamp > local.preferencesTimestamp
           ? "远程"
           : "本地"
-      }偏好设置`
+      }偏好设置, 通道配置数: ${Object.keys(mergedChannelConfigs).length}`
     )
 
     return {
       accounts: mergedAccounts,
-      preferences
+      preferences,
+      channelConfigs: mergedChannelConfigs
     }
   }
 
