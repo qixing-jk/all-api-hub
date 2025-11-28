@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.17.0](https://github.com/qixing-jk/all-api-hub/compare/v2.16.0...v2.17.0) (2025-11-28)
+
+
+### Features
+
+* automatic pop-up prompts for one-click redemption ([#198](https://github.com/qixing-jk/all-api-hub/issues/198)) ([941a826](https://github.com/qixing-jk/all-api-hub/commit/941a8262948dfdee9929f2a94b811ef1a7e7695e))
+* Unify import/export and WebDAV backup with versioned V2 schema ([#197](https://github.com/qixing-jk/all-api-hub/issues/197)) ([9ce294d](https://github.com/qixing-jk/all-api-hub/commit/9ce294da9140a25de8c1c52bb943736a85ce0b44))
+
 ## [2.16.0](https://github.com/qixing-jk/all-api-hub/compare/v2.15.0...v2.16.0) (2025-11-27)
 
 
