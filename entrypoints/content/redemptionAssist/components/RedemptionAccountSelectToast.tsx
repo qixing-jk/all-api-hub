@@ -1,6 +1,7 @@
 import React, { useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import { Button } from "~/components/ui"
 import type { DisplaySiteData } from "~/types"
 
 export interface RedemptionAccountSelectToastProps {
@@ -18,12 +19,14 @@ export const RedemptionAccountSelectToast: React.FC<
     accounts[0]?.id ?? null
   )
 
-  const handleConfirm = () => {
+  const handleConfirm = (e: React.MouseEvent) => {
+    e.stopPropagation()
     const account = accounts.find((a) => a.id === selectedId) || null
     onSelect(account)
   }
 
-  const handleCancel = () => {
+  const handleCancel = (e: React.MouseEvent) => {
+    e.stopPropagation()
     onSelect(null)
   }
 
@@ -75,19 +78,10 @@ export const RedemptionAccountSelectToast: React.FC<
       </div>
 
       <div className="mt-2 flex justify-end gap-2">
-        <button
-          type="button"
-          onClick={handleCancel}
-          className="border-border text-foreground hover:bg-muted inline-flex items-center rounded-md border bg-transparent px-3 py-1 text-xs font-medium">
-          {t("common:actions.cancel", { defaultValue: "取消" })}
-        </button>
-        <button
-          type="button"
-          disabled={!selectedId}
-          onClick={handleConfirm}
-          className="bg-semantic-info-600 hover:bg-semantic-info-500 inline-flex items-center rounded-md border border-transparent px-3 py-1 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-60">
-          {t("accountSelect.confirm", { defaultValue: "确认兑换" })}
-        </button>
+        <Button onClick={handleCancel}>{t("common:actions.cancel")}</Button>
+        <Button disabled={!selectedId} onClick={handleConfirm}>
+          {t("accountSelect.confirm")}
+        </Button>
       </div>
     </div>
   )
