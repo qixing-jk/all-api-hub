@@ -53,7 +53,7 @@ function setupClipboardWriteListener() {
     if (!data || data.type !== "__ALL_API_HUB_CLIPBOARD_WRITE__") return
     const text = typeof data.text === "string" ? data.text : ""
     if (text) {
-      void scanForRedemptionCodes(text)
+      void scheduleRedemptionScan(text)
     }
   })
 }
@@ -112,7 +112,7 @@ function setupRedemptionAssistDetection() {
     }
 
     if (text) {
-      void scanForRedemptionCodes(text)
+      void scheduleRedemptionScan(text)
     }
   }
 
@@ -128,13 +128,32 @@ function setupRedemptionAssistDetection() {
     }
 
     if (text) {
-      void scanForRedemptionCodes(text)
+      void scheduleRedemptionScan(text)
     }
   }
 
   document.addEventListener("click", handleClick, true)
   document.addEventListener("copy", handleClipboardEvent, true)
   document.addEventListener("cut", handleClipboardEvent, true)
+}
+
+const SCAN_DEDUP_INTERVAL_MS = 1000
+let lastScanText = ""
+let lastScanAt = 0
+
+async function scheduleRedemptionScan(sourceText: string) {
+  const text = (sourceText ?? "").trim()
+  if (!text) return
+
+  const now = Date.now()
+  if (text === lastScanText && now - lastScanAt < SCAN_DEDUP_INTERVAL_MS) {
+    return
+  }
+
+  lastScanText = text
+  lastScanAt = now
+
+  await scanForRedemptionCodes(text)
 }
 
 async function scanForRedemptionCodes(sourceText?: string) {
