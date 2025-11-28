@@ -1,42 +1,15 @@
 import * as React from "react"
-import type { Root } from "react-dom/client"
-import { createRoot } from "react-dom/client"
 import toast from "react-hot-toast"
 
 import type { DisplaySiteData } from "~/types"
 
-import { ContentReactRoot } from "../components/ContentReactRoot.tsx"
 import { RedemptionAccountSelectToast } from "../components/RedemptionAccountSelectToast.tsx"
 import {
   RedemptionPromptToast,
   type RedemptionPromptAction
 } from "../components/RedemptionPromptToast.tsx"
 
-let redemptionToastRoot: Root | null = null
-
-function ensureRedemptionToastRoot() {
-  if (redemptionToastRoot) {
-    return
-  }
-
-  const existing = document.getElementById("all-api-hub-redemption-toast-root")
-  const container = existing || document.createElement("div")
-
-  if (!existing) {
-    container.id = "all-api-hub-redemption-toast-root"
-    container.style.position = "fixed"
-    container.style.zIndex = "2147483647"
-    container.style.top = "0"
-    container.style.left = "0"
-    container.style.width = "100%"
-    container.style.height = "0"
-    container.style.pointerEvents = "none"
-    document.documentElement.appendChild(container)
-  }
-
-  redemptionToastRoot = createRoot(container)
-  redemptionToastRoot.render(React.createElement(ContentReactRoot))
-}
+function ensureRedemptionToastRoot() {}
 
 export function showAccountSelectToast(
   accounts: DisplaySiteData[],
