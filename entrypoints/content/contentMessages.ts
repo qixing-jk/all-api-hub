@@ -201,10 +201,15 @@ async function parseResponseData(
   switch (responseType) {
     case "text":
       return await response.text()
-    case "arrayBuffer":
-      return await response.arrayBuffer()
-    case "blob":
-      return await response.blob()
+    case "arrayBuffer": {
+      const buffer = await response.arrayBuffer()
+      return Array.from(new Uint8Array(buffer))
+    }
+    case "blob": {
+      const blob = await response.blob()
+      const blobBuffer = await blob.arrayBuffer()
+      return { data: Array.from(new Uint8Array(blobBuffer)), type: blob.type }
+    }
     case "json":
     default: {
       const text = await response.text()
