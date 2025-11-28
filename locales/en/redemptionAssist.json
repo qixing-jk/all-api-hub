@@ -25,6 +25,7 @@
     "title": "Select an account to use for redemption",
     "confirm": "Confirm redemption",
     "titleMultiple": "Multiple accounts available, please select one for redemption",
-    "titleFallback": "No account matched this site, please select one manually"
+    "titleFallback": "No account matched this site, please select one manually",
+    "noResults": "No matching accounts found"
   }
 }
