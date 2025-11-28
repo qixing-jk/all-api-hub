@@ -5,11 +5,20 @@ import { reactDevToolsAuto } from "./plugins/react-devtools-auto"
 // See https://wxt.dev/api/config.html
 export default defineConfig({
   modules: ["@wxt-dev/auto-icons", "@wxt-dev/module-react"],
-  manifest: {
+  manifest: ({ browser }) => ({
     name: "__MSG_manifest_name__",
     description: "__MSG_manifest_description__",
     default_locale: "zh_CN",
-    permissions: ["tabs", "storage", "sidePanel", "alarms", "clipboardRead"],
+    permissions: [
+      "tabs",
+      "storage",
+      "alarms",
+      "clipboardRead",
+      // Firefox 专属：添加 cookies 和 webRequest 权限
+      ...(browser === "firefox"
+        ? ["cookies", "webRequest", "webRequestBlocking"]
+        : ["sidePanel"])
+    ],
     host_permissions: ["https://*/*"],
     browser_specific_settings: {
       gecko: {
@@ -28,7 +37,7 @@ export default defineConfig({
         description: "__MSG_manifest_commands_browser_action__"
       }
     }
-  },
+  }),
   vite: (env) => {
     console.log("当前构建模式:", env.mode)
     return {

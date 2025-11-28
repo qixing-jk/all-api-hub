@@ -11,6 +11,7 @@ import {
   type TempWindowFetchParams,
   type TempWindowResponseType
 } from "~/utils/browserApi"
+import { addExtensionHeader, isFirefox } from "~/utils/cookieHelper"
 import { joinUrl } from "~/utils/url"
 
 /**
@@ -83,8 +84,20 @@ const createBaseRequest = (
 const createCookieAuthRequest = (
   userId: number | string | undefined,
   options: RequestInit = {}
-): RequestInit =>
-  createBaseRequest(createRequestHeaders(userId), "include", options)
+): RequestInit => {
+  const baseRequest = createBaseRequest(
+    createRequestHeaders(userId),
+    "include",
+    options
+  )
+
+  // Firefox：为 Cookie 认证请求添加扩展标识头
+  if (isFirefox()) {
+    baseRequest.headers = addExtensionHeader(baseRequest.headers)
+  }
+
+  return baseRequest
+}
 
 /**
  * 创建带 Bearer token 认证的请求
