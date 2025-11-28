@@ -1,4 +1,7 @@
-import { setupRedemptionAssistContent } from "~/entrypoints/content/redemptionAssist"
+import {
+  REDEMPTION_TOAST_HOST_TAG,
+  setupRedemptionAssistContent
+} from "~/entrypoints/content/redemptionAssist"
 
 import { setupContentMessageHandlers } from "./contentMessages"
 
@@ -17,7 +20,7 @@ async function mountRedemptionToastUi(ctx: any) {
   }
 
   const ui = await createShadowRootUi(ctx, {
-    name: "all-api-hub-redemption-toast",
+    name: REDEMPTION_TOAST_HOST_TAG,
     position: "overlay",
     anchor: "body",
     onMount(container) {

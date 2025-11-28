@@ -8,6 +8,8 @@ import {
   showRedemptionPromptToast
 } from "./utils/redemptionToasts.ts"
 
+export const REDEMPTION_TOAST_HOST_TAG = "all-api-hub-redemption-toast"
+
 export function setupRedemptionAssistContent() {
   setupRedemptionAssistDetection()
 }
@@ -104,12 +106,10 @@ function setupRedemptionAssistDetection() {
 
 function isEventFromRedemptionAssistUI(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false
-  const container = target.closest("[data-all-api-hub]")
-  if (!container) return false
-  const marker = container.getAttribute("data-all-api-hub") || ""
-  // All redemption-assist related toasts use data-all-api-hub starting with
-  // "redemption-assist" (e.g. "redemption-assist-toast", "redemption-assist-account-select")
-  return marker.startsWith("redemption-assist")
+  // Events from inside the Shadow DOM toaster are retargeted to the shadow host
+  // <all-api-hub-redemption-toast data-wxt-shadow-root="">
+  // so we only need to check whether the event target is inside this host element.
+  return !!target.closest(REDEMPTION_TOAST_HOST_TAG)
 }
 
 const SCAN_DEDUP_INTERVAL_MS = 1000
