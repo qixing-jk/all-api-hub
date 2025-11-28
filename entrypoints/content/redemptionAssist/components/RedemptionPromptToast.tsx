@@ -29,7 +29,7 @@ export const RedemptionPromptToast: React.FC<RedemptionPromptToastProps> = ({
   return (
     <div
       data-all-api-hub="redemption-assist-toast"
-      className="border-border bg-background/95 flex w-[320px] max-w-[92vw] flex-col gap-3 rounded-lg border px-4 py-3 text-sm shadow-lg backdrop-blur">
+      className="border-border bg-background/95 pointer-events-auto flex w-[320px] max-w-[92vw] flex-col gap-3 rounded-lg border px-4 py-3 text-sm shadow-lg backdrop-blur">
       <div className="text-sm leading-snug whitespace-pre-line">{message}</div>
       <div className="mt-2 flex justify-end gap-2">
         <Button variant="secondary" onClick={handleCancel}>

@@ -52,7 +52,7 @@ export const RedemptionAccountSelectToast: React.FC<
   return (
     <div
       data-all-api-hub="redemption-assist-account-select"
-      className="border-border bg-background/95 flex w-[360px] max-w-[96vw] flex-col gap-3 rounded-lg border px-4 py-3 text-sm shadow-lg backdrop-blur">
+      className="border-border bg-background/95 pointer-events-auto flex w-[360px] max-w-[96vw] flex-col gap-3 rounded-lg border px-4 py-3 text-sm shadow-lg backdrop-blur">
       <div className="flex flex-col gap-1">
         <div className="text-foreground text-sm font-medium">
           {title || t("accountSelect.title")}
