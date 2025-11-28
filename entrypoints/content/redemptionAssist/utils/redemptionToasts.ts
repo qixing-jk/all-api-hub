@@ -56,16 +56,22 @@ export function showAccountSelectToast(
       resolve(account)
     }
 
-    toast.custom((toastInstance) => {
-      const toastId = toastInstance.id
-      return React.createElement(RedemptionAccountSelectToast, {
-        title: options?.title,
-        message: options?.message,
-        accounts,
-        onSelect: (account: DisplaySiteData | null) =>
-          handleResolve(account, toastId)
-      })
-    })
+    toast.custom(
+      (toastInstance) => {
+        const toastId = toastInstance.id
+        return React.createElement(RedemptionAccountSelectToast, {
+          title: options?.title,
+          message: options?.message,
+          accounts,
+          onSelect: (account: DisplaySiteData | null) =>
+            handleResolve(account, toastId)
+        })
+      },
+      {
+        // Keep the account select toast on screen until user confirms or cancels
+        duration: Infinity
+      }
+    )
   })
 }
 

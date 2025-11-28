@@ -247,9 +247,7 @@ async function scanForRedemptionCodes(sourceText?: string) {
 
     if (result?.code === "NO_ACCOUNTS" && result.allAccounts?.length) {
       const selected = await showAccountSelectToast(result.allAccounts, {
-        title: t("redemptionAssist:accountSelect.titleFallback", {
-          defaultValue: "未找到与当前站点匹配的账号，请手动选择"
-        })
+        title: t("redemptionAssist:accountSelect.titleFallback")
       })
 
       if (!selected) {
@@ -269,9 +267,7 @@ async function scanForRedemptionCodes(sourceText?: string) {
       return
     }
 
-    const fallbackMessage = t("redemptionAssist:messages.redeemFailed", {
-      defaultValue: "兑换失败，请稍后重试。"
-    })
+    const fallbackMessage = t("redemptionAssist:messages.redeemFailed")
     const msg = redeemResp?.error || result?.message || fallbackMessage
     showRedeemResultToast(false, msg)
   } catch (error) {

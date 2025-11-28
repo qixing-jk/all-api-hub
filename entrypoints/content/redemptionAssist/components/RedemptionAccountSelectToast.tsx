@@ -1,7 +1,9 @@
-import React, { useState } from "react"
+import React, { useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Button } from "~/components/ui"
+import AccountSearchInput from "~/features/AccountManagement/components/AccountList/AccountSearchInput"
+import { useAccountSearch } from "~/features/AccountManagement/hooks/useAccountSearch"
 import type { DisplaySiteData } from "~/types"
 
 export interface RedemptionAccountSelectToastProps {
@@ -15,9 +17,26 @@ export const RedemptionAccountSelectToast: React.FC<
   RedemptionAccountSelectToastProps
 > = ({ title, message, accounts, onSelect }) => {
   const { t } = useTranslation("redemptionAssist")
-  const [selectedId, setSelectedId] = useState<string | null>(
-    accounts[0]?.id ?? null
+  const { query, setQuery, clearSearch, searchResults, inSearchMode } =
+    useAccountSearch(accounts)
+
+  const displayedAccounts = useMemo<DisplaySiteData[]>(
+    () =>
+      inSearchMode && searchResults.length > 0
+        ? searchResults.map((result) => result.account)
+        : accounts,
+    [accounts, inSearchMode, searchResults]
   )
+
+  const [selectedId, setSelectedId] = useState<string | null>(
+    displayedAccounts[0]?.id ?? null
+  )
+
+  useEffect(() => {
+    if (!displayedAccounts.some((account) => account.id === selectedId)) {
+      setSelectedId(displayedAccounts[0]?.id ?? null)
+    }
+  }, [displayedAccounts, selectedId])
 
   const handleConfirm = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -45,33 +64,47 @@ export const RedemptionAccountSelectToast: React.FC<
         )}
       </div>
 
+      <AccountSearchInput
+        value={query}
+        onChange={setQuery}
+        onClear={clearSearch}
+      />
+
       <div className="max-h-56 space-y-1 overflow-y-auto pr-1">
-        {accounts.map((account) => {
-          const checkInUrl =
-            account.checkIn?.customCheckInUrl || account.baseUrl
-          return (
-            <label
-              key={account.id}
-              className="border-border/60 hover:bg-muted/70 flex cursor-pointer flex-col gap-0.5 rounded-md border px-2 py-1.5 text-xs">
-              <div className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  className="h-3 w-3"
-                  checked={selectedId === account.id}
-                  onChange={() => setSelectedId(account.id)}
-                />
-                <span className="text-foreground font-medium">
-                  {account.name}
-                </span>
-              </div>
-              {checkInUrl && (
-                <div className="text-muted-foreground truncate pl-5 text-[11px]">
-                  {checkInUrl}
+        {displayedAccounts.length === 0 ? (
+          <div className="text-muted-foreground py-4 text-center text-xs">
+            {t("accountSelect.noResults", {
+              defaultValue: "未找到匹配的账号，请调整搜索条件"
+            })}
+          </div>
+        ) : (
+          displayedAccounts.map((account) => {
+            const checkInUrl =
+              account.checkIn?.customCheckInUrl || account.baseUrl
+            return (
+              <label
+                key={account.id}
+                className="border-border/60 hover:bg-muted/70 flex cursor-pointer flex-col gap-0.5 rounded-md border px-2 py-1.5 text-xs">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    className="h-3 w-3"
+                    checked={selectedId === account.id}
+                    onChange={() => setSelectedId(account.id)}
+                  />
+                  <span className="text-foreground font-medium">
+                    {account.name}
+                  </span>
                 </div>
-              )}
-            </label>
-          )
-        })}
+                {checkInUrl && (
+                  <div className="text-muted-foreground truncate pl-5 text-[11px]">
+                    {checkInUrl}
+                  </div>
+                )}
+              </label>
+            )
+          })
+        )}
       </div>
 
       <div className="mt-2 flex justify-end gap-2">
