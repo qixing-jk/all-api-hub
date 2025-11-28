@@ -161,103 +161,101 @@ async function scanForRedemptionCodes(sourceText?: string) {
     const text = (sourceText ?? "").trim()
     if (!text) return
 
-    const codes = extractRedemptionCodesFromText(text).slice(0, 3)
-    if (codes.length === 0) return
+    const code = extractRedemptionCodesFromText(text)[0]
+    if (!code) return
 
     const url = window.location.href
 
-    for (const code of codes) {
-      console.log("[RedemptionAssist][Content] Detected code:", code, url)
-      const shouldResp: any = await browser.runtime.sendMessage({
-        action: "redemptionAssist:shouldPrompt",
-        url,
-        code
-      })
+    console.log("[RedemptionAssist][Content] Detected code:", code, url)
+    const shouldResp: any = await browser.runtime.sendMessage({
+      action: "redemptionAssist:shouldPrompt",
+      url,
+      code
+    })
 
-      if (!shouldResp?.success || !shouldResp.shouldPrompt) {
-        continue
-      }
-
-      console.log("[RedemptionAssist][Content] Prompting for code:", code)
-
-      const codePreview = maskCode(code)
-      const confirmMessage = t("redemptionAssist:messages.promptConfirm", {
-        code: codePreview,
-        defaultValue:
-          "检测到疑似兑换码：" + codePreview + "\n是否为当前站点尝试自动兑换？"
-      })
-      const action = await showRedemptionPromptToast(confirmMessage)
-      if (action !== "auto") continue
-
-      const redeemResp: any = await browser.runtime.sendMessage({
-        action: "redemptionAssist:autoRedeemByUrl",
-        url,
-        code
-      })
-
-      const result = redeemResp?.data
-
-      if (result?.success) {
-        if (result.message) {
-          showRedeemResultToast(true, result.message)
-        }
-        continue
-      }
-
-      if (result?.code === "MULTIPLE_ACCOUNTS" && result.candidates?.length) {
-        const selected = await showAccountSelectToast(result.candidates, {
-          title: t("redemptionAssist:accountSelect.titleMultiple", {
-            defaultValue: "检测到多个可用账号，请选择一个用于兑换"
-          })
-        })
-
-        if (!selected) {
-          continue
-        }
-
-        const manualResp: any = await browser.runtime.sendMessage({
-          action: "redemptionAssist:autoRedeem",
-          accountId: selected.id,
-          code
-        })
-
-        const manualResult = manualResp?.data
-        if (manualResult?.message) {
-          showRedeemResultToast(!!manualResult.success, manualResult.message)
-        }
-        continue
-      }
-
-      if (result?.code === "NO_ACCOUNTS" && result.allAccounts?.length) {
-        const selected = await showAccountSelectToast(result.allAccounts, {
-          title: t("redemptionAssist:accountSelect.titleFallback", {
-            defaultValue: "未找到与当前站点匹配的账号，请手动选择"
-          })
-        })
-
-        if (!selected) {
-          continue
-        }
-
-        const manualResp: any = await browser.runtime.sendMessage({
-          action: "redemptionAssist:autoRedeem",
-          accountId: selected.id,
-          code
-        })
-
-        const manualResult = manualResp?.data
-        if (manualResult?.message) {
-          showRedeemResultToast(!!manualResult.success, manualResult.message)
-        }
-        continue
-      }
-
-      const fallbackMessage = t("redemptionAssist:messages.redeemFailed", {
-        defaultValue: "兑换失败，请稍后重试。"
-      })
-      const msg = redeemResp?.error || result?.message || fallbackMessage
-      showRedeemResultToast(false, msg)
+    if (!shouldResp?.success || !shouldResp.shouldPrompt) {
+      return
     }
+
+    console.log("[RedemptionAssist][Content] Prompting for code:", code)
+
+    const codePreview = maskCode(code)
+    const confirmMessage = t("redemptionAssist:messages.promptConfirm", {
+      code: codePreview,
+      defaultValue:
+        "检测到疑似兑换码：" + codePreview + "\n是否为当前站点尝试自动兑换？"
+    })
+    const action = await showRedemptionPromptToast(confirmMessage)
+    if (action !== "auto") return
+
+    const redeemResp: any = await browser.runtime.sendMessage({
+      action: "redemptionAssist:autoRedeemByUrl",
+      url,
+      code
+    })
+
+    const result = redeemResp?.data
+
+    if (result?.success) {
+      if (result.message) {
+        showRedeemResultToast(true, result.message)
+      }
+      return
+    }
+
+    if (result?.code === "MULTIPLE_ACCOUNTS" && result.candidates?.length) {
+      const selected = await showAccountSelectToast(result.candidates, {
+        title: t("redemptionAssist:accountSelect.titleMultiple", {
+          defaultValue: "检测到多个可用账号，请选择一个用于兑换"
+        })
+      })
+
+      if (!selected) {
+        return
+      }
+
+      const manualResp: any = await browser.runtime.sendMessage({
+        action: "redemptionAssist:autoRedeem",
+        accountId: selected.id,
+        code
+      })
+
+      const manualResult = manualResp?.data
+      if (manualResult?.message) {
+        showRedeemResultToast(!!manualResult.success, manualResult.message)
+      }
+      return
+    }
+
+    if (result?.code === "NO_ACCOUNTS" && result.allAccounts?.length) {
+      const selected = await showAccountSelectToast(result.allAccounts, {
+        title: t("redemptionAssist:accountSelect.titleFallback", {
+          defaultValue: "未找到与当前站点匹配的账号，请手动选择"
+        })
+      })
+
+      if (!selected) {
+        return
+      }
+
+      const manualResp: any = await browser.runtime.sendMessage({
+        action: "redemptionAssist:autoRedeem",
+        accountId: selected.id,
+        code
+      })
+
+      const manualResult = manualResp?.data
+      if (manualResult?.message) {
+        showRedeemResultToast(!!manualResult.success, manualResult.message)
+      }
+      return
+    }
+
+    const fallbackMessage = t("redemptionAssist:messages.redeemFailed", {
+      defaultValue: "兑换失败，请稍后重试。"
+    })
+    const msg = redeemResp?.error || result?.message || fallbackMessage
+    showRedeemResultToast(false, msg)
   } catch (error) {
     console.error("[RedemptionAssist][Content] scan failed:", error)
   }
