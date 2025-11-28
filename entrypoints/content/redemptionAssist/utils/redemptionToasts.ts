@@ -1,4 +1,5 @@
 import * as React from "react"
+import type { Root } from "react-dom/client"
 import { createRoot } from "react-dom/client"
 import toast from "react-hot-toast"
 
@@ -11,7 +12,7 @@ import {
   type RedemptionPromptAction
 } from "../components/RedemptionPromptToast.tsx"
 
-let redemptionToastRoot: any | null = null
+let redemptionToastRoot: Root | null = null
 
 function ensureRedemptionToastRoot() {
   if (redemptionToastRoot) {
