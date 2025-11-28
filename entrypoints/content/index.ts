@@ -9,12 +9,15 @@ import "~/styles/style.css"
 
 import * as React from "react"
 import { createRoot, type Root } from "react-dom/client"
+import { ContentScriptContext } from "wxt/utils/content-script-context"
+import { createShadowRootUi } from "wxt/utils/content-script-ui/shadow-root"
+import { defineContentScript } from "wxt/utils/define-content-script"
 
 import { ContentReactRoot } from "./redemptionAssist/components/ContentReactRoot.tsx"
 
 let redemptionToastRoot: Root | null = null
 
-async function mountRedemptionToastUi(ctx: any) {
+async function mountRedemptionToastUi(ctx: ContentScriptContext) {
   if (redemptionToastRoot) {
     return
   }
@@ -47,11 +50,11 @@ export default defineContentScript({
   cssInjectionMode: "ui",
   async main(ctx) {
     await mountRedemptionToastUi(ctx)
-    main()
+    mainLogic()
   }
 })
 
-function main() {
+function mainLogic() {
   console.log("Hello content script!", { id: browser.runtime.id })
 
   setupContentMessageHandlers()
