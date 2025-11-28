@@ -82,6 +82,11 @@ function setupRedemptionAssistDetection() {
   let lastClickScan = 0
 
   const handleClick = async (event: MouseEvent) => {
+    // Ignore clicks that originate from inside our own redemption assist UI
+    if (isEventFromRedemptionAssistUI(event.target)) {
+      return
+    }
+
     const now = Date.now()
     if (now - lastClickScan < CLICK_SCAN_INTERVAL_MS) return
     lastClickScan = now
@@ -117,6 +122,10 @@ function setupRedemptionAssistDetection() {
   }
 
   const handleClipboardEvent = (event: ClipboardEvent) => {
+    // Ignore clipboard events that originate from inside our own redemption assist UI
+    if (isEventFromRedemptionAssistUI(event.target)) {
+      return
+    }
     const selection = window.getSelection()
     let text = selection?.toString().trim() || ""
 
@@ -135,6 +144,16 @@ function setupRedemptionAssistDetection() {
   document.addEventListener("click", handleClick, true)
   document.addEventListener("copy", handleClipboardEvent, true)
   document.addEventListener("cut", handleClipboardEvent, true)
+}
+
+function isEventFromRedemptionAssistUI(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false
+  const container = target.closest("[data-all-api-hub]")
+  if (!container) return false
+  const marker = container.getAttribute("data-all-api-hub") || ""
+  // All redemption-assist related toasts use data-all-api-hub starting with
+  // "redemption-assist" (e.g. "redemption-assist-toast", "redemption-assist-account-select")
+  return marker.startsWith("redemption-assist")
 }
 
 const SCAN_DEDUP_INTERVAL_MS = 1000
@@ -181,10 +200,9 @@ async function scanForRedemptionCodes(sourceText?: string) {
 
     const codePreview = maskCode(code)
     const confirmMessage = t("redemptionAssist:messages.promptConfirm", {
-      code: codePreview,
-      defaultValue:
-        "检测到疑似兑换码：" + codePreview + "\n是否为当前站点尝试自动兑换？"
+      code: codePreview
     })
+
     const action = await showRedemptionPromptToast(confirmMessage)
     if (action !== "auto") return
 

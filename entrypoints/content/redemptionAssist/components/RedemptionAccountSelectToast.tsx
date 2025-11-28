@@ -36,10 +36,7 @@ export const RedemptionAccountSelectToast: React.FC<
       className="border-border bg-background/95 flex w-[360px] max-w-[96vw] flex-col gap-3 rounded-lg border px-4 py-3 text-sm shadow-lg backdrop-blur">
       <div className="flex flex-col gap-1">
         <div className="text-foreground text-sm font-medium">
-          {title ||
-            t("accountSelect.title", {
-              defaultValue: "选择要用于兑换的账号"
-            })}
+          {title || t("accountSelect.title")}
         </div>
         {message && (
           <div className="text-muted-foreground text-xs whitespace-pre-line">
@@ -78,7 +75,9 @@ export const RedemptionAccountSelectToast: React.FC<
       </div>
 
       <div className="mt-2 flex justify-end gap-2">
-        <Button onClick={handleCancel}>{t("common:actions.cancel")}</Button>
+        <Button variant="secondary" onClick={handleCancel}>
+          {t("common:actions.cancel")}
+        </Button>
         <Button disabled={!selectedId} onClick={handleConfirm}>
           {t("accountSelect.confirm")}
         </Button>
