@@ -97,7 +97,7 @@ function setupRedemptionAssistDetection() {
     if (!text) {
       const target = event.target as HTMLElement | null
       if (target) {
-        text = (target.innerText || target.textContent || "").slice(0, 2000)
+        text = (target.innerText || target.textContent || "").slice(0, 50)
       }
     }
 
