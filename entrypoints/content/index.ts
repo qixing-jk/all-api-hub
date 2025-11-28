@@ -153,6 +153,10 @@ function main() {
     }
   })
 
+  // Hook clipboard writeText in page context and listen for events
+  injectClipboardWriteHook()
+  setupClipboardWriteListener()
+
   // 启用兑换助手检测
   setupRedemptionAssistDetection()
 }
@@ -350,29 +354,112 @@ function showRedeemResultToast(success: boolean, message: string) {
   }
 }
 
+function injectClipboardWriteHook() {
+  try {
+    const script = document.createElement("script")
+    script.textContent = `;(function() {
+  try {
+    if (!navigator.clipboard || !navigator.clipboard.writeText) return;
+    const originalWriteText = navigator.clipboard.writeText.bind(navigator.clipboard);
+
+    navigator.clipboard.writeText = function(text) {
+      try {
+        window.postMessage({ type: "__ALL_API_HUB_CLIPBOARD_WRITE__", text: String(text) }, "*");
+      } catch (e) {
+        // ignore
+      }
+      return originalWriteText(text);
+    };
+  } catch (e) {
+    // ignore
+  }
+})();`
+    ;(document.documentElement || document.head || document.body)?.appendChild(
+      script
+    )
+    script.remove()
+  } catch (error) {
+    console.warn(
+      "[RedemptionAssist][Content] Failed to inject clipboard hook:",
+      error
+    )
+  }
+}
+
+function setupClipboardWriteListener() {
+  window.addEventListener("message", (event: MessageEvent) => {
+    if (event.source !== window) return
+    const data = event.data as any
+    if (!data || data.type !== "__ALL_API_HUB_CLIPBOARD_WRITE__") return
+    const text = typeof data.text === "string" ? data.text : ""
+    if (text) {
+      void scanForRedemptionCodes(text)
+    }
+  })
+}
+
 // Redemption Assist helpers
 
 function setupRedemptionAssistDetection() {
-  let lastScan = 0
-  const SCAN_INTERVAL_MS = 2000
+  const CLICK_SCAN_INTERVAL_MS = 2000
+  let lastClickScan = 0
 
-  const triggerScan = () => {
+  const handleClick = (event: MouseEvent) => {
     const now = Date.now()
-    if (now - lastScan < SCAN_INTERVAL_MS) return
-    lastScan = now
-    void scanForRedemptionCodes()
+    if (now - lastClickScan < CLICK_SCAN_INTERVAL_MS) return
+    lastClickScan = now
+
+    // Prefer current selection text if any
+    const selection = window.getSelection()
+    let text = selection?.toString().trim() || ""
+
+    // Fallback to clicked element text (truncate to avoid huge payloads)
+    if (!text) {
+      const target = event.target as HTMLElement | null
+      if (target) {
+        text = (target.innerText || target.textContent || "").slice(0, 2000)
+      }
+    }
+
+    if (text) {
+      void scanForRedemptionCodes(text)
+    }
   }
 
-  window.addEventListener("load", triggerScan)
-  document.addEventListener("click", triggerScan, true)
+  const handleClipboardEvent = (event: ClipboardEvent) => {
+    // Try selection text first
+    const selection = window.getSelection()
+    let text = selection?.toString().trim() || ""
+
+    // Then clipboard data from the event if available (primarily for paste)
+    if (!text && event.clipboardData) {
+      const clipText = event.clipboardData.getData("text")
+      if (clipText) {
+        text = clipText
+      }
+    }
+
+    if (text) {
+      void scanForRedemptionCodes(text)
+    }
+  }
+
+  document.addEventListener("click", handleClick, true)
+  document.addEventListener("copy", handleClipboardEvent, true)
+  document.addEventListener("cut", handleClipboardEvent, true)
 }
 
-async function scanForRedemptionCodes() {
+async function scanForRedemptionCodes(sourceText?: string) {
   try {
-    const { body } = document
-    if (!body) return
+    let text = (sourceText ?? "").trim()
 
-    const text = body.innerText || ""
+    if (!text) {
+      const { body } = document
+      if (!body) return
+
+      text = (body.innerText || "").trim()
+    }
+
     if (!text) return
 
     const codes = extractRedemptionCodesFromText(text).slice(0, 3)
