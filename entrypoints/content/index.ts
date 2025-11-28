@@ -398,13 +398,32 @@ function setupClipboardWriteListener() {
   })
 }
 
+function readClipboardLegacy() {
+  const textarea = document.createElement("textarea")
+  textarea.style.position = "fixed"
+  textarea.style.opacity = "0"
+  document.body.appendChild(textarea)
+  textarea.focus()
+
+  try {
+    document.execCommand("paste")
+    const text = textarea.value
+    document.body.removeChild(textarea)
+    return text
+  } catch (err) {
+    console.error("Failed to read clipboard:", err)
+    document.body.removeChild(textarea)
+    return ""
+  }
+}
+
 // Redemption Assist helpers
 
 function setupRedemptionAssistDetection() {
   const CLICK_SCAN_INTERVAL_MS = 2000
   let lastClickScan = 0
 
-  const handleClick = (event: MouseEvent) => {
+  const handleClick = async (event: MouseEvent) => {
     const now = Date.now()
     if (now - lastClickScan < CLICK_SCAN_INTERVAL_MS) return
     lastClickScan = now
@@ -418,6 +437,22 @@ function setupRedemptionAssistDetection() {
       const target = event.target as HTMLElement | null
       if (target) {
         text = (target.innerText || target.textContent || "").slice(0, 2000)
+      }
+    }
+
+    // try clipboard content (requires clipboardRead/user gesture)
+    if (!text && navigator.clipboard && navigator.clipboard.readText) {
+      try {
+        const clipText = await navigator.clipboard.readText()
+        if (clipText) {
+          text = clipText.trim()
+        }
+      } catch (error) {
+        console.warn(
+          "[RedemptionAssist][Content] Clipboard read failed:",
+          error
+        )
+        text = readClipboardLegacy()
       }
     }
 
@@ -451,15 +486,7 @@ function setupRedemptionAssistDetection() {
 
 async function scanForRedemptionCodes(sourceText?: string) {
   try {
-    let text = (sourceText ?? "").trim()
-
-    if (!text) {
-      const { body } = document
-      if (!body) return
-
-      text = (body.innerText || "").trim()
-    }
-
+    const text = (sourceText ?? "").trim()
     if (!text) return
 
     const codes = extractRedemptionCodesFromText(text).slice(0, 3)
