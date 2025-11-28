@@ -9,53 +9,7 @@ import {
 } from "./utils/redemptionToasts.ts"
 
 export function setupRedemptionAssistContent() {
-  injectClipboardWriteHook()
-  setupClipboardWriteListener()
   setupRedemptionAssistDetection()
-}
-
-function injectClipboardWriteHook() {
-  try {
-    const script = document.createElement("script")
-    script.textContent = `;(function() {
-  try {
-    if (!navigator.clipboard || !navigator.clipboard.writeText) return;
-    const originalWriteText = navigator.clipboard.writeText.bind(navigator.clipboard);
-
-    navigator.clipboard.writeText = function(text) {
-      try {
-        window.postMessage({ type: "__ALL_API_HUB_CLIPBOARD_WRITE__", text: String(text) }, "*");
-      } catch (e) {
-        // ignore
-      }
-      return originalWriteText(text);
-    };
-  } catch (e) {
-    // ignore
-  }
-})();`
-    ;(document.documentElement || document.head || document.body)?.appendChild(
-      script
-    )
-    script.remove()
-  } catch (error) {
-    console.warn(
-      "[RedemptionAssist][Content] Failed to inject clipboard hook:",
-      error
-    )
-  }
-}
-
-function setupClipboardWriteListener() {
-  window.addEventListener("message", (event: MessageEvent) => {
-    if (event.source !== window) return
-    const data = event.data as any
-    if (!data || data.type !== "__ALL_API_HUB_CLIPBOARD_WRITE__") return
-    const text = typeof data.text === "string" ? data.text : ""
-    if (text) {
-      void scheduleRedemptionScan(text)
-    }
-  })
 }
 
 function readClipboardLegacy() {
@@ -82,43 +36,45 @@ function setupRedemptionAssistDetection() {
   let lastClickScan = 0
 
   const handleClick = async (event: MouseEvent) => {
-    // Ignore clicks that originate from inside our own redemption assist UI
-    if (isEventFromRedemptionAssistUI(event.target)) {
-      return
-    }
-
-    const now = Date.now()
-    if (now - lastClickScan < CLICK_SCAN_INTERVAL_MS) return
-    lastClickScan = now
-
-    const selection = window.getSelection()
-    let text = selection?.toString().trim() || ""
-
-    if (!text) {
-      const target = event.target as HTMLElement | null
-      if (target) {
-        text = (target.innerText || target.textContent || "").slice(0, 50)
+    setTimeout(async () => {
+      // Ignore clicks that originate from inside our own redemption assist UI
+      if (isEventFromRedemptionAssistUI(event.target)) {
+        return
       }
-    }
 
-    if (!text && navigator.clipboard && navigator.clipboard.readText) {
-      try {
-        const clipText = await navigator.clipboard.readText()
-        if (clipText) {
-          text = clipText.trim()
+      const now = Date.now()
+      if (now - lastClickScan < CLICK_SCAN_INTERVAL_MS) return
+      lastClickScan = now
+
+      const selection = window.getSelection()
+      let text = selection?.toString().trim() || ""
+
+      if (!text) {
+        const target = event.target as HTMLElement | null
+        if (target) {
+          text = (target.innerText || target.textContent || "").slice(0, 50)
         }
-      } catch (error) {
-        console.warn(
-          "[RedemptionAssist][Content] Clipboard read failed:",
-          error
-        )
-        text = readClipboardLegacy()
       }
-    }
 
-    if (text) {
-      void scheduleRedemptionScan(text)
-    }
+      if (!text && navigator.clipboard && navigator.clipboard.readText) {
+        try {
+          const clipText = await navigator.clipboard.readText()
+          if (clipText) {
+            text = clipText.trim()
+          }
+        } catch (error) {
+          console.warn(
+            "[RedemptionAssist][Content] Clipboard read failed:",
+            error
+          )
+          text = readClipboardLegacy()
+        }
+      }
+
+      if (text) {
+        void scheduleRedemptionScan(text)
+      }
+    }, 500)
   }
 
   const handleClipboardEvent = (event: ClipboardEvent) => {

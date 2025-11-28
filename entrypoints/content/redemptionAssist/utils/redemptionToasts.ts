@@ -76,7 +76,7 @@ export function showAccountSelectToast(
 }
 
 export function showRedemptionPromptToast(
-  message: string = "test"
+  message: string
 ): Promise<RedemptionPromptAction> {
   ensureRedemptionToastRoot()
 
