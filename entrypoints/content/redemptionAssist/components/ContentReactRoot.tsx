@@ -1,7 +1,7 @@
 import React from "react"
 import { Toaster } from "react-hot-toast"
 
-import "~/utils/i18n"
+import "~/utils/i18n.ts"
 import "~/styles/style.css"
 
 export const ContentReactRoot: React.FC = () => {

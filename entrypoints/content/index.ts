@@ -1,5 +1,6 @@
+import { setupRedemptionAssistContent } from "~/entrypoints/content/redemptionAssist"
+
 import { setupContentMessageHandlers } from "./contentMessages"
-import { setupRedemptionAssistContent } from "./redemptionAssistContent"
 
 export default defineContentScript({
   matches: ["<all_urls>"],

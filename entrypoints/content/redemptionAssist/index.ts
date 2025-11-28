@@ -1,117 +1,17 @@
 import { t } from "i18next"
-import * as React from "react"
-import { createRoot } from "react-dom/client"
-import toast from "react-hot-toast"
 
-import type { DisplaySiteData } from "~/types"
-import { extractRedemptionCodesFromText } from "~/utils/redemptionAssist"
+import { extractRedemptionCodesFromText } from "~/utils/redemptionAssist.ts"
 
-import { ContentReactRoot } from "./ContentReactRoot"
-import { RedemptionAccountSelectToast } from "./RedemptionAccountSelectToast"
 import {
-  RedemptionPromptToast,
-  type RedemptionPromptAction
-} from "./RedemptionPromptToast"
-
-let redemptionToastRoot: any | null = null
+  showAccountSelectToast,
+  showRedeemResultToast,
+  showRedemptionPromptToast
+} from "./utils/redemptionToasts.ts"
 
 export function setupRedemptionAssistContent() {
   injectClipboardWriteHook()
   setupClipboardWriteListener()
   setupRedemptionAssistDetection()
-}
-
-function ensureRedemptionToastRoot() {
-  if (redemptionToastRoot) {
-    return
-  }
-
-  const existing = document.getElementById("all-api-hub-redemption-toast-root")
-  const container = existing || document.createElement("div")
-
-  if (!existing) {
-    container.id = "all-api-hub-redemption-toast-root"
-    container.style.position = "fixed"
-    container.style.zIndex = "2147483647"
-    container.style.top = "0"
-    container.style.left = "0"
-    container.style.width = "100%"
-    container.style.height = "0"
-    container.style.pointerEvents = "none"
-    document.documentElement.appendChild(container)
-  }
-
-  redemptionToastRoot = createRoot(container)
-  redemptionToastRoot.render(React.createElement(ContentReactRoot))
-}
-
-function showAccountSelectToast(
-  accounts: DisplaySiteData[],
-  options?: { title?: string; message?: string }
-): Promise<DisplaySiteData | null> {
-  ensureRedemptionToastRoot()
-
-  return new Promise((resolve) => {
-    let resolved = false
-
-    const handleResolve = (
-      account: DisplaySiteData | null,
-      toastId: string
-    ) => {
-      if (resolved) return
-      resolved = true
-      toast.dismiss(toastId)
-      resolve(account)
-    }
-
-    toast.custom((toastInstance) => {
-      const toastId = toastInstance.id
-      return React.createElement(RedemptionAccountSelectToast, {
-        title: options?.title,
-        message: options?.message,
-        accounts,
-        onSelect: (account: DisplaySiteData | null) =>
-          handleResolve(account, toastId)
-      })
-    })
-  })
-}
-
-function showRedemptionPromptToast(
-  message: string = "test"
-): Promise<RedemptionPromptAction> {
-  ensureRedemptionToastRoot()
-
-  return new Promise((resolve) => {
-    let resolved = false
-
-    const handleResolve = (action: RedemptionPromptAction, toastId: string) => {
-      if (resolved) return
-      resolved = true
-      toast.dismiss(toastId)
-      resolve(action)
-    }
-
-    toast.custom((toastInstance) => {
-      const toastId = toastInstance.id
-      return React.createElement(RedemptionPromptToast, {
-        message,
-        onAction: (action: RedemptionPromptAction) =>
-          handleResolve(action, toastId)
-      })
-    })
-  })
-}
-
-function showRedeemResultToast(success: boolean, message: string) {
-  ensureRedemptionToastRoot()
-  if (!message) return
-
-  if (success) {
-    toast.success(message)
-  } else {
-    toast.error(message)
-  }
 }
 
 function injectClipboardWriteHook() {
