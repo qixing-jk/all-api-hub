@@ -8,9 +8,6 @@ import type { DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/error"
 import { isPossibleRedemptionCode } from "~/utils/redemptionAssist"
 
-const DEDUP_TTL_MS = 10 * 60 * 1000 // 10 minutes
-const COOLDOWN_MS = 4000 // 4 seconds between prompts per tab
-
 interface RedemptionAssistRuntimeSettings {
   enabled: boolean
 }
@@ -18,12 +15,6 @@ interface RedemptionAssistRuntimeSettings {
 class RedemptionAssistService {
   private initialized = false
   private settings: RedemptionAssistRuntimeSettings = { enabled: true }
-
-  // Map of `${origin}|${code}` -> lastPromptTimestamp
-  private promptHistory = new Map<string, number>()
-
-  // Per-tab cooldown map: tabId -> lastPromptTimestamp
-  private lastPromptPerTab = new Map<number, number>()
 
   async initialize() {
     if (this.initialized) {
@@ -71,23 +62,6 @@ class RedemptionAssistService {
     }
   }
 
-  private makeKey(url: string, code: string): string {
-    try {
-      const u = new URL(url)
-      return `${u.origin}|${code}`
-    } catch {
-      return `${url}|${code}`
-    }
-  }
-
-  private cleanupPromptHistory(now: number) {
-    for (const [key, ts] of this.promptHistory.entries()) {
-      if (now - ts > DEDUP_TTL_MS) {
-        this.promptHistory.delete(key)
-      }
-    }
-  }
-
   async shouldPrompt(params: {
     url: string
     code: string
@@ -99,31 +73,10 @@ class RedemptionAssistService {
       return { shouldPrompt: false, reason: "disabled" }
     }
 
-    const { url, code, tabId } = params
+    const { code } = params
 
     if (!isPossibleRedemptionCode(code)) {
       return { shouldPrompt: false, reason: "invalid_code" }
-    }
-
-    const now = Date.now()
-    this.cleanupPromptHistory(now)
-
-    if (typeof tabId === "number") {
-      const last = this.lastPromptPerTab.get(tabId)
-      if (last && now - last < COOLDOWN_MS) {
-        return { shouldPrompt: false, reason: "cooldown" }
-      }
-    }
-
-    const key = this.makeKey(url, code)
-    const lastTs = this.promptHistory.get(key)
-    if (lastTs && now - lastTs < DEDUP_TTL_MS) {
-      return { shouldPrompt: false, reason: "dedup" }
-    }
-
-    this.promptHistory.set(key, now)
-    if (typeof tabId === "number") {
-      this.lastPromptPerTab.set(tabId, now)
     }
 
     return { shouldPrompt: true }
