@@ -5,15 +5,15 @@ import toast from "react-hot-toast"
 
 import { fetchUserInfo } from "~/services/apiService"
 import type { DisplaySiteData } from "~/types"
+import { getErrorMessage } from "~/utils/error"
 import { extractRedemptionCodesFromText } from "~/utils/redemptionAssist"
 
-import { getErrorMessage } from "../utils/error"
-import { ContentReactRoot } from "./content/ContentReactRoot"
-import { RedemptionAccountSelectToast } from "./content/RedemptionAccountSelectToast"
+import { ContentReactRoot } from "./ContentReactRoot"
+import { RedemptionAccountSelectToast } from "./RedemptionAccountSelectToast"
 import {
   RedemptionPromptToast,
   type RedemptionPromptAction
-} from "./content/RedemptionPromptToast"
+} from "./RedemptionPromptToast"
 
 export default defineContentScript({
   matches: ["<all_urls>"],
