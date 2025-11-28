@@ -20,13 +20,11 @@ export const RedemptionAccountSelectToast: React.FC<
   const { query, setQuery, clearSearch, searchResults, inSearchMode } =
     useAccountSearch(accounts)
 
-  const displayedAccounts = useMemo<DisplaySiteData[]>(
-    () =>
-      inSearchMode && searchResults.length > 0
-        ? searchResults.map((result) => result.account)
-        : accounts,
-    [accounts, inSearchMode, searchResults]
-  )
+  const displayedAccounts = useMemo<DisplaySiteData[]>(() => {
+    if (!inSearchMode) return accounts
+    if (searchResults.length === 0) return []
+    return searchResults.map((result) => result.account)
+  }, [accounts, inSearchMode, searchResults])
 
   const [selectedId, setSelectedId] = useState<string | null>(
     displayedAccounts[0]?.id ?? null
