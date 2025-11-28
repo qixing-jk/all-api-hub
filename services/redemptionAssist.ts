@@ -2,7 +2,9 @@ import { t } from "i18next"
 
 import { accountStorage } from "~/services/accountStorage"
 import { redeemService } from "~/services/redeemService"
+import { searchAccounts } from "~/services/search/accountSearch"
 import { userPreferences } from "~/services/userPreferences"
+import type { DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/error"
 import { isPossibleRedemptionCode } from "~/utils/redemptionAssist"
 
@@ -49,6 +51,23 @@ class RedemptionAssistService {
   private async ensureInitialized() {
     if (!this.initialized) {
       await this.initialize()
+    }
+  }
+
+  private async getDisplayAccounts(): Promise<DisplaySiteData[]> {
+    const siteAccounts = await accountStorage.getAllAccounts()
+    const displayAccounts = accountStorage.convertToDisplayData(
+      siteAccounts
+    ) as DisplaySiteData[]
+    return displayAccounts
+  }
+
+  private getHostname(url: string): string | null {
+    try {
+      const u = new URL(url)
+      return u.hostname.toLowerCase()
+    } catch {
+      return null
     }
   }
 
@@ -117,16 +136,62 @@ class RedemptionAssistService {
 
   async autoRedeemByUrl(url: string, code: string) {
     await this.ensureInitialized()
+    const hostname = this.getHostname(url)
 
-    const account = await accountStorage.checkUrlExists(url)
-    if (!account) {
+    if (!hostname) {
       return {
         success: false,
+        code: "INVALID_URL",
         message: t("redemptionAssist:messages.noAccountForUrl")
       }
     }
 
-    return redeemService.redeemCodeForAccount(account.id, code)
+    const displayAccounts = await this.getDisplayAccounts()
+
+    // First, use accountSearch to get candidates related to this hostname
+    const searchResults = searchAccounts(displayAccounts, hostname)
+
+    // Then, narrow down to accounts whose customCheckInUrl shares the same domain
+    const sameDomainCandidates = searchResults
+      .map((result) => result.account)
+      .filter((account) => {
+        const customCheckInUrl = account.checkIn?.customCheckInUrl
+        if (!customCheckInUrl) return false
+        const accountHost = this.getHostname(customCheckInUrl)
+        return accountHost === hostname
+      })
+
+    if (sameDomainCandidates.length === 1) {
+      // Single clear match – auto redeem
+      const account = sameDomainCandidates[0]
+      const redeemResult = await redeemService.redeemCodeForAccount(
+        account.id,
+        code
+      )
+      // Flatten the result so it matches the RedeemResult shape used elsewhere
+      return {
+        ...redeemResult,
+        selectedAccount: account
+      }
+    }
+
+    if (sameDomainCandidates.length > 1) {
+      // Multiple matches – let the content script show a selector
+      return {
+        success: false,
+        code: "MULTIPLE_ACCOUNTS",
+        candidates: sameDomainCandidates
+      }
+    }
+
+    // No valid match by hostname + customCheckInUrl – return all accounts for manual search
+    return {
+      success: false,
+      code: "NO_ACCOUNTS",
+      candidates: [],
+      allAccounts: displayAccounts,
+      message: t("redemptionAssist:messages.noAccountForUrl")
+    }
   }
 }
 

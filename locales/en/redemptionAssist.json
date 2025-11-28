@@ -17,5 +17,14 @@
     "error": {
       "saveFailed": "Failed to save redemption assist settings."
     }
+  },
+  "actions": {
+    "autoRedeem": "Auto redeem"
+  },
+  "accountSelect": {
+    "title": "Select an account to use for redemption",
+    "confirm": "Confirm redemption",
+    "titleMultiple": "Multiple accounts available, please select one for redemption",
+    "titleFallback": "No account matched this site, please select one manually"
   }
 }

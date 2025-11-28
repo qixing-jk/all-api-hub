@@ -17,5 +17,14 @@
     "error": {
       "saveFailed": "保存兑换助手设置失败。"
     }
+  },
+  "actions": {
+    "autoRedeem": "自动兑换"
+  },
+  "accountSelect": {
+    "title": "选择要用于兑换的账号",
+    "confirm": "确认兑换",
+    "titleMultiple": "检测到多个可用账号，请选择一个用于兑换",
+    "titleFallback": "未找到与当前站点匹配的账号，请手动选择一个账号"
   }
 }

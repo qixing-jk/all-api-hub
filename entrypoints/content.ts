@@ -4,10 +4,12 @@ import { createRoot } from "react-dom/client"
 import toast from "react-hot-toast"
 
 import { fetchUserInfo } from "~/services/apiService"
+import type { DisplaySiteData } from "~/types"
 import { extractRedemptionCodesFromText } from "~/utils/redemptionAssist"
 
 import { getErrorMessage } from "../utils/error"
 import { ContentReactRoot } from "./content/ContentReactRoot"
+import { RedemptionAccountSelectToast } from "./content/RedemptionAccountSelectToast"
 import {
   RedemptionPromptToast,
   type RedemptionPromptAction
@@ -251,6 +253,38 @@ async function parseResponseData(
   }
 }
 
+function showAccountSelectToast(
+  accounts: DisplaySiteData[],
+  options?: { title?: string; message?: string }
+): Promise<DisplaySiteData | null> {
+  ensureRedemptionToastRoot()
+
+  return new Promise((resolve) => {
+    let resolved = false
+
+    const handleResolve = (
+      account: DisplaySiteData | null,
+      toastId: string
+    ) => {
+      if (resolved) return
+      resolved = true
+      toast.dismiss(toastId)
+      resolve(account)
+    }
+
+    toast.custom((toastInstance) => {
+      const toastId = toastInstance.id
+      return React.createElement(RedemptionAccountSelectToast, {
+        title: options?.title,
+        message: options?.message,
+        accounts,
+        onSelect: (account: DisplaySiteData | null) =>
+          handleResolve(account, toastId)
+      })
+    })
+  })
+}
+
 // Redemption Assist toast UI
 
 let redemptionToastRoot: any | null = null
@@ -280,7 +314,7 @@ function ensureRedemptionToastRoot() {
 }
 
 function showRedemptionPromptToast(
-  message: string
+  message: string = "test"
 ): Promise<RedemptionPromptAction> {
   ensureRedemptionToastRoot()
 
@@ -335,7 +369,7 @@ function setupRedemptionAssistDetection() {
 
 async function scanForRedemptionCodes() {
   try {
-    const body = document.body
+    const { body } = document
     if (!body) return
 
     const text = body.innerText || ""
@@ -375,19 +409,72 @@ async function scanForRedemptionCodes() {
         code
       })
 
-      if (!redeemResp?.success) {
-        const fallbackMessage = t("redemptionAssist:messages.redeemFailed", {
-          defaultValue: "兑换失败，请稍后重试。"
-        })
-        const msg = redeemResp?.error || fallbackMessage
-        showRedeemResultToast(false, msg)
+      const result = redeemResp?.data
+
+      // Direct success from background auto redeem
+      if (result?.success) {
+        if (result.message) {
+          showRedeemResultToast(true, result.message)
+        }
         continue
       }
 
-      const result = redeemResp.data
-      if (result?.message) {
-        showRedeemResultToast(!!result.success, result.message)
+      // Multiple matching accounts on the same domain – let user choose
+      if (result?.code === "MULTIPLE_ACCOUNTS" && result.candidates?.length) {
+        const selected = await showAccountSelectToast(result.candidates, {
+          title: t("redemptionAssist:accountSelect.titleMultiple", {
+            defaultValue: "检测到多个可用账号，请选择一个用于兑换"
+          })
+        })
+
+        if (!selected) {
+          continue
+        }
+
+        const manualResp: any = await browser.runtime.sendMessage({
+          action: "redemptionAssist:autoRedeem",
+          accountId: selected.id,
+          code
+        })
+
+        const manualResult = manualResp?.data
+        if (manualResult?.message) {
+          showRedeemResultToast(!!manualResult.success, manualResult.message)
+        }
+        continue
       }
+
+      // No clear match – show a search/select across all accounts
+      if (result?.code === "NO_ACCOUNTS" && result.allAccounts?.length) {
+        const selected = await showAccountSelectToast(result.allAccounts, {
+          title: t("redemptionAssist:accountSelect.titleFallback", {
+            defaultValue: "未找到与当前站点匹配的账号，请手动选择"
+          })
+        })
+
+        if (!selected) {
+          continue
+        }
+
+        const manualResp: any = await browser.runtime.sendMessage({
+          action: "redemptionAssist:autoRedeem",
+          accountId: selected.id,
+          code
+        })
+
+        const manualResult = manualResp?.data
+        if (manualResult?.message) {
+          showRedeemResultToast(!!manualResult.success, manualResult.message)
+        }
+        continue
+      }
+
+      // Generic failure fallback
+      const fallbackMessage = t("redemptionAssist:messages.redeemFailed", {
+        defaultValue: "兑换失败，请稍后重试。"
+      })
+      const msg = redeemResp?.error || result?.message || fallbackMessage
+      showRedeemResultToast(false, msg)
     }
   } catch (error) {
     console.error("[RedemptionAssist][Content] scan failed:", error)
