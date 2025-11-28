@@ -5,5 +5,5 @@ import "~/utils/i18n"
 import "~/styles/style.css"
 
 export const ContentReactRoot: React.FC = () => {
-  return <Toaster position="bottom-center" gutter={8} />
+  return <Toaster position="top-right" gutter={8} />
 }
