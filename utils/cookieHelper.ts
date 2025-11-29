@@ -3,6 +3,8 @@
  * 使用 WebRequest 拦截器自动注入 Cookie
  */
 
+import { isFirefox } from "~/utils/browser"
+
 // Cookie 缓存
 interface CookieCache {
   cookies: string

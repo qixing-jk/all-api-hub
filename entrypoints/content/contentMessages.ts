@@ -94,15 +94,16 @@ export function setupContentMessageHandlers() {
 
           const normalizedOptions = normalizeFetchOptions(fetchOptions)
           normalizedOptions.credentials = "include"
-          if (normalizedOptions.headers) {
-            /** 添加扩展标识头
-             * 用于区分是来自扩展的请求，方便服务器做特殊处理
-             * @see handleWebRequest
-             */
-            // @ts-expect-error 专门添加扩展标识头
-            normalizedOptions.headers[EXTENSION_HEADER_NAME] =
-              EXTENSION_HEADER_VALUE
+          /** 添加扩展标识头
+           * 用于区分是来自扩展的请求，方便服务器做特殊处理
+           * @see handleWebRequest
+           */
+          if (!normalizedOptions.headers) {
+            normalizedOptions.headers = {}
           }
+          ;(normalizedOptions.headers as Record<string, string>)[
+            EXTENSION_HEADER_NAME
+          ] = EXTENSION_HEADER_VALUE
           const response = await fetch(fetchUrl, normalizedOptions)
 
           const headers: Record<string, string> = {}
