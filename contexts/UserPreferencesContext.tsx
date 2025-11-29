@@ -12,6 +12,7 @@ import { UI_CONSTANTS } from "~/constants/ui"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
+  type TempWindowFallbackPreferences,
   type UserPreferences
 } from "~/services/userPreferences"
 import type { BalanceType, CurrencyType, SortField, SortOrder } from "~/types"
@@ -42,6 +43,7 @@ interface UserPreferencesContextType {
   newApiAdminToken: string
   newApiUserId: string
   themeMode: ThemeMode
+  tempWindowFallback: TempWindowFallbackPreferences
 
   updateActiveTab: (activeTab: BalanceType) => Promise<boolean>
   updateDefaultTab: (activeTab: BalanceType) => Promise<boolean>
@@ -71,6 +73,9 @@ interface UserPreferencesContextType {
     updates: Partial<ModelRedirectPreferences>
   ) => Promise<boolean>
   updateRedemptionAssist: (updates: { enabled: boolean }) => Promise<boolean>
+  updateTempWindowFallback: (
+    updates: Partial<TempWindowFallbackPreferences>
+  ) => Promise<boolean>
   resetToDefaults: () => Promise<boolean>
   resetDisplaySettings: () => Promise<boolean>
   resetAutoRefreshConfig: () => Promise<boolean>
@@ -389,6 +394,38 @@ export const UserPreferencesProvider = ({
     []
   )
 
+  const updateTempWindowFallback = useCallback(
+    async (updates: Partial<TempWindowFallbackPreferences>) => {
+      const success = await userPreferences.savePreferences({
+        tempWindowFallback: updates
+      })
+      if (success) {
+        setPreferences((prev) => {
+          if (!prev) return null
+          const merged: TempWindowFallbackPreferences = {
+            ...(DEFAULT_PREFERENCES.tempWindowFallback ?? {
+              enabled: true,
+              useInPopup: true,
+              useInSidePanel: true,
+              useInOptions: true,
+              useForAutoRefresh: true,
+              useForManualRefresh: true
+            }),
+            ...(prev.tempWindowFallback ?? {}),
+            ...updates
+          }
+          return {
+            ...prev,
+            tempWindowFallback: merged,
+            lastUpdated: Date.now()
+          }
+        })
+      }
+      return success
+    },
+    []
+  )
+
   const resetToDefaults = useCallback(async () => {
     const success = await userPreferences.resetToDefaults()
     if (success) {
@@ -630,6 +667,9 @@ export const UserPreferencesProvider = ({
     newApiAdminToken: preferences?.newApi?.adminToken || "",
     newApiUserId: preferences?.newApi?.userId || "",
     themeMode: preferences?.themeMode || "system",
+    tempWindowFallback:
+      preferences.tempWindowFallback ??
+      (DEFAULT_PREFERENCES.tempWindowFallback as TempWindowFallbackPreferences),
     updateActiveTab,
     updateDefaultTab,
     updateCurrencyType,
@@ -647,6 +687,7 @@ export const UserPreferencesProvider = ({
     updateNewApiModelSync,
     updateModelRedirect,
     updateRedemptionAssist,
+    updateTempWindowFallback,
     resetToDefaults,
     resetDisplaySettings,
     resetAutoRefreshConfig,

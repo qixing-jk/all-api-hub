@@ -44,6 +44,7 @@ export { Switch, switchVariants } from "./Switch"
 export { EmptyState } from "./EmptyState"
 export { Modal } from "./Dialog/Modal"
 export { Separator } from "./Separator"
+export { Checkbox } from "./checkbox"
 
 // Typography Components
 export {

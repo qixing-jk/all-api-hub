@@ -5,8 +5,18 @@ import type {
   LogItem,
   TodayUsageData
 } from "~/services/apiService/common/type"
+import {
+  DEFAULT_PREFERENCES,
+  userPreferences,
+  type TempWindowFallbackPreferences
+} from "~/services/userPreferences"
 import { AuthTypeEnum } from "~/types"
-import { isFirefox } from "~/utils/browser.ts"
+import {
+  isExtensionPopup,
+  isExtensionSidePanel,
+  isFirefox,
+  OPTIONS_PAGE_URL
+} from "~/utils/browser.ts"
 import {
   tempWindowFetch,
   type TempWindowFetchParams,
@@ -333,6 +343,28 @@ interface TempWindowFallbackContext {
   responseType: TempWindowResponseType
 }
 
+function logSkipTempWindowFallback(
+  message: string,
+  context: TempWindowFallbackContext,
+  extra?: Record<string, unknown>
+): void {
+  try {
+    const location = context.endpoint
+      ? `endpoint "${context.endpoint}"`
+      : `url ${context.url}`
+
+    const base = `[API Service] Temp window fallback skipped for ${location}: ${message}`
+
+    if (extra && Object.keys(extra).length > 0) {
+      console.log(base, extra)
+    } else {
+      console.log(base)
+    }
+  } catch {
+    // ignore logging errors
+  }
+}
+
 async function executeWithTempWindowFallback<T>(
   context: TempWindowFallbackContext,
   primaryRequest: () => Promise<T | ApiResponse<T>>
@@ -340,7 +372,7 @@ async function executeWithTempWindowFallback<T>(
   try {
     return await primaryRequest()
   } catch (error) {
-    if (!shouldUseTempWindowFallback(error, context)) {
+    if (!(await shouldUseTempWindowFallback(error, context))) {
       throw error
     }
 
@@ -348,23 +380,148 @@ async function executeWithTempWindowFallback<T>(
   }
 }
 
-function shouldUseTempWindowFallback(
+async function shouldUseTempWindowFallback(
   error: unknown,
   context: TempWindowFallbackContext
-): boolean {
+): Promise<boolean> {
   if (!(error instanceof ApiError)) {
+    logSkipTempWindowFallback(
+      "Error is not an ApiError instance; treating as normal network/other error.",
+      context,
+      { error }
+    )
     return false
   }
 
   if (!error.statusCode || !TEMP_WINDOW_FALLBACK_STATUS.has(error.statusCode)) {
+    logSkipTempWindowFallback(
+      "HTTP status is not in the fallback set (only 401/403/429 trigger shield).",
+      context,
+      {
+        statusCode: error.statusCode
+      }
+    )
     return false
   }
 
   if (!isHttpUrl(context.baseUrl)) {
+    logSkipTempWindowFallback(
+      "Base URL is not HTTP/HTTPS; temp window fallback only supports http(s).",
+      context,
+      {
+        baseUrl: context.baseUrl
+      }
+    )
     return false
   }
 
-  return Boolean(context.fetchOptions)
+  if (!context.fetchOptions) {
+    logSkipTempWindowFallback(
+      "Missing fetch options; cannot safely re-issue request via temp window.",
+      context
+    )
+    return false
+  }
+
+  try {
+    if (typeof window !== "undefined" && isFirefox() && isExtensionPopup()) {
+      logSkipTempWindowFallback(
+        "Running in Firefox popup; temp window fallback is forcibly disabled to avoid closing the popup.",
+        context
+      )
+      return false
+    }
+  } catch {
+    // ignore environment detection errors
+  }
+
+  let prefsFallback: TempWindowFallbackPreferences | undefined
+  try {
+    const prefs = await userPreferences.getPreferences()
+    prefsFallback =
+      (prefs.tempWindowFallback as TempWindowFallbackPreferences | undefined) ??
+      (DEFAULT_PREFERENCES.tempWindowFallback as TempWindowFallbackPreferences)
+  } catch {
+    prefsFallback =
+      DEFAULT_PREFERENCES.tempWindowFallback as TempWindowFallbackPreferences
+  }
+
+  if (!prefsFallback || !prefsFallback.enabled) {
+    logSkipTempWindowFallback(
+      "Temp window shield is disabled or preferences are missing.",
+      context,
+      {
+        enabled: prefsFallback?.enabled ?? null
+      }
+    )
+    return false
+  }
+
+  const isBackground =
+    typeof window === "undefined" || typeof document === "undefined"
+
+  let inPopup = false
+  let inSidePanel = false
+  let inOptions = false
+
+  if (!isBackground) {
+    try {
+      if (isExtensionPopup()) {
+        inPopup = true
+      } else if (isExtensionSidePanel()) {
+        inSidePanel = true
+      } else if (typeof window !== "undefined") {
+        const href = window.location?.href || ""
+        if (href && href.startsWith(OPTIONS_PAGE_URL)) {
+          inOptions = true
+        }
+      }
+    } catch {
+      // ignore environment detection errors
+    }
+  }
+
+  const isAutoRefreshContext = isBackground
+  const isManualRefreshContext = !isBackground
+
+  if (inPopup && !prefsFallback.useInPopup) {
+    logSkipTempWindowFallback(
+      "Popup context is disabled by user shield preferences.",
+      context
+    )
+    return false
+  }
+  if (inSidePanel && !prefsFallback.useInSidePanel) {
+    logSkipTempWindowFallback(
+      "Side panel context is disabled by user shield preferences.",
+      context
+    )
+    return false
+  }
+  if (inOptions && !prefsFallback.useInOptions) {
+    logSkipTempWindowFallback(
+      "Options page context is disabled by user shield preferences.",
+      context
+    )
+    return false
+  }
+
+  if (isAutoRefreshContext && !prefsFallback.useForAutoRefresh) {
+    logSkipTempWindowFallback(
+      "Auto-refresh context is disabled by user shield preferences.",
+      context
+    )
+    return false
+  }
+  if (isManualRefreshContext && !prefsFallback.useForManualRefresh) {
+    logSkipTempWindowFallback(
+      "Manual refresh context is disabled by user shield preferences.",
+      context
+    )
+    return false
+  }
+
+  return true
 }
 
 async function fetchViaTempWindow<T>(

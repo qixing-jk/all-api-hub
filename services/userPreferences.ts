@@ -35,6 +35,15 @@ import { DeepPartial } from "~/types/utils.ts"
 import { deepOverride } from "~/utils"
 import { DEFAULT_SORTING_PRIORITY_CONFIG } from "~/utils/sortingPriority"
 
+export interface TempWindowFallbackPreferences {
+  enabled: boolean
+  useInPopup: boolean
+  useInSidePanel: boolean
+  useInOptions: boolean
+  useForAutoRefresh: boolean
+  useForManualRefresh: boolean
+}
+
 // 用户偏好设置类型定义
 export interface UserPreferences {
   themeMode: ThemeMode
@@ -111,6 +120,11 @@ export interface UserPreferences {
   redemptionAssist?: {
     enabled: boolean
   }
+
+  /**
+   * 临时窗口过盾相关设置
+   */
+  tempWindowFallback?: TempWindowFallbackPreferences
 
   /**
    * 最后更新时间
@@ -227,7 +241,15 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   sortingPriorityConfig: undefined,
   themeMode: "system",
   language: undefined, // Default to undefined to trigger browser detection
-  preferencesVersion: CURRENT_PREFERENCES_VERSION
+  preferencesVersion: CURRENT_PREFERENCES_VERSION,
+  tempWindowFallback: {
+    enabled: true,
+    useInPopup: true,
+    useInSidePanel: true,
+    useInOptions: true,
+    useForAutoRefresh: true,
+    useForManualRefresh: true
+  }
 }
 
 class UserPreferencesService {

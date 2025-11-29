@@ -34,7 +34,19 @@
     "refreshOnOpen": "Auto-refresh when opening plugin",
     "refreshOnOpenDesc": "Auto-refresh account data when opening the plugin popup",
     "minRefreshInterval": "Minimum Refresh Interval",
-    "minRefreshIntervalDesc": "Minimum time interval for auto-refresh to avoid frequent requests (manual refresh is not restricted)"
+    "minRefreshIntervalDesc": "Minimum time interval for auto-refresh to avoid frequent requests (manual refresh is not restricted)",
+    "shieldTitle": "Temp-window protection bypass",
+    "shieldDescription": "Configure how the extension uses a temporary window with cookies to automatically bypass website protection pages (for example Cloudflare 5s checks) and then fetch data.",
+    "shieldEnabled": "Enable protection bypass (temp window)",
+    "shieldEnabledDesc": "When disabled, the extension will not open a temporary window to bypass website protection pages.",
+    "shieldContextsTitle": "Use protection bypass in these contexts",
+    "shieldContextsDesc": "Choose where the temp-window protection bypass is allowed. Individual options are ignored when the main switch is disabled.",
+    "shieldPopup": "Use in popup",
+    "shieldSidepanel": "Use in side panel",
+    "shieldOptions": "Use on options page",
+    "shieldAutoRefresh": "Use for automatic refresh",
+    "shieldManualRefresh": "Use for manual refresh",
+    "shieldPopupFirefoxNote": "In Firefox popup, shielded data requests are always disabled to avoid closing the popup. This setting is still saved for other browsers."
   },
   "sorting": {
     "title": "Sorting Priority Settings",

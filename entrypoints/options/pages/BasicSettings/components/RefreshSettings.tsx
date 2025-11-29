@@ -5,8 +5,7 @@ import { useTranslation } from "react-i18next"
 import { SettingSection } from "~/components/SettingSection"
 import { Card, CardItem, CardList, Input, Switch } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-
-import { showUpdateToast } from "../../../../../utils/toastHelpers.ts"
+import { showUpdateToast } from "~/utils/toastHelpers.ts"
 
 export default function RefreshSettings() {
   const { t } = useTranslation("settings")
@@ -116,7 +115,7 @@ export default function RefreshSettings() {
                     placeholder="360"
                     className="w-24"
                   />
-                  <span className="text-sm text-gray-500 dark:text-dark-text-secondary">
+                  <span className="dark:text-dark-text-secondary text-sm text-gray-500">
                     {t("common:time.seconds")}
                   </span>
                 </div>
@@ -155,7 +154,7 @@ export default function RefreshSettings() {
                   placeholder="60"
                   className="w-24"
                 />
-                <span className="text-sm text-gray-500 dark:text-dark-text-secondary">
+                <span className="dark:text-dark-text-secondary text-sm text-gray-500">
                   {t("common:time.seconds")}
                 </span>
               </div>
