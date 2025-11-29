@@ -6,12 +6,13 @@ import type {
   TodayUsageData
 } from "~/services/apiService/common/type"
 import { AuthTypeEnum } from "~/types"
+import { isFirefox } from "~/utils/browser.ts"
 import {
   tempWindowFetch,
   type TempWindowFetchParams,
   type TempWindowResponseType
 } from "~/utils/browserApi"
-import { addExtensionHeader, isFirefox } from "~/utils/cookieHelper"
+import { addExtensionHeader } from "~/utils/cookieHelper"
 import { joinUrl } from "~/utils/url"
 
 /**

@@ -84,20 +84,6 @@ export function clearCookieCache(url?: string): void {
 }
 
 /**
- * 检测是否为 Firefox 浏览器
- */
-export function isFirefox(): boolean {
-  try {
-    return (
-      typeof browser !== "undefined" &&
-      typeof browser.runtime.getBrowserInfo !== "undefined"
-    )
-  } catch {
-    return false
-  }
-}
-
-/**
  * WebRequest 拦截处理函数
  */
 async function handleWebRequest(details: any) {

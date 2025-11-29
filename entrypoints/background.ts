@@ -1,12 +1,18 @@
 import { t } from "i18next"
 
+import { accountStorage } from "~/services/accountStorage"
+import { modelMetadataService } from "~/services/modelMetadata"
+import {
+  handleNewApiModelSyncMessage,
+  newApiModelSyncScheduler
+} from "~/services/newApiModelSync"
+import { AuthTypeEnum, type SiteAccount } from "~/types"
 import { initBackgroundI18n } from "~/utils/background-i18n.ts"
 import {
   registerWebRequestInterceptor,
   setupWebRequestInterceptor
 } from "~/utils/cookieHelper"
 
-import { accountStorage } from "../services/accountStorage"
 import {
   autoCheckinScheduler,
   handleAutoCheckinMessage
@@ -18,11 +24,6 @@ import {
 import { handleChannelConfigMessage } from "../services/channelConfigStorage"
 import { migrateAccountsConfig } from "../services/configMigration/account/accountDataMigration.ts"
 import { getSiteType } from "../services/detectSiteType"
-import { modelMetadataService } from "../services/modelMetadata"
-import {
-  handleNewApiModelSyncMessage,
-  newApiModelSyncScheduler
-} from "../services/newApiModelSync"
 import {
   handleRedemptionAssistMessage,
   redemptionAssistService
@@ -32,7 +33,6 @@ import {
   handleWebdavAutoSyncMessage,
   webdavAutoSyncService
 } from "../services/webdav/webdavAutoSyncService.ts"
-import { AuthTypeEnum, type SiteAccount } from "../types"
 import {
   createTab,
   createWindow,
@@ -182,7 +182,7 @@ async function main() {
   })
 
   // 处理来自 popup 的消息
-  onRuntimeMessage((request, _sender, sendResponse) => {
+  onRuntimeMessage((request, sender, sendResponse) => {
     if (request.action === "openTempWindow") {
       handleOpenTempWindow(request, sendResponse)
       return true // 保持异步响应通道
