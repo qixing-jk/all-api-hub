@@ -1,6 +1,10 @@
 import { t } from "i18next"
 
 import { fetchUserInfo } from "~/services/apiService"
+import {
+  EXTENSION_HEADER_NAME,
+  EXTENSION_HEADER_VALUE
+} from "~/utils/cookieHelper.ts"
 import { getErrorMessage } from "~/utils/error"
 
 export function setupContentMessageHandlers() {
@@ -90,6 +94,15 @@ export function setupContentMessageHandlers() {
 
           const normalizedOptions = normalizeFetchOptions(fetchOptions)
           normalizedOptions.credentials = "include"
+          if (normalizedOptions.headers) {
+            /** 添加扩展标识头
+             * 用于区分是来自扩展的请求，方便服务器做特殊处理
+             * @see handleWebRequest
+             */
+            // @ts-expect-error 专门添加扩展标识头
+            normalizedOptions.headers[EXTENSION_HEADER_NAME] =
+              EXTENSION_HEADER_VALUE
+          }
           const response = await fetch(fetchUrl, normalizedOptions)
 
           const headers: Record<string, string> = {}

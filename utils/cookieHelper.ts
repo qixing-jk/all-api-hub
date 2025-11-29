@@ -13,8 +13,8 @@ const cookieCache = new Map<string, CookieCache>()
 const CACHE_DURATION = 10000 // 10秒缓存
 
 // 请求标识头
-const EXTENSION_HEADER_NAME = "All-API-Hub"
-const EXTENSION_HEADER_VALUE = "true"
+export const EXTENSION_HEADER_NAME = "All-API-Hub"
+export const EXTENSION_HEADER_VALUE = "true"
 
 // 拦截器注册状态
 let isInterceptorRegistered = false
@@ -86,7 +86,7 @@ export function clearCookieCache(url?: string): void {
 /**
  * WebRequest 拦截处理函数
  */
-async function handleWebRequest(details: any) {
+export async function handleWebRequest(details: any) {
   const headers = details.requestHeaders || []
 
   // 只处理带有扩展标识的请求
