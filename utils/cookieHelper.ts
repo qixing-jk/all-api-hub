@@ -18,7 +18,6 @@ export const EXTENSION_HEADER_VALUE = "true"
 
 // 拦截器注册状态
 let isInterceptorRegistered = false
-let currentUrlPatterns: string[] = []
 
 /**
  * 获取指定 URL 的 Cookie 请求头
@@ -156,7 +155,6 @@ export function registerWebRequestInterceptor(urlPatterns: string[]): void {
     // 如果没有 URL 模式，不注册
     if (!urlPatterns || urlPatterns.length === 0) {
       console.log("[Cookie Helper] 无 URL 白名单，跳过注册")
-      currentUrlPatterns = []
       return
     }
 
@@ -168,7 +166,6 @@ export function registerWebRequestInterceptor(urlPatterns: string[]): void {
     )
 
     isInterceptorRegistered = true
-    currentUrlPatterns = urlPatterns
     console.log(
       `[Cookie Helper] 拦截器注册成功，监控 ${urlPatterns.length} 个 URL 模式:`,
       urlPatterns
@@ -176,7 +173,6 @@ export function registerWebRequestInterceptor(urlPatterns: string[]): void {
   } catch (error) {
     console.error("[Cookie Helper] 拦截器注册失败:", error)
     isInterceptorRegistered = false
-    currentUrlPatterns = []
   }
 }
 
