@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.18.0](https://github.com/qixing-jk/all-api-hub/compare/v2.17.0...v2.18.0) (2025-11-29)
+
+
+### Features
+
+* add shield settings for temporary window fallback ([#205](https://github.com/qixing-jk/all-api-hub/issues/205)) ([bf10e90](https://github.com/qixing-jk/all-api-hub/commit/bf10e90774497b6c32628f103327ee02370f1d34))
+* **docs:** add redemption assist feature documentation ([d7ea3bf](https://github.com/qixing-jk/all-api-hub/commit/d7ea3bf8796a0226f208c636b2532aacab12fcf6))
+* **firefox:** implement WebRequest-based cookie injection mechanism ([#201](https://github.com/qixing-jk/all-api-hub/issues/201)) ([b0edaa1](https://github.com/qixing-jk/all-api-hub/commit/b0edaa17d4b53328865110c34b9f88c96e7f5720))
+* **redemption:** add theme support and remove redundant toast root check ([82f36e2](https://github.com/qixing-jk/all-api-hub/commit/82f36e28e003c9f2f475a0136cc13c910315d116))
+* **redemption:** enhance prompt toast with source info & settings link ([c831ace](https://github.com/qixing-jk/all-api-hub/commit/c831ace12a9925f50a109a5d9b4d874f3f5846f7))
+
+
+### Bug Fixes
+
+* correct tailwind CSS file path in components.json ([2bac548](https://github.com/qixing-jk/all-api-hub/commit/2bac548fc3c29e4e10bec867e100a0cd045fc590))
+
 ## [2.17.0](https://github.com/qixing-jk/all-api-hub/compare/v2.16.0...v2.17.0) (2025-11-28)
 
 
