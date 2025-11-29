@@ -87,7 +87,9 @@ export function clearCookieCache(url?: string): void {
 /**
  * WebRequest 拦截处理函数
  */
-export async function handleWebRequest(details: any) {
+export async function handleWebRequest(
+  details: browser.webRequest._OnBeforeSendHeadersDetails
+) {
   const headers = details.requestHeaders || []
 
   // 只处理带有扩展标识的请求
