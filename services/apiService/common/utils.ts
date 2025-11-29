@@ -392,6 +392,8 @@ async function fetchViaTempWindow<T>(
 
   const response = await tempWindowFetch(requestPayload)
 
+  console.log("[API Service] Temp window fetch response:", response)
+
   if (!response.success) {
     throw new ApiError(
       response.error || "Temp window fetch failed",

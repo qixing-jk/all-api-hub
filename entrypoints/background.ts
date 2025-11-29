@@ -6,7 +6,7 @@ import {
   handleNewApiModelSyncMessage,
   newApiModelSyncScheduler
 } from "~/services/newApiModelSync"
-import { AuthTypeEnum, type SiteAccount } from "~/types"
+import { type SiteAccount } from "~/types"
 import { initBackgroundI18n } from "~/utils/background-i18n.ts"
 import {
   registerWebRequestInterceptor,
@@ -96,10 +96,9 @@ async function main() {
 
   await initializeServices()
 
-  // 辅助函数：从账号列表提取 Cookie 认证站点的 URL 模式
-  function extractCookieAuthUrlPatterns(accounts: SiteAccount[]): string[] {
+  // 辅助函数：从账号列表提取 站点的 URL 模式
+  function extractAccountUrlPatterns(accounts: SiteAccount[]): string[] {
     const patterns = accounts
-      .filter((acc) => acc.authType === AuthTypeEnum.Cookie)
       .map((acc) => {
         try {
           const url = new URL(acc.site_url)
@@ -122,7 +121,7 @@ async function main() {
   async function initializeCookieInterceptor(): Promise<void> {
     try {
       const accounts = await accountStorage.getAllAccounts()
-      const urlPatterns = extractCookieAuthUrlPatterns(accounts)
+      const urlPatterns = extractAccountUrlPatterns(accounts)
       setupWebRequestInterceptor(urlPatterns)
     } catch (error) {
       console.error("[Background] 初始化 cookie 拦截器失败：", error)
@@ -133,7 +132,7 @@ async function main() {
   async function updateCookieInterceptor(): Promise<void> {
     try {
       const accounts = await accountStorage.getAllAccounts()
-      const urlPatterns = extractCookieAuthUrlPatterns(accounts)
+      const urlPatterns = extractAccountUrlPatterns(accounts)
       registerWebRequestInterceptor(urlPatterns)
     } catch (error) {
       console.error("[Background] 更新 cookie 拦截器失败：", error)
