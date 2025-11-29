@@ -31,6 +31,13 @@ Object.defineProperty(window, "matchMedia", {
 
 const globalAny = globalThis as any
 
+if (!globalAny.browser) {
+  globalAny.browser = fakeBrowser
+}
+if (!globalAny.chrome) {
+  globalAny.chrome = fakeBrowser
+}
+
 globalAny.IntersectionObserver = class IntersectionObserver {
   disconnect() {}
   observe() {}
