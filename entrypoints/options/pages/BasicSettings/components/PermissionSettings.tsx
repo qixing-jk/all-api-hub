@@ -95,45 +95,59 @@ export default function PermissionSettings() {
       )
       let success = false
 
-      if (shouldEnable) {
-        success = await requestPermission(id)
-        console.log(
-          `[Permissions] Request ${id} ${success ? "succeeded" : "failed"}`
-        )
-        showResultToast(
-          success,
-          t("permissions.messages.granted", { name: label }),
-          t("permissions.messages.grantFailed", { name: label })
-        )
-      } else {
-        success = await removePermission(id)
-        console.log(
-          `[Permissions] Remove ${id} ${success ? "succeeded" : "failed"}`
-        )
-        showResultToast(
-          success,
-          t("permissions.messages.revoked", { name: label }),
-          t("permissions.messages.revokeFailed", { name: label })
-        )
-      }
+      try {
+        if (shouldEnable) {
+          success = await requestPermission(id)
+          console.log(
+            `[Permissions] Request ${id} ${success ? "succeeded" : "failed"}`
+          )
+          showResultToast(
+            success,
+            t("permissions.messages.granted", { name: label }),
+            t("permissions.messages.grantFailed", { name: label })
+          )
+        } else {
+          success = await removePermission(id)
+          console.log(
+            `[Permissions] Remove ${id} ${success ? "succeeded" : "failed"}`
+          )
+          showResultToast(
+            success,
+            t("permissions.messages.revoked", { name: label }),
+            t("permissions.messages.revokeFailed", { name: label })
+          )
+        }
 
-      if (success) {
+        if (success) {
+          setState((prev) => ({
+            ...prev,
+            statuses: {
+              ...prev.statuses,
+              [id]: shouldEnable
+            }
+          }))
+        }
+      } catch (error) {
+        success = false
+        console.error(`[Permissions] Failed to toggle ${id}`, error)
+        showResultToast(
+          false,
+          shouldEnable
+            ? t("permissions.messages.granted", { name: label })
+            : t("permissions.messages.revoked", { name: label }),
+          shouldEnable
+            ? t("permissions.messages.grantFailed", { name: label })
+            : t("permissions.messages.revokeFailed", { name: label })
+        )
+      } finally {
         setState((prev) => ({
           ...prev,
-          statuses: {
-            ...prev.statuses,
-            [id]: shouldEnable
+          pending: {
+            ...prev.pending,
+            [id]: false
           }
         }))
       }
-
-      setState((prev) => ({
-        ...prev,
-        pending: {
-          ...prev.pending,
-          [id]: false
-        }
-      }))
     },
     [t]
   )
