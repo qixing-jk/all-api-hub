@@ -460,3 +460,51 @@ export function onAlarm(
 export function getManifestVersion(): number {
   return browser.runtime.getManifest().manifest_version
 }
+
+// Permissions helpers
+export async function containsPermissions(
+  permissions: browser.permissions.Permissions
+): Promise<boolean> {
+  try {
+    return await browser.permissions.contains(permissions)
+  } catch (error) {
+    console.error("permissions.contains failed", permissions, error)
+    return false
+  }
+}
+
+export async function requestPermissions(
+  permissions: browser.permissions.Permissions
+): Promise<boolean> {
+  try {
+    return await browser.permissions.request(permissions)
+  } catch (error) {
+    console.error("permissions.request failed", permissions, error)
+    return false
+  }
+}
+
+export async function removePermissions(
+  permissions: browser.permissions.Permissions
+): Promise<boolean> {
+  try {
+    return await browser.permissions.remove(permissions)
+  } catch (error) {
+    console.error("permissions.remove failed", permissions, error)
+    return false
+  }
+}
+
+export function onPermissionsAdded(
+  callback: (permissions: browser.permissions.Permissions) => void
+): () => void {
+  browser.permissions.onAdded.addListener(callback)
+  return () => browser.permissions.onAdded.removeListener(callback)
+}
+
+export function onPermissionsRemoved(
+  callback: (permissions: browser.permissions.Permissions) => void
+): () => void {
+  browser.permissions.onRemoved.addListener(callback)
+  return () => browser.permissions.onRemoved.removeListener(callback)
+}

@@ -32,6 +32,7 @@ import DataBackupTab from "./components/DataBackupTab"
 import GeneralTab from "./components/GeneralTab"
 import LoadingSkeleton from "./components/LoadingSkeleton"
 import NewApiTab from "./components/NewApiTab"
+import PermissionsTab from "./components/PermissionsTab"
 
 type TabId =
   | "general"
@@ -40,6 +41,7 @@ type TabId =
   | "checkinRedeem"
   | "dataBackup"
   | "newApi"
+  | "permissions"
 
 interface TabConfig {
   id: TabId
@@ -51,8 +53,9 @@ const TAB_CONFIGS: TabConfig[] = [
   { id: "accountManagement", component: AccountManagementTab },
   { id: "autoRefresh", component: AutoRefreshTab },
   { id: "checkinRedeem", component: CheckinRedeemTab },
-  { id: "dataBackup", component: DataBackupTab },
-  { id: "newApi", component: NewApiTab }
+  { id: "newApi", component: NewApiTab },
+  { id: "permissions", component: PermissionsTab },
+  { id: "dataBackup", component: DataBackupTab }
 ]
 
 const ANCHOR_TO_TAB: Record<string, TabId> = {
@@ -72,7 +75,8 @@ const ANCHOR_TO_TAB: Record<string, TabId> = {
   "import-export-entry": "dataBackup",
   "new-api": "newApi",
   "new-api-model-sync": "newApi",
-  "dangerous-zone": "newApi"
+  "dangerous-zone": "newApi",
+  permissions: "permissions"
 }
 
 export default function BasicSettings() {

@@ -1,8 +1,11 @@
+import { useCallback, useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
 import {
+  Alert,
   BodySmall,
+  Button,
   Card,
   CardItem,
   CardList,
@@ -11,12 +14,28 @@ import {
   Switch
 } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { hasCookieInterceptorPermissions } from "~/services/permissions/permissionManager"
 import { isFirefox } from "~/utils/browser.ts"
+import { openSettingsTab } from "~/utils/navigation"
 
 export default function ShieldSettings() {
   const { t } = useTranslation("settings")
   const { tempWindowFallback, updateTempWindowFallback } =
     useUserPreferencesContext()
+
+  const [hasCookiePermissions, setHasCookiePermissions] = useState<
+    boolean | null
+  >(null)
+
+  const refreshPermissionStatus = useCallback(async () => {
+    setHasCookiePermissions(null)
+    const granted = await hasCookieInterceptorPermissions()
+    setHasCookiePermissions(granted)
+  }, [])
+
+  useEffect(() => {
+    void refreshPermissionStatus()
+  }, [refreshPermissionStatus])
 
   const isFirefoxEnv = isFirefox()
 
@@ -27,11 +46,38 @@ export default function ShieldSettings() {
   const shieldAutoRefresh = tempWindowFallback.useForAutoRefresh
   const shieldManualRefresh = tempWindowFallback.useForManualRefresh
 
+  const permissionsPending = hasCookiePermissions === null
+  const hasPrerequisitePermissions = hasCookiePermissions === true
+  const disableShieldUI = !hasPrerequisitePermissions || permissionsPending
+
+  const handleOpenPermissionsTab = useCallback(() => {
+    void openSettingsTab("permissions")
+  }, [])
+
   return (
     <SettingSection
       id="shield-settings"
       title={t("refresh.shieldTitle")}
       description={t("refresh.shieldDescription")}>
+      {!hasPrerequisitePermissions && !permissionsPending && (
+        <Alert
+          variant="warning"
+          title={t("refresh.shieldPermissionWarningTitle")}
+          description={t("refresh.shieldPermissionWarningDesc")}>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button size="sm" onClick={handleOpenPermissionsTab}>
+              {t("refresh.shieldPermissionAction")}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => void refreshPermissionStatus()}>
+              {t("permissions.actions.refresh")}
+            </Button>
+          </div>
+        </Alert>
+      )}
+
       <Card padding="none">
         <CardList>
           <CardItem
@@ -40,6 +86,7 @@ export default function ShieldSettings() {
             rightContent={
               <Switch
                 checked={shieldEnabled}
+                disabled={disableShieldUI}
                 onChange={(value) =>
                   updateTempWindowFallback({ enabled: value })
                 }
@@ -56,7 +103,9 @@ export default function ShieldSettings() {
                   <label className="flex items-center space-x-2">
                     <Checkbox
                       checked={shieldPopup}
-                      disabled={!shieldEnabled || isFirefoxEnv}
+                      disabled={
+                        disableShieldUI || !shieldEnabled || isFirefoxEnv
+                      }
                       onCheckedChange={(checked) =>
                         updateTempWindowFallback({
                           useInPopup: Boolean(checked)
@@ -71,7 +120,7 @@ export default function ShieldSettings() {
                   <label className="flex items-center space-x-2">
                     <Checkbox
                       checked={shieldSidepanel}
-                      disabled={!shieldEnabled}
+                      disabled={disableShieldUI || !shieldEnabled}
                       onCheckedChange={(checked) =>
                         updateTempWindowFallback({
                           useInSidePanel: Boolean(checked)
@@ -86,7 +135,7 @@ export default function ShieldSettings() {
                   <label className="flex items-center space-x-2">
                     <Checkbox
                       checked={shieldOptions}
-                      disabled={!shieldEnabled}
+                      disabled={disableShieldUI || !shieldEnabled}
                       onCheckedChange={(checked) =>
                         updateTempWindowFallback({
                           useInOptions: Boolean(checked)
@@ -101,7 +150,7 @@ export default function ShieldSettings() {
                   <label className="flex items-center space-x-2">
                     <Checkbox
                       checked={shieldAutoRefresh}
-                      disabled={!shieldEnabled}
+                      disabled={disableShieldUI || !shieldEnabled}
                       onCheckedChange={(checked) =>
                         updateTempWindowFallback({
                           useForAutoRefresh: Boolean(checked)
@@ -116,7 +165,7 @@ export default function ShieldSettings() {
                   <label className="flex items-center space-x-2">
                     <Checkbox
                       checked={shieldManualRefresh}
-                      disabled={!shieldEnabled}
+                      disabled={disableShieldUI || !shieldEnabled}
                       onCheckedChange={(checked) =>
                         updateTempWindowFallback({
                           useForManualRefresh: Boolean(checked)

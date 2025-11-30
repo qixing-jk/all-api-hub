@@ -13,11 +13,9 @@ export default defineConfig({
       "tabs",
       "storage",
       "alarms",
-      // Firefox 专属：添加 cookies 和 webRequest 权限
-      ...(browser === "firefox"
-        ? ["cookies", "webRequest", "webRequestBlocking"]
-        : ["sidePanel"])
+      ...(browser === "firefox" ? [] : ["sidePanel"])
     ],
+    optional_permissions: ["cookies", "webRequest", "webRequestBlocking"],
     host_permissions: ["https://*/*"],
     browser_specific_settings: {
       gecko: {
