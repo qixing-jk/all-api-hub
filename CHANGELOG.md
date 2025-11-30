@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.19.0](https://github.com/qixing-jk/all-api-hub/compare/v2.18.0...v2.19.0) (2025-11-30)
+
+
+### Features
+
+* **redemption:** add loading state and toast during redemption process ([ca74037](https://github.com/qixing-jk/all-api-hub/commit/ca74037ac21b21acb0d205b9662a3a5ee2e9c109))
+* **redemption:** remove clipboard read functionality ([9970933](https://github.com/qixing-jk/all-api-hub/commit/997093367c82486ff427c73dea6f9c0761663b70))
+
+
+### Bug Fixes
+
+* **i18n:** add missing background error messages ([f7e3466](https://github.com/qixing-jk/all-api-hub/commit/f7e3466a5e81094b870d13a8e7f015363e7a7e1e))
+* prevent concurrent service initialization and race conditions ([12d5fe5](https://github.com/qixing-jk/all-api-hub/commit/12d5fe5d6a61de88acc4cc1d108798b759a6b5dc))
+* resolve intermittent "Could not establish connection" error ([a660120](https://github.com/qixing-jk/all-api-hub/commit/a660120056054eed38c17713d306d7baf5186e76))
+* **tempWindowPool:** prevent race conditions during origin pool destruction ([f595d10](https://github.com/qixing-jk/all-api-hub/commit/f595d10f263a888a2584c1dbefd656117cf20b1d))
+
 ## [2.18.0](https://github.com/qixing-jk/all-api-hub/compare/v2.17.0...v2.18.0) (2025-11-29)
 
 
