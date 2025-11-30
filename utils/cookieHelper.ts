@@ -1,9 +1,9 @@
 import { hasCookieInterceptorPermissions } from "~/services/permissions/permissionManager.ts"
+
 /**
  * Firefox Cookie 助手（WebRequest 方案）
  * 使用 WebRequest 拦截器自动注入 Cookie
  */
-import { isFirefox } from "~/utils/browser"
 
 // Cookie 缓存
 interface CookieCache {
@@ -194,11 +194,6 @@ export async function handleWebRequest(
  * @param urlPatterns URL 白名单模式列表
  */
 export function registerWebRequestInterceptor(urlPatterns: string[]): void {
-  if (!isFirefox()) {
-    console.log("[Cookie Helper] 非 Firefox 环境，跳过拦截器注册")
-    return
-  }
-
   try {
     // 先注销旧的拦截器
     if (isInterceptorRegistered) {
@@ -236,11 +231,6 @@ export function registerWebRequestInterceptor(urlPatterns: string[]): void {
  * @param urlPatterns 初始 URL 白名单
  */
 export function setupWebRequestInterceptor(urlPatterns: string[] = []): void {
-  if (!isFirefox()) {
-    console.log("[Cookie Helper] 非 Firefox 环境，跳过初始化")
-    return
-  }
-
   registerWebRequestInterceptor(urlPatterns)
 }
 
@@ -250,10 +240,6 @@ export function setupWebRequestInterceptor(urlPatterns: string[] = []): void {
 export function addExtensionHeader(
   headers: HeadersInit = {}
 ): Record<string, string> {
-  if (!isFirefox()) {
-    return headers as Record<string, string>
-  }
-
   const headersObj = normalizeHeaders(headers)
   headersObj[EXTENSION_HEADER_NAME] = EXTENSION_HEADER_VALUE
   return headersObj
