@@ -461,6 +461,10 @@ export function getManifestVersion(): number {
   return browser.runtime.getManifest().manifest_version
 }
 
+export function getManifest(): browser._manifest.WebExtensionManifest {
+  return browser.runtime.getManifest()
+}
+
 // Permissions helpers
 export async function containsPermissions(
   permissions: browser.permissions.Permissions

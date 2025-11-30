@@ -1,16 +1,30 @@
 import {
   containsPermissions,
+  getManifest,
   removePermissions,
   requestPermissions
 } from "~/utils/browserApi"
 
-export const OPTIONAL_PERMISSIONS = [
+const ALL_OPTIONAL_PERMISSIONS = [
   "cookies",
   "webRequest",
   "webRequestBlocking"
 ] as const
 
-export type OptionalPermission = (typeof OPTIONAL_PERMISSIONS)[number]
+export type OptionalPermission = (typeof ALL_OPTIONAL_PERMISSIONS)[number]
+
+function readOptionalPermissions(): OptionalPermission[] {
+  const manifest = getManifest()
+  const manifestPermissions = manifest.optional_permissions ?? []
+
+  return manifestPermissions.filter(
+    (permission): permission is OptionalPermission =>
+      (ALL_OPTIONAL_PERMISSIONS as readonly string[]).includes(permission)
+  )
+}
+
+export const OPTIONAL_PERMISSIONS: OptionalPermission[] =
+  readOptionalPermissions()
 
 export const COOKIE_INTERCEPTOR_PERMISSIONS: OptionalPermission[] = [
   ...OPTIONAL_PERMISSIONS
