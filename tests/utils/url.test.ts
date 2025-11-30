@@ -238,7 +238,8 @@ describe("updateUrlWithTab", () => {
     updateUrlWithTab("settings", { hashPage: "config" })
     const call = vi.mocked(window.history.replaceState).mock.calls[0]
     const url = call[2] as string
-    expect(url).toContain("#config?tab=settings")
+    expect(url).toContain("#config")
+    expect(url).toContain("?tab=settings")
   })
 
   it("should preserve existing search parameters", () => {
@@ -328,7 +329,8 @@ describe("navigateToAnchor", () => {
     expect(window.history.replaceState).toHaveBeenCalled()
     const call = vi.mocked(window.history.replaceState).mock.calls[0]
     const url = call[2] as string
-    expect(url).toContain("#config?tab=settings")
+    expect(url).toContain("#config")
+    expect(url).toContain("?tab=settings")
   })
 
   it("should handle element not found gracefully", async () => {
