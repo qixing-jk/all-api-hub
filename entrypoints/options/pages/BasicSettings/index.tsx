@@ -19,6 +19,7 @@ import {
 } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { PageHeader } from "~/entrypoints/options/components/PageHeader"
+import { OPTIONAL_PERMISSIONS } from "~/services/permissions/permissionManager"
 import {
   navigateToAnchor,
   parseTabFromUrl,
@@ -48,15 +49,22 @@ interface TabConfig {
   component: ComponentType
 }
 
-const TAB_CONFIGS: TabConfig[] = [
+const hasOptionalPermissions = OPTIONAL_PERMISSIONS.length > 0
+
+const PERMISSIONS_TAB_CONFIG: TabConfig = {
+  id: "permissions",
+  component: PermissionsTab
+}
+
+const TAB_CONFIGS = [
   { id: "general", component: GeneralTab },
   { id: "accountManagement", component: AccountManagementTab },
   { id: "autoRefresh", component: AutoRefreshTab },
   { id: "checkinRedeem", component: CheckinRedeemTab },
   { id: "newApi", component: NewApiTab },
-  { id: "permissions", component: PermissionsTab },
+  ...(hasOptionalPermissions ? [PERMISSIONS_TAB_CONFIG] : []),
   { id: "dataBackup", component: DataBackupTab }
-]
+] satisfies TabConfig[]
 
 const ANCHOR_TO_TAB: Record<string, TabId> = {
   "general-display": "general",
@@ -76,7 +84,7 @@ const ANCHOR_TO_TAB: Record<string, TabId> = {
   "new-api": "newApi",
   "new-api-model-sync": "newApi",
   "dangerous-zone": "newApi",
-  permissions: "permissions"
+  ...(hasOptionalPermissions ? { permissions: "permissions" } : {})
 }
 
 export default function BasicSettings() {
