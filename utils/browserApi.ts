@@ -5,6 +5,8 @@
 
 import { isNotEmptyArray } from "~/utils/index"
 
+import i18n from "./i18n"
+
 // 确保 browser 全局对象可用
 if (typeof (globalThis as any).browser === "undefined") {
   // Prefer chrome if present; otherwise leave undefined to fail fast where appropriate
@@ -457,12 +459,26 @@ export function onAlarm(
 /**
  * 获取当前扩展的 manifest 版本
  */
-export function getManifestVersion(): number {
-  return browser.runtime.getManifest().manifest_version
+export function getManifest(): browser._manifest.WebExtensionManifest {
+  try {
+    return browser.runtime.getManifest()
+  } catch (error) {
+    console.warn(
+      "[browserApi] Failed to read manifest, falling back to minimal manifest",
+      error
+    )
+
+    return {
+      manifest_version: 3,
+      name: i18n.t("ui:app.name"),
+      version: "0.0.0",
+      optional_permissions: []
+    }
+  }
 }
 
-export function getManifest(): browser._manifest.WebExtensionManifest {
-  return browser.runtime.getManifest()
+export function getManifestVersion(): number {
+  return getManifest().manifest_version
 }
 
 // Permissions helpers
