@@ -354,7 +354,9 @@ export function onStartup(callback: () => void): () => void {
 /**
  * 监听扩展安装/更新事件
  */
-export function onInstalled(callback: (details: any) => void): () => void {
+export function onInstalled(
+  callback: (details: browser.runtime._OnInstalledDetails) => void
+): () => void {
   browser.runtime.onInstalled.addListener(callback)
   return () => {
     browser.runtime.onInstalled.removeListener(callback)

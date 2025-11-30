@@ -2,8 +2,10 @@ import { setupRuntimeMessageListeners } from "~/entrypoints/background/runtimeMe
 import { setupTempWindowListeners } from "~/entrypoints/background/tempWindowPool.ts"
 import { accountStorage } from "~/services/accountStorage"
 import { migrateAccountsConfig } from "~/services/configMigration/account/accountDataMigration"
+import { OPTIONAL_PERMISSIONS } from "~/services/permissions/permissionManager"
 import { userPreferences } from "~/services/userPreferences"
 import { onInstalled } from "~/utils/browserApi"
+import { openOrFocusOptionsPage } from "~/utils/navigation"
 
 import {
   initializeCookieInterceptors,
@@ -50,6 +52,16 @@ export default defineBackground(() => {
           const config = await accountStorage.exportData()
           await accountStorage.importData({ ...config, accounts: migrated })
           console.log(`Migration complete: ${migratedCount} accounts updated`)
+        }
+
+        if (details.reason === "install" && OPTIONAL_PERMISSIONS.length > 0) {
+          console.log(
+            "[Background] First install detected, opening permissions onboarding"
+          )
+          openOrFocusOptionsPage("#basic", {
+            tab: "permissions",
+            onboarding: "permissions"
+          })
         }
       }
     })()
