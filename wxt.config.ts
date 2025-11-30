@@ -13,7 +13,6 @@ export default defineConfig({
       "tabs",
       "storage",
       "alarms",
-      "clipboardRead",
       // Firefox 专属：添加 cookies 和 webRequest 权限
       ...(browser === "firefox"
         ? ["cookies", "webRequest", "webRequestBlocking"]
