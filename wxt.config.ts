@@ -15,7 +15,11 @@ export default defineConfig({
       "alarms",
       ...(browser === "firefox" ? [] : ["sidePanel"])
     ],
-    optional_permissions: ["cookies", "webRequest", "webRequestBlocking"],
+    ...(browser === "firefox"
+      ? {
+          optional_permissions: ["cookies", "webRequest", "webRequestBlocking"]
+        }
+      : {}),
     host_permissions: ["https://*/*"],
     browser_specific_settings: {
       gecko: {

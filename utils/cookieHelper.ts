@@ -264,7 +264,8 @@ export async function addAuthMethodHeader(
   mode: AuthMode
 ): Promise<Record<string, string>> {
   const headersObj = normalizeHeaders(headers)
-  if (await hasCookieInterceptorPermissions()) {
+  const granted = await hasCookieInterceptorPermissions()
+  if (isFirefox() && granted) {
     headersObj[COOKIE_AUTH_HEADER_NAME] = mode
   }
   return headersObj
