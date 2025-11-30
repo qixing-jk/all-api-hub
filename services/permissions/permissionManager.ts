@@ -12,6 +12,14 @@ export const OPTIONAL_PERMISSIONS = [
 
 export type OptionalPermission = (typeof OPTIONAL_PERMISSIONS)[number]
 
+export const COOKIE_INTERCEPTOR_PERMISSIONS: OptionalPermission[] = [
+  ...OPTIONAL_PERMISSIONS
+]
+
+export async function hasCookieInterceptorPermissions(): Promise<boolean> {
+  return await hasPermissions(COOKIE_INTERCEPTOR_PERMISSIONS)
+}
+
 export interface PermissionDefinition {
   id: OptionalPermission
   titleKey: string

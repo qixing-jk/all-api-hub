@@ -47,7 +47,10 @@
     "shieldOptions": "在设置页面中使用",
     "shieldAutoRefresh": "用于自动刷新",
     "shieldManualRefresh": "用于手动刷新",
-    "shieldPopupFirefoxNote": "在 Firefox 弹出窗口中，为避免弹窗被关闭，受保护的数据请求始终处于禁用状态。此设置仍会保存在其他浏览器中生效。"
+    "shieldPopupFirefoxNote": "在 Firefox 弹出窗口中，为避免弹窗被关闭，受保护的数据请求始终处于禁用状态。此设置仍会保存在其他浏览器中生效。",
+    "shieldPermissionWarningTitle": "请先授予 Cookie 拦截权限",
+    "shieldPermissionWarningDesc": "需要授予 Cookies / Web Request 权限，临时窗口绕过功能才能附加认证 Cookies 并发送请求。",
+    "shieldPermissionAction": "前往权限设置"
   },
   "sorting": {
     "title": "排序优先级设置",

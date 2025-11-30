@@ -6,6 +6,10 @@ import type {
   TodayUsageData
 } from "~/services/apiService/common/type"
 import {
+  COOKIE_INTERCEPTOR_PERMISSIONS,
+  hasPermissions
+} from "~/services/permissions/permissionManager"
+import {
   DEFAULT_PREFERENCES,
   userPreferences,
   type TempWindowFallbackPreferences
@@ -452,6 +456,20 @@ async function shouldUseTempWindowFallback(
       context,
       {
         enabled: prefsFallback?.enabled ?? null
+      }
+    )
+    return false
+  }
+
+  const hasCookiePermissions = await hasPermissions(
+    COOKIE_INTERCEPTOR_PERMISSIONS
+  )
+  if (!hasCookiePermissions) {
+    logSkipTempWindowFallback(
+      "Cookie interceptor permissions not granted; skipping temp window fallback.",
+      context,
+      {
+        permissions: COOKIE_INTERCEPTOR_PERMISSIONS
       }
     )
     return false

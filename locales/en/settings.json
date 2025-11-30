@@ -47,7 +47,10 @@
     "shieldOptions": "Use on options page",
     "shieldAutoRefresh": "Use for automatic refresh",
     "shieldManualRefresh": "Use for manual refresh",
-    "shieldPopupFirefoxNote": "In Firefox popup, shielded data requests are always disabled to avoid closing the popup. This setting is still saved for other browsers."
+    "shieldPopupFirefoxNote": "In Firefox popup, shielded data requests are always disabled to avoid closing the popup. This setting is still saved for other browsers.",
+    "shieldPermissionWarningTitle": "Cookie interceptor permissions required",
+    "shieldPermissionWarningDesc": "Grant the Cookies/Web Request permissions so the temporary window bypass can attach authenticated cookies before sending requests.",
+    "shieldPermissionAction": "Open Permissions Tab"
   },
   "sorting": {
     "title": "Sorting Priority Settings",

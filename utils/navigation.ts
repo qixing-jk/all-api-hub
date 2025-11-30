@@ -33,28 +33,52 @@ const isOnOptionsPage = () => {
   }
 }
 
-const navigateWithinOptionsPage = (hash: string) => {
+const buildSearchString = (params?: Record<string, string | undefined>) => {
+  if (!params) {
+    return ""
+  }
+
+  const searchParams = new URLSearchParams()
+  Object.entries(params).forEach(([key, value]) => {
+    if (typeof value === "undefined") {
+      return
+    }
+    searchParams.set(key, value)
+  })
+
+  const query = searchParams.toString()
+  return query ? `?${query}` : ""
+}
+
+const navigateWithinOptionsPage = (
+  hash: string,
+  searchParams?: Record<string, string | undefined>
+) => {
   if (typeof window === "undefined") {
     return
   }
 
-  if (window.location.hash === hash) {
+  const currentUrl = new URL(window.location.href)
+  const nextUrl = new URL(window.location.href)
+
+  if (searchParams) {
+    nextUrl.search = buildSearchString(searchParams)
+  }
+
+  nextUrl.hash = hash
+
+  if (nextUrl.href === currentUrl.href) {
     window.dispatchEvent(new Event("hashchange"))
     return
   }
 
-  window.location.hash = hash
+  window.history.replaceState(null, "", nextUrl.toString())
+  window.dispatchEvent(new Event("hashchange"))
 }
 
-const getAccountHash = (params?: { search?: string }) => {
-  if (!params?.search) {
-    return "#account"
-  }
+const getAccountHash = () => "#account"
 
-  const searchParams = new URLSearchParams()
-  searchParams.set("search", params.search)
-  return `#account?${searchParams.toString()}`
-}
+const getBasicSettingsHash = () => "#basic"
 
 /**
  * Creates a new tab with the specified URL
@@ -103,8 +127,12 @@ const queryTabs = async (
   }
 }
 
-export const openOrFocusOptionsPage = (hash: string) => {
-  const baseUrl = `${OPTIONS_PAGE_URL}${hash}`
+export const openOrFocusOptionsPage = (
+  hash: string,
+  searchParams?: Record<string, string | undefined>
+) => {
+  const searchString = buildSearchString(searchParams)
+  const baseUrl = `${OPTIONS_PAGE_URL}${searchString}${hash}`
 
   queryTabs({}, (tabs) => {
     // 查找是否已存在忽略查询参数的 options 页
@@ -112,7 +140,7 @@ export const openOrFocusOptionsPage = (hash: string) => {
       if (!tab.url) return false
       try {
         const tabUrl = new URL(tab.url)
-        const normalizedUrl = `${tabUrl.origin}${tabUrl.pathname}${tabUrl.hash}`
+        const normalizedUrl = `${tabUrl.origin}${tabUrl.pathname}${tabUrl.search}${tabUrl.hash}`
         return normalizedUrl === baseUrl
       } catch {
         return false
@@ -153,18 +181,35 @@ const withPopupClose = <T extends any[]>(
 
 // 重构后的函数 - 去掉 closeIfPopup
 const _openFullManagerPage = (params?: { search?: string }) => {
-  const targetHash = getAccountHash(params)
+  const targetHash = getAccountHash()
+  const searchParams = params?.search ? { search: params.search } : undefined
 
   if (isOnOptionsPage()) {
-    navigateWithinOptionsPage(targetHash)
+    navigateWithinOptionsPage(targetHash, searchParams)
     return
   }
 
-  openOrFocusOptionsPage(targetHash)
+  openOrFocusOptionsPage(targetHash, searchParams)
+}
+
+const navigateToBasicSettings = (tabId?: string) => {
+  const targetHash = getBasicSettingsHash()
+  const searchParams = tabId ? { tab: tabId } : undefined
+
+  if (isOnOptionsPage()) {
+    navigateWithinOptionsPage(targetHash, searchParams)
+    return
+  }
+
+  openOrFocusOptionsPage(targetHash, searchParams)
 }
 
 const _openSettingsPage = () => {
-  openOrFocusOptionsPage("#basic")
+  navigateToBasicSettings()
+}
+
+const _openSettingsTab = (tabId: string) => {
+  navigateToBasicSettings(tabId)
 }
 
 const _openKeysPage = async (accountId?: string) => {
@@ -219,6 +264,7 @@ export const openAccountManagerWithSearch = withPopupClose((search: string) =>
   _openFullManagerPage({ search })
 )
 export const openSettingsPage = withPopupClose(_openSettingsPage)
+export const openSettingsTab = withPopupClose(_openSettingsTab)
 export const openSidePanelPage = withPopupClose(_openSidePanel)
 export const openKeysPage = withPopupClose(_openKeysPage)
 export const openModelsPage = withPopupClose(_openModelsPage)

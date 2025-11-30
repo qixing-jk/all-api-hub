@@ -84,9 +84,7 @@ export function updateUrlWithTab(
   url.searchParams.set("tab", tab)
 
   if (hashPage) {
-    const hashParams = new URLSearchParams()
-    hashParams.set("tab", tab)
-    url.hash = `${hashPage}?${hashParams.toString()}`
+    url.hash = hashPage.startsWith("#") ? hashPage : `#${hashPage}`
   }
 
   if (replaceHistory) {
