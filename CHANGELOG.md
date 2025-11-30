@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.19.1](https://github.com/qixing-jk/all-api-hub/compare/v2.19.0...v2.19.1) (2025-11-30)
+
+
+### Bug Fixes
+
+* prevent action buttons overflow in account dialog ([f0caacf](https://github.com/qixing-jk/all-api-hub/commit/f0caacfe7529fb1299724adbe423c654f44bb016))
+
 ## [2.19.0](https://github.com/qixing-jk/all-api-hub/compare/v2.18.0...v2.19.0) (2025-11-30)
 
 
