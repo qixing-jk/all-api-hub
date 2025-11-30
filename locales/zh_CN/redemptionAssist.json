@@ -9,6 +9,7 @@
   "messages": {
     "redeemSuccess": "兑换成功，到账额度：{{amount}}",
     "redeemFailed": "兑换失败，请稍后重试。",
+    "redeemLoading": "正在尝试兑换，请稍候…",
     "promptConfirm": "检测到疑似兑换码 {{code}}，是否为当前站点尝试自动兑换？",
     "promptSource": "此提示来自 All API Hub 浏览器扩展。",
     "promptSettingsLink": "打开兑换助手设置",

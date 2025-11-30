@@ -49,7 +49,7 @@ export const RedemptionPromptToast: React.FC<RedemptionPromptToastProps> = ({
   }
 
   return (
-    <Card data-all-api-hub="redemption-assist-toast">
+    <Card>
       <CardHeader padding="sm">
         <Heading3>{t("redemptionAssist:messages.promptTitle")}</Heading3>
       </CardHeader>

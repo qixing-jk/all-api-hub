@@ -4,10 +4,24 @@ import toast from "react-hot-toast/headless"
 import type { DisplaySiteData } from "~/types"
 
 import { RedemptionAccountSelectToast } from "../components/RedemptionAccountSelectToast.tsx"
+import { RedemptionLoadingToast } from "../components/RedemptionLoadingToast.tsx"
 import {
   RedemptionPromptToast,
   type RedemptionPromptAction
 } from "../components/RedemptionPromptToast.tsx"
+
+export function showRedeemLoadingToast(message: string) {
+  return toast.custom(
+    () => React.createElement(RedemptionLoadingToast, { message }),
+    {
+      duration: Infinity
+    }
+  )
+}
+
+export function dismissToast(toastId?: string) {
+  toast.dismiss(toastId)
+}
 
 export function showAccountSelectToast(
   accounts: DisplaySiteData[],

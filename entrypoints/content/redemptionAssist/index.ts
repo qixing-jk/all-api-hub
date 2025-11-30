@@ -4,7 +4,9 @@ import { sendRuntimeMessage } from "~/utils/browserApi"
 import { extractRedemptionCodesFromText } from "~/utils/redemptionAssist"
 
 import {
+  dismissToast,
   showAccountSelectToast,
+  showRedeemLoadingToast,
   showRedeemResultToast,
   showRedemptionPromptToast
 } from "./utils/redemptionToasts"
@@ -163,70 +165,84 @@ async function scanForRedemptionCodes(sourceText?: string) {
     const action = await showRedemptionPromptToast(confirmMessage)
     if (action !== "auto") return
 
-    const redeemResp: any = await sendRuntimeMessage({
-      action: "redemptionAssist:autoRedeemByUrl",
-      url,
-      code
-    })
+    const loadingMessage = t("redemptionAssist:messages.redeemLoading")
+    let loadingToastId: string | undefined
 
-    const result = redeemResp?.data
-
-    if (result?.success) {
-      if (result.message) {
-        showRedeemResultToast(true, result.message)
+    const dismissLoadingToast = () => {
+      if (loadingToastId) {
+        dismissToast(loadingToastId)
+        loadingToastId = undefined
       }
-      return
     }
 
-    if (result?.code === "MULTIPLE_ACCOUNTS" && result.candidates?.length) {
-      const selected = await showAccountSelectToast(result.candidates, {
-        title: t("redemptionAssist:accountSelect.titleMultiple", {
-          defaultValue: "检测到多个可用账号，请选择一个用于兑换"
+    try {
+      loadingToastId = showRedeemLoadingToast(loadingMessage)
+
+      const redeemResp: any = await sendRuntimeMessage({
+        action: "redemptionAssist:autoRedeemByUrl",
+        url,
+        code
+      })
+
+      const result = redeemResp?.data
+
+      if (result?.success) {
+        if (result.message) {
+          showRedeemResultToast(true, result.message)
+        }
+        return
+      }
+
+      if (result?.code === "MULTIPLE_ACCOUNTS" && result.candidates?.length) {
+        dismissLoadingToast()
+        const selected = await showAccountSelectToast(result.candidates, {
+          title: t("redemptionAssist:accountSelect.titleMultiple", {
+            defaultValue: "检测到多个可用账号，请选择一个用于兑换"
+          })
         })
-      })
 
-      if (!selected) {
+        if (!selected) {
+          return
+        }
+
+        const manualResult = await performManualRedeem(
+          selected.id,
+          code,
+          loadingMessage
+        )
+        if (manualResult?.message) {
+          showRedeemResultToast(!!manualResult.success, manualResult.message)
+        }
         return
       }
 
-      const manualResp: any = await sendRuntimeMessage({
-        action: "redemptionAssist:autoRedeem",
-        accountId: selected.id,
-        code
-      })
+      if (result?.code === "NO_ACCOUNTS" && result.allAccounts?.length) {
+        dismissLoadingToast()
+        const selected = await showAccountSelectToast(result.allAccounts, {
+          title: t("redemptionAssist:accountSelect.titleFallback")
+        })
 
-      const manualResult = manualResp?.data
-      if (manualResult?.message) {
-        showRedeemResultToast(!!manualResult.success, manualResult.message)
-      }
-      return
-    }
+        if (!selected) {
+          return
+        }
 
-    if (result?.code === "NO_ACCOUNTS" && result.allAccounts?.length) {
-      const selected = await showAccountSelectToast(result.allAccounts, {
-        title: t("redemptionAssist:accountSelect.titleFallback")
-      })
-
-      if (!selected) {
+        const manualResult = await performManualRedeem(
+          selected.id,
+          code,
+          loadingMessage
+        )
+        if (manualResult?.message) {
+          showRedeemResultToast(!!manualResult.success, manualResult.message)
+        }
         return
       }
 
-      const manualResp: any = await sendRuntimeMessage({
-        action: "redemptionAssist:autoRedeem",
-        accountId: selected.id,
-        code
-      })
-
-      const manualResult = manualResp?.data
-      if (manualResult?.message) {
-        showRedeemResultToast(!!manualResult.success, manualResult.message)
-      }
-      return
+      const fallbackMessage = t("redemptionAssist:messages.redeemFailed")
+      const msg = redeemResp?.error || result?.message || fallbackMessage
+      showRedeemResultToast(false, msg)
+    } finally {
+      dismissLoadingToast()
     }
-
-    const fallbackMessage = t("redemptionAssist:messages.redeemFailed")
-    const msg = redeemResp?.error || result?.message || fallbackMessage
-    showRedeemResultToast(false, msg)
   } catch (error) {
     console.error("[RedemptionAssist][Content] scan failed:", error)
   }
@@ -236,4 +252,22 @@ function maskCode(code: string): string {
   const trimmed = code.trim()
   if (trimmed.length <= 8) return trimmed
   return `${trimmed.slice(0, 4)}****${trimmed.slice(-4)}`
+}
+
+async function performManualRedeem(
+  accountId: string,
+  code: string,
+  loadingMessage: string
+) {
+  const toastId = showRedeemLoadingToast(loadingMessage)
+  try {
+    const manualResp: any = await sendRuntimeMessage({
+      action: "redemptionAssist:autoRedeem",
+      accountId,
+      code
+    })
+    return manualResp?.data
+  } finally {
+    dismissToast(toastId)
+  }
 }
