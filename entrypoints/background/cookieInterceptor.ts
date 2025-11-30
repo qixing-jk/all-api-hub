@@ -1,9 +1,29 @@
 import { accountStorage } from "~/services/accountStorage"
+import {
+  hasPermissions,
+  type OptionalPermission
+} from "~/services/permissions/permissionManager"
 import { type SiteAccount } from "~/types"
 import {
   registerWebRequestInterceptor,
   setupWebRequestInterceptor
 } from "~/utils/cookieHelper"
+
+const COOKIE_INTERCEPTOR_PERMISSIONS: OptionalPermission[] = [
+  "cookies",
+  "webRequest",
+  "webRequestBlocking"
+]
+
+async function ensureCookieInterceptorPermissions(): Promise<boolean> {
+  const granted = await hasPermissions(COOKIE_INTERCEPTOR_PERMISSIONS)
+  if (!granted) {
+    console.warn(
+      "[Background] Required optional permissions (cookies/webRequest) are missing; skip cookie interception"
+    )
+  }
+  return granted
+}
 
 // 辅助函数：从账号列表提取 站点的 URL 模式
 function extractAccountUrlPatterns(accounts: SiteAccount[]): string[] {
@@ -12,7 +32,7 @@ function extractAccountUrlPatterns(accounts: SiteAccount[]): string[] {
       try {
         const url = new URL(acc.site_url)
         return `${url.origin}/*`
-      } catch (error) {
+      } catch {
         console.warn(
           `[Background] 账户 ${acc.site_name} 的 URL 无效：`,
           acc.site_url
@@ -29,6 +49,9 @@ function extractAccountUrlPatterns(accounts: SiteAccount[]): string[] {
 // 初始化 Cookie 拦截器
 export async function initializeCookieInterceptors(): Promise<void> {
   try {
+    if (!(await ensureCookieInterceptorPermissions())) {
+      return
+    }
     const accounts = await accountStorage.getAllAccounts()
     const urlPatterns = extractAccountUrlPatterns(accounts)
     setupWebRequestInterceptor(urlPatterns)
@@ -40,6 +63,9 @@ export async function initializeCookieInterceptors(): Promise<void> {
 // 更新 Cookie 拦截器（配置变更时调用）
 async function updateCookieInterceptor(): Promise<void> {
   try {
+    if (!(await ensureCookieInterceptorPermissions())) {
+      return
+    }
     const accounts = await accountStorage.getAllAccounts()
     const urlPatterns = extractAccountUrlPatterns(accounts)
     registerWebRequestInterceptor(urlPatterns)
@@ -62,4 +88,6 @@ function handleStorageChanged(
 
 export function setupCookieInterceptorListeners() {
   browser.storage.onChanged.addListener(handleStorageChanged as any)
+  chrome.permissions.onAdded.addListener(updateCookieInterceptor)
+  chrome.permissions.onRemoved.addListener(updateCookieInterceptor)
 }

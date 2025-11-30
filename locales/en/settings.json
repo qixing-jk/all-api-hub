@@ -9,6 +9,7 @@
     "dataBackup": "Data & Backup",
     "newApi": "New API",
     "more": "More",
+    "permissions": "Permissions",
     "select": "Select a tab"
   },
   "display": {
@@ -97,6 +98,42 @@
     "urlDesc": "Set the base URL for New API integration",
     "tokenDesc": "Token for accessing New API admin functions",
     "userIdDesc": "User identification ID for New API"
+  },
+  "permissions": {
+    "title": "Permissions",
+    "description": "Grant the extra browser permissions required by optional features like cookie interception and the temporary window firewall bypass.",
+    "helper": "Only enable the permissions you need for advanced flows such as the temporary window bypass. You can always revoke them later without affecting the rest of the extension.",
+    "statusCaption": "Permission status is synced with the browser. Click refresh if you changed permissions outside this page.",
+    "status": {
+      "checking": "Checking…",
+      "granted": "Granted",
+      "denied": "Not granted"
+    },
+    "actions": {
+      "allow": "Allow",
+      "remove": "Revoke",
+      "refresh": "Refresh status"
+    },
+    "messages": {
+      "granted": "{{name}} permission granted",
+      "grantFailed": "Failed to request {{name}} permission",
+      "revoked": "{{name}} permission revoked",
+      "revokeFailed": "Failed to revoke {{name}} permission"
+    },
+    "items": {
+      "cookies": {
+        "title": "Cookies",
+        "description": "Allows the extension to read cookies for connected accounts when you enable advanced request features like the temporary window bypass."
+      },
+      "webRequest": {
+        "title": "Web Request",
+        "description": "Lets the extension monitor outgoing requests so it can inject authenticated headers when required by the temporary window bypass and similar features."
+      },
+      "webRequestBlocking": {
+        "title": "Web Request Blocking",
+        "description": "Required to synchronously modify requests and attach cookies before they are sent, ensuring the temporary window bypass works reliably."
+      }
+    }
   },
   "danger": {
     "title": "Danger Zone",

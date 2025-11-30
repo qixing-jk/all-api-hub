@@ -9,6 +9,7 @@
     "dataBackup": "数据与备份",
     "newApi": "New API",
     "more": "更多",
+    "permissions": "权限管理",
     "select": "选择一个分组"
   },
   "display": {
@@ -97,6 +98,42 @@
     "urlDesc": "设置用于 New API 集成的基础 URL",
     "tokenDesc": "用于访问 New API 管理员功能的令牌",
     "userIdDesc": "用于 New API 的用户识别 ID"
+  },
+  "permissions": {
+    "title": "权限管理",
+    "description": "为可选功能（如 Cookie 拦截和临时窗口绕过防火墙）授予所需的浏览器权限。",
+    "helper": "仅在需要高级流程（例如临时窗口绕过防火墙）时启用相关权限，随时可以撤销，不会影响其他功能。",
+    "statusCaption": "权限状态与浏览器同步，如在此页面外修改请点击刷新。",
+    "status": {
+      "checking": "检测中…",
+      "granted": "已授予",
+      "denied": "未授予"
+    },
+    "actions": {
+      "allow": "允许",
+      "remove": "撤销",
+      "refresh": "刷新状态"
+    },
+    "messages": {
+      "granted": "已授予 {{name}} 权限",
+      "grantFailed": "请求 {{name}} 权限失败",
+      "revoked": "已撤销 {{name}} 权限",
+      "revokeFailed": "撤销 {{name}} 权限失败"
+    },
+    "items": {
+      "cookies": {
+        "title": "Cookies",
+        "description": "允许扩展在启用临时窗口绕过等高级请求功能时读取关联账号的 Cookies。"
+      },
+      "webRequest": {
+        "title": "网络请求",
+        "description": "允许扩展监听外发请求，以便在临时窗口绕过等场景下按需注入认证头信息。"
+      },
+      "webRequestBlocking": {
+        "title": "网络请求阻断",
+        "description": "用于在请求发送前同步修改请求并附加 Cookies，确保临时窗口绕过等高级功能可靠运行。"
+      }
+    }
   },
   "danger": {
     "title": "危险操作",
