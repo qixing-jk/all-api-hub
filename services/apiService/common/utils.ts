@@ -26,16 +26,22 @@ import {
   type TempWindowFetchParams,
   type TempWindowResponseType
 } from "~/utils/browserApi"
-import { addExtensionHeader } from "~/utils/cookieHelper"
+import {
+  addAuthMethodHeader,
+  addExtensionHeader,
+  AUTH_MODE,
+  AuthMode
+} from "~/utils/cookieHelper.ts"
 import { joinUrl } from "~/utils/url"
 
 /**
  * 创建请求头
  */
-const createRequestHeaders = (
+const createRequestHeaders = async (
+  authMode: AuthMode,
   userId?: number | string,
   accessToken?: string
-): Record<string, string> => {
+): Promise<Record<string, string>> => {
   const baseHeaders = {
     "Content-Type": REQUEST_CONFIG.HEADERS.CONTENT_TYPE,
     Pragma: REQUEST_CONFIG.HEADERS.PRAGMA
@@ -52,10 +58,11 @@ const createRequestHeaders = (
       }
     : {}
 
-  const headers: Record<string, string> = { ...baseHeaders, ...userHeaders }
-  // TODO：bug，还是带上了 cookie，导致网站没有使用 access_token进行验证
+  let headers: Record<string, string> = { ...baseHeaders, ...userHeaders }
+
+  headers = await addAuthMethodHeader(addExtensionHeader(headers), authMode)
+
   if (accessToken) {
-    headers["Cookie"] = "" // 使用 Bearer token 时清空 Cookie 头
     headers["Authorization"] = `Bearer ${accessToken}`
   }
 
@@ -96,33 +103,30 @@ const createBaseRequest = (
 /**
  * 创建带 cookie 认证的请求
  */
-const createCookieAuthRequest = (
+const createCookieAuthRequest = async (
   userId: number | string | undefined,
   options: RequestInit = {}
-): RequestInit => {
-  const baseRequest = createBaseRequest(
-    createRequestHeaders(userId),
+): Promise<RequestInit> => {
+  return createBaseRequest(
+    await createRequestHeaders(AUTH_MODE.COOKIE_AUTH_MODE, userId, undefined),
     "include",
     options
   )
-
-  // Firefox：为 Cookie 认证请求添加扩展标识头
-  if (isFirefox()) {
-    baseRequest.headers = addExtensionHeader(baseRequest.headers)
-  }
-
-  return baseRequest
 }
 
 /**
  * 创建带 Bearer token 认证的请求
  */
-const createTokenAuthRequest = (
+const createTokenAuthRequest = async (
   userId: number | string | undefined,
   accessToken: string,
   options: RequestInit = {}
-): RequestInit =>
-  createBaseRequest(createRequestHeaders(userId, accessToken), "omit", options)
+): Promise<RequestInit> =>
+  createBaseRequest(
+    await createRequestHeaders(AUTH_MODE.TOKEN_AUTH_MODE, userId, accessToken),
+    "omit",
+    options
+  )
 
 /**
  * 计算今日时间戳范围
@@ -251,17 +255,17 @@ const _fetchApi = async <T>(
   let authOptions = {}
   switch (authType) {
     case AuthTypeEnum.Cookie:
-      authOptions = createCookieAuthRequest(userId)
+      authOptions = await createCookieAuthRequest(userId, options)
       break
     case AuthTypeEnum.AccessToken:
-      authOptions = createTokenAuthRequest(userId, token!)
+      authOptions = await createTokenAuthRequest(userId, token!)
       break
     case AuthTypeEnum.None:
       authOptions = {}
       break
     default:
       if (token) {
-        authOptions = createTokenAuthRequest(userId, token!)
+        authOptions = await createTokenAuthRequest(userId, token!)
       }
       break
   }

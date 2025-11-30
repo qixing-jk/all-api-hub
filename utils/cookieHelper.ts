@@ -1,8 +1,8 @@
+import { hasCookieInterceptorPermissions } from "~/services/permissions/permissionManager.ts"
 /**
  * Firefox Cookie 助手（WebRequest 方案）
  * 使用 WebRequest 拦截器自动注入 Cookie
  */
-
 import { isFirefox } from "~/utils/browser"
 
 // Cookie 缓存
@@ -14,9 +14,32 @@ interface CookieCache {
 const cookieCache = new Map<string, CookieCache>()
 const CACHE_DURATION = 10000 // 10秒缓存
 
+const buildCacheKey = (url: string, includeSession: boolean) =>
+  includeSession ? url : `${url}__no_session`
+
+const normalizeHeaders = (
+  headers: HeadersInit = {}
+): Record<string, string> => {
+  if (headers instanceof Headers) {
+    return Object.fromEntries(headers.entries())
+  }
+  if (Array.isArray(headers)) {
+    return Object.fromEntries(headers)
+  }
+  return { ...(headers as Record<string, string>) }
+}
+
 // 请求标识头
 export const EXTENSION_HEADER_NAME = "All-API-Hub"
 export const EXTENSION_HEADER_VALUE = "true"
+export const COOKIE_AUTH_HEADER_NAME = "All-API-Hub-Cookie-Auth"
+
+export const AUTH_MODE = {
+  COOKIE_AUTH_MODE: "cookie",
+  TOKEN_AUTH_MODE: "token"
+} as const
+
+export type AuthMode = (typeof AUTH_MODE)[keyof typeof AUTH_MODE]
 
 // 拦截器注册状态
 let isInterceptorRegistered = false
@@ -24,9 +47,14 @@ let isInterceptorRegistered = false
 /**
  * 获取指定 URL 的 Cookie 请求头
  */
-export async function getCookieHeaderForUrl(url: string): Promise<string> {
+export async function getCookieHeaderForUrl(
+  url: string,
+  options: { includeSession?: boolean } = {}
+): Promise<string> {
+  const includeSession = options.includeSession ?? true
+  const cacheKey = buildCacheKey(url, includeSession)
   // 检查缓存
-  const cached = cookieCache.get(url)
+  const cached = cookieCache.get(cacheKey)
   if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
     console.log("[Cookie Helper] 使用缓存 Cookie:", url)
     return cached.cookies
@@ -49,8 +77,12 @@ export async function getCookieHeaderForUrl(url: string): Promise<string> {
       return true
     })
 
+    const filteredCookies = includeSession
+      ? validCookies
+      : validCookies.filter((cookie) => cookie.name !== "session")
+
     // 格式化为 Cookie 请求头：name1=value1; name2=value2
-    const cookieHeader = validCookies
+    const cookieHeader = filteredCookies
       .map((c) => `${c.name}=${c.value}`)
       .join("; ")
 
@@ -60,7 +92,7 @@ export async function getCookieHeaderForUrl(url: string): Promise<string> {
 
     // 更新缓存
     if (cookieHeader) {
-      cookieCache.set(url, {
+      cookieCache.set(cacheKey, {
         cookies: cookieHeader,
         timestamp: Date.now()
       })
@@ -78,10 +110,11 @@ export async function getCookieHeaderForUrl(url: string): Promise<string> {
  */
 export function clearCookieCache(url?: string): void {
   if (url) {
-    cookieCache.delete(url)
-  } else {
-    cookieCache.clear()
+    cookieCache.delete(buildCacheKey(url, true))
+    cookieCache.delete(buildCacheKey(url, false))
+    return
   }
+  cookieCache.clear()
 }
 
 /**
@@ -93,11 +126,23 @@ export async function handleWebRequest(
   const headers = details.requestHeaders || []
 
   // 只处理带有扩展标识的请求
-  const hasExtensionHeader = headers.some(
-    (h: any) =>
-      h.name.toLowerCase() === EXTENSION_HEADER_NAME.toLowerCase() &&
+  let hasExtensionHeader = false
+  let includeSessionCookie = true
+  const normalizedExtensionName = EXTENSION_HEADER_NAME.toLowerCase()
+  const normalizedCookieAuthName = COOKIE_AUTH_HEADER_NAME.toLowerCase()
+
+  headers.forEach((h: any) => {
+    const lower = h.name.toLowerCase()
+    if (
+      lower === normalizedExtensionName &&
       h.value === EXTENSION_HEADER_VALUE
-  )
+    ) {
+      hasExtensionHeader = true
+    }
+    if (lower === normalizedCookieAuthName) {
+      includeSessionCookie = h.value === AUTH_MODE.COOKIE_AUTH_MODE
+    }
+  })
 
   if (!hasExtensionHeader) {
     return {}
@@ -106,7 +151,9 @@ export async function handleWebRequest(
   console.log("[Cookie Helper] 拦截请求:", details.url)
 
   // 获取 Cookie
-  const cookieHeader = await getCookieHeaderForUrl(details.url)
+  const cookieHeader = await getCookieHeaderForUrl(details.url, {
+    includeSession: includeSessionCookie
+  })
 
   if (!cookieHeader) {
     console.warn("[Cookie Helper] 未找到 Cookie:", details.url)
@@ -117,11 +164,15 @@ export async function handleWebRequest(
   const newHeaders = headers
     .map((h: any) => {
       // 移除扩展标识头
-      if (h.name.toLowerCase() === EXTENSION_HEADER_NAME.toLowerCase()) {
+      const lower = h.name.toLowerCase()
+      if (
+        lower === normalizedExtensionName ||
+        lower === normalizedCookieAuthName
+      ) {
         return null
       }
       // 替换 Cookie 头
-      if (h.name.toLowerCase() === "cookie") {
+      if (lower === "cookie") {
         console.log("[Cookie Helper] 已替换 Cookie 头")
         return { name: h.name, value: cookieHeader }
       }
@@ -203,14 +254,18 @@ export function addExtensionHeader(
     return headers as Record<string, string>
   }
 
-  const headersObj: Record<string, string> =
-    headers instanceof Headers
-      ? Object.fromEntries(headers.entries())
-      : Array.isArray(headers)
-        ? Object.fromEntries(headers)
-        : { ...headers }
-
+  const headersObj = normalizeHeaders(headers)
   headersObj[EXTENSION_HEADER_NAME] = EXTENSION_HEADER_VALUE
+  return headersObj
+}
 
+export async function addAuthMethodHeader(
+  headers: HeadersInit = {},
+  mode: AuthMode
+): Promise<Record<string, string>> {
+  const headersObj = normalizeHeaders(headers)
+  if (await hasCookieInterceptorPermissions()) {
+    headersObj[COOKIE_AUTH_HEADER_NAME] = mode
+  }
   return headersObj
 }
