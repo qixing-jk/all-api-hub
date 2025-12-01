@@ -13,10 +13,10 @@ import { BodySmall, Heading3, Link } from "~/components/ui/Typography"
 import {
   ensurePermissions,
   hasPermission,
+  ManifestOptionalPermissions,
   onOptionalPermissionsChanged,
   OPTIONAL_PERMISSION_DEFINITIONS,
-  OPTIONAL_PERMISSIONS,
-  type OptionalPermission
+  OPTIONAL_PERMISSIONS
 } from "~/services/permissions/permissionManager"
 import { showResultToast } from "~/utils/toastHelpers"
 
@@ -24,11 +24,11 @@ const GITHUB_URL = "https://github.com/qixing-jk/all-api-hub"
 
 const buildState = <T,>(value: T) =>
   Object.fromEntries(OPTIONAL_PERMISSIONS.map((id) => [id, value])) as Record<
-    OptionalPermission,
+    ManifestOptionalPermissions,
     T
   >
 
-const iconMap: Record<OptionalPermission, React.ReactNode> = {
+const iconMap: Partial<Record<ManifestOptionalPermissions, React.ReactNode>> = {
   cookies: <Sparkles className="h-5 w-5 text-amber-500" />,
   webRequest: <Sparkles className="h-5 w-5 text-blue-500" />,
   webRequestBlocking: <Sparkles className="h-5 w-5 text-purple-500" />
@@ -45,7 +45,7 @@ export function PermissionOnboardingDialog({
 }: PermissionOnboardingDialogProps) {
   const { t } = useTranslation("settings")
   const [statuses, setStatuses] = useState<
-    Record<OptionalPermission, boolean | null>
+    Record<ManifestOptionalPermissions, boolean | null>
   >(() => buildState<boolean | null>(null))
   const [isRequesting, setIsRequesting] = useState(false)
 
@@ -67,7 +67,7 @@ export function PermissionOnboardingDialog({
           ...acc,
           [curr.id]: curr.granted
         }),
-        {} as Record<OptionalPermission, boolean>
+        {} as Record<ManifestOptionalPermissions, boolean>
       )
     }))
   }, [hasOptionalPermissions])

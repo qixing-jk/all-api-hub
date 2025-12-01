@@ -12,27 +12,27 @@ import { CardList } from "~/components/ui/CardList"
 import { BodySmall } from "~/components/ui/Typography"
 import {
   hasPermission,
+  ManifestOptionalPermissions,
   onOptionalPermissionsChanged,
   OPTIONAL_PERMISSION_DEFINITIONS,
   OPTIONAL_PERMISSIONS,
   removePermission,
-  requestPermission,
-  type OptionalPermission
+  requestPermission
 } from "~/services/permissions/permissionManager"
 import { showResultToast } from "~/utils/toastHelpers"
 
 interface PermissionState {
-  statuses: Record<OptionalPermission, boolean | null>
-  pending: Record<OptionalPermission, boolean>
+  statuses: Record<ManifestOptionalPermissions, boolean | null>
+  pending: Record<ManifestOptionalPermissions, boolean>
 }
 
 const buildState = <T,>(value: T) =>
   Object.fromEntries(OPTIONAL_PERMISSIONS.map((id) => [id, value])) as Record<
-    OptionalPermission,
+    ManifestOptionalPermissions,
     T
   >
 
-const iconMap: Record<OptionalPermission, React.ReactNode> = {
+const iconMap: Partial<Record<ManifestOptionalPermissions, React.ReactNode>> = {
   cookies: <Cookie className="h-5 w-5 text-amber-500" />,
   webRequest: <Network className="h-5 w-5 text-blue-500" />,
   webRequestBlocking: <ShieldAlert className="h-5 w-5 text-purple-500" />
@@ -67,7 +67,7 @@ export default function PermissionSettings() {
           ...acc,
           [curr.id]: curr.granted
         }),
-        {} as Record<OptionalPermission, boolean>
+        {} as Record<ManifestOptionalPermissions, boolean>
       )
     }))
     setIsRefreshing(false)
@@ -85,7 +85,7 @@ export default function PermissionSettings() {
   }, [loadStatuses])
 
   const handleToggle = useCallback(
-    async (id: OptionalPermission, shouldEnable: boolean) => {
+    async (id: ManifestOptionalPermissions, shouldEnable: boolean) => {
       setState((prev) => ({
         ...prev,
         pending: {
