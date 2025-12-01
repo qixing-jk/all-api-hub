@@ -1,4 +1,3 @@
-import { Cookie, Network, ShieldAlert } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -7,8 +6,6 @@ import { Alert } from "~/components/ui/Alert"
 import { Badge } from "~/components/ui/badge"
 import { Button } from "~/components/ui/button"
 import { Card } from "~/components/ui/Card"
-import { CardItem } from "~/components/ui/CardItem"
-import { CardList } from "~/components/ui/CardList"
 import { BodySmall } from "~/components/ui/Typography"
 import {
   hasPermission,
@@ -21,6 +18,8 @@ import {
 } from "~/services/permissions/permissionManager"
 import { showResultToast } from "~/utils/toastHelpers"
 
+import PermissionList from "./PermissionList"
+
 interface PermissionState {
   statuses: Record<ManifestOptionalPermissions, boolean | null>
   pending: Record<ManifestOptionalPermissions, boolean>
@@ -31,12 +30,6 @@ const buildState = <T,>(value: T) =>
     ManifestOptionalPermissions,
     T
   >
-
-const iconMap: Partial<Record<ManifestOptionalPermissions, React.ReactNode>> = {
-  cookies: <Cookie className="h-5 w-5 text-amber-500" />,
-  webRequest: <Network className="h-5 w-5 text-blue-500" />,
-  webRequestBlocking: <ShieldAlert className="h-5 w-5 text-purple-500" />
-}
 
 export default function PermissionSettings() {
   const { t } = useTranslation("settings")
@@ -188,52 +181,49 @@ export default function PermissionSettings() {
       </div>
 
       <Card padding="none">
-        <CardList>
-          {OPTIONAL_PERMISSION_DEFINITIONS.map((permission) => {
+        <PermissionList
+          items={OPTIONAL_PERMISSION_DEFINITIONS.map((permission) => {
             const granted = state.statuses[permission.id]
             const pending = state.pending[permission.id]
             const label = t(permission.titleKey)
 
-            return (
-              <CardItem
-                key={permission.id}
-                icon={iconMap[permission.id]}
-                title={label}
-                description={t(permission.descriptionKey)}
-                rightContent={
-                  <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
-                    <Badge
-                      variant={
-                        granted
-                          ? "success"
-                          : granted === false
-                            ? "warning"
-                            : "info"
-                      }>
-                      {granted === null
-                        ? t("permissions.status.checking")
-                        : t(
-                            granted
-                              ? "permissions.status.granted"
-                              : "permissions.status.denied"
-                          )}
-                    </Badge>
-                    <Button
-                      size="sm"
-                      variant={granted ? "outline" : "default"}
-                      onClick={() => void handleToggle(permission.id, !granted)}
-                      disabled={pending || granted === null}
-                      loading={pending}>
-                      {granted
-                        ? t("permissions.actions.remove")
-                        : t("permissions.actions.allow")}
-                    </Button>
-                  </div>
-                }
-              />
-            )
+            return {
+              id: permission.id,
+              title: label,
+              description: t(permission.descriptionKey),
+              rightContent: (
+                <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+                  <Badge
+                    variant={
+                      granted
+                        ? "success"
+                        : granted === false
+                          ? "warning"
+                          : "info"
+                    }>
+                    {granted === null
+                      ? t("permissions.status.checking")
+                      : t(
+                          granted
+                            ? "permissions.status.granted"
+                            : "permissions.status.denied"
+                        )}
+                  </Badge>
+                  <Button
+                    size="sm"
+                    variant={granted ? "outline" : "default"}
+                    onClick={() => void handleToggle(permission.id, !granted)}
+                    disabled={pending || granted === null}
+                    loading={pending}>
+                    {granted
+                      ? t("permissions.actions.remove")
+                      : t("permissions.actions.allow")}
+                  </Button>
+                </div>
+              )
+            }
           })}
-        </CardList>
+        />
       </Card>
     </SettingSection>
   )

@@ -7,8 +7,6 @@ import { Alert, AlertDescription } from "~/components/ui/Alert"
 import { Badge } from "~/components/ui/badge"
 import { Button } from "~/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/Card"
-import { CardItem } from "~/components/ui/CardItem"
-import { CardList } from "~/components/ui/CardList"
 import { BodySmall, Heading3, Link } from "~/components/ui/Typography"
 import {
   ensurePermissions,
@@ -20,6 +18,8 @@ import {
 } from "~/services/permissions/permissionManager"
 import { showResultToast } from "~/utils/toastHelpers"
 
+import PermissionList from "./PermissionList"
+
 const GITHUB_URL = "https://github.com/qixing-jk/all-api-hub"
 
 const buildState = <T,>(value: T) =>
@@ -27,12 +27,6 @@ const buildState = <T,>(value: T) =>
     ManifestOptionalPermissions,
     T
   >
-
-const iconMap: Partial<Record<ManifestOptionalPermissions, React.ReactNode>> = {
-  cookies: <Sparkles className="h-5 w-5 text-amber-500" />,
-  webRequest: <Sparkles className="h-5 w-5 text-blue-500" />,
-  webRequestBlocking: <Sparkles className="h-5 w-5 text-purple-500" />
-}
 
 interface PermissionOnboardingDialogProps {
   open: boolean
@@ -203,34 +197,31 @@ export function PermissionOnboardingDialog({
             </BodySmall>
           </CardHeader>
           <CardContent padding="none" spacing="none">
-            <CardList>
-              {permissionList.map((permission) => (
-                <CardItem
-                  key={permission.id}
-                  icon={iconMap[permission.id]}
-                  title={t(permission.titleKey)}
-                  description={t(permission.descriptionKey)}
-                  rightContent={
-                    <Badge
-                      variant={
-                        permission.granted
-                          ? "success"
-                          : permission.granted === false
-                            ? "warning"
-                            : "info"
-                      }>
-                      {permission.granted === null
-                        ? t("permissions.status.checking")
-                        : t(
-                            permission.granted
-                              ? "permissions.status.granted"
-                              : "permissions.status.denied"
-                          )}
-                    </Badge>
-                  }
-                />
-              ))}
-            </CardList>
+            <PermissionList
+              items={permissionList.map((permission) => ({
+                id: permission.id,
+                title: t(permission.titleKey),
+                description: t(permission.descriptionKey),
+                rightContent: (
+                  <Badge
+                    variant={
+                      permission.granted
+                        ? "success"
+                        : permission.granted === false
+                          ? "warning"
+                          : "info"
+                    }>
+                    {permission.granted === null
+                      ? t("permissions.status.checking")
+                      : t(
+                          permission.granted
+                            ? "permissions.status.granted"
+                            : "permissions.status.denied"
+                        )}
+                  </Badge>
+                )
+              }))}
+            />
           </CardContent>
         </Card>
       </div>
