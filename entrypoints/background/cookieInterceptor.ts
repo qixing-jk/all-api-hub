@@ -1,19 +1,20 @@
 import { accountStorage } from "~/services/accountStorage"
 import { hasCookieInterceptorPermissions } from "~/services/permissions/permissionManager"
 import { type SiteAccount } from "~/types"
+import { isFirefox } from "~/utils/browser.ts"
 import {
   registerWebRequestInterceptor,
   setupWebRequestInterceptor
 } from "~/utils/cookieHelper"
 
-async function checkCookieInterceptorRequirement(): Promise<boolean> {
+export async function checkCookieInterceptorRequirement(): Promise<boolean> {
   const granted = await hasCookieInterceptorPermissions()
   if (!granted) {
     console.warn(
       "[Background] Required optional permissions (cookies/webRequest) are missing; skip cookie interception"
     )
   }
-  return granted
+  return granted && isFirefox()
 }
 
 // 辅助函数：从账号列表提取 站点的 URL 模式

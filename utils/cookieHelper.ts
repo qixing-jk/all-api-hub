@@ -1,8 +1,8 @@
-import { hasCookieInterceptorPermissions } from "~/services/permissions/permissionManager.ts"
 /**
  * Firefox Cookie 助手（WebRequest 方案）
  * 使用 WebRequest 拦截器自动注入 Cookie
  */
+import { checkCookieInterceptorRequirement } from "~/entrypoints/background/cookieInterceptor.ts"
 import { isFirefox } from "~/utils/browser"
 
 // Cookie 缓存
@@ -264,8 +264,8 @@ export async function addAuthMethodHeader(
   mode: AuthMode
 ): Promise<Record<string, string>> {
   const headersObj = normalizeHeaders(headers)
-  const granted = await hasCookieInterceptorPermissions()
-  if (isFirefox() && granted) {
+  const canCookieInterceptor = await checkCookieInterceptorRequirement()
+  if (canCookieInterceptor) {
     headersObj[COOKIE_AUTH_HEADER_NAME] = mode
   }
   return headersObj
