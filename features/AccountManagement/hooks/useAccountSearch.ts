@@ -18,6 +18,7 @@ export interface SearchResultWithHighlight extends SearchResult {
     customCheckInUrl?: HighlightFragment[]
     customRedeemUrl?: HighlightFragment[]
     username?: HighlightFragment[]
+    tags?: HighlightFragment[]
   }
 }
 
@@ -194,6 +195,21 @@ function generateHighlights(
 
         if (redeemTokens.length > 0) {
           highlights.username = createHighlightFragments(username, redeemTokens)
+        }
+      }
+    }
+
+    if (result.matchedFields.includes("tags")) {
+      const tags = result.account.tags || []
+      if (tags.length > 0) {
+        const joined = tags.join(", ")
+        const normalizedTags = normalizeForMatching(joined)
+        const tagTokens = tokenInfos.filter((token) =>
+          normalizedTags.includes(token.normalized)
+        )
+
+        if (tagTokens.length > 0) {
+          highlights.tags = createHighlightFragments(joined, tagTokens)
         }
       }
     }

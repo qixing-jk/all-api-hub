@@ -6,6 +6,7 @@ import {
   GiftIcon,
   LinkIcon,
   PencilSquareIcon,
+  TagIcon,
   UserIcon,
   XCircleIcon
 } from "@heroicons/react/24/outline"
@@ -333,6 +334,20 @@ export default function SiteInfo({ site, highlights }: SiteInfoProps) {
             <PencilSquareIcon className="dark:text-dark-text-tertiary mt-0.5 h-3 w-3 shrink-0 text-gray-400" />
             <Caption className="truncate" title={site.notes}>
               {site.notes}
+            </Caption>
+          </div>
+        )}
+
+        {site.tags && site.tags.length > 0 && (
+          <div className="mt-0.5 flex min-w-0 items-start gap-1 sm:mt-1">
+            <TagIcon className="dark:text-dark-text-tertiary mt-0.5 h-3 w-3 shrink-0 text-gray-400" />
+            <Caption className="truncate" title={site.tags.join(", ")}>
+              {highlights?.tags
+                ? renderHighlightedFragments(
+                    highlights.tags,
+                    site.tags.join(", ")
+                  )
+                : site.tags.join(", ")}
             </Caption>
           </div>
         )}

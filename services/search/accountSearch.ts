@@ -62,6 +62,30 @@ function scoreNameMatch(normalized: string, query: string): number {
   return 0
 }
 
+function scoreTagMatch(tags: string[] | undefined, query: string): number {
+  if (!tags || tags.length === 0) {
+    return 0
+  }
+
+  const normalizedQuery = normalizeString(query)
+  if (!normalizedQuery) {
+    return 0
+  }
+
+  let score = 0
+  for (const tag of tags) {
+    const normalizedTag = normalizeString(tag)
+    if (!normalizedTag) continue
+    if (normalizedTag === normalizedQuery) {
+      score = Math.max(score, 4)
+    } else if (normalizedTag.includes(normalizedQuery)) {
+      score = Math.max(score, 2)
+    }
+  }
+
+  return score
+}
+
 /**
  * Calculates the score for URL field matching
  */
@@ -211,6 +235,13 @@ export function searchAccounts(
       if (accountIdScore > 0) {
         tokenScore += accountIdScore
         // accountId is internal-only, no highlight needed
+      }
+
+      // Match against tags
+      const tagScore = scoreTagMatch(account.tags, token)
+      if (tagScore > 0) {
+        tokenScore += tagScore
+        tokenMatchedFields.add("tags")
       }
 
       // Match against accessToken (lowest weight, not added to matchedFields for UI)
