@@ -82,8 +82,12 @@ export function isExtensionBackground() {
     return true
   }
 
-  // 2. 无 window 对象 (Service Worker)
-  if (typeof window === "undefined") {
+  // 2. 无 window 对象 且 存在 browser.runtime => Service Worker / background
+  if (
+    typeof window === "undefined" &&
+    typeof browser !== "undefined" &&
+    !!browser.runtime
+  ) {
     return true
   }
 
