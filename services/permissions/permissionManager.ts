@@ -19,7 +19,9 @@ export const OPTIONAL_PERMISSIONS: ManifestOptionalPermissions[] =
   readOptionalPermissions()
 
 export const COOKIE_INTERCEPTOR_PERMISSIONS: ManifestOptionalPermissions[] = [
-  ...OPTIONAL_PERMISSIONS
+  "cookies",
+  "webRequest",
+  "webRequestBlocking"
 ]
 
 export async function hasCookieInterceptorPermissions(): Promise<boolean> {

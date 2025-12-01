@@ -6,7 +6,7 @@ import {
   setupWebRequestInterceptor
 } from "~/utils/cookieHelper"
 
-async function checkCookieInterceptorPermissions(): Promise<boolean> {
+async function checkCookieInterceptorRequirement(): Promise<boolean> {
   const granted = await hasCookieInterceptorPermissions()
   if (!granted) {
     console.warn(
@@ -40,7 +40,7 @@ function extractAccountUrlPatterns(accounts: SiteAccount[]): string[] {
 // 初始化 Cookie 拦截器
 export async function initializeCookieInterceptors(): Promise<void> {
   try {
-    if (!(await checkCookieInterceptorPermissions())) {
+    if (!(await checkCookieInterceptorRequirement())) {
       return
     }
     const accounts = await accountStorage.getAllAccounts()
@@ -54,7 +54,7 @@ export async function initializeCookieInterceptors(): Promise<void> {
 // 更新 Cookie 拦截器（配置变更时调用）
 async function updateCookieInterceptor(): Promise<void> {
   try {
-    if (!(await checkCookieInterceptorPermissions())) {
+    if (!(await checkCookieInterceptorRequirement())) {
       return
     }
     const accounts = await accountStorage.getAllAccounts()
