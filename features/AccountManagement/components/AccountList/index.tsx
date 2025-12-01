@@ -8,11 +8,13 @@ import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
+  Button,
   Card,
   CardContent,
   CardList,
   EmptyState,
-  IconButton
+  IconButton,
+  MultiSelect
 } from "~/components/ui"
 import { DATA_TYPE_BALANCE, DATA_TYPE_CONSUMPTION } from "~/constants"
 import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
@@ -23,6 +25,10 @@ import {
 } from "~/features/AccountManagement/hooks/useAccountSearch"
 import { useAddAccountHandler } from "~/hooks/useAddAccountHandler.ts"
 import type { DisplaySiteData, SortField } from "~/types"
+import {
+  calculateTotalBalanceForSites,
+  calculateTotalConsumptionForSites
+} from "~/utils/formatters"
 
 import CopyKeyDialog from "../CopyKeyDialog"
 import DelAccountDialog from "../DelAccountDialog"
@@ -44,6 +50,7 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
     useState<DisplaySiteData | null>(null)
   const [copyKeyDialogAccount, setCopyKeyDialogAccount] =
     useState<DisplaySiteData | null>(null)
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
 
   const { query, setQuery, clearSearch, searchResults, inSearchMode } =
     useAccountSearch(displayData, initialSearchQuery)
@@ -56,7 +63,19 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
     setCopyKeyDialogAccount(site)
   }
 
-  const displayedResults = useMemo<
+  const availableTags = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          displayData.flatMap((item) =>
+            item.tags && item.tags.length ? item.tags : []
+          )
+        )
+      ),
+    [displayData]
+  )
+
+  const baseResults = useMemo<
     Array<{
       account: DisplaySiteData
       highlights?: SearchResultWithHighlight["highlights"]
@@ -72,7 +91,33 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
     return sortedData.map((account) => ({ account, highlights: undefined }))
   }, [inSearchMode, searchResults, sortedData])
 
+  const displayedResults = useMemo(() => {
+    if (selectedTags.length === 0) {
+      return baseResults
+    }
+    return baseResults.filter(({ account }) => {
+      const tags = account.tags || []
+      return selectedTags.every((tag) => tags.includes(tag))
+    })
+  }, [baseResults, selectedTags])
+
+  const filteredSites = useMemo(
+    () => displayedResults.map((item) => item.account),
+    [displayedResults]
+  )
+
+  const filteredBalance = useMemo(
+    () => calculateTotalBalanceForSites(filteredSites),
+    [filteredSites]
+  )
+
+  const filteredConsumption = useMemo(
+    () => calculateTotalConsumptionForSites(filteredSites),
+    [filteredSites]
+  )
+
   const hasAccounts = displayData.length > 0
+  const showFilteredSummary = inSearchMode || selectedTags.length > 0
 
   if (!hasAccounts) {
     return (
@@ -119,42 +164,88 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
           />
         </div>
 
-        {/* Header */}
-        {
-          <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary sticky top-0 z-10 border-b border-gray-200 bg-gray-50 px-3 py-2 sm:px-5">
-            <div className="flex items-center justify-between gap-2 sm:gap-4">
-              {/* Account Name Column */}
-              <div className="flex min-w-0 flex-1 gap-2">
-                {renderSortButton("name", t("account:list.header.account"))}
-                <span className="text-[10px] font-medium sm:text-xs">
-                  {t("common:total") + ": " + displayedResults.length}
+        {/* Tag Filter */}
+        <div className="dark:border-dark-bg-tertiary border-b border-gray-200 px-3 py-2 sm:px-5">
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-gray-700 dark:text-gray-200">
+                {t("account:filter.tagsLabel")}
+              </span>
+              {selectedTags.length > 0 && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setSelectedTags([])}>
+                  {t("account:filter.clearTags")}
+                </Button>
+              )}
+            </div>
+            <MultiSelect
+              options={availableTags.map((tag) => ({ value: tag, label: tag }))}
+              selected={selectedTags}
+              onChange={setSelectedTags}
+              placeholder={t("account:filter.tagsPlaceholder") ?? ""}
+              allowCustom={false}
+            />
+            {showFilteredSummary && (
+              <div className="flex flex-wrap items-center gap-3 text-xs text-gray-600 dark:text-gray-300">
+                <span>
+                  {t("account:filter.summary", {
+                    count: filteredSites.length
+                  })}
                 </span>
+                <div className="flex flex-wrap gap-3">
+                  <span>
+                    {t("account:filteredTotals.balance")}: USD{" "}
+                    {filteredBalance.USD.toFixed(2)} / CNY{" "}
+                    {filteredBalance.CNY.toFixed(2)}
+                  </span>
+                  <span>
+                    {t("account:filteredTotals.consumption")}: USD{" "}
+                    {filteredConsumption.USD.toFixed(2)} / CNY{" "}
+                    {filteredConsumption.CNY.toFixed(2)}
+                  </span>
+                </div>
               </div>
+            )}
+          </div>
+        </div>
 
-              {/* Balance & Consumption Column */}
-              <div className="flex shrink-0 items-end gap-0.5">
-                <div className="flex items-center">
-                  {renderSortButton(
-                    DATA_TYPE_BALANCE,
-                    t("account:list.header.balance")
-                  )}
-                </div>
-                <div className="dark:text-dark-text-tertiary text-[10px] text-gray-400 sm:text-xs">
-                  /
-                </div>
-                <div className="dark:text-dark-text-tertiary flex items-center text-[9px] text-gray-400 sm:text-[10px]">
-                  {renderSortButton(
-                    DATA_TYPE_CONSUMPTION,
-                    t("account:list.header.todayConsumption")
-                  )}
-                </div>
+        {/* Header */}
+        <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary sticky top-0 z-10 border-b border-gray-200 bg-gray-50 px-3 py-2 sm:px-5">
+          <div className="flex items-center justify-between gap-2 sm:gap-4">
+            {/* Account Name Column */}
+            <div className="flex min-w-0 flex-1 gap-2">
+              {renderSortButton("name", t("account:list.header.account"))}
+              <span className="text-[10px] font-medium sm:text-xs">
+                {t("common:total") + ": " + displayedResults.length}
+              </span>
+            </div>
+
+            {/* Balance & Consumption Column */}
+            <div className="flex shrink-0 items-end gap-0.5">
+              <div className="flex items-center">
+                {renderSortButton(
+                  DATA_TYPE_BALANCE,
+                  t("account:list.header.balance")
+                )}
+              </div>
+              <div className="dark:text-dark-text-tertiary text-[10px] text-gray-400 sm:text-xs">
+                /
+              </div>
+              <div className="dark:text-dark-text-tertiary flex items-center text-[9px] text-gray-400 sm:text-[10px]">
+                {renderSortButton(
+                  DATA_TYPE_CONSUMPTION,
+                  t("account:list.header.todayConsumption")
+                )}
               </div>
             </div>
           </div>
-        }
+        </div>
 
         {/* Account List or No Results */}
-        {inSearchMode && displayedResults.length === 0 ? (
+        {showFilteredSummary && displayedResults.length === 0 ? (
           <EmptyState
             icon={<InboxIcon className="h-12 w-12" />}
             title={t("account:search.noResults")}

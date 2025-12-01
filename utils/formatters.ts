@@ -145,6 +145,19 @@ export const calculateTotalBalance = (displayData: DisplaySiteData[]) => {
   }
 }
 
+export const calculateTotalBalanceForSites = (sites: DisplaySiteData[]) =>
+  calculateTotalBalance(sites)
+
+export const calculateTotalConsumptionForSites = (sites: DisplaySiteData[]) => {
+  const usd = sites.reduce((sum, site) => sum + site.todayConsumption.USD, 0)
+  const cny = sites.reduce((sum, site) => sum + site.todayConsumption.CNY, 0)
+
+  return {
+    USD: parseFloat(usd.toFixed(2)),
+    CNY: parseFloat(cny.toFixed(2))
+  }
+}
+
 /**
  * 获取货币符号
  */

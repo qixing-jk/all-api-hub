@@ -82,5 +82,16 @@
   "search": {
     "placeholder": "Search name/URL/check-in/redeem/token",
     "noResults": "No matching accounts found"
+  },
+  "filter": {
+    "tagsLabel": "Filter tags",
+    "tagsPlaceholder": "Select tags",
+    "clearTags": "Clear",
+    "summary": "{{count}} account(s)"
+  },
+  "filteredTotals": {
+    "title": "Filtered totals",
+    "balance": "Balance",
+    "consumption": "Today's consumption"
   }
 }

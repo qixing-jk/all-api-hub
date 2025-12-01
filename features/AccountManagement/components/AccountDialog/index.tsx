@@ -1,3 +1,5 @@
+import { useMemo } from "react"
+
 import { Modal } from "~/components/ui/Dialog/Modal"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
@@ -31,6 +33,17 @@ export default function AccountDialog({
 }: AccountDialogProps) {
   const { displayData, detectedAccount } = useAccountDataContext()
   const { openEditAccount } = useDialogStateContext()
+  const availableTags = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          displayData.flatMap((item) =>
+            item.tags && item.tags.length ? item.tags : []
+          )
+        )
+      ),
+    [displayData]
+  )
 
   const { state, setters, handlers } = useAccountDialog({
     isOpen,
@@ -125,6 +138,9 @@ export default function AccountDialog({
               }
               notes={state.notes}
               onNotesChange={setters.setNotes}
+              tags={state.tags}
+              onTagsChange={setters.setTags}
+              availableTags={availableTags}
               checkIn={state.checkIn}
               onCheckInChange={setters.setCheckIn}
               siteType={state.siteType}

@@ -80,7 +80,18 @@
     "unpinned": "已取消置顶"
   },
   "search": {
-    "placeholder": "搜索名称/地址/签到/兑换/令牌",
-    "noResults": "未找到匹配的账户"
+    "placeholder": "搜索名称/URL/签到/兑换/令牌",
+    "noResults": "没有找到匹配的账号"
+  },
+  "filter": {
+    "tagsLabel": "标签筛选",
+    "tagsPlaceholder": "选择标签",
+    "clearTags": "清除",
+    "summary": "共 {{count}} 个账号"
+  },
+  "filteredTotals": {
+    "title": "筛选统计",
+    "balance": "余额",
+    "consumption": "今日消耗"
   }
 }

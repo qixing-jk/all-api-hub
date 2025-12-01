@@ -316,6 +316,7 @@ export function useAccountDialog({
               userId.trim(),
               exchangeRate,
               notes.trim(),
+              tags,
               checkIn,
               siteType,
               authType

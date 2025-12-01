@@ -332,18 +332,6 @@ export default function AccountForm({
         />
       </FormField>
 
-      {/* 备注 */}
-      <FormField label={t("form.notes")}>
-        <div className="relative">
-          <Textarea
-            value={notes}
-            onChange={(e) => onNotesChange(e.target.value)}
-            placeholder={t("form.notesPlaceholder")}
-            rows={2}
-          />
-        </div>
-      </FormField>
-
       {/* 标签 */}
       <FormField
         label={t("form.tags")}
@@ -355,6 +343,18 @@ export default function AccountForm({
           placeholder={t("form.tagsPlaceholder") ?? ""}
           allowCustom
         />
+      </FormField>
+
+      {/* 备注 */}
+      <FormField label={t("form.notes")}>
+        <div className="relative">
+          <Textarea
+            value={notes}
+            onChange={(e) => onNotesChange(e.target.value)}
+            placeholder={t("form.notesPlaceholder")}
+            rows={2}
+          />
+        </div>
       </FormField>
     </>
   )
