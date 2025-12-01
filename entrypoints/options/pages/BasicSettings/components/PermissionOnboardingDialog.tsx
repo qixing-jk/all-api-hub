@@ -83,14 +83,27 @@ export function PermissionOnboardingDialog({
   const handleGrantAll = useCallback(async () => {
     if (!hasOptionalPermissions) return
     setIsRequesting(true)
-    const success = await ensurePermissions(OPTIONAL_PERMISSIONS)
-    showResultToast(
-      success,
-      t("permissionsOnboarding.toasts.success"),
-      t("permissionsOnboarding.toasts.error")
-    )
-    await loadStatuses()
-    setIsRequesting(false)
+    let success = false
+
+    try {
+      success = await ensurePermissions(OPTIONAL_PERMISSIONS)
+      showResultToast(
+        success,
+        t("permissionsOnboarding.toasts.success"),
+        t("permissionsOnboarding.toasts.error")
+      )
+    } catch (error) {
+      console.error(
+        "[Permissions] Failed to grant all optional permissions",
+        error
+      )
+      success = false
+      showResultToast(false, t("permissionsOnboarding.toasts.error"))
+    } finally {
+      await loadStatuses()
+      setIsRequesting(false)
+    }
+
     if (success) {
       onClose()
     }
