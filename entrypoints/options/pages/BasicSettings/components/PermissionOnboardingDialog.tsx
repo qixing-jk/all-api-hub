@@ -13,6 +13,7 @@ import { BodySmall, Heading3, Link } from "~/components/ui/Typography"
 import {
   ensurePermissions,
   hasPermission,
+  onOptionalPermissionsChanged,
   OPTIONAL_PERMISSION_DEFINITIONS,
   OPTIONAL_PERMISSIONS,
   type OptionalPermission
@@ -74,6 +75,14 @@ export function PermissionOnboardingDialog({
   useEffect(() => {
     if (open) {
       void loadStatuses()
+    }
+
+    const unsubscribe = onOptionalPermissionsChanged(() => {
+      void loadStatuses()
+    })
+
+    return () => {
+      unsubscribe()
     }
   }, [open, loadStatuses])
 

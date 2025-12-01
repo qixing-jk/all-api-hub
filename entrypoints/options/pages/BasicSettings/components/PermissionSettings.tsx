@@ -12,6 +12,7 @@ import { CardList } from "~/components/ui/CardList"
 import { BodySmall } from "~/components/ui/Typography"
 import {
   hasPermission,
+  onOptionalPermissionsChanged,
   OPTIONAL_PERMISSION_DEFINITIONS,
   OPTIONAL_PERMISSIONS,
   removePermission,
@@ -74,6 +75,13 @@ export default function PermissionSettings() {
 
   useEffect(() => {
     void loadStatuses()
+    const unsubscribe = onOptionalPermissionsChanged(() => {
+      void loadStatuses()
+    })
+
+    return () => {
+      unsubscribe()
+    }
   }, [loadStatuses])
 
   const handleToggle = useCallback(

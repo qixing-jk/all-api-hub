@@ -1,6 +1,8 @@
 import {
   containsPermissions,
   getManifest,
+  onPermissionsAdded,
+  onPermissionsRemoved,
   removePermissions,
   requestPermissions
 } from "~/utils/browserApi"
@@ -90,4 +92,30 @@ export async function ensurePermissions(
 
 export function getPermissionDefinition(id: OptionalPermission) {
   return OPTIONAL_PERMISSION_DEFINITIONS.find((perm) => perm.id === id)
+}
+
+function includesOptionalPermission(permissions?: string[]): boolean {
+  if (!permissions?.length) return false
+  return permissions.some((permission) =>
+    (ALL_OPTIONAL_PERMISSIONS as readonly string[]).includes(permission)
+  )
+}
+
+export function onOptionalPermissionsChanged(callback: () => void): () => void {
+  const unsubscribeAdded = onPermissionsAdded((permissions) => {
+    if (includesOptionalPermission(permissions.permissions)) {
+      callback()
+    }
+  })
+
+  const unsubscribeRemoved = onPermissionsRemoved((permissions) => {
+    if (includesOptionalPermission(permissions.permissions)) {
+      callback()
+    }
+  })
+
+  return () => {
+    unsubscribeAdded()
+    unsubscribeRemoved()
+  }
 }
