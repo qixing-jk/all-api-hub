@@ -104,8 +104,8 @@
   },
   "permissions": {
     "title": "权限管理",
-    "description": "为可选功能（如 Cookie 拦截和临时窗口绕过防火墙）授予所需的浏览器权限。",
-    "helper": "仅在需要高级流程（例如临时窗口绕过防火墙）时启用相关权限，随时可以撤销，不会影响其他功能。",
+    "description": "在需要临时窗口过盾流程时，再授予这些可选权限。",
+    "helper": "开启后，权限只用于完成过盾必要的 Cookie/请求头操作，而且可以随时关闭，随时可以关闭，不会影响基础功能。",
     "statusCaption": "权限状态与浏览器同步，如在此页面外修改请点击刷新。",
     "status": {
       "checking": "检测中…",
@@ -113,36 +113,36 @@
       "denied": "未授予"
     },
     "actions": {
-      "allow": "允许",
+      "allow": "允许（推荐）",
       "remove": "撤销",
       "refresh": "刷新状态"
     },
     "messages": {
-      "granted": "已授予 {{name}} 权限",
-      "grantFailed": "请求 {{name}} 权限失败",
+      "granted": "已开启 {{name}}，相关流程将按预期运行",
+      "grantFailed": "未能开启 {{name}}，如仍需使用请稍后重试",
       "revoked": "已撤销 {{name}} 权限",
       "revokeFailed": "撤销 {{name}} 权限失败"
     },
     "items": {
       "cookies": {
         "title": "Cookies",
-        "description": "允许扩展在启用临时窗口绕过等高级请求功能时读取关联账号的 Cookies。"
+        "description": "允许读取必要的 Cookie，用于在需要时自动附加认证信息。"
       },
       "webRequest": {
         "title": "网络请求",
-        "description": "允许扩展监听外发请求，以便在临时窗口绕过等场景下按需注入认证头信息。"
+        "description": "仅在临时窗口过盾或自动刷新需要时，监听请求并追加必要的请求头。"
       },
       "webRequestBlocking": {
         "title": "网络请求阻断",
-        "description": "用于在请求发送前同步修改请求并附加 Cookies，确保临时窗口绕过等高级功能可靠运行。"
+        "description": "在请求发出前同步附加 Cookie，确保绕过防护页面的流程稳定可行。"
       }
     }
   },
   "permissionsOnboarding": {
     "title": "欢迎加入 All API Hub",
-    "subtitle": "这是一个开源扩展，需要少量可选权限来启用 Cookie 拦截、临时窗口过盾等高级功能。",
+    "subtitle": "这是一个开源扩展，需要可选权限来启用临时窗口过盾等高级功能。",
     "openSourceBadge": "开源 · 社区共建",
-    "intro": "All API Hub 完全公开开发，可选权限默认关闭，只有在你授权后才会启用。",
+    "intro": "权限只用于完成过盾必要的 Cookie/请求头操作，而且可以随时关闭。",
     "project": {
       "label": "项目仓库",
       "cta": "前往仓库关注版本、提交 Issue 或参与开发。",
@@ -153,7 +153,7 @@
       "maybeLater": "稍后再说"
     },
     "permissionListTitle": "这些权限的作用",
-    "permissionListDescription": "授予后，All API Hub 才能在需要时自动附加 Cookie 和头信息。",
+    "permissionListDescription": "绕过防火墙防护等功能的必要权限，让数据获取能在存在防火墙的网站上正常工作。",
     "toasts": {
       "success": "已授予全部推荐权限",
       "error": "权限请求被取消"

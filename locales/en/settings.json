@@ -104,8 +104,8 @@
   },
   "permissions": {
     "title": "Permissions",
-    "description": "Grant the extra browser permissions required by optional features like cookie interception and the temporary window firewall bypass.",
-    "helper": "Only enable the permissions you need for advanced flows such as the temporary window bypass. You can always revoke them later without affecting the rest of the extension.",
+    "description": "Only grant these optional capabilities when you need All API Hub to handle cookies, headers, or temp-window bypass flows for you.",
+    "helper": "Once enabled, the extension simply attaches your existing session cookies and headers in the background. You can disable any permission later without affecting core features.",
     "statusCaption": "Permission status is synced with the browser. Click refresh if you changed permissions outside this page.",
     "status": {
       "checking": "Checking…",
@@ -113,36 +113,36 @@
       "denied": "Not granted"
     },
     "actions": {
-      "allow": "Allow",
+      "allow": "Allow (recommended)",
       "remove": "Revoke",
       "refresh": "Refresh status"
     },
     "messages": {
-      "granted": "{{name}} permission granted",
-      "grantFailed": "Failed to request {{name}} permission",
+      "granted": "{{name}} enabled. Related workflows will now run as expected.",
+      "grantFailed": "Couldn’t enable {{name}}. Please retry later if you still need it.",
       "revoked": "{{name}} permission revoked",
       "revokeFailed": "Failed to revoke {{name}} permission"
     },
     "items": {
       "cookies": {
         "title": "Cookies",
-        "description": "Allows the extension to read cookies for connected accounts when you enable advanced request features like the temporary window bypass."
+        "description": "Allows All API Hub to read the necessary cookies for your connected accounts so authentication headers can be added when required."
       },
       "webRequest": {
         "title": "Web Request",
-        "description": "Lets the extension monitor outgoing requests so it can inject authenticated headers when required by the temporary window bypass and similar features."
+        "description": "Lets the extension observe outgoing requests only when temp-window bypass or auto-refresh needs to add required headers."
       },
       "webRequestBlocking": {
         "title": "Web Request Blocking",
-        "description": "Required to synchronously modify requests and attach cookies before they are sent, ensuring the temporary window bypass works reliably."
+        "description": "Allows synchronous modification so cookies can be attached before a request leaves the browser, keeping firewall-bypass flows reliable."
       }
     }
   },
   "permissionsOnboarding": {
     "title": "Welcome to All API Hub",
-    "subtitle": "This open-source extension needs a few optional permissions to unlock cookie interception, temp-window bypass, and other pro workflows.",
+    "subtitle": "This open-source extension needs a few optional permissions to enable features like the temp-window bypass and other advanced workflows.",
     "openSourceBadge": "Open-source & community-driven",
-    "intro": "We build All API Hub in public. Optional permissions stay disabled unless you explicitly allow them.",
+    "intro": "We only use them for the cookie/header steps required to pass protection screens, and you can disable them whenever you like.",
     "project": {
       "label": "Project repository",
       "cta": "Visit the repo to follow releases, file issues, or join development.",
@@ -153,9 +153,9 @@
       "maybeLater": "Maybe later"
     },
     "permissionListTitle": "What these permissions do",
-    "permissionListDescription": "Granting them lets All API Hub attach cookies and headers automatically when sites require it.",
+    "permissionListDescription": "These permissions are required for firewall-bypass flows so data refresh jobs keep working on protected sites.",
     "toasts": {
-      "success": "All recommended permissions granted",
+      "success": "All recommended permissions granted.",
       "error": "Permission request was dismissed"
     }
   },
