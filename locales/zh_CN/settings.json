@@ -4,7 +4,7 @@
   "tabs": {
     "general": "通用",
     "accountManagement": "账号管理",
-    "autoRefresh": "自动刷新",
+    "refresh": "数据刷新",
     "checkinRedeem": "签到与兑换",
     "dataBackup": "数据与备份",
     "newApi": "New API",
@@ -37,7 +37,7 @@
     "minRefreshInterval": "最小刷新间隔",
     "minRefreshIntervalDesc": "自动刷新时的最小时间间隔，避免频繁请求（手动刷新不受限制）",
     "shieldTitle": "临时窗口绕过防火墙防护",
-    "shieldDescription": "配置扩展如何使用带 Cookie 的临时窗口，自动通过网站的防护页面（例如 Cloudflare 5 秒盾）然后再获取数据。",
+    "shieldDescription": "配置扩展如何使用临时窗口，自动通过网站的防护页面（例如 Cloudflare 5 秒盾）然后再获取数据（对于存在网站防火墙的站点获取数据是必要功能）",
     "shieldEnabled": "启用防护绕过（临时窗口）",
     "shieldEnabledDesc": "关闭后，扩展不会通过打开临时窗口来绕过网站防护页面。",
     "shieldContextsTitle": "在以下场景使用防护绕过",

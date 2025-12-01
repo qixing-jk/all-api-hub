@@ -39,7 +39,7 @@ import PermissionsTab from "./components/PermissionsTab"
 type TabId =
   | "general"
   | "accountManagement"
-  | "autoRefresh"
+  | "refresh"
   | "checkinRedeem"
   | "dataBackup"
   | "newApi"
@@ -60,7 +60,7 @@ const PERMISSIONS_TAB_CONFIG: TabConfig = {
 const TAB_CONFIGS = [
   { id: "general", component: GeneralTab },
   { id: "accountManagement", component: AccountManagementTab },
-  { id: "autoRefresh", component: AutoRefreshTab },
+  { id: "refresh", component: AutoRefreshTab },
   { id: "checkinRedeem", component: CheckinRedeemTab },
   { id: "newApi", component: NewApiTab },
   ...(hasOptionalPermissions ? [PERMISSIONS_TAB_CONFIG] : []),
@@ -75,8 +75,8 @@ const ANCHOR_TO_TAB: Record<string, TabId> = {
   "account-management": "accountManagement",
   "sorting-priority": "accountManagement",
   sorting: "accountManagement",
-  "auto-refresh": "autoRefresh",
-  refresh: "autoRefresh",
+  "auto-refresh": "refresh",
+  refresh: "refresh",
   "checkin-redeem": "checkinRedeem",
   checkin: "checkinRedeem",
   webdav: "dataBackup",

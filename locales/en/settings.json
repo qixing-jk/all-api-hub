@@ -4,7 +4,7 @@
   "tabs": {
     "general": "General",
     "accountManagement": "Account Management",
-    "autoRefresh": "Auto Refresh",
+    "refresh": "Data Refresh",
     "checkinRedeem": "Check-in & Redeem",
     "dataBackup": "Data & Backup",
     "newApi": "New API",
@@ -37,7 +37,7 @@
     "minRefreshInterval": "Minimum Refresh Interval",
     "minRefreshIntervalDesc": "Minimum time interval for auto-refresh to avoid frequent requests (manual refresh is not restricted)",
     "shieldTitle": "Temp-window protection bypass",
-    "shieldDescription": "Configure how the extension uses a temporary window with cookies to automatically bypass website protection pages (for example Cloudflare 5s checks) and then fetch data.",
+    "shieldDescription": "Configure how the extension uses a temporary window to automatically bypass website protection pages (e.g., Cloudflare's 5-second shield) and then retrieve data (this is a necessary feature for retrieving data from sites with a website firewall).",
     "shieldEnabled": "Enable protection bypass (temp window)",
     "shieldEnabledDesc": "When disabled, the extension will not open a temporary window to bypass website protection pages.",
     "shieldContextsTitle": "Use protection bypass in these contexts",
