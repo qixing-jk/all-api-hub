@@ -106,6 +106,9 @@ export const AccountActionsProvider = ({
     )
   }, [])
 
+  /**
+   * 标记账户为已签到
+   */
   const handleMarkAsCheckedIn = useCallback(
     async (account: DisplaySiteData) => {
       try {

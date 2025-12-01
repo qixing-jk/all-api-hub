@@ -104,8 +104,10 @@ export interface CheckInConfig {
    * - false: Can check in today (not yet checked in)
    * - undefined: Status unknown or detection not enabled
    *
-   * This field is only meaningful when enableDetection is true.
-   * It is updated during refresh operations if enableDetection is true.
+   * This field is for enableDetection and customCheckInUrl.
+   * @see fetchAccountData
+   * @see resetExpiredCheckIns
+   * @see markAccountAsCheckedIn
    */
   isCheckedInToday?: boolean
 

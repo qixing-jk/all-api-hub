@@ -433,7 +433,7 @@ class AccountStorageService {
         return { account, refreshed: false }
       }
 
-      // 使用同步导入的API服务
+      // 刷新账号数据
       const result = await refreshAccountData(
         account.site_url,
         account.account_info.id,
@@ -457,7 +457,7 @@ class AccountStorageService {
         if (account.checkIn?.customCheckInUrl) {
           // 有自定义签到URL的账号，需要检查日期重置
           const today = new Date().toISOString().split("T")[0]
-          const lastCheckInDate = account.checkIn.lastCheckInDate
+          const { lastCheckInDate } = account.checkIn
 
           if (lastCheckInDate && lastCheckInDate !== today) {
             // 日期变了，重置签到状态
