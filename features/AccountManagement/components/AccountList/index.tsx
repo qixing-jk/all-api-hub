@@ -8,7 +8,6 @@ import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
-  Button,
   Card,
   CardContent,
   CardList,
@@ -171,15 +170,6 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
               <span className="text-xs font-medium text-gray-700 dark:text-gray-200">
                 {t("account:filter.tagsLabel")}
               </span>
-              {selectedTags.length > 0 && (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setSelectedTags([])}>
-                  {t("account:filter.clearTags")}
-                </Button>
-              )}
             </div>
             <MultiSelect
               options={availableTags.map((tag) => ({ value: tag, label: tag }))}

@@ -80,7 +80,7 @@
     "unpinned": "已取消置顶"
   },
   "search": {
-    "placeholder": "搜索名称/URL/签到/兑换/令牌",
+    "placeholder": "输入站点信息或账号信息进行搜索",
     "noResults": "没有找到匹配的账号"
   },
   "filter": {

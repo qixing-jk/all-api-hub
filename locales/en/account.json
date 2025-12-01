@@ -80,7 +80,7 @@
     "unpinned": "Unpinned"
   },
   "search": {
-    "placeholder": "Search name/URL/check-in/redeem/token",
+    "placeholder": "Enter site information or account information to search",
     "noResults": "No matching accounts found"
   },
   "filter": {

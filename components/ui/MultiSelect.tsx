@@ -34,6 +34,7 @@ export interface MultiSelectProps {
   allowCustom?: boolean
   parseCommaStrings?: boolean
   className?: string
+  clearable?: boolean
 }
 
 export function MultiSelect({
@@ -45,7 +46,8 @@ export function MultiSelect({
   disabled = false,
   allowCustom = false,
   parseCommaStrings = true,
-  className
+  className,
+  clearable = true
 }: MultiSelectProps) {
   const { t } = useTranslation("ui")
   const [query, setQuery] = useState("")
@@ -226,12 +228,25 @@ export function MultiSelect({
               onKeyDown={handleInputKeyDown}
               displayValue={() => query}
             />
-            <Combobox.Button className="absolute inset-y-0 right-0 flex items-center pr-2">
-              <ChevronUpDownIcon
-                className="h-5 w-5 text-gray-400"
-                aria-hidden="true"
-              />
-            </Combobox.Button>
+            <div className="absolute inset-y-0 right-0 flex items-center gap-1 pr-2">
+              {!disabled && query.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuery("")
+                  }}
+                  className="inline-flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 focus:bg-gray-200 focus:text-gray-700 focus:outline-none"
+                  aria-label={t("multiSelect.clearInput")}>
+                  <XMarkIcon className="h-5 w-5" />
+                </button>
+              )}
+              <Combobox.Button className="flex items-center">
+                <ChevronUpDownIcon
+                  className="h-5 w-5 text-gray-400"
+                  aria-hidden="true"
+                />
+              </Combobox.Button>
+            </div>
           </div>
 
           <Transition
@@ -346,6 +361,18 @@ export function MultiSelect({
                 </span>
               )}
             </button>
+            {clearable && !disabled && selectedOptions.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  onChange([])
+                }}
+                className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary/60 dark:text-dark-text-primary dark:hover:bg-dark-bg-secondary inline-flex items-center justify-center rounded-md border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                title={t("multiSelect.clearSelected")}
+                aria-label={t("multiSelect.clearSelected")}>
+                <XMarkIcon className="h-4 w-4" />
+              </button>
+            )}
             <button
               type="button"
               onClick={handleCopySelected}
