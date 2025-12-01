@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.20.0](https://github.com/qixing-jk/all-api-hub/compare/v2.19.0...v2.20.0) (2025-12-01)
+
+
+### Features
+
+* **background:** add permissions onboarding for first-time installation ([#215](https://github.com/qixing-jk/all-api-hub/issues/215)) ([017008c](https://github.com/qixing-jk/all-api-hub/commit/017008cf25c5e8fdbdd8d972cedf8102d01f5f68))
+* Gate Cookie Interceptor Headers Behind Optional Permissions for Cross-Browser Support ([#214](https://github.com/qixing-jk/all-api-hub/issues/214)) ([4d76e7d](https://github.com/qixing-jk/all-api-hub/commit/4d76e7d7476bb7e8c8ce9473e56764f438bde4bd))
+
+
+### Bug Fixes
+
+* prevent action buttons overflow in account dialog ([f0caacf](https://github.com/qixing-jk/all-api-hub/commit/f0caacfe7529fb1299724adbe423c654f44bb016))
+* **redeem:** use constant for credited amount conversion factor ([c80fc6b](https://github.com/qixing-jk/all-api-hub/commit/c80fc6b2cff4cebbe1374137f07c291857275bf3))
+* restrict cookie interceptor to Firefox only  ([#216](https://github.com/qixing-jk/all-api-hub/issues/216)) ([10eff3d](https://github.com/qixing-jk/all-api-hub/commit/10eff3d25c9940a63b67ac0ba03ebf1b03ff1c47))
+
 ## [2.19.0](https://github.com/qixing-jk/all-api-hub/compare/v2.18.0...v2.19.0) (2025-11-30)
 
 
