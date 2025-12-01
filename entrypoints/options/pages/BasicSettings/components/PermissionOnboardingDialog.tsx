@@ -169,7 +169,7 @@ export function PermissionOnboardingDialog({
             variant="info"
             title={t("permissionsOnboarding.project.label")}>
             <AlertDescription>
-              <div className="flex flex-col gap-2">
+              <div>
                 <Link
                   href={GITHUB_URL}
                   target="_blank"

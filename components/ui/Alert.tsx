@@ -2,6 +2,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { AlertCircle, AlertTriangle, CheckCircle, Info } from "lucide-react"
 import React from "react"
 
+import { Heading5 } from "~/components/ui/Typography.tsx"
 import { cn } from "~/lib/utils.ts"
 
 const alertVariants = cva(
@@ -71,11 +72,9 @@ const Alert = React.forwardRef<HTMLDivElement, AlertProps>(
         className={cn(alertVariants({ variant }), className)}
         {...props}>
         {getIcon()}
-        <div className="ml-0">
+        <div className="ml-0 space-y-1.5">
           {title && (
-            <h5 className="mb-1 leading-none font-medium tracking-tight">
-              {title}
-            </h5>
+            <Heading5 className="leading-none tracking-tight">{title}</Heading5>
           )}
           {description && (
             <div className="text-sm [&_p]:leading-relaxed">{description}</div>
