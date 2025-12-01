@@ -138,6 +138,27 @@
       }
     }
   },
+  "permissionsOnboarding": {
+    "title": "欢迎加入 All API Hub",
+    "subtitle": "这是一个开源扩展，需要少量可选权限来启用 Cookie 拦截、临时窗口过盾等高级功能。",
+    "openSourceBadge": "开源 · 社区共建",
+    "intro": "All API Hub 完全公开开发，可选权限默认关闭，只有在你授权后才会启用。",
+    "project": {
+      "label": "项目仓库",
+      "cta": "前往仓库关注版本、提交 Issue 或参与开发。",
+      "starCta": "去 GitHub 点亮 Star"
+    },
+    "actions": {
+      "allowAll": "授予推荐权限",
+      "maybeLater": "稍后再说"
+    },
+    "permissionListTitle": "这些权限的作用",
+    "permissionListDescription": "授予后，All API Hub 才能在需要时自动附加 Cookie 和头信息。",
+    "toasts": {
+      "success": "已授予全部推荐权限",
+      "error": "权限请求被取消"
+    }
+  },
   "danger": {
     "title": "危险操作",
     "resetAllSettings": "重置所有设置",

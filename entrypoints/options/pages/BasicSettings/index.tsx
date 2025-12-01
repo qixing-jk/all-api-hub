@@ -33,6 +33,7 @@ import DataBackupTab from "./components/DataBackupTab"
 import GeneralTab from "./components/GeneralTab"
 import LoadingSkeleton from "./components/LoadingSkeleton"
 import NewApiTab from "./components/NewApiTab"
+import PermissionOnboardingDialog from "./components/PermissionOnboardingDialog"
 import PermissionsTab from "./components/PermissionsTab"
 
 type TabId =
@@ -103,6 +104,8 @@ export default function BasicSettings() {
   const [selectedTabIndex, setSelectedTabIndex] = useState(0)
   const selectedTab = TAB_CONFIGS[selectedTabIndex]
   const selectedTabId = selectedTab?.id ?? "general"
+  const [showPermissionsOnboarding, setShowPermissionsOnboarding] =
+    useState(false)
 
   const applyUrlState = useCallback(() => {
     const { tab, anchor, isHeadingAnchor } = parseTabFromUrl({
@@ -141,6 +144,20 @@ export default function BasicSettings() {
       window.removeEventListener("hashchange", applyUrlState)
     }
   }, [applyUrlState])
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get("onboarding") === "permissions" && hasOptionalPermissions) {
+      setShowPermissionsOnboarding(true)
+    }
+  }, [])
+
+  const handleCloseOnboarding = useCallback(() => {
+    setShowPermissionsOnboarding(false)
+    const url = new URL(window.location.href)
+    url.searchParams.delete("onboarding")
+    window.history.replaceState(null, "", url.toString())
+  }, [])
 
   const getTabIndexFromId = useCallback(
     (tabId: string) => TAB_CONFIGS.findIndex((cfg) => cfg.id === tabId),
@@ -220,6 +237,13 @@ export default function BasicSettings() {
           })}
         </Tab.Panels>
       </Tab.Group>
+
+      {hasOptionalPermissions && (
+        <PermissionOnboardingDialog
+          open={showPermissionsOnboarding}
+          onClose={handleCloseOnboarding}
+        />
+      )}
     </div>
   )
 }

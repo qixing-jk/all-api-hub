@@ -138,6 +138,27 @@
       }
     }
   },
+  "permissionsOnboarding": {
+    "title": "Welcome to All API Hub",
+    "subtitle": "This open-source extension needs a few optional permissions to unlock cookie interception, temp-window bypass, and other pro workflows.",
+    "openSourceBadge": "Open-source & community-driven",
+    "intro": "We build All API Hub in public. Optional permissions stay disabled unless you explicitly allow them.",
+    "project": {
+      "label": "Project repository",
+      "cta": "Visit the repo to follow releases, file issues, or join development.",
+      "starCta": "Give us a star on GitHub"
+    },
+    "actions": {
+      "allowAll": "Allow recommended permissions",
+      "maybeLater": "Maybe later"
+    },
+    "permissionListTitle": "What these permissions do",
+    "permissionListDescription": "Granting them lets All API Hub attach cookies and headers automatically when sites require it.",
+    "toasts": {
+      "success": "All recommended permissions granted",
+      "error": "Permission request was dismissed"
+    }
+  },
   "danger": {
     "title": "Danger Zone",
     "resetAllSettings": "Reset All Settings",
