@@ -287,7 +287,7 @@ export function MultiSelect({
                     key={option.value}
                     className={({ active }) =>
                       cn(
-                        "relative cursor-default py-2 pr-4 pl-10 select-none",
+                        "relative flex w-full cursor-pointer items-center py-2 pr-4 pl-10 select-none",
                         active
                           ? "bg-blue-600 text-white"
                           : "dark:text-dark-text-primary text-gray-900"
