@@ -16,6 +16,7 @@ import {
 } from "~/services/userPreferences"
 import { AuthTypeEnum } from "~/types"
 import {
+  isExtensionBackground,
   isExtensionPopup,
   isExtensionSidePanel,
   isFirefox,
@@ -477,8 +478,7 @@ async function shouldUseTempWindowFallback(
     return false
   }
 
-  const isBackground =
-    typeof window === "undefined" || typeof document === "undefined"
+  const isBackground = isExtensionBackground()
 
   let inPopup = false
   let inSidePanel = false

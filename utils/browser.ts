@@ -70,3 +70,7 @@ export function isExtensionSidePanel() {
     return false
   }
 }
+
+export function isExtensionBackground() {
+  return typeof window === "undefined" || typeof document === "undefined"
+}
