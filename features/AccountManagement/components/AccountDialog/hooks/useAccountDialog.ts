@@ -55,6 +55,7 @@ export function useAccountDialog({
   const [exchangeRate, setExchangeRate] = useState("")
   const [currentTabUrl, setCurrentTabUrl] = useState<string | null>(null)
   const [notes, setNotes] = useState("")
+  const [tags, setTags] = useState<string[]>([])
   const [checkIn, setCheckIn] = useState<CheckInConfig>({
     enableDetection: false,
     isCheckedInToday: false,
@@ -85,6 +86,7 @@ export function useAccountDialog({
     setExchangeRate("")
     setCurrentTabUrl(null)
     setNotes("")
+    setTags([])
     setCheckIn({
       enableDetection: false,
       autoCheckInEnabled: true,
@@ -111,6 +113,7 @@ export function useAccountDialog({
           setUserId(siteAccount.account_info.id.toString())
           setExchangeRate(siteAccount.exchange_rate.toString())
           setNotes(siteAccount.notes || "")
+          setTags(siteAccount.tags || [])
           setCheckIn({
             enableDetection: siteAccount.checkIn?.enableDetection ?? false,
             autoCheckInEnabled: siteAccount.checkIn?.autoCheckInEnabled ?? true,
@@ -299,6 +302,7 @@ export function useAccountDialog({
               userId.trim(),
               exchangeRate,
               notes.trim(),
+              tags,
               checkIn,
               siteType,
               authType
@@ -449,6 +453,7 @@ export function useAccountDialog({
       exchangeRate,
       currentTabUrl,
       notes,
+      tags,
       checkIn,
       siteType,
       authType,
@@ -465,6 +470,7 @@ export function useAccountDialog({
       setShowManualForm,
       setExchangeRate,
       setNotes,
+      setTags,
       setCheckIn,
       setSiteType,
       setAuthType

@@ -187,6 +187,7 @@ export async function validateAndSaveAccount(
   userId: string,
   exchangeRate: string,
   notes: string,
+  tags: string[] | undefined,
   checkInConfig: CheckInConfig,
   siteType: string,
   authType: AuthTypeEnum
@@ -236,6 +237,7 @@ export async function validateAndSaveAccount(
       exchange_rate:
         parseFloat(exchangeRate) || UI_CONSTANTS.EXCHANGE_RATE.DEFAULT, // 使用用户输入的汇率
       notes: notes || "",
+      tags: tags?.filter(Boolean),
       checkIn: freshAccountData.checkIn,
       account_info: {
         id: parsedUserId,
@@ -279,6 +281,7 @@ export async function validateAndSaveAccount(
       exchange_rate:
         parseFloat(exchangeRate) || UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
       notes: notes || "",
+      tags: tags?.filter(Boolean),
       checkIn: checkInConfig,
       health: {
         status: SiteHealthStatus.Warning,
@@ -334,6 +337,7 @@ export async function validateAndUpdateAccount(
   userId: string,
   exchangeRate: string,
   notes: string,
+  tags: string[] | undefined,
   checkInConfig: CheckInConfig,
   siteType: string,
   authType: AuthTypeEnum
@@ -383,6 +387,7 @@ export async function validateAndUpdateAccount(
       exchange_rate:
         parseFloat(exchangeRate) || UI_CONSTANTS.EXCHANGE_RATE.DEFAULT, // 使用用户输入的汇率
       notes: notes,
+      tags: tags?.filter(Boolean),
       checkIn: freshAccountData.checkIn,
       account_info: {
         id: parsedUserId,
@@ -432,6 +437,7 @@ export async function validateAndUpdateAccount(
       exchange_rate:
         parseFloat(exchangeRate) || UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
       notes: notes,
+      tags: tags?.filter(Boolean),
       checkIn: checkInConfig,
       health: {
         status: SiteHealthStatus.Warning,

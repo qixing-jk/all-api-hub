@@ -55,6 +55,7 @@ export interface SiteAccount {
   updated_at: number // 更改时间 (timestamp)
   created_at: number // 创建时间 (timestamp)
   notes?: string // 备注
+  tags?: string[] // 标签
   /**
    * @deprecated Use `checkIn.isCheckedInToday` instead.
    */
@@ -199,6 +200,7 @@ export interface DisplaySiteData {
   token: string // 访问令牌，用于复制功能
   userId: number // 真实的用户 ID，用于 API 调用
   notes?: string
+  tags?: string[]
   /**
    * @deprecated Use `checkIn.isCheckedInToday` instead.
    */

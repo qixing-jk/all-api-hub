@@ -66,7 +66,10 @@
     "autoCheckInEnabled": "启用每日自动签到",
     "autoCheckInEnabledDesc": "开启后，在全局自动签到功能生效时，此账号将自动参与每日签到",
     "notes": "备注",
-    "notesPlaceholder": "选填，输入备注信息"
+    "notesPlaceholder": "选填，输入备注信息",
+    "tags": "标签",
+    "tagsDescription": "使用标签对账号进行分类，便于快速筛选",
+    "tagsPlaceholder": "添加或选择标签"
   },
   "messages": {
     "loadFailed": "加载账号数据失败",

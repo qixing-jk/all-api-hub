@@ -689,6 +689,7 @@ class AccountStorageService {
       token: account.account_info.access_token,
       userId: account.account_info.id,
       notes: account.notes,
+      tags: account.tags || [],
       siteType: account.site_type,
       checkIn: account.checkIn,
       can_check_in: account.can_check_in,

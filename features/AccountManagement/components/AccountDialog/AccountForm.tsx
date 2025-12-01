@@ -7,12 +7,14 @@ import {
   KeyIcon,
   UserIcon
 } from "@heroicons/react/24/outline"
+import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
   FormField,
   IconButton,
   Input,
+  MultiSelect,
   Select,
   SelectContent,
   SelectItem,
@@ -33,6 +35,7 @@ interface AccountFormProps {
   exchangeRate: string
   showAccessToken: boolean
   notes: string
+  tags: string[]
   onSiteNameChange: (value: string) => void
   onUsernameChange: (value: string) => void
   onUserIdChange: (value: string) => void
@@ -40,6 +43,8 @@ interface AccountFormProps {
   onExchangeRateChange: (value: string) => void
   onToggleShowAccessToken: () => void
   onNotesChange: (value: string) => void
+  onTagsChange: (value: string[]) => void
+  availableTags: string[]
   siteType: string
   onSiteTypeChange: (value: string) => void
   checkIn: CheckInConfig
@@ -55,6 +60,7 @@ export default function AccountForm({
   exchangeRate,
   showAccessToken,
   notes,
+  tags,
   onSiteNameChange,
   onUsernameChange,
   onUserIdChange,
@@ -62,12 +68,21 @@ export default function AccountForm({
   onExchangeRateChange,
   onToggleShowAccessToken,
   onNotesChange,
+  onTagsChange,
+  availableTags,
   siteType,
   onSiteTypeChange,
   checkIn,
   onCheckInChange
 }: AccountFormProps) {
   const { t } = useTranslation("accountDialog")
+  const tagOptions = useMemo(
+    () =>
+      Array.from(new Set(availableTags.concat(tags)))
+        .filter(Boolean)
+        .map((tag) => ({ value: tag, label: tag })),
+    [availableTags, tags]
+  )
 
   return (
     <>
@@ -327,6 +342,19 @@ export default function AccountForm({
             rows={2}
           />
         </div>
+      </FormField>
+
+      {/* 标签 */}
+      <FormField
+        label={t("form.tags")}
+        description={t("form.tagsDescription") ?? undefined}>
+        <MultiSelect
+          options={tagOptions}
+          selected={tags}
+          onChange={onTagsChange}
+          placeholder={t("form.tagsPlaceholder") ?? ""}
+          allowCustom
+        />
       </FormField>
     </>
   )

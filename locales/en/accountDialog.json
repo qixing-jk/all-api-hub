@@ -66,7 +66,10 @@
     "autoCheckInEnabled": "Enable daily automatic check-in",
     "autoCheckInEnabledDesc": "When enabled, this account will be automatically checked in during the daily auto check-in window (requires global auto check-in feature enabled)",
     "notes": "Notes",
-    "notesPlaceholder": "Optional, enter notes"
+    "notesPlaceholder": "Optional, enter notes",
+    "tags": "Tags",
+    "tagsDescription": "Use tags to categorize accounts for quick filtering",
+    "tagsPlaceholder": "Add or select tags"
   },
   "messages": {
     "loadFailed": "Failed to load account data",
