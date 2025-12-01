@@ -72,5 +72,31 @@ export function isExtensionSidePanel() {
 }
 
 export function isExtensionBackground() {
-  return typeof window === "undefined" || typeof document === "undefined"
+  // 1. Service Worker 环境检测 (V3)
+  if (
+    // @ts-expect-error 全局对象类型
+    typeof ServiceWorkerGlobalScope !== "undefined" &&
+    // @ts-expect-error 全局对象类型
+    self instanceof ServiceWorkerGlobalScope
+  ) {
+    return true
+  }
+
+  // 2. 无 window 对象 (Service Worker)
+  if (typeof window === "undefined") {
+    return true
+  }
+
+  // 3. URL 路径检测 (V2)
+  if (typeof location !== "undefined") {
+    const pathname = location.pathname || ""
+    if (
+      pathname.includes("background.html") ||
+      pathname.includes("_generated_background_page.html")
+    ) {
+      return true
+    }
+  }
+
+  return false
 }

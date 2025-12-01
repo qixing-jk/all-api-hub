@@ -6,8 +6,6 @@ import { handleTempWindowFetch } from "~/entrypoints/background/tempWindowPool.t
 import { isExtensionBackground } from "~/utils/browser.ts"
 import { isNotEmptyArray } from "~/utils/index"
 
-import i18n from "./i18n"
-
 // 确保 browser 全局对象可用
 if (typeof (globalThis as any).browser === "undefined") {
   // Prefer chrome if present; otherwise leave undefined to fail fast where appropriate
@@ -485,7 +483,7 @@ export function getManifest(): browser._manifest.WebExtensionManifest {
 
     return {
       manifest_version: 3,
-      name: i18n.t("ui:app.name"),
+      name: "All API Hub",
       version: "0.0.0",
       optional_permissions: []
     }
