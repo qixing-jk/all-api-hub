@@ -108,6 +108,9 @@
   },
   "multiSelect": {
     "copySuccess": "已复制已选择的内容",
-    "copyError": "复制失败，请重试"
+    "copyError": "复制失败，请重试",
+    "emptyWithQueryAllowCustom": "按 Enter 键添加“{{value}}”",
+    "noOptionsAllowCustom": "暂无可选项，可输入创建",
+    "noOptions": "暂无可选项"
   }
 }

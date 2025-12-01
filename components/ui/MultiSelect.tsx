@@ -214,9 +214,7 @@ export function MultiSelect({
         immediate
         value={selectedOptions}
         onChange={handleSelect}
-        virtual={{
-          options: filteredOptions
-        }}
+        virtual={{ options: filteredOptions }}
         multiple
         disabled={disabled}>
         <div className="relative" ref={comboboxRef}>
@@ -243,21 +241,33 @@ export function MultiSelect({
             leaveTo="opacity-0"
             afterLeave={() => setQuery("")}
             appear>
-            <Combobox.Options
-              className={cn(
-                "ring-opacity-5 dark:bg-dark-bg-secondary absolute z-10 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black focus:outline-none sm:text-sm",
-                dropdownPosition === "top"
-                  ? "bottom-full mb-1"
-                  : "top-full mt-1"
-              )}>
-              {({ option: option }) => {
-                return filteredOptions.length === 0 && query !== "" ? (
-                  <div className="dark:text-dark-text-secondary relative cursor-default px-4 py-2 text-gray-700 select-none">
-                    {allowCustom
-                      ? "Press Enter to add custom value"
-                      : "Nothing found."}
-                  </div>
-                ) : (
+            {filteredOptions.length === 0 ? (
+              <div
+                className={cn(
+                  "ring-opacity-5 dark:bg-dark-bg-secondary absolute z-50 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black focus:outline-none sm:text-sm",
+                  dropdownPosition === "top"
+                    ? "bottom-full mb-1"
+                    : "top-full mt-1"
+                )}>
+                <div className="dark:text-dark-text-secondary relative cursor-default px-4 py-1 text-gray-700 select-none">
+                  {allowCustom
+                    ? query
+                      ? t("multiSelect.emptyWithQueryAllowCustom", {
+                          value: query
+                        })
+                      : t("multiSelect.noOptionsAllowCustom")
+                    : t("multiSelect.noOptions")}
+                </div>
+              </div>
+            ) : (
+              <Combobox.Options
+                className={cn(
+                  "ring-opacity-5 dark:bg-dark-bg-secondary absolute z-50 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black focus:outline-none sm:text-sm",
+                  dropdownPosition === "top"
+                    ? "bottom-full mb-1"
+                    : "top-full mt-1"
+                )}>
+                {({ option }) => (
                   <Combobox.Option
                     key={option.value}
                     className={({ active }) =>
@@ -291,9 +301,9 @@ export function MultiSelect({
                       </>
                     )}
                   </Combobox.Option>
-                )
-              }}
-            </Combobox.Options>
+                )}
+              </Combobox.Options>
+            )}
           </Transition>
         </div>
       </Combobox>
