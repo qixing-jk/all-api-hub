@@ -29,6 +29,7 @@ import {
 import AccountManagementTab from "./components/AccountManagementTab"
 import AutoRefreshTab from "./components/AutoRefreshTab"
 import CheckinRedeemTab from "./components/CheckinRedeemTab"
+import CliProxyTab from "./components/CliProxyTab"
 import DataBackupTab from "./components/DataBackupTab"
 import GeneralTab from "./components/GeneralTab"
 import LoadingSkeleton from "./components/LoadingSkeleton"
@@ -43,6 +44,7 @@ type TabId =
   | "checkinRedeem"
   | "dataBackup"
   | "newApi"
+  | "cliProxy"
   | "permissions"
 
 interface TabConfig {
@@ -63,6 +65,7 @@ const TAB_CONFIGS = [
   { id: "refresh", component: AutoRefreshTab },
   { id: "checkinRedeem", component: CheckinRedeemTab },
   { id: "newApi", component: NewApiTab },
+  { id: "cliProxy", component: CliProxyTab },
   ...(hasOptionalPermissions ? [PERMISSIONS_TAB_CONFIG] : []),
   { id: "dataBackup", component: DataBackupTab }
 ] satisfies TabConfig[]
@@ -84,6 +87,7 @@ const ANCHOR_TO_TAB: Record<string, TabId> = {
   "import-export-entry": "dataBackup",
   "new-api": "newApi",
   "new-api-model-sync": "newApi",
+  "cli-proxy": "cliProxy",
   "dangerous-zone": "newApi",
   ...(hasOptionalPermissions ? { permissions: "permissions" } : {})
 }

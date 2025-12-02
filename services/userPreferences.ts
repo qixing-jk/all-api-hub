@@ -25,6 +25,10 @@ import {
   AutoCheckinPreferences
 } from "~/types/autoCheckin"
 import {
+  DEFAULT_CLI_PROXY_CONFIG,
+  type CliProxyConfig
+} from "~/types/cliProxyConfig.ts"
+import {
   DEFAULT_MODEL_REDIRECT_PREFERENCES,
   type ModelRedirectPreferences
 } from "~/types/modelRedirect"
@@ -83,6 +87,9 @@ export interface UserPreferences {
 
   // New API 相关配置
   newApi: NewApiConfig
+
+  // CLIProxyAPI 管理接口配置
+  cliProxy?: CliProxyConfig
 
   // New API Model Sync 配置
   newApiModelSync: {
@@ -211,6 +218,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   webdav: DEFAULT_WEBDAV_SETTINGS,
   lastUpdated: Date.now(),
   newApi: DEFAULT_NEW_API_CONFIG,
+  cliProxy: DEFAULT_CLI_PROXY_CONFIG,
   newApiModelSync: {
     enabled: false,
     interval: 24 * 60 * 60 * 1000, // 24小时
@@ -500,6 +508,12 @@ class UserPreferencesService {
   async resetNewApiModelSyncConfig(): Promise<boolean> {
     return this.savePreferences({
       newApiModelSync: DEFAULT_PREFERENCES.newApiModelSync
+    })
+  }
+
+  async resetCliProxyConfig(): Promise<boolean> {
+    return this.savePreferences({
+      cliProxy: DEFAULT_PREFERENCES.cliProxy
     })
   }
 

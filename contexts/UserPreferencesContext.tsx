@@ -42,6 +42,8 @@ interface UserPreferencesContextType {
   newApiBaseUrl: string
   newApiAdminToken: string
   newApiUserId: string
+  cliProxyBaseUrl: string
+  cliProxyManagementKey: string
   themeMode: ThemeMode
   tempWindowFallback: TempWindowFallbackPreferences
 
@@ -62,6 +64,8 @@ interface UserPreferencesContextType {
   updateNewApiBaseUrl: (url: string) => Promise<boolean>
   updateNewApiAdminToken: (token: string) => Promise<boolean>
   updateNewApiUserId: (userId: string) => Promise<boolean>
+  updateCliProxyBaseUrl: (url: string) => Promise<boolean>
+  updateCliProxyManagementKey: (key: string) => Promise<boolean>
   updateThemeMode: (themeMode: ThemeMode) => Promise<boolean>
   updateAutoCheckin: (
     updates: Partial<AutoCheckinPreferences>
@@ -81,6 +85,7 @@ interface UserPreferencesContextType {
   resetAutoRefreshConfig: () => Promise<boolean>
   resetNewApiConfig: () => Promise<boolean>
   resetNewApiModelSyncConfig: () => Promise<boolean>
+  resetCliProxyConfig: () => Promise<boolean>
   resetAutoCheckinConfig: () => Promise<boolean>
   resetRedemptionAssistConfig: () => Promise<boolean>
   resetModelRedirectConfig: () => Promise<boolean>
@@ -127,6 +132,31 @@ export const UserPreferencesProvider = ({
     }
     return success
   }, [])
+
+  const updateCliProxyBaseUrl = useCallback(async (baseUrl: string) => {
+    const updates = {
+      cliProxy: { baseUrl }
+    }
+    const success = await userPreferences.savePreferences(updates)
+    if (success) {
+      setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
+    }
+    return success
+  }, [])
+
+  const updateCliProxyManagementKey = useCallback(
+    async (managementKey: string) => {
+      const updates = {
+        cliProxy: { managementKey }
+      }
+      const success = await userPreferences.savePreferences(updates)
+      if (success) {
+        setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
+      }
+      return success
+    },
+    []
+  )
 
   const updateDefaultTab = useCallback(async (activeTab: BalanceType) => {
     const success = await userPreferences.updateActiveTab(activeTab)
@@ -536,6 +566,22 @@ export const UserPreferencesProvider = ({
     return success
   }, [])
 
+  const resetCliProxyConfig = useCallback(async () => {
+    const success = await userPreferences.resetCliProxyConfig()
+    if (success) {
+      const defaults = DEFAULT_PREFERENCES.cliProxy
+      setPreferences((prev) =>
+        prev
+          ? deepOverride(prev, {
+              cliProxy: defaults,
+              lastUpdated: Date.now()
+            })
+          : prev
+      )
+    }
+    return success
+  }, [])
+
   const resetAutoCheckinConfig = useCallback(async () => {
     const success = await userPreferences.resetAutoCheckinConfig()
     if (success) {
@@ -666,6 +712,8 @@ export const UserPreferencesProvider = ({
     newApiBaseUrl: preferences?.newApi?.baseUrl || "",
     newApiAdminToken: preferences?.newApi?.adminToken || "",
     newApiUserId: preferences?.newApi?.userId || "",
+    cliProxyBaseUrl: preferences?.cliProxy?.baseUrl || "",
+    cliProxyManagementKey: preferences?.cliProxy?.managementKey || "",
     themeMode: preferences?.themeMode || "system",
     tempWindowFallback:
       preferences.tempWindowFallback ??
@@ -682,6 +730,8 @@ export const UserPreferencesProvider = ({
     updateNewApiBaseUrl,
     updateNewApiAdminToken,
     updateNewApiUserId,
+    updateCliProxyBaseUrl,
+    updateCliProxyManagementKey,
     updateThemeMode,
     updateAutoCheckin,
     updateNewApiModelSync,
@@ -693,6 +743,7 @@ export const UserPreferencesProvider = ({
     resetAutoRefreshConfig,
     resetNewApiConfig,
     resetNewApiModelSyncConfig,
+    resetCliProxyConfig,
     resetAutoCheckinConfig,
     resetRedemptionAssistConfig,
     resetModelRedirectConfig,

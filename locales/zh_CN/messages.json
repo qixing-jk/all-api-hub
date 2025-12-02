@@ -103,6 +103,12 @@
     "importSuccess": "成功导入新渠道 {{channelName}}",
     "importFailed": "导入失败，发生未知错误"
   },
+  "cliproxy": {
+    "configMissing": "请先在设置中配置 CLIProxyAPI 管理接口地址和密钥",
+    "updateSuccess": "已成功更新 CLIProxy 提供商 {{name}}",
+    "importSuccess": "已成功将提供商 {{name}} 导入到 CLIProxyAPI",
+    "importFailed": "导入到 CLIProxyAPI 失败"
+  },
   "autodetect": {
     "timeout": "自动识别超时,请尝试手动添加",
     "notLoggedIn": "您未在当前站点登录,或者登录信息已过期,无法自动添加,可查看帮助文档或点击先进行登录",

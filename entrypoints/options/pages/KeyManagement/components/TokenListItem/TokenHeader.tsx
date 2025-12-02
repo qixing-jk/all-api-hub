@@ -9,7 +9,9 @@ import { useTranslation } from "react-i18next"
 import { useChannelDialog } from "~/components/ChannelDialog"
 import { CCSwitchIcon } from "~/components/icons/CCSwitchIcon"
 import { CherryIcon } from "~/components/icons/CherryIcon"
+import { CliProxyIcon } from "~/components/icons/CliProxyIcon"
 import { Badge, Heading6, IconButton } from "~/components/ui"
+import { importToCliProxy } from "~/services/cliProxyService.ts"
 import type { DisplaySiteData } from "~/types"
 import { OpenInCherryStudio } from "~/utils/cherryStudio"
 import { showResultToast } from "~/utils/toastHelpers.ts"
@@ -42,6 +44,11 @@ function TokenActionButtons({
     })
   }
 
+  const handleImportToCliProxy = async () => {
+    const result = await importToCliProxy(account, token)
+    showResultToast(result)
+  }
+
   return (
     <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
       <IconButton
@@ -67,6 +74,13 @@ function TokenActionButtons({
           <CCSwitchIcon />
         </IconButton>
       )}
+      <IconButton
+        aria-label={t("actions.importToCliProxy")}
+        size="sm"
+        variant="ghost"
+        onClick={handleImportToCliProxy}>
+        <CliProxyIcon size="sm" />
+      </IconButton>
       <IconButton
         aria-label={t("actions.importToNewApi")}
         size="sm"

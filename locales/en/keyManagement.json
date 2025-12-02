@@ -28,6 +28,7 @@
     "useInCherry": "Use in Cherry Studio",
     "exportToCCSwitch": "Export to CC Switch",
     "importToNewApi": "Import to New API",
+    "importToCliProxy": "Import to CLIProxyAPI",
     "editKey": "Edit Key",
     "deleteKey": "Delete Key",
     "enable": "Enable",
