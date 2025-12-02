@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.21.0](https://github.com/qixing-jk/all-api-hub/compare/v2.20.0...v2.21.0) (2025-12-02)
+
+
+### Features
+
+* add CLIProxyAPI integration and settings ([#219](https://github.com/qixing-jk/all-api-hub/issues/219)) ([f8eef42](https://github.com/qixing-jk/all-api-hub/commit/f8eef4253aa657a1314efe90e7d2fb405b29eadc))
+
+
+### Bug Fixes
+
+* **auto-checkin:** remove check for already checked-in today ([16a0068](https://github.com/qixing-jk/all-api-hub/commit/16a0068fc33a8fc3aee81a0f3fc737d0d35a01c9))
+* fix and simplify temporary window fetch logic ([#220](https://github.com/qixing-jk/all-api-hub/issues/220)) ([dd76112](https://github.com/qixing-jk/all-api-hub/commit/dd761125ab278464e649e98b52a807d5162d82e5))
+* restore search params parsing from URL query string ([#222](https://github.com/qixing-jk/all-api-hub/issues/222)) ([3079e8e](https://github.com/qixing-jk/all-api-hub/commit/3079e8e66bd597516ba85c595443322ac4090cfb))
+
 ## [2.20.0](https://github.com/qixing-jk/all-api-hub/compare/v2.19.0...v2.20.0) (2025-12-01)
 
 
