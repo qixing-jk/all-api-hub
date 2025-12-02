@@ -23,12 +23,10 @@ export default function ShieldSettings() {
   const { tempWindowFallback, updateTempWindowFallback } =
     useUserPreferencesContext()
 
-  const [canUseTempWindowFallback, setCanUseTempWindowFallback] = useState<
-    boolean | null
-  >(null)
+  const [canUseTempWindowFallback, setCanUseTempWindowFallback] =
+    useState<boolean>(false)
 
   const refreshPermissionStatus = useCallback(async () => {
-    setCanUseTempWindowFallback(null)
     const granted = await canUseTempWindowFetch()
     setCanUseTempWindowFallback(granted)
   }, [])
@@ -46,8 +44,7 @@ export default function ShieldSettings() {
   const shieldAutoRefresh = tempWindowFallback.useForAutoRefresh
   const shieldManualRefresh = tempWindowFallback.useForManualRefresh
 
-  const hasPrerequisitePermissions = canUseTempWindowFallback === true
-  const disableShieldUI = !hasPrerequisitePermissions
+  const disableShieldUI = !canUseTempWindowFallback
 
   const handleOpenPermissionsTab = useCallback(() => {
     void openSettingsTab("permissions")
@@ -58,7 +55,7 @@ export default function ShieldSettings() {
       id="shield-settings"
       title={t("refresh.shieldTitle")}
       description={t("refresh.shieldDescription")}>
-      {!hasPrerequisitePermissions && (
+      {!canUseTempWindowFallback && (
         <Alert
           variant="warning"
           title={t("refresh.shieldPermissionWarningTitle")}
