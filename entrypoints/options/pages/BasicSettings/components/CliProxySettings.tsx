@@ -32,13 +32,13 @@ export default function CliProxySettings() {
   const handleBaseUrlChange = async (url: string) => {
     if (url === cliProxyBaseUrl) return
     const success = await updateCliProxyBaseUrl(url)
-    showUpdateToast(success, "CLIProxy Management Base URL")
+    showUpdateToast(success, t("cliProxy.baseUrlLabel"))
   }
 
   const handleKeyChange = async (key: string) => {
     if (key === cliProxyManagementKey) return
     const success = await updateCliProxyManagementKey(key)
-    showUpdateToast(success, "Management Key")
+    showUpdateToast(success, t("cliProxy.managementKeyLabel"))
   }
 
   return (
