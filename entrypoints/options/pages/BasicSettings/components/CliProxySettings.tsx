@@ -50,7 +50,7 @@ export default function CliProxySettings() {
       <Card padding="none">
         <CardList>
           <CardItem
-            title={"Management API Base URL"}
+            title={t("cliProxy.baseUrlLabel")}
             description={t("cliProxy.urlDesc")}
             rightContent={
               <Input
@@ -64,7 +64,7 @@ export default function CliProxySettings() {
           />
 
           <CardItem
-            title={"Management Key"}
+            title={t("cliProxy.managementKeyLabel")}
             description={t("cliProxy.keyDesc")}
             rightContent={
               <div className="relative">

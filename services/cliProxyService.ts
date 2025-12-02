@@ -36,9 +36,7 @@ function buildProviderName(account: DisplaySiteData): string {
 
 async function getCliProxyConfig() {
   const prefs = await userPreferences.getPreferences()
-  const cliProxy = (prefs as any).cliProxy as
-    | { baseUrl?: string; managementKey?: string }
-    | undefined
+  const { cliProxy } = prefs
 
   if (!cliProxy || !cliProxy.baseUrl || !cliProxy.managementKey) {
     return null

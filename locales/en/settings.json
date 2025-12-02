@@ -106,6 +106,8 @@
   "cliProxy": {
     "title": "CLIProxyAPI Settings",
     "description": "Configure connection to CLIProxyAPI Management API",
+    "baseUrlLabel": "Management API Base URL",
+    "managementKeyLabel": "Management Key",
     "urlDesc": "Set the Management API base URL, e.g. http://localhost:8317/v0/management",
     "keyDesc": "Management key for interface access authentication"
   },
