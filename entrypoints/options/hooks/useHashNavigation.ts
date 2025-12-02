@@ -5,10 +5,18 @@ import { menuItems } from "../constants"
 // 解析URL hash和参数
 function parseHash() {
   const hash = window.location.hash.slice(1) // 去掉 #
-  if (!hash) return { page: "basic", params: {} }
+
+  const params: Record<string, string> = {}
+  const searchParams = new URLSearchParams(window.location.search)
+  for (const [key, value] of searchParams.entries()) {
+    params[key] = value
+  }
+
+  if (!hash) {
+    return { page: "basic", params }
+  }
 
   const [page, ...paramParts] = hash.split("?")
-  const params: Record<string, string> = {}
 
   if (paramParts.length > 0) {
     const paramString = paramParts.join("?")
