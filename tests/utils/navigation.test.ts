@@ -61,9 +61,9 @@ describe("navigation utilities", () => {
 
     await openKeysPage()
 
-    expect(mockedGetExtensionURL).toHaveBeenCalledWith("options.html#keys")
-    const url = mockedGetExtensionURL.mock.results[0].value
-    expect(mockedCreateTab).toHaveBeenCalledWith(url, true)
+    expect(mockedGetExtensionURL).toHaveBeenCalledWith("options.html")
+    const baseUrl = mockedGetExtensionURL.mock.results[0].value
+    expect(mockedCreateTab).toHaveBeenCalledWith(`${baseUrl}#keys`, true)
     expect(closeSpy).not.toHaveBeenCalled()
 
     closeSpy.mockRestore()
@@ -72,8 +72,11 @@ describe("navigation utilities", () => {
   it("openKeysPage should include accountId when provided", async () => {
     await openKeysPage("123")
 
-    expect(mockedGetExtensionURL).toHaveBeenCalledWith(
-      "options.html#keys?accountId=123"
+    expect(mockedGetExtensionURL).toHaveBeenCalledWith("options.html")
+    const baseUrl = mockedGetExtensionURL.mock.results[0].value
+    expect(mockedCreateTab).toHaveBeenCalledWith(
+      `${baseUrl}?accountId=123#keys`,
+      true
     )
   })
 
@@ -95,9 +98,15 @@ describe("navigation utilities", () => {
     await openModelsPage()
     await openModelsPage("42")
 
-    expect(mockedGetExtensionURL).toHaveBeenCalledWith("options.html#models")
-    expect(mockedGetExtensionURL).toHaveBeenCalledWith(
-      "options.html#models?accountId=42"
+    expect(mockedGetExtensionURL).toHaveBeenCalledTimes(2)
+    expect(mockedGetExtensionURL).toHaveBeenCalledWith("options.html")
+    const baseUrl = mockedGetExtensionURL.mock.results[0].value
+    const baseUrl2 = mockedGetExtensionURL.mock.results[1].value
+    expect(baseUrl2).toBe(baseUrl)
+    expect(mockedCreateTab).toHaveBeenCalledWith(`${baseUrl}#models`, true)
+    expect(mockedCreateTab).toHaveBeenCalledWith(
+      `${baseUrl}?accountId=42#models`,
+      true
     )
   })
 

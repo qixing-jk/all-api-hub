@@ -213,17 +213,27 @@ const _openSettingsTab = (tabId: string) => {
 }
 
 const _openKeysPage = async (accountId?: string) => {
-  const url = accountId
-    ? getExtensionURL(`options.html#keys?accountId=${accountId}`)
-    : getExtensionURL("options.html#keys")
-  await createActiveTab(url)
+  const baseUrl = getExtensionURL("options.html")
+  const url = new URL(baseUrl)
+
+  if (accountId) {
+    url.searchParams.set("accountId", accountId)
+  }
+
+  url.hash = "keys"
+  await createActiveTab(url.toString())
 }
 
 const _openModelsPage = async (accountId?: string) => {
-  const url = accountId
-    ? getExtensionURL(`options.html#models?accountId=${accountId}`)
-    : getExtensionURL("options.html#models")
-  await createActiveTab(url)
+  const baseUrl = getExtensionURL("options.html")
+  const url = new URL(baseUrl)
+
+  if (accountId) {
+    url.searchParams.set("accountId", accountId)
+  }
+
+  url.hash = "models"
+  await createActiveTab(url.toString())
 }
 
 const _openUsagePage = async (account: DisplaySiteData) => {
