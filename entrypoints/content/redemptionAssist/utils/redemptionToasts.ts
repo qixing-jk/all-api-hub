@@ -9,8 +9,10 @@ import {
   RedemptionPromptToast,
   type RedemptionPromptAction,
 } from "../components/RedemptionPromptToast"
+import { ensureRedemptionToastUi } from "../uiRoot"
 
 export function showRedeemLoadingToast(message: string) {
+  void ensureRedemptionToastUi()
   return toast.custom(
     () => React.createElement(RedemptionLoadingToast, { message }),
     {
@@ -39,6 +41,8 @@ export function showAccountSelectToast(
       toast.dismiss(toastId)
       resolve(account)
     }
+
+    void ensureRedemptionToastUi()
 
     toast.custom(
       (toastInstance) => {
@@ -71,6 +75,7 @@ export function showRedemptionPromptToast(
       toast.dismiss(toastId)
       resolve(action)
     }
+    void ensureRedemptionToastUi()
 
     toast.custom((toastInstance) => {
       const toastId = toastInstance.id
@@ -85,6 +90,8 @@ export function showRedemptionPromptToast(
 
 export function showRedeemResultToast(success: boolean, message: string) {
   if (!message) return
+
+  void ensureRedemptionToastUi()
 
   if (success) {
     toast.success(message)
