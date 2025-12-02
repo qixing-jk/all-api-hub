@@ -11,8 +11,8 @@ import {
 } from "../components/RedemptionPromptToast"
 import { ensureRedemptionToastUi } from "../uiRoot"
 
-export function showRedeemLoadingToast(message: string) {
-  void ensureRedemptionToastUi()
+export async function showRedeemLoadingToast(message: string) {
+  await ensureRedemptionToastUi()
   return toast.custom(
     () => React.createElement(RedemptionLoadingToast, { message }),
     {
@@ -42,24 +42,24 @@ export function showAccountSelectToast(
       resolve(account)
     }
 
-    void ensureRedemptionToastUi()
-
-    toast.custom(
-      (toastInstance) => {
-        const toastId = toastInstance.id
-        return React.createElement(RedemptionAccountSelectToast, {
-          title: options?.title,
-          message: options?.message,
-          accounts,
-          onSelect: (account: DisplaySiteData | null) =>
-            handleResolve(account, toastId),
-        })
-      },
-      {
-        // Keep the account select toast on screen until user confirms or cancels
-        duration: Infinity,
-      },
-    )
+    void ensureRedemptionToastUi().then(() => {
+      toast.custom(
+        (toastInstance) => {
+          const toastId = toastInstance.id
+          return React.createElement(RedemptionAccountSelectToast, {
+            title: options?.title,
+            message: options?.message,
+            accounts,
+            onSelect: (account: DisplaySiteData | null) =>
+              handleResolve(account, toastId),
+          })
+        },
+        {
+          // Keep the account select toast on screen until user confirms or cancels
+          duration: Infinity,
+        },
+      )
+    })
   })
 }
 
@@ -75,23 +75,23 @@ export function showRedemptionPromptToast(
       toast.dismiss(toastId)
       resolve(action)
     }
-    void ensureRedemptionToastUi()
-
-    toast.custom((toastInstance) => {
-      const toastId = toastInstance.id
-      return React.createElement(RedemptionPromptToast, {
-        message,
-        onAction: (action: RedemptionPromptAction) =>
-          handleResolve(action, toastId),
+    void ensureRedemptionToastUi().then(() => {
+      toast.custom((toastInstance) => {
+        const toastId = toastInstance.id
+        return React.createElement(RedemptionPromptToast, {
+          message,
+          onAction: (action: RedemptionPromptAction) =>
+            handleResolve(action, toastId),
+        })
       })
     })
   })
 }
 
-export function showRedeemResultToast(success: boolean, message: string) {
+export async function showRedeemResultToast(success: boolean, message: string) {
   if (!message) return
 
-  void ensureRedemptionToastUi()
+  await ensureRedemptionToastUi()
 
   if (success) {
     toast.success(message)

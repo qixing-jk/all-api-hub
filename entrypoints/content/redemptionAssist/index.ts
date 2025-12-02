@@ -142,7 +142,7 @@ async function scanForRedemptionCodes(sourceText?: string) {
     }
 
     try {
-      loadingToastId = showRedeemLoadingToast(loadingMessage)
+      loadingToastId = await showRedeemLoadingToast(loadingMessage)
 
       const redeemResp: any = await sendRuntimeMessage({
         action: "redemptionAssist:autoRedeemByUrl",
@@ -154,7 +154,7 @@ async function scanForRedemptionCodes(sourceText?: string) {
 
       if (result?.success) {
         if (result.message) {
-          showRedeemResultToast(true, result.message)
+          await showRedeemResultToast(true, result.message)
         }
         return
       }
@@ -177,7 +177,10 @@ async function scanForRedemptionCodes(sourceText?: string) {
           loadingMessage,
         )
         if (manualResult?.message) {
-          showRedeemResultToast(!!manualResult.success, manualResult.message)
+          await showRedeemResultToast(
+            !!manualResult.success,
+            manualResult.message,
+          )
         }
         return
       }
@@ -198,14 +201,17 @@ async function scanForRedemptionCodes(sourceText?: string) {
           loadingMessage,
         )
         if (manualResult?.message) {
-          showRedeemResultToast(!!manualResult.success, manualResult.message)
+          await showRedeemResultToast(
+            !!manualResult.success,
+            manualResult.message,
+          )
         }
         return
       }
 
       const fallbackMessage = t("redemptionAssist:messages.redeemFailed")
       const msg = redeemResp?.error || result?.message || fallbackMessage
-      showRedeemResultToast(false, msg)
+      await showRedeemResultToast(false, msg)
     } finally {
       dismissLoadingToast()
     }
@@ -225,7 +231,7 @@ async function performManualRedeem(
   code: string,
   loadingMessage: string,
 ) {
-  const toastId = showRedeemLoadingToast(loadingMessage)
+  const toastId = await showRedeemLoadingToast(loadingMessage)
   try {
     const manualResp: any = await sendRuntimeMessage({
       action: "redemptionAssist:autoRedeem",
