@@ -1,9 +1,8 @@
-import { handleTempWindowFetch } from "~/entrypoints/background/tempWindowPool.ts"
 /**
  * Browser API 工具函数
  * 提供跨浏览器兼容的 API 封装和常用 fallback 逻辑
  */
-import { isExtensionBackground } from "~/utils/browser.ts"
+
 import { isNotEmptyArray } from "~/utils/index"
 
 // 确保 browser 全局对象可用
@@ -181,45 +180,6 @@ export async function sendRuntimeMessage(
   options?: SendMessageRetryOptions
 ): Promise<any> {
   return await sendMessageWithRetry(message, options)
-}
-
-export type TempWindowResponseType = "json" | "text" | "arrayBuffer" | "blob"
-
-export interface TempWindowFetchParams {
-  originUrl: string
-  fetchUrl: string
-  fetchOptions?: Record<string, any>
-  responseType?: TempWindowResponseType
-  requestId?: string
-}
-
-export interface TempWindowFetchResult {
-  success: boolean
-  status?: number
-  headers?: Record<string, string>
-  data?: any
-  error?: string
-}
-
-export async function tempWindowFetch(
-  params: TempWindowFetchParams
-): Promise<TempWindowFetchResult> {
-  if (isExtensionBackground()) {
-    return await new Promise<TempWindowFetchResult>((resolve) => {
-      void handleTempWindowFetch(params, (response) => {
-        resolve(
-          (response ?? {
-            success: false,
-            error: "Empty tempWindowFetch response"
-          }) as TempWindowFetchResult
-        )
-      })
-    })
-  }
-  return await sendRuntimeMessage({
-    action: "tempWindowFetch",
-    ...params
-  })
 }
 
 export interface SendMessageRetryOptions {
