@@ -8,13 +8,20 @@ import {
 } from "~/utils/cookieHelper"
 
 export async function checkCookieInterceptorRequirement(): Promise<boolean> {
-  const granted = await hasCookieInterceptorPermissions()
-  if (!granted) {
-    console.warn(
-      "[Background] Required optional permissions (cookies/webRequest) are missing; skip cookie interception"
-    )
+  // 仅 Firefox 使用这个功能
+  if (isFirefox()) {
+    // 检查权限
+    const granted = await hasCookieInterceptorPermissions()
+    if (!granted) {
+      console.warn(
+        "[Background] Required optional permissions (cookies/webRequest) are missing; skip cookie interception"
+      )
+    }
+    return granted
   }
-  return granted && isFirefox()
+
+  // 非 Firefox 不需要拦截器
+  return false
 }
 
 // 辅助函数：从账号列表提取 站点的 URL 模式
