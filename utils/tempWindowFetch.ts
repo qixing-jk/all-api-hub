@@ -41,6 +41,14 @@ export interface TempWindowFetch {
   error?: string
 }
 
+export async function canUseTempWindowFetch() {
+  if (isFirefox()) {
+    return await hasCookieInterceptorPermissions()
+  } else {
+    return true
+  }
+}
+
 export async function tempWindowFetch(
   params: TempWindowFetchParams
 ): Promise<TempWindowFetch> {

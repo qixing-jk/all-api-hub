@@ -14,23 +14,23 @@ import {
   Switch
 } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { hasCookieInterceptorPermissions } from "~/services/permissions/permissionManager"
 import { isFirefox } from "~/utils/browser.ts"
 import { openSettingsTab } from "~/utils/navigation"
+import { canUseTempWindowFetch } from "~/utils/tempWindowFetch.ts"
 
 export default function ShieldSettings() {
   const { t } = useTranslation("settings")
   const { tempWindowFallback, updateTempWindowFallback } =
     useUserPreferencesContext()
 
-  const [hasCookiePermissions, setHasCookiePermissions] = useState<
+  const [canUseTempWindowFallback, setCanUseTempWindowFallback] = useState<
     boolean | null
   >(null)
 
   const refreshPermissionStatus = useCallback(async () => {
-    setHasCookiePermissions(null)
-    const granted = await hasCookieInterceptorPermissions()
-    setHasCookiePermissions(granted)
+    setCanUseTempWindowFallback(null)
+    const granted = await canUseTempWindowFetch()
+    setCanUseTempWindowFallback(granted)
   }, [])
 
   useEffect(() => {
@@ -46,9 +46,8 @@ export default function ShieldSettings() {
   const shieldAutoRefresh = tempWindowFallback.useForAutoRefresh
   const shieldManualRefresh = tempWindowFallback.useForManualRefresh
 
-  const permissionsPending = hasCookiePermissions === null
-  const hasPrerequisitePermissions = hasCookiePermissions === true
-  const disableShieldUI = !hasPrerequisitePermissions || permissionsPending
+  const hasPrerequisitePermissions = canUseTempWindowFallback === true
+  const disableShieldUI = !hasPrerequisitePermissions
 
   const handleOpenPermissionsTab = useCallback(() => {
     void openSettingsTab("permissions")
@@ -59,7 +58,7 @@ export default function ShieldSettings() {
       id="shield-settings"
       title={t("refresh.shieldTitle")}
       description={t("refresh.shieldDescription")}>
-      {!hasPrerequisitePermissions && !permissionsPending && (
+      {!hasPrerequisitePermissions && (
         <Alert
           variant="warning"
           title={t("refresh.shieldPermissionWarningTitle")}
