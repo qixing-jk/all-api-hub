@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react"
 
+import { navigateWithinOptionsPage } from "~/utils/navigation.ts"
+
 import { menuItems } from "../constants"
 
 // 解析URL hash和参数
@@ -31,12 +33,8 @@ function parseHash() {
 
 // 更新URL hash
 function updateHash(page: string, params?: Record<string, string>) {
-  let hash = `#${page}`
-  if (params && Object.keys(params).length > 0) {
-    const searchParams = new URLSearchParams(params)
-    hash += `?${searchParams.toString()}`
-  }
-  window.history.replaceState(null, "", hash)
+  const hash = `#${page}`
+  navigateWithinOptionsPage(hash, params)
 }
 
 export function useHashNavigation() {

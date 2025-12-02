@@ -20,6 +20,7 @@ import type { ModelMetadata } from "~/services/modelMetadata/types"
 import { DEFAULT_PREFERENCES } from "~/services/userPreferences"
 import type { NewApiModelSyncPreferences } from "~/types/newApiModelSync"
 import { sendRuntimeMessage } from "~/utils/browserApi"
+import { navigateWithinOptionsPage } from "~/utils/navigation.ts"
 
 type UserNewApiModelSyncConfig = NonNullable<
   typeof DEFAULT_PREFERENCES.newApiModelSync
@@ -163,8 +164,7 @@ export default function NewApiModelSyncSettings() {
 
   const handleNavigateToExecution = () => {
     // Navigate to the NewApiModelSync page
-    const url = browser.runtime.getURL("options.html#newApiModelSync")
-    window.location.href = url
+    navigateWithinOptionsPage("#newApiModelSync")
   }
 
   return (

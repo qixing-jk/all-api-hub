@@ -5,6 +5,7 @@ import {
 import { useTranslation } from "react-i18next"
 
 import { Alert, Button, Card, CardContent, Heading4 } from "~/components/ui"
+import { navigateWithinOptionsPage } from "~/utils/navigation.ts"
 
 import WebDAVAutoSyncSettings from "../../ImportExport/components/WebDAVAutoSyncSettings"
 import WebDAVSettings from "../../ImportExport/components/WebDAVSettings"
@@ -13,7 +14,7 @@ export default function DataBackupTab() {
   const { t } = useTranslation("settings")
 
   const handleNavigateToImportExport = () => {
-    window.location.href = browser.runtime.getURL("options.html#importExport")
+    navigateWithinOptionsPage("#importExport")
   }
 
   return (

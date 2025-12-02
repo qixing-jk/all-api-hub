@@ -19,6 +19,7 @@ import {
   AutoCheckinPreferences,
   AutoCheckinScheduleMode
 } from "~/types/autoCheckin"
+import { navigateWithinOptionsPage } from "~/utils/navigation.ts"
 
 export default function AutoCheckinSettings() {
   const { t } = useTranslation(["autoCheckin", "settings"])
@@ -69,8 +70,7 @@ export default function AutoCheckinSettings() {
   }
 
   const handleNavigateToExecution = () => {
-    const url = browser.runtime.getURL("options.html#autoCheckin")
-    window.location.href = url
+    navigateWithinOptionsPage("#autoCheckin")
   }
 
   const validateTimeWindow = (start: string, end: string): boolean => {

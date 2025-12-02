@@ -50,7 +50,7 @@ const buildSearchString = (params?: Record<string, string | undefined>) => {
   return query ? `?${query}` : ""
 }
 
-const navigateWithinOptionsPage = (
+export const navigateWithinOptionsPage = (
   hash: string,
   searchParams?: Record<string, string | undefined>
 ) => {

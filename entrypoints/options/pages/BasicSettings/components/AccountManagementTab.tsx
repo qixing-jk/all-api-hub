@@ -2,6 +2,7 @@ import { UsersIcon } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
 import { Button, Card, CardContent, Heading4 } from "~/components/ui"
+import { navigateWithinOptionsPage } from "~/utils/navigation.ts"
 
 import SortingPrioritySettings from "./SortingPrioritySettings"
 
@@ -9,8 +10,7 @@ export default function AccountManagementTab() {
   const { t } = useTranslation("settings")
 
   const handleNavigate = () => {
-    const url = browser.runtime.getURL("options.html#account")
-    window.location.href = url
+    navigateWithinOptionsPage("#account")
   }
 
   return (
