@@ -194,8 +194,7 @@ async function shouldUseTempWindowFallback(
     return false
   }
 
-  const hasCookiePermissions = await hasCookieInterceptorPermissions()
-  if (!hasCookiePermissions && isFirefox()) {
+  if (await canUseTempWindowFetch()) {
     logSkipTempWindowFallback(
       "Cookie interceptor permissions not granted; skipping temp window fallback.",
       context,
