@@ -194,7 +194,7 @@ async function shouldUseTempWindowFallback(
     return false
   }
 
-  if (await canUseTempWindowFetch()) {
+  if (!(await canUseTempWindowFetch())) {
     logSkipTempWindowFallback(
       "Cookie interceptor permissions not granted; skipping temp window fallback.",
       context,
