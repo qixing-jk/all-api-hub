@@ -33,7 +33,9 @@
     "importing": "Importing...",
     "testing": "Testing...",
     "uploading": "Uploading...",
-    "refreshing": "Refreshing..."
+    "refreshing": "Refreshing...",
+    "enabled": "Enabled",
+    "disabled": "Disabled"
   },
   "labels": {
     "settings": "Settings",

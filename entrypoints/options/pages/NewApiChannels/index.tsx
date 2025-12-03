@@ -1328,7 +1328,7 @@ function ChannelFilterDialog({
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-2">
           <Label className="text-muted-foreground text-xs font-medium">
-            {t("filters.viewMode.label", "Edit mode")}
+            {t("filters.viewMode.label")}
           </Label>
           <div className="flex gap-2">
             <Button
@@ -1352,7 +1352,7 @@ function ChannelFilterDialog({
                 }
               }}
             >
-              {t("filters.viewMode.visual", "Visual edit")}
+              {t("filters.viewMode.visual")}
             </Button>
             <Button
               type="button"
@@ -1368,7 +1368,7 @@ function ChannelFilterDialog({
                 setViewMode("json")
               }}
             >
-              {t("filters.viewMode.json", "JSON edit")}
+              {t("filters.viewMode.json")}
             </Button>
           </div>
         </div>
@@ -1406,7 +1406,7 @@ function ChannelFilterDialog({
                             event.target.value,
                           )
                         }
-                        placeholder={t("filters.placeholders.name") ?? ""}
+                        placeholder={t("filters.placeholders.name")}
                       />
                     </div>
                     <div className="space-y-2">
@@ -1414,8 +1414,8 @@ function ChannelFilterDialog({
                       <div className="border-input flex items-center justify-between rounded-lg border px-3 py-2 text-sm">
                         <span className="text-muted-foreground">
                           {filter.enabled
-                            ? t("common:status.enabled", "Enabled")
-                            : t("common:status.disabled", "Disabled")}
+                            ? t("common:status.enabled")
+                            : t("common:status.disabled")}
                         </span>
                         <Switch
                           id={`filter-enabled-${filter.id}`}
