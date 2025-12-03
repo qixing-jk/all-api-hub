@@ -28,6 +28,7 @@
     "useInCherry": "在Cherry Studio中使用",
     "exportToCCSwitch": "导出到CC Switch",
     "importToNewApi": "导入到New API",
+    "importToCliProxy": "导入到 CLIProxyAPI",
     "editKey": "编辑密钥",
     "deleteKey": "删除密钥",
     "enable": "启用",

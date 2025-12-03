@@ -6,16 +6,16 @@ import {
   createDefaultChannelConfig,
   type ChannelConfig,
   type ChannelConfigMap,
-  type ChannelModelFilterSettings
+  type ChannelModelFilterSettings,
 } from "~/types/channelConfig"
 import type {
   ChannelModelFilterInput,
-  ChannelModelFilterRule
-} from "~/types/channelModelFilters.ts"
+  ChannelModelFilterRule,
+} from "~/types/channelModelFilters"
 import { getErrorMessage } from "~/utils/error"
 
 const STORAGE_KEYS = {
-  CHANNEL_CONFIGS: "channel_configs"
+  CHANNEL_CONFIGS: "channel_configs",
 } as const
 
 class ChannelConfigStorage {
@@ -23,7 +23,7 @@ class ChannelConfigStorage {
 
   constructor() {
     this.storage = new Storage({
-      area: "local"
+      area: "local",
     })
   }
 
@@ -51,8 +51,8 @@ class ChannelConfigStorage {
         ...configs,
         [config.channelId]: {
           ...config,
-          updatedAt: Date.now()
-        }
+          updatedAt: Date.now(),
+        },
       }
       await this.storage.set(STORAGE_KEYS.CHANNEL_CONFIGS, next)
       return true
@@ -74,7 +74,7 @@ class ChannelConfigStorage {
 
   async upsertFilters(
     channelId: number,
-    rules: ChannelModelFilterRule[]
+    rules: ChannelModelFilterRule[],
   ): Promise<boolean> {
     const timestamp = Date.now()
     const current = await this.getConfig(channelId)
@@ -88,10 +88,10 @@ class ChannelConfigStorage {
       modelFilterSettings: {
         ...previousSettings,
         rules,
-        updatedAt: timestamp
+        updatedAt: timestamp,
       },
       updatedAt: timestamp,
-      createdAt: current.createdAt || timestamp
+      createdAt: current.createdAt || timestamp,
     }
 
     return this.saveConfig(updated)
@@ -107,7 +107,7 @@ type IncomingChannelFilter = ChannelModelFilterInput & {
 }
 
 function normalizeFilters(
-  filters: IncomingChannelFilter[]
+  filters: IncomingChannelFilter[],
 ): ChannelModelFilterRule[] {
   if (!Array.isArray(filters)) {
     throw new Error("Filters must be an array")
@@ -149,14 +149,14 @@ function normalizeFilters(
       action: filter.action === "exclude" ? "exclude" : "include",
       enabled: filter.enabled !== false,
       createdAt,
-      updatedAt: now
+      updatedAt: now,
     }
   })
 }
 
 export async function handleChannelConfigMessage(
   request: any,
-  sendResponse: (response: any) => void
+  sendResponse: (response: any) => void,
 ) {
   try {
     switch (request.action) {
@@ -180,7 +180,7 @@ export async function handleChannelConfigMessage(
         const normalizedFilters = normalizeFilters(request.filters ?? [])
         const success = await channelConfigStorage.upsertFilters(
           channelId,
-          normalizedFilters
+          normalizedFilters,
         )
 
         if (!success) {
@@ -220,7 +220,7 @@ function sanitizeChannelConfigMap(rawConfigs: unknown): ChannelConfigMap {
 
 function sanitizeChannelConfig(
   value: unknown,
-  channelId: number
+  channelId: number,
 ): ChannelConfig {
   const timestamp = Date.now()
   const payload = (value ?? {}) as Partial<ChannelConfig> & {
@@ -233,7 +233,7 @@ function sanitizeChannelConfig(
   const modelFilterSettings = sanitizeModelFilterSettings(
     payload.modelFilterSettings,
     payload.filters,
-    timestamp
+    timestamp,
   )
 
   return {
@@ -246,7 +246,7 @@ function sanitizeChannelConfig(
     updatedAt:
       typeof payload.updatedAt === "number" && payload.updatedAt > 0
         ? payload.updatedAt
-        : modelFilterSettings.updatedAt
+        : modelFilterSettings.updatedAt,
   }
 }
 
@@ -255,7 +255,7 @@ function sanitizeModelFilterSettings(
     | (Partial<ChannelModelFilterSettings> & { rules?: unknown })
     | undefined,
   legacyFilters: unknown,
-  fallbackTimestamp: number
+  fallbackTimestamp: number,
 ): ChannelModelFilterSettings {
   if (rawSettings && typeof rawSettings === "object") {
     const rules = Array.isArray(rawSettings.rules)
@@ -271,7 +271,7 @@ function sanitizeModelFilterSettings(
 
     return {
       rules,
-      updatedAt
+      updatedAt,
     }
   }
 
@@ -283,13 +283,13 @@ function sanitizeModelFilterSettings(
 
   return {
     rules: legacyRules,
-    updatedAt: fallbackTimestamp
+    updatedAt: fallbackTimestamp,
   }
 }
 
 function sanitizeFilter(
   filter: unknown,
-  fallbackTimestamp: number
+  fallbackTimestamp: number,
 ): ChannelModelFilterRule | null {
   if (!filter || typeof filter !== "object") {
     return null
@@ -327,6 +327,6 @@ function sanitizeFilter(
     updatedAt:
       typeof payload.updatedAt === "number" && payload.updatedAt > 0
         ? payload.updatedAt
-        : fallbackTimestamp
+        : fallbackTimestamp,
   }
 }

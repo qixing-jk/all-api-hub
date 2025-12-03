@@ -28,9 +28,9 @@ function LoadingSkeleton() {
     <div className="space-y-3">
       {[...Array(3)].map((_, i) => (
         <Card key={i} padding="sm" className="animate-pulse">
-          <div className="mb-2 h-4 w-1/4 rounded bg-gray-200 dark:bg-dark-bg-tertiary"></div>
-          <div className="mb-2 h-3 w-1/2 rounded bg-gray-200 dark:bg-dark-bg-tertiary"></div>
-          <div className="h-3 w-3/4 rounded bg-gray-200 dark:bg-dark-bg-tertiary"></div>
+          <div className="dark:bg-dark-bg-tertiary mb-2 h-4 w-1/4 rounded bg-gray-200"></div>
+          <div className="dark:bg-dark-bg-tertiary mb-2 h-3 w-1/2 rounded bg-gray-200"></div>
+          <div className="dark:bg-dark-bg-tertiary h-3 w-3/4 rounded bg-gray-200"></div>
         </Card>
       ))}
     </div>
@@ -40,7 +40,7 @@ function LoadingSkeleton() {
 function TokenEmptyState({
   tokens,
   handleAddToken,
-  displayData
+  displayData,
 }: {
   tokens: unknown[]
   handleAddToken: () => void
@@ -69,7 +69,7 @@ function TokenEmptyState({
           label: t("createFirstKey"),
           onClick: handleAddToken,
           variant: "success",
-          icon: <PlusIcon className="h-4 w-4" />
+          icon: <PlusIcon className="h-4 w-4" />,
         }}
       />
     )
@@ -95,7 +95,7 @@ export function TokenList({
   handleDeleteToken,
   handleAddToken,
   selectedAccount,
-  displayData
+  displayData,
 }: TokenListProps) {
   const { t } = useTranslation("keyManagement")
   const [ccSwitchContext, setCCSwitchContext] = useState<{
@@ -105,7 +105,7 @@ export function TokenList({
 
   const handleOpenCCSwitchDialog = (
     token: AccountToken,
-    account: DisplaySiteData
+    account: DisplaySiteData,
   ) => {
     setCCSwitchContext({ token, account })
   }
@@ -142,7 +142,7 @@ export function TokenList({
       <div className="space-y-3">
         {filteredTokens.map((token) => {
           const account = displayData.find(
-            (item) => item.name === token.accountName
+            (item) => item.name === token.accountName,
           )
           if (!account) {
             return null

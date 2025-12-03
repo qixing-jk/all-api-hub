@@ -20,7 +20,7 @@ interface CopyKeyDialogProps {
 export default function CopyKeyDialog({
   isOpen,
   onClose,
-  account
+  account,
 }: CopyKeyDialogProps) {
   const [ccSwitchContext, setCCSwitchContext] = useState<{
     token: ApiToken
@@ -34,12 +34,12 @@ export default function CopyKeyDialog({
     expandedTokens,
     fetchTokens,
     copyKey,
-    toggleTokenExpansion
+    toggleTokenExpansion,
   } = useCopyKeyDialog(isOpen, account)
 
   const handleOpenCCSwitchDialog = (
     token: ApiToken,
-    currentAccount: DisplaySiteData
+    currentAccount: DisplaySiteData,
   ) => {
     setCCSwitchContext({ token, account: currentAccount })
   }
@@ -73,7 +73,8 @@ export default function CopyKeyDialog({
         onClose={onClose}
         panelClassName="max-h-[85vh] overflow-hidden flex flex-col"
         header={<DialogHeader account={account} />}
-        footer={<DialogFooter tokenCount={tokens.length} onClose={onClose} />}>
+        footer={<DialogFooter tokenCount={tokens.length} onClose={onClose} />}
+      >
         <div className="flex-1 overflow-y-auto">{renderContent()}</div>
       </Modal>
       {ccSwitchContext && (

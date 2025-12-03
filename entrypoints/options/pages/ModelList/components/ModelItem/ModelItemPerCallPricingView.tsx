@@ -15,14 +15,15 @@ export const ModelItemPerCallPricingView = ({
   isAvailableForUser,
   exchangeRate,
   showRealPrice,
-  tokenBillingType
+  tokenBillingType,
 }: ModelItemPerCallPricingViewProps) => {
   if (typeof perCallPrice === "number") {
     return (
       <span
         className={`text-sm ${
           isAvailableForUser ? "text-purple-600" : "text-gray-500"
-        }`}>
+        }`}
+      >
         {showRealPrice
           ? formatPriceCompact((perCallPrice || 0) * exchangeRate, "CNY")
           : formatPriceCompact(perCallPrice || 0, "USD")}
@@ -34,7 +35,7 @@ export const ModelItemPerCallPricingView = ({
       inputCNY: perCallPrice.input * exchangeRate,
       outputUSD: perCallPrice.output,
       outputCNY: perCallPrice.output * exchangeRate,
-      perCallPrice: 0
+      perCallPrice: 0,
     }
     return (
       <PriceView

@@ -8,12 +8,11 @@ import { modelMetadataService } from "~/services/modelMetadata"
 import { NewApiModelSyncService } from "~/services/newApiModelSync"
 import {
   ALL_PRESET_STANDARD_MODELS,
-  CHANNEL_STATUS,
   DEFAULT_MODEL_REDIRECT_PREFERENCES,
-  NewApiChannel
-} from "~/types"
+} from "~/types/modelRedirect"
+import { CHANNEL_STATUS, NewApiChannel } from "~/types/newapi"
 
-import { hasValidNewApiConfig } from "../newApiService/newApiService.ts"
+import { hasValidNewApiConfig } from "../newApiService/newApiService"
 import { userPreferences } from "../userPreferences"
 import { renameModel } from "./modelNormalization"
 
@@ -29,7 +28,7 @@ export class ModelRedirectService {
   static async applyModelMappingToChannel(
     channel: NewApiChannel,
     newMapping: Record<string, string>,
-    service: NewApiModelSyncService
+    service: NewApiModelSyncService,
   ): Promise<void> {
     if (Object.keys(newMapping).length === 0) {
       return
@@ -43,7 +42,7 @@ export class ModelRedirectService {
       } catch (parseError) {
         console.warn(
           `[ModelRedirect] Failed to parse existing model_mapping for channel ${channel.id}:`,
-          parseError
+          parseError,
         )
       }
     }
@@ -51,7 +50,7 @@ export class ModelRedirectService {
     // Merge mappings: new mapping overrides existing keys
     const mergedMapping = {
       ...existingMapping,
-      ...newMapping
+      ...newMapping,
     }
 
     await service.updateChannelModelMapping(channel, mergedMapping)
@@ -74,14 +73,14 @@ export class ModelRedirectService {
           success: false,
           updatedChannels: 0,
           errors: ["New API configuration is missing"],
-          message: "New API configuration is missing"
+          message: "New API configuration is missing",
         }
       }
 
       const modelRedirectPrefs = Object.assign(
         {},
         DEFAULT_MODEL_REDIRECT_PREFERENCES,
-        prefs.modelRedirect
+        prefs.modelRedirect,
       )
 
       if (!modelRedirectPrefs.enabled) {
@@ -89,7 +88,7 @@ export class ModelRedirectService {
           success: false,
           updatedChannels: 0,
           errors: ["Model redirect feature is disabled"],
-          message: "Model redirect feature is disabled"
+          message: "Model redirect feature is disabled",
         }
       }
 
@@ -106,7 +105,7 @@ export class ModelRedirectService {
       const service = new NewApiModelSyncService(
         newApi.baseUrl!,
         newApi.adminToken!,
-        newApi.userId!
+        newApi.userId!,
       )
 
       const channelList = await service.listChannels()
@@ -134,19 +133,19 @@ export class ModelRedirectService {
           const newMapping =
             ModelRedirectService.generateModelMappingForChannel(
               standardModels,
-              actualModels
+              actualModels,
             )
 
           // Use unified method for incremental merge and apply
           await ModelRedirectService.applyModelMappingToChannel(
             channel,
             newMapping,
-            service
+            service,
           )
           successCount += 1
         } catch (error) {
           errors.push(
-            `Channel ${channel.name} (${channel.id}): ${(error as Error).message || "Unknown error"}`
+            `Channel ${channel.name} (${channel.id}): ${(error as Error).message || "Unknown error"}`,
           )
         }
       }
@@ -154,7 +153,7 @@ export class ModelRedirectService {
       return {
         success: errors.length === 0,
         updatedChannels: successCount,
-        errors
+        errors,
       }
     } catch (error) {
       console.error("[ModelRedirect] Failed to apply redirect:", error)
@@ -162,8 +161,8 @@ export class ModelRedirectService {
         success: false,
         updatedChannels: 0,
         errors: [
-          error instanceof Error ? error.message : "Failed to apply redirect"
-        ]
+          error instanceof Error ? error.message : "Failed to apply redirect",
+        ],
       }
     }
   }
@@ -175,7 +174,7 @@ export class ModelRedirectService {
    */
   static generateModelMappingForChannel(
     standardModels: string[],
-    actualModels: string[]
+    actualModels: string[],
   ): Record<string, string> {
     const mapping: Record<string, string> = {}
     const usedActualModels = new Set<string>()
@@ -210,7 +209,7 @@ export class ModelRedirectService {
 
       const normalizedStandardModelName = renameModel(
         standardModel,
-        false
+        false,
       )?.trim()
       if (!normalizedStandardModelName) continue
 
@@ -218,7 +217,7 @@ export class ModelRedirectService {
       if (!candidates || candidates.length === 0) continue
 
       const availableCandidate = candidates.find(
-        (candidate) => !usedActualModels.has(candidate)
+        (candidate) => !usedActualModels.has(candidate),
       )
       if (availableCandidate) {
         mapping[standardModel] = availableCandidate

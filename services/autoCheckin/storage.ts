@@ -6,7 +6,7 @@ import type { AutoCheckinStatus } from "~/types/autoCheckin"
  * Storage keys for Auto Check-in
  */
 const STORAGE_KEYS = {
-  AUTO_CHECKIN_STATUS: "autoCheckin_status"
+  AUTO_CHECKIN_STATUS: "autoCheckin_status",
 } as const
 
 /**
@@ -17,7 +17,7 @@ class AutoCheckinStorage {
 
   constructor() {
     this.storage = new Storage({
-      area: "local"
+      area: "local",
     })
   }
 
@@ -27,7 +27,7 @@ class AutoCheckinStorage {
   async getStatus(): Promise<AutoCheckinStatus | null> {
     try {
       const stored = (await this.storage.get(
-        STORAGE_KEYS.AUTO_CHECKIN_STATUS
+        STORAGE_KEYS.AUTO_CHECKIN_STATUS,
       )) as AutoCheckinStatus | undefined
 
       return stored || null

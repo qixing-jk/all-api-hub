@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next"
 
 import {
   fetchAccountAvailableModels,
-  fetchUserGroups
+  fetchUserGroups,
 } from "~/services/apiService"
 import type { UserGroupInfo } from "~/services/apiService/common/type"
 import type { DisplaySiteData } from "~/types"
@@ -14,7 +14,7 @@ import type { FormData } from "./useTokenForm"
 export function useTokenData(
   isOpen: boolean,
   currentAccount: DisplaySiteData | undefined,
-  setFormData: React.Dispatch<React.SetStateAction<FormData>>
+  setFormData: React.Dispatch<React.SetStateAction<FormData>>,
 ) {
   const { t } = useTranslation("keyManagement")
   const [isLoading, setIsLoading] = useState(false)
@@ -28,7 +28,7 @@ export function useTokenData(
     try {
       const [models, groupsData] = await Promise.all([
         fetchAccountAvailableModels(currentAccount),
-        fetchUserGroups(currentAccount)
+        fetchUserGroups(currentAccount),
       ])
 
       setAvailableModels(models)

@@ -1,7 +1,7 @@
 import { cva, type VariantProps } from "class-variance-authority"
 import React from "react"
 
-import { cn } from "~/lib/utils.ts"
+import { cn } from "~/lib/utils"
 
 import { BodySmall, Heading3 } from "./Typography"
 
@@ -15,21 +15,21 @@ const cardVariants = cva(
         interactive:
           "border-gray-200 dark:border-dark-bg-tertiary shadow-sm hover:shadow-md transition-shadow cursor-pointer",
         outlined: "border-gray-300 dark:border-gray-600 shadow-none",
-        ghost: "border-transparent shadow-none"
+        ghost: "border-transparent shadow-none",
       },
       padding: {
         none: "p-0",
         default: "p-0",
         sm: "p-2 sm:p-3",
         md: "p-4 sm:p-6",
-        lg: "p-6 sm:p-8"
-      }
+        lg: "p-6 sm:p-8",
+      },
     },
     defaultVariants: {
       variant: "default",
-      padding: "default"
-    }
-  }
+      padding: "default",
+    },
+  },
 )
 
 export interface CardProps
@@ -43,7 +43,7 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
       className={cn(cardVariants({ variant, padding, className }))}
       {...props}
     />
-  )
+  ),
 )
 Card.displayName = "Card"
 
@@ -60,7 +60,7 @@ const CardHeader = React.forwardRef<HTMLDivElement, CardHeaderProps>(
       none: "",
       sm: "px-4 py-3",
       default: "px-6 py-4",
-      lg: "px-8 py-6"
+      lg: "px-8 py-6",
     }
 
     return (
@@ -70,12 +70,12 @@ const CardHeader = React.forwardRef<HTMLDivElement, CardHeaderProps>(
           "flex flex-col space-y-1.5",
           bordered && "dark:border-dark-bg-tertiary border-b border-gray-200",
           paddingClasses[padding],
-          className
+          className,
         )}
         {...props}
       />
     )
-  }
+  },
 )
 CardHeader.displayName = "CardHeader"
 
@@ -86,7 +86,8 @@ const CardTitle = React.forwardRef<
   <Heading3
     ref={ref}
     className={cn("leading-none tracking-tight", className)}
-    {...props}>
+    {...props}
+  >
     {children}
   </Heading3>
 ))
@@ -99,7 +100,8 @@ const CardDescription = React.forwardRef<
   <BodySmall
     ref={ref}
     className={cn("dark:text-dark-text-secondary text-gray-600", className)}
-    {...props}>
+    {...props}
+  >
     {children}
   </BodySmall>
 ))
@@ -112,20 +114,20 @@ const cardContentVariants = cva("", {
       sm: "p-3",
       default: "p-4",
       md: "p-6",
-      lg: "p-8"
+      lg: "p-8",
     },
     spacing: {
       none: "",
       sm: "space-y-2",
       default: "space-y-4",
       md: "space-y-6",
-      lg: "space-y-8"
-    }
+      lg: "space-y-8",
+    },
   },
   defaultVariants: {
     padding: "default",
-    spacing: "default"
-  }
+    spacing: "default",
+  },
 })
 
 export interface CardContentProps
@@ -141,7 +143,7 @@ const CardContent = React.forwardRef<HTMLDivElement, CardContentProps>(
         {...props}
       />
     )
-  }
+  },
 )
 
 CardContent.displayName = "CardContent"
@@ -159,7 +161,7 @@ const CardFooter = React.forwardRef<HTMLDivElement, CardFooterProps>(
       none: "",
       sm: "px-4 py-3",
       default: "px-6 py-4",
-      lg: "px-8 py-6"
+      lg: "px-8 py-6",
     }
 
     return (
@@ -169,12 +171,12 @@ const CardFooter = React.forwardRef<HTMLDivElement, CardFooterProps>(
           "flex items-center justify-end space-x-3",
           bordered && "dark:border-dark-bg-tertiary border-t border-gray-200",
           paddingClasses[padding],
-          className
+          className,
         )}
         {...props}
       />
     )
-  }
+  },
 )
 CardFooter.displayName = "CardFooter"
 

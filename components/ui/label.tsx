@@ -11,18 +11,18 @@ const labelVariants = cva(
       variant: {
         default: "text-foreground",
         error: "text-destructive",
-        success: "text-emerald-600 dark:text-emerald-400"
+        success: "text-emerald-600 dark:text-emerald-400",
       },
       size: {
         default: "text-sm",
-        sm: "text-xs"
-      }
+        sm: "text-xs",
+      },
     },
     defaultVariants: {
       variant: "default",
-      size: "default"
-    }
-  }
+      size: "default",
+    },
+  },
 )
 
 type LabelProps = React.ComponentPropsWithoutRef<typeof LabelPrimitive.Root> &
@@ -40,7 +40,8 @@ const Label = React.forwardRef<
       ref={ref}
       data-slot="label"
       className={cn(labelVariants({ variant, size }), className)}
-      {...props}>
+      {...props}
+    >
       {children}
       {required && <span className="text-destructive">*</span>}
       {hint && (

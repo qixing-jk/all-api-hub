@@ -4,12 +4,11 @@ import React, {
   useContext,
   useEffect,
   useRef,
-  useState
+  useState,
 } from "react"
 
-import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes.ts"
-import type { ChannelFormData } from "~/types"
-import type { NewApiChannel } from "~/types/newapi.ts"
+import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
+import type { ChannelFormData, NewApiChannel } from "~/types/newapi"
 
 interface ChannelDialogState {
   isOpen: boolean
@@ -36,18 +35,18 @@ interface ChannelDialogContextValue {
 }
 
 const ChannelDialogContext = createContext<ChannelDialogContextValue | null>(
-  null
+  null,
 )
 
 export function ChannelDialogProvider({
-  children
+  children,
 }: {
   children: React.ReactNode
 }) {
   const [state, setState] = useState<ChannelDialogState>({
     isOpen: false,
     mode: DIALOG_MODES.ADD,
-    channel: null
+    channel: null,
   })
 
   const openDialog = useCallback(
@@ -66,16 +65,16 @@ export function ChannelDialogProvider({
         initialValues: config.initialValues,
         initialModels: config.initialModels,
         initialGroups: config.initialGroups,
-        onSuccessCallback: config.onSuccess
+        onSuccessCallback: config.onSuccess,
       })
     },
-    []
+    [],
   )
 
   const closeDialog = useCallback(() => {
     setState((prev) => ({
       ...prev,
-      isOpen: false
+      isOpen: false,
     }))
   }, [])
 
@@ -90,12 +89,13 @@ export function ChannelDialogProvider({
       onSuccessRef.current?.(result)
       closeDialog()
     },
-    [closeDialog]
+    [closeDialog],
   )
 
   return (
     <ChannelDialogContext.Provider
-      value={{ state, openDialog, closeDialog, handleSuccess }}>
+      value={{ state, openDialog, closeDialog, handleSuccess }}
+    >
       {children}
     </ChannelDialogContext.Provider>
   )
@@ -105,7 +105,7 @@ export function useChannelDialogContext() {
   const context = useContext(ChannelDialogContext)
   if (!context) {
     throw new Error(
-      "useChannelDialogContext must be used within a ChannelDialogProvider"
+      "useChannelDialogContext must be used within a ChannelDialogProvider",
     )
   }
   return context

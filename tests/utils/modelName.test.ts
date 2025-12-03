@@ -8,7 +8,7 @@ describe("removeDateSuffix", () => {
       expect(removeDateSuffix("model-20250101")).toBe("model")
       expect(removeDateSuffix("gpt-4o-20240718")).toBe("gpt-4o")
       expect(removeDateSuffix("claude-3-5-sonnet-20241022")).toBe(
-        "claude-3-5-sonnet"
+        "claude-3-5-sonnet",
       )
     })
 
@@ -16,7 +16,7 @@ describe("removeDateSuffix", () => {
       expect(removeDateSuffix("model_20250101")).toBe("model")
       expect(removeDateSuffix("gpt-4o_20240718")).toBe("gpt-4o")
       expect(removeDateSuffix("claude-3-5-sonnet_20241022")).toBe(
-        "claude-3-5-sonnet"
+        "claude-3-5-sonnet",
       )
     })
 
@@ -31,7 +31,7 @@ describe("removeDateSuffix", () => {
       expect(removeDateSuffix("model-2025-01-01")).toBe("model")
       expect(removeDateSuffix("gpt-4o-2024-07-18")).toBe("gpt-4o")
       expect(removeDateSuffix("claude-3-5-sonnet-2024-10-22")).toBe(
-        "claude-3-5-sonnet"
+        "claude-3-5-sonnet",
       )
     })
 
@@ -39,7 +39,7 @@ describe("removeDateSuffix", () => {
       expect(removeDateSuffix("model_2025_01_01")).toBe("model")
       expect(removeDateSuffix("gpt-4o_2024_07_18")).toBe("gpt-4o")
       expect(removeDateSuffix("claude-3-5-sonnet_2024_10_22")).toBe(
-        "claude-3-5-sonnet"
+        "claude-3-5-sonnet",
       )
     })
 
@@ -131,7 +131,7 @@ describe("removeDateSuffix", () => {
       expect(removeDateSuffix("2024-01-01-model")).toBe("2024-01-01-model")
       expect(removeDateSuffix("model-20240101-v2")).toBe("model-20240101-v2")
       expect(removeDateSuffix("gpt-2024-01-01-latest")).toBe(
-        "gpt-2024-01-01-latest"
+        "gpt-2024-01-01-latest",
       )
     })
 
@@ -161,37 +161,37 @@ describe("removeDateSuffix", () => {
   describe("complex real-world model names", () => {
     it("should handle organization/provider prefixes", () => {
       expect(removeDateSuffix("deepseek-ai/DeepSeek-V3.1-20250101")).toBe(
-        "deepseek-ai/DeepSeek-V3.1"
+        "deepseek-ai/DeepSeek-V3.1",
       )
       expect(removeDateSuffix("openai/gpt-4o-2024-07-18")).toBe("openai/gpt-4o")
       expect(removeDateSuffix("anthropic/claude-3-5-sonnet-20241022")).toBe(
-        "anthropic/claude-3-5-sonnet"
+        "anthropic/claude-3-5-sonnet",
       )
     })
 
     it("should handle mixed separators in model names", () => {
       expect(removeDateSuffix("model_name-with_mixed-20250101")).toBe(
-        "model_name-with_mixed"
+        "model_name-with_mixed",
       )
       expect(removeDateSuffix("gpt_4o-turbo-2024-07-18")).toBe("gpt_4o-turbo")
     })
 
     it("should handle multiple version numbers before date", () => {
       expect(removeDateSuffix("llama-3.1-70b-instruct-20240101")).toBe(
-        "llama-3.1-70b-instruct"
+        "llama-3.1-70b-instruct",
       )
       expect(removeDateSuffix("gemini-1.5-pro-001-20240101")).toBe(
-        "gemini-1.5-pro-001"
+        "gemini-1.5-pro-001",
       )
     })
 
     it("should handle mm-dd or mm_dd date", () => {
       expect(removeDateSuffix("gemini-2.5-flash-preview-05-20")).toBe(
-        "gemini-2.5-flash-preview"
+        "gemini-2.5-flash-preview",
       )
 
       expect(removeDateSuffix("gemini-2.5-flash-preview-05_20")).toBe(
-        "gemini-2.5-flash-preview"
+        "gemini-2.5-flash-preview",
       )
     })
   })

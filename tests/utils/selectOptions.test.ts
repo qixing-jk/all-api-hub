@@ -6,7 +6,7 @@ import {
   groupsToOptions,
   mergeUniqueOptions,
   modelsToOptions,
-  toSelectOptions
+  toSelectOptions,
 } from "~/utils/selectOptions"
 
 describe("selectOptions", () => {
@@ -16,7 +16,7 @@ describe("selectOptions", () => {
       expect(result).toEqual([
         { label: "a", value: "a" },
         { label: "b", value: "b" },
-        { label: "c", value: "c" }
+        { label: "c", value: "c" },
       ])
     })
 
@@ -29,12 +29,12 @@ describe("selectOptions", () => {
     it("converts channel groups to options", () => {
       const groups: ChannelGroup[] = [
         { id: "1", name: "Group A" },
-        { id: "2", name: "Group B" }
+        { id: "2", name: "Group B" },
       ]
       const result = groupsToOptions(groups)
       expect(result).toEqual([
         { label: "Group A", value: "1" },
-        { label: "Group B", value: "2" }
+        { label: "Group B", value: "2" },
       ])
     })
 
@@ -47,12 +47,12 @@ describe("selectOptions", () => {
     it("converts channel models to options", () => {
       const models: ChannelModel[] = [
         { id: "m1", name: "Model 1" },
-        { id: "m2", name: "Model 2" }
+        { id: "m2", name: "Model 2" },
       ]
       const result = modelsToOptions(models)
       expect(result).toEqual([
         { label: "Model 1", value: "m1" },
-        { label: "Model 2", value: "m2" }
+        { label: "Model 2", value: "m2" },
       ])
     })
 
@@ -65,11 +65,11 @@ describe("selectOptions", () => {
     it("merges multiple option lists", () => {
       const list1: MultiSelectOption[] = [
         { label: "A", value: "1" },
-        { label: "B", value: "2" }
+        { label: "B", value: "2" },
       ]
       const list2: MultiSelectOption[] = [
         { label: "C", value: "3" },
-        { label: "D", value: "4" }
+        { label: "D", value: "4" },
       ]
       const result = mergeUniqueOptions(list1, list2)
       expect(result).toHaveLength(4)

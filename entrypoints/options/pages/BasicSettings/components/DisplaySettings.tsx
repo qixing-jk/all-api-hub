@@ -7,8 +7,7 @@ import { DATA_TYPE_BALANCE, DATA_TYPE_CONSUMPTION } from "~/constants"
 import { ANIMATIONS, COLORS } from "~/constants/designTokens"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import type { BalanceType, CurrencyType } from "~/types"
-
-import { showUpdateToast } from "../../../../../utils/toastHelpers.ts"
+import { showUpdateToast } from "~/utils/toastHelpers"
 
 export default function DisplaySettings() {
   const { t } = useTranslation("settings")
@@ -17,7 +16,7 @@ export default function DisplaySettings() {
     activeTab,
     updateCurrencyType,
     updateDefaultTab,
-    resetDisplaySettings
+    resetDisplaySettings,
   } = useUserPreferencesContext()
 
   const handleCurrencyChange = async (currency: CurrencyType) => {
@@ -37,7 +36,8 @@ export default function DisplaySettings() {
       id="general-display"
       title={t("display.title")}
       description={t("display.description")}
-      onReset={resetDisplaySettings}>
+      onReset={resetDisplaySettings}
+    >
       <Card padding="none">
         <CardList>
           <CardItem
@@ -48,19 +48,22 @@ export default function DisplaySettings() {
             description={t("display.currencyDesc")}
             rightContent={
               <div
-                className={`flex flex-col sm:flex-row ${COLORS.background.tertiary} rounded-lg p-1 shadow-sm ${ANIMATIONS.transition.base}`}>
+                className={`flex flex-col sm:flex-row ${COLORS.background.tertiary} rounded-lg p-1 shadow-sm ${ANIMATIONS.transition.base}`}
+              >
                 <ToggleButton
                   onClick={() => handleCurrencyChange("USD")}
                   isActive={currencyType === "USD"}
                   size="default"
-                  aria-label={t("display.usd")}>
+                  aria-label={t("display.usd")}
+                >
                   {t("display.usd")}
                 </ToggleButton>
                 <ToggleButton
                   onClick={() => handleCurrencyChange("CNY")}
                   isActive={currencyType === "CNY"}
                   size="default"
-                  aria-label={t("display.cny")}>
+                  aria-label={t("display.cny")}
+                >
                   {t("display.cny")}
                 </ToggleButton>
               </div>
@@ -75,19 +78,22 @@ export default function DisplaySettings() {
             description={t("display.defaultTabDesc")}
             rightContent={
               <div
-                className={`flex flex-col sm:flex-row ${COLORS.background.tertiary} rounded-lg p-1 shadow-sm ${ANIMATIONS.transition.base}`}>
+                className={`flex flex-col sm:flex-row ${COLORS.background.tertiary} rounded-lg p-1 shadow-sm ${ANIMATIONS.transition.base}`}
+              >
                 <ToggleButton
                   onClick={() => handleDefaultTabChange(DATA_TYPE_CONSUMPTION)}
                   isActive={activeTab === DATA_TYPE_CONSUMPTION}
                   size="default"
-                  aria-label={t("display.todayConsumption")}>
+                  aria-label={t("display.todayConsumption")}
+                >
                   {t("display.todayConsumption")}
                 </ToggleButton>
                 <ToggleButton
                   onClick={() => handleDefaultTabChange(DATA_TYPE_BALANCE)}
                   isActive={activeTab === DATA_TYPE_BALANCE}
                   size="default"
-                  aria-label={t("display.totalBalance")}>
+                  aria-label={t("display.totalBalance")}
+                >
                   {t("display.totalBalance")}
                 </ToggleButton>
               </div>

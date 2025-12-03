@@ -29,5 +29,5 @@ execSync("wxt build -b firefox --mode development", { stdio: "inherit" })
 console.log("部署到 Android Firefox...")
 execSync(
   `web-ext run -t firefox-android --adb-device ${deviceId} --source-dir ./.output/firefox-mv2-dev`,
-  { stdio: "inherit" }
+  { stdio: "inherit" },
 )

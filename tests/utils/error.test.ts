@@ -36,7 +36,7 @@ describe("getErrorMessage", () => {
 
     it("should handle string with special characters", () => {
       expect(getErrorMessage("Error: 404 - Not Found!")).toBe(
-        "Error: 404 - Not Found!"
+        "Error: 404 - Not Found!",
       )
     })
 
@@ -94,7 +94,7 @@ describe("getErrorMessage", () => {
     it("should serialize plain object to JSON string", () => {
       const obj = { status: 500, error: "Internal Server Error" }
       expect(getErrorMessage(obj)).toBe(
-        '{"status":500,"error":"Internal Server Error"}'
+        '{"status":500,"error":"Internal Server Error"}',
       )
     })
 
@@ -171,10 +171,10 @@ describe("getErrorMessage", () => {
     it("should handle axios-style error", () => {
       const axiosError = {
         message: "Request failed with status code 401",
-        code: "ERR_BAD_REQUEST"
+        code: "ERR_BAD_REQUEST",
       }
       expect(getErrorMessage(axiosError)).toBe(
-        "Request failed with status code 401"
+        "Request failed with status code 401",
       )
     })
 

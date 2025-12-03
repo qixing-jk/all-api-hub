@@ -5,7 +5,7 @@ import i18n from "./i18n"
  * @param pageType - The type of page ('options', 'popup', or 'sidepanel')
  */
 export function initializeDocumentTitle(
-  pageType: "options" | "popup" | "sidepanel"
+  pageType: "options" | "popup" | "sidepanel",
 ): void {
   // Set initial title
   setDocumentTitle(pageType)
@@ -22,7 +22,7 @@ export function initializeDocumentTitle(
  * @param pageType - The type of page ('options', 'popup', or 'sidepanel')
  */
 export function setDocumentTitle(
-  pageType: "options" | "popup" | "sidepanel"
+  pageType: "options" | "popup" | "sidepanel",
 ): void {
   try {
     document.title = i18n.t(`ui:pageTitle.${pageType}`)

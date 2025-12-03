@@ -1,14 +1,15 @@
 import {
   ArrowPathIcon,
   ExclamationTriangleIcon,
-  MagnifyingGlassIcon
+  MagnifyingGlassIcon,
 } from "@heroicons/react/24/outline"
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { EmptyState } from "~/components/ui"
-import { hasValidNewApiConfig } from "~/services/newApiService/newApiService.ts"
+import { hasValidNewApiConfig } from "~/services/newApiService/newApiService"
 import { userPreferences } from "~/services/userPreferences"
+import { navigateWithinOptionsPage } from "~/utils/navigation"
 
 interface EmptyResultsProps {
   hasHistory: boolean
@@ -37,9 +38,9 @@ export default function EmptyResults({ hasHistory }: EmptyResultsProps) {
           }
           action={{
             onClick: () => {
-              window.location.hash = "#basic"
+              navigateWithinOptionsPage("#basic")
             },
-            label: t("execution.empty.goToSettings")
+            label: t("execution.empty.goToSettings"),
           }}
         />
       )

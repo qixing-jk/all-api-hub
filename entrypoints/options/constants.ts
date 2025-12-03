@@ -7,7 +7,7 @@ import {
   Layers,
   RefreshCcw,
   Settings,
-  UserRound
+  UserRound,
 } from "lucide-react"
 
 import About from "./pages/About"
@@ -34,54 +34,54 @@ export const menuItems: MenuItem[] = [
     id: "basic",
     name: "基本设置",
     icon: Settings,
-    component: BasicSettings
+    component: BasicSettings,
   },
   {
     id: "account",
     name: "账户管理",
     icon: UserRound,
-    component: AccountManagement
+    component: AccountManagement,
   },
   {
     id: "autoCheckin",
     name: "自动签到",
     icon: CalendarCheck2,
-    component: AutoCheckin
+    component: AutoCheckin,
   },
   {
     id: "models",
     name: "模型列表",
     icon: Cpu,
-    component: ModelList
+    component: ModelList,
   },
   {
     id: "keys",
     name: "密钥管理",
     icon: KeyRound,
-    component: KeyManagement
+    component: KeyManagement,
   },
   {
     id: "newApiChannels",
     name: "渠道管理",
     icon: Layers,
-    component: NewApiChannels
+    component: NewApiChannels,
   },
   {
     id: "newApiModelSync",
     name: "模型同步",
     icon: RefreshCcw,
-    component: NewApiModelSync
+    component: NewApiModelSync,
   },
   {
     id: "importExport",
     name: "导入/导出",
     icon: ArrowLeftRight,
-    component: ImportExport
+    component: ImportExport,
   },
   {
     id: "about",
     name: "关于",
     icon: Info,
-    component: About
-  }
+    component: About,
+  },
 ]

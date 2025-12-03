@@ -4,7 +4,7 @@ import type { LogItem } from "~/services/apiService/common/type"
 import {
   aggregateUsageData,
   extractAmount,
-  getTodayTimestampRange
+  getTodayTimestampRange,
 } from "~/services/apiService/common/utils"
 
 describe("API Service Common Utils", () => {
@@ -75,7 +75,7 @@ describe("API Service Common Utils", () => {
       expect(result).toEqual({
         today_quota_consumption: 0,
         today_prompt_tokens: 0,
-        today_completion_tokens: 0
+        today_completion_tokens: 0,
       })
     })
 
@@ -84,8 +84,8 @@ describe("API Service Common Utils", () => {
         {
           quota: 100,
           prompt_tokens: 50,
-          completion_tokens: 30
-        } as LogItem
+          completion_tokens: 30,
+        } as LogItem,
       ]
 
       const result = aggregateUsageData(items)
@@ -99,7 +99,7 @@ describe("API Service Common Utils", () => {
       const items: LogItem[] = [
         { quota: 100, prompt_tokens: 50, completion_tokens: 30 },
         { quota: 200, prompt_tokens: 100, completion_tokens: 60 },
-        { quota: 150, prompt_tokens: 75, completion_tokens: 45 }
+        { quota: 150, prompt_tokens: 75, completion_tokens: 45 },
       ] as LogItem[]
 
       const result = aggregateUsageData(items)
@@ -112,7 +112,7 @@ describe("API Service Common Utils", () => {
     it("should handle missing quota field", () => {
       const items: LogItem[] = [
         { prompt_tokens: 50, completion_tokens: 30 },
-        { quota: 100, prompt_tokens: 40, completion_tokens: 20 }
+        { quota: 100, prompt_tokens: 40, completion_tokens: 20 },
       ] as LogItem[]
 
       const result = aggregateUsageData(items)
@@ -126,7 +126,7 @@ describe("API Service Common Utils", () => {
       const items: LogItem[] = [
         { quota: 100 },
         { quota: 200, prompt_tokens: 50 },
-        { quota: 150, completion_tokens: 40 }
+        { quota: 150, completion_tokens: 40 },
       ] as unknown as LogItem[]
 
       const result = aggregateUsageData(items)
@@ -139,7 +139,7 @@ describe("API Service Common Utils", () => {
     it("should handle zero values", () => {
       const items: LogItem[] = [
         { quota: 0, prompt_tokens: 0, completion_tokens: 0 },
-        { quota: 100, prompt_tokens: 50, completion_tokens: 30 }
+        { quota: 100, prompt_tokens: 50, completion_tokens: 30 },
       ] as LogItem[]
 
       const result = aggregateUsageData(items)
@@ -152,7 +152,7 @@ describe("API Service Common Utils", () => {
     it("should handle large numbers", () => {
       const items: LogItem[] = [
         { quota: 1000000, prompt_tokens: 500000, completion_tokens: 300000 },
-        { quota: 2000000, prompt_tokens: 1000000, completion_tokens: 600000 }
+        { quota: 2000000, prompt_tokens: 1000000, completion_tokens: 600000 },
       ] as LogItem[]
 
       const result = aggregateUsageData(items)
@@ -264,7 +264,7 @@ describe("API Service Common Utils", () => {
       it("should extract first currency match in text", () => {
         const result = extractAmount(
           "Price: $100 or €85",
-          DEFAULT_EXCHANGE_RATE
+          DEFAULT_EXCHANGE_RATE,
         )
 
         expect(result?.currencySymbol).toBe("$")

@@ -8,12 +8,12 @@ await testI18n.use(initReactI18next).init({
   fallbackLng: "en",
   resources: {
     en: {
-      translation: {}
-    }
+      translation: {},
+    },
   },
   interpolation: {
-    escapeValue: false
-  }
+    escapeValue: false,
+  },
 })
 
 export default testI18n

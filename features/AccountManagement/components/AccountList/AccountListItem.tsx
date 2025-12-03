@@ -40,7 +40,8 @@ const AccountListItem: React.FC<AccountListItemProps> = React.memo(
             : ""
         }`}
         onMouseEnter={() => handleMouseEnter(site.id)}
-        onMouseLeave={handleMouseLeave}>
+        onMouseLeave={handleMouseLeave}
+      >
         <div className="flex w-full min-w-0 items-center gap-1 sm:gap-2">
           {/* 左侧：站点信息 - 可压缩 */}
           <div className="min-w-[60px] flex-1 sm:min-w-[80px]">
@@ -49,7 +50,8 @@ const AccountListItem: React.FC<AccountListItemProps> = React.memo(
 
           {/* 中间：操作按钮 */}
           <div
-            className={`shrink-0 transition-opacity duration-200 ${revealButtonsClass}`}>
+            className={`shrink-0 transition-opacity duration-200 ${revealButtonsClass}`}
+          >
             <AccountActionButtons
               site={site}
               onDeleteAccount={onDeleteWithDialog}
@@ -64,7 +66,7 @@ const AccountListItem: React.FC<AccountListItemProps> = React.memo(
         </div>
       </CardItem>
     )
-  }
+  },
 )
 
 AccountListItem.displayName = "AccountListItem"

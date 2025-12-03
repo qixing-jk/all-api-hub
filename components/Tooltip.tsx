@@ -1,7 +1,7 @@
 import { useId, type ReactElement, type ReactNode } from "react"
 import { Tooltip as ReactTooltip } from "react-tooltip"
 
-import { cn } from "~/lib/utils.ts"
+import { cn } from "~/lib/utils"
 
 interface TooltipProps {
   content: ReactNode
@@ -30,7 +30,7 @@ export default function Tooltip({
   position = "top",
   delay = 0,
   className = "",
-  wrapperClassName = ""
+  wrapperClassName = "",
 }: TooltipProps) {
   const tooltipId = `tooltip-${useId()}`
 
@@ -43,8 +43,9 @@ export default function Tooltip({
         id={tooltipId}
         className={cn(
           "flex items-center justify-center gap-2",
-          wrapperClassName
-        )}>
+          wrapperClassName,
+        )}
+      >
         {children}
       </div>
 
@@ -61,7 +62,8 @@ export default function Tooltip({
           anchorId={tooltipId}
           place={position}
           delayShow={delay}
-          className={defaultClassName}>
+          className={defaultClassName}
+        >
           {content}
         </ReactTooltip>
       )}

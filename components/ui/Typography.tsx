@@ -1,7 +1,7 @@
 import { cva, type VariantProps } from "class-variance-authority"
 import React, { JSX } from "react"
 
-import { cn } from "~/lib/utils.ts"
+import { cn } from "~/lib/utils"
 
 const typographyVariants = cva("", {
   variants: {
@@ -21,33 +21,33 @@ const typographyVariants = cva("", {
       "label-small":
         "text-xs font-medium text-gray-600 dark:text-dark-text-tertiary",
       link: "text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 underline-offset-4 hover:underline",
-      code: "font-mono text-sm bg-gray-100 dark:bg-dark-bg-tertiary px-1.5 py-0.5 rounded text-gray-800 dark:text-dark-text-primary"
+      code: "font-mono text-sm bg-gray-100 dark:bg-dark-bg-tertiary px-1.5 py-0.5 rounded text-gray-800 dark:text-dark-text-primary",
     },
     align: {
       left: "text-left",
       center: "text-center",
       right: "text-right",
-      justify: "text-justify"
+      justify: "text-justify",
     },
     weight: {
       normal: "font-normal",
       medium: "font-medium",
       semibold: "font-semibold",
-      bold: "font-bold"
+      bold: "font-bold",
     },
     size: {
       xs: "text-xs",
       sm: "text-sm",
       base: "text-base",
       lg: "text-lg",
-      xl: "text-xl"
-    }
+      xl: "text-xl",
+    },
   },
   defaultVariants: {
     variant: "body",
-    align: "left"
+    align: "left",
     // Note: weight intentionally has no default to allow variant-specific weights
-  }
+  },
 })
 
 export interface TypographyProps
@@ -88,12 +88,12 @@ const Typography = React.forwardRef<HTMLElement, TypographyProps>(
       <Component
         ref={ref}
         className={cn(
-          typographyVariants({ variant, align, weight, size, className })
+          typographyVariants({ variant, align, weight, size, className }),
         )}
         {...props}
       />
     )
-  }
+  },
 )
 Typography.displayName = "Typography"
 
@@ -180,7 +180,7 @@ const Link = React.forwardRef<
 Link.displayName = "Link"
 
 const Code = React.forwardRef<HTMLElement, Omit<TypographyProps, "variant">>(
-  (props, ref) => <Typography ref={ref} variant="code" as="code" {...props} />
+  (props, ref) => <Typography ref={ref} variant="code" as="code" {...props} />,
 )
 Code.displayName = "Code"
 
@@ -199,5 +199,5 @@ export {
   Muted,
   Link,
   Code,
-  typographyVariants
+  typographyVariants,
 }

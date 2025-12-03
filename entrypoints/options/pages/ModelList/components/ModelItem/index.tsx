@@ -39,7 +39,7 @@ export default function ModelItem({
   userGroup,
   onGroupClick,
   availableGroups = [],
-  isAllGroupsMode = false
+  isAllGroupsMode = false,
 }: ModelItemProps) {
   const { t } = useTranslation("modelList")
   const [isExpanded, setIsExpanded] = useState(false)
@@ -65,7 +65,8 @@ export default function ModelItem({
         isAvailableForUser
           ? "hover:border-blue-300 dark:hover:border-blue-500/50"
           : "bg-gray-50 opacity-75 dark:bg-gray-800/50"
-      }>
+      }
+    >
       {/* 主要信息行 */}
       <CardContent padding="default">
         <div className="flex min-w-0 items-start gap-2">

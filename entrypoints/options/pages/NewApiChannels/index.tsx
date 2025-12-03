@@ -15,7 +15,7 @@ import {
   VisibilityState,
   type Cell,
   type CellContext,
-  type HeaderGroup
+  type HeaderGroup,
 } from "@tanstack/react-table"
 import {
   ChevronDown,
@@ -31,8 +31,7 @@ import {
   Loader2,
   Plus,
   RefreshCcw,
-  Settings2,
-  Trash2
+  Trash2,
 } from "lucide-react"
 import { nanoid } from "nanoid"
 import { useCallback, useEffect, useMemo, useState } from "react"
@@ -40,7 +39,8 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { useChannelDialog } from "~/components/ChannelDialog"
-import { Input, Modal, Switch, Textarea } from "~/components/ui"
+import ChannelFiltersEditor from "~/components/ChannelFiltersEditor"
+import { Input, Modal } from "~/components/ui"
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/Alert"
 import {
   AlertDialog,
@@ -50,7 +50,7 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle
+  AlertDialogTitle,
 } from "~/components/ui/alert-dialog"
 import { Badge } from "~/components/ui/badge"
 import { Button } from "~/components/ui/button"
@@ -62,20 +62,20 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuTrigger
+  DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
 import { Label } from "~/components/ui/label"
 import {
   Popover,
   PopoverContent,
-  PopoverTrigger
+  PopoverTrigger,
 } from "~/components/ui/popover"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
 } from "~/components/ui/select"
 import {
   Table,
@@ -83,7 +83,7 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow
+  TableRow,
 } from "~/components/ui/table"
 import { ChannelTypeNames } from "~/constants/newApi"
 import { PageHeader } from "~/entrypoints/options/components/PageHeader"
@@ -91,9 +91,9 @@ import { cn } from "~/lib/utils"
 import { channelConfigStorage } from "~/services/channelConfigStorage"
 import {
   deleteChannel,
-  getNewApiConfig
+  getNewApiConfig,
 } from "~/services/newApiService/newApiService"
-import type { ChannelModelFilterRule } from "~/types/channelModelFilters.ts"
+import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 import type { NewApiChannel } from "~/types/newapi"
 import { sendRuntimeMessage } from "~/utils/browserApi"
 import { getErrorMessage } from "~/utils/error"
@@ -118,12 +118,12 @@ type RowActionsLabels = {
  *    locally so editing is still possible.
  */
 async function fetchChannelFilters(
-  channelId: number
+  channelId: number,
 ): Promise<ChannelModelFilterRule[]> {
   try {
     const response = await sendRuntimeMessage({
       action: "channelConfig:get",
-      channelId
+      channelId,
     })
     if (response?.success) {
       return response.data?.modelFilterSettings?.rules ?? []
@@ -132,7 +132,7 @@ async function fetchChannelFilters(
   } catch (runtimeError) {
     console.warn(
       `[ChannelFilters] Runtime fetch failed for channel ${channelId}, using fallback storage`,
-      runtimeError
+      runtimeError,
     )
     try {
       const config = await channelConfigStorage.getConfig(channelId)
@@ -140,7 +140,7 @@ async function fetchChannelFilters(
     } catch (storageError) {
       console.error(
         `[ChannelFilters] Storage fallback failed for channel ${channelId}`,
-        storageError
+        storageError,
       )
       throw storageError instanceof Error ? storageError : runtimeError
     }
@@ -156,13 +156,13 @@ async function fetchChannelFilters(
  */
 async function saveChannelFilters(
   channelId: number,
-  filters: ChannelModelFilterRule[]
+  filters: ChannelModelFilterRule[],
 ): Promise<void> {
   try {
     const response = await sendRuntimeMessage({
       action: "channelConfig:upsertFilters",
       channelId,
-      filters
+      filters,
     })
     if (!response?.success) {
       throw new Error(response?.error || "Failed to save channel filters")
@@ -170,12 +170,12 @@ async function saveChannelFilters(
   } catch (runtimeError) {
     console.warn(
       `[ChannelFilters] Runtime save failed for channel ${channelId}, persisting locally`,
-      runtimeError
+      runtimeError,
     )
     try {
       const success = await channelConfigStorage.upsertFilters(
         channelId,
-        filters
+        filters,
       )
       if (!success) {
         throw new Error("Failed to persist filters locally")
@@ -183,7 +183,7 @@ async function saveChannelFilters(
     } catch (storageError) {
       console.error(
         `[ChannelFilters] Storage save failed for channel ${channelId}`,
-        storageError
+        storageError,
       )
       throw storageError instanceof Error ? storageError : runtimeError
     }
@@ -202,24 +202,24 @@ const STATUS_VARIANTS: Record<
   1: {
     labelKey: "statusLabels.enabled",
     className: "border-emerald-200 text-emerald-700",
-    variant: "secondary"
+    variant: "secondary",
   },
   2: {
     labelKey: "statusLabels.manualPause",
     className: "border-amber-200 text-amber-800",
-    variant: "outline"
+    variant: "outline",
   },
   3: {
     labelKey: "statusLabels.autoDisabled",
     className: "",
-    variant: "destructive"
-  }
+    variant: "destructive",
+  },
 }
 
 const multiColumnFilterFn: FilterFn<ChannelRow> = (
   row,
   _columnId,
-  filterValue
+  filterValue,
 ) => {
   const content =
     `${row.original.name} ${row.original.base_url} ${row.original.group}`
@@ -233,7 +233,7 @@ const multiColumnFilterFn: FilterFn<ChannelRow> = (
 const statusFilterFn: FilterFn<ChannelRow> = (
   row,
   columnId,
-  filterValue: string[]
+  filterValue: string[],
 ) => {
   if (!filterValue?.length) return true
   return filterValue.includes(String(row.getValue(columnId)))
@@ -248,14 +248,14 @@ export default function NewApiChannelsPage() {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
     base_url: false,
-    group: true
+    group: true,
   })
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
-    pageSize: 10
+    pageSize: 10,
   })
   const [sorting, setSorting] = useState<SortingState>([
-    { id: "name", desc: false }
+    { id: "name", desc: false },
   ])
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({})
   const [pendingDeleteIds, setPendingDeleteIds] = useState<number[]>([])
@@ -280,7 +280,7 @@ export default function NewApiChannelsPage() {
       }
       setConfigMissing(false)
       const response = await sendRuntimeMessage({
-        action: "newApiModelSync:listChannels"
+        action: "newApiModelSync:listChannels",
       })
       if (!response?.success) {
         throw new Error(response?.error || "Failed to load channels")
@@ -305,7 +305,7 @@ export default function NewApiChannelsPage() {
       onSuccess: () => {
         toast.success(t("toasts.channelSaved"))
         void refreshChannels()
-      }
+      },
     })
   }, [openWithCustom, refreshChannels, t])
 
@@ -327,17 +327,17 @@ export default function NewApiChannelsPage() {
           models,
           priority: channel.priority,
           weight: channel.weight,
-          status: channel.status
+          status: channel.status,
         },
         initialGroups: groups,
         initialModels: models,
         onSuccess: () => {
           toast.success(t("toasts.channelUpdated"))
           void refreshChannels()
-        }
+        },
       })
     },
-    [openWithCustom, refreshChannels, t]
+    [openWithCustom, refreshChannels, t],
   )
 
   const scheduleDelete = useCallback((ids: number[]) => {
@@ -357,8 +357,8 @@ export default function NewApiChannelsPage() {
 
       const results = await Promise.allSettled(
         pendingDeleteIds.map((id) =>
-          deleteChannel(config.baseUrl, config.token, config.userId, id)
-        )
+          deleteChannel(config.baseUrl, config.token, config.userId, id),
+        ),
       )
 
       const successIds: number[] = []
@@ -374,13 +374,13 @@ export default function NewApiChannelsPage() {
 
       if (successIds.length > 0) {
         setChannels((prev) =>
-          prev.filter((channel) => !successIds.includes(channel.id))
+          prev.filter((channel) => !successIds.includes(channel.id)),
         )
         setRowSelection({})
         toast.success(
           successIds.length === 1
             ? t("toasts.channelDeleted")
-            : t("toasts.channelsDeleted", { count: successIds.length })
+            : t("toasts.channelsDeleted", { count: successIds.length }),
         )
       }
 
@@ -391,8 +391,8 @@ export default function NewApiChannelsPage() {
             ? getErrorMessage(firstError)
             : t("toasts.someDeletesFailed", {
                 count: failedResults.length,
-                error: getErrorMessage(firstError)
-              })
+                error: getErrorMessage(firstError),
+              }),
         )
       }
     } catch (err) {
@@ -415,7 +415,7 @@ export default function NewApiChannelsPage() {
       try {
         const response = await sendRuntimeMessage({
           action: "newApiModelSync:triggerSelected",
-          channelIds
+          channelIds,
         })
         if (!response?.success) {
           throw new Error(response?.error || "Failed to sync channels")
@@ -425,8 +425,8 @@ export default function NewApiChannelsPage() {
         toast.success(
           t("toasts.syncCompleted", {
             success: successCount,
-            total: channelIds.length
-          })
+            total: channelIds.length,
+          }),
         )
       } catch (err) {
         toast.error(t("toasts.syncFailed", { error: getErrorMessage(err) }))
@@ -438,7 +438,7 @@ export default function NewApiChannelsPage() {
         })
       }
     },
-    [t]
+    [t],
   )
 
   const rowActionLabels = useMemo<RowActionsLabels>(
@@ -447,9 +447,9 @@ export default function NewApiChannelsPage() {
       sync: t("table.rowActions.sync"),
       syncing: t("table.rowActions.syncing"),
       filters: t("table.rowActions.filters"),
-      delete: t("table.rowActions.delete")
+      delete: t("table.rowActions.delete"),
     }),
-    [t]
+    [t],
   )
 
   const handleOpenFilterDialog = useCallback((channel: ChannelRow) => {
@@ -489,7 +489,7 @@ export default function NewApiChannelsPage() {
         ),
         size: 16,
         enableSorting: false,
-        enableHiding: false
+        enableHiding: false,
       },
       {
         accessorKey: "name",
@@ -504,14 +504,14 @@ export default function NewApiChannelsPage() {
         ),
         filterFn: multiColumnFilterFn,
         enableHiding: false,
-        size: 300
+        size: 300,
       },
       {
         accessorKey: "type",
         header: t("table.columns.type"),
         cell: ({ row }: { row: Row<ChannelRow> }) =>
           ChannelTypeNames[row.original.type] ?? "Unknown",
-        size: 90
+        size: 90,
       },
       {
         accessorKey: "models",
@@ -528,7 +528,7 @@ export default function NewApiChannelsPage() {
             </span>
           )
         },
-        size: 90
+        size: 90,
       },
       {
         accessorKey: "group",
@@ -548,7 +548,7 @@ export default function NewApiChannelsPage() {
             </div>
           )
         },
-        size: 90
+        size: 90,
       },
       {
         accessorKey: "status",
@@ -557,19 +557,19 @@ export default function NewApiChannelsPage() {
         cell: ({ row }: { row: Row<ChannelRow> }) => (
           <StatusBadge status={row.original.status} />
         ),
-        size: 90
+        size: 90,
       },
       {
         accessorKey: "priority",
         header: t("table.columns.priority"),
         cell: ({ row }: { row: Row<ChannelRow> }) => row.original.priority,
-        size: 60
+        size: 60,
       },
       {
         accessorKey: "weight",
         header: t("table.columns.weight"),
         cell: ({ row }: { row: Row<ChannelRow> }) => row.original.weight,
-        size: 60
+        size: 60,
       },
       {
         id: "actions",
@@ -588,8 +588,8 @@ export default function NewApiChannelsPage() {
         ),
         size: 60,
         enableSorting: false,
-        enableHiding: false
-      }
+        enableHiding: false,
+      },
     ],
     [
       handleOpenEditDialog,
@@ -598,8 +598,8 @@ export default function NewApiChannelsPage() {
       rowActionLabels,
       scheduleDelete,
       syncingIds,
-      t
-    ]
+      t,
+    ],
   )
 
   const table = useReactTable({
@@ -610,7 +610,7 @@ export default function NewApiChannelsPage() {
       columnFilters,
       columnVisibility,
       pagination,
-      rowSelection
+      rowSelection,
     },
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -622,7 +622,7 @@ export default function NewApiChannelsPage() {
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
-    enableSortingRemoval: false
+    enableSortingRemoval: false,
   })
 
   const statusColumn = table.getColumn("status")
@@ -709,9 +709,8 @@ export default function NewApiChannelsPage() {
               type="button"
               aria-label={t("toolbar.clearSearch")}
               className="text-muted-foreground/80 absolute top-1/2 right-2 -translate-y-1/2"
-              onClick={() =>
-                table.getColumn("name")?.setFilterValue(undefined)
-              }>
+              onClick={() => table.getColumn("name")?.setFilterValue(undefined)}
+            >
               <CircleX className="h-4 w-4" />
             </button>
           )}
@@ -737,7 +736,8 @@ export default function NewApiChannelsPage() {
                 {uniqueStatusValues.map((value) => (
                   <div
                     key={value}
-                    className="flex items-center justify-between gap-2">
+                    className="flex items-center justify-between gap-2"
+                  >
                     <div className="flex items-center gap-2">
                       <Checkbox
                         id={`status-${value}`}
@@ -748,10 +748,11 @@ export default function NewApiChannelsPage() {
                       />
                       <Label
                         htmlFor={`status-${value}`}
-                        className="text-sm font-normal">
+                        className="text-sm font-normal"
+                      >
                         {t(
                           STATUS_VARIANTS[Number(value)]?.labelKey ??
-                            STATUS_VARIANTS[0].labelKey
+                            STATUS_VARIANTS[0].labelKey,
                         )}
                       </Label>
                     </div>
@@ -769,7 +770,8 @@ export default function NewApiChannelsPage() {
           <DropdownMenuTrigger asChild>
             <Button
               variant="outline"
-              leftIcon={<Columns3 className="h-4 w-4" />}>
+              leftIcon={<Columns3 className="h-4 w-4" />}
+            >
               {t("toolbar.columns")}
             </Button>
           </DropdownMenuTrigger>
@@ -787,7 +789,8 @@ export default function NewApiChannelsPage() {
                   onCheckedChange={(value: CheckboxState) =>
                     column.toggleVisibility(!!value)
                   }
-                  onSelect={(event: Event) => event.preventDefault()}>
+                  onSelect={(event: Event) => event.preventDefault()}
+                >
                   {t(`table.columns.${column.id}`, { defaultValue: column.id })}
                 </DropdownMenuCheckboxItem>
               ))}
@@ -801,7 +804,8 @@ export default function NewApiChannelsPage() {
             onClick={() =>
               scheduleDelete(selectedRows.map((row) => row.original.id))
             }
-            leftIcon={<Trash2 className="h-4 w-4" />}>
+            leftIcon={<Trash2 className="h-4 w-4" />}
+          >
             {t("toolbar.deleteSelected")}
           </Button>
           <Button
@@ -810,18 +814,21 @@ export default function NewApiChannelsPage() {
             onClick={() =>
               handleSyncChannels(selectedRows.map((row) => row.original.id))
             }
-            leftIcon={<RefreshCcw className="h-4 w-4" />}>
+            leftIcon={<RefreshCcw className="h-4 w-4" />}
+          >
             {t("toolbar.syncSelected")}
           </Button>
           <Button
             variant="outline"
             onClick={() => void refreshChannels()}
-            leftIcon={<RefreshCcw className="h-4 w-4" />}>
+            leftIcon={<RefreshCcw className="h-4 w-4" />}
+          >
             {t("toolbar.refresh")}
           </Button>
           <Button
             onClick={handleOpenCreateDialog}
-            leftIcon={<Plus className="h-4 w-4" />}>
+            leftIcon={<Plus className="h-4 w-4" />}
+          >
             {t("toolbar.addChannel")}
           </Button>
         </div>
@@ -837,15 +844,17 @@ export default function NewApiChannelsPage() {
                   {headerGroup.headers.map((header) => (
                     <TableHead
                       key={header.id}
-                      style={{ width: header.getSize() }}>
+                      style={{ width: header.getSize() }}
+                    >
                       {header.isPlaceholder ? null : header.column.getCanSort() ? (
                         <button
                           type="button"
                           className="flex w-full items-center gap-2"
-                          onClick={header.column.getToggleSortingHandler()}>
+                          onClick={header.column.getToggleSortingHandler()}
+                        >
                           {flexRender(
                             header.column.columnDef.header,
-                            header.getContext()
+                            header.getContext(),
                           )}
                           {header.column.getIsSorted() === "asc" && (
                             <ChevronUp className="h-3.5 w-3.5 opacity-60" />
@@ -857,7 +866,7 @@ export default function NewApiChannelsPage() {
                       ) : (
                         flexRender(
                           header.column.columnDef.header,
-                          header.getContext()
+                          header.getContext(),
                         )
                       )}
                     </TableHead>
@@ -870,7 +879,8 @@ export default function NewApiChannelsPage() {
               <TableRow>
                 <TableCell
                   colSpan={columns.length}
-                  className="h-32 text-center">
+                  className="h-32 text-center"
+                >
                   <div className="text-muted-foreground flex items-center justify-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     {t("table.loading")}
@@ -882,14 +892,15 @@ export default function NewApiChannelsPage() {
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
-                  className="align-middle">
+                  className="align-middle"
+                >
                   {row
                     .getVisibleCells()
                     .map((cell: Cell<ChannelRow, unknown>) => (
                       <TableCell key={cell.id} className="py-3">
                         {flexRender(
                           cell.column.columnDef.cell,
-                          cell.getContext()
+                          cell.getContext(),
                         )}
                       </TableCell>
                     ))}
@@ -899,7 +910,8 @@ export default function NewApiChannelsPage() {
               <TableRow>
                 <TableCell
                   colSpan={columns.length}
-                  className="h-32 text-center">
+                  className="h-32 text-center"
+                >
                   <div className="text-muted-foreground text-sm">
                     {t("table.empty")}
                   </div>
@@ -917,12 +929,14 @@ export default function NewApiChannelsPage() {
           </Label>
           <Select
             value={String(table.getState().pagination.pageSize)}
-            onValueChange={(value: string) => table.setPageSize(Number(value))}>
+            onValueChange={(value: string) => table.setPageSize(Number(value))}
+          >
             <SelectTrigger
               id="rows-per-page"
               size="sm"
               aria-label={t("table.rowsPerPage")}
-              className="w-[110px]">
+              className="w-[110px]"
+            >
               <SelectValue placeholder={t("table.rowsPerPage") ?? ""} />
             </SelectTrigger>
             <SelectContent>
@@ -946,9 +960,9 @@ export default function NewApiChannelsPage() {
                 end: Math.min(
                   (table.getState().pagination.pageIndex + 1) *
                     table.getState().pagination.pageSize,
-                  table.getRowCount()
+                  table.getRowCount(),
                 ),
-                total: table.getRowCount()
+                total: table.getRowCount(),
               })}
             </span>
           ) : (
@@ -962,7 +976,8 @@ export default function NewApiChannelsPage() {
             variant="outline"
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
-            aria-label={t("table.paginationPrev", "Previous page")}>
+            aria-label={t("table.paginationPrev", "Previous page")}
+          >
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <Button
@@ -970,7 +985,8 @@ export default function NewApiChannelsPage() {
             variant="outline"
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
-            aria-label={t("table.paginationNext", "Next page")}>
+            aria-label={t("table.paginationNext", "Next page")}
+          >
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
@@ -978,7 +994,8 @@ export default function NewApiChannelsPage() {
 
       <AlertDialog
         open={isDeleteDialogOpen}
-        onOpenChange={setIsDeleteDialogOpen}>
+        onOpenChange={setIsDeleteDialogOpen}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
@@ -1017,7 +1034,8 @@ function StatusBadge({ status }: { status: number }) {
   return (
     <Badge
       variant={config.variant ?? "secondary"}
-      className={cn("text-xs", config.className)}>
+      className={cn("text-xs", config.className)}
+    >
       {t(config.labelKey)}
     </Badge>
   )
@@ -1029,7 +1047,7 @@ function RowActions({
   onSync,
   onFilters,
   isSyncing,
-  labels
+  labels,
 }: {
   onEdit: () => void
   onDelete: () => void
@@ -1047,16 +1065,18 @@ function RowActions({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-44">
         <DropdownMenuItem onClick={onEdit}>{labels.edit}</DropdownMenuItem>
-        <DropdownMenuItem onClick={onSync} disabled={isSyncing}>
-          {isSyncing ? labels.syncing : labels.sync}
-        </DropdownMenuItem>
+        <DropdownMenuSeparator />
         <DropdownMenuItem onClick={onFilters}>
           {labels.filters}
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={onSync} disabled={isSyncing}>
+          {isSyncing ? labels.syncing : labels.sync}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
           className="text-destructive focus:text-destructive"
-          onClick={onDelete}>
+          onClick={onDelete}
+        >
           {labels.delete}
         </DropdownMenuItem>
       </DropdownMenuContent>
@@ -1075,17 +1095,21 @@ type EditableFilter = ChannelModelFilterRule
 function ChannelFilterDialog({
   channel,
   open,
-  onClose
+  onClose,
 }: ChannelFilterDialogProps) {
   const { t } = useTranslation("newApiChannels")
   const [filters, setFilters] = useState<EditableFilter[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [jsonText, setJsonText] = useState("")
+  const [viewMode, setViewMode] = useState<"visual" | "json">("visual")
 
   const resetState = useCallback(() => {
     setFilters([])
     setIsLoading(false)
     setIsSaving(false)
+    setJsonText("")
+    setViewMode("visual")
   }, [])
 
   const loadFilters = useCallback(async () => {
@@ -1094,9 +1118,14 @@ function ChannelFilterDialog({
     try {
       const loadedFilters = await fetchChannelFilters(channel.id)
       setFilters(loadedFilters)
+      try {
+        setJsonText(JSON.stringify(loadedFilters, null, 2))
+      } catch {
+        setJsonText("")
+      }
     } catch (error) {
       toast.error(
-        t("filters.messages.loadFailed", { error: getErrorMessage(error) })
+        t("filters.messages.loadFailed", { error: getErrorMessage(error) }),
       )
       onClose()
     } finally {
@@ -1119,7 +1148,7 @@ function ChannelFilterDialog({
   const handleFieldChange = (
     filterId: string,
     field: keyof EditableFilter,
-    value: EditableFilter[typeof field]
+    value: EditableFilter[typeof field],
   ) => {
     setFilters((prev) =>
       prev.map((filter) =>
@@ -1127,10 +1156,10 @@ function ChannelFilterDialog({
           ? {
               ...filter,
               [field]: value,
-              updatedAt: Date.now()
+              updatedAt: Date.now(),
             }
-          : filter
-      )
+          : filter,
+      ),
     )
   }
 
@@ -1147,8 +1176,8 @@ function ChannelFilterDialog({
         action: "include",
         enabled: true,
         createdAt: timestamp,
-        updatedAt: timestamp
-      }
+        updatedAt: timestamp,
+      },
     ])
   }
 
@@ -1156,8 +1185,8 @@ function ChannelFilterDialog({
     setFilters((prev) => prev.filter((filter) => filter.id !== filterId))
   }
 
-  const validateFilters = () => {
-    for (const filter of filters) {
+  const validateFilters = (rules: EditableFilter[]) => {
+    for (const filter of rules) {
       if (!filter.name.trim()) {
         return t("filters.messages.validationName")
       }
@@ -1169,7 +1198,7 @@ function ChannelFilterDialog({
           new RegExp(filter.pattern.trim())
         } catch (error) {
           return t("filters.messages.validationRegex", {
-            error: (error as Error).message
+            error: (error as Error).message,
           })
         }
       }
@@ -1177,182 +1206,114 @@ function ChannelFilterDialog({
     return null
   }
 
+  const parseJsonFilters = (rawJson: string): EditableFilter[] => {
+    const trimmed = rawJson.trim()
+    if (!trimmed) {
+      return []
+    }
+
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(trimmed)
+    } catch (error) {
+      throw new Error(getErrorMessage(error))
+    }
+
+    if (!Array.isArray(parsed)) {
+      throw new Error("JSON must be an array of filter rules")
+    }
+
+    const now = Date.now()
+
+    return parsed.map((item, index) => {
+      if (!item || typeof item !== "object") {
+        throw new Error(`Filter at index ${index} is not an object`)
+      }
+
+      const anyItem = item as any
+      const name = typeof anyItem.name === "string" ? anyItem.name.trim() : ""
+      const pattern =
+        typeof anyItem.pattern === "string" ? anyItem.pattern.trim() : ""
+
+      if (!name) {
+        throw new Error(`Filter at index ${index} is missing a name`)
+      }
+
+      if (!pattern) {
+        throw new Error(`Filter at index ${index} is missing a pattern`)
+      }
+
+      return {
+        id:
+          typeof anyItem.id === "string" && anyItem.id.trim()
+            ? anyItem.id.trim()
+            : nanoid(),
+        name,
+        description:
+          typeof anyItem.description === "string"
+            ? anyItem.description
+            : anyItem.description ?? "",
+        pattern,
+        isRegex: Boolean(anyItem.isRegex),
+        action: anyItem.action === "exclude" ? "exclude" : "include",
+        enabled: anyItem.enabled !== false,
+        createdAt:
+          typeof anyItem.createdAt === "number" && anyItem.createdAt > 0
+            ? anyItem.createdAt
+            : now,
+        updatedAt:
+          typeof anyItem.updatedAt === "number" && anyItem.updatedAt > 0
+            ? anyItem.updatedAt
+            : now,
+      }
+    })
+  }
+
   const handleSave = async () => {
-    const validationError = validateFilters()
+    let rulesToSave: EditableFilter[]
+
+    if (viewMode === "json") {
+      try {
+        rulesToSave = parseJsonFilters(jsonText)
+      } catch (error) {
+        toast.error(
+          t("filters.messages.jsonInvalid", { error: getErrorMessage(error) }),
+        )
+        return
+      }
+    } else {
+      rulesToSave = filters
+    }
+
+    const validationError = validateFilters(rulesToSave)
     if (validationError) {
       toast.error(validationError)
       return
     }
     setIsSaving(true)
     try {
-      const payload = filters.map((filter) => ({
+      const payload = rulesToSave.map((filter) => ({
         ...filter,
         name: filter.name.trim(),
         description: filter.description?.trim() || undefined,
-        pattern: filter.pattern.trim()
+        pattern: filter.pattern.trim(),
       }))
       await saveChannelFilters(channel.id, payload)
+      setFilters(rulesToSave)
+      try {
+        setJsonText(JSON.stringify(rulesToSave, null, 2))
+      } catch {
+        // ignore serialization errors
+      }
       toast.success(t("filters.messages.saved"))
       onClose()
     } catch (error) {
       toast.error(
-        t("filters.messages.saveFailed", { error: getErrorMessage(error) })
+        t("filters.messages.saveFailed", { error: getErrorMessage(error) }),
       )
     } finally {
       setIsSaving(false)
     }
-  }
-
-  const renderContent = () => {
-    if (isLoading) {
-      return (
-        <div className="text-muted-foreground flex min-h-[160px] items-center justify-center gap-2">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          {t("filters.loading")}
-        </div>
-      )
-    }
-
-    if (!filters.length) {
-      return (
-        <div className="text-center">
-          <div className="bg-muted mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full">
-            <Settings2 className="text-muted-foreground h-5 w-5" />
-          </div>
-          <p className="text-base font-semibold">{t("filters.empty.title")}</p>
-          <p className="text-muted-foreground mb-6 text-sm">
-            {t("filters.empty.description")}
-          </p>
-          <Button onClick={handleAddFilter}>{t("filters.addRule")}</Button>
-        </div>
-      )
-    }
-
-    return (
-      <div className="space-y-4">
-        {filters.map((filter) => (
-          <div
-            key={filter.id}
-            className="border-border space-y-5 rounded-lg border p-5">
-            <div className="grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto] md:items-end">
-              <div className="space-y-2">
-                <Label>{t("filters.labels.name")}</Label>
-                <Input
-                  value={filter.name}
-                  onChange={(event) =>
-                    handleFieldChange(filter.id, "name", event.target.value)
-                  }
-                  placeholder={t("filters.placeholders.name") ?? ""}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>{t("filters.labels.enabled")}</Label>
-                <div className="border-input flex items-center justify-between rounded-lg border px-3 py-2 text-sm">
-                  <span className="text-muted-foreground">
-                    {filter.enabled
-                      ? t("common:status.enabled", "Enabled")
-                      : t("common:status.disabled", "Disabled")}
-                  </span>
-                  <Switch
-                    id={`filter-enabled-${filter.id}`}
-                    checked={filter.enabled}
-                    onChange={(value: boolean) =>
-                      handleFieldChange(filter.id, "enabled", value)
-                    }
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end">
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => handleRemoveFilter(filter.id)}
-                  aria-label={t("filters.labels.delete") ?? "Delete"}
-                  className="text-muted-foreground hover:text-destructive">
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(220px,0.45fr)]">
-              <div className="space-y-2">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <Label>{t("filters.labels.pattern")}</Label>
-                  <div className="text-muted-foreground flex items-center gap-2 text-sm">
-                    <span>{t("filters.labels.regex")}</span>
-                    <Switch
-                      size={"sm"}
-                      id={`filter-regex-${filter.id}`}
-                      checked={filter.isRegex}
-                      onChange={(value: boolean) =>
-                        handleFieldChange(filter.id, "isRegex", value)
-                      }
-                    />
-                  </div>
-                </div>
-                <Input
-                  value={filter.pattern}
-                  onChange={(event) =>
-                    handleFieldChange(filter.id, "pattern", event.target.value)
-                  }
-                  placeholder={t("filters.placeholders.pattern") ?? ""}
-                />
-                <p className="text-muted-foreground text-xs">
-                  {filter.isRegex
-                    ? t("filters.hints.regex")
-                    : t("filters.hints.substring")}
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label>{t("filters.labels.action")}</Label>
-                <Select
-                  value={filter.action}
-                  onValueChange={(value: "include" | "exclude") =>
-                    handleFieldChange(filter.id, "action", value)
-                  }>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="include">
-                      {t("filters.actionOptions.include")}
-                    </SelectItem>
-                    <SelectItem value="exclude">
-                      {t("filters.actionOptions.exclude")}
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>{t("filters.labels.description")}</Label>
-              <Textarea
-                value={filter.description ?? ""}
-                onChange={(event) =>
-                  handleFieldChange(
-                    filter.id,
-                    "description",
-                    event.target.value
-                  )
-                }
-                placeholder={t("filters.placeholders.description") ?? ""}
-                rows={3}
-              />
-            </div>
-          </div>
-        ))}
-
-        <Button
-          type="button"
-          variant="outline"
-          onClick={handleAddFilter}
-          leftIcon={<Plus className="h-4 w-4" />}>
-          {t("filters.addRule")}
-        </Button>
-      </div>
-    )
   }
 
   return (
@@ -1375,15 +1336,49 @@ function ChannelFilterDialog({
             type="button"
             variant="secondary"
             onClick={onClose}
-            disabled={isSaving}>
+            disabled={isSaving}
+          >
             {t("filters.actions.cancel")}
           </Button>
           <Button onClick={handleSave} disabled={isSaving} loading={isSaving}>
             {t("filters.actions.save")}
           </Button>
         </div>
-      }>
-      {renderContent()}
+      }
+    >
+      <ChannelFiltersEditor
+        filters={filters}
+        viewMode={viewMode}
+        jsonText={jsonText}
+        isLoading={isLoading}
+        onAddFilter={handleAddFilter}
+        onRemoveFilter={handleRemoveFilter}
+        onFieldChange={handleFieldChange}
+        onClickViewVisual={() => {
+          if (viewMode === "visual") return
+          try {
+            const parsed = jsonText.trim() ? parseJsonFilters(jsonText) : []
+            setFilters(parsed)
+            setViewMode("visual")
+          } catch (error) {
+            toast.error(
+              t("filters.messages.jsonInvalid", {
+                error: getErrorMessage(error),
+              }),
+            )
+          }
+        }}
+        onClickViewJson={() => {
+          if (viewMode === "json") return
+          try {
+            setJsonText(JSON.stringify(filters, null, 2))
+          } catch {
+            setJsonText("")
+          }
+          setViewMode("json")
+        }}
+        onChangeJsonText={setJsonText}
+      />
     </Modal>
   )
 }

@@ -12,9 +12,9 @@ const mockMetadataMap = new Map<
   ["deepseek-r1", { standardName: "deepseek-r1", vendorName: "DeepSeek" }],
   [
     "claude-3-5-sonnet",
-    { standardName: "claude-3-5-sonnet-20241022", vendorName: "Anthropic" }
+    { standardName: "claude-3-5-sonnet-20241022", vendorName: "Anthropic" },
   ],
-  ["gpt-4o-mini", { standardName: "gpt-4o-mini", vendorName: "OpenAI" }]
+  ["gpt-4o-mini", { standardName: "gpt-4o-mini", vendorName: "OpenAI" }],
 ])
 
 vi.mock("~/services/modelMetadata", () => ({
@@ -35,9 +35,9 @@ vi.mock("~/services/modelMetadata", () => ({
     getCacheInfo: () => ({
       isLoaded: true,
       modelCount: mockMetadataMap.size,
-      lastUpdated: Date.now()
-    })
-  }
+      lastUpdated: Date.now(),
+    }),
+  },
 }))
 
 describe("ModelRedirectService.generateModelMappingForChannel", () => {
@@ -48,18 +48,18 @@ describe("ModelRedirectService.generateModelMappingForChannel", () => {
       "BigModel/deepseek/deepseek-r1:free",
       "deepseek/deepseek-r1:premium",
       "anthropic/claude-3-5-sonnet",
-      "anthropic/claude-3-5-sonnet-20241022"
+      "anthropic/claude-3-5-sonnet-20241022",
     ]
 
     const mapping = ModelRedirectService.generateModelMappingForChannel(
       standardModels,
-      actualModels
+      actualModels,
     )
 
     expect(mapping).toEqual({
       "gpt-4o": "openai/gpt-4o:free",
       "deepseek-r1": "BigModel/deepseek/deepseek-r1:free",
-      "claude-3-5-sonnet": "anthropic/claude-3-5-sonnet"
+      "claude-3-5-sonnet": "anthropic/claude-3-5-sonnet",
     })
   })
 
@@ -69,11 +69,11 @@ describe("ModelRedirectService.generateModelMappingForChannel", () => {
 
     const mapping = ModelRedirectService.generateModelMappingForChannel(
       standardModels,
-      actualModels
+      actualModels,
     )
 
     expect(mapping).toEqual({
-      "gpt-4o-mini": "openai/gpt-4o-mini-20240718"
+      "gpt-4o-mini": "openai/gpt-4o-mini-20240718",
     })
   })
 
@@ -83,7 +83,7 @@ describe("ModelRedirectService.generateModelMappingForChannel", () => {
 
     const mapping = ModelRedirectService.generateModelMappingForChannel(
       standardModels,
-      actualModels
+      actualModels,
     )
 
     expect(Object.keys(mapping)).toHaveLength(1)
@@ -96,7 +96,7 @@ describe("ModelRedirectService.generateModelMappingForChannel", () => {
 
     const mapping = ModelRedirectService.generateModelMappingForChannel(
       standardModels,
-      actualModels
+      actualModels,
     )
 
     expect(mapping).toEqual({})
@@ -107,10 +107,10 @@ describe("extractActualModel", () => {
   it("should correctly extract actual model names", () => {
     expect(extractActualModel("openai/gpt-4o:free")).toBe("gpt-4o")
     expect(extractActualModel("BigModel/deepseek/deepseek-r1:free")).toBe(
-      "deepseek-r1"
+      "deepseek-r1",
     )
     expect(extractActualModel("claude-3-5-sonnet-20241022")).toBe(
-      "claude-3-5-sonnet"
+      "claude-3-5-sonnet",
     )
   })
 })
@@ -121,19 +121,19 @@ describe("Model mapping merge logic", () => {
     const existingMapping: Record<string, string> = {
       "gpt-4o": "old-provider/gpt-4o",
       "claude-3-5-sonnet": "old-provider/claude-3-5-sonnet",
-      "custom-model": "custom-provider/model"
+      "custom-model": "custom-provider/model",
     }
 
     // Simulate newly generated mapping
     const newMapping: Record<string, string> = {
       "gpt-4o": "new-provider/gpt-4o", // This should override the old value
-      "deepseek-r1": "new-provider/deepseek-r1" // This should be added
+      "deepseek-r1": "new-provider/deepseek-r1", // This should be added
     }
 
     // Merge logic: spread existing first, then new (new overrides old for same keys)
     const mergedMapping = {
       ...existingMapping,
-      ...newMapping
+      ...newMapping,
     }
 
     // Assertions
@@ -141,12 +141,12 @@ describe("Model mapping merge logic", () => {
       "gpt-4o": "new-provider/gpt-4o", // Updated from old value
       "claude-3-5-sonnet": "old-provider/claude-3-5-sonnet", // Preserved from old
       "custom-model": "custom-provider/model", // Preserved from old
-      "deepseek-r1": "new-provider/deepseek-r1" // Added from new
+      "deepseek-r1": "new-provider/deepseek-r1", // Added from new
     })
 
     // Verify that old keys are preserved
     expect(mergedMapping["claude-3-5-sonnet"]).toBe(
-      "old-provider/claude-3-5-sonnet"
+      "old-provider/claude-3-5-sonnet",
     )
     expect(mergedMapping["custom-model"]).toBe("custom-provider/model")
 
@@ -164,13 +164,13 @@ describe("Model mapping merge logic", () => {
   it("should preserve all old keys when new mapping is empty", () => {
     const existingMapping: Record<string, string> = {
       "model-1": "provider-1/model-1",
-      "model-2": "provider-2/model-2"
+      "model-2": "provider-2/model-2",
     }
     const newMapping: Record<string, string> = {}
 
     const mergedMapping = {
       ...existingMapping,
-      ...newMapping
+      ...newMapping,
     }
 
     expect(mergedMapping).toEqual(existingMapping)
@@ -181,12 +181,12 @@ describe("Model mapping merge logic", () => {
     const existingMapping: Record<string, string> = {}
     const newMapping: Record<string, string> = {
       "model-1": "provider-1/model-1",
-      "model-2": "provider-2/model-2"
+      "model-2": "provider-2/model-2",
     }
 
     const mergedMapping = {
       ...existingMapping,
-      ...newMapping
+      ...newMapping,
     }
 
     expect(mergedMapping).toEqual(newMapping)

@@ -2,18 +2,18 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { useChannelDialogContext } from "~/components/ChannelDialog/context/ChannelDialogContext"
-import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes.ts"
-import { AccountToken } from "~/entrypoints/options/pages/KeyManagement/type.ts"
-import { ensureAccountApiToken } from "~/services/accountOperations.ts"
-import { accountStorage } from "~/services/accountStorage.ts"
+import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
+import { AccountToken } from "~/entrypoints/options/pages/KeyManagement/type"
+import { ensureAccountApiToken } from "~/services/accountOperations"
+import { accountStorage } from "~/services/accountStorage"
 import {
   findMatchingChannel,
   getNewApiConfig,
-  prepareChannelFormData
-} from "~/services/newApiService/newApiService.ts"
+  prepareChannelFormData,
+} from "~/services/newApiService/newApiService"
 import type { ApiToken, DisplaySiteData, SiteAccount } from "~/types"
-import type { NewApiChannel } from "~/types/newapi.ts"
-import { getErrorMessage } from "~/utils/error.ts"
+import type { NewApiChannel } from "~/types/newapi"
+import { getErrorMessage } from "~/utils/error"
 
 /**
  * Hook to easily trigger channel creation dialog from anywhere
@@ -28,10 +28,10 @@ export function useChannelDialog() {
   const openWithAccount = async (
     account: DisplaySiteData | SiteAccount,
     accoutToken: AccountToken | ApiToken | null,
-    onSuccess?: (result: any) => void
+    onSuccess?: (result: any) => void,
   ) => {
     const toastId = toast.loading(
-      t("messages:accountOperations.checkingApiKeys")
+      t("messages:accountOperations.checkingApiKeys"),
     )
 
     try {
@@ -42,7 +42,7 @@ export function useChannelDialog() {
       if ("created_at" in account) {
         siteAccount = account
         displaySiteData = accountStorage.convertToDisplayData(
-          account
+          account,
         ) as DisplaySiteData
       } else {
         displaySiteData = account
@@ -67,7 +67,7 @@ export function useChannelDialog() {
         apiToken = await ensureAccountApiToken(
           siteAccount,
           displaySiteData,
-          toastId
+          toastId,
         )
       }
 
@@ -80,15 +80,15 @@ export function useChannelDialog() {
         newApiConfig.token,
         newApiConfig.userId,
         displaySiteData.baseUrl,
-        formData.models
+        formData.models,
       )
 
       if (existingChannel) {
         toast.error(
           t("messages:newapi.channelExists", {
-            channelName: existingChannel.name
+            channelName: existingChannel.name,
           }),
-          { id: toastId }
+          { id: toastId },
         )
         return
       }
@@ -105,14 +105,14 @@ export function useChannelDialog() {
           if (onSuccess) {
             onSuccess(result)
           }
-        }
+        },
       })
     } catch (error) {
       toast.error(
         t("messages:errors.operation.failed", {
-          error: getErrorMessage(error)
+          error: getErrorMessage(error),
         }),
-        { id: toastId }
+        { id: toastId },
       )
       console.error("[useChannelDialog] Failed to prepare channel data:", error)
     }
@@ -134,6 +134,6 @@ export function useChannelDialog() {
 
   return {
     openWithAccount,
-    openWithCustom
+    openWithCustom,
   }
 }

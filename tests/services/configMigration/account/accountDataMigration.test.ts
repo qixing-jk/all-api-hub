@@ -5,7 +5,7 @@ import {
   getConfigVersion,
   migrateAccountConfig,
   migrateAccountsConfig,
-  needsConfigMigration
+  needsConfigMigration,
 } from "~/services/configMigration/account/accountDataMigration"
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
@@ -13,7 +13,7 @@ import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 describe("accountDataMigration", () => {
   // Helper to create a minimal SiteAccount fixture
   const createSiteAccount = (
-    overrides: Partial<SiteAccount> = {}
+    overrides: Partial<SiteAccount> = {},
   ): SiteAccount =>
     ({
       id: "test-account-1",
@@ -31,7 +31,7 @@ describe("accountDataMigration", () => {
         today_completion_tokens: 0,
         today_quota_consumption: 0,
         today_requests_count: 0,
-        today_income: 0
+        today_income: 0,
       },
       last_sync_time: Date.now(),
       updated_at: Date.now(),
@@ -39,7 +39,7 @@ describe("accountDataMigration", () => {
       authType: AuthTypeEnum.AccessToken,
       // Note: checkIn is intentionally omitted to simulate old accounts
       // It can be provided in overrides when needed
-      ...overrides
+      ...overrides,
     }) as SiteAccount
 
   describe("getConfigVersion", () => {
@@ -69,14 +69,14 @@ describe("accountDataMigration", () => {
 
     it("returns false when account version equals current version", () => {
       const account = createSiteAccount({
-        configVersion: CURRENT_CONFIG_VERSION
+        configVersion: CURRENT_CONFIG_VERSION,
       })
       expect(needsConfigMigration(account)).toBe(false)
     })
 
     it("returns false when account version is greater than current version", () => {
       const account = createSiteAccount({
-        configVersion: CURRENT_CONFIG_VERSION + 1
+        configVersion: CURRENT_CONFIG_VERSION + 1,
       })
       expect(needsConfigMigration(account)).toBe(false)
     })
@@ -92,7 +92,7 @@ describe("accountDataMigration", () => {
       const oldAccount = createSiteAccount({
         configVersion: 0,
         supports_check_in: true,
-        can_check_in: false
+        can_check_in: false,
       })
 
       const migrated = migrateAccountConfig(oldAccount)
@@ -109,7 +109,7 @@ describe("accountDataMigration", () => {
     it("leaves account unchanged when already at current version", () => {
       const currentAccount = createSiteAccount({
         configVersion: CURRENT_CONFIG_VERSION,
-        checkIn: { enableDetection: false, isCheckedInToday: true }
+        checkIn: { enableDetection: false, isCheckedInToday: true },
       })
 
       const migrated = migrateAccountConfig(currentAccount)
@@ -123,8 +123,8 @@ describe("accountDataMigration", () => {
         configVersion: CURRENT_CONFIG_VERSION + 1,
         checkIn: {
           enableDetection: true,
-          customCheckInUrl: "https://custom.com"
-        }
+          customCheckInUrl: "https://custom.com",
+        },
       })
 
       const migrated = migrateAccountConfig(futureAccount)
@@ -139,7 +139,7 @@ describe("accountDataMigration", () => {
         supports_check_in: true,
         can_check_in: true,
         notes: "Test notes",
-        site_name: "Custom Site Name"
+        site_name: "Custom Site Name",
       })
 
       const migrated = migrateAccountConfig(oldAccount)
@@ -155,7 +155,7 @@ describe("accountDataMigration", () => {
       const oldAccount = createSiteAccount({
         configVersion: 0,
         supports_check_in: true,
-        can_check_in: false
+        can_check_in: false,
       })
 
       const migrated = migrateAccountConfig(oldAccount)
@@ -179,18 +179,18 @@ describe("accountDataMigration", () => {
           id: "account-1",
           configVersion: 0,
           supports_check_in: true,
-          can_check_in: true
+          can_check_in: true,
         }),
         createSiteAccount({
           id: "account-2",
           configVersion: 0,
-          supports_check_in: false
+          supports_check_in: false,
         }),
         createSiteAccount({
           id: "account-3",
           configVersion: CURRENT_CONFIG_VERSION,
-          checkIn: { enableDetection: false }
-        })
+          checkIn: { enableDetection: false },
+        }),
       ]
 
       const result = migrateAccountsConfig(accounts)
@@ -218,12 +218,12 @@ describe("accountDataMigration", () => {
       const accounts = [
         createSiteAccount({
           id: "account-1",
-          configVersion: CURRENT_CONFIG_VERSION
+          configVersion: CURRENT_CONFIG_VERSION,
         }),
         createSiteAccount({
           id: "account-2",
-          configVersion: CURRENT_CONFIG_VERSION + 1
-        })
+          configVersion: CURRENT_CONFIG_VERSION + 1,
+        }),
       ]
 
       const result = migrateAccountsConfig(accounts)
@@ -243,17 +243,17 @@ describe("accountDataMigration", () => {
       const accounts = [
         createSiteAccount({
           id: "first",
-          configVersion: CURRENT_CONFIG_VERSION
+          configVersion: CURRENT_CONFIG_VERSION,
         }),
         createSiteAccount({
           id: "second",
           configVersion: 0,
-          supports_check_in: true
+          supports_check_in: true,
         }),
         createSiteAccount({
           id: "third",
-          configVersion: CURRENT_CONFIG_VERSION
-        })
+          configVersion: CURRENT_CONFIG_VERSION,
+        }),
       ]
 
       const result = migrateAccountsConfig(accounts)
@@ -261,7 +261,7 @@ describe("accountDataMigration", () => {
       expect(result.accounts.map((a) => a.id)).toEqual([
         "first",
         "second",
-        "third"
+        "third",
       ])
       expect(result.migratedCount).toBe(1)
     })
@@ -274,7 +274,7 @@ describe("accountDataMigration", () => {
           supports_check_in: true,
           can_check_in: false,
           notes: "Already checked in",
-          site_name: "Site A"
+          site_name: "Site A",
         }),
         createSiteAccount({
           id: "complex-2",
@@ -282,14 +282,14 @@ describe("accountDataMigration", () => {
           supports_check_in: true,
           can_check_in: true,
           notes: "Can check in",
-          site_name: "Site B"
+          site_name: "Site B",
         }),
         createSiteAccount({
           id: "complex-3",
           configVersion: 0,
           supports_check_in: false,
           notes: "No check-in support",
-          site_name: "Site C"
+          site_name: "Site C",
         }),
         createSiteAccount({
           id: "already-migrated",
@@ -297,11 +297,11 @@ describe("accountDataMigration", () => {
           checkIn: {
             enableDetection: true,
             isCheckedInToday: false,
-            customCheckInUrl: "https://custom.com/checkin"
+            customCheckInUrl: "https://custom.com/checkin",
           },
           notes: "Modern account",
-          site_name: "Site D"
-        })
+          site_name: "Site D",
+        }),
       ]
 
       const result = migrateAccountsConfig(accounts)
@@ -334,7 +334,7 @@ describe("accountDataMigration", () => {
       expect(unchanged?.checkIn).toEqual({
         enableDetection: true,
         isCheckedInToday: false,
-        customCheckInUrl: "https://custom.com/checkin"
+        customCheckInUrl: "https://custom.com/checkin",
       })
     })
   })

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import { migrateAutoRefreshConfig } from "~/services/configMigration/preferences/autoRefreshConfigMigration"
 import type { UserPreferences } from "~/services/userPreferences"
-import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh.ts"
+import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
 
 describe("autoRefreshConfigMigration", () => {
   it("migrates flat auto-refresh fields to nested structure", () => {
@@ -11,7 +11,7 @@ describe("autoRefreshConfigMigration", () => {
       refreshInterval: 300,
       minRefreshInterval: 45,
       refreshOnOpen: false,
-      preferencesVersion: 3
+      preferencesVersion: 3,
     } as UserPreferences
 
     const migratedPrefs = migrateAutoRefreshConfig(oldPrefs)
@@ -20,7 +20,7 @@ describe("autoRefreshConfigMigration", () => {
       enabled: oldPrefs.autoRefresh,
       interval: oldPrefs.refreshInterval,
       minInterval: oldPrefs.minRefreshInterval,
-      refreshOnOpen: oldPrefs.refreshOnOpen
+      refreshOnOpen: oldPrefs.refreshOnOpen,
     })
 
     // Old fields removed
@@ -40,9 +40,9 @@ describe("autoRefreshConfigMigration", () => {
         enabled: true,
         interval: 360,
         minInterval: 60,
-        refreshOnOpen: false
+        refreshOnOpen: false,
       },
-      preferencesVersion: 3
+      preferencesVersion: 3,
     } as UserPreferences
 
     const migratedPrefs = migrateAutoRefreshConfig(mixedPrefs)
@@ -51,7 +51,7 @@ describe("autoRefreshConfigMigration", () => {
       enabled: mixedPrefs.autoRefresh,
       interval: mixedPrefs.refreshInterval,
       minInterval: mixedPrefs.minRefreshInterval,
-      refreshOnOpen: mixedPrefs.refreshOnOpen
+      refreshOnOpen: mixedPrefs.refreshOnOpen,
     })
   })
 
@@ -60,7 +60,7 @@ describe("autoRefreshConfigMigration", () => {
     const migratedPrefs = migrateAutoRefreshConfig(emptyPrefs)
 
     expect(migratedPrefs.accountAutoRefresh).toEqual(
-      DEFAULT_ACCOUNT_AUTO_REFRESH
+      DEFAULT_ACCOUNT_AUTO_REFRESH,
     )
   })
 
@@ -70,15 +70,15 @@ describe("autoRefreshConfigMigration", () => {
         enabled: false,
         interval: 361,
         minInterval: 61,
-        refreshOnOpen: false
+        refreshOnOpen: false,
       },
-      preferencesVersion: 3
+      preferencesVersion: 3,
     } as UserPreferences
 
     const migratedPrefs = migrateAutoRefreshConfig(newPrefs)
 
     expect(migratedPrefs.accountAutoRefresh).toEqual(
-      newPrefs.accountAutoRefresh
+      newPrefs.accountAutoRefresh,
     )
   })
 })

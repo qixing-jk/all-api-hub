@@ -10,12 +10,12 @@ export const CHECKIN_RESULT_STATUS = {
   SUCCESS: "success",
   ALREADY_CHECKED: "already_checked",
   FAILED: "failed",
-  SKIPPED: "skipped"
+  SKIPPED: "skipped",
 } as const
 export type CheckinResultStatus =
   (typeof CHECKIN_RESULT_STATUS)[keyof typeof CHECKIN_RESULT_STATUS]
 export const CHECKIN_RESULT_STATUSES = Object.values(
-  CHECKIN_RESULT_STATUS
+  CHECKIN_RESULT_STATUS,
 ) as CheckinResultStatus[]
 
 /**
@@ -26,12 +26,12 @@ export const AUTO_CHECKIN_SKIP_REASON = {
   AUTO_CHECKIN_DISABLED: "auto_checkin_disabled",
   ALREADY_CHECKED_TODAY: "already_checked_today",
   NO_PROVIDER: "no_provider",
-  PROVIDER_NOT_READY: "provider_not_ready"
+  PROVIDER_NOT_READY: "provider_not_ready",
 } as const
 export type AutoCheckinSkipReason =
   (typeof AUTO_CHECKIN_SKIP_REASON)[keyof typeof AUTO_CHECKIN_SKIP_REASON]
 export const AUTO_CHECKIN_SKIP_REASONS = Object.values(
-  AUTO_CHECKIN_SKIP_REASON
+  AUTO_CHECKIN_SKIP_REASON,
 ) as AutoCheckinSkipReason[]
 
 /**
@@ -52,12 +52,12 @@ export interface CheckinAccountResult {
 export const AUTO_CHECKIN_RUN_RESULT = {
   SUCCESS: "success",
   PARTIAL: "partial",
-  FAILED: "failed"
+  FAILED: "failed",
 } as const
 export type AutoCheckinRunResult =
   (typeof AUTO_CHECKIN_RUN_RESULT)[keyof typeof AUTO_CHECKIN_RUN_RESULT]
 export const AUTO_CHECKIN_RUN_RESULTS = Object.values(
-  AUTO_CHECKIN_RUN_RESULT
+  AUTO_CHECKIN_RUN_RESULT,
 ) as AutoCheckinRunResult[]
 
 /**
@@ -115,12 +115,12 @@ export interface AutoCheckinStatus {
  */
 export const AUTO_CHECKIN_SCHEDULE_MODE = {
   RANDOM: "random",
-  DETERMINISTIC: "deterministic"
+  DETERMINISTIC: "deterministic",
 } as const
 export type AutoCheckinScheduleMode =
   (typeof AUTO_CHECKIN_SCHEDULE_MODE)[keyof typeof AUTO_CHECKIN_SCHEDULE_MODE]
 export const AUTO_CHECKIN_SCHEDULE_MODES = Object.values(
-  AUTO_CHECKIN_SCHEDULE_MODE
+  AUTO_CHECKIN_SCHEDULE_MODE,
 ) as AutoCheckinScheduleMode[]
 
 export interface AutoCheckinRetryStrategy {

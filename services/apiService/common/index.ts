@@ -24,20 +24,20 @@ import {
   UpstreamModelItem,
   UpstreamModelList,
   UserGroupInfo,
-  UserInfo
+  UserInfo,
 } from "~/services/apiService/common/type"
 import {
   aggregateUsageData,
   extractAmount,
   fetchApi,
   fetchApiData,
-  getTodayTimestampRange
+  getTodayTimestampRange,
 } from "~/services/apiService/common/utils"
 import {
   AuthTypeEnum,
   CheckInConfig,
   SiteHealthStatus,
-  type ApiToken
+  type ApiToken,
 } from "~/types"
 
 // ============= 核心 API 函数 =============
@@ -50,14 +50,14 @@ export const fetchUserInfo = async (baseUrl: string, userId?: number) => {
     baseUrl,
     endpoint: "/api/user/self",
     userId,
-    authType: AuthTypeEnum.Cookie
+    authType: AuthTypeEnum.Cookie,
   })
 
   return {
     id: userData.id,
     username: userData.username,
     access_token: userData.access_token || null,
-    user: userData
+    user: userData,
   }
 }
 
@@ -66,13 +66,13 @@ export const fetchUserInfo = async (baseUrl: string, userId?: number) => {
  */
 export const createAccessToken = async (
   baseUrl: string,
-  userId: number
+  userId: number,
 ): Promise<string> => {
   return await fetchApiData<string>({
     baseUrl,
     endpoint: "/api/user/token",
     userId,
-    authType: AuthTypeEnum.Cookie
+    authType: AuthTypeEnum.Cookie,
   })
 }
 
@@ -81,13 +81,13 @@ export const createAccessToken = async (
  */
 export const fetchSiteStatus = async (
   baseUrl: string,
-  authType?: AuthTypeEnum
+  authType?: AuthTypeEnum,
 ): Promise<SiteStatusInfo | null> => {
   try {
     return await fetchApiData({
       baseUrl,
       endpoint: "/api/status",
-      authType: authType || AuthTypeEnum.None
+      authType: authType || AuthTypeEnum.None,
     })
   } catch (error) {
     console.warn("获取站点状态信息失败:", error)
@@ -99,7 +99,7 @@ export const fetchSiteStatus = async (
  * 从站点状态信息中提取默认充值比例
  */
 export const extractDefaultExchangeRate = (
-  statusInfo: SiteStatusInfo | null
+  statusInfo: SiteStatusInfo | null,
 ): number | null => {
   if (!statusInfo) {
     return null
@@ -135,7 +135,7 @@ export const fetchPaymentInfo = async ({
   baseUrl,
   userId,
   token: accessToken,
-  authType
+  authType,
 }: AuthTypeFetchParams): Promise<PaymentResponse> => {
   try {
     return await fetchApi<PaymentResponse>(
@@ -144,9 +144,9 @@ export const fetchPaymentInfo = async ({
         endpoint: "/api/user/payment",
         userId,
         token: accessToken,
-        authType
+        authType,
       },
-      true
+      true,
     )
   } catch (error) {
     console.error("获取支付信息失败:", error)
@@ -159,7 +159,7 @@ export const fetchPaymentInfo = async ({
  */
 export const getOrCreateAccessToken = async (
   baseUrl: string,
-  userId: number
+  userId: number,
 ): Promise<AccessTokenInfo> => {
   // 首先获取用户信息
   const userInfo = await fetchUserInfo(baseUrl, userId)
@@ -175,7 +175,7 @@ export const getOrCreateAccessToken = async (
 
   return {
     username: userInfo.username,
-    access_token: accessToken
+    access_token: accessToken,
   }
 }
 
@@ -186,14 +186,14 @@ export const fetchAccountQuota = async (
   baseUrl: string,
   userId: number,
   accessToken: string,
-  authType?: AuthTypeEnum
+  authType?: AuthTypeEnum,
 ): Promise<number> => {
   const userData = await fetchApiData<{ quota?: number }>({
     baseUrl,
     endpoint: "/api/user/self",
     userId,
     token: accessToken,
-    authType
+    authType,
   })
 
   return userData.quota || 0
@@ -206,7 +206,7 @@ export const fetchCheckInStatus = async (
   baseUrl: string,
   userId: number,
   accessToken: string,
-  authType?: AuthTypeEnum
+  authType?: AuthTypeEnum,
 ): Promise<boolean | undefined> => {
   try {
     const checkInData = await fetchApiData<{ can_check_in?: boolean }>({
@@ -214,7 +214,7 @@ export const fetchCheckInStatus = async (
       endpoint: "/api/user/check_in_status",
       userId,
       token: accessToken,
-      authType
+      authType,
     })
     // 仅当 can_check_in 明确为 true 或 false 时才返回，否则返回 undefined
     if (typeof checkInData.can_check_in === "boolean") {
@@ -239,7 +239,7 @@ export const fetchCheckInStatus = async (
  * @param baseUrl
  */
 export const fetchSupportCheckIn = async (
-  baseUrl: string
+  baseUrl: string,
 ): Promise<boolean | undefined> => {
   const siteStatus = await fetchSiteStatus(baseUrl)
   return siteStatus?.check_in_enabled
@@ -259,7 +259,7 @@ const fetchPaginatedLogs = async <T>(
   logTypes: LogType[],
   dataAggregator: (accumulator: T, items: LogResponseData["items"]) => T,
   initialValue: T,
-  errorHandler?: (error: unknown, logType: LogType) => void
+  errorHandler?: (error: unknown, logType: LogType) => void,
 ): Promise<T> => {
   const { baseUrl, userId, token: accessToken, authType } = authParams
   const { start: startTimestamp, end: endTimestamp } = getTodayTimestampRange()
@@ -278,7 +278,7 @@ const fetchPaginatedLogs = async <T>(
           model_name: "",
           start_timestamp: startTimestamp.toString(),
           end_timestamp: endTimestamp.toString(),
-          group: ""
+          group: "",
         })
 
         const logData = await fetchApiData<LogResponseData>({
@@ -286,14 +286,14 @@ const fetchPaginatedLogs = async <T>(
           endpoint: `/api/log/self?${params.toString()}`,
           userId,
           token: accessToken,
-          authType
+          authType,
         })
 
         const items = logData.items || []
         aggregatedData = dataAggregator(aggregatedData, items)
 
         const totalPages = Math.ceil(
-          (logData.total || 0) / REQUEST_CONFIG.DEFAULT_PAGE_SIZE
+          (logData.total || 0) / REQUEST_CONFIG.DEFAULT_PAGE_SIZE,
         )
         if (currentPage >= totalPages) {
           break
@@ -315,7 +315,7 @@ const fetchPaginatedLogs = async <T>(
 
   if (maxPageReached) {
     console.warn(
-      `达到最大分页限制(${REQUEST_CONFIG.MAX_PAGES}页)，数据可能不完整`
+      `达到最大分页限制(${REQUEST_CONFIG.MAX_PAGES}页)，数据可能不完整`,
     )
   }
 
@@ -326,18 +326,18 @@ const fetchPaginatedLogs = async <T>(
  * 获取今日使用情况
  */
 export const fetchTodayUsage = async (
-  authParams: AuthTypeFetchParams
+  authParams: AuthTypeFetchParams,
 ): Promise<TodayUsageData> => {
   const initialState = {
     today_quota_consumption: 0,
     today_prompt_tokens: 0,
     today_completion_tokens: 0,
-    today_requests_count: 0
+    today_requests_count: 0,
   }
 
   const usageAggregator = (
     accumulator: typeof initialState,
-    items: LogResponseData["items"]
+    items: LogResponseData["items"],
   ) => {
     const pageData = aggregateUsageData(items)
     accumulator.today_quota_consumption += pageData.today_quota_consumption
@@ -351,7 +351,7 @@ export const fetchTodayUsage = async (
     authParams,
     [LogType.Consume],
     usageAggregator,
-    initialState
+    initialState,
   )
 }
 
@@ -359,21 +359,21 @@ export const fetchTodayUsage = async (
  * 获取今日收入情况
  */
 export const fetchTodayIncome = async (
-  authParams: AuthTypeFetchParams
+  authParams: AuthTypeFetchParams,
 ): Promise<TodayIncomeData> => {
   const { baseUrl, userId } = authParams
   let exchangeRate: number = UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
 
   const account = await accountStorage.getAccountByBaseUrlAndUserId(
     baseUrl,
-    userId
+    userId,
   )
   if (account) {
     exchangeRate = account.exchange_rate
   }
   const incomeAggregator = (
     accumulator: number,
-    items: LogResponseData["items"]
+    items: LogResponseData["items"],
   ) => {
     return (
       accumulator +
@@ -383,7 +383,7 @@ export const fetchTodayIncome = async (
           (item.quota ||
             UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR *
               (extractAmount(item.content, exchangeRate)?.amount ?? 0)),
-        0
+        0,
       ) || 0)
     )
   }
@@ -396,7 +396,7 @@ export const fetchTodayIncome = async (
     (error, logType) => {
       const typeName = logType === LogType.Recharge ? "充值" : "签到"
       console.warn(`获取${typeName}记录失败:`, error)
-    }
+    },
   )
 
   return { today_income: totalIncome }
@@ -410,7 +410,7 @@ export const fetchAccountData = async (
   userId: number,
   token: string,
   checkIn: CheckInConfig,
-  authType?: AuthTypeEnum
+  authType?: AuthTypeEnum,
 ): Promise<AccountData> => {
   const params = { baseUrl, userId, token, authType, checkIn }
   const quotaPromise = fetchAccountQuota(baseUrl, userId, token, authType)
@@ -425,7 +425,7 @@ export const fetchAccountData = async (
     quotaPromise,
     todayUsagePromise,
     todayIncomePromise,
-    checkInPromise
+    checkInPromise,
   ])
 
   return {
@@ -434,8 +434,8 @@ export const fetchAccountData = async (
     ...todayIncome,
     checkIn: {
       ...checkIn,
-      isCheckedInToday: !(canCheckIn ?? true)
-    }
+      isCheckedInToday: !(canCheckIn ?? true),
+    },
   }
 }
 
@@ -447,7 +447,7 @@ export const refreshAccountData = async (
   userId: number,
   accessToken: string,
   checkIn: CheckInConfig,
-  authType?: AuthTypeEnum
+  authType?: AuthTypeEnum,
 ): Promise<RefreshAccountResult> => {
   try {
     const data = await fetchAccountData(
@@ -455,21 +455,21 @@ export const refreshAccountData = async (
       userId,
       accessToken,
       checkIn,
-      authType
+      authType,
     )
     return {
       success: true,
       data,
       healthStatus: {
         status: SiteHealthStatus.Healthy,
-        message: i18next.t("account:healthStatus.normal")
-      }
+        message: i18next.t("account:healthStatus.normal"),
+      },
     }
   } catch (error) {
     console.error("刷新账号数据失败:", error)
     return {
       success: false,
-      healthStatus: determineHealthStatus(error)
+      healthStatus: determineHealthStatus(error),
     }
   }
 }
@@ -481,7 +481,7 @@ export const validateAccountConnection = async (
   baseUrl: string,
   userId: number,
   accessToken: string,
-  authType?: AuthTypeEnum
+  authType?: AuthTypeEnum,
 ): Promise<boolean> => {
   try {
     await fetchAccountQuota(baseUrl, userId, accessToken, authType)
@@ -498,11 +498,11 @@ export const validateAccountConnection = async (
 export const fetchAccountTokens = async (
   { baseUrl, userId, token: accessToken, authType }: AuthTypeFetchParams,
   page: number = 0,
-  size: number = 100
+  size: number = 100,
 ): Promise<ApiToken[]> => {
   const params = new URLSearchParams({
     p: page.toString(),
-    size: size.toString()
+    size: size.toString(),
   })
 
   try {
@@ -512,7 +512,7 @@ export const fetchAccountTokens = async (
       endpoint: `/api/token/?${params.toString()}`,
       userId,
       token: accessToken,
-      authType
+      authType,
     })
 
     // 处理不同的响应格式
@@ -544,7 +544,7 @@ export const fetchAccountAvailableModels = async ({
   baseUrl,
   userId,
   token: accessToken,
-  authType
+  authType,
 }: AuthTypeFetchParams): Promise<string[]> => {
   try {
     return await fetchApiData<string[]>({
@@ -552,7 +552,7 @@ export const fetchAccountAvailableModels = async ({
       endpoint: "/api/user/models",
       userId,
       token: accessToken,
-      authType
+      authType,
     })
   } catch (error) {
     console.error("获取模型列表失败:", error)
@@ -567,13 +567,13 @@ export const fetchAccountAvailableModels = async ({
  */
 export const fetchUpstreamModels = async ({
   baseUrl,
-  apiKey
+  apiKey,
 }: OpenAIAuthParams) => {
   try {
     return await fetchApiData<UpstreamModelList>({
       baseUrl,
       endpoint: "/v1/models",
-      token: apiKey
+      token: apiKey,
     })
   } catch (error) {
     console.error("获取上游模型列表失败:", error)
@@ -583,11 +583,11 @@ export const fetchUpstreamModels = async ({
 
 export const fetchUpstreamModelsNameList = async ({
   baseUrl,
-  apiKey
+  apiKey,
 }: OpenAIAuthParams) => {
   const upstreamModels = await fetchUpstreamModels({
     baseUrl: baseUrl,
-    apiKey: apiKey
+    apiKey: apiKey,
   })
   return upstreamModels.map((item: UpstreamModelItem) => item.id)
 }
@@ -599,7 +599,7 @@ export const fetchUserGroups = async ({
   baseUrl,
   userId,
   token: accessToken,
-  authType
+  authType,
 }: AuthTypeFetchParams): Promise<Record<string, UserGroupInfo>> => {
   try {
     return await fetchApiData<Record<string, UserGroupInfo>>({
@@ -607,7 +607,7 @@ export const fetchUserGroups = async ({
       endpoint: "/api/user/self/groups",
       userId,
       token: accessToken,
-      authType
+      authType,
     })
   } catch (error) {
     console.error("获取分组信息失败:", error)
@@ -629,7 +629,7 @@ export const fetchSiteUserGroups = async ({
   baseUrl,
   userId,
   token: accessToken,
-  authType
+  authType,
 }: AuthTypeFetchParams): Promise<Array<string>> => {
   try {
     return await fetchApiData<Array<string>>({
@@ -637,7 +637,7 @@ export const fetchSiteUserGroups = async ({
       endpoint: "/api/group",
       userId,
       token: accessToken,
-      authType
+      authType,
     })
   } catch (error) {
     console.error("获取站点分组信息失败:", error)
@@ -653,7 +653,7 @@ export const createApiToken = async (
   userId: number,
   accessToken: string,
   tokenData: CreateTokenRequest,
-  authType?: AuthTypeEnum
+  authType?: AuthTypeEnum,
 ): Promise<boolean> => {
   try {
     const response = await fetchApi<any>({
@@ -664,8 +664,8 @@ export const createApiToken = async (
       authType,
       options: {
         method: "POST",
-        body: JSON.stringify(tokenData)
-      }
+        body: JSON.stringify(tokenData),
+      },
     })
 
     // 对于创建令牌的响应，只检查success字段，不要求data字段存在
@@ -673,7 +673,7 @@ export const createApiToken = async (
       throw new ApiError(
         response.message || "创建令牌失败",
         undefined,
-        "/api/token"
+        "/api/token",
       )
     }
 
@@ -692,7 +692,7 @@ export const fetchTokenById = async (
   userId: number,
   accessToken: string,
   tokenId: number,
-  authType?: AuthTypeEnum
+  authType?: AuthTypeEnum,
 ): Promise<ApiToken> => {
   try {
     return await fetchApiData<ApiToken>({
@@ -700,7 +700,7 @@ export const fetchTokenById = async (
       endpoint: `/api/token/${tokenId}`,
       userId,
       token: accessToken,
-      authType
+      authType,
     })
   } catch (error) {
     console.error("获取令牌详情失败:", error)
@@ -717,7 +717,7 @@ export const updateApiToken = async (
   accessToken: string,
   tokenId: number,
   tokenData: CreateTokenRequest,
-  authType?: AuthTypeEnum
+  authType?: AuthTypeEnum,
 ): Promise<boolean> => {
   try {
     const response = await fetchApi<any>({
@@ -728,15 +728,15 @@ export const updateApiToken = async (
       authType,
       options: {
         method: "PUT",
-        body: JSON.stringify({ ...tokenData, id: tokenId })
-      }
+        body: JSON.stringify({ ...tokenData, id: tokenId }),
+      },
     })
 
     if (!response.success) {
       throw new ApiError(
         response.message || "更新令牌失败",
         undefined,
-        "/api/token"
+        "/api/token",
       )
     }
 
@@ -755,7 +755,7 @@ export const deleteApiToken = async (
   userId: number,
   accessToken: string,
   tokenId: number,
-  authType?: AuthTypeEnum
+  authType?: AuthTypeEnum,
 ): Promise<boolean> => {
   try {
     const response = await fetchApi<any>({
@@ -765,15 +765,15 @@ export const deleteApiToken = async (
       token: accessToken,
       authType,
       options: {
-        method: "DELETE"
-      }
+        method: "DELETE",
+      },
     })
 
     if (!response.success) {
       throw new ApiError(
         response.message || "删除令牌失败",
         undefined,
-        `/api/token/${tokenId}`
+        `/api/token/${tokenId}`,
       )
     }
 
@@ -791,7 +791,7 @@ export const fetchModelPricing = async ({
   baseUrl,
   userId,
   token: accessToken,
-  authType
+  authType,
 }: AuthTypeFetchParams): Promise<PricingResponse> => {
   try {
     // /api/pricing 接口直接返回 PricingResponse 格式，不需要通过 apiRequestData 包装
@@ -801,9 +801,9 @@ export const fetchModelPricing = async ({
         endpoint: "/api/pricing",
         userId,
         token: accessToken,
-        authType
+        authType,
       },
-      true
+      true,
     )
   } catch (error) {
     console.error("获取模型定价失败:", error)
@@ -825,11 +825,11 @@ export const redeemCode = async (
   userId: number,
   accessToken: string,
   redemptionCode: string,
-  authType?: AuthTypeEnum
+  authType?: AuthTypeEnum,
 ): Promise<number> => {
   try {
     const requestData: RedeemCodeRequest = {
-      key: redemptionCode
+      key: redemptionCode,
     }
 
     return await fetchApiData<number>({
@@ -840,8 +840,8 @@ export const redeemCode = async (
       authType,
       options: {
         method: "POST",
-        body: JSON.stringify(requestData)
-      }
+        body: JSON.stringify(requestData),
+      },
     })
   } catch (error) {
     console.error("兑换码充值失败:", error)
@@ -862,14 +862,14 @@ export const determineHealthStatus = (error: any): HealthCheckResult => {
         status: SiteHealthStatus.Warning,
         message: i18next.t("account:healthStatus.httpError", {
           statusCode: error.statusCode,
-          message: error.message
-        })
+          message: error.message,
+        }),
       }
     }
     // 其他API错误（数据格式错误等）
     return {
       status: SiteHealthStatus.Unknown,
-      message: i18next.t("account:healthStatus.apiError")
+      message: i18next.t("account:healthStatus.apiError"),
     }
   }
 
@@ -877,13 +877,13 @@ export const determineHealthStatus = (error: any): HealthCheckResult => {
   if (error instanceof TypeError && error.message.includes("fetch")) {
     return {
       status: SiteHealthStatus.Error,
-      message: i18next.t("account:healthStatus.networkFailed")
+      message: i18next.t("account:healthStatus.networkFailed"),
     }
   }
 
   // 其他未知错误
   return {
     status: SiteHealthStatus.Unknown,
-    message: i18next.t("account:healthStatus.unknownError")
+    message: i18next.t("account:healthStatus.unknownError"),
   }
 }

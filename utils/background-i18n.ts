@@ -37,7 +37,7 @@ export async function initBackgroundI18n() {
     defaultNS: "common",
     ns: ["common", "messages", "settings", "ui", "redemptionAssist"], // 精简即可
     interpolation: { escapeValue: false },
-    returnEmptyString: false
+    returnEmptyString: false,
   })
 
   // 尝试读取用户偏好语言

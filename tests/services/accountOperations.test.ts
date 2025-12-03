@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   extractDomainPrefix,
   isValidAccount,
-  isValidExchangeRate
+  isValidExchangeRate,
 } from "~/services/accountOperations"
 import { AuthTypeEnum } from "~/types"
 
@@ -17,8 +17,8 @@ describe("accountOperations", () => {
           userId: "123",
           authType: AuthTypeEnum.AccessToken,
           accessToken: "token",
-          exchangeRate: "7.0"
-        })
+          exchangeRate: "7.0",
+        }),
       ).toBe(true)
     })
 
@@ -30,8 +30,8 @@ describe("accountOperations", () => {
           userId: "123",
           authType: AuthTypeEnum.AccessToken,
           accessToken: "token",
-          exchangeRate: "7.0"
-        })
+          exchangeRate: "7.0",
+        }),
       ).toBe(false)
     })
 
@@ -43,8 +43,8 @@ describe("accountOperations", () => {
           userId: "123",
           authType: AuthTypeEnum.AccessToken,
           accessToken: "token",
-          exchangeRate: "7.0"
-        })
+          exchangeRate: "7.0",
+        }),
       ).toBe(false)
     })
 
@@ -56,8 +56,8 @@ describe("accountOperations", () => {
           userId: "",
           authType: AuthTypeEnum.AccessToken,
           accessToken: "token",
-          exchangeRate: "7.0"
-        })
+          exchangeRate: "7.0",
+        }),
       ).toBe(false)
     })
 
@@ -69,8 +69,8 @@ describe("accountOperations", () => {
           userId: "123",
           authType: AuthTypeEnum.AccessToken,
           accessToken: "token",
-          exchangeRate: "invalid"
-        })
+          exchangeRate: "invalid",
+        }),
       ).toBe(false)
     })
 
@@ -82,8 +82,8 @@ describe("accountOperations", () => {
           userId: "123",
           authType: AuthTypeEnum.Cookie,
           accessToken: "",
-          exchangeRate: "7.0"
-        })
+          exchangeRate: "7.0",
+        }),
       ).toBe(true)
     })
 
@@ -95,8 +95,8 @@ describe("accountOperations", () => {
           userId: "123",
           authType: AuthTypeEnum.AccessToken,
           accessToken: "",
-          exchangeRate: "7.0"
-        })
+          exchangeRate: "7.0",
+        }),
       ).toBe(false)
     })
   })

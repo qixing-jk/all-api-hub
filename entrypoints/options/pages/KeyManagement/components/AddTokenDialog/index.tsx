@@ -34,13 +34,13 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
     useTokenForm(props)
 
   const currentAccount = availableAccounts.find(
-    (acc) => acc.id === formData.accountId
+    (acc) => acc.id === formData.accountId,
   )
 
   const { isLoading, availableModels, groups, resetData } = useTokenData(
     isOpen,
     currentAccount,
-    setFormData
+    setFormData,
   )
 
   const handleClose = () => {
@@ -60,7 +60,7 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
           ? -1
           : Math.floor(
               parseFloat(formData.quota) *
-                UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+                UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR,
             ),
         expired_time: formData.expiredTime
           ? Math.floor(new Date(formData.expiredTime).getTime() / 1000)
@@ -69,7 +69,7 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
         model_limits_enabled: formData.modelLimitsEnabled,
         model_limits: formData.modelLimits.join(","),
         allow_ips: formData.allowIps.trim() || "",
-        group: formData.group
+        group: formData.group,
       }
 
       if (isEditMode && editingToken) {
@@ -78,7 +78,7 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
           currentAccount.userId,
           currentAccount.token,
           editingToken.id,
-          tokenData
+          tokenData,
         )
         toast.success(t("dialog.updateSuccess"))
       } else {
@@ -86,7 +86,7 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
           currentAccount.baseUrl,
           currentAccount.userId,
           currentAccount.token,
-          tokenData
+          tokenData,
         )
         toast.success(t("dialog.createSuccess"))
       }
@@ -95,7 +95,7 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
     } catch (error) {
       console.error(`${isEditMode ? "更新" : "创建"}密钥失败:`, error)
       toast.error(
-        isEditMode ? t("dialog.updateFailed") : t("dialog.createFailed")
+        isEditMode ? t("dialog.updateFailed") : t("dialog.createFailed"),
       )
     } finally {
       setIsSubmitting(false)
@@ -118,7 +118,8 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
             canSubmit={!!currentAccount}
           />
         )
-      }>
+      }
+    >
       {isLoading ? (
         <LoadingIndicator />
       ) : (

@@ -1,4 +1,4 @@
-import { ChannelDefaults } from "~/types"
+import { ChannelDefaults } from "~/types/newapi"
 
 /**
  * Channel Type enumeration
@@ -56,7 +56,7 @@ export const ChannelType = {
   Vidu: 52,
   Submodel: 53,
   DoubaoVideo: 54,
-  Sora: 55
+  Sora: 55,
 } as const
 
 export type ChannelType = (typeof ChannelType)[keyof typeof ChannelType]
@@ -71,7 +71,7 @@ export const DEFAULT_CHANNEL_FIELDS: ChannelDefaults = {
   weight: 0,
   groups: ["default"],
   models: [],
-  type: ChannelType.OpenAI
+  type: ChannelType.OpenAI,
 }
 
 /**
@@ -130,12 +130,12 @@ export const ChannelTypeNames: Record<ChannelType, string> = {
   [ChannelType.Vidu]: "Vidu",
   [ChannelType.Submodel]: "Submodel",
   [ChannelType.DoubaoVideo]: "DoubaoVideo",
-  [ChannelType.Sora]: "Sora"
+  [ChannelType.Sora]: "Sora",
 }
 
 export const ChannelTypeOptions = Object.entries(ChannelTypeNames).map(
   ([key, label]) => ({
     value: Number(key) as ChannelType,
-    label
-  })
+    label,
+  }),
 )

@@ -35,7 +35,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
 
         const tokensWithAccount = accountTokens.map((token) => ({
           ...token,
-          accountName: account.name
+          accountName: account.name,
         }))
 
         setTokens(tokensWithAccount)
@@ -47,7 +47,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         setIsLoading(false)
       }
     },
-    [selectedAccount, displayData, t]
+    [selectedAccount, displayData, t],
   )
 
   useEffect(() => {
@@ -61,7 +61,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
   useEffect(() => {
     if (routeParams?.accountId && displayData.length > 0) {
       const accountExists = displayData.some(
-        (acc) => acc.id === routeParams.accountId
+        (acc) => acc.id === routeParams.accountId,
       )
       if (accountExists) {
         setSelectedAccount(routeParams.accountId)
@@ -119,7 +119,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
   const handleDeleteToken = async (token: AccountToken) => {
     if (
       !window.confirm(
-        t("keyManagement:messages.deleteConfirm", { name: token.name })
+        t("keyManagement:messages.deleteConfirm", { name: token.name }),
       )
     ) {
       return
@@ -136,10 +136,10 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         account.baseUrl,
         account.userId,
         account.token,
-        token.id
+        token.id,
       )
       toast.success(
-        t("keyManagement:messages.deleteSuccess", { name: token.name })
+        t("keyManagement:messages.deleteSuccess", { name: token.name }),
       )
 
       if (selectedAccount) {
@@ -169,6 +169,6 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     handleAddToken,
     handleCloseAddToken,
     handleEditToken,
-    handleDeleteToken
+    handleDeleteToken,
   }
 }

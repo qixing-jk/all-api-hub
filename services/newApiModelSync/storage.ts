@@ -2,7 +2,7 @@ import { Storage } from "@plasmohq/storage"
 
 import type {
   ExecutionResult,
-  NewApiModelSyncPreferences
+  NewApiModelSyncPreferences,
 } from "~/types/newApiModelSync"
 
 import { DEFAULT_PREFERENCES, userPreferences } from "../userPreferences"
@@ -12,7 +12,7 @@ import { DEFAULT_PREFERENCES, userPreferences } from "../userPreferences"
  */
 const STORAGE_KEYS = {
   LAST_EXECUTION: "newApiModelSync_lastExecution",
-  CHANNEL_UPSTREAM_MODELS_CACHE: "newApiModelSync_channelUpstreamModelsCache"
+  CHANNEL_UPSTREAM_MODELS_CACHE: "newApiModelSync_channelUpstreamModelsCache",
 } as const
 
 /**
@@ -23,7 +23,7 @@ class NewApiModelSyncStorage {
 
   constructor() {
     this.storage = new Storage({
-      area: "local"
+      area: "local",
     })
   }
 
@@ -41,7 +41,10 @@ class NewApiModelSyncStorage {
         concurrency: config.concurrency,
         maxRetries: config.maxRetries,
         rateLimit: { ...config.rateLimit },
-        allowedModels: [...(config.allowedModels ?? [])]
+        allowedModels: [...(config.allowedModels ?? [])],
+        globalChannelModelFilters: [
+          ...(config.globalChannelModelFilters ?? []),
+        ],
       }
     } catch (error) {
       console.error("[NewApiModelSync] Failed to get preferences:", error)
@@ -53,7 +56,7 @@ class NewApiModelSyncStorage {
    * Save sync preferences to userPreferences
    */
   async savePreferences(
-    preferences: Partial<NewApiModelSyncPreferences>
+    preferences: Partial<NewApiModelSyncPreferences>,
   ): Promise<boolean> {
     try {
       const prefs = await userPreferences.getPreferences()
@@ -83,7 +86,11 @@ class NewApiModelSyncStorage {
         allowedModels:
           preferences.allowedModels !== undefined
             ? [...preferences.allowedModels]
-            : [...(current.allowedModels ?? [])]
+            : [...(current.allowedModels ?? [])],
+        globalChannelModelFilters:
+          preferences.globalChannelModelFilters !== undefined
+            ? [...preferences.globalChannelModelFilters]
+            : [...(current.globalChannelModelFilters ?? [])],
       }
 
       await userPreferences.savePreferences({ newApiModelSync: updated })
@@ -145,7 +152,7 @@ class NewApiModelSyncStorage {
   async getChannelUpstreamModelOptions(): Promise<string[]> {
     try {
       const stored = (await this.storage.get(
-        STORAGE_KEYS.CHANNEL_UPSTREAM_MODELS_CACHE
+        STORAGE_KEYS.CHANNEL_UPSTREAM_MODELS_CACHE,
       )) as string[] | undefined
 
       if (!stored || stored.length === 0) {
@@ -153,14 +160,14 @@ class NewApiModelSyncStorage {
       }
 
       const normalized = Array.from(
-        new Set(stored.map((model) => model.trim()).filter(Boolean))
+        new Set(stored.map((model) => model.trim()).filter(Boolean)),
       )
 
       return normalized.sort((a, b) => a.localeCompare(b))
     } catch (error) {
       console.error(
         "[NewApiModelSync] Failed to get channel upstream model cache:",
-        error
+        error,
       )
       return []
     }
@@ -172,21 +179,21 @@ class NewApiModelSyncStorage {
   async saveChannelUpstreamModelOptions(models: string[]): Promise<boolean> {
     try {
       const normalized = Array.from(
-        new Set(models.map((model) => model.trim()).filter(Boolean))
+        new Set(models.map((model) => model.trim()).filter(Boolean)),
       ).sort((a, b) => a.localeCompare(b))
 
       await this.storage.set(
         STORAGE_KEYS.CHANNEL_UPSTREAM_MODELS_CACHE,
-        normalized
+        normalized,
       )
       console.log(
-        `[NewApiModelSync] Cached ${normalized.length} channel upstream models`
+        `[NewApiModelSync] Cached ${normalized.length} channel upstream models`,
       )
       return true
     } catch (error) {
       console.error(
         "[NewApiModelSync] Failed to save channel upstream model cache:",
-        error
+        error,
       )
       return false
     }
@@ -203,7 +210,10 @@ class NewApiModelSyncStorage {
       concurrency: defaultConfig.concurrency,
       maxRetries: defaultConfig.maxRetries,
       rateLimit: { ...defaultConfig.rateLimit },
-      allowedModels: [...(defaultConfig.allowedModels ?? [])]
+      allowedModels: [...(defaultConfig.allowedModels ?? [])],
+      globalChannelModelFilters: [
+        ...(defaultConfig.globalChannelModelFilters ?? []),
+      ],
     }
   }
 }

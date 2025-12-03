@@ -6,17 +6,17 @@
 // Local configuration object for health status
 const HEALTH_STATUS_CONFIG = {
   healthy: {
-    color: "bg-green-500"
+    color: "bg-green-500",
   },
   error: {
-    color: "bg-red-500"
+    color: "bg-red-500",
   },
   warning: {
-    color: "bg-yellow-500"
+    color: "bg-yellow-500",
   },
   unknown: {
-    color: "bg-gray-400"
-  }
+    color: "bg-gray-400",
+  },
 } as const
 
 /**
@@ -27,12 +27,12 @@ const HEALTH_STATUS_CONFIG = {
  */
 export function getHealthStatusDisplay(
   status: string | undefined,
-  t: (key: string) => string
+  t: (key: string) => string,
 ) {
   if (!status) {
     return {
       text: t("account:healthStatus.unknown"),
-      color: HEALTH_STATUS_CONFIG.unknown.color
+      color: HEALTH_STATUS_CONFIG.unknown.color,
     }
   }
 
@@ -41,13 +41,13 @@ export function getHealthStatusDisplay(
   if (!config) {
     return {
       text: t("account:healthStatus.unknown"),
-      color: HEALTH_STATUS_CONFIG.unknown.color
+      color: HEALTH_STATUS_CONFIG.unknown.color,
     }
   }
 
   return {
     text: t(`account:healthStatus.${status}`),
-    color: config.color
+    color: config.color,
   }
 }
 

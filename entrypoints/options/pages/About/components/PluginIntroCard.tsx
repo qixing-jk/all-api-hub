@@ -13,7 +13,8 @@ const PluginIntroCard = ({ version }: PluginIntroCardProps) => {
     <Card
       padding="md"
       variant="default"
-      className="border-blue-200 bg-linear-to-r from-blue-50 to-indigo-50 dark:border-blue-800 dark:from-blue-900/30 dark:to-indigo-900/30">
+      className="border-blue-200 bg-linear-to-r from-blue-50 to-indigo-50 dark:border-blue-800 dark:from-blue-900/30 dark:to-indigo-900/30"
+    >
       <CardContent padding={"none"}>
         <div className="flex items-start space-x-4">
           <img

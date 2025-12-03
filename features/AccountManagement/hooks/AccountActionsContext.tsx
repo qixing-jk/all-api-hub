@@ -5,7 +5,7 @@ import {
   useContext,
   useMemo,
   useState,
-  type ReactNode
+  type ReactNode,
 } from "react"
 import toast from "react-hot-toast"
 
@@ -19,7 +19,7 @@ interface AccountActionsContextType {
   refreshingAccountId: string | null
   handleRefreshAccount: (
     account: DisplaySiteData,
-    force?: boolean
+    force?: boolean,
   ) => Promise<void>
   handleDeleteAccount: (account: DisplaySiteData) => void
   handleCopyUrl: (account: DisplaySiteData) => void
@@ -33,13 +33,13 @@ const AccountActionsContext = createContext<
 
 // 3. 创建 Provider 组件
 export const AccountActionsProvider = ({
-  children
+  children,
 }: {
   children: ReactNode
 }) => {
   const { loadAccountData } = useAccountDataContext()
   const [refreshingAccountId, setRefreshingAccountId] = useState<string | null>(
-    null
+    null,
   )
 
   const handleRefreshAccount = useCallback(
@@ -56,8 +56,8 @@ export const AccountActionsProvider = ({
         } else {
           throw new Error(
             i18next.t("messages:toast.error.refreshAccount", {
-              accountName: account.name
-            })
+              accountName: account.name,
+            }),
           )
         }
       }
@@ -69,18 +69,18 @@ export const AccountActionsProvider = ({
               return i18next.t("messages:toast.success.refreshSkipped")
             }
             return i18next.t("messages:toast.success.refreshAccount", {
-              accountName: account.name
+              accountName: account.name,
             })
           }),
           {
             loading: i18next.t("messages:toast.loading.refreshingAccount", {
-              accountName: account.name
+              accountName: account.name,
             }),
             success: (message) => message,
             error: i18next.t("messages:toast.error.refreshAccount", {
-              accountName: account.name
-            })
-          }
+              accountName: account.name,
+            }),
+          },
         )
       } catch (error) {
         console.error("Error refreshing account:", error)
@@ -88,7 +88,7 @@ export const AccountActionsProvider = ({
         setRefreshingAccountId(null)
       }
     },
-    [refreshingAccountId, loadAccountData]
+    [refreshingAccountId, loadAccountData],
   )
 
   const handleDeleteAccount = useCallback(() => {
@@ -101,8 +101,8 @@ export const AccountActionsProvider = ({
     navigator.clipboard.writeText(account.baseUrl)
     toast.success(
       i18next.t("messages:toast.success.urlCopied", {
-        accountName: account.name
-      })
+        accountName: account.name,
+      }),
     )
   }, [])
 
@@ -120,7 +120,7 @@ export const AccountActionsProvider = ({
         console.error("Error marking account as checked in:", error)
       }
     },
-    [loadAccountData]
+    [loadAccountData],
   )
 
   const value = useMemo(
@@ -129,15 +129,15 @@ export const AccountActionsProvider = ({
       handleRefreshAccount,
       handleDeleteAccount,
       handleCopyUrl,
-      handleMarkAsCheckedIn
+      handleMarkAsCheckedIn,
     }),
     [
       refreshingAccountId,
       handleRefreshAccount,
       handleDeleteAccount,
       handleCopyUrl,
-      handleMarkAsCheckedIn
-    ]
+      handleMarkAsCheckedIn,
+    ],
   )
 
   return (
@@ -158,7 +158,7 @@ export const useAccountActionsContext = () => {
     !context.handleMarkAsCheckedIn
   ) {
     throw new Error(
-      "useAccountActionsContext 必须在 AccountActionsProvider 中使用，并且必须提供所有必需的函数"
+      "useAccountActionsContext 必须在 AccountActionsProvider 中使用，并且必须提供所有必需的函数",
     )
   }
   return context

@@ -1,7 +1,7 @@
 import {
   ChevronDownIcon,
   ChevronRightIcon,
-  UserGroupIcon
+  UserGroupIcon,
 } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
@@ -28,7 +28,7 @@ export function TokenItem({
   onToggle,
   onCopyKey,
   account,
-  onOpenCCSwitchDialog
+  onOpenCCSwitchDialog,
 }: TokenItemProps) {
   const { t } = useTranslation("ui")
 
@@ -36,11 +36,12 @@ export function TokenItem({
     <Card variant="interactive" padding="none">
       <CardContent
         padding="sm"
-        className="cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-dark-bg-tertiary"
-        onClick={onToggle}>
+        className="dark:hover:bg-dark-bg-tertiary cursor-pointer transition-colors hover:bg-gray-50"
+        onClick={onToggle}
+      >
         <div className="flex items-center justify-between">
           <div className="min-w-0 flex-1 space-y-1.5">
-            <h4 className="truncate text-sm font-medium text-gray-900 dark:text-dark-text-primary">
+            <h4 className="dark:text-dark-text-primary truncate text-sm font-medium text-gray-900">
               {token.name}
             </h4>
             <div className="flex items-center space-x-1.5">
@@ -48,7 +49,8 @@ export function TokenItem({
               <Badge
                 variant="outline"
                 size="sm"
-                className={getGroupBadgeStyle(token.group || "")}>
+                className={getGroupBadgeStyle(token.group || "")}
+              >
                 {token.group || t("dialog.copyKey.defaultGroup")}
               </Badge>
             </div>
@@ -58,7 +60,8 @@ export function TokenItem({
             <Badge
               variant={token.status === 1 ? "success" : "secondary"}
               size="sm"
-              className={getStatusBadgeStyle(token.status)}>
+              className={getStatusBadgeStyle(token.status)}
+            >
               {token.status === 1
                 ? t("dialog.copyKey.enabled")
                 : t("dialog.copyKey.disabled")}
@@ -69,7 +72,8 @@ export function TokenItem({
               size="sm"
               aria-label={
                 isExpanded ? t("dialog.collapse") : t("dialog.expand")
-              }>
+              }
+            >
               {isExpanded ? (
                 <ChevronDownIcon className="h-4 w-4" />
               ) : (

@@ -2,23 +2,23 @@ import { useCallback, useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import type { MultiSelectOption } from "~/components/ui/MultiSelect.tsx"
-import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes.ts"
-import { ChannelType, DEFAULT_CHANNEL_FIELDS } from "~/constants/newApi.ts"
+import type { MultiSelectOption } from "~/components/ui/MultiSelect"
+import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
+import { ChannelType, DEFAULT_CHANNEL_FIELDS } from "~/constants/newApi"
 import { fetchSiteUserGroups } from "~/services/apiService"
 import {
   buildChannelPayload,
   checkValidNewApiConfig,
   createChannel,
   getNewApiConfig,
-  updateChannel
-} from "~/services/newApiService/newApiService.ts"
+  updateChannel,
+} from "~/services/newApiService/newApiService"
 import type {
   ChannelFormData,
   NewApiChannel,
-  UpdateChannelPayload
-} from "~/types/newapi.ts"
-import { mergeUniqueOptions } from "~/utils/selectOptions.ts"
+  UpdateChannelPayload,
+} from "~/types/newapi"
+import { mergeUniqueOptions } from "~/utils/selectOptions"
 
 export interface UseChannelFormProps {
   mode: DialogMode
@@ -39,7 +39,7 @@ export function useChannelForm({
   onSuccess,
   initialValues,
   initialModels,
-  initialGroups
+  initialGroups,
 }: UseChannelFormProps) {
   const { t } = useTranslation("channelDialog")
 
@@ -56,14 +56,14 @@ export function useChannelForm({
           : [...DEFAULT_CHANNEL_FIELDS.groups],
       priority: initialValues?.priority ?? DEFAULT_CHANNEL_FIELDS.priority,
       weight: initialValues?.weight ?? DEFAULT_CHANNEL_FIELDS.weight,
-      status: initialValues?.status ?? DEFAULT_CHANNEL_FIELDS.status
+      status: initialValues?.status ?? DEFAULT_CHANNEL_FIELDS.status,
     }),
-    [initialValues]
+    [initialValues],
   )
 
   // Form state
   const [formData, setFormData] = useState<ChannelFormData>(() =>
-    buildInitialFormData()
+    buildInitialFormData(),
   )
 
   // UI state
@@ -71,10 +71,10 @@ export function useChannelForm({
   const [isLoadingGroups, setIsLoadingGroups] = useState(false)
   const [isLoadingModels, setIsLoadingModels] = useState(false)
   const [availableGroups, setAvailableGroups] = useState<MultiSelectOption[]>(
-    []
+    [],
   )
   const [availableModels, setAvailableModels] = useState<MultiSelectOption[]>(
-    []
+    [],
   )
 
   // Load groups and model suggestions on mount
@@ -102,7 +102,7 @@ export function useChannelForm({
         groups: channel.group.split(",") ?? DEFAULT_CHANNEL_FIELDS.groups,
         priority: channel.priority ?? DEFAULT_CHANNEL_FIELDS.priority,
         weight: channel.weight ?? DEFAULT_CHANNEL_FIELDS.weight,
-        status: channel.status ?? DEFAULT_CHANNEL_FIELDS.status
+        status: channel.status ?? DEFAULT_CHANNEL_FIELDS.status,
       })
     } else {
       setFormData(buildInitialFormData())
@@ -135,8 +135,8 @@ export function useChannelForm({
         setAvailableGroups(
           mergeUniqueOptions(
             [{ label: "default", value: "default" }],
-            preselectedGroups
-          )
+            preselectedGroups,
+          ),
         )
         return
       }
@@ -144,12 +144,12 @@ export function useChannelForm({
       const groupsData = await fetchSiteUserGroups({
         baseUrl: config.baseUrl,
         userId: config.userId,
-        token: config.token
+        token: config.token,
       })
 
       let groupOptions = groupsData.map((group) => ({
         label: group,
-        value: group
+        value: group,
       }))
 
       if (!groupOptions.some((option) => option.value === "default")) {
@@ -181,7 +181,7 @@ export function useChannelForm({
         []
       ).map((value) => ({
         label: value,
-        value
+        value,
       }))
 
       setAvailableModels(preselectedModels)
@@ -193,7 +193,7 @@ export function useChannelForm({
         []
       ).map((value) => ({
         label: value,
-        value
+        value,
       }))
       setAvailableModels(preselectedModels)
     } finally {
@@ -203,7 +203,7 @@ export function useChannelForm({
 
   const updateField = <K extends keyof ChannelFormData>(
     field: K,
-    value: ChannelFormData[K]
+    value: ChannelFormData[K],
   ) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
@@ -213,7 +213,7 @@ export function useChannelForm({
       ...prev,
       type: newType,
       priority: prev.priority,
-      weight: prev.weight
+      weight: prev.weight,
     }))
   }
 
@@ -240,7 +240,7 @@ export function useChannelForm({
     if (isBaseUrlRequired && !formData?.base_url?.trim()) {
       toast.error(
         t("validation.baseUrlRequired") ||
-          "Base URL is required for this channel type"
+          "Base URL is required for this channel type",
       )
       return
     }
@@ -269,21 +269,21 @@ export function useChannelForm({
             models: formData.models.join(","),
             groups: formData.groups,
             // 实际只有这个group参数生效
-            group: formData.groups.join(",")
+            group: formData.groups.join(","),
           }
         })()
         response = await updateChannel(
           apiConfig.baseUrl,
           apiConfig.token,
           apiConfig.userId,
-          updatePayload
+          updatePayload,
         )
       } else {
         response = await createChannel(
           apiConfig.baseUrl,
           apiConfig.token,
           apiConfig.userId,
-          payload
+          payload,
         )
       }
 
@@ -299,8 +299,8 @@ export function useChannelForm({
       toast.error(
         t("channelDialog:messages.saveFailed", {
           error: error.message,
-          defaultValue: `Failed to save channel: ${error.message}`
-        })
+          defaultValue: `Failed to save channel: ${error.message}`,
+        }),
       )
     } finally {
       setIsSaving(false)
@@ -310,7 +310,7 @@ export function useChannelForm({
   const isFormValid = Boolean(
     formData.name.trim() &&
       (!isKeyFieldRequired || formData.key.trim()) &&
-      (!isBaseUrlRequired || formData?.base_url?.trim())
+      (!isBaseUrlRequired || formData?.base_url?.trim()),
   )
 
   return {
@@ -326,6 +326,6 @@ export function useChannelForm({
     availableModels,
     resetForm,
     isKeyFieldRequired,
-    isBaseUrlRequired
+    isBaseUrlRequired,
   }
 }

@@ -12,8 +12,8 @@ describe("collectModelsFromExecution", () => {
       failureCount: items.filter((item) => !item.ok).length,
       durationMs: 0,
       startedAt: 0,
-      endedAt: 0
-    }
+      endedAt: 0,
+    },
   })
 
   it("collects sorted unique models from successful runs", () => {
@@ -25,7 +25,7 @@ describe("collectModelsFromExecution", () => {
         attempts: 1,
         finishedAt: 0,
         newModels: ["gpt-4o", "claude-3"],
-        oldModels: []
+        oldModels: [],
       },
       {
         channelId: 2,
@@ -34,8 +34,8 @@ describe("collectModelsFromExecution", () => {
         attempts: 1,
         finishedAt: 0,
         newModels: ["claude-3", "gpt-4o"],
-        oldModels: []
-      }
+        oldModels: [],
+      },
     ])
 
     expect(collectModelsFromExecution(result)).toEqual(["claude-3", "gpt-4o"])
@@ -50,13 +50,13 @@ describe("collectModelsFromExecution", () => {
         attempts: 2,
         finishedAt: 0,
         message: "Failed",
-        oldModels: ["gpt-4o-mini", "   claude-3   "]
-      }
+        oldModels: ["gpt-4o-mini", "   claude-3   "],
+      },
     ])
 
     expect(collectModelsFromExecution(result)).toEqual([
       "claude-3",
-      "gpt-4o-mini"
+      "gpt-4o-mini",
     ])
   })
 

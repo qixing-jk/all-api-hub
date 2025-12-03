@@ -1,5 +1,5 @@
 export function isPossibleRedemptionCode(
-  code: string | undefined | null
+  code: string | undefined | null,
 ): boolean {
   if (!code) return false
   const normalized = code.trim()

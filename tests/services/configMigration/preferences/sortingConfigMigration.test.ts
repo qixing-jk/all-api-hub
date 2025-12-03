@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest"
 
 import {
   migrateSortingConfig,
-  needsSortingConfigMigration
+  needsSortingConfigMigration,
 } from "~/services/configMigration/preferences/sortingConfigMigration"
-import { SortingCriteriaType } from "~/types/sorting.ts"
-import { DEFAULT_SORTING_PRIORITY_CONFIG } from "~/utils/sortingPriority.ts"
+import { SortingCriteriaType } from "~/types/sorting"
+import { DEFAULT_SORTING_PRIORITY_CONFIG } from "~/utils/sortingPriority"
 
 describe("sortingConfigMigration", () => {
   describe("needsSortingConfigMigration", () => {
@@ -18,8 +18,8 @@ describe("sortingConfigMigration", () => {
       const config = {
         ...DEFAULT_SORTING_PRIORITY_CONFIG,
         criteria: DEFAULT_SORTING_PRIORITY_CONFIG.criteria.filter(
-          (c) => c.id !== SortingCriteriaType.PINNED
-        )
+          (c) => c.id !== SortingCriteriaType.PINNED,
+        ),
       }
       const result = needsSortingConfigMigration(config)
       expect(result).toBe(true)
@@ -28,7 +28,7 @@ describe("sortingConfigMigration", () => {
     it("returns true when config has fewer criteria than default", () => {
       const config = {
         ...DEFAULT_SORTING_PRIORITY_CONFIG,
-        criteria: DEFAULT_SORTING_PRIORITY_CONFIG.criteria.slice(0, 3)
+        criteria: DEFAULT_SORTING_PRIORITY_CONFIG.criteria.slice(0, 3),
       }
       const result = needsSortingConfigMigration(config)
       expect(result).toBe(true)
@@ -38,8 +38,8 @@ describe("sortingConfigMigration", () => {
       const config = {
         ...DEFAULT_SORTING_PRIORITY_CONFIG,
         criteria: DEFAULT_SORTING_PRIORITY_CONFIG.criteria.map((c) => ({
-          ...c
-        }))
+          ...c,
+        })),
       }
       const result = needsSortingConfigMigration(config)
       expect(result).toBe(false)
@@ -50,7 +50,7 @@ describe("sortingConfigMigration", () => {
         ...DEFAULT_SORTING_PRIORITY_CONFIG,
         criteria: DEFAULT_SORTING_PRIORITY_CONFIG.criteria
           .map((c) => ({ ...c }))
-          .reverse()
+          .reverse(),
       }
       const result = needsSortingConfigMigration(config)
       expect(result).toBe(false)
@@ -62,11 +62,11 @@ describe("sortingConfigMigration", () => {
       const result = migrateSortingConfig(undefined)
 
       expect(result.criteria).toHaveLength(
-        DEFAULT_SORTING_PRIORITY_CONFIG.criteria.length
+        DEFAULT_SORTING_PRIORITY_CONFIG.criteria.length,
       )
       expect(result).toHaveProperty("lastModified")
       expect(result.criteria.map((c) => c.id)).toEqual(
-        DEFAULT_SORTING_PRIORITY_CONFIG.criteria.map((c) => c.id)
+        DEFAULT_SORTING_PRIORITY_CONFIG.criteria.map((c) => c.id),
       )
     })
 
@@ -74,8 +74,8 @@ describe("sortingConfigMigration", () => {
       const config = {
         ...DEFAULT_SORTING_PRIORITY_CONFIG,
         criteria: DEFAULT_SORTING_PRIORITY_CONFIG.criteria.map((c) => ({
-          ...c
-        }))
+          ...c,
+        })),
       }
       const originalLastModified = config.lastModified
 
@@ -88,15 +88,15 @@ describe("sortingConfigMigration", () => {
     it("adds PINNED criterion when missing", () => {
       const config = {
         criteria: DEFAULT_SORTING_PRIORITY_CONFIG.criteria.filter(
-          (c) => c.id !== SortingCriteriaType.PINNED
+          (c) => c.id !== SortingCriteriaType.PINNED,
         ),
-        lastModified: 1000
+        lastModified: 1000,
       }
 
       const result = migrateSortingConfig(config)
 
       const pinnedCriterion = result.criteria.find(
-        (c) => c.id === SortingCriteriaType.PINNED
+        (c) => c.id === SortingCriteriaType.PINNED,
       )
       expect(pinnedCriterion).toBeDefined()
       expect(pinnedCriterion?.enabled).toBe(true)
@@ -107,16 +107,16 @@ describe("sortingConfigMigration", () => {
         criteria: DEFAULT_SORTING_PRIORITY_CONFIG.criteria
           .filter((c) => c.id !== SortingCriteriaType.PINNED)
           .map((c) => ({ ...c })),
-        lastModified: 1000
+        lastModified: 1000,
       }
 
       const result = migrateSortingConfig(config)
 
       const pinnedIndex = result.criteria.findIndex(
-        (c) => c.id === SortingCriteriaType.PINNED
+        (c) => c.id === SortingCriteriaType.PINNED,
       )
       const currentSiteIndex = result.criteria.findIndex(
-        (c) => c.id === SortingCriteriaType.CURRENT_SITE
+        (c) => c.id === SortingCriteriaType.CURRENT_SITE,
       )
 
       // Both should be at the top - CURRENT_SITE comes first due to sort order in normalization
@@ -131,15 +131,15 @@ describe("sortingConfigMigration", () => {
           {
             id: SortingCriteriaType.CURRENT_SITE,
             enabled: true,
-            priority: 0
+            priority: 0,
           },
           {
             id: SortingCriteriaType.PINNED,
             enabled: true,
-            priority: 1
-          }
+            priority: 1,
+          },
         ],
-        lastModified: 1000
+        lastModified: 1000,
       }
 
       const result = migrateSortingConfig(config)
@@ -147,7 +147,7 @@ describe("sortingConfigMigration", () => {
       const missingCriteria = result.criteria.filter(
         (c) =>
           c.id !== SortingCriteriaType.CURRENT_SITE &&
-          c.id !== SortingCriteriaType.PINNED
+          c.id !== SortingCriteriaType.PINNED,
       )
 
       expect(missingCriteria.length).toBeGreaterThan(0)
@@ -162,15 +162,15 @@ describe("sortingConfigMigration", () => {
           {
             id: SortingCriteriaType.CURRENT_SITE,
             enabled: true,
-            priority: 10
+            priority: 10,
           },
           {
             id: SortingCriteriaType.HEALTH_STATUS,
             enabled: true,
-            priority: 20
-          }
+            priority: 20,
+          },
         ],
-        lastModified: 1000
+        lastModified: 1000,
       }
 
       const result = migrateSortingConfig(config)
@@ -185,9 +185,9 @@ describe("sortingConfigMigration", () => {
     it("updates lastModified timestamp", () => {
       const config = {
         criteria: DEFAULT_SORTING_PRIORITY_CONFIG.criteria.filter(
-          (c) => c.id !== SortingCriteriaType.PINNED
+          (c) => c.id !== SortingCriteriaType.PINNED,
         ),
-        lastModified: 1000
+        lastModified: 1000,
       }
 
       const beforeTime = Date.now()
@@ -204,24 +204,24 @@ describe("sortingConfigMigration", () => {
           {
             id: SortingCriteriaType.HEALTH_STATUS,
             enabled: true,
-            priority: 0
+            priority: 0,
           },
           {
             id: SortingCriteriaType.CHECK_IN_REQUIREMENT,
             enabled: true,
-            priority: 1
-          }
+            priority: 1,
+          },
         ],
-        lastModified: 1000
+        lastModified: 1000,
       }
 
       const result = migrateSortingConfig(config)
 
       const currentSiteIndex = result.criteria.findIndex(
-        (c) => c.id === SortingCriteriaType.CURRENT_SITE
+        (c) => c.id === SortingCriteriaType.CURRENT_SITE,
       )
       const healthStatusIndex = result.criteria.findIndex(
-        (c) => c.id === SortingCriteriaType.HEALTH_STATUS
+        (c) => c.id === SortingCriteriaType.HEALTH_STATUS,
       )
 
       expect(currentSiteIndex).toBeLessThan(healthStatusIndex)
@@ -233,17 +233,17 @@ describe("sortingConfigMigration", () => {
           {
             id: SortingCriteriaType.HEALTH_STATUS,
             enabled: true,
-            priority: 0
-          }
+            priority: 0,
+          },
         ],
-        lastModified: 1000
+        lastModified: 1000,
       }
 
       const result = migrateSortingConfig(config)
 
       const resultIds = new Set(result.criteria.map((c) => c.id))
       const defaultIds = new Set(
-        DEFAULT_SORTING_PRIORITY_CONFIG.criteria.map((c) => c.id)
+        DEFAULT_SORTING_PRIORITY_CONFIG.criteria.map((c) => c.id),
       )
 
       expect(resultIds).toEqual(defaultIds)
@@ -252,9 +252,9 @@ describe("sortingConfigMigration", () => {
     it("does not duplicate existing criteria", () => {
       const config = {
         criteria: DEFAULT_SORTING_PRIORITY_CONFIG.criteria.filter(
-          (c) => c.id !== SortingCriteriaType.PINNED
+          (c) => c.id !== SortingCriteriaType.PINNED,
         ),
-        lastModified: 1000
+        lastModified: 1000,
       }
 
       const result = migrateSortingConfig(config)
@@ -266,7 +266,7 @@ describe("sortingConfigMigration", () => {
       expect(uniqueIds.length).toBe(resultIds.length)
 
       const healthStatusCount = result.criteria.filter(
-        (c) => c.id === SortingCriteriaType.HEALTH_STATUS
+        (c) => c.id === SortingCriteriaType.HEALTH_STATUS,
       ).length
 
       expect(healthStatusCount).toBe(1)
@@ -275,18 +275,18 @@ describe("sortingConfigMigration", () => {
     it("handles empty criteria array", () => {
       const config = {
         criteria: [],
-        lastModified: 1000
+        lastModified: 1000,
       }
 
       const result = migrateSortingConfig(config)
 
       expect(result.criteria.length).toBe(
-        DEFAULT_SORTING_PRIORITY_CONFIG.criteria.length
+        DEFAULT_SORTING_PRIORITY_CONFIG.criteria.length,
       )
       expect(
         result.criteria.every((c) =>
-          DEFAULT_SORTING_PRIORITY_CONFIG.criteria.some((dc) => dc.id === c.id)
-        )
+          DEFAULT_SORTING_PRIORITY_CONFIG.criteria.some((dc) => dc.id === c.id),
+        ),
       ).toBe(true)
     })
 
@@ -296,24 +296,24 @@ describe("sortingConfigMigration", () => {
           {
             id: SortingCriteriaType.CURRENT_SITE,
             enabled: false,
-            priority: 0
+            priority: 0,
           },
           {
             id: SortingCriteriaType.HEALTH_STATUS,
             enabled: true,
-            priority: 1
-          }
+            priority: 1,
+          },
         ],
-        lastModified: 1000
+        lastModified: 1000,
       }
 
       const result = migrateSortingConfig(config)
 
       const currentSite = result.criteria.find(
-        (c) => c.id === SortingCriteriaType.CURRENT_SITE
+        (c) => c.id === SortingCriteriaType.CURRENT_SITE,
       )
       const healthStatus = result.criteria.find(
-        (c) => c.id === SortingCriteriaType.HEALTH_STATUS
+        (c) => c.id === SortingCriteriaType.HEALTH_STATUS,
       )
 
       expect(currentSite?.enabled).toBe(false)

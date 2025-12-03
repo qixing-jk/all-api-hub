@@ -3,9 +3,9 @@
  * Converts flat new-api fields to nested object structure
  */
 
-import { DEFAULT_NEW_API_CONFIG } from "~/types/newApiConfig.ts"
+import { DEFAULT_NEW_API_CONFIG } from "~/types/newApiConfig"
 
-import type { UserPreferences } from "../../userPreferences.ts"
+import type { UserPreferences } from "../../userPreferences"
 
 /**
  * Checks if the given user preferences object contains any of the old flat new-api fields.
@@ -44,12 +44,12 @@ export function migrateNewApiConfig(prefs: UserPreferences): UserPreferences {
   const newApiSettings = {
     baseUrl: prefs?.newApiBaseUrl ?? DEFAULT_NEW_API_CONFIG.baseUrl,
     adminToken: prefs?.newApiAdminToken ?? DEFAULT_NEW_API_CONFIG.adminToken,
-    userId: prefs?.newApiUserId ?? DEFAULT_NEW_API_CONFIG.userId
+    userId: prefs?.newApiUserId ?? DEFAULT_NEW_API_CONFIG.userId,
   }
 
   console.log(
     "[PreferencesMigration] Migrated newApi settings:",
-    newApiSettings
+    newApiSettings,
   )
 
   const { newApiBaseUrl, newApiAdminToken, newApiUserId, ...restOfPrefs } =
@@ -57,6 +57,6 @@ export function migrateNewApiConfig(prefs: UserPreferences): UserPreferences {
 
   return {
     ...restOfPrefs,
-    newApi: newApiSettings
+    newApi: newApiSettings,
   }
 }

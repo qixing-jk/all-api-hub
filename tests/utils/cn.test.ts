@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { cn } from "~/lib/utils.ts"
+import { cn } from "~/lib/utils"
 
 describe("cn utility", () => {
   it("should merge class names correctly", () => {
@@ -15,7 +15,7 @@ describe("cn utility", () => {
       // eslint-disable-next-line no-constant-binary-expression
       true && "conditional-class",
       // eslint-disable-next-line no-constant-binary-expression
-      false && "hidden"
+      false && "hidden",
     )
     expect(result).toContain("base-class")
     expect(result).toContain("conditional-class")
@@ -46,7 +46,7 @@ describe("cn utility", () => {
     const result = cn({
       class1: true,
       class2: false,
-      class3: true
+      class3: true,
     })
     expect(result).toContain("class1")
     expect(result).not.toContain("class2")

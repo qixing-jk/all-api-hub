@@ -4,19 +4,19 @@ import {
   AuthTypeEnum,
   SiteHealthStatus,
   type ApiToken,
-  type DisplaySiteData
+  type DisplaySiteData,
 } from "~/types"
 import { OpenInCherryStudio } from "~/utils/cherryStudio"
 
 vi.mock("react-hot-toast", () => ({
   default: {
     success: vi.fn(),
-    error: vi.fn()
-  }
+    error: vi.fn(),
+  },
 }))
 
 vi.mock("i18next", () => ({
-  t: vi.fn((key: string) => key)
+  t: vi.fn((key: string) => key),
 }))
 
 const mockAccount: DisplaySiteData = {
@@ -33,7 +33,7 @@ const mockAccount: DisplaySiteData = {
   health: { status: SiteHealthStatus.Healthy },
   last_sync_time: Date.now(),
   siteType: "one-api",
-  authType: AuthTypeEnum.AccessToken
+  authType: AuthTypeEnum.AccessToken,
 }
 
 const mockToken: ApiToken = {
@@ -45,7 +45,7 @@ const mockToken: ApiToken = {
   expired_time: -1,
   remain_quota: 1000000,
   unlimited_quota: true,
-  status: 1
+  status: 1,
 }
 
 describe("cherryStudio", () => {

@@ -12,7 +12,7 @@ interface ActionBarProps {
 export default function ActionBar({
   isRunning,
   onRunNow,
-  onRefresh
+  onRefresh,
 }: ActionBarProps) {
   const { t } = useTranslation("autoCheckin")
 
@@ -21,13 +21,15 @@ export default function ActionBar({
       <Button
         onClick={onRunNow}
         disabled={isRunning}
-        leftIcon={<PlayIcon className="h-4 w-4" />}>
+        leftIcon={<PlayIcon className="h-4 w-4" />}
+      >
         {t("execution.runNow")}
       </Button>
       <Button
         onClick={onRefresh}
         variant="secondary"
-        leftIcon={<ArrowPathIcon className="h-4 w-4" />}>
+        leftIcon={<ArrowPathIcon className="h-4 w-4" />}
+      >
         {t("execution.refresh")}
       </Button>
     </div>

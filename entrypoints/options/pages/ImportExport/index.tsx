@@ -20,7 +20,7 @@ export default function ImportExport() {
     setImportData,
     handleFileImport,
     handleImport,
-    validateImportData
+    validateImportData,
   } = useImportExport()
 
   const validation = validateImportData()

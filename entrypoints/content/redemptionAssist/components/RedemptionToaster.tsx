@@ -22,7 +22,8 @@ export const RedemptionToaster: React.FC = () => {
     <div
       className="pointer-events-none fixed inset-x-0 top-4 z-9999 flex justify-center sm:justify-end"
       onMouseEnter={startPause}
-      onMouseLeave={endPause}>
+      onMouseLeave={endPause}
+    >
       <div className="flex max-h-[calc(100vh-3rem)] max-w-full flex-col gap-3 overflow-y-auto px-3 sm:px-4">
         {visibleToasts.map((toast) => {
           // 自定义 toast（toast.custom）：统一由这里控制外层宽度/布局，内部组件只关心内容样式
@@ -31,7 +32,8 @@ export const RedemptionToaster: React.FC = () => {
               <div
                 key={toast.id}
                 {...toast.ariaProps}
-                className="pointer-events-auto w-full max-w-[96vw] sm:w-[360px]">
+                className="pointer-events-auto w-full max-w-[96vw] sm:w-[360px]"
+              >
                 {typeof toast.message === "function"
                   ? toast.message(toast)
                   : toast.message}

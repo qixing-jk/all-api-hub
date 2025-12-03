@@ -1,7 +1,7 @@
 import {
   ArrowPathIcon,
   EyeIcon,
-  EyeSlashIcon
+  EyeSlashIcon,
 } from "@heroicons/react/24/outline"
 import { useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
@@ -16,7 +16,7 @@ import {
   CardTitle,
   FormField,
   IconButton,
-  Input
+  Input,
 } from "~/components/ui"
 import { accountStorage } from "~/services/accountStorage"
 import { channelConfigStorage } from "~/services/channelConfigStorage"
@@ -24,13 +24,13 @@ import { userPreferences } from "~/services/userPreferences"
 import {
   downloadBackup,
   testWebdavConnection,
-  uploadBackup
-} from "~/services/webdav/webdavService.ts"
+  uploadBackup,
+} from "~/services/webdav/webdavService"
 
 import {
   BACKUP_VERSION,
   importFromBackupObject,
-  type BackupFullV2
+  type BackupFullV2,
 } from "../utils"
 
 export default function WebDAVSettings() {
@@ -49,7 +49,7 @@ export default function WebDAVSettings() {
 
   const webdavConfigFilled = useMemo(
     () => Boolean(webdavUrl && webdavUsername && webdavPassword),
-    [webdavUrl, webdavUsername, webdavPassword]
+    [webdavUrl, webdavUsername, webdavPassword],
   )
 
   // 初始加载
@@ -115,7 +115,8 @@ export default function WebDAVSettings() {
                     onClick={() => setShowPassword(!showPassword)}
                     aria-label={
                       showPassword ? "Hide password" : "Show password"
-                    }>
+                    }
+                  >
                     {showPassword ? (
                       <EyeSlashIcon className="h-4 w-4" />
                     ) : (
@@ -137,7 +138,7 @@ export default function WebDAVSettings() {
                 await userPreferences.updateWebdavSettings({
                   url: webdavUrl,
                   username: webdavUsername,
-                  password: webdavPassword
+                  password: webdavPassword,
                 })
                 toast.success(t("settings:messages.updateSuccess"))
               } catch (e) {
@@ -151,7 +152,8 @@ export default function WebDAVSettings() {
             loading={saving}
             variant="default"
             size="sm"
-            bleed>
+            bleed
+          >
             {saving ? t("common:status.saving") : t("webdav.saveConfig")}
           </Button>
 
@@ -163,12 +165,12 @@ export default function WebDAVSettings() {
                 await userPreferences.updateWebdavSettings({
                   url: webdavUrl,
                   username: webdavUsername,
-                  password: webdavPassword
+                  password: webdavPassword,
                 })
                 await testWebdavConnection({
                   url: webdavUrl,
                   username: webdavUsername,
-                  password: webdavPassword
+                  password: webdavPassword,
                 })
                 toast.success(t("settings:messages.updateSuccess"))
               } catch (e: any) {
@@ -182,7 +184,8 @@ export default function WebDAVSettings() {
             loading={testing}
             variant="secondary"
             size="sm"
-            bleed>
+            bleed
+          >
             {testing ? t("common:status.testing") : t("webdav.testConnection")}
           </Button>
 
@@ -195,19 +198,19 @@ export default function WebDAVSettings() {
                   await Promise.all([
                     accountStorage.exportData(),
                     userPreferences.exportPreferences(),
-                    channelConfigStorage.exportConfigs()
+                    channelConfigStorage.exportConfigs(),
                   ])
                 const exportData: BackupFullV2 = {
                   version: BACKUP_VERSION,
                   timestamp: Date.now(),
                   accounts: accountData,
                   preferences: preferencesData,
-                  channelConfigs
+                  channelConfigs,
                 }
                 await uploadBackup(JSON.stringify(exportData, null, 2), {
                   url: webdavUrl,
                   username: webdavUsername,
-                  password: webdavPassword
+                  password: webdavPassword,
                 })
                 toast.success(t("export.dataExported"))
               } catch (e: any) {
@@ -221,7 +224,8 @@ export default function WebDAVSettings() {
             loading={uploading}
             variant="success"
             size="sm"
-            bleed>
+            bleed
+          >
             {uploading
               ? t("common:status.uploading")
               : t("webdav.uploadBackup")}
@@ -235,7 +239,7 @@ export default function WebDAVSettings() {
                 const content = await downloadBackup({
                   url: webdavUrl,
                   username: webdavUsername,
-                  password: webdavPassword
+                  password: webdavPassword,
                 })
                 const data = JSON.parse(content)
                 const result = await importFromBackupObject(data)
@@ -245,7 +249,7 @@ export default function WebDAVSettings() {
               } catch (e: any) {
                 console.error(e)
                 toast.error(
-                  e?.message || t("importExport:import.downloadImportFailed")
+                  e?.message || t("importExport:import.downloadImportFailed"),
                 )
               } finally {
                 setDownloading(false)
@@ -255,7 +259,8 @@ export default function WebDAVSettings() {
             loading={downloading}
             variant="default"
             size="sm"
-            bleed>
+            bleed
+          >
             {downloading
               ? t("common:status.processing")
               : t("webdav.downloadImport")}

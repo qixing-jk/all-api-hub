@@ -10,7 +10,7 @@ export const permissionIconMap: Partial<
 > = {
   cookies: <Cookie className="h-5 w-5 text-amber-500" />,
   webRequest: <Network className="h-5 w-5 text-blue-500" />,
-  webRequestBlocking: <ShieldAlert className="h-5 w-5 text-purple-500" />
+  webRequestBlocking: <ShieldAlert className="h-5 w-5 text-purple-500" />,
 }
 
 export interface PermissionListItem {

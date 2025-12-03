@@ -24,7 +24,7 @@ const LinkCard = ({
   href,
   buttonText,
   buttonVariant = "default",
-  iconClass = "text-gray-900 dark:text-gray-100"
+  iconClass = "text-gray-900 dark:text-gray-100",
 }: LinkCardProps) => {
   return (
     <Card padding="md">

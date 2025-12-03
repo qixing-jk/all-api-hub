@@ -7,20 +7,20 @@ import {
   fetchAvailableModel,
   fetchModelPricing,
   fetchUserGroupMap,
-  fetchUserGroups
+  fetchUserGroups,
 } from "~/services/apiService/oneHub"
 import {
   transformModelPricing,
-  transformUserGroup
+  transformUserGroup,
 } from "~/utils/dataTransform/one-hub"
 
 vi.mock("~/services/apiService/common/utils", () => ({
-  fetchApiData: vi.fn()
+  fetchApiData: vi.fn(),
 }))
 
 vi.mock("~/utils/dataTransform/one-hub", () => ({
   transformModelPricing: vi.fn(),
-  transformUserGroup: vi.fn()
+  transformUserGroup: vi.fn(),
 }))
 
 const mockedFetchApiData = fetchApiData as unknown as ReturnType<typeof vi.fn>
@@ -33,7 +33,7 @@ const mockedTransformUserGroup = transformUserGroup as unknown as ReturnType<
 const baseAuthParams = {
   baseUrl: "https://example.com",
   userId: 1,
-  token: "token"
+  token: "token",
 }
 
 describe("OneHub API service", () => {
@@ -48,7 +48,7 @@ describe("OneHub API service", () => {
 
     expect(mockedFetchApiData).toHaveBeenCalledWith({
       ...baseAuthParams,
-      endpoint: "/api/available_model"
+      endpoint: "/api/available_model",
     })
   })
 
@@ -59,7 +59,7 @@ describe("OneHub API service", () => {
 
     expect(mockedFetchApiData).toHaveBeenCalledWith({
       ...baseAuthParams,
-      endpoint: "/api/user_group_map"
+      endpoint: "/api/user_group_map",
     })
   })
 
@@ -70,7 +70,7 @@ describe("OneHub API service", () => {
       data: [],
       group_ratio: {},
       success: true,
-      usable_group: {}
+      usable_group: {},
     }
 
     mockedFetchApiData
@@ -82,15 +82,15 @@ describe("OneHub API service", () => {
 
     expect(mockedFetchApiData).toHaveBeenNthCalledWith(1, {
       ...baseAuthParams,
-      endpoint: "/api/available_model"
+      endpoint: "/api/available_model",
     })
     expect(mockedFetchApiData).toHaveBeenNthCalledWith(2, {
       ...baseAuthParams,
-      endpoint: "/api/user_group_map"
+      endpoint: "/api/user_group_map",
     })
     expect(mockedTransformModelPricing).toHaveBeenCalledWith(
       availableModel,
-      userGroupMap
+      userGroupMap,
     )
     expect(result).toBe(transformed)
   })
@@ -100,7 +100,7 @@ describe("OneHub API service", () => {
     mockedFetchApiData.mockRejectedValueOnce(error)
 
     await expect(fetchModelPricing(baseAuthParams as any)).rejects.toThrow(
-      "network error"
+      "network error",
     )
   })
 
@@ -136,7 +136,7 @@ describe("OneHub API service", () => {
     mockedFetchApiData.mockRejectedValueOnce(error)
 
     await expect(fetchAccountTokens(baseAuthParams as any)).rejects.toThrow(
-      "token error"
+      "token error",
     )
   })
 
@@ -150,7 +150,7 @@ describe("OneHub API service", () => {
 
     expect(mockedFetchApiData).toHaveBeenCalledWith({
       ...baseAuthParams,
-      endpoint: "/api/user_group_map"
+      endpoint: "/api/user_group_map",
     })
     expect(mockedTransformUserGroup).toHaveBeenCalledWith(responseData)
     expect(result).toBe(transformed)
@@ -161,14 +161,14 @@ describe("OneHub API service", () => {
     mockedFetchApiData.mockRejectedValueOnce(error)
 
     await expect(fetchUserGroups(baseAuthParams as any)).rejects.toThrow(
-      "group error"
+      "group error",
     )
   })
 
   it("fetchAccountAvailableModels should return keys of available models", async () => {
     const availableModel = {
       modelA: {},
-      modelB: {}
+      modelB: {},
     }
     mockedFetchApiData.mockResolvedValueOnce(availableModel)
 

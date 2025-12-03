@@ -25,25 +25,25 @@ const buttonVariants = cva(
           "bg-[var(--button-warning-bg)] text-[var(--button-warning-foreground)] shadow-sm hover:bg-[var(--button-warning-bg-hover)] focus-visible:ring-[var(--button-warning-ring)] focus-visible:ring-opacity-40",
         ghost:
           "text-[var(--button-ghost-foreground)] hover:bg-[var(--button-ghost-hover-bg)] hover:text-[var(--button-ghost-hover-foreground)]",
-        link: "text-[var(--button-link-foreground)] underline-offset-4 hover:text-[var(--button-link-hover-foreground)] hover:underline focus-visible:ring-[var(--button-link-ring)] focus-visible:ring-opacity-40"
+        link: "text-[var(--button-link-foreground)] underline-offset-4 hover:text-[var(--button-link-hover-foreground)] hover:underline focus-visible:ring-[var(--button-link-ring)] focus-visible:ring-opacity-40",
       },
       size: {
         default: "h-9 px-4 py-2",
         sm: "h-8 rounded-md px-3",
         lg: "h-10 rounded-md px-6",
-        icon: "h-9 w-9"
+        icon: "h-9 w-9",
       },
       bleed: {
         true: "w-full",
-        false: ""
-      }
+        false: "",
+      },
     },
     defaultVariants: {
       variant: "default",
       size: "default",
-      bleed: false
-    }
-  }
+      bleed: false,
+    },
+  },
 )
 
 function Button({
@@ -90,7 +90,8 @@ function Button({
     <Comp
       data-slot="button"
       className={cn(buttonVariants({ variant, size, bleed, className }))}
-      {...props}>
+      {...props}
+    >
       {loading && (
         <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <Spinner
@@ -102,7 +103,8 @@ function Button({
       )}
       <span
         className={cn("flex items-center gap-2", loading && "opacity-0")}
-        aria-live={loading ? "polite" : undefined}>
+        aria-live={loading ? "polite" : undefined}
+      >
         {leftIcon && <span className={iconClass}>{leftIcon}</span>}
         <span className="truncate">{children}</span>
         {rightIcon && <span className={iconClass}>{rightIcon}</span>}

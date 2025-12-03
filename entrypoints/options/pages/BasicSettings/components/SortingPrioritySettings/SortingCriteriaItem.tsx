@@ -14,7 +14,7 @@ interface SortingCriteriaItemProps {
 
 export function SortingCriteriaItem({
   item,
-  onToggleEnabled
+  onToggleEnabled,
 }: SortingCriteriaItemProps) {
   const { t } = useTranslation("settings")
   const {
@@ -23,13 +23,13 @@ export function SortingCriteriaItem({
     setNodeRef,
     transform,
     transition,
-    isDragging
+    isDragging,
   } = useSortable({ id: item.id })
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1
+    opacity: isDragging ? 0.5 : 1,
   }
 
   return (
@@ -38,13 +38,15 @@ export function SortingCriteriaItem({
       style={style}
       variant="default"
       padding="none"
-      className="dark:hover:bg-dark-bg-secondary mb-2 transition-colors hover:bg-gray-100">
+      className="dark:hover:bg-dark-bg-secondary mb-2 transition-colors hover:bg-gray-100"
+    >
       <CardContent padding="sm">
         <div className="flex items-center gap-2">
           <div
             {...attributes}
             {...listeners}
-            className="dark:text-dark-text-tertiary dark:hover:text-dark-text-secondary mr-1 flex cursor-move touch-none items-center text-gray-400 hover:text-gray-600">
+            className="dark:text-dark-text-tertiary dark:hover:text-dark-text-secondary mr-1 flex cursor-move touch-none items-center text-gray-400 hover:text-gray-600"
+          >
             <Bars2Icon className="h-5 w-5" />
           </div>
           <div className="min-w-0 grow">

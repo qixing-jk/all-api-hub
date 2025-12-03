@@ -1,14 +1,24 @@
 import { useEffect, useState } from "react"
 
+import { navigateWithinOptionsPage } from "~/utils/navigation"
+
 import { menuItems } from "../constants"
 
 // 解析URL hash和参数
 function parseHash() {
   const hash = window.location.hash.slice(1) // 去掉 #
-  if (!hash) return { page: "basic", params: {} }
+
+  const params: Record<string, string> = {}
+  const searchParams = new URLSearchParams(window.location.search)
+  for (const [key, value] of searchParams.entries()) {
+    params[key] = value
+  }
+
+  if (!hash) {
+    return { page: "basic", params }
+  }
 
   const [page, ...paramParts] = hash.split("?")
-  const params: Record<string, string> = {}
 
   if (paramParts.length > 0) {
     const paramString = paramParts.join("?")
@@ -23,12 +33,8 @@ function parseHash() {
 
 // 更新URL hash
 function updateHash(page: string, params?: Record<string, string>) {
-  let hash = `#${page}`
-  if (params && Object.keys(params).length > 0) {
-    const searchParams = new URLSearchParams(params)
-    hash += `?${searchParams.toString()}`
-  }
-  window.history.replaceState(null, "", hash)
+  const hash = `#${page}`
+  navigateWithinOptionsPage(hash, params)
 }
 
 export function useHashNavigation() {
@@ -65,7 +71,7 @@ export function useHashNavigation() {
   // 切换菜单项
   const handleMenuItemChange = (
     itemId: string,
-    params?: Record<string, string>
+    params?: Record<string, string>,
   ) => {
     setActiveMenuItem(itemId)
     setRouteParams(params || {})

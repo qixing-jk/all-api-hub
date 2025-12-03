@@ -92,6 +92,6 @@ export function useCopyKeyDialog(isOpen: boolean, account: DisplaySiteData) {
     expandedTokens,
     fetchTokens,
     copyKey,
-    toggleTokenExpansion
+    toggleTokenExpansion,
   }
 }

@@ -15,7 +15,7 @@ export const PriceView = ({
   showRealPrice,
   tokenBillingType,
   isAvailableForUser,
-  formatPriceCompact
+  formatPriceCompact,
 }: PriceViewProps) => {
   const { t } = useTranslation("modelList")
   let inputPrice = showRealPrice
@@ -35,26 +35,28 @@ export const PriceView = ({
     <div className="flex items-center gap-6">
       {/* 输入价格 */}
       <div className="flex items-center space-x-2">
-        <span className="text-sm text-gray-600 dark:text-dark-text-primary">
+        <span className="dark:text-dark-text-primary text-sm text-gray-600">
           {t("input")}
         </span>
         <span
           className={`text-sm ${
             isAvailableForUser ? "text-blue-600" : "text-gray-500"
-          }`}>
+          }`}
+        >
           {inputPrice}
         </span>
       </div>
 
       {/* 输出价格 */}
       <div className="flex items-center space-x-2">
-        <span className="text-sm text-gray-600 dark:text-dark-text-primary">
+        <span className="dark:text-dark-text-primary text-sm text-gray-600">
           {t("output")}
         </span>
         <span
           className={`text-sm ${
             isAvailableForUser ? "text-green-600" : "text-gray-500"
-          }`}>
+          }`}
+        >
           {outputPrice}
         </span>
       </div>

@@ -19,7 +19,7 @@ import {
   Qwen,
   Tencent,
   Yi,
-  Zhipu
+  Zhipu,
 } from "@lobehub/icons"
 
 // 厂商类型
@@ -43,132 +43,132 @@ export const PROVIDER_CONFIGS: Record<string, ProviderConfig> = {
     patterns: [
       /gpt|whisper/i,
       /o\d+/i, // o1, o3 等
-      /text-embedding/i
+      /text-embedding/i,
     ],
     color: "text-green-600",
-    bgColor: "bg-green-50"
+    bgColor: "bg-green-50",
   },
   Claude: {
     name: "Claude",
     icon: Claude,
     patterns: [/claude/i, /sonnet/i, /haiku/i, /neptune/i, /opus/i],
     color: "text-orange-600",
-    bgColor: "bg-orange-50"
+    bgColor: "bg-orange-50",
   },
   Gemini: {
     name: "Gemini",
     icon: Gemini,
     patterns: [/gemini/i],
     color: "text-blue-600",
-    bgColor: "bg-blue-50"
+    bgColor: "bg-blue-50",
   },
   Grok: {
     name: "Grok",
     icon: Grok,
     patterns: [/grok/i],
     color: "text-gray-900",
-    bgColor: "bg-gray-50"
+    bgColor: "bg-gray-50",
   },
   Qwen: {
     name: "阿里",
     icon: Qwen,
     patterns: [/qwen/i],
     color: "text-purple-600",
-    bgColor: "bg-purple-50"
+    bgColor: "bg-purple-50",
   },
   DeepSeek: {
     name: "DeepSeek",
     icon: DeepSeek,
     patterns: [/deepseek/i],
     color: "text-cyan-600",
-    bgColor: "bg-cyan-50"
+    bgColor: "bg-cyan-50",
   },
   Mistral: {
     name: "Mistral",
     icon: Mistral,
     patterns: [
-      /mistral|magistral|mixtral|codestral|pixtral|devstral|Voxtral|ministral/i
+      /mistral|magistral|mixtral|codestral|pixtral|devstral|Voxtral|ministral/i,
     ],
     color: "text-orange-500",
-    bgColor: "bg-orange-50"
+    bgColor: "bg-orange-50",
   },
   Moonshot: {
     name: "Moonshot",
     icon: Moonshot,
     patterns: [/moonshot|kimi/i],
     color: "text-indigo-600",
-    bgColor: "bg-indigo-50"
+    bgColor: "bg-indigo-50",
   },
   Azure: {
     name: "Azure",
     icon: Azure,
     patterns: [/azure/i],
     color: "text-blue-500",
-    bgColor: "bg-blue-50"
+    bgColor: "bg-blue-50",
   },
   ZhipuAI: {
     name: "智谱",
     icon: Zhipu,
     patterns: [/glm/i],
     color: "text-blue-700",
-    bgColor: "bg-blue-50"
+    bgColor: "bg-blue-50",
   },
   DeepMind: {
     name: "DeepMind",
     icon: DeepMind,
     patterns: [/gemma|imagen/i],
     color: "text-blue-700",
-    bgColor: "bg-blue-50"
+    bgColor: "bg-blue-50",
   },
   Ollama: {
     name: "Ollama",
     icon: Ollama,
     patterns: [/llama/i],
     color: "text-blue-700",
-    bgColor: "bg-blue-50"
+    bgColor: "bg-blue-50",
   },
   Tencent: {
     name: "腾讯",
     icon: Tencent,
     patterns: [/Tencent|hunyuan/i],
     color: "text-blue-700",
-    bgColor: "bg-blue-50"
+    bgColor: "bg-blue-50",
   },
   Baidu: {
     name: "百度",
     icon: Baidu,
     patterns: [/Baidu|ERNIE/i],
     color: "text-yellow-600",
-    bgColor: "bg-yellow-50"
+    bgColor: "bg-yellow-50",
   },
   yi: {
     name: "零一万物",
     icon: Yi,
     patterns: [/01-ai|yi/i],
     color: "text-yellow-600",
-    bgColor: "bg-yellow-50"
+    bgColor: "bg-yellow-50",
   },
   Baichuan: {
     name: "百川",
     icon: Baichuan,
     patterns: [/baichuan/i],
     color: "text-yellow-600",
-    bgColor: "bg-yellow-50"
+    bgColor: "bg-yellow-50",
   },
   Cohere: {
     name: "Cohere",
     icon: Cohere,
     patterns: [/command|c4ai/i],
     color: "text-purple-500",
-    bgColor: "bg-purple-50"
+    bgColor: "bg-purple-50",
   },
   Unknown: {
     name: "Unknown",
     icon: () => null,
     patterns: [],
     color: "text-gray-600",
-    bgColor: "bg-gray-50"
-  }
+    bgColor: "bg-gray-50",
+  },
 }
 
 /**
@@ -201,7 +201,7 @@ export const getProviderConfig = (modelName: string): ProviderConfig => {
  */
 export const getAllProviders = (): ProviderType[] => {
   return Object.keys(PROVIDER_CONFIGS).filter(
-    (key) => key !== "Unknown"
+    (key) => key !== "Unknown",
   ) as ProviderType[]
 }
 
@@ -210,11 +210,11 @@ export const getAllProviders = (): ProviderType[] => {
  */
 export const filterModelsByProvider = <T extends { model_name: string }>(
   models: T[],
-  providerType: ProviderType | "all"
+  providerType: ProviderType | "all",
 ): T[] => {
   if (providerType === "all") return models
 
   return models.filter(
-    (model) => identifyProvider(model.model_name) === providerType
+    (model) => identifyProvider(model.model_name) === providerType,
   )
 }

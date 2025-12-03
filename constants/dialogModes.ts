@@ -3,7 +3,7 @@
  */
 export const DIALOG_MODES = {
   ADD: "add",
-  EDIT: "edit"
+  EDIT: "edit",
 } as const
 
 /**

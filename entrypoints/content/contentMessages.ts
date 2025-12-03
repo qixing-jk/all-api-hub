@@ -3,8 +3,8 @@ import { t } from "i18next"
 import { fetchUserInfo } from "~/services/apiService"
 import {
   EXTENSION_HEADER_NAME,
-  EXTENSION_HEADER_VALUE
-} from "~/utils/cookieHelper.ts"
+  EXTENSION_HEADER_VALUE,
+} from "~/utils/cookieHelper"
 import { getErrorMessage } from "~/utils/error"
 
 export function setupContentMessageHandlers() {
@@ -46,7 +46,7 @@ export function setupContentMessageHandlers() {
           if (!user || !user.id) {
             sendResponse({
               success: false,
-              error: t("messages:content.userInfoNotFound")
+              error: t("messages:content.userInfoNotFound"),
             })
             return
           }
@@ -131,7 +131,7 @@ export function setupContentMessageHandlers() {
             status: response.status,
             headers,
             data,
-            error: errorMessage
+            error: errorMessage,
           })
         } catch (error) {
           sendResponse({ success: false, error: getErrorMessage(error) })
@@ -143,7 +143,7 @@ export function setupContentMessageHandlers() {
 }
 
 async function waitForUserInfo(
-  maxWaitTime = 5000
+  maxWaitTime = 5000,
 ): Promise<{ userId: string; user: any }> {
   const startTime = Date.now()
 
@@ -193,7 +193,7 @@ function sanitizeHeaders(headers: HeadersInit): Record<string, string> {
         acc[key] = value
         return acc
       },
-      {} as Record<string, string>
+      {} as Record<string, string>,
     )
   }
 
@@ -204,13 +204,13 @@ function sanitizeHeaders(headers: HeadersInit): Record<string, string> {
       }
       return acc
     },
-    {} as Record<string, string>
+    {} as Record<string, string>,
   )
 }
 
 async function parseResponseData(
   response: Response,
-  responseType: TempWindowResponseType
+  responseType: TempWindowResponseType,
 ) {
   switch (responseType) {
     case "text":
@@ -232,7 +232,7 @@ async function parseResponseData(
       } catch (error) {
         console.warn(
           "[Content] Failed to parse JSON response, fallback to text",
-          error
+          error,
         )
         return text
       }

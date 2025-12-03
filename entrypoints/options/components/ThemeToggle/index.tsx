@@ -1,7 +1,7 @@
 import {
   ComputerDesktopIcon,
   MoonIcon,
-  SunIcon
+  SunIcon,
 } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
@@ -16,20 +16,20 @@ const getThemeOptions = (t: (key: string) => string) => {
       mode: "light" as ThemeMode,
       label: t("settings:theme.light"),
       icon: SunIcon,
-      description: t("settings:theme.useLightTheme")
+      description: t("settings:theme.useLightTheme"),
     },
     {
       mode: "dark" as ThemeMode,
       label: t("settings:theme.dark"),
       icon: MoonIcon,
-      description: t("settings:theme.useDarkTheme")
+      description: t("settings:theme.useDarkTheme"),
     },
     {
       mode: "system" as ThemeMode,
       label: t("settings:theme.followSystem"),
       icon: ComputerDesktopIcon,
-      description: t("settings:theme.followSystemTheme")
-    }
+      description: t("settings:theme.followSystemTheme"),
+    },
   ]
 }
 
@@ -49,7 +49,8 @@ const ThemeToggle = () => {
       description={t("theme.selectTheme")}
       rightContent={
         <div
-          className={`flex flex-col sm:flex-row ${COLORS.background.tertiary} rounded-lg p-1 shadow-sm ${ANIMATIONS.transition.base}`}>
+          className={`flex flex-col sm:flex-row ${COLORS.background.tertiary} rounded-lg p-1 shadow-sm ${ANIMATIONS.transition.base}`}
+        >
           {themeOptions.map(({ mode, label, icon: Icon, description }) => {
             const isActive = themeMode === mode
             return (
@@ -59,7 +60,8 @@ const ThemeToggle = () => {
                 isActive={isActive}
                 showActiveIndicator
                 title={description}
-                aria-label={t("theme.switchTo", { theme: label, description })}>
+                aria-label={t("theme.switchTo", { theme: label, description })}
+              >
                 <span className="flex items-center">
                   <Icon
                     className={`mr-2 h-4 w-4 transition-colors ${
@@ -77,11 +79,12 @@ const ThemeToggle = () => {
       }
       leftContent={
         <Caption
-          className={`${COLORS.text.tertiary} mt-1 ${ANIMATIONS.transition.base}`}>
+          className={`${COLORS.text.tertiary} mt-1 ${ANIMATIONS.transition.base}`}
+        >
           {t("theme.currentTheme", {
             theme: themeOptions.find((opt) => opt.mode === themeMode)?.label,
             resolvedTheme:
-              resolvedTheme === "dark" ? t("theme.dark") : t("theme.light")
+              resolvedTheme === "dark" ? t("theme.dark") : t("theme.light"),
           })}
         </Caption>
       }

@@ -2,13 +2,13 @@ import {
   CheckCircleIcon,
   ListBulletIcon,
   MagnifyingGlassIcon,
-  XCircleIcon
+  XCircleIcon,
 } from "@heroicons/react/24/outline"
 import { ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Input } from "~/components/ui"
-import { ExecutionStatistics } from "~/types/newApiModelSync.ts"
+import { ExecutionStatistics } from "~/types/newApiModelSync"
 
 export type FilterStatus = "all" | "success" | "failed"
 
@@ -25,7 +25,7 @@ export default function FilterBar({
   statistics,
   keyword,
   onStatusChange,
-  onKeywordChange
+  onKeywordChange,
 }: FilterBarProps) {
   const { t } = useTranslation("newApiModelSync")
 
@@ -33,7 +33,7 @@ export default function FilterBar({
     value: FilterStatus,
     color: string,
     icon: ReactNode,
-    count?: number
+    count?: number,
   ) => (
     <button
       onClick={() => onStatusChange(value)}
@@ -41,7 +41,8 @@ export default function FilterBar({
         status === value
           ? `${color} text-white`
           : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
-      }`}>
+      }`}
+    >
       {icon}
       <span>{t(`execution.filters.${value}`)}</span>
       {count !== undefined && count > 0 && (
@@ -50,7 +51,8 @@ export default function FilterBar({
             status === value
               ? "bg-white/20 text-white"
               : "bg-gray-200 text-gray-600 dark:bg-gray-600 dark:text-gray-300"
-          }`}>
+          }`}
+        >
           {count}
         </span>
       )}
@@ -64,19 +66,19 @@ export default function FilterBar({
           "all",
           "bg-blue-600",
           <ListBulletIcon className="h-4 w-4" />,
-          statistics.total
+          statistics.total,
         )}
         {renderFilterButton(
           "success",
           "bg-green-600",
           <CheckCircleIcon className="h-4 w-4" />,
-          statistics.successCount
+          statistics.successCount,
         )}
         {renderFilterButton(
           "failed",
           "bg-red-600",
           <XCircleIcon className="h-4 w-4" />,
-          statistics.failureCount
+          statistics.failureCount,
         )}
       </div>
       <div className="relative flex-1 md:max-w-xs">

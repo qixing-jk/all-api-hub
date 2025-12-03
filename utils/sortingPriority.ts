@@ -3,11 +3,11 @@ import type {
   CurrencyType,
   DisplaySiteData,
   SiteAccount,
-  SortField
+  SortField,
 } from "~/types"
 import {
   SortingCriteriaType,
-  type SortingPriorityConfig
+  type SortingPriorityConfig,
 } from "~/types/sorting"
 
 /**
@@ -19,45 +19,45 @@ export const DEFAULT_SORTING_PRIORITY_CONFIG: SortingPriorityConfig = {
     {
       id: SortingCriteriaType.PINNED,
       enabled: true,
-      priority: 0
+      priority: 0,
     },
     {
       id: SortingCriteriaType.CURRENT_SITE,
       enabled: true,
-      priority: 1
+      priority: 1,
     },
     {
       id: SortingCriteriaType.CHECK_IN_REQUIREMENT,
       enabled: true,
-      priority: 2
+      priority: 2,
     },
     {
       id: SortingCriteriaType.MATCHED_OPEN_TABS,
       enabled: true,
-      priority: 3
+      priority: 3,
     },
     {
       id: SortingCriteriaType.HEALTH_STATUS,
       enabled: true,
-      priority: 4
+      priority: 4,
     },
     {
       id: SortingCriteriaType.CUSTOM_CHECK_IN_URL,
       enabled: true,
-      priority: 5
+      priority: 5,
     },
     {
       id: SortingCriteriaType.CUSTOM_REDEEM_URL,
       enabled: true,
-      priority: 6
+      priority: 6,
     },
     {
       id: SortingCriteriaType.USER_SORT_FIELD,
       enabled: true,
-      priority: 7
-    }
+      priority: 7,
+    },
   ],
-  lastModified: Date.now()
+  lastModified: Date.now(),
 }
 
 function compareByUserSortField(
@@ -65,7 +65,7 @@ function compareByUserSortField(
   b: DisplaySiteData,
   sortField: SortField,
   currencyType: CurrencyType,
-  sortOrder: "asc" | "desc"
+  sortOrder: "asc" | "desc",
 ) {
   switch (sortField) {
     case "name":
@@ -93,7 +93,7 @@ function applySortingCriteria(
   currencyType: CurrencyType,
   sortOrder: "asc" | "desc",
   matchedAccountScores: Record<string, number>,
-  pinnedAccountIds: string[]
+  pinnedAccountIds: string[],
 ): number {
   switch (criteriaId) {
     case SortingCriteriaType.PINNED: {
@@ -167,7 +167,7 @@ function applySortingCriteria(
         b,
         userSortField,
         currencyType,
-        sortOrder
+        sortOrder,
       )
 
     default:
@@ -193,7 +193,7 @@ export function createDynamicSortComparator(
   currencyType: CurrencyType,
   sortOrder: "asc" | "desc",
   matchedAccountScores: Record<string, number> = {},
-  pinnedAccountIds: string[] = []
+  pinnedAccountIds: string[] = [],
 ) {
   return (a: DisplaySiteData, b: DisplaySiteData): number => {
     const enabledCriteria = config.criteria
@@ -210,7 +210,7 @@ export function createDynamicSortComparator(
         currencyType,
         sortOrder,
         matchedAccountScores,
-        pinnedAccountIds
+        pinnedAccountIds,
       )
       if (comparison !== 0) return comparison
     }

@@ -103,6 +103,12 @@
     "importSuccess": "Successfully imported new channel {{channelName}}",
     "importFailed": "Import failed, an unknown error occurred"
   },
+  "cliproxy": {
+    "configMissing": "Please configure CLIProxyAPI Management API base URL and key in settings first",
+    "updateSuccess": "Successfully updated CLIProxy provider {{name}}",
+    "importSuccess": "Successfully imported provider {{name}} to CLIProxyAPI",
+    "importFailed": "Failed to import provider to CLIProxyAPI"
+  },
   "autodetect": {
     "timeout": "Auto-detection timeout, please try adding manually",
     "notLoggedIn": "You are not logged in to the current site, or the login information has expired. Cannot auto-add. Please check the help documentation or click to login first",

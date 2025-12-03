@@ -6,7 +6,7 @@ import { DialogStateProvider } from "./DialogStateContext"
 
 export const AccountManagementProvider = ({
   children,
-  refreshKey
+  refreshKey,
 }: {
   children: ReactNode
   refreshKey?: number

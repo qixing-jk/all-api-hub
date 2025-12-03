@@ -6,7 +6,7 @@ import {
   useEffect,
   useMemo,
   useRef,
-  useState
+  useState,
 } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next" // 1. 定义 Context 的值类型
@@ -21,7 +21,7 @@ import type {
   DisplaySiteData,
   SiteAccount,
   SortField,
-  SortOrder
+  SortOrder,
 } from "~/types"
 import {
   getActiveTabs,
@@ -29,7 +29,7 @@ import {
   onRuntimeMessage,
   onTabActivated,
   onTabRemoved,
-  onTabUpdated
+  onTabUpdated,
 } from "~/utils/browserApi"
 import { createDynamicSortComparator } from "~/utils/sortingPriority"
 
@@ -53,7 +53,7 @@ interface AccountDataContextType {
   togglePinAccount: (id: string) => Promise<boolean>
   loadAccountData: () => Promise<void>
   handleRefresh: (
-    force?: boolean
+    force?: boolean,
   ) => Promise<{ success: number; failed: number; latestSyncTime?: number }>
   handleSort: (field: SortField) => void
   sortField: SortField
@@ -62,13 +62,13 @@ interface AccountDataContextType {
 
 // 2. 创建 Context
 const AccountDataContext = createContext<AccountDataContextType | undefined>(
-  undefined
+  undefined,
 )
 
 // 3. 创建 Provider 组件
 export const AccountDataProvider = ({
   children,
-  refreshKey
+  refreshKey,
 }: {
   children: ReactNode
   refreshKey?: number
@@ -80,7 +80,7 @@ export const AccountDataProvider = ({
     sortOrder: initialSortOrder,
     updateSortConfig,
     sortingPriorityConfig,
-    refreshOnOpen
+    refreshOnOpen,
   } = useUserPreferencesContext()
   const [accounts, setAccounts] = useState<SiteAccount[]>([])
   const [displayData, setDisplayData] = useState<DisplaySiteData[]>([])
@@ -90,7 +90,7 @@ export const AccountDataProvider = ({
     today_total_requests: 0,
     today_total_prompt_tokens: 0,
     today_total_completion_tokens: 0,
-    today_total_income: 0
+    today_total_income: 0,
   })
   const [lastUpdateTime, setLastUpdateTime] = useState<Date>()
   const [isInitialLoad, setIsInitialLoad] = useState(true)
@@ -101,7 +101,7 @@ export const AccountDataProvider = ({
   const [sortField, setSortField] = useState<SortField>(initialSortField)
   const [sortOrder, setSortOrder] = useState<SortOrder>(initialSortOrder)
   const [detectedAccount, setDetectedAccount] = useState<SiteAccount | null>(
-    null
+    null,
   )
   const [isDetecting, setIsDetecting] = useState(true)
   const [pinnedAccountIds, setPinnedAccountIds] = useState<string[]>([])
@@ -134,7 +134,7 @@ export const AccountDataProvider = ({
       const allAccounts = await accountStorage.getAllAccounts()
       const accountStats = await accountStorage.getAccountStats()
       const displaySiteData = accountStorage.convertToDisplayData(
-        allAccounts
+        allAccounts,
       ) as DisplaySiteData[]
 
       if (!isInitialLoad) {
@@ -148,13 +148,13 @@ export const AccountDataProvider = ({
 
       const pinnedIds = await accountStorage.getPinnedList()
       const validPinnedIds = pinnedIds.filter((id) =>
-        displaySiteData.some((site) => site.id === id)
+        displaySiteData.some((site) => site.id === id),
       )
       setPinnedAccountIds(validPinnedIds)
 
       if (allAccounts.length > 0) {
         const latestSyncTime = Math.max(
-          ...allAccounts.map((acc) => acc.last_sync_time)
+          ...allAccounts.map((acc) => acc.last_sync_time),
         )
         if (latestSyncTime > 0) {
           setLastUpdateTime(new Date(latestSyncTime))
@@ -187,7 +187,7 @@ export const AccountDataProvider = ({
         setIsRefreshing(false)
       }
     },
-    [loadAccountData]
+    [loadAccountData],
   )
 
   const hasRefreshedOnOpen = useRef(false)
@@ -212,7 +212,7 @@ export const AccountDataProvider = ({
                 if (result.failed > 0) {
                   return t("refresh.refreshComplete", {
                     success: result.success,
-                    failed: result.failed
+                    failed: result.failed,
                   })
                 }
                 const sum = result.success + result.failed
@@ -226,13 +226,13 @@ export const AccountDataProvider = ({
                 if (refreshedCount < sum) {
                   return t("refresh.refreshPartialSkipped", {
                     success: refreshedCount,
-                    skipped: sum - refreshedCount
+                    skipped: sum - refreshedCount,
                   })
                 }
                 console.log("[Popup] 打开插件时自动刷新完成")
                 return t("refresh.refreshSuccess")
               },
-              error: t("refresh.refreshFailed")
+              error: t("refresh.refreshFailed"),
             })
           } else {
             await handleRefresh(false)
@@ -282,7 +282,7 @@ export const AccountDataProvider = ({
         message.payload.type === "refresh_completed"
       ) {
         console.log(
-          "[AccountContext] Background refresh completed, reloading data."
+          "[AccountContext] Background refresh completed, reloading data.",
         )
         loadAccountData()
       }
@@ -302,7 +302,7 @@ export const AccountDataProvider = ({
       }
       updateSortConfig(field, newOrder)
     },
-    [sortField, sortOrder, updateSortConfig]
+    [sortField, sortOrder, updateSortConfig],
   )
 
   // State to hold matched account scores from open tabs
@@ -373,7 +373,7 @@ export const AccountDataProvider = ({
 
   const isAccountPinned = useCallback(
     (id: string) => pinnedAccountIds.includes(id),
-    [pinnedAccountIds]
+    [pinnedAccountIds],
   )
 
   const pinAccount = useCallback(async (id: string) => {
@@ -381,7 +381,7 @@ export const AccountDataProvider = ({
     if (success) {
       setPinnedAccountIds((prev) => [
         id,
-        ...prev.filter((pinnedId) => pinnedId !== id)
+        ...prev.filter((pinnedId) => pinnedId !== id),
       ])
     }
     return success
@@ -402,7 +402,7 @@ export const AccountDataProvider = ({
       }
       return pinAccount(id)
     },
-    [isAccountPinned, pinAccount, unpinAccount]
+    [isAccountPinned, pinAccount, unpinAccount],
   )
 
   const sortedData = useMemo(() => {
@@ -413,7 +413,7 @@ export const AccountDataProvider = ({
       currencyType,
       sortOrder,
       matchedAccountScores,
-      pinnedAccountIds
+      pinnedAccountIds,
     )
     return [...displayData].sort(comparator)
   }, [
@@ -424,7 +424,7 @@ export const AccountDataProvider = ({
     currencyType,
     sortOrder,
     matchedAccountScores,
-    pinnedAccountIds
+    pinnedAccountIds,
   ])
 
   const value = useMemo(
@@ -449,7 +449,7 @@ export const AccountDataProvider = ({
       handleRefresh,
       handleSort,
       sortField,
-      sortOrder
+      sortOrder,
     }),
     [
       accounts,
@@ -472,8 +472,8 @@ export const AccountDataProvider = ({
       handleRefresh,
       handleSort,
       sortField,
-      sortOrder
-    ]
+      sortOrder,
+    ],
   )
 
   return (
@@ -493,7 +493,7 @@ export const useAccountDataContext = () => {
     !context.handleSort
   ) {
     throw new Error(
-      "useAccountDataContext must be used within a AccountDataProvider and have all required functions"
+      "useAccountDataContext must be used within a AccountDataProvider and have all required functions",
     )
   }
   return context

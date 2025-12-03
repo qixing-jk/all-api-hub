@@ -21,7 +21,8 @@ export default function DialogHeader({ mode }: DialogHeaderProps) {
     <div className="flex items-center justify-between">
       <div className="flex items-center space-x-3">
         <div
-          className={`h-8 w-8 ${iconBgClass} flex items-center justify-center rounded-lg`}>
+          className={`h-8 w-8 ${iconBgClass} flex items-center justify-center rounded-lg`}
+        >
           <Icon className="h-4 w-4 text-white" />
         </div>
         <DialogTitle className="dark:text-dark-text-primary text-lg font-semibold text-gray-900">

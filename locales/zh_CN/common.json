@@ -33,7 +33,9 @@
     "importing": "导入中...",
     "testing": "测试中...",
     "uploading": "上传中...",
-    "refreshing": "刷新中..."
+    "refreshing": "刷新中...",
+    "enabled": "已启用",
+    "disabled": "已禁用"
   },
   "labels": {
     "settings": "设置",

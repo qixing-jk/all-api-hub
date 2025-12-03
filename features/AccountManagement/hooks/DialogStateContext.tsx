@@ -6,7 +6,7 @@ import {
   useMemo,
   useRef,
   useState,
-  type ReactNode
+  type ReactNode,
 } from "react"
 import ReactDOM from "react-dom/client"
 
@@ -39,7 +39,7 @@ interface DialogStateContextType {
 }
 
 const DialogStateContext = createContext<DialogStateContextType | undefined>(
-  undefined
+  undefined,
 )
 
 export const DialogStateProvider = ({ children }: { children: ReactNode }) => {
@@ -47,7 +47,7 @@ export const DialogStateProvider = ({ children }: { children: ReactNode }) => {
   const [dialogState, setDialogState] = useState<DialogState>({
     isOpen: false,
     mode: DIALOG_MODES.ADD,
-    account: null
+    account: null,
   })
 
   const promiseRef = useRef<{
@@ -60,7 +60,7 @@ export const DialogStateProvider = ({ children }: { children: ReactNode }) => {
       setDialogState({
         isOpen: true,
         mode: options.mode,
-        account: options.account || null
+        account: options.account || null,
       })
       promiseRef.current = { resolve, reject }
     })
@@ -90,13 +90,13 @@ export const DialogStateProvider = ({ children }: { children: ReactNode }) => {
 
   const openAddAccount = useCallback(
     () => openAccountDialog({ mode: DIALOG_MODES.ADD }),
-    [openAccountDialog]
+    [openAccountDialog],
   )
   const closeAddAccount = useCallback(handleClose, [loadAccountData])
   const openEditAccount = useCallback(
     (account: DisplaySiteData) =>
       openAccountDialog({ mode: DIALOG_MODES.EDIT, account }),
-    [openAccountDialog]
+    [openAccountDialog],
   )
   const closeEditAccount = useCallback(handleClose, [loadAccountData])
 
@@ -109,7 +109,7 @@ export const DialogStateProvider = ({ children }: { children: ReactNode }) => {
       openAddAccount,
       closeAddAccount,
       openEditAccount,
-      closeEditAccount
+      closeEditAccount,
     }),
     [
       openAccountDialog,
@@ -119,8 +119,8 @@ export const DialogStateProvider = ({ children }: { children: ReactNode }) => {
       openAddAccount,
       closeAddAccount,
       openEditAccount,
-      closeEditAccount
-    ]
+      closeEditAccount,
+    ],
   )
 
   return (
@@ -144,7 +144,7 @@ export const useDialogStateContext = () => {
   const context = useContext(DialogStateContext)
   if (!context) {
     throw new Error(
-      "useDialogStateContext 必须在 DialogStateProvider 中使用，并且必须提供所有必需的函数"
+      "useDialogStateContext 必须在 DialogStateProvider 中使用，并且必须提供所有必需的函数",
     )
   }
   return context
@@ -172,7 +172,7 @@ export const showAccountDialog = (options: DialogOptions): Promise<any> => {
     root.render(
       <DialogStateProvider>
         <DialogWrapper />
-      </DialogStateProvider>
+      </DialogStateProvider>,
     )
   })
 }

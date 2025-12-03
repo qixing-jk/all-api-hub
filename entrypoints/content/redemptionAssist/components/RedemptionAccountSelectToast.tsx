@@ -27,7 +27,7 @@ export const RedemptionAccountSelectToast: React.FC<
   }, [accounts, inSearchMode, searchResults])
 
   const [selectedId, setSelectedId] = useState<string | null>(
-    displayedAccounts[0]?.id ?? null
+    displayedAccounts[0]?.id ?? null,
   )
 
   useEffect(() => {
@@ -70,7 +70,7 @@ export const RedemptionAccountSelectToast: React.FC<
         {displayedAccounts.length === 0 ? (
           <div className="text-muted-foreground py-4 text-center text-xs">
             {t("accountSelect.noResults", {
-              defaultValue: "未找到匹配的账号，请调整搜索条件"
+              defaultValue: "未找到匹配的账号，请调整搜索条件",
             })}
           </div>
         ) : (
@@ -80,7 +80,8 @@ export const RedemptionAccountSelectToast: React.FC<
             return (
               <label
                 key={account.id}
-                className="border-border/60 hover:bg-muted/70 flex cursor-pointer flex-col gap-0.5 rounded-md border px-2 py-1.5 text-xs">
+                className="border-border/60 hover:bg-muted/70 flex cursor-pointer flex-col gap-0.5 rounded-md border px-2 py-1.5 text-xs"
+              >
                 <div className="flex items-center gap-2">
                   <input
                     type="radio"

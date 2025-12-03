@@ -31,11 +31,11 @@ export async function fetchAllPaginated<T, R>(
   }>,
   aggregator: (accumulator: R, items: T[]) => R,
   initialValue: R,
-  options: PaginationOptions = {}
+  options: PaginationOptions = {},
 ): Promise<R> {
   const {
     pageSize = REQUEST_CONFIG.DEFAULT_PAGE_SIZE,
-    maxPages = REQUEST_CONFIG.MAX_PAGES
+    maxPages = REQUEST_CONFIG.MAX_PAGES,
   } = options
 
   let aggregatedData = initialValue
@@ -74,12 +74,12 @@ export async function fetchAllItems<T>(
     items: T[]
     total: number
   }>,
-  options: PaginationOptions = {}
+  options: PaginationOptions = {},
 ): Promise<T[]> {
   return fetchAllPaginated(
     fetchPage,
     (accumulator: T[], items: T[]) => [...accumulator, ...items],
     [],
-    options
+    options,
   )
 }

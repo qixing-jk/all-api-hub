@@ -17,7 +17,7 @@ export function Header({
   onRefresh,
   isLoading,
   selectedAccount,
-  isAddTokenDisabled
+  isAddTokenDisabled,
 }: HeaderProps) {
   const { t } = useTranslation("keyManagement")
   return (
@@ -33,7 +33,8 @@ export function Header({
               disabled={isAddTokenDisabled}
               size="sm"
               variant="success"
-              leftIcon={<Plus className="h-4 w-4" />}>
+              leftIcon={<Plus className="h-4 w-4" />}
+            >
               {t("dialog.addToken")}
             </Button>
             <Button onClick={onRefresh} disabled={isLoading} size="sm">

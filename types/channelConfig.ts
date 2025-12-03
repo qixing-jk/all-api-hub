@@ -1,4 +1,4 @@
-import type { ChannelModelFilterRule } from "./channelModelFilters.ts"
+import type { ChannelModelFilterRule } from "./channelModelFilters"
 
 export interface ChannelModelFilterSettings {
   rules: ChannelModelFilterRule[]
@@ -21,9 +21,9 @@ export function createDefaultChannelConfig(channelId: number): ChannelConfig {
     channelId,
     modelFilterSettings: {
       rules: [],
-      updatedAt: timestamp
+      updatedAt: timestamp,
     },
     createdAt: timestamp,
-    updatedAt: timestamp
+    updatedAt: timestamp,
   }
 }

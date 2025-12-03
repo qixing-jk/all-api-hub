@@ -12,7 +12,7 @@ import { t } from "i18next"
 import {
   getActiveOrAllTabs,
   getActiveTabs,
-  sendRuntimeMessage
+  sendRuntimeMessage,
 } from "~/utils/browserApi"
 import { getErrorMessage } from "~/utils/error"
 
@@ -42,7 +42,7 @@ export function detectPlatformCapabilities() {
   return {
     hasWindows: !!b?.windows,
     hasTabs: !!b?.tabs,
-    hasBackgroundMessaging: !!b?.runtime
+    hasBackgroundMessaging: !!b?.runtime,
   }
 }
 
@@ -52,12 +52,12 @@ export function detectPlatformCapabilities() {
  */
 async function combineUserDataAndSiteType(
   userData: UserDataResult | null,
-  url: string
+  url: string,
 ): Promise<AutoDetectResult> {
   if (!userData) {
     return {
       success: false,
-      error: t("messages:operations.detection.getUserIdFailed")
+      error: t("messages:operations.detection.getUserIdFailed"),
     }
   }
 
@@ -68,13 +68,13 @@ async function combineUserDataAndSiteType(
       data: {
         userId: userData.userId,
         user: userData.user,
-        siteType
-      }
+        siteType,
+      },
     }
   } catch (error) {
     return {
       success: false,
-      error: getErrorMessage(error)
+      error: getErrorMessage(error),
     }
   }
 }
@@ -91,7 +91,7 @@ async function getUserDataViaAPI(url: string): Promise<UserDataResult | null> {
     }
     return {
       userId: userInfo.id,
-      user: userInfo
+      user: userInfo,
     }
   } catch (error) {
     console.error("[AutoDetect] API 方式获取用户数据失败:", error)
@@ -128,14 +128,14 @@ export async function autoDetectDirect(url: string): Promise<AutoDetectResult> {
  * Background 会创建临时窗口/标签页并从 localStorage 获取数据
  */
 async function getUserDataViaBackground(
-  url: string
+  url: string,
 ): Promise<UserDataResult | null> {
   try {
     const requestId = `auto-detect-${Date.now()}`
     const response = await sendRuntimeMessage({
       action: "autoDetectSite",
       url: url,
-      requestId: requestId
+      requestId: requestId,
     })
 
     if (!response || !response.success || !response.data) {
@@ -144,7 +144,7 @@ async function getUserDataViaBackground(
       if (userInfo) {
         return {
           userId: userInfo.id,
-          user: userInfo
+          user: userInfo,
         }
       } else {
         return null
@@ -153,7 +153,7 @@ async function getUserDataViaBackground(
 
     return {
       userId: response.data.userId,
-      user: response.data.user
+      user: response.data.user,
     }
   } catch (error) {
     console.error("[AutoDetect] Background 方式获取用户数据失败:", error)
@@ -166,7 +166,7 @@ async function getUserDataViaBackground(
  * 适用于桌面浏览器
  */
 export async function autoDetectViaBackground(
-  url: string
+  url: string,
 ): Promise<AutoDetectResult> {
   console.log("[AutoDetect] 使用 Background 方式")
 
@@ -182,7 +182,7 @@ export async function autoDetectViaBackground(
  * 适用于 popup 场景，用户已在目标站点登录
  */
 async function getUserDataFromCurrentTab(
-  url: string
+  url: string,
 ): Promise<UserDataResult | null> {
   try {
     // 1. 获取当前活动标签页
@@ -198,7 +198,7 @@ async function getUserDataFromCurrentTab(
     // 2. 通过 content script 获取用户信息
     const userResponse = await browser.tabs.sendMessage(tabId, {
       action: "getUserFromLocalStorage",
-      url: url
+      url: url,
     })
 
     if (!userResponse || !userResponse.success || !userResponse.data) {
@@ -207,7 +207,7 @@ async function getUserDataFromCurrentTab(
       if (userInfo) {
         return {
           userId: userInfo.id,
-          user: userInfo
+          user: userInfo,
         }
       } else {
         return null
@@ -216,7 +216,7 @@ async function getUserDataFromCurrentTab(
 
     return {
       userId: userResponse.data.userId,
-      user: userResponse.data.user
+      user: userResponse.data.user,
     }
   } catch (error) {
     console.error("[AutoDetect] 从当前标签页获取用户数据失败:", error)
@@ -229,7 +229,7 @@ async function getUserDataFromCurrentTab(
  * 适用于 popup 场景
  */
 export async function autoDetectFromCurrentTab(
-  url: string
+  url: string,
 ): Promise<AutoDetectResult> {
   console.log("[AutoDetect] 使用当前标签页方式")
 

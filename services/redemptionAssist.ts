@@ -48,7 +48,7 @@ class RedemptionAssistService {
   private async getDisplayAccounts(): Promise<DisplaySiteData[]> {
     const siteAccounts = await accountStorage.getAllAccounts()
     const displayAccounts = accountStorage.convertToDisplayData(
-      siteAccounts
+      siteAccounts,
     ) as DisplaySiteData[]
     return displayAccounts
   }
@@ -95,7 +95,7 @@ class RedemptionAssistService {
       return {
         success: false,
         code: "INVALID_URL",
-        message: t("redemptionAssist:messages.noAccountForUrl")
+        message: t("redemptionAssist:messages.noAccountForUrl"),
       }
     }
 
@@ -119,12 +119,12 @@ class RedemptionAssistService {
       const account = sameDomainCandidates[0]
       const redeemResult = await redeemService.redeemCodeForAccount(
         account.id,
-        code
+        code,
       )
       // Flatten the result so it matches the RedeemResult shape used elsewhere
       return {
         ...redeemResult,
-        selectedAccount: account
+        selectedAccount: account,
       }
     }
 
@@ -133,7 +133,7 @@ class RedemptionAssistService {
       return {
         success: false,
         code: "MULTIPLE_ACCOUNTS",
-        candidates: sameDomainCandidates
+        candidates: sameDomainCandidates,
       }
     }
 
@@ -143,7 +143,7 @@ class RedemptionAssistService {
       code: "NO_ACCOUNTS",
       candidates: [],
       allAccounts: displayAccounts,
-      message: t("redemptionAssist:messages.noAccountForUrl")
+      message: t("redemptionAssist:messages.noAccountForUrl"),
     }
   }
 }
@@ -153,7 +153,7 @@ export const redemptionAssistService = new RedemptionAssistService()
 export const handleRedemptionAssistMessage = async (
   request: any,
   sender: browser.runtime.MessageSender,
-  sendResponse: (response: any) => void
+  sendResponse: (response: any) => void,
 ) => {
   try {
     switch (request.action) {
@@ -172,7 +172,7 @@ export const handleRedemptionAssistMessage = async (
         const result = await redemptionAssistService.shouldPrompt({
           url,
           code,
-          tabId: sender.tab?.id
+          tabId: sender.tab?.id,
         })
         sendResponse({ success: true, ...result })
         break

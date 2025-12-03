@@ -23,9 +23,9 @@ const mockAccounts: DisplaySiteData[] = [
       enableDetection: true,
       isCheckedInToday: false,
       customCheckInUrl: "https://checkin.openai.com/api",
-      customRedeemUrl: "https://redeem.openai.com/api"
+      customRedeemUrl: "https://redeem.openai.com/api",
     },
-    icon: ""
+    icon: "",
   },
   {
     id: "2",
@@ -46,10 +46,10 @@ const mockAccounts: DisplaySiteData[] = [
       enableDetection: false,
       isCheckedInToday: false,
       customCheckInUrl: "",
-      customRedeemUrl: ""
+      customRedeemUrl: "",
     },
-    icon: ""
-  }
+    icon: "",
+  },
 ]
 
 describe("accountSearch", () => {

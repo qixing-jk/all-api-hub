@@ -2,7 +2,7 @@
  * Firefox Cookie 助手（WebRequest 方案）
  * 使用 WebRequest 拦截器自动注入 Cookie
  */
-import { checkCookieInterceptorRequirement } from "~/entrypoints/background/cookieInterceptor.ts"
+import { checkCookieInterceptorRequirement } from "~/entrypoints/background/cookieInterceptor"
 import { isFirefox } from "~/utils/browser"
 
 // Cookie 缓存
@@ -18,7 +18,7 @@ const buildCacheKey = (url: string, includeSession: boolean) =>
   includeSession ? url : `${url}__no_session`
 
 const normalizeHeaders = (
-  headers: HeadersInit = {}
+  headers: HeadersInit = {},
 ): Record<string, string> => {
   if (headers instanceof Headers) {
     return Object.fromEntries(headers.entries())
@@ -36,7 +36,7 @@ export const COOKIE_AUTH_HEADER_NAME = "All-API-Hub-Cookie-Auth"
 
 export const AUTH_MODE = {
   COOKIE_AUTH_MODE: "cookie",
-  TOKEN_AUTH_MODE: "token"
+  TOKEN_AUTH_MODE: "token",
 } as const
 
 export type AuthMode = (typeof AUTH_MODE)[keyof typeof AUTH_MODE]
@@ -49,7 +49,7 @@ let isInterceptorRegistered = false
  */
 export async function getCookieHeaderForUrl(
   url: string,
-  options: { includeSession?: boolean } = {}
+  options: { includeSession?: boolean } = {},
 ): Promise<string> {
   const includeSession = options.includeSession ?? true
   const cacheKey = buildCacheKey(url, includeSession)
@@ -65,7 +65,7 @@ export async function getCookieHeaderForUrl(
     const cookies = await browser.cookies.getAll({
       url,
       // Firefox 支持分区 cookie
-      partitionKey: {}
+      partitionKey: {},
     })
 
     // 过滤并格式化
@@ -87,14 +87,14 @@ export async function getCookieHeaderForUrl(
       .join("; ")
 
     console.log(
-      `[Cookie Helper] 获取到 ${validCookies.length} 个 Cookie: ${url}`
+      `[Cookie Helper] 获取到 ${validCookies.length} 个 Cookie: ${url}`,
     )
 
     // 更新缓存
     if (cookieHeader) {
       cookieCache.set(cacheKey, {
         cookies: cookieHeader,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       })
     }
 
@@ -121,7 +121,7 @@ export function clearCookieCache(url?: string): void {
  * WebRequest 拦截处理函数
  */
 export async function handleWebRequest(
-  details: browser.webRequest._OnBeforeSendHeadersDetails
+  details: browser.webRequest._OnBeforeSendHeadersDetails,
 ) {
   const headers = details.requestHeaders || []
 
@@ -152,7 +152,7 @@ export async function handleWebRequest(
 
   // 获取 Cookie
   const cookieHeader = await getCookieHeaderForUrl(details.url, {
-    includeSession: includeSessionCookie
+    includeSession: includeSessionCookie,
   })
 
   if (!cookieHeader) {
@@ -217,13 +217,13 @@ export function registerWebRequestInterceptor(urlPatterns: string[]): void {
     browser.webRequest.onBeforeSendHeaders.addListener(
       handleWebRequest,
       { urls: urlPatterns },
-      ["blocking", "requestHeaders"]
+      ["blocking", "requestHeaders"],
     )
 
     isInterceptorRegistered = true
     console.log(
       `[Cookie Helper] 拦截器注册成功，监控 ${urlPatterns.length} 个 URL 模式:`,
-      urlPatterns
+      urlPatterns,
     )
   } catch (error) {
     console.error("[Cookie Helper] 拦截器注册失败:", error)
@@ -248,7 +248,7 @@ export function setupWebRequestInterceptor(urlPatterns: string[] = []): void {
  * 为请求添加扩展标识头
  */
 export function addExtensionHeader(
-  headers: HeadersInit = {}
+  headers: HeadersInit = {},
 ): Record<string, string> {
   if (!isFirefox()) {
     return headers as Record<string, string>
@@ -261,7 +261,7 @@ export function addExtensionHeader(
 
 export async function addAuthMethodHeader(
   headers: HeadersInit = {},
-  mode: AuthMode
+  mode: AuthMode,
 ): Promise<Record<string, string>> {
   const headersObj = normalizeHeaders(headers)
   const canCookieInterceptor = await checkCookieInterceptorRequirement()

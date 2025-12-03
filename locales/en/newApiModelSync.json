@@ -22,6 +22,11 @@
     "allowedModelsHint": "Only models listed here will be written to each channel during sync.",
     "allowedModelsLoading": "Loading model metadata...",
     "allowedModelsLoadFailed": "Failed to load model metadata: {{error}}",
+    "globalChannelModelFilters": "Global Filters",
+    "globalChannelModelFiltersDesc": "Include/exclude rules applied to all channels before per-channel filters.",
+    "globalChannelModelFiltersButton": "Edit global filters",
+    "globalChannelModelFiltersDialogTitle": "Global model filters",
+    "globalChannelModelFiltersDialogSubtitle": "Rules defined here apply to every channel before its own channel-specific filters.",
     "viewExecution": "View Execution & Results",
     "viewExecutionDesc": "View detailed execution results and trigger manual syncs",
     "viewExecutionButton": "Open"

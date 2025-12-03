@@ -6,7 +6,7 @@ import * as oneHubAPI from "./oneHub"
 // 映射表,只放需要覆盖的站点
 const siteOverrideMap = {
   [ONE_HUB]: oneHubAPI,
-  [DONE_HUB]: oneHubAPI
+  [DONE_HUB]: oneHubAPI,
 } as const
 
 // 添加类型定义
@@ -15,7 +15,7 @@ type SiteOverrideMap = typeof siteOverrideMap
 // 获取对应站点的 API 函数
 function getApiFunc<T extends keyof typeof commonAPI>(
   funcName: T,
-  currentSite: SiteType = "default"
+  currentSite: SiteType = "default",
 ): (typeof commonAPI)[T] {
   const overrideModule =
     currentSite in siteOverrideMap
@@ -26,12 +26,13 @@ function getApiFunc<T extends keyof typeof commonAPI>(
     // 使用类型断言避免索引类型错误
     return (overrideModule as any)[funcName] as (typeof commonAPI)[T]
   }
+  // eslint-disable-next-line import/namespace
   return commonAPI[funcName] as (typeof commonAPI)[T]
 }
 
 // 创建包装函数的辅助函数
 function createWrappedFunction<T extends (...args: any[]) => any>(
-  funcName: keyof typeof commonAPI
+  funcName: keyof typeof commonAPI,
 ): T {
   return ((...args: any[]) => {
     let currentSite: SiteType = "default"
@@ -65,10 +66,11 @@ const exportedAPI = {} as {
 
 // 遍历 commonAPI 并包装每个函数
 for (const key in commonAPI) {
+  // eslint-disable-next-line import/namespace
   const func = commonAPI[key as keyof typeof commonAPI]
   if (typeof func === "function") {
     ;(exportedAPI as any)[key] = createWrappedFunction(
-      key as keyof typeof commonAPI
+      key as keyof typeof commonAPI,
     )
   } else {
     ;(exportedAPI as any)[key] = func
@@ -102,7 +104,7 @@ export const {
   deleteApiToken,
   fetchModelPricing,
   redeemCode,
-  determineHealthStatus
+  determineHealthStatus,
 } = exportedAPI
 
 export { exportedAPI }

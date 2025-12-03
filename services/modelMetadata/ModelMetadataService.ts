@@ -1,9 +1,9 @@
-import { extractActualModel } from "~/services/modelRedirect/modelNormalization.ts"
+import { extractActualModel } from "~/services/modelRedirect/modelNormalization"
 import { removeDateSuffix } from "~/utils/modelName"
 
 import {
   MODEL_METADATA_REFRESH_INTERVAL,
-  MODEL_METADATA_URL
+  MODEL_METADATA_URL,
 } from "./constants"
 import type { ModelMetadata, ModelMetadataCache, VendorRule } from "./types"
 
@@ -26,7 +26,7 @@ const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
   xai: "xAI",
   alibaba: "阿里巴巴",
   "alibaba-cn": "通义千问",
-  doubao: "豆包"
+  doubao: "豆包",
 }
 
 class ModelMetadataService {
@@ -87,13 +87,13 @@ class ModelMetadataService {
       const models: ModelMetadata[] = modelsArray.map((item: any) => ({
         id: item.id || "",
         name: item.name || item.id || "",
-        provider_id: item.providerId || item.provider_id || ""
+        provider_id: item.providerId || item.provider_id || "",
       }))
 
       this.cache = {
         models,
         lastUpdated: Date.now(),
-        version: "1.0"
+        version: "1.0",
       }
 
       this.lastFetch = Date.now()
@@ -101,7 +101,7 @@ class ModelMetadataService {
       this.buildVendorRules()
 
       console.log("[ModelMetadata] Refreshed successfully", {
-        models: models.length
+        models: models.length,
       })
     } catch (error) {
       console.error("[ModelMetadata] Failed to refresh metadata:", error)
@@ -168,7 +168,7 @@ class ModelMetadataService {
 
       // 构建正则表达式（匹配任意前缀）
       const prefixList = Array.from(prefixes).map((prefix) =>
-        prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+        prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
       )
 
       const patternStr = `^(${prefixList.join("|")})`
@@ -179,7 +179,7 @@ class ModelMetadataService {
       } catch (error) {
         console.warn(
           `[ModelMetadata] Failed to build pattern for ${providerID}:`,
-          error
+          error,
         )
       }
     }
@@ -202,27 +202,27 @@ class ModelMetadataService {
       {
         id: "claude-3-5-sonnet-20241022",
         name: "Claude 3.5 Sonnet",
-        provider_id: "anthropic"
+        provider_id: "anthropic",
       },
       {
         id: "claude-3-5-haiku-20241022",
         name: "Claude 3.5 Haiku",
-        provider_id: "anthropic"
+        provider_id: "anthropic",
       },
       {
         id: "claude-3-opus-20240229",
         name: "Claude 3 Opus",
-        provider_id: "anthropic"
+        provider_id: "anthropic",
       },
       {
         id: "claude-sonnet-4-5-20250929",
         name: "Claude 4.5 Sonnet",
-        provider_id: "anthropic"
+        provider_id: "anthropic",
       },
       {
         id: "claude-haiku-4-5-20251001",
         name: "Claude 4.5 Haiku",
-        provider_id: "anthropic"
+        provider_id: "anthropic",
       },
       { id: "gpt-4o", name: "GPT-4o", provider_id: "openai" },
       { id: "gpt-4o-mini", name: "GPT-4o mini", provider_id: "openai" },
@@ -231,60 +231,60 @@ class ModelMetadataService {
       {
         id: "gemini-2.0-flash-exp",
         name: "Gemini 2.0 Flash",
-        provider_id: "google"
+        provider_id: "google",
       },
       { id: "gemini-1.5-pro", name: "Gemini 1.5 Pro", provider_id: "google" },
       {
         id: "gemini-1.5-flash",
         name: "Gemini 1.5 Flash",
-        provider_id: "google"
+        provider_id: "google",
       },
       { id: "deepseek-chat", name: "DeepSeek Chat", provider_id: "deepseek" },
       {
         id: "deepseek-reasoner",
         name: "DeepSeek Reasoner",
-        provider_id: "deepseek"
-      }
+        provider_id: "deepseek",
+      },
     ]
 
     const defaultRules: VendorRule[] = [
       {
         providerID: "anthropic",
         displayName: "Anthropic",
-        pattern: /^claude/i
+        pattern: /^claude/i,
       },
       {
         providerID: "openai",
         displayName: "OpenAI",
-        pattern: /^(gpt|chatgpt|o1|o3)/i
+        pattern: /^(gpt|chatgpt|o1|o3)/i,
       },
       { providerID: "google", displayName: "Google", pattern: /^gemini/i },
       { providerID: "alibaba", displayName: "阿里巴巴", pattern: /^qwen/i },
       {
         providerID: "alibaba-cn",
         displayName: "通义千问",
-        pattern: /^(qwen|tongyi)/i
+        pattern: /^(qwen|tongyi)/i,
       },
       {
         providerID: "deepseek",
         displayName: "DeepSeek",
-        pattern: /^deepseek/i
+        pattern: /^deepseek/i,
       },
       {
         providerID: "moonshot",
         displayName: "Moonshot",
-        pattern: /^moonshot/i
+        pattern: /^moonshot/i,
       },
       { providerID: "zhipu", displayName: "智谱", pattern: /^(glm|bigmodel)/i },
       { providerID: "mistral", displayName: "MistralAI", pattern: /^mistral/i },
       { providerID: "xai", displayName: "xAI", pattern: /^grok/i },
-      { providerID: "meta", displayName: "Meta", pattern: /^llama/i }
+      { providerID: "meta", displayName: "Meta", pattern: /^llama/i },
     ]
 
     this.cache = {
       models: defaultMetadata,
       lastUpdated: Date.now(),
-      version: "1.0-fallback"
+      version: "1.0-fallback",
     }
 
     this.lastFetch = Date.now()
@@ -301,7 +301,7 @@ class ModelMetadataService {
   }
 
   findStandardModelName(
-    modelName: string
+    modelName: string,
   ): { standardName: string; vendorName: string } | null {
     if (!this.cache) return null
 
@@ -316,7 +316,7 @@ class ModelMetadataService {
         this.capitalizeFirst(metadata.provider_id)
       return {
         standardName: metadata.id,
-        vendorName
+        vendorName,
       }
     }
 
@@ -334,7 +334,7 @@ class ModelMetadataService {
           this.capitalizeFirst(metadata.provider_id)
         return {
           standardName: metadata.id,
-          vendorName
+          vendorName,
         }
       }
     }
@@ -419,7 +419,7 @@ class ModelMetadataService {
     return {
       isLoaded: !!this.cache,
       modelCount: this.cache?.models.length || 0,
-      lastUpdated: this.cache?.lastUpdated || null
+      lastUpdated: this.cache?.lastUpdated || null,
     }
   }
 

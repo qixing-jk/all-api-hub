@@ -2,7 +2,7 @@ import {
   ArrowPathIcon,
   CheckCircleIcon,
   ClockIcon,
-  XCircleIcon
+  XCircleIcon,
 } from "@heroicons/react/24/outline"
 import { useEffect, useState } from "react"
 import toast from "react-hot-toast"
@@ -23,9 +23,9 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  Switch
+  Switch,
 } from "~/components/ui"
-import { WEBDAV_SYNC_STRATEGIES, WebDAVSettings } from "~/types"
+import { WEBDAV_SYNC_STRATEGIES, WebDAVSettings } from "~/types/webdav"
 import { sendRuntimeMessage } from "~/utils/browserApi"
 import { formatTimestamp } from "~/utils/formatters"
 
@@ -72,7 +72,7 @@ export default function WebDAVAutoSyncSettings() {
   const loadStatus = async () => {
     try {
       const response = await sendRuntimeMessage({
-        action: "webdavAutoSync:getStatus"
+        action: "webdavAutoSync:getStatus",
       })
       if (response.success && response.data) {
         setIsSyncing(response.data.isSyncing)
@@ -93,8 +93,8 @@ export default function WebDAVAutoSyncSettings() {
         settings: {
           autoSync: autoSyncEnabled,
           syncInterval: syncInterval,
-          syncStrategy: syncStrategy
-        }
+          syncStrategy: syncStrategy,
+        },
       })
 
       if (response.success) {
@@ -115,7 +115,7 @@ export default function WebDAVAutoSyncSettings() {
     setSyncing(true)
     try {
       const response = await sendRuntimeMessage({
-        action: "webdavAutoSync:syncNow"
+        action: "webdavAutoSync:syncNow",
       })
 
       if (response.success) {
@@ -185,7 +185,8 @@ export default function WebDAVAutoSyncSettings() {
         {/* Auto-sync toggle */}
         <FormField
           label={t("webdav.autoSync.enable")}
-          description={t("webdav.autoSync.enableDesc")}>
+          description={t("webdav.autoSync.enableDesc")}
+        >
           <div className="flex items-center gap-2">
             <Switch checked={autoSyncEnabled} onChange={setAutoSyncEnabled} />
             <span className="text-sm text-gray-700 dark:text-gray-300">
@@ -199,7 +200,8 @@ export default function WebDAVAutoSyncSettings() {
             {/* Sync interval */}
             <FormField
               label={t("webdav.autoSync.interval")}
-              description={t("webdav.autoSync.intervalDesc")}>
+              description={t("webdav.autoSync.intervalDesc")}
+            >
               <Input
                 type="number"
                 min={60}
@@ -211,7 +213,7 @@ export default function WebDAVAutoSyncSettings() {
               />
               <p className="mt-1 text-xs text-gray-500">
                 {t("webdav.autoSync.intervalHint", {
-                  minutes: Math.floor(syncInterval / 60)
+                  minutes: Math.floor(syncInterval / 60),
                 })}
               </p>
             </FormField>
@@ -219,12 +221,14 @@ export default function WebDAVAutoSyncSettings() {
             {/* Sync strategy */}
             <FormField
               label={t("webdav.autoSync.strategy")}
-              description={t("webdav.autoSync.strategyDesc")}>
+              description={t("webdav.autoSync.strategyDesc")}
+            >
               <Select
                 value={syncStrategy ?? ""}
                 onValueChange={(value) =>
                   setSyncStrategy(value as WebDAVSettings["syncStrategy"])
-                }>
+                }
+              >
                 <SelectTrigger>
                   <SelectValue
                     placeholder={t("webdav.autoSync.strategy") ?? ""}
@@ -272,7 +276,8 @@ export default function WebDAVAutoSyncSettings() {
             loading={savingSettings}
             variant="default"
             size="sm"
-            className="flex-1">
+            className="flex-1"
+          >
             {savingSettings
               ? t("common:status.saving")
               : t("webdav.autoSync.saveSettings")}
@@ -284,7 +289,8 @@ export default function WebDAVAutoSyncSettings() {
             loading={syncing || isSyncing}
             variant="success"
             size="sm"
-            className="flex-1">
+            className="flex-1"
+          >
             {syncing || isSyncing
               ? t("webdav.syncing")
               : t("webdav.autoSync.syncNow")}

@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next"
 import { SettingSection } from "~/components/SettingSection"
 import { Card, CardItem, CardList, Input, Switch } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { showUpdateToast } from "~/utils/toastHelpers.ts"
+import { showUpdateToast } from "~/utils/toastHelpers"
 
 export default function RefreshSettings() {
   const { t } = useTranslation("settings")
@@ -18,12 +18,12 @@ export default function RefreshSettings() {
     updateRefreshOnOpen,
     updateRefreshInterval,
     updateMinRefreshInterval,
-    resetAutoRefreshConfig
+    resetAutoRefreshConfig,
   } = useUserPreferencesContext()
 
   const [intervalInput, setIntervalInput] = useState(refreshInterval.toString())
   const [minIntervalInput, setMinIntervalInput] = useState(
-    minRefreshInterval.toString()
+    minRefreshInterval.toString(),
   )
 
   useEffect(() => {
@@ -48,7 +48,9 @@ export default function RefreshSettings() {
     const value = parseInt(intervalInput, 10)
     if (isNaN(value) || value < 10) {
       toast.error(
-        t("refresh.refreshInterval") + " " + t("refresh.minRefreshIntervalDesc")
+        t("refresh.refreshInterval") +
+          " " +
+          t("refresh.minRefreshIntervalDesc"),
       )
       setIntervalInput(refreshInterval.toString())
       return
@@ -65,7 +67,7 @@ export default function RefreshSettings() {
       toast.error(
         t("refresh.minRefreshInterval") +
           " " +
-          t("refresh.minRefreshIntervalDesc")
+          t("refresh.minRefreshIntervalDesc"),
       )
       setMinIntervalInput(minRefreshInterval.toString())
       return
@@ -81,7 +83,8 @@ export default function RefreshSettings() {
       id="auto-refresh"
       title={t("refresh.title")}
       description={t("refresh.description", { defaultValue: "" })}
-      onReset={resetAutoRefreshConfig}>
+      onReset={resetAutoRefreshConfig}
+    >
       <Card padding="none">
         <CardList>
           <CardItem

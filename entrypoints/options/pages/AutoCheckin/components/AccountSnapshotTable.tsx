@@ -2,7 +2,7 @@ import {
   CheckCircleIcon,
   ClockIcon,
   ExclamationTriangleIcon,
-  XCircleIcon
+  XCircleIcon,
 } from "@heroicons/react/24/outline"
 import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
@@ -11,7 +11,7 @@ import AccountLinkButton from "~/components/AccountLinkButton"
 import { Card } from "~/components/ui"
 import {
   CHECKIN_RESULT_STATUS,
-  type AutoCheckinAccountSnapshot
+  type AutoCheckinAccountSnapshot,
 } from "~/types/autoCheckin"
 
 interface AccountSnapshotTableProps {
@@ -19,13 +19,13 @@ interface AccountSnapshotTableProps {
 }
 
 export default function AccountSnapshotTable({
-  snapshots
+  snapshots,
 }: AccountSnapshotTableProps) {
   const { t } = useTranslation("autoCheckin")
 
   const sortedSnapshots = useMemo(() => {
     return [...snapshots].sort((a, b) =>
-      a.accountName.localeCompare(b.accountName)
+      a.accountName.localeCompare(b.accountName),
     )
   }, [snapshots])
 
@@ -41,7 +41,7 @@ export default function AccountSnapshotTable({
   const getSkipReasonLabel = (reason?: string) => {
     if (!reason) return "-"
     return t(`skipReasons.${reason}`, {
-      defaultValue: t("skipReasons.unknown") as string
+      defaultValue: t("skipReasons.unknown") as string,
     })
   }
 
@@ -95,7 +95,7 @@ export default function AccountSnapshotTable({
   const renderBooleanBadge = (
     value: boolean,
     trueLabel: string,
-    falseLabel: string
+    falseLabel: string,
   ) => {
     return value ? (
       <span className="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-200">
@@ -141,7 +141,8 @@ export default function AccountSnapshotTable({
             {sortedSnapshots.map((snapshot) => (
               <tr
                 key={snapshot.accountId}
-                className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                className="hover:bg-gray-50 dark:hover:bg-gray-800"
+              >
                 <td className="px-6 py-4 text-sm font-medium whitespace-nowrap text-gray-900 dark:text-gray-100">
                   <AccountLinkButton
                     accountId={snapshot.accountId}
@@ -152,21 +153,21 @@ export default function AccountSnapshotTable({
                   {renderBooleanBadge(
                     snapshot.detectionEnabled,
                     t("snapshot.badges.enabled"),
-                    t("snapshot.badges.disabled")
+                    t("snapshot.badges.disabled"),
                   )}
                 </td>
                 <td className="px-6 py-4 text-sm whitespace-nowrap">
                   {renderBooleanBadge(
                     snapshot.autoCheckinEnabled,
                     t("snapshot.badges.enabled"),
-                    t("snapshot.badges.disabled")
+                    t("snapshot.badges.disabled"),
                   )}
                 </td>
                 <td className="px-6 py-4 text-sm whitespace-nowrap">
                   {renderBooleanBadge(
                     snapshot.providerAvailable,
                     t("snapshot.badges.providerAvailable"),
-                    t("snapshot.badges.providerUnavailable")
+                    t("snapshot.badges.providerUnavailable"),
                   )}
                 </td>
                 <td className="px-6 py-4 text-sm whitespace-nowrap text-gray-700 dark:text-gray-300">

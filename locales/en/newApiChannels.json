@@ -54,9 +54,9 @@
     "paginationNext": "Next page",
     "rowActions": {
       "edit": "Edit",
-      "sync": "Sync models",
+      "sync": "Sync Model List",
       "syncing": "Syncing...",
-      "filters": "Channel filters",
+      "filters": "Edit Channel filters",
       "delete": "Delete"
     }
   },
@@ -110,6 +110,17 @@
       "regex": "Regex rules support advanced matching using JavaScript syntax.",
       "substring": "Plain rules match case-sensitive substrings inside model names."
     },
+    "viewMode": {
+      "label": "Edit mode",
+      "visual": "Visual edit",
+      "json": "JSON edit"
+    },
+    "jsonEditor": {
+      "label": "Advanced JSON editor",
+      "placeholder": "Paste or edit an array of filter rule objects here to quickly reuse the same configuration across channels.",
+      "hint": "The JSON must be an array of objects with at least 'name' and 'pattern'. Optional fields: id, description, isRegex, action ('include' | 'exclude'), enabled, createdAt, updatedAt.",
+      "syncFromForm": "Sync from form"
+    },
     "actions": {
       "cancel": "Cancel",
       "save": "Save filters"
@@ -120,7 +131,8 @@
       "saved": "Filters saved",
       "validationName": "Please provide a name for each filter.",
       "validationPattern": "Filter pattern cannot be empty.",
-      "validationRegex": "Invalid regex pattern: {{error}}"
+      "validationRegex": "Invalid regex pattern: {{error}}",
+      "jsonInvalid": "Invalid filter JSON: {{error}}"
     }
   }
 }

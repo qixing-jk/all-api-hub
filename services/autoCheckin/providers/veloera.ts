@@ -36,7 +36,7 @@ async function checkinVeloera(account: SiteAccount): Promise<CheckinResult> {
       userId: account_info.id,
       token: account_info.access_token,
       authType: authType || AuthTypeEnum.AccessToken,
-      options: { method: "POST" }
+      options: { method: "POST" },
     })) as { success: boolean; message?: string; data?: any }
 
     const responseMessage =
@@ -50,7 +50,7 @@ async function checkinVeloera(account: SiteAccount): Promise<CheckinResult> {
     ) {
       return {
         status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
-        message: responseMessage || "Already checked in today"
+        message: responseMessage || "Already checked in today",
       }
     }
 
@@ -59,14 +59,14 @@ async function checkinVeloera(account: SiteAccount): Promise<CheckinResult> {
       return {
         status: CHECKIN_RESULT_STATUS.SUCCESS,
         message: responseMessage || "Check-in successful",
-        data: response.data
+        data: response.data,
       }
     }
 
     // Other failure cases
     return {
       status: CHECKIN_RESULT_STATUS.FAILED,
-      message: responseMessage || "Check-in failed"
+      message: responseMessage || "Check-in failed",
     }
   } catch (error: any) {
     // Handle specific error cases
@@ -80,7 +80,7 @@ async function checkinVeloera(account: SiteAccount): Promise<CheckinResult> {
     ) {
       return {
         status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
-        message: errorMessage
+        message: errorMessage,
       }
     }
 
@@ -88,14 +88,14 @@ async function checkinVeloera(account: SiteAccount): Promise<CheckinResult> {
     if (error?.statusCode === 404 || errorMessage.includes("404")) {
       return {
         status: CHECKIN_RESULT_STATUS.FAILED,
-        message: "Check-in endpoint not supported"
+        message: "Check-in endpoint not supported",
       }
     }
 
     // General failure
     return {
       status: CHECKIN_RESULT_STATUS.FAILED,
-      message: errorMessage || "Unknown error occurred"
+      message: errorMessage || "Unknown error occurred",
     }
   }
 }
@@ -123,5 +123,5 @@ function canCheckIn(account: SiteAccount): boolean {
 
 export const veloeraProvider: AutoCheckinProvider = {
   canCheckIn,
-  checkIn: checkinVeloera
+  checkIn: checkinVeloera,
 }

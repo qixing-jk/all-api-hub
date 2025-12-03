@@ -21,7 +21,7 @@ export function ProviderTabs({
   setSelectedProvider,
   baseFilteredModelsCount,
   getProviderFilteredCount,
-  children
+  children,
 }: ProviderTabsProps) {
   const { t } = useTranslation("modelList")
   const tabListRef = useRef<HTMLDivElement>(null)
@@ -35,7 +35,7 @@ export function ProviderTabs({
       e.preventDefault()
       tabList.scrollTo({
         left: tabList.scrollLeft + e.deltaY,
-        behavior: "auto"
+        behavior: "auto",
       })
     }
 
@@ -61,14 +61,14 @@ export function ProviderTabs({
 
       tabList.scrollTo({
         left: Math.max(0, idealScrollLeft),
-        behavior: "smooth"
+        behavior: "smooth",
       })
     }
   }
 
   // Filter out providers with zero models
   const filteredProviders = providers.filter(
-    (provider) => getProviderFilteredCount(provider) > 0
+    (provider) => getProviderFilteredCount(provider) > 0,
   )
 
   useEffect(() => {
@@ -77,7 +77,7 @@ export function ProviderTabs({
         ? 0
         : Math.max(
             0,
-            filteredProviders.indexOf(selectedProvider as ProviderType) + 1
+            filteredProviders.indexOf(selectedProvider as ProviderType) + 1,
           )
     setTimeout(() => scrollToSelectedTab(selectedIndex), 100)
   }, [selectedProvider, filteredProviders])
@@ -87,7 +87,7 @@ export function ProviderTabs({
       ? 0
       : Math.max(
           0,
-          filteredProviders.indexOf(selectedProvider as ProviderType) + 1
+          filteredProviders.indexOf(selectedProvider as ProviderType) + 1,
         )
 
   return (
@@ -97,10 +97,12 @@ export function ProviderTabs({
         const newProvider = index === 0 ? "all" : filteredProviders[index - 1]
         setSelectedProvider(newProvider)
         setTimeout(() => scrollToSelectedTab(index), 50)
-      }}>
+      }}
+    >
       <Tab.List
         ref={tabListRef}
-        className={`flex space-x-1 rounded-xl ${COLORS.background.tertiary} scrollbar-hide mb-6 touch-pan-x overflow-x-auto p-1`}>
+        className={`flex space-x-1 rounded-xl ${COLORS.background.tertiary} scrollbar-hide mb-6 touch-pan-x overflow-x-auto p-1`}
+      >
         <Tab
           className={({ selected }) =>
             `shrink-0 rounded-lg px-4 py-2.5 text-sm leading-5 font-medium transition-all ${ANIMATIONS.transition.base} ${
@@ -108,7 +110,8 @@ export function ProviderTabs({
                 ? "dark:bg-dark-bg-secondary bg-white text-blue-700 shadow dark:text-blue-400"
                 : "dark:text-dark-text-secondary dark:hover:bg-dark-bg-secondary/60 dark:hover:text-dark-text-primary text-gray-700 hover:bg-white/60 hover:text-gray-900"
             }`
-          }>
+          }
+        >
           <div className="flex items-center justify-center space-x-2">
             <CpuChipIcon className="dark:text-dark-text-secondary h-4 w-4 text-gray-600" />
             <span>{t("allProviders", { count: baseFilteredModelsCount })}</span>
@@ -116,7 +119,7 @@ export function ProviderTabs({
         </Tab>
         {filteredProviders.map((provider) => {
           const providerConfig = getProviderConfig(
-            provider.toLowerCase().replace(/\s/g, "-")
+            provider.toLowerCase().replace(/\s/g, "-"),
           )
           const IconComponent = providerConfig.icon
           return (
@@ -128,7 +131,8 @@ export function ProviderTabs({
                     ? "dark:bg-dark-bg-secondary bg-white text-blue-700 shadow dark:text-blue-400"
                     : "dark:text-dark-text-secondary dark:hover:bg-dark-bg-secondary/60 dark:hover:text-dark-text-primary text-gray-700 hover:bg-white/60 hover:text-gray-900"
                 }`
-              }>
+              }
+            >
               <div className="flex items-center justify-center space-x-2">
                 <IconComponent className="h-4 w-4" />
                 <span>

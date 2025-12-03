@@ -4,7 +4,7 @@ import "~/styles/style.css"
 
 import {
   ChannelDialogContainer,
-  ChannelDialogProvider
+  ChannelDialogProvider,
 } from "~/components/ChannelDialog"
 import { ThemeAwareToaster } from "~/components/ThemeAwareToaster"
 import { DeviceProvider } from "~/contexts/DeviceContext"

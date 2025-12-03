@@ -17,9 +17,9 @@ describe("detectSiteType", () => {
       server.use(
         http.get("https://example.com", () => {
           return new HttpResponse(mockHTML, {
-            headers: { "Content-Type": "text/html" }
+            headers: { "Content-Type": "text/html" },
           })
-        })
+        }),
       )
 
       const title = await fetchSiteOriginalTitle("https://example.com")
@@ -33,9 +33,9 @@ describe("detectSiteType", () => {
       server.use(
         http.get("https://example.com", () => {
           return new HttpResponse(mockHTML, {
-            headers: { "Content-Type": "text/html" }
+            headers: { "Content-Type": "text/html" },
           })
-        })
+        }),
       )
 
       const title = await fetchSiteOriginalTitle("https://example.com")
@@ -48,9 +48,9 @@ describe("detectSiteType", () => {
       server.use(
         http.get("https://example.com", () => {
           return new HttpResponse(mockHTML, {
-            headers: { "Content-Type": "text/html" }
+            headers: { "Content-Type": "text/html" },
           })
-        })
+        }),
       )
 
       const title = await fetchSiteOriginalTitle("https://example.com")
@@ -63,9 +63,9 @@ describe("detectSiteType", () => {
       server.use(
         http.get("https://example.com", () => {
           return new HttpResponse(mockHTML, {
-            headers: { "Content-Type": "text/html" }
+            headers: { "Content-Type": "text/html" },
           })
-        })
+        }),
       )
 
       const title = await fetchSiteOriginalTitle("https://example.com")
@@ -79,9 +79,9 @@ describe("detectSiteType", () => {
       server.use(
         http.get("https://example.com", () => {
           return new HttpResponse(mockHTML, {
-            headers: { "Content-Type": "text/html" }
+            headers: { "Content-Type": "text/html" },
           })
-        })
+        }),
       )
 
       const title = await fetchSiteOriginalTitle("https://example.com")
@@ -94,9 +94,9 @@ describe("detectSiteType", () => {
       server.use(
         http.get("https://example.com", () => {
           return new HttpResponse(mockHTML, {
-            headers: { "Content-Type": "text/html" }
+            headers: { "Content-Type": "text/html" },
           })
-        })
+        }),
       )
 
       const title = await fetchSiteOriginalTitle("https://example.com")
@@ -109,9 +109,9 @@ describe("detectSiteType", () => {
       server.use(
         http.get("https://example.com", () => {
           return new HttpResponse(mockHTML, {
-            headers: { "Content-Type": "text/html" }
+            headers: { "Content-Type": "text/html" },
           })
-        })
+        }),
       )
 
       const title = await fetchSiteOriginalTitle("https://example.com")
@@ -124,9 +124,9 @@ describe("detectSiteType", () => {
       server.use(
         http.get("https://example.com", () => {
           return new HttpResponse(mockHTML, {
-            headers: { "Content-Type": "text/html" }
+            headers: { "Content-Type": "text/html" },
           })
-        })
+        }),
       )
 
       const title = await fetchSiteOriginalTitle("https://example.com")
@@ -146,9 +146,9 @@ describe("detectSiteType", () => {
         server.use(
           http.get("https://example.com", () => {
             return new HttpResponse(mockHTML, {
-              headers: { "Content-Type": "text/html" }
+              headers: { "Content-Type": "text/html" },
             })
-          })
+          }),
         )
 
         const siteType = await getSiteType("https://example.com")
@@ -161,9 +161,9 @@ describe("detectSiteType", () => {
         server.use(
           http.get("https://example.com", () => {
             return new HttpResponse(mockHTML, {
-              headers: { "Content-Type": "text/html" }
+              headers: { "Content-Type": "text/html" },
             })
-          })
+          }),
         )
 
         const siteType = await getSiteType("https://example.com")
@@ -183,20 +183,20 @@ describe("detectSiteType", () => {
         const mockHTML = "<html><title>Unknown Site</title></html>"
         const mockApiResponse = {
           success: false,
-          message: "error: invalid user unknown-api-identifier"
+          message: "error: invalid user unknown-api-identifier",
         }
 
         server.use(
           // First call: fetch HTML title
           http.get("https://example.com", () => {
             return new HttpResponse(mockHTML, {
-              headers: { "Content-Type": "text/html" }
+              headers: { "Content-Type": "text/html" },
             })
           }),
           // Second call: fetch API for user ID type
           http.get("https://example.com/api/user/self", () => {
             return HttpResponse.json(mockApiResponse, { status: 400 })
-          })
+          }),
         )
 
         const siteType = await getSiteType("https://example.com")
@@ -209,18 +209,18 @@ describe("detectSiteType", () => {
         const mockHTML = "<html><title>Unrecognized Title</title></html>"
         const mockApiResponse = {
           success: false,
-          message: "error: completely unmatched identifier"
+          message: "error: completely unmatched identifier",
         }
 
         server.use(
           http.get("https://example.com", () => {
             return new HttpResponse(mockHTML, {
-              headers: { "Content-Type": "text/html" }
+              headers: { "Content-Type": "text/html" },
             })
           }),
           http.get("https://example.com/api/user/self", () => {
             return HttpResponse.json(mockApiResponse, { status: 400 })
-          })
+          }),
         )
 
         const siteType = await getSiteType("https://example.com")
@@ -238,18 +238,18 @@ describe("detectSiteType", () => {
         const mockHTML = "<html><title>No Match</title></html>"
         const mockApiResponse = {
           success: false,
-          message: "error: invalid user new-api"
+          message: "error: invalid user new-api",
         }
 
         server.use(
           http.get("https://example.com", () => {
             return new HttpResponse(mockHTML, {
-              headers: { "Content-Type": "text/html" }
+              headers: { "Content-Type": "text/html" },
             })
           }),
           http.get("https://example.com/api/user/self", () => {
             return HttpResponse.json(mockApiResponse, { status: 400 })
-          })
+          }),
         )
 
         const siteType = await getSiteType("https://example.com")
@@ -265,12 +265,12 @@ describe("detectSiteType", () => {
         server.use(
           http.get("https://example.com", () => {
             return new HttpResponse(mockHTML, {
-              headers: { "Content-Type": "text/html" }
+              headers: { "Content-Type": "text/html" },
             })
           }),
           http.get("https://example.com/api/user/self", () => {
             return HttpResponse.json(mockApiResponse)
-          })
+          }),
         )
 
         const siteType = await getSiteType("https://example.com")
@@ -284,7 +284,7 @@ describe("detectSiteType", () => {
         server.use(
           http.get("https://example.com", () => {
             return HttpResponse.error()
-          })
+          }),
         )
 
         await expect(getSiteType("https://example.com")).rejects.toThrow()
@@ -297,9 +297,9 @@ describe("detectSiteType", () => {
           http.get("https://example.com", () => {
             // Return a response that will cause text() to throw
             return new HttpResponse(null, {
-              headers: { "Content-Type": "text/html" }
+              headers: { "Content-Type": "text/html" },
             })
-          })
+          }),
         )
 
         const siteType = await getSiteType("https://example.com")

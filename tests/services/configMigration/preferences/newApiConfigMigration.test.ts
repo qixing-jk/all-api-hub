@@ -9,7 +9,7 @@ describe("newApiConfigMigration", () => {
       newApiBaseUrl: "https://api.example.com",
       newApiAdminToken: "admin-token-123",
       newApiUserId: "user-456",
-      preferencesVersion: 4
+      preferencesVersion: 4,
     } as UserPreferences
 
     const migratedPrefs = migrateNewApiConfig(oldPrefs)
@@ -17,7 +17,7 @@ describe("newApiConfigMigration", () => {
     expect(migratedPrefs.newApi).toEqual({
       baseUrl: oldPrefs.newApiBaseUrl,
       adminToken: oldPrefs.newApiAdminToken,
-      userId: oldPrefs.newApiUserId
+      userId: oldPrefs.newApiUserId,
     })
 
     // Old fields removed
@@ -33,7 +33,7 @@ describe("newApiConfigMigration", () => {
     expect(migratedPrefs.newApi).toEqual({
       baseUrl: "",
       adminToken: "",
-      userId: ""
+      userId: "",
     })
   })
 
@@ -42,9 +42,9 @@ describe("newApiConfigMigration", () => {
       newApi: {
         baseUrl: "https://api.example.com",
         adminToken: "admin-token-123",
-        userId: "user-456"
+        userId: "user-456",
       },
-      preferencesVersion: 4
+      preferencesVersion: 4,
     } as UserPreferences
 
     const migratedPrefs = migrateNewApiConfig(newPrefs)
@@ -57,7 +57,7 @@ describe("newApiConfigMigration", () => {
     const partialPrefs = {
       newApiBaseUrl: "https://api.example.com",
       newApiAdminToken: "admin-token-123",
-      preferencesVersion: 4
+      preferencesVersion: 4,
     } as UserPreferences
 
     const migratedPrefs = migrateNewApiConfig(partialPrefs)
@@ -65,7 +65,7 @@ describe("newApiConfigMigration", () => {
     expect(migratedPrefs.newApi).toEqual({
       baseUrl: "https://api.example.com",
       adminToken: "admin-token-123",
-      userId: ""
+      userId: "",
     })
   })
 })

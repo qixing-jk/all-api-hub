@@ -2,7 +2,7 @@ import {
   CheckCircleIcon,
   ListBulletIcon,
   MagnifyingGlassIcon,
-  XCircleIcon
+  XCircleIcon,
 } from "@heroicons/react/24/outline"
 import { ReactNode } from "react"
 import { useTranslation } from "react-i18next"
@@ -10,14 +10,14 @@ import { useTranslation } from "react-i18next"
 import { Input } from "~/components/ui"
 import {
   CHECKIN_RESULT_STATUS,
-  type CheckinAccountResult
+  type CheckinAccountResult,
 } from "~/types/autoCheckin"
 
 export const FILTER_STATUS = {
   ALL: "all",
   SUCCESS: "success",
   FAILED: "failed",
-  SKIPPED: "skipped"
+  SKIPPED: "skipped",
 } as const
 
 export type FilterStatus = (typeof FILTER_STATUS)[keyof typeof FILTER_STATUS]
@@ -35,7 +35,7 @@ export default function FilterBar({
   status,
   keyword,
   onStatusChange,
-  onKeywordChange
+  onKeywordChange,
 }: FilterBarProps) {
   const { t } = useTranslation("autoCheckin")
 
@@ -43,20 +43,20 @@ export default function FilterBar({
   const successCount = accountResults.filter(
     (r) =>
       r.status === CHECKIN_RESULT_STATUS.SUCCESS ||
-      r.status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED
+      r.status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
   ).length
   const failedCount = accountResults.filter(
-    (r) => r.status === CHECKIN_RESULT_STATUS.FAILED
+    (r) => r.status === CHECKIN_RESULT_STATUS.FAILED,
   ).length
   const skippedCount = accountResults.filter(
-    (r) => r.status === CHECKIN_RESULT_STATUS.SKIPPED
+    (r) => r.status === CHECKIN_RESULT_STATUS.SKIPPED,
   ).length
 
   const renderFilterButton = (
     value: FilterStatus,
     color: string,
     icon: ReactNode,
-    count?: number
+    count?: number,
   ) => (
     <button
       onClick={() => onStatusChange(value)}
@@ -64,7 +64,8 @@ export default function FilterBar({
         status === value
           ? `${color} text-white`
           : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
-      }`}>
+      }`}
+    >
       {icon}
       <span>{t(`execution.filters.${value}`)}</span>
       {count !== undefined && count > 0 && (
@@ -73,7 +74,8 @@ export default function FilterBar({
             status === value
               ? "bg-white/20 text-white"
               : "bg-gray-200 text-gray-600 dark:bg-gray-600 dark:text-gray-300"
-          }`}>
+          }`}
+        >
           {count}
         </span>
       )}
@@ -87,25 +89,25 @@ export default function FilterBar({
           FILTER_STATUS.ALL,
           "bg-blue-600",
           <ListBulletIcon className="h-4 w-4" />,
-          totalCount
+          totalCount,
         )}
         {renderFilterButton(
           FILTER_STATUS.SUCCESS,
           "bg-green-600",
           <CheckCircleIcon className="h-4 w-4" />,
-          successCount
+          successCount,
         )}
         {renderFilterButton(
           FILTER_STATUS.FAILED,
           "bg-red-600",
           <XCircleIcon className="h-4 w-4" />,
-          failedCount
+          failedCount,
         )}
         {renderFilterButton(
           FILTER_STATUS.SKIPPED,
           "bg-yellow-600",
           <ListBulletIcon className="h-4 w-4" />,
-          skippedCount
+          skippedCount,
         )}
       </div>
       <div className="relative flex-1 md:max-w-xs">

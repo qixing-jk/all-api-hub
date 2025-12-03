@@ -5,12 +5,11 @@ export default {
   useTabs: false,
   semi: false,
   singleQuote: false,
-  trailingComma: "none",
   bracketSpacing: true,
-  bracketSameLine: true,
+  bracketSameLine: false,
   plugins: [
     "@ianvs/prettier-plugin-sort-imports",
-    "prettier-plugin-tailwindcss"
+    "prettier-plugin-tailwindcss",
   ],
   importOrder: [
     "<BUILTIN_MODULES>", // Node.js built-in modules
@@ -22,6 +21,6 @@ export default {
     "",
     "^~(.*)$",
     "",
-    "^[./]"
-  ]
+    "^[./]",
+  ],
 }

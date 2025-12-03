@@ -3,12 +3,12 @@
  * Handles version-based migrations for UserPreferences configurations
  */
 
-import { migrateAutoRefreshConfig } from "~/services/configMigration/preferences/autoRefreshConfigMigration.ts"
-import { migrateNewApiConfig } from "~/services/configMigration/preferences/newApiConfigMigration.ts"
-import { migrateWebDavConfig } from "~/services/configMigration/preferences/webDavConfigMigration.ts"
+import { migrateAutoRefreshConfig } from "~/services/configMigration/preferences/autoRefreshConfigMigration"
+import { migrateNewApiConfig } from "~/services/configMigration/preferences/newApiConfigMigration"
+import { migrateWebDavConfig } from "~/services/configMigration/preferences/webDavConfigMigration"
 
-import type { UserPreferences } from "../../userPreferences.ts"
-import { migrateSortingConfig } from "./sortingConfigMigration.ts"
+import type { UserPreferences } from "../../userPreferences"
+import { migrateSortingConfig } from "./sortingConfigMigration"
 
 // Current version of the preferences schema
 export const CURRENT_PREFERENCES_VERSION = 5
@@ -28,87 +28,87 @@ const migrations: Record<number, PreferencesMigrationFunction> = {
   // Version 0 -> 1: Migrate sorting priority configuration
   1: (prefs: UserPreferences): UserPreferences => {
     console.log(
-      "[PreferencesMigration] Migrating preferences from v0 to v1 (sorting config migration)"
+      "[PreferencesMigration] Migrating preferences from v0 to v1 (sorting config migration)",
     )
 
     // Migrate sorting priority config
     const migratedSortingConfig = migrateSortingConfig(
-      prefs.sortingPriorityConfig
+      prefs.sortingPriorityConfig,
     )
 
     return {
       ...prefs,
       sortingPriorityConfig: migratedSortingConfig,
-      preferencesVersion: 1
+      preferencesVersion: 1,
     }
   },
 
   // Version 1 -> 2: Add PINNED sorting criterion
   2: (prefs: UserPreferences): UserPreferences => {
     console.log(
-      "[PreferencesMigration] Migrating preferences from v1 to v2 (add PINNED criterion)"
+      "[PreferencesMigration] Migrating preferences from v1 to v2 (add PINNED criterion)",
     )
 
     // Migrate sorting priority config to add PINNED criterion
     const migratedSortingConfig = migrateSortingConfig(
-      prefs.sortingPriorityConfig
+      prefs.sortingPriorityConfig,
     )
 
     return {
       ...prefs,
       sortingPriorityConfig: migratedSortingConfig,
-      preferencesVersion: 2
+      preferencesVersion: 2,
     }
   },
 
   // Version 2 -> 3: Migrate flat WebDAV fields to nested webdav object
   3: (prefs: UserPreferences): UserPreferences => {
     console.log(
-      "[PreferencesMigration] Migrating preferences from v2 to v3 (WebDAV settings migration)"
+      "[PreferencesMigration] Migrating preferences from v2 to v3 (WebDAV settings migration)",
     )
 
     const migratedPrefs = migrateWebDavConfig(prefs)
 
     return {
       ...migratedPrefs,
-      preferencesVersion: 3
+      preferencesVersion: 3,
     }
   },
 
   // Version 3 -> 4: Migrate flat auto-refresh fields to nested accountAutoRefresh object
   4: (prefs: UserPreferences): UserPreferences => {
     console.log(
-      "[PreferencesMigration] Migrating preferences from v3 to v4 (auto-refresh config migration)"
+      "[PreferencesMigration] Migrating preferences from v3 to v4 (auto-refresh config migration)",
     )
 
     const migratedPrefs = migrateAutoRefreshConfig(prefs)
 
     return {
       ...migratedPrefs,
-      preferencesVersion: 4
+      preferencesVersion: 4,
     }
   },
 
   // Version 4 -> 5: Migrate flat new-api fields to nested newApi object
   5: (prefs: UserPreferences): UserPreferences => {
     console.log(
-      "[PreferencesMigration] Migrating preferences from v4 to v5 (new-api config migration)"
+      "[PreferencesMigration] Migrating preferences from v4 to v5 (new-api config migration)",
     )
 
     const migratedPrefs = migrateNewApiConfig(prefs)
 
     return {
       ...migratedPrefs,
-      preferencesVersion: 5
+      preferencesVersion: 5,
     }
-  }
+  },
 }
 
 /**
  * Check if preferences need migration
  */
 export function needsPreferencesMigration(
-  prefs: UserPreferences | undefined
+  prefs: UserPreferences | undefined,
 ): boolean {
   if (!prefs) return false
   const currentVersion = prefs.preferencesVersion ?? 0
@@ -119,7 +119,7 @@ export function needsPreferencesMigration(
  * Get the version of preferences
  */
 export function getPreferencesVersion(
-  prefs: UserPreferences | undefined
+  prefs: UserPreferences | undefined,
 ): number {
   return prefs?.preferencesVersion ?? 0
 }
@@ -129,7 +129,7 @@ export function getPreferencesVersion(
  * Applies all necessary migrations sequentially
  */
 export function migratePreferences(
-  migratedPrefs: UserPreferences
+  migratedPrefs: UserPreferences,
 ): UserPreferences {
   let currentVersion = getPreferencesVersion(migratedPrefs)
 
@@ -140,13 +140,13 @@ export function migratePreferences(
 
     if (!migrationFn) {
       console.error(
-        `[PreferencesMigration] No migration defined for version ${nextVersion}`
+        `[PreferencesMigration] No migration defined for version ${nextVersion}`,
       )
       break
     }
 
     console.log(
-      `[PreferencesMigration] Migrating preferences from v${currentVersion} to v${nextVersion}`
+      `[PreferencesMigration] Migrating preferences from v${currentVersion} to v${nextVersion}`,
     )
     migratedPrefs = migrationFn(migratedPrefs)
     currentVersion = nextVersion

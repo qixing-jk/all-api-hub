@@ -6,7 +6,7 @@ import {
   useEffect,
   useMemo,
   useState,
-  type ComponentType
+  type ComponentType,
 } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -15,7 +15,7 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
 } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { PageHeader } from "~/entrypoints/options/components/PageHeader"
@@ -23,12 +23,13 @@ import { OPTIONAL_PERMISSIONS } from "~/services/permissions/permissionManager"
 import {
   navigateToAnchor,
   parseTabFromUrl,
-  updateUrlWithTab
+  updateUrlWithTab,
 } from "~/utils/url"
 
 import AccountManagementTab from "./components/AccountManagementTab"
 import AutoRefreshTab from "./components/AutoRefreshTab"
 import CheckinRedeemTab from "./components/CheckinRedeemTab"
+import CliProxyTab from "./components/CliProxyTab"
 import DataBackupTab from "./components/DataBackupTab"
 import GeneralTab from "./components/GeneralTab"
 import LoadingSkeleton from "./components/LoadingSkeleton"
@@ -43,6 +44,7 @@ type TabId =
   | "checkinRedeem"
   | "dataBackup"
   | "newApi"
+  | "cliProxy"
   | "permissions"
 
 interface TabConfig {
@@ -54,7 +56,7 @@ const hasOptionalPermissions = OPTIONAL_PERMISSIONS.length > 0
 
 const PERMISSIONS_TAB_CONFIG: TabConfig = {
   id: "permissions",
-  component: PermissionsTab
+  component: PermissionsTab,
 }
 
 const TAB_CONFIGS = [
@@ -63,8 +65,9 @@ const TAB_CONFIGS = [
   { id: "refresh", component: AutoRefreshTab },
   { id: "checkinRedeem", component: CheckinRedeemTab },
   { id: "newApi", component: NewApiTab },
+  { id: "cliProxy", component: CliProxyTab },
   ...(hasOptionalPermissions ? [PERMISSIONS_TAB_CONFIG] : []),
-  { id: "dataBackup", component: DataBackupTab }
+  { id: "dataBackup", component: DataBackupTab },
 ] satisfies TabConfig[]
 
 const ANCHOR_TO_TAB: Record<string, TabId> = {
@@ -84,8 +87,9 @@ const ANCHOR_TO_TAB: Record<string, TabId> = {
   "import-export-entry": "dataBackup",
   "new-api": "newApi",
   "new-api-model-sync": "newApi",
+  "cli-proxy": "cliProxy",
   "dangerous-zone": "newApi",
-  ...(hasOptionalPermissions ? { permissions: "permissions" } : {})
+  ...(hasOptionalPermissions ? { permissions: "permissions" } : {}),
 }
 
 export default function BasicSettings() {
@@ -96,9 +100,9 @@ export default function BasicSettings() {
     () =>
       TAB_CONFIGS.map((config) => ({
         id: config.id,
-        label: t(`tabs.${config.id}`)
+        label: t(`tabs.${config.id}`),
       })),
-    [t]
+    [t],
   )
 
   const [selectedTabIndex, setSelectedTabIndex] = useState(0)
@@ -110,7 +114,7 @@ export default function BasicSettings() {
   const applyUrlState = useCallback(() => {
     const { tab, anchor, isHeadingAnchor } = parseTabFromUrl({
       ignoreAnchors: ["basic"],
-      defaultHashPage: "basic"
+      defaultHashPage: "basic",
     })
 
     if (tab) {
@@ -161,7 +165,7 @@ export default function BasicSettings() {
 
   const getTabIndexFromId = useCallback(
     (tabId: string) => TAB_CONFIGS.findIndex((cfg) => cfg.id === tabId),
-    []
+    [],
   )
 
   const handleTabChange = useCallback((index: number) => {
@@ -194,7 +198,8 @@ export default function BasicSettings() {
               onValueChange={(tabId) => {
                 const index = getTabIndexFromId(tabId)
                 handleTabChange(index)
-              }}>
+              }}
+            >
               <SelectTrigger id="settings-tab-select" className="w-full">
                 <SelectValue placeholder={t("tabs.select")} />
               </SelectTrigger>
@@ -217,7 +222,8 @@ export default function BasicSettings() {
                       selected
                         ? "border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-400"
                         : "border-transparent text-gray-600 hover:border-gray-300 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
-                    }`}>
+                    }`}
+                  >
                     {tab.label}
                   </button>
                 )}

@@ -3,19 +3,21 @@ import toast from "react-hot-toast/headless"
 
 import type { DisplaySiteData } from "~/types"
 
-import { RedemptionAccountSelectToast } from "../components/RedemptionAccountSelectToast.tsx"
-import { RedemptionLoadingToast } from "../components/RedemptionLoadingToast.tsx"
+import { RedemptionAccountSelectToast } from "../components/RedemptionAccountSelectToast"
+import { RedemptionLoadingToast } from "../components/RedemptionLoadingToast"
 import {
   RedemptionPromptToast,
-  type RedemptionPromptAction
-} from "../components/RedemptionPromptToast.tsx"
+  type RedemptionPromptAction,
+} from "../components/RedemptionPromptToast"
+import { ensureRedemptionToastUi } from "../uiRoot"
 
-export function showRedeemLoadingToast(message: string) {
+export async function showRedeemLoadingToast(message: string) {
+  await ensureRedemptionToastUi()
   return toast.custom(
     () => React.createElement(RedemptionLoadingToast, { message }),
     {
-      duration: Infinity
-    }
+      duration: Infinity,
+    },
   )
 }
 
@@ -23,16 +25,18 @@ export function dismissToast(toastId?: string) {
   toast.dismiss(toastId)
 }
 
-export function showAccountSelectToast(
+export async function showAccountSelectToast(
   accounts: DisplaySiteData[],
-  options?: { title?: string; message?: string }
+  options?: { title?: string; message?: string },
 ): Promise<DisplaySiteData | null> {
+  await ensureRedemptionToastUi()
+
   return new Promise((resolve) => {
     let resolved = false
 
     const handleResolve = (
       account: DisplaySiteData | null,
-      toastId: string
+      toastId: string,
     ) => {
       if (resolved) return
       resolved = true
@@ -48,20 +52,22 @@ export function showAccountSelectToast(
           message: options?.message,
           accounts,
           onSelect: (account: DisplaySiteData | null) =>
-            handleResolve(account, toastId)
+            handleResolve(account, toastId),
         })
       },
       {
         // Keep the account select toast on screen until user confirms or cancels
-        duration: Infinity
-      }
+        duration: Infinity,
+      },
     )
   })
 }
 
-export function showRedemptionPromptToast(
-  message: string
+export async function showRedemptionPromptToast(
+  message: string,
 ): Promise<RedemptionPromptAction> {
+  await ensureRedemptionToastUi()
+
   return new Promise((resolve) => {
     let resolved = false
 
@@ -77,14 +83,16 @@ export function showRedemptionPromptToast(
       return React.createElement(RedemptionPromptToast, {
         message,
         onAction: (action: RedemptionPromptAction) =>
-          handleResolve(action, toastId)
+          handleResolve(action, toastId),
       })
     })
   })
 }
 
-export function showRedeemResultToast(success: boolean, message: string) {
+export async function showRedeemResultToast(success: boolean, message: string) {
   if (!message) return
+
+  await ensureRedemptionToastUi()
 
   if (success) {
     toast.success(message)

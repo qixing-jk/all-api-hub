@@ -1,6 +1,6 @@
 import type {
   AuthFetchParams,
-  PricingResponse
+  PricingResponse,
 } from "~/services/apiService/common/type"
 import { fetchApiData } from "~/services/apiService/common/utils"
 import type {
@@ -8,34 +8,34 @@ import type {
   OneHubUserGroupInfo,
   OneHubUserGroupMap,
   OneHubUserGroupsResponse,
-  PaginatedTokenDate
+  PaginatedTokenDate,
 } from "~/services/apiService/oneHub/type"
 import type { ApiToken } from "~/types"
 import {
   transformModelPricing,
-  transformUserGroup
+  transformUserGroup,
 } from "~/utils/dataTransform/one-hub"
 
 export const fetchAvailableModel = async (params: AuthFetchParams) => {
   return fetchApiData<OneHubModelPricing>({
     ...params,
-    endpoint: "/api/available_model"
+    endpoint: "/api/available_model",
   })
 }
 
 export const fetchUserGroupMap = async (params: AuthFetchParams) => {
   return fetchApiData<OneHubUserGroupMap>({
     ...params,
-    endpoint: "/api/user_group_map"
+    endpoint: "/api/user_group_map",
   })
 }
 export const fetchModelPricing = async (
-  params: AuthFetchParams
+  params: AuthFetchParams,
 ): Promise<PricingResponse> => {
   try {
     const [availableModel, userGroupMap] = await Promise.all([
       fetchAvailableModel(params),
-      fetchUserGroupMap(params)
+      fetchUserGroupMap(params),
     ])
 
     const result = transformModelPricing(availableModel, userGroupMap)
@@ -54,11 +54,11 @@ export const fetchModelPricing = async (
 export const fetchAccountTokens = async (
   { baseUrl, userId, token: accessToken }: AuthFetchParams,
   page: number = 0,
-  size: number = 100
+  size: number = 100,
 ): Promise<ApiToken[]> => {
   const params = new URLSearchParams({
     p: page.toString(),
-    size: size.toString()
+    size: size.toString(),
   })
 
   try {
@@ -67,7 +67,7 @@ export const fetchAccountTokens = async (
       baseUrl,
       endpoint: `/api/token/?${params.toString()}`,
       userId,
-      token: accessToken
+      token: accessToken,
     })
 
     // 处理不同的响应格式
@@ -98,14 +98,14 @@ export const fetchAccountTokens = async (
 export const fetchUserGroups = async ({
   baseUrl,
   userId,
-  token: accessToken
+  token: accessToken,
 }: AuthFetchParams): Promise<Record<string, OneHubUserGroupInfo>> => {
   try {
     const response = await fetchApiData<OneHubUserGroupsResponse["data"]>({
       baseUrl,
       endpoint: "/api/user_group_map",
       userId,
-      token: accessToken
+      token: accessToken,
     })
     return transformUserGroup(response)
   } catch (error) {

@@ -3,15 +3,15 @@ import {
   ArrowTopRightOnSquareIcon,
   CheckCircleIcon,
   ExclamationTriangleIcon,
-  XCircleIcon
+  XCircleIcon,
 } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
-import AccountLinkButton from "~/components/AccountLinkButton.tsx"
+import AccountLinkButton from "~/components/AccountLinkButton"
 import { Button, Card } from "~/components/ui"
 import {
   CHECKIN_RESULT_STATUS,
-  CheckinAccountResult
+  CheckinAccountResult,
 } from "~/types/autoCheckin"
 
 interface ResultsTableProps {
@@ -27,7 +27,7 @@ export default function ResultsTable({
   retryingAccountId,
   openingManualAccountId,
   onRetryAccount,
-  onOpenManualSignIn
+  onOpenManualSignIn,
 }: ResultsTableProps) {
   const { t } = useTranslation("autoCheckin")
 
@@ -106,7 +106,8 @@ export default function ResultsTable({
             {results.map((result) => (
               <tr
                 key={result.accountId}
-                className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                className="hover:bg-gray-50 dark:hover:bg-gray-800"
+              >
                 <td className="px-6 py-4 text-sm font-medium whitespace-nowrap text-gray-900 dark:text-gray-100">
                   <AccountLinkButton
                     accountId={result.accountId}
@@ -132,7 +133,8 @@ export default function ResultsTable({
                           loading={retryingAccountId === result.accountId}
                           disabled={retryingAccountId === result.accountId}
                           onClick={() => onRetryAccount(result.accountId)}
-                          leftIcon={<ArrowPathIcon className="h-3.5 w-3.5" />}>
+                          leftIcon={<ArrowPathIcon className="h-3.5 w-3.5" />}
+                        >
                           {t("execution.actions.retryAccount")}
                         </Button>
                       )}
@@ -146,7 +148,8 @@ export default function ResultsTable({
                           onClick={() => onOpenManualSignIn(result.accountId)}
                           leftIcon={
                             <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" />
-                          }>
+                          }
+                        >
                           {t("execution.actions.openManual")}
                         </Button>
                       )}

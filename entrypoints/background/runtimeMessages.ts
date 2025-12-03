@@ -11,7 +11,7 @@ import {
   handleAutoDetectSite,
   handleCloseTempWindow,
   handleOpenTempWindow,
-  handleTempWindowFetch
+  handleTempWindowFetch,
 } from "./tempWindowPool"
 
 export function setupRuntimeMessageListeners() {
@@ -51,7 +51,7 @@ export function setupRuntimeMessageListeners() {
         "refreshNow",
         "stopAutoRefresh",
         "updateAutoRefreshSettings",
-        "getAutoRefreshStatus"
+        "getAutoRefreshStatus",
       ].includes(request.action)
     ) {
       handleAutoRefreshMessage(request, sendResponse)

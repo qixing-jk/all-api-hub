@@ -12,7 +12,7 @@ import FirefoxAddAccountWarningDialog from "./index"
  * that they want to add an account in a non-side-panel context.
  */
 export function showFirefoxWarningDialog(
-  onConfirm: () => void = openSidePanelPage
+  onConfirm: () => void = openSidePanelPage,
 ) {
   const container = document.createElement("div")
   document.body.appendChild(container)
@@ -31,6 +31,6 @@ export function showFirefoxWarningDialog(
         handleClose()
         onConfirm?.()
       }}
-    />
+    />,
   )
 }

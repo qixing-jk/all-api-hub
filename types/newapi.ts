@@ -27,7 +27,7 @@ export const CHANNEL_STATUS = {
   Unknown: 0,
   Enable: 1,
   ManuallyDisabled: 2,
-  AutoDisabled: 3
+  AutoDisabled: 3,
 } as const
 
 export type ChannelStatus = (typeof CHANNEL_STATUS)[keyof typeof CHANNEL_STATUS]
@@ -37,7 +37,7 @@ export type ChannelStatus = (typeof CHANNEL_STATUS)[keyof typeof CHANNEL_STATUS]
  */
 export const CHANNEL_MODE = {
   SINGLE: "single",
-  BATCH: "batch"
+  BATCH: "batch",
 } as const
 
 export type ChannelMode = (typeof CHANNEL_MODE)[keyof typeof CHANNEL_MODE]

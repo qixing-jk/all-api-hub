@@ -27,7 +27,7 @@ export function TokenListItem({
   handleEditToken,
   handleDeleteToken,
   account,
-  onOpenCCSwitchDialog
+  onOpenCCSwitchDialog,
 }: TokenListItemProps) {
   const { t } = useTranslation("keyManagement")
 
@@ -44,7 +44,7 @@ export function TokenListItem({
             onOpenCCSwitchDialog={() => onOpenCCSwitchDialog(token, account)}
           />
           <div className="min-w-0 flex-1">
-            <div className="space-y-2 text-xs text-gray-600 dark:text-dark-text-secondary sm:text-sm">
+            <div className="dark:text-dark-text-secondary space-y-2 text-xs text-gray-600 sm:text-sm">
               <KeyDisplay
                 tokenKey={token.key}
                 tokenId={token.id}
@@ -54,10 +54,10 @@ export function TokenListItem({
               <TokenDetails token={token} />
               {token.group && (
                 <div>
-                  <span className="text-gray-500 dark:text-dark-text-tertiary">
+                  <span className="dark:text-dark-text-tertiary text-gray-500">
                     {t("keyDetails.group")}
                   </span>
-                  <span className="ml-2 font-medium text-gray-900 dark:text-dark-text-primary">
+                  <span className="dark:text-dark-text-primary ml-2 font-medium text-gray-900">
                     {token.group}
                   </span>
                 </div>

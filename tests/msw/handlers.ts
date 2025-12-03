@@ -22,8 +22,8 @@ export const handlers: HttpHandler[] = [
         access_token: "mock-token",
         quota: 500000,
         used_quota: 100000,
-        request_count: 50
-      }
+        request_count: 50,
+      },
     })
   }),
 
@@ -39,8 +39,8 @@ export const handlers: HttpHandler[] = [
         unlimited_quota: false,
         expired_time: -1,
         start_time: 1640000000,
-        subscription_count: 1
-      }
+        subscription_count: 1,
+      },
     })
   }),
 
@@ -55,16 +55,16 @@ export const handlers: HttpHandler[] = [
           name: "gpt-3.5-turbo",
           type: 1,
           status: 1,
-          models: ["gpt-3.5-turbo", "gpt-3.5-turbo-16k"]
+          models: ["gpt-3.5-turbo", "gpt-3.5-turbo-16k"],
         },
         {
           id: 2,
           name: "gpt-4",
           type: 1,
           status: 1,
-          models: ["gpt-4", "gpt-4-32k"]
-        }
-      ]
+          models: ["gpt-4", "gpt-4-32k"],
+        },
+      ],
     })
   }),
 
@@ -84,7 +84,7 @@ export const handlers: HttpHandler[] = [
           remain_quota: 400000,
           unlimited_quota: false,
           used_quota: 100000,
-          status: 1
+          status: 1,
         },
         {
           id: 2,
@@ -96,9 +96,9 @@ export const handlers: HttpHandler[] = [
           remain_quota: 200000,
           unlimited_quota: false,
           used_quota: 50000,
-          status: 1
-        }
-      ]
+          status: 1,
+        },
+      ],
     })
   }),
 
@@ -116,9 +116,9 @@ export const handlers: HttpHandler[] = [
           quota: 1000,
           prompt_tokens: 50,
           completion_tokens: 100,
-          content: "test request"
-        }
-      ]
+          content: "test request",
+        },
+      ],
     })
   }),
 
@@ -127,8 +127,8 @@ export const handlers: HttpHandler[] = [
     return HttpResponse.json({
       rates: {
         CNY: 7.2,
-        USD: 1
-      }
+        USD: 1,
+      },
     })
-  })
+  }),
 ]

@@ -1,13 +1,13 @@
 import {
   ChevronDoubleLeftIcon,
-  ChevronDoubleRightIcon
+  ChevronDoubleRightIcon,
 } from "@heroicons/react/24/outline"
 import { motion } from "framer-motion"
 import { useEffect } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Button, Heading3, IconButton, Separator } from "~/components/ui"
-import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext.tsx"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { cn } from "~/lib/utils"
 import { hasValidNewApiConfig } from "~/services/newApiService/newApiService"
 
@@ -32,7 +32,7 @@ function Sidebar({
   isMobileOpen,
   onMobileClose,
   isCollapsed = false,
-  onCollapseToggle
+  onCollapseToggle,
 }: SidebarProps) {
   const { t } = useTranslation("ui")
   const { preferences } = useUserPreferencesContext()
@@ -46,7 +46,7 @@ function Sidebar({
     ? t("navigation.sidebarCollapsedHint")
     : t("navigation.settingsOptions")
   const collapseButtonLabel = t(
-    `navigation.${shouldShowCollapsedState ? "expandSidebar" : "collapseSidebar"}`
+    `navigation.${shouldShowCollapsedState ? "expandSidebar" : "collapseSidebar"}`,
   )
   const sidebarHeight = isMobileOpen
     ? "100vh"
@@ -93,14 +93,16 @@ function Sidebar({
           isMobileOpen
             ? "fixed inset-y-0 left-0 translate-x-0"
             : "fixed inset-y-0 left-0 -translate-x-full md:translate-x-0",
-          "md:sticky md:inset-auto md:left-auto md:translate-x-0 md:self-start md:overflow-hidden"
-        )}>
+          "md:sticky md:inset-auto md:left-auto md:translate-x-0 md:self-start md:overflow-hidden",
+        )}
+      >
         <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary flex h-full flex-col border-r border-gray-200 bg-white shadow-sm">
           <div
             className={cn(
               "flex h-16 items-center px-3 py-2",
-              shouldShowCollapsedState ? "justify-center" : "justify-between"
-            )}>
+              shouldShowCollapsedState ? "justify-center" : "justify-between",
+            )}
+          >
             {!shouldShowCollapsedState && (
               <div className="flex flex-1 items-center gap-2 overflow-hidden">
                 <Heading3
@@ -109,8 +111,9 @@ function Sidebar({
                     "dark:text-dark-text-tertiary truncate text-sm font-semibold tracking-wide text-gray-500 uppercase transition-all duration-200",
                     shouldShowCollapsedState
                       ? "max-w-0 opacity-0"
-                      : "max-w-[200px] opacity-100"
-                  )}>
+                      : "max-w-[200px] opacity-100",
+                  )}
+                >
                   {t("navigation.settingsOptions")}
                 </Heading3>
               </div>
@@ -121,7 +124,8 @@ function Sidebar({
                 variant="outline"
                 size="icon"
                 className="hidden h-8 w-8 rounded-full md:inline-flex"
-                onClick={handleCollapseButtonClick}>
+                onClick={handleCollapseButtonClick}
+              >
                 {shouldShowCollapsedState ? (
                   <ChevronDoubleRightIcon className="h-4 w-4" />
                 ) : (
@@ -166,23 +170,25 @@ function Sidebar({
                         shouldShowCollapsedState && "justify-center px-0",
                         isActive
                           ? "bg-blue-600 text-white dark:bg-blue-500"
-                          : "dark:text-dark-text-secondary text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-white/10 dark:hover:text-white"
-                      )}>
+                          : "dark:text-dark-text-secondary text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-white/10 dark:hover:text-white",
+                      )}
+                    >
                       <Icon
                         className={cn(
                           "h-5 w-5 shrink-0",
                           isActive
                             ? "text-white"
-                            : "dark:text-dark-text-tertiary text-gray-400 group-hover:text-gray-600 dark:group-hover:text-white"
+                            : "dark:text-dark-text-tertiary text-gray-400 group-hover:text-gray-600 dark:group-hover:text-white",
                         )}
                       />
 
                       {!shouldShowCollapsedState && (
                         <div
                           className={cn(
-                            "flex-1 overflow-hidden text-sm font-medium transition-all duration-200 sm:text-base"
+                            "flex-1 overflow-hidden text-sm font-medium transition-all duration-200 sm:text-base",
                           )}
-                          aria-hidden={shouldShowCollapsedState}>
+                          aria-hidden={shouldShowCollapsedState}
+                        >
                           <span className="block truncate">{label}</span>
                         </div>
                       )}
@@ -199,8 +205,9 @@ function Sidebar({
             <Heading3
               className={cn(
                 "dark:text-dark-text-tertiary text-xs font-semibold tracking-wide text-gray-400 uppercase",
-                shouldShowCollapsedState && "sr-only"
-              )}>
+                shouldShowCollapsedState && "sr-only",
+              )}
+            >
               {t("navigation.settings")}
             </Heading3>
             {(onCollapseToggle || isMobileOpen) && (
@@ -209,7 +216,8 @@ function Sidebar({
                 variant="ghost"
                 size="sm"
                 className="md:hidden"
-                onClick={handleCollapseButtonClick}>
+                onClick={handleCollapseButtonClick}
+              >
                 {shouldShowCollapsedState ? (
                   <ChevronDoubleRightIcon className="h-5 w-5" />
                 ) : (

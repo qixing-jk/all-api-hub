@@ -9,7 +9,7 @@ import { Switch } from "~/components/ui/Switch"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { fetchAccountAvailableModels } from "~/services/apiService/common"
 import { ModelRedirectService } from "~/services/modelRedirect"
-import { hasValidNewApiConfig } from "~/services/newApiService/newApiService.ts"
+import { hasValidNewApiConfig } from "~/services/newApiService/newApiService"
 import { AuthTypeEnum } from "~/types"
 import { ALL_PRESET_STANDARD_MODELS } from "~/types/modelRedirect"
 
@@ -31,7 +31,7 @@ export default function ModelRedirectSettings() {
           baseUrl: preferences.newApi.baseUrl,
           userId: preferences.newApi.userId,
           token: preferences.newApi.adminToken,
-          authType: AuthTypeEnum.AccessToken
+          authType: AuthTypeEnum.AccessToken,
         })
       }
     }
@@ -54,7 +54,7 @@ export default function ModelRedirectSettings() {
     } catch (error) {
       console.error(
         "[ModelRedirectSettings] Failed to update preferences",
-        error
+        error,
       )
       toast.error(t("messages.updateFailed"))
     } finally {
@@ -86,15 +86,16 @@ export default function ModelRedirectSettings() {
       id="model-redirect"
       title={t("title")}
       description={t("description")}
-      onReset={resetModelRedirectConfig}>
+      onReset={resetModelRedirectConfig}
+    >
       <Card>
         <CardContent>
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <p className="text-sm font-medium text-gray-700 dark:text-dark-text-primary">
+              <p className="dark:text-dark-text-primary text-sm font-medium text-gray-700">
                 {t("enable")}
               </p>
-              <p className="mt-1 text-sm text-gray-500 dark:text-dark-text-secondary">
+              <p className="dark:text-dark-text-secondary mt-1 text-sm text-gray-500">
                 {t("enableDesc")}
               </p>
             </div>
@@ -114,7 +115,7 @@ export default function ModelRedirectSettings() {
                   label={t("standardModels")}
                   options={modelList.map((model) => ({
                     value: model,
-                    label: model
+                    label: model,
                   }))}
                   selected={modelRedirect?.standardModels ?? []}
                   onChange={(standardModels) =>
@@ -124,7 +125,7 @@ export default function ModelRedirectSettings() {
                   disabled={isUpdating}
                   allowCustom
                 />
-                <p className="mt-1 text-sm text-gray-500 dark:text-dark-text-secondary">
+                <p className="dark:text-dark-text-secondary mt-1 text-sm text-gray-500">
                   {t("standardModelsDesc")}
                 </p>
               </div>
@@ -135,7 +136,8 @@ export default function ModelRedirectSettings() {
                   disabled={isRegenerating}
                   loading={isRegenerating}
                   onClick={handleRegenerateMapping}
-                  variant="default">
+                  variant="default"
+                >
                   {isRegenerating ? t("regenerating") : t("regenerateButton")}
                 </Button>
               </div>

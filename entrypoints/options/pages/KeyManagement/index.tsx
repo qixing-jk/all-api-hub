@@ -6,7 +6,7 @@ import { TokenList } from "./components/TokenList"
 import { useKeyManagement } from "./hooks/useKeyManagement"
 
 export default function KeyManagement({
-  routeParams
+  routeParams,
 }: {
   routeParams?: Record<string, string>
 }) {
@@ -28,7 +28,7 @@ export default function KeyManagement({
     handleAddToken,
     handleCloseAddToken,
     handleEditToken,
-    handleDeleteToken
+    handleDeleteToken,
   } = useKeyManagement(routeParams)
 
   return (

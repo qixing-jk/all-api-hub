@@ -3,9 +3,9 @@
  * Converts flat auto-refresh fields to nested object structure
  */
 
-import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh.ts"
+import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
 
-import type { UserPreferences } from "../../userPreferences.ts"
+import type { UserPreferences } from "../../userPreferences"
 
 /**
  * Checks if the given user preferences object contains any of the old flat auto-refresh fields.
@@ -16,7 +16,7 @@ import type { UserPreferences } from "../../userPreferences.ts"
  * @returns {boolean} - True if the user preferences object needs to be migrated, false otherwise
  */
 export function needAutoRefreshConfigMigration(
-  prefs: UserPreferences
+  prefs: UserPreferences,
 ): boolean {
   return (
     "autoRefresh" in prefs ||
@@ -33,7 +33,7 @@ export function needAutoRefreshConfigMigration(
  * @returns {UserPreferences} - Migrated user preferences object with nested accountAutoRefresh object
  */
 export function migrateAutoRefreshConfig(
-  prefs: UserPreferences
+  prefs: UserPreferences,
 ): UserPreferences {
   const hasNestedAccountAutoRefresh =
     "accountAutoRefresh" in prefs &&
@@ -50,12 +50,12 @@ export function migrateAutoRefreshConfig(
     minInterval:
       prefs.minRefreshInterval ?? DEFAULT_ACCOUNT_AUTO_REFRESH.minInterval,
     refreshOnOpen:
-      prefs.refreshOnOpen ?? DEFAULT_ACCOUNT_AUTO_REFRESH.refreshOnOpen
+      prefs.refreshOnOpen ?? DEFAULT_ACCOUNT_AUTO_REFRESH.refreshOnOpen,
   }
 
   console.log(
     "[PreferencesMigration] Migrated accountAutoRefresh settings:",
-    accountAutoRefreshSettings
+    accountAutoRefreshSettings,
   )
 
   const {
@@ -68,6 +68,6 @@ export function migrateAutoRefreshConfig(
 
   return {
     ...restOfPrefs,
-    accountAutoRefresh: accountAutoRefreshSettings
+    accountAutoRefresh: accountAutoRefreshSettings,
   }
 }

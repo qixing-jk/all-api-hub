@@ -13,5 +13,5 @@ export const DEFAULT_ACCOUNT_AUTO_REFRESH: AccountAutoRefresh = {
   enabled: true,
   interval: 360,
   minInterval: 60,
-  refreshOnOpen: true
+  refreshOnOpen: true,
 }

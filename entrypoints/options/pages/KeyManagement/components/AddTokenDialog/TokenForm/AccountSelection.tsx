@@ -6,7 +6,7 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
 } from "~/components/ui"
 
 export interface Account {
@@ -29,7 +29,7 @@ export function AccountSelection({
   handleSelectChange,
   isEditMode,
   availableAccounts,
-  error
+  error,
 }: AccountSelectionProps) {
   const { t } = useTranslation("keyManagement")
 
@@ -38,13 +38,15 @@ export function AccountSelection({
       label={`${t("dialog.accountSelect")} *`}
       htmlFor="accountSelect"
       error={error}
-      description={isEditMode ? t("dialog.editModeNoChange") : undefined}>
+      description={isEditMode ? t("dialog.editModeNoChange") : undefined}
+    >
       <Select
         value={accountId ? accountId : UNSELECTED_VALUE}
         onValueChange={(value) =>
           handleSelectChange(value === UNSELECTED_VALUE ? "" : value)
         }
-        disabled={isEditMode}>
+        disabled={isEditMode}
+      >
         <SelectTrigger id="accountSelect" className="w-full">
           <SelectValue placeholder={t("pleaseSelectAccount")} />
         </SelectTrigger>

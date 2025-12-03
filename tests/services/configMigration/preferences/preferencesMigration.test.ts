@@ -4,18 +4,18 @@ import {
   CURRENT_PREFERENCES_VERSION,
   getPreferencesVersion,
   migratePreferences,
-  needsPreferencesMigration
+  needsPreferencesMigration,
 } from "~/services/configMigration/preferences/preferencesMigration"
 import type { UserPreferences } from "~/services/userPreferences"
-import { DEFAULT_WEBDAV_SETTINGS, WEBDAV_SYNC_STRATEGIES } from "~/types"
-import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh.ts"
-import { DEFAULT_NEW_API_CONFIG } from "~/types/newApiConfig.ts"
-import { SortingCriteriaType } from "~/types/sorting.ts"
-import { DEFAULT_SORTING_PRIORITY_CONFIG } from "~/utils/sortingPriority.ts"
+import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
+import { DEFAULT_NEW_API_CONFIG } from "~/types/newApiConfig"
+import { SortingCriteriaType } from "~/types/sorting"
+import { DEFAULT_WEBDAV_SETTINGS, WEBDAV_SYNC_STRATEGIES } from "~/types/webdav"
+import { DEFAULT_SORTING_PRIORITY_CONFIG } from "~/utils/sortingPriority"
 
 // Helper function to create a minimal v0 preferences object
 function createV0Preferences(
-  overrides?: Partial<UserPreferences>
+  overrides?: Partial<UserPreferences>,
 ): UserPreferences {
   return {
     themeMode: "system" as const,
@@ -32,21 +32,21 @@ function createV0Preferences(
       interval: 24 * 60 * 60 * 1000,
       concurrency: 2,
       maxRetries: 2,
-      rateLimit: { requestsPerMinute: 20, burst: 5 }
+      rateLimit: { requestsPerMinute: 20, burst: 5 },
     },
     autoCheckin: {
       globalEnabled: false,
       windowStart: "09:00",
-      windowEnd: "18:00"
+      windowEnd: "18:00",
     },
     modelRedirect: {
       enabled: false,
-      standardModels: []
+      standardModels: [],
     },
     sortingPriorityConfig: undefined,
     lastUpdated: Date.now(),
     // v0 does not have preferencesVersion
-    ...overrides
+    ...overrides,
   }
 }
 
@@ -88,14 +88,14 @@ describe("preferencesMigration", () => {
 
     it("returns false when version equals current", () => {
       const prefs = createV0Preferences({
-        preferencesVersion: CURRENT_PREFERENCES_VERSION
+        preferencesVersion: CURRENT_PREFERENCES_VERSION,
       })
       expect(needsPreferencesMigration(prefs)).toBe(false)
     })
 
     it("returns false when version is greater than current", () => {
       const prefs = createV0Preferences({
-        preferencesVersion: CURRENT_PREFERENCES_VERSION + 1
+        preferencesVersion: CURRENT_PREFERENCES_VERSION + 1,
       })
       expect(needsPreferencesMigration(prefs)).toBe(false)
     })
@@ -105,7 +105,7 @@ describe("preferencesMigration", () => {
     it("does not modify preferences at current version", () => {
       const prefs = createV0Preferences({
         preferencesVersion: CURRENT_PREFERENCES_VERSION,
-        sortingPriorityConfig: DEFAULT_SORTING_PRIORITY_CONFIG
+        sortingPriorityConfig: DEFAULT_SORTING_PRIORITY_CONFIG,
       })
 
       const result = migratePreferences(prefs)
@@ -133,11 +133,11 @@ describe("preferencesMigration", () => {
             {
               id: SortingCriteriaType.CURRENT_SITE,
               enabled: true,
-              priority: 0
-            }
+              priority: 0,
+            },
           ],
-          lastModified: Date.now()
-        }
+          lastModified: Date.now(),
+        },
       })
 
       const result = migratePreferences(prefs)
@@ -145,7 +145,7 @@ describe("preferencesMigration", () => {
       expect(result.preferencesVersion).toBe(CURRENT_PREFERENCES_VERSION)
       // PINNED should be added during migration
       const hasPinned = result.sortingPriorityConfig?.criteria.some(
-        (c) => c.id === SortingCriteriaType.PINNED
+        (c) => c.id === SortingCriteriaType.PINNED,
       )
       expect(hasPinned).toBe(true)
     })
@@ -159,7 +159,7 @@ describe("preferencesMigration", () => {
         webdavPassword: "pass",
         webdavAutoSync: true,
         webdavSyncInterval: 3600,
-        webdavSyncStrategy: WEBDAV_SYNC_STRATEGIES.MERGE
+        webdavSyncStrategy: WEBDAV_SYNC_STRATEGIES.MERGE,
       }) as UserPreferences
 
       const result = migratePreferences(prefs)
@@ -179,7 +179,7 @@ describe("preferencesMigration", () => {
         autoRefresh: true,
         refreshInterval: 300,
         minRefreshInterval: 45,
-        refreshOnOpen: false
+        refreshOnOpen: false,
       }) as UserPreferences
 
       const result = migratePreferences(prefs)
@@ -193,7 +193,7 @@ describe("preferencesMigration", () => {
         enabled: true,
         interval: 300,
         minInterval: 45,
-        refreshOnOpen: false
+        refreshOnOpen: false,
       })
     })
 
@@ -203,7 +203,7 @@ describe("preferencesMigration", () => {
         // Legacy flat new-api fields
         newApiBaseUrl: "https://api.example.com",
         newApiAdminToken: "admin-token",
-        newApiUserId: "user-id"
+        newApiUserId: "user-id",
       }) as UserPreferences
 
       const result = migratePreferences(prefs)
@@ -217,7 +217,7 @@ describe("preferencesMigration", () => {
       expect(result.newApi).toEqual({
         baseUrl: "https://api.example.com",
         adminToken: "admin-token",
-        userId: "user-id"
+        userId: "user-id",
       })
     })
 
@@ -229,15 +229,15 @@ describe("preferencesMigration", () => {
             {
               id: SortingCriteriaType.CURRENT_SITE,
               enabled: true,
-              priority: 0
+              priority: 0,
             },
             {
               id: SortingCriteriaType.HEALTH_STATUS,
               enabled: true,
-              priority: 1
-            }
+              priority: 1,
+            },
           ],
-          lastModified: Date.now()
+          lastModified: Date.now(),
         },
         webdavUrl: "https://backup.example.com",
         webdavUsername: "backupuser",
@@ -251,7 +251,7 @@ describe("preferencesMigration", () => {
         refreshOnOpen: true,
         newApiBaseUrl: "https://api.example.com",
         newApiAdminToken: "admin-token",
-        newApiUserId: "user-id"
+        newApiUserId: "user-id",
       }) as UserPreferences
 
       const result = migratePreferences(prefs)
@@ -272,20 +272,20 @@ describe("preferencesMigration", () => {
         password: "backuppass",
         autoSync: true,
         syncInterval: 7200,
-        syncStrategy: WEBDAV_SYNC_STRATEGIES.UPLOAD_ONLY
+        syncStrategy: WEBDAV_SYNC_STRATEGIES.UPLOAD_ONLY,
       })
 
       expect(result.accountAutoRefresh).toEqual({
         enabled: true,
         interval: 600,
         minInterval: 60,
-        refreshOnOpen: true
+        refreshOnOpen: true,
       })
 
       expect(result.newApi).toEqual({
         baseUrl: "https://api.example.com",
         adminToken: "admin-token",
-        userId: "user-id"
+        userId: "user-id",
       })
     })
 
@@ -297,7 +297,7 @@ describe("preferencesMigration", () => {
         sortField: "name" as const,
         sortOrder: "asc" as const,
         showHealthStatus: false,
-        language: "zh-CN"
+        language: "zh-CN",
       })
 
       const result = migratePreferences(prefs)
@@ -328,22 +328,22 @@ describe("preferencesMigration", () => {
           interval: 24 * 60 * 60 * 1000,
           concurrency: 2,
           maxRetries: 2,
-          rateLimit: { requestsPerMinute: 20, burst: 5 }
+          rateLimit: { requestsPerMinute: 20, burst: 5 },
         },
         autoCheckin: {
           globalEnabled: false,
           windowStart: "09:00",
-          windowEnd: "18:00"
+          windowEnd: "18:00",
         },
         modelRedirect: {
           enabled: false,
-          standardModels: []
+          standardModels: [],
         },
         webdav: DEFAULT_WEBDAV_SETTINGS,
         lastUpdated: Date.now(),
         preferencesVersion: 2,
         // Legacy fields that need migration from v2->v3 (WebDAV)
-        webdavUrl: "https://example.com"
+        webdavUrl: "https://example.com",
       } as UserPreferences
 
       const result = migratePreferences(prefs)
@@ -357,7 +357,7 @@ describe("preferencesMigration", () => {
 
     it("respects defaults when fields are missing", () => {
       const prefs = createV0Preferences({
-        preferencesVersion: 2
+        preferencesVersion: 2,
         // No legacy WebDAV fields
       })
 
@@ -377,10 +377,10 @@ describe("preferencesMigration", () => {
           password: "oldpass",
           autoSync: false,
           syncInterval: 3600,
-          syncStrategy: WEBDAV_SYNC_STRATEGIES.MERGE
+          syncStrategy: WEBDAV_SYNC_STRATEGIES.MERGE,
         },
         webdavUrl: "https://new.com",
-        webdavUsername: "newuser"
+        webdavUsername: "newuser",
       }) as UserPreferences
 
       const result = migratePreferences(prefs)
@@ -399,17 +399,17 @@ describe("preferencesMigration", () => {
             {
               id: SortingCriteriaType.CURRENT_SITE,
               enabled: true,
-              priority: 0
-            }
+              priority: 0,
+            },
           ],
-          lastModified: Date.now()
-        }
+          lastModified: Date.now(),
+        },
       })
 
       const result = migratePreferences(prefs)
 
       const pinnedCriterion = result.sortingPriorityConfig?.criteria.find(
-        (c) => c.id === SortingCriteriaType.PINNED
+        (c) => c.id === SortingCriteriaType.PINNED,
       )
 
       expect(pinnedCriterion).toBeDefined()
@@ -424,23 +424,23 @@ describe("preferencesMigration", () => {
             {
               id: SortingCriteriaType.CURRENT_SITE,
               enabled: true,
-              priority: 10
+              priority: 10,
             },
             {
               id: SortingCriteriaType.HEALTH_STATUS,
               enabled: true,
-              priority: 20
-            }
+              priority: 20,
+            },
           ],
-          lastModified: Date.now()
-        }
+          lastModified: Date.now(),
+        },
       })
 
       const result = migratePreferences(prefs)
 
       // Priorities should be normalized
       const priorities = result.sortingPriorityConfig?.criteria.map(
-        (c) => c.priority
+        (c) => c.priority,
       )
       const uniquePriorities = [...new Set(priorities)]
       expect(uniquePriorities.length).toBe(priorities?.length)
@@ -450,7 +450,7 @@ describe("preferencesMigration", () => {
       const prefs = createV0Preferences({
         webdavUrl: "https://example.com",
         autoRefresh: true,
-        refreshInterval: 300
+        refreshInterval: 300,
       }) as UserPreferences
 
       delete (prefs as any).preferencesVersion
@@ -463,7 +463,7 @@ describe("preferencesMigration", () => {
 
     it("updates lastUpdated timestamp during migration", () => {
       const prefs = createV0Preferences({
-        lastUpdated: 1000
+        lastUpdated: 1000,
       })
 
       const result = migratePreferences(prefs)
@@ -476,7 +476,7 @@ describe("preferencesMigration", () => {
 
     it("correctly handles defaults for all migration steps", () => {
       const prefs = createV0Preferences({
-        preferencesVersion: 1
+        preferencesVersion: 1,
       })
 
       const result = migratePreferences(prefs)
@@ -490,7 +490,7 @@ describe("preferencesMigration", () => {
 
     it("preserves optional fields like language during migration", () => {
       const prefs = createV0Preferences({
-        language: "en"
+        language: "en",
       })
 
       const result = migratePreferences(prefs)
@@ -501,7 +501,7 @@ describe("preferencesMigration", () => {
     it("handles sorting config without migration when already correct", () => {
       const prefs = createV0Preferences({
         preferencesVersion: CURRENT_PREFERENCES_VERSION,
-        sortingPriorityConfig: DEFAULT_SORTING_PRIORITY_CONFIG
+        sortingPriorityConfig: DEFAULT_SORTING_PRIORITY_CONFIG,
       })
 
       const result = migratePreferences(prefs)
@@ -524,7 +524,7 @@ describe("preferencesMigration", () => {
         webdavPassword: "pass",
         webdavAutoSync: true,
         webdavSyncInterval: 3600,
-        webdavSyncStrategy: WEBDAV_SYNC_STRATEGIES.MERGE
+        webdavSyncStrategy: WEBDAV_SYNC_STRATEGIES.MERGE,
       }) as UserPreferences
 
       const result = migratePreferences(prefs)

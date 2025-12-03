@@ -1,6 +1,6 @@
 import React from "react"
 
-import { cn } from "~/lib/utils.ts"
+import { cn } from "~/lib/utils"
 
 export interface CardListProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode
@@ -16,13 +16,14 @@ const CardList = React.forwardRef<HTMLDivElement, CardListProps>(
           dividers
             ? "dark:divide-dark-bg-tertiary divide-y divide-gray-200"
             : "space-y-4",
-          className
+          className,
         )}
-        {...props}>
+        {...props}
+      >
         {children}
       </div>
     )
-  }
+  },
 )
 CardList.displayName = "CardList"
 

@@ -14,7 +14,7 @@ import {
   ManifestOptionalPermissions,
   onOptionalPermissionsChanged,
   OPTIONAL_PERMISSION_DEFINITIONS,
-  OPTIONAL_PERMISSIONS
+  OPTIONAL_PERMISSIONS,
 } from "~/services/permissions/permissionManager"
 import { showResultToast } from "~/utils/toastHelpers"
 
@@ -35,7 +35,7 @@ interface PermissionOnboardingDialogProps {
 
 export function PermissionOnboardingDialog({
   open,
-  onClose
+  onClose,
 }: PermissionOnboardingDialogProps) {
   const { t } = useTranslation("settings")
   const [statuses, setStatuses] = useState<
@@ -50,8 +50,8 @@ export function PermissionOnboardingDialog({
     const results = await Promise.all(
       OPTIONAL_PERMISSIONS.map(async (id) => ({
         id,
-        granted: await hasPermission(id)
-      }))
+        granted: await hasPermission(id),
+      })),
     )
 
     setStatuses((prev) => ({
@@ -59,10 +59,10 @@ export function PermissionOnboardingDialog({
       ...results.reduce(
         (acc, curr) => ({
           ...acc,
-          [curr.id]: curr.granted
+          [curr.id]: curr.granted,
         }),
-        {} as Record<ManifestOptionalPermissions, boolean>
-      )
+        {} as Record<ManifestOptionalPermissions, boolean>,
+      ),
     }))
   }, [hasOptionalPermissions])
 
@@ -90,12 +90,12 @@ export function PermissionOnboardingDialog({
       showResultToast(
         success,
         t("permissionsOnboarding.toasts.success"),
-        t("permissionsOnboarding.toasts.error")
+        t("permissionsOnboarding.toasts.error"),
       )
     } catch (error) {
       console.error(
         "[Permissions] Failed to grant all optional permissions",
-        error
+        error,
       )
       success = false
       showResultToast(false, t("permissionsOnboarding.toasts.error"))
@@ -116,7 +116,7 @@ export function PermissionOnboardingDialog({
   const permissionList = useMemo(() => {
     return OPTIONAL_PERMISSION_DEFINITIONS.map((permission) => ({
       ...permission,
-      granted: statuses[permission.id]
+      granted: statuses[permission.id],
     }))
   }, [statuses])
 
@@ -139,14 +139,16 @@ export function PermissionOnboardingDialog({
         <Button
           onClick={handleGrantAll}
           loading={isRequesting}
-          className="flex-1">
+          className="flex-1"
+        >
           {t("permissionsOnboarding.actions.allowAll")}
         </Button>
         <Button
           variant="outline"
           onClick={onClose}
           className="flex-1"
-          disabled={isRequesting}>
+          disabled={isRequesting}
+        >
           {t("permissionsOnboarding.actions.maybeLater")}
         </Button>
       </div>
@@ -155,7 +157,8 @@ export function PermissionOnboardingDialog({
         className="flex-1"
         onClick={handleOpenGithub}
         disabled={isRequesting}
-        leftIcon={<Star className="h-4 w-4" />}>
+        leftIcon={<Star className="h-4 w-4" />}
+      >
         {t("permissionsOnboarding.project.starCta")}
       </Button>
     </div>
@@ -167,7 +170,8 @@ export function PermissionOnboardingDialog({
       onClose={onClose}
       size="lg"
       header={header}
-      footer={footer}>
+      footer={footer}
+    >
       <div className="space-y-4">
         <Card padding="md" className="space-y-4">
           <div className="flex flex-wrap items-center gap-3">
@@ -180,14 +184,16 @@ export function PermissionOnboardingDialog({
           </div>
           <Alert
             variant="info"
-            title={t("permissionsOnboarding.project.label")}>
+            title={t("permissionsOnboarding.project.label")}
+          >
             <AlertDescription>
               <div>
                 <Link
                   href={GITHUB_URL}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-1">
+                  className="flex items-center gap-1"
+                >
                   {GITHUB_URL}
                   <Github className="h-4 w-4" />
                 </Link>
@@ -223,16 +229,17 @@ export function PermissionOnboardingDialog({
                         : permission.granted === false
                           ? "warning"
                           : "info"
-                    }>
+                    }
+                  >
                     {permission.granted === null
                       ? t("permissions.status.checking")
                       : t(
                           permission.granted
                             ? "permissions.status.granted"
-                            : "permissions.status.denied"
+                            : "permissions.status.denied",
                         )}
                   </Badge>
-                )
+                ),
               }))}
             />
           </CardContent>

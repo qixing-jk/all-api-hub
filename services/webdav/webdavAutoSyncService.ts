@@ -3,21 +3,21 @@ import { t } from "i18next"
 import {
   BACKUP_VERSION,
   normalizeBackupForMerge,
-  type BackupFullV2
-} from "~/entrypoints/options/pages/ImportExport/utils.ts"
-import type { SiteAccount, WebDAVSettings } from "~/types"
-import { WEBDAV_SYNC_STRATEGIES } from "~/types"
+  type BackupFullV2,
+} from "~/entrypoints/options/pages/ImportExport/utils"
+import { SiteAccount } from "~/types"
 import type { ChannelConfigMap } from "~/types/channelConfig"
-import { getErrorMessage } from "~/utils/error.ts"
+import { WEBDAV_SYNC_STRATEGIES, WebDAVSettings } from "~/types/webdav"
+import { getErrorMessage } from "~/utils/error"
 
-import { accountStorage } from "../accountStorage.ts"
-import { channelConfigStorage } from "../channelConfigStorage.ts"
-import { userPreferences, type UserPreferences } from "../userPreferences.ts"
+import { accountStorage } from "../accountStorage"
+import { channelConfigStorage } from "../channelConfigStorage"
+import { userPreferences, type UserPreferences } from "../userPreferences"
 import {
   downloadBackup,
   testWebdavConnection,
-  uploadBackup
-} from "./webdavService.ts"
+  uploadBackup,
+} from "./webdavService"
 
 /**
  * WebDAV 自动同步服务
@@ -86,7 +86,7 @@ class WebdavAutoSyncService {
       }, intervalMs)
 
       console.log(
-        `[WebdavAutoSync] 自动同步已启动，间隔: ${preferences.webdav.syncInterval || 3600}秒`
+        `[WebdavAutoSync] 自动同步已启动，间隔: ${preferences.webdav.syncInterval || 3600}秒`,
       )
     } catch (error) {
       console.error("[WebdavAutoSync] 设置自动同步失败:", error)
@@ -116,7 +116,7 @@ class WebdavAutoSyncService {
 
       // 通知前端更新（如果popup是打开的）
       this.notifyFrontend("sync_completed", {
-        timestamp: this.lastSyncTime
+        timestamp: this.lastSyncTime,
       })
     } catch (error) {
       console.error("[WebdavAutoSync] 后台同步失败:", error)
@@ -161,7 +161,7 @@ class WebdavAutoSyncService {
       remoteData = JSON.parse(content)
       console.log(
         "[WebdavAutoSync] 成功下载远程数据，时间戳:",
-        remoteData?.timestamp
+        remoteData?.timestamp,
       )
     } catch (error: any) {
       if (error.message?.includes("404") || error.message?.includes("不存在")) {
@@ -177,7 +177,7 @@ class WebdavAutoSyncService {
       await Promise.all([
         accountStorage.exportData(),
         userPreferences.exportPreferences(),
-        channelConfigStorage.exportConfigs()
+        channelConfigStorage.exportConfigs(),
       ])
 
     const localPinnedAccountIds = localAccountsConfig.pinnedAccountIds || []
@@ -196,7 +196,7 @@ class WebdavAutoSyncService {
 
     const normalizedRemote = normalizeBackupForMerge(
       remoteData,
-      localPreferences
+      localPreferences,
     )
 
     // 决定同步策略
@@ -216,7 +216,7 @@ class WebdavAutoSyncService {
           accountsTimestamp: localAccountsConfig.last_updated,
           preferences: localPreferences,
           preferencesTimestamp: localPreferences.lastUpdated,
-          channelConfigs: localChannelConfigs
+          channelConfigs: localChannelConfigs,
         },
         {
           accounts: normalizedRemote.accounts,
@@ -226,8 +226,8 @@ class WebdavAutoSyncService {
             (normalizedRemote.preferences &&
               normalizedRemote.preferences.lastUpdated) ||
             0,
-          channelConfigs: normalizedRemote.channelConfigs
-        }
+          channelConfigs: normalizedRemote.channelConfigs,
+        },
       )
 
       accountsToSave = mergeResult.accounts
@@ -236,7 +236,7 @@ class WebdavAutoSyncService {
 
       const mergedPinnedIds = [
         ...remotePinnedAccountIds,
-        ...localPinnedAccountIds
+        ...localPinnedAccountIds,
       ]
       const seenPinned = new Set<string>()
       const uniqueMergedPinnedIds: string[] = []
@@ -247,7 +247,7 @@ class WebdavAutoSyncService {
         }
       }
       pinnedAccountIdsToSave = uniqueMergedPinnedIds.filter((id) =>
-        accountsToSave.some((account) => account.id === id)
+        accountsToSave.some((account) => account.id === id),
       )
       console.log(`[WebdavAutoSync] 合并完成: ${accountsToSave.length} 个账号`)
     } else if (strategy === WEBDAV_SYNC_STRATEGIES.UPLOAD_ONLY || !remoteData) {
@@ -256,7 +256,7 @@ class WebdavAutoSyncService {
       preferencesToSave = localPreferences
       channelConfigsToSave = localChannelConfigs
       pinnedAccountIdsToSave = localPinnedAccountIds.filter((id) =>
-        accountsToSave.some((account) => account.id === id)
+        accountsToSave.some((account) => account.id === id),
       )
       console.log("[WebdavAutoSync] 使用本地数据覆盖")
     } else if (strategy === WEBDAV_SYNC_STRATEGIES.DOWNLOAD_ONLY) {
@@ -266,12 +266,12 @@ class WebdavAutoSyncService {
       channelConfigsToSave =
         normalizedRemote.channelConfigs || localChannelConfigs
       pinnedAccountIdsToSave = remotePinnedAccountIds.filter((id) =>
-        accountsToSave.some((account) => account.id === id)
+        accountsToSave.some((account) => account.id === id),
       )
       console.log("[WebdavAutoSync] 使用远程数据")
     } else {
       console.error(
-        `[WebdavAutoSync] 无效的同步策略: ${String(strategy)}, 将中止本次同步`
+        `[WebdavAutoSync] 无效的同步策略: ${String(strategy)}, 将中止本次同步`,
       )
       throw new Error(`Invalid WebDAV sync strategy: ${String(strategy)}`)
     }
@@ -280,10 +280,10 @@ class WebdavAutoSyncService {
     await Promise.all([
       accountStorage.importData({
         accounts: accountsToSave,
-        pinnedAccountIds: pinnedAccountIdsToSave
+        pinnedAccountIds: pinnedAccountIdsToSave,
       }),
       userPreferences.importPreferences(preferencesToSave),
-      channelConfigStorage.importConfigs(channelConfigsToSave)
+      channelConfigStorage.importConfigs(channelConfigsToSave),
     ])
 
     // 上传到WebDAV
@@ -293,10 +293,10 @@ class WebdavAutoSyncService {
       accounts: {
         accounts: accountsToSave,
         pinnedAccountIds: pinnedAccountIdsToSave,
-        last_updated: Date.now()
+        last_updated: Date.now(),
       },
       preferences: preferencesToSave,
-      channelConfigs: channelConfigsToSave
+      channelConfigs: channelConfigsToSave,
     }
 
     await uploadBackup(JSON.stringify(exportData, null, 2))
@@ -321,14 +321,14 @@ class WebdavAutoSyncService {
       preferences: UserPreferences
       preferencesTimestamp: number
       channelConfigs: ChannelConfigMap | null
-    }
+    },
   ): {
     accounts: SiteAccount[]
     preferences: UserPreferences
     channelConfigs: ChannelConfigMap
   } {
     console.log(
-      `[WebdavAutoSync] 开始合并数据 - 本地账号: ${local.accounts.length}, 远程账号: ${remote.accounts.length}`
+      `[WebdavAutoSync] 开始合并数据 - 本地账号: ${local.accounts.length}, 远程账号: ${remote.accounts.length}`,
     )
 
     // 合并账号数据
@@ -356,11 +356,11 @@ class WebdavAutoSyncService {
           // 远程更新，使用远程数据
           accountMap.set(remoteAccount.id, remoteAccount)
           console.log(
-            `[WebdavAutoSync] 使用远程账号: ${remoteAccount.site_name} (远程更新)`
+            `[WebdavAutoSync] 使用远程账号: ${remoteAccount.site_name} (远程更新)`,
           )
         } else {
           console.log(
-            `[WebdavAutoSync] 保留本地账号: ${localAccount.site_name} (本地更新)`
+            `[WebdavAutoSync] 保留本地账号: ${localAccount.site_name} (本地更新)`,
           )
         }
       }
@@ -413,13 +413,13 @@ class WebdavAutoSyncService {
         remote.preferencesTimestamp > local.preferencesTimestamp
           ? "远程"
           : "本地"
-      }偏好设置, 通道配置数: ${Object.keys(mergedChannelConfigs).length}`
+      }偏好设置, 通道配置数: ${Object.keys(mergedChannelConfigs).length}`,
     )
 
     return {
       accounts: mergedAccounts,
       preferences,
-      channelConfigs: mergedChannelConfigs
+      channelConfigs: mergedChannelConfigs,
     }
   }
 
@@ -430,7 +430,7 @@ class WebdavAutoSyncService {
     if (this.isSyncing) {
       return {
         success: false,
-        message: "同步正在进行中，请稍后再试"
+        message: "同步正在进行中，请稍后再试",
       }
     }
 
@@ -443,7 +443,7 @@ class WebdavAutoSyncService {
       console.log("[WebdavAutoSync] 立即同步完成")
       return {
         success: true,
-        message: "同步成功"
+        message: "同步成功",
       }
     } catch (error) {
       console.error("[WebdavAutoSync] 立即同步失败:", error)
@@ -451,7 +451,7 @@ class WebdavAutoSyncService {
       this.lastSyncError = getErrorMessage(error)
       return {
         success: false,
-        message: getErrorMessage(error)
+        message: getErrorMessage(error),
       }
     }
   }
@@ -478,7 +478,7 @@ class WebdavAutoSyncService {
     try {
       // Update the nested webdav object
       await userPreferences.savePreferences({
-        webdav: settings
+        webdav: settings,
       })
       await this.setupAutoSync() // 重新设置定时器
       console.log("[WebdavAutoSync] 设置已更新:", settings)
@@ -497,7 +497,7 @@ class WebdavAutoSyncService {
       isSyncing: this.isSyncing,
       lastSyncTime: this.lastSyncTime,
       lastSyncStatus: this.lastSyncStatus,
-      lastSyncError: this.lastSyncError
+      lastSyncError: this.lastSyncError,
     }
   }
 
@@ -510,13 +510,13 @@ class WebdavAutoSyncService {
       browser.runtime
         .sendMessage({
           type: "WEBDAV_AUTO_SYNC_UPDATE",
-          payload: { type, data }
+          payload: { type, data },
         })
         .catch((error) => {
           // 静默处理"没有接收者"的错误（popup可能没打开）
           if (
             String(error?.message || "").includes(
-              "receiving end does not exist"
+              "receiving end does not exist",
             )
           ) {
             console.log("[WebdavAutoSync] 前端未打开，跳过通知")
@@ -547,7 +547,7 @@ export const webdavAutoSyncService = new WebdavAutoSyncService()
 // 消息处理器
 export const handleWebdavAutoSyncMessage = async (
   request: any,
-  sendResponse: (response: any) => void
+  sendResponse: (response: any) => void,
 ) => {
   try {
     switch (request.action) {

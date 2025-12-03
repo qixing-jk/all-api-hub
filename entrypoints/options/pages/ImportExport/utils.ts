@@ -104,7 +104,7 @@ export interface ImportResult {
  */
 export function parseBackupSummary(
   importData: string,
-  unknownLabel: string
+  unknownLabel: string,
 ): ParsedBackupSummary | { valid: false } | null {
   if (!importData.trim()) return null
 
@@ -113,10 +113,10 @@ export function parseBackupSummary(
 
     const hasAccounts = Boolean(data.accounts || data.type === "accounts")
     const hasPreferences = Boolean(
-      data.preferences || data.type === "preferences"
+      data.preferences || data.type === "preferences",
     )
     const hasChannelConfigs = Boolean(
-      data.channelConfigs || data.type === "channelConfigs"
+      data.channelConfigs || data.type === "channelConfigs",
     )
 
     const ts =
@@ -129,7 +129,7 @@ export function parseBackupSummary(
       hasAccounts,
       hasPreferences,
       hasChannelConfigs,
-      timestamp: ts
+      timestamp: ts,
     }
   } catch {
     return { valid: false }
@@ -143,10 +143,10 @@ async function importV1Backup(data: RawBackupData): Promise<ImportResult> {
 
   const accountsRequested = Boolean(data.accounts || data.type === "accounts")
   const preferencesRequested = Boolean(
-    data.preferences || data.type === "preferences"
+    data.preferences || data.type === "preferences",
   )
   const channelConfigsRequested = Boolean(
-    data.channelConfigs || data.type === "channelConfigs"
+    data.channelConfigs || data.type === "channelConfigs",
   )
 
   // accounts: support both legacy partial exports and older full exports
@@ -158,7 +158,7 @@ async function importV1Backup(data: RawBackupData): Promise<ImportResult> {
 
     if (accountsData) {
       await accountStorage.importData({
-        accounts: accountsData
+        accounts: accountsData,
       })
       accountsImported = true
     }
@@ -173,7 +173,7 @@ async function importV1Backup(data: RawBackupData): Promise<ImportResult> {
         preferencesImported = true
       } else {
         console.error(
-          "[Import] Failed to import user preferences from legacy backup"
+          "[Import] Failed to import user preferences from legacy backup",
         )
       }
     }
@@ -205,8 +205,8 @@ async function importV1Backup(data: RawBackupData): Promise<ImportResult> {
     sections: {
       accounts: accountsImported,
       preferences: preferencesImported,
-      channelConfigs: channelConfigsImported
-    }
+      channelConfigs: channelConfigsImported,
+    },
   }
 }
 
@@ -217,7 +217,7 @@ async function importV1Backup(data: RawBackupData): Promise<ImportResult> {
  */
 export function normalizeBackupForMerge(
   data: RawBackupData | null,
-  localPreferences: any
+  localPreferences: any,
 ): {
   accounts: any[]
   accountsTimestamp: number
@@ -229,7 +229,7 @@ export function normalizeBackupForMerge(
       accounts: [],
       accountsTimestamp: 0,
       preferences: null,
-      channelConfigs: null
+      channelConfigs: null,
     }
   }
 
@@ -246,7 +246,7 @@ export function normalizeBackupForMerge(
 
 function normalizeV2BackupForMerge(
   data: BackupFullV2,
-  localPreferences: any
+  localPreferences: any,
 ): {
   accounts: any[]
   accountsTimestamp: number
@@ -270,13 +270,13 @@ function normalizeV2BackupForMerge(
     accounts,
     accountsTimestamp,
     preferences: data.preferences || localPreferences,
-    channelConfigs
+    channelConfigs,
   }
 }
 
 function normalizeV1BackupForMerge(
   data: RawBackupData,
-  localPreferences: any
+  localPreferences: any,
 ): {
   accounts: any[]
   accountsTimestamp: number
@@ -305,7 +305,7 @@ function normalizeV1BackupForMerge(
     accounts,
     accountsTimestamp,
     preferences,
-    channelConfigs
+    channelConfigs,
   }
 }
 
@@ -337,7 +337,7 @@ async function importV2Backup(data: BackupV2): Promise<ImportResult> {
 
     await accountStorage.importData({
       accounts,
-      pinnedAccountIds
+      pinnedAccountIds,
     })
     accountsImported = true
   }
@@ -354,7 +354,7 @@ async function importV2Backup(data: BackupV2): Promise<ImportResult> {
 
   if (channelConfigsRequested) {
     await channelConfigStorage.importConfigs(
-      (data as BackupFullV2).channelConfigs
+      (data as BackupFullV2).channelConfigs,
     )
     channelConfigsImported = true
   }
@@ -376,8 +376,8 @@ async function importV2Backup(data: BackupV2): Promise<ImportResult> {
     sections: {
       accounts: accountsImported,
       preferences: preferencesImported,
-      channelConfigs: channelConfigsImported
-    }
+      channelConfigs: channelConfigsImported,
+    },
   }
 }
 
@@ -394,7 +394,7 @@ async function importV2Backup(data: BackupV2): Promise<ImportResult> {
  *   this dispatcher.
  */
 export async function importFromBackupObject(
-  data: RawBackupData
+  data: RawBackupData,
 ): Promise<ImportResult> {
   // timestamp is required for all versions; version is optional for backward compatibility
   if (!data.timestamp) {
@@ -421,7 +421,7 @@ export async function importFromBackupObject(
  * full V2 backup file and trigger a browser download.
  */
 export const handleExportAll = async (
-  setIsExporting: (isExporting: boolean) => void
+  setIsExporting: (isExporting: boolean) => void,
 ) => {
   try {
     setIsExporting(true)
@@ -430,7 +430,7 @@ export const handleExportAll = async (
     const [accountData, preferencesData, channelConfigs] = await Promise.all([
       accountStorage.exportData(),
       userPreferences.exportPreferences(),
-      channelConfigStorage.exportConfigs()
+      channelConfigStorage.exportConfigs(),
     ])
 
     const exportData: BackupFullV2 = {
@@ -438,12 +438,12 @@ export const handleExportAll = async (
       timestamp: Date.now(),
       accounts: accountData,
       preferences: preferencesData,
-      channelConfigs
+      channelConfigs,
     }
 
     // 创建下载链接
     const blob = new Blob([JSON.stringify(exportData, null, 2)], {
-      type: "application/json"
+      type: "application/json",
     })
     const url = URL.createObjectURL(blob)
     const link = document.createElement("a")
@@ -469,7 +469,7 @@ export const handleExportAll = async (
  * `type: "accounts"`.
  */
 export const handleExportAccounts = async (
-  setIsExporting: (isExporting: boolean) => void
+  setIsExporting: (isExporting: boolean) => void,
 ) => {
   try {
     setIsExporting(true)
@@ -479,11 +479,11 @@ export const handleExportAccounts = async (
       version: BACKUP_VERSION,
       timestamp: Date.now(),
       type: "accounts",
-      accounts: accountData
+      accounts: accountData,
     }
 
     const blob = new Blob([JSON.stringify(exportData, null, 2)], {
-      type: "application/json"
+      type: "application/json",
     })
     const url = URL.createObjectURL(blob)
     const link = document.createElement("a")
@@ -509,7 +509,7 @@ export const handleExportAccounts = async (
  * `type: "preferences"`.
  */
 export const handleExportPreferences = async (
-  setIsExporting: (isExporting: boolean) => void
+  setIsExporting: (isExporting: boolean) => void,
 ) => {
   try {
     setIsExporting(true)
@@ -519,11 +519,11 @@ export const handleExportPreferences = async (
       version: BACKUP_VERSION,
       timestamp: Date.now(),
       type: "preferences",
-      preferences: preferencesData
+      preferences: preferencesData,
     }
 
     const blob = new Blob([JSON.stringify(exportData, null, 2)], {
-      type: "application/json"
+      type: "application/json",
     })
     const url = URL.createObjectURL(blob)
     const link = document.createElement("a")

@@ -10,22 +10,23 @@ import {
   CardItem,
   CardList,
   Input,
-  Switch
+  Switch,
 } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { DEFAULT_PREFERENCES } from "~/services/userPreferences"
 import {
   AUTO_CHECKIN_SCHEDULE_MODE,
   AutoCheckinPreferences,
-  AutoCheckinScheduleMode
+  AutoCheckinScheduleMode,
 } from "~/types/autoCheckin"
+import { navigateWithinOptionsPage } from "~/utils/navigation"
 
 export default function AutoCheckinSettings() {
   const { t } = useTranslation(["autoCheckin", "settings"])
   const {
     preferences: userPrefs,
     updateAutoCheckin,
-    resetAutoCheckinConfig
+    resetAutoCheckinConfig,
   } = useUserPreferencesContext()
   const [isSaving, setIsSaving] = useState(false)
 
@@ -33,21 +34,21 @@ export default function AutoCheckinSettings() {
   const retryPreferences = preferences.retryStrategy ?? {
     enabled: false,
     intervalMinutes: 30,
-    maxAttemptsPerDay: 3
+    maxAttemptsPerDay: 3,
   }
 
   const scheduleModes = useMemo(
     () => [
       {
         value: AUTO_CHECKIN_SCHEDULE_MODE.RANDOM,
-        label: t("autoCheckin:settings.scheduleModeRandom")
+        label: t("autoCheckin:settings.scheduleModeRandom"),
       },
       {
         value: AUTO_CHECKIN_SCHEDULE_MODE.DETERMINISTIC,
-        label: t("autoCheckin:settings.scheduleModeDeterministic")
-      }
+        label: t("autoCheckin:settings.scheduleModeDeterministic"),
+      },
     ],
-    [t]
+    [t],
   )
 
   const savePreferences = async (updates: Partial<AutoCheckinPreferences>) => {
@@ -69,8 +70,7 @@ export default function AutoCheckinSettings() {
   }
 
   const handleNavigateToExecution = () => {
-    const url = browser.runtime.getURL("options.html#autoCheckin")
-    window.location.href = url
+    navigateWithinOptionsPage("#autoCheckin")
   }
 
   const validateTimeWindow = (start: string, end: string): boolean => {
@@ -104,7 +104,7 @@ export default function AutoCheckinSettings() {
   const isTimeWithinWindow = (
     time: string,
     start: string,
-    end: string
+    end: string,
   ): boolean => {
     const [timeH, timeM] = time.split(":").map(Number)
     const [startH, startM] = start.split(":").map(Number)
@@ -124,13 +124,13 @@ export default function AutoCheckinSettings() {
   }
 
   const saveRetryPreferences = async (
-    updates: Partial<AutoCheckinPreferences["retryStrategy"]>
+    updates: Partial<AutoCheckinPreferences["retryStrategy"]>,
   ) => {
     await savePreferences({
       retryStrategy: {
         ...retryPreferences,
-        ...updates
-      }
+        ...updates,
+      },
     })
   }
 
@@ -145,7 +145,8 @@ export default function AutoCheckinSettings() {
           setIsSaving(false)
         }
         return result
-      }}>
+      }}
+    >
       <Card padding="none">
         <CardList>
           {/* Enable Auto Check-in */}
@@ -177,7 +178,7 @@ export default function AutoCheckinSettings() {
                     savePreferences({ windowStart: newStart })
                   } else {
                     toast.error(
-                      t("autoCheckin:messages.error.invalidTimeWindow")
+                      t("autoCheckin:messages.error.invalidTimeWindow"),
                     )
                   }
                 }}
@@ -201,7 +202,7 @@ export default function AutoCheckinSettings() {
                     savePreferences({ windowEnd: newEnd })
                   } else {
                     toast.error(
-                      t("autoCheckin:messages.error.invalidTimeWindow")
+                      t("autoCheckin:messages.error.invalidTimeWindow"),
                     )
                   }
                 }}
@@ -223,7 +224,7 @@ export default function AutoCheckinSettings() {
                     type="button"
                     onClick={() =>
                       savePreferences({
-                        scheduleMode: mode.value as AutoCheckinScheduleMode
+                        scheduleMode: mode.value as AutoCheckinScheduleMode,
                       })
                     }
                     disabled={isSaving}
@@ -231,7 +232,8 @@ export default function AutoCheckinSettings() {
                       preferences.scheduleMode === mode.value
                         ? "border-blue-500 bg-blue-50 text-blue-600 dark:border-blue-400 dark:bg-blue-400/10 dark:text-blue-200"
                         : "border-gray-300 text-gray-600 hover:border-gray-400 dark:border-gray-700 dark:text-gray-300"
-                    }`}>
+                    }`}
+                  >
                     {mode.label}
                   </button>
                 ))}
@@ -255,7 +257,9 @@ export default function AutoCheckinSettings() {
                     const newTime = e.target.value
                     if (!validateTimeFormat(newTime)) {
                       toast.error(
-                        t("autoCheckin:messages.error.invalidDeterministicTime")
+                        t(
+                          "autoCheckin:messages.error.invalidDeterministicTime",
+                        ),
                       )
                       return
                     }
@@ -263,13 +267,13 @@ export default function AutoCheckinSettings() {
                       !isTimeWithinWindow(
                         newTime,
                         preferences.windowStart,
-                        preferences.windowEnd
+                        preferences.windowEnd,
                       )
                     ) {
                       toast.error(
                         t(
-                          "autoCheckin:messages.error.deterministicTimeOutsideWindow"
-                        )
+                          "autoCheckin:messages.error.deterministicTimeOutsideWindow",
+                        ),
                       )
                       return
                     }
@@ -351,7 +355,8 @@ export default function AutoCheckinSettings() {
                 variant="default"
                 size="sm"
                 className="flex items-center gap-2"
-                rightIcon={<ArrowTopRightOnSquareIcon className="h-4 w-4" />}>
+                rightIcon={<ArrowTopRightOnSquareIcon className="h-4 w-4" />}
+              >
                 <span>{t("autoCheckin:settings.viewExecutionButton")}</span>
               </Button>
             }

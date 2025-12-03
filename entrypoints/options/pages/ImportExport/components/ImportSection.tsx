@@ -10,7 +10,7 @@ import {
   CardHeader,
   CardTitle,
   FormField,
-  Textarea
+  Textarea,
 } from "~/components/ui"
 
 interface ImportSectionProps {
@@ -34,7 +34,7 @@ const ImportSection = ({
   handleFileImport,
   handleImport,
   isImporting,
-  validation
+  validation,
 }: ImportSectionProps) => {
   const { t } = useTranslation("importExport")
   return (
@@ -107,7 +107,8 @@ const ImportSection = ({
             disabled={isImporting || !validation?.valid}
             loading={isImporting}
             variant="default"
-            bleed>
+            bleed
+          >
             {isImporting
               ? t("common:status.importing")
               : t("common:actions.import")}

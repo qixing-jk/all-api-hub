@@ -20,7 +20,8 @@ export default function ProgressCard({ progress }: ProgressCardProps) {
       <CardContent
         padding="default"
         spacing="none"
-        className="flex flex-col items-center gap-3 text-center sm:flex-row sm:items-center sm:gap-4 sm:text-left">
+        className="flex flex-col items-center gap-3 text-center sm:flex-row sm:items-center sm:gap-4 sm:text-left"
+      >
         <ArrowPathIcon className="h-5 w-5 shrink-0 animate-spin text-blue-600 dark:text-blue-400" />
         <div className="flex flex-col items-center sm:items-start">
           <p className="font-medium text-blue-900 dark:text-blue-100">
@@ -29,7 +30,7 @@ export default function ProgressCard({ progress }: ProgressCardProps) {
           <p className="text-sm text-blue-700 dark:text-blue-300">
             {t("execution.progress.running", {
               completed: progress.completed,
-              total: progress.total
+              total: progress.total,
             })}
             {progress.currentChannel && ` - ${progress.currentChannel}`}
           </p>

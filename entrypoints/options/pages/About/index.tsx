@@ -29,28 +29,28 @@ export default function About() {
     {
       name: "WXT",
       version: getPkgVersion("wxt"),
-      description: t("techStack.wxt")
+      description: t("techStack.wxt"),
     },
     {
       name: "React",
       version: getPkgVersion("react"),
-      description: t("techStack.react")
+      description: t("techStack.react"),
     },
     {
       name: "TypeScript",
       version: getPkgVersion("typescript"),
-      description: t("techStack.typescript")
+      description: t("techStack.typescript"),
     },
     {
       name: "Tailwind CSS",
       version: getPkgVersion("tailwindcss"),
-      description: t("techStack.tailwindcss")
+      description: t("techStack.tailwindcss"),
     },
     {
       name: "Headless UI",
       version: getPkgVersion("@headlessui/react"),
-      description: t("techStack.headlessui")
-    }
+      description: t("techStack.headlessui"),
+    },
   ]
 
   return (

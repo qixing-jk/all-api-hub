@@ -15,8 +15,8 @@ function generateCherryStudioURL(data: CherryStudioExportData): string {
   // 转成 Base64（UTF-8 编码）
   const base64String = btoa(
     encodeURIComponent(jsonString).replace(/%([0-9A-F]{2})/g, (_, p1) =>
-      String.fromCharCode(parseInt(p1, 16))
-    )
+      String.fromCharCode(parseInt(p1, 16)),
+    ),
   )
   return `cherrystudio://providers/api-keys?v=1&data=${base64String}`
 }
@@ -31,7 +31,7 @@ export function OpenInCherryStudio(account: DisplaySiteData, token: ApiToken) {
     id: account.id,
     baseUrl: account.baseUrl,
     apiKey: token.key,
-    name: account.name
+    name: account.name,
   }
 
   const url = generateCherryStudioURL(exportData)

@@ -17,14 +17,14 @@ export function useModelListData() {
   // Compute current account
   const currentAccount = useMemo(
     () => accounts.find((acc) => acc.id === state.selectedAccount),
-    [accounts, state.selectedAccount]
+    [accounts, state.selectedAccount],
   )
 
   // Data loading (no longer calls useAccountData internally)
   const modelData = useModelData({
     selectedAccount: state.selectedAccount,
     accounts,
-    selectedGroup: state.selectedGroup
+    selectedGroup: state.selectedGroup,
   })
 
   // Filtering
@@ -33,7 +33,7 @@ export function useModelListData() {
     currentAccount,
     selectedGroup: state.selectedGroup,
     searchTerm: state.searchTerm,
-    selectedProvider: state.selectedProvider
+    selectedProvider: state.selectedProvider,
   })
 
   // Return unified state
@@ -49,6 +49,6 @@ export function useModelListData() {
     ...modelData,
 
     // Spread filtered data
-    ...filteredData
+    ...filteredData,
   }
 }

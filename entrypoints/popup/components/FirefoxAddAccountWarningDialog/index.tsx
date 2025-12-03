@@ -13,7 +13,7 @@ interface FirefoxWarningDialogProps {
 export default function FirefoxAddAccountWarningDialog({
   isOpen,
   onClose,
-  onConfirm
+  onConfirm,
 }: FirefoxWarningDialogProps) {
   const { t } = useTranslation("ui")
 
@@ -67,7 +67,8 @@ export default function FirefoxAddAccountWarningDialog({
           variant="secondary"
           className="flex-1"
           onClick={onClose}
-          aria-label={t("dialog.firefox.confirm")}>
+          aria-label={t("dialog.firefox.confirm")}
+        >
           {t("dialog.firefox.confirm")}
         </Button>
         <Button
@@ -75,7 +76,8 @@ export default function FirefoxAddAccountWarningDialog({
           variant="default"
           className="flex-1"
           onClick={onConfirm}
-          aria-label={t("dialog.firefox.openSidebar")}>
+          aria-label={t("dialog.firefox.openSidebar")}
+        >
           {t("dialog.firefox.openSidebar")}
         </Button>
       </div>

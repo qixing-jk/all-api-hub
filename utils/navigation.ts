@@ -5,7 +5,7 @@ import {
   openSidePanel as _openSidePanel,
   createTab as createTabApi,
   focusTab,
-  getExtensionURL
+  getExtensionURL,
 } from "~/utils/browserApi"
 import { joinUrl } from "~/utils/url"
 
@@ -50,9 +50,9 @@ const buildSearchString = (params?: Record<string, string | undefined>) => {
   return query ? `?${query}` : ""
 }
 
-const navigateWithinOptionsPage = (
+export const navigateWithinOptionsPage = (
   hash: string,
-  searchParams?: Record<string, string | undefined>
+  searchParams?: Record<string, string | undefined>,
 ) => {
   if (typeof window === "undefined") {
     return
@@ -95,7 +95,7 @@ const createActiveTab = async (url: string): Promise<void> => {
  */
 const updateTab = async (
   tabId: number,
-  updateInfo: browser.tabs._UpdateUpdateProperties
+  updateInfo: browser.tabs._UpdateUpdateProperties,
 ): Promise<void> => {
   await browser.tabs.update(tabId, updateInfo)
 }
@@ -115,7 +115,7 @@ const focusWindow = async (tab: browser.tabs.Tab) => {
  */
 const queryTabs = async (
   queryInfo: browser.tabs._QueryQueryInfo,
-  callback: (tabs: browser.tabs.Tab[]) => void
+  callback: (tabs: browser.tabs.Tab[]) => void,
 ): Promise<void> => {
   try {
     const tabs = await browser.tabs.query(queryInfo)
@@ -129,7 +129,7 @@ const queryTabs = async (
 
 export const openOrFocusOptionsPage = (
   hash: string,
-  searchParams?: Record<string, string | undefined>
+  searchParams?: Record<string, string | undefined>,
 ) => {
   const searchString = buildSearchString(searchParams)
   const baseUrl = `${OPTIONS_PAGE_URL}${searchString}${hash}`
@@ -171,7 +171,7 @@ export const openOrFocusOptionsPage = (
 }
 // 核心工具函数
 const withPopupClose = <T extends any[]>(
-  fn: (...args: T) => Promise<void> | void
+  fn: (...args: T) => Promise<void> | void,
 ) => {
   return async (...args: T) => {
     await fn(...args)
@@ -213,23 +213,33 @@ const _openSettingsTab = (tabId: string) => {
 }
 
 const _openKeysPage = async (accountId?: string) => {
-  const url = accountId
-    ? getExtensionURL(`options.html#keys?accountId=${accountId}`)
-    : getExtensionURL("options.html#keys")
-  await createActiveTab(url)
+  const baseUrl = getExtensionURL("options.html")
+  const url = new URL(baseUrl)
+
+  if (accountId) {
+    url.searchParams.set("accountId", accountId)
+  }
+
+  url.hash = "keys"
+  await createActiveTab(url.toString())
 }
 
 const _openModelsPage = async (accountId?: string) => {
-  const url = accountId
-    ? getExtensionURL(`options.html#models?accountId=${accountId}`)
-    : getExtensionURL("options.html#models")
-  await createActiveTab(url)
+  const baseUrl = getExtensionURL("options.html")
+  const url = new URL(baseUrl)
+
+  if (accountId) {
+    url.searchParams.set("accountId", accountId)
+  }
+
+  url.hash = "models"
+  await createActiveTab(url.toString())
 }
 
 const _openUsagePage = async (account: DisplaySiteData) => {
   const logUrl = joinUrl(
     account.baseUrl,
-    getSiteApiRouter(account.siteType).usagePath
+    getSiteApiRouter(account.siteType).usagePath,
   )
   await createActiveTab(logUrl)
 }
@@ -237,7 +247,7 @@ const _openUsagePage = async (account: DisplaySiteData) => {
 const _openCheckInPage = async (account: DisplaySiteData) => {
   const checkInUrl = joinUrl(
     account.baseUrl,
-    getSiteApiRouter(account.siteType).checkInPath
+    getSiteApiRouter(account.siteType).checkInPath,
   )
   await createActiveTab(checkInUrl)
 }
@@ -258,10 +268,10 @@ const _openRedeemPage = async (account: DisplaySiteData) => {
 
 // 导出带自动关闭的版本
 export const openFullAccountManagerPage = withPopupClose(() =>
-  _openFullManagerPage()
+  _openFullManagerPage(),
 )
 export const openAccountManagerWithSearch = withPopupClose((search: string) =>
-  _openFullManagerPage({ search })
+  _openFullManagerPage({ search }),
 )
 export const openSettingsPage = withPopupClose(_openSettingsPage)
 export const openSettingsTab = withPopupClose(_openSettingsTab)
@@ -275,7 +285,7 @@ export const openRedeemPage = withPopupClose(_openRedeemPage)
 
 // 批量操作
 export const openMultiplePages = async (
-  operations: (() => Promise<void> | void)[]
+  operations: (() => Promise<void> | void)[],
 ) => {
   await Promise.all(operations.map((op) => op()))
   closeIfPopup()
@@ -284,6 +294,6 @@ export const openMultiplePages = async (
 export const openCheckInAndRedeem = async (account: DisplaySiteData) => {
   await openMultiplePages([
     () => _openRedeemPage(account),
-    () => _openCustomCheckInPage(account)
+    () => _openCustomCheckInPage(account),
   ])
 }

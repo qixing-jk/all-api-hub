@@ -4,7 +4,7 @@ import { veloeraProvider } from "~/services/autoCheckin/providers/veloera"
 import { AuthTypeEnum, SiteHealthStatus, type SiteAccount } from "~/types"
 
 vi.mock("~/services/apiService/common/utils", () => ({
-  fetchApi: vi.fn()
+  fetchApi: vi.fn(),
 }))
 
 const mockAccount: SiteAccount = {
@@ -26,11 +26,11 @@ const mockAccount: SiteAccount = {
     today_completion_tokens: 0,
     today_quota_consumption: 0,
     today_requests_count: 0,
-    today_income: 0
+    today_income: 0,
   },
   last_sync_time: Date.now(),
   created_at: Date.now(),
-  updated_at: Date.now()
+  updated_at: Date.now(),
 }
 
 describe("veloeraProvider", () => {
@@ -47,7 +47,7 @@ describe("veloeraProvider", () => {
     it("returns false when no access token", () => {
       const account = {
         ...mockAccount,
-        account_info: { ...mockAccount.account_info, access_token: "" }
+        account_info: { ...mockAccount.account_info, access_token: "" },
       }
       expect(veloeraProvider.canCheckIn(account)).toBe(false)
     })
@@ -58,7 +58,7 @@ describe("veloeraProvider", () => {
       const { fetchApi } = await import("~/services/apiService/common/utils")
       vi.mocked(fetchApi).mockResolvedValueOnce({
         success: true,
-        message: "Success"
+        message: "Success",
       })
 
       const result = await veloeraProvider.checkIn(mockAccount)
@@ -69,7 +69,7 @@ describe("veloeraProvider", () => {
       const { fetchApi } = await import("~/services/apiService/common/utils")
       vi.mocked(fetchApi).mockResolvedValueOnce({
         success: true,
-        message: "已签到"
+        message: "已签到",
       })
 
       const result = await veloeraProvider.checkIn(mockAccount)

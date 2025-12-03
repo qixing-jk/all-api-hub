@@ -29,7 +29,7 @@ export const calculateModelPrice = (
   model: ModelPricing,
   groupRatio: Record<string, number>,
   exchangeRate: number,
-  userGroup: string = "default"
+  userGroup: string = "default",
 ): CalculatedPrice => {
   // 获取用户分组的倍率，默认为1
   const groupMultiplier = groupRatio[userGroup] || 1
@@ -46,13 +46,13 @@ export const calculateModelPrice = (
       inputUSD,
       outputUSD,
       inputCNY: inputUSD * exchangeRate,
-      outputCNY: outputUSD * exchangeRate
+      outputCNY: outputUSD * exchangeRate,
     }
   } else {
     // 按次计费
     const perCallPrice = calculateModelPerCallPrice(
       model.model_price,
-      groupMultiplier
+      groupMultiplier,
     )
 
     return {
@@ -60,7 +60,7 @@ export const calculateModelPrice = (
       outputUSD: 0,
       inputCNY: 0,
       outputCNY: 0,
-      perCallPrice
+      perCallPrice,
     }
   }
 }
@@ -75,14 +75,14 @@ const DONE_HUB_TOKEN_TO_CALL_RATIO = 0.002
  */
 const calculateModelPerCallPrice = (
   cost: PerCallPrice,
-  factor: number
+  factor: number,
 ): PerCallPrice => {
   if (typeof cost === "number") {
     return cost * factor
   }
   return {
     input: cost.input * factor * DONE_HUB_TOKEN_TO_CALL_RATIO,
-    output: cost.output * factor * DONE_HUB_TOKEN_TO_CALL_RATIO
+    output: cost.output * factor * DONE_HUB_TOKEN_TO_CALL_RATIO,
   }
 }
 
@@ -92,7 +92,7 @@ const calculateModelPerCallPrice = (
 export const formatPrice = (
   price: number,
   currency: CurrencyType = "USD",
-  precision: number = 4
+  precision: number = 4,
 ): string => {
   const symbol = currency === "USD" ? "$" : "¥"
 
@@ -110,7 +110,7 @@ export const formatPrice = (
  */
 export const formatPriceCompact = (
   price: number,
-  currency: CurrencyType = "USD"
+  currency: CurrencyType = "USD",
 ): string => {
   const symbol = currency === "USD" ? "$" : "¥"
 
@@ -132,7 +132,7 @@ export const formatPriceRange = (
   inputPrice: number,
   outputPrice: number,
   currency: CurrencyType = "USD",
-  precision: number = 4
+  precision: number = 4,
 ): string => {
   const formattedInput = formatPrice(inputPrice, currency, precision)
   const formattedOutput = formatPrice(outputPrice, currency, precision)
@@ -157,7 +157,7 @@ export const getBillingModeText = (quotaType: number): string => {
  * 获取计费模式的样式
  */
 export const getBillingModeStyle = (
-  quotaType: number
+  quotaType: number,
 ): { color: string; bgColor: string } => {
   return isTokenBillingType(quotaType)
     ? { color: "text-blue-600", bgColor: "bg-blue-50" }
@@ -169,7 +169,7 @@ export const getBillingModeStyle = (
  */
 export const isModelAvailableForGroup = (
   model: ModelPricing,
-  userGroup: string
+  userGroup: string,
 ): boolean => {
   return model.enable_groups.includes(userGroup)
 }
@@ -178,7 +178,7 @@ export const isModelAvailableForGroup = (
  * 获取模型的可用端点类型显示文本
  */
 export const getEndpointTypesText = (
-  endpointTypes: string[] | undefined
+  endpointTypes: string[] | undefined,
 ): string => {
   if (!endpointTypes || !Array.isArray(endpointTypes)) {
     return t("ui:billing.notProvided")

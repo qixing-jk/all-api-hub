@@ -4,7 +4,7 @@ import { DONE_HUB, ONE_HUB } from "~/constants/siteType"
 import {
   fetchAccountTokens,
   fetchModelPricing,
-  fetchUserInfo
+  fetchUserInfo,
 } from "~/services/apiService"
 import * as commonAPI from "~/services/apiService/common"
 import * as oneHubAPI from "~/services/apiService/oneHub"

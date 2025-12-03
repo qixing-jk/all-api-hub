@@ -8,7 +8,7 @@ import type {
   ApiToken,
   CurrencyType,
   DisplaySiteData,
-  SortOrder
+  SortOrder,
 } from "~/types"
 
 // 初始化 dayjs
@@ -29,7 +29,7 @@ export const formatTokenCount = (count: number): string => {
 export function normalizeToMs(input: number | string | Date): number
 export function normalizeToMs(input: null | undefined): null
 export function normalizeToMs(
-  input: number | string | Date | null | undefined
+  input: number | string | Date | null | undefined,
 ): number | null
 /**
  * 自动修正时间输入为毫秒级时间戳
@@ -39,7 +39,7 @@ export function normalizeToMs(
  * @returns number | null  返回标准毫秒时间戳，无法识别时返回 null
  */
 export function normalizeToMs(
-  input: string | number | Date | null | undefined
+  input: string | number | Date | null | undefined,
 ) {
   if (input == null) return null
 
@@ -67,7 +67,7 @@ export function normalizeToDate(input: null | undefined): null
  * @returns Date | null
  */
 export function normalizeToDate(
-  input: number | string | Date | null | undefined
+  input: number | string | Date | null | undefined,
 ): Date | null {
   const ms = normalizeToMs(input)
   return ms == null ? null : new Date(ms)
@@ -104,13 +104,13 @@ export const formatFullTime = (date: Date | undefined): string => {
  */
 export const calculateTotalConsumption = (
   stats: AccountStats,
-  accounts: any[]
+  accounts: any[],
 ) => {
   const usdAmount = parseFloat(
     (
       stats.today_total_consumption /
       UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
-    ).toFixed(2)
+    ).toFixed(2),
   )
   const cnyAmount = parseFloat(
     accounts
@@ -120,14 +120,14 @@ export const calculateTotalConsumption = (
           (acc.account_info.today_quota_consumption /
             UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR) *
             acc.exchange_rate,
-        0
+        0,
       )
-      .toFixed(2)
+      .toFixed(2),
   )
 
   return {
     USD: usdAmount,
-    CNY: cnyAmount
+    CNY: cnyAmount,
   }
 }
 
@@ -137,11 +137,11 @@ export const calculateTotalConsumption = (
 export const calculateTotalBalance = (displayData: DisplaySiteData[]) => {
   return {
     USD: parseFloat(
-      displayData.reduce((sum, site) => sum + site.balance.USD, 0).toFixed(2)
+      displayData.reduce((sum, site) => sum + site.balance.USD, 0).toFixed(2),
     ),
     CNY: parseFloat(
-      displayData.reduce((sum, site) => sum + site.balance.CNY, 0).toFixed(2)
-    )
+      displayData.reduce((sum, site) => sum + site.balance.CNY, 0).toFixed(2),
+    ),
   }
 }
 
@@ -154,7 +154,7 @@ export const calculateTotalConsumptionForSites = (sites: DisplaySiteData[]) => {
 
   return {
     USD: parseFloat(usd.toFixed(2)),
-    CNY: parseFloat(cny.toFixed(2))
+    CNY: parseFloat(cny.toFixed(2)),
   }
 }
 
@@ -178,7 +178,7 @@ export const getCurrencyDisplayName = (currencyType: CurrencyType): string => {
  * 获取切换后的货币类型
  */
 export const getOppositeCurrency = (
-  currencyType: CurrencyType
+  currencyType: CurrencyType,
 ): CurrencyType => {
   return currencyType === "USD" ? "CNY" : "USD"
 }
@@ -211,7 +211,7 @@ export const generateId = (prefix = "id"): string => {
  */
 export const debounce = <T extends (...args: any[]) => any>(
   func: T,
-  wait: number
+  wait: number,
 ): ((...args: Parameters<T>) => void) => {
   let timeout: NodeJS.Timeout | null = null
 
@@ -228,7 +228,7 @@ export const debounce = <T extends (...args: any[]) => any>(
  */
 export const throttle = <T extends (...args: any[]) => any>(
   func: T,
-  limit: number
+  limit: number,
 ): ((...args: Parameters<T>) => void) => {
   let inThrottle = false
 
@@ -295,7 +295,7 @@ export const getGroupBadgeStyle = (group: string) => {
     "bg-pink-100 text-pink-800 border-pink-200",
     "bg-indigo-100 text-indigo-800 border-indigo-200",
     "bg-teal-100 text-teal-800 border-teal-200",
-    "bg-yellow-100 text-yellow-800 border-yellow-200"
+    "bg-yellow-100 text-yellow-800 border-yellow-200",
   ]
 
   return colors[Math.abs(hash) % colors.length]

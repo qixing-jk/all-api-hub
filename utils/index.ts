@@ -1,6 +1,6 @@
 import { isArray, mergeWith } from "lodash"
 
-import { DeepPartial } from "~/types/utils.ts"
+import { DeepPartial } from "~/types/utils"
 
 export function isNotEmptyArray<T>(arr: T[] | null | undefined): arr is T[] {
   return Array.isArray(arr) && arr.length > 0

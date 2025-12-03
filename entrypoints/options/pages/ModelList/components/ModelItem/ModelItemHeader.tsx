@@ -16,7 +16,7 @@ interface ModelItemHeaderProps {
 export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
   model,
   isAvailableForUser,
-  handleCopyModelName
+  handleCopyModelName,
 }) => {
   const { t } = useTranslation("modelList")
   const providerConfig = getProviderConfig(model.model_name)
@@ -44,7 +44,8 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
             isAvailableForUser
               ? "dark:text-dark-text-primary text-gray-900"
               : "dark:text-dark-text-tertiary text-gray-500"
-          }`}>
+          }`}
+        >
           {model.model_name}
         </h3>
 
@@ -55,7 +56,8 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
           onClick={handleCopyModelName}
           title={t("messages.modelNameCopied")}
           aria-label={t("messages.modelNameCopied")}
-          className="shrink-0">
+          className="shrink-0"
+        >
           <DocumentDuplicateIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
         </IconButton>
 
@@ -65,7 +67,8 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
           <Badge
             variant={getBillingVariant(model.quota_type)}
             size="sm"
-            className="text-[10px] sm:text-xs">
+            className="text-[10px] sm:text-xs"
+          >
             {getBillingModeText(model.quota_type)}
           </Badge>
 
@@ -73,7 +76,8 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
           <Badge
             variant={isAvailableForUser ? "success" : "secondary"}
             size="sm"
-            className="text-[10px] sm:text-xs">
+            className="text-[10px] sm:text-xs"
+          >
             {isAvailableForUser ? t("available") : t("unavailable")}
           </Badge>
         </div>

@@ -8,46 +8,46 @@ import { Card, CardContent } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { SortingCriteriaType, type SortingFieldConfig } from "~/types/sorting"
 
-import { showUpdateToast } from "../../../../../../utils/toastHelpers.ts"
+import { showUpdateToast } from "../../../../../../utils/toastHelpers"
 import { SortingPriorityDragList } from "./SortingPriorityDragList"
 
 // Maps sorting criteria IDs to their UI display text (label and description).
 // This keeps UI concerns separate from the data-only sorting configuration.
 const getSortingCriteriaUiText = (
-  t: (key: string) => string
+  t: (key: string) => string,
 ): Record<SortingCriteriaType, { label: string; description?: string }> => ({
   [SortingCriteriaType.PINNED]: {
     label: t("settings:sorting.pinnedPriority"),
-    description: t("settings:sorting.pinnedDesc")
+    description: t("settings:sorting.pinnedDesc"),
   },
   [SortingCriteriaType.CURRENT_SITE]: {
     label: t("settings:sorting.currentSitePriority"),
-    description: t("settings:sorting.currentSiteDesc")
+    description: t("settings:sorting.currentSiteDesc"),
   },
   [SortingCriteriaType.HEALTH_STATUS]: {
     label: t("settings:sorting.healthStatus"),
-    description: t("settings:sorting.healthDesc")
+    description: t("settings:sorting.healthDesc"),
   },
   [SortingCriteriaType.CHECK_IN_REQUIREMENT]: {
     label: t("settings:sorting.checkInRequirement"),
-    description: t("settings:sorting.checkInDesc")
+    description: t("settings:sorting.checkInDesc"),
   },
   [SortingCriteriaType.USER_SORT_FIELD]: {
     label: t("settings:sorting.userCustomSort"),
-    description: t("settings:sorting.customSortDesc")
+    description: t("settings:sorting.customSortDesc"),
   },
   [SortingCriteriaType.CUSTOM_CHECK_IN_URL]: {
     label: t("settings:sorting.customCheckInUrl"),
-    description: t("settings:sorting.customCheckInDesc")
+    description: t("settings:sorting.customCheckInDesc"),
   },
   [SortingCriteriaType.CUSTOM_REDEEM_URL]: {
     label: t("settings:sorting.customRedeemUrl"),
-    description: t("settings:sorting.customRedeemDesc")
+    description: t("settings:sorting.customRedeemDesc"),
   },
   [SortingCriteriaType.MATCHED_OPEN_TABS]: {
     label: t("settings:sorting.matchedOpenTabs"),
-    description: t("settings:sorting.matchedOpenTabsDesc")
-  }
+    description: t("settings:sorting.matchedOpenTabsDesc"),
+  },
 })
 
 export default function SortingPrioritySettings() {
@@ -56,7 +56,7 @@ export default function SortingPrioritySettings() {
     sortingPriorityConfig: initialConfig,
     updateSortingPriorityConfig,
     resetSortingPriorityConfig,
-    isLoading
+    isLoading,
   } = useUserPreferencesContext()
   const [items, setItems] = useState<SortingFieldConfig[]>([])
 
@@ -64,7 +64,7 @@ export default function SortingPrioritySettings() {
     if (initialConfig?.criteria) {
       // Sort items based on priority for consistent display
       setItems(
-        [...initialConfig.criteria].sort((a, b) => a.priority - b.priority)
+        [...initialConfig.criteria].sort((a, b) => a.priority - b.priority),
       )
     }
   }, [initialConfig])
@@ -77,7 +77,7 @@ export default function SortingPrioritySettings() {
       const reorderedItems = arrayMove(items, oldIndex, newIndex)
       const updatedItems = reorderedItems.map((item, index) => ({
         ...item,
-        priority: index
+        priority: index,
       }))
 
       setItems(updatedItems)
@@ -87,7 +87,7 @@ export default function SortingPrioritySettings() {
         const success = await updateSortingPriorityConfig({
           ...initialConfig,
           criteria: updatedItems,
-          lastModified: Date.now()
+          lastModified: Date.now(),
         })
         if (success) {
           showUpdateToast(success, t("sorting.title"))
@@ -98,7 +98,7 @@ export default function SortingPrioritySettings() {
 
   const handleToggleEnabled = async (id: string, enabled: boolean) => {
     const updatedItems = items.map((item) =>
-      item.id === id ? { ...item, enabled } : item
+      item.id === id ? { ...item, enabled } : item,
     )
 
     setItems(updatedItems)
@@ -108,7 +108,7 @@ export default function SortingPrioritySettings() {
       const success = await updateSortingPriorityConfig({
         ...initialConfig,
         criteria: updatedItems,
-        lastModified: Date.now()
+        lastModified: Date.now(),
       })
       if (success) {
         showUpdateToast(success, t("sorting.title"))
@@ -126,8 +126,8 @@ export default function SortingPrioritySettings() {
     ...item,
     ...(sortingCriteriaUiText[item.id] || {
       label: item.id,
-      description: t("sorting.unknownSortRule")
-    })
+      description: t("sorting.unknownSortRule"),
+    }),
   }))
 
   return (
@@ -135,7 +135,8 @@ export default function SortingPrioritySettings() {
       id="sorting-priority"
       title={t("sorting.title")}
       description={t("sorting.description", { defaultValue: "" })}
-      onReset={resetSortingPriorityConfig}>
+      onReset={resetSortingPriorityConfig}
+    >
       <Card>
         <CardContent>
           <SortingPriorityDragList

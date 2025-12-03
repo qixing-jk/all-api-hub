@@ -15,13 +15,13 @@ const FeatureList = ({ title, items, color }: FeatureListProps) => {
           dot: "bg-green-500",
           box: "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-900/30",
           text: "text-green-800 dark:text-green-300",
-          bullet: "bg-green-500"
+          bullet: "bg-green-500",
         }
       : {
           dot: "bg-blue-500",
           box: "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-900/30",
           text: "text-blue-800 dark:text-blue-300",
-          bullet: "bg-blue-500"
+          bullet: "bg-blue-500",
         }
 
   return (
@@ -35,9 +35,11 @@ const FeatureList = ({ title, items, color }: FeatureListProps) => {
           {items.map((feature, index) => (
             <li
               key={index}
-              className={`flex items-start space-x-2 text-sm ${palette.text}`}>
+              className={`flex items-start space-x-2 text-sm ${palette.text}`}
+            >
               <div
-                className={`h-1.5 w-1.5 ${palette.bullet} mt-2 shrink-0 rounded-full`}></div>
+                className={`h-1.5 w-1.5 ${palette.bullet} mt-2 shrink-0 rounded-full`}
+              ></div>
               <span>{feature}</span>
             </li>
           ))}

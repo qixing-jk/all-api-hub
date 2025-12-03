@@ -22,18 +22,18 @@ const badgeVariants = cva(
           "border-transparent bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/40 dark:text-amber-200",
         info: "border-transparent bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/40 dark:text-blue-200",
         danger:
-          "border-transparent bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/40 dark:text-red-300"
+          "border-transparent bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/40 dark:text-red-300",
       },
       size: {
         default: "text-xs px-2.5 py-0.5",
-        sm: "text-[0.65rem] px-2 py-0.5"
-      }
+        sm: "text-[0.65rem] px-2 py-0.5",
+      },
     },
     defaultVariants: {
       variant: "default",
-      size: "default"
-    }
-  }
+      size: "default",
+    },
+  },
 )
 
 function Badge({

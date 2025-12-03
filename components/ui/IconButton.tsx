@@ -1,7 +1,7 @@
 import { cva, type VariantProps } from "class-variance-authority"
 import React from "react"
 
-import { cn } from "~/lib/utils.ts"
+import { cn } from "~/lib/utils"
 
 const iconButtonVariants = cva(
   "inline-flex items-center justify-center rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background",
@@ -20,7 +20,7 @@ const iconButtonVariants = cva(
         success:
           "bg-green-600 text-white hover:bg-green-700 focus:ring-green-500",
         warning:
-          "bg-yellow-600 text-white hover:bg-yellow-700 focus:ring-yellow-500"
+          "bg-yellow-600 text-white hover:bg-yellow-700 focus:ring-yellow-500",
       },
       size: {
         none: "",
@@ -28,14 +28,14 @@ const iconButtonVariants = cva(
         sm: "h-6 w-6 sm:h-8 sm:w-8",
         default: "h-8 w-8 sm:h-10 sm:w-10",
         lg: "h-10 w-10 sm:h-12 sm:w-12",
-        xl: "h-12 w-12 sm:h-14 sm:w-14"
-      }
+        xl: "h-12 w-12 sm:h-14 sm:w-14",
+      },
     },
     defaultVariants: {
       variant: "default",
-      size: "default"
-    }
-  }
+      size: "default",
+    },
+  },
 )
 
 export interface IconButtonProps
@@ -48,7 +48,7 @@ export interface IconButtonProps
 const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
   (
     { className, variant, size, loading, children, disabled, ...props },
-    ref
+    ref,
   ) => {
     const isDisabled = disabled || loading
 
@@ -57,13 +57,15 @@ const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
         className={cn(iconButtonVariants({ variant, size, className }))}
         ref={ref}
         disabled={isDisabled}
-        {...props}>
+        {...props}
+      >
         {loading ? (
           <svg
             className="h-4 w-4 animate-spin"
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
-            viewBox="0 0 24 24">
+            viewBox="0 0 24 24"
+          >
             <circle
               className="opacity-25"
               cx="12"
@@ -83,7 +85,7 @@ const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
         )}
       </button>
     )
-  }
+  },
 )
 IconButton.displayName = "IconButton"
 

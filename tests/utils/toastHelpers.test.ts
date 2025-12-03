@@ -3,14 +3,14 @@ import { describe, expect, it, vi } from "vitest"
 import {
   showResetToast,
   showResultToast,
-  showUpdateToast
+  showUpdateToast,
 } from "~/utils/toastHelpers"
 
 vi.mock("react-hot-toast", () => ({
   default: {
     success: vi.fn(),
-    error: vi.fn()
-  }
+    error: vi.fn(),
+  },
 }))
 
 vi.mock("i18next", () => ({
@@ -21,7 +21,7 @@ vi.mock("i18next", () => ({
       return `${params?.name} failed`
     if (key === "settings:danger.resetFailed") return "Reset failed"
     return key
-  })
+  }),
 }))
 
 describe("toastHelpers", () => {

@@ -6,8 +6,8 @@ import i18n from "~/utils/i18n"
 vi.mock("~/utils/i18n", () => ({
   default: {
     t: vi.fn((key: string) => key),
-    on: vi.fn()
-  }
+    on: vi.fn(),
+  },
 }))
 
 describe("documentTitle", () => {
@@ -54,7 +54,7 @@ describe("documentTitle", () => {
 
       expect(onSpy).toHaveBeenCalledWith(
         "languageChanged",
-        expect.any(Function)
+        expect.any(Function),
       )
 
       const handler = onSpy.mock.calls[0][1] as () => void

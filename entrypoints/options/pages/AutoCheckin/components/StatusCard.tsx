@@ -5,7 +5,7 @@ import {
   AUTO_CHECKIN_RUN_RESULT,
   CHECKIN_RESULT_STATUS,
   type AutoCheckinRunResult,
-  type AutoCheckinStatus
+  type AutoCheckinStatus,
 } from "~/types/autoCheckin"
 
 interface StatusCardProps {
@@ -46,10 +46,10 @@ export default function StatusCard({ status }: StatusCardProps) {
   const derivedSuccess = accountResults.filter(
     (r) =>
       r.status === CHECKIN_RESULT_STATUS.SUCCESS ||
-      r.status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED
+      r.status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
   ).length
   const derivedFailed = accountResults.filter(
-    (r) => r.status === CHECKIN_RESULT_STATUS.FAILED
+    (r) => r.status === CHECKIN_RESULT_STATUS.FAILED,
   ).length
   const derivedSkipped = accountResults.length - derivedSuccess - derivedFailed
 
@@ -59,30 +59,30 @@ export default function StatusCard({ status }: StatusCardProps) {
     successCount: derivedSuccess,
     failedCount: derivedFailed,
     skippedCount: Math.max(derivedSkipped, 0),
-    needsRetry: false
+    needsRetry: false,
   }
 
   const summaryItems = [
     {
       label: t("status.summary.eligible"),
-      value: summary.totalEligible ?? accountResults.length
+      value: summary.totalEligible ?? accountResults.length,
     },
     {
       label: t("status.summary.executed"),
-      value: summary.executed ?? accountResults.length
+      value: summary.executed ?? accountResults.length,
     },
     {
       label: t("status.summary.success"),
-      value: summary.successCount ?? derivedSuccess
+      value: summary.successCount ?? derivedSuccess,
     },
     {
       label: t("status.summary.failed"),
-      value: summary.failedCount ?? derivedFailed
+      value: summary.failedCount ?? derivedFailed,
     },
     {
       label: t("status.summary.skipped"),
-      value: summary.skippedCount ?? derivedSkipped
-    }
+      value: summary.skippedCount ?? derivedSkipped,
+    },
   ]
 
   return (
@@ -119,7 +119,8 @@ export default function StatusCard({ status }: StatusCardProps) {
             <div className="mt-1">
               {status.lastRunResult && (
                 <span
-                  className={`inline-block rounded px-2 py-1 text-sm font-medium ${getResultBadgeColor(status.lastRunResult)}`}>
+                  className={`inline-block rounded px-2 py-1 text-sm font-medium ${getResultBadgeColor(status.lastRunResult)}`}
+                >
                   {t(`status.result.${status.lastRunResult}`)}
                 </span>
               )}

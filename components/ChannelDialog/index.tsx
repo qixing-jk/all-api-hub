@@ -3,6 +3,6 @@ export { ChannelDialogContainer } from "~/components/ChannelDialog/components/Ch
 export { useChannelForm } from "~/components/ChannelDialog/hooks/useChannelForm"
 export {
   ChannelDialogProvider,
-  useChannelDialogContext
+  useChannelDialogContext,
 } from "~/components/ChannelDialog/context/ChannelDialogContext"
 export { useChannelDialog } from "~/components/ChannelDialog/hooks/useChannelDialog"

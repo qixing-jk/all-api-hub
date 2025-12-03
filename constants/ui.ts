@@ -8,7 +8,7 @@ export const UI_CONSTANTS = {
   POPUP: {
     WIDTH: "w-[410px]",
     HEIGHT: "h-[600px]",
-    MAX_HEIGHT: "max-h-[90vh]"
+    MAX_HEIGHT: "max-h-[90vh]",
   },
 
   // 动画配置
@@ -16,7 +16,7 @@ export const UI_CONSTANTS = {
     INITIAL_DURATION: 1.5,
     UPDATE_DURATION: 0.8,
     FAST_DURATION: 0.6,
-    SLOW_DURATION: 1.0
+    SLOW_DURATION: 1.0,
   },
 
   // 更新间隔
@@ -25,19 +25,19 @@ export const UI_CONSTANTS = {
   // 排序相关
   SORT: {
     DEFAULT_FIELD: DATA_TYPE_BALANCE,
-    DEFAULT_ORDER: "desc" as const
+    DEFAULT_ORDER: "desc" as const,
   },
 
   // Token 格式化阈值
   TOKEN: {
     MILLION_THRESHOLD: 1000000,
-    THOUSAND_THRESHOLD: 1000
+    THOUSAND_THRESHOLD: 1000,
   },
 
   // 汇率相关
   EXCHANGE_RATE: {
     DEFAULT: 7.2,
-    CONVERSION_FACTOR: 500000 // USD to quota conversion
+    CONVERSION_FACTOR: 500000, // USD to quota conversion
   },
 
   // 样式类名
@@ -54,7 +54,7 @@ export const UI_CONSTANTS = {
       REFRESH:
         "px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-dark-bg-primary transition-colors disabled:opacity-50",
       COPY: "inline-flex items-center space-x-2 cursor-pointer rounded-md bg-gray-100 dark:bg-dark-bg-tertiary px-3 py-1.5 text-gray-700 dark:text-dark-text-secondary hover:bg-gray-200 dark:hover:bg-dark-bg-primary focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-dark-bg-primary",
-      SAVE: "rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-dark-bg-primary transition-colors"
+      SAVE: "rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-dark-bg-primary transition-colors",
     },
 
     // 状态指示器
@@ -62,7 +62,7 @@ export const UI_CONSTANTS = {
       HEALTHY: "bg-green-500",
       ERROR: "bg-red-500",
       WARNING: "bg-yellow-500",
-      UNKNOWN: "bg-gray-400"
+      UNKNOWN: "bg-gray-400",
     },
 
     // 文本颜色
@@ -71,7 +71,7 @@ export const UI_CONSTANTS = {
       SECONDARY: "text-gray-500 dark:text-dark-text-secondary",
       SUCCESS: "text-green-500",
       ERROR: "text-red-500",
-      WARNING: "text-yellow-500"
+      WARNING: "text-yellow-500",
     },
 
     // 输入框
@@ -81,12 +81,12 @@ export const UI_CONSTANTS = {
       SEARCH:
         "w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-dark-bg-tertiary rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 dark:disabled:bg-dark-bg-tertiary disabled:cursor-not-allowed bg-white dark:bg-dark-bg-secondary text-gray-900 dark:text-dark-text-primary placeholder-gray-400 dark:placeholder-gray-500",
       CHECKBOX:
-        "rounded border-gray-300 dark:border-dark-bg-tertiary text-blue-600 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-dark-bg-primary"
-    }
-  }
+        "rounded border-gray-300 dark:border-dark-bg-tertiary text-blue-600 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-dark-bg-primary",
+    },
+  },
 } as const
 
 export const CURRENCY_SYMBOLS = {
   USD: "$",
-  CNY: "¥"
+  CNY: "¥",
 } as const

@@ -15,7 +15,7 @@ export function FormActions({
   isEditMode,
   onClose,
   onSubmit,
-  canSubmit
+  canSubmit,
 }: FormActionsProps) {
   const { t } = useTranslation("keyManagement")
 
@@ -27,7 +27,8 @@ export function FormActions({
       <Button
         onClick={onSubmit}
         disabled={isSubmitting || !canSubmit}
-        loading={isSubmitting}>
+        loading={isSubmitting}
+      >
         {isSubmitting
           ? isEditMode
             ? t("common:status.updating")

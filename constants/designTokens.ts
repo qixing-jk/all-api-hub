@@ -11,7 +11,7 @@ export const COLORS = {
     secondary: "bg-gray-50 dark:bg-dark-bg-secondary",
     tertiary: "bg-gray-100 dark:bg-dark-bg-tertiary",
     elevated: "bg-white dark:bg-dark-bg-secondary",
-    overlay: "bg-black/50 dark:bg-black/70"
+    overlay: "bg-black/50 dark:bg-black/70",
   },
 
   // Text colors
@@ -20,7 +20,7 @@ export const COLORS = {
     secondary: "text-gray-600 dark:text-dark-text-secondary",
     tertiary: "text-gray-500 dark:text-dark-text-tertiary",
     inverse: "text-white dark:text-gray-900",
-    muted: "text-gray-400 dark:text-gray-500"
+    muted: "text-gray-400 dark:text-gray-500",
   },
 
   // Border colors
@@ -28,8 +28,8 @@ export const COLORS = {
     default: "border-gray-200 dark:border-dark-bg-tertiary",
     subtle: "border-gray-100 dark:border-gray-700",
     strong: "border-gray-300 dark:border-gray-600",
-    focus: "border-blue-500 dark:border-blue-400"
-  }
+    focus: "border-blue-500 dark:border-blue-400",
+  },
 
   // Semantic colors
   // semantic: {
@@ -69,7 +69,7 @@ export const TYPOGRAPHY = {
     h3: "text-xl font-semibold text-gray-900 dark:text-dark-text-primary",
     h4: "text-lg font-medium text-gray-900 dark:text-dark-text-primary",
     h5: "text-base font-medium text-gray-900 dark:text-dark-text-primary",
-    h6: "text-sm font-medium text-gray-900 dark:text-dark-text-primary"
+    h6: "text-sm font-medium text-gray-900 dark:text-dark-text-primary",
   },
 
   // Body text
@@ -77,20 +77,20 @@ export const TYPOGRAPHY = {
     large: "text-lg text-gray-700 dark:text-dark-text-secondary",
     base: "text-base text-gray-700 dark:text-dark-text-secondary",
     small: "text-sm text-gray-600 dark:text-dark-text-secondary",
-    xs: "text-xs text-gray-500 dark:text-dark-text-tertiary"
+    xs: "text-xs text-gray-500 dark:text-dark-text-tertiary",
   },
 
   // Labels
   label: {
     base: "text-sm font-medium text-gray-700 dark:text-dark-text-secondary",
-    small: "text-xs font-medium text-gray-600 dark:text-dark-text-tertiary"
+    small: "text-xs font-medium text-gray-600 dark:text-dark-text-tertiary",
   },
 
   // Captions and helper text
   caption: {
     base: "text-xs text-gray-500 dark:text-dark-text-tertiary",
-    muted: "text-xs text-gray-400 dark:text-gray-500"
-  }
+    muted: "text-xs text-gray-400 dark:text-gray-500",
+  },
 } as const
 
 // Spacing tokens
@@ -102,7 +102,7 @@ export const SPACING = {
     base: "p-3",
     md: "p-4",
     lg: "p-6",
-    xl: "p-8"
+    xl: "p-8",
   },
 
   // Margin
@@ -112,7 +112,7 @@ export const SPACING = {
     base: "m-3",
     md: "m-4",
     lg: "m-6",
-    xl: "m-8"
+    xl: "m-8",
   },
 
   // Gap
@@ -122,8 +122,8 @@ export const SPACING = {
     base: "gap-3",
     md: "gap-4",
     lg: "gap-6",
-    xl: "gap-8"
-  }
+    xl: "gap-8",
+  },
 } as const
 
 // Border radius tokens
@@ -135,7 +135,7 @@ export const RADIUS = {
   lg: "rounded-lg",
   xl: "rounded-xl",
   "2xl": "rounded-2xl",
-  full: "rounded-full"
+  full: "rounded-full",
 } as const
 
 // Shadow tokens
@@ -147,7 +147,7 @@ export const SHADOWS = {
   lg: "shadow-lg",
   xl: "shadow-xl",
   "2xl": "shadow-2xl",
-  inner: "shadow-inner"
+  inner: "shadow-inner",
 } as const
 
 // Animation tokens
@@ -155,14 +155,14 @@ export const ANIMATIONS = {
   transition: {
     fast: "transition-all duration-150 ease-in-out",
     base: "transition-all duration-200 ease-in-out",
-    slow: "transition-all duration-300 ease-in-out"
+    slow: "transition-all duration-300 ease-in-out",
   },
 
   hover: {
     scale: "hover:scale-105",
     lift: "hover:-translate-y-0.5",
-    glow: "hover:shadow-lg"
-  }
+    glow: "hover:shadow-lg",
+  },
 } as const
 
 // Component-specific tokens
@@ -177,7 +177,7 @@ export const COMPONENTS = {
     ghost:
       "bg-transparent hover:bg-gray-100 dark:hover:bg-dark-bg-secondary text-gray-700 dark:text-dark-text-secondary focus:ring-gray-500",
     danger: "bg-red-600 hover:bg-red-700 text-white focus:ring-red-500",
-    success: "bg-green-600 hover:bg-green-700 text-white focus:ring-green-500"
+    success: "bg-green-600 hover:bg-green-700 text-white focus:ring-green-500",
   },
 
   // Input variants
@@ -186,7 +186,7 @@ export const COMPONENTS = {
     error:
       "border-red-300 dark:border-red-600 focus:ring-red-500 focus:border-red-500",
     success:
-      "border-green-300 dark:border-green-600 focus:ring-green-500 focus:border-green-500"
+      "border-green-300 dark:border-green-600 focus:ring-green-500 focus:border-green-500",
   },
 
   // Card variants
@@ -195,8 +195,8 @@ export const COMPONENTS = {
     elevated:
       "bg-white dark:bg-dark-bg-secondary border border-gray-200 dark:border-dark-bg-tertiary rounded-lg shadow-md",
     interactive:
-      "bg-white dark:bg-dark-bg-secondary border border-gray-200 dark:border-dark-bg-tertiary rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-  }
+      "bg-white dark:bg-dark-bg-secondary border border-gray-200 dark:border-dark-bg-tertiary rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer",
+  },
 } as const
 
 // Layout tokens
@@ -214,7 +214,7 @@ export const LAYOUT = {
     "5xl": "max-w-5xl",
     "6xl": "max-w-6xl",
     "7xl": "max-w-7xl",
-    full: "max-w-full"
+    full: "max-w-full",
   },
 
   // Flexbox utilities
@@ -224,7 +224,7 @@ export const LAYOUT = {
     "center-y": "flex items-center",
     between: "flex items-center justify-between",
     start: "flex items-center justify-start",
-    end: "flex items-center justify-end"
+    end: "flex items-center justify-end",
   },
 
   // Grid utilities
@@ -232,8 +232,8 @@ export const LAYOUT = {
     "2": "grid grid-cols-2 gap-4",
     "3": "grid grid-cols-3 gap-4",
     "4": "grid grid-cols-4 gap-4",
-    auto: "grid grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-4"
-  }
+    auto: "grid grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-4",
+  },
 } as const
 
 // Z-index tokens
@@ -243,5 +243,5 @@ export const Z_INDEX = {
   fixed: "z-30",
   modal: "z-50",
   popover: "z-40",
-  tooltip: "z-50"
+  tooltip: "z-50",
 } as const

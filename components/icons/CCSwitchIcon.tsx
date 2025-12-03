@@ -5,7 +5,7 @@ type CCSwitchIconSize = "sm" | "md" | "lg"
 const SIZE_MAP: Record<CCSwitchIconSize, number> = {
   sm: 20,
   md: 28,
-  lg: 36
+  lg: 36,
 }
 
 interface CCSwitchIconProps {

@@ -41,6 +41,6 @@ export const useAccountListItem = () => {
   return {
     hoveredSiteId,
     handleMouseEnter,
-    handleMouseLeave
+    handleMouseLeave,
   }
 }

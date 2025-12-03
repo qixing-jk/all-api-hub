@@ -67,7 +67,7 @@ function needsCheckInMigration(account: Partial<SiteAccount>): boolean {
  * // migrated5 will be { id: '5', checkIn: { enableDetection: true, isCheckedInToday: false } }
  */
 export function migrateCheckInConfig<T extends Partial<SiteAccount>>(
-  account: T
+  account: T,
 ): T {
   if (!needsCheckInMigration(account)) {
     // If migration is not needed, but old keys still exist (e.g. supports_check_in: false),
@@ -90,7 +90,7 @@ export function migrateCheckInConfig<T extends Partial<SiteAccount>>(
       // The logic is inverted:
       // old `can_check_in: true` (can check in) => new `isCheckedInToday: false` (not checked in)
       // old `can_check_in: false` (already checked in) => new `isCheckedInToday: true` (checked in)
-      isCheckedInToday: !(migratedAccount.can_check_in ?? true)
+      isCheckedInToday: !(migratedAccount.can_check_in ?? true),
     }
   }
 

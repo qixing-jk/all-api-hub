@@ -3,8 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { webdavAutoSyncService } from "~/services/webdav/webdavAutoSyncService"
 
 // Basic getErrorMessage passthrough to avoid noisy output
-vi.mock("~/utils/error.ts", () => ({
-  getErrorMessage: (e: unknown) => String(e)
+vi.mock("~/utils/error", () => ({
+  getErrorMessage: (e: unknown) => String(e),
 }))
 
 // Mock WebDAV network helpers so syncWithWebdav can be tested in isolation if needed
@@ -12,10 +12,10 @@ const mockTestConnection = vi.fn()
 const mockDownloadBackup = vi.fn()
 const mockUploadBackup = vi.fn()
 
-vi.mock("~/services/webdav/webdavService.ts", () => ({
+vi.mock("~/services/webdav/webdavService", () => ({
   testWebdavConnection: (...args: any[]) => mockTestConnection(...args),
   downloadBackup: (...args: any[]) => mockDownloadBackup(...args),
-  uploadBackup: (...args: any[]) => mockUploadBackup(...args)
+  uploadBackup: (...args: any[]) => mockUploadBackup(...args),
 }))
 
 describe("WebdavAutoSyncService.mergeData", () => {
@@ -24,19 +24,19 @@ describe("WebdavAutoSyncService.mergeData", () => {
 
   const basePrefsLocal: any = {
     themeMode: "light",
-    preferencesVersion: 1
+    preferencesVersion: 1,
   } as any
 
   const basePrefsRemote: any = {
     themeMode: "dark",
-    preferencesVersion: 2
+    preferencesVersion: 2,
   } as any
 
   const mkChannelConfig = (id: number, updatedAt: number) => ({
     channelId: id,
     modelFilterSettings: {},
     createdAt: 0,
-    updatedAt
+    updatedAt,
   })
 
   beforeEach(() => {
@@ -46,11 +46,11 @@ describe("WebdavAutoSyncService.mergeData", () => {
   it("merges accounts by id choosing the most recently updated", () => {
     const localAccounts = [
       { id: "a1", site_name: "local-1", updated_at: 10 } as any,
-      { id: "a2", site_name: "local-2", updated_at: 5 } as any
+      { id: "a2", site_name: "local-2", updated_at: 5 } as any,
     ]
     const remoteAccounts = [
       { id: "a2", site_name: "remote-2", updated_at: 20 } as any,
-      { id: "a3", site_name: "remote-3", updated_at: 1 } as any
+      { id: "a3", site_name: "remote-3", updated_at: 1 } as any,
     ]
 
     const local: any = {
@@ -58,7 +58,7 @@ describe("WebdavAutoSyncService.mergeData", () => {
       accountsTimestamp: 100,
       preferences: basePrefsLocal,
       preferencesTimestamp: 50,
-      channelConfigs: {}
+      channelConfigs: {},
     }
 
     const remote: any = {
@@ -66,7 +66,7 @@ describe("WebdavAutoSyncService.mergeData", () => {
       accountsTimestamp: 200,
       preferences: basePrefsRemote,
       preferencesTimestamp: 60,
-      channelConfigs: {}
+      channelConfigs: {},
     }
 
     const result = callMerge(local, remote)
@@ -84,7 +84,7 @@ describe("WebdavAutoSyncService.mergeData", () => {
       accountsTimestamp: 0,
       preferences: { ...basePrefsLocal, themeMode: "local" },
       preferencesTimestamp: 10,
-      channelConfigs: {}
+      channelConfigs: {},
     }
 
     const remote: any = {
@@ -92,7 +92,7 @@ describe("WebdavAutoSyncService.mergeData", () => {
       accountsTimestamp: 0,
       preferences: { ...basePrefsRemote, themeMode: "remote" },
       preferencesTimestamp: 20,
-      channelConfigs: {}
+      channelConfigs: {},
     }
 
     const result = callMerge(local, remote)
@@ -102,12 +102,12 @@ describe("WebdavAutoSyncService.mergeData", () => {
   it("merges channel configs by numeric id using latest updatedAt", () => {
     const localChannels = {
       1: mkChannelConfig(1, 10),
-      2: mkChannelConfig(2, 5)
+      2: mkChannelConfig(2, 5),
     }
 
     const remoteChannels = {
       2: mkChannelConfig(2, 20),
-      3: mkChannelConfig(3, 1)
+      3: mkChannelConfig(3, 1),
     }
 
     const local: any = {
@@ -115,7 +115,7 @@ describe("WebdavAutoSyncService.mergeData", () => {
       accountsTimestamp: 0,
       preferences: basePrefsLocal,
       preferencesTimestamp: 0,
-      channelConfigs: localChannels
+      channelConfigs: localChannels,
     }
 
     const remote: any = {
@@ -123,7 +123,7 @@ describe("WebdavAutoSyncService.mergeData", () => {
       accountsTimestamp: 0,
       preferences: basePrefsRemote,
       preferencesTimestamp: 0,
-      channelConfigs: remoteChannels
+      channelConfigs: remoteChannels,
     }
 
     const result = callMerge(local, remote)
@@ -131,7 +131,7 @@ describe("WebdavAutoSyncService.mergeData", () => {
     expect(
       Object.keys(result.channelConfigs)
         .map((k: any) => Number(k))
-        .sort()
+        .sort(),
     ).toEqual([1, 2, 3])
 
     // id 2 should come from remote because of newer updatedAt

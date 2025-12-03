@@ -10,7 +10,7 @@ import {
   getBillingModeText,
   getEndpointTypesText,
   isModelAvailableForGroup,
-  isTokenBillingType
+  isTokenBillingType,
 } from "~/utils/modelPricing"
 
 // Mock i18next
@@ -19,10 +19,10 @@ vi.mock("i18next", () => ({
     const translations: Record<string, string> = {
       "ui:billing.tokenBased": "按量计费",
       "ui:billing.perCall": "按次计费",
-      "ui:billing.notProvided": "未提供"
+      "ui:billing.notProvided": "未提供",
     }
     return translations[key] || key
-  }
+  },
 }))
 
 describe("modelPricing utils", () => {
@@ -54,7 +54,7 @@ describe("modelPricing utils", () => {
         completion_ratio: 2,
         model_price: 0,
         enable_groups: ["default", "vip"],
-        supported_endpoint_types: ["chat"]
+        supported_endpoint_types: ["chat"],
       }
 
       it("should calculate prices for default group", () => {
@@ -62,7 +62,7 @@ describe("modelPricing utils", () => {
           tokenModel,
           baseGroupRatio,
           exchangeRate,
-          "default"
+          "default",
         )
 
         // inputUSD = model_ratio × 2 × groupRatio = 15 × 2 × 1 = 30
@@ -81,7 +81,7 @@ describe("modelPricing utils", () => {
           tokenModel,
           baseGroupRatio,
           exchangeRate,
-          "vip"
+          "vip",
         )
 
         // inputUSD = 15 × 2 × 2 = 60
@@ -97,7 +97,7 @@ describe("modelPricing utils", () => {
           tokenModel,
           baseGroupRatio,
           exchangeRate,
-          "premium"
+          "premium",
         )
 
         // inputUSD = 15 × 2 × 3 = 90
@@ -111,7 +111,7 @@ describe("modelPricing utils", () => {
           tokenModel,
           baseGroupRatio,
           exchangeRate,
-          "unknown"
+          "unknown",
         )
 
         expect(result.inputUSD).toBe(30)
@@ -121,14 +121,14 @@ describe("modelPricing utils", () => {
       it("should handle model with completion_ratio = 1", () => {
         const equalRatioModel: ModelPricing = {
           ...tokenModel,
-          completion_ratio: 1
+          completion_ratio: 1,
         }
 
         const result = calculateModelPrice(
           equalRatioModel,
           baseGroupRatio,
           exchangeRate,
-          "default"
+          "default",
         )
 
         // outputUSD = 15 × 1 × 2 × 1 = 30
@@ -139,14 +139,14 @@ describe("modelPricing utils", () => {
       it("should handle zero model_ratio", () => {
         const zeroRatioModel: ModelPricing = {
           ...tokenModel,
-          model_ratio: 0
+          model_ratio: 0,
         }
 
         const result = calculateModelPrice(
           zeroRatioModel,
           baseGroupRatio,
           exchangeRate,
-          "default"
+          "default",
         )
 
         expect(result.inputUSD).toBe(0)
@@ -160,7 +160,7 @@ describe("modelPricing utils", () => {
           tokenModel,
           baseGroupRatio,
           6.5,
-          "default"
+          "default",
         )
 
         expect(result.inputCNY).toBe(195) // 30 × 6.5
@@ -177,14 +177,14 @@ describe("modelPricing utils", () => {
           completion_ratio: 1,
           model_price: 0.02,
           enable_groups: ["default"],
-          supported_endpoint_types: ["image"]
+          supported_endpoint_types: ["image"],
         }
 
         const result = calculateModelPrice(
           perCallModel,
           baseGroupRatio,
           exchangeRate,
-          "default"
+          "default",
         )
 
         expect(result.inputUSD).toBe(0)
@@ -202,14 +202,14 @@ describe("modelPricing utils", () => {
           completion_ratio: 1,
           model_price: 0.02,
           enable_groups: ["default"],
-          supported_endpoint_types: []
+          supported_endpoint_types: [],
         }
 
         const result = calculateModelPrice(
           perCallModel,
           baseGroupRatio,
           exchangeRate,
-          "vip"
+          "vip",
         )
 
         // perCallPrice = 0.02 × 2 = 0.04
@@ -224,14 +224,14 @@ describe("modelPricing utils", () => {
           completion_ratio: 1,
           model_price: { input: 10, output: 20 },
           enable_groups: ["default"],
-          supported_endpoint_types: ["chat"]
+          supported_endpoint_types: ["chat"],
         }
 
         const result = calculateModelPrice(
           complexPerCallModel,
           baseGroupRatio,
           exchangeRate,
-          "default"
+          "default",
         )
 
         // input: 10 × 1 × 0.002 = 0.02
@@ -247,14 +247,14 @@ describe("modelPricing utils", () => {
           completion_ratio: 1,
           model_price: { input: 10, output: 20 },
           enable_groups: ["default"],
-          supported_endpoint_types: []
+          supported_endpoint_types: [],
         }
 
         const result = calculateModelPrice(
           complexPerCallModel,
           baseGroupRatio,
           exchangeRate,
-          "vip"
+          "vip",
         )
 
         // input: 10 × 2 × 0.002 = 0.04
@@ -270,14 +270,14 @@ describe("modelPricing utils", () => {
           completion_ratio: 1,
           model_price: 0,
           enable_groups: ["default"],
-          supported_endpoint_types: []
+          supported_endpoint_types: [],
         }
 
         const result = calculateModelPrice(
           freeModel,
           baseGroupRatio,
           exchangeRate,
-          "default"
+          "default",
         )
 
         expect(result.perCallPrice).toBe(0)
@@ -432,7 +432,7 @@ describe("modelPricing utils", () => {
       completion_ratio: 1,
       model_price: 0,
       enable_groups: ["default", "vip", "premium"],
-      supported_endpoint_types: ["chat"]
+      supported_endpoint_types: ["chat"],
     }
 
     it("should return true for enabled group", () => {
@@ -449,7 +449,7 @@ describe("modelPricing utils", () => {
     it("should handle empty enable_groups", () => {
       const restrictedModel: ModelPricing = {
         ...model,
-        enable_groups: []
+        enable_groups: [],
       }
       expect(isModelAvailableForGroup(restrictedModel, "default")).toBe(false)
     })
@@ -463,7 +463,7 @@ describe("modelPricing utils", () => {
   describe("getEndpointTypesText", () => {
     it("should join multiple endpoint types with comma", () => {
       expect(getEndpointTypesText(["chat", "completion", "embedding"])).toBe(
-        "chat, completion, embedding"
+        "chat, completion, embedding",
       )
     })
 
@@ -486,7 +486,7 @@ describe("modelPricing utils", () => {
 
     it("should preserve endpoint type order", () => {
       expect(getEndpointTypesText(["image", "audio", "video"])).toBe(
-        "image, audio, video"
+        "image, audio, video",
       )
     })
   })

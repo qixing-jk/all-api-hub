@@ -1,6 +1,6 @@
 import React from "react"
 
-import { cn } from "~/lib/utils.ts"
+import { cn } from "~/lib/utils"
 
 import { Label } from "./label"
 
@@ -30,7 +30,7 @@ const FormField = React.forwardRef<HTMLDivElement, FormFieldProps>(
       htmlFor,
       ...props
     },
-    ref
+    ref,
   ) => {
     return (
       <div ref={ref} className={cn("space-y-2", className)} {...props}>
@@ -39,7 +39,8 @@ const FormField = React.forwardRef<HTMLDivElement, FormFieldProps>(
             htmlFor={htmlFor}
             required={required}
             variant={error ? "error" : success ? "success" : "default"}
-            className={labelClassName}>
+            className={labelClassName}
+          >
             {label}
           </Label>
         )}
@@ -59,7 +60,7 @@ const FormField = React.forwardRef<HTMLDivElement, FormFieldProps>(
         )}
       </div>
     )
-  }
+  },
 )
 FormField.displayName = "FormField"
 

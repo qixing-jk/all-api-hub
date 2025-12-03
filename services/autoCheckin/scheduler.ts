@@ -3,7 +3,7 @@ import { t } from "i18next"
 import { accountStorage } from "~/services/accountStorage"
 import {
   DEFAULT_PREFERENCES,
-  userPreferences
+  userPreferences,
 } from "~/services/userPreferences"
 import type { DisplaySiteData, SiteAccount } from "~/types"
 import {
@@ -19,14 +19,14 @@ import {
   AutoCheckinStatus,
   CHECKIN_RESULT_STATUS,
   type CheckinAccountResult,
-  type CheckinResultStatus
+  type CheckinResultStatus,
 } from "~/types/autoCheckin"
 import {
   clearAlarm,
   createAlarm,
   getAlarm,
   hasAlarmsAPI,
-  onAlarm
+  onAlarm,
 } from "~/utils/browserApi"
 import { getErrorMessage } from "~/utils/error"
 
@@ -65,7 +65,7 @@ class AutoCheckinScheduler {
   private isMinutesWithinWindow(
     minutes: number,
     windowStart: number,
-    windowEnd: number
+    windowEnd: number,
   ): boolean {
     if (windowStart === windowEnd) {
       return false
@@ -81,10 +81,10 @@ class AutoCheckinScheduler {
 
   private calculateDeterministicTrigger(
     config: AutoCheckinPreferences,
-    now: Date
+    now: Date,
   ): Date | null {
     const deterministicMinutes = this.parseTimeToMinutes(
-      config.deterministicTime || config.windowStart
+      config.deterministicTime || config.windowStart,
     )
     const windowStartMinutes = this.parseTimeToMinutes(config.windowStart)
     const windowEndMinutes = this.parseTimeToMinutes(config.windowEnd)
@@ -101,7 +101,7 @@ class AutoCheckinScheduler {
       !this.isMinutesWithinWindow(
         deterministicMinutes,
         windowStartMinutes,
-        windowEndMinutes
+        windowEndMinutes,
       )
     ) {
       return null
@@ -112,7 +112,7 @@ class AutoCheckinScheduler {
       Math.floor(deterministicMinutes / 60),
       deterministicMinutes % 60,
       0,
-      0
+      0,
     )
 
     if (target <= now) {
@@ -125,7 +125,7 @@ class AutoCheckinScheduler {
   private calculateRandomTrigger(
     windowStart: string,
     windowEnd: string,
-    now: Date
+    now: Date,
   ): Date {
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
 
@@ -170,7 +170,7 @@ class AutoCheckinScheduler {
   private computeRetryTrigger(
     config: AutoCheckinPreferences,
     status: AutoCheckinStatus | null,
-    now: Date
+    now: Date,
   ): Date | null {
     if (!config.retryStrategy?.enabled || !status?.pendingRetry) {
       return null
@@ -196,7 +196,7 @@ class AutoCheckinScheduler {
     }
 
     const retryTime = new Date(
-      lastRun.getTime() + config.retryStrategy.intervalMinutes * 60 * 1000
+      lastRun.getTime() + config.retryStrategy.intervalMinutes * 60 * 1000,
     )
 
     if (retryTime <= now) {
@@ -218,7 +218,7 @@ class AutoCheckinScheduler {
    */
   private computeNextTriggerTime(
     config: AutoCheckinPreferences,
-    status: AutoCheckinStatus | null
+    status: AutoCheckinStatus | null,
   ): Date {
     const now = new Date()
 
@@ -237,44 +237,44 @@ class AutoCheckinScheduler {
     return this.calculateRandomTrigger(
       config.windowStart,
       config.windowEnd,
-      now
+      now,
     )
   }
 
   private getUpdatedAttempts(
     status: AutoCheckinStatus | null,
-    today: string
+    today: string,
   ): AutoCheckinAttemptsTracker {
     if (status?.attempts?.date === today) {
       return {
         date: today,
-        attempts: status.attempts.attempts + 1
+        attempts: status.attempts.attempts + 1,
       }
     }
 
     return {
       date: today,
-      attempts: 1
+      attempts: 1,
     }
   }
 
   private recalculateSummaryFromResults(
     perAccount: Record<string, CheckinAccountResult>,
-    previousSummary?: AutoCheckinRunSummary
+    previousSummary?: AutoCheckinRunSummary,
   ): AutoCheckinRunSummary {
     const values = Object.values(perAccount)
     const successStatuses: CheckinResultStatus[] = [
       CHECKIN_RESULT_STATUS.SUCCESS,
-      CHECKIN_RESULT_STATUS.ALREADY_CHECKED
+      CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
     ]
     const successCount = values.filter((value) =>
-      successStatuses.includes(value.status)
+      successStatuses.includes(value.status),
     ).length
     const failedCount = values.filter(
-      (value) => value.status === CHECKIN_RESULT_STATUS.FAILED
+      (value) => value.status === CHECKIN_RESULT_STATUS.FAILED,
     ).length
     const skippedCount = values.filter(
-      (value) => value.status === CHECKIN_RESULT_STATUS.SKIPPED
+      (value) => value.status === CHECKIN_RESULT_STATUS.SKIPPED,
     ).length
 
     const executed = successCount + failedCount
@@ -287,13 +287,13 @@ class AutoCheckinScheduler {
       successCount,
       failedCount,
       skippedCount,
-      needsRetry: failedCount > 0
+      needsRetry: failedCount > 0,
     }
   }
 
   private updateSnapshotWithResult(
     snapshots: AutoCheckinAccountSnapshot[] | undefined,
-    result: CheckinAccountResult
+    result: CheckinAccountResult,
   ): AutoCheckinAccountSnapshot[] | undefined {
     if (!snapshots || snapshots.length === 0) {
       return snapshots
@@ -307,7 +307,7 @@ class AutoCheckinScheduler {
       updated = true
       return {
         ...snapshot,
-        lastResult: result
+        lastResult: result,
       }
     })
 
@@ -319,18 +319,17 @@ class AutoCheckinScheduler {
    */
   private getSkipReasonMessage(reason: AutoCheckinSkipReason): string {
     return t(`autoCheckin:skipReasons.${reason}`, {
-      defaultValue: t("autoCheckin:skipReasons.unknown")
+      defaultValue: t("autoCheckin:skipReasons.unknown"),
     })
   }
 
   private buildAccountSnapshot(
-    account: SiteAccount
+    account: SiteAccount,
   ): AutoCheckinAccountSnapshot {
     const detectionEnabled = account.checkIn?.enableDetection ?? false
     const autoCheckinEnabled = account.checkIn?.autoCheckInEnabled !== false
     const provider = resolveAutoCheckinProvider(account)
     const providerAvailable = provider ? provider.canCheckIn(account) : false
-    const isCheckedInToday = account.checkIn?.isCheckedInToday === true
 
     let skipReason: AutoCheckinSkipReason | undefined
 
@@ -338,8 +337,6 @@ class AutoCheckinScheduler {
       skipReason = AUTO_CHECKIN_SKIP_REASON.DETECTION_DISABLED
     } else if (!autoCheckinEnabled) {
       skipReason = AUTO_CHECKIN_SKIP_REASON.AUTO_CHECKIN_DISABLED
-    } else if (isCheckedInToday) {
-      skipReason = AUTO_CHECKIN_SKIP_REASON.ALREADY_CHECKED_TODAY
     } else if (!provider) {
       skipReason = AUTO_CHECKIN_SKIP_REASON.NO_PROVIDER
     } else if (!providerAvailable) {
@@ -355,17 +352,17 @@ class AutoCheckinScheduler {
       providerAvailable,
       isCheckedInToday: account.checkIn?.isCheckedInToday,
       lastCheckInDate: account.checkIn?.lastCheckInDate,
-      skipReason
+      skipReason,
     }
   }
 
   private attachResultsToSnapshots(
     snapshots: AutoCheckinAccountSnapshot[],
-    results: Record<string, CheckinAccountResult>
+    results: Record<string, CheckinAccountResult>,
   ): AutoCheckinAccountSnapshot[] {
     return snapshots.map((snapshot) => ({
       ...snapshot,
-      lastResult: results[snapshot.accountId]
+      lastResult: results[snapshot.accountId],
     }))
   }
 
@@ -375,13 +372,13 @@ class AutoCheckinScheduler {
   }> {
     const buildResult = (
       status: CheckinResultStatus,
-      message: string
+      message: string,
     ): CheckinAccountResult => ({
       accountId: account.id,
       accountName: account.site_name,
       status,
       message,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     })
 
     try {
@@ -391,7 +388,7 @@ class AutoCheckinScheduler {
         console.warn(`[AutoCheckin] ${account.site_name}: ${message}`)
         return {
           result: buildResult(CHECKIN_RESULT_STATUS.FAILED, message),
-          successful: false
+          successful: false,
         }
       }
 
@@ -404,23 +401,23 @@ class AutoCheckinScheduler {
       ) {
         await accountStorage.markAccountAsCheckedIn(account.id)
         console.log(
-          `[AutoCheckin] ${account.site_name}: ${providerResult.status} - ${providerResult.message}`
+          `[AutoCheckin] ${account.site_name}: ${providerResult.status} - ${providerResult.message}`,
         )
         return { result, successful: true }
       }
 
       console.error(
-        `[AutoCheckin] ${account.site_name}: failed - ${providerResult.message}`
+        `[AutoCheckin] ${account.site_name}: failed - ${providerResult.message}`,
       )
       return { result, successful: false }
     } catch (error) {
       const errorMessage = getErrorMessage(error)
       console.error(
-        `[AutoCheckin] ${account.site_name}: error - ${errorMessage}`
+        `[AutoCheckin] ${account.site_name}: error - ${errorMessage}`,
       )
       return {
         result: buildResult(CHECKIN_RESULT_STATUS.FAILED, errorMessage),
-        successful: false
+        successful: false,
       }
     }
   }
@@ -449,7 +446,7 @@ class AutoCheckinScheduler {
         await this.scheduleNextRun()
       } else {
         console.warn(
-          "[AutoCheckin] Alarms API not available, automatic check-in disabled"
+          "[AutoCheckin] Alarms API not available, automatic check-in disabled",
         )
       }
 
@@ -482,7 +479,7 @@ class AutoCheckinScheduler {
       const currentStatus = await autoCheckinStorage.getStatus()
       await autoCheckinStorage.saveStatus({
         ...currentStatus,
-        nextScheduledAt: undefined
+        nextScheduledAt: undefined,
       })
       return
     }
@@ -494,7 +491,7 @@ class AutoCheckinScheduler {
 
     try {
       await createAlarm(AutoCheckinScheduler.ALARM_NAME, {
-        when: nextTriggerTime.getTime()
+        when: nextTriggerTime.getTime(),
       })
 
       // Verify alarm was created
@@ -502,13 +499,13 @@ class AutoCheckinScheduler {
       if (alarm) {
         console.log(`[AutoCheckin] Alarm scheduled:`, {
           name: alarm.name,
-          scheduledTime: new Date(alarm.scheduledTime || 0)
+          scheduledTime: new Date(alarm.scheduledTime || 0),
         })
 
         // Update status with next scheduled time
         const updatedStatus: AutoCheckinStatus = {
           ...(currentStatus ?? {}),
-          nextScheduledAt: nextTriggerTime.toISOString()
+          nextScheduledAt: nextTriggerTime.toISOString(),
         }
         await autoCheckinStorage.saveStatus(updatedStatus)
       } else {
@@ -571,15 +568,15 @@ class AutoCheckinScheduler {
           await accountStorage.updateAccount(account.id, {
             checkIn: {
               ...account.checkIn,
-              isCheckedInToday: false // New day -> not yet checked in
-            }
+              isCheckedInToday: false, // New day -> not yet checked in
+            },
           })
         }
       }
 
       // Filter accounts with detection enabled
       const detectionEnabledAccounts = allAccounts.filter(
-        (account) => account.checkIn?.enableDetection
+        (account) => account.checkIn?.enableDetection,
       )
 
       const accountSnapshots: AutoCheckinAccountSnapshot[] = []
@@ -606,13 +603,13 @@ class AutoCheckinScheduler {
             status: CHECKIN_RESULT_STATUS.SKIPPED,
             message: this.getSkipReasonMessage(snapshot.skipReason),
             reasonCode: snapshot.skipReason,
-            timestamp
+            timestamp,
           }
         }
       }
 
       console.log(
-        `[AutoCheckin] Tracking ${detectionEnabledAccounts.length} accounts, runnable: ${runnableAccounts.length}`
+        `[AutoCheckin] Tracking ${detectionEnabledAccounts.length} accounts, runnable: ${runnableAccounts.length}`,
       )
 
       // If no accounts to run, save status and exit
@@ -623,7 +620,7 @@ class AutoCheckinScheduler {
           successCount: 0,
           failedCount: 0,
           skippedCount: accountSnapshots.length,
-          needsRetry: false
+          needsRetry: false,
         }
 
         await autoCheckinStorage.saveStatus({
@@ -636,8 +633,8 @@ class AutoCheckinScheduler {
           pendingRetry: false,
           accountsSnapshot: this.attachResultsToSnapshots(
             accountSnapshots,
-            results
-          )
+            results,
+          ),
         })
         return
       }
@@ -647,7 +644,7 @@ class AutoCheckinScheduler {
       let failedCount = 0
 
       const checkinOutcomes = await Promise.all(
-        runnableAccounts.map((account) => this.runAccountCheckin(account))
+        runnableAccounts.map((account) => this.runAccountCheckin(account)),
       )
 
       for (const outcome of checkinOutcomes) {
@@ -680,7 +677,7 @@ class AutoCheckinScheduler {
         successCount,
         failedCount,
         skippedCount,
-        needsRetry: summaryNeedsRetry
+        needsRetry: summaryNeedsRetry,
       }
 
       const pendingRetry = summaryNeedsRetry && hasRetriesRemaining
@@ -695,13 +692,13 @@ class AutoCheckinScheduler {
         pendingRetry,
         accountsSnapshot: this.attachResultsToSnapshots(
           accountSnapshots,
-          results
-        )
+          results,
+        ),
       })
 
       const duration = Date.now() - startTime
       console.log(
-        `[AutoCheckin] Execution completed in ${duration}ms: ${successCount} succeeded, ${failedCount} failed`
+        `[AutoCheckin] Execution completed in ${duration}ms: ${successCount} succeeded, ${failedCount} failed`,
       )
     } catch (error) {
       console.error("[AutoCheckin] Execution failed:", error)
@@ -711,7 +708,7 @@ class AutoCheckinScheduler {
         perAccount: {},
         nextScheduledAt: undefined,
         attempts: updatedAttempts,
-        pendingRetry: false
+        pendingRetry: false,
       })
     }
   }
@@ -731,7 +728,7 @@ class AutoCheckinScheduler {
       >
     > & {
       retryStrategy?: Partial<AutoCheckinPreferences["retryStrategy"]>
-    }
+    },
   ) {
     // Get current config and update
     const prefs = await userPreferences.getPreferences()
@@ -742,8 +739,8 @@ class AutoCheckinScheduler {
       ...settings,
       retryStrategy: {
         ...current.retryStrategy,
-        ...(settings.retryStrategy ?? {})
-      }
+        ...(settings.retryStrategy ?? {}),
+      },
     }
 
     await userPreferences.savePreferences({ autoCheckin: updated })
@@ -763,12 +760,12 @@ class AutoCheckinScheduler {
 
     const perAccount: Record<string, CheckinAccountResult> = {
       ...(currentStatus.perAccount ?? {}),
-      [result.accountId]: result
+      [result.accountId]: result,
     }
 
     const summary = this.recalculateSummaryFromResults(
       perAccount,
-      currentStatus.summary
+      currentStatus.summary,
     )
 
     const prefs = await userPreferences.getPreferences()
@@ -790,7 +787,7 @@ class AutoCheckinScheduler {
 
     const accountsSnapshot = this.updateSnapshotWithResult(
       currentStatus.accountsSnapshot,
-      result
+      result,
     )
 
     const updatedStatus: AutoCheckinStatus = {
@@ -800,7 +797,7 @@ class AutoCheckinScheduler {
       perAccount,
       summary,
       pendingRetry,
-      accountsSnapshot
+      accountsSnapshot,
     }
 
     await autoCheckinStorage.saveStatus(updatedStatus)
@@ -808,7 +805,7 @@ class AutoCheckinScheduler {
     return {
       result,
       summary,
-      pendingRetry
+      pendingRetry,
     }
   }
 
@@ -831,7 +828,7 @@ export const autoCheckinScheduler = new AutoCheckinScheduler()
  */
 export const handleAutoCheckinMessage = async (
   request: any,
-  sendResponse: (response: any) => void
+  sendResponse: (response: any) => void,
 ) => {
   try {
     switch (request.action) {
@@ -855,7 +852,7 @@ export const handleAutoCheckinMessage = async (
           break
         }
         const displayData = await autoCheckinScheduler.getAccountDisplayData(
-          request.accountId
+          request.accountId,
         )
         sendResponse({ success: true, data: displayData })
         break

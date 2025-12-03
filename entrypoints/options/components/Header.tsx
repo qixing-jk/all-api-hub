@@ -14,7 +14,7 @@ interface HeaderProps {
 function Header({
   onTitleClick,
   onMenuToggle,
-  isMobileSidebarOpen
+  isMobileSidebarOpen,
 }: HeaderProps) {
   const { t } = useTranslation("ui")
   return (
@@ -27,7 +27,8 @@ function Header({
             variant="ghost"
             size="default"
             className="tap-highlight-transparent touch-manipulation md:hidden"
-            aria-label="Toggle menu">
+            aria-label="Toggle menu"
+          >
             {isMobileSidebarOpen ? (
               <XMarkIcon className="h-6 w-6" />
             ) : (
@@ -38,7 +39,8 @@ function Header({
           {/* 插件图标和名称 */}
           <div
             className="tap-highlight-transparent flex cursor-pointer touch-manipulation items-center space-x-2 sm:space-x-3"
-            onClick={onTitleClick}>
+            onClick={onTitleClick}
+          >
             <img
               src={iconImage}
               alt={t("app.name")}

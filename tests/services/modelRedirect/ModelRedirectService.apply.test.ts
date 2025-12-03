@@ -2,9 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { modelMetadataService } from "~/services/modelMetadata"
 import { ModelRedirectService } from "~/services/modelRedirect/ModelRedirectService"
-import { hasValidNewApiConfig } from "~/services/newApiService/newApiService.ts"
+import { hasValidNewApiConfig } from "~/services/newApiService/newApiService"
 import { userPreferences } from "~/services/userPreferences"
-import { CHANNEL_STATUS, DEFAULT_MODEL_REDIRECT_PREFERENCES } from "~/types"
+import { DEFAULT_MODEL_REDIRECT_PREFERENCES } from "~/types/modelRedirect"
+import { CHANNEL_STATUS } from "~/types/newapi"
 
 vi.mock("~/services/modelMetadata", () => ({
   modelMetadataService: {
@@ -15,9 +16,9 @@ vi.mock("~/services/modelMetadata", () => ({
     getCacheInfo: () => ({
       isLoaded: true,
       modelCount: 0,
-      lastUpdated: Date.now()
-    })
-  }
+      lastUpdated: Date.now(),
+    }),
+  },
 }))
 
 const listChannelsMock = vi.fn()
@@ -26,22 +27,22 @@ const updateChannelModelMappingMock = vi.fn()
 vi.mock("~/services/newApiModelSync", () => {
   const NewApiModelSyncServiceMock = vi.fn().mockImplementation(() => ({
     listChannels: listChannelsMock,
-    updateChannelModelMapping: updateChannelModelMappingMock
+    updateChannelModelMapping: updateChannelModelMappingMock,
   }))
   return {
     NewApiModelSyncService: NewApiModelSyncServiceMock,
-    __esModule: true
+    __esModule: true,
   }
 })
 
-vi.mock("~/services/newApiService/newApiService.ts", () => ({
-  hasValidNewApiConfig: vi.fn()
+vi.mock("~/services/newApiService/newApiService", () => ({
+  hasValidNewApiConfig: vi.fn(),
 }))
 
 vi.mock("~/services/userPreferences", () => ({
   userPreferences: {
-    getPreferences: vi.fn()
-  }
+    getPreferences: vi.fn(),
+  },
 }))
 
 const mockedHasValidConfig = hasValidNewApiConfig as unknown as ReturnType<
@@ -62,7 +63,7 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
   it("should do nothing when newMapping is empty", async () => {
     const channel = { id: 1, model_mapping: "{}" } as any
     const service = {
-      updateChannelModelMapping: vi.fn()
+      updateChannelModelMapping: vi.fn(),
     } as any
 
     await ModelRedirectService.applyModelMappingToChannel(channel, {}, service)
@@ -73,52 +74,52 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
   it("should merge existing mapping JSON with new mapping", async () => {
     const channel = {
       id: 1,
-      model_mapping: '{"gpt-4o":"old","custom":"keep"}'
+      model_mapping: '{"gpt-4o":"old","custom":"keep"}',
     } as any
     const service = {
-      updateChannelModelMapping: vi.fn().mockResolvedValue(undefined)
+      updateChannelModelMapping: vi.fn().mockResolvedValue(undefined),
     } as any
 
     const newMapping = {
       "gpt-4o": "new",
-      "deepseek-r1": "actual"
+      "deepseek-r1": "actual",
     }
 
     await ModelRedirectService.applyModelMappingToChannel(
       channel,
       newMapping,
-      service
+      service,
     )
 
     expect(service.updateChannelModelMapping).toHaveBeenCalledWith(channel, {
       "gpt-4o": "new",
       custom: "keep",
-      "deepseek-r1": "actual"
+      "deepseek-r1": "actual",
     })
   })
 
   it("should ignore invalid existing JSON and apply only new mapping", async () => {
     const channel = {
       id: 1,
-      model_mapping: "invalid-json"
+      model_mapping: "invalid-json",
     } as any
     const service = {
-      updateChannelModelMapping: vi.fn().mockResolvedValue(undefined)
+      updateChannelModelMapping: vi.fn().mockResolvedValue(undefined),
     } as any
 
     const newMapping = {
-      "gpt-4o": "new"
+      "gpt-4o": "new",
     }
 
     await ModelRedirectService.applyModelMappingToChannel(
       channel,
       newMapping,
-      service
+      service,
     )
 
     expect(service.updateChannelModelMapping).toHaveBeenCalledWith(
       channel,
-      newMapping
+      newMapping,
     )
   })
 })
@@ -149,12 +150,12 @@ describe("ModelRedirectService.applyModelRedirect", () => {
       newApi: {
         baseUrl: "https://example.com",
         adminToken: "token",
-        userId: 1
+        userId: 1,
       },
       modelRedirect: {
         ...DEFAULT_MODEL_REDIRECT_PREFERENCES,
-        enabled: false
-      }
+        enabled: false,
+      },
     } as any)
 
     const result = await ModelRedirectService.applyModelRedirect()
@@ -170,13 +171,13 @@ describe("ModelRedirectService.applyModelRedirect", () => {
       newApi: {
         baseUrl: "https://example.com",
         adminToken: "token",
-        userId: 1
+        userId: 1,
       },
       modelRedirect: {
         ...DEFAULT_MODEL_REDIRECT_PREFERENCES,
         enabled: true,
-        standardModels: ["gpt-4o"]
-      }
+        standardModels: ["gpt-4o"],
+      },
     } as any)
 
     mockedMetadataInitialize.mockResolvedValue(undefined)
@@ -186,27 +187,27 @@ describe("ModelRedirectService.applyModelRedirect", () => {
         id: 1,
         name: "active-channel",
         // no status field -> treated as enabled
-        models: "openai/gpt-4o"
+        models: "openai/gpt-4o",
       },
       {
         id: 2,
         name: "disabled-manual",
         status: CHANNEL_STATUS.ManuallyDisabled,
-        models: "openai/gpt-4o"
+        models: "openai/gpt-4o",
       },
       {
         id: 3,
         name: "disabled-auto",
         status: CHANNEL_STATUS.AutoDisabled,
-        models: "openai/gpt-4o"
-      }
+        models: "openai/gpt-4o",
+      },
     ]
 
     listChannelsMock.mockResolvedValue({ items: channels })
 
     const mappingSpy = vi.spyOn(
       ModelRedirectService,
-      "generateModelMappingForChannel"
+      "generateModelMappingForChannel",
     )
     mappingSpy.mockReturnValue({ "gpt-4o": "openai/gpt-4o" })
 
@@ -224,13 +225,13 @@ describe("ModelRedirectService.applyModelRedirect", () => {
       newApi: {
         baseUrl: "https://example.com",
         adminToken: "token",
-        userId: 1
+        userId: 1,
       },
       modelRedirect: {
         ...DEFAULT_MODEL_REDIRECT_PREFERENCES,
         enabled: true,
-        standardModels: ["gpt-4o"]
-      }
+        standardModels: ["gpt-4o"],
+      },
     } as any)
 
     mockedMetadataInitialize.mockResolvedValue(undefined)
@@ -240,15 +241,15 @@ describe("ModelRedirectService.applyModelRedirect", () => {
         id: 1,
         name: "active-channel",
         // no status field -> treated as enabled
-        models: "openai/gpt-4o"
-      }
+        models: "openai/gpt-4o",
+      },
     ]
 
     listChannelsMock.mockResolvedValue({ items: channels })
 
     const mappingSpy = vi.spyOn(
       ModelRedirectService,
-      "generateModelMappingForChannel"
+      "generateModelMappingForChannel",
     )
     mappingSpy.mockReturnValue({ "gpt-4o": "openai/gpt-4o" })
 

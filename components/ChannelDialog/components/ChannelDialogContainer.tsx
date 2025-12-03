@@ -1,6 +1,6 @@
 import { useChannelDialogContext } from "~/components/ChannelDialog/context/ChannelDialogContext"
 
-import { ChannelDialog } from "./ChannelDialog.tsx"
+import { ChannelDialog } from "./ChannelDialog"
 
 /**
  * Global ChannelDialog container that can be triggered from anywhere

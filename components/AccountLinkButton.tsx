@@ -2,7 +2,7 @@ import { ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline"
 import { useCallback } from "react"
 
 import { Button } from "~/components/ui"
-import { openAccountManagerWithSearch } from "~/utils/navigation.ts"
+import { openAccountManagerWithSearch } from "~/utils/navigation"
 
 interface AccountLinkButtonProps {
   accountId: string
@@ -20,7 +20,7 @@ interface AccountLinkButtonProps {
 export default function AccountLinkButton({
   accountId,
   accountName,
-  className
+  className,
 }: AccountLinkButtonProps) {
   const handleClick = useCallback(async () => {
     await openAccountManagerWithSearch(accountId)
@@ -34,7 +34,8 @@ export default function AccountLinkButton({
       aria-label={`View account ${accountName} in manager`}
       rightIcon={
         <ArrowTopRightOnSquareIcon className="h-4 w-4" aria-hidden="true" />
-      }>
+      }
+    >
       <span className="truncate">{accountName}</span>
     </Button>
   )

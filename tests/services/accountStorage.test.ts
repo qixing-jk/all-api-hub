@@ -5,7 +5,7 @@ import {
   AuthTypeEnum,
   SiteHealthStatus,
   type AccountStorageConfig,
-  type SiteAccount
+  type SiteAccount,
 } from "~/types"
 
 const storageData = new Map<string, AccountStorageConfig>()
@@ -15,13 +15,13 @@ const {
   mockFetchSupportCheckIn,
   mockGetSiteType,
   mockRefreshAccountData,
-  mockFetchTodayIncome
+  mockFetchTodayIncome,
 } = vi.hoisted(() => ({
   mockValidateAccountConnection: vi.fn(),
   mockFetchSupportCheckIn: vi.fn(),
   mockGetSiteType: vi.fn(),
   mockRefreshAccountData: vi.fn(),
-  mockFetchTodayIncome: vi.fn()
+  mockFetchTodayIncome: vi.fn(),
 }))
 
 vi.mock("@plasmohq/storage", () => {
@@ -46,21 +46,21 @@ vi.mock("~/services/apiService", () => ({
   fetchTodayIncome: mockFetchTodayIncome,
   refreshAccountData: mockRefreshAccountData,
   validateAccountConnection: mockValidateAccountConnection,
-  fetchSupportCheckIn: mockFetchSupportCheckIn
+  fetchSupportCheckIn: mockFetchSupportCheckIn,
 }))
 
 vi.mock("~/services/detectSiteType", () => ({
-  getSiteType: mockGetSiteType
+  getSiteType: mockGetSiteType,
 }))
 
 const seedStorage = (
   accounts: SiteAccount[],
-  pinnedAccountIds: string[] = []
+  pinnedAccountIds: string[] = [],
 ) => {
   storageData.set(STORAGE_KEY, {
     accounts,
     pinnedAccountIds,
-    last_updated: Date.now()
+    last_updated: Date.now(),
   })
 }
 
@@ -85,7 +85,7 @@ const createAccount = (overrides: Partial<SiteAccount> = {}): SiteAccount => {
       today_quota_consumption:
         overrides.account_info?.today_quota_consumption ?? 250_000,
       today_requests_count: overrides.account_info?.today_requests_count ?? 10,
-      today_income: overrides.account_info?.today_income ?? 500_000
+      today_income: overrides.account_info?.today_income ?? 500_000,
     },
     last_sync_time: overrides.last_sync_time ?? Date.now(),
     updated_at: overrides.updated_at ?? Date.now(),
@@ -94,7 +94,7 @@ const createAccount = (overrides: Partial<SiteAccount> = {}): SiteAccount => {
     can_check_in: overrides.can_check_in,
     supports_check_in: overrides.supports_check_in,
     authType: overrides.authType ?? AuthTypeEnum.AccessToken,
-    checkIn: overrides.checkIn || { enableDetection: true }
+    checkIn: overrides.checkIn || { enableDetection: true },
   }
 }
 
@@ -120,13 +120,13 @@ describe("accountStorage core behaviors", () => {
           isCheckedInToday: false,
           customCheckInUrl: "",
           customRedeemUrl: "",
-          openRedeemWithCheckIn: true
-        }
+          openRedeemWithCheckIn: true,
+        },
       },
       healthStatus: {
         status: SiteHealthStatus.Healthy,
-        message: ""
-      }
+        message: "",
+      },
     })
 
     mockFetchTodayIncome.mockResolvedValue({ today_income: 0 })
@@ -144,8 +144,8 @@ describe("accountStorage core behaviors", () => {
         today_completion_tokens: 400,
         today_quota_consumption: 500_000,
         today_requests_count: 8,
-        today_income: 250_000
-      }
+        today_income: 250_000,
+      },
     })
 
     const display = accountStorage.convertToDisplayData(account)
@@ -161,7 +161,7 @@ describe("accountStorage core behaviors", () => {
   it("convertToDisplayData should handle arrays", () => {
     const accounts = [
       createAccount({ id: "account-1" }),
-      createAccount({ id: "account-2" })
+      createAccount({ id: "account-2" }),
     ]
 
     const displayData = accountStorage.convertToDisplayData(accounts)
@@ -176,7 +176,7 @@ describe("accountStorage core behaviors", () => {
     const accounts = [
       createAccount({ id: "a-1" }),
       createAccount({ id: "a-2" }),
-      createAccount({ id: "a-3" })
+      createAccount({ id: "a-3" }),
     ]
     seedStorage(accounts, ["a-2"])
 
@@ -193,7 +193,7 @@ describe("accountStorage core behaviors", () => {
   it("setPinnedList should drop invalid ids and keep order", async () => {
     const accounts = [
       createAccount({ id: "valid-1" }),
-      createAccount({ id: "valid-2" })
+      createAccount({ id: "valid-2" }),
     ]
     seedStorage(accounts)
 
@@ -201,7 +201,7 @@ describe("accountStorage core behaviors", () => {
       "valid-1",
       "missing",
       "valid-2",
-      "valid-2"
+      "valid-2",
     ])
 
     expect(await accountStorage.getPinnedList()).toEqual(["valid-1", "valid-2"])
@@ -212,8 +212,8 @@ describe("accountStorage core behaviors", () => {
       id: "check-1",
       checkIn: {
         enableDetection: true,
-        isCheckedInToday: false
-      }
+        isCheckedInToday: false,
+      },
     })
     seedStorage([account])
 
@@ -224,7 +224,7 @@ describe("accountStorage core behaviors", () => {
 
     const updatedConfig = storageData.get(STORAGE_KEY)
     const updatedAccount = updatedConfig?.accounts.find(
-      (acc) => acc.id === "check-1"
+      (acc) => acc.id === "check-1",
     )
 
     expect(updatedAccount?.checkIn?.isCheckedInToday).toBe(true)
@@ -243,8 +243,8 @@ describe("accountStorage core behaviors", () => {
         today_completion_tokens: 200,
         today_quota_consumption: 50_000,
         today_requests_count: 5,
-        today_income: 10_000
-      }
+        today_income: 10_000,
+      },
     })
 
     const accountB = createAccount({
@@ -258,8 +258,8 @@ describe("accountStorage core behaviors", () => {
         today_completion_tokens: 400,
         today_quota_consumption: 75_000,
         today_requests_count: 7,
-        today_income: 5_000
-      }
+        today_income: 5_000,
+      },
     })
 
     seedStorage([accountA, accountB])
@@ -272,23 +272,23 @@ describe("accountStorage core behaviors", () => {
       today_total_requests: 12,
       today_total_prompt_tokens: 400,
       today_total_completion_tokens: 600,
-      today_total_income: 15_000
+      today_total_income: 15_000,
     })
   })
 
   it("checkUrlExists should match accounts by origin and ignore paths", async () => {
     const account = createAccount({
       id: "origin-match",
-      site_url: "https://foo.example.com/dashboard"
+      site_url: "https://foo.example.com/dashboard",
     })
     const otherAccount = createAccount({
       id: "origin-miss",
-      site_url: "https://bar.example.com"
+      site_url: "https://bar.example.com",
     })
     seedStorage([account, otherAccount])
 
     const match = await accountStorage.checkUrlExists(
-      "https://foo.example.com/settings/profile"
+      "https://foo.example.com/settings/profile",
     )
     const miss = await accountStorage.checkUrlExists("https://baz.example.com")
 
@@ -309,8 +309,8 @@ describe("accountStorage core behaviors", () => {
         today_completion_tokens: 0,
         today_quota_consumption: 0,
         today_requests_count: 0,
-        today_income: 0
-      }
+        today_income: 0,
+      },
     })
     const otherAccount = createAccount({
       id: "other",
@@ -324,19 +324,19 @@ describe("accountStorage core behaviors", () => {
         today_completion_tokens: 0,
         today_quota_consumption: 0,
         today_requests_count: 0,
-        today_income: 0
-      }
+        today_income: 0,
+      },
     })
 
     seedStorage([targetAccount, otherAccount])
 
     const found = await accountStorage.getAccountByBaseUrlAndUserId(
       "https://foo.example.com/api",
-      "123"
+      "123",
     )
     const missing = await accountStorage.getAccountByBaseUrlAndUserId(
       "https://foo.example.com/api",
-      "999"
+      "999",
     )
 
     expect(found?.id).toBe("target")
@@ -374,8 +374,8 @@ describe("accountStorage core behaviors", () => {
         enableDetection: true,
         customCheckInUrl: "https://example.com/check",
         isCheckedInToday: true,
-        lastCheckInDate: "2000-01-01"
-      }
+        lastCheckInDate: "2000-01-01",
+      },
     })
 
     const freshAccount = createAccount({
@@ -384,8 +384,8 @@ describe("accountStorage core behaviors", () => {
         enableDetection: true,
         customCheckInUrl: "https://example.com/check",
         isCheckedInToday: true,
-        lastCheckInDate: new Date().toISOString().split("T")[0]
-      }
+        lastCheckInDate: new Date().toISOString().split("T")[0],
+      },
     })
 
     seedStorage([staleAccount, freshAccount])
@@ -398,11 +398,11 @@ describe("accountStorage core behaviors", () => {
 
     expect(updatedStale?.checkIn?.isCheckedInToday).toBe(false)
     expect(updatedStale?.checkIn?.lastCheckInDate).toBe(
-      staleAccount.checkIn.lastCheckInDate
+      staleAccount.checkIn.lastCheckInDate,
     )
     expect(updatedFresh?.checkIn?.isCheckedInToday).toBe(true)
     expect(updatedFresh?.checkIn?.lastCheckInDate).toBe(
-      freshAccount.checkIn.lastCheckInDate
+      freshAccount.checkIn.lastCheckInDate,
     )
   })
 
@@ -411,7 +411,7 @@ describe("accountStorage core behaviors", () => {
       id: "needs-detect",
       site_url: "https://foo.example.com",
       site_type: "unknown",
-      checkIn: {} as any
+      checkIn: {} as any,
     })
     seedStorage([account])
 
@@ -424,7 +424,7 @@ describe("accountStorage core behaviors", () => {
 
     expect(mockGetSiteType).toHaveBeenCalledWith("https://foo.example.com")
     expect(mockFetchSupportCheckIn).toHaveBeenCalledWith(
-      "https://foo.example.com"
+      "https://foo.example.com",
     )
     expect(updatedAccount?.site_type).toBe("one-api")
     expect(updatedAccount?.checkIn?.enableDetection).toBe(true)
@@ -435,7 +435,7 @@ describe("accountStorage core behaviors", () => {
       id: "known-site",
       site_url: "https://bar.example.com",
       site_type: "one-api",
-      checkIn: { enableDetection: true }
+      checkIn: { enableDetection: true },
     })
     seedStorage([account])
 
@@ -476,8 +476,8 @@ describe("AccountStorageUtils", () => {
           "访问令牌不能为空",
           "用户名不能为空",
           "站点健康状态不能为空",
-          "充值比例必须为正数"
-        ])
+          "充值比例必须为正数",
+        ]),
       )
     })
 
@@ -492,7 +492,7 @@ describe("AccountStorageUtils", () => {
       const accounts = [
         createAccount({ id: "valid" }),
         createAccount({ id: "invalid" }),
-        createAccount({ id: "error" })
+        createAccount({ id: "error" }),
       ]
 
       mockValidateAccountConnection
@@ -511,19 +511,19 @@ describe("AccountStorageUtils", () => {
   describe("getHealthStatusInfo", () => {
     it("should map health statuses to style tokens", () => {
       expect(
-        AccountStorageUtils.getHealthStatusInfo(SiteHealthStatus.Healthy)
+        AccountStorageUtils.getHealthStatusInfo(SiteHealthStatus.Healthy),
       ).toMatchObject({
-        text: "正常"
+        text: "正常",
       })
       expect(
-        AccountStorageUtils.getHealthStatusInfo(SiteHealthStatus.Error)
+        AccountStorageUtils.getHealthStatusInfo(SiteHealthStatus.Error),
       ).toMatchObject({
-        color: "text-red-600"
+        color: "text-red-600",
       })
       expect(
-        AccountStorageUtils.getHealthStatusInfo(SiteHealthStatus.Unknown)
+        AccountStorageUtils.getHealthStatusInfo(SiteHealthStatus.Unknown),
       ).toMatchObject({
-        bgColor: "bg-gray-50"
+        bgColor: "bg-gray-50",
       })
     })
   })
@@ -541,10 +541,10 @@ describe("AccountStorageUtils", () => {
 
     it("isAccountStale should respect max age threshold", () => {
       const staleAccount = createAccount({
-        last_sync_time: fixedNow - 40 * 60 * 1000
+        last_sync_time: fixedNow - 40 * 60 * 1000,
       })
       const freshAccount = createAccount({
-        last_sync_time: fixedNow - 10 * 60 * 1000
+        last_sync_time: fixedNow - 10 * 60 * 1000,
       })
 
       expect(AccountStorageUtils.isAccountStale(staleAccount, 30)).toBe(true)
@@ -555,13 +555,13 @@ describe("AccountStorageUtils", () => {
       const accounts = [
         createAccount({
           id: "fresh",
-          last_sync_time: fixedNow - 5 * 60 * 1000
+          last_sync_time: fixedNow - 5 * 60 * 1000,
         }),
         createAccount({
           id: "borderline",
-          last_sync_time: fixedNow - 30 * 60 * 1000
+          last_sync_time: fixedNow - 30 * 60 * 1000,
         }),
-        createAccount({ id: "old", last_sync_time: fixedNow - 90 * 60 * 1000 })
+        createAccount({ id: "old", last_sync_time: fixedNow - 90 * 60 * 1000 }),
       ]
 
       const staleAccounts = AccountStorageUtils.getStaleAccounts(accounts, 30)

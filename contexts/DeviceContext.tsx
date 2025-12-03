@@ -20,7 +20,7 @@ export function DeviceProvider({ children }: { children: React.ReactNode }) {
     // sm: 480px, md: 768px, lg: 1024px
     const mobileQuery = window.matchMedia("(max-width: 767px)") // < md (768px)
     const tabletQuery = window.matchMedia(
-      "(min-width: 768px) and (max-width: 1023px)"
+      "(min-width: 768px) and (max-width: 1023px)",
     ) // md to lg
     const desktopQuery = window.matchMedia("(min-width: 1024px)") // >= lg
     const touchQuery = window.matchMedia("(pointer: coarse)")
@@ -61,7 +61,8 @@ export function DeviceProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <DeviceContext.Provider
-      value={{ isTouchDevice, isMobile, isTablet, isDesktop }}>
+      value={{ isTouchDevice, isMobile, isTablet, isDesktop }}
+    >
       {children}
     </DeviceContext.Provider>
   )

@@ -10,11 +10,11 @@ export const fetchSiteOriginalTitle = async (url: string) => {
       endpoint: "/",
       authType: AuthTypeEnum.None,
       options: {
-        cache: "no-store"
+        cache: "no-store",
       },
-      responseType: "text"
+      responseType: "text",
     },
-    true
+    true,
   )
   const match = html.match(/<title>(.*?)<\/title>/i)
   const title = match ? match[1] : "未找到"
@@ -29,8 +29,8 @@ async function getSiteUserIdType(url: string) {
       endpoint: "/api/user/self",
       authType: AuthTypeEnum.Cookie,
       options: {
-        cache: "no-store"
-      }
+        cache: "no-store",
+      },
     })
   } catch (error) {
     if (error instanceof ApiError && error.message) {

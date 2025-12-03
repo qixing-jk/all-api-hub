@@ -1,7 +1,7 @@
 import { t } from "i18next"
 
-import { userPreferences } from "~/services/userPreferences.ts"
-import type { WebDAVConfig } from "~/types/webdav.ts"
+import { userPreferences } from "~/services/userPreferences"
+import type { WebDAVConfig } from "~/types/webdav"
 
 function buildAuthHeader(username: string, password: string) {
   const token = btoa(`${username}:${password}`)
@@ -40,7 +40,7 @@ function getBackupDirUrl(targetUrl: string) {
 async function ensureBackupDirectory(
   targetUrl: string,
   username: string,
-  password: string
+  password: string,
 ) {
   const dirUrl = getBackupDirUrl(targetUrl)
   // Some servers require MKCOL on the exact collection URL
@@ -48,8 +48,8 @@ async function ensureBackupDirectory(
   const res = await fetch(dirUrl, {
     method: "MKCOL",
     headers: {
-      Authorization: buildAuthHeader(username, password)
-    }
+      Authorization: buildAuthHeader(username, password),
+    },
   })
   if (
     res.status === 201 ||
@@ -63,8 +63,8 @@ async function ensureBackupDirectory(
     const res2 = await fetch(dirUrl + "/", {
       method: "MKCOL",
       headers: {
-        Authorization: buildAuthHeader(username, password)
-      }
+        Authorization: buildAuthHeader(username, password),
+      },
     })
     if (
       res2.status === 201 ||
@@ -98,8 +98,8 @@ export async function testWebdavConnection(custom?: Partial<WebDAVConfig>) {
   const res = await fetch(targetUrl, {
     method: "GET",
     headers: {
-      Authorization: buildAuthHeader(cfg.username, cfg.password)
-    }
+      Authorization: buildAuthHeader(cfg.username, cfg.password),
+    },
   })
   // 200 存在；404 文件不存在但鉴权通过也视为连通
   if (res.status === 200 || res.status === 404) return true
@@ -124,8 +124,8 @@ export async function downloadBackup(custom?: Partial<WebDAVConfig>) {
     method: "GET",
     headers: {
       Authorization: buildAuthHeader(cfg.username, cfg.password),
-      Accept: "application/json"
-    }
+      Accept: "application/json",
+    },
   })
   if (res.status === 200) {
     return await res.text()
@@ -143,7 +143,7 @@ export async function downloadBackup(custom?: Partial<WebDAVConfig>) {
  */
 export async function uploadBackup(
   content: string,
-  custom?: Partial<WebDAVConfig>
+  custom?: Partial<WebDAVConfig>,
 ) {
   const cfg = { ...(await getWebDavConfig()), ...custom }
   if (!cfg.url || !cfg.username || !cfg.password) {
@@ -158,9 +158,9 @@ export async function uploadBackup(
     method: "PUT",
     headers: {
       Authorization: buildAuthHeader(cfg.username, cfg.password),
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
     },
-    body: content
+    body: content,
   })
 
   if (res.status >= 200 && res.status < 300) return true

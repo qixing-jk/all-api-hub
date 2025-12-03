@@ -7,7 +7,7 @@ import {
   hasWindowsAPI,
   onTabRemoved,
   onWindowRemoved,
-  removeTabOrWindow
+  removeTabOrWindow,
 } from "~/utils/browserApi"
 import { getErrorMessage } from "~/utils/error"
 
@@ -62,11 +62,11 @@ function handleTempWindowRemoved(windowId: number) {
   const context = tempContextById.get(windowId)
   if (context && context.type === "window") {
     withOriginLock(context.origin, () =>
-      destroyContext(context, { skipBrowserRemoval: true })
+      destroyContext(context, { skipBrowserRemoval: true }),
     ).catch((error) => {
       console.error(
         "[Background] Failed to cleanup removed window context",
-        error
+        error,
       )
     })
   }
@@ -86,7 +86,7 @@ function handleTempTabRemoved(tabId: number) {
   const context = tempContextByTabId.get(tabId)
   if (context && context.type === "tab") {
     withOriginLock(context.origin, () =>
-      destroyContext(context, { skipBrowserRemoval: true })
+      destroyContext(context, { skipBrowserRemoval: true }),
     ).catch((error) => {
       console.error("[Background] Failed to cleanup removed tab context", error)
     })
@@ -98,7 +98,7 @@ function handleTempTabRemoved(tabId: number) {
  */
 export async function handleOpenTempWindow(
   request: any,
-  sendResponse: (response?: any) => void
+  sendResponse: (response?: any) => void,
 ) {
   try {
     const { url, requestId } = request
@@ -111,7 +111,7 @@ export async function handleOpenTempWindow(
         type: "popup",
         width: 800,
         height: 600,
-        focused: false
+        focused: false,
       })
 
       if (window?.id) {
@@ -121,7 +121,7 @@ export async function handleOpenTempWindow(
       } else {
         sendResponse({
           success: false,
-          error: t("messages:background.cannotCreateWindow")
+          error: t("messages:background.cannotCreateWindow"),
         })
       }
     } else {
@@ -133,7 +133,7 @@ export async function handleOpenTempWindow(
       } else {
         sendResponse({
           success: false,
-          error: t("messages:background.cannotCreateWindow")
+          error: t("messages:background.cannotCreateWindow"),
         })
       }
     }
@@ -147,7 +147,7 @@ export async function handleOpenTempWindow(
  */
 export async function handleCloseTempWindow(
   request: any,
-  sendResponse: (response?: any) => void
+  sendResponse: (response?: any) => void,
 ) {
   try {
     const { requestId } = request
@@ -168,7 +168,7 @@ export async function handleCloseTempWindow(
 
     sendResponse({
       success: false,
-      error: t("messages:background.windowNotFound")
+      error: t("messages:background.windowNotFound"),
     })
   } catch (error) {
     sendResponse({ success: false, error: getErrorMessage(error) })
@@ -180,21 +180,21 @@ export async function handleCloseTempWindow(
  */
 export async function handleAutoDetectSite(
   request: any,
-  sendResponse: (response?: any) => void
+  sendResponse: (response?: any) => void,
 ) {
   const { url, requestId } = request
 
   try {
     const [userData, siteType] = await Promise.all([
       getSiteDataFromTab(url, requestId),
-      getSiteType(url)
+      getSiteType(url),
     ])
 
     let result = null
     if (siteType && userData) {
       result = {
         siteType,
-        ...(userData ?? {})
+        ...(userData ?? {}),
       }
     }
     console.log("自动检测结果:", result)
@@ -202,7 +202,7 @@ export async function handleAutoDetectSite(
     // 返回结果
     sendResponse({
       success: true,
-      data: result
+      data: result,
     })
   } catch (error) {
     sendResponse({ success: false, error: getErrorMessage(error) })
@@ -214,14 +214,14 @@ export async function handleAutoDetectSite(
  */
 export async function handleTempWindowFetch(
   request: any,
-  sendResponse: (response?: any) => void
+  sendResponse: (response?: any) => void,
 ) {
   const {
     originUrl,
     fetchUrl,
     fetchOptions,
     responseType = "json",
-    requestId
+    requestId,
   } = request
 
   if (!originUrl || !fetchUrl) {
@@ -229,7 +229,7 @@ export async function handleTempWindowFetch(
       success: false,
       error:
         t("messages:background.invalidFetchRequest", "Invalid fetch request") ||
-        "Invalid fetch request"
+        "Invalid fetch request",
     })
     return
   }
@@ -243,7 +243,7 @@ export async function handleTempWindowFetch(
       action: "performTempWindowFetch",
       fetchUrl,
       fetchOptions: fetchOptions ?? {},
-      responseType
+      responseType,
     })
     await releaseTempContext(tempRequestId)
 
@@ -271,7 +271,7 @@ async function getSiteDataFromTab(url: string, requestId: string) {
     // 通过 content script 获取用户信息
     const userResponse = await browser.tabs.sendMessage(tabId, {
       action: "getUserFromLocalStorage",
-      url: url
+      url: url,
     })
 
     await releaseTempContext(requestId)
@@ -284,7 +284,7 @@ async function getSiteDataFromTab(url: string, requestId: string) {
 
     return {
       userId: userResponse.data?.userId,
-      user: userResponse.data?.user
+      user: userResponse.data?.user,
     }
   } catch (error) {
     console.error(error)
@@ -298,7 +298,7 @@ async function getSiteDataFromTab(url: string, requestId: string) {
  */
 async function withOriginLock<T>(
   origin: string,
-  task: () => Promise<T>
+  task: () => Promise<T>,
 ): Promise<T> {
   const previous = originLocks.get(origin) ?? Promise.resolve()
   let release: () => void
@@ -331,8 +331,8 @@ async function destroyOriginPool(origin: string, pool?: TempContext[]) {
     contexts.map((ctx) =>
       destroyContext(ctx).catch((error) => {
         console.error("[Background] Failed to destroy context from pool", error)
-      })
-    )
+      }),
+    ),
   )
 }
 
@@ -383,7 +383,7 @@ async function acquireTempContext(url: string, requestId: string) {
  */
 async function releaseTempContext(
   requestId: string,
-  options: { forceClose?: boolean } = {}
+  options: { forceClose?: boolean } = {},
 ) {
   // 延迟释放，提高并发时的复用率
   setTimeout(async () => {
@@ -466,7 +466,7 @@ async function createTempContextInstance(url: string, origin: string) {
         type: "popup",
         width: 800,
         height: 600,
-        focused: false
+        focused: false,
       })
 
       if (!window?.id) {
@@ -476,7 +476,7 @@ async function createTempContextInstance(url: string, origin: string) {
       contextId = window.id
       const tabs = await browser.tabs.query({
         windowId: window.id,
-        active: true
+        active: true,
       })
       tabId = tabs[0]?.id
     } else {
@@ -498,7 +498,7 @@ async function createTempContextInstance(url: string, origin: string) {
       origin,
       type,
       busy: false,
-      lastUsed: Date.now()
+      lastUsed: Date.now(),
     }
   } catch (error) {
     if (contextId) {
@@ -507,7 +507,7 @@ async function createTempContextInstance(url: string, origin: string) {
       } catch (cleanupError) {
         console.warn(
           "[Background] Failed to cleanup temp context after creation error",
-          cleanupError
+          cleanupError,
         )
       }
     }
@@ -551,7 +551,7 @@ function scheduleContextCleanup(context: TempContext) {
  */
 async function destroyContext(
   context: TempContext,
-  options: { skipBrowserRemoval?: boolean } = {}
+  options: { skipBrowserRemoval?: boolean } = {},
 ) {
   if (!tempContextById.has(context.id)) {
     return
@@ -569,7 +569,7 @@ async function destroyContext(
   if (pool) {
     tempContextsByOrigin.set(
       context.origin,
-      pool.filter((item) => item !== context)
+      pool.filter((item) => item !== context),
     )
   }
 
@@ -628,13 +628,13 @@ function waitForTabComplete(tabId: number): Promise<void> {
           let passed = false
           try {
             const response = await browser.tabs.sendMessage(tabId, {
-              action: "checkCloudflareGuard"
+              action: "checkCloudflareGuard",
             })
             passed = Boolean(response?.success && response.passed)
           } catch (error) {
             console.warn(
               "[Background] CF check via content script failed",
-              error
+              error,
             )
           }
 

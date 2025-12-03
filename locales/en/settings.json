@@ -8,6 +8,7 @@
     "checkinRedeem": "Check-in & Redeem",
     "dataBackup": "Data & Backup",
     "newApi": "New API",
+    "cliProxy": "CLIProxyAPI",
     "more": "More",
     "permissions": "Permissions",
     "select": "Select a tab"
@@ -101,6 +102,14 @@
     "urlDesc": "Set the base URL for New API integration",
     "tokenDesc": "Token for accessing New API admin functions",
     "userIdDesc": "User identification ID for New API"
+  },
+  "cliProxy": {
+    "title": "CLIProxyAPI Settings",
+    "description": "Configure connection to CLIProxyAPI Management API",
+    "baseUrlLabel": "Management API Base URL",
+    "managementKeyLabel": "Management Key",
+    "urlDesc": "Set the Management API base URL, e.g. http://localhost:8317/v0/management",
+    "keyDesc": "Management key for interface access authentication"
   },
   "permissions": {
     "title": "Permissions",

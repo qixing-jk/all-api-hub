@@ -4,49 +4,49 @@ import {
   joinUrl,
   navigateToAnchor,
   parseTabFromUrl,
-  updateUrlWithTab
+  updateUrlWithTab,
 } from "~/utils/url"
 
 describe("joinUrl", () => {
   it("should join base and path with single slash", () => {
     expect(joinUrl("https://example.com", "api/users")).toBe(
-      "https://example.com/api/users"
+      "https://example.com/api/users",
     )
   })
 
   it("should remove trailing slash from base", () => {
     expect(joinUrl("https://example.com/", "api/users")).toBe(
-      "https://example.com/api/users"
+      "https://example.com/api/users",
     )
   })
 
   it("should remove leading slash from path", () => {
     expect(joinUrl("https://example.com", "/api/users")).toBe(
-      "https://example.com/api/users"
+      "https://example.com/api/users",
     )
   })
 
   it("should handle both trailing and leading slashes", () => {
     expect(joinUrl("https://example.com/", "/api/users")).toBe(
-      "https://example.com/api/users"
+      "https://example.com/api/users",
     )
   })
 
   it("should handle multiple trailing slashes", () => {
     expect(joinUrl("https://example.com///", "api/users")).toBe(
-      "https://example.com/api/users"
+      "https://example.com/api/users",
     )
   })
 
   it("should handle multiple leading slashes", () => {
     expect(joinUrl("https://example.com", "///api/users")).toBe(
-      "https://example.com/api/users"
+      "https://example.com/api/users",
     )
   })
 
   it("should handle both multiple slashes", () => {
     expect(joinUrl("https://example.com///", "///api/users")).toBe(
-      "https://example.com/api/users"
+      "https://example.com/api/users",
     )
   })
 
@@ -56,19 +56,19 @@ describe("joinUrl", () => {
 
   it("should handle path with query parameters", () => {
     expect(joinUrl("https://example.com", "api?key=value")).toBe(
-      "https://example.com/api?key=value"
+      "https://example.com/api?key=value",
     )
   })
 
   it("should handle path with hash", () => {
     expect(joinUrl("https://example.com", "page#section")).toBe(
-      "https://example.com/page#section"
+      "https://example.com/page#section",
     )
   })
 
   it("should handle nested paths", () => {
     expect(joinUrl("https://example.com/api", "v1/users")).toBe(
-      "https://example.com/api/v1/users"
+      "https://example.com/api/v1/users",
     )
   })
 })
@@ -80,7 +80,7 @@ describe("parseTabFromUrl", () => {
     ;(window as any).location = {
       hash: "",
       search: "",
-      href: "https://example.com"
+      href: "https://example.com",
     }
   })
 
@@ -206,11 +206,11 @@ describe("updateUrlWithTab", () => {
     ;(window as any).location = {
       href: "https://example.com/page",
       search: "",
-      hash: ""
+      hash: "",
     }
     ;(window as any).history = {
       replaceState: vi.fn(),
-      pushState: vi.fn()
+      pushState: vi.fn(),
     }
   })
 
@@ -262,19 +262,19 @@ describe("navigateToAnchor", () => {
     ;(window as any).location = {
       href: "https://example.com/page",
       search: "",
-      hash: ""
+      hash: "",
     }
     ;(window as any).history = {
       replaceState: vi.fn(),
-      pushState: vi.fn()
+      pushState: vi.fn(),
     }
 
     const mockElement = {
-      scrollIntoView: vi.fn()
+      scrollIntoView: vi.fn(),
     }
 
     ;(window as any).document = {
-      getElementById: vi.fn(() => mockElement)
+      getElementById: vi.fn(() => mockElement),
     }
 
     vi.useFakeTimers()
@@ -293,7 +293,7 @@ describe("navigateToAnchor", () => {
     const mockElement = document.getElementById("section-id")
     expect(mockElement?.scrollIntoView).toHaveBeenCalledWith({
       behavior: "smooth",
-      block: "start"
+      block: "start",
     })
   })
 

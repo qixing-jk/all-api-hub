@@ -28,7 +28,7 @@ export function extractActualModel(modelName: string) {
 
 export const renameModel = (
   model: string,
-  includeVendor: boolean
+  includeVendor: boolean,
 ): string | undefined => {
   if (!model) return undefined
 

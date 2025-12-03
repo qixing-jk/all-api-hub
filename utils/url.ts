@@ -20,7 +20,7 @@ export function parseTabFromUrl(
   options: {
     ignoreAnchors?: string[]
     defaultHashPage?: string
-  } = {}
+  } = {},
 ): {
   tab: string | null
   anchor: string | null
@@ -77,7 +77,7 @@ export function updateUrlWithTab(
   options: {
     replaceHistory?: boolean
     hashPage?: string
-  } = {}
+  } = {},
 ) {
   const { replaceHistory = true, hashPage } = options
   const url = new URL(window.location.href)
@@ -106,7 +106,7 @@ export function navigateToAnchor(
   options: {
     hashPage?: string
     delay?: number
-  } = {}
+  } = {},
 ) {
   const { hashPage, delay = 100 } = options
 

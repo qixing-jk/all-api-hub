@@ -10,7 +10,7 @@ describe("LinkCard", () => {
     title: "Test Title",
     description: "Test description text",
     href: "https://example.com",
-    buttonText: "Click Me"
+    buttonText: "Click Me",
   }
 
   it("should render correctly with required props", async () => {
@@ -43,13 +43,13 @@ describe("LinkCard", () => {
 
     const button = await screen.findByRole("button", { name: "Click Me" })
     expect(button.className).toContain(
-      "bg-[var(--button-secondary-bg)] text-[var(--button-secondary-foreground)]"
+      "bg-[var(--button-secondary-bg)] text-[var(--button-secondary-foreground)]",
     )
   })
 
   it("should apply custom icon class", async () => {
     const { container } = render(
-      <LinkCard {...defaultProps} iconClass="text-red-500" />
+      <LinkCard {...defaultProps} iconClass="text-red-500" />,
     )
 
     await screen.findByText("Test Title")

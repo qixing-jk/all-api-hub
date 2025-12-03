@@ -6,7 +6,7 @@ import type { DisplaySiteData } from "~/types"
 import { calculateModelPrice } from "~/utils/modelPricing"
 import {
   filterModelsByProvider,
-  type ProviderType
+  type ProviderType,
 } from "~/utils/modelProviders"
 
 interface UseFilteredModelsProps {
@@ -22,7 +22,7 @@ export function useFilteredModels({
   currentAccount,
   selectedGroup,
   searchTerm,
-  selectedProvider
+  selectedProvider,
 }: UseFilteredModelsProps) {
   const modelsWithPricing = useMemo(() => {
     if (!pricingData || !currentAccount || !Array.isArray(pricingData.data)) {
@@ -39,12 +39,12 @@ export function useFilteredModels({
         model,
         pricingData.group_ratio || {},
         exchangeRate,
-        selectedGroup === "all" ? "default" : selectedGroup
+        selectedGroup === "all" ? "default" : selectedGroup,
       )
 
       return {
         model,
-        calculatedPrice
+        calculatedPrice,
       }
     })
   }, [pricingData, currentAccount, selectedGroup])
@@ -58,7 +58,7 @@ export function useFilteredModels({
         : []
       if (availableGroupsList.includes(selectedGroup)) {
         filtered = filtered.filter((item) =>
-          item.model.enable_groups.includes(selectedGroup)
+          item.model.enable_groups.includes(selectedGroup),
         )
       }
     }
@@ -69,7 +69,7 @@ export function useFilteredModels({
         (item) =>
           item.model.model_name.toLowerCase().includes(searchLower) ||
           item.model.model_description?.toLowerCase().includes(searchLower) ||
-          false
+          false,
       )
     }
 
@@ -82,13 +82,13 @@ export function useFilteredModels({
     }
     return baseFilteredModels.filter(
       (item) =>
-        filterModelsByProvider([item.model], selectedProvider).length > 0
+        filterModelsByProvider([item.model], selectedProvider).length > 0,
     )
   }, [baseFilteredModels, selectedProvider])
 
   const getProviderFilteredCount = (provider: ProviderType) => {
     return baseFilteredModels.filter(
-      (item) => filterModelsByProvider([item.model], provider).length > 0
+      (item) => filterModelsByProvider([item.model], provider).length > 0,
     ).length
   }
 
@@ -103,6 +103,6 @@ export function useFilteredModels({
     filteredModels,
     baseFilteredModels,
     getProviderFilteredCount,
-    availableGroups
+    availableGroups,
   }
 }

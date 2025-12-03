@@ -30,6 +30,6 @@ export function useModelListState() {
     showRatioColumn,
     setShowRatioColumn,
     showEndpointTypes,
-    setShowEndpointTypes
+    setShowEndpointTypes,
   }
 }

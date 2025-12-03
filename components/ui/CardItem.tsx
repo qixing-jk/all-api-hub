@@ -1,7 +1,7 @@
 import { cva, type VariantProps } from "class-variance-authority"
 import React from "react"
 
-import { cn } from "~/lib/utils.ts"
+import { cn } from "~/lib/utils"
 
 import { BodySmall, Typography } from "./Typography"
 
@@ -14,18 +14,18 @@ const cardItemVariants = cva(
         sm: "sm:py-3 sm:px-4 py-2 px-3",
         default: "sm:py-4 sm:px-6 py-3 px-4",
         md: "sm:py-5 sm:px-6 py-4 px-5",
-        lg: "sm:py-6 sm:px-8 py-5 px-6"
+        lg: "sm:py-6 sm:px-8 py-5 px-6",
       },
       interactive: {
         false: "",
-        true: "hover:bg-gray-50 dark:hover:bg-dark-bg-tertiary cursor-pointer"
-      }
+        true: "hover:bg-gray-50 dark:hover:bg-dark-bg-tertiary cursor-pointer",
+      },
     },
     defaultVariants: {
       padding: "default",
-      interactive: false
-    }
-  }
+      interactive: false,
+    },
+  },
 )
 
 export interface CardSectionProps
@@ -54,7 +54,7 @@ const CardItem = React.forwardRef<HTMLDivElement, CardSectionProps>(
       children,
       ...props
     },
-    ref
+    ref,
   ) => {
     const isClickable = onClick || interactive
 
@@ -67,12 +67,13 @@ const CardItem = React.forwardRef<HTMLDivElement, CardSectionProps>(
           cardItemVariants({
             padding,
             interactive: !!isClickable,
-            className
-          })
+            className,
+          }),
         )}
         onClick={onClick}
         type={isClickable ? "button" : undefined}
-        {...props}>
+        {...props}
+      >
         {children || (
           <>
             <div className="flex min-w-0 flex-1 items-center gap-3">
@@ -85,7 +86,8 @@ const CardItem = React.forwardRef<HTMLDivElement, CardSectionProps>(
                 {title && (
                   <Typography
                     variant="h6"
-                    className="dark:text-dark-text-primary mb-0.5 text-gray-900 transition-colors">
+                    className="dark:text-dark-text-primary mb-0.5 text-gray-900 transition-colors"
+                  >
                     {title}
                   </Typography>
                 )}
@@ -106,7 +108,7 @@ const CardItem = React.forwardRef<HTMLDivElement, CardSectionProps>(
         )}
       </Component>
     )
-  }
+  },
 )
 CardItem.displayName = "CardItem"
 

@@ -1,10 +1,10 @@
 import { cva, type VariantProps } from "class-variance-authority"
 import React from "react"
 
-import { cn } from "~/lib/utils.ts"
+import { cn } from "~/lib/utils"
 
 const textareaVariants = cva(
-  "flex min-h-[80px] w-full rounded-md border border-gray-300 dark:border-dark-bg-tertiary bg-white dark:bg-dark-bg-secondary px-3 py-2 text-sm placeholder:text-gray-400 dark:placeholder:text-gray-500 text-gray-900 dark:text-dark-text-primary focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50 transition-colors resize-vertical",
+  "flex w-full rounded-md border border-gray-300 dark:border-dark-bg-tertiary bg-white dark:bg-dark-bg-secondary px-3 py-2 text-sm placeholder:text-gray-400 dark:placeholder:text-gray-500 text-gray-900 dark:text-dark-text-primary focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50 transition-colors resize-vertical",
   {
     variants: {
       variant: {
@@ -12,19 +12,19 @@ const textareaVariants = cva(
         error:
           "border-red-300 dark:border-red-600 focus:ring-red-500 focus:border-red-500",
         success:
-          "border-green-300 dark:border-green-600 focus:ring-green-500 focus:border-green-500"
+          "border-green-300 dark:border-green-600 focus:ring-green-500 focus:border-green-500",
       },
       size: {
-        default: "min-h-[80px]",
-        sm: "min-h-[60px] px-2 py-1 text-xs",
-        lg: "min-h-[120px] px-4 py-3"
-      }
+        default: "min-h-16",
+        sm: "min-h-14 px-2 py-1 text-xs",
+        lg: "min-h-20 px-4 py-3",
+      },
     },
     defaultVariants: {
       variant: "default",
-      size: "default"
-    }
-  }
+      size: "default",
+    },
+  },
 )
 
 export interface TextareaProps
@@ -49,7 +49,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       value,
       ...props
     },
-    ref
+    ref,
   ) => {
     const textareaVariant = error ? "error" : success ? "success" : variant
     const currentLength = typeof value === "string" ? value.length : 0
@@ -58,7 +58,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       <div className="relative">
         <textarea
           className={cn(
-            textareaVariants({ variant: textareaVariant, size, className })
+            textareaVariants({ variant: textareaVariant, size, className }),
           )}
           ref={ref}
           value={value}
@@ -71,8 +71,9 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
               "mt-1 text-xs",
               error
                 ? "text-red-600 dark:text-red-400"
-                : "text-green-600 dark:text-green-400"
-            )}>
+                : "text-green-600 dark:text-green-400",
+            )}
+          >
             {error || success}
           </p>
         )}
@@ -83,7 +84,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         )}
       </div>
     )
-  }
+  },
 )
 Textarea.displayName = "Textarea"
 

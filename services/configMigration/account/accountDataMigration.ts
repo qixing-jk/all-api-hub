@@ -5,7 +5,7 @@
 
 import type { SiteAccount } from "~/types"
 
-import { migrateCheckInConfig } from "./checkInMigration.ts"
+import { migrateCheckInConfig } from "./checkInMigration"
 
 // Current version of the configuration schema
 export const CURRENT_CONFIG_VERSION = 1
@@ -27,7 +27,7 @@ const migrations: Record<number, MigrationFunction> = {
     const migrated = migrateCheckInConfig(account)
     migrated.configVersion = 1
     return migrated
-  }
+  },
 
   // Future migrations will be added here:
   // 2: (account: SiteAccount): SiteAccount => { ... },
@@ -67,7 +67,7 @@ export function migrateAccountConfig(account: SiteAccount): SiteAccount {
     }
 
     console.log(
-      `Migrating account ${account.id} from v${currentVersion} to v${nextVersion}`
+      `Migrating account ${account.id} from v${currentVersion} to v${nextVersion}`,
     )
     migratedAccount = migrationFn(migratedAccount)
     currentVersion = nextVersion
@@ -96,12 +96,12 @@ export function migrateAccountsConfig(accounts: SiteAccount[]): {
 
   if (migratedCount > 0) {
     console.log(
-      `Successfully migrated ${migratedCount} account(s) to config version ${CURRENT_CONFIG_VERSION}`
+      `Successfully migrated ${migratedCount} account(s) to config version ${CURRENT_CONFIG_VERSION}`,
     )
   }
 
   return {
     accounts: migratedAccounts,
-    migratedCount
+    migratedCount,
   }
 }

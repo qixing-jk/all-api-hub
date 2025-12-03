@@ -18,7 +18,7 @@ export const UpdateTimeAndWarning = () => {
     // 而不是仅在组件初次渲染时计算一次
     const timer = setInterval(
       () => setTick((t) => t + 1),
-      UI_CONSTANTS.UPDATE_INTERVAL
+      UI_CONSTANTS.UPDATE_INTERVAL,
     )
     return () => clearInterval(timer)
   }, [])
@@ -28,14 +28,14 @@ export const UpdateTimeAndWarning = () => {
       <Tooltip content={formatFullTime(lastUpdateTime)}>
         <Caption className="cursor-help">
           {t("common:time.updatedAt", {
-            time: formatRelativeTime(lastUpdateTime)
+            time: formatRelativeTime(lastUpdateTime),
           })}
         </Caption>
       </Tooltip>
       {detectedAccount && (
         <Badge variant="warning" size="sm">
           {t("currentSiteAdded", {
-            siteName: detectedAccount.site_name
+            siteName: detectedAccount.site_name,
           })}
         </Badge>
       )}

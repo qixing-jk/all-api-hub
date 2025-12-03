@@ -17,7 +17,7 @@ function normalizeString(str: string): string {
 
   // Convert full-width to half-width characters
   normalized = normalized.replace(/[\uff01-\uff5e]/g, (ch) =>
-    String.fromCharCode(ch.charCodeAt(0) - 0xfee0)
+    String.fromCharCode(ch.charCodeAt(0) - 0xfee0),
   )
 
   // Remove protocol for URLs
@@ -48,7 +48,7 @@ function parseUrl(url: string): { domain: string; path: string } {
 
   return {
     domain: normalized.substring(0, slashIndex),
-    path: normalized.substring(slashIndex)
+    path: normalized.substring(slashIndex),
   }
 }
 
@@ -159,7 +159,7 @@ export interface SearchResult {
  */
 export function searchAccounts(
   accounts: DisplaySiteData[],
-  query: string
+  query: string,
 ): SearchResult[] {
   if (!query || !query.trim()) {
     return []
@@ -224,7 +224,7 @@ export function searchAccounts(
       // Match against username
       const usernameScore = scoreNameMatch(
         normalizeString(account.username),
-        token
+        token,
       )
       if (usernameScore > 0) {
         tokenScore += usernameScore
@@ -268,7 +268,7 @@ export function searchAccounts(
       results.push({
         account,
         score: totalScore,
-        matchedFields: Array.from(matchedFields)
+        matchedFields: Array.from(matchedFields),
       })
     }
   }

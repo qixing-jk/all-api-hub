@@ -11,7 +11,7 @@ const createFetchMock = (response: any) => {
   return vi.fn().mockResolvedValue({
     ok: true,
     status: 200,
-    json: async () => response
+    json: async () => response,
   }) as any
 }
 
@@ -35,7 +35,7 @@ describe("apiService common fetchApi helpers", () => {
       endpoint: ENDPOINT,
       userId: 123,
       token: "token",
-      authType: AuthTypeEnum.AccessToken
+      authType: AuthTypeEnum.AccessToken,
     })
 
     expect(global.fetch).toHaveBeenCalledTimes(1)
@@ -50,15 +50,15 @@ describe("apiService common fetchApi helpers", () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: false,
       status: 500,
-      json: async () => ({})
+      json: async () => ({}),
     }) as any
 
     await expect(
       fetchApiData({
         baseUrl: BASE_URL,
         endpoint: ENDPOINT,
-        authType: AuthTypeEnum.AccessToken
-      } as any)
+        authType: AuthTypeEnum.AccessToken,
+      } as any),
     ).rejects.toBeInstanceOf(ApiError)
   })
 
@@ -66,30 +66,30 @@ describe("apiService common fetchApi helpers", () => {
     global.fetch = createFetchMock({
       success: false,
       data: null,
-      message: "bad request"
+      message: "bad request",
     })
 
     await expect(
       fetchApiData({
         baseUrl: BASE_URL,
         endpoint: ENDPOINT,
-        authType: AuthTypeEnum.AccessToken
-      } as any)
+        authType: AuthTypeEnum.AccessToken,
+      } as any),
     ).rejects.toMatchObject({ message: "bad request" } as any)
   })
 
   it("fetchApiData should throw ApiError when data is missing", async () => {
     global.fetch = createFetchMock({
       success: true,
-      message: "no data"
+      message: "no data",
     })
 
     await expect(
       fetchApiData({
         baseUrl: BASE_URL,
         endpoint: ENDPOINT,
-        authType: AuthTypeEnum.AccessToken
-      } as any)
+        authType: AuthTypeEnum.AccessToken,
+      } as any),
     ).rejects.toBeInstanceOf(ApiError)
   })
 })

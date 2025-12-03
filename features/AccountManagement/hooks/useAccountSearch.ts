@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import {
   searchAccounts,
-  type SearchResult
+  type SearchResult,
 } from "~/services/search/accountSearch"
 import type { DisplaySiteData } from "~/types"
 
@@ -36,7 +36,7 @@ function normalizeForMatching(value: string): string {
 
   // Convert full-width characters to half-width
   normalized = normalized.replace(/[\uff01-\uff5e]/g, (char) =>
-    String.fromCharCode(char.charCodeAt(0) - 0xfee0)
+    String.fromCharCode(char.charCodeAt(0) - 0xfee0),
   )
 
   // Remove http/https protocol
@@ -60,14 +60,14 @@ function escapeRegex(value: string): string {
 
 function createHighlightFragments(
   text: string,
-  tokens: TokenInfo[]
+  tokens: TokenInfo[],
 ): HighlightFragment[] {
   if (!text || tokens.length === 0) {
     return [{ text: text || "", highlighted: false }]
   }
 
   const uniqueTokens = Array.from(
-    new Set(tokens.map((token) => token.original).filter(Boolean))
+    new Set(tokens.map((token) => token.original).filter(Boolean)),
   )
 
   if (uniqueTokens.length === 0) {
@@ -85,13 +85,13 @@ function createHighlightFragments(
     if (match.index > lastIndex) {
       fragments.push({
         text: text.substring(lastIndex, match.index),
-        highlighted: false
+        highlighted: false,
       })
     }
 
     fragments.push({
       text: match[0],
-      highlighted: true
+      highlighted: true,
     })
 
     lastIndex = match.index + match[0].length
@@ -100,7 +100,7 @@ function createHighlightFragments(
   if (lastIndex < text.length) {
     fragments.push({
       text: text.substring(lastIndex),
-      highlighted: false
+      highlighted: false,
     })
   }
 
@@ -109,14 +109,14 @@ function createHighlightFragments(
 
 function generateHighlights(
   results: SearchResult[],
-  query: string
+  query: string,
 ): SearchResultWithHighlight[] {
   const tokenInfos: TokenInfo[] = query
     .trim()
     .split(/\s+/)
     .map((token) => ({
       original: token,
-      normalized: normalizeForMatching(token)
+      normalized: normalizeForMatching(token),
     }))
     .filter((token) => token.normalized.length > 0)
 
@@ -126,13 +126,13 @@ function generateHighlights(
     if (result.matchedFields.includes("name")) {
       const normalizedName = normalizeForMatching(result.account.name)
       const nameTokens = tokenInfos.filter((token) =>
-        normalizedName.includes(token.normalized)
+        normalizedName.includes(token.normalized),
       )
 
       if (nameTokens.length > 0) {
         highlights.name = createHighlightFragments(
           result.account.name,
-          nameTokens
+          nameTokens,
         )
       }
     }
@@ -140,13 +140,13 @@ function generateHighlights(
     if (result.matchedFields.includes("baseUrl")) {
       const normalizedUrl = normalizeForMatching(result.account.baseUrl)
       const urlTokens = tokenInfos.filter((token) =>
-        normalizedUrl.includes(token.normalized)
+        normalizedUrl.includes(token.normalized),
       )
 
       if (urlTokens.length > 0) {
         highlights.baseUrl = createHighlightFragments(
           result.account.baseUrl,
-          urlTokens
+          urlTokens,
         )
       }
     }
@@ -156,13 +156,13 @@ function generateHighlights(
       if (customCheckInUrl) {
         const normalizedCheckIn = normalizeForMatching(customCheckInUrl)
         const checkInTokens = tokenInfos.filter((token) =>
-          normalizedCheckIn.includes(token.normalized)
+          normalizedCheckIn.includes(token.normalized),
         )
 
         if (checkInTokens.length > 0) {
           highlights.customCheckInUrl = createHighlightFragments(
             customCheckInUrl,
-            checkInTokens
+            checkInTokens,
           )
         }
       }
@@ -173,13 +173,13 @@ function generateHighlights(
       if (customRedeemUrl) {
         const normalizedRedeem = normalizeForMatching(customRedeemUrl)
         const redeemTokens = tokenInfos.filter((token) =>
-          normalizedRedeem.includes(token.normalized)
+          normalizedRedeem.includes(token.normalized),
         )
 
         if (redeemTokens.length > 0) {
           highlights.customRedeemUrl = createHighlightFragments(
             customRedeemUrl,
-            redeemTokens
+            redeemTokens,
           )
         }
       }
@@ -190,7 +190,7 @@ function generateHighlights(
       if (username) {
         const normalizedRedeem = normalizeForMatching(username)
         const redeemTokens = tokenInfos.filter((token) =>
-          normalizedRedeem.includes(token.normalized)
+          normalizedRedeem.includes(token.normalized),
         )
 
         if (redeemTokens.length > 0) {
@@ -205,7 +205,7 @@ function generateHighlights(
         const joined = tags.join(", ")
         const normalizedTags = normalizeForMatching(joined)
         const tagTokens = tokenInfos.filter((token) =>
-          normalizedTags.includes(token.normalized)
+          normalizedTags.includes(token.normalized),
         )
 
         if (tagTokens.length > 0) {
@@ -216,19 +216,19 @@ function generateHighlights(
 
     return {
       ...result,
-      highlights
+      highlights,
     }
   })
 }
 
 export function useAccountSearch(
   accounts: DisplaySiteData[],
-  initialQuery?: string
+  initialQuery?: string,
 ) {
   const normalizedInitialQuery = initialQuery ?? ""
   const [query, setQuery] = useState(() => normalizedInitialQuery)
   const [debouncedQuery, setDebouncedQuery] = useState(
-    () => normalizedInitialQuery
+    () => normalizedInitialQuery,
   )
   const lastAppliedInitialQuery = useRef(normalizedInitialQuery)
 
@@ -290,6 +290,6 @@ export function useAccountSearch(
     debouncedQuery,
     searchResults: resultsWithHighlights,
     clearSearch,
-    inSearchMode: query.trim().length > 0
+    inSearchMode: query.trim().length > 0,
   }
 }

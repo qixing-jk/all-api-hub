@@ -43,17 +43,17 @@ i18n
       "redemptionAssist",
       "ui",
       "importExport",
-      "about"
+      "about",
     ],
     resources,
     interpolation: {
-      escapeValue: false // react already escapes by default
+      escapeValue: false, // react already escapes by default
     },
     missingInterpolationHandler: () => "",
     // Set the language determined by user preferences, or let detector handle it
     react: {
-      useSuspense: false
-    }
+      useSuspense: false,
+    },
   })
   .then(async () => {
     const storedLanguage = (await userPreferences.getLanguage()) || DEFAULT_LANG

@@ -16,7 +16,7 @@ export function KeyDisplay({
   tokenKey,
   tokenId,
   visibleKeys,
-  toggleKeyVisibility
+  toggleKeyVisibility,
 }: KeyDisplayProps) {
   const { t } = useTranslation("keyManagement")
 
@@ -38,7 +38,8 @@ export function KeyDisplay({
               ? t("actions.hideKey")
               : t("actions.showKey")
           }
-          className="shrink-0">
+          className="shrink-0"
+        >
           {visibleKeys.has(tokenId) ? (
             <EyeSlashIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           ) : (

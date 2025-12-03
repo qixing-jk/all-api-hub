@@ -30,7 +30,7 @@ export enum AutoDetectErrorType {
   UNKNOWN = "unknown",
   FORBIDDEN = "forbidden",
   NOT_FOUND = "notFound",
-  SERVER_ERROR = "serverError"
+  SERVER_ERROR = "serverError",
 }
 
 // 自动识别错误信息
@@ -53,7 +53,7 @@ const ERROR_KEYWORDS: Record<string, string[]> = {
     "无法获取",
     "invalid response",
     "parse error",
-    "malformed"
+    "malformed",
   ],
   NETWORK_ERROR: [
     "网络",
@@ -61,11 +61,11 @@ const ERROR_KEYWORDS: Record<string, string[]> = {
     "Network",
     "网络中断",
     "connection lost",
-    "offline"
+    "offline",
   ],
   FORBIDDEN: ["403", "禁止访问", "Forbidden"],
   NOT_FOUND: ["404", "未找到", "Not Found"],
-  SERVER_ERROR: ["500", "服务器错误", "Internal Server Error", "server crash"]
+  SERVER_ERROR: ["500", "服务器错误", "Internal Server Error", "server crash"],
 }
 
 // 分析错误并返回结构化错误信息
@@ -81,44 +81,44 @@ export function analyzeAutoDetectError(error: any): AutoDetectError {
           return {
             type: AutoDetectErrorType.TIMEOUT,
             message: t("messages:autodetect.timeout"),
-            helpDocUrl: FAQ_URL
+            helpDocUrl: FAQ_URL,
           }
         case "UNAUTHORIZED":
           return {
             type: AutoDetectErrorType.UNAUTHORIZED,
             message: t("messages:autodetect.notLoggedIn"),
             actionText: t("messages:autodetect.loginThisSite"),
-            helpDocUrl: FAQ_URL
+            helpDocUrl: FAQ_URL,
           }
         case "INVALID_RESPONSE":
           return {
             type: AutoDetectErrorType.INVALID_RESPONSE,
             message: t("messages:autodetect.unexpectedData"),
-            helpDocUrl: FAQ_URL
+            helpDocUrl: FAQ_URL,
           }
         case "NETWORK_ERROR":
           return {
             type: AutoDetectErrorType.NETWORK_ERROR,
             message: t("messages:autodetect.networkError"),
-            helpDocUrl: FAQ_URL
+            helpDocUrl: FAQ_URL,
           }
         case "FORBIDDEN":
           return {
             type: AutoDetectErrorType.FORBIDDEN,
             message: t("messages:autodetect.forbidden"),
-            helpDocUrl: FAQ_URL
+            helpDocUrl: FAQ_URL,
           }
         case "NOT_FOUND":
           return {
             type: AutoDetectErrorType.NOT_FOUND,
             message: t("messages:autodetect.notFound"),
-            helpDocUrl: FAQ_URL
+            helpDocUrl: FAQ_URL,
           }
         case "SERVER_ERROR":
           return {
             type: AutoDetectErrorType.SERVER_ERROR,
             message: t("messages:autodetect.serverError"),
-            helpDocUrl: FAQ_URL
+            helpDocUrl: FAQ_URL,
           }
       }
     }
@@ -128,7 +128,7 @@ export function analyzeAutoDetectError(error: any): AutoDetectError {
   return {
     type: AutoDetectErrorType.UNKNOWN,
     message: t("messages:autodetect.failed") + errorMessage,
-    helpDocUrl: FAQ_URL
+    helpDocUrl: FAQ_URL,
   }
 }
 

@@ -3,7 +3,7 @@ import {
   ArrowPathIcon,
   ClipboardDocumentListIcon,
   CpuChipIcon,
-  MagnifyingGlassIcon
+  MagnifyingGlassIcon,
 } from "@heroicons/react/24/outline"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
@@ -20,7 +20,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  Switch
+  Switch,
 } from "~/components/ui"
 
 interface ControlPanelProps {
@@ -58,7 +58,7 @@ export function ControlPanel({
   showEndpointTypes,
   setShowEndpointTypes,
   totalModels,
-  filteredModels
+  filteredModels,
 }: ControlPanelProps) {
   const { t } = useTranslation("modelList")
   const handleCopyModelNames = () => {
@@ -90,7 +90,8 @@ export function ControlPanel({
           <FormField label={t("userGroup")} className="w-full lg:w-64">
             <Select
               value={selectedGroup ?? ""}
-              onValueChange={setSelectedGroup}>
+              onValueChange={setSelectedGroup}
+            >
               <SelectTrigger>
                 <SelectValue placeholder={t("allGroups")} />
               </SelectTrigger>
@@ -111,7 +112,8 @@ export function ControlPanel({
               disabled={isLoading}
               loading={isLoading}
               className="w-full lg:w-auto"
-              leftIcon={!isLoading && <ArrowPathIcon className="h-4 w-4" />}>
+              leftIcon={!isLoading && <ArrowPathIcon className="h-4 w-4" />}
+            >
               {t("refreshData")}
             </Button>
           </div>
@@ -157,7 +159,8 @@ export function ControlPanel({
               variant="ghost"
               size="sm"
               onClick={handleCopyModelNames}
-              leftIcon={<ClipboardDocumentListIcon className="h-4 w-4" />}>
+              leftIcon={<ClipboardDocumentListIcon className="h-4 w-4" />}
+            >
               {t("copyAllNames")}
             </Button>
           </div>

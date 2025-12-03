@@ -15,7 +15,7 @@ import { StatusIndicator } from "./components/StatusIndicator"
 import { useModelListData } from "./hooks/useModelListData"
 
 export default function ModelList({
-  routeParams
+  routeParams,
 }: {
   routeParams?: Record<string, string>
 }) {
@@ -55,7 +55,7 @@ export default function ModelList({
 
     // Operations
     loadPricingData,
-    getProviderFilteredCount
+    getProviderFilteredCount,
   } = useModelListData()
 
   const providers = getAllProviders()
@@ -63,15 +63,15 @@ export default function ModelList({
   const sortedProviders = useMemo(
     () =>
       [...providers].sort(
-        (a, b) => getProviderFilteredCount(b) - getProviderFilteredCount(a)
+        (a, b) => getProviderFilteredCount(b) - getProviderFilteredCount(a),
       ),
-    [providers, getProviderFilteredCount]
+    [providers, getProviderFilteredCount],
   )
 
   useEffect(() => {
     if (routeParams?.accountId && accounts.length > 0) {
       const accountExists = accounts.some(
-        (acc) => acc.id === routeParams.accountId
+        (acc) => acc.id === routeParams.accountId,
       )
       if (accountExists) {
         setSelectedAccount(routeParams.accountId)
@@ -130,7 +130,8 @@ export default function ModelList({
             selectedProvider={selectedProvider}
             setSelectedProvider={setSelectedProvider}
             baseFilteredModelsCount={baseFilteredModels.length}
-            getProviderFilteredCount={getProviderFilteredCount}>
+            getProviderFilteredCount={getProviderFilteredCount}
+          >
             <Tab.Panels>
               <Tab.Panel>
                 <ModelDisplay

@@ -25,7 +25,7 @@ export const SITE_TITLE_RULES = [
   { name: SUPER_API, regex: makeTitleRegex(SUPER_API) },
   { name: RIX_API, regex: makeTitleRegex(RIX_API) },
   { name: NEO_API, regex: makeTitleRegex(NEO_API) },
-  { name: UNKNOWN_SITE, regex: makeTitleRegex(UNKNOWN_SITE) }
+  { name: UNKNOWN_SITE, regex: makeTitleRegex(UNKNOWN_SITE) },
 ]
 
 /**
@@ -51,7 +51,7 @@ export const SITE_API_ROUTER: Record<string, any> = {
   [VELOERA]: {
     usagePath: "/app/logs/api-usage",
     checkInPath: "/app/me",
-    redeemPath: "/app/wallet"
+    redeemPath: "/app/wallet",
   },
   [ONE_HUB]: { usagePath: "/panel/log", redeemPath: "/panel/topup" },
   [DONE_HUB]: { usagePath: "/panel/log", redeemPath: "/panel/topup" },
@@ -59,8 +59,8 @@ export const SITE_API_ROUTER: Record<string, any> = {
   Default: {
     usagePath: DEFAULT_USAGE_PATH,
     checkInPath: DEFAULT_CHECKIN_PATH,
-    redeemPath: DEFAULT_REDEEM_PATH
-  }
+    redeemPath: DEFAULT_REDEEM_PATH,
+  },
 }
 
 /**

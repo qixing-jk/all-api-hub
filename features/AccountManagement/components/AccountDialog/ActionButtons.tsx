@@ -2,7 +2,7 @@ import {
   BoltIcon,
   CheckIcon,
   PencilIcon,
-  SparklesIcon
+  SparklesIcon,
 } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
@@ -36,7 +36,7 @@ export default function ActionButtons({
   onClose,
   onAutoConfig,
   isAutoConfiguring,
-  formId
+  formId,
 }: ActionButtonsProps) {
   const { t } = useTranslation(["accountDialog", "common"])
   const isAddMode = mode === DIALOG_MODES.ADD
@@ -54,7 +54,8 @@ export default function ActionButtons({
           variant="default"
           leftIcon={
             !isDetecting ? <SparklesIcon className="h-4 w-4" /> : undefined
-          }>
+          }
+        >
           {isDetecting
             ? t("accountDialog:mode.detecting")
             : t("accountDialog:mode.autoDetect")}
@@ -65,7 +66,8 @@ export default function ActionButtons({
           bleed
           className="flex-1"
           variant="outline"
-          leftIcon={<PencilIcon className="h-4 w-4" />}>
+          leftIcon={<PencilIcon className="h-4 w-4" />}
+        >
           {t("accountDialog:mode.manualAdd")}
         </Button>
       </div>
@@ -89,7 +91,8 @@ export default function ActionButtons({
           variant="warning"
           leftIcon={
             !isDetecting ? <SparklesIcon className="h-4 w-4" /> : undefined
-          }>
+          }
+        >
           {isDetecting
             ? t("accountDialog:mode.detecting")
             : t("accountDialog:mode.reDetect")}
@@ -109,7 +112,8 @@ export default function ActionButtons({
           variant="default"
           leftIcon={
             !isAutoConfiguring ? <BoltIcon className="h-4 w-4" /> : undefined
-          }>
+          }
+        >
           {isAutoConfiguring
             ? t("accountDialog:actions.configuring")
             : t("accountDialog:actions.configToNewApi")}
@@ -124,7 +128,8 @@ export default function ActionButtons({
         bleed
         className="flex-1"
         variant={isAddMode ? "success" : "default"}
-        leftIcon={!isSaving ? <CheckIcon className="h-4 w-4" /> : undefined}>
+        leftIcon={!isSaving ? <CheckIcon className="h-4 w-4" /> : undefined}
+      >
         {isSaving
           ? t("common:status.saving")
           : isAddMode

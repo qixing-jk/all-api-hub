@@ -21,7 +21,7 @@ export default function DelAccountDialog({
   isOpen,
   onClose,
   account,
-  onDeleted
+  onDeleted,
 }: DelAccountDialogProps) {
   const { t } = useTranslation(["ui", "messages"])
 
@@ -41,8 +41,8 @@ export default function DelAccountDialog({
         },
         error: (err: Error) =>
           t("ui:dialog.delete.deleteFailed", {
-            error: err.message || t("messages:errors.unknown")
-          })
+            error: err.message || t("messages:errors.unknown"),
+          }),
       })
     } catch (error) {
       // toast.promise already handles showing the error toast
@@ -55,7 +55,8 @@ export default function DelAccountDialog({
       isOpen={isOpen}
       onClose={onClose}
       header={<DialogHeader />}
-      footer={<ActionButtons onClose={onClose} onDelete={handleDelete} />}>
+      footer={<ActionButtons onClose={onClose} onDelete={handleDelete} />}
+    >
       <div>
         <WarningSection accountName={account?.name} />
         {account && <AccountInfo account={account} />}

@@ -20,11 +20,11 @@ import {
   getOppositeCurrency,
   getStatusBadgeStyle,
   normalizeToDate,
-  normalizeToMs
+  normalizeToMs,
 } from "~/utils/formatters"
 
 vi.mock("i18next", () => ({
-  t: vi.fn((key: string) => `__mocked__${key}`)
+  t: vi.fn((key: string) => `__mocked__${key}`),
 }))
 
 describe("formatters utilities", () => {
@@ -141,7 +141,7 @@ describe("formatters utilities", () => {
     const items = [
       { name: "Alice", age: 30 },
       { name: "Bob", age: 25 },
-      { name: "Charlie", age: 35 }
+      { name: "Charlie", age: 35 },
     ]
 
     it("should sort in ascending order", () => {
@@ -171,7 +171,7 @@ describe("formatters utilities", () => {
       const result = formatKeyTime(0)
       expect(result).toBe("__mocked__keyManagement:keyDetails.neverExpires")
       expect(vi.mocked(t)).toHaveBeenCalledWith(
-        "keyManagement:keyDetails.neverExpires"
+        "keyManagement:keyDetails.neverExpires",
       )
     })
 
@@ -221,22 +221,22 @@ describe("formatters utilities", () => {
   describe("calculateTotalConsumption", () => {
     it("should calculate USD and CNY amounts from stats and accounts", () => {
       const stats = {
-        today_total_consumption: 12345
+        today_total_consumption: 12345,
       } as any
 
       const accounts = [
         {
           account_info: {
-            today_quota_consumption: 10000
+            today_quota_consumption: 10000,
           },
-          exchange_rate: 7
+          exchange_rate: 7,
         },
         {
           account_info: {
-            today_quota_consumption: 20000
+            today_quota_consumption: 20000,
           },
-          exchange_rate: 7.5
-        }
+          exchange_rate: 7.5,
+        },
       ]
 
       const result = calculateTotalConsumption(stats, accounts)
@@ -251,7 +251,7 @@ describe("formatters utilities", () => {
     it("should sum balances across sites and round to 2 decimals", () => {
       const data = [
         { balance: { USD: 1.234, CNY: 7.89 } },
-        { balance: { USD: 2.345, CNY: 8.11 } }
+        { balance: { USD: 2.345, CNY: 8.11 } },
       ] as any
 
       const result = calculateTotalBalance(data)
@@ -264,10 +264,10 @@ describe("formatters utilities", () => {
   describe("getCurrencyDisplayName", () => {
     it("should use correct translation keys for USD and CNY", () => {
       expect(getCurrencyDisplayName("USD")).toBe(
-        "__mocked__common:currency.usd"
+        "__mocked__common:currency.usd",
       )
       expect(getCurrencyDisplayName("CNY")).toBe(
-        "__mocked__common:currency.cny"
+        "__mocked__common:currency.cny",
       )
     })
   })
@@ -298,18 +298,18 @@ describe("formatters utilities", () => {
     it("should return unlimited label when quota is unlimited or negative", () => {
       const tokenUnlimited = {
         unlimited_quota: true,
-        remain_quota: 1000
+        remain_quota: 1000,
       } as any
       const tokenNegative = {
         unlimited_quota: false,
-        remain_quota: -1
+        remain_quota: -1,
       } as any
 
       expect(formatQuota(tokenUnlimited)).toBe(
-        "__mocked__common:quota.unlimited"
+        "__mocked__common:quota.unlimited",
       )
       expect(formatQuota(tokenNegative)).toBe(
-        "__mocked__common:quota.unlimited"
+        "__mocked__common:quota.unlimited",
       )
     })
 
@@ -317,7 +317,7 @@ describe("formatters utilities", () => {
       const token = {
         unlimited_quota: false,
         remain_quota: 12345,
-        used_quota: 6789
+        used_quota: 6789,
       } as any
 
       const quota = formatQuota(token)
@@ -347,16 +347,16 @@ describe("formatters utilities", () => {
   describe("getStatusBadgeStyle", () => {
     it("should return green style for status 1", () => {
       expect(getStatusBadgeStyle(1)).toBe(
-        "bg-green-100 text-green-800 border-green-200"
+        "bg-green-100 text-green-800 border-green-200",
       )
     })
 
     it("should return red style for non-1 status", () => {
       expect(getStatusBadgeStyle(0)).toBe(
-        "bg-red-100 text-red-800 border-red-200"
+        "bg-red-100 text-red-800 border-red-200",
       )
       expect(getStatusBadgeStyle(2)).toBe(
-        "bg-red-100 text-red-800 border-red-200"
+        "bg-red-100 text-red-800 border-red-200",
       )
     })
   })

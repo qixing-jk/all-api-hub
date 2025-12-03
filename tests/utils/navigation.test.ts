@@ -8,13 +8,13 @@ import {
   openKeysPage,
   openModelsPage,
   openMultiplePages,
-  openUsagePage
+  openUsagePage,
 } from "~/utils/navigation"
 import { joinUrl } from "~/utils/url"
 
 vi.mock("~/utils/browser", () => ({
   isExtensionPopup: vi.fn().mockReturnValue(false),
-  OPTIONS_PAGE_URL: "chrome-extension://options.html"
+  OPTIONS_PAGE_URL: "chrome-extension://options.html",
 }))
 
 vi.mock("~/utils/browserApi", () => {
@@ -28,7 +28,7 @@ vi.mock("~/utils/browserApi", () => {
     focusTab,
     getExtensionURL,
     openSidePanel,
-    __esModule: true
+    __esModule: true,
   }
 })
 
@@ -36,12 +36,12 @@ vi.mock("~/constants/siteType", () => ({
   getSiteApiRouter: vi.fn(() => ({
     usagePath: "/usage",
     checkInPath: "/checkin",
-    redeemPath: "/redeem"
-  }))
+    redeemPath: "/redeem",
+  })),
 }))
 
 vi.mock("~/utils/url", () => ({
-  joinUrl: vi.fn((base: string, path: string) => `${base}${path}`)
+  joinUrl: vi.fn((base: string, path: string) => `${base}${path}`),
 }))
 
 const mockedIsExtensionPopup = vi.mocked(isExtensionPopup)
@@ -61,9 +61,9 @@ describe("navigation utilities", () => {
 
     await openKeysPage()
 
-    expect(mockedGetExtensionURL).toHaveBeenCalledWith("options.html#keys")
-    const url = mockedGetExtensionURL.mock.results[0].value
-    expect(mockedCreateTab).toHaveBeenCalledWith(url, true)
+    expect(mockedGetExtensionURL).toHaveBeenCalledWith("options.html")
+    const baseUrl = mockedGetExtensionURL.mock.results[0].value
+    expect(mockedCreateTab).toHaveBeenCalledWith(`${baseUrl}#keys`, true)
     expect(closeSpy).not.toHaveBeenCalled()
 
     closeSpy.mockRestore()
@@ -72,15 +72,18 @@ describe("navigation utilities", () => {
   it("openKeysPage should include accountId when provided", async () => {
     await openKeysPage("123")
 
-    expect(mockedGetExtensionURL).toHaveBeenCalledWith(
-      "options.html#keys?accountId=123"
+    expect(mockedGetExtensionURL).toHaveBeenCalledWith("options.html")
+    const baseUrl = mockedGetExtensionURL.mock.results[0].value
+    expect(mockedCreateTab).toHaveBeenCalledWith(
+      `${baseUrl}?accountId=123#keys`,
+      true,
     )
   })
 
   it("openUsagePage should open usage URL built from site router", async () => {
     const account = {
       baseUrl: "https://example.com",
-      siteType: "one-api"
+      siteType: "one-api",
     } as any
 
     await openUsagePage(account)
@@ -95,9 +98,15 @@ describe("navigation utilities", () => {
     await openModelsPage()
     await openModelsPage("42")
 
-    expect(mockedGetExtensionURL).toHaveBeenCalledWith("options.html#models")
-    expect(mockedGetExtensionURL).toHaveBeenCalledWith(
-      "options.html#models?accountId=42"
+    expect(mockedGetExtensionURL).toHaveBeenCalledTimes(2)
+    expect(mockedGetExtensionURL).toHaveBeenCalledWith("options.html")
+    const baseUrl = mockedGetExtensionURL.mock.results[0].value
+    const baseUrl2 = mockedGetExtensionURL.mock.results[1].value
+    expect(baseUrl2).toBe(baseUrl)
+    expect(mockedCreateTab).toHaveBeenCalledWith(`${baseUrl}#models`, true)
+    expect(mockedCreateTab).toHaveBeenCalledWith(
+      `${baseUrl}?accountId=42#models`,
+      true,
     )
   })
 
@@ -134,8 +143,8 @@ describe("navigation utilities", () => {
       siteType: "one-api",
       checkIn: {
         customCheckInUrl: "https://checkin.custom",
-        customRedeemUrl: "https://redeem.custom"
-      }
+        customRedeemUrl: "https://redeem.custom",
+      },
     } as any
 
     await openCheckInAndRedeem(account)

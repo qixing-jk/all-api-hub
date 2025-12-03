@@ -9,7 +9,7 @@ export default function AutoDetectErrorAlert({
   error,
   siteUrl,
   onHelpClick,
-  onActionClick
+  onActionClick,
 }: AutoDetectErrorProps) {
   const { t } = useTranslation("accountDialog")
 
@@ -45,7 +45,8 @@ export default function AutoDetectErrorAlert({
                 type="button"
                 onClick={handleActionClick}
                 variant="warning"
-                size="sm">
+                size="sm"
+              >
                 {error.actionText}
               </Button>
             )}
@@ -57,7 +58,8 @@ export default function AutoDetectErrorAlert({
                 onClick={handleHelpClick}
                 variant="secondary"
                 size="sm"
-                leftIcon={<QuestionMarkCircleIcon className="h-3 w-3" />}>
+                leftIcon={<QuestionMarkCircleIcon className="h-3 w-3" />}
+              >
                 {t("actions.helpDocument")}
               </Button>
             )}

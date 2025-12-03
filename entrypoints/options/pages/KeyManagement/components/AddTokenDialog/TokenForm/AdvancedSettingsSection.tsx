@@ -16,7 +16,7 @@ interface AdvancedSettingsSectionProps {
   groups: Record<string, UserGroupInfo>
   availableModels: string[]
   handleInputChange: (
-    field: keyof FormData
+    field: keyof FormData,
   ) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void
   handleSelectChange: (field: keyof FormData) => (value: string) => void
   handleModelLimitsChange: (values: string[]) => void
@@ -30,7 +30,7 @@ export function AdvancedSettingsSection({
   availableModels,
   handleInputChange,
   handleSelectChange,
-  handleModelLimitsChange
+  handleModelLimitsChange,
 }: AdvancedSettingsSectionProps) {
   const { t } = useTranslation("keyManagement")
 

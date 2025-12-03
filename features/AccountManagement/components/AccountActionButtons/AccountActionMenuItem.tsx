@@ -21,7 +21,7 @@ export const AccountActionMenuItem: React.FC<AccountActionMenuItemProps> = ({
   icon: Icon,
   label,
   isDestructive = false,
-  disabled = false
+  disabled = false,
 }) => (
   <MenuItem disabled={disabled}>
     <button
@@ -37,7 +37,8 @@ export const AccountActionMenuItem: React.FC<AccountActionMenuItemProps> = ({
           : isDestructive
             ? destructiveMenuItemClassName
             : menuItemClassName
-      }>
+      }
+    >
       <Icon className="h-4 w-4" />
       <span>{label}</span>
     </button>

@@ -5,13 +5,18 @@
 import { t } from "i18next"
 import toast from "react-hot-toast"
 
-import { SITE_TITLE_RULES, UNKNOWN_SITE } from "~/constants/siteType.ts"
+import { SITE_TITLE_RULES, UNKNOWN_SITE } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { accountStorage } from "~/services/accountStorage"
 import {
   createApiToken,
   extractDefaultExchangeRate,
-  fetchAccountTokens
+  fetchAccountData,
+  fetchAccountTokens,
+  fetchSiteStatus,
+  fetchSupportCheckIn,
+  fetchUserInfo,
+  getOrCreateAccessToken,
 } from "~/services/apiService"
 import type { CreateTokenRequest } from "~/services/apiService/common/type"
 import {
@@ -21,19 +26,12 @@ import {
   SiteHealthStatus,
   type CheckInConfig,
   type DisplaySiteData,
-  type SiteAccount
+  type SiteAccount,
 } from "~/types"
 import type { AccountSaveResponse } from "~/types/serviceResponse"
 import { analyzeAutoDetectError } from "~/utils/autoDetectUtils"
+import { getErrorMessage } from "~/utils/error"
 
-import { getErrorMessage } from "../utils/error"
-import {
-  fetchAccountData,
-  fetchSiteStatus,
-  fetchSupportCheckIn,
-  fetchUserInfo,
-  getOrCreateAccessToken
-} from "./apiService"
 import { autoDetectSmart } from "./autoDetectService"
 
 /**
@@ -48,12 +46,12 @@ import { autoDetectSmart } from "./autoDetectService"
  */
 export async function autoDetectAccount(
   url: string,
-  authType: AuthTypeEnum
+  authType: AuthTypeEnum,
 ): Promise<AccountValidationResponse> {
   if (!url.trim()) {
     return {
       success: false,
-      message: t("messages:errors.validation.urlRequired")
+      message: t("messages:errors.validation.urlRequired"),
     }
   }
 
@@ -68,7 +66,7 @@ export async function autoDetectAccount(
       return {
         success: false,
         message: errorMsg,
-        detailedError
+        detailedError,
       }
     }
 
@@ -76,12 +74,12 @@ export async function autoDetectAccount(
 
     if (!userId) {
       const detailedError = analyzeAutoDetectError(
-        t("messages:operations.detection.getUserIdFailed")
+        t("messages:operations.detection.getUserIdFailed"),
       )
       return {
         success: false,
         message: t("messages:operations.detection.getUserIdFailed"),
-        detailedError
+        detailedError,
       }
     }
 
@@ -102,19 +100,19 @@ export async function autoDetectAccount(
       tokenPromise,
       fetchSiteStatus(url, authType),
       fetchSupportCheckIn(url),
-      getSiteName(url)
+      getSiteName(url),
     ])
 
     const { username: detectedUsername, access_token } = tokenInfo
 
     if (!detectedUsername || !access_token) {
       const detailedError = analyzeAutoDetectError(
-        t("messages:operations.detection.getInfoFailed")
+        t("messages:operations.detection.getInfoFailed"),
       )
       return {
         success: false,
         message: t("messages:operations.detection.getInfoFailed"),
-        detailedError
+        detailedError,
       }
     }
 
@@ -135,10 +133,10 @@ export async function autoDetectAccount(
           isCheckedInToday: false,
           customCheckInUrl: "",
           customRedeemUrl: "",
-          openRedeemWithCheckIn: true
+          openRedeemWithCheckIn: true,
         },
-        siteType: siteType
-      }
+        siteType: siteType,
+      },
     }
   } catch (error) {
     console.error(t("messages:autodetect.failed"), error)
@@ -147,9 +145,9 @@ export async function autoDetectAccount(
     return {
       success: false,
       message: t("accountDialog:messages.autoDetectFailed", {
-        error: errorMessage
+        error: errorMessage,
       }),
-      detailedError
+      detailedError,
     }
   }
 }
@@ -160,7 +158,7 @@ export function isValidAccount({
   userId,
   authType,
   accessToken,
-  exchangeRate
+  exchangeRate,
 }: {
   siteName: string
   username: string
@@ -212,7 +210,7 @@ export async function validateAndSaveAccount(
   tags: TagsInput,
   checkInConfig: CheckInConfig,
   siteType: string,
-  authType: AuthTypeEnum
+  authType: AuthTypeEnum,
 ): Promise<AccountSaveResponse> {
   // 表单验证
   if (
@@ -222,12 +220,12 @@ export async function validateAndSaveAccount(
       userId,
       authType,
       accessToken,
-      exchangeRate
+      exchangeRate,
     })
   ) {
     return {
       success: false,
-      message: t("messages:errors.validation.incompleteAccountInfo")
+      message: t("messages:errors.validation.incompleteAccountInfo"),
     }
   }
 
@@ -235,7 +233,7 @@ export async function validateAndSaveAccount(
   if (isNaN(parsedUserId)) {
     return {
       success: false,
-      message: t("messages:errors.validation.userIdNumeric")
+      message: t("messages:errors.validation.userIdNumeric"),
     }
   }
 
@@ -247,7 +245,7 @@ export async function validateAndSaveAccount(
       parsedUserId,
       accessToken.trim(),
       checkInConfig,
-      authType
+      authType,
     )
 
     const normalizedTags = normalizeTagsInput(tags)
@@ -272,22 +270,22 @@ export async function validateAndSaveAccount(
         today_completion_tokens: freshAccountData.today_completion_tokens,
         today_quota_consumption: freshAccountData.today_quota_consumption,
         today_requests_count: freshAccountData.today_requests_count,
-        today_income: freshAccountData.today_income
+        today_income: freshAccountData.today_income,
       },
-      last_sync_time: Date.now()
+      last_sync_time: Date.now(),
     }
 
     const accountId = await accountStorage.addAccount(accountData)
     console.log(t("messages:toast.success.accountSaveSuccess"), {
       id: accountId,
       siteName,
-      freshAccountData
+      freshAccountData,
     })
 
     return {
       success: true,
       message: t("messages:toast.success.accountSaveSuccess"),
-      accountId
+      accountId,
     }
   } catch (error) {
     // FALLBACK: 即使获取数据失败也要保存配置
@@ -311,7 +309,7 @@ export async function validateAndSaveAccount(
       checkIn: checkInConfig,
       health: {
         status: SiteHealthStatus.Warning,
-        reason: getErrorMessage(error)
+        reason: getErrorMessage(error),
       },
       account_info: {
         id: parsedUserId,
@@ -322,9 +320,9 @@ export async function validateAndSaveAccount(
         today_completion_tokens: 0,
         today_quota_consumption: 0,
         today_requests_count: 0,
-        today_income: 0
+        today_income: 0,
       },
-      last_sync_time: Date.now()
+      last_sync_time: Date.now(),
     }
 
     // Try to save partial account data
@@ -332,13 +330,13 @@ export async function validateAndSaveAccount(
       const accountId = await accountStorage.addAccount(partialAccountData)
       console.log("Account saved without data refresh:", {
         id: accountId,
-        siteName
+        siteName,
       })
 
       return {
         success: true,
         message: t("messages:warnings.accountSavedWithoutDataRefresh"),
-        accountId
+        accountId,
       }
     } catch (saveError) {
       console.error("Failed to save account:", saveError)
@@ -346,8 +344,8 @@ export async function validateAndSaveAccount(
       return {
         success: false,
         message: t("messages:errors.operation.saveFailed", {
-          error: errorMessage
-        })
+          error: errorMessage,
+        }),
       }
     }
   }
@@ -366,7 +364,7 @@ export async function validateAndUpdateAccount(
   tags: TagsInput,
   checkInConfig: CheckInConfig,
   siteType: string,
-  authType: AuthTypeEnum
+  authType: AuthTypeEnum,
 ): Promise<AccountSaveResponse> {
   // 表单验证
   if (
@@ -376,12 +374,12 @@ export async function validateAndUpdateAccount(
       userId,
       authType,
       accessToken,
-      exchangeRate
+      exchangeRate,
     })
   ) {
     return {
       success: false,
-      message: t("messages:errors.validation.incompleteAccountInfo")
+      message: t("messages:errors.validation.incompleteAccountInfo"),
     }
   }
 
@@ -389,7 +387,7 @@ export async function validateAndUpdateAccount(
   if (isNaN(parsedUserId)) {
     return {
       success: false,
-      message: t("messages:errors.validation.userIdNumeric")
+      message: t("messages:errors.validation.userIdNumeric"),
     }
   }
 
@@ -401,7 +399,7 @@ export async function validateAndUpdateAccount(
       parsedUserId,
       accessToken.trim(),
       checkInConfig,
-      authType
+      authType,
     )
 
     const normalizedTags = normalizeTagsInput(tags)
@@ -426,9 +424,9 @@ export async function validateAndUpdateAccount(
         today_completion_tokens: freshAccountData.today_completion_tokens,
         today_quota_consumption: freshAccountData.today_quota_consumption,
         today_requests_count: freshAccountData.today_requests_count,
-        today_income: freshAccountData.today_income
+        today_income: freshAccountData.today_income,
       },
-      last_sync_time: Date.now()
+      last_sync_time: Date.now(),
     }
 
     const success = await accountStorage.updateAccount(accountId, updateData)
@@ -436,21 +434,21 @@ export async function validateAndUpdateAccount(
       return {
         success: false,
         message: t("messages:errors.validation.updateAccountFailed", {
-          error: ""
-        })
+          error: "",
+        }),
       }
     }
 
     console.log(t("messages:toast.success.accountUpdateSuccess"), {
       id: accountId,
       siteName,
-      freshAccountData
+      freshAccountData,
     })
 
     return {
       success: true,
       message: t("messages:toast.success.accountUpdateSuccess"),
-      accountId
+      accountId,
     }
   } catch (error) {
     // FALLBACK: 即使获取数据失败也要保存配置
@@ -471,35 +469,35 @@ export async function validateAndUpdateAccount(
       checkIn: checkInConfig,
       health: {
         status: SiteHealthStatus.Warning,
-        reason: getErrorMessage(error)
+        reason: getErrorMessage(error),
       },
       account_info: {
         id: parsedUserId,
         access_token: accessToken.trim(),
-        username: username.trim()
+        username: username.trim(),
       },
-      last_sync_time: Date.now()
+      last_sync_time: Date.now(),
     }
 
     // Try to save partial update
     const success = await accountStorage.updateAccount(
       accountId,
-      partialUpdateData
+      partialUpdateData,
     )
 
     if (!success) {
       return {
         success: false,
         message: t("messages:errors.validation.updateAccountFailed", {
-          error: ""
-        })
+          error: "",
+        }),
       }
     }
 
     return {
       success: true,
       message: t("messages:warnings.accountUpdatedWithoutDataRefresh"),
-      accountId
+      accountId,
     }
   }
 }
@@ -541,11 +539,11 @@ export function extractDomainPrefix(hostname: string): string {
 
 function IsNotDefaultSiteName(siteName: string): boolean {
   return !SITE_TITLE_RULES.some(
-    (rule) => rule.name !== UNKNOWN_SITE && rule.regex.test(siteName)
+    (rule) => rule.name !== UNKNOWN_SITE && rule.regex.test(siteName),
   )
 }
 export async function getSiteName(
-  input: browser.tabs.Tab | string
+  input: browser.tabs.Tab | string,
 ): Promise<string> {
   // 1. 统一提取信息
   const urlString = typeof input === "string" ? input : input.url ?? ""
@@ -605,17 +603,17 @@ function generateDefaultToken(): CreateTokenRequest {
     model_limits_enabled: false,
     model_limits: "", // All models allowed
     // 为空则是跟随用户分组
-    group: ""
+    group: "",
   }
 }
 
 export async function ensureAccountApiToken(
   account: SiteAccount,
   displaySiteData: DisplaySiteData,
-  toastId?: string
+  toastId?: string,
 ): Promise<ApiToken> {
   toast.loading(t("messages:accountOperations.checkingApiKeys"), {
-    id: toastId
+    id: toastId,
   })
 
   const tokens = await fetchAccountTokens(displaySiteData)
@@ -627,7 +625,7 @@ export async function ensureAccountApiToken(
       account.site_url,
       account.account_info.id,
       account.account_info.access_token,
-      newTokenData
+      newTokenData,
     )
 
     if (!createApiTokenResult) {

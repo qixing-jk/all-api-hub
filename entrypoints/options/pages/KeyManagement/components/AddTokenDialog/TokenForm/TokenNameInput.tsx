@@ -7,7 +7,7 @@ import type { FormData } from "../hooks/useTokenForm"
 interface TokenNameInputProps {
   name: string
   handleInputChange: (
-    field: keyof FormData
+    field: keyof FormData,
   ) => (e: React.ChangeEvent<HTMLInputElement>) => void
   error?: string
 }
@@ -15,7 +15,7 @@ interface TokenNameInputProps {
 export function TokenNameInput({
   name,
   handleInputChange,
-  error
+  error,
 }: TokenNameInputProps) {
   const { t } = useTranslation("keyManagement")
 
@@ -23,7 +23,8 @@ export function TokenNameInput({
     <FormField
       label={`${t("dialog.tokenName")} *`}
       htmlFor="tokenName"
-      error={error}>
+      error={error}
+    >
       <Input
         id="tokenName"
         type="text"

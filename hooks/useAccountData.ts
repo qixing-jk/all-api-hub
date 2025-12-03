@@ -6,7 +6,7 @@ import type {
   CurrencyAmount,
   CurrencyAmountMap,
   DisplaySiteData,
-  SiteAccount
+  SiteAccount,
 } from "~/types"
 
 interface UseAccountDataResult {
@@ -39,7 +39,7 @@ export const useAccountData = (): UseAccountDataResult => {
     today_total_requests: 0,
     today_total_prompt_tokens: 0,
     today_total_completion_tokens: 0,
-    today_total_income: 0
+    today_total_income: 0,
   })
   const [lastUpdateTime, setLastUpdateTime] = useState<Date>(new Date())
 
@@ -50,7 +50,7 @@ export const useAccountData = (): UseAccountDataResult => {
   // 动画相关状态
   const [prevTotalConsumption, setPrevTotalConsumption] = useState({
     USD: 0,
-    CNY: 0
+    CNY: 0,
   })
   const [prevBalances, setPrevBalances] = useState<{
     [id: string]: CurrencyAmount
@@ -62,7 +62,7 @@ export const useAccountData = (): UseAccountDataResult => {
       const allAccounts = await accountStorage.getAllAccounts()
       const accountStats = await accountStorage.getAccountStats()
       const displaySiteData = accountStorage.convertToDisplayData(
-        allAccounts
+        allAccounts,
       ) as DisplaySiteData[]
 
       // 计算新的余额数据
@@ -70,7 +70,7 @@ export const useAccountData = (): UseAccountDataResult => {
       displaySiteData.forEach((site) => {
         newBalances[site.id] = {
           USD: site.balance.USD,
-          CNY: site.balance.CNY
+          CNY: site.balance.CNY,
         }
       })
 
@@ -88,7 +88,7 @@ export const useAccountData = (): UseAccountDataResult => {
       // 更新最后同步时间为最近的一次同步时间
       if (allAccounts.length > 0) {
         const latestSyncTime = Math.max(
-          ...allAccounts.map((acc) => acc.last_sync_time)
+          ...allAccounts.map((acc) => acc.last_sync_time),
         )
         if (latestSyncTime > 0) {
           setLastUpdateTime(new Date(latestSyncTime))
@@ -102,7 +102,7 @@ export const useAccountData = (): UseAccountDataResult => {
 
       console.log("账号数据加载完成:", {
         accountCount: allAccounts.length,
-        stats: accountStats
+        stats: accountStats,
       })
     } catch (error) {
       console.error("加载账号数据失败:", error)
@@ -155,6 +155,6 @@ export const useAccountData = (): UseAccountDataResult => {
 
     // 操作函数
     loadAccountData,
-    handleRefresh
+    handleRefresh,
   }
 }

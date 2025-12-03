@@ -8,7 +8,7 @@ import {
   LinkIcon,
   ListBulletIcon,
   PencilIcon,
-  TrashIcon
+  TrashIcon,
 } from "@heroicons/react/24/outline"
 import { ChartPieIcon, PinIcon, PinOffIcon } from "lucide-react"
 import React, { useState } from "react"
@@ -26,7 +26,7 @@ import {
   openKeysPage,
   openModelsPage,
   openRedeemPage,
-  openUsagePage
+  openUsagePage,
 } from "~/utils/navigation"
 
 import { AccountActionMenuItem } from "./AccountActionMenuItem"
@@ -40,7 +40,7 @@ export interface ActionButtonsProps {
 export default function AccountActionButtons({
   site,
   onCopyKey,
-  onDeleteAccount
+  onDeleteAccount,
 }: ActionButtonsProps) {
   const { t } = useTranslation("account")
   const { refreshingAccountId, handleRefreshAccount } =
@@ -60,10 +60,10 @@ export default function AccountActionButtons({
     if (success) {
       const message = isPinned
         ? t("messages:toast.success.accountUnpinned", {
-            accountName: site.name
+            accountName: site.name,
           })
         : t("messages:toast.success.accountPinned", {
-            accountName: site.name
+            accountName: site.name,
           })
       toast.success(message)
     }
@@ -156,7 +156,8 @@ export default function AccountActionButtons({
         size="sm"
         className="touch-manipulation"
         aria-label={t("actions.copyUrl")}
-        title={t("actions.copyUrl")}>
+        title={t("actions.copyUrl")}
+      >
         <LinkIcon className="h-4 w-4" />
       </IconButton>
 
@@ -167,7 +168,8 @@ export default function AccountActionButtons({
         className="touch-manipulation"
         disabled={isCheckingTokens}
         aria-label={t("actions.copyKey")}
-        title={t("actions.copyKey")}>
+        title={t("actions.copyKey")}
+      >
         <KeyIcon className="h-4 w-4" />
       </IconButton>
 
@@ -181,7 +183,8 @@ export default function AccountActionButtons({
         size="sm"
         className="touch-manipulation"
         aria-label={t("actions.edit")}
-        title={t("actions.edit")}>
+        title={t("actions.edit")}
+      >
         <PencilIcon className="h-4 w-4" />
       </IconButton>
 
@@ -191,13 +194,15 @@ export default function AccountActionButtons({
           as={IconButton}
           variant="ghost"
           size="sm"
-          aria-label={t("common:actions.more")}>
+          aria-label={t("common:actions.more")}
+        >
           <EllipsisHorizontalIcon className="h-4 w-4" />
         </MenuButton>
 
         <MenuItems
           anchor="bottom end"
-          className="z-50 rounded-lg border border-gray-200 bg-white py-1 shadow-lg [--anchor-gap:4px] [--anchor-padding:8px] focus:outline-none dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary">
+          className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary z-50 rounded-lg border border-gray-200 bg-white py-1 shadow-lg [--anchor-gap:4px] [--anchor-padding:8px] focus:outline-none"
+        >
           {/* Secondary Menu Items */}
           <AccountActionMenuItem
             onClick={handleOpenKeyList}
@@ -217,7 +222,7 @@ export default function AccountActionButtons({
             label={t("actions.modelManagement")}
           />
 
-          <hr className="my-1 border-gray-200 dark:border-dark-bg-tertiary" />
+          <hr className="dark:border-dark-bg-tertiary my-1 border-gray-200" />
 
           <AccountActionMenuItem
             onClick={handleNavigateToUsageManagement}
@@ -231,7 +236,7 @@ export default function AccountActionButtons({
             label={t("actions.redeemPage")}
           />
 
-          <hr className="my-1 border-gray-200 dark:border-dark-bg-tertiary" />
+          <hr className="dark:border-dark-bg-tertiary my-1 border-gray-200" />
 
           {/* Pin/Unpin */}
           <AccountActionMenuItem

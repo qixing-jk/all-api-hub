@@ -23,7 +23,7 @@ export function TokenList({
   onToggleToken,
   onCopyKey,
   account,
-  onOpenCCSwitchDialog
+  onOpenCCSwitchDialog,
 }: TokenListProps) {
   const { t } = useTranslation("ui")
 

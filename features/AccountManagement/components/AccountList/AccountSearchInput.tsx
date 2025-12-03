@@ -12,7 +12,7 @@ interface AccountSearchInputProps {
 export default function AccountSearchInput({
   value,
   onChange,
-  onClear
+  onClear,
 }: AccountSearchInputProps) {
   const { t } = useTranslation("account")
 
@@ -41,7 +41,8 @@ export default function AccountSearchInput({
               type="button"
               onClick={onClear}
               className="flex h-5 w-5 items-center justify-center rounded-full text-gray-400 transition-colors hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
-              aria-label={t("common:actions.clear")}>
+              aria-label={t("common:actions.clear")}
+            >
               <XMarkIcon className="h-4 w-4" />
             </button>
           )

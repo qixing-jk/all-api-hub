@@ -1,7 +1,7 @@
 import {
   ArrowPathIcon,
   ArrowTopRightOnSquareIcon,
-  CpuChipIcon
+  CpuChipIcon,
 } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
@@ -21,7 +21,7 @@ export function StatusIndicator({
   isLoading,
   dataFormatError,
   currentAccount,
-  loadPricingData
+  loadPricingData,
 }: StatusIndicatorProps) {
   const { t } = useTranslation("modelList")
   if (!selectedAccount) {
@@ -58,13 +58,15 @@ export function StatusIndicator({
               onClick={() =>
                 window.open(`${currentAccount.baseUrl}/pricing`, "_blank")
               }
-              rightIcon={<ArrowTopRightOnSquareIcon className="h-4 w-4" />}>
+              rightIcon={<ArrowTopRightOnSquareIcon className="h-4 w-4" />}
+            >
               {t("status.goToSitePricing")}
             </Button>
             <Button
               variant="secondary"
               onClick={loadPricingData}
-              leftIcon={<ArrowPathIcon className="h-4 w-4" />}>
+              leftIcon={<ArrowPathIcon className="h-4 w-4" />}
+            >
               {t("status.retryLoad")}
             </Button>
           </div>

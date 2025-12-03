@@ -17,40 +17,44 @@ export function TokenDetails({ token }: TokenDetailsProps) {
       <div className="min-w-0 truncate">
         <BodySmall
           as="span"
-          className="text-gray-500 dark:text-dark-text-tertiary">
+          className="dark:text-dark-text-tertiary text-gray-500"
+        >
           {t("keyDetails.remainingQuota")}
         </BodySmall>
-        <span className="ml-2 font-medium text-gray-900 dark:text-dark-text-primary">
+        <span className="dark:text-dark-text-primary ml-2 font-medium text-gray-900">
           {formatQuota(token.remain_quota, token.unlimited_quota)}
         </span>
       </div>
       <div className="min-w-0 truncate">
         <BodySmall
           as="span"
-          className="text-gray-500 dark:text-dark-text-tertiary">
+          className="dark:text-dark-text-tertiary text-gray-500"
+        >
           {t("keyDetails.usedQuota")}
         </BodySmall>
-        <span className="ml-2 font-medium text-gray-900 dark:text-dark-text-primary">
+        <span className="dark:text-dark-text-primary ml-2 font-medium text-gray-900">
           {formatQuota(token.used_quota, false)}
         </span>
       </div>
       <div className="min-w-0 truncate">
         <BodySmall
           as="span"
-          className="text-gray-500 dark:text-dark-text-tertiary">
+          className="dark:text-dark-text-tertiary text-gray-500"
+        >
           {t("keyDetails.expireTime")}
         </BodySmall>
-        <span className="ml-2 font-medium text-gray-900 dark:text-dark-text-primary">
+        <span className="dark:text-dark-text-primary ml-2 font-medium text-gray-900">
           {formatKeyTime(token.expired_time)}
         </span>
       </div>
       <div className="min-w-0 truncate">
         <BodySmall
           as="span"
-          className="text-gray-500 dark:text-dark-text-tertiary">
+          className="dark:text-dark-text-tertiary text-gray-500"
+        >
           {t("keyDetails.createTime")}
         </BodySmall>
-        <span className="ml-2 font-medium text-gray-900 dark:text-dark-text-primary">
+        <span className="dark:text-dark-text-primary ml-2 font-medium text-gray-900">
           {formatKeyTime(token.created_time)}
         </span>
       </div>

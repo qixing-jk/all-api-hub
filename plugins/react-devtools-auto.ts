@@ -26,7 +26,7 @@ export function reactDevToolsAuto(options: ReactDevToolsOptions = {}): Plugin {
       options.cacheDuration ??
       numEnv(env.REACT_DEVTOOLS_CACHE_DURATION, 86400000),
     forceFetch:
-      options.forceFetch ?? boolEnv(env.REACT_DEVTOOLS_FORCE_FETCH, false)
+      options.forceFetch ?? boolEnv(env.REACT_DEVTOOLS_FORCE_FETCH, false),
   }
 
   const publicDir = path.resolve(process.cwd(), "public")
@@ -69,7 +69,7 @@ export function reactDevToolsAuto(options: ReactDevToolsOptions = {}): Plugin {
   async function fetchBackend() {
     try {
       const content = await fetch(`http://localhost:${config.port}`).then((r) =>
-        r.text()
+        r.text(),
       )
       await fs.mkdir(path.dirname(backendPath), { recursive: true })
       await fs.writeFile(backendPath, content)
@@ -96,10 +96,10 @@ export function reactDevToolsAuto(options: ReactDevToolsOptions = {}): Plugin {
       if (config.autoStart && !devtoolsProcess) {
         devtoolsProcess = spawn("npx", ["react-devtools"], {
           stdio: "inherit",
-          shell: true
+          shell: true,
         })
         console.log(
-          `🚀 React DevTools standalone starting on port ${config.port}...`
+          `🚀 React DevTools standalone starting on port ${config.port}...`,
         )
       }
 
@@ -131,10 +131,10 @@ export function reactDevToolsAuto(options: ReactDevToolsOptions = {}): Plugin {
           {
             tag: "script",
             attrs: { src: "/react-devtools-backend.js" },
-            injectTo: "head-prepend"
-          }
+            injectTo: "head-prepend",
+          },
         ]
-      }
-    }
+      },
+    },
   }
 }

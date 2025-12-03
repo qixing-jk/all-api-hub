@@ -6,7 +6,7 @@ import {
   getAllProviders,
   getProviderConfig,
   identifyProvider,
-  PROVIDER_CONFIGS
+  PROVIDER_CONFIGS,
 } from "~/utils/modelProviders"
 
 describe("modelProviders utils", () => {
@@ -286,7 +286,7 @@ describe("modelProviders utils", () => {
     it("should match PROVIDER_CONFIGS keys except Unknown", () => {
       const providers = getAllProviders()
       const configKeys = Object.keys(PROVIDER_CONFIGS).filter(
-        (key) => key !== "Unknown"
+        (key) => key !== "Unknown",
       )
       expect(providers).toEqual(configKeys)
     })
@@ -305,7 +305,7 @@ describe("modelProviders utils", () => {
       { model_name: "claude-2", id: "4" },
       { model_name: "gemini-pro", id: "5" },
       { model_name: "deepseek-chat", id: "6" },
-      { model_name: "unknown-model", id: "7" }
+      { model_name: "unknown-model", id: "7" },
     ]
 
     it("should return all models when provider is 'all'", () => {
@@ -363,7 +363,7 @@ describe("modelProviders utils", () => {
 
       const extendedModels: ExtendedModel[] = [
         { model_name: "gpt-4", price: 0.03, enabled: true },
-        { model_name: "claude-3", price: 0.015, enabled: false }
+        { model_name: "claude-3", price: 0.015, enabled: false },
       ]
 
       const filtered = filterModelsByProvider(extendedModels, "OpenAI")

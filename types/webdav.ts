@@ -14,7 +14,7 @@ export interface WebDAVSettings {
 export const WEBDAV_SYNC_STRATEGIES = {
   MERGE: "merge",
   UPLOAD_ONLY: "upload_only",
-  DOWNLOAD_ONLY: "download_only"
+  DOWNLOAD_ONLY: "download_only",
 } as const
 
 export type WebDAVSyncStrategy =
@@ -33,5 +33,5 @@ export const DEFAULT_WEBDAV_SETTINGS: WebDAVSettings = {
   password: "",
   autoSync: false,
   syncInterval: 3600,
-  syncStrategy: WEBDAV_SYNC_STRATEGIES.MERGE
+  syncStrategy: WEBDAV_SYNC_STRATEGIES.MERGE,
 }

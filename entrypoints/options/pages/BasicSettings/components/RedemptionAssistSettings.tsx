@@ -12,7 +12,7 @@ export default function RedemptionAssistSettings() {
   const {
     preferences: userPrefs,
     updateRedemptionAssist,
-    resetRedemptionAssistConfig
+    resetRedemptionAssistConfig,
   } = useUserPreferencesContext()
   const [isSaving, setIsSaving] = useState(false)
 
@@ -27,22 +27,22 @@ export default function RedemptionAssistSettings() {
       if (success) {
         toast.success(
           t("redemptionAssist:messages.success.settingsSaved", {
-            defaultValue: "Redemption assist settings have been saved."
-          })
+            defaultValue: "Redemption assist settings have been saved.",
+          }),
         )
       } else {
         toast.error(
           t("settings:messages.saveSettingsFailed", {
-            defaultValue: "Failed to save settings"
-          })
+            defaultValue: "Failed to save settings",
+          }),
         )
       }
     } catch (error) {
       console.error("Failed to save redemption assist settings:", error)
       toast.error(
         t("settings:messages.saveSettingsFailed", {
-          defaultValue: "Failed to save settings"
-        })
+          defaultValue: "Failed to save settings",
+        }),
       )
     } finally {
       setIsSaving(false)
@@ -60,7 +60,8 @@ export default function RedemptionAssistSettings() {
           setIsSaving(false)
         }
         return result
-      }}>
+      }}
+    >
       <Card padding="none">
         <CardList>
           <CardItem

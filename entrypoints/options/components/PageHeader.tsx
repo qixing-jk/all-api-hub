@@ -20,7 +20,7 @@ export function PageHeader({
   actions,
   spacing = "default",
   className,
-  iconClassName
+  iconClassName,
 }: PageHeaderProps) {
   return (
     <div className={cn(spacing === "compact" ? "mb-6" : "mb-8", className)}>
@@ -29,7 +29,7 @@ export function PageHeader({
           <Icon
             className={cn(
               "h-6 w-6 text-blue-600 dark:text-blue-400",
-              iconClassName
+              iconClassName,
             )}
           />
           <Heading2 className="dark:text-dark-text-primary text-gray-900">

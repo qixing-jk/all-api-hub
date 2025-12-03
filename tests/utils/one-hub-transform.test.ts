@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import {
   transformModelPricing,
-  transformUserGroup
+  transformUserGroup,
 } from "~/utils/dataTransform/one-hub"
 
 describe("OneHub data transformers", () => {
@@ -18,9 +18,9 @@ describe("OneHub data transformers", () => {
             channel_type: 0,
             input: 10,
             output: 20,
-            locked: false
-          }
-        }
+            locked: false,
+          },
+        },
       }
 
       const result = transformModelPricing(input as any, {})
@@ -51,9 +51,9 @@ describe("OneHub data transformers", () => {
             channel_type: 0,
             input: 5,
             output: 10,
-            locked: false
-          }
-        }
+            locked: false,
+          },
+        },
       }
 
       const result = transformModelPricing(input as any, {})
@@ -69,7 +69,7 @@ describe("OneHub data transformers", () => {
       const userGroupMap = {
         group1: { id: 1, symbol: "G1", name: "Group 1", ratio: 2 },
         group2: { id: 2, symbol: "G2", name: "Group 2", ratio: 0 as any },
-        group3: { id: 3, symbol: "G3", name: "Group 3" } as any
+        group3: { id: 3, symbol: "G3", name: "Group 3" } as any,
       }
 
       const result = transformModelPricing(input as any, userGroupMap as any)
@@ -77,12 +77,12 @@ describe("OneHub data transformers", () => {
       expect(result.group_ratio).toEqual({
         group1: 2,
         group2: 1,
-        group3: 1
+        group3: 1,
       })
       expect(result.usable_group).toEqual({
         group1: "Group 1",
         group2: "Group 2",
-        group3: "Group 3"
+        group3: "Group 3",
       })
     })
   })
@@ -100,8 +100,8 @@ describe("OneHub data transformers", () => {
           promotion: false,
           min: 0,
           max: 100,
-          enable: true
-        }
+          enable: true,
+        },
       }
 
       const result = transformUserGroup(input as any)
@@ -109,8 +109,8 @@ describe("OneHub data transformers", () => {
       expect(result).toEqual({
         group1: {
           desc: "Group 1",
-          ratio: 2
-        }
+          ratio: 2,
+        },
       })
     })
 

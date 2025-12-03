@@ -7,7 +7,7 @@ import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 describe("checkInMigration", () => {
   // Helper to create a minimal SiteAccount fixture
   const createSiteAccount = (
-    overrides: Partial<SiteAccount> = {}
+    overrides: Partial<SiteAccount> = {},
   ): SiteAccount =>
     ({
       id: "test-account-1",
@@ -25,7 +25,7 @@ describe("checkInMigration", () => {
         today_completion_tokens: 0,
         today_quota_consumption: 0,
         today_requests_count: 0,
-        today_income: 0
+        today_income: 0,
       },
       last_sync_time: Date.now(),
       updated_at: Date.now(),
@@ -33,21 +33,21 @@ describe("checkInMigration", () => {
       authType: AuthTypeEnum.AccessToken,
       // Note: checkIn is intentionally omitted to simulate old accounts
       // It can be provided in overrides when needed
-      ...overrides
+      ...overrides,
     }) as SiteAccount
 
   describe("Scenario 1: Can check in (supports_check_in: true, can_check_in: true)", () => {
     it("creates checkIn object with isCheckedInToday: false", () => {
       const account = createSiteAccount({
         supports_check_in: true,
-        can_check_in: true
+        can_check_in: true,
       })
 
       const migrated = migrateCheckInConfig(account)
 
       expect(migrated.checkIn).toEqual({
         enableDetection: true,
-        isCheckedInToday: false // Inverted from can_check_in: true
+        isCheckedInToday: false, // Inverted from can_check_in: true
       })
 
       // Legacy fields should be removed
@@ -60,14 +60,14 @@ describe("checkInMigration", () => {
     it("creates checkIn object with isCheckedInToday: true", () => {
       const account = createSiteAccount({
         supports_check_in: true,
-        can_check_in: false
+        can_check_in: false,
       })
 
       const migrated = migrateCheckInConfig(account)
 
       expect(migrated.checkIn).toEqual({
         enableDetection: true,
-        isCheckedInToday: true // Inverted from can_check_in: false
+        isCheckedInToday: true, // Inverted from can_check_in: false
       })
 
       expect(migrated).not.toHaveProperty("supports_check_in")
@@ -78,7 +78,7 @@ describe("checkInMigration", () => {
   describe("Scenario 3: can_check_in is undefined", () => {
     it("defaults to isCheckedInToday: false when can_check_in is undefined", () => {
       const account = createSiteAccount({
-        supports_check_in: true
+        supports_check_in: true,
         // can_check_in is undefined
       })
 
@@ -86,7 +86,7 @@ describe("checkInMigration", () => {
 
       expect(migrated.checkIn).toEqual({
         enableDetection: true,
-        isCheckedInToday: false // Defaults to false when can_check_in is undefined
+        isCheckedInToday: false, // Defaults to false when can_check_in is undefined
       })
       expect(migrated).not.toHaveProperty("supports_check_in")
       expect(migrated).not.toHaveProperty("can_check_in")
@@ -97,7 +97,7 @@ describe("checkInMigration", () => {
     it("does not create checkIn object and cleans up legacy fields", () => {
       const account = createSiteAccount({
         supports_check_in: false,
-        can_check_in: true // This should be ignored
+        can_check_in: true, // This should be ignored
       })
 
       const migrated = migrateCheckInConfig(account)
@@ -110,7 +110,7 @@ describe("checkInMigration", () => {
     it("cleans up legacy fields when supports_check_in is false and no checkIn exists", () => {
       const account = createSiteAccount({
         supports_check_in: false,
-        can_check_in: false
+        can_check_in: false,
       })
 
       const migrated = migrateCheckInConfig(account)
@@ -127,11 +127,11 @@ describe("checkInMigration", () => {
       const existingCheckIn = {
         enableDetection: true,
         isCheckedInToday: false,
-        customCheckInUrl: "https://custom.com"
+        customCheckInUrl: "https://custom.com",
       }
 
       const account = createSiteAccount({
-        checkIn: existingCheckIn
+        checkIn: existingCheckIn,
       })
 
       const migrated = migrateCheckInConfig(account)
@@ -143,13 +143,13 @@ describe("checkInMigration", () => {
     it("preserves existing checkIn and does not clean up legacy fields when checkIn exists", () => {
       const existingCheckIn = {
         enableDetection: false,
-        isCheckedInToday: true
+        isCheckedInToday: true,
       }
 
       const account = createSiteAccount({
         checkIn: existingCheckIn,
         supports_check_in: false,
-        can_check_in: true
+        can_check_in: true,
       })
 
       const migrated = migrateCheckInConfig(account)
@@ -164,7 +164,7 @@ describe("checkInMigration", () => {
   describe("Edge cases and cleanup scenarios", () => {
     it("handles account with supports_check_in: true but no can_check_in", () => {
       const account = createSiteAccount({
-        supports_check_in: true
+        supports_check_in: true,
       })
       delete (account as any).checkIn
       delete (account as any).can_check_in
@@ -173,7 +173,7 @@ describe("checkInMigration", () => {
 
       expect(migrated.checkIn).toEqual({
         enableDetection: true,
-        isCheckedInToday: false // Defaults to false when can_check_in is undefined
+        isCheckedInToday: false, // Defaults to false when can_check_in is undefined
       })
       expect(migrated).not.toHaveProperty("supports_check_in")
       expect(migrated).not.toHaveProperty("can_check_in")
@@ -181,7 +181,7 @@ describe("checkInMigration", () => {
 
     it("handles account with only can_check_in but no supports_check_in", () => {
       const account = createSiteAccount({
-        can_check_in: true
+        can_check_in: true,
       })
       delete (account as any).supports_check_in
 
@@ -195,7 +195,7 @@ describe("checkInMigration", () => {
     it("handles account with both legacy fields but supports_check_in is null", () => {
       const account = createSiteAccount({
         supports_check_in: undefined,
-        can_check_in: true
+        can_check_in: true,
       })
 
       const migrated = migrateCheckInConfig(account)
@@ -211,7 +211,7 @@ describe("checkInMigration", () => {
         supports_check_in: true,
         can_check_in: false,
         notes: "Test notes",
-        site_name: "Custom Site"
+        site_name: "Custom Site",
       })
 
       const migrated = migrateCheckInConfig(account)
@@ -227,7 +227,7 @@ describe("checkInMigration", () => {
     it("creates a copy and does not mutate the original account", () => {
       const account = createSiteAccount({
         supports_check_in: true,
-        can_check_in: true
+        can_check_in: true,
       })
 
       const migrated = migrateCheckInConfig(account)
@@ -249,10 +249,10 @@ describe("checkInMigration", () => {
         checkIn: {
           enableDetection: true,
           isCheckedInToday: false,
-          customCheckInUrl: "https://example.com/checkin"
+          customCheckInUrl: "https://example.com/checkin",
         },
         supports_check_in: false, // This should NOT trigger cleanup when checkIn exists
-        can_check_in: true
+        can_check_in: true,
       })
 
       const migrated = migrateCheckInConfig(account)
@@ -261,7 +261,7 @@ describe("checkInMigration", () => {
       expect(migrated.checkIn).toEqual({
         enableDetection: true,
         isCheckedInToday: false,
-        customCheckInUrl: "https://example.com/checkin"
+        customCheckInUrl: "https://example.com/checkin",
       })
       expect(migrated).toHaveProperty("supports_check_in", false)
       expect(migrated).toHaveProperty("can_check_in", true)
@@ -274,13 +274,13 @@ describe("checkInMigration", () => {
         customCheckInUrl: "https://custom.com/checkin",
         customRedeemUrl: "https://custom.com/redeem",
         lastCheckInDate: "2024-01-15",
-        openRedeemWithCheckIn: false
+        openRedeemWithCheckIn: false,
       }
 
       const account = createSiteAccount({
         checkIn: complexCheckIn,
         supports_check_in: false,
-        can_check_in: false
+        can_check_in: false,
       })
 
       const migrated = migrateCheckInConfig(account)

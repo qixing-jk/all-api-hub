@@ -26,7 +26,7 @@ export function isMobileByUA(): boolean {
   // 检测是否为移动设备，如果不是移动设备则认为是桌面设备
   const userAgent = navigator.userAgent.toLowerCase()
   return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(
-    userAgent
+    userAgent,
   )
 }
 

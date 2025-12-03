@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { userPreferences } from "~/services/userPreferences.ts"
+import { userPreferences } from "~/services/userPreferences"
 import {
   downloadBackup,
   testWebdavConnection,
-  uploadBackup
+  uploadBackup,
 } from "~/services/webdav/webdavService"
 
 // Mock i18n so error messages are deterministic
@@ -12,13 +12,13 @@ vi.mock("i18next", () => ({
   t: (key: string, params?: { status?: number }) =>
     params && typeof params.status !== "undefined"
       ? `${key}:${params.status}`
-      : key
+      : key,
 }))
 
-vi.mock("~/services/userPreferences.ts", () => ({
+vi.mock("~/services/userPreferences", () => ({
   userPreferences: {
-    getPreferences: vi.fn()
-  }
+    getPreferences: vi.fn(),
+  },
 }))
 
 const mockedUserPreferences = userPreferences as any
@@ -36,18 +36,18 @@ describe("webdavService", () => {
     webdav: {
       url: "https://example.com/webdav",
       username: "user",
-      password: "pass"
-    }
+      password: "pass",
+    },
   }
 
   describe("testWebdavConnection", () => {
     it("throws when config is incomplete", async () => {
       mockedUserPreferences.getPreferences.mockResolvedValue({
-        webdav: { url: "", username: "u", password: "p" }
+        webdav: { url: "", username: "u", password: "p" },
       })
 
       await expect(testWebdavConnection()).rejects.toThrow(
-        "messages:webdav.configIncomplete"
+        "messages:webdav.configIncomplete",
       )
       expect(globalAny.fetch).not.toHaveBeenCalled()
     })
@@ -78,7 +78,7 @@ describe("webdavService", () => {
       globalAny.fetch.mockResolvedValue({ status: 401 })
 
       await expect(testWebdavConnection()).rejects.toThrow(
-        "messages:webdav.authFailed"
+        "messages:webdav.authFailed",
       )
     })
 
@@ -87,7 +87,7 @@ describe("webdavService", () => {
       globalAny.fetch.mockResolvedValue({ status: 500 })
 
       await expect(testWebdavConnection()).rejects.toThrow(
-        "messages:webdav.connectionFailed:500"
+        "messages:webdav.connectionFailed:500",
       )
     })
   })
@@ -97,7 +97,7 @@ describe("webdavService", () => {
       mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
       globalAny.fetch.mockResolvedValue({
         status: 200,
-        text: vi.fn().mockResolvedValue('{"ok":true}')
+        text: vi.fn().mockResolvedValue('{"ok":true}'),
       })
 
       const content = await downloadBackup()
@@ -106,11 +106,11 @@ describe("webdavService", () => {
 
     it("throws configIncomplete when credentials missing", async () => {
       mockedUserPreferences.getPreferences.mockResolvedValue({
-        webdav: { url: "", username: "", password: "" }
+        webdav: { url: "", username: "", password: "" },
       })
 
       await expect(downloadBackup()).rejects.toThrow(
-        "messages:webdav.configIncomplete"
+        "messages:webdav.configIncomplete",
       )
     })
 
@@ -119,7 +119,7 @@ describe("webdavService", () => {
       globalAny.fetch.mockResolvedValue({ status: 404 })
 
       await expect(downloadBackup()).rejects.toThrow(
-        "messages:webdav.fileNotFound"
+        "messages:webdav.fileNotFound",
       )
     })
 
@@ -128,7 +128,7 @@ describe("webdavService", () => {
       globalAny.fetch.mockResolvedValue({ status: 403 })
 
       await expect(downloadBackup()).rejects.toThrow(
-        "messages:webdav.authFailed"
+        "messages:webdav.authFailed",
       )
     })
 
@@ -137,7 +137,7 @@ describe("webdavService", () => {
       globalAny.fetch.mockResolvedValue({ status: 500 })
 
       await expect(downloadBackup()).rejects.toThrow(
-        "messages:webdav.downloadFailed:500"
+        "messages:webdav.downloadFailed:500",
       )
     })
   })
@@ -168,11 +168,11 @@ describe("webdavService", () => {
 
     it("throws configIncomplete when credentials missing", async () => {
       mockedUserPreferences.getPreferences.mockResolvedValue({
-        webdav: { url: "", username: "", password: "" }
+        webdav: { url: "", username: "", password: "" },
       })
 
       await expect(uploadBackup("{}")).rejects.toThrow(
-        "messages:webdav.configIncomplete"
+        "messages:webdav.configIncomplete",
       )
     })
 
@@ -184,7 +184,7 @@ describe("webdavService", () => {
         .mockResolvedValueOnce({ status: 401 }) // PUT unauthorized
 
       await expect(uploadBackup("{}")).rejects.toThrow(
-        "messages:webdav.authFailed"
+        "messages:webdav.authFailed",
       )
     })
 
@@ -196,7 +196,7 @@ describe("webdavService", () => {
         .mockResolvedValueOnce({ status: 500 })
 
       await expect(uploadBackup("{}")).rejects.toThrow(
-        "messages:webdav.uploadFailed:500"
+        "messages:webdav.uploadFailed:500",
       )
     })
   })

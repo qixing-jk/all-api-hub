@@ -20,7 +20,7 @@ export default function ActionBar({
   onRunAll,
   onRunSelected,
   onRetryFailed,
-  onRefresh
+  onRefresh,
 }: ActionBarProps) {
   const { t } = useTranslation("newApiModelSync")
 
@@ -30,26 +30,30 @@ export default function ActionBar({
         onClick={onRunAll}
         variant="default"
         disabled={isRunning}
-        leftIcon={<ArrowPathIcon className="h-4 w-4" />}>
+        leftIcon={<ArrowPathIcon className="h-4 w-4" />}
+      >
         {t("execution.actions.runAll")}
       </Button>
       <Button
         onClick={onRunSelected}
         variant="secondary"
-        disabled={isRunning || selectedCount === 0}>
+        disabled={isRunning || selectedCount === 0}
+      >
         {t("execution.actions.runSelected")} ({selectedCount})
       </Button>
       <Button
         onClick={onRetryFailed}
         variant="outline"
-        disabled={isRunning || failedCount === 0}>
+        disabled={isRunning || failedCount === 0}
+      >
         {t("execution.actions.retryFailed")}
       </Button>
       <Button
         onClick={onRefresh}
         variant="ghost"
         disabled={isRunning}
-        leftIcon={<ArrowPathIcon className="h-4 w-4" />}>
+        leftIcon={<ArrowPathIcon className="h-4 w-4" />}
+      >
         {t("execution.actions.refresh")}
       </Button>
     </div>

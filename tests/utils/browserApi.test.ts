@@ -6,7 +6,7 @@ import {
   getAlarm,
   getAllAlarms,
   hasAlarmsAPI,
-  onAlarm
+  onAlarm,
 } from "~/utils/browserApi"
 
 const originalBrowser = (globalThis as any).browser
@@ -34,7 +34,7 @@ describe("browserApi alarms helpers", () => {
     ;(globalThis as any).browser = {}
 
     await expect(
-      createAlarm("test", { when: Date.now() })
+      createAlarm("test", { when: Date.now() }),
     ).resolves.toBeUndefined()
 
     expect(warnSpy).toHaveBeenCalledWith("Alarms API not supported")
@@ -44,8 +44,8 @@ describe("browserApi alarms helpers", () => {
     const createMock = vi.fn()
     ;(globalThis as any).browser = {
       alarms: {
-        create: createMock
-      }
+        create: createMock,
+      },
     }
 
     const when = Date.now()
@@ -68,8 +68,8 @@ describe("browserApi alarms helpers", () => {
     const clearMock = vi.fn().mockResolvedValue(true)
     ;(globalThis as any).browser = {
       alarms: {
-        clear: clearMock
-      }
+        clear: clearMock,
+      },
     }
 
     const result = await clearAlarm("alarm-1")
@@ -93,8 +93,8 @@ describe("browserApi alarms helpers", () => {
     const getMock = vi.fn().mockResolvedValue(alarm)
     ;(globalThis as any).browser = {
       alarms: {
-        get: getMock
-      }
+        get: getMock,
+      },
     }
 
     const result = await getAlarm("alarm-x")
@@ -118,8 +118,8 @@ describe("browserApi alarms helpers", () => {
     const getAllMock = vi.fn().mockResolvedValue(alarms)
     ;(globalThis as any).browser = {
       alarms: {
-        getAll: getAllMock
-      }
+        getAll: getAllMock,
+      },
     }
 
     const result = await getAllAlarms()
@@ -151,9 +151,9 @@ describe("browserApi alarms helpers", () => {
       alarms: {
         onAlarm: {
           addListener: addListenerMock,
-          removeListener: removeListenerMock
-        }
-      }
+          removeListener: removeListenerMock,
+        },
+      },
     }
 
     const callback = vi.fn()

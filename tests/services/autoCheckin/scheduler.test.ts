@@ -2,19 +2,19 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   autoCheckinScheduler,
-  handleAutoCheckinMessage
+  handleAutoCheckinMessage,
 } from "~/services/autoCheckin/scheduler"
 import { autoCheckinStorage } from "~/services/autoCheckin/storage"
 import {
   DEFAULT_PREFERENCES,
-  userPreferences
+  userPreferences,
 } from "~/services/userPreferences"
 import {
   clearAlarm,
   createAlarm,
   getAlarm,
   hasAlarmsAPI,
-  onAlarm
+  onAlarm,
 } from "~/utils/browserApi"
 import { getErrorMessage } from "~/utils/error"
 
@@ -29,33 +29,33 @@ vi.mock("~/services/userPreferences", () => ({
       retryStrategy: {
         enabled: false,
         intervalMinutes: 30,
-        maxAttemptsPerDay: 3
-      }
-    }
+        maxAttemptsPerDay: 3,
+      },
+    },
   },
   userPreferences: {
     getPreferences: vi.fn(),
-    savePreferences: vi.fn()
-  }
+    savePreferences: vi.fn(),
+  },
 }))
 
 vi.mock("~/services/accountStorage", () => ({
   accountStorage: {
     getAllAccounts: vi.fn(),
     updateAccount: vi.fn(),
-    markAccountAsCheckedIn: vi.fn()
-  }
+    markAccountAsCheckedIn: vi.fn(),
+  },
 }))
 
 vi.mock("~/services/autoCheckin/providers", () => ({
-  resolveAutoCheckinProvider: vi.fn()
+  resolveAutoCheckinProvider: vi.fn(),
 }))
 
 vi.mock("~/services/autoCheckin/storage", () => ({
   autoCheckinStorage: {
     getStatus: vi.fn(),
-    saveStatus: vi.fn()
-  }
+    saveStatus: vi.fn(),
+  },
 }))
 
 vi.mock("~/utils/browserApi", () => ({
@@ -63,11 +63,11 @@ vi.mock("~/utils/browserApi", () => ({
   createAlarm: vi.fn(),
   getAlarm: vi.fn(),
   hasAlarmsAPI: vi.fn(),
-  onAlarm: vi.fn()
+  onAlarm: vi.fn(),
 }))
 
 vi.mock("~/utils/error", () => ({
-  getErrorMessage: vi.fn((e: unknown) => String(e))
+  getErrorMessage: vi.fn((e: unknown) => String(e)),
 }))
 
 const mockedUserPreferences = userPreferences as unknown as {
@@ -85,7 +85,7 @@ const mockedBrowserApi = {
   createAlarm: createAlarm as unknown as ReturnType<typeof vi.fn>,
   getAlarm: getAlarm as unknown as ReturnType<typeof vi.fn>,
   hasAlarmsAPI: hasAlarmsAPI as unknown as ReturnType<typeof vi.fn>,
-  onAlarm: onAlarm as unknown as ReturnType<typeof vi.fn>
+  onAlarm: onAlarm as unknown as ReturnType<typeof vi.fn>,
 }
 
 describe("autoCheckinScheduler.initialize", () => {
@@ -95,8 +95,8 @@ describe("autoCheckinScheduler.initialize", () => {
     mockedUserPreferences.getPreferences.mockResolvedValue({
       autoCheckin: {
         ...(DEFAULT_PREFERENCES as any).autoCheckin,
-        globalEnabled: true
-      }
+        globalEnabled: true,
+      },
     })
   })
 
@@ -120,21 +120,21 @@ describe("autoCheckinScheduler.scheduleNextRun", () => {
     mockedUserPreferences.getPreferences.mockResolvedValue({
       autoCheckin: {
         ...(DEFAULT_PREFERENCES as any).autoCheckin,
-        globalEnabled: false
-      }
+        globalEnabled: false,
+      },
     })
     mockedAutoCheckinStorage.getStatus.mockResolvedValue({
       lastRunResult: "success",
       lastRunAt: "2024-01-01T00:00:00.000Z",
       perAccount: {},
-      nextScheduledAt: "2024-01-02T00:00:00.000Z"
+      nextScheduledAt: "2024-01-02T00:00:00.000Z",
     } as any)
 
     await (autoCheckinScheduler as any).scheduleNextRun()
 
     expect(mockedBrowserApi.clearAlarm).toHaveBeenCalledWith("autoCheckin")
     expect(mockedAutoCheckinStorage.saveStatus).toHaveBeenCalledWith(
-      expect.objectContaining({ nextScheduledAt: undefined })
+      expect.objectContaining({ nextScheduledAt: undefined }),
     )
   })
 })
@@ -152,7 +152,7 @@ describe("handleAutoCheckinMessage", () => {
 
     await handleAutoCheckinMessage(
       { action: "autoCheckin:runNow" },
-      sendResponse
+      sendResponse,
     )
 
     expect(runSpy).toHaveBeenCalled()
@@ -166,7 +166,7 @@ describe("handleAutoCheckinMessage", () => {
 
     await handleAutoCheckinMessage(
       { action: "autoCheckin:getStatus" },
-      sendResponse
+      sendResponse,
     )
 
     expect(sendResponse).toHaveBeenCalledWith({ success: true, data: status })
@@ -181,7 +181,7 @@ describe("handleAutoCheckinMessage", () => {
 
     await handleAutoCheckinMessage(
       { action: "autoCheckin:updateSettings", settings },
-      sendResponse
+      sendResponse,
     )
 
     expect(updateSpy).toHaveBeenCalledWith(settings)
@@ -195,7 +195,7 @@ describe("handleAutoCheckinMessage", () => {
 
     expect(sendResponse).toHaveBeenCalledWith({
       success: false,
-      error: "Unknown action"
+      error: "Unknown action",
     })
   })
 
@@ -205,13 +205,13 @@ describe("handleAutoCheckinMessage", () => {
       .spyOn(autoCheckinScheduler as any, "runCheckins")
       .mockRejectedValue(error)
     ;(getErrorMessage as unknown as ReturnType<typeof vi.fn>).mockReturnValue(
-      "boom"
+      "boom",
     )
     const sendResponse = vi.fn()
 
     await handleAutoCheckinMessage(
       { action: "autoCheckin:runNow" },
-      sendResponse
+      sendResponse,
     )
 
     expect(runSpy).toHaveBeenCalled()

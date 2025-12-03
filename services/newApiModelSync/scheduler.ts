@@ -1,19 +1,20 @@
 import { t } from "i18next"
 
 import { ModelRedirectService } from "~/services/modelRedirect"
-import { hasValidNewApiConfig } from "~/services/newApiService/newApiService.ts"
+import { hasValidNewApiConfig } from "~/services/newApiService/newApiService"
+import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 import {
   ALL_PRESET_STANDARD_MODELS,
   DEFAULT_MODEL_REDIRECT_PREFERENCES,
-  NewApiChannel
-} from "~/types"
+} from "~/types/modelRedirect"
+import { NewApiChannel } from "~/types/newapi"
 import { ExecutionProgress, ExecutionResult } from "~/types/newApiModelSync"
 import {
   clearAlarm,
   createAlarm,
   getAlarm,
   hasAlarmsAPI,
-  onAlarm
+  onAlarm,
 } from "~/utils/browserApi"
 import { getErrorMessage } from "~/utils/error"
 
@@ -42,7 +43,7 @@ class NewApiModelSyncScheduler {
     const {
       baseUrl: newApiBaseUrl,
       adminToken: newApiAdminToken,
-      userId: newApiUserId
+      userId: newApiUserId,
     } = userPrefs.newApi
 
     const config =
@@ -56,7 +57,8 @@ class NewApiModelSyncScheduler {
       newApiUserId!,
       config.rateLimit,
       config.allowedModels,
-      channelConfigs
+      channelConfigs,
+      config.globalChannelModelFilters,
     )
   }
 
@@ -77,7 +79,7 @@ class NewApiModelSyncScheduler {
             this.executeSync().catch((error) => {
               console.error(
                 "[NewApiModelSync] Scheduled execution failed:",
-                error
+                error,
               )
             })
           }
@@ -87,7 +89,7 @@ class NewApiModelSyncScheduler {
         await this.setupAlarm()
       } else {
         console.warn(
-          "[NewApiModelSync] Alarms API not available, automatic sync disabled"
+          "[NewApiModelSync] Alarms API not available, automatic sync disabled",
         )
       }
 
@@ -105,7 +107,7 @@ class NewApiModelSyncScheduler {
     // Check if alarms API is supported
     if (!hasAlarmsAPI()) {
       console.warn(
-        "[NewApiModelSync] Alarms API not supported, auto-sync disabled"
+        "[NewApiModelSync] Alarms API not supported, auto-sync disabled",
       )
       return
     }
@@ -127,7 +129,7 @@ class NewApiModelSyncScheduler {
     try {
       await createAlarm(NewApiModelSyncScheduler.ALARM_NAME, {
         delayInMinutes: intervalInMinutes, // Initial delay
-        periodInMinutes: intervalInMinutes // Repeat interval
+        periodInMinutes: intervalInMinutes, // Repeat interval
       })
 
       // Verify alarm was created
@@ -138,7 +140,7 @@ class NewApiModelSyncScheduler {
           scheduledTime: alarm.scheduledTime
             ? new Date(alarm.scheduledTime)
             : null,
-          periodInMinutes: alarm.periodInMinutes
+          periodInMinutes: alarm.periodInMinutes,
         })
       } else {
         console.warn("[NewApiModelSync] Alarm was not created properly")
@@ -198,7 +200,7 @@ class NewApiModelSyncScheduler {
       isRunning: true,
       total: channels.length,
       completed: 0,
-      failed: 0
+      failed: 0,
     }
 
     let failureCount = 0
@@ -220,11 +222,11 @@ class NewApiModelSyncScheduler {
               try {
                 // Find the channel that was just synced
                 const channel = allChannels.find(
-                  (c) => c.id === payload.lastResult.channelId
+                  (c) => c.id === payload.lastResult.channelId,
                 )
                 if (!channel) {
                   console.warn(
-                    `[NewApiModelSync] Channel ${payload.lastResult.channelId} not found`
+                    `[NewApiModelSync] Channel ${payload.lastResult.channelId} not found`,
                   )
                 } else {
                   const actualModels = payload.lastResult.newModels || []
@@ -232,24 +234,24 @@ class NewApiModelSyncScheduler {
                   const newMapping =
                     ModelRedirectService.generateModelMappingForChannel(
                       standardModels,
-                      actualModels
+                      actualModels,
                     )
 
                   // Use unified method for incremental merge and apply
                   await ModelRedirectService.applyModelMappingToChannel(
                     channel,
                     newMapping,
-                    service
+                    service,
                   )
                   mappingSuccessCount++
                   console.log(
-                    `[NewApiModelSync] Applied ${Object.keys(newMapping).length} model redirects to channel ${channel.name}`
+                    `[NewApiModelSync] Applied ${Object.keys(newMapping).length} model redirects to channel ${channel.name}`,
                   )
                 }
               } catch (error) {
                 console.error(
                   `[NewApiModelSync] Failed to apply mapping for channel ${payload.lastResult.channelName}:`,
-                  error
+                  error,
                 )
                 mappingErrorCount++
               }
@@ -263,7 +265,7 @@ class NewApiModelSyncScheduler {
             this.currentProgress.failed = failureCount
           }
           this.notifyProgress()
-        }
+        },
       })
 
       // Save execution result
@@ -274,19 +276,19 @@ class NewApiModelSyncScheduler {
         const collectedModels = collectModelsFromExecution(result)
         if (collectedModels.length > 0) {
           await newApiModelSyncStorage.saveChannelUpstreamModelOptions(
-            collectedModels
+            collectedModels,
           )
         }
       }
 
       console.log(
-        `[NewApiModelSync] Execution completed: ${result.statistics.successCount}/${result.statistics.total} succeeded`
+        `[NewApiModelSync] Execution completed: ${result.statistics.successCount}/${result.statistics.total} succeeded`,
       )
 
       // Log model redirect mapping results
       if (modelRedirectConfig.enabled && standardModels.length > 0) {
         console.log(
-          `[NewApiModelSync] Model redirect mappings applied: ${mappingSuccessCount} succeeded, ${mappingErrorCount} failed`
+          `[NewApiModelSync] Model redirect mappings applied: ${mappingSuccessCount} succeeded, ${mappingErrorCount} failed`,
         )
       }
 
@@ -338,6 +340,7 @@ class NewApiModelSyncScheduler {
       burst?: number
     }
     allowedModels?: string[]
+    globalChannelModelFilters?: ChannelModelFilterRule[]
   }) {
     // Get current config and update
     const prefs = await userPreferences.getPreferences()
@@ -367,7 +370,11 @@ class NewApiModelSyncScheduler {
       allowedModels:
         settings.allowedModels !== undefined
           ? settings.allowedModels
-          : current.allowedModels
+          : current.allowedModels,
+      globalChannelModelFilters:
+        settings.globalChannelModelFilters !== undefined
+          ? settings.globalChannelModelFilters
+          : current.globalChannelModelFilters,
     }
 
     await userPreferences.savePreferences({ newApiModelSync: updated })
@@ -383,7 +390,7 @@ class NewApiModelSyncScheduler {
       browser.runtime
         .sendMessage({
           type: "NEW_API_MODEL_SYNC_PROGRESS",
-          payload: this.currentProgress
+          payload: this.currentProgress,
         })
         .catch(() => {
           // Silent: frontend might not be open
@@ -402,7 +409,7 @@ export const newApiModelSyncScheduler = new NewApiModelSyncScheduler()
  */
 export const handleNewApiModelSyncMessage = async (
   request: any,
-  sendResponse: (response: any) => void
+  sendResponse: (response: any) => void,
 ) => {
   try {
     switch (request.action) {
@@ -414,7 +421,7 @@ export const handleNewApiModelSyncMessage = async (
 
       case "newApiModelSync:triggerSelected": {
         const resultSelected = await newApiModelSyncScheduler.executeSync(
-          request.channelIds
+          request.channelIds,
         )
         sendResponse({ success: true, data: resultSelected })
         break

@@ -47,8 +47,8 @@ export const useImportExport = () => {
       } else {
         toast.error(
           t("importExport:import.importFailed", {
-            error: getErrorMessage(error)
-          })
+            error: getErrorMessage(error),
+          }),
         )
       }
     } finally {
@@ -79,6 +79,6 @@ export const useImportExport = () => {
     setImportData,
     handleFileImport,
     handleImport,
-    validateImportData
+    validateImportData,
   }
 }

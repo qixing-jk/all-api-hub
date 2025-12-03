@@ -27,7 +27,7 @@ export function ModelDisplay({
   showEndpointTypes,
   selectedGroup,
   handleGroupClick,
-  availableGroups
+  availableGroups,
 }: ModelDisplayProps) {
   const { t } = useTranslation("modelList")
   if (models.length === 0) {
@@ -48,7 +48,7 @@ export function ModelDisplay({
             <div className="my-3 first:mt-0" {...props}>
               {children}
             </div>
-          )
+          ),
         }}
         itemContent={(index, item) => (
           <ModelItem

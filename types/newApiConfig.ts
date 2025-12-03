@@ -7,5 +7,5 @@ export interface NewApiConfig {
 export const DEFAULT_NEW_API_CONFIG = {
   baseUrl: "",
   adminToken: "",
-  userId: ""
+  userId: "",
 }

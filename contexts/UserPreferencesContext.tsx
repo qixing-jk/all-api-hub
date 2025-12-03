@@ -4,7 +4,7 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useState
+  useState,
 } from "react"
 
 import { DATA_TYPE_CONSUMPTION } from "~/constants"
@@ -13,7 +13,7 @@ import {
   DEFAULT_PREFERENCES,
   userPreferences,
   type TempWindowFallbackPreferences,
-  type UserPreferences
+  type UserPreferences,
 } from "~/services/userPreferences"
 import type { BalanceType, CurrencyType, SortField, SortOrder } from "~/types"
 import type { AutoCheckinPreferences } from "~/types/autoCheckin"
@@ -42,6 +42,8 @@ interface UserPreferencesContextType {
   newApiBaseUrl: string
   newApiAdminToken: string
   newApiUserId: string
+  cliProxyBaseUrl: string
+  cliProxyManagementKey: string
   themeMode: ThemeMode
   tempWindowFallback: TempWindowFallbackPreferences
 
@@ -50,10 +52,10 @@ interface UserPreferencesContextType {
   updateCurrencyType: (currencyType: CurrencyType) => Promise<boolean>
   updateSortConfig: (
     sortField: SortField,
-    sortOrder: SortOrder
+    sortOrder: SortOrder,
   ) => Promise<boolean>
   updateSortingPriorityConfig: (
-    sortingPriority: SortingPriorityConfig
+    sortingPriority: SortingPriorityConfig,
   ) => Promise<boolean>
   updateAutoRefresh: (enabled: boolean) => Promise<boolean>
   updateRefreshInterval: (interval: number) => Promise<boolean>
@@ -62,25 +64,28 @@ interface UserPreferencesContextType {
   updateNewApiBaseUrl: (url: string) => Promise<boolean>
   updateNewApiAdminToken: (token: string) => Promise<boolean>
   updateNewApiUserId: (userId: string) => Promise<boolean>
+  updateCliProxyBaseUrl: (url: string) => Promise<boolean>
+  updateCliProxyManagementKey: (key: string) => Promise<boolean>
   updateThemeMode: (themeMode: ThemeMode) => Promise<boolean>
   updateAutoCheckin: (
-    updates: Partial<AutoCheckinPreferences>
+    updates: Partial<AutoCheckinPreferences>,
   ) => Promise<boolean>
   updateNewApiModelSync: (
-    updates: Partial<UserNewApiModelSyncConfig>
+    updates: Partial<UserNewApiModelSyncConfig>,
   ) => Promise<boolean>
   updateModelRedirect: (
-    updates: Partial<ModelRedirectPreferences>
+    updates: Partial<ModelRedirectPreferences>,
   ) => Promise<boolean>
   updateRedemptionAssist: (updates: { enabled: boolean }) => Promise<boolean>
   updateTempWindowFallback: (
-    updates: Partial<TempWindowFallbackPreferences>
+    updates: Partial<TempWindowFallbackPreferences>,
   ) => Promise<boolean>
   resetToDefaults: () => Promise<boolean>
   resetDisplaySettings: () => Promise<boolean>
   resetAutoRefreshConfig: () => Promise<boolean>
   resetNewApiConfig: () => Promise<boolean>
   resetNewApiModelSyncConfig: () => Promise<boolean>
+  resetCliProxyConfig: () => Promise<boolean>
   resetAutoCheckinConfig: () => Promise<boolean>
   resetRedemptionAssistConfig: () => Promise<boolean>
   resetModelRedirectConfig: () => Promise<boolean>
@@ -97,7 +102,7 @@ const UserPreferencesContext = createContext<
 
 // 3. 创建 Provider 组件
 export const UserPreferencesProvider = ({
-  children
+  children,
 }: {
   children: ReactNode
 }) => {
@@ -128,6 +133,31 @@ export const UserPreferencesProvider = ({
     return success
   }, [])
 
+  const updateCliProxyBaseUrl = useCallback(async (baseUrl: string) => {
+    const updates = {
+      cliProxy: { baseUrl },
+    }
+    const success = await userPreferences.savePreferences(updates)
+    if (success) {
+      setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
+    }
+    return success
+  }, [])
+
+  const updateCliProxyManagementKey = useCallback(
+    async (managementKey: string) => {
+      const updates = {
+        cliProxy: { managementKey },
+      }
+      const success = await userPreferences.savePreferences(updates)
+      if (success) {
+        setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
+      }
+      return success
+    },
+    [],
+  )
+
   const updateDefaultTab = useCallback(async (activeTab: BalanceType) => {
     const success = await userPreferences.updateActiveTab(activeTab)
     if (success) {
@@ -148,16 +178,16 @@ export const UserPreferencesProvider = ({
     async (sortField: SortField, sortOrder: SortOrder) => {
       const success = await userPreferences.updateSortConfig(
         sortField,
-        sortOrder
+        sortOrder,
       )
       if (success) {
         setPreferences((prev) =>
-          prev ? { ...prev, sortField, sortOrder } : null
+          prev ? { ...prev, sortField, sortOrder } : null,
         )
       }
       return success
     },
-    []
+    [],
   )
 
   const updateSortingPriorityConfig = useCallback(
@@ -169,26 +199,26 @@ export const UserPreferencesProvider = ({
           prev
             ? {
                 ...prev,
-                sortingPriorityConfig: sortingPriority
+                sortingPriorityConfig: sortingPriority,
               }
-            : null
+            : null,
         )
       }
       return success
     },
-    []
+    [],
   )
 
   const updateAutoRefresh = useCallback(async (enabled: boolean) => {
     const updates = {
-      accountAutoRefresh: { enabled: enabled }
+      accountAutoRefresh: { enabled: enabled },
     }
     const success = await userPreferences.savePreferences(updates)
     if (success) {
       setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
       sendRuntimeMessage({
         action: "updateAutoRefreshSettings",
-        settings: updates
+        settings: updates,
       })
     }
     return success
@@ -196,14 +226,14 @@ export const UserPreferencesProvider = ({
 
   const updateRefreshInterval = useCallback(async (interval: number) => {
     const updates = {
-      accountAutoRefresh: { interval: interval }
+      accountAutoRefresh: { interval: interval },
     }
     const success = await userPreferences.savePreferences(updates)
     if (success) {
       setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
       sendRuntimeMessage({
         action: "updateAutoRefreshSettings",
-        settings: updates
+        settings: updates,
       })
     }
     return success
@@ -211,14 +241,14 @@ export const UserPreferencesProvider = ({
 
   const updateMinRefreshInterval = useCallback(async (minInterval: number) => {
     const updates = {
-      accountAutoRefresh: { minInterval: minInterval }
+      accountAutoRefresh: { minInterval: minInterval },
     }
     const success = await userPreferences.savePreferences(updates)
     if (success) {
       setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
       sendRuntimeMessage({
         action: "updateAutoRefreshSettings",
-        settings: updates
+        settings: updates,
       })
     }
     return success
@@ -226,14 +256,14 @@ export const UserPreferencesProvider = ({
 
   const updateRefreshOnOpen = useCallback(async (refreshOnOpen: boolean) => {
     const updates = {
-      accountAutoRefresh: { refreshOnOpen: refreshOnOpen }
+      accountAutoRefresh: { refreshOnOpen: refreshOnOpen },
     }
     const success = await userPreferences.savePreferences(updates)
     if (success) {
       setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
       sendRuntimeMessage({
         action: "updateAutoRefreshSettings",
-        settings: updates
+        settings: updates,
       })
     }
     return success
@@ -241,7 +271,7 @@ export const UserPreferencesProvider = ({
 
   const updateNewApiBaseUrl = useCallback(async (baseUrl: string) => {
     const updates = {
-      newApi: { baseUrl }
+      newApi: { baseUrl },
     }
     const success = await userPreferences.savePreferences(updates)
     if (success) {
@@ -252,7 +282,7 @@ export const UserPreferencesProvider = ({
 
   const updateNewApiAdminToken = useCallback(async (adminToken: string) => {
     const updates = {
-      newApi: { adminToken }
+      newApi: { adminToken },
     }
     const success = await userPreferences.savePreferences(updates)
     if (success) {
@@ -263,7 +293,7 @@ export const UserPreferencesProvider = ({
 
   const updateNewApiUserId = useCallback(async (userId: string) => {
     const updates = {
-      newApi: { userId }
+      newApi: { userId },
     }
     const success = await userPreferences.savePreferences(updates)
     if (success) {
@@ -283,7 +313,7 @@ export const UserPreferencesProvider = ({
   const updateAutoCheckin = useCallback(
     async (updates: Partial<AutoCheckinPreferences>) => {
       const success = await userPreferences.savePreferences({
-        autoCheckin: updates
+        autoCheckin: updates,
       })
 
       if (success) {
@@ -291,81 +321,81 @@ export const UserPreferencesProvider = ({
           if (!prev) return null
           const merged = deepOverride(
             prev.autoCheckin ?? DEFAULT_PREFERENCES.autoCheckin,
-            updates
+            updates,
           )
           return {
             ...prev,
-            autoCheckin: merged
+            autoCheckin: merged,
           }
         })
 
         // Notify background to update alarm
         await sendRuntimeMessage({
           action: "autoCheckin:updateSettings",
-          settings: updates
+          settings: updates,
         })
       }
       return success
     },
-    []
+    [],
   )
 
   const updateNewApiModelSync = useCallback(
     async (updates: Partial<UserNewApiModelSyncConfig>) => {
       const success = await userPreferences.savePreferences({
-        newApiModelSync: updates
+        newApiModelSync: updates,
       })
       if (success) {
         setPreferences((prev) => {
           if (!prev) return null
           const merged = deepOverride(
             prev.newApiModelSync ?? DEFAULT_PREFERENCES.newApiModelSync,
-            updates
+            updates,
           )
           return {
             ...prev,
-            newApiModelSync: merged
+            newApiModelSync: merged,
           }
         })
 
         // Notify background to update alarm
         await sendRuntimeMessage({
           action: "newApiModelSync:updateSettings",
-          settings: updates
+          settings: updates,
         })
       }
       return success
     },
-    []
+    [],
   )
 
   const updateModelRedirect = useCallback(
     async (updates: Partial<ModelRedirectPreferences>) => {
       const success = await userPreferences.savePreferences({
-        modelRedirect: updates
+        modelRedirect: updates,
       })
       if (success) {
         setPreferences((prev) => {
           if (!prev) return null
           const merged = deepOverride(
             prev.modelRedirect ?? DEFAULT_PREFERENCES.modelRedirect,
-            updates
+            updates,
           )
           return {
             ...prev,
-            modelRedirect: merged
+            modelRedirect: merged,
           }
         })
       }
       return success
     },
-    []
+    [],
   )
 
   const updateRedemptionAssist = useCallback(
     async (updates: { enabled: boolean }) => {
       const success = await userPreferences.savePreferences({
-        redemptionAssist: updates
+        redemptionAssist: updates,
       })
 
       if (success) {
@@ -374,30 +404,30 @@ export const UserPreferencesProvider = ({
           const merged = {
             ...(DEFAULT_PREFERENCES.redemptionAssist ?? { enabled: true }),
             ...(prev.redemptionAssist ?? {}),
-            ...updates
+            ...updates,
           }
           return {
             ...prev,
             redemptionAssist: merged,
-            lastUpdated: Date.now()
+            lastUpdated: Date.now(),
           }
         })
 
         await sendRuntimeMessage({
           action: "redemptionAssist:updateSettings",
-          settings: updates
+          settings: updates,
         })
       }
 
       return success
     },
-    []
+    [],
   )
 
   const updateTempWindowFallback = useCallback(
     async (updates: Partial<TempWindowFallbackPreferences>) => {
       const success = await userPreferences.savePreferences({
-        tempWindowFallback: updates
+        tempWindowFallback: updates,
       })
       if (success) {
         setPreferences((prev) => {
@@ -409,21 +439,21 @@ export const UserPreferencesProvider = ({
               useInSidePanel: true,
               useInOptions: true,
               useForAutoRefresh: true,
-              useForManualRefresh: true
+              useForManualRefresh: true,
             }),
             ...(prev.tempWindowFallback ?? {}),
-            ...updates
+            ...updates,
           }
           return {
             ...prev,
             tempWindowFallback: merged,
-            lastUpdated: Date.now()
+            lastUpdated: Date.now(),
           }
         })
       }
       return success
     },
-    []
+    [],
   )
 
   const resetToDefaults = useCallback(async () => {
@@ -437,14 +467,14 @@ export const UserPreferencesProvider = ({
       // Notify auto-refresh service
       sendRuntimeMessage({
         action: "updateAutoRefreshSettings",
-        settings: { accountAutoRefresh: defaults.accountAutoRefresh }
+        settings: { accountAutoRefresh: defaults.accountAutoRefresh },
       })
 
       // Notify auto-checkin service
       if (defaults.autoCheckin) {
         void sendRuntimeMessage({
           action: "autoCheckin:updateSettings",
-          settings: defaults.autoCheckin
+          settings: defaults.autoCheckin,
         })
       }
 
@@ -452,7 +482,7 @@ export const UserPreferencesProvider = ({
       if (defaults.newApiModelSync) {
         void sendRuntimeMessage({
           action: "newApiModelSync:updateSettings",
-          settings: defaults.newApiModelSync
+          settings: defaults.newApiModelSync,
         })
       }
     }
@@ -469,9 +499,9 @@ export const UserPreferencesProvider = ({
               ...prev,
               activeTab: DEFAULT_PREFERENCES.activeTab,
               currencyType: DEFAULT_PREFERENCES.currencyType,
-              lastUpdated: now
+              lastUpdated: now,
             }
-          : prev
+          : prev,
       )
     }
     return success
@@ -486,13 +516,13 @@ export const UserPreferencesProvider = ({
         prev
           ? deepOverride(prev, {
               accountAutoRefresh: defaults,
-              lastUpdated: Date.now()
+              lastUpdated: Date.now(),
             })
-          : prev
+          : prev,
       )
       sendRuntimeMessage({
         action: "updateAutoRefreshSettings",
-        settings: { accountAutoRefresh: defaults }
+        settings: { accountAutoRefresh: defaults },
       })
     }
     return success
@@ -506,9 +536,9 @@ export const UserPreferencesProvider = ({
         prev
           ? deepOverride(prev, {
               newApi: defaults,
-              lastUpdated: Date.now()
+              lastUpdated: Date.now(),
             })
-          : prev
+          : prev,
       )
     }
     return success
@@ -522,16 +552,32 @@ export const UserPreferencesProvider = ({
         prev
           ? deepOverride(prev, {
               newApiModelSync: defaults,
-              lastUpdated: Date.now()
+              lastUpdated: Date.now(),
             })
-          : prev
+          : prev,
       )
       if (defaults) {
         void sendRuntimeMessage({
           action: "newApiModelSync:updateSettings",
-          settings: defaults
+          settings: defaults,
         })
       }
+    }
+    return success
+  }, [])
+
+  const resetCliProxyConfig = useCallback(async () => {
+    const success = await userPreferences.resetCliProxyConfig()
+    if (success) {
+      const defaults = DEFAULT_PREFERENCES.cliProxy
+      setPreferences((prev) =>
+        prev
+          ? deepOverride(prev, {
+              cliProxy: defaults,
+              lastUpdated: Date.now(),
+            })
+          : prev,
+      )
     }
     return success
   }, [])
@@ -544,14 +590,14 @@ export const UserPreferencesProvider = ({
         prev
           ? deepOverride(prev, {
               autoCheckin: defaults,
-              lastUpdated: Date.now()
+              lastUpdated: Date.now(),
             })
-          : prev
+          : prev,
       )
       if (defaults) {
         void sendRuntimeMessage({
           action: "autoCheckin:updateSettings",
-          settings: defaults
+          settings: defaults,
         })
       }
     }
@@ -566,14 +612,14 @@ export const UserPreferencesProvider = ({
         prev
           ? deepOverride(prev, {
               redemptionAssist: defaults,
-              lastUpdated: Date.now()
+              lastUpdated: Date.now(),
             })
-          : prev
+          : prev,
       )
       if (defaults) {
         void sendRuntimeMessage({
           action: "redemptionAssist:updateSettings",
-          settings: defaults
+          settings: defaults,
         })
       }
     }
@@ -588,9 +634,9 @@ export const UserPreferencesProvider = ({
         prev
           ? deepOverride(prev, {
               modelRedirect: defaults,
-              lastUpdated: Date.now()
+              lastUpdated: Date.now(),
             })
-          : prev
+          : prev,
       )
     }
     return success
@@ -604,9 +650,9 @@ export const UserPreferencesProvider = ({
         prev
           ? deepOverride(prev, {
               webdav: defaults,
-              lastUpdated: Date.now()
+              lastUpdated: Date.now(),
             })
-          : prev
+          : prev,
       )
     }
     return success
@@ -622,9 +668,9 @@ export const UserPreferencesProvider = ({
               ...prev,
               themeMode: DEFAULT_PREFERENCES.themeMode,
               language: DEFAULT_PREFERENCES.language,
-              lastUpdated: now
+              lastUpdated: now,
             }
-          : prev
+          : prev,
       )
     }
     return success
@@ -638,9 +684,9 @@ export const UserPreferencesProvider = ({
           ? {
               ...prev,
               sortingPriorityConfig: undefined,
-              lastUpdated: Date.now()
+              lastUpdated: Date.now(),
             }
-          : prev
+          : prev,
       )
     }
     return success
@@ -666,6 +712,8 @@ export const UserPreferencesProvider = ({
     newApiBaseUrl: preferences?.newApi?.baseUrl || "",
     newApiAdminToken: preferences?.newApi?.adminToken || "",
     newApiUserId: preferences?.newApi?.userId || "",
+    cliProxyBaseUrl: preferences?.cliProxy?.baseUrl || "",
+    cliProxyManagementKey: preferences?.cliProxy?.managementKey || "",
     themeMode: preferences?.themeMode || "system",
     tempWindowFallback:
       preferences.tempWindowFallback ??
@@ -682,6 +730,8 @@ export const UserPreferencesProvider = ({
     updateNewApiBaseUrl,
     updateNewApiAdminToken,
     updateNewApiUserId,
+    updateCliProxyBaseUrl,
+    updateCliProxyManagementKey,
     updateThemeMode,
     updateAutoCheckin,
     updateNewApiModelSync,
@@ -693,13 +743,14 @@ export const UserPreferencesProvider = ({
     resetAutoRefreshConfig,
     resetNewApiConfig,
     resetNewApiModelSyncConfig,
+    resetCliProxyConfig,
     resetAutoCheckinConfig,
     resetRedemptionAssistConfig,
     resetModelRedirectConfig,
     resetWebdavConfig,
     resetThemeAndLanguage,
     resetSortingPriorityConfig,
-    loadPreferences
+    loadPreferences,
   }
 
   return (
@@ -714,7 +765,7 @@ export const useUserPreferencesContext = () => {
   const context = useContext(UserPreferencesContext)
   if (!context) {
     throw new Error(
-      "useUserPreferencesContext 必须在 UserPreferencesProvider 中使用"
+      "useUserPreferencesContext 必须在 UserPreferencesProvider 中使用",
     )
   }
   return context

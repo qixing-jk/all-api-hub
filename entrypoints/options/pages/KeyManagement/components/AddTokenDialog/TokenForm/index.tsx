@@ -22,7 +22,7 @@ export function TokenForm({
   isEditMode,
   availableAccounts,
   groups,
-  availableModels
+  availableModels,
 }: TokenFormProps) {
   const handleInputChange =
     (field: keyof FormData) =>

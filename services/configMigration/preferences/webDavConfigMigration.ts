@@ -1,5 +1,5 @@
-import { UserPreferences } from "~/services/userPreferences.ts"
-import { DEFAULT_WEBDAV_SETTINGS } from "~/types"
+import { UserPreferences } from "~/services/userPreferences"
+import { DEFAULT_WEBDAV_SETTINGS } from "~/types/webdav"
 
 /**
  * Checks if the given user preferences object contains any of the old flat WebDAV fields.
@@ -42,12 +42,12 @@ export function migrateWebDavConfig(prefs: UserPreferences) {
     syncInterval:
       prefs.webdavSyncInterval ?? DEFAULT_WEBDAV_SETTINGS.syncInterval,
     syncStrategy:
-      prefs.webdavSyncStrategy ?? DEFAULT_WEBDAV_SETTINGS.syncStrategy
+      prefs.webdavSyncStrategy ?? DEFAULT_WEBDAV_SETTINGS.syncStrategy,
   }
 
   console.log(
     "[PreferencesMigration] Migrated WebDAV settings:",
-    webdavSettings
+    webdavSettings,
   )
 
   // Create new preferences object with nested webdav
@@ -63,6 +63,6 @@ export function migrateWebDavConfig(prefs: UserPreferences) {
 
   return {
     ...restOfPrefs,
-    webdav: webdavSettings
+    webdav: webdavSettings,
   }
 }

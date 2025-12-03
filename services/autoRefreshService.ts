@@ -1,4 +1,4 @@
-import { AccountAutoRefresh } from "~/types/accountAutoRefresh.ts"
+import { AccountAutoRefresh } from "~/types/accountAutoRefresh"
 
 import { getErrorMessage } from "../utils/error"
 import { accountStorage } from "./accountStorage"
@@ -57,7 +57,7 @@ class AutoRefreshService {
       }, intervalMs)
 
       console.log(
-        `[AutoRefresh] 自动刷新已启动，间隔: ${preferences.accountAutoRefresh.interval}秒`
+        `[AutoRefresh] 自动刷新已启动，间隔: ${preferences.accountAutoRefresh.interval}秒`,
       )
     } catch (error) {
       console.error("[AutoRefresh] 设置自动刷新失败:", error)
@@ -74,7 +74,7 @@ class AutoRefreshService {
       // 直接调用accountStorage的刷新方法
       const result = await accountStorage.refreshAllAccounts(false)
       console.log(
-        `[AutoRefresh] 后台刷新完成 - 成功: ${result.success}, 失败: ${result.failed}`
+        `[AutoRefresh] 后台刷新完成 - 成功: ${result.success}, 失败: ${result.failed}`,
       )
 
       // 通知前端更新（如果popup是打开的）
@@ -93,7 +93,7 @@ class AutoRefreshService {
       console.log("[AutoRefresh] 执行立即刷新")
       const result = await accountStorage.refreshAllAccounts(true)
       console.log(
-        `[AutoRefresh] 立即刷新完成 - 成功: ${result.success}, 失败: ${result.failed}`
+        `[AutoRefresh] 立即刷新完成 - 成功: ${result.success}, 失败: ${result.failed}`,
       )
       return result
     } catch (error) {
@@ -135,7 +135,7 @@ class AutoRefreshService {
   getStatus() {
     return {
       isRunning: this.refreshTimer !== null,
-      isInitialized: this.isInitialized
+      isInitialized: this.isInitialized,
     }
   }
 
@@ -148,13 +148,13 @@ class AutoRefreshService {
       browser.runtime
         .sendMessage({
           type: "AUTO_REFRESH_UPDATE",
-          payload: { type, data }
+          payload: { type, data },
         })
         .catch((error) => {
           // 静默处理"没有接收者"的错误（popup可能没打开）
           if (
             String(error?.message || "").includes(
-              "receiving end does not exist"
+              "receiving end does not exist",
             )
           ) {
             console.log("[AutoRefresh] 前端未打开，跳过通知")
@@ -185,7 +185,7 @@ export const autoRefreshService = new AutoRefreshService()
 // 消息处理器
 export const handleAutoRefreshMessage = async (
   request: any,
-  sendResponse: (response: any) => void
+  sendResponse: (response: any) => void,
 ) => {
   try {
     switch (request.action) {

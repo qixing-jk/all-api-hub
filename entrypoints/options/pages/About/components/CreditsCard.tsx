@@ -19,7 +19,8 @@ const CreditsCard = () => {
               <Badge
                 variant="destructive"
                 size="sm"
-                className="bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-900/50 dark:text-red-300 dark:hover:bg-red-900/70">
+                className="bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-900/50 dark:text-red-300 dark:hover:bg-red-900/70"
+              >
                 Made with ❤️
               </Badge>
               <Badge variant="secondary" size="sm">

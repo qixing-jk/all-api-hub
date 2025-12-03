@@ -1,20 +1,27 @@
 import { accountStorage } from "~/services/accountStorage"
 import { hasCookieInterceptorPermissions } from "~/services/permissions/permissionManager"
 import { type SiteAccount } from "~/types"
-import { isFirefox } from "~/utils/browser.ts"
+import { isFirefox } from "~/utils/browser"
 import {
   registerWebRequestInterceptor,
-  setupWebRequestInterceptor
+  setupWebRequestInterceptor,
 } from "~/utils/cookieHelper"
 
 export async function checkCookieInterceptorRequirement(): Promise<boolean> {
-  const granted = await hasCookieInterceptorPermissions()
-  if (!granted) {
-    console.warn(
-      "[Background] Required optional permissions (cookies/webRequest) are missing; skip cookie interception"
-    )
+  // 仅 Firefox 使用这个功能
+  if (isFirefox()) {
+    // 检查权限
+    const granted = await hasCookieInterceptorPermissions()
+    if (!granted) {
+      console.warn(
+        "[Background] Required optional permissions (cookies/webRequest) are missing; skip cookie interception",
+      )
+    }
+    return granted
   }
-  return granted && isFirefox()
+
+  // 非 Firefox 不需要拦截器
+  return false
 }
 
 // 辅助函数：从账号列表提取 站点的 URL 模式
@@ -27,7 +34,7 @@ function extractAccountUrlPatterns(accounts: SiteAccount[]): string[] {
       } catch {
         console.warn(
           `[Background] 账户 ${acc.site_name} 的 URL 无效：`,
-          acc.site_url
+          acc.site_url,
         )
         return null
       }
@@ -68,7 +75,7 @@ async function updateCookieInterceptor(): Promise<void> {
 
 function handleStorageChanged(
   changes: Record<string, unknown>,
-  areaName: string
+  areaName: string,
 ) {
   if (areaName === "local" && (changes as any).site_accounts) {
     console.log("[Background] 账户配置已变更，正在更新拦截器")

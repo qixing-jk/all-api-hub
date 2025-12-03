@@ -27,7 +27,8 @@ function PopupContent() {
 
   return (
     <div
-      className={`${popupWidthClass} ${popupHeightClass} flex flex-col bg-white dark:bg-dark-bg-primary`}>
+      className={`${popupWidthClass} ${popupHeightClass} dark:bg-dark-bg-primary flex flex-col bg-white`}
+    >
       <HeaderSection />
 
       <div className="flex-1 overflow-y-auto">

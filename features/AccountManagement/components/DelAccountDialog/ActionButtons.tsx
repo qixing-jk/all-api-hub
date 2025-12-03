@@ -10,7 +10,7 @@ interface ActionButtonsProps {
 
 export const ActionButtons: FC<ActionButtonsProps> = ({
   onClose,
-  onDelete
+  onDelete,
 }) => {
   const { t } = useTranslation(["ui", "common"])
 
@@ -20,14 +20,16 @@ export const ActionButtons: FC<ActionButtonsProps> = ({
         type="button"
         onClick={onClose}
         variant="secondary"
-        className="flex-1">
+        className="flex-1"
+      >
         {t("common:actions.cancel")}
       </Button>
       <Button
         type="button"
         onClick={onDelete}
         variant="destructive"
-        className="flex-1">
+        className="flex-1"
+      >
         {t("ui:dialog.delete.confirmDelete")}
       </Button>
     </div>

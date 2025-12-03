@@ -20,7 +20,7 @@ interface ModalProps {
 const sizeMap: Record<Size, string> = {
   sm: "max-w-sm",
   md: "max-w-md",
-  lg: "max-w-2xl"
+  lg: "max-w-2xl",
 }
 
 export function Modal({
@@ -33,7 +33,7 @@ export function Modal({
   showCloseButton = true,
   closeOnEsc = true,
   closeOnBackdropClick = true,
-  size = "md"
+  size = "md",
 }: ModalProps) {
   // Intercept onKeyDown to optionally prevent Escape from closing
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -61,7 +61,8 @@ export function Modal({
       <Dialog
         onClose={onClose}
         className="relative z-50"
-        onKeyDown={handleKeyDown}>
+        onKeyDown={handleKeyDown}
+      >
         {/* backdrop */}
         <Transition.Child
           as={Fragment}
@@ -70,7 +71,8 @@ export function Modal({
           enterTo="opacity-100"
           leave="ease-in duration-200"
           leaveFrom="opacity-100"
-          leaveTo="opacity-0">
+          leaveTo="opacity-0"
+        >
           <div
             className="fixed inset-0 bg-black/30 backdrop-blur-sm"
             aria-hidden="true"
@@ -86,14 +88,16 @@ export function Modal({
             enterTo="opacity-100 scale-100 translate-y-0"
             leave="ease-in duration-200"
             leaveFrom="opacity-100 scale-100 translate-y-0"
-            leaveTo="opacity-0 scale-95 translate-y-4">
+            leaveTo="opacity-0 scale-95 translate-y-4"
+          >
             <Dialog.Panel className={panelBaseClass}>
               {/* close button */}
               {showCloseButton && (
                 <button
                   onClick={onClose}
                   aria-label="Close"
-                  className="dark:hover:bg-dark-bg-tertiary dark:hover:text-dark-text-secondary absolute top-4 right-4 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600">
+                  className="dark:hover:bg-dark-bg-tertiary dark:hover:text-dark-text-secondary absolute top-4 right-4 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+                >
                   <XMarkIcon className="h-5 w-5" />
                 </button>
               )}

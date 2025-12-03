@@ -2,7 +2,7 @@ import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { useChannelForm } from "~/components/ChannelDialog/hooks/useChannelForm.ts"
+import { useChannelForm } from "~/components/ChannelDialog/hooks/useChannelForm"
 import {
   Button,
   IconButton,
@@ -14,16 +14,16 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
 } from "~/components/ui"
-import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes.ts"
-import { ChannelType, ChannelTypeOptions } from "~/constants/newApi.ts"
+import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
+import { ChannelType, ChannelTypeOptions } from "~/constants/newApi"
 import {
   CHANNEL_STATUS,
   type ChannelFormData,
   type ChannelStatus,
-  type NewApiChannel
-} from "~/types/newapi.ts"
+  type NewApiChannel,
+} from "~/types/newapi"
 
 export interface ChannelDialogProps {
   isOpen: boolean
@@ -44,7 +44,7 @@ export function ChannelDialog({
   onSuccess,
   initialValues,
   initialModels,
-  initialGroups
+  initialGroups,
 }: ChannelDialogProps) {
   const { t } = useTranslation(["channelDialog", "common"])
   const [showKey, setShowKey] = useState(false)
@@ -61,7 +61,7 @@ export function ChannelDialog({
     availableGroups,
     availableModels,
     isKeyFieldRequired,
-    isBaseUrlRequired
+    isBaseUrlRequired,
   } = useChannelForm({
     mode,
     channel,
@@ -70,13 +70,13 @@ export function ChannelDialog({
     onSuccess,
     initialValues,
     initialModels,
-    initialGroups
+    initialGroups,
   })
 
   const handleSelectAllModels = () => {
     updateField(
       "models",
-      availableModels.map((m) => m.value)
+      availableModels.map((m) => m.value),
     )
   }
 
@@ -103,7 +103,7 @@ export function ChannelDialog({
         {mode === DIALOG_MODES.ADD
           ? t(
               "channelDialog:description.add",
-              "Create a new channel for your API aggregator"
+              "Create a new channel for your API aggregator",
             )
           : t("channelDialog:description.edit", "Update channel settings")}
       </p>
@@ -116,14 +116,16 @@ export function ChannelDialog({
         variant="outline"
         onClick={onClose}
         disabled={isSaving}
-        type="button">
+        type="button"
+      >
         {t("common:actions.cancel", "Cancel")}
       </Button>
       <Button
         onClick={handleSubmit}
         disabled={!isFormValid || isSaving}
         loading={isSaving}
-        type="submit">
+        type="submit"
+      >
         {mode === DIALOG_MODES.ADD
           ? t("channelDialog:actions.create", "Create Channel")
           : t("channelDialog:actions.update", "Update Channel")}
@@ -139,7 +141,8 @@ export function ChannelDialog({
       footer={footer}
       size="lg"
       closeOnBackdropClick={!isSaving}
-      closeOnEsc={!isSaving}>
+      closeOnEsc={!isSaving}
+    >
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Channel Name */}
         <div>
@@ -172,12 +175,13 @@ export function ChannelDialog({
               handleTypeChange(Number(value) as ChannelType)
             }
             disabled={isSaving || mode === DIALOG_MODES.EDIT}
-            required>
+            required
+          >
             <SelectTrigger id="channel-type">
               <SelectValue
                 placeholder={t(
                   "channelDialog:fields.type.placeholder",
-                  "Select a type"
+                  "Select a type",
                 )}
               />
             </SelectTrigger>
@@ -218,7 +222,8 @@ export function ChannelDialog({
                     : t("channelDialog:actions.showKey", "Show Key")
                 }
                 type="button"
-                disabled={isSaving}>
+                disabled={isSaving}
+              >
                 {showKey ? (
                   <EyeSlashIcon className="h-4 w-4" />
                 ) : (
@@ -259,7 +264,8 @@ export function ChannelDialog({
                 disabled={
                   isSaving || isLoadingModels || availableModels.length === 0
                 }
-                type="button">
+                type="button"
+              >
                 {t("channelDialog:actions.selectAll", "Select All")}
               </Button>
               <Button
@@ -269,7 +275,8 @@ export function ChannelDialog({
                 disabled={
                   isSaving || isLoadingModels || availableModels.length === 0
                 }
-                type="button">
+                type="button"
+              >
                 {t("channelDialog:actions.inverse", "Inverse")}
               </Button>
               <Button
@@ -279,7 +286,8 @@ export function ChannelDialog({
                 disabled={
                   isSaving || isLoadingModels || formData.models.length === 0
                 }
-                type="button">
+                type="button"
+              >
                 {t("channelDialog:actions.deselectAll", "Deselect All")}
               </Button>
             </div>
@@ -319,7 +327,7 @@ export function ChannelDialog({
           <p className="dark:text-dark-text-secondary mt-1 text-xs text-gray-500">
             {t(
               "channelDialog:fields.groups.hint",
-              "Groups from your New API configuration"
+              "Groups from your New API configuration",
             )}
           </p>
         </div>
@@ -349,7 +357,7 @@ export function ChannelDialog({
               <p className="dark:text-dark-text-secondary mt-1 text-xs text-gray-500">
                 {t(
                   "channelDialog:fields.priority.hint",
-                  "Higher priority channels are used first"
+                  "Higher priority channels are used first",
                 )}
               </p>
             </div>
@@ -373,7 +381,7 @@ export function ChannelDialog({
               <p className="dark:text-dark-text-secondary mt-1 text-xs text-gray-500">
                 {t(
                   "channelDialog:fields.weight.hint",
-                  "Weight for load balancing (0 = equal distribution)"
+                  "Weight for load balancing (0 = equal distribution)",
                 )}
               </p>
             </div>
@@ -392,7 +400,8 @@ export function ChannelDialog({
                 onValueChange={(value) =>
                   updateField("status", Number(value) as ChannelStatus)
                 }
-                disabled={isSaving}>
+                disabled={isSaving}
+              >
                 <SelectTrigger id="channel-status">
                   <SelectValue />
                 </SelectTrigger>

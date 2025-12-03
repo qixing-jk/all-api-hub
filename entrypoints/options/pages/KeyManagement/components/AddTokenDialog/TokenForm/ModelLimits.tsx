@@ -18,7 +18,7 @@ export function ModelLimits({
   modelLimits,
   availableModels,
   setFormData,
-  handleModelLimitsChange
+  handleModelLimitsChange,
 }: ModelLimitsProps) {
   const { t } = useTranslation("keyManagement")
 
@@ -34,14 +34,15 @@ export function ModelLimits({
             setFormData((prev) => ({
               ...prev,
               modelLimitsEnabled: enabled,
-              modelLimits: enabled ? prev.modelLimits : []
+              modelLimits: enabled ? prev.modelLimits : [],
             }))
           }}
           className={`${
             modelLimitsEnabled
               ? "bg-blue-600"
               : "dark:bg-dark-bg-tertiary bg-gray-200"
-          } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none`}>
+          } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none`}
+        >
           <span
             className={`${
               modelLimitsEnabled ? "translate-x-6" : "translate-x-1"
@@ -55,7 +56,7 @@ export function ModelLimits({
           <MultiSelect
             options={availableModels.map((model) => ({
               value: model,
-              label: model
+              label: model,
             }))}
             selected={modelLimits}
             onChange={handleModelLimitsChange}

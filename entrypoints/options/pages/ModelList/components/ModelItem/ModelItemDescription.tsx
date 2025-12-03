@@ -9,7 +9,7 @@ interface ModelItemDescriptionProps {
 
 export const ModelItemDescription: React.FC<ModelItemDescriptionProps> = ({
   model,
-  isAvailableForUser
+  isAvailableForUser,
 }) => {
   if (!model.model_description) {
     return null
@@ -20,15 +20,16 @@ export const ModelItemDescription: React.FC<ModelItemDescriptionProps> = ({
       <p
         className={`text-sm leading-relaxed ${
           isAvailableForUser
-            ? "text-gray-600 dark:text-dark-text-secondary"
-            : "text-gray-400 dark:text-dark-text-tertiary"
+            ? "dark:text-dark-text-secondary text-gray-600"
+            : "dark:text-dark-text-tertiary text-gray-400"
         } overflow-hidden`}
         style={{
           display: "-webkit-box",
           WebkitLineClamp: 2,
-          WebkitBoxOrient: "vertical"
+          WebkitBoxOrient: "vertical",
         }}
-        title={model.model_description}>
+        title={model.model_description}
+      >
         {model.model_description}
       </p>
     </div>

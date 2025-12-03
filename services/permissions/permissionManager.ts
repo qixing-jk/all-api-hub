@@ -4,7 +4,7 @@ import {
   onPermissionsAdded,
   onPermissionsRemoved,
   removePermissions,
-  requestPermissions
+  requestPermissions,
 } from "~/utils/browserApi"
 
 export type ManifestPermissions = browser._manifest.Permission
@@ -21,7 +21,7 @@ export const OPTIONAL_PERMISSIONS: ManifestOptionalPermissions[] =
 export const COOKIE_INTERCEPTOR_PERMISSIONS: ManifestOptionalPermissions[] = [
   "cookies",
   "webRequest",
-  "webRequestBlocking"
+  "webRequestBlocking",
 ]
 
 export async function hasCookieInterceptorPermissions(): Promise<boolean> {
@@ -38,36 +38,36 @@ export const OPTIONAL_PERMISSION_DEFINITIONS: PermissionDefinition[] =
   OPTIONAL_PERMISSIONS.map((id) => ({
     id,
     titleKey: `permissions.items.${id}.title`,
-    descriptionKey: `permissions.items.${id}.description`
+    descriptionKey: `permissions.items.${id}.description`,
   }))
 
 export async function hasPermission(
-  id: ManifestOptionalPermissions
+  id: ManifestOptionalPermissions,
 ): Promise<boolean> {
   return await containsPermissions({ permissions: [id] })
 }
 
 export async function hasPermissions(
-  ids: ManifestOptionalPermissions[]
+  ids: ManifestOptionalPermissions[],
 ): Promise<boolean> {
   if (ids.length === 0) return true
   return await containsPermissions({ permissions: ids })
 }
 
 export async function requestPermission(
-  id: ManifestOptionalPermissions
+  id: ManifestOptionalPermissions,
 ): Promise<boolean> {
   return await requestPermissions({ permissions: [id] })
 }
 
 export async function removePermission(
-  id: ManifestOptionalPermissions
+  id: ManifestOptionalPermissions,
 ): Promise<boolean> {
   return await removePermissions({ permissions: [id] })
 }
 
 export async function ensurePermissions(
-  ids: ManifestOptionalPermissions[]
+  ids: ManifestOptionalPermissions[],
 ): Promise<boolean> {
   const missing: ManifestOptionalPermissions[] = []
 
@@ -92,7 +92,9 @@ export function onOptionalPermissionsChanged(callback: () => void): () => void {
   const unsubscribeAdded = onPermissionsAdded((permissions) => {
     if (
       permissions.permissions?.some((permission) =>
-        OPTIONAL_PERMISSIONS.includes(permission as ManifestOptionalPermissions)
+        OPTIONAL_PERMISSIONS.includes(
+          permission as ManifestOptionalPermissions,
+        ),
       )
     ) {
       callback()
@@ -102,7 +104,9 @@ export function onOptionalPermissionsChanged(callback: () => void): () => void {
   const unsubscribeRemoved = onPermissionsRemoved((permissions) => {
     if (
       permissions.permissions?.some((permission) =>
-        OPTIONAL_PERMISSIONS.includes(permission as ManifestOptionalPermissions)
+        OPTIONAL_PERMISSIONS.includes(
+          permission as ManifestOptionalPermissions,
+        ),
       )
     ) {
       callback()

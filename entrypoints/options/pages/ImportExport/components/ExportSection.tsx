@@ -8,13 +8,13 @@ import {
   CardHeader,
   CardItem,
   CardList,
-  CardTitle
+  CardTitle,
 } from "~/components/ui"
 
 import {
   handleExportAccounts,
   handleExportAll,
-  handleExportPreferences
+  handleExportPreferences,
 } from "../utils"
 
 interface ExportSectionProps {
@@ -47,7 +47,8 @@ const ExportSection = ({ isExporting, setIsExporting }: ExportSectionProps) => {
                 disabled={isExporting}
                 variant="success"
                 size="sm"
-                loading={isExporting}>
+                loading={isExporting}
+              >
                 {isExporting
                   ? t("common:status.exporting")
                   : t("common:actions.export")}
@@ -66,7 +67,8 @@ const ExportSection = ({ isExporting, setIsExporting }: ExportSectionProps) => {
                 disabled={isExporting}
                 variant="default"
                 size="sm"
-                loading={isExporting}>
+                loading={isExporting}
+              >
                 {isExporting
                   ? t("common:status.exporting")
                   : t("common:actions.export")}
@@ -85,7 +87,8 @@ const ExportSection = ({ isExporting, setIsExporting }: ExportSectionProps) => {
                 disabled={isExporting}
                 variant="secondary"
                 size="sm"
-                loading={isExporting}>
+                loading={isExporting}
+              >
                 {isExporting
                   ? t("common:status.exporting")
                   : t("common:actions.export")}

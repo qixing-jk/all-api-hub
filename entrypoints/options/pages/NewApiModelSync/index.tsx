@@ -11,7 +11,7 @@ import type { NewApiChannel } from "~/types"
 import type {
   ExecutionItemResult,
   ExecutionProgress,
-  ExecutionResult
+  ExecutionResult,
 } from "~/types/newApiModelSync"
 import { sendRuntimeMessage } from "~/utils/browserApi"
 
@@ -25,23 +25,23 @@ import StatisticsCard from "./components/StatisticsCard"
 
 const TAB_INDEX = {
   history: 0,
-  manual: 1
+  manual: 1,
 } as const
 
 export default function NewApiModelSync() {
   const { t } = useTranslation("newApiModelSync")
   const hasInitializedTab = useRef(false)
   const [lastExecution, setLastExecution] = useState<ExecutionResult | null>(
-    null
+    null,
   )
   const [progress, setProgress] = useState<ExecutionProgress | null>(null)
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all")
   const [searchKeyword, setSearchKeyword] = useState("")
   const [historySelectedIds, setHistorySelectedIds] = useState<Set<number>>(
-    new Set()
+    new Set(),
   )
   const [manualSelectedIds, setManualSelectedIds] = useState<Set<number>>(
-    new Set()
+    new Set(),
   )
   const [isLoading, setIsLoading] = useState(true)
   const [runningChannelId, setRunningChannelId] = useState<number | null>(null)
@@ -57,7 +57,7 @@ export default function NewApiModelSync() {
     try {
       setIsLoading(true)
       const response = await sendRuntimeMessage({
-        action: "newApiModelSync:getLastExecution"
+        action: "newApiModelSync:getLastExecution",
       })
 
       if (response.success) {
@@ -73,7 +73,7 @@ export default function NewApiModelSync() {
   const loadProgress = useCallback(async () => {
     try {
       const response = await sendRuntimeMessage({
-        action: "newApiModelSync:getProgress"
+        action: "newApiModelSync:getProgress",
       })
 
       if (response.success) {
@@ -89,7 +89,7 @@ export default function NewApiModelSync() {
       setIsChannelsLoading(true)
       setChannelsError(null)
       const response = await sendRuntimeMessage({
-        action: "newApiModelSync:listChannels"
+        action: "newApiModelSync:listChannels",
       })
 
       if (response.success) {
@@ -102,8 +102,8 @@ export default function NewApiModelSync() {
       setChannelsError(message)
       toast.error(
         t("messages.error.loadFailed", {
-          error: message
-        })
+          error: message,
+        }),
       )
     } finally {
       setIsChannelsLoading(false)
@@ -146,7 +146,7 @@ export default function NewApiModelSync() {
 
     hasInitializedTab.current = true
     setSelectedTab(
-      lastExecution?.items?.length ? TAB_INDEX.history : TAB_INDEX.manual
+      lastExecution?.items?.length ? TAB_INDEX.history : TAB_INDEX.manual,
     )
   }, [isLoading, lastExecution?.items?.length])
 
@@ -164,21 +164,21 @@ export default function NewApiModelSync() {
     hasAttemptedChannelsLoad,
     isChannelsLoading,
     loadChannels,
-    selectedTab
+    selectedTab,
   ])
 
   const handleRunAll = async () => {
     try {
       const response = await sendRuntimeMessage({
-        action: "newApiModelSync:triggerAll"
+        action: "newApiModelSync:triggerAll",
       })
 
       if (response.success) {
         toast.success(
           t("messages.success.syncCompleted", {
             success: response.data.statistics.successCount,
-            total: response.data.statistics.total
-          })
+            total: response.data.statistics.total,
+          }),
         )
         setLastExecution(response.data)
       } else {
@@ -201,15 +201,15 @@ export default function NewApiModelSync() {
     try {
       const response = await sendRuntimeMessage({
         action: "newApiModelSync:triggerSelected",
-        channelIds: Array.from(selectedSet)
+        channelIds: Array.from(selectedSet),
       })
 
       if (response.success) {
         toast.success(
           t("messages.success.syncCompleted", {
             success: response.data.statistics.successCount,
-            total: response.data.statistics.total
-          })
+            total: response.data.statistics.total,
+          }),
         )
         setLastExecution(response.data)
         if (source === "history") {
@@ -228,15 +228,15 @@ export default function NewApiModelSync() {
   const handleRetryFailed = async () => {
     try {
       const response = await sendRuntimeMessage({
-        action: "newApiModelSync:triggerFailedOnly"
+        action: "newApiModelSync:triggerFailedOnly",
       })
 
       if (response.success) {
         toast.success(
           t("messages.success.syncCompleted", {
             success: response.data.statistics.successCount,
-            total: response.data.statistics.total
-          })
+            total: response.data.statistics.total,
+          }),
         )
         setLastExecution(response.data)
       } else {
@@ -257,7 +257,7 @@ export default function NewApiModelSync() {
     try {
       const response = await sendRuntimeMessage({
         action: "newApiModelSync:triggerSelected",
-        channelIds: [channelId]
+        channelIds: [channelId],
       })
 
       if (response.success) {
@@ -268,14 +268,14 @@ export default function NewApiModelSync() {
             toast.success(
               t("messages.success.syncCompleted", {
                 success: 1,
-                total: 1
-              })
+                total: 1,
+              }),
             )
           } else {
             toast.error(
               t("messages.error.syncFailed", {
-                error: newItem.message || "Unknown error"
-              })
+                error: newItem.message || "Unknown error",
+              }),
             )
           }
 
@@ -285,7 +285,7 @@ export default function NewApiModelSync() {
             }
 
             const updatedItems = prev.items.map((item) =>
-              item.channelId === channelId ? newItem : item
+              item.channelId === channelId ? newItem : item,
             )
 
             const successCount = updatedItems.filter((item) => item.ok).length
@@ -297,8 +297,8 @@ export default function NewApiModelSync() {
               statistics: {
                 ...prev.statistics,
                 successCount,
-                failureCount
-              }
+                failureCount,
+              },
             }
           })
         }
@@ -315,7 +315,7 @@ export default function NewApiModelSync() {
   const handleHistorySelectAll = (checked: boolean) => {
     if (checked && filteredItems) {
       setHistorySelectedIds(
-        new Set(filteredItems.map((item) => item.channelId))
+        new Set(filteredItems.map((item) => item.channelId)),
       )
     } else {
       setHistorySelectedIds(new Set())
@@ -357,7 +357,7 @@ export default function NewApiModelSync() {
       ? channels.filter(
           (channel) =>
             channel.name.toLowerCase().includes(keyword) ||
-            channel.id.toString().includes(keyword)
+            channel.id.toString().includes(keyword),
         )
       : channels
 
@@ -366,7 +366,7 @@ export default function NewApiModelSync() {
       channelName: channel.name,
       ok: true,
       attempts: 0,
-      finishedAt: 0
+      finishedAt: 0,
     }))
   }, [channels, manualSearchKeyword])
 
@@ -408,7 +408,8 @@ export default function NewApiModelSync() {
                   ? "bg-white text-blue-700 shadow dark:bg-gray-900 dark:text-blue-400"
                   : "text-gray-600 hover:text-gray-900 dark:text-gray-300"
               }`
-            }>
+            }
+          >
             {t(`execution.tabs.${key as "history" | "manual"}`)}
           </Tab>
         ))}
@@ -477,7 +478,8 @@ export default function NewApiModelSync() {
                   disabled={
                     (progress?.isRunning ?? false) ||
                     manualSelectedIds.size === 0
-                  }>
+                  }
+                >
                   {t("execution.actions.runSelected")} ({manualSelectedIds.size}
                   )
                 </Button>
@@ -485,7 +487,8 @@ export default function NewApiModelSync() {
                   onClick={() => void loadChannels()}
                   variant="ghost"
                   disabled={isChannelsLoading}
-                  leftIcon={<RefreshCcw className="h-4 w-4" />}>
+                  leftIcon={<RefreshCcw className="h-4 w-4" />}
+                >
                   {t("execution.actions.refresh")}
                 </Button>
               </div>
@@ -508,7 +511,7 @@ export default function NewApiModelSync() {
                   status: false,
                   message: false,
                   attempts: false,
-                  finishedAt: false
+                  finishedAt: false,
                 }}
               />
             ) : (
@@ -522,7 +525,7 @@ export default function NewApiModelSync() {
                 icon={<MagnifyingGlassIcon className="h-12 w-12" />}
                 action={{
                   label: t("execution.manual.reload"),
-                  onClick: () => void loadChannels()
+                  onClick: () => void loadChannels(),
                 }}
               />
             )}

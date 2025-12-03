@@ -5,7 +5,7 @@ interface RedemptionLoadingToastProps {
 }
 
 export const RedemptionLoadingToast: React.FC<RedemptionLoadingToastProps> = ({
-  message
+  message,
 }) => {
   return (
     <div className="pointer-events-auto w-full rounded-2xl border border-blue-200/70 bg-white/95 p-4 text-blue-900 shadow-xl ring-1 shadow-blue-500/20 ring-blue-100/80 dark:border-blue-500/30 dark:bg-slate-900/95 dark:text-blue-100 dark:ring-blue-500/40">

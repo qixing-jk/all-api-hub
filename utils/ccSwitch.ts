@@ -80,7 +80,7 @@ export function openInCCSwitch(options: OpenInCCSwitchOptions) {
     notes,
     name,
     homepage: homepageOverride,
-    endpoint: endpointOverride
+    endpoint: endpointOverride,
   } = options
 
   if (!account || !token) {
@@ -117,7 +117,7 @@ export function openInCCSwitch(options: OpenInCCSwitchOptions) {
     endpoint,
     apiKey: token.key,
     model,
-    notes
+    notes,
   })
 
   try {

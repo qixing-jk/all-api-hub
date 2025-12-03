@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react"
 
-import "~/utils/i18n.ts"
+import "~/utils/i18n"
 import "~/styles/style.css"
 
 import { userPreferences } from "~/services/userPreferences"
@@ -23,7 +23,7 @@ export const ContentReactRoot: React.FC = () => {
         setThemeMode(mode)
         if (mode === "system") {
           const isDark = window.matchMedia(
-            "(prefers-color-scheme: dark)"
+            "(prefers-color-scheme: dark)",
           ).matches
           setResolvedTheme(isDark ? "dark" : "light")
         } else {
@@ -32,7 +32,7 @@ export const ContentReactRoot: React.FC = () => {
       } catch (error) {
         console.warn(
           "[RedemptionAssist][Content] Failed to load theme preferences:",
-          error
+          error,
         )
       }
     }

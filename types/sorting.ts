@@ -7,7 +7,7 @@ export enum SortingCriteriaType {
   CUSTOM_CHECK_IN_URL = "custom_check_in_url",
   CUSTOM_REDEEM_URL = "custom_redeem_url",
   MATCHED_OPEN_TABS = "matched_open_tabs",
-  USER_SORT_FIELD = "user_sort_field"
+  USER_SORT_FIELD = "user_sort_field",
 }
 
 // Interface for sorting field configuration.

@@ -3,36 +3,20 @@ import { ApiError } from "~/services/apiService/common/errors"
 import type {
   ApiResponse,
   LogItem,
-  TodayUsageData
+  TodayUsageData,
 } from "~/services/apiService/common/type"
-import {
-  COOKIE_INTERCEPTOR_PERMISSIONS,
-  hasCookieInterceptorPermissions
-} from "~/services/permissions/permissionManager"
-import {
-  DEFAULT_PREFERENCES,
-  userPreferences,
-  type TempWindowFallbackPreferences
-} from "~/services/userPreferences"
 import { AuthTypeEnum } from "~/types"
-import {
-  isExtensionBackground,
-  isExtensionPopup,
-  isExtensionSidePanel,
-  isFirefox,
-  OPTIONS_PAGE_URL
-} from "~/utils/browser.ts"
-import {
-  tempWindowFetch,
-  type TempWindowFetchParams,
-  type TempWindowResponseType
-} from "~/utils/browserApi"
 import {
   addAuthMethodHeader,
   addExtensionHeader,
   AUTH_MODE,
-  AuthMode
-} from "~/utils/cookieHelper.ts"
+  AuthMode,
+} from "~/utils/cookieHelper"
+import {
+  executeWithTempWindowFallback,
+  TempWindowFallbackContext,
+  TempWindowResponseType,
+} from "~/utils/tempWindowFetch"
 import { joinUrl } from "~/utils/url"
 
 /**
@@ -41,11 +25,11 @@ import { joinUrl } from "~/utils/url"
 const createRequestHeaders = async (
   authMode: AuthMode,
   userId?: number | string,
-  accessToken?: string
+  accessToken?: string,
 ): Promise<Record<string, string>> => {
   const baseHeaders = {
     "Content-Type": REQUEST_CONFIG.HEADERS.CONTENT_TYPE,
-    Pragma: REQUEST_CONFIG.HEADERS.PRAGMA
+    Pragma: REQUEST_CONFIG.HEADERS.PRAGMA,
   }
 
   const userHeaders: Record<string, string> = userId
@@ -55,7 +39,7 @@ const createRequestHeaders = async (
         "voapi-user": userId.toString(),
         "User-id": userId.toString(),
         "Rix-Api-User": userId.toString(),
-        "neo-api-user": userId.toString()
+        "neo-api-user": userId.toString(),
       }
     : {}
 
@@ -80,24 +64,24 @@ const createRequestHeaders = async (
 const createBaseRequest = (
   headers: HeadersInit,
   credentials: RequestCredentials,
-  options: RequestInit = {}
+  options: RequestInit = {},
 ): RequestInit => {
   const method = (options.method ?? "GET").toUpperCase()
 
   const defaultHeaders: HeadersInit = {
     ...headers,
     // 非 GET 请求自动加 Content-Type
-    ...(method !== "GET" ? { "Content-Type": "application/json" } : {})
+    ...(method !== "GET" ? { "Content-Type": "application/json" } : {}),
   }
 
   return {
     method,
     headers: {
       ...defaultHeaders,
-      ...(options.headers || {}) // 用户自定义 headers 可覆盖默认值
+      ...(options.headers || {}), // 用户自定义 headers 可覆盖默认值
     },
     credentials,
-    ...options
+    ...options,
   }
 }
 
@@ -106,12 +90,12 @@ const createBaseRequest = (
  */
 const createCookieAuthRequest = async (
   userId: number | string | undefined,
-  options: RequestInit = {}
+  options: RequestInit = {},
 ): Promise<RequestInit> => {
   return createBaseRequest(
     await createRequestHeaders(AUTH_MODE.COOKIE_AUTH_MODE, userId, undefined),
     "include",
-    options
+    options,
   )
 }
 
@@ -121,12 +105,12 @@ const createCookieAuthRequest = async (
 const createTokenAuthRequest = async (
   userId: number | string | undefined,
   accessToken: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
 ): Promise<RequestInit> =>
   createBaseRequest(
     await createRequestHeaders(AUTH_MODE.TOKEN_AUTH_MODE, userId, accessToken),
     "omit",
-    options
+    options,
   )
 
 /**
@@ -150,20 +134,20 @@ export const getTodayTimestampRange = (): { start: number; end: number } => {
  * 聚合使用量数据
  */
 export const aggregateUsageData = (
-  items: LogItem[]
+  items: LogItem[],
 ): Omit<TodayUsageData, "today_requests_count"> => {
   return items.reduce(
     (acc, item) => ({
       today_quota_consumption: acc.today_quota_consumption + (item.quota || 0),
       today_prompt_tokens: acc.today_prompt_tokens + (item.prompt_tokens || 0),
       today_completion_tokens:
-        acc.today_completion_tokens + (item.completion_tokens || 0)
+        acc.today_completion_tokens + (item.completion_tokens || 0),
     }),
     {
       today_quota_consumption: 0,
       today_prompt_tokens: 0,
-      today_completion_tokens: 0
-    }
+      today_completion_tokens: 0,
+    },
   )
 }
 
@@ -176,7 +160,7 @@ const apiRequestData = async <T>(
   url: string,
   options: RequestInit | undefined,
   endpoint: string | undefined,
-  responseType: TempWindowResponseType
+  responseType: TempWindowResponseType,
 ): Promise<T> => {
   if (responseType !== "json") {
     throw new ApiError("仅支持 JSON 响应数据", undefined, endpoint)
@@ -186,7 +170,7 @@ const apiRequestData = async <T>(
     url,
     options,
     endpoint,
-    responseType
+    responseType,
   )) as ApiResponse<T>
 
   if (!res.success || res.data === undefined) {
@@ -214,7 +198,7 @@ const apiRequest = async <T>(
   url: string,
   options: RequestInit | undefined,
   endpoint: string | undefined,
-  responseType: TempWindowResponseType
+  responseType: TempWindowResponseType,
 ): Promise<ApiResponse<T> | T> => {
   const response = await fetch(url, options)
 
@@ -222,7 +206,7 @@ const apiRequest = async <T>(
     throw new ApiError(
       `请求失败: ${response.status}`,
       response.status,
-      endpoint
+      endpoint,
     )
   }
 
@@ -248,9 +232,9 @@ const _fetchApi = async <T>(
     token,
     authType,
     options,
-    responseType = "json"
+    responseType = "json",
   }: FetchApiParams,
-  onlyData: boolean = false
+  onlyData: boolean = false,
 ) => {
   const url = joinUrl(baseUrl, endpoint)
   let authOptions = {}
@@ -273,7 +257,7 @@ const _fetchApi = async <T>(
 
   const fetchOptions = {
     ...authOptions,
-    ...options
+    ...options,
   }
 
   const context: TempWindowFallbackContext = {
@@ -282,7 +266,7 @@ const _fetchApi = async <T>(
     endpoint,
     fetchOptions,
     onlyData,
-    responseType
+    responseType,
   }
 
   return await executeWithTempWindowFallback(context, async () => {
@@ -293,7 +277,7 @@ const _fetchApi = async <T>(
       url,
       fetchOptions,
       endpoint,
-      responseType
+      responseType,
     )
 
     if (responseType === "json") {
@@ -313,7 +297,7 @@ export const fetchApiData = async <T>(params: FetchApiParams): Promise<T> => {
     throw new ApiError(
       "fetchApiData 仅支持 JSON 响应",
       undefined,
-      params.endpoint
+      params.endpoint,
     )
   }
   return (await _fetchApi({ ...params, responseType: "json" }, true)) as T
@@ -321,11 +305,11 @@ export const fetchApiData = async <T>(params: FetchApiParams): Promise<T> => {
 
 export function fetchApi<T>(
   params: FetchApiParams,
-  _normalResponseType: true
+  _normalResponseType: true,
 ): Promise<T>
 export function fetchApi<T>(
   params: FetchApiParams,
-  _normalResponseType?: false
+  _normalResponseType?: false,
 ): Promise<ApiResponse<T>>
 
 /**
@@ -336,264 +320,14 @@ export function fetchApi<T>(
 export async function fetchApi<T>(
   params: FetchApiParams,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _normalResponseType?: boolean
+  _normalResponseType?: boolean,
 ): Promise<T | ApiResponse<T>> {
   return await _fetchApi(params)
 }
 
-const TEMP_WINDOW_FALLBACK_STATUS = new Set([401, 403, 429])
-
-interface TempWindowFallbackContext {
-  baseUrl: string
-  url: string
-  endpoint?: string
-  fetchOptions: RequestInit
-  onlyData: boolean
-  responseType: TempWindowResponseType
-}
-
-function logSkipTempWindowFallback(
-  message: string,
-  context: TempWindowFallbackContext,
-  extra?: Record<string, unknown>
-): void {
-  try {
-    const location = context.endpoint
-      ? `endpoint "${context.endpoint}"`
-      : `url ${context.url}`
-
-    const base = `[API Service] Temp window fallback skipped for ${location}: ${message}`
-
-    if (extra && Object.keys(extra).length > 0) {
-      console.log(base, extra)
-    } else {
-      console.log(base)
-    }
-  } catch {
-    // ignore logging errors
-  }
-}
-
-async function executeWithTempWindowFallback<T>(
-  context: TempWindowFallbackContext,
-  primaryRequest: () => Promise<T | ApiResponse<T>>
-): Promise<T | ApiResponse<T>> {
-  try {
-    return await primaryRequest()
-  } catch (error) {
-    if (!(await shouldUseTempWindowFallback(error, context))) {
-      throw error
-    }
-
-    return await fetchViaTempWindow<T>(context)
-  }
-}
-
-async function shouldUseTempWindowFallback(
-  error: unknown,
-  context: TempWindowFallbackContext
-): Promise<boolean> {
-  if (!(error instanceof ApiError)) {
-    logSkipTempWindowFallback(
-      "Error is not an ApiError instance; treating as normal network/other error.",
-      context,
-      { error }
-    )
-    return false
-  }
-
-  if (!error.statusCode || !TEMP_WINDOW_FALLBACK_STATUS.has(error.statusCode)) {
-    logSkipTempWindowFallback(
-      "HTTP status is not in the fallback set (only 401/403/429 trigger shield).",
-      context,
-      {
-        statusCode: error.statusCode
-      }
-    )
-    return false
-  }
-
-  if (!isHttpUrl(context.baseUrl)) {
-    logSkipTempWindowFallback(
-      "Base URL is not HTTP/HTTPS; temp window fallback only supports http(s).",
-      context,
-      {
-        baseUrl: context.baseUrl
-      }
-    )
-    return false
-  }
-
-  if (!context.fetchOptions) {
-    logSkipTempWindowFallback(
-      "Missing fetch options; cannot safely re-issue request via temp window.",
-      context
-    )
-    return false
-  }
-
-  try {
-    if (typeof window !== "undefined" && isFirefox() && isExtensionPopup()) {
-      logSkipTempWindowFallback(
-        "Running in Firefox popup; temp window fallback is forcibly disabled to avoid closing the popup.",
-        context
-      )
-      return false
-    }
-  } catch {
-    // ignore environment detection errors
-  }
-
-  let prefsFallback: TempWindowFallbackPreferences | undefined
-  try {
-    const prefs = await userPreferences.getPreferences()
-    prefsFallback =
-      (prefs.tempWindowFallback as TempWindowFallbackPreferences | undefined) ??
-      (DEFAULT_PREFERENCES.tempWindowFallback as TempWindowFallbackPreferences)
-  } catch {
-    prefsFallback =
-      DEFAULT_PREFERENCES.tempWindowFallback as TempWindowFallbackPreferences
-  }
-
-  if (!prefsFallback || !prefsFallback.enabled) {
-    logSkipTempWindowFallback(
-      "Temp window shield is disabled or preferences are missing.",
-      context,
-      {
-        enabled: prefsFallback?.enabled ?? null
-      }
-    )
-    return false
-  }
-
-  const hasCookiePermissions = await hasCookieInterceptorPermissions()
-  if (!hasCookiePermissions && isFirefox()) {
-    logSkipTempWindowFallback(
-      "Cookie interceptor permissions not granted; skipping temp window fallback.",
-      context,
-      {
-        permissions: COOKIE_INTERCEPTOR_PERMISSIONS
-      }
-    )
-    return false
-  }
-
-  const isBackground = isExtensionBackground()
-
-  let inPopup = false
-  let inSidePanel = false
-  let inOptions = false
-
-  if (!isBackground) {
-    try {
-      if (isExtensionPopup()) {
-        inPopup = true
-      } else if (isExtensionSidePanel()) {
-        inSidePanel = true
-      } else if (typeof window !== "undefined") {
-        const href = window.location?.href || ""
-        if (href && href.startsWith(OPTIONS_PAGE_URL)) {
-          inOptions = true
-        }
-      }
-    } catch {
-      // ignore environment detection errors
-    }
-  }
-
-  const isAutoRefreshContext = isBackground
-  const isManualRefreshContext = !isBackground
-
-  if (inPopup && !prefsFallback.useInPopup) {
-    logSkipTempWindowFallback(
-      "Popup context is disabled by user shield preferences.",
-      context
-    )
-    return false
-  }
-  if (inSidePanel && !prefsFallback.useInSidePanel) {
-    logSkipTempWindowFallback(
-      "Side panel context is disabled by user shield preferences.",
-      context
-    )
-    return false
-  }
-  if (inOptions && !prefsFallback.useInOptions) {
-    logSkipTempWindowFallback(
-      "Options page context is disabled by user shield preferences.",
-      context
-    )
-    return false
-  }
-
-  if (isAutoRefreshContext && !prefsFallback.useForAutoRefresh) {
-    logSkipTempWindowFallback(
-      "Auto-refresh context is disabled by user shield preferences.",
-      context
-    )
-    return false
-  }
-  if (isManualRefreshContext && !prefsFallback.useForManualRefresh) {
-    logSkipTempWindowFallback(
-      "Manual refresh context is disabled by user shield preferences.",
-      context
-    )
-    return false
-  }
-
-  return true
-}
-
-async function fetchViaTempWindow<T>(
-  context: TempWindowFallbackContext
-): Promise<T | ApiResponse<T>> {
-  const { fetchOptions, responseType } = context
-
-  if (!fetchOptions) {
-    throw new ApiError(
-      "Temp window fetch fallback is not supported for current request",
-      undefined,
-      context.endpoint
-    )
-  }
-
-  const requestPayload: TempWindowFetchParams = {
-    originUrl: context.baseUrl,
-    fetchUrl: context.url,
-    fetchOptions,
-    responseType,
-    requestId: `temp-fetch-${Date.now()}`
-  }
-
-  console.log("[API Service] Using temp window fetch fallback for", context.url)
-
-  const response = await tempWindowFetch(requestPayload)
-
-  console.log("[API Service] Temp window fetch response:", response)
-
-  if (!response.success) {
-    throw new ApiError(
-      response.error || "Temp window fetch failed",
-      response.status,
-      context.endpoint
-    )
-  }
-
-  const responseBody = response.data
-
-  if (responseType === "json") {
-    if (context.onlyData) {
-      return extractDataFromApiResponseBody<T>(responseBody, context.endpoint)
-    }
-    return responseBody as ApiResponse<T>
-  }
-
-  return responseBody as T
-}
-
 async function parseResponseByType<T>(
   response: Response,
-  responseType: TempWindowResponseType
+  responseType: TempWindowResponseType,
 ): Promise<ApiResponse<T> | T> {
   switch (responseType) {
     case "text":
@@ -608,7 +342,7 @@ async function parseResponseByType<T>(
   }
 }
 
-function isHttpUrl(url: string): boolean {
+export function isHttpUrl(url: string): boolean {
   try {
     const parsed = new URL(url)
     return parsed.protocol === "http:" || parsed.protocol === "https:"
@@ -618,7 +352,10 @@ function isHttpUrl(url: string): boolean {
   }
 }
 
-function extractDataFromApiResponseBody<T>(body: any, endpoint?: string): T {
+export function extractDataFromApiResponseBody<T>(
+  body: any,
+  endpoint?: string,
+): T {
   if (!body || typeof body !== "object") {
     throw new ApiError("响应数据格式错误", undefined, endpoint)
   }
@@ -637,7 +374,7 @@ function extractDataFromApiResponseBody<T>(body: any, endpoint?: string): T {
  */
 export function extractAmount(
   text: string,
-  exchangeRate: number
+  exchangeRate: number,
 ): { currencySymbol: string; amount: number } | null {
   // \p{Sc} 支持所有 Unicode 货币符号
   const regex = /([\p{Sc}])\s*([\d,]+(?:\.\d+)?)/u

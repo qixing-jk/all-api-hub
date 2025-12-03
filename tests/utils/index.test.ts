@@ -31,17 +31,17 @@ describe("utils index exports", () => {
         flags: ["a", "b"],
         nested: {
           count: 1,
-          items: [1, 2]
-        }
+          items: [1, 2],
+        },
       }
 
       const source = {
         flags: ["c"],
         nested: {
           count: 2,
-          items: [3]
+          items: [3],
         },
-        extra: true
+        extra: true,
       }
 
       const result = deepOverride(target, source)
@@ -50,7 +50,7 @@ describe("utils index exports", () => {
         name: "base",
         flags: ["c"],
         nested: { count: 2, items: [3] },
-        extra: true
+        extra: true,
       })
       expect(result.flags).toEqual(["c"]) // ensure arrays were replaced
       expect(target.flags).toEqual(["a", "b"]) // ensure immutability
@@ -65,13 +65,13 @@ describe("utils index exports", () => {
       const result = deepOverride(target, null, undefined, {
         info: { retries: 3, enabled: true },
         tags: ["y"],
-        another: "field"
+        another: "field",
       })
 
       expect(result).toEqual({
         info: { retries: 3, enabled: true },
         tags: ["y"],
-        another: "field"
+        another: "field",
       })
     })
   })

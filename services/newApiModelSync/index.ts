@@ -2,5 +2,5 @@ export { NewApiModelSyncService } from "./NewApiModelSyncService"
 export { newApiModelSyncStorage } from "./storage"
 export {
   newApiModelSyncScheduler,
-  handleNewApiModelSyncMessage
+  handleNewApiModelSyncMessage,
 } from "./scheduler"

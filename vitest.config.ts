@@ -25,7 +25,7 @@ export default defineConfig({
         "features/**/*.{ts,tsx}",
         "hooks/**/*.{ts,tsx}",
         "services/**/*.{ts,tsx}",
-        "utils/**/*.{ts,tsx}"
+        "utils/**/*.{ts,tsx}",
       ],
       exclude: [
         "**/*.d.ts",
@@ -35,7 +35,7 @@ export default defineConfig({
         "**/dist/**",
         "**/.output/**",
         "**/e2e/**",
-        "**/__tests__/**"
+        "**/__tests__/**",
       ],
       // Coverage thresholds (can be adjusted - starting with lower targets)
       thresholds: {
@@ -43,9 +43,9 @@ export default defineConfig({
           statements: 5,
           branches: 5,
           functions: 5,
-          lines: 5
-        }
-      }
+          lines: 5,
+        },
+      },
     },
 
     // Exclude patterns
@@ -55,14 +55,14 @@ export default defineConfig({
       "**/dist/**",
       "**/.output/**",
       "**/e2e/**",
-      "**/*.config.*"
-    ]
+      "**/*.config.*",
+    ],
   },
 
   resolve: {
     alias: {
       // Mirror WXT/Vite path aliases
-      "~": path.resolve(rootDir, ".")
-    }
-  }
+      "~": path.resolve(rootDir, "."),
+    },
+  },
 })

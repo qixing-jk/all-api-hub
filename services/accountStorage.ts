@@ -12,35 +12,35 @@ import {
   type AccountStorageConfig,
   type CurrencyType,
   type DisplaySiteData,
-  type SiteAccount
+  type SiteAccount,
 } from "~/types"
-import { DeepPartial } from "~/types/utils.ts"
+import { DeepPartial } from "~/types/utils"
+import { getErrorMessage } from "~/utils/error"
 
-import { getErrorMessage } from "../utils/error" // 存储键名常量
 import {
   fetchSupportCheckIn,
   fetchTodayIncome,
   refreshAccountData,
-  validateAccountConnection
+  validateAccountConnection,
 } from "./apiService"
 import {
   migrateAccountConfig,
   migrateAccountsConfig,
-  needsConfigMigration
-} from "./configMigration/account/accountDataMigration.ts"
+  needsConfigMigration,
+} from "./configMigration/account/accountDataMigration"
 import { getSiteType } from "./detectSiteType"
 import { userPreferences } from "./userPreferences"
 
 // 存储键名常量
 const ACCOUNT_STORAGE_KEYS = {
-  ACCOUNTS: "site_accounts"
+  ACCOUNTS: "site_accounts",
 } as const
 
 // 默认配置
 const DEFAULT_ACCOUNT_CONFIG: AccountStorageConfig = {
   accounts: [],
   pinnedAccountIds: [],
-  last_updated: Date.now()
+  last_updated: Date.now(),
 }
 
 class AccountStorageService {
@@ -48,7 +48,7 @@ class AccountStorageService {
 
   constructor() {
     this.storage = new Storage({
-      area: "local"
+      area: "local",
     })
   }
 
@@ -62,7 +62,7 @@ class AccountStorageService {
 
       if (migratedCount > 0) {
         console.log(
-          `[AccountStorage] ${migratedCount} accounts migrated, saving updated accounts...`
+          `[AccountStorage] ${migratedCount} accounts migrated, saving updated accounts...`,
         )
         await this.saveAccounts(accounts)
       }
@@ -84,7 +84,7 @@ class AccountStorageService {
 
       if (account && needsConfigMigration(account)) {
         console.log(
-          `[AccountStorage] Migrating single account ${account.id} on fetch.`
+          `[AccountStorage] Migrating single account ${account.id} on fetch.`,
         )
         const migratedAccount = migrateAccountConfig(account)
         await this.updateAccount(id, migratedAccount)
@@ -103,21 +103,21 @@ class AccountStorageService {
    */
   async getAccountByBaseUrlAndUserId(
     baseUrl: string,
-    userId: string | number
+    userId: string | number,
   ): Promise<SiteAccount | null> {
     try {
       console.log(
-        `[AccountStorage] Searching for account with baseUrl: ${baseUrl}, userId: ${userId}`
+        `[AccountStorage] Searching for account with baseUrl: ${baseUrl}, userId: ${userId}`,
       )
       const accounts = await this.getAllAccounts()
       const account = accounts.find(
         (acc) =>
-          acc.site_url === baseUrl && acc.account_info.id.toString() === userId
+          acc.site_url === baseUrl && acc.account_info.id.toString() === userId,
       )
 
       if (account && needsConfigMigration(account)) {
         console.log(
-          `[AccountStorage] Migrating account ${account.id} (baseUrl: ${baseUrl}, userId: ${userId}) on fetch.`
+          `[AccountStorage] Migrating account ${account.id} (baseUrl: ${baseUrl}, userId: ${userId}) on fetch.`,
         )
         const migratedAccount = migrateAccountConfig(account)
         await this.updateAccount(account.id, migratedAccount)
@@ -126,11 +126,11 @@ class AccountStorageService {
 
       if (account) {
         console.log(
-          `[AccountStorage] Found account: ${account.site_name} (id: ${account.id})`
+          `[AccountStorage] Found account: ${account.site_name} (id: ${account.id})`,
         )
       } else {
         console.log(
-          `[AccountStorage] No account found with baseUrl: ${baseUrl}, userId: ${userId}`
+          `[AccountStorage] No account found with baseUrl: ${baseUrl}, userId: ${userId}`,
         )
       }
 
@@ -138,7 +138,7 @@ class AccountStorageService {
     } catch (error) {
       console.error(
         `[AccountStorage] Failed to get account by baseUrl and userId:`,
-        error
+        error,
       )
       return null
     }
@@ -173,7 +173,7 @@ class AccountStorageService {
    * 添加新账号
    */
   async addAccount(
-    accountData: Omit<SiteAccount, "id" | "created_at" | "updated_at">
+    accountData: Omit<SiteAccount, "id" | "created_at" | "updated_at">,
   ): Promise<string> {
     try {
       console.log("[AccountStorage] 开始添加新账号:", accountData.site_name)
@@ -185,7 +185,7 @@ class AccountStorageService {
         ...accountData,
         id: this.generateId(),
         created_at: now,
-        updated_at: now
+        updated_at: now,
       }
 
       accounts.push(newAccount)
@@ -205,7 +205,7 @@ class AccountStorageService {
    */
   async updateAccount(
     id: string,
-    updates: DeepPartial<SiteAccount>
+    updates: DeepPartial<SiteAccount>,
   ): Promise<boolean> {
     try {
       const accounts = await this.getAllAccounts()
@@ -219,7 +219,7 @@ class AccountStorageService {
         {},
         accounts[index], // 原对象
         updates, // 更新数据
-        { updated_at: Date.now() } // 强制更新字段
+        { updated_at: Date.now() }, // 强制更新字段
       )
 
       await this.saveAccounts(accounts)
@@ -241,7 +241,7 @@ class AccountStorageService {
       if (filteredAccounts.length === accounts.length) {
         console.error(
           `账号 ${id} 不存在，当前账号列表:`,
-          accounts.map((acc) => ({ id: acc.id, name: acc.site_name }))
+          accounts.map((acc) => ({ id: acc.id, name: acc.site_name })),
         )
         throw new Error(t("messages:storage.accountNotFound", { id }))
       }
@@ -279,7 +279,7 @@ class AccountStorageService {
       const config = await this.getStorageConfig()
       const uniqueIds = Array.from(new Set(ids))
       const validIds = uniqueIds.filter((id) =>
-        config.accounts.some((account) => account.id === id)
+        config.accounts.some((account) => account.id === id),
       )
       config.pinnedAccountIds = validIds
       config.last_updated = Date.now()
@@ -349,7 +349,7 @@ class AccountStorageService {
    */
   async updateSyncTime(id: string): Promise<boolean> {
     return this.updateAccount(id, {
-      last_sync_time: Date.now()
+      last_sync_time: Date.now(),
     })
   }
 
@@ -372,8 +372,8 @@ class AccountStorageService {
         checkIn: {
           ...currentCheckIn,
           isCheckedInToday: true,
-          lastCheckInDate: todayDate
-        }
+          lastCheckInDate: todayDate,
+        },
       })
     } catch (error) {
       console.error("标记账号为已签到失败:", error)
@@ -428,7 +428,7 @@ class AccountStorageService {
 
       if (await this.shouldSkipRefresh(account, force)) {
         console.log(
-          `[AccountStorage] 账号 ${account.site_name} 刷新间隔未到，跳过刷新`
+          `[AccountStorage] 账号 ${account.site_name} 刷新间隔未到，跳过刷新`,
         )
         return { account, refreshed: false }
       }
@@ -439,16 +439,16 @@ class AccountStorageService {
         account.account_info.id,
         account.account_info.access_token,
         account.checkIn,
-        account.authType
+        account.authType,
       )
 
       // 构建更新数据
       const updateData: Partial<Omit<SiteAccount, "id" | "created_at">> = {
         health: {
           status: result.healthStatus.status,
-          reason: result.healthStatus.message
+          reason: result.healthStatus.message,
         },
-        last_sync_time: Date.now()
+        last_sync_time: Date.now(),
       }
 
       // 如果成功获取数据，更新账号信息
@@ -464,7 +464,7 @@ class AccountStorageService {
             updateData.checkIn = {
               ...account.checkIn,
               isCheckedInToday: false,
-              lastCheckInDate: undefined
+              lastCheckInDate: undefined,
             }
           } else {
             // 保留当前的签到状态（不被刷新覆盖）
@@ -481,7 +481,7 @@ class AccountStorageService {
           today_prompt_tokens: result.data.today_prompt_tokens,
           today_completion_tokens: result.data.today_completion_tokens,
           today_quota_consumption: result.data.today_quota_consumption,
-          today_requests_count: result.data.today_requests_count
+          today_requests_count: result.data.today_requests_count,
         }
       }
 
@@ -490,14 +490,14 @@ class AccountStorageService {
         const todayIncome = await fetchTodayIncome(DisplaySiteData)
         updateData.account_info = {
           ...(updateData.account_info || account.account_info),
-          today_income: todayIncome.today_income
+          today_income: todayIncome.today_income,
         }
       } catch (error) {
         console.error(`获取账号 ${account.site_name} 今日收入失败:`, error)
         // 如果获取收入失败，设置为0
         updateData.account_info = {
           ...(updateData.account_info || account.account_info),
-          today_income: 0
+          today_income: 0,
         }
       }
 
@@ -508,7 +508,7 @@ class AccountStorageService {
       // 记录健康状态变化
       if (account.health?.status !== result.healthStatus.status) {
         console.log(
-          `账号 ${account.site_name} 健康状态变化: ${account.health?.status} -> ${result.healthStatus.status}`
+          `账号 ${account.site_name} 健康状态变化: ${account.health?.status} -> ${result.healthStatus.status}`,
         )
         console.log(`状态详情: ${result.healthStatus.message}`)
       }
@@ -521,9 +521,9 @@ class AccountStorageService {
         await this.updateAccount(id, {
           health: {
             status: SiteHealthStatus.Unknown,
-            reason: getErrorMessage(error)
+            reason: getErrorMessage(error),
           },
-          last_sync_time: Date.now()
+          last_sync_time: Date.now(),
         })
       } catch (updateError) {
         console.error("更新健康状态失败:", updateError)
@@ -544,7 +544,7 @@ class AccountStorageService {
 
     // 使用 Promise.allSettled 来并发刷新，避免单个失败影响其他账号
     const results = await Promise.allSettled(
-      accounts.map((account) => this.refreshAccount(account.id, force))
+      accounts.map((account) => this.refreshAccount(account.id, force)),
     )
 
     results.forEach((result, index) => {
@@ -552,7 +552,7 @@ class AccountStorageService {
         successCount++
         latestSyncTime = Math.max(
           result.value.account?.last_sync_time || 0,
-          latestSyncTime
+          latestSyncTime,
         )
         if (result.value.refreshed) {
           refreshedCount++
@@ -561,7 +561,7 @@ class AccountStorageService {
         failedCount++
         console.error(
           `刷新账号 ${accounts[index].site_name} 失败:`,
-          result.status === "rejected" ? result.reason : "未知错误"
+          result.status === "rejected" ? result.reason : "未知错误",
         )
       }
     })
@@ -570,7 +570,7 @@ class AccountStorageService {
       success: successCount,
       failed: failedCount,
       latestSyncTime,
-      refreshedCount
+      refreshedCount,
     }
   }
 
@@ -597,7 +597,7 @@ class AccountStorageService {
             stats.today_total_completion_tokens +
             account.account_info.today_completion_tokens,
           today_total_income:
-            stats.today_total_income + (account.account_info.today_income || 0)
+            stats.today_total_income + (account.account_info.today_income || 0),
         }),
         {
           total_quota: 0,
@@ -605,8 +605,8 @@ class AccountStorageService {
           today_total_requests: 0,
           today_total_prompt_tokens: 0,
           today_total_completion_tokens: 0,
-          today_total_income: 0
-        }
+          today_total_income: 0,
+        },
       )
     } catch (error) {
       console.error("计算统计信息失败:", error)
@@ -616,7 +616,7 @@ class AccountStorageService {
         today_total_requests: 0,
         today_total_prompt_tokens: 0,
         today_total_completion_tokens: 0,
-        today_total_income: 0
+        today_total_income: 0,
       }
     }
   }
@@ -628,7 +628,7 @@ class AccountStorageService {
    * 转换为展示用的数据格式 (兼容当前 UI)
    */
   convertToDisplayData(
-    input: SiteAccount | SiteAccount[]
+    input: SiteAccount | SiteAccount[],
   ): DisplaySiteData | DisplaySiteData[] {
     const transform = (account: SiteAccount): DisplaySiteData => ({
       id: account.id,
@@ -639,49 +639,49 @@ class AccountStorageService {
           (
             account.account_info.quota /
             UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
-          ).toFixed(2)
+          ).toFixed(2),
         ),
         CNY: parseFloat(
           (
             (account.account_info.quota /
               UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR) *
             account.exchange_rate
-          ).toFixed(2)
-        )
+          ).toFixed(2),
+        ),
       },
       todayConsumption: {
         USD: parseFloat(
           (
             account.account_info.today_quota_consumption /
             UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
-          ).toFixed(2)
+          ).toFixed(2),
         ),
         CNY: parseFloat(
           (
             (account.account_info.today_quota_consumption /
               UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR) *
             account.exchange_rate
-          ).toFixed(2)
-        )
+          ).toFixed(2),
+        ),
       },
       todayIncome: {
         USD: parseFloat(
           (
             (account.account_info.today_income || 0) /
             UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
-          ).toFixed(2)
+          ).toFixed(2),
         ),
         CNY: parseFloat(
           (
             ((account.account_info.today_income || 0) /
               UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR) *
             account.exchange_rate
-          ).toFixed(2)
-        )
+          ).toFixed(2),
+        ),
       },
       todayTokens: {
         upload: account.account_info.today_prompt_tokens,
-        download: account.account_info.today_completion_tokens
+        download: account.account_info.today_completion_tokens,
       },
       health: account.health,
       last_sync_time: account.last_sync_time,
@@ -694,7 +694,7 @@ class AccountStorageService {
       checkIn: account.checkIn,
       can_check_in: account.can_check_in,
       supports_check_in: account.supports_check_in,
-      authType: account.authType || AuthTypeEnum.AccessToken
+      authType: account.authType || AuthTypeEnum.AccessToken,
     })
 
     // 判断是否是数组
@@ -744,7 +744,7 @@ class AccountStorageService {
 
       if (migratedCount > 0) {
         console.log(
-          `[Migration] Upgraded ${migratedCount} imported account(s) to config v1`
+          `[Migration] Upgraded ${migratedCount} imported account(s) to config v1`,
         )
       }
 
@@ -754,11 +754,11 @@ class AccountStorageService {
       if (data.pinnedAccountIds) {
         // Clean up invalid IDs (accounts that don't exist)
         const validPinnedIds = data.pinnedAccountIds.filter((id) =>
-          migratedAccounts.some((account) => account.id === id)
+          migratedAccounts.some((account) => account.id === id),
         )
         await this.setPinnedList(validPinnedIds)
         console.log(
-          `[Import] Imported ${validPinnedIds.length} pinned account(s)`
+          `[Import] Imported ${validPinnedIds.length} pinned account(s)`,
         )
       }
 
@@ -766,7 +766,7 @@ class AccountStorageService {
     } catch (error) {
       console.error(
         "[Migration Error] Import migration failed, restoring from backup:",
-        error
+        error,
       )
       await this.saveAccounts(existingAccounts)
       await this.setPinnedList(existingPinnedIds)
@@ -783,7 +783,7 @@ class AccountStorageService {
   private async getStorageConfig(): Promise<AccountStorageConfig> {
     try {
       const config = (await this.storage.get(
-        ACCOUNT_STORAGE_KEYS.ACCOUNTS
+        ACCOUNT_STORAGE_KEYS.ACCOUNTS,
       )) as AccountStorageConfig
       return config || DEFAULT_ACCOUNT_CONFIG
     } catch (error) {
@@ -799,20 +799,20 @@ class AccountStorageService {
     console.log("[AccountStorage] 开始保存账号数据，数量:", accounts.length)
     const existingConfig = await this.getStorageConfig()
     const filteredPinnedIds = (existingConfig.pinnedAccountIds || []).filter(
-      (id) => accounts.some((account) => account.id === id)
+      (id) => accounts.some((account) => account.id === id),
     )
     const config: AccountStorageConfig = {
       ...existingConfig,
       accounts,
       pinnedAccountIds: filteredPinnedIds,
-      last_updated: Date.now()
+      last_updated: Date.now(),
     }
 
     console.log("[AccountStorage] 保存的配置数据:", {
       accountCount: config.accounts.length,
       pinnedCount: config.pinnedAccountIds?.length || 0,
       last_updated: config.last_updated,
-      storageKey: ACCOUNT_STORAGE_KEYS.ACCOUNTS
+      storageKey: ACCOUNT_STORAGE_KEYS.ACCOUNTS,
     })
 
     await this.storage.set(ACCOUNT_STORAGE_KEYS.ACCOUNTS, config)
@@ -831,7 +831,7 @@ class AccountStorageService {
    */
   private async shouldSkipRefresh(
     account: SiteAccount,
-    force: boolean = false
+    force: boolean = false,
   ): Promise<boolean> {
     if (force) {
       return false // 强制刷新，不跳过
@@ -857,7 +857,7 @@ class AccountStorageService {
   }
 
   private async refreshSiteMetadataIfNeeded(
-    account: SiteAccount
+    account: SiteAccount,
   ): Promise<SiteAccount> {
     const normalizedUrl = this.normalizeBaseUrl(account.site_url)
     if (!normalizedUrl) {
@@ -885,7 +885,7 @@ class AccountStorageService {
       } catch (error) {
         console.warn(
           `[AccountStorage] Failed to detect site type for ${normalizedUrl}:`,
-          error
+          error,
         )
       }
     }
@@ -896,13 +896,13 @@ class AccountStorageService {
         if (typeof support === "boolean") {
           updates.checkIn = {
             ...(account.checkIn ?? {}),
-            enableDetection: support
+            enableDetection: support,
           }
         }
       } catch (error) {
         console.warn(
           `[AccountStorage] Failed to determine check-in support for ${normalizedUrl}:`,
-          error
+          error,
         )
       }
     }
@@ -996,7 +996,7 @@ export const AccountStorageUtils = {
         return {
           text: "警告",
           color: "text-yellow-600",
-          bgColor: "bg-yellow-50"
+          bgColor: "bg-yellow-50",
         }
       case "error":
         return { text: "错误", color: "text-red-600", bgColor: "bg-red-50" }
@@ -1020,10 +1020,10 @@ export const AccountStorageUtils = {
    */
   getStaleAccounts(
     accounts: SiteAccount[],
-    maxAgeMinutes: number = 30
+    maxAgeMinutes: number = 30,
   ): SiteAccount[] {
     return accounts.filter((account) =>
-      this.isAccountStale(account, maxAgeMinutes)
+      this.isAccountStale(account, maxAgeMinutes),
     )
   },
 
@@ -1031,7 +1031,7 @@ export const AccountStorageUtils = {
    * 批量验证账号信息
    */
   async validateAccounts(
-    accounts: SiteAccount[]
+    accounts: SiteAccount[],
   ): Promise<{ valid: SiteAccount[]; invalid: SiteAccount[] }> {
     const valid: SiteAccount[] = []
     const invalid: SiteAccount[] = []
@@ -1041,7 +1041,7 @@ export const AccountStorageUtils = {
         const isValid = await validateAccountConnection(
           account.site_url,
           account.account_info.id,
-          account.account_info.access_token
+          account.account_info.access_token,
         )
         return { account, isValid }
       } catch {
@@ -1061,5 +1061,5 @@ export const AccountStorageUtils = {
     })
 
     return { valid, invalid }
-  }
+  },
 }

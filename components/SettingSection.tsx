@@ -27,7 +27,7 @@ export function SettingSection({
   resetButtonLabel,
   children,
   id,
-  className = ""
+  className = "",
 }: SettingSectionProps) {
   const { t } = useTranslation("settings")
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false)
@@ -77,7 +77,8 @@ export function SettingSection({
               variant="outline"
               size="sm"
               className="shrink-0"
-              leftIcon={<ArrowPathIcon className="h-4 w-4" />}>
+              leftIcon={<ArrowPathIcon className="h-4 w-4" />}
+            >
               {resetButtonLabel || t("common:actions.reset")}
             </Button>
           )}
@@ -103,20 +104,23 @@ export function SettingSection({
             <Button
               onClick={handleResetCancel}
               variant="outline"
-              disabled={isResetting}>
+              disabled={isResetting}
+            >
               {t("common:actions.cancel")}
             </Button>
             <Button
               onClick={handleResetConfirm}
               variant="destructive"
               loading={isResetting}
-              disabled={isResetting}>
+              disabled={isResetting}
+            >
               {isResetting
                 ? t("common:status.resetting")
                 : t("common:actions.reset")}
             </Button>
           </div>
-        }>
+        }
+      >
         <p className="dark:text-dark-text-secondary text-sm text-gray-600">
           {t("messages.resetConfirmDesc", { name: title })}
         </p>

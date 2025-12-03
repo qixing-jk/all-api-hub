@@ -7,7 +7,7 @@ import {
   useIsMobile,
   useIsSmallScreen,
   useIsTablet,
-  useMediaQuery
+  useMediaQuery,
 } from "~/hooks/useMediaQuery"
 
 describe("useMediaQuery", () => {
@@ -25,7 +25,7 @@ describe("useMediaQuery", () => {
       removeEventListener: removeEventListenerMock,
       addListener: vi.fn(),
       removeListener: vi.fn(),
-      dispatchEvent: vi.fn()
+      dispatchEvent: vi.fn(),
     }))
     window.matchMedia = matchMediaMock
   })
@@ -47,7 +47,7 @@ describe("useMediaQuery", () => {
       removeEventListener: removeEventListenerMock,
       addListener: vi.fn(),
       removeListener: vi.fn(),
-      dispatchEvent: vi.fn()
+      dispatchEvent: vi.fn(),
     })
     const { result } = renderHook(() => useMediaQuery("(max-width: 1px)"))
     expect(result.current).toBe(true)
@@ -57,7 +57,7 @@ describe("useMediaQuery", () => {
     renderHook(() => useMediaQuery("(max-width: 1px)"))
     expect(addEventListenerMock).toHaveBeenCalledWith(
       "change",
-      expect.any(Function)
+      expect.any(Function),
     )
   })
 
@@ -66,7 +66,7 @@ describe("useMediaQuery", () => {
     unmount()
     expect(removeEventListenerMock).toHaveBeenCalledWith(
       "change",
-      expect.any(Function)
+      expect.any(Function),
     )
   })
 
@@ -93,7 +93,7 @@ describe("useMediaQuery", () => {
     it("useIsTablet uses correct media query", () => {
       renderHook(() => useIsTablet())
       expect(matchMediaMock).toHaveBeenCalledWith(
-        "(min-width: 768px) and (max-width: 1023px)"
+        "(min-width: 768px) and (max-width: 1023px)",
       )
     })
 

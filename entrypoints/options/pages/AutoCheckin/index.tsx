@@ -13,7 +13,7 @@ import ActionBar from "./components/ActionBar"
 import EmptyResults from "./components/EmptyResults"
 import FilterBar, {
   FILTER_STATUS,
-  type FilterStatus
+  type FilterStatus,
 } from "./components/FilterBar"
 import LoadingSkeleton from "./components/LoadingSkeleton"
 import ResultsTable from "./components/ResultsTable"
@@ -23,13 +23,13 @@ export default function AutoCheckin() {
   const { t } = useTranslation("autoCheckin")
   const [status, setStatus] = useState<AutoCheckinStatus | null>(null)
   const [filterStatus, setFilterStatus] = useState<FilterStatus>(
-    FILTER_STATUS.ALL
+    FILTER_STATUS.ALL,
   )
   const [searchKeyword, setSearchKeyword] = useState("")
   const [isLoading, setIsLoading] = useState(true)
   const [isRunning, setIsRunning] = useState(false)
   const [retryingAccountId, setRetryingAccountId] = useState<string | null>(
-    null
+    null,
   )
   const [openingManualAccountId, setOpeningManualAccountId] = useState<
     string | null
@@ -39,7 +39,7 @@ export default function AutoCheckin() {
     try {
       setIsLoading(true)
       const response = await sendRuntimeMessage({
-        action: "autoCheckin:getStatus"
+        action: "autoCheckin:getStatus",
       })
 
       if (response.success) {
@@ -62,7 +62,7 @@ export default function AutoCheckin() {
       toast.loading(t("messages.loading.running"))
 
       const response = await sendRuntimeMessage({
-        action: "autoCheckin:runNow"
+        action: "autoCheckin:runNow",
       })
 
       toast.dismiss()
@@ -90,7 +90,7 @@ export default function AutoCheckin() {
       setRetryingAccountId(accountId)
       const response = await sendRuntimeMessage({
         action: "autoCheckin:retryAccount",
-        accountId
+        accountId,
       })
 
       if (response.success) {
@@ -98,7 +98,7 @@ export default function AutoCheckin() {
         await loadStatus()
       } else {
         toast.error(
-          t("messages.error.retryFailed", { error: response.error ?? "" })
+          t("messages.error.retryFailed", { error: response.error ?? "" }),
         )
       }
     } catch (error: any) {
@@ -113,7 +113,7 @@ export default function AutoCheckin() {
       setOpeningManualAccountId(accountId)
       const response = await sendRuntimeMessage({
         action: "autoCheckin:getAccountInfo",
-        accountId
+        accountId,
       })
 
       if (!response.success || !response.data) {
@@ -124,7 +124,7 @@ export default function AutoCheckin() {
       await openCheckInPage(displayData)
     } catch (error: any) {
       toast.error(
-        t("messages.error.openManualFailed", { error: error.message })
+        t("messages.error.openManualFailed", { error: error.message }),
       )
     } finally {
       setOpeningManualAccountId(null)

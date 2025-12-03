@@ -1,10 +1,11 @@
 import {
   ArrowsRightLeftIcon,
-  ArrowTopRightOnSquareIcon
+  ArrowTopRightOnSquareIcon,
 } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
 import { Alert, Button, Card, CardContent, Heading4 } from "~/components/ui"
+import { navigateWithinOptionsPage } from "~/utils/navigation"
 
 import WebDAVAutoSyncSettings from "../../ImportExport/components/WebDAVAutoSyncSettings"
 import WebDAVSettings from "../../ImportExport/components/WebDAVSettings"
@@ -13,7 +14,7 @@ export default function DataBackupTab() {
   const { t } = useTranslation("settings")
 
   const handleNavigateToImportExport = () => {
-    window.location.href = browser.runtime.getURL("options.html#importExport")
+    navigateWithinOptionsPage("#importExport")
   }
 
   return (
@@ -34,7 +35,8 @@ export default function DataBackupTab() {
                 variant="default"
                 className="justify-center"
                 leftIcon={<ArrowsRightLeftIcon className="h-5 w-5" />}
-                rightIcon={<ArrowTopRightOnSquareIcon className="h-4 w-4" />}>
+                rightIcon={<ArrowTopRightOnSquareIcon className="h-4 w-4" />}
+              >
                 {t("dataBackup.importExport.openPage")}
               </Button>
             </div>

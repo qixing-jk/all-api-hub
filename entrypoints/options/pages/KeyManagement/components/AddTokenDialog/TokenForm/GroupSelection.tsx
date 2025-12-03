@@ -6,7 +6,7 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
 } from "~/components/ui"
 import type { UserGroupInfo } from "~/services/apiService/common/type"
 
@@ -19,7 +19,7 @@ interface GroupSelectionProps {
 export function GroupSelection({
   group,
   handleSelectChange,
-  groups
+  groups,
 }: GroupSelectionProps) {
   const { t } = useTranslation("keyManagement")
 

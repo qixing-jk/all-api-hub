@@ -4,6 +4,6 @@ export const REQUEST_CONFIG = {
   MAX_PAGES: 100,
   HEADERS: {
     CONTENT_TYPE: "application/json",
-    PRAGMA: "no-cache"
-  }
+    PRAGMA: "no-cache",
+  },
 } as const

@@ -44,7 +44,7 @@ export const initialFormData: FormData = {
   modelLimitsEnabled: false,
   modelLimits: [],
   allowIps: "",
-  group: "default"
+  group: "default",
 }
 
 const isValidIpList = (ips: string): boolean => {
@@ -69,7 +69,7 @@ export function useTokenForm({
   isOpen,
   preSelectedAccountId,
   availableAccounts,
-  editingToken
+  editingToken,
 }: AddTokenDialogProps) {
   const { t } = useTranslation("keyManagement")
   const [formData, setFormData] = useState<FormData>(initialFormData)
@@ -80,7 +80,7 @@ export function useTokenForm({
     if (isOpen) {
       if (isEditMode && editingToken) {
         const matchingAccount = availableAccounts.find(
-          (acc) => acc.name === editingToken.accountName
+          (acc) => acc.name === editingToken.accountName,
         )
         const accountId =
           matchingAccount?.id ||
@@ -107,7 +107,7 @@ export function useTokenForm({
             ? editingToken.model_limits.split(",")
             : [],
           allowIps: editingToken.allow_ips || "",
-          group: editingToken.group || "default"
+          group: editingToken.group || "default",
         })
       } else {
         const defaultAccountId =
@@ -115,7 +115,7 @@ export function useTokenForm({
           (availableAccounts.length > 0 ? availableAccounts[0].id : "")
         setFormData({
           ...initialFormData,
-          accountId: defaultAccountId
+          accountId: defaultAccountId,
         })
       }
     }
@@ -124,7 +124,7 @@ export function useTokenForm({
     preSelectedAccountId,
     availableAccounts,
     isEditMode,
-    editingToken
+    editingToken,
   ])
 
   const validateForm = (): boolean => {

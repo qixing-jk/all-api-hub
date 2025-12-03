@@ -35,7 +35,7 @@ interface AccountManagementProps {
 
 function AccountManagement({
   refreshKey,
-  routeParams
+  routeParams,
 }: AccountManagementProps) {
   return (
     <AccountManagementProvider refreshKey={refreshKey}>

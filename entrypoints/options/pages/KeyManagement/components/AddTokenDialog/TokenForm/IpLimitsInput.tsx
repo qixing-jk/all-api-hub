@@ -7,7 +7,7 @@ import type { FormData } from "../hooks/useTokenForm"
 interface IpLimitsInputProps {
   allowIps: string
   handleInputChange: (
-    field: keyof FormData
+    field: keyof FormData,
   ) => (e: React.ChangeEvent<HTMLInputElement>) => void
   error?: string
 }
@@ -15,7 +15,7 @@ interface IpLimitsInputProps {
 export function IpLimitsInput({
   allowIps,
   handleInputChange,
-  error
+  error,
 }: IpLimitsInputProps) {
   const { t } = useTranslation("keyManagement")
 
@@ -24,7 +24,8 @@ export function IpLimitsInput({
       label={t("dialog.ipLimits")}
       htmlFor="ipLimits"
       error={error}
-      description={t("dialog.ipExample")}>
+      description={t("dialog.ipExample")}
+    >
       <Input
         id="ipLimits"
         type="text"

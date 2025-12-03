@@ -3,7 +3,7 @@ import {
   useContext,
   useEffect,
   useState,
-  type ReactNode
+  type ReactNode,
 } from "react"
 
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
@@ -59,7 +59,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const value = {
     themeMode,
     resolvedTheme,
-    setThemeMode
+    setThemeMode,
   }
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>

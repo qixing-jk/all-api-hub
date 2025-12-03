@@ -7,7 +7,7 @@ import type { FormData } from "../hooks/useTokenForm"
 interface ExpirationTimeInputProps {
   expiredTime: string
   handleInputChange: (
-    field: keyof FormData
+    field: keyof FormData,
   ) => (e: React.ChangeEvent<HTMLInputElement>) => void
   error?: string
 }
@@ -15,7 +15,7 @@ interface ExpirationTimeInputProps {
 export function ExpirationTimeInput({
   expiredTime,
   handleInputChange,
-  error
+  error,
 }: ExpirationTimeInputProps) {
   const { t } = useTranslation("keyManagement")
 
@@ -24,7 +24,8 @@ export function ExpirationTimeInput({
       label={t("dialog.expiration")}
       htmlFor="expiredTime"
       error={error}
-      description={t("dialog.expirationPlaceholder")}>
+      description={t("dialog.expirationPlaceholder")}
+    >
       <Input
         id="expiredTime"
         type="datetime-local"

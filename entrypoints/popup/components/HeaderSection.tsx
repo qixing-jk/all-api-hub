@@ -1,7 +1,7 @@
 import {
   ArrowPathIcon,
   ArrowsPointingOutIcon,
-  Cog6ToothIcon
+  Cog6ToothIcon,
 } from "@heroicons/react/24/outline"
 import { PanelRightClose } from "lucide-react"
 import { useCallback } from "react"
@@ -16,7 +16,7 @@ import { useAccountDataContext } from "~/features/AccountManagement/hooks/Accoun
 import {
   openFullAccountManagerPage,
   openSettingsPage,
-  openSidePanelPage
+  openSidePanelPage,
 } from "~/utils/navigation"
 
 import CompactThemeToggle from "./ThemeToggle"
@@ -33,12 +33,12 @@ export default function HeaderSection() {
           if (result.failed > 0) {
             return t("account:refresh.refreshComplete", {
               success: result.success,
-              failed: result.failed
+              failed: result.failed,
             })
           }
           return t("account:refresh.refreshSuccess")
         },
-        error: t("account:refresh.refreshFailed")
+        error: t("account:refresh.refreshFailed"),
       })
     } catch (error) {
       console.error("Error during global refresh:", error)
@@ -59,7 +59,8 @@ export default function HeaderSection() {
 
   return (
     <header
-      className={`flex items-center justify-between px-3 py-2 sm:px-5 sm:py-3 ${COLORS.background.primary} ${COLORS.border.default} shrink-0 border-b`}>
+      className={`flex items-center justify-between px-3 py-2 sm:px-5 sm:py-3 ${COLORS.background.primary} ${COLORS.border.default} shrink-0 border-b`}
+    >
       {/* Logo and Title Section */}
       <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
         <img
@@ -88,7 +89,8 @@ export default function HeaderSection() {
             variant="outline"
             size="sm"
             aria-label={t("common:actions.refresh")}
-            className="touch-manipulation">
+            className="touch-manipulation"
+          >
             <ArrowPathIcon
               className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
             />
@@ -101,7 +103,8 @@ export default function HeaderSection() {
             variant="outline"
             size="sm"
             aria-label={t("ui:navigation.account")}
-            className="touch-manipulation">
+            className="touch-manipulation"
+          >
             <ArrowsPointingOutIcon className="h-4 w-4" />
           </IconButton>
         </Tooltip>
@@ -112,7 +115,8 @@ export default function HeaderSection() {
             variant="outline"
             size="sm"
             aria-label={t("common:labels.settings")}
-            className="touch-manipulation">
+            className="touch-manipulation"
+          >
             <Cog6ToothIcon className="h-4 w-4" />
           </IconButton>
         </Tooltip>
@@ -121,7 +125,8 @@ export default function HeaderSection() {
             aria-label={t("common:actions.openSidePanel")}
             size="sm"
             variant="outline"
-            onClick={handleOpenSidePanel}>
+            onClick={handleOpenSidePanel}
+          >
             <PanelRightClose className="h-4 w-4" />
           </IconButton>
         </Tooltip>

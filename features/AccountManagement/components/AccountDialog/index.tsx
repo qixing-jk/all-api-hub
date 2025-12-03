@@ -29,7 +29,7 @@ export default function AccountDialog({
   mode,
   account,
   onSuccess,
-  onError
+  onError,
 }: AccountDialogProps) {
   const { displayData, detectedAccount } = useAccountDataContext()
   const { openEditAccount } = useDialogStateContext()
@@ -38,11 +38,11 @@ export default function AccountDialog({
       Array.from(
         new Set(
           displayData.flatMap((item) =>
-            item.tags && item.tags.length ? item.tags : []
-          )
-        )
+            item.tags && item.tags.length ? item.tags : [],
+          ),
+        ),
       ),
-    [displayData]
+    [displayData],
   )
 
   const { state, setters, handlers } = useAccountDialog({
@@ -52,7 +52,7 @@ export default function AccountDialog({
     },
     mode,
     account,
-    onSuccess
+    onSuccess,
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -90,12 +90,14 @@ export default function AccountDialog({
           // ensure submit button in footer can submit the form by linking via form id
           formId="account-form"
         />
-      }>
+      }
+    >
       <div>
         <form
           id="account-form"
           onSubmit={handleSubmit}
-          className="flex flex-col gap-2">
+          className="flex flex-col gap-2"
+        >
           {state.detectionError && (
             <AutoDetectErrorAlert
               error={state.detectionError}
@@ -115,7 +117,7 @@ export default function AccountDialog({
               isCurrentSiteAdded: !!detectedAccount,
               detectedAccount: detectedDisplayAccount,
               onUseCurrentTab: handlers.handleUseCurrentTabUrl,
-              onEditAccount: openEditAccount
+              onEditAccount: openEditAccount,
             })}
           />
 

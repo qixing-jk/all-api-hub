@@ -21,7 +21,7 @@ interface UseModelDataReturn {
 
 export function useModelData({
   selectedAccount,
-  accounts
+  accounts,
 }: UseModelDataProps): UseModelDataReturn {
   const { t } = useTranslation("modelList")
   const [pricingData, setPricingData] = useState<PricingResponse | null>(null)
@@ -58,7 +58,7 @@ export function useModelData({
         setIsLoading(false)
       }
     },
-    [safeDisplayData, t]
+    [safeDisplayData, t],
   )
 
   useEffect(() => {
@@ -73,6 +73,6 @@ export function useModelData({
     pricingData,
     isLoading,
     dataFormatError,
-    loadPricingData
+    loadPricingData,
   }
 }

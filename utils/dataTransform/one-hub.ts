@@ -1,11 +1,11 @@
 import type {
   ModelPricing,
-  PricingResponse
+  PricingResponse,
 } from "~/services/apiService/common/type"
 import type {
   OneHubModelPricing,
   OneHubUserGroupMap,
-  OneHubUserGroupsResponse
+  OneHubUserGroupsResponse,
 } from "~/services/apiService/oneHub/type"
 
 /**
@@ -13,7 +13,7 @@ import type {
  */
 export function transformModelPricing(
   modelPricing: OneHubModelPricing,
-  userGroupMap: OneHubUserGroupMap = {}
+  userGroupMap: OneHubUserGroupMap = {},
 ): PricingResponse {
   const data: ModelPricing[] = Object.entries(modelPricing).map(
     ([modelName, model]) => {
@@ -25,14 +25,14 @@ export function transformModelPricing(
         model_ratio: 1,
         model_price: {
           input: model.price.input,
-          output: model.price.output
+          output: model.price.output,
         },
         owner_by: model.owned_by || "",
         completion_ratio: model.price.output / model.price.input || 1,
         enable_groups: enableGroups,
-        supported_endpoint_types: []
+        supported_endpoint_types: [],
       }
-    }
+    },
   )
 
   const group_ratio: Record<string, number> = {}
@@ -49,7 +49,7 @@ export function transformModelPricing(
     data,
     group_ratio,
     success: true,
-    usable_group
+    usable_group,
   }
 }
 
@@ -58,7 +58,7 @@ export function transformModelPricing(
  * @param input
  */
 export function transformUserGroup(
-  input: OneHubUserGroupsResponse["data"]
+  input: OneHubUserGroupsResponse["data"],
 ): OneHubUserGroupsResponse["data"] {
   const result: Record<string, any> = {}
 
@@ -67,7 +67,7 @@ export function transformUserGroup(
     const group = input[key]
     result[key] = {
       desc: group.name,
-      ratio: group.ratio
+      ratio: group.ratio,
     }
   }
   return result

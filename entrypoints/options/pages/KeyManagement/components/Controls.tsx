@@ -8,7 +8,7 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
 } from "~/components/ui"
 import type { DisplaySiteData } from "~/types"
 
@@ -29,7 +29,7 @@ export function Controls({
   setSearchTerm,
   displayData,
   tokens,
-  filteredTokens
+  filteredTokens,
 }: ControlsProps) {
   const { t } = useTranslation("keyManagement")
 
@@ -39,7 +39,8 @@ export function Controls({
         <Heading3 className="mb-1">{t("selectAccount")}</Heading3>
         <Select
           value={selectedAccount ?? ""}
-          onValueChange={setSelectedAccount}>
+          onValueChange={setSelectedAccount}
+        >
           <SelectTrigger className="w-full sm:w-80">
             <SelectValue placeholder={t("pleaseSelectAccount")} />
           </SelectTrigger>
@@ -71,7 +72,7 @@ export function Controls({
           <span>{t("totalKeys", { count: tokens.length })}</span>
           <span>
             {t("enabledCount", {
-              count: tokens.filter((t: any) => t.status === 1).length
+              count: tokens.filter((t: any) => t.status === 1).length,
             })}
           </span>
           <span>{t("showingCount", { count: filteredTokens.length })}</span>

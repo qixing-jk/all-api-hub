@@ -14,7 +14,7 @@ export interface AutoCheckinProvider {
 }
 
 const providers: Record<string, AutoCheckinProvider> = {
-  [VELOERA]: veloeraProvider
+  [VELOERA]: veloeraProvider,
 }
 
 /**
@@ -23,7 +23,7 @@ const providers: Record<string, AutoCheckinProvider> = {
  * @returns The resolved auto check-in provider, or null if no provider is found
  */
 export function resolveAutoCheckinProvider(
-  account: SiteAccount
+  account: SiteAccount,
 ): AutoCheckinProvider | null {
   const provider = providers[account.site_type]
   return provider ?? null

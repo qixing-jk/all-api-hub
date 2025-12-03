@@ -8,7 +8,7 @@ import {
   type BackupFullV2,
   type BackupPreferencesPartialV2,
   type BackupV2,
-  type RawBackupData
+  type RawBackupData,
 } from "~/entrypoints/options/pages/ImportExport/utils"
 import { accountStorage } from "~/services/accountStorage"
 import { channelConfigStorage } from "~/services/channelConfigStorage"
@@ -16,35 +16,35 @@ import { userPreferences } from "~/services/userPreferences"
 
 // Mock i18n so error messages are stable
 vi.mock("i18next", () => ({
-  t: (key: string) => key
+  t: (key: string) => key,
 }))
 
 vi.mock("~/services/accountStorage", () => ({
   accountStorage: {
     importData: vi.fn(),
-    exportData: vi.fn()
-  }
+    exportData: vi.fn(),
+  },
 }))
 
 vi.mock("~/services/userPreferences", () => ({
   userPreferences: {
     importPreferences: vi.fn(),
-    exportPreferences: vi.fn()
-  }
+    exportPreferences: vi.fn(),
+  },
 }))
 
 vi.mock("~/services/channelConfigStorage", () => ({
   channelConfigStorage: {
     importConfigs: vi.fn(),
-    exportConfigs: vi.fn()
-  }
+    exportConfigs: vi.fn(),
+  },
 }))
 
 vi.mock("react-hot-toast", () => ({
   default: {
     success: vi.fn(),
-    error: vi.fn()
-  }
+    error: vi.fn(),
+  },
 }))
 
 const mockAccountStorageImportData =
@@ -82,7 +82,7 @@ describe("parseBackupSummary", () => {
       timestamp: Date.now(),
       accounts: {},
       preferences: {},
-      channelConfigs: {}
+      channelConfigs: {},
     }
 
     const json = JSON.stringify(payload)
@@ -103,7 +103,7 @@ describe("parseBackupSummary", () => {
       version: BACKUP_VERSION,
       timestamp: Date.now(),
       type: "accounts",
-      accounts: undefined
+      accounts: undefined,
     }
 
     const result = parseBackupSummary(JSON.stringify(payload), "unknown")
@@ -119,7 +119,7 @@ describe("parseBackupSummary", () => {
   it("uses fallback label when timestamp is invalid", () => {
     const payload: RawBackupData = {
       version: BACKUP_VERSION,
-      timestamp: "not-a-date" as any
+      timestamp: "not-a-date" as any,
     }
 
     const result = parseBackupSummary(JSON.stringify(payload), "unknown")
@@ -145,7 +145,7 @@ describe("importFromBackupObject", () => {
     const payload: RawBackupData = {}
 
     await expect(importFromBackupObject(payload)).rejects.toThrow(
-      "importExport:import.formatNotCorrect"
+      "importExport:import.formatNotCorrect",
     )
   })
 
@@ -156,15 +156,15 @@ describe("importFromBackupObject", () => {
       data: {
         accounts: [{ id: "a1" }],
         preferences: { themeMode: "dark" },
-        channelConfigs: { 1: { enabled: true } }
+        channelConfigs: { 1: { enabled: true } },
       },
-      type: "accounts"
+      type: "accounts",
     }
 
     const result = await importFromBackupObject(payload)
 
     expect(mockAccountStorageImportData).toHaveBeenCalledWith({
-      accounts: [{ id: "a1" }]
+      accounts: [{ id: "a1" }],
     })
     // With type: "accounts" and no root-level preferences/channelConfigs,
     // importV1Backup only imports accounts.
@@ -175,7 +175,7 @@ describe("importFromBackupObject", () => {
     expect(result.sections).toEqual({
       accounts: true,
       preferences: false,
-      channelConfigs: false
+      channelConfigs: false,
     })
   })
 
@@ -186,30 +186,30 @@ describe("importFromBackupObject", () => {
       accounts: {
         accounts: [{ id: "a1" } as any, { id: "a2" } as any],
         pinnedAccountIds: ["a2"],
-        last_updated: Date.now()
+        last_updated: Date.now(),
       } as any,
       preferences: { themeMode: "dark" } as any,
-      channelConfigs: { 1: { enabled: true } } as any
+      channelConfigs: { 1: { enabled: true } } as any,
     }
 
     const result = await importFromBackupObject(backup as BackupV2)
 
     expect(mockAccountStorageImportData).toHaveBeenCalledWith({
       accounts: [{ id: "a1" }, { id: "a2" }],
-      pinnedAccountIds: ["a2"]
+      pinnedAccountIds: ["a2"],
     })
     expect(mockUserPreferencesImport).toHaveBeenCalledWith({
-      themeMode: "dark"
+      themeMode: "dark",
     })
     expect(mockChannelConfigImport).toHaveBeenCalledWith({
-      1: { enabled: true }
+      1: { enabled: true },
     })
 
     expect(result.allImported).toBe(true)
     expect(result.sections).toEqual({
       accounts: true,
       preferences: true,
-      channelConfigs: true
+      channelConfigs: true,
     })
   })
 
@@ -218,7 +218,7 @@ describe("importFromBackupObject", () => {
       version: BACKUP_VERSION,
       timestamp: Date.now(),
       type: "preferences",
-      preferences: { themeMode: "light" } as any
+      preferences: { themeMode: "light" } as any,
     }
 
     const result = await importFromBackupObject(backup as BackupV2)
@@ -226,14 +226,14 @@ describe("importFromBackupObject", () => {
     expect(mockAccountStorageImportData).not.toHaveBeenCalled()
     expect(mockChannelConfigImport).not.toHaveBeenCalled()
     expect(mockUserPreferencesImport).toHaveBeenCalledWith({
-      themeMode: "light"
+      themeMode: "light",
     })
 
     expect(result.allImported).toBe(true)
     expect(result.sections).toEqual({
       accounts: false,
       preferences: true,
-      channelConfigs: false
+      channelConfigs: false,
     })
   })
 
@@ -241,13 +241,13 @@ describe("importFromBackupObject", () => {
     const payload: RawBackupData = {
       version: "3.0",
       timestamp: Date.now(),
-      accounts: { accounts: [{ id: "x" }] }
+      accounts: { accounts: [{ id: "x" }] },
     }
 
     const result = await importFromBackupObject(payload)
 
     expect(mockAccountStorageImportData).toHaveBeenCalledWith({
-      accounts: [{ id: "x" }]
+      accounts: [{ id: "x" }],
     })
     expect(result.allImported).toBe(true)
   })
@@ -255,11 +255,11 @@ describe("importFromBackupObject", () => {
   it("throws when nothing can be imported", async () => {
     const payload: RawBackupData = {
       version: BACKUP_VERSION,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     }
 
     await expect(importFromBackupObject(payload)).rejects.toThrow(
-      "importExport:import.noImportableData"
+      "importExport:import.noImportableData",
     )
   })
 })
@@ -278,7 +278,7 @@ describe("normalizeBackupForMerge", () => {
       accounts: [],
       accountsTimestamp: 0,
       preferences: null,
-      channelConfigs: null
+      channelConfigs: null,
     })
   })
 
@@ -289,10 +289,10 @@ describe("normalizeBackupForMerge", () => {
       timestamp: 123,
       accounts: {
         accounts: [{ id: "a1" } as any],
-        last_updated: 456
+        last_updated: 456,
       } as any,
       preferences: { themeMode: "dark" } as any,
-      channelConfigs: { 1: { enabled: true } } as any
+      channelConfigs: { 1: { enabled: true } } as any,
     }
 
     const result = normalizeBackupForMerge(backup, localPrefs)
@@ -311,8 +311,8 @@ describe("normalizeBackupForMerge", () => {
       data: {
         accounts: [{ id: "legacy" }],
         preferences: { themeMode: "dark" },
-        channelConfigs: { 2: { enabled: false } }
-      }
+        channelConfigs: { 2: { enabled: false } },
+      },
     }
 
     const result = normalizeBackupForMerge(payload, localPrefs)
@@ -344,13 +344,13 @@ describe("export handlers", () => {
       href: "",
       download: "",
       click: vi.fn(),
-      remove: vi.fn()
+      remove: vi.fn(),
     })) as any
 
     mockAccountStorageExportData.mockResolvedValue({
       accounts: [],
       pinnedAccountIds: [],
-      last_updated: 0
+      last_updated: 0,
     })
     mockUserPreferencesExport.mockResolvedValue({} as any)
     mockChannelConfigExport.mockResolvedValue({} as any)
@@ -368,7 +368,7 @@ describe("export handlers", () => {
     return {
       handleExportAll: mod.handleExportAll,
       handleExportAccounts: mod.handleExportAccounts,
-      handleExportPreferences: mod.handleExportPreferences
+      handleExportPreferences: mod.handleExportPreferences,
     }
   }
 

@@ -5,33 +5,35 @@ import { Storage } from "@plasmohq/storage"
 import { DATA_TYPE_BALANCE, DATA_TYPE_CONSUMPTION } from "~/constants"
 import {
   CURRENT_PREFERENCES_VERSION,
-  migratePreferences
-} from "~/services/configMigration/preferences/preferencesMigration.ts"
-import {
-  BalanceType,
-  CurrencyType,
-  DEFAULT_WEBDAV_SETTINGS,
-  SortField,
-  SortOrder,
-  WebDAVSettings,
-  type WebDAVSyncStrategy
-} from "~/types"
+  migratePreferences,
+} from "~/services/configMigration/preferences/preferencesMigration"
+import { BalanceType, CurrencyType, SortField, SortOrder } from "~/types"
 import {
   AccountAutoRefresh,
-  DEFAULT_ACCOUNT_AUTO_REFRESH
-} from "~/types/accountAutoRefresh.ts"
+  DEFAULT_ACCOUNT_AUTO_REFRESH,
+} from "~/types/accountAutoRefresh"
 import {
   AUTO_CHECKIN_SCHEDULE_MODE,
-  AutoCheckinPreferences
+  AutoCheckinPreferences,
 } from "~/types/autoCheckin"
+import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
+import {
+  DEFAULT_CLI_PROXY_CONFIG,
+  type CliProxyConfig,
+} from "~/types/cliProxyConfig"
 import {
   DEFAULT_MODEL_REDIRECT_PREFERENCES,
-  type ModelRedirectPreferences
+  type ModelRedirectPreferences,
 } from "~/types/modelRedirect"
-import { DEFAULT_NEW_API_CONFIG, NewApiConfig } from "~/types/newApiConfig.ts"
+import { DEFAULT_NEW_API_CONFIG, NewApiConfig } from "~/types/newApiConfig"
 import type { SortingPriorityConfig } from "~/types/sorting"
 import type { ThemeMode } from "~/types/theme"
-import { DeepPartial } from "~/types/utils.ts"
+import { DeepPartial } from "~/types/utils"
+import {
+  DEFAULT_WEBDAV_SETTINGS,
+  WebDAVSettings,
+  WebDAVSyncStrategy,
+} from "~/types/webdav"
 import { deepOverride } from "~/utils"
 import { DEFAULT_SORTING_PRIORITY_CONFIG } from "~/utils/sortingPriority"
 
@@ -84,6 +86,9 @@ export interface UserPreferences {
   // New API 相关配置
   newApi: NewApiConfig
 
+  // CLIProxyAPI 管理接口配置
+  cliProxy?: CliProxyConfig
+
   // New API Model Sync 配置
   newApiModelSync: {
     enabled: boolean
@@ -103,6 +108,7 @@ export interface UserPreferences {
      * 限制可同步的模型列表，空数组表示同步全部
      */
     allowedModels: string[]
+    globalChannelModelFilters: ChannelModelFilterRule[]
   }
 
   /**
@@ -197,7 +203,7 @@ export interface UserPreferences {
 
 // 存储键名常量
 const STORAGE_KEYS = {
-  USER_PREFERENCES: "user_preferences"
+  USER_PREFERENCES: "user_preferences",
 } as const
 
 // 默认配置
@@ -211,6 +217,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   webdav: DEFAULT_WEBDAV_SETTINGS,
   lastUpdated: Date.now(),
   newApi: DEFAULT_NEW_API_CONFIG,
+  cliProxy: DEFAULT_CLI_PROXY_CONFIG,
   newApiModelSync: {
     enabled: false,
     interval: 24 * 60 * 60 * 1000, // 24小时
@@ -218,9 +225,10 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
     maxRetries: 2,
     rateLimit: {
       requestsPerMinute: 20, // 每分钟20个请求
-      burst: 5 // 允许5个突发请求
+      burst: 5, // 允许5个突发请求
     },
-    allowedModels: []
+    allowedModels: [],
+    globalChannelModelFilters: [],
   },
   autoCheckin: {
     globalEnabled: false,
@@ -231,12 +239,12 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
     retryStrategy: {
       enabled: false,
       intervalMinutes: 30,
-      maxAttemptsPerDay: 3
-    }
+      maxAttemptsPerDay: 3,
+    },
   },
   modelRedirect: DEFAULT_MODEL_REDIRECT_PREFERENCES,
   redemptionAssist: {
-    enabled: true
+    enabled: true,
   },
   sortingPriorityConfig: undefined,
   themeMode: "system",
@@ -248,8 +256,8 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
     useInSidePanel: true,
     useInOptions: true,
     useForAutoRefresh: true,
-    useForManualRefresh: true
-  }
+    useForManualRefresh: true,
+  },
 }
 
 class UserPreferencesService {
@@ -257,7 +265,7 @@ class UserPreferencesService {
 
   constructor() {
     this.storage = new Storage({
-      area: "local"
+      area: "local",
     })
   }
 
@@ -267,7 +275,7 @@ class UserPreferencesService {
   async getPreferences(): Promise<UserPreferences> {
     try {
       const storedPreferences = (await this.storage.get(
-        STORAGE_KEYS.USER_PREFERENCES
+        STORAGE_KEYS.USER_PREFERENCES,
       )) as UserPreferences | undefined
       const preferences = storedPreferences || DEFAULT_PREFERENCES
 
@@ -276,7 +284,7 @@ class UserPreferencesService {
 
       const finalPreferences = deepOverride(
         DEFAULT_PREFERENCES,
-        migratedPreferences
+        migratedPreferences,
       )
 
       // If migration changed preferences, save the updated version
@@ -296,7 +304,7 @@ class UserPreferencesService {
    */
 
   async savePreferences(
-    preferences: DeepPartial<UserPreferences>
+    preferences: DeepPartial<UserPreferences>,
   ): Promise<boolean> {
     try {
       const currentPreferences = await this.getPreferences()
@@ -306,8 +314,8 @@ class UserPreferencesService {
         preferences,
         {
           lastUpdated: Date.now(),
-          preferencesVersion: CURRENT_PREFERENCES_VERSION
-        }
+          preferencesVersion: CURRENT_PREFERENCES_VERSION,
+        },
       )
 
       await this.storage.set(STORAGE_KEYS.USER_PREFERENCES, updatedPreferences)
@@ -338,7 +346,7 @@ class UserPreferencesService {
    */
   async updateSortConfig(
     sortField: SortField,
-    sortOrder: SortOrder
+    sortOrder: SortOrder,
   ): Promise<boolean> {
     return this.savePreferences({ sortField, sortOrder })
   }
@@ -359,7 +367,7 @@ class UserPreferencesService {
     password?: string
   }): Promise<boolean> {
     return this.savePreferences({
-      webdav: settings
+      webdav: settings,
     })
   }
 
@@ -372,7 +380,7 @@ class UserPreferencesService {
     syncStrategy?: WebDAVSettings["syncStrategy"]
   }): Promise<boolean> {
     return this.savePreferences({
-      webdav: settings
+      webdav: settings,
     })
   }
 
@@ -421,7 +429,7 @@ class UserPreferencesService {
 
       await this.storage.set(STORAGE_KEYS.USER_PREFERENCES, {
         ...migratedPreferences,
-        lastUpdated: Date.now()
+        lastUpdated: Date.now(),
       })
       console.log("[UserPreferences] 偏好设置导入成功，已迁移至最新版本")
       return true
@@ -438,7 +446,7 @@ class UserPreferencesService {
   }
 
   async setSortingPriorityConfig(
-    config: SortingPriorityConfig
+    config: SortingPriorityConfig,
   ): Promise<boolean> {
     config.lastModified = Date.now()
     return this.savePreferences({ sortingPriorityConfig: config })
@@ -472,7 +480,7 @@ class UserPreferencesService {
   async resetDisplaySettings(): Promise<boolean> {
     return this.savePreferences({
       activeTab: DEFAULT_PREFERENCES.activeTab,
-      currencyType: DEFAULT_PREFERENCES.currencyType
+      currencyType: DEFAULT_PREFERENCES.currencyType,
     })
   }
 
@@ -481,7 +489,7 @@ class UserPreferencesService {
    */
   async resetAutoRefreshConfig(): Promise<boolean> {
     return this.savePreferences({
-      accountAutoRefresh: DEFAULT_PREFERENCES.accountAutoRefresh
+      accountAutoRefresh: DEFAULT_PREFERENCES.accountAutoRefresh,
     })
   }
 
@@ -490,7 +498,7 @@ class UserPreferencesService {
    */
   async resetNewApiConfig(): Promise<boolean> {
     return this.savePreferences({
-      newApi: DEFAULT_PREFERENCES.newApi
+      newApi: DEFAULT_PREFERENCES.newApi,
     })
   }
 
@@ -499,7 +507,13 @@ class UserPreferencesService {
    */
   async resetNewApiModelSyncConfig(): Promise<boolean> {
     return this.savePreferences({
-      newApiModelSync: DEFAULT_PREFERENCES.newApiModelSync
+      newApiModelSync: DEFAULT_PREFERENCES.newApiModelSync,
+    })
+  }
+
+  async resetCliProxyConfig(): Promise<boolean> {
+    return this.savePreferences({
+      cliProxy: DEFAULT_PREFERENCES.cliProxy,
     })
   }
 
@@ -508,7 +522,7 @@ class UserPreferencesService {
    */
   async resetAutoCheckinConfig(): Promise<boolean> {
     return this.savePreferences({
-      autoCheckin: DEFAULT_PREFERENCES.autoCheckin
+      autoCheckin: DEFAULT_PREFERENCES.autoCheckin,
     })
   }
 
@@ -517,7 +531,7 @@ class UserPreferencesService {
    */
   async resetModelRedirectConfig(): Promise<boolean> {
     return this.savePreferences({
-      modelRedirect: DEFAULT_PREFERENCES.modelRedirect
+      modelRedirect: DEFAULT_PREFERENCES.modelRedirect,
     })
   }
 
@@ -526,7 +540,7 @@ class UserPreferencesService {
    */
   async resetRedemptionAssist(): Promise<boolean> {
     return this.savePreferences({
-      redemptionAssist: DEFAULT_PREFERENCES.redemptionAssist
+      redemptionAssist: DEFAULT_PREFERENCES.redemptionAssist,
     })
   }
 
@@ -535,7 +549,7 @@ class UserPreferencesService {
    */
   async resetWebdavConfig(): Promise<boolean> {
     return this.savePreferences({
-      webdav: DEFAULT_PREFERENCES.webdav
+      webdav: DEFAULT_PREFERENCES.webdav,
     })
   }
 
@@ -545,7 +559,7 @@ class UserPreferencesService {
   async resetThemeAndLanguage(): Promise<boolean> {
     return this.savePreferences({
       themeMode: DEFAULT_PREFERENCES.themeMode,
-      language: DEFAULT_PREFERENCES.language
+      language: DEFAULT_PREFERENCES.language,
     })
   }
 }

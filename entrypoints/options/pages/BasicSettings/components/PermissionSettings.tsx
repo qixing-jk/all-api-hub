@@ -14,7 +14,7 @@ import {
   OPTIONAL_PERMISSION_DEFINITIONS,
   OPTIONAL_PERMISSIONS,
   removePermission,
-  requestPermission
+  requestPermission,
 } from "~/services/permissions/permissionManager"
 import { showResultToast } from "~/utils/toastHelpers"
 
@@ -35,7 +35,7 @@ export default function PermissionSettings() {
   const { t } = useTranslation("settings")
   const [state, setState] = useState<PermissionState>(() => ({
     statuses: buildState<boolean | null>(null),
-    pending: buildState(false)
+    pending: buildState(false),
   }))
   const [isRefreshing, setIsRefreshing] = useState(false)
 
@@ -45,12 +45,12 @@ export default function PermissionSettings() {
     const results = await Promise.all(
       OPTIONAL_PERMISSIONS.map(async (id) => ({
         id,
-        granted: await hasPermission(id)
-      }))
+        granted: await hasPermission(id),
+      })),
     )
 
     console.table(
-      results.map((item) => ({ permission: item.id, granted: item.granted }))
+      results.map((item) => ({ permission: item.id, granted: item.granted })),
     )
 
     setState((prev) => ({
@@ -58,10 +58,10 @@ export default function PermissionSettings() {
       statuses: results.reduce(
         (acc, curr) => ({
           ...acc,
-          [curr.id]: curr.granted
+          [curr.id]: curr.granted,
         }),
-        {} as Record<ManifestOptionalPermissions, boolean>
-      )
+        {} as Record<ManifestOptionalPermissions, boolean>,
+      ),
     }))
     setIsRefreshing(false)
   }, [])
@@ -83,16 +83,16 @@ export default function PermissionSettings() {
         ...prev,
         pending: {
           ...prev.pending,
-          [id]: true
-        }
+          [id]: true,
+        },
       }))
 
       const label = t(
         OPTIONAL_PERMISSION_DEFINITIONS.find((perm) => perm.id === id)
-          ?.titleKey ?? id
+          ?.titleKey ?? id,
       )
       console.log(
-        `[Permissions] ${shouldEnable ? "Request" : "Revoke"} ${id} triggered by user: ${label}`
+        `[Permissions] ${shouldEnable ? "Request" : "Revoke"} ${id} triggered by user: ${label}`,
       )
       let success = false
 
@@ -100,22 +100,22 @@ export default function PermissionSettings() {
         if (shouldEnable) {
           success = await requestPermission(id)
           console.log(
-            `[Permissions] Request ${id} ${success ? "succeeded" : "failed"}`
+            `[Permissions] Request ${id} ${success ? "succeeded" : "failed"}`,
           )
           showResultToast(
             success,
             t("permissions.messages.granted", { name: label }),
-            t("permissions.messages.grantFailed", { name: label })
+            t("permissions.messages.grantFailed", { name: label }),
           )
         } else {
           success = await removePermission(id)
           console.log(
-            `[Permissions] Remove ${id} ${success ? "succeeded" : "failed"}`
+            `[Permissions] Remove ${id} ${success ? "succeeded" : "failed"}`,
           )
           showResultToast(
             success,
             t("permissions.messages.revoked", { name: label }),
-            t("permissions.messages.revokeFailed", { name: label })
+            t("permissions.messages.revokeFailed", { name: label }),
           )
         }
 
@@ -124,8 +124,8 @@ export default function PermissionSettings() {
             ...prev,
             statuses: {
               ...prev.statuses,
-              [id]: shouldEnable
-            }
+              [id]: shouldEnable,
+            },
           }))
         }
       } catch (error) {
@@ -138,24 +138,24 @@ export default function PermissionSettings() {
             : t("permissions.messages.revoked", { name: label }),
           shouldEnable
             ? t("permissions.messages.grantFailed", { name: label })
-            : t("permissions.messages.revokeFailed", { name: label })
+            : t("permissions.messages.revokeFailed", { name: label }),
         )
       } finally {
         setState((prev) => ({
           ...prev,
           pending: {
             ...prev.pending,
-            [id]: false
-          }
+            [id]: false,
+          },
         }))
       }
     },
-    [t]
+    [t],
   )
 
   const isLoading = useMemo(
     () => OPTIONAL_PERMISSIONS.some((id) => state.statuses[id] === null),
-    [state.statuses]
+    [state.statuses],
   )
 
   return (
@@ -163,7 +163,8 @@ export default function PermissionSettings() {
       id="permissions"
       title={t("permissions.title")}
       description={t("permissions.description")}
-      className="space-y-4">
+      className="space-y-4"
+    >
       <Alert variant="info" description={t("permissions.helper")} />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -175,7 +176,8 @@ export default function PermissionSettings() {
           size="sm"
           onClick={() => void loadStatuses()}
           disabled={isRefreshing || isLoading}
-          loading={isRefreshing}>
+          loading={isRefreshing}
+        >
           {t("permissions.actions.refresh")}
         </Button>
       </div>
@@ -200,13 +202,14 @@ export default function PermissionSettings() {
                         : granted === false
                           ? "warning"
                           : "info"
-                    }>
+                    }
+                  >
                     {granted === null
                       ? t("permissions.status.checking")
                       : t(
                           granted
                             ? "permissions.status.granted"
-                            : "permissions.status.denied"
+                            : "permissions.status.denied",
                         )}
                   </Badge>
                   <Button
@@ -214,13 +217,14 @@ export default function PermissionSettings() {
                     variant={granted ? "outline" : "default"}
                     onClick={() => void handleToggle(permission.id, !granted)}
                     disabled={pending || granted === null}
-                    loading={pending}>
+                    loading={pending}
+                  >
                     {granted
                       ? t("permissions.actions.remove")
                       : t("permissions.actions.allow")}
                   </Button>
                 </div>
-              )
+              ),
             }
           })}
         />

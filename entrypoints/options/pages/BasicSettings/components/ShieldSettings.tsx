@@ -11,26 +11,24 @@ import {
   CardList,
   Checkbox,
   Muted,
-  Switch
+  Switch,
 } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { hasCookieInterceptorPermissions } from "~/services/permissions/permissionManager"
-import { isFirefox } from "~/utils/browser.ts"
+import { isFirefox } from "~/utils/browser"
 import { openSettingsTab } from "~/utils/navigation"
+import { canUseTempWindowFetch } from "~/utils/tempWindowFetch"
 
 export default function ShieldSettings() {
   const { t } = useTranslation("settings")
   const { tempWindowFallback, updateTempWindowFallback } =
     useUserPreferencesContext()
 
-  const [hasCookiePermissions, setHasCookiePermissions] = useState<
-    boolean | null
-  >(null)
+  const [canUseTempWindowFallback, setCanUseTempWindowFallback] =
+    useState<boolean>(false)
 
   const refreshPermissionStatus = useCallback(async () => {
-    setHasCookiePermissions(null)
-    const granted = await hasCookieInterceptorPermissions()
-    setHasCookiePermissions(granted)
+    const granted = await canUseTempWindowFetch()
+    setCanUseTempWindowFallback(granted)
   }, [])
 
   useEffect(() => {
@@ -46,9 +44,7 @@ export default function ShieldSettings() {
   const shieldAutoRefresh = tempWindowFallback.useForAutoRefresh
   const shieldManualRefresh = tempWindowFallback.useForManualRefresh
 
-  const permissionsPending = hasCookiePermissions === null
-  const hasPrerequisitePermissions = hasCookiePermissions === true
-  const disableShieldUI = !hasPrerequisitePermissions || permissionsPending
+  const disableShieldUI = !canUseTempWindowFallback
 
   const handleOpenPermissionsTab = useCallback(() => {
     void openSettingsTab("permissions")
@@ -58,12 +54,14 @@ export default function ShieldSettings() {
     <SettingSection
       id="shield-settings"
       title={t("refresh.shieldTitle")}
-      description={t("refresh.shieldDescription")}>
-      {!hasPrerequisitePermissions && !permissionsPending && (
+      description={t("refresh.shieldDescription")}
+    >
+      {!canUseTempWindowFallback && (
         <Alert
           variant="warning"
           title={t("refresh.shieldPermissionWarningTitle")}
-          description={t("refresh.shieldPermissionWarningDesc")}>
+          description={t("refresh.shieldPermissionWarningDesc")}
+        >
           <div className="mt-3 flex flex-wrap gap-2">
             <Button size="sm" onClick={handleOpenPermissionsTab}>
               {t("refresh.shieldPermissionAction")}
@@ -71,7 +69,8 @@ export default function ShieldSettings() {
             <Button
               size="sm"
               variant="outline"
-              onClick={() => void refreshPermissionStatus()}>
+              onClick={() => void refreshPermissionStatus()}
+            >
               {t("permissions.actions.refresh")}
             </Button>
           </div>
@@ -108,7 +107,7 @@ export default function ShieldSettings() {
                       }
                       onCheckedChange={(checked) =>
                         updateTempWindowFallback({
-                          useInPopup: Boolean(checked)
+                          useInPopup: Boolean(checked),
                         })
                       }
                     />
@@ -123,7 +122,7 @@ export default function ShieldSettings() {
                       disabled={disableShieldUI || !shieldEnabled}
                       onCheckedChange={(checked) =>
                         updateTempWindowFallback({
-                          useInSidePanel: Boolean(checked)
+                          useInSidePanel: Boolean(checked),
                         })
                       }
                     />
@@ -138,7 +137,7 @@ export default function ShieldSettings() {
                       disabled={disableShieldUI || !shieldEnabled}
                       onCheckedChange={(checked) =>
                         updateTempWindowFallback({
-                          useInOptions: Boolean(checked)
+                          useInOptions: Boolean(checked),
                         })
                       }
                     />
@@ -153,7 +152,7 @@ export default function ShieldSettings() {
                       disabled={disableShieldUI || !shieldEnabled}
                       onCheckedChange={(checked) =>
                         updateTempWindowFallback({
-                          useForAutoRefresh: Boolean(checked)
+                          useForAutoRefresh: Boolean(checked),
                         })
                       }
                     />
@@ -168,7 +167,7 @@ export default function ShieldSettings() {
                       disabled={disableShieldUI || !shieldEnabled}
                       onCheckedChange={(checked) =>
                         updateTempWindowFallback({
-                          useForManualRefresh: Boolean(checked)
+                          useForManualRefresh: Boolean(checked),
                         })
                       }
                     />

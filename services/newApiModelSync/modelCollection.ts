@@ -1,6 +1,6 @@
 import type {
   ExecutionItemResult,
-  ExecutionResult
+  ExecutionResult,
 } from "~/types/newApiModelSync"
 
 /**
@@ -9,7 +9,7 @@ import type {
  * models, but falls back to the previous ones when a channel failed to sync.
  */
 export function collectModelsFromExecution(
-  result: ExecutionResult | null
+  result: ExecutionResult | null,
 ): string[] {
   if (!result || !Array.isArray(result.items) || result.items.length === 0) {
     return []

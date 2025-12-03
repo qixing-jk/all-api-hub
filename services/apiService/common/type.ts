@@ -5,7 +5,7 @@ import {
   ApiToken,
   AuthTypeEnum,
   CheckInConfig,
-  SiteHealthStatus
+  SiteHealthStatus,
 } from "~/types"
 import type { PerCallPrice } from "~/utils/modelPricing"
 
@@ -147,7 +147,7 @@ export enum LogType {
   /** 消费 */ Consume = 2,
   /** 管理 */ Admin = 3,
   /** 错误 */ Error = 4,
-  /** 系统 */ System = 5
+  /** 系统 */ System = 5,
 }
 
 /**

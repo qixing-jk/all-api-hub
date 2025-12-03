@@ -8,7 +8,7 @@ interface ThemeAwareToasterProps {
 }
 
 export const ThemeAwareToaster = ({
-  reverseOrder = false
+  reverseOrder = false,
 }: ThemeAwareToasterProps) => {
   const { resolvedTheme } = useTheme()
 
@@ -17,13 +17,13 @@ export const ThemeAwareToaster = ({
       return {
         background: "#1e293b",
         color: "#f1f5f9",
-        border: "1px solid #334155"
+        border: "1px solid #334155",
       }
     }
     return {
       background: "#fff",
       color: "#363636",
-      border: "1px solid #e5e7eb"
+      border: "1px solid #e5e7eb",
     }
   }
 
@@ -42,23 +42,24 @@ export const ThemeAwareToaster = ({
           duration: 3000,
           iconTheme: {
             primary: resolvedTheme === "dark" ? "#10b981" : "#059669",
-            secondary: resolvedTheme === "dark" ? "#1e293b" : "#fff"
-          }
+            secondary: resolvedTheme === "dark" ? "#1e293b" : "#fff",
+          },
         },
         error: {
           duration: 5000,
           iconTheme: {
             primary: resolvedTheme === "dark" ? "#ef4444" : "#dc2626",
-            secondary: resolvedTheme === "dark" ? "#1e293b" : "#fff"
-          }
+            secondary: resolvedTheme === "dark" ? "#1e293b" : "#fff",
+          },
         },
         loading: {
           iconTheme: {
             primary: resolvedTheme === "dark" ? "#3b82f6" : "#2563eb",
-            secondary: resolvedTheme === "dark" ? "#1e293b" : "#fff"
-          }
-        }
-      }}>
+            secondary: resolvedTheme === "dark" ? "#1e293b" : "#fff",
+          },
+        },
+      }}
+    >
       {(t) => (
         <ToastBar toast={t}>
           {({ icon, message }) => {

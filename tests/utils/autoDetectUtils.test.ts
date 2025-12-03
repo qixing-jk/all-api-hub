@@ -5,7 +5,7 @@ import {
   analyzeAutoDetectError,
   AutoDetectErrorType,
   getLoginUrl,
-  openLoginTab
+  openLoginTab,
 } from "~/utils/autoDetectUtils"
 
 // Mock i18next
@@ -17,17 +17,17 @@ vi.mock("i18next", () => ({
       "messages:autodetect.loginThisSite": "登录该站点",
       "messages:autodetect.unexpectedData": "返回数据格式不符合预期",
       "messages:autodetect.networkError": "网络连接失败",
-      "messages:autodetect.failed": "自动识别失败: "
+      "messages:autodetect.failed": "自动识别失败: ",
     }
     return translations[key] || key
-  }
+  },
 }))
 
 // Mock browser.tabs
 vi.stubGlobal("browser", {
   tabs: {
-    create: vi.fn()
-  }
+    create: vi.fn(),
+  },
 })
 
 describe("autoDetectUtils", () => {
@@ -157,7 +157,7 @@ describe("autoDetectUtils", () => {
         // This tests the actual behavior
         expect([
           AutoDetectErrorType.NETWORK_ERROR,
-          AutoDetectErrorType.UNKNOWN
+          AutoDetectErrorType.UNKNOWN,
         ]).toContain(result.type)
       })
     })
@@ -215,27 +215,27 @@ describe("autoDetectUtils", () => {
       it("should check errors in order of specificity", () => {
         // Timeout is checked first
         expect(analyzeAutoDetectError(new Error("超时")).type).toBe(
-          AutoDetectErrorType.TIMEOUT
+          AutoDetectErrorType.TIMEOUT,
         )
 
         // Then 401
         expect(analyzeAutoDetectError(new Error("401")).type).toBe(
-          AutoDetectErrorType.UNAUTHORIZED
+          AutoDetectErrorType.UNAUTHORIZED,
         )
 
         // Then invalid response
         expect(analyzeAutoDetectError(new Error("格式")).type).toBe(
-          AutoDetectErrorType.INVALID_RESPONSE
+          AutoDetectErrorType.INVALID_RESPONSE,
         )
 
         // Then network
         expect(analyzeAutoDetectError(new Error("网络")).type).toBe(
-          AutoDetectErrorType.NETWORK_ERROR
+          AutoDetectErrorType.NETWORK_ERROR,
         )
 
         // Finally unknown
         expect(analyzeAutoDetectError(new Error("其他错误")).type).toBe(
-          AutoDetectErrorType.UNKNOWN
+          AutoDetectErrorType.UNKNOWN,
         )
       })
     })
@@ -243,16 +243,16 @@ describe("autoDetectUtils", () => {
     describe("Case sensitivity", () => {
       it("should handle mixed case error messages", () => {
         expect(analyzeAutoDetectError(new Error("TimeOut")).type).toBe(
-          AutoDetectErrorType.TIMEOUT
+          AutoDetectErrorType.TIMEOUT,
         )
         expect(analyzeAutoDetectError(new Error("UNAUTHORIZED")).type).toBe(
-          AutoDetectErrorType.UNAUTHORIZED
+          AutoDetectErrorType.UNAUTHORIZED,
         )
         expect(analyzeAutoDetectError(new Error("JSON")).type).toBe(
-          AutoDetectErrorType.INVALID_RESPONSE
+          AutoDetectErrorType.INVALID_RESPONSE,
         )
         expect(analyzeAutoDetectError(new Error("Network")).type).toBe(
-          AutoDetectErrorType.NETWORK_ERROR
+          AutoDetectErrorType.NETWORK_ERROR,
         )
       })
     })
@@ -344,7 +344,7 @@ describe("autoDetectUtils", () => {
 
       expect(browser.tabs.create).toHaveBeenCalledWith({
         url: "https://example.com/login",
-        active: true
+        active: true,
       })
     })
 
@@ -355,8 +355,8 @@ describe("autoDetectUtils", () => {
 
       expect(browser.tabs.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          active: true
-        })
+          active: true,
+        }),
       )
     })
 
@@ -364,13 +364,13 @@ describe("autoDetectUtils", () => {
       await openLoginTab("https://site1.com")
       expect(browser.tabs.create).toHaveBeenCalledWith({
         url: "https://site1.com/login",
-        active: true
+        active: true,
       })
 
       await openLoginTab("https://site2.com:8080")
       expect(browser.tabs.create).toHaveBeenCalledWith({
         url: "https://site2.com:8080/login",
-        active: true
+        active: true,
       })
     })
 
@@ -381,7 +381,7 @@ describe("autoDetectUtils", () => {
 
       expect(browser.tabs.create).toHaveBeenCalledWith({
         url: invalidUrl,
-        active: true
+        active: true,
       })
     })
 
@@ -396,7 +396,7 @@ describe("autoDetectUtils", () => {
       vi.mocked(browser.tabs.create).mockRejectedValueOnce(mockError)
 
       await expect(openLoginTab("https://example.com")).rejects.toThrow(
-        "Tab creation failed"
+        "Tab creation failed",
       )
     })
 
@@ -407,7 +407,7 @@ describe("autoDetectUtils", () => {
       // Verify that the /login path is appended correctly
       expect(browser.tabs.create).toHaveBeenCalledWith({
         url: "https://example.com/login",
-        active: true
+        active: true,
       })
     })
   })
@@ -437,7 +437,7 @@ describe("autoDetectUtils", () => {
         type: AutoDetectErrorType.UNAUTHORIZED,
         message: expect.any(String),
         actionText: expect.any(String),
-        helpDocUrl: FAQ_URL
+        helpDocUrl: FAQ_URL,
       })
     })
 
@@ -454,7 +454,7 @@ describe("autoDetectUtils", () => {
 
       expect(browser.tabs.create).toHaveBeenCalledWith({
         url: "https://example.com/login",
-        active: true
+        active: true,
       })
     })
 

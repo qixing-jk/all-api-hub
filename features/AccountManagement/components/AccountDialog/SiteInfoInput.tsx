@@ -3,7 +3,7 @@ import {
   GlobeAltIcon,
   InformationCircleIcon,
   PencilIcon,
-  XCircleIcon
+  XCircleIcon,
 } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
@@ -16,7 +16,7 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
 } from "~/components/ui"
 import { AuthTypeEnum, type DisplaySiteData } from "~/types"
 
@@ -46,7 +46,7 @@ export default function SiteInfoInput({
   isCurrentSiteAdded,
   detectedAccount,
   onUseCurrentTab,
-  onEditAccount
+  onEditAccount,
 }: SiteInfoInputProps) {
   const { t } = useTranslation("accountDialog")
 
@@ -61,12 +61,14 @@ export default function SiteInfoInput({
       <div className="flex justify-between">
         <label
           htmlFor="site-url"
-          className="dark:text-dark-text-secondary block text-sm font-medium text-gray-700">
+          className="dark:text-dark-text-secondary block text-sm font-medium text-gray-700"
+        >
           {t("siteInfo.siteUrl")}
         </label>
         <label
           htmlFor="auth-type"
-          className="dark:text-dark-text-secondary block text-sm font-medium text-gray-700">
+          className="dark:text-dark-text-secondary block text-sm font-medium text-gray-700"
+        >
           {t("siteInfo.authMethod")}
         </label>
       </div>
@@ -87,7 +89,8 @@ export default function SiteInfoInput({
                   onClick={onClearUrl}
                   variant="ghost"
                   size="sm"
-                  aria-label="clear-url">
+                  aria-label="clear-url"
+                >
                   <XCircleIcon className="h-5 w-5 text-gray-400" />
                 </IconButton>
               )
@@ -98,10 +101,12 @@ export default function SiteInfoInput({
           <Select
             value={authType}
             onValueChange={(value) => onAuthTypeChange(value as AuthTypeEnum)}
-            disabled={isDetected}>
+            disabled={isDetected}
+          >
             <SelectTrigger
               id="auth-type"
-              className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary dark:text-dark-text-primary w-full">
+              className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary dark:text-dark-text-primary w-full"
+            >
               <SelectValue placeholder={t("siteInfo.authMethodPlaceholder")} />
             </SelectTrigger>
             <SelectContent align="end" className="min-w-48">
@@ -127,7 +132,8 @@ export default function SiteInfoInput({
               onClick={handleEditClick}
               variant="warning"
               size="sm"
-              leftIcon={<PencilIcon className="h-3 w-3" />}>
+              leftIcon={<PencilIcon className="h-3 w-3" />}
+            >
               {t("siteInfo.editNow")}
             </Button>
           </div>
@@ -148,7 +154,8 @@ export default function SiteInfoInput({
               type="button"
               onClick={onUseCurrentTab}
               className="flex items-center font-medium text-blue-800 disabled:cursor-not-allowed disabled:text-gray-400 dark:text-blue-200 dark:disabled:text-gray-600"
-              disabled={!currentTabUrl}>
+              disabled={!currentTabUrl}
+            >
               <GlobeAltIcon className="mr-1 h-3 w-3" />
               <span>{t("siteInfo.useCurrent")}</span>
             </button>

@@ -1,7 +1,7 @@
 import {
   ArrowPathIcon,
   CheckCircleIcon,
-  ExclamationCircleIcon
+  ExclamationCircleIcon,
 } from "@heroicons/react/24/outline"
 import dayjs from "dayjs"
 import { useTranslation } from "react-i18next"
@@ -33,7 +33,7 @@ export default function ResultsTable({
   onRunSingle,
   isRunning,
   runningChannelId,
-  visibleColumns
+  visibleColumns,
 }: ResultsTableProps) {
   const { t } = useTranslation("newApiModelSync")
 
@@ -42,7 +42,7 @@ export default function ResultsTable({
     status: visibleColumns?.status ?? true,
     message: visibleColumns?.message ?? true,
     attempts: visibleColumns?.attempts ?? true,
-    finishedAt: visibleColumns?.finishedAt ?? true
+    finishedAt: visibleColumns?.finishedAt ?? true,
   }
 
   return (
@@ -97,7 +97,8 @@ export default function ResultsTable({
               return (
                 <tr
                   key={item.channelId}
-                  className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                  className="hover:bg-gray-50 dark:hover:bg-gray-800"
+                >
                   <td className="px-4 py-3">
                     <input
                       type="checkbox"
@@ -167,7 +168,8 @@ export default function ResultsTable({
                       onClick={() => onRunSingle(item.channelId)}
                       disabled={isRunning}
                       loading={isRunningThis}
-                      title={t("execution.table.syncChannel")}>
+                      title={t("execution.table.syncChannel")}
+                    >
                       {!isRunningThis && <ArrowPathIcon className="h-4 w-4" />}
                     </Button>
                   </td>

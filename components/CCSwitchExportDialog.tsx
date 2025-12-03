@@ -11,13 +11,13 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
 } from "~/components/ui"
 import type { ApiToken, DisplaySiteData } from "~/types"
 import {
   CCSWITCH_APPS,
   openInCCSwitch,
-  type CCSwitchApp
+  type CCSwitchApp,
 } from "~/utils/ccSwitch"
 
 interface CCSwitchExportDialogProps {
@@ -33,7 +33,7 @@ export function CCSwitchExportDialog({
   isOpen,
   onClose,
   account,
-  token
+  token,
 }: CCSwitchExportDialogProps) {
   const { t } = useTranslation(["ui", "common"])
   const [app, setApp] = useState<CCSwitchApp>(DEFAULT_APP)
@@ -66,7 +66,7 @@ export function CCSwitchExportDialog({
       notes: notes.trim() || undefined,
       name: providerName,
       homepage,
-      endpoint
+      endpoint,
     })
 
     if (success) {
@@ -100,7 +100,8 @@ export function CCSwitchExportDialog({
             {t("ui:dialog.ccswitch.actions.export")}
           </Button>
         </div>
-      }>
+      }
+    >
       <form className="space-y-4" id={formId} onSubmit={handleSubmit}>
         <div>
           <Label htmlFor="ccswitch-name">
@@ -147,7 +148,8 @@ export function CCSwitchExportDialog({
           </Label>
           <Select
             value={app ?? ""}
-            onValueChange={(value) => setApp(value as CCSwitchApp)}>
+            onValueChange={(value) => setApp(value as CCSwitchApp)}
+          >
             <SelectTrigger id="ccswitch-app" className="mt-1">
               <SelectValue placeholder={t("ui:dialog.ccswitch.fields.app")} />
             </SelectTrigger>

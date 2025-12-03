@@ -5,8 +5,8 @@ describe("ModelMetadataService", () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
-        models: [{ id: "gpt-4", name: "GPT-4", providerId: "openai" }]
-      })
+        models: [{ id: "gpt-4", name: "GPT-4", providerId: "openai" }],
+      }),
     })
   })
 

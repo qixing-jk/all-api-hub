@@ -9,7 +9,7 @@ import {
   CardContent,
   CardHeader,
   Heading3,
-  Link
+  Link,
 } from "~/components/ui"
 import { sendRuntimeMessage } from "~/utils/browserApi"
 
@@ -22,7 +22,7 @@ interface RedemptionPromptToastProps {
 
 export const RedemptionPromptToast: React.FC<RedemptionPromptToastProps> = ({
   message,
-  onAction
+  onAction,
 }) => {
   const { t } = useTranslation("redemptionAssist")
 
@@ -41,7 +41,7 @@ export const RedemptionPromptToast: React.FC<RedemptionPromptToastProps> = ({
     e.preventDefault()
     try {
       await sendRuntimeMessage({
-        action: "openSettings:checkinRedeem"
+        action: "openSettings:checkinRedeem",
       })
     } catch (error) {
       console.error("[RedemptionAssist] Failed to open settings page:", error)

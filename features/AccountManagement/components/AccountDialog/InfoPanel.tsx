@@ -12,7 +12,7 @@ interface InfoPanelProps {
 export default function InfoPanel({
   mode,
   isDetected,
-  showManualForm
+  showManualForm,
 }: InfoPanelProps) {
   const { t } = useTranslation("accountDialog")
   const isAddMode = mode === DIALOG_MODES.ADD

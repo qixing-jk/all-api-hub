@@ -6,7 +6,7 @@ import { UI_CONSTANTS } from "~/constants/ui"
 export const formatKey = (
   key: string,
   tokenId: number,
-  visibleKeys: Set<number>
+  visibleKeys: Set<number>,
 ) => {
   if (visibleKeys.has(tokenId)) {
     return key
@@ -15,7 +15,7 @@ export const formatKey = (
     return "******"
   }
   return `${key.substring(0, 8)}${"*".repeat(16)}${key.substring(
-    key.length - 4
+    key.length - 4,
   )}`
 }
 

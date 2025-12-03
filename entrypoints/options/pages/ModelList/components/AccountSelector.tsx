@@ -6,7 +6,7 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
 } from "~/components/ui"
 import type { DisplaySiteData } from "~/types"
 
@@ -19,7 +19,7 @@ interface AccountSelectorProps {
 export function AccountSelector({
   selectedAccount,
   setSelectedAccount,
-  accounts
+  accounts,
 }: AccountSelectorProps) {
   const { t } = useTranslation("modelList")
   return (

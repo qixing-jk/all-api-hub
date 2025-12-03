@@ -5,7 +5,7 @@ import type { ModelPricing } from "~/services/apiService/common/type"
 import {
   formatPriceCompact,
   isTokenBillingType,
-  type CalculatedPrice
+  type CalculatedPrice,
 } from "~/utils/modelPricing"
 
 import { ModelItemPerCallPricingView } from "./ModelItemPerCallPricingView"
@@ -26,7 +26,7 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
   exchangeRate,
   showRealPrice,
   showRatioColumn,
-  isAvailableForUser
+  isAvailableForUser,
 }) => {
   const { t } = useTranslation("modelList")
   const tokenBillingType = isTokenBillingType(model.quota_type)
@@ -48,15 +48,16 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
           {/* 倍率显示 */}
           {showRatioColumn && (
             <div className="flex items-center gap-1.5 sm:gap-2">
-              <span className="whitespace-nowrap text-xs text-gray-500 dark:text-dark-text-tertiary sm:text-sm">
+              <span className="dark:text-dark-text-tertiary text-xs whitespace-nowrap text-gray-500 sm:text-sm">
                 {t("ratio")}
               </span>
               <span
                 className={`text-xs font-medium sm:text-sm ${
                   isAvailableForUser
-                    ? "text-gray-900 dark:text-dark-text-primary"
-                    : "text-gray-500 dark:text-dark-text-tertiary"
-                }`}>
+                    ? "dark:text-dark-text-primary text-gray-900"
+                    : "dark:text-dark-text-tertiary text-gray-500"
+                }`}
+              >
                 {model.model_ratio}x
               </span>
             </div>
@@ -66,7 +67,7 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
         perCallPrice && (
           // 按次计费
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-            <span className="whitespace-nowrap text-xs text-gray-600 dark:text-dark-text-secondary sm:text-sm">
+            <span className="dark:text-dark-text-secondary text-xs whitespace-nowrap text-gray-600 sm:text-sm">
               {t("perCall")}
             </span>
             <ModelItemPerCallPricingView
