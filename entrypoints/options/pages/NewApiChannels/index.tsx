@@ -1065,11 +1065,12 @@ function RowActions({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-44">
         <DropdownMenuItem onClick={onEdit}>{labels.edit}</DropdownMenuItem>
-        <DropdownMenuItem onClick={onSync} disabled={isSyncing}>
-          {isSyncing ? labels.syncing : labels.sync}
-        </DropdownMenuItem>
+        <DropdownMenuSeparator />
         <DropdownMenuItem onClick={onFilters}>
           {labels.filters}
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={onSync} disabled={isSyncing}>
+          {isSyncing ? labels.syncing : labels.sync}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem

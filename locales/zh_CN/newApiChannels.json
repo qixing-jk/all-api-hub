@@ -54,9 +54,9 @@
     "paginationNext": "下一页",
     "rowActions": {
       "edit": "编辑",
-      "sync": "同步模型",
+      "sync": "同步模型列表",
       "syncing": "正在同步…",
-      "filters": "渠道过滤规则",
+      "filters": "编辑渠道过滤规则",
       "delete": "删除"
     }
   },

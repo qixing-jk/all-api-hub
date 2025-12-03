@@ -54,9 +54,9 @@
     "paginationNext": "Next page",
     "rowActions": {
       "edit": "Edit",
-      "sync": "Sync models",
+      "sync": "Sync Model List",
       "syncing": "Syncing...",
-      "filters": "Channel filters",
+      "filters": "Edit Channel filters",
       "delete": "Delete"
     }
   },
