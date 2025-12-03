@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.22.0](https://github.com/qixing-jk/all-api-hub/compare/v2.21.0...v2.22.0) (2025-12-03)
+
+
+### Features
+
+* **account:** add tags support for account management ([#217](https://github.com/qixing-jk/all-api-hub/issues/217)) ([5bf7b31](https://github.com/qixing-jk/all-api-hub/commit/5bf7b31fe8844fde085b5b6dce2bb911c2dcb093))
+* **content:** implement lazy loading for redemption toast UI and fix potential breaking website style ([#223](https://github.com/qixing-jk/all-api-hub/issues/223)) ([e97c7fb](https://github.com/qixing-jk/all-api-hub/commit/e97c7fbd468aa49202fde9235ca5ff8a2f46086e))
+* support global channel filters and JSON edit mode ([#225](https://github.com/qixing-jk/all-api-hub/issues/225)) ([3f50cc9](https://github.com/qixing-jk/all-api-hub/commit/3f50cc902c6b5efeceef1545d238de06b8dc5d35))
+
 ## [2.21.0](https://github.com/qixing-jk/all-api-hub/compare/v2.20.0...v2.21.0) (2025-12-02)
 
 
