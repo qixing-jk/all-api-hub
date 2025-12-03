@@ -1,10 +1,10 @@
 import { ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline"
-import { Plus, Settings2, Trash2 } from "lucide-react"
 import { nanoid } from "nanoid"
 import { useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
+import ChannelFiltersEditor from "~/components/ChannelFiltersEditor"
 import { SettingSection } from "~/components/SettingSection"
 import {
   Button,
@@ -12,16 +12,9 @@ import {
   CardItem,
   CardList,
   Input,
-  Label,
   Modal,
   MultiSelect,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
   Switch,
-  Textarea,
   type MultiSelectOption,
 } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
@@ -105,6 +98,8 @@ export default function NewApiModelSyncSettings() {
     isSavingglobalChannelModelFilters,
     setIsSavingglobalChannelModelFilters,
   ] = useState(false)
+  const [jsonText, setJsonText] = useState("")
+  const [viewMode, setViewMode] = useState<"visual" | "json">("visual")
 
   useEffect(() => {
     let isMounted = true
@@ -202,9 +197,14 @@ export default function NewApiModelSyncSettings() {
   }
 
   const handleOpenglobalChannelModelFilters = () => {
-    setglobalChannelModelFiltersDraft(
-      preferences.globalChannelModelFilters ?? [],
-    )
+    const currentFilters = preferences.globalChannelModelFilters ?? []
+    setglobalChannelModelFiltersDraft(currentFilters)
+    try {
+      setJsonText(JSON.stringify(currentFilters, null, 2))
+    } catch {
+      setJsonText("")
+    }
+    setViewMode("visual")
     setIsglobalChannelModelFiltersDialogOpen(true)
   }
 
@@ -255,8 +255,10 @@ export default function NewApiModelSyncSettings() {
     )
   }
 
-  const validateglobalChannelModelFilters = () => {
-    for (const filter of globalChannelModelFiltersDraft) {
+  const validateglobalChannelModelFilters = (
+    rules: EditableFilter[],
+  ): string | undefined => {
+    for (const filter of rules) {
       const name = filter.name.trim()
       const pattern = filter.pattern.trim()
 
@@ -279,11 +281,28 @@ export default function NewApiModelSyncSettings() {
       }
     }
 
-    return undefined as string | undefined
+    return undefined
   }
 
   const handleSaveglobalChannelModelFilters = async () => {
-    const validationError = validateglobalChannelModelFilters()
+    let rulesToSave: EditableFilter[]
+
+    if (viewMode === "json") {
+      try {
+        rulesToSave = parseJsonGlobalChannelModelFilters(jsonText)
+      } catch (error) {
+        toast.error(
+          t("newApiChannels:filters.messages.jsonInvalid", {
+            error: getErrorMessage(error),
+          }),
+        )
+        return
+      }
+    } else {
+      rulesToSave = globalChannelModelFiltersDraft
+    }
+
+    const validationError = validateglobalChannelModelFilters(rulesToSave)
     if (validationError) {
       toast.error(validationError)
       return
@@ -292,7 +311,7 @@ export default function NewApiModelSyncSettings() {
     setIsSavingglobalChannelModelFilters(true)
 
     try {
-      const payload = globalChannelModelFiltersDraft.map((filter) => ({
+      const payload = rulesToSave.map((filter) => ({
         ...filter,
         name: filter.name.trim(),
         pattern: filter.pattern.trim(),
@@ -300,6 +319,7 @@ export default function NewApiModelSyncSettings() {
       }))
 
       await savePreferences({ globalChannelModelFilters: payload })
+      setglobalChannelModelFiltersDraft(rulesToSave)
       toast.success(t("newApiChannels:filters.messages.saved"))
       setIsglobalChannelModelFiltersDialogOpen(false)
     } catch (error) {
@@ -593,185 +613,109 @@ export default function NewApiModelSyncSettings() {
           </div>
         }
       >
-        {globalChannelModelFiltersDraft.length === 0 ? (
-          <div className="text-center">
-            <div className="bg-muted mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full">
-              <Settings2 className="text-muted-foreground h-5 w-5" />
-            </div>
-            <p className="text-base font-semibold">
-              {t("newApiChannels:filters.empty.title")}
-            </p>
-            <p className="text-muted-foreground mb-6 text-sm">
-              {t("newApiChannels:filters.empty.description")}
-            </p>
-            <Button onClick={handleAddGlobalFilter}>
-              {t("newApiChannels:filters.addRule")}
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {globalChannelModelFiltersDraft.map((filter) => (
-              <div
-                key={filter.id}
-                className="border-border space-y-5 rounded-lg border p-5"
-              >
-                <div className="grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto] md:items-end">
-                  <div className="space-y-2">
-                    <Label>{t("newApiChannels:filters.labels.name")}</Label>
-                    <Input
-                      value={filter.name}
-                      onChange={(event) =>
-                        handleGlobalFilterFieldChange(
-                          filter.id,
-                          "name",
-                          event.target.value,
-                        )
-                      }
-                      placeholder={
-                        t("newApiChannels:filters.placeholders.name") ?? ""
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{t("newApiChannels:filters.labels.enabled")}</Label>
-                    <div className="border-input flex items-center justify-between rounded-lg border px-3 py-2 text-sm">
-                      <span className="text-muted-foreground">
-                        {filter.enabled
-                          ? t("common:status.enabled", "Enabled")
-                          : t("common:status.disabled", "Disabled")}
-                      </span>
-                      <Switch
-                        id={`global-filter-enabled-${filter.id}`}
-                        checked={filter.enabled}
-                        onChange={(value: boolean) =>
-                          handleGlobalFilterFieldChange(
-                            filter.id,
-                            "enabled",
-                            value,
-                          )
-                        }
-                      />
-                    </div>
-                  </div>
-                  <div className="flex justify-end">
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => handleRemoveGlobalFilter(filter.id)}
-                      aria-label={
-                        t("newApiChannels:filters.labels.delete") ?? "Delete"
-                      }
-                      className="text-muted-foreground hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(220px,0.45fr)]">
-                  <div className="space-y-2">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <Label>
-                        {t("newApiChannels:filters.labels.pattern")}
-                      </Label>
-                      <div className="text-muted-foreground flex items-center gap-2 text-sm">
-                        <span>{t("newApiChannels:filters.labels.regex")}</span>
-                        <Switch
-                          size={"sm"}
-                          id={`global-filter-regex-${filter.id}`}
-                          checked={filter.isRegex}
-                          onChange={(value: boolean) =>
-                            handleGlobalFilterFieldChange(
-                              filter.id,
-                              "isRegex",
-                              value,
-                            )
-                          }
-                        />
-                      </div>
-                    </div>
-                    <Input
-                      value={filter.pattern}
-                      onChange={(event) =>
-                        handleGlobalFilterFieldChange(
-                          filter.id,
-                          "pattern",
-                          event.target.value,
-                        )
-                      }
-                      placeholder={
-                        t("newApiChannels:filters.placeholders.pattern") ?? ""
-                      }
-                    />
-                    <p className="text-muted-foreground text-xs">
-                      {filter.isRegex
-                        ? t("newApiChannels:filters.hints.regex")
-                        : t("newApiChannels:filters.hints.substring")}
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{t("newApiChannels:filters.labels.action")}</Label>
-                    <Select
-                      value={filter.action}
-                      onValueChange={(value: "include" | "exclude") =>
-                        handleGlobalFilterFieldChange(
-                          filter.id,
-                          "action",
-                          value,
-                        )
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="include">
-                          {t("newApiChannels:filters.actionOptions.include")}
-                        </SelectItem>
-                        <SelectItem value="exclude">
-                          {t("newApiChannels:filters.actionOptions.exclude")}
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>
-                    {t("newApiChannels:filters.labels.description")}
-                  </Label>
-                  <Textarea
-                    value={filter.description ?? ""}
-                    onChange={(event) =>
-                      handleGlobalFilterFieldChange(
-                        filter.id,
-                        "description",
-                        event.target.value,
-                      )
-                    }
-                    placeholder={
-                      t("newApiChannels:filters.placeholders.description") ?? ""
-                    }
-                    rows={3}
-                  />
-                </div>
-              </div>
-            ))}
-
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleAddGlobalFilter}
-              leftIcon={<Plus className="h-4 w-4" />}
-            >
-              {t("newApiChannels:filters.addRule")}
-            </Button>
-          </div>
-        )}
+        <ChannelFiltersEditor
+          filters={globalChannelModelFiltersDraft}
+          viewMode={viewMode}
+          jsonText={jsonText}
+          isLoading={false}
+          onAddFilter={handleAddGlobalFilter}
+          onRemoveFilter={handleRemoveGlobalFilter}
+          onFieldChange={handleGlobalFilterFieldChange}
+          onClickViewVisual={() => {
+            if (viewMode === "visual") return
+            try {
+              const parsed = jsonText.trim()
+                ? parseJsonGlobalChannelModelFilters(jsonText)
+                : []
+              setglobalChannelModelFiltersDraft(parsed)
+              setViewMode("visual")
+            } catch (error) {
+              toast.error(
+                t("newApiChannels:filters.messages.jsonInvalid", {
+                  error: getErrorMessage(error),
+                }),
+              )
+            }
+          }}
+          onClickViewJson={() => {
+            if (viewMode === "json") return
+            try {
+              setJsonText(
+                JSON.stringify(globalChannelModelFiltersDraft, null, 2),
+              )
+            } catch {
+              setJsonText("")
+            }
+            setViewMode("json")
+          }}
+          onChangeJsonText={setJsonText}
+        />
       </Modal>
     </SettingSection>
   )
+}
+
+function parseJsonGlobalChannelModelFilters(rawJson: string): EditableFilter[] {
+  const trimmed = rawJson.trim()
+  if (!trimmed) {
+    return []
+  }
+
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(trimmed)
+  } catch (error) {
+    throw new Error(getErrorMessage(error))
+  }
+
+  if (!Array.isArray(parsed)) {
+    throw new Error("JSON must be an array of filter rules")
+  }
+
+  const now = Date.now()
+
+  return parsed.map((item, index) => {
+    if (!item || typeof item !== "object") {
+      throw new Error(`Filter at index ${index} is not an object`)
+    }
+
+    const anyItem = item as any
+    const name = typeof anyItem.name === "string" ? anyItem.name.trim() : ""
+    const pattern =
+      typeof anyItem.pattern === "string" ? anyItem.pattern.trim() : ""
+
+    if (!name) {
+      throw new Error(`Filter at index ${index} is missing a name`)
+    }
+
+    if (!pattern) {
+      throw new Error(`Filter at index ${index} is missing a pattern`)
+    }
+
+    return {
+      id:
+        typeof anyItem.id === "string" && anyItem.id.trim()
+          ? anyItem.id.trim()
+          : nanoid(),
+      name,
+      description:
+        typeof anyItem.description === "string"
+          ? anyItem.description
+          : anyItem.description ?? "",
+      pattern,
+      isRegex: Boolean(anyItem.isRegex),
+      action: anyItem.action === "exclude" ? "exclude" : "include",
+      enabled: anyItem.enabled !== false,
+      createdAt:
+        typeof anyItem.createdAt === "number" && anyItem.createdAt > 0
+          ? anyItem.createdAt
+          : now,
+      updatedAt:
+        typeof anyItem.updatedAt === "number" && anyItem.updatedAt > 0
+          ? anyItem.updatedAt
+          : now,
+    }
+  })
 }
 
 /**
