@@ -205,7 +205,7 @@ export default function ChannelFiltersEditor({
                       )
                     }
                     placeholder={t("filters.placeholders.description") ?? ""}
-                    rows={3}
+                    rows={2}
                   />
                 </div>
               </div>
