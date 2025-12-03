@@ -15,8 +15,8 @@ import {
   type SiteAccount,
 } from "~/types"
 import { DeepPartial } from "~/types/utils"
+import { getErrorMessage } from "~/utils/error" // 存储键名常量
 
-import { getErrorMessage } from "../utils/error" // 存储键名常量
 import {
   fetchSupportCheckIn,
   fetchTodayIncome,

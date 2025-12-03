@@ -1,4 +1,4 @@
-import { ChannelDefaults } from "~/types"
+import { ChannelDefaults } from "~/types/newapi"
 
 /**
  * Channel Type enumeration

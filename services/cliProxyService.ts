@@ -1,7 +1,8 @@
 import { t } from "i18next"
 
 import { userPreferences } from "~/services/userPreferences"
-import type { ApiToken, DisplaySiteData, ServiceResponse } from "~/types"
+import { ApiToken, DisplaySiteData } from "~/types"
+import { ServiceResponse } from "~/types/serviceResponse"
 import { joinUrl } from "~/utils/url"
 
 interface OpenAICompatibilityProviderApiKeyEntry {

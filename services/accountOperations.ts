@@ -30,8 +30,8 @@ import {
 } from "~/types"
 import type { AccountSaveResponse } from "~/types/serviceResponse"
 import { analyzeAutoDetectError } from "~/utils/autoDetectUtils"
+import { getErrorMessage } from "~/utils/error"
 
-import { getErrorMessage } from "../utils/error"
 import { autoDetectSmart } from "./autoDetectService"
 
 /**

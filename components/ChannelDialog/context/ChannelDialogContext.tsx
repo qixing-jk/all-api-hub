@@ -8,8 +8,7 @@ import React, {
 } from "react"
 
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
-import type { ChannelFormData } from "~/types"
-import type { NewApiChannel } from "~/types/newapi"
+import type { ChannelFormData, NewApiChannel } from "~/types/newapi"
 
 interface ChannelDialogState {
   isOpen: boolean

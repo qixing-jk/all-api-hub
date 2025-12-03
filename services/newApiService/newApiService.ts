@@ -11,21 +11,19 @@ import {
 } from "~/services/apiService"
 import { ApiError } from "~/services/apiService/common/errors"
 import { fetchApi, fetchApiData } from "~/services/apiService/common/utils"
-import {
-  ApiToken,
-  AutoConfigToNewApiResponse,
-  DisplaySiteData,
-  NewApiChannel,
-  NewApiChannelListData,
-  SiteAccount,
-  UpdateChannelPayload,
-} from "~/types"
+import { ApiToken, DisplaySiteData, SiteAccount } from "~/types"
 import type {
   ChannelFormData,
   ChannelMode,
   CreateChannelPayload,
+  NewApiChannel,
+  NewApiChannelListData,
+  UpdateChannelPayload,
 } from "~/types/newapi"
-import type { ServiceResponse } from "~/types/serviceResponse"
+import type {
+  AutoConfigToNewApiResponse,
+  ServiceResponse,
+} from "~/types/serviceResponse"
 import { isArraysEqual } from "~/utils"
 import { getErrorMessage } from "~/utils/error"
 

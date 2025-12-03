@@ -3,13 +3,13 @@ import { union } from "lodash-es"
 import { ApiError } from "~/services/apiService/common/errors"
 import { fetchAllItems } from "~/services/apiService/common/pagination"
 import { fetchApi } from "~/services/apiService/common/utils"
+import type { ChannelConfigMap } from "~/types/channelConfig"
+import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 import {
   NewApiChannel,
   NewApiChannelListData,
   UpdateChannelPayload,
-} from "~/types"
-import type { ChannelConfigMap } from "~/types/channelConfig"
-import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
+} from "~/types/newapi"
 import {
   BatchExecutionOptions,
   ExecutionItemResult,
