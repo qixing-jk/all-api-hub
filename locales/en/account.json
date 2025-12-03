@@ -86,6 +86,7 @@
   "filter": {
     "tagsLabel": "Filter tags",
     "tagsPlaceholder": "Select tags",
+    "tagsAllLabel": "All",
     "clearTags": "Clear",
     "summary": "{{count}} account(s)"
   },

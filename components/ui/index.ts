@@ -35,6 +35,11 @@ export {
   type MultiSelectOption,
   type MultiSelectProps,
 } from "./MultiSelect"
+export {
+  TagFilter,
+  type TagFilterOption,
+  type TagFilterProps,
+} from "./TagFilter"
 export { Textarea, textareaVariants } from "./Textarea"
 export { IconButton, iconButtonVariants } from "./IconButton"
 export { Spinner, spinnerVariants } from "./Spinner"

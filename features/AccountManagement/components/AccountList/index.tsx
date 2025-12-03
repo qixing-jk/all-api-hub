@@ -13,7 +13,7 @@ import {
   CardList,
   EmptyState,
   IconButton,
-  MultiSelect,
+  TagFilter,
 } from "~/components/ui"
 import { DATA_TYPE_BALANCE, DATA_TYPE_CONSUMPTION } from "~/constants"
 import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
@@ -73,6 +73,27 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
       ),
     [displayData],
   )
+
+  const tagFilterOptions = useMemo(() => {
+    if (availableTags.length === 0) {
+      return []
+    }
+
+    const counts = new Map<string, number>()
+
+    for (const item of displayData) {
+      const tags = item.tags || []
+      for (const tag of tags) {
+        counts.set(tag, (counts.get(tag) ?? 0) + 1)
+      }
+    }
+
+    return availableTags.map((tag) => ({
+      value: tag,
+      label: tag,
+      count: counts.get(tag) ?? 0,
+    }))
+  }, [availableTags, displayData])
 
   const baseResults = useMemo<
     Array<{
@@ -172,12 +193,13 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
                 {t("account:filter.tagsLabel")}
               </span>
             </div>
-            <MultiSelect
-              options={availableTags.map((tag) => ({ value: tag, label: tag }))}
-              selected={selectedTags}
+            <TagFilter
+              options={tagFilterOptions}
+              value={selectedTags}
               onChange={setSelectedTags}
-              placeholder={t("account:filter.tagsPlaceholder") ?? ""}
-              allowCustom={false}
+              maxVisible={6}
+              allLabel={t("account:filter.tagsAllLabel")}
+              allCount={displayData.length}
             />
             {showFilteredSummary && (
               <div className="flex flex-wrap items-center gap-3 text-xs text-gray-600 dark:text-gray-300">

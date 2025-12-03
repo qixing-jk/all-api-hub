@@ -86,6 +86,7 @@
   "filter": {
     "tagsLabel": "标签筛选",
     "tagsPlaceholder": "选择标签",
+    "tagsAllLabel": "全部",
     "clearTags": "清除",
     "summary": "共 {{count}} 个账号"
   },
