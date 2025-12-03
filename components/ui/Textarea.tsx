@@ -17,7 +17,7 @@ const textareaVariants = cva(
       size: {
         default: "min-h-16",
         sm: "min-h-14 px-2 py-1 text-xs",
-        lg: "min-h-18 px-4 py-3",
+        lg: "min-h-20 px-4 py-3",
       },
     },
     defaultVariants: {
