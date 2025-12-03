@@ -11,6 +11,9 @@ const createFetchMock = (response: any) => {
   return vi.fn().mockResolvedValue({
     ok: true,
     status: 200,
+    headers: {
+      get: () => "application/json",
+    },
     json: async () => response,
   }) as any
 }
