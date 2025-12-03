@@ -45,6 +45,7 @@ interface AccountFormProps {
   onNotesChange: (value: string) => void
   onTagsChange: (value: string[]) => void
   availableTags: string[]
+  tagCounts?: Record<string, number>
   siteType: string
   onSiteTypeChange: (value: string) => void
   checkIn: CheckInConfig
@@ -70,19 +71,24 @@ export default function AccountForm({
   onNotesChange,
   onTagsChange,
   availableTags,
+  tagCounts,
   siteType,
   onSiteTypeChange,
   checkIn,
   onCheckInChange,
 }: AccountFormProps) {
   const { t } = useTranslation("accountDialog")
-  const tagOptions = useMemo(
-    () =>
-      Array.from(new Set(availableTags.concat(tags)))
-        .filter(Boolean)
-        .map((tag) => ({ value: tag, label: tag })),
-    [availableTags, tags],
-  )
+  const tagOptions = useMemo(() => {
+    const uniqueTags = Array.from(new Set(availableTags.concat(tags))).filter(
+      Boolean,
+    )
+
+    return uniqueTags.map((tag) => {
+      const count = tagCounts?.[tag] ?? 0
+      const label = count > 0 ? `${tag} (${count})` : tag
+      return { value: tag, label }
+    })
+  }, [availableTags, tags, tagCounts])
 
   return (
     <>

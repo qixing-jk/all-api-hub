@@ -40,8 +40,15 @@ interface AccountListProps {
 
 export default function AccountList({ initialSearchQuery }: AccountListProps) {
   const { t } = useTranslation(["account", "common"])
-  const { sortedData, displayData, handleSort, sortField, sortOrder } =
-    useAccountDataContext()
+  const {
+    sortedData,
+    displayData,
+    handleSort,
+    sortField,
+    sortOrder,
+    availableTags,
+    tagCounts,
+  } = useAccountDataContext()
   const { handleAddAccountClick } = useAddAccountHandler()
   const { handleDeleteAccount } = useAccountActionsContext()
 
@@ -62,38 +69,17 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
     setCopyKeyDialogAccount(site)
   }
 
-  const availableTags = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          displayData.flatMap((item) =>
-            item.tags && item.tags.length ? item.tags : [],
-          ),
-        ),
-      ),
-    [displayData],
-  )
-
   const tagFilterOptions = useMemo(() => {
     if (availableTags.length === 0) {
       return []
     }
 
-    const counts = new Map<string, number>()
-
-    for (const item of displayData) {
-      const tags = item.tags || []
-      for (const tag of tags) {
-        counts.set(tag, (counts.get(tag) ?? 0) + 1)
-      }
-    }
-
     return availableTags.map((tag) => ({
       value: tag,
       label: tag,
-      count: counts.get(tag) ?? 0,
+      count: tagCounts[tag] ?? 0,
     }))
-  }, [availableTags, displayData])
+  }, [availableTags, tagCounts])
 
   const baseResults = useMemo<
     Array<{

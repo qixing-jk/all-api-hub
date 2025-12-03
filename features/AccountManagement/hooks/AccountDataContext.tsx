@@ -47,6 +47,8 @@ interface AccountDataContextType {
   detectedAccount: SiteAccount | null
   isDetecting: boolean
   pinnedAccountIds: string[]
+  availableTags: string[]
+  tagCounts: Record<string, number>
   isAccountPinned: (id: string) => boolean
   pinAccount: (id: string) => Promise<boolean>
   unpinAccount: (id: string) => Promise<boolean>
@@ -427,6 +429,23 @@ export const AccountDataProvider = ({
     pinnedAccountIds,
   ])
 
+  const { availableTags, tagCounts } = useMemo(() => {
+    const counts: Record<string, number> = {}
+
+    for (const item of displayData) {
+      const tags = item.tags || []
+      for (const tag of tags) {
+        if (!tag) continue
+        counts[tag] = (counts[tag] ?? 0) + 1
+      }
+    }
+
+    return {
+      availableTags: Object.keys(counts),
+      tagCounts: counts,
+    }
+  }, [displayData])
+
   const value = useMemo(
     () => ({
       accounts,
@@ -441,6 +460,8 @@ export const AccountDataProvider = ({
       detectedAccount,
       isDetecting,
       pinnedAccountIds,
+      availableTags,
+      tagCounts,
       isAccountPinned,
       pinAccount,
       unpinAccount,
@@ -464,6 +485,8 @@ export const AccountDataProvider = ({
       detectedAccount,
       isDetecting,
       pinnedAccountIds,
+      availableTags,
+      tagCounts,
       isAccountPinned,
       pinAccount,
       unpinAccount,
