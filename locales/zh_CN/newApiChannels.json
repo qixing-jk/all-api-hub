@@ -110,6 +110,17 @@
       "regex": "正则模式使用 JavaScript 语法，可实现更灵活的匹配。",
       "substring": "普通模式将执行区分大小写的子串匹配。"
     },
+    "viewMode": {
+      "label": "编辑模式",
+      "visual": "可视化编辑",
+      "json": "JSON 编辑"
+    },
+    "jsonEditor": {
+      "label": "高级 JSON 编辑器",
+      "placeholder": "在此粘贴或编辑过滤规则对象数组，以便在多个渠道之间快速复用同一套配置。",
+      "hint": "JSON 必须是一个对象数组，至少包含 name 和 pattern 字段。可选字段包括：id、description、isRegex、action（include | exclude）、enabled、createdAt、updatedAt。",
+      "syncFromForm": "从表单同步"
+    },
     "actions": {
       "cancel": "取消",
       "save": "保存规则"
@@ -120,7 +131,8 @@
       "saved": "过滤规则已保存",
       "validationName": "请为每个规则填写名称。",
       "validationPattern": "匹配模式不能为空。",
-      "validationRegex": "无效的正则表达式：{{error}}"
+      "validationRegex": "无效的正则表达式：{{error}}",
+      "jsonInvalid": "无效的过滤规则 JSON：{{error}}"
     }
   }
 }
