@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.23.0](https://github.com/qixing-jk/all-api-hub/compare/v2.22.0...v2.23.0) (2025-12-03)
+
+
+### Features
+
+* account tags enhance ([#228](https://github.com/qixing-jk/all-api-hub/issues/228)) ([3e267ad](https://github.com/qixing-jk/all-api-hub/commit/3e267ad450bb2b07a0721213bf56a21aa17de3f0))
+* **api:** extend temp window fallback with error code matching ([2770056](https://github.com/qixing-jk/all-api-hub/commit/27700567d0f5c9d73a66a4d37643f6125f64da40))
+
 ## [2.22.0](https://github.com/qixing-jk/all-api-hub/compare/v2.21.0...v2.22.0) (2025-12-03)
 
 
