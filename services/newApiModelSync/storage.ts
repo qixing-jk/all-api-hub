@@ -42,6 +42,9 @@ class NewApiModelSyncStorage {
         maxRetries: config.maxRetries,
         rateLimit: { ...config.rateLimit },
         allowedModels: [...(config.allowedModels ?? [])],
+        globalChannelModelFilters: [
+          ...(config.globalChannelModelFilters ?? []),
+        ],
       }
     } catch (error) {
       console.error("[NewApiModelSync] Failed to get preferences:", error)
@@ -84,6 +87,10 @@ class NewApiModelSyncStorage {
           preferences.allowedModels !== undefined
             ? [...preferences.allowedModels]
             : [...(current.allowedModels ?? [])],
+        globalChannelModelFilters:
+          preferences.globalChannelModelFilters !== undefined
+            ? [...preferences.globalChannelModelFilters]
+            : [...(current.globalChannelModelFilters ?? [])],
       }
 
       await userPreferences.savePreferences({ newApiModelSync: updated })
@@ -204,6 +211,9 @@ class NewApiModelSyncStorage {
       maxRetries: defaultConfig.maxRetries,
       rateLimit: { ...defaultConfig.rateLimit },
       allowedModels: [...(defaultConfig.allowedModels ?? [])],
+      globalChannelModelFilters: [
+        ...(defaultConfig.globalChannelModelFilters ?? []),
+      ],
     }
   }
 }

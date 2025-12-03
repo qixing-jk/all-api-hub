@@ -30,6 +30,7 @@ export class NewApiModelSyncService {
   private rateLimiter: RateLimiter | null = null
   private allowedModelSet: Set<string> | null = null
   private channelConfigs: ChannelConfigMap | null = null
+  private globalChannelModelFilters: ChannelModelFilterRule[] | null = null
 
   constructor(
     baseUrl: string,
@@ -38,6 +39,7 @@ export class NewApiModelSyncService {
     rateLimitConfig?: { requestsPerMinute: number; burst: number },
     allowedModels?: string[],
     channelConfigs?: ChannelConfigMap | null,
+    globalChannelModelFilters?: ChannelModelFilterRule[] | null,
   ) {
     this.baseUrl = baseUrl
     this.token = token
@@ -55,6 +57,9 @@ export class NewApiModelSyncService {
     }
     if (channelConfigs) {
       this.channelConfigs = channelConfigs
+    }
+    if (globalChannelModelFilters && globalChannelModelFilters.length > 0) {
+      this.globalChannelModelFilters = globalChannelModelFilters
     }
   }
 
@@ -265,9 +270,13 @@ export class NewApiModelSyncService {
       try {
         const fetchedModels = await this.fetchChannelModels(channel.id)
         const allowListedModels = this.filterAllowedModels(fetchedModels)
+        const globallyScopedModels = this.applyFilters(
+          this.globalChannelModelFilters,
+          allowListedModels,
+        )
         const channelScopedModels = this.applyChannelFilters(
           channel.id,
-          allowListedModels,
+          globallyScopedModels,
         )
 
         if (this.haveModelsChanged(oldModels, channelScopedModels)) {
@@ -430,16 +439,19 @@ export class NewApiModelSyncService {
   }
 
   /**
-   * Applies the per-channel include/exclude filters defined in channel configs.
+   * Applies a list of include/exclude rules to the provided model list.
    *
    * Steps:
    * 1. Normalize incoming model names (trim + dedupe).
-   * 2. If no filters exist, return normalized models as-is.
+   * 2. If no enabled filters exist, return normalized models as-is.
    * 3. Apply include rules (OR logic). At least one include must match when
    *    include rules are present; otherwise the model is dropped.
    * 4. Apply exclude rules (OR logic). Any match removes the model.
    */
-  private applyChannelFilters(channelId: number, models: string[]): string[] {
+  private applyFilters(
+    rules: ChannelModelFilterRule[] | null | undefined,
+    models: string[],
+  ): string[] {
     const normalized = Array.from(
       new Set(models.map((model) => model.trim()).filter(Boolean)),
     )
@@ -447,9 +459,7 @@ export class NewApiModelSyncService {
       return normalized
     }
 
-    const filters = this.channelConfigs?.[
-      channelId
-    ]?.modelFilterSettings?.rules?.filter((rule) => rule.enabled)
+    const filters = rules?.filter((rule) => rule.enabled)
     if (!filters || filters.length === 0) {
       return normalized
     }
@@ -477,6 +487,16 @@ export class NewApiModelSyncService {
     }
 
     return result
+  }
+
+  /**
+   * Applies the per-channel include/exclude filters defined in channel configs
+   * to the provided models.
+   */
+  private applyChannelFilters(channelId: number, models: string[]): string[] {
+    const rules =
+      this.channelConfigs?.[channelId]?.modelFilterSettings?.rules ?? []
+    return this.applyFilters(rules, models)
   }
 
   /**

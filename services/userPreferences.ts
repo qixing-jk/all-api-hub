@@ -16,6 +16,7 @@ import {
   AUTO_CHECKIN_SCHEDULE_MODE,
   AutoCheckinPreferences,
 } from "~/types/autoCheckin"
+import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 import {
   DEFAULT_CLI_PROXY_CONFIG,
   type CliProxyConfig,
@@ -107,6 +108,7 @@ export interface UserPreferences {
      * 限制可同步的模型列表，空数组表示同步全部
      */
     allowedModels: string[]
+    globalChannelModelFilters: ChannelModelFilterRule[]
   }
 
   /**
@@ -226,6 +228,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
       burst: 5, // 允许5个突发请求
     },
     allowedModels: [],
+    globalChannelModelFilters: [],
   },
   autoCheckin: {
     globalEnabled: false,

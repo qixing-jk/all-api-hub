@@ -1,3 +1,5 @@
+import type { ChannelModelFilterRule } from "./channelModelFilters"
+
 /**
  * Single channel execution result
  */
@@ -59,6 +61,7 @@ export interface NewApiModelSyncPreferences {
    * Empty array = sync all upstream models.
    */
   allowedModels: string[]
+  globalChannelModelFilters: ChannelModelFilterRule[]
 }
 
 /**

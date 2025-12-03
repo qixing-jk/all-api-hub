@@ -2,6 +2,7 @@ import { t } from "i18next"
 
 import { ModelRedirectService } from "~/services/modelRedirect"
 import { hasValidNewApiConfig } from "~/services/newApiService/newApiService"
+import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 import {
   ALL_PRESET_STANDARD_MODELS,
   DEFAULT_MODEL_REDIRECT_PREFERENCES,
@@ -57,6 +58,7 @@ class NewApiModelSyncScheduler {
       config.rateLimit,
       config.allowedModels,
       channelConfigs,
+      config.globalChannelModelFilters,
     )
   }
 
@@ -338,6 +340,7 @@ class NewApiModelSyncScheduler {
       burst?: number
     }
     allowedModels?: string[]
+    globalChannelModelFilters?: ChannelModelFilterRule[]
   }) {
     // Get current config and update
     const prefs = await userPreferences.getPreferences()
@@ -368,6 +371,10 @@ class NewApiModelSyncScheduler {
         settings.allowedModels !== undefined
           ? settings.allowedModels
           : current.allowedModels,
+      globalChannelModelFilters:
+        settings.globalChannelModelFilters !== undefined
+          ? settings.globalChannelModelFilters
+          : current.globalChannelModelFilters,
     }
 
     await userPreferences.savePreferences({ newApiModelSync: updated })

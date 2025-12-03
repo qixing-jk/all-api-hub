@@ -22,6 +22,11 @@
     "allowedModelsHint": "同步时仅会将此处列出的模型写入渠道。",
     "allowedModelsLoading": "正在加载模型元数据...",
     "allowedModelsLoadFailed": "加载模型元数据失败：{{error}}",
+    "globalChannelModelFilters": "全局过滤规则",
+    "globalChannelModelFiltersDesc": "在所有渠道的本地规则之前应用的包含/排除规则。",
+    "globalChannelModelFiltersButton": "编辑全局规则",
+    "globalChannelModelFiltersDialogTitle": "全局模型过滤规则",
+    "globalChannelModelFiltersDialogSubtitle": "此处配置的规则会在每个渠道自己的过滤规则之前生效并应用于所有渠道。",
     "viewExecution": "查看执行与结果",
     "viewExecutionDesc": "查看详细执行结果并手动触发同步",
     "viewExecutionButton": "打开"

@@ -1,4 +1,6 @@
 import { ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline"
+import { Plus, Settings2, Trash2 } from "lucide-react"
+import { nanoid } from "nanoid"
 import { useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
@@ -10,16 +12,26 @@ import {
   CardItem,
   CardList,
   Input,
+  Label,
+  Modal,
   MultiSelect,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   Switch,
+  Textarea,
   type MultiSelectOption,
 } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { modelMetadataService } from "~/services/modelMetadata"
 import type { ModelMetadata } from "~/services/modelMetadata/types"
 import { DEFAULT_PREFERENCES } from "~/services/userPreferences"
+import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 import type { NewApiModelSyncPreferences } from "~/types/newApiModelSync"
 import { sendRuntimeMessage } from "~/utils/browserApi"
+import { getErrorMessage } from "~/utils/error"
 import { navigateWithinOptionsPage } from "~/utils/navigation"
 
 type UserNewApiModelSyncConfig = NonNullable<
@@ -36,8 +48,15 @@ type UserNewApiModelSyncConfig = NonNullable<
  *
  * @returns The settings section React element for configuring New API Model Sync.
  */
+type EditableFilter = ChannelModelFilterRule
+
 export default function NewApiModelSyncSettings() {
-  const { t } = useTranslation(["newApiModelSync", "settings"])
+  const { t } = useTranslation([
+    "newApiModelSync",
+    "settings",
+    "newApiChannels",
+    "common",
+  ])
   const {
     preferences: userPrefs,
     updateNewApiModelSync,
@@ -59,6 +78,7 @@ export default function NewApiModelSyncSettings() {
         maxRetries: rawPrefs.maxRetries,
         rateLimit: rawPrefs.rateLimit,
         allowedModels: rawPrefs.allowedModels ?? [],
+        globalChannelModelFilters: rawPrefs.globalChannelModelFilters ?? [],
       }
     : {
         enableSync: DEFAULT_PREFERENCES.newApiModelSync?.enabled ?? false,
@@ -71,7 +91,20 @@ export default function NewApiModelSyncSettings() {
           burst: 5,
         },
         allowedModels: DEFAULT_PREFERENCES.newApiModelSync?.allowedModels ?? [],
+        globalChannelModelFilters:
+          DEFAULT_PREFERENCES.newApiModelSync?.globalChannelModelFilters ?? [],
       }
+
+  const [
+    isglobalChannelModelFiltersDialogOpen,
+    setIsglobalChannelModelFiltersDialogOpen,
+  ] = useState(false)
+  const [globalChannelModelFiltersDraft, setglobalChannelModelFiltersDraft] =
+    useState<EditableFilter[]>([])
+  const [
+    isSavingglobalChannelModelFilters,
+    setIsSavingglobalChannelModelFilters,
+  ] = useState(false)
 
   useEffect(() => {
     let isMounted = true
@@ -146,19 +179,137 @@ export default function NewApiModelSyncSettings() {
       if (updates.allowedModels !== undefined) {
         userPrefsUpdate.allowedModels = updates.allowedModels
       }
+      if (updates.globalChannelModelFilters !== undefined) {
+        userPrefsUpdate.globalChannelModelFilters =
+          updates.globalChannelModelFilters
+      }
 
       const success = await updateNewApiModelSync(userPrefsUpdate)
 
-      if (success) {
-        toast.success(t("newApiModelSync:messages.success.settingsSaved"))
-      } else {
+      if (!success) {
         toast.error(t("settings:messages.saveSettingsFailed"))
+      } else if (!updates.globalChannelModelFilters) {
+        // Avoid double toast when saving from the global filters dialog,
+        // which already shows a dedicated success message.
+        toast.success(t("newApiModelSync:messages.success.settingsSaved"))
       }
     } catch (error) {
       console.error("Failed to save preferences:", error)
       toast.error(t("settings:messages.saveSettingsFailed"))
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  const handleOpenglobalChannelModelFilters = () => {
+    setglobalChannelModelFiltersDraft(
+      preferences.globalChannelModelFilters ?? [],
+    )
+    setIsglobalChannelModelFiltersDialogOpen(true)
+  }
+
+  const handleCloseglobalChannelModelFilters = () => {
+    if (isSavingglobalChannelModelFilters) {
+      return
+    }
+    setIsglobalChannelModelFiltersDialogOpen(false)
+  }
+
+  const handleGlobalFilterFieldChange = (
+    id: string,
+    field: keyof EditableFilter,
+    value: any,
+  ) => {
+    setglobalChannelModelFiltersDraft((prev) =>
+      prev.map((filter) =>
+        filter.id === id
+          ? {
+              ...filter,
+              [field]: value,
+              updatedAt: Date.now(),
+            }
+          : filter,
+      ),
+    )
+  }
+
+  const handleAddGlobalFilter = () => {
+    const now = Date.now()
+    const newFilter: EditableFilter = {
+      id: nanoid(),
+      name: "",
+      pattern: "",
+      isRegex: false,
+      action: "include",
+      enabled: true,
+      createdAt: now,
+      updatedAt: now,
+      description: "",
+    }
+    setglobalChannelModelFiltersDraft((prev) => [...prev, newFilter])
+  }
+
+  const handleRemoveGlobalFilter = (id: string) => {
+    setglobalChannelModelFiltersDraft((prev) =>
+      prev.filter((filter) => filter.id !== id),
+    )
+  }
+
+  const validateglobalChannelModelFilters = () => {
+    for (const filter of globalChannelModelFiltersDraft) {
+      const name = filter.name.trim()
+      const pattern = filter.pattern.trim()
+
+      if (!name) {
+        return t("newApiChannels:filters.messages.validationName")
+      }
+
+      if (!pattern) {
+        return t("newApiChannels:filters.messages.validationPattern")
+      }
+
+      if (filter.isRegex) {
+        try {
+          new RegExp(pattern)
+        } catch (error) {
+          return t("newApiChannels:filters.messages.validationRegex", {
+            error: getErrorMessage(error),
+          })
+        }
+      }
+    }
+
+    return undefined as string | undefined
+  }
+
+  const handleSaveglobalChannelModelFilters = async () => {
+    const validationError = validateglobalChannelModelFilters()
+    if (validationError) {
+      toast.error(validationError)
+      return
+    }
+
+    setIsSavingglobalChannelModelFilters(true)
+
+    try {
+      const payload = globalChannelModelFiltersDraft.map((filter) => ({
+        ...filter,
+        name: filter.name.trim(),
+        pattern: filter.pattern.trim(),
+        description: filter.description?.trim() || undefined,
+      }))
+
+      await savePreferences({ globalChannelModelFilters: payload })
+      toast.success(t("newApiChannels:filters.messages.saved"))
+      setIsglobalChannelModelFiltersDialogOpen(false)
+    } catch (error) {
+      toast.error(
+        t("newApiChannels:filters.messages.saveFailed", {
+          error: getErrorMessage(error),
+        }),
+      )
+    } finally {
+      setIsSavingglobalChannelModelFilters(false)
     }
   }
 
@@ -366,6 +517,24 @@ export default function NewApiModelSyncSettings() {
             </div>
           </CardItem>
 
+          {/* Global Filters */}
+          <CardItem
+            title={t("newApiModelSync:settings.globalChannelModelFilters")}
+            description={t(
+              "newApiModelSync:settings.globalChannelModelFiltersDesc",
+            )}
+            rightContent={
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleOpenglobalChannelModelFilters}
+                disabled={isSaving}
+              >
+                {t("newApiModelSync:settings.globalChannelModelFiltersButton")}
+              </Button>
+            }
+          />
+
           {/* View Execution Button */}
           <CardItem
             title={t("newApiModelSync:settings.viewExecution")}
@@ -384,6 +553,223 @@ export default function NewApiModelSyncSettings() {
           />
         </CardList>
       </Card>
+
+      <Modal
+        isOpen={isglobalChannelModelFiltersDialogOpen}
+        onClose={handleCloseglobalChannelModelFilters}
+        size="lg"
+        panelClassName="max-h-[85vh]"
+        header={
+          <div>
+            <p className="text-base font-semibold">
+              {t(
+                "newApiModelSync:settings.globalChannelModelFiltersDialogTitle",
+              )}
+            </p>
+            <p className="text-muted-foreground text-sm">
+              {t(
+                "newApiModelSync:settings.globalChannelModelFiltersDialogSubtitle",
+              )}
+            </p>
+          </div>
+        }
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={handleCloseglobalChannelModelFilters}
+              disabled={isSavingglobalChannelModelFilters}
+            >
+              {t("newApiChannels:filters.actions.cancel")}
+            </Button>
+            <Button
+              onClick={handleSaveglobalChannelModelFilters}
+              disabled={isSavingglobalChannelModelFilters}
+              loading={isSavingglobalChannelModelFilters}
+            >
+              {t("newApiChannels:filters.actions.save")}
+            </Button>
+          </div>
+        }
+      >
+        {globalChannelModelFiltersDraft.length === 0 ? (
+          <div className="text-center">
+            <div className="bg-muted mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full">
+              <Settings2 className="text-muted-foreground h-5 w-5" />
+            </div>
+            <p className="text-base font-semibold">
+              {t("newApiChannels:filters.empty.title")}
+            </p>
+            <p className="text-muted-foreground mb-6 text-sm">
+              {t("newApiChannels:filters.empty.description")}
+            </p>
+            <Button onClick={handleAddGlobalFilter}>
+              {t("newApiChannels:filters.addRule")}
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {globalChannelModelFiltersDraft.map((filter) => (
+              <div
+                key={filter.id}
+                className="border-border space-y-5 rounded-lg border p-5"
+              >
+                <div className="grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto] md:items-end">
+                  <div className="space-y-2">
+                    <Label>{t("newApiChannels:filters.labels.name")}</Label>
+                    <Input
+                      value={filter.name}
+                      onChange={(event) =>
+                        handleGlobalFilterFieldChange(
+                          filter.id,
+                          "name",
+                          event.target.value,
+                        )
+                      }
+                      placeholder={
+                        t("newApiChannels:filters.placeholders.name") ?? ""
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{t("newApiChannels:filters.labels.enabled")}</Label>
+                    <div className="border-input flex items-center justify-between rounded-lg border px-3 py-2 text-sm">
+                      <span className="text-muted-foreground">
+                        {filter.enabled
+                          ? t("common:status.enabled", "Enabled")
+                          : t("common:status.disabled", "Disabled")}
+                      </span>
+                      <Switch
+                        id={`global-filter-enabled-${filter.id}`}
+                        checked={filter.enabled}
+                        onChange={(value: boolean) =>
+                          handleGlobalFilterFieldChange(
+                            filter.id,
+                            "enabled",
+                            value,
+                          )
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-end">
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => handleRemoveGlobalFilter(filter.id)}
+                      aria-label={
+                        t("newApiChannels:filters.labels.delete") ?? "Delete"
+                      }
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(220px,0.45fr)]">
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <Label>
+                        {t("newApiChannels:filters.labels.pattern")}
+                      </Label>
+                      <div className="text-muted-foreground flex items-center gap-2 text-sm">
+                        <span>{t("newApiChannels:filters.labels.regex")}</span>
+                        <Switch
+                          size={"sm"}
+                          id={`global-filter-regex-${filter.id}`}
+                          checked={filter.isRegex}
+                          onChange={(value: boolean) =>
+                            handleGlobalFilterFieldChange(
+                              filter.id,
+                              "isRegex",
+                              value,
+                            )
+                          }
+                        />
+                      </div>
+                    </div>
+                    <Input
+                      value={filter.pattern}
+                      onChange={(event) =>
+                        handleGlobalFilterFieldChange(
+                          filter.id,
+                          "pattern",
+                          event.target.value,
+                        )
+                      }
+                      placeholder={
+                        t("newApiChannels:filters.placeholders.pattern") ?? ""
+                      }
+                    />
+                    <p className="text-muted-foreground text-xs">
+                      {filter.isRegex
+                        ? t("newApiChannels:filters.hints.regex")
+                        : t("newApiChannels:filters.hints.substring")}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{t("newApiChannels:filters.labels.action")}</Label>
+                    <Select
+                      value={filter.action}
+                      onValueChange={(value: "include" | "exclude") =>
+                        handleGlobalFilterFieldChange(
+                          filter.id,
+                          "action",
+                          value,
+                        )
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="include">
+                          {t("newApiChannels:filters.actionOptions.include")}
+                        </SelectItem>
+                        <SelectItem value="exclude">
+                          {t("newApiChannels:filters.actionOptions.exclude")}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>
+                    {t("newApiChannels:filters.labels.description")}
+                  </Label>
+                  <Textarea
+                    value={filter.description ?? ""}
+                    onChange={(event) =>
+                      handleGlobalFilterFieldChange(
+                        filter.id,
+                        "description",
+                        event.target.value,
+                      )
+                    }
+                    placeholder={
+                      t("newApiChannels:filters.placeholders.description") ?? ""
+                    }
+                    rows={3}
+                  />
+                </div>
+              </div>
+            ))}
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleAddGlobalFilter}
+              leftIcon={<Plus className="h-4 w-4" />}
+            >
+              {t("newApiChannels:filters.addRule")}
+            </Button>
+          </div>
+        )}
+      </Modal>
     </SettingSection>
   )
 }
