@@ -117,7 +117,7 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
     }
     return baseResults.filter(({ account }) => {
       const tags = account.tags || []
-      return selectedTags.every((tag) => tags.includes(tag))
+      return selectedTags.some((tag) => tags.includes(tag))
     })
   }, [baseResults, selectedTags])
 
@@ -188,11 +188,6 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
         {/* Tag Filter */}
         <div className="dark:border-dark-bg-tertiary border-b border-gray-200 px-3 py-2 sm:px-5">
           <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-gray-700 dark:text-gray-200">
-                {t("account:filter.tagsLabel")}
-              </span>
-            </div>
             <TagFilter
               options={tagFilterOptions}
               value={selectedTags}
