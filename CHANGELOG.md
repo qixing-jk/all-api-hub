@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.24.0](https://github.com/qixing-jk/all-api-hub/compare/v2.23.0...v2.24.0) (2025-12-04)
+
+
+### Features
+
+* **i18n:** update app description and about page content ([283d901](https://github.com/qixing-jk/all-api-hub/commit/283d901808048d8b6f36783b9604398fa4dd6c5c))
+* **i18n:** update extension name with subtitle ([54251b8](https://github.com/qixing-jk/all-api-hub/commit/54251b8ba68342a9e9f6a7a080e90093e0b7c7b1))
+* **options:** add separators before specific menu items ([decb971](https://github.com/qixing-jk/all-api-hub/commit/decb971e30f93ab9a0d4b6ba6a40204fe2345da4))
+* **ui:** add line-based visibility control for TagFilter ([b13a89b](https://github.com/qixing-jk/all-api-hub/commit/b13a89b3929f8b162f374cfe39e52b371fe891b0))
+* **ui:** improve TagFilter overflow detection logic ([b4c638d](https://github.com/qixing-jk/all-api-hub/commit/b4c638de89ddc1370d0589092422c8b11bfbc458))
+* **ui:** update app description for clarity and consistency ([bc7cfa1](https://github.com/qixing-jk/all-api-hub/commit/bc7cfa1e21e17bf4b80c946a08c00c99c9e1ebd1))
+* **webdav:** expand success status codes for connectivity check ([c024197](https://github.com/qixing-jk/all-api-hub/commit/c0241973bf7ff84169ae3e9aa7585a3cbbec0d49))
+* **webdav:** update WebDAV connection test messages ([1a93722](https://github.com/qixing-jk/all-api-hub/commit/1a937222d60fd25e11f2ba6a947ca1ba7faebc8d))
+
+
+### Bug Fixes
+
+* **i18n:** remove trailing periods from JSON strings ([bebc7ec](https://github.com/qixing-jk/all-api-hub/commit/bebc7ec7e63b7bdfac86539d11bd24070c550757))
+
 ## [2.23.0](https://github.com/qixing-jk/all-api-hub/compare/v2.22.0...v2.23.0) (2025-12-03)
 
 
