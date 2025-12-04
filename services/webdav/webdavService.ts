@@ -85,8 +85,12 @@ async function getWebDavConfig(): Promise<WebDAVConfig> {
 
 /**
  * Test connectivity and authentication against the configured WebDAV
- * endpoint. Treats 200 and 404 as success (404 means the backup file does
- * not yet exist but auth is valid).
+ * endpoint.
+ *
+ * Any non-auth HTTP status in the 2xx–4xx range is treated as a successful
+ * connectivity check (the exact backup file does not need to exist yet).
+ * 401/403 are treated as authentication failures and 5xx as connection
+ * errors.
  */
 export async function testWebdavConnection(custom?: Partial<WebDAVConfig>) {
   const cfg = { ...(await getWebDavConfig()), ...custom }
@@ -101,10 +105,12 @@ export async function testWebdavConnection(custom?: Partial<WebDAVConfig>) {
       Authorization: buildAuthHeader(cfg.username, cfg.password),
     },
   })
-  // 200 存在；404 文件不存在但鉴权通过也视为连通
-  if (res.status === 200 || res.status === 404) return true
+  // 401/403 明确表示鉴权失败
   if (res.status === 401 || res.status === 403)
     throw new Error(t("messages:webdav.authFailed"))
+  // 其余 2xx–4xx（例如部分 WebDAV 服务返回的 405/409 等）视为网络可达且凭据大概率有效
+  if (res.status >= 200 && res.status < 500) return true
+  // 5xx 等错误仍视为连接失败，保留原有错误信息
   throw new Error(t("messages:webdav.connectionFailed", { status: res.status }))
 }
 

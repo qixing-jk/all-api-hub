@@ -73,6 +73,14 @@ describe("webdavService", () => {
       expect(ok).toBe(true)
     })
 
+    it("treats other non-auth 4xx (e.g. 405/409) as connectivity success", async () => {
+      mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
+      globalAny.fetch.mockResolvedValue({ status: 405 })
+
+      const ok = await testWebdavConnection()
+      expect(ok).toBe(true)
+    })
+
     it("throws auth error for 401/403", async () => {
       mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
       globalAny.fetch.mockResolvedValue({ status: 401 })
@@ -82,7 +90,7 @@ describe("webdavService", () => {
       )
     })
 
-    it("throws connectionFailed for other status codes", async () => {
+    it("throws connectionFailed for 5xx status codes", async () => {
       mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
       globalAny.fetch.mockResolvedValue({ status: 500 })
 
