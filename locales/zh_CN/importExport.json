@@ -67,6 +67,8 @@
     "syncError": "同步失败",
     "syncFailed": "同步失败",
     "notSynced": "未同步",
+    "testSuccess": "测试连接成功",
+    "testFailed": "测试连接失败",
     "autoSync": {
       "title": "WebDAV 自动同步",
       "description": "配置自动同步设置，定期备份和恢复数据",

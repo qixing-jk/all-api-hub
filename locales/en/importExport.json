@@ -67,6 +67,8 @@
     "syncError": "Sync failed",
     "syncFailed": "Sync failed",
     "notSynced": "Not synced",
+    "testSuccess": "Connection test successful",
+    "testFailed": "Connection test failed",
     "autoSync": {
       "title": "WebDAV Auto Sync",
       "description": "Configure automatic sync to periodically back up and restore data",

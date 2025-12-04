@@ -172,10 +172,10 @@ export default function WebDAVSettings() {
                   username: webdavUsername,
                   password: webdavPassword,
                 })
-                toast.success(t("settings:messages.updateSuccess"))
+                toast.success(t("webdav.testSuccess"))
               } catch (e: any) {
                 console.error(e)
-                toast.error(e?.message || t("settings:messages.updateFailed"))
+                toast.error(e?.message || t("webdav.testFailed"))
               } finally {
                 setTesting(false)
               }
