@@ -62,6 +62,81 @@ export default function WebDAVSettings() {
     })()
   }, [])
 
+  const webdavConfig = {
+    url: webdavUrl,
+    username: webdavUsername,
+    password: webdavPassword,
+  }
+
+  const handleSaveConfig = async () => {
+    setSaving(true)
+    try {
+      await userPreferences.updateWebdavSettings(webdavConfig)
+      toast.success(t("settings:messages.updateSuccess"))
+    } catch (e) {
+      console.error(e)
+      toast.error(t("settings:messages.saveSettingsFailed"))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleTestConnection = async () => {
+    setTesting(true)
+    try {
+      await userPreferences.updateWebdavSettings(webdavConfig)
+      await testWebdavConnection(webdavConfig)
+      toast.success(t("webdav.testSuccess"))
+    } catch (e: any) {
+      console.error(e)
+      toast.error(e?.message || t("webdav.testFailed"))
+    } finally {
+      setTesting(false)
+    }
+  }
+
+  const handleUploadBackup = async () => {
+    setUploading(true)
+    try {
+      const [accountData, preferencesData, channelConfigs] = await Promise.all([
+        accountStorage.exportData(),
+        userPreferences.exportPreferences(),
+        channelConfigStorage.exportConfigs(),
+      ])
+      const exportData: BackupFullV2 = {
+        version: BACKUP_VERSION,
+        timestamp: Date.now(),
+        accounts: accountData,
+        preferences: preferencesData,
+        channelConfigs,
+      }
+      await uploadBackup(JSON.stringify(exportData, null, 2), webdavConfig)
+      toast.success(t("export.dataExported"))
+    } catch (e: any) {
+      console.error(e)
+      toast.error(e?.message || t("export.exportFailed"))
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleDownloadAndImport = async () => {
+    setDownloading(true)
+    try {
+      const content = await downloadBackup(webdavConfig)
+      const data = JSON.parse(content)
+      const result = await importFromBackupObject(data)
+      if (result.allImported) {
+        toast.success(t("importExport:import.importSuccess"))
+      }
+    } catch (e: any) {
+      console.error(e)
+      toast.error(e?.message || t("importExport:import.downloadImportFailed"))
+    } finally {
+      setDownloading(false)
+    }
+  }
+
   return (
     <Card padding="none">
       <CardHeader>
@@ -132,22 +207,7 @@ export default function WebDAVSettings() {
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {/* 保存配置 */}
           <Button
-            onClick={async () => {
-              setSaving(true)
-              try {
-                await userPreferences.updateWebdavSettings({
-                  url: webdavUrl,
-                  username: webdavUsername,
-                  password: webdavPassword,
-                })
-                toast.success(t("settings:messages.updateSuccess"))
-              } catch (e) {
-                console.error(e)
-                toast.error(t("settings:messages.saveSettingsFailed"))
-              } finally {
-                setSaving(false)
-              }
-            }}
+            onClick={handleSaveConfig}
             disabled={saving}
             loading={saving}
             variant="default"
@@ -159,27 +219,7 @@ export default function WebDAVSettings() {
 
           {/* 测试连接 */}
           <Button
-            onClick={async () => {
-              setTesting(true)
-              try {
-                await userPreferences.updateWebdavSettings({
-                  url: webdavUrl,
-                  username: webdavUsername,
-                  password: webdavPassword,
-                })
-                await testWebdavConnection({
-                  url: webdavUrl,
-                  username: webdavUsername,
-                  password: webdavPassword,
-                })
-                toast.success(t("webdav.testSuccess"))
-              } catch (e: any) {
-                console.error(e)
-                toast.error(e?.message || t("webdav.testFailed"))
-              } finally {
-                setTesting(false)
-              }
-            }}
+            onClick={handleTestConnection}
             disabled={testing || !webdavConfigFilled}
             loading={testing}
             variant="secondary"
@@ -191,35 +231,7 @@ export default function WebDAVSettings() {
 
           {/* 上传备份 */}
           <Button
-            onClick={async () => {
-              setUploading(true)
-              try {
-                const [accountData, preferencesData, channelConfigs] =
-                  await Promise.all([
-                    accountStorage.exportData(),
-                    userPreferences.exportPreferences(),
-                    channelConfigStorage.exportConfigs(),
-                  ])
-                const exportData: BackupFullV2 = {
-                  version: BACKUP_VERSION,
-                  timestamp: Date.now(),
-                  accounts: accountData,
-                  preferences: preferencesData,
-                  channelConfigs,
-                }
-                await uploadBackup(JSON.stringify(exportData, null, 2), {
-                  url: webdavUrl,
-                  username: webdavUsername,
-                  password: webdavPassword,
-                })
-                toast.success(t("export.dataExported"))
-              } catch (e: any) {
-                console.error(e)
-                toast.error(e?.message || t("export.exportFailed"))
-              } finally {
-                setUploading(false)
-              }
-            }}
+            onClick={handleUploadBackup}
             disabled={uploading || !webdavConfigFilled}
             loading={uploading}
             variant="success"
@@ -233,28 +245,7 @@ export default function WebDAVSettings() {
 
           {/* 下载并导入 */}
           <Button
-            onClick={async () => {
-              setDownloading(true)
-              try {
-                const content = await downloadBackup({
-                  url: webdavUrl,
-                  username: webdavUsername,
-                  password: webdavPassword,
-                })
-                const data = JSON.parse(content)
-                const result = await importFromBackupObject(data)
-                if (result.allImported) {
-                  toast.success(t("importExport:import.importSuccess"))
-                }
-              } catch (e: any) {
-                console.error(e)
-                toast.error(
-                  e?.message || t("importExport:import.downloadImportFailed"),
-                )
-              } finally {
-                setDownloading(false)
-              }
-            }}
+            onClick={handleDownloadAndImport}
             disabled={downloading || !webdavConfigFilled}
             loading={downloading}
             variant="default"
