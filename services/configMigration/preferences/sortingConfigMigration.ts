@@ -67,28 +67,54 @@ export function migrateSortingConfig(
     }
   }
 
-  const missingIds = [...allIds].filter((id) => !existingIds.has(id))
+  const currentIds = new Set(newCriteria.map((c) => c.id))
+  const missingIds = [...allIds].filter((id) => !currentIds.has(id))
 
-  const filteredMissing = missingIds.filter(
-    (id) => id !== SortingCriteriaType.PINNED,
+  // Special handling: ensure MANUAL_ORDER exists and is enabled.
+  // Its relative ordering (after CURRENT_SITE and PINNED) is handled
+  // centrally in the normalization sort, so we can keep its default
+  // priority here.
+  if (missingIds.includes(SortingCriteriaType.MANUAL_ORDER)) {
+    const manualDefault = DEFAULT_SORTING_PRIORITY_CONFIG.criteria.find(
+      (c) => c.id === SortingCriteriaType.MANUAL_ORDER,
+    )
+    if (manualDefault) {
+      newCriteria.push({
+        ...manualDefault,
+        priority: manualDefault.priority,
+        enabled: manualDefault.enabled,
+      })
+      modified = true
+      console.log(
+        `[SortingConfigMigration] Added MANUAL_ORDER criterion with default priority ${manualDefault.priority}, enabled: ${manualDefault.enabled}`,
+      )
+    }
+  }
+
+  // Handle remaining missing criteria (excluding PINNED and MANUAL_ORDER)
+  const remainingMissing = missingIds.filter(
+    (id) =>
+      id !== SortingCriteriaType.PINNED &&
+      id !== SortingCriteriaType.MANUAL_ORDER,
   )
 
-  if (filteredMissing.length > 0) {
+  if (remainingMissing.length > 0) {
     const maxPriority = Math.max(...newCriteria.map((c) => c.priority), -1)
-    filteredMissing.forEach((id, index) => {
+    remainingMissing.forEach((id, index) => {
       const defaultCriterion = DEFAULT_SORTING_PRIORITY_CONFIG.criteria.find(
         (c) => c.id === id,
       )
       if (defaultCriterion) {
+        const priority = maxPriority + index + 1
         newCriteria.push({
           ...defaultCriterion,
-          priority: maxPriority + index + 1,
-          // Default to disabled for new criteria
+          priority,
+          // Default to disabled for new criteria introduced after initial release
           enabled: false,
         })
         modified = true
         console.log(
-          `[SortingConfigMigration] Adding new criterion: ${id} with priority ${maxPriority + index + 1}, enabled: false`,
+          `[SortingConfigMigration] Adding new criterion: ${id} with priority ${priority}, enabled: false`,
         )
       }
     })
@@ -100,11 +126,22 @@ export function migrateSortingConfig(
 
   const normalizedCriteria = newCriteria
     .sort((a, b) => {
-      if (a.id === SortingCriteriaType.CURRENT_SITE) return -1
-      if (b.id === SortingCriteriaType.CURRENT_SITE) return 1
+      const getGroupRank = (id: SortingCriteriaType): number => {
+        switch (id) {
+          case SortingCriteriaType.CURRENT_SITE:
+            return 0
+          case SortingCriteriaType.PINNED:
+            return 1
+          case SortingCriteriaType.MANUAL_ORDER:
+            return 2
+          default:
+            return 3
+        }
+      }
 
-      if (a.id === SortingCriteriaType.PINNED) return -1
-      if (b.id === SortingCriteriaType.PINNED) return 1
+      const rankA = getGroupRank(a.id)
+      const rankB = getGroupRank(b.id)
+      if (rankA !== rankB) return rankA - rankB
       return a.priority - b.priority
     })
     .map((item, index) => ({

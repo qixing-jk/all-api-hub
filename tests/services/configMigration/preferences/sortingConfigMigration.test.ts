@@ -125,7 +125,7 @@ describe("sortingConfigMigration", () => {
       expect(pinnedIndex).toBeLessThanOrEqual(2) // At most position 2 due to other top criteria
     })
 
-    it("adds missing criteria with disabled state by default", () => {
+    it("adds missing criteria with expected enabled state", () => {
       const config = {
         criteria: [
           {
@@ -144,14 +144,21 @@ describe("sortingConfigMigration", () => {
 
       const result = migrateSortingConfig(config)
 
-      const missingCriteria = result.criteria.filter(
+      const manualOrderCriterion = result.criteria.find(
+        (c) => c.id === SortingCriteriaType.MANUAL_ORDER,
+      )
+      expect(manualOrderCriterion).toBeDefined()
+      expect(manualOrderCriterion?.enabled).toBe(true)
+
+      const otherMissingCriteria = result.criteria.filter(
         (c) =>
           c.id !== SortingCriteriaType.CURRENT_SITE &&
-          c.id !== SortingCriteriaType.PINNED,
+          c.id !== SortingCriteriaType.PINNED &&
+          c.id !== SortingCriteriaType.MANUAL_ORDER,
       )
 
-      expect(missingCriteria.length).toBeGreaterThan(0)
-      missingCriteria.forEach((c) => {
+      expect(otherMissingCriteria.length).toBeGreaterThan(0)
+      otherMissingCriteria.forEach((c) => {
         expect(c.enabled).toBe(false)
       })
     })
@@ -318,6 +325,32 @@ describe("sortingConfigMigration", () => {
 
       expect(currentSite?.enabled).toBe(false)
       expect(healthStatus?.enabled).toBe(true)
+    })
+
+    it("places CURRENT_SITE, PINNED, and MANUAL_ORDER at the top in that order", () => {
+      const config = {
+        criteria: [
+          {
+            id: SortingCriteriaType.HEALTH_STATUS,
+            enabled: true,
+            priority: 10,
+          },
+          {
+            id: SortingCriteriaType.CHECK_IN_REQUIREMENT,
+            enabled: true,
+            priority: 20,
+          },
+        ],
+        lastModified: 1000,
+      }
+
+      const result = migrateSortingConfig(config)
+
+      const ids = result.criteria.map((c) => c.id)
+
+      expect(ids.indexOf(SortingCriteriaType.CURRENT_SITE)).toBe(0)
+      expect(ids.indexOf(SortingCriteriaType.PINNED)).toBe(1)
+      expect(ids.indexOf(SortingCriteriaType.MANUAL_ORDER)).toBe(2)
     })
   })
 })

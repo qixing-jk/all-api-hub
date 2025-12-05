@@ -11,7 +11,7 @@ import type { UserPreferences } from "../../userPreferences"
 import { migrateSortingConfig } from "./sortingConfigMigration"
 
 // Current version of the preferences schema
-export const CURRENT_PREFERENCES_VERSION = 5
+export const CURRENT_PREFERENCES_VERSION = 6
 
 /**
  * Migration function type
@@ -100,6 +100,22 @@ const migrations: Record<number, PreferencesMigrationFunction> = {
     return {
       ...migratedPrefs,
       preferencesVersion: 5,
+    }
+  },
+  // Version 5 -> 6: Ensure sorting priority config includes latest criteria (e.g. MANUAL_ORDER)
+  6: (prefs: UserPreferences): UserPreferences => {
+    console.log(
+      "[PreferencesMigration] Migrating preferences from v5 to v6 (sorting config migration)",
+    )
+
+    const migratedSortingConfig = migrateSortingConfig(
+      prefs.sortingPriorityConfig,
+    )
+
+    return {
+      ...prefs,
+      sortingPriorityConfig: migratedSortingConfig,
+      preferencesVersion: 6,
     }
   },
 }
