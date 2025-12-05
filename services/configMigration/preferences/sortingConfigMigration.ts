@@ -81,12 +81,11 @@ export function migrateSortingConfig(
     if (manualDefault) {
       newCriteria.push({
         ...manualDefault,
-        priority: manualDefault.priority,
-        enabled: manualDefault.enabled,
+        enabled: true,
       })
       modified = true
       console.log(
-        `[SortingConfigMigration] Added MANUAL_ORDER criterion with default priority ${manualDefault.priority}, enabled: ${manualDefault.enabled}`,
+        `[SortingConfigMigration] Added MANUAL_ORDER criterion with default priority ${manualDefault.priority}, enabled: true`,
       )
     }
   }
