@@ -1,5 +1,28 @@
 # Changelog
 
+## [2.26.0](https://github.com/qixing-jk/all-api-hub/compare/v2.25.0...v2.26.0) (2025-12-05)
+
+
+### Features
+
+* **AccountManagement:** refactor account list item highlighting ([dde5899](https://github.com/qixing-jk/all-api-hub/commit/dde5899539803f70b1332260a84d37964270b255))
+* **cache:** implement model pricing cache service ([2822098](https://github.com/qixing-jk/all-api-hub/commit/2822098991d005cf2f18db9df1fd30c62cb7296b))
+* **model-list:** add account summary bar component ([5dee9c4](https://github.com/qixing-jk/all-api-hub/commit/5dee9c456b246414453bf4dcc3b47e368c3db8a6))
+* **model-list:** replace callbacks with useEffect for query state ([5eb9116](https://github.com/qixing-jk/all-api-hub/commit/5eb9116f1d89d54e84cf07854978e940ddb5863e))
+* **ModelList:** implement multi-account model pricing display ([b0d18eb](https://github.com/qixing-jk/all-api-hub/commit/b0d18ebb40dc692cf6430b1ff3603ce35f2f7668))
+* **models:** refactor account filtering to preserve count statistics ([418df9d](https://github.com/qixing-jk/all-api-hub/commit/418df9dce60d107e2859f29b9dcabefb09f9e11d))
+* **ui:** add Command and Dialog components ([853b015](https://github.com/qixing-jk/all-api-hub/commit/853b01558ebf57109ddf94181302d6dcd054bf02))
+* **ui:** add searchable select component ([749e620](https://github.com/qixing-jk/all-api-hub/commit/749e620ffa23aa9323159541e622660e63c59975))
+* **ui:** refactor input component styling ([ccc5676](https://github.com/qixing-jk/all-api-hub/commit/ccc56765f953539bbe61ccfe6caa54d1dd66ae47))
+* **ui:** replace Select components with SearchableSelect ([7917033](https://github.com/qixing-jk/all-api-hub/commit/7917033f458523961853313180ff4e2ebe76625f))
+
+
+### Bug Fixes
+
+* **tests:** update LinkCard button variant class names ([781f3e6](https://github.com/qixing-jk/all-api-hub/commit/781f3e6ee0068cd7127c61b308df0e3bfb82b95d))
+* **ui:** add customizable spinner props to button component ([f611505](https://github.com/qixing-jk/all-api-hub/commit/f6115052e7d4c7b2b573b0f5714b4a8b4ed5a28e))
+* update utils alias path in components.json ([06c3588](https://github.com/qixing-jk/all-api-hub/commit/06c35887972363f245fe2b2dcd6bcfd21402fcf6))
+
 ## [2.25.0](https://github.com/qixing-jk/all-api-hub/compare/v2.24.0...v2.25.0) (2025-12-05)
 
 
