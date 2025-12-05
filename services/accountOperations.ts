@@ -20,7 +20,6 @@ import {
 } from "~/services/apiService"
 import type { CreateTokenRequest } from "~/services/apiService/common/type"
 import {
-  AccountValidationResponse,
   ApiToken,
   AuthTypeEnum,
   SiteHealthStatus,
@@ -28,7 +27,10 @@ import {
   type DisplaySiteData,
   type SiteAccount,
 } from "~/types"
-import type { AccountSaveResponse } from "~/types/serviceResponse"
+import type {
+  AccountSaveResponse,
+  AccountValidationResponse,
+} from "~/types/serviceResponse"
 import { analyzeAutoDetectError } from "~/utils/autoDetectUtils"
 import { getErrorMessage } from "~/utils/error"
 
@@ -185,10 +187,9 @@ function normalizeTagsInput(tags: TagsInput): string[] | undefined {
   }
 
   if (Array.isArray(tags)) {
-    const cleaned = tags
+    return tags
       .map((tag) => (typeof tag === "string" ? tag.trim() : ""))
       .filter((tag) => tag.length > 0)
-    return cleaned.length > 0 ? cleaned : undefined
   }
 
   if (typeof tags === "string") {

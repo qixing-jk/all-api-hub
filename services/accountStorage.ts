@@ -1,5 +1,4 @@
 import { t } from "i18next"
-import merge from "lodash-es/merge"
 
 import { Storage } from "@plasmohq/storage"
 
@@ -15,6 +14,7 @@ import {
   type SiteAccount,
 } from "~/types"
 import { DeepPartial } from "~/types/utils"
+import { deepOverride } from "~/utils"
 import { getErrorMessage } from "~/utils/error"
 
 import {
@@ -216,12 +216,10 @@ class AccountStorageService {
         throw new Error(t("messages:storage.accountNotFound", { id }))
       }
 
-      accounts[index] = merge(
-        {},
-        accounts[index], // 原对象
-        updates, // 更新数据
-        { updated_at: Date.now() }, // 强制更新字段
-      )
+      accounts[index] = deepOverride<SiteAccount>(accounts[index], {
+        ...updates,
+        updated_at: Date.now(),
+      } as DeepPartial<SiteAccount>)
 
       await this.saveAccounts(accounts)
       return true
@@ -964,7 +962,7 @@ class AccountStorageService {
       }
     }
 
-    return merge({}, account, updates) as SiteAccount
+    return deepOverride<SiteAccount>(account, updates)
   }
 }
 
