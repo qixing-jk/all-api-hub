@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.25.0](https://github.com/qixing-jk/all-api-hub/compare/v2.24.0...v2.25.0) (2025-12-05)
+
+
+### Features
+
+* **account:** add newcomer support card for empty state ([52bced5](https://github.com/qixing-jk/all-api-hub/commit/52bced5136f3d08510f623e77387db16eb75b341))
+* **account:** hide UI elements when pin/manual sort features are disabled ([613ad53](https://github.com/qixing-jk/all-api-hub/commit/613ad53a8fe0a11d6b5b05d5a809f635860c479f))
+* **account:** implement manual account reordering ([#237](https://github.com/qixing-jk/all-api-hub/issues/237)) ([08b9cc8](https://github.com/qixing-jk/all-api-hub/commit/08b9cc882263c2a153e2e01d7ac4cdf48f26fbb9))
+
+
+### Bug Fixes
+
+* **account:** allow empty tags array when updating accounts ([a4cb89f](https://github.com/qixing-jk/all-api-hub/commit/a4cb89fbe1aa07ef157ac1f549308d47eb4dc4f8))
+
 ## [2.24.0](https://github.com/qixing-jk/all-api-hub/compare/v2.23.0...v2.24.0) (2025-12-04)
 
 
