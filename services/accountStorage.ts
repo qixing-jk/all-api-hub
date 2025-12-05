@@ -40,6 +40,7 @@ const ACCOUNT_STORAGE_KEYS = {
 const DEFAULT_ACCOUNT_CONFIG: AccountStorageConfig = {
   accounts: [],
   pinnedAccountIds: [],
+  orderedAccountIds: [],
   last_updated: Date.now(),
 }
 
@@ -250,6 +251,12 @@ class AccountStorageService {
 
       // Clean up from pinned list if present
       await this.unpinAccount(id)
+      const orderedIds = await this.getOrderedList()
+      if (orderedIds.includes(id)) {
+        await this.setOrderedList(
+          orderedIds.filter((orderedId) => orderedId !== id),
+        )
+      }
 
       return true
     } catch (error) {
@@ -272,6 +279,19 @@ class AccountStorageService {
   }
 
   /**
+   * 获取自定义排序列表
+   */
+  async getOrderedList(): Promise<string[]> {
+    try {
+      const config = await this.getStorageConfig()
+      return config.orderedAccountIds || []
+    } catch (error) {
+      console.error("获取自定义排序列表失败:", error)
+      return []
+    }
+  }
+
+  /**
    * 设置置顶账号ID列表
    */
   async setPinnedList(ids: string[]): Promise<boolean> {
@@ -287,6 +307,26 @@ class AccountStorageService {
       return true
     } catch (error) {
       console.error("设置置顶账号列表失败:", error)
+      return false
+    }
+  }
+
+  /**
+   * 设置自定义排序列表
+   */
+  async setOrderedList(ids: string[]): Promise<boolean> {
+    try {
+      const config = await this.getStorageConfig()
+      const uniqueIds = Array.from(new Set(ids))
+      const validIds = uniqueIds.filter((id) =>
+        config.accounts.some((account) => account.id === id),
+      )
+      config.orderedAccountIds = validIds
+      config.last_updated = Date.now()
+      await this.storage.set(ACCOUNT_STORAGE_KEYS.ACCOUNTS, config)
+      return true
+    } catch (error) {
+      console.error("设置自定义排序列表失败:", error)
       return false
     }
   }
@@ -801,16 +841,21 @@ class AccountStorageService {
     const filteredPinnedIds = (existingConfig.pinnedAccountIds || []).filter(
       (id) => accounts.some((account) => account.id === id),
     )
+    const filteredOrderedIds = (existingConfig.orderedAccountIds || []).filter(
+      (id) => accounts.some((account) => account.id === id),
+    )
     const config: AccountStorageConfig = {
       ...existingConfig,
       accounts,
       pinnedAccountIds: filteredPinnedIds,
+      orderedAccountIds: filteredOrderedIds,
       last_updated: Date.now(),
     }
 
     console.log("[AccountStorage] 保存的配置数据:", {
       accountCount: config.accounts.length,
       pinnedCount: config.pinnedAccountIds?.length || 0,
+      orderedCount: config.orderedAccountIds?.length || 0,
       last_updated: config.last_updated,
       storageKey: ACCOUNT_STORAGE_KEYS.ACCOUNTS,
     })

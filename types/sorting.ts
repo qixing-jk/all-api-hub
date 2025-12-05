@@ -1,6 +1,7 @@
 // Enum for sorting criteria identifiers
 export enum SortingCriteriaType {
   PINNED = "pinned",
+  MANUAL_ORDER = "manual_order",
   CURRENT_SITE = "current_site",
   HEALTH_STATUS = "health_status",
   CHECK_IN_REQUIREMENT = "check_in_requirement",

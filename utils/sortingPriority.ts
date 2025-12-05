@@ -22,39 +22,44 @@ export const DEFAULT_SORTING_PRIORITY_CONFIG: SortingPriorityConfig = {
       priority: 0,
     },
     {
-      id: SortingCriteriaType.CURRENT_SITE,
+      id: SortingCriteriaType.MANUAL_ORDER,
       enabled: true,
       priority: 1,
     },
     {
-      id: SortingCriteriaType.CHECK_IN_REQUIREMENT,
+      id: SortingCriteriaType.CURRENT_SITE,
       enabled: true,
       priority: 2,
     },
     {
-      id: SortingCriteriaType.MATCHED_OPEN_TABS,
+      id: SortingCriteriaType.CHECK_IN_REQUIREMENT,
       enabled: true,
       priority: 3,
     },
     {
-      id: SortingCriteriaType.HEALTH_STATUS,
+      id: SortingCriteriaType.MATCHED_OPEN_TABS,
       enabled: true,
       priority: 4,
     },
     {
-      id: SortingCriteriaType.CUSTOM_CHECK_IN_URL,
+      id: SortingCriteriaType.HEALTH_STATUS,
       enabled: true,
       priority: 5,
     },
     {
-      id: SortingCriteriaType.CUSTOM_REDEEM_URL,
+      id: SortingCriteriaType.CUSTOM_CHECK_IN_URL,
       enabled: true,
       priority: 6,
     },
     {
-      id: SortingCriteriaType.USER_SORT_FIELD,
+      id: SortingCriteriaType.CUSTOM_REDEEM_URL,
       enabled: true,
       priority: 7,
+    },
+    {
+      id: SortingCriteriaType.USER_SORT_FIELD,
+      enabled: true,
+      priority: 8,
     },
   ],
   lastModified: Date.now(),
@@ -94,6 +99,7 @@ function applySortingCriteria(
   sortOrder: "asc" | "desc",
   matchedAccountScores: Record<string, number>,
   pinnedAccountIds: string[],
+  manualOrderIndices?: Record<string, number>,
 ): number {
   switch (criteriaId) {
     case SortingCriteriaType.PINNED: {
@@ -170,6 +176,19 @@ function applySortingCriteria(
         sortOrder,
       )
 
+    case SortingCriteriaType.MANUAL_ORDER: {
+      const manualIndexA = manualOrderIndices?.[a.id]
+      const manualIndexB = manualOrderIndices?.[b.id]
+      const hasA = typeof manualIndexA === "number"
+      const hasB = typeof manualIndexB === "number"
+      if (hasA && hasB) {
+        return manualIndexA - manualIndexB
+      }
+      if (hasA) return -1
+      if (hasB) return 1
+      return 0
+    }
+
     default:
       return 0
   }
@@ -184,6 +203,7 @@ function applySortingCriteria(
  * @param sortOrder The sort order ('asc' or 'desc').
  * @param matchedAccountScores
  * @param pinnedAccountIds The list of pinned account IDs in order
+ * @param manualOrderIndices Map of account id to manual order index (0-based)
  * @returns A comparator function for `Array.prototype.sort()`.
  */
 export function createDynamicSortComparator(
@@ -194,6 +214,7 @@ export function createDynamicSortComparator(
   sortOrder: "asc" | "desc",
   matchedAccountScores: Record<string, number> = {},
   pinnedAccountIds: string[] = [],
+  manualOrderIndices: Record<string, number> = {},
 ) {
   return (a: DisplaySiteData, b: DisplaySiteData): number => {
     const enabledCriteria = config.criteria
@@ -211,6 +232,7 @@ export function createDynamicSortComparator(
         sortOrder,
         matchedAccountScores,
         pinnedAccountIds,
+        manualOrderIndices,
       )
       if (comparison !== 0) return comparison
     }

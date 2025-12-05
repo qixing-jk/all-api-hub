@@ -38,6 +38,75 @@ describe("createDynamicSortComparator", () => {
     ...overrides,
   })
 
+  describe("MANUAL_ORDER criterion", () => {
+    it("should prioritize manual order before user sort field", () => {
+      const accountA = createDisplaySiteData({
+        id: "account-1",
+        name: "Zeta",
+        balance: { USD: 10, CNY: 70 },
+      })
+      const accountB = createDisplaySiteData({
+        id: "account-2",
+        name: "Alpha",
+        balance: { USD: 20, CNY: 140 },
+      })
+
+      const config = {
+        ...DEFAULT_SORTING_PRIORITY_CONFIG,
+        criteria: [
+          { id: SortingCriteriaType.MANUAL_ORDER, enabled: true, priority: 0 },
+          {
+            id: SortingCriteriaType.USER_SORT_FIELD,
+            enabled: true,
+            priority: 1,
+          },
+        ],
+      }
+
+      const manualOrderIndices = { "account-1": 1, "account-2": 0 }
+      const comparator = createDynamicSortComparator(
+        config,
+        null,
+        DATA_TYPE_BALANCE,
+        "USD",
+        "asc",
+        {},
+        [],
+        manualOrderIndices,
+      )
+
+      // Even though accountB has higher balance, manual order puts it first
+      expect(comparator(accountB, accountA)).toBeLessThan(0)
+      expect(comparator(accountA, accountB)).toBeGreaterThan(0)
+    })
+
+    it("should apply manual order within non-pinned after pinned come first", () => {
+      const pinnedAccount = createDisplaySiteData({ id: "pinned-1" })
+      const manualFirst = createDisplaySiteData({ id: "manual-1" })
+      const manualSecond = createDisplaySiteData({ id: "manual-2" })
+
+      const config = DEFAULT_SORTING_PRIORITY_CONFIG
+      const pinnedAccountIds = ["pinned-1"]
+      const manualOrderIndices = { "manual-2": 0, "manual-1": 1 }
+
+      const comparator = createDynamicSortComparator(
+        config,
+        null,
+        "name",
+        "USD",
+        "asc",
+        {},
+        pinnedAccountIds,
+        manualOrderIndices,
+      )
+
+      // pinned always above non-pinned
+      expect(comparator(pinnedAccount, manualFirst)).toBeLessThan(0)
+      // manual ordering respected between non-pinned
+      expect(comparator(manualSecond, manualFirst)).toBeLessThan(0)
+    })
+  })
+
   // Helper to create a SiteAccount for detectedAccount parameter
   const createSiteAccount = (
     overrides: Partial<SiteAccount> = {},

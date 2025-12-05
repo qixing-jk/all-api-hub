@@ -65,6 +65,8 @@
     "healthDesc": "按站点的健康状况排序（错误 > 警告 > 未知 > 健康）",
     "checkInRequirement": "签到需求",
     "checkInDesc": "将需要签到的站点排在前面",
+    "manualOrder": "手动排序",
+    "manualOrderDesc": "按照您在账号列表中手动调整的顺序进行排序",
     "userCustomSort": "用户自定义排序",
     "customSortDesc": "根据用户在列表视图中选择的字段（如余额）进行排序",
     "customCheckInUrl": "自定义签到链接",

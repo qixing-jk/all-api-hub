@@ -207,6 +207,32 @@ describe("accountStorage core behaviors", () => {
     expect(await accountStorage.getPinnedList()).toEqual(["valid-1", "valid-2"])
   })
 
+  it("setOrderedList should dedupe and drop invalid ids then persist", async () => {
+    const accounts = [
+      createAccount({ id: "a-1" }),
+      createAccount({ id: "a-2" }),
+      createAccount({ id: "a-3" }),
+    ]
+    seedStorage(accounts)
+
+    await accountStorage.setOrderedList([
+      "a-2",
+      "missing",
+      "a-1",
+      "a-2", // duplicate
+    ])
+
+    expect(await accountStorage.getOrderedList()).toEqual(["a-2", "a-1"])
+
+    // When accounts change, saveAccounts should drop invalid ordered ids
+    await (accountStorage as any).saveAccounts(accounts.slice(0, 2))
+    expect(await accountStorage.getOrderedList()).toEqual(["a-2", "a-1"])
+
+    // After deleting an account, ordered ids should be cleaned
+    await accountStorage.deleteAccount("a-2")
+    expect(await accountStorage.getOrderedList()).toEqual(["a-1"])
+  })
+
   it("markAccountAsCheckedIn should persist today's check-in state", async () => {
     const account = createAccount({
       id: "check-1",

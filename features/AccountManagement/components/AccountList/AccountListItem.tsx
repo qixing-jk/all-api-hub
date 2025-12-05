@@ -34,7 +34,7 @@ const AccountListItem: React.FC<AccountListItemProps> = React.memo(
     return (
       <CardItem
         padding="none"
-        className={`group touch-manipulation px-3 py-2.5 transition-all sm:px-4 sm:py-3 ${
+        className={`group touch-manipulation transition-all ${
           isDetected
             ? "border-l-4 border-l-blue-500 bg-blue-50 dark:border-l-blue-400 dark:bg-blue-900/50"
             : ""

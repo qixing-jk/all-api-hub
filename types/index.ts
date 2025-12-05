@@ -147,6 +147,10 @@ export interface AccountStorageConfig {
    *  IDs of pinned accounts, in order (newest pinned first)
    */
   pinnedAccountIds: string[]
+  /**
+   * Manual ordering of accounts (full list of ids), newest change first
+   */
+  orderedAccountIds?: string[]
   last_updated: number
 }
 

@@ -38,6 +38,7 @@ interface AccountDataContextType {
   accounts: SiteAccount[]
   displayData: DisplaySiteData[]
   sortedData: DisplaySiteData[]
+  orderedAccountIds: string[]
   stats: AccountStats
   lastUpdateTime: Date | undefined
   isInitialLoad: boolean
@@ -49,6 +50,7 @@ interface AccountDataContextType {
   pinnedAccountIds: string[]
   availableTags: string[]
   tagCounts: Record<string, number>
+  handleReorder: (ids: string[]) => Promise<void>
   isAccountPinned: (id: string) => boolean
   pinAccount: (id: string) => Promise<boolean>
   unpinAccount: (id: string) => Promise<boolean>
@@ -86,6 +88,7 @@ export const AccountDataProvider = ({
   } = useUserPreferencesContext()
   const [accounts, setAccounts] = useState<SiteAccount[]>([])
   const [displayData, setDisplayData] = useState<DisplaySiteData[]>([])
+  const [orderedAccountIds, setOrderedAccountIds] = useState<string[]>([])
   const [stats, setStats] = useState<AccountStats>({
     total_quota: 0,
     today_total_consumption: 0,
@@ -134,6 +137,7 @@ export const AccountDataProvider = ({
       console.log("[AccountContext] Loading account data...")
       await accountStorage.resetExpiredCheckIns()
       const allAccounts = await accountStorage.getAllAccounts()
+      const storedOrderedIds = await accountStorage.getOrderedList()
       const accountStats = await accountStorage.getAccountStats()
       const displaySiteData = accountStorage.convertToDisplayData(
         allAccounts,
@@ -147,6 +151,11 @@ export const AccountDataProvider = ({
       setAccounts(allAccounts)
       setStats(accountStats)
       setDisplayData(displaySiteData)
+      setOrderedAccountIds(
+        storedOrderedIds.filter((id) =>
+          displaySiteData.some((site) => site.id === id),
+        ),
+      )
 
       const pinnedIds = await accountStorage.getPinnedList()
       const validPinnedIds = pinnedIds.filter((id) =>
@@ -307,6 +316,19 @@ export const AccountDataProvider = ({
     [sortField, sortOrder, updateSortConfig],
   )
 
+  const handleReorder = useCallback(
+    async (ids: string[]) => {
+      // Ensure pinned accounts stay at top but allow pinned relative order to follow ids
+      const pinnedSet = new Set(pinnedAccountIds)
+      const pinnedSegment = ids.filter((id) => pinnedSet.has(id))
+      const nonPinnedSegment = ids.filter((id) => !pinnedSet.has(id))
+      const merged = [...pinnedSegment, ...nonPinnedSegment]
+      setOrderedAccountIds(merged)
+      await accountStorage.setOrderedList(merged)
+    },
+    [pinnedAccountIds],
+  )
+
   // State to hold matched account scores from open tabs
   const [matchedAccountScores, setMatchedAccountScores] = useState<
     Record<string, number>
@@ -408,6 +430,10 @@ export const AccountDataProvider = ({
   )
 
   const sortedData = useMemo(() => {
+    const manualOrderIndices: Record<string, number> = {}
+    orderedAccountIds.forEach((id, index) => {
+      manualOrderIndices[id] = index
+    })
     const comparator = createDynamicSortComparator(
       sortingPriorityConfig,
       detectedAccount,
@@ -416,6 +442,7 @@ export const AccountDataProvider = ({
       sortOrder,
       matchedAccountScores,
       pinnedAccountIds,
+      manualOrderIndices,
     )
     return [...displayData].sort(comparator)
   }, [
@@ -427,6 +454,7 @@ export const AccountDataProvider = ({
     sortOrder,
     matchedAccountScores,
     pinnedAccountIds,
+    orderedAccountIds,
   ])
 
   const { availableTags, tagCounts } = useMemo(() => {
@@ -451,6 +479,7 @@ export const AccountDataProvider = ({
       accounts,
       displayData,
       sortedData,
+      orderedAccountIds,
       stats,
       lastUpdateTime,
       isInitialLoad,
@@ -462,6 +491,7 @@ export const AccountDataProvider = ({
       pinnedAccountIds,
       availableTags,
       tagCounts,
+      handleReorder,
       isAccountPinned,
       pinAccount,
       unpinAccount,
@@ -476,6 +506,7 @@ export const AccountDataProvider = ({
       accounts,
       displayData,
       sortedData,
+      orderedAccountIds,
       stats,
       lastUpdateTime,
       isInitialLoad,
@@ -487,6 +518,7 @@ export const AccountDataProvider = ({
       pinnedAccountIds,
       availableTags,
       tagCounts,
+      handleReorder,
       isAccountPinned,
       pinAccount,
       unpinAccount,

@@ -1,4 +1,21 @@
 import {
+  closestCenter,
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core"
+import {
+  arrayMove,
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
+import {
+  Bars3Icon,
   ChevronDownIcon,
   ChevronUpIcon,
   InboxIcon,
@@ -36,6 +53,71 @@ import { NewcomerSupportCard } from "../NewcomerSupportCard"
 import AccountListItem from "./AccountListItem"
 import AccountSearchInput from "./AccountSearchInput"
 
+function SortableAccountListItem({
+  site,
+  highlights,
+  onCopyKey,
+  onDeleteWithDialog,
+  isDragDisabled,
+  handleLabel,
+}: {
+  site: DisplaySiteData
+  highlights?: SearchResultWithHighlight["highlights"]
+  onCopyKey: (site: DisplaySiteData) => void
+  onDeleteWithDialog: (site: DisplaySiteData) => void
+  isDragDisabled: boolean
+  handleLabel: string
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: site.id,
+    disabled: isDragDisabled,
+  })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={isDragging ? "relative z-10" : undefined}
+    >
+      <div className="flex items-center gap-2 px-3 py-2.5 transition-all sm:px-4 sm:py-3">
+        <IconButton
+          ref={setActivatorNodeRef}
+          variant="ghost"
+          size="xs"
+          aria-label={handleLabel}
+          disabled={isDragDisabled}
+          className="shrink-0 text-gray-400 hover:text-gray-700 focus-visible:ring-2 focus-visible:ring-offset-2"
+          {...listeners}
+          {...attributes}
+        >
+          <Bars3Icon className="h-4 w-4" />
+        </IconButton>
+        <div className="min-w-0 flex-1">
+          <AccountListItem
+            site={site}
+            highlights={highlights}
+            onDeleteWithDialog={onDeleteWithDialog}
+            onCopyKey={onCopyKey}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 interface AccountListProps {
   initialSearchQuery?: string
 }
@@ -50,6 +132,7 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
     handleSort,
     sortField,
     sortOrder,
+    handleReorder,
     availableTags,
     tagCounts,
   } = useAccountDataContext()
@@ -64,6 +147,10 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
 
   const { query, setQuery, clearSearch, searchResults, inSearchMode } =
     useAccountSearch(displayData, initialSearchQuery)
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor),
+  )
 
   const handleDeleteWithDialog = (site: DisplaySiteData) => {
     setDeleteDialogAccount(site)
@@ -128,6 +215,26 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
 
   const hasAccounts = displayData.length > 0
   const showFilteredSummary = inSearchMode || selectedTags.length > 0
+  const dragDisabled = inSearchMode
+  const handleLabel = t("account:list.dragHandle")
+
+  const sortedIds = useMemo(
+    () => baseResults.map((item) => item.account.id),
+    [baseResults],
+  )
+
+  const onDragEnd = (event: DragEndEvent) => {
+    if (dragDisabled) return
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+
+    const oldIndex = sortedIds.indexOf(active.id as string)
+    const newIndex = sortedIds.indexOf(over.id as string)
+    if (oldIndex === -1 || newIndex === -1) return
+
+    const newOrder = arrayMove(sortedIds, oldIndex, newIndex)
+    void handleReorder(newOrder)
+  }
 
   const maxTagFilterLines = isSmallScreen ? 2 : isDesktop ? 3 : 2
 
@@ -254,17 +361,30 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
             title={t("account:search.noResults")}
           />
         ) : (
-          <CardList>
-            {displayedResults.map((item) => (
-              <AccountListItem
-                key={item.account.id}
-                site={item.account}
-                highlights={item.highlights}
-                onDeleteWithDialog={handleDeleteWithDialog}
-                onCopyKey={handleCopyKeyWithDialog}
-              />
-            ))}
-          </CardList>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={onDragEnd}
+          >
+            <SortableContext
+              items={sortedIds}
+              strategy={verticalListSortingStrategy}
+            >
+              <CardList>
+                {displayedResults.map((item) => (
+                  <SortableAccountListItem
+                    key={item.account.id}
+                    site={item.account}
+                    highlights={item.highlights}
+                    onDeleteWithDialog={handleDeleteWithDialog}
+                    onCopyKey={handleCopyKeyWithDialog}
+                    isDragDisabled={dragDisabled}
+                    handleLabel={handleLabel}
+                  />
+                ))}
+              </CardList>
+            </SortableContext>
+          </DndContext>
         )}
       </CardContent>
 

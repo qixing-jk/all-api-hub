@@ -20,6 +20,10 @@ const getSortingCriteriaUiText = (
     label: t("settings:sorting.pinnedPriority"),
     description: t("settings:sorting.pinnedDesc"),
   },
+  [SortingCriteriaType.MANUAL_ORDER]: {
+    label: t("settings:sorting.manualOrder"),
+    description: t("settings:sorting.manualOrderDesc"),
+  },
   [SortingCriteriaType.CURRENT_SITE]: {
     label: t("settings:sorting.currentSitePriority"),
     description: t("settings:sorting.currentSiteDesc"),

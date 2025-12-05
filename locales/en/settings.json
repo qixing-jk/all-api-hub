@@ -65,6 +65,8 @@
     "healthDesc": "Sort by site health status (Error > Warning > Unknown > Healthy)",
     "checkInRequirement": "Check-in Requirement",
     "checkInDesc": "Place sites that need check-in at the front",
+    "manualOrder": "Manual order",
+    "manualOrderDesc": "Sort accounts according to your manually defined list order",
     "userCustomSort": "User Custom Sort",
     "customSortDesc": "Sort according to the field (such as balance) selected by the user in the list view",
     "customCheckInUrl": "Custom Check-in URL",
