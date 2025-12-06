@@ -158,7 +158,7 @@ function applySortingCriteria(
        * @param item The site data item to evaluate.
        * @returns True if the item requires check-in and is not checked in today; otherwise, false.
        */
-      function isNotCheckedIn(item: any): boolean {
+      function isNotCheckedIn(item: DisplaySiteData): boolean {
         const checkIn = item?.checkIn
         if (!checkIn) return false
 
