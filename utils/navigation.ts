@@ -95,10 +95,19 @@ export const navigateWithinOptionsPage = (
   window.dispatchEvent(new Event("hashchange"))
 }
 
+/**
+ * Normalized hash used by account manager navigations to keep routing consistent.
+ */
 const getAccountHash = () => "#account"
 
+/**
+ * Canonical hash for the default settings landing page, reused across helpers.
+ */
 const getBasicSettingsHash = () => "#basic"
 
+/**
+ * Hash fragment pointing to the About section inside options.html.
+ */
 const getAboutHash = () => "#about"
 
 /**
@@ -204,7 +213,11 @@ const withPopupClose = <T extends any[]>(
   }
 }
 
-// 重构后的函数 - 去掉 closeIfPopup
+/**
+ * Route to the account manager root, preferring in-page navigation when the
+ * user is already inside options.html to avoid opening duplicate tabs.
+ * @param params Optional search payload that prefilters the manager list.
+ */
 const _openFullManagerPage = (params?: { search?: string }) => {
   const targetHash = getAccountHash()
   const searchParams = params?.search ? { search: params.search } : undefined
@@ -233,6 +246,10 @@ const navigateToBasicSettings = (tabId?: string) => {
   openOrFocusOptionsPage(targetHash, searchParams)
 }
 
+/**
+ * Jump to the default settings page hash, reusing the current options tab when
+ * possible to minimize flicker and redundant windows.
+ */
 const _openSettingsPage = () => {
   navigateToBasicSettings()
 }
@@ -285,6 +302,10 @@ const _openModelsPage = async (accountId?: string) => {
   await createActiveTab(url.toString())
 }
 
+/**
+ * Opens the provider usage log endpoint derived from account metadata.
+ * @param account Account definition containing base URL and site type.
+ */
 const _openUsagePage = async (account: DisplaySiteData) => {
   const logUrl = joinUrl(
     account.baseUrl,
@@ -306,7 +327,9 @@ const _openCheckInPage = async (account: DisplaySiteData) => {
 }
 
 /**
- * Opens the custom check-in page or falls back to default check-in path.
+ * Opens the account's custom check-in URL when present, otherwise falls back to
+ * the default site-specific path so manual overrides keep working.
+ * @param account Account metadata that may contain a custom checkout URL.
  */
 const _openCustomCheckInPage = async (account: DisplaySiteData) => {
   const customCheckInUrl =
@@ -316,7 +339,8 @@ const _openCustomCheckInPage = async (account: DisplaySiteData) => {
 }
 
 /**
- * Opens redeem page using custom or default path.
+ * Opens the redeem flow, honoring custom URLs when available.
+ * @param account Account metadata that can optionally override redeem path.
  */
 const _openRedeemPage = async (account: DisplaySiteData) => {
   const redeemUrl =

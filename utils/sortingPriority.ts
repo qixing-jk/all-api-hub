@@ -65,6 +65,11 @@ export const DEFAULT_SORTING_PRIORITY_CONFIG: SortingPriorityConfig = {
   lastModified: Date.now(),
 }
 
+/**
+ * Compare two display records using the user-selected sort field.
+ * Keeps currency-aware ordering logic in a single place so every criteria can
+ * reuse the same implementation.
+ */
 function compareByUserSortField(
   a: DisplaySiteData,
   b: DisplaySiteData,
@@ -89,6 +94,11 @@ function compareByUserSortField(
       return 0
   }
 }
+/**
+ * Applies a specific sorting criteria to two display entries and returns the
+ * comparison result. Criteria are evaluated in priority order until one
+ * produces a non-zero delta, mimicking SQL's ORDER BY cascade.
+ */
 function applySortingCriteria(
   a: DisplaySiteData,
   b: DisplaySiteData,
