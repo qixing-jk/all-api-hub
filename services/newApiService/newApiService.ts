@@ -170,7 +170,7 @@ export async function deleteChannel(
 }
 
 /**
- *
+ * Checks whether the given user preferences contain a complete New API config.
  */
 export function hasValidNewApiConfig(prefs: UserPreferences | null): boolean {
   if (!prefs) {

@@ -27,7 +27,8 @@ export const fetchSiteOriginalTitle = async (url: string) => {
 }
 
 /**
- *
+ * Probes the /api/user/self endpoint using cookie auth and extracts any
+ * user-id-like suffix from an error message to help infer site type.
  */
 async function getSiteUserIdType(url: string) {
   try {

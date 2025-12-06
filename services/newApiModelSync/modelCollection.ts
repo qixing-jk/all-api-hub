@@ -25,7 +25,8 @@ export function collectModelsFromExecution(
 }
 
 /**
- *
+ * Adds normalized models from a single execution item into the aggregated set,
+ * preferring newModels when present and falling back to oldModels otherwise.
  */
 function addModelsFromItem(item: ExecutionItemResult, collected: Set<string>) {
   const sourceModels = item.newModels?.length

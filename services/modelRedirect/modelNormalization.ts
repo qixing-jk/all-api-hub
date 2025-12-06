@@ -2,7 +2,8 @@ import { modelMetadataService } from "~/services/modelMetadata"
 import { removeDateSuffix } from "~/utils/modelName"
 
 /**
- *
+ * Normalizes a raw model identifier to its core name by stripping known
+ * vendor prefixes, path segments, non-model suffixes and date components.
  */
 export function extractActualModel(modelName: string) {
   let actualModel = modelName

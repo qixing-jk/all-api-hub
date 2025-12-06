@@ -38,6 +38,8 @@ export class NewApiModelSyncService {
    * @param token Admin token for channel operations.
    * @param userId Optional user id for header injection.
    * @param rateLimitConfig Optional RPM/burst limits for upstream calls.
+   * @param rateLimitConfig.requestsPerMinute Maximum allowed requests per minute.
+   * @param rateLimitConfig.burst Maximum burst size before throttling kicks in.
    * @param allowedModels Optional allow-list to constrain synced models.
    * @param channelConfigs Optional per-channel filter/settings cache.
    * @param globalChannelModelFilters Optional global include/exclude rules.

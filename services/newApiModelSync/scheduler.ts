@@ -38,7 +38,7 @@ class NewApiModelSyncScheduler {
 
   /**
    * Build a NewApiModelSyncService instance using persisted preferences and channel configs.
-   * @throws Error when New API config is missing.
+   * @throws {Error} When New API config is missing.
    */
   private async createService(): Promise<NewApiModelSyncService> {
     const userPrefs = await userPreferences.getPreferences()
@@ -316,7 +316,7 @@ class NewApiModelSyncScheduler {
   /**
    * Execute sync for failed channels only
    * @returns ExecutionResult for retry batch.
-   * @throws Error when no previous execution or no failed channels.
+   * @throws {Error} When no previous execution exists or no failed channels are found.
    */
   async executeFailedOnly(): Promise<ExecutionResult> {
     const lastExecution = await newApiModelSyncStorage.getLastExecution()
@@ -346,6 +346,15 @@ class NewApiModelSyncScheduler {
   /**
    * Update sync settings and reschedule alarm
    * @param settings Partial override of sync prefs (interval, concurrency, filters, rate limit).
+   * @param settings.enableSync Whether periodic sync is enabled.
+   * @param settings.intervalMs Interval in milliseconds between scheduled sync runs.
+   * @param settings.concurrency Maximum number of channels processed in parallel.
+   * @param settings.maxRetries Maximum retry attempts per channel.
+   * @param settings.rateLimit Optional rate limit overrides.
+   * @param settings.rateLimit.requestsPerMinute Allowed upstream requests per minute.
+   * @param settings.rateLimit.burst Allowed burst size before throttling.
+   * @param settings.allowedModels Optional allow-list of models to keep during sync.
+   * @param settings.globalChannelModelFilters Optional global include/exclude channel filters.
    */
   async updateSettings(settings: {
     enableSync?: boolean
