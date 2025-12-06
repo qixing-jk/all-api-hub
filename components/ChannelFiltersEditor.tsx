@@ -30,7 +30,10 @@ interface ChannelFiltersEditorProps {
 }
 
 /**
- *
+ * Editor for New API channel filtering rules supporting visual and JSON modes.
+ * Provides UX to add/remove rules, toggle regex behavior, and edit raw JSON definitions.
+ * @param props Filters data, loading flag, and editing handlers from parent.
+ * @returns Visual or JSON editing surface depending on selected view mode.
  */
 export default function ChannelFiltersEditor({
   filters,

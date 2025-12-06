@@ -16,7 +16,7 @@ interface AppLayoutProps {
 }
 
 /**
- *
+ * AppLayout wires global providers and renders the Channel dialog container plus toasts.
  */
 export function AppLayout({ children }: AppLayoutProps) {
   return (

@@ -8,7 +8,7 @@ interface SeparatorProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 /**
- *
+ * Separator renders a horizontal or vertical line with optional decorative role.
  */
 export function Separator({
   className,

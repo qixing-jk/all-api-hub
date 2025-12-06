@@ -39,7 +39,8 @@ const ChannelDialogContext = createContext<ChannelDialogContextValue | null>(
 )
 
 /**
- *
+ * Provides ChannelDialog state and helpers to descendants.
+ * Stores last onSuccess callback in a ref so closures stay stable.
  */
 export function ChannelDialogProvider({
   children,
@@ -105,7 +106,8 @@ export function ChannelDialogProvider({
 }
 
 /**
- *
+ * Hook to access ChannelDialog context safely.
+ * Throws when called outside ChannelDialogProvider to surface wiring bugs.
  */
 export function useChannelDialogContext() {
   const context = useContext(ChannelDialogContext)

@@ -30,7 +30,9 @@ interface CCSwitchExportDialogProps {
 const DEFAULT_APP: CCSwitchApp = "claude"
 
 /**
- *
+ * Presents a modal for exporting an account token into CCSwitch-compatible apps.
+ * Prefills provider metadata and lets the user tweak app, endpoint, model, and helper notes.
+ * @param props Dialog state, selected account, and token details.
  */
 export function CCSwitchExportDialog({
   isOpen,

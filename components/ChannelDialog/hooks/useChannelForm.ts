@@ -32,7 +32,10 @@ export interface UseChannelFormProps {
 }
 
 /**
- *
+ * Manages Channel dialog form state, remote group/model loading, and submissions.
+ * Abstracts validation, payload building, and success handling for add/edit flows.
+ * @param props Dialog mode, current channel, dialog lifecycle callbacks, and defaults.
+ * @returns Binding helpers plus UI/loading flags for the form consumer.
  */
 export function useChannelForm({
   mode,

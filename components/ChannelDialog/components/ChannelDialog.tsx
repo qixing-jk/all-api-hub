@@ -37,7 +37,9 @@ export interface ChannelDialogProps {
 }
 
 /**
- *
+ * Full channel create/edit dialog for the New API feature.
+ * Handles form state, validation, and submission via useChannelForm.
+ * @param props Dialog visibility, initial data, and callbacks.
  */
 export function ChannelDialog({
   isOpen,
