@@ -1,6 +1,7 @@
 import eslint from "@eslint/js"
 import eslintConfigPrettier from "eslint-config-prettier/flat"
 import importPlugin from "eslint-plugin-import"
+import jsdoc from "eslint-plugin-jsdoc"
 import reactHooks from "eslint-plugin-react-hooks"
 import { defineConfig } from "eslint/config"
 import globals from "globals"
@@ -91,6 +92,24 @@ export default defineConfig([
           tsx: "never",
         },
       ],
+    },
+  },
+  jsdoc.configs["flat/recommended"],
+  jsdoc.configs["flat/recommended-typescript"],
+  {
+    files: ["**/*.{ts,tsx}"],
+    plugins: { jsdoc },
+    languageOptions: {
+      parser: tseslint.parser,
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+    rules: {
+      "jsdoc/require-description": "warn",
+      "jsdoc/require-param": "off",
+      "jsdoc/require-returns": "off",
     },
   },
   { rules },
