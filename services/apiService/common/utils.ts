@@ -417,7 +417,7 @@ export function isHttpUrl(url: string): boolean {
 /**
  * Extract the `data` field from a JSON API response, throwing on invalid shape.
  *
-+ * @param body Parsed JSON body from upstream.
+ * @param body Parsed JSON body from upstream.
  * @param endpoint Optional endpoint for richer error context.
  * @returns Extracted `data` payload cast to T.
  */
