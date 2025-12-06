@@ -244,11 +244,10 @@ export function createDynamicSortComparator(
   pinnedAccountIds: string[] = [],
   manualOrderIndices: Record<string, number> = {},
 ) {
+  const enabledCriteria = config.criteria
+    .filter((c) => c.enabled)
+    .sort((c1, c2) => c1.priority - c2.priority)
   return (a: DisplaySiteData, b: DisplaySiteData): number => {
-    const enabledCriteria = config.criteria
-      .filter((c) => c.enabled)
-      .sort((c1, c2) => c1.priority - c2.priority)
-
     for (const criteria of enabledCriteria) {
       const comparison = applySortingCriteria(
         a,
