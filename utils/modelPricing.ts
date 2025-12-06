@@ -69,9 +69,10 @@ export const calculateModelPrice = (
 const DONE_HUB_TOKEN_TO_CALL_RATIO = 0.002
 
 /**
- * 计算按次计费模型在不同调用次数下的价格
- * @param cost
- * @param factor
+ * Calculates per-call pricing for models that charge per request rather than per token.
+ * @param cost Raw per-call definition from the API (number or separate input/output).
+ * @param factor Group multiplier applied before converting to DONE HUB ratios.
+ * @returns Normalized per-call price data aligned with the UI expectations.
  */
 const calculateModelPerCallPrice = (
   cost: PerCallPrice,
@@ -88,6 +89,9 @@ const calculateModelPerCallPrice = (
 
 /**
  * 格式化价格显示
+ * @param price
+ * @param currency
+ * @param precision
  */
 export const formatPrice = (
   price: number,
@@ -107,6 +111,8 @@ export const formatPrice = (
 
 /**
  * 格式化价格显示 - 简洁格式
+ * @param price
+ * @param currency
  */
 export const formatPriceCompact = (
   price: number,
@@ -127,6 +133,10 @@ export const formatPriceCompact = (
 
 /**
  * 格式化价格区间显示（输入-输出）
+ * @param inputPrice
+ * @param outputPrice
+ * @param currency
+ * @param precision
  */
 export const formatPriceRange = (
   inputPrice: number,
@@ -146,6 +156,7 @@ export const formatPriceRange = (
 
 /**
  * 获取计费模式的显示文本
+ * @param quotaType
  */
 export const getBillingModeText = (quotaType: number): string => {
   return isTokenBillingType(quotaType)
@@ -155,6 +166,7 @@ export const getBillingModeText = (quotaType: number): string => {
 
 /**
  * 获取计费模式的样式
+ * @param quotaType
  */
 export const getBillingModeStyle = (
   quotaType: number,
@@ -166,6 +178,8 @@ export const getBillingModeStyle = (
 
 /**
  * 检查模型是否对指定分组可用
+ * @param model
+ * @param userGroup
  */
 export const isModelAvailableForGroup = (
   model: ModelPricing,
@@ -176,6 +190,7 @@ export const isModelAvailableForGroup = (
 
 /**
  * 获取模型的可用端点类型显示文本
+ * @param endpointTypes
  */
 export const getEndpointTypesText = (
   endpointTypes: string[] | undefined,
@@ -187,8 +202,9 @@ export const getEndpointTypesText = (
 }
 
 /**
- * 判断是否为按量计费
- * @param quotaType
+ * Determines whether a quota type represents token-based pricing.
+ * @param quotaType Backend quota type enumerator.
+ * @returns True for token-based billing, false for per-call plans.
  */
 export const isTokenBillingType = (quotaType: number) => {
   return quotaType === 0

@@ -214,9 +214,9 @@ const withPopupClose = <T extends any[]>(
 }
 
 /**
- * Route to the account manager root, preferring in-page navigation when the
- * user is already inside options.html to avoid opening duplicate tabs.
- * @param params Optional search payload that prefilters the manager list.
+ * Opens or focuses the account manager page, preferring in-page navigation when already on options.html.
+ * @param params Optional query parameters to prefilter accounts.
+ * @param params.search Search keyword applied to the manager list.
  */
 const _openFullManagerPage = (params?: { search?: string }) => {
   const targetHash = getAccountHash()
@@ -255,8 +255,8 @@ const _openSettingsPage = () => {
 }
 
 /**
- * Opens a specific settings tab by ID.
- * @param tabId Settings tab identifier.
+ * Navigates directly to a named settings tab.
+ * @param tabId Unique identifier for the tab to activate.
  */
 const _openSettingsTab = (tabId: string) => {
   navigateToBasicSettings(tabId)
@@ -317,6 +317,7 @@ const _openUsagePage = async (account: DisplaySiteData) => {
 /**
  * Opens the check-in page for a given account.
  * Prefers custom check-in URL when available.
+ * @param account
  */
 const _openCheckInPage = async (account: DisplaySiteData) => {
   const checkInUrl = joinUrl(

@@ -71,8 +71,7 @@ export async function getActiveOrAllTabs() {
 }
 
 /**
- * Retrieves all browser tabs.
- * @returns {Promise<browser.tabs.Tab[]>} A promise resolved with an array of browser tabs or an empty array if no tabs are found.
+ * Retrieves all browser tabs and falls back to an empty array if the API returns nullish.
  */
 export async function getAllTabs(): Promise<browser.tabs.Tab[]> {
   return (await queryTabs({})) || []
@@ -81,6 +80,8 @@ export async function getAllTabs(): Promise<browser.tabs.Tab[]> {
 /**
  * 创建新标签页
  * 统一接口，自动设置 active: true
+ * @param url
+ * @param active
  */
 export async function createTab(
   url: string,
@@ -91,6 +92,8 @@ export async function createTab(
 
 /**
  * 更新标签页
+ * @param tabId
+ * @param updateInfo
  */
 export async function updateTab(
   tabId: number,
@@ -101,6 +104,7 @@ export async function updateTab(
 
 /**
  * 查询标签页
+ * @param queryInfo
  */
 export async function queryTabs(
   queryInfo: browser.tabs._QueryQueryInfo,
@@ -111,6 +115,7 @@ export async function queryTabs(
 /**
  * 移除标签页或窗口
  * 自动检测平台能力并选择合适的 API
+ * @param id
  */
 export async function removeTabOrWindow(id: number): Promise<void> {
   if (hasWindowsAPI()) {
@@ -133,6 +138,7 @@ export async function removeTabOrWindow(id: number): Promise<void> {
 /**
  * 创建新窗口（如果支持）
  * 返回窗口对象，如果不支持则返回 null
+ * @param createData
  */
 export async function createWindow(
   createData: browser.windows._CreateCreateData,
@@ -153,6 +159,7 @@ export function hasWindowsAPI(): boolean {
 /**
  * 聚焦标签页
  * 同时聚焦窗口（如果支持）和激活标签页
+ * @param tab
  */
 export async function focusTab(tab: browser.tabs.Tab): Promise<void> {
   // 先聚焦窗口（如果支持）
@@ -174,6 +181,8 @@ export async function focusTab(tab: browser.tabs.Tab): Promise<void> {
 /**
  * 发送消息到 runtime
  * 统一的消息发送接口
+ * @param message
+ * @param options
  */
 export async function sendRuntimeMessage(
   message: any,
@@ -192,6 +201,11 @@ const RECOVERABLE_MESSAGE_SNIPPETS = [
   "Could not establish connection",
 ]
 
+/**
+ * Determines whether a runtime messaging error is transient and worth retrying.
+ * @param error Error caught from `browser.runtime.sendMessage`.
+ * @returns True when the error message matches a known recoverable snippet.
+ */
 function isRecoverableSendMessageError(error: any): boolean {
   const message = (error?.message || String(error || "")).toLowerCase()
   return RECOVERABLE_MESSAGE_SNIPPETS.some((snippet) =>
@@ -199,6 +213,12 @@ function isRecoverableSendMessageError(error: any): boolean {
   )
 }
 
+/**
+ * Sends a runtime message with retry logic for recoverable failures.
+ * Applies exponential backoff based on `maxAttempts` and `delayMs`.
+ * @param message Payload forwarded to the background/page runtime.
+ * @param options Optional retry configuration.
+ */
 export async function sendMessageWithRetry(
   message: any,
   options?: SendMessageRetryOptions,
@@ -226,6 +246,7 @@ export async function sendMessageWithRetry(
 
 /**
  * 获取扩展资源 URL
+ * @param path
  */
 export function getExtensionURL(path: string): string {
   return browser.runtime.getURL(path)
@@ -236,6 +257,7 @@ export function getExtensionURL(path: string): string {
  * 返回清理函数
  *
  * 注意：callback 可以返回 true 来保持异步响应通道
+ * @param callback
  */
 export function onRuntimeMessage(
   callback: (
@@ -253,6 +275,7 @@ export function onRuntimeMessage(
 /**
  * 监听标签页激活事件
  * 返回清理函数
+ * @param callback
  */
 export function onTabActivated(
   callback: (activeInfo: browser.tabs._OnActivatedActiveInfo) => void,
@@ -266,6 +289,7 @@ export function onTabActivated(
 /**
  * 监听标签页更新事件
  * 返回清理函数
+ * @param callback
  */
 export function onTabUpdated(
   callback: (
@@ -283,6 +307,7 @@ export function onTabUpdated(
 /**
  * 监听标签页移除事件
  * 返回清理函数
+ * @param callback
  */
 export function onTabRemoved(
   callback: (
@@ -299,6 +324,7 @@ export function onTabRemoved(
 /**
  * 监听窗口移除事件（如果支持）
  * 返回清理函数
+ * @param callback
  */
 export function onWindowRemoved(
   callback: (windowId: number) => void,
@@ -314,6 +340,7 @@ export function onWindowRemoved(
 
 /**
  * 监听扩展启动事件
+ * @param callback
  */
 export function onStartup(callback: () => void): () => void {
   browser.runtime.onStartup.addListener(callback)
@@ -324,6 +351,7 @@ export function onStartup(callback: () => void): () => void {
 
 /**
  * 监听扩展安装/更新事件
+ * @param callback
  */
 export function onInstalled(
   callback: (details: browser.runtime._OnInstalledDetails) => void,
@@ -337,7 +365,7 @@ export function onInstalled(
 /**
  * Open the extension side panel using the host browser's native APIs.
  * Automatically chooses the appropriate Chromium or Firefox pathway.
- * @throws Error when the current browser does not expose side panel support.
+ * @throws {Error} When the current browser does not expose side panel support.
  */
 export const openSidePanel = async () => {
   // Firefox
@@ -366,6 +394,11 @@ export function hasAlarmsAPI(): boolean {
 
 /**
  * 创建定时任务
+ * @param name
+ * @param alarmInfo
+ * @param alarmInfo.periodInMinutes
+ * @param alarmInfo.delayInMinutes
+ * @param alarmInfo.when
  */
 export async function createAlarm(
   name: string,
@@ -384,6 +417,7 @@ export async function createAlarm(
 
 /**
  * 清除定时任务
+ * @param name
  */
 export async function clearAlarm(name: string): Promise<boolean> {
   if (!hasAlarmsAPI()) {
@@ -395,6 +429,7 @@ export async function clearAlarm(name: string): Promise<boolean> {
 
 /**
  * 获取定时任务
+ * @param name
  */
 export async function getAlarm(
   name: string,
@@ -420,6 +455,7 @@ export async function getAllAlarms(): Promise<browser.alarms.Alarm[]> {
 /**
  * 监听定时任务触发事件
  * 返回清理函数
+ * @param callback
  */
 export function onAlarm(
   callback: (alarm: browser.alarms.Alarm) => void,

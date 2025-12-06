@@ -69,6 +69,11 @@ export const DEFAULT_SORTING_PRIORITY_CONFIG: SortingPriorityConfig = {
  * Compare two display records using the user-selected sort field.
  * Keeps currency-aware ordering logic in a single place so every criteria can
  * reuse the same implementation.
+ * @param a
+ * @param b
+ * @param sortField
+ * @param currencyType
+ * @param sortOrder
  */
 function compareByUserSortField(
   a: DisplaySiteData,
@@ -95,9 +100,18 @@ function compareByUserSortField(
   }
 }
 /**
- * Applies a specific sorting criteria to two display entries and returns the
- * comparison result. Criteria are evaluated in priority order until one
- * produces a non-zero delta, mimicking SQL's ORDER BY cascade.
+ * Applies a specific sorting criteria to two display entries and returns the comparison result.
+ * Criteria are evaluated in priority order until one produces a non-zero delta.
+ * @param a First display entry for comparison.
+ * @param b Second display entry for comparison.
+ * @param criteriaId Sorting criteria identifier.
+ * @param detectedAccount Account currently detected in browser context.
+ * @param userSortField Field selected by user for tie-breaking.
+ * @param currencyType Currency type referenced by balance/consumption fields.
+ * @param sortOrder Sort direction (`asc` or `desc`).
+ * @param matchedAccountScores Map of account IDs to open-tab match scores.
+ * @param pinnedAccountIds List of pinned account IDs ordered by priority.
+ * @param manualOrderIndices Optional map of manual order positions by account ID.
  */
 function applySortingCriteria(
   a: DisplaySiteData,
@@ -139,19 +153,6 @@ function applySortingCriteria(
     }
 
     case SortingCriteriaType.CHECK_IN_REQUIREMENT: {
-      function isNotCheckedIn(item: any): boolean {
-        const checkIn = item?.checkIn
-        if (!checkIn) return false
-
-        const supportsCheckIn =
-          checkIn.enableDetection === true ||
-          (typeof checkIn.customCheckInUrl === "string" &&
-            checkIn.customCheckInUrl.trim() !== "")
-
-        // 只在支持签到且未签到的情况下返回 true
-        return supportsCheckIn && checkIn.isCheckedInToday === false
-      }
-
       const aNotCheckedIn = isNotCheckedIn(a) ? 1 : 0
       const bNotCheckedIn = isNotCheckedIn(b) ? 1 : 0
 
@@ -205,16 +206,15 @@ function applySortingCriteria(
 }
 /**
  * Creates a dynamic comparator function for sorting site data based on a data-only configuration.
- *
- * @param config The sorting priority configuration containing data-only fields.
- * @param detectedAccount The currently detected site account, used for 'current_site' priority.
- * @param userSortField The field selected by the user for sorting ('name', 'balance', 'consumption').
- * @param currencyType The currency type to use for sorting balance or consumption.
- * @param sortOrder The sort order ('asc' or 'desc').
- * @param matchedAccountScores
- * @param pinnedAccountIds The list of pinned account IDs in order
- * @param manualOrderIndices Map of account id to manual order index (0-based)
- * @returns A comparator function for `Array.prototype.sort()`.
+ * @param config Sorting priority configuration containing data-only fields.
+ * @param detectedAccount Currently detected site account, used for 'current_site' priority.
+ * @param userSortField Field selected by the user for sorting ('name', 'balance', 'consumption').
+ * @param currencyType Currency used for balance/consumption comparisons.
+ * @param sortOrder Sort order ('asc' or 'desc').
+ * @param matchedAccountScores Map of account IDs to matching scores from open tabs.
+ * @param pinnedAccountIds The list of pinned account IDs in priority order.
+ * @param manualOrderIndices Map of account ID to manual order index (0-based).
+ * @returns Comparator function for `Array.prototype.sort()`.
  */
 export function createDynamicSortComparator(
   config: SortingPriorityConfig,

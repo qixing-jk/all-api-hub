@@ -128,6 +128,11 @@ function logSkipTempWindowFallback(
   }
 }
 
+/**
+ * Tries a primary API request and transparently falls back to the temp-window flow when needed.
+ * @param context Metadata describing the request and fallback behavior.
+ * @param primaryRequest Function executing the original request.
+ */
 export async function executeWithTempWindowFallback<T>(
   context: TempWindowFallbackContext,
   primaryRequest: () => Promise<T | ApiResponse<T>>,
@@ -143,6 +148,11 @@ export async function executeWithTempWindowFallback<T>(
   }
 }
 
+/**
+ * Determines whether the temp-window fallback should be invoked for a failed request.
+ * @param error Error thrown by the primary request.
+ * @param context Network context describing endpoint, URL, and fetch options.
+ */
 async function shouldUseTempWindowFallback(
   error: unknown,
   context: TempWindowFallbackContext,
@@ -302,6 +312,10 @@ async function shouldUseTempWindowFallback(
   return true
 }
 
+/**
+ * Issues the network request via the temp-window channel once fallback is approved.
+ * @param context Context describing the original request configuration.
+ */
 async function fetchViaTempWindow<T>(
   context: TempWindowFallbackContext,
 ): Promise<T | ApiResponse<T>> {

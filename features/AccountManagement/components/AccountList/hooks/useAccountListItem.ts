@@ -1,12 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
 /**
- * @description 管理 AccountList 中每个列表项的交互逻辑，如 hover 效果和菜单操作。
- * @returns {{
- *   hoveredSiteId: string | null,
- *   handleMouseEnter: (siteId: string) => void,
- *   handleMouseLeave: () => void,
- * }}
+ * 管理 AccountList 中每个列表项的交互逻辑，如 hover 效果和菜单操作。
+ * @returns
  */
 export const useAccountListItem = () => {
   const [hoveredSiteId, setHoveredSiteId] = useState<string | null>(null)

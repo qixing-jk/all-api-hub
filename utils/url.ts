@@ -14,6 +14,9 @@ export function joinUrl(base: string, path: string) {
  * Parse tab and anchor from URL
  * Supports both ?tab=xxx and hash patterns like #tab=xxx or #basic?tab=xxx
  * Also supports direct heading anchors like #heading-id
+ * @param options
+ * @param options.ignoreAnchors
+ * @param options.defaultHashPage
  * @returns Object containing tab and anchor information
  */
 export function parseTabFromUrl(
@@ -68,9 +71,11 @@ export function parseTabFromUrl(
 }
 
 /**
- * Update URL with tab parameter while preserving hash structure
- * @param tab - Tab ID to set in URL
- * @param options - Control whether to replace history and hash page name
+ * Update URL with tab parameter while preserving hash structure.
+ * @param tab Tab ID to set in URL.
+ * @param options Options controlling history replacement and hash root (supports `replaceHistory` and `hashPage`).
+ * @param options.replaceHistory Whether to replace the current history entry (default true).
+ * @param options.hashPage Optional hash root (e.g., "#basic") to enforce while updating.
  */
 export function updateUrlWithTab(
   tab: string,
@@ -95,10 +100,12 @@ export function updateUrlWithTab(
 }
 
 /**
- * Navigate to a heading anchor within a specific tab
- * @param anchor - The heading ID to scroll to
- * @param tab - The tab containing the heading
- * @param options - Additional navigation options
+ * Navigate to a heading anchor within a specific tab.
+ * @param anchor Heading ID to scroll to.
+ * @param tab Tab containing the heading. Omit to keep current tab.
+ * @param options Additional navigation options (supports `hashPage` and `delay`).
+ * @param options.hashPage Optional hash page override applied before scrolling.
+ * @param options.delay Delay (ms) before scrolling after the next animation frame.
  */
 export function navigateToAnchor(
   anchor: string,

@@ -22,13 +22,8 @@ export function isFirefox(): boolean {
 }
 
 /**
- * Determines if the current device is a mobile device.
- *
- * This function checks the user agent string against a set of known mobile device keywords.
- * If the user agent string contains any of these keywords, it is considered a mobile device.
- * Otherwise, it is considered a desktop device.
- *
- * @returns {boolean} true if the device is a mobile device, false otherwise.
+ * Determines if the current device is a mobile device by matching known user-agent keywords.
+ * @returns True when the UA string indicates a mobile platform.
  */
 export function isMobileByUA(): boolean {
   // 检测是否为移动设备，如果不是移动设备则认为是桌面设备
@@ -40,22 +35,16 @@ export function isMobileByUA(): boolean {
 
 /**
  * Determines if the current device is a desktop device.
- * Returns true if the device is not identified as a mobile device.
- *
- * Returns a boolean indicating whether the device is a desktop.
+ * @returns True when the UA check does not match mobile patterns.
  */
 export function isDesktopByUA(): boolean {
   return !isMobileByUA()
 }
 
 /**
- * Checks if the given URL is an extension page.
- *
- * Extension pages have a protocol that includes "-extension:", such as
- * "chrome-extension:" or "moz-extension:".
- *
- * @param url - The URL to check.
- * @returns {boolean} true if the URL is an extension page, false otherwise.
+ * Checks if the given URL is an extension page (chrome-extension:/moz-extension:).
+ * @param url URL instance to check.
+ * @returns True when the protocol contains "-extension:".
  */
 export function isExtensionPage(url: URL) {
   return url.protocol.includes("-extension:")
