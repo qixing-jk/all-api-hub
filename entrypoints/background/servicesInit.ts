@@ -10,7 +10,11 @@ let servicesInitialized = false
 let initializingPromise: Promise<void> | null = null
 
 /**
- * 初始化各项服务
+ * Initialize all long-lived background services used by the extension.
+ *
+ * Sequence notes:
+ * - Guarded to avoid duplicate initialization; concurrent callers await one promise.
+ * - i18n must be ready before downstream services log or emit user-facing messages.
  */
 export async function initializeServices() {
   // 若已初始化，跳过

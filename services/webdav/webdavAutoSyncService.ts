@@ -20,8 +20,12 @@ import {
 } from "./webdavService"
 
 /**
- * WebDAV 自动同步服务
- * 负责管理后台定时同步功能
+ * Manages WebDAV auto-sync in the background.
+ * Responsibilities:
+ * - Reads WebDAV preferences to decide if/when to sync.
+ * - Maintains a single interval timer with an isSyncing guard to avoid overlap.
+ * - Merges or uploads backups according to user-selected strategy.
+ * - Notifies frontends about sync status/results.
  */
 class WebdavAutoSyncService {
   private syncTimer: ReturnType<typeof setInterval> | null = null
@@ -32,7 +36,8 @@ class WebdavAutoSyncService {
   private lastSyncError: string | null = null
 
   /**
-   * 初始化自动同步服务
+   * Initialize auto-sync (idempotent).
+   * Loads preferences and starts timer when enabled.
    */
   async initialize() {
     if (this.isInitialized) {
@@ -50,11 +55,12 @@ class WebdavAutoSyncService {
   }
 
   /**
-   * 根据用户设置启动或停止自动同步
+   * Start or stop auto-sync based on current preferences.
+   * Always clears existing timer to prevent duplicate schedules.
    */
   async setupAutoSync() {
     try {
-      // 清除现有定时器
+      // 清除现有定时器，避免重复的并发任务
       if (this.syncTimer) {
         clearInterval(this.syncTimer)
         this.syncTimer = null
@@ -69,7 +75,7 @@ class WebdavAutoSyncService {
         return
       }
 
-      // 检查WebDAV配置是否完整
+      // 检查WebDAV配置是否完整；缺失凭据时跳过自动同步
       if (
         !preferences.webdav.url ||
         !preferences.webdav.username ||
@@ -79,7 +85,7 @@ class WebdavAutoSyncService {
         return
       }
 
-      // 启动定时同步
+      // 启动定时同步；保存定时器引用以便后续清理
       const intervalMs = (preferences.webdav.syncInterval || 3600) * 1000
       this.syncTimer = setInterval(async () => {
         await this.performBackgroundSync()
@@ -94,7 +100,8 @@ class WebdavAutoSyncService {
   }
 
   /**
-   * 执行后台同步
+   * Execute a background sync run.
+   * Uses isSyncing flag to skip overlapping executions.
    */
   private async performBackgroundSync() {
     if (this.isSyncing) {

@@ -5,15 +5,19 @@ import { accountStorage } from "./accountStorage"
 import { userPreferences } from "./userPreferences"
 
 /**
- * 自动刷新服务
- * 负责管理后台定时刷新功能
+ * Manages account auto-refresh in the background.
+ * Responsibilities:
+ * - Reads user preferences to decide whether and how often to refresh.
+ * - Maintains a single interval timer to avoid duplicate refresh jobs.
+ * - Broadcasts status/results to any connected frontends (popup/options).
  */
 class AutoRefreshService {
   private refreshTimer: NodeJS.Timeout | null = null
   private isInitialized = false
 
   /**
-   * 初始化自动刷新服务
+   * Initialize auto refresh (idempotent).
+   * Loads preferences and starts the timer if enabled.
    */
   async initialize() {
     if (this.isInitialized) {
@@ -31,7 +35,8 @@ class AutoRefreshService {
   }
 
   /**
-   * 根据用户设置启动或停止自动刷新
+   * Start or stop the interval based on current user preferences.
+   * Always clears any existing timer to prevent duplicate schedules.
    */
   async setupAutoRefresh() {
     try {
@@ -42,7 +47,7 @@ class AutoRefreshService {
         console.log("[AutoRefresh] 已清除现有定时器")
       }
 
-      // 获取用户偏好设置
+      // 获取用户偏好设置（可能关闭自动刷新）
       const preferences = await userPreferences.getPreferences()
 
       if (!preferences.accountAutoRefresh?.enabled) {
@@ -50,7 +55,7 @@ class AutoRefreshService {
         return
       }
 
-      // 启动定时刷新
+      // 启动定时刷新；使用 setInterval 保存引用以便后续清理
       const intervalMs = preferences.accountAutoRefresh.interval * 1000
       this.refreshTimer = setInterval(async () => {
         await this.performBackgroundRefresh()
@@ -65,7 +70,8 @@ class AutoRefreshService {
   }
 
   /**
-   * 执行后台刷新
+   * Execute a background refresh cycle.
+   * Catches errors and notifies frontend listeners.
    */
   private async performBackgroundRefresh() {
     try {
@@ -86,7 +92,7 @@ class AutoRefreshService {
   }
 
   /**
-   * 立即执行一次刷新
+   * Trigger a one-off immediate refresh (bypasses interval scheduling).
    */
   async refreshNow(): Promise<{ success: number; failed: number }> {
     try {
@@ -103,7 +109,7 @@ class AutoRefreshService {
   }
 
   /**
-   * 停止自动刷新
+   * Stop the interval timer if running.
    */
   stopAutoRefresh() {
     if (this.refreshTimer) {
@@ -114,7 +120,7 @@ class AutoRefreshService {
   }
 
   /**
-   * 更新刷新设置
+   * Persist new refresh settings and reconfigure the timer accordingly.
    */
   async updateSettings(updates: {
     accountAutoRefresh: Partial<AccountAutoRefresh>
@@ -130,7 +136,7 @@ class AutoRefreshService {
   }
 
   /**
-   * 获取当前状态
+   * Get current runtime status (used by UI to display state).
    */
   getStatus() {
     return {
@@ -140,7 +146,8 @@ class AutoRefreshService {
   }
 
   /**
-   * 通知前端
+   * Notify any connected frontend about refresh state changes.
+   * Swallows "receiving end does not exist" errors because popup may be closed.
    */
   private notifyFrontend(type: string, data: any) {
     try {

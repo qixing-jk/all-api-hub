@@ -25,8 +25,11 @@ import { NewApiModelSyncService } from "./NewApiModelSyncService"
 import { newApiModelSyncStorage } from "./storage"
 
 /**
- * Scheduler service for New API Model Sync
- * Handles periodic execution using chrome.alarms
+ * Scheduler for New API Model Sync.
+ * Responsibilities:
+ * - Sets up alarms to run sync on a fixed cadence (when alarms API is available).
+ * - Orchestrates execution with user preferences (interval, concurrency, retries).
+ * - Applies model redirect mappings immediately after successful channel syncs.
  */
 class NewApiModelSyncScheduler {
   private static readonly ALARM_NAME = "newApiModelSync"
@@ -63,7 +66,8 @@ class NewApiModelSyncScheduler {
   }
 
   /**
-   * Initialize the scheduler
+   * Initialize the scheduler (idempotent).
+   * Registers alarm listeners and schedules the first alarm if supported.
    */
   async initialize() {
     if (this.isInitialized) {
@@ -101,7 +105,8 @@ class NewApiModelSyncScheduler {
   }
 
   /**
-   * Setup or update the alarm based on current preferences
+   * Setup or update the alarm based on current preferences.
+   * Clears existing alarm first to avoid duplicates, then recreates if enabled.
    */
   async setupAlarm() {
     // Check if alarms API is supported
@@ -115,7 +120,7 @@ class NewApiModelSyncScheduler {
     const prefs = await userPreferences.getPreferences()
     const config = prefs.newApiModelSync ?? DEFAULT_PREFERENCES.newApiModelSync!
 
-    // Clear existing alarm
+    // Clear existing alarm before re-creating with new interval
     await clearAlarm(NewApiModelSyncScheduler.ALARM_NAME)
 
     if (!config.enabled) {
@@ -156,8 +161,8 @@ class NewApiModelSyncScheduler {
   }
 
   /**
-   * Execute model sync for all channels
-   * Also generates model redirect mappings if enabled
+   * Execute model sync for all channels (or a filtered subset).
+   * Also generates model redirect mappings if enabled.
    */
   async executeSync(channelIds?: number[]): Promise<ExecutionResult> {
     console.log("[NewApiModelSync] Starting execution")
