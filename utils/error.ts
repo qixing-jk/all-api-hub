@@ -1,3 +1,8 @@
+/**
+ * Normalize unknown error inputs into a human-readable string.
+ * @param error Any thrown value, including primitives or Error-like objects.
+ * @returns String representation safe for logging or user display.
+ */
 export function getErrorMessage(error: unknown): string {
   if (error instanceof Error) {
     return error.message

@@ -3,6 +3,9 @@ import toast from "react-hot-toast"
 
 import type { ApiToken, DisplaySiteData } from "~/types"
 
+/**
+ * Shape expected by Cherry Studio import deeplink payloads.
+ */
 interface CherryStudioExportData {
   id: string
   baseUrl: string
@@ -10,6 +13,11 @@ interface CherryStudioExportData {
   name: string
 }
 
+/**
+ * Serialize Cherry Studio payload data and produce deeplink URL.
+ * @param data - Provider metadata and credential bundle.
+ * @returns The deeplink URL consumable by Cherry Studio.
+ */
 function generateCherryStudioURL(data: CherryStudioExportData): string {
   const jsonString = JSON.stringify(data)
   // 转成 Base64（UTF-8 编码）

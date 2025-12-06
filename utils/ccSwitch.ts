@@ -3,9 +3,15 @@ import toast from "react-hot-toast"
 
 import type { ApiToken, DisplaySiteData } from "~/types"
 
+/**
+ * Supported CC Switch client identifiers.
+ */
 export const CCSWITCH_APPS = ["claude", "codex", "gemini"] as const
 export type CCSwitchApp = (typeof CCSWITCH_APPS)[number]
 
+/**
+ * Minimal payload required by CC Switch deeplink import protocol.
+ */
 export interface CCSwitchDeeplinkPayload {
   app: CCSwitchApp
   name: string
@@ -31,6 +37,11 @@ export interface OpenInCCSwitchOptions {
   endpoint?: string
 }
 
+/**
+ * Normalize arbitrary user-provided URLs so CC Switch receives valid origins.
+ * @param url Possible URL string supplied by account metadata.
+ * @returns HTTPS URL stripped of trailing slash or null when invalid.
+ */
 function normalizeUrl(url: string | undefined | null) {
   if (!url) return null
   const trimmed = url.trim()
@@ -52,6 +63,11 @@ function normalizeUrl(url: string | undefined | null) {
   }
 }
 
+/**
+ * Build the CC Switch deeplink from the provided payload.
+ * @param payload Structured payload including provider metadata.
+ * @returns Formatted ccswitch:// URL.
+ */
 export function generateCCSwitchURL(payload: CCSwitchDeeplinkPayload) {
   const params = new URLSearchParams()
   params.set("resource", "provider")
@@ -71,6 +87,12 @@ export function generateCCSwitchURL(payload: CCSwitchDeeplinkPayload) {
   return `ccswitch://v1/import?${params.toString()}`
 }
 
+/**
+ * Attempt to open the CC Switch desktop client via deeplink.
+ * Validates inputs, normalizes URLs, and surfaces toast feedback.
+ * @param options Caller supplied account/token context.
+ * @returns Whether the operation was initiated successfully.
+ */
 export function openInCCSwitch(options: OpenInCCSwitchOptions) {
   const {
     account,
