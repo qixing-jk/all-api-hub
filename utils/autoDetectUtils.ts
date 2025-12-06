@@ -74,6 +74,7 @@ export function analyzeAutoDetectError(error: any): AutoDetectError {
 
   const msg = errorMessage.toLowerCase()
 
+  // Iterate known keyword buckets and return the first matching structured error
   for (const [type, keywords] of Object.entries(ERROR_KEYWORDS)) {
     if (keywords.some((k) => msg.includes(k.toLowerCase()))) {
       switch (type) {
@@ -147,6 +148,7 @@ export function getLoginUrl(siteUrl: string): string {
     // 对于 One API 和 New API，通常登录页面在 /login
     return `${url.protocol}//${url.host}/login`
   } catch {
+    // If parsing fails, fall back to the original URL (best-effort)
     return siteUrl
   }
 }

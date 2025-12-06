@@ -62,6 +62,7 @@ class AccountStorageService {
       const { accounts, migratedCount } = migrateAccountsConfig(config.accounts)
 
       if (migratedCount > 0) {
+        // If any account schemas were upgraded, persist the normalized set immediately
         console.log(
           `[AccountStorage] ${migratedCount} accounts migrated, saving updated accounts...`,
         )
@@ -158,7 +159,7 @@ class AccountStorageService {
         accounts.find((account) => {
           try {
             const accountUrl = new URL(account.site_url)
-            return accountUrl.origin === currentUrl.origin
+            return accountUrl.origin === currentUrl.origin // compare origins only; ignore path/query differences
           } catch {
             return false
           }
@@ -221,6 +222,7 @@ class AccountStorageService {
         updated_at: Date.now(),
       } as DeepPartial<SiteAccount>)
 
+      // Persist the updated list atomically to keep pinned/ordered ids consistent
       await this.saveAccounts(accounts)
       return true
     } catch (error) {

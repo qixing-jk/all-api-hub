@@ -3,6 +3,10 @@ import { ApiError } from "~/services/apiService/common/errors"
 import { fetchApi, fetchApiData } from "~/services/apiService/common/utils"
 import { AuthTypeEnum } from "~/types"
 
+/**
+ * Fetch the raw HTML title from the site root.
+ * Uses a text response and no-store cache to avoid stale titles.
+ */
 export const fetchSiteOriginalTitle = async (url: string) => {
   const html = await fetchApi<string>(
     {
@@ -16,7 +20,7 @@ export const fetchSiteOriginalTitle = async (url: string) => {
     },
     true,
   )
-  const match = html.match(/<title>(.*?)<\/title>/i)
+  const match = html.match(/<title>(.*?)<\/title>/i) // simple, case-insensitive title extract
   const title = match ? match[1] : "未找到"
   console.log("原始 document title:", title)
   return title
