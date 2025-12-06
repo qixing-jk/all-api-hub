@@ -5,7 +5,7 @@ import * as React from "react"
 import { cn } from "~/lib/utils"
 
 /**
- *
+ * Select provides a Radix-based select root for controlled value and open state.
  */
 function Select({
   ...props
@@ -14,7 +14,7 @@ function Select({
 }
 
 /**
- *
+ * SelectGroup groups related select items.
  */
 function SelectGroup({
   ...props

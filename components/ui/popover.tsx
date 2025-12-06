@@ -4,7 +4,7 @@ import * as React from "react"
 import { cn } from "~/lib/utils"
 
 /**
- *
+ * Popover provides a Radix-based floating panel container.
  */
 function Popover({
   ...props
@@ -13,7 +13,7 @@ function Popover({
 }
 
 /**
- *
+ * PopoverTrigger toggles the popover when activated.
  */
 function PopoverTrigger({
   ...props
@@ -22,7 +22,7 @@ function PopoverTrigger({
 }
 
 /**
- *
+ * PopoverContent renders the positioned popover surface with animation.
  */
 function PopoverContent({
   className,
@@ -47,7 +47,7 @@ function PopoverContent({
 }
 
 /**
- *
+ * PopoverAnchor sets a custom anchor element for positioning.
  */
 function PopoverAnchor({
   ...props

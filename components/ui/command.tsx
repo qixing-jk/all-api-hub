@@ -14,7 +14,7 @@ import {
 import { cn } from "~/lib/utils"
 
 /**
- *
+ * Command renders the base command palette surface.
  */
 function Command({
   className,
@@ -33,7 +33,7 @@ function Command({
 }
 
 /**
- *
+ * CommandDialog composes the command palette inside a dialog shell.
  */
 function CommandDialog({
   title = "Command Palette",
@@ -67,7 +67,7 @@ function CommandDialog({
 }
 
 /**
- *
+ * CommandInput renders the searchable input with an icon wrapper.
  */
 function CommandInput({
   className,
@@ -92,7 +92,7 @@ function CommandInput({
 }
 
 /**
- *
+ * CommandList provides the scrollable results container.
  */
 function CommandList({
   className,
@@ -111,7 +111,7 @@ function CommandList({
 }
 
 /**
- *
+ * CommandEmpty shows fallback content when no results match.
  */
 function CommandEmpty({
   ...props
@@ -126,7 +126,7 @@ function CommandEmpty({
 }
 
 /**
- *
+ * CommandGroup groups related results with a heading.
  */
 function CommandGroup({
   className,
@@ -145,7 +145,7 @@ function CommandGroup({
 }
 
 /**
- *
+ * CommandSeparator draws a thin rule between groups.
  */
 function CommandSeparator({
   className,
@@ -161,7 +161,7 @@ function CommandSeparator({
 }
 
 /**
- *
+ * CommandItem renders an interactive row in the results list.
  */
 function CommandItem({
   className,
@@ -180,7 +180,7 @@ function CommandItem({
 }
 
 /**
- *
+ * CommandShortcut shows keyboard shortcut text aligned to the right.
  */
 function CommandShortcut({
   className,

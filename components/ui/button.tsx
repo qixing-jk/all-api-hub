@@ -48,7 +48,7 @@ const buttonVariants = cva(
 )
 
 /**
- *
+ * Button renders a styled Radix-aware button with variants, sizes, icons, and optional loading spinner.
  */
 function Button({
   className,

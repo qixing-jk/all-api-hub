@@ -38,7 +38,7 @@ export interface MultiSelectProps {
 }
 
 /**
- *
+ * MultiSelect renders a searchable, multi-value combobox with optional custom entries.
  */
 export function MultiSelect({
   options,

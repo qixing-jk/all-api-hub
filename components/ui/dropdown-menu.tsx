@@ -5,7 +5,7 @@ import * as React from "react"
 import { cn } from "~/lib/utils"
 
 /**
- *
+ * DropdownMenu wraps Radix dropdown root to manage menu state.
  */
 function DropdownMenu({
   ...props
@@ -14,7 +14,7 @@ function DropdownMenu({
 }
 
 /**
- *
+ * DropdownMenuPortal renders dropdown content in a portal.
  */
 function DropdownMenuPortal({
   ...props
@@ -25,7 +25,7 @@ function DropdownMenuPortal({
 }
 
 /**
- *
+ * DropdownMenuTrigger opens or closes the dropdown when interacted with.
  */
 function DropdownMenuTrigger({
   ...props
@@ -39,7 +39,7 @@ function DropdownMenuTrigger({
 }
 
 /**
- *
+ * DropdownMenuContent positions and animates the dropdown surface.
  */
 function DropdownMenuContent({
   className,
@@ -62,7 +62,7 @@ function DropdownMenuContent({
 }
 
 /**
- *
+ * DropdownMenuGroup groups related dropdown items.
  */
 function DropdownMenuGroup({
   ...props
@@ -73,7 +73,7 @@ function DropdownMenuGroup({
 }
 
 /**
- *
+ * DropdownMenuItem renders a selectable menu row with optional destructive style.
  */
 function DropdownMenuItem({
   className,
@@ -99,7 +99,7 @@ function DropdownMenuItem({
 }
 
 /**
- *
+ * DropdownMenuCheckboxItem renders a checkbox entry inside the menu.
  */
 function DropdownMenuCheckboxItem({
   className,
@@ -128,7 +128,7 @@ function DropdownMenuCheckboxItem({
 }
 
 /**
- *
+ * DropdownMenuRadioGroup manages a set of radio items for single selection.
  */
 function DropdownMenuRadioGroup({
   ...props
@@ -142,7 +142,7 @@ function DropdownMenuRadioGroup({
 }
 
 /**
- *
+ * DropdownMenuRadioItem renders a radio option row within the menu.
  */
 function DropdownMenuRadioItem({
   className,
@@ -169,7 +169,7 @@ function DropdownMenuRadioItem({
 }
 
 /**
- *
+ * DropdownMenuLabel displays a small heading or label within the menu.
  */
 function DropdownMenuLabel({
   className,
@@ -192,7 +192,7 @@ function DropdownMenuLabel({
 }
 
 /**
- *
+ * DropdownMenuSeparator draws a dividing line between menu sections.
  */
 function DropdownMenuSeparator({
   className,
@@ -208,7 +208,7 @@ function DropdownMenuSeparator({
 }
 
 /**
- *
+ * DropdownMenuShortcut shows keyboard shortcut text aligned to the right.
  */
 function DropdownMenuShortcut({
   className,
@@ -227,7 +227,7 @@ function DropdownMenuShortcut({
 }
 
 /**
- *
+ * DropdownMenuSub nests another dropdown inside the current menu.
  */
 function DropdownMenuSub({
   ...props
@@ -236,7 +236,7 @@ function DropdownMenuSub({
 }
 
 /**
- *
+ * DropdownMenuSubTrigger opens a nested submenu when hovered or clicked.
  */
 function DropdownMenuSubTrigger({
   className,
@@ -263,7 +263,7 @@ function DropdownMenuSubTrigger({
 }
 
 /**
- *
+ * DropdownMenuSubContent renders the submenu surface for nested items.
  */
 function DropdownMenuSubContent({
   className,

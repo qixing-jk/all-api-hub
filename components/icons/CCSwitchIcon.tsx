@@ -13,7 +13,7 @@ interface CCSwitchIconProps {
 }
 
 /**
- *
+ * CCSwitchIcon renders the CC Switch brand mark at a chosen size.
  */
 export function CCSwitchIcon({ size = "sm" }: CCSwitchIconProps) {
   const dimension = SIZE_MAP[size]

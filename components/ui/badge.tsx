@@ -37,7 +37,7 @@ const badgeVariants = cva(
 )
 
 /**
- *
+ * Badge renders a pill-style label with color and size variants for status or metadata.
  */
 function Badge({
   className,

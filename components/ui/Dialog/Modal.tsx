@@ -24,7 +24,7 @@ const sizeMap: Record<Size, string> = {
 }
 
 /**
- *
+ * Modal renders a HeadlessUI dialog with configurable size, close behavior, and slots for header/footer.
  */
 export function Modal({
   isOpen,

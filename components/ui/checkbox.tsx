@@ -5,7 +5,7 @@ import * as React from "react"
 import { cn } from "~/lib/utils"
 
 /**
- *
+ * Checkbox renders a styled Radix checkbox with consistent focus and validation states.
  */
 function Checkbox({
   className,

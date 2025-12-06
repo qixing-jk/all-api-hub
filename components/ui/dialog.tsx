@@ -5,7 +5,7 @@ import * as React from "react"
 import { cn } from "~/lib/utils"
 
 /**
- *
+ * Dialog provides a Radix-based modal root to manage open/close state.
  */
 function Dialog({
   ...props
@@ -14,7 +14,7 @@ function Dialog({
 }
 
 /**
- *
+ * DialogTrigger toggles the dialog open state when activated.
  */
 function DialogTrigger({
   ...props
@@ -23,7 +23,7 @@ function DialogTrigger({
 }
 
 /**
- *
+ * DialogPortal renders dialog content in a React portal.
  */
 function DialogPortal({
   ...props
@@ -32,7 +32,7 @@ function DialogPortal({
 }
 
 /**
- *
+ * DialogClose closes the dialog when interacted with.
  */
 function DialogClose({
   ...props
@@ -41,7 +41,7 @@ function DialogClose({
 }
 
 /**
- *
+ * DialogOverlay renders the translucent backdrop behind the dialog content.
  */
 function DialogOverlay({
   className,
@@ -60,7 +60,7 @@ function DialogOverlay({
 }
 
 /**
- *
+ * DialogContent positions and animates the dialog surface with optional close button.
  */
 function DialogContent({
   className,
@@ -97,7 +97,7 @@ function DialogContent({
 }
 
 /**
- *
+ * DialogHeader lays out title and description at the top of dialog content.
  */
 function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
@@ -110,7 +110,7 @@ function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
 }
 
 /**
- *
+ * DialogFooter arranges action buttons at the bottom of dialog content.
  */
 function DialogFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
@@ -126,7 +126,7 @@ function DialogFooter({ className, ...props }: React.ComponentProps<"div">) {
 }
 
 /**
- *
+ * DialogTitle displays the dialog title text with semantic markup.
  */
 function DialogTitle({
   className,
@@ -142,7 +142,7 @@ function DialogTitle({
 }
 
 /**
- *
+ * DialogDescription renders supporting text beneath the dialog title.
  */
 function DialogDescription({
   className,

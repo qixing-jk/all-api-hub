@@ -9,7 +9,7 @@ import { Button, buttonVariants } from "~/components/ui/button"
 import { cn } from "~/lib/utils"
 
 /**
- *
+ * Pagination wraps navigation container with aria labeling for page controls.
  */
 function Pagination({ className, ...props }: React.ComponentProps<"nav">) {
   return (
@@ -24,7 +24,7 @@ function Pagination({ className, ...props }: React.ComponentProps<"nav">) {
 }
 
 /**
- *
+ * PaginationContent lays out pagination items in a horizontal list.
  */
 function PaginationContent({
   className,
@@ -40,7 +40,7 @@ function PaginationContent({
 }
 
 /**
- *
+ * PaginationItem renders a list item wrapper for pagination controls.
  */
 function PaginationItem({ ...props }: React.ComponentProps<"li">) {
   return <li data-slot="pagination-item" {...props} />
@@ -52,7 +52,7 @@ type PaginationLinkProps = {
   React.ComponentProps<"a">
 
 /**
- *
+ * PaginationLink renders a styled anchor for page navigation with active state.
  */
 function PaginationLink({
   className,
@@ -78,7 +78,7 @@ function PaginationLink({
 }
 
 /**
- *
+ * PaginationPrevious renders the previous-page control with icon and label.
  */
 function PaginationPrevious({
   className,
@@ -98,7 +98,7 @@ function PaginationPrevious({
 }
 
 /**
- *
+ * PaginationNext renders the next-page control with icon and label.
  */
 function PaginationNext({
   className,
@@ -118,7 +118,7 @@ function PaginationNext({
 }
 
 /**
- *
+ * PaginationEllipsis shows an overflow indicator between distant pages.
  */
 function PaginationEllipsis({
   className,

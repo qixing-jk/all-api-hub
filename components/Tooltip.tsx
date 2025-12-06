@@ -25,7 +25,7 @@ interface TooltipProps {
 }
 
 /**
- *
+ * Tooltip wraps children with a react-tooltip anchor and renders rich or text content in a popup.
  */
 export default function Tooltip({
   content,

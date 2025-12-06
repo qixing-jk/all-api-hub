@@ -13,7 +13,7 @@ interface CliProxyIconProps {
 }
 
 /**
- *
+ * CliProxyIcon renders the CLI Proxy API logo at a chosen size.
  */
 export function CliProxyIcon({ size = "sm" }: CliProxyIconProps) {
   const dimension = SIZE_MAP[size]

@@ -11,7 +11,7 @@ const languageOptions = [
 ]
 
 /**
- *
+ * LanguageSwitcher toggles the UI language and persists the preference.
  */
 export function LanguageSwitcher() {
   const { i18n } = useTranslation()
