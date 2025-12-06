@@ -9,7 +9,8 @@ import { useHashNavigation } from "./hooks/useHashNavigation"
 import BasicSettings from "./pages/BasicSettings"
 
 /**
- *
+ * Main Options page shell: renders header, sidebar, and routed content panes.
+ * Handles hash navigation, mobile sidebar toggles, and collapse state.
  */
 function OptionsPage() {
   const { activeMenuItem, routeParams, handleMenuItemChange, refreshKey } =
@@ -66,7 +67,7 @@ function OptionsPage() {
 }
 
 /**
- *
+ * Wraps OptionsPage with shared AppLayout (theme/providers).
  */
 function App() {
   return (

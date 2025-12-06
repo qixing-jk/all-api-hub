@@ -15,7 +15,7 @@ export default defineContentScript({
 })
 
 /**
- *
+ * Bootstraps content-script side features: logging, message handlers, and redemption assist UI.
  */
 function mainLogic() {
   console.log("Hello content script!", { id: browser.runtime.id })

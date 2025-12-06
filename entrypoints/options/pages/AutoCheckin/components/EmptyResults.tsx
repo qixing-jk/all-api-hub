@@ -7,7 +7,8 @@ interface EmptyResultsProps {
 }
 
 /**
- *
+ * Shown when no auto-checkin runs or history exist yet.
+ * @param props hasHistory toggles messaging between past runs and first-time state.
  */
 export default function EmptyResults({ hasHistory }: EmptyResultsProps) {
   const { t } = useTranslation("autoCheckin")

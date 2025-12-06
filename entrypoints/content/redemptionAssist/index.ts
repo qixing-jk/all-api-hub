@@ -14,14 +14,15 @@ import {
 export const REDEMPTION_TOAST_HOST_TAG = "all-api-hub-redemption-toast"
 
 /**
- *
+ * Initializes redemption assist in content scripts (event listeners, toasts, etc.).
  */
 export function setupRedemptionAssistContent() {
   setupRedemptionAssistDetection()
 }
 
 /**
- *
+ * Wires DOM events (click/copy/cut) to scan for redemption codes, with throttling.
+ * Skips interactions originating from the redemption assist UI itself.
  */
 function setupRedemptionAssistDetection() {
   const CLICK_SCAN_INTERVAL_MS = 2000
@@ -80,7 +81,9 @@ function setupRedemptionAssistDetection() {
 }
 
 /**
- *
+ * Guards against handling events triggered from inside the redemption assist UI.
+ * @param target Event origin node.
+ * @returns True when the event originated from our toast host.
  */
 function isEventFromRedemptionAssistUI(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false
@@ -95,7 +98,8 @@ let lastScanText = ""
 let lastScanAt = 0
 
 /**
- *
+ * Deduplicates scan requests before invoking the expensive scan routine.
+ * @param sourceText Selected or clipboard text to inspect.
  */
 async function scheduleRedemptionScan(sourceText: string) {
   const text = (sourceText ?? "").trim()
@@ -113,7 +117,8 @@ async function scheduleRedemptionScan(sourceText: string) {
 }
 
 /**
- *
+ * Attempts to auto-redeem a detected code by coordinating with the background page.
+ * @param sourceText Text possibly containing redemption codes.
  */
 async function scanForRedemptionCodes(sourceText?: string) {
   try {
@@ -236,7 +241,9 @@ async function scanForRedemptionCodes(sourceText?: string) {
 }
 
 /**
- *
+ * Masks sensitive redemption codes for UI prompts/logs.
+ * @param code Raw redemption code.
+ * @returns Masked code preview.
  */
 function maskCode(code: string): string {
   const trimmed = code.trim()
@@ -245,7 +252,11 @@ function maskCode(code: string): string {
 }
 
 /**
- *
+ * Handles manual redemption flow when the user must choose an account.
+ * @param accountId Selected account id.
+ * @param code Redemption code.
+ * @param loadingMessage Message displayed while awaiting backend result.
+ * @returns Result payload from background message.
  */
 async function performManualRedeem(
   accountId: string,

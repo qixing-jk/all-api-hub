@@ -14,7 +14,8 @@ interface PageHeaderProps {
 }
 
 /**
- *
+ * Shared section header for options pages with icon, title, description, and action slots.
+ * @param props Visual icon, title/description nodes, optional actions, spacing variant, and extra classnames.
  */
 export function PageHeader({
   icon: Icon,

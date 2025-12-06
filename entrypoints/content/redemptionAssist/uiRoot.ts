@@ -11,14 +11,16 @@ let redemptionToastRoot: Root | null = null
 let mountingPromise: Promise<void> | null = null
 
 /**
- *
+ * Stores the WXT ContentScriptContext so other helpers can mount UI later.
+ * @param ctx Context provided by defineContentScript main().
  */
 export function setContentScriptContext(ctx: ContentScriptContext) {
   ctxRef = ctx
 }
 
 /**
- *
+ * Ensures the redemption toast shadow-root UI is mounted once.
+ * Creates the shadow host, renders React root, and guards concurrent mounts.
  */
 export async function ensureRedemptionToastUi(): Promise<void> {
   if (redemptionToastRoot) return

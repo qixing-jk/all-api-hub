@@ -8,7 +8,9 @@ import {
 import { getErrorMessage } from "~/utils/error"
 
 /**
- *
+ * Registers content-script message handlers for fetching storage data,
+ * checking guard status, relaying temp fetches, etc.
+ * Each branch replies via sendResponse so browser.runtime ports stay alive.
  */
 export function setupContentMessageHandlers() {
   browser.runtime.onMessage.addListener((request, _sender, sendResponse) => {
@@ -147,7 +149,9 @@ export function setupContentMessageHandlers() {
 }
 
 /**
- *
+ * Polls localStorage for user info until available or until timeout elapses.
+ * @param maxWaitTime Maximum wait duration in ms before rejecting.
+ * @returns User ID and parsed user payload once retrieved.
  */
 async function waitForUserInfo(
   maxWaitTime = 5000,
@@ -176,7 +180,9 @@ async function waitForUserInfo(
 type TempWindowResponseType = "json" | "text" | "arrayBuffer" | "blob"
 
 /**
- *
+ * Normalizes fetch options coming from background scripts.
+ * Ensures headers are sanitized and mutations do not affect original objects.
+ * @param options Raw RequestInit payload.
  */
 function normalizeFetchOptions(options: RequestInit = {}): RequestInit {
   const normalized: RequestInit = { ...options }
@@ -189,7 +195,9 @@ function normalizeFetchOptions(options: RequestInit = {}): RequestInit {
 }
 
 /**
- *
+ * Converts various header inputs to a plain object accepted by fetch.
+ * @param headers Headers instance, tuple array, or object.
+ * @returns Plain key/value header map.
  */
 function sanitizeHeaders(headers: HeadersInit): Record<string, string> {
   if (headers instanceof Headers) {
@@ -222,7 +230,8 @@ function sanitizeHeaders(headers: HeadersInit): Record<string, string> {
 }
 
 /**
- *
+ * Parses a fetch Response according to the requested responseType.
+ * Falls back to text when JSON parsing fails to avoid throwing.
  */
 async function parseResponseData(
   response: Response,

@@ -260,8 +260,8 @@ export async function handleTempWindowFetch(
 
 /**
  * 通过打开临时标签页获取站点用户信息
- * @param url
- * @param requestId
+ * @param url 页面地址（含 origin），用于确定要打开的临时窗口
+ * @param requestId 用于标识本次请求的唯一 ID，便于释放上下文
  */
 async function getSiteDataFromTab(url: string, requestId: string) {
   try {

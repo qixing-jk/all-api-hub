@@ -23,7 +23,8 @@ interface ResultsTableProps {
 }
 
 /**
- *
+ * Renders auto-checkin execution results with status badges, timestamps, and action buttons.
+ * @param props results list and callbacks controlling retry/manual sign-in states.
  */
 export default function ResultsTable({
   results,

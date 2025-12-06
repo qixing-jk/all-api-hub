@@ -12,7 +12,9 @@ import {
 import { ensureRedemptionToastUi } from "../uiRoot"
 
 /**
- *
+ * Shows an indefinite loading toast while auto-redeem runs.
+ * @param message Loading copy for the toast body.
+ * @returns Toast ID for later dismissal.
  */
 export async function showRedeemLoadingToast(message: string) {
   await ensureRedemptionToastUi()
@@ -25,14 +27,18 @@ export async function showRedeemLoadingToast(message: string) {
 }
 
 /**
- *
+ * Wrapper around react-hot-toast dismiss to avoid direct dependency elsewhere.
+ * @param toastId Optional toast identifier.
  */
 export function dismissToast(toastId?: string) {
   toast.dismiss(toastId)
 }
 
 /**
- *
+ * Prompts user to select an account when multiple candidates exist.
+ * @param accounts Candidate account list.
+ * @param options Optional title/message overrides.
+ * @returns Selected account or null when cancelled.
  */
 export async function showAccountSelectToast(
   accounts: DisplaySiteData[],
@@ -73,7 +79,9 @@ export async function showAccountSelectToast(
 }
 
 /**
- *
+ * Renders prompt toast asking user whether to auto redeem.
+ * @param message Prompt copy.
+ * @returns Action user chose (auto/manual/cancel).
  */
 export async function showRedemptionPromptToast(
   message: string,
@@ -102,7 +110,9 @@ export async function showRedemptionPromptToast(
 }
 
 /**
- *
+ * Displays success/error result toast after redeem completes.
+ * @param success Whether operation succeeded.
+ * @param message Message to show (no trailing period per UI rules).
  */
 export async function showRedeemResultToast(success: boolean, message: string) {
   if (!message) return

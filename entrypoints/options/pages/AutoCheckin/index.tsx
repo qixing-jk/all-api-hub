@@ -20,7 +20,7 @@ import ResultsTable from "./components/ResultsTable"
 import StatusCard from "./components/StatusCard"
 
 /**
- *
+ * Auto Check-in dashboard page: fetches status, runs jobs, filters/searches results, and shows snapshots.
  */
 export default function AutoCheckin() {
   const { t } = useTranslation("autoCheckin")

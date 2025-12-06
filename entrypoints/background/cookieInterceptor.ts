@@ -8,7 +8,8 @@ import {
 } from "~/utils/cookieHelper"
 
 /**
- *
+ * Checks whether cookie interception should run (Firefox + permissions).
+ * Logs helpful warnings when optional permissions were not granted.
  */
 export async function checkCookieInterceptorRequirement(): Promise<boolean> {
   // 仅 Firefox 使用这个功能
@@ -29,7 +30,9 @@ export async function checkCookieInterceptorRequirement(): Promise<boolean> {
 
 // 辅助函数：从账号列表提取 站点的 URL 模式
 /**
- *
+ * Converts stored account URLs into unique origin match patterns usable by webRequest APIs.
+ * @param accounts Site accounts stored locally.
+ * @returns Deduplicated pattern list (origin/*).
  */
 function extractAccountUrlPatterns(accounts: SiteAccount[]): string[] {
   const patterns = accounts
@@ -53,7 +56,8 @@ function extractAccountUrlPatterns(accounts: SiteAccount[]): string[] {
 
 // 初始化 Cookie 拦截器
 /**
- *
+ * Installs the cookie interceptors if requirements are satisfied.
+ * Fetches account list to derive URL patterns.
  */
 export async function initializeCookieInterceptors(): Promise<void> {
   try {
@@ -70,7 +74,8 @@ export async function initializeCookieInterceptors(): Promise<void> {
 
 // 更新 Cookie 拦截器（配置变更时调用）
 /**
- *
+ * Refreshes interceptor registrations when account data or permissions change.
+ * Reuses URL extraction logic to keep listeners aligned with current config.
  */
 async function updateCookieInterceptor(): Promise<void> {
   try {
@@ -86,7 +91,9 @@ async function updateCookieInterceptor(): Promise<void> {
 }
 
 /**
- *
+ * Handles storage change events to refresh interceptors when site accounts update.
+ * @param changes Storage diff payload.
+ * @param areaName Storage area name (local/sync/etc).
  */
 function handleStorageChanged(
   changes: Record<string, unknown>,
@@ -101,7 +108,7 @@ function handleStorageChanged(
 }
 
 /**
- *
+ * Registers listeners to keep cookie interception lifecycle in sync with storage and permission changes.
  */
 export function setupCookieInterceptorListeners() {
   browser.storage.onChanged.addListener(handleStorageChanged as any)

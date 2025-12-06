@@ -8,7 +8,7 @@ import { AccountManagementProvider } from "~/features/AccountManagement/hooks/Ac
 import { useDialogStateContext } from "~/features/AccountManagement/hooks/DialogStateContext"
 
 /**
- *
+ * Renders the Account Management page body: header with CTA and account list.
  */
 function AccountManagementContent({ searchQuery }: { searchQuery?: string }) {
   const { t } = useTranslation("account")
@@ -37,7 +37,7 @@ interface AccountManagementProps {
 }
 
 /**
- *
+ * Wraps AccountManagementContent with provider and hash-driven params.
  */
 function AccountManagement({
   refreshKey,

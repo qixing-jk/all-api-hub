@@ -15,7 +15,8 @@ import {
 } from "./tempWindowPool"
 
 /**
- *
+ * Registers runtime message handlers for background scripts.
+ * Routes browser.runtime messages to feature-specific handlers based on action prefixes.
  */
 export function setupRuntimeMessageListeners() {
   // 处理来自 popup 的消息

@@ -6,7 +6,8 @@ import { menuItems } from "../constants"
 
 // 解析URL hash和参数
 /**
- *
+ * Parses the current location hash + search params into page + param map.
+ * @returns Active page id and query params.
  */
 function parseHash() {
   const hash = window.location.hash.slice(1) // 去掉 #
@@ -36,7 +37,9 @@ function parseHash() {
 
 // 更新URL hash
 /**
- *
+ * Updates the hash (and query params) while staying within the options page.
+ * @param page Menu id to navigate to.
+ * @param params Optional query parameters.
  */
 function updateHash(page: string, params?: Record<string, string>) {
   const hash = `#${page}`
@@ -44,7 +47,8 @@ function updateHash(page: string, params?: Record<string, string>) {
 }
 
 /**
- *
+ * Hook that synchronizes menu navigation with the URL hash/query parameters.
+ * Exposes current page, params, a handler to change pages, and refreshKey bumps.
  */
 export function useHashNavigation() {
   const [activeMenuItem, setActiveMenuItem] = useState("basic")

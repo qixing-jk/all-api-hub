@@ -33,7 +33,9 @@ const SEPARATOR_BEFORE_IDS = new Set([
 ])
 
 /**
- *
+ * Animated sidebar for the Options page, supporting collapse and mobile overlay.
+ * Handles menu rendering, accessibility labels, and user preference filters.
+ * @param props Active menu id, handlers for clicks/collapse, and responsive state flags.
  */
 function Sidebar({
   activeMenuItem,

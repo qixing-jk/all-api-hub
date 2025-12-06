@@ -12,7 +12,8 @@ interface HeaderProps {
 }
 
 /**
- *
+ * Sticky options-page header with menu toggle, app identity, and language switcher.
+ * @param props Title click handler, menu toggle callback, and mobile open state.
  */
 function Header({
   onTitleClick,

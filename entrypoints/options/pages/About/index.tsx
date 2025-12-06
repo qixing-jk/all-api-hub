@@ -17,7 +17,7 @@ import PrivacyNotice from "./components/PrivacyNotice"
 import TechStackGrid from "./components/TechStackGrid"
 
 /**
- *
+ * Options/About page: displays app metadata, links, features, tech stack, credits, and privacy notice.
  */
 export default function About() {
   const { t } = useTranslation("about")

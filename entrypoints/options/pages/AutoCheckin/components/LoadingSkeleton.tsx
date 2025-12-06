@@ -1,7 +1,7 @@
 import { Card } from "~/components/ui"
 
 /**
- *
+ * Skeleton placeholder while auto-checkin dashboard data loads.
  */
 export default function LoadingSkeleton() {
   return (

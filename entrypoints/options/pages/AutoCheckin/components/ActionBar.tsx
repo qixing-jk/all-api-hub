@@ -10,7 +10,8 @@ interface ActionBarProps {
 }
 
 /**
- *
+ * Provides run-now and refresh buttons for the auto-checkin dashboard.
+ * @param props isRunning locks run button; callbacks handle actions.
  */
 export default function ActionBar({
   isRunning,
