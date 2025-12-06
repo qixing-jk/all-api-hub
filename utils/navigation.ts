@@ -9,12 +9,20 @@ import {
 } from "~/utils/browserApi"
 import { joinUrl } from "~/utils/url"
 
+/**
+ * Closes the current window when running inside the extension popup.
+ * Safe to call in other contexts; it no-ops when not in popup.
+ */
 export function closeIfPopup() {
   if (isExtensionPopup()) {
     window.close()
   }
 }
 
+/**
+ * Detects whether the current page is the extension options page.
+ * @returns True if the current location matches OPTIONS_PAGE_URL.
+ */
 const isOnOptionsPage = () => {
   if (typeof window === "undefined") {
     return false
@@ -33,6 +41,11 @@ const isOnOptionsPage = () => {
   }
 }
 
+/**
+ * Builds a serialized search string from the provided params.
+ * @param params Query key-value pairs where undefined values are ignored.
+ * @returns A query string starting with ? or an empty string when no params.
+ */
 const buildSearchString = (params?: Record<string, string | undefined>) => {
   if (!params) {
     return ""
@@ -50,6 +63,12 @@ const buildSearchString = (params?: Record<string, string | undefined>) => {
   return query ? `?${query}` : ""
 }
 
+/**
+ * Updates the hash/search of the current options page without full reload.
+ * Dispatches a hashchange event when URL remains unchanged to notify listeners.
+ * @param hash Target hash (including #).
+ * @param searchParams Optional query params to set.
+ */
 export const navigateWithinOptionsPage = (
   hash: string,
   searchParams?: Record<string, string | undefined>,
@@ -83,17 +102,17 @@ const getBasicSettingsHash = () => "#basic"
 const getAboutHash = () => "#about"
 
 /**
- * Creates a new tab with the specified URL
- * @param url - The URL to open in the new tab
+ * Creates and activates a new browser tab with the given URL.
+ * @param url Target URL to open.
  */
 const createActiveTab = async (url: string): Promise<void> => {
   await createTabApi(url, true)
 }
 
 /**
- * Updates an existing tab with the provided update info
- * @param tabId - The ID of the tab to update
- * @param updateInfo - The properties to update on the tab
+ * Updates an existing tab with new properties.
+ * @param tabId Target tab ID.
+ * @param updateInfo Fields to update on the tab.
  */
 const updateTab = async (
   tabId: number,
@@ -103,17 +122,17 @@ const updateTab = async (
 }
 
 /**
- * Focuses a window by bringing it to the foreground
- * @param tab
+ * Brings a tab's window to the foreground.
+ * @param tab Browser tab to focus.
  */
 const focusWindow = async (tab: browser.tabs.Tab) => {
   await focusTab(tab)
 }
 
 /**
- * Queries tabs based on the provided query criteria with error handling
- * @param queryInfo - The query criteria for filtering tabs
- * @param callback - Function to execute with the query results
+ * Queries tabs with error handling and executes a callback with results.
+ * @param queryInfo Tab query filter.
+ * @param callback Invoked with matched tabs.
  */
 const queryTabs = async (
   queryInfo: browser.tabs._QueryQueryInfo,
@@ -171,7 +190,11 @@ export const openOrFocusOptionsPage = (
     }
   })
 }
-// 核心工具函数
+/**
+ * Wraps a function to auto-close the popup after execution when applicable.
+ * @param fn Function to run before optional popup close.
+ * @returns Wrapped function that preserves original return value.
+ */
 const withPopupClose = <T extends any[]>(
   fn: (...args: T) => Promise<void> | void,
 ) => {
@@ -194,6 +217,10 @@ const _openFullManagerPage = (params?: { search?: string }) => {
   openOrFocusOptionsPage(targetHash, searchParams)
 }
 
+/**
+ * Navigates to the basic settings area, optionally focusing a sub-tab.
+ * @param tabId Optional tab ID within settings.
+ */
 const navigateToBasicSettings = (tabId?: string) => {
   const targetHash = getBasicSettingsHash()
   const searchParams = tabId ? { tab: tabId } : undefined
@@ -210,15 +237,26 @@ const _openSettingsPage = () => {
   navigateToBasicSettings()
 }
 
+/**
+ * Opens a specific settings tab by ID.
+ * @param tabId Settings tab identifier.
+ */
 const _openSettingsTab = (tabId: string) => {
   navigateToBasicSettings(tabId)
 }
 
+/**
+ * Opens the About section inside the options page.
+ */
 const _openAboutPage = () => {
   const targetHash = getAboutHash()
   openOrFocusOptionsPage(targetHash)
 }
 
+/**
+ * Opens the Keys page, optionally pre-selecting an account.
+ * @param accountId Optional account id to prefill.
+ */
 const _openKeysPage = async (accountId?: string) => {
   const baseUrl = getExtensionURL("options.html")
   const url = new URL(baseUrl)
@@ -231,6 +269,10 @@ const _openKeysPage = async (accountId?: string) => {
   await createActiveTab(url.toString())
 }
 
+/**
+ * Opens the Models page, optionally pre-selecting an account.
+ * @param accountId Optional account id to prefill.
+ */
 const _openModelsPage = async (accountId?: string) => {
   const baseUrl = getExtensionURL("options.html")
   const url = new URL(baseUrl)
@@ -251,6 +293,10 @@ const _openUsagePage = async (account: DisplaySiteData) => {
   await createActiveTab(logUrl)
 }
 
+/**
+ * Opens the check-in page for a given account.
+ * Prefers custom check-in URL when available.
+ */
 const _openCheckInPage = async (account: DisplaySiteData) => {
   const checkInUrl = joinUrl(
     account.baseUrl,
@@ -259,6 +305,9 @@ const _openCheckInPage = async (account: DisplaySiteData) => {
   await createActiveTab(checkInUrl)
 }
 
+/**
+ * Opens the custom check-in page or falls back to default check-in path.
+ */
 const _openCustomCheckInPage = async (account: DisplaySiteData) => {
   const customCheckInUrl =
     account.checkIn?.customCheckInUrl ||
@@ -266,6 +315,9 @@ const _openCustomCheckInPage = async (account: DisplaySiteData) => {
   await createActiveTab(customCheckInUrl)
 }
 
+/**
+ * Opens redeem page using custom or default path.
+ */
 const _openRedeemPage = async (account: DisplaySiteData) => {
   const redeemUrl =
     account.checkIn?.customRedeemUrl ||
@@ -291,7 +343,10 @@ export const openCheckInPage = withPopupClose(_openCheckInPage)
 export const openCustomCheckInPage = withPopupClose(_openCustomCheckInPage)
 export const openRedeemPage = withPopupClose(_openRedeemPage)
 
-// 批量操作
+/**
+ * Executes multiple navigation operations concurrently and closes popup.
+ * @param operations List of actions to run.
+ */
 export const openMultiplePages = async (
   operations: (() => Promise<void> | void)[],
 ) => {
@@ -299,6 +354,10 @@ export const openMultiplePages = async (
   closeIfPopup()
 }
 
+/**
+ * Opens both redeem and check-in pages in parallel.
+ * @param account Target account.
+ */
 export const openCheckInAndRedeem = async (account: DisplaySiteData) => {
   await openMultiplePages([
     () => _openRedeemPage(account),

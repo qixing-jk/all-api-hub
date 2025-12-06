@@ -68,7 +68,15 @@ const ERROR_KEYWORDS: Record<string, string[]> = {
   SERVER_ERROR: ["500", "服务器错误", "Internal Server Error", "server crash"],
 }
 
-// 分析错误并返回结构化错误信息
+/**
+ * Convert a raw error into a structured {@link AutoDetectError}.
+ *
+ * Scans known keyword buckets to infer the most likely failure type and
+ * returns localized UI copy plus optional next-action metadata.
+ *
+ * @param error Unknown error object thrown during auto-detection.
+ * @returns Structured error info for UI display and guidance.
+ */
 export function analyzeAutoDetectError(error: any): AutoDetectError {
   const errorMessage = getErrorMessage(error) || ""
 
@@ -141,7 +149,15 @@ export interface AutoDetectErrorProps {
   onActionClick?: () => void
 }
 
-// 获取用于打开登录页面的URL
+/**
+ * Build a best-effort login URL for a given site.
+ *
+ * Tries to normalize to `{protocol}//{host}/login`; falls back to the
+ * original URL if parsing fails.
+ *
+ * @param siteUrl Base site URL provided by the caller.
+ * @returns Login page URL to open in a new tab.
+ */
 export function getLoginUrl(siteUrl: string): string {
   try {
     const url = new URL(siteUrl)
@@ -153,7 +169,11 @@ export function getLoginUrl(siteUrl: string): string {
   }
 }
 
-// 打开新标签页进行登录
+/**
+ * Open a new browser tab pointing to the site's login page.
+ *
+ * @param siteUrl Base site URL used to derive the login page.
+ */
 export async function openLoginTab(siteUrl: string): Promise<void> {
   const loginUrl = getLoginUrl(siteUrl)
   await browser.tabs.create({ url: loginUrl, active: true })

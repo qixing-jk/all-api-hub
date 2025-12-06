@@ -45,6 +45,10 @@ export interface TempWindowFetch {
   error?: string
 }
 
+/**
+ * Checks whether the temp window fetch flow can be used in the current browser.
+ * Firefox requires cookie interceptor permissions; other browsers always allow.
+ */
 export async function canUseTempWindowFetch() {
   if (isFirefox()) {
     return await hasCookieInterceptorPermissions()
@@ -53,6 +57,12 @@ export async function canUseTempWindowFetch() {
   }
 }
 
+/**
+ * Performs a network request via the background "temp window" channel.
+ * - In background context: delegates to a handler that executes the request.
+ * - In other contexts: sends a runtime message to the background to perform it.
+ * @param params Request configuration forwarded to the temp window handler.
+ */
 export async function tempWindowFetch(
   params: TempWindowFetchParams,
 ): Promise<TempWindowFetch> {
@@ -90,6 +100,12 @@ export interface TempWindowFallbackContext {
   responseType: TempWindowResponseType
 }
 
+/**
+ * Logs why temp-window fallback is skipped; errors inside logger are ignored.
+ * @param message Human-friendly skip reason.
+ * @param context Request context for diagnostics.
+ * @param extra Optional extra metadata.
+ */
 function logSkipTempWindowFallback(
   message: string,
   context: TempWindowFallbackContext,

@@ -74,12 +74,17 @@ export class NewApiModelSyncService {
     }
   }
 
+  /**
+   * Update in-memory channel configs to be used by per-channel filters.
+   *
+   * @param configs Cached channel configuration map; null clears cache.
+   */
   setChannelConfigs(configs: ChannelConfigMap | null) {
     this.channelConfigs = configs
   }
 
   /**
-   * Honor optional rate limiter before upstream calls.
+   * Respect optional rate limiter before issuing upstream requests.
    */
   private async throttle() {
     if (this.rateLimiter) {
@@ -91,6 +96,11 @@ export class NewApiModelSyncService {
    * List all channels from New API
    *
    * Aggregates totals/type_counts across paginated results.
+   */
+  /**
+   * Fetch all channels from New API with pagination aggregation.
+   *
+   * @returns Channel list data including totals and type counts.
    */
   async listChannels(): Promise<NewApiChannelListData> {
     try {
@@ -152,10 +162,10 @@ export class NewApiModelSyncService {
   }
 
   /**
-   * Fetch models for a specific channel
+   * Fetch raw model list for a given channel.
    *
    * @param channelId Target channel id.
-   * @returns Raw model list from upstream.
+   * @returns Model identifiers returned by upstream.
    */
   async fetchChannelModels(channelId: number): Promise<string[]> {
     try {
@@ -183,11 +193,10 @@ export class NewApiModelSyncService {
   }
 
   /**
-   * Update channel models
-   * Strategy: Update models field (model_mapping handled separately)
+   * Persist models field for a channel (model_mapping handled separately).
    *
-   * @param channel Target channel.
-   * @param models Model list to persist (comma-joined).
+   * @param channel Channel to update.
+   * @param models Canonical model list to write.
    */
   async updateChannelModels(
     channel: NewApiChannel,
@@ -226,11 +235,10 @@ export class NewApiModelSyncService {
   }
 
   /**
-   * Update channel model_mapping
+   * Persist model_mapping while ensuring models contains all mapped keys.
    *
-   * Merges model_mapping and ensures models list contains mapped keys.
-   * @param channel Target channel.
-   * @param modelMapping Standard->actual mapping to persist.
+   * @param channel Channel to update.
+   * @param modelMapping Standard→actual mapping to write.
    */
   async updateChannelModelMapping(
     channel: NewApiChannel,
@@ -277,11 +285,11 @@ export class NewApiModelSyncService {
   }
 
   /**
-   * Execute sync for a single channel with retry logic
+   * Execute sync for a single channel with retry/backoff.
    *
-   * @param channel Target channel.
-   * @param maxRetries Max retry attempts on failure (exponential backoff).
-   * @returns ExecutionItemResult with old/new model sets and status.
+   * @param channel Channel to sync.
+   * @param maxRetries Max retry attempts (default 2) with exponential backoff.
+   * @returns Outcome including old/new models and status.
    */
   async runForChannel(
     channel: NewApiChannel,
@@ -357,11 +365,11 @@ export class NewApiModelSyncService {
   }
 
   /**
-   * Execute sync for multiple channels with concurrency control
+   * Run sync across multiple channels with concurrency control.
    *
-   * @param channels Channel list to process.
-   * @param options Concurrency, retries, and onProgress callback.
-   * @returns ExecutionResult with per-channel outcomes and statistics.
+   * @param channels Channels to process.
+   * @param options Concurrency, retry limit, and progress callback.
+   * @returns Aggregate execution result and statistics.
    */
   async runBatch(
     channels: NewApiChannel[],
@@ -441,9 +449,10 @@ export class NewApiModelSyncService {
   }
 
   /**
-   * Apply the optional allow-list to the fetched model set.
-   * Always trims/normalizes input and removes duplicates so channel updates
-   * receive a clean, deterministic list.
+   * Apply optional allow-list and dedupe/trim models.
+   *
+   * @param models Models fetched upstream.
+   * @returns Normalized models limited by allow-list when present.
    */
   private filterAllowedModels(models: string[]): string[] {
     if (!this.allowedModelSet || this.allowedModelSet.size === 0) {
@@ -460,7 +469,7 @@ export class NewApiModelSyncService {
   }
 
   /**
-   * Compare two model lists for any change (order-insensitive).
+   * Compare two model lists ignoring order to detect changes.
    */
   private haveModelsChanged(previous: string[], next: string[]): boolean {
     if (previous.length !== next.length) {

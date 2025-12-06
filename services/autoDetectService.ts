@@ -2,8 +2,8 @@
  * 自动识别服务
  * 提供跨平台的账号自动识别功能
  *
- * 样心流程：
- * 1. 获取用户 ID (通过 localStorage 或 API)
+ * 核心流程：
+ * 1. 获取用户 ID（通过 localStorage 或 API）
  * 2. 检测站点类型
  * 3. 返回统一的结果格式
  */
@@ -37,6 +37,11 @@ export interface UserDataResult {
 /**
  * 检测平台能力
  */
+/**
+ * Detect available browser APIs to choose a compatible auto-detect strategy.
+ *
+ * @returns Capability flags indicating windows/tabs/runtime availability.
+ */
 export function detectPlatformCapabilities() {
   const b = (globalThis as any).browser
   return {
@@ -49,6 +54,13 @@ export function detectPlatformCapabilities() {
 /**
  * 公共逻辑：组合用户数据和站点类型
  * 这是所有自动识别方式的最后一步
+ */
+/**
+ * Merge user data (if any) with detected site type into a unified result.
+ *
+ * @param userData User info resolved from upstream source; null when missing.
+ * @param url Current site URL for site type detection.
+ * @returns Successful result with user + siteType, or failure with message.
  */
 async function combineUserDataAndSiteType(
   userData: UserDataResult | null,
@@ -80,8 +92,10 @@ async function combineUserDataAndSiteType(
 }
 
 /**
- * 通过 API 获取用户数据
- * 适用于所有平台，依赖浏览器 cookie
+ * Fetch user data via upstream API (cookie-based).
+ *
+ * @param url Base site URL used for API calls.
+ * @returns UserDataResult when ID present; otherwise null.
  */
 async function getUserDataViaAPI(url: string): Promise<UserDataResult | null> {
   try {
@@ -100,18 +114,12 @@ async function getUserDataViaAPI(url: string): Promise<UserDataResult | null> {
 }
 
 /**
- * 直接方式：通过 API 调用获取用户信息
- * 适用于 手机 或其他受限环境
+ * Direct auto-detect: use upstream API to fetch user info (cookie-based).
  *
- * 流程：
- * 1. 调用 /api/user/self 获取用户信息（依赖浏览器 cookie）
- * 2. 从响应中提取 userId
- * 3. 检测站点类型
- *
- * 注意：
- * - Background 方式通过 localStorage 获取 userId
- * - 直接方式通过 API 获取 userId
- * - 两种方式最终返回相同的数据结构
+ * Flow:
+ * 1) GET /api/user/self to fetch user profile (requires login cookies)
+ * 2) Extract userId and user payload
+ * 3) Detect site type and return unified result
  */
 export async function autoDetectDirect(url: string): Promise<AutoDetectResult> {
   console.log("[AutoDetect] 使用直接方式")
@@ -124,8 +132,13 @@ export async function autoDetectDirect(url: string): Promise<AutoDetectResult> {
 }
 
 /**
- * 通过 Background Script 获取用户数据
- * Background 会创建临时窗口/标签页并从 localStorage 获取数据
+ * Fetch user data through background script flow with fallback to API.
+ *
+ * Creates a runtime request to content/background to read localStorage; if that
+ * fails, attempts API-based fetch using cookies.
+ *
+ * @param url Target site URL.
+ * @returns User data or null when both methods fail.
  */
 async function getUserDataViaBackground(
   url: string,
@@ -162,8 +175,10 @@ async function getUserDataViaBackground(
 }
 
 /**
- * Background 方式：通过 background script 创建临时窗口/标签页
- * 适用于桌面浏览器
+ * Auto-detect via background flow (desktop browsers).
+ *
+ * 1) Background script opens temp window/tab to read localStorage
+ * 2) Falls back to API-based fetch when storage read fails
  */
 export async function autoDetectViaBackground(
   url: string,
@@ -178,8 +193,10 @@ export async function autoDetectViaBackground(
 }
 
 /**
- * 从当前活动标签页获取用户数据
- * 适用于 popup 场景，用户已在目标站点登录
+ * Fetch user data from the active tab using content script, with API fallback.
+ *
+ * @param url Target site URL.
+ * @returns User data or null when not available.
  */
 async function getUserDataFromCurrentTab(
   url: string,
@@ -225,8 +242,10 @@ async function getUserDataFromCurrentTab(
 }
 
 /**
- * 当前标签页方式：从用户正在浏览的标签页获取信息
- * 适用于 popup 场景
+ * Auto-detect from the currently active tab (popup scenario).
+ *
+ * 1) Ask content script for user info from localStorage in active tab
+ * 2) Fall back to API call if content script response is missing
  */
 export async function autoDetectFromCurrentTab(
   url: string,
