@@ -22,7 +22,7 @@ import {
 import { navigateWithinOptionsPage } from "~/utils/navigation"
 
 /**
- *
+ * Basic settings panel for configuring auto check-in (window, schedule, retries, navigation).
  */
 export default function AutoCheckinSettings() {
   const { t } = useTranslation(["autoCheckin", "settings"])

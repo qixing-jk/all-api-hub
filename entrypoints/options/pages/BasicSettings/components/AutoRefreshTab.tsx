@@ -2,7 +2,7 @@ import RefreshSettings from "./RefreshSettings"
 import ShieldSettings from "./ShieldSettings"
 
 /**
- *
+ * Basic Settings tab section combining auto-refresh and shield settings subpanels.
  */
 export default function AutoRefreshTab() {
   return (

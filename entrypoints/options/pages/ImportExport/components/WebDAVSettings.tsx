@@ -34,7 +34,7 @@ import {
 } from "../utils"
 
 /**
- *
+ * WebDAV backup configuration card handling save/test/upload/download actions.
  */
 export default function WebDAVSettings() {
   const { t } = useTranslation("importExport")

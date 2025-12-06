@@ -93,7 +93,7 @@ const ANCHOR_TO_TAB: Record<string, TabId> = {
 }
 
 /**
- *
+ * Basic Settings page: renders tabs for all settings sections and handles URL syncing/onboarding.
  */
 export default function BasicSettings() {
   const { t } = useTranslation("settings")

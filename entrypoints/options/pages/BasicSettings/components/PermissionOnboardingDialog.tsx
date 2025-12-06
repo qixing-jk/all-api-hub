@@ -34,7 +34,8 @@ interface PermissionOnboardingDialogProps {
 }
 
 /**
- *
+ * Onboarding modal that explains optional permissions and lets users grant them.
+ * @param props open state and close handler.
  */
 export function PermissionOnboardingDialog({
   open,

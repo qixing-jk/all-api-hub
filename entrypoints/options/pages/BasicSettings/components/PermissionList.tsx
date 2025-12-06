@@ -25,7 +25,7 @@ interface PermissionListProps {
 }
 
 /**
- *
+ * Renders a list of optional permissions with icons, descriptions, and actions.
  */
 export function PermissionList({ items }: PermissionListProps) {
   return (

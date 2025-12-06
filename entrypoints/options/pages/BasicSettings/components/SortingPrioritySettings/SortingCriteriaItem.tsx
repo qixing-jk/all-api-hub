@@ -13,7 +13,7 @@ interface SortingCriteriaItemProps {
 }
 
 /**
- *
+ * Card row showing a sortable criteria item with drag handle, priority badge, and enable switch.
  */
 export function SortingCriteriaItem({
   item,

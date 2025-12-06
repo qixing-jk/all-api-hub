@@ -11,7 +11,7 @@ import WebDAVAutoSyncSettings from "../../ImportExport/components/WebDAVAutoSync
 import WebDAVSettings from "../../ImportExport/components/WebDAVSettings"
 
 /**
- *
+ * Basic Settings tab for data backup/import/export and WebDAV sync settings.
  */
 export default function DataBackupTab() {
   const { t } = useTranslation("settings")

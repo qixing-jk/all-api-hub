@@ -137,7 +137,7 @@ export function parseBackupSummary(
 }
 
 /**
- *
+ * Handles legacy (V1) backup payloads by importing accounts/preferences/channel configs when present.
  */
 async function importV1Backup(data: RawBackupData): Promise<ImportResult> {
   let accountsImported = false
@@ -248,7 +248,7 @@ export function normalizeBackupForMerge(
 }
 
 /**
- *
+ * Normalize canonical V2 backups into the shape WebDAV merge expects.
  */
 function normalizeV2BackupForMerge(
   data: BackupFullV2,
@@ -281,7 +281,7 @@ function normalizeV2BackupForMerge(
 }
 
 /**
- *
+ * Normalize legacy (V1/unknown) backups into merge-friendly structure.
  */
 function normalizeV1BackupForMerge(
   data: RawBackupData,
@@ -319,7 +319,7 @@ function normalizeV1BackupForMerge(
 }
 
 /**
- *
+ * Import a canonical V2 backup (full or partial) into local storage.
  */
 async function importV2Backup(data: BackupV2): Promise<ImportResult> {
   let accountsImported = false

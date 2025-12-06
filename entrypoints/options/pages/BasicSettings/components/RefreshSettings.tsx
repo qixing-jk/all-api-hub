@@ -8,7 +8,7 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { showUpdateToast } from "~/utils/toastHelpers"
 
 /**
- *
+ * Settings section for auto-refresh behavior (intervals, toggle, refresh on open).
  */
 export default function RefreshSettings() {
   const { t } = useTranslation("settings")

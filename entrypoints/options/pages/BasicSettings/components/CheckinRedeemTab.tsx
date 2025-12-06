@@ -2,7 +2,7 @@ import AutoCheckinSettings from "./AutoCheckinSettings"
 import RedemptionAssistSettings from "./RedemptionAssistSettings"
 
 /**
- *
+ * Basic Settings tab combining auto-checkin and redemption assist panels.
  */
 export default function CheckinRedeemTab() {
   return (

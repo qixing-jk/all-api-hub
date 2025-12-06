@@ -9,7 +9,7 @@ import ThemeToggle from "../../../components/ThemeToggle"
 import DisplaySettings from "./DisplaySettings"
 
 /**
- *
+ * General Basic Settings tab for display preferences, theme/language, and dangerous zone.
  */
 export default function GeneralTab() {
   const { t } = useTranslation("settings")

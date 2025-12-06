@@ -30,7 +30,7 @@ import { sendRuntimeMessage } from "~/utils/browserApi"
 import { formatTimestamp } from "~/utils/formatters"
 
 /**
- *
+ * WebDAV automatic sync configuration card: toggles auto-sync, schedule, strategy, and shows status/actions.
  */
 export default function WebDAVAutoSyncSettings() {
   const { t } = useTranslation("importExport")

@@ -10,7 +10,7 @@ import type { BalanceType, CurrencyType } from "~/types"
 import { showUpdateToast } from "~/utils/toastHelpers"
 
 /**
- *
+ * Settings section for display preferences (currency, default dashboard tab).
  */
 export default function DisplaySettings() {
   const { t } = useTranslation("settings")

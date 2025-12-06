@@ -7,7 +7,8 @@ import { navigateWithinOptionsPage } from "~/utils/navigation"
 import SortingPrioritySettings from "./SortingPrioritySettings"
 
 /**
- *
+ * Basic Settings tab section for account management and sorting priorities.
+ * Provides link to full Account page and embeds SortingPrioritySettings.
  */
 export default function AccountManagementTab() {
   const { t } = useTranslation("settings")

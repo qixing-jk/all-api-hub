@@ -8,7 +8,8 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { showUpdateToast } from "~/utils/toastHelpers"
 
 /**
- *
+ * Settings section for CLI Proxy base URL and management key entries.
+ * Handles local input state, visibility toggle, persistence, and reset hook.
  */
 export default function CliProxySettings() {
   const { t } = useTranslation("settings")

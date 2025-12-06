@@ -22,6 +22,9 @@ interface ExportSectionProps {
   setIsExporting: (isExporting: boolean) => void
 }
 
+/**
+ * Export section offering controls for full backup, account data, and user settings.
+ */
 const ExportSection = ({ isExporting, setIsExporting }: ExportSectionProps) => {
   const { t } = useTranslation("importExport")
   return (

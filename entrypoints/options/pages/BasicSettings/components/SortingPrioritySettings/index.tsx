@@ -55,7 +55,7 @@ const getSortingCriteriaUiText = (
 })
 
 /**
- *
+ * Settings section that lets users reorder and toggle sorting criteria priorities.
  */
 export default function SortingPrioritySettings() {
   const { t } = useTranslation("settings")

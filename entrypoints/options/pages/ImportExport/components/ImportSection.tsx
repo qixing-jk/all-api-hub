@@ -28,6 +28,9 @@ interface ImportSectionProps {
   } | null
 }
 
+/**
+ * Import section showing file selector, JSON preview, validation notice, and import action.
+ */
 const ImportSection = ({
   importData,
   setImportData,

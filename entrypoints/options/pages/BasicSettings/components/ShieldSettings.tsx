@@ -19,7 +19,8 @@ import { openSettingsTab } from "~/utils/navigation"
 import { canUseTempWindowFetch } from "~/utils/tempWindowFetch"
 
 /**
- *
+ * Settings section for shield/temp-window fallback controls and permissions.
+ * Lets users toggle fallback contexts, refresh permissions, or open settings tab.
  */
 export default function ShieldSettings() {
   const { t } = useTranslation("settings")

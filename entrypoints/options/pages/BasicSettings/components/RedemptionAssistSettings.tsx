@@ -8,7 +8,7 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { DEFAULT_PREFERENCES } from "~/services/userPreferences"
 
 /**
- *
+ * Settings section for toggling redemption assist feature.
  */
 export default function RedemptionAssistSettings() {
   const { t } = useTranslation(["redemptionAssist", "settings"])

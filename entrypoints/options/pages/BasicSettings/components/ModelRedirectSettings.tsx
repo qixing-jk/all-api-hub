@@ -14,7 +14,7 @@ import { AuthTypeEnum } from "~/types"
 import { ALL_PRESET_STANDARD_MODELS } from "~/types/modelRedirect"
 
 /**
- *
+ * Configures model redirect feature: enable toggle, model list, regeneration.
  */
 export default function ModelRedirectSettings() {
   const { t } = useTranslation("modelRedirect")

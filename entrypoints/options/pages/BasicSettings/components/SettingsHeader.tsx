@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next"
 import { BodySmall, Heading2 } from "~/components/ui"
 
 /**
- *
+ * Basic settings page header with cog icon and description.
  */
 export default function SettingsHeader() {
   const { t } = useTranslation("settings")

@@ -1,7 +1,7 @@
 import PermissionSettings from "./PermissionSettings"
 
 /**
- *
+ * Wrapper tab exposing the permissions settings section.
  */
 export default function PermissionsTab() {
   return (

@@ -1,7 +1,7 @@
 import CliProxySettings from "./CliProxySettings"
 
 /**
- *
+ * Wrapper tab that renders CLI Proxy settings within Basic Settings.
  */
 export default function CliProxyTab() {
   return (

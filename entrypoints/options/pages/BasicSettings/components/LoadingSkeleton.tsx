@@ -1,7 +1,7 @@
 import { Card } from "~/components/ui"
 
 /**
- *
+ * Skeleton placeholder while Basic Settings content loads.
  */
 export default function LoadingSkeleton() {
   return (

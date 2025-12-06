@@ -29,7 +29,7 @@ interface SortingPriorityDragListProps {
 }
 
 /**
- *
+ * Drag-and-drop list for sorting priority criteria using @dnd-kit.
  */
 export function SortingPriorityDragList({
   items,

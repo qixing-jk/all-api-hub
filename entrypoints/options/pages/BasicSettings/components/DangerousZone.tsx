@@ -15,7 +15,7 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { showResetToast } from "../../../../../utils/toastHelpers"
 
 /**
- *
+ * Renders the destructive reset section with confirmation dialog for settings.
  */
 export default function DangerousZone() {
   const { t } = useTranslation("settings")

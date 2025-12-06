@@ -32,7 +32,7 @@ const buildState = <T,>(value: T) =>
   >
 
 /**
- *
+ * Settings section for managing optional browser permissions: refresh, request, remove.
  */
 export default function PermissionSettings() {
   const { t } = useTranslation("settings")

@@ -11,7 +11,7 @@ import WebDAVSettings from "./components/WebDAVSettings"
 import { useImportExport } from "./hooks/useImportExport"
 
 /**
- *
+ * Import/Export page combining manual export/import sections plus WebDAV backup and notices.
  */
 export default function ImportExport() {
   const { t } = useTranslation("importExport")
