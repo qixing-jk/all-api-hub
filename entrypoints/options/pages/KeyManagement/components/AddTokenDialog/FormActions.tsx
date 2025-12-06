@@ -11,7 +11,13 @@ interface FormActionsProps {
 }
 
 /**
- *
+ * Renders dialog footer buttons handling cancel/save flows.
+ * @param props Component props container.
+ * @param props.isSubmitting Whether form submission is in progress.
+ * @param props.isEditMode Toggles between create/update labels.
+ * @param props.onClose Callback invoked when cancel button pressed.
+ * @param props.onSubmit Callback invoked for primary action.
+ * @param props.canSubmit Enables submit button when form is valid.
  */
 export function FormActions({
   isSubmitting,

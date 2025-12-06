@@ -16,7 +16,14 @@ interface QuotaSettingsProps {
 }
 
 /**
- *
+ * Handles unlimited toggle and quota numeric input for token creation.
+ * @param props Component props container including handlers and validation.
+ * @param props.unlimitedQuota Whether the token has no quota limit.
+ * @param props.quota Current quota value as string.
+ * @param props.handleSwitchChange Toggle handler for the unlimited switch.
+ * @param props.handleInputChange Change handler for quota input.
+ * @param props.error Optional validation error message.
+ * @returns JSX block containing switch and optional quota input.
  */
 export function QuotaSettings({
   unlimitedQuota,

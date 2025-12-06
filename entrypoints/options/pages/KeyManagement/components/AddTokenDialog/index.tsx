@@ -26,7 +26,9 @@ interface AddTokenDialogProps {
 }
 
 /**
- *
+ * Modal dialog for creating/updating API tokens with form handling and validation.
+ * @param props Component props container for dialog configuration.
+ * @returns Modal element rendered through shared UI primitives.
  */
 export default function AddTokenDialog(props: AddTokenDialogProps) {
   const { isOpen, onClose, availableAccounts, editingToken } = props

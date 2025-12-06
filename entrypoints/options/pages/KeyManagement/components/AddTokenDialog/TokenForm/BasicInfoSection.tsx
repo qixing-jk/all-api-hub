@@ -21,7 +21,15 @@ interface BasicInfoSectionProps {
 }
 
 /**
- *
+ * Groups primary token metadata inputs (account, name, quota, expiry).
+ * @param props Component props container.
+ * @param props.formData Current form values.
+ * @param props.errors Validation errors mapped by field.
+ * @param props.isEditMode Whether the dialog edits an existing token.
+ * @param props.availableAccounts Accounts selectable for association.
+ * @param props.handleInputChange Factory for binding input change handlers.
+ * @param props.handleSelectChange Factory for select change handlers.
+ * @param props.handleSwitchChange Factory for switch change handlers.
  */
 export function BasicInfoSection({
   formData,

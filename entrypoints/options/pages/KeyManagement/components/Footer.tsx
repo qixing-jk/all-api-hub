@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next"
 import { Alert } from "~/components/ui"
 
 /**
- *
+ * Warning footer reminding users about irreversible token actions.
  */
 export function Footer() {
   const { t } = useTranslation("keyManagement")

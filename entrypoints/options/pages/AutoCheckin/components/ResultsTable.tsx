@@ -24,7 +24,12 @@ interface ResultsTableProps {
 
 /**
  * Renders auto-checkin execution results with status badges, timestamps, and action buttons.
- * @param props results list and callbacks controlling retry/manual sign-in states.
+ * @param props Component props container.
+ * @param props.results List of account execution results to render.
+ * @param props.retryingAccountId Account currently retrying, used to show loading state.
+ * @param props.openingManualAccountId Account opening manual sign-in, for button state.
+ * @param props.onRetryAccount Callback invoked when retry button clicked.
+ * @param props.onOpenManualSignIn Callback invoked when manual sign-in button clicked.
  */
 export default function ResultsTable({
   results,

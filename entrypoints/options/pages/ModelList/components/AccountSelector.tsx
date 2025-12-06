@@ -10,7 +10,12 @@ interface AccountSelectorProps {
 }
 
 /**
- *
+ * Dropdown selector for choosing which account's model pricing to view.
+ * @param props Component props.
+ * @param props.selectedAccount Currently selected account id.
+ * @param props.setSelectedAccount Setter to update selected account.
+ * @param props.accounts Available accounts to display.
+ * @returns Searchable select control wrapped with heading.
  */
 export function AccountSelector({
   selectedAccount,

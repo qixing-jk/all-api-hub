@@ -6,13 +6,15 @@ import { TokenList } from "./components/TokenList"
 import { useKeyManagement } from "./hooks/useKeyManagement"
 
 /**
- *
+ * Key management page rendering header, filters, token list, and dialogs.
+ * @param props Component props optionally carrying routing context.
+ * @param props.routeParams Optional route parameters forwarded by the router.
+ * @returns Full key management page layout.
  */
-export default function KeyManagement({
-  routeParams,
-}: {
+export default function KeyManagement(props: {
   routeParams?: Record<string, string>
 }) {
+  const { routeParams } = props
   const {
     displayData,
     selectedAccount,

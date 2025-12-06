@@ -43,7 +43,9 @@ type UserNewApiModelSyncConfig = NonNullable<
 type EditableFilter = ChannelModelFilterRule
 
 /**
- *
+ * Settings section for configuring New API Model Sync behaviors.
+ * Handles preference persistence, option loading, and filter management dialogs.
+ * @returns React element rendering the section UI.
  */
 export default function NewApiModelSyncSettings() {
   const { t } = useTranslation([
@@ -658,7 +660,10 @@ export default function NewApiModelSyncSettings() {
 }
 
 /**
- *
+ * Parses JSON text into strongly typed global channel model filters.
+ * @param rawJson Raw JSON string entered by the user.
+ * @returns Parsed filters array guaranteeing id/name/pattern fields.
+ * @throws {Error} When JSON is invalid or missing required fields.
  */
 function parseJsonGlobalChannelModelFilters(rawJson: string): EditableFilter[] {
   const trimmed = rawJson.trim()
@@ -725,8 +730,8 @@ function parseJsonGlobalChannelModelFilters(rawJson: string): EditableFilter[] {
 
 /**
  * Builds sorted multi-select options from an array of model metadata.
- * @param metadata - Array of model metadata objects to convert into select options
- * @returns An array of MultiSelectOption objects with `label` and `value` set to each model's `id`, sorted by `label`
+ * @param metadata Array of model metadata objects to convert into select options.
+ * @returns MultiSelect options with labels/values derived from model IDs.
  */
 function buildModelOptions(metadata: ModelMetadata[]): MultiSelectOption[] {
   const options = metadata.map((model) => ({
@@ -737,7 +742,9 @@ function buildModelOptions(metadata: ModelMetadata[]): MultiSelectOption[] {
 }
 
 /**
- *
+ * Converts plain model ID strings into sorted MultiSelect options.
+ * @param modelIds Array of model identifiers returned from remote APIs.
+ * @returns Options list sorted alphabetically by label.
  */
 function buildOptionsFromIds(modelIds: string[]): MultiSelectOption[] {
   const options = modelIds

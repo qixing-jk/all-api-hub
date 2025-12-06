@@ -13,7 +13,13 @@ interface HeaderProps {
 }
 
 /**
- *
+ * Page header summarizing the key management section with actions.
+ * @param props Component props container.
+ * @param props.selectedAccount Currently selected account identifier.
+ * @param props.onAddToken Handler for invoking the add-token dialog.
+ * @param props.onRefresh Handler for refreshing the token list.
+ * @param props.isLoading Indicates whether tokens are currently refreshing.
+ * @param props.isAddTokenDisabled Disables add button when lacking permissions.
  */
 export function Header({
   onAddToken,

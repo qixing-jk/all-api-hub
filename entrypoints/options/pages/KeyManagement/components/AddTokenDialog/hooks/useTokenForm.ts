@@ -66,7 +66,13 @@ const isValidIpList = (ips: string): boolean => {
 }
 
 /**
- *
+ * Manages AddTokenDialog form state, hydration, and validation.
+ * @param props Props bag containing dialog visibility and editing data.
+ * @param props.isOpen Whether the dialog is currently visible.
+ * @param props.preSelectedAccountId Account to prefill when opening the dialog.
+ * @param props.availableAccounts Accounts that can be linked to a token.
+ * @param props.editingToken Token being edited when in edit mode.
+ * @returns Form state, setters, validation helper, edit-mode flag, reset helper.
  */
 export function useTokenForm({
   isOpen,

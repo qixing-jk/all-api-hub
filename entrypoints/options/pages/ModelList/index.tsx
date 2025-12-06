@@ -16,13 +16,15 @@ import { StatusIndicator } from "./components/StatusIndicator"
 import { useModelListData } from "./hooks/useModelListData"
 
 /**
- *
+ * Model list page showing pricing details with filtering by account, provider, and group.
+ * @param props Component props containing optional route params.
+ * @param props.routeParams Optional route parameters provided by the router.
+ * @returns Page layout with controls, tabs, and model display.
  */
-export default function ModelList({
-  routeParams,
-}: {
+export default function ModelList(props: {
   routeParams?: Record<string, string>
 }) {
+  const { routeParams } = props
   const { t } = useTranslation("modelList")
   const {
     // Account data

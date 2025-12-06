@@ -13,7 +13,11 @@ interface ExpirationTimeInputProps {
 }
 
 /**
- *
+ * Input for configuring token expiration timestamp (or leaving blank).
+ * @param props Component props container with handlers and validation.
+ * @param props.expiredTime ISO string bound to the datetime input.
+ * @param props.handleInputChange Change handler factory bound to form state.
+ * @param props.error Optional validation message for the field.
  */
 export function ExpirationTimeInput({
   expiredTime,

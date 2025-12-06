@@ -37,7 +37,9 @@ export function dismissToast(toastId?: string) {
 /**
  * Prompts user to select an account when multiple candidates exist.
  * @param accounts Candidate account list.
- * @param options Optional title/message overrides.
+ * @param options Optional overrides container.
+ * @param options.title Custom heading for the toast.
+ * @param options.message Supplemental body copy for the toast.
  * @returns Selected account or null when cancelled.
  */
 export async function showAccountSelectToast(

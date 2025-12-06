@@ -21,7 +21,14 @@ interface FilterBarProps {
 }
 
 /**
- *
+ * Filters execution records by status and keyword with quick counts.
+ * @param props Component props container.
+ * @param props.status Active status filter.
+ * @param props.statistics Execution aggregate stats for badges.
+ * @param props.keyword Current search keyword.
+ * @param props.onStatusChange Handler to change status filter.
+ * @param props.onKeywordChange Handler to change search keyword.
+ * @returns Filter controls with status chips and search input.
  */
 export default function FilterBar({
   status,

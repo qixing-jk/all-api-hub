@@ -7,7 +7,8 @@ import { useModelData } from "./useModelData"
 import { useModelListState } from "./useModelListState"
 
 /**
- *
+ * Aggregates model list state, data loading, and filtering in one hook.
+ * @returns Combined account data, UI state, model data, and filtered results.
  */
 export function useModelListData() {
   // Single source of account data

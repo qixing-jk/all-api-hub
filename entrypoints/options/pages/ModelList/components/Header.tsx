@@ -4,7 +4,8 @@ import { useTranslation } from "react-i18next"
 import { BodySmall, Heading2 } from "~/components/ui"
 
 /**
- *
+ * Page header showing title and description for the model list.
+ * @returns Heading with icon and supporting text.
  */
 export function Header() {
   const { t } = useTranslation("modelList")

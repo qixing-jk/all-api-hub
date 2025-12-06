@@ -16,7 +16,12 @@ interface AccountSummaryBarProps {
 }
 
 /**
- *
+ * Shows clickable badges summarizing model counts per account.
+ * @param props Component props.
+ * @param props.items Accounts with model counts and error states.
+ * @param props.activeAccountId Currently highlighted account id.
+ * @param props.onAccountClick Callback when a badge is clicked.
+ * @returns Card containing account summary badges or null when empty.
  */
 export function AccountSummaryBar({
   items,

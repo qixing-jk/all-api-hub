@@ -1,5 +1,6 @@
 /**
- *
+ * Placeholder skeleton while New API Model Sync data loads.
+ * @returns Animated skeleton blocks matching page layout.
  */
 export default function LoadingSkeleton() {
   return (

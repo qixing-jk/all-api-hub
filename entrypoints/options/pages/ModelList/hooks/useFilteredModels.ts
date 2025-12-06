@@ -22,17 +22,28 @@ interface UseFilteredModelsProps {
 }
 
 /**
- *
+ * Derives filtered model list with pricing and helper metadata for UI controls.
+ * Applies group, search, provider, and account filters on priced models.
+ * @param params Hook input parameters.
+ * @param params.pricingData Pricing response for a single account.
+ * @param params.pricingContexts Pricing data across multiple accounts.
+ * @param params.currentAccount Currently selected account for single-account mode.
+ * @param params.selectedGroup User group to filter models by.
+ * @param params.searchTerm Search keyword for model name/description.
+ * @param params.selectedProvider Provider filter value or "all".
+ * @param params.accountFilterAccountId Optional account id filter in all-accounts mode.
+ * @returns Filtered models plus counts and available groups metadata.
  */
-export function useFilteredModels({
-  pricingData,
-  pricingContexts,
-  currentAccount,
-  selectedGroup,
-  searchTerm,
-  selectedProvider,
-  accountFilterAccountId,
-}: UseFilteredModelsProps) {
+export function useFilteredModels(params: UseFilteredModelsProps) {
+  const {
+    pricingData,
+    pricingContexts,
+    currentAccount,
+    selectedGroup,
+    searchTerm,
+    selectedProvider,
+    accountFilterAccountId,
+  } = params
   const modelsWithPricing = useMemo(() => {
     if (pricingContexts && pricingContexts.length > 0) {
       return pricingContexts.flatMap(({ account, pricing }) => {

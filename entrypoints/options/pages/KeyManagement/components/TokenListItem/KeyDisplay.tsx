@@ -6,14 +6,31 @@ import { IconButton } from "~/components/ui"
 import { formatKey } from "../../utils"
 
 interface KeyDisplayProps {
+  /**
+   * Raw token key string to display (partially masked when hidden).
+   */
   tokenKey: string
+  /**
+   * Identifier used to track visibility toggle state for this key.
+   */
   tokenId: number
+  /**
+   * Set of token IDs currently visible in cleartext.
+   */
   visibleKeys: Set<number>
+  /**
+   * Toggle callback to switch visibility for the given token ID.
+   */
   toggleKeyVisibility: (id: number) => void
 }
 
 /**
- *
+ * Shows an API key value with masking and a toggle button to reveal/hide it.
+ * @param props Component props container.
+ * @param props.tokenKey Raw token key value.
+ * @param props.tokenId Identifier for visibility tracking.
+ * @param props.visibleKeys Set of currently visible key IDs.
+ * @param props.toggleKeyVisibility Handler to toggle visibility.
  */
 export function KeyDisplay({
   tokenKey,

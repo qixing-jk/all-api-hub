@@ -16,7 +16,13 @@ interface AccountSelectionProps {
 }
 
 /**
- *
+ * Account selector for associating a token with one of the user accounts.
+ * @param props Component props container.
+ * @param props.accountId Currently selected account id.
+ * @param props.handleSelectChange Callback fired when selection changes.
+ * @param props.isEditMode When true, disables changing the account.
+ * @param props.availableAccounts List of accounts rendered in dropdown.
+ * @param props.error Validation message to display beneath the field.
  */
 export function AccountSelection({
   accountId,

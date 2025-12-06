@@ -7,7 +7,9 @@ interface DialogHeaderProps {
 }
 
 /**
- *
+ * Displays the token dialog title and icon, toggling copy based on mode.
+ * @param props Component props container.
+ * @param props.isEditMode When true, shows edit label instead of add.
  */
 export function DialogHeader({ isEditMode }: DialogHeaderProps) {
   const { t } = useTranslation("keyManagement")

@@ -3,7 +3,8 @@ import { useTranslation } from "react-i18next"
 import { Alert } from "~/components/ui"
 
 /**
- *
+ * Highlights security warnings related to token creation/editing.
+ * @returns Alert content referencing localized warning strings.
  */
 export function WarningNote() {
   const { t } = useTranslation("keyManagement")

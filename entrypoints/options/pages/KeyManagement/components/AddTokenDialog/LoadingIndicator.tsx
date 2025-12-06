@@ -1,5 +1,6 @@
 /**
- *
+ * Skeleton placeholder shown while token dialog data loads.
+ * @returns Animated pulse blocks mimicking the form layout.
  */
 export function LoadingIndicator() {
   return (

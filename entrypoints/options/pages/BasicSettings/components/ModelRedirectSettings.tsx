@@ -15,6 +15,7 @@ import { ALL_PRESET_STANDARD_MODELS } from "~/types/modelRedirect"
 
 /**
  * Configures model redirect feature: enable toggle, model list, regeneration.
+ * @returns Model redirect settings panel.
  */
 export default function ModelRedirectSettings() {
   const { t } = useTranslation("modelRedirect")
@@ -29,7 +30,7 @@ export default function ModelRedirectSettings() {
 
   useEffect(() => {
     /**
-     *
+     * Fetches available standard models when New API configuration exists.
      */
     async function getModelList() {
       if (hasValidNewApiConfig(preferences)) {

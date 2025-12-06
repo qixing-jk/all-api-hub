@@ -16,7 +16,15 @@ interface ProviderTabsProps {
 }
 
 /**
- *
+ * Provider filter tabs with horizontal scroll and counts.
+ * @param props Component props container.
+ * @param props.providers Provider list with available models.
+ * @param props.selectedProvider Currently selected provider or "all".
+ * @param props.setSelectedProvider Setter to change provider filter.
+ * @param props.baseFilteredModelsCount Count of models before provider filter.
+ * @param props.getProviderFilteredCount Helper to get count per provider.
+ * @param props.children Tab panels content to render.
+ * @returns Headless UI Tab group with provider tabs.
  */
 export function ProviderTabs({
   providers,

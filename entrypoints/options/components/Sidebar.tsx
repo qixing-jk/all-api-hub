@@ -35,7 +35,13 @@ const SEPARATOR_BEFORE_IDS = new Set([
 /**
  * Animated sidebar for the Options page, supporting collapse and mobile overlay.
  * Handles menu rendering, accessibility labels, and user preference filters.
- * @param props Active menu id, handlers for clicks/collapse, and responsive state flags.
+ * @param props Component props container.
+ * @param props.activeMenuItem Currently selected menu id.
+ * @param props.onMenuItemClick Callback fired when user picks another menu item.
+ * @param props.isMobileOpen Whether the drawer is visible on mobile screens.
+ * @param props.onMobileClose Close handler for the mobile drawer mask.
+ * @param props.isCollapsed Whether the sidebar is collapsed on desktop.
+ * @param props.onCollapseToggle Toggles collapsed state when collapse button clicked.
  */
 function Sidebar({
   activeMenuItem,

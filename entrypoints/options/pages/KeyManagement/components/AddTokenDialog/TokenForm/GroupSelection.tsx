@@ -10,7 +10,12 @@ interface GroupSelectionProps {
 }
 
 /**
- *
+ * Dropdown for selecting the token's user group or plan.
+ * @param props Component props container.
+ * @param props.group Currently selected group key.
+ * @param props.handleSelectChange Change handler invoked when a group is chosen.
+ * @param props.groups Available groups keyed by id.
+ * @returns Searchable select listing groups with ratios.
  */
 export function GroupSelection({
   group,

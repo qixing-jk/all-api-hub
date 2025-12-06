@@ -23,7 +23,17 @@ interface AdvancedSettingsSectionProps {
 }
 
 /**
- *
+ * Houses advanced configuration fields like group, model, and IP restrictions.
+ * @param props Component props container.
+ * @param props.formData Current token form values powering the controls.
+ * @param props.setFormData Setter used to update complex form fields.
+ * @param props.errors Map of validation messages keyed by field name.
+ * @param props.groups Available user groups keyed by identifier.
+ * @param props.availableModels List of model IDs that can be targeted.
+ * @param props.handleInputChange Factory for text input change handlers.
+ * @param props.handleSelectChange Factory for select change handlers.
+ * @param props.handleModelLimitsChange Emits updated model whitelist.
+ * @returns JSX section with conditional model-limit controls.
  */
 export function AdvancedSettingsSection({
   formData,

@@ -9,9 +9,12 @@ interface ProgressCardProps {
 }
 
 /**
- *
+ * Shows an inline card while a model sync execution is running.
+ * @param props Component props containing execution progress data.
+ * @returns Progress indicator card or null when idle.
  */
-export default function ProgressCard({ progress }: ProgressCardProps) {
+export default function ProgressCard(props: ProgressCardProps) {
+  const { progress } = props
   const { t } = useTranslation("newApiModelSync")
 
   if (!progress?.isRunning) {

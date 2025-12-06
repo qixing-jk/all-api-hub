@@ -9,9 +9,12 @@ interface StatisticsCardProps {
 }
 
 /**
- *
+ * Displays aggregate statistics for the most recent model sync execution.
+ * @param props Component props containing execution statistics.
+ * @returns Card with counts and timestamps.
  */
-export default function StatisticsCard({ statistics }: StatisticsCardProps) {
+export default function StatisticsCard(props: StatisticsCardProps) {
+  const { statistics } = props
   const { t } = useTranslation("newApiModelSync")
 
   return (

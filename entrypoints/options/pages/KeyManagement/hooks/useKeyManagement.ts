@@ -8,7 +8,9 @@ import { deleteApiToken, fetchAccountTokens } from "~/services/apiService"
 import { AccountToken } from "../type"
 
 /**
- *
+ * Manages key management page state: selection, loading, filtering, and CRUD handlers.
+ * @param routeParams Optional route params containing preselected accountId.
+ * @returns State, derived data, and handlers for token management UI.
  */
 export function useKeyManagement(routeParams?: Record<string, string>) {
   const { t } = useTranslation(["keyManagement", "messages"])

@@ -11,6 +11,8 @@ import ModelItem from "./ModelItem"
 interface ModelDisplayProps {
   models: any[]
   currentAccount: DisplaySiteData | undefined
+  onModelClick?: (model: unknown) => void
+  count?: number
   showRealPrice: boolean
   showRatioColumn: boolean
   showEndpointTypes: boolean
@@ -20,18 +22,23 @@ interface ModelDisplayProps {
 }
 
 /**
- *
+ * Virtualized list displaying model cards with pricing and availability data.
+ * @param props Component props describing the rendered model list.
+ * @returns Virtualized model list or empty state when no matches.
  */
-export function ModelDisplay({
-  models,
-  currentAccount,
-  showRealPrice,
-  showRatioColumn,
-  showEndpointTypes,
-  selectedGroup,
-  handleGroupClick,
-  availableGroups,
-}: ModelDisplayProps) {
+export function ModelDisplay(props: ModelDisplayProps) {
+  const {
+    models,
+    currentAccount,
+    onModelClick,
+    count,
+    showRealPrice,
+    showRatioColumn,
+    showEndpointTypes,
+    selectedGroup,
+    handleGroupClick,
+    availableGroups,
+  } = props
   const { t } = useTranslation("modelList")
   if (models.length === 0) {
     return (

@@ -5,7 +5,9 @@ import type { ProviderType } from "~/utils/modelProviders"
 type SelectedAccountValue = string | "all"
 
 /**
- *
+ * Manages view state for the model list page.
+ * Keeps selected account, provider, group, search term, and display toggles.
+ * @returns State values and setters for model list controls.
  */
 export function useModelListState() {
   // 状态管理

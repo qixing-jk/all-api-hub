@@ -7,11 +7,16 @@ import { formatKeyTime } from "~/utils/formatters"
 import { formatQuota } from "../../utils"
 
 interface TokenDetailsProps {
+  /**
+   * Token data to display including quotas and timestamps.
+   */
   token: ApiToken
 }
 
 /**
- *
+ * Shows key quota and timing metadata in a compact grid.
+ * @param props Component props container.
+ * @param props.token Token data source with quotas and times.
  */
 export function TokenDetails({ token }: TokenDetailsProps) {
   const { t } = useTranslation("keyManagement")

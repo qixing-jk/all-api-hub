@@ -26,7 +26,17 @@ interface ResultsTableProps {
 }
 
 /**
- *
+ * Table displaying execution results with selection and per-channel actions.
+ * @param props Component props bundle.
+ * @param props.items Execution results to render.
+ * @param props.selectedIds Selected channel ids.
+ * @param props.onSelectAll Handler to toggle all selections.
+ * @param props.onSelectItem Handler to toggle a single selection.
+ * @param props.onRunSingle Trigger to run sync for a single channel.
+ * @param props.isRunning Whether any sync is currently running.
+ * @param props.runningChannelId Channel id currently executing, if any.
+ * @param props.visibleColumns Optional column visibility overrides.
+ * @returns Card containing results table.
  */
 export default function ResultsTable({
   items,

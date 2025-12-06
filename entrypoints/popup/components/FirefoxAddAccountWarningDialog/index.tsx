@@ -11,7 +11,8 @@ interface FirefoxWarningDialogProps {
 }
 
 /**
- *
+ * Firefox-specific warning dialog guiding users to open the sidebar for adding accounts.
+ * Provides limitation explanation plus CTA to open the sidebar.
  */
 export default function FirefoxAddAccountWarningDialog({
   isOpen,

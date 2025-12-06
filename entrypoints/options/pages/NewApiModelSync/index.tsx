@@ -29,7 +29,9 @@ const TAB_INDEX = {
 } as const
 
 /**
- *
+ * New API Model Sync dashboard showing history, manual runs, progress, and filters.
+ * Fetches execution data, channels, and renders tabs for history and manual sync.
+ * @returns Page layout with controls, status, and result tables.
  */
 export default function NewApiModelSync() {
   const { t } = useTranslation("newApiModelSync")

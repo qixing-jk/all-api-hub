@@ -16,9 +16,12 @@ interface EmptyResultsProps {
 }
 
 /**
- *
+ * Displays empty states for execution history with config awareness.
+ * @param props Component props containing history awareness.
+ * @returns Appropriate empty state prompting config or search actions.
  */
-export default function EmptyResults({ hasHistory }: EmptyResultsProps) {
+export default function EmptyResults(props: EmptyResultsProps) {
+  const { hasHistory } = props
   const { t } = useTranslation("newApiModelSync")
   const [hasValidConfig, setHasValidConfig] = useState(true)
 

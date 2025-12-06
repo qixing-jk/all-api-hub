@@ -16,7 +16,8 @@ interface TokenFormProps {
 }
 
 /**
- *
+ * Composes the token creation form, splitting into basic and advanced sections.
+ * Handles wiring shared change handlers and passing state down to subcomponents.
  */
 export function TokenForm({
   formData,

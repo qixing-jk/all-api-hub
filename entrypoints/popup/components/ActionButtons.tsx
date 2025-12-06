@@ -8,7 +8,8 @@ import { useAddAccountHandler } from "~/hooks/useAddAccountHandler"
 import { openKeysPage, openModelsPage } from "~/utils/navigation"
 
 /**
- *
+ * Renders quick action buttons in popup header for adding accounts and navigating.
+ * Includes primary add-account CTA plus shortcuts to Keys and Models pages.
  */
 export default function ActionButtons() {
   const { t } = useTranslation(["account", "ui"])

@@ -17,7 +17,14 @@ interface StatusIndicatorProps {
 }
 
 /**
- *
+ * Displays loading or error feedback for model pricing fetch status.
+ * @param props Component props.
+ * @param props.selectedAccount Currently selected account id.
+ * @param props.isLoading Whether pricing data is loading.
+ * @param props.dataFormatError Flag indicating invalid data format.
+ * @param props.currentAccount Account details for navigation links.
+ * @param props.loadPricingData Retry handler.
+ * @returns Status UI for loading/error or null when idle.
  */
 export function StatusIndicator({
   selectedAccount,

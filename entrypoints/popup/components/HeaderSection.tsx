@@ -22,7 +22,8 @@ import {
 import CompactThemeToggle from "./ThemeToggle"
 
 /**
- *
+ * Popup header with app identity, theme toggle, and navigation controls.
+ * Provides refresh, account manager, settings, and side panel shortcuts.
  */
 export default function HeaderSection() {
   const { t } = useTranslation(["ui", "account", "common"])

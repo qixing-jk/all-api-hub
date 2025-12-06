@@ -19,16 +19,41 @@ import { showResultToast } from "~/utils/toastHelpers"
 import { AccountToken } from "../../type"
 
 interface TokenHeaderProps {
+  /**
+   * Token data with account display name included.
+   */
   token: AccountToken
+  /**
+   * Copy handler for placing the key on clipboard.
+   */
   copyKey: (key: string, name: string) => void
+  /**
+   * Handler to open the edit dialog for the token.
+   */
   handleEditToken: (token: AccountToken) => void
+  /**
+   * Handler to delete the token.
+   */
   handleDeleteToken: (token: AccountToken) => void
+  /**
+   * Account metadata for linking cross-app actions.
+   */
   account: DisplaySiteData
+  /**
+   * Optional opener for CCSwitch export dialog.
+   */
   onOpenCCSwitchDialog?: () => void
 }
 
 /**
- *
+ * Renders action buttons for a token (copy, export, edit/delete).
+ * @param props Component props container.
+ * @param props.token Token being acted upon.
+ * @param props.copyKey Clipboard copy handler.
+ * @param props.handleEditToken Edit action callback.
+ * @param props.handleDeleteToken Delete action callback.
+ * @param props.account Account context for integrations.
+ * @param props.onOpenCCSwitchDialog Optional CCSwitch export opener.
  */
 function TokenActionButtons({
   token,
@@ -117,7 +142,14 @@ function TokenActionButtons({
 }
 
 /**
- *
+ * Token header displaying name, status badges, and action buttons.
+ * @param props Component props container.
+ * @param props.token Token entity with account name.
+ * @param props.copyKey Clipboard copy handler.
+ * @param props.handleEditToken Edit action callback.
+ * @param props.handleDeleteToken Delete action callback.
+ * @param props.account Account context for cross-app operations.
+ * @param props.onOpenCCSwitchDialog Optional CCSwitch export opener.
  */
 export function TokenHeader({
   token,

@@ -9,7 +9,8 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { showUpdateToast } from "../../../../../utils/toastHelpers"
 
 /**
- *
+ * Settings panel for configuring New API connection credentials (base URL, admin token, user ID).
+ * @returns Section containing inputs and reset handling for the New API config.
  */
 export default function NewApiSettings() {
   const { t } = useTranslation("settings")

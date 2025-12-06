@@ -43,15 +43,17 @@ interface UseModelDataReturn {
 }
 
 /**
- *
+ * Fetches pricing data for a single selected account with caching and error handling.
+ * @param params Input parameters for the hook.
+ * @param params.selectedAccount Account id to load pricing for.
+ * @param params.accounts All available accounts.
+ * @returns Pricing data, loading flags, query states, and reload helper.
  */
-function useSingleAccountModelData({
-  selectedAccount,
-  accounts,
-}: {
+function useSingleAccountModelData(params: {
   selectedAccount: string
   accounts: DisplaySiteData[]
 }): UseModelDataReturn {
+  const { selectedAccount, accounts } = params
   const { t } = useTranslation("modelList")
   const [dataFormatError, setDataFormatError] = useState(false)
 
@@ -158,7 +160,9 @@ function useSingleAccountModelData({
 }
 
 /**
- *
+ * Fetches pricing data for all accounts concurrently and aggregates results.
+ * @param accounts List of accounts to query.
+ * @returns Pricing contexts, loading/error flags, and reload helper.
  */
 function useAllAccountsModelData(
   accounts: DisplaySiteData[],
@@ -261,12 +265,14 @@ function useAllAccountsModelData(
 }
 
 /**
- *
+ * Provides model pricing data for either a single account or all accounts.
+ * @param params Hook input parameters.
+ * @param params.selectedAccount Selected account id or "all".
+ * @param params.accounts Available accounts list.
+ * @returns Pricing data, contexts, loading state, and query summaries.
  */
-export function useModelData({
-  selectedAccount,
-  accounts,
-}: UseModelDataProps): UseModelDataReturn {
+export function useModelData(params: UseModelDataProps): UseModelDataReturn {
+  const { selectedAccount, accounts } = params
   const safeDisplayData = useMemo(() => accounts || [], [accounts])
   const isAllAccounts = selectedAccount === "all"
 

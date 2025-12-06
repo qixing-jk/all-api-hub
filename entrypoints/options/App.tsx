@@ -1,6 +1,6 @@
 import { useState } from "react"
 
-import AppLayout from "~/components/AppLayout"
+import { AppLayout } from "~/components/AppLayout"
 
 import Header from "./components/Header"
 import Sidebar from "./components/Sidebar"

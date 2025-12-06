@@ -20,7 +20,8 @@ interface AccountSnapshotTableProps {
 
 /**
  * Displays per-account auto check-in snapshots with status badges and timestamps.
- * @param props snapshots array from auto check-in service.
+ * @param props Component props bundle.
+ * @param props.snapshots Snapshot array produced by the auto check-in service.
  */
 export default function AccountSnapshotTable({
   snapshots,

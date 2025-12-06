@@ -1,4 +1,4 @@
-import AppLayout from "~/components/AppLayout"
+import { AppLayout } from "~/components/AppLayout"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import AccountList from "~/features/AccountManagement/components/AccountList"
@@ -10,7 +10,8 @@ import BalanceSection from "./components/BalanceSection"
 import HeaderSection from "./components/HeaderSection"
 
 /**
- *
+ * Popup body content for the extension popup and side panel.
+ * Handles layout sizing, header/actions, and account list rendering.
  */
 function PopupContent() {
   const { isLoading } = useUserPreferencesContext()
@@ -31,6 +32,9 @@ function PopupContent() {
   return (
     <div
       className={`${popupWidthClass} ${popupHeightClass} dark:bg-dark-bg-primary flex flex-col bg-white`}
+      export
+      default
+      App
     >
       <HeaderSection />
 
@@ -46,7 +50,8 @@ function PopupContent() {
 }
 
 /**
- *
+ * Root popup application with providers/layout wrappers.
+ * @returns Popup component tree rendered inside AppLayout.
  */
 function App() {
   return (

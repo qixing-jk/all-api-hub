@@ -14,7 +14,8 @@ interface StatusCardProps {
 
 /**
  * Shows aggregated auto-checkin status info (last run, next schedule, results summary).
- * @param props status payload from auto-checkin service.
+ * @param props Component props container.
+ * @param props.status Status payload from auto-checkin service.
  */
 export default function StatusCard({ status }: StatusCardProps) {
   const { t } = useTranslation("autoCheckin")

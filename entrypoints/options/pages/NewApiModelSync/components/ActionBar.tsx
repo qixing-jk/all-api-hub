@@ -14,7 +14,15 @@ interface ActionBarProps {
 }
 
 /**
- *
+ * Action button cluster for New API Model Sync execution controls.
+ * @param props Component props container with run/retry callbacks.
+ * @param props.isRunning Disables buttons while sync is in progress.
+ * @param props.selectedCount Number of selected items for targeted runs.
+ * @param props.failedCount Number of failed items eligible for retry.
+ * @param props.onRunAll Handler to run all channels.
+ * @param props.onRunSelected Handler to run only selected channels.
+ * @param props.onRetryFailed Handler to retry failed executions.
+ * @param props.onRefresh Handler to refresh execution results.
  */
 export default function ActionBar({
   isRunning,

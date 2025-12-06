@@ -6,7 +6,11 @@ interface FormSectionProps {
 }
 
 /**
- *
+ * Lightweight wrapper adding spacing and a heading for grouped form fields.
+ * @param props Section configuration.
+ * @param props.title Section heading text.
+ * @param props.children Field elements rendered inside the section.
+ * @returns JSX section block with heading and content.
  */
 export function FormSection({ title, children }: FormSectionProps) {
   return (

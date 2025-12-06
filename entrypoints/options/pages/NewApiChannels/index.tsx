@@ -240,7 +240,8 @@ const statusFilterFn: FilterFn<ChannelRow> = (
 }
 
 /**
- *
+ * Main management page for New API channels including table, filters, and dialogs.
+ * Fetches channel data, exposes filtering tools, and handles CRUD operations.
  */
 export default function NewApiChannelsPage() {
   const { t } = useTranslation("newApiChannels")
@@ -1032,7 +1033,7 @@ export default function NewApiChannelsPage() {
 }
 
 /**
- *
+ * Renders the status badge for a channel row based on numeric status code.
  */
 function StatusBadge({ status }: { status: number }) {
   const { t } = useTranslation("newApiChannels")
@@ -1048,7 +1049,7 @@ function StatusBadge({ status }: { status: number }) {
 }
 
 /**
- *
+ * Dropdown actions available for each channel row (edit, filters, sync, delete).
  */
 function RowActions({
   onEdit,
@@ -1102,7 +1103,7 @@ interface ChannelFilterDialogProps {
 type EditableFilter = ChannelModelFilterRule
 
 /**
- *
+ * Dialog for editing channel model filters via visual builder or raw JSON input.
  */
 function ChannelFilterDialog({
   channel,

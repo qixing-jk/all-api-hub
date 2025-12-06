@@ -3,7 +3,8 @@ import { useTranslation } from "react-i18next"
 import { Alert } from "~/components/ui"
 
 /**
- *
+ * Informational footer reminding users about pricing variability.
+ * @returns Info alert with pricing note and description.
  */
 export function Footer() {
   const { t } = useTranslation("modelList")

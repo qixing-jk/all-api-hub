@@ -39,7 +39,25 @@ interface ControlPanelProps {
 }
 
 /**
- *
+ * Top control strip for searching, filtering, and refreshing model pricing data.
+ * @param props Component props bundle.
+ * @param props.searchTerm Current search keyword.
+ * @param props.setSearchTerm Setter to update search keyword.
+ * @param props.selectedGroup Active user group filter.
+ * @param props.setSelectedGroup Setter for user group filter.
+ * @param props.availableGroups Available group options.
+ * @param props.pricingData Pricing data used to show ratios.
+ * @param props.loadPricingData Callback to refetch pricing data.
+ * @param props.isLoading Loading state flag for refresh.
+ * @param props.showRealPrice Whether to display real price values.
+ * @param props.setShowRealPrice Setter for real price toggle.
+ * @param props.showRatioColumn Whether to show ratio column.
+ * @param props.setShowRatioColumn Setter for ratio column toggle.
+ * @param props.showEndpointTypes Whether to show endpoint types.
+ * @param props.setShowEndpointTypes Setter for endpoint type toggle.
+ * @param props.totalModels Total models available.
+ * @param props.filteredModels Currently filtered model list.
+ * @returns Card with filters, toggles, and actions.
  */
 export function ControlPanel({
   searchTerm,

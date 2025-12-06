@@ -32,7 +32,12 @@ interface FilterBarProps {
 
 /**
  * Filter controls for auto-checkin execution list: status buttons + keyword search.
- * @param props accountResults for counts, current status/keyword, and change handlers.
+ * @param props Component props bundle.
+ * @param props.accountResults Account execution results used to derive counts.
+ * @param props.status Current filter status value.
+ * @param props.keyword Current keyword filter value.
+ * @param props.onStatusChange Callback fired when status filter changes.
+ * @param props.onKeywordChange Callback fired when keyword input changes.
  */
 export default function FilterBar({
   accountResults,

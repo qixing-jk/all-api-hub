@@ -9,29 +9,55 @@ import { TokenDetails } from "./TokenDetails"
 import { TokenHeader } from "./TokenHeader"
 
 interface TokenListItemProps {
+  /**
+   * Token entry including account display name.
+   */
   token: AccountToken
+  /**
+   * Set of token IDs currently visible (unmasked).
+   */
   visibleKeys: Set<number>
+  /**
+   * Toggles visibility of a token by ID.
+   */
   toggleKeyVisibility: (id: number) => void
+  /**
+   * Copies the token key to clipboard.
+   */
   copyKey: (key: string, name: string) => void
+  /**
+   * Opens the edit dialog for the token.
+   */
   handleEditToken: (token: AccountToken) => void
+  /**
+   * Deletes the token.
+   */
   handleDeleteToken: (token: AccountToken) => void
+  /**
+   * Account context for rendering labels/actions.
+   */
   account: DisplaySiteData
+  /**
+   * Opens CCSwitch dialog for exporting the token.
+   */
   onOpenCCSwitchDialog: (token: AccountToken, account: DisplaySiteData) => void
 }
 
 /**
- *
+ * Card presenting a single token with header actions, key display, and details.
+ * @param props Component props configuring the token card.
  */
-export function TokenListItem({
-  token,
-  visibleKeys,
-  toggleKeyVisibility,
-  copyKey,
-  handleEditToken,
-  handleDeleteToken,
-  account,
-  onOpenCCSwitchDialog,
-}: TokenListItemProps) {
+export function TokenListItem(props: TokenListItemProps) {
+  const {
+    token,
+    visibleKeys,
+    toggleKeyVisibility,
+    copyKey,
+    handleEditToken,
+    handleDeleteToken,
+    account,
+    onOpenCCSwitchDialog,
+  } = props
   const { t } = useTranslation("keyManagement")
 
   return (

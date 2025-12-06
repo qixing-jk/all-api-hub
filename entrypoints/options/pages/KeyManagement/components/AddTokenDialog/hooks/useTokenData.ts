@@ -12,7 +12,11 @@ import type { DisplaySiteData } from "~/types"
 import type { FormData } from "./useTokenForm"
 
 /**
- *
+ * Loads available models and user groups for the selected account when dialog opens.
+ * @param isOpen Whether dialog is visible.
+ * @param currentAccount Currently selected account info.
+ * @param setFormData Setter to update form state with defaults (e.g., group).
+ * @returns Loading flag, fetched models/groups, and reset helper.
  */
 export function useTokenData(
   isOpen: boolean,

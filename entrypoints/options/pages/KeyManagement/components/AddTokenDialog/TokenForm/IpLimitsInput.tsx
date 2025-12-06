@@ -13,7 +13,12 @@ interface IpLimitsInputProps {
 }
 
 /**
- *
+ * Text input for comma-separated allowed IP addresses.
+ * @param props Component props container with handler/error info.
+ * @param props.allowIps Current allowed IPs value.
+ * @param props.handleInputChange Handler to update form state for IP field.
+ * @param props.error Optional validation error message.
+ * @returns JSX form field for IP allow list.
  */
 export function IpLimitsInput({
   allowIps,

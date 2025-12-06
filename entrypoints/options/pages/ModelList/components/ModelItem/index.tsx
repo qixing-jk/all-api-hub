@@ -1,7 +1,3 @@
-/**
- * 模型列表项组件
- */
-
 import { useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
@@ -31,21 +27,24 @@ interface ModelItemProps {
 }
 
 /**
- *
+ * Detailed model card combining header, pricing, and expandable metadata.
+ * @param props Component props describing the model card configuration.
+ * @returns Rendered model card element.
  */
-export default function ModelItem({
-  model,
-  calculatedPrice,
-  exchangeRate,
-  showRealPrice,
-  showRatioColumn,
-  showEndpointTypes,
-  userGroup,
-  onGroupClick,
-  availableGroups = [],
-  isAllGroupsMode = false,
-  accountName,
-}: ModelItemProps) {
+export default function ModelItem(props: ModelItemProps) {
+  const {
+    model,
+    calculatedPrice,
+    exchangeRate,
+    showRealPrice,
+    showRatioColumn,
+    showEndpointTypes,
+    userGroup,
+    onGroupClick,
+    availableGroups = [],
+    isAllGroupsMode = false,
+    accountName,
+  } = props
   const { t } = useTranslation("modelList")
   const [isExpanded, setIsExpanded] = useState(false)
   const handleCopyModelName = async () => {

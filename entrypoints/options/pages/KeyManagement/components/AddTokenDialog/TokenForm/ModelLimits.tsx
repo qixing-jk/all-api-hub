@@ -14,7 +14,14 @@ interface ModelLimitsProps {
 }
 
 /**
- *
+ * Section toggling and configuring per-model allow lists for a token.
+ * @param props Component props container.
+ * @param props.modelLimitsEnabled Whether per-model limits are enabled.
+ * @param props.modelLimits Selected model allow list.
+ * @param props.availableModels All available models to choose from.
+ * @param props.setFormData Setter to update the form state.
+ * @param props.handleModelLimitsChange Change handler for model selections.
+ * @returns Toggle with optional multi-select for model limits.
  */
 export function ModelLimits({
   modelLimitsEnabled,

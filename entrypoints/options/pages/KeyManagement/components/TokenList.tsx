@@ -24,7 +24,7 @@ interface TokenListProps {
 }
 
 /**
- *
+ * Skeleton placeholder shown while tokens list is loading.
  */
 function LoadingSkeleton() {
   return (
@@ -41,7 +41,11 @@ function LoadingSkeleton() {
 }
 
 /**
- *
+ * Empty state content for no tokens or filtered results.
+ * @param props Component props container.
+ * @param props.tokens All tokens for the current account.
+ * @param props.handleAddToken Callback to open the add-token flow.
+ * @param props.displayData Account display data used to determine empty states.
  */
 function TokenEmptyState({
   tokens,
@@ -91,21 +95,35 @@ function TokenEmptyState({
 }
 
 /**
- *
+ * Displays a list of API tokens with loading and empty states.
+ * Handles key visibility toggles, copy, edit/delete actions, and CCSwitch export.
+ * @param props Component props configuring the token list view.
+ * @param props.isLoading Whether data for the current account is still loading.
+ * @param props.tokens Tokens belonging to the selected account.
+ * @param props.filteredTokens Tokens after search/filter is applied.
+ * @param props.visibleKeys Set of token IDs whose values are currently unmasked.
+ * @param props.toggleKeyVisibility Toggles a token between visible/hidden states.
+ * @param props.copyKey Copies the token value to the clipboard.
+ * @param props.handleEditToken Opens the edit modal for the given token.
+ * @param props.handleDeleteToken Removes the token after confirmation.
+ * @param props.handleAddToken Opens the add-token dialog.
+ * @param props.selectedAccount Currently selected account identifier.
+ * @param props.displayData Account metadata used to render contextual info.
  */
-export function TokenList({
-  isLoading,
-  tokens,
-  filteredTokens,
-  visibleKeys,
-  toggleKeyVisibility,
-  copyKey,
-  handleEditToken,
-  handleDeleteToken,
-  handleAddToken,
-  selectedAccount,
-  displayData,
-}: TokenListProps) {
+export function TokenList(props: TokenListProps) {
+  const {
+    isLoading,
+    tokens,
+    filteredTokens,
+    visibleKeys,
+    toggleKeyVisibility,
+    copyKey,
+    handleEditToken,
+    handleDeleteToken,
+    handleAddToken,
+    selectedAccount,
+    displayData,
+  } = props
   const { t } = useTranslation("keyManagement")
   const [ccSwitchContext, setCCSwitchContext] = useState<{
     token: AccountToken
