@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.26.1](https://github.com/qixing-jk/all-api-hub/compare/v2.26.0...v2.26.1) (2025-12-06)
+
+
+### Performance Improvements
+
+* **utils:** extract enabled criteria sorting from comparator ([3bae3f9](https://github.com/qixing-jk/all-api-hub/commit/3bae3f98c9c5a7922efdc5ebc3304be0556c2358))
+
 ## [2.26.0](https://github.com/qixing-jk/all-api-hub/compare/v2.25.0...v2.26.0) (2025-12-05)
 
 
