@@ -30,8 +30,6 @@ export function ModelDisplay(props: ModelDisplayProps) {
   const {
     models,
     currentAccount,
-    onModelClick,
-    count,
     showRealPrice,
     showRatioColumn,
     showEndpointTypes,

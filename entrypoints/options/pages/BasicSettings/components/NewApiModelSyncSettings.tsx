@@ -31,6 +31,8 @@ type UserNewApiModelSyncConfig = NonNullable<
   typeof DEFAULT_PREFERENCES.newApiModelSync
 >
 
+type EditableFilter = ChannelModelFilterRule
+
 /**
  * Render the New API Model Sync settings UI and manage its local state and interactions.
  *
@@ -39,13 +41,6 @@ type UserNewApiModelSyncConfig = NonNullable<
  * to the sync execution view. It loads model metadata on mount, persists preference changes via
  * the user preferences context, and shows success/error toasts for save operations.
  * @returns The settings section React element for configuring New API Model Sync.
- */
-type EditableFilter = ChannelModelFilterRule
-
-/**
- * Settings section for configuring New API Model Sync behaviors.
- * Handles preference persistence, option loading, and filter management dialogs.
- * @returns React element rendering the section UI.
  */
 export default function NewApiModelSyncSettings() {
   const { t } = useTranslation([

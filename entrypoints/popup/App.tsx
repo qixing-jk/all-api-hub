@@ -32,9 +32,6 @@ function PopupContent() {
   return (
     <div
       className={`${popupWidthClass} ${popupHeightClass} dark:bg-dark-bg-primary flex flex-col bg-white`}
-      export
-      default
-      App
     >
       <HeaderSection />
 
