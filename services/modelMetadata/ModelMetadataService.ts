@@ -45,6 +45,8 @@ class ModelMetadataService {
 
   /**
    * Initialize metadata (idempotent). Reuses in-flight init promise.
+   *
+   * @returns Promise that resolves when initialization completes or reuses the in-flight promise.
    */
   async initialize(): Promise<void> {
     if (this.initPromise) {
@@ -57,6 +59,8 @@ class ModelMetadataService {
 
   /**
    * Internal initialize: skip fetch if cache is fresh, otherwise refresh.
+   *
+   * Uses MODEL_METADATA_REFRESH_INTERVAL to decide reuse; falls back on failure.
    */
   private async _initialize(): Promise<void> {
     try {
@@ -80,6 +84,8 @@ class ModelMetadataService {
   /**
    * Fetch metadata from remote endpoint and rebuild caches.
    * Falls back to existing cache if fetch fails.
+   *
+   * Refreshes cache, metadata map, and vendor rules on success.
    */
   async refreshMetadata(): Promise<void> {
     try {
@@ -130,6 +136,8 @@ class ModelMetadataService {
 
   /**
    * Build internal map from cleaned model id to metadata.
+   *
+   * Uses extractActualModel to strip prefixes/suffixes for lookup.
    */
   private buildMetaDataMapFromCache(): void {
     if (!this.cache) return
@@ -147,6 +155,8 @@ class ModelMetadataService {
   /**
    * Build vendor detection rules from cached models.
    * Groups by provider and derives regex prefixes.
+   *
+   * Populates vendorRules with provider display names and regex patterns.
    */
   private buildVendorRules(): void {
     if (!this.cache) return
@@ -213,6 +223,9 @@ class ModelMetadataService {
 
   /**
    * Capitalize hyphen/space-delimited provider id for display.
+   *
+   * @param str Provider id.
+   * @returns Capitalized display string.
    */
   private capitalizeFirst(str: string): string {
     if (!str) return ""
@@ -224,6 +237,8 @@ class ModelMetadataService {
 
   /**
    * Initialize fallback metadata/rules when remote fetch is unavailable.
+   *
+   * Seeds cache, metadata map, and vendor rules with bundled defaults.
    */
   private initializeFallback(): void {
     console.warn("[ModelMetadata] Using fallback default data")

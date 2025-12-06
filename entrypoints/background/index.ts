@@ -69,6 +69,11 @@ export default defineBackground(() => {
 
   main()
 })
+
+/**
+ * Entrypoint invoked at background startup.
+ * Ensures services are initialized before installing cookie interceptors so that downstream requests have localization and config ready.
+ */
 async function main() {
   await initializeServices()
   await initializeCookieInterceptors()

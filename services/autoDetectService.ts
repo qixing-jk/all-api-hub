@@ -139,7 +139,7 @@ async function getUserDataViaBackground(
     })
 
     if (!response || !response.success || !response.data) {
-      // fallback
+      // Fallback: if content script/localStorage fetch fails, attempt API-based fetch
       const userInfo = await fetchUserInfo(url)
       if (userInfo) {
         return {
@@ -254,7 +254,7 @@ export async function autoDetectSmart(url: string): Promise<AutoDetectResult> {
   // 1. 尝试从当前标签页获取（最快，无需创建新窗口）
   if (capabilities.hasTabs) {
     try {
-      // 手机 不支持 currentWindow，需要 fallback
+      // On mobile, currentWindow may be unsupported; fall back to first available tab
       const tabs = await getActiveOrAllTabs()
       const currentTab = tabs.find((t) => t.active) ?? tabs[0]
 
@@ -265,28 +265,23 @@ export async function autoDetectSmart(url: string): Promise<AutoDetectResult> {
 
         if (currentUrl.origin === targetUrl.origin) {
           console.log("[AutoDetect] 当前标签页匹配目标站点，使用当前标签页方式")
-          const result = await autoDetectFromCurrentTab(url)
-          if (result.success) {
-            return result
-          }
+          return await autoDetectFromCurrentTab(url)
         }
       }
     } catch (error) {
-      console.log("[AutoDetect] 当前标签页方式不可用:", error)
+      console.warn("[AutoDetect] 当前标签页方式失败，尝试其他方式", error)
     }
   }
 
-  // 2. 尝试 background 方式（桌面浏览器）
+  // 2. 如果支持 background（桌面），使用 Background 方式
   if (capabilities.hasBackgroundMessaging) {
+    // Background path opens a temp window to fetch user context without disturbing active tab
     const result = await autoDetectViaBackground(url)
-
-    // 如果成功，直接返回
     if (result.success) {
       return result
     }
-
-    console.log("[AutoDetect] Background 方式失败，降级到直接方式")
   }
+  console.log("[AutoDetect] Background 方式失败，降级到直接方式")
 
   // 3. Fallback: 使用直接方式（手机 或其他方式失败）
   return await autoDetectDirect(url)

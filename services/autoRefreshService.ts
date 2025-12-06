@@ -18,6 +18,8 @@ class AutoRefreshService {
   /**
    * Initialize auto refresh (idempotent).
    * Loads preferences and starts the timer if enabled.
+   *
+   * Safe to call repeatedly; returns early when already initialized.
    */
   async initialize() {
     if (this.isInitialized) {
@@ -37,6 +39,8 @@ class AutoRefreshService {
   /**
    * Start or stop the interval based on current user preferences.
    * Always clears any existing timer to prevent duplicate schedules.
+   *
+   * Respects accountAutoRefresh.enabled/interval from user preferences.
    */
   async setupAutoRefresh() {
     try {
@@ -72,6 +76,8 @@ class AutoRefreshService {
   /**
    * Execute a background refresh cycle.
    * Catches errors and notifies frontend listeners.
+   *
+   * Uses accountStorage.refreshAllAccounts with silent mode (no toast).
    */
   private async performBackgroundRefresh() {
     try {
@@ -93,6 +99,8 @@ class AutoRefreshService {
 
   /**
    * Trigger a one-off immediate refresh (bypasses interval scheduling).
+   *
+   * @returns Counts of succeeded/failed account refreshes.
    */
   async refreshNow(): Promise<{ success: number; failed: number }> {
     try {
@@ -110,6 +118,8 @@ class AutoRefreshService {
 
   /**
    * Stop the interval timer if running.
+   *
+   * Idempotent; safe to call when not running.
    */
   stopAutoRefresh() {
     if (this.refreshTimer) {
@@ -121,6 +131,8 @@ class AutoRefreshService {
 
   /**
    * Persist new refresh settings and reconfigure the timer accordingly.
+   *
+   * @param updates Partial accountAutoRefresh config.
    */
   async updateSettings(updates: {
     accountAutoRefresh: Partial<AccountAutoRefresh>
@@ -137,6 +149,8 @@ class AutoRefreshService {
 
   /**
    * Get current runtime status (used by UI to display state).
+   *
+   * @returns Whether timer is running and service initialized.
    */
   getStatus() {
     return {
@@ -148,6 +162,8 @@ class AutoRefreshService {
   /**
    * Notify any connected frontend about refresh state changes.
    * Swallows "receiving end does not exist" errors because popup may be closed.
+   *
+   * Best-effort; errors are logged without throwing to avoid breaking background flow.
    */
   private notifyFrontend(type: string, data: any) {
     try {
@@ -192,6 +208,9 @@ export const autoRefreshService = new AutoRefreshService()
 /**
  * Message handler for auto-refresh related actions.
  * Keeps background-only logic centralized; responds with success/error payloads.
+ *
+ * @param request Incoming message with action and payload.
+ * @param sendResponse Callback to reply to sender.
  */
 export const handleAutoRefreshMessage = async (
   request: any,

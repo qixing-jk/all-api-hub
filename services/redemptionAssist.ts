@@ -25,6 +25,8 @@ class RedemptionAssistService {
 
   /**
    * Initialize from stored preferences (idempotent).
+   *
+   * Safe to call multiple times; loads enable flag from user preferences.
    */
   async initialize() {
     if (this.initialized) {
@@ -44,6 +46,8 @@ class RedemptionAssistService {
 
   /**
    * Update runtime flags without persisting.
+   *
+   * @param settings Runtime-only toggle overrides.
    */
   updateRuntimeSettings(settings: { enabled?: boolean }) {
     if (typeof settings.enabled === "boolean") {
@@ -74,6 +78,9 @@ class RedemptionAssistService {
 
   /**
    * Normalize and extract hostname; returns null if URL is invalid.
+   *
+   * @param url Candidate URL.
+   * @returns Lowercased hostname or null on parse failure.
    */
   private getHostname(url: string): string | null {
     try {
@@ -87,6 +94,9 @@ class RedemptionAssistService {
   /**
    * Decide whether to show redemption prompt for a given URL/code pair.
    * Returns a reason when skipping prompt (disabled/invalid_code).
+   *
+   * @param params url, code, optional tabId for telemetry.
+   * @returns shouldPrompt flag and optional skip reason.
    */
   async shouldPrompt(params: {
     url: string
@@ -110,6 +120,9 @@ class RedemptionAssistService {
 
   /**
    * Redeem a code for a specific account directly.
+   *
+   * @param accountId Target account id.
+   * @param code Redemption code.
    */
   async autoRedeem(accountId: string, code: string) {
     // Delegate to redeemService which handles i18n and error messages

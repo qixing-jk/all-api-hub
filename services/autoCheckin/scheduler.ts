@@ -424,6 +424,8 @@ class AutoCheckinScheduler {
 
   /**
    * Initialize the scheduler
+   *
+   * Idempotent: installs alarm listener and schedules next run when supported.
    */
   async initialize() {
     if (this.isInitialized) {
@@ -459,6 +461,8 @@ class AutoCheckinScheduler {
 
   /**
    * Schedule the next check-in run randomly within configured time window
+   *
+   * Clears existing alarm, respects globalEnabled, and persists nextScheduledAt.
    */
   async scheduleNextRun() {
     // Check if alarms API is supported
@@ -524,6 +528,8 @@ class AutoCheckinScheduler {
    */
   /**
    * Handle alarm trigger - execute check-ins
+   *
+   * Runs check-ins then schedules the following run.
    */
   async handleAlarm() {
     console.log("[AutoCheckin] Alarm triggered, starting check-in execution")
@@ -534,6 +540,9 @@ class AutoCheckinScheduler {
 
   /**
    * Execute check-ins for all eligible accounts
+   *
+   * Builds snapshots, records skip reasons, executes providers, updates status,
+   * and considers retry strategy for pending retries.
    */
   async runCheckins(): Promise<void> {
     console.log("[AutoCheckin] Starting check-in execution")
@@ -715,6 +724,8 @@ class AutoCheckinScheduler {
 
   /**
    * Update settings and reschedule alarm
+   *
+   * @param settings Partial auto-checkin config plus retryStrategy overrides.
    */
   async updateSettings(
     settings: Partial<
@@ -829,6 +840,9 @@ export const autoCheckinScheduler = new AutoCheckinScheduler()
 /**
  * Message handler for Auto Check-in actions (run, retry, get status/settings).
  * Keeps background-only logic centralized for content scripts/options UI calls.
+ *
+ * @param request Incoming message with action/payload.
+ * @param sendResponse Callback to reply to sender.
  */
 export const handleAutoCheckinMessage = async (
   request: any,

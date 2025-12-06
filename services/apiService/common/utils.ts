@@ -25,9 +25,16 @@ import { joinUrl } from "~/utils/url"
 
 /**
  * Build request headers for New API calls.
- * - Adds extension + auth method headers.
- * - Injects multiple compatible user id headers when provided.
- * - Adds Bearer token when given.
+ *
+ * Behavior:
+ * - Adds extension + auth method headers (via cookieHelper).
+ * - Injects multiple compatible user-id headers so different backends can read the user context.
+ * - Adds Bearer token when provided.
+ *
+ * @param authMode Auth strategy used to add auth headers.
+ * @param userId Optional user identifier injected under several header keys.
+ * @param accessToken Optional bearer token for token auth flows.
+ * @returns Headers object ready for fetch.
  */
 const createRequestHeaders = async (
   authMode: AuthMode,
@@ -39,6 +46,7 @@ const createRequestHeaders = async (
     Pragma: REQUEST_CONFIG.HEADERS.PRAGMA,
   }
 
+  // Some deployments expect different header names; keep a fan-out map for compatibility.
   const userHeaders: Record<string, string> = userId
     ? {
         "New-API-User": userId.toString(),
@@ -63,8 +71,11 @@ const createRequestHeaders = async (
 
 /**
  * Build a base RequestInit with defaults.
- * - Uppercases method, sets JSON content-type for non-GET.
- * - Merges caller headers after defaults.
+ *
+ * @param headers Default headers to seed the request with.
+ * @param credentials Fetch credentials policy (include/omit for cookies).
+ * @param options Caller-provided overrides (method, body, headers, etc.).
+ * @returns RequestInit merged with sensible defaults.
  */
 const createBaseRequest = (
   headers: HeadersInit,
@@ -91,7 +102,10 @@ const createBaseRequest = (
 }
 
 /**
- * Create a request using cookie-based auth.
+ * Create a RequestInit configured for cookie-based auth.
+ *
+ * @param userId Optional user id to embed in headers.
+ * @param options Additional fetch options to merge.
  */
 const createCookieAuthRequest = async (
   userId: number | string | undefined,
@@ -105,7 +119,11 @@ const createCookieAuthRequest = async (
 }
 
 /**
- * Create a request using bearer token auth.
+ * Create a RequestInit configured for bearer-token auth.
+ *
+ * @param userId Optional user id to embed in headers.
+ * @param accessToken Bearer token for Authorization header.
+ * @param options Additional fetch options to merge.
  */
 const createTokenAuthRequest = async (
   userId: number | string | undefined,
@@ -120,6 +138,8 @@ const createTokenAuthRequest = async (
 
 /**
  * Compute today's start/end unix timestamps (seconds).
+ *
+ * @returns Object with start and end seconds for the current day.
  */
 export const getTodayTimestampRange = (): { start: number; end: number } => {
   const today = new Date()
@@ -137,6 +157,9 @@ export const getTodayTimestampRange = (): { start: number; end: number } => {
 
 /**
  * Aggregate usage data over log items (quota + tokens).
+ *
+ * @param items Log records to sum.
+ * @returns Totals for quota and token counts.
  */
 export const aggregateUsageData = (
   items: LogItem[],

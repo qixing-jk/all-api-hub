@@ -26,15 +26,31 @@ interface OpenAICompatibilityListResponse {
   [key: string]: any
 }
 
+/**
+ * Compute upstream OpenAI-compatible base URL for a provider.
+ *
+ * @param account Display account info.
+ * @returns Base URL ending with /v1 for OpenAI compatibility.
+ */
 function getProviderBaseUrl(account: DisplaySiteData): string {
   // Use the OpenAI-compatible /v1 endpoint for the upstream
   return joinUrl(account.baseUrl, "/v1")
 }
 
+/**
+ * Build human-readable provider name for CLI Proxy.
+ *
+ * @param account Display account info.
+ */
 function buildProviderName(account: DisplaySiteData): string {
   return account.name || account.baseUrl
 }
 
+/**
+ * Read CLI Proxy config from user preferences.
+ *
+ * @returns Base URL and management key, or null if not configured.
+ */
 async function getCliProxyConfig() {
   const prefs = await userPreferences.getPreferences()
   const { cliProxy } = prefs
@@ -49,6 +65,9 @@ async function getCliProxyConfig() {
   }
 }
 
+/**
+ * Fetch existing providers from CLI Proxy management API.
+ */
 async function fetchProviders(baseUrl: string, managementKey: string) {
   const url = joinUrl(baseUrl, "/openai-compatibility")
 
@@ -78,6 +97,9 @@ async function fetchProviders(baseUrl: string, managementKey: string) {
   return [] as OpenAICompatibilityProvider[]
 }
 
+/**
+ * Replace providers list via CLI Proxy management API.
+ */
 async function putProviders(
   baseUrl: string,
   managementKey: string,
@@ -99,6 +121,9 @@ async function putProviders(
   }
 }
 
+/**
+ * Patch a single provider entry by index.
+ */
 async function patchProviderByIndex(
   baseUrl: string,
   managementKey: string,
@@ -121,6 +146,13 @@ async function patchProviderByIndex(
   }
 }
 
+/**
+ * Import an account/token into CLI Proxy as an OpenAI-compatible provider.
+ *
+ * @param account Display site data (source).
+ * @param token API token to register.
+ * @returns ServiceResponse with success flag and message.
+ */
 export async function importToCliProxy(
   account: DisplaySiteData,
   token: ApiToken,

@@ -97,7 +97,7 @@ export async function autoDetectAccount(
       tokenPromise = Promise.resolve(null)
     }
 
-    // 并行执行 token 获取和 site 状态获取
+    // 并行执行 token 获取和 site 状态获取（降低端到端等待）
     const [tokenInfo, siteStatus, checkSupport, siteName] = await Promise.all([
       tokenPromise,
       fetchSiteStatus(url, authType),

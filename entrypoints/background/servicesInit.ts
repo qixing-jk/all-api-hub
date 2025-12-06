@@ -15,6 +15,7 @@ let initializingPromise: Promise<void> | null = null
  * Sequence notes:
  * - Guarded to avoid duplicate initialization; concurrent callers await one promise.
  * - i18n must be ready before downstream services log or emit user-facing messages.
+ * - Each service handles its own retries; failures are logged but do not block others.
  */
 export async function initializeServices() {
   // 若已初始化，跳过

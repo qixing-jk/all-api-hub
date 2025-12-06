@@ -36,6 +36,11 @@ class NewApiModelSyncScheduler {
   private isInitialized = false
   private currentProgress: ExecutionProgress | null = null
 
+  /**
+   * Build a NewApiModelSyncService instance using persisted preferences and channel configs.
+   *
+   * @throws Error when New API config is missing.
+   */
   private async createService(): Promise<NewApiModelSyncService> {
     const userPrefs = await userPreferences.getPreferences()
 
@@ -107,6 +112,8 @@ class NewApiModelSyncScheduler {
   /**
    * Setup or update the alarm based on current preferences.
    * Clears existing alarm first to avoid duplicates, then recreates if enabled.
+   *
+   * Respects newApiModelSync.enabled/interval; no-op if alarms API unavailable.
    */
   async setupAlarm() {
     // Check if alarms API is supported
@@ -162,7 +169,10 @@ class NewApiModelSyncScheduler {
 
   /**
    * Execute model sync for all channels (or a filtered subset).
-   * Also generates model redirect mappings if enabled.
+   * Also generates model redirect mappings immediately after successful channel syncs.
+   *
+   * @param channelIds Optional subset of channel IDs to sync; defaults to all.
+   * @returns ExecutionResult with per-channel outcomes and statistics.
    */
   async executeSync(channelIds?: number[]): Promise<ExecutionResult> {
     console.log("[NewApiModelSync] Starting execution")
@@ -307,6 +317,9 @@ class NewApiModelSyncScheduler {
 
   /**
    * Execute sync for failed channels only
+   *
+   * @returns ExecutionResult for retry batch.
+   * @throws Error when no previous execution or no failed channels.
    */
   async executeFailedOnly(): Promise<ExecutionResult> {
     const lastExecution = await newApiModelSyncStorage.getLastExecution()
@@ -327,6 +340,8 @@ class NewApiModelSyncScheduler {
 
   /**
    * Get current execution progress
+   *
+   * @returns Latest progress snapshot or null when idle.
    */
   getProgress(): ExecutionProgress | null {
     return this.currentProgress
@@ -334,6 +349,8 @@ class NewApiModelSyncScheduler {
 
   /**
    * Update sync settings and reschedule alarm
+   *
+   * @param settings Partial override of sync prefs (interval, concurrency, filters, rate limit).
    */
   async updateSettings(settings: {
     enableSync?: boolean

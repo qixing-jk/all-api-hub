@@ -43,7 +43,11 @@ import {
 // ============= 核心 API 函数 =============
 
 /**
- * 获取用户基本信息（用于账号检测） - 使用浏览器 cookie 认证
+ * Fetch basic user info for account detection using cookie auth.
+ *
+ * @param baseUrl Site base URL.
+ * @param userId Optional user id; required when backend needs explicit user context.
+ * @returns Minimal user profile plus access token if present.
  */
 export const fetchUserInfo = async (baseUrl: string, userId?: number) => {
   const userData = await fetchApiData<UserInfo>({
@@ -62,7 +66,11 @@ export const fetchUserInfo = async (baseUrl: string, userId?: number) => {
 }
 
 /**
- * 创建访问令牌 - 使用浏览器 cookie 认证
+ * Create an access token using cookie auth for the given user.
+ *
+ * @param baseUrl Site base URL.
+ * @param userId Target user id (cookie-authenticated).
+ * @returns Newly created access token string.
  */
 export const createAccessToken = async (
   baseUrl: string,
@@ -77,7 +85,11 @@ export const createAccessToken = async (
 }
 
 /**
- * 获取站点状态信息（包含充值比例）
+ * Fetch site status (includes pricing/exchange data).
+ *
+ * @param baseUrl Site base URL.
+ * @param authType Auth mode; defaults to none for public endpoints.
+ * @returns Site status info or null when unavailable.
  */
 export const fetchSiteStatus = async (
   baseUrl: string,
@@ -96,7 +108,10 @@ export const fetchSiteStatus = async (
 }
 
 /**
- * 从站点状态信息中提取默认充值比例
+ * Extract default exchange rate (USD) from status info with fallback order.
+ *
+ * @param statusInfo Site status response.
+ * @returns Preferred numeric rate or null if absent.
  */
 export const extractDefaultExchangeRate = (
   statusInfo: SiteStatusInfo | null,
@@ -124,12 +139,13 @@ export const extractDefaultExchangeRate = (
 }
 
 /**
- * 获取支付信息
- * @note 此为 RIX_API 独有，放common为保证fallback
- * @param baseUrl
- * @param userId
- * @param accessToken
- * @param authType
+ * Fetch payment info (RIX_API specific; kept in common for fallback).
+ *
+ * @param baseUrl Site base URL.
+ * @param userId User id for the request.
+ * @param accessToken Token for auth.
+ * @param authType Auth mode (cookie/token/none).
+ * @returns Payment summary from backend.
  */
 export const fetchPaymentInfo = async ({
   baseUrl,
@@ -155,7 +171,11 @@ export const fetchPaymentInfo = async ({
 }
 
 /**
- * 自动获取或创建访问令牌
+ * Get existing access token or create one via cookie-auth fallback.
+ *
+ * @param baseUrl Site base URL.
+ * @param userId Target user id.
+ * @returns Username + access token (newly created if missing).
  */
 export const getOrCreateAccessToken = async (
   baseUrl: string,
@@ -180,7 +200,13 @@ export const getOrCreateAccessToken = async (
 }
 
 /**
- * 获取账号余额信息
+ * Fetch account quota/balance.
+ *
+ * @param baseUrl Site base URL.
+ * @param userId Target user id.
+ * @param accessToken Access token for the user.
+ * @param authType Optional auth mode override.
+ * @returns Remaining quota (0 if missing).
  */
 export const fetchAccountQuota = async (
   baseUrl: string,
@@ -200,7 +226,13 @@ export const fetchAccountQuota = async (
 }
 
 /**
- * 获取签到状态
+ * Fetch check-in capability for the user.
+ *
+ * @param baseUrl Site base URL.
+ * @param userId Target user id.
+ * @param accessToken Access token for the user.
+ * @param authType Optional auth mode override.
+ * @returns True/false when available; undefined if unsupported or errors.
  */
 export const fetchCheckInStatus = async (
   baseUrl: string,
@@ -235,8 +267,10 @@ export const fetchCheckInStatus = async (
 }
 
 /**
- * 检查是否支持签到功能
- * @param baseUrl
+ * Check if site supports check-in based on status info.
+ *
+ * @param baseUrl Site base URL.
+ * @returns Whether check-in is enabled (undefined when unknown).
  */
 export const fetchSupportCheckIn = async (
   baseUrl: string,
@@ -246,13 +280,14 @@ export const fetchSupportCheckIn = async (
 }
 
 /**
- * 通用的分页日志获取与聚合函数
- * @param authParams - 认证参数
- * @param logTypes - 需要获取的日志类型数组
- * @param dataAggregator - 数据聚合函数
- * @param initialValue - 聚合结果的初始值
- * @param errorHandler - 错误处理函数
- * @returns 聚合后的结果
+ * Fetch paginated logs and aggregate results.
+ *
+ * @param authParams Auth context (baseUrl, userId, token, authType).
+ * @param logTypes Log categories to fetch.
+ * @param dataAggregator Reducer to merge items into accumulator.
+ * @param initialValue Initial accumulator value.
+ * @param errorHandler Optional handler per log type error.
+ * @returns Aggregated value after pagination.
  */
 const fetchPaginatedLogs = async <T>(
   authParams: AuthTypeFetchParams,
@@ -323,7 +358,10 @@ const fetchPaginatedLogs = async <T>(
 }
 
 /**
- * 获取今日使用情况
+ * Fetch today's usage (quota + token counts + request count).
+ *
+ * @param authParams Auth context (baseUrl, userId, token, authType).
+ * @returns Usage totals for the current day.
  */
 export const fetchTodayUsage = async (
   authParams: AuthTypeFetchParams,
@@ -356,7 +394,10 @@ export const fetchTodayUsage = async (
 }
 
 /**
- * 获取今日收入情况
+ * Fetch today's income (recharge/system logs).
+ *
+ * @param authParams Auth context (baseUrl, userId, token, authType).
+ * @returns Total income amount for today.
  */
 export const fetchTodayIncome = async (
   authParams: AuthTypeFetchParams,
@@ -403,7 +444,14 @@ export const fetchTodayIncome = async (
 }
 
 /**
- * 获取完整的账号数据
+ * Fetch full account snapshot (quota, usage, income, check-in).
+ *
+ * @param baseUrl Site base URL.
+ * @param userId Target user id.
+ * @param token Access token for the user.
+ * @param checkIn Check-in config to honor auto-detection.
+ * @param authType Optional auth mode override.
+ * @returns Aggregated account data with check-in state.
  */
 export const fetchAccountData = async (
   baseUrl: string,
@@ -440,7 +488,14 @@ export const fetchAccountData = async (
 }
 
 /**
- * 刷新单个账号数据
+ * Refresh a single account's data and return health status.
+ *
+ * @param baseUrl Site base URL.
+ * @param userId Target user id.
+ * @param accessToken Access token.
+ * @param checkIn Check-in config.
+ * @param authType Optional auth mode override.
+ * @returns Success flag, data (when success), and health status.
  */
 export const refreshAccountData = async (
   baseUrl: string,
@@ -475,7 +530,13 @@ export const refreshAccountData = async (
 }
 
 /**
- * 验证账号连接性
+ * Validate account connectivity by fetching quota.
+ *
+ * @param baseUrl Site base URL.
+ * @param userId Target user id.
+ * @param accessToken Access token.
+ * @param authType Optional auth mode override.
+ * @returns True if quota fetch succeeds, else false.
  */
 export const validateAccountConnection = async (
   baseUrl: string,
@@ -493,7 +554,12 @@ export const validateAccountConnection = async (
 }
 
 /**
- * 获取账号令牌列表
+ * Fetch account token list (array or paginated response).
+ *
+ * @param param0 Auth + pagination params.
+ * @param page Page index (default 0).
+ * @param size Page size (default 100).
+ * @returns List of API tokens.
  */
 export const fetchAccountTokens = async (
   { baseUrl, userId, token: accessToken, authType }: AuthTypeFetchParams,
@@ -538,7 +604,10 @@ export const fetchAccountTokens = async (
 }
 
 /**
- * 获取可用模型列表
+ * Fetch available models for the current account.
+ *
+ * @param params Auth params.
+ * @returns Model id list.
  */
 export const fetchAccountAvailableModels = async ({
   baseUrl,
@@ -561,9 +630,10 @@ export const fetchAccountAvailableModels = async ({
 }
 
 /**
- * 获取站点Key的模型列表（OpenAI类型接口）
- * @param baseUrl
- * @param accessToken
+ * Fetch upstream models for an OpenAI-compatible API key.
+ *
+ * @param baseUrl Site base URL.
+ * @param apiKey API key used for upstream call.
  */
 export const fetchUpstreamModels = async ({
   baseUrl,
@@ -593,7 +663,10 @@ export const fetchUpstreamModelsNameList = async ({
 }
 
 /**
- * 获取用户分组信息
+ * Fetch user groups for the current account.
+ *
+ * @param params Auth params.
+ * @returns Record keyed by group name with metadata.
  */
 export const fetchUserGroups = async ({
   baseUrl,
@@ -616,14 +689,11 @@ export const fetchUserGroups = async ({
 }
 
 /**
- * 获取站点用户分组信息
- * @param {AuthTypeFetchParams} params
- * @param {string} params.baseUrl
- * @param {number} params.userId
- * @param {string} params.token
- * @param {AuthTypeEnum} [params.authType=AuthTypeEnum.None]
- * @returns {Promise<Array<string>>}
- * @throws {ApiError}
+ * Fetch site-wide user group identifiers.
+ *
+ * @param params Auth params.
+ * @returns Array of group ids.
+ * @throws ApiError on failure.
  */
 export const fetchSiteUserGroups = async ({
   baseUrl,
