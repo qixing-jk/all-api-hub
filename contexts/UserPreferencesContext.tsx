@@ -100,7 +100,10 @@ const UserPreferencesContext = createContext<
   UserPreferencesContextType | undefined
 >(undefined)
 
-// 3. 创建 Provider 组件
+/**
+ * Top-level provider that loads persisted user preferences, exposes update
+ * helpers, and keeps background scripts informed about configuration changes.
+ */
 export const UserPreferencesProvider = ({
   children,
 }: {
@@ -109,6 +112,10 @@ export const UserPreferencesProvider = ({
   const [preferences, setPreferences] = useState<UserPreferences | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
+  /**
+   * Fetch the latest preference snapshot from storage and hydrate local state.
+   * Guards against repeated calls by toggling an `isLoading` flag.
+   */
   const loadPreferences = useCallback(async () => {
     try {
       setIsLoading(true)
@@ -125,6 +132,10 @@ export const UserPreferencesProvider = ({
     loadPreferences()
   }, [loadPreferences])
 
+  /**
+   * Persist the currently visible balance tab and mirror it in React state.
+   * @param activeTab - Consumption vs balance tab identifier.
+   */
   const updateActiveTab = useCallback(async (activeTab: BalanceType) => {
     const success = await userPreferences.updateActiveTab(activeTab)
     if (success) {
@@ -133,6 +144,10 @@ export const UserPreferencesProvider = ({
     return success
   }, [])
 
+  /**
+   * Update the CLI proxy base URL and merge it into the preference tree so
+   * dependent features read the latest endpoint.
+   */
   const updateCliProxyBaseUrl = useCallback(async (baseUrl: string) => {
     const updates = {
       cliProxy: { baseUrl },
@@ -144,6 +159,10 @@ export const UserPreferencesProvider = ({
     return success
   }, [])
 
+  /**
+   * Persist the CLI proxy management key token used for authenticated calls.
+   * @param managementKey - User-provided secret for the CLI proxy service.
+   */
   const updateCliProxyManagementKey = useCallback(
     async (managementKey: string) => {
       const updates = {
@@ -761,6 +780,10 @@ export const UserPreferencesProvider = ({
 }
 
 // 4. 创建自定义 Hook
+/**
+ * Shorthand hook for consuming {@link UserPreferencesContext}. Throws when the
+ * provider is missing to surface incorrect tree wiring during development.
+ */
 export const useUserPreferencesContext = () => {
   const context = useContext(UserPreferencesContext)
   if (!context) {

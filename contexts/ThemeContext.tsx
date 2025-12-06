@@ -17,6 +17,10 @@ interface ThemeContextValue {
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined)
 
+/**
+ * High-level provider that keeps the resolved theme in sync with user
+ * preferences and system color scheme, exposing the mode setter to children.
+ */
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const { themeMode, updateThemeMode } = useUserPreferencesContext()
   const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>("light")
@@ -65,6 +69,10 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
 }
 
+/**
+ * Hook wrapper around {@link ThemeContext} that throws when used outside the
+ * provider, ensuring components always receive live theme metadata.
+ */
 export const useTheme = () => {
   const context = useContext(ThemeContext)
   if (context === undefined) {
