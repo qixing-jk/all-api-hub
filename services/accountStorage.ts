@@ -661,12 +661,18 @@ class AccountStorageService {
     }
   }
 
+  /**
+   * Convert persistence-layer SiteAccount data into the shape consumed by the UI.
+   *
+   * The UI expects currency values in both USD/CNY, token counts, and display
+   * helpers like tags and health summaries. This adapter ensures we never leak
+   * the raw storage format into presentation logic.
+   *
+   * @param input Single account or array of accounts.
+   * @returns Display-ready representation preserving existing metadata.
+   */
   convertToDisplayData(input: SiteAccount): DisplaySiteData
   convertToDisplayData(input: SiteAccount[]): DisplaySiteData[]
-
-  /**
-   * 转换为展示用的数据格式 (兼容当前 UI)
-   */
   convertToDisplayData(
     input: SiteAccount | SiteAccount[],
   ): DisplaySiteData | DisplaySiteData[] {
@@ -746,7 +752,9 @@ class AccountStorageService {
   }
 
   /**
-   * 清空所有数据
+   * Clear every stored account + metadata blob.
+   *
+   * Primarily used by troubleshooting tools when the user wants a clean slate.
    */
   async clearAllData(): Promise<boolean> {
     try {
@@ -759,14 +767,17 @@ class AccountStorageService {
   }
 
   /**
-   * 导出数据
+   * Export the current storage configuration, preserving ordering + pinned info.
    */
   async exportData(): Promise<AccountStorageConfig> {
     return this.getStorageConfig()
   }
 
   /**
-   * 导入数据
+   * Import a full config dump (accounts + optional pinned ids).
+   *
+   * Accounts are migrated before persisting to ensure compatibility. In case of
+   * failure we restore the earlier snapshot to avoid partial imports.
    */
   async importData(data: {
     accounts?: SiteAccount[]
@@ -815,10 +826,8 @@ class AccountStorageService {
     }
   }
 
-  // 私有方法
-
   /**
-   * 获取存储配置
+   * Read the persisted storage config (with DEFAULT fallback on first run).
    */
   private async getStorageConfig(): Promise<AccountStorageConfig> {
     try {
@@ -833,7 +842,10 @@ class AccountStorageService {
   }
 
   /**
-   * 保存账号数据
+   * Save the full account list while also pruning stale pinned/ordered ids.
+   *
+   * This keeps derived collections in sync so the UI never references missing
+   * accounts after deletions or imports.
    */
   private async saveAccounts(accounts: SiteAccount[]): Promise<void> {
     console.log("[AccountStorage] 开始保存账号数据，数量:", accounts.length)

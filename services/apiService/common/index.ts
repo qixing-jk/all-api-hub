@@ -554,12 +554,16 @@ export const validateAccountConnection = async (
 }
 
 /**
- * Fetch account token list (array or paginated response).
+ * Fetch the API token list for a user and normalize multiple response shapes.
  *
- * @param param0 Auth + pagination params.
- * @param page Page index (default 0).
- * @param size Page size (default 100).
- * @returns List of API tokens.
+ * Some upstreams return a simple array, while others wrap the data in a
+ * paginated envelope. This helper hides those differences and always returns
+ * a flat array so the UI can treat both responses identically.
+ *
+ * @param param0 Auth payload (baseUrl/userId/token/authType).
+ * @param page Pagination index (defaults to first page).
+ * @param size Page size in records (defaults to 100, matching upstream default).
+ * @returns Normalized list of API tokens.
  */
 export const fetchAccountTokens = async (
   { baseUrl, userId, token: accessToken, authType }: AuthTypeFetchParams,
@@ -604,10 +608,14 @@ export const fetchAccountTokens = async (
 }
 
 /**
- * Fetch available models for the current account.
+ * Fetch the list of downstream model identifiers that an account can access.
  *
- * @param params Auth params.
- * @returns Model id list.
+ * This hits `/api/user/models`, which typically returns a flat array of model
+ * IDs that should be displayed to the user when configuring per-account model
+ * visibility.
+ *
+ * @param params Auth context (baseUrl/userId/token/authType).
+ * @returns Array of model identifiers allowed for the account.
  */
 export const fetchAccountAvailableModels = async ({
   baseUrl,
@@ -630,10 +638,11 @@ export const fetchAccountAvailableModels = async ({
 }
 
 /**
- * Fetch upstream models for an OpenAI-compatible API key.
+ * Fetch upstream model metadata using an OpenAI-compatible API key.
  *
  * @param baseUrl Site base URL.
  * @param apiKey API key used for upstream call.
+ * @returns Full upstream model payload, including metadata per model.
  */
 export const fetchUpstreamModels = async ({
   baseUrl,
@@ -655,6 +664,11 @@ export const fetchUpstreamModelsNameList = async ({
   baseUrl,
   apiKey,
 }: OpenAIAuthParams) => {
+  /**
+   * Narrow helper that strips the upstream response down to only model IDs.
+   * Using a separate function keeps call sites simple when only the name list
+   * (instead of full metadata) is required.
+   */
   const upstreamModels = await fetchUpstreamModels({
     baseUrl: baseUrl,
     apiKey: apiKey,
@@ -663,10 +677,13 @@ export const fetchUpstreamModelsNameList = async ({
 }
 
 /**
- * Fetch user groups for the current account.
+ * Fetch user-group assignments for the authenticated account.
  *
- * @param params Auth params.
- * @returns Record keyed by group name with metadata.
+ * The upstream returns a record keyed by group name with metadata describing
+ * entitlements. Consumers use this to render per-account permissions.
+ *
+ * @param params Auth context (baseUrl/userId/token/authType).
+ * @returns Mapping of group names to metadata.
  */
 export const fetchUserGroups = async ({
   baseUrl,
@@ -689,11 +706,15 @@ export const fetchUserGroups = async ({
 }
 
 /**
- * Fetch site-wide user group identifiers.
+ * Fetch the complete list of user groups defined on the site.
  *
- * @param params Auth params.
- * @returns Array of group ids.
- * @throws ApiError on failure.
+ * Unlike {@link fetchUserGroups}, this endpoint returns every group identifier
+ * (not just those tied to the current user) and is primarily used for admin
+ * UI when editing assignments.
+ *
+ * @param params Auth payload (baseUrl/userId/token/authType).
+ * @returns Array of group IDs available on the site.
+ * @throws ApiError when the upstream response fails.
  */
 export const fetchSiteUserGroups = async ({
   baseUrl,
@@ -716,7 +737,15 @@ export const fetchSiteUserGroups = async ({
 }
 
 /**
- * 创建新的API令牌
+ * Create a new API token for the specified account.
+ *
+ * @param baseUrl Site base URL.
+ * @param userId User whose token should be created (requires cookie/token auth).
+ * @param accessToken Auth token for the account owner.
+ * @param tokenData Form payload describing the token (scopes, name, etc.).
+ * @param authType Optional override for auth strategy.
+ * @returns True when the upstream confirms `success === true`.
+ * @throws ApiError if the server reports a failure.
  */
 export const createApiToken = async (
   baseUrl: string,
@@ -755,7 +784,14 @@ export const createApiToken = async (
 }
 
 /**
- * 获取单个API令牌详情
+ * Fetch a single API token by its identifier.
+ *
+ * @param baseUrl Site base URL.
+ * @param userId Token owner ID.
+ * @param accessToken Access token for authentication.
+ * @param tokenId Token identifier to retrieve.
+ * @param authType Optional auth type override.
+ * @returns Detailed token representation from upstream.
  */
 export const fetchTokenById = async (
   baseUrl: string,
@@ -779,7 +815,16 @@ export const fetchTokenById = async (
 }
 
 /**
- * 更新API令牌
+ * Update an existing API token in place.
+ *
+ * @param baseUrl Site base URL.
+ * @param userId Owner of the token.
+ * @param accessToken Auth token for the owner.
+ * @param tokenId Identifier of the token being updated.
+ * @param tokenData Updated fields (name/scopes/etc.).
+ * @param authType Optional auth override.
+ * @returns True when upstream returns `success === true`.
+ * @throws ApiError if the update fails upstream.
  */
 export const updateApiToken = async (
   baseUrl: string,
@@ -818,7 +863,15 @@ export const updateApiToken = async (
 }
 
 /**
- * 删除API令牌
+ * Delete an API token permanently.
+ *
+ * @param baseUrl Site base URL.
+ * @param userId Token owner.
+ * @param accessToken Auth token for the owner.
+ * @param tokenId Identifier of the token to delete.
+ * @param authType Optional auth override.
+ * @returns True when the deletion succeeds upstream.
+ * @throws ApiError when the backend reports failure.
  */
 export const deleteApiToken = async (
   baseUrl: string,
@@ -855,7 +908,14 @@ export const deleteApiToken = async (
 }
 
 /**
- * 获取模型定价信息
+ * Fetch model pricing metadata for the authenticated account.
+ *
+ * The `/api/pricing` endpoint returns a rich `PricingResponse` payload; unlike
+ * other helpers we use `fetchApi` directly because the upstream is already in
+ * the desired shape and may include additional metadata beyond `data`.
+ *
+ * @param params Auth context (baseUrl/userId/token/authType).
+ * @returns Pricing response as provided by upstream.
  */
 export const fetchModelPricing = async ({
   baseUrl,
@@ -922,7 +982,15 @@ export const redeemCode = async (
 // ============= 健康状态判断 =============
 
 /**
- * 根据错误判断健康状态
+ * Map runtime errors to the user-facing health status shown in the dashboard.
+ *
+ * - API errors with HTTP response codes become `Warning` with rich messaging.
+ * - API errors without HTTP codes (schema issues, etc.) render as `Unknown`.
+ * - Network-level `TypeError`s become `Error` to highlight connectivity issues.
+ * - Any other error falls back to `Unknown` to avoid misleading the user.
+ *
+ * @param error Arbitrary runtime error thrown during refresh.
+ * @returns Health status object suitable for persistence + UI display.
  */
 export const determineHealthStatus = (error: any): HealthCheckResult => {
   if (error instanceof ApiError) {
