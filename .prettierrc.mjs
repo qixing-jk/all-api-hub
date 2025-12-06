@@ -1,3 +1,4 @@
+// eslint-disable-next-line jsdoc/check-tag-names
 /** @type {import('prettier').Config & import('prettier-plugin-tailwindcss').PluginOptions} */
 export default {
   printWidth: 80,
