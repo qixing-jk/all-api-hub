@@ -9,6 +9,10 @@ import type {
   SiteAccount,
 } from "~/types"
 
+/**
+ * Snapshot of account-derived state and handlers returned by {@link useAccountData}.
+ * Separates data buckets so the consuming UI can selectively render sections.
+ */
 interface UseAccountDataResult {
   // 数据状态
   accounts: SiteAccount[]
@@ -29,6 +33,10 @@ interface UseAccountDataResult {
   handleRefresh: () => Promise<{ success: number; failed: number }>
 }
 
+/**
+ * Build an aggregated account data view sourced from {@link accountStorage}.
+ * Exposes helper callbacks so UI layers can refresh or reload on demand.
+ */
 export const useAccountData = (): UseAccountDataResult => {
   // 数据状态
   const [accounts, setAccounts] = useState<SiteAccount[]>([])
@@ -56,7 +64,10 @@ export const useAccountData = (): UseAccountDataResult => {
     [id: string]: CurrencyAmount
   }>({})
 
-  // 加载账号数据
+  /**
+   * Load the persisted account payloads and recompute UI-ready aggregates.
+   * Ensures animations have previous values to interpolate between renders.
+   */
   const loadAccountData = useCallback(async () => {
     try {
       const allAccounts = await accountStorage.getAllAccounts()
@@ -109,7 +120,10 @@ export const useAccountData = (): UseAccountDataResult => {
     }
   }, [isInitialLoad, prevTotalConsumption, prevBalances])
 
-  // 刷新数据
+  /**
+   * Trigger remote refresh followed by a local reload, bubbling the result
+   * back to the caller so toast logic can reflect success/failure counts.
+   */
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true)
     try {

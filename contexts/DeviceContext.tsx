@@ -7,8 +7,16 @@ interface DeviceContextType {
   isDesktop: boolean
 }
 
+/**
+ * React context storing coarse device capability flags derived from viewport
+ * breakpoints and pointer characteristics.
+ */
 const DeviceContext = createContext<DeviceContextType | undefined>(undefined)
 
+/**
+ * Provide responsive device flags to descendant components so layout logic
+ * can branch without duplicating media-query bookkeeping.
+ */
 export function DeviceProvider({ children }: { children: React.ReactNode }) {
   const [isTouchDevice, setIsTouchDevice] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
@@ -68,6 +76,10 @@ export function DeviceProvider({ children }: { children: React.ReactNode }) {
   )
 }
 
+/**
+ * Consume the {@link DeviceContext} flags, ensuring callers are wrapped inside
+ * {@link DeviceProvider}. Throws early to make misuse obvious in development.
+ */
 export function useDevice() {
   const context = useContext(DeviceContext)
   if (context === undefined) {
