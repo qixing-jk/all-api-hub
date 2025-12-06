@@ -2,7 +2,7 @@ import AccountList from "~/features/AccountManagement/components/AccountList"
 import { AccountManagementProvider } from "~/features/AccountManagement/hooks/AccountManagementProvider"
 
 /**
- *
+ * Root feature wiring provider context with AccountList presentation.
  */
 function AccountManagement() {
   return (

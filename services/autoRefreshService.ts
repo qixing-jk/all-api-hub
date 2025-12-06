@@ -130,7 +130,8 @@ class AutoRefreshService {
 
   /**
    * Persist new refresh settings and reconfigure the timer accordingly.
-   * @param updates Partial accountAutoRefresh config.
+   * @param updates Settings payload containing preference updates.
+   * @param updates.accountAutoRefresh Partial accountAutoRefresh config to merge.
    */
   async updateSettings(updates: {
     accountAutoRefresh: Partial<AccountAutoRefresh>

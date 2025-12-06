@@ -14,7 +14,8 @@ interface ReactDevToolsOptions {
 let devtoolsProcess: ChildProcess | null = null
 
 /**
- *
+ * Vite plugin that auto-starts React DevTools standalone and injects the backend script during dev.
+ * Handles caching of backend bundle to avoid repeated fetches between sessions.
  */
 export function reactDevToolsAuto(options: ReactDevToolsOptions = {}): Plugin {
   const env = process.env
@@ -36,7 +37,10 @@ export function reactDevToolsAuto(options: ReactDevToolsOptions = {}): Plugin {
   const backendPath = path.join(publicDir, "react-devtools-backend.js")
 
   /**
-   *
+   * Read a boolean flag from environment variables with fallback default.
+   * @param envValue 环境变量中的原始字符串
+   * @param defaultValue 若无法解析时使用的默认值
+   * @returns boolean 形式的环境值
    */
   function boolEnv(envValue: string | undefined, defaultValue: boolean) {
     if (envValue === "true") return true
@@ -45,7 +49,10 @@ export function reactDevToolsAuto(options: ReactDevToolsOptions = {}): Plugin {
   }
 
   /**
-   *
+   * Read a numeric flag from environment variables with fallback default.
+   * @param envValue 环境变量中的原始字符串
+   * @param defaultValue 若无法解析时使用的默认值
+   * @returns number 形式的环境值
    */
   function numEnv(envValue: string | undefined, defaultValue: number) {
     return envValue ? Number(envValue) : defaultValue
@@ -53,7 +60,8 @@ export function reactDevToolsAuto(options: ReactDevToolsOptions = {}): Plugin {
 
   // ======== 辅助函数 ========
   /**
-   *
+   * Poll local React DevTools server until reachable or timeout.
+   * @returns 是否在限定时间内成功连接
    */
   async function waitForDevTools(): Promise<boolean> {
     const start = Date.now()
@@ -70,7 +78,9 @@ export function reactDevToolsAuto(options: ReactDevToolsOptions = {}): Plugin {
   }
 
   /**
-   *
+   * 判断缓存文件是否已经过期。
+   * @param filePath 缓存文件路径
+   * @returns true 表示需要刷新缓存
    */
   async function isCacheExpired(filePath: string): Promise<boolean> {
     try {
@@ -82,7 +92,7 @@ export function reactDevToolsAuto(options: ReactDevToolsOptions = {}): Plugin {
   }
 
   /**
-   *
+   * 下载最新的 React DevTools backend 并写入 public 目录。
    */
   async function fetchBackend() {
     try {

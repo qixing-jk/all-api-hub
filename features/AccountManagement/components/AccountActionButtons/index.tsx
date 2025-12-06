@@ -38,7 +38,8 @@ export interface ActionButtonsProps {
 }
 
 /**
- *
+ * Primary/secondary action controls for each account card.
+ * Provides copy URL/key, edit, refresh, pin, delete, and page navigation shortcuts.
  */
 export default function AccountActionButtons({
   site,

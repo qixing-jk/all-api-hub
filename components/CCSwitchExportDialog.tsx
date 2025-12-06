@@ -32,14 +32,14 @@ const DEFAULT_APP: CCSwitchApp = "claude"
 /**
  * Presents a modal for exporting an account token into CCSwitch-compatible apps.
  * Prefills provider metadata and lets the user tweak app, endpoint, model, and helper notes.
- * @param props Dialog state, selected account, and token details.
+ * @param props Component props bundle.
+ * @param props.isOpen Whether the dialog is visible.
+ * @param props.onClose Callback invoked when the dialog should close.
+ * @param props.account Account metadata used to prefill the form.
+ * @param props.token API token exported through CCSwitch.
  */
-export function CCSwitchExportDialog({
-  isOpen,
-  onClose,
-  account,
-  token,
-}: CCSwitchExportDialogProps) {
+export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
+  const { isOpen, onClose, account, token } = props
   const { t } = useTranslation(["ui", "common"])
   const [app, setApp] = useState<CCSwitchApp>(DEFAULT_APP)
   const [model, setModel] = useState("")

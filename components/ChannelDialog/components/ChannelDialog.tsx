@@ -39,7 +39,15 @@ export interface ChannelDialogProps {
 /**
  * Full channel create/edit dialog for the New API feature.
  * Handles form state, validation, and submission via useChannelForm.
- * @param props Dialog visibility, initial data, and callbacks.
+ * @param props Component props bundle.
+ * @param props.isOpen Whether the dialog is visible.
+ * @param props.onClose Callback invoked when the dialog should close.
+ * @param props.mode Dialog mode (add/edit) controlling UX copy.
+ * @param props.channel Existing channel for edit mode.
+ * @param props.onSuccess Callback fired after successful mutation.
+ * @param props.initialValues Pre-filled form values when reusing data.
+ * @param props.initialModels Models to seed multi-select state.
+ * @param props.initialGroups Groups to seed multi-select state.
  */
 export function ChannelDialog({
   isOpen,

@@ -35,6 +35,14 @@ export interface UseChannelFormProps {
  * Manages Channel dialog form state, remote group/model loading, and submissions.
  * Abstracts validation, payload building, and success handling for add/edit flows.
  * @param props Dialog mode, current channel, dialog lifecycle callbacks, and defaults.
+ * @param props.mode Dialog mode (add or edit).
+ * @param props.channel Channel instance being edited, if any.
+ * @param props.isOpen Whether the dialog is currently visible.
+ * @param props.onClose Close callback triggered after saving or cancel.
+ * @param props.onSuccess Success callback invoked with the saved channel.
+ * @param props.initialValues Prefilled form values supplied externally.
+ * @param props.initialModels Prefilled model list for the multiselect.
+ * @param props.initialGroups Prefilled group list for the multiselect.
  * @returns Binding helpers plus UI/loading flags for the form consumer.
  */
 export function useChannelForm({

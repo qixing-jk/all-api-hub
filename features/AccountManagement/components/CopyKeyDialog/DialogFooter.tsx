@@ -9,7 +9,7 @@ interface DialogFooterProps {
 }
 
 /**
- *
+ * Footer section for copy key dialog, showing token count summary and close action.
  */
 export function DialogFooter({ tokenCount, onClose }: DialogFooterProps) {
   const { t } = useTranslation(["ui", "common"])

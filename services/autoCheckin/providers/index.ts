@@ -30,7 +30,9 @@ export function resolveAutoCheckinProvider(
 }
 
 /**
- *
+ * Determine whether the specified site type supports auto check-in.
+ * @param siteType Identifier describing the current site implementation.
+ * @returns True when a provider exists for the supplied site type.
  */
 export function isAutoCheckinSupportedForSite(siteType: string): boolean {
   return !!providers[siteType]

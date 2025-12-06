@@ -17,7 +17,7 @@ interface TokenListProps {
 }
 
 /**
- *
+ * List view wrapper for TokenItem elements, handling empty states and expansion toggles.
  */
 export function TokenList({
   tokens,

@@ -27,7 +27,7 @@ interface TokenDetailsProps {
 }
 
 /**
- *
+ * Displays detailed token metadata, quota information, and export actions inside copy key dialog.
  */
 export function TokenDetails({
   token,

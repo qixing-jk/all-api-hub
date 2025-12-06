@@ -36,7 +36,19 @@ interface SiteInfoInputProps {
 }
 
 /**
- *
+ * Site information section displaying URL input and auth selector with contextual helpers.
+ * @param props Component props defining field values, detection state, and callbacks.
+ * @param props.url Current site URL value.
+ * @param props.onUrlChange Handler updating the site URL.
+ * @param props.isDetected Whether the site info was auto-detected (locks inputs when true).
+ * @param props.onClearUrl Clears the URL field.
+ * @param props.authType Selected authentication method.
+ * @param props.onAuthTypeChange Handler updating the authentication method.
+ * @param props.currentTabUrl URL detected from the active browser tab.
+ * @param props.isCurrentSiteAdded Indicates if the current site already exists.
+ * @param props.detectedAccount Account info detected from the site.
+ * @param props.onUseCurrentTab Handler to reuse the current tab URL.
+ * @param props.onEditAccount Handler to edit the detected account entry.
  */
 export default function SiteInfoInput({
   url,

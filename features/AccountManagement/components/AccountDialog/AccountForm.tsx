@@ -53,7 +53,31 @@ interface AccountFormProps {
 }
 
 /**
- *
+ * Account form body used inside the account dialog for creating/editing accounts.
+ * @param props Component props configuring every field and handler.
+ * @param props.authType Selected authentication type controlling visible fields.
+ * @param props.siteName Current site name value.
+ * @param props.username Account username.
+ * @param props.userId Numeric user id string.
+ * @param props.accessToken Access token string for auth.
+ * @param props.exchangeRate Top-up exchange rate value.
+ * @param props.showAccessToken Whether the token input is visible.
+ * @param props.notes User-provided notes.
+ * @param props.tags Selected tag values.
+ * @param props.onSiteNameChange Handler to update site name.
+ * @param props.onUsernameChange Handler to update username.
+ * @param props.onUserIdChange Handler to update user id.
+ * @param props.onAccessTokenChange Handler to update access token.
+ * @param props.onExchangeRateChange Handler to update exchange rate.
+ * @param props.onToggleShowAccessToken Toggles token visibility.
+ * @param props.onNotesChange Handler to update notes.
+ * @param props.onTagsChange Handler to update tags selection.
+ * @param props.availableTags Tags available from other accounts.
+ * @param props.tagCounts Optional counts associated with tags.
+ * @param props.siteType Selected site type identifier.
+ * @param props.onSiteTypeChange Handler when site type changes.
+ * @param props.checkIn Check-in configuration payload.
+ * @param props.onCheckInChange Handler when check-in config changes.
  */
 export default function AccountForm({
   authType,

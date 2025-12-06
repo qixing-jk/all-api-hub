@@ -6,7 +6,9 @@ import { fetchAccountTokens } from "~/services/apiService"
 import type { ApiToken, DisplaySiteData } from "~/types"
 
 /**
- *
+ * 将未知错误对象转换为字符串消息，方便展示。
+ * @param error 任意异常或消息对象
+ * @returns 可读的错误文本
  */
 function getErrorMessage(error: any): string {
   if (error instanceof Error) {
@@ -19,7 +21,10 @@ function getErrorMessage(error: any): string {
 }
 
 /**
- *
+ * CopyKeyDialog 核心逻辑 hook，负责加载 token、处理复制与展开状态。
+ * @param isOpen 对话框是否打开
+ * @param account 当前账号
+ * @returns token 数据、加载状态、错误以及相关操作方法
  */
 export function useCopyKeyDialog(isOpen: boolean, account: DisplaySiteData) {
   const { t } = useTranslation(["ui", "messages"])

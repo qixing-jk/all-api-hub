@@ -10,7 +10,11 @@ interface InfoPanelProps {
 }
 
 /**
- *
+ * Side panel describing automatic detection status and next steps per mode.
+ * @param props Component props indicating mode and detection state.
+ * @param props.mode Dialog mode used to determine copy and icon visuals.
+ * @param props.isDetected Whether auto-detection succeeded.
+ * @param props.showManualForm Whether manual form is currently shown.
  */
 export default function InfoPanel({
   mode,

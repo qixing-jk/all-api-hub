@@ -107,7 +107,11 @@ type IncomingChannelFilter = ChannelModelFilterInput & {
 }
 
 /**
- *
+ * Normalize inbound filter payloads and ensure required fields are present.
+ * Validates names/patterns and fills defaults for IDs and timestamps.
+ * @param filters Incoming filter definitions from the UI or message bus.
+ * @throws {Error} When required fields are missing or regex is invalid.
+ * @returns Sanitized filter rules ready for persistence.
  */
 function normalizeFilters(
   filters: IncomingChannelFilter[],
@@ -158,7 +162,10 @@ function normalizeFilters(
 }
 
 /**
- *
+ * Handle runtime messages related to channel configuration CRUD operations.
+ * Supports fetching configs and upserting filter rules.
+ * @param request Message payload containing action and arguments.
+ * @param sendResponse Response callback for the runtime message.
  */
 export async function handleChannelConfigMessage(
   request: any,
@@ -208,7 +215,10 @@ export async function handleChannelConfigMessage(
 }
 
 /**
- *
+ * Sanitize the raw config map received from import or storage.
+ * Ensures keys are valid numeric channel IDs and values are cleaned configs.
+ * @param rawConfigs Arbitrary raw object to be parsed as channel config map.
+ * @returns Clean ChannelConfigMap keyed by channelId.
  */
 function sanitizeChannelConfigMap(rawConfigs: unknown): ChannelConfigMap {
   if (!rawConfigs || typeof rawConfigs !== "object") {
@@ -228,7 +238,11 @@ function sanitizeChannelConfigMap(rawConfigs: unknown): ChannelConfigMap {
 }
 
 /**
- *
+ * Sanitize a single channel config entry into the expected structure.
+ * Applies default timestamps and cleans nested filter settings.
+ * @param value Raw config object.
+ * @param channelId Channel identifier for the config.
+ * @returns Sanitized ChannelConfig.
  */
 function sanitizeChannelConfig(
   value: unknown,
@@ -263,7 +277,12 @@ function sanitizeChannelConfig(
 }
 
 /**
- *
+ * Sanitize filter settings including legacy filter arrays.
+ * Converts raw rule entries into validated ChannelModelFilterRule items.
+ * @param rawSettings Current stored settings with potential partial data.
+ * @param legacyFilters Legacy filters array to migrate if rules are absent.
+ * @param fallbackTimestamp Timestamp used when rule timestamps are missing.
+ * @returns Clean ChannelModelFilterSettings with validated rules.
  */
 function sanitizeModelFilterSettings(
   rawSettings:
@@ -303,7 +322,11 @@ function sanitizeModelFilterSettings(
 }
 
 /**
- *
+ * Sanitize a single filter entry ensuring required fields and defaults.
+ * Invalid or incomplete entries return null to be filtered out by callers.
+ * @param filter Raw filter object.
+ * @param fallbackTimestamp Timestamp used when per-rule timestamps are absent.
+ * @returns Valid ChannelModelFilterRule or null when validation fails.
  */
 function sanitizeFilter(
   filter: unknown,

@@ -40,7 +40,8 @@ interface SiteInfoProps {
 }
 
 /**
- *
+ * Renders highlighted fragments (such as search matches) with mark elements while preserving non-highlighted text.
+ * Falls back to provided string when no highlight fragments exist.
  */
 function renderHighlightedFragments(
   fragments: HighlightFragment[] | undefined,
@@ -65,7 +66,7 @@ function renderHighlightedFragments(
 }
 
 /**
- *
+ * Site info row combining metadata, status chips, and context actions for a display account entry.
  */
 export default function SiteInfo({ site, highlights }: SiteInfoProps) {
   const { t } = useTranslation("account")

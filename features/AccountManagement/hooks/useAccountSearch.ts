@@ -28,7 +28,9 @@ interface TokenInfo {
 }
 
 /**
- *
+ * Normalizes a string for matching by lowercasing, trimming, and removing protocols/query params.
+ * @param value 原始文本
+ * @returns 规范化后的文本
  */
 function normalizeForMatching(value: string): string {
   if (!value) {
@@ -58,14 +60,19 @@ function normalizeForMatching(value: string): string {
 }
 
 /**
- *
+ * Escapes special regex characters so they can be used in a generated pattern.
+ * @param value 需要转义的文本
+ * @returns 转义后的文本
  */
 function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 }
 
 /**
- *
+ * Builds highlight fragments by splitting text with provided tokens, preserving order.
+ * @param text 原始文本
+ * @param tokens 匹配的 token 列表
+ * @returns 含有高亮标记的片段数组
  */
 function createHighlightFragments(
   text: string,
@@ -117,7 +124,10 @@ function createHighlightFragments(
 }
 
 /**
- *
+ * Creates highlight metadata for each matched field in the search results.
+ * @param results 原始搜索结果
+ * @param query 用户查询
+ * @returns 附带高亮信息的搜索结果
  */
 function generateHighlights(
   results: SearchResult[],
@@ -234,7 +244,10 @@ function generateHighlights(
 }
 
 /**
- *
+ * 搜索账号列表并提供高亮信息、去抖和清空逻辑。
+ * @param accounts 可用账号数据
+ * @param initialQuery 初始查询字符串
+ * @returns 查询状态、结果及工具函数
  */
 export function useAccountSearch(
   accounts: DisplaySiteData[],

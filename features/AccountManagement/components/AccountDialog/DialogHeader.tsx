@@ -9,7 +9,9 @@ interface DialogHeaderProps {
 }
 
 /**
- *
+ * Dialog header with contextual icon/title depending on add vs edit mode.
+ * @param props Component props describing the dialog mode.
+ * @param props.mode Current dialog mode that drives icon/title selection.
  */
 export default function DialogHeader({ mode }: DialogHeaderProps) {
   const { t } = useTranslation("accountDialog")

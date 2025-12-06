@@ -10,7 +10,11 @@ interface AccountSearchInputProps {
 }
 
 /**
- *
+ * Compact search field used to filter account list entries.
+ * @param props Component props containing search value and handlers.
+ * @param props.value Current search string.
+ * @param props.onChange Handler invoked when user types in the field.
+ * @param props.onClear Handler clearing the current search string.
  */
 export default function AccountSearchInput({
   value,

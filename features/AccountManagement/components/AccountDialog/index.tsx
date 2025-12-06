@@ -22,7 +22,14 @@ interface AccountDialogProps {
 }
 
 /**
- *
+ * Modal dialog for creating or editing account credentials with auto-detect support.
+ * @param props Component props to control dialog visibility and behavior.
+ * @param props.isOpen Whether the dialog is currently visible.
+ * @param props.onClose Handler invoked when closing without saving.
+ * @param props.mode Current dialog mode (add or edit).
+ * @param props.account Account data to prefill the form when editing.
+ * @param props.onSuccess Callback fired with saved data.
+ * @param props.onError Callback fired when submission fails.
  */
 export default function AccountDialog({
   isOpen,

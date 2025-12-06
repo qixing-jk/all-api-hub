@@ -8,7 +8,7 @@ interface ErrorDisplayProps {
 }
 
 /**
- *
+ * Renders error state within copy key dialog, showing failure message and retry action.
  */
 export function ErrorDisplay({ error, onRetry }: ErrorDisplayProps) {
   const { t } = useTranslation("ui")

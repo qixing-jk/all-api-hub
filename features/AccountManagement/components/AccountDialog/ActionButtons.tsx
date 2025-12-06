@@ -25,7 +25,8 @@ interface ActionButtonsProps {
 }
 
 /**
- *
+ * Action bar within the account dialog handling detect/manual modes and form submission.
+ * Renders auto-detect, manual-switch, auto-config, cancel, and submit buttons based on state.
  */
 export default function ActionButtons({
   mode,

@@ -18,7 +18,7 @@ interface DelAccountDialogProps {
 }
 
 /**
- *
+ * Confirmation dialog for deleting an account, combining warning copy and action buttons.
  */
 export default function DelAccountDialog({
   isOpen,

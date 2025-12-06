@@ -6,7 +6,12 @@ import type { AutoDetectErrorProps } from "~/utils/autoDetectUtils"
 import { openLoginTab } from "~/utils/autoDetectUtils"
 
 /**
- *
+ * Alert displayed when automatic credential detection fails so users can recover.
+ * @param props Component props describing the error context and handlers.
+ * @param props.error Error metadata powering the alert content.
+ * @param props.siteUrl Optional site URL used for fallback login redirection.
+ * @param props.onHelpClick Optional handler invoked when help action is triggered.
+ * @param props.onActionClick Optional handler invoked when custom action button is pressed.
  */
 export default function AutoDetectErrorAlert({
   error,

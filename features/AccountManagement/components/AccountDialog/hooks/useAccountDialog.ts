@@ -25,7 +25,14 @@ interface UseAccountDialogProps {
 }
 
 /**
- *
+ * Hook encapsulating the full lifecycle of the account dialog including detection, validation, and persistence logic.
+ * @param props Hook configuration supporting add/edit modes and callbacks.
+ * @param props.mode Current dialog mode (add or edit).
+ * @param props.account Account record to edit when in edit mode.
+ * @param props.isOpen Whether the dialog is currently open.
+ * @param props.onClose Handler invoked when dialog closes.
+ * @param props.onSuccess Optional handler invoked after successful save.
+ * @returns Aggregated state, setters, and handlers powering the dialog UI.
  */
 export function useAccountDialog({
   mode,
@@ -487,9 +494,10 @@ export function useAccountDialog({
   }
 }
 
-// Helper function to get error message
 /**
- *
+ * Normalizes unknown error values into human-readable strings for toast notifications.
+ * @param error Unknown error value thrown during account operations.
+ * @returns Extracted error message string.
  */
 function getErrorMessage(error: any): string {
   if (error instanceof Error) {

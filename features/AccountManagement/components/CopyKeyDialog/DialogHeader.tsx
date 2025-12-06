@@ -9,7 +9,7 @@ interface DialogHeaderProps {
 }
 
 /**
- *
+ * Header section for copy key dialog, rendering account name and iconography.
  */
 export function DialogHeader({ account }: DialogHeaderProps) {
   const { t } = useTranslation("ui")

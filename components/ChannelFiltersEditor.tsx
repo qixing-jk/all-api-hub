@@ -32,21 +32,32 @@ interface ChannelFiltersEditorProps {
 /**
  * Editor for New API channel filtering rules supporting visual and JSON modes.
  * Provides UX to add/remove rules, toggle regex behavior, and edit raw JSON definitions.
- * @param props Filters data, loading flag, and editing handlers from parent.
+ * @param props Component props bundle.
+ * @param props.filters Array of editable filter rules rendered in visual mode.
+ * @param props.viewMode Visual or JSON editing mode flag.
+ * @param props.jsonText Raw JSON string for manual editing.
+ * @param props.isLoading Whether filter data is still loading.
+ * @param props.onAddFilter Handler invoked when user adds a rule.
+ * @param props.onRemoveFilter Handler to delete a rule by id.
+ * @param props.onFieldChange Field update callback for rule edits.
+ * @param props.onClickViewVisual Switcher handler for the visual view.
+ * @param props.onClickViewJson Switcher handler for the JSON view.
+ * @param props.onChangeJsonText Controlled change handler for JSON textarea.
  * @returns Visual or JSON editing surface depending on selected view mode.
  */
-export default function ChannelFiltersEditor({
-  filters,
-  viewMode,
-  jsonText,
-  isLoading,
-  onAddFilter,
-  onRemoveFilter,
-  onFieldChange,
-  onClickViewVisual,
-  onClickViewJson,
-  onChangeJsonText,
-}: ChannelFiltersEditorProps) {
+export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
+  const {
+    filters,
+    viewMode,
+    jsonText,
+    isLoading,
+    onAddFilter,
+    onRemoveFilter,
+    onFieldChange,
+    onClickViewVisual,
+    onClickViewJson,
+    onChangeJsonText,
+  } = props
   const { t } = useTranslation("newApiChannels")
 
   if (isLoading) {

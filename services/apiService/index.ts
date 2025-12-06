@@ -14,7 +14,10 @@ type SiteOverrideMap = typeof siteOverrideMap
 
 // 获取对应站点的 API 函数
 /**
- *
+ * Resolve an API implementation taking site overrides into account.
+ * @param funcName Name of the API helper to retrieve.
+ * @param currentSite Site identifier used to look up overrides.
+ * @returns The concrete function reference sourced from overrides or common.
  */
 function getApiFunc<T extends keyof typeof commonAPI>(
   funcName: T,
@@ -35,7 +38,9 @@ function getApiFunc<T extends keyof typeof commonAPI>(
 
 // 创建包装函数的辅助函数
 /**
- *
+ * Factory that wraps public API helpers with automatic site detection.
+ * @param funcName Name of the helper being wrapped.
+ * @returns A proxy function that inspects arguments for site hints.
  */
 function createWrappedFunction<T extends (...args: any[]) => any>(
   funcName: keyof typeof commonAPI,

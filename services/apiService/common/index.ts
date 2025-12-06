@@ -136,10 +136,11 @@ export const extractDefaultExchangeRate = (
 
 /**
  * Fetch payment info (RIX_API specific; kept in common for fallback).
- * @param baseUrl Site base URL.
- * @param userId User id for the request.
- * @param accessToken Token for auth.
- * @param authType Auth mode (cookie/token/none).
+ * @param params Request metadata describing site base URL and auth context.
+ * @param params.baseUrl Site base URL.
+ * @param params.userId User id for the request.
+ * @param params.token Token for auth.
+ * @param params.authType Auth mode (cookie/token/none).
  * @returns Payment summary from backend.
  */
 export const fetchPaymentInfo = async ({
@@ -544,17 +545,22 @@ export const validateAccountConnection = async (
  * Some upstreams return a simple array, while others wrap the data in a
  * paginated envelope. This helper hides those differences and always returns
  * a flat array so the UI can treat both responses identically.
- * @param param0 Auth payload (baseUrl/userId/token/authType).
+ * @param params Auth payload (baseUrl/userId/token/authType).
+ * @param params.baseUrl Base URL for the site.
+ * @param params.userId User identifier for the request.
+ * @param params.token Access token used for authentication.
+ * @param params.authType Auth strategy for the call.
  * @param page Pagination index (defaults to first page).
  * @param size Page size in records (defaults to 100, matching upstream default).
  * @returns Normalized list of API tokens.
  */
 export const fetchAccountTokens = async (
-  { baseUrl, userId, token: accessToken, authType }: AuthTypeFetchParams,
+  params: AuthTypeFetchParams,
   page: number = 0,
   size: number = 100,
 ): Promise<ApiToken[]> => {
-  const params = new URLSearchParams({
+  const { baseUrl, userId, token: accessToken, authType } = params
+  const searchParams = new URLSearchParams({
     p: page.toString(),
     size: size.toString(),
   })
@@ -563,7 +569,7 @@ export const fetchAccountTokens = async (
     // 尝试获取响应数据，可能是直接的数组或者分页对象
     const tokensData = await fetchApiData<ApiToken[] | PaginatedTokenResponse>({
       baseUrl,
-      endpoint: `/api/token/?${params.toString()}`,
+      endpoint: `/api/token/?${searchParams.toString()}`,
       userId,
       token: accessToken,
       authType,
@@ -598,6 +604,10 @@ export const fetchAccountTokens = async (
  * IDs that should be displayed to the user when configuring per-account model
  * visibility.
  * @param params Auth context (baseUrl/userId/token/authType).
+ * @param params.baseUrl Site base URL.
+ * @param params.userId Account identifier.
+ * @param params.token Access token for authentication.
+ * @param params.authType Auth strategy for the call.
  * @returns Array of model identifiers allowed for the account.
  */
 export const fetchAccountAvailableModels = async ({
@@ -622,8 +632,8 @@ export const fetchAccountAvailableModels = async ({
 
 /**
  * Fetch upstream model metadata using an OpenAI-compatible API key.
- * @param baseUrl Site base URL.
- * @param apiKey API key used for upstream call.
+ * @param params.baseUrl Site base URL.
+ * @param params.apiKey API key used for upstream call.
  * @returns Full upstream model payload, including metadata per model.
  */
 export const fetchUpstreamModels = async ({
@@ -650,6 +660,8 @@ export const fetchUpstreamModelsNameList = async ({
    * Narrow helper that strips the upstream response down to only model IDs.
    * Using a separate function keeps call sites simple when only the name list
    * (instead of full metadata) is required.
+   * @param baseUrl Site base URL.
+   * @param apiKey API key for upstream call.
    */
   const upstreamModels = await fetchUpstreamModels({
     baseUrl: baseUrl,
@@ -664,6 +676,10 @@ export const fetchUpstreamModelsNameList = async ({
  * The upstream returns a record keyed by group name with metadata describing
  * entitlements. Consumers use this to render per-account permissions.
  * @param params Auth context (baseUrl/userId/token/authType).
+ * @param params.baseUrl Site base URL.
+ * @param params.userId Account identifier.
+ * @param params.token Access token for authentication.
+ * @param params.authType Auth strategy for the call.
  * @returns Mapping of group names to metadata.
  */
 export const fetchUserGroups = async ({
@@ -693,8 +709,12 @@ export const fetchUserGroups = async ({
  * (not just those tied to the current user) and is primarily used for admin
  * UI when editing assignments.
  * @param params Auth payload (baseUrl/userId/token/authType).
+ * @param params.baseUrl Site base URL.
+ * @param params.userId Account identifier.
+ * @param params.token Access token.
+ * @param params.authType Auth strategy.
  * @returns Array of group IDs available on the site.
- * @throws ApiError when the upstream response fails.
+ * @throws {ApiError} when the upstream response fails.
  */
 export const fetchSiteUserGroups = async ({
   baseUrl,
@@ -724,7 +744,7 @@ export const fetchSiteUserGroups = async ({
  * @param tokenData Form payload describing the token (scopes, name, etc.).
  * @param authType Optional override for auth strategy.
  * @returns True when the upstream confirms `success === true`.
- * @throws ApiError if the server reports a failure.
+ * @throws {ApiError} if the server reports a failure.
  */
 export const createApiToken = async (
   baseUrl: string,
@@ -770,6 +790,7 @@ export const createApiToken = async (
  * @param tokenId Token identifier to retrieve.
  * @param authType Optional auth type override.
  * @returns Detailed token representation from upstream.
+ * @throws {ApiError} when the backend reports a failure.
  */
 export const fetchTokenById = async (
   baseUrl: string,
@@ -801,7 +822,7 @@ export const fetchTokenById = async (
  * @param tokenData Updated fields (name/scopes/etc.).
  * @param authType Optional auth override.
  * @returns True when upstream returns `success === true`.
- * @throws ApiError if the update fails upstream.
+ * @throws {ApiError} if the update fails upstream.
  */
 export const updateApiToken = async (
   baseUrl: string,
@@ -847,7 +868,7 @@ export const updateApiToken = async (
  * @param tokenId Identifier of the token to delete.
  * @param authType Optional auth override.
  * @returns True when the deletion succeeds upstream.
- * @throws ApiError when the backend reports failure.
+ * @throws {ApiError} when the backend reports failure.
  */
 export const deleteApiToken = async (
   baseUrl: string,
@@ -890,6 +911,10 @@ export const deleteApiToken = async (
  * other helpers we use `fetchApi` directly because the upstream is already in
  * the desired shape and may include additional metadata beyond `data`.
  * @param params Auth context (baseUrl/userId/token/authType).
+ * @param params.baseUrl Site base URL.
+ * @param params.userId Account identifier.
+ * @param params.token Access token for authentication.
+ * @param params.authType Auth strategy for the call.
  * @returns Pricing response as provided by upstream.
  */
 export const fetchModelPricing = async ({
@@ -917,13 +942,14 @@ export const fetchModelPricing = async ({
 }
 
 /**
- * 兑换码充值
- * @param baseUrl - 站点基础URL
- * @param userId - 用户ID
- * @param accessToken - 访问令牌
- * @param redemptionCode - 兑换码
- * @param authType - 认证类型
- * @returns 兑换获得的额度
+ * Redeem a code to top up account quota.
+ * @param baseUrl Site base URL.
+ * @param userId User ID for the redemption.
+ * @param accessToken Access token for auth.
+ * @param redemptionCode Redemption code string.
+ * @param authType Auth strategy used.
+ * @returns Amount of quota redeemed.
+ * @throws {ApiError} when redemption fails upstream.
  */
 export const redeemCode = async (
   baseUrl: string,

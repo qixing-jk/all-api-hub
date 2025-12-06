@@ -43,8 +43,8 @@ import { autoDetectSmart } from "./autoDetectService"
  * 2. 使用 content script 从站点获取用户信息
  * 3. 调用 API 获取访问令牌和账号数据
  * 4. 保存或更新账号信息到本地存储
- * @param url
- * @param authType
+ * @param url 站点地址（将被自动标准化并请求）
+ * @param authType 当前选择的认证方式（Cookie / AccessToken / None）
  */
 export async function autoDetectAccount(
   url: string,
@@ -155,7 +155,15 @@ export async function autoDetectAccount(
 }
 
 /**
- *
+ * 校验账号必填字段是否合法（主要用于表单提交前的快速判断）。
+ * @param params 账号核心字段集合
+ * @param params.siteName 站点名称
+ * @param params.username 用户名
+ * @param params.userId 用户 ID
+ * @param params.authType 认证类型
+ * @param params.accessToken 访问令牌
+ * @param params.exchangeRate 汇率配置
+ * @returns 是否满足最基本的账号信息要求
  */
 export function isValidAccount({
   siteName,
@@ -550,7 +558,9 @@ export async function validateAndUpdateAccount(
 
 // 提取域名的主要部分（一级域名前缀）
 /**
- *
+ * 提取域名关键部分（排除 www 与常见双后缀）供 UI 显示默认站点名使用。
+ * @param hostname 待分析的主机名
+ * @returns 规范化后的前缀并首字母大写
  */
 export function extractDomainPrefix(hostname: string): string {
   if (!hostname) return ""
@@ -587,7 +597,9 @@ export function extractDomainPrefix(hostname: string): string {
 }
 
 /**
- *
+ * 判断站点名称是否仍是默认标题（如“未知站点”），用于决定是否替换。
+ * @param siteName 待检测的站点名称
+ * @returns true 表示不是默认名称
  */
 function IsNotDefaultSiteName(siteName: string): boolean {
   return !SITE_TITLE_RULES.some(
@@ -595,7 +607,9 @@ function IsNotDefaultSiteName(siteName: string): boolean {
   )
 }
 /**
- *
+ * 根据 Tab、URL 或站点状态信息推断最终展示的站点名称。
+ * @param input 可能为浏览器 Tab 对象或字符串 URL
+ * @returns 计算后的站点名称
  */
 export async function getSiteName(
   input: browser.tabs.Tab | string,
@@ -670,7 +684,7 @@ function generateDefaultToken(): CreateTokenRequest {
  * @param displaySiteData - Derived display data used by token APIs.
  * @param toastId - Optional toast identifier to reuse existing notifications.
  * @returns The ensured ApiToken ready for downstream use.
- * @throws When token retrieval and token creation both fail.
+ * @throws {Error} 当密钥获取或生成都失败时抛出异常
  */
 export async function ensureAccountApiToken(
   account: SiteAccount,

@@ -56,7 +56,7 @@ interface AccountListProps {
 }
 
 /**
- *
+ * Master list view for user accounts, including search, tagging, sorting, filtering, and manual reordering controls.
  */
 export default function AccountList({ initialSearchQuery }: AccountListProps) {
   const { t } = useTranslation(["account", "common"])

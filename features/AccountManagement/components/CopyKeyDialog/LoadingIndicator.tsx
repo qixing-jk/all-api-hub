@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next"
 
 /**
- *
+ * Spinner placeholder shown while copy key data is being fetched.
  */
 export function LoadingIndicator() {
   const { t } = useTranslation("ui")

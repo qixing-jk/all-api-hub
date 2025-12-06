@@ -21,7 +21,7 @@ interface SortableAccountListItemProps {
 }
 
 /**
- *
+ * Sortable wrapper around AccountListItem that adds drag handle controls and DnDKit bindings.
  */
 function SortableAccountListItem({
   site,

@@ -18,7 +18,7 @@ interface CopyKeyDialogProps {
 }
 
 /**
- *
+ * Modal dialog for browsing and copying API keys tied to an account, with export helpers.
  */
 export default function CopyKeyDialog({
   isOpen,

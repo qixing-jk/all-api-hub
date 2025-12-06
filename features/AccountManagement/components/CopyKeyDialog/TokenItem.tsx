@@ -22,7 +22,7 @@ interface TokenItemProps {
 }
 
 /**
- *
+ * Collapsible card for a single API token showing group, status, and expanded details.
  */
 export function TokenItem({
   token,
