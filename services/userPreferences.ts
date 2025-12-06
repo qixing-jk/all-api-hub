@@ -143,35 +143,43 @@ export interface UserPreferences {
 
   /**
    * 以下字段已废弃，仅保留供迁移使用
+   * Legacy base URL field preserved for migration from older configurations.
    * @deprecated Use newApi object instead
    */
   newApiBaseUrl?: string
   /**
+   * Legacy admin token field used before the nested newApi config existed.
    * @deprecated Use newApi object instead
    */
   newApiAdminToken?: string
   /**
+   * Legacy user id field kept for backward compatibility during migration.
    * @deprecated Use newApi object instead
    */
   newApiUserId?: string
   /**
+   * Legacy toggle for enabling automatic account refresh behavior.
    * @deprecated Use accountAutoRefresh instead
    */
   autoRefresh?: boolean
   /**
+   * Legacy refresh cadence in seconds for auto refresh.
    * @deprecated Use accountAutoRefresh.interval instead
    */
   refreshInterval?: number
   /**
+   * Legacy minimum interval in seconds between consecutive refresh runs.
    * @deprecated Use accountAutoRefresh.minInterval instead
    */
   minRefreshInterval?: number
   /**
+   * Legacy flag controlling whether to trigger a refresh when the UI opens.
    * @deprecated Use accountAutoRefresh.refreshOnOpen instead
    */
   refreshOnOpen?: boolean
   /**
    * 远程备份文件完整URL（例如：https://dav.example.com/backups/all-api-hub.json）
+   * Legacy inlined WebDAV URL field used before the nested webdav config existed.
    * @deprecated 请使用 webdav.url
    */
   webdavUrl?: string
@@ -181,6 +189,7 @@ export interface UserPreferences {
    */
   webdavUsername?: string
   /**
+   * Legacy inlined WebDAV password field used before nested webdav config.
    * @deprecated 请使用 webdav.password
    */
   webdavPassword?: string // 密码

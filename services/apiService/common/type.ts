@@ -37,6 +37,7 @@ export type TodayStatsData = TodayUsageData & TodayIncomeData
 export interface AccountData extends TodayStatsData {
   quota: number
   /**
+   * Legacy flag indicating whether the account can be checked in today.
    * @deprecated Use `checkIn.isCheckedInToday` instead.
    */
   can_check_in?: boolean

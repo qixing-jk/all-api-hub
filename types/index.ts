@@ -41,7 +41,7 @@ export interface AccountInfo {
 export interface SiteAccount {
   id: string // 此项 id
   /**
-   * emoji
+   * Emoji icon previously used for the account label in legacy UIs.
    * @deprecated not used anymore
    */
   emoji?: string
@@ -57,10 +57,12 @@ export interface SiteAccount {
   notes?: string // 备注
   tags?: string[] // 标签
   /**
+   * Legacy flag indicating whether the account can be checked in today.
    * @deprecated Use `checkIn.isCheckedInToday` instead.
    */
   can_check_in?: boolean // 是否可以签到
   /**
+   * Legacy flag indicating whether the account supports check-in at all.
    * @deprecated Use `checkIn` object presence instead.
    */
   supports_check_in?: boolean // 是否支持签到功能
@@ -189,6 +191,7 @@ export type TokenUsage = { upload: number; download: number }
 export interface DisplaySiteData {
   id: string
   /**
+   * Icon URL or identifier used by older UI components for site branding.
    * @deprecated not used anymore
    */
   icon?: string
@@ -207,10 +210,12 @@ export interface DisplaySiteData {
   notes?: string
   tags?: string[]
   /**
+   * Legacy flag indicating whether the account can be checked in today.
    * @deprecated Use `checkIn.isCheckedInToday` instead.
    */
   can_check_in?: boolean // 是否可以签到
   /**
+   * Legacy flag indicating whether the account supports check-in at all.
    * @deprecated Use `checkIn` object presence instead.
    */
   supports_check_in?: boolean // 是否支持签到功能
