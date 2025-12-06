@@ -10,6 +10,9 @@ import type {
 
 /**
  * 将 OneHub 模型定价转换为通用定价
+ * @param modelPricing 原始模型定价
+ * @param userGroupMap 用户分组配置信息
+ * @returns {PricingResponse} 转换后的结构
  */
 export function transformModelPricing(
   modelPricing: OneHubModelPricing,
@@ -55,7 +58,8 @@ export function transformModelPricing(
 
 /**
  * 将 OneHub 用户分组转换为通用分组
- * @param input
+ * @param input OneHub 分组接口返回值
+ * @returns {OneHubUserGroupsResponse["data"]} 通用结构
  */
 export function transformUserGroup(
   input: OneHubUserGroupsResponse["data"],

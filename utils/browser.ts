@@ -2,6 +2,10 @@ import { getExtensionURL } from "~/utils/browserApi"
 
 export const OPTIONS_PAGE_URL = getExtensionURL("options.html")
 
+/**
+ * Detects Firefox-like user agents using UA string heuristics.
+ * Useful in early bootstrapping before browser APIs are available.
+ */
 export function isFirefoxByUA(): boolean {
   return (
     navigator.userAgent.indexOf(" Firefox/") !== -1 ||
@@ -9,6 +13,10 @@ export function isFirefoxByUA(): boolean {
   )
 }
 
+/**
+ * Checks whether the current extension runtime is Firefox.
+ * Relies on the moz-extension protocol prefix exposed by WebExtensions.
+ */
 export function isFirefox() {
   return browser.runtime.getURL("").startsWith("moz-extension://")
 }
@@ -53,6 +61,10 @@ export function isExtensionPage(url: URL) {
   return url.protocol.includes("-extension:")
 }
 
+/**
+ * Determines if current window is the browser action popup.
+ * @returns True when running inside popup.html.
+ */
 export function isExtensionPopup() {
   try {
     const url = new URL(window.location.href)
@@ -62,6 +74,10 @@ export function isExtensionPopup() {
   }
 }
 
+/**
+ * Determines if the current page is loaded inside the extension side panel.
+ * @returns True when sidepanel.html is detected in the URL path.
+ */
 export function isExtensionSidePanel() {
   try {
     const url = new URL(window.location.href)
@@ -71,6 +87,10 @@ export function isExtensionSidePanel() {
   }
 }
 
+/**
+ * Detects whether the code runs inside the extension background context.
+ * Supports both Manifest V3 service workers and legacy background pages.
+ */
 export function isExtensionBackground() {
   // 1. Service Worker 环境检测 (V3)
   if (

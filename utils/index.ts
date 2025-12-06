@@ -2,6 +2,10 @@ import { isArray, mergeWith } from "lodash"
 
 import { DeepPartial } from "~/types/utils"
 
+/**
+ * Type guard that verifies an array is defined and contains at least one item.
+ * Useful before rendering list components that require non-empty data.
+ */
 export function isNotEmptyArray<T>(arr: T[] | null | undefined): arr is T[] {
   return Array.isArray(arr) && arr.length > 0
 }
@@ -34,7 +38,10 @@ export function isArraysEqual<T>(arr1: T[], arr2: T[]) {
 }
 
 /**
- * 深度合并配置，但数组完全替换
+ * Deeply merges configuration objects but replaces arrays instead of merging them.
+ * @param target Base configuration object.
+ * @param sources Additional overrides preserving nested object merges.
+ * @returns Consolidated object with deterministic array semantics.
  */
 export function deepOverride<T extends Record<string, any>>(
   target: T,
