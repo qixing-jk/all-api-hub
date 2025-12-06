@@ -871,13 +871,18 @@ class AccountStorageService {
     return `account_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
   }
 
-  /**
-   * 检查是否应跳过刷新
-   */
   private async shouldSkipRefresh(
     account: SiteAccount,
     force: boolean = false,
   ): Promise<boolean> {
+    /**
+     * Determines whether an account refresh should be skipped based on the
+     * global refresh preferences and the timestamp of the last sync.
+     *
+     * @param account - The account whose refresh cadence is being evaluated.
+     * @param force - When true, bypasses the interval guardrail entirely.
+     * @returns True when the refresh interval has not elapsed and force isn’t set.
+     */
     if (force) {
       return false // 强制刷新，不跳过
     }
@@ -889,6 +894,13 @@ class AccountStorageService {
     return timeSinceLastRefresh < minIntervalMs
   }
 
+  /**
+   * Normalizes a URL into its protocol + host origin to ensure consistent
+   * comparisons across the storage layer.
+   *
+   * @param url - Raw URL string that may contain paths or query strings.
+   * @returns The normalized origin string or null when parsing fails.
+   */
   private normalizeBaseUrl(url?: string): string | null {
     if (!url) {
       return null
@@ -901,6 +913,13 @@ class AccountStorageService {
     }
   }
 
+  /**
+   * Enriches an account with derived metadata (site type + check-in support)
+   * when those values are missing or still set to legacy defaults.
+   *
+   * @param account - The account record that may require metadata upgrades.
+   * @returns The latest account representation after any metadata refresh.
+   */
   private async refreshSiteMetadataIfNeeded(
     account: SiteAccount,
   ): Promise<SiteAccount> {
@@ -922,6 +941,7 @@ class AccountStorageService {
     const updates: DeepPartial<SiteAccount> = {}
 
     if (needsSiteType) {
+      // Remote inference fills in UNKNOWN_SITE entries after migrations
       try {
         const detectedType = await getSiteType(normalizedUrl)
         if (detectedType && detectedType !== UNKNOWN_SITE) {
@@ -936,6 +956,7 @@ class AccountStorageService {
     }
 
     if (needsCheckInDetection) {
+      // Probe the API to confirm whether automatic check-in is available
       try {
         const support = await fetchSupportCheckIn(normalizedUrl)
         if (typeof support === "boolean") {

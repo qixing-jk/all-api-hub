@@ -13,7 +13,19 @@ export interface RedeemResult {
   account?: DisplaySiteData
 }
 
+/**
+ * Encapsulates redemption flows that convert codes into account credits while
+ * handling storage lookups, API invocation, and success/error localization.
+ */
 export class RedeemService {
+  /**
+   * Redeems a code for the specified account, returning localized results with
+   * credited amount and display-ready account info when successful.
+   *
+   * @param accountId - Identifier of the account to credit.
+   * @param code - Redemption code provided by the user.
+   * @returns Outcome describing success, message, and optional metadata.
+   */
   async redeemCodeForAccount(
     accountId: string,
     code: string,

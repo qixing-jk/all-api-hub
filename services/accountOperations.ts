@@ -178,9 +178,15 @@ export function isValidAccount({
   )
 }
 
-// 验证并保存账号信息（用于新增）
 type TagsInput = string[] | string | undefined
 
+/**
+ * Normalizes a tags input originating from various form widgets into a clean
+ * string array, trimming whitespace and discarding empty values.
+ *
+ * @param tags - Array, single string, or undefined tags payload from UI.
+ * @returns An array of sanitized tag strings or undefined when no tags remain.
+ */
 function normalizeTagsInput(tags: TagsInput): string[] | undefined {
   if (!tags) {
     return undefined
@@ -200,6 +206,25 @@ function normalizeTagsInput(tags: TagsInput): string[] | undefined {
   return undefined
 }
 
+/**
+ * 验证并保存账号信息（用于新增）
+ *
+ * Validates user-supplied account form data, fetches the freshest remote
+ * account metrics, and persists the resulting record via accountStorage.
+ *
+ * @param url - Target site URL entered by the user.
+ * @param siteName - Display name for the account.
+ * @param username - Username retrieved from the remote site.
+ * @param accessToken - Auth token required for API calls.
+ * @param userId - Numeric user id in string form.
+ * @param exchangeRate - Recharge exchange rate configured in UI.
+ * @param notes - Free-form notes provided by user.
+ * @param tags - Optional tags originating from the form field.
+ * @param checkInConfig - Check-in configuration captured from UI.
+ * @param siteType - Classifier describing the site (OneAPI, etc.).
+ * @param authType - Authentication strategy (cookie/token/none).
+ * @returns Success payload with new account id or a failure descriptor.
+ */
 export async function validateAndSaveAccount(
   url: string,
   siteName: string,
@@ -352,7 +377,27 @@ export async function validateAndSaveAccount(
   }
 }
 
-// 验证并更新账号信息（用于编辑）
+/**
+ * 验证并更新账号信息（用于编辑）
+ *
+ * Re-validates edited account data, refreshes remote metrics, and applies a
+ * partial update to the existing account record. Falls back to a config-only
+ * update when live data fetching fails.
+ *
+ * @param accountId - Identifier of the stored account to update.
+ * @param url - Updated site URL.
+ * @param siteName - Updated display name.
+ * @param username - Updated username.
+ * @param accessToken - Updated auth token.
+ * @param userId - Updated user id string.
+ * @param exchangeRate - Updated recharge rate string.
+ * @param notes - Updated notes.
+ * @param tags - Updated tag collection.
+ * @param checkInConfig - Updated check-in configuration.
+ * @param siteType - Updated site type classification.
+ * @param authType - Authentication mode in use.
+ * @returns Response describing success/failure and account id.
+ */
 export async function validateAndUpdateAccount(
   accountId: string,
   url: string,
@@ -608,6 +653,17 @@ function generateDefaultToken(): CreateTokenRequest {
   }
 }
 
+/**
+ * Ensures that an API token exists for the supplied account by checking the
+ * remote token inventory and lazily issuing a default token when none exist.
+ * Provides toast updates for the long-running request to improve UX feedback.
+ *
+ * @param account - The underlying account record (includes credentials).
+ * @param displaySiteData - Derived display data used by token APIs.
+ * @param toastId - Optional toast identifier to reuse existing notifications.
+ * @returns The ensured ApiToken ready for downstream use.
+ * @throws When token retrieval and token creation both fail.
+ */
 export async function ensureAccountApiToken(
   account: SiteAccount,
   displaySiteData: DisplaySiteData,

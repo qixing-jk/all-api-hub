@@ -268,6 +268,14 @@ export interface FetchApiParams {
   responseType?: TempWindowResponseType // 默认 json，可自定义响应处理
 }
 
+/**
+ * Core fetch helper that wires authentication, temp-window fallback, and
+ * response parsing for all upstream API calls.
+ *
+ * @param params Fetch configuration (baseUrl, endpoint, auth, etc.).
+ * @param onlyData When true, returns the `data` field directly (JSON only).
+ * @returns ApiResponse<T>, raw payload, or data field based on flags.
+ */
 const _fetchApi = async <T>(
   {
     baseUrl,
@@ -346,6 +354,9 @@ export const fetchApiData = async <T>(params: FetchApiParams): Promise<T> => {
   return (await _fetchApi({ ...params, responseType: "json" }, true)) as T
 }
 
+/**
+ * Public helper: fetch API; returns ApiResponse<T> for JSON or raw for others.
+ */
 export function fetchApi<T>(
   params: FetchApiParams,
   _normalResponseType: true,
@@ -355,9 +366,6 @@ export function fetchApi<T>(
   _normalResponseType?: false,
 ): Promise<ApiResponse<T>>
 
-/**
- * Public helper: fetch API; returns ApiResponse<T> for JSON or raw for others.
- */
 export async function fetchApi<T>(
   params: FetchApiParams,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
