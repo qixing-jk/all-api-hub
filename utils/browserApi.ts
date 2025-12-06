@@ -334,6 +334,11 @@ export function onInstalled(
   }
 }
 
+/**
+ * Open the extension side panel using the host browser's native APIs.
+ * Automatically chooses the appropriate Chromium or Firefox pathway.
+ * @throws Error when the current browser does not expose side panel support.
+ */
 export const openSidePanel = async () => {
   // Firefox
   if (typeof browser !== "undefined" && browser.sidebarAction) {
@@ -450,11 +455,20 @@ export function getManifest(): browser._manifest.WebExtensionManifest {
   }
 }
 
+/**
+ * Convenience helper returning the manifest_version number from runtime manifest.
+ * Falls back to {@link getManifest} when the runtime manifest cannot be read.
+ */
 export function getManifestVersion(): number {
   return getManifest().manifest_version
 }
 
 // Permissions helpers
+/**
+ * Check whether the extension already holds the requested permissions.
+ * @param permissions Permission descriptor passed directly to the browser API.
+ * @returns Resolves true when the set is already granted, false otherwise.
+ */
 export async function containsPermissions(
   permissions: browser.permissions.Permissions,
 ): Promise<boolean> {
@@ -466,6 +480,11 @@ export async function containsPermissions(
   }
 }
 
+/**
+ * Request additional permissions from the user, logging failures for debugging.
+ * @param permissions Permission descriptor to be requested from the browser.
+ * @returns Resolves true when the user grants the request, false when denied.
+ */
 export async function requestPermissions(
   permissions: browser.permissions.Permissions,
 ): Promise<boolean> {
@@ -477,6 +496,11 @@ export async function requestPermissions(
   }
 }
 
+/**
+ * Remove previously granted permissions to minimize the extension's footprint.
+ * @param permissions Permission descriptor indicating entries to revoke.
+ * @returns Resolves true when the removal succeeds, false when it fails.
+ */
 export async function removePermissions(
   permissions: browser.permissions.Permissions,
 ): Promise<boolean> {
@@ -488,6 +512,10 @@ export async function removePermissions(
   }
 }
 
+/**
+ * Subscribe to permission-added events and return an unsubscribe callback.
+ * @param callback Handler receiving the granted permission set.
+ */
 export function onPermissionsAdded(
   callback: (permissions: browser.permissions.Permissions) => void,
 ): () => void {
@@ -495,6 +523,10 @@ export function onPermissionsAdded(
   return () => browser.permissions.onAdded.removeListener(callback)
 }
 
+/**
+ * Subscribe to permission-removed events and return an unsubscribe callback.
+ * @param callback Handler receiving the revoked permission set.
+ */
 export function onPermissionsRemoved(
   callback: (permissions: browser.permissions.Permissions) => void,
 ): () => void {

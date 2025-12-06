@@ -17,7 +17,7 @@ export function isFirefoxByUA(): boolean {
  * Checks whether the current extension runtime is Firefox.
  * Relies on the moz-extension protocol prefix exposed by WebExtensions.
  */
-export function isFirefox() {
+export function isFirefox(): boolean {
   return browser.runtime.getURL("").startsWith("moz-extension://")
 }
 

@@ -299,8 +299,8 @@ export async function autoDetectSmart(url: string): Promise<AutoDetectResult> {
     if (result.success) {
       return result
     }
+    console.log("[AutoDetect] Background 方式失败，降级到直接方式")
   }
-  console.log("[AutoDetect] Background 方式失败，降级到直接方式")
 
   // 3. Fallback: 使用直接方式（手机 或其他方式失败）
   return await autoDetectDirect(url)

@@ -63,7 +63,7 @@ export class ModelRedirectService {
   /**
    * Run model redirect generation and apply mappings directly
    *
-   * @returns Summary with success flag, count of updated channels, and errors.
+   * @returns Summary with success flag, count of updated channels, errors, and optional message.
    */
   static async applyModelRedirect(): Promise<{
     success: boolean

@@ -326,26 +326,86 @@ const _openRedeemPage = async (account: DisplaySiteData) => {
 }
 
 // 导出带自动关闭的版本
+/**
+ * Launch the account manager root view, auto-closing the popup when invoked
+ * from popup.html to prevent duplicate UI shells.
+ */
 export const openFullAccountManagerPage = withPopupClose(() =>
   _openFullManagerPage(),
 )
+
+/**
+ * Open the account manager filtered by the provided search string before
+ * closing the popup, keeping the flow consistent with popup interactions.
+ */
 export const openAccountManagerWithSearch = withPopupClose((search: string) =>
   _openFullManagerPage({ search }),
 )
+
+/**
+ * Navigate to the default settings landing section and close the popup if
+ * applicable, so the user ends up in the options page only.
+ */
 export const openSettingsPage = withPopupClose(_openSettingsPage)
+
+/**
+ * Open a specific settings tab while ensuring popup teardown happens after
+ * dispatching the navigation request.
+ */
 export const openSettingsTab = withPopupClose(_openSettingsTab)
+
+/**
+ * Open the extension side panel (if supported) and close the popup afterward to
+ * avoid overlapping surfaces.
+ */
 export const openSidePanelPage = withPopupClose(_openSidePanel)
+
+/**
+ * Jump straight to the About section inside the options page and close the
+ * popup to keep focus on the destination UI.
+ */
 export const openAboutPage = withPopupClose(_openAboutPage)
+
+/**
+ * Open the Keys management page, forwarding optional account focus, then close
+ * the popup to free screen real estate.
+ */
 export const openKeysPage = withPopupClose(_openKeysPage)
+
+/**
+ * Open the Models management page for the given account context and close the
+ * popup afterwards.
+ */
 export const openModelsPage = withPopupClose(_openModelsPage)
+
+/**
+ * Open the provider's usage log page and auto-close the popup when triggered
+ * from compact contexts.
+ */
 export const openUsagePage = withPopupClose(_openUsagePage)
+
+/**
+ * Open the default check-in page for the provided account and shut down the
+ * popup shell once the navigation has been requested.
+ */
 export const openCheckInPage = withPopupClose(_openCheckInPage)
+
+/**
+ * Open the account's custom check-in location when defined (falling back to
+ * default) and close the popup to avoid redundant windows.
+ */
 export const openCustomCheckInPage = withPopupClose(_openCustomCheckInPage)
+
+/**
+ * Open the redeem page (custom or default path) and close the popup afterwards
+ * so the user focuses on the newly opened tab.
+ */
 export const openRedeemPage = withPopupClose(_openRedeemPage)
 
 /**
- * Executes multiple navigation operations concurrently and closes popup.
- * @param operations List of actions to run.
+ * Execute multiple navigation operations concurrently and close the popup once
+ * every action has been scheduled.
+ * @param operations List of async/sync navigation callbacks to run together.
  */
 export const openMultiplePages = async (
   operations: (() => Promise<void> | void)[],
@@ -355,7 +415,8 @@ export const openMultiplePages = async (
 }
 
 /**
- * Opens both redeem and check-in pages in parallel.
+ * Open both redeem and check-in pages in parallel for the given account,
+ * leveraging {@link openMultiplePages} to minimize popup churn.
  * @param account Target account.
  */
 export const openCheckInAndRedeem = async (account: DisplaySiteData) => {

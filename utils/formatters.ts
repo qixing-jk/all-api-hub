@@ -73,7 +73,10 @@ export function normalizeToDate(
   return ms == null ? null : new Date(ms)
 }
 
-// 格式化时间
+/**
+ * Format a numeric timestamp for key expiration fields.
+ * Falls back to localized "never expires" copy when timestamp is <= 0.
+ */
 export const formatKeyTime = (timestamp: number) => {
   if (timestamp <= 0) return t("keyManagement:keyDetails.neverExpires")
   return normalizeToDate(timestamp).toLocaleDateString("zh-CN")
@@ -145,9 +148,17 @@ export const calculateTotalBalance = (displayData: DisplaySiteData[]) => {
   }
 }
 
+/**
+ * Convenience wrapper to derive aggregate balances from a subset of sites.
+ * Delegates to {@link calculateTotalBalance} for the actual sum logic.
+ */
 export const calculateTotalBalanceForSites = (sites: DisplaySiteData[]) =>
   calculateTotalBalance(sites)
 
+/**
+ * Sum per-site consumption metrics into global USD/CNY totals.
+ * @param sites Display-ready site collection containing `todayConsumption`.
+ */
 export const calculateTotalConsumptionForSites = (sites: DisplaySiteData[]) => {
   const usd = sites.reduce((sum, site) => sum + site.todayConsumption.USD, 0)
   const cny = sites.reduce((sum, site) => sum + site.todayConsumption.CNY, 0)
