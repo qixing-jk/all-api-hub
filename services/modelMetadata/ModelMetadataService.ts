@@ -29,6 +29,13 @@ const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
   doubao: "豆包",
 }
 
+/**
+ * Loads and caches model metadata from a remote source with fallback defaults.
+ * Responsibilities:
+ * - Fetch remote metadata (with refresh interval).
+ * - Build lookup maps for fuzzy vendor/model resolution.
+ * - Provide cache info and vendor rules for downstream consumers.
+ */
 class ModelMetadataService {
   private cache: ModelMetadataCache | null = null
   private vendorRules: VendorRule[] = []
@@ -36,6 +43,9 @@ class ModelMetadataService {
   private initPromise: Promise<void> | null = null
   private lastFetch: number = 0
 
+  /**
+   * Initialize metadata (idempotent). Reuses in-flight init promise.
+   */
   async initialize(): Promise<void> {
     if (this.initPromise) {
       return this.initPromise
@@ -45,6 +55,9 @@ class ModelMetadataService {
     return this.initPromise
   }
 
+  /**
+   * Internal initialize: skip fetch if cache is fresh, otherwise refresh.
+   */
   private async _initialize(): Promise<void> {
     try {
       const now = Date.now()
@@ -64,6 +77,10 @@ class ModelMetadataService {
     }
   }
 
+  /**
+   * Fetch metadata from remote endpoint and rebuild caches.
+   * Falls back to existing cache if fetch fails.
+   */
   async refreshMetadata(): Promise<void> {
     try {
       console.log("[ModelMetadata] Fetching from", MODEL_METADATA_URL)
@@ -111,6 +128,9 @@ class ModelMetadataService {
     }
   }
 
+  /**
+   * Build internal map from cleaned model id to metadata.
+   */
   private buildMetaDataMapFromCache(): void {
     if (!this.cache) return
 
@@ -124,6 +144,10 @@ class ModelMetadataService {
     }
   }
 
+  /**
+   * Build vendor detection rules from cached models.
+   * Groups by provider and derives regex prefixes.
+   */
   private buildVendorRules(): void {
     if (!this.cache) return
 
@@ -187,6 +211,9 @@ class ModelMetadataService {
     this.vendorRules = rules
   }
 
+  /**
+   * Capitalize hyphen/space-delimited provider id for display.
+   */
   private capitalizeFirst(str: string): string {
     if (!str) return ""
     const parts = str.replace(/-/g, " ").split(/\s+/)
@@ -195,6 +222,9 @@ class ModelMetadataService {
       .join(" ")
   }
 
+  /**
+   * Initialize fallback metadata/rules when remote fetch is unavailable.
+   */
   private initializeFallback(): void {
     console.warn("[ModelMetadata] Using fallback default data")
 
@@ -300,6 +330,10 @@ class ModelMetadataService {
     this.vendorRules = defaultRules
   }
 
+  /**
+   * Resolve a model name to a standard id and vendor display name.
+   * Uses exact match first, then fuzzy match if no date suffix is present.
+   */
   findStandardModelName(
     modelName: string,
   ): { standardName: string; vendorName: string } | null {
@@ -342,6 +376,10 @@ class ModelMetadataService {
     return null
   }
 
+  /**
+   * Check if an input model name fuzzily matches a candidate.
+   * Ignores date suffixes and requires shared vendor keyword overlap.
+   */
   private isFuzzyMatch(input: string, candidate: string): boolean {
     const cleanedInput = removeDateSuffix(input)
     const cleanedCandidate = removeDateSuffix(candidate)
@@ -395,6 +433,9 @@ class ModelMetadataService {
     return matchCount >= 2
   }
 
+  /**
+   * Find vendor display name by regex pattern match.
+   */
   findVendorByPattern(modelName: string): string | null {
     const cleaned = modelName.toLowerCase().trim()
 
@@ -407,10 +448,16 @@ class ModelMetadataService {
     return null
   }
 
+  /**
+   * Return a copy of vendor rules for callers.
+   */
   getVendorRules(): VendorRule[] {
     return [...this.vendorRules]
   }
 
+  /**
+   * Return cache summary info (loaded flag, count, lastUpdated).
+   */
   getCacheInfo(): {
     isLoaded: boolean
     modelCount: number
@@ -423,6 +470,9 @@ class ModelMetadataService {
     }
   }
 
+  /**
+   * Return all cached metadata (empty array when not loaded).
+   */
   getAllMetadata(): ModelMetadata[] {
     if (!this.cache) {
       return []
@@ -430,6 +480,9 @@ class ModelMetadataService {
     return [...this.cache.models]
   }
 
+  /**
+   * Clear in-memory cache and derived maps/rules.
+   */
   clearCache(): void {
     this.cache = null
     this.metadataMap.clear()

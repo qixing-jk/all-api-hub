@@ -809,6 +809,9 @@ class AutoCheckinScheduler {
     }
   }
 
+  /**
+   * Return display data for a specific account (used by UI).
+   */
   async getAccountDisplayData(accountId: string): Promise<DisplaySiteData> {
     const account = await accountStorage.getAccountById(accountId)
 
@@ -824,7 +827,8 @@ class AutoCheckinScheduler {
 export const autoCheckinScheduler = new AutoCheckinScheduler()
 
 /**
- * Message handler for Auto Check-in
+ * Message handler for Auto Check-in actions (run, retry, get status/settings).
+ * Keeps background-only logic centralized for content scripts/options UI calls.
  */
 export const handleAutoCheckinMessage = async (
   request: any,

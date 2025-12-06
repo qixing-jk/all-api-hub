@@ -24,7 +24,10 @@ import {
 import { joinUrl } from "~/utils/url"
 
 /**
- * 创建请求头
+ * Build request headers for New API calls.
+ * - Adds extension + auth method headers.
+ * - Injects multiple compatible user id headers when provided.
+ * - Adds Bearer token when given.
  */
 const createRequestHeaders = async (
   authMode: AuthMode,
@@ -59,11 +62,9 @@ const createRequestHeaders = async (
 }
 
 /**
- * 创建基本请求配置
- * @param headers 请求头
- * @param credentials 请求凭证信息
- * @param options 可选，请求配置
- * @returns RequestInit - 基本请求配置
+ * Build a base RequestInit with defaults.
+ * - Uppercases method, sets JSON content-type for non-GET.
+ * - Merges caller headers after defaults.
  */
 const createBaseRequest = (
   headers: HeadersInit,
@@ -90,7 +91,7 @@ const createBaseRequest = (
 }
 
 /**
- * 创建带 cookie 认证的请求
+ * Create a request using cookie-based auth.
  */
 const createCookieAuthRequest = async (
   userId: number | string | undefined,
@@ -104,7 +105,7 @@ const createCookieAuthRequest = async (
 }
 
 /**
- * 创建带 Bearer token 认证的请求
+ * Create a request using bearer token auth.
  */
 const createTokenAuthRequest = async (
   userId: number | string | undefined,
@@ -118,7 +119,7 @@ const createTokenAuthRequest = async (
   )
 
 /**
- * 计算今日时间戳范围
+ * Compute today's start/end unix timestamps (seconds).
  */
 export const getTodayTimestampRange = (): { start: number; end: number } => {
   const today = new Date()
@@ -135,7 +136,7 @@ export const getTodayTimestampRange = (): { start: number; end: number } => {
 }
 
 /**
- * 聚合使用量数据
+ * Aggregate usage data over log items (quota + tokens).
  */
 export const aggregateUsageData = (
   items: LogItem[],
@@ -156,9 +157,8 @@ export const aggregateUsageData = (
 }
 
 /**
- * 基于 apiRequest 的快捷函数：直接提取 data
- * @waring 非必要请勿在外部使用
- * @see fetchApi fetchApiData
+ * Internal helper: call apiRequest and return data field.
+ * Warning: For internal use; fetchApiData is the public entry.
  */
 const apiRequestData = async <T>(
   url: string,
@@ -188,15 +188,9 @@ const apiRequestData = async <T>(
 }
 
 /**
- * 通用 API 请求函数
- * @param url 请求 URL
- * @param options 请求配置
- * @param endpoint 可选，接口名称，用于错误追踪
- * @param responseType
- * @returns ApiResponse 对象
- * 默认：返回完整响应，不提取 data
- * @waring 非必要请勿在外部使用
- * @see fetchApi fetchApiData
+ * Low-level API request helper.
+ * - Returns ApiResponse<T> for JSON, raw parsed value otherwise.
+ * - Raises ApiError on HTTP failure or content-type mismatch for JSON.
  */
 const apiRequest = async <T>(
   url: string,
@@ -316,8 +310,7 @@ const _fetchApi = async <T>(
 }
 
 /**
- * 通用 API 请求函数，直接返回 data
- * @param params
+ * Public helper: fetch API and return data (JSON only).
  */
 export const fetchApiData = async <T>(params: FetchApiParams): Promise<T> => {
   if (params.responseType && params.responseType !== "json") {
@@ -340,9 +333,7 @@ export function fetchApi<T>(
 ): Promise<ApiResponse<T>>
 
 /**
- * 通用 API 请求函数
- * @param params
- * @param _normalResponseType
+ * Public helper: fetch API; returns ApiResponse<T> for JSON or raw for others.
  */
 export async function fetchApi<T>(
   params: FetchApiParams,

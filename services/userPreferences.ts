@@ -270,7 +270,8 @@ class UserPreferencesService {
   }
 
   /**
-   * 获取用户偏好设置
+   * Get user preferences (with migration + defaults merged).
+   * Saves back if migration updated stored prefs.
    */
   async getPreferences(): Promise<UserPreferences> {
     try {
@@ -300,9 +301,8 @@ class UserPreferencesService {
   }
 
   /**
-   * 保存用户偏好设置
+   * Save partial user preferences (deep merge) and stamp lastUpdated/version.
    */
-
   async savePreferences(
     preferences: DeepPartial<UserPreferences>,
   ): Promise<boolean> {
@@ -328,21 +328,21 @@ class UserPreferencesService {
   }
 
   /**
-   * 更新活动标签页
+   * Update active tab preference.
    */
   async updateActiveTab(activeTab: BalanceType): Promise<boolean> {
     return this.savePreferences({ activeTab })
   }
 
   /**
-   * 更新货币类型
+   * Update currency preference.
    */
   async updateCurrencyType(currencyType: CurrencyType): Promise<boolean> {
     return this.savePreferences({ currencyType })
   }
 
   /**
-   * 更新排序配置
+   * Update sort field/order.
    */
   async updateSortConfig(
     sortField: SortField,
@@ -352,14 +352,14 @@ class UserPreferencesService {
   }
 
   /**
-   * 更新健康状态显示设置
+   * Toggle health status visibility.
    */
   async updateShowHealthStatus(showHealthStatus: boolean): Promise<boolean> {
     return this.savePreferences({ showHealthStatus })
   }
 
   /**
-   * 更新 WebDAV 设置
+   * Update WebDAV credentials/settings.
    */
   async updateWebdavSettings(settings: {
     url?: string
@@ -372,7 +372,7 @@ class UserPreferencesService {
   }
 
   /**
-   * 更新 WebDAV 自动同步设置
+   * Update WebDAV auto-sync settings.
    */
   async updateWebdavAutoSyncSettings(settings: {
     autoSync?: boolean
@@ -385,7 +385,7 @@ class UserPreferencesService {
   }
 
   /**
-   * 重置为默认设置
+   * Reset all preferences to defaults.
    */
   async resetToDefaults(): Promise<boolean> {
     try {
@@ -399,7 +399,7 @@ class UserPreferencesService {
   }
 
   /**
-   * 清空偏好设置
+   * Clear stored preferences (removes key).
    */
   async clearPreferences(): Promise<boolean> {
     try {
@@ -413,14 +413,14 @@ class UserPreferencesService {
   }
 
   /**
-   * 导出偏好设置
+   * Export preferences (returns current with migrations applied).
    */
   async exportPreferences(): Promise<UserPreferences> {
     return this.getPreferences()
   }
 
   /**
-   * 导入偏好设置
+   * Import preferences (runs migration before saving).
    */
   async importPreferences(preferences: UserPreferences): Promise<boolean> {
     try {
@@ -460,7 +460,7 @@ class UserPreferencesService {
   }
 
   /**
-   * 获取语言偏好设置
+   * Get language preference.
    */
   async getLanguage(): Promise<string | undefined> {
     const preferences = await this.getPreferences()
@@ -468,14 +468,14 @@ class UserPreferencesService {
   }
 
   /**
-   * 更新语言偏好设置
+   * Set language preference.
    */
   async setLanguage(language: string): Promise<boolean> {
     return this.savePreferences({ language })
   }
 
   /**
-   * 重置显示设置（货币单位和默认标签页）
+   * Reset display settings (currency + active tab).
    */
   async resetDisplaySettings(): Promise<boolean> {
     return this.savePreferences({
@@ -485,7 +485,7 @@ class UserPreferencesService {
   }
 
   /**
-   * 重置自动刷新设置
+   * Reset auto refresh config.
    */
   async resetAutoRefreshConfig(): Promise<boolean> {
     return this.savePreferences({
@@ -494,7 +494,7 @@ class UserPreferencesService {
   }
 
   /**
-   * 重置 New API 配置
+   * Reset New API config.
    */
   async resetNewApiConfig(): Promise<boolean> {
     return this.savePreferences({
@@ -503,7 +503,7 @@ class UserPreferencesService {
   }
 
   /**
-   * 重置 New API Model Sync 配置
+   * Reset New API Model Sync config.
    */
   async resetNewApiModelSyncConfig(): Promise<boolean> {
     return this.savePreferences({
@@ -518,7 +518,7 @@ class UserPreferencesService {
   }
 
   /**
-   * 重置自动签到配置
+   * Reset auto check-in config.
    */
   async resetAutoCheckinConfig(): Promise<boolean> {
     return this.savePreferences({
@@ -527,7 +527,7 @@ class UserPreferencesService {
   }
 
   /**
-   * 重置模型重定向配置
+   * Reset model redirect config.
    */
   async resetModelRedirectConfig(): Promise<boolean> {
     return this.savePreferences({
@@ -536,7 +536,7 @@ class UserPreferencesService {
   }
 
   /**
-   * 重置兑换助手配置
+   * Reset redemption assist config.
    */
   async resetRedemptionAssist(): Promise<boolean> {
     return this.savePreferences({
@@ -545,7 +545,7 @@ class UserPreferencesService {
   }
 
   /**
-   * 重置 WebDAV 配置
+   * Reset WebDAV config.
    */
   async resetWebdavConfig(): Promise<boolean> {
     return this.savePreferences({
@@ -554,7 +554,7 @@ class UserPreferencesService {
   }
 
   /**
-   * 重置主题和语言设置
+   * Reset theme and language.
    */
   async resetThemeAndLanguage(): Promise<boolean> {
     return this.savePreferences({

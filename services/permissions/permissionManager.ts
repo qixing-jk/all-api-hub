@@ -7,23 +7,38 @@ import {
   requestPermissions,
 } from "~/utils/browserApi"
 
+/**
+ * Aliases to manifest permission types for clearer signatures.
+ */
 export type ManifestPermissions = browser._manifest.Permission
 export type ManifestOptionalPermissions = browser._manifest.OptionalPermission
 
+/**
+ * Read optional permissions declared in manifest.
+ */
 function readOptionalPermissions(): ManifestOptionalPermissions[] {
   const manifest = getManifest()
   return (manifest.optional_permissions ?? []) as ManifestOptionalPermissions[]
 }
 
+/**
+ * All optional permissions declared in manifest.json.
+ */
 export const OPTIONAL_PERMISSIONS: ManifestOptionalPermissions[] =
   readOptionalPermissions()
 
+/**
+ * Optional permissions required for cookie interception flows.
+ */
 export const COOKIE_INTERCEPTOR_PERMISSIONS: ManifestOptionalPermissions[] = [
   "cookies",
   "webRequest",
   "webRequestBlocking",
 ]
 
+/**
+ * Check whether cookie interceptor permissions are already granted.
+ */
 export async function hasCookieInterceptorPermissions(): Promise<boolean> {
   return await hasPermissions(COOKIE_INTERCEPTOR_PERMISSIONS)
 }
@@ -34,6 +49,9 @@ export interface PermissionDefinition {
   descriptionKey: string
 }
 
+/**
+ * Optional permission definitions with i18n keys for UI rendering.
+ */
 export const OPTIONAL_PERMISSION_DEFINITIONS: PermissionDefinition[] =
   OPTIONAL_PERMISSIONS.map((id) => ({
     id,
@@ -41,12 +59,18 @@ export const OPTIONAL_PERMISSION_DEFINITIONS: PermissionDefinition[] =
     descriptionKey: `permissions.items.${id}.description`,
   }))
 
+/**
+ * Check a single optional permission.
+ */
 export async function hasPermission(
   id: ManifestOptionalPermissions,
 ): Promise<boolean> {
   return await containsPermissions({ permissions: [id] })
 }
 
+/**
+ * Check multiple optional permissions; empty list always true.
+ */
 export async function hasPermissions(
   ids: ManifestOptionalPermissions[],
 ): Promise<boolean> {
@@ -54,18 +78,27 @@ export async function hasPermissions(
   return await containsPermissions({ permissions: ids })
 }
 
+/**
+ * Request a single optional permission from the user.
+ */
 export async function requestPermission(
   id: ManifestOptionalPermissions,
 ): Promise<boolean> {
   return await requestPermissions({ permissions: [id] })
 }
 
+/**
+ * Remove a single optional permission (revocation).
+ */
 export async function removePermission(
   id: ManifestOptionalPermissions,
 ): Promise<boolean> {
   return await removePermissions({ permissions: [id] })
 }
 
+/**
+ * Ensure a set of optional permissions; prompts only for missing ones.
+ */
 export async function ensurePermissions(
   ids: ManifestOptionalPermissions[],
 ): Promise<boolean> {
@@ -84,10 +117,17 @@ export async function ensurePermissions(
   return await requestPermissions({ permissions: missing })
 }
 
+/**
+ * Get i18n definition for an optional permission.
+ */
 export function getPermissionDefinition(id: ManifestOptionalPermissions) {
   return OPTIONAL_PERMISSION_DEFINITIONS.find((perm) => perm.id === id)
 }
 
+/**
+ * Subscribe to optional permission changes (added/removed).
+ * Returns an unsubscribe function to detach both listeners.
+ */
 export function onOptionalPermissionsChanged(callback: () => void): () => void {
   const unsubscribeAdded = onPermissionsAdded((permissions) => {
     if (

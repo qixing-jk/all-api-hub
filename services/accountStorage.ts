@@ -54,7 +54,7 @@ class AccountStorageService {
   }
 
   /**
-   * 获取所有账号信息
+   * Get all accounts (migrates legacy configs if needed).
    */
   async getAllAccounts(): Promise<SiteAccount[]> {
     try {
@@ -76,7 +76,7 @@ class AccountStorageService {
   }
 
   /**
-   * 根据 ID 获取单个账号信息
+   * Get single account by id (auto-migrates if outdated).
    */
   async getAccountById(id: string): Promise<SiteAccount | null> {
     try {
@@ -100,7 +100,7 @@ class AccountStorageService {
   }
 
   /**
-   * 根据 baseUrl 和 userId 获取单个账号信息
+   * Get account by baseUrl + userId (auto-migrates if outdated).
    */
   async getAccountByBaseUrlAndUserId(
     baseUrl: string,
@@ -146,7 +146,7 @@ class AccountStorageService {
   }
 
   /**
-   * 检查给定 URL 是否已存在
+   * Check whether a given URL (origin) already exists.
    */
   async checkUrlExists(url: string): Promise<SiteAccount | null> {
     if (!url) return null
@@ -171,7 +171,7 @@ class AccountStorageService {
   }
 
   /**
-   * 添加新账号
+   * Add a new account; generates id/timestamps and saves.
    */
   async addAccount(
     accountData: Omit<SiteAccount, "id" | "created_at" | "updated_at">,
@@ -202,7 +202,7 @@ class AccountStorageService {
   }
 
   /**
-   * 更新账号信息
+   * Update an account by id (partial), refreshes updated_at.
    */
   async updateAccount(
     id: string,
@@ -230,7 +230,7 @@ class AccountStorageService {
   }
 
   /**
-   * 删除账号
+   * Delete an account; also unpins and removes from ordered list.
    */
   async deleteAccount(id: string): Promise<boolean> {
     try {
@@ -264,7 +264,7 @@ class AccountStorageService {
   }
 
   /**
-   * 获取置顶账号ID列表
+   * Get pinned account ids.
    */
   async getPinnedList(): Promise<string[]> {
     try {
@@ -277,7 +277,7 @@ class AccountStorageService {
   }
 
   /**
-   * 获取自定义排序列表
+   * Get ordered account ids.
    */
   async getOrderedList(): Promise<string[]> {
     try {
@@ -290,7 +290,7 @@ class AccountStorageService {
   }
 
   /**
-   * 设置置顶账号ID列表
+   * Set pinned ids (filters to existing accounts, de-dupes).
    */
   async setPinnedList(ids: string[]): Promise<boolean> {
     try {
@@ -310,7 +310,7 @@ class AccountStorageService {
   }
 
   /**
-   * 设置自定义排序列表
+   * Set ordered ids (filters to existing accounts, de-dupes).
    */
   async setOrderedList(ids: string[]): Promise<boolean> {
     try {
@@ -330,7 +330,7 @@ class AccountStorageService {
   }
 
   /**
-   * 置顶账号
+   * Pin account (moves to front).
    */
   async pinAccount(id: string): Promise<boolean> {
     try {
@@ -350,7 +350,7 @@ class AccountStorageService {
   }
 
   /**
-   * 取消置顶账号
+   * Unpin account (no-op if already removed).
    */
   async unpinAccount(id: string): Promise<boolean> {
     try {
@@ -370,7 +370,7 @@ class AccountStorageService {
   }
 
   /**
-   * 检查账号是否已置顶
+   * Check if account is pinned.
    */
   async isPinned(id: string): Promise<boolean> {
     try {
@@ -383,7 +383,7 @@ class AccountStorageService {
   }
 
   /**
-   * 更新账号同步时间
+   * Update account last_sync_time to now.
    */
   async updateSyncTime(id: string): Promise<boolean> {
     return this.updateAccount(id, {
@@ -392,7 +392,7 @@ class AccountStorageService {
   }
 
   /**
-   * 标记账号为已签到
+   * Mark account as checked-in for today (sets date + flag).
    */
   async markAccountAsCheckedIn(id: string): Promise<boolean> {
     try {
@@ -420,7 +420,7 @@ class AccountStorageService {
   }
 
   /**
-   * 重置过期的签到状态（针对自定义签到URL的账号）
+   * Reset expired check-in flags for accounts with custom check-in URLs.
    */
   async resetExpiredCheckIns(): Promise<void> {
     try {
@@ -451,7 +451,7 @@ class AccountStorageService {
   }
 
   /**
-   * 刷新单个账号数据
+   * Refresh a single account (API calls, check-in resets, health/status updates).
    */
   async refreshAccount(id: string, force: boolean = false) {
     try {
@@ -571,7 +571,7 @@ class AccountStorageService {
   }
 
   /**
-   * 刷新所有账号数据
+   * Refresh all accounts concurrently; summarizes results.
    */
   async refreshAllAccounts(force: boolean = false) {
     const accounts = await this.getAllAccounts()
@@ -613,7 +613,7 @@ class AccountStorageService {
   }
 
   /**
-   * 计算账号统计信息
+   * Compute aggregate account stats (quota, usage, income).
    */
   async getAccountStats(): Promise<AccountStats> {
     try {
