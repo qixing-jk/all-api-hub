@@ -189,6 +189,10 @@ class RedemptionAssistService {
 
 export const redemptionAssistService = new RedemptionAssistService()
 
+/**
+ * Message handler for redemption assist actions.
+ * Centralizes background decision logic and delegates responses to callers.
+ */
 export const handleRedemptionAssistMessage = async (
   request: any,
   sender: browser.runtime.MessageSender,

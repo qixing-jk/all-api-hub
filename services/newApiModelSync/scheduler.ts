@@ -388,7 +388,8 @@ class NewApiModelSyncScheduler {
   }
 
   /**
-   * Notify frontend about progress
+   * Notify frontend about progress.
+   * Swallows missing-receiver errors because UI may not be open.
    */
   private notifyProgress() {
     try {
@@ -410,7 +411,8 @@ class NewApiModelSyncScheduler {
 export const newApiModelSyncScheduler = new NewApiModelSyncScheduler()
 
 /**
- * Message handler for New API Model Sync
+ * Message handler for New API Model Sync actions (trigger, retry failed, prefs).
+ * Centralizes background-only control plane for sync operations.
  */
 export const handleNewApiModelSyncMessage = async (
   request: any,

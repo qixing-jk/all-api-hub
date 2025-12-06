@@ -189,7 +189,10 @@ class AutoRefreshService {
 // 创建单例实例
 export const autoRefreshService = new AutoRefreshService()
 
-// 消息处理器
+/**
+ * Message handler for auto-refresh related actions.
+ * Keeps background-only logic centralized; responds with success/error payloads.
+ */
 export const handleAutoRefreshMessage = async (
   request: any,
   sendResponse: (response: any) => void,

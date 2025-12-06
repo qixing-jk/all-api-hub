@@ -311,8 +311,8 @@ class WebdavAutoSyncService {
   }
 
   /**
-   * 合并本地和远程数据
-   * 基于时间戳，保留最新的数据
+   * Merge local and remote data based on timestamps (latest wins).
+   * Also reconciles channel configs and deduplicates pinned ids.
    */
   private mergeData(
     local: {
@@ -346,7 +346,7 @@ class WebdavAutoSyncService {
       accountMap.set(account.id, account)
     })
 
-    // 然后处理远程账号
+    // 然后处理远程账号（按 updated_at 选择较新版本）
     remote.accounts.forEach((remoteAccount) => {
       const localAccount = accountMap.get(remoteAccount.id)
 
@@ -509,7 +509,8 @@ class WebdavAutoSyncService {
   }
 
   /**
-   * 通知前端
+   * Notify frontends about sync status updates.
+   * Silently ignores missing receivers (popup/options may be closed).
    */
   private notifyFrontend(type: string, data: any) {
     try {
@@ -551,7 +552,9 @@ class WebdavAutoSyncService {
 // 创建单例实例
 export const webdavAutoSyncService = new WebdavAutoSyncService()
 
-// 消息处理器
+/**
+ * Message handler for WebDAV auto-sync actions (setup, syncNow, stop, update).
+ */
 export const handleWebdavAutoSyncMessage = async (
   request: any,
   sendResponse: (response: any) => void,
