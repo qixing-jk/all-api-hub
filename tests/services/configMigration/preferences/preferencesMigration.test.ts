@@ -15,7 +15,7 @@ import { DEFAULT_SORTING_PRIORITY_CONFIG } from "~/utils/sortingPriority"
 
 // Helper function to create a minimal v0 preferences object
 /**
- *
+ * Builds a baseline v0 UserPreferences object for migration test scenarios.
  */
 function createV0Preferences(
   overrides?: Partial<UserPreferences>,

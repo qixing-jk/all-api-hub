@@ -317,7 +317,7 @@ const _openUsagePage = async (account: DisplaySiteData) => {
 /**
  * Opens the check-in page for a given account.
  * Prefers custom check-in URL when available.
- * @param account
+ * @param account Account metadata used to resolve the check-in URL.
  */
 const _openCheckInPage = async (account: DisplaySiteData) => {
   const checkInUrl = joinUrl(

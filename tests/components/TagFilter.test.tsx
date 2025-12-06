@@ -5,7 +5,7 @@ import { TagFilter } from "~/components/ui"
 import { fireEvent, render, screen } from "~/tests/test-utils/render"
 
 /**
- *
+ * Renders the TagFilter component in multi-select mode for interaction tests.
  */
 function renderMultipleMode() {
   const Wrapper = () => {
@@ -28,7 +28,7 @@ function renderMultipleMode() {
 }
 
 /**
- *
+ * Renders the TagFilter component in single-select mode for interaction tests.
  */
 function renderSingleMode() {
   const Wrapper = () => {

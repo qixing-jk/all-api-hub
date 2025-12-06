@@ -4,7 +4,7 @@ import { userPreferences } from "~/services/userPreferences"
 import type { WebDAVConfig } from "~/types/webdav"
 
 /**
- *
+ * Builds a Basic Authorization header value from WebDAV username and password.
  */
 function buildAuthHeader(username: string, password: string) {
   const token = btoa(`${username}:${password}`)
@@ -16,7 +16,7 @@ export const PROGRAM_NAME = "all-api-hub"
 const BACKUP_FOLDER_NAME = `${PROGRAM_NAME}-backup`
 
 /**
- *
+ * Ensures the configured WebDAV URL points to a concrete JSON backup file path.
  */
 function ensureFilename(url: string, version: string = CONFIG_VERSION) {
   try {
@@ -32,7 +32,7 @@ function ensureFilename(url: string, version: string = CONFIG_VERSION) {
 }
 
 /**
- *
+ * Derives the backup directory URL from a fully-qualified backup target URL.
  */
 function getBackupDirUrl(targetUrl: string) {
   // derive the .../all-api-hub-backup/ directory from final target URL
@@ -47,7 +47,7 @@ function getBackupDirUrl(targetUrl: string) {
 }
 
 /**
- *
+ * Creates the WebDAV backup directory if needed, tolerating already-existing paths.
  */
 async function ensureBackupDirectory(
   targetUrl: string,
@@ -91,7 +91,7 @@ async function ensureBackupDirectory(
 }
 
 /**
- *
+ * Reads WebDAV configuration from user preferences.
  */
 async function getWebDavConfig(): Promise<WebDAVConfig> {
   const prefs = await userPreferences.getPreferences()

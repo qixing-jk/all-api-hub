@@ -10,7 +10,7 @@ vi.mock("@plasmohq/storage", () => {
   const remove = vi.fn()
 
   /**
-   *
+   * Minimal mock implementation of the Plasmo Storage class used in tests.
    */
   function Storage(this: any) {
     this.set = set

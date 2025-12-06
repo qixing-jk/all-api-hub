@@ -63,7 +63,7 @@ function scoreNameMatch(normalized: string, query: string): number {
 }
 
 /**
- *
+ * Calculates a relevance score based on matching query tokens against account tags.
  */
 function scoreTagMatch(tags: string[] | undefined, query: string): number {
   if (!tags || tags.length === 0) {
@@ -134,7 +134,7 @@ function scoreTokenMatch(token: string, query: string): number {
 }
 
 /**
- *
+ * Calculates a low-weight score when the query matches part of the internal account id.
  */
 function scoreAccountIdMatch(accountId: string, query: string): number {
   if (!accountId) {

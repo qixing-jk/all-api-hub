@@ -71,8 +71,9 @@ export interface SiteAccount {
   checkIn: CheckInConfig
   /**
    * Configuration version for migration tracking
-   * @since v1.0.0 - Initial version (no version field = version 0)
-   * @since v1.1.0 - Introduced checkIn object structure
+   * 1.0.0: Initial version (no version field = version 0)
+   * 1.1.0: Introduced checkIn object structure
+   * @since 1.0.0
    */
   configVersion?: number
 }

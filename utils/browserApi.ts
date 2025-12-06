@@ -80,8 +80,8 @@ export async function getAllTabs(): Promise<browser.tabs.Tab[]> {
 /**
  * 创建新标签页
  * 统一接口，自动设置 active: true
- * @param url
- * @param active
+ * @param url 新标签页要打开的 URL。
+ * @param active 是否在创建后立即激活该标签页。
  */
 export async function createTab(
   url: string,
@@ -92,8 +92,8 @@ export async function createTab(
 
 /**
  * 更新标签页
- * @param tabId
- * @param updateInfo
+ * @param tabId 需要更新的标签页 ID。
+ * @param updateInfo 浏览器标签页更新参数。
  */
 export async function updateTab(
   tabId: number,
@@ -104,7 +104,7 @@ export async function updateTab(
 
 /**
  * 查询标签页
- * @param queryInfo
+ * @param queryInfo 标签查询条件对象。
  */
 export async function queryTabs(
   queryInfo: browser.tabs._QueryQueryInfo,
@@ -115,7 +115,7 @@ export async function queryTabs(
 /**
  * 移除标签页或窗口
  * 自动检测平台能力并选择合适的 API
- * @param id
+ * @param id 目标窗口或标签页的 ID。
  */
 export async function removeTabOrWindow(id: number): Promise<void> {
   if (hasWindowsAPI()) {
@@ -138,7 +138,7 @@ export async function removeTabOrWindow(id: number): Promise<void> {
 /**
  * 创建新窗口（如果支持）
  * 返回窗口对象，如果不支持则返回 null
- * @param createData
+ * @param createData 用于创建窗口的配置数据。
  */
 export async function createWindow(
   createData: browser.windows._CreateCreateData,
@@ -159,7 +159,7 @@ export function hasWindowsAPI(): boolean {
 /**
  * 聚焦标签页
  * 同时聚焦窗口（如果支持）和激活标签页
- * @param tab
+ * @param tab 需要聚焦的浏览器标签页对象。
  */
 export async function focusTab(tab: browser.tabs.Tab): Promise<void> {
   // 先聚焦窗口（如果支持）
@@ -181,8 +181,8 @@ export async function focusTab(tab: browser.tabs.Tab): Promise<void> {
 /**
  * 发送消息到 runtime
  * 统一的消息发送接口
- * @param message
- * @param options
+ * @param message 要发送到 runtime 的消息负载。
+ * @param options 可选的重试和延迟配置。
  */
 export async function sendRuntimeMessage(
   message: any,
@@ -246,7 +246,7 @@ export async function sendMessageWithRetry(
 
 /**
  * 获取扩展资源 URL
- * @param path
+ * @param path 扩展内资源的相对路径。
  */
 export function getExtensionURL(path: string): string {
   return browser.runtime.getURL(path)
@@ -257,7 +257,7 @@ export function getExtensionURL(path: string): string {
  * 返回清理函数
  *
  * 注意：callback 可以返回 true 来保持异步响应通道
- * @param callback
+ * @param callback 收到消息时触发的处理函数。
  */
 export function onRuntimeMessage(
   callback: (
@@ -275,7 +275,7 @@ export function onRuntimeMessage(
 /**
  * 监听标签页激活事件
  * 返回清理函数
- * @param callback
+ * @param callback 激活信息发生变化时调用的回调函数。
  */
 export function onTabActivated(
   callback: (activeInfo: browser.tabs._OnActivatedActiveInfo) => void,
@@ -289,7 +289,7 @@ export function onTabActivated(
 /**
  * 监听标签页更新事件
  * 返回清理函数
- * @param callback
+ * @param callback 标签页更新时调用的处理函数。
  */
 export function onTabUpdated(
   callback: (
@@ -307,7 +307,7 @@ export function onTabUpdated(
 /**
  * 监听标签页移除事件
  * 返回清理函数
- * @param callback
+ * @param callback 标签页被移除时调用的处理函数。
  */
 export function onTabRemoved(
   callback: (
@@ -324,7 +324,7 @@ export function onTabRemoved(
 /**
  * 监听窗口移除事件（如果支持）
  * 返回清理函数
- * @param callback
+ * @param callback 窗口被移除时调用的处理函数。
  */
 export function onWindowRemoved(
   callback: (windowId: number) => void,
@@ -340,7 +340,7 @@ export function onWindowRemoved(
 
 /**
  * 监听扩展启动事件
- * @param callback
+ * @param callback 扩展启动时执行的回调函数。
  */
 export function onStartup(callback: () => void): () => void {
   browser.runtime.onStartup.addListener(callback)
@@ -351,7 +351,7 @@ export function onStartup(callback: () => void): () => void {
 
 /**
  * 监听扩展安装/更新事件
- * @param callback
+ * @param callback 安装或更新时触发的处理函数。
  */
 export function onInstalled(
   callback: (details: browser.runtime._OnInstalledDetails) => void,
@@ -394,11 +394,11 @@ export function hasAlarmsAPI(): boolean {
 
 /**
  * 创建定时任务
- * @param name
- * @param alarmInfo
- * @param alarmInfo.periodInMinutes
- * @param alarmInfo.delayInMinutes
- * @param alarmInfo.when
+ * @param name 定时任务名称，用于标识和后续查找。
+ * @param alarmInfo 定时任务配置对象。
+ * @param alarmInfo.periodInMinutes 任务执行的时间间隔（分钟）。
+ * @param alarmInfo.delayInMinutes 任务首次执行前的延迟时间（分钟）。
+ * @param alarmInfo.when 指定首次触发时间的时间戳（毫秒）。
  */
 export async function createAlarm(
   name: string,
@@ -417,7 +417,7 @@ export async function createAlarm(
 
 /**
  * 清除定时任务
- * @param name
+ * @param name 要清除的定时任务名称。
  */
 export async function clearAlarm(name: string): Promise<boolean> {
   if (!hasAlarmsAPI()) {
@@ -429,7 +429,7 @@ export async function clearAlarm(name: string): Promise<boolean> {
 
 /**
  * 获取定时任务
- * @param name
+ * @param name 需要获取的定时任务名称。
  */
 export async function getAlarm(
   name: string,
@@ -455,7 +455,7 @@ export async function getAllAlarms(): Promise<browser.alarms.Alarm[]> {
 /**
  * 监听定时任务触发事件
  * 返回清理函数
- * @param callback
+ * @param callback 定时任务触发时调用的处理函数。
  */
 export function onAlarm(
   callback: (alarm: browser.alarms.Alarm) => void,

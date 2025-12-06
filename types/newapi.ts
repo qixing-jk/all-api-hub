@@ -132,14 +132,14 @@ export interface ChannelInfo {
 
 /**
  * New API Channel data
- * @note 获取Channel的info时的数据结构
+ * 获取 Channel 的 info 时使用的数据结构。
  */
 export interface NewApiChannel {
   id: number
   type: ChannelType
   /**
    * 渠道key
-   * @note 为""
+   * 通常从接口获取时该字段可能为空字符串。
    */
   key: string
   name: string
@@ -168,7 +168,7 @@ export interface NewApiChannel {
   test_model: string | null
   /**
    * 创建时间戳
-   * @note unix timestamp (秒)
+   * 使用 Unix 时间戳（秒）。
    */
   created_time: number
   test_time: number

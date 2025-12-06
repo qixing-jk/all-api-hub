@@ -11,13 +11,13 @@ export function joinUrl(base: string, path: string) {
 }
 
 /**
- * Parse tab and anchor from URL
- * Supports both ?tab=xxx and hash patterns like #tab=xxx or #basic?tab=xxx
- * Also supports direct heading anchors like #heading-id
- * @param options
- * @param options.ignoreAnchors
- * @param options.defaultHashPage
- * @returns Object containing tab and anchor information
+ * Parse tab/anchor information from URL hash and search parameters.
+ * Supports both ?tab=xxx and hash patterns like #tab=xxx or #basic?tab=xxx.
+ * Also supports direct heading anchors like #heading-id.
+ * @param options Options for ignoring anchors or forcing a default hash page.
+ * @param options.ignoreAnchors Anchors to skip when parsing headings.
+ * @param options.defaultHashPage Hash page treated as the default context.
+ * @returns Object containing tab and anchor information.
  */
 export function parseTabFromUrl(
   options: {

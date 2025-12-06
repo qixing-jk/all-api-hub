@@ -69,11 +69,11 @@ export const DEFAULT_SORTING_PRIORITY_CONFIG: SortingPriorityConfig = {
  * Compare two display records using the user-selected sort field.
  * Keeps currency-aware ordering logic in a single place so every criteria can
  * reuse the same implementation.
- * @param a
- * @param b
- * @param sortField
- * @param currencyType
- * @param sortOrder
+ * @param a First account entry to compare.
+ * @param b Second account entry to compare.
+ * @param sortField Field selected by the user for comparison.
+ * @param currencyType Currency used when comparing numeric balances.
+ * @param sortOrder Sort direction (`asc` or `desc`).
  */
 function compareByUserSortField(
   a: DisplaySiteData,

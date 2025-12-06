@@ -15,7 +15,7 @@ export interface ChannelConfig {
 export type ChannelConfigMap = Record<number, ChannelConfig>
 
 /**
- *
+ * Creates a default channel configuration with empty model filter rules and current timestamps.
  */
 export function createDefaultChannelConfig(channelId: number): ChannelConfig {
   const timestamp = Date.now()

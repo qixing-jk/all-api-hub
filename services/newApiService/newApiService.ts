@@ -30,7 +30,7 @@ import { getErrorMessage } from "~/utils/error"
 import { UserPreferences, userPreferences } from "../userPreferences"
 
 /**
- *
+ * Parses a comma-delimited string into a trimmed string array, skipping blanks.
  */
 function parseDelimitedList(value?: string | null): string[] {
   if (!value) return []
@@ -41,7 +41,7 @@ function parseDelimitedList(value?: string | null): string[] {
 }
 
 /**
- *
+ * Normalizes a list of strings by trimming entries and removing duplicates.
  */
 function normalizeList(values: string[] = []): string[] {
   return Array.from(new Set(values.map((item) => item.trim()).filter(Boolean)))
@@ -225,8 +225,8 @@ export async function getNewApiConfig(): Promise<{
 }
 
 /**
- * 获取账号支持的模型列表
- * @note 优先为API密钥的模型列表，回退到账号所有可用的模型列表
+ * 获取账号支持的模型列表。
+ * 优先使用 API 密钥携带的模型列表，回退到上游接口与账号可用模型。
  */
 export async function fetchAvailableModels(
   account: DisplaySiteData,
@@ -382,10 +382,9 @@ export interface ImportToNewApiOptions {
 }
 
 /**
- * 将账户导入到 New API
- * @disabled 暂时不需要此功能
- * @param account 站点数据
- * @param token API 令牌
+ * 将账户导入到 New API 作为渠道。
+ * @param account 站点数据。
+ * @param token API 令牌，用于访问上游模型与构建渠道。
  */
 export async function importToNewApi(
   account: DisplaySiteData,
@@ -459,7 +458,7 @@ export async function importToNewApi(
 
 // Helper function to validate New API configuration
 /**
- *
+ * Validates New API configuration from user preferences and collects error messages.
  */
 async function validateNewApiConfig(): Promise<{
   valid: boolean
@@ -489,10 +488,9 @@ async function validateNewApiConfig(): Promise<{
 }
 
 /**
- * 自动导入到New API中作为渠道
- * @disabled 暂时不需要此功能
- * @param account
- * @param toastId
+ * 自动导入到 New API 中作为渠道，并通过 toast 展示进度与结果。
+ * @param account 需要导入的新 API 站点账号实体。
+ * @param toastId 可选 toast 标识，用于复用通知实例。
  */
 export async function autoConfigToNewApi(
   account: SiteAccount,

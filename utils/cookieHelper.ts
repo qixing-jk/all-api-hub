@@ -260,7 +260,8 @@ export function addExtensionHeader(
 }
 
 /**
- *
+ * Adds the authentication mode header when the cookie interceptor is available.
+ * Normalizes the headers object before mutating it.
  */
 export async function addAuthMethodHeader(
   headers: HeadersInit = {},

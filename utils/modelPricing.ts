@@ -20,9 +20,9 @@ export type PerCallPrice = number | { input: number; output: number }
 /**
  * 计算模型价格
  * @param model 模型定价信息
- * @param groupRatio 分组倍率
+ * @param groupRatio 分组倍率映射表
  * @param exchangeRate 汇率（CNY per USD）
- * @param userGroup 用户分组
+ * @param userGroup 用户分组标识，用于匹配 groupRatio
  * 原理 https://github.com/QuantumNous/new-api/blob/7437b671efb6b994eae3d8d721e3cbe215e5abc9/web/src/helpers/utils.jsx#L595
  */
 export const calculateModelPrice = (
@@ -89,9 +89,9 @@ const calculateModelPerCallPrice = (
 
 /**
  * 格式化价格显示
- * @param price
- * @param currency
- * @param precision
+ * @param price 需要展示的价格
+ * @param currency 货币类型，用于决定符号
+ * @param precision 小数位数
  */
 export const formatPrice = (
   price: number,
@@ -111,8 +111,8 @@ export const formatPrice = (
 
 /**
  * 格式化价格显示 - 简洁格式
- * @param price
- * @param currency
+ * @param price 需要展示的价格
+ * @param currency 货币类型，用于决定符号
  */
 export const formatPriceCompact = (
   price: number,
@@ -133,10 +133,10 @@ export const formatPriceCompact = (
 
 /**
  * 格式化价格区间显示（输入-输出）
- * @param inputPrice
- * @param outputPrice
- * @param currency
- * @param precision
+ * @param inputPrice 输入价格
+ * @param outputPrice 输出价格
+ * @param currency 货币类型
+ * @param precision 小数位数
  */
 export const formatPriceRange = (
   inputPrice: number,
@@ -156,7 +156,7 @@ export const formatPriceRange = (
 
 /**
  * 获取计费模式的显示文本
- * @param quotaType
+ * @param quotaType 后端返回的计费模式类型
  */
 export const getBillingModeText = (quotaType: number): string => {
   return isTokenBillingType(quotaType)
@@ -166,7 +166,7 @@ export const getBillingModeText = (quotaType: number): string => {
 
 /**
  * 获取计费模式的样式
- * @param quotaType
+ * @param quotaType 后端返回的计费模式类型
  */
 export const getBillingModeStyle = (
   quotaType: number,
@@ -178,8 +178,8 @@ export const getBillingModeStyle = (
 
 /**
  * 检查模型是否对指定分组可用
- * @param model
- * @param userGroup
+ * @param model 模型定价数据
+ * @param userGroup 用户分组标识
  */
 export const isModelAvailableForGroup = (
   model: ModelPricing,
@@ -190,7 +190,7 @@ export const isModelAvailableForGroup = (
 
 /**
  * 获取模型的可用端点类型显示文本
- * @param endpointTypes
+ * @param endpointTypes 支持的端点类型列表
  */
 export const getEndpointTypesText = (
   endpointTypes: string[] | undefined,

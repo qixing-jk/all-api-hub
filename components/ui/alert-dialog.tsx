@@ -5,7 +5,7 @@ import { buttonVariants } from "~/components/ui/button"
 import { cn } from "~/lib/utils"
 
 /**
- *
+ * Root alert dialog container that wires Radix primitives into our design tokens.
  */
 function AlertDialog({
   ...props
@@ -14,7 +14,7 @@ function AlertDialog({
 }
 
 /**
- *
+ * Trigger element that opens the alert dialog when interacted with.
  */
 function AlertDialogTrigger({
   ...props
@@ -25,7 +25,7 @@ function AlertDialogTrigger({
 }
 
 /**
- *
+ * Portal wrapper to ensure alert dialogs render outside regular stacking context.
  */
 function AlertDialogPortal({
   ...props
@@ -36,7 +36,7 @@ function AlertDialogPortal({
 }
 
 /**
- *
+ * Semi-transparent overlay drawn beneath the alert dialog content.
  */
 function AlertDialogOverlay({
   className,
@@ -55,7 +55,7 @@ function AlertDialogOverlay({
 }
 
 /**
- *
+ * Surface that renders the alert dialog body and composes overlay + portal.
  */
 function AlertDialogContent({
   className,
@@ -77,7 +77,7 @@ function AlertDialogContent({
 }
 
 /**
- *
+ * Layout helper that stacks dialog title and description with consistent spacing.
  */
 function AlertDialogHeader({
   className,
@@ -93,7 +93,7 @@ function AlertDialogHeader({
 }
 
 /**
- *
+ * Footer container that aligns dialog action buttons responsively.
  */
 function AlertDialogFooter({
   className,
@@ -112,7 +112,7 @@ function AlertDialogFooter({
 }
 
 /**
- *
+ * Headline text element for the alert dialog.
  */
 function AlertDialogTitle({
   className,
@@ -128,7 +128,7 @@ function AlertDialogTitle({
 }
 
 /**
- *
+ * Supporting copy element for the alert dialog describing consequences.
  */
 function AlertDialogDescription({
   className,
@@ -144,7 +144,7 @@ function AlertDialogDescription({
 }
 
 /**
- *
+ * Primary action button used to confirm destructive interactions.
  */
 function AlertDialogAction({
   className,
@@ -159,7 +159,7 @@ function AlertDialogAction({
 }
 
 /**
- *
+ * Secondary action button that cancels the alert dialog flow.
  */
 function AlertDialogCancel({
   className,

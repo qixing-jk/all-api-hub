@@ -82,7 +82,7 @@ vi.mock("~/services/userPreferences", () => ({
 // ============================================================================
 
 /**
- *
+ * Creates a mock DisplaySiteData object with sensible defaults for tests.
  */
 function createMockDisplaySiteData(
   overrides?: Partial<DisplaySiteData>,
@@ -109,7 +109,7 @@ function createMockDisplaySiteData(
 }
 
 /**
- *
+ * Creates a mock ApiToken instance representing a typical API key record.
  */
 function createMockApiToken(overrides?: Partial<ApiToken>): ApiToken {
   return {
@@ -129,7 +129,7 @@ function createMockApiToken(overrides?: Partial<ApiToken>): ApiToken {
 }
 
 /**
- *
+ * Creates a UserPreferences object wired with New API configuration fields.
  */
 function createMockUserPreferencesWithNewApi(overrides?: any) {
   return {
@@ -172,7 +172,7 @@ function createMockUserPreferencesWithNewApi(overrides?: any) {
 }
 
 /**
- *
+ * Creates a representative New API channel structure used in service tests.
  */
 function createMockNewApiChannel(overrides?: any) {
   return {
@@ -217,7 +217,7 @@ function createMockNewApiChannel(overrides?: any) {
 }
 
 /**
- *
+ * Wraps one or more New API channels into a list payload returned by search.
  */
 function createMockNewApiChannelListData(channels?: any[]) {
   return {
@@ -228,7 +228,7 @@ function createMockNewApiChannelListData(channels?: any[]) {
 }
 
 /**
- *
+ * Creates a mock SiteAccount entity for integration-style New API tests.
  */
 function createMockSiteAccount(overrides?: Partial<SiteAccount>): SiteAccount {
   return {

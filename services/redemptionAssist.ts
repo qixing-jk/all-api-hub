@@ -47,6 +47,7 @@ class RedemptionAssistService {
   /**
    * Update runtime flags without persisting.
    * @param settings Runtime-only toggle overrides.
+   * @param settings.enabled Whether redemption assist is enabled at runtime.
    */
   updateRuntimeSettings(settings: { enabled?: boolean }) {
     if (typeof settings.enabled === "boolean") {
@@ -92,7 +93,10 @@ class RedemptionAssistService {
   /**
    * Decide whether to show redemption prompt for a given URL/code pair.
    * Returns a reason when skipping prompt (disabled/invalid_code).
-   * @param params url, code, optional tabId for telemetry.
+   * @param params Wrapper object containing URL, redemption code and tab id.
+   * @param params.url Page URL where the potential redemption code was found.
+   * @param params.code Candidate redemption code extracted from the page.
+   * @param params.tabId Optional tab identifier used for telemetry.
    * @returns shouldPrompt flag and optional skip reason.
    */
   async shouldPrompt(params: {
