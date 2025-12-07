@@ -696,7 +696,7 @@ export async function ensureAccountApiToken(
   })
 
   const tokens = await fetchAccountTokens(displaySiteData)
-  let apiToken: ApiToken | undefined = tokens[0]
+  let apiToken: ApiToken | undefined = tokens.at(-1)
 
   if (!apiToken) {
     const newTokenData = generateDefaultToken()
