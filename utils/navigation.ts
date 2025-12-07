@@ -315,8 +315,7 @@ const _openUsagePage = async (account: DisplaySiteData) => {
 }
 
 /**
- * Opens the check-in page for a given account.
- * Prefers custom check-in URL when available.
+ * Opens the default check-in page for a given account.
  * @param account Account metadata used to resolve the check-in URL.
  */
 const _openCheckInPage = async (account: DisplaySiteData) => {
@@ -330,7 +329,7 @@ const _openCheckInPage = async (account: DisplaySiteData) => {
 /**
  * Opens the account's custom check-in URL when present, otherwise falls back to
  * the default site-specific path so manual overrides keep working.
- * @param account Account metadata that may contain a custom checkout URL.
+ * @param account Account metadata that may contain a custom check-in URL.
  */
 const _openCustomCheckInPage = async (account: DisplaySiteData) => {
   const customCheckInUrl =
@@ -429,7 +428,7 @@ export const openRedeemPage = withPopupClose(_openRedeemPage)
 
 /**
  * Execute multiple navigation operations concurrently and close the popup once
- * every action has been scheduled.
+ * every action has completed.
  * @param operations List of async/sync navigation callbacks to run together.
  */
 export const openMultiplePages = async (

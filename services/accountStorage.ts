@@ -882,17 +882,17 @@ class AccountStorageService {
     return `account_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
   }
 
+  /**
+   * Determines whether an account refresh should be skipped based on the
+   * global refresh preferences and the timestamp of the last sync.
+   * @param account - The account whose refresh cadence is being evaluated.
+   * @param force - When true, bypasses the interval guardrail entirely.
+   * @returns True when the refresh interval has not elapsed and force isn't set.
+   */
   private async shouldSkipRefresh(
     account: SiteAccount,
     force: boolean = false,
   ): Promise<boolean> {
-    /**
-     * Determines whether an account refresh should be skipped based on the
-     * global refresh preferences and the timestamp of the last sync.
-     * @param account - The account whose refresh cadence is being evaluated.
-     * @param force - When true, bypasses the interval guardrail entirely.
-     * @returns True when the refresh interval has not elapsed and force isn’t set.
-     */
     if (force) {
       return false // 强制刷新，不跳过
     }
