@@ -52,7 +52,9 @@ class ModelMetadataService {
       return this.initPromise
     }
 
-    this.initPromise = this._initialize()
+    this.initPromise = this._initialize().finally(() => {
+      this.initPromise = null
+    })
     return this.initPromise
   }
 
