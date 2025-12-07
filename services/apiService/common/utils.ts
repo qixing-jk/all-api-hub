@@ -123,7 +123,7 @@ const createCookieAuthRequest = async (
  */
 const createTokenAuthRequest = async (
   userId: number | string | undefined,
-  accessToken: string,
+  accessToken: string | undefined,
   options: RequestInit = {},
 ): Promise<RequestInit> =>
   createBaseRequest(
@@ -288,14 +288,14 @@ const _fetchApi = async <T>(
       authOptions = await createCookieAuthRequest(userId, options)
       break
     case AuthTypeEnum.AccessToken:
-      authOptions = await createTokenAuthRequest(userId, token!)
+      authOptions = await createTokenAuthRequest(userId, token)
       break
     case AuthTypeEnum.None:
       authOptions = {}
       break
     default:
       if (token) {
-        authOptions = await createTokenAuthRequest(userId, token!)
+        authOptions = await createTokenAuthRequest(userId, token)
       }
       break
   }
@@ -407,7 +407,6 @@ export function isHttpUrl(url: string): boolean {
 
 /**
  * Extract the `data` field from a JSON API response, throwing on invalid shape.
- *
  * @param body Parsed JSON body from upstream.
  * @param endpoint Optional endpoint for richer error context.
  * @returns Extracted `data` payload cast to T.
