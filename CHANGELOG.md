@@ -1,5 +1,34 @@
 # Changelog
 
+## [2.27.0](https://github.com/qixing-jk/all-api-hub/compare/v2.26.0...v2.27.0) (2025-12-12)
+
+
+### Features
+
+* **account:** add health status codes for actionable UI ([3e53135](https://github.com/qixing-jk/all-api-hub/commit/3e5313520d7c8d77a9e500bf4ca2a4094e2f307d))
+* **api:** add temp-window fallback health status indicators ([77bd8e4](https://github.com/qixing-jk/all-api-hub/commit/77bd8e450da51f43c5569813b183ae37cb0b49f4))
+* **button:** update link text style for consistency ([adea02b](https://github.com/qixing-jk/all-api-hub/commit/adea02bd22eed6b164844b14ba16cc72a96db770))
+* **i18n:** refine shield bypass descriptions for clarity ([1e6f6d3](https://github.com/qixing-jk/all-api-hub/commit/1e6f6d31648d859b4ef67fae8d8420a582accacb))
+* **ui:** add dedicated protection bypass UI text variants ([6de709e](https://github.com/qixing-jk/all-api-hub/commit/6de709e3aa32dde15ab31b1c34848ca5fa53a52b))
+* **user-preferences:** add temp-window fallback reminder system ([6db0460](https://github.com/qixing-jk/all-api-hub/commit/6db0460a002565599df08fa0d5ef00f70bb76bab))
+
+
+### Bug Fixes
+
+* **accountOperations:** ensure consistent token selection strategy ([67a0f4d](https://github.com/qixing-jk/all-api-hub/commit/67a0f4d467188f7ede71b139d940369b49d6c03f))
+* **api:** make accessToken parameter optional in auth utils ([7292f96](https://github.com/qixing-jk/all-api-hub/commit/7292f96848324e614e0283be5638b96f3cb256dc))
+* **button:** remove extra spacing conflicting with gap property ([108b2da](https://github.com/qixing-jk/all-api-hub/commit/108b2da8a7001db7ee0b91cf5b1f372bce2612ec))
+* **i18n:** update settings path in localization files ([109b984](https://github.com/qixing-jk/all-api-hub/commit/109b984da7bd4d6b27fe3f15b75850d10e5b7863))
+* **locales:** correct Firefox popup note in zh_CN settings ([b7ad39b](https://github.com/qixing-jk/all-api-hub/commit/b7ad39b6a43180d601e2d3fdf9728004726259db))
+* **modelMetadata:** reset initPromise after initialization ([e7d4c13](https://github.com/qixing-jk/all-api-hub/commit/e7d4c13fdd692fe7bd4569ac1ae49dd72c550227))
+* **types:** correct export syntax for TempWindowHealthStatusCode ([a32317c](https://github.com/qixing-jk/all-api-hub/commit/a32317caf921421358eeeb86c16d82c57d66da6a))
+* **utils:** simplify Base64 encoding in cherryStudioURL ([dfb0e8e](https://github.com/qixing-jk/all-api-hub/commit/dfb0e8e9deb5ebce439932e609fa0f300e2e2824))
+
+
+### Performance Improvements
+
+* **utils:** extract enabled criteria sorting from comparator ([3bae3f9](https://github.com/qixing-jk/all-api-hub/commit/3bae3f98c9c5a7922efdc5ebc3304be0556c2358))
+
 ## [2.26.0](https://github.com/qixing-jk/all-api-hub/compare/v2.25.0...v2.26.0) (2025-12-05)
 
 
