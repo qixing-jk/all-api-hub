@@ -1,6 +1,6 @@
 {
   "manifest_name": {
-    "message": "All API Hub – AI Relay & New API Manager"
+    "message": "All API Hub v2.26.1 – AI Relay & New API Manager"
   },
   "manifest_description": {
     "message": "Manage third-party New API-compatible relays and your own New API: accounts, balances, channels, and model sync in one place."
