@@ -54,6 +54,8 @@
     "unknown": "Unknown",
     "normal": "Account status is normal",
     "httpError": "HTTP {{statusCode}}: {{message}}",
+    "tempWindowDisabled": "Temp-window protection bypass is disabled. Enable it in Settings > Data Refresh",
+    "tempWindowPermissionRequired": "Temp-window protection bypass needs cookie interceptor permissions. Grant them in Settings > Permissions",
     "apiError": "API error",
     "networkFailed": "Network connection failed",
     "unknownError": "Unknown error"

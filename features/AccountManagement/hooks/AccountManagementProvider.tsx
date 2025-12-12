@@ -1,5 +1,7 @@
 import { type ReactNode } from "react"
 
+import { TempWindowFallbackReminderGate } from "~/features/AccountManagement/components/TempWindowFallbackReminderGate"
+
 import { AccountActionsProvider } from "./AccountActionsContext"
 import { AccountDataProvider } from "./AccountDataContext"
 import { DialogStateProvider } from "./DialogStateContext"
@@ -16,6 +18,7 @@ export const AccountManagementProvider = ({
       <DialogStateProvider>
         <AccountActionsProvider>{children}</AccountActionsProvider>
       </DialogStateProvider>
+      <TempWindowFallbackReminderGate />
     </AccountDataProvider>
   )
 }

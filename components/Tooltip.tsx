@@ -65,6 +65,7 @@ export default function Tooltip({
           anchorId={tooltipId}
           place={position}
           delayShow={delay}
+          clickable
           className={defaultClassName}
         >
           {content}

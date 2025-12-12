@@ -13,6 +13,7 @@ import {
   DEFAULT_PREFERENCES,
   userPreferences,
   type TempWindowFallbackPreferences,
+  type TempWindowFallbackReminderPreferences,
   type UserPreferences,
 } from "~/services/userPreferences"
 import type { BalanceType, CurrencyType, SortField, SortOrder } from "~/types"
@@ -46,6 +47,7 @@ interface UserPreferencesContextType {
   cliProxyManagementKey: string
   themeMode: ThemeMode
   tempWindowFallback: TempWindowFallbackPreferences
+  tempWindowFallbackReminder: TempWindowFallbackReminderPreferences
 
   updateActiveTab: (activeTab: BalanceType) => Promise<boolean>
   updateDefaultTab: (activeTab: BalanceType) => Promise<boolean>
@@ -79,6 +81,9 @@ interface UserPreferencesContextType {
   updateRedemptionAssist: (updates: { enabled: boolean }) => Promise<boolean>
   updateTempWindowFallback: (
     updates: Partial<TempWindowFallbackPreferences>,
+  ) => Promise<boolean>
+  updateTempWindowFallbackReminder: (
+    updates: Partial<TempWindowFallbackReminderPreferences>,
   ) => Promise<boolean>
   resetToDefaults: () => Promise<boolean>
   resetDisplaySettings: () => Promise<boolean>
@@ -171,6 +176,33 @@ export const UserPreferencesProvider = ({
       const success = await userPreferences.savePreferences(updates)
       if (success) {
         setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
+      }
+      return success
+    },
+    [],
+  )
+
+  const updateTempWindowFallbackReminder = useCallback(
+    async (updates: Partial<TempWindowFallbackReminderPreferences>) => {
+      const success = await userPreferences.savePreferences({
+        tempWindowFallbackReminder: updates,
+      })
+      if (success) {
+        setPreferences((prev) => {
+          if (!prev) return null
+          const merged: TempWindowFallbackReminderPreferences = {
+            ...(DEFAULT_PREFERENCES.tempWindowFallbackReminder ?? {
+              dismissed: false,
+            }),
+            ...(prev.tempWindowFallbackReminder ?? {}),
+            ...updates,
+          }
+          return {
+            ...prev,
+            tempWindowFallbackReminder: merged,
+            lastUpdated: Date.now(),
+          }
+        })
       }
       return success
     },
@@ -737,6 +769,10 @@ export const UserPreferencesProvider = ({
     tempWindowFallback:
       preferences.tempWindowFallback ??
       (DEFAULT_PREFERENCES.tempWindowFallback as TempWindowFallbackPreferences),
+    tempWindowFallbackReminder:
+      preferences.tempWindowFallbackReminder ??
+      (DEFAULT_PREFERENCES
+        .tempWindowFallbackReminder as TempWindowFallbackReminderPreferences),
     updateActiveTab,
     updateDefaultTab,
     updateCurrencyType,
@@ -757,6 +793,7 @@ export const UserPreferencesProvider = ({
     updateModelRedirect,
     updateRedemptionAssist,
     updateTempWindowFallback,
+    updateTempWindowFallbackReminder,
     resetToDefaults,
     resetDisplaySettings,
     resetAutoRefreshConfig,

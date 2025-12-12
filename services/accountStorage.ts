@@ -217,10 +217,22 @@ class AccountStorageService {
         throw new Error(t("messages:storage.accountNotFound", { id }))
       }
 
-      accounts[index] = deepOverride<SiteAccount>(accounts[index], {
+      const merged = deepOverride<SiteAccount>(accounts[index], {
         ...updates,
         updated_at: Date.now(),
       } as DeepPartial<SiteAccount>)
+
+      if (
+        updates.health &&
+        Object.prototype.hasOwnProperty.call(updates.health, "code") &&
+        updates.health.code === undefined &&
+        merged.health &&
+        Object.prototype.hasOwnProperty.call(merged.health, "code")
+      ) {
+        delete (merged.health as { code?: unknown }).code
+      }
+
+      accounts[index] = merged
 
       // Persist the updated list atomically to keep pinned/ordered ids consistent
       await this.saveAccounts(accounts)
@@ -487,6 +499,7 @@ class AccountStorageService {
         health: {
           status: result.healthStatus.status,
           reason: result.healthStatus.message,
+          code: result.healthStatus.code,
         },
         last_sync_time: Date.now(),
       }
@@ -562,6 +575,7 @@ class AccountStorageService {
           health: {
             status: SiteHealthStatus.Unknown,
             reason: getErrorMessage(error),
+            code: undefined,
           },
           last_sync_time: Date.now(),
         })

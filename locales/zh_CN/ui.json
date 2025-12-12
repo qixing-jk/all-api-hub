@@ -40,6 +40,17 @@
       "deleteFailed": "删除失败: {{error}}",
       "deleteFailedGeneric": "删除账号失败: {{error}}"
     },
+    "tempWindowFallbackReminder": {
+      "title": "启用临时窗口模式以完成网络请求",
+      "descriptionDisabled": "{{accountName}} 的网络请求需要打开临时窗口来通过防护，确保请求成功完成，请在 设置 > 数据刷新 中启用",
+      "descriptionPermission": "{{accountName}} 需要 Cookie 拦截权限才能打开临时窗口，确保请求成功完成，请在 设置 > 权限 中授予",
+      "neverRemindCheckbox": "不再提醒",
+      "actions": {
+        "openSettings": "打开设置",
+        "notNow": "稍后再说",
+        "neverRemind": "不再提醒"
+      }
+    },
     "copyKey": {
       "title": "密钥列表",
       "loading": "正在获取密钥列表...",

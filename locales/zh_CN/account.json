@@ -54,6 +54,8 @@
     "unknown": "未知",
     "normal": "账号状态正常",
     "httpError": "HTTP {{statusCode}}: {{message}}",
+    "tempWindowDisabled": "临时窗口过盾功能已关闭，请在 设置 > 数据刷新 中启用",
+    "tempWindowPermissionRequired": "临时窗口过盾功能需要 Cookie 拦截权限，请在 设置 > 权限管理 中授予",
     "apiError": "API错误",
     "networkFailed": "网络连接失败",
     "unknownError": "未知错误"

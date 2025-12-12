@@ -4,6 +4,7 @@ import { accountStorage, AccountStorageUtils } from "~/services/accountStorage"
 import {
   AuthTypeEnum,
   SiteHealthStatus,
+  TEMP_WINDOW_HEALTH_STATUS_CODES,
   type AccountStorageConfig,
   type SiteAccount,
 } from "~/types"
@@ -127,6 +128,7 @@ describe("accountStorage core behaviors", () => {
       healthStatus: {
         status: SiteHealthStatus.Healthy,
         message: "",
+        code: undefined,
       },
     })
 
@@ -491,6 +493,59 @@ describe("accountStorage core behaviors", () => {
     const updatedAccount = await accountStorage.getAccountById("known-site")
     expect(updatedAccount?.site_type).toBe("one-api")
     expect(updatedAccount?.checkIn?.enableDetection).toBe(true)
+  })
+
+  it("refreshAccount should persist health code for actionable UI", async () => {
+    const account = createAccount({
+      id: "temp-window",
+      site_url: "https://baz.example.com",
+      site_type: "one-api",
+      checkIn: { enableDetection: true },
+    })
+    seedStorage([account])
+
+    mockRefreshAccountData.mockResolvedValueOnce({
+      success: false,
+      healthStatus: {
+        status: SiteHealthStatus.Warning,
+        message:
+          "Temp-window protection bypass is disabled. Enable it in Settings > Data Refresh",
+        code: TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED,
+      },
+    })
+
+    await accountStorage.refreshAccount("temp-window", true)
+
+    const updatedAccount = await accountStorage.getAccountById("temp-window")
+    expect(updatedAccount?.health?.code).toBe(
+      TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED,
+    )
+
+    mockRefreshAccountData.mockResolvedValueOnce({
+      success: true,
+      data: {
+        quota: 0,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_quota_consumption: 0,
+        today_requests_count: 0,
+        checkIn: {
+          enableDetection: true,
+          isCheckedInToday: false,
+          customCheckInUrl: "",
+          customRedeemUrl: "",
+          openRedeemWithCheckIn: true,
+        },
+      },
+      healthStatus: {
+        status: SiteHealthStatus.Healthy,
+        message: "",
+      },
+    })
+
+    await accountStorage.refreshAccount("temp-window", true)
+    const clearedAccount = await accountStorage.getAccountById("temp-window")
+    expect(clearedAccount?.health?.code).toBeUndefined()
   })
 })
 

@@ -91,6 +91,23 @@ const TEMP_WINDOW_FALLBACK_CODES = new Set<ApiErrorCode>([
   API_ERROR_CODES.CONTENT_TYPE_MISMATCH,
 ])
 
+/**
+ * Mutates an {@link ApiError} to preserve its original code and attach a more
+ * specific failure reason.
+ *
+ * This is used when temp-window fallback would have been applicable, but is
+ * blocked by user configuration or insufficient permissions.
+ */
+function tagTempWindowFallbackBlocked(
+  error: ApiError,
+  code: ApiErrorCode,
+): void {
+  if (!error.originalCode) {
+    error.originalCode = error.code
+  }
+  error.code = code
+}
+
 export interface TempWindowFallbackContext {
   baseUrl: string
   url: string
@@ -225,6 +242,7 @@ async function shouldUseTempWindowFallback(
   }
 
   if (!prefsFallback || !prefsFallback.enabled) {
+    tagTempWindowFallbackBlocked(error, API_ERROR_CODES.TEMP_WINDOW_DISABLED)
     logSkipTempWindowFallback(
       "Temp window shield is disabled or preferences are missing.",
       context,
@@ -236,6 +254,10 @@ async function shouldUseTempWindowFallback(
   }
 
   if (!(await canUseTempWindowFetch())) {
+    tagTempWindowFallbackBlocked(
+      error,
+      API_ERROR_CODES.TEMP_WINDOW_PERMISSION_REQUIRED,
+    )
     logSkipTempWindowFallback(
       "Cookie interceptor permissions not granted; skipping temp window fallback.",
       context,
@@ -273,6 +295,7 @@ async function shouldUseTempWindowFallback(
   const isManualRefreshContext = !isBackground
 
   if (inPopup && !prefsFallback.useInPopup) {
+    tagTempWindowFallbackBlocked(error, API_ERROR_CODES.TEMP_WINDOW_DISABLED)
     logSkipTempWindowFallback(
       "Popup context is disabled by user shield preferences.",
       context,
@@ -280,6 +303,7 @@ async function shouldUseTempWindowFallback(
     return false
   }
   if (inSidePanel && !prefsFallback.useInSidePanel) {
+    tagTempWindowFallbackBlocked(error, API_ERROR_CODES.TEMP_WINDOW_DISABLED)
     logSkipTempWindowFallback(
       "Side panel context is disabled by user shield preferences.",
       context,
@@ -287,6 +311,7 @@ async function shouldUseTempWindowFallback(
     return false
   }
   if (inOptions && !prefsFallback.useInOptions) {
+    tagTempWindowFallbackBlocked(error, API_ERROR_CODES.TEMP_WINDOW_DISABLED)
     logSkipTempWindowFallback(
       "Options page context is disabled by user shield preferences.",
       context,
@@ -295,6 +320,7 @@ async function shouldUseTempWindowFallback(
   }
 
   if (isAutoRefreshContext && !prefsFallback.useForAutoRefresh) {
+    tagTempWindowFallbackBlocked(error, API_ERROR_CODES.TEMP_WINDOW_DISABLED)
     logSkipTempWindowFallback(
       "Auto-refresh context is disabled by user shield preferences.",
       context,
@@ -302,6 +328,7 @@ async function shouldUseTempWindowFallback(
     return false
   }
   if (isManualRefreshContext && !prefsFallback.useForManualRefresh) {
+    tagTempWindowFallbackBlocked(error, API_ERROR_CODES.TEMP_WINDOW_DISABLED)
     logSkipTempWindowFallback(
       "Manual refresh context is disabled by user shield preferences.",
       context,

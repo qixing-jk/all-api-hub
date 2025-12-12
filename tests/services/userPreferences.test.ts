@@ -13,6 +13,9 @@ describe("userPreferences", () => {
       expect(DEFAULT_PREFERENCES.showHealthStatus).toBe(true)
       expect(DEFAULT_PREFERENCES.themeMode).toBe("system")
       expect(DEFAULT_PREFERENCES.redemptionAssist?.enabled).toBe(true)
+      expect(DEFAULT_PREFERENCES.tempWindowFallbackReminder?.dismissed).toBe(
+        false,
+      )
     })
 
     it("has valid accountAutoRefresh config", () => {

@@ -40,6 +40,17 @@
       "deleteFailed": "Delete failed: {{error}}",
       "deleteFailedGeneric": "Failed to delete account: {{error}}"
     },
+    "tempWindowFallbackReminder": {
+      "title": "Enable temporary window mode for requests",
+      "descriptionDisabled": "{{accountName}} needs a temporary window to pass protection so requests can complete successfully. Enable it in Settings > Data Refresh",
+      "descriptionPermission": "{{accountName}} needs Cookie Interceptor permission to open the temporary window so requests can complete successfully. Grant it in Settings > Permissions",
+      "neverRemindCheckbox": "Never remind me",
+      "actions": {
+        "openSettings": "Open settings",
+        "notNow": "Not now",
+        "neverRemind": "Never remind"
+      }
+    },
     "copyKey": {
       "title": "Key List",
       "loading": "Loading key list...",

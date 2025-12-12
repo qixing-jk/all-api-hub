@@ -2,6 +2,7 @@
 
 // 站点健康状态
 import { DATA_TYPE_BALANCE, DATA_TYPE_CONSUMPTION } from "~/constants"
+import { TempWindowHealthStatusCode } from "~/types/tempWindow"
 
 export enum SiteHealthStatus {
   Healthy = "healthy",
@@ -22,7 +23,17 @@ export interface LogItem {
 export interface HealthStatus {
   status: SiteHealthStatus
   reason?: string
+  /**
+   * Optional machine-readable reason code for the current health state.
+   * Used by the UI to provide actionable shortcuts (e.g., jump to settings).
+   */
+  code?: HealthStatusCode
 }
+
+/**
+ * Subset of health status codes that the UI can act on (e.g., open Settings).
+ */
+export type HealthStatusCode = TempWindowHealthStatusCode
 
 // 账号基础信息
 export interface AccountInfo {
@@ -253,3 +264,5 @@ export enum AuthTypeEnum {
   Cookie = "cookie",
   None = "none",
 }
+export type { TempWindowHealthStatusCode } from "~/types/tempWindow"
+export { TEMP_WINDOW_HEALTH_STATUS_CODES } from "~/types/tempWindow"

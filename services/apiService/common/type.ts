@@ -6,6 +6,7 @@ import {
   AuthTypeEnum,
   CheckInConfig,
   SiteHealthStatus,
+  TempWindowHealthStatusCode,
 } from "~/types"
 import type { PerCallPrice } from "~/utils/modelPricing"
 
@@ -53,6 +54,10 @@ export interface RefreshAccountResult {
 export interface HealthCheckResult {
   status: SiteHealthStatus
   message: string
+  /**
+   * Optional machine-readable reason code for actionable UI.
+   */
+  code?: TempWindowHealthStatusCode
 }
 
 export interface SiteStatusInfo {

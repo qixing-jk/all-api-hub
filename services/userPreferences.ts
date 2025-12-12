@@ -50,6 +50,10 @@ export interface TempWindowFallbackPreferences {
   useForManualRefresh: boolean
 }
 
+export interface TempWindowFallbackReminderPreferences {
+  dismissed: boolean
+}
+
 // 用户偏好设置类型定义
 export interface UserPreferences {
   themeMode: ThemeMode
@@ -140,6 +144,10 @@ export interface UserPreferences {
    * 扩展图标徽章配置
    */
   badge?: BadgeConfig
+   * Reminders related to temp-window fallback configuration.
+   * When dismissed, the UI will stop showing opt-in reminder dialogs.
+   */
+  tempWindowFallbackReminder?: TempWindowFallbackReminderPreferences
 
   /**
    * 最后更新时间
@@ -277,6 +285,9 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
     useForManualRefresh: true,
   },
   badge: DEFAULT_BADGE_CONFIG,
+  tempWindowFallbackReminder: {
+    dismissed: false,
+  },
 }
 
 class UserPreferencesService {

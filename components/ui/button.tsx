@@ -11,7 +11,7 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-[var(--button-primary-bg)] text-[var(--button-primary-foreground)] shadow hover:bg-[var(--button-primary-bg-hover)] focus-visible:ring-[var(--button-primary-ring)] focus-visible:ring-opacity-40",
+          "bg-(--button-primary-bg) text-(--button-primary-foreground) shadow hover:bg-(--button-primary-bg-hover) focus-visible:ring-(--button-primary-ring) focus-visible:ring-opacity-40",
         destructive:
           "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
         outline:
@@ -19,12 +19,12 @@ const buttonVariants = cva(
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         success:
-          "bg-[var(--button-success-bg)] text-[var(--button-success-foreground)] shadow-sm hover:bg-[var(--button-success-bg-hover)] focus-visible:ring-[var(--button-success-ring)] focus-visible:ring-opacity-40",
+          "bg-(--button-success-bg) text-(--button-success-foreground) shadow-sm hover:bg-(--button-success-bg-hover) focus-visible:ring-(--button-success-ring) focus-visible:ring-opacity-40",
         warning:
-          "bg-[var(--button-warning-bg)] text-[var(--button-warning-foreground)] shadow-sm hover:bg-[var(--button-warning-bg-hover)] focus-visible:ring-[var(--button-warning-ring)] focus-visible:ring-opacity-40",
+          "bg-(--button-warning-bg) text-(--button-warning-foreground) shadow-sm hover:bg-(--button-warning-bg-hover) focus-visible:ring-(--button-warning-ring) focus-visible:ring-opacity-40",
         ghost:
           "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
-        link: "text-primary underline-offset-4 hover:underline",
+        link: "text-(--button-link-foreground) underline-offset-4 hover:text-(--button-link-hover-foreground) hover:underline focus-visible:ring-(--button-link-ring)",
       },
       size: {
         default: "h-9 px-4 py-2 has-[>svg]:px-3",
@@ -105,9 +105,9 @@ function Button({
         </span>
       )}
       <>
-        {leftIcon && <span className="mr-2">{leftIcon}</span>}
+        {leftIcon && <span>{leftIcon}</span>}
         {children}
-        {rightIcon && <span className="ml-2">{rightIcon}</span>}
+        {rightIcon && <span>{rightIcon}</span>}
       </>
     </Comp>
   )
