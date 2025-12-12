@@ -554,3 +554,265 @@ export const handleExportPreferences = async (
     setIsExporting(false)
   }
 }
+
+/**
+ * CC Switch provider configuration structure
+ */
+interface CCSwitchProvider {
+  id: string
+  app_type: string
+  name: string
+  settings_config: string
+  website_url: string | null
+  category: string | null
+  created_at: number | null
+  sort_index: number | null
+  notes: string | null
+  icon: string | null
+  icon_color: string | null
+  meta: string
+  is_current: number
+}
+
+/**
+ * CC Switch provider endpoint structure
+ */
+interface CCSwitchProviderEndpoint {
+  id: number
+  provider_id: string
+  app_type: string
+  url: string
+  added_at: number | null
+}
+
+/**
+ * Generate a UUID v4 string
+ */
+function generateUUID(): string {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0
+    const v = c === "x" ? r : (r & 0x3) | 0x8
+    return v.toString(16)
+  })
+}
+
+/**
+ * Escape a string for SQL insertion
+ */
+function escapeSqlString(str: string): string {
+  return str.replace(/'/g, "''")
+}
+
+/**
+ * Format a timestamp for SQL comment
+ */
+function formatSqlTimestamp(timestamp: number): string {
+  const date = new Date(timestamp)
+  return date
+    .toISOString()
+    .replace("T", " ")
+    .replace(/\.\d{3}Z$/, "")
+}
+
+/**
+ * Export account data as CC Switch SQLite format.
+ * This generates a SQL file compatible with CC Switch's import functionality.
+ */
+export const handleExportCCSwitch = async (
+  setIsExporting: (isExporting: boolean) => void,
+) => {
+  try {
+    setIsExporting(true)
+
+    const accountData = await accountStorage.exportData()
+    const accounts = accountData.accounts || []
+
+    if (accounts.length === 0) {
+      toast.error(t("importExport:export.noAccountsToExport"))
+      return
+    }
+
+    const now = Date.now()
+    const providers: CCSwitchProvider[] = []
+    const providerEndpoints: CCSwitchProviderEndpoint[] = []
+    let endpointId = 1
+
+    for (const account of accounts) {
+      const providerId = generateUUID()
+      const baseUrl = account.site_url.replace(/\/$/, "")
+
+      // Build settings_config JSON
+      const settingsConfig = {
+        env: {
+          ANTHROPIC_AUTH_TOKEN: account.account_info.access_token,
+          ANTHROPIC_BASE_URL: baseUrl,
+        },
+      }
+
+      const provider: CCSwitchProvider = {
+        id: providerId,
+        app_type: "claude",
+        name: account.site_name || baseUrl,
+        settings_config: JSON.stringify(settingsConfig),
+        website_url: baseUrl,
+        category: null,
+        created_at: account.created_at || now,
+        sort_index: null,
+        notes: account.notes || null,
+        icon: null,
+        icon_color: null,
+        meta: "{}",
+        is_current: 0,
+      }
+      providers.push(provider)
+
+      const endpoint: CCSwitchProviderEndpoint = {
+        id: endpointId++,
+        provider_id: providerId,
+        app_type: "claude",
+        url: baseUrl,
+        added_at: account.created_at || now,
+      }
+      providerEndpoints.push(endpoint)
+    }
+
+    // Generate SQL content
+    let sql = `-- CC Switch SQLite 导出\n`
+    sql += `-- 生成时间: ${formatSqlTimestamp(now)}\n`
+    sql += `-- 来源: All API Hub\n`
+    sql += `-- user_version: 1\n`
+    sql += `PRAGMA foreign_keys=OFF;\n`
+    sql += `PRAGMA user_version=1;\n`
+    sql += `BEGIN TRANSACTION;\n`
+
+    // Create tables
+    sql += `CREATE TABLE IF NOT EXISTS mcp_servers (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                server_config TEXT NOT NULL,
+                description TEXT,
+                homepage TEXT,
+                docs TEXT,
+                tags TEXT NOT NULL DEFAULT '[]',
+                enabled_claude BOOLEAN NOT NULL DEFAULT 0,
+                enabled_codex BOOLEAN NOT NULL DEFAULT 0,
+                enabled_gemini BOOLEAN NOT NULL DEFAULT 0
+            );\n`
+
+    sql += `CREATE TABLE IF NOT EXISTS prompts (
+                id TEXT NOT NULL,
+                app_type TEXT NOT NULL,
+                name TEXT NOT NULL,
+                content TEXT NOT NULL,
+                description TEXT,
+                enabled BOOLEAN NOT NULL DEFAULT 1,
+                created_at INTEGER,
+                updated_at INTEGER,
+                PRIMARY KEY (id, app_type)
+            );\n`
+
+    sql += `CREATE TABLE IF NOT EXISTS provider_endpoints (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                provider_id TEXT NOT NULL,
+                app_type TEXT NOT NULL,
+                url TEXT NOT NULL,
+                added_at INTEGER,
+                FOREIGN KEY (provider_id, app_type) REFERENCES providers(id, app_type) ON DELETE CASCADE
+            );\n`
+
+    sql += `CREATE TABLE IF NOT EXISTS providers (
+                id TEXT NOT NULL,
+                app_type TEXT NOT NULL,
+                name TEXT NOT NULL,
+                settings_config TEXT NOT NULL,
+                website_url TEXT,
+                category TEXT,
+                created_at INTEGER,
+                sort_index INTEGER,
+                notes TEXT,
+                icon TEXT,
+                icon_color TEXT,
+                meta TEXT NOT NULL DEFAULT '{}',
+                is_current BOOLEAN NOT NULL DEFAULT 0,
+                PRIMARY KEY (id, app_type)
+            );\n`
+
+    sql += `CREATE TABLE IF NOT EXISTS settings (
+                key TEXT PRIMARY KEY,
+                value TEXT
+            );\n`
+
+    sql += `CREATE TABLE IF NOT EXISTS skill_repos (
+                owner TEXT NOT NULL,
+                name TEXT NOT NULL,
+                branch TEXT NOT NULL DEFAULT 'main',
+                enabled BOOLEAN NOT NULL DEFAULT 1,
+                PRIMARY KEY (owner, name)
+            );\n`
+
+    sql += `CREATE TABLE IF NOT EXISTS skills (
+                key TEXT PRIMARY KEY,
+                installed BOOLEAN NOT NULL DEFAULT 0,
+                installed_at INTEGER NOT NULL DEFAULT 0
+            );\n`
+
+    // Insert provider endpoints
+    for (const endpoint of providerEndpoints) {
+      sql += `INSERT INTO "provider_endpoints" ("id", "provider_id", "app_type", "url", "added_at") VALUES (${endpoint.id}, '${escapeSqlString(endpoint.provider_id)}', '${escapeSqlString(endpoint.app_type)}', '${escapeSqlString(endpoint.url)}', ${endpoint.added_at});\n`
+    }
+
+    // Insert providers
+    for (const provider of providers) {
+      const websiteUrl =
+        provider.website_url !== null
+          ? `'${escapeSqlString(provider.website_url)}'`
+          : "NULL"
+      const category =
+        provider.category !== null
+          ? `'${escapeSqlString(provider.category)}'`
+          : "NULL"
+      const createdAt =
+        provider.created_at !== null ? provider.created_at : "NULL"
+      const sortIndex =
+        provider.sort_index !== null ? provider.sort_index : "NULL"
+      const notes =
+        provider.notes !== null
+          ? `'${escapeSqlString(provider.notes)}'`
+          : "NULL"
+      const icon =
+        provider.icon !== null ? `'${escapeSqlString(provider.icon)}'` : "NULL"
+      const iconColor =
+        provider.icon_color !== null
+          ? `'${escapeSqlString(provider.icon_color)}'`
+          : "NULL"
+
+      sql += `INSERT INTO "providers" ("id", "app_type", "name", "settings_config", "website_url", "category", "created_at", "sort_index", "notes", "icon", "icon_color", "meta", "is_current") VALUES ('${escapeSqlString(provider.id)}', '${escapeSqlString(provider.app_type)}', '${escapeSqlString(provider.name)}', '${escapeSqlString(provider.settings_config)}', ${websiteUrl}, ${category}, ${createdAt}, ${sortIndex}, ${notes}, ${icon}, ${iconColor}, '${escapeSqlString(provider.meta)}', ${provider.is_current});\n`
+    }
+
+    sql += `COMMIT;\n`
+    sql += `PRAGMA foreign_keys=ON;\n`
+
+    // Download the SQL file
+    const blob = new Blob([sql], { type: "application/sql" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    const timestamp = new Date()
+      .toISOString()
+      .replace(/[-:]/g, "")
+      .replace("T", "_")
+      .slice(0, 15)
+    link.download = `cc-switch-export-${timestamp}.sql`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+
+    toast.success(t("importExport:export.ccSwitchExported"))
+  } catch (error) {
+    console.error("导出 CC Switch 配置失败:", error)
+    toast.error(t("importExport:export.exportFailed"))
+  } finally {
+    setIsExporting(false)
+  }
+}

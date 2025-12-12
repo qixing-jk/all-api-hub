@@ -14,6 +14,7 @@ import {
 import {
   handleExportAccounts,
   handleExportAll,
+  handleExportCCSwitch,
   handleExportPreferences,
 } from "../utils"
 
@@ -89,6 +90,26 @@ const ExportSection = ({ isExporting, setIsExporting }: ExportSectionProps) => {
                 onClick={() => handleExportPreferences(setIsExporting)}
                 disabled={isExporting}
                 variant="secondary"
+                size="sm"
+                loading={isExporting}
+              >
+                {isExporting
+                  ? t("common:status.exporting")
+                  : t("common:actions.export")}
+              </Button>
+            }
+          />
+
+          {/* 导出 CC Switch 配置 */}
+          <CardItem
+            className="flex flex-1 items-center"
+            title={t("export.ccSwitch")}
+            description={t("export.ccSwitchDescription")}
+            rightContent={
+              <Button
+                onClick={() => handleExportCCSwitch(setIsExporting)}
+                disabled={isExporting}
+                variant="outline"
                 size="sm"
                 loading={isExporting}
               >

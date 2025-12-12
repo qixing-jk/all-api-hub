@@ -13,10 +13,14 @@
     "accountDataDescription": "仅导出账号信息和相关数据",
     "userSettings": "用户设置",
     "userSettingsDescription": "仅导出界面设置和偏好配置",
+    "ccSwitch": "CC Switch 格式",
+    "ccSwitchDescription": "导出为 CC Switch SQLite 格式，用于 Claude Code Switch 扩展",
     "dataExported": "数据导出成功",
     "exportFailed": "导出失败，请重试",
     "accountsExported": "账号数据导出成功",
-    "settingsExported": "用户设置导出成功"
+    "settingsExported": "用户设置导出成功",
+    "ccSwitchExported": "CC Switch 配置导出成功",
+    "noAccountsToExport": "没有可导出的账号"
   },
   "import": {
     "title": "导入数据",

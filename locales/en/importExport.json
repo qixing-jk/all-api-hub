@@ -13,10 +13,14 @@
     "accountDataDescription": "Only export account information and related data",
     "userSettings": "User Settings",
     "userSettingsDescription": "Only export interface settings and preference configurations",
+    "ccSwitch": "CC Switch Format",
+    "ccSwitchDescription": "Export as CC Switch SQLite format for use with Claude Code Switch",
     "dataExported": "Data exported successfully",
     "exportFailed": "Export failed, please try again",
     "accountsExported": "Account data exported successfully",
-    "settingsExported": "User settings exported successfully"
+    "settingsExported": "User settings exported successfully",
+    "ccSwitchExported": "CC Switch configuration exported successfully",
+    "noAccountsToExport": "No accounts to export"
   },
   "import": {
     "title": "Import Data",
