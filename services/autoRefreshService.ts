@@ -2,6 +2,7 @@ import { AccountAutoRefresh } from "~/types/accountAutoRefresh"
 
 import { getErrorMessage } from "../utils/error"
 import { accountStorage } from "./accountStorage"
+import { badgeService } from "./badgeService"
 import { userPreferences } from "./userPreferences"
 
 /**
@@ -89,6 +90,9 @@ class AutoRefreshService {
         `[AutoRefresh] 后台刷新完成 - 成功: ${result.success}, 失败: ${result.failed}`,
       )
 
+      // 更新扩展图标徽章
+      await badgeService.updateBadge()
+
       // 通知前端更新（如果popup是打开的）
       this.notifyFrontend("refresh_completed", result)
     } catch (error) {
@@ -108,6 +112,10 @@ class AutoRefreshService {
       console.log(
         `[AutoRefresh] 立即刷新完成 - 成功: ${result.success}, 失败: ${result.failed}`,
       )
+
+      // 更新扩展图标徽章
+      await badgeService.updateBadge()
+
       return result
     } catch (error) {
       console.error("[AutoRefresh] 立即刷新失败:", error)

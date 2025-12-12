@@ -26,6 +26,19 @@
     "todayConsumption": "Today's Consumption",
     "totalBalance": "Total Balance"
   },
+  "badge": {
+    "title": "Icon Badge",
+    "description": "Display balance or consumption on the extension icon",
+    "enabled": "Enable Icon Badge",
+    "enabledDesc": "Show a numeric badge on the extension icon",
+    "displayMode": "Display Content",
+    "displayModeDesc": "Choose what data the badge displays",
+    "off": "Off",
+    "balance": "Total Balance",
+    "consumption": "Today's Consumption",
+    "currency": "Badge Currency",
+    "currencyDesc": "Choose the currency unit for the badge"
+  },
   "refresh": {
     "title": "Refresh Settings",
     "description": "Configure auto-refresh related settings, such as refresh interval and behavior at startup",
