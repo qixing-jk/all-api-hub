@@ -80,6 +80,7 @@
       "strategy": "Sync strategy",
       "strategyDesc": "Choose how data should be synchronized",
       "strategyMerge": "Smart merge - merge local and remote data based on timestamps",
+      "strategyMaxMerge": "Maximum merge - preserve both sides as much as possible to avoid data loss",
       "strategyLocalFirst": "Local first - local data overrides remote data",
       "strategyRemoteFirst": "Remote first - remote data overwrites local data",
       "lastSync": "Last sync",

@@ -224,9 +224,18 @@ class WebdavAutoSyncService {
     let channelConfigsToSave: ChannelConfigMap = localChannelConfigs
     let pinnedAccountIdsToSave: string[] = localPinnedAccountIds
 
-    if (strategy === WEBDAV_SYNC_STRATEGIES.MERGE && remoteData) {
-      // 合并策略
-      const mergeResult = this.mergeData(
+    if (
+      (strategy === WEBDAV_SYNC_STRATEGIES.MERGE ||
+        strategy === WEBDAV_SYNC_STRATEGIES.MAX_MERGE) &&
+      remoteData
+    ) {
+      // 合并策略（智能合并 / 最大合并）
+      const mergeFn =
+        strategy === WEBDAV_SYNC_STRATEGIES.MAX_MERGE
+          ? this.maxMergeData.bind(this)
+          : this.mergeData.bind(this)
+
+      const mergeResult = mergeFn(
         {
           accounts: localAccountsConfig.accounts,
           accountsTimestamp: localAccountsConfig.last_updated,
@@ -320,7 +329,229 @@ class WebdavAutoSyncService {
   }
 
   /**
-   * Merge local and remote data based on timestamps (latest wins).
+   * 最大合并策略：尽量保留双方数据以防丢失。
+   *
+   * 规则：
+   * - 账号 / 通道配置按 id 合并，优先保留较新记录；同时用较旧记录填补缺失字段并合并数组。
+   * - 偏好设置以最新为基底，填补缺失字段并合并数组。
+   */
+  private maxMergeData(
+    local: {
+      accounts: SiteAccount[]
+      accountsTimestamp: number
+      preferences: UserPreferences
+      preferencesTimestamp: number
+      channelConfigs: ChannelConfigMap
+    },
+    remote: {
+      accounts: SiteAccount[]
+      accountsTimestamp: number
+      preferences: UserPreferences
+      preferencesTimestamp: number
+      channelConfigs: ChannelConfigMap | null
+    },
+  ): {
+    accounts: SiteAccount[]
+    preferences: UserPreferences
+    channelConfigs: ChannelConfigMap
+  } {
+    console.log(
+      `[WebdavAutoSync] 开始最大合并 - 本地账号: ${local.accounts.length}, 远程账号: ${remote.accounts.length}`,
+    )
+
+    const remoteById = new Map<string, SiteAccount>()
+    remote.accounts.forEach((acc) => remoteById.set(acc.id, acc))
+
+    const mergedAccounts: SiteAccount[] = []
+    const seenIds = new Set<string>()
+
+    // 先按本地顺序合并同 id 的账号
+    for (const localAccount of local.accounts) {
+      const remoteAccount = remoteById.get(localAccount.id)
+      if (!remoteAccount) {
+        mergedAccounts.push(localAccount)
+        seenIds.add(localAccount.id)
+        continue
+      }
+
+      const base =
+        (remoteAccount.updated_at || 0) > (localAccount.updated_at || 0)
+          ? remoteAccount
+          : localAccount
+      const other = base === remoteAccount ? localAccount : remoteAccount
+
+      mergedAccounts.push(this.maxMergeObject(base, other))
+      seenIds.add(localAccount.id)
+    }
+
+    // 再追加仅远程存在的账号
+    for (const remoteAccount of remote.accounts) {
+      if (!seenIds.has(remoteAccount.id)) {
+        mergedAccounts.push(remoteAccount)
+        seenIds.add(remoteAccount.id)
+      }
+    }
+
+    // 偏好设置：以最新为基底，填补缺失字段并合并数组
+    const basePrefs =
+      remote.preferencesTimestamp > local.preferencesTimestamp
+        ? remote.preferences
+        : local.preferences
+    const otherPrefs =
+      basePrefs === remote.preferences ? local.preferences : remote.preferences
+    const preferences = this.maxMergeObject(basePrefs, otherPrefs)
+
+    // 通道配置：逐个 channelId 做最大合并
+    const mergedChannelConfigs: ChannelConfigMap = {
+      ...local.channelConfigs,
+    }
+    if (remote.channelConfigs && typeof remote.channelConfigs === "object") {
+      for (const [key, value] of Object.entries(remote.channelConfigs)) {
+        const channelId = Number(key)
+        if (!Number.isFinite(channelId) || channelId <= 0) continue
+
+        const localConfig = local.channelConfigs[channelId]
+        const remoteConfig = value as ChannelConfigMap[number]
+        if (!localConfig) {
+          mergedChannelConfigs[channelId] = remoteConfig
+          continue
+        }
+
+        const baseConfig =
+          (remoteConfig.updatedAt || 0) > (localConfig.updatedAt || 0)
+            ? remoteConfig
+            : localConfig
+        const otherConfig =
+          baseConfig === remoteConfig ? localConfig : remoteConfig
+
+        mergedChannelConfigs[channelId] = this.maxMergeObject(
+          baseConfig,
+          otherConfig,
+        )
+      }
+    }
+
+    console.log(
+      `[WebdavAutoSync] 最大合并完成 - 总账号数: ${mergedAccounts.length}, 偏好设置基底:${
+        basePrefs === remote.preferences ? "远程" : "本地"
+      }, 通道配置数: ${Object.keys(mergedChannelConfigs).length}`,
+    )
+
+    return {
+      accounts: mergedAccounts,
+      preferences,
+      channelConfigs: mergedChannelConfigs,
+    }
+  }
+
+  private isPlainObject(value: any): value is Record<string, any> {
+    return (
+      typeof value === "object" && value !== null && !Array.isArray(value)
+    )
+  }
+
+  private getItemTimestamp(value: any): number {
+    if (!this.isPlainObject(value)) return 0
+    const ts =
+      (value as any).updated_at ??
+      (value as any).updatedAt ??
+      (value as any).lastUpdated ??
+      0
+    return typeof ts === "number" ? ts : 0
+  }
+
+  private maxMergeArray(baseArr: any[], otherArr: any[]): any[] {
+    if (!Array.isArray(baseArr)) return Array.isArray(otherArr) ? otherArr : []
+    if (!Array.isArray(otherArr) || otherArr.length === 0) return baseArr
+    if (baseArr.length === 0) return otherArr
+
+    const hasId = (item: any) =>
+      this.isPlainObject(item) && typeof (item as any).id === "string"
+
+    if (baseArr.every(hasId) && otherArr.every(hasId)) {
+      const mergedById = new Map<string, any>()
+      for (const item of baseArr) mergedById.set(item.id, item)
+
+      for (const item of otherArr) {
+        const existing = mergedById.get(item.id)
+        if (!existing) {
+          mergedById.set(item.id, item)
+          continue
+        }
+        const baseItem =
+          this.getItemTimestamp(item) > this.getItemTimestamp(existing)
+            ? item
+            : existing
+        const otherItem = baseItem === item ? existing : item
+        mergedById.set(item.id, this.maxMergeObject(baseItem, otherItem))
+      }
+
+      const ordered: any[] = []
+      const added = new Set<string>()
+      for (const item of baseArr) {
+        const merged = mergedById.get(item.id)
+        if (merged) {
+          ordered.push(merged)
+          added.add(item.id)
+        }
+      }
+      for (const item of otherArr) {
+        if (!added.has(item.id)) {
+          ordered.push(mergedById.get(item.id))
+          added.add(item.id)
+        }
+      }
+      return ordered.filter(Boolean)
+    }
+
+    // Fallback: union unique items (primitives by Set, objects by JSON hash)
+    const seen = new Set<string>()
+    const result: any[] = []
+    const pushUnique = (item: any) => {
+      const key = this.isPlainObject(item)
+        ? JSON.stringify(item)
+        : String(item)
+      if (seen.has(key)) return
+      seen.add(key)
+      result.push(item)
+    }
+    baseArr.forEach(pushUnique)
+    otherArr.forEach(pushUnique)
+    return result
+  }
+
+  private maxMergeObject<T>(base: T, other: any): T {
+    if (Array.isArray(base) && Array.isArray(other)) {
+      return this.maxMergeArray(base, other) as any as T
+    }
+
+    if (this.isPlainObject(base) && this.isPlainObject(other)) {
+      const result: Record<string, any> = { ...base }
+      for (const [key, otherVal] of Object.entries(other)) {
+        const baseVal = (result as any)[key]
+
+        if (Array.isArray(baseVal) && Array.isArray(otherVal)) {
+          result[key] = this.maxMergeArray(baseVal, otherVal)
+          continue
+        }
+
+        if (this.isPlainObject(baseVal) && this.isPlainObject(otherVal)) {
+          result[key] = this.maxMergeObject(baseVal, otherVal)
+          continue
+        }
+
+        if (baseVal === undefined || baseVal === null) {
+          result[key] = otherVal
+        }
+      }
+      return result as any as T
+    }
+
+    return base
+  }
+
+  /**
+   * 智能合并策略：按时间戳选择较新数据（latest wins）。
    * Also reconciles channel configs and deduplicates pinned ids.
    * @returns Merged accounts, preferences, and channel configs.
    */

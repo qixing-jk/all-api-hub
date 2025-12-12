@@ -283,6 +283,7 @@ describe("webDavConfigMigration", () => {
     it("handles all sync strategies correctly", () => {
       const strategies = [
         WEBDAV_SYNC_STRATEGIES.MERGE,
+        WEBDAV_SYNC_STRATEGIES.MAX_MERGE,
         WEBDAV_SYNC_STRATEGIES.UPLOAD_ONLY,
         WEBDAV_SYNC_STRATEGIES.DOWNLOAD_ONLY,
       ] as const

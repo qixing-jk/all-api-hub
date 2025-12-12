@@ -80,6 +80,7 @@
       "strategy": "同步策略",
       "strategyDesc": "选择数据同步方式",
       "strategyMerge": "智能合并 - 根据时间戳合并本地和远程数据",
+      "strategyMaxMerge": "最大合并 - 尽可能保留双方数据以防丢失",
       "strategyLocalFirst": "本地优先 - 本地数据覆盖远程数据",
       "strategyRemoteFirst": "远程优先 - 远程数据覆盖本地数据",
       "lastSync": "上次同步",

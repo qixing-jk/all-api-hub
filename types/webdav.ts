@@ -13,6 +13,7 @@ export interface WebDAVSettings {
 
 export const WEBDAV_SYNC_STRATEGIES = {
   MERGE: "merge",
+  MAX_MERGE: "max_merge",
   UPLOAD_ONLY: "upload_only",
   DOWNLOAD_ONLY: "download_only",
 } as const

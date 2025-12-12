@@ -241,6 +241,9 @@ export default function WebDAVAutoSyncSettings() {
                   <SelectItem value={WEBDAV_SYNC_STRATEGIES.MERGE}>
                     {t("webdav.autoSync.strategyMerge")}
                   </SelectItem>
+                  <SelectItem value={WEBDAV_SYNC_STRATEGIES.MAX_MERGE}>
+                    {t("webdav.autoSync.strategyMaxMerge")}
+                  </SelectItem>
                   <SelectItem value={WEBDAV_SYNC_STRATEGIES.UPLOAD_ONLY}>
                     {t("webdav.autoSync.strategyLocalFirst")}
                   </SelectItem>

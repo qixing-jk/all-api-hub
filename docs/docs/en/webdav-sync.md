@@ -6,8 +6,10 @@
 
 - **One-Click Backup/Restore**: After filling in WebDAV credentials on the "Import/Export" page, you can upload or download JSON backups at any time.
 - **Automatic Synchronization**: `webdavAutoSyncService` supports scheduled background synchronization (default 1 hour), automatically merging or overwriting data based on the strategy.
-- **Multi-Strategy Support**: Choose "Merge / Upload Only / Download Only" to meet differentiated needs for primary and secondary devices.
-- **Conflict Merging**: In merge mode, accounts and preferences are de-duplicated by update time, maximizing the retention of newer data.
+- **Multi-Strategy Support**: Choose "Smart Merge / Maximum Merge / Upload Only / Download Only" to meet differentiated needs for primary and secondary devices.
+- **Conflict Merging**:
+  - **Smart Merge**: De-duplicate by update time and keep the latest version.
+  - **Maximum Merge**: Keep the latest version while filling missing fields and unioning arrays to minimize data loss.
 
 ## Prerequisites
 
@@ -31,7 +33,7 @@ Enable "Automatic Synchronization" on the same page for scheduled background syn
 |------|------|
 | **Enable Automatic Sync** | Corresponds to the `webdav.autoSync` switch; when off, only manual backups are retained. |
 | **Sync Interval** | In seconds, default 3600 seconds (1 hour). |
-| **Sync Strategy** | `merge` (merge), `upload_only` (local overwrites remote), `download_only` (remote overwrites local). |
+| **Sync Strategy** | `merge` (smart merge), `max_merge` (maximum merge, minimize data loss), `upload_only` (local overwrites remote), `download_only` (remote overwrites local). |
 | **Sync Now** | Triggers `webdavAutoSync:syncNow` for debugging; if synchronization is in progress, it will prompt to try again later. |
 
 ### Scheduling Process
@@ -41,7 +43,8 @@ Enable "Automatic Synchronization" on the same page for scheduled background syn
    - First call `testWebdavConnection` to confirm credentials are valid.
    - Download remote backup (if it doesn't exist, it's considered the first backup).
    - Export local accounts and preferences, determining the final data based on the strategy:
-     - **Merge**: Retain the latest items based on `updated_at` / `lastUpdated` timestamps.
+     - **Smart Merge**: Retain the latest items based on `updated_at` / `lastUpdated` timestamps.
+     - **Maximum Merge**: Use the latest as base and merge missing fields/arrays from both sides.
      - **Upload Only/Download Only**: Directly select local or remote data.
    - Write the merged result back to local (via `accountStorage.importData` + `userPreferences.importPreferences`).
    - Generate new JSON and upload it to `all-api-hub-backup/all-api-hub-1-0.json`.
