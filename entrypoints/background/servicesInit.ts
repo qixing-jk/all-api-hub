@@ -1,5 +1,6 @@
 import { autoCheckinScheduler } from "~/services/autoCheckin/scheduler"
 import { autoRefreshService } from "~/services/autoRefreshService"
+import { badgeService } from "~/services/badgeService"
 import { modelMetadataService } from "~/services/modelMetadata"
 import { newApiModelSyncScheduler } from "~/services/newApiModelSync"
 import { redemptionAssistService } from "~/services/redemptionAssist"
@@ -39,6 +40,7 @@ export async function initializeServices() {
       console.warn("[Background] Model metadata initialization failed:", error)
     })
     await autoRefreshService.initialize()
+    await badgeService.initialize()
     await webdavAutoSyncService.initialize()
     await newApiModelSyncScheduler.initialize()
     await autoCheckinScheduler.initialize()

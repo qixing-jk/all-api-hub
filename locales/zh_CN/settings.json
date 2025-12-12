@@ -26,6 +26,19 @@
     "todayConsumption": "今日消耗",
     "totalBalance": "总余额"
   },
+  "badge": {
+    "title": "图标徽章",
+    "description": "在扩展图标上显示余额或消耗信息",
+    "enabled": "启用图标徽章",
+    "enabledDesc": "在扩展图标上显示数值徽章",
+    "displayMode": "显示内容",
+    "displayModeDesc": "选择徽章显示的数据类型",
+    "off": "关闭",
+    "balance": "总余额",
+    "consumption": "今日消耗",
+    "currency": "徽章货币",
+    "currencyDesc": "选择徽章显示的货币单位"
+  },
   "refresh": {
     "title": "刷新设置",
     "description": "配置自动数据刷新相关的设置，例如刷新间隔和启动时的行为。",
