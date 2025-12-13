@@ -4,6 +4,10 @@ import { Storage } from "@plasmohq/storage"
 
 import { DATA_TYPE_BALANCE, DATA_TYPE_CONSUMPTION } from "~/constants"
 import {
+  BadgeConfig,
+  DEFAULT_BADGE_CONFIG,
+} from "~/services/badgeService"
+import {
   CURRENT_PREFERENCES_VERSION,
   migratePreferences,
 } from "~/services/configMigration/preferences/preferencesMigration"
@@ -137,6 +141,9 @@ export interface UserPreferences {
   tempWindowFallback?: TempWindowFallbackPreferences
 
   /**
+   * 扩展图标徽章配置
+   */
+  badge?: BadgeConfig
    * Reminders related to temp-window fallback configuration.
    * When dismissed, the UI will stop showing opt-in reminder dialogs.
    */
@@ -277,6 +284,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
     useForAutoRefresh: true,
     useForManualRefresh: true,
   },
+  badge: DEFAULT_BADGE_CONFIG,
   tempWindowFallbackReminder: {
     dismissed: false,
   },
@@ -582,6 +590,15 @@ class UserPreferencesService {
     return this.savePreferences({
       themeMode: DEFAULT_PREFERENCES.themeMode,
       language: DEFAULT_PREFERENCES.language,
+    })
+  }
+
+  /**
+   * Reset badge config.
+   */
+  async resetBadgeConfig(): Promise<boolean> {
+    return this.savePreferences({
+      badge: DEFAULT_PREFERENCES.badge,
     })
   }
 }
