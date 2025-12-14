@@ -1,4 +1,5 @@
 import { getSiteApiRouter } from "~/constants/siteType"
+import { MENU_ITEM_IDS, type OptionsMenuItemId } from "~/constants/optionsMenuIds"
 import type { DisplaySiteData } from "~/types"
 import { isExtensionPopup, OPTIONS_PAGE_URL } from "~/utils/browser"
 import {
@@ -17,6 +18,17 @@ export function closeIfPopup() {
   if (isExtensionPopup()) {
     window.close()
   }
+}
+
+/**
+ * Opens/focuses the options page for a specific menu item id.
+ * Prefer this helper over passing ad-hoc hash strings.
+ */
+export const openOrFocusOptionsMenuItem = (
+  menuItemId: OptionsMenuItemId,
+  searchParams?: Record<string, string | undefined>,
+) => {
+  openOrFocusOptionsPage(`#${menuItemId}`, searchParams)
 }
 
 /**
@@ -98,17 +110,17 @@ export const navigateWithinOptionsPage = (
 /**
  * Normalized hash used by account manager navigations to keep routing consistent.
  */
-const getAccountHash = () => "#account"
+const getAccountHash = () => `#${MENU_ITEM_IDS.ACCOUNT}`
 
 /**
  * Canonical hash for the default settings landing page, reused across helpers.
  */
-const getBasicSettingsHash = () => "#basic"
+const getBasicSettingsHash = () => `#${MENU_ITEM_IDS.BASIC}`
 
 /**
  * Hash fragment pointing to the About section inside options.html.
  */
-const getAboutHash = () => "#about"
+const getAboutHash = () => `#${MENU_ITEM_IDS.ABOUT}`
 
 /**
  * Creates and activates a new browser tab with the given URL.
@@ -282,7 +294,7 @@ const _openKeysPage = async (accountId?: string) => {
     url.searchParams.set("accountId", accountId)
   }
 
-  url.hash = "keys"
+  url.hash = MENU_ITEM_IDS.KEYS
   await createActiveTab(url.toString())
 }
 
@@ -298,7 +310,7 @@ const _openModelsPage = async (accountId?: string) => {
     url.searchParams.set("accountId", accountId)
   }
 
-  url.hash = "models"
+  url.hash = MENU_ITEM_IDS.MODELS
   await createActiveTab(url.toString())
 }
 

@@ -10,15 +10,17 @@ import {
   UserRound,
 } from "lucide-react"
 
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+
 import About from "./pages/About"
 import AccountManagement from "./pages/AccountManagement"
 import AutoCheckin from "./pages/AutoCheckin"
 import BasicSettings from "./pages/BasicSettings"
 import ImportExport from "./pages/ImportExport"
 import KeyManagement from "./pages/KeyManagement"
+import managedSiteChannels from "./pages/ManagedSiteChannels"
+import ManagedSiteModelSync from "./pages/ManagedSiteModelSync"
 import ModelList from "./pages/ModelList"
-import NewApiChannels from "./pages/NewApiChannels"
-import NewApiModelSync from "./pages/NewApiModelSync"
 
 // 菜单项类型定义
 export interface MenuItem {
@@ -31,55 +33,55 @@ export interface MenuItem {
 // 菜单配置
 export const menuItems: MenuItem[] = [
   {
-    id: "basic",
+    id: MENU_ITEM_IDS.BASIC,
     name: "基本设置",
     icon: Settings,
     component: BasicSettings,
   },
   {
-    id: "account",
+    id: MENU_ITEM_IDS.ACCOUNT,
     name: "账户管理",
     icon: UserRound,
     component: AccountManagement,
   },
   {
-    id: "autoCheckin",
+    id: MENU_ITEM_IDS.AUTO_CHECKIN,
     name: "自动签到",
     icon: CalendarCheck2,
     component: AutoCheckin,
   },
   {
-    id: "models",
+    id: MENU_ITEM_IDS.MODELS,
     name: "模型列表",
     icon: Cpu,
     component: ModelList,
   },
   {
-    id: "keys",
+    id: MENU_ITEM_IDS.KEYS,
     name: "密钥管理",
     icon: KeyRound,
     component: KeyManagement,
   },
   {
-    id: "newApiChannels",
+    id: MENU_ITEM_IDS.MANAGED_SITE_CHANNELS,
     name: "渠道管理",
     icon: Layers,
-    component: NewApiChannels,
+    component: managedSiteChannels,
   },
   {
-    id: "newApiModelSync",
+    id: MENU_ITEM_IDS.MANAGED_SITE_MODEL_SYNC,
     name: "模型同步",
     icon: RefreshCcw,
-    component: NewApiModelSync,
+    component: ManagedSiteModelSync,
   },
   {
-    id: "importExport",
+    id: MENU_ITEM_IDS.IMPORT_EXPORT,
     name: "导入/导出",
     icon: ArrowLeftRight,
     component: ImportExport,
   },
   {
-    id: "about",
+    id: MENU_ITEM_IDS.ABOUT,
     name: "关于",
     icon: Info,
     component: About,

@@ -2,7 +2,7 @@ import React from "react"
 
 import { cn } from "~/lib/utils"
 
-import { Button, type ButtonProps } from "./button"
+import { Button } from "./button"
 
 export interface EmptyStateProps {
   icon: React.ReactNode
@@ -11,7 +11,7 @@ export interface EmptyStateProps {
   action?: {
     label: string
     onClick: () => void
-    variant?: ButtonProps["variant"]
+    variant?: React.ComponentProps<typeof Button>["variant"]
     icon?: React.ReactNode
   }
   className?: string

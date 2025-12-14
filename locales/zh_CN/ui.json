@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "All API Hub",
-    "description": "统一管理第三方中转站与自建 New API 的账号与余额"
+    "description": "统一管理第三方中转站与自建站点的账号与余额"
   },
   "pageTitle": {
     "options": "中转站管理器 - All API Hub | 设置",
@@ -18,8 +18,10 @@
     "models": "模型列表",
     "keys": "密钥管理",
     "autoCheckin": "自动签到",
-    "newApiChannels": "New API 渠道管理",
-    "newApiModelSync": "New API 模型同步",
+    "managedSiteChannels": "渠道管理",
+    "newApiChannels": "渠道管理",
+    "newApiModelSync": "模型同步",
+    "managedSiteModelSync": "模型同步",
     "importExport": "导入/导出",
     "collapseSidebar": "折叠侧边栏",
     "expandSidebar": "展开侧边栏",

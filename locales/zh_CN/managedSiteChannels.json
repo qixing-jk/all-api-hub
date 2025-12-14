@@ -1,0 +1,138 @@
+{
+  "title": "渠道管理",
+  "description": "在此搜索、编辑、删除或手动同步与你的托管站点相连的所有渠道。",
+  "alerts": {
+    "configMissing": {
+      "title": "缺少配置",
+      "description": "请先在设置中配置托管站点凭据，然后再管理渠道。"
+    },
+    "loadError": {
+      "title": "无法加载渠道",
+      "description": "{{error}}"
+    }
+  },
+  "toolbar": {
+    "searchPlaceholder": "按名称、URL 或分组搜索",
+    "clearSearch": "清除搜索",
+    "status": "状态",
+    "statusSubtitle": "按状态筛选",
+    "columns": "显示列",
+    "toggleColumns": "切换列",
+    "deleteSelected": "删除所选",
+    "syncSelected": "同步所选",
+    "refresh": "刷新",
+    "addChannel": "新增渠道"
+  },
+  "filter": {
+    "statusLabel": "按状态筛选"
+  },
+  "statusLabels": {
+    "unknown": "未知",
+    "enabled": "启用",
+    "manualPause": "手动暂停",
+    "autoDisabled": "自动禁用"
+  },
+  "table": {
+    "columns": {
+      "name": "渠道",
+      "type": "类型",
+      "models": "模型数量",
+      "group": "可用分组",
+      "status": "状态",
+      "priority": "优先级",
+      "weight": "权重",
+      "actions": "操作"
+    },
+    "selectAll": "选择所有行",
+    "selectRow": "选择行",
+    "loading": "正在加载渠道…",
+    "empty": "未找到渠道，请尝试调整筛选条件。",
+    "noEntries": "暂无数据",
+    "rowsPerPage": "每页行数",
+    "paginationSummary": "第 {{start}} - {{end}} 条 / 共 {{total}} 条",
+    "paginationPrev": "上一页",
+    "paginationNext": "下一页",
+    "rowActions": {
+      "edit": "编辑",
+      "sync": "同步模型列表",
+      "syncing": "正在同步…",
+      "filters": "编辑渠道过滤规则",
+      "delete": "删除"
+    }
+  },
+  "dialog": {
+    "deleteTitle": "删除渠道？",
+    "deleteTitlePlural": "删除这些渠道？",
+    "deleteDescription": "此操作无法撤销，所选配置将被永久删除。",
+    "cancel": "取消",
+    "confirm": "删除"
+  },
+  "toasts": {
+    "channelSaved": "渠道已保存",
+    "channelUpdated": "渠道已更新",
+    "configMissing": "缺少托管站点配置",
+    "channelDeleted": "已删除 1 个渠道",
+    "channelsDeleted": "已删除 {{count}} 个渠道",
+    "someDeletesFailed": "删除 {{count}} 个渠道失败：{{error}}",
+    "syncCompleted": "模型同步完成（{{success}}/{{total}}）",
+    "syncFailed": "模型同步失败：{{error}}",
+    "loadFailed": "渠道加载失败：{{error}}",
+    "genericError": "请求失败：{{error}}"
+  },
+  "filters": {
+    "title": "渠道过滤规则",
+    "subtitle": "为 {{channel}} 配置包含/排除规则",
+    "loading": "正在加载渠道过滤规则…",
+    "empty": {
+      "title": "尚未添加规则",
+      "description": "新增包含或排除规则（可选正则）以控制同步到该渠道的模型。"
+    },
+    "addRule": "新增规则",
+    "labels": {
+      "name": "规则名称",
+      "pattern": "匹配模式",
+      "description": "描述",
+      "action": "执行动作",
+      "enabled": "启用",
+      "regex": "使用正则",
+      "delete": "删除规则"
+    },
+    "placeholders": {
+      "name": "如：仅允许 GPT-4",
+      "pattern": "精确字符串或正则表达式",
+      "description": "可选备注"
+    },
+    "actionOptions": {
+      "include": "包含匹配的模型",
+      "exclude": "排除匹配的模型"
+    },
+    "hints": {
+      "regex": "正则模式使用 JavaScript 语法，可实现更灵活的匹配。",
+      "substring": "普通模式将执行区分大小写的子串匹配。"
+    },
+    "viewMode": {
+      "label": "编辑模式",
+      "visual": "可视化编辑",
+      "json": "JSON 编辑"
+    },
+    "jsonEditor": {
+      "label": "高级 JSON 编辑器",
+      "placeholder": "在此粘贴或编辑过滤规则对象数组，以便在多个渠道之间快速复用同一套配置。",
+      "hint": "JSON 必须是一个对象数组，至少包含 name 和 pattern 字段。可选字段包括：id、description、isRegex、action（include | exclude）、enabled、createdAt、updatedAt。",
+      "syncFromForm": "从表单同步"
+    },
+    "actions": {
+      "cancel": "取消",
+      "save": "保存规则"
+    },
+    "messages": {
+      "loadFailed": "过滤规则加载失败：{{error}}",
+      "saveFailed": "保存过滤规则失败：{{error}}",
+      "saved": "过滤规则已保存",
+      "validationName": "请为每个规则填写名称。",
+      "validationPattern": "匹配模式不能为空。",
+      "validationRegex": "无效的正则表达式：{{error}}",
+      "jsonInvalid": "无效的过滤规则 JSON：{{error}}"
+    }
+  }
+}

@@ -12,6 +12,8 @@ export const RIX_API = "Rix-Api"
 export const NEO_API = "neo-Api"
 export const UNKNOWN_SITE = "unknown"
 
+export type ManagedSiteType = typeof NEW_API | typeof VELOERA
+
 export type SiteType = (typeof SITE_TITLE_RULES)[number]["name"]
 
 // 定义网站类型及匹配规则

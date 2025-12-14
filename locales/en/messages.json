@@ -47,7 +47,10 @@
       "updateAccountFailed": "Failed to update account {{error}}",
       "newApiBaseUrlRequired": "New API base URL not configured",
       "newApiAdminTokenRequired": "New API admin token not configured",
-      "newApiUserIdRequired": "New API user ID not configured"
+      "newApiUserIdRequired": "New API user ID not configured",
+      "veloeraBaseUrlRequired": "Veloera base URL not configured",
+      "veloeraAdminTokenRequired": "Veloera admin token not configured",
+      "veloeraUserIdRequired": "Veloera user ID not configured"
     },
     "api": {
       "fetchUserInfoFailed": "Failed to get user info",
@@ -78,6 +81,7 @@
   "accountOperations": {
     "checkingApiKeys": "Checking API key...",
     "importingToNewApi": "Importing to New API...",
+    "importingToVeloera": "Importing to Veloera...",
     "createTokenFailed": "Failed to create API token",
     "tokenNotFound": "Failed to create or find an API token",
     "retrying": "An error occurred, attempting retry #{{attempt}}"
@@ -98,6 +102,14 @@
   "newapi": {
     "configMissing": "Please configure New API address, admin token, and user ID in basic settings first",
     "dataFetchFailed": "Failed to fetch New API data, please check if the configuration is correct",
+    "noAnyModels": "No models available",
+    "channelExists": "Channel {{channelName}} already exists, no need to import again",
+    "importSuccess": "Successfully imported new channel {{channelName}}",
+    "importFailed": "Import failed, an unknown error occurred"
+  },
+  "veloera": {
+    "configMissing": "Please configure Veloera address, admin token, and user ID in basic settings first",
+    "dataFetchFailed": "Failed to fetch Veloera data, please check if the configuration is correct",
     "noAnyModels": "No models available",
     "channelExists": "Channel {{channelName}} already exists, no need to import again",
     "importSuccess": "Successfully imported new channel {{channelName}}",

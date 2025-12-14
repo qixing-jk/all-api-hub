@@ -19,7 +19,8 @@
   "messages": {
     "createSuccess": "渠道创建成功",
     "updateSuccess": "渠道更新成功",
-    "saveFailed": "保存渠道失败：{{error}}"
+    "saveFailed": "保存渠道失败：{{error}}",
+    "missingChannelId": "缺少现有渠道 ID"
   },
   "validation": {
     "nameRequired": "渠道名称必填",

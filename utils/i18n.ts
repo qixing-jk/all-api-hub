@@ -31,20 +31,6 @@ i18n
     debug: process.env.NODE_ENV === "development",
     fallbackLng: DEFAULT_LANG,
     defaultNS: "common",
-    ns: [
-      "common",
-      "account",
-      "accountDialog",
-      "channelDialog",
-      "keyManagement",
-      "modelList",
-      "settings",
-      "messages",
-      "redemptionAssist",
-      "ui",
-      "importExport",
-      "about",
-    ],
     resources,
     interpolation: {
       escapeValue: false, // react already escapes by default

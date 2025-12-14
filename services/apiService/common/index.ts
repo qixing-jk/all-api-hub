@@ -4,6 +4,7 @@ import { UI_CONSTANTS } from "~/constants/ui"
 import { accountStorage } from "~/services/accountStorage"
 import { REQUEST_CONFIG } from "~/services/apiService/common/constant"
 import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
+import { fetchAllItems } from "~/services/apiService/common/pagination"
 import {
   AccessTokenInfo,
   AccountData,
@@ -40,8 +41,345 @@ import {
   TEMP_WINDOW_HEALTH_STATUS_CODES,
   type ApiToken,
 } from "~/types"
+import type {
+  CreateChannelPayload,
+  ManagedSiteChannel,
+  ManagedSiteChannelListData,
+  UpdateChannelPayload,
+} from "~/types/managedSite"
 
-// ============= 核心 API 函数 =============
+const CHANNEL_API_BASE = "/api/channel/"
+
+/**
+ * 搜索指定关键词的渠道。
+ * @param baseUrl New API 的基础 URL。
+ * @param accessToken 管理员令牌。
+ * @param userId 用户 ID。
+ * @param keyword 搜索关键词。
+ */
+export async function searchChannel(
+  baseUrl: string,
+  accessToken: string,
+  userId: number | string,
+  keyword: string,
+): Promise<ManagedSiteChannelListData | null> {
+  try {
+    return await fetchApiData<ManagedSiteChannelListData>({
+      baseUrl,
+      endpoint: `${CHANNEL_API_BASE}search?keyword=${keyword}`,
+      userId,
+      token: accessToken,
+    })
+  } catch (error) {
+    if (error instanceof ApiError) {
+      console.error(`API 请求失败: ${error.message}`)
+    } else {
+      console.error("搜索渠道失败:", error)
+    }
+    return null
+  }
+}
+
+/**
+ * 创建新渠道。
+ * @param baseUrl New API 的基础 URL。
+ * @param adminToken 管理员令牌。
+ * @param userId 用户 ID。
+ * @param channelData 渠道数据。
+ */
+export async function createChannel(
+  baseUrl: string,
+  adminToken: string,
+  userId: number | string,
+  channelData: CreateChannelPayload,
+) {
+  try {
+    const payload = {
+      ...channelData,
+      channel: {
+        ...channelData.channel,
+        group: channelData?.channel?.groups?.join(","),
+      },
+    }
+
+    return await fetchApi<void>({
+      baseUrl,
+      endpoint: CHANNEL_API_BASE,
+      userId,
+      token: adminToken,
+      options: {
+        method: "POST",
+        body: JSON.stringify(payload),
+      },
+    })
+  } catch (error) {
+    console.error("创建渠道失败:", error)
+    throw new Error("创建渠道失败，请检查网络或 New API 配置。")
+  }
+}
+
+/**
+ * 更新新渠道。
+ * @param baseUrl New API 的基础 URL。
+ * @param adminToken 管理员令牌。
+ * @param userId 用户 ID。
+ * @param channelData 渠道数据。
+ */
+export async function updateChannel(
+  baseUrl: string,
+  adminToken: string,
+  userId: number | string,
+  channelData: UpdateChannelPayload,
+) {
+  try {
+    return await fetchApi<void>({
+      baseUrl,
+      endpoint: CHANNEL_API_BASE,
+      userId,
+      token: adminToken,
+      options: {
+        method: "PUT",
+        body: JSON.stringify(channelData),
+      },
+    })
+  } catch (error) {
+    console.error("更新渠道失败:", error)
+    throw new Error("更新渠道失败，请检查网络或 New API 配置。")
+  }
+}
+
+/**
+ * 删除渠道。
+ * @param baseUrl New API 的基础 URL。
+ * @param adminToken 管理员令牌。
+ * @param userId 用户 ID。
+ * @param channelId 渠道 ID。
+ */
+export async function deleteChannel(
+  baseUrl: string,
+  adminToken: string,
+  userId: number | string,
+  channelId: number,
+) {
+  try {
+    return await fetchApi<void>({
+      baseUrl,
+      endpoint: `${CHANNEL_API_BASE}${channelId}`,
+      userId,
+      token: adminToken,
+      options: {
+        method: "DELETE",
+      },
+    })
+  } catch (error) {
+    console.error("删除渠道失败:", error)
+    throw new Error("删除渠道失败，请检查网络或 New API 配置。")
+  }
+}
+
+/**
+ * Fetch all channels from New API with pagination aggregation.
+ *
+ * Notes:
+ * - Aggregates `type_counts` across pages.
+ * - Uses the first page's `total` as the authoritative total when later pages omit it.
+ * - Optionally invokes a `beforeRequest` hook (e.g. rate limiter) before each page request.
+ * @param baseUrl New API base URL.
+ * @param adminToken Admin token for channel operations.
+ * @param userId Optional user id injected into compatible headers.
+ * @param options Additional pagination options.
+ */
+export async function listAllChannels(
+  baseUrl: string,
+  adminToken: string,
+  userId?: number | string,
+  options?: {
+    pageSize?: number
+    beforeRequest?: () => Promise<void>
+    endpoint?: string
+    pageStart?: number
+  },
+): Promise<ManagedSiteChannelListData> {
+  const pageSize = options?.pageSize ?? REQUEST_CONFIG.DEFAULT_PAGE_SIZE
+  const beforeRequest = options?.beforeRequest
+  const endpoint = options?.endpoint ?? CHANNEL_API_BASE
+  const pageStart = options?.pageStart ?? 1
+
+  let total = 0
+  const typeCounts: Record<string, number> = {}
+
+  const items = await fetchAllItems<ManagedSiteChannel>(
+    async (page) => {
+      const params = new URLSearchParams({
+        p: page.toString(),
+        page_size: pageSize.toString(),
+      })
+
+      await beforeRequest?.()
+
+      const response = await fetchApi<ManagedSiteChannelListData>(
+        {
+          baseUrl,
+          endpoint: `${endpoint}?${params.toString()}`,
+          userId,
+          token: adminToken,
+        },
+        false,
+      )
+
+      if (!response.success || !response.data) {
+        throw new ApiError(
+          response.message || "Failed to fetch channels",
+          undefined,
+          endpoint,
+        )
+      }
+
+      const { data } = response
+      if (page === pageStart) {
+        total = data.total || data.items.length || 0
+        Object.assign(typeCounts, data.type_counts || {})
+      } else if (data.type_counts) {
+        for (const [key, value] of Object.entries(data.type_counts)) {
+          typeCounts[key] = (typeCounts[key] || 0) + value
+        }
+      }
+
+      return {
+        items: data.items || [],
+        total: total || 0,
+      }
+    },
+    { pageSize, startPage: pageStart },
+  )
+
+  return {
+    items,
+    total,
+    type_counts: typeCounts,
+  } as ManagedSiteChannelListData
+}
+
+/**
+ * Fetch raw model list for a given channel.
+ * @param baseUrl New API base URL.
+ * @param adminToken Admin token.
+ * @param userId Optional user id injected into headers.
+ * @param channelId Target channel id.
+ */
+export async function fetchChannelModels(
+  baseUrl: string,
+  adminToken: string,
+  userId: number | string | undefined,
+  channelId: number,
+): Promise<string[]> {
+  const response = await fetchApi<string[]>(
+    {
+      baseUrl,
+      endpoint: `${CHANNEL_API_BASE}fetch_models/${channelId}`,
+      userId,
+      token: adminToken,
+    },
+    false,
+  )
+
+  if (!response.success || !Array.isArray(response.data)) {
+    throw new ApiError(
+      response.message || "Failed to fetch models",
+      undefined,
+      `${CHANNEL_API_BASE}fetch_models/${channelId}`,
+    )
+  }
+
+  return response.data
+}
+
+/**
+ * Update the `models` field for a channel.
+ * @param baseUrl New API base URL.
+ * @param adminToken Admin token.
+ * @param userId Optional user id injected into headers.
+ * @param channelId Channel id.
+ * @param models Comma-separated model list.
+ */
+export async function updateChannelModels(
+  baseUrl: string,
+  adminToken: string,
+  userId: number | string | undefined,
+  channelId: number,
+  models: string,
+): Promise<void> {
+  const payload: UpdateChannelPayload = {
+    id: channelId,
+    models,
+  }
+
+  const response = await fetchApi<void>(
+    {
+      baseUrl,
+      endpoint: CHANNEL_API_BASE,
+      userId,
+      token: adminToken,
+      options: {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      },
+    },
+    false,
+  )
+
+  if (!response.success) {
+    throw new ApiError(
+      response.message || "Failed to update channel",
+      undefined,
+    )
+  }
+}
+
+/**
+ * Update the `models` and `model_mapping` fields for a channel.
+ * @param baseUrl New API base URL.
+ * @param adminToken Admin token.
+ * @param userId Optional user id injected into headers.
+ * @param channelId Channel id.
+ * @param models Comma-separated model list.
+ * @param modelMappingJson Stringified mapping JSON.
+ */
+export async function updateChannelModelMapping(
+  baseUrl: string,
+  adminToken: string,
+  userId: number | string | undefined,
+  channelId: number,
+  models: string,
+  modelMappingJson: string,
+): Promise<void> {
+  const payload: UpdateChannelPayload = {
+    id: channelId,
+    models,
+    model_mapping: modelMappingJson,
+  }
+
+  const response = await fetchApi<void>(
+    {
+      baseUrl,
+      endpoint: CHANNEL_API_BASE,
+      userId,
+      token: adminToken,
+      options: {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      },
+    },
+    false,
+  )
+
+  if (!response.success) {
+    throw new ApiError(
+      response.message || "Failed to update channel mapping",
+      undefined,
+    )
+  }
+}
 
 /**
  * Fetch basic user info for account detection using cookie auth.

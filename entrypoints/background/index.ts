@@ -5,7 +5,8 @@ import { migrateAccountsConfig } from "~/services/configMigration/account/accoun
 import { OPTIONAL_PERMISSIONS } from "~/services/permissions/permissionManager"
 import { userPreferences } from "~/services/userPreferences"
 import { onInstalled } from "~/utils/browserApi"
-import { openOrFocusOptionsPage } from "~/utils/navigation"
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { openOrFocusOptionsMenuItem } from "~/utils/navigation"
 
 import {
   initializeCookieInterceptors,
@@ -58,7 +59,7 @@ export default defineBackground(() => {
           console.log(
             "[Background] First install detected, opening permissions onboarding",
           )
-          openOrFocusOptionsPage("#basic", {
+          openOrFocusOptionsMenuItem(MENU_ITEM_IDS.BASIC, {
             tab: "permissions",
             onboarding: "permissions",
           })

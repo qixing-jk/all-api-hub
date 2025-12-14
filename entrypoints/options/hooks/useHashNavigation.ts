@@ -2,6 +2,8 @@ import { useEffect, useState } from "react"
 
 import { navigateWithinOptionsPage } from "~/utils/navigation"
 
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+
 import { menuItems } from "../constants"
 
 // 解析URL hash和参数
@@ -19,7 +21,7 @@ function parseHash() {
   }
 
   if (!hash) {
-    return { page: "basic", params }
+    return { page: MENU_ITEM_IDS.BASIC, params }
   }
 
   const [page, ...paramParts] = hash.split("?")
@@ -32,7 +34,7 @@ function parseHash() {
     }
   }
 
-  return { page: page || "basic", params }
+  return { page: page || MENU_ITEM_IDS.BASIC, params }
 }
 
 // 更新URL hash
@@ -51,7 +53,9 @@ function updateHash(page: string, params?: Record<string, string>) {
  * Exposes current page, params, a handler to change pages, and refreshKey bumps.
  */
 export function useHashNavigation() {
-  const [activeMenuItem, setActiveMenuItem] = useState("basic")
+  const [activeMenuItem, setActiveMenuItem] = useState<string>(
+    MENU_ITEM_IDS.BASIC,
+  )
   const [routeParams, setRouteParams] = useState<Record<string, string>>({})
   const [refreshKey, setRefreshKey] = useState(0)
 
@@ -60,7 +64,7 @@ export function useHashNavigation() {
     const { page, params } = parseHash()
     const validPage = menuItems.find((item) => item.id === page)
       ? page
-      : "basic"
+      : MENU_ITEM_IDS.BASIC
     setActiveMenuItem(validPage)
     setRouteParams(params)
 
@@ -72,7 +76,7 @@ export function useHashNavigation() {
       }
       const validPage = menuItems.find((item) => item.id === page)
         ? page
-        : "basic"
+        : MENU_ITEM_IDS.BASIC
       setActiveMenuItem(validPage)
       setRouteParams(params)
     }

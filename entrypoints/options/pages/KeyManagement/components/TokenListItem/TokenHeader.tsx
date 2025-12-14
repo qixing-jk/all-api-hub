@@ -11,6 +11,8 @@ import { CCSwitchIcon } from "~/components/icons/CCSwitchIcon"
 import { CherryIcon } from "~/components/icons/CherryIcon"
 import { CliProxyIcon } from "~/components/icons/CliProxyIcon"
 import { Badge, Heading6, IconButton } from "~/components/ui"
+import { VELOERA } from "~/constants/siteType"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { importToCliProxy } from "~/services/cliProxyService"
 import type { DisplaySiteData } from "~/types"
 import { OpenInCherryStudio } from "~/utils/cherryStudio"
@@ -63,8 +65,14 @@ function TokenActionButtons({
   account,
   onOpenCCSwitchDialog,
 }: TokenHeaderProps) {
-  const { t } = useTranslation("keyManagement")
+  const { t } = useTranslation(["keyManagement", "settings"])
+  const { managedSiteType } = useUserPreferencesContext()
   const { openWithAccount } = useChannelDialog()
+
+  const managedSiteLabel =
+    managedSiteType === VELOERA
+      ? t("settings:managedSite.veloera")
+      : t("settings:managedSite.newApi")
 
   const handleImportToNewApi = async () => {
     await openWithAccount(account, token, (result) => {
@@ -114,12 +122,14 @@ function TokenActionButtons({
         <CliProxyIcon size="sm" />
       </IconButton>
       <IconButton
-        aria-label={t("actions.importToNewApi")}
+        aria-label={t("actions.importToManagedSite", {
+          site: managedSiteLabel,
+        })}
         size="sm"
         variant="ghost"
         onClick={handleImportToNewApi}
       >
-        <NewAPI.Color className="h-4 w-4" />
+        <NewAPI className="h-4 w-4 text-blue-500" />
       </IconButton>
       <IconButton
         aria-label={t("actions.editKey")}

@@ -25,11 +25,12 @@ const mockAccount: DisplaySiteData = {
   username: "testuser",
   baseUrl: "https://api.test.com",
   token: "sk-test",
-  userId: "123",
+  userId: 123,
   balance: { USD: 10, CNY: 70 },
   todayConsumption: { USD: 1, CNY: 7 },
   todayIncome: { USD: 0, CNY: 0 },
   todayTokens: { upload: 100, download: 200 },
+  checkIn: { enableDetection: false },
   health: { status: SiteHealthStatus.Healthy },
   last_sync_time: Date.now(),
   siteType: "one-api",
@@ -38,12 +39,14 @@ const mockAccount: DisplaySiteData = {
 
 const mockToken: ApiToken = {
   id: 1,
+  user_id: 123,
   key: "sk-test-key",
   name: "Test Token",
   created_time: Date.now(),
   accessed_time: Date.now(),
   expired_time: -1,
   remain_quota: 1000000,
+  used_quota: 0,
   unlimited_quota: true,
   status: 1,
 }

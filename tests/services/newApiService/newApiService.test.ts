@@ -48,9 +48,17 @@ vi.mock("~/services/apiService/common/errors", () => ({
 // Mock higher-level API service functions
 const mockFetchAccountAvailableModels = vi.fn()
 const mockFetchUpstreamModelsNameList = vi.fn()
+const mockSearchChannel = vi.fn()
+const mockCreateChannel = vi.fn()
+const mockUpdateChannel = vi.fn()
+const mockDeleteChannel = vi.fn()
 vi.mock("~/services/apiService", () => ({
   fetchAccountAvailableModels: mockFetchAccountAvailableModels,
   fetchUpstreamModelsNameList: mockFetchUpstreamModelsNameList,
+  searchChannel: mockSearchChannel,
+  createChannel: mockCreateChannel,
+  updateChannel: mockUpdateChannel,
+  deleteChannel: mockDeleteChannel,
 }))
 
 // Mock account storage
@@ -277,9 +285,7 @@ describe("newApiService", () => {
 
   describe("searchChannel", () => {
     it("should return channel list data on success", async () => {
-      const { searchChannel } = await import(
-        "~/services/newApiService/newApiService"
-      )
+      const { searchChannel } = await import("~/services/apiService/common")
       const mockChannelData = createMockNewApiChannelListData([
         createMockNewApiChannel({ id: 1, name: "Channel 1" }),
         createMockNewApiChannel({ id: 2, name: "Channel 2" }),
@@ -304,9 +310,7 @@ describe("newApiService", () => {
     })
 
     it("should return null when ApiError is thrown", async () => {
-      const { searchChannel } = await import(
-        "~/services/newApiService/newApiService"
-      )
+      const { searchChannel } = await import("~/services/apiService/common")
       const error = new MockApiError("API request failed")
 
       mockFetchApiData.mockRejectedValueOnce(error)
@@ -322,9 +326,7 @@ describe("newApiService", () => {
     })
 
     it("should return null when other error is thrown", async () => {
-      const { searchChannel } = await import(
-        "~/services/newApiService/newApiService"
-      )
+      const { searchChannel } = await import("~/services/apiService/common")
       const error = new Error("Network error")
 
       mockFetchApiData.mockRejectedValueOnce(error)
@@ -346,9 +348,7 @@ describe("newApiService", () => {
 
   describe("createChannel", () => {
     it("should create channel successfully", async () => {
-      const { createChannel } = await import(
-        "~/services/newApiService/newApiService"
-      )
+      const { createChannel } = await import("~/services/apiService/common")
       const payload: CreateChannelPayload = {
         mode: "single",
         channel: {
@@ -387,9 +387,7 @@ describe("newApiService", () => {
     })
 
     it("should throw error when creation fails", async () => {
-      const { createChannel } = await import(
-        "~/services/newApiService/newApiService"
-      )
+      const { createChannel } = await import("~/services/apiService/common")
       const payload: CreateChannelPayload = {
         mode: "single",
         channel: {
@@ -418,9 +416,7 @@ describe("newApiService", () => {
     })
 
     it("should join groups in payload", async () => {
-      const { createChannel } = await import(
-        "~/services/newApiService/newApiService"
-      )
+      const { createChannel } = await import("~/services/apiService/common")
       const payload: CreateChannelPayload = {
         mode: "single",
         channel: {
@@ -457,9 +453,7 @@ describe("newApiService", () => {
 
   describe("updateChannel", () => {
     it("should update channel successfully", async () => {
-      const { updateChannel } = await import(
-        "~/services/newApiService/newApiService"
-      )
+      const { updateChannel } = await import("~/services/apiService/common")
       const updateData = { id: 1, name: "Updated Name" }
 
       mockFetchApi.mockResolvedValueOnce({ success: true })
@@ -485,9 +479,7 @@ describe("newApiService", () => {
     })
 
     it("should throw error when update fails", async () => {
-      const { updateChannel } = await import(
-        "~/services/newApiService/newApiService"
-      )
+      const { updateChannel } = await import("~/services/apiService/common")
 
       mockFetchApi.mockRejectedValueOnce(new Error("API error"))
 
@@ -1008,7 +1000,7 @@ describe("newApiService", () => {
         models: "gpt-4,gpt-3.5-turbo",
       })
 
-      mockFetchApiData.mockResolvedValueOnce(
+      mockSearchChannel.mockResolvedValueOnce(
         createMockNewApiChannelListData([matchingChannel]),
       )
 
@@ -1031,7 +1023,7 @@ describe("newApiService", () => {
         base_url: "https://different.example.com",
       })
 
-      mockFetchApiData.mockResolvedValueOnce(
+      mockSearchChannel.mockResolvedValueOnce(
         createMockNewApiChannelListData([differentChannel]),
       )
 
@@ -1051,7 +1043,7 @@ describe("newApiService", () => {
         "~/services/newApiService/newApiService"
       )
 
-      mockFetchApiData.mockResolvedValueOnce(null)
+      mockSearchChannel.mockResolvedValueOnce(null)
 
       const result = await findMatchingChannel(
         "https://new-api.example.com",
@@ -1078,7 +1070,7 @@ describe("newApiService", () => {
         models: "gpt-4",
       })
 
-      mockFetchApiData.mockResolvedValueOnce(
+      mockSearchChannel.mockResolvedValueOnce(
         createMockNewApiChannelListData([channel1, channel2]),
       )
 
@@ -1131,7 +1123,7 @@ describe("newApiService", () => {
         createMockUserPreferencesWithNewApi(),
       )
       mockFetchUpstreamModelsNameList.mockResolvedValueOnce(["gpt-4"])
-      mockFetchApiData.mockResolvedValueOnce(
+      mockSearchChannel.mockResolvedValueOnce(
         createMockNewApiChannelListData([existingChannel]),
       )
 
@@ -1153,10 +1145,10 @@ describe("newApiService", () => {
         createMockUserPreferencesWithNewApi(),
       )
       mockFetchUpstreamModelsNameList.mockResolvedValueOnce(["gpt-4"])
-      mockFetchApiData.mockResolvedValueOnce(
+      mockSearchChannel.mockResolvedValueOnce(
         createMockNewApiChannelListData([]),
       )
-      mockFetchApi.mockResolvedValueOnce({ success: true })
+      mockCreateChannel.mockResolvedValueOnce({ success: true })
 
       const result = await importToNewApi(account, token)
 
@@ -1175,18 +1167,18 @@ describe("newApiService", () => {
         createMockUserPreferencesWithNewApi(),
       )
       mockFetchUpstreamModelsNameList.mockResolvedValueOnce(["gpt-4"])
-      mockFetchApiData.mockResolvedValueOnce(
+      mockSearchChannel.mockResolvedValueOnce(
         createMockNewApiChannelListData([]),
       )
-      mockFetchApi.mockResolvedValueOnce({
+      mockCreateChannel.mockResolvedValueOnce({
         success: false,
-        message: "Channel creation failed",
+        message: "create failed",
       })
 
       const result = await importToNewApi(account, token)
 
       expect(result.success).toBe(false)
-      expect(result.message).toBe("Channel creation failed")
+      expect(result.message).toBe("create failed")
     })
 
     it("should handle thrown errors during import", async () => {
@@ -1251,8 +1243,8 @@ describe("newApiService", () => {
       mockAccountStorageConvertToDisplayData.mockReturnValue(displayData)
       mockEnsureAccountApiToken.mockResolvedValue(token)
       mockFetchUpstreamModelsNameList.mockResolvedValue(["gpt-4"])
-      mockFetchApiData.mockResolvedValue(createMockNewApiChannelListData([]))
-      mockFetchApi.mockResolvedValue({ success: true })
+      mockSearchChannel.mockResolvedValue(createMockNewApiChannelListData([]))
+      mockCreateChannel.mockResolvedValue({ success: true })
 
       const result = await autoConfigToNewApi(account, "toast-id")
 
@@ -1281,8 +1273,8 @@ describe("newApiService", () => {
         .mockResolvedValueOnce(token)
 
       mockFetchUpstreamModelsNameList.mockResolvedValue(["gpt-4"])
-      mockFetchApiData.mockResolvedValue(createMockNewApiChannelListData([]))
-      mockFetchApi.mockResolvedValue({ success: true })
+      mockSearchChannel.mockResolvedValue(createMockNewApiChannelListData([]))
+      mockCreateChannel.mockResolvedValue({ success: true })
 
       const resultPromise = autoConfigToNewApi(account, "toast-id")
 
@@ -1364,8 +1356,8 @@ describe("newApiService", () => {
         .mockResolvedValueOnce(token)
 
       mockFetchUpstreamModelsNameList.mockResolvedValue(["gpt-4"])
-      mockFetchApiData.mockResolvedValue(createMockNewApiChannelListData([]))
-      mockFetchApi.mockResolvedValue({ success: true })
+      mockSearchChannel.mockResolvedValue(createMockNewApiChannelListData([]))
+      mockCreateChannel.mockResolvedValue({ success: true })
 
       const resultPromise = autoConfigToNewApi(account, "toast-id")
 

@@ -8,12 +8,12 @@ import React, {
 } from "react"
 
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
-import type { ChannelFormData, NewApiChannel } from "~/types/newapi"
+import type { ChannelFormData, ManagedSiteChannel } from "~/types/managedSite"
 
 interface ChannelDialogState {
   isOpen: boolean
   mode: DialogMode
-  channel?: NewApiChannel | null
+  channel?: ManagedSiteChannel | null
   initialValues?: Partial<ChannelFormData>
   initialModels?: string[]
   initialGroups?: string[]
@@ -24,7 +24,7 @@ interface ChannelDialogContextValue {
   state: ChannelDialogState
   openDialog: (config: {
     mode?: DialogMode
-    channel?: NewApiChannel | null
+    channel?: ManagedSiteChannel | null
     initialValues?: Partial<ChannelFormData>
     initialModels?: string[]
     initialGroups?: string[]
@@ -56,7 +56,7 @@ export function ChannelDialogProvider({
   const openDialog = useCallback(
     (config: {
       mode?: DialogMode
-      channel?: NewApiChannel | null
+      channel?: ManagedSiteChannel | null
       initialValues?: Partial<ChannelFormData>
       initialModels?: string[]
       initialGroups?: string[]

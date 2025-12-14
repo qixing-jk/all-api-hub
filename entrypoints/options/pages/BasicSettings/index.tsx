@@ -19,6 +19,7 @@ import {
 } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { PageHeader } from "~/entrypoints/options/components/PageHeader"
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { OPTIONAL_PERMISSIONS } from "~/services/permissions/permissionManager"
 import {
   navigateToAnchor,
@@ -33,7 +34,7 @@ import CliProxyTab from "./components/CliProxyTab"
 import DataBackupTab from "./components/DataBackupTab"
 import GeneralTab from "./components/GeneralTab"
 import LoadingSkeleton from "./components/LoadingSkeleton"
-import NewApiTab from "./components/NewApiTab"
+import ManagedSiteTab from "./components/managedSiteTab"
 import PermissionOnboardingDialog from "./components/PermissionOnboardingDialog"
 import PermissionsTab from "./components/PermissionsTab"
 
@@ -64,7 +65,7 @@ const TAB_CONFIGS = [
   { id: "accountManagement", component: AccountManagementTab },
   { id: "refresh", component: AutoRefreshTab },
   { id: "checkinRedeem", component: CheckinRedeemTab },
-  { id: "newApi", component: NewApiTab },
+  { id: "newApi", component: ManagedSiteTab },
   { id: "cliProxy", component: CliProxyTab },
   ...(hasOptionalPermissions ? [PERMISSIONS_TAB_CONFIG] : []),
   { id: "dataBackup", component: DataBackupTab },
@@ -116,8 +117,8 @@ export default function BasicSettings() {
 
   const applyUrlState = useCallback(() => {
     const { tab, anchor, isHeadingAnchor } = parseTabFromUrl({
-      ignoreAnchors: ["basic"],
-      defaultHashPage: "basic",
+      ignoreAnchors: [MENU_ITEM_IDS.BASIC],
+      defaultHashPage: MENU_ITEM_IDS.BASIC,
     })
 
     if (tab) {
@@ -175,7 +176,7 @@ export default function BasicSettings() {
     if (index < 0 || index >= TAB_CONFIGS.length) return
     setSelectedTabIndex(index)
     const tab = TAB_CONFIGS[index]
-    updateUrlWithTab(tab.id, { hashPage: "basic" })
+    updateUrlWithTab(tab.id, { hashPage: MENU_ITEM_IDS.BASIC })
   }, [])
 
   if (isLoading) {

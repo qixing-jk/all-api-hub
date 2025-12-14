@@ -44,19 +44,19 @@ export default function NewApiSettings() {
   const handleNewApiBaseUrlChange = async (url: string) => {
     if (url === newApiBaseUrl) return
     const success = await updateNewApiBaseUrl(url)
-    showUpdateToast(success, "New API Base URL")
+    showUpdateToast(success, t("newApi.fields.baseUrlLabel"))
   }
 
   const handleNewApiAdminTokenChange = async (token: string) => {
     if (token === newApiAdminToken) return
     const success = await updateNewApiAdminToken(token)
-    showUpdateToast(success, "Admin Token")
+    showUpdateToast(success, t("newApi.fields.adminTokenLabel"))
   }
 
   const handleNewApiUserIdChange = async (id: string) => {
     if (id === newApiUserId) return
     const success = await updateNewApiUserId(id)
-    showUpdateToast(success, "User ID")
+    showUpdateToast(success, t("newApi.fields.userIdLabel"))
   }
 
   return (
@@ -69,7 +69,7 @@ export default function NewApiSettings() {
       <Card padding="none">
         <CardList>
           <CardItem
-            title={"New API Base URL"}
+            title={t("newApi.fields.baseUrlLabel")}
             description={t("newApi.urlDesc")}
             rightContent={
               <Input
@@ -77,13 +77,13 @@ export default function NewApiSettings() {
                 value={localBaseUrl}
                 onChange={(e) => setLocalBaseUrl(e.target.value)}
                 onBlur={(e) => handleNewApiBaseUrlChange(e.target.value)}
-                placeholder="https://api.example.com"
+                placeholder={t("newApi.fields.baseUrlPlaceholder")}
               />
             }
           />
 
           <CardItem
-            title={"Admin Token"}
+            title={t("newApi.fields.adminTokenLabel")}
             description={t("newApi.tokenDesc")}
             rightContent={
               <div className="relative">
@@ -98,7 +98,9 @@ export default function NewApiSettings() {
                       size="sm"
                       onClick={() => setShowAdminToken(!showAdminToken)}
                       aria-label={
-                        showAdminToken ? "Hide password" : "Show password"
+                        showAdminToken
+                          ? t("newApi.fields.hideToken")
+                          : t("newApi.fields.showToken")
                       }
                     >
                       {showAdminToken ? (
@@ -114,7 +116,7 @@ export default function NewApiSettings() {
           />
 
           <CardItem
-            title={"User ID"}
+            title={t("newApi.fields.userIdLabel")}
             description={t("newApi.userIdDesc")}
             rightContent={
               <Input

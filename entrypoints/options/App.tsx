@@ -4,6 +4,8 @@ import { AppLayout } from "~/components/AppLayout"
 
 import Header from "./components/Header"
 import Sidebar from "./components/Sidebar"
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+
 import { menuItems } from "./constants"
 import { useHashNavigation } from "./hooks/useHashNavigation"
 import BasicSettings from "./pages/BasicSettings"
@@ -24,7 +26,7 @@ function OptionsPage() {
     BasicSettings
 
   const handleTitleClick = () => {
-    handleMenuItemChange("basic")
+    handleMenuItemChange(MENU_ITEM_IDS.BASIC)
   }
 
   const handleMenuItemClick = (itemId: string) => {

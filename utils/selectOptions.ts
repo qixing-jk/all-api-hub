@@ -1,5 +1,5 @@
 import type { MultiSelectOption } from "~/components/ui/MultiSelect"
-import type { ChannelGroup, ChannelModel } from "~/types/newapi"
+import type { ChannelGroup, ChannelModel } from "~/types/managedSite"
 
 export interface SelectOption {
   label: string

@@ -17,19 +17,19 @@ import {
   SelectValue,
 } from "~/components/ui"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
-import { ChannelType, ChannelTypeOptions } from "~/constants/newApi"
+import { ChannelType, ChannelTypeOptions } from "~/constants/managedSite"
 import {
   CHANNEL_STATUS,
   type ChannelFormData,
   type ChannelStatus,
-  type NewApiChannel,
-} from "~/types/newapi"
+  type ManagedSiteChannel,
+} from "~/types/managedSite"
 
 export interface ChannelDialogProps {
   isOpen: boolean
   onClose: () => void
   mode?: DialogMode
-  channel?: NewApiChannel | null
+  channel?: ManagedSiteChannel | null
   onSuccess?: (channel: any) => void
   initialValues?: Partial<ChannelFormData>
   initialModels?: string[]

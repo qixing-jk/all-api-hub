@@ -58,7 +58,7 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
     onClickViewJson,
     onChangeJsonText,
   } = props
-  const { t } = useTranslation("newApiChannels")
+  const { t } = useTranslation("managedSiteChannels")
 
   if (isLoading) {
     return (

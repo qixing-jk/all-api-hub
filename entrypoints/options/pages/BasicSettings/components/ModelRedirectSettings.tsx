@@ -6,12 +6,17 @@ import { SettingSection } from "~/components/SettingSection"
 import { Button, Card, CardContent } from "~/components/ui"
 import { MultiSelect } from "~/components/ui/MultiSelect"
 import { Switch } from "~/components/ui/Switch"
+import { VELOERA } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { fetchAccountAvailableModels } from "~/services/apiService/common"
+import { hasValidManagedSiteConfig } from "~/services/managedSiteService"
 import { ModelRedirectService } from "~/services/modelRedirect"
-import { hasValidNewApiConfig } from "~/services/newApiService/newApiService"
 import { AuthTypeEnum } from "~/types"
-import { ALL_PRESET_STANDARD_MODELS } from "~/types/modelRedirect"
+import { ALL_PRESET_STANDARD_MODELS } from "~/types/managedSiteModelRedirect"
+
+
+
+
 
 /**
  * Configures model redirect feature: enable toggle, model list, regeneration.
@@ -33,14 +38,25 @@ export default function ModelRedirectSettings() {
      * Fetches available standard models when New API configuration exists.
      */
     async function getModelList() {
-      if (hasValidNewApiConfig(preferences)) {
-        return await fetchAccountAvailableModels({
-          baseUrl: preferences.newApi.baseUrl,
-          userId: preferences.newApi.userId,
-          token: preferences.newApi.adminToken,
-          authType: AuthTypeEnum.AccessToken,
-        })
+      if (!preferences) {
+        return
       }
+
+      if (!hasValidManagedSiteConfig(preferences)) {
+        return
+      }
+
+      const managedConfig =
+        preferences.managedSiteType === VELOERA
+          ? preferences.veloera
+          : preferences.newApi
+
+      return await fetchAccountAvailableModels({
+        baseUrl: managedConfig.baseUrl,
+        userId: managedConfig.userId,
+        token: managedConfig.adminToken,
+        authType: AuthTypeEnum.AccessToken,
+      })
     }
 
     ;(async () => {

@@ -2,6 +2,7 @@ import { UsersIcon } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
 import { Button, Card, CardContent, Heading4 } from "~/components/ui"
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { navigateWithinOptionsPage } from "~/utils/navigation"
 
 import SortingPrioritySettings from "./SortingPrioritySettings"
@@ -14,7 +15,7 @@ export default function AccountManagementTab() {
   const { t } = useTranslation("settings")
 
   const handleNavigate = () => {
-    navigateWithinOptionsPage("#account")
+    navigateWithinOptionsPage(`#${MENU_ITEM_IDS.ACCOUNT}`)
   }
 
   return (

@@ -19,7 +19,8 @@
   "messages": {
     "createSuccess": "Channel created successfully",
     "updateSuccess": "Channel updated successfully",
-    "saveFailed": "Failed to save channel: {{error}}"
+    "saveFailed": "Failed to save channel: {{error}}",
+    "missingChannelId": "Existing channel ID is missing"
   },
   "validation": {
     "nameRequired": "Channel name is required",

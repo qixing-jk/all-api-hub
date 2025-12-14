@@ -1,11 +1,12 @@
 import { handleAutoCheckinMessage } from "~/services/autoCheckin/scheduler"
 import { handleAutoRefreshMessage } from "~/services/autoRefreshService"
 import { handleChannelConfigMessage } from "~/services/channelConfigStorage"
-import { handleNewApiModelSyncMessage } from "~/services/newApiModelSync"
+import { handleNewApiModelSyncMessage } from "~/services/modelSync"
 import { handleRedemptionAssistMessage } from "~/services/redemptionAssist"
 import { handleWebdavAutoSyncMessage } from "~/services/webdav/webdavAutoSyncService"
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { onRuntimeMessage } from "~/utils/browserApi"
-import { openOrFocusOptionsPage } from "~/utils/navigation"
+import { openOrFocusOptionsMenuItem } from "~/utils/navigation"
 
 import {
   handleAutoDetectSite,
@@ -42,7 +43,7 @@ export function setupRuntimeMessageListeners() {
     }
 
     if (request.action === "openSettings:checkinRedeem") {
-      openOrFocusOptionsPage("?tab=checkinRedeem#basic")
+      openOrFocusOptionsMenuItem(MENU_ITEM_IDS.BASIC, { tab: "checkinRedeem" })
       sendResponse({ success: true })
       return true
     }
@@ -69,7 +70,7 @@ export function setupRuntimeMessageListeners() {
     }
 
     // 处理New API模型同步相关消息
-    if (request.action && request.action.startsWith("newApiModelSync:")) {
+    if (request.action && request.action.startsWith("modelSync:")) {
       handleNewApiModelSyncMessage(request, sendResponse)
       return true
     }

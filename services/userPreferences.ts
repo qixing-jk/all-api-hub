@@ -3,6 +3,7 @@ import { isEqual } from "lodash-es"
 import { Storage } from "@plasmohq/storage"
 
 import { DATA_TYPE_BALANCE, DATA_TYPE_CONSUMPTION } from "~/constants"
+import { NEW_API, VELOERA, type ManagedSiteType } from "~/constants/siteType"
 import {
   CURRENT_PREFERENCES_VERSION,
   migratePreferences,
@@ -24,11 +25,12 @@ import {
 import {
   DEFAULT_MODEL_REDIRECT_PREFERENCES,
   type ModelRedirectPreferences,
-} from "~/types/modelRedirect"
+} from "~/types/managedSiteModelRedirect"
 import { DEFAULT_NEW_API_CONFIG, NewApiConfig } from "~/types/newApiConfig"
 import type { SortingPriorityConfig } from "~/types/sorting"
 import type { ThemeMode } from "~/types/theme"
 import { DeepPartial } from "~/types/utils"
+import { DEFAULT_VELOERA_CONFIG, VeloeraConfig } from "~/types/veloeraConfig"
 import {
   DEFAULT_WEBDAV_SETTINGS,
   WebDAVSettings,
@@ -89,6 +91,12 @@ export interface UserPreferences {
 
   // New API 相关配置
   newApi: NewApiConfig
+
+  // Veloera 相关配置
+  veloera: VeloeraConfig
+
+  // 管理站点类型 (用户可以选择管理 New API 或 Veloera)
+  managedSiteType: ManagedSiteType
 
   // CLIProxyAPI 管理接口配置
   cliProxy?: CliProxyConfig
@@ -236,6 +244,8 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   webdav: DEFAULT_WEBDAV_SETTINGS,
   lastUpdated: Date.now(),
   newApi: DEFAULT_NEW_API_CONFIG,
+  veloera: DEFAULT_VELOERA_CONFIG,
+  managedSiteType: NEW_API,
   cliProxy: DEFAULT_CLI_PROXY_CONFIG,
   newApiModelSync: {
     enabled: false,
@@ -522,6 +532,46 @@ class UserPreferencesService {
     return this.savePreferences({
       newApi: DEFAULT_PREFERENCES.newApi,
     })
+  }
+
+  /**
+   * Update Veloera config.
+   */
+  async updateVeloeraConfig(config: Partial<VeloeraConfig>): Promise<boolean> {
+    return this.savePreferences({
+      veloera: config,
+    })
+  }
+
+  /**
+   * Reset Veloera config.
+   */
+  async resetVeloeraConfig(): Promise<boolean> {
+    return this.savePreferences({
+      veloera: DEFAULT_PREFERENCES.veloera,
+    })
+  }
+
+  /**
+   * Update managed site type (new-api or veloera).
+   */
+  async updateManagedSiteType(siteType: ManagedSiteType): Promise<boolean> {
+    return this.savePreferences({
+      managedSiteType: siteType,
+    })
+  }
+
+  /**
+   * Get managed site configuration based on current managedSiteType.
+   */
+  async getManagedSiteConfig(): Promise<{
+    siteType: ManagedSiteType
+    config: NewApiConfig | VeloeraConfig
+  }> {
+    const prefs = await this.getPreferences()
+    const siteType = prefs.managedSiteType || NEW_API
+    const config = siteType === VELOERA ? prefs.veloera : prefs.newApi
+    return { siteType, config }
   }
 
   /**

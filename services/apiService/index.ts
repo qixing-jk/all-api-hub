@@ -1,16 +1,34 @@
-import { DONE_HUB, ONE_HUB, type SiteType } from "~/constants/siteType"
+import {
+  DONE_HUB,
+  NEW_API,
+  ONE_HUB,
+  VELOERA,
+  type SiteType,
+} from "~/constants/siteType"
 
 import * as commonAPI from "./common"
 import * as oneHubAPI from "./oneHub"
+import * as veloeraAPI from "./veloera"
 
 // 映射表,只放需要覆盖的站点
 const siteOverrideMap = {
   [ONE_HUB]: oneHubAPI,
   [DONE_HUB]: oneHubAPI,
+  [VELOERA]: veloeraAPI,
+  [NEW_API]: commonAPI,
 } as const
 
 // 添加类型定义
 type SiteOverrideMap = typeof siteOverrideMap
+
+/**
+ * Append an optional SiteType hint to a function signature.
+ * This allows callers to explicitly request a site/version implementation
+ * without changing the underlying common API function shapes.
+ */
+type WithSiteHint<F> = F extends (...args: infer A) => infer R
+  ? (...args: [...A, SiteType?]) => R
+  : F
 
 // 获取对应站点的 API 函数
 /**
@@ -72,7 +90,7 @@ function createWrappedFunction<T extends (...args: any[]) => any>(
 
 // 创建导出对象
 const exportedAPI = {} as {
-  [K in keyof typeof commonAPI]: (typeof commonAPI)[K]
+  [K in keyof typeof commonAPI]: WithSiteHint<(typeof commonAPI)[K]>
 }
 
 // 遍历 commonAPI 并包装每个函数
@@ -94,6 +112,14 @@ export const {
   createAccessToken,
   fetchSiteStatus,
   extractDefaultExchangeRate,
+  searchChannel,
+  createChannel,
+  updateChannel,
+  deleteChannel,
+  listAllChannels,
+  fetchChannelModels,
+  updateChannelModels,
+  updateChannelModelMapping,
   getOrCreateAccessToken,
   fetchAccountQuota,
   fetchCheckInStatus,

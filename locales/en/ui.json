@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "All API Hub",
-    "description": "Manage AI relays and your own New API accounts and balances in one place"
+    "description": "Manage AI relays and your accounts and balances in one place"
   },
   "pageTitle": {
     "options": "All API Hub | Settings",
@@ -17,8 +17,10 @@
     "account": "Account Management",
     "models": "Model List",
     "autoCheckin": "Auto Check-in",
-    "newApiChannels": "New API Channels Management",
-    "newApiModelSync": "New API Model Sync",
+    "managedSiteChannels": "Channels Management",
+    "newApiChannels": "Channels Management",
+    "newApiModelSync": "Model sync",
+    "managedSiteModelSync": "Model sync",
     "keys": "Key Management",
     "importExport": "Import/Export",
     "collapseSidebar": "Collapse sidebar",

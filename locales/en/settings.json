@@ -7,7 +7,7 @@
     "refresh": "Data Refresh",
     "checkinRedeem": "Check-in & Redeem",
     "dataBackup": "Data & Backup",
-    "newApi": "New API",
+    "newApi": "Managed site",
     "cliProxy": "CLIProxyAPI",
     "more": "More",
     "permissions": "Permissions",
@@ -107,7 +107,38 @@
     "description": "Configure integration settings for connecting to New API compatible services",
     "urlDesc": "Set the base URL for New API integration",
     "tokenDesc": "Token for accessing New API admin functions",
-    "userIdDesc": "User identification ID for New API"
+    "userIdDesc": "User identification ID for New API",
+    "fields": {
+      "baseUrlLabel": "Base URL",
+      "baseUrlPlaceholder": "https://api.example.com",
+      "adminTokenLabel": "Admin token",
+      "userIdLabel": "User ID",
+      "showToken": "Show token",
+      "hideToken": "Hide token"
+    }
+  },
+  "veloera": {
+    "title": "Veloera Integration Settings",
+    "description": "Configure integration settings for connecting to Veloera compatible services",
+    "urlDesc": "Set the base URL for Veloera integration",
+    "tokenDesc": "Token for accessing Veloera admin functions",
+    "userIdDesc": "User identification ID for Veloera",
+    "fields": {
+      "baseUrlLabel": "Base URL",
+      "baseUrlPlaceholder": "https://api.example.com",
+      "adminTokenLabel": "Admin token",
+      "userIdLabel": "User ID",
+      "showToken": "Show token",
+      "hideToken": "Hide token"
+    }
+  },
+  "managedSite": {
+    "title": "Managed Site Configuration",
+    "description": "Select which API aggregator platform you want to manage. This determines which configuration will be used for channel management and model syncing.",
+    "siteTypeLabel": "Managed Site Type",
+    "siteTypeDesc": "Choose the platform used for channel management and model sync",
+    "newApi": "New API",
+    "veloera": "Veloera"
   },
   "cliProxy": {
     "title": "CLIProxyAPI Settings",

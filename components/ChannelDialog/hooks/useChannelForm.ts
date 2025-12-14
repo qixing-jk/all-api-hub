@@ -4,28 +4,22 @@ import { useTranslation } from "react-i18next"
 
 import type { MultiSelectOption } from "~/components/ui/MultiSelect"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
-import { ChannelType, DEFAULT_CHANNEL_FIELDS } from "~/constants/newApi"
+import { ChannelType, DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
 import { fetchSiteUserGroups } from "~/services/apiService"
-import {
-  buildChannelPayload,
-  checkValidNewApiConfig,
-  createChannel,
-  getNewApiConfig,
-  updateChannel,
-} from "~/services/newApiService/newApiService"
+import { getManagedSiteService } from "~/services/managedSiteService"
 import type {
   ChannelFormData,
-  NewApiChannel,
+  ManagedSiteChannel,
   UpdateChannelPayload,
-} from "~/types/newapi"
+} from "~/types/managedSite"
 import { mergeUniqueOptions } from "~/utils/selectOptions"
 
 export interface UseChannelFormProps {
   mode: DialogMode
-  channel: NewApiChannel | null
+  channel: ManagedSiteChannel | null
   isOpen: boolean
   onClose: () => void
-  onSuccess?: (channel: any) => void
+  onSuccess?: (response: any) => void
   initialValues?: Partial<ChannelFormData>
   initialModels?: string[]
   initialGroups?: string[]
@@ -55,7 +49,7 @@ export function useChannelForm({
   initialModels,
   initialGroups,
 }: UseChannelFormProps) {
-  const { t } = useTranslation("channelDialog")
+  const { t } = useTranslation(["channelDialog", "messages"])
 
   const buildInitialFormData = useCallback(
     (): ChannelFormData => ({
@@ -130,7 +124,8 @@ export function useChannelForm({
   const loadGroups = async () => {
     setIsLoadingGroups(true)
     try {
-      const hasConfig = await checkValidNewApiConfig()
+      const service = await getManagedSiteService()
+      const hasConfig = await service.checkValidConfig()
       const preselectedGroups = (
         initialValues?.groups ??
         initialGroups ??
@@ -144,7 +139,7 @@ export function useChannelForm({
         return
       }
 
-      const config = await getNewApiConfig()
+      const config = await service.getConfig()
       if (!config) {
         setAvailableGroups(
           mergeUniqueOptions(
@@ -242,39 +237,37 @@ export function useChannelForm({
 
     // Validation
     if (!formData.name.trim()) {
-      toast.error(t("validation.nameRequired") || "Channel name is required")
+      toast.error(t("channelDialog:validation.nameRequired"))
       return
     }
 
     if (isKeyFieldRequired && !formData.key.trim()) {
-      toast.error(t("validation.keyRequired") || "API key is required")
+      toast.error(t("channelDialog:validation.keyRequired"))
       return
     }
 
     if (isBaseUrlRequired && !formData?.base_url?.trim()) {
-      toast.error(
-        t("validation.baseUrlRequired") ||
-          "Base URL is required for this channel type",
-      )
+      toast.error(t("channelDialog:validation.baseUrlRequired"))
       return
     }
 
     setIsSaving(true)
 
     try {
-      const apiConfig = await getNewApiConfig()
+      const service = await getManagedSiteService()
+      const apiConfig = await service.getConfig()
       if (!apiConfig) {
-        throw new Error("New API configuration not found")
+        throw new Error(t(`messages:${service.messagesKey}.configMissing`))
       }
 
       // Build payload
-      const payload = buildChannelPayload(formData)
+      const payload = service.buildChannelPayload(formData)
 
       let response
       if (mode === DIALOG_MODES.EDIT && channel) {
         const channelId = channel.id
         if (!channelId) {
-          throw new Error("Existing channel id is missing")
+          throw new Error(t("channelDialog:messages.missingChannelId"))
         }
         const updatePayload: UpdateChannelPayload = (() => {
           return {
@@ -286,14 +279,14 @@ export function useChannelForm({
             group: formData.groups.join(","),
           }
         })()
-        response = await updateChannel(
+        response = await service.updateChannel(
           apiConfig.baseUrl,
           apiConfig.token,
           apiConfig.userId,
           updatePayload,
         )
       } else {
-        response = await createChannel(
+        response = await service.createChannel(
           apiConfig.baseUrl,
           apiConfig.token,
           apiConfig.userId,
@@ -306,14 +299,13 @@ export function useChannelForm({
         onClose()
         resetForm()
       } else {
-        throw new Error(response.message || "Failed to save channel")
+        throw new Error(response.message)
       }
     } catch (error: any) {
       console.error("[ChannelForm] Save failed:", error)
       toast.error(
         t("channelDialog:messages.saveFailed", {
           error: error.message,
-          defaultValue: `Failed to save channel: ${error.message}`,
         }),
       )
     } finally {

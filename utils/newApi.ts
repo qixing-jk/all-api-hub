@@ -1,5 +1,5 @@
 import { ChannelType } from "~/constants"
-import { ChannelTypeNames } from "~/constants/newApi"
+import { ChannelTypeNames } from "~/constants/managedSite"
 
 /**
  * Resolve a user-facing name for the provided channel type.

@@ -61,10 +61,8 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
                   title={
                     isClickable ? t("clickSwitchGroup", { group }) : undefined
                   }
-                  leftIcon={
-                    isCurrentGroup ? <TagIcon className="h-3 w-3" /> : undefined
-                  }
                 >
+                  {isCurrentGroup && <TagIcon className="h-3 w-3" />}
                   {group}
                 </Badge>
               )

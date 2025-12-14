@@ -13,6 +13,7 @@ import {
   Switch,
 } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { DEFAULT_PREFERENCES } from "~/services/userPreferences"
 import {
   AUTO_CHECKIN_SCHEDULE_MODE,
@@ -73,7 +74,7 @@ export default function AutoCheckinSettings() {
   }
 
   const handleNavigateToExecution = () => {
-    navigateWithinOptionsPage("#autoCheckin")
+    navigateWithinOptionsPage(`#${MENU_ITEM_IDS.AUTO_CHECKIN}`)
   }
 
   const validateTimeWindow = (start: string, end: string): boolean => {

@@ -7,6 +7,7 @@ import { REQUEST_CONFIG } from "./constant"
 export interface PaginationOptions {
   pageSize?: number
   maxPages?: number
+  startPage?: number
 }
 
 export interface PaginatedResult<T> {
@@ -14,6 +15,12 @@ export interface PaginatedResult<T> {
   totalPages: number
   currentPage: number
   hasMore: boolean
+}
+
+export interface PageData<T> {
+  items: T[]
+  total?: number
+  hasMore?: boolean
 }
 
 /**
@@ -25,10 +32,7 @@ export interface PaginatedResult<T> {
  * @returns Aggregated result
  */
 export async function fetchAllPaginated<T, R>(
-  fetchPage: (page: number) => Promise<{
-    items: T[]
-    total: number
-  }>,
+  fetchPage: (page: number) => Promise<PageData<T>>,
   aggregator: (accumulator: R, items: T[]) => R,
   initialValue: R,
   options: PaginationOptions = {},
@@ -36,26 +40,37 @@ export async function fetchAllPaginated<T, R>(
   const {
     pageSize = REQUEST_CONFIG.DEFAULT_PAGE_SIZE,
     maxPages = REQUEST_CONFIG.MAX_PAGES,
+    startPage = 1,
   } = options
 
   let aggregatedData = initialValue
-  let currentPage = 1
+  let currentPage = startPage
+  let pageCount = 0
 
-  while (currentPage <= maxPages) {
+  while (pageCount < maxPages) {
     const pageData = await fetchPage(currentPage)
     const items = pageData.items || []
 
     aggregatedData = aggregator(aggregatedData, items)
 
-    const totalPages = Math.ceil((pageData.total || 0) / pageSize)
-
-    if (currentPage >= totalPages) {
+    if (typeof pageData.hasMore === "boolean") {
+      if (!pageData.hasMore) {
+        break
+      }
+    } else if (typeof pageData.total === "number") {
+      const totalPages = Math.ceil((pageData.total || 0) / pageSize)
+      const pageIndex = currentPage - startPage + 1
+      if (pageIndex >= totalPages) {
+        break
+      }
+    } else if (items.length < pageSize) {
       break
     }
 
     currentPage++
+    pageCount++
 
-    if (currentPage > maxPages) {
+    if (pageCount >= maxPages) {
       console.warn(`达到最大分页限制(${maxPages}页)，数据可能不完整`)
     }
   }
@@ -70,10 +85,7 @@ export async function fetchAllPaginated<T, R>(
  * @returns All items from all pages
  */
 export async function fetchAllItems<T>(
-  fetchPage: (page: number) => Promise<{
-    items: T[]
-    total: number
-  }>,
+  fetchPage: (page: number) => Promise<PageData<T>>,
   options: PaginationOptions = {},
 ): Promise<T[]> {
   return fetchAllPaginated(

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 
+import { NEW_API } from "~/constants/siteType"
 import {
   CURRENT_PREFERENCES_VERSION,
   getPreferencesVersion,
@@ -10,6 +11,7 @@ import type { UserPreferences } from "~/services/userPreferences"
 import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
 import { DEFAULT_NEW_API_CONFIG } from "~/types/newApiConfig"
 import { SortingCriteriaType } from "~/types/sorting"
+import { DEFAULT_VELOERA_CONFIG } from "~/types/veloeraConfig"
 import { DEFAULT_WEBDAV_SETTINGS, WEBDAV_SYNC_STRATEGIES } from "~/types/webdav"
 import { DEFAULT_SORTING_PRIORITY_CONFIG } from "~/utils/sortingPriority"
 
@@ -30,17 +32,27 @@ function createV0Preferences(
     showHealthStatus: true,
     webdav: DEFAULT_WEBDAV_SETTINGS,
     newApi: DEFAULT_NEW_API_CONFIG,
+    veloera: DEFAULT_VELOERA_CONFIG,
+    managedSiteType: NEW_API,
     newApiModelSync: {
       enabled: false,
       interval: 24 * 60 * 60 * 1000,
       concurrency: 2,
       maxRetries: 2,
       rateLimit: { requestsPerMinute: 20, burst: 5 },
+      allowedModels: [],
+      globalChannelModelFilters: [],
     },
     autoCheckin: {
       globalEnabled: false,
       windowStart: "09:00",
       windowEnd: "18:00",
+      scheduleMode: "random",
+      retryStrategy: {
+        enabled: false,
+        intervalMinutes: 30,
+        maxAttemptsPerDay: 3,
+      },
     },
     modelRedirect: {
       enabled: false,
@@ -326,17 +338,27 @@ describe("preferencesMigration", () => {
         accountAutoRefresh: DEFAULT_ACCOUNT_AUTO_REFRESH,
         showHealthStatus: true,
         newApi: DEFAULT_NEW_API_CONFIG,
+        veloera: DEFAULT_VELOERA_CONFIG,
+        managedSiteType: NEW_API,
         newApiModelSync: {
           enabled: false,
           interval: 24 * 60 * 60 * 1000,
           concurrency: 2,
           maxRetries: 2,
           rateLimit: { requestsPerMinute: 20, burst: 5 },
+          allowedModels: [],
+          globalChannelModelFilters: [],
         },
         autoCheckin: {
           globalEnabled: false,
           windowStart: "09:00",
           windowEnd: "18:00",
+          scheduleMode: "random",
+          retryStrategy: {
+            enabled: false,
+            intervalMinutes: 30,
+            maxAttemptsPerDay: 3,
+          },
         },
         modelRedirect: {
           enabled: false,
