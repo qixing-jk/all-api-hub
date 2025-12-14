@@ -1,5 +1,43 @@
 # Changelog
 
+## [2.28.0](https://github.com/qixing-jk/all-api-hub/compare/v2.27.0...v2.28.0) (2025-12-14)
+
+
+### Features
+
+* add managed site service for flexible API integration ([e6dd7cb](https://github.com/qixing-jk/all-api-hub/commit/e6dd7cb6d297adfec6fc5ae212ed439f6fc47330))
+* **api:** add explicit site type hinting for API functions ([7e95ac9](https://github.com/qixing-jk/all-api-hub/commit/7e95ac9584d096f94a0285ec968389766af76cbc))
+* **api:** add Veloera service integration ([1b66d98](https://github.com/qixing-jk/all-api-hub/commit/1b66d9879b5ccf8893e6cbc3a6fec435821199f0))
+* **apiService:** add Veloera site support ([626198e](https://github.com/qixing-jk/all-api-hub/commit/626198e990a8a1d7f87af09dc64a886dcebe51b3))
+* **channel-dialog:** improve i18n implementation ([0a5bbfa](https://github.com/qixing-jk/all-api-hub/commit/0a5bbfac0a059ad4a53336a581687b82783d7010))
+* **i18n:** add Veloera settings field translations ([88d62f1](https://github.com/qixing-jk/all-api-hub/commit/88d62f13fb03f93f1065901ead3cdcb78a1c9f38))
+* **i18n:** internationalize no channels error message ([809e253](https://github.com/qixing-jk/all-api-hub/commit/809e25377f8ea94e3c5905920467566370e9321a))
+* **i18n:** remove hardcoded default values from translation calls ([08b1f15](https://github.com/qixing-jk/all-api-hub/commit/08b1f15e36add53c00365f4dbce0c8d04a925bb7))
+* **i18n:** remove hardcoded namespaces from i18n config ([48c69b1](https://github.com/qixing-jk/all-api-hub/commit/48c69b1671fc05694217abd45c875bc54350fd59))
+* **i18n:** remove unused New API related translations ([6eb140c](https://github.com/qixing-jk/all-api-hub/commit/6eb140c0f65ee60e9fb03ce6dce0c91c80b50119))
+* **i18n:** update setting key from 'newApi' to 'managedSite' ([37b39e4](https://github.com/qixing-jk/all-api-hub/commit/37b39e4b60df9358b5ac3278ff612cf0780f7c63))
+* **i18n:** update terminology from "New API" to "managed site" ([3e8cbba](https://github.com/qixing-jk/all-api-hub/commit/3e8cbbabad9f75965b81fd1f77c037816c8df544))
+* **i18n:** update zh_CN locale for consistent terminology ([74e36b6](https://github.com/qixing-jk/all-api-hub/commit/74e36b60c4315bce03f26a94ee605b487c21b4a0))
+* **managed-site:** refactor to use unified managed site utilities ([7666214](https://github.com/qixing-jk/all-api-hub/commit/76662149b22b727279f77c287dd67249927437ae))
+* **managedSiteTab:** update section IDs for managed site components ([7005e01](https://github.com/qixing-jk/all-api-hub/commit/7005e0167c67012836d95abd9cfd9095444f6b04))
+* **model-sync:** update alarm name and related log messages ([18dc977](https://github.com/qixing-jk/all-api-hub/commit/18dc977070d88c254e2635f764d1ed12833bca6e))
+* **model-sync:** update message type for managed site sync progress ([6dc9fea](https://github.com/qixing-jk/all-api-hub/commit/6dc9feacc94e485a0417b0107aa161017c9c292e))
+* **modelSync:** implement storage key migration for backward compatibility ([59bd0a2](https://github.com/qixing-jk/all-api-hub/commit/59bd0a2a78ccdda553cebac37780923a98028cb8))
+* **newApiModelSync:** add siteType parameter for multi-site support ([6c82977](https://github.com/qixing-jk/all-api-hub/commit/6c82977490ca328db070e0e0c558fb7258ca688a))
+* **options:** centralize menu item IDs in constants ([2148cf2](https://github.com/qixing-jk/all-api-hub/commit/2148cf2b4c94e5d2eb09e1b55df441fb4de9a2a0))
+* **preferences:** add Veloera integration and site management ([fef3c55](https://github.com/qixing-jk/all-api-hub/commit/fef3c55400bd5a436f6b15e5bf52b9be940edc38))
+* **preferences:** migrate model sync config from newApiModelSync to managedSiteModelSync ([b74408e](https://github.com/qixing-jk/all-api-hub/commit/b74408ee9aa12edf4f48dccdc7a604bacc60c46d))
+* **settings:** update component IDs for managed site settings ([f0a004a](https://github.com/qixing-jk/all-api-hub/commit/f0a004a7f316e749c516949738448ddc590f2d1d))
+* **ui:** add Veloera logo support for VELOERA site type ([a7ddfe1](https://github.com/qixing-jk/all-api-hub/commit/a7ddfe1e71505634ad4ce43b424137938bca3b7b))
+* **ui:** improve sticky actions column in tables ([66b9792](https://github.com/qixing-jk/all-api-hub/commit/66b9792b3ef2b39b399d6e8a9db5d8182abc00b0))
+* **veloera:** add channel CRUD operations ([92bf2ce](https://github.com/qixing-jk/all-api-hub/commit/92bf2ce19aa40c06f20e24d6f7cafda4ea8afa1c))
+
+
+### Bug Fixes
+
+* **i18n:** remove redundant fallback strings in translation calls ([7f684ae](https://github.com/qixing-jk/all-api-hub/commit/7f684ae0a2a0d3d7a82d80721e1f080b9992950d))
+* **tests:** update deprecated API references to managedSite ([f7a5490](https://github.com/qixing-jk/all-api-hub/commit/f7a549093a945a1087f882daf99908fd0689478c))
+
 ## [2.27.0](https://github.com/qixing-jk/all-api-hub/compare/v2.26.0...v2.27.0) (2025-12-12)
 
 
