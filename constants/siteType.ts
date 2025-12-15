@@ -60,6 +60,7 @@ export const SITE_API_ROUTER: Record<string, any> = {
   [ONE_HUB]: { usagePath: "/panel/log", redeemPath: "/panel/topup" },
   [DONE_HUB]: { usagePath: "/panel/log", redeemPath: "/panel/topup" },
   [RIX_API]: { usagePath: "/log", checkInPath: "/panel", redeemPath: "/topup" },
+  [ANYROUTER]: { checkInPath: "/console/topup" },
   Default: {
     usagePath: DEFAULT_USAGE_PATH,
     checkInPath: DEFAULT_CHECKIN_PATH,
