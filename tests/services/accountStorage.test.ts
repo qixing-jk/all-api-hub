@@ -44,10 +44,12 @@ vi.mock("@plasmohq/storage", () => {
 })
 
 vi.mock("~/services/apiService", () => ({
-  fetchTodayIncome: mockFetchTodayIncome,
-  refreshAccountData: mockRefreshAccountData,
-  validateAccountConnection: mockValidateAccountConnection,
-  fetchSupportCheckIn: mockFetchSupportCheckIn,
+  getApiService: vi.fn(() => ({
+    fetchTodayIncome: mockFetchTodayIncome,
+    refreshAccountData: mockRefreshAccountData,
+    validateAccountConnection: mockValidateAccountConnection,
+    fetchSupportCheckIn: mockFetchSupportCheckIn,
+  })),
 }))
 
 vi.mock("~/services/detectSiteType", () => ({

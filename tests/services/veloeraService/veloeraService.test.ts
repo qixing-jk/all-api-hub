@@ -28,12 +28,14 @@ const mockUpdateChannel = vi.fn()
 const mockDeleteChannel = vi.fn()
 
 vi.mock("~/services/apiService", () => ({
-  fetchAccountAvailableModels: mockFetchAccountAvailableModels,
-  fetchUpstreamModelsNameList: mockFetchUpstreamModelsNameList,
-  searchChannel: mockSearchChannel,
-  createChannel: mockCreateChannel,
-  updateChannel: mockUpdateChannel,
-  deleteChannel: mockDeleteChannel,
+  getApiService: vi.fn(() => ({
+    fetchAccountAvailableModels: mockFetchAccountAvailableModels,
+    fetchUpstreamModelsNameList: mockFetchUpstreamModelsNameList,
+    searchChannel: mockSearchChannel,
+    createChannel: mockCreateChannel,
+    updateChannel: mockUpdateChannel,
+    deleteChannel: mockDeleteChannel,
+  })),
 }))
 
 const mockGetPreferences = vi.fn()
@@ -150,7 +152,6 @@ describe("veloeraService", () => {
 
   describe("searchChannel/createChannel/updateChannel/deleteChannel", () => {
     it("passes VELOERA site hint to apiService wrappers", async () => {
-      const { VELOERA } = await import("~/constants/siteType")
       const { searchChannel, createChannel, updateChannel, deleteChannel } =
         await import("~/services/veloeraService/veloeraService")
 
@@ -161,7 +162,6 @@ describe("veloeraService", () => {
         "token",
         "1",
         "k",
-        VELOERA,
       )
 
       mockCreateChannel.mockResolvedValueOnce({ success: true, message: "ok" })
@@ -190,7 +190,6 @@ describe("veloeraService", () => {
         "token",
         "1",
         expect.any(Object),
-        VELOERA,
       )
 
       mockUpdateChannel.mockResolvedValueOnce({ success: true, message: "ok" })
@@ -215,7 +214,6 @@ describe("veloeraService", () => {
         "token",
         "1",
         expect.any(Object),
-        VELOERA,
       )
 
       mockDeleteChannel.mockResolvedValueOnce({ success: true, message: "ok" })
@@ -225,7 +223,6 @@ describe("veloeraService", () => {
         "token",
         "1",
         1,
-        VELOERA,
       )
     })
   })
