@@ -3,7 +3,7 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { useAccountData } from "~/hooks/useAccountData"
-import { deleteApiToken, getApiService } from "~/services/apiService"
+import { getApiService } from "~/services/apiService"
 
 import { AccountToken } from "../type"
 
@@ -139,7 +139,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         return
       }
 
-      await deleteApiToken(
+      await getApiService(account.siteType).deleteApiToken(
         account.baseUrl,
         account.userId,
         account.token,

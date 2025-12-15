@@ -6,14 +6,7 @@ import { NEW_API } from "~/constants/siteType"
 import { AccountToken } from "~/entrypoints/options/pages/KeyManagement/type"
 import { ensureAccountApiToken } from "~/services/accountOperations"
 import { accountStorage } from "~/services/accountStorage"
-import {
-  createChannel as createChannelApi,
-  deleteChannel as deleteChannelApi,
-  fetchUpstreamModelsNameList,
-  getApiService,
-  searchChannel as searchChannelApi,
-  updateChannel as updateChannelApi,
-} from "~/services/apiService"
+import { getApiService } from "~/services/apiService"
 import { ApiToken, DisplaySiteData, SiteAccount } from "~/types"
 import type {
   ChannelFormData,
@@ -63,7 +56,12 @@ export async function searchChannel(
   userId: number | string,
   keyword: string,
 ): Promise<ManagedSiteChannelListData | null> {
-  return await searchChannelApi(baseUrl, accessToken, userId, keyword, NEW_API)
+  return await getApiService(NEW_API).searchChannel(
+    baseUrl,
+    accessToken,
+    userId,
+    keyword,
+  )
 }
 
 /**
@@ -79,12 +77,11 @@ export async function createChannel(
   userId: number | string,
   channelData: CreateChannelPayload,
 ) {
-  return await createChannelApi(
+  return await getApiService(NEW_API).createChannel(
     baseUrl,
     adminToken,
     userId,
     channelData,
-    NEW_API,
   )
 }
 
@@ -101,12 +98,11 @@ export async function updateChannel(
   userId: number | string,
   channelData: UpdateChannelPayload,
 ) {
-  return await updateChannelApi(
+  return await getApiService(NEW_API).updateChannel(
     baseUrl,
     adminToken,
     userId,
     channelData,
-    NEW_API,
   )
 }
 
@@ -119,7 +115,12 @@ export async function deleteChannel(
   userId: number | string,
   channelId: number,
 ) {
-  return await deleteChannelApi(baseUrl, adminToken, userId, channelId, NEW_API)
+  return await getApiService(NEW_API).deleteChannel(
+    baseUrl,
+    adminToken,
+    userId,
+    channelId,
+  )
 }
 
 /**
@@ -193,7 +194,9 @@ export async function fetchAvailableModels(
   }
 
   try {
-    const upstreamModels = await fetchUpstreamModelsNameList({
+    const upstreamModels = await getApiService(
+      undefined,
+    ).fetchUpstreamModelsNameList({
       baseUrl: account.baseUrl,
       apiKey: token.key,
     })
@@ -240,7 +243,9 @@ export async function prepareChannelFormData(
   account: DisplaySiteData,
   token: ApiToken | AccountToken,
 ): Promise<ChannelFormData> {
-  const availableModels = await fetchUpstreamModelsNameList({
+  const availableModels = await getApiService(
+    undefined,
+  ).fetchUpstreamModelsNameList({
     baseUrl: account.baseUrl,
     apiKey: token.key,
   })

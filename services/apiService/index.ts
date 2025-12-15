@@ -125,7 +125,9 @@ export const isApiOverrideSite = (value: unknown): value is ApiOverrideSite =>
   typeof value === "string" && value in siteOverrideMap
 
 export const getApiService = (site: unknown) =>
-  (isApiOverrideSite(site) ? apiForSite(site) : exportedAPI) as typeof exportedAPI
+  (isApiOverrideSite(site)
+    ? apiForSite(site)
+    : exportedAPI) as typeof exportedAPI
 
 // 创建导出对象
 const exportedAPI = {} as {
@@ -145,42 +147,4 @@ for (const key in commonAPI) {
   }
 }
 
-// 导出所有函数
-export const {
-  fetchUserInfo,
-  createAccessToken,
-  fetchSiteStatus,
-  extractDefaultExchangeRate,
-  searchChannel,
-  createChannel,
-  updateChannel,
-  deleteChannel,
-  listAllChannels,
-  fetchChannelModels,
-  updateChannelModels,
-  updateChannelModelMapping,
-  getOrCreateAccessToken,
-  fetchAccountQuota,
-  fetchCheckInStatus,
-  fetchSupportCheckIn,
-  fetchTodayUsage,
-  fetchTodayIncome,
-  fetchAccountData,
-  refreshAccountData,
-  validateAccountConnection,
-  fetchAccountTokens,
-  fetchAccountAvailableModels,
-  fetchUpstreamModels,
-  fetchUpstreamModelsNameList,
-  fetchUserGroups,
-  fetchSiteUserGroups,
-  createApiToken,
-  fetchTokenById,
-  updateApiToken,
-  deleteApiToken,
-  fetchModelPricing,
-  redeemCode,
-  determineHealthStatus,
-} = exportedAPI
-
-export { exportedAPI }
+export type ApiService = typeof exportedAPI

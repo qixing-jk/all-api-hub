@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next"
 import type { MultiSelectOption } from "~/components/ui/MultiSelect"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { ChannelType, DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
-import { fetchSiteUserGroups } from "~/services/apiService"
+import { getApiService } from "~/services/apiService"
 import { getManagedSiteService } from "~/services/managedSiteService"
 import type {
   ChannelFormData,
@@ -150,7 +150,9 @@ export function useChannelForm({
         return
       }
 
-      const groupsData = await fetchSiteUserGroups({
+      const groupsData = await getApiService(
+        service.siteType,
+      ).fetchSiteUserGroups({
         baseUrl: config.baseUrl,
         userId: config.userId,
         token: config.token,

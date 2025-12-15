@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next"
 
 import { Modal } from "~/components/ui/Dialog/Modal"
 import { UI_CONSTANTS } from "~/constants/ui"
-import { createApiToken, updateApiToken } from "~/services/apiService"
+import { getApiService } from "~/services/apiService"
 import type { CreateTokenRequest } from "~/services/apiService/common/type"
 import type { DisplaySiteData } from "~/types"
 
@@ -78,7 +78,7 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
       }
 
       if (isEditMode && editingToken) {
-        await updateApiToken(
+        await getApiService(currentAccount.siteType).updateApiToken(
           currentAccount.baseUrl,
           currentAccount.userId,
           currentAccount.token,
@@ -87,7 +87,7 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
         )
         toast.success(t("dialog.updateSuccess"))
       } else {
-        await createApiToken(
+        await getApiService(currentAccount.siteType).createApiToken(
           currentAccount.baseUrl,
           currentAccount.userId,
           currentAccount.token,

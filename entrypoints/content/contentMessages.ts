@@ -1,6 +1,6 @@
 import { t } from "i18next"
 
-import { fetchUserInfo } from "~/services/apiService"
+import { getApiService } from "~/services/apiService"
 import {
   EXTENSION_HEADER_NAME,
   EXTENSION_HEADER_VALUE,
@@ -46,7 +46,7 @@ export function setupContentMessageHandlers() {
           const userStr = localStorage.getItem("user")
           const user = userStr
             ? JSON.parse(userStr)
-            : await fetchUserInfo(request.url)
+            : await getApiService(undefined).fetchUserInfo(request.url)
 
           if (!user || !user.id) {
             sendResponse({

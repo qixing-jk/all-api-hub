@@ -4,6 +4,7 @@ import { Storage } from "@plasmohq/storage"
 
 import { UNKNOWN_SITE } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
+import { getApiService } from "~/services/apiService"
 import {
   AuthTypeEnum,
   SiteHealthStatus,
@@ -17,12 +18,6 @@ import { DeepPartial } from "~/types/utils"
 import { deepOverride } from "~/utils"
 import { getErrorMessage } from "~/utils/error"
 
-import {
-  fetchSupportCheckIn,
-  fetchTodayIncome,
-  refreshAccountData,
-  validateAccountConnection,
-} from "./apiService"
 import {
   migrateAccountConfig,
   migrateAccountsConfig,
@@ -486,7 +481,7 @@ class AccountStorageService {
       }
 
       // 刷新账号数据
-      const result = await refreshAccountData(
+      const result = await getApiService(account.site_type).refreshAccountData(
         account.site_url,
         account.account_info.id,
         account.account_info.access_token,
@@ -540,7 +535,9 @@ class AccountStorageService {
 
       // 获取今日收入数据
       try {
-        const todayIncome = await fetchTodayIncome(DisplaySiteData)
+        const todayIncome = await getApiService(
+          DisplaySiteData.siteType,
+        ).fetchTodayIncome(DisplaySiteData)
         updateData.account_info = {
           ...(updateData.account_info || account.account_info),
           today_income: todayIncome.today_income,
@@ -980,7 +977,9 @@ class AccountStorageService {
     if (needsCheckInDetection) {
       // Probe the API to confirm whether automatic check-in is available
       try {
-        const support = await fetchSupportCheckIn(normalizedUrl)
+        const candidateSite = updates.site_type ?? account.site_type
+        const support =
+          await getApiService(candidateSite).fetchSupportCheckIn(normalizedUrl)
         if (typeof support === "boolean") {
           updates.checkIn = {
             ...(account.checkIn ?? {}),
@@ -1126,14 +1125,17 @@ export const AccountStorageUtils = {
 
     const validationPromises = accounts.map(async (account) => {
       try {
-        const isValid = await validateAccountConnection(
+        const isValid = await getApiService(
+          account.site_type,
+        ).validateAccountConnection(
           account.site_url,
           account.account_info.id,
           account.account_info.access_token,
+          account.authType,
         )
-        return { account, isValid }
+        return { isValid }
       } catch {
-        return { account, isValid: false }
+        return { isValid: false }
       }
     })
 

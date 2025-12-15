@@ -6,14 +6,7 @@ import { VELOERA } from "~/constants/siteType"
 import { AccountToken } from "~/entrypoints/options/pages/KeyManagement/type"
 import { ensureAccountApiToken } from "~/services/accountOperations"
 import { accountStorage } from "~/services/accountStorage"
-import {
-  createChannel as createChannelApi,
-  deleteChannel as deleteChannelApi,
-  fetchUpstreamModelsNameList,
-  getApiService,
-  searchChannel as searchChannelApi,
-  updateChannel as updateChannelApi,
-} from "~/services/apiService"
+import { getApiService } from "~/services/apiService"
 import { ApiToken, DisplaySiteData, SiteAccount } from "~/types"
 import type {
   ChannelFormData,
@@ -59,7 +52,12 @@ export async function searchChannel(
   userId: number | string,
   keyword: string,
 ): Promise<ManagedSiteChannelListData | null> {
-  return await searchChannelApi(baseUrl, accessToken, userId, keyword, VELOERA)
+  return await getApiService(VELOERA).searchChannel(
+    baseUrl,
+    accessToken,
+    userId,
+    keyword,
+  )
 }
 
 /**
@@ -71,12 +69,11 @@ export async function createChannel(
   userId: number | string,
   channelData: CreateChannelPayload,
 ) {
-  return await createChannelApi(
+  return await getApiService(VELOERA).createChannel(
     baseUrl,
     adminToken,
     userId,
     channelData,
-    VELOERA,
   )
 }
 
@@ -89,12 +86,11 @@ export async function updateChannel(
   userId: number | string,
   channelData: UpdateChannelPayload,
 ) {
-  return await updateChannelApi(
+  return await getApiService(VELOERA).updateChannel(
     baseUrl,
     adminToken,
     userId,
     channelData,
-    VELOERA,
   )
 }
 
@@ -107,7 +103,12 @@ export async function deleteChannel(
   userId: number | string,
   channelId: number,
 ) {
-  return await deleteChannelApi(baseUrl, adminToken, userId, channelId, VELOERA)
+  return await getApiService(VELOERA).deleteChannel(
+    baseUrl,
+    adminToken,
+    userId,
+    channelId,
+  )
 }
 
 /**
@@ -180,7 +181,9 @@ export async function fetchAvailableModels(
   }
 
   try {
-    const upstreamModels = await fetchUpstreamModelsNameList({
+    const upstreamModels = await getApiService(
+      undefined,
+    ).fetchUpstreamModelsNameList({
       baseUrl: account.baseUrl,
       apiKey: token.key,
     })
@@ -227,7 +230,9 @@ export async function prepareChannelFormData(
   account: DisplaySiteData,
   token: ApiToken | AccountToken,
 ): Promise<ChannelFormData> {
-  const availableModels = await fetchUpstreamModelsNameList({
+  const availableModels = await getApiService(
+    undefined,
+  ).fetchUpstreamModelsNameList({
     baseUrl: account.baseUrl,
     apiKey: token.key,
   })

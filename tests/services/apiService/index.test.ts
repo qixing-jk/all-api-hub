@@ -1,11 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DONE_HUB, ONE_HUB } from "~/constants/siteType"
-import {
-  fetchAccountTokens,
-  fetchModelPricing,
-  fetchUserInfo,
-} from "~/services/apiService"
+import { getApiService } from "~/services/apiService"
 import * as commonAPI from "~/services/apiService/common"
 import * as oneHubAPI from "~/services/apiService/oneHub"
 
@@ -19,32 +15,32 @@ describe("apiService index wrapper", () => {
       .spyOn(commonAPI, "fetchUserInfo")
       .mockResolvedValue({} as any)
 
-    await (fetchUserInfo as any)({ foo: "bar" })
+    await (getApiService(undefined).fetchUserInfo as any)({ foo: "bar" })
 
     expect(spy).toHaveBeenCalledTimes(1)
     expect(spy).toHaveBeenCalledWith({ foo: "bar" })
   })
 
-  it("should use override module when site string is passed as last argument", async () => {
+  it("should use override module when selecting a site-scoped api instance", async () => {
     const spy = vi
       .spyOn(oneHubAPI, "fetchModelPricing")
       .mockResolvedValue({} as any)
 
-    await (fetchModelPricing as any)({ foo: "bar" }, ONE_HUB)
+    await (getApiService(ONE_HUB).fetchModelPricing as any)({ foo: "bar" })
 
     expect(spy).toHaveBeenCalledTimes(1)
     expect(spy).toHaveBeenCalledWith({ foo: "bar" })
   })
 
-  it("should detect siteType from object argument when last arg is not a site string", async () => {
+  it("should route to override without relying on object siteType detection", async () => {
     const spy = vi
       .spyOn(oneHubAPI, "fetchAccountTokens")
       .mockResolvedValue([] as any)
 
-    await (fetchAccountTokens as any)({ foo: "bar", siteType: DONE_HUB })
+    await (getApiService(DONE_HUB).fetchAccountTokens as any)({ foo: "bar" })
 
     expect(spy).toHaveBeenCalledTimes(1)
-    expect(spy).toHaveBeenCalledWith({ foo: "bar", siteType: DONE_HUB })
+    expect(spy).toHaveBeenCalledWith({ foo: "bar" })
   })
 
   it("should fall back to common implementation when override module does not implement function", async () => {
@@ -52,7 +48,7 @@ describe("apiService index wrapper", () => {
       .spyOn(commonAPI, "fetchUserInfo")
       .mockResolvedValue({} as any)
 
-    await (fetchUserInfo as any)({ foo: "bar" }, ONE_HUB)
+    await (getApiService(ONE_HUB).fetchUserInfo as any)({ foo: "bar" })
 
     expect(spy).toHaveBeenCalledTimes(1)
     expect(spy).toHaveBeenCalledWith({ foo: "bar" })

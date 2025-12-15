@@ -16,7 +16,7 @@ import {
 } from "~/utils/browserApi"
 import { getErrorMessage } from "~/utils/error"
 
-import { fetchUserInfo } from "./apiService"
+import { getApiService } from "./apiService"
 import { getSiteType } from "./detectSiteType"
 
 export interface AutoDetectResult {
@@ -96,7 +96,7 @@ async function combineUserDataAndSiteType(
  */
 async function getUserDataViaAPI(url: string): Promise<UserDataResult | null> {
   try {
-    const userInfo = await fetchUserInfo(url)
+    const userInfo = await getApiService(undefined).fetchUserInfo(url)
     if (!userInfo || !userInfo.id) {
       return null
     }
@@ -149,7 +149,7 @@ async function getUserDataViaBackground(
 
     if (!response || !response.success || !response.data) {
       // Fallback: if content script/localStorage fetch fails, attempt API-based fetch
-      const userInfo = await fetchUserInfo(url)
+      const userInfo = await getApiService(undefined).fetchUserInfo(url)
       if (userInfo) {
         return {
           userId: userInfo.id,
@@ -215,7 +215,7 @@ async function getUserDataFromCurrentTab(
 
     if (!userResponse || !userResponse.success || !userResponse.data) {
       // fallback
-      const userInfo = await fetchUserInfo(url)
+      const userInfo = await getApiService(undefined).fetchUserInfo(url)
       if (userInfo) {
         return {
           userId: userInfo.id,

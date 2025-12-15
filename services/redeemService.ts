@@ -2,7 +2,7 @@ import { t } from "i18next"
 
 import { UI_CONSTANTS } from "~/constants/ui"
 import { accountStorage } from "~/services/accountStorage"
-import { redeemCode } from "~/services/apiService"
+import { getApiService } from "~/services/apiService"
 import type { DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/error"
 
@@ -38,7 +38,7 @@ export class RedeemService {
         }
       }
 
-      const creditedAmount = await redeemCode(
+      const creditedAmount = await getApiService(account.site_type).redeemCode(
         account.site_url,
         account.account_info.id,
         account.account_info.access_token,

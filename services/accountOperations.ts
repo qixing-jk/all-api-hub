@@ -8,12 +8,7 @@ import toast from "react-hot-toast"
 import { SITE_TITLE_RULES, UNKNOWN_SITE } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { accountStorage } from "~/services/accountStorage"
-import {
-  createApiToken,
-  extractDefaultExchangeRate,
-  fetchSiteStatus,
-  getApiService,
-} from "~/services/apiService"
+import { getApiService } from "~/services/apiService"
 import type { CreateTokenRequest } from "~/services/apiService/common/type"
 import {
   ApiToken,
@@ -115,7 +110,8 @@ export async function autoDetectAccount(
     }
 
     // 获取默认充值比例
-    const defaultExchangeRate = extractDefaultExchangeRate(siteStatus)
+    const defaultExchangeRate =
+      getApiService(undefined).extractDefaultExchangeRate(siteStatus)
 
     return {
       success: true,
@@ -624,7 +620,8 @@ export async function getSiteName(
   const hostWithProtocol = `${urlObj.protocol}//${urlObj.host}`
 
   // 4. 从站点状态获取
-  const siteStatusInfo = await fetchSiteStatus(hostWithProtocol)
+  const siteStatusInfo =
+    await getApiService(undefined).fetchSiteStatus(hostWithProtocol)
   if (
     siteStatusInfo?.system_name &&
     IsNotDefaultSiteName(siteStatusInfo.system_name)
@@ -691,14 +688,16 @@ export async function ensureAccountApiToken(
     id: toastId,
   })
 
-  const tokens = await getApiService(displaySiteData.siteType).fetchAccountTokens(
-    displaySiteData,
-  )
+  const tokens = await getApiService(
+    displaySiteData.siteType,
+  ).fetchAccountTokens(displaySiteData)
   let apiToken: ApiToken | undefined = tokens.at(-1)
 
   if (!apiToken) {
     const newTokenData = generateDefaultToken()
-    const createApiTokenResult = await createApiToken(
+    const createApiTokenResult = await getApiService(
+      displaySiteData.siteType,
+    ).createApiToken(
       account.site_url,
       account.account_info.id,
       account.account_info.access_token,
