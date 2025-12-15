@@ -10,6 +10,30 @@ import { fakeBrowser } from "wxt/testing/fake-browser"
 
 import { server } from "./msw/server"
 
+vi.mock("@lobehub/icons", () => {
+  const createIcon = () => () => null
+  return {
+    Azure: createIcon(),
+    Baichuan: createIcon(),
+    Baidu: createIcon(),
+    Claude: createIcon(),
+    Cohere: createIcon(),
+    DeepMind: createIcon(),
+    DeepSeek: createIcon(),
+    Gemini: createIcon(),
+    Grok: createIcon(),
+    Mistral: createIcon(),
+    Moonshot: createIcon(),
+    NewAPI: createIcon(),
+    Ollama: createIcon(),
+    OpenAI: createIcon(),
+    Qwen: createIcon(),
+    Tencent: createIcon(),
+    Yi: createIcon(),
+    Zhipu: createIcon(),
+  }
+})
+
 // No need to manually mock @plasmohq/storage - WxtVitest handles browser.storage
 // No need to manually mock webextension-polyfill - WxtVitest provides it
 // No need to manually mock chrome API - fakeBrowser provides complete implementation

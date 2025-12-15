@@ -1,15 +1,22 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { VELOERA } from "~/constants/siteType"
-import { listAllChannels } from "~/services/apiService"
+import { getApiService } from "~/services/apiService"
 import { ModelSyncService } from "~/services/modelSync/modelSyncService"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 
+const listAllChannelsMock = vi.fn()
+const fetchChannelModelsMock = vi.fn()
+const updateChannelModelsMock = vi.fn()
+const updateChannelModelMappingMock = vi.fn()
+
 vi.mock("~/services/apiService", () => ({
-  listAllChannels: vi.fn(),
-  fetchChannelModels: vi.fn(),
-  updateChannelModels: vi.fn(),
-  updateChannelModelMapping: vi.fn(),
+  getApiService: vi.fn(() => ({
+    listAllChannels: listAllChannelsMock,
+    fetchChannelModels: fetchChannelModelsMock,
+    updateChannelModels: updateChannelModelsMock,
+    updateChannelModelMapping: updateChannelModelMappingMock,
+  })),
 }))
 
 describe("ModelSyncService - allowed model filtering", () => {
@@ -62,13 +69,11 @@ describe("ModelSyncService - allowed model filtering", () => {
 
 describe("ModelSyncService - siteType routing", () => {
   it("forwards ManagedSiteType hint to apiService listAllChannels", async () => {
-    ;(listAllChannels as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
-      {
-        items: [],
-        total: 0,
-        type_counts: {},
-      },
-    )
+    listAllChannelsMock.mockResolvedValue({
+      items: [],
+      total: 0,
+      type_counts: {},
+    })
 
     const service = new ModelSyncService(
       "https://example.com",
@@ -83,11 +88,8 @@ describe("ModelSyncService - siteType routing", () => {
 
     await service.listChannels()
 
-    expect(listAllChannels).toHaveBeenCalled()
-    const lastArg = (
-      listAllChannels as unknown as ReturnType<typeof vi.fn>
-    ).mock.calls[0].at(-1)
-    expect(lastArg).toBe(VELOERA)
+    expect(getApiService).toHaveBeenCalledWith(VELOERA)
+    expect(listAllChannelsMock).toHaveBeenCalled()
   })
 })
 
