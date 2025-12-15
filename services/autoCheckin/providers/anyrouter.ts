@@ -14,6 +14,13 @@ type CheckinResult = {
   data?: any
 }
 
+export type AnyrouterCheckInParams = {
+  site_url: string
+  account_info: {
+    id: number
+  }
+}
+
 const isAlreadyChecked = (message: string): boolean => {
   const normalized = message.toLowerCase()
   return (
@@ -25,7 +32,7 @@ const isAlreadyChecked = (message: string): boolean => {
 }
 
 const checkinAnyRouter = async (
-  account: SiteAccount,
+  account: SiteAccount | AnyrouterCheckInParams,
 ): Promise<CheckinResult> => {
   const { site_url, account_info } = account
 
@@ -63,18 +70,15 @@ const checkinAnyRouter = async (
       }
     }
 
-    if (response.ret === 1 || response.code === 0 || response.success) {
+    if (
+      response.ret === 1 ||
+      response.code === 0 ||
+      responseMessage.includes("success")
+    ) {
       return {
         status: CHECKIN_RESULT_STATUS.SUCCESS,
         message: responseMessage || "Check-in successful",
         data: response,
-      }
-    }
-
-    if (responseMessage.includes("success")) {
-      return {
-        status: CHECKIN_RESULT_STATUS.SUCCESS,
-        message: responseMessage || "Check-in successful",
       }
     }
 

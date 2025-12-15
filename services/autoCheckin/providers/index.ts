@@ -2,12 +2,12 @@ import { ANYROUTER, VELOERA } from "~/constants/siteType"
 import type { SiteAccount } from "~/types"
 import type { CheckinResultStatus } from "~/types/autoCheckin"
 
-import { anyrouterProvider } from "./anyrouter"
+import { AnyrouterCheckInParams, anyrouterProvider } from "./anyrouter"
 import { veloeraProvider } from "./veloera"
 
 export interface AutoCheckinProvider {
   canCheckIn(account: SiteAccount): boolean
-  checkIn(account: SiteAccount): Promise<{
+  checkIn(account: SiteAccount | AnyrouterCheckInParams): Promise<{
     status: CheckinResultStatus
     message: string
     data?: any
