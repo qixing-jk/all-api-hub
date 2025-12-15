@@ -29,7 +29,7 @@ export type ApiOverrideSite = keyof SiteOverrideMap
  * without changing the underlying common API function shapes.
  */
 type WithSiteHint<F> = F extends (...args: infer A) => infer R
-  ? (...args: [...A, SiteType?]) => R
+  ? (...args: [...A, ApiOverrideSite?]) => R
   : F
 
 // 获取对应站点的 API 函数
@@ -90,17 +90,17 @@ function createWrappedFunction<T extends (...args: any[]) => any>(
   }) as T
 }
 
-function createSiteScopedFunction<T extends (...args: any[]) => any>(
+const createSiteScopedFunction = <T extends (...args: any[]) => any>(
   funcName: keyof typeof commonAPI,
   site: ApiOverrideSite,
-): T {
+): T => {
   return ((...args: any[]) => {
     const targetFunc = getApiFunc(funcName, site)
     return (targetFunc as any)(...args)
   }) as T
 }
 
-export function apiForSite(site: ApiOverrideSite) {
+export const apiForSite = (site: ApiOverrideSite) => {
   const scopedAPI = {} as {
     [K in keyof typeof commonAPI]: (typeof commonAPI)[K]
   }
@@ -120,6 +120,12 @@ export function apiForSite(site: ApiOverrideSite) {
 
   return scopedAPI
 }
+
+export const isApiOverrideSite = (value: unknown): value is ApiOverrideSite =>
+  typeof value === "string" && value in siteOverrideMap
+
+export const getApiService = (site: unknown) =>
+  (isApiOverrideSite(site) ? apiForSite(site) : exportedAPI) as typeof exportedAPI
 
 // 创建导出对象
 const exportedAPI = {} as {
