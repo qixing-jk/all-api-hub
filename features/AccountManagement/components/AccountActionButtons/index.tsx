@@ -19,7 +19,7 @@ import { IconButton } from "~/components/ui"
 import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { useDialogStateContext } from "~/features/AccountManagement/hooks/DialogStateContext"
-import { fetchAccountTokens } from "~/services/apiService"
+import { getApiService } from "~/services/apiService"
 import type { DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/error"
 import {
@@ -84,8 +84,10 @@ export default function AccountActionButtons({
     setIsCheckingTokens(true)
 
     try {
-      // Fetch tokens to check count
-      const tokensResponse = await fetchAccountTokens(site)
+      // Fetch tokens to check count before deciding action
+      const tokensResponse = await getApiService(site.siteType).fetchAccountTokens(
+        site,
+      )
 
       if (Array.isArray(tokensResponse)) {
         if (tokensResponse.length === 1) {

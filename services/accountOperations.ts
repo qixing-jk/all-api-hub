@@ -11,12 +11,8 @@ import { accountStorage } from "~/services/accountStorage"
 import {
   createApiToken,
   extractDefaultExchangeRate,
-  fetchAccountData,
-  fetchAccountTokens,
   fetchSiteStatus,
-  fetchSupportCheckIn,
-  fetchUserInfo,
-  getOrCreateAccessToken,
+  getApiService,
 } from "~/services/apiService"
 import type { CreateTokenRequest } from "~/services/apiService/common/type"
 import {
@@ -89,9 +85,9 @@ export async function autoDetectAccount(
 
     // 根据 authType 选择对应的 Promise
     if (authType === AuthTypeEnum.Cookie) {
-      tokenPromise = fetchUserInfo(url, userId)
+      tokenPromise = getApiService(siteType).fetchUserInfo(url, userId)
     } else if (authType === AuthTypeEnum.AccessToken) {
-      tokenPromise = getOrCreateAccessToken(url, userId)
+      tokenPromise = getApiService(siteType).getOrCreateAccessToken(url, userId)
     } else {
       // none 或其他情况
       tokenPromise = Promise.resolve(null)
@@ -100,8 +96,8 @@ export async function autoDetectAccount(
     // 并行执行 token 获取和 site 状态获取（降低端到端等待）
     const [tokenInfo, siteStatus, checkSupport, siteName] = await Promise.all([
       tokenPromise,
-      fetchSiteStatus(url, authType),
-      fetchSupportCheckIn(url),
+      getApiService(siteType).fetchSiteStatus(url, authType),
+      getApiService(siteType).fetchSupportCheckIn(url),
       getSiteName(url),
     ])
 
@@ -275,7 +271,7 @@ export async function validateAndSaveAccount(
   try {
     // 获取账号余额和今日使用情况
     console.log(t("messages:toast.loading.fetchingAccountData"))
-    const freshAccountData = await fetchAccountData(
+    const freshAccountData = await getApiService(siteType).fetchAccountData(
       url.trim(),
       parsedUserId,
       accessToken.trim(),
@@ -448,7 +444,7 @@ export async function validateAndUpdateAccount(
   try {
     // 获取账号余额和今日使用情况
     console.log(t("messages:toast.loading.fetchingAccountData"))
-    const freshAccountData = await fetchAccountData(
+    const freshAccountData = await getApiService(siteType).fetchAccountData(
       url.trim(),
       parsedUserId,
       accessToken.trim(),
@@ -695,7 +691,9 @@ export async function ensureAccountApiToken(
     id: toastId,
   })
 
-  const tokens = await fetchAccountTokens(displaySiteData)
+  const tokens = await getApiService(displaySiteData.siteType).fetchAccountTokens(
+    displaySiteData,
+  )
   let apiToken: ApiToken | undefined = tokens.at(-1)
 
   if (!apiToken) {
@@ -711,7 +709,9 @@ export async function ensureAccountApiToken(
       throw new Error(t("messages:accountOperations.createTokenFailed"))
     }
 
-    const updatedTokens = await fetchAccountTokens(displaySiteData)
+    const updatedTokens = await getApiService(
+      displaySiteData.siteType,
+    ).fetchAccountTokens(displaySiteData)
     apiToken = updatedTokens.at(-1)
   }
 

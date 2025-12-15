@@ -2,10 +2,7 @@ import { union } from "lodash-es"
 
 import { NEW_API, type ManagedSiteType } from "~/constants/siteType"
 import {
-  fetchChannelModels as fetchChannelModelsApi,
-  listAllChannels,
-  updateChannelModelMapping as updateChannelModelMappingApi,
-  updateChannelModels as updateChannelModelsApi,
+  getApiService,
 } from "~/services/apiService"
 import type { ChannelConfigMap } from "~/types/channelConfig"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
@@ -109,7 +106,7 @@ export class ModelSyncService {
    */
   async listChannels(): Promise<ManagedSiteChannelListData> {
     try {
-      return await listAllChannels(
+      return await getApiService(this.siteType).listAllChannels(
         this.baseUrl,
         this.token,
         this.userId,
@@ -118,7 +115,6 @@ export class ModelSyncService {
             await this.throttle()
           },
         },
-        this.siteType,
       )
     } catch (error) {
       console.error("[ManagedSiteModelSync] Failed to list channels:", error)
@@ -135,12 +131,11 @@ export class ModelSyncService {
     try {
       await this.throttle()
 
-      return await fetchChannelModelsApi(
+      return await getApiService(this.siteType).fetchChannelModels(
         this.baseUrl,
         this.token,
         this.userId,
         channelId,
-        this.siteType,
       )
     } catch (error: any) {
       console.error("[ManagedSiteModelSync] Failed to fetch models:", error)
@@ -160,13 +155,12 @@ export class ModelSyncService {
     try {
       await this.throttle()
 
-      await updateChannelModelsApi(
+      await getApiService(this.siteType).updateChannelModels(
         this.baseUrl,
         this.token,
         this.userId,
         channel.id,
         models.join(","),
-        this.siteType,
       )
     } catch (error: any) {
       console.error("[ManagedSiteModelSync] Failed to update channel:", error)
@@ -190,14 +184,13 @@ export class ModelSyncService {
       ).join(",")
       await this.throttle()
 
-      await updateChannelModelMappingApi(
+      await getApiService(this.siteType).updateChannelModelMapping(
         this.baseUrl,
         this.token,
         this.userId,
         channel.id,
         updateModels,
         JSON.stringify(modelMapping),
-        this.siteType,
       )
     } catch (error) {
       console.error(

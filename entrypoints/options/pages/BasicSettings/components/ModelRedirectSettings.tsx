@@ -7,7 +7,7 @@ import { Button, Card, CardContent } from "~/components/ui"
 import { MultiSelect } from "~/components/ui/MultiSelect"
 import { Switch } from "~/components/ui/Switch"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { fetchAccountAvailableModels } from "~/services/apiService/common"
+import { getApiService } from "~/services/apiService"
 import { hasValidManagedSiteConfig } from "~/services/managedSiteService"
 import { ModelRedirectService } from "~/services/modelRedirect"
 import { AuthTypeEnum } from "~/types"
@@ -47,7 +47,9 @@ export default function ModelRedirectSettings() {
         return
       }
 
-      return await fetchAccountAvailableModels({
+      return await getApiService(
+        preferences.managedSiteType,
+      ).fetchAccountAvailableModels({
         baseUrl: managedConfig.baseUrl,
         userId: managedConfig.userId,
         token: managedConfig.adminToken,

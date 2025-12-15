@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { fetchAccountTokens } from "~/services/apiService"
+import { getApiService } from "~/services/apiService"
 import type { ApiToken, DisplaySiteData } from "~/types"
 
 /**
@@ -40,7 +40,9 @@ export function useCopyKeyDialog(isOpen: boolean, account: DisplaySiteData) {
     setError(null)
 
     try {
-      const tokensResponse = await fetchAccountTokens(account)
+      const tokensResponse = await getApiService(account.siteType).fetchAccountTokens(
+        account,
+      )
       if (Array.isArray(tokensResponse)) {
         setTokens(tokensResponse)
       } else {

@@ -9,8 +9,8 @@ import { accountStorage } from "~/services/accountStorage"
 import {
   createChannel as createChannelApi,
   deleteChannel as deleteChannelApi,
-  fetchAccountAvailableModels,
   fetchUpstreamModelsNameList,
+  getApiService,
   searchChannel as searchChannelApi,
   updateChannel as updateChannelApi,
 } from "~/services/apiService"
@@ -205,7 +205,9 @@ export async function fetchAvailableModels(
   }
 
   try {
-    const fallbackModels = await fetchAccountAvailableModels(account)
+    const fallbackModels = await getApiService(
+      account.siteType,
+    ).fetchAccountAvailableModels(account)
     if (fallbackModels && fallbackModels.length > 0) {
       candidateSources.push(fallbackModels)
     }

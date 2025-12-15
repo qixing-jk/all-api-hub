@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { fetchModelPricing } from "~/services/apiService"
+import { getApiService } from "~/services/apiService"
 import type { PricingResponse } from "~/services/apiService/common/type"
 import {
   MODEL_PRICING_CACHE_TTL_MS,
@@ -95,7 +95,9 @@ function useSingleAccountModelData(params: {
         return cached
       }
 
-      const data = await fetchModelPricing(currentAccount)
+      const data = await getApiService(currentAccount.siteType).fetchModelPricing(
+        currentAccount,
+      )
 
       if (!Array.isArray(data.data)) {
         const error = new Error("INVALID_FORMAT")
@@ -133,8 +135,9 @@ function useSingleAccountModelData(params: {
   }, [query.data, query.isSuccess, query.isError, query.error, t])
 
   const loadPricingData = useCallback(
-    async (_accountId: string) => {
+    async (accountId: string) => {
       if (!currentAccount) return
+      if (accountId !== currentAccount.id) return
       await modelPricingCache.invalidate(currentAccount.id)
       await query.refetch()
     },
@@ -182,7 +185,7 @@ function useAllAccountsModelData(
           return cached
         }
 
-        const data = await fetchModelPricing(account)
+        const data = await getApiService(account.siteType).fetchModelPricing(account)
 
         if (!Array.isArray(data.data)) {
           const error = new Error("INVALID_FORMAT")

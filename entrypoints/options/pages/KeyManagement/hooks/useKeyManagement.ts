@@ -3,7 +3,7 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { useAccountData } from "~/hooks/useAccountData"
-import { deleteApiToken, fetchAccountTokens } from "~/services/apiService"
+import { deleteApiToken, getApiService } from "~/services/apiService"
 
 import { AccountToken } from "../type"
 
@@ -36,7 +36,9 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
           return
         }
 
-        const accountTokens = await fetchAccountTokens(account)
+        const accountTokens = await getApiService(
+          account.siteType,
+        ).fetchAccountTokens(account)
 
         const tokensWithAccount = accountTokens.map((token) => ({
           ...token,
