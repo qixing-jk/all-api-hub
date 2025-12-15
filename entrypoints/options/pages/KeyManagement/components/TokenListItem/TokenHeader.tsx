@@ -3,11 +3,14 @@ import {
   PencilIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline"
+import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { useChannelDialog } from "~/components/ChannelDialog"
+import { ClaudeCodeRouterImportDialog } from "~/components/ClaudeCodeRouterImportDialog"
 import { CCSwitchIcon } from "~/components/icons/CCSwitchIcon"
 import { CherryIcon } from "~/components/icons/CherryIcon"
+import { ClaudeCodeRouterIcon } from "~/components/icons/ClaudeCodeRouterIcon"
 import { CliProxyIcon } from "~/components/icons/CliProxyIcon"
 import { ManagedSiteIcon } from "~/components/icons/ManagedSiteIcon"
 import { Badge, Heading6, IconButton } from "~/components/ui"
@@ -66,8 +69,11 @@ function TokenActionButtons({
   onOpenCCSwitchDialog,
 }: TokenHeaderProps) {
   const { t } = useTranslation(["keyManagement", "settings"])
-  const { managedSiteType } = useUserPreferencesContext()
+  const { managedSiteType, claudeCodeRouterBaseUrl, claudeCodeRouterApiKey } =
+    useUserPreferencesContext()
   const { openWithAccount } = useChannelDialog()
+
+  const [isClaudeCodeRouterOpen, setIsClaudeCodeRouterOpen] = useState(false)
 
   const managedSiteLabel = t(getManagedSiteLabelKey(managedSiteType))
 
@@ -82,8 +88,27 @@ function TokenActionButtons({
     showResultToast(result)
   }
 
+  const handleOpenClaudeCodeRouter = () => {
+    if (!claudeCodeRouterBaseUrl?.trim()) {
+      showResultToast({
+        success: false,
+        message: t("messages:claudeCodeRouter.configMissing"),
+      })
+      return
+    }
+    setIsClaudeCodeRouterOpen(true)
+  }
+
   return (
     <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
+      <ClaudeCodeRouterImportDialog
+        isOpen={isClaudeCodeRouterOpen}
+        onClose={() => setIsClaudeCodeRouterOpen(false)}
+        account={account}
+        token={token}
+        routerBaseUrl={claudeCodeRouterBaseUrl}
+        routerApiKey={claudeCodeRouterApiKey}
+      />
       <IconButton
         aria-label={t("common:actions.copyKey")}
         size="sm"
@@ -117,6 +142,14 @@ function TokenActionButtons({
         onClick={handleImportToCliProxy}
       >
         <CliProxyIcon size="sm" />
+      </IconButton>
+      <IconButton
+        aria-label={t("actions.importToClaudeCodeRouter")}
+        size="sm"
+        variant="ghost"
+        onClick={handleOpenClaudeCodeRouter}
+      >
+        <ClaudeCodeRouterIcon size="sm" />
       </IconButton>
       <IconButton
         aria-label={t("actions.importToManagedSite", {

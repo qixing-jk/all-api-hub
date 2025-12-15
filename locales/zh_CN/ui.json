@@ -108,6 +108,27 @@
         "export": "导出"
       }
     },
+    "claudeCodeRouter": {
+      "title": "导入到 Claude Code Router",
+      "description": "在 Claude Code Router 中创建或更新 Provider（必须填写模型）。",
+      "fields": {
+        "providerName": "Provider 名称",
+        "providerApiBaseUrl": "Provider 接口地址",
+        "models": "模型列表",
+        "modelsPicker": "选择模型",
+        "restartAfterSave": "保存后重启"
+      },
+      "descriptions": {
+        "providerApiBaseUrl": "需填写完整的 /v1/chat/completions 端点。",
+        "models": "每行一个模型，或用逗号分隔。",
+        "restartAfterSave": "部分场景下需要重启才能使配置生效。"
+      },
+      "placeholders": {
+        "providerName": "例如 我的中转",
+        "providerApiBaseUrl": "https://example.com/v1/chat/completions",
+        "modelsPicker": "输入以添加模型"
+      }
+    },
     "firefox": {
       "warningTitle": "功能限制提醒",
       "limitation": "Firefox 浏览器功能限制",

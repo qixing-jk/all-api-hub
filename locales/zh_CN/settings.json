@@ -9,6 +9,7 @@
     "dataBackup": "数据与备份",
     "managedSite": "自建站点管理",
     "cliProxy": "CLIProxyAPI",
+    "claudeCodeRouter": "Claude Code Router",
     "more": "更多",
     "permissions": "权限管理",
     "select": "选择一个分组"
@@ -147,6 +148,16 @@
     "managementKeyLabel": "管理密钥",
     "urlDesc": "设置管理接口基础 URL，例如 http://localhost:8317/v0/management",
     "keyDesc": "用于管理接口访问认证的管理密钥"
+  },
+  "claudeCodeRouter": {
+    "title": "Claude Code Router",
+    "description": "配置 Claude Code Router 管理接口连接信息",
+    "baseUrlLabel": "基础 URL",
+    "baseUrlPlaceholder": "http://localhost:3000",
+    "apiKeyLabel": "API Key",
+    "apiKeyPlaceholder": "sk-123456",
+    "urlDesc": "Claude Code Router 服务基础 URL，例如 http://localhost:3000",
+    "keyDesc": "用于 /api/config 的可选 APIKEY（如未启用可留空）"
   },
   "permissions": {
     "title": "权限管理",

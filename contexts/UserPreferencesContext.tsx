@@ -52,6 +52,8 @@ interface UserPreferencesContextType {
   managedSiteType: ManagedSiteType
   cliProxyBaseUrl: string
   cliProxyManagementKey: string
+  claudeCodeRouterBaseUrl: string
+  claudeCodeRouterApiKey: string
   themeMode: ThemeMode
   tempWindowFallback: TempWindowFallbackPreferences
   tempWindowFallbackReminder: TempWindowFallbackReminderPreferences
@@ -79,6 +81,8 @@ interface UserPreferencesContextType {
   updateManagedSiteType: (siteType: ManagedSiteType) => Promise<boolean>
   updateCliProxyBaseUrl: (url: string) => Promise<boolean>
   updateCliProxyManagementKey: (key: string) => Promise<boolean>
+  updateClaudeCodeRouterBaseUrl: (url: string) => Promise<boolean>
+  updateClaudeCodeRouterApiKey: (key: string) => Promise<boolean>
   updateThemeMode: (themeMode: ThemeMode) => Promise<boolean>
   updateAutoCheckin: (
     updates: Partial<AutoCheckinPreferences>,
@@ -103,6 +107,7 @@ interface UserPreferencesContextType {
   resetVeloeraConfig: () => Promise<boolean>
   resetNewApiModelSyncConfig: () => Promise<boolean>
   resetCliProxyConfig: () => Promise<boolean>
+  resetClaudeCodeRouterConfig: () => Promise<boolean>
   resetAutoCheckinConfig: () => Promise<boolean>
   resetRedemptionAssistConfig: () => Promise<boolean>
   resetModelRedirectConfig: () => Promise<boolean>
@@ -161,6 +166,22 @@ export const UserPreferencesProvider = ({
     return success
   }, [])
 
+  const resetClaudeCodeRouterConfig = useCallback(async () => {
+    const success = await userPreferences.resetClaudeCodeRouterConfig()
+    if (success) {
+      const defaults = DEFAULT_PREFERENCES.claudeCodeRouter
+      setPreferences((prev) =>
+        prev
+          ? deepOverride(prev, {
+              claudeCodeRouter: defaults,
+              lastUpdated: Date.now(),
+            })
+          : prev,
+      )
+    }
+    return success
+  }, [])
+
   /**
    * Update the CLI proxy base URL and merge it into the preference tree so
    * dependent features read the latest endpoint.
@@ -193,6 +214,28 @@ export const UserPreferencesProvider = ({
     },
     [],
   )
+
+  const updateClaudeCodeRouterBaseUrl = useCallback(async (baseUrl: string) => {
+    const updates = {
+      claudeCodeRouter: { baseUrl },
+    }
+    const success = await userPreferences.savePreferences(updates)
+    if (success) {
+      setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
+    }
+    return success
+  }, [])
+
+  const updateClaudeCodeRouterApiKey = useCallback(async (apiKey: string) => {
+    const updates = {
+      claudeCodeRouter: { apiKey },
+    }
+    const success = await userPreferences.savePreferences(updates)
+    if (success) {
+      setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
+    }
+    return success
+  }, [])
 
   const updateTempWindowFallbackReminder = useCallback(
     async (updates: Partial<TempWindowFallbackReminderPreferences>) => {
@@ -457,11 +500,23 @@ export const UserPreferencesProvider = ({
       if (success) {
         setPreferences((prev) => {
           if (!prev) return null
+          const base = prev.managedSiteModelSync ??
+            DEFAULT_PREFERENCES.managedSiteModelSync ?? {
+              enabled: false,
+              interval: 24 * 60 * 60 * 1000,
+              concurrency: 2,
+              maxRetries: 2,
+              rateLimit: {
+                requestsPerMinute: 20,
+                burst: 5,
+              },
+              allowedModels: [],
+              globalChannelModelFilters: [],
+            }
           const merged = deepOverride(
-            prev.managedSiteModelSync ??
-              DEFAULT_PREFERENCES.managedSiteModelSync,
+            base,
             updates,
-          )
+          ) as UserManagedSiteModelSyncConfig
           return {
             ...prev,
             managedSiteModelSync: merged,
@@ -844,6 +899,8 @@ export const UserPreferencesProvider = ({
     managedSiteType: preferences?.managedSiteType || NEW_API,
     cliProxyBaseUrl: preferences?.cliProxy?.baseUrl || "",
     cliProxyManagementKey: preferences?.cliProxy?.managementKey || "",
+    claudeCodeRouterBaseUrl: preferences?.claudeCodeRouter?.baseUrl || "",
+    claudeCodeRouterApiKey: preferences?.claudeCodeRouter?.apiKey || "",
     themeMode: preferences?.themeMode || "system",
     tempWindowFallback:
       preferences.tempWindowFallback ??
@@ -869,6 +926,8 @@ export const UserPreferencesProvider = ({
     updateManagedSiteType,
     updateCliProxyBaseUrl,
     updateCliProxyManagementKey,
+    updateClaudeCodeRouterBaseUrl,
+    updateClaudeCodeRouterApiKey,
     updateThemeMode,
     updateAutoCheckin,
     updateNewApiModelSync,
@@ -883,6 +942,7 @@ export const UserPreferencesProvider = ({
     resetVeloeraConfig,
     resetNewApiModelSyncConfig,
     resetCliProxyConfig,
+    resetClaudeCodeRouterConfig,
     resetAutoCheckinConfig,
     resetRedemptionAssistConfig,
     resetModelRedirectConfig,

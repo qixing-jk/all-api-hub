@@ -29,6 +29,7 @@
     "exportToCCSwitch": "Export to CC Switch",
     "importToManagedSite": "Import to {{site}}",
     "importToCliProxy": "Import to CLIProxyAPI",
+    "importToClaudeCodeRouter": "Import to Claude Code Router",
     "editKey": "Edit Key",
     "deleteKey": "Delete Key",
     "enable": "Enable",

@@ -119,6 +119,13 @@
     "importSuccess": "Successfully imported provider {{name}} to CLIProxyAPI",
     "importFailed": "Failed to import provider to CLIProxyAPI"
   },
+  "claudeCodeRouter": {
+    "configMissing": "Please configure Claude Code Router base URL in settings first",
+    "modelsMissing": "Please provide at least one model",
+    "updateSuccess": "Successfully updated Claude Code Router provider {{name}}",
+    "importSuccess": "Successfully imported provider {{name}} to Claude Code Router",
+    "importFailed": "Failed to import provider to Claude Code Router"
+  },
   "autodetect": {
     "timeout": "Auto-detection timeout, please try adding manually",
     "notLoggedIn": "You are not logged in to the current site, or the login information has expired. Cannot auto-add. Please check the help documentation or click to login first",

@@ -70,7 +70,7 @@ describe("Managed site logo", () => {
       accountName: "Test Account",
     }
 
-    const { container } = render(
+    render(
       <TokenHeader
         token={token}
         copyKey={vi.fn()}
@@ -105,7 +105,7 @@ describe("Managed site logo", () => {
       accountName: "Test Account",
     }
 
-    const { container } = render(
+    render(
       <TokenHeader
         token={token}
         copyKey={vi.fn()}
@@ -141,7 +141,7 @@ describe("Managed site logo", () => {
       used_quota: 0,
     }
 
-    const { container } = render(
+    render(
       <TokenDetails
         token={token}
         copiedKey={null}

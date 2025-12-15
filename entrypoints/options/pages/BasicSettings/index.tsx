@@ -30,6 +30,7 @@ import {
 import AccountManagementTab from "./components/AccountManagementTab"
 import AutoRefreshTab from "./components/AutoRefreshTab"
 import CheckinRedeemTab from "./components/CheckinRedeemTab"
+import ClaudeCodeRouterTab from "./components/ClaudeCodeRouterTab"
 import CliProxyTab from "./components/CliProxyTab"
 import DataBackupTab from "./components/DataBackupTab"
 import GeneralTab from "./components/GeneralTab"
@@ -46,6 +47,7 @@ type TabId =
   | "dataBackup"
   | "managedSite"
   | "cliProxy"
+  | "claudeCodeRouter"
   | "permissions"
 
 interface TabConfig {
@@ -67,6 +69,7 @@ const TAB_CONFIGS = [
   { id: "checkinRedeem", component: CheckinRedeemTab },
   { id: "managedSite", component: ManagedSiteTab },
   { id: "cliProxy", component: CliProxyTab },
+  { id: "claudeCodeRouter", component: ClaudeCodeRouterTab },
   ...(hasOptionalPermissions ? [PERMISSIONS_TAB_CONFIG] : []),
   { id: "dataBackup", component: DataBackupTab },
 ] satisfies TabConfig[]
@@ -89,6 +92,7 @@ const ANCHOR_TO_TAB: Record<string, TabId> = {
   "new-api": "managedSite",
   "new-api-model-sync": "managedSite",
   "cli-proxy": "cliProxy",
+  "claude-code-router": "claudeCodeRouter",
   "dangerous-zone": "managedSite",
   ...(hasOptionalPermissions ? { permissions: "permissions" } : {}),
 }
