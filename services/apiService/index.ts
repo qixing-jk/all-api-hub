@@ -1,4 +1,5 @@
 import {
+  ANYROUTER,
   DONE_HUB,
   NEW_API,
   ONE_HUB,
@@ -6,6 +7,7 @@ import {
   type SiteType,
 } from "~/constants/siteType"
 
+import * as anyrouterAPI from "./anyrouter"
 import * as commonAPI from "./common"
 import * as oneHubAPI from "./oneHub"
 import * as veloeraAPI from "./veloera"
@@ -15,6 +17,7 @@ const siteOverrideMap = {
   [ONE_HUB]: oneHubAPI,
   [DONE_HUB]: oneHubAPI,
   [VELOERA]: veloeraAPI,
+  [ANYROUTER]: anyrouterAPI,
   [NEW_API]: commonAPI,
 } as const
 
