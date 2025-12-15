@@ -185,17 +185,21 @@ function extractStoredAccountUrlPatternSet(value: unknown): Set<string> {
     return patterns
   }
 
-  // Parse the value if it's a string
-  let data
-  try {
-    if (typeof value === "string") {
+  // Handle both string (serialized) and object (direct) inputs
+  let data: AccountStorageConfig | undefined
+  if (typeof value === "string") {
+    try {
       data = JSON.parse(value)
+    } catch (e) {
+      console.log("[Background] 解析变更数据失败：", e)
+      return patterns
     }
-  } catch (e) {
-    console.log("[Background] 解析变更数据失败：", e)
+  } else if (typeof value === "object" && value !== null) {
+    data = value as AccountStorageConfig
   }
+
   // Extract accounts from parsed data
-  const accounts: SiteAccount[] = data?.accounts ? data.accounts : []
+  const accounts: SiteAccount[] = data?.accounts ?? []
 
   // Add each account's origin to the set
   for (const account of accounts) {
