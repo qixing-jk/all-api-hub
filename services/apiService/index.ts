@@ -21,6 +21,8 @@ const siteOverrideMap = {
 // 添加类型定义
 type SiteOverrideMap = typeof siteOverrideMap
 
+export type ApiOverrideSite = keyof SiteOverrideMap
+
 /**
  * Append an optional SiteType hint to a function signature.
  * This allows callers to explicitly request a site/version implementation
@@ -86,6 +88,37 @@ function createWrappedFunction<T extends (...args: any[]) => any>(
     // 使用类型断言避免 spread 参数类型错误
     return (targetFunc as any)(...args)
   }) as T
+}
+
+function createSiteScopedFunction<T extends (...args: any[]) => any>(
+  funcName: keyof typeof commonAPI,
+  site: ApiOverrideSite,
+): T {
+  return ((...args: any[]) => {
+    const targetFunc = getApiFunc(funcName, site)
+    return (targetFunc as any)(...args)
+  }) as T
+}
+
+export function apiForSite(site: ApiOverrideSite) {
+  const scopedAPI = {} as {
+    [K in keyof typeof commonAPI]: (typeof commonAPI)[K]
+  }
+
+  for (const key in commonAPI) {
+    // eslint-disable-next-line import/namespace
+    const func = commonAPI[key as keyof typeof commonAPI]
+    if (typeof func === "function") {
+      ;(scopedAPI as any)[key] = createSiteScopedFunction(
+        key as keyof typeof commonAPI,
+        site,
+      )
+    } else {
+      ;(scopedAPI as any)[key] = func
+    }
+  }
+
+  return scopedAPI
 }
 
 // 创建导出对象
