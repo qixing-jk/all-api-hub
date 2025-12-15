@@ -38,6 +38,20 @@ export function isArraysEqual<T>(arr1: T[], arr2: T[]) {
 }
 
 /**
+ * Compares two sets of strings for equality.
+ * @param a First set to compare.
+ * @param b Second set to compare.
+ * @returns True if both sets contain the same elements.
+ */
+export function isSameStringSet(a: Set<string>, b: Set<string>): boolean {
+  if (a.size !== b.size) return false
+  for (const item of a) {
+    if (!b.has(item)) return false
+  }
+  return true
+}
+
+/**
  * Deeply merges configuration objects but replaces arrays instead of merging them.
  * @param target Base configuration object.
  * @param sources Additional overrides preserving nested object merges.

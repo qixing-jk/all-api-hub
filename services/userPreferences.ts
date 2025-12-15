@@ -19,6 +19,10 @@ import {
 } from "~/types/autoCheckin"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 import {
+  DEFAULT_CLAUDE_CODE_ROUTER_CONFIG,
+  type ClaudeCodeRouterConfig,
+} from "~/types/claudeCodeRouterConfig"
+import {
   DEFAULT_CLI_PROXY_CONFIG,
   type CliProxyConfig,
 } from "~/types/cliProxyConfig"
@@ -100,6 +104,9 @@ export interface UserPreferences {
 
   // CLIProxyAPI 管理接口配置
   cliProxy?: CliProxyConfig
+
+  // Claude Code Router 配置
+  claudeCodeRouter?: ClaudeCodeRouterConfig
 
   // New API Model Sync 配置
   managedSiteModelSync?: {
@@ -259,6 +266,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   veloera: DEFAULT_VELOERA_CONFIG,
   managedSiteType: NEW_API,
   cliProxy: DEFAULT_CLI_PROXY_CONFIG,
+  claudeCodeRouter: DEFAULT_CLAUDE_CODE_ROUTER_CONFIG,
   managedSiteModelSync: {
     enabled: false,
     interval: 24 * 60 * 60 * 1000, // 24小时
@@ -602,6 +610,12 @@ class UserPreferencesService {
   async resetCliProxyConfig(): Promise<boolean> {
     return this.savePreferences({
       cliProxy: DEFAULT_PREFERENCES.cliProxy,
+    })
+  }
+
+  async resetClaudeCodeRouterConfig(): Promise<boolean> {
+    return this.savePreferences({
+      claudeCodeRouter: DEFAULT_PREFERENCES.claudeCodeRouter,
     })
   }
 

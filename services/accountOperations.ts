@@ -23,6 +23,7 @@ import type {
   AccountValidationResponse,
 } from "~/types/serviceResponse"
 import { analyzeAutoDetectError } from "~/utils/autoDetectUtils"
+import { sendRuntimeMessage } from "~/utils/browserApi"
 import { getErrorMessage } from "~/utils/error"
 
 import { autoDetectSmart } from "./autoDetectService"
@@ -49,6 +50,18 @@ export async function autoDetectAccount(
   }
 
   try {
+    try {
+      await sendRuntimeMessage({
+        action: "cookieInterceptor:trackUrl",
+        url: url.trim(),
+      })
+    } catch (error) {
+      console.log(
+        "[AutoDetect] Failed to track cookie interceptor url:",
+        getErrorMessage(error),
+      )
+    }
+
     // 使用智能自动识别服务
     const detectResult = await autoDetectSmart(url.trim())
 

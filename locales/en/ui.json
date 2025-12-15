@@ -108,6 +108,27 @@
         "export": "Export"
       }
     },
+    "claudeCodeRouter": {
+      "title": "Import to Claude Code Router",
+      "description": "Create or update a provider in Claude Code Router. Models are required.",
+      "fields": {
+        "providerName": "Provider name",
+        "providerApiBaseUrl": "Provider API endpoint",
+        "models": "Models",
+        "modelsPicker": "Select models",
+        "restartAfterSave": "Restart after save"
+      },
+      "descriptions": {
+        "providerApiBaseUrl": "This should be the full /v1/chat/completions endpoint.",
+        "models": "Enter one model per line or separate by commas.",
+        "restartAfterSave": "Router may require restart for config changes to take effect."
+      },
+      "placeholders": {
+        "providerName": "e.g. My Relay",
+        "providerApiBaseUrl": "https://example.com/v1/chat/completions",
+        "modelsPicker": "Type to add models"
+      }
+    },
     "firefox": {
       "warningTitle": "Feature Limitation Reminder",
       "limitation": "Firefox Browser Feature Limitation",

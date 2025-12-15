@@ -27,7 +27,7 @@ import { getSiteType } from "./detectSiteType"
 import { userPreferences } from "./userPreferences"
 
 // 存储键名常量
-const ACCOUNT_STORAGE_KEYS = {
+export const ACCOUNT_STORAGE_KEYS = {
   ACCOUNTS: "site_accounts",
 } as const
 

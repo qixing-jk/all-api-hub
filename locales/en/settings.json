@@ -9,6 +9,7 @@
     "dataBackup": "Data & Backup",
     "managedSite": "Managed site",
     "cliProxy": "CLIProxyAPI",
+    "claudeCodeRouter": "Claude Code Router",
     "more": "More",
     "permissions": "Permissions",
     "select": "Select a tab"
@@ -147,6 +148,16 @@
     "managementKeyLabel": "Management Key",
     "urlDesc": "Set the Management API base URL, e.g. http://localhost:8317/v0/management",
     "keyDesc": "Management key for interface access authentication"
+  },
+  "claudeCodeRouter": {
+    "title": "Claude Code Router",
+    "description": "Configure connection to Claude Code Router admin API",
+    "baseUrlLabel": "Base URL",
+    "baseUrlPlaceholder": "http://localhost:3000",
+    "apiKeyLabel": "API key",
+    "apiKeyPlaceholder": "sk-123456",
+    "urlDesc": "Claude Code Router server base URL, e.g. http://localhost:3000",
+    "keyDesc": "Optional API key for /api/config (APIKEY)"
   },
   "permissions": {
     "title": "Permissions",

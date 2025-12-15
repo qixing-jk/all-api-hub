@@ -29,6 +29,7 @@
     "exportToCCSwitch": "导出到CC Switch",
     "importToManagedSite": "导入到 {{site}}",
     "importToCliProxy": "导入到 CLIProxyAPI",
+    "importToClaudeCodeRouter": "导入到 Claude Code Router",
     "editKey": "编辑密钥",
     "deleteKey": "删除密钥",
     "enable": "启用",

@@ -3,12 +3,14 @@ import {
   ClockIcon,
   DocumentDuplicateIcon,
 } from "@heroicons/react/24/outline"
-import { MouseEvent } from "react"
+import { MouseEvent, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { useChannelDialog } from "~/components/ChannelDialog"
+import { ClaudeCodeRouterImportDialog } from "~/components/ClaudeCodeRouterImportDialog"
 import { CCSwitchIcon } from "~/components/icons/CCSwitchIcon"
 import { CherryIcon } from "~/components/icons/CherryIcon"
+import { ClaudeCodeRouterIcon } from "~/components/icons/ClaudeCodeRouterIcon"
 import { CliProxyIcon } from "~/components/icons/CliProxyIcon"
 import { ManagedSiteIcon } from "~/components/icons/ManagedSiteIcon"
 import { IconButton } from "~/components/ui"
@@ -39,8 +41,11 @@ export function TokenDetails({
   onOpenCCSwitchDialog,
 }: TokenDetailsProps) {
   const { t } = useTranslation(["ui", "keyManagement", "settings"])
-  const { managedSiteType } = useUserPreferencesContext()
+  const { managedSiteType, claudeCodeRouterBaseUrl, claudeCodeRouterApiKey } =
+    useUserPreferencesContext()
   const { openWithAccount } = useChannelDialog()
+
+  const [isClaudeCodeRouterOpen, setIsClaudeCodeRouterOpen] = useState(false)
 
   const managedSiteLabel = t(getManagedSiteLabelKey(managedSiteType))
 
@@ -72,8 +77,28 @@ export function TokenDetails({
     showResultToast(result)
   }
 
+  const handleOpenClaudeCodeRouter = (event: MouseEvent) => {
+    event.stopPropagation()
+    if (!claudeCodeRouterBaseUrl) {
+      showResultToast({
+        success: false,
+        message: t("messages:claudeCodeRouter.configMissing"),
+      })
+      return
+    }
+    setIsClaudeCodeRouterOpen(true)
+  }
+
   return (
     <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-primary border-t border-gray-100 bg-gray-50/30 px-3 pb-3">
+      <ClaudeCodeRouterImportDialog
+        isOpen={isClaudeCodeRouterOpen}
+        onClose={() => setIsClaudeCodeRouterOpen(false)}
+        account={account}
+        token={token}
+        routerBaseUrl={claudeCodeRouterBaseUrl}
+        routerApiKey={claudeCodeRouterApiKey}
+      />
       <div className="dark:text-dark-text-secondary mb-3 flex items-center space-x-1 pt-3 text-xs text-gray-500">
         <ClockIcon className="h-3 w-3" />
         <span>
@@ -157,6 +182,14 @@ export function TokenDetails({
               onClick={handleImportToCliProxy}
             >
               <CliProxyIcon size="sm" />
+            </IconButton>
+            <IconButton
+              aria-label={t("keyManagement:actions.importToClaudeCodeRouter")}
+              variant="ghost"
+              size="sm"
+              onClick={handleOpenClaudeCodeRouter}
+            >
+              <ClaudeCodeRouterIcon size="sm" />
             </IconButton>
             <IconButton
               aria-label={t("keyManagement:actions.importToManagedSite", {
