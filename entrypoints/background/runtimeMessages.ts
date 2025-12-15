@@ -6,8 +6,10 @@ import { handleManagedSiteModelSyncMessage } from "~/services/modelSync"
 import { handleRedemptionAssistMessage } from "~/services/redemptionAssist"
 import { handleWebdavAutoSyncMessage } from "~/services/webdav/webdavAutoSyncService"
 import { onRuntimeMessage } from "~/utils/browserApi"
+import { getErrorMessage } from "~/utils/error"
 import { openOrFocusOptionsMenuItem } from "~/utils/navigation"
 
+import { trackCookieInterceptorUrl } from "./cookieInterceptor"
 import {
   handleAutoDetectSite,
   handleCloseTempWindow,
@@ -39,6 +41,21 @@ export function setupRuntimeMessageListeners() {
 
     if (request.action === "tempWindowFetch") {
       void handleTempWindowFetch(request, sendResponse)
+      return true
+    }
+
+    if (request.action === "cookieInterceptor:trackUrl") {
+      console.log("[Background] Runtime action cookieInterceptor:trackUrl", {
+        url: request.url,
+        ttlMs: request.ttlMs,
+      })
+      void trackCookieInterceptorUrl(request.url, request.ttlMs)
+        .then(() => {
+          sendResponse({ success: true })
+        })
+        .catch((error) => {
+          sendResponse({ success: false, error: getErrorMessage(error) })
+        })
       return true
     }
 

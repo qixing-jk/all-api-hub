@@ -1,11 +1,14 @@
 import { accountStorage } from "~/services/accountStorage"
 import { hasCookieInterceptorPermissions } from "~/services/permissions/permissionManager"
 import { type SiteAccount } from "~/types"
-import { isProtectionBypassFirefoxEnv } from "~/utils/protectionBypass"
 import {
   registerWebRequestInterceptor,
   setupWebRequestInterceptor,
 } from "~/utils/cookieHelper"
+import { isProtectionBypassFirefoxEnv } from "~/utils/protectionBypass"
+
+const temporaryUrlPatternExpiry = new Map<string, number>()
+const DEFAULT_TEMP_PATTERN_TTL_MS = 5 * 60 * 1000
 
 /**
  * Checks whether cookie interception should run (Firefox + permissions).
@@ -54,6 +57,87 @@ function extractAccountUrlPatterns(accounts: SiteAccount[]): string[] {
   return Array.from(new Set(patterns))
 }
 
+/**
+ * Returns temporary url match patterns used to widen the webRequest listener scope.
+ *
+ * When patterns expire, they are removed and the interceptor registration is
+ * refreshed on a best-effort basis.
+ * @param now Timestamp used to evaluate expirations.
+ */
+function extractTemporaryUrlPatterns(now: number = Date.now()): string[] {
+  let changed = false
+  for (const [pattern, expiry] of temporaryUrlPatternExpiry.entries()) {
+    if (expiry <= now) {
+      temporaryUrlPatternExpiry.delete(pattern)
+      changed = true
+      console.debug(
+        "[Background] Temporary cookie interceptor pattern expired:",
+        pattern,
+      )
+    }
+  }
+
+  if (changed) {
+    // Best-effort refresh; do not await here to avoid cascading failures.
+    void updateCookieInterceptor()
+  }
+
+  return Array.from(temporaryUrlPatternExpiry.keys())
+}
+
+/**
+ * Merge account-derived url patterns with temporary patterns.
+ * @param accountPatterns Patterns derived from persisted accounts.
+ */
+function mergeUrlPatterns(accountPatterns: string[]): string[] {
+  const merged = [...accountPatterns, ...extractTemporaryUrlPatterns()]
+  return Array.from(new Set(merged))
+}
+
+/**
+ * Temporarily allow-list a site origin for the cookie webRequest interceptor.
+ *
+ * This is used by auto-detect flows so that requests to a newly discovered site
+ * can be intercepted even before the account is saved to storage.
+ * @param url Any URL under the target origin.
+ * @param ttlMs How long to keep the pattern alive before removing it.
+ */
+export async function trackCookieInterceptorUrl(
+  url: string,
+  ttlMs: number = DEFAULT_TEMP_PATTERN_TTL_MS,
+): Promise<void> {
+  if (!url) return
+
+  let pattern: string | null = null
+  try {
+    const parsed = new URL(url)
+    pattern = `${parsed.origin}/*`
+  } catch {
+    return
+  }
+
+  const now = Date.now()
+  const expiry = now + Math.max(1, ttlMs)
+  const previousExpiry = temporaryUrlPatternExpiry.get(pattern)
+  if (!previousExpiry || previousExpiry < expiry) {
+    temporaryUrlPatternExpiry.set(pattern, expiry)
+  }
+
+  console.debug("[Background] Temporary cookie interceptor pattern tracked:", {
+    pattern,
+    ttlMs,
+  })
+
+  setTimeout(
+    () => {
+      void extractTemporaryUrlPatterns(Date.now())
+    },
+    Math.max(1, expiry - now),
+  )
+
+  await updateCookieInterceptor()
+}
+
 // 初始化 Cookie 拦截器
 /**
  * Installs the cookie interceptors if requirements are satisfied.
@@ -65,7 +149,7 @@ export async function initializeCookieInterceptors(): Promise<void> {
       return
     }
     const accounts = await accountStorage.getAllAccounts()
-    const urlPatterns = extractAccountUrlPatterns(accounts)
+    const urlPatterns = mergeUrlPatterns(extractAccountUrlPatterns(accounts))
     setupWebRequestInterceptor(urlPatterns)
   } catch (error) {
     console.error("[Background] 初始化 cookie 拦截器失败：", error)
@@ -83,7 +167,7 @@ async function updateCookieInterceptor(): Promise<void> {
       return
     }
     const accounts = await accountStorage.getAllAccounts()
-    const urlPatterns = extractAccountUrlPatterns(accounts)
+    const urlPatterns = mergeUrlPatterns(extractAccountUrlPatterns(accounts))
     registerWebRequestInterceptor(urlPatterns)
   } catch (error) {
     console.error("[Background] 更新 cookie 拦截器失败：", error)
