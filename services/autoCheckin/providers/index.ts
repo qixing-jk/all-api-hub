@@ -1,7 +1,8 @@
-import { VELOERA } from "~/constants/siteType"
+import { ANYROUTER, VELOERA } from "~/constants/siteType"
 import type { SiteAccount } from "~/types"
 import type { CheckinResultStatus } from "~/types/autoCheckin"
 
+import { anyrouterProvider } from "./anyrouter"
 import { veloeraProvider } from "./veloera"
 
 export interface AutoCheckinProvider {
@@ -14,6 +15,7 @@ export interface AutoCheckinProvider {
 }
 
 const providers: Record<string, AutoCheckinProvider> = {
+  [ANYROUTER]: anyrouterProvider,
   [VELOERA]: veloeraProvider,
 }
 

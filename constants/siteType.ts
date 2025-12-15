@@ -3,6 +3,7 @@ import merge from "lodash-es/merge"
 
 export const ONE_API = "one-api"
 export const NEW_API = "new-api"
+export const ANYROUTER = "anyrouter"
 export const VELOERA = "Veloera"
 export const ONE_HUB = "one-hub"
 export const DONE_HUB = "done-hub"
@@ -20,6 +21,7 @@ export type SiteType = (typeof SITE_TITLE_RULES)[number]["name"]
 export const SITE_TITLE_RULES = [
   { name: ONE_API, regex: makeTitleRegex(ONE_API) },
   { name: NEW_API, regex: makeTitleRegex(NEW_API) },
+  { name: ANYROUTER, regex: /\bany\s*router\b/i },
   { name: VELOERA, regex: makeTitleRegex(VELOERA) },
   { name: ONE_HUB, regex: makeTitleRegex(ONE_HUB) },
   { name: DONE_HUB, regex: makeTitleRegex(DONE_HUB) },
