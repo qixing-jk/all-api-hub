@@ -10,12 +10,13 @@ import {
   removeTabOrWindow,
 } from "~/utils/browserApi"
 import { getErrorMessage } from "~/utils/error"
+import { sanitizeUrlForLog } from "~/utils/sanitizeUrlForLog"
 
 const TEMP_CONTEXT_IDLE_TIMEOUT = 5000
 const TEMP_WINDOW_LOG_PREFIX = "[Background][TempWindow]"
 
 /**
- *
+ * Log temporary window events to console.
  */
 function logTempWindow(event: string, details?: Record<string, unknown>) {
   try {
@@ -25,19 +26,7 @@ function logTempWindow(event: string, details?: Record<string, unknown>) {
       console.log(`${TEMP_WINDOW_LOG_PREFIX} ${event}`)
     }
   } catch {
-    // ignore logging errors
-  }
-}
-
-/**
- *
- */
-function sanitizeUrlForLog(url: string) {
-  try {
-    const parsed = new URL(url)
-    return `${parsed.origin}${parsed.pathname}`
-  } catch {
-    return url
+    // ignore sanitizeUrlForLog errors
   }
 }
 

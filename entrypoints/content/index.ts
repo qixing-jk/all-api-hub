@@ -2,7 +2,7 @@ import { defineContentScript } from "wxt/utils/define-content-script"
 
 import { setupRedemptionAssistContent } from "~/entrypoints/content/redemptionAssist"
 
-import { setupContentMessageHandlers } from "./contentMessages"
+import { setupContentMessageHandlers } from "./messageHandlers"
 import { setContentScriptContext } from "./redemptionAssist/uiRoot"
 
 export default defineContentScript({
@@ -15,7 +15,7 @@ export default defineContentScript({
 })
 
 /**
- * Bootstraps content-script side features: logging, message handlers, and redemption assist UI.
+ * Bootstraps content-script side features: sanitizeUrlForLog, message handlers, and redemption assist UI.
  */
 function mainLogic() {
   console.log("Hello content script!", { id: browser.runtime.id })

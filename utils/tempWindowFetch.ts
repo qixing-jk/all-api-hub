@@ -24,8 +24,8 @@ import {
   isExtensionSidePanel,
   OPTIONS_PAGE_URL,
 } from "~/utils/browser"
-import { isProtectionBypassFirefoxEnv } from "~/utils/protectionBypass"
 import { sendRuntimeMessage } from "~/utils/browserApi"
+import { isProtectionBypassFirefoxEnv } from "~/utils/protectionBypass"
 
 export type TempWindowResponseType = "json" | "text" | "arrayBuffer" | "blob"
 
