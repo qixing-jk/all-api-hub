@@ -54,6 +54,10 @@
   "webdav": {
     "title": "WebDAV Backup and Sync",
     "configDesc": "Configure WebDAV and upload/download backup files",
+    "restorePolicy": {
+      "title": "Restore notice",
+      "description": "When restoring from WebDAV, your backup data will be imported but your current WebDAV connection/encryption settings will not be overwritten. This prevents accidentally switching WebDAV targets or overwriting credentials/encryption passwords. Use manual import to restore WebDAV settings."
+    },
     "webdavUrl": "Webdav URL",
     "webdavUrlExample": "For example: https://dav.example.com/{{filename}} full file URL or Webdav root directory URL",
     "username": "Username",

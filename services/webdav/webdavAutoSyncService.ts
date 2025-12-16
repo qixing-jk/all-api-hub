@@ -301,7 +301,9 @@ class WebdavAutoSyncService {
         accounts: accountsToSave,
         pinnedAccountIds: pinnedAccountIdsToSave,
       }),
-      userPreferences.importPreferences(preferencesToSave),
+      userPreferences.importPreferences(preferencesToSave, {
+        preserveWebdav: true,
+      }),
       channelConfigStorage.importConfigs(channelConfigsToSave),
     ])
 

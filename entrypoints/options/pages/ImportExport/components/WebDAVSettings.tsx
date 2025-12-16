@@ -8,6 +8,7 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import {
+  Alert,
   BodySmall,
   Button,
   Card,
@@ -198,7 +199,9 @@ export default function WebDAVSettings() {
       }
 
       const data = JSON.parse(content)
-      const result = await importFromBackupObject(data)
+      const result = await importFromBackupObject(data, {
+        preserveWebdav: true,
+      })
       if (result.allImported) {
         toast.success(t("importExport:import.importSuccess"))
       }
@@ -229,7 +232,9 @@ export default function WebDAVSettings() {
       })
 
       const data = JSON.parse(content)
-      const result = await importFromBackupObject(data)
+      const result = await importFromBackupObject(data, {
+        preserveWebdav: true,
+      })
       if (result.allImported) {
         toast.success(t("importExport:import.importSuccess"))
       }
@@ -263,6 +268,12 @@ export default function WebDAVSettings() {
         </CardHeader>
 
         <CardContent padding="md" className="space-y-4">
+          <Alert
+            variant="info"
+            title={t("webdav.restorePolicy.title")}
+            description={t("webdav.restorePolicy.description")}
+          />
+
           {/* 配置表单 */}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="md:col-span-2">

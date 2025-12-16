@@ -54,6 +54,10 @@
   "webdav": {
     "title": "WebDAV 备份与同步",
     "configDesc": "配置 WebDAV 并上传/下载备份文件",
+    "restorePolicy": {
+      "title": "恢复提示",
+      "description": "从 WebDAV 恢复时，会导入备份数据，但不会覆盖当前设备的 WebDAV 连接/加密设置，以避免误切换 WebDAV 目标或覆盖凭据/加密密码导致后续备份与恢复失败。如需恢复 WebDAV 配置，请使用手动导入。"
+    },
     "webdavUrl": "Webdav 地址",
     "webdavUrlExample": "例如：https://dav.example.com/{{filename}} 完整文件 URL或Webdav 根目录 URL",
     "username": "用户名",

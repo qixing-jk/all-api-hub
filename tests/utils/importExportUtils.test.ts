@@ -252,6 +252,26 @@ describe("importFromBackupObject", () => {
     expect(result.allImported).toBe(true)
   })
 
+  it("preserves webdav config when preserveWebdav option is provided", async () => {
+    const backup: BackupPreferencesPartialV2 = {
+      version: BACKUP_VERSION,
+      timestamp: Date.now(),
+      type: "preferences",
+      preferences: { themeMode: "light" } as any,
+    }
+
+    await importFromBackupObject(backup as BackupV2, { preserveWebdav: true })
+
+    expect(mockUserPreferencesImport).toHaveBeenCalledWith(
+      {
+        themeMode: "light",
+      },
+      {
+        preserveWebdav: true,
+      },
+    )
+  })
+
   it("throws when nothing can be imported", async () => {
     const payload: RawBackupData = {
       version: BACKUP_VERSION,

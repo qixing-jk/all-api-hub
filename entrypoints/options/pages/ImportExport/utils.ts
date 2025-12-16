@@ -97,6 +97,10 @@ export interface ImportResult {
   }
 }
 
+export interface ImportFromBackupOptions {
+  preserveWebdav?: boolean
+}
+
 /**
  * Parse a raw backup JSON string into a lightweight summary used by the
  * import UI. This is tolerant of both legacy (V1) and V2 payload shapes and
@@ -139,7 +143,10 @@ export function parseBackupSummary(
 /**
  * Handles legacy (V1) backup payloads by importing accounts/preferences/channel configs when present.
  */
-async function importV1Backup(data: RawBackupData): Promise<ImportResult> {
+async function importV1Backup(
+  data: RawBackupData,
+  options?: ImportFromBackupOptions,
+): Promise<ImportResult> {
   let accountsImported = false
   let preferencesImported = false
   let channelConfigsImported = false
@@ -171,7 +178,11 @@ async function importV1Backup(data: RawBackupData): Promise<ImportResult> {
   if (preferencesRequested) {
     const preferencesData = data.preferences || data.data?.preferences
     if (preferencesData) {
-      const success = await userPreferences.importPreferences(preferencesData)
+      const success = options?.preserveWebdav
+        ? await userPreferences.importPreferences(preferencesData, {
+            preserveWebdav: true,
+          })
+        : await userPreferences.importPreferences(preferencesData)
       if (success) {
         preferencesImported = true
       } else {
@@ -321,7 +332,10 @@ function normalizeV1BackupForMerge(
 /**
  * Import a canonical V2 backup (full or partial) into local storage.
  */
-async function importV2Backup(data: BackupV2): Promise<ImportResult> {
+async function importV2Backup(
+  data: BackupV2,
+  options?: ImportFromBackupOptions,
+): Promise<ImportResult> {
   let accountsImported = false
   let preferencesImported = false
   let channelConfigsImported = false
@@ -356,7 +370,11 @@ async function importV2Backup(data: BackupV2): Promise<ImportResult> {
 
   if (preferencesRequested) {
     const { preferences } = data as BackupFullV2 | BackupPreferencesPartialV2
-    const success = await userPreferences.importPreferences(preferences)
+    const success = options?.preserveWebdav
+      ? await userPreferences.importPreferences(preferences, {
+          preserveWebdav: true,
+        })
+      : await userPreferences.importPreferences(preferences)
     if (success) {
       preferencesImported = true
     } else {
@@ -407,6 +425,7 @@ async function importV2Backup(data: BackupV2): Promise<ImportResult> {
  */
 export async function importFromBackupObject(
   data: RawBackupData,
+  options?: ImportFromBackupOptions,
 ): Promise<ImportResult> {
   // timestamp is required for all versions; version is optional for backward compatibility
   if (!data.timestamp) {
@@ -416,15 +435,15 @@ export async function importFromBackupObject(
   const version = data.version ?? "1.0"
 
   if (version === "1.0") {
-    return importV1Backup(data)
+    return importV1Backup(data, options)
   }
 
   if (version === BACKUP_VERSION) {
-    return importV2Backup(data as BackupV2)
+    return importV2Backup(data as BackupV2, options)
   }
 
   // Unknown future version: fall back to tolerant V1-style import
-  return importV1Backup(data)
+  return importV1Backup(data, options)
 }
 
 // 导出所有数据

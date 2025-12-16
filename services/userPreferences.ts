@@ -475,14 +475,31 @@ class UserPreferencesService {
 
   /**
    * Import preferences (runs migration before saving).
+   *
+   * WebDAV import policy:
+   * - Manual import is allowed to restore `webdav` settings from the backup.
+   * - WebDAV-based restore/sync flows may opt-in to preserving the current
+   *   device's WebDAV config to avoid accidentally switching targets.
    */
-  async importPreferences(preferences: UserPreferences): Promise<boolean> {
+  async importPreferences(
+    preferences: UserPreferences,
+    options?: {
+      preserveWebdav?: boolean
+    },
+  ): Promise<boolean> {
     try {
       // Migrate imported preferences to ensure compatibility
       const migratedPreferences = migratePreferences(preferences)
 
+      const currentPreferences = options?.preserveWebdav
+        ? await this.getPreferences()
+        : null
+
       await this.storage.set(STORAGE_KEYS.USER_PREFERENCES, {
         ...migratedPreferences,
+        ...(options?.preserveWebdav && currentPreferences
+          ? { webdav: currentPreferences.webdav }
+          : null),
         lastUpdated: Date.now(),
       })
       console.log("[UserPreferences] 偏好设置导入成功，已迁移至最新版本")
