@@ -149,12 +149,15 @@ class WebdavAutoSyncService {
    * 1. 使用当前用户 WebDAV 配置测试连接。
    * 2. 从远程下载备份并通过 normalizeBackupForMerge 按版本规范化
    *    （兼容 V1 旧结构和当前 V2 扁平结构，未来版本可扩展）。
+   *    - 如果远程备份是加密封套（envelope），downloadBackup 会尝试用
+   *      当前 WebDAV 加密密码自动解密；缺失/错误密码会导致本次同步失败。
    * 3. 根据 syncStrategy 决定合并方式：
    *    - "merge": 调用 mergeData 基于时间戳双向合并本地 / 远程账号与偏好设置。
    *    - "upload_only" 或远程无数据：使用本地数据覆盖远程。
    *    - 默认：优先使用远程数据，否则回退到本地。
    * 4. 将合并后的账号和偏好设置写回本地存储，并上传新的备份（始终使用
    *    BACKUP_VERSION 与扁平结构，包含 channelConfigs 快照）。
+   *    - uploadBackup 会根据当前 WebDAV 加密开关决定是否将备份加密后上传。
    *
    * Throws when connection fails or merge/upload errors occur.
    */

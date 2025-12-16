@@ -298,6 +298,8 @@ describe("preferencesMigration", () => {
         url: "https://backup.example.com",
         username: "backupuser",
         password: "backuppass",
+        backupEncryptionEnabled: false,
+        backupEncryptionPassword: "",
         autoSync: true,
         syncInterval: 7200,
         syncStrategy: WEBDAV_SYNC_STRATEGIES.UPLOAD_ONLY,

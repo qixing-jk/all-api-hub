@@ -143,7 +143,10 @@
     "connectionFailed": "Connection failed, status code: {{status}}",
     "fileNotFound": "Remote backup file does not exist",
     "downloadFailed": "Download failed, status code: {{status}}",
-    "uploadFailed": "Upload failed, status code: {{status}}"
+    "uploadFailed": "Upload failed, status code: {{status}}",
+    "encryptFailedNoPassword": "Encryption is enabled but no password is set",
+    "decryptFailedNoPassword": "Backup is encrypted but no password is set",
+    "decryptFailed": "Failed to decrypt backup, please check your password"
   },
   "storage": {
     "accountNotFound": "Account {{id}} does not exist",

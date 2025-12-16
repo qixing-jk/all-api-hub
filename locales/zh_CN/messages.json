@@ -143,7 +143,10 @@
     "connectionFailed": "连接失败，状态码: {{status}}",
     "fileNotFound": "远程备份文件不存在",
     "downloadFailed": "下载失败，状态码: {{status}}",
-    "uploadFailed": "上传失败，状态码: {{status}}"
+    "uploadFailed": "上传失败，状态码: {{status}}",
+    "encryptFailedNoPassword": "已开启加密，但未设置密码",
+    "decryptFailedNoPassword": "备份已加密，但未设置密码",
+    "decryptFailed": "解密备份失败，请检查密码"
   },
   "storage": {
     "accountNotFound": "账号 {{id}} 不存在",

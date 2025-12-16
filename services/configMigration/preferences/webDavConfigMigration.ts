@@ -21,6 +21,11 @@ export function needWebDavConfigMigration(prefs: UserPreferences): boolean {
 
 /**
  * Migrate old flat WebDAV fields to a nested WebDAVSettings object
+ *
+ * Notes:
+ * - Older configurations did not include WebDAV backup encryption settings.
+ *   During migration, `backupEncryptionEnabled` and `backupEncryptionPassword`
+ *   are initialized from defaults for backwards compatibility.
  * @param prefs - User preferences object to migrate
  * @returns - Migrated user preferences object with nested WebDAVSettings
  */
@@ -36,6 +41,8 @@ export function migrateWebDavConfig(prefs: UserPreferences) {
     url: prefs.webdavUrl ?? DEFAULT_WEBDAV_SETTINGS.url,
     username: prefs.webdavUsername ?? DEFAULT_WEBDAV_SETTINGS.username,
     password: prefs.webdavPassword ?? DEFAULT_WEBDAV_SETTINGS.password,
+    backupEncryptionEnabled: DEFAULT_WEBDAV_SETTINGS.backupEncryptionEnabled,
+    backupEncryptionPassword: DEFAULT_WEBDAV_SETTINGS.backupEncryptionPassword,
     autoSync: prefs.webdavAutoSync ?? DEFAULT_WEBDAV_SETTINGS.autoSync,
     syncInterval:
       prefs.webdavSyncInterval ?? DEFAULT_WEBDAV_SETTINGS.syncInterval,
@@ -50,14 +57,21 @@ export function migrateWebDavConfig(prefs: UserPreferences) {
 
   // Create new preferences object with nested webdav
   const {
-    webdavUrl,
-    webdavUsername,
-    webdavPassword,
-    webdavAutoSync,
-    webdavSyncInterval,
-    webdavSyncStrategy,
+    webdavUrl: _webdavUrl,
+    webdavUsername: _webdavUsername,
+    webdavPassword: _webdavPassword,
+    webdavAutoSync: _webdavAutoSync,
+    webdavSyncInterval: _webdavSyncInterval,
+    webdavSyncStrategy: _webdavSyncStrategy,
     ...restOfPrefs
   } = prefs
+
+  void _webdavUrl
+  void _webdavUsername
+  void _webdavPassword
+  void _webdavAutoSync
+  void _webdavSyncInterval
+  void _webdavSyncStrategy
 
   return {
     ...restOfPrefs,

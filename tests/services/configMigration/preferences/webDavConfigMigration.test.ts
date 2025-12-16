@@ -155,6 +155,8 @@ describe("webDavConfigMigration", () => {
         url: "https://example.com/webdav",
         username: "testuser",
         password: "testpass",
+        backupEncryptionEnabled: false,
+        backupEncryptionPassword: "",
         autoSync: true,
         syncInterval: 1800,
         syncStrategy: WEBDAV_SYNC_STRATEGIES.UPLOAD_ONLY,
@@ -205,6 +207,10 @@ describe("webDavConfigMigration", () => {
         url: "https://example.com",
         username: DEFAULT_WEBDAV_SETTINGS.username,
         password: DEFAULT_WEBDAV_SETTINGS.password,
+        backupEncryptionEnabled:
+          DEFAULT_WEBDAV_SETTINGS.backupEncryptionEnabled,
+        backupEncryptionPassword:
+          DEFAULT_WEBDAV_SETTINGS.backupEncryptionPassword,
         autoSync: true,
         syncInterval: DEFAULT_WEBDAV_SETTINGS.syncInterval,
         syncStrategy: DEFAULT_WEBDAV_SETTINGS.syncStrategy,
@@ -254,6 +260,8 @@ describe("webDavConfigMigration", () => {
         url: "https://new.com",
         username: "newuser",
         password: "newpass",
+        backupEncryptionEnabled: false,
+        backupEncryptionPassword: "",
         autoSync: true,
         syncInterval: 3600,
         syncStrategy: WEBDAV_SYNC_STRATEGIES.MERGE,
@@ -315,6 +323,10 @@ describe("webDavConfigMigration", () => {
         url: "",
         username: "",
         password: "",
+        backupEncryptionEnabled:
+          DEFAULT_WEBDAV_SETTINGS.backupEncryptionEnabled,
+        backupEncryptionPassword:
+          DEFAULT_WEBDAV_SETTINGS.backupEncryptionPassword,
         autoSync: DEFAULT_WEBDAV_SETTINGS.autoSync,
         syncInterval: DEFAULT_WEBDAV_SETTINGS.syncInterval,
         syncStrategy: DEFAULT_WEBDAV_SETTINGS.syncStrategy,

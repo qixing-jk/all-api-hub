@@ -417,6 +417,8 @@ class UserPreferencesService {
     url?: string
     username?: string
     password?: string
+    backupEncryptionEnabled?: boolean
+    backupEncryptionPassword?: string
   }): Promise<boolean> {
     return this.savePreferences({
       webdav: settings,

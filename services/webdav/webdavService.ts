@@ -3,6 +3,12 @@ import { t } from "i18next"
 import { userPreferences } from "~/services/userPreferences"
 import type { WebDAVConfig } from "~/types/webdav"
 
+import {
+  decryptWebdavBackupEnvelope,
+  encryptWebdavBackupContent,
+  tryParseEncryptedWebdavBackupEnvelope,
+} from "./webdavBackupEncryption"
+
 /**
  * Builds a Basic Authorization header value from WebDAV username and password.
  */
@@ -11,12 +17,31 @@ function buildAuthHeader(username: string, password: string) {
   return `Basic ${token}`
 }
 
+/**
+ * WebDAV backup path version string.
+ *
+ * This controls the default filename under the configured WebDAV directory.
+ * It is intentionally separate from the backup schema version.
+ */
 const CONFIG_VERSION = "1-0"
+
+/**
+ * Program identifier used in default WebDAV backup paths.
+ */
 export const PROGRAM_NAME = "all-api-hub"
+
+/**
+ * Default WebDAV collection/directory name used for backups.
+ */
 const BACKUP_FOLDER_NAME = `${PROGRAM_NAME}-backup`
 
 /**
  * Ensures the configured WebDAV URL points to a concrete JSON backup file path.
+ *
+ * Supported inputs:
+ * - Full file URL (e.g. `.../all-api-hub-backup/all-api-hub-1-0.json`)
+ * - Directory-like URL (e.g. `.../webdav/`) which will be expanded to a
+ *   deterministic filename under `all-api-hub-backup/`.
  */
 function ensureFilename(url: string, version: string = CONFIG_VERSION) {
   try {
@@ -33,6 +58,8 @@ function ensureFilename(url: string, version: string = CONFIG_VERSION) {
 
 /**
  * Derives the backup directory URL from a fully-qualified backup target URL.
+ *
+ * Used so we can create the collection via `MKCOL` before uploading.
  */
 function getBackupDirUrl(targetUrl: string) {
   // derive the .../all-api-hub-backup/ directory from final target URL
@@ -48,6 +75,9 @@ function getBackupDirUrl(targetUrl: string) {
 
 /**
  * Creates the WebDAV backup directory if needed, tolerating already-existing paths.
+ *
+ * Note: WebDAV servers differ in their `MKCOL` behavior; this implementation is
+ * deliberately permissive to avoid blocking backups on idiosyncratic responses.
  */
 async function ensureBackupDirectory(
   targetUrl: string,
@@ -99,6 +129,20 @@ async function getWebDavConfig(): Promise<WebDAVConfig> {
 }
 
 /**
+ * Read WebDAV backup encryption settings from user preferences.
+ *
+ * When enabled, uploads will wrap the backup JSON in an encrypted envelope.
+ * Downloads will attempt to decrypt envelopes using the stored password.
+ */
+async function getWebdavEncryptionConfig() {
+  const prefs = await userPreferences.getPreferences()
+  return {
+    enabled: Boolean(prefs.webdav.backupEncryptionEnabled),
+    password: (prefs.webdav.backupEncryptionPassword || "").trim(),
+  }
+}
+
+/**
  * Test connectivity and authentication against the configured WebDAV
  * endpoint.
  *
@@ -130,11 +174,13 @@ export async function testWebdavConnection(custom?: Partial<WebDAVConfig>) {
 }
 
 /**
- * Download the current backup JSON from the configured WebDAV location.
- * Returns the raw response body as text, or throws a localized error when
- * the file is missing, auth fails or the request fails.
+ * Download the remote backup as raw text.
+ *
+ * This function does not attempt to detect or decrypt encrypted envelopes.
+ * It is intended for UI flows that need to decide how to prompt the user when
+ * no password is available or decryption fails.
  */
-export async function downloadBackup(custom?: Partial<WebDAVConfig>) {
+export async function downloadBackupRaw(custom?: Partial<WebDAVConfig>) {
   const cfg = { ...(await getWebDavConfig()), ...custom }
   if (!cfg.url || !cfg.username || !cfg.password) {
     throw new Error(t("messages:webdav.configIncomplete"))
@@ -158,9 +204,41 @@ export async function downloadBackup(custom?: Partial<WebDAVConfig>) {
 }
 
 /**
+ * Download the remote backup and return a plaintext JSON string.
+ *
+ * Backwards compatible:
+ * - If the remote content is plain JSON (not an envelope), it is returned as-is.
+ * - If the remote content is an encrypted envelope, this will attempt to decrypt
+ *   using the stored encryption password and throw a localized error message on
+ *   missing/incorrect passwords.
+ */
+export async function downloadBackup(custom?: Partial<WebDAVConfig>) {
+  const raw = await downloadBackupRaw(custom)
+  const envelope = tryParseEncryptedWebdavBackupEnvelope(raw)
+  if (!envelope) return raw
+
+  const encCfg = await getWebdavEncryptionConfig()
+  if (!encCfg.password) {
+    throw new Error(t("messages:webdav.decryptFailedNoPassword"))
+  }
+
+  try {
+    return await decryptWebdavBackupEnvelope({
+      envelope,
+      password: encCfg.password,
+    })
+  } catch {
+    throw new Error(t("messages:webdav.decryptFailed"))
+  }
+}
+
+/**
  * Upload a backup JSON string to the configured WebDAV location. When the
  * user provided only a directory-like URL, a versioned filename under
  * `all-api-hub-backup/` is generated automatically.
+ *
+ * When encryption is enabled, the plaintext JSON is uploaded as an encrypted
+ * envelope JSON instead.
  */
 export async function uploadBackup(
   content: string,
@@ -172,6 +250,19 @@ export async function uploadBackup(
   }
   const targetUrl = ensureFilename(cfg.url)
 
+  const encCfg = await getWebdavEncryptionConfig()
+  let contentToUpload = content
+  if (encCfg.enabled) {
+    if (!encCfg.password) {
+      throw new Error(t("messages:webdav.encryptFailedNoPassword"))
+    }
+    const envelope = await encryptWebdavBackupContent({
+      content,
+      password: encCfg.password,
+    })
+    contentToUpload = JSON.stringify(envelope)
+  }
+
   // Ensure backup directory exists when using folder-style input
   await ensureBackupDirectory(targetUrl, cfg.username, cfg.password)
 
@@ -181,7 +272,7 @@ export async function uploadBackup(
       Authorization: buildAuthHeader(cfg.username, cfg.password),
       "Content-Type": "application/json",
     },
-    body: content,
+    body: contentToUpload,
   })
 
   if (res.status >= 200 && res.status < 300) return true

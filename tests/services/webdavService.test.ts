@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { userPreferences } from "~/services/userPreferences"
 import {
   downloadBackup,
+  downloadBackupRaw,
   testWebdavConnection,
   uploadBackup,
 } from "~/services/webdav/webdavService"
@@ -37,6 +38,8 @@ describe("webdavService", () => {
       url: "https://example.com/webdav",
       username: "user",
       password: "pass",
+      backupEncryptionEnabled: false,
+      backupEncryptionPassword: "",
     },
   }
 
@@ -110,6 +113,17 @@ describe("webdavService", () => {
 
       const content = await downloadBackup()
       expect(content).toBe('{"ok":true}')
+    })
+
+    it("downloadBackupRaw returns raw response text when status is 200", async () => {
+      mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
+      globalAny.fetch.mockResolvedValue({
+        status: 200,
+        text: vi.fn().mockResolvedValue('{"raw":true}'),
+      })
+
+      const content = await downloadBackupRaw()
+      expect(content).toBe('{"raw":true}')
     })
 
     it("throws configIncomplete when credentials missing", async () => {
