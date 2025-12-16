@@ -10,7 +10,9 @@ import type { AutoCheckinProvider } from "./index"
 
 type CheckinResult = {
   status: CheckinResultStatus
-  message: string
+  messageKey?: string
+  messageParams?: Record<string, any>
+  rawMessage?: string
   data?: any
 }
 
@@ -59,13 +61,17 @@ const checkinAnyRouter = async (
       true,
     )
 
-    const responseMessage =
-      typeof response.message === "string" ? response.message.toLowerCase() : ""
+    const rawResponseMessage =
+      typeof response.message === "string" ? response.message : ""
+    const normalizedResponseMessage = rawResponseMessage.toLowerCase()
 
     if (!response.success) {
       return {
         status: CHECKIN_RESULT_STATUS.FAILED,
-        message: responseMessage || "Check-in failed",
+        rawMessage: rawResponseMessage || undefined,
+        messageKey: rawResponseMessage
+          ? undefined
+          : "autoCheckin:providerFallback.checkinFailed",
         data: response ?? undefined,
       }
     }
@@ -73,25 +79,34 @@ const checkinAnyRouter = async (
     if (
       response.ret === 1 ||
       response.code === 0 ||
-      responseMessage.includes("success")
+      normalizedResponseMessage.includes("success")
     ) {
       return {
         status: CHECKIN_RESULT_STATUS.SUCCESS,
-        message: responseMessage || "Check-in successful",
+        rawMessage: rawResponseMessage || undefined,
+        messageKey: rawResponseMessage
+          ? undefined
+          : "autoCheckin:providerFallback.checkinSuccessful",
         data: response,
       }
     }
 
-    if (isAlreadyChecked(responseMessage)) {
+    if (isAlreadyChecked(normalizedResponseMessage)) {
       return {
         status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
-        message: responseMessage || "Already checked in today",
+        rawMessage: rawResponseMessage || undefined,
+        messageKey: rawResponseMessage
+          ? undefined
+          : "autoCheckin:providerFallback.alreadyCheckedToday",
       }
     }
 
     return {
       status: CHECKIN_RESULT_STATUS.FAILED,
-      message: responseMessage || "Check-in failed",
+      rawMessage: rawResponseMessage || undefined,
+      messageKey: rawResponseMessage
+        ? undefined
+        : "autoCheckin:providerFallback.checkinFailed",
       data: response ?? undefined,
     }
   } catch (error: any) {
@@ -100,20 +115,23 @@ const checkinAnyRouter = async (
     if (errorMessage && isAlreadyChecked(errorMessage)) {
       return {
         status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
-        message: errorMessage,
+        rawMessage: errorMessage,
       }
     }
 
     if (error?.statusCode === 404 || errorMessage.includes("404")) {
       return {
         status: CHECKIN_RESULT_STATUS.FAILED,
-        message: "Check-in endpoint not supported",
+        messageKey: "autoCheckin:providerFallback.endpointNotSupported",
       }
     }
 
     return {
       status: CHECKIN_RESULT_STATUS.FAILED,
-      message: errorMessage || "Unknown error occurred",
+      rawMessage: errorMessage || undefined,
+      messageKey: errorMessage
+        ? undefined
+        : "autoCheckin:providerFallback.unknownError",
     }
   }
 }

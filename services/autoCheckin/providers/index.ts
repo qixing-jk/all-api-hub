@@ -9,7 +9,9 @@ export interface AutoCheckinProvider {
   canCheckIn(account: SiteAccount): boolean
   checkIn(account: SiteAccount | AnyrouterCheckInParams): Promise<{
     status: CheckinResultStatus
-    message: string
+    messageKey?: string
+    messageParams?: Record<string, any>
+    rawMessage?: string
     data?: any
   }>
 }

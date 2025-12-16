@@ -112,6 +112,13 @@
     "provider_not_ready": "账号配置暂不支持签到",
     "unknown": "未知"
   },
+  "providerFallback": {
+    "checkinFailed": "签到失败",
+    "checkinSuccessful": "签到成功",
+    "alreadyCheckedToday": "今日已签到",
+    "endpointNotSupported": "不支持该签到接口",
+    "unknownError": "发生未知错误"
+  },
   "messages": {
     "error": {
       "loadFailed": "获取自动签到设置失败：{{error}}",

@@ -41,7 +41,10 @@ export interface CheckinAccountResult {
   accountId: string
   accountName: string
   status: CheckinResultStatus
-  message: string
+  message?: string
+  messageKey?: string
+  messageParams?: Record<string, any>
+  rawMessage?: string
   reasonCode?: AutoCheckinSkipReason
   timestamp: number
 }

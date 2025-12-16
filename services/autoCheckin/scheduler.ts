@@ -314,12 +314,10 @@ class AutoCheckinScheduler {
   }
 
   /**
-   * Returns the localized, human-readable message for a skip reason code.
+   * Returns the i18n key for a skip reason code.
    */
-  private getSkipReasonMessage(reason: AutoCheckinSkipReason): string {
-    return t(`autoCheckin:skipReasons.${reason}`, {
-      defaultValue: t("autoCheckin:skipReasons.unknown"),
-    })
+  private getSkipReasonMessageKey(reason: AutoCheckinSkipReason): string {
+    return `autoCheckin:skipReasons.${reason}`
   }
 
   private buildAccountSnapshot(
@@ -371,28 +369,38 @@ class AutoCheckinScheduler {
   }> {
     const buildResult = (
       status: CheckinResultStatus,
-      message: string,
+      partial?: Pick<
+        CheckinAccountResult,
+        "message" | "messageKey" | "messageParams" | "rawMessage" | "reasonCode"
+      >,
     ): CheckinAccountResult => ({
       accountId: account.id,
       accountName: account.site_name,
       status,
-      message,
+      ...(partial ?? {}),
       timestamp: Date.now(),
     })
 
     try {
       const provider = resolveAutoCheckinProvider(account)
       if (!provider) {
-        const message = "No auto check-in provider available"
-        console.warn(`[AutoCheckin] ${account.site_name}: ${message}`)
+        const messageKey = "autoCheckin:skipReasons.no_provider"
+        console.warn(`[AutoCheckin] ${account.site_name}: ${messageKey}`)
         return {
-          result: buildResult(CHECKIN_RESULT_STATUS.FAILED, message),
+          result: buildResult(CHECKIN_RESULT_STATUS.FAILED, {
+            messageKey,
+            reasonCode: AUTO_CHECKIN_SKIP_REASON.NO_PROVIDER,
+          }),
           successful: false,
         }
       }
 
       const providerResult = await provider.checkIn(account)
-      const result = buildResult(providerResult.status, providerResult.message)
+      const result = buildResult(providerResult.status, {
+        messageKey: providerResult.messageKey,
+        messageParams: providerResult.messageParams,
+        rawMessage: providerResult.rawMessage,
+      })
 
       if (
         providerResult.status === CHECKIN_RESULT_STATUS.SUCCESS ||
@@ -400,13 +408,13 @@ class AutoCheckinScheduler {
       ) {
         await accountStorage.markAccountAsCheckedIn(account.id)
         console.log(
-          `[AutoCheckin] ${account.site_name}: ${providerResult.status} - ${providerResult.message}`,
+          `[AutoCheckin] ${account.site_name}: ${providerResult.status} - ${providerResult.rawMessage ?? providerResult.messageKey ?? ""}`,
         )
         return { result, successful: true }
       }
 
       console.error(
-        `[AutoCheckin] ${account.site_name}: failed - ${providerResult.message}`,
+        `[AutoCheckin] ${account.site_name}: failed - ${providerResult.rawMessage ?? providerResult.messageKey ?? ""}`,
       )
       return { result, successful: false }
     } catch (error) {
@@ -415,7 +423,9 @@ class AutoCheckinScheduler {
         `[AutoCheckin] ${account.site_name}: error - ${errorMessage}`,
       )
       return {
-        result: buildResult(CHECKIN_RESULT_STATUS.FAILED, errorMessage),
+        result: buildResult(CHECKIN_RESULT_STATUS.FAILED, {
+          rawMessage: errorMessage,
+        }),
         successful: false,
       }
     }
@@ -609,7 +619,7 @@ class AutoCheckinScheduler {
             accountId: snapshot.accountId,
             accountName: snapshot.accountName,
             status: CHECKIN_RESULT_STATUS.SKIPPED,
-            message: this.getSkipReasonMessage(snapshot.skipReason),
+            messageKey: this.getSkipReasonMessageKey(snapshot.skipReason),
             reasonCode: snapshot.skipReason,
             timestamp,
           }

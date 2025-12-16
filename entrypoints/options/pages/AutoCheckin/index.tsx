@@ -161,10 +161,19 @@ export default function AutoCheckin() {
     // Search by keyword
     if (searchKeyword) {
       const keyword = searchKeyword.toLowerCase()
+
+      const displayMessage =
+        result.rawMessage ??
+        (result.messageKey
+          ? (t(result.messageKey.replace(/^autoCheckin:/, ""), {
+              ...(result.messageParams ?? {}),
+              defaultValue: result.messageKey,
+            }) as string)
+          : result.message ?? "")
       return (
         result.accountName.toLowerCase().includes(keyword) ||
         String(result.accountId).toLowerCase().includes(keyword) ||
-        (result.message?.toLowerCase() ?? "").includes(keyword)
+        displayMessage.toLowerCase().includes(keyword)
       )
     }
 

@@ -40,6 +40,17 @@ export default function ResultsTable({
 }: ResultsTableProps) {
   const { t } = useTranslation("autoCheckin")
 
+  const getResultMessage = (result: CheckinAccountResult): string => {
+    if (result.rawMessage) return result.rawMessage
+    if (result.messageKey) {
+      return t(result.messageKey.replace(/^autoCheckin:/, ""), {
+        ...(result.messageParams ?? {}),
+        defaultValue: result.messageKey,
+      }) as string
+    }
+    return result.message ?? "-"
+  }
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case CHECKIN_RESULT_STATUS.SUCCESS:
@@ -127,7 +138,7 @@ export default function ResultsTable({
                   {getStatusBadge(result.status)}
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                  {result.message}
+                  {getResultMessage(result)}
                 </td>
                 <td className="px-6 py-4 text-sm whitespace-nowrap text-gray-500 dark:text-gray-400">
                   {formatTimestamp(result.timestamp)}

@@ -112,6 +112,13 @@
     "provider_not_ready": "Account configuration currently does not support check-in",
     "unknown": "Unknown"
   },
+  "providerFallback": {
+    "checkinFailed": "Check-in failed",
+    "checkinSuccessful": "Check-in successful",
+    "alreadyCheckedToday": "Already checked in today",
+    "endpointNotSupported": "Check-in endpoint not supported",
+    "unknownError": "Unknown error occurred"
+  },
   "messages": {
     "error": {
       "loadFailed": "Failed to load auto check-in settings: {{error}}",
