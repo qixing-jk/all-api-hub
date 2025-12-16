@@ -5,7 +5,7 @@ import React from "react"
 import { cn } from "~/lib/utils"
 
 const switchVariants = cva(
-  "relative inline-flex items-center rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
+  "relative inline-flex items-center rounded-full overflow-hidden p-0 border-0 box-border shrink-0 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
   {
     variants: {
       checked: {

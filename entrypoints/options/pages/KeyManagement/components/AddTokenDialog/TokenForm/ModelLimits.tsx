@@ -1,7 +1,6 @@
-import { Switch } from "@headlessui/react"
 import { useTranslation } from "react-i18next"
 
-import { MultiSelect } from "~/components/ui"
+import { MultiSelect, Switch } from "~/components/ui"
 
 import type { FormData } from "../hooks/useTokenForm"
 
@@ -51,14 +50,8 @@ export function ModelLimits({
             modelLimitsEnabled
               ? "bg-blue-600"
               : "dark:bg-dark-bg-tertiary bg-gray-200"
-          } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none`}
-        >
-          <span
-            className={`${
-              modelLimitsEnabled ? "translate-x-6" : "translate-x-1"
-            } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
-          />
-        </Switch>
+          } focus:ring-blue-500`}
+        />
       </div>
 
       {modelLimitsEnabled && (

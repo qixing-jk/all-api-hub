@@ -1,4 +1,3 @@
-import { Switch } from "@headlessui/react"
 import {
   CurrencyDollarIcon,
   EyeIcon,
@@ -20,6 +19,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Switch,
   Textarea,
 } from "~/components/ui"
 import { SITE_TITLE_RULES } from "~/constants/siteType"
@@ -263,14 +263,8 @@ export default function AccountForm({
           id="supports-check-in"
           className={`${
             checkIn.enableDetection ? "bg-green-600" : "bg-gray-200"
-          } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:outline-none`}
-        >
-          <span
-            className={`${
-              checkIn.enableDetection ? "translate-x-6" : "translate-x-1"
-            } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
-          />
-        </Switch>
+          } focus:ring-green-500`}
+        />
       </div>
 
       {/* Custom Check-in URL */}
@@ -309,16 +303,8 @@ export default function AccountForm({
               checkIn.openRedeemWithCheckIn ?? true
                 ? "bg-green-600"
                 : "bg-gray-200"
-            } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:outline-none`}
-          >
-            <span
-              className={`${
-                checkIn.openRedeemWithCheckIn ?? true
-                  ? "translate-x-6"
-                  : "translate-x-1"
-              } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
-            />
-          </Switch>
+            } focus:ring-green-500`}
+          />
         </div>
       )}
 
@@ -346,16 +332,8 @@ export default function AccountForm({
               checkIn.autoCheckInEnabled !== false
                 ? "bg-green-600"
                 : "bg-gray-200"
-            } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:outline-none`}
-          >
-            <span
-              className={`${
-                checkIn.autoCheckInEnabled !== false
-                  ? "translate-x-6"
-                  : "translate-x-1"
-              } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
-            />
-          </Switch>
+            } focus:ring-green-500`}
+          />
         </div>
       )}
 
@@ -377,10 +355,7 @@ export default function AccountForm({
       </FormField>
 
       {/* 标签 */}
-      <FormField
-        label={t("form.tags")}
-        description={t("form.tagsDescription")}
-      >
+      <FormField label={t("form.tags")} description={t("form.tagsDescription")}>
         <MultiSelect
           options={tagOptions}
           selected={tags}
