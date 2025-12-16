@@ -7,6 +7,7 @@ import { AccountToken } from "~/entrypoints/options/pages/KeyManagement/type"
 import { ensureAccountApiToken } from "~/services/accountOperations"
 import { accountStorage } from "~/services/accountStorage"
 import { getApiService } from "~/services/apiService"
+import { fetchUpstreamModelsNameList } from "~/services/apiService/openai"
 import { ApiToken, DisplaySiteData, SiteAccount } from "~/types"
 import type {
   ChannelFormData,
@@ -181,9 +182,7 @@ export async function fetchAvailableModels(
   }
 
   try {
-    const upstreamModels = await getApiService(
-      undefined,
-    ).fetchUpstreamModelsNameList({
+    const upstreamModels = await fetchUpstreamModelsNameList({
       baseUrl: account.baseUrl,
       apiKey: token.key,
     })
@@ -230,9 +229,7 @@ export async function prepareChannelFormData(
   account: DisplaySiteData,
   token: ApiToken | AccountToken,
 ): Promise<ChannelFormData> {
-  const availableModels = await getApiService(
-    undefined,
-  ).fetchUpstreamModelsNameList({
+  const availableModels = await fetchUpstreamModelsNameList({
     baseUrl: account.baseUrl,
     apiKey: token.key,
   })

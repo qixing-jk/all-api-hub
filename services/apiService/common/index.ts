@@ -13,7 +13,6 @@ import {
   HealthCheckResult,
   LogResponseData,
   LogType,
-  OpenAIAuthParams,
   PaginatedTokenResponse,
   PaymentResponse,
   PricingResponse,
@@ -22,8 +21,6 @@ import {
   SiteStatusInfo,
   TodayIncomeData,
   TodayUsageData,
-  UpstreamModelItem,
-  UpstreamModelList,
   UserGroupInfo,
   UserInfo,
 } from "~/services/apiService/common/type"
@@ -967,46 +964,6 @@ export const fetchAccountAvailableModels = async ({
     console.error("获取模型列表失败:", error)
     throw error
   }
-}
-
-/**
- * Fetch upstream model metadata using an OpenAI-compatible API key.
- * @param params.baseUrl Site base URL.
- * @param params.apiKey API key used for upstream call.
- * @returns Full upstream model payload, including metadata per model.
- */
-export const fetchUpstreamModels = async ({
-  baseUrl,
-  apiKey,
-}: OpenAIAuthParams) => {
-  try {
-    return await fetchApiData<UpstreamModelList>({
-      baseUrl,
-      endpoint: "/v1/models",
-      token: apiKey,
-    })
-  } catch (error) {
-    console.error("获取上游模型列表失败:", error)
-    throw error
-  }
-}
-
-export const fetchUpstreamModelsNameList = async ({
-  baseUrl,
-  apiKey,
-}: OpenAIAuthParams) => {
-  /**
-   * Narrow helper that strips the upstream response down to only model IDs.
-   * Using a separate function keeps call sites simple when only the name list
-   * (instead of full metadata) is required.
-   * @param baseUrl Site base URL.
-   * @param apiKey API key for upstream call.
-   */
-  const upstreamModels = await fetchUpstreamModels({
-    baseUrl: baseUrl,
-    apiKey: apiKey,
-  })
-  return upstreamModels.map((item: UpstreamModelItem) => item.id)
 }
 
 /**

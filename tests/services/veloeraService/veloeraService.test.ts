@@ -30,12 +30,15 @@ const mockDeleteChannel = vi.fn()
 vi.mock("~/services/apiService", () => ({
   getApiService: vi.fn(() => ({
     fetchAccountAvailableModels: mockFetchAccountAvailableModels,
-    fetchUpstreamModelsNameList: mockFetchUpstreamModelsNameList,
     searchChannel: mockSearchChannel,
     createChannel: mockCreateChannel,
     updateChannel: mockUpdateChannel,
     deleteChannel: mockDeleteChannel,
   })),
+}))
+
+vi.mock("~/services/apiService/openai", () => ({
+  fetchUpstreamModelsNameList: mockFetchUpstreamModelsNameList,
 }))
 
 const mockGetPreferences = vi.fn()

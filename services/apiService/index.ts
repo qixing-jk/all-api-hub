@@ -10,6 +10,8 @@ import * as commonAPI from "./common"
 import * as oneHubAPI from "./oneHub"
 import * as veloeraAPI from "./veloera"
 
+export { fetchUpstreamModels, fetchUpstreamModelsNameList } from "./openai"
+
 // 映射表,只放需要覆盖的站点
 const siteOverrideMap = {
   [ONE_HUB]: oneHubAPI,

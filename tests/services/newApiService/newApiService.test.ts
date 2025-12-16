@@ -65,11 +65,21 @@ vi.mock("~/services/apiService/common", async () => {
   return {
     ...actual,
     fetchAccountAvailableModels: mockFetchAccountAvailableModels,
-    fetchUpstreamModelsNameList: mockFetchUpstreamModelsNameList,
     searchChannel: mockSearchChannel,
     createChannel: mockCreateChannel,
     updateChannel: mockUpdateChannel,
     deleteChannel: mockDeleteChannel,
+  }
+})
+
+vi.mock("~/services/apiService/openai", async () => {
+  const actual = await vi.importActual<
+    typeof import("~/services/apiService/openai")
+  >("~/services/apiService/openai")
+
+  return {
+    ...actual,
+    fetchUpstreamModelsNameList: mockFetchUpstreamModelsNameList,
   }
 })
 
