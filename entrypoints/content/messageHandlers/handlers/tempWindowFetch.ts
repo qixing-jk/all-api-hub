@@ -19,7 +19,7 @@ export function handlePerformTempWindowFetch(
   request: any,
   sendResponse: (res: any) => void,
 ) {
-  ;(async () => {
+  const perform = async () => {
     try {
       const {
         fetchUrl,
@@ -43,12 +43,9 @@ export function handlePerformTempWindowFetch(
       const normalizedOptions = normalizeFetchOptions(fetchOptions)
       normalizedOptions.credentials = "include"
 
-      if (!normalizedOptions.headers) {
-        normalizedOptions.headers = {}
-      }
-      ;(normalizedOptions.headers as Record<string, string>)[
-        EXTENSION_HEADER_NAME
-      ] = EXTENSION_HEADER_VALUE
+      const requestHeaders = new Headers(normalizedOptions.headers)
+      requestHeaders.set(EXTENSION_HEADER_NAME, EXTENSION_HEADER_VALUE)
+      normalizedOptions.headers = Object.fromEntries(requestHeaders.entries())
 
       const response = await fetch(fetchUrl, normalizedOptions)
 
@@ -103,7 +100,9 @@ export function handlePerformTempWindowFetch(
       }
       sendResponse({ success: false, error: getErrorMessage(error) })
     }
-  })()
+  }
+
+  void perform()
 
   return true
 }
