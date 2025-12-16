@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.29.0](https://github.com/qixing-jk/all-api-hub/compare/v2.28.0...v2.29.0) (2025-12-16)
+
+
+### Features
+
+* add Claude Code Router integration ([#260](https://github.com/qixing-jk/all-api-hub/issues/260)) ([9a681e2](https://github.com/qixing-jk/all-api-hub/commit/9a681e29184c1755606f1f2cd158516e4b4c3177))
+
+
+### Bug Fixes
+
+* **accountOperations:** ensure site cookie interception during auto-detect ([#257](https://github.com/qixing-jk/all-api-hub/issues/257)) ([45b3271](https://github.com/qixing-jk/all-api-hub/commit/45b327125e18c823d9eedb0317ea9515ae2af467))
+* **ui:** center empty state content in Firefox ([1e23cee](https://github.com/qixing-jk/all-api-hub/commit/1e23cee4af87456e7938930a67b7aa428f12ec17)), closes [#261](https://github.com/qixing-jk/all-api-hub/issues/261)
+* **ui:** migrate Switch components to custom implementation ([#263](https://github.com/qixing-jk/all-api-hub/issues/263)) ([5b2c607](https://github.com/qixing-jk/all-api-hub/commit/5b2c60761be0a89b1b3e4e660ecf1ef1b3d008c4))
+
 ## [2.28.0](https://github.com/qixing-jk/all-api-hub/compare/v2.27.0...v2.28.0) (2025-12-14)
 
 
