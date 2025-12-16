@@ -24,6 +24,26 @@ import {
 export function setupRuntimeMessageListeners() {
   // 处理来自 popup 的消息
   onRuntimeMessage((request, sender, sendResponse) => {
+    if (request.action === "cloudflareGuardLog") {
+      try {
+        console.log("[Background][CFGuardRelay]", {
+          event: request.event ?? null,
+          requestId: request?.details?.requestId ?? null,
+          details: request.details ?? null,
+          sender: {
+            tabId: sender?.tab?.id ?? null,
+            frameId: sender?.frameId ?? null,
+            url: sender?.url ?? null,
+          },
+        })
+      } catch {
+        // ignore logging errors
+      }
+
+      sendResponse({ success: true })
+      return true
+    }
+
     if (request.action === "openTempWindow") {
       void handleOpenTempWindow(request, sendResponse)
       return true // 保持异步响应通道

@@ -7,6 +7,47 @@ import {
 } from "~/utils/cookieHelper"
 import { getErrorMessage } from "~/utils/error"
 
+const CF_LOG_PREFIX = "[Content][CloudflareGuard]"
+
+/**
+ *
+ */
+function logCloudflareGuard(event: string, details?: Record<string, unknown>) {
+  try {
+    if (details && Object.keys(details).length > 0) {
+      console.log(`${CF_LOG_PREFIX} ${event}`, details)
+    } else {
+      console.log(`${CF_LOG_PREFIX} ${event}`)
+    }
+  } catch {
+    // ignore logging errors
+  }
+
+  try {
+    void browser.runtime
+      .sendMessage({
+        action: "cloudflareGuardLog",
+        event,
+        details: details ?? null,
+      })
+      .catch(() => {})
+  } catch {
+    // ignore relay errors
+  }
+}
+
+/**
+ *
+ */
+function sanitizeUrlForLog(url: string) {
+  try {
+    const parsed = new URL(url)
+    return `${parsed.origin}${parsed.pathname}`
+  } catch {
+    return url
+  }
+}
+
 /**
  * Registers content-script message handlers for fetching storage data,
  * checking guard status, relaying temp fetches, etc.
@@ -66,12 +107,37 @@ export function setupContentMessageHandlers() {
 
     if (request.action === "checkCloudflareGuard") {
       try {
-        const passed =
-          !document.title.includes("Just a moment") &&
-          !document.querySelector("#cf-content")
+        const title = String(document.title ?? "")
+        const isJustAMoment =
+          title.includes("Just a moment") || title.includes("请稍候")
+        const hasCfContent = Boolean(document.querySelector("#cf-content"))
+        const passed = !isJustAMoment && !hasCfContent
+
+        if (request.requestId) {
+          logCloudflareGuard("check", {
+            requestId: request.requestId,
+            origin: (() => {
+              try {
+                return window.location.origin
+              } catch {
+                return null
+              }
+            })(),
+            title,
+            isJustAMoment,
+            hasCfContent,
+            passed,
+          })
+        }
 
         sendResponse({ success: true, passed })
       } catch (error) {
+        if (request.requestId) {
+          logCloudflareGuard("checkError", {
+            requestId: request.requestId,
+            error: getErrorMessage(error),
+          })
+        }
         sendResponse({ success: false, error: getErrorMessage(error) })
       }
       return true
@@ -91,10 +157,23 @@ export function setupContentMessageHandlers() {
     if (request.action === "performTempWindowFetch") {
       ;(async () => {
         try {
-          const { fetchUrl, fetchOptions = {}, responseType = "json" } = request
+          const {
+            fetchUrl,
+            fetchOptions = {},
+            responseType = "json",
+            requestId,
+          } = request
 
           if (!fetchUrl) {
             throw new Error("Invalid fetch request")
+          }
+
+          if (requestId) {
+            logCloudflareGuard("tempFetchStart", {
+              requestId,
+              fetchUrl: sanitizeUrlForLog(String(fetchUrl)),
+              responseType,
+            })
           }
 
           const normalizedOptions = normalizeFetchOptions(fetchOptions)
@@ -139,7 +218,25 @@ export function setupContentMessageHandlers() {
             data,
             error: errorMessage,
           })
+
+          if (requestId) {
+            logCloudflareGuard("tempFetchDone", {
+              requestId,
+              fetchUrl: sanitizeUrlForLog(String(fetchUrl)),
+              ok: response.ok,
+              status: response.status,
+            })
+          }
         } catch (error) {
+          if (request.requestId) {
+            logCloudflareGuard("tempFetchError", {
+              requestId: request.requestId,
+              fetchUrl: request.fetchUrl
+                ? sanitizeUrlForLog(String(request.fetchUrl))
+                : null,
+              error: getErrorMessage(error),
+            })
+          }
           sendResponse({ success: false, error: getErrorMessage(error) })
         }
       })()
