@@ -21,10 +21,14 @@ vi.mock("~/contexts/UserPreferencesContext", async () => {
     typeof import("~/contexts/UserPreferencesContext")
   >("~/contexts/UserPreferencesContext")
 
-  return {
-    ...actual,
-    useUserPreferencesContext: () => mockedUseUserPreferencesContext(),
-  }
+  return new Proxy(actual, {
+    get(target, prop) {
+      if (prop === "useUserPreferencesContext") {
+        return () => mockedUseUserPreferencesContext()
+      }
+      return (target as any)[prop]
+    },
+  })
 })
 
 /**

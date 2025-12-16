@@ -21,7 +21,7 @@ vi.mock("react-hot-toast", () => ({
 }))
 
 const mockFetchAccountAvailableModels = vi.fn()
-const mockFetchUpstreamModelsNameList = vi.fn()
+const mockFetchOpenAICompatibleModelIds = vi.fn()
 const mockSearchChannel = vi.fn()
 const mockCreateChannel = vi.fn()
 const mockUpdateChannel = vi.fn()
@@ -37,8 +37,8 @@ vi.mock("~/services/apiService", () => ({
   })),
 }))
 
-vi.mock("~/services/apiService/openai", () => ({
-  fetchUpstreamModelsNameList: mockFetchUpstreamModelsNameList,
+vi.mock("~/services/apiService/openaiCompatible", () => ({
+  fetchOpenAICompatibleModelIds: mockFetchOpenAICompatibleModelIds,
 }))
 
 const mockGetPreferences = vi.fn()

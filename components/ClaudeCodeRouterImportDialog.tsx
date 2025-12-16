@@ -9,7 +9,7 @@ import {
   Modal,
   MultiSelect,
 } from "~/components/ui"
-import { fetchUpstreamModels } from "~/services/apiService"
+import { fetchOpenAICompatibleModels } from "~/services/apiService/openaiCompatible"
 import { importToClaudeCodeRouter } from "~/services/claudeCodeRouterService"
 import type { ApiToken, DisplaySiteData } from "~/types"
 import { showResultToast } from "~/utils/toastHelpers"
@@ -109,7 +109,7 @@ export function ClaudeCodeRouterImportDialog(
       void (async () => {
         try {
           setIsLoadingModels(true)
-          const models = await fetchUpstreamModels({
+          const models = await fetchOpenAICompatibleModels({
             baseUrl: upstreamBaseUrl,
             apiKey: token.key,
           })

@@ -5,7 +5,7 @@ import type {
 } from "~/services/apiService/common/type"
 import { fetchApiData } from "~/services/apiService/common/utils"
 
-export const fetchUpstreamModels = async ({
+export const fetchOpenAICompatibleModels = async ({
   baseUrl,
   apiKey,
 }: OpenAIAuthParams) => {
@@ -21,11 +21,11 @@ export const fetchUpstreamModels = async ({
   }
 }
 
-export const fetchUpstreamModelsNameList = async ({
+export const fetchOpenAICompatibleModelIds = async ({
   baseUrl,
   apiKey,
 }: OpenAIAuthParams) => {
-  const upstreamModels = await fetchUpstreamModels({
+  const upstreamModels = await fetchOpenAICompatibleModels({
     baseUrl: baseUrl,
     apiKey: apiKey,
   })
