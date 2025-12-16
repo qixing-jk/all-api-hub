@@ -19,6 +19,20 @@ export interface CheckinResult {
 }
 
 /**
+ * Check if the message indicates already checked in
+ * @param message - The message to check
+ * @returns true if already checked in
+ */
+const isAlreadyChecked = (message: string): boolean => {
+  const normalized = message.toLowerCase()
+  return (
+    normalized.includes("已签到") ||
+    normalized.includes("已经签到") ||
+    normalized.includes("already checked")
+  )
+}
+
+/**
  * Perform check-in for a Veloera account
  * @param account - The site account to check in
  * @returns Check-in result with status and message
@@ -46,10 +60,7 @@ async function checkinVeloera(account: SiteAccount): Promise<CheckinResult> {
     const normalizedMessage = responseMessage.toLowerCase()
 
     // Check if response.message indicates already checked in
-    if (
-      normalizedMessage.includes("已签到") ||
-      normalizedMessage.includes("already checked in")
-    ) {
+    if (isAlreadyChecked(normalizedMessage)) {
       return {
         status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
         rawMessage: responseMessage || undefined,
@@ -85,10 +96,7 @@ async function checkinVeloera(account: SiteAccount): Promise<CheckinResult> {
     const normalizedErrorMessage = errorMessage.toLowerCase()
 
     // Check if already checked in based on error message
-    if (
-      normalizedErrorMessage.includes("已签到") ||
-      normalizedErrorMessage.includes("already checked in")
-    ) {
+    if (isAlreadyChecked(normalizedErrorMessage)) {
       return {
         status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
         rawMessage: errorMessage,

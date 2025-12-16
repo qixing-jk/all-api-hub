@@ -23,6 +23,11 @@ export type AnyrouterCheckInParams = {
   }
 }
 
+/**
+ * Check if the message indicates already checked in
+ * @param message - The message to check
+ * @returns true if already checked in
+ */
 const isAlreadyChecked = (message: string): boolean => {
   const normalized = message.toLowerCase()
   return (
