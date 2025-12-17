@@ -55,7 +55,7 @@ describe("anyrouterProvider", () => {
   })
 
   describe("checkIn", () => {
-    it("returns success on successful check-in (ret=1)", async () => {
+    it("returns success on successful check-in (message includes 签到成功)", async () => {
       const { fetchApi } = await import("~/services/apiService/common/utils")
       const mockedFetchApi = vi.mocked(
         fetchApi as unknown as (...args: any[]) => Promise<any>,
@@ -64,11 +64,27 @@ describe("anyrouterProvider", () => {
         code: 1,
         ret: 1,
         success: true,
-        message: "OK",
+        message: "签到成功，获得 $25 额度",
       })
 
       const result = await anyrouterProvider.checkIn(mockAccount)
       expect(result.status).toBe("success")
+    })
+
+    it("returns already_checked when response is success and message is empty", async () => {
+      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const mockedFetchApi = vi.mocked(
+        fetchApi as unknown as (...args: any[]) => Promise<any>,
+      )
+      mockedFetchApi.mockResolvedValueOnce({
+        code: 1,
+        ret: 0,
+        success: true,
+        message: "",
+      })
+
+      const result = await anyrouterProvider.checkIn(mockAccount)
+      expect(result.status).toBe("already_checked")
     })
 
     it("returns failed when response is not success (even if message indicates already checked)", async () => {

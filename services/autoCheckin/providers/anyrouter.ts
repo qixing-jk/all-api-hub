@@ -25,6 +25,9 @@ export type AnyrouterCheckInParams = {
 
 /**
  * Check if the message indicates already checked in
+ * Actual returned data:
+ *  - when check in success: {"message":"签到成功，获得 $25 额度","success":true}
+ *  - when already checked: {"message":"","success":true}
  * @param message - The message to check
  * @returns true if already checked in
  */
@@ -82,9 +85,8 @@ const checkinAnyRouter = async (
     }
 
     if (
-      response.ret === 1 ||
-      response.code === 0 ||
-      normalizedResponseMessage.includes("success")
+      normalizedResponseMessage.includes("success") ||
+      normalizedResponseMessage.includes("签到成功")
     ) {
       return {
         status: CHECKIN_RESULT_STATUS.SUCCESS,
