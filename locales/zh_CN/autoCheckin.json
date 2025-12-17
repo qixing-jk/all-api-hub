@@ -119,6 +119,9 @@
     "endpointNotSupported": "不支持该签到接口",
     "unknownError": "发生未知错误"
   },
+  "providerWong": {
+    "checkinDisabled": "该站点未开启签到功能"
+  },
   "messages": {
     "error": {
       "loadFailed": "获取自动签到设置失败：{{error}}",

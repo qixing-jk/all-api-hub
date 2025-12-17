@@ -4,6 +4,7 @@ import {
   NEW_API,
   ONE_HUB,
   VELOERA,
+  WONG_GONGYI,
   type SiteType,
 } from "~/constants/siteType"
 
@@ -11,6 +12,7 @@ import * as anyrouterAPI from "./anyrouter"
 import * as commonAPI from "./common"
 import * as oneHubAPI from "./oneHub"
 import * as veloeraAPI from "./veloera"
+import * as wongAPI from "./wong"
 
 // 映射表,只放需要覆盖的站点
 const siteOverrideMap = {
@@ -19,6 +21,7 @@ const siteOverrideMap = {
   [VELOERA]: veloeraAPI,
   [ANYROUTER]: anyrouterAPI,
   [NEW_API]: commonAPI,
+  [WONG_GONGYI]: wongAPI,
 } as const
 
 // 添加类型定义

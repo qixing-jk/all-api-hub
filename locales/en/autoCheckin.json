@@ -119,6 +119,9 @@
     "endpointNotSupported": "Check-in endpoint not supported",
     "unknownError": "Unknown error occurred"
   },
+  "providerWong": {
+    "checkinDisabled": "Check-in feature is disabled"
+  },
   "messages": {
     "error": {
       "loadFailed": "Failed to load auto check-in settings: {{error}}",

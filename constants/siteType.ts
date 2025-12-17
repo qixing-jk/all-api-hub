@@ -11,6 +11,7 @@ export const VO_API = "VoAPI"
 export const SUPER_API = "Super-API"
 export const RIX_API = "Rix-Api"
 export const NEO_API = "neo-Api"
+export const WONG_GONGYI = "wong-gongyi"
 export const UNKNOWN_SITE = "unknown"
 
 export type ManagedSiteType = typeof NEW_API | typeof VELOERA
@@ -29,6 +30,10 @@ export const SITE_TITLE_RULES = [
   { name: SUPER_API, regex: makeTitleRegex(SUPER_API) },
   { name: RIX_API, regex: makeTitleRegex(RIX_API) },
   { name: NEO_API, regex: makeTitleRegex(NEO_API) },
+  /**
+   * WONG公益站 uses localized titles; match the Chinese keyword with optional spacing.
+   */
+  { name: WONG_GONGYI, regex: /wong\s*公益站/i },
   { name: UNKNOWN_SITE, regex: makeTitleRegex(UNKNOWN_SITE) },
 ]
 
@@ -61,6 +66,7 @@ export const SITE_API_ROUTER: Record<string, any> = {
   [DONE_HUB]: { usagePath: "/panel/log", redeemPath: "/panel/topup" },
   [RIX_API]: { usagePath: "/log", checkInPath: "/panel", redeemPath: "/topup" },
   [ANYROUTER]: { checkInPath: "/console/topup" },
+  [WONG_GONGYI]: { checkInPath: "/console/topup" },
   Default: {
     usagePath: DEFAULT_USAGE_PATH,
     checkInPath: DEFAULT_CHECKIN_PATH,

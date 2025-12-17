@@ -5,6 +5,20 @@ import { getApiService } from "~/services/apiService"
 import * as commonAPI from "~/services/apiService/common"
 import * as oneHubAPI from "~/services/apiService/oneHub"
 
+vi.mock("~/services/apiService/common", async () => {
+  const actual = await vi.importActual<
+    typeof import("~/services/apiService/common")
+  >("~/services/apiService/common")
+  return { ...actual }
+})
+
+vi.mock("~/services/apiService", async () => {
+  const actual = await vi.importActual<typeof import("~/services/apiService")>(
+    "~/services/apiService",
+  )
+  return { ...actual }
+})
+
 describe("apiService index wrapper", () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -15,10 +29,13 @@ describe("apiService index wrapper", () => {
       .spyOn(commonAPI, "fetchUserInfo")
       .mockResolvedValue({} as any)
 
-    await (getApiService(undefined).fetchUserInfo as any)({ foo: "bar" })
+    await (getApiService(undefined).fetchUserInfo as any)(
+      "https://example.com",
+      1,
+    )
 
     expect(spy).toHaveBeenCalledTimes(1)
-    expect(spy).toHaveBeenCalledWith({ foo: "bar" })
+    expect(spy).toHaveBeenCalledWith("https://example.com", 1)
   })
 
   it("should use override module when selecting a site-scoped api instance", async () => {
@@ -48,9 +65,12 @@ describe("apiService index wrapper", () => {
       .spyOn(commonAPI, "fetchUserInfo")
       .mockResolvedValue({} as any)
 
-    await (getApiService(ONE_HUB).fetchUserInfo as any)({ foo: "bar" })
+    await (getApiService(ONE_HUB).fetchUserInfo as any)(
+      "https://example.com",
+      1,
+    )
 
     expect(spy).toHaveBeenCalledTimes(1)
-    expect(spy).toHaveBeenCalledWith({ foo: "bar" })
+    expect(spy).toHaveBeenCalledWith("https://example.com", 1)
   })
 })

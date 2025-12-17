@@ -1,10 +1,18 @@
-import { ANYROUTER, VELOERA } from "~/constants/siteType"
+import { ANYROUTER, VELOERA, WONG_GONGYI } from "~/constants/siteType"
 import type { SiteAccount } from "~/types"
 import type { CheckinResultStatus } from "~/types/autoCheckin"
 
 import { AnyrouterCheckInParams, anyrouterProvider } from "./anyrouter"
 import { veloeraProvider } from "./veloera"
+import { wongGongyiProvider } from "./wong"
 
+/**
+ * Auto check-in provider contract.
+ *
+ * Providers are selected by `SiteAccount.site_type` and should:
+ * - Quickly decide eligibility via `canCheckIn`.
+ * - Perform the check-in flow via `checkIn` and return a normalized result.
+ */
 export interface AutoCheckinProvider {
   canCheckIn(account: SiteAccount): boolean
   checkIn(account: SiteAccount | AnyrouterCheckInParams): Promise<{
@@ -19,6 +27,7 @@ export interface AutoCheckinProvider {
 const providers: Record<string, AutoCheckinProvider> = {
   [ANYROUTER]: anyrouterProvider,
   [VELOERA]: veloeraProvider,
+  [WONG_GONGYI]: wongGongyiProvider,
 }
 
 /**
