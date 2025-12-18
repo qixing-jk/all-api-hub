@@ -111,7 +111,11 @@ export async function autoDetectAccount(
 
     const { username: detectedUsername, access_token } = tokenInfo
 
-    if (!detectedUsername || !access_token) {
+    // 验证获取到的用户信息是否完整
+    if (
+      !detectedUsername ||
+      (authType === AuthTypeEnum.AccessToken && !access_token)
+    ) {
       const detailedError = analyzeAutoDetectError(
         t("messages:operations.detection.getInfoFailed"),
       )

@@ -395,7 +395,7 @@ export const fetchUserInfo = async (baseUrl: string, userId?: number) => {
   return {
     id: userData.id,
     username: userData.username,
-    access_token: userData.access_token || null,
+    access_token: userData.access_token || "",
     user: userData,
   }
 }
