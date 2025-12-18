@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.30.0](https://github.com/qixing-jk/all-api-hub/compare/v2.29.0...v2.30.0) (2025-12-18)
+
+
+### Features
+
+* **api:** add wong check-in support ([#270](https://github.com/qixing-jk/all-api-hub/issues/270)) ([72bfd68](https://github.com/qixing-jk/all-api-hub/commit/72bfd689af545e0af8a76c6c017d13d4947dbfc4))
+* **auto-checkin:** add AnyRouter check-in support ([#269](https://github.com/qixing-jk/all-api-hub/issues/269)) ([16ed3e6](https://github.com/qixing-jk/all-api-hub/commit/16ed3e6a650b50eb144ad5add64725c6a5e5d2c4))
+* **content:** implement Cloudflare better challenge detection ([#264](https://github.com/qixing-jk/all-api-hub/issues/264)) ([3def779](https://github.com/qixing-jk/all-api-hub/commit/3def7793fe0da2d5303d20824898eb01f21cacbe))
+* **WebDAV:** Encrypt backups, add decrypt-retry modal, and preserve WebDAV config on WebDAV restore ([#267](https://github.com/qixing-jk/all-api-hub/issues/267)) ([c6852ba](https://github.com/qixing-jk/all-api-hub/commit/c6852ba6ac28c331b3f59a0b8cd5e29b1d19de12))
+
 ## [2.29.0](https://github.com/qixing-jk/all-api-hub/compare/v2.28.0...v2.29.0) (2025-12-16)
 
 
