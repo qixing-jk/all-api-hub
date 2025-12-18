@@ -185,6 +185,10 @@
         "title": "Cookies",
         "description": "Allows All API Hub to read the necessary cookies for your connected accounts so authentication headers can be added when required."
       },
+      "declarativeNetRequestWithHostAccess": {
+        "title": "Declarative Net Request",
+        "description": "Allow applying request header rules by pressing Tab during the temporary window shield, attaching the correct cookies for different accounts, and avoiding data anomalies under multiple accounts."
+      },
       "webRequest": {
         "title": "Web Request",
         "description": "Lets the extension observe outgoing requests only when temp-window bypass or auto-refresh needs to add required headers."

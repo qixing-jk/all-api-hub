@@ -41,7 +41,11 @@ export function handlePerformTempWindowFetch(
       }
 
       const normalizedOptions = normalizeFetchOptions(fetchOptions)
-      normalizedOptions.credentials = "include"
+      // Respect caller-provided credentials so token-auth flows can omit cookies.
+      // Cookie-auth flows should explicitly set credentials="include" when needed.
+      if (!normalizedOptions.credentials) {
+        normalizedOptions.credentials = "include"
+      }
 
       const requestHeaders = new Headers(normalizedOptions.headers)
       requestHeaders.set(EXTENSION_HEADER_NAME, EXTENSION_HEADER_VALUE)

@@ -9,7 +9,13 @@ import {
   onWindowRemoved,
   removeTabOrWindow,
 } from "~/utils/browserApi"
+import { getCookieHeaderForUrl } from "~/utils/cookieHelper"
+import {
+  applyTempWindowCookieRule,
+  removeTempWindowCookieRule,
+} from "~/utils/dnrCookieInjector"
 import { getErrorMessage } from "~/utils/error"
+import { isProtectionBypassFirefoxEnv } from "~/utils/protectionBypass"
 import { sanitizeUrlForLog } from "~/utils/sanitizeUrlForLog"
 
 const TEMP_CONTEXT_IDLE_TIMEOUT = 5000
@@ -329,20 +335,71 @@ export async function handleTempWindowFetch(
   try {
     const context = await acquireTempContext(originUrl, tempRequestId)
     const { tabId } = context
-    const response = await browser.tabs.sendMessage(tabId, {
-      action: "performTempWindowFetch",
-      requestId: tempRequestId,
-      fetchUrl,
-      fetchOptions: fetchOptions ?? {},
-      responseType,
-    })
-    await releaseTempContext(tempRequestId)
+    let ruleId: number | null = null
+    let released = false
+    const rawOptions = (fetchOptions ?? {}) as Record<string, any>
+    let effectiveFetchOptions: Record<string, any> = rawOptions
 
-    if (!response) {
-      throw new Error("No response from temp window fetch")
+    try {
+      // Chromium-based browsers: for token-auth (credentials=omit) we still need WAF cookies,
+      // but MUST exclude session cookies to prevent cross-account contamination (issue #204).
+      if (
+        !isProtectionBypassFirefoxEnv() &&
+        rawOptions.credentials === "omit"
+      ) {
+        const cookieHeader = await getCookieHeaderForUrl(fetchUrl, {
+          includeSession: false,
+        })
+
+        if (cookieHeader) {
+          ruleId = await applyTempWindowCookieRule({
+            tabId,
+            url: fetchUrl,
+            cookieHeader,
+          })
+
+          if (ruleId) {
+            effectiveFetchOptions = {
+              ...rawOptions,
+              credentials: "include",
+            }
+          }
+        }
+      }
+
+      const response = await browser.tabs.sendMessage(tabId, {
+        action: "performTempWindowFetch",
+        requestId: tempRequestId,
+        fetchUrl,
+        fetchOptions: effectiveFetchOptions,
+        responseType,
+      })
+
+      if (!response) {
+        throw new Error("No response from temp window fetch")
+      }
+
+      sendResponse(response)
+    } catch (error) {
+      logTempWindow("tempWindowFetchError", {
+        requestId: tempRequestId,
+        error: getErrorMessage(error),
+      })
+      await releaseTempContext(tempRequestId, {
+        forceClose: true,
+        reason: "tempWindowFetchError",
+      })
+      released = true
+      sendResponse({ success: false, error: getErrorMessage(error) })
+    } finally {
+      if (ruleId) {
+        await removeTempWindowCookieRule(ruleId)
+      }
+
+      if (!released) {
+        await releaseTempContext(tempRequestId)
+      }
     }
-
-    sendResponse(response)
   } catch (error) {
     logTempWindow("tempWindowFetchError", {
       requestId: tempRequestId,

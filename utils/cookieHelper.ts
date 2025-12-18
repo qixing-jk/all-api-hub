@@ -64,7 +64,6 @@ export async function getCookieHeaderForUrl(
     // 读取 cookies
     const cookies = await browser.cookies.getAll({
       url,
-      // Firefox 支持分区 cookie
       partitionKey: {},
     })
 

@@ -1,4 +1,4 @@
-import { Cookie, Network, ShieldAlert } from "lucide-react"
+import { Cookie, Network, ShieldAlert, SlidersHorizontal } from "lucide-react"
 import type { ReactNode } from "react"
 
 import { CardItem } from "~/components/ui/CardItem"
@@ -9,6 +9,9 @@ export const permissionIconMap: Partial<
   Record<ManifestOptionalPermissions, ReactNode>
 > = {
   cookies: <Cookie className="h-5 w-5 text-amber-500" />,
+  declarativeNetRequestWithHostAccess: (
+    <SlidersHorizontal className="h-5 w-5 text-emerald-500" />
+  ),
   webRequest: <Network className="h-5 w-5 text-blue-500" />,
   webRequestBlocking: <ShieldAlert className="h-5 w-5 text-purple-500" />,
 }

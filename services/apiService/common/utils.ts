@@ -291,7 +291,9 @@ const _fetchApi = async <T>(
       authOptions = await createTokenAuthRequest(userId, token)
       break
     case AuthTypeEnum.None:
-      authOptions = {}
+      authOptions = {
+        credentials: "omit",
+      }
       break
     default:
       if (token) {

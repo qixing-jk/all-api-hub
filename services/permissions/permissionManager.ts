@@ -11,7 +11,16 @@ import {
  * Aliases to manifest permission types for clearer signatures.
  */
 export type ManifestPermissions = browser._manifest.Permission
-export type ManifestOptionalPermissions = browser._manifest.OptionalPermission
+
+export const OPTIONAL_PERMISSION_IDS = {
+  Cookies: "cookies",
+  declarativeNetRequestWithHostAccess: "declarativeNetRequestWithHostAccess",
+  WebRequest: "webRequest",
+  WebRequestBlocking: "webRequestBlocking",
+} as const
+
+export type ManifestOptionalPermissions =
+  (typeof OPTIONAL_PERMISSION_IDS)[keyof typeof OPTIONAL_PERMISSION_IDS]
 
 /**
  * Read optional permissions declared in manifest.
@@ -31,9 +40,9 @@ export const OPTIONAL_PERMISSIONS: ManifestOptionalPermissions[] =
  * Optional permissions required for cookie interception flows.
  */
 export const COOKIE_INTERCEPTOR_PERMISSIONS: ManifestOptionalPermissions[] = [
-  "cookies",
-  "webRequest",
-  "webRequestBlocking",
+  OPTIONAL_PERMISSION_IDS.Cookies,
+  OPTIONAL_PERMISSION_IDS.WebRequest,
+  OPTIONAL_PERMISSION_IDS.WebRequestBlocking,
 ]
 
 /**
@@ -65,7 +74,9 @@ export const OPTIONAL_PERMISSION_DEFINITIONS: PermissionDefinition[] =
 export async function hasPermission(
   id: ManifestOptionalPermissions,
 ): Promise<boolean> {
-  return await containsPermissions({ permissions: [id] })
+  return await containsPermissions({
+    permissions: [id as unknown as browser._manifest.OptionalPermission],
+  })
 }
 
 /**
@@ -75,7 +86,9 @@ export async function hasPermissions(
   ids: ManifestOptionalPermissions[],
 ): Promise<boolean> {
   if (ids.length === 0) return true
-  return await containsPermissions({ permissions: ids })
+  return await containsPermissions({
+    permissions: ids as unknown as browser._manifest.OptionalPermission[],
+  })
 }
 
 /**
@@ -84,7 +97,9 @@ export async function hasPermissions(
 export async function requestPermission(
   id: ManifestOptionalPermissions,
 ): Promise<boolean> {
-  return await requestPermissions({ permissions: [id] })
+  return await requestPermissions({
+    permissions: [id as unknown as browser._manifest.OptionalPermission],
+  })
 }
 
 /**
@@ -93,7 +108,9 @@ export async function requestPermission(
 export async function removePermission(
   id: ManifestOptionalPermissions,
 ): Promise<boolean> {
-  return await removePermissions({ permissions: [id] })
+  return await removePermissions({
+    permissions: [id as unknown as browser._manifest.OptionalPermission],
+  })
 }
 
 /**
@@ -114,7 +131,9 @@ export async function ensurePermissions(
     return true
   }
 
-  return await requestPermissions({ permissions: missing })
+  return await requestPermissions({
+    permissions: missing as unknown as browser._manifest.OptionalPermission[],
+  })
 }
 
 /**

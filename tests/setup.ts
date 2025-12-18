@@ -62,6 +62,17 @@ if (!globalAny.chrome) {
   globalAny.chrome = fakeBrowser
 }
 
+if (!globalAny.browser.runtime) {
+  globalAny.browser.runtime = {}
+}
+
+// fakeBrowser ships with a getManifest stub that throws "not implemented".
+// Override it unconditionally so modules can safely read optional permissions.
+globalAny.browser.runtime.getManifest = vi.fn(() => ({
+  manifest_version: 3,
+  optional_permissions: ["cookies", "declarativeNetRequestWithHostAccess"],
+}))
+
 globalAny.IntersectionObserver = class IntersectionObserver {
   disconnect() {}
   observe() {}

@@ -19,7 +19,12 @@ export default defineConfig({
       ? {
           optional_permissions: ["cookies", "webRequest", "webRequestBlocking"],
         }
-      : {}),
+      : {
+          optional_permissions: [
+            "cookies",
+            "declarativeNetRequestWithHostAccess",
+          ],
+        }),
     host_permissions: ["https://*/*"],
     browser_specific_settings: {
       gecko: {

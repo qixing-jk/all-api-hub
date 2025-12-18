@@ -185,6 +185,10 @@
         "title": "Cookies",
         "description": "允许读取必要的 Cookie，用于在需要时自动附加认证信息。"
       },
+      "declarativeNetRequestWithHostAccess": {
+        "title": "Declarative Net Request",
+        "description": "允许在临时窗口过盾期间按 Tab 应用请求头规则，为不同账号附加正确的 Cookie，避免多账号下的数据异常问题。"
+      },
       "webRequest": {
         "title": "网络请求",
         "description": "仅在临时窗口过盾或自动刷新需要时，监听请求并追加必要的请求头。"
