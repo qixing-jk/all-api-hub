@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.31.0](https://github.com/qixing-jk/all-api-hub/compare/v2.30.0...v2.31.0) (2025-12-18)
+
+
+### Features
+
+* add declarativeNetRequestWithHostAccess for temp window cookie isolation ([#272](https://github.com/qixing-jk/all-api-hub/issues/272)) ([d73409a](https://github.com/qixing-jk/all-api-hub/commit/d73409acc229244561d70e576bd8f3f76320d940))
+* **auto-checkin:** add quick run check-in functionality from popup ([#276](https://github.com/qixing-jk/all-api-hub/issues/276)) ([169aaf6](https://github.com/qixing-jk/all-api-hub/commit/169aaf661c905b9f1a09c57189a918bd50b4a9bb))
+* **preferences:** add URL whitelist for redemption assist ([#274](https://github.com/qixing-jk/all-api-hub/issues/274)) ([dfbb754](https://github.com/qixing-jk/all-api-hub/commit/dfbb75416987f8b99b741b267628386c6da9339e))
+
 ## [2.30.0](https://github.com/qixing-jk/all-api-hub/compare/v2.29.0...v2.30.0) (2025-12-18)
 
 
