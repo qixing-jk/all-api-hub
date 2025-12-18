@@ -82,9 +82,24 @@ describe("accountOperations", () => {
           userId: "123",
           authType: AuthTypeEnum.Cookie,
           accessToken: "",
+          cookieAuthSessionCookie: "session=abc",
           exchangeRate: "7.0",
         }),
       ).toBe(true)
+    })
+
+    it("rejects missing session cookie for Cookie auth", () => {
+      expect(
+        isValidAccount({
+          siteName: "Test",
+          username: "user",
+          userId: "123",
+          authType: AuthTypeEnum.Cookie,
+          accessToken: "",
+          cookieAuthSessionCookie: "",
+          exchangeRate: "7.0",
+        }),
+      ).toBe(false)
     })
 
     it("rejects empty token for AccessToken auth", () => {

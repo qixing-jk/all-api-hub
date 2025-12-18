@@ -26,7 +26,7 @@
     "useCurrent": "Use Current Site",
     "alreadyAdded": "Current site already added",
     "editNow": "Edit Now",
-    "cookieWarning": "Cookie authentication uses your current login account, cannot be used for multiple accounts on the same site, do not use unless necessary",
+    "cookieWarning": "Cookie authentication uses a per-account Cookie header (session cookies). Paste each account's session Cookie to enable multiple accounts on the same site.",
     "unknown": "Unable to get",
     "authMethodPlaceholder": "Authentication method",
     "authType": {
@@ -52,6 +52,8 @@
     "userId": "User ID",
     "userIdNumber": "User ID (number)",
     "accessToken": "Access Token",
+    "cookieAuthSessionCookie": "Session Cookie (Cookie Auth)",
+    "cookieAuthSessionCookiePlaceholder": "Paste Cookie header value (e.g. session=...; other=...)",
     "toggleAccessTokenVisibility": "Toggle Access Token Visibility",
     "exchangeRate": "Recharge Amount Ratio (CNY/USD)",
     "exchangeRatePlaceholder": "Please enter exchange rate",

@@ -11,7 +11,10 @@ import {
   onWindowRemoved,
   removeTabOrWindow,
 } from "~/utils/browserApi"
-import { getCookieHeaderForUrl } from "~/utils/cookieHelper"
+import {
+  COOKIE_SESSION_OVERRIDE_HEADER_NAME,
+  getCookieHeaderForUrl,
+} from "~/utils/cookieHelper"
 import { mergeCookieHeaders } from "~/utils/cookieString"
 import {
   applyTempWindowCookieRule,
@@ -417,7 +420,7 @@ export async function handleTempWindowFetch(
             // Firefox: pass session cookie bundle through a private header.
             // The webRequest interceptor will consume and strip it.
             const headers = new Headers(rawOptions.headers ?? {})
-            headers.set("All-API-Hub-Session-Cookie", sessionCookie)
+            headers.set(COOKIE_SESSION_OVERRIDE_HEADER_NAME, sessionCookie)
             effectiveFetchOptions = {
               ...rawOptions,
               credentials: rawOptions.credentials ?? "include",

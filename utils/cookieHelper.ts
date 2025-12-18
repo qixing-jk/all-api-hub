@@ -64,10 +64,16 @@ export async function getCookieHeaderForUrl(
 
   try {
     // 读取 cookies
-    const cookies = await browser.cookies.getAll({
-      url,
-      partitionKey: {},
-    })
+    const cookies = await browser.cookies.getAll(
+      isProtectionBypassFirefoxEnv()
+        ? {
+            url,
+            partitionKey: {},
+          }
+        : {
+            url,
+          },
+    )
 
     // 过滤并格式化
     const validCookies = cookies.filter((cookie) => {
@@ -163,17 +169,19 @@ export async function handleWebRequest(
     includeSession: includeSessionCookie,
   })
 
+  const sessionCookieOverrideValue =
+    typeof sessionCookieOverride === "string" ? sessionCookieOverride : ""
+
   // Multi-account cookie auth (Firefox): when a session cookie override is provided,
   // merge it with WAF cookies from the cookie jar (excluding ambient session cookies).
-  if (
-    includeSessionCookie &&
-    typeof sessionCookieOverride === "string" &&
-    sessionCookieOverride.trim().length > 0
-  ) {
+  if (includeSessionCookie && sessionCookieOverrideValue.trim().length > 0) {
     const wafCookieHeader = await getCookieHeaderForUrl(details.url, {
       includeSession: false,
     })
-    cookieHeader = mergeCookieHeaders(wafCookieHeader, sessionCookieOverride)
+    cookieHeader = mergeCookieHeaders(
+      wafCookieHeader,
+      sessionCookieOverrideValue,
+    )
   }
 
   if (!cookieHeader) {

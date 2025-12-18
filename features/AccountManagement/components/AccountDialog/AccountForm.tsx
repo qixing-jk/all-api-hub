@@ -32,6 +32,7 @@ interface AccountFormProps {
   username: string
   userId: string
   accessToken: string
+  cookieAuthSessionCookie: string
   exchangeRate: string
   showAccessToken: boolean
   notes: string
@@ -40,6 +41,7 @@ interface AccountFormProps {
   onUsernameChange: (value: string) => void
   onUserIdChange: (value: string) => void
   onAccessTokenChange: (value: string) => void
+  onCookieAuthSessionCookieChange: (value: string) => void
   onExchangeRateChange: (value: string) => void
   onToggleShowAccessToken: () => void
   onNotesChange: (value: string) => void
@@ -60,6 +62,7 @@ interface AccountFormProps {
  * @param props.username Account username.
  * @param props.userId Numeric user id string.
  * @param props.accessToken Access token string for auth.
+ * @param props.cookieAuthSessionCookie Cookie-auth session cookie header value.
  * @param props.exchangeRate Top-up exchange rate value.
  * @param props.showAccessToken Whether the token input is visible.
  * @param props.notes User-provided notes.
@@ -68,6 +71,7 @@ interface AccountFormProps {
  * @param props.onUsernameChange Handler to update username.
  * @param props.onUserIdChange Handler to update user id.
  * @param props.onAccessTokenChange Handler to update access token.
+ * @param props.onCookieAuthSessionCookieChange Handler to update cookie-auth session cookie header.
  * @param props.onExchangeRateChange Handler to update exchange rate.
  * @param props.onToggleShowAccessToken Toggles token visibility.
  * @param props.onNotesChange Handler to update notes.
@@ -85,6 +89,7 @@ export default function AccountForm({
   username,
   userId,
   accessToken,
+  cookieAuthSessionCookie,
   exchangeRate,
   showAccessToken,
   notes,
@@ -93,6 +98,7 @@ export default function AccountForm({
   onUsernameChange,
   onUserIdChange,
   onAccessTokenChange,
+  onCookieAuthSessionCookieChange,
   onExchangeRateChange,
   onToggleShowAccessToken,
   onNotesChange,
@@ -203,6 +209,17 @@ export default function AccountForm({
               </IconButton>
             }
             required
+          />
+        </FormField>
+      )}
+
+      {authType === AuthTypeEnum.Cookie && (
+        <FormField label={t("form.cookieAuthSessionCookie")} required>
+          <Textarea
+            value={cookieAuthSessionCookie}
+            onChange={(e) => onCookieAuthSessionCookieChange(e.target.value)}
+            placeholder={t("form.cookieAuthSessionCookiePlaceholder")}
+            className="min-h-[96px]"
           />
         </FormField>
       )}

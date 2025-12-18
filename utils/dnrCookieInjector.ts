@@ -1,5 +1,6 @@
 import {
   COOKIE_AUTH_HEADER_NAME,
+  COOKIE_SESSION_OVERRIDE_HEADER_NAME,
   EXTENSION_HEADER_NAME,
 } from "~/utils/cookieHelper"
 
@@ -56,6 +57,7 @@ export function buildTempWindowCookieRule(params: TempWindowCookieRuleParams) {
       requestHeaders: [
         { header: EXTENSION_HEADER_NAME, operation: "remove" },
         { header: COOKIE_AUTH_HEADER_NAME, operation: "remove" },
+        { header: COOKIE_SESSION_OVERRIDE_HEADER_NAME, operation: "remove" },
         { header: "Cookie", operation: "set", value: params.cookieHeader },
       ],
     },

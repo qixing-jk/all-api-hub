@@ -126,12 +126,16 @@ export default function AccountDialog({
               username={state.username}
               userId={state.userId}
               accessToken={state.accessToken}
+              cookieAuthSessionCookie={state.cookieAuthSessionCookie}
               exchangeRate={state.exchangeRate}
               showAccessToken={state.showAccessToken}
               onSiteNameChange={setters.setSiteName}
               onUsernameChange={setters.setUsername}
               onUserIdChange={setters.setUserId}
               onAccessTokenChange={setters.setAccessToken}
+              onCookieAuthSessionCookieChange={
+                setters.setCookieAuthSessionCookie
+              }
               onExchangeRateChange={setters.setExchangeRate}
               onToggleShowAccessToken={() =>
                 setters.setShowAccessToken(!state.showAccessToken)

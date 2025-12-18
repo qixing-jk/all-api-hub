@@ -167,6 +167,7 @@ export async function autoDetectAccount(
  * @param params.userId 用户 ID
  * @param params.authType 认证类型
  * @param params.accessToken 访问令牌
+ * @param params.cookieAuthSessionCookie Cookie 认证所需的会话 Cookie（Header 值）
  * @param params.exchangeRate 汇率配置
  * @returns 是否满足最基本的账号信息要求
  */
@@ -176,6 +177,7 @@ export function isValidAccount({
   userId,
   authType,
   accessToken,
+  cookieAuthSessionCookie,
   exchangeRate,
 }: {
   siteName: string
@@ -183,6 +185,7 @@ export function isValidAccount({
   userId: string
   authType: AuthTypeEnum
   accessToken: string
+  cookieAuthSessionCookie?: string
   exchangeRate: string
 }) {
   return (
@@ -190,7 +193,8 @@ export function isValidAccount({
     !!username.trim() &&
     !!userId.trim() &&
     isValidExchangeRate(exchangeRate) &&
-    (authType !== AuthTypeEnum.AccessToken || !!accessToken.trim())
+    (authType !== AuthTypeEnum.AccessToken || !!accessToken.trim()) &&
+    (authType !== AuthTypeEnum.Cookie || !!cookieAuthSessionCookie?.trim())
   )
 }
 
@@ -251,6 +255,7 @@ export async function validateAndSaveAccount(
   checkInConfig: CheckInConfig,
   siteType: string,
   authType: AuthTypeEnum,
+  cookieAuthSessionCookie: string,
 ): Promise<AccountSaveResponse> {
   // 表单验证
   if (
@@ -260,6 +265,7 @@ export async function validateAndSaveAccount(
       userId,
       authType,
       accessToken,
+      cookieAuthSessionCookie,
       exchangeRate,
     })
   ) {
@@ -286,6 +292,9 @@ export async function validateAndSaveAccount(
       accessToken.trim(),
       checkInConfig,
       authType,
+      authType === AuthTypeEnum.Cookie
+        ? { cookieAuthSessionCookie: cookieAuthSessionCookie.trim() }
+        : undefined,
     )
 
     const normalizedTags = normalizeTagsInput(tags)
@@ -296,6 +305,12 @@ export async function validateAndSaveAccount(
       health: { status: SiteHealthStatus.Healthy }, // 成功获取数据说明状态正常
       site_type: siteType,
       authType: authType,
+      cookieAuth:
+        authType === AuthTypeEnum.Cookie
+          ? {
+              sessionCookie: cookieAuthSessionCookie.trim(),
+            }
+          : undefined,
       exchange_rate:
         parseFloat(exchangeRate) || UI_CONSTANTS.EXCHANGE_RATE.DEFAULT, // 使用用户输入的汇率
       notes: notes || "",
@@ -342,6 +357,12 @@ export async function validateAndSaveAccount(
       site_url: url.trim(),
       site_type: siteType,
       authType: authType,
+      cookieAuth:
+        authType === AuthTypeEnum.Cookie
+          ? {
+              sessionCookie: cookieAuthSessionCookie.trim(),
+            }
+          : undefined,
       exchange_rate:
         parseFloat(exchangeRate) || UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
       notes: notes || "",
@@ -424,6 +445,7 @@ export async function validateAndUpdateAccount(
   checkInConfig: CheckInConfig,
   siteType: string,
   authType: AuthTypeEnum,
+  cookieAuthSessionCookie: string,
 ): Promise<AccountSaveResponse> {
   // 表单验证
   if (
@@ -433,6 +455,7 @@ export async function validateAndUpdateAccount(
       userId,
       authType,
       accessToken,
+      cookieAuthSessionCookie,
       exchangeRate,
     })
   ) {
@@ -459,6 +482,9 @@ export async function validateAndUpdateAccount(
       accessToken.trim(),
       checkInConfig,
       authType,
+      authType === AuthTypeEnum.Cookie
+        ? { cookieAuthSessionCookie: cookieAuthSessionCookie.trim() }
+        : undefined,
     )
 
     const normalizedTags = normalizeTagsInput(tags)
@@ -469,6 +495,12 @@ export async function validateAndUpdateAccount(
       health: { status: SiteHealthStatus.Healthy }, // 成功获取数据说明状态正常
       site_type: siteType,
       authType: authType,
+      cookieAuth:
+        authType === AuthTypeEnum.Cookie
+          ? {
+              sessionCookie: cookieAuthSessionCookie.trim(),
+            }
+          : undefined,
       exchange_rate:
         parseFloat(exchangeRate) || UI_CONSTANTS.EXCHANGE_RATE.DEFAULT, // 使用用户输入的汇率
       notes: notes,
@@ -521,6 +553,12 @@ export async function validateAndUpdateAccount(
       site_url: url.trim(),
       site_type: siteType,
       authType: authType,
+      cookieAuth:
+        authType === AuthTypeEnum.Cookie
+          ? {
+              sessionCookie: cookieAuthSessionCookie.trim(),
+            }
+          : undefined,
       exchange_rate:
         parseFloat(exchangeRate) || UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
       notes: notes,

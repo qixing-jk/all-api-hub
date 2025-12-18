@@ -48,6 +48,7 @@ export function useAccountDialog({
   const [siteName, setSiteName] = useState("")
   const [username, setUsername] = useState("")
   const [accessToken, setAccessToken] = useState("")
+  const [cookieAuthSessionCookie, setCookieAuthSessionCookie] = useState("")
   const [userId, setUserId] = useState("")
   const [isDetected, setIsDetected] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -85,6 +86,7 @@ export function useAccountDialog({
     setSiteName("")
     setUsername("")
     setAccessToken("")
+    setCookieAuthSessionCookie("")
     setUserId("")
     setShowAccessToken(false)
     setDetectionError(null)
@@ -116,6 +118,9 @@ export function useAccountDialog({
           setSiteName(siteAccount.site_name)
           setUsername(siteAccount.account_info.username)
           setAccessToken(siteAccount.account_info.access_token)
+          setCookieAuthSessionCookie(
+            siteAccount.cookieAuth?.sessionCookie ?? "",
+          )
           setUserId(siteAccount.account_info.id.toString())
           setExchangeRate(siteAccount.exchange_rate.toString())
           setNotes(siteAccount.notes || "")
@@ -312,6 +317,7 @@ export function useAccountDialog({
               checkIn,
               siteType,
               authType,
+              cookieAuthSessionCookie.trim(),
             )
           : await validateAndUpdateAccount(
               account!.id,
@@ -326,6 +332,7 @@ export function useAccountDialog({
               checkIn,
               siteType,
               authType,
+              cookieAuthSessionCookie.trim(),
             )
 
       if (result.success) {
@@ -441,6 +448,7 @@ export function useAccountDialog({
     userId,
     authType,
     accessToken,
+    cookieAuthSessionCookie,
     exchangeRate,
   })
 
@@ -451,6 +459,7 @@ export function useAccountDialog({
       siteName,
       username,
       accessToken,
+      cookieAuthSessionCookie,
       userId,
       isDetected,
       isSaving,
@@ -472,6 +481,7 @@ export function useAccountDialog({
       setSiteName,
       setUsername,
       setAccessToken,
+      setCookieAuthSessionCookie,
       setUserId,
       setShowAccessToken,
       setShowManualForm,
