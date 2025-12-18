@@ -543,6 +543,10 @@ export const fetchAccountQuota = async (
   userId: number,
   accessToken: string,
   authType?: AuthTypeEnum,
+  requestContext?: Pick<
+    AuthTypeFetchParams,
+    "accountId" | "cookieAuthSessionCookie"
+  >,
 ): Promise<number> => {
   const userData = await fetchApiData<{ quota?: number }>({
     baseUrl,
@@ -550,6 +554,7 @@ export const fetchAccountQuota = async (
     userId,
     token: accessToken,
     authType,
+    ...requestContext,
   })
 
   return userData.quota || 0
@@ -568,6 +573,10 @@ export const fetchCheckInStatus = async (
   userId: number,
   accessToken: string,
   authType?: AuthTypeEnum,
+  requestContext?: Pick<
+    AuthTypeFetchParams,
+    "accountId" | "cookieAuthSessionCookie"
+  >,
 ): Promise<boolean | undefined> => {
   try {
     const checkInData = await fetchApiData<{ can_check_in?: boolean }>({
@@ -576,6 +585,7 @@ export const fetchCheckInStatus = async (
       userId,
       token: accessToken,
       authType,
+      ...requestContext,
     })
     // 仅当 can_check_in 明确为 true 或 false 时才返回，否则返回 undefined
     if (typeof checkInData.can_check_in === "boolean") {
@@ -623,7 +633,14 @@ const fetchPaginatedLogs = async <T>(
   initialValue: T,
   errorHandler?: (error: unknown, logType: LogType) => void,
 ): Promise<T> => {
-  const { baseUrl, userId, token: accessToken, authType } = authParams
+  const {
+    baseUrl,
+    userId,
+    token: accessToken,
+    authType,
+    accountId,
+    cookieAuthSessionCookie,
+  } = authParams
   const { start: startTimestamp, end: endTimestamp } = getTodayTimestampRange()
   let aggregatedData = initialValue
   let maxPageReached = false
@@ -649,6 +666,8 @@ const fetchPaginatedLogs = async <T>(
           userId,
           token: accessToken,
           authType,
+          accountId,
+          cookieAuthSessionCookie,
         })
 
         const items = logData.items || []
@@ -783,14 +802,31 @@ export const fetchAccountData = async (
   token: string,
   checkIn: CheckInConfig,
   authType?: AuthTypeEnum,
+  requestContext?: Pick<
+    AuthTypeFetchParams,
+    "accountId" | "cookieAuthSessionCookie"
+  >,
 ): Promise<AccountData> => {
-  const params = { baseUrl, userId, token, authType, checkIn }
-  const quotaPromise = fetchAccountQuota(baseUrl, userId, token, authType)
+  const params = {
+    baseUrl,
+    userId,
+    token,
+    authType,
+    checkIn,
+    ...requestContext,
+  }
+  const quotaPromise = fetchAccountQuota(
+    baseUrl,
+    userId,
+    token,
+    authType,
+    requestContext,
+  )
   const todayUsagePromise = fetchTodayUsage(params)
   const todayIncomePromise = fetchTodayIncome(params)
   const checkInPromise =
     checkIn?.enableDetection && !checkIn.customCheckInUrl
-      ? fetchCheckInStatus(baseUrl, userId, token, authType)
+      ? fetchCheckInStatus(baseUrl, userId, token, authType, requestContext)
       : Promise.resolve<boolean | undefined>(undefined)
 
   const [quota, todayUsage, todayIncome, canCheckIn] = await Promise.all([
@@ -826,6 +862,10 @@ export const refreshAccountData = async (
   accessToken: string,
   checkIn: CheckInConfig,
   authType?: AuthTypeEnum,
+  requestContext?: Pick<
+    AuthTypeFetchParams,
+    "accountId" | "cookieAuthSessionCookie"
+  >,
 ): Promise<RefreshAccountResult> => {
   try {
     const data = await fetchAccountData(
@@ -834,6 +874,7 @@ export const refreshAccountData = async (
       accessToken,
       checkIn,
       authType,
+      requestContext,
     )
     return {
       success: true,

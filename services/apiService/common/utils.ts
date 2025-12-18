@@ -255,9 +255,11 @@ const apiRequest = async <T>(
 export interface FetchApiParams {
   baseUrl: string
   endpoint: string
+  accountId?: string
   userId?: number | string
   token?: string
   authType?: AuthTypeEnum // 认证方式，默认 token
+  cookieAuthSessionCookie?: string
   options?: RequestInit // 可额外自定义 fetch 参数
   responseType?: TempWindowResponseType // 默认 json，可自定义响应处理
 }
@@ -266,6 +268,15 @@ export interface FetchApiParams {
  * Core fetch helper that wires authentication, temp-window fallback, and
  * response parsing for all upstream API calls.
  * @param params Fetch configuration (baseUrl, endpoint, auth, etc.).
+ * @param params.baseUrl Base URL for the target site.
+ * @param params.endpoint Endpoint path (relative to baseUrl).
+ * @param params.accountId Optional account id used for multi-account cookie injection.
+ * @param params.userId Optional user identifier injected into compatible headers.
+ * @param params.token Optional access token for token-auth flows.
+ * @param params.authType Optional authentication strategy override.
+ * @param params.cookieAuthSessionCookie Optional per-account cookie-auth session cookie header.
+ * @param params.options Optional fetch overrides.
+ * @param params.responseType Desired response parsing mode.
  * @param onlyData When true, returns the `data` field directly (JSON only).
  * @returns ApiResponse<T>, raw payload, or data field based on flags.
  */
@@ -273,9 +284,11 @@ const _fetchApi = async <T>(
   {
     baseUrl,
     endpoint,
+    accountId,
     userId,
     token,
     authType,
+    cookieAuthSessionCookie,
     options,
     responseType = "json",
   }: FetchApiParams,
@@ -314,6 +327,13 @@ const _fetchApi = async <T>(
     fetchOptions,
     onlyData,
     responseType,
+    accountId,
+    authType,
+    cookieAuthSessionCookie,
+    forceTempWindow:
+      authType === AuthTypeEnum.Cookie &&
+      typeof cookieAuthSessionCookie === "string" &&
+      cookieAuthSessionCookie.trim().length > 0,
   }
 
   return await executeWithTempWindowFallback(context, async () => {

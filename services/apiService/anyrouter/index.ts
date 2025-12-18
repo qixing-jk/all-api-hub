@@ -57,9 +57,23 @@ export const fetchAccountData = async (
   token: string,
   checkIn: CheckInConfig,
   authType?: AuthTypeEnum,
+  requestContext?: { accountId?: string; cookieAuthSessionCookie?: string },
 ): Promise<AccountData> => {
-  const params = { baseUrl, userId, token, authType, checkIn }
-  const quotaPromise = fetchAccountQuota(baseUrl, userId, token, authType)
+  const params = {
+    baseUrl,
+    userId,
+    token,
+    authType,
+    checkIn,
+    ...requestContext,
+  }
+  const quotaPromise = fetchAccountQuota(
+    baseUrl,
+    userId,
+    token,
+    authType,
+    requestContext,
+  )
   const todayUsagePromise = fetchTodayUsage(params)
   const todayIncomePromise = fetchTodayIncome(params)
   const checkInPromise =
@@ -91,6 +105,7 @@ export const refreshAccountData = async (
   accessToken: string,
   checkIn: CheckInConfig,
   authType?: AuthTypeEnum,
+  requestContext?: { accountId?: string; cookieAuthSessionCookie?: string },
 ): Promise<RefreshAccountResult> => {
   try {
     const data = await fetchAccountData(
@@ -99,6 +114,7 @@ export const refreshAccountData = async (
       accessToken,
       checkIn,
       authType,
+      requestContext,
     )
     return {
       success: true,

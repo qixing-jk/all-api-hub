@@ -48,6 +48,16 @@ export interface AccountInfo {
   today_income: number // 今日收入 (recharge + check-in)
 }
 
+export interface CookieAuthConfig {
+  /**
+   * Cookie header string used for cookie-auth multi-account requests.
+   *
+   * This should contain at least the session cookies required by the site.
+   * The extension will merge these with WAF cookies (e.g. Cloudflare) at request time.
+   */
+  sessionCookie: string
+}
+
 // 站点账号完整信息
 export interface SiteAccount {
   id: string // 此项 id
@@ -78,6 +88,14 @@ export interface SiteAccount {
    */
   supports_check_in?: boolean // 是否支持签到功能
   authType: AuthTypeEnum // 认证方式
+  /**
+   * Optional per-account cookie-auth session cookie bundle.
+   *
+   * When present, the extension can perform true multi-account cookie auth by
+   * injecting this cookie header on a per-request basis (without mutating the
+   * browser's global cookie jar).
+   */
+  cookieAuth?: CookieAuthConfig
   /**
    * 站点签到相关
    */
@@ -231,6 +249,16 @@ export interface DisplaySiteData {
    */
   supports_check_in?: boolean // 是否支持签到功能
   authType: AuthTypeEnum // 认证方式
+  /**
+   * Optional account id used for per-request cookie isolation.
+   *
+   * This is primarily used by background temp-window fetch flows.
+   */
+  accountId?: string
+  /**
+   * Optional per-account cookie-auth session cookie header to merge with WAF cookies.
+   */
+  cookieAuthSessionCookie?: string
   checkIn: CheckInConfig
 }
 

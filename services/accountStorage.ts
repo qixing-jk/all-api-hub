@@ -487,6 +487,10 @@ class AccountStorageService {
         account.account_info.access_token,
         account.checkIn,
         account.authType,
+        {
+          accountId: account.id,
+          cookieAuthSessionCookie: account.cookieAuth?.sessionCookie,
+        },
       )
 
       // 构建更新数据
@@ -537,7 +541,11 @@ class AccountStorageService {
       try {
         const todayIncome = await getApiService(
           DisplaySiteData.siteType,
-        ).fetchTodayIncome(DisplaySiteData)
+        ).fetchTodayIncome({
+          ...DisplaySiteData,
+          accountId: DisplaySiteData.id,
+          cookieAuthSessionCookie: account.cookieAuth?.sessionCookie,
+        })
         updateData.account_info = {
           ...(updateData.account_info || account.account_info),
           today_income: todayIncome.today_income,

@@ -1,6 +1,8 @@
 import { t } from "i18next"
 
+import { accountStorage } from "~/services/accountStorage"
 import { getSiteType } from "~/services/detectSiteType"
+import { AuthTypeEnum } from "~/types"
 import {
   createTab,
   createWindow,
@@ -10,6 +12,7 @@ import {
   removeTabOrWindow,
 } from "~/utils/browserApi"
 import { getCookieHeaderForUrl } from "~/utils/cookieHelper"
+import { mergeCookieHeaders } from "~/utils/cookieString"
 import {
   applyTempWindowCookieRule,
   removeTempWindowCookieRule,
@@ -313,6 +316,9 @@ export async function handleTempWindowFetch(
     fetchOptions,
     responseType = "json",
     requestId,
+    accountId,
+    authType,
+    cookieAuthSessionCookie,
   } = request
 
   if (!originUrl || !fetchUrl) {
@@ -340,6 +346,11 @@ export async function handleTempWindowFetch(
     const rawOptions = (fetchOptions ?? {}) as Record<string, any>
     let effectiveFetchOptions: Record<string, any> = rawOptions
 
+    const resolvedAuthType: AuthTypeEnum | undefined =
+      authType && Object.values(AuthTypeEnum).includes(authType)
+        ? (authType as AuthTypeEnum)
+        : undefined
+
     try {
       // Chromium-based browsers: for token-auth (credentials=omit) we still need WAF cookies,
       // but MUST exclude session cookies to prevent cross-account contamination (issue #204).
@@ -362,6 +373,55 @@ export async function handleTempWindowFetch(
             effectiveFetchOptions = {
               ...rawOptions,
               credentials: "include",
+            }
+          }
+        }
+      }
+
+      // Multi-account cookie auth: merge WAF cookies (no session) + per-account session cookie bundle.
+      // Never overwrite the browser cookie jar.
+      if (resolvedAuthType === AuthTypeEnum.Cookie) {
+        const sessionCookie =
+          typeof cookieAuthSessionCookie === "string" &&
+          cookieAuthSessionCookie.trim()
+            ? cookieAuthSessionCookie
+            : accountId
+              ? (await accountStorage.getAccountById(accountId))?.cookieAuth
+                  ?.sessionCookie
+              : undefined
+
+        if (sessionCookie && sessionCookie.trim()) {
+          const wafCookieHeader = await getCookieHeaderForUrl(fetchUrl, {
+            includeSession: false,
+          })
+          const mergedCookieHeader = mergeCookieHeaders(
+            wafCookieHeader,
+            sessionCookie,
+          )
+
+          if (!isProtectionBypassFirefoxEnv()) {
+            // Chromium: inject Cookie header per-tab using DNR.
+            ruleId = await applyTempWindowCookieRule({
+              tabId,
+              url: fetchUrl,
+              cookieHeader: mergedCookieHeader,
+            })
+
+            if (ruleId) {
+              effectiveFetchOptions = {
+                ...rawOptions,
+                credentials: "include",
+              }
+            }
+          } else {
+            // Firefox: pass session cookie bundle through a private header.
+            // The webRequest interceptor will consume and strip it.
+            const headers = new Headers(rawOptions.headers ?? {})
+            headers.set("All-API-Hub-Session-Cookie", sessionCookie)
+            effectiveFetchOptions = {
+              ...rawOptions,
+              credentials: rawOptions.credentials ?? "include",
+              headers: Object.fromEntries(headers.entries()),
             }
           }
         }

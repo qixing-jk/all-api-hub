@@ -245,6 +245,14 @@ export interface AuthFetchParams extends BaseFetchParams {
  */
 export interface AuthTypeFetchParams extends AuthFetchParams {
   authType?: AuthTypeEnum
+  /**
+   * Optional account id used for per-request cookie isolation.
+   */
+  accountId?: string
+  /**
+   * Optional per-account cookie-auth session cookie header to merge with WAF cookies.
+   */
+  cookieAuthSessionCookie?: string
 }
 
 /**

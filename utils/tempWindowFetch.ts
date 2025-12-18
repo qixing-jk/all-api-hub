@@ -12,12 +12,14 @@ import {
 import {
   COOKIE_INTERCEPTOR_PERMISSIONS,
   hasCookieInterceptorPermissions,
+  OPTIONAL_PERMISSION_IDS,
 } from "~/services/permissions/permissionManager"
 import {
   DEFAULT_PREFERENCES,
   TempWindowFallbackPreferences,
   userPreferences,
 } from "~/services/userPreferences"
+import { AuthTypeEnum } from "~/types"
 import {
   isExtensionBackground,
   isExtensionPopup,
@@ -32,6 +34,9 @@ export type TempWindowResponseType = "json" | "text" | "arrayBuffer" | "blob"
 export interface TempWindowFetchParams {
   originUrl: string
   fetchUrl: string
+  accountId?: string
+  authType?: AuthTypeEnum
+  cookieAuthSessionCookie?: string
   fetchOptions?: Record<string, any>
   responseType?: TempWindowResponseType
   requestId?: string
@@ -53,7 +58,16 @@ export async function canUseTempWindowFetch() {
   if (isProtectionBypassFirefoxEnv()) {
     return await hasCookieInterceptorPermissions()
   } else {
-    return true
+    try {
+      return await browser.permissions.contains({
+        permissions: [
+          OPTIONAL_PERMISSION_IDS.Cookies,
+          OPTIONAL_PERMISSION_IDS.declarativeNetRequestWithHostAccess,
+        ] as unknown as browser._manifest.OptionalPermission[],
+      })
+    } catch {
+      return true
+    }
   }
 }
 
@@ -112,6 +126,10 @@ export interface TempWindowFallbackContext {
   baseUrl: string
   url: string
   endpoint?: string
+  accountId?: string
+  authType?: AuthTypeEnum
+  cookieAuthSessionCookie?: string
+  forceTempWindow?: boolean
   fetchOptions: RequestInit
   onlyData: boolean
   responseType: TempWindowResponseType
@@ -154,6 +172,19 @@ export async function executeWithTempWindowFallback<T>(
   context: TempWindowFallbackContext,
   primaryRequest: () => Promise<T | ApiResponse<T>>,
 ): Promise<T | ApiResponse<T>> {
+  if (context.forceTempWindow) {
+    if (!(await canUseTempWindowFetch())) {
+      const error = new ApiError(
+        "Temp window fetch requires optional permissions",
+        undefined,
+        context.endpoint,
+        API_ERROR_CODES.TEMP_WINDOW_PERMISSION_REQUIRED,
+      )
+      throw error
+    }
+    return await fetchViaTempWindow<T>(context)
+  }
+
   try {
     return await primaryRequest()
   } catch (error) {
@@ -363,6 +394,9 @@ async function fetchViaTempWindow<T>(
   const requestPayload: TempWindowFetchParams = {
     originUrl: context.baseUrl,
     fetchUrl: context.url,
+    accountId: context.accountId,
+    authType: context.authType,
+    cookieAuthSessionCookie: context.cookieAuthSessionCookie,
     fetchOptions,
     responseType,
     requestId: `temp-fetch-${Date.now()}`,
