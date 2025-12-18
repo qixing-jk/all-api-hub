@@ -3,6 +3,7 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { useChannelDialog } from "~/components/ChannelDialog"
+import { RuntimeActionIds } from "~/constants"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import {
   autoDetectAccount,
@@ -12,9 +13,19 @@ import {
   validateAndUpdateAccount,
 } from "~/services/accountOperations"
 import { accountStorage } from "~/services/accountStorage"
+import {
+  ensurePermissions,
+  hasPermission,
+  OPTIONAL_PERMISSION_IDS,
+} from "~/services/permissions/permissionManager"
 import { AuthTypeEnum, type CheckInConfig, type DisplaySiteData } from "~/types"
 import { AutoDetectError } from "~/utils/autoDetectUtils"
-import { getActiveTabs, onTabActivated, onTabUpdated } from "~/utils/browserApi"
+import {
+  getActiveTabs,
+  onTabActivated,
+  onTabUpdated,
+  sendRuntimeMessage,
+} from "~/utils/browserApi"
 
 interface UseAccountDialogProps {
   mode: DialogMode
@@ -143,6 +154,67 @@ export function useAccountDialog({
       }
     },
     [t],
+  )
+
+  const handleImportCookieAuthSessionCookie = useCallback(
+    async (targetUrl?: string, allowPrompt: boolean = true) => {
+      const urlToRead = (targetUrl ?? url).trim()
+      if (!urlToRead) {
+        toast.error(t("messages.importCookiesUrlRequired"), {
+          id: RuntimeActionIds.AccountDialogImportCookieAuthSessionCookie,
+        })
+        return
+      }
+
+      toast.loading(t("messages.importCookiesLoading"), {
+        id: RuntimeActionIds.AccountDialogImportCookieAuthSessionCookie,
+      })
+
+      try {
+        const alreadyGranted = await hasPermission(
+          OPTIONAL_PERMISSION_IDS.Cookies,
+        )
+        const permissionGranted = alreadyGranted
+          ? true
+          : allowPrompt
+            ? await ensurePermissions([OPTIONAL_PERMISSION_IDS.Cookies])
+            : false
+        if (!permissionGranted) {
+          toast.error(t("messages.importCookiesPermissionDenied"), {
+            id: RuntimeActionIds.AccountDialogImportCookieAuthSessionCookie,
+          })
+          return
+        }
+
+        const response = await sendRuntimeMessage({
+          action: RuntimeActionIds.AccountDialogImportCookieAuthSessionCookie,
+          url: urlToRead,
+        })
+
+        const cookieHeader =
+          response && typeof response.cookieHeader === "string"
+            ? response.cookieHeader
+            : ""
+
+        if (!cookieHeader.trim()) {
+          toast.error(t("messages.importCookiesEmpty"), {
+            id: RuntimeActionIds.AccountDialogImportCookieAuthSessionCookie,
+          })
+          return
+        }
+
+        setCookieAuthSessionCookie(cookieHeader)
+        toast.success(t("messages.importCookiesSuccess"), {
+          id: RuntimeActionIds.AccountDialogImportCookieAuthSessionCookie,
+        })
+      } catch (error) {
+        toast.error(
+          t("messages.importCookiesFailed", { error: getErrorMessage(error) }),
+          { id: RuntimeActionIds.AccountDialogImportCookieAuthSessionCookie },
+        )
+      }
+    },
+    [t, url],
   )
 
   const checkCurrentTab = useCallback(async () => {
@@ -280,6 +352,14 @@ export function useAccountDialog({
 
         setIsDetected(true)
         setSiteName(resultData.siteName)
+
+        if (
+          authType === AuthTypeEnum.Cookie &&
+          !cookieAuthSessionCookie.trim() &&
+          url.trim()
+        ) {
+          void handleImportCookieAuthSessionCookie(url.trim(), false)
+        }
         if (mode === DIALOG_MODES.EDIT) {
           toast.success(t("messages.autoDetectSuccess"))
         }
@@ -495,6 +575,7 @@ export function useAccountDialog({
     handlers: {
       handleUseCurrentTabUrl,
       handleAutoDetect,
+      handleImportCookieAuthSessionCookie,
       handleSaveAccount,
       handleUrlChange,
       handleSubmit,

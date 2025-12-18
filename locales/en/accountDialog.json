@@ -53,6 +53,8 @@
     "userIdNumber": "User ID (number)",
     "accessToken": "Access Token",
     "cookieAuthSessionCookie": "Session Cookie (Cookie Auth)",
+    "cookieAuthSessionCookieDesc": "Import session cookies from the currently logged-in browser tab for this site.",
+    "importCookieAuthSessionCookie": "Import from current login",
     "cookieAuthSessionCookiePlaceholder": "Paste Cookie header value (e.g. session=...; other=...)",
     "toggleAccessTokenVisibility": "Toggle Access Token Visibility",
     "exchangeRate": "Recharge Amount Ratio (CNY/USD)",
@@ -74,6 +76,12 @@
     "tagsPlaceholder": "Add or select tags"
   },
   "messages": {
+    "importCookiesLoading": "Importing cookies...",
+    "importCookiesSuccess": "Cookies imported",
+    "importCookiesEmpty": "No cookies found. Please log in to the site first.",
+    "importCookiesUrlRequired": "Please enter the site URL first.",
+    "importCookiesPermissionDenied": "Cookies permission denied. Please allow it in Settings → Permissions.",
+    "importCookiesFailed": "Failed to import cookies: {{error}}",
     "loadFailed": "Failed to load account data",
     "urlParseError": "Unable to parse URL: {{error}}",
     "autoDetectSuccess": "Auto-detect successful!",

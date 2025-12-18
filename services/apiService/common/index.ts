@@ -35,7 +35,6 @@ import {
   AuthTypeEnum,
   CheckInConfig,
   SiteHealthStatus,
-  TEMP_WINDOW_HEALTH_STATUS_CODES,
   type ApiToken,
 } from "~/types"
 import type {
@@ -44,6 +43,7 @@ import type {
   ManagedSiteChannelListData,
   UpdateChannelPayload,
 } from "~/types/managedSite"
+import { TEMP_WINDOW_HEALTH_STATUS_CODES } from "~/types/tempWindow"
 
 const CHANNEL_API_BASE = "/api/channel/"
 

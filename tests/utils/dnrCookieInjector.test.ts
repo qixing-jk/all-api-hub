@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { RuntimeActionIds } from "~/constants"
 import {
   applyTempWindowCookieRule,
   buildTempWindowCookieRule,
@@ -7,12 +8,69 @@ import {
   TEMP_WINDOW_DNR_RULE_ID_BASE,
 } from "~/utils/dnrCookieInjector"
 
+vi.mock("~/utils/cookieHelper", async (importOriginal) => {
+  const original = await importOriginal<typeof import("~/utils/cookieHelper")>()
+  return {
+    ...original,
+    getCookieHeaderForUrl: vi.fn().mockResolvedValue("session=abc"),
+  }
+})
+
 describe("dnrCookieInjector", () => {
   let originalChrome: unknown
 
   beforeEach(() => {
     originalChrome = (globalThis as any).chrome
     vi.restoreAllMocks()
+  })
+
+  describe("runtimeMessages cookie import", () => {
+    it("should respond with cookieHeader for cookie-auth import action", async () => {
+      const originalBrowser = (globalThis as any).browser
+      const listenerCalls: any[] = []
+
+      const onMessage = {
+        addListener: (cb: any) => listenerCalls.push(cb),
+        removeListener: () => {},
+      }
+
+      ;(globalThis as any).browser = {
+        runtime: {
+          onMessage,
+        },
+      }
+
+      try {
+        const { setupRuntimeMessageListeners } = await import(
+          "~/entrypoints/background/runtimeMessages"
+        )
+
+        setupRuntimeMessageListeners()
+        expect(listenerCalls.length).toBeGreaterThan(0)
+        const handler = listenerCalls[0]
+
+        const responsePromise = new Promise<any>((resolve) => {
+          handler(
+            {
+              action:
+                RuntimeActionIds.AccountDialogImportCookieAuthSessionCookie,
+              url: "https://example.com",
+            },
+            {},
+            (resp: any) => resolve(resp),
+          )
+        })
+
+        const resp = await responsePromise
+        expect(resp.success).toBe(true)
+        expect(resp.cookieHeader).toBe("session=abc")
+
+        const cookieHelper = await import("~/utils/cookieHelper")
+        expect(cookieHelper.getCookieHeaderForUrl).toHaveBeenCalled()
+      } finally {
+        ;(globalThis as any).browser = originalBrowser
+      }
+    })
   })
 
   afterEach(() => {

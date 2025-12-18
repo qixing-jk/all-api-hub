@@ -10,6 +10,7 @@ import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
+  Button,
   FormField,
   IconButton,
   Input,
@@ -42,6 +43,7 @@ interface AccountFormProps {
   onUserIdChange: (value: string) => void
   onAccessTokenChange: (value: string) => void
   onCookieAuthSessionCookieChange: (value: string) => void
+  onImportCookieAuthSessionCookie: () => void
   onExchangeRateChange: (value: string) => void
   onToggleShowAccessToken: () => void
   onNotesChange: (value: string) => void
@@ -63,6 +65,7 @@ interface AccountFormProps {
  * @param props.userId Numeric user id string.
  * @param props.accessToken Access token string for auth.
  * @param props.cookieAuthSessionCookie Cookie-auth session cookie header value.
+ * @param props.onImportCookieAuthSessionCookie Imports cookie-auth session cookie header from current login.
  * @param props.exchangeRate Top-up exchange rate value.
  * @param props.showAccessToken Whether the token input is visible.
  * @param props.notes User-provided notes.
@@ -99,6 +102,7 @@ export default function AccountForm({
   onUserIdChange,
   onAccessTokenChange,
   onCookieAuthSessionCookieChange,
+  onImportCookieAuthSessionCookie,
   onExchangeRateChange,
   onToggleShowAccessToken,
   onNotesChange,
@@ -214,13 +218,29 @@ export default function AccountForm({
       )}
 
       {authType === AuthTypeEnum.Cookie && (
-        <FormField label={t("form.cookieAuthSessionCookie")} required>
-          <Textarea
-            value={cookieAuthSessionCookie}
-            onChange={(e) => onCookieAuthSessionCookieChange(e.target.value)}
-            placeholder={t("form.cookieAuthSessionCookiePlaceholder")}
-            className="min-h-[96px]"
-          />
+        <FormField
+          label={t("form.cookieAuthSessionCookie")}
+          required
+          description={t("form.cookieAuthSessionCookieDesc")}
+        >
+          <>
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={onImportCookieAuthSessionCookie}
+              >
+                {t("form.importCookieAuthSessionCookie")}
+              </Button>
+            </div>
+            <Textarea
+              value={cookieAuthSessionCookie}
+              onChange={(e) => onCookieAuthSessionCookieChange(e.target.value)}
+              placeholder={t("form.cookieAuthSessionCookiePlaceholder")}
+              className="min-h-[96px]"
+            />
+          </>
         </FormField>
       )}
 

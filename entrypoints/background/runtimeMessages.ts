@@ -1,3 +1,4 @@
+import { RuntimeActionIds } from "~/constants"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { handleAutoCheckinMessage } from "~/services/autoCheckin/scheduler"
 import { handleAutoRefreshMessage } from "~/services/autoRefreshService"
@@ -6,6 +7,7 @@ import { handleManagedSiteModelSyncMessage } from "~/services/modelSync"
 import { handleRedemptionAssistMessage } from "~/services/redemptionAssist"
 import { handleWebdavAutoSyncMessage } from "~/services/webdav/webdavAutoSyncService"
 import { onRuntimeMessage } from "~/utils/browserApi"
+import { getCookieHeaderForUrl } from "~/utils/cookieHelper"
 import { getErrorMessage } from "~/utils/error"
 import { openOrFocusOptionsMenuItem } from "~/utils/navigation"
 
@@ -61,6 +63,30 @@ export function setupRuntimeMessageListeners() {
 
     if (request.action === "tempWindowFetch") {
       void handleTempWindowFetch(request, sendResponse)
+      return true
+    }
+
+    if (
+      request.action ===
+      RuntimeActionIds.AccountDialogImportCookieAuthSessionCookie
+    ) {
+      void (async () => {
+        try {
+          const url = typeof request.url === "string" ? request.url : ""
+          if (!url.trim()) {
+            sendResponse({ success: false, error: "invalid url" })
+            return
+          }
+
+          const cookieHeader = await getCookieHeaderForUrl(url.trim(), {
+            includeSession: true,
+          })
+
+          sendResponse({ success: true, cookieHeader })
+        } catch (error) {
+          sendResponse({ success: false, error: getErrorMessage(error) })
+        }
+      })()
       return true
     }
 

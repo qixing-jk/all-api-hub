@@ -1,4 +1,4 @@
-import { TEMP_WINDOW_HEALTH_STATUS_CODES } from "~/types"
+import { TEMP_WINDOW_HEALTH_STATUS_CODES } from "~/types/tempWindow"
 
 // ============= 错误处理 =============
 export const API_ERROR_CODES = {

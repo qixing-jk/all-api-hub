@@ -136,6 +136,9 @@ export default function AccountDialog({
               onCookieAuthSessionCookieChange={
                 setters.setCookieAuthSessionCookie
               }
+              onImportCookieAuthSessionCookie={() =>
+                void handlers.handleImportCookieAuthSessionCookie()
+              }
               onExchangeRateChange={setters.setExchangeRate}
               onToggleShowAccessToken={() =>
                 setters.setShowAccessToken(!state.showAccessToken)

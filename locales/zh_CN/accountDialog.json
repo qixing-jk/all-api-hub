@@ -53,6 +53,8 @@
     "userIdNumber": "用户 ID (数字)",
     "accessToken": "访问令牌",
     "cookieAuthSessionCookie": "会话 Cookie（Cookie 认证）",
+    "cookieAuthSessionCookieDesc": "从当前浏览器已登录的标签页自动读取该站点的 Cookie（会话）。",
+    "importCookieAuthSessionCookie": "从当前登录导入",
     "cookieAuthSessionCookiePlaceholder": "粘贴 Cookie 请求头内容（如 session=...; other=... ）",
     "toggleAccessTokenVisibility": "切换访问令牌的可见性",
     "exchangeRate": "充值金额比例 (CNY/USD)",
@@ -74,6 +76,12 @@
     "tagsPlaceholder": "添加或选择标签"
   },
   "messages": {
+    "importCookiesLoading": "正在导入 Cookie...",
+    "importCookiesSuccess": "Cookie 导入成功",
+    "importCookiesEmpty": "未读取到 Cookie，请先在站点完成登录。",
+    "importCookiesUrlRequired": "请先填写站点 URL。",
+    "importCookiesPermissionDenied": "未授权 Cookies 权限，请前往 设置 → 权限 开启。",
+    "importCookiesFailed": "导入 Cookie 失败: {{error}}",
     "loadFailed": "加载账号数据失败",
     "urlParseError": "无法解析 URL: {{error}}",
     "autoDetectSuccess": "自动识别成功！",
