@@ -18,6 +18,7 @@
     "models": "模型列表",
     "keys": "密钥管理",
     "autoCheckin": "自动签到",
+    "autoCheckinRunNow": "快速签到",
     "managedSiteChannels": "渠道管理",
     "managedSiteModelSync": "模型同步",
     "importExport": "导入/导出",

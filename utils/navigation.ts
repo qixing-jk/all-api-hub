@@ -1,5 +1,8 @@
+import {
+  MENU_ITEM_IDS,
+  type OptionsMenuItemId,
+} from "~/constants/optionsMenuIds"
 import { getSiteApiRouter } from "~/constants/siteType"
-import { MENU_ITEM_IDS, type OptionsMenuItemId } from "~/constants/optionsMenuIds"
 import type { DisplaySiteData } from "~/types"
 import { isExtensionPopup, OPTIONS_PAGE_URL } from "~/utils/browser"
 import {
@@ -389,6 +392,10 @@ export const openSettingsPage = withPopupClose(_openSettingsPage)
  * dispatching the navigation request.
  */
 export const openSettingsTab = withPopupClose(_openSettingsTab)
+export const openAutoCheckinPage = withPopupClose(
+  (searchParams?: Record<string, string | undefined>) =>
+    openOrFocusOptionsMenuItem(MENU_ITEM_IDS.AUTO_CHECKIN, searchParams),
+)
 
 /**
  * Open the extension side panel (if supported) and close the popup afterward to

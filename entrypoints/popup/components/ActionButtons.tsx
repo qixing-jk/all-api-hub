@@ -1,11 +1,20 @@
-import { CpuChipIcon, KeyIcon, PlusIcon } from "@heroicons/react/24/outline"
+import {
+  CalendarDaysIcon,
+  CpuChipIcon,
+  KeyIcon,
+  PlusIcon,
+} from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
 import Tooltip from "~/components/Tooltip"
 import { Button, IconButton } from "~/components/ui"
 import { COLORS } from "~/constants/designTokens"
 import { useAddAccountHandler } from "~/hooks/useAddAccountHandler"
-import { openKeysPage, openModelsPage } from "~/utils/navigation"
+import {
+  openAutoCheckinPage,
+  openKeysPage,
+  openModelsPage,
+} from "~/utils/navigation"
 
 /**
  * Renders quick action buttons in popup header for adding accounts and navigating.
@@ -21,6 +30,10 @@ export default function ActionButtons() {
 
   const handleOpenModelsPageClick = () => {
     openModelsPage()
+  }
+
+  const handleQuickCheckinClick = () => {
+    openAutoCheckinPage({ runNow: "true" })
   }
 
   return (
@@ -58,6 +71,18 @@ export default function ActionButtons() {
             aria-label={t("ui:navigation.models")}
           >
             <CpuChipIcon className="h-4 w-4" />
+          </IconButton>
+        </Tooltip>
+
+        <Tooltip content={t("ui:navigation.autoCheckinRunNow")}>
+          <IconButton
+            onClick={handleQuickCheckinClick}
+            variant="outline"
+            size="default"
+            className="touch-manipulation"
+            aria-label={t("ui:navigation.autoCheckinRunNow")}
+          >
+            <CalendarDaysIcon className="h-4 w-4" />
           </IconButton>
         </Tooltip>
       </div>

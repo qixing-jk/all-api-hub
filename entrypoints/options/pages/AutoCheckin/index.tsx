@@ -1,12 +1,13 @@
 import { CalendarCheck2 } from "lucide-react"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { PageHeader } from "~/entrypoints/options/components/PageHeader"
 import { AutoCheckinStatus, CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { sendRuntimeMessage } from "~/utils/browserApi"
-import { openCheckInPage } from "~/utils/navigation"
+import { navigateWithinOptionsPage, openCheckInPage } from "~/utils/navigation"
 
 import AccountSnapshotTable from "./components/AccountSnapshotTable"
 import ActionBar from "./components/ActionBar"
@@ -22,8 +23,13 @@ import StatusCard from "./components/StatusCard"
 /**
  * Auto Check-in dashboard page: fetches status, runs jobs, filters/searches results, and shows snapshots.
  */
-export default function AutoCheckin() {
+export default function AutoCheckin(props: {
+  routeParams?: Record<string, string>
+}) {
   const { t } = useTranslation("autoCheckin")
+  const routeParams = props.routeParams
+  const QUICK_RUN_PARAM = "runNow" as const
+  const QUICK_RUN_VALUE = "true" as const
   const [status, setStatus] = useState<AutoCheckinStatus | null>(null)
   const [filterStatus, setFilterStatus] = useState<FilterStatus>(
     FILTER_STATUS.ALL,
@@ -37,6 +43,8 @@ export default function AutoCheckin() {
   const [openingManualAccountId, setOpeningManualAccountId] = useState<
     string | null
   >(null)
+
+  const quickRunTriggeredRef = useRef(false)
 
   const loadStatus = useCallback(async () => {
     try {
@@ -59,7 +67,7 @@ export default function AutoCheckin() {
     void loadStatus()
   }, [loadStatus])
 
-  const handleRunNow = async () => {
+  const handleRunNow = useCallback(async () => {
     try {
       setIsRunning(true)
       toast.loading(t("messages.loading.running"))
@@ -82,7 +90,24 @@ export default function AutoCheckin() {
     } finally {
       setIsRunning(false)
     }
-  }
+  }, [loadStatus, t])
+
+  useEffect(() => {
+    if (quickRunTriggeredRef.current) {
+      return
+    }
+
+    if (routeParams?.[QUICK_RUN_PARAM] !== QUICK_RUN_VALUE) {
+      return
+    }
+
+    quickRunTriggeredRef.current = true
+    navigateWithinOptionsPage(`#${MENU_ITEM_IDS.AUTO_CHECKIN}`, {
+      ...routeParams,
+      [QUICK_RUN_PARAM]: undefined,
+    })
+    void handleRunNow()
+  }, [handleRunNow, routeParams])
 
   const handleRefresh = () => {
     void loadStatus()

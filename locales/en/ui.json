@@ -17,6 +17,7 @@
     "account": "Account Management",
     "models": "Model List",
     "autoCheckin": "Auto Check-in",
+    "autoCheckinRunNow": "Quick check-in",
     "managedSiteChannels": "Channels Management",
     "managedSiteModelSync": "Model sync",
     "keys": "Key Management",
