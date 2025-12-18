@@ -56,6 +56,31 @@ export interface TempWindowFallbackReminderPreferences {
   dismissed: boolean
 }
 
+export interface RedemptionAssistUrlWhitelistPreferences {
+  /**
+   * When enabled, redemption assist will only run on URLs matching the whitelist.
+   */
+  enabled: boolean
+  /**
+   * User-provided whitelist patterns, one RegExp pattern per entry.
+   * Patterns are evaluated using JavaScript RegExp syntax.
+   */
+  patterns: string[]
+  /**
+   * Include all pages under each account's site URL origin.
+   */
+  includeAccountSiteUrls: boolean
+  /**
+   * Include each account's resolved check-in and redeem URLs (custom or default).
+   */
+  includeCheckInAndRedeemUrls: boolean
+}
+
+export interface RedemptionAssistPreferences {
+  enabled: boolean
+  urlWhitelist: RedemptionAssistUrlWhitelistPreferences
+}
+
 // 用户偏好设置类型定义
 export interface UserPreferences {
   themeMode: ThemeMode
@@ -142,9 +167,7 @@ export interface UserPreferences {
   modelRedirect: ModelRedirectPreferences
 
   // Redemption Assist 配置
-  redemptionAssist?: {
-    enabled: boolean
-  }
+  redemptionAssist?: RedemptionAssistPreferences
 
   /**
    * 临时窗口过盾相关设置
@@ -294,6 +317,12 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   modelRedirect: DEFAULT_MODEL_REDIRECT_PREFERENCES,
   redemptionAssist: {
     enabled: true,
+    urlWhitelist: {
+      enabled: true,
+      patterns: [],
+      includeAccountSiteUrls: true,
+      includeCheckInAndRedeemUrls: true,
+    },
   },
   sortingPriorityConfig: undefined,
   themeMode: "system",

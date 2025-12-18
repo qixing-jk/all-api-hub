@@ -130,6 +130,12 @@ async function scanForRedemptionCodes(sourceText?: string) {
 
     const url = window.location.href
 
+    // Skip non-http(s) pages to avoid unnecessary background traffic.
+    // (e.g. chrome://, about:, file://, extension pages)
+    if (!/^https?:/i.test(url)) {
+      return
+    }
+
     console.log("[RedemptionAssist][Content] Detected code:", code, url)
     const shouldResp: any = await sendRuntimeMessage({
       action: "redemptionAssist:shouldPrompt",

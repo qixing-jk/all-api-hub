@@ -4,7 +4,18 @@
     "title": "Redemption Assist",
     "enable": "Enable redemption assist",
     "enableDesc": "Automatically detect redemption codes on supported pages and show a redeem prompt",
-    "description": "Configure how the extension detects and assists with redeeming codes on supported pages"
+    "description": "Configure how the extension detects and assists with redeeming codes on supported pages",
+    "urlWhitelist": {
+      "enable": "Enable URL whitelist",
+      "enableDesc": "When enabled, redemption assist only runs on URLs allowed by the rules below.",
+      "includeAccountSiteUrls": "Include account site URLs",
+      "includeAccountSiteUrlsDesc": "Allow all pages under each account's site URL origin.",
+      "includeCheckInAndRedeemUrls": "Include check-in & redeem URLs",
+      "includeCheckInAndRedeemUrlsDesc": "Allow the check-in and redeem pages (custom or default) for each account.",
+      "patterns": "Custom regex patterns",
+      "patternsDesc": "One JavaScript RegExp pattern per line. Case-insensitive match is applied.",
+      "patternsPlaceholder": "^https://example\\.com/console/topup"
+    }
   },
   "messages": {
     "redeemSuccess": "Redeemed successfully. Credited amount: {{amount}}",

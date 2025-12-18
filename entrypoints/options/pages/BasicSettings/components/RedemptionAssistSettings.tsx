@@ -1,9 +1,17 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
-import { Card, CardItem, CardList, Switch } from "~/components/ui"
+import {
+  Button,
+  Card,
+  CardContent,
+  CardItem,
+  CardList,
+  Switch,
+  Textarea,
+} from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { DEFAULT_PREFERENCES } from "~/services/userPreferences"
 
@@ -11,7 +19,7 @@ import { DEFAULT_PREFERENCES } from "~/services/userPreferences"
  * Settings section for toggling redemption assist feature.
  */
 export default function RedemptionAssistSettings() {
-  const { t } = useTranslation(["redemptionAssist", "settings"])
+  const { t } = useTranslation(["redemptionAssist", "settings", "common"])
   const {
     preferences: userPrefs,
     updateRedemptionAssist,
@@ -22,7 +30,20 @@ export default function RedemptionAssistSettings() {
   const config =
     userPrefs.redemptionAssist ?? DEFAULT_PREFERENCES.redemptionAssist!
 
-  const saveSettings = async (updates: { enabled: boolean }) => {
+  const whitelist =
+    config.urlWhitelist ?? DEFAULT_PREFERENCES.redemptionAssist!.urlWhitelist
+
+  const [patternsDraft, setPatternsDraft] = useState(
+    (whitelist.patterns ?? []).join("\n"),
+  )
+
+  useEffect(() => {
+    setPatternsDraft((whitelist.patterns ?? []).join("\n"))
+  }, [whitelist.patterns])
+
+  const saveSettings = async (
+    updates: Parameters<typeof updateRedemptionAssist>[0],
+  ) => {
     try {
       setIsSaving(true)
       const success = await updateRedemptionAssist(updates)
@@ -80,7 +101,147 @@ export default function RedemptionAssistSettings() {
               />
             }
           />
+
+          <CardItem
+            title={t("redemptionAssist:settings.urlWhitelist.enable", {
+              defaultValue: "Enable URL whitelist",
+            })}
+            description={t(
+              "redemptionAssist:settings.urlWhitelist.enableDesc",
+              {
+                defaultValue:
+                  "When enabled, redemption assist only runs on URLs allowed by the rules below.",
+              },
+            )}
+            rightContent={
+              <Switch
+                checked={whitelist.enabled}
+                onChange={(checked) => {
+                  void saveSettings({
+                    urlWhitelist: {
+                      ...whitelist,
+                      enabled: checked,
+                    },
+                  })
+                }}
+                disabled={isSaving}
+              />
+            }
+          />
+
+          <CardItem
+            title={t(
+              "redemptionAssist:settings.urlWhitelist.includeAccountSiteUrls",
+              {
+                defaultValue: "Include account site URLs",
+              },
+            )}
+            description={t(
+              "redemptionAssist:settings.urlWhitelist.includeAccountSiteUrlsDesc",
+              {
+                defaultValue:
+                  "Allow all pages under each account's site URL origin.",
+              },
+            )}
+            rightContent={
+              <Switch
+                checked={whitelist.includeAccountSiteUrls}
+                onChange={(checked) => {
+                  void saveSettings({
+                    urlWhitelist: {
+                      ...whitelist,
+                      includeAccountSiteUrls: checked,
+                    },
+                  })
+                }}
+                disabled={isSaving}
+              />
+            }
+          />
+
+          <CardItem
+            title={t(
+              "redemptionAssist:settings.urlWhitelist.includeCheckInAndRedeemUrls",
+              {
+                defaultValue: "Include check-in & redeem URLs",
+              },
+            )}
+            description={t(
+              "redemptionAssist:settings.urlWhitelist.includeCheckInAndRedeemUrlsDesc",
+              {
+                defaultValue:
+                  "Allow the check-in and redeem pages (custom or default) for each account.",
+              },
+            )}
+            rightContent={
+              <Switch
+                checked={whitelist.includeCheckInAndRedeemUrls}
+                onChange={(checked) => {
+                  void saveSettings({
+                    urlWhitelist: {
+                      ...whitelist,
+                      includeCheckInAndRedeemUrls: checked,
+                    },
+                  })
+                }}
+                disabled={isSaving}
+              />
+            }
+          />
         </CardList>
+
+        <CardContent
+          className="border-border dark:border-dark-bg-tertiary border-t"
+          spacing="sm"
+        >
+          <div className="space-y-2">
+            <div className="text-sm font-medium">
+              {t("redemptionAssist:settings.urlWhitelist.patterns", {
+                defaultValue: "Custom regex patterns",
+              })}
+            </div>
+            <div className="text-muted-foreground text-xs">
+              {t("redemptionAssist:settings.urlWhitelist.patternsDesc", {
+                defaultValue:
+                  "One JavaScript RegExp pattern per line. Case-insensitive match is applied.",
+              })}
+            </div>
+            <Textarea
+              value={patternsDraft}
+              onChange={(event) => setPatternsDraft(event.target.value)}
+              placeholder={t(
+                "redemptionAssist:settings.urlWhitelist.patternsPlaceholder",
+                {
+                  defaultValue: "^https://example\\.com/console/topup",
+                },
+              )}
+              rows={6}
+              disabled={isSaving}
+            />
+
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isSaving}
+                onClick={() => {
+                  const nextPatterns = patternsDraft
+                    .split(/\r?\n/)
+                    .map((line) => line.trim())
+                    .filter(Boolean)
+                  void saveSettings({
+                    urlWhitelist: {
+                      ...whitelist,
+                      patterns: nextPatterns,
+                    },
+                  })
+                }}
+              >
+                {t("common:actions.save", { defaultValue: "Save" })}
+              </Button>
+            </div>
+          </div>
+        </CardContent>
       </Card>
     </SettingSection>
   )

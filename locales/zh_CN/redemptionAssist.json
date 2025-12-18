@@ -4,7 +4,18 @@
     "title": "兑换助手",
     "enable": "启用兑换助手",
     "enableDesc": "在支持的页面上自动检测兑换码并弹出兑换提示",
-    "description": "配置扩展在支持的页面上如何检测并辅助兑换兑换码"
+    "description": "配置扩展在支持的页面上如何检测并辅助兑换兑换码",
+    "urlWhitelist": {
+      "enable": "启用 URL 白名单",
+      "enableDesc": "启用后，兑换助手仅会在下方规则允许的页面 URL 上生效。",
+      "includeAccountSiteUrls": "包含账号站点 URL",
+      "includeAccountSiteUrlsDesc": "允许每个账号站点 URL（同源）下的所有页面。",
+      "includeCheckInAndRedeemUrls": "包含签到/兑换 URL",
+      "includeCheckInAndRedeemUrlsDesc": "允许每个账号的签到与兑换页面（自定义或默认）。",
+      "patterns": "自定义正则规则",
+      "patternsDesc": "每行一条 JavaScript RegExp 语法的正则表达式（匹配时会忽略大小写）。",
+      "patternsPlaceholder": "^https://example\\.com/console/topup"
+    }
   },
   "messages": {
     "redeemSuccess": "兑换成功，到账额度：{{amount}}",

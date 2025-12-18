@@ -3,10 +3,6 @@ import { describe, expect, it } from "vitest"
 import { DATA_TYPE_BALANCE, DATA_TYPE_CONSUMPTION } from "~/constants"
 import { DEFAULT_PREFERENCES } from "~/services/userPreferences"
 
-
-
-
-
 describe("userPreferences", () => {
   describe("DEFAULT_PREFERENCES", () => {
     it("has correct default values", () => {
@@ -17,6 +13,21 @@ describe("userPreferences", () => {
       expect(DEFAULT_PREFERENCES.showHealthStatus).toBe(true)
       expect(DEFAULT_PREFERENCES.themeMode).toBe("system")
       expect(DEFAULT_PREFERENCES.redemptionAssist?.enabled).toBe(true)
+      expect(DEFAULT_PREFERENCES.redemptionAssist?.urlWhitelist).toBeDefined()
+      expect(DEFAULT_PREFERENCES.redemptionAssist?.urlWhitelist.enabled).toBe(
+        true,
+      )
+      expect(
+        DEFAULT_PREFERENCES.redemptionAssist?.urlWhitelist
+          .includeAccountSiteUrls,
+      ).toBe(true)
+      expect(
+        DEFAULT_PREFERENCES.redemptionAssist?.urlWhitelist
+          .includeCheckInAndRedeemUrls,
+      ).toBe(true)
+      expect(
+        DEFAULT_PREFERENCES.redemptionAssist?.urlWhitelist.patterns,
+      ).toEqual([])
       expect(DEFAULT_PREFERENCES.tempWindowFallbackReminder?.dismissed).toBe(
         false,
       )

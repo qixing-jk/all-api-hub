@@ -13,6 +13,7 @@ import { UI_CONSTANTS } from "~/constants/ui"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
+  type RedemptionAssistPreferences,
   type TempWindowFallbackPreferences,
   type TempWindowFallbackReminderPreferences,
   type UserPreferences,
@@ -93,7 +94,9 @@ interface UserPreferencesContextType {
   updateModelRedirect: (
     updates: Partial<ModelRedirectPreferences>,
   ) => Promise<boolean>
-  updateRedemptionAssist: (updates: { enabled: boolean }) => Promise<boolean>
+  updateRedemptionAssist: (
+    updates: Partial<RedemptionAssistPreferences>,
+  ) => Promise<boolean>
   updateTempWindowFallback: (
     updates: Partial<TempWindowFallbackPreferences>,
   ) => Promise<boolean>
@@ -558,7 +561,7 @@ export const UserPreferencesProvider = ({
   )
 
   const updateRedemptionAssist = useCallback(
-    async (updates: { enabled: boolean }) => {
+    async (updates: Partial<RedemptionAssistPreferences>) => {
       const success = await userPreferences.savePreferences({
         redemptionAssist: updates,
       })
@@ -566,11 +569,20 @@ export const UserPreferencesProvider = ({
       if (success) {
         setPreferences((prev) => {
           if (!prev) return null
-          const merged = {
-            ...(DEFAULT_PREFERENCES.redemptionAssist ?? { enabled: true }),
-            ...(prev.redemptionAssist ?? {}),
-            ...updates,
-          }
+          const base =
+            prev.redemptionAssist ??
+            DEFAULT_PREFERENCES.redemptionAssist ??
+            ({
+              enabled: true,
+              urlWhitelist: {
+                enabled: true,
+                patterns: [],
+                includeAccountSiteUrls: true,
+                includeCheckInAndRedeemUrls: true,
+              },
+            } satisfies RedemptionAssistPreferences)
+
+          const merged = deepOverride(base, updates)
           return {
             ...prev,
             redemptionAssist: merged,

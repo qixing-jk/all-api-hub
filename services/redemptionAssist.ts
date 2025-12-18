@@ -1,5 +1,6 @@
 import { t } from "i18next"
 
+import { getSiteApiRouter } from "~/constants/siteType"
 import { accountStorage } from "~/services/accountStorage"
 import { redeemService } from "~/services/redeemService"
 import { searchAccounts } from "~/services/search/accountSearch"
@@ -7,9 +8,21 @@ import { userPreferences } from "~/services/userPreferences"
 import type { DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/error"
 import { isPossibleRedemptionCode } from "~/utils/redemptionAssist"
+import {
+  buildOriginWhitelistPattern,
+  buildUrlPrefixWhitelistPattern,
+  isUrlAllowedByRegexList,
+} from "~/utils/redemptionAssistWhitelist"
+import { joinUrl } from "~/utils/url"
 
 interface RedemptionAssistRuntimeSettings {
   enabled: boolean
+  urlWhitelist?: {
+    enabled: boolean
+    patterns: string[]
+    includeAccountSiteUrls: boolean
+    includeCheckInAndRedeemUrls: boolean
+  }
 }
 
 /**
@@ -22,6 +35,14 @@ interface RedemptionAssistRuntimeSettings {
 class RedemptionAssistService {
   private initialized = false
   private settings: RedemptionAssistRuntimeSettings = { enabled: true }
+
+  private derivedPatternsCache: {
+    fetchedAt: number
+    patterns: string[]
+    key: string
+  } | null = null
+
+  private static readonly DERIVED_PATTERNS_TTL_MS = 30_000
 
   /**
    * Initialize from stored preferences (idempotent).
@@ -36,6 +57,9 @@ class RedemptionAssistService {
     try {
       const prefs = await userPreferences.getPreferences()
       this.settings.enabled = prefs.redemptionAssist?.enabled ?? true
+      if (prefs.redemptionAssist?.urlWhitelist) {
+        this.settings.urlWhitelist = prefs.redemptionAssist.urlWhitelist
+      }
     } catch (error) {
       console.warn("[RedemptionAssist] Failed to load preferences:", error)
     }
@@ -48,12 +72,33 @@ class RedemptionAssistService {
    * Update runtime flags without persisting.
    * @param settings Runtime-only toggle overrides.
    * @param settings.enabled Whether redemption assist is enabled at runtime.
+   * @param settings.urlWhitelist Optional URL whitelist configuration used to gate feature activation.
    */
-  updateRuntimeSettings(settings: { enabled?: boolean }) {
-    if (typeof settings.enabled === "boolean") {
-      this.settings.enabled = settings.enabled
-      console.log("[RedemptionAssist] Runtime settings updated", this.settings)
+  updateRuntimeSettings(settings: {
+    enabled?: boolean
+    urlWhitelist?: RedemptionAssistRuntimeSettings["urlWhitelist"]
+  }) {
+    const next: RedemptionAssistRuntimeSettings = {
+      ...this.settings,
+      ...settings,
+      urlWhitelist: settings.urlWhitelist
+        ? {
+            ...(this.settings.urlWhitelist ?? {
+              enabled: true,
+              patterns: [],
+              includeAccountSiteUrls: true,
+              includeCheckInAndRedeemUrls: true,
+            }),
+            ...settings.urlWhitelist,
+          }
+        : this.settings.urlWhitelist,
     }
+    if (typeof settings.enabled === "boolean") {
+      next.enabled = settings.enabled
+    }
+    this.settings = next
+    this.derivedPatternsCache = null
+    console.log("[RedemptionAssist] Runtime settings updated", this.settings)
   }
 
   /**
@@ -74,6 +119,127 @@ class RedemptionAssistService {
       siteAccounts,
     ) as DisplaySiteData[]
     return displayAccounts
+  }
+
+  /**
+   * Extracts the URL origin (protocol + host) from a URL string.
+   */
+  private getOrigin(url: string): string | null {
+    try {
+      const parsed = new URL(url)
+      return parsed.origin
+    } catch {
+      return null
+    }
+  }
+
+  private getRuntimeWhitelist() {
+    const whitelist = this.settings.urlWhitelist
+    if (!whitelist) {
+      return null
+    }
+    return {
+      enabled: whitelist.enabled,
+      patterns: Array.isArray(whitelist.patterns) ? whitelist.patterns : [],
+      includeAccountSiteUrls: !!whitelist.includeAccountSiteUrls,
+      includeCheckInAndRedeemUrls: !!whitelist.includeCheckInAndRedeemUrls,
+    }
+  }
+
+  private async getDerivedWhitelistPatterns(
+    options: {
+      includeAccountSiteUrls: boolean
+      includeCheckInAndRedeemUrls: boolean
+    },
+    now: number = Date.now(),
+  ): Promise<string[]> {
+    const cacheKey = `${options.includeAccountSiteUrls ? 1 : 0}:${
+      options.includeCheckInAndRedeemUrls ? 1 : 0
+    }`
+    const cached = this.derivedPatternsCache
+    if (
+      cached &&
+      cached.key === cacheKey &&
+      now - cached.fetchedAt < RedemptionAssistService.DERIVED_PATTERNS_TTL_MS
+    ) {
+      return cached.patterns
+    }
+
+    if (
+      !options.includeAccountSiteUrls &&
+      !options.includeCheckInAndRedeemUrls
+    ) {
+      this.derivedPatternsCache = {
+        fetchedAt: now,
+        patterns: [],
+        key: cacheKey,
+      }
+      return []
+    }
+
+    const accounts = await this.getDisplayAccounts()
+    const patterns: string[] = []
+
+    if (options.includeAccountSiteUrls) {
+      for (const account of accounts) {
+        const pattern = buildOriginWhitelistPattern(account.baseUrl)
+        if (pattern) patterns.push(pattern)
+      }
+    }
+
+    if (options.includeCheckInAndRedeemUrls) {
+      for (const account of accounts) {
+        const origin = this.getOrigin(account.baseUrl)
+        if (!origin) continue
+
+        const router = getSiteApiRouter(account.siteType)
+        const resolvedCheckInUrl =
+          account.checkIn?.customCheckInUrl ||
+          joinUrl(origin, router.checkInPath)
+        const resolvedRedeemUrl =
+          account.checkIn?.customRedeemUrl || joinUrl(origin, router.redeemPath)
+
+        const checkInPattern =
+          buildUrlPrefixWhitelistPattern(resolvedCheckInUrl)
+        if (checkInPattern) patterns.push(checkInPattern)
+
+        const redeemPattern = buildUrlPrefixWhitelistPattern(resolvedRedeemUrl)
+        if (redeemPattern) patterns.push(redeemPattern)
+      }
+    }
+
+    const unique = Array.from(new Set(patterns))
+    this.derivedPatternsCache = {
+      fetchedAt: now,
+      patterns: unique,
+      key: cacheKey,
+    }
+    return unique
+  }
+
+  private async isUrlAllowedByWhitelist(url: string): Promise<boolean> {
+    const whitelist = this.getRuntimeWhitelist()
+    if (!whitelist || !whitelist.enabled) {
+      return true
+    }
+
+    const userPatterns = whitelist.patterns
+      .map((p) => (p ?? "").trim())
+      .filter(Boolean)
+
+    const derivedPatterns = await this.getDerivedWhitelistPatterns({
+      includeAccountSiteUrls: whitelist.includeAccountSiteUrls,
+      includeCheckInAndRedeemUrls: whitelist.includeCheckInAndRedeemUrls,
+    })
+
+    const combined = [...userPatterns, ...derivedPatterns]
+
+    // If there are no patterns at all, treat as allow-all (safe default).
+    if (!combined.length) {
+      return true
+    }
+
+    return isUrlAllowedByRegexList(url, combined)
   }
 
   /**
@@ -114,6 +280,11 @@ class RedemptionAssistService {
 
     if (!isPossibleRedemptionCode(code)) {
       return { shouldPrompt: false, reason: "invalid_code" }
+    }
+
+    const urlAllowed = await this.isUrlAllowedByWhitelist(params.url)
+    if (!urlAllowed) {
+      return { shouldPrompt: false, reason: "url_not_allowed" }
     }
 
     return { shouldPrompt: true }
