@@ -25,7 +25,8 @@ export default defineConfig({
             "declarativeNetRequestWithHostAccess",
           ],
         }),
-    host_permissions: ["https://*/*"],
+    // ensure can get site cookies, please refer to https://stackoverflow.com/a/70070106/22460724
+    host_permissions: ["<all_urls>"],
     browser_specific_settings: {
       gecko: {
         id: "{bc73541a-133d-4b50-b261-36ea20df0d24}",

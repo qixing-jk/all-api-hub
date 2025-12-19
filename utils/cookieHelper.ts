@@ -64,16 +64,10 @@ export async function getCookieHeaderForUrl(
 
   try {
     // 读取 cookies
-    const cookies = await browser.cookies.getAll(
-      isProtectionBypassFirefoxEnv()
-        ? {
-            url,
-            partitionKey: {},
-          }
-        : {
-            url,
-          },
-    )
+    const cookies = await browser.cookies.getAll({
+      url,
+      partitionKey: {},
+    })
 
     // 过滤并格式化
     const validCookies = cookies.filter((cookie) => {
