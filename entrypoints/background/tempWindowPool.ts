@@ -24,6 +24,7 @@ import { isProtectionBypassFirefoxEnv } from "~/utils/protectionBypass"
 import { sanitizeUrlForLog } from "~/utils/sanitizeUrlForLog"
 
 const TEMP_CONTEXT_IDLE_TIMEOUT = 5000
+const QUIET_WINDOW_IDLE_TIMEOUT = 3000
 const TEMP_WINDOW_LOG_PREFIX = "[Background][TempWindow]"
 const DEFAULT_TEMP_CONTEXT_MODE: TempWindowFallbackPreferences["tempContextMode"] =
   "tab"
@@ -772,8 +773,8 @@ async function createTempContextInstance(
       const window = await createWindow({
         url,
         type: "popup",
-        width: 800,
-        height: 600,
+        width: 420,
+        height: 520,
         focused: false,
       })
 
@@ -787,6 +788,23 @@ async function createTempContextInstance(
         active: true,
       })
       tabId = tabs[0]?.id
+
+      // Best-effort minimize to reduce disturbance.
+      try {
+        await browser.windows.update(window.id, { state: "minimized" })
+        logTempWindow("quietWindowMinimized", {
+          requestId,
+          origin,
+          windowId: window.id,
+        })
+      } catch (minErr) {
+        logTempWindow("quietWindowMinimizeFailed", {
+          requestId,
+          origin,
+          windowId: window.id,
+          error: getErrorMessage(minErr),
+        })
+      }
     } else {
       const tab = await createTab(url, false)
       contextId = tab?.id
@@ -871,12 +889,17 @@ function scheduleContextCleanup(context: TempContext) {
     clearTimeout(context.releaseTimer)
   }
 
+  const idleTimeoutMs =
+    context.type === "window"
+      ? QUIET_WINDOW_IDLE_TIMEOUT
+      : TEMP_CONTEXT_IDLE_TIMEOUT
+
   logTempWindow("scheduleContextCleanup", {
     origin: context.origin,
     contextId: context.id,
     tabId: context.tabId,
     type: context.type,
-    idleTimeoutMs: TEMP_CONTEXT_IDLE_TIMEOUT,
+    idleTimeoutMs,
   })
 
   context.releaseTimer = setTimeout(() => {
@@ -891,7 +914,7 @@ function scheduleContextCleanup(context: TempContext) {
         console.error("[Background] Failed to destroy idle temp context", error)
       })
     }
-  }, TEMP_CONTEXT_IDLE_TIMEOUT)
+  }, idleTimeoutMs)
 }
 
 /**
