@@ -64,6 +64,7 @@ export default function ShieldSettings() {
   const shieldOptions = tempWindowFallback.useInOptions
   const shieldAutoRefresh = tempWindowFallback.useForAutoRefresh
   const shieldManualRefresh = tempWindowFallback.useForManualRefresh
+  const shieldTempContextMode = tempWindowFallback.tempContextMode ?? "tab"
 
   const disableShieldUI = !canUseTempWindowFallback
 
@@ -111,6 +112,50 @@ export default function ShieldSettings() {
                   updateTempWindowFallback({ enabled: value })
                 }
               />
+            }
+          />
+
+          <CardItem
+            title={t("refresh.shieldMethodTitle")}
+            description={t("refresh.shieldMethodDesc")}
+            rightContent={
+              <div className="flex flex-col space-y-2 text-left">
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant={
+                      shieldTempContextMode === "tab" ? "default" : "outline"
+                    }
+                    disabled={disableShieldUI || !shieldEnabled}
+                    onClick={() =>
+                      updateTempWindowFallback({ tempContextMode: "tab" })
+                    }
+                  >
+                    {t("refresh.shieldMethodTab")}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={
+                      shieldTempContextMode === "window" ? "default" : "outline"
+                    }
+                    disabled={
+                      disableShieldUI ||
+                      !shieldEnabled ||
+                      (isFirefoxEnv && !canUseTempWindowFallback)
+                    }
+                    onClick={() =>
+                      updateTempWindowFallback({ tempContextMode: "window" })
+                    }
+                  >
+                    {t("refresh.shieldMethodWindow")}
+                  </Button>
+                </div>
+                <Muted>
+                  {shieldTempContextMode === "tab"
+                    ? t("refresh.shieldMethodHintTab")
+                    : t("refresh.shieldMethodHintWindow")}
+                </Muted>
+              </div>
             }
           />
 
