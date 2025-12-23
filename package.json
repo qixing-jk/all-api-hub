@@ -3,7 +3,7 @@
   "displayName": "中转站管理器 - All API Hub",
   "private": true,
   "type": "module",
-  "version": "2.31.0",
+  "version": "2.32.0",
   "description": "一站式聚合管理所有AI中转站账号的余额、模型和密钥，告别繁琐登录。",
   "scripts": {
     "dev": "wxt",

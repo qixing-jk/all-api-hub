@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.32.0](https://github.com/qixing-jk/all-api-hub/compare/v2.31.0...v2.32.0) (2025-12-23)
+
+
+### Features
+
+* **model-redirect:** support hyphen/dot version equivalence ([463f789](https://github.com/qixing-jk/all-api-hub/commit/463f7899fd5f45801142a9bd500e6f2de9f93d20))
+* **redemption:** add context menu for selection redemption ([bd95033](https://github.com/qixing-jk/all-api-hub/commit/bd95033c2a079468c820b44f0fe1c36241453966))
+* **user-preferences:** default enable auto checkin and extend time window ([973785d](https://github.com/qixing-jk/all-api-hub/commit/973785dbcb48bda31d684688261d3443ca7de576))
+
 ## [2.31.0](https://github.com/qixing-jk/all-api-hub/compare/v2.30.0...v2.31.0) (2025-12-18)
 
 
