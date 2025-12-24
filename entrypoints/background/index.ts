@@ -15,6 +15,7 @@ import { userPreferences } from "~/services/userPreferences"
 import { onInstalled } from "~/utils/browserApi"
 import { openOrFocusOptionsMenuItem } from "~/utils/navigation"
 
+import { applyActionClickBehavior } from "./actionClickBehavior"
 import { setupContextMenus } from "./contextMenus"
 import {
   initializeCookieInterceptors,
@@ -112,5 +113,9 @@ export default defineBackground(() => {
  */
 async function main() {
   await initializeServices()
+
+  const prefs = await userPreferences.getPreferences()
+  await applyActionClickBehavior(prefs.actionClickBehavior ?? "popup")
+
   await initializeCookieInterceptors()
 }

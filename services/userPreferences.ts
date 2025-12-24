@@ -91,6 +91,12 @@ export interface RedemptionAssistPreferences {
 export interface UserPreferences {
   themeMode: ThemeMode
   /**
+   * Controls what happens when the toolbar icon is clicked.
+   * - popup: open extension popup (default)
+   * - sidepanel: open side panel (if supported)
+   */
+  actionClickBehavior?: "popup" | "sidepanel"
+  /**
    * language preference
    */
   language?: string
@@ -287,6 +293,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   currencyType: "USD",
   sortField: DATA_TYPE_BALANCE, // 与 UI_CONSTANTS.SORT.DEFAULT_FIELD 保持一致
   sortOrder: "desc", // 与 UI_CONSTANTS.SORT.DEFAULT_ORDER 保持一致
+  actionClickBehavior: "popup",
   accountAutoRefresh: DEFAULT_ACCOUNT_AUTO_REFRESH,
   showHealthStatus: true, // 默认显示健康状态
   webdav: DEFAULT_WEBDAV_SETTINGS,

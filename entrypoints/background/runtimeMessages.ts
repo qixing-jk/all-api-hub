@@ -1,4 +1,5 @@
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { applyActionClickBehavior } from "~/entrypoints/background/actionClickBehavior"
 import { handleAutoCheckinMessage } from "~/services/autoCheckin/scheduler"
 import { handleAutoRefreshMessage } from "~/services/autoRefreshService"
 import { handleChannelConfigMessage } from "~/services/channelConfigStorage"
@@ -87,6 +88,12 @@ export function setupRuntimeMessageListeners() {
 
     if (request.action === "openSettings:checkinRedeem") {
       openOrFocusOptionsMenuItem(MENU_ITEM_IDS.BASIC, { tab: "checkinRedeem" })
+      sendResponse({ success: true })
+      return true
+    }
+
+    if (request.action === "preferences:updateActionClickBehavior") {
+      applyActionClickBehavior(request.behavior)
       sendResponse({ success: true })
       return true
     }

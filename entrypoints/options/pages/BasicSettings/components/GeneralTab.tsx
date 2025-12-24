@@ -6,6 +6,7 @@ import { BodySmall, Card, CardItem, CardList, Heading3 } from "~/components/ui"
 import DangerousZone from "~/entrypoints/options/pages/BasicSettings/components/DangerousZone"
 
 import ThemeToggle from "../../../components/ThemeToggle"
+import ActionClickBehaviorSettings from "./ActionClickBehaviorSettings"
 import DisplaySettings from "./DisplaySettings"
 
 /**
@@ -17,6 +18,7 @@ export default function GeneralTab() {
   return (
     <div className="space-y-6">
       <DisplaySettings />
+      <ActionClickBehaviorSettings />
 
       {/* Appearance & Language Section */}
       <section id="appearance" className="space-y-6">

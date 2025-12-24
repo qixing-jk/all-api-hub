@@ -167,6 +167,16 @@
     "urlDesc": "Claude Code Router server base URL, e.g. http://localhost:3000",
     "keyDesc": "Optional API key for /api/config (APIKEY)"
   },
+  "actionClick": {
+    "title": "Toolbar icon behavior",
+    "description": "Choose what happens when you click the extension icon.",
+    "actionIconClickTitle": "Opens when extension icon is clicked",
+    "actionIconClickDesc": "Choose open behavior when extension icon is clicked",
+    "popupTitle": "Open popup",
+    "popupLabel": "Popup",
+    "sidepanelTitle": "Open side panel",
+    "sidepanelLabel": "Side panel"
+  },
   "permissions": {
     "title": "Permissions",
     "description": "Only grant these optional capabilities when you need All API Hub to handle cookies, headers, or temp-window bypass flows for you.",

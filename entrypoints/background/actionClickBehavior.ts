@@ -1,0 +1,68 @@
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { isFirefox } from "~/utils/browser"
+import {
+  addActionClickListener,
+  openSidePanel,
+  removeActionClickListener,
+  setActionPopup,
+} from "~/utils/browserApi"
+import { openOrFocusOptionsMenuItem } from "~/utils/navigation"
+
+export type ActionClickBehavior = "popup" | "sidepanel"
+
+const POPUP_PAGE = "popup.html"
+
+/**
+ * Singleton click handler used when the action is configured to open the side panel.
+ * Falls back to options settings when side panel is unavailable.
+ */
+const handleActionClick = async () => {
+  try {
+    if (isFirefox()) {
+      await openSidePanel()
+    } else {
+      await chrome.sidePanel.setPanelBehavior({
+        openPanelOnActionClick: true,
+      })
+    }
+  } catch (error) {
+    console.warn(
+      "[ActionClickBehavior] Side panel unavailable, opening settings instead",
+      error,
+    )
+    openOrFocusOptionsMenuItem(MENU_ITEM_IDS.BASIC)
+  }
+}
+
+/**
+ * Apply toolbar click behavior at runtime.
+ * - "popup": restores the popup.html UI and removes side-panel click listeners.
+ * - "sidepanel": disables the popup so onClicked fires and opens the side panel.
+ */
+export async function applyActionClickBehavior(
+  behavior: ActionClickBehavior,
+): Promise<void> {
+  const isSidePanel = behavior === "sidepanel"
+
+  // 清理旧的点击监听
+  removeActionClickListener(handleActionClick)
+
+  // 设置 sidePanel 行为 (chrome only)
+  try {
+    await chrome.sidePanel.setPanelBehavior({
+      openPanelOnActionClick: isSidePanel,
+    })
+  } catch (error) {
+    console.warn("sidePanel.setPanelBehavior not available", error)
+  }
+
+  // 当选择 sidepanel 时清空 popup；选择 popup 时恢复 popup.html
+  try {
+    await setActionPopup(isSidePanel ? "" : POPUP_PAGE)
+  } catch (error) {
+    console.warn("action.setPopup not available", error)
+  }
+
+  // 确保监听已注册
+  addActionClickListener(handleActionClick)
+}

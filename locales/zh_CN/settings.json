@@ -167,6 +167,16 @@
     "urlDesc": "Claude Code Router 服务基础 URL，例如 http://localhost:3000",
     "keyDesc": "用于 /api/config 的可选 APIKEY（如未启用可留空）"
   },
+  "actionClick": {
+    "title": "工具栏图标行为",
+    "description": "选择点击扩展图标时的行为。",
+    "actionIconClickTitle": "点击扩展图标时打开",
+    "actionIconClickDesc": "选择扩展图标时的打开行为，弹出窗口或侧边栏。",
+    "popupTitle": "打开弹出窗口",
+    "popupLabel": "弹窗",
+    "sidepanelTitle": "打开侧边栏",
+    "sidepanelLabel": "侧边栏"
+  },
   "permissions": {
     "title": "权限管理",
     "description": "在需要临时窗口过盾流程时，再授予这些可选权限。",

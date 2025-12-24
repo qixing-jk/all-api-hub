@@ -44,6 +44,7 @@ interface UserPreferencesContextType {
   refreshInterval: number
   minRefreshInterval: number
   refreshOnOpen: boolean
+  actionClickBehavior: "popup" | "sidepanel"
   newApiBaseUrl: string
   newApiAdminToken: string
   newApiUserId: string
@@ -73,6 +74,9 @@ interface UserPreferencesContextType {
   updateRefreshInterval: (interval: number) => Promise<boolean>
   updateMinRefreshInterval: (interval: number) => Promise<boolean>
   updateRefreshOnOpen: (enabled: boolean) => Promise<boolean>
+  updateActionClickBehavior: (
+    behavior: "popup" | "sidepanel",
+  ) => Promise<boolean>
   updateNewApiBaseUrl: (url: string) => Promise<boolean>
   updateNewApiAdminToken: (token: string) => Promise<boolean>
   updateNewApiUserId: (userId: string) => Promise<boolean>
@@ -168,6 +172,31 @@ export const UserPreferencesProvider = ({
     }
     return success
   }, [])
+
+  const updateActionClickBehavior = useCallback(
+    async (behavior: "popup" | "sidepanel") => {
+      const success = await userPreferences.savePreferences({
+        actionClickBehavior: behavior,
+      })
+      if (success) {
+        setPreferences((prev) =>
+          prev
+            ? {
+                ...prev,
+                actionClickBehavior: behavior,
+              }
+            : prev,
+        )
+
+        await sendRuntimeMessage({
+          action: "preferences:updateActionClickBehavior",
+          behavior,
+        })
+      }
+      return success
+    },
+    [],
+  )
 
   const resetClaudeCodeRouterConfig = useCallback(async () => {
     const success = await userPreferences.resetClaudeCodeRouterConfig()
@@ -903,6 +932,7 @@ export const UserPreferencesProvider = ({
     refreshInterval: preferences?.accountAutoRefresh?.interval ?? 360,
     minRefreshInterval: preferences?.accountAutoRefresh?.minInterval ?? 60,
     refreshOnOpen: preferences?.accountAutoRefresh?.refreshOnOpen ?? true,
+    actionClickBehavior: preferences?.actionClickBehavior ?? "popup",
     newApiBaseUrl: preferences?.newApi?.baseUrl || "",
     newApiAdminToken: preferences?.newApi?.adminToken || "",
     newApiUserId: preferences?.newApi?.userId || "",
@@ -930,6 +960,7 @@ export const UserPreferencesProvider = ({
     updateRefreshInterval,
     updateMinRefreshInterval,
     updateRefreshOnOpen,
+    updateActionClickBehavior,
     updateNewApiBaseUrl,
     updateNewApiAdminToken,
     updateNewApiUserId,
