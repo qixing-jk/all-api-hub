@@ -214,7 +214,8 @@
     "intro": "As an open-source project, we only ask for the minimal optional permissions needed to enable advanced workflows. You stay in full control.",
     "project": {
       "label": "Project",
-      "cta": "Star us on GitHub to support the project!"
+      "cta": "Go to the repository to follow versions, submit issues, or participate in development.",
+      "starCta": "Star us on GitHub to support the project!"
     },
     "reason": {
       "newPermissions": "We added new optional permissions to support recent features. Please review and confirm to keep everything working."
