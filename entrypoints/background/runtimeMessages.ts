@@ -15,6 +15,7 @@ import {
   handleCloseTempWindow,
   handleOpenTempWindow,
   handleTempWindowFetch,
+  handleTempWindowGetRenderedTitle,
 } from "./tempWindowPool"
 
 /**
@@ -61,6 +62,11 @@ export function setupRuntimeMessageListeners() {
 
     if (request.action === "tempWindowFetch") {
       void handleTempWindowFetch(request, sendResponse)
+      return true
+    }
+
+    if (request.action === "tempWindowGetRenderedTitle") {
+      void handleTempWindowGetRenderedTitle(request, sendResponse)
       return true
     }
 

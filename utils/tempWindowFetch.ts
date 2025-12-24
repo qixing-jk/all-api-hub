@@ -1,4 +1,7 @@
-import { handleTempWindowFetch } from "~/entrypoints/background/tempWindowPool"
+import {
+  handleTempWindowFetch,
+  handleTempWindowGetRenderedTitle,
+} from "~/entrypoints/background/tempWindowPool"
 import {
   API_ERROR_CODES,
   ApiError,
@@ -45,6 +48,12 @@ export interface TempWindowFetch {
   error?: string
 }
 
+export interface TempWindowRenderedTitleResponse {
+  success: boolean
+  title?: string
+  error?: string
+}
+
 /**
  * Checks whether the temp window fetch flow can be used in the current browser.
  * Firefox requires cookie interceptor permissions; other browsers always allow.
@@ -82,6 +91,35 @@ export async function tempWindowFetch(
     action: "tempWindowFetch",
     ...params,
   })
+}
+
+/**
+ * Reads the rendered document.title via the temp window flow.
+ */
+export async function tempWindowGetRenderedTitle(params: {
+  originUrl: string
+  requestId?: string
+}): Promise<TempWindowRenderedTitleResponse> {
+  const payload = {
+    action: "tempWindowGetRenderedTitle",
+    ...params,
+  }
+
+  if (isExtensionBackground()) {
+    return await new Promise<TempWindowRenderedTitleResponse>((resolve) => {
+      // reuse background handler directly for synchronous contexts
+      void handleTempWindowGetRenderedTitle(payload, (response: any) => {
+        resolve(
+          (response ?? {
+            success: false,
+            error: "Empty tempWindowGetRenderedTitle response",
+          }) as TempWindowRenderedTitleResponse,
+        )
+      })
+    })
+  }
+
+  return await sendRuntimeMessage(payload)
 }
 const TEMP_WINDOW_FALLBACK_STATUS = new Set([401, 403, 429])
 const TEMP_WINDOW_FALLBACK_CODES = new Set<ApiErrorCode>([

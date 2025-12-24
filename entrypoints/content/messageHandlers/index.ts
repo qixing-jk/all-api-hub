@@ -1,6 +1,7 @@
 import {
   handleCheckCloudflareGuard,
   handleGetLocalStorage,
+  handleGetRenderedTitle,
   handleGetUserFromLocalStorage,
   handlePerformTempWindowFetch,
   handleWaitAndGetUserInfo,
@@ -31,6 +32,10 @@ export function setupContentMessageHandlers() {
 
     if (request.action === "performTempWindowFetch") {
       return handlePerformTempWindowFetch(request, sendResponse)
+    }
+
+    if (request.action === "getRenderedTitle") {
+      return handleGetRenderedTitle(request, sendResponse)
     }
   })
 }

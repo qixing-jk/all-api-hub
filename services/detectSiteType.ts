@@ -2,12 +2,72 @@ import { SITE_TITLE_RULES, UNKNOWN_SITE } from "~/constants/siteType"
 import { ApiError } from "~/services/apiService/common/errors"
 import { fetchApi, fetchApiData } from "~/services/apiService/common/utils"
 import { AuthTypeEnum } from "~/types"
+import {
+  canUseTempWindowFetch,
+  tempWindowFetch,
+  tempWindowGetRenderedTitle,
+} from "~/utils/tempWindowFetch"
 
 /**
  * Fetch the raw HTML title from the site root.
  * Uses a text response and no-store cache to avoid stale titles.
  */
 export const fetchSiteOriginalTitle = async (url: string) => {
+  const parseTitle = (html: string) => {
+    const match = html.match(/<title>(.*?)<\/title>/i) // simple, case-insensitive title extract
+    return match ? match[1] : ""
+  }
+
+  const fetchUrl = new URL("/", url).toString()
+  const tempRequestId = `fetch-title-${Date.now()}`
+
+  // 首选通过临时上下文实际渲染页面并读取 document.title
+  try {
+    if (await canUseTempWindowFetch()) {
+      const rendered = await tempWindowGetRenderedTitle({
+        originUrl: fetchUrl,
+        requestId: `${tempRequestId}-render`,
+      })
+
+      if (rendered?.success && rendered.title) {
+        console.log("原始 document title (rendered):", rendered.title)
+        return rendered.title
+      }
+    }
+  } catch (error) {
+    console.warn(
+      "[DetectSiteType] temp context rendered title failed, fallback to fetch",
+      error,
+    )
+  }
+
+  // 优先尝试临时上下文获取标题，确保通过 WAF/盾后读取真实页面内容
+  try {
+    if (await canUseTempWindowFetch()) {
+      const tempResult = await tempWindowFetch({
+        originUrl: url,
+        fetchUrl,
+        responseType: "text",
+        fetchOptions: {
+          credentials: "include",
+          cache: "no-store",
+        },
+        requestId: tempRequestId,
+      })
+
+      if (tempResult?.success && typeof tempResult.data === "string") {
+        const title = parseTitle(tempResult.data)
+        console.log("原始 document title (temp context):", title)
+        return title
+      }
+    }
+  } catch (error) {
+    console.warn(
+      "[DetectSiteType] temp context title fetch failed, fallback",
+      error,
+    )
+  }
+
   const html = await fetchApi<string>(
     {
       baseUrl: url,
@@ -20,9 +80,8 @@ export const fetchSiteOriginalTitle = async (url: string) => {
     },
     true,
   )
-  const match = html.match(/<title>(.*?)<\/title>/i) // simple, case-insensitive title extract
-  const title = match ? match[1] : "未找到"
-  console.log("原始 document title:", title)
+  const title = parseTitle(html)
+  console.log("原始 document title (direct fetch):", title)
   return title
 }
 

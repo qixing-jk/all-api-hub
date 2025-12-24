@@ -12,7 +12,6 @@ import {
   hasWindowsAPI,
   onTabRemoved,
   onWindowRemoved,
-  removeTabOrWindow,
 } from "~/utils/browserApi"
 import { getCookieHeaderForUrl } from "~/utils/cookieHelper"
 import {
@@ -50,6 +49,66 @@ async function resolveTempContextMode(): Promise<
       (DEFAULT_PREFERENCES.tempWindowFallback as TempWindowFallbackPreferences)
         .tempContextMode ?? DEFAULT_TEMP_CONTEXT_MODE
     )
+  }
+}
+
+/**
+ * 在临时上下文中渲染页面并读取真实的 document.title。
+ */
+export async function handleTempWindowGetRenderedTitle(
+  request: any,
+  sendResponse: (response?: any) => void,
+) {
+  const { originUrl, requestId } = request
+  const tempRequestId = requestId || `temp-title-${Date.now()}`
+
+  logTempWindow("tempWindowGetRenderedTitleStart", {
+    requestId: tempRequestId,
+    origin: originUrl ? normalizeOrigin(originUrl) : null,
+  })
+
+  try {
+    const context = await acquireTempContext(originUrl, tempRequestId)
+    const { tabId } = context
+    let released = false
+
+    try {
+      const response = await browser.tabs.sendMessage(tabId, {
+        action: "getRenderedTitle",
+        requestId: tempRequestId,
+      })
+
+      if (!response) {
+        throw new Error("No response from rendered title fetch")
+      }
+
+      sendResponse(response)
+    } catch (error) {
+      logTempWindow("tempWindowGetRenderedTitleError", {
+        requestId: tempRequestId,
+        error: getErrorMessage(error),
+      })
+      await releaseTempContext(tempRequestId, {
+        forceClose: true,
+        reason: "tempWindowGetRenderedTitleError",
+      })
+      released = true
+      sendResponse({ success: false, error: getErrorMessage(error) })
+    } finally {
+      if (!released) {
+        await releaseTempContext(tempRequestId)
+      }
+    }
+  } catch (error) {
+    logTempWindow("tempWindowGetRenderedTitleError", {
+      requestId: tempRequestId,
+      error: getErrorMessage(error),
+    })
+    await releaseTempContext(tempRequestId, {
+      forceClose: true,
+      reason: "tempWindowGetRenderedTitleError",
+    })
+    sendResponse({ success: false, error: getErrorMessage(error) })
   }
 }
 

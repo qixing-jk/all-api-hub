@@ -58,7 +58,7 @@ describe("detectSiteType", () => {
       expect(title).toBe("Mixed Case")
     })
 
-    it("should return '未找到' when title tag is missing", async () => {
+    it("should return '' when title tag is missing", async () => {
       const mockHTML = "<html><head></head><body>No title</body></html>"
       server.use(
         http.get("https://example.com", () => {
@@ -70,7 +70,7 @@ describe("detectSiteType", () => {
 
       const title = await fetchSiteOriginalTitle("https://example.com")
 
-      expect(title).toBe("未找到")
+      expect(title).toBe("")
     })
 
     it("should extract title with special characters", async () => {
