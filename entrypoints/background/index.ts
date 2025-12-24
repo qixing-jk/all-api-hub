@@ -7,7 +7,10 @@ import {
   hasNewOptionalPermissions,
   setLastSeenOptionalPermissions,
 } from "~/services/permissions/optionalPermissionState"
-import { OPTIONAL_PERMISSIONS } from "~/services/permissions/permissionManager"
+import {
+  hasPermissions,
+  OPTIONAL_PERMISSIONS,
+} from "~/services/permissions/permissionManager"
 import { userPreferences } from "~/services/userPreferences"
 import { onInstalled } from "~/utils/browserApi"
 import { openOrFocusOptionsMenuItem } from "~/utils/navigation"
@@ -74,14 +77,23 @@ export default defineBackground(() => {
         if (details.reason === "update" && OPTIONAL_PERMISSIONS.length > 0) {
           const hasNew = await hasNewOptionalPermissions()
           if (hasNew) {
-            console.log(
-              "[Background] Update detected with new optional permissions; prompting user to re-confirm.",
-            )
-            openOrFocusOptionsMenuItem(MENU_ITEM_IDS.BASIC, {
-              tab: "permissions",
-              onboarding: "permissions",
-              reason: "new-permissions",
-            })
+            const allGranted = await hasPermissions(OPTIONAL_PERMISSIONS)
+            if (allGranted) {
+              // No missing permissions; refresh snapshot quietly.
+              await setLastSeenOptionalPermissions()
+              console.log(
+                "[Permissions] New optional permissions detected but already granted; snapshot refreshed without prompting.",
+              )
+            } else {
+              console.log(
+                "[Background] Update detected with new optional permissions; prompting user to re-confirm.",
+              )
+              openOrFocusOptionsMenuItem(MENU_ITEM_IDS.BASIC, {
+                tab: "permissions",
+                onboarding: "permissions",
+                reason: "new-permissions",
+              })
+            }
           } else {
             // Keep snapshot fresh on update when nothing new to prompt
             await setLastSeenOptionalPermissions()
