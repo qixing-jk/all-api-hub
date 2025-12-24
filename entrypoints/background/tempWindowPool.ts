@@ -21,6 +21,7 @@ import {
 import { getErrorMessage } from "~/utils/error"
 import { isProtectionBypassFirefoxEnv } from "~/utils/protectionBypass"
 import { sanitizeUrlForLog } from "~/utils/sanitizeUrlForLog"
+import { TempWindowFetchParams } from "~/utils/tempWindowFetch"
 
 const TEMP_CONTEXT_IDLE_TIMEOUT = 5000
 const QUIET_WINDOW_IDLE_TIMEOUT = 3000
@@ -389,7 +390,7 @@ export async function handleAutoDetectSite(
  * 在临时上下文中执行跨域 fetch 请求，用于绕过需要真实浏览器环境的接口访问。
  */
 export async function handleTempWindowFetch(
-  request: any,
+  request: TempWindowFetchParams,
   sendResponse: (response?: any) => void,
 ) {
   const {
@@ -410,7 +411,7 @@ export async function handleTempWindowFetch(
   }
 
   const tempRequestId =
-    requestId || `temp-fetch-${fetchUrl.url}-${crypto.randomUUID()}`
+    requestId || `temp-fetch-${fetchUrl}-${crypto.randomUUID()}`
 
   logTempWindow("tempWindowFetchStart", {
     requestId: tempRequestId,
