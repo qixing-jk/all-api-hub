@@ -31,6 +31,7 @@ const buildState = <T,>(value: T) =>
 interface PermissionOnboardingDialogProps {
   open: boolean
   onClose: () => void
+  reason?: string | null
 }
 
 /**
@@ -38,10 +39,12 @@ interface PermissionOnboardingDialogProps {
  * @param props Component props container.
  * @param props.open Controls dialog visibility.
  * @param props.onClose Callback executed when modal requests closure.
+ * @param props.reason Optional reason code to adjust messaging (e.g., new-permissions).
  */
 export function PermissionOnboardingDialog({
   open,
   onClose,
+  reason,
 }: PermissionOnboardingDialogProps) {
   const { t } = useTranslation("settings")
   const [statuses, setStatuses] = useState<
@@ -180,6 +183,15 @@ export function PermissionOnboardingDialog({
     >
       <div className="space-y-4">
         <Card padding="md" className="space-y-4">
+          {reason === "new-permissions" && (
+            <Alert variant="warning">
+              <AlertDescription>
+                <BodySmall className="dark:text-dark-text-secondary text-gray-500">
+                  {t("permissionsOnboarding.reason.newPermissions")}
+                </BodySmall>
+              </AlertDescription>
+            </Alert>
+          )}
           <div className="flex flex-wrap items-center gap-3">
             <Badge variant="info">
               {t("permissionsOnboarding.openSourceBadge")}

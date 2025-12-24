@@ -20,6 +20,7 @@ import {
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { PageHeader } from "~/entrypoints/options/components/PageHeader"
+import { setLastSeenOptionalPermissions } from "~/services/permissions/optionalPermissionState"
 import { OPTIONAL_PERMISSIONS } from "~/services/permissions/permissionManager"
 import {
   navigateToAnchor,
@@ -36,7 +37,7 @@ import DataBackupTab from "./components/DataBackupTab"
 import GeneralTab from "./components/GeneralTab"
 import LoadingSkeleton from "./components/LoadingSkeleton"
 import ManagedSiteTab from "./components/managedSiteTab"
-import PermissionOnboardingDialog from "./components/PermissionOnboardingDialog"
+import { PermissionOnboardingDialog } from "./components/PermissionOnboardingDialog"
 import PermissionsTab from "./components/PermissionsTab"
 
 type TabId =
@@ -118,6 +119,8 @@ export default function BasicSettings() {
   const selectedTabId = selectedTab?.id ?? "general"
   const [showPermissionsOnboarding, setShowPermissionsOnboarding] =
     useState(false)
+  const [permissionsOnboardingReason, setPermissionsOnboardingReason] =
+    useState<string | null>(null)
 
   const applyUrlState = useCallback(() => {
     const { tab, anchor, isHeadingAnchor } = parseTabFromUrl({
@@ -160,14 +163,17 @@ export default function BasicSettings() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     if (params.get("onboarding") === "permissions" && hasOptionalPermissions) {
+      setPermissionsOnboardingReason(params.get("reason"))
       setShowPermissionsOnboarding(true)
     }
   }, [])
 
   const handleCloseOnboarding = useCallback(() => {
     setShowPermissionsOnboarding(false)
+    void setLastSeenOptionalPermissions()
     const url = new URL(window.location.href)
     url.searchParams.delete("onboarding")
+    url.searchParams.delete("reason")
     window.history.replaceState(null, "", url.toString())
   }, [])
 
@@ -256,6 +262,7 @@ export default function BasicSettings() {
         <PermissionOnboardingDialog
           open={showPermissionsOnboarding}
           onClose={handleCloseOnboarding}
+          reason={permissionsOnboardingReason}
         />
       )}
     </div>

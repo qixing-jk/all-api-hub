@@ -104,7 +104,7 @@
   },
   "appearanceLanguage": {
     "language": "语言",
-    "languageDesc": "选择您偏好的语言"
+    "languageDesc": "选择您偏好的显示语言"
   },
   "accountManagement": {
     "title": "账号管理",
@@ -220,6 +220,9 @@
     "actions": {
       "allowAll": "授予推荐权限",
       "maybeLater": "稍后再说"
+    },
+    "reason": {
+      "newPermissions": "我们新增了一些可选权限以支持新的功能，请再次确认授权以确保一切正常运行。"
     },
     "permissionListTitle": "这些权限的作用",
     "permissionListDescription": "绕过防火墙防护等功能的必要权限，让数据获取能在存在防火墙的网站上正常工作。",

@@ -211,11 +211,13 @@
     "title": "Welcome to All API Hub",
     "subtitle": "This open-source extension needs a few optional permissions to enable features like the temp-window bypass and other advanced workflows.",
     "openSourceBadge": "Open-source & community-driven",
-    "intro": "We only use them for the cookie/header steps required to pass protection screens, and you can disable them whenever you like.",
+    "intro": "As an open-source project, we only ask for the minimal optional permissions needed to enable advanced workflows. You stay in full control.",
     "project": {
-      "label": "Project repository",
-      "cta": "Visit the repo to follow releases, file issues, or join development.",
-      "starCta": "Give us a star on GitHub"
+      "label": "Project",
+      "cta": "Star us on GitHub to support the project!"
+    },
+    "reason": {
+      "newPermissions": "We added new optional permissions to support recent features. Please review and confirm to keep everything working."
     },
     "actions": {
       "allowAll": "Allow recommended permissions",
