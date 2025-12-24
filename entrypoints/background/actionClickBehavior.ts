@@ -1,5 +1,4 @@
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import { isFirefox } from "~/utils/browser"
 import {
   addActionClickListener,
   openSidePanel,
@@ -18,13 +17,7 @@ const POPUP_PAGE = "popup.html"
  */
 const handleActionClick = async () => {
   try {
-    if (isFirefox()) {
-      await openSidePanel()
-    } else {
-      await chrome.sidePanel.setPanelBehavior({
-        openPanelOnActionClick: true,
-      })
-    }
+    await openSidePanel()
   } catch (error) {
     console.warn(
       "[ActionClickBehavior] Side panel unavailable, opening settings instead",
