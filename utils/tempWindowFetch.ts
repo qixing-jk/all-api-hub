@@ -36,8 +36,9 @@ export interface TempWindowFetchParams {
   originUrl: string
   fetchUrl: string
   fetchOptions?: Record<string, any>
-  responseType?: TempWindowResponseType
   requestId?: string
+  responseType?: TempWindowResponseType
+  suppressMinimize?: boolean
 }
 
 export interface TempWindowFetch {
@@ -75,9 +76,18 @@ export async function canUseTempWindowFetch() {
 export async function tempWindowFetch(
   params: TempWindowFetchParams,
 ): Promise<TempWindowFetch> {
+  const suppressMinimize =
+    params.suppressMinimize ??
+    (typeof window !== "undefined" && isExtensionPopup())
+
+  const payload: TempWindowFetchParams = {
+    ...params,
+    suppressMinimize,
+  }
+
   if (isExtensionBackground()) {
     return await new Promise<TempWindowFetch>((resolve) => {
-      void handleTempWindowFetch(params, (response) => {
+      void handleTempWindowFetch(payload, (response) => {
         resolve(
           (response ?? {
             success: false,
@@ -89,7 +99,7 @@ export async function tempWindowFetch(
   }
   return await sendRuntimeMessage({
     action: "tempWindowFetch",
-    ...params,
+    ...payload,
   })
 }
 
@@ -99,10 +109,14 @@ export async function tempWindowFetch(
 export async function tempWindowGetRenderedTitle(params: {
   originUrl: string
   requestId?: string
+  suppressMinimize?: boolean
 }): Promise<TempWindowRenderedTitleResponse> {
   const payload = {
     action: "tempWindowGetRenderedTitle",
     ...params,
+    suppressMinimize:
+      params.suppressMinimize ??
+      (typeof window !== "undefined" && isExtensionPopup()),
   }
 
   if (isExtensionBackground()) {
@@ -323,8 +337,8 @@ async function shouldUseTempWindowFallback(
       } else if (isExtensionSidePanel()) {
         inSidePanel = true
       } else if (typeof window !== "undefined") {
-        const href = window.location?.href || ""
-        if (href && href.startsWith(OPTIONS_PAGE_URL)) {
+        const currentUrl = new URL(window.location.href)
+        if (currentUrl && currentUrl.href.startsWith(OPTIONS_PAGE_URL)) {
           inOptions = true
         }
       }
@@ -398,17 +412,20 @@ async function fetchViaTempWindow<T>(
     )
   }
 
-  const requestPayload: TempWindowFetchParams = {
+  const requestId = `temp-fetch-${Date.now()}`
+  const suppressMinimize = true
+  const payload: TempWindowFetchParams = {
     originUrl: context.baseUrl,
     fetchUrl: context.url,
     fetchOptions,
+    requestId,
     responseType,
-    requestId: `temp-fetch-${Date.now()}`,
+    suppressMinimize,
   }
 
   console.log("[API Service] Using temp window fetch fallback for", context.url)
 
-  const response = await tempWindowFetch(requestPayload)
+  const response = await tempWindowFetch(payload)
 
   console.log("[API Service] Temp window fetch response:", response)
 
