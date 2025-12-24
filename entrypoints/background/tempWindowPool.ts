@@ -409,7 +409,8 @@ export async function handleTempWindowFetch(
     return
   }
 
-  const tempRequestId = requestId || `temp-fetch-${Date.now()}`
+  const tempRequestId =
+    requestId || `temp-fetch-${fetchUrl.url}-${crypto.randomUUID()}`
 
   logTempWindow("tempWindowFetchStart", {
     requestId: tempRequestId,
@@ -728,9 +729,14 @@ async function releaseTempContext(
           type: context.type,
           reason: options.reason ?? null,
         })
-        await destroyContext(context, {
-          reason: options.reason ?? "forceClose",
-        })
+        destroyingOrigins.add(context.origin)
+        try {
+          await destroyContext(context, {
+            reason: options.reason ?? "forceClose",
+          })
+        } finally {
+          destroyingOrigins.delete(context.origin)
+        }
         return
       }
 

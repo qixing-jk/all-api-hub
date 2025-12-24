@@ -19,7 +19,7 @@ export const fetchSiteOriginalTitle = async (url: string) => {
   }
 
   const fetchUrl = new URL("/", url).toString()
-  const tempRequestId = `fetch-title-${Date.now()}`
+  const tempRequestId = `fetch-title-${fetchUrl}-${crypto.randomUUID()}`
 
   // 首选通过临时上下文实际渲染页面并读取 document.title
   try {

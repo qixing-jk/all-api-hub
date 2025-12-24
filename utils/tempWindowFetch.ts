@@ -412,7 +412,7 @@ async function fetchViaTempWindow<T>(
     )
   }
 
-  const requestId = `temp-fetch-${Date.now()}`
+  const requestId = `temp-fetch-${context.url}-${crypto.randomUUID()}`
   const suppressMinimize = true
   const payload: TempWindowFetchParams = {
     originUrl: context.baseUrl,
