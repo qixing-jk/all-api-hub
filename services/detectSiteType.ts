@@ -45,7 +45,7 @@ export const fetchSiteOriginalTitle = async (url: string) => {
   try {
     if (await canUseTempWindowFetch()) {
       const tempResult = await tempWindowFetch({
-        originUrl: url,
+        originUrl: fetchUrl,
         fetchUrl,
         responseType: "text",
         fetchOptions: {
