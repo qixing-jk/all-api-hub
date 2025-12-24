@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.33.0](https://github.com/qixing-jk/all-api-hub/compare/v2.32.0...v2.33.0) (2025-12-24)
+
+
+### Features
+
+* add temp context mode for shield bypass ([#279](https://github.com/qixing-jk/all-api-hub/issues/279)) ([aa045c3](https://github.com/qixing-jk/all-api-hub/commit/aa045c34f9ecc475e9afb842edef35e87ba178a3))
+* **api:** internationalize error messages in API utilities ([20a4c91](https://github.com/qixing-jk/all-api-hub/commit/20a4c9149a63539a20dadfa4ccdfde2147ebe046))
+* **detectSiteType:** add temp window rendered title detection ([#282](https://github.com/qixing-jk/all-api-hub/issues/282)) ([df203d7](https://github.com/qixing-jk/all-api-hub/commit/df203d764f292a554e7846cd44fa7275daae9d65))
+* **permissions:** add optional permission state tracking ([#283](https://github.com/qixing-jk/all-api-hub/issues/283)) ([6b98f69](https://github.com/qixing-jk/all-api-hub/commit/6b98f6974394074b8f9d66361bb685c87637f72a))
+
+
+### Bug Fixes
+
+* add validation messages for refresh interval settings ([ccd2ff1](https://github.com/qixing-jk/all-api-hub/commit/ccd2ff18b1f603a9c8eff7e1d3bd9aac2d4a9de2))
+* **react-devtools:** use devDependency react-devtools instead of global ([b616bc1](https://github.com/qixing-jk/all-api-hub/commit/b616bc10432cb6de65f3171d61a65a0459bdaad0))
+
 ## [2.32.0](https://github.com/qixing-jk/all-api-hub/compare/v2.31.0...v2.32.0) (2025-12-23)
 
 
