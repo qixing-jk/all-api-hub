@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.34.0](https://github.com/qixing-jk/all-api-hub/compare/v2.33.0...v2.34.0) (2025-12-25)
+
+
+### Features
+
+* add toolbar icon behavior setting (popup/sidepanel) ([#284](https://github.com/qixing-jk/all-api-hub/issues/284)) ([7285b55](https://github.com/qixing-jk/all-api-hub/commit/7285b555acce8a8a05113584f353bf762737376e))
+
+
+### Bug Fixes
+
+* **accountStorage:** ensure type-safe comparison for account IDs ([44f4177](https://github.com/qixing-jk/all-api-hub/commit/44f4177a7af147f7e229a14c729f4e1e1372562a))
+* make sure all temp context is closed ([#286](https://github.com/qixing-jk/all-api-hub/issues/286)) ([1fbbedd](https://github.com/qixing-jk/all-api-hub/commit/1fbbedd724be83a5dd20d882c2e0dd0290dee4b6))
+
 ## [2.33.0](https://github.com/qixing-jk/all-api-hub/compare/v2.32.0...v2.33.0) (2025-12-24)
 
 
