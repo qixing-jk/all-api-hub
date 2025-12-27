@@ -236,6 +236,7 @@ export async function fetchAvailableModels(
         authType: account.authType,
         userId: account.userId,
         accessToken: account.token,
+        cookie: account.cookieAuthSessionCookie,
       },
     })
     if (fallbackModels && fallbackModels.length > 0) {

@@ -46,6 +46,7 @@ export class RedeemService {
             authType: account.authType,
             userId: account.account_info.id,
             accessToken: account.account_info.access_token,
+            cookie: account.cookieAuth?.sessionCookie,
           },
         },
         code,

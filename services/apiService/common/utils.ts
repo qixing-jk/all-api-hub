@@ -19,6 +19,8 @@ import {
   addAuthMethodHeader,
   addExtensionHeader,
   AUTH_MODE,
+  COOKIE_AUTH_HEADER_NAME,
+  COOKIE_SESSION_OVERRIDE_HEADER_NAME,
 } from "~/utils/cookieHelper"
 import {
   executeWithTempWindowFallback,
@@ -76,6 +78,14 @@ const createRequestHeaders = async (
 
   if (auth.authType === AuthTypeEnum.Cookie && auth.cookie) {
     headers["Cookie"] = auth.cookie
+
+    // Preserve per-account session cookies when the Firefox interceptor is active.
+    const hasCookieInterceptorHeader =
+      COOKIE_AUTH_HEADER_NAME in headers &&
+      headers[COOKIE_AUTH_HEADER_NAME] === AUTH_MODE.COOKIE_AUTH_MODE
+    if (hasCookieInterceptorHeader) {
+      headers[COOKIE_SESSION_OVERRIDE_HEADER_NAME] = auth.cookie
+    }
   }
 
   return headers
@@ -279,6 +289,9 @@ const _fetchApi = async <T>(
     fetchOptions,
     onlyData,
     responseType,
+    accountId: request.accountId,
+    authType: resolvedAuth.authType,
+    cookieAuthSessionCookie: request.auth?.cookie,
   }
 
   return await executeWithTempWindowFallback(context, async () => {
