@@ -257,7 +257,11 @@ export interface AuthTypeFetchParams extends AuthFetchParams {
 export interface AuthConfig {
   /** 认证类型: cookie | access_token | none */
   authType: AuthTypeEnum
-  /** Cookie 字符串（预留字段，后续扩展为账号完整信息） */
+  /**
+   * Cookie 字符串
+   * 因为浏览器无法通过其他方式自定义请求携带的cookie,只能DNR
+   * 但DNR部分已经注入cookie头,所以这里传入的cookie是备用方案，主要避免后续还需从存储中读取cookie
+   */
   cookie?: string
   /** 访问令牌（用于 token/access_token 认证） */
   accessToken?: string
