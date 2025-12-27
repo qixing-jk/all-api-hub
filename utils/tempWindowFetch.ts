@@ -171,14 +171,14 @@ function tagTempWindowFallbackBlocked(
 export interface TempWindowFallbackContext {
   baseUrl: string
   url: string
-  endpoint?: string
+  endpoint: string
   fetchOptions: RequestInit
   onlyData: boolean
   responseType: TempWindowResponseType
   /** Account ID for per-request cookie isolation */
   accountId?: string
   /** Auth type for cookie auth handling */
-  authType?: AuthTypeEnum
+  authType: AuthTypeEnum
   /** Per-account session cookie header to merge with WAF cookies */
   cookieAuthSessionCookie?: string
 }

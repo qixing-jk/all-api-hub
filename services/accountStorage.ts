@@ -100,7 +100,7 @@ class AccountStorageService {
    */
   async getAccountByBaseUrlAndUserId(
     baseUrl: string,
-    userId: string | number,
+    userId?: string | number,
   ): Promise<SiteAccount | null> {
     try {
       console.log(
