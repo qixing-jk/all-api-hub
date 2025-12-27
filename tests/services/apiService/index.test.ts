@@ -31,45 +31,57 @@ describe("apiService index wrapper", () => {
     const { getApiService } = await import("~/services/apiService")
     commonFetchUserInfo.mockResolvedValue({} as any)
 
-    await (getApiService(undefined).fetchUserInfo as any)(
-      "https://example.com",
-      1,
-    )
+    const request = {
+      baseUrl: "https://example.com",
+      auth: { authType: "cookie", userId: 1 },
+    }
+
+    await (getApiService(undefined).fetchUserInfo as any)(request)
 
     expect(commonFetchUserInfo).toHaveBeenCalledTimes(1)
-    expect(commonFetchUserInfo).toHaveBeenCalledWith("https://example.com", 1)
+    expect(commonFetchUserInfo).toHaveBeenCalledWith(request)
   })
 
   it("should use override module when selecting a site-scoped api instance", async () => {
     const { getApiService } = await import("~/services/apiService")
     oneHubFetchModelPricing.mockResolvedValue({} as any)
 
-    await (getApiService(ONE_HUB).fetchModelPricing as any)({ foo: "bar" })
+    const request = {
+      baseUrl: "https://example.com",
+      auth: { authType: "none" },
+    }
+    await (getApiService(ONE_HUB).fetchModelPricing as any)(request)
 
     expect(oneHubFetchModelPricing).toHaveBeenCalledTimes(1)
-    expect(oneHubFetchModelPricing).toHaveBeenCalledWith({ foo: "bar" })
+    expect(oneHubFetchModelPricing).toHaveBeenCalledWith(request)
   })
 
   it("should route to override without relying on object siteType detection", async () => {
     const { getApiService } = await import("~/services/apiService")
     oneHubFetchAccountTokens.mockResolvedValue([] as any)
 
-    await (getApiService(DONE_HUB).fetchAccountTokens as any)({ foo: "bar" })
+    const request = {
+      baseUrl: "https://example.com",
+      auth: { authType: "none" },
+    }
+    await (getApiService(DONE_HUB).fetchAccountTokens as any)(request)
 
     expect(oneHubFetchAccountTokens).toHaveBeenCalledTimes(1)
-    expect(oneHubFetchAccountTokens).toHaveBeenCalledWith({ foo: "bar" })
+    expect(oneHubFetchAccountTokens).toHaveBeenCalledWith(request)
   })
 
   it("should fall back to common implementation when override module does not implement function", async () => {
     const { getApiService } = await import("~/services/apiService")
     commonFetchUserInfo.mockResolvedValue({} as any)
 
-    await (getApiService(ONE_HUB).fetchUserInfo as any)(
-      "https://example.com",
-      1,
-    )
+    const request = {
+      baseUrl: "https://example.com",
+      auth: { authType: "cookie", userId: 1 },
+    }
+
+    await (getApiService(ONE_HUB).fetchUserInfo as any)(request)
 
     expect(commonFetchUserInfo).toHaveBeenCalledTimes(1)
-    expect(commonFetchUserInfo).toHaveBeenCalledWith("https://example.com", 1)
+    expect(commonFetchUserInfo).toHaveBeenCalledWith(request)
   })
 })

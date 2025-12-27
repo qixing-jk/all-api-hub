@@ -39,11 +39,16 @@ export class RedeemService {
       }
 
       const creditedAmount = await getApiService(account.site_type).redeemCode(
-        account.site_url,
-        account.account_info.id,
-        account.account_info.access_token,
+        {
+          baseUrl: account.site_url,
+          accountId,
+          auth: {
+            authType: account.authType,
+            userId: account.account_info.id,
+            accessToken: account.account_info.access_token,
+          },
+        },
         code,
-        account.authType,
       )
 
       const displayAccount =

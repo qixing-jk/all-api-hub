@@ -6,6 +6,7 @@ import {
   searchChannel,
   updateChannel,
 } from "~/services/apiService/veloera"
+import { AuthTypeEnum } from "~/types"
 
 const { mockFetchApiData } = vi.hoisted(() => ({
   mockFetchApiData: vi.fn(),
@@ -38,6 +39,14 @@ describe("apiService veloera channel APIs", () => {
     const baseUrl = "https://example.com"
     const token = "token"
     const userId = 1
+    const request = {
+      baseUrl,
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        accessToken: token,
+        userId,
+      },
+    }
 
     mockFetchApiData
       .mockResolvedValueOnce([
@@ -46,15 +55,15 @@ describe("apiService veloera channel APIs", () => {
       ])
       .mockResolvedValueOnce([{ id: 3, type: 1, name: "c3" }])
 
-    const result = await listAllChannels(baseUrl, token, userId, {
+    const result = await listAllChannels(request as any, {
       pageSize: 2,
     })
 
     expect(mockFetchApiData).toHaveBeenCalledTimes(2)
 
-    const firstCallEndpoint = mockFetchApiData.mock.calls[0][0]
+    const firstCallEndpoint = mockFetchApiData.mock.calls[0][1]
       .endpoint as string
-    const secondCallEndpoint = mockFetchApiData.mock.calls[1][0]
+    const secondCallEndpoint = mockFetchApiData.mock.calls[1][1]
       .endpoint as string
 
     expect(firstCallEndpoint).toContain("/api/channel/?")
@@ -74,21 +83,30 @@ describe("apiService veloera channel APIs", () => {
     const baseUrl = "https://example.com"
     const token = "token"
     const userId = 1
+    const request = {
+      baseUrl,
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        accessToken: token,
+        userId,
+      },
+    }
 
     mockFetchApiData.mockResolvedValueOnce([
       { id: 1, type: 1, name: "c1" },
       { id: 2, type: 2, name: "c2" },
     ])
 
-    const result = await searchChannel(baseUrl, token, userId, "k")
+    const result = await searchChannel(request as any, "k")
 
     expect(mockFetchApiData).toHaveBeenCalledTimes(1)
-    const call = mockFetchApiData.mock.calls[0][0]
-    expect(call.baseUrl).toBe(baseUrl)
-    expect(call.userId).toBe(userId)
-    expect(call.token).toBe(token)
-    expect(call.endpoint).toContain("/api/channel/search")
-    expect(call.endpoint).toContain("keyword=")
+    const callRequest = mockFetchApiData.mock.calls[0][0]
+    const callOptions = mockFetchApiData.mock.calls[0][1]
+    expect(callRequest.baseUrl).toBe(baseUrl)
+    expect(callRequest.auth.userId).toBe(userId)
+    expect(callRequest.auth.accessToken).toBe(token)
+    expect(callOptions.endpoint).toContain("/api/channel/search")
+    expect(callOptions.endpoint).toContain("keyword=")
 
     expect(result).not.toBeNull()
     expect(result!.items).toHaveLength(2)
@@ -100,10 +118,18 @@ describe("apiService veloera channel APIs", () => {
     const baseUrl = "https://example.com"
     const token = "token"
     const userId = 1
+    const request = {
+      baseUrl,
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        accessToken: token,
+        userId,
+      },
+    }
 
     mockFetchApi.mockResolvedValueOnce({ success: true, message: "ok" })
 
-    await createChannel(baseUrl, token, userId, {
+    await createChannel(request as any, {
       mode: "none" as any,
       channel: {
         name: "n",
@@ -119,14 +145,15 @@ describe("apiService veloera channel APIs", () => {
     })
 
     expect(mockFetchApi).toHaveBeenCalledTimes(1)
-    const call = mockFetchApi.mock.calls[0][0]
-    expect(call.baseUrl).toBe(baseUrl)
-    expect(call.endpoint).toBe("/api/channel")
-    expect(call.token).toBe(token)
-    expect(call.userId).toBe(userId)
-    expect(call.options?.method).toBe("POST")
+    const callRequest = mockFetchApi.mock.calls[0][0]
+    const callOptions = mockFetchApi.mock.calls[0][1]
+    expect(callRequest.baseUrl).toBe(baseUrl)
+    expect(callOptions.endpoint).toBe("/api/channel")
+    expect(callRequest.auth.accessToken).toBe(token)
+    expect(callRequest.auth.userId).toBe(userId)
+    expect(callOptions.options?.method).toBe("POST")
 
-    const body = JSON.parse(call.options?.body as string)
+    const body = JSON.parse(callOptions.options?.body as string)
     expect(body).toMatchObject({
       name: "n",
       type: 1,
@@ -145,10 +172,18 @@ describe("apiService veloera channel APIs", () => {
     const baseUrl = "https://example.com"
     const token = "token"
     const userId = 1
+    const request = {
+      baseUrl,
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        accessToken: token,
+        userId,
+      },
+    }
 
     mockFetchApi.mockResolvedValueOnce({ success: true, message: "ok" })
 
-    await updateChannel(baseUrl, token, userId, {
+    await updateChannel(request as any, {
       id: 1,
       name: "Updated Channel",
       key: "k",
@@ -159,14 +194,15 @@ describe("apiService veloera channel APIs", () => {
     })
 
     expect(mockFetchApi).toHaveBeenCalledTimes(1)
-    const call = mockFetchApi.mock.calls[0][0]
-    expect(call.baseUrl).toBe(baseUrl)
-    expect(call.endpoint).toBe("/api/channel")
-    expect(call.token).toBe(token)
-    expect(call.userId).toBe(userId)
-    expect(call.options?.method).toBe("PUT")
+    const callRequest = mockFetchApi.mock.calls[0][0]
+    const callOptions = mockFetchApi.mock.calls[0][1]
+    expect(callRequest.baseUrl).toBe(baseUrl)
+    expect(callOptions.endpoint).toBe("/api/channel")
+    expect(callRequest.auth.accessToken).toBe(token)
+    expect(callRequest.auth.userId).toBe(userId)
+    expect(callOptions.options?.method).toBe("PUT")
 
-    const body = JSON.parse(call.options?.body as string)
+    const body = JSON.parse(callOptions.options?.body as string)
     expect(body).toMatchObject({
       id: 1,
       name: "Updated Channel",

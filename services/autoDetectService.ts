@@ -9,6 +9,7 @@
  */
 import { t } from "i18next"
 
+import { AuthTypeEnum } from "~/types"
 import {
   getActiveOrAllTabs,
   getActiveTabs,
@@ -96,7 +97,12 @@ async function combineUserDataAndSiteType(
  */
 async function getUserDataViaAPI(url: string): Promise<UserDataResult | null> {
   try {
-    const userInfo = await getApiService(undefined).fetchUserInfo(url)
+    const userInfo = await getApiService(undefined).fetchUserInfo({
+      baseUrl: url,
+      auth: {
+        authType: AuthTypeEnum.Cookie,
+      },
+    })
     if (!userInfo || !userInfo.id) {
       return null
     }
@@ -149,7 +155,12 @@ async function getUserDataViaBackground(
 
     if (!response || !response.success || !response.data) {
       // Fallback: if content script/localStorage fetch fails, attempt API-based fetch
-      const userInfo = await getApiService(undefined).fetchUserInfo(url)
+      const userInfo = await getApiService(undefined).fetchUserInfo({
+        baseUrl: url,
+        auth: {
+          authType: AuthTypeEnum.Cookie,
+        },
+      })
       if (userInfo) {
         return {
           userId: userInfo.id,
@@ -215,7 +226,12 @@ async function getUserDataFromCurrentTab(
 
     if (!userResponse || !userResponse.success || !userResponse.data) {
       // fallback
-      const userInfo = await getApiService(undefined).fetchUserInfo(url)
+      const userInfo = await getApiService(undefined).fetchUserInfo({
+        baseUrl: url,
+        auth: {
+          authType: AuthTypeEnum.Cookie,
+        },
+      })
       if (userInfo) {
         return {
           userId: userInfo.id,

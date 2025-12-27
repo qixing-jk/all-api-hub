@@ -472,9 +472,10 @@ describe("accountStorage core behaviors", () => {
     const updatedAccount = await accountStorage.getAccountById("needs-detect")
 
     expect(mockGetSiteType).toHaveBeenCalledWith("https://foo.example.com")
-    expect(mockFetchSupportCheckIn).toHaveBeenCalledWith(
-      "https://foo.example.com",
-    )
+    expect(mockFetchSupportCheckIn).toHaveBeenCalledWith({
+      baseUrl: "https://foo.example.com",
+      auth: { authType: AuthTypeEnum.None },
+    })
     expect(updatedAccount?.site_type).toBe("one-api")
     expect(updatedAccount?.checkIn?.enableDetection).toBe(true)
   })

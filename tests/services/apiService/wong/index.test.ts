@@ -19,12 +19,14 @@ describe("apiService wong", () => {
       },
     })
 
-    const canCheckIn = await fetchCheckInStatus(
-      "https://wong.example.com",
-      1,
-      "token",
-      AuthTypeEnum.AccessToken,
-    )
+    const canCheckIn = await fetchCheckInStatus({
+      baseUrl: "https://wong.example.com",
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        userId: 1,
+        accessToken: "token",
+      },
+    } as any)
 
     expect(canCheckIn).toBe(false)
   })
@@ -40,12 +42,14 @@ describe("apiService wong", () => {
       },
     })
 
-    const canCheckIn = await fetchCheckInStatus(
-      "https://wong.example.com",
-      1,
-      "token",
-      AuthTypeEnum.AccessToken,
-    )
+    const canCheckIn = await fetchCheckInStatus({
+      baseUrl: "https://wong.example.com",
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        userId: 1,
+        accessToken: "token",
+      },
+    } as any)
 
     expect(canCheckIn).toBe(true)
   })
@@ -61,12 +65,14 @@ describe("apiService wong", () => {
       },
     })
 
-    const canCheckIn = await fetchCheckInStatus(
-      "https://wong.example.com",
-      1,
-      "token",
-      AuthTypeEnum.AccessToken,
-    )
+    const canCheckIn = await fetchCheckInStatus({
+      baseUrl: "https://wong.example.com",
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        userId: 1,
+        accessToken: "token",
+      },
+    } as any)
 
     expect(canCheckIn).toBeUndefined()
   })
@@ -79,12 +85,14 @@ describe("apiService wong", () => {
       data: null,
     })
 
-    const canCheckIn = await fetchCheckInStatus(
-      "https://wong.example.com",
-      1,
-      "token",
-      AuthTypeEnum.AccessToken,
-    )
+    const canCheckIn = await fetchCheckInStatus({
+      baseUrl: "https://wong.example.com",
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        userId: 1,
+        accessToken: "token",
+      },
+    } as any)
 
     expect(canCheckIn).toBe(false)
   })
@@ -97,12 +105,14 @@ describe("apiService wong", () => {
       data: undefined,
     })
 
-    const canCheckIn = await fetchCheckInStatus(
-      "https://wong.example.com",
-      1,
-      "token",
-      AuthTypeEnum.AccessToken,
-    )
+    const canCheckIn = await fetchCheckInStatus({
+      baseUrl: "https://wong.example.com",
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        userId: 1,
+        accessToken: "token",
+      },
+    } as any)
 
     expect(canCheckIn).toBe(false)
   })
@@ -118,12 +128,14 @@ describe("apiService wong", () => {
       },
     })
 
-    const canCheckIn = await fetchCheckInStatus(
-      "https://wong.example.com",
-      1,
-      "token",
-      AuthTypeEnum.AccessToken,
-    )
+    const canCheckIn = await fetchCheckInStatus({
+      baseUrl: "https://wong.example.com",
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        userId: 1,
+        accessToken: "token",
+      },
+    } as any)
 
     expect(canCheckIn).toBe(false)
   })

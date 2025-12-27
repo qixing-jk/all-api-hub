@@ -1,6 +1,7 @@
 import { t } from "i18next"
 
 import { getApiService } from "~/services/apiService"
+import { AuthTypeEnum } from "~/types"
 import { getErrorMessage } from "~/utils/error"
 
 /**
@@ -47,7 +48,10 @@ export function handleGetUserFromLocalStorage(
       const userStr = localStorage.getItem("user")
       const user = userStr
         ? JSON.parse(userStr)
-        : await getApiService(undefined).fetchUserInfo(request.url)
+        : await getApiService(undefined).fetchUserInfo({
+            baseUrl: request.url,
+            auth: { authType: AuthTypeEnum.Cookie },
+          })
 
       if (!user || !user.id) {
         sendResponse({

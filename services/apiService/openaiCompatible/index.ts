@@ -4,16 +4,19 @@ import type {
   UpstreamModelList,
 } from "~/services/apiService/common/type"
 import { fetchApiData } from "~/services/apiService/common/utils"
+import { AuthTypeEnum } from "~/types"
 
-export const fetchOpenAICompatibleModels = async ({
-  baseUrl,
-  apiKey,
-}: OpenAIAuthParams) => {
+export const fetchOpenAICompatibleModels = async (params: OpenAIAuthParams) => {
+  const request = {
+    baseUrl: params.baseUrl,
+    auth: {
+      authType: AuthTypeEnum.AccessToken,
+      accessToken: params.apiKey,
+    },
+  }
   try {
-    return await fetchApiData<UpstreamModelList>({
-      baseUrl,
+    return await fetchApiData<UpstreamModelList>(request, {
       endpoint: "/v1/models",
-      token: apiKey,
     })
   } catch (error) {
     console.error("获取上游模型列表失败:", error)
@@ -21,13 +24,9 @@ export const fetchOpenAICompatibleModels = async ({
   }
 }
 
-export const fetchOpenAICompatibleModelIds = async ({
-  baseUrl,
-  apiKey,
-}: OpenAIAuthParams) => {
-  const upstreamModels = await fetchOpenAICompatibleModels({
-    baseUrl: baseUrl,
-    apiKey: apiKey,
-  })
+export const fetchOpenAICompatibleModelIds = async (
+  params: OpenAIAuthParams,
+) => {
+  const upstreamModels = await fetchOpenAICompatibleModels(params)
   return upstreamModels.map((item: UpstreamModelItem) => item.id)
 }

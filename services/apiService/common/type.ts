@@ -9,6 +9,7 @@ import {
   TempWindowHealthStatusCode,
 } from "~/types"
 import type { PerCallPrice } from "~/utils/modelPricing"
+import type { TempWindowResponseType } from "~/utils/tempWindowFetch"
 
 // ============= 类型定义 =============
 export interface UserInfo {
@@ -245,6 +246,66 @@ export interface AuthFetchParams extends BaseFetchParams {
  */
 export interface AuthTypeFetchParams extends AuthFetchParams {
   authType?: AuthTypeEnum
+}
+
+/**
+ * Unified authentication config for ApiServiceRequest.
+ */
+export interface AuthConfig {
+  /** 认证类型: cookie | access_token | none */
+  authType: AuthTypeEnum
+  /** Cookie 字符串（预留字段，后续扩展为账号完整信息） */
+  cookie?: string
+  /** 访问令牌（用于 token/access_token 认证） */
+  accessToken?: string
+  /** 用户 ID（用于 cookie 认证或通用标识） */
+  userId?: number | string
+}
+
+/**
+ * API 服务请求的统一参数对象。
+ *
+ * 用于在 apiService 层统一承载认证信息、站点 baseUrl，以及可扩展的业务数据。
+ * 后续可以在 `auth.cookie` / `accountId` 上扩展为 cookie 认证的多账号管理。
+ */
+export interface ApiServiceRequest {
+  /**
+   * 认证信息
+   */
+  auth: AuthConfig
+  /**
+   * API 基础 URL
+   */
+  baseUrl: string
+  /**
+   * 传入的具体业务数据对象（可选，用于逐步迁移调用方参数）
+   */
+  data?: Record<string, any>
+  /**
+   * 账号 ID（用于后续查询账号信息，目前可选）
+   */
+  accountId?: string
+}
+
+/**
+ * Account-data related requests must include check-in config.
+ *
+ * Note: we keep `ApiServiceRequest` as the minimal/common request DTO, and only
+ * extend it for flows that actually need extra fields (like check-in).
+ */
+export type ApiServiceAccountRequest = ApiServiceRequest & {
+  checkIn: CheckInConfig
+}
+
+/**
+ * fetchApi / fetchApiData 的请求配置（除 auth/baseUrl 外）。
+ *
+ * 该类型从历史 `FetchApiParams` 结构中抽取出来，便于在统一 DTO 路径下复用。
+ */
+export interface FetchApiOptions {
+  endpoint: string
+  options?: RequestInit
+  responseType?: TempWindowResponseType
 }
 
 /**

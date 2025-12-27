@@ -8,6 +8,9 @@ import {
 } from "~/services/apiService/common/errors"
 import type {
   ApiResponse,
+  ApiServiceRequest,
+  AuthConfig,
+  FetchApiOptions,
   LogItem,
   TodayUsageData,
 } from "~/services/apiService/common/type"
@@ -16,7 +19,6 @@ import {
   addAuthMethodHeader,
   addExtensionHeader,
   AUTH_MODE,
-  AuthMode,
 } from "~/utils/cookieHelper"
 import {
   executeWithTempWindowFallback,
@@ -25,6 +27,8 @@ import {
 } from "~/utils/tempWindowFetch"
 import { joinUrl } from "~/utils/url"
 
+type NormalizedAuthContext = AuthConfig
+
 /**
  * Build request headers for New API calls.
  *
@@ -32,15 +36,12 @@ import { joinUrl } from "~/utils/url"
  * - Adds extension + auth method headers (via cookieHelper).
  * - Injects multiple compatible user-id headers so different backends can read the user context.
  * - Adds Bearer token when provided.
- * @param authMode Auth strategy used to add auth headers.
- * @param userId Optional user identifier injected under several header keys.
- * @param accessToken Optional bearer token for token auth flows.
+ * - Optionally includes Cookie header when provided (best-effort; may be ignored by browser).
+ * @param auth Auth context describing authentication and optional user identifier.
  * @returns Headers object ready for fetch.
  */
 const createRequestHeaders = async (
-  authMode: AuthMode,
-  userId?: number | string,
-  accessToken?: string,
+  auth: NormalizedAuthContext,
 ): Promise<Record<string, string>> => {
   const baseHeaders = {
     "Content-Type": REQUEST_CONFIG.HEADERS.CONTENT_TYPE,
@@ -48,23 +49,33 @@ const createRequestHeaders = async (
   }
 
   // Some deployments expect different header names; keep a fan-out map for compatibility.
-  const userHeaders: Record<string, string> = userId
+  const userHeaders: Record<string, string> = auth.userId
     ? {
-        "New-API-User": userId.toString(),
-        "Veloera-User": userId.toString(),
-        "voapi-user": userId.toString(),
-        "User-id": userId.toString(),
-        "Rix-Api-User": userId.toString(),
-        "neo-api-user": userId.toString(),
+        "New-API-User": auth.userId.toString(),
+        "Veloera-User": auth.userId.toString(),
+        "voapi-user": auth.userId.toString(),
+        "User-id": auth.userId.toString(),
+        "Rix-Api-User": auth.userId.toString(),
+        "neo-api-user": auth.userId.toString(),
       }
     : {}
 
   let headers: Record<string, string> = { ...baseHeaders, ...userHeaders }
 
-  headers = await addAuthMethodHeader(addExtensionHeader(headers), authMode)
+  headers = addExtensionHeader(headers)
 
-  if (accessToken) {
-    headers["Authorization"] = `Bearer ${accessToken}`
+  if (auth.authType === AuthTypeEnum.Cookie) {
+    headers = await addAuthMethodHeader(headers, AUTH_MODE.COOKIE_AUTH_MODE)
+  } else if (auth.authType === AuthTypeEnum.AccessToken) {
+    headers = await addAuthMethodHeader(headers, AUTH_MODE.TOKEN_AUTH_MODE)
+  }
+
+  if (auth.accessToken) {
+    headers["Authorization"] = `Bearer ${auth.accessToken}`
+  }
+
+  if (auth.authType === AuthTypeEnum.Cookie && auth.cookie) {
+    headers["Cookie"] = auth.cookie
   }
 
   return headers
@@ -103,36 +114,22 @@ const createBaseRequest = (
 
 /**
  * Create a RequestInit configured for cookie-based auth.
- * @param userId Optional user id to embed in headers.
+ * @param auth Auth context used to compute headers.
  * @param options Additional fetch options to merge.
  */
-const createCookieAuthRequest = async (
-  userId: number | string | undefined,
+const createAuthRequest = async (
+  auth: NormalizedAuthContext,
   options: RequestInit = {},
 ): Promise<RequestInit> => {
+  const credentials: RequestCredentials =
+    auth.authType === AuthTypeEnum.Cookie ? "include" : "omit"
+
   return createBaseRequest(
-    await createRequestHeaders(AUTH_MODE.COOKIE_AUTH_MODE, userId, undefined),
-    "include",
+    await createRequestHeaders(auth),
+    credentials,
     options,
   )
 }
-
-/**
- * Create a RequestInit configured for bearer-token auth.
- * @param userId Optional user id to embed in headers.
- * @param accessToken Bearer token for Authorization header.
- * @param options Additional fetch options to merge.
- */
-const createTokenAuthRequest = async (
-  userId: number | string | undefined,
-  accessToken: string | undefined,
-  options: RequestInit = {},
-): Promise<RequestInit> =>
-  createBaseRequest(
-    await createRequestHeaders(AUTH_MODE.TOKEN_AUTH_MODE, userId, accessToken),
-    "omit",
-    options,
-  )
 
 /**
  * Compute today's start/end unix timestamps (seconds).
@@ -250,66 +247,35 @@ const apiRequest = async <T>(
   return await parseResponseByType<T>(response, responseType)
 }
 
-// 通用请求函数
-export interface FetchApiParams {
-  baseUrl: string
-  endpoint: string
-  userId?: number | string
-  token?: string
-  authType?: AuthTypeEnum // 认证方式，默认 token
-  options?: RequestInit // 可额外自定义 fetch 参数
-  responseType?: TempWindowResponseType // 默认 json，可自定义响应处理
-}
-
 /**
  * Core fetch helper that wires authentication, temp-window fallback, and
  * response parsing for all upstream API calls.
- * @param params Fetch configuration (baseUrl, endpoint, auth, etc.).
+ * @param request Unified request DTO.
+ * @param options Fetch options (endpoint/method/body/responseType).
  * @param onlyData When true, returns the `data` field directly (JSON only).
  * @returns ApiResponse<T>, raw payload, or data field based on flags.
  */
 const _fetchApi = async <T>(
-  {
-    baseUrl,
-    endpoint,
-    userId,
-    token,
-    authType,
-    options,
-    responseType = "json",
-  }: FetchApiParams,
+  request: ApiServiceRequest,
+  options: FetchApiOptions,
   onlyData: boolean = false,
 ) => {
-  const url = joinUrl(baseUrl, endpoint)
-  let authOptions = {}
-  switch (authType) {
-    case AuthTypeEnum.Cookie:
-      authOptions = await createCookieAuthRequest(userId, options)
-      break
-    case AuthTypeEnum.AccessToken:
-      authOptions = await createTokenAuthRequest(userId, token)
-      break
-    case AuthTypeEnum.None:
-      authOptions = {
-        credentials: "omit",
-      }
-      break
-    default:
-      if (token) {
-        authOptions = await createTokenAuthRequest(userId, token)
-      }
-      break
+  const responseType = options.responseType ?? "json"
+  const url = joinUrl(request.baseUrl, options.endpoint)
+
+  const resolvedAuth: NormalizedAuthContext = {
+    authType: request.auth?.authType ?? AuthTypeEnum.None,
+    userId: request.auth?.userId,
+    accessToken: request.auth?.accessToken,
+    cookie: request.auth?.cookie,
   }
 
-  const fetchOptions = {
-    ...authOptions,
-    ...options,
-  }
+  const fetchOptions = await createAuthRequest(resolvedAuth, options.options)
 
   const context: TempWindowFallbackContext = {
-    baseUrl,
+    baseUrl: request.baseUrl,
     url,
-    endpoint,
+    endpoint: options.endpoint,
     fetchOptions,
     onlyData,
     responseType,
@@ -317,12 +283,17 @@ const _fetchApi = async <T>(
 
   return await executeWithTempWindowFallback(context, async () => {
     if (onlyData) {
-      return await apiRequestData<T>(url, fetchOptions, endpoint, responseType)
+      return await apiRequestData<T>(
+        url,
+        fetchOptions,
+        options.endpoint,
+        responseType,
+      )
     }
     const response = await apiRequest<T>(
       url,
       fetchOptions,
-      endpoint,
+      options.endpoint,
       responseType,
     )
 
@@ -337,35 +308,44 @@ const _fetchApi = async <T>(
 /**
  * Public helper: fetch API and return data (JSON only).
  */
-export const fetchApiData = async <T>(params: FetchApiParams): Promise<T> => {
-  if (params.responseType && params.responseType !== "json") {
+export async function fetchApiData<T>(
+  request: ApiServiceRequest,
+  options: FetchApiOptions,
+): Promise<T> {
+  if (options.responseType && options.responseType !== "json") {
     throw new ApiError(
       "fetchApiData 仅支持 JSON 响应",
       undefined,
-      params.endpoint,
+      options.endpoint,
     )
   }
-  return (await _fetchApi({ ...params, responseType: "json" }, true)) as T
+  return (await _fetchApi(
+    request,
+    { ...options, responseType: "json" },
+    true,
+  )) as T
 }
 
 /**
  * Public helper: fetch API; returns ApiResponse<T> for JSON or raw for others.
  */
 export function fetchApi<T>(
-  params: FetchApiParams,
+  request: ApiServiceRequest,
+  options: FetchApiOptions,
   _normalResponseType: true,
 ): Promise<T>
 export function fetchApi<T>(
-  params: FetchApiParams,
+  request: ApiServiceRequest,
+  options: FetchApiOptions,
   _normalResponseType?: false,
 ): Promise<ApiResponse<T>>
-
 export async function fetchApi<T>(
-  params: FetchApiParams,
+  request: ApiServiceRequest,
+  options: FetchApiOptions,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _normalResponseType?: boolean,
 ): Promise<T | ApiResponse<T>> {
-  return await _fetchApi(params)
+  return await _fetchApi(request, options)
 }
 
 /**

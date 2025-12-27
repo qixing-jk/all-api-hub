@@ -7,6 +7,7 @@ import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { ChannelType, DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
 import { getApiService } from "~/services/apiService"
 import { getManagedSiteService } from "~/services/managedSiteService"
+import { AuthTypeEnum } from "~/types"
 import type {
   ChannelFormData,
   ManagedSiteChannel,
@@ -154,8 +155,11 @@ export function useChannelForm({
         service.siteType,
       ).fetchSiteUserGroups({
         baseUrl: config.baseUrl,
-        userId: config.userId,
-        token: config.token,
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          userId: config.userId,
+          accessToken: config.token,
+        },
       })
 
       let groupOptions = groupsData.map((group) => ({

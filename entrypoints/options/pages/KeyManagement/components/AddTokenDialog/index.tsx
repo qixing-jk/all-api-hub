@@ -79,18 +79,30 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
 
       if (isEditMode && editingToken) {
         await getApiService(currentAccount.siteType).updateApiToken(
-          currentAccount.baseUrl,
-          currentAccount.userId,
-          currentAccount.token,
+          {
+            baseUrl: currentAccount.baseUrl,
+            accountId: currentAccount.id,
+            auth: {
+              authType: currentAccount.authType,
+              userId: currentAccount.userId,
+              accessToken: currentAccount.token,
+            },
+          },
           editingToken.id,
           tokenData,
         )
         toast.success(t("dialog.updateSuccess"))
       } else {
         await getApiService(currentAccount.siteType).createApiToken(
-          currentAccount.baseUrl,
-          currentAccount.userId,
-          currentAccount.token,
+          {
+            baseUrl: currentAccount.baseUrl,
+            accountId: currentAccount.id,
+            auth: {
+              authType: currentAccount.authType,
+              userId: currentAccount.userId,
+              accessToken: currentAccount.token,
+            },
+          },
           tokenData,
         )
         toast.success(t("dialog.createSuccess"))

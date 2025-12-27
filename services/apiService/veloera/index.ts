@@ -1,6 +1,7 @@
 import { REQUEST_CONFIG } from "~/services/apiService/common/constant"
 import { ApiError } from "~/services/apiService/common/errors"
 import { fetchAllItems } from "~/services/apiService/common/pagination"
+import type { ApiServiceRequest } from "~/services/apiService/common/type"
 import { fetchApi, fetchApiData } from "~/services/apiService/common/utils"
 import type {
   CreateChannelPayload,
@@ -60,7 +61,9 @@ const normalizeChannel = (raw: VeloeraChannelRaw): ManagedSiteChannel => {
         is_multi_key: Boolean(rawInfo.is_multi_key),
         multi_key_size: toNumberOrZero(rawInfo.multi_key_size),
         multi_key_status_list: rawInfo.multi_key_status_list ?? null,
-        multi_key_polling_index: toNumberOrZero(rawInfo.multi_key_polling_index),
+        multi_key_polling_index: toNumberOrZero(
+          rawInfo.multi_key_polling_index,
+        ),
         multi_key_mode: rawInfo.multi_key_mode ?? "",
       }
     : createDefaultChannelInfo()
@@ -106,11 +109,9 @@ const normalizeChannel = (raw: VeloeraChannelRaw): ManagedSiteChannel => {
  * We convert `CreateChannelPayload` into a Veloera-compatible request body.
  */
 export async function createChannel(
-  baseUrl: string,
-  adminToken: string,
-  userId: number | string,
+  request: ApiServiceRequest,
   channelData: CreateChannelPayload,
-) {
+): Promise<any> {
   try {
     const { groups, ...channel } = channelData.channel
     const payload = {
@@ -118,11 +119,8 @@ export async function createChannel(
       group: (groups ?? []).join(","),
     }
 
-    return await fetchApi<void>({
-      baseUrl,
+    return await fetchApi<void>(request, {
       endpoint: VELOERA_CHANNEL_ENDPOINT,
-      userId,
-      token: adminToken,
       options: {
         method: "POST",
         body: JSON.stringify(payload),
@@ -141,11 +139,9 @@ export async function createChannel(
  * of `groups`. We ensure `group` is populated and omit the `groups` array.
  */
 export async function updateChannel(
-  baseUrl: string,
-  adminToken: string,
-  userId: number | string,
+  request: ApiServiceRequest,
   channelData: UpdateChannelPayload,
-) {
+): Promise<any> {
   try {
     const { groups, ...rest } = channelData
     const payload = {
@@ -153,11 +149,8 @@ export async function updateChannel(
       group: rest.group ?? (groups ?? []).join(","),
     }
 
-    return await fetchApi<void>({
-      baseUrl,
+    return await fetchApi<void>(request, {
       endpoint: VELOERA_CHANNEL_ENDPOINT,
-      userId,
-      token: adminToken,
       options: {
         method: "PUT",
         body: JSON.stringify(payload),
@@ -177,9 +170,7 @@ export async function updateChannel(
  * same `ManagedSiteChannelListData` structure used by the New API implementation.
  */
 export async function listAllChannels(
-  baseUrl: string,
-  adminToken: string,
-  userId?: number | string,
+  request: ApiServiceRequest,
   options?: {
     pageSize?: number
     beforeRequest?: () => Promise<void>
@@ -193,12 +184,7 @@ export async function listAllChannels(
       await beforeRequest?.()
 
       const endpoint = `/api/channel/?p=${page}&page_size=${pageSize}`
-      const data = await fetchApiData<unknown>({
-        baseUrl,
-        endpoint,
-        userId,
-        token: adminToken,
-      })
+      const data = await fetchApiData<unknown>(request, { endpoint })
 
       if (!Array.isArray(data)) {
         throw new ApiError("Failed to fetch channels", undefined, endpoint)
@@ -237,19 +223,12 @@ export async function listAllChannels(
  * This adapter normalizes that payload to New API compatible `ManagedSiteChannelListData`.
  */
 export async function searchChannel(
-  baseUrl: string,
-  accessToken: string,
-  userId: number | string,
+  request: ApiServiceRequest,
   keyword: string,
 ): Promise<ManagedSiteChannelListData | null> {
   try {
     const endpoint = `/api/channel/search?keyword=${encodeURIComponent(keyword)}`
-    const data = await fetchApiData<unknown>({
-      baseUrl,
-      endpoint,
-      userId,
-      token: accessToken,
-    })
+    const data = await fetchApiData<unknown>(request, { endpoint })
 
     const rawItems: VeloeraChannelRaw[] | null = Array.isArray(data)
       ? (data as VeloeraChannelRaw[])

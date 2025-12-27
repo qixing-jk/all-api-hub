@@ -16,6 +16,8 @@ import {
 } from "~/services/apiService/common"
 import type {
   AccountData,
+  ApiServiceAccountRequest,
+  ApiServiceRequest,
   RefreshAccountResult,
 } from "~/services/apiService/common/type"
 import { fetchApi } from "~/services/apiService/common/utils"
@@ -99,18 +101,10 @@ const ENDPOINT = "/api/user/checkin"
  * @param accessToken access token
  * @param authType authentication type (optional, defaults to AccessToken)
  */
-export const fetchSupportCheckIn = async (
-  baseUrl: string,
-  userId: number,
-  accessToken: string,
-  authType?: AuthTypeEnum,
-): Promise<boolean | undefined> => {
-  const siteStatus = await fetchCheckInStatus(
-    baseUrl,
-    userId,
-    accessToken,
-    authType,
-  )
+export async function fetchSupportCheckIn(
+  request: ApiServiceRequest,
+): Promise<boolean | undefined> {
+  const siteStatus = await fetchCheckInStatus(request)
   return siteStatus !== undefined
 }
 
@@ -137,20 +131,25 @@ const isAlreadyCheckedMessage = (message: string): boolean => {
  * @param accessToken access token
  * @param authType authentication type (optional, defaults to AccessToken)
  */
-export const fetchCheckInStatus = async (
-  baseUrl: string,
-  userId: number,
-  accessToken: string,
-  authType?: AuthTypeEnum,
-): Promise<boolean | undefined> => {
+export async function fetchCheckInStatus(
+  request: ApiServiceRequest,
+): Promise<boolean | undefined> {
+  const normalizedRequest: ApiServiceRequest =
+    request.auth.authType === AuthTypeEnum.None
+      ? {
+          ...request,
+          auth: {
+            ...request.auth,
+            authType: AuthTypeEnum.AccessToken,
+          },
+        }
+      : request
+
   try {
     const response = (await fetchApi<WongCheckinApiResponse>(
+      normalizedRequest,
       {
-        baseUrl,
         endpoint: ENDPOINT,
-        userId,
-        token: accessToken,
-        authType: authType || AuthTypeEnum.AccessToken,
         options: {
           method: "GET",
           cache: "no-store",
@@ -191,20 +190,17 @@ export const fetchCheckInStatus = async (
  * Fetch WONG account data by composing common quota/usage/income calls and
  * optionally probing daily check-in status.
  */
-export const fetchAccountData = async (
-  baseUrl: string,
-  userId: number,
-  token: string,
-  checkIn: CheckInConfig,
-  authType?: AuthTypeEnum,
-): Promise<AccountData> => {
-  const params = { baseUrl, userId, token, authType, checkIn }
-  const quotaPromise = fetchAccountQuota(baseUrl, userId, token, authType)
-  const todayUsagePromise = fetchTodayUsage(params)
-  const todayIncomePromise = fetchTodayIncome(params)
+export async function fetchAccountData(
+  request: ApiServiceAccountRequest,
+): Promise<AccountData> {
+  const checkIn: CheckInConfig = request.checkIn
+
+  const quotaPromise = fetchAccountQuota(request)
+  const todayUsagePromise = fetchTodayUsage(request)
+  const todayIncomePromise = fetchTodayIncome(request)
   const checkInPromise =
     checkIn?.enableDetection && !checkIn.customCheckInUrl
-      ? fetchCheckInStatus(baseUrl, userId, token, authType)
+      ? fetchCheckInStatus(request)
       : Promise.resolve<boolean | undefined>(undefined)
 
   const [quota, todayUsage, todayIncome, canCheckIn] = await Promise.all([
@@ -228,21 +224,11 @@ export const fetchAccountData = async (
 /**
  * Refresh account data for WONG and return a normalized `RefreshAccountResult`.
  */
-export const refreshAccountData = async (
-  baseUrl: string,
-  userId: number,
-  accessToken: string,
-  checkIn: CheckInConfig,
-  authType?: AuthTypeEnum,
-): Promise<RefreshAccountResult> => {
+export async function refreshAccountData(
+  request: ApiServiceAccountRequest,
+): Promise<RefreshAccountResult> {
   try {
-    const data = await fetchAccountData(
-      baseUrl,
-      userId,
-      accessToken,
-      checkIn,
-      authType,
-    )
+    const data = await fetchAccountData(request)
     return {
       success: true,
       data,

@@ -40,9 +40,17 @@ export function useCopyKeyDialog(isOpen: boolean, account: DisplaySiteData) {
     setError(null)
 
     try {
-      const tokensResponse = await getApiService(account.siteType).fetchAccountTokens(
-        account,
-      )
+      const tokensResponse = await getApiService(
+        account.siteType,
+      ).fetchAccountTokens({
+        baseUrl: account.baseUrl,
+        accountId: account.id,
+        auth: {
+          authType: account.authType,
+          userId: account.userId,
+          accessToken: account.token,
+        },
+      })
       if (Array.isArray(tokensResponse)) {
         setTokens(tokensResponse)
       } else {

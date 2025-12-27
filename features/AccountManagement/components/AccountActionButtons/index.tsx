@@ -85,9 +85,17 @@ export default function AccountActionButtons({
 
     try {
       // Fetch tokens to check count before deciding action
-      const tokensResponse = await getApiService(site.siteType).fetchAccountTokens(
-        site,
-      )
+      const tokensResponse = await getApiService(
+        site.siteType,
+      ).fetchAccountTokens({
+        baseUrl: site.baseUrl,
+        accountId: site.id,
+        auth: {
+          authType: site.authType,
+          userId: site.userId,
+          accessToken: site.token,
+        },
+      })
 
       if (Array.isArray(tokensResponse)) {
         if (tokensResponse.length === 1) {

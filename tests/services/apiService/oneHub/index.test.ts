@@ -30,10 +30,13 @@ const mockedTransformUserGroup = transformUserGroup as unknown as ReturnType<
   typeof vi.fn
 >
 
-const baseAuthParams = {
+const baseRequest = {
   baseUrl: "https://example.com",
-  userId: 1,
-  token: "token",
+  auth: {
+    authType: "access_token",
+    userId: 1,
+    accessToken: "token",
+  },
 }
 
 describe("OneHub API service", () => {
@@ -44,10 +47,9 @@ describe("OneHub API service", () => {
   it("fetchAvailableModel should call fetchApiData with correct endpoint", async () => {
     mockedFetchApiData.mockResolvedValueOnce({})
 
-    await fetchAvailableModel(baseAuthParams as any)
+    await fetchAvailableModel(baseRequest as any)
 
-    expect(mockedFetchApiData).toHaveBeenCalledWith({
-      ...baseAuthParams,
+    expect(mockedFetchApiData).toHaveBeenCalledWith(baseRequest, {
       endpoint: "/api/available_model",
     })
   })
@@ -55,10 +57,9 @@ describe("OneHub API service", () => {
   it("fetchUserGroupMap should call fetchApiData with correct endpoint", async () => {
     mockedFetchApiData.mockResolvedValueOnce({})
 
-    await fetchUserGroupMap(baseAuthParams as any)
+    await fetchUserGroupMap(baseRequest as any)
 
-    expect(mockedFetchApiData).toHaveBeenCalledWith({
-      ...baseAuthParams,
+    expect(mockedFetchApiData).toHaveBeenCalledWith(baseRequest, {
       endpoint: "/api/user_group_map",
     })
   })
@@ -78,14 +79,12 @@ describe("OneHub API service", () => {
       .mockResolvedValueOnce(userGroupMap)
     mockedTransformModelPricing.mockReturnValueOnce(transformed)
 
-    const result = await fetchModelPricing(baseAuthParams as any)
+    const result = await fetchModelPricing(baseRequest as any)
 
-    expect(mockedFetchApiData).toHaveBeenNthCalledWith(1, {
-      ...baseAuthParams,
+    expect(mockedFetchApiData).toHaveBeenNthCalledWith(1, baseRequest, {
       endpoint: "/api/available_model",
     })
-    expect(mockedFetchApiData).toHaveBeenNthCalledWith(2, {
-      ...baseAuthParams,
+    expect(mockedFetchApiData).toHaveBeenNthCalledWith(2, baseRequest, {
       endpoint: "/api/user_group_map",
     })
     expect(mockedTransformModelPricing).toHaveBeenCalledWith(
@@ -99,7 +98,7 @@ describe("OneHub API service", () => {
     const error = new Error("network error")
     mockedFetchApiData.mockRejectedValueOnce(error)
 
-    await expect(fetchModelPricing(baseAuthParams as any)).rejects.toThrow(
+    await expect(fetchModelPricing(baseRequest as any)).rejects.toThrow(
       "network error",
     )
   })
@@ -108,7 +107,7 @@ describe("OneHub API service", () => {
     const tokens = [{ id: 1 }]
     mockedFetchApiData.mockResolvedValueOnce(tokens)
 
-    const result = await fetchAccountTokens(baseAuthParams as any)
+    const result = await fetchAccountTokens(baseRequest as any)
 
     expect(mockedFetchApiData).toHaveBeenCalled()
     expect(result).toEqual(tokens)
@@ -118,7 +117,7 @@ describe("OneHub API service", () => {
     const tokens = [{ id: 1 }, { id: 2 }]
     mockedFetchApiData.mockResolvedValueOnce({ data: tokens })
 
-    const result = await fetchAccountTokens(baseAuthParams as any)
+    const result = await fetchAccountTokens(baseRequest as any)
 
     expect(result).toEqual(tokens)
   })
@@ -126,7 +125,7 @@ describe("OneHub API service", () => {
   it("fetchAccountTokens should return empty array for unexpected format", async () => {
     mockedFetchApiData.mockResolvedValueOnce({ foo: "bar" })
 
-    const result = await fetchAccountTokens(baseAuthParams as any)
+    const result = await fetchAccountTokens(baseRequest as any)
 
     expect(result).toEqual([])
   })
@@ -135,7 +134,7 @@ describe("OneHub API service", () => {
     const error = new Error("token error")
     mockedFetchApiData.mockRejectedValueOnce(error)
 
-    await expect(fetchAccountTokens(baseAuthParams as any)).rejects.toThrow(
+    await expect(fetchAccountTokens(baseRequest as any)).rejects.toThrow(
       "token error",
     )
   })
@@ -146,10 +145,9 @@ describe("OneHub API service", () => {
     mockedFetchApiData.mockResolvedValueOnce(responseData)
     mockedTransformUserGroup.mockReturnValueOnce(transformed)
 
-    const result = await fetchUserGroups(baseAuthParams as any)
+    const result = await fetchUserGroups(baseRequest as any)
 
-    expect(mockedFetchApiData).toHaveBeenCalledWith({
-      ...baseAuthParams,
+    expect(mockedFetchApiData).toHaveBeenCalledWith(baseRequest, {
       endpoint: "/api/user_group_map",
     })
     expect(mockedTransformUserGroup).toHaveBeenCalledWith(responseData)
@@ -160,7 +158,7 @@ describe("OneHub API service", () => {
     const error = new Error("group error")
     mockedFetchApiData.mockRejectedValueOnce(error)
 
-    await expect(fetchUserGroups(baseAuthParams as any)).rejects.toThrow(
+    await expect(fetchUserGroups(baseRequest as any)).rejects.toThrow(
       "group error",
     )
   })
@@ -172,7 +170,7 @@ describe("OneHub API service", () => {
     }
     mockedFetchApiData.mockResolvedValueOnce(availableModel)
 
-    const result = await fetchAccountAvailableModels(baseAuthParams as any)
+    const result = await fetchAccountAvailableModels(baseRequest as any)
 
     expect(result).toEqual(["modelA", "modelB"])
   })

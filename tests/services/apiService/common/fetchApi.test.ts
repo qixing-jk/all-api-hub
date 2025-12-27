@@ -91,13 +91,17 @@ describe("apiService common fetchApi helpers", () => {
     const data = { foo: "bar" }
     global.fetch = createFetchMock({ success: true, data, message: "ok" })
 
-    const result = await fetchApiData<{ foo: string }>({
-      baseUrl: BASE_URL,
-      endpoint: ENDPOINT,
-      userId: 123,
-      token: "token",
-      authType: AuthTypeEnum.AccessToken,
-    })
+    const result = await fetchApiData<{ foo: string }>(
+      {
+        baseUrl: BASE_URL,
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          userId: 123,
+          accessToken: "token",
+        },
+      },
+      { endpoint: ENDPOINT },
+    )
 
     expect(global.fetch).toHaveBeenCalledTimes(1)
     const [url, options] = (global.fetch as any).mock.calls[0]
@@ -115,11 +119,13 @@ describe("apiService common fetchApi helpers", () => {
     }) as any
 
     await expect(
-      fetchApiData({
-        baseUrl: BASE_URL,
-        endpoint: ENDPOINT,
-        authType: AuthTypeEnum.AccessToken,
-      } as any),
+      fetchApiData(
+        {
+          baseUrl: BASE_URL,
+          auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+        },
+        { endpoint: ENDPOINT },
+      ),
     ).rejects.toBeInstanceOf(ApiError)
   })
 
@@ -131,11 +137,13 @@ describe("apiService common fetchApi helpers", () => {
     })
 
     await expect(
-      fetchApiData({
-        baseUrl: BASE_URL,
-        endpoint: ENDPOINT,
-        authType: AuthTypeEnum.AccessToken,
-      } as any),
+      fetchApiData(
+        {
+          baseUrl: BASE_URL,
+          auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+        },
+        { endpoint: ENDPOINT },
+      ),
     ).rejects.toMatchObject({ message: "bad request" } as any)
   })
 
@@ -147,11 +155,13 @@ describe("apiService common fetchApi helpers", () => {
     }) as any
 
     await expect(
-      fetchApiData({
-        baseUrl: BASE_URL,
-        endpoint: ENDPOINT,
-        authType: AuthTypeEnum.AccessToken,
-      } as any),
+      fetchApiData(
+        {
+          baseUrl: BASE_URL,
+          auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+        },
+        { endpoint: ENDPOINT },
+      ),
     ).rejects.toMatchObject({
       code: TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED,
       originalCode: "HTTP_403",

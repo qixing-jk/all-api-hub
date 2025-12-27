@@ -71,10 +71,14 @@ async function performCheckin(
   return (await fetchApi<WongCheckinApiResponse>(
     {
       baseUrl: site_url,
+      auth: {
+        authType: authType ?? AuthTypeEnum.AccessToken,
+        userId: account_info.id,
+        accessToken: account_info.access_token,
+      },
+    },
+    {
       endpoint: ENDPOINT,
-      userId: account_info.id,
-      token: account_info.access_token,
-      authType: authType,
       options: {
         method: "POST",
         body: "{}",

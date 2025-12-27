@@ -51,9 +51,11 @@ export default function ModelRedirectSettings() {
         preferences.managedSiteType,
       ).fetchAccountAvailableModels({
         baseUrl: managedConfig.baseUrl,
-        userId: managedConfig.userId,
-        token: managedConfig.adminToken,
-        authType: AuthTypeEnum.AccessToken,
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          userId: managedConfig.userId,
+          accessToken: managedConfig.adminToken,
+        },
       })
     }
 

@@ -38,7 +38,15 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
 
         const accountTokens = await getApiService(
           account.siteType,
-        ).fetchAccountTokens(account)
+        ).fetchAccountTokens({
+          baseUrl: account.baseUrl,
+          accountId: account.id,
+          auth: {
+            authType: account.authType,
+            userId: account.userId,
+            accessToken: account.token,
+          },
+        })
 
         const tokensWithAccount = accountTokens.map((token) => ({
           ...token,
@@ -140,9 +148,15 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       }
 
       await getApiService(account.siteType).deleteApiToken(
-        account.baseUrl,
-        account.userId,
-        account.token,
+        {
+          baseUrl: account.baseUrl,
+          accountId: account.id,
+          auth: {
+            authType: account.authType,
+            userId: account.userId,
+            accessToken: account.token,
+          },
+        },
         token.id,
       )
       toast.success(

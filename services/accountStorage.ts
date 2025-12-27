@@ -482,13 +482,16 @@ class AccountStorageService {
       }
 
       // 刷新账号数据
-      const result = await getApiService(account.site_type).refreshAccountData(
-        account.site_url,
-        account.account_info.id,
-        account.account_info.access_token,
-        account.checkIn,
-        account.authType,
-      )
+      const result = await getApiService(account.site_type).refreshAccountData({
+        baseUrl: account.site_url,
+        accountId: account.id,
+        checkIn: account.checkIn ?? { enableDetection: false },
+        auth: {
+          authType: account.authType,
+          userId: account.account_info.id,
+          accessToken: account.account_info.access_token,
+        },
+      })
 
       // 构建更新数据
       const updateData: Partial<Omit<SiteAccount, "id" | "created_at">> = {
@@ -538,7 +541,15 @@ class AccountStorageService {
       try {
         const todayIncome = await getApiService(
           DisplaySiteData.siteType,
-        ).fetchTodayIncome(DisplaySiteData)
+        ).fetchTodayIncome({
+          baseUrl: account.site_url,
+          accountId: account.id,
+          auth: {
+            authType: account.authType,
+            userId: account.account_info.id,
+            accessToken: account.account_info.access_token,
+          },
+        })
         updateData.account_info = {
           ...(updateData.account_info || account.account_info),
           today_income: todayIncome.today_income,
@@ -979,8 +990,12 @@ class AccountStorageService {
       // Probe the API to confirm whether automatic check-in is available
       try {
         const candidateSite = updates.site_type ?? account.site_type
-        const support =
-          await getApiService(candidateSite).fetchSupportCheckIn(normalizedUrl)
+        const support = await getApiService(candidateSite).fetchSupportCheckIn({
+          baseUrl: normalizedUrl,
+          auth: {
+            authType: AuthTypeEnum.None,
+          },
+        })
         if (typeof support === "boolean") {
           updates.checkIn = {
             ...(account.checkIn ?? {}),
@@ -1128,12 +1143,15 @@ export const AccountStorageUtils = {
       try {
         const isValid = await getApiService(
           account.site_type,
-        ).validateAccountConnection(
-          account.site_url,
-          account.account_info.id,
-          account.account_info.access_token,
-          account.authType,
-        )
+        ).validateAccountConnection({
+          baseUrl: account.site_url,
+          accountId: account.id,
+          auth: {
+            authType: account.authType,
+            userId: account.account_info.id,
+            accessToken: account.account_info.access_token,
+          },
+        })
         return { isValid }
       } catch {
         return { isValid: false }

@@ -55,9 +55,13 @@ const checkinAnyRouter = async (
     }>(
       {
         baseUrl: site_url,
+        auth: {
+          authType: AuthTypeEnum.Cookie,
+          userId: account_info.id,
+        },
+      },
+      {
         endpoint: "/api/user/sign_in",
-        userId: account_info.id,
-        authType: AuthTypeEnum.Cookie,
         options: {
           method: "POST",
           body: "{}",

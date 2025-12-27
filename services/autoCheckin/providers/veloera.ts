@@ -46,14 +46,21 @@ async function checkinVeloera(account: SiteAccount): Promise<CheckinResult> {
       success: boolean
       message?: string
       data?: any
-    }>({
-      baseUrl: site_url,
-      endpoint: "/api/user/check_in",
-      userId: account_info.id,
-      token: account_info.access_token,
-      authType: authType || AuthTypeEnum.AccessToken,
-      options: { method: "POST" },
-    })) as { success: boolean; message?: string; data?: any }
+    }>(
+      {
+        baseUrl: site_url,
+        auth: {
+          authType: authType || AuthTypeEnum.AccessToken,
+          userId: account_info.id,
+          accessToken: account_info.access_token,
+        },
+      },
+      {
+        endpoint: "/api/user/check_in",
+        options: { method: "POST" },
+      },
+      true,
+    )) as { success: boolean; message?: string; data?: any }
 
     const responseMessage =
       typeof response.message === "string" ? response.message : ""

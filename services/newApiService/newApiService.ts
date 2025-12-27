@@ -8,7 +8,7 @@ import { ensureAccountApiToken } from "~/services/accountOperations"
 import { accountStorage } from "~/services/accountStorage"
 import { getApiService } from "~/services/apiService"
 import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompatible"
-import { ApiToken, DisplaySiteData, SiteAccount } from "~/types"
+import { ApiToken, AuthTypeEnum, DisplaySiteData, SiteAccount } from "~/types"
 import type {
   ChannelFormData,
   ChannelMode,
@@ -58,9 +58,14 @@ export async function searchChannel(
   keyword: string,
 ): Promise<ManagedSiteChannelListData | null> {
   return await getApiService(NEW_API).searchChannel(
-    baseUrl,
-    accessToken,
-    userId,
+    {
+      baseUrl,
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        accessToken,
+        userId,
+      },
+    },
     keyword,
   )
 }
@@ -79,9 +84,14 @@ export async function createChannel(
   channelData: CreateChannelPayload,
 ) {
   return await getApiService(NEW_API).createChannel(
-    baseUrl,
-    adminToken,
-    userId,
+    {
+      baseUrl,
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        accessToken: adminToken,
+        userId,
+      },
+    },
     channelData,
   )
 }
@@ -100,9 +110,14 @@ export async function updateChannel(
   channelData: UpdateChannelPayload,
 ) {
   return await getApiService(NEW_API).updateChannel(
-    baseUrl,
-    adminToken,
-    userId,
+    {
+      baseUrl,
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        accessToken: adminToken,
+        userId,
+      },
+    },
     channelData,
   )
 }
@@ -117,9 +132,14 @@ export async function deleteChannel(
   channelId: number,
 ) {
   return await getApiService(NEW_API).deleteChannel(
-    baseUrl,
-    adminToken,
-    userId,
+    {
+      baseUrl,
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        accessToken: adminToken,
+        userId,
+      },
+    },
     channelId,
   )
 }
@@ -209,7 +229,15 @@ export async function fetchAvailableModels(
   try {
     const fallbackModels = await getApiService(
       account.siteType,
-    ).fetchAccountAvailableModels(account)
+    ).fetchAccountAvailableModels({
+      baseUrl: account.baseUrl,
+      accountId: account.id,
+      auth: {
+        authType: account.authType,
+        userId: account.userId,
+        accessToken: account.token,
+      },
+    })
     if (fallbackModels && fallbackModels.length > 0) {
       candidateSources.push(fallbackModels)
     }

@@ -161,9 +161,14 @@ describe("veloeraService", () => {
       mockSearchChannel.mockResolvedValueOnce(null)
       await searchChannel("https://veloera.example.com", "token", "1", "k")
       expect(mockSearchChannel).toHaveBeenLastCalledWith(
-        "https://veloera.example.com",
-        "token",
-        "1",
+        {
+          baseUrl: "https://veloera.example.com",
+          auth: {
+            authType: "access_token",
+            accessToken: "token",
+            userId: "1",
+          },
+        },
         "k",
       )
 
@@ -189,10 +194,15 @@ describe("veloeraService", () => {
         createPayload,
       )
       expect(mockCreateChannel).toHaveBeenLastCalledWith(
-        "https://veloera.example.com",
-        "token",
-        "1",
-        expect.any(Object),
+        {
+          baseUrl: "https://veloera.example.com",
+          auth: {
+            authType: "access_token",
+            accessToken: "token",
+            userId: "1",
+          },
+        },
+        createPayload,
       )
 
       mockUpdateChannel.mockResolvedValueOnce({ success: true, message: "ok" })
@@ -213,18 +223,28 @@ describe("veloeraService", () => {
         updatePayload,
       )
       expect(mockUpdateChannel).toHaveBeenLastCalledWith(
-        "https://veloera.example.com",
-        "token",
-        "1",
-        expect.any(Object),
+        {
+          baseUrl: "https://veloera.example.com",
+          auth: {
+            authType: "access_token",
+            accessToken: "token",
+            userId: "1",
+          },
+        },
+        updatePayload,
       )
 
       mockDeleteChannel.mockResolvedValueOnce({ success: true, message: "ok" })
       await deleteChannel("https://veloera.example.com", "token", "1", 1)
       expect(mockDeleteChannel).toHaveBeenLastCalledWith(
-        "https://veloera.example.com",
-        "token",
-        "1",
+        {
+          baseUrl: "https://veloera.example.com",
+          auth: {
+            authType: "access_token",
+            accessToken: "token",
+            userId: "1",
+          },
+        },
         1,
       )
     })

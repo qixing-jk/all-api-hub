@@ -1,9 +1,8 @@
 import { union } from "lodash-es"
 
 import { NEW_API, type ManagedSiteType } from "~/constants/siteType"
-import {
-  getApiService,
-} from "~/services/apiService"
+import { getApiService } from "~/services/apiService"
+import { AuthTypeEnum } from "~/types"
 import type { ChannelConfigMap } from "~/types/channelConfig"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 import {
@@ -107,9 +106,14 @@ export class ModelSyncService {
   async listChannels(): Promise<ManagedSiteChannelListData> {
     try {
       return await getApiService(this.siteType).listAllChannels(
-        this.baseUrl,
-        this.token,
-        this.userId,
+        {
+          baseUrl: this.baseUrl,
+          auth: {
+            authType: AuthTypeEnum.AccessToken,
+            accessToken: this.token,
+            userId: this.userId,
+          },
+        },
         {
           beforeRequest: async () => {
             await this.throttle()
@@ -132,9 +136,14 @@ export class ModelSyncService {
       await this.throttle()
 
       return await getApiService(this.siteType).fetchChannelModels(
-        this.baseUrl,
-        this.token,
-        this.userId,
+        {
+          baseUrl: this.baseUrl,
+          auth: {
+            authType: AuthTypeEnum.AccessToken,
+            accessToken: this.token,
+            userId: this.userId,
+          },
+        },
         channelId,
       )
     } catch (error: any) {
@@ -156,9 +165,14 @@ export class ModelSyncService {
       await this.throttle()
 
       await getApiService(this.siteType).updateChannelModels(
-        this.baseUrl,
-        this.token,
-        this.userId,
+        {
+          baseUrl: this.baseUrl,
+          auth: {
+            authType: AuthTypeEnum.AccessToken,
+            accessToken: this.token,
+            userId: this.userId,
+          },
+        },
         channel.id,
         models.join(","),
       )
@@ -185,9 +199,14 @@ export class ModelSyncService {
       await this.throttle()
 
       await getApiService(this.siteType).updateChannelModelMapping(
-        this.baseUrl,
-        this.token,
-        this.userId,
+        {
+          baseUrl: this.baseUrl,
+          auth: {
+            authType: AuthTypeEnum.AccessToken,
+            accessToken: this.token,
+            userId: this.userId,
+          },
+        },
         channel.id,
         updateModels,
         JSON.stringify(modelMapping),

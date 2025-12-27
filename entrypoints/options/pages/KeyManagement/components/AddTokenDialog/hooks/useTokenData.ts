@@ -30,11 +30,21 @@ export function useTokenData(
 
     setIsLoading(true)
     try {
+      const request = {
+        baseUrl: currentAccount.baseUrl,
+        accountId: currentAccount.id,
+        auth: {
+          authType: currentAccount.authType,
+          userId: currentAccount.userId,
+          accessToken: currentAccount.token,
+        },
+      }
+
       const [models, groupsData] = await Promise.all([
         getApiService(currentAccount.siteType).fetchAccountAvailableModels(
-          currentAccount,
+          request,
         ),
-        getApiService(currentAccount.siteType).fetchUserGroups(currentAccount),
+        getApiService(currentAccount.siteType).fetchUserGroups(request),
       ])
 
       setAvailableModels(models)

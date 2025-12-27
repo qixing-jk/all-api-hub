@@ -95,9 +95,17 @@ function useSingleAccountModelData(params: {
         return cached
       }
 
-      const data = await getApiService(currentAccount.siteType).fetchModelPricing(
-        currentAccount,
-      )
+      const data = await getApiService(
+        currentAccount.siteType,
+      ).fetchModelPricing({
+        baseUrl: currentAccount.baseUrl,
+        accountId: currentAccount.id,
+        auth: {
+          authType: currentAccount.authType,
+          userId: currentAccount.userId,
+          accessToken: currentAccount.token,
+        },
+      })
 
       if (!Array.isArray(data.data)) {
         const error = new Error("INVALID_FORMAT")
@@ -185,7 +193,15 @@ function useAllAccountsModelData(
           return cached
         }
 
-        const data = await getApiService(account.siteType).fetchModelPricing(account)
+        const data = await getApiService(account.siteType).fetchModelPricing({
+          baseUrl: account.baseUrl,
+          accountId: account.id,
+          auth: {
+            authType: account.authType,
+            userId: account.userId,
+            accessToken: account.token,
+          },
+        })
 
         if (!Array.isArray(data.data)) {
           const error = new Error("INVALID_FORMAT")

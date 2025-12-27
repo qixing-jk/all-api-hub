@@ -93,9 +93,21 @@ export async function autoDetectAccount(
 
     // 根据 authType 选择对应的 Promise
     if (authType === AuthTypeEnum.Cookie) {
-      tokenPromise = getApiService(siteType).fetchUserInfo(url, userId)
+      tokenPromise = getApiService(siteType).fetchUserInfo({
+        baseUrl: url,
+        auth: {
+          authType: AuthTypeEnum.Cookie,
+          userId,
+        },
+      })
     } else if (authType === AuthTypeEnum.AccessToken) {
-      tokenPromise = getApiService(siteType).getOrCreateAccessToken(url, userId)
+      tokenPromise = getApiService(siteType).getOrCreateAccessToken({
+        baseUrl: url,
+        auth: {
+          authType: AuthTypeEnum.Cookie,
+          userId,
+        },
+      })
     } else {
       // none 或其他情况
       tokenPromise = Promise.resolve(null)
@@ -104,8 +116,18 @@ export async function autoDetectAccount(
     // 并行执行 token 获取和 site 状态获取（降低端到端等待）
     const [tokenInfo, siteStatus, checkSupport, siteName] = await Promise.all([
       tokenPromise,
-      getApiService(siteType).fetchSiteStatus(url, authType),
-      getApiService(siteType).fetchSupportCheckIn(url),
+      getApiService(siteType).fetchSiteStatus({
+        baseUrl: url,
+        auth: {
+          authType: authType || AuthTypeEnum.None,
+        },
+      }),
+      getApiService(siteType).fetchSupportCheckIn({
+        baseUrl: url,
+        auth: {
+          authType: AuthTypeEnum.None,
+        },
+      }),
       getSiteName(url),
     ])
 
@@ -280,13 +302,15 @@ export async function validateAndSaveAccount(
   try {
     // 获取账号余额和今日使用情况
     console.log(t("messages:toast.loading.fetchingAccountData"))
-    const freshAccountData = await getApiService(siteType).fetchAccountData(
-      url.trim(),
-      parsedUserId,
-      accessToken.trim(),
-      checkInConfig,
-      authType,
-    )
+    const freshAccountData = await getApiService(siteType).fetchAccountData({
+      baseUrl: url.trim(),
+      checkIn: checkInConfig,
+      auth: {
+        authType,
+        userId: parsedUserId,
+        accessToken: accessToken.trim(),
+      },
+    })
 
     const normalizedTags = normalizeTagsInput(tags)
 
@@ -453,13 +477,15 @@ export async function validateAndUpdateAccount(
   try {
     // 获取账号余额和今日使用情况
     console.log(t("messages:toast.loading.fetchingAccountData"))
-    const freshAccountData = await getApiService(siteType).fetchAccountData(
-      url.trim(),
-      parsedUserId,
-      accessToken.trim(),
-      checkInConfig,
-      authType,
-    )
+    const freshAccountData = await getApiService(siteType).fetchAccountData({
+      baseUrl: url.trim(),
+      checkIn: checkInConfig,
+      auth: {
+        authType,
+        userId: parsedUserId,
+        accessToken: accessToken.trim(),
+      },
+    })
 
     const normalizedTags = normalizeTagsInput(tags)
 
@@ -633,8 +659,12 @@ export async function getSiteName(
   const hostWithProtocol = `${urlObj.protocol}//${urlObj.host}`
 
   // 4. 从站点状态获取
-  const siteStatusInfo =
-    await getApiService(undefined).fetchSiteStatus(hostWithProtocol)
+  const siteStatusInfo = await getApiService(undefined).fetchSiteStatus({
+    baseUrl: hostWithProtocol,
+    auth: {
+      authType: AuthTypeEnum.None,
+    },
+  })
   if (
     siteStatusInfo?.system_name &&
     IsNotDefaultSiteName(siteStatusInfo.system_name)
@@ -703,7 +733,15 @@ export async function ensureAccountApiToken(
 
   const tokens = await getApiService(
     displaySiteData.siteType,
-  ).fetchAccountTokens(displaySiteData)
+  ).fetchAccountTokens({
+    baseUrl: displaySiteData.baseUrl,
+    accountId: displaySiteData.id,
+    auth: {
+      authType: displaySiteData.authType,
+      userId: displaySiteData.userId,
+      accessToken: displaySiteData.token,
+    },
+  })
   let apiToken: ApiToken | undefined = tokens.at(-1)
 
   if (!apiToken) {
@@ -711,9 +749,15 @@ export async function ensureAccountApiToken(
     const createApiTokenResult = await getApiService(
       displaySiteData.siteType,
     ).createApiToken(
-      account.site_url,
-      account.account_info.id,
-      account.account_info.access_token,
+      {
+        baseUrl: account.site_url,
+        accountId: account.id,
+        auth: {
+          authType: account.authType,
+          userId: account.account_info.id,
+          accessToken: account.account_info.access_token,
+        },
+      },
       newTokenData,
     )
 
@@ -723,7 +767,15 @@ export async function ensureAccountApiToken(
 
     const updatedTokens = await getApiService(
       displaySiteData.siteType,
-    ).fetchAccountTokens(displaySiteData)
+    ).fetchAccountTokens({
+      baseUrl: displaySiteData.baseUrl,
+      accountId: displaySiteData.id,
+      auth: {
+        authType: displaySiteData.authType,
+        userId: displaySiteData.userId,
+        accessToken: displaySiteData.token,
+      },
+    })
     apiToken = updatedTokens.at(-1)
   }
 

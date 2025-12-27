@@ -71,12 +71,14 @@ export const fetchSiteOriginalTitle = async (url: string) => {
   const html = await fetchApi<string>(
     {
       baseUrl: url,
+      auth: { authType: AuthTypeEnum.None },
+    },
+    {
       endpoint: "/",
-      authType: AuthTypeEnum.None,
+      responseType: "text",
       options: {
         cache: "no-store",
       },
-      responseType: "text",
     },
     true,
   )
@@ -91,14 +93,18 @@ export const fetchSiteOriginalTitle = async (url: string) => {
  */
 async function getSiteUserIdType(url: string) {
   try {
-    await fetchApiData<unknown>({
-      baseUrl: url,
-      endpoint: "/api/user/self",
-      authType: AuthTypeEnum.Cookie,
-      options: {
-        cache: "no-store",
+    await fetchApiData<unknown>(
+      {
+        baseUrl: url,
+        auth: { authType: AuthTypeEnum.Cookie },
       },
-    })
+      {
+        endpoint: "/api/user/self",
+        options: {
+          cache: "no-store",
+        },
+      },
+    )
   } catch (error) {
     if (error instanceof ApiError && error.message) {
       const parts = error.message.split(" ")

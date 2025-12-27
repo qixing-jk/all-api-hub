@@ -317,19 +317,22 @@ describe("newApiService", () => {
 
       mockFetchApiData.mockResolvedValueOnce(mockChannelData)
 
+      const request = {
+        baseUrl: "https://api.example.com",
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "admin-token",
+          userId: "user-123",
+        },
+      }
       const result = await searchChannel(
-        "https://api.example.com",
-        "admin-token",
-        "user-123",
+        request as any,
         "https://api.example.com",
       )
 
       expect(result).toEqual(mockChannelData)
-      expect(mockFetchApiData).toHaveBeenCalledWith({
-        baseUrl: "https://api.example.com",
-        endpoint: "/api/channel/search?keyword=https://api.example.com",
-        userId: "user-123",
-        token: "admin-token",
+      expect(mockFetchApiData).toHaveBeenCalledWith(request, {
+        endpoint: "/api/channel/search?keyword=https%3A%2F%2Fapi.example.com",
       })
     })
 
@@ -339,12 +342,15 @@ describe("newApiService", () => {
 
       mockFetchApiData.mockRejectedValueOnce(error)
 
-      const result = await searchChannel(
-        "https://api.example.com",
-        "admin-token",
-        "user-123",
-        "keyword",
-      )
+      const request = {
+        baseUrl: "https://api.example.com",
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "admin-token",
+          userId: "user-123",
+        },
+      }
+      const result = await searchChannel(request as any, "keyword")
 
       expect(result).toBeNull()
     })
@@ -355,12 +361,15 @@ describe("newApiService", () => {
 
       mockFetchApiData.mockRejectedValueOnce(error)
 
-      const result = await searchChannel(
-        "https://api.example.com",
-        "admin-token",
-        "user-123",
-        "keyword",
-      )
+      const request = {
+        baseUrl: "https://api.example.com",
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "admin-token",
+          userId: "user-123",
+        },
+      }
+      const result = await searchChannel(request as any, "keyword")
 
       expect(result).toBeNull()
     })
@@ -390,24 +399,27 @@ describe("newApiService", () => {
 
       mockFetchApi.mockResolvedValueOnce({ success: true })
 
-      const result = await createChannel(
-        "https://api.example.com",
-        "admin-token",
-        "user-123",
-        payload,
-      )
+      const request = {
+        baseUrl: "https://api.example.com",
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "admin-token",
+          userId: "user-123",
+        },
+      }
+      const result = await createChannel(request as any, payload)
 
       expect(result).toEqual({ success: true })
-      expect(mockFetchApi).toHaveBeenCalledWith({
-        baseUrl: "https://api.example.com",
-        endpoint: "/api/channel/",
-        userId: "user-123",
-        token: "admin-token",
-        options: {
-          method: "POST",
-          body: expect.stringContaining('"name":"Test Channel"'),
-        },
-      })
+      expect(mockFetchApi).toHaveBeenCalledWith(
+        request,
+        expect.objectContaining({
+          endpoint: "/api/channel/",
+          options: expect.objectContaining({
+            method: "POST",
+            body: expect.stringContaining('"name":"Test Channel"'),
+          }),
+        }),
+      )
     })
 
     it("should throw error when creation fails", async () => {
@@ -429,14 +441,17 @@ describe("newApiService", () => {
 
       mockFetchApi.mockRejectedValueOnce(new Error("API error"))
 
-      await expect(
-        createChannel(
-          "https://api.example.com",
-          "admin-token",
-          "user-123",
-          payload,
-        ),
-      ).rejects.toThrow("创建渠道失败，请检查网络或 New API 配置。")
+      const request = {
+        baseUrl: "https://api.example.com",
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "admin-token",
+          userId: "user-123",
+        },
+      }
+      await expect(createChannel(request as any, payload)).rejects.toThrow(
+        "创建渠道失败，请检查网络或 New API 配置。",
+      )
     })
 
     it("should join groups in payload", async () => {
@@ -458,14 +473,18 @@ describe("newApiService", () => {
 
       mockFetchApi.mockResolvedValueOnce({ success: true })
 
-      await createChannel(
-        "https://api.example.com",
-        "admin-token",
-        "user-123",
-        payload,
-      )
+      const request = {
+        baseUrl: "https://api.example.com",
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "admin-token",
+          userId: "user-123",
+        },
+      }
 
-      const callArgs = mockFetchApi.mock.calls[0][0]
+      await createChannel(request as any, payload)
+
+      const callArgs = mockFetchApi.mock.calls[0][1]
       const bodyObj = JSON.parse(callArgs.options.body)
       expect(bodyObj.channel.group).toBe("group1,group2")
     })
@@ -482,24 +501,28 @@ describe("newApiService", () => {
 
       mockFetchApi.mockResolvedValueOnce({ success: true })
 
-      const result = await updateChannel(
-        "https://api.example.com",
-        "admin-token",
-        "user-123",
-        updateData,
-      )
+      const request = {
+        baseUrl: "https://api.example.com",
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "admin-token",
+          userId: "user-123",
+        },
+      }
+
+      const result = await updateChannel(request as any, updateData as any)
 
       expect(result).toEqual({ success: true })
-      expect(mockFetchApi).toHaveBeenCalledWith({
-        baseUrl: "https://api.example.com",
-        endpoint: "/api/channel/",
-        userId: "user-123",
-        token: "admin-token",
-        options: {
-          method: "PUT",
-          body: JSON.stringify(updateData),
-        },
-      })
+      expect(mockFetchApi).toHaveBeenCalledWith(
+        request,
+        expect.objectContaining({
+          endpoint: "/api/channel/",
+          options: {
+            method: "PUT",
+            body: JSON.stringify(updateData),
+          },
+        }),
+      )
     })
 
     it("should throw error when update fails", async () => {
@@ -507,11 +530,23 @@ describe("newApiService", () => {
 
       mockFetchApi.mockRejectedValueOnce(new Error("API error"))
 
+      const request = {
+        baseUrl: "https://api.example.com",
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "admin-token",
+          userId: "user-123",
+        },
+      }
+
       await expect(
-        updateChannel("https://api.example.com", "admin-token", "user-123", {
-          id: 1,
-          name: "Updated",
-        }),
+        updateChannel(
+          request as any,
+          {
+            id: 1,
+            name: "Updated",
+          } as any,
+        ),
       ).rejects.toThrow("更新渠道失败，请检查网络或 New API 配置。")
     })
   })

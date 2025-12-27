@@ -8,17 +8,21 @@ import {
 } from "~/services/apiService/common"
 import type {
   AccountData,
+  ApiServiceAccountRequest,
+  ApiServiceRequest,
   RefreshAccountResult,
 } from "~/services/apiService/common/type"
 import { anyrouterProvider } from "~/services/autoCheckin/providers/anyrouter"
-import { AuthTypeEnum, SiteHealthStatus, type CheckInConfig } from "~/types"
+import { SiteHealthStatus, type CheckInConfig } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 
 /**
  * Check if site supports check-in based on status info.
  * @returns Whether check-in is enabled (undefined when unknown).
  */
-export const fetchSupportCheckIn = async (): Promise<boolean | undefined> => {
+export async function fetchSupportCheckIn(
+  _request: ApiServiceRequest,
+): Promise<boolean | undefined> {
   return true
 }
 
@@ -30,19 +34,20 @@ export const fetchSupportCheckIn = async (): Promise<boolean | undefined> => {
  * @param authType Optional auth mode override.
  * @returns True/false when available; undefined if unsupported or errors.
  */
-export const fetchCheckInStatus = async (
-  baseUrl: string,
-  userId: number,
-  accessToken: string,
-  authType?: AuthTypeEnum,
-): Promise<boolean | undefined> => {
+export async function fetchCheckInStatus(
+  request: ApiServiceRequest,
+): Promise<boolean | undefined> {
   try {
-    void accessToken
-    void authType
+    const userId = request.auth.userId
+    const numericUserId =
+      typeof userId === "number" ? userId : Number(String(userId))
+    if (!Number.isFinite(numericUserId)) {
+      return undefined
+    }
 
     const checkInData = await anyrouterProvider.checkIn({
-      site_url: baseUrl,
-      account_info: { id: userId },
+      site_url: request.baseUrl,
+      account_info: { id: numericUserId },
     })
     return checkInData.status !== CHECKIN_RESULT_STATUS.ALREADY_CHECKED
   } catch (error) {
@@ -51,20 +56,20 @@ export const fetchCheckInStatus = async (
   }
 }
 
-export const fetchAccountData = async (
-  baseUrl: string,
-  userId: number,
-  token: string,
-  checkIn: CheckInConfig,
-  authType?: AuthTypeEnum,
-): Promise<AccountData> => {
-  const params = { baseUrl, userId, token, authType, checkIn }
-  const quotaPromise = fetchAccountQuota(baseUrl, userId, token, authType)
-  const todayUsagePromise = fetchTodayUsage(params)
-  const todayIncomePromise = fetchTodayIncome(params)
+/**
+ *
+ */
+export async function fetchAccountData(
+  request: ApiServiceAccountRequest,
+): Promise<AccountData> {
+  const checkIn: CheckInConfig = request.checkIn
+
+  const quotaPromise = fetchAccountQuota(request)
+  const todayUsagePromise = fetchTodayUsage(request)
+  const todayIncomePromise = fetchTodayIncome(request)
   const checkInPromise =
     checkIn?.enableDetection && !checkIn.customCheckInUrl
-      ? fetchCheckInStatus(baseUrl, userId, token, authType)
+      ? fetchCheckInStatus(request)
       : Promise.resolve<boolean | undefined>(undefined)
 
   const [quota, todayUsage, todayIncome, canCheckIn] = await Promise.all([
@@ -85,21 +90,14 @@ export const fetchAccountData = async (
   }
 }
 
-export const refreshAccountData = async (
-  baseUrl: string,
-  userId: number,
-  accessToken: string,
-  checkIn: CheckInConfig,
-  authType?: AuthTypeEnum,
-): Promise<RefreshAccountResult> => {
+/**
+ *
+ */
+export async function refreshAccountData(
+  request: ApiServiceAccountRequest,
+): Promise<RefreshAccountResult> {
   try {
-    const data = await fetchAccountData(
-      baseUrl,
-      userId,
-      accessToken,
-      checkIn,
-      authType,
-    )
+    const data = await fetchAccountData(request)
     return {
       success: true,
       data,
