@@ -1,4 +1,4 @@
-import i18n from "./i18n"
+import i18n from "~/utils/i18n"
 
 /**
  * Initializes the document title and sets up a listener for language changes

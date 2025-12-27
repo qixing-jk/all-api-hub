@@ -45,6 +45,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
             authType: account.authType,
             userId: account.userId,
             accessToken: account.token,
+            cookie: account.cookieAuthSessionCookie,
           },
         })
 
@@ -155,6 +156,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
             authType: account.authType,
             userId: account.userId,
             accessToken: account.token,
+            cookie: account.cookieAuthSessionCookie,
           },
         },
         token.id,

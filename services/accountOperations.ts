@@ -24,6 +24,7 @@ import type {
 } from "~/types/serviceResponse"
 import { analyzeAutoDetectError } from "~/utils/autoDetectUtils"
 import { sendRuntimeMessage } from "~/utils/browserApi"
+import { extractSessionCookieHeader } from "~/utils/cookieString"
 import { getErrorMessage } from "~/utils/error"
 
 import { autoDetectSmart } from "./autoDetectService"
@@ -133,7 +134,11 @@ export async function autoDetectAccount(
 
     const { username: detectedUsername, access_token } = tokenInfo
 
-    if (!detectedUsername || !access_token) {
+    // 验证获取到的用户信息是否完整
+    if (
+      !detectedUsername ||
+      (authType === AuthTypeEnum.AccessToken && !access_token)
+    ) {
       const detailedError = analyzeAutoDetectError(
         t("messages:operations.detection.getInfoFailed"),
       )
@@ -189,6 +194,7 @@ export async function autoDetectAccount(
  * @param params.userId 用户 ID
  * @param params.authType 认证类型
  * @param params.accessToken 访问令牌
+ * @param params.cookieAuthSessionCookie Cookie 认证所需的会话 Cookie（Header 值）
  * @param params.exchangeRate 汇率配置
  * @returns 是否满足最基本的账号信息要求
  */
@@ -198,6 +204,7 @@ export function isValidAccount({
   userId,
   authType,
   accessToken,
+  cookieAuthSessionCookie,
   exchangeRate,
 }: {
   siteName: string
@@ -205,6 +212,7 @@ export function isValidAccount({
   userId: string
   authType: AuthTypeEnum
   accessToken: string
+  cookieAuthSessionCookie?: string
   exchangeRate: string
 }) {
   return (
@@ -212,7 +220,8 @@ export function isValidAccount({
     !!username.trim() &&
     !!userId.trim() &&
     isValidExchangeRate(exchangeRate) &&
-    (authType !== AuthTypeEnum.AccessToken || !!accessToken.trim())
+    (authType !== AuthTypeEnum.AccessToken || !!accessToken.trim()) &&
+    (authType !== AuthTypeEnum.Cookie || !!cookieAuthSessionCookie?.trim())
   )
 }
 
@@ -259,6 +268,7 @@ function normalizeTagsInput(tags: TagsInput): string[] | undefined {
  * @param checkInConfig - Check-in configuration captured from UI.
  * @param siteType - Classifier describing the site (OneAPI, etc.).
  * @param authType - Authentication strategy (cookie/token/none).
+ * @param cookieAuthSessionCookie - Session cookie for cookie auth.
  * @returns Success payload with new account id or a failure descriptor.
  */
 export async function validateAndSaveAccount(
@@ -273,7 +283,13 @@ export async function validateAndSaveAccount(
   checkInConfig: CheckInConfig,
   siteType: string,
   authType: AuthTypeEnum,
+  cookieAuthSessionCookie: string,
 ): Promise<AccountSaveResponse> {
+  const sessionCookieHeader =
+    authType === AuthTypeEnum.Cookie
+      ? extractSessionCookieHeader(cookieAuthSessionCookie)
+      : ""
+
   // 表单验证
   if (
     !isValidAccount({
@@ -282,6 +298,7 @@ export async function validateAndSaveAccount(
       userId,
       authType,
       accessToken,
+      cookieAuthSessionCookie: sessionCookieHeader,
       exchangeRate,
     })
   ) {
@@ -305,10 +322,15 @@ export async function validateAndSaveAccount(
     const freshAccountData = await getApiService(siteType).fetchAccountData({
       baseUrl: url.trim(),
       checkIn: checkInConfig,
+      accountId: undefined, // New account, no ID yet
       auth: {
         authType,
         userId: parsedUserId,
         accessToken: accessToken.trim(),
+        cookie:
+          authType === AuthTypeEnum.Cookie
+            ? sessionCookieHeader.trim()
+            : undefined,
       },
     })
 
@@ -320,6 +342,10 @@ export async function validateAndSaveAccount(
       health: { status: SiteHealthStatus.Healthy }, // 成功获取数据说明状态正常
       site_type: siteType,
       authType: authType,
+      cookieAuth:
+        authType === AuthTypeEnum.Cookie
+          ? { sessionCookie: sessionCookieHeader.trim() }
+          : undefined,
       exchange_rate:
         parseFloat(exchangeRate) || UI_CONSTANTS.EXCHANGE_RATE.DEFAULT, // 使用用户输入的汇率
       notes: notes || "",
@@ -366,6 +392,10 @@ export async function validateAndSaveAccount(
       site_url: url.trim(),
       site_type: siteType,
       authType: authType,
+      cookieAuth:
+        authType === AuthTypeEnum.Cookie
+          ? { sessionCookie: sessionCookieHeader.trim() }
+          : undefined,
       exchange_rate:
         parseFloat(exchangeRate) || UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
       notes: notes || "",
@@ -433,6 +463,7 @@ export async function validateAndSaveAccount(
  * @param checkInConfig - Updated check-in configuration.
  * @param siteType - Updated site type classification.
  * @param authType - Authentication mode in use.
+ * @param cookieAuthSessionCookie - Session cookie for cookie auth.
  * @returns Response describing success/failure and account id.
  */
 export async function validateAndUpdateAccount(
@@ -448,7 +479,13 @@ export async function validateAndUpdateAccount(
   checkInConfig: CheckInConfig,
   siteType: string,
   authType: AuthTypeEnum,
+  cookieAuthSessionCookie: string,
 ): Promise<AccountSaveResponse> {
+  const sessionCookieHeader =
+    authType === AuthTypeEnum.Cookie
+      ? extractSessionCookieHeader(cookieAuthSessionCookie)
+      : ""
+
   // 表单验证
   if (
     !isValidAccount({
@@ -457,6 +494,7 @@ export async function validateAndUpdateAccount(
       userId,
       authType,
       accessToken,
+      cookieAuthSessionCookie: sessionCookieHeader,
       exchangeRate,
     })
   ) {
@@ -480,10 +518,15 @@ export async function validateAndUpdateAccount(
     const freshAccountData = await getApiService(siteType).fetchAccountData({
       baseUrl: url.trim(),
       checkIn: checkInConfig,
+      accountId,
       auth: {
         authType,
         userId: parsedUserId,
         accessToken: accessToken.trim(),
+        cookie:
+          authType === AuthTypeEnum.Cookie
+            ? sessionCookieHeader.trim()
+            : undefined,
       },
     })
 
@@ -495,6 +538,10 @@ export async function validateAndUpdateAccount(
       health: { status: SiteHealthStatus.Healthy }, // 成功获取数据说明状态正常
       site_type: siteType,
       authType: authType,
+      cookieAuth:
+        authType === AuthTypeEnum.Cookie
+          ? { sessionCookie: sessionCookieHeader.trim() }
+          : undefined,
       exchange_rate:
         parseFloat(exchangeRate) || UI_CONSTANTS.EXCHANGE_RATE.DEFAULT, // 使用用户输入的汇率
       notes: notes,
@@ -547,6 +594,10 @@ export async function validateAndUpdateAccount(
       site_url: url.trim(),
       site_type: siteType,
       authType: authType,
+      cookieAuth:
+        authType === AuthTypeEnum.Cookie
+          ? { sessionCookie: sessionCookieHeader.trim() }
+          : undefined,
       exchange_rate:
         parseFloat(exchangeRate) || UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
       notes: notes,
@@ -740,6 +791,7 @@ export async function ensureAccountApiToken(
       authType: displaySiteData.authType,
       userId: displaySiteData.userId,
       accessToken: displaySiteData.token,
+      cookie: displaySiteData.cookieAuthSessionCookie,
     },
   })
   let apiToken: ApiToken | undefined = tokens.at(-1)
@@ -756,6 +808,7 @@ export async function ensureAccountApiToken(
           authType: account.authType,
           userId: account.account_info.id,
           accessToken: account.account_info.access_token,
+          cookie: account.cookieAuth?.sessionCookie,
         },
       },
       newTokenData,
@@ -774,6 +827,7 @@ export async function ensureAccountApiToken(
         authType: displaySiteData.authType,
         userId: displaySiteData.userId,
         accessToken: displaySiteData.token,
+        cookie: displaySiteData.cookieAuthSessionCookie,
       },
     })
     apiToken = updatedTokens.at(-1)
