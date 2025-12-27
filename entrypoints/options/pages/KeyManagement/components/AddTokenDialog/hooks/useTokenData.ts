@@ -37,6 +37,7 @@ export function useTokenData(
           authType: currentAccount.authType,
           userId: currentAccount.userId,
           accessToken: currentAccount.token,
+          cookie: currentAccount.cookieAuthSessionCookie,
         },
       }
 

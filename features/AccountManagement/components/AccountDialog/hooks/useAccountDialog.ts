@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 
 import { useChannelDialog } from "~/components/ChannelDialog"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   autoDetectAccount,
   getSiteName,
@@ -14,7 +15,12 @@ import {
 import { accountStorage } from "~/services/accountStorage"
 import { AuthTypeEnum, type CheckInConfig, type DisplaySiteData } from "~/types"
 import { AutoDetectError } from "~/utils/autoDetectUtils"
-import { getActiveTabs, onTabActivated, onTabUpdated } from "~/utils/browserApi"
+import {
+  getActiveTabs,
+  onTabActivated,
+  onTabUpdated,
+  sendRuntimeMessage,
+} from "~/utils/browserApi"
 
 interface UseAccountDialogProps {
   mode: DialogMode
@@ -78,6 +84,8 @@ export function useAccountDialog({
   const [siteType, setSiteType] = useState("unknown")
   const [authType, setAuthType] = useState(AuthTypeEnum.AccessToken)
   const [isAutoConfiguring, setIsAutoConfiguring] = useState(false)
+  const [cookieAuthSessionCookie, setCookieAuthSessionCookie] = useState("")
+  const [isImportingCookies, setIsImportingCookies] = useState(false)
 
   // useRef 保存跨渲染引用
   const newAccountRef = useRef<any>(null)
@@ -115,6 +123,8 @@ export function useAccountDialog({
     setSiteType("unknown")
     setAuthType(AuthTypeEnum.AccessToken)
     setIsAutoConfiguring(false)
+    setCookieAuthSessionCookie("")
+    setIsImportingCookies(false)
     targetAccountRef.current = null
   }, [mode])
 
@@ -153,6 +163,9 @@ export function useAccountDialog({
           })
           setSiteType(siteAccount.site_type || "")
           setAuthType(siteAccount.authType || AuthTypeEnum.AccessToken)
+          setCookieAuthSessionCookie(
+            siteAccount.cookieAuth?.sessionCookie || "",
+          )
         }
       } catch (error) {
         console.error(t("messages.loadFailed"), error)
@@ -253,6 +266,33 @@ export function useAccountDialog({
     }
   }
 
+  const handleImportCookieAuthSessionCookie = async () => {
+    if (!url.trim()) {
+      toast.error(t("messages.urlRequired"))
+      return
+    }
+    setIsImportingCookies(true)
+    try {
+      const response = await sendRuntimeMessage({
+        action: RuntimeActionIds.AccountDialogImportCookieAuthSessionCookie,
+        url: url.trim(),
+      })
+      if (response?.success && response.data) {
+        setCookieAuthSessionCookie(response.data)
+        toast.success(t("messages.importCookiesSuccess"))
+      } else if (response?.error) {
+        toast.error(response.error)
+      } else {
+        toast.error(t("messages.importCookiesEmpty"))
+      }
+    } catch (error) {
+      console.error("Failed to import cookies:", error)
+      toast.error(t("messages.importCookiesPermissionDenied"))
+    } finally {
+      setIsImportingCookies(false)
+    }
+  }
+
   const handleAutoDetect = async () => {
     if (!url.trim()) {
       return
@@ -304,6 +344,30 @@ export function useAccountDialog({
           setSiteType(resultData.siteType)
         }
 
+        // Attempt to auto-import session cookies after detection for cookie-auth accounts.
+        if (
+          authType === AuthTypeEnum.Cookie &&
+          !cookieAuthSessionCookie.trim() &&
+          url.trim()
+        ) {
+          try {
+            const cookieResponse = await sendRuntimeMessage({
+              action:
+                RuntimeActionIds.AccountDialogImportCookieAuthSessionCookie,
+              url: url.trim(),
+            })
+            const header =
+              typeof cookieResponse?.data === "string"
+                ? cookieResponse.data.trim()
+                : ""
+            if (header) {
+              setCookieAuthSessionCookie(header)
+            }
+          } catch (error) {
+            console.warn("[AccountDialog] Auto import cookie failed:", error)
+          }
+        }
+
         setIsDetected(true)
         setSiteName(resultData.siteName)
         if (mode === DIALOG_MODES.EDIT) {
@@ -343,6 +407,7 @@ export function useAccountDialog({
               checkIn,
               siteType,
               authType,
+              cookieAuthSessionCookie.trim(),
             )
           : await validateAndUpdateAccount(
               account!.id,
@@ -357,6 +422,7 @@ export function useAccountDialog({
               checkIn,
               siteType,
               authType,
+              cookieAuthSessionCookie.trim(),
             )
 
       if (result.success) {
@@ -472,6 +538,7 @@ export function useAccountDialog({
     userId,
     authType,
     accessToken,
+    cookieAuthSessionCookie,
     exchangeRate,
   })
 
@@ -497,6 +564,8 @@ export function useAccountDialog({
       authType,
       isFormValid,
       isAutoConfiguring,
+      cookieAuthSessionCookie,
+      isImportingCookies,
     },
     setters: {
       setUrl,
@@ -512,6 +581,7 @@ export function useAccountDialog({
       setCheckIn,
       setSiteType,
       setAuthType,
+      setCookieAuthSessionCookie,
     },
     handlers: {
       handleUseCurrentTabUrl,
@@ -521,6 +591,7 @@ export function useAccountDialog({
       handleSubmit,
       handleAutoConfig,
       handleClose,
+      handleImportCookieAuthSessionCookie,
     },
   }
 }

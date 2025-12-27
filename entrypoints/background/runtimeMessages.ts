@@ -1,4 +1,5 @@
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { applyActionClickBehavior } from "~/entrypoints/background/actionClickBehavior"
 import { handleAutoCheckinMessage } from "~/services/autoCheckin/scheduler"
 import { handleAutoRefreshMessage } from "~/services/autoRefreshService"
@@ -7,6 +8,8 @@ import { handleManagedSiteModelSyncMessage } from "~/services/modelSync"
 import { handleRedemptionAssistMessage } from "~/services/redemptionAssist"
 import { handleWebdavAutoSyncMessage } from "~/services/webdav/webdavAutoSyncService"
 import { onRuntimeMessage } from "~/utils/browserApi"
+import { getCookieHeaderForUrl } from "~/utils/cookieHelper"
+import { extractSessionCookieHeader } from "~/utils/cookieString"
 import { getErrorMessage } from "~/utils/error"
 import { openOrFocusOptionsMenuItem } from "~/utils/navigation"
 
@@ -99,6 +102,28 @@ export function setupRuntimeMessageListeners() {
           .catch((error) => {
             sendResponse({ success: false, error: getErrorMessage(error) })
           })
+        return true
+      }
+
+      if (
+        request.action ===
+        RuntimeActionIds.AccountDialogImportCookieAuthSessionCookie
+      ) {
+        void (async () => {
+          try {
+            const cookieHeader = await getCookieHeaderForUrl(request.url, {
+              includeSession: true,
+            })
+            const sessionOnly = extractSessionCookieHeader(cookieHeader)
+            if (sessionOnly) {
+              sendResponse({ success: true, data: sessionOnly })
+            } else {
+              sendResponse({ success: false, error: "No cookies found" })
+            }
+          } catch (error) {
+            sendResponse({ success: false, error: getErrorMessage(error) })
+          }
+        })()
         return true
       }
 

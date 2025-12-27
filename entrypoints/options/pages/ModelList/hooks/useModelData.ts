@@ -104,6 +104,7 @@ function useSingleAccountModelData(params: {
           authType: currentAccount.authType,
           userId: currentAccount.userId,
           accessToken: currentAccount.token,
+          cookie: currentAccount.cookieAuthSessionCookie,
         },
       })
 
@@ -200,6 +201,7 @@ function useAllAccountsModelData(
             authType: account.authType,
             userId: account.userId,
             accessToken: account.token,
+            cookie: account.cookieAuthSessionCookie,
           },
         })
 

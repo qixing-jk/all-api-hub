@@ -21,6 +21,7 @@ import {
   TempWindowFallbackPreferences,
   userPreferences,
 } from "~/services/userPreferences"
+import { AuthTypeEnum } from "~/types"
 import {
   isExtensionBackground,
   isExtensionPopup,
@@ -40,6 +41,12 @@ export interface TempWindowFetchParams {
   requestId?: string
   responseType?: TempWindowResponseType
   suppressMinimize?: boolean
+  /** Account ID for per-request cookie isolation */
+  accountId?: string
+  /** Auth type for cookie auth handling */
+  authType?: AuthTypeEnum
+  /** Per-account session cookie header to merge with WAF cookies */
+  cookieAuthSessionCookie?: string
 }
 
 export interface TempWindowFetch {
@@ -168,6 +175,12 @@ export interface TempWindowFallbackContext {
   fetchOptions: RequestInit
   onlyData: boolean
   responseType: TempWindowResponseType
+  /** Account ID for per-request cookie isolation */
+  accountId?: string
+  /** Auth type for cookie auth handling */
+  authType?: AuthTypeEnum
+  /** Per-account session cookie header to merge with WAF cookies */
+  cookieAuthSessionCookie?: string
 }
 
 /**
@@ -422,6 +435,9 @@ async function fetchViaTempWindow<T>(
     requestId,
     responseType,
     suppressMinimize,
+    accountId: context.accountId,
+    authType: context.authType,
+    cookieAuthSessionCookie: context.cookieAuthSessionCookie,
   }
 
   console.log("[API Service] Using temp window fetch fallback for", context.url)

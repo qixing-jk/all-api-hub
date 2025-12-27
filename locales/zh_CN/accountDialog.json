@@ -69,7 +69,11 @@
     "notesPlaceholder": "选填，输入备注信息",
     "tags": "标签",
     "tagsDescription": "使用标签对账号进行分类，便于快速筛选",
-    "tagsPlaceholder": "添加或选择标签"
+    "tagsPlaceholder": "添加或选择标签",
+    "cookieAuthSessionCookie": "会话 Cookie",
+    "cookieAuthSessionCookieDesc": "从当前已登录的浏览器标签页导入会话 Cookie",
+    "importCookieAuthSessionCookie": "从当前登录导入",
+    "cookieAuthSessionCookiePlaceholder": "粘贴 Cookie 头部值"
   },
   "messages": {
     "loadFailed": "加载账号数据失败",
@@ -81,6 +85,11 @@
     "operationFailed": "操作失败: {{error}}",
     "saveFailed": "保存失败",
     "saveAccountFailed": "保存账号失败",
-    "newApiConfigFailed": "自动配置到 New API失败: {{error}}"
+    "newApiConfigFailed": "自动配置到 New API失败: {{error}}",
+    "importCookiesLoading": "正在导入 Cookie...",
+    "importCookiesSuccess": "Cookie 导入成功",
+    "importCookiesEmpty": "未找到 Cookie，请先登录",
+    "importCookiesPermissionDenied": "Cookie 权限被拒绝",
+    "urlRequired": "请先输入 URL"
   }
 }

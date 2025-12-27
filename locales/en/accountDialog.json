@@ -69,7 +69,11 @@
     "notesPlaceholder": "Optional, enter notes",
     "tags": "Tags",
     "tagsDescription": "Use tags to categorize accounts for quick filtering",
-    "tagsPlaceholder": "Add or select tags"
+    "tagsPlaceholder": "Add or select tags",
+    "cookieAuthSessionCookie": "Session Cookie",
+    "cookieAuthSessionCookieDesc": "Import session cookies from the currently logged-in browser tab",
+    "importCookieAuthSessionCookie": "Import from current login",
+    "cookieAuthSessionCookiePlaceholder": "Paste Cookie header value"
   },
   "messages": {
     "loadFailed": "Failed to load account data",
@@ -81,6 +85,11 @@
     "operationFailed": "Operation failed: {{error}}",
     "saveFailed": "Save failed",
     "saveAccountFailed": "Failed to save account",
-    "newApiConfigFailed": "Auto-configuration to New API failed: {{error}}"
+    "newApiConfigFailed": "Auto-configuration to New API failed: {{error}}",
+    "importCookiesLoading": "Importing cookies...",
+    "importCookiesSuccess": "Cookies imported",
+    "importCookiesEmpty": "No cookies found. Please log in first.",
+    "importCookiesPermissionDenied": "Cookie permission denied",
+    "urlRequired": "Please enter a URL first"
   }
 }

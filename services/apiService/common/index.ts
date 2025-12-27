@@ -344,7 +344,7 @@ export async function fetchUserInfo(request: ApiServiceRequest): Promise<{
   return {
     id: userData.id,
     username: userData.username,
-    access_token: userData.access_token || null,
+    access_token: userData.access_token || "",
     user: userData,
   }
 }

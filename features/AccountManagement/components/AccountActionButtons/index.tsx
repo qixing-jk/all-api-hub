@@ -94,6 +94,7 @@ export default function AccountActionButtons({
           authType: site.authType,
           userId: site.userId,
           accessToken: site.token,
+          cookie: site.cookieAuthSessionCookie,
         },
       })
 

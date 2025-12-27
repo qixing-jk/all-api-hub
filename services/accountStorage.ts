@@ -528,6 +528,7 @@ class AccountStorageService {
         authType: account.authType,
         userId: account.account_info.id,
         accessToken: account.account_info.access_token,
+        cookie: account.cookieAuth?.sessionCookie,
       }
 
       // Refresh check-in support status together with account refresh.

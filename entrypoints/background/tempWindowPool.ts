@@ -1,11 +1,13 @@
 import { t } from "i18next"
 
+import { accountStorage } from "~/services/accountStorage"
 import { getSiteType } from "~/services/detectSiteType"
 import {
   DEFAULT_PREFERENCES,
   TempWindowFallbackPreferences,
   userPreferences,
 } from "~/services/userPreferences"
+import { AuthTypeEnum } from "~/types"
 import {
   createTab,
   createWindow,
@@ -14,7 +16,11 @@ import {
   onWindowRemoved,
   removeTabOrWindow,
 } from "~/utils/browserApi"
-import { getCookieHeaderForUrl } from "~/utils/cookieHelper"
+import {
+  COOKIE_SESSION_OVERRIDE_HEADER_NAME,
+  getCookieHeaderForUrl,
+} from "~/utils/cookieHelper"
+import { mergeCookieHeaders } from "~/utils/cookieString"
 import {
   applyTempWindowCookieRule,
   removeTempWindowCookieRule,
@@ -476,6 +482,9 @@ export async function handleTempWindowFetch(
     responseType = "json",
     requestId,
     suppressMinimize,
+    accountId,
+    authType,
+    cookieAuthSessionCookie,
   } = request
 
   if (!originUrl || !fetchUrl) {
@@ -499,6 +508,11 @@ export async function handleTempWindowFetch(
 
   const rawOptions = (fetchOptions ?? {}) as Record<string, any>
   let effectiveFetchOptions: Record<string, any> = rawOptions
+
+  const resolvedAuthType: AuthTypeEnum | undefined =
+    authType && Object.values(AuthTypeEnum).includes(authType)
+      ? (authType as AuthTypeEnum)
+      : undefined
 
   try {
     const context = await acquireTempContext(
@@ -526,6 +540,53 @@ export async function handleTempWindowFetch(
           effectiveFetchOptions = {
             ...rawOptions,
             credentials: "include",
+          }
+        }
+      }
+    }
+
+    // Multi-account cookie auth: merge WAF cookies (no session) + per-account session cookie bundle.
+    if (resolvedAuthType === AuthTypeEnum.Cookie) {
+      const sessionCookie =
+        typeof cookieAuthSessionCookie === "string" &&
+        cookieAuthSessionCookie.trim()
+          ? cookieAuthSessionCookie
+          : accountId
+            ? (await accountStorage.getAccountById(accountId))?.cookieAuth
+                ?.sessionCookie
+            : undefined
+
+      if (sessionCookie && sessionCookie.trim()) {
+        const wafCookieHeader = await getCookieHeaderForUrl(fetchUrl, {
+          includeSession: false,
+        })
+        const mergedCookieHeader = mergeCookieHeaders(
+          wafCookieHeader,
+          sessionCookie,
+        )
+
+        if (!isProtectionBypassFirefoxEnv()) {
+          // Chromium: inject Cookie header per-tab using DNR.
+          ruleId = await applyTempWindowCookieRule({
+            tabId,
+            url: fetchUrl,
+            cookieHeader: mergedCookieHeader,
+          })
+
+          if (ruleId) {
+            effectiveFetchOptions = {
+              ...rawOptions,
+              credentials: "include",
+            }
+          }
+        } else {
+          // Firefox: pass session cookie bundle through a private header.
+          const headers = new Headers(rawOptions.headers ?? {})
+          headers.set(COOKIE_SESSION_OVERRIDE_HEADER_NAME, sessionCookie)
+          effectiveFetchOptions = {
+            ...rawOptions,
+            credentials: rawOptions.credentials ?? "include",
+            headers: Object.fromEntries(headers.entries()),
           }
         }
       }

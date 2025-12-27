@@ -48,6 +48,14 @@ export interface AccountInfo {
   today_income: number // 今日收入 (recharge + check-in)
 }
 
+export interface CookieAuthConfig {
+  /**
+   * Cookie header string used for cookie-auth multi-account requests.
+   * The extension will merge these with WAF cookies at request time.
+   */
+  sessionCookie: string
+}
+
 // 站点账号完整信息
 export interface SiteAccount {
   id: string // 此项 id
@@ -78,6 +86,10 @@ export interface SiteAccount {
    */
   supports_check_in?: boolean // 是否支持签到功能
   authType: AuthTypeEnum // 认证方式
+  /**
+   * Per-account cookie-auth session cookie bundle for multi-account isolation.
+   */
+  cookieAuth?: CookieAuthConfig
   /**
    * 站点签到相关
    */
@@ -248,6 +260,14 @@ export interface DisplaySiteData {
    */
   supports_check_in?: boolean // 是否支持签到功能
   authType: AuthTypeEnum // 认证方式
+  /**
+   * Account id for per-request cookie isolation.
+   */
+  accountId?: string
+  /**
+   * Per-account cookie-auth session cookie header to merge with WAF cookies.
+   */
+  cookieAuthSessionCookie?: string
   checkIn: CheckInConfig
 }
 
