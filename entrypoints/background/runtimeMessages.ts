@@ -27,6 +27,21 @@ export function setupRuntimeMessageListeners() {
   // 处理来自 popup 的消息
   onRuntimeMessage((request, sender, sendResponse) => {
     try {
+      if (request.action === "permissions:check") {
+        void browser.permissions
+          .contains(request.permissions)
+          .then((hasPermission) => {
+            sendResponse({ hasPermission })
+          })
+          .catch((error) => {
+            sendResponse({
+              hasPermission: false,
+              error: getErrorMessage(error),
+            })
+          })
+        return true
+      }
+
       if (request.action === "cloudflareGuardLog") {
         try {
           console.log("[Background][CFGuardRelay]", {

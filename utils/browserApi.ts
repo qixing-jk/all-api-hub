@@ -561,6 +561,26 @@ export function removeActionClickListener(
   }
 }
 
+/**
+ * Check permissions via background script message (for content scripts).
+ * @param permissions Permission descriptor to check.
+ * @returns Resolves true when the permission is granted, false otherwise.
+ */
+export async function checkPermissionViaMessage(
+  permissions: browser.permissions.Permissions,
+): Promise<boolean> {
+  try {
+    const response = await sendRuntimeMessage({
+      action: "permissions:check",
+      permissions,
+    })
+    return response?.hasPermission ?? false
+  } catch (error) {
+    console.error("checkPermissionViaMessage failed", permissions, error)
+    return false
+  }
+}
+
 // Permissions helpers
 /**
  * Check whether the extension already holds the requested permissions.
