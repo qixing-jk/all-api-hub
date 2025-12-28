@@ -25,30 +25,6 @@ export function setupRedemptionAssistContent() {
 }
 
 /**
- * Legacy clipboard read fallback using execCommand.
- * Note: this may not work in all browsers due to security restrictions.
- * @returns Clipboard text or empty string on failure.
- */
-function readClipboardLegacy() {
-  const textarea = document.createElement("textarea")
-  textarea.style.position = "fixed"
-  textarea.style.opacity = "0"
-  document.body.appendChild(textarea)
-  textarea.focus()
-
-  try {
-    document.execCommand("paste")
-    const text = textarea.value
-    document.body.removeChild(textarea)
-    return text
-  } catch (err) {
-    console.error("Failed to read clipboard:", err)
-    document.body.removeChild(textarea)
-    return ""
-  }
-}
-
-/**
  * Wires DOM events (click/copy/cut) to scan for redemption codes, with throttling.
  * Skips interactions originating from the redemption assist UI itself.
  */
@@ -93,10 +69,7 @@ function setupRedemptionAssistDetection() {
               "[RedemptionAssist][Content] Clipboard read failed:",
               error,
             )
-            text = readClipboardLegacy()
           }
-        } else {
-          text = readClipboardLegacy()
         }
       }
 
