@@ -214,6 +214,10 @@
       "webRequestBlocking": {
         "title": "Web Request Blocking",
         "description": "Allows synchronous modification so cookies can be attached before a request leaves the browser, keeping firewall-bypass flows reliable."
+      },
+      "clipboardRead": {
+        "title": "Clipboard Read",
+        "description": "Allow the redemption assistant to detect copied redemption codes, thereby prompting automatic redemption of the codes."
       }
     }
   },

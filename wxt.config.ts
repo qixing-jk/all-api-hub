@@ -18,12 +18,18 @@ export default defineConfig({
     ],
     ...(browser === "firefox"
       ? {
-          optional_permissions: ["cookies", "webRequest", "webRequestBlocking"],
+          optional_permissions: [
+            "cookies",
+            "webRequest",
+            "webRequestBlocking",
+            "clipboardRead",
+          ],
         }
       : {
           optional_permissions: [
             "cookies",
             "declarativeNetRequestWithHostAccess",
+            "clipboardRead",
           ],
         }),
     host_permissions: ["https://*/*"],

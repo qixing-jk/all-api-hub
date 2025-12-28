@@ -1,4 +1,10 @@
-import { Cookie, Network, ShieldAlert, SlidersHorizontal } from "lucide-react"
+import {
+  ClipboardCheck,
+  Cookie,
+  Network,
+  ShieldAlert,
+  SlidersHorizontal,
+} from "lucide-react"
 import type { ReactNode } from "react"
 
 import { CardItem } from "~/components/ui/CardItem"
@@ -14,6 +20,7 @@ export const permissionIconMap: Partial<
   ),
   webRequest: <Network className="h-5 w-5 text-blue-500" />,
   webRequestBlocking: <ShieldAlert className="h-5 w-5 text-purple-500" />,
+  clipboardRead: <ClipboardCheck className="h-5 w-5 text-indigo-500" />,
 }
 
 export interface PermissionListItem {

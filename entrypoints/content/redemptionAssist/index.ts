@@ -22,7 +22,9 @@ export function setupRedemptionAssistContent() {
 }
 
 /**
- *
+ * Legacy clipboard read fallback using execCommand.
+ * Note: this may not work in all browsers due to security restrictions.
+ * @returns Clipboard text or empty string on failure.
  */
 function readClipboardLegacy() {
   const textarea = document.createElement("textarea")

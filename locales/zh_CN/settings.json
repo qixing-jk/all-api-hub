@@ -214,6 +214,10 @@
       "webRequestBlocking": {
         "title": "网络请求阻断",
         "description": "在请求发出前同步附加 Cookie，确保绕过防护页面的流程稳定可行。"
+      },
+      "clipboardRead": {
+        "title": "读取剪贴板",
+        "description": "允许兑换助手检测复制的兑换码，从而提示自动兑换兑换码。"
       }
     }
   },

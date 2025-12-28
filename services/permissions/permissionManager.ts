@@ -17,6 +17,7 @@ export const OPTIONAL_PERMISSION_IDS = {
   declarativeNetRequestWithHostAccess: "declarativeNetRequestWithHostAccess",
   WebRequest: "webRequest",
   WebRequestBlocking: "webRequestBlocking",
+  ClipboardRead: "clipboardRead",
 } as const
 
 export type ManifestOptionalPermissions =
