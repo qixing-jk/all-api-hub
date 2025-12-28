@@ -22,6 +22,28 @@ export function setupRedemptionAssistContent() {
 }
 
 /**
+ *
+ */
+function readClipboardLegacy() {
+  const textarea = document.createElement("textarea")
+  textarea.style.position = "fixed"
+  textarea.style.opacity = "0"
+  document.body.appendChild(textarea)
+  textarea.focus()
+
+  try {
+    document.execCommand("paste")
+    const text = textarea.value
+    document.body.removeChild(textarea)
+    return text
+  } catch (err) {
+    console.error("Failed to read clipboard:", err)
+    document.body.removeChild(textarea)
+    return ""
+  }
+}
+
+/**
  * Wires DOM events (click/copy/cut) to scan for redemption codes, with throttling.
  * Skips interactions originating from the redemption assist UI itself.
  */
@@ -47,6 +69,21 @@ function setupRedemptionAssistDetection() {
         const target = event.target as HTMLElement | null
         if (target) {
           text = (target.innerText || target.textContent || "").slice(0, 50)
+        }
+      }
+
+      if (!text && navigator.clipboard && navigator.clipboard.readText) {
+        try {
+          const clipText = await navigator.clipboard.readText()
+          if (clipText) {
+            text = clipText.trim()
+          }
+        } catch (error) {
+          console.warn(
+            "[RedemptionAssist][Content] Clipboard read failed:",
+            error,
+          )
+          text = readClipboardLegacy()
         }
       }
 
