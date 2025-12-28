@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.35.0](https://github.com/qixing-jk/all-api-hub/compare/v2.34.0...v2.35.0) (2025-12-28)
+
+
+### Features
+
+* add optional clipboard read permission for reminding redemption when copying any possible redemption code ([#292](https://github.com/qixing-jk/all-api-hub/issues/292)) ([5966289](https://github.com/qixing-jk/all-api-hub/commit/5966289b6099795e37af989fc0da64398f2fdc8d))
+* **user-preferences:** add cdk.linux.do to default redemption URL whitelist ([a2ee154](https://github.com/qixing-jk/all-api-hub/commit/a2ee1545d71b174f9b12f6c9ad710784bed7e514))
+
 ## [2.34.0](https://github.com/qixing-jk/all-api-hub/compare/v2.33.0...v2.34.0) (2025-12-25)
 
 
