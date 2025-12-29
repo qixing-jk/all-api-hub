@@ -453,8 +453,7 @@ class AutoCheckinScheduler {
           }
         })
 
-        // Setup initial alarm based on preferences
-        await this.scheduleNextRun()
+        await this.scheduleNextRun({ preserveExisting: true })
       } else {
         console.warn(
           "[AutoCheckin] Alarms API not available, automatic check-in disabled",
@@ -469,11 +468,11 @@ class AutoCheckinScheduler {
   }
 
   /**
-   * Schedule the next check-in run randomly within configured time window
-   *
-   * Clears existing alarm, respects globalEnabled, and persists nextScheduledAt.
+   * Schedule the next check-in run randomly within configured time window.
+   * When `preserveExisting` is true we reuse any surviving alarm to avoid
+   * re-randomizing on background restarts, only recreating the alarm if missing.
    */
-  async scheduleNextRun() {
+  async scheduleNextRun(options?: { preserveExisting?: boolean }) {
     // Check if alarms API is supported
     if (!hasAlarmsAPI()) {
       console.warn("[AutoCheckin] Alarms API not supported, cannot schedule")
@@ -482,14 +481,15 @@ class AutoCheckinScheduler {
 
     const prefs = await userPreferences.getPreferences()
     const config = prefs.autoCheckin ?? DEFAULT_PREFERENCES.autoCheckin!
+    const currentStatus = await autoCheckinStorage.getStatus()
+    const existingAlarm = options?.preserveExisting
+      ? await getAlarm(AutoCheckinScheduler.ALARM_NAME)
+      : undefined
 
-    // Clear existing alarm
-    await clearAlarm(AutoCheckinScheduler.ALARM_NAME)
-
+    // If globally disabled, clear any existing alarm and exit
     if (!config.globalEnabled) {
+      await clearAlarm(AutoCheckinScheduler.ALARM_NAME)
       console.log("[AutoCheckin] Auto check-in disabled, alarm cleared")
-      // Update status to clear nextScheduledAt
-      const currentStatus = await autoCheckinStorage.getStatus()
       await autoCheckinStorage.saveStatus({
         ...currentStatus,
         nextScheduledAt: undefined,
@@ -497,11 +497,34 @@ class AutoCheckinScheduler {
       return
     }
 
-    const currentStatus = await autoCheckinStorage.getStatus()
+    // If preserving existing and alarm exists, sync stored status and exit
+    if (options?.preserveExisting && existingAlarm?.scheduledTime) {
+      const scheduledIso = new Date(existingAlarm.scheduledTime).toISOString()
+      if (currentStatus?.nextScheduledAt !== scheduledIso) {
+        await autoCheckinStorage.saveStatus({
+          ...(currentStatus ?? {}),
+          nextScheduledAt: scheduledIso,
+        })
+        console.log(
+          "[AutoCheckin] Synced stored next schedule with existing alarm",
+        )
+      }
+      return
+    }
+
+    if (options?.preserveExisting) {
+      console.warn(
+        "[AutoCheckin] Auto check-in alarm missing on startup, restoring...",
+      )
+    }
+
+    // Clear existing alarm before scheduling a new run
+    await clearAlarm(AutoCheckinScheduler.ALARM_NAME)
 
     // Calculate next trigger time (retry or scheduled window)
     const nextTriggerTime = this.computeNextTriggerTime(config, currentStatus)
 
+    // Create alarm
     try {
       await createAlarm(AutoCheckinScheduler.ALARM_NAME, {
         when: nextTriggerTime.getTime(),
