@@ -553,21 +553,20 @@ class AutoCheckinScheduler {
   }
 
   /**
-   * Calculate next trigger time randomly within the time window
-   * @param windowStart - Start time in HH:mm format
-   * @param windowEnd - End time in HH:mm format
-   * @returns Date object for next trigger
-   */
-  /**
    * Handle alarm trigger - execute check-ins
    *
    * Runs check-ins then schedules the following run.
    */
   async handleAlarm() {
     console.log("[AutoCheckin] Alarm triggered, starting check-in execution")
-    await this.runCheckins()
-    // Schedule next run after completion
-    await this.scheduleNextRun()
+    try {
+      await this.runCheckins()
+    } catch (error) {
+      console.error("[AutoCheckin] Error during check-in execution:", error)
+    } finally {
+      // Schedule next run after completion
+      await this.scheduleNextRun()
+    }
   }
 
   /**
