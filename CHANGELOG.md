@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.35.1](https://github.com/qixing-jk/all-api-hub/compare/v2.35.0...v2.35.1) (2025-12-30)
+
+
+### Bug Fixes
+
+* **autoCheckin:** reuse existing alarm on scheduler restart and ensure next run is always scheduled ([#295](https://github.com/qixing-jk/all-api-hub/issues/295)) ([f35c60f](https://github.com/qixing-jk/all-api-hub/commit/f35c60f9d1efcff2e74ad5546362df513add4541))
+* **ui:** prevent modal content overflow and improve layout ([e117735](https://github.com/qixing-jk/all-api-hub/commit/e117735b12ea2a79c82bca5912f96f9a297d719e))
+* **ui:** remove unnecessary padding from form actions ([1297ac9](https://github.com/qixing-jk/all-api-hub/commit/1297ac902a0e624ba2fd4b738ae18fc2114ac808))
+
 ## [2.35.0](https://github.com/qixing-jk/all-api-hub/compare/v2.34.0...v2.35.0) (2025-12-28)
 
 
