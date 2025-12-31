@@ -120,7 +120,9 @@ class ModelSyncScheduler {
 
   /**
    * Setup or update the alarm based on current preferences.
-   * Clears existing alarm first to avoid duplicates, then recreates if enabled.
+   * Preserves an existing matching alarm to avoid re-scheduling on background
+   * restarts or unrelated settings updates, only recreating when missing or when
+   * the interval changes.
    *
    * Respects modelSync.enabled/interval; no-op if alarms API unavailable.
    */
@@ -137,10 +139,8 @@ class ModelSyncScheduler {
     const config =
       prefs.managedSiteModelSync ?? DEFAULT_PREFERENCES.managedSiteModelSync!
 
-    // Clear existing alarm before re-creating with new interval
-    await clearAlarm(ModelSyncScheduler.ALARM_NAME)
-
     if (!config.enabled) {
+      await clearAlarm(ModelSyncScheduler.ALARM_NAME)
       console.log("[ManagedSiteModelSync] Auto-sync disabled, alarm cleared")
       return
     }
@@ -149,6 +149,28 @@ class ModelSyncScheduler {
     const intervalInMinutes = Math.max(intervalMs / 1000 / 60, 1)
 
     try {
+      const existingAlarm = await getAlarm(ModelSyncScheduler.ALARM_NAME)
+      const existingPeriodInMinutes = existingAlarm?.periodInMinutes
+
+      if (
+        existingAlarm &&
+        existingPeriodInMinutes != null &&
+        Math.abs(existingPeriodInMinutes - intervalInMinutes) < 0.001
+      ) {
+        console.log(
+          "[ManagedSiteModelSync] Alarm already exists, preserving:",
+          {
+            name: existingAlarm.name,
+            scheduledTime: existingAlarm.scheduledTime
+              ? new Date(existingAlarm.scheduledTime)
+              : null,
+            periodInMinutes: existingPeriodInMinutes,
+          },
+        )
+        return
+      }
+
+      await clearAlarm(ModelSyncScheduler.ALARM_NAME)
       await createAlarm(ModelSyncScheduler.ALARM_NAME, {
         delayInMinutes: intervalInMinutes, // Initial delay
         periodInMinutes: intervalInMinutes, // Repeat interval
