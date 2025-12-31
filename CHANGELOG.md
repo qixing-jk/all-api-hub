@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.36.0](https://github.com/qixing-jk/all-api-hub/compare/v2.35.1...v2.36.0) (2025-12-31)
+
+
+### Features
+
+* **managedSiteModelSync:** add auto-sync overview card ([#302](https://github.com/qixing-jk/all-api-hub/issues/302)) ([51d5569](https://github.com/qixing-jk/all-api-hub/commit/51d55692e892053f843e83737eb6e49e819dafcf))
+
+
+### Bug Fixes
+
+* **modelSync:** avoid duplicate alarm creation on setup ([#300](https://github.com/qixing-jk/all-api-hub/issues/300)) ([386ef21](https://github.com/qixing-jk/all-api-hub/commit/386ef218f86d73a9c3b9a257841ab264f35d5d52))
+
 ## [2.35.1](https://github.com/qixing-jk/all-api-hub/compare/v2.35.0...v2.35.1) (2025-12-30)
 
 
