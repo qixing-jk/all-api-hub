@@ -23,7 +23,6 @@ import ProgressCard from "./components/ProgressCard"
 import ResultsTable from "./components/ResultsTable"
 import StatisticsCard from "./components/StatisticsCard"
 
-
 const TAB_INDEX = {
   history: 0,
   manual: 1,
@@ -41,6 +40,7 @@ export default function ManagedSiteModelSync() {
     null,
   )
   const [progress, setProgress] = useState<ExecutionProgress | null>(null)
+  const [nextScheduledAt, setNextScheduledAt] = useState<string | null>(null)
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all")
   const [searchKeyword, setSearchKeyword] = useState("")
   const [historySelectedIds, setHistorySelectedIds] = useState<Set<number>>(
@@ -90,6 +90,20 @@ export default function ManagedSiteModelSync() {
     }
   }, [])
 
+  const loadNextRun = useCallback(async () => {
+    try {
+      const response = await sendRuntimeMessage({
+        action: "modelSync:getNextRun",
+      })
+
+      if (response.success) {
+        setNextScheduledAt(response.data?.nextScheduledAt ?? null)
+      }
+    } catch (error) {
+      console.error("Failed to load next run:", error)
+    }
+  }, [])
+
   const loadChannels = useCallback(async () => {
     try {
       setIsChannelsLoading(true)
@@ -120,6 +134,7 @@ export default function ManagedSiteModelSync() {
   useEffect(() => {
     void loadLastExecution()
     void loadProgress()
+    void loadNextRun()
 
     // Listen for progress updates
     const handleMessage = (message: any) => {
@@ -129,6 +144,7 @@ export default function ManagedSiteModelSync() {
         // If sync completed, reload execution results
         if (!message.payload?.isRunning) {
           void loadLastExecution()
+          void loadNextRun()
         }
       }
     }
@@ -137,7 +153,7 @@ export default function ManagedSiteModelSync() {
     return () => {
       browser.runtime.onMessage.removeListener(handleMessage)
     }
-  }, [loadLastExecution, loadProgress])
+  }, [loadLastExecution, loadNextRun, loadProgress])
 
   useEffect(() => {
     if (!progress?.isRunning) {
@@ -256,6 +272,7 @@ export default function ManagedSiteModelSync() {
   const handleRefresh = () => {
     void loadLastExecution()
     void loadProgress()
+    void loadNextRun()
   }
 
   const handleRunSingle = async (channelId: number) => {
@@ -558,7 +575,10 @@ export default function ManagedSiteModelSync() {
 
       {lastExecution?.statistics && (
         <div className="mb-6">
-          <StatisticsCard statistics={lastExecution.statistics} />
+          <StatisticsCard
+            statistics={lastExecution.statistics}
+            nextScheduledAt={nextScheduledAt}
+          />
         </div>
       )}
 

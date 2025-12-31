@@ -476,6 +476,23 @@ export const handleManagedSiteModelSyncMessage = async (
 ) => {
   try {
     switch (request.action) {
+      case "modelSync:getNextRun": {
+        const alarm = await getAlarm(ModelSyncScheduler.ALARM_NAME)
+        const nextScheduledAt =
+          alarm?.scheduledTime != null
+            ? new Date(alarm.scheduledTime).toISOString()
+            : undefined
+
+        sendResponse({
+          success: true,
+          data: {
+            nextScheduledAt,
+            periodInMinutes: alarm?.periodInMinutes,
+          },
+        })
+        break
+      }
+
       case "modelSync:triggerAll": {
         const resultAll = await modelSyncScheduler.executeSync()
         sendResponse({ success: true, data: resultAll })

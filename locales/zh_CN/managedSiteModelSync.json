@@ -45,7 +45,8 @@
       "duration": "耗时",
       "startTime": "开始时间",
       "endTime": "结束时间",
-      "nextRun": "下次计划时间"
+      "nextRun": "下次计划时间",
+      "notScheduled": "未计划"
     },
     "actions": {
       "runAll": "执行全部",

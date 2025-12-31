@@ -45,7 +45,8 @@
       "duration": "Duration",
       "startTime": "Start Time",
       "endTime": "End Time",
-      "nextRun": "Next Scheduled Run"
+      "nextRun": "Next Scheduled Run",
+      "notScheduled": "Not scheduled"
     },
     "actions": {
       "runAll": "Run All",

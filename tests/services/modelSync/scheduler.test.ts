@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { modelSyncScheduler } from "~/services/modelSync/scheduler"
+import {
+  handleManagedSiteModelSyncMessage,
+  modelSyncScheduler,
+} from "~/services/modelSync/scheduler"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
@@ -115,5 +118,35 @@ describe("modelSyncScheduler.setupAlarm", () => {
       "managedSiteModelSync",
     )
     expect(mockedBrowserApi.createAlarm).toHaveBeenCalled()
+  })
+})
+
+describe("handleManagedSiteModelSyncMessage", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockedBrowserApi.hasAlarmsAPI.mockReturnValue(true)
+  })
+
+  it("returns next scheduled time from the alarm", async () => {
+    const scheduledTime = Date.now() + 60_000
+    mockedBrowserApi.getAlarm.mockResolvedValue({
+      name: "managedSiteModelSync",
+      scheduledTime,
+      periodInMinutes: 1,
+    })
+
+    const sendResponse = vi.fn()
+    await handleManagedSiteModelSyncMessage(
+      { action: "modelSync:getNextRun" },
+      sendResponse,
+    )
+
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: true,
+      data: {
+        nextScheduledAt: new Date(scheduledTime).toISOString(),
+        periodInMinutes: 1,
+      },
+    })
   })
 })
