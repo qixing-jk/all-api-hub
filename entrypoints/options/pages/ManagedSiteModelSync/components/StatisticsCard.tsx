@@ -6,7 +6,6 @@ import { formatFullTime } from "~/utils/formatters"
 
 interface StatisticsCardProps {
   statistics: ExecutionStatistics
-  nextScheduledAt?: string | null
 }
 
 /**
@@ -15,21 +14,8 @@ interface StatisticsCardProps {
  * @returns Card with counts and timestamps.
  */
 export default function StatisticsCard(props: StatisticsCardProps) {
-  const { statistics, nextScheduledAt } = props
+  const { statistics } = props
   const { t } = useTranslation("managedSiteModelSync")
-
-  const formatNextRun = (value?: string | null) => {
-    if (!value) return t("execution.statistics.notScheduled")
-    try {
-      const date = new Date(value)
-      if (Number.isNaN(date.getTime())) {
-        return t("execution.statistics.notScheduled")
-      }
-      return formatFullTime(date)
-    } catch {
-      return t("execution.statistics.notScheduled")
-    }
-  }
 
   return (
     <Card>
@@ -87,14 +73,6 @@ export default function StatisticsCard(props: StatisticsCardProps) {
               </span>
               <span className="text-gray-900 dark:text-white">
                 {formatFullTime(new Date(statistics.endedAt))}
-              </span>
-            </div>
-            <div>
-              <span className="text-gray-600 dark:text-gray-400">
-                {t("execution.statistics.nextRun")}:{" "}
-              </span>
-              <span className="text-gray-900 dark:text-white">
-                {formatNextRun(nextScheduledAt)}
               </span>
             </div>
           </div>

@@ -33,6 +33,15 @@
   },
   "execution": {
     "title": "模型列表同步执行",
+    "overview": {
+      "autoSync": "自动同步",
+      "enabled": "已启用",
+      "disabled": "已禁用",
+      "everyHours": "每 {{count}} 小时",
+      "everyMinutes": "每 {{count}} 分钟",
+      "lastRun": "上次运行",
+      "never": "从未"
+    },
     "lastExecution": "上一次执行",
     "tabs": {
       "history": "执行记录",
