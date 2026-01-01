@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.37.0](https://github.com/qixing-jk/all-api-hub/compare/v2.36.0...v2.37.0) (2026-01-01)
+
+
+### Features
+
+* **navigation:** add cross-page navigation between channels and sync ([#307](https://github.com/qixing-jk/all-api-hub/issues/307)) ([cb9ab3e](https://github.com/qixing-jk/all-api-hub/commit/cb9ab3e79f7e2ea2864c67821b98f9d32cb32f96))
+* **redemptionAssist:** add relaxed code validation support ([#305](https://github.com/qixing-jk/all-api-hub/issues/305)) ([706237e](https://github.com/qixing-jk/all-api-hub/commit/706237ea0d3d1caba7c3e4fd8023c31dc2344cde))
+
+
+### Bug Fixes
+
+* **background:** make context menu setup async and prevent duplicates ([16a502a](https://github.com/qixing-jk/all-api-hub/commit/16a502a5b7d70b52d3cfd2a17f8832a8023be57c))
+
 ## [2.36.0](https://github.com/qixing-jk/all-api-hub/compare/v2.35.1...v2.36.0) (2025-12-31)
 
 
