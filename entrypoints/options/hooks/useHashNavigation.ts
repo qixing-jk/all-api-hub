@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react"
 
-import { navigateWithinOptionsPage } from "~/utils/navigation"
-
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { navigateWithinOptionsPage } from "~/utils/navigation"
 
 import { menuItems } from "../constants"
 
@@ -45,7 +44,7 @@ function parseHash() {
  */
 function updateHash(page: string, params?: Record<string, string>) {
   const hash = `#${page}`
-  navigateWithinOptionsPage(hash, params)
+  navigateWithinOptionsPage(hash, params ?? {})
 }
 
 /**

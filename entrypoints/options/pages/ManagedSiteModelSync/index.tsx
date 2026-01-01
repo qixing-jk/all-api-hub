@@ -34,7 +34,18 @@ const TAB_INDEX = {
  * Fetches execution data, channels, and renders tabs for history and manual sync.
  * @returns Page layout with controls, status, and result tables.
  */
-export default function ManagedSiteModelSync() {
+interface ManagedSiteModelSyncProps {
+  refreshKey?: number
+  routeParams?: Record<string, string>
+}
+
+/**
+ * Managed Site Model Sync Page
+ */
+export default function ManagedSiteModelSync({
+  refreshKey,
+  routeParams,
+}: ManagedSiteModelSyncProps) {
   const { t } = useTranslation("managedSiteModelSync")
   const hasInitializedTab = useRef(false)
   const [lastExecution, setLastExecution] = useState<ExecutionResult | null>(
@@ -206,6 +217,61 @@ export default function ManagedSiteModelSync() {
     isChannelsLoading,
     loadChannels,
     selectedTab,
+  ])
+
+  useEffect(() => {
+    if (refreshKey) {
+      void loadLastExecution()
+      void loadProgress()
+      void loadNextRun()
+      void loadPreferences()
+    }
+  }, [
+    loadLastExecution,
+    loadNextRun,
+    loadPreferences,
+    loadProgress,
+    refreshKey,
+  ])
+
+  useEffect(() => {
+    const channelIdRaw = routeParams?.channelId?.trim()
+    const channelId = channelIdRaw ? Number(channelIdRaw) : NaN
+    const requestedTab = routeParams?.tab?.trim()
+
+    if (!Number.isNaN(channelId)) {
+      hasInitializedTab.current = true
+      setSelectedTab(TAB_INDEX.manual)
+      setManualSearchKeyword(String(channelId))
+      setManualSelectedIds(new Set([channelId]))
+      if (
+        channels.length === 0 &&
+        !isChannelsLoading &&
+        !hasAttemptedChannelsLoad
+      ) {
+        void loadChannels()
+      }
+      return
+    }
+
+    if (requestedTab === "history" || requestedTab === "manual") {
+      hasInitializedTab.current = true
+      setSelectedTab(TAB_INDEX[requestedTab])
+    }
+
+    const search = routeParams?.search?.trim()
+    if (search) {
+      setSearchKeyword(search)
+      setManualSearchKeyword(search)
+    }
+  }, [
+    channels.length,
+    hasAttemptedChannelsLoad,
+    isChannelsLoading,
+    loadChannels,
+    routeParams?.channelId,
+    routeParams?.search,
+    routeParams?.tab,
   ])
 
   const handleRunAll = async () => {

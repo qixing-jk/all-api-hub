@@ -38,7 +38,7 @@ import { managedSiteModelSyncStorage } from "./storage"
  * - Applies model redirect mappings immediately after successful channel syncs.
  */
 class ModelSyncScheduler {
-  private static readonly ALARM_NAME = "managedSiteModelSync"
+  static readonly ALARM_NAME = "managedSiteModelSync"
   private isInitialized = false
   private currentProgress: ExecutionProgress | null = null
 

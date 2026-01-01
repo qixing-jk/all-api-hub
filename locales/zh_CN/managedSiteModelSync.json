@@ -81,6 +81,7 @@
       "attempts": "尝试次数",
       "finishedAt": "完成时间",
       "actions": "操作",
+      "manageChannel": "管理渠道",
       "syncChannel": "同步此渠道"
     },
     "status": {

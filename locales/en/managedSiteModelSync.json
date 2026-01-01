@@ -81,6 +81,7 @@
       "attempts": "Attempts",
       "finishedAt": "Finished At",
       "actions": "Actions",
+      "manageChannel": "Manage channel",
       "syncChannel": "Sync"
     },
     "status": {

@@ -56,6 +56,7 @@
       "edit": "编辑",
       "sync": "同步模型列表",
       "syncing": "正在同步…",
+      "openSync": "打开模型同步",
       "filters": "编辑渠道过滤规则",
       "delete": "删除"
     }

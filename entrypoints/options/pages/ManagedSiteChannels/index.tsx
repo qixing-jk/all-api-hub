@@ -94,6 +94,7 @@ import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 import type { ManagedSiteChannel } from "~/types/managedSite"
 import { sendRuntimeMessage } from "~/utils/browserApi"
 import { getErrorMessage } from "~/utils/error"
+import { openManagedSiteModelSyncForChannel } from "~/utils/navigation"
 
 type ChannelRow = ManagedSiteChannel
 type CheckboxState = boolean | "indeterminate"
@@ -101,6 +102,7 @@ type RowActionsLabels = {
   edit: string
   sync: string
   syncing: string
+  openSync: string
   filters: string
   delete: string
 }
@@ -219,7 +221,7 @@ const multiColumnFilterFn: FilterFn<ChannelRow> = (
   filterValue,
 ) => {
   const content =
-    `${row.original.name} ${row.original.base_url} ${row.original.group}`
+    `${row.original.id} ${row.original.name} ${row.original.base_url} ${row.original.group}`
       .toLowerCase()
       .trim()
   const searchTerm = (filterValue ?? "").toLowerCase().trim()
@@ -240,7 +242,18 @@ const statusFilterFn: FilterFn<ChannelRow> = (
  * Main management page for New API channels including table, filters, and dialogs.
  * Fetches channel data, exposes filtering tools, and handles CRUD operations.
  */
-export default function ManagedSiteChannels() {
+interface ManagedSiteChannelsProps {
+  refreshKey?: number
+  routeParams?: Record<string, string>
+}
+
+/**
+ *
+ */
+export default function ManagedSiteChannels({
+  refreshKey,
+  routeParams,
+}: ManagedSiteChannelsProps) {
   const { t } = useTranslation(["managedSiteChannels", "messages"])
   const [channels, setChannels] = useState<ChannelRow[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -307,6 +320,12 @@ export default function ManagedSiteChannels() {
   useEffect(() => {
     void refreshChannels()
   }, [refreshChannels])
+
+  useEffect(() => {
+    if (refreshKey) {
+      void refreshChannels()
+    }
+  }, [refreshChannels, refreshKey])
 
   const handleOpenCreateDialog = useCallback(() => {
     openWithCustom({
@@ -461,6 +480,7 @@ export default function ManagedSiteChannels() {
       edit: t("table.rowActions.edit"),
       sync: t("table.rowActions.sync"),
       syncing: t("table.rowActions.syncing"),
+      openSync: t("table.rowActions.openSync"),
       filters: t("table.rowActions.filters"),
       delete: t("table.rowActions.delete"),
     }),
@@ -596,6 +616,9 @@ export default function ManagedSiteChannels() {
             onEdit={() => handleOpenEditDialog(row.original)}
             onDelete={() => scheduleDelete([row.original.id])}
             onSync={() => handleSyncChannels([row.original.id])}
+            onOpenSync={() =>
+              void openManagedSiteModelSyncForChannel(row.original.id)
+            }
             onFilters={() => handleOpenFilterDialog(row.original)}
             isSyncing={syncingIds.has(row.original.id)}
             labels={rowActionLabels}
@@ -639,6 +662,15 @@ export default function ManagedSiteChannels() {
     getFacetedUniqueValues: getFacetedUniqueValues(),
     enableSortingRemoval: false,
   })
+
+  useEffect(() => {
+    const search =
+      routeParams?.channelId?.trim() || routeParams?.search?.trim() || ""
+    table.getColumn("name")?.setFilterValue(search || undefined)
+    if (search) {
+      setPagination((prev) => ({ ...prev, pageIndex: 0 }))
+    }
+  }, [routeParams?.channelId, routeParams?.search, table])
 
   const statusColumn = table.getColumn("status")
   const uniqueStatusValues = useMemo(() => {
@@ -1082,6 +1114,7 @@ function RowActions({
   onEdit,
   onDelete,
   onSync,
+  onOpenSync,
   onFilters,
   isSyncing,
   labels,
@@ -1089,6 +1122,7 @@ function RowActions({
   onEdit: () => void
   onDelete: () => void
   onSync: () => void
+  onOpenSync: () => void
   onFilters: () => void
   isSyncing: boolean
   labels: RowActionsLabels
@@ -1108,6 +1142,9 @@ function RowActions({
         </DropdownMenuItem>
         <DropdownMenuItem onClick={onSync} disabled={isSyncing}>
           {isSyncing ? labels.syncing : labels.sync}
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={onOpenSync}>
+          {labels.openSync}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem

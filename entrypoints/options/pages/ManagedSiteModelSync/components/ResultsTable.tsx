@@ -6,6 +6,7 @@ import {
 import dayjs from "dayjs"
 import { useTranslation } from "react-i18next"
 
+import ManagedSiteChannelLinkButton from "~/components/ManagedSiteChannelLinkButton"
 import { Badge, Button, Card } from "~/components/ui"
 import type { ExecutionItemResult } from "~/types/managedSiteModelSync"
 
@@ -135,7 +136,11 @@ export default function ResultsTable({
                     {item.channelId}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
-                    {item.channelName}
+                    <ManagedSiteChannelLinkButton
+                      channelId={item.channelId}
+                      channelName={item.channelName}
+                      className="h-auto justify-start p-0 text-sm"
+                    />
                   </td>
                   {columns.message && (
                     <td className="px-4 py-3">

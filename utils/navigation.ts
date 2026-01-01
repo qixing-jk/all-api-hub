@@ -126,6 +126,18 @@ const getBasicSettingsHash = () => `#${MENU_ITEM_IDS.BASIC}`
 const getAboutHash = () => `#${MENU_ITEM_IDS.ABOUT}`
 
 /**
+ * Hash fragment pointing to Managed Site channel management inside options.html.
+ */
+const getManagedSiteChannelsHash = () =>
+  `#${MENU_ITEM_IDS.MANAGED_SITE_CHANNELS}`
+
+/**
+ * Hash fragment pointing to Managed Site model sync inside options.html.
+ */
+const getManagedSiteModelSyncHash = () =>
+  `#${MENU_ITEM_IDS.MANAGED_SITE_MODEL_SYNC}`
+
+/**
  * Creates and activates a new browser tab with the given URL.
  * @param url Target URL to open.
  */
@@ -259,6 +271,51 @@ const navigateToBasicSettings = (tabId?: string) => {
   }
 
   openOrFocusOptionsPage(targetHash, searchParams)
+}
+
+/**
+ * Opens Managed Site channel management, optionally applying a search query.
+ */
+const _openManagedSiteChannelsPage = (params?: { search?: string }) => {
+  const targetHash = getManagedSiteChannelsHash()
+  const searchParams = params?.search ? { search: params.search } : {}
+
+  if (isOnOptionsPage()) {
+    navigateWithinOptionsPage(targetHash, searchParams)
+    return
+  }
+
+  openOrFocusOptionsPage(targetHash, searchParams)
+}
+
+type ManagedSiteModelSyncTab = "history" | "manual"
+
+/**
+ * Opens Managed Site model sync dashboard, optionally focusing a channel and tab.
+ */
+const _openManagedSiteModelSyncPage = (params?: {
+  channelId?: number | string
+  tab?: ManagedSiteModelSyncTab
+}) => {
+  const targetHash = getManagedSiteModelSyncHash()
+  const searchParams: Record<string, string | undefined> = {}
+
+  if (params?.channelId != null) {
+    searchParams.channelId = String(params.channelId)
+  }
+
+  if (params?.tab) {
+    searchParams.tab = params.tab
+  }
+
+  const resolvedParams = Object.keys(searchParams).length ? searchParams : {}
+
+  if (isOnOptionsPage()) {
+    navigateWithinOptionsPage(targetHash, resolvedParams)
+    return
+  }
+
+  openOrFocusOptionsPage(targetHash, resolvedParams)
 }
 
 /**
@@ -420,6 +477,35 @@ export const openKeysPage = withPopupClose(_openKeysPage)
  * popup afterwards.
  */
 export const openModelsPage = withPopupClose(_openModelsPage)
+
+/**
+ * Open Managed Site channel management and close the popup afterwards.
+ */
+export const openManagedSiteChannelsPage = withPopupClose(
+  _openManagedSiteChannelsPage,
+)
+
+/**
+ * Open Managed Site channel management with a prefilled search query.
+ */
+export const openManagedSiteChannelsWithSearch = withPopupClose(
+  (search: string) => _openManagedSiteChannelsPage({ search }),
+)
+
+/**
+ * Open Managed Site model sync dashboard and close the popup afterwards.
+ */
+export const openManagedSiteModelSyncPage = withPopupClose(
+  _openManagedSiteModelSyncPage,
+)
+
+/**
+ * Open Managed Site model sync dashboard focused on a single channel.
+ */
+export const openManagedSiteModelSyncForChannel = withPopupClose(
+  (channelId: number) =>
+    _openManagedSiteModelSyncPage({ channelId, tab: "manual" }),
+)
 
 /**
  * Open the provider's usage log page and auto-close the popup when triggered
