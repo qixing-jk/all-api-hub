@@ -603,6 +603,7 @@ export const UserPreferencesProvider = ({
             DEFAULT_PREFERENCES.redemptionAssist ??
             ({
               enabled: true,
+              relaxedCodeValidation: true,
               urlWhitelist: {
                 enabled: true,
                 patterns: [],

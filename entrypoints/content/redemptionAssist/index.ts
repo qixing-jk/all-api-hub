@@ -277,7 +277,9 @@ async function scanForRedemptionCodes(sourceText?: string) {
     const text = (sourceText ?? "").trim()
     if (!text) return
 
-    const code = extractRedemptionCodesFromText(text)[0]
+    const code = extractRedemptionCodesFromText(text, {
+      relaxedCharset: true,
+    })[0]
     if (!code) return
 
     const url = window.location.href

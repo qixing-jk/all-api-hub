@@ -17,6 +17,7 @@ import { joinUrl } from "~/utils/url"
 
 interface RedemptionAssistRuntimeSettings {
   enabled: boolean
+  relaxedCodeValidation: boolean
   urlWhitelist?: {
     enabled: boolean
     patterns: string[]
@@ -34,7 +35,10 @@ interface RedemptionAssistRuntimeSettings {
  */
 class RedemptionAssistService {
   private initialized = false
-  private settings: RedemptionAssistRuntimeSettings = { enabled: true }
+  private settings: RedemptionAssistRuntimeSettings = {
+    enabled: true,
+    relaxedCodeValidation: true,
+  }
 
   private derivedPatternsCache: {
     fetchedAt: number
@@ -57,6 +61,8 @@ class RedemptionAssistService {
     try {
       const prefs = await userPreferences.getPreferences()
       this.settings.enabled = prefs.redemptionAssist?.enabled ?? true
+      this.settings.relaxedCodeValidation =
+        prefs.redemptionAssist?.relaxedCodeValidation ?? true
       if (prefs.redemptionAssist?.urlWhitelist) {
         this.settings.urlWhitelist = prefs.redemptionAssist.urlWhitelist
       }
@@ -76,11 +82,19 @@ class RedemptionAssistService {
    */
   updateRuntimeSettings(settings: {
     enabled?: boolean
+    relaxedCodeValidation?: boolean
     urlWhitelist?: RedemptionAssistRuntimeSettings["urlWhitelist"]
   }) {
     const next: RedemptionAssistRuntimeSettings = {
       ...this.settings,
-      ...settings,
+      enabled:
+        typeof settings.enabled === "boolean"
+          ? settings.enabled
+          : this.settings.enabled,
+      relaxedCodeValidation:
+        typeof settings.relaxedCodeValidation === "boolean"
+          ? settings.relaxedCodeValidation
+          : this.settings.relaxedCodeValidation,
       urlWhitelist: settings.urlWhitelist
         ? {
             ...(this.settings.urlWhitelist ?? {
@@ -92,9 +106,6 @@ class RedemptionAssistService {
             ...settings.urlWhitelist,
           }
         : this.settings.urlWhitelist,
-    }
-    if (typeof settings.enabled === "boolean") {
-      next.enabled = settings.enabled
     }
     this.settings = next
     this.derivedPatternsCache = null
@@ -278,7 +289,11 @@ class RedemptionAssistService {
 
     const { code } = params
 
-    if (!isPossibleRedemptionCode(code)) {
+    const possible = isPossibleRedemptionCode(code, {
+      relaxedCharset: this.settings.relaxedCodeValidation,
+    })
+
+    if (!possible) {
       return { shouldPrompt: false, reason: "invalid_code" }
     }
 

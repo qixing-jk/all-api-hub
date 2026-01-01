@@ -84,6 +84,11 @@ export interface RedemptionAssistUrlWhitelistPreferences {
 
 export interface RedemptionAssistPreferences {
   enabled: boolean
+  /**
+   * When enabled, treat any 32-character non-whitespace token as a possible
+   * redemption code (do not require strict hex charset).
+   */
+  relaxedCodeValidation: boolean
   urlWhitelist: RedemptionAssistUrlWhitelistPreferences
 }
 
@@ -330,6 +335,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   modelRedirect: DEFAULT_MODEL_REDIRECT_PREFERENCES,
   redemptionAssist: {
     enabled: true,
+    relaxedCodeValidation: true,
     urlWhitelist: {
       enabled: true,
       patterns: ["cdk.linux.do"],

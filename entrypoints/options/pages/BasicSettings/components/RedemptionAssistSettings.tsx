@@ -103,6 +103,28 @@ export default function RedemptionAssistSettings() {
           />
 
           <CardItem
+            title={t("redemptionAssist:settings.relaxedCodeValidation", {
+              defaultValue: "Relax code format restrictions",
+            })}
+            description={t(
+              "redemptionAssist:settings.relaxedCodeValidationDesc",
+              {
+                defaultValue:
+                  "When enabled, any 32-character code will be treated as a possible redemption code (no charset check).",
+              },
+            )}
+            rightContent={
+              <Switch
+                checked={config.relaxedCodeValidation}
+                onChange={(checked) => {
+                  void saveSettings({ relaxedCodeValidation: checked })
+                }}
+                disabled={isSaving}
+              />
+            }
+          />
+
+          <CardItem
             title={t("redemptionAssist:settings.urlWhitelist.enable", {
               defaultValue: "Enable URL whitelist",
             })}

@@ -4,6 +4,8 @@
     "title": "Redemption Assist",
     "enable": "Enable redemption assist",
     "enableDesc": "Automatically detect redemption codes on supported pages and show a redeem prompt",
+    "relaxedCodeValidation": "Relax code format restrictions",
+    "relaxedCodeValidationDesc": "When enabled, any 32-character code will be treated as a possible redemption code (no charset check).",
     "description": "Configure how the extension detects and assists with redeeming codes on supported pages",
     "urlWhitelist": {
       "enable": "Enable URL whitelist",
