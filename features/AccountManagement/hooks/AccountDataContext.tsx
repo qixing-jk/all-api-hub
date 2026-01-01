@@ -344,6 +344,19 @@ export const AccountDataProvider = ({
       const pinnedSegment = ids.filter((id) => pinnedSet.has(id))
       const nonPinnedSegment = ids.filter((id) => !pinnedSet.has(id))
       const merged = [...pinnedSegment, ...nonPinnedSegment]
+
+      // Check if pinned order has changed
+      const shouldUpdatePinnedOrder =
+        pinnedAccountIds.length > 0 &&
+        pinnedSegment.length === pinnedAccountIds.length &&
+        pinnedSegment.some((id, index) => id !== pinnedAccountIds[index])
+
+      if (shouldUpdatePinnedOrder) {
+        setPinnedAccountIds(pinnedSegment)
+        await accountStorage.setPinnedList(pinnedSegment)
+      }
+
+      // Update overall order
       setOrderedAccountIds(merged)
       await accountStorage.setOrderedList(merged)
     },
