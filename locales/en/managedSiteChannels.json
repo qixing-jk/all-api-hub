@@ -55,10 +55,10 @@
     "paginationNext": "Next page",
     "rowActions": {
       "edit": "Edit",
-      "sync": "Sync Model List",
+      "sync": "Sync model list immediately",
       "syncing": "Syncing...",
-      "openSync": "Open Model Sync",
-      "filters": "Edit Channel filters",
+      "openSync": "Open model sync interface",
+      "filters": "Edit channel filtering rules",
       "delete": "Delete"
     }
   },
