@@ -34,6 +34,7 @@
   },
   "table": {
     "columns": {
+      "id": "ID",
       "name": "渠道",
       "type": "类型",
       "models": "模型数量",

@@ -238,6 +238,17 @@ const statusFilterFn: FilterFn<ChannelRow> = (
   return filterValue.includes(String(row.getValue(columnId)))
 }
 
+const channelIdFilterFn: FilterFn<ChannelRow> = (
+  row,
+  columnId,
+  filterValue,
+) => {
+  const value = String(row.getValue(columnId) ?? "").trim()
+  const expected = String(filterValue ?? "").trim()
+  if (!expected) return true
+  return value === expected
+}
+
 /**
  * Main management page for New API channels including table, filters, and dialogs.
  * Fetches channel data, exposes filtering tools, and handles CRUD operations.
@@ -527,6 +538,15 @@ export default function ManagedSiteChannels({
         enableHiding: false,
       },
       {
+        accessorKey: "id",
+        header: t("table.columns.id"),
+        cell: ({ row }: { row: Row<ChannelRow> }) => (
+          <span className="font-mono text-sm">{row.original.id}</span>
+        ),
+        filterFn: channelIdFilterFn,
+        size: 40,
+      },
+      {
         accessorKey: "name",
         header: t("table.columns.name"),
         cell: ({ row }: { row: Row<ChannelRow> }) => (
@@ -664,11 +684,25 @@ export default function ManagedSiteChannels({
   })
 
   useEffect(() => {
-    const search =
-      routeParams?.channelId?.trim() || routeParams?.search?.trim() || ""
-    table.getColumn("name")?.setFilterValue(search || undefined)
-    if (search) {
+    const channelIdParam = routeParams?.channelId?.trim()
+    const idColumn = table.getColumn("id")
+    const nameColumn = table.getColumn("name")
+
+    if (channelIdParam) {
+      idColumn?.setFilterValue(channelIdParam)
+      nameColumn?.setFilterValue(undefined)
       setPagination((prev) => ({ ...prev, pageIndex: 0 }))
+      return
+    }
+
+    const searchParam = routeParams?.search?.trim()
+    if (searchParam) {
+      if (/^\d+$/.test(searchParam)) {
+        idColumn?.setFilterValue(searchParam)
+        nameColumn?.setFilterValue(undefined)
+        setPagination((prev) => ({ ...prev, pageIndex: 0 }))
+      }
+      return
     }
   }, [routeParams?.channelId, routeParams?.search, table])
 
@@ -1140,11 +1174,11 @@ function RowActions({
         <DropdownMenuItem onClick={onFilters}>
           {labels.filters}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={onSync} disabled={isSyncing}>
-          {isSyncing ? labels.syncing : labels.sync}
-        </DropdownMenuItem>
         <DropdownMenuItem onClick={onOpenSync}>
           {labels.openSync}
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={onSync} disabled={isSyncing}>
+          {isSyncing ? labels.syncing : labels.sync}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem

@@ -34,6 +34,7 @@
   },
   "table": {
     "columns": {
+      "id": "ID",
       "name": "Channel",
       "type": "Type",
       "models": "Models",

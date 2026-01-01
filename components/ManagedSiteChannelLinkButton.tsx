@@ -2,7 +2,7 @@ import { ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline"
 import { useCallback } from "react"
 
 import { Button } from "~/components/ui"
-import { openManagedSiteChannelsWithSearch } from "~/utils/navigation"
+import { openManagedSiteChannelsForChannel } from "~/utils/navigation"
 
 interface ManagedSiteChannelLinkButtonProps {
   channelId: number
@@ -19,7 +19,7 @@ export default function ManagedSiteChannelLinkButton({
   className,
 }: ManagedSiteChannelLinkButtonProps) {
   const handleClick = useCallback(async () => {
-    await openManagedSiteChannelsWithSearch(String(channelId))
+    await openManagedSiteChannelsForChannel(channelId)
   }, [channelId])
 
   return (

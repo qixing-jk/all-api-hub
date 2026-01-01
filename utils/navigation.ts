@@ -274,11 +274,14 @@ const navigateToBasicSettings = (tabId?: string) => {
 }
 
 /**
- * Opens Managed Site channel management, optionally applying a search query.
+ * Opens Managed Site channel management, optionally focusing a channel id.
  */
-const _openManagedSiteChannelsPage = (params?: { search?: string }) => {
+const _openManagedSiteChannelsPage = (params?: {
+  channelId?: number | string
+}) => {
   const targetHash = getManagedSiteChannelsHash()
-  const searchParams = params?.search ? { search: params.search } : {}
+  const searchParams =
+    params?.channelId != null ? { channelId: String(params.channelId) } : {}
 
   if (isOnOptionsPage()) {
     navigateWithinOptionsPage(targetHash, searchParams)
@@ -486,10 +489,10 @@ export const openManagedSiteChannelsPage = withPopupClose(
 )
 
 /**
- * Open Managed Site channel management with a prefilled search query.
+ * Open Managed Site channel management focused on a single channel id.
  */
-export const openManagedSiteChannelsWithSearch = withPopupClose(
-  (search: string) => _openManagedSiteChannelsPage({ search }),
+export const openManagedSiteChannelsForChannel = withPopupClose(
+  (channelId: number) => _openManagedSiteChannelsPage({ channelId }),
 )
 
 /**
