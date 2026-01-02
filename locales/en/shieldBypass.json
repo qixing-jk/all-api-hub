@@ -1,0 +1,11 @@
+{
+  "titlePrefix": "All API Hub · Shield Bypass",
+  "toast": {
+    "title": "All API Hub shielded bypass helper (temporary window)",
+    "body": "This page was opened automatically by All API Hub to pass protection pages (e.g., Cloudflare challenges) and obtain the required cookies/session.\n\nIt’s necessary so All API Hub can make successful requests and detect data on protected sites.\n\nIf a verification step appears, complete it in this window; once passed, All API Hub continues and this window may close automatically.",
+    "actions": {
+      "openSettings": "Open shield bypass settings",
+      "dismiss": "Dismiss"
+    }
+  }
+}

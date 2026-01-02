@@ -4,6 +4,7 @@ import {
   handleGetRenderedTitle,
   handleGetUserFromLocalStorage,
   handlePerformTempWindowFetch,
+  handleShowShieldBypassUi,
   handleWaitAndGetUserInfo,
 } from "~/entrypoints/content/messageHandlers/handlers"
 
@@ -36,6 +37,10 @@ export function setupContentMessageHandlers() {
 
     if (request.action === "getRenderedTitle") {
       return handleGetRenderedTitle(request, sendResponse)
+    }
+
+    if (request.action === "showShieldBypassUi") {
+      return handleShowShieldBypassUi(request, sendResponse)
     }
   })
 }

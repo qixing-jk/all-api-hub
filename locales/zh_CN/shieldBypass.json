@@ -1,0 +1,11 @@
+{
+  "titlePrefix": "All API Hub · 过盾助手",
+  "toast": {
+    "title": "All API Hub 过盾助手（临时窗口）",
+    "body": "此页面由 All API Hub 自动打开，用于通过站点防护页（如 Cloudflare 五秒盾）以获取必要的 Cookie/会话信息。\n\n这是让 All API Hub 在防护站点上正常请求和识别数据所必需的步骤。\n\n如出现人机验证，请在此窗口内完成验证；通过后 All API Hub 会继续流程并自动关闭该窗口。",
+    "actions": {
+      "openSettings": "打开过盾设置",
+      "dismiss": "关闭提示"
+    }
+  }
+}

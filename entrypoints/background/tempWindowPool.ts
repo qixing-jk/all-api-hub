@@ -29,6 +29,52 @@ const TEMP_WINDOW_LOG_PREFIX = "[Background][TempWindow]"
 const DEFAULT_TEMP_CONTEXT_MODE: TempWindowFallbackPreferences["tempContextMode"] =
   "tab"
 
+/** Retry delay when the content script is not ready to receive messages. */
+const SHIELD_BYPASS_UI_RETRY_MS = 250
+/** Max retry attempts for showing the shield-bypass UI in the temp tab. */
+const SHIELD_BYPASS_UI_MAX_RETRIES = 20
+
+/**
+ * Best-effort: Ask the content script in the temporary tab/window to show a
+ * small prompt so users know the page was opened for protection (shield) bypass.
+ */
+async function showShieldBypassUiInTab(meta: {
+  tabId: number
+  origin: string
+  requestId: string
+}) {
+  for (let attempt = 1; attempt <= SHIELD_BYPASS_UI_MAX_RETRIES; attempt += 1) {
+    try {
+      await browser.tabs.sendMessage(meta.tabId, {
+        action: "showShieldBypassUi",
+        origin: meta.origin,
+        requestId: meta.requestId,
+      })
+      logTempWindow("shieldBypassUiShown", {
+        tabId: meta.tabId,
+        requestId: meta.requestId,
+        origin: meta.origin,
+        attempt,
+      })
+      return
+    } catch (error) {
+      // Content script might not be ready yet or page may not allow scripts; ignore.
+      if (attempt === SHIELD_BYPASS_UI_MAX_RETRIES) {
+        logTempWindow("shieldBypassUiFailed", {
+          tabId: meta.tabId,
+          requestId: meta.requestId,
+          origin: meta.origin,
+          error: getErrorMessage(error),
+        })
+        return
+      }
+      await new Promise((resolve) =>
+        setTimeout(resolve, SHIELD_BYPASS_UI_RETRY_MS),
+      )
+    }
+  }
+}
+
 /**
  * Resolve the preferred temporary context mode from user preferences.
  * Falls back to default when preferences are unavailable.
@@ -879,6 +925,9 @@ async function createTempContextInstance(
       preferredMode,
       url: sanitizeUrlForLog(url),
     })
+
+    // Best-effort: annotate the temporary window/tab so users understand why it opened.
+    void showShieldBypassUiInTab({ tabId, origin, requestId })
 
     await waitForTabComplete(tabId, { requestId, origin })
 

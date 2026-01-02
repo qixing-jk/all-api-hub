@@ -110,6 +110,15 @@ export function setupRuntimeMessageListeners() {
         return true
       }
 
+      if (request.action === "openSettings:shieldBypass") {
+        openOrFocusOptionsMenuItem(MENU_ITEM_IDS.BASIC, {
+          tab: "refresh",
+          anchor: "shield-settings",
+        })
+        sendResponse({ success: true })
+        return true
+      }
+
       if (request.action === "preferences:updateActionClickBehavior") {
         applyActionClickBehavior(request.behavior)
         sendResponse({ success: true })
