@@ -139,12 +139,6 @@ export default function BasicSettings() {
       if (pendingAnchor) {
         window.setTimeout(() => {
           navigateToAnchor(pendingAnchor)
-          try {
-            const url = new URL(window.location.href)
-            window.history.replaceState(null, "", url.toString())
-          } catch {
-            // ignore
-          }
         }, 150)
       }
       return
