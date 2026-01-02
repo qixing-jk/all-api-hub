@@ -12,6 +12,7 @@ import {
   hasWindowsAPI,
   onTabRemoved,
   onWindowRemoved,
+  removeTabOrWindow,
 } from "~/utils/browserApi"
 import { getCookieHeaderForUrl } from "~/utils/cookieHelper"
 import {
@@ -183,6 +184,12 @@ const originLocks = new Map<string, Promise<void>>()
 // 正在销毁上下文池的 origin，用于防止获取/复用与销毁操作并发冲突
 const destroyingOrigins = new Set<string>()
 
+type CompositeWindowCreationResult = { windowId: number; tabId: number }
+
+let compositeWindowId: number | null = null
+let compositeWindowCreatePromise: Promise<CompositeWindowCreationResult> | null =
+  null
+
 /**
  * 设置临时窗口/标签页相关的浏览器事件监听器。
  *
@@ -201,6 +208,11 @@ export function setupTempWindowListeners() {
  * 处理临时窗口关闭事件，移除 tempWindows 记录并销毁对应的 window 上下文。
  */
 function handleTempWindowRemoved(windowId: number) {
+  if (compositeWindowId === windowId) {
+    compositeWindowId = null
+    logTempWindow("compositeWindowRemoved", { windowId })
+  }
+
   let removedRequestId: string | undefined
   for (const [requestId, storedId] of tempWindows.entries()) {
     if (storedId === windowId) {
@@ -272,17 +284,34 @@ export async function handleOpenTempWindow(
   try {
     const { url, requestId } = request
     const preferredMode = await resolveTempContextMode()
+    const origin = normalizeOrigin(url)
 
     logTempWindow("openTempWindow", {
       requestId,
-      origin: normalizeOrigin(url),
+      origin,
       url: sanitizeUrlForLog(url),
       preferredMode,
     })
 
     const shouldUseWindow = preferredMode === "window" && hasWindowsAPI()
+    const shouldUseComposite = preferredMode === "composite" && hasWindowsAPI()
 
-    if (shouldUseWindow) {
+    if (shouldUseComposite) {
+      const { windowId, tabId } = await openTabInCompositeWindow({
+        url,
+        origin,
+        requestId,
+        suppressMinimize: true,
+      })
+
+      tempWindows.set(requestId, tabId)
+      logTempWindow("openTempCompositeTabSuccess", {
+        requestId,
+        windowId,
+        tabId,
+      })
+      sendResponse({ success: true, windowId, tabId })
+    } else if (shouldUseWindow) {
       // 创建新窗口
       const window = await createWindow({
         url: url,
@@ -866,8 +895,20 @@ async function createTempContextInstance(
 
   try {
     const canUseWindow = preferredMode === "window" && hasWindowsAPI()
+    const canUseComposite = preferredMode === "composite" && hasWindowsAPI()
 
-    if (canUseWindow) {
+    if (canUseComposite) {
+      const opened = await openTabInCompositeWindow({
+        url,
+        origin,
+        requestId,
+        suppressMinimize,
+      })
+
+      contextId = opened.tabId
+      tabId = opened.tabId
+      type = "tab"
+    } else if (canUseWindow) {
       const window = await createWindow({
         url,
         type: "popup",
@@ -969,6 +1010,106 @@ async function createTempContextInstance(
       }
     }
     throw error
+  }
+}
+
+/**
+ * Opens a temporary tab inside a single shared window (composite mode).
+ * Reuses the shared window when possible and falls back to recreating it when closed.
+ */
+async function openTabInCompositeWindow(params: {
+  url: string
+  origin: string
+  requestId: string
+  suppressMinimize?: boolean
+}): Promise<{ windowId: number; tabId: number }> {
+  if (!hasWindowsAPI()) {
+    throw new Error(t("messages:background.cannotCreateWindowOrTab"))
+  }
+
+  if (compositeWindowId != null) {
+    try {
+      await browser.windows.get(compositeWindowId)
+      const tab = await createTab(params.url, false, {
+        windowId: compositeWindowId,
+      })
+      if (!tab?.id) {
+        throw new Error(t("messages:background.cannotCreateWindowOrTab"))
+      }
+
+      return { windowId: compositeWindowId, tabId: tab.id }
+    } catch (error) {
+      logTempWindow("compositeWindowNotAlive", {
+        requestId: params.requestId,
+        origin: params.origin,
+        windowId: compositeWindowId,
+        error: getErrorMessage(error),
+      })
+      compositeWindowId = null
+    }
+  }
+
+  if (compositeWindowCreatePromise) {
+    const { windowId } = await compositeWindowCreatePromise
+    const tab = await createTab(params.url, false, { windowId })
+    if (!tab?.id) {
+      throw new Error(t("messages:background.cannotCreateWindowOrTab"))
+    }
+
+    return { windowId, tabId: tab.id }
+  }
+
+  compositeWindowCreatePromise = (async () => {
+    const window = await createWindow({
+      url: params.url,
+      type: "normal",
+      width: 420,
+      height: 520,
+      focused: false,
+    })
+
+    if (!window?.id) {
+      throw new Error(t("messages:background.cannotCreateWindowOrTab"))
+    }
+
+    compositeWindowId = window.id
+
+    if (!params.suppressMinimize) {
+      try {
+        await browser.windows.update(window.id, { state: "minimized" })
+        logTempWindow("compositeWindowMinimized", {
+          requestId: params.requestId,
+          origin: params.origin,
+          windowId: window.id,
+        })
+      } catch (minErr) {
+        logTempWindow("compositeWindowMinimizeFailed", {
+          requestId: params.requestId,
+          origin: params.origin,
+          windowId: window.id,
+          error: getErrorMessage(minErr),
+        })
+      }
+    }
+
+    const tabs = await browser.tabs.query({
+      windowId: window.id,
+      active: true,
+    })
+    const tabId = tabs[0]?.id
+
+    if (!tabId) {
+      throw new Error(t("messages:background.cannotCreateWindowOrTab"))
+    }
+
+    return { windowId: window.id, tabId }
+  })()
+
+  try {
+    const { windowId, tabId } = await compositeWindowCreatePromise
+    return { windowId, tabId }
+  } finally {
+    compositeWindowCreatePromise = null
   }
 }
 

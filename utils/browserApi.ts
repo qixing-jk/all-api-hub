@@ -86,8 +86,13 @@ export async function getAllTabs(): Promise<browser.tabs.Tab[]> {
 export async function createTab(
   url: string,
   active = true,
+  options?: { windowId?: number },
 ): Promise<browser.tabs.Tab | undefined> {
-  return await browser.tabs.create({ url, active })
+  return await browser.tabs.create({
+    url,
+    active,
+    windowId: options?.windowId,
+  })
 }
 
 /**

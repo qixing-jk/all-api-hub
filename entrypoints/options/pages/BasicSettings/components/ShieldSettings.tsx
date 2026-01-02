@@ -67,6 +67,12 @@ export default function ShieldSettings() {
   const shieldTempContextMode = tempWindowFallback.tempContextMode ?? "tab"
 
   const disableShieldUI = !canUseTempWindowFallback
+  const shieldMethodHint =
+    shieldTempContextMode === "window"
+      ? t("refresh.shieldMethodHintWindow")
+      : shieldTempContextMode === "composite"
+        ? t("refresh.shieldMethodHintComposite")
+        : t("refresh.shieldMethodHintTab")
 
   const handleOpenPermissionsTab = useCallback(() => {
     void openSettingsTab("permissions")
@@ -149,12 +155,26 @@ export default function ShieldSettings() {
                   >
                     {t("refresh.shieldMethodWindow")}
                   </Button>
+                  <Button
+                    size="sm"
+                    variant={
+                      shieldTempContextMode === "composite"
+                        ? "default"
+                        : "outline"
+                    }
+                    disabled={
+                      disableShieldUI ||
+                      !shieldEnabled ||
+                      (isFirefoxEnv && !canUseTempWindowFallback)
+                    }
+                    onClick={() =>
+                      updateTempWindowFallback({ tempContextMode: "composite" })
+                    }
+                  >
+                    {t("refresh.shieldMethodComposite")}
+                  </Button>
                 </div>
-                <Muted>
-                  {shieldTempContextMode === "tab"
-                    ? t("refresh.shieldMethodHintTab")
-                    : t("refresh.shieldMethodHintWindow")}
-                </Muted>
+                <Muted>{shieldMethodHint}</Muted>
               </div>
             }
           />
