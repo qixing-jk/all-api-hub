@@ -130,6 +130,24 @@ export default function ShieldSettings() {
                   <Button
                     size="sm"
                     variant={
+                      shieldTempContextMode === "composite"
+                        ? "default"
+                        : "outline"
+                    }
+                    disabled={
+                      disableShieldUI ||
+                      !shieldEnabled ||
+                      (isFirefoxEnv && !canUseTempWindowFallback)
+                    }
+                    onClick={() =>
+                      updateTempWindowFallback({ tempContextMode: "composite" })
+                    }
+                  >
+                    {t("refresh.shieldMethodComposite")}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={
                       shieldTempContextMode === "tab" ? "default" : "outline"
                     }
                     disabled={disableShieldUI || !shieldEnabled}
@@ -154,24 +172,6 @@ export default function ShieldSettings() {
                     }
                   >
                     {t("refresh.shieldMethodWindow")}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={
-                      shieldTempContextMode === "composite"
-                        ? "default"
-                        : "outline"
-                    }
-                    disabled={
-                      disableShieldUI ||
-                      !shieldEnabled ||
-                      (isFirefoxEnv && !canUseTempWindowFallback)
-                    }
-                    onClick={() =>
-                      updateTempWindowFallback({ tempContextMode: "composite" })
-                    }
-                  >
-                    {t("refresh.shieldMethodComposite")}
                   </Button>
                 </div>
                 <Muted>{shieldMethodHint}</Muted>
