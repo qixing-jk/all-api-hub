@@ -28,7 +28,7 @@ const TEMP_CONTEXT_IDLE_TIMEOUT = 5000
 const QUIET_WINDOW_IDLE_TIMEOUT = 3000
 const TEMP_WINDOW_LOG_PREFIX = "[Background][TempWindow]"
 const DEFAULT_TEMP_CONTEXT_MODE: TempWindowFallbackPreferences["tempContextMode"] =
-  "tab"
+  "composite"
 
 /** Retry delay when the content script is not ready to receive messages. */
 const SHIELD_BYPASS_UI_RETRY_MS = 250

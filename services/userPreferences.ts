@@ -355,7 +355,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
     useInOptions: true,
     useForAutoRefresh: true,
     useForManualRefresh: true,
-    tempContextMode: "tab",
+    tempContextMode: "composite",
   },
   tempWindowFallbackReminder: {
     dismissed: false,

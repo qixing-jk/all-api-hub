@@ -1,3 +1,4 @@
+import { StarIcon } from "@heroicons/react/24/outline"
 import { useCallback, useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -64,7 +65,8 @@ export default function ShieldSettings() {
   const shieldOptions = tempWindowFallback.useInOptions
   const shieldAutoRefresh = tempWindowFallback.useForAutoRefresh
   const shieldManualRefresh = tempWindowFallback.useForManualRefresh
-  const shieldTempContextMode = tempWindowFallback.tempContextMode ?? "tab"
+  const shieldTempContextMode =
+    tempWindowFallback.tempContextMode ?? "composite"
 
   const disableShieldUI = !canUseTempWindowFallback
   const shieldMethodHint =
@@ -141,6 +143,9 @@ export default function ShieldSettings() {
                     }
                     onClick={() =>
                       updateTempWindowFallback({ tempContextMode: "composite" })
+                    }
+                    leftIcon={
+                      <StarIcon className="h-4 w-4 text-amber-500 dark:text-amber-400" />
                     }
                   >
                     {t("refresh.shieldMethodComposite")}

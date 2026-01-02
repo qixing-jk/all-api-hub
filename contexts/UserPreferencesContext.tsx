@@ -647,7 +647,7 @@ export const UserPreferencesProvider = ({
               useInOptions: true,
               useForAutoRefresh: true,
               useForManualRefresh: true,
-              tempContextMode: "tab",
+              tempContextMode: "composite",
             }),
             ...(prev.tempWindowFallback ?? {}),
             ...updates,

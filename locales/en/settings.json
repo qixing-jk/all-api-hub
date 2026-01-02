@@ -49,7 +49,7 @@
     "shieldEnabledDescTempWindowOnly": "When disabled, the extension will not open the temporary popup window to bypass website protection pages.",
     "shieldEnabledDescWithCookieInterceptor": "When disabled, Firefox will not open the temporary popup window to obtain cookies for Cookie Interceptor based requests.",
     "shieldMethodTitle": "Bypass method",
-    "shieldMethodDesc": "Choose whether to open a temporary tab or a popup window when running the protection bypass.",
+    "shieldMethodDesc": "Choose which temporary context to use when running the protection bypass.",
     "shieldMethodTab": "Temp tab",
     "shieldMethodWindow": "Popup window",
     "shieldMethodComposite": "Shared window (tabs)",
