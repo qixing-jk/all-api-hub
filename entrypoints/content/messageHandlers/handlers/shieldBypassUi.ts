@@ -11,12 +11,12 @@ type ShieldBypassUiMessage = {
  * This is used for temporary tabs/windows opened by the background to pass
  * Cloudflare-like protection pages and obtain cookies/session.
  */
-export function handleShowShieldBypassUi(
+export async function handleShowShieldBypassUi(
   _request: ShieldBypassUiMessage,
   sendResponse: (res: any) => void,
 ) {
   try {
-    void showShieldBypassPromptToast()
+    await showShieldBypassPromptToast()
     sendResponse({ success: true })
   } catch (error) {
     sendResponse({ success: false, error: (error as Error)?.message })
