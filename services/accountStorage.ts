@@ -481,16 +481,50 @@ class AccountStorageService {
         return { account, refreshed: false }
       }
 
+      const normalizedUrl = this.normalizeBaseUrl(account.site_url)
+      const baseUrl = normalizedUrl ?? account.site_url
+      const auth = {
+        authType: account.authType,
+        userId: account.account_info.id,
+        accessToken: account.account_info.access_token,
+      }
+
+      // Refresh check-in support status together with account refresh.
+      const currentCheckIn = account.checkIn ?? { enableDetection: false }
+      let checkInForRefresh = {
+        ...currentCheckIn,
+        enableDetection: currentCheckIn.enableDetection ?? false,
+      }
+
+      if (!currentCheckIn.customCheckInUrl) {
+        try {
+          const support = await getApiService(
+            account.site_type,
+          ).fetchSupportCheckIn({
+            baseUrl,
+            auth,
+          })
+
+          if (typeof support === "boolean") {
+            checkInForRefresh = {
+              ...checkInForRefresh,
+              enableDetection: support,
+            }
+          }
+        } catch (error) {
+          console.warn(
+            `[AccountStorage] Failed to determine check-in support for ${baseUrl}:`,
+            error,
+          )
+        }
+      }
+
       // 刷新账号数据
       const result = await getApiService(account.site_type).refreshAccountData({
         baseUrl: account.site_url,
         accountId: account.id,
-        checkIn: account.checkIn ?? { enableDetection: false },
-        auth: {
-          authType: account.authType,
-          userId: account.account_info.id,
-          accessToken: account.account_info.access_token,
-        },
+        checkIn: checkInForRefresh,
+        auth,
       })
 
       // 构建更新数据
@@ -946,8 +980,8 @@ class AccountStorageService {
   }
 
   /**
-   * Enriches an account with derived metadata (site type + check-in support)
-   * when those values are missing or still set to legacy defaults.
+   * Enriches an account with derived metadata (site type)
+   * when the value is missing or still set to legacy defaults.
    * @param account - The account record that may require metadata upgrades.
    * @returns The latest account representation after any metadata refresh.
    */
@@ -959,13 +993,11 @@ class AccountStorageService {
       return account
     }
 
+    // Check if site_type is missing or set to UNKNOWN_SITE
     const needsSiteType =
       !account.site_type || account.site_type === UNKNOWN_SITE
-    const needsCheckInDetection =
-      typeof account.checkIn?.enableDetection === "undefined" ||
-      account.checkIn.enableDetection === false
 
-    if (!needsSiteType && !needsCheckInDetection) {
+    if (!needsSiteType) {
       return account
     }
 
@@ -981,30 +1013,6 @@ class AccountStorageService {
       } catch (error) {
         console.warn(
           `[AccountStorage] Failed to detect site type for ${normalizedUrl}:`,
-          error,
-        )
-      }
-    }
-
-    if (needsCheckInDetection) {
-      // Probe the API to confirm whether automatic check-in is available
-      try {
-        const candidateSite = updates.site_type ?? account.site_type
-        const support = await getApiService(candidateSite).fetchSupportCheckIn({
-          baseUrl: normalizedUrl,
-          auth: {
-            authType: AuthTypeEnum.None,
-          },
-        })
-        if (typeof support === "boolean") {
-          updates.checkIn = {
-            ...(account.checkIn ?? {}),
-            enableDetection: support,
-          }
-        }
-      } catch (error) {
-        console.warn(
-          `[AccountStorage] Failed to determine check-in support for ${normalizedUrl}:`,
           error,
         )
       }

@@ -111,7 +111,7 @@ describe("accountStorage core behaviors", () => {
     mockRefreshAccountData.mockReset()
     mockFetchTodayIncome.mockReset()
 
-    mockRefreshAccountData.mockResolvedValue({
+    mockRefreshAccountData.mockImplementation(async (request) => ({
       success: true,
       data: {
         quota: 0,
@@ -120,7 +120,7 @@ describe("accountStorage core behaviors", () => {
         today_quota_consumption: 0,
         today_requests_count: 0,
         checkIn: {
-          enableDetection: true,
+          ...(request.checkIn ?? { enableDetection: false }),
           isCheckedInToday: false,
           customCheckInUrl: "",
           customRedeemUrl: "",
@@ -132,7 +132,7 @@ describe("accountStorage core behaviors", () => {
         message: "",
         code: undefined,
       },
-    })
+    }))
 
     mockFetchTodayIncome.mockResolvedValue({ today_income: 0 })
   })
@@ -474,7 +474,11 @@ describe("accountStorage core behaviors", () => {
     expect(mockGetSiteType).toHaveBeenCalledWith("https://foo.example.com")
     expect(mockFetchSupportCheckIn).toHaveBeenCalledWith({
       baseUrl: "https://foo.example.com",
-      auth: { authType: AuthTypeEnum.None },
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        userId: 1,
+        accessToken: "token",
+      },
     })
     expect(updatedAccount?.site_type).toBe("one-api")
     expect(updatedAccount?.checkIn?.enableDetection).toBe(true)
@@ -489,13 +493,22 @@ describe("accountStorage core behaviors", () => {
     })
     seedStorage([account])
 
+    mockFetchSupportCheckIn.mockResolvedValue(false)
+
     await accountStorage.refreshAccount("known-site", true)
 
     expect(mockGetSiteType).not.toHaveBeenCalled()
-    expect(mockFetchSupportCheckIn).not.toHaveBeenCalled()
+    expect(mockFetchSupportCheckIn).toHaveBeenCalledWith({
+      baseUrl: "https://bar.example.com",
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        userId: 1,
+        accessToken: "token",
+      },
+    })
     const updatedAccount = await accountStorage.getAccountById("known-site")
     expect(updatedAccount?.site_type).toBe("one-api")
-    expect(updatedAccount?.checkIn?.enableDetection).toBe(true)
+    expect(updatedAccount?.checkIn?.enableDetection).toBe(false)
   })
 
   it("refreshAccount should persist health code for actionable UI", async () => {
