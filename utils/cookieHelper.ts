@@ -3,6 +3,7 @@
  * 使用 WebRequest 拦截器自动注入 Cookie
  */
 import { checkCookieInterceptorRequirement } from "~/entrypoints/background/cookieInterceptor"
+import { mergeCookieHeaders } from "~/utils/cookieString"
 import { isProtectionBypassFirefoxEnv } from "~/utils/protectionBypass"
 
 // Cookie 缓存
@@ -33,6 +34,7 @@ const normalizeHeaders = (
 export const EXTENSION_HEADER_NAME = "All-API-Hub"
 export const EXTENSION_HEADER_VALUE = "true"
 export const COOKIE_AUTH_HEADER_NAME = "All-API-Hub-Cookie-Auth"
+export const COOKIE_SESSION_OVERRIDE_HEADER_NAME = "All-API-Hub-Session-Cookie"
 
 export const AUTH_MODE = {
   COOKIE_AUTH_MODE: "cookie",
@@ -127,8 +129,11 @@ export async function handleWebRequest(
   // 只处理带有扩展标识的请求
   let hasExtensionHeader = false
   let includeSessionCookie = true
+  let sessionCookieOverride: string | null = null
   const normalizedExtensionName = EXTENSION_HEADER_NAME.toLowerCase()
   const normalizedCookieAuthName = COOKIE_AUTH_HEADER_NAME.toLowerCase()
+  const normalizedSessionOverrideName =
+    COOKIE_SESSION_OVERRIDE_HEADER_NAME.toLowerCase()
 
   headers.forEach((h: any) => {
     const lower = h.name.toLowerCase()
@@ -141,6 +146,9 @@ export async function handleWebRequest(
     if (lower === normalizedCookieAuthName) {
       includeSessionCookie = h.value === AUTH_MODE.COOKIE_AUTH_MODE
     }
+    if (lower === normalizedSessionOverrideName) {
+      sessionCookieOverride = typeof h.value === "string" ? h.value : null
+    }
   })
 
   if (!hasExtensionHeader) {
@@ -150,9 +158,23 @@ export async function handleWebRequest(
   console.log("[Cookie Helper] 拦截请求:", details.url)
 
   // 获取 Cookie
-  const cookieHeader = await getCookieHeaderForUrl(details.url, {
+  let cookieHeader = await getCookieHeaderForUrl(details.url, {
     includeSession: includeSessionCookie,
   })
+
+  const sessionCookieOverrideValue =
+    typeof sessionCookieOverride === "string" ? sessionCookieOverride : ""
+
+  // Multi-account cookie auth: merge WAF cookies + per-account session cookie
+  if (includeSessionCookie && sessionCookieOverrideValue.trim().length > 0) {
+    const wafCookieHeader = await getCookieHeaderForUrl(details.url, {
+      includeSession: false,
+    })
+    cookieHeader = mergeCookieHeaders(
+      wafCookieHeader,
+      sessionCookieOverrideValue,
+    )
+  }
 
   if (!cookieHeader) {
     console.warn("[Cookie Helper] 未找到 Cookie:", details.url)
@@ -166,7 +188,8 @@ export async function handleWebRequest(
       const lower = h.name.toLowerCase()
       if (
         lower === normalizedExtensionName ||
-        lower === normalizedCookieAuthName
+        lower === normalizedCookieAuthName ||
+        lower === normalizedSessionOverrideName
       ) {
         return null
       }

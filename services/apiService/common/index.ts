@@ -334,7 +334,7 @@ export async function updateChannelModelMapping(
 export async function fetchUserInfo(request: ApiServiceRequest): Promise<{
   id: number
   username: string
-  access_token: string | null
+  access_token: string
   user: UserInfo
 }> {
   const userData = await fetchApiData<UserInfo>(request, {
@@ -344,7 +344,7 @@ export async function fetchUserInfo(request: ApiServiceRequest): Promise<{
   return {
     id: userData.id,
     username: userData.username,
-    access_token: userData.access_token || null,
+    access_token: userData.access_token || "",
     user: userData,
   }
 }

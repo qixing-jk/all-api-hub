@@ -1,4 +1,5 @@
 import {
+  ArrowDownTrayIcon,
   CurrencyDollarIcon,
   EyeIcon,
   EyeSlashIcon,
@@ -10,6 +11,7 @@ import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
+  Button,
   FormField,
   IconButton,
   Input,
@@ -36,6 +38,8 @@ interface AccountFormProps {
   showAccessToken: boolean
   notes: string
   tags: string[]
+  cookieAuthSessionCookie: string
+  isImportingCookies: boolean
   onSiteNameChange: (value: string) => void
   onUsernameChange: (value: string) => void
   onUserIdChange: (value: string) => void
@@ -44,6 +48,8 @@ interface AccountFormProps {
   onToggleShowAccessToken: () => void
   onNotesChange: (value: string) => void
   onTagsChange: (value: string[]) => void
+  onCookieAuthSessionCookieChange: (value: string) => void
+  onImportCookieAuthSessionCookie: () => void
   availableTags: string[]
   tagCounts?: Record<string, number>
   siteType: string
@@ -89,6 +95,8 @@ export default function AccountForm({
   showAccessToken,
   notes,
   tags,
+  cookieAuthSessionCookie,
+  isImportingCookies,
   onSiteNameChange,
   onUsernameChange,
   onUserIdChange,
@@ -97,6 +105,8 @@ export default function AccountForm({
   onToggleShowAccessToken,
   onNotesChange,
   onTagsChange,
+  onCookieAuthSessionCookieChange,
+  onImportCookieAuthSessionCookie,
   availableTags,
   tagCounts,
   siteType,
@@ -204,6 +214,37 @@ export default function AccountForm({
             }
             required
           />
+        </FormField>
+      )}
+
+      {/* Cookie Auth Session Cookie */}
+      {authType === AuthTypeEnum.Cookie && (
+        <FormField
+          label={t("form.cookieAuthSessionCookie")}
+          description={t("form.cookieAuthSessionCookieDesc")}
+          required
+        >
+          <div className="space-y-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onImportCookieAuthSessionCookie}
+              disabled={isImportingCookies}
+              className="w-full"
+            >
+              <ArrowDownTrayIcon className="mr-2 h-4 w-4" />
+              {isImportingCookies
+                ? t("messages.importCookiesLoading")
+                : t("form.importCookieAuthSessionCookie")}
+            </Button>
+            <Textarea
+              value={cookieAuthSessionCookie}
+              onChange={(e) => onCookieAuthSessionCookieChange(e.target.value)}
+              placeholder={t("form.cookieAuthSessionCookiePlaceholder")}
+              rows={2}
+            />
+          </div>
         </FormField>
       )}
 

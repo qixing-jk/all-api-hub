@@ -74,7 +74,7 @@ describe("accountOperations", () => {
       ).toBe(false)
     })
 
-    it("allows empty token for Cookie auth", () => {
+    it("allows empty accessToken for Cookie auth", () => {
       expect(
         isValidAccount({
           siteName: "Test",
@@ -82,6 +82,7 @@ describe("accountOperations", () => {
           userId: "123",
           authType: AuthTypeEnum.Cookie,
           accessToken: "",
+          cookieAuthSessionCookie: "session=abc",
           exchangeRate: "7.0",
         }),
       ).toBe(true)

@@ -1,5 +1,6 @@
 import i18next from "i18next"
 
+import { accountStorage } from "~/services/accountStorage"
 import { REQUEST_CONFIG } from "~/services/apiService/common/constant"
 import {
   API_ERROR_CODES,
@@ -19,6 +20,8 @@ import {
   addAuthMethodHeader,
   addExtensionHeader,
   AUTH_MODE,
+  COOKIE_AUTH_HEADER_NAME,
+  COOKIE_SESSION_OVERRIDE_HEADER_NAME,
 } from "~/utils/cookieHelper"
 import {
   executeWithTempWindowFallback,
@@ -76,6 +79,14 @@ const createRequestHeaders = async (
 
   if (auth.authType === AuthTypeEnum.Cookie && auth.cookie) {
     headers["Cookie"] = auth.cookie
+
+    // Preserve per-account session cookies when the Firefox interceptor is active.
+    const hasCookieInterceptorHeader =
+      COOKIE_AUTH_HEADER_NAME in headers &&
+      headers[COOKIE_AUTH_HEADER_NAME] === AUTH_MODE.COOKIE_AUTH_MODE
+    if (hasCookieInterceptorHeader) {
+      headers[COOKIE_SESSION_OVERRIDE_HEADER_NAME] = auth.cookie
+    }
   }
 
   return headers
@@ -261,11 +272,23 @@ const _fetchApi = async <T>(
   onlyData: boolean = false,
 ) => {
   const responseType = options.responseType ?? "json"
-  const url = joinUrl(request.baseUrl, options.endpoint)
+  const { baseUrl, accountId } = request
+  const userId = request.auth?.userId
+
+  let accountInfo = null
+  if (!accountId) {
+    console.warn("fetchApi called without accountId in request:", request)
+    accountInfo = await accountStorage.getAccountByBaseUrlAndUserId(
+      baseUrl,
+      userId,
+    )
+  }
+
+  const url = joinUrl(baseUrl, options.endpoint)
 
   const resolvedAuth: NormalizedAuthContext = {
     authType: request.auth?.authType ?? AuthTypeEnum.None,
-    userId: request.auth?.userId,
+    userId: userId,
     accessToken: request.auth?.accessToken,
     cookie: request.auth?.cookie,
   }
@@ -273,12 +296,16 @@ const _fetchApi = async <T>(
   const fetchOptions = await createAuthRequest(resolvedAuth, options.options)
 
   const context: TempWindowFallbackContext = {
-    baseUrl: request.baseUrl,
+    baseUrl: baseUrl,
     url,
     endpoint: options.endpoint,
     fetchOptions,
     onlyData,
     responseType,
+    accountId: accountId ?? accountInfo?.id,
+    authType: resolvedAuth.authType,
+    cookieAuthSessionCookie:
+      request.auth?.cookie ?? accountInfo?.cookieAuth?.sessionCookie,
   }
 
   return await executeWithTempWindowFallback(context, async () => {

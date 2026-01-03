@@ -145,6 +145,14 @@ export default function AccountDialog({
               onCheckInChange={setters.setCheckIn}
               siteType={state.siteType}
               onSiteTypeChange={setters.setSiteType}
+              cookieAuthSessionCookie={state.cookieAuthSessionCookie}
+              isImportingCookies={state.isImportingCookies}
+              onCookieAuthSessionCookieChange={
+                setters.setCookieAuthSessionCookie
+              }
+              onImportCookieAuthSessionCookie={
+                handlers.handleImportCookieAuthSessionCookie
+              }
             />
           )}
         </form>
