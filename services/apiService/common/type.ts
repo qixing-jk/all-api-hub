@@ -379,3 +379,19 @@ export interface CheckInStatusResponse {
   data: CheckInStatus
   success: boolean
 }
+
+/**
+ * New-API 签到响应类型
+ */
+export type NewApiCheckinResponse = {
+  data: CheckinRecord
+  success: boolean
+  /**
+   * Response message from the API.
+   * @example "签到成功"
+   * @example "今日已签到"
+   * @example "签到失败，请稍后重试"
+   * @example "签到失败：更新额度出错"
+   */
+  message: string
+}
