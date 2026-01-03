@@ -28,10 +28,6 @@ export async function fetchSupportCheckIn(
 
 /**
  * Fetch check-in capability for the user.
- * @param baseUrl Site base URL.
- * @param userId Target user id.
- * @param accessToken Access token for the user.
- * @param authType Optional auth mode override.
  * @returns True/false when available; undefined if unsupported or errors.
  */
 export async function fetchCheckInStatus(
@@ -57,7 +53,7 @@ export async function fetchCheckInStatus(
 }
 
 /**
- *
+ * Fetch complete account data.
  */
 export async function fetchAccountData(
   request: ApiServiceAccountRequest,
@@ -91,7 +87,7 @@ export async function fetchAccountData(
 }
 
 /**
- *
+ * Refresh account data with error handling.
  */
 export async function refreshAccountData(
   request: ApiServiceAccountRequest,

@@ -417,11 +417,7 @@ export const extractDefaultExchangeRate = (
 
 /**
  * Fetch payment info (RIX_API specific; kept in common for fallback).
- * @param params Request metadata describing site base URL and auth context.
- * @param params.baseUrl Site base URL.
- * @param params.userId User id for the request.
- * @param params.token Token for auth.
- * @param params.authType Auth mode (cookie/token/none).
+ * @param request ApiServiceRequest.
  * @returns Payment summary from backend.
  */
 export async function fetchPaymentInfo(
@@ -522,7 +518,7 @@ export async function fetchSupportCheckIn(
 
 /**
  * Fetch paginated logs and aggregate results.
- * @param authParams Auth context (baseUrl, userId, token, authType).
+ * @param request ApiServiceRequest.
  * @param logTypes Log categories to fetch.
  * @param dataAggregator Reducer to merge items into accumulator.
  * @param initialValue Initial accumulator value.
@@ -636,7 +632,7 @@ export async function fetchTodayIncome(
   request: ApiServiceRequest,
 ): Promise<TodayIncomeData> {
   const { baseUrl } = request
-  const userId = request.auth.userId
+  const { userId } = request.auth
   let exchangeRate: number = UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
 
   const account = request.accountId
