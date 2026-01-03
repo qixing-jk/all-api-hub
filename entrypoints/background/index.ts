@@ -12,7 +12,8 @@ import {
   OPTIONAL_PERMISSIONS,
 } from "~/services/permissions/permissionManager"
 import { userPreferences } from "~/services/userPreferences"
-import { onInstalled } from "~/utils/browserApi"
+import { createTab, getManifest, onInstalled } from "~/utils/browserApi"
+import { getDocsChangelogUrl } from "~/utils/docsLinks"
 import { openOrFocusOptionsMenuItem } from "~/utils/navigation"
 
 import { applyActionClickBehavior } from "./actionClickBehavior"
@@ -99,6 +100,12 @@ export default defineBackground(() => {
             // Keep snapshot fresh on update when nothing new to prompt
             await setLastSeenOptionalPermissions()
           }
+        }
+
+        if (details.reason === "update") {
+          const { version } = getManifest()
+          const changelogUrl = getDocsChangelogUrl(version)
+          await createTab(changelogUrl, true)
         }
       }
     })()
