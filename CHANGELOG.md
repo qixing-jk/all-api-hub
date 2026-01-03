@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.39.0](https://github.com/qixing-jk/all-api-hub/compare/v2.38.0...v2.39.0) (2026-01-03)
+
+
+### Features
+
+* **account:** detect site check-in support during refresh ([#315](https://github.com/qixing-jk/all-api-hub/issues/315)) ([8aaa47a](https://github.com/qixing-jk/all-api-hub/commit/8aaa47ab3d9ab303de06fbf6f717316f7df149f2))
+* Add version info and changelog access improvements ([#317](https://github.com/qixing-jk/all-api-hub/issues/317)) ([c85c910](https://github.com/qixing-jk/all-api-hub/commit/c85c910853697a76cf6b85641b189f478471350d))
+
 ## [2.38.0](https://github.com/qixing-jk/all-api-hub/compare/v2.37.0...v2.38.0) (2026-01-03)
 
 
