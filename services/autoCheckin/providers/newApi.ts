@@ -88,8 +88,9 @@ async function checkinnewApi(account: SiteAccount): Promise<CheckinResult> {
 
     // Already checked-in today
     if (
-      (responseMessage && isAlreadyCheckedMessage(responseMessage)) ||
-      !checkinResponse.success
+      responseMessage &&
+      isAlreadyCheckedMessage(responseMessage) &&
+      checkinResponse.success
     ) {
       return {
         status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
