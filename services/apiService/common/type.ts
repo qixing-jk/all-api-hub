@@ -341,3 +341,38 @@ export interface RedeemCodeResponse {
    */
   data: number
 }
+
+export interface CheckinRecord {
+  /**
+   * 签到日期，格式 YYYY-MM-DD
+   * @example "2026-01-03"
+   */
+  checkin_date: string
+  quota_awarded: number
+}
+
+export interface CheckInStatus {
+  /**
+   * 是否启用签到功能
+   */
+  enabled: boolean
+  max_quota: number
+  min_quota: number
+  stats: {
+    /**
+     * 今天是否已签到
+     * @example true 今日已经签到
+     * @example false 今日尚未签到
+     */
+    checked_in_today: boolean
+    checkin_count: number
+    records: CheckinRecord[]
+    total_checkins: number
+    total_quota: number
+  }
+}
+
+export interface CheckInStatusResponse {
+  data: CheckInStatus
+  success: boolean
+}

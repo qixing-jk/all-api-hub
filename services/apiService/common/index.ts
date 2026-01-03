@@ -10,6 +10,7 @@ import {
   AccountData,
   ApiServiceAccountRequest,
   ApiServiceRequest,
+  CheckInStatus,
   CreateTokenRequest,
   HealthCheckResult,
   LogResponseData,
@@ -487,18 +488,13 @@ export async function fetchAccountQuota(
 export async function fetchCheckInStatus(
   request: ApiServiceRequest,
 ): Promise<boolean | undefined> {
+  const currentMonth = new Date().toISOString().slice(0, 7)
   try {
-    const checkInData = await fetchApiData<{ can_check_in?: boolean }>(
-      request,
-      {
-        endpoint: "/api/user/check_in_status",
-      },
-    )
-    // 仅当 can_check_in 明确为 true 或 false 时才返回，否则返回 undefined
-    if (typeof checkInData.can_check_in === "boolean") {
-      return checkInData.can_check_in
-    }
-    return undefined
+    const checkInData = await fetchApiData<CheckInStatus>(request, {
+      endpoint: `/api/user/checkin?month=${currentMonth}`,
+    })
+    // 返回今天是否已签到的状态
+    return !checkInData.stats.checked_in_today
   } catch (error) {
     // 如果接口不存在或返回错误（如 404 Not Found），则认为不支持签到功能
     if (
