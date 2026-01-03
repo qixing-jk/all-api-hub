@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 import iconImage from "~/assets/icon.png"
 import { LanguageSwitcher } from "~/components/LanguageSwitcher"
 import { Badge, BodySmall, Heading5, IconButton } from "~/components/ui"
+import { getManifest } from "~/utils/browserApi"
 import { getDocsChangelogUrl } from "~/utils/docsLinks"
 import { getRepository } from "~/utils/packageMeta"
 
@@ -28,7 +29,7 @@ function Header({
   const { t } = useTranslation("ui")
   const repositoryUrl = getRepository()
   const { version } = getManifest()
-  const changelogUrl = getDocsChangelogUrl()
+  const changelogUrl = getDocsChangelogUrl(version)
 
   return (
     <header className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary sticky top-0 z-50 h-(--options-header-height) border-b border-gray-200 bg-white shadow-sm">
