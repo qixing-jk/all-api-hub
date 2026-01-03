@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.38.0](https://github.com/qixing-jk/all-api-hub/compare/v2.37.0...v2.38.0) (2026-01-03)
+
+
+### Features
+
+* **account:** support reordering within pinned accounts ([#311](https://github.com/qixing-jk/all-api-hub/issues/311)) ([952f9a5](https://github.com/qixing-jk/all-api-hub/commit/952f9a56421d73a31fe2d14c289678ae481f321d))
+* **content:** add keyboard navigation to account select toast ([#309](https://github.com/qixing-jk/all-api-hub/issues/309)) ([5eff885](https://github.com/qixing-jk/all-api-hub/commit/5eff8857a95f3e0174991bd8e34ea04046dc792a))
+* **content:** add shield bypass UI prompt for temp windows ([#312](https://github.com/qixing-jk/all-api-hub/issues/312)) ([10aaad9](https://github.com/qixing-jk/all-api-hub/commit/10aaad979511b88fb7cf13abd6816b5fe86b8bd9))
+* **shield-bypass:** add composite mode and make it default ([#313](https://github.com/qixing-jk/all-api-hub/issues/313)) ([9ce9616](https://github.com/qixing-jk/all-api-hub/commit/9ce9616396870dddd713b41860f825778dc1bb15))
+* support new-api check-in ([#314](https://github.com/qixing-jk/all-api-hub/issues/314)) ([1d9ac54](https://github.com/qixing-jk/all-api-hub/commit/1d9ac5445175d081ecb82931b938bb886388e8d3))
+
 ## [2.37.0](https://github.com/qixing-jk/all-api-hub/compare/v2.36.0...v2.37.0) (2026-01-01)
 
 
