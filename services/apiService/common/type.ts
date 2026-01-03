@@ -66,7 +66,10 @@ export interface SiteStatusInfo {
   stripe_unit_price?: number
   PaymentUSDRate?: number
   system_name?: string
-  check_in_enabled?: boolean
+  /**
+   * 是否启用签到功能
+   */
+  checkin_enabled?: boolean
 }
 
 // 模型列表响应类型

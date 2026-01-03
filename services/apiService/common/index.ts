@@ -517,7 +517,7 @@ export async function fetchSupportCheckIn(
   request: ApiServiceRequest,
 ): Promise<boolean | undefined> {
   const siteStatus = await fetchSiteStatus(request)
-  return siteStatus?.check_in_enabled
+  return siteStatus?.checkin_enabled
 }
 
 /**
