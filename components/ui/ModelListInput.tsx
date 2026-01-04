@@ -1,4 +1,5 @@
 import { ArrowRight } from "lucide-react"
+import { useTranslation } from "react-i18next"
 
 import { cn } from "~/lib/utils"
 
@@ -41,7 +42,7 @@ export interface ModelListInputProps {
 }
 
 /**
- *
+ * createDefaultModelListItem creates a new ModelListItem with default values
  */
 function createDefaultModelListItem(): ModelListItem {
   return {
@@ -71,21 +72,27 @@ export function ModelListInput({
   showHeader = true,
   className,
 }: ModelListInputProps) {
-  const resolvedTitle =
-    title ?? strings?.title ?? "Model List (name[, alias] one per line):"
+  const { t } = useTranslation("ui")
+
+  const resolvedTitle = title ?? strings?.title ?? t("modelListInput.title")
   const resolvedDescription =
-    description ??
-    strings?.description ??
-    "Example: gpt-4o-mini or moonshotai/kimi-k2:free, kimi-k2"
-  const resolvedAddLabel = addLabel ?? strings?.addLabel ?? "Add Model"
+    description ?? strings?.description ?? t("modelListInput.description")
+  const resolvedAddLabel =
+    addLabel ?? strings?.addLabel ?? t("modelListInput.actions.add")
   const resolvedNamePlaceholder =
-    namePlaceholder ?? strings?.namePlaceholder ?? "Model name, e.g. claude"
+    namePlaceholder ??
+    strings?.namePlaceholder ??
+    t("modelListInput.placeholders.name")
   const resolvedAliasPlaceholder =
-    aliasPlaceholder ?? strings?.aliasPlaceholder ?? "Model alias (optional)"
+    aliasPlaceholder ??
+    strings?.aliasPlaceholder ??
+    t("modelListInput.placeholders.alias")
   const resolvedDragHandleLabel =
-    dragHandleLabel ?? strings?.dragHandleLabel ?? "Reorder model"
+    dragHandleLabel ??
+    strings?.dragHandleLabel ??
+    t("modelListInput.actions.reorder")
   const resolvedRemoveLabel =
-    removeLabel ?? strings?.removeLabel ?? "Remove model"
+    removeLabel ?? strings?.removeLabel ?? t("modelListInput.actions.remove")
 
   return (
     <div className={cn("space-y-2", className)}>

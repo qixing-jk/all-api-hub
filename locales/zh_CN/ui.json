@@ -184,5 +184,25 @@
   "searchableSelect": {
     "searchPlaceholder": "搜索...",
     "empty": "未找到匹配项"
+  },
+  "repeatableInput": {
+    "actions": {
+      "add": "添加",
+      "remove": "删除",
+      "reorder": "拖动排序"
+    }
+  },
+  "modelListInput": {
+    "title": "模型列表（每行一个 name[, alias]）：",
+    "description": "示例：gpt-4o-mini 或 moonshotai/kimi-k2:free, kimi-k2",
+    "actions": {
+      "add": "添加模型",
+      "remove": "删除模型",
+      "reorder": "拖动排序"
+    },
+    "placeholders": {
+      "name": "模型名称，例如 claude",
+      "alias": "模型别名（可选）"
+    }
   }
 }

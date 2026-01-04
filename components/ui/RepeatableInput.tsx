@@ -20,6 +20,7 @@ import {
 import { CSS } from "@dnd-kit/utilities"
 import { GripVertical, X } from "lucide-react"
 import React from "react"
+import { useTranslation } from "react-i18next"
 
 import { cn } from "~/lib/utils"
 
@@ -160,15 +161,21 @@ export function RepeatableInput<TItem extends RepeatableInputItem>({
   itemClassName,
   isDragDisabled = false,
   showDragHandle = true,
-  dragHandleLabel = "Drag to reorder",
+  dragHandleLabel,
   isDeleteDisabled,
   onRemove,
-  removeLabel = "Remove",
+  removeLabel,
   createItem,
   onAdd,
-  addLabel = "Add",
+  addLabel,
   addButtonProps,
 }: RepeatableInputProps<TItem>) {
+  const { t } = useTranslation("ui")
+  const resolvedDragHandleLabel =
+    dragHandleLabel ?? t("repeatableInput.actions.reorder")
+  const resolvedRemoveLabel = removeLabel ?? t("repeatableInput.actions.remove")
+  const resolvedAddLabel = addLabel ?? t("repeatableInput.actions.add")
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 8 },
@@ -217,8 +224,8 @@ export function RepeatableInput<TItem extends RepeatableInputItem>({
               itemClassName={itemClassName}
               isDragDisabled={isDragDisabled}
               showDragHandle={showDragHandle}
-              dragHandleLabel={dragHandleLabel}
-              removeLabel={removeLabel}
+              dragHandleLabel={resolvedDragHandleLabel}
+              removeLabel={resolvedRemoveLabel}
               isDeleteDisabled={isDeleteDisabled}
               removeItem={() => {
                 onRemove?.(item, index)
@@ -246,7 +253,7 @@ export function RepeatableInput<TItem extends RepeatableInputItem>({
             onClick={handleAdd}
             {...addButtonProps}
           >
-            {addLabel}
+            {resolvedAddLabel}
           </Button>
         </div>
       )}

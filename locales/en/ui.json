@@ -184,5 +184,25 @@
   "searchableSelect": {
     "searchPlaceholder": "Search...",
     "empty": "No results found"
+  },
+  "repeatableInput": {
+    "actions": {
+      "add": "Add",
+      "remove": "Remove",
+      "reorder": "Drag to reorder"
+    }
+  },
+  "modelListInput": {
+    "title": "Model List (name[, alias] one per line):",
+    "description": "Example: gpt-4o-mini or moonshotai/kimi-k2:free, kimi-k2",
+    "actions": {
+      "add": "Add Model",
+      "remove": "Remove model",
+      "reorder": "Reorder model"
+    },
+    "placeholders": {
+      "name": "Model name, e.g. claude",
+      "alias": "Model alias (optional)"
+    }
   }
 }
