@@ -13,6 +13,7 @@ import {
 } from "~/components/ui"
 import { getSiteApiRouter, VELOERA } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { createTab } from "~/utils/browserApi"
 import { showUpdateToast } from "~/utils/toastHelpers"
 import { joinUrl } from "~/utils/url"
 
@@ -73,6 +74,15 @@ export default function VeloeraSettings() {
     ? joinUrl(trimmedBaseUrl, getSiteApiRouter(VELOERA).adminCredentialsPath)
     : ""
 
+  const handleOpenAdminCredentials = async () => {
+    if (!adminCredentialsUrl) return
+    try {
+      await createTab(adminCredentialsUrl, true)
+    } catch {
+      window.open(adminCredentialsUrl, "_blank", "noopener,noreferrer")
+    }
+  }
+
   return (
     <SettingSection
       id="veloera"
@@ -101,14 +111,12 @@ export default function VeloeraSettings() {
               title={t("veloera.adminCredentialsLink.title")}
               description={t("veloera.adminCredentialsLink.description")}
               rightContent={
-                <Button variant="link" size="sm">
-                  <a
-                    href={adminCredentialsUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    {t("veloera.adminCredentialsLink.open")}
-                  </a>
+                <Button
+                  variant="link"
+                  size="sm"
+                  onClick={handleOpenAdminCredentials}
+                >
+                  {t("veloera.adminCredentialsLink.open")}
                 </Button>
               }
             />

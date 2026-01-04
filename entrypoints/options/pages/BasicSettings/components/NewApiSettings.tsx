@@ -13,6 +13,7 @@ import {
 } from "~/components/ui"
 import { getSiteApiRouter, NEW_API } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { createTab } from "~/utils/browserApi"
 import { showUpdateToast } from "~/utils/toastHelpers"
 import { joinUrl } from "~/utils/url"
 
@@ -73,6 +74,15 @@ export default function NewApiSettings() {
     ? joinUrl(trimmedBaseUrl, getSiteApiRouter(NEW_API).adminCredentialsPath)
     : ""
 
+  const handleOpenAdminCredentials = async () => {
+    if (!adminCredentialsUrl) return
+    try {
+      await createTab(adminCredentialsUrl, true)
+    } catch {
+      window.open(adminCredentialsUrl, "_blank", "noopener,noreferrer")
+    }
+  }
+
   return (
     <SettingSection
       id="new-api"
@@ -101,14 +111,12 @@ export default function NewApiSettings() {
               title={t("newApi.adminCredentialsLink.title")}
               description={t("newApi.adminCredentialsLink.description")}
               rightContent={
-                <Button variant="link" size="sm">
-                  <a
-                    href={adminCredentialsUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    {t("newApi.adminCredentialsLink.open")}
-                  </a>
+                <Button
+                  variant="link"
+                  size="sm"
+                  onClick={handleOpenAdminCredentials}
+                >
+                  {t("newApi.adminCredentialsLink.open")}
                 </Button>
               }
             />
