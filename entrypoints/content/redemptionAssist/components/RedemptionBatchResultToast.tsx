@@ -15,6 +15,7 @@ export interface RedemptionBatchResultItem {
   preview: string
   success: boolean
   message: string
+  errorMessage?: string
 }
 
 export interface RedemptionBatchResultToastProps {
@@ -51,6 +52,26 @@ export const RedemptionBatchResultToast: React.FC<
       setItems((prev) =>
         prev.map((item) => (item.code === code ? updated : item)),
       )
+    } catch (error) {
+      console.error("[RedemptionAssist] Retry failed:", error)
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : typeof error === "string"
+            ? error
+            : t("common:status.error")
+      setItems((prev) =>
+        prev.map((item) =>
+          item.code === code
+            ? {
+                ...item,
+                success: false,
+                errorMessage,
+                message: errorMessage,
+              }
+            : item,
+        ),
+      )
     } finally {
       setRetryingCode(null)
     }
@@ -76,9 +97,9 @@ export const RedemptionBatchResultToast: React.FC<
         </Body>
 
         <div className="mt-3 max-h-60 space-y-2 overflow-y-auto pr-1">
-          {items.map((item) => (
+          {items.map((item, index) => (
             <div
-              key={item.code}
+              key={`${item.code}-${index}`}
               className="border-border/60 bg-muted/20 flex flex-col gap-1 rounded-md border px-2 py-2 text-xs"
             >
               <div className="flex items-center justify-between gap-2">
