@@ -2,7 +2,13 @@ import { FormEvent, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { CliProxyIcon } from "~/components/icons/CliProxyIcon"
-import { Button, FormField, Input, Modal } from "~/components/ui"
+import {
+  Button,
+  FormField,
+  Input,
+  Modal,
+  ModelListInput,
+} from "~/components/ui"
 import { importToCliProxy } from "~/services/cliProxyService"
 import type { ApiToken, DisplaySiteData } from "~/types"
 import { showResultToast } from "~/utils/toastHelpers"
@@ -33,6 +39,9 @@ export function CliProxyExportDialog(props: CliProxyExportDialogProps) {
   const [providerName, setProviderName] = useState("")
   const [providerBaseUrl, setProviderBaseUrl] = useState("")
   const [proxyUrl, setProxyUrl] = useState("")
+  const [models, setModels] = useState<
+    React.ComponentProps<typeof ModelListInput>["value"]
+  >([])
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const formId = useMemo(() => `cliproxy-export-form-${token.id}`, [token.id])
@@ -42,6 +51,15 @@ export function CliProxyExportDialog(props: CliProxyExportDialogProps) {
     setProviderName(account.name || account.baseUrl)
     setProviderBaseUrl(buildProviderBaseUrl(account.baseUrl))
     setProxyUrl("")
+    setModels([
+      {
+        id:
+          globalThis.crypto?.randomUUID?.() ??
+          `model-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        name: "",
+        alias: "",
+      },
+    ])
   }, [account.baseUrl, account.name, isOpen])
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -50,6 +68,16 @@ export function CliProxyExportDialog(props: CliProxyExportDialogProps) {
     void (async () => {
       try {
         setIsSubmitting(true)
+        const normalizedModels = models
+          .map((item) => {
+            const name = item.name.trim()
+            const alias = item.alias.trim()
+            return {
+              name,
+              alias: alias || undefined,
+            }
+          })
+          .filter((item) => item.name.length > 0)
         const result = await importToCliProxy({
           account,
           token,
@@ -57,6 +85,7 @@ export function CliProxyExportDialog(props: CliProxyExportDialogProps) {
           providerBaseUrl:
             providerBaseUrl.trim() || buildProviderBaseUrl(account.baseUrl),
           proxyUrl: proxyUrl.trim(),
+          models: normalizedModels.length > 0 ? normalizedModels : undefined,
         })
         showResultToast(result)
         if (result.success) {
@@ -124,6 +153,24 @@ export function CliProxyExportDialog(props: CliProxyExportDialogProps) {
             value={proxyUrl}
             onChange={(event) => setProxyUrl(event.target.value)}
             placeholder={t("ui:dialog.cliproxy.placeholders.proxyUrl")}
+          />
+        </FormField>
+
+        <FormField
+          label={t("ui:dialog.cliproxy.fields.models")}
+          description={t("ui:dialog.cliproxy.descriptions.models")}
+        >
+          <ModelListInput
+            value={models}
+            onChange={setModels}
+            showHeader={false}
+            strings={{
+              addLabel: t("ui:dialog.cliproxy.actions.addModel"),
+              removeLabel: t("ui:dialog.cliproxy.actions.removeModel"),
+              dragHandleLabel: t("ui:dialog.cliproxy.actions.reorderModel"),
+              namePlaceholder: t("ui:dialog.cliproxy.placeholders.modelName"),
+              aliasPlaceholder: t("ui:dialog.cliproxy.placeholders.modelAlias"),
+            }}
           />
         </FormField>
       </form>

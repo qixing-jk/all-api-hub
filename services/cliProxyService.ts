@@ -155,6 +155,7 @@ export interface ImportToCliProxyOptions {
   providerName?: string
   providerBaseUrl?: string
   proxyUrl?: string
+  models?: Array<{ name: string; alias?: string }>
 }
 
 /**
@@ -170,6 +171,7 @@ export async function importToCliProxy(
       providerName: providerNameOverride,
       providerBaseUrl: providerBaseUrlOverride,
       proxyUrl: proxyUrlOverride,
+      models: modelsOverride,
     } = options
     const config = await getCliProxyConfig()
 
@@ -186,6 +188,23 @@ export async function importToCliProxy(
       providerBaseUrlOverride?.trim() || getProviderBaseUrl(account)
     const providerName =
       providerNameOverride?.trim() || buildProviderName(account)
+
+    const normalizedModels = (() => {
+      if (!modelsOverride) return undefined
+
+      const nextModels = modelsOverride
+        .map((model) => {
+          const name = model.name.trim()
+          const alias = model.alias?.trim()
+          return {
+            name,
+            alias: alias || undefined,
+          }
+        })
+        .filter((model) => model.name.length > 0)
+
+      return nextModels.length > 0 ? nextModels : undefined
+    })()
 
     const providers = await fetchProviders(baseUrl, managementKey)
 
@@ -211,6 +230,7 @@ export async function importToCliProxy(
         name: existing.name || providerName,
         "base-url": providerBaseUrl,
         "api-key-entries": [...filtered, apiKeyEntry],
+        ...(normalizedModels ? { models: normalizedModels } : {}),
       }
 
       await patchProviderByIndex(
@@ -232,7 +252,7 @@ export async function importToCliProxy(
       name: providerName,
       "base-url": providerBaseUrl,
       "api-key-entries": [apiKeyEntry],
-      models: [],
+      models: normalizedModels ?? [],
       headers: {},
     }
 
