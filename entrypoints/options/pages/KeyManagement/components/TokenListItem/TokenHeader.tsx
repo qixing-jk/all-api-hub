@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next"
 
 import { useChannelDialog } from "~/components/ChannelDialog"
 import { ClaudeCodeRouterImportDialog } from "~/components/ClaudeCodeRouterImportDialog"
+import { CliProxyExportDialog } from "~/components/CliProxyExportDialog"
 import { CCSwitchIcon } from "~/components/icons/CCSwitchIcon"
 import { CherryIcon } from "~/components/icons/CherryIcon"
 import { ClaudeCodeRouterIcon } from "~/components/icons/ClaudeCodeRouterIcon"
@@ -15,7 +16,6 @@ import { CliProxyIcon } from "~/components/icons/CliProxyIcon"
 import { ManagedSiteIcon } from "~/components/icons/ManagedSiteIcon"
 import { Badge, Heading6, IconButton } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { importToCliProxy } from "~/services/cliProxyService"
 import type { DisplaySiteData } from "~/types"
 import { OpenInCherryStudio } from "~/utils/cherryStudio"
 import { getManagedSiteLabelKey } from "~/utils/managedSite"
@@ -69,11 +69,17 @@ function TokenActionButtons({
   onOpenCCSwitchDialog,
 }: TokenHeaderProps) {
   const { t } = useTranslation(["keyManagement", "settings"])
-  const { managedSiteType, claudeCodeRouterBaseUrl, claudeCodeRouterApiKey } =
-    useUserPreferencesContext()
+  const {
+    managedSiteType,
+    claudeCodeRouterBaseUrl,
+    claudeCodeRouterApiKey,
+    cliProxyBaseUrl,
+    cliProxyManagementKey,
+  } = useUserPreferencesContext()
   const { openWithAccount } = useChannelDialog()
 
   const [isClaudeCodeRouterOpen, setIsClaudeCodeRouterOpen] = useState(false)
+  const [isCliProxyDialogOpen, setIsCliProxyDialogOpen] = useState(false)
 
   const managedSiteLabel = t(getManagedSiteLabelKey(managedSiteType))
 
@@ -83,9 +89,15 @@ function TokenActionButtons({
     })
   }
 
-  const handleImportToCliProxy = async () => {
-    const result = await importToCliProxy(account, token)
-    showResultToast(result)
+  const handleOpenCliProxyDialog = () => {
+    if (!cliProxyBaseUrl?.trim() || !cliProxyManagementKey?.trim()) {
+      showResultToast({
+        success: false,
+        message: t("messages:cliproxy.configMissing"),
+      })
+      return
+    }
+    setIsCliProxyDialogOpen(true)
   }
 
   const handleOpenClaudeCodeRouter = () => {
@@ -108,6 +120,12 @@ function TokenActionButtons({
         token={token}
         routerBaseUrl={claudeCodeRouterBaseUrl}
         routerApiKey={claudeCodeRouterApiKey}
+      />
+      <CliProxyExportDialog
+        isOpen={isCliProxyDialogOpen}
+        onClose={() => setIsCliProxyDialogOpen(false)}
+        account={account}
+        token={token}
       />
       <IconButton
         aria-label={t("common:actions.copyKey")}
@@ -139,7 +157,7 @@ function TokenActionButtons({
         aria-label={t("actions.importToCliProxy")}
         size="sm"
         variant="ghost"
-        onClick={handleImportToCliProxy}
+        onClick={handleOpenCliProxyDialog}
       >
         <CliProxyIcon size="sm" />
       </IconButton>

@@ -109,6 +109,24 @@
         "export": "Export"
       }
     },
+    "cliproxy": {
+      "title": "Import to CLIProxyAPI",
+      "description": "Create or update an OpenAI-compatible provider in CLIProxyAPI.",
+      "fields": {
+        "name": "Provider name",
+        "baseUrl": "Provider base URL",
+        "proxyUrl": "Proxy URL (optional)"
+      },
+      "descriptions": {
+        "baseUrl": "OpenAI-compatible upstream base URL, typically ending with /v1.",
+        "proxyUrl": "Optional proxy URL used for this API key entry."
+      },
+      "placeholders": {
+        "name": "e.g. Acme Relay",
+        "baseUrl": "https://example.com/v1",
+        "proxyUrl": "http://localhost:3000"
+      }
+    },
     "claudeCodeRouter": {
       "title": "Import to Claude Code Router",
       "description": "Create or update a provider in Claude Code Router. Models are required.",

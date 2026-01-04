@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next"
 
 import { useChannelDialog } from "~/components/ChannelDialog"
 import { ClaudeCodeRouterImportDialog } from "~/components/ClaudeCodeRouterImportDialog"
+import { CliProxyExportDialog } from "~/components/CliProxyExportDialog"
 import { CCSwitchIcon } from "~/components/icons/CCSwitchIcon"
 import { CherryIcon } from "~/components/icons/CherryIcon"
 import { ClaudeCodeRouterIcon } from "~/components/icons/ClaudeCodeRouterIcon"
@@ -15,7 +16,6 @@ import { CliProxyIcon } from "~/components/icons/CliProxyIcon"
 import { ManagedSiteIcon } from "~/components/icons/ManagedSiteIcon"
 import { IconButton } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { importToCliProxy } from "~/services/cliProxyService"
 import type { ApiToken, DisplaySiteData } from "~/types"
 import { OpenInCherryStudio } from "~/utils/cherryStudio"
 import { formatKeyTime, formatQuota, formatUsedQuota } from "~/utils/formatters"
@@ -41,11 +41,17 @@ export function TokenDetails({
   onOpenCCSwitchDialog,
 }: TokenDetailsProps) {
   const { t } = useTranslation(["ui", "keyManagement", "settings"])
-  const { managedSiteType, claudeCodeRouterBaseUrl, claudeCodeRouterApiKey } =
-    useUserPreferencesContext()
+  const {
+    managedSiteType,
+    claudeCodeRouterBaseUrl,
+    claudeCodeRouterApiKey,
+    cliProxyBaseUrl,
+    cliProxyManagementKey,
+  } = useUserPreferencesContext()
   const { openWithAccount } = useChannelDialog()
 
   const [isClaudeCodeRouterOpen, setIsClaudeCodeRouterOpen] = useState(false)
+  const [isCliProxyDialogOpen, setIsCliProxyDialogOpen] = useState(false)
 
   const managedSiteLabel = t(getManagedSiteLabelKey(managedSiteType))
 
@@ -71,10 +77,16 @@ export function TokenDetails({
     })
   }
 
-  const handleImportToCliProxy = async (event: MouseEvent) => {
+  const handleOpenCliProxyDialog = (event: MouseEvent) => {
     event.stopPropagation()
-    const result = await importToCliProxy(account, token)
-    showResultToast(result)
+    if (!cliProxyBaseUrl?.trim() || !cliProxyManagementKey?.trim()) {
+      showResultToast({
+        success: false,
+        message: t("messages:cliproxy.configMissing"),
+      })
+      return
+    }
+    setIsCliProxyDialogOpen(true)
   }
 
   const handleOpenClaudeCodeRouter = (event: MouseEvent) => {
@@ -98,6 +110,12 @@ export function TokenDetails({
         token={token}
         routerBaseUrl={claudeCodeRouterBaseUrl}
         routerApiKey={claudeCodeRouterApiKey}
+      />
+      <CliProxyExportDialog
+        isOpen={isCliProxyDialogOpen}
+        onClose={() => setIsCliProxyDialogOpen(false)}
+        account={account}
+        token={token}
       />
       <div className="dark:text-dark-text-secondary mb-3 flex items-center space-x-1 pt-3 text-xs text-gray-500">
         <ClockIcon className="h-3 w-3" />
@@ -179,7 +197,7 @@ export function TokenDetails({
               aria-label={t("keyManagement:actions.importToCliProxy")}
               variant="ghost"
               size="sm"
-              onClick={handleImportToCliProxy}
+              onClick={handleOpenCliProxyDialog}
             >
               <CliProxyIcon size="sm" />
             </IconButton>

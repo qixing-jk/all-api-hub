@@ -109,6 +109,24 @@
         "export": "导出"
       }
     },
+    "cliproxy": {
+      "title": "导入到 CLIProxyAPI",
+      "description": "在 CLIProxyAPI 中创建或更新 OpenAI 兼容 Provider。",
+      "fields": {
+        "name": "Provider 名称",
+        "baseUrl": "Provider 基础地址",
+        "proxyUrl": "Proxy URL（可选）"
+      },
+      "descriptions": {
+        "baseUrl": "OpenAI 兼容接口基础地址，通常以 /v1 结尾。",
+        "proxyUrl": "可选的转发地址，用于此 Key 的代理路由。"
+      },
+      "placeholders": {
+        "name": "例如 我的中转",
+        "baseUrl": "https://example.com/v1",
+        "proxyUrl": "http://localhost:3000"
+      }
+    },
     "claudeCodeRouter": {
       "title": "导入到 Claude Code Router",
       "description": "在 Claude Code Router 中创建或更新 Provider（必须填写模型）。",
