@@ -24,9 +24,14 @@
     "redeemFailed": "Redemption failed. Please try again later.",
     "redeemLoading": "Trying to redeem…",
     "promptConfirm": "Detected a possible redemption code {{code}} on this page. Try auto redeem for this site?",
+    "promptConfirmBatch": "Detected {{count}} possible redemption codes on this page. Select codes to auto redeem for this site.",
     "promptTitle": "Redemption Assist",
     "promptSource": "This prompt is provided by the All API Hub extension",
     "promptSettingsLink": "Open Redemption Assist settings",
+    "selectAll": "Select all",
+    "batchResultTitle": "Redemption results",
+    "batchResultSummary": "Total {{total}}. Succeeded {{success}}. Failed {{failed}}.",
+    "cancelled": "Cancelled",
     "noAccountForUrl": "No matching account found for this site. Please add the site as an account in All API Hub, then try again.",
     "success": {
       "settingsSaved": "Redemption assist settings have been saved"

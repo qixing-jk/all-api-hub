@@ -24,9 +24,14 @@
     "redeemFailed": "兑换失败，请稍后重试。",
     "redeemLoading": "正在尝试兑换，请稍候…",
     "promptConfirm": "检测到疑似兑换码 {{code}}，是否为当前站点尝试自动兑换？",
+    "promptConfirmBatch": "检测到 {{count}} 个疑似兑换码，请选择要为当前站点尝试自动兑换的兑换码。",
     "promptSource": "此提示来自 All API Hub 浏览器扩展",
     "promptSettingsLink": "打开兑换助手设置",
     "promptTitle": "兑换助手",
+    "selectAll": "全选",
+    "batchResultTitle": "兑换结果",
+    "batchResultSummary": "共 {{total}} 个，成功 {{success}} 个，失败 {{failed}} 个。",
+    "cancelled": "已取消",
     "noAccountForUrl": "当前站点未在 All API Hub 中配置账号，请先在扩展中添加该站点后再试。",
     "success": {
       "settingsSaved": "兑换助手设置已保存"

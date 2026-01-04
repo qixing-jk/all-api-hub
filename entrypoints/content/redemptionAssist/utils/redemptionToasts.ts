@@ -4,10 +4,15 @@ import toast from "react-hot-toast/headless"
 import type { DisplaySiteData } from "~/types"
 
 import { RedemptionAccountSelectToast } from "../components/RedemptionAccountSelectToast"
+import {
+  RedemptionBatchResultToast,
+  type RedemptionBatchResultItem,
+} from "../components/RedemptionBatchResultToast"
 import { RedemptionLoadingToast } from "../components/RedemptionLoadingToast"
 import {
   RedemptionPromptToast,
-  type RedemptionPromptAction,
+  type RedemptionPromptCodeItem,
+  type RedemptionPromptResult,
 } from "../components/RedemptionPromptToast"
 import { ensureRedemptionToastUi } from "../uiRoot"
 
@@ -87,25 +92,27 @@ export async function showAccountSelectToast(
  */
 export async function showRedemptionPromptToast(
   message: string,
-): Promise<RedemptionPromptAction> {
+  codes: RedemptionPromptCodeItem[],
+): Promise<RedemptionPromptResult> {
   await ensureRedemptionToastUi()
 
   return new Promise((resolve) => {
     let resolved = false
 
-    const handleResolve = (action: RedemptionPromptAction, toastId: string) => {
+    const handleResolve = (result: RedemptionPromptResult, toastId: string) => {
       if (resolved) return
       resolved = true
       toast.dismiss(toastId)
-      resolve(action)
+      resolve(result)
     }
 
     toast.custom((toastInstance) => {
       const toastId = toastInstance.id
       return React.createElement(RedemptionPromptToast, {
         message,
-        onAction: (action: RedemptionPromptAction) =>
-          handleResolve(action, toastId),
+        codes,
+        onAction: (result: RedemptionPromptResult) =>
+          handleResolve(result, toastId),
       })
     })
   })
@@ -126,4 +133,29 @@ export async function showRedeemResultToast(success: boolean, message: string) {
   } else {
     toast.error(message)
   }
+}
+
+/**
+ * Displays a batch redemption result toast with per-item retry controls.
+ * @param results Results for each redeemed code (success/failure).
+ * @param onRetry Handler to retry a specific code.
+ * @returns Toast ID for optional dismissal.
+ */
+export async function showRedeemBatchResultToast(
+  results: RedemptionBatchResultItem[],
+  onRetry: (code: string) => Promise<RedemptionBatchResultItem>,
+) {
+  await ensureRedemptionToastUi()
+
+  return toast.custom(
+    (toastInstance) =>
+      React.createElement(RedemptionBatchResultToast, {
+        results,
+        onRetry,
+        onClose: () => toast.dismiss(toastInstance.id),
+      }),
+    {
+      duration: Infinity,
+    },
+  )
 }

@@ -9,6 +9,7 @@ import { extractRedemptionCodesFromText } from "~/utils/redemptionAssist"
 import {
   dismissToast,
   showAccountSelectToast,
+  showRedeemBatchResultToast,
   showRedeemLoadingToast,
   showRedeemResultToast,
   showRedemptionPromptToast,
@@ -137,8 +138,33 @@ async function handleContextMenuRedemption(
   pageUrl: string,
 ) {
   try {
-    const code = selectionText.trim()
-    if (!code) return
+    const trimmedSelection = (selectionText ?? "").trim()
+    if (!trimmedSelection) return
+
+    const extracted = extractRedemptionCodesFromText(trimmedSelection, {
+      relaxedCharset: true,
+    })
+    const codes = extracted.length > 0 ? extracted : [trimmedSelection]
+
+    const selectedCodes =
+      codes.length > 1
+        ? await (async () => {
+            const promptMessage = t(
+              "redemptionAssist:messages.promptConfirmBatch",
+              {
+                count: codes.length,
+              },
+            )
+            const prompt = await showRedemptionPromptToast(
+              promptMessage,
+              codes.map((code) => ({ code, preview: maskCode(code) })),
+            )
+            if (prompt.action !== "auto") return []
+            return prompt.selectedCodes
+          })()
+        : codes
+
+    if (selectedCodes.length === 0) return
 
     const loadingMessage = t("redemptionAssist:messages.redeemLoading")
     let loadingToastId: string | undefined
@@ -153,74 +179,18 @@ async function handleContextMenuRedemption(
     try {
       loadingToastId = await showRedeemLoadingToast(loadingMessage)
 
-      const redeemResp: any = await sendRuntimeMessage({
-        action: "redemptionAssist:autoRedeemByUrl",
+      const { results, retry } = await redeemCodesSequential({
         url: pageUrl,
-        code,
+        codes: selectedCodes,
+        dismissOuterLoading: dismissLoadingToast,
       })
 
-      const result = redeemResp?.data
-
-      if (result?.success) {
-        if (result.message) {
-          await showRedeemResultToast(true, result.message)
-        }
+      if (results.length === 1 && results[0]?.success) {
+        await showRedeemResultToast(true, results[0].message)
         return
       }
 
-      if (result?.code === "MULTIPLE_ACCOUNTS" && result.candidates?.length) {
-        dismissLoadingToast()
-        const selected = await showAccountSelectToast(result.candidates, {
-          title: t("redemptionAssist:accountSelect.titleMultiple", {
-            defaultValue: "检测到多个可用账号，请选择一个用于兑换",
-          }),
-        })
-
-        if (!selected) {
-          return
-        }
-
-        const manualResult = await performManualRedeem(
-          selected.id,
-          code,
-          loadingMessage,
-        )
-        if (manualResult?.message) {
-          await showRedeemResultToast(
-            !!manualResult.success,
-            manualResult.message,
-          )
-        }
-        return
-      }
-
-      if (result?.code === "NO_ACCOUNTS" && result.allAccounts?.length) {
-        dismissLoadingToast()
-        const selected = await showAccountSelectToast(result.allAccounts, {
-          title: t("redemptionAssist:accountSelect.titleFallback"),
-        })
-
-        if (!selected) {
-          return
-        }
-
-        const manualResult = await performManualRedeem(
-          selected.id,
-          code,
-          loadingMessage,
-        )
-        if (manualResult?.message) {
-          await showRedeemResultToast(
-            !!manualResult.success,
-            manualResult.message,
-          )
-        }
-        return
-      }
-
-      const fallbackMessage = t("redemptionAssist:messages.redeemFailed")
-      const msg = redeemResp?.error || result?.message || fallbackMessage
-      await showRedeemResultToast(false, msg)
+      await showRedeemBatchResultToast(results, retry)
     } finally {
       dismissLoadingToast()
     }
@@ -277,10 +247,10 @@ async function scanForRedemptionCodes(sourceText?: string) {
     const text = (sourceText ?? "").trim()
     if (!text) return
 
-    const code = extractRedemptionCodesFromText(text, {
+    const codes = extractRedemptionCodesFromText(text, {
       relaxedCharset: true,
-    })[0]
-    if (!code) return
+    })
+    if (codes.length === 0) return
 
     const url = window.location.href
 
@@ -290,26 +260,34 @@ async function scanForRedemptionCodes(sourceText?: string) {
       return
     }
 
-    console.log("[RedemptionAssist][Content] Detected code:", code, url)
+    console.log("[RedemptionAssist][Content] Detected codes:", codes, url)
     const shouldResp: any = await sendRuntimeMessage({
       action: "redemptionAssist:shouldPrompt",
       url,
-      code,
+      code: codes[0],
     })
 
     if (!shouldResp?.success || !shouldResp.shouldPrompt) {
       return
     }
 
-    console.log("[RedemptionAssist][Content] Prompting for code:", code)
+    const confirmMessage =
+      codes.length > 1
+        ? t("redemptionAssist:messages.promptConfirmBatch", {
+            count: codes.length,
+          })
+        : t("redemptionAssist:messages.promptConfirm", {
+            code: maskCode(codes[0] || ""),
+          })
 
-    const codePreview = maskCode(code)
-    const confirmMessage = t("redemptionAssist:messages.promptConfirm", {
-      code: codePreview,
-    })
+    const prompt = await showRedemptionPromptToast(
+      confirmMessage,
+      codes.map((code) => ({ code, preview: maskCode(code) })),
+    )
+    if (prompt.action !== "auto") return
+    if (prompt.selectedCodes.length === 0) return
 
-    const action = await showRedemptionPromptToast(confirmMessage)
-    if (action !== "auto") return
+    const selectedCodes = prompt.selectedCodes
 
     const loadingMessage = t("redemptionAssist:messages.redeemLoading")
     let loadingToastId: string | undefined
@@ -324,74 +302,18 @@ async function scanForRedemptionCodes(sourceText?: string) {
     try {
       loadingToastId = await showRedeemLoadingToast(loadingMessage)
 
-      const redeemResp: any = await sendRuntimeMessage({
-        action: "redemptionAssist:autoRedeemByUrl",
+      const { results, retry } = await redeemCodesSequential({
         url,
-        code,
+        codes: selectedCodes,
+        dismissOuterLoading: dismissLoadingToast,
       })
 
-      const result = redeemResp?.data
-
-      if (result?.success) {
-        if (result.message) {
-          await showRedeemResultToast(true, result.message)
-        }
+      if (results.length === 1 && results[0]?.success) {
+        await showRedeemResultToast(true, results[0].message)
         return
       }
 
-      if (result?.code === "MULTIPLE_ACCOUNTS" && result.candidates?.length) {
-        dismissLoadingToast()
-        const selected = await showAccountSelectToast(result.candidates, {
-          title: t("redemptionAssist:accountSelect.titleMultiple", {
-            defaultValue: "检测到多个可用账号，请选择一个用于兑换",
-          }),
-        })
-
-        if (!selected) {
-          return
-        }
-
-        const manualResult = await performManualRedeem(
-          selected.id,
-          code,
-          loadingMessage,
-        )
-        if (manualResult?.message) {
-          await showRedeemResultToast(
-            !!manualResult.success,
-            manualResult.message,
-          )
-        }
-        return
-      }
-
-      if (result?.code === "NO_ACCOUNTS" && result.allAccounts?.length) {
-        dismissLoadingToast()
-        const selected = await showAccountSelectToast(result.allAccounts, {
-          title: t("redemptionAssist:accountSelect.titleFallback"),
-        })
-
-        if (!selected) {
-          return
-        }
-
-        const manualResult = await performManualRedeem(
-          selected.id,
-          code,
-          loadingMessage,
-        )
-        if (manualResult?.message) {
-          await showRedeemResultToast(
-            !!manualResult.success,
-            manualResult.message,
-          )
-        }
-        return
-      }
-
-      const fallbackMessage = t("redemptionAssist:messages.redeemFailed")
-      const msg = redeemResp?.error || result?.message || fallbackMessage
-      await showRedeemResultToast(false, msg)
+      await showRedeemBatchResultToast(results, retry)
     } finally {
       dismissLoadingToast()
     }
@@ -412,26 +334,128 @@ function maskCode(code: string): string {
 }
 
 /**
- * Handles manual redemption flow when the user must choose an account.
+ * Redeems a code for a specific account, via background runtime messaging.
  * @param accountId Selected account id.
  * @param code Redemption code.
- * @param loadingMessage Message displayed while awaiting backend result.
- * @returns Result payload from background message.
+ * @returns Redeem result payload from background.
  */
-async function performManualRedeem(
-  accountId: string,
-  code: string,
-  loadingMessage: string,
-) {
-  const toastId = await showRedeemLoadingToast(loadingMessage)
-  try {
-    const manualResp: any = await sendRuntimeMessage({
-      action: "redemptionAssist:autoRedeem",
-      accountId,
+async function redeemForAccount(accountId: string, code: string) {
+  const manualResp: any = await sendRuntimeMessage({
+    action: "redemptionAssist:autoRedeem",
+    accountId,
+    code,
+  })
+  return manualResp?.data
+}
+
+type RedeemBatchItem = {
+  code: string
+  preview: string
+  success: boolean
+  message: string
+}
+
+/**
+ * Redeems multiple codes sequentially (no concurrent requests) and returns the
+ * result list plus a retry handler for a single code.
+ * @param params Sequential redeem parameters.
+ * @param params.url Page URL to infer account candidates.
+ * @param params.codes Selected redemption codes to redeem.
+ * @param params.dismissOuterLoading Dismiss outer loading toast before user prompts.
+ * @returns Results list and per-code retry handler.
+ */
+async function redeemCodesSequential(params: {
+  url: string
+  codes: string[]
+  dismissOuterLoading: () => void
+}) {
+  let forcedAccountId: string | null = null
+
+  const redeemOne = async (code: string): Promise<RedeemBatchItem> => {
+    if (forcedAccountId) {
+      const manual = await redeemForAccount(forcedAccountId, code)
+      const message =
+        manual?.message || t("redemptionAssist:messages.redeemFailed")
+      return {
+        code,
+        preview: maskCode(code),
+        success: !!manual?.success,
+        message,
+      }
+    }
+
+    const redeemResp: any = await sendRuntimeMessage({
+      action: "redemptionAssist:autoRedeemByUrl",
+      url: params.url,
       code,
     })
-    return manualResp?.data
-  } finally {
-    dismissToast(toastId)
+
+    const result = redeemResp?.data
+
+    if (result?.success) {
+      return {
+        code,
+        preview: maskCode(code),
+        success: true,
+        message: result.message || "",
+      }
+    }
+
+    if (result?.code === "MULTIPLE_ACCOUNTS" && result.candidates?.length) {
+      params.dismissOuterLoading()
+      const selected = await showAccountSelectToast(result.candidates, {
+        title: t("redemptionAssist:accountSelect.titleMultiple"),
+      })
+
+      if (!selected) {
+        return {
+          code,
+          preview: maskCode(code),
+          success: false,
+          message: t("redemptionAssist:messages.cancelled"),
+        }
+      }
+
+      forcedAccountId = selected.id
+      return redeemOne(code)
+    }
+
+    if (result?.code === "NO_ACCOUNTS" && result.allAccounts?.length) {
+      params.dismissOuterLoading()
+      const selected = await showAccountSelectToast(result.allAccounts, {
+        title: t("redemptionAssist:accountSelect.titleFallback"),
+      })
+
+      if (!selected) {
+        return {
+          code,
+          preview: maskCode(code),
+          success: false,
+          message: t("redemptionAssist:messages.cancelled"),
+        }
+      }
+
+      forcedAccountId = selected.id
+      return redeemOne(code)
+    }
+
+    const fallbackMessage = t("redemptionAssist:messages.redeemFailed")
+    const msg = redeemResp?.error || result?.message || fallbackMessage
+    return {
+      code,
+      preview: maskCode(code),
+      success: false,
+      message: msg,
+    }
+  }
+
+  const results: RedeemBatchItem[] = []
+  for (const code of params.codes) {
+    results.push(await redeemOne(code))
+  }
+
+  return {
+    results,
+    retry: redeemOne,
   }
 }
