@@ -3,10 +3,18 @@ import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
-import { Card, CardItem, CardList, IconButton, Input } from "~/components/ui"
+import {
+  Button,
+  Card,
+  CardItem,
+  CardList,
+  IconButton,
+  Input,
+} from "~/components/ui"
+import { getSiteApiRouter, NEW_API } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-
-import { showUpdateToast } from "../../../../../utils/toastHelpers"
+import { showUpdateToast } from "~/utils/toastHelpers"
+import { joinUrl } from "~/utils/url"
 
 /**
  * Settings panel for configuring New API connection credentials (base URL, admin token, user ID).
@@ -59,6 +67,12 @@ export default function NewApiSettings() {
     showUpdateToast(success, t("newApi.fields.userIdLabel"))
   }
 
+  const trimmedBaseUrl = localBaseUrl.trim()
+  const shouldShowAdminCredentialsLink = Boolean(trimmedBaseUrl)
+  const adminCredentialsUrl = shouldShowAdminCredentialsLink
+    ? joinUrl(trimmedBaseUrl, getSiteApiRouter(NEW_API).adminCredentialsPath)
+    : ""
+
   return (
     <SettingSection
       id="new-api"
@@ -81,6 +95,24 @@ export default function NewApiSettings() {
               />
             }
           />
+
+          {shouldShowAdminCredentialsLink && (
+            <CardItem
+              title={t("newApi.adminCredentialsLink.title")}
+              description={t("newApi.adminCredentialsLink.description")}
+              rightContent={
+                <Button variant="link" size="sm">
+                  <a
+                    href={adminCredentialsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {t("newApi.adminCredentialsLink.open")}
+                  </a>
+                </Button>
+              }
+            />
+          )}
 
           <CardItem
             title={t("newApi.fields.adminTokenLabel")}

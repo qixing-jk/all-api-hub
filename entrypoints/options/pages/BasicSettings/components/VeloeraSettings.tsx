@@ -3,9 +3,18 @@ import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
-import { Card, CardItem, CardList, IconButton, Input } from "~/components/ui"
+import {
+  Button,
+  Card,
+  CardItem,
+  CardList,
+  IconButton,
+  Input,
+} from "~/components/ui"
+import { getSiteApiRouter, VELOERA } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { showUpdateToast } from "~/utils/toastHelpers"
+import { joinUrl } from "~/utils/url"
 
 /**
  * Settings panel for configuring Veloera connection credentials (base URL, admin token, user ID).
@@ -58,6 +67,12 @@ export default function VeloeraSettings() {
     showUpdateToast(success, t("veloera.fields.userIdLabel"))
   }
 
+  const trimmedBaseUrl = localBaseUrl.trim()
+  const shouldShowAdminCredentialsLink = Boolean(trimmedBaseUrl)
+  const adminCredentialsUrl = shouldShowAdminCredentialsLink
+    ? joinUrl(trimmedBaseUrl, getSiteApiRouter(VELOERA).adminCredentialsPath)
+    : ""
+
   return (
     <SettingSection
       id="veloera"
@@ -80,6 +95,24 @@ export default function VeloeraSettings() {
               />
             }
           />
+
+          {shouldShowAdminCredentialsLink && (
+            <CardItem
+              title={t("veloera.adminCredentialsLink.title")}
+              description={t("veloera.adminCredentialsLink.description")}
+              rightContent={
+                <Button variant="link" size="sm">
+                  <a
+                    href={adminCredentialsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {t("veloera.adminCredentialsLink.open")}
+                  </a>
+                </Button>
+              }
+            />
+          )}
 
           <CardItem
             title={t("veloera.fields.adminTokenLabel")}

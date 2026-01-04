@@ -51,6 +51,7 @@ function makeTitleRegex(name: string): RegExp {
 const DEFAULT_USAGE_PATH = "/console/log"
 const DEFAULT_CHECKIN_PATH = "/console/personal"
 const DEFAULT_REDEEM_PATH = "/console/topup"
+const DEFAULT_ADMIN_CREDENTIALS_PATH = DEFAULT_CHECKIN_PATH
 
 // 定义各站点对应的 API 路径
 export const SITE_API_ROUTER: Record<string, any> = {
@@ -58,12 +59,14 @@ export const SITE_API_ROUTER: Record<string, any> = {
   [NEW_API]: {
     usagePath: DEFAULT_USAGE_PATH,
     checkInPath: "/console/personal",
+    adminCredentialsPath: "/console/personal",
   },
   [VO_API]: { usagePath: DEFAULT_USAGE_PATH, redeemPath: "/wallet" },
   [VELOERA]: {
     usagePath: "/app/logs/api-usage",
     checkInPath: "/app/me",
     redeemPath: "/app/wallet",
+    adminCredentialsPath: "/app/me",
   },
   [ONE_HUB]: { usagePath: "/panel/log", redeemPath: "/panel/topup" },
   [DONE_HUB]: { usagePath: "/panel/log", redeemPath: "/panel/topup" },
@@ -73,6 +76,7 @@ export const SITE_API_ROUTER: Record<string, any> = {
   Default: {
     usagePath: DEFAULT_USAGE_PATH,
     checkInPath: DEFAULT_CHECKIN_PATH,
+    adminCredentialsPath: DEFAULT_ADMIN_CREDENTIALS_PATH,
     redeemPath: DEFAULT_REDEEM_PATH,
   },
 }

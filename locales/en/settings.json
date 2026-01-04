@@ -119,6 +119,11 @@
     "urlDesc": "Set the base URL for New API integration",
     "tokenDesc": "System access token for the administrator user",
     "userIdDesc": "Administrator user ID (numeric only)",
+    "adminCredentialsLink": {
+      "title": "Quick access",
+      "description": "Open the admin personal settings page to find the system access token and user ID.",
+      "open": "Open page"
+    },
     "fields": {
       "baseUrlLabel": "Base URL",
       "baseUrlPlaceholder": "https://api.example.com",
@@ -134,6 +139,11 @@
     "urlDesc": "Set the base URL for Veloera integration",
     "tokenDesc": "System access token for the administrator user",
     "userIdDesc": "Administrator user ID (numeric only)",
+    "adminCredentialsLink": {
+      "title": "Quick access",
+      "description": "Open the admin personal settings page to find the system access token and user ID.",
+      "open": "Open page"
+    },
     "fields": {
       "baseUrlLabel": "Base URL",
       "baseUrlPlaceholder": "https://api.example.com",

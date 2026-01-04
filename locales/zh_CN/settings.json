@@ -117,8 +117,13 @@
     "title": "New API 集成设置",
     "description": "配置用于连接 New API 兼容服务的集成设置。",
     "urlDesc": "设置用于 New API 集成的基础 URL",
-    "tokenDesc": "管理员用户的系统访问令牌",
-    "userIdDesc": "管理员用户 ID (纯数字)",
+    "tokenDesc": "管理员用户的系统访问令牌，请在 New API 管理后台 -> 个人设置 -> 安全设置 -> 系统访问令牌 处生成",
+    "userIdDesc": "管理员用户 ID (纯数字)，请在 New API 管理后台 -> 个人设置 处查看",
+    "adminCredentialsLink": {
+      "title": "快速获取",
+      "description": "打开管理后台个人设置页面，快速获取系统访问令牌和用户 ID。",
+      "open": "打开页面"
+    },
     "fields": {
       "baseUrlLabel": "基础 URL",
       "baseUrlPlaceholder": "https://api.example.com",
@@ -132,8 +137,13 @@
     "title": "Veloera 集成设置",
     "description": "配置用于连接 Veloera 兼容服务的集成设置。",
     "urlDesc": "设置用于 Veloera 集成的基础 URL",
-    "tokenDesc": "管理员用户的系统访问令牌",
-    "userIdDesc": "管理员用户 ID (纯数字)",
+    "tokenDesc": "管理员用户的系统访问令牌，请在 Veloera 管理后台 -> 个人设置 -> 个人信息 处生成",
+    "userIdDesc": "管理员用户 ID (纯数字)，请在 Veloera 管理后台 -> 个人设置 处查看",
+    "adminCredentialsLink": {
+      "title": "快速获取",
+      "description": "打开管理后台个人设置页面，快速获取系统访问令牌和用户 ID。",
+      "open": "打开页面"
+    },
     "fields": {
       "baseUrlLabel": "基础 URL",
       "baseUrlPlaceholder": "https://api.example.com",
