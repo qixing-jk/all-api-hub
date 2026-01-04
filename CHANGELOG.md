@@ -1,5 +1,24 @@
 # Changelog
 
+## [3.0.0](https://github.com/qixing-jk/all-api-hub/compare/v2.39.0...v3.0.0) (2026-01-04)
+
+
+### Features
+
+* **accounts:** implement multi-account cookie authentication ([#290](https://github.com/qixing-jk/all-api-hub/issues/290)) ([e1a6b73](https://github.com/qixing-jk/all-api-hub/commit/e1a6b739dfe4134c4b99e68d2dc35d327c17e70c))
+* Add CLI proxy model configuration and UI components ([#322](https://github.com/qixing-jk/all-api-hub/issues/322)) ([0ce135c](https://github.com/qixing-jk/all-api-hub/commit/0ce135c2ee404f3ed047334b89da89a6d1019802))
+* **config:** migrate check-in to dual status tracking ([#325](https://github.com/qixing-jk/all-api-hub/issues/325)) ([c38622f](https://github.com/qixing-jk/all-api-hub/commit/c38622fcc469d0a1967f5c46b54a7fc1f0b4a902))
+
+
+### Bug Fixes
+
+* **router:** update check-in path for NEW_API site ([dcc2adf](https://github.com/qixing-jk/all-api-hub/commit/dcc2adf25f2e7e4a1de04be98900f66a5c6f58a9))
+
+
+### Miscellaneous Chores
+
+* release 3.0.0 ([74f90b5](https://github.com/qixing-jk/all-api-hub/commit/74f90b5cb1064aa1f75194b58613bda99e4961a0))
+
 ## [2.39.0](https://github.com/qixing-jk/all-api-hub/compare/v2.38.0...v2.39.0) (2026-01-03)
 
 
