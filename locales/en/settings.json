@@ -115,32 +115,32 @@
   },
   "newApi": {
     "title": "New API Integration Settings",
-    "description": "Configure integration settings for connecting to New API compatible services",
+    "description": "Configure integration settings for connecting to New API compatible services.",
     "urlDesc": "Set the base URL for New API integration",
-    "tokenDesc": "Token for accessing New API admin functions",
-    "userIdDesc": "User identification ID for New API",
+    "tokenDesc": "System access token for the administrator user",
+    "userIdDesc": "Administrator user ID (numeric only)",
     "fields": {
       "baseUrlLabel": "Base URL",
       "baseUrlPlaceholder": "https://api.example.com",
-      "adminTokenLabel": "Admin token",
-      "userIdLabel": "User ID",
-      "showToken": "Show token",
-      "hideToken": "Hide token"
+      "adminTokenLabel": "Administrator's system access token",
+      "userIdLabel": "Administrator user ID",
+      "showToken": "Show system access token",
+      "hideToken": "Hide system access token"
     }
   },
   "veloera": {
     "title": "Veloera Integration Settings",
-    "description": "Configure integration settings for connecting to Veloera compatible services",
+    "description": "Configure integration settings for connecting to Veloera compatible services.",
     "urlDesc": "Set the base URL for Veloera integration",
-    "tokenDesc": "Token for accessing Veloera admin functions",
-    "userIdDesc": "User identification ID for Veloera",
+    "tokenDesc": "System access token for the administrator user",
+    "userIdDesc": "Administrator user ID (numeric only)",
     "fields": {
       "baseUrlLabel": "Base URL",
       "baseUrlPlaceholder": "https://api.example.com",
-      "adminTokenLabel": "Admin token",
-      "userIdLabel": "User ID",
-      "showToken": "Show token",
-      "hideToken": "Hide token"
+      "adminTokenLabel": "Administrator's system access token",
+      "userIdLabel": "Administrator user ID",
+      "showToken": "Show system access token",
+      "hideToken": "Hide system access token"
     }
   },
   "managedSite": {
