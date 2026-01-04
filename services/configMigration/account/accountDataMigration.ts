@@ -5,10 +5,11 @@
 
 import type { SiteAccount } from "~/types"
 
+import { migrateCheckInDualStatusConfig } from "./checkInDualStatusMigration"
 import { migrateCheckInConfig } from "./checkInMigration"
 
 // Current version of the configuration schema
-export const CURRENT_CONFIG_VERSION = 1
+export const CURRENT_CONFIG_VERSION = 2
 
 /**
  * Migration function type
@@ -29,8 +30,12 @@ const migrations: Record<number, MigrationFunction> = {
     return migrated
   },
 
-  // Future migrations will be added here:
-  // 2: (account: SiteAccount): SiteAccount => { ... },
+  // Version 1 -> 2: Split site check-in vs custom check-in state
+  2: (account: SiteAccount): SiteAccount => {
+    const migrated = migrateCheckInDualStatusConfig(account)
+    migrated.configVersion = 2
+    return migrated
+  },
 }
 
 /**

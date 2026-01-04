@@ -402,9 +402,10 @@ class AccountStorageService {
   }
 
   /**
-   * Mark account as checked-in for today (sets date + flag).
+   * Mark account as checked-in for today via the site check-in flow
+   * (sets date + flag under checkIn.siteStatus).
    */
-  async markAccountAsCheckedIn(id: string): Promise<boolean> {
+  async markAccountAsSiteCheckedIn(id: string): Promise<boolean> {
     try {
       const account = await this.getAccountById(id)
 
@@ -419,12 +420,52 @@ class AccountStorageService {
       return this.updateAccount(id, {
         checkIn: {
           ...currentCheckIn,
-          isCheckedInToday: true,
-          lastCheckInDate: todayDate,
+          siteStatus: {
+            ...(currentCheckIn.siteStatus ?? {}),
+            isCheckedInToday: true,
+            lastCheckInDate: todayDate,
+          },
         },
       })
     } catch (error) {
       console.error("标记账号为已签到失败:", error)
+      return false
+    }
+  }
+
+  /**
+   * Mark account as checked-in for today via the custom check-in URL flow
+   * (sets date + flag under checkIn.customCheckIn).
+   */
+  async markAccountAsCustomCheckedIn(id: string): Promise<boolean> {
+    try {
+      const account = await this.getAccountById(id)
+
+      if (!account) {
+        throw new Error(t("messages:storage.accountNotFound", { id }))
+      }
+
+      const url = account.checkIn?.customCheckIn?.url
+      if (typeof url !== "string" || url.trim() === "") {
+        return false
+      }
+
+      const today = new Date()
+      const todayDate = today.toISOString().split("T")[0]
+      const currentCheckIn = account.checkIn ?? { enableDetection: false }
+
+      return this.updateAccount(id, {
+        checkIn: {
+          ...currentCheckIn,
+          customCheckIn: {
+            ...(currentCheckIn.customCheckIn ?? {}),
+            isCheckedInToday: true,
+            lastCheckInDate: todayDate,
+          },
+        },
+      })
+    } catch (error) {
+      console.error("标记账号自定义签到为已完成失败:", error)
       return false
     }
   }
@@ -440,13 +481,13 @@ class AccountStorageService {
 
       for (const account of accounts) {
         if (
-          account.checkIn?.customCheckInUrl &&
-          account.checkIn.lastCheckInDate &&
-          account.checkIn.lastCheckInDate !== today &&
-          account.checkIn.isCheckedInToday === true
+          account.checkIn?.customCheckIn?.url &&
+          account.checkIn.customCheckIn.lastCheckInDate &&
+          account.checkIn.customCheckIn.lastCheckInDate !== today &&
+          account.checkIn.customCheckIn.isCheckedInToday === true
         ) {
           // 日期已过，重置签到状态
-          account.checkIn.isCheckedInToday = false
+          account.checkIn.customCheckIn.isCheckedInToday = false
           needsSave = true
         }
       }
@@ -496,27 +537,25 @@ class AccountStorageService {
         enableDetection: currentCheckIn.enableDetection ?? false,
       }
 
-      if (!currentCheckIn.customCheckInUrl) {
-        try {
-          const support = await getApiService(
-            account.site_type,
-          ).fetchSupportCheckIn({
-            baseUrl,
-            auth,
-          })
+      try {
+        const support = await getApiService(
+          account.site_type,
+        ).fetchSupportCheckIn({
+          baseUrl,
+          auth,
+        })
 
-          if (typeof support === "boolean") {
-            checkInForRefresh = {
-              ...checkInForRefresh,
-              enableDetection: support,
-            }
+        if (typeof support === "boolean") {
+          checkInForRefresh = {
+            ...checkInForRefresh,
+            enableDetection: support,
           }
-        } catch (error) {
-          console.warn(
-            `[AccountStorage] Failed to determine check-in support for ${baseUrl}:`,
-            error,
-          )
         }
+      } catch (error) {
+        console.warn(
+          `[AccountStorage] Failed to determine check-in support for ${baseUrl}:`,
+          error,
+        )
       }
 
       // 刷新账号数据
@@ -539,27 +578,23 @@ class AccountStorageService {
 
       // 如果成功获取数据，更新账号信息
       if (result.success && result.data) {
-        // 处理签到配置
-        if (account.checkIn?.customCheckInUrl) {
-          // 有自定义签到URL的账号，需要检查日期重置
-          const today = new Date().toISOString().split("T")[0]
-          const { lastCheckInDate } = account.checkIn
+        // Merge API check-in status (siteStatus) with local custom check-in state.
+        const today = new Date().toISOString().split("T")[0]
+        const nextCheckIn = { ...(result.data.checkIn ?? account.checkIn) }
 
-          if (lastCheckInDate && lastCheckInDate !== today) {
-            // 日期变了，重置签到状态
-            updateData.checkIn = {
-              ...account.checkIn,
-              isCheckedInToday: false,
-              lastCheckInDate: undefined,
-            }
-          } else {
-            // 保留当前的签到状态（不被刷新覆盖）
-            updateData.checkIn = account.checkIn
+        if (
+          nextCheckIn.customCheckIn?.url &&
+          nextCheckIn.customCheckIn.lastCheckInDate &&
+          nextCheckIn.customCheckIn.lastCheckInDate !== today
+        ) {
+          nextCheckIn.customCheckIn = {
+            ...nextCheckIn.customCheckIn,
+            isCheckedInToday: false,
+            lastCheckInDate: undefined,
           }
-        } else {
-          // 没有自定义签到URL，使用API返回的签到状态
-          updateData.checkIn = result.data.checkIn
         }
+
+        updateData.checkIn = nextCheckIn
 
         updateData.account_info = {
           ...account.account_info,

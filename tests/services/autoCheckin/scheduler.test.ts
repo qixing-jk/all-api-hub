@@ -43,7 +43,7 @@ vi.mock("~/services/accountStorage", () => ({
   accountStorage: {
     getAllAccounts: vi.fn(),
     updateAccount: vi.fn(),
-    markAccountAsCheckedIn: vi.fn(),
+    markAccountAsSiteCheckedIn: vi.fn(),
   },
 }))
 

@@ -37,7 +37,7 @@ describe("checkInMigration", () => {
     }) as SiteAccount
 
   describe("Scenario 1: Can check in (supports_check_in: true, can_check_in: true)", () => {
-    it("creates checkIn object with isCheckedInToday: false", () => {
+    it("creates checkIn object with siteStatus.isCheckedInToday: false", () => {
       const account = createSiteAccount({
         supports_check_in: true,
         can_check_in: true,
@@ -47,7 +47,9 @@ describe("checkInMigration", () => {
 
       expect(migrated.checkIn).toEqual({
         enableDetection: true,
-        isCheckedInToday: false, // Inverted from can_check_in: true
+        siteStatus: {
+          isCheckedInToday: false, // Inverted from can_check_in: true
+        },
       })
 
       // Legacy fields should be removed
@@ -57,7 +59,7 @@ describe("checkInMigration", () => {
   })
 
   describe("Scenario 2: Already checked in (supports_check_in: true, can_check_in: false)", () => {
-    it("creates checkIn object with isCheckedInToday: true", () => {
+    it("creates checkIn object with siteStatus.isCheckedInToday: true", () => {
       const account = createSiteAccount({
         supports_check_in: true,
         can_check_in: false,
@@ -67,7 +69,9 @@ describe("checkInMigration", () => {
 
       expect(migrated.checkIn).toEqual({
         enableDetection: true,
-        isCheckedInToday: true, // Inverted from can_check_in: false
+        siteStatus: {
+          isCheckedInToday: true, // Inverted from can_check_in: false
+        },
       })
 
       expect(migrated).not.toHaveProperty("supports_check_in")
@@ -76,7 +80,7 @@ describe("checkInMigration", () => {
   })
 
   describe("Scenario 3: can_check_in is undefined", () => {
-    it("defaults to isCheckedInToday: false when can_check_in is undefined", () => {
+    it("defaults to siteStatus.isCheckedInToday: false when can_check_in is undefined", () => {
       const account = createSiteAccount({
         supports_check_in: true,
         // can_check_in is undefined
@@ -86,7 +90,9 @@ describe("checkInMigration", () => {
 
       expect(migrated.checkIn).toEqual({
         enableDetection: true,
-        isCheckedInToday: false, // Defaults to false when can_check_in is undefined
+        siteStatus: {
+          isCheckedInToday: false, // Defaults to false when can_check_in is undefined
+        },
       })
       expect(migrated).not.toHaveProperty("supports_check_in")
       expect(migrated).not.toHaveProperty("can_check_in")
@@ -126,8 +132,8 @@ describe("checkInMigration", () => {
     it("returns account unchanged when checkIn already exists and no legacy fields", () => {
       const existingCheckIn = {
         enableDetection: true,
-        isCheckedInToday: false,
-        customCheckInUrl: "https://custom.com",
+        siteStatus: { isCheckedInToday: false },
+        customCheckIn: { url: "https://custom.com" },
       }
 
       const account = createSiteAccount({
@@ -143,7 +149,7 @@ describe("checkInMigration", () => {
     it("preserves existing checkIn and does not clean up legacy fields when checkIn exists", () => {
       const existingCheckIn = {
         enableDetection: false,
-        isCheckedInToday: true,
+        siteStatus: { isCheckedInToday: true },
       }
 
       const account = createSiteAccount({
@@ -173,7 +179,9 @@ describe("checkInMigration", () => {
 
       expect(migrated.checkIn).toEqual({
         enableDetection: true,
-        isCheckedInToday: false, // Defaults to false when can_check_in is undefined
+        siteStatus: {
+          isCheckedInToday: false, // Defaults to false when can_check_in is undefined
+        },
       })
       expect(migrated).not.toHaveProperty("supports_check_in")
       expect(migrated).not.toHaveProperty("can_check_in")
@@ -248,8 +256,8 @@ describe("checkInMigration", () => {
       const account = createSiteAccount({
         checkIn: {
           enableDetection: true,
-          isCheckedInToday: false,
-          customCheckInUrl: "https://example.com/checkin",
+          siteStatus: { isCheckedInToday: false },
+          customCheckIn: { url: "https://example.com/checkin" },
         },
         supports_check_in: false, // This should NOT trigger cleanup when checkIn exists
         can_check_in: true,
@@ -260,8 +268,8 @@ describe("checkInMigration", () => {
       // Should preserve existing checkIn but does NOT clean up legacy fields when checkIn exists
       expect(migrated.checkIn).toEqual({
         enableDetection: true,
-        isCheckedInToday: false,
-        customCheckInUrl: "https://example.com/checkin",
+        siteStatus: { isCheckedInToday: false },
+        customCheckIn: { url: "https://example.com/checkin" },
       })
       expect(migrated).toHaveProperty("supports_check_in", false)
       expect(migrated).toHaveProperty("can_check_in", true)
@@ -270,11 +278,14 @@ describe("checkInMigration", () => {
     it("preserves complex checkIn configuration and does not clean up legacy fields when checkIn exists", () => {
       const complexCheckIn = {
         enableDetection: true,
-        isCheckedInToday: false,
-        customCheckInUrl: "https://custom.com/checkin",
-        customRedeemUrl: "https://custom.com/redeem",
-        lastCheckInDate: "2024-01-15",
-        openRedeemWithCheckIn: false,
+        siteStatus: { isCheckedInToday: false },
+        customCheckIn: {
+          url: "https://custom.com/checkin",
+          redeemUrl: "https://custom.com/redeem",
+          lastCheckInDate: "2024-01-15",
+          openRedeemWithCheckIn: false,
+          isCheckedInToday: true,
+        },
       }
 
       const account = createSiteAccount({

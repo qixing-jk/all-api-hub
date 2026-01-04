@@ -64,10 +64,16 @@ export function useAccountDialog({
   const [tags, setTags] = useState<string[]>([])
   const [checkIn, setCheckIn] = useState<CheckInConfig>({
     enableDetection: false,
-    isCheckedInToday: false,
-    customCheckInUrl: "",
-    customRedeemUrl: "",
-    openRedeemWithCheckIn: true,
+    autoCheckInEnabled: true,
+    siteStatus: {
+      isCheckedInToday: false,
+    },
+    customCheckIn: {
+      url: "",
+      redeemUrl: "",
+      openRedeemWithCheckIn: true,
+      isCheckedInToday: false,
+    },
   })
   const [siteType, setSiteType] = useState("unknown")
   const [authType, setAuthType] = useState(AuthTypeEnum.AccessToken)
@@ -96,10 +102,15 @@ export function useAccountDialog({
     setCheckIn({
       enableDetection: false,
       autoCheckInEnabled: true,
-      isCheckedInToday: false,
-      customCheckInUrl: "",
-      customRedeemUrl: "",
-      openRedeemWithCheckIn: true,
+      siteStatus: {
+        isCheckedInToday: false,
+      },
+      customCheckIn: {
+        url: "",
+        redeemUrl: "",
+        openRedeemWithCheckIn: true,
+        isCheckedInToday: false,
+      },
     })
     setSiteType("unknown")
     setAuthType(AuthTypeEnum.AccessToken)
@@ -123,11 +134,22 @@ export function useAccountDialog({
           setCheckIn({
             enableDetection: siteAccount.checkIn?.enableDetection ?? false,
             autoCheckInEnabled: siteAccount.checkIn?.autoCheckInEnabled ?? true,
-            isCheckedInToday: siteAccount.checkIn?.isCheckedInToday ?? false,
-            customCheckInUrl: siteAccount.checkIn?.customCheckInUrl ?? "",
-            customRedeemUrl: siteAccount.checkIn?.customRedeemUrl ?? "",
-            openRedeemWithCheckIn:
-              siteAccount.checkIn?.openRedeemWithCheckIn ?? true,
+            siteStatus: {
+              isCheckedInToday:
+                siteAccount.checkIn?.siteStatus?.isCheckedInToday ?? false,
+              lastCheckInDate: siteAccount.checkIn?.siteStatus?.lastCheckInDate,
+            },
+            customCheckIn: {
+              url: siteAccount.checkIn?.customCheckIn?.url ?? "",
+              redeemUrl: siteAccount.checkIn?.customCheckIn?.redeemUrl ?? "",
+              openRedeemWithCheckIn:
+                siteAccount.checkIn?.customCheckIn?.openRedeemWithCheckIn ??
+                true,
+              isCheckedInToday:
+                siteAccount.checkIn?.customCheckIn?.isCheckedInToday ?? false,
+              lastCheckInDate:
+                siteAccount.checkIn?.customCheckIn?.lastCheckInDate,
+            },
           })
           setSiteType(siteAccount.site_type || "")
           setAuthType(siteAccount.authType || AuthTypeEnum.AccessToken)
@@ -256,11 +278,20 @@ export function useAccountDialog({
         setCheckIn({
           enableDetection: resultData.checkIn?.enableDetection ?? false,
           autoCheckInEnabled: resultData.checkIn?.autoCheckInEnabled ?? true,
-          isCheckedInToday: resultData.checkIn?.isCheckedInToday ?? false,
-          customCheckInUrl: resultData.checkIn?.customCheckInUrl ?? "",
-          customRedeemUrl: resultData.checkIn?.customRedeemUrl ?? "",
-          openRedeemWithCheckIn:
-            resultData.checkIn?.openRedeemWithCheckIn ?? true,
+          siteStatus: {
+            isCheckedInToday:
+              resultData.checkIn?.siteStatus?.isCheckedInToday ?? false,
+            lastCheckInDate: resultData.checkIn?.siteStatus?.lastCheckInDate,
+          },
+          customCheckIn: {
+            url: resultData.checkIn?.customCheckIn?.url ?? "",
+            redeemUrl: resultData.checkIn?.customCheckIn?.redeemUrl ?? "",
+            openRedeemWithCheckIn:
+              resultData.checkIn?.customCheckIn?.openRedeemWithCheckIn ?? true,
+            isCheckedInToday:
+              resultData.checkIn?.customCheckIn?.isCheckedInToday ?? false,
+            lastCheckInDate: resultData.checkIn?.customCheckIn?.lastCheckInDate,
+          },
         })
 
         if (resultData.exchangeRate) {

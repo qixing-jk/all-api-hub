@@ -143,8 +143,10 @@ describe("navigation utilities", () => {
       baseUrl: "https://example.com",
       siteType: "one-api",
       checkIn: {
-        customCheckInUrl: "https://checkin.custom",
-        customRedeemUrl: "https://redeem.custom",
+        customCheckIn: {
+          url: "https://checkin.custom",
+          redeemUrl: "https://redeem.custom",
+        },
       },
     } as any
 

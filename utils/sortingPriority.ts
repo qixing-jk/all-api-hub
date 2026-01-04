@@ -162,13 +162,19 @@ function applySortingCriteria(
         const checkIn = item?.checkIn
         if (!checkIn) return false
 
-        const supportsCheckIn =
-          checkIn.enableDetection === true ||
-          (typeof checkIn.customCheckInUrl === "string" &&
-            checkIn.customCheckInUrl.trim() !== "")
+        const supportsSiteCheckIn = checkIn.enableDetection === true
+        const supportsCustomCheckIn =
+          typeof checkIn.customCheckIn?.url === "string" &&
+          checkIn.customCheckIn.url.trim() !== ""
 
-        // 只在支持签到且未签到的情况下返回 true
-        return supportsCheckIn && checkIn.isCheckedInToday === false
+        const siteNotCheckedIn =
+          supportsSiteCheckIn && checkIn.siteStatus?.isCheckedInToday === false
+        const customNotCheckedIn =
+          supportsCustomCheckIn &&
+          (checkIn.customCheckIn?.isCheckedInToday ?? false) === false
+
+        // Prefer accounts that still need either site check-in or custom check-in today.
+        return siteNotCheckedIn || customNotCheckedIn
       }
 
       const aNotCheckedIn = isNotCheckedIn(a) ? 1 : 0
@@ -179,14 +185,14 @@ function applySortingCriteria(
     }
 
     case SortingCriteriaType.CUSTOM_CHECK_IN_URL: {
-      const customCheckInA = a?.checkIn?.customCheckInUrl ? 1 : 0
-      const customCheckInB = b?.checkIn?.customCheckInUrl ? 1 : 0
+      const customCheckInA = a?.checkIn?.customCheckIn?.url ? 1 : 0
+      const customCheckInB = b?.checkIn?.customCheckIn?.url ? 1 : 0
       return customCheckInB - customCheckInA
     }
 
     case SortingCriteriaType.CUSTOM_REDEEM_URL: {
-      const customRedeemA = a?.checkIn?.customRedeemUrl ? 1 : 0
-      const customRedeemB = b?.checkIn?.customRedeemUrl ? 1 : 0
+      const customRedeemA = a?.checkIn?.customCheckIn?.redeemUrl ? 1 : 0
+      const customRedeemB = b?.checkIn?.customCheckIn?.redeemUrl ? 1 : 0
       return customRedeemB - customRedeemA
     }
 

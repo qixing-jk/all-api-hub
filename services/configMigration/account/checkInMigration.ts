@@ -26,7 +26,7 @@ function needsCheckInMigration(account: Partial<SiteAccount>): boolean {
  * The migration logic is as follows:
  * 1. If `supports_check_in` is true, create the `checkIn` object.
  *    - `enableDetection` is set to `true`.
- *    - `isCheckedInToday` is set based on the INVERTED value of `can_check_in`.
+ *    - `checkIn.siteStatus.isCheckedInToday` is set based on the INVERTED value of `can_check_in`.
  *      - `can_check_in: true` (can check in) => `isCheckedInToday: false` (not checked in today)
  *      - `can_check_in: false` (already checked in) => `isCheckedInToday: true` (checked in today)
  * 2. If `supports_check_in` is not true, the `checkIn` object is not created.
@@ -37,17 +37,17 @@ function needsCheckInMigration(account: Partial<SiteAccount>): boolean {
  * // Scenario 1: Can check in
  * const account1 = { id: '1', supports_check_in: true, can_check_in: true };
  * const migrated1 = migrateCheckInConfig(account1);
- * // migrated1 will be { id: '1', checkIn: { enableDetection: true, isCheckedInToday: false } }
+ * // migrated1 will be { id: '1', checkIn: { enableDetection: true, siteStatus: { isCheckedInToday: false } } }
  * @example
  * // Scenario 2: Already checked in
  * const account2 = { id: '2', supports_check_in: true, can_check_in: false };
  * const migrated2 = migrateCheckInConfig(account2);
- * // migrated2 will be { id: '2', checkIn: { enableDetection: true, isCheckedInToday: true } }
+ * // migrated2 will be { id: '2', checkIn: { enableDetection: true, siteStatus: { isCheckedInToday: true } } }
  * @example
  * // Scenario 3: `can_check_in` is undefined
  * const account3 = { id: '3', supports_check_in: true };
  * const migrated3 = migrateCheckInConfig(account3);
- * // migrated3 will be { id: '3', checkIn: { enableDetection: true, isCheckedInToday: false } }
+ * // migrated3 will be { id: '3', checkIn: { enableDetection: true, siteStatus: { isCheckedInToday: false } } }
  * @example
  * // Scenario 4: Feature not supported
  * const account4 = { id: '4', supports_check_in: false };
@@ -55,9 +55,9 @@ function needsCheckInMigration(account: Partial<SiteAccount>): boolean {
  * // migrated4 will be { id: '4' }
  * @example
  * // Scenario 5: Already migrated
- * const account5 = { id: '5', checkIn: { enableDetection: true, isCheckedInToday: false } };
+ * const account5 = { id: '5', checkIn: { enableDetection: true, siteStatus: { isCheckedInToday: false } } };
  * const migrated5 = migrateCheckInConfig(account5);
- * // migrated5 will be { id: '5', checkIn: { enableDetection: true, isCheckedInToday: false } }
+ * // migrated5 will be { id: '5', checkIn: { enableDetection: true, siteStatus: { isCheckedInToday: false } } }
  */
 export function migrateCheckInConfig<T extends Partial<SiteAccount>>(
   account: T,
@@ -83,7 +83,9 @@ export function migrateCheckInConfig<T extends Partial<SiteAccount>>(
       // The logic is inverted:
       // old `can_check_in: true` (can check in) => new `isCheckedInToday: false` (not checked in)
       // old `can_check_in: false` (already checked in) => new `isCheckedInToday: true` (checked in)
-      isCheckedInToday: !(migratedAccount.can_check_in ?? true),
+      siteStatus: {
+        isCheckedInToday: !(migratedAccount.can_check_in ?? true),
+      },
     }
   }
 

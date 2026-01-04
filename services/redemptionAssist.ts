@@ -205,10 +205,11 @@ class RedemptionAssistService {
 
         const router = getSiteApiRouter(account.siteType)
         const resolvedCheckInUrl =
-          account.checkIn?.customCheckInUrl ||
+          account.checkIn?.customCheckIn?.url ||
           joinUrl(origin, router.checkInPath)
         const resolvedRedeemUrl =
-          account.checkIn?.customRedeemUrl || joinUrl(origin, router.redeemPath)
+          account.checkIn?.customCheckIn?.redeemUrl ||
+          joinUrl(origin, router.redeemPath)
 
         const checkInPattern =
           buildUrlPrefixWhitelistPattern(resolvedCheckInUrl)
@@ -346,7 +347,7 @@ class RedemptionAssistService {
     const sameDomainCandidates = searchResults
       .map((result) => result.account)
       .filter((account) => {
-        const customCheckInUrl = account.checkIn?.customCheckInUrl
+        const customCheckInUrl = account.checkIn?.customCheckIn?.url
         if (!customCheckInUrl) return false
         const accountHost = this.getHostname(customCheckInUrl)
         return accountHost === hostname

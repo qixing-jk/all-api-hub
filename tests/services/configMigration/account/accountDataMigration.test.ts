@@ -88,7 +88,7 @@ describe("accountDataMigration", () => {
   })
 
   describe("migrateAccountConfig", () => {
-    it("migrates account from version 0 to version 1", () => {
+    it("migrates account from version 0 to current version", () => {
       const oldAccount = createSiteAccount({
         configVersion: 0,
         supports_check_in: true,
@@ -100,16 +100,70 @@ describe("accountDataMigration", () => {
       expect(migrated.configVersion).toBe(CURRENT_CONFIG_VERSION)
       expect(migrated.checkIn).toBeDefined()
       expect(migrated.checkIn?.enableDetection).toBe(true)
-      expect(migrated.checkIn?.isCheckedInToday).toBe(true)
+      expect(migrated.checkIn?.siteStatus?.isCheckedInToday).toBe(true)
       // Legacy fields should be removed
       expect(migrated).not.toHaveProperty("supports_check_in")
       expect(migrated).not.toHaveProperty("can_check_in")
     })
 
+    it("migrates version 1 custom check-in fields into checkIn.customCheckIn", () => {
+      const legacyV1Account = createSiteAccount({
+        configVersion: 1,
+        checkIn: {
+          enableDetection: true,
+          isCheckedInToday: true,
+          lastCheckInDate: "2000-01-01",
+          customCheckInUrl: "https://custom.example.com/checkin",
+          customRedeemUrl: "https://custom.example.com/redeem",
+          openRedeemWithCheckIn: false,
+        } as any,
+      })
+
+      const migrated = migrateAccountConfig(legacyV1Account)
+
+      expect(migrated.configVersion).toBe(CURRENT_CONFIG_VERSION)
+      expect(migrated.checkIn?.customCheckIn).toEqual({
+        url: "https://custom.example.com/checkin",
+        redeemUrl: "https://custom.example.com/redeem",
+        openRedeemWithCheckIn: false,
+        isCheckedInToday: true,
+        lastCheckInDate: "2000-01-01",
+      })
+
+      // Legacy keys should not survive on the migrated shape.
+      expect((migrated.checkIn as any).customCheckInUrl).toBeUndefined()
+      expect((migrated.checkIn as any).customRedeemUrl).toBeUndefined()
+      expect((migrated.checkIn as any).openRedeemWithCheckIn).toBeUndefined()
+    })
+
+    it("migrates version 1 site check-in status into checkIn.siteStatus", () => {
+      const legacyV1Account = createSiteAccount({
+        configVersion: 1,
+        checkIn: {
+          enableDetection: true,
+          isCheckedInToday: false,
+          lastCheckInDate: "2000-01-02",
+        } as any,
+      })
+
+      const migrated = migrateAccountConfig(legacyV1Account)
+
+      expect(migrated.configVersion).toBe(CURRENT_CONFIG_VERSION)
+      expect(migrated.checkIn?.siteStatus).toEqual({
+        isCheckedInToday: false,
+        lastCheckInDate: "2000-01-02",
+      })
+      expect((migrated.checkIn as any).isCheckedInToday).toBeUndefined()
+      expect((migrated.checkIn as any).lastCheckInDate).toBeUndefined()
+    })
+
     it("leaves account unchanged when already at current version", () => {
       const currentAccount = createSiteAccount({
         configVersion: CURRENT_CONFIG_VERSION,
-        checkIn: { enableDetection: false, isCheckedInToday: true },
+        checkIn: {
+          enableDetection: false,
+          siteStatus: { isCheckedInToday: true },
+        },
       })
 
       const migrated = migrateAccountConfig(currentAccount)
@@ -123,7 +177,7 @@ describe("accountDataMigration", () => {
         configVersion: CURRENT_CONFIG_VERSION + 1,
         checkIn: {
           enableDetection: true,
-          customCheckInUrl: "https://custom.com",
+          customCheckIn: { url: "https://custom.com" },
         },
       })
 
@@ -296,8 +350,8 @@ describe("accountDataMigration", () => {
           configVersion: CURRENT_CONFIG_VERSION,
           checkIn: {
             enableDetection: true,
-            isCheckedInToday: false,
-            customCheckInUrl: "https://custom.com/checkin",
+            siteStatus: { isCheckedInToday: false },
+            customCheckIn: { url: "https://custom.com/checkin" },
           },
           notes: "Modern account",
           site_name: "Site D",
@@ -315,10 +369,10 @@ describe("accountDataMigration", () => {
 
       // Verify specific migration scenarios
       expect(migrated1?.checkIn?.enableDetection).toBe(true)
-      expect(migrated1?.checkIn?.isCheckedInToday).toBe(true) // was can_check_in: false
+      expect(migrated1?.checkIn?.siteStatus?.isCheckedInToday).toBe(true) // was can_check_in: false
 
       expect(migrated2?.checkIn?.enableDetection).toBe(true)
-      expect(migrated2?.checkIn?.isCheckedInToday).toBe(false) // was can_check_in: true
+      expect(migrated2?.checkIn?.siteStatus?.isCheckedInToday).toBe(false) // was can_check_in: true
 
       expect(migrated3?.checkIn).toBeUndefined() // supports_check_in was false, so no checkIn object created
 
@@ -333,8 +387,8 @@ describe("accountDataMigration", () => {
       // Unchanged account should remain the same
       expect(unchanged?.checkIn).toEqual({
         enableDetection: true,
-        isCheckedInToday: false,
-        customCheckInUrl: "https://custom.com/checkin",
+        siteStatus: { isCheckedInToday: false },
+        customCheckIn: { url: "https://custom.com/checkin" },
       })
     })
   })

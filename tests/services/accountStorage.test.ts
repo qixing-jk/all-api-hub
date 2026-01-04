@@ -98,7 +98,11 @@ const createAccount = (overrides: Partial<SiteAccount> = {}): SiteAccount => {
     can_check_in: overrides.can_check_in,
     supports_check_in: overrides.supports_check_in,
     authType: overrides.authType ?? AuthTypeEnum.AccessToken,
-    checkIn: overrides.checkIn || { enableDetection: true },
+    checkIn: overrides.checkIn || {
+      enableDetection: true,
+      autoCheckInEnabled: true,
+      siteStatus: { isCheckedInToday: false },
+    },
   }
 }
 
@@ -121,10 +125,10 @@ describe("accountStorage core behaviors", () => {
         today_requests_count: 0,
         checkIn: {
           ...(request.checkIn ?? { enableDetection: false }),
-          isCheckedInToday: false,
-          customCheckInUrl: "",
-          customRedeemUrl: "",
-          openRedeemWithCheckIn: true,
+          siteStatus: {
+            ...((request.checkIn?.siteStatus ?? {}) as any),
+            isCheckedInToday: false,
+          },
         },
       },
       healthStatus: {
@@ -256,18 +260,20 @@ describe("accountStorage core behaviors", () => {
     expect(updated?.tags).toEqual([])
   })
 
-  it("markAccountAsCheckedIn should persist today's check-in state", async () => {
+  it("markAccountAsSiteCheckedIn should persist today's check-in state", async () => {
     const account = createAccount({
       id: "check-1",
       checkIn: {
         enableDetection: true,
-        isCheckedInToday: false,
+        siteStatus: {
+          isCheckedInToday: false,
+        },
       },
     })
     seedStorage([account])
 
     const today = new Date().toISOString().split("T")[0]
-    const success = await accountStorage.markAccountAsCheckedIn("check-1")
+    const success = await accountStorage.markAccountAsSiteCheckedIn("check-1")
 
     expect(success).toBe(true)
 
@@ -276,8 +282,36 @@ describe("accountStorage core behaviors", () => {
       (acc) => acc.id === "check-1",
     )
 
-    expect(updatedAccount?.checkIn?.isCheckedInToday).toBe(true)
-    expect(updatedAccount?.checkIn?.lastCheckInDate).toBe(today)
+    expect(updatedAccount?.checkIn?.siteStatus?.isCheckedInToday).toBe(true)
+    expect(updatedAccount?.checkIn?.siteStatus?.lastCheckInDate).toBe(today)
+  })
+
+  it("markAccountAsCustomCheckedIn should persist today's custom check-in state", async () => {
+    const account = createAccount({
+      id: "custom-1",
+      checkIn: {
+        enableDetection: true,
+        customCheckIn: {
+          url: "https://example.com/check",
+          isCheckedInToday: false,
+        },
+      },
+    })
+    seedStorage([account])
+
+    const today = new Date().toISOString().split("T")[0]
+    const success =
+      await accountStorage.markAccountAsCustomCheckedIn("custom-1")
+
+    expect(success).toBe(true)
+
+    const updatedConfig = storageData.get(STORAGE_KEY)
+    const updatedAccount = updatedConfig?.accounts.find(
+      (acc) => acc.id === "custom-1",
+    )
+
+    expect(updatedAccount?.checkIn?.customCheckIn?.isCheckedInToday).toBe(true)
+    expect(updatedAccount?.checkIn?.customCheckIn?.lastCheckInDate).toBe(today)
   })
 
   it("getAccountStats should aggregate numeric fields across accounts", async () => {
@@ -421,9 +455,11 @@ describe("accountStorage core behaviors", () => {
       id: "stale",
       checkIn: {
         enableDetection: true,
-        customCheckInUrl: "https://example.com/check",
-        isCheckedInToday: true,
-        lastCheckInDate: "2000-01-01",
+        customCheckIn: {
+          url: "https://example.com/check",
+          isCheckedInToday: true,
+          lastCheckInDate: "2000-01-01",
+        },
       },
     })
 
@@ -431,9 +467,11 @@ describe("accountStorage core behaviors", () => {
       id: "fresh",
       checkIn: {
         enableDetection: true,
-        customCheckInUrl: "https://example.com/check",
-        isCheckedInToday: true,
-        lastCheckInDate: new Date().toISOString().split("T")[0],
+        customCheckIn: {
+          url: "https://example.com/check",
+          isCheckedInToday: true,
+          lastCheckInDate: new Date().toISOString().split("T")[0],
+        },
       },
     })
 
@@ -445,13 +483,13 @@ describe("accountStorage core behaviors", () => {
     const updatedStale = config?.accounts.find((acc) => acc.id === "stale")
     const updatedFresh = config?.accounts.find((acc) => acc.id === "fresh")
 
-    expect(updatedStale?.checkIn?.isCheckedInToday).toBe(false)
-    expect(updatedStale?.checkIn?.lastCheckInDate).toBe(
-      staleAccount.checkIn.lastCheckInDate,
+    expect(updatedStale?.checkIn?.customCheckIn?.isCheckedInToday).toBe(false)
+    expect(updatedStale?.checkIn?.customCheckIn?.lastCheckInDate).toBe(
+      staleAccount.checkIn.customCheckIn?.lastCheckInDate,
     )
-    expect(updatedFresh?.checkIn?.isCheckedInToday).toBe(true)
-    expect(updatedFresh?.checkIn?.lastCheckInDate).toBe(
-      freshAccount.checkIn.lastCheckInDate,
+    expect(updatedFresh?.checkIn?.customCheckIn?.isCheckedInToday).toBe(true)
+    expect(updatedFresh?.checkIn?.customCheckIn?.lastCheckInDate).toBe(
+      freshAccount.checkIn.customCheckIn?.lastCheckInDate,
     )
   })
 
@@ -547,10 +585,9 @@ describe("accountStorage core behaviors", () => {
         today_requests_count: 0,
         checkIn: {
           enableDetection: true,
-          isCheckedInToday: false,
-          customCheckInUrl: "",
-          customRedeemUrl: "",
-          openRedeemWithCheckIn: true,
+          siteStatus: {
+            isCheckedInToday: false,
+          },
         },
       },
       healthStatus: {

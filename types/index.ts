@@ -69,7 +69,7 @@ export interface SiteAccount {
   tags?: string[] // 标签
   /**
    * Legacy flag indicating whether the account can be checked in today.
-   * @deprecated Use `checkIn.isCheckedInToday` instead.
+   * @deprecated Use `checkIn.siteStatus.isCheckedInToday` instead.
    */
   can_check_in?: boolean // 是否可以签到
   /**
@@ -114,44 +114,61 @@ export interface CheckInConfig {
   autoCheckInEnabled?: boolean
 
   /**
-   * Today's check-in status.
-   * - true: Already checked in today
-   * - false: Can check in today (not yet checked in)
-   * - undefined: Status unknown or detection not enabled
-   *
-   * This field is for enableDetection and customCheckInUrl.
-   * @see fetchAccountData
-   * @see resetExpiredCheckIns
-   * @see markAccountAsCheckedIn
+   * Status for the built-in site check-in flow (API-backed detection).
+   * This status is independent from the custom check-in URL flow.
    */
-  isCheckedInToday?: boolean
+  siteStatus?: {
+    /**
+     * Today's check-in status.
+     * - true: Already checked in today
+     * - false: Can check in today (not yet checked in)
+     * - undefined: Status unknown or detection not enabled
+     */
+    isCheckedInToday?: boolean
+
+    /**
+     * The date (YYYY-MM-DD format) when the site check-in was last marked as done.
+     * Used by the auto check-in scheduler to reset the daily state.
+     */
+    lastCheckInDate?: string
+  }
 
   /**
-   * Custom URL for check-in operations.
-   * When provided, the system will navigate to this URL instead of the default check-in page.
-   * This allows users to specify alternative check-in endpoints.
+   * Configuration and status for the custom check-in URL flow.
+   * This does not disable the site check-in feature and can co-exist with it.
    */
-  customCheckInUrl?: string
+  customCheckIn?: {
+    /**
+     * Custom URL for check-in operations.
+     * When provided, the UI can open this URL in addition to the site check-in page.
+     */
+    url?: string
 
-  /**
-   * The date (YYYY-MM-DD format) when the user last checked in manually.
-   * Used to reset the check-in status daily for custom check-in URLs.
-   */
-  lastCheckInDate?: string
+    /**
+     * Custom URL path for redeem/topup operations.
+     */
+    redeemUrl?: string
 
-  /**
-   * Custom URL path for redeem/topup operations.
-   */
-  customRedeemUrl?: string
+    /**
+     * Whether to open the redeem page when opening a custom check-in URL.
+     * Only applicable when `customCheckIn.url` is set.
+     * Default: true (for backward compatibility)
+     */
+    openRedeemWithCheckIn?: boolean
 
-  /**
-   * Whether to open the redeem page when opening a custom check-in URL.
-   * Only applicable when customCheckInUrl is set.
-   * When true, both the custom check-in URL and redeem page will be opened.
-   * When false, only the custom check-in URL will be opened.
-   * Default: true (for backward compatibility)
-   */
-  openRedeemWithCheckIn?: boolean
+    /**
+     * Today's custom check-in status.
+     * - true: Already opened/checked in today
+     * - false: Not yet opened/checked in today
+     */
+    isCheckedInToday?: boolean
+
+    /**
+     * The date (YYYY-MM-DD format) when the user last checked in via the custom URL.
+     * Used to reset the custom check-in status daily.
+     */
+    lastCheckInDate?: string
+  }
 }
 
 // 存储配置
@@ -222,7 +239,7 @@ export interface DisplaySiteData {
   tags?: string[]
   /**
    * Legacy flag indicating whether the account can be checked in today.
-   * @deprecated Use `checkIn.isCheckedInToday` instead.
+   * @deprecated Use `checkIn.siteStatus.isCheckedInToday` instead.
    */
   can_check_in?: boolean // 是否可以签到
   /**

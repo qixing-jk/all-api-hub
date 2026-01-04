@@ -408,7 +408,7 @@ const _openCheckInPage = async (account: DisplaySiteData) => {
  */
 const _openCustomCheckInPage = async (account: DisplaySiteData) => {
   const customCheckInUrl =
-    account.checkIn?.customCheckInUrl ||
+    account.checkIn?.customCheckIn?.url ||
     joinUrl(account.baseUrl, getSiteApiRouter(account.siteType).checkInPath)
   await createActiveTab(customCheckInUrl)
 }
@@ -419,7 +419,7 @@ const _openCustomCheckInPage = async (account: DisplaySiteData) => {
  */
 const _openRedeemPage = async (account: DisplaySiteData) => {
   const redeemUrl =
-    account.checkIn?.customRedeemUrl ||
+    account.checkIn?.customCheckIn?.redeemUrl ||
     joinUrl(account.baseUrl, getSiteApiRouter(account.siteType).redeemPath)
   await createActiveTab(redeemUrl)
 }

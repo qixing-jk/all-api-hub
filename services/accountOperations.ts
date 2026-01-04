@@ -159,10 +159,16 @@ export async function autoDetectAccount(
         exchangeRate: defaultExchangeRate,
         checkIn: {
           enableDetection: checkSupport ?? false,
-          isCheckedInToday: false,
-          customCheckInUrl: "",
-          customRedeemUrl: "",
-          openRedeemWithCheckIn: true,
+          autoCheckInEnabled: true,
+          siteStatus: {
+            isCheckedInToday: false,
+          },
+          customCheckIn: {
+            url: "",
+            redeemUrl: "",
+            openRedeemWithCheckIn: true,
+            isCheckedInToday: false,
+          },
         },
         siteType: siteType,
       },

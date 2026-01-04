@@ -23,7 +23,9 @@ interface AccountActionsContextType {
   ) => Promise<void>
   handleDeleteAccount: (account: DisplaySiteData) => void
   handleCopyUrl: (account: DisplaySiteData) => void
-  handleMarkAsCheckedIn: (account: DisplaySiteData) => Promise<void>
+  handleMarkCustomCheckInAsCheckedIn: (
+    account: DisplaySiteData,
+  ) => Promise<void>
 }
 
 // 2. 创建 Context
@@ -109,10 +111,12 @@ export const AccountActionsProvider = ({
   /**
    * 标记账户为已签到
    */
-  const handleMarkAsCheckedIn = useCallback(
+  const handleMarkCustomCheckInAsCheckedIn = useCallback(
     async (account: DisplaySiteData) => {
       try {
-        const success = await accountStorage.markAccountAsCheckedIn(account.id)
+        const success = await accountStorage.markAccountAsCustomCheckedIn(
+          account.id,
+        )
         if (success) {
           await loadAccountData()
         }
@@ -129,14 +133,14 @@ export const AccountActionsProvider = ({
       handleRefreshAccount,
       handleDeleteAccount,
       handleCopyUrl,
-      handleMarkAsCheckedIn,
+      handleMarkCustomCheckInAsCheckedIn,
     }),
     [
       refreshingAccountId,
       handleRefreshAccount,
       handleDeleteAccount,
       handleCopyUrl,
-      handleMarkAsCheckedIn,
+      handleMarkCustomCheckInAsCheckedIn,
     ],
   )
 
@@ -155,7 +159,7 @@ export const useAccountActionsContext = () => {
     !context.handleRefreshAccount ||
     !context.handleDeleteAccount ||
     !context.handleCopyUrl ||
-    !context.handleMarkAsCheckedIn
+    !context.handleMarkCustomCheckInAsCheckedIn
   ) {
     throw new Error(
       "useAccountActionsContext 必须在 AccountActionsProvider 中使用，并且必须提供所有必需的函数",

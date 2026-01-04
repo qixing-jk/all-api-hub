@@ -40,7 +40,7 @@ export interface AccountData extends TodayStatsData {
   quota: number
   /**
    * Legacy flag indicating whether the account can be checked in today.
-   * @deprecated Use `checkIn.isCheckedInToday` instead.
+   * @deprecated Use `checkIn.siteStatus.isCheckedInToday` instead.
    */
   can_check_in?: boolean
   checkIn: CheckInConfig

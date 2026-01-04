@@ -688,10 +688,9 @@ export async function fetchAccountData(
   const quotaPromise = fetchAccountQuota(request)
   const todayUsagePromise = fetchTodayUsage(request)
   const todayIncomePromise = fetchTodayIncome(request)
-  const checkInPromise =
-    resolvedCheckIn?.enableDetection && !resolvedCheckIn.customCheckInUrl
-      ? fetchCheckInStatus(request)
-      : Promise.resolve<boolean | undefined>(undefined)
+  const checkInPromise = resolvedCheckIn?.enableDetection
+    ? fetchCheckInStatus(request)
+    : Promise.resolve<boolean | undefined>(undefined)
 
   const [quota, todayUsage, todayIncome, canCheckIn] = await Promise.all([
     quotaPromise,
@@ -706,7 +705,10 @@ export async function fetchAccountData(
     ...todayIncome,
     checkIn: {
       ...resolvedCheckIn,
-      isCheckedInToday: !(canCheckIn ?? true),
+      siteStatus: {
+        ...(resolvedCheckIn.siteStatus ?? {}),
+        isCheckedInToday: !(canCheckIn ?? true),
+      },
     },
   }
 }

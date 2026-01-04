@@ -126,7 +126,7 @@ export const RedemptionAccountSelectToast: React.FC<
         ) : (
           displayedAccounts.map((account) => {
             const checkInUrl =
-              account.checkIn?.customCheckInUrl || account.baseUrl
+              account.checkIn?.customCheckIn?.url || account.baseUrl
             return (
               <label
                 key={account.id}

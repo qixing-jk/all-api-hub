@@ -174,7 +174,7 @@ function generateHighlights(
     }
 
     if (result.matchedFields.includes("customCheckInUrl")) {
-      const customCheckInUrl = result.account.checkIn?.customCheckInUrl
+      const customCheckInUrl = result.account.checkIn?.customCheckIn?.url
       if (customCheckInUrl) {
         const normalizedCheckIn = normalizeForMatching(customCheckInUrl)
         const checkInTokens = tokenInfos.filter((token) =>
@@ -191,7 +191,7 @@ function generateHighlights(
     }
 
     if (result.matchedFields.includes("customRedeemUrl")) {
-      const customRedeemUrl = result.account.checkIn?.customRedeemUrl
+      const customRedeemUrl = result.account.checkIn?.customCheckIn?.redeemUrl
       if (customRedeemUrl) {
         const normalizedRedeem = normalizeForMatching(customRedeemUrl)
         const redeemTokens = tokenInfos.filter((token) =>

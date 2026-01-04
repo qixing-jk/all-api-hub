@@ -347,8 +347,8 @@ class AutoCheckinScheduler {
       detectionEnabled,
       autoCheckinEnabled,
       providerAvailable,
-      isCheckedInToday: account.checkIn?.isCheckedInToday,
-      lastCheckInDate: account.checkIn?.lastCheckInDate,
+      isCheckedInToday: account.checkIn?.siteStatus?.isCheckedInToday,
+      lastCheckInDate: account.checkIn?.siteStatus?.lastCheckInDate,
       skipReason,
     }
   }
@@ -406,7 +406,7 @@ class AutoCheckinScheduler {
         providerResult.status === CHECKIN_RESULT_STATUS.SUCCESS ||
         providerResult.status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED
       ) {
-        await accountStorage.markAccountAsCheckedIn(account.id)
+        await accountStorage.markAccountAsSiteCheckedIn(account.id)
         console.log(
           `[AutoCheckin] ${account.site_name}: ${providerResult.status} - ${providerResult.rawMessage ?? providerResult.messageKey ?? ""}`,
         )
@@ -599,16 +599,21 @@ class AutoCheckinScheduler {
       // isCheckedInToday: true means already checked in (skip until tomorrow)
       // isCheckedInToday: false/undefined means can check in today
       for (const account of allAccounts) {
+        const siteLastCheckInDate = account.checkIn?.siteStatus?.lastCheckInDate
+        const siteCheckedInToday = account.checkIn?.siteStatus?.isCheckedInToday
         if (
-          account.checkIn?.lastCheckInDate &&
-          account.checkIn.lastCheckInDate !== today &&
-          account.checkIn.isCheckedInToday === true
+          siteLastCheckInDate &&
+          siteLastCheckInDate !== today &&
+          siteCheckedInToday === true
         ) {
           // Date changed, reset status to allow check-in today
           await accountStorage.updateAccount(account.id, {
             checkIn: {
               ...account.checkIn,
-              isCheckedInToday: false, // New day -> not yet checked in
+              siteStatus: {
+                ...(account.checkIn.siteStatus ?? {}),
+                isCheckedInToday: false, // New day -> not yet checked in
+              },
             },
           })
         }

@@ -83,13 +83,18 @@ export default function SiteInfo({ site, highlights }: SiteInfoProps) {
     togglePinAccount,
     isPinFeatureEnabled,
   } = useAccountDataContext()
-  const { handleRefreshAccount, refreshingAccountId, handleMarkAsCheckedIn } =
-    useAccountActionsContext()
+  const {
+    handleRefreshAccount,
+    refreshingAccountId,
+    handleMarkCustomCheckInAsCheckedIn,
+  } = useAccountActionsContext()
   const detectedAccountId = detectedAccount?.id
 
   const isPinned = isAccountPinned(site.id)
   const pinTooltipLabel = isPinned ? t("actions.unpin") : t("actions.pin")
   const isRefreshing = refreshingAccountId === site.id
+  const customCheckInUrl = site.checkIn?.customCheckIn?.url
+  const customRedeemUrl = site.checkIn?.customCheckIn?.redeemUrl
 
   const healthCode = site.health?.code
   const canOpenHealthSettings =
@@ -117,35 +122,100 @@ export default function SiteInfo({ site, highlights }: SiteInfoProps) {
     }
   }
 
-  const handleCheckIn = (customCheckInUrl?: string) => async () => {
+  const handleSiteCheckIn = async () => {
     try {
-      if (customCheckInUrl) {
-        await handleMarkAsCheckedIn(site)
-        const shouldOpenRedeem = site.checkIn?.openRedeemWithCheckIn ?? true
-        if (shouldOpenRedeem) {
-          await openCheckInAndRedeem(site)
-        } else {
-          await openCustomCheckInPage(site)
-        }
+      await openCheckInPage(site)
+    } catch (error) {
+      console.error("Failed to handle check-in navigation:", error)
+    }
+  }
+
+  const handleCustomCheckIn = async () => {
+    try {
+      await handleMarkCustomCheckInAsCheckedIn(site)
+      const shouldOpenRedeem =
+        site.checkIn?.customCheckIn?.openRedeemWithCheckIn ?? true
+      if (shouldOpenRedeem) {
+        await openCheckInAndRedeem(site)
       } else {
-        await openCheckInPage(site)
+        await openCustomCheckInPage(site)
       }
     } catch (error) {
       console.error("Failed to handle check-in navigation:", error)
     }
   }
 
-  const renderCheckInIcon = () => {
-    if (site.checkIn?.customCheckInUrl) {
-      if (site.checkIn.isCheckedInToday) {
-        return (
+  const renderCheckInIndicators = () => {
+    const indicators: React.ReactNode[] = []
+
+    const customUrl = site.checkIn?.customCheckIn?.url
+    const hasCustomUrl =
+      typeof customUrl === "string" && customUrl.trim() !== ""
+
+    if (site.checkIn?.enableDetection) {
+      const siteCheckedIn = site.checkIn.siteStatus?.isCheckedInToday
+      if (siteCheckedIn === undefined) {
+        indicators.push(
           <Tooltip
+            key="site-checkin"
+            content={t("list.site.checkInUnsupported")}
+            position="top"
+            wrapperClassName="flex items-center"
+          >
+            <ExclamationTriangleIcon className="h-4 w-4 text-yellow-500" />
+          </Tooltip>,
+        )
+      } else if (siteCheckedIn) {
+        indicators.push(
+          <Tooltip
+            key="site-checkin"
             content={t("list.site.checkedInToday")}
             position="top"
             wrapperClassName="flex items-center"
           >
             <IconButton
-              onClick={handleCheckIn(site.checkIn.customCheckInUrl)}
+              onClick={handleSiteCheckIn}
+              variant="ghost"
+              size="xs"
+              aria-label={t("list.site.checkedInToday")}
+            >
+              <CheckCircleIcon className="h-4 w-4 text-green-500" />
+            </IconButton>
+          </Tooltip>,
+        )
+      } else {
+        indicators.push(
+          <Tooltip
+            key="site-checkin"
+            content={t("list.site.notCheckedInToday")}
+            position="top"
+            wrapperClassName="flex items-center"
+          >
+            <IconButton
+              onClick={handleSiteCheckIn}
+              variant="ghost"
+              size="xs"
+              aria-label={t("list.site.notCheckedInToday")}
+            >
+              <XCircleIcon className="h-4 w-4 text-red-500" />
+            </IconButton>
+          </Tooltip>,
+        )
+      }
+    }
+
+    if (hasCustomUrl) {
+      const isCustomCheckedIn = site.checkIn.customCheckIn?.isCheckedInToday
+      indicators.push(
+        isCustomCheckedIn ? (
+          <Tooltip
+            key="custom-checkin"
+            content={t("list.site.checkedInToday")}
+            position="top"
+            wrapperClassName="flex items-center"
+          >
+            <IconButton
+              onClick={handleCustomCheckIn}
               variant="ghost"
               size="xs"
               aria-label={t("list.site.checkedInToday")}
@@ -153,81 +223,34 @@ export default function SiteInfo({ site, highlights }: SiteInfoProps) {
               <CurrencyYenIcon className="h-4 w-4 text-green-500" />
             </IconButton>
           </Tooltip>
-        )
-      }
-
-      return (
-        <Tooltip
-          content={t("list.site.notCheckedInToday")}
-          position="top"
-          wrapperClassName="flex items-center"
-        >
-          <IconButton
-            onClick={handleCheckIn(site.checkIn.customCheckInUrl)}
-            variant="ghost"
-            size="xs"
-            aria-label={t("list.site.notCheckedInToday")}
-          >
-            <CurrencyYenIcon className="h-4 w-4 text-red-500" />
-          </IconButton>
-        </Tooltip>
-      )
-    }
-
-    if (site.checkIn?.enableDetection) {
-      if (site.checkIn.isCheckedInToday === undefined) {
-        return (
+        ) : (
           <Tooltip
-            content={t("list.site.checkInUnsupported")}
-            position="top"
-            wrapperClassName="flex items-center"
-          >
-            <ExclamationTriangleIcon className="h-4 w-4 text-yellow-500" />
-          </Tooltip>
-        )
-      }
-
-      if (site.checkIn.isCheckedInToday) {
-        return (
-          <Tooltip
-            content={t("list.site.checkedInToday")}
+            key="custom-checkin"
+            content={t("list.site.notCheckedInToday")}
             position="top"
             wrapperClassName="flex items-center"
           >
             <IconButton
-              onClick={handleCheckIn()}
+              onClick={handleCustomCheckIn}
               variant="ghost"
               size="xs"
-              aria-label={t("list.site.checkedInToday")}
+              aria-label={t("list.site.notCheckedInToday")}
             >
-              <CheckCircleIcon className="h-4 w-4 text-green-500" />
+              <CurrencyYenIcon className="h-4 w-4 text-red-500" />
             </IconButton>
           </Tooltip>
-        )
-      }
-
-      return (
-        <Tooltip
-          content={t("list.site.notCheckedInToday")}
-          position="top"
-          wrapperClassName="flex items-center"
-        >
-          <IconButton
-            onClick={handleCheckIn()}
-            variant="ghost"
-            size="xs"
-            aria-label={t("list.site.notCheckedInToday")}
-          >
-            <XCircleIcon className="h-4 w-4 text-red-500" />
-          </IconButton>
-        </Tooltip>
+        ),
       )
     }
 
-    return null
+    if (indicators.length === 0) {
+      return null
+    }
+
+    return <div className="flex items-center gap-1">{indicators}</div>
   }
 
-  const checkInIndicator = renderCheckInIcon()
+  const checkInIndicator = renderCheckInIndicators()
 
   const handleHealthClick = async () => {
     if (!isRefreshing) {
@@ -362,25 +385,25 @@ export default function SiteInfo({ site, highlights }: SiteInfoProps) {
           </div>
         )}
 
-        {highlights?.customCheckInUrl && site.checkIn?.customCheckInUrl && (
+        {highlights?.customCheckInUrl && customCheckInUrl && (
           <div className="mt-0.5 flex min-w-0 items-start gap-1">
             <ArrowPathIcon className="dark:text-dark-text-tertiary mt-0.5 h-3 w-3 shrink-0 text-gray-400" />
-            <Caption className="truncate" title={site.checkIn.customCheckInUrl}>
+            <Caption className="truncate" title={customCheckInUrl}>
               {renderHighlightedFragments(
                 highlights.customCheckInUrl,
-                site.checkIn.customCheckInUrl,
+                customCheckInUrl,
               )}
             </Caption>
           </div>
         )}
 
-        {highlights?.customRedeemUrl && site.checkIn?.customRedeemUrl && (
+        {highlights?.customRedeemUrl && customRedeemUrl && (
           <div className="mt-0.5 flex min-w-0 items-start gap-1">
             <GiftIcon className="dark:text-dark-text-tertiary mt-0.5 h-3 w-3 shrink-0 text-gray-400" />
-            <Caption className="truncate" title={site.checkIn.customRedeemUrl}>
+            <Caption className="truncate" title={customRedeemUrl}>
               {renderHighlightedFragments(
                 highlights.customRedeemUrl,
-                site.checkIn.customRedeemUrl,
+                customRedeemUrl,
               )}
             </Caption>
           </div>

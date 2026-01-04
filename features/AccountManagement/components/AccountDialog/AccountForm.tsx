@@ -275,9 +275,15 @@ export default function AccountForm({
         <Input
           type="url"
           id="custom-checkin-url"
-          value={checkIn.customCheckInUrl}
+          value={checkIn.customCheckIn?.url ?? ""}
           onChange={(e) =>
-            onCheckInChange({ ...checkIn, customCheckInUrl: e.target.value })
+            onCheckInChange({
+              ...checkIn,
+              customCheckIn: {
+                ...(checkIn.customCheckIn ?? { openRedeemWithCheckIn: true }),
+                url: e.target.value,
+              },
+            })
           }
           placeholder="https://example.com/api/checkin"
           leftIcon={<GlobeAltIcon className="h-5 w-5" />}
@@ -285,7 +291,7 @@ export default function AccountForm({
       </FormField>
 
       {/* Open Redeem with Check-in Toggle - Only shown when custom check-in URL is set */}
-      {checkIn.customCheckInUrl && (
+      {checkIn.customCheckIn?.url && (
         <div className="flex w-full items-center justify-between">
           <label
             htmlFor="open-redeem-with-checkin"
@@ -294,13 +300,19 @@ export default function AccountForm({
             {t("form.openRedeemWithCheckIn")}
           </label>
           <Switch
-            checked={checkIn.openRedeemWithCheckIn ?? true}
+            checked={checkIn.customCheckIn?.openRedeemWithCheckIn ?? true}
             onChange={(openRedeemWithCheckIn) =>
-              onCheckInChange({ ...checkIn, openRedeemWithCheckIn })
+              onCheckInChange({
+                ...checkIn,
+                customCheckIn: {
+                  ...(checkIn.customCheckIn ?? { url: "" }),
+                  openRedeemWithCheckIn,
+                },
+              })
             }
             id="open-redeem-with-checkin"
             className={`${
-              checkIn.openRedeemWithCheckIn ?? true
+              checkIn.customCheckIn?.openRedeemWithCheckIn ?? true
                 ? "bg-green-600"
                 : "bg-gray-200"
             } focus:ring-green-500`}
@@ -345,9 +357,15 @@ export default function AccountForm({
         <Input
           type="text"
           id="custom-redeem-url"
-          value={checkIn.customRedeemUrl || ""}
+          value={checkIn.customCheckIn?.redeemUrl ?? ""}
           onChange={(e) =>
-            onCheckInChange({ ...checkIn, customRedeemUrl: e.target.value })
+            onCheckInChange({
+              ...checkIn,
+              customCheckIn: {
+                ...(checkIn.customCheckIn ?? { url: "" }),
+                redeemUrl: e.target.value,
+              },
+            })
           }
           placeholder="https://example.com/console/topup"
           leftIcon={<GlobeAltIcon className="h-5 w-5" />}

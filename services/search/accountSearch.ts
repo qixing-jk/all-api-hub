@@ -208,7 +208,7 @@ export function searchAccounts(
       }
 
       // Match against customCheckInUrl
-      const customCheckInUrl = account.checkIn?.customCheckInUrl
+      const customCheckInUrl = account.checkIn?.customCheckIn?.url
       if (customCheckInUrl) {
         const checkInScore = scoreUrlMatch(customCheckInUrl, token)
         if (checkInScore > 0) {
@@ -218,7 +218,7 @@ export function searchAccounts(
       }
 
       // Match against customRedeemUrl
-      const customRedeemUrl = account.checkIn?.customRedeemUrl
+      const customRedeemUrl = account.checkIn?.customCheckIn?.redeemUrl
       if (customRedeemUrl) {
         const redeemScore = scoreUrlMatch(customRedeemUrl, token)
         if (redeemScore > 0) {

@@ -33,7 +33,7 @@ describe("createDynamicSortComparator", () => {
     authType: AuthTypeEnum.AccessToken,
     checkIn: {
       enableDetection: false,
-      isCheckedInToday: false,
+      siteStatus: { isCheckedInToday: false },
     },
     ...overrides,
   })
@@ -373,11 +373,17 @@ describe("createDynamicSortComparator", () => {
     it("should prioritize accounts that need check-in (isCheckedInToday=false)", () => {
       const needsCheckIn = createDisplaySiteData({
         id: "needs-checkin",
-        checkIn: { enableDetection: true, isCheckedInToday: false },
+        checkIn: {
+          enableDetection: true,
+          siteStatus: { isCheckedInToday: false },
+        },
       })
       const alreadyCheckedIn = createDisplaySiteData({
         id: "checked-in",
-        checkIn: { enableDetection: true, isCheckedInToday: true },
+        checkIn: {
+          enableDetection: true,
+          siteStatus: { isCheckedInToday: true },
+        },
       })
 
       const config = {
@@ -407,11 +413,17 @@ describe("createDynamicSortComparator", () => {
     it("should return 0 when both have same check-in status", () => {
       const account1 = createDisplaySiteData({
         id: "account-1",
-        checkIn: { enableDetection: true, isCheckedInToday: false },
+        checkIn: {
+          enableDetection: true,
+          siteStatus: { isCheckedInToday: false },
+        },
       })
       const account2 = createDisplaySiteData({
         id: "account-2",
-        checkIn: { enableDetection: true, isCheckedInToday: false },
+        checkIn: {
+          enableDetection: true,
+          siteStatus: { isCheckedInToday: false },
+        },
       })
 
       const config = {
@@ -443,7 +455,10 @@ describe("createDynamicSortComparator", () => {
       })
       const account2 = createDisplaySiteData({
         id: "account-2",
-        checkIn: { enableDetection: true, isCheckedInToday: false },
+        checkIn: {
+          enableDetection: true,
+          siteStatus: { isCheckedInToday: false },
+        },
       })
 
       const config = {
@@ -476,7 +491,9 @@ describe("createDynamicSortComparator", () => {
         id: "with-custom",
         checkIn: {
           enableDetection: true,
-          customCheckInUrl: "https://custom.com",
+          customCheckIn: {
+            url: "https://custom.com",
+          },
         },
       })
       const withoutCustomUrl = createDisplaySiteData({
@@ -512,14 +529,18 @@ describe("createDynamicSortComparator", () => {
         id: "account-1",
         checkIn: {
           enableDetection: true,
-          customCheckInUrl: "https://custom1.com",
+          customCheckIn: {
+            url: "https://custom1.com",
+          },
         },
       })
       const account2 = createDisplaySiteData({
         id: "account-2",
         checkIn: {
           enableDetection: true,
-          customCheckInUrl: "https://custom2.com",
+          customCheckIn: {
+            url: "https://custom2.com",
+          },
         },
       })
 
@@ -552,7 +573,9 @@ describe("createDynamicSortComparator", () => {
         id: "with-custom",
         checkIn: {
           enableDetection: true,
-          customRedeemUrl: "https://custom.com",
+          customCheckIn: {
+            redeemUrl: "https://custom.com",
+          },
         },
       })
       const withoutCustomUrl = createDisplaySiteData({
@@ -588,14 +611,18 @@ describe("createDynamicSortComparator", () => {
         id: "account-1",
         checkIn: {
           enableDetection: true,
-          customRedeemUrl: "https://custom1.com",
+          customCheckIn: {
+            redeemUrl: "https://custom1.com",
+          },
         },
       })
       const account2 = createDisplaySiteData({
         id: "account-2",
         checkIn: {
           enableDetection: true,
-          customRedeemUrl: "https://custom2.com",
+          customCheckIn: {
+            redeemUrl: "https://custom2.com",
+          },
         },
       })
 
@@ -1084,12 +1111,18 @@ describe("createDynamicSortComparator", () => {
       const account1 = createDisplaySiteData({
         id: "account-1",
         name: "Zebra",
-        checkIn: { enableDetection: true, isCheckedInToday: false },
+        checkIn: {
+          enableDetection: true,
+          siteStatus: { isCheckedInToday: false },
+        },
       })
       const account2 = createDisplaySiteData({
         id: "account-2",
         name: "Apple",
-        checkIn: { enableDetection: true, isCheckedInToday: true },
+        checkIn: {
+          enableDetection: true,
+          siteStatus: { isCheckedInToday: true },
+        },
       })
 
       // Priority: check-in (priority 0) > name (priority 1)
@@ -1203,15 +1236,18 @@ describe("createDynamicSortComparator", () => {
         health: { status: SiteHealthStatus.Error },
         checkIn: {
           enableDetection: true,
-          isCheckedInToday: false,
-          customCheckInUrl: "https://custom.com",
+          siteStatus: { isCheckedInToday: false },
+          customCheckIn: { url: "https://custom.com" },
         },
       })
       const account2 = createDisplaySiteData({
         id: "account-2",
         name: "Account2",
         health: { status: SiteHealthStatus.Healthy },
-        checkIn: { enableDetection: true, isCheckedInToday: true },
+        checkIn: {
+          enableDetection: true,
+          siteStatus: { isCheckedInToday: true },
+        },
       })
 
       const config = DEFAULT_SORTING_PRIORITY_CONFIG

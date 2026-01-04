@@ -21,9 +21,11 @@ const mockAccounts: DisplaySiteData[] = [
     authType: AuthTypeEnum.AccessToken,
     checkIn: {
       enableDetection: true,
-      isCheckedInToday: false,
-      customCheckInUrl: "https://checkin.openai.com/api",
-      customRedeemUrl: "https://redeem.openai.com/api",
+      siteStatus: { isCheckedInToday: false },
+      customCheckIn: {
+        url: "https://checkin.openai.com/api",
+        redeemUrl: "https://redeem.openai.com/api",
+      },
     },
     icon: "",
   },
@@ -44,9 +46,8 @@ const mockAccounts: DisplaySiteData[] = [
     authType: AuthTypeEnum.AccessToken,
     checkIn: {
       enableDetection: false,
-      isCheckedInToday: false,
-      customCheckInUrl: "",
-      customRedeemUrl: "",
+      siteStatus: { isCheckedInToday: false },
+      customCheckIn: { url: "", redeemUrl: "" },
     },
     icon: "",
   },
