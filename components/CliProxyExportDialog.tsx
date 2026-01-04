@@ -11,6 +11,7 @@ import {
 } from "~/components/ui"
 import { importToCliProxy } from "~/services/cliProxyService"
 import type { ApiToken, DisplaySiteData } from "~/types"
+import { safeRandomUUID } from "~/utils/identifier"
 import { showResultToast } from "~/utils/toastHelpers"
 import { joinUrl } from "~/utils/url"
 
@@ -53,9 +54,7 @@ export function CliProxyExportDialog(props: CliProxyExportDialogProps) {
     setProxyUrl("")
     setModels([
       {
-        id:
-          globalThis.crypto?.randomUUID?.() ??
-          `model-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        id: safeRandomUUID("model"),
         name: "",
         alias: "",
       },

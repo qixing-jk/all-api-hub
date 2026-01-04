@@ -2,6 +2,7 @@ import { ArrowRight } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { cn } from "~/lib/utils"
+import { safeRandomUUID } from "~/utils/identifier"
 
 import { Input } from "./input"
 import { RepeatableInput } from "./RepeatableInput"
@@ -46,9 +47,7 @@ export interface ModelListInputProps {
  */
 function createDefaultModelListItem(): ModelListItem {
   return {
-    id:
-      globalThis.crypto?.randomUUID?.() ??
-      `model-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    id: safeRandomUUID("model"),
     name: "",
     alias: "",
   }

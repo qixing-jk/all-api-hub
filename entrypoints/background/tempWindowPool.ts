@@ -20,6 +20,7 @@ import {
   removeTempWindowCookieRule,
 } from "~/utils/dnrCookieInjector"
 import { getErrorMessage } from "~/utils/error"
+import { safeRandomUUID } from "~/utils/identifier"
 import { isProtectionBypassFirefoxEnv } from "~/utils/protectionBypass"
 import { sanitizeUrlForLog } from "~/utils/sanitizeUrlForLog"
 import { TempWindowFetchParams } from "~/utils/tempWindowFetch"
@@ -485,8 +486,7 @@ export async function handleTempWindowFetch(
     return
   }
 
-  const tempRequestId =
-    requestId || `temp-fetch-${fetchUrl}-${crypto.randomUUID()}`
+  const tempRequestId = requestId || safeRandomUUID(`temp-fetch-${fetchUrl}`)
 
   logTempWindow("tempWindowFetchStart", {
     requestId: tempRequestId,

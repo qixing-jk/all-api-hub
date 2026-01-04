@@ -28,6 +28,7 @@ import {
   OPTIONS_PAGE_URL,
 } from "~/utils/browser"
 import { sendRuntimeMessage } from "~/utils/browserApi"
+import { safeRandomUUID } from "~/utils/identifier"
 import { isProtectionBypassFirefoxEnv } from "~/utils/protectionBypass"
 
 export type TempWindowResponseType = "json" | "text" | "arrayBuffer" | "blob"
@@ -412,7 +413,7 @@ async function fetchViaTempWindow<T>(
     )
   }
 
-  const requestId = `temp-fetch-${context.url}-${crypto.randomUUID()}`
+  const requestId = safeRandomUUID(`temp-fetch-${context.url}`)
   const suppressMinimize = true
   const payload: TempWindowFetchParams = {
     originUrl: context.baseUrl,

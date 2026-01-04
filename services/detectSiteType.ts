@@ -2,6 +2,7 @@ import { SITE_TITLE_RULES, UNKNOWN_SITE } from "~/constants/siteType"
 import { ApiError } from "~/services/apiService/common/errors"
 import { fetchApi, fetchApiData } from "~/services/apiService/common/utils"
 import { AuthTypeEnum } from "~/types"
+import { safeRandomUUID } from "~/utils/identifier"
 import {
   canUseTempWindowFetch,
   tempWindowFetch,
@@ -19,7 +20,7 @@ export const fetchSiteOriginalTitle = async (url: string) => {
   }
 
   const fetchUrl = new URL("/", url).toString()
-  const tempRequestId = `fetch-title-${fetchUrl}-${crypto.randomUUID()}`
+  const tempRequestId = safeRandomUUID(`fetch-title-${fetchUrl}`)
 
   // 首选通过临时上下文实际渲染页面并读取 document.title
   try {
