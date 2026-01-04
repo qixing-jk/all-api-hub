@@ -55,6 +55,8 @@ export { EmptyState } from "./EmptyState"
 export { Modal } from "./Dialog/Modal"
 export { Separator } from "./Separator"
 export { Checkbox } from "./checkbox"
+export { RepeatableInput, type RepeatableInputItem } from "./RepeatableInput"
+export { ModelListInput, type ModelListItem } from "./ModelListInput"
 
 // Typography Components
 export {
