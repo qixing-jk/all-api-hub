@@ -130,6 +130,7 @@ export function setupRuntimeMessageListeners() {
       if (request.action === "openSettings:checkinRedeem") {
         openOrFocusOptionsMenuItem(MENU_ITEM_IDS.BASIC, {
           tab: "checkinRedeem",
+          anchor: "redemption-assist",
         })
         sendResponse({ success: true })
         return true
