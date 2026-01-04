@@ -211,8 +211,7 @@ class RedemptionAssistService {
           account.checkIn?.customCheckIn?.redeemUrl ||
           joinUrl(origin, router.redeemPath)
 
-        const checkInPattern =
-          buildUrlPrefixWhitelistPattern(resolvedCheckInUrl)
+        const checkInPattern = buildOriginWhitelistPattern(resolvedCheckInUrl)
         if (checkInPattern) patterns.push(checkInPattern)
 
         const redeemPattern = buildUrlPrefixWhitelistPattern(resolvedRedeemUrl)

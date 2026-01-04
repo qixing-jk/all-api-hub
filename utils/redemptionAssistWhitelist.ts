@@ -13,7 +13,7 @@ export function buildOriginWhitelistPattern(url: string): string | null {
   if (!url) return null
   try {
     const parsed = new URL(url)
-    const origin = parsed.origin
+    const { origin } = parsed
     if (!origin) return null
     const escaped = escapeRegExp(origin)
     return `^${escaped}(?:[/?#].*)?$`
