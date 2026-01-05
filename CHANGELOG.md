@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.1.0](https://github.com/qixing-jk/all-api-hub/compare/v3.0.0...v3.1.0) (2026-01-05)
+
+
+### Features
+
+* Add admin credentials guidance to API settings ([#327](https://github.com/qixing-jk/all-api-hub/issues/327)) ([f655954](https://github.com/qixing-jk/all-api-hub/commit/f6559549d1b3c5d9ea0f66a4aeeef4400f0cab17))
+* **redemptionAssist:** add batch redemption support with per-code retry ([#329](https://github.com/qixing-jk/all-api-hub/issues/329)) ([9831abb](https://github.com/qixing-jk/all-api-hub/commit/9831abbdcf672efdb821de91cb2a404148ea6cfd))
+
 ## [3.0.0](https://github.com/qixing-jk/all-api-hub/compare/v2.39.0...v3.0.0) (2026-01-04)
 
 
