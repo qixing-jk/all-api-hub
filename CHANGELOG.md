@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.1.1](https://github.com/qixing-jk/all-api-hub/compare/v3.1.0...v3.1.1) (2026-01-06)
+
+
+### Bug Fixes
+
+* **manifest:** update host permissions to &lt;all_urls&gt; ([f1b2d3a](https://github.com/qixing-jk/all-api-hub/commit/f1b2d3a6ad88e6e65d4f17cd13e7b8a9813209bb))
+
 ## [3.1.0](https://github.com/qixing-jk/all-api-hub/compare/v3.0.0...v3.1.0) (2026-01-05)
 
 
