@@ -5,8 +5,30 @@
     "idleHint": "Select a token and model to start verification.",
     "notRunYet": "Not run yet",
     "requiresModelId": "Enter a model id to run this test.",
+    "unsupportedProbeForApiType": "{{probe}} probe is not supported for this API type.",
     "errors": {
       "unexpected": "Unexpected error"
+    },
+    "summaries": {
+      "modelsFetched": "Fetched {{count}} models.",
+      "noModelsReturned": "No models returned.",
+      "textGenerationSucceeded": "Text generation succeeded.",
+      "textGenerationUnexpectedResponse": "Unexpected response text.",
+      "noToolCallDetected": "No tool call detected (model may not support tools).",
+      "toolCallSucceeded": "Tool call succeeded.",
+      "structuredOutputSucceeded": "Structured output succeeded.",
+      "structuredOutputInvalid": "Invalid output.",
+      "webSearchUnsupportedAnthropic": "Web search probe is not supported for Anthropic endpoints.",
+      "webSearchSucceeded": "Web search succeeded.",
+      "webSearchNoResults": "No web search results.",
+      "webSearchGroundingSucceeded": "Web search/grounding succeeded.",
+      "webSearchGroundingNoResults": "No web search/grounding results.",
+      "webSearchUnsupportedForApiType": "Web search probe is not supported for this API type.",
+      "webSearchRequiresExplicitSupport": "Web search probe requires explicit API type support.",
+      "modelsProbeUnsupportedForApiType": "Models probe is only supported for OpenAI-compatible APIs.",
+      "noModelIdProvidedToRunProbe": "No model id provided to run probe.",
+      "noModelIdProvidedToRunProbes": "No model id provided to run probes.",
+      "noModelAvailableToRunProbes": "No model available to run probes."
     },
     "meta": {
       "token": "Token",

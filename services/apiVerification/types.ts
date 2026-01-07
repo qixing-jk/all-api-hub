@@ -17,7 +17,25 @@ export type ApiVerificationProbeResult = {
   id: ApiVerificationProbeId
   status: ApiVerificationProbeStatus
   latencyMs: number
+  /**
+   * Human-readable summary of the probe result.
+   *
+   * Prefer {@link summaryKey} + {@link summaryParams} in UI-facing scenarios so the
+   * message can be translated. `summary` remains as a safe fallback for dynamic
+   * error messages and older callers.
+   */
   summary: string
+  /**
+   * Optional i18n key for rendering {@link summary} in the UI.
+   *
+   * This is expected to be resolved by the caller's i18n namespace (e.g. the UI
+   * uses the `apiVerification` namespace).
+   */
+  summaryKey?: string
+  /**
+   * Optional interpolation params for {@link summaryKey}.
+   */
+  summaryParams?: Record<string, unknown>
   /**
    * Best-effort diagnostics about what the probe sent.
    * Must never include secrets (e.g., apiKey).

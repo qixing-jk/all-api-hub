@@ -245,6 +245,8 @@ describe("apiVerificationService", () => {
     })
 
     expect(result.status).toBe("fail")
-    expect(result.summary.toLowerCase()).toContain("model")
+    expect(result.summaryKey).toBe(
+      "verifyDialog.summaries.noModelIdProvidedToRunProbe",
+    )
   })
 })

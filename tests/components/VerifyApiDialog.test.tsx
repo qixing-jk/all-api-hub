@@ -184,4 +184,68 @@ describe("VerifyApiDialog", () => {
     fireEvent.click(outputToggle)
     expect(await within(probeCard).findByText(/"bar": 2/)).toBeInTheDocument()
   })
+
+  it("shows i18n summary for unsupported probes", async () => {
+    mockFetchAccountTokens.mockResolvedValueOnce([
+      {
+        id: 1,
+        user_id: 1,
+        key: "secret",
+        status: 1,
+        name: "token-1",
+        created_time: 0,
+        accessed_time: 0,
+        expired_time: 0,
+        remain_quota: 0,
+        unlimited_quota: true,
+        used_quota: 0,
+      },
+    ])
+
+    mockRunApiVerificationProbe.mockResolvedValueOnce({
+      id: "web-search",
+      status: "unsupported",
+      latencyMs: 0,
+      summary: "service-provided summary",
+    })
+
+    render(
+      <VerifyApiDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={{
+          id: "a1",
+          name: "Account",
+          username: "u",
+          balance: { USD: 0, CNY: 0 },
+          todayConsumption: { USD: 0, CNY: 0 },
+          todayIncome: { USD: 0, CNY: 0 },
+          todayTokens: { upload: 0, download: 0 },
+          health: { status: "healthy" as any },
+          siteType: "newapi",
+          baseUrl: "https://example.com",
+          token: "t",
+          userId: 1,
+          authType: "access_token" as any,
+          checkIn: { enableDetection: false } as any,
+        }}
+        initialModelId="gpt-test"
+      />,
+    )
+
+    const probeCard = await screen.findByTestId("verify-probe-web-search")
+    const runButton = within(probeCard).getByRole("button", {
+      name: apiVerificationEn.verifyDialog.actions.runOne,
+    })
+    fireEvent.click(runButton)
+
+    expect(
+      await within(probeCard).findByText(
+        testI18n.t("verifyDialog.unsupportedProbeForApiType", {
+          ns: "apiVerification",
+          probe: apiVerificationEn.verifyDialog.probes["web-search"],
+        }),
+      ),
+    ).toBeInTheDocument()
+  })
 })

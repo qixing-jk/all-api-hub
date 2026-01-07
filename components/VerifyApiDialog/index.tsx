@@ -321,6 +321,18 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
               probe.definition.requiresModelId &&
               !modelId.trim() &&
               !tokenModelHint
+
+            const resultSummary = isDisabledForModel
+              ? t("verifyDialog.requiresModelId")
+              : result?.summaryKey
+                ? t(result.summaryKey, result.summaryParams)
+                : result?.status === "unsupported"
+                  ? t("verifyDialog.unsupportedProbeForApiType", {
+                      probe: t(`verifyDialog.probes.${probe.definition.id}`),
+                    })
+                  : result
+                    ? result.summary
+                    : t("verifyDialog.notRunYet")
             return (
               <div
                 key={probe.definition.id}
@@ -349,11 +361,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
                     </div>
 
                     <div className="dark:text-dark-text-secondary mt-1 text-xs text-gray-600">
-                      {isDisabledForModel
-                        ? t("verifyDialog.requiresModelId")
-                        : result
-                          ? result.summary
-                          : t("verifyDialog.notRunYet")}
+                      {resultSummary}
                     </div>
                   </div>
 

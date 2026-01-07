@@ -5,8 +5,30 @@
     "idleHint": "请选择密钥和模型后开始验证。",
     "notRunYet": "尚未运行",
     "requiresModelId": "请输入模型 ID 后运行该测试。",
+    "unsupportedProbeForApiType": "当前接口类型不支持 {{probe}} 探测。",
     "errors": {
       "unexpected": "发生未知错误"
+    },
+    "summaries": {
+      "modelsFetched": "成功获取 {{count}} 个模型。",
+      "noModelsReturned": "未返回任何模型。",
+      "textGenerationSucceeded": "文本生成成功。",
+      "textGenerationUnexpectedResponse": "返回内容不符合预期。",
+      "noToolCallDetected": "未检测到工具调用（模型可能不支持工具）。",
+      "toolCallSucceeded": "工具调用成功。",
+      "structuredOutputSucceeded": "结构化输出成功。",
+      "structuredOutputInvalid": "输出内容无效。",
+      "webSearchUnsupportedAnthropic": "Anthropic 接口不支持联网搜索探测。",
+      "webSearchSucceeded": "联网搜索成功。",
+      "webSearchNoResults": "未获取到联网搜索结果。",
+      "webSearchGroundingSucceeded": "联网搜索 / Grounding 成功。",
+      "webSearchGroundingNoResults": "未获取到联网搜索 / Grounding 结果。",
+      "webSearchUnsupportedForApiType": "当前接口类型不支持联网搜索探测。",
+      "webSearchRequiresExplicitSupport": "联网搜索探测需要显式的接口类型支持。",
+      "modelsProbeUnsupportedForApiType": "仅 OpenAI 兼容接口支持模型列表探测。",
+      "noModelIdProvidedToRunProbe": "未提供模型 ID，无法运行探测。",
+      "noModelIdProvidedToRunProbes": "未提供模型 ID，无法运行探测。",
+      "noModelAvailableToRunProbes": "没有可用模型，无法运行探测。"
     },
     "meta": {
       "token": "密钥",

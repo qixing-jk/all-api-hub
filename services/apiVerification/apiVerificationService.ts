@@ -161,6 +161,11 @@ async function runModelsProbe(params: {
           modelIds.length > 0
             ? `Fetched ${modelIds.length} models`
             : "No models returned",
+        summaryKey:
+          modelIds.length > 0
+            ? "verifyDialog.summaries.modelsFetched"
+            : "verifyDialog.summaries.noModelsReturned",
+        summaryParams: modelIds.length > 0 ? { count: modelIds.length } : {},
         input: {
           endpoint: "/v1/models",
           baseUrl: params.baseUrl,
@@ -224,6 +229,9 @@ async function runTextGenerationProbe(params: {
       status: ok ? "pass" : "fail",
       latencyMs: okLatency(startedAt),
       summary: ok ? "Text generation succeeded" : "Unexpected response text",
+      summaryKey: ok
+        ? "verifyDialog.summaries.textGenerationSucceeded"
+        : "verifyDialog.summaries.textGenerationUnexpectedResponse",
       input: {
         apiType: params.apiType,
         baseUrl: params.baseUrl,
@@ -298,6 +306,7 @@ async function runToolCallingProbe(params: {
         status: "fail",
         latencyMs: okLatency(startedAt),
         summary: "No tool call detected (model may not support tools)",
+        summaryKey: "verifyDialog.summaries.noToolCallDetected",
         input: {
           apiType: params.apiType,
           baseUrl: params.baseUrl,
@@ -323,6 +332,7 @@ async function runToolCallingProbe(params: {
       status: "pass",
       latencyMs: okLatency(startedAt),
       summary: "Tool call succeeded",
+      summaryKey: "verifyDialog.summaries.toolCallSucceeded",
       input: {
         apiType: params.apiType,
         baseUrl: params.baseUrl,
@@ -401,6 +411,10 @@ async function runStructuredOutputProbe(params: {
       latencyMs: okLatency(startedAt),
       summary:
         output?.ok === true ? "Structured output succeeded" : "Invalid output",
+      summaryKey:
+        output?.ok === true
+          ? "verifyDialog.summaries.structuredOutputSucceeded"
+          : "verifyDialog.summaries.structuredOutputInvalid",
       input: {
         apiType: params.apiType,
         baseUrl: params.baseUrl,
@@ -448,6 +462,7 @@ async function runWebSearchProbe(params: {
       status: "unsupported",
       latencyMs: okLatency(startedAt),
       summary: "Web search probe is not supported for Anthropic endpoints",
+      summaryKey: "verifyDialog.summaries.webSearchUnsupportedAnthropic",
       input: {
         apiType: params.apiType,
         baseUrl: params.baseUrl,
@@ -486,6 +501,9 @@ async function runWebSearchProbe(params: {
         status: searched ? "pass" : "fail",
         latencyMs: okLatency(startedAt),
         summary: searched ? "Web search succeeded" : "No web search results",
+        summaryKey: searched
+          ? "verifyDialog.summaries.webSearchSucceeded"
+          : "verifyDialog.summaries.webSearchNoResults",
         input: {
           apiType: params.apiType,
           baseUrl: params.baseUrl,
@@ -530,6 +548,9 @@ async function runWebSearchProbe(params: {
         summary: searched
           ? "Web search/grounding succeeded"
           : "No web search/grounding results",
+        summaryKey: searched
+          ? "verifyDialog.summaries.webSearchGroundingSucceeded"
+          : "verifyDialog.summaries.webSearchGroundingNoResults",
         input: {
           apiType: params.apiType,
           baseUrl: params.baseUrl,
@@ -550,6 +571,7 @@ async function runWebSearchProbe(params: {
       status: "unsupported",
       latencyMs: okLatency(startedAt),
       summary: "Web search probe is not supported for this API type",
+      summaryKey: "verifyDialog.summaries.webSearchUnsupportedForApiType",
       input: {
         apiType: params.apiType,
         baseUrl: params.baseUrl,
@@ -586,6 +608,7 @@ export async function runApiVerificationProbe(
         status: "unsupported",
         latencyMs: 0,
         summary: "Models probe is only supported for OpenAI-compatible APIs",
+        summaryKey: "verifyDialog.summaries.modelsProbeUnsupportedForApiType",
         input: {
           apiType: params.apiType,
           baseUrl: params.baseUrl,
@@ -606,6 +629,7 @@ export async function runApiVerificationProbe(
       status: "fail",
       latencyMs: 0,
       summary: "No model id provided to run probe",
+      summaryKey: "verifyDialog.summaries.noModelIdProvidedToRunProbe",
       input: {
         apiType: params.apiType,
         baseUrl: params.baseUrl,
@@ -674,24 +698,28 @@ export async function runApiVerification(
         status: "fail",
         latencyMs: 0,
         summary: "No model available to run probes",
+        summaryKey: "verifyDialog.summaries.noModelAvailableToRunProbes",
       })
       results.push({
         id: "tool-calling",
         status: "fail",
         latencyMs: 0,
         summary: "No model available to run probes",
+        summaryKey: "verifyDialog.summaries.noModelAvailableToRunProbes",
       })
       results.push({
         id: "structured-output",
         status: "fail",
         latencyMs: 0,
         summary: "No model available to run probes",
+        summaryKey: "verifyDialog.summaries.noModelAvailableToRunProbes",
       })
       results.push({
         id: "web-search",
         status: "unsupported",
         latencyMs: 0,
         summary: "Web search probe requires explicit API type support",
+        summaryKey: "verifyDialog.summaries.webSearchRequiresExplicitSupport",
       })
 
       return {
@@ -753,24 +781,28 @@ export async function runApiVerification(
       status: "fail",
       latencyMs: 0,
       summary: "No model id provided to run probes",
+      summaryKey: "verifyDialog.summaries.noModelIdProvidedToRunProbes",
     })
     results.push({
       id: "tool-calling",
       status: "fail",
       latencyMs: 0,
       summary: "No model id provided to run probes",
+      summaryKey: "verifyDialog.summaries.noModelIdProvidedToRunProbes",
     })
     results.push({
       id: "structured-output",
       status: "fail",
       latencyMs: 0,
       summary: "No model id provided to run probes",
+      summaryKey: "verifyDialog.summaries.noModelIdProvidedToRunProbes",
     })
     results.push({
       id: "web-search",
       status: "unsupported",
       latencyMs: 0,
       summary: "Web search probe requires explicit API type support",
+      summaryKey: "verifyDialog.summaries.webSearchRequiresExplicitSupport",
     })
 
     return {
