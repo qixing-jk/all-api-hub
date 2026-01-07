@@ -8,6 +8,7 @@ locales/
 │   ├── common.json         # 通用操作、状态、标签
 │   ├── account.json        # 账户管理
 │   ├── accountDialog.json  # 账户对话框
+│   ├── apiVerification.json # API 验证对话框
 │   ├── keyManagement.json  # 密钥管理
 │   ├── modelList.json      # 模型列表
 │   ├── settings.json       # 设置
@@ -17,7 +18,7 @@ locales/
 │   ├── about.json          # 关于
 │   └── translation.json    # 旧版兼容（已废弃）
 ├── zh_CN/                  # 中文翻译
-│   └── (同上结构)
+│   └── (同上结构，包含 apiVerification.json)
 └── README.md               # 本文件
 ```
 

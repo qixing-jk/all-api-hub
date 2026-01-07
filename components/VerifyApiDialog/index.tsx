@@ -30,7 +30,7 @@ import { formatLatency, safeJsonStringify } from "./utils"
  */
 export function VerifyApiDialog(props: VerifyApiDialogProps) {
   const { isOpen, onClose, account, initialModelId } = props
-  const { t } = useTranslation("modelList")
+  const { t } = useTranslation("apiVerification")
 
   const [isRunning, setIsRunning] = useState(false)
   const [isLoadingTokens, setIsLoadingTokens] = useState(false)
@@ -159,7 +159,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
               id: probeId,
               status: "fail",
               latencyMs: 0,
-              summary: "Unexpected error",
+              summary: t("verifyDialog.errors.unexpected"),
             },
           }
         }),

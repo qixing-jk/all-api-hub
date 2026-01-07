@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it, vi } from "vitest"
 
 import { VerifyApiDialog } from "~/components/VerifyApiDialog"
-import modelListEn from "~/locales/en/modelList.json"
+import apiVerificationEn from "~/locales/en/apiVerification.json"
 import { testI18n } from "~/tests/test-utils/i18n"
 import { fireEvent, render, screen, within } from "~/tests/test-utils/render"
 
@@ -32,7 +32,13 @@ vi.mock(
 
 describe("VerifyApiDialog", () => {
   beforeAll(() => {
-    testI18n.addResourceBundle("en", "modelList", modelListEn, true, true)
+    testI18n.addResourceBundle(
+      "en",
+      "apiVerification",
+      apiVerificationEn,
+      true,
+      true,
+    )
   })
 
   it("renders probe items before running", async () => {
@@ -78,19 +84,23 @@ describe("VerifyApiDialog", () => {
 
     expect(
       await screen.findByText(
-        modelListEn.verifyDialog.probes["text-generation"],
+        apiVerificationEn.verifyDialog.probes["text-generation"],
       ),
-    ).toBeInTheDocument()
-    expect(
-      await screen.findByText(modelListEn.verifyDialog.probes["tool-calling"]),
     ).toBeInTheDocument()
     expect(
       await screen.findByText(
-        modelListEn.verifyDialog.probes["structured-output"],
+        apiVerificationEn.verifyDialog.probes["tool-calling"],
       ),
     ).toBeInTheDocument()
     expect(
-      await screen.findByText(modelListEn.verifyDialog.probes["web-search"]),
+      await screen.findByText(
+        apiVerificationEn.verifyDialog.probes["structured-output"],
+      ),
+    ).toBeInTheDocument()
+    expect(
+      await screen.findByText(
+        apiVerificationEn.verifyDialog.probes["web-search"],
+      ),
     ).toBeInTheDocument()
   })
 
@@ -146,7 +156,7 @@ describe("VerifyApiDialog", () => {
 
     const probeCard = await screen.findByTestId("verify-probe-text-generation")
     const runButton = within(probeCard).getByRole("button", {
-      name: modelListEn.verifyDialog.actions.runOne,
+      name: apiVerificationEn.verifyDialog.actions.runOne,
     })
     fireEvent.click(runButton)
 
@@ -158,18 +168,18 @@ describe("VerifyApiDialog", () => {
 
     expect(
       within(probeCard).getByRole("button", {
-        name: modelListEn.verifyDialog.actions.retry,
+        name: apiVerificationEn.verifyDialog.actions.retry,
       }),
     ).toBeInTheDocument()
 
     const inputToggle = within(probeCard).getByRole("button", {
-      name: modelListEn.verifyDialog.details.input,
+      name: apiVerificationEn.verifyDialog.details.input,
     })
     fireEvent.click(inputToggle)
     expect(await within(probeCard).findByText(/"foo": 1/)).toBeInTheDocument()
 
     const outputToggle = within(probeCard).getByRole("button", {
-      name: modelListEn.verifyDialog.details.output,
+      name: apiVerificationEn.verifyDialog.details.output,
     })
     fireEvent.click(outputToggle)
     expect(await within(probeCard).findByText(/"bar": 2/)).toBeInTheDocument()

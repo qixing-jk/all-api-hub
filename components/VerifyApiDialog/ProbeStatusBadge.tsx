@@ -12,7 +12,7 @@ export function ProbeStatusBadge({
 }: {
   result: ApiVerificationProbeResult
 }) {
-  const { t } = useTranslation("modelList")
+  const { t } = useTranslation("apiVerification")
 
   if (result.status === "pass") {
     return (

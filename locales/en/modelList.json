@@ -60,50 +60,5 @@
   },
   "actions": {
     "verifyApi": "Verify API"
-  },
-  "verifyDialog": {
-    "title": "API Verification",
-    "loadingTokensHint": "Loading tokens...",
-    "idleHint": "Select a token and model to start verification.",
-    "notRunYet": "Not run yet",
-    "requiresModelId": "Enter a model id to run this test.",
-    "meta": {
-      "token": "Token",
-      "tokenPlaceholder": "Select token",
-      "apiType": "API type",
-      "apiTypePlaceholder": "Select API type",
-      "model": "Model",
-      "modelPlaceholder": "Enter model id"
-    },
-    "apiTypes": {
-      "openaiCompatible": "OpenAI-compatible",
-      "openai": "OpenAI",
-      "anthropic": "Anthropic",
-      "google": "Google/Gemini"
-    },
-    "actions": {
-      "close": "Close",
-      "run": "Run",
-      "runOne": "Run",
-      "retry": "Retry",
-      "running": "Running..."
-    },
-    "status": {
-      "pass": "Pass",
-      "fail": "Fail",
-      "pending": "Pending",
-      "unsupported": "Unsupported"
-    },
-    "details": {
-      "input": "Input",
-      "output": "Output"
-    },
-    "probes": {
-      "models": "Models endpoint (/v1/models)",
-      "text-generation": "Text generation",
-      "tool-calling": "Tool/function calling",
-      "structured-output": "Structured output (schema JSON)",
-      "web-search": "Web search / grounding"
-    }
   }
 }
