@@ -1,4 +1,3 @@
-import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline"
 import { useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -17,81 +16,14 @@ import { getApiVerificationProbeDefinitions } from "~/services/apiVerification/p
 import type {
   ApiVerificationApiType,
   ApiVerificationProbeId,
-  ApiVerificationProbeResult,
 } from "~/services/apiVerification/types"
 import { guessModelIdFromToken } from "~/services/apiVerification/utils"
-import type { ApiToken, DisplaySiteData } from "~/types"
+import type { ApiToken } from "~/types"
 import { identifyProvider } from "~/utils/modelProviders"
 
-type VerifyApiDialogProps = {
-  isOpen: boolean
-  onClose: () => void
-  account: DisplaySiteData
-  initialModelId?: string
-}
-
-/**
- * Format probe latency for display.
- */
-function formatLatency(latencyMs: number) {
-  if (!Number.isFinite(latencyMs) || latencyMs <= 0) return "-"
-  return `${Math.round(latencyMs)}ms`
-}
-
-/**
- * Render a standardized status badge for a probe result.
- */
-function ProbeStatusBadge({ result }: { result: ApiVerificationProbeResult }) {
-  const { t } = useTranslation("modelList")
-
-  if (result.status === "pass") {
-    return (
-      <Badge variant="success" size="sm">
-        <span className="flex items-center gap-1">
-          <CheckCircleIcon className="h-3.5 w-3.5" />
-          {t("verifyDialog.status.pass")}
-        </span>
-      </Badge>
-    )
-  }
-
-  if (result.status === "unsupported") {
-    return (
-      <Badge variant="outline" size="sm">
-        {t("verifyDialog.status.unsupported")}
-      </Badge>
-    )
-  }
-
-  return (
-    <Badge variant="destructive" size="sm">
-      <span className="flex items-center gap-1">
-        <XCircleIcon className="h-3.5 w-3.5" />
-        {t("verifyDialog.status.fail")}
-      </span>
-    </Badge>
-  )
-}
-
-type ProbeItemState = {
-  definition: { id: ApiVerificationProbeId; requiresModelId: boolean }
-  isRunning: boolean
-  attempts: number
-  result: ApiVerificationProbeResult | null
-}
-
-/**
- * Stringify an unknown value for display in the UI.
- * Falls back to a best-effort string when the value is not JSON-serializable.
- */
-function safeJsonStringify(value: unknown): string {
-  if (value === undefined) return ""
-  try {
-    return JSON.stringify(value, null, 2)
-  } catch {
-    return String(value)
-  }
-}
+import { ProbeStatusBadge } from "./ProbeStatusBadge"
+import type { ProbeItemState, VerifyApiDialogProps } from "./types"
+import { formatLatency, safeJsonStringify } from "./utils"
 
 /**
  * Modal dialog that runs API verification for a selected account token + model.
