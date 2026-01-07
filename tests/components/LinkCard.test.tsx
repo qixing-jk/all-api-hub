@@ -41,8 +41,10 @@ describe("LinkCard", () => {
   it("should apply custom button variant", async () => {
     render(<LinkCard {...defaultProps} buttonVariant="secondary" />)
 
-    const button = await screen.findByRole("button", { name: "Click Me" })
-    expect(button.className).toContain("bg-secondary text-secondary-foreground")
+    const link = await screen.findByRole("link", { name: "Click Me" })
+    const button = link.closest("button")
+    expect(button).toBeInTheDocument()
+    expect(button).toHaveClass("bg-secondary", "text-secondary-foreground")
   })
 
   it("should apply custom icon class", async () => {
@@ -59,7 +61,7 @@ describe("LinkCard", () => {
     const { container } = render(<LinkCard {...defaultProps} />)
 
     await screen.findByText("Test Title")
-    const flexContainer = container.querySelector(".flex.items-start")
+    const flexContainer = container.querySelector("div.flex.h-full.space-x-4")
     expect(flexContainer).toBeInTheDocument()
   })
 })
