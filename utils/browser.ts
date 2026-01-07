@@ -20,7 +20,7 @@ export function isFirefoxByUA(): boolean {
  * Relies on the moz-extension protocol prefix exposed by WebExtensions.
  */
 export function isFirefox(): boolean {
-  return getExtensionURL("").startsWith("moz-extension://")
+  return getRuntimeBaseUrl().startsWith("moz-extension://")
 }
 
 /**
