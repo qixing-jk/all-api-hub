@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { runApiVerification } from "~/services/apiVerification/apiVerificationService"
+import {
+  runApiVerification,
+  runApiVerificationProbe,
+} from "~/services/apiVerification/apiVerificationService"
 
 const mockFetchOpenAICompatibleModelIds = vi.fn()
 
@@ -198,5 +201,50 @@ describe("apiVerificationService", () => {
     expect(report.results.find((r) => r.id === "web-search")?.status).toBe(
       "fail",
     )
+  })
+
+  it("runs a single probe and returns input/output diagnostics", async () => {
+    mockGenerateText.mockResolvedValueOnce({ text: "OK" })
+
+    const result = await runApiVerificationProbe({
+      baseUrl: "https://example.com",
+      apiKey: "secret",
+      apiType: "openai",
+      modelId: "gpt-test",
+      probeId: "text-generation",
+    })
+
+    expect(result.id).toBe("text-generation")
+    expect(result.status).toBe("pass")
+    expect(result.input).toMatchObject({
+      apiType: "openai",
+      baseUrl: "https://example.com",
+      modelId: "gpt-test",
+    })
+    expect(result.output).toMatchObject({ text: "OK" })
+  })
+
+  it("returns unsupported for models probe on non-openai-compatible apiType", async () => {
+    const result = await runApiVerificationProbe({
+      baseUrl: "https://example.com",
+      apiKey: "secret",
+      apiType: "openai",
+      modelId: "gpt-test",
+      probeId: "models",
+    })
+
+    expect(result.status).toBe("unsupported")
+  })
+
+  it("fails a probe when modelId is missing", async () => {
+    const result = await runApiVerificationProbe({
+      baseUrl: "https://example.com",
+      apiKey: "secret",
+      apiType: "openai",
+      probeId: "tool-calling",
+    })
+
+    expect(result.status).toBe("fail")
+    expect(result.summary.toLowerCase()).toContain("model")
   })
 })

@@ -57,6 +57,10 @@ export { Separator } from "./Separator"
 export { Checkbox } from "./checkbox"
 export { RepeatableInput, type RepeatableInputItem } from "./RepeatableInput"
 export { ModelListInput, type ModelListItem } from "./ModelListInput"
+export {
+  CollapsibleSection,
+  type CollapsibleSectionProps,
+} from "./CollapsibleSection"
 
 // Typography Components
 export {

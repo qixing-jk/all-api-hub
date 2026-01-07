@@ -65,6 +65,8 @@
     "title": "接口验证",
     "loadingTokensHint": "正在加载密钥...",
     "idleHint": "请选择密钥和模型后开始验证。",
+    "notRunYet": "尚未运行",
+    "requiresModelId": "请输入模型 ID 后运行该测试。",
     "meta": {
       "token": "密钥",
       "tokenPlaceholder": "选择密钥",
@@ -82,12 +84,19 @@
     "actions": {
       "close": "关闭",
       "run": "开始验证",
+      "runOne": "运行",
+      "retry": "重试",
       "running": "运行中..."
     },
     "status": {
       "pass": "通过",
       "fail": "失败",
+      "pending": "待运行",
       "unsupported": "不支持"
+    },
+    "details": {
+      "input": "输入",
+      "output": "输出"
     },
     "probes": {
       "models": "模型列表接口 (/v1/models)",

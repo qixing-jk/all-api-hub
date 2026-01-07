@@ -5,17 +5,21 @@ import { useTranslation } from "react-i18next"
 import {
   Badge,
   Button,
+  CollapsibleSection,
   Heading5,
   Input,
   SearchableSelect,
 } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
 import { getApiService } from "~/services/apiService"
-import { runApiVerification } from "~/services/apiVerification/apiVerificationService"
+import { runApiVerificationProbe } from "~/services/apiVerification/apiVerificationService"
+import { getApiVerificationProbeDefinitions } from "~/services/apiVerification/probes"
 import type {
   ApiVerificationApiType,
+  ApiVerificationProbeId,
   ApiVerificationProbeResult,
 } from "~/services/apiVerification/types"
+import { guessModelIdFromToken } from "~/services/apiVerification/utils"
 import type { ApiToken, DisplaySiteData } from "~/types"
 import { identifyProvider } from "~/utils/modelProviders"
 
@@ -69,6 +73,26 @@ function ProbeStatusBadge({ result }: { result: ApiVerificationProbeResult }) {
   )
 }
 
+type ProbeItemState = {
+  definition: { id: ApiVerificationProbeId; requiresModelId: boolean }
+  isRunning: boolean
+  attempts: number
+  result: ApiVerificationProbeResult | null
+}
+
+/**
+ * Stringify an unknown value for display in the UI.
+ * Falls back to a best-effort string when the value is not JSON-serializable.
+ */
+function safeJsonStringify(value: unknown): string {
+  if (value === undefined) return ""
+  try {
+    return JSON.stringify(value, null, 2)
+  } catch {
+    return String(value)
+  }
+}
+
 /**
  * Modal dialog that runs API verification for a selected account token + model.
  */
@@ -83,15 +107,24 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
   const [apiType, setApiType] =
     useState<ApiVerificationApiType>("openai-compatible")
   const [modelId, setModelId] = useState<string>(initialModelId?.trim() ?? "")
-  const [results, setResults] = useState<ApiVerificationProbeResult[] | null>(
-    null,
-  )
+  const [probes, setProbes] = useState<ProbeItemState[]>([])
 
   const selectedToken = tokens.find(
     (tok) => tok.id.toString() === selectedTokenId,
   )
 
-  const canClose = !isRunning
+  const tokenModelHint = useMemo(() => {
+    if (!selectedToken) return undefined
+    return guessModelIdFromToken({
+      models: selectedToken.models,
+      model_limits: selectedToken.model_limits,
+    })
+  }, [selectedToken])
+
+  const isAnyProbeRunning = probes.some((p) => p.isRunning)
+  const canClose = !isRunning && !isAnyProbeRunning
+
+  const hasAnyResult = probes.some((p) => p.result !== null)
 
   const header = useMemo(() => {
     return (
@@ -103,6 +136,22 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
       </div>
     )
   }, [account.baseUrl, account.name, t])
+
+  /**
+   * Build the probe list state for the selected API type.
+   * The list is shown immediately so users can run/retry individual items.
+   */
+  const buildProbeState = (nextApiType: ApiVerificationApiType) => {
+    const defs = getApiVerificationProbeDefinitions(nextApiType)
+    return defs.map(
+      (definition): ProbeItemState => ({
+        definition,
+        isRunning: false,
+        attempts: 0,
+        result: null,
+      }),
+    )
+  }
 
   const loadTokens = async () => {
     setIsLoadingTokens(true)
@@ -136,26 +185,76 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
     }
   }
 
-  const run = async () => {
-    if (!selectedToken || !modelId.trim()) return
+  const runProbe = async (probeId: ApiVerificationProbeId) => {
+    if (!selectedToken) return
 
-    setIsRunning(true)
-    setResults(null)
+    setProbes((prev) =>
+      prev.map((p) =>
+        p.definition.id === probeId
+          ? { ...p, isRunning: true, attempts: p.attempts + 1 }
+          : p,
+      ),
+    )
+
     try {
-      const report = await runApiVerification({
+      const result = await runApiVerificationProbe({
         baseUrl: account.baseUrl,
         apiKey: selectedToken.key,
         apiType,
-        modelId: modelId.trim(),
+        modelId: modelId.trim() || undefined,
         tokenMeta: {
           id: selectedToken.id,
           name: selectedToken.name,
           model_limits: selectedToken.model_limits,
           models: selectedToken.models,
         },
+        probeId,
       })
 
-      setResults(report.results)
+      setProbes((prev) =>
+        prev.map((p) =>
+          p.definition.id === probeId ? { ...p, isRunning: false, result } : p,
+        ),
+      )
+    } catch (error) {
+      setProbes((prev) =>
+        prev.map((p) => {
+          if (p.definition.id !== probeId) return p
+          return {
+            ...p,
+            isRunning: false,
+            result: {
+              id: probeId,
+              status: "fail",
+              latencyMs: 0,
+              summary: "Unexpected error",
+            },
+          }
+        }),
+      )
+    }
+  }
+
+  const canRunAll =
+    !!selectedToken &&
+    (apiType === "openai-compatible" || !!modelId.trim() || !!tokenModelHint)
+
+  const runAll = async () => {
+    if (!canRunAll) return
+
+    setIsRunning(true)
+    setProbes((prev) =>
+      prev.map((p) => ({ ...p, isRunning: false, attempts: 0, result: null })),
+    )
+    try {
+      // Run sequentially so each probe updates independently (and can be retried individually).
+      const ordered = getApiVerificationProbeDefinitions(apiType)
+      for (const probe of ordered) {
+        if (probe.requiresModelId && !modelId.trim() && !tokenModelHint)
+          continue
+
+        await runProbe(probe.id)
+      }
     } finally {
       setIsRunning(false)
     }
@@ -163,25 +262,32 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
 
   useEffect(() => {
     if (!isOpen) return
-    setResults(null)
+    const trimmedModelId = initialModelId?.trim() ?? ""
     setTokens([])
     setSelectedTokenId("")
-    const trimmedModelId = initialModelId?.trim() ?? ""
     setModelId(trimmedModelId)
 
     const providerType = trimmedModelId
       ? identifyProvider(trimmedModelId)
       : null
-    setApiType(
+
+    const initialApiType: ApiVerificationApiType =
       providerType === "Claude"
         ? "anthropic"
         : providerType === "Gemini"
           ? "google"
-          : "openai-compatible",
-    )
+          : "openai-compatible"
+
+    setApiType(initialApiType)
+    setProbes(buildProbeState(initialApiType))
     void loadTokens()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [account.id, initialModelId, isOpen])
+
+  useEffect(() => {
+    if (!isOpen) return
+    setProbes(buildProbeState(apiType))
+  }, [apiType, isOpen])
 
   const footer = (
     <div className="flex justify-end gap-2">
@@ -190,10 +296,8 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
       </Button>
       <Button
         variant="success"
-        onClick={run}
-        disabled={
-          isRunning || isLoadingTokens || !selectedToken || !modelId.trim()
-        }
+        onClick={runAll}
+        disabled={isRunning || isLoadingTokens || !canRunAll}
       >
         {isRunning
           ? t("verifyDialog.actions.running")
@@ -270,40 +374,104 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
           </div>
         </div>
 
-        {results === null ? (
+        {!hasAnyResult && (
           <div className="dark:text-dark-text-secondary text-sm text-gray-600">
             {isLoadingTokens
               ? t("verifyDialog.loadingTokensHint")
               : t("verifyDialog.idleHint")}
           </div>
-        ) : (
-          <div className="space-y-2">
-            {results.map((result) => (
+        )}
+
+        <div className="space-y-2">
+          {probes.map((probe) => {
+            const result = probe.result
+            const isDisabledForModel =
+              probe.definition.requiresModelId &&
+              !modelId.trim() &&
+              !tokenModelHint
+            return (
               <div
-                key={result.id}
+                key={probe.definition.id}
+                data-testid={`verify-probe-${probe.definition.id}`}
                 className="dark:border-dark-bg-tertiary rounded-md border border-gray-100 p-3"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <div className="dark:text-dark-text-primary text-sm font-medium text-gray-900">
-                      {t(`verifyDialog.probes.${result.id}`)}
+                      {t(`verifyDialog.probes.${probe.definition.id}`)}
                     </div>
                     <div className="dark:text-dark-text-secondary mt-1 text-xs text-gray-600">
-                      {result.summary}
+                      {isDisabledForModel
+                        ? t("verifyDialog.requiresModelId")
+                        : result
+                          ? result.summary
+                          : t("verifyDialog.notRunYet")}
                     </div>
                   </div>
 
                   <div className="shrink-0 text-right">
-                    <ProbeStatusBadge result={result} />
+                    {result ? (
+                      <ProbeStatusBadge result={result} />
+                    ) : (
+                      <Badge variant="outline" size="sm">
+                        {t("verifyDialog.status.pending")}
+                      </Badge>
+                    )}
                     <div className="dark:text-dark-text-tertiary mt-1 text-xs text-gray-500">
-                      {formatLatency(result.latencyMs)}
+                      {result ? formatLatency(result.latencyMs) : "-"}
                     </div>
                   </div>
                 </div>
+
+                <div className="mt-2 flex items-center justify-end gap-2">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => runProbe(probe.definition.id)}
+                    disabled={
+                      isRunning ||
+                      isLoadingTokens ||
+                      probe.isRunning ||
+                      !selectedToken ||
+                      isDisabledForModel
+                    }
+                  >
+                    {probe.isRunning
+                      ? t("verifyDialog.actions.running")
+                      : probe.attempts > 0
+                        ? t("verifyDialog.actions.retry")
+                        : t("verifyDialog.actions.runOne")}
+                  </Button>
+                </div>
+
+                {result &&
+                  (result.input !== undefined ||
+                    result.output !== undefined) && (
+                    <div className="mt-3 space-y-2">
+                      {result.input !== undefined && (
+                        <CollapsibleSection
+                          title={t("verifyDialog.details.input")}
+                        >
+                          <pre className="dark:text-dark-text-secondary overflow-auto text-xs break-words whitespace-pre-wrap text-gray-700">
+                            {safeJsonStringify(result.input)}
+                          </pre>
+                        </CollapsibleSection>
+                      )}
+                      {result.output !== undefined && (
+                        <CollapsibleSection
+                          title={t("verifyDialog.details.output")}
+                        >
+                          <pre className="dark:text-dark-text-secondary overflow-auto text-xs break-words whitespace-pre-wrap text-gray-700">
+                            {safeJsonStringify(result.output)}
+                          </pre>
+                        </CollapsibleSection>
+                      )}
+                    </div>
+                  )}
               </div>
-            ))}
-          </div>
-        )}
+            )
+          })}
+        </div>
       </div>
     </Modal>
   )

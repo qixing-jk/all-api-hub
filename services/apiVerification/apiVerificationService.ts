@@ -10,6 +10,7 @@ import type { ApiToken } from "~/types"
 
 import type {
   ApiVerificationApiType,
+  ApiVerificationProbeId,
   ApiVerificationProbeResult,
   ApiVerificationReport,
 } from "./types"
@@ -29,6 +30,10 @@ type RunApiVerificationParams = {
   tokenMeta?: Pick<ApiToken, "models" | "model_limits" | "name" | "id">
 }
 
+export type RunApiVerificationProbeParams = RunApiVerificationParams & {
+  probeId: ApiVerificationProbeId
+}
+
 /**
  * Get current timestamp in milliseconds.
  */
@@ -41,6 +46,19 @@ function nowMs() {
  */
 function okLatency(startedAt: number) {
   return Math.max(0, nowMs() - startedAt)
+}
+
+/**
+ * Resolve the model id requested by the caller.
+ * Falls back to a best-effort guess from token metadata.
+ */
+function resolveRequestedModelId(
+  params: RunApiVerificationParams,
+): string | undefined {
+  const tokenHint = params.tokenMeta
+    ? guessModelIdFromToken(params.tokenMeta)
+    : undefined
+  return params.modelId ?? tokenHint
 }
 
 type CreateModelParams = {
@@ -143,6 +161,15 @@ async function runModelsProbe(params: {
           modelIds.length > 0
             ? `Fetched ${modelIds.length} models`
             : "No models returned",
+        input: {
+          endpoint: "/v1/models",
+          baseUrl: params.baseUrl,
+        },
+        output: {
+          modelCount: modelIds.length,
+          suggestedModelId: firstModelId ?? null,
+          modelIdsPreview: modelIds.slice(0, 20),
+        },
         details:
           modelIds.length > 0 ? { modelCount: modelIds.length } : undefined,
       },
@@ -154,6 +181,10 @@ async function runModelsProbe(params: {
         status: "fail",
         latencyMs: okLatency(startedAt),
         summary: toSanitizedErrorSummary(error, [params.apiKey]),
+        input: {
+          endpoint: "/v1/models",
+          baseUrl: params.baseUrl,
+        },
       },
     }
   }
@@ -193,6 +224,15 @@ async function runTextGenerationProbe(params: {
       status: ok ? "pass" : "fail",
       latencyMs: okLatency(startedAt),
       summary: ok ? "Text generation succeeded" : "Unexpected response text",
+      input: {
+        apiType: params.apiType,
+        baseUrl: params.baseUrl,
+        modelId: params.modelId,
+        prompt,
+      },
+      output: {
+        text: result.text ?? null,
+      },
       details: ok
         ? undefined
         : { responsePreview: (result.text ?? "").slice(0, 80) },
@@ -203,6 +243,12 @@ async function runTextGenerationProbe(params: {
       status: "fail",
       latencyMs: okLatency(startedAt),
       summary: toSanitizedErrorSummary(error, secretsToRedact),
+      input: {
+        apiType: params.apiType,
+        baseUrl: params.baseUrl,
+        modelId: params.modelId,
+        prompt: "Reply with exactly: OK",
+      },
     }
   }
 }
@@ -236,10 +282,11 @@ async function runToolCallingProbe(params: {
       execute: async () => ({ now: new Date().toISOString() }),
     })
 
+    const prompt =
+      "Call the verify_tool tool once. Reply with a short sentence that includes the returned time."
     const result = await generateText({
       model,
-      prompt:
-        "Call the verify_tool tool once. Reply with a short sentence that includes the returned time.",
+      prompt,
       tools: { verify_tool: verifyTool },
       toolChoice: "required",
       stopWhen: stepCountIs(3),
@@ -251,6 +298,23 @@ async function runToolCallingProbe(params: {
         status: "fail",
         latencyMs: okLatency(startedAt),
         summary: "No tool call detected (model may not support tools)",
+        input: {
+          apiType: params.apiType,
+          baseUrl: params.baseUrl,
+          modelId: params.modelId,
+          prompt,
+          tool: {
+            name: "verify_tool",
+            description: "Return a timestamp string.",
+            inputSchema: { type: "object", properties: {} },
+          },
+          toolChoice: "required",
+        },
+        output: {
+          text: (result as any).text ?? null,
+          toolCalls: (result.toolCalls ?? []).slice(0, 20),
+          toolResults: (result.toolResults ?? []).slice(0, 20),
+        },
       }
     }
 
@@ -259,6 +323,23 @@ async function runToolCallingProbe(params: {
       status: "pass",
       latencyMs: okLatency(startedAt),
       summary: "Tool call succeeded",
+      input: {
+        apiType: params.apiType,
+        baseUrl: params.baseUrl,
+        modelId: params.modelId,
+        prompt,
+        tool: {
+          name: "verify_tool",
+          description: "Return a timestamp string.",
+          inputSchema: { type: "object", properties: {} },
+        },
+        toolChoice: "required",
+      },
+      output: {
+        text: (result as any).text ?? null,
+        toolCalls: (result.toolCalls ?? []).slice(0, 20),
+        toolResults: (result.toolResults ?? []).slice(0, 20),
+      },
     }
   } catch (error) {
     return {
@@ -266,6 +347,19 @@ async function runToolCallingProbe(params: {
       status: "fail",
       latencyMs: okLatency(startedAt),
       summary: toSanitizedErrorSummary(error, secretsToRedact),
+      input: {
+        apiType: params.apiType,
+        baseUrl: params.baseUrl,
+        modelId: params.modelId,
+        prompt:
+          "Call the verify_tool tool once. Reply with a short sentence that includes the returned time.",
+        tool: {
+          name: "verify_tool",
+          description: "Return a timestamp string.",
+          inputSchema: { type: "object", properties: {} },
+        },
+        toolChoice: "required",
+      },
     }
   }
 }
@@ -290,9 +384,10 @@ async function runStructuredOutputProbe(params: {
       modelId: params.modelId,
     })
 
+    const prompt = "Return a JSON object with shape { ok: true }."
     const { output } = await generateText({
       model,
-      prompt: "Return a JSON object with shape { ok: true }.",
+      prompt,
       output: Output.object({
         schema: z.object({
           ok: z.literal(true),
@@ -306,6 +401,16 @@ async function runStructuredOutputProbe(params: {
       latencyMs: okLatency(startedAt),
       summary:
         output?.ok === true ? "Structured output succeeded" : "Invalid output",
+      input: {
+        apiType: params.apiType,
+        baseUrl: params.baseUrl,
+        modelId: params.modelId,
+        prompt,
+        schema: { ok: true },
+      },
+      output: {
+        output: output ?? null,
+      },
     }
   } catch (error) {
     const summary = toSanitizedErrorSummary(error, secretsToRedact)
@@ -314,6 +419,13 @@ async function runStructuredOutputProbe(params: {
       status: "fail",
       latencyMs: okLatency(startedAt),
       summary,
+      input: {
+        apiType: params.apiType,
+        baseUrl: params.baseUrl,
+        modelId: params.modelId,
+        prompt: "Return a JSON object with shape { ok: true }.",
+        schema: { ok: true },
+      },
     }
   }
 }
@@ -336,6 +448,11 @@ async function runWebSearchProbe(params: {
       status: "unsupported",
       latencyMs: okLatency(startedAt),
       summary: "Web search probe is not supported for Anthropic endpoints",
+      input: {
+        apiType: params.apiType,
+        baseUrl: params.baseUrl,
+        modelId: params.modelId,
+      },
     }
   }
 
@@ -346,9 +463,10 @@ async function runWebSearchProbe(params: {
         apiKey: params.apiKey,
       })
 
+      const prompt = "Use web search to find one recent headline about AI SDK."
       const result = await generateText({
         model: provider(params.modelId),
-        prompt: "Use web search to find one recent headline about AI SDK.",
+        prompt,
         tools: {
           web_search: provider.tools.webSearch({
             externalWebAccess: true,
@@ -368,6 +486,18 @@ async function runWebSearchProbe(params: {
         status: searched ? "pass" : "fail",
         latencyMs: okLatency(startedAt),
         summary: searched ? "Web search succeeded" : "No web search results",
+        input: {
+          apiType: params.apiType,
+          baseUrl: params.baseUrl,
+          modelId: params.modelId,
+          prompt,
+          toolName: "web_search",
+        },
+        output: {
+          sourcesCount: (result.sources ?? []).length,
+          toolResultsCount: (result.toolResults ?? []).length,
+          sourcesPreview: (result.sources ?? []).slice(0, 3),
+        },
       }
     }
 
@@ -377,9 +507,11 @@ async function runWebSearchProbe(params: {
         apiKey: params.apiKey,
       })
 
+      const prompt =
+        "Use Google search grounding to find one recent AI headline."
       const result = await generateText({
         model: google(params.modelId),
-        prompt: "Use Google search grounding to find one recent AI headline.",
+        prompt,
         tools: {
           google_search: google.tools.googleSearch({}),
         },
@@ -398,6 +530,18 @@ async function runWebSearchProbe(params: {
         summary: searched
           ? "Web search/grounding succeeded"
           : "No web search/grounding results",
+        input: {
+          apiType: params.apiType,
+          baseUrl: params.baseUrl,
+          modelId: params.modelId,
+          prompt,
+          toolName: "google_search",
+        },
+        output: {
+          sourcesCount: (result.sources ?? []).length,
+          toolResultsCount: (result.toolResults ?? []).length,
+          sourcesPreview: (result.sources ?? []).slice(0, 3),
+        },
       }
     }
 
@@ -406,6 +550,11 @@ async function runWebSearchProbe(params: {
       status: "unsupported",
       latencyMs: okLatency(startedAt),
       summary: "Web search probe is not supported for this API type",
+      input: {
+        apiType: params.apiType,
+        baseUrl: params.baseUrl,
+        modelId: params.modelId,
+      },
     }
   } catch (error) {
     return {
@@ -413,8 +562,90 @@ async function runWebSearchProbe(params: {
       status: "fail",
       latencyMs: okLatency(startedAt),
       summary: toSanitizedErrorSummary(error, secretsToRedact),
+      input: {
+        apiType: params.apiType,
+        baseUrl: params.baseUrl,
+        modelId: params.modelId,
+      },
     }
   }
+}
+
+/**
+ * Run a single API verification probe.
+ *
+ * This is used by the UI to execute and retry probes independently.
+ */
+export async function runApiVerificationProbe(
+  params: RunApiVerificationProbeParams,
+): Promise<ApiVerificationProbeResult> {
+  if (params.probeId === "models") {
+    if (params.apiType !== "openai-compatible") {
+      return {
+        id: "models",
+        status: "unsupported",
+        latencyMs: 0,
+        summary: "Models probe is only supported for OpenAI-compatible APIs",
+        input: {
+          apiType: params.apiType,
+          baseUrl: params.baseUrl,
+          endpoint: "/v1/models",
+        },
+      }
+    }
+
+    return (
+      await runModelsProbe({ baseUrl: params.baseUrl, apiKey: params.apiKey })
+    ).result
+  }
+
+  const resolvedModelId = resolveRequestedModelId(params)
+  if (!resolvedModelId?.trim()) {
+    return {
+      id: params.probeId,
+      status: "fail",
+      latencyMs: 0,
+      summary: "No model id provided to run probe",
+      input: {
+        apiType: params.apiType,
+        baseUrl: params.baseUrl,
+      },
+    }
+  }
+
+  if (params.probeId === "text-generation") {
+    return await runTextGenerationProbe({
+      baseUrl: params.baseUrl,
+      apiKey: params.apiKey,
+      apiType: params.apiType,
+      modelId: resolvedModelId,
+    })
+  }
+
+  if (params.probeId === "tool-calling") {
+    return await runToolCallingProbe({
+      baseUrl: params.baseUrl,
+      apiKey: params.apiKey,
+      apiType: params.apiType,
+      modelId: resolvedModelId,
+    })
+  }
+
+  if (params.probeId === "structured-output") {
+    return await runStructuredOutputProbe({
+      baseUrl: params.baseUrl,
+      apiKey: params.apiKey,
+      apiType: params.apiType,
+      modelId: resolvedModelId,
+    })
+  }
+
+  return await runWebSearchProbe({
+    baseUrl: params.baseUrl,
+    apiKey: params.apiKey,
+    apiType: params.apiType,
+    modelId: resolvedModelId,
+  })
 }
 
 /**
@@ -427,10 +658,7 @@ export async function runApiVerification(
 
   const results: ApiVerificationProbeResult[] = []
 
-  const tokenHint = params.tokenMeta
-    ? guessModelIdFromToken(params.tokenMeta)
-    : undefined
-  const requestedModelId = params.modelId ?? tokenHint
+  const requestedModelId = resolveRequestedModelId(params)
 
   if (params.apiType === "openai-compatible") {
     const modelsProbe = await runModelsProbe({

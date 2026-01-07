@@ -65,6 +65,8 @@
     "title": "API Verification",
     "loadingTokensHint": "Loading tokens...",
     "idleHint": "Select a token and model to start verification.",
+    "notRunYet": "Not run yet",
+    "requiresModelId": "Enter a model id to run this test.",
     "meta": {
       "token": "Token",
       "tokenPlaceholder": "Select token",
@@ -82,12 +84,19 @@
     "actions": {
       "close": "Close",
       "run": "Run",
+      "runOne": "Run",
+      "retry": "Retry",
       "running": "Running..."
     },
     "status": {
       "pass": "Pass",
       "fail": "Fail",
+      "pending": "Pending",
       "unsupported": "Unsupported"
+    },
+    "details": {
+      "input": "Input",
+      "output": "Output"
     },
     "probes": {
       "models": "Models endpoint (/v1/models)",
