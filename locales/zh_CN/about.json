@@ -18,6 +18,23 @@
   "privacyNotice": "隐私声明",
   "privacyText": "本插件所有数据均存储在本地浏览器中，不会主动上传到任何服务器。您的账号信息和使用数据完全由您自己掌控，确保隐私安全",
   "privacyTitle": "隐私保护",
+  "stores": {
+    "chrome": "Chrome 应用商店",
+    "edge": "Edge 扩展商店",
+    "firefox": "Firefox 附加组件"
+  },
+  "storesSection": {
+    "title": "评分与下载",
+    "review": {
+      "title": "给我们一个好评",
+      "description": "如果 All API Hub 对你有帮助，欢迎在 {{store}} 留下正向评价，支持我们持续更新。",
+      "button": "前往 {{store}} 评分"
+    },
+    "download": {
+      "description": "从 {{store}} 下载/安装。",
+      "button": "打开商店"
+    }
+  },
   "techStack": {
     "title": "技术栈",
     "wxt": "浏览器扩展开发框架",

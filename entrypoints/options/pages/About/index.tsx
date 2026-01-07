@@ -1,4 +1,9 @@
-import { CodeBracketIcon, GlobeAltIcon } from "@heroicons/react/24/outline"
+import {
+  ArrowDownTrayIcon,
+  CodeBracketIcon,
+  GlobeAltIcon,
+  StarIcon,
+} from "@heroicons/react/24/outline"
 import { Info } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
@@ -6,9 +11,12 @@ import FeatureList from "~/components/FeatureList"
 import LinkCard from "~/components/LinkCard"
 import { Heading4 } from "~/components/ui"
 import { FEATURES, FUTURE_FEATURES } from "~/constants/about"
+import { EXTENSION_STORE_LISTING_URLS } from "~/constants/extensionStores"
 import { PageHeader } from "~/entrypoints/options/components/PageHeader"
 import packageJson from "~/package.json"
 import { isNotEmptyArray } from "~/utils"
+import type { ExtensionStoreId } from "~/utils/browser"
+import { detectExtensionStore } from "~/utils/browser"
 import { getHomepage, getPkgVersion, getRepository } from "~/utils/packageMeta"
 
 import CreditsCard from "./components/CreditsCard"
@@ -26,6 +34,13 @@ export default function About() {
   // 从工具函数获取元数据
   const homepage = getHomepage()
   const repository = getRepository()
+
+  // Store CTA: ask for a positive review on the current store, and provide download links for other stores.
+  const currentStoreId = detectExtensionStore()
+  const currentStoreName = t(`stores.${currentStoreId}`)
+  const otherStoreIds = (
+    Object.keys(EXTENSION_STORE_LISTING_URLS) as ExtensionStoreId[]
+  ).filter((storeId) => storeId !== currentStoreId)
 
   // 技术栈版本动态化
   const techStack = [
@@ -92,6 +107,40 @@ export default function About() {
               buttonVariant="default"
               iconClass="text-blue-600 dark:text-blue-400"
             />
+          </div>
+        </section>
+
+        {/* 商店评分与下载 */}
+        <section>
+          <Heading4 className="mb-4">{t("storesSection.title")}</Heading4>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <LinkCard
+              Icon={StarIcon}
+              title={t("storesSection.review.title")}
+              description={t("storesSection.review.description", {
+                store: currentStoreName,
+              })}
+              href={EXTENSION_STORE_LISTING_URLS[currentStoreId]}
+              buttonText={t("storesSection.review.button", {
+                store: currentStoreName,
+              })}
+              buttonVariant="default"
+              iconClass="text-yellow-500 dark:text-yellow-400"
+            />
+            {otherStoreIds.map((storeId) => (
+              <LinkCard
+                key={storeId}
+                Icon={ArrowDownTrayIcon}
+                title={t(`stores.${storeId}`)}
+                description={t("storesSection.download.description", {
+                  store: t(`stores.${storeId}`),
+                })}
+                href={EXTENSION_STORE_LISTING_URLS[storeId]}
+                buttonText={t("storesSection.download.button")}
+                buttonVariant="secondary"
+                iconClass="text-blue-600 dark:text-blue-400"
+              />
+            ))}
           </div>
         </section>
 

@@ -18,6 +18,23 @@
   "privacyNotice": "Privacy Notice",
   "privacyText": "All data of this plugin is stored locally in the browser and will not be actively uploaded to any server. Your account information and usage data are completely under your control, ensuring privacy and security",
   "privacyTitle": "Privacy Protection",
+  "stores": {
+    "chrome": "Chrome Web Store",
+    "edge": "Microsoft Edge Add-ons",
+    "firefox": "Firefox Add-ons"
+  },
+  "storesSection": {
+    "title": "Rate & Download",
+    "review": {
+      "title": "Leave a positive review",
+      "description": "If All API Hub helps you, a positive review on {{store}} really helps.",
+      "button": "Rate on {{store}}"
+    },
+    "download": {
+      "description": "Download from {{store}}.",
+      "button": "Open store"
+    }
+  },
   "techStack": {
     "title": "Tech Stack",
     "wxt": "Browser extension development framework",

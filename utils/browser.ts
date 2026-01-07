@@ -2,6 +2,8 @@ import { getExtensionURL } from "~/utils/browserApi"
 
 export const OPTIONS_PAGE_URL = getExtensionURL("options.html")
 
+export type ExtensionStoreId = "chrome" | "edge" | "firefox"
+
 /**
  * Detects Firefox-like user agents using UA string heuristics.
  * Useful in early bootstrapping before browser APIs are available.
@@ -18,7 +20,53 @@ export function isFirefoxByUA(): boolean {
  * Relies on the moz-extension protocol prefix exposed by WebExtensions.
  */
 export function isFirefox(): boolean {
-  return browser.runtime.getURL("").startsWith("moz-extension://")
+  return getExtensionURL("").startsWith("moz-extension://")
+}
+
+/**
+ * Detects Microsoft Edge browsers by inspecting the user-agent string.
+ * @param userAgent Optional user-agent string to check. Defaults to navigator.userAgent.
+ * @returns True when the UA indicates Microsoft Edge.
+ */
+export function isEdgeByUA(userAgent?: string): boolean {
+  const ua =
+    userAgent ?? (typeof navigator !== "undefined" ? navigator.userAgent : "")
+  return /EdgA\//.test(ua) || /EdgiOS\//.test(ua) || /Edg\//.test(ua)
+}
+
+/**
+ * Retrieves the base URL of the extension runtime.
+ * @returns The runtime base URL or an empty string if unavailable.
+ */
+function getRuntimeBaseUrl(): string {
+  try {
+    return getExtensionURL("")
+  } catch {
+    return ""
+  }
+}
+
+/**
+ * Detects the extension store based on runtime URL and user-agent heuristics.
+ * @param options Optional parameters for detection.
+ * @param options.userAgent Optional user-agent string for Edge detection.
+ * @param options.runtimeUrl Optional runtime URL for Firefox detection.
+ * @returns The detected ExtensionStoreId: "firefox", "edge", or "chrome".
+ */
+export function detectExtensionStore(options?: {
+  userAgent?: string
+  runtimeUrl?: string
+}): ExtensionStoreId {
+  const runtimeUrl = options?.runtimeUrl ?? getRuntimeBaseUrl()
+  if (runtimeUrl.startsWith("moz-extension://")) {
+    return "firefox"
+  }
+
+  if (isEdgeByUA(options?.userAgent)) {
+    return "edge"
+  }
+
+  return "chrome"
 }
 
 /**
