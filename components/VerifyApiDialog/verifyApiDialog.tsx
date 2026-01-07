@@ -328,10 +328,26 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
                 className="dark:border-dark-bg-tertiary rounded-md border border-gray-100 p-3"
               >
                 <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="dark:text-dark-text-primary text-sm font-medium text-gray-900">
-                      {t(`verifyDialog.probes.${probe.definition.id}`)}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                      <div className="dark:text-dark-text-primary min-w-0 truncate text-sm font-medium text-gray-900">
+                        {t(`verifyDialog.probes.${probe.definition.id}`)}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {result ? (
+                          <ProbeStatusBadge result={result} />
+                        ) : (
+                          <Badge variant="outline" size="sm">
+                            {t("verifyDialog.status.pending")}
+                          </Badge>
+                        )}
+                        <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                          {result ? formatLatency(result.latencyMs) : "-"}
+                        </div>
+                      </div>
                     </div>
+
                     <div className="dark:text-dark-text-secondary mt-1 text-xs text-gray-600">
                       {isDisabledForModel
                         ? t("verifyDialog.requiresModelId")
@@ -341,21 +357,6 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
                     </div>
                   </div>
 
-                  <div className="shrink-0 text-right">
-                    {result ? (
-                      <ProbeStatusBadge result={result} />
-                    ) : (
-                      <Badge variant="outline" size="sm">
-                        {t("verifyDialog.status.pending")}
-                      </Badge>
-                    )}
-                    <div className="dark:text-dark-text-tertiary mt-1 text-xs text-gray-500">
-                      {result ? formatLatency(result.latencyMs) : "-"}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-2 flex items-center justify-end gap-2">
                   <Button
                     size="sm"
                     variant="secondary"
