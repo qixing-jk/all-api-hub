@@ -3,6 +3,7 @@ import { Cpu } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import { VerifyApiDialog } from "~/components/VerifyApiDialog/verifyApiDialog"
 import { PageHeader } from "~/entrypoints/options/components/PageHeader"
 import type { DisplaySiteData } from "~/types"
 import { getAllProviders } from "~/utils/modelProviders"
@@ -14,7 +15,6 @@ import { Footer } from "./components/Footer"
 import { ModelDisplay } from "./components/ModelDisplay"
 import { ProviderTabs } from "./components/ProviderTabs"
 import { StatusIndicator } from "./components/StatusIndicator"
-import { VerifyApiDialog } from "./components/VerifyApiDialog"
 import { useModelListData } from "./hooks/useModelListData"
 
 /**

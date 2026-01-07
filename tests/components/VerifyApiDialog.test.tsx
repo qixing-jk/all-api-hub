@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it, vi } from "vitest"
 
-import { VerifyApiDialog } from "~/entrypoints/options/pages/ModelList/components/VerifyApiDialog"
+import { VerifyApiDialog } from "~/components/VerifyApiDialog/verifyApiDialog"
 import modelListEn from "~/locales/en/modelList.json"
 import { testI18n } from "~/tests/test-utils/i18n"
 import { fireEvent, render, screen, within } from "~/tests/test-utils/render"
