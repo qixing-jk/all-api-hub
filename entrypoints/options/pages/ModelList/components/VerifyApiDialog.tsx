@@ -12,8 +12,12 @@ import {
 import { Modal } from "~/components/ui/Dialog/Modal"
 import { getApiService } from "~/services/apiService"
 import { runApiVerification } from "~/services/apiVerification/apiVerificationService"
-import type { ApiVerificationProbeResult } from "~/services/apiVerification/types"
+import type {
+  ApiVerificationApiType,
+  ApiVerificationProbeResult,
+} from "~/services/apiVerification/types"
 import type { ApiToken, DisplaySiteData } from "~/types"
+import { identifyProvider } from "~/utils/modelProviders"
 
 type VerifyApiDialogProps = {
   isOpen: boolean
@@ -76,6 +80,8 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
   const [isLoadingTokens, setIsLoadingTokens] = useState(false)
   const [tokens, setTokens] = useState<ApiToken[]>([])
   const [selectedTokenId, setSelectedTokenId] = useState<string>("")
+  const [apiType, setApiType] =
+    useState<ApiVerificationApiType>("openai-compatible")
   const [modelId, setModelId] = useState<string>(initialModelId?.trim() ?? "")
   const [results, setResults] = useState<ApiVerificationProbeResult[] | null>(
     null,
@@ -139,6 +145,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
       const report = await runApiVerification({
         baseUrl: account.baseUrl,
         apiKey: selectedToken.key,
+        apiType,
         modelId: modelId.trim(),
         tokenMeta: {
           id: selectedToken.id,
@@ -159,7 +166,19 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
     setResults(null)
     setTokens([])
     setSelectedTokenId("")
-    setModelId(initialModelId?.trim() ?? "")
+    const trimmedModelId = initialModelId?.trim() ?? ""
+    setModelId(trimmedModelId)
+
+    const providerType = trimmedModelId
+      ? identifyProvider(trimmedModelId)
+      : null
+    setApiType(
+      providerType === "Claude"
+        ? "anthropic"
+        : providerType === "Gemini"
+          ? "google"
+          : "openai-compatible",
+    )
     void loadTokens()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [account.id, initialModelId, isOpen])
@@ -194,7 +213,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
       closeOnBackdropClick={canClose}
     >
       <div className="space-y-3">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <div className="space-y-1.5">
             <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
               {t("verifyDialog.meta.token")}
@@ -211,6 +230,30 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
               onChange={setSelectedTokenId}
               disabled={isLoadingTokens}
               placeholder={t("verifyDialog.meta.tokenPlaceholder")}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+              {t("verifyDialog.meta.apiType")}
+            </div>
+            <SearchableSelect
+              options={[
+                {
+                  value: "openai-compatible",
+                  label: t("verifyDialog.apiTypes.openaiCompatible"),
+                },
+                { value: "openai", label: t("verifyDialog.apiTypes.openai") },
+                {
+                  value: "anthropic",
+                  label: t("verifyDialog.apiTypes.anthropic"),
+                },
+                { value: "google", label: t("verifyDialog.apiTypes.google") },
+              ]}
+              value={apiType}
+              onChange={(value) => setApiType(value as ApiVerificationApiType)}
+              disabled={isRunning}
+              placeholder={t("verifyDialog.meta.apiTypePlaceholder")}
             />
           </div>
 

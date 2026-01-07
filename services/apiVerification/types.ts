@@ -1,4 +1,15 @@
-export type ApiVerificationProbeId = "models" | "tool-calling"
+export type ApiVerificationApiType =
+  | "openai-compatible"
+  | "openai"
+  | "anthropic"
+  | "google"
+
+export type ApiVerificationProbeId =
+  | "models"
+  | "text-generation"
+  | "tool-calling"
+  | "structured-output"
+  | "web-search"
 
 export type ApiVerificationProbeStatus = "pass" | "fail" | "unsupported"
 
@@ -12,6 +23,7 @@ export type ApiVerificationProbeResult = {
 
 export type ApiVerificationReport = {
   baseUrl: string
+  apiType: ApiVerificationApiType
   modelId?: string
   startedAt: number
   finishedAt: number

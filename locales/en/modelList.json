@@ -68,8 +68,16 @@
     "meta": {
       "token": "Token",
       "tokenPlaceholder": "Select token",
+      "apiType": "API type",
+      "apiTypePlaceholder": "Select API type",
       "model": "Model",
       "modelPlaceholder": "Enter model id"
+    },
+    "apiTypes": {
+      "openaiCompatible": "OpenAI-compatible",
+      "openai": "OpenAI",
+      "anthropic": "Anthropic",
+      "google": "Google/Gemini"
     },
     "actions": {
       "close": "Close",
@@ -83,7 +91,10 @@
     },
     "probes": {
       "models": "Models endpoint (/v1/models)",
-      "tool-calling": "Tool calling (chat)"
+      "text-generation": "Text generation",
+      "tool-calling": "Tool/function calling",
+      "structured-output": "Structured output (schema JSON)",
+      "web-search": "Web search / grounding"
     }
   }
 }

@@ -68,8 +68,16 @@
     "meta": {
       "token": "密钥",
       "tokenPlaceholder": "选择密钥",
+      "apiType": "接口类型",
+      "apiTypePlaceholder": "选择接口类型",
       "model": "模型",
       "modelPlaceholder": "输入模型 ID"
+    },
+    "apiTypes": {
+      "openaiCompatible": "OpenAI 兼容",
+      "openai": "OpenAI",
+      "anthropic": "Anthropic",
+      "google": "Google/Gemini"
     },
     "actions": {
       "close": "关闭",
@@ -83,7 +91,10 @@
     },
     "probes": {
       "models": "模型列表接口 (/v1/models)",
-      "tool-calling": "工具调用（chat）"
+      "text-generation": "文本生成",
+      "tool-calling": "工具/函数调用",
+      "structured-output": "结构化输出（JSON Schema）",
+      "web-search": "联网搜索 / Grounding"
     }
   }
 }
