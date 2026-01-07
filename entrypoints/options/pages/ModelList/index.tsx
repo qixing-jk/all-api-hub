@@ -1,9 +1,10 @@
 import { Tab } from "@headlessui/react"
 import { Cpu } from "lucide-react"
-import { useEffect, useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { PageHeader } from "~/entrypoints/options/components/PageHeader"
+import type { DisplaySiteData } from "~/types"
 import { getAllProviders } from "~/utils/modelProviders"
 
 import { AccountSelector } from "./components/AccountSelector"
@@ -13,6 +14,7 @@ import { Footer } from "./components/Footer"
 import { ModelDisplay } from "./components/ModelDisplay"
 import { ProviderTabs } from "./components/ProviderTabs"
 import { StatusIndicator } from "./components/StatusIndicator"
+import { VerifyApiDialog } from "./components/VerifyApiDialog"
 import { useModelListData } from "./hooks/useModelListData"
 
 /**
@@ -123,6 +125,15 @@ export default function ModelList(props: {
     }))
   }, [baseFilteredModels, accountQueryStates])
 
+  const [verifyContext, setVerifyContext] = useState<{
+    account: DisplaySiteData
+    modelId: string
+  } | null>(null)
+
+  const handleVerifyModel = (account: DisplaySiteData, modelId: string) => {
+    setVerifyContext({ account, modelId })
+  }
+
   return (
     <div className="p-6">
       <PageHeader
@@ -148,6 +159,15 @@ export default function ModelList(props: {
 
       {selectedAccount && hasModelData && (
         <>
+          {verifyContext && (
+            <VerifyApiDialog
+              isOpen={true}
+              onClose={() => setVerifyContext(null)}
+              account={verifyContext.account}
+              initialModelId={verifyContext.modelId}
+            />
+          )}
+
           {selectedAccount === "all" && accountSummaryItems.length > 0 && (
             <AccountSummaryBar
               items={accountSummaryItems}
@@ -186,6 +206,7 @@ export default function ModelList(props: {
                 <ModelDisplay
                   models={filteredModels}
                   currentAccount={currentAccount}
+                  onVerifyModel={handleVerifyModel}
                   showRealPrice={showRealPrice}
                   showRatioColumn={showRatioColumn}
                   showEndpointTypes={showEndpointTypes}
@@ -199,6 +220,7 @@ export default function ModelList(props: {
                   <ModelDisplay
                     models={filteredModels}
                     currentAccount={currentAccount}
+                    onVerifyModel={handleVerifyModel}
                     showRealPrice={showRealPrice}
                     showRatioColumn={showRatioColumn}
                     showEndpointTypes={showEndpointTypes}

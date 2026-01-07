@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 
 import { Card, CardContent } from "~/components/ui"
 import type { ModelPricing } from "~/services/apiService/common/type"
+import type { DisplaySiteData } from "~/types"
 import type { CalculatedPrice } from "~/utils/modelPricing"
 
 import { ModelItemDescription } from "./ModelItemDescription"
@@ -23,7 +24,9 @@ interface ModelItemProps {
   onGroupClick?: (group: string) => void // 新增：点击分组时的回调函数
   availableGroups?: string[] // 新增：用户的所有可用分组列表
   isAllGroupsMode?: boolean // 新增：是否为"所有分组"模式
+  account?: DisplaySiteData
   accountName?: string
+  onVerifyModel?: (account: DisplaySiteData, modelId: string) => void
 }
 
 /**
@@ -43,7 +46,9 @@ export default function ModelItem(props: ModelItemProps) {
     onGroupClick,
     availableGroups = [],
     isAllGroupsMode = false,
+    account,
     accountName,
+    onVerifyModel,
   } = props
   const { t } = useTranslation("modelList")
   const [isExpanded, setIsExpanded] = useState(false)
@@ -79,6 +84,11 @@ export default function ModelItem(props: ModelItemProps) {
             isAvailableForUser={isAvailableForUser}
             handleCopyModelName={handleCopyModelName}
             accountName={accountName}
+            onVerifyApi={
+              account && onVerifyModel
+                ? () => onVerifyModel(account, model.model_name)
+                : undefined
+            }
           />
           <ModelItemExpandButton
             isExpanded={isExpanded}

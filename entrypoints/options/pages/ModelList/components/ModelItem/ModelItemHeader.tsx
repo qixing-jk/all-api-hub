@@ -1,4 +1,7 @@
-import { DocumentDuplicateIcon } from "@heroicons/react/24/outline"
+import {
+  DocumentDuplicateIcon,
+  WrenchScrewdriverIcon,
+} from "@heroicons/react/24/outline"
 import React from "react"
 import { useTranslation } from "react-i18next"
 
@@ -12,6 +15,7 @@ interface ModelItemHeaderProps {
   isAvailableForUser: boolean
   handleCopyModelName: () => void
   accountName?: string
+  onVerifyApi?: () => void
 }
 
 export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
@@ -19,6 +23,7 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
   isAvailableForUser,
   handleCopyModelName,
   accountName,
+  onVerifyApi,
 }) => {
   const { t } = useTranslation("modelList")
   const providerConfig = getProviderConfig(model.model_name)
@@ -62,6 +67,19 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
         >
           <DocumentDuplicateIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
         </IconButton>
+
+        {onVerifyApi && (
+          <IconButton
+            variant="ghost"
+            size="sm"
+            onClick={onVerifyApi}
+            title={t("actions.verifyApi")}
+            aria-label={t("actions.verifyApi")}
+            className="shrink-0"
+          >
+            <WrenchScrewdriverIcon className="h-3 w-3 text-emerald-600 sm:h-3.5 sm:w-3.5 dark:text-emerald-400" />
+          </IconButton>
+        )}
 
         {/* 标签 */}
         <div className="flex shrink-0 flex-wrap items-center gap-1.5 sm:gap-2">

@@ -57,5 +57,33 @@
   "messages": {
     "modelNameCopied": "Model name copied",
     "copyFailed": "Copy failed"
+  },
+  "actions": {
+    "verifyApi": "Verify API"
+  },
+  "verifyDialog": {
+    "title": "API Verification",
+    "loadingTokensHint": "Loading tokens...",
+    "idleHint": "Select a token and model to start verification.",
+    "meta": {
+      "token": "Token",
+      "tokenPlaceholder": "Select token",
+      "model": "Model",
+      "modelPlaceholder": "Enter model id"
+    },
+    "actions": {
+      "close": "Close",
+      "run": "Run",
+      "running": "Running..."
+    },
+    "status": {
+      "pass": "Pass",
+      "fail": "Fail",
+      "unsupported": "Unsupported"
+    },
+    "probes": {
+      "models": "Models endpoint (/v1/models)",
+      "tool-calling": "Tool calling (chat)"
+    }
   }
 }

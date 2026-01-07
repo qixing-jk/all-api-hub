@@ -11,6 +11,7 @@ import ModelItem from "./ModelItem"
 interface ModelDisplayProps {
   models: any[]
   currentAccount: DisplaySiteData | undefined
+  onVerifyModel?: (account: DisplaySiteData, modelId: string) => void
   onModelClick?: (model: unknown) => void
   count?: number
   showRealPrice: boolean
@@ -30,6 +31,7 @@ export function ModelDisplay(props: ModelDisplayProps) {
   const {
     models,
     currentAccount,
+    onVerifyModel,
     showRealPrice,
     showRatioColumn,
     showEndpointTypes,
@@ -78,7 +80,9 @@ export function ModelDisplay(props: ModelDisplayProps) {
               onGroupClick={handleGroupClick}
               availableGroups={availableGroups}
               isAllGroupsMode={selectedGroup === "all"}
+              account={accountForModel}
               accountName={accountForModel?.name}
+              onVerifyModel={onVerifyModel}
             />
           )
         }}
