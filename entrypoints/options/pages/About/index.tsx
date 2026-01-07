@@ -104,7 +104,7 @@ export default function About() {
               description={t("homepageDesc")}
               href={homepage}
               buttonText={t("visitHomepage")}
-              buttonVariant="default"
+              buttonVariant="secondary"
               iconClass="text-blue-600 dark:text-blue-400"
             />
           </div>
