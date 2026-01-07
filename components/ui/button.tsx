@@ -1,4 +1,4 @@
-import { Slot } from "@radix-ui/react-slot"
+import { Slot, Slottable } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
 import * as React from "react"
 
@@ -104,11 +104,9 @@ function Button({
           />
         </span>
       )}
-      <>
-        {leftIcon && <span>{leftIcon}</span>}
-        {children}
-        {rightIcon && <span>{rightIcon}</span>}
-      </>
+      {leftIcon && <span>{leftIcon}</span>}
+      <Slottable>{children}</Slottable>
+      {rightIcon && <span>{rightIcon}</span>}
     </Comp>
   )
 }

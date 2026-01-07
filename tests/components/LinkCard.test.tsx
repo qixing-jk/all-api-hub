@@ -42,9 +42,7 @@ describe("LinkCard", () => {
     render(<LinkCard {...defaultProps} buttonVariant="secondary" />)
 
     const link = await screen.findByRole("link", { name: "Click Me" })
-    const button = link.closest("button")
-    expect(button).toBeInTheDocument()
-    expect(button).toHaveClass("bg-secondary", "text-secondary-foreground")
+    expect(link).toHaveClass("bg-secondary", "text-secondary-foreground")
   })
 
   it("should apply custom icon class", async () => {

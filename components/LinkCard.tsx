@@ -38,7 +38,7 @@ const LinkCard = ({
             <BodySmall>{description}</BodySmall>
           </div>
           <div className="mt-auto">
-            <Button variant={buttonVariant} size="sm">
+            <Button asChild variant={buttonVariant} size="sm">
               <a href={href} target="_blank" rel="noopener noreferrer">
                 {buttonText}
               </a>
