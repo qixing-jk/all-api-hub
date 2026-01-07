@@ -3,7 +3,7 @@ import { Cpu } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { VerifyApiDialog } from "~/components/VerifyApiDialog/verifyApiDialog"
+import { VerifyApiDialog } from "~/components/VerifyApiDialog"
 import { PageHeader } from "~/entrypoints/options/components/PageHeader"
 import type { DisplaySiteData } from "~/types"
 import { getAllProviders } from "~/utils/modelProviders"
