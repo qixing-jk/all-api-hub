@@ -1,4 +1,5 @@
 import type { ApiVerificationApiType, ApiVerificationProbeId } from "./types"
+import { API_TYPES } from "./types"
 
 export type ApiVerificationProbeDefinition = {
   /**
@@ -21,7 +22,8 @@ export type ApiVerificationProbeDefinition = {
 export function getApiVerificationProbeDefinitions(
   apiType: ApiVerificationApiType,
 ): ApiVerificationProbeDefinition[] {
-  if (apiType === "openai-compatible") {
+  // OpenAI-compatible proxies expose the models endpoint and can probe it first.
+  if (apiType === API_TYPES.OPENAI_COMPATIBLE) {
     return [
       { id: "models", requiresModelId: false },
       { id: "text-generation", requiresModelId: true },

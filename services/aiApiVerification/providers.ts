@@ -4,6 +4,7 @@ import { createOpenAI } from "@ai-sdk/openai"
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible"
 
 import type { ApiVerificationApiType } from "./types"
+import { API_TYPES } from "./types"
 import {
   coerceBaseUrlToAnthropicV1,
   coerceBaseUrlToGoogleV1beta,
@@ -24,7 +25,8 @@ export type CreateModelParams = {
  * Create an AI SDK model instance for the selected API type and model id.
  */
 export function createModel(params: CreateModelParams) {
-  if (params.apiType === "openai-compatible") {
+  // Compare against shared API type constants to avoid magic strings.
+  if (params.apiType === API_TYPES.OPENAI_COMPATIBLE) {
     return createOpenAICompatible({
       name: "all-api-hub",
       baseURL: coerceBaseUrlToV1(params.baseUrl),
@@ -32,14 +34,14 @@ export function createModel(params: CreateModelParams) {
     })(params.modelId)
   }
 
-  if (params.apiType === "openai") {
+  if (params.apiType === API_TYPES.OPENAI) {
     return createOpenAI({
       baseURL: coerceBaseUrlToV1(params.baseUrl),
       apiKey: params.apiKey,
     })(params.modelId)
   }
 
-  if (params.apiType === "anthropic") {
+  if (params.apiType === API_TYPES.ANTHROPIC) {
     return createAnthropic({
       baseURL: coerceBaseUrlToAnthropicV1(params.baseUrl),
       apiKey: params.apiKey,

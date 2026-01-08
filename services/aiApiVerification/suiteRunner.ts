@@ -5,6 +5,7 @@ import type {
   ApiVerificationApiType,
   ApiVerificationProbeResult,
 } from "./types"
+import { API_TYPES } from "./types"
 
 type RunApiVerificationSuiteParams = {
   baseUrl: string
@@ -27,7 +28,8 @@ export async function runApiVerificationSuite(
   const results: ApiVerificationProbeResult[] = []
   const definitions = getApiVerificationProbeDefinitions(params.apiType)
 
-  if (params.apiType === "openai-compatible") {
+  // OpenAI-compatible APIs can discover models before running the suite.
+  if (params.apiType === API_TYPES.OPENAI_COMPATIBLE) {
     const modelsProbe = await runModelsProbe({
       baseUrl: params.baseUrl,
       apiKey: params.apiKey,

@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+// Use shared API type constants to keep test inputs aligned with supported values.
 import {
+  API_TYPES,
   runApiVerification,
   runApiVerificationProbe,
 } from "~/services/aiApiVerification"
@@ -72,11 +74,11 @@ describe("apiVerificationService", () => {
     const report = await runApiVerification({
       baseUrl: "https://example.com",
       apiKey: "secret",
-      apiType: "openai-compatible",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
     })
 
     expect(report.baseUrl).toBe("https://example.com")
-    expect(report.apiType).toBe("openai-compatible")
+    expect(report.apiType).toBe(API_TYPES.OPENAI_COMPATIBLE)
     expect(report.modelId).toBe("m1")
 
     const models = report.results.find((r) => r.id === "models")
@@ -108,7 +110,7 @@ describe("apiVerificationService", () => {
     const report = await runApiVerification({
       baseUrl: "https://example.com",
       apiKey: "secret",
-      apiType: "openai-compatible",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
       modelId: "override-model",
     })
 
@@ -132,7 +134,7 @@ describe("apiVerificationService", () => {
     const report = await runApiVerification({
       baseUrl: "https://example.com",
       apiKey: "secret",
-      apiType: "openai-compatible",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
       tokenMeta: {
         id: 1,
         name: "t",
@@ -153,7 +155,7 @@ describe("apiVerificationService", () => {
     const report = await runApiVerification({
       baseUrl: "https://example.com",
       apiKey: "secret",
-      apiType: "openai-compatible",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
     })
 
     const tools = report.results.find((r) => r.id === "tool-calling")
@@ -168,7 +170,7 @@ describe("apiVerificationService", () => {
     const report = await runApiVerification({
       baseUrl: "https://example.com",
       apiKey: "secret",
-      apiType: "openai-compatible",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
     })
 
     const tools = report.results.find((r) => r.id === "tool-calling")
@@ -188,7 +190,7 @@ describe("apiVerificationService", () => {
     const report = await runApiVerification({
       baseUrl: "https://example.com",
       apiKey: "secret",
-      apiType: "google",
+      apiType: API_TYPES.GOOGLE,
       modelId: "gemini-test",
     })
 
@@ -209,7 +211,7 @@ describe("apiVerificationService", () => {
     const result = await runApiVerificationProbe({
       baseUrl: "https://example.com",
       apiKey: "secret",
-      apiType: "openai",
+      apiType: API_TYPES.OPENAI,
       modelId: "gpt-test",
       probeId: "text-generation",
     })
@@ -217,7 +219,7 @@ describe("apiVerificationService", () => {
     expect(result.id).toBe("text-generation")
     expect(result.status).toBe("pass")
     expect(result.input).toMatchObject({
-      apiType: "openai",
+      apiType: API_TYPES.OPENAI,
       baseUrl: "https://example.com",
       modelId: "gpt-test",
     })
@@ -228,7 +230,7 @@ describe("apiVerificationService", () => {
     const result = await runApiVerificationProbe({
       baseUrl: "https://example.com",
       apiKey: "secret",
-      apiType: "openai",
+      apiType: API_TYPES.OPENAI,
       modelId: "gpt-test",
       probeId: "models",
     })
@@ -240,7 +242,7 @@ describe("apiVerificationService", () => {
     const result = await runApiVerificationProbe({
       baseUrl: "https://example.com",
       apiKey: "secret",
-      apiType: "openai",
+      apiType: API_TYPES.OPENAI,
       probeId: "tool-calling",
     })
 
@@ -254,7 +256,7 @@ describe("apiVerificationService", () => {
     const result = await runApiVerificationProbe({
       baseUrl: "https://example.com",
       apiKey: "secret",
-      apiType: "anthropic",
+      apiType: API_TYPES.ANTHROPIC,
       modelId: "claude-test",
       probeId: "web-search",
     })

@@ -12,6 +12,7 @@ import {
 } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
 import {
+  API_TYPES,
   getApiVerificationProbeDefinitions,
   guessModelIdFromToken,
   runApiVerificationProbe,
@@ -39,8 +40,9 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
   const [isLoadingTokens, setIsLoadingTokens] = useState(false)
   const [tokens, setTokens] = useState<ApiToken[]>([])
   const [selectedTokenId, setSelectedTokenId] = useState<string>("")
-  const [apiType, setApiType] =
-    useState<ApiVerificationApiType>("openai-compatible")
+  const [apiType, setApiType] = useState<ApiVerificationApiType>(
+    API_TYPES.OPENAI_COMPATIBLE,
+  )
   const [modelId, setModelId] = useState<string>(initialModelId?.trim() ?? "")
   const [probes, setProbes] = useState<ProbeItemState[]>([])
 
@@ -176,9 +178,12 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
     }
   }
 
+  // Allow running without a model id only for OpenAI-compatible proxies.
   const canRunAll =
     !!selectedToken &&
-    (apiType === "openai-compatible" || !!modelId.trim() || !!tokenModelHint)
+    (apiType === API_TYPES.OPENAI_COMPATIBLE ||
+      !!modelId.trim() ||
+      !!tokenModelHint)
 
   const runAll = async () => {
     if (!canRunAll) return
@@ -212,12 +217,13 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
       ? identifyProvider(trimmedModelId)
       : null
 
+    // Map detected provider to the closest verification API type.
     const initialApiType: ApiVerificationApiType =
       providerType === "Claude"
-        ? "anthropic"
+        ? API_TYPES.ANTHROPIC
         : providerType === "Gemini"
-          ? "google"
-          : "openai-compatible"
+          ? API_TYPES.GOOGLE
+          : API_TYPES.OPENAI_COMPATIBLE
 
     setApiType(initialApiType)
     setProbes(buildProbeState(initialApiType))
@@ -284,16 +290,23 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
             </div>
             <SearchableSelect
               options={[
+                // Keep a fixed display order for the supported API types.
                 {
-                  value: "openai-compatible",
+                  value: API_TYPES.OPENAI_COMPATIBLE,
                   label: t("verifyDialog.apiTypes.openaiCompatible"),
                 },
-                { value: "openai", label: t("verifyDialog.apiTypes.openai") },
                 {
-                  value: "anthropic",
+                  value: API_TYPES.OPENAI,
+                  label: t("verifyDialog.apiTypes.openai"),
+                },
+                {
+                  value: API_TYPES.ANTHROPIC,
                   label: t("verifyDialog.apiTypes.anthropic"),
                 },
-                { value: "google", label: t("verifyDialog.apiTypes.google") },
+                {
+                  value: API_TYPES.GOOGLE,
+                  label: t("verifyDialog.apiTypes.google"),
+                },
               ]}
               value={apiType}
               onChange={(value) => setApiType(value as ApiVerificationApiType)}

@@ -1,8 +1,14 @@
-export type ApiVerificationApiType =
-  | "openai-compatible"
-  | "openai"
-  | "anthropic"
-  | "google"
+/**
+ * Canonical API verification types shared by services and UI.
+ */
+export const API_TYPES = {
+  OPENAI_COMPATIBLE: "openai-compatible",
+  OPENAI: "openai",
+  ANTHROPIC: "anthropic",
+  GOOGLE: "google",
+} as const
+
+export type ApiVerificationApiType = (typeof API_TYPES)[keyof typeof API_TYPES]
 
 export type ApiVerificationProbeId =
   | "models"
