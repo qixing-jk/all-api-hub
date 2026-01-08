@@ -249,4 +249,19 @@ describe("apiVerificationService", () => {
       "verifyDialog.summaries.noModelIdProvidedToRunProbe",
     )
   })
+
+  it("returns unsupported for web-search probe on anthropic apiType", async () => {
+    const result = await runApiVerificationProbe({
+      baseUrl: "https://example.com",
+      apiKey: "secret",
+      apiType: "anthropic",
+      modelId: "claude-test",
+      probeId: "web-search",
+    })
+
+    expect(result.status).toBe("unsupported")
+    expect(result.summaryKey).toBe(
+      "verifyDialog.summaries.webSearchUnsupportedAnthropic",
+    )
+  })
 })

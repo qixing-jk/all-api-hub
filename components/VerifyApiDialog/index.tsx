@@ -10,13 +10,15 @@ import {
   SearchableSelect,
 } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
-import { runApiVerificationProbe } from "~/services/aiApiVerification"
-import { getApiVerificationProbeDefinitions } from "~/services/aiApiVerification/probes"
+import {
+  getApiVerificationProbeDefinitions,
+  guessModelIdFromToken,
+  runApiVerificationProbe,
+} from "~/services/aiApiVerification"
 import type {
   ApiVerificationApiType,
   ApiVerificationProbeId,
-} from "~/services/aiApiVerification/types"
-import { guessModelIdFromToken } from "~/services/aiApiVerification/utils"
+} from "~/services/aiApiVerification"
 import { getApiService } from "~/services/apiService"
 import type { ApiToken } from "~/types"
 import { identifyProvider } from "~/utils/modelProviders"

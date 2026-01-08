@@ -1,7 +1,7 @@
 import type {
   ApiVerificationProbeId,
   ApiVerificationProbeResult,
-} from "~/services/aiApiVerification/types"
+} from "~/services/aiApiVerification"
 import type { DisplaySiteData } from "~/types"
 
 /**
