@@ -1,5 +1,20 @@
 # Changelog
 
+## [3.2.0](https://github.com/qixing-jk/all-api-hub/compare/v3.1.1...v3.2.0) (2026-01-08)
+
+
+### Features
+
+* add CLI support verification feature ([#337](https://github.com/qixing-jk/all-api-hub/issues/337)) ([1cff4de](https://github.com/qixing-jk/all-api-hub/commit/1cff4dee3616b76df5f3ec4c30f95d51eea8780b))
+* AI API verification with multi-provider support ([#336](https://github.com/qixing-jk/all-api-hub/issues/336)) ([32b7028](https://github.com/qixing-jk/all-api-hub/commit/32b7028bc13b821015a63b6a3ee967eac5550df9))
+* extension store detection and about page CTAs ([#334](https://github.com/qixing-jk/all-api-hub/issues/334)) ([21c68ad](https://github.com/qixing-jk/all-api-hub/commit/21c68ad5ca4e3488cabe2e6cbeb3b15e0b672caa))
+
+
+### Bug Fixes
+
+* **api:** include error message in health status responses ([41b4b34](https://github.com/qixing-jk/all-api-hub/commit/41b4b34243851b5b18067af96f7c6e9ad2bc0c64))
+* **ui:** hide side panel button when inside side panel ([f312ee6](https://github.com/qixing-jk/all-api-hub/commit/f312ee63d87199860fad4a330705b5150329d4eb))
+
 ## [3.1.1](https://github.com/qixing-jk/all-api-hub/compare/v3.1.0...v3.1.1) (2026-01-06)
 
 
