@@ -115,6 +115,10 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
       const defaultToken =
         sorted.find((tok) => tok.status === 1) ?? sorted.at(0) ?? null
       setSelectedTokenId(defaultToken ? defaultToken.id.toString() : "")
+    } catch (error) {
+      console.error("Failed to load tokens:", error)
+      setTokens([])
+      setSelectedTokenId("")
     } finally {
       setIsLoadingTokens(false)
     }
@@ -151,7 +155,8 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
           p.definition.id === probeId ? { ...p, isRunning: false, result } : p,
         ),
       )
-    } catch {
+    } catch (error) {
+      console.error(`Probe ${probeId} failed:`, error)
       setProbes((prev) =>
         prev.map((p) => {
           if (p.definition.id !== probeId) return p
