@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
+  Alert,
   Badge,
   Button,
   CollapsibleSection,
@@ -315,6 +316,10 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
               : t("verifyDialog.idleHint")}
           </div>
         )}
+
+        <Alert variant="warning">
+          <p>{t("verifyDialog.warning")}</p>
+        </Alert>
 
         <div className="space-y-2">
           {probes.map((probe) => {

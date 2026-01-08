@@ -3,6 +3,7 @@
     "title": "接口验证",
     "loadingTokensHint": "正在加载密钥...",
     "idleHint": "请选择密钥和模型后开始验证。",
+    "warning": "此功能为 Beta。检测到支持时，高概率为真实支持；未检测到支持时，也可能实际支持。结果仅供参考，请以工具的实际使用情况为准。",
     "notRunYet": "尚未运行",
     "requiresModelId": "请输入模型 ID 后运行该测试。",
     "unsupportedProbeForApiType": "当前接口类型不支持 {{probe}} 探测。",
