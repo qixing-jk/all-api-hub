@@ -60,6 +60,7 @@
       "httpError": "HTTP error ({{status}})",
       "invalidResponse": "Unexpected response format",
       "networkError": "Network error / blocked request",
+      "unexpectedError": "Unexpected error: {{message}}",
       "noModelIdProvided": "No model id available",
       "unsupportedForApiType": "Unsupported for selected API type ({{apiType}})"
     }

@@ -12,6 +12,11 @@ import {
 } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
 import { guessModelIdFromToken } from "~/services/aiApiVerification"
+import {
+  inferHttpStatus,
+  summaryKeyFromHttpStatus,
+  toSanitizedErrorSummary,
+} from "~/services/aiApiVerification/utils"
 import { getApiService } from "~/services/apiService"
 import {
   CLI_TOOL_IDS,
@@ -135,6 +140,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
 
     if (!resolvedModelId.trim()) return null
 
+    const startedAt = Date.now()
     setTools((prev) =>
       prev.map((t) =>
         t.toolId === toolId
@@ -158,12 +164,58 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
       )
       return result
     } catch (error) {
+      const finishedAt = Date.now()
+      const sanitizedMessage = toSanitizedErrorSummary(error, [
+        selectedToken.key,
+      ])
+      const inferredStatus = inferHttpStatus(error, sanitizedMessage)
+      const summaryKey =
+        summaryKeyFromHttpStatus(inferredStatus) ??
+        (typeof inferredStatus === "number"
+          ? "verifyDialog.summaries.httpError"
+          : "verifyDialog.summaries.unexpectedError")
+      const summaryParams =
+        summaryKey === "verifyDialog.summaries.httpError"
+          ? { status: inferredStatus }
+          : summaryKey === "verifyDialog.summaries.unexpectedError"
+            ? { message: sanitizedMessage }
+            : undefined
+
       console.error(
         `[VerifyCliSupportDialog] Tool run failed (${toolId}):`,
         error,
       )
       setTools((prev) =>
-        prev.map((t) => (t.toolId === toolId ? { ...t, isRunning: false } : t)),
+        prev.map((t) => {
+          if (t.toolId !== toolId) return t
+
+          // Ensure failures are rendered distinctly from "Not run yet" (result=null).
+          const failureResult: CliSupportResult = {
+            id: toolId,
+            probeId: "tool-calling",
+            status: "fail",
+            latencyMs: Math.max(0, finishedAt - startedAt),
+            summary: sanitizedMessage || "Unknown error",
+            summaryKey,
+            summaryParams,
+            input: {
+              toolId,
+              baseUrl: account.baseUrl,
+              modelId: resolvedModelId,
+              tokenId: selectedTokenId,
+            },
+            output: {
+              error: sanitizedMessage,
+              inferredHttpStatus: inferredStatus,
+            },
+            details: {
+              occurredAt: new Date(finishedAt).toISOString(),
+              attempts: t.attempts,
+            },
+          }
+
+          return { ...t, isRunning: false, result: failureResult }
+        }),
       )
       return null
     }

@@ -60,6 +60,7 @@
       "httpError": "HTTP 错误（{{status}}）",
       "invalidResponse": "返回格式不符合预期",
       "networkError": "网络错误 / 请求被阻止",
+      "unexpectedError": "未知错误：{{message}}",
       "noModelIdProvided": "没有可用的模型 ID",
       "unsupportedForApiType": "不支持当前接口类型（{{apiType}}）"
     }
