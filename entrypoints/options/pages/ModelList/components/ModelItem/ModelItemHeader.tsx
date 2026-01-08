@@ -56,30 +56,32 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
           {model.model_name}
         </h3>
 
-        {/* 复制按钮 */}
-        <IconButton
-          variant="ghost"
-          size="sm"
-          onClick={handleCopyModelName}
-          title={t("messages.modelNameCopied")}
-          aria-label={t("messages.modelNameCopied")}
-          className="shrink-0"
-        >
-          <DocumentDuplicateIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-        </IconButton>
-
-        {onVerifyApi && (
+        <div className="flex items-center gap-1">
+          {/* 复制按钮 */}
           <IconButton
             variant="ghost"
             size="sm"
-            onClick={onVerifyApi}
-            title={t("actions.verifyApi")}
-            aria-label={t("actions.verifyApi")}
+            onClick={handleCopyModelName}
+            title={t("messages.modelNameCopied")}
+            aria-label={t("messages.modelNameCopied")}
             className="shrink-0"
           >
-            <WrenchScrewdriverIcon className="h-3 w-3 text-emerald-600 sm:h-3.5 sm:w-3.5 dark:text-emerald-400" />
+            <DocumentDuplicateIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
           </IconButton>
-        )}
+
+          {onVerifyApi && (
+            <IconButton
+              variant="ghost"
+              size="sm"
+              onClick={onVerifyApi}
+              title={t("actions.verifyApi")}
+              aria-label={t("actions.verifyApi")}
+              className="shrink-0"
+            >
+              <WrenchScrewdriverIcon className="h-3 w-3 text-emerald-600 sm:h-3.5 sm:w-3.5 dark:text-emerald-400" />
+            </IconButton>
+          )}
+        </div>
 
         {/* 标签 */}
         <div className="flex shrink-0 flex-wrap items-center gap-1.5 sm:gap-2">
