@@ -189,11 +189,6 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
     setModelId(initialModelId?.trim() ?? "")
   }, [initialModelId, isOpen, loadTokens])
 
-  useEffect(() => {
-    if (!isOpen) return
-    setTools(buildInitialToolState())
-  }, [isOpen, selectedTokenId])
-
   const canRunAll = !!selectedToken && resolvedModelId.trim().length > 0
 
   const footer = (
