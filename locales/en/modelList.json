@@ -59,6 +59,7 @@
     "copyFailed": "Copy failed"
   },
   "actions": {
-    "verifyApi": "Verify API"
+    "verifyApi": "Verify API",
+    "verifyCliSupport": "Verify CLI Support"
   }
 }

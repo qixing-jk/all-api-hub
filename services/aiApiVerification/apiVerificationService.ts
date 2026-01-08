@@ -44,8 +44,8 @@ export async function runApiVerificationProbe(
       id: params.probeId,
       status: "fail",
       latencyMs: 0,
-      summary: "No model id provided to run probe",
-      summaryKey: "verifyDialog.summaries.noModelIdProvidedToRunProbe",
+      summary: "No model id provided",
+      summaryKey: "verifyDialog.summaries.noModelIdProvided",
       input: {
         apiType: params.apiType,
         baseUrl: params.baseUrl,

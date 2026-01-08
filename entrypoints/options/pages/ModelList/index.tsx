@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { VerifyApiDialog } from "~/components/VerifyApiDialog"
+import { VerifyCliSupportDialog } from "~/components/VerifyCliSupportDialog"
 import { PageHeader } from "~/entrypoints/options/components/PageHeader"
 import type { DisplaySiteData } from "~/types"
 import { getAllProviders } from "~/utils/modelProviders"
@@ -130,8 +131,20 @@ export default function ModelList(props: {
     modelId: string
   } | null>(null)
 
+  const [verifyCliContext, setVerifyCliContext] = useState<{
+    account: DisplaySiteData
+    modelId: string
+  } | null>(null)
+
   const handleVerifyModel = (account: DisplaySiteData, modelId: string) => {
     setVerifyContext({ account, modelId })
+  }
+
+  const handleVerifyCliSupport = (
+    account: DisplaySiteData,
+    modelId: string,
+  ) => {
+    setVerifyCliContext({ account, modelId })
   }
 
   return (
@@ -165,6 +178,15 @@ export default function ModelList(props: {
               onClose={() => setVerifyContext(null)}
               account={verifyContext.account}
               initialModelId={verifyContext.modelId}
+            />
+          )}
+
+          {verifyCliContext && (
+            <VerifyCliSupportDialog
+              isOpen={true}
+              onClose={() => setVerifyCliContext(null)}
+              account={verifyCliContext.account}
+              initialModelId={verifyCliContext.modelId}
             />
           )}
 
@@ -207,6 +229,7 @@ export default function ModelList(props: {
                   models={filteredModels}
                   currentAccount={currentAccount}
                   onVerifyModel={handleVerifyModel}
+                  onVerifyCliSupport={handleVerifyCliSupport}
                   showRealPrice={showRealPrice}
                   showRatioColumn={showRatioColumn}
                   showEndpointTypes={showEndpointTypes}
@@ -221,6 +244,7 @@ export default function ModelList(props: {
                     models={filteredModels}
                     currentAccount={currentAccount}
                     onVerifyModel={handleVerifyModel}
+                    onVerifyCliSupport={handleVerifyCliSupport}
                     showRealPrice={showRealPrice}
                     showRatioColumn={showRatioColumn}
                     showEndpointTypes={showEndpointTypes}

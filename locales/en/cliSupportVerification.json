@@ -1,0 +1,67 @@
+{
+  "verifyDialog": {
+    "title": "CLI Support Simulation",
+    "loadingTokensHint": "Loading tokens...",
+    "idleHint": "Select a token, then run the simulation. Provide a model id if the token cannot be used to infer one.",
+    "warning": "This feature is Beta. A detected pass is likely real; a fail may still work in some clients. Treat the result as guidance and verify with the actual CLI when possible.",
+    "notRunYet": "Not run yet",
+    "requiresModelId": "Provide a model id before running this check.",
+    "unsupportedToolForApiType": "The selected API type does not support {{tool}} simulation.",
+    "modelHint": "Model hint from token: {{modelId}}",
+    "meta": {
+      "token": "Token",
+      "tokenPlaceholder": "Select token",
+      "apiType": "API type",
+      "apiTypePlaceholder": "Select API type",
+      "model": "Model",
+      "modelPlaceholder": "Enter model id",
+      "models": {
+        "claude": "Claude model",
+        "codex": "Codex model",
+        "gemini": "Gemini model"
+      }
+    },
+    "apiTypes": {
+      "openaiCompatible": "OpenAI-compatible",
+      "openai": "OpenAI",
+      "anthropic": "Anthropic",
+      "google": "Google/Gemini"
+    },
+    "actions": {
+      "close": "Close",
+      "run": "Run simulation",
+      "runOne": "Run",
+      "retry": "Retry",
+      "running": "Running..."
+    },
+    "status": {
+      "pass": "Pass",
+      "fail": "Fail",
+      "pending": "Pending",
+      "unsupported": "Unsupported"
+    },
+    "details": {
+      "input": "Input",
+      "output": "Output"
+    },
+    "tools": {
+      "claude": "Claude Code",
+      "codex": "Codex (Codex CLI)",
+      "gemini": "Gemini CLI"
+    },
+    "summaries": {
+      "supported": "Supported",
+      "supportedStreaming": "Supported (streaming)",
+      "noToolCallDetected": "No tool call detected (tool calling may not be supported)",
+      "toolCallSucceeded": "Tool call succeeded.",
+      "unauthorized": "Unauthorized (401): invalid key or missing auth",
+      "forbidden": "Forbidden (403): access denied",
+      "endpointNotFound": "Endpoint not found (404): this API may not be supported",
+      "httpError": "HTTP error ({{status}})",
+      "invalidResponse": "Unexpected response format",
+      "networkError": "Network error / blocked request",
+      "noModelIdProvided": "No model id available",
+      "unsupportedForApiType": "Unsupported for selected API type ({{apiType}})"
+    }
+  }
+}

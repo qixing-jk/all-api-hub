@@ -1,4 +1,5 @@
 import {
+  CommandLineIcon,
   DocumentDuplicateIcon,
   WrenchScrewdriverIcon,
 } from "@heroicons/react/24/outline"
@@ -16,6 +17,7 @@ interface ModelItemHeaderProps {
   handleCopyModelName: () => void
   accountName?: string
   onVerifyApi?: () => void
+  onVerifyCliSupport?: () => void
 }
 
 export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
@@ -24,6 +26,7 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
   handleCopyModelName,
   accountName,
   onVerifyApi,
+  onVerifyCliSupport,
 }) => {
   const { t } = useTranslation("modelList")
   const providerConfig = getProviderConfig(model.model_name)
@@ -79,6 +82,19 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
               className="shrink-0"
             >
               <WrenchScrewdriverIcon className="h-3 w-3 text-emerald-600 sm:h-3.5 sm:w-3.5 dark:text-emerald-400" />
+            </IconButton>
+          )}
+
+          {onVerifyCliSupport && (
+            <IconButton
+              variant="ghost"
+              size="sm"
+              onClick={onVerifyCliSupport}
+              title={t("actions.verifyCliSupport")}
+              aria-label={t("actions.verifyCliSupport")}
+              className="shrink-0"
+            >
+              <CommandLineIcon className="h-3 w-3 text-sky-600 sm:h-3.5 sm:w-3.5 dark:text-sky-400" />
             </IconButton>
           )}
         </div>

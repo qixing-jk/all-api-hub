@@ -97,8 +97,8 @@ export async function runApiVerificationSuite(
         id: definition.id,
         status: "fail",
         latencyMs: 0,
-        summary: "No model id provided to run probes",
-        summaryKey: "verifyDialog.summaries.noModelIdProvidedToRunProbes",
+        summary: "No model id provided",
+        summaryKey: "verifyDialog.summaries.noModelIdProvided",
       })
     }
 

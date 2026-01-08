@@ -247,9 +247,7 @@ describe("apiVerificationService", () => {
     })
 
     expect(result.status).toBe("fail")
-    expect(result.summaryKey).toBe(
-      "verifyDialog.summaries.noModelIdProvidedToRunProbe",
-    )
+    expect(result.summaryKey).toBe("verifyDialog.summaries.noModelIdProvided")
   })
 
   it("returns unsupported for web-search probe on anthropic apiType", async () => {

@@ -1,0 +1,67 @@
+{
+  "verifyDialog": {
+    "title": "CLI 兼容性验证",
+    "loadingTokensHint": "正在加载密钥...",
+    "idleHint": "请选择密钥后开始验证。如无法从密钥推测模型，请手动填写模型 ID。",
+    "warning": "此功能为 Beta。检测到通过时，高概率为真实支持；检测失败时，也可能实际可用。结果仅供参考，请以工具的实际使用情况为准。",
+    "notRunYet": "尚未运行",
+    "requiresModelId": "请输入模型 ID 后运行该测试。",
+    "unsupportedToolForApiType": "当前接口类型不支持 {{tool}} 的模拟测试。",
+    "modelHint": "从密钥推测的模型：{{modelId}}",
+    "meta": {
+      "token": "密钥",
+      "tokenPlaceholder": "选择密钥",
+      "apiType": "接口类型",
+      "apiTypePlaceholder": "选择接口类型",
+      "model": "模型",
+      "modelPlaceholder": "输入模型 ID",
+      "models": {
+        "claude": "Claude 模型",
+        "codex": "Codex 模型",
+        "gemini": "Gemini 模型"
+      }
+    },
+    "apiTypes": {
+      "openaiCompatible": "OpenAI 兼容",
+      "openai": "OpenAI",
+      "anthropic": "Anthropic",
+      "google": "Google/Gemini"
+    },
+    "actions": {
+      "close": "关闭",
+      "run": "开始验证",
+      "runOne": "运行",
+      "retry": "重试",
+      "running": "运行中..."
+    },
+    "status": {
+      "pass": "通过",
+      "fail": "失败",
+      "pending": "待运行",
+      "unsupported": "不支持"
+    },
+    "details": {
+      "input": "输入",
+      "output": "输出"
+    },
+    "tools": {
+      "claude": "Claude Code",
+      "codex": "Codex（Codex CLI）",
+      "gemini": "Gemini CLI"
+    },
+    "summaries": {
+      "supported": "支持",
+      "supportedStreaming": "支持（流式）",
+      "noToolCallDetected": "未检测到工具调用（可能不支持 tool/function calling）",
+      "toolCallSucceeded": "工具调用成功。",
+      "unauthorized": "未授权（401）：密钥无效或缺少认证",
+      "forbidden": "禁止访问（403）",
+      "endpointNotFound": "端点不存在（404）：可能不支持该接口",
+      "httpError": "HTTP 错误（{{status}}）",
+      "invalidResponse": "返回格式不符合预期",
+      "networkError": "网络错误 / 请求被阻止",
+      "noModelIdProvided": "没有可用的模型 ID",
+      "unsupportedForApiType": "不支持当前接口类型（{{apiType}}）"
+    }
+  }
+}

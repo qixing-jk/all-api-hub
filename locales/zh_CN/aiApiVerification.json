@@ -27,6 +27,7 @@
       "webSearchUnsupportedForApiType": "当前接口类型不支持联网搜索探测。",
       "webSearchRequiresExplicitSupport": "联网搜索探测需要显式的接口类型支持。",
       "modelsProbeUnsupportedForApiType": "仅 OpenAI 兼容接口支持模型列表探测。",
+      "noModelIdProvided": "未提供模型 ID，无法运行探测。",
       "noModelIdProvidedToRunProbe": "未提供模型 ID，无法运行探测。",
       "noModelIdProvidedToRunProbes": "未提供模型 ID，无法运行探测。",
       "noModelAvailableToRunProbes": "没有可用模型，无法运行探测。"

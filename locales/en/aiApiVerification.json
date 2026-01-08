@@ -27,6 +27,7 @@
       "webSearchUnsupportedForApiType": "Web search probe is not supported for this API type.",
       "webSearchRequiresExplicitSupport": "Web search probe requires explicit API type support.",
       "modelsProbeUnsupportedForApiType": "Models probe is only supported for OpenAI-compatible APIs.",
+      "noModelIdProvided": "No model id provided.",
       "noModelIdProvidedToRunProbe": "No model id provided to run probe.",
       "noModelIdProvidedToRunProbes": "No model id provided to run probes.",
       "noModelAvailableToRunProbes": "No model available to run probes."

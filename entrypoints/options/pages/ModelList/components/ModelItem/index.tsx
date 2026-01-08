@@ -27,6 +27,7 @@ interface ModelItemProps {
   account?: DisplaySiteData
   accountName?: string
   onVerifyModel?: (account: DisplaySiteData, modelId: string) => void
+  onVerifyCliSupport?: (account: DisplaySiteData, modelId: string) => void
 }
 
 /**
@@ -49,6 +50,7 @@ export default function ModelItem(props: ModelItemProps) {
     account,
     accountName,
     onVerifyModel,
+    onVerifyCliSupport,
   } = props
   const { t } = useTranslation("modelList")
   const [isExpanded, setIsExpanded] = useState(false)
@@ -87,6 +89,11 @@ export default function ModelItem(props: ModelItemProps) {
             onVerifyApi={
               account && onVerifyModel
                 ? () => onVerifyModel(account, model.model_name)
+                : undefined
+            }
+            onVerifyCliSupport={
+              account && onVerifyCliSupport
+                ? () => onVerifyCliSupport(account, model.model_name)
                 : undefined
             }
           />

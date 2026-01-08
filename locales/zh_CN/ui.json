@@ -107,6 +107,13 @@
       },
       "actions": {
         "export": "导出"
+      },
+      "cliSupport": {
+        "title": "CLI 兼容性提示",
+        "loading": "正在读取缓存的 CLI 兼容性结果...",
+        "noCached": "未找到该密钥的 CLI 兼容性缓存结果。可在模型列表中点击“验证 CLI 兼容性”先进行测试，再导出到 CC Switch。",
+        "cachedHint": "显示该密钥最近一次 CLI 兼容性验证的缓存结果。",
+        "apiTypeHint": "缓存检测使用的接口类型：{{apiType}}"
       }
     },
     "cliproxy": {

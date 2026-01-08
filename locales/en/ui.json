@@ -107,6 +107,13 @@
       },
       "actions": {
         "export": "Export"
+      },
+      "cliSupport": {
+        "title": "CLI support check",
+        "loading": "Checking cached CLI support result...",
+        "noCached": "No cached CLI support result found for this token. Run \"Verify CLI Support\" from the model list to test compatibility before exporting.",
+        "cachedHint": "Showing a cached result from the latest CLI support simulation for this token.",
+        "apiTypeHint": "Cached check uses API type: {{apiType}}"
       }
     },
     "cliproxy": {

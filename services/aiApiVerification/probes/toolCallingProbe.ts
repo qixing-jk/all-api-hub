@@ -1,4 +1,4 @@
-import { generateText, jsonSchema, stepCountIs, tool } from "ai"
+import { generateText, jsonSchema, tool } from "ai"
 
 import { nowMs, okLatency } from "../probeTiming"
 import { createModel } from "../providers"
@@ -6,7 +6,11 @@ import type {
   ApiVerificationApiType,
   ApiVerificationProbeResult,
 } from "../types"
-import { toSanitizedErrorSummary } from "../utils"
+import {
+  inferHttpStatus,
+  summaryKeyFromHttpStatus,
+  toSanitizedErrorSummary,
+} from "../utils"
 
 type RunToolCallingProbeParams = {
   baseUrl: string
@@ -18,7 +22,7 @@ type RunToolCallingProbeParams = {
 /**
  * Check whether the verification tool was called in the AI SDK result.
  */
-function toolCalled(result: {
+export function toolCalled(result: {
   toolCalls?: Array<{ toolName?: string }>
   toolResults?: Array<{ toolName?: string }>
 }): boolean {
@@ -36,6 +40,8 @@ export async function runToolCallingProbe(
 ): Promise<ApiVerificationProbeResult> {
   const startedAt = nowMs()
   const secretsToRedact = [params.apiKey]
+  const prompt =
+    "Call the verify_tool tool once. Reply with a short sentence that includes the returned time."
 
   try {
     const model = createModel({
@@ -54,14 +60,11 @@ export async function runToolCallingProbe(
       execute: async () => ({ now: new Date().toISOString() }),
     })
 
-    const prompt =
-      "Call the verify_tool tool once. Reply with a short sentence that includes the returned time."
     const result = await generateText({
       model,
       prompt,
       tools: { verify_tool: verifyTool },
       toolChoice: "required",
-      stopWhen: stepCountIs(3),
     })
 
     if (!toolCalled(result)) {
@@ -116,17 +119,23 @@ export async function runToolCallingProbe(
       },
     }
   } catch (error) {
+    const summary = toSanitizedErrorSummary(error, secretsToRedact)
+    const inferredStatus = inferHttpStatus(error, summary)
     return {
       id: "tool-calling",
       status: "fail",
       latencyMs: okLatency(startedAt),
-      summary: toSanitizedErrorSummary(error, secretsToRedact),
+      summary: summary || "Request failed",
+      summaryKey: summaryKeyFromHttpStatus(inferredStatus),
+      summaryParams:
+        typeof inferredStatus === "number"
+          ? { status: inferredStatus }
+          : undefined,
       input: {
         apiType: params.apiType,
         baseUrl: params.baseUrl,
         modelId: params.modelId,
-        prompt:
-          "Call the verify_tool tool once. Reply with a short sentence that includes the returned time.",
+        prompt,
         tool: {
           name: "verify_tool",
           description: "Return a timestamp string.",

@@ -59,6 +59,7 @@
     "copyFailed": "复制失败"
   },
   "actions": {
-    "verifyApi": "验证接口"
+    "verifyApi": "验证接口",
+    "verifyCliSupport": "验证 CLI 兼容性"
   }
 }
