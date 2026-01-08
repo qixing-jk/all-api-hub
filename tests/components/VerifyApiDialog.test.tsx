@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it, vi } from "vitest"
 
 import { VerifyApiDialog } from "~/components/VerifyApiDialog"
-import apiVerificationEn from "~/locales/en/apiVerification.json"
+import apiVerificationEn from "~/locales/en/aiApiVerification.json"
 import { testI18n } from "~/tests/test-utils/i18n"
 import { fireEvent, render, screen, within } from "~/tests/test-utils/render"
 
@@ -16,12 +16,10 @@ vi.mock("~/services/apiService", () => ({
 const mockRunApiVerificationProbe = vi.fn()
 
 vi.mock(
-  "~/services/apiVerification/apiVerificationService",
+  "~/services/aiApiVerification/apiVerificationService",
   async (importOriginal) => {
     const original =
-      await importOriginal<
-        typeof import("~/services/apiVerification/apiVerificationService")
-      >()
+      await importOriginal<typeof import("~/services/aiApiVerification")>()
     return {
       ...original,
       runApiVerificationProbe: (...args: any[]) =>
@@ -34,7 +32,7 @@ describe("VerifyApiDialog", () => {
   beforeAll(() => {
     testI18n.addResourceBundle(
       "en",
-      "apiVerification",
+      "aiApiVerification",
       apiVerificationEn,
       true,
       true,
@@ -242,7 +240,7 @@ describe("VerifyApiDialog", () => {
     expect(
       await within(probeCard).findByText(
         testI18n.t("verifyDialog.unsupportedProbeForApiType", {
-          ns: "apiVerification",
+          ns: "aiApiVerification",
           probe: apiVerificationEn.verifyDialog.probes["web-search"],
         }),
       ),

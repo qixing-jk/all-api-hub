@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import {
   runApiVerification,
   runApiVerificationProbe,
-} from "~/services/apiVerification/apiVerificationService"
+} from "~/services/aiApiVerification"
 
 const mockFetchOpenAICompatibleModelIds = vi.fn()
 

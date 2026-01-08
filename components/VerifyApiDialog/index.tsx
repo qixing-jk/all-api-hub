@@ -10,14 +10,14 @@ import {
   SearchableSelect,
 } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
-import { getApiService } from "~/services/apiService"
-import { runApiVerificationProbe } from "~/services/apiVerification/apiVerificationService"
-import { getApiVerificationProbeDefinitions } from "~/services/apiVerification/probes"
+import { runApiVerificationProbe } from "~/services/aiApiVerification"
+import { getApiVerificationProbeDefinitions } from "~/services/aiApiVerification/probes"
 import type {
   ApiVerificationApiType,
   ApiVerificationProbeId,
-} from "~/services/apiVerification/types"
-import { guessModelIdFromToken } from "~/services/apiVerification/utils"
+} from "~/services/aiApiVerification/types"
+import { guessModelIdFromToken } from "~/services/aiApiVerification/utils"
+import { getApiService } from "~/services/apiService"
 import type { ApiToken } from "~/types"
 import { identifyProvider } from "~/utils/modelProviders"
 
@@ -30,7 +30,7 @@ import { formatLatency, safeJsonStringify } from "./utils"
  */
 export function VerifyApiDialog(props: VerifyApiDialogProps) {
   const { isOpen, onClose, account, initialModelId } = props
-  const { t } = useTranslation("apiVerification")
+  const { t } = useTranslation("aiApiVerification")
 
   const [isRunning, setIsRunning] = useState(false)
   const [isLoadingTokens, setIsLoadingTokens] = useState(false)

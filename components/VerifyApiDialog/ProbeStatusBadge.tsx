@@ -2,7 +2,7 @@ import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
 import { Badge } from "~/components/ui"
-import type { ApiVerificationProbeResult } from "~/services/apiVerification/types"
+import type { ApiVerificationProbeResult } from "~/services/aiApiVerification/types"
 
 /**
  * Render a standardized status badge for a probe result.
@@ -12,7 +12,7 @@ export function ProbeStatusBadge({
 }: {
   result: ApiVerificationProbeResult
 }) {
-  const { t } = useTranslation("apiVerification")
+  const { t } = useTranslation("aiApiVerification")
 
   if (result.status === "pass") {
     return (

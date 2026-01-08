@@ -29,7 +29,7 @@ export type ApiVerificationProbeResult = {
    * Optional i18n key for rendering {@link summary} in the UI.
    *
    * This is expected to be resolved by the caller's i18n namespace (e.g. the UI
-   * uses the `apiVerification` namespace).
+   * uses the `aiApiVerification` namespace).
    */
   summaryKey?: string
   /**
