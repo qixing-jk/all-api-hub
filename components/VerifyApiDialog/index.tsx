@@ -151,13 +151,14 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
           p.definition.id === probeId ? { ...p, isRunning: false, result } : p,
         ),
       )
-    } catch (error) {
+    } catch {
       setProbes((prev) =>
         prev.map((p) => {
           if (p.definition.id !== probeId) return p
           return {
             ...p,
             isRunning: false,
+            // Surface a generic message to avoid leaking provider error details.
             result: {
               id: probeId,
               status: "fail",
