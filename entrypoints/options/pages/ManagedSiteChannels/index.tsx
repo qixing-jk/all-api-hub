@@ -107,7 +107,7 @@ interface ManagedSiteChannelsProps {
 }
 
 /**
- *
+ * Render the managed site channels page with data loading, filtering, and actions.
  */
 export default function ManagedSiteChannels({
   refreshKey,

@@ -80,6 +80,10 @@ interface AccountFormProps {
  * @param props.onToggleShowAccessToken Toggles token visibility.
  * @param props.onNotesChange Handler to update notes.
  * @param props.onTagsChange Handler to update tags selection.
+ * @param props.cookieAuthSessionCookie Cookie value used for cookie-based auth.
+ * @param props.isImportingCookies Whether cookie import is in progress.
+ * @param props.onCookieAuthSessionCookieChange Handler to update cookie value.
+ * @param props.onImportCookieAuthSessionCookie Handler to trigger cookie import.
  * @param props.availableTags Tags available from other accounts.
  * @param props.tagCounts Optional counts associated with tags.
  * @param props.siteType Selected site type identifier.

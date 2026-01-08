@@ -159,7 +159,7 @@ export interface ImportToCliProxyOptions {
 }
 
 /**
- *
+ * Register or update a provider in CLI Proxy from a site account and token.
  */
 export async function importToCliProxy(
   options: ImportToCliProxyOptions,

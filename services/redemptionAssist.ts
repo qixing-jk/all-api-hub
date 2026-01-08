@@ -78,6 +78,7 @@ class RedemptionAssistService {
    * Update runtime flags without persisting.
    * @param settings Runtime-only toggle overrides.
    * @param settings.enabled Whether redemption assist is enabled at runtime.
+   * @param settings.relaxedCodeValidation Whether to loosen code validation rules.
    * @param settings.urlWhitelist Optional URL whitelist configuration used to gate feature activation.
    */
   updateRuntimeSettings(settings: {

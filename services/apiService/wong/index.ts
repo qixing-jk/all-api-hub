@@ -95,11 +95,8 @@ const ENDPOINT = "/api/user/checkin"
 
 /**
  * Whether the current site supports check-in.
- * @returns `true` or `false` when check-in is supported, `undefined` when not supported,
- * @param baseUrl base URL of the WONG site
- * @param userId user ID
- * @param accessToken access token
- * @param authType authentication type (optional, defaults to AccessToken)
+ * @param request API request context for the WONG site.
+ * @returns `true` or `false` when check-in is supported, `undefined` when not supported.
  */
 export async function fetchSupportCheckIn(
   request: ApiServiceRequest,
@@ -122,14 +119,11 @@ const isAlreadyCheckedMessage = (message: string): boolean => {
 
 /**
  * Fetch today's check-in status for WONG account.
+ * @param request API request context for the WONG site.
  * @returns
  * - `true` when the user can check in today (not yet checked in).
  * - `false` when the user has already checked in today.
  * - `undefined` when the status is unknown or check-in is not supported.
- * @param baseUrl base URL of the WONG site
- * @param userId user ID
- * @param accessToken access token
- * @param authType authentication type (optional, defaults to AccessToken)
  */
 export async function fetchCheckInStatus(
   request: ApiServiceRequest,

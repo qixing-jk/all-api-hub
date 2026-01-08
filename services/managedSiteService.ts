@@ -93,7 +93,7 @@ export interface ManagedSiteService {
 }
 
 /**
- *
+ * Check if preferences contain a valid managed site admin configuration.
  */
 export function hasValidManagedSiteConfig(
   prefs: UserPreferences | null,
@@ -106,7 +106,7 @@ export function hasValidManagedSiteConfig(
 }
 
 /**
- *
+ * Resolve the managed site service implementation based on preferences.
  */
 export async function getManagedSiteService(): Promise<ManagedSiteService> {
   const prefs = await userPreferences.getPreferences()

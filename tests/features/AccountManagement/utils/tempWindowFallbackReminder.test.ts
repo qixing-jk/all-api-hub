@@ -8,7 +8,7 @@ import {
 } from "~/types"
 
 /**
- *
+ * Build a DisplaySiteData object with overrides for test scenarios.
  */
 function makeSite(overrides: Partial<DisplaySiteData>): DisplaySiteData {
   return {
