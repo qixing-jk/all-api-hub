@@ -78,7 +78,7 @@
     "usageLog": "Usage Log",
     "redeemPage": "Redeem/Top-up",
     "openAllExternalCheckIn": "Open all external check-ins",
-    "openAllExternalCheckInDisabled": "No external check-in URLs configured",
+    "openAllExternalCheckInHint": "Open unchecked external check-ins. Ctrl/Cmd: open all.",
     "pin": "Pin account",
     "unpin": "Unpin account",
     "pinned": "Pinned",

@@ -78,7 +78,7 @@
     "usageLog": "用量日志",
     "redeemPage": "充值页面",
     "openAllExternalCheckIn": "一键打开外部签到",
-    "openAllExternalCheckInDisabled": "未配置外部签到地址",
+    "openAllExternalCheckInHint": "默认仅打开未签到，按 Ctrl/Cmd 打开全部。",
     "pin": "置顶账号",
     "unpin": "取消置顶",
     "pinned": "已置顶",

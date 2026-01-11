@@ -18,7 +18,11 @@
       "importedAccounts": "已导入并迁移 {{migratedCount}} 个账号",
       "importSuccess": "导入成功",
       "accountPinned": "已置顶 {{accountName}}",
-      "accountUnpinned": "已取消置顶 {{accountName}}"
+      "accountUnpinned": "已取消置顶 {{accountName}}",
+      "externalCheckInOpened": "已为 {{count}} 个账号打开外部签到（{{mode}}）。",
+      "externalCheckInNonePending": "没有今日未打开过的外部签到站。",
+      "externalCheckInModeAll": "全部",
+      "externalCheckInModeUnchecked": "仅未签到"
     },
     "error": {
       "refreshAccount": "刷新 {{accountName}} 失败",

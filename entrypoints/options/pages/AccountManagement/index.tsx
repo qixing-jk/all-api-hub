@@ -47,11 +47,7 @@ function AccountManagementContent({ searchQuery }: { searchQuery?: string }) {
               <Button
                 onClick={handleOpenExternalCheckInsClick}
                 leftIcon={<CalendarCheck2 className="h-4 w-4" />}
-                title={
-                  canOpenExternalCheckIns
-                    ? t("actions.openAllExternalCheckIn")
-                    : t("actions.openAllExternalCheckInDisabled")
-                }
+                title={t("actions.openAllExternalCheckInHint")}
               >
                 {t("actions.openAllExternalCheckIn")}
               </Button>

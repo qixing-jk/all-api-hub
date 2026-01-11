@@ -145,6 +145,9 @@ export const AccountActionsProvider = ({
           )
 
       if (!accountsToOpen.length) {
+        toast.error(
+          i18next.t("messages:toast.success.externalCheckInNonePending"),
+        )
         return
       }
 
@@ -155,6 +158,15 @@ export const AccountActionsProvider = ({
       await openExternalCheckInPages(accountsToOpen)
 
       await loadAccountData()
+
+      toast.success(
+        i18next.t("messages:toast.success.externalCheckInOpened", {
+          count: accountsToOpen.length,
+          mode: options?.openAll
+            ? i18next.t("messages:toast.success.externalCheckInModeAll")
+            : i18next.t("messages:toast.success.externalCheckInModeUnchecked"),
+        }),
+      )
     },
     [loadAccountData],
   )

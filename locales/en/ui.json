@@ -21,6 +21,7 @@
     "managedSiteChannels": "Channels Management",
     "managedSiteModelSync": "Model sync",
     "externalCheckinAll": "Open all external check-ins",
+    "externalCheckinAllHint": "Open unchecked external check-ins. Ctrl/Cmd: open all.",
     "externalCheckinAllDisabled": "No external check-in URLs configured",
     "keys": "Key Management",
     "importExport": "Import/Export",

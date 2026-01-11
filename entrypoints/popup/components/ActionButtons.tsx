@@ -112,7 +112,7 @@ export default function ActionButtons() {
         </Tooltip>
 
         {canOpenExternalCheckIns && (
-          <Tooltip content={t("ui:navigation.externalCheckinAll")}>
+          <Tooltip content={t("ui:navigation.externalCheckinAllHint")}>
             <IconButton
               onClick={handleOpenExternalCheckInsClick}
               variant="outline"

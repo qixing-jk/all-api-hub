@@ -18,7 +18,11 @@
       "importedAccounts": "Imported and migrated {{migratedCount}} account(s)",
       "importSuccess": "Import successful",
       "accountPinned": "{{accountName}} pinned",
-      "accountUnpinned": "{{accountName}} unpinned"
+      "accountUnpinned": "{{accountName}} unpinned",
+      "externalCheckInOpened": "Opened external check-ins for {{count}} account(s) ({{mode}}).",
+      "externalCheckInNonePending": "There are no external check-in stations that haven't been opened today.",
+      "externalCheckInModeAll": "all",
+      "externalCheckInModeUnchecked": "unchecked only"
     },
     "error": {
       "refreshAccount": "Failed to refresh {{accountName}}",
