@@ -1,5 +1,9 @@
 import { t } from "i18next"
 
+import type {
+  RedemptionAssistShouldPromptRequest,
+  RedemptionAssistShouldPromptResponse,
+} from "~/services/redemptionAssist"
 import {
   checkPermissionViaMessage,
   sendRuntimeMessage,
@@ -239,6 +243,25 @@ async function scheduleRedemptionScan(sourceText: string) {
 }
 
 /**
+ * Requests prompt-eligible codes from the background runtime handler.
+ */
+async function requestPromptableCodes(url: string, codes: string[]) {
+  if (codes.length === 0) return []
+
+  const response = (await sendRuntimeMessage({
+    action: "redemptionAssist:shouldPrompt",
+    url,
+    codes,
+  } as RedemptionAssistShouldPromptRequest)) as RedemptionAssistShouldPromptResponse
+
+  if (!response?.success) {
+    return []
+  }
+
+  return response.promptableCodes ?? []
+}
+
+/**
  * Attempts to auto-redeem a detected code by coordinating with the background page.
  * @param sourceText Text possibly containing redemption codes.
  */
@@ -261,33 +284,28 @@ async function scanForRedemptionCodes(sourceText?: string) {
     }
 
     console.log("[RedemptionAssist][Content] Detected codes:", codes, url)
-    const shouldResp: any = await sendRuntimeMessage({
-      action: "redemptionAssist:shouldPrompt",
-      url,
-      code: codes[0],
-    })
-
-    if (!shouldResp?.success || !shouldResp.shouldPrompt) {
+    const promptableCodes = await requestPromptableCodes(url, codes)
+    if (promptableCodes.length === 0) {
       return
     }
 
     const confirmMessage =
-      codes.length > 1
+      promptableCodes.length > 1
         ? t("redemptionAssist:messages.promptConfirmBatch", {
-            count: codes.length,
+            count: promptableCodes.length,
           })
         : t("redemptionAssist:messages.promptConfirm", {
-            code: maskCode(codes[0] || ""),
+            code: maskCode(promptableCodes[0] || ""),
           })
 
     const prompt = await showRedemptionPromptToast(
       confirmMessage,
-      codes.map((code) => ({ code, preview: maskCode(code) })),
+      promptableCodes.map((code) => ({ code, preview: maskCode(code) })),
     )
     if (prompt.action !== "auto") return
     if (prompt.selectedCodes.length === 0) return
 
-    const selectedCodes = prompt.selectedCodes
+    const { selectedCodes } = prompt
 
     const loadingMessage = t("redemptionAssist:messages.redeemLoading")
     let loadingToastId: string | undefined

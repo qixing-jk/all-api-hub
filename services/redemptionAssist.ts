@@ -27,6 +27,28 @@ interface RedemptionAssistRuntimeSettings {
 }
 
 /**
+ * Request payload for redemptionAssist:shouldPrompt runtime messages.
+ */
+export type RedemptionAssistShouldPromptRequest = {
+  action: "redemptionAssist:shouldPrompt"
+  url: string
+  codes: string[]
+}
+
+/**
+ * Response payload for redemptionAssist:shouldPrompt runtime messages.
+ */
+export type RedemptionAssistShouldPromptResponse =
+  | {
+      success: true
+      promptableCodes: string[]
+    }
+  | {
+      success: false
+      error?: string
+    }
+
+/**
  * Provides code redemption assistance in background/context scripts.
  * Responsibilities:
  * - Tracks runtime enable flag from preferences.
@@ -269,21 +291,46 @@ class RedemptionAssistService {
   }
 
   /**
-   * Decide whether to show redemption prompt for a given URL/code pair.
-   * Returns a reason when skipping prompt (disabled/invalid_code).
-   * @param params Wrapper object containing URL, redemption code and tab id.
-   * @param params.url Page URL where the potential redemption code was found.
-   * @param params.code Candidate redemption code extracted from the page.
+   * Filters codes to those eligible for redemption prompts.
+   * @param params Wrapper object containing URL, redemption codes and tab id.
+   * @param params.url Page URL where the potential redemption codes were found.
+   * @param params.codes Candidate redemption codes extracted from the page.
    * @param params.tabId Optional tab identifier used for telemetry.
-   * @returns shouldPrompt flag and optional skip reason.
+   * @returns List of codes that pass validation and whitelist checks.
    */
-  async shouldPrompt(params: {
+  async filterPromptableCodes(params: {
+    url: string
+    codes: string[]
+    tabId?: number
+  }): Promise<string[]> {
+    await this.ensureInitialized()
+
+    if (!this.settings.enabled) {
+      return []
+    }
+
+    const checks = await Promise.all(
+      params.codes.map(async (code) => {
+        const result = await this.evaluatePromptability({
+          url: params.url,
+          code,
+          tabId: params.tabId,
+        })
+        return result.shouldPrompt ? code : null
+      }),
+    )
+
+    return checks.filter((code): code is string => Boolean(code))
+  }
+
+  /**
+   * Evaluates prompt eligibility for a single code after initialization.
+   */
+  private async evaluatePromptability(params: {
     url: string
     code: string
     tabId?: number
   }): Promise<{ shouldPrompt: boolean; reason?: string }> {
-    await this.ensureInitialized()
-
     if (!this.settings.enabled) {
       return { shouldPrompt: false, reason: "disabled" }
     }
@@ -407,17 +454,22 @@ export const handleRedemptionAssistMessage = async (
       }
 
       case "redemptionAssist:shouldPrompt": {
-        const { url, code } = request
-        if (!url || !code) {
-          sendResponse({ success: false, error: "Missing url or code" })
+        const { url, codes } = request
+        if (!url || !Array.isArray(codes) || codes.length === 0) {
+          sendResponse({ success: false, error: "Missing url or codes" })
           break
         }
-        const result = await redemptionAssistService.shouldPrompt({
-          url,
-          code,
-          tabId: sender.tab?.id,
-        })
-        sendResponse({ success: true, ...result })
+        const promptableCodes =
+          await redemptionAssistService.filterPromptableCodes({
+            url,
+            codes,
+            tabId: sender.tab?.id,
+          })
+        const response: RedemptionAssistShouldPromptResponse = {
+          success: true,
+          promptableCodes,
+        }
+        sendResponse(response)
         break
       }
 
