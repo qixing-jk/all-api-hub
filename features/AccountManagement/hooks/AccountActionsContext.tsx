@@ -153,9 +153,8 @@ export const AccountActionsProvider = ({
       }
 
       try {
-        await openExternalCheckInPages(accountsToOpen)
-
         for (const account of accountsToOpen) {
+          await openExternalCheckInPages([account])
           await accountStorage.markAccountAsCustomCheckedIn(account.id)
         }
 

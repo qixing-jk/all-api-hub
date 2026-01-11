@@ -104,10 +104,9 @@ describe("AccountActionsContext", () => {
     expect(mockMarkCustomCheckIn).toHaveBeenCalledTimes(2)
     expect(mockMarkCustomCheckIn).toHaveBeenCalledWith("a2")
     expect(mockMarkCustomCheckIn).toHaveBeenCalledWith("a3")
-    expect(mockOpenExternalCheckInPages).toHaveBeenCalledWith([
-      accounts[1],
-      accounts[2],
-    ])
+    expect(mockOpenExternalCheckInPages).toHaveBeenCalledTimes(2)
+    expect(mockOpenExternalCheckInPages).toHaveBeenCalledWith([accounts[1]])
+    expect(mockOpenExternalCheckInPages).toHaveBeenCalledWith([accounts[2]])
     expect(mockLoadAccountData).toHaveBeenCalled()
     expect(mockToast.success).toHaveBeenCalled()
   })
@@ -140,7 +139,9 @@ describe("AccountActionsContext", () => {
     })
 
     expect(mockMarkCustomCheckIn).toHaveBeenCalledTimes(2)
-    expect(mockOpenExternalCheckInPages).toHaveBeenCalledWith(accounts)
+    expect(mockOpenExternalCheckInPages).toHaveBeenCalledTimes(2)
+    expect(mockOpenExternalCheckInPages).toHaveBeenCalledWith([accounts[0]])
+    expect(mockOpenExternalCheckInPages).toHaveBeenCalledWith([accounts[1]])
     expect(mockLoadAccountData).toHaveBeenCalled()
     expect(mockToast.success).toHaveBeenCalled()
   })
