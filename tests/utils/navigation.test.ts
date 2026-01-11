@@ -5,6 +5,7 @@ import { isExtensionPopup } from "~/utils/browser"
 import { createTab as createTabApi, getExtensionURL } from "~/utils/browserApi"
 import {
   openCheckInAndRedeem,
+  openExternalCheckInPages,
   openKeysPage,
   openModelsPage,
   openMultiplePages,
@@ -156,5 +157,48 @@ describe("navigation utilities", () => {
     const calls = mockedCreateTab.mock.calls.map((call) => call[0] as string)
     expect(calls).toContain("https://redeem.custom")
     expect(calls).toContain("https://checkin.custom")
+  })
+
+  it("openExternalCheckInPages should open custom check-in and optional redeem pages", async () => {
+    const accounts = [
+      {
+        baseUrl: "https://alpha.example.com",
+        siteType: "one-api",
+        checkIn: {
+          customCheckIn: {
+            url: "https://checkin.alpha",
+            redeemUrl: "https://redeem.alpha",
+            openRedeemWithCheckIn: true,
+          },
+        },
+      },
+      {
+        baseUrl: "https://beta.example.com",
+        siteType: "one-api",
+        checkIn: {
+          customCheckIn: {
+            url: "https://checkin.beta",
+            openRedeemWithCheckIn: false,
+          },
+        },
+      },
+      {
+        baseUrl: "https://gamma.example.com",
+        siteType: "one-api",
+        checkIn: {
+          customCheckIn: {
+            url: "",
+          },
+        },
+      },
+    ] as any
+
+    await openExternalCheckInPages(accounts)
+
+    const calls = mockedCreateTab.mock.calls.map((call) => call[0] as string)
+    expect(calls).toContain("https://checkin.alpha")
+    expect(calls).toContain("https://redeem.alpha")
+    expect(calls).toContain("https://checkin.beta")
+    expect(calls).not.toContain("https://gamma.example.com/redeem")
   })
 })

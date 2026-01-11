@@ -424,6 +424,14 @@ const _openRedeemPage = async (account: DisplaySiteData) => {
   await createActiveTab(redeemUrl)
 }
 
+/**
+ * Returns true when the account has a usable external check-in URL.
+ */
+const hasCustomCheckInUrl = (account: DisplaySiteData) => {
+  const customUrl = account.checkIn?.customCheckIn?.url
+  return typeof customUrl === "string" && customUrl.trim() !== ""
+}
+
 // 导出带自动关闭的版本
 /**
  * Launch the account manager root view, auto-closing the popup when invoked
@@ -556,4 +564,34 @@ export const openCheckInAndRedeem = async (account: DisplaySiteData) => {
     () => _openRedeemPage(account),
     () => _openCustomCheckInPage(account),
   ])
+}
+
+/**
+ * Open all external check-in sites for accounts with custom URLs, optionally
+ * opening redeem pages when configured.
+ * @param accounts Accounts to inspect for external check-in URLs.
+ */
+export const openExternalCheckInPages = async (accounts: DisplaySiteData[]) => {
+  const operations: (() => Promise<void> | void)[] = []
+
+  accounts.forEach((account) => {
+    if (!hasCustomCheckInUrl(account)) {
+      return
+    }
+
+    const shouldOpenRedeem =
+      account.checkIn?.customCheckIn?.openRedeemWithCheckIn ?? true
+
+    if (shouldOpenRedeem) {
+      operations.push(() => _openRedeemPage(account))
+    }
+
+    operations.push(() => _openCustomCheckInPage(account))
+  })
+
+  if (!operations.length) {
+    return
+  }
+
+  await openMultiplePages(operations)
 }

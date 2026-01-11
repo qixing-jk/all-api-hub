@@ -20,6 +20,8 @@
     "autoCheckinRunNow": "Quick check-in",
     "managedSiteChannels": "Channels Management",
     "managedSiteModelSync": "Model sync",
+    "externalCheckinAll": "Open all external check-ins",
+    "externalCheckinAllDisabled": "No external check-in URLs configured",
     "keys": "Key Management",
     "importExport": "Import/Export",
     "collapseSidebar": "Collapse sidebar",

@@ -21,6 +21,8 @@
     "autoCheckinRunNow": "快速签到",
     "managedSiteChannels": "渠道管理",
     "managedSiteModelSync": "模型同步",
+    "externalCheckinAll": "一键打开外部签到",
+    "externalCheckinAllDisabled": "未配置外部签到地址",
     "importExport": "导入/导出",
     "collapseSidebar": "折叠侧边栏",
     "expandSidebar": "展开侧边栏",

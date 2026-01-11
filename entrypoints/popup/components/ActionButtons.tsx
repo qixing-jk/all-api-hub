@@ -1,6 +1,7 @@
 import {
   CalendarDaysIcon,
   CpuChipIcon,
+  CurrencyYenIcon,
   KeyIcon,
   PlusIcon,
 } from "@heroicons/react/24/outline"
@@ -9,9 +10,11 @@ import { useTranslation } from "react-i18next"
 import Tooltip from "~/components/Tooltip"
 import { Button, IconButton } from "~/components/ui"
 import { COLORS } from "~/constants/designTokens"
+import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { useAddAccountHandler } from "~/hooks/useAddAccountHandler"
 import {
   openAutoCheckinPage,
+  openExternalCheckInPages,
   openKeysPage,
   openModelsPage,
 } from "~/utils/navigation"
@@ -23,6 +26,14 @@ import {
 export default function ActionButtons() {
   const { t } = useTranslation(["account", "ui"])
   const { handleAddAccountClick } = useAddAccountHandler()
+  const { displayData } = useAccountDataContext()
+
+  // Only enable the external check-in shortcut when at least one account has a custom URL.
+  const externalCheckInAccounts = displayData.filter((account) => {
+    const customUrl = account.checkIn?.customCheckIn?.url
+    return typeof customUrl === "string" && customUrl.trim() !== ""
+  })
+  const canOpenExternalCheckIns = externalCheckInAccounts.length > 0
 
   const handleOpenKeysPageClick = () => {
     openKeysPage()
@@ -34,6 +45,10 @@ export default function ActionButtons() {
 
   const handleQuickCheckinClick = () => {
     openAutoCheckinPage({ runNow: "true" })
+  }
+
+  const handleOpenExternalCheckIns = async () => {
+    await openExternalCheckInPages(externalCheckInAccounts)
   }
 
   return (
@@ -85,6 +100,20 @@ export default function ActionButtons() {
             <CalendarDaysIcon className="h-4 w-4" />
           </IconButton>
         </Tooltip>
+
+        {canOpenExternalCheckIns && (
+          <Tooltip content={t("ui:navigation.externalCheckinAll")}>
+            <IconButton
+              onClick={handleOpenExternalCheckIns}
+              variant="outline"
+              size="default"
+              className="touch-manipulation"
+              aria-label={t("ui:navigation.externalCheckinAll")}
+            >
+              <CurrencyYenIcon className="h-4 w-4" />
+            </IconButton>
+          </Tooltip>
+        )}
       </div>
     </section>
   )
