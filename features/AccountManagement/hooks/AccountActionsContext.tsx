@@ -146,7 +146,7 @@ export const AccountActionsProvider = ({
 
       if (!accountsToOpen.length) {
         toast.error(
-          i18next.t("messages:toast.success.externalCheckInNonePending"),
+          i18next.t("messages:toast.error.externalCheckInNonePending"),
         )
         return
       }

@@ -20,11 +20,11 @@
       "accountPinned": "已置顶 {{accountName}}",
       "accountUnpinned": "已取消置顶 {{accountName}}",
       "externalCheckInOpened": "已为 {{count}} 个账号打开外部签到（{{mode}}）。",
-      "externalCheckInNonePending": "没有今日未打开过的外部签到站。",
       "externalCheckInModeAll": "全部",
       "externalCheckInModeUnchecked": "仅未签到"
     },
     "error": {
+      "externalCheckInNonePending": "没有今日未打开过的外部签到站。",
       "refreshAccount": "刷新 {{accountName}} 失败",
       "loadAccountFailed": "加载账号数据失败",
       "operationFailed": "操作失败: {{error}}",
