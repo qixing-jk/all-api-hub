@@ -27,7 +27,10 @@ interface AccountActionsContextType {
   handleMarkCustomCheckInAsCheckedIn: (
     account: DisplaySiteData,
   ) => Promise<void>
-  handleOpenExternalCheckIns: (accounts: DisplaySiteData[]) => Promise<void>
+  handleOpenExternalCheckIns: (
+    accounts: DisplaySiteData[],
+    options?: { openAll?: boolean },
+  ) => Promise<void>
 }
 
 // 2. 创建 Context
@@ -131,19 +134,25 @@ export const AccountActionsProvider = ({
 
   /**
    * Bulk open external check-in sites and mark them as checked in, mirroring the
-   * single-account check-in behavior.
+   * single-account check-in behavior. Defaults to only opening unchecked sites.
    */
   const handleOpenExternalCheckIns = useCallback(
-    async (accounts: DisplaySiteData[]) => {
-      if (!accounts.length) {
+    async (accounts: DisplaySiteData[], options?: { openAll?: boolean }) => {
+      const accountsToOpen = options?.openAll
+        ? accounts
+        : accounts.filter(
+            (account) => !account.checkIn?.customCheckIn?.isCheckedInToday,
+          )
+
+      if (!accountsToOpen.length) {
         return
       }
 
-      for (const account of accounts) {
+      for (const account of accountsToOpen) {
         await accountStorage.markAccountAsCustomCheckedIn(account.id)
       }
 
-      await openExternalCheckInPages(accounts)
+      await openExternalCheckInPages(accountsToOpen)
 
       await loadAccountData()
     },

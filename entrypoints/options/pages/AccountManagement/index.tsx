@@ -1,4 +1,5 @@
 import { CalendarCheck2, UserRound } from "lucide-react"
+import type { MouseEvent } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Button } from "~/components/ui"
@@ -26,8 +27,12 @@ function AccountManagementContent({ searchQuery }: { searchQuery?: string }) {
   const canOpenExternalCheckIns = externalCheckInAccounts.length > 0
 
   // Open all configured external check-in sites and sync the checked-in status.
-  const handleOpenExternalCheckInsClick = async () => {
-    await handleOpenExternalCheckIns(externalCheckInAccounts)
+  const handleOpenExternalCheckInsClick = async (
+    event: MouseEvent<HTMLButtonElement>,
+  ) => {
+    // Ctrl/Cmd click opens all external check-ins; default opens only unchecked today.
+    const openAll = event.ctrlKey || event.metaKey
+    await handleOpenExternalCheckIns(externalCheckInAccounts, { openAll })
   }
 
   return (

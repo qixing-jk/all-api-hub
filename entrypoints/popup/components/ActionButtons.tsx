@@ -5,6 +5,7 @@ import {
   KeyIcon,
   PlusIcon,
 } from "@heroicons/react/24/outline"
+import type { MouseEvent } from "react"
 import { useTranslation } from "react-i18next"
 
 import Tooltip from "~/components/Tooltip"
@@ -52,8 +53,12 @@ export default function ActionButtons() {
     openAutoCheckinPage({ runNow: "true" })
   }
 
-  const handleOpenExternalCheckInsClick = async () => {
-    await handleOpenExternalCheckIns(externalCheckInAccounts)
+  const handleOpenExternalCheckInsClick = async (
+    event: MouseEvent<HTMLButtonElement>,
+  ) => {
+    // Ctrl/Cmd click opens all external check-ins; default opens only unchecked today.
+    const openAll = event.ctrlKey || event.metaKey
+    await handleOpenExternalCheckIns(externalCheckInAccounts, { openAll })
   }
 
   return (
