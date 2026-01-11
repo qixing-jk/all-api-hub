@@ -1,5 +1,22 @@
 # Changelog
 
+## [3.3.0](https://github.com/qixing-jk/all-api-hub/compare/v3.2.0...v3.3.0) (2026-01-11)
+
+
+### Features
+
+* **auto-checkin:** enhance account identification with username ([9b5b4ca](https://github.com/qixing-jk/all-api-hub/commit/9b5b4ca90415dcfbaf75d9c8694be1b5f87846e9))
+* **navigation:** add bulk external check-in functionality ([#344](https://github.com/qixing-jk/all-api-hub/issues/344)) ([bd38d62](https://github.com/qixing-jk/all-api-hub/commit/bd38d62f0d5420337b19b484b291eee9833a54ef))
+* remove max cap for min refresh interval ([99a1ce1](https://github.com/qixing-jk/all-api-hub/commit/99a1ce1cf0adf86b6f6a4522a040c15a0210a4e3))
+
+
+### Bug Fixes
+
+* **content:** restrict clipboard read to likely copy action targets ([0bdf70c](https://github.com/qixing-jk/all-api-hub/commit/0bdf70c57e03558e824d397e3b6a7f1965807712))
+* **redemptionAssist:** validate all redemption codes before prompting ([#343](https://github.com/qixing-jk/all-api-hub/issues/343)) ([ec3c18e](https://github.com/qixing-jk/all-api-hub/commit/ec3c18ea6c893e796a961e3963a37bd77ef479eb))
+* **service:** implement atomic storage operations with write locks ([#345](https://github.com/qixing-jk/all-api-hub/issues/345)) ([5061d67](https://github.com/qixing-jk/all-api-hub/commit/5061d6792b81023af68ce808c36028f262a72fed))
+* **ui:** update model name copy functionality and locales ([0e1a27a](https://github.com/qixing-jk/all-api-hub/commit/0e1a27a80a1e828f3508b0300083bf4174d03720))
+
 ## [3.2.0](https://github.com/qixing-jk/all-api-hub/compare/v3.1.1...v3.2.0) (2026-01-08)
 
 
