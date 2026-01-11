@@ -32,19 +32,105 @@ export const ACCOUNT_STORAGE_KEYS = {
 } as const
 
 // 默认配置
-const DEFAULT_ACCOUNT_CONFIG: AccountStorageConfig = {
+const createDefaultAccountConfig = (): AccountStorageConfig => ({
   accounts: [],
   pinnedAccountIds: [],
   orderedAccountIds: [],
   last_updated: Date.now(),
-}
+})
 
 class AccountStorageService {
   private storage: Storage
+  private inMemoryWriteQueue: Promise<void>
 
   constructor() {
     this.storage = new Storage({
       area: "local",
+    })
+    this.inMemoryWriteQueue = Promise.resolve()
+  }
+
+  /**
+   * Run a storage mutation under an exclusive lock to prevent cross-context
+   * (popup/options/background) concurrent read-modify-write races.
+   *
+   * Prefers the Web Locks API when available to coordinate across extension
+   * contexts; falls back to an in-memory queue when locks are not supported.
+   */
+  private async withStorageWriteLock<T>(work: () => Promise<T>): Promise<T> {
+    const runWithInMemoryQueue = async (
+      queuedWork: () => Promise<T>,
+    ): Promise<T> => {
+      const run = this.inMemoryWriteQueue.then(() => queuedWork())
+      this.inMemoryWriteQueue = run.then(
+        () => undefined,
+        () => undefined,
+      )
+      return run
+    }
+
+    const maybeLocks = (
+      globalThis as unknown as { navigator?: { locks?: unknown } }
+    ).navigator?.locks
+    if (
+      maybeLocks &&
+      typeof (maybeLocks as { request?: unknown }).request === "function"
+    ) {
+      type AsyncLockManager = {
+        request<T>(
+          name: string,
+          options: LockOptions,
+          callback: (lock: Lock | null) => Promise<T>,
+        ): Promise<T>
+      }
+      const asyncLocks = maybeLocks as AsyncLockManager
+      return runWithInMemoryQueue(() =>
+        asyncLocks.request(
+          "all-api-hub:account-storage",
+          { mode: "exclusive" },
+          () => work(),
+        ),
+      )
+    }
+
+    return runWithInMemoryQueue(work)
+  }
+
+  private cloneConfig(config: AccountStorageConfig): AccountStorageConfig {
+    if (typeof structuredClone === "function") {
+      return structuredClone(config)
+    }
+    return JSON.parse(JSON.stringify(config)) as AccountStorageConfig
+  }
+
+  private normalizeConfig(config: AccountStorageConfig): AccountStorageConfig {
+    return {
+      ...createDefaultAccountConfig(),
+      ...config,
+      accounts: config.accounts || [],
+      pinnedAccountIds: config.pinnedAccountIds || [],
+      orderedAccountIds: config.orderedAccountIds || [],
+      last_updated: Date.now(),
+    }
+  }
+
+  /**
+   * Atomically mutate the stored config (read-modify-write) under an exclusive lock.
+   * The mutation callback receives a cloned config and may mutate it in-place.
+   */
+  private async mutateStorageConfig<T>(
+    mutation: (config: AccountStorageConfig) => { result: T; changed: boolean },
+  ): Promise<T> {
+    return this.withStorageWriteLock(async () => {
+      const current = this.cloneConfig(await this.getStorageConfig())
+      const { result, changed } = mutation(current)
+      if (!changed) {
+        return result
+      }
+
+      const next = this.normalizeConfig(current)
+      await this.storage.set(ACCOUNT_STORAGE_KEYS.ACCOUNTS, next)
+      return result
     })
   }
 
@@ -175,23 +261,19 @@ class AccountStorageService {
   ): Promise<string> {
     try {
       console.log("[AccountStorage] 开始添加新账号:", accountData.site_name)
-      const accounts = await this.getAllAccounts()
-      console.log("[AccountStorage] 当前账号数量:", accounts.length)
+      return await this.mutateStorageConfig((config) => {
+        const now = Date.now()
+        const newAccount: SiteAccount = {
+          ...accountData,
+          id: this.generateId(),
+          created_at: now,
+          updated_at: now,
+        }
 
-      const now = Date.now()
-      const newAccount: SiteAccount = {
-        ...accountData,
-        id: this.generateId(),
-        created_at: now,
-        updated_at: now,
-      }
-
-      accounts.push(newAccount)
-      console.log("[AccountStorage] 准备保存账号，总数量:", accounts.length)
-      await this.saveAccounts(accounts)
-      console.log("[AccountStorage] 账号保存成功，ID:", newAccount.id)
-
-      return newAccount.id
+        config.accounts = config.accounts || []
+        config.accounts.push(newAccount)
+        return { result: newAccount.id, changed: true }
+      })
     } catch (error) {
       console.error("[AccountStorage] 添加账号失败:", error)
       throw error
@@ -206,33 +288,33 @@ class AccountStorageService {
     updates: DeepPartial<SiteAccount>,
   ): Promise<boolean> {
     try {
-      const accounts = await this.getAllAccounts()
-      const index = accounts.findIndex((account) => account.id === id)
+      return await this.mutateStorageConfig((config) => {
+        const accounts = config.accounts || []
+        const index = accounts.findIndex((account) => account.id === id)
 
-      if (index === -1) {
-        throw new Error(t("messages:storage.accountNotFound", { id }))
-      }
+        if (index === -1) {
+          throw new Error(t("messages:storage.accountNotFound", { id }))
+        }
 
-      const merged = deepOverride<SiteAccount>(accounts[index], {
-        ...updates,
-        updated_at: Date.now(),
-      } as DeepPartial<SiteAccount>)
+        const merged = deepOverride<SiteAccount>(accounts[index], {
+          ...updates,
+          updated_at: Date.now(),
+        } as DeepPartial<SiteAccount>)
 
-      if (
-        updates.health &&
-        Object.prototype.hasOwnProperty.call(updates.health, "code") &&
-        updates.health.code === undefined &&
-        merged.health &&
-        Object.prototype.hasOwnProperty.call(merged.health, "code")
-      ) {
-        delete (merged.health as { code?: unknown }).code
-      }
+        if (
+          updates.health &&
+          Object.prototype.hasOwnProperty.call(updates.health, "code") &&
+          updates.health.code === undefined &&
+          merged.health &&
+          Object.prototype.hasOwnProperty.call(merged.health, "code")
+        ) {
+          delete (merged.health as { code?: unknown }).code
+        }
 
-      accounts[index] = merged
-
-      // Persist the updated list atomically to keep pinned/ordered ids consistent
-      await this.saveAccounts(accounts)
-      return true
+        accounts[index] = merged
+        config.accounts = accounts
+        return { result: true, changed: true }
+      })
     } catch (error) {
       console.error(t("messages:storage.updateFailed", { error: "" }), error)
       return false
@@ -244,29 +326,27 @@ class AccountStorageService {
    */
   async deleteAccount(id: string): Promise<boolean> {
     try {
-      const accounts = await this.getAllAccounts()
-      const filteredAccounts = accounts.filter((account) => account.id !== id)
+      return await this.mutateStorageConfig((config) => {
+        const accounts = config.accounts || []
+        const filteredAccounts = accounts.filter((account) => account.id !== id)
 
-      if (filteredAccounts.length === accounts.length) {
-        console.error(
-          `账号 ${id} 不存在，当前账号列表:`,
-          accounts.map((acc) => ({ id: acc.id, name: acc.site_name })),
+        if (filteredAccounts.length === accounts.length) {
+          console.error(
+            `账号 ${id} 不存在，当前账号列表:`,
+            accounts.map((acc) => ({ id: acc.id, name: acc.site_name })),
+          )
+          throw new Error(t("messages:storage.accountNotFound", { id }))
+        }
+
+        config.accounts = filteredAccounts
+        config.pinnedAccountIds = (config.pinnedAccountIds || []).filter(
+          (pinnedId) => pinnedId !== id,
         )
-        throw new Error(t("messages:storage.accountNotFound", { id }))
-      }
-
-      await this.saveAccounts(filteredAccounts)
-
-      // Clean up from pinned list if present
-      await this.unpinAccount(id)
-      const orderedIds = await this.getOrderedList()
-      if (orderedIds.includes(id)) {
-        await this.setOrderedList(
-          orderedIds.filter((orderedId) => orderedId !== id),
+        config.orderedAccountIds = (config.orderedAccountIds || []).filter(
+          (orderedId) => orderedId !== id,
         )
-      }
-
-      return true
+        return { result: true, changed: true }
+      })
     } catch (error) {
       console.error("删除账号失败:", error)
       throw error // 重新抛出错误，让调用者处理
@@ -304,15 +384,14 @@ class AccountStorageService {
    */
   async setPinnedList(ids: string[]): Promise<boolean> {
     try {
-      const config = await this.getStorageConfig()
-      const uniqueIds = Array.from(new Set(ids))
-      const validIds = uniqueIds.filter((id) =>
-        config.accounts.some((account) => account.id === id),
-      )
-      config.pinnedAccountIds = validIds
-      config.last_updated = Date.now()
-      await this.storage.set(ACCOUNT_STORAGE_KEYS.ACCOUNTS, config)
-      return true
+      return await this.mutateStorageConfig((config) => {
+        const uniqueIds = Array.from(new Set(ids))
+        const validIds = uniqueIds.filter((id) =>
+          (config.accounts || []).some((account) => account.id === id),
+        )
+        config.pinnedAccountIds = validIds
+        return { result: true, changed: true }
+      })
     } catch (error) {
       console.error("设置置顶账号列表失败:", error)
       return false
@@ -324,15 +403,14 @@ class AccountStorageService {
    */
   async setOrderedList(ids: string[]): Promise<boolean> {
     try {
-      const config = await this.getStorageConfig()
-      const uniqueIds = Array.from(new Set(ids))
-      const validIds = uniqueIds.filter((id) =>
-        config.accounts.some((account) => account.id === id),
-      )
-      config.orderedAccountIds = validIds
-      config.last_updated = Date.now()
-      await this.storage.set(ACCOUNT_STORAGE_KEYS.ACCOUNTS, config)
-      return true
+      return await this.mutateStorageConfig((config) => {
+        const uniqueIds = Array.from(new Set(ids))
+        const validIds = uniqueIds.filter((id) =>
+          (config.accounts || []).some((account) => account.id === id),
+        )
+        config.orderedAccountIds = validIds
+        return { result: true, changed: true }
+      })
     } catch (error) {
       console.error("设置自定义排序列表失败:", error)
       return false
@@ -475,25 +553,28 @@ class AccountStorageService {
    */
   async resetExpiredCheckIns(): Promise<void> {
     try {
-      const accounts = await this.getAllAccounts()
       const today = new Date().toISOString().split("T")[0]
-      let needsSave = false
+      const didReset = await this.mutateStorageConfig((config) => {
+        const accounts = config.accounts || []
+        let needsSave = false
 
-      for (const account of accounts) {
-        if (
-          account.checkIn?.customCheckIn?.url &&
-          account.checkIn.customCheckIn.lastCheckInDate &&
-          account.checkIn.customCheckIn.lastCheckInDate !== today &&
-          account.checkIn.customCheckIn.isCheckedInToday === true
-        ) {
-          // 日期已过，重置签到状态
-          account.checkIn.customCheckIn.isCheckedInToday = false
-          needsSave = true
+        for (const account of accounts) {
+          if (
+            account.checkIn?.customCheckIn?.url &&
+            account.checkIn.customCheckIn.lastCheckInDate &&
+            account.checkIn.customCheckIn.lastCheckInDate !== today &&
+            account.checkIn.customCheckIn.isCheckedInToday === true
+          ) {
+            account.checkIn.customCheckIn.isCheckedInToday = false
+            needsSave = true
+          }
         }
-      }
 
-      if (needsSave) {
-        await this.saveAccounts(accounts)
+        config.accounts = accounts
+        return { result: needsSave, changed: needsSave }
+      })
+
+      if (didReset) {
         console.log("[AccountStorage] 已重置过期的签到状态")
       }
     } catch (error) {
@@ -877,45 +958,64 @@ class AccountStorageService {
   }): Promise<{
     migratedCount: number
   }> {
-    const existingAccounts = await this.getAllAccounts()
-    const existingPinnedIds = await this.getPinnedList()
-    try {
-      const accountsToImport = data.accounts || []
+    return this.withStorageWriteLock(async () => {
+      const backupConfig = this.cloneConfig(await this.getStorageConfig())
+      try {
+        const accountsToImport = data.accounts || []
 
-      const { accounts: migratedAccounts, migratedCount } =
-        migrateAccountsConfig(accountsToImport)
+        const { accounts: migratedAccounts, migratedCount } =
+          migrateAccountsConfig(accountsToImport)
 
-      if (migratedCount > 0) {
+        if (migratedCount > 0) {
+          console.log(
+            `[Migration] Upgraded ${migratedCount} imported account(s) to config v1`,
+          )
+        }
+
+        const filteredPinnedIds = (backupConfig.pinnedAccountIds || []).filter(
+          (id) => migratedAccounts.some((account) => account.id === id),
+        )
+        const filteredOrderedIds = (
+          backupConfig.orderedAccountIds || []
+        ).filter((id) => migratedAccounts.some((account) => account.id === id))
+
+        const pinnedToPersist = data.pinnedAccountIds
+          ? data.pinnedAccountIds.filter((id) =>
+              migratedAccounts.some((account) => account.id === id),
+            )
+          : filteredPinnedIds
+
+        const nextConfig = this.normalizeConfig({
+          ...backupConfig,
+          accounts: migratedAccounts,
+          pinnedAccountIds: pinnedToPersist,
+          orderedAccountIds: filteredOrderedIds,
+        })
+
+        await this.storage.set(ACCOUNT_STORAGE_KEYS.ACCOUNTS, nextConfig)
+
+        if (data.pinnedAccountIds) {
+          console.log(
+            `[Import] Imported ${pinnedToPersist.length} pinned account(s)`,
+          )
+        }
+
+        return { migratedCount }
+      } catch (error) {
+        console.error(
+          "[Migration Error] Import migration failed, restoring from backup:",
+          error,
+        )
+        await this.storage.set(
+          ACCOUNT_STORAGE_KEYS.ACCOUNTS,
+          this.normalizeConfig(backupConfig),
+        )
         console.log(
-          `[Migration] Upgraded ${migratedCount} imported account(s) to config v1`,
+          "[Migration] Safety fallback: restored accounts from backup",
         )
+        throw error // Re-throw to inform caller of failure
       }
-
-      await this.saveAccounts(migratedAccounts)
-
-      // Import pinned account IDs if provided
-      if (data.pinnedAccountIds) {
-        // Clean up invalid IDs (accounts that don't exist)
-        const validPinnedIds = data.pinnedAccountIds.filter((id) =>
-          migratedAccounts.some((account) => account.id === id),
-        )
-        await this.setPinnedList(validPinnedIds)
-        console.log(
-          `[Import] Imported ${validPinnedIds.length} pinned account(s)`,
-        )
-      }
-
-      return { migratedCount }
-    } catch (error) {
-      console.error(
-        "[Migration Error] Import migration failed, restoring from backup:",
-        error,
-      )
-      await this.saveAccounts(existingAccounts)
-      await this.setPinnedList(existingPinnedIds)
-      console.log("[Migration] Safety fallback: restored accounts from backup")
-      throw error // Re-throw to inform caller of failure
-    }
+    })
   }
 
   /**
@@ -926,10 +1026,10 @@ class AccountStorageService {
       const config = (await this.storage.get(
         ACCOUNT_STORAGE_KEYS.ACCOUNTS,
       )) as AccountStorageConfig
-      return config || DEFAULT_ACCOUNT_CONFIG
+      return config || createDefaultAccountConfig()
     } catch (error) {
       console.error("获取存储配置失败:", error)
-      return DEFAULT_ACCOUNT_CONFIG
+      return createDefaultAccountConfig()
     }
   }
 
@@ -941,30 +1041,25 @@ class AccountStorageService {
    */
   private async saveAccounts(accounts: SiteAccount[]): Promise<void> {
     console.log("[AccountStorage] 开始保存账号数据，数量:", accounts.length)
-    const existingConfig = await this.getStorageConfig()
-    const filteredPinnedIds = (existingConfig.pinnedAccountIds || []).filter(
-      (id) => accounts.some((account) => account.id === id),
-    )
-    const filteredOrderedIds = (existingConfig.orderedAccountIds || []).filter(
-      (id) => accounts.some((account) => account.id === id),
-    )
-    const config: AccountStorageConfig = {
-      ...existingConfig,
-      accounts,
-      pinnedAccountIds: filteredPinnedIds,
-      orderedAccountIds: filteredOrderedIds,
-      last_updated: Date.now(),
-    }
+    await this.mutateStorageConfig((existingConfig) => {
+      const filteredPinnedIds = (existingConfig.pinnedAccountIds || []).filter(
+        (id) => accounts.some((account) => account.id === id),
+      )
+      const filteredOrderedIds = (
+        existingConfig.orderedAccountIds || []
+      ).filter((id) => accounts.some((account) => account.id === id))
+      existingConfig.accounts = accounts
+      existingConfig.pinnedAccountIds = filteredPinnedIds
+      existingConfig.orderedAccountIds = filteredOrderedIds
 
-    console.log("[AccountStorage] 保存的配置数据:", {
-      accountCount: config.accounts.length,
-      pinnedCount: config.pinnedAccountIds?.length || 0,
-      orderedCount: config.orderedAccountIds?.length || 0,
-      last_updated: config.last_updated,
-      storageKey: ACCOUNT_STORAGE_KEYS.ACCOUNTS,
+      console.log("[AccountStorage] 保存的配置数据:", {
+        accountCount: accounts.length,
+        pinnedCount: filteredPinnedIds.length,
+        orderedCount: filteredOrderedIds.length,
+        storageKey: ACCOUNT_STORAGE_KEYS.ACCOUNTS,
+      })
+      return { result: undefined, changed: true }
     })
-
-    await this.storage.set(ACCOUNT_STORAGE_KEYS.ACCOUNTS, config)
     console.log("[AccountStorage] 账号数据保存完成")
   }
 

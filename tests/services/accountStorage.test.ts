@@ -11,6 +11,16 @@ import {
 
 const storageData = new Map<string, AccountStorageConfig>()
 const STORAGE_KEY = "site_accounts"
+
+const storageHooks: {
+  beforeGet: (key: string) => Promise<void>
+  beforeSet: (key: string, value: AccountStorageConfig) => Promise<void>
+  beforeRemove: (key: string) => Promise<void>
+} = {
+  beforeGet: async () => {},
+  beforeSet: async () => {},
+  beforeRemove: async () => {},
+}
 const {
   mockValidateAccountConnection,
   mockFetchSupportCheckIn,
@@ -28,14 +38,17 @@ const {
 vi.mock("@plasmohq/storage", () => {
   class Storage {
     async set(key: string, value: AccountStorageConfig) {
+      await storageHooks.beforeSet(key, value)
       storageData.set(key, value)
     }
 
     async get(key: string) {
+      await storageHooks.beforeGet(key)
       return storageData.get(key)
     }
 
     async remove(key: string) {
+      await storageHooks.beforeRemove(key)
       storageData.delete(key)
     }
   }
@@ -109,6 +122,9 @@ const createAccount = (overrides: Partial<SiteAccount> = {}): SiteAccount => {
 describe("accountStorage core behaviors", () => {
   beforeEach(() => {
     storageData.clear()
+    storageHooks.beforeGet = async () => {}
+    storageHooks.beforeSet = async () => {}
+    storageHooks.beforeRemove = async () => {}
     mockValidateAccountConnection.mockReset()
     mockFetchSupportCheckIn.mockReset()
     mockGetSiteType.mockReset()
@@ -258,6 +274,41 @@ describe("accountStorage core behaviors", () => {
     const updated = config?.accounts.find((acc) => acc.id === "with-tags")
 
     expect(updated?.tags).toEqual([])
+  })
+
+  it("updateAccount should not lose parallel updates to different accounts", async () => {
+    /**
+     * Concurrency stress test:
+     * - If accountStorage performs a naive read-modify-write without a lock/queue,
+     *   concurrent updates will overwrite each other (last write wins).
+     * - The production implementation uses an exclusive lock/queue around mutations,
+     *   so all updates should be preserved even when callers fire them in parallel.
+     */
+    const parallelUpdates = 10
+
+    const accounts = Array.from({ length: parallelUpdates }, (_, index) =>
+      createAccount({ id: `a-${index + 1}` }),
+    )
+    seedStorage(accounts)
+
+    const expectedNotesById = new Map(
+      accounts.map((account, index) => [account.id, `note-${index + 1}`]),
+    )
+
+    await Promise.all(
+      accounts.map((account) =>
+        accountStorage.updateAccount(account.id, {
+          notes: expectedNotesById.get(account.id),
+        }),
+      ),
+    )
+
+    const saved = storageData.get(STORAGE_KEY)
+    expect(saved?.accounts).toHaveLength(parallelUpdates)
+    for (const account of saved?.accounts ?? []) {
+      if (!expectedNotesById.has(account.id)) continue
+      expect(account.notes).toBe(expectedNotesById.get(account.id))
+    }
   })
 
   it("markAccountAsSiteCheckedIn should persist today's check-in state", async () => {
