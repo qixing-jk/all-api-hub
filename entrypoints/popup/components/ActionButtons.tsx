@@ -10,11 +10,11 @@ import { useTranslation } from "react-i18next"
 import Tooltip from "~/components/Tooltip"
 import { Button, IconButton } from "~/components/ui"
 import { COLORS } from "~/constants/designTokens"
+import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { useAddAccountHandler } from "~/hooks/useAddAccountHandler"
 import {
   openAutoCheckinPage,
-  openExternalCheckInPages,
   openKeysPage,
   openModelsPage,
 } from "~/utils/navigation"
@@ -27,6 +27,7 @@ export default function ActionButtons() {
   const { t } = useTranslation(["account", "ui"])
   const { handleAddAccountClick } = useAddAccountHandler()
   const { displayData } = useAccountDataContext()
+  const { handleOpenExternalCheckIns } = useAccountActionsContext()
 
   // Only enable the external check-in shortcut when at least one account has a custom URL.
   const externalCheckInAccounts = displayData.filter((account) => {
@@ -34,6 +35,10 @@ export default function ActionButtons() {
     return typeof customUrl === "string" && customUrl.trim() !== ""
   })
   const canOpenExternalCheckIns = externalCheckInAccounts.length > 0
+  // Highlight red when any external check-in is still pending today.
+  const hasUncheckedExternalCheckIns = externalCheckInAccounts.some(
+    (account) => !account.checkIn?.customCheckIn?.isCheckedInToday,
+  )
 
   const handleOpenKeysPageClick = () => {
     openKeysPage()
@@ -47,8 +52,8 @@ export default function ActionButtons() {
     openAutoCheckinPage({ runNow: "true" })
   }
 
-  const handleOpenExternalCheckIns = async () => {
-    await openExternalCheckInPages(externalCheckInAccounts)
+  const handleOpenExternalCheckInsClick = async () => {
+    await handleOpenExternalCheckIns(externalCheckInAccounts)
   }
 
   return (
@@ -104,13 +109,20 @@ export default function ActionButtons() {
         {canOpenExternalCheckIns && (
           <Tooltip content={t("ui:navigation.externalCheckinAll")}>
             <IconButton
-              onClick={handleOpenExternalCheckIns}
+              onClick={handleOpenExternalCheckInsClick}
               variant="outline"
               size="default"
               className="touch-manipulation"
               aria-label={t("ui:navigation.externalCheckinAll")}
             >
-              <CurrencyYenIcon className="h-4 w-4" />
+              {/* Match per-account indicator colors: red when not checked in today, green when done. */}
+              <CurrencyYenIcon
+                className={`h-4 w-4 ${
+                  hasUncheckedExternalCheckIns
+                    ? "text-red-500"
+                    : "text-green-500"
+                }`}
+              />
             </IconButton>
           </Tooltip>
         )}

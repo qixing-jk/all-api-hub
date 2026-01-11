@@ -11,6 +11,7 @@ import toast from "react-hot-toast"
 
 import { accountStorage } from "~/services/accountStorage"
 import type { DisplaySiteData } from "~/types"
+import { openExternalCheckInPages } from "~/utils/navigation"
 
 import { useAccountDataContext } from "./AccountDataContext"
 
@@ -26,6 +27,7 @@ interface AccountActionsContextType {
   handleMarkCustomCheckInAsCheckedIn: (
     account: DisplaySiteData,
   ) => Promise<void>
+  handleOpenExternalCheckIns: (accounts: DisplaySiteData[]) => Promise<void>
 }
 
 // 2. 创建 Context
@@ -127,6 +129,27 @@ export const AccountActionsProvider = ({
     [loadAccountData],
   )
 
+  /**
+   * Bulk open external check-in sites and mark them as checked in, mirroring the
+   * single-account check-in behavior.
+   */
+  const handleOpenExternalCheckIns = useCallback(
+    async (accounts: DisplaySiteData[]) => {
+      if (!accounts.length) {
+        return
+      }
+
+      for (const account of accounts) {
+        await accountStorage.markAccountAsCustomCheckedIn(account.id)
+      }
+
+      await openExternalCheckInPages(accounts)
+
+      await loadAccountData()
+    },
+    [loadAccountData],
+  )
+
   const value = useMemo(
     () => ({
       refreshingAccountId,
@@ -134,6 +157,7 @@ export const AccountActionsProvider = ({
       handleDeleteAccount,
       handleCopyUrl,
       handleMarkCustomCheckInAsCheckedIn,
+      handleOpenExternalCheckIns,
     }),
     [
       refreshingAccountId,
@@ -141,6 +165,7 @@ export const AccountActionsProvider = ({
       handleDeleteAccount,
       handleCopyUrl,
       handleMarkCustomCheckInAsCheckedIn,
+      handleOpenExternalCheckIns,
     ],
   )
 

@@ -4,10 +4,10 @@ import { useTranslation } from "react-i18next"
 import { Button } from "~/components/ui"
 import { PageHeader } from "~/entrypoints/options/components/PageHeader"
 import AccountList from "~/features/AccountManagement/components/AccountList"
+import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { AccountManagementProvider } from "~/features/AccountManagement/hooks/AccountManagementProvider"
 import { useDialogStateContext } from "~/features/AccountManagement/hooks/DialogStateContext"
-import { openExternalCheckInPages } from "~/utils/navigation"
 
 /**
  * Renders the Account Management page body: header with CTA and account list.
@@ -16,6 +16,7 @@ function AccountManagementContent({ searchQuery }: { searchQuery?: string }) {
   const { t } = useTranslation("account")
   const { openAddAccount } = useDialogStateContext()
   const { displayData } = useAccountDataContext()
+  const { handleOpenExternalCheckIns } = useAccountActionsContext()
 
   const externalCheckInAccounts = displayData.filter((account) => {
     const customUrl = account.checkIn?.customCheckIn?.url
@@ -24,9 +25,9 @@ function AccountManagementContent({ searchQuery }: { searchQuery?: string }) {
 
   const canOpenExternalCheckIns = externalCheckInAccounts.length > 0
 
-  // Open all configured external check-in sites in one go.
-  const handleOpenExternalCheckIns = async () => {
-    await openExternalCheckInPages(externalCheckInAccounts)
+  // Open all configured external check-in sites and sync the checked-in status.
+  const handleOpenExternalCheckInsClick = async () => {
+    await handleOpenExternalCheckIns(externalCheckInAccounts)
   }
 
   return (
@@ -39,7 +40,7 @@ function AccountManagementContent({ searchQuery }: { searchQuery?: string }) {
           <>
             {canOpenExternalCheckIns && (
               <Button
-                onClick={handleOpenExternalCheckIns}
+                onClick={handleOpenExternalCheckInsClick}
                 leftIcon={<CalendarCheck2 className="h-4 w-4" />}
                 title={
                   canOpenExternalCheckIns
