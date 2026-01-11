@@ -11,6 +11,7 @@ import toast from "react-hot-toast"
 
 import { accountStorage } from "~/services/accountStorage"
 import type { DisplaySiteData } from "~/types"
+import { getErrorMessage } from "~/utils/error"
 import { openExternalCheckInPages } from "~/utils/navigation"
 
 import { useAccountDataContext } from "./AccountDataContext"
@@ -151,13 +152,23 @@ export const AccountActionsProvider = ({
         return
       }
 
-      for (const account of accountsToOpen) {
-        await accountStorage.markAccountAsCustomCheckedIn(account.id)
+      try {
+        await openExternalCheckInPages(accountsToOpen)
+
+        for (const account of accountsToOpen) {
+          await accountStorage.markAccountAsCustomCheckedIn(account.id)
+        }
+
+        await loadAccountData()
+      } catch (error) {
+        console.error("Error opening external check-ins:", error)
+        toast.error(
+          i18next.t("messages:errors.operation.failed", {
+            error: getErrorMessage(error),
+          }),
+        )
+        return
       }
-
-      await openExternalCheckInPages(accountsToOpen)
-
-      await loadAccountData()
 
       toast.success(
         i18next.t("messages:toast.success.externalCheckInOpened", {
