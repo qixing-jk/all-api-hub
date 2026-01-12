@@ -79,8 +79,7 @@ export function useCopyKeyDialog(isOpen: boolean, account: DisplaySiteData) {
 
   const copyKey = async (key: string) => {
     try {
-      const textToCopy = key.startsWith("sk-") ? key : "sk-" + key
-      await navigator.clipboard.writeText(textToCopy)
+      await navigator.clipboard.writeText(key)
       setCopiedKey(key)
       toast.success(t("ui:dialog.copyKey.keyCopied"))
 

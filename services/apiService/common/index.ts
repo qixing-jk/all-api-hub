@@ -46,6 +46,7 @@ import type {
   ManagedSiteChannelListData,
   UpdateChannelPayload,
 } from "~/types/managedSite"
+import { normalizeApiTokenKey } from "~/utils/apiKey"
 
 const CHANNEL_API_BASE = "/api/channel/"
 
@@ -790,14 +791,14 @@ export async function fetchAccountTokens(
     // 处理不同的响应格式
     if (Array.isArray(tokensData)) {
       // 直接返回数组格式
-      return tokensData
+      return tokensData.map(normalizeApiTokenKey)
     } else if (
       tokensData &&
       typeof tokensData === "object" &&
       "items" in tokensData
     ) {
       // 分页格式，返回 items 数组
-      return tokensData.items || []
+      return (tokensData.items || []).map(normalizeApiTokenKey)
     } else {
       // 其他情况，返回空数组
       console.warn("Unexpected token response format:", tokensData)
@@ -923,9 +924,10 @@ export async function fetchTokenById(
   tokenId: number,
 ): Promise<ApiToken> {
   try {
-    return await fetchApiData<ApiToken>(request, {
+    const token = await fetchApiData<ApiToken>(request, {
       endpoint: `/api/token/${tokenId}`,
     })
+    return normalizeApiTokenKey(token)
   } catch (error) {
     console.error("获取令牌详情失败:", error)
     throw error

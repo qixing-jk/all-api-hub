@@ -102,10 +102,7 @@ export default function AccountActionButtons({
         if (tokensResponse.length === 1) {
           // Single token - copy directly
           const token = tokensResponse[0]
-          const textToCopy = token.key.startsWith("sk-")
-            ? token.key
-            : "sk-" + token.key
-          await navigator.clipboard.writeText(textToCopy)
+          await navigator.clipboard.writeText(token.key)
           toast.success(t("actions.keyCopied"))
         } else if (tokensResponse.length > 1) {
           // Multiple tokens - open dialog

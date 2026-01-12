@@ -113,6 +113,21 @@ describe("OneHub API service", () => {
     expect(result).toEqual(tokens)
   })
 
+  it("fetchAccountTokens should normalize token.key with sk- prefix", async () => {
+    mockedFetchApiData.mockResolvedValueOnce([
+      { id: 1, key: "plain" },
+      { id: 2, key: "sk-already" },
+      { id: 3, key: "  sk-trim  " },
+    ])
+
+    const result = await fetchAccountTokens(baseRequest as any)
+    expect(result.map((token: any) => token.key)).toEqual([
+      "sk-plain",
+      "sk-already",
+      "sk-trim",
+    ])
+  })
+
   it("fetchAccountTokens should return data field when response is paginated object", async () => {
     const tokens = [{ id: 1 }, { id: 2 }]
     mockedFetchApiData.mockResolvedValueOnce({ data: tokens })

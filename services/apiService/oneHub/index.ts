@@ -11,6 +11,7 @@ import type {
   PaginatedTokenDate,
 } from "~/services/apiService/oneHub/type"
 import type { ApiToken } from "~/types"
+import { normalizeApiTokenKey } from "~/utils/apiKey"
 import {
   transformModelPricing,
   transformUserGroup,
@@ -68,14 +69,14 @@ export const fetchAccountTokens = async (
     // 处理不同的响应格式
     if (Array.isArray(tokensData)) {
       // 直接返回数组格式
-      return tokensData
+      return tokensData.map(normalizeApiTokenKey)
     } else if (
       tokensData &&
       typeof tokensData === "object" &&
       "data" in tokensData
     ) {
       // 分页格式，返回 data 数组
-      return tokensData.data || []
+      return (tokensData.data || []).map(normalizeApiTokenKey)
     } else {
       // 其他情况，返回空数组
       console.warn("Unexpected token response format:", tokensData)

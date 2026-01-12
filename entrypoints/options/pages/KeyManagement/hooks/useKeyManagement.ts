@@ -94,8 +94,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
 
   const copyKey = async (key: string, name: string) => {
     try {
-      const textToCopy = key.startsWith("sk-") ? key : "sk-" + key
-      await navigator.clipboard.writeText(textToCopy)
+      await navigator.clipboard.writeText(key)
       toast.success(t("keyManagement:messages.keyCopied", { name }))
     } catch (error) {
       toast.error(t("keyManagement:messages.copyFailed"))
