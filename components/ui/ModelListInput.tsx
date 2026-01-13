@@ -32,8 +32,8 @@ export interface ModelListInputProps {
   /**
    * Optional upstream model identifiers used as suggestions for the `name` field.
    *
-   * When provided, the name input will expose these values via an HTML `datalist`,
-   * allowing users to select an existing model id while still supporting free typing.
+   * When provided, the name input renders a searchable dropdown with these values,
+   * allowing users to select an existing model id while still supporting custom input.
    */
   nameSuggestions?: string[]
 
