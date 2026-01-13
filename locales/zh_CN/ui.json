@@ -131,7 +131,7 @@
       "descriptions": {
         "baseUrl": "OpenAI 兼容接口基础地址，通常以 /v1 结尾。",
         "proxyUrl": "可选的转发地址，用于此 Key 的代理路由。",
-        "models": "将上游模型名称映射到别名（name → alias）。留空则不写入。"
+        "models": "将上游模型名称映射到别名（name → alias）。若可用，会自动从 /v1/models 获取模型列表供选择；留空则不写入。"
       },
       "placeholders": {
         "name": "例如 我的中转",
@@ -193,7 +193,8 @@
   },
   "searchableSelect": {
     "searchPlaceholder": "搜索...",
-    "empty": "未找到匹配项"
+    "empty": "未找到匹配项",
+    "useValue": "使用“{{value}}”"
   },
   "repeatableInput": {
     "actions": {

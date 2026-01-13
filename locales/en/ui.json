@@ -131,7 +131,7 @@
       "descriptions": {
         "baseUrl": "OpenAI-compatible upstream base URL, typically ending with /v1.",
         "proxyUrl": "Optional proxy URL used for this API key entry.",
-        "models": "Map upstream model names to optional aliases (name → alias). Leave blank to omit."
+        "models": "Map upstream model names to optional aliases (name → alias). When available, upstream models are loaded from /v1/models for selection."
       },
       "placeholders": {
         "name": "e.g. Acme Relay",
@@ -193,7 +193,8 @@
   },
   "searchableSelect": {
     "searchPlaceholder": "Search...",
-    "empty": "No results found"
+    "empty": "No results found",
+    "useValue": "Use \"{{value}}\""
   },
   "repeatableInput": {
     "actions": {

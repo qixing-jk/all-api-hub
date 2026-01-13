@@ -64,4 +64,25 @@ describe("ModelListInput", () => {
     )
     expect(remainingNameInputs.length).toBe(1)
   })
+
+  it("uses SearchableSelect when name suggestions are provided", async () => {
+    const Wrapper = () => {
+      const [value, setValue] = React.useState<
+        React.ComponentProps<typeof ModelListInput>["value"]
+      >([{ id: "1", name: "", alias: "" }])
+      return (
+        <ModelListInput
+          value={value}
+          onChange={setValue}
+          nameSuggestions={["gpt-4", "claude-3-opus", "gpt-4"]}
+        />
+      )
+    }
+
+    render(<Wrapper />)
+
+    const nameCombo = await screen.findByRole("combobox")
+    fireEvent.click(nameCombo)
+    expect(await screen.findByText("gpt-4")).toBeInTheDocument()
+  })
 })

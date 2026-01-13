@@ -1,4 +1,5 @@
 import { ArrowRight } from "lucide-react"
+import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
 import { cn } from "~/lib/utils"
@@ -6,6 +7,7 @@ import { safeRandomUUID } from "~/utils/identifier"
 
 import { Input } from "./input"
 import { RepeatableInput } from "./RepeatableInput"
+import { SearchableSelect } from "./SearchableSelect"
 
 export interface ModelListItem {
   id: string
@@ -26,6 +28,14 @@ export interface ModelListInputStrings {
 export interface ModelListInputProps {
   value: ModelListItem[]
   onChange: (value: ModelListItem[]) => void
+
+  /**
+   * Optional upstream model identifiers used as suggestions for the `name` field.
+   *
+   * When provided, the name input will expose these values via an HTML `datalist`,
+   * allowing users to select an existing model id while still supporting free typing.
+   */
+  nameSuggestions?: string[]
 
   title?: string
   description?: string
@@ -60,6 +70,7 @@ function createDefaultModelListItem(): ModelListItem {
 export function ModelListInput({
   value,
   onChange,
+  nameSuggestions,
   title,
   description,
   addLabel,
@@ -72,6 +83,25 @@ export function ModelListInput({
   className,
 }: ModelListInputProps) {
   const { t } = useTranslation("ui")
+
+  const resolvedNameSuggestions = useMemo(() => {
+    const candidates = nameSuggestions ?? []
+    if (!candidates.length) return []
+    return Array.from(
+      new Set(
+        candidates
+          .map((item) => (typeof item === "string" ? item.trim() : ""))
+          .filter(Boolean),
+      ),
+    ).sort((a, b) => a.localeCompare(b))
+  }, [nameSuggestions])
+  const nameOptions = useMemo(() => {
+    if (!resolvedNameSuggestions.length) return []
+    return resolvedNameSuggestions.map((modelId) => ({
+      value: modelId,
+      label: modelId,
+    }))
+  }, [resolvedNameSuggestions])
 
   const resolvedTitle = title ?? strings?.title ?? t("modelListInput.title")
   const resolvedDescription =
@@ -117,13 +147,28 @@ export function ModelListInput({
         renderItem={({ item, updateItem }) => (
           <div className="flex min-w-0 items-center gap-2">
             <div className="min-w-0 flex-1">
-              <Input
-                value={item.name}
-                placeholder={resolvedNamePlaceholder}
-                onChange={(event) =>
-                  updateItem((prev) => ({ ...prev, name: event.target.value }))
-                }
-              />
+              {nameOptions.length > 0 ? (
+                <SearchableSelect
+                  options={nameOptions}
+                  value={item.name}
+                  onChange={(nextValue) =>
+                    updateItem((prev) => ({ ...prev, name: nextValue }))
+                  }
+                  placeholder={resolvedNamePlaceholder}
+                  allowCustomValue
+                />
+              ) : (
+                <Input
+                  value={item.name}
+                  placeholder={resolvedNamePlaceholder}
+                  onChange={(event) =>
+                    updateItem((prev) => ({
+                      ...prev,
+                      name: event.target.value,
+                    }))
+                  }
+                />
+              )}
             </div>
             <ArrowRight className="h-4 w-4 shrink-0 text-gray-400" />
             <div className="min-w-0 flex-1">

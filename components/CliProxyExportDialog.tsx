@@ -9,6 +9,7 @@ import {
   Modal,
   ModelListInput,
 } from "~/components/ui"
+import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompatible"
 import { importToCliProxy } from "~/services/cliProxyService"
 import type { ApiToken, DisplaySiteData } from "~/types"
 import { safeRandomUUID } from "~/utils/identifier"
@@ -30,6 +31,31 @@ function buildProviderBaseUrl(baseUrl: string) {
 }
 
 /**
+ * Strip a trailing `/v1` from a user-supplied OpenAI-compatible base URL.
+ *
+ * `fetchOpenAICompatibleModelIds` uses the `/v1/models` endpoint internally, so
+ * passing a base URL that already ends with `/v1` would otherwise produce
+ * `/v1/v1/models`.
+ */
+function stripTrailingOpenAIV1(baseUrl: string): string {
+  const trimmed = baseUrl.trim()
+  if (!trimmed) return trimmed
+
+  try {
+    const url = new URL(trimmed)
+    const pathname = url.pathname.replace(/\/+$/, "")
+    if (!pathname.endsWith("/v1")) {
+      return url.toString().replace(/\/+$/, "")
+    }
+
+    url.pathname = pathname.replace(/\/v1$/, "") || "/"
+    return url.toString().replace(/\/+$/, "")
+  } catch {
+    return trimmed.replace(/\/v1\/?$/, "").replace(/\/+$/, "")
+  }
+}
+
+/**
  * Modal dialog for exporting a token to CLIProxyAPI.
  * Allows tweaking provider name, base URL, and optional proxy URL.
  */
@@ -43,6 +69,9 @@ export function CliProxyExportDialog(props: CliProxyExportDialogProps) {
   const [models, setModels] = useState<
     React.ComponentProps<typeof ModelListInput>["value"]
   >([])
+  const [availableUpstreamModels, setAvailableUpstreamModels] = useState<
+    string[]
+  >([])
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const formId = useMemo(() => `cliproxy-export-form-${token.id}`, [token.id])
@@ -52,6 +81,7 @@ export function CliProxyExportDialog(props: CliProxyExportDialogProps) {
     setProviderName(account.name || account.baseUrl)
     setProviderBaseUrl(buildProviderBaseUrl(account.baseUrl))
     setProxyUrl("")
+    setAvailableUpstreamModels([])
     setModels([
       {
         id: safeRandomUUID("model"),
@@ -60,6 +90,35 @@ export function CliProxyExportDialog(props: CliProxyExportDialogProps) {
       },
     ])
   }, [account.baseUrl, account.name, isOpen])
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    let isActive = true
+    void (async () => {
+      try {
+        const modelIds = await fetchOpenAICompatibleModelIds({
+          baseUrl: stripTrailingOpenAIV1(account.baseUrl),
+          apiKey: token.key,
+        })
+
+        const normalized = modelIds
+          .map((item) => (typeof item === "string" ? item.trim() : ""))
+          .filter(Boolean)
+
+        if (!isActive) return
+        setAvailableUpstreamModels(normalized)
+      } catch (error) {
+        console.warn("[CLIProxy] Failed to fetch upstream model list", error)
+        if (!isActive) return
+        setAvailableUpstreamModels([])
+      }
+    })()
+
+    return () => {
+      isActive = false
+    }
+  }, [account.baseUrl, isOpen, token.key])
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -163,6 +222,7 @@ export function CliProxyExportDialog(props: CliProxyExportDialogProps) {
             value={models}
             onChange={setModels}
             showHeader={false}
+            nameSuggestions={availableUpstreamModels}
             strings={{
               addLabel: t("ui:dialog.cliproxy.actions.addModel"),
               removeLabel: t("ui:dialog.cliproxy.actions.removeModel"),

@@ -67,6 +67,14 @@ export interface SearchableSelectProps
    * Falls back to the i18n key `ui:searchableSelect.empty`.
    */
   emptyMessage?: string
+
+  /**
+   * Allow selecting a custom value not present in `options`.
+   *
+   * When enabled, typing in the search input will offer an extra row to use the
+   * current search term as the selected value.
+   */
+  allowCustomValue?: boolean
 }
 
 /**
@@ -83,17 +91,23 @@ export function SearchableSelect({
   placeholder,
   searchPlaceholder,
   emptyMessage,
+  allowCustomValue = false,
   className,
   disabled,
   ...buttonProps
 }: SearchableSelectProps) {
   const { t } = useTranslation("ui")
   const [open, setOpen] = React.useState(false)
+  const [searchTerm, setSearchTerm] = React.useState("")
 
   const selectedOption = React.useMemo(
     () => options.find((option) => option.value === value),
     [options, value],
   )
+
+  const displayedLabel = selectedOption
+    ? selectedOption.label
+    : value || placeholder
 
   const resolvedSearchPlaceholder =
     searchPlaceholder ?? t("searchableSelect.searchPlaceholder")
@@ -101,6 +115,16 @@ export function SearchableSelect({
   const resolvedEmptyMessage = emptyMessage ?? t("searchableSelect.empty")
 
   const isDisabled = disabled ?? false
+
+  React.useEffect(() => {
+    if (!open) setSearchTerm("")
+  }, [open])
+
+  const normalizedSearchTerm = searchTerm.trim()
+  const canUseCustomValue =
+    allowCustomValue &&
+    normalizedSearchTerm.length > 0 &&
+    !options.some((option) => option.value === normalizedSearchTerm)
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -121,15 +145,35 @@ export function SearchableSelect({
             <ChevronsUpDownIcon className="size-4 shrink-0 opacity-50" />
           }
         >
-          {selectedOption ? selectedOption.label : placeholder}
+          {displayedLabel}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[var(--radix-popper-anchor-width)] p-0">
+      <PopoverContent className="w-(--radix-popper-anchor-width) p-0">
         <Command>
-          <CommandInput placeholder={resolvedSearchPlaceholder} />
+          <CommandInput
+            placeholder={resolvedSearchPlaceholder}
+            value={searchTerm}
+            onValueChange={setSearchTerm}
+          />
           <CommandList>
             <CommandEmpty>{resolvedEmptyMessage}</CommandEmpty>
             <CommandGroup>
+              {canUseCustomValue ? (
+                <CommandItem
+                  key={`__custom__:${normalizedSearchTerm}`}
+                  value={normalizedSearchTerm}
+                  onSelect={() => {
+                    onChange(normalizedSearchTerm)
+                    setOpen(false)
+                  }}
+                >
+                  <span className="truncate">
+                    {t("searchableSelect.useValue", {
+                      value: normalizedSearchTerm,
+                    })}
+                  </span>
+                </CommandItem>
+              ) : null}
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
@@ -143,11 +187,11 @@ export function SearchableSelect({
                 >
                   <CheckIcon
                     className={cn(
-                      "mr-2 size-4",
+                      "size-4",
                       value === option.value ? "opacity-100" : "opacity-0",
                     )}
                   />
-                  <span className="truncate">{option.label}</span>
+                  <span>{option.label}</span>
                 </CommandItem>
               ))}
             </CommandGroup>

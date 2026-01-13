@@ -39,6 +39,7 @@
    - 读取 CLIProxyAPI 配置（基础 URL 和管理密钥）。
    - 使用站点的 `Base URL` 生成 OpenAI 兼容地址（自动拼接 `/v1`）。
    - 以站点名称或 Base URL 作为提供方名称。
+   - （可选）在导入弹窗中配置 **模型映射**（原始模型 → 别名）；弹窗会尝试从上游 `/v1/models` 拉取模型列表，便于选择原始模型。
    - 调用 CLIProxyAPI：
      - 若已存在同名或相同 `base-url` 的提供方：
        - 去重后在 `api-key-entries` 中追加当前密钥。
