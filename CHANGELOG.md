@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.4.0](https://github.com/qixing-jk/all-api-hub/compare/v3.3.0...v3.4.0) (2026-01-13)
+
+
+### Features
+
+* **cli-proxy:** enhance model mapping with upstream model selection ([#352](https://github.com/qixing-jk/all-api-hub/issues/352)) ([0f6799a](https://github.com/qixing-jk/all-api-hub/commit/0f6799aca387ac4be891277566694707b5f9028b))
+
+
+### Bug Fixes
+
+* **api:** ensure consistent sk- prefix for API keys ([#347](https://github.com/qixing-jk/all-api-hub/issues/347)) ([6d5a9eb](https://github.com/qixing-jk/all-api-hub/commit/6d5a9eb7d4a13822b9013ae3861f0ba2a9ab7f8f))
+* **deps:** enforce Electron rebuild via pnpm onlyBuiltDependencies ([c8e50df](https://github.com/qixing-jk/all-api-hub/commit/c8e50df2b0b29bd37f8dda25f68d0f647dc3020b))
+
 ## [3.3.0](https://github.com/qixing-jk/all-api-hub/compare/v3.2.0...v3.3.0) (2026-01-11)
 
 
