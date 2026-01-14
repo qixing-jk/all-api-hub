@@ -30,7 +30,7 @@ interface AccountActionsContextType {
   ) => Promise<void>
   handleOpenExternalCheckIns: (
     accounts: DisplaySiteData[],
-    options?: { openAll?: boolean },
+    options?: { openAll?: boolean; openInNewWindow?: boolean },
   ) => Promise<void>
 }
 
@@ -141,7 +141,10 @@ export const AccountActionsProvider = ({
    * in-flight async work if executed directly in the popup context.
    */
   const handleOpenExternalCheckIns = useCallback(
-    async (accounts: DisplaySiteData[], options?: { openAll?: boolean }) => {
+    async (
+      accounts: DisplaySiteData[],
+      options?: { openAll?: boolean; openInNewWindow?: boolean },
+    ) => {
       const accountsToOpen = options?.openAll
         ? accounts
         : accounts.filter(
@@ -159,6 +162,7 @@ export const AccountActionsProvider = ({
         const response = await sendRuntimeMessage({
           action: "externalCheckIn:openAndMark",
           accountIds: accountsToOpen.map((account) => account.id),
+          ...(options?.openInNewWindow ? { openInNewWindow: true } : {}),
         })
 
         if (!response?.data) {

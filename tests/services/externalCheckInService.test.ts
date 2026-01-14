@@ -1,7 +1,7 @@
 import { getSiteApiRouter } from "~/constants/siteType"
 import { accountStorage } from "~/services/accountStorage"
 import { handleExternalCheckInMessage } from "~/services/externalCheckInService"
-import { createTab } from "~/utils/browserApi"
+import { createTab, createWindow, hasWindowsAPI } from "~/utils/browserApi"
 import { joinUrl } from "~/utils/url"
 
 vi.mock("~/services/accountStorage", () => ({
@@ -13,7 +13,12 @@ vi.mock("~/services/accountStorage", () => ({
 
 vi.mock("~/utils/browserApi", async (importOriginal) => {
   const actual = await importOriginal<typeof import("~/utils/browserApi")>()
-  return { ...actual, createTab: vi.fn() }
+  return {
+    ...actual,
+    createTab: vi.fn(),
+    createWindow: vi.fn(),
+    hasWindowsAPI: vi.fn(),
+  }
 })
 
 vi.mock("~/constants/siteType", () => ({
@@ -26,12 +31,15 @@ vi.mock("~/utils/url", () => ({
 
 const mockedAccountStorage = vi.mocked(accountStorage)
 const mockedCreateTab = vi.mocked(createTab)
+const mockedCreateWindow = vi.mocked(createWindow)
+const mockedHasWindowsAPI = vi.mocked(hasWindowsAPI)
 const mockedGetSiteApiRouter = vi.mocked(getSiteApiRouter)
 const mockedJoinUrl = vi.mocked(joinUrl)
 
 describe("handleExternalCheckInMessage", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockedHasWindowsAPI.mockReturnValue(false)
   })
 
   it("returns error when accountIds missing", async () => {
@@ -128,6 +136,64 @@ describe("handleExternalCheckInMessage", () => {
     expect(
       mockedAccountStorage.markAccountAsCustomCheckedIn,
     ).toHaveBeenCalledWith("a2")
+    expect(sendResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        data: expect.objectContaining({
+          openedCount: 1,
+          markedCount: 1,
+          failedCount: 0,
+          totalCount: 1,
+        }),
+      }),
+    )
+  })
+
+  it("opens pages in a new window when requested", async () => {
+    const sendResponse = vi.fn()
+    mockedHasWindowsAPI.mockReturnValue(true)
+
+    mockedAccountStorage.getAccountById.mockResolvedValue({
+      id: "a3",
+      site_url: "https://example.com",
+      site_type: "one-api",
+      checkIn: {
+        customCheckIn: {
+          url: "https://checkin.example",
+          openRedeemWithCheckIn: true,
+        },
+      },
+    } as any)
+
+    mockedCreateWindow.mockResolvedValue({ id: 123 } as any)
+    mockedCreateTab.mockResolvedValueOnce({ id: 33 } as any)
+    mockedAccountStorage.markAccountAsCustomCheckedIn.mockResolvedValue(true)
+
+    await handleExternalCheckInMessage(
+      {
+        action: "externalCheckIn:openAndMark",
+        accountIds: ["a3"],
+        openInNewWindow: true,
+      },
+      sendResponse,
+    )
+
+    expect(mockedGetSiteApiRouter).toHaveBeenCalledWith("one-api")
+    expect(mockedJoinUrl).toHaveBeenCalledWith("https://example.com", "/redeem")
+    expect(mockedCreateWindow).toHaveBeenCalledWith({
+      url: "https://example.com/redeem",
+      focused: true,
+    })
+    expect(mockedCreateTab).toHaveBeenCalledWith(
+      "https://checkin.example",
+      true,
+      {
+        windowId: 123,
+      },
+    )
+    expect(
+      mockedAccountStorage.markAccountAsCustomCheckedIn,
+    ).toHaveBeenCalledWith("a3")
     expect(sendResponse).toHaveBeenCalledWith(
       expect.objectContaining({
         success: true,

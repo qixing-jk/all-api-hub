@@ -19,6 +19,7 @@ import {
   openKeysPage,
   openModelsPage,
 } from "~/utils/navigation"
+import { getExternalCheckInOpenOptions } from "~/utils/shortcutKeys"
 
 /**
  * Renders quick action buttons in popup header for adding accounts and navigating.
@@ -56,9 +57,11 @@ export default function ActionButtons() {
   const handleOpenExternalCheckInsClick = async (
     event: MouseEvent<HTMLButtonElement>,
   ) => {
-    // Ctrl/Cmd click opens all external check-ins; default opens only unchecked today.
-    const openAll = event.ctrlKey || event.metaKey
-    await handleOpenExternalCheckIns(externalCheckInAccounts, { openAll })
+    const { openAll, openInNewWindow } = getExternalCheckInOpenOptions(event)
+    await handleOpenExternalCheckIns(externalCheckInAccounts, {
+      openAll,
+      ...(openInNewWindow ? { openInNewWindow: true } : {}),
+    })
   }
 
   return (

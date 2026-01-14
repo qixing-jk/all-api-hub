@@ -9,6 +9,7 @@ import { useAccountActionsContext } from "~/features/AccountManagement/hooks/Acc
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { AccountManagementProvider } from "~/features/AccountManagement/hooks/AccountManagementProvider"
 import { useDialogStateContext } from "~/features/AccountManagement/hooks/DialogStateContext"
+import { getExternalCheckInOpenOptions } from "~/utils/shortcutKeys"
 
 /**
  * Renders the Account Management page body: header with CTA and account list.
@@ -30,9 +31,11 @@ function AccountManagementContent({ searchQuery }: { searchQuery?: string }) {
   const handleOpenExternalCheckInsClick = async (
     event: MouseEvent<HTMLButtonElement>,
   ) => {
-    // Ctrl/Cmd click opens all external check-ins; default opens only unchecked today.
-    const openAll = event.ctrlKey || event.metaKey
-    await handleOpenExternalCheckIns(externalCheckInAccounts, { openAll })
+    const { openAll, openInNewWindow } = getExternalCheckInOpenOptions(event)
+    await handleOpenExternalCheckIns(externalCheckInAccounts, {
+      openAll,
+      ...(openInNewWindow ? { openInNewWindow: true } : {}),
+    })
   }
 
   return (

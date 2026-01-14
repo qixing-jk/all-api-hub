@@ -22,7 +22,7 @@
     "managedSiteChannels": "渠道管理",
     "managedSiteModelSync": "模型同步",
     "externalCheckinAll": "一键打开外部签到",
-    "externalCheckinAllHint": "默认仅打开未签到，按 Ctrl/Cmd 打开全部。",
+    "externalCheckinAllHint": "默认仅打开未签到；Ctrl/Cmd 打开全部；Shift 在新窗口打开；Ctrl/Cmd+Shift 同时生效。",
     "externalCheckinAllDisabled": "未配置外部签到地址",
     "importExport": "导入/导出",
     "collapseSidebar": "折叠侧边栏",
