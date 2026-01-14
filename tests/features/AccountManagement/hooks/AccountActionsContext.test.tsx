@@ -8,20 +8,16 @@ import {
 } from "~/features/AccountManagement/hooks/AccountActionsContext"
 
 // Verifies bulk external check-in behavior (unchecked-only vs open-all) and toast feedback.
-const {
-  mockLoadAccountData,
-  mockMarkCustomCheckIn,
-  mockOpenExternalCheckInPages,
-  mockToast,
-} = vi.hoisted(() => ({
-  mockLoadAccountData: vi.fn(),
-  mockMarkCustomCheckIn: vi.fn().mockResolvedValue(true),
-  mockOpenExternalCheckInPages: vi.fn(),
-  mockToast: {
-    success: vi.fn(),
-    error: vi.fn(),
-  },
-}))
+const { mockLoadAccountData, mockSendRuntimeMessage, mockToast } = vi.hoisted(
+  () => ({
+    mockLoadAccountData: vi.fn(),
+    mockSendRuntimeMessage: vi.fn(),
+    mockToast: {
+      success: vi.fn(),
+      error: vi.fn(),
+    },
+  }),
+)
 
 vi.mock("react-hot-toast", () => ({
   default: mockToast,
@@ -35,14 +31,14 @@ vi.mock("i18next", () => ({
 
 vi.mock("~/services/accountStorage", () => ({
   accountStorage: {
-    markAccountAsCustomCheckedIn: mockMarkCustomCheckIn,
     refreshAccount: vi.fn(),
   },
 }))
 
-vi.mock("~/utils/navigation", () => ({
-  openExternalCheckInPages: mockOpenExternalCheckInPages,
-}))
+vi.mock("~/utils/browserApi", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/browserApi")>()
+  return { ...actual, sendRuntimeMessage: mockSendRuntimeMessage }
+})
 
 vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
   useAccountDataContext: () => ({
@@ -98,15 +94,24 @@ describe("AccountActionsContext", () => {
     ] as any
 
     await act(async () => {
+      mockSendRuntimeMessage.mockResolvedValueOnce({
+        success: true,
+        data: {
+          results: [],
+          openedCount: 2,
+          markedCount: 2,
+          failedCount: 0,
+          totalCount: 2,
+        },
+      })
       await captured!.handleOpenExternalCheckIns(accounts)
     })
 
-    expect(mockMarkCustomCheckIn).toHaveBeenCalledTimes(2)
-    expect(mockMarkCustomCheckIn).toHaveBeenCalledWith("a2")
-    expect(mockMarkCustomCheckIn).toHaveBeenCalledWith("a3")
-    expect(mockOpenExternalCheckInPages).toHaveBeenCalledTimes(2)
-    expect(mockOpenExternalCheckInPages).toHaveBeenCalledWith([accounts[1]])
-    expect(mockOpenExternalCheckInPages).toHaveBeenCalledWith([accounts[2]])
+    expect(mockSendRuntimeMessage).toHaveBeenCalledTimes(1)
+    expect(mockSendRuntimeMessage).toHaveBeenCalledWith({
+      action: "externalCheckIn:openAndMark",
+      accountIds: ["a2", "a3"],
+    })
     expect(mockLoadAccountData).toHaveBeenCalled()
     expect(mockToast.success).toHaveBeenCalled()
   })
@@ -135,13 +140,24 @@ describe("AccountActionsContext", () => {
     ] as any
 
     await act(async () => {
+      mockSendRuntimeMessage.mockResolvedValueOnce({
+        success: true,
+        data: {
+          results: [],
+          openedCount: 2,
+          markedCount: 2,
+          failedCount: 0,
+          totalCount: 2,
+        },
+      })
       await captured!.handleOpenExternalCheckIns(accounts, { openAll: true })
     })
 
-    expect(mockMarkCustomCheckIn).toHaveBeenCalledTimes(2)
-    expect(mockOpenExternalCheckInPages).toHaveBeenCalledTimes(2)
-    expect(mockOpenExternalCheckInPages).toHaveBeenCalledWith([accounts[0]])
-    expect(mockOpenExternalCheckInPages).toHaveBeenCalledWith([accounts[1]])
+    expect(mockSendRuntimeMessage).toHaveBeenCalledTimes(1)
+    expect(mockSendRuntimeMessage).toHaveBeenCalledWith({
+      action: "externalCheckIn:openAndMark",
+      accountIds: ["b1", "b2"],
+    })
     expect(mockLoadAccountData).toHaveBeenCalled()
     expect(mockToast.success).toHaveBeenCalled()
   })
@@ -173,8 +189,7 @@ describe("AccountActionsContext", () => {
       await captured!.handleOpenExternalCheckIns(accounts)
     })
 
-    expect(mockMarkCustomCheckIn).not.toHaveBeenCalled()
-    expect(mockOpenExternalCheckInPages).not.toHaveBeenCalled()
+    expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
     expect(mockLoadAccountData).not.toHaveBeenCalled()
     expect(mockToast.error).toHaveBeenCalledWith(
       "messages:toast.error.externalCheckInNonePending",

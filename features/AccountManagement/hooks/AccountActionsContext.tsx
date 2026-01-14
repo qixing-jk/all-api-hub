@@ -11,8 +11,8 @@ import toast from "react-hot-toast"
 
 import { accountStorage } from "~/services/accountStorage"
 import type { DisplaySiteData } from "~/types"
+import { sendRuntimeMessage } from "~/utils/browserApi"
 import { getErrorMessage } from "~/utils/error"
-import { openExternalCheckInPages } from "~/utils/navigation"
 
 import { useAccountDataContext } from "./AccountDataContext"
 
@@ -134,8 +134,11 @@ export const AccountActionsProvider = ({
   )
 
   /**
-   * Bulk open external check-in sites and mark them as checked in, mirroring the
-   * single-account check-in behavior. Defaults to only opening unchecked sites.
+   * Bulk open external check-in sites and mark them as checked in.
+   *
+   * Note: This must run in the background because the popup UI can close early
+   * (including programmatically after opening a tab), which would interrupt any
+   * in-flight async work if executed directly in the popup context.
    */
   const handleOpenExternalCheckIns = useCallback(
     async (accounts: DisplaySiteData[], options?: { openAll?: boolean }) => {
@@ -153,12 +156,25 @@ export const AccountActionsProvider = ({
       }
 
       try {
-        for (const account of accountsToOpen) {
-          await openExternalCheckInPages([account])
-          await accountStorage.markAccountAsCustomCheckedIn(account.id)
+        const response = await sendRuntimeMessage({
+          action: "externalCheckIn:openAndMark",
+          accountIds: accountsToOpen.map((account) => account.id),
+        })
+
+        if (!response?.data) {
+          throw new Error(response?.error || "Empty response")
         }
 
         await loadAccountData()
+
+        if (response.data.failedCount > 0) {
+          toast.error(
+            i18next.t("messages:errors.operation.failed", {
+              error: `${response.data.failedCount}/${response.data.totalCount} failed`,
+            }),
+          )
+          return
+        }
       } catch (error) {
         console.error("Error opening external check-ins:", error)
         toast.error(

@@ -4,6 +4,7 @@ import { applyActionClickBehavior } from "~/entrypoints/background/actionClickBe
 import { handleAutoCheckinMessage } from "~/services/autoCheckin/scheduler"
 import { handleAutoRefreshMessage } from "~/services/autoRefreshService"
 import { handleChannelConfigMessage } from "~/services/channelConfigStorage"
+import { handleExternalCheckInMessage } from "~/services/externalCheckInService"
 import { handleManagedSiteModelSyncMessage } from "~/services/modelSync"
 import { handleRedemptionAssistMessage } from "~/services/redemptionAssist"
 import { handleWebdavAutoSyncMessage } from "~/services/webdav/webdavAutoSyncService"
@@ -102,6 +103,12 @@ export function setupRuntimeMessageListeners() {
           .catch((error) => {
             sendResponse({ success: false, error: getErrorMessage(error) })
           })
+        return true
+      }
+
+      // Bulk external check-in must run in background so it isn't interrupted by popup teardown.
+      if (request.action?.startsWith("externalCheckIn:")) {
+        void handleExternalCheckInMessage(request, sendResponse)
         return true
       }
 
