@@ -34,7 +34,7 @@ function AccountManagementContent({ searchQuery }: { searchQuery?: string }) {
     const { openAll, openInNewWindow } = getExternalCheckInOpenOptions(event)
     await handleOpenExternalCheckIns(externalCheckInAccounts, {
       openAll,
-      ...(openInNewWindow ? { openInNewWindow: true } : {}),
+      openInNewWindow,
     })
   }
 

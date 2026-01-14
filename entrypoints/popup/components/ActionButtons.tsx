@@ -60,7 +60,7 @@ export default function ActionButtons() {
     const { openAll, openInNewWindow } = getExternalCheckInOpenOptions(event)
     await handleOpenExternalCheckIns(externalCheckInAccounts, {
       openAll,
-      ...(openInNewWindow ? { openInNewWindow: true } : {}),
+      openInNewWindow,
     })
   }
 

@@ -1,3 +1,4 @@
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { getSiteApiRouter } from "~/constants/siteType"
 import { accountStorage } from "~/services/accountStorage"
 import { handleExternalCheckInMessage } from "~/services/externalCheckInService"
@@ -46,7 +47,7 @@ describe("handleExternalCheckInMessage", () => {
     const sendResponse = vi.fn()
 
     await handleExternalCheckInMessage(
-      { action: "externalCheckIn:openAndMark" },
+      { action: RuntimeActionIds.ExternalCheckInOpenAndMark },
       sendResponse,
     )
 
@@ -75,7 +76,10 @@ describe("handleExternalCheckInMessage", () => {
       .mockResolvedValueOnce(undefined as any)
 
     await handleExternalCheckInMessage(
-      { action: "externalCheckIn:openAndMark", accountIds: ["a1"] },
+      {
+        action: RuntimeActionIds.ExternalCheckInOpenAndMark,
+        accountIds: ["a1"],
+      },
       sendResponse,
     )
 
@@ -129,7 +133,10 @@ describe("handleExternalCheckInMessage", () => {
     mockedAccountStorage.markAccountAsCustomCheckedIn.mockResolvedValue(true)
 
     await handleExternalCheckInMessage(
-      { action: "externalCheckIn:openAndMark", accountIds: ["a2"] },
+      {
+        action: RuntimeActionIds.ExternalCheckInOpenAndMark,
+        accountIds: ["a2"],
+      },
       sendResponse,
     )
 
@@ -171,7 +178,7 @@ describe("handleExternalCheckInMessage", () => {
 
     await handleExternalCheckInMessage(
       {
-        action: "externalCheckIn:openAndMark",
+        action: RuntimeActionIds.ExternalCheckInOpenAndMark,
         accountIds: ["a3"],
         openInNewWindow: true,
       },

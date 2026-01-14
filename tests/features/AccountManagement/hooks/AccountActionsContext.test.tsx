@@ -2,6 +2,7 @@ import { act, render, waitFor } from "@testing-library/react"
 import { useEffect } from "react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   AccountActionsProvider,
   useAccountActionsContext,
@@ -109,8 +110,9 @@ describe("AccountActionsContext", () => {
 
     expect(mockSendRuntimeMessage).toHaveBeenCalledTimes(1)
     expect(mockSendRuntimeMessage).toHaveBeenCalledWith({
-      action: "externalCheckIn:openAndMark",
+      action: RuntimeActionIds.ExternalCheckInOpenAndMark,
       accountIds: ["a2", "a3"],
+      openInNewWindow: false,
     })
     expect(mockLoadAccountData).toHaveBeenCalled()
     expect(mockToast.success).toHaveBeenCalled()
@@ -155,8 +157,9 @@ describe("AccountActionsContext", () => {
 
     expect(mockSendRuntimeMessage).toHaveBeenCalledTimes(1)
     expect(mockSendRuntimeMessage).toHaveBeenCalledWith({
-      action: "externalCheckIn:openAndMark",
+      action: RuntimeActionIds.ExternalCheckInOpenAndMark,
       accountIds: ["b1", "b2"],
+      openInNewWindow: false,
     })
     expect(mockLoadAccountData).toHaveBeenCalled()
     expect(mockToast.success).toHaveBeenCalled()
@@ -203,7 +206,7 @@ describe("AccountActionsContext", () => {
 
     expect(mockSendRuntimeMessage).toHaveBeenCalledTimes(1)
     expect(mockSendRuntimeMessage).toHaveBeenCalledWith({
-      action: "externalCheckIn:openAndMark",
+      action: RuntimeActionIds.ExternalCheckInOpenAndMark,
       accountIds: ["w2"],
       openInNewWindow: true,
     })

@@ -1,3 +1,4 @@
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { getSiteApiRouter } from "~/constants/siteType"
 import { accountStorage } from "~/services/accountStorage"
 import { createTab, createWindow, hasWindowsAPI } from "~/utils/browserApi"
@@ -14,7 +15,7 @@ import { joinUrl } from "~/utils/url"
  *   the account after the check-in URL was opened successfully.
  *
  * Message contract:
- * - Request: `{ action: "externalCheckIn:openAndMark", accountIds: string[], openInNewWindow?: boolean }`
+ * - Request: `{ action: RuntimeActionIds.ExternalCheckInOpenAndMark, accountIds: string[], openInNewWindow?: boolean }`
  * - Response: `{ success: boolean, data?: { results, openedCount, markedCount, failedCount, totalCount }, error?: string }`
  *
  * Semantics:
@@ -42,7 +43,7 @@ export async function handleExternalCheckInMessage(
 ) {
   try {
     switch (request.action) {
-      case "externalCheckIn:openAndMark": {
+      case RuntimeActionIds.ExternalCheckInOpenAndMark: {
         const accountIds: unknown = request.accountIds
         const openInNewWindow = Boolean(request.openInNewWindow)
 

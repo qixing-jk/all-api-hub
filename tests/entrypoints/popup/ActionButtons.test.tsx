@@ -87,6 +87,7 @@ describe("popup ActionButtons", () => {
       displayDataMock,
       {
         openAll: false,
+        openInNewWindow: false,
       },
     )
   })
@@ -117,6 +118,7 @@ describe("popup ActionButtons", () => {
       displayDataMock,
       {
         openAll: true,
+        openInNewWindow: false,
       },
     )
   })

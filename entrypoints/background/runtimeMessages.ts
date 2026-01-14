@@ -107,7 +107,7 @@ export function setupRuntimeMessageListeners() {
       }
 
       // Bulk external check-in must run in background so it isn't interrupted by popup teardown.
-      if (request.action?.startsWith("externalCheckIn:")) {
+      if (request.action && request.action.startsWith("externalCheckIn:")) {
         void handleExternalCheckInMessage(request, sendResponse)
         return true
       }
