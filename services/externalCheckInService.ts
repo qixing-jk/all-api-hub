@@ -74,7 +74,7 @@ export async function handleExternalCheckInMessage(
                 const tab = await createTab(url, true, {
                   windowId: targetWindowId,
                 })
-                if (tab?.id) return true
+                if (tab?.id != null) return true
               } catch {
                 // ignore and try to recreate the target window
               }
@@ -88,7 +88,7 @@ export async function handleExternalCheckInMessage(
           }
 
           const tab = await createTab(url, true)
-          return Boolean(tab?.id)
+          return tab?.id != null
         }
 
         for (const accountId of accountIds) {
