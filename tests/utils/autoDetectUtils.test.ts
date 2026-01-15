@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { FAQ_URL } from "~/constants/about"
+import { AUTO_DETECT_DOC_URL } from "~/constants/about"
 import {
   analyzeAutoDetectError,
   AutoDetectErrorType,
@@ -39,7 +39,7 @@ describe("autoDetectUtils", () => {
 
         expect(result.type).toBe(AutoDetectErrorType.TIMEOUT)
         expect(result.message).toBe("自动识别超时")
-        expect(result.helpDocUrl).toBe(FAQ_URL)
+        expect(result.helpDocUrl).toBe(AUTO_DETECT_DOC_URL)
         expect(result.actionText).toBeUndefined()
         expect(result.actionUrl).toBeUndefined()
       })
@@ -68,7 +68,7 @@ describe("autoDetectUtils", () => {
         expect(result.type).toBe(AutoDetectErrorType.UNAUTHORIZED)
         expect(result.message).toBe("未登录或会话已过期")
         expect(result.actionText).toBe("登录该站点")
-        expect(result.helpDocUrl).toBe(FAQ_URL)
+        expect(result.helpDocUrl).toBe(AUTO_DETECT_DOC_URL)
       })
 
       it("should detect Chinese unauthorized text", () => {
@@ -93,7 +93,7 @@ describe("autoDetectUtils", () => {
 
         expect(result.type).toBe(AutoDetectErrorType.INVALID_RESPONSE)
         expect(result.message).toBe("返回数据格式不符合预期")
-        expect(result.helpDocUrl).toBe(FAQ_URL)
+        expect(result.helpDocUrl).toBe(AUTO_DETECT_DOC_URL)
       })
 
       it("should detect parsing error", () => {
@@ -132,7 +132,7 @@ describe("autoDetectUtils", () => {
 
         expect(result.type).toBe(AutoDetectErrorType.NETWORK_ERROR)
         expect(result.message).toBe("网络连接失败")
-        expect(result.helpDocUrl).toBe(FAQ_URL)
+        expect(result.helpDocUrl).toBe(AUTO_DETECT_DOC_URL)
       })
 
       it("should detect connection error", () => {
@@ -170,7 +170,7 @@ describe("autoDetectUtils", () => {
         expect(result.type).toBe(AutoDetectErrorType.UNKNOWN)
         expect(result.message).toContain("自动识别失败")
         expect(result.message).toContain("Something went wrong")
-        expect(result.helpDocUrl).toBe(FAQ_URL)
+        expect(result.helpDocUrl).toBe(AUTO_DETECT_DOC_URL)
       })
 
       it("should handle non-Error objects", () => {
@@ -437,7 +437,7 @@ describe("autoDetectUtils", () => {
         type: AutoDetectErrorType.UNAUTHORIZED,
         message: expect.any(String),
         actionText: expect.any(String),
-        helpDocUrl: FAQ_URL,
+        helpDocUrl: AUTO_DETECT_DOC_URL,
       })
     })
 

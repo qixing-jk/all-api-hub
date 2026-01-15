@@ -80,6 +80,7 @@
     "urlParseError": "无法解析 URL: {{error}}",
     "autoDetectSuccess": "自动识别成功！",
     "autoDetectFailed": "自动识别失败: {{error}}",
+    "autoDetectTakingTooLong": "自动识别耗时较长？点击打开排查文档",
     "addSuccess": "账号 {{name}} 添加成功!",
     "updateSuccess": "账号 {{name}} 更新成功!",
     "operationFailed": "操作失败: {{error}}",

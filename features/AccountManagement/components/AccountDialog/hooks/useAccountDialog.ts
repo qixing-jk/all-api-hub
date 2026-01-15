@@ -14,13 +14,18 @@ import {
 } from "~/services/accountOperations"
 import { accountStorage } from "~/services/accountStorage"
 import { AuthTypeEnum, type CheckInConfig, type DisplaySiteData } from "~/types"
-import { AutoDetectError } from "~/utils/autoDetectUtils"
+import {
+  analyzeAutoDetectError,
+  AutoDetectError,
+} from "~/utils/autoDetectUtils"
 import {
   getActiveTabs,
   onTabActivated,
   onTabUpdated,
   sendRuntimeMessage,
 } from "~/utils/browserApi"
+
+const AUTO_DETECT_SLOW_HINT_DELAY_MS = 10_000
 
 interface UseAccountDialogProps {
   mode: DialogMode
@@ -51,6 +56,7 @@ export function useAccountDialog({
 
   const [url, setUrl] = useState("")
   const [isDetecting, setIsDetecting] = useState(false)
+  const [isDetectingSlow, setIsDetectingSlow] = useState(false)
   const [siteName, setSiteName] = useState("")
   const [username, setUsername] = useState("")
   const [accessToken, setAccessToken] = useState("")
@@ -90,6 +96,9 @@ export function useAccountDialog({
   // useRef 保存跨渲染引用
   const newAccountRef = useRef<any>(null)
   const targetAccountRef = useRef<any>(null)
+  const detectSlowHintTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  )
 
   const { openWithAccount: openChannelDialog } = useChannelDialog()
 
@@ -260,6 +269,29 @@ export function useAccountDialog({
     }
   }, [checkCurrentTab])
 
+  useEffect(() => {
+    if (!isDetecting) {
+      setIsDetectingSlow(false)
+      if (detectSlowHintTimeoutRef.current) {
+        clearTimeout(detectSlowHintTimeoutRef.current)
+        detectSlowHintTimeoutRef.current = null
+      }
+      return
+    }
+
+    setIsDetectingSlow(false)
+    detectSlowHintTimeoutRef.current = setTimeout(() => {
+      setIsDetectingSlow(true)
+    }, AUTO_DETECT_SLOW_HINT_DELAY_MS)
+
+    return () => {
+      if (detectSlowHintTimeoutRef.current) {
+        clearTimeout(detectSlowHintTimeoutRef.current)
+        detectSlowHintTimeoutRef.current = null
+      }
+    }
+  }, [isDetecting])
+
   const handleUseCurrentTabUrl = () => {
     if (currentTabUrl) {
       setUrl(currentTabUrl)
@@ -376,14 +408,7 @@ export function useAccountDialog({
       }
     } catch (error) {
       console.error(t("messages.autoDetectFailed"), error)
-      const errorMessage = getErrorMessage(error)
-      setDetectionError({
-        type: "unknown" as any,
-        message: t("messages.autoDetectFailed", {
-          error: errorMessage,
-        }),
-        helpDocUrl: "#",
-      })
+      setDetectionError(analyzeAutoDetectError(error))
       setShowManualForm(true)
     } finally {
       setIsDetecting(false)
@@ -546,6 +571,7 @@ export function useAccountDialog({
     state: {
       url,
       isDetecting,
+      isDetectingSlow,
       siteName,
       username,
       accessToken,

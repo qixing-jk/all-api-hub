@@ -80,6 +80,7 @@
     "urlParseError": "Unable to parse URL: {{error}}",
     "autoDetectSuccess": "Auto-detect successful!",
     "autoDetectFailed": "Auto-detect failed: {{error}}",
+    "autoDetectTakingTooLong": "Auto-detect is taking longer than expected. Open troubleshooting guide.",
     "addSuccess": "Account {{name}} added successfully!",
     "updateSuccess": "Account {{name}} updated successfully!",
     "operationFailed": "Operation failed: {{error}}",

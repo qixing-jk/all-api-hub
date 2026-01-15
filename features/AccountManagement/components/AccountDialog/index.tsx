@@ -7,6 +7,7 @@ import type { DisplaySiteData } from "~/types"
 import AccountForm from "./AccountForm"
 import ActionButtons from "./ActionButtons"
 import AutoDetectErrorAlert from "./AutoDetectErrorAlert"
+import AutoDetectSlowHintAlert from "./AutoDetectSlowHintAlert"
 import DialogHeader from "./DialogHeader"
 import { useAccountDialog } from "./hooks/useAccountDialog"
 import InfoPanel from "./InfoPanel"
@@ -100,6 +101,10 @@ export default function AccountDialog({
               error={state.detectionError}
               siteUrl={state.url}
             />
+          )}
+
+          {state.isDetecting && state.isDetectingSlow && (
+            <AutoDetectSlowHintAlert />
           )}
 
           <SiteInfoInput
