@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.5.0](https://github.com/qixing-jk/all-api-hub/compare/v3.4.0...v3.5.0) (2026-01-15)
+
+
+### Features
+
+* **account:** add auto-detect slow hint alert ([#357](https://github.com/qixing-jk/all-api-hub/issues/357)) ([c300ab6](https://github.com/qixing-jk/all-api-hub/commit/c300ab68bdd592fd346f2828c37a721ca7fd23ce))
+* **account:** add new window support for external check-ins ([#356](https://github.com/qixing-jk/all-api-hub/issues/356)) ([ec292df](https://github.com/qixing-jk/all-api-hub/commit/ec292df1e91a1b54dcf9a873c06e75f486949c1e))
+
+
+### Bug Fixes
+
+* **account:** refactor external check-in flow to background service ([#354](https://github.com/qixing-jk/all-api-hub/issues/354)) ([28a990d](https://github.com/qixing-jk/all-api-hub/commit/28a990d9b1181347c2a0fe447ae929c78fdf9f47))
+
 ## [3.4.0](https://github.com/qixing-jk/all-api-hub/compare/v3.3.0...v3.4.0) (2026-01-13)
 
 
