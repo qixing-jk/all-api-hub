@@ -12,25 +12,35 @@ import { server } from "./msw/server"
 
 vi.mock("@lobehub/icons", () => {
   const createIcon = () => () => null
+  const createCompoundedIcon = () => {
+    const icon = createIcon() as any
+    icon.Color = createIcon()
+    icon.Text = createIcon()
+    icon.Combine = createIcon()
+    icon.Avatar = createIcon()
+    icon.colorPrimary = "#000000"
+    icon.title = "mock"
+    return icon
+  }
   return {
-    Azure: createIcon(),
-    Baichuan: createIcon(),
-    Baidu: createIcon(),
-    Claude: createIcon(),
-    Cohere: createIcon(),
-    DeepMind: createIcon(),
-    DeepSeek: createIcon(),
-    Gemini: createIcon(),
-    Grok: createIcon(),
-    Mistral: createIcon(),
-    Moonshot: createIcon(),
-    NewAPI: createIcon(),
-    Ollama: createIcon(),
-    OpenAI: createIcon(),
-    Qwen: createIcon(),
-    Tencent: createIcon(),
-    Yi: createIcon(),
-    Zhipu: createIcon(),
+    Azure: createCompoundedIcon(),
+    Baichuan: createCompoundedIcon(),
+    Baidu: createCompoundedIcon(),
+    Claude: createCompoundedIcon(),
+    Cohere: createCompoundedIcon(),
+    DeepMind: createCompoundedIcon(),
+    DeepSeek: createCompoundedIcon(),
+    Gemini: createCompoundedIcon(),
+    Grok: createCompoundedIcon(),
+    Mistral: createCompoundedIcon(),
+    Moonshot: createCompoundedIcon(),
+    NewAPI: createCompoundedIcon(),
+    Ollama: createCompoundedIcon(),
+    OpenAI: createCompoundedIcon(),
+    Qwen: createCompoundedIcon(),
+    Tencent: createCompoundedIcon(),
+    Yi: createCompoundedIcon(),
+    Zhipu: createCompoundedIcon(),
   }
 })
 
