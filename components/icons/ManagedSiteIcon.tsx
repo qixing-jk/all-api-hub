@@ -1,20 +1,14 @@
 import { NewAPI } from "@lobehub/icons"
 
+import { ICON_SIZE_CLASSNAME, IconSize } from "~/components/icons/iconSizes"
 import { VeloeraIcon } from "~/components/icons/VeloeraIcon"
 import type { ManagedSiteType } from "~/constants/siteType"
 import { VELOERA } from "~/constants/siteType"
-
-type ManagedSiteIconSize = "sm" | "md" | "lg"
+import { cn } from "~/lib/utils"
 
 interface ManagedSiteIconProps {
   siteType: ManagedSiteType
-  size?: ManagedSiteIconSize
-}
-
-const NEW_API_ICON_CLASSNAME: Record<ManagedSiteIconSize, string> = {
-  sm: "h-4 w-4 text-blue-500",
-  md: "h-6 w-6 text-blue-500",
-  lg: "h-8 w-8 text-blue-500",
+  size?: IconSize
 }
 
 /**
@@ -28,5 +22,5 @@ export function ManagedSiteIcon({
     return <VeloeraIcon size={size} />
   }
 
-  return <NewAPI className={NEW_API_ICON_CLASSNAME[size]} />
+  return <NewAPI.Color className={cn(ICON_SIZE_CLASSNAME[size])} />
 }

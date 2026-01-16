@@ -1,15 +1,10 @@
 import claudeCodeRouterLogo from "~/assets/claude-code-router-logo.png"
+import { cn } from "~/lib/utils"
 
-type ClaudeCodeRouterIconSize = "sm" | "md" | "lg"
-
-const SIZE_MAP: Record<ClaudeCodeRouterIconSize, number> = {
-  sm: 16,
-  md: 24,
-  lg: 32,
-}
+import { ICON_SIZE_CLASSNAME, type IconSize } from "./iconSizes"
 
 interface ClaudeCodeRouterIconProps {
-  size?: ClaudeCodeRouterIconSize
+  size?: IconSize
 }
 
 /**
@@ -18,14 +13,11 @@ interface ClaudeCodeRouterIconProps {
 export function ClaudeCodeRouterIcon({
   size = "sm",
 }: ClaudeCodeRouterIconProps) {
-  const dimension = SIZE_MAP[size]
-
   return (
     <img
       src={claudeCodeRouterLogo}
       alt="Claude Code Router logo"
-      width={dimension}
-      height={dimension}
+      className={cn(ICON_SIZE_CLASSNAME[size])}
       loading="lazy"
       decoding="async"
     />

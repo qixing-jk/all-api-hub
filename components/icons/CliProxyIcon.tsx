@@ -1,29 +1,21 @@
 import cliProxyLogo from "~/assets/cli-proxy-api-logo.png"
+import { cn } from "~/lib/utils"
 
-type CliProxyIconSize = "sm" | "md" | "lg"
-
-const SIZE_MAP: Record<CliProxyIconSize, number> = {
-  sm: 16,
-  md: 24,
-  lg: 32,
-}
+import { ICON_SIZE_CLASSNAME, type IconSize } from "./iconSizes"
 
 interface CliProxyIconProps {
-  size?: CliProxyIconSize
+  size?: IconSize
 }
 
 /**
  * CliProxyIcon renders the CLI Proxy API logo at a chosen size.
  */
 export function CliProxyIcon({ size = "sm" }: CliProxyIconProps) {
-  const dimension = SIZE_MAP[size]
-
   return (
     <img
       src={cliProxyLogo}
       alt="CLIProxyAPI logo"
-      width={dimension}
-      height={dimension}
+      className={cn(ICON_SIZE_CLASSNAME[size])}
       loading="lazy"
       decoding="async"
     />
