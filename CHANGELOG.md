@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.5.2](https://github.com/qixing-jk/all-api-hub/compare/v3.5.1...v3.5.2) (2026-01-16)
+
+
+### Bug Fixes
+
+* **money:** implement small value floor strategy for UI display ([#367](https://github.com/qixing-jk/all-api-hub/issues/367)) ([3d930bf](https://github.com/qixing-jk/all-api-hub/commit/3d930bf4fbf1ee1e17bbbdcb361769fda277ceb1))
+
 ## [3.5.1](https://github.com/qixing-jk/all-api-hub/compare/v3.5.0...v3.5.1) (2026-01-16)
 
 
