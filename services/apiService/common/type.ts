@@ -143,21 +143,24 @@ export interface ApiResponse<T = any> {
 }
 
 /**
- * 日志类型。
- * - `0` 所有
- * - `1` 充值
- * - `2` 消费
- * - `3` 管理
- * - `4` 错误
- * - `5` 系统
+ * 日志类型
+ * @see https://github.com/QuantumNous/new-api/blob/8ef99f472875ceeaf20aecb2bb0f2b33ff575feb/model/log.go#L43
  */
 export enum LogType {
-  /** 所有 */ All = 0,
-  /** 充值 */ Recharge = 1,
-  /** 消费 */ Consume = 2,
-  /** 管理 */ Admin = 3,
-  /** 错误 */ Error = 4,
-  /** 系统 */ System = 5,
+  /** 所有 */
+  All = 0,
+  /** 充值 */
+  Topup = 1,
+  /** 消费 */
+  Consume = 2,
+  /** 管理 */
+  Manage = 3,
+  /** 系统 */
+  System = 4,
+  /** 错误 */
+  Error = 5,
+  /** Refund */
+  Refund = 6,
 }
 
 /**
@@ -169,7 +172,8 @@ export interface LogItem {
   user_id: number
   created_at: number
   /**
-   * 日志类型，可选值：1=充值，2=消费，3=管理，4=错误，5=系统
+   * 日志类型
+   * @see LogType
    */
   type: LogType
   /**

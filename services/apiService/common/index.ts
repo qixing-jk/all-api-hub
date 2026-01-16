@@ -664,11 +664,11 @@ export async function fetchTodayIncome(
 
   const totalIncome = await fetchPaginatedLogs(
     request,
-    [LogType.Recharge, LogType.System],
+    [LogType.Topup, LogType.System],
     incomeAggregator,
     0,
     (error, logType) => {
-      const typeName = logType === LogType.Recharge ? "充值" : "签到"
+      const typeName = logType === LogType.Topup ? "充值" : "签到"
       console.warn(`获取${typeName}记录失败:`, error)
     },
   )
