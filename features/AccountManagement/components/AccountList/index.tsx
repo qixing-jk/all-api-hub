@@ -44,6 +44,7 @@ import {
   calculateTotalBalanceForSites,
   calculateTotalConsumptionForSites,
 } from "~/utils/formatters"
+import { formatMoneyFixed } from "~/utils/money"
 
 import CopyKeyDialog from "../CopyKeyDialog"
 import DelAccountDialog from "../DelAccountDialog"
@@ -267,13 +268,13 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
                 <div className="flex flex-wrap gap-3">
                   <span>
                     {t("account:filteredTotals.balance")}: USD{" "}
-                    {filteredBalance.USD.toFixed(2)} / CNY{" "}
-                    {filteredBalance.CNY.toFixed(2)}
+                    {formatMoneyFixed(filteredBalance.USD)} / CNY{" "}
+                    {formatMoneyFixed(filteredBalance.CNY)}
                   </span>
                   <span>
                     {t("account:filteredTotals.consumption")}: USD{" "}
-                    {filteredConsumption.USD.toFixed(2)} / CNY{" "}
-                    {filteredConsumption.CNY.toFixed(2)}
+                    {formatMoneyFixed(filteredConsumption.USD)} / CNY{" "}
+                    {formatMoneyFixed(filteredConsumption.CNY)}
                   </span>
                 </div>
               </div>

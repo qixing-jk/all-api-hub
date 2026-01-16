@@ -40,6 +40,12 @@ export const UI_CONSTANTS = {
     CONVERSION_FACTOR: 500000, // USD to quota conversion
   },
 
+  // 金额显示相关
+  MONEY: {
+    DECIMALS: 2,
+    MIN_NON_ZERO: 0.01,
+  },
+
   // 样式类名
   STYLES: {
     // 按钮样式

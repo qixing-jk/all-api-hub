@@ -8,6 +8,7 @@ import { useAccountActionsContext } from "~/features/AccountManagement/hooks/Acc
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import type { DisplaySiteData } from "~/types"
 import { getCurrencySymbol } from "~/utils/formatters"
+import { getDisplayMoneyValue } from "~/utils/money"
 
 interface BalanceDisplayProps {
   site: DisplaySiteData
@@ -37,6 +38,11 @@ const AnimatedValue: React.FC<{
     const { isInitialLoad } = useAccountDataContext()
     const { currencyType } = useUserPreferencesContext()
 
+    const displayEndValue = getDisplayMoneyValue(value)
+    const displayStartValue = isInitialLoad
+      ? 0
+      : getDisplayMoneyValue(startValue)
+
     return (
       <div
         className={`truncate transition-all duration-200 ${
@@ -52,14 +58,14 @@ const AnimatedValue: React.FC<{
         {prefix}
         {getCurrencySymbol(currencyType)}
         <CountUp
-          start={isInitialLoad ? 0 : startValue}
-          end={value}
+          start={displayStartValue}
+          end={displayEndValue}
           duration={
             isInitialLoad
               ? UI_CONSTANTS.ANIMATION.SLOW_DURATION
               : UI_CONSTANTS.ANIMATION.FAST_DURATION
           }
-          decimals={2}
+          decimals={UI_CONSTANTS.MONEY.DECIMALS}
           preserveValue
         />
         {suffix}

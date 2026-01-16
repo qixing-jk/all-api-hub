@@ -853,49 +853,31 @@ class AccountStorageService {
       name: account.site_name,
       username: account.account_info.username,
       balance: {
-        USD: parseFloat(
-          (
-            account.account_info.quota /
-            UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
-          ).toFixed(2),
-        ),
-        CNY: parseFloat(
-          (
-            (account.account_info.quota /
-              UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR) *
-            account.exchange_rate
-          ).toFixed(2),
-        ),
+        USD:
+          account.account_info.quota /
+          UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR,
+        CNY:
+          (account.account_info.quota /
+            UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR) *
+          account.exchange_rate,
       },
       todayConsumption: {
-        USD: parseFloat(
-          (
-            account.account_info.today_quota_consumption /
-            UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
-          ).toFixed(2),
-        ),
-        CNY: parseFloat(
-          (
-            (account.account_info.today_quota_consumption /
-              UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR) *
-            account.exchange_rate
-          ).toFixed(2),
-        ),
+        USD:
+          account.account_info.today_quota_consumption /
+          UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR,
+        CNY:
+          (account.account_info.today_quota_consumption /
+            UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR) *
+          account.exchange_rate,
       },
       todayIncome: {
-        USD: parseFloat(
-          (
-            (account.account_info.today_income || 0) /
-            UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
-          ).toFixed(2),
-        ),
-        CNY: parseFloat(
-          (
-            ((account.account_info.today_income || 0) /
-              UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR) *
-            account.exchange_rate
-          ).toFixed(2),
-        ),
+        USD:
+          (account.account_info.today_income || 0) /
+          UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR,
+        CNY:
+          ((account.account_info.today_income || 0) /
+            UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR) *
+          account.exchange_rate,
       },
       todayTokens: {
         upload: account.account_info.today_prompt_tokens,

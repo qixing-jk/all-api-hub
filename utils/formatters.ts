@@ -10,6 +10,7 @@ import type {
   DisplaySiteData,
   SortOrder,
 } from "~/types"
+import { formatMoneyFixed } from "~/utils/money"
 
 // 初始化 dayjs
 dayjs.extend(relativeTime)
@@ -108,23 +109,15 @@ export const calculateTotalConsumption = (
   stats: AccountStats,
   accounts: any[],
 ) => {
-  const usdAmount = parseFloat(
-    (
-      stats.today_total_consumption /
-      UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
-    ).toFixed(2),
-  )
-  const cnyAmount = parseFloat(
-    accounts
-      .reduce(
-        (sum, acc) =>
-          sum +
-          (acc.account_info.today_quota_consumption /
-            UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR) *
-            acc.exchange_rate,
-        0,
-      )
-      .toFixed(2),
+  const usdAmount =
+    stats.today_total_consumption / UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+  const cnyAmount = accounts.reduce(
+    (sum, acc) =>
+      sum +
+      (acc.account_info.today_quota_consumption /
+        UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR) *
+        acc.exchange_rate,
+    0,
   )
 
   return {
@@ -138,12 +131,8 @@ export const calculateTotalConsumption = (
  */
 export const calculateTotalBalance = (displayData: DisplaySiteData[]) => {
   return {
-    USD: parseFloat(
-      displayData.reduce((sum, site) => sum + site.balance.USD, 0).toFixed(2),
-    ),
-    CNY: parseFloat(
-      displayData.reduce((sum, site) => sum + site.balance.CNY, 0).toFixed(2),
-    ),
+    USD: displayData.reduce((sum, site) => sum + site.balance.USD, 0),
+    CNY: displayData.reduce((sum, site) => sum + site.balance.CNY, 0),
   }
 }
 
@@ -163,8 +152,8 @@ export const calculateTotalConsumptionForSites = (sites: DisplaySiteData[]) => {
   const cny = sites.reduce((sum, site) => sum + site.todayConsumption.CNY, 0)
 
   return {
-    USD: parseFloat(usd.toFixed(2)),
-    CNY: parseFloat(cny.toFixed(2)),
+    USD: usd,
+    CNY: cny,
   }
 }
 
@@ -262,7 +251,7 @@ export const formatQuota = (token: ApiToken) => {
   // 使用CONVERSION_FACTOR转换真实额度
   const realQuota =
     token.remain_quota / UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
-  return `$${realQuota.toFixed(2)}`
+  return `$${formatMoneyFixed(realQuota)}`
 }
 
 /**
@@ -271,7 +260,7 @@ export const formatQuota = (token: ApiToken) => {
 export const formatUsedQuota = (token: ApiToken) => {
   const realUsedQuota =
     token.used_quota / UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
-  return `$${realUsedQuota.toFixed(2)}`
+  return `$${formatMoneyFixed(realUsedQuota)}`
 }
 
 /**

@@ -5,6 +5,7 @@ import { accountStorage } from "~/services/accountStorage"
 import { getApiService } from "~/services/apiService"
 import type { DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/error"
+import { formatMoneyFixed } from "~/utils/money"
 
 export interface RedeemResult {
   success: boolean
@@ -58,9 +59,9 @@ export class RedeemService {
 
       const amountStr =
         typeof creditedAmount === "number"
-          ? (
-              creditedAmount / UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
-            ).toFixed(2)
+          ? formatMoneyFixed(
+              creditedAmount / UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR,
+            )
           : ""
 
       const message = t("redemptionAssist:messages.redeemSuccess", {
