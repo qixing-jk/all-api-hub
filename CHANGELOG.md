@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.5.1](https://github.com/qixing-jk/all-api-hub/compare/v3.5.0...v3.5.1) (2026-01-16)
+
+
+### Bug Fixes
+
+* **AccountManagement:** handle null account in CopyKeyDialog ([da2a9e2](https://github.com/qixing-jk/all-api-hub/commit/da2a9e26b06cf7d3ddc335cd9ca6daecfd26c3f1))
+
 ## [3.5.0](https://github.com/qixing-jk/all-api-hub/compare/v3.4.0...v3.5.0) (2026-01-15)
 
 
