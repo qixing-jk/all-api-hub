@@ -1,44 +1,49 @@
-# Automatic Identification Troubleshooting Guide
+# Troubleshooting Guide for Auto-Identification
 
-This page is for troubleshooting issues that occur when clicking **Automatic Identification** in the plugin's "Add/Edit Account", such as: identification taking too long, infinite waiting, identification failure (e.g., 401/403/format errors), and inability to submit.
+This page helps troubleshoot issues encountered when clicking **Auto-Identify** in the plugin's "Add/Edit Account" section, such as: excessively long identification time, infinite waiting, identification failure (401/403/format errors, etc.), and inability to submit.
 
-## Identification Taking Too Long (Stuck on "Identifying...")
+## Excessively Long Identification Time (Stuck on "Identifying...")
 
-Automatic identification requires opening a temporary page and reading site information. It will significantly slow down under the following circumstances:
+Auto-identification requires opening a temporary page and reading site information. It will noticeably slow down in the following situations:
 
--   **Site has Cloudflare / firewall verification enabled**: Please check if a temporary window popped up; if manual verification is required, please complete it before timeout.
--   **Slow network / site response**: It is recommended to wait a moment, or switch network/proxy and retry.
--   **Permissions / browser anomaly**: If "infinite waiting" started appearing right after you granted optional permissions, see "Infinite Waiting After Granting Optional Permissions" below.
+-   **Site has Cloudflare / Firewall verification enabled**: Please check if a temporary window pops up; if manual verification is required, please complete it before timeout.
+-   **Slow network/site response**: It is recommended to wait a moment, or switch networks/proxies and retry.
+-   **Permissions/Browser anomaly**: If you just granted optional permissions and started experiencing "infinite waiting", see "Infinite Waiting After Granting Optional Permissions" below.
 
 ### Infinite Waiting After Granting Optional Permissions
 
-After initially granting optional permissions, some sites might remain in automatic identification, showing as the interface continuously loading:
+After initially granting optional permissions, identifying some sites might get stuck in auto-identification, appearing as a continuously loading interface:
 
--   Solution: Open the browser's extension management page, first **disable then enable** this extension, or **restart the browser** and retry identification/authorization.
--   For the purpose and explanation of optional permissions, see: `/permissions` (Permissions Management).
+-   Solution: Open the browser extension management page, **disable then re-enable** this extension, or **restart the browser** and retry identification/authorization.
+-   For the purpose and explanation of optional permissions, see: `/permissions` (Permission Management).
 
-## Identification Failure: First, Confirm You Are Logged In
+## Identification Failed: First, Confirm You Are Indeed Logged In
 
-Automatic identification relies on you being already logged into the target site in the same browser:
+Auto-identification relies on you being logged into the target site in the same browser:
 
-1.  First, open the target site's backend (console) page in the browser.
-2.  Confirm you are not redirected back to the login page (refresh the page to verify once).
-3.  Then return to the plugin and perform automatic identification.
+1.  First, open the target site's backend (console) page in your browser.
+2.  Confirm that you are not redirected back to the login page (refresh the page to verify).
+3.  Then return to the plugin and perform auto-identification.
 
-## Identification Failure: Try Switching Authentication Methods
+## Identification Failed: Try Switching Authentication Methods
 
 Different sites/modified versions handle interfaces and login states differently. When identification fails, prioritize trying to switch authentication methods:
 
--   **Access Token authentication failed**: Switch to **Cookie authentication** and perform automatic identification again.
+-   **Access Token authentication failed**: Switch to **Cookie authentication** and auto-identify again.
 -   **AnyRouter**: Must use **Cookie authentication**, and the Cookie must come from the currently logged-in account; Cookie authentication does not support multiple accounts on the same site simultaneously.
 
 ## Unable to Submit / Unable to Save: Check Required Fields Item by Item
 
 When required fields are not met, the submit button will be disabled or saving will fail. Please confirm item by item:
 
--   Have filled in **Site Name**, **Username**, **User ID**
--   **Recharge Amount Ratio (Exchange Rate)** is a number greater than 0
--   When selecting **Access Token authentication**: Have filled in **Access Token**
--   When selecting **Cookie authentication**: Have imported or filled in **Session Cookie (Header Value)**
+-   **Site Name**, **Username**, **User ID** have been filled in.
+-   **Recharge Amount Ratio (Exchange Rate)** is a number greater than 0.
+-   When **Access Token authentication** is selected: **Access Token** has been filled in.
+-   When **Cookie authentication** is selected: **Session Cookie (Header Value)** has been imported or filled in.
 
-If automatic identification consistently fails to complete, you can switch to **Manual Addition**, first save the account, then gradually complete the information.
+If auto-identification consistently fails, you can switch to **Manual Addition**, save the account first, and then gradually complete the information.
+
+## Last Resort: Manually Add Account
+If auto-identification consistently fails, you can switch to **Manual Addition**, complete the information, and then save the account.
+
+See [Manual Account Addition Guide](./get-started.md#manual-addition) for details.
