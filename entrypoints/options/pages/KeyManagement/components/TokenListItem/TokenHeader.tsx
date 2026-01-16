@@ -141,7 +141,7 @@ function TokenActionButtons({
         variant="ghost"
         onClick={() => OpenInCherryStudio(account, token)}
       >
-        <CherryIcon className="text-purple-500 dark:text-purple-400" />
+        <CherryIcon />
       </IconButton>
       {onOpenCCSwitchDialog && (
         <IconButton

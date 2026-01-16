@@ -181,7 +181,7 @@ export function TokenDetails({
               size="sm"
               onClick={handleUseInCherry}
             >
-              <CherryIcon className="h-4 w-4 text-purple-500 dark:text-purple-400" />
+              <CherryIcon />
             </IconButton>
             {onOpenCCSwitchDialog && (
               <IconButton

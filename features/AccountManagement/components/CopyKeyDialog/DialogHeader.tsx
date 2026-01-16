@@ -17,9 +17,7 @@ export function DialogHeader({ account }: DialogHeaderProps) {
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center space-x-3">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-r from-purple-500 to-indigo-600">
-          <KeyIcon className="h-4 w-4 text-white" />
-        </div>
+        <KeyIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
         <div>
           <DialogTitle className="dark:text-dark-text-primary text-lg font-semibold text-gray-900">
             {t("dialog.copyKey.title")}

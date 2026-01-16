@@ -23,9 +23,7 @@ export default function FirefoxAddAccountWarningDialog({
 
   const header = (
     <div className="flex items-center space-x-3">
-      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-r from-orange-500 to-amber-600">
-        <ExclamationTriangleIcon className="h-4 w-4 text-white" />
-      </div>
+      <ExclamationTriangleIcon className="h-5 w-5 text-orange-500 dark:text-orange-300" />
       <div className="dark:text-dark-text-primary text-lg font-semibold text-gray-900">
         {t("dialog.firefox.warningTitle")}
       </div>
