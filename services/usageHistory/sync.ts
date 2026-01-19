@@ -210,7 +210,11 @@ export async function syncUsageHistoryForAccount(params: {
   }
 
   const apiRequest = buildApiRequestForAccount(account)
-  const retentionDays = Math.max(1, Math.trunc(config.retentionDays))
+  // Defensive: preferences may be corrupted or come from untyped sources; avoid NaN propagation.
+  const retentionDaysRaw = Number(config.retentionDays)
+  const retentionDays = Number.isFinite(retentionDaysRaw)
+    ? Math.max(1, Math.trunc(retentionDaysRaw))
+    : 1
   const retentionStartTimestamp = Math.max(
     0,
     nowUnixSeconds - retentionDays * 24 * 60 * 60,
@@ -235,8 +239,13 @@ export async function syncUsageHistoryForAccount(params: {
   }
 
   // Due check: sync interval.
+  const syncIntervalMinutesRaw = Number(config.syncIntervalMinutes)
   const intervalMs =
-    Math.max(1, Math.trunc(config.syncIntervalMinutes)) * 60 * 1000
+    (Number.isFinite(syncIntervalMinutesRaw)
+      ? Math.max(1, Math.trunc(syncIntervalMinutesRaw))
+      : 1) *
+    60 *
+    1000
   if (
     !force &&
     typeof accountStore.status.lastSyncAt === "number" &&
