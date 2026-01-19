@@ -144,6 +144,11 @@ export function normalizeHttpUrl(
   const trimmed = url.trim()
   if (!trimmed) return null
 
+  // Reject non-http schemes early
+  if (/^[a-z][a-z0-9+.-]*:/i.test(trimmed) && !/^https?:/i.test(trimmed)) {
+    return null
+  }
+
   const prefixed = /^(https?:)?\/\//i.test(trimmed)
     ? trimmed
     : `https://${trimmed}`
