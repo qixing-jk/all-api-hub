@@ -254,8 +254,10 @@ export function fingerprintLogItem(
     | "use_time"
   >,
 ): string {
+  const useTime = Number(item.use_time)
+  const useTimePart = Number.isFinite(useTime) ? useTime : "unknown"
   return [
-    "v3",
+    "v1",
     item.created_at,
     item.type,
     item.model_name ?? "",
@@ -264,7 +266,7 @@ export function fingerprintLogItem(
     item.completion_tokens ?? 0,
     item.channel_id ?? 0,
     item.token_id ?? 0,
-    Number(item.use_time) || 0,
+    useTimePart,
   ].join("|")
 }
 

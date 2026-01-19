@@ -4,6 +4,7 @@ import { LogType, type LogItem } from "~/services/apiService/common/type"
 import {
   computeRetentionCutoffDayKey,
   createEmptyUsageHistoryAccountStore,
+  fingerprintLogItem,
   ingestConsumeLogItems,
   pruneUsageHistoryAccountStore,
   USAGE_HISTORY_LATENCY_BUCKET_UPPER_BOUNDS_SECONDS,
@@ -104,6 +105,25 @@ describe("usageHistory core", () => {
 
     expect(second.ingestedCount).toBe(0)
     expect(JSON.stringify(accountStore.daily)).toBe(dailyBefore)
+  })
+
+  it("encodes invalid use_time distinctly in fingerprints", () => {
+    const base = {
+      created_at: 123,
+      type: LogType.Consume,
+      model_name: "gpt-4",
+      prompt_tokens: 1,
+      completion_tokens: 1,
+      quota: 1,
+      channel_id: 1,
+      token_id: 1,
+    } as const
+
+    const zero = fingerprintLogItem({ ...base, use_time: 0 })
+    const unknown = fingerprintLogItem({ ...base, use_time: "bad" as any })
+
+    expect(zero).not.toBe(unknown)
+    expect(unknown.endsWith("|unknown")).toBe(true)
   })
 
   it("ingests new items at the same created_at as cursor and updates fingerprints", () => {
