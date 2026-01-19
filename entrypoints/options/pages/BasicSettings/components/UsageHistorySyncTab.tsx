@@ -175,13 +175,13 @@ export default function UsageHistorySyncTab() {
         setIsSyncingAll(true)
       }
 
+      let toastId: string | undefined
       try {
-        toast.loading(t("messages.loading.syncing"))
+        toastId = toast.loading(t("messages.loading.syncing"))
         const response = await sendRuntimeMessage({
           action: "usageHistory:syncNow",
           ...(nextAccountIds ? { accountIds: nextAccountIds } : {}),
         })
-        toast.dismiss()
 
         if (!response?.success) {
           throw new Error(response?.error || "Unknown error")
@@ -196,16 +196,21 @@ export default function UsageHistorySyncTab() {
               error: totals.error ?? 0,
               unsupported: totals.unsupported ?? 0,
             }),
+            { id: toastId },
           )
         } else {
-          toast.success(t("messages.success.syncCompletedNoSummary"))
+          toast.success(t("messages.success.syncCompletedNoSummary"), {
+            id: toastId,
+          })
         }
 
         await loadData()
       } catch (error) {
-        toast.dismiss()
         toast.error(
           t("messages.error.syncFailed", { error: getErrorMessage(error) }),
+          {
+            id: toastId,
+          },
         )
       } finally {
         if (nextAccountIds?.length) {
