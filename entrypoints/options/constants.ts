@@ -1,5 +1,6 @@
 import {
   ArrowLeftRight,
+  BarChart3,
   CalendarCheck2,
   Cpu,
   Info,
@@ -21,6 +22,7 @@ import KeyManagement from "./pages/KeyManagement"
 import managedSiteChannels from "./pages/ManagedSiteChannels"
 import ManagedSiteModelSync from "./pages/ManagedSiteModelSync"
 import ModelList from "./pages/ModelList"
+import UsageAnalytics from "./pages/UsageAnalytics"
 
 // 菜单项类型定义
 export interface MenuItem {
@@ -43,6 +45,12 @@ export const menuItems: MenuItem[] = [
     name: "账户管理",
     icon: UserRound,
     component: AccountManagement,
+  },
+  {
+    id: MENU_ITEM_IDS.USAGE_ANALYTICS,
+    name: "用量分析",
+    icon: BarChart3,
+    component: UsageAnalytics,
   },
   {
     id: MENU_ITEM_IDS.AUTO_CHECKIN,

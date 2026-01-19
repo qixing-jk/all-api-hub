@@ -3,6 +3,7 @@ import { autoRefreshService } from "~/services/autoRefreshService"
 import { modelMetadataService } from "~/services/modelMetadata"
 import { modelSyncScheduler } from "~/services/modelSync"
 import { redemptionAssistService } from "~/services/redemptionAssist"
+import { usageHistoryScheduler } from "~/services/usageHistory/scheduler"
 import { webdavAutoSyncService } from "~/services/webdav/webdavAutoSyncService"
 import { initBackgroundI18n } from "~/utils/background-i18n"
 
@@ -39,6 +40,7 @@ export async function initializeServices() {
       console.warn("[Background] Model metadata initialization failed:", error)
     })
     await autoRefreshService.initialize()
+    await usageHistoryScheduler.initialize()
     await webdavAutoSyncService.initialize()
     await modelSyncScheduler.initialize()
     await autoCheckinScheduler.initialize()

@@ -6,6 +6,7 @@
     "accountManagement": "账号管理",
     "refresh": "数据刷新",
     "checkinRedeem": "签到与兑换",
+    "accountUsage": "账号用量",
     "dataBackup": "数据与备份",
     "managedSite": "自建站点管理",
     "cliProxy": "CLIProxyAPI",

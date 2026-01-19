@@ -14,6 +14,11 @@ export interface TagFilterOption {
   value: string
   /** Display label of the tag. */
   label: string
+  /**
+   * Optional native `title` text shown on hover/focus.
+   * When omitted, the label is used.
+   */
+  title?: string
   /** Optional count to display next to the label. */
   count?: number
   /** Optional visual style variant for the count badge. */
@@ -267,7 +272,7 @@ export function TagFilter(props: TagFilterProps) {
       >
         <span className="flex min-w-0 items-center gap-1">
           {option.icon && <span className="shrink-0">{option.icon}</span>}
-          <span className="max-w-28 truncate" title={option.label}>
+          <span className="truncate" title={option.title ?? option.label}>
             {option.label}
           </span>
           {typeof count === "number" && (

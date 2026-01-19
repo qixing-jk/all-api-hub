@@ -8,6 +8,7 @@ export const MENU_ITEM_IDS = {
   BASIC: "basic",
   ACCOUNT: "account",
   AUTO_CHECKIN: "autoCheckin",
+  USAGE_ANALYTICS: "usageAnalytics",
   MODELS: "models",
   KEYS: "keys",
   MANAGED_SITE_CHANNELS: "managedSiteChannels",

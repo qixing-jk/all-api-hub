@@ -7,6 +7,7 @@ import { handleChannelConfigMessage } from "~/services/channelConfigStorage"
 import { handleExternalCheckInMessage } from "~/services/externalCheckInService"
 import { handleManagedSiteModelSyncMessage } from "~/services/modelSync"
 import { handleRedemptionAssistMessage } from "~/services/redemptionAssist"
+import { handleUsageHistoryMessage } from "~/services/usageHistory/scheduler"
 import { handleWebdavAutoSyncMessage } from "~/services/webdav/webdavAutoSyncService"
 import { onRuntimeMessage } from "~/utils/browserApi"
 import { getCookieHeaderForUrl } from "~/utils/cookieHelper"
@@ -200,6 +201,12 @@ export function setupRuntimeMessageListeners() {
       // 处理Channel Config相关消息
       if (request.action && request.action.startsWith("channelConfig:")) {
         handleChannelConfigMessage(request, sendResponse)
+        return true
+      }
+
+      // 处理 usage-history 相关消息
+      if (request.action && request.action.startsWith("usageHistory:")) {
+        handleUsageHistoryMessage(request, sendResponse)
         return true
       }
 

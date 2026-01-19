@@ -1,0 +1,239 @@
+{
+  "title": "用量分析",
+  "description": "同步并可视化本地聚合的用量历史，支持导出。",
+  "actions": {
+    "refresh": "刷新",
+    "syncNow": "立即同步",
+    "export": "导出",
+    "openAccountUsageSettings": "用量设置",
+    "applySettings": "应用设置"
+  },
+  "settings": {
+    "enabled": "用量历史同步",
+    "enabledHint": "开启后仅保存有限的每日聚合数据（不会保存原始日志）。",
+    "retentionDays": "保留天数",
+    "scheduleMode": "自动同步方式",
+    "scheduleModePlaceholder": "请选择自动同步方式",
+    "scheduleModes": {
+      "manual": "仅手动",
+      "afterRefresh": "在账号刷新后",
+      "alarm": "类 Cron（需要 Alarms API）"
+    },
+    "alarmUnsupported": "当前浏览器不支持 Alarms API，无法使用类 Cron 调度。",
+    "syncIntervalHours": "最小同步间隔（小时）"
+  },
+  "filters": {
+    "sites": "站点",
+    "sitesHint": "可选择部分站点（不选择表示全部）。",
+    "allSites": "全部站点",
+    "accounts": "账号",
+    "accountsHint": "可选择部分账号（不选择表示站点范围内全部）。",
+    "allAccounts": "全部账号",
+    "tokens": "API Token",
+    "tokensHint": "可按账号 Token 过滤（不选择表示账号范围内全部）。",
+    "allTokens": "全部 Token",
+    "unknownToken": "未知 Token",
+    "startDay": "开始日期",
+    "endDay": "结束日期"
+  },
+  "hover": {
+    "site": "站点",
+    "url": "URL",
+    "type": "类型",
+    "accountsCount": "账号数",
+    "account": "账号",
+    "notes": "备注",
+    "token": "Token",
+    "owners": "所属账号"
+  },
+  "summary": {
+    "promptTokens": "输入 Token",
+    "completionTokens": "输出 Token",
+    "totalTokens": "Token 总量",
+    "requests": "请求数",
+    "cost": "花费"
+  },
+  "weekdays": {
+    "mon": "周一",
+    "tue": "周二",
+    "wed": "周三",
+    "thu": "周四",
+    "fri": "周五",
+    "sat": "周六",
+    "sun": "周日"
+  },
+  "empty": {
+    "title": "暂无用量历史数据",
+    "description": "请先在 设置 → 账号用量 中开启同步，然后点击“立即同步”拉取最近的用量历史。"
+  },
+  "syncTab": {
+    "settingsTitle": "用量历史同步设置",
+    "settingsDescription": "配置用量历史聚合数据的存储与调度方式。",
+    "stateTitle": "同步状态",
+    "stateDescription": "查看各账号的同步状态与最后同步时间。",
+    "searchPlaceholder": "输入关键词搜索…",
+    "noAccounts": "未找到任何账号。",
+    "actions": {
+      "refreshStatus": "刷新状态",
+      "syncSelected": "同步已选",
+      "clearSelection": "清空选择",
+      "syncAccount": "同步该账号",
+      "syncing": "同步中..."
+    },
+    "table": {
+      "selectAll": "全选账号",
+      "selectRow": "选择账号：{{name}}",
+      "rowActions": "行操作",
+      "selectedCount": "已选择：{{count}}",
+      "loading": "加载中…",
+      "empty": "没有匹配当前搜索的账号。",
+      "noMessage": "—",
+      "columns": {
+        "account": "账号",
+        "state": "状态",
+        "lastSyncAt": "最后同步",
+        "message": "信息"
+      }
+    }
+  },
+  "charts": {
+    "total": "合计",
+    "other": "其他",
+    "common": {
+      "chartType": {
+        "ariaLabel": "图表类型",
+        "pie": "饼图",
+        "histogram": "直方图"
+      }
+    },
+    "dailyOverview": {
+      "title": "每日总览",
+      "description": "多指标趋势，支持提示与缩放。",
+      "axes": {
+        "requests": "请求数",
+        "tokens": "Tokens / 额度"
+      },
+      "series": {
+        "requests": "请求数",
+        "promptTokens": "Prompt Tokens",
+        "completionTokens": "Completion Tokens",
+        "totalTokens": "总 Tokens",
+        "quota": "额度"
+      }
+    },
+    "dailyRequests": {
+      "title": "每日请求数",
+      "description": "按当前选择账号汇总的请求数趋势。"
+    },
+    "dailyTokens": {
+      "title": "每日 Tokens",
+      "description": "按当前选择账号汇总的 Tokens（prompt + completion）趋势。"
+    },
+    "dailyQuota": {
+      "title": "每日额度消耗",
+      "description": "按当前选择账号汇总的额度消耗趋势。"
+    },
+    "modelDistribution": {
+      "title": "模型分布",
+      "description": "按所选日期范围内总 Tokens 统计的 Top 模型。",
+      "series": {
+        "tokens": "总 Tokens"
+      },
+      "empty": "当前选择下暂无模型数据。"
+    },
+    "modelCostDistribution": {
+      "title": "模型花费分布",
+      "description": "按所选日期范围内额度消耗（折算 USD）统计的 Top 模型。",
+      "series": {
+        "usd": "花费（USD）"
+      }
+    },
+    "accountComparison": {
+      "title": "账号对比",
+      "description": "对比当前选择下各账号的合计用量。",
+      "series": {
+        "tokens": "总 Tokens"
+      }
+    },
+    "usageTimeHeatmap": {
+      "title": "使用时间热点",
+      "description": "按星期 × 小时（本地时间）汇总的 Tokens 热力图。",
+      "series": {
+        "tokens": "总 Tokens"
+      }
+    },
+    "modelHeatmap": {
+      "title": "模型 × 日期热力图",
+      "description": "Top 模型在时间维度的 Tokens 强度（点击模型可聚焦）。",
+      "series": {
+        "tokens": "总 Tokens"
+      }
+    },
+    "latencyHistogram": {
+      "title": "延迟分布",
+      "description": "当前选择下单次请求延迟（use_time）的直方图。",
+      "series": {
+        "count": "数量"
+      }
+    },
+    "latencyTrend": {
+      "title": "延迟趋势",
+      "description": "每日平均/最大延迟与慢请求数量。",
+      "axes": {
+        "seconds": "秒",
+        "slowCount": "慢请求数"
+      },
+      "series": {
+        "avg": "平均",
+        "max": "最大",
+        "slow": "慢"
+      }
+    },
+    "slowModels": {
+      "title": "慢模型排行",
+      "description": "当前选择下慢请求最多的模型。",
+      "series": {
+        "slowCount": "慢请求数"
+      }
+    },
+    "slowTokens": {
+      "title": "慢 Token 排行",
+      "description": "当前选择下慢请求最多的 API Token。",
+      "series": {
+        "slowCount": "慢请求数"
+      }
+    }
+  },
+  "status": {
+    "title": "同步状态",
+    "description": "展示每个账号的同步状态与最后同步时间。",
+    "never": "从未",
+    "lastSyncAt": "最后同步：{{value}}",
+    "states": {
+      "never": "从未",
+      "success": "成功",
+      "error": "失败",
+      "unsupported": "不支持"
+    }
+  },
+  "messages": {
+    "loading": {
+      "syncing": "正在同步用量历史..."
+    },
+    "success": {
+      "settingsSaved": "设置已保存",
+      "syncCompleted": "同步完成（成功：{{success}}，跳过：{{skipped}}，失败：{{error}}，不支持：{{unsupported}}）",
+      "syncCompletedNoSummary": "同步完成",
+      "exported": "已导出"
+    },
+    "warning": {
+      "scheduleFallback": "已应用调度回退：{{warning}}"
+    },
+    "error": {
+      "settingsSaveFailed": "保存设置失败：{{error}}",
+      "syncFailed": "同步失败：{{error}}",
+      "exportNoData": "当前选择下没有可导出的数据",
+      "exportFailed": "导出失败：{{error}}"
+    }
+  }
+}

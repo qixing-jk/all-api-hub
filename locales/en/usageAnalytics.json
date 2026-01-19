@@ -1,0 +1,239 @@
+{
+  "title": "Usage Analytics",
+  "description": "Sync and visualize aggregated usage history across accounts, with export support.",
+  "actions": {
+    "refresh": "Refresh",
+    "syncNow": "Sync now",
+    "export": "Export",
+    "openAccountUsageSettings": "Usage settings",
+    "applySettings": "Apply settings"
+  },
+  "settings": {
+    "enabled": "Usage history sync",
+    "enabledHint": "When enabled, the extension stores bounded daily aggregates (no raw logs).",
+    "retentionDays": "Retention (days)",
+    "scheduleMode": "Auto-sync schedule",
+    "scheduleModePlaceholder": "Select a schedule mode",
+    "scheduleModes": {
+      "manual": "Manual only",
+      "afterRefresh": "After account refresh",
+      "alarm": "Cron-like (Alarms API)"
+    },
+    "alarmUnsupported": "Alarms API is not supported in this browser; cron-like scheduling is unavailable.",
+    "syncIntervalHours": "Minimum sync interval (hours)"
+  },
+  "filters": {
+    "sites": "Sites",
+    "sitesHint": "Pick a subset of sites (empty selection means all).",
+    "allSites": "All sites",
+    "accounts": "Accounts",
+    "accountsHint": "Pick a subset of accounts (empty selection means all within selected sites).",
+    "allAccounts": "All accounts",
+    "tokens": "API tokens",
+    "tokensHint": "Optional token filter derived from usage-history aggregates (empty selection means all within selected accounts).",
+    "allTokens": "All tokens",
+    "unknownToken": "Unknown token",
+    "startDay": "Start date",
+    "endDay": "End date"
+  },
+  "hover": {
+    "site": "Site",
+    "url": "URL",
+    "type": "Type",
+    "accountsCount": "Accounts",
+    "account": "Account",
+    "notes": "Notes",
+    "token": "Token",
+    "owners": "Accounts"
+  },
+  "summary": {
+    "promptTokens": "Input tokens",
+    "completionTokens": "Output tokens",
+    "totalTokens": "Total tokens",
+    "requests": "Requests",
+    "cost": "Cost"
+  },
+  "weekdays": {
+    "mon": "Mon",
+    "tue": "Tue",
+    "wed": "Wed",
+    "thu": "Thu",
+    "fri": "Fri",
+    "sat": "Sat",
+    "sun": "Sun"
+  },
+  "empty": {
+    "title": "No usage history data yet",
+    "description": "Enable sync in Settings → Account usage, then click “Sync now” to pull recent usage history."
+  },
+  "syncTab": {
+    "settingsTitle": "Usage history synchronization",
+    "settingsDescription": "Configure how aggregated usage history is stored and scheduled.",
+    "stateTitle": "Sync state",
+    "stateDescription": "View per-account sync state and the last sync timestamp.",
+    "searchPlaceholder": "Type to search…",
+    "noAccounts": "No accounts found.",
+    "actions": {
+      "refreshStatus": "Refresh status",
+      "syncSelected": "Sync selected",
+      "clearSelection": "Clear selection",
+      "syncAccount": "Sync account",
+      "syncing": "Syncing..."
+    },
+    "table": {
+      "selectAll": "Select all accounts",
+      "selectRow": "Select account: {{name}}",
+      "rowActions": "Row actions",
+      "selectedCount": "Selected: {{count}}",
+      "loading": "Loading…",
+      "empty": "No accounts match the current search.",
+      "noMessage": "—",
+      "columns": {
+        "account": "Account",
+        "state": "State",
+        "lastSyncAt": "Last sync",
+        "message": "Message"
+      }
+    }
+  },
+  "charts": {
+    "total": "Total",
+    "other": "Other",
+    "common": {
+      "chartType": {
+        "ariaLabel": "Chart type",
+        "pie": "Pie",
+        "histogram": "Histogram"
+      }
+    },
+    "dailyOverview": {
+      "title": "Daily overview",
+      "description": "Multi-metric trends with tooltip and zoom.",
+      "axes": {
+        "requests": "Requests",
+        "tokens": "Tokens / Quota"
+      },
+      "series": {
+        "requests": "Requests",
+        "promptTokens": "Prompt tokens",
+        "completionTokens": "Completion tokens",
+        "totalTokens": "Total tokens",
+        "quota": "Quota"
+      }
+    },
+    "dailyRequests": {
+      "title": "Daily requests",
+      "description": "Fused request counts across selected accounts."
+    },
+    "dailyTokens": {
+      "title": "Daily tokens",
+      "description": "Fused token usage (prompt + completion) across selected accounts."
+    },
+    "dailyQuota": {
+      "title": "Daily quota consumption",
+      "description": "Fused quota consumption across selected accounts."
+    },
+    "modelDistribution": {
+      "title": "Model distribution",
+      "description": "Top models by total tokens in the selected date range.",
+      "series": {
+        "tokens": "Total tokens"
+      },
+      "empty": "No model data for the current selection."
+    },
+    "modelCostDistribution": {
+      "title": "Model cost distribution",
+      "description": "Top models by quota consumption (converted to USD) in the selected date range.",
+      "series": {
+        "usd": "Cost (USD)"
+      }
+    },
+    "accountComparison": {
+      "title": "Per-account comparison",
+      "description": "Compare totals across accounts for the current selection.",
+      "series": {
+        "tokens": "Total tokens"
+      }
+    },
+    "usageTimeHeatmap": {
+      "title": "Usage time heatmap",
+      "description": "Total tokens aggregated by weekday and hour (local time).",
+      "series": {
+        "tokens": "Total tokens"
+      }
+    },
+    "modelHeatmap": {
+      "title": "Model × day heatmap",
+      "description": "Token usage intensity over time for top models (click a model to focus).",
+      "series": {
+        "tokens": "Total tokens"
+      }
+    },
+    "latencyHistogram": {
+      "title": "Latency distribution",
+      "description": "Histogram of per-request latency (`use_time`) for the current selection.",
+      "series": {
+        "count": "Count"
+      }
+    },
+    "latencyTrend": {
+      "title": "Latency trend",
+      "description": "Daily avg/max latency and slow counts.",
+      "axes": {
+        "seconds": "Seconds",
+        "slowCount": "Slow count"
+      },
+      "series": {
+        "avg": "Avg",
+        "max": "Max",
+        "slow": "Slow"
+      }
+    },
+    "slowModels": {
+      "title": "Slow models",
+      "description": "Models with the most slow requests in the current selection.",
+      "series": {
+        "slowCount": "Slow count"
+      }
+    },
+    "slowTokens": {
+      "title": "Slow tokens",
+      "description": "API tokens with the most slow requests in the current selection.",
+      "series": {
+        "slowCount": "Slow count"
+      }
+    }
+  },
+  "status": {
+    "title": "Sync status",
+    "description": "Per-account sync status and last sync timestamp.",
+    "never": "Never",
+    "lastSyncAt": "Last sync: {{value}}",
+    "states": {
+      "never": "Never",
+      "success": "Success",
+      "error": "Error",
+      "unsupported": "Unsupported"
+    }
+  },
+  "messages": {
+    "loading": {
+      "syncing": "Syncing usage history..."
+    },
+    "success": {
+      "settingsSaved": "Settings saved",
+      "syncCompleted": "Sync completed (success: {{success}}, skipped: {{skipped}}, error: {{error}}, unsupported: {{unsupported}})",
+      "syncCompletedNoSummary": "Sync completed",
+      "exported": "Exported"
+    },
+    "warning": {
+      "scheduleFallback": "Schedule fallback applied: {{warning}}"
+    },
+    "error": {
+      "settingsSaveFailed": "Failed to save settings: {{error}}",
+      "syncFailed": "Sync failed: {{error}}",
+      "exportNoData": "No data to export for the current selection",
+      "exportFailed": "Export failed: {{error}}"
+    }
+  }
+}

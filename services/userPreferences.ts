@@ -33,6 +33,10 @@ import {
 import { DEFAULT_NEW_API_CONFIG, NewApiConfig } from "~/types/newApiConfig"
 import type { SortingPriorityConfig } from "~/types/sorting"
 import type { ThemeMode } from "~/types/theme"
+import {
+  DEFAULT_USAGE_HISTORY_PREFERENCES,
+  type UsageHistoryPreferences,
+} from "~/types/usageHistory"
 import { DeepPartial } from "~/types/utils"
 import { DEFAULT_VELOERA_CONFIG, VeloeraConfig } from "~/types/veloeraConfig"
 import {
@@ -129,6 +133,9 @@ export interface UserPreferences {
 
   // 自动刷新相关配置
   accountAutoRefresh: AccountAutoRefresh
+
+  // Usage history sync + analytics
+  usageHistory?: UsageHistoryPreferences
 
   // 是否显示健康状态
   showHealthStatus: boolean
@@ -301,6 +308,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   sortOrder: "desc", // 与 UI_CONSTANTS.SORT.DEFAULT_ORDER 保持一致
   actionClickBehavior: "popup",
   accountAutoRefresh: DEFAULT_ACCOUNT_AUTO_REFRESH,
+  usageHistory: DEFAULT_USAGE_HISTORY_PREFERENCES,
   showHealthStatus: true, // 默认显示健康状态
   webdav: DEFAULT_WEBDAV_SETTINGS,
   lastUpdated: Date.now(),

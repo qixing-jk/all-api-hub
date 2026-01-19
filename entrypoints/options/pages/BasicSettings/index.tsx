@@ -39,12 +39,14 @@ import LoadingSkeleton from "./components/LoadingSkeleton"
 import ManagedSiteTab from "./components/managedSiteTab"
 import { PermissionOnboardingDialog } from "./components/PermissionOnboardingDialog"
 import PermissionsTab from "./components/PermissionsTab"
+import UsageHistorySyncTab from "./components/UsageHistorySyncTab"
 
 type TabId =
   | "general"
   | "accountManagement"
   | "refresh"
   | "checkinRedeem"
+  | "accountUsage"
   | "dataBackup"
   | "managedSite"
   | "cliProxy"
@@ -66,6 +68,7 @@ const PERMISSIONS_TAB_CONFIG: TabConfig = {
 const TAB_CONFIGS = [
   { id: "general", component: GeneralTab },
   { id: "accountManagement", component: AccountManagementTab },
+  { id: "accountUsage", component: UsageHistorySyncTab },
   { id: "refresh", component: AutoRefreshTab },
   { id: "checkinRedeem", component: CheckinRedeemTab },
   { id: "managedSite", component: ManagedSiteTab },
@@ -87,6 +90,8 @@ const ANCHOR_TO_TAB: Record<string, TabId> = {
   refresh: "refresh",
   "checkin-redeem": "checkinRedeem",
   checkin: "checkinRedeem",
+  "usage-history-sync": "accountUsage",
+  "usage-history-sync-state": "accountUsage",
   webdav: "dataBackup",
   "webdav-auto-sync": "dataBackup",
   "import-export-entry": "dataBackup",
@@ -131,7 +136,8 @@ export default function BasicSettings() {
     })
 
     if (tab) {
-      const index = TAB_CONFIGS.findIndex((cfg) => cfg.id === tab)
+      const normalizedTab = tab === "sync" ? "accountUsage" : tab
+      const index = TAB_CONFIGS.findIndex((cfg) => cfg.id === normalizedTab)
       if (index >= 0) {
         setSelectedTabIndex(index)
       }

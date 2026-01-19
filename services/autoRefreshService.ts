@@ -2,6 +2,7 @@ import { AccountAutoRefresh } from "~/types/accountAutoRefresh"
 
 import { getErrorMessage } from "../utils/error"
 import { accountStorage } from "./accountStorage"
+import { usageHistoryScheduler } from "./usageHistory/scheduler"
 import { userPreferences } from "./userPreferences"
 
 /**
@@ -88,6 +89,14 @@ class AutoRefreshService {
       console.log(
         `[AutoRefresh] 后台刷新完成 - 成功: ${result.success}, 失败: ${result.failed}`,
       )
+
+      // Opportunistically trigger usage-history sync after refresh cycles when enabled and due.
+      void usageHistoryScheduler.runAfterRefreshSync().catch((error) => {
+        console.warn(
+          "[AutoRefresh] Usage-history sync after refresh failed:",
+          error,
+        )
+      })
 
       // 通知前端更新（如果popup是打开的）
       this.notifyFrontend("refresh_completed", result)

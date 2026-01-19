@@ -6,6 +6,7 @@
     "accountManagement": "Account Management",
     "refresh": "Data Refresh",
     "checkinRedeem": "Check-in & Redeem",
+    "accountUsage": "Account usage",
     "dataBackup": "Data & Backup",
     "managedSite": "Managed site",
     "cliProxy": "CLIProxyAPI",

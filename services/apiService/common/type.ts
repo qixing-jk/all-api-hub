@@ -186,6 +186,9 @@ export interface LogItem {
   username: string
   token_name: string
   model_name: string
+  /**
+   * 额度变动
+   */
   quota: number
   prompt_tokens: number
   completion_tokens: number
