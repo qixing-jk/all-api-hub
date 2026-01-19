@@ -96,12 +96,18 @@
         "model": "默认模型（可选）",
         "notes": "备注（可选）"
       },
+      "descriptions": {
+        "model": "若可用，会自动从 /v1/models 获取模型列表供选择；也可以直接输入自定义模型名称。"
+      },
       "placeholders": {
         "name": "例如 Acme 中转",
         "homepage": "https://example.com",
         "endpoint": "https://example.com",
         "model": "例如 claude-3-opus",
         "notes": "添加导入说明"
+      },
+      "modelOptions": {
+        "none": "不设置默认模型"
       },
       "appOptions": {
         "claude": "Claude",

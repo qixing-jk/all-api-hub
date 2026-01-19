@@ -96,12 +96,18 @@
         "model": "Default model (optional)",
         "notes": "Notes (optional)"
       },
+      "descriptions": {
+        "model": "When available, models are loaded from /v1/models for selection. You can also type a custom model id."
+      },
       "placeholders": {
         "name": "e.g. Acme Relay",
         "homepage": "https://example.com",
         "endpoint": "https://example.com",
         "model": "e.g. claude-3-opus",
         "notes": "Add import notes"
+      },
+      "modelOptions": {
+        "none": "No default model"
       },
       "appOptions": {
         "claude": "Claude",

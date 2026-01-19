@@ -7,12 +7,14 @@ import {
   Input,
   Label,
   Modal,
+  SearchableSelect,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "~/components/ui"
+import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompatible"
 import type { ApiToken, DisplaySiteData } from "~/types"
 import {
   CCSWITCH_APPS,
@@ -28,6 +30,52 @@ interface CCSwitchExportDialogProps {
 }
 
 const DEFAULT_APP: CCSwitchApp = "claude"
+
+/**
+ * Normalize user-provided URL strings into a valid HTTP(S) URL without a trailing slash.
+ *
+ * This is used to safely derive an upstream base URL for `/v1/models` fetching from
+ * a potentially incomplete endpoint field.
+ */
+function normalizeHttpUrl(rawUrl: string): string {
+  const trimmed = (rawUrl || "").trim()
+  if (!trimmed) return ""
+
+  const prefixed = /^(https?:)?\/\//i.test(trimmed)
+    ? trimmed
+    : `https://${trimmed}`
+  try {
+    const parsed = new URL(prefixed)
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return ""
+    return parsed.toString().replace(/\/$/, "")
+  } catch {
+    return ""
+  }
+}
+
+/**
+ * Strip a trailing `/v1` from a user-supplied OpenAI-compatible base URL.
+ *
+ * `fetchOpenAICompatibleModelIds` calls `/v1/models` internally, so passing a base URL
+ * that already ends with `/v1` would otherwise produce `/v1/v1/models`.
+ */
+function stripTrailingOpenAIV1(baseUrl: string): string {
+  const trimmed = (baseUrl || "").trim()
+  if (!trimmed) return ""
+
+  try {
+    const url = new URL(trimmed)
+    const pathname = url.pathname.replace(/\/+$/, "")
+    if (!pathname.endsWith("/v1")) {
+      return url.toString().replace(/\/+$/, "")
+    }
+
+    url.pathname = pathname.replace(/\/v1$/, "") || "/"
+    return url.toString().replace(/\/+$/, "")
+  } catch {
+    return trimmed.replace(/\/v1\/?$/, "").replace(/\/+$/, "")
+  }
+}
 
 /**
  * Presents a modal for exporting an account token into CCSwitch-compatible apps.
@@ -47,6 +95,10 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
   const [providerName, setProviderName] = useState(account.name)
   const [homepage, setHomepage] = useState(account.baseUrl)
   const [endpoint, setEndpoint] = useState(account.baseUrl)
+  const [upstreamModelOptions, setUpstreamModelOptions] = useState<
+    { value: string; label: string }[]
+  >([])
+  const [isLoadingModels, setIsLoadingModels] = useState(false)
   const formId = useMemo(() => `ccswitch-export-form-${token.id}`, [token.id])
 
   useEffect(() => {
@@ -57,8 +109,56 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
       setProviderName(account.name)
       setHomepage(account.baseUrl)
       setEndpoint(account.baseUrl)
+      setUpstreamModelOptions([])
+      setIsLoadingModels(false)
     }
   }, [account.name, account.baseUrl, isOpen])
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    const upstreamBaseUrl = stripTrailingOpenAIV1(normalizeHttpUrl(endpoint))
+    if (!upstreamBaseUrl) {
+      setUpstreamModelOptions([])
+      return
+    }
+
+    let isMounted = true
+    const handle = setTimeout(() => {
+      void (async () => {
+        try {
+          setIsLoadingModels(true)
+          const modelIds = await fetchOpenAICompatibleModelIds({
+            baseUrl: upstreamBaseUrl,
+            apiKey: token.key,
+          })
+          const normalized = modelIds
+            .map((item) => (typeof item === "string" ? item.trim() : ""))
+            .filter(Boolean)
+            .sort((a, b) => a.localeCompare(b))
+            .map((id) => ({ value: id, label: id }))
+
+          if (isMounted) {
+            setUpstreamModelOptions(normalized)
+          }
+        } catch (error) {
+          console.warn("[CCSwitch] Failed to fetch upstream model list", error)
+          if (isMounted) {
+            setUpstreamModelOptions([])
+          }
+        } finally {
+          if (isMounted) {
+            setIsLoadingModels(false)
+          }
+        }
+      })()
+    }, 300)
+
+    return () => {
+      isMounted = false
+      clearTimeout(handle)
+    }
+  }, [endpoint, isOpen, token.key])
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -172,13 +272,29 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
           <Label htmlFor="ccswitch-model">
             {t("ui:dialog.ccswitch.fields.model")}
           </Label>
-          <Input
+          <SearchableSelect
             id="ccswitch-model"
-            value={model}
             className="mt-1"
-            placeholder={t("ui:dialog.ccswitch.placeholders.model")}
-            onChange={(event) => setModel(event.target.value)}
+            value={model}
+            onChange={setModel}
+            placeholder={
+              isLoadingModels
+                ? t("common:status.loading")
+                : t("ui:dialog.ccswitch.placeholders.model")
+            }
+            options={[
+              {
+                value: "",
+                label: t("ui:dialog.ccswitch.modelOptions.none"),
+              },
+              ...upstreamModelOptions,
+            ]}
+            allowCustomValue
+            disabled={isLoadingModels}
           />
+          <p className="dark:text-dark-text-secondary mt-1 text-xs text-gray-500">
+            {t("ui:dialog.ccswitch.descriptions.model")}
+          </p>
         </div>
 
         <div>
