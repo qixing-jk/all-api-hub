@@ -16,6 +16,13 @@ export function listDayKeysInRange(startDay: DayKey, endDay: DayKey): DayKey[] {
   const cursor = new Date(Date.UTC(start.year, start.month - 1, start.day))
   const endDate = new Date(Date.UTC(end.year, end.month - 1, end.day))
 
+  if (
+    formatDayKeyUtc(cursor) !== startDay ||
+    formatDayKeyUtc(endDate) !== endDay
+  ) {
+    return []
+  }
+
   const out: DayKey[] = []
   while (cursor <= endDate) {
     out.push(formatDayKeyUtc(cursor))
