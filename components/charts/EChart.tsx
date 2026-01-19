@@ -71,7 +71,7 @@ export function EChart(props: EChartProps) {
     const instance = instanceRef.current
     if (!instance) return
     instance.setOption(option, resolvedSetOptionOpts)
-  }, [option, resolvedSetOptionOpts])
+  }, [option, resolvedSetOptionOpts, renderer])
 
   useEffect(() => {
     const container = containerRef.current
@@ -106,7 +106,7 @@ export function EChart(props: EChartProps) {
         instance.off(eventName, handler as any)
       }
     }
-  }, [onEvents])
+  }, [onEvents, renderer])
 
   return <div ref={containerRef} className={className} style={resolvedStyle} />
 }
