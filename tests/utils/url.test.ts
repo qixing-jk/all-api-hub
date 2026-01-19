@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
+  coerceBaseUrlToPathSuffix,
   joinUrl,
   navigateToAnchor,
   normalizeHttpUrl,
@@ -111,6 +112,32 @@ describe("stripTrailingOpenAIV1", () => {
   it("does not strip non-v1 endings", () => {
     expect(stripTrailingOpenAIV1("https://x.test")).toBe("https://x.test")
     expect(stripTrailingOpenAIV1("https://x.test/v1beta")).toBe(
+      "https://x.test/v1beta",
+    )
+  })
+})
+
+describe("coerceBaseUrlToPathSuffix", () => {
+  it("appends suffix when missing", () => {
+    expect(coerceBaseUrlToPathSuffix("https://x.test", "/v1")).toBe(
+      "https://x.test/v1",
+    )
+    expect(coerceBaseUrlToPathSuffix("https://x.test/", "/v1")).toBe(
+      "https://x.test/v1",
+    )
+  })
+
+  it("keeps suffix when present", () => {
+    expect(coerceBaseUrlToPathSuffix("https://x.test/v1", "/v1")).toBe(
+      "https://x.test/v1",
+    )
+    expect(coerceBaseUrlToPathSuffix("https://x.test/v1/", "/v1")).toBe(
+      "https://x.test/v1",
+    )
+  })
+
+  it("accepts suffix without leading slash", () => {
+    expect(coerceBaseUrlToPathSuffix("https://x.test", "v1beta")).toBe(
       "https://x.test/v1beta",
     )
   })

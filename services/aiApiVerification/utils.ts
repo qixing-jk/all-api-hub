@@ -1,4 +1,5 @@
 import { getErrorMessage } from "~/utils/error"
+import { coerceBaseUrlToPathSuffix } from "~/utils/url"
 
 /**
  * Redact any known secret strings from a message.
@@ -72,66 +73,21 @@ export function inferHttpStatus(
  * Normalize a user-supplied base URL to the `/v1` prefix used by OpenAI-compatible APIs.
  */
 export function coerceBaseUrlToV1(baseUrl: string): string {
-  const trimmed = baseUrl.trim()
-  if (!trimmed) return trimmed
-
-  try {
-    const url = new URL(trimmed)
-    const pathname = url.pathname.replace(/\/+$/, "")
-    if (pathname.endsWith("/v1")) {
-      url.pathname = pathname
-      return url.toString().replace(/\/+$/, "")
-    }
-
-    url.pathname = `${pathname}/v1`.replace(/\/{2,}/g, "/")
-    return url.toString().replace(/\/+$/, "")
-  } catch {
-    return trimmed.replace(/\/+$/, "")
-  }
+  return coerceBaseUrlToPathSuffix(baseUrl, "/v1")
 }
 
 /**
  * Normalize a user-supplied base URL to the `/v1` prefix used by Anthropic APIs.
  */
 export function coerceBaseUrlToAnthropicV1(baseUrl: string): string {
-  const trimmed = baseUrl.trim()
-  if (!trimmed) return trimmed
-
-  try {
-    const url = new URL(trimmed)
-    const pathname = url.pathname.replace(/\/+$/, "")
-    if (pathname.endsWith("/v1")) {
-      url.pathname = pathname
-      return url.toString().replace(/\/+$/, "")
-    }
-
-    url.pathname = `${pathname}/v1`.replace(/\/{2,}/g, "/")
-    return url.toString().replace(/\/+$/, "")
-  } catch {
-    return trimmed.replace(/\/+$/, "")
-  }
+  return coerceBaseUrlToPathSuffix(baseUrl, "/v1")
 }
 
 /**
  * Normalize a user-supplied base URL to the `/v1beta` prefix used by Google/Gemini APIs.
  */
 export function coerceBaseUrlToGoogleV1beta(baseUrl: string): string {
-  const trimmed = baseUrl.trim()
-  if (!trimmed) return trimmed
-
-  try {
-    const url = new URL(trimmed)
-    const pathname = url.pathname.replace(/\/+$/, "")
-    if (pathname.endsWith("/v1beta")) {
-      url.pathname = pathname
-      return url.toString().replace(/\/+$/, "")
-    }
-
-    url.pathname = `${pathname}/v1beta`.replace(/\/{2,}/g, "/")
-    return url.toString().replace(/\/+$/, "")
-  } catch {
-    return trimmed.replace(/\/+$/, "")
-  }
+  return coerceBaseUrlToPathSuffix(baseUrl, "/v1beta")
 }
 
 /**

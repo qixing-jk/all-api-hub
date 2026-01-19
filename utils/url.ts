@@ -136,9 +136,6 @@ export function navigateToAnchor(
  *
  * - Adds an implicit `https://` prefix when the scheme is missing.
  * - Returns `null` when the URL is invalid or uses a non-HTTP(S) scheme.
- *
- * Note: This helper is intentionally pure (no toasts). Callers may enable optional
- * logging for debugging.
  */
 export function normalizeHttpUrl(
   url: string | undefined | null,
@@ -186,5 +183,39 @@ export function stripTrailingOpenAIV1(baseUrl: string): string {
   } catch (e) {
     console.error("[stripTrailingOpenAIV1] Invalid URL:", e)
     return trimmed.replace(/\/v1\/?$/, "").replace(/\/+$/, "")
+  }
+}
+
+/**
+ * Ensure a URL's path ends with a given suffix.
+ *
+ * This is useful for provider base URLs that must include a specific prefix such as
+ * `/v1` (OpenAI/Anthropic) or `/v1beta` (Google/Gemini).
+ *
+ * - When the input is a valid URL, the suffix is appended to the pathname if missing.
+ * - When the input is not a valid URL, returns the trimmed string without trailing slashes.
+ */
+export function coerceBaseUrlToPathSuffix(
+  baseUrl: string,
+  suffix: string,
+): string {
+  const trimmed = (baseUrl || "").trim()
+  if (!trimmed) return trimmed
+
+  const normalizedSuffix = suffix.startsWith("/") ? suffix : `/${suffix}`
+
+  try {
+    const url = new URL(trimmed)
+    const pathname = url.pathname.replace(/\/+$/, "")
+    if (pathname.endsWith(normalizedSuffix)) {
+      url.pathname = pathname
+      return url.toString().replace(/\/+$/, "")
+    }
+
+    url.pathname = `${pathname}${normalizedSuffix}`.replace(/\/{2,}/g, "/")
+    return url.toString().replace(/\/+$/, "")
+  } catch (e) {
+    console.error("[coerceBaseUrlToPathSuffix] Invalid URL:", e)
+    return trimmed.replace(/\/+$/, "")
   }
 }
