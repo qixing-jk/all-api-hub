@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import { computeUsageHistoryExport } from "~/services/usageHistory/analytics"
 import { createEmptyUsageHistoryAccountStore } from "~/services/usageHistory/core"
 import {
+  USAGE_HISTORY_EXPORT_SCHEMA_VERSION,
   USAGE_HISTORY_STORE_SCHEMA_VERSION,
   UsageHistoryStore,
 } from "~/types/usageHistory"
@@ -58,7 +59,7 @@ describe("usageHistory analytics", () => {
       },
     })
 
-    expect(exportData.schemaVersion).toBe(USAGE_HISTORY_STORE_SCHEMA_VERSION)
+    expect(exportData.schemaVersion).toBe(USAGE_HISTORY_EXPORT_SCHEMA_VERSION)
     expect(exportData.selection.accountIds).toEqual(["a1", "a2"])
     expect(exportData.selection.startDay).toBe("2026-01-01")
     expect(exportData.selection.endDay).toBe("2026-01-01")
