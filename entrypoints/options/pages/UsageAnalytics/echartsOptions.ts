@@ -423,11 +423,13 @@ export function getTokenTotalsRows(params: {
     const tokenId = item.key
     const tokenName = tokenNamesById[tokenId]
     const tokenLabel =
-      tokenId === "unknown"
-        ? unknownLabel
-        : tokenName
-          ? `${tokenName} (#${tokenId})`
-          : `#${tokenId}`
+      tokenId === otherLabel
+        ? otherLabel
+        : tokenId === "unknown"
+          ? unknownLabel
+          : tokenName
+            ? `${tokenName} (#${tokenId})`
+            : `#${tokenId}`
 
     return {
       tokenId,
@@ -537,11 +539,13 @@ export function getSlowTokenRows(params: {
     const tokenId = item.key
     const tokenName = tokenNamesById[tokenId]
     const label =
-      tokenId === "unknown"
-        ? unknownLabel
-        : tokenName
-          ? `${tokenName} (#${tokenId})`
-          : `#${tokenId}`
+      tokenId === otherLabel
+        ? otherLabel
+        : tokenId === "unknown"
+          ? unknownLabel
+          : tokenName
+            ? `${tokenName} (#${tokenId})`
+            : `#${tokenId}`
 
     return {
       key: tokenId,

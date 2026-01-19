@@ -416,6 +416,48 @@ describe("UsageAnalytics echartsOptions", () => {
     expect(byId["unknown"].tokenLabel).toBe("Unknown")
   })
 
+  it("getTokenTotalsRows does not prefix the Other bucket with #", () => {
+    const accountStore = createEmptyUsageHistoryAccountStore()
+    const dayKey = "2026-01-01"
+
+    accountStore.dailyByToken["1"] = {
+      [dayKey]: {
+        requests: 1,
+        promptTokens: 0,
+        completionTokens: 0,
+        totalTokens: 100,
+        quotaConsumed: 0,
+      },
+    }
+    accountStore.dailyByToken["2"] = {
+      [dayKey]: {
+        requests: 1,
+        promptTokens: 0,
+        completionTokens: 0,
+        totalTokens: 5,
+        quotaConsumed: 0,
+      },
+    }
+
+    const store: UsageHistoryStore = {
+      schemaVersion: 1,
+      accounts: { a1: accountStore },
+    }
+    const exportData = computeUsageHistoryExport({
+      store,
+      selection: { accountIds: ["a1"], startDay: dayKey, endDay: dayKey },
+    })
+
+    const rows = getTokenTotalsRows({
+      exportData,
+      topN: 1,
+      otherLabel: "Other",
+    })
+
+    const other = rows.find((row) => row.tokenId === "Other")
+    expect(other?.tokenLabel).toBe("Other")
+  })
+
   it("getModelTotalsRows sorts deterministically and aggregates remainder into Other", () => {
     const accountStore = createEmptyUsageHistoryAccountStore()
     const dayKey = "2026-01-01"
