@@ -64,7 +64,7 @@
   },
   "empty": {
     "title": "No usage history data yet",
-    "description": "Enable sync in Settings → Account usage, then click “Sync now” to pull recent usage history."
+    "description": "Enable sync in Settings → Account usage, then click \"Sync now\" to pull recent usage history."
   },
   "syncTab": {
     "settingsTitle": "Usage history synchronization",
