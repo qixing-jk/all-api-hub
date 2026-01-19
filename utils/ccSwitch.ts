@@ -2,6 +2,7 @@ import { t } from "i18next"
 import toast from "react-hot-toast"
 
 import type { ApiToken, DisplaySiteData } from "~/types"
+import { normalizeHttpUrl } from "~/utils/url"
 
 /**
  * Supported CC Switch client identifiers.
@@ -35,32 +36,6 @@ export interface OpenInCCSwitchOptions {
   name?: string
   homepage?: string
   endpoint?: string
-}
-
-/**
- * Normalize arbitrary user-provided URLs so CC Switch receives valid origins.
- * @param url Possible URL string supplied by account metadata.
- * @returns HTTPS URL stripped of trailing slash or null when invalid.
- */
-function normalizeUrl(url: string | undefined | null) {
-  if (!url) return null
-  const trimmed = url.trim()
-  if (!trimmed) return null
-
-  const prefixed = /^(https?:)?\/\//i.test(trimmed)
-    ? trimmed
-    : `https://${trimmed}`
-
-  try {
-    const parsed = new URL(prefixed)
-    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-      return null
-    }
-    return parsed.toString().replace(/\/$/, "")
-  } catch (error) {
-    console.error("[ccSwitch] Invalid URL: ", error)
-    return null
-  }
 }
 
 /**
@@ -115,13 +90,13 @@ export function openInCCSwitch(options: OpenInCCSwitchOptions) {
     return false
   }
 
-  const endpoint = normalizeUrl(endpointOverride ?? account.baseUrl)
+  const endpoint = normalizeHttpUrl(endpointOverride ?? account.baseUrl)
   if (!endpoint) {
     toast.error(t("messages:ccswitch.invalidEndpoint"))
     return false
   }
 
-  const homepage = normalizeUrl(homepageOverride ?? account.baseUrl)
+  const homepage = normalizeHttpUrl(homepageOverride ?? account.baseUrl)
   if (!homepage) {
     toast.error(t("messages:ccswitch.invalidHomepage"))
     return false

@@ -130,3 +130,61 @@ export function navigateToAnchor(
     }, delay)
   })
 }
+
+/**
+ * Normalize user-provided URL strings into a valid HTTP(S) URL without a trailing slash.
+ *
+ * - Adds an implicit `https://` prefix when the scheme is missing.
+ * - Returns `null` when the URL is invalid or uses a non-HTTP(S) scheme.
+ *
+ * Note: This helper is intentionally pure (no toasts). Callers may enable optional
+ * logging for debugging.
+ */
+export function normalizeHttpUrl(
+  url: string | undefined | null,
+): string | null {
+  if (!url) return null
+  const trimmed = url.trim()
+  if (!trimmed) return null
+
+  const prefixed = /^(https?:)?\/\//i.test(trimmed)
+    ? trimmed
+    : `https://${trimmed}`
+
+  try {
+    const parsed = new URL(prefixed)
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return null
+    }
+    return parsed.toString().replace(/\/$/, "")
+  } catch (e) {
+    console.error("[normalizeHttpUrl] Invalid URL:", e)
+    return null
+  }
+}
+
+/**
+ * Strip a trailing `/v1` from a user-supplied OpenAI-compatible base URL.
+ *
+ * This is needed for APIs like `fetchOpenAICompatibleModelIds` that already append
+ * `/v1/models` internally — passing a base URL ending with `/v1` would otherwise
+ * yield `/v1/v1/models`.
+ */
+export function stripTrailingOpenAIV1(baseUrl: string): string {
+  const trimmed = (baseUrl || "").trim()
+  if (!trimmed) return ""
+
+  try {
+    const url = new URL(trimmed)
+    const pathname = url.pathname.replace(/\/+$/, "")
+    if (!pathname.endsWith("/v1")) {
+      return url.toString().replace(/\/+$/, "")
+    }
+
+    url.pathname = pathname.replace(/\/v1$/, "") || "/"
+    return url.toString().replace(/\/+$/, "")
+  } catch (e) {
+    console.error("[stripTrailingOpenAIV1] Invalid URL:", e)
+    return trimmed.replace(/\/v1\/?$/, "").replace(/\/+$/, "")
+  }
+}

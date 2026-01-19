@@ -3,7 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import {
   joinUrl,
   navigateToAnchor,
+  normalizeHttpUrl,
   parseTabFromUrl,
+  stripTrailingOpenAIV1,
   updateUrlWithTab,
 } from "~/utils/url"
 
@@ -69,6 +71,47 @@ describe("joinUrl", () => {
   it("should handle nested paths", () => {
     expect(joinUrl("https://example.com/api", "v1/users")).toBe(
       "https://example.com/api/v1/users",
+    )
+  })
+})
+
+describe("normalizeHttpUrl", () => {
+  it("returns null for empty input", () => {
+    expect(normalizeHttpUrl(undefined)).toBeNull()
+    expect(normalizeHttpUrl(null)).toBeNull()
+    expect(normalizeHttpUrl("")).toBeNull()
+    expect(normalizeHttpUrl("   ")).toBeNull()
+  })
+
+  it("adds https:// when scheme is missing", () => {
+    expect(normalizeHttpUrl("example.com")).toBe("https://example.com")
+    expect(normalizeHttpUrl("example.com/")).toBe("https://example.com")
+  })
+
+  it("keeps http/https scheme and strips trailing slash", () => {
+    expect(normalizeHttpUrl("https://example.com/")).toBe("https://example.com")
+    expect(normalizeHttpUrl("http://example.com/")).toBe("http://example.com")
+  })
+
+  it("rejects non-http schemes and invalid urls", () => {
+    expect(normalizeHttpUrl("ftp://example.com")).toBeNull()
+    expect(normalizeHttpUrl("not a url")).toBeNull()
+  })
+})
+
+describe("stripTrailingOpenAIV1", () => {
+  it("strips a trailing /v1 segment", () => {
+    expect(stripTrailingOpenAIV1("https://x.test/v1")).toBe("https://x.test")
+    expect(stripTrailingOpenAIV1("https://x.test/v1/")).toBe("https://x.test")
+    expect(stripTrailingOpenAIV1("https://x.test/openai/v1")).toBe(
+      "https://x.test/openai",
+    )
+  })
+
+  it("does not strip non-v1 endings", () => {
+    expect(stripTrailingOpenAIV1("https://x.test")).toBe("https://x.test")
+    expect(stripTrailingOpenAIV1("https://x.test/v1beta")).toBe(
+      "https://x.test/v1beta",
     )
   })
 })

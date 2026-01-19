@@ -21,6 +21,7 @@ import {
   openInCCSwitch,
   type CCSwitchApp,
 } from "~/utils/ccSwitch"
+import { normalizeHttpUrl, stripTrailingOpenAIV1 } from "~/utils/url"
 
 interface CCSwitchExportDialogProps {
   isOpen: boolean
@@ -30,52 +31,6 @@ interface CCSwitchExportDialogProps {
 }
 
 const DEFAULT_APP: CCSwitchApp = "claude"
-
-/**
- * Normalize user-provided URL strings into a valid HTTP(S) URL without a trailing slash.
- *
- * This is used to safely derive an upstream base URL for `/v1/models` fetching from
- * a potentially incomplete endpoint field.
- */
-function normalizeHttpUrl(rawUrl: string): string {
-  const trimmed = (rawUrl || "").trim()
-  if (!trimmed) return ""
-
-  const prefixed = /^(https?:)?\/\//i.test(trimmed)
-    ? trimmed
-    : `https://${trimmed}`
-  try {
-    const parsed = new URL(prefixed)
-    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return ""
-    return parsed.toString().replace(/\/$/, "")
-  } catch {
-    return ""
-  }
-}
-
-/**
- * Strip a trailing `/v1` from a user-supplied OpenAI-compatible base URL.
- *
- * `fetchOpenAICompatibleModelIds` calls `/v1/models` internally, so passing a base URL
- * that already ends with `/v1` would otherwise produce `/v1/v1/models`.
- */
-function stripTrailingOpenAIV1(baseUrl: string): string {
-  const trimmed = (baseUrl || "").trim()
-  if (!trimmed) return ""
-
-  try {
-    const url = new URL(trimmed)
-    const pathname = url.pathname.replace(/\/+$/, "")
-    if (!pathname.endsWith("/v1")) {
-      return url.toString().replace(/\/+$/, "")
-    }
-
-    url.pathname = pathname.replace(/\/v1$/, "") || "/"
-    return url.toString().replace(/\/+$/, "")
-  } catch {
-    return trimmed.replace(/\/v1\/?$/, "").replace(/\/+$/, "")
-  }
-}
 
 /**
  * Presents a modal for exporting an account token into CCSwitch-compatible apps.
@@ -117,7 +72,10 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
   useEffect(() => {
     if (!isOpen) return
 
-    const upstreamBaseUrl = stripTrailingOpenAIV1(normalizeHttpUrl(endpoint))
+    const normalizedEndpoint = normalizeHttpUrl(endpoint)
+    const upstreamBaseUrl = normalizedEndpoint
+      ? stripTrailingOpenAIV1(normalizedEndpoint)
+      : ""
     if (!upstreamBaseUrl) {
       setUpstreamModelOptions([])
       return

@@ -14,7 +14,7 @@ import { importToCliProxy } from "~/services/cliProxyService"
 import type { ApiToken, DisplaySiteData } from "~/types"
 import { safeRandomUUID } from "~/utils/identifier"
 import { showResultToast } from "~/utils/toastHelpers"
-import { joinUrl } from "~/utils/url"
+import { joinUrl, stripTrailingOpenAIV1 } from "~/utils/url"
 
 interface CliProxyExportDialogProps {
   isOpen: boolean
@@ -28,31 +28,6 @@ interface CliProxyExportDialogProps {
  */
 function buildProviderBaseUrl(baseUrl: string) {
   return joinUrl(baseUrl, "/v1")
-}
-
-/**
- * Strip a trailing `/v1` from a user-supplied OpenAI-compatible base URL.
- *
- * `fetchOpenAICompatibleModelIds` uses the `/v1/models` endpoint internally, so
- * passing a base URL that already ends with `/v1` would otherwise produce
- * `/v1/v1/models`.
- */
-function stripTrailingOpenAIV1(baseUrl: string): string {
-  const trimmed = baseUrl.trim()
-  if (!trimmed) return trimmed
-
-  try {
-    const url = new URL(trimmed)
-    const pathname = url.pathname.replace(/\/+$/, "")
-    if (!pathname.endsWith("/v1")) {
-      return url.toString().replace(/\/+$/, "")
-    }
-
-    url.pathname = pathname.replace(/\/v1$/, "") || "/"
-    return url.toString().replace(/\/+$/, "")
-  } catch {
-    return trimmed.replace(/\/v1\/?$/, "").replace(/\/+$/, "")
-  }
 }
 
 /**
