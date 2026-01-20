@@ -21,6 +21,7 @@
     "site": {
       "currentSiteExists": "Current tab site already exists",
       "currentSite": "Current Site",
+      "disabled": "Disabled",
       "lastSync": "Last Sync",
       "status": "Status",
       "reason": "Reason",
@@ -63,6 +64,8 @@
   "actions": {
     "edit": "Edit",
     "delete": "Delete",
+    "disableAccount": "Disable account",
+    "enableAccount": "Enable account",
     "copyUrl": "Copy URL",
     "copyKey": "Copy Key",
     "refresh": "Refresh",

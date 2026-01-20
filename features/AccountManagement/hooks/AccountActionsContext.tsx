@@ -24,6 +24,10 @@ interface AccountActionsContextType {
     account: DisplaySiteData,
     force?: boolean,
   ) => Promise<void>
+  handleSetAccountDisabled: (
+    account: DisplaySiteData,
+    disabled: boolean,
+  ) => Promise<void>
   handleDeleteAccount: (account: DisplaySiteData) => void
   handleCopyUrl: (account: DisplaySiteData) => void
   handleMarkCustomCheckInAsCheckedIn: (
@@ -54,6 +58,7 @@ export const AccountActionsProvider = ({
   const handleRefreshAccount = useCallback(
     async (account: DisplaySiteData, force: boolean = true) => {
       if (refreshingAccountId) return
+      if (account.disabled === true) return
 
       setRefreshingAccountId(account.id)
 
@@ -100,6 +105,36 @@ export const AccountActionsProvider = ({
     [refreshingAccountId, loadAccountData],
   )
 
+  const handleSetAccountDisabled = useCallback(
+    async (account: DisplaySiteData, disabled: boolean) => {
+      const success = await accountStorage.setAccountDisabled(
+        account.id,
+        disabled,
+      )
+      if (!success) {
+        toast.error(
+          i18next.t("messages:toast.error.operationFailed", {
+            error: i18next.t("messages:storage.updateFailed", { error: "" }),
+          }),
+        )
+        return
+      }
+
+      await loadAccountData()
+
+      toast.success(
+        disabled
+          ? i18next.t("messages:toast.success.accountDisabled", {
+              accountName: account.name,
+            })
+          : i18next.t("messages:toast.success.accountEnabled", {
+              accountName: account.name,
+            }),
+      )
+    },
+    [loadAccountData],
+  )
+
   const handleDeleteAccount = useCallback(() => {
     // The actual deletion logic is in DelAccountDialog,
     // this just reloads the data after deletion.
@@ -120,6 +155,7 @@ export const AccountActionsProvider = ({
    */
   const handleMarkCustomCheckInAsCheckedIn = useCallback(
     async (account: DisplaySiteData) => {
+      if (account.disabled === true) return
       try {
         const success = await accountStorage.markAccountAsCustomCheckedIn(
           account.id,
@@ -146,9 +182,10 @@ export const AccountActionsProvider = ({
       accounts: DisplaySiteData[],
       options?: { openAll?: boolean; openInNewWindow?: boolean },
     ) => {
+      const enabledAccounts = accounts.filter((account) => !account.disabled)
       const accountsToOpen = options?.openAll
-        ? accounts
-        : accounts.filter(
+        ? enabledAccounts
+        : enabledAccounts.filter(
             (account) => !account.checkIn?.customCheckIn?.isCheckedInToday,
           )
 
@@ -206,6 +243,7 @@ export const AccountActionsProvider = ({
     () => ({
       refreshingAccountId,
       handleRefreshAccount,
+      handleSetAccountDisabled,
       handleDeleteAccount,
       handleCopyUrl,
       handleMarkCustomCheckInAsCheckedIn,
@@ -214,6 +252,7 @@ export const AccountActionsProvider = ({
     [
       refreshingAccountId,
       handleRefreshAccount,
+      handleSetAccountDisabled,
       handleDeleteAccount,
       handleCopyUrl,
       handleMarkCustomCheckInAsCheckedIn,
@@ -234,6 +273,7 @@ export const useAccountActionsContext = () => {
   if (
     context === undefined ||
     !context.handleRefreshAccount ||
+    !context.handleSetAccountDisabled ||
     !context.handleDeleteAccount ||
     !context.handleCopyUrl ||
     !context.handleMarkCustomCheckInAsCheckedIn

@@ -50,6 +50,13 @@ class AccountStorageService {
   }
 
   /**
+   * Backward-compatible guard: treat missing/undefined as enabled.
+   */
+  private static isAccountDisabled(account: Pick<SiteAccount, "disabled">) {
+    return account.disabled === true
+  }
+
+  /**
    * Run a storage mutation under an exclusive lock to prevent cross-context
    * (popup/options/background) concurrent read-modify-write races.
    *
@@ -154,6 +161,20 @@ class AccountStorageService {
       console.error("获取账号信息失败:", error)
       return []
     }
+  }
+
+  /**
+   * Get only enabled accounts (excludes disabled accounts by default).
+   *
+   * This is the safe default for any non-management feature (stats, background
+   * jobs, selectors), so disabled accounts remain discoverable only in the
+   * Account Management list where they can be re-enabled.
+   */
+  async getEnabledAccounts(): Promise<SiteAccount[]> {
+    const accounts = await this.getAllAccounts()
+    return accounts.filter(
+      (account) => !AccountStorageService.isAccountDisabled(account),
+    )
   }
 
   /**
@@ -264,6 +285,7 @@ class AccountStorageService {
         const now = Date.now()
         const newAccount: SiteAccount = {
           ...accountData,
+          disabled: accountData.disabled ?? false,
           id: this.generateId(),
           created_at: now,
           updated_at: now,
@@ -318,6 +340,17 @@ class AccountStorageService {
       console.error(t("messages:storage.updateFailed", { error: "" }), error)
       return false
     }
+  }
+
+  /**
+   * Enable/disable an account. Disabling is persisted in storage and used as a
+   * single source of truth for gating background and UI operations.
+   * @param id Account id to mutate.
+   * @param disabled When true, disables the account; when false, enables it.
+   */
+  async setAccountDisabled(id: string, disabled: boolean): Promise<boolean> {
+    const normalized = Boolean(disabled)
+    return this.updateAccount(id, { disabled: normalized })
   }
 
   /**
@@ -489,6 +522,9 @@ class AccountStorageService {
       if (!account) {
         throw new Error(t("messages:storage.accountNotFound", { id }))
       }
+      if (AccountStorageService.isAccountDisabled(account)) {
+        return false
+      }
 
       const today = new Date()
       const todayDate = today.toISOString().split("T")[0]
@@ -520,6 +556,9 @@ class AccountStorageService {
 
       if (!account) {
         throw new Error(t("messages:storage.accountNotFound", { id }))
+      }
+      if (AccountStorageService.isAccountDisabled(account)) {
+        return false
       }
 
       const url = account.checkIn?.customCheckIn?.url
@@ -591,9 +630,15 @@ class AccountStorageService {
       if (!account) {
         throw new Error(t("messages:storage.accountNotFound", { id }))
       }
-      account = await this.refreshSiteMetadataIfNeeded(account)
 
-      const DisplaySiteData = accountStorage.convertToDisplayData(account)
+      if (AccountStorageService.isAccountDisabled(account)) {
+        console.log(
+          `[AccountStorage] 账号 ${account.site_name} 已禁用，跳过刷新`,
+        )
+        return { account, refreshed: false, skippedReason: "account_disabled" }
+      }
+
+      account = await this.refreshSiteMetadataIfNeeded(account)
 
       if (await this.shouldSkipRefresh(account, force)) {
         console.log(
@@ -690,7 +735,7 @@ class AccountStorageService {
       // 获取今日收入数据
       try {
         const todayIncome = await getApiService(
-          DisplaySiteData.siteType,
+          account.site_type,
         ).fetchTodayIncome({
           baseUrl: account.site_url,
           accountId: account.id,
@@ -792,7 +837,7 @@ class AccountStorageService {
    */
   async getAccountStats(): Promise<AccountStats> {
     try {
-      const accounts = await this.getAllAccounts()
+      const accounts = await this.getEnabledAccounts()
 
       return accounts.reduce(
         (stats, account) => ({
@@ -852,6 +897,7 @@ class AccountStorageService {
       id: account.id,
       name: account.site_name,
       username: account.account_info.username,
+      disabled: AccountStorageService.isAccountDisabled(account),
       balance: {
         USD:
           account.account_info.quota /

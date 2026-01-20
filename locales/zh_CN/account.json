@@ -21,6 +21,7 @@
     "site": {
       "currentSiteExists": "当前标签页站点已存在",
       "currentSite": "当前站点",
+      "disabled": "已禁用",
       "lastSync": "上次同步",
       "status": "状态",
       "reason": "原因",
@@ -63,6 +64,8 @@
   "actions": {
     "edit": "编辑",
     "delete": "删除",
+    "disableAccount": "禁用账号",
+    "enableAccount": "启用账号",
     "copyUrl": "复制网址",
     "copyKey": "复制密钥",
     "refresh": "刷新",

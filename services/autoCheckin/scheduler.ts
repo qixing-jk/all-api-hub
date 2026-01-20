@@ -592,13 +592,21 @@ class AutoCheckinScheduler {
         return
       }
 
-      // Get all accounts
+      // Get all accounts, then exclude disabled accounts from runnable selection.
+      // Disabled accounts must not participate, but we still record an explicit
+      // skip reason so background status/history can explain why an account was skipped.
       const allAccounts = await accountStorage.getAllAccounts()
+      const enabledAccounts = allAccounts.filter(
+        (account) => account.disabled !== true,
+      )
+      const disabledAccounts = allAccounts.filter(
+        (account) => account.disabled === true,
+      )
 
       // Reset isCheckedInToday for accounts whose lastCheckInDate !== today
       // isCheckedInToday: true means already checked in (skip until tomorrow)
       // isCheckedInToday: false/undefined means can check in today
-      for (const account of allAccounts) {
+      for (const account of enabledAccounts) {
         const siteLastCheckInDate = account.checkIn?.siteStatus?.lastCheckInDate
         const siteCheckedInToday = account.checkIn?.siteStatus?.isCheckedInToday
         if (
@@ -620,7 +628,7 @@ class AutoCheckinScheduler {
       }
 
       // Filter accounts with detection enabled
-      const detectionEnabledAccounts = allAccounts.filter(
+      const detectionEnabledAccounts = enabledAccounts.filter(
         (account) => account.checkIn?.enableDetection,
       )
 
@@ -638,6 +646,19 @@ class AutoCheckinScheduler {
 
       const results: Record<string, CheckinAccountResult> = {}
       const timestamp = Date.now()
+
+      for (const account of disabledAccounts) {
+        results[account.id] = {
+          accountId: account.id,
+          accountName: `${account.site_name} - ${account.account_info.username}`,
+          status: CHECKIN_RESULT_STATUS.SKIPPED,
+          messageKey: this.getSkipReasonMessageKey(
+            AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DISABLED,
+          ),
+          reasonCode: AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DISABLED,
+          timestamp,
+        }
+      }
 
       // Record skipped accounts to results
       for (const snapshot of accountSnapshots) {
@@ -800,6 +821,40 @@ class AutoCheckinScheduler {
     if (!account) {
       throw new Error(t("messages:storage.accountNotFound", { id: accountId }))
     }
+    if (account.disabled === true) {
+      const result: CheckinAccountResult = {
+        accountId: account.id,
+        accountName: `${account.site_name} - ${account.account_info.username}`,
+        status: CHECKIN_RESULT_STATUS.SKIPPED,
+        messageKey: `autoCheckin:skipReasons.${AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DISABLED}`,
+        reasonCode: AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DISABLED,
+        timestamp: Date.now(),
+      }
+
+      const currentStatus = (await autoCheckinStorage.getStatus()) || {}
+      const perAccount: Record<string, CheckinAccountResult> = {
+        ...(currentStatus.perAccount ?? {}),
+        [result.accountId]: result,
+      }
+
+      const summary = this.recalculateSummaryFromResults(
+        perAccount,
+        currentStatus.summary,
+      )
+
+      const updatedStatus: AutoCheckinStatus = {
+        ...currentStatus,
+        lastRunAt: new Date().toISOString(),
+        lastRunResult: AUTO_CHECKIN_RUN_RESULT.SUCCESS,
+        perAccount,
+        summary,
+        pendingRetry: false,
+        accountsSnapshot: currentStatus.accountsSnapshot,
+      }
+      await autoCheckinStorage.saveStatus(updatedStatus)
+
+      return { result, summary, pendingRetry: false }
+    }
 
     const { result } = await this.runAccountCheckin(account)
     const currentStatus = (await autoCheckinStorage.getStatus()) || {}
@@ -863,6 +918,9 @@ class AutoCheckinScheduler {
 
     if (!account) {
       throw new Error(t("messages:storage.accountNotFound", { id: accountId }))
+    }
+    if (account.disabled === true) {
+      throw new Error(t("messages:storage.accountDisabled", { id: accountId }))
     }
 
     return accountStorage.convertToDisplayData(account) as DisplaySiteData

@@ -19,6 +19,8 @@
       "importSuccess": "导入成功",
       "accountPinned": "已置顶 {{accountName}}",
       "accountUnpinned": "已取消置顶 {{accountName}}",
+      "accountDisabled": "已禁用 {{accountName}}",
+      "accountEnabled": "已启用 {{accountName}}",
       "externalCheckInOpened": "已为 {{count}} 个账号打开外部签到（{{mode}}）。",
       "externalCheckInModeAll": "全部",
       "externalCheckInModeUnchecked": "仅未签到"
@@ -156,6 +158,7 @@
   },
   "storage": {
     "accountNotFound": "账号 {{id}} 不存在",
+    "accountDisabled": "账号 {{id}} 已禁用",
     "updateFailed": "更新账号失败"
   },
   "background": {

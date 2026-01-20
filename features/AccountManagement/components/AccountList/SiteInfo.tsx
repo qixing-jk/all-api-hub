@@ -93,6 +93,7 @@ export default function SiteInfo({ site, highlights }: SiteInfoProps) {
   const isPinned = isAccountPinned(site.id)
   const pinTooltipLabel = isPinned ? t("actions.unpin") : t("actions.pin")
   const isRefreshing = refreshingAccountId === site.id
+  const isAccountDisabled = site.disabled === true
   const customCheckInUrl = site.checkIn?.customCheckIn?.url
   const customRedeemUrl = site.checkIn?.customCheckIn?.redeemUrl
 
@@ -123,6 +124,7 @@ export default function SiteInfo({ site, highlights }: SiteInfoProps) {
   }
 
   const handleSiteCheckIn = async () => {
+    if (isAccountDisabled) return
     try {
       await openCheckInPage(site)
     } catch (error) {
@@ -131,6 +133,7 @@ export default function SiteInfo({ site, highlights }: SiteInfoProps) {
   }
 
   const handleCustomCheckIn = async () => {
+    if (isAccountDisabled) return
     try {
       await handleMarkCustomCheckInAsCheckedIn(site)
       const shouldOpenRedeem =
@@ -146,6 +149,10 @@ export default function SiteInfo({ site, highlights }: SiteInfoProps) {
   }
 
   const renderCheckInIndicators = () => {
+    if (isAccountDisabled) {
+      return null
+    }
+
     const indicators: React.ReactNode[] = []
 
     const customUrl = site.checkIn?.customCheckIn?.url
@@ -253,6 +260,7 @@ export default function SiteInfo({ site, highlights }: SiteInfoProps) {
   const checkInIndicator = renderCheckInIndicators()
 
   const handleHealthClick = async () => {
+    if (isAccountDisabled) return
     if (!isRefreshing) {
       await handleRefreshAccount(site, true)
     }
@@ -311,7 +319,9 @@ export default function SiteInfo({ site, highlights }: SiteInfoProps) {
             className={`h-2 w-2 shrink-0 rounded-full transition-all duration-200 ${
               isRefreshing
                 ? "animate-pulse opacity-60"
-                : "cursor-pointer hover:scale-125"
+                : isAccountDisabled
+                  ? "cursor-not-allowed opacity-60"
+                  : "cursor-pointer hover:scale-125"
             } ${
               getStatusIndicatorColor(site.health?.status) ||
               UI_CONSTANTS.STYLES.STATUS_INDICATOR.UNKNOWN
@@ -321,7 +331,7 @@ export default function SiteInfo({ site, highlights }: SiteInfoProps) {
           />
         </Tooltip>
 
-        {isPinFeatureEnabled && isPinned && (
+        {!isAccountDisabled && isPinFeatureEnabled && isPinned && (
           <Tooltip content={pinTooltipLabel} position="right">
             <IconButton
               onClick={handlePinClick}
@@ -347,19 +357,32 @@ export default function SiteInfo({ site, highlights }: SiteInfoProps) {
               </Badge>
             </Tooltip>
           )}
+          {isAccountDisabled && (
+            <Badge variant="secondary" size="sm" className="whitespace-nowrap">
+              {t("list.site.disabled")}
+            </Badge>
+          )}
 
           <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
-            <a
-              href={site.baseUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block min-w-0 truncate"
-              title={site.name}
-            >
-              <BodySmall weight="medium" className="truncate">
-                {renderHighlightedFragments(highlights?.name, site.name)}
-              </BodySmall>
-            </a>
+            {isAccountDisabled ? (
+              <span className="block min-w-0 truncate" title={site.name}>
+                <BodySmall weight="medium" className="truncate">
+                  {renderHighlightedFragments(highlights?.name, site.name)}
+                </BodySmall>
+              </span>
+            ) : (
+              <a
+                href={site.baseUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block min-w-0 truncate"
+                title={site.name}
+              >
+                <BodySmall weight="medium" className="truncate">
+                  {renderHighlightedFragments(highlights?.name, site.name)}
+                </BodySmall>
+              </a>
+            )}
 
             {checkInIndicator && (
               <div className="flex items-center">{checkInIndicator}</div>

@@ -38,6 +38,12 @@ export class RedeemService {
           message: t("messages:storage.accountNotFound", { id: accountId }),
         }
       }
+      if (account.disabled === true) {
+        return {
+          success: false,
+          message: t("messages:storage.accountDisabled", { id: accountId }),
+        }
+      }
 
       const creditedAmount = await getApiService(account.site_type).redeemCode(
         {

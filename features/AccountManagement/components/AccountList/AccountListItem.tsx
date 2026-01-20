@@ -5,6 +5,7 @@ import { useDevice } from "~/contexts/DeviceContext"
 import AccountActionButtons from "~/features/AccountManagement/components/AccountActionButtons"
 import { useAccountListItem } from "~/features/AccountManagement/components/AccountList/hooks/useAccountListItem"
 import type { SearchResultWithHighlight } from "~/features/AccountManagement/hooks/useAccountSearch"
+import { cn } from "~/lib/utils"
 import type { DisplaySiteData } from "~/types"
 
 import BalanceDisplay from "./BalanceDisplay"
@@ -30,7 +31,10 @@ const AccountListItem: React.FC<AccountListItemProps> = React.memo(
     return (
       <CardItem
         padding="none"
-        className="group touch-manipulation transition-all"
+        className={cn("group touch-manipulation transition-all", {
+          "opacity-60": site.disabled,
+        })}
+        data-disabled={site.disabled ? "true" : undefined}
         onMouseEnter={() => handleMouseEnter(site.id)}
         onMouseLeave={handleMouseLeave}
       >

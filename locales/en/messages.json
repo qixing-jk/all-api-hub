@@ -19,6 +19,8 @@
       "importSuccess": "Import successful",
       "accountPinned": "{{accountName}} pinned",
       "accountUnpinned": "{{accountName}} unpinned",
+      "accountDisabled": "{{accountName}} disabled",
+      "accountEnabled": "{{accountName}} enabled",
       "externalCheckInOpened": "Opened external check-ins for {{count}} account(s) ({{mode}}).",
       "externalCheckInModeAll": "all",
       "externalCheckInModeUnchecked": "unchecked only"
@@ -156,6 +158,7 @@
   },
   "storage": {
     "accountNotFound": "Account {{id}} does not exist",
+    "accountDisabled": "Account {{id}} is disabled",
     "updateFailed": "Failed to update account"
   },
   "background": {

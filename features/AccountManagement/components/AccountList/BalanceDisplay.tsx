@@ -82,12 +82,18 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
     useAccountActionsContext()
 
   const isRefreshing = refreshingAccountId === site.id
+  const isAccountDisabled = site.disabled === true
 
   const handleRefreshClick = async () => {
+    if (isAccountDisabled) return
     if (!isRefreshing) {
       await handleRefreshAccount(site, true) // Force refresh
     }
   }
+
+  const refreshTitle = isAccountDisabled
+    ? t("list.site.disabled")
+    : t("list.balance.refreshBalance")
 
   return (
     <div className="w-full overflow-hidden text-right">
@@ -98,8 +104,8 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
           isInitialLoad ? 0 : prevBalances[site.id]?.[currencyType] || 0
         }
         className="dark:text-dark-text-primary mb-0.5 text-sm font-semibold text-gray-900 sm:text-base md:text-lg"
-        title={t("list.balance.refreshBalance")}
-        onClick={handleRefreshClick}
+        title={refreshTitle}
+        onClick={isAccountDisabled ? undefined : handleRefreshClick}
         isRefreshing={isRefreshing}
       />
 
@@ -115,8 +121,12 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
               ? "text-green-500"
               : "dark:text-dark-text-tertiary text-gray-400"
           }`}
-          title={t("list.balance.refreshConsumption")}
-          onClick={handleRefreshClick}
+          title={
+            isAccountDisabled
+              ? t("list.site.disabled")
+              : t("list.balance.refreshConsumption")
+          }
+          onClick={isAccountDisabled ? undefined : handleRefreshClick}
           isRefreshing={isRefreshing}
         />
 
@@ -130,8 +140,12 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
               ? "text-blue-500"
               : "dark:text-dark-text-tertiary text-gray-400"
           }`}
-          title={t("list.balance.refreshIncome")}
-          onClick={handleRefreshClick}
+          title={
+            isAccountDisabled
+              ? t("list.site.disabled")
+              : t("list.balance.refreshIncome")
+          }
+          onClick={isAccountDisabled ? undefined : handleRefreshClick}
           isRefreshing={isRefreshing}
         />
       </div>

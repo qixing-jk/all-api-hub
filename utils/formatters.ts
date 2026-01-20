@@ -130,9 +130,10 @@ export const calculateTotalConsumption = (
  * 计算总余额
  */
 export const calculateTotalBalance = (displayData: DisplaySiteData[]) => {
+  const enabledSites = displayData.filter((site) => !site.disabled)
   return {
-    USD: displayData.reduce((sum, site) => sum + site.balance.USD, 0),
-    CNY: displayData.reduce((sum, site) => sum + site.balance.CNY, 0),
+    USD: enabledSites.reduce((sum, site) => sum + site.balance.USD, 0),
+    CNY: enabledSites.reduce((sum, site) => sum + site.balance.CNY, 0),
   }
 }
 
@@ -148,8 +149,15 @@ export const calculateTotalBalanceForSites = (sites: DisplaySiteData[]) =>
  * @param sites Display-ready site collection containing `todayConsumption`.
  */
 export const calculateTotalConsumptionForSites = (sites: DisplaySiteData[]) => {
-  const usd = sites.reduce((sum, site) => sum + site.todayConsumption.USD, 0)
-  const cny = sites.reduce((sum, site) => sum + site.todayConsumption.CNY, 0)
+  const enabledSites = sites.filter((site) => !site.disabled)
+  const usd = enabledSites.reduce(
+    (sum, site) => sum + site.todayConsumption.USD,
+    0,
+  )
+  const cny = enabledSites.reduce(
+    (sum, site) => sum + site.todayConsumption.CNY,
+    0,
+  )
 
   return {
     USD: usd,

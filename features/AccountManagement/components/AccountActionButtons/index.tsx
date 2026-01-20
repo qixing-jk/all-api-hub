@@ -2,11 +2,13 @@ import { Menu, MenuButton, MenuItems } from "@headlessui/react"
 import {
   ArrowPathIcon,
   BanknotesIcon,
+  CheckCircleIcon,
   CpuChipIcon,
   EllipsisHorizontalIcon,
   KeyIcon,
   LinkIcon,
   ListBulletIcon,
+  NoSymbolIcon,
   PencilIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline"
@@ -47,12 +49,17 @@ export default function AccountActionButtons({
   onDeleteAccount,
 }: ActionButtonsProps) {
   const { t } = useTranslation("account")
-  const { refreshingAccountId, handleRefreshAccount } =
-    useAccountActionsContext()
+  const {
+    refreshingAccountId,
+    handleRefreshAccount,
+    handleSetAccountDisabled,
+  } = useAccountActionsContext()
   const { isAccountPinned, togglePinAccount, isPinFeatureEnabled } =
     useAccountDataContext()
   const { openEditAccount } = useDialogStateContext()
   const [isCheckingTokens, setIsCheckingTokens] = useState(false)
+
+  const isAccountDisabled = site.disabled === true
 
   const isPinned = isAccountPinned(site.id)
   const pinLabel = isPinned ? t("actions.unpin") : t("actions.pin")
@@ -160,6 +167,10 @@ export default function AccountActionButtons({
     onDeleteAccount(site)
   }
 
+  const handleDisableToggle = () => {
+    void handleSetAccountDisabled(site, !isAccountDisabled)
+  }
+
   return (
     <div className="grid grid-cols-2 justify-end gap-2 sm:grid-cols-4">
       {/* Primary Level - Three standalone buttons */}
@@ -168,6 +179,7 @@ export default function AccountActionButtons({
         variant="ghost"
         size="sm"
         className="touch-manipulation"
+        disabled={isAccountDisabled}
         aria-label={t("actions.copyUrl")}
         title={t("actions.copyUrl")}
       >
@@ -179,7 +191,7 @@ export default function AccountActionButtons({
         variant="ghost"
         size="sm"
         className="touch-manipulation"
-        disabled={isCheckingTokens}
+        disabled={isCheckingTokens || isAccountDisabled}
         aria-label={t("actions.copyKey")}
         title={t("actions.copyKey")}
       >
@@ -195,6 +207,7 @@ export default function AccountActionButtons({
         variant="ghost"
         size="sm"
         className="touch-manipulation"
+        disabled={isAccountDisabled}
         aria-label={t("actions.edit")}
         title={t("actions.edit")}
       >
@@ -216,63 +229,77 @@ export default function AccountActionButtons({
           anchor="bottom end"
           className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary z-50 rounded-lg border border-gray-200 bg-white py-1 shadow-lg [--anchor-gap:4px] [--anchor-padding:8px] focus:outline-none"
         >
-          {/* Secondary Menu Items */}
           <AccountActionMenuItem
-            onClick={handleOpenKeyList}
-            icon={ListBulletIcon}
-            label={t("actions.keyList")}
+            onClick={handleDisableToggle}
+            icon={isAccountDisabled ? CheckCircleIcon : NoSymbolIcon}
+            label={
+              isAccountDisabled
+                ? t("actions.enableAccount")
+                : t("actions.disableAccount")
+            }
           />
 
-          <AccountActionMenuItem
-            onClick={handleNavigateToKeyManagement}
-            icon={KeyIcon}
-            label={t("actions.keyManagement")}
-          />
+          {isAccountDisabled ? null : (
+            <>
+              {/* Secondary Menu Items */}
+              <AccountActionMenuItem
+                onClick={handleOpenKeyList}
+                icon={ListBulletIcon}
+                label={t("actions.keyList")}
+              />
 
-          <AccountActionMenuItem
-            onClick={handleNavigateToModelManagement}
-            icon={CpuChipIcon}
-            label={t("actions.modelManagement")}
-          />
+              <AccountActionMenuItem
+                onClick={handleNavigateToKeyManagement}
+                icon={KeyIcon}
+                label={t("actions.keyManagement")}
+              />
 
-          <hr className="dark:border-dark-bg-tertiary my-1 border-gray-200" />
+              <AccountActionMenuItem
+                onClick={handleNavigateToModelManagement}
+                icon={CpuChipIcon}
+                label={t("actions.modelManagement")}
+              />
 
-          <AccountActionMenuItem
-            onClick={handleNavigateToUsageManagement}
-            icon={ChartPieIcon}
-            label={t("actions.usageLog")}
-          />
+              <hr className="dark:border-dark-bg-tertiary my-1 border-gray-200" />
 
-          <AccountActionMenuItem
-            onClick={handleNavigateToRedeemPage}
-            icon={BanknotesIcon}
-            label={t("actions.redeemPage")}
-          />
+              <AccountActionMenuItem
+                onClick={handleNavigateToUsageManagement}
+                icon={ChartPieIcon}
+                label={t("actions.usageLog")}
+              />
 
-          <hr className="dark:border-dark-bg-tertiary my-1 border-gray-200" />
+              <AccountActionMenuItem
+                onClick={handleNavigateToRedeemPage}
+                icon={BanknotesIcon}
+                label={t("actions.redeemPage")}
+              />
 
-          {/* Pin/Unpin */}
-          {isPinFeatureEnabled && (
-            <AccountActionMenuItem
-              onClick={handleTogglePin}
-              icon={PinToggleIcon}
-              label={pinLabel}
-            />
+              <hr className="dark:border-dark-bg-tertiary my-1 border-gray-200" />
+
+              {/* Pin/Unpin */}
+              {isPinFeatureEnabled && (
+                <AccountActionMenuItem
+                  onClick={handleTogglePin}
+                  icon={PinToggleIcon}
+                  label={pinLabel}
+                />
+              )}
+
+              <AccountActionMenuItem
+                onClick={handleRefreshLocal}
+                icon={ArrowPathIcon}
+                label={t("actions.refresh")}
+                disabled={refreshingAccountId === site.id}
+              />
+
+              <AccountActionMenuItem
+                onClick={handleDeleteLocal}
+                icon={TrashIcon}
+                label={t("actions.delete")}
+                isDestructive={true}
+              />
+            </>
           )}
-
-          <AccountActionMenuItem
-            onClick={handleRefreshLocal}
-            icon={ArrowPathIcon}
-            label={t("actions.refresh")}
-            disabled={refreshingAccountId === site.id}
-          />
-
-          <AccountActionMenuItem
-            onClick={handleDeleteLocal}
-            icon={TrashIcon}
-            label={t("actions.delete")}
-            isDestructive={true}
-          />
         </MenuItems>
       </Menu>
     </div>

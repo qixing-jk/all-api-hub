@@ -85,6 +85,7 @@ const createAccount = (overrides: Partial<SiteAccount> = {}): SiteAccount => {
 
   return {
     id: overrides.id || "account-1",
+    disabled: overrides.disabled,
     site_name: overrides.site_name || "Test Site",
     site_url: overrides.site_url || "https://test.example.com",
     health: overrides.health || { status: SiteHealthStatus.Healthy },
@@ -410,6 +411,52 @@ describe("accountStorage core behaviors", () => {
     })
   })
 
+  it("getAccountStats should exclude disabled accounts", async () => {
+    const disabledAccount = createAccount({
+      id: "stats-disabled",
+      disabled: true,
+      account_info: {
+        id: 1,
+        access_token: "token",
+        username: "userDisabled",
+        quota: 1_000_000,
+        today_prompt_tokens: 100,
+        today_completion_tokens: 200,
+        today_quota_consumption: 50_000,
+        today_requests_count: 5,
+        today_income: 10_000,
+      },
+    })
+
+    const enabledAccount = createAccount({
+      id: "stats-enabled",
+      account_info: {
+        id: 2,
+        access_token: "token",
+        username: "userEnabled",
+        quota: 2_500_000,
+        today_prompt_tokens: 300,
+        today_completion_tokens: 400,
+        today_quota_consumption: 75_000,
+        today_requests_count: 7,
+        today_income: 5_000,
+      },
+    })
+
+    seedStorage([disabledAccount, enabledAccount])
+
+    const stats = await accountStorage.getAccountStats()
+
+    expect(stats).toEqual({
+      total_quota: 2_500_000,
+      today_total_consumption: 75_000,
+      today_total_requests: 7,
+      today_total_prompt_tokens: 300,
+      today_total_completion_tokens: 400,
+      today_total_income: 5_000,
+    })
+  })
+
   it("checkUrlExists should match accounts by origin and ignore paths", async () => {
     const account = createAccount({
       id: "origin-match",
@@ -571,6 +618,30 @@ describe("accountStorage core behaviors", () => {
     })
     expect(updatedAccount?.site_type).toBe("one-api")
     expect(updatedAccount?.checkIn?.enableDetection).toBe(true)
+  })
+
+  it("refreshAccount should skip disabled accounts and avoid network calls", async () => {
+    const account = createAccount({
+      id: "disabled-refresh",
+      disabled: true,
+      site_url: "https://disabled.example.com",
+      site_type: "unknown",
+      checkIn: {} as any,
+    })
+    seedStorage([account])
+
+    const result = await accountStorage.refreshAccount("disabled-refresh", true)
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        refreshed: false,
+        skippedReason: "account_disabled",
+      }),
+    )
+    expect(mockGetSiteType).not.toHaveBeenCalled()
+    expect(mockFetchSupportCheckIn).not.toHaveBeenCalled()
+    expect(mockRefreshAccountData).not.toHaveBeenCalled()
+    expect(mockFetchTodayIncome).not.toHaveBeenCalled()
   })
 
   it("refreshAccount should skip re-detection when site metadata is complete", async () => {

@@ -105,6 +105,7 @@
     }
   },
   "skipReasons": {
+    "account_disabled": "账号已禁用",
     "detection_disabled": "检测已关闭",
     "auto_checkin_disabled": "自动签到已关闭",
     "already_checked_today": "今日已签到",

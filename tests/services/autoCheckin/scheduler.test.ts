@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { accountStorage } from "~/services/accountStorage"
 import {
   autoCheckinScheduler,
   handleAutoCheckinMessage,
@@ -42,8 +43,11 @@ vi.mock("~/services/userPreferences", () => ({
 vi.mock("~/services/accountStorage", () => ({
   accountStorage: {
     getAllAccounts: vi.fn(),
+    getEnabledAccounts: vi.fn(),
     updateAccount: vi.fn(),
     markAccountAsSiteCheckedIn: vi.fn(),
+    getAccountById: vi.fn(),
+    convertToDisplayData: vi.fn(),
   },
 }))
 
@@ -82,6 +86,10 @@ const mockedUserPreferences = userPreferences as unknown as {
 const mockedAutoCheckinStorage = autoCheckinStorage as unknown as {
   getStatus: ReturnType<typeof vi.fn>
   saveStatus: ReturnType<typeof vi.fn>
+}
+
+const mockedAccountStorage = accountStorage as unknown as {
+  getAccountById: ReturnType<typeof vi.fn>
 }
 
 const mockedBrowserApi = {
@@ -220,5 +228,35 @@ describe("handleAutoCheckinMessage", () => {
 
     expect(runSpy).toHaveBeenCalled()
     expect(sendResponse).toHaveBeenCalledWith({ success: false, error: "boom" })
+  })
+})
+
+describe("autoCheckinScheduler.retryAccount", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it("skips disabled accounts with an explicit skip reason", async () => {
+    mockedAccountStorage.getAccountById.mockResolvedValueOnce({
+      id: "disabled-1",
+      disabled: true,
+      site_name: "Disabled",
+      account_info: { username: "user" },
+    })
+    mockedAutoCheckinStorage.getStatus.mockResolvedValueOnce({
+      perAccount: {},
+      summary: {
+        executed: 0,
+        skippedCount: 0,
+        successCount: 0,
+        failedCount: 0,
+      },
+    } as any)
+
+    const result = await autoCheckinScheduler.retryAccount("disabled-1")
+
+    expect(result.result.status).toBe("skipped")
+    expect(result.result.reasonCode).toBe("account_disabled")
+    expect(mockedAutoCheckinStorage.saveStatus).toHaveBeenCalled()
   })
 })

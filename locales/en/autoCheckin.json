@@ -105,6 +105,7 @@
     }
   },
   "skipReasons": {
+    "account_disabled": "Account is disabled",
     "detection_disabled": "Detection disabled",
     "auto_checkin_disabled": "Auto check-in disabled",
     "already_checked_today": "Already checked today",

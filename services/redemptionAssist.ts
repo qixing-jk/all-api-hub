@@ -148,7 +148,7 @@ class RedemptionAssistService {
    * Fetch accounts and convert to display data used by search/filter utilities.
    */
   private async getDisplayAccounts(): Promise<DisplaySiteData[]> {
-    const siteAccounts = await accountStorage.getAllAccounts()
+    const siteAccounts = await accountStorage.getEnabledAccounts()
     const displayAccounts = accountStorage.convertToDisplayData(
       siteAccounts,
     ) as DisplaySiteData[]

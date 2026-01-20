@@ -22,6 +22,7 @@ export const CHECKIN_RESULT_STATUSES = Object.values(
  * Reasons why an account was skipped during auto check-in
  */
 export const AUTO_CHECKIN_SKIP_REASON = {
+  ACCOUNT_DISABLED: "account_disabled",
   DETECTION_DISABLED: "detection_disabled",
   AUTO_CHECKIN_DISABLED: "auto_checkin_disabled",
   ALREADY_CHECKED_TODAY: "already_checked_today",
