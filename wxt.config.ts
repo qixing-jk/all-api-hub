@@ -3,6 +3,7 @@ import fs from "node:fs"
 import path from "node:path"
 import { defineConfig } from "wxt"
 
+import { APP_SHORT_NAME } from "./constants"
 import { reactDevToolsAuto } from "./plugins/react-devtools-auto"
 import {
   formatDevManifestDescription,
@@ -108,7 +109,7 @@ export default defineConfig({
     const versionName =
       isDev && gitBuildInfo ? formatDevVersionName(gitBuildInfo) : null
 
-    const devNameBase = devLocaleStrings?.name ?? "All API Hub"
+    const devNameBase = devLocaleStrings?.name ?? APP_SHORT_NAME
     const devDescriptionBase = devLocaleStrings?.description ?? ""
     const devVersion =
       isDev && versionName ? getExtensionVersionFromPackageJson() : null

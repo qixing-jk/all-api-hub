@@ -3,6 +3,7 @@
  * 提供跨浏览器兼容的 API 封装和常用 fallback 逻辑
  */
 
+import { APP_SHORT_NAME } from "~/constants/branding"
 import { isNotEmptyArray } from "~/utils/index"
 
 // 确保 browser 全局对象可用
@@ -489,7 +490,7 @@ export function getManifest(): browser._manifest.WebExtensionManifest {
 
     return {
       manifest_version: 3,
-      name: "All API Hub",
+      name: APP_SHORT_NAME,
       version: "0.0.0",
       optional_permissions: [],
     }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 
+import { APP_SHORT_NAME } from "~/constants/branding"
 import {
   formatDevActionTitle,
   formatDevManifestDescription,
@@ -26,8 +27,8 @@ describe("devBranding", () => {
   })
 
   it("appends version label to manifest name", () => {
-    expect(formatDevManifestName("All API Hub", "dev main@abc")).toBe(
-      "All API Hub [dev main@abc]",
+    expect(formatDevManifestName(APP_SHORT_NAME, "dev main@abc")).toBe(
+      `${APP_SHORT_NAME} [dev main@abc]`,
     )
   })
 
@@ -42,14 +43,14 @@ describe("devBranding", () => {
   })
 
   it("formats action title with versionName when present", () => {
-    expect(formatDevActionTitle("All API Hub", "dev main@abc")).toBe(
-      "All API Hub (dev main@abc)",
+    expect(formatDevActionTitle(APP_SHORT_NAME, "dev main@abc")).toBe(
+      `${APP_SHORT_NAME} (dev main@abc)`,
     )
   })
 
   it("avoids duplicating versionName when base already contains it", () => {
     expect(
-      formatDevActionTitle("All API Hub [dev main@abc]", "dev main@abc"),
-    ).toBe("All API Hub [dev main@abc]")
+      formatDevActionTitle(`${APP_SHORT_NAME} [dev main@abc]`, "dev main@abc"),
+    ).toBe(`${APP_SHORT_NAME} [dev main@abc]`)
   })
 })

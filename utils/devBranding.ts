@@ -1,3 +1,6 @@
+// noinspection ES6PreferShortImport wxt config file dependency, can't parse any alias like
+import { APP_SHORT_NAME } from "../constants/branding"
+
 export type DevBuildInfo = {
   /**
    * Git branch name, for example: `feat/account-disable`.
@@ -30,7 +33,7 @@ export function formatDevVersionName(info: DevBuildInfo): string {
  * This is only intended for development builds (WXT `serve`).
  */
 export function formatDevManifestName(baseName: string, versionName: string) {
-  const safeBase = (baseName || "All API Hub").trim()
+  const safeBase = (baseName || APP_SHORT_NAME).trim()
   const safeVersion = (versionName || "dev").trim()
   return `${safeBase} [${safeVersion}]`
 }
@@ -60,7 +63,7 @@ export function getDevBadgeText() {
  * Creates a dev-only tooltip title for the toolbar action.
  */
 export function formatDevActionTitle(baseTitle: string, versionName?: string) {
-  const safeBase = (baseTitle || "All API Hub").trim()
+  const safeBase = (baseTitle || APP_SHORT_NAME).trim()
   const safeVersion = (versionName || "").trim()
   if (!safeVersion) return `${safeBase} (dev)`
   return safeBase.includes(safeVersion)
