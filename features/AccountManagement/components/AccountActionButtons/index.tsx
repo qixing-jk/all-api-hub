@@ -229,17 +229,14 @@ export default function AccountActionButtons({
           anchor="bottom end"
           className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary z-50 rounded-lg border border-gray-200 bg-white py-1 shadow-lg [--anchor-gap:4px] [--anchor-padding:8px] focus:outline-none"
         >
-          <AccountActionMenuItem
-            onClick={handleDisableToggle}
-            icon={isAccountDisabled ? CheckCircleIcon : NoSymbolIcon}
-            label={
-              isAccountDisabled
-                ? t("actions.enableAccount")
-                : t("actions.disableAccount")
-            }
-          />
-
-          {isAccountDisabled ? null : (
+          {isAccountDisabled ? (
+            <AccountActionMenuItem
+              onClick={handleDisableToggle}
+              icon={CheckCircleIcon}
+              label={t("actions.enableAccount")}
+              tone="success"
+            />
+          ) : (
             <>
               {/* Secondary Menu Items */}
               <AccountActionMenuItem
@@ -290,6 +287,16 @@ export default function AccountActionButtons({
                 icon={ArrowPathIcon}
                 label={t("actions.refresh")}
                 disabled={refreshingAccountId === site.id}
+              />
+
+              <hr className="dark:border-dark-bg-tertiary my-1 border-gray-200" />
+
+              {/* Place Disable immediately above Delete for clarity and consistency. */}
+              <AccountActionMenuItem
+                onClick={handleDisableToggle}
+                icon={NoSymbolIcon}
+                label={t("actions.disableAccount")}
+                tone="warning"
               />
 
               <AccountActionMenuItem

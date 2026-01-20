@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react"
+import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
@@ -81,17 +81,20 @@ describe("AccountActionButtons", () => {
       screen.getByRole("button", { name: "common:actions.more" }),
     )
 
-    expect(
-      await screen.findByRole("button", { name: "actions.enableAccount" }),
-    ).toBeInTheDocument()
+    const menu = await screen.findByRole("menu")
+    const enableLabel = await within(menu).findByText("actions.enableAccount")
+    const enableButton = enableLabel.closest("button")
+    expect(enableButton).not.toBeNull()
+
+    expect(enableButton!).toBeInTheDocument()
+    expect(enableButton!).toHaveClass("text-emerald-600")
     expect(
       screen.queryByRole("button", { name: "actions.disableAccount" }),
     ).toBeNull()
     expect(screen.queryByRole("button", { name: "actions.delete" })).toBeNull()
+    expect(Array.from(menu.querySelectorAll("button"))).toEqual([enableButton!])
 
-    await user.click(
-      screen.getByRole("button", { name: "actions.enableAccount" }),
-    )
+    await user.click(enableButton!)
     expect(mockHandleSetAccountDisabled).toHaveBeenCalledWith(
       expect.objectContaining({ id: "acc-1" }),
       false,
@@ -125,9 +128,22 @@ describe("AccountActionButtons", () => {
       screen.getByRole("button", { name: "common:actions.more" }),
     )
 
-    expect(
-      await screen.findByRole("button", { name: "actions.disableAccount" }),
-    ).toBeInTheDocument()
+    const menu = await screen.findByRole("menu")
+    const disableLabel = await within(menu).findByText("actions.disableAccount")
+    const deleteLabel = await within(menu).findByText("actions.delete")
+    const disableButton = disableLabel.closest("button")
+    const deleteButton = deleteLabel.closest("button")
+    expect(disableButton).not.toBeNull()
+    expect(deleteButton).not.toBeNull()
+
+    expect(disableButton!).toBeInTheDocument()
+    expect(disableButton!).toHaveClass("text-amber-600")
+    expect(deleteButton!).toBeInTheDocument()
+
+    const menuButtons = Array.from(menu.querySelectorAll("button"))
+    const disableIndex = menuButtons.indexOf(disableButton!)
+    const deleteIndex = menuButtons.indexOf(deleteButton!)
+    expect(deleteIndex - disableIndex).toBe(1)
     expect(
       screen.queryByRole("button", { name: "actions.enableAccount" }),
     ).toBeNull()
