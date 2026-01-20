@@ -23,9 +23,9 @@ interface AccountActionMenuItemProps {
 const menuItemClassName =
   "w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-dark-text-secondary hover:text-gray-900 dark:hover:text-dark-text-primary data-focus:bg-gray-50 dark:data-focus:bg-dark-bg-tertiary flex items-center space-x-2"
 const warningMenuItemClassName =
-  "w-full px-3 py-2 text-left text-sm text-amber-600 hover:text-amber-700 data-focus:bg-amber-50 dark:data-focus:bg-amber-900/40 flex items-center space-x-2"
+  "w-full px-3 py-2 text-left text-sm text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 data-focus:bg-amber-50 dark:data-focus:bg-amber-900/40 flex items-center space-x-2"
 const successMenuItemClassName =
-  "w-full px-3 py-2 text-left text-sm text-emerald-600 hover:text-emerald-700 data-focus:bg-emerald-50 dark:data-focus:bg-emerald-900/40 flex items-center space-x-2"
+  "w-full px-3 py-2 text-left text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 data-focus:bg-emerald-50 dark:data-focus:bg-emerald-900/40 flex items-center space-x-2"
 const destructiveMenuItemClassName =
   "w-full px-3 py-2 text-left text-sm text-red-600 hover:text-red-700 data-focus:bg-red-50 dark:data-focus:bg-red-900/50 flex items-center space-x-2"
 const disabledMenuItemClassName =
