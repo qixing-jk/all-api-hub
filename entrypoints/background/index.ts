@@ -22,10 +22,14 @@ import {
   initializeCookieInterceptors,
   setupCookieInterceptorListeners,
 } from "./cookieInterceptor"
+import { applyDevActionBranding } from "./devActionBranding"
 import { initializeServices } from "./servicesInit"
 
 export default defineBackground(() => {
   console.log("Hello background!", { id: browser.runtime.id })
+
+  // Apply dev-only branding early so the toolbar action is visually distinguishable.
+  void applyDevActionBranding()
 
   /**
    * 设置各种事件监听器
