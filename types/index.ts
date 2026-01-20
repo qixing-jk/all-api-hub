@@ -96,7 +96,9 @@ export interface SiteAccount {
   /**
    * Configuration version for migration tracking
    * 1.0.0: Initial version (no version field = version 0)
-   * 1.1.0: Introduced checkIn object structure
+   * 1.1.0: Introduced `checkIn` object structure (configVersion = 1)
+   * 1.1.1: Split site vs custom check-in state (configVersion = 2)
+   * 1.2.0: Persist/normalize `disabled` flag (configVersion = 3)
    * @since 1.0.0
    */
   configVersion?: number

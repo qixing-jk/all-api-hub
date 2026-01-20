@@ -1,15 +1,19 @@
 /**
  * Centralized configuration migration system
  * Handles version-based migrations for SiteAccount configurations
+ *
+ * This module is used by `accountStorage.getAllAccounts()` and on extension
+ * install/update to normalize persisted account data in storage.
  */
 
 import type { SiteAccount } from "~/types"
 
 import { migrateCheckInDualStatusConfig } from "./checkInDualStatusMigration"
 import { migrateCheckInConfig } from "./checkInMigration"
+import { migrateDisabledFlagConfig } from "./disabledFlagMigration"
 
 // Current version of the configuration schema
-export const CURRENT_CONFIG_VERSION = 2
+export const CURRENT_CONFIG_VERSION = 3
 
 /**
  * Migration function type
@@ -34,6 +38,13 @@ const migrations: Record<number, MigrationFunction> = {
   2: (account: SiteAccount): SiteAccount => {
     const migrated = migrateCheckInDualStatusConfig(account)
     migrated.configVersion = 2
+    return migrated
+  },
+
+  // Version 2 -> 3: Ensure `disabled` exists (default false) and is normalized.
+  3: (account: SiteAccount): SiteAccount => {
+    const migrated = migrateDisabledFlagConfig(account)
+    migrated.configVersion = 3
     return migrated
   },
 }
