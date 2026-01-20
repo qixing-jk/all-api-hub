@@ -3,9 +3,8 @@ import { useTranslation } from "react-i18next"
 
 import iconImage from "~/assets/icon.png"
 import { LanguageSwitcher } from "~/components/LanguageSwitcher"
-import { Badge, BodySmall, Heading5, IconButton } from "~/components/ui"
-import { getManifest } from "~/utils/browserApi"
-import { getDocsChangelogUrl } from "~/utils/docsLinks"
+import { BodySmall, Heading5, IconButton } from "~/components/ui"
+import { VersionBadge } from "~/components/VersionBadge"
 import { getRepository } from "~/utils/packageMeta"
 
 interface HeaderProps {
@@ -28,8 +27,6 @@ function Header({
 }: HeaderProps) {
   const { t } = useTranslation("ui")
   const repositoryUrl = getRepository()
-  const { version } = getManifest()
-  const changelogUrl = getDocsChangelogUrl(version)
 
   return (
     <header className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary sticky top-0 z-50 h-(--options-header-height) border-b border-gray-200 bg-white shadow-sm">
@@ -76,17 +73,8 @@ function Header({
                     {t("app.name")}
                   </a>
                 </Heading5>
-                <Badge asChild variant="secondary" className="text-xs">
-                  <a
-                    href={changelogUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="tap-highlight-transparent touch-manipulation"
-                    aria-label={`v${version} changelog`}
-                  >
-                    v{version}
-                  </a>
-                </Badge>
+                {/* Current extension version (links to the changelog). */}
+                <VersionBadge className="text-xs" />
               </div>
               <BodySmall className="dark:text-dark-text-tertiary hidden text-xs text-gray-500 sm:block sm:text-sm">
                 {t("app.description")}

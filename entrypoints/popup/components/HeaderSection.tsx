@@ -10,12 +10,11 @@ import { useTranslation } from "react-i18next"
 
 import iconImage from "~/assets/icon.png"
 import Tooltip from "~/components/Tooltip"
-import { Badge, BodySmall, Caption, IconButton } from "~/components/ui"
+import { BodySmall, Caption, IconButton } from "~/components/ui"
+import { VersionBadge } from "~/components/VersionBadge"
 import { COLORS } from "~/constants/designTokens"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { isExtensionSidePanel } from "~/utils/browser"
-import { getManifest } from "~/utils/browserApi"
-import { getDocsChangelogUrl } from "~/utils/docsLinks"
 import {
   openFullAccountManagerPage,
   openSettingsPage,
@@ -32,8 +31,6 @@ export default function HeaderSection() {
   const { t } = useTranslation(["ui", "account", "common"])
   const { isRefreshing, handleRefresh } = useAccountDataContext()
   const inSidePanel = isExtensionSidePanel()
-  const { version } = getManifest()
-  const changelogUrl = getDocsChangelogUrl(version)
 
   const handleGlobalRefresh = useCallback(async () => {
     try {
@@ -83,18 +80,8 @@ export default function HeaderSection() {
             <BodySmall weight="semibold" className="truncate">
               {t("ui:app.name")}
             </BodySmall>
-            {/* Keep version visible and link to the changelog, matching the options header behavior. */}
-            <Badge asChild variant="secondary" size="sm" className="shrink-0">
-              <a
-                href={changelogUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="tap-highlight-transparent touch-manipulation"
-                aria-label={`v${version} changelog`}
-              >
-                v{version}
-              </a>
-            </Badge>
+            {/* Current extension version (links to the changelog). */}
+            <VersionBadge size="sm" className="shrink-0" />
           </div>
           <Caption className="xs:block hidden truncate">
             {t("ui:app.description")}
