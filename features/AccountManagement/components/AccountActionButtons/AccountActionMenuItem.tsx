@@ -40,27 +40,34 @@ export const AccountActionMenuItem: React.FC<AccountActionMenuItemProps> = ({
   disabled = false,
 }) => (
   <MenuItem disabled={disabled}>
-    <button
-      onClick={(e) => {
-        e.preventDefault()
-        e.stopPropagation()
-        onClick(e)
-      }}
-      disabled={disabled}
-      className={
-        disabled
-          ? disabledMenuItemClassName
-          : isDestructive
-            ? destructiveMenuItemClassName
-            : tone === "warning"
-              ? warningMenuItemClassName
-              : tone === "success"
-                ? successMenuItemClassName
-                : menuItemClassName
-      }
-    >
-      <Icon className="h-4 w-4" />
-      <span>{label}</span>
-    </button>
+    {({ close, disabled: isMenuItemDisabled }) => (
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          if (isMenuItemDisabled) return
+          onClick(e)
+          // Ensure the dropdown closes immediately after selection to avoid UI flicker
+          // (e.g., Disable triggers a reload and would otherwise swap to Enable while still open).
+          close()
+        }}
+        disabled={isMenuItemDisabled}
+        className={
+          isMenuItemDisabled
+            ? disabledMenuItemClassName
+            : isDestructive
+              ? destructiveMenuItemClassName
+              : tone === "warning"
+                ? warningMenuItemClassName
+                : tone === "success"
+                  ? successMenuItemClassName
+                  : menuItemClassName
+        }
+      >
+        <Icon className="h-4 w-4" />
+        <span>{label}</span>
+      </button>
+    )}
   </MenuItem>
 )

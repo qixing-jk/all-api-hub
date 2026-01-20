@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react"
+import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
@@ -147,5 +147,49 @@ describe("AccountActionButtons", () => {
     expect(
       screen.queryByRole("button", { name: "actions.enableAccount" }),
     ).toBeNull()
+  })
+
+  it("closes the menu after clicking Disable to avoid showing Enable immediately", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <AccountActionButtons
+        site={
+          {
+            id: "acc-3",
+            disabled: false,
+            name: "Site",
+            siteType: "test",
+            baseUrl: "https://example.com",
+            token: "token",
+            userId: 1,
+            authType: "access_token",
+            checkIn: { enableDetection: false },
+          } as any
+        }
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+
+    const menu = await screen.findByRole("menu")
+    const disableLabel = await within(menu).findByText("actions.disableAccount")
+    const disableButton = disableLabel.closest("button")
+    expect(disableButton).not.toBeNull()
+
+    await user.click(disableButton!)
+
+    expect(mockHandleSetAccountDisabled).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "acc-3" }),
+      true,
+    )
+
+    await waitFor(() => {
+      expect(screen.queryByRole("menu")).toBeNull()
+    })
   })
 })
