@@ -356,7 +356,6 @@ export function TagPicker({
                 disabled={disabled || isWorking}
                 id={getOptionId("create")}
                 data-active={activeIndex === 0}
-                aria-selected={activeIndex === 0}
               >
                 <PlusIcon className="mr-2 h-4 w-4" />
                 {t("form.tagsCreate", { name: query.trim() })}
