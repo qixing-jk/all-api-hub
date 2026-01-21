@@ -269,6 +269,7 @@ export function TagPicker({
                               value={editingName}
                               onChange={(e) => setEditingName(e.target.value)}
                               className="h-8"
+                              containerClassName="w-full"
                               disabled={disabled || isWorking}
                               autoFocus
                             />

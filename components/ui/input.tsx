@@ -30,6 +30,14 @@ const inputVariants = cva(
 export interface InputProps
   extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "size">,
     VariantProps<typeof inputVariants> {
+  /**
+   * Classes applied to the outer wrapper `<div>`.
+   *
+   * Use this for layout utilities (e.g. `w-full`, `flex-1`) so the component can
+   * size correctly when used as a flex/grid item, while keeping `className`
+   * reserved for styling the actual `<input>` element.
+   */
+  containerClassName?: string
   leftIcon?: React.ReactNode
   rightIcon?: React.ReactNode
   error?: string
@@ -38,13 +46,23 @@ export interface InputProps
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
   (
-    { className, variant, size, leftIcon, rightIcon, error, success, ...props },
+    {
+      className,
+      containerClassName,
+      variant,
+      size,
+      leftIcon,
+      rightIcon,
+      error,
+      success,
+      ...props
+    },
     ref,
   ) => {
     const inputVariant = error ? "error" : success ? "success" : variant
 
     return (
-      <div className="relative">
+      <div className={cn("relative", containerClassName)}>
         {leftIcon && (
           <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
             <span className="text-gray-400 dark:text-gray-500">{leftIcon}</span>
