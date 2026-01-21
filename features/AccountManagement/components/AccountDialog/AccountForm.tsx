@@ -134,6 +134,12 @@ export default function AccountForm({
 }: AccountFormProps) {
   const { t } = useTranslation("accountDialog")
 
+  const trimmedManualBalanceUsd = manualBalanceUsd.trim()
+  const parsedManualBalanceUsd = Number.parseFloat(manualBalanceUsd)
+  const isManualBalanceUsdInvalid =
+    trimmedManualBalanceUsd !== "" &&
+    (!Number.isFinite(parsedManualBalanceUsd) || parsedManualBalanceUsd < 0)
+
   return (
     <>
       {/* 网站名称 */}
@@ -292,9 +298,7 @@ export default function AccountForm({
         label={t("form.manualBalanceUsd")}
         description={t("form.manualBalanceUsdDesc")}
         error={
-          manualBalanceUsd.trim() &&
-          (!Number.isFinite(Number.parseFloat(manualBalanceUsd)) ||
-            Number.parseFloat(manualBalanceUsd) < 0)
+          isManualBalanceUsdInvalid
             ? t("form.manualBalanceUsdError")
             : undefined
         }
@@ -312,13 +316,7 @@ export default function AccountForm({
               USD
             </span>
           }
-          variant={
-            manualBalanceUsd.trim() &&
-            (!Number.isFinite(Number.parseFloat(manualBalanceUsd)) ||
-              Number.parseFloat(manualBalanceUsd) < 0)
-              ? "error"
-              : "default"
-          }
+          variant={isManualBalanceUsdInvalid ? "error" : "default"}
         />
       </FormField>
 
