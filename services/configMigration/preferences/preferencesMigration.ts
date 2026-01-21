@@ -3,6 +3,7 @@
  * Handles version-based migrations for UserPreferences configurations
  */
 
+import { DATA_TYPE_CASHFLOW, DATA_TYPE_CONSUMPTION } from "~/constants"
 import { migrateAutoRefreshConfig } from "~/services/configMigration/preferences/autoRefreshConfigMigration"
 import { migrateNewApiConfig } from "~/services/configMigration/preferences/newApiConfigMigration"
 import { migrateWebDavConfig } from "~/services/configMigration/preferences/webDavConfigMigration"
@@ -11,7 +12,7 @@ import type { UserPreferences } from "../../userPreferences"
 import { migrateSortingConfig } from "./sortingConfigMigration"
 
 // Current version of the preferences schema
-export const CURRENT_PREFERENCES_VERSION = 7
+export const CURRENT_PREFERENCES_VERSION = 8
 
 /**
  * Migration function type
@@ -148,6 +149,33 @@ const migrations: Record<number, PreferencesMigrationFunction> = {
       ...rest,
       managedSiteModelSync: legacyConfig,
       preferencesVersion: 7,
+    }
+  },
+
+  // Version 7 -> 8: Rename dashboard tab value consumption -> cashflow
+  8: (prefs: UserPreferences): UserPreferences => {
+    console.log(
+      "[PreferencesMigration] Migrating preferences from v7 to v8 (cashflow tab rename)",
+    )
+
+    /**
+     * Historically the dashboard used `activeTab = \"consumption\"` for the first tab,
+     * but that tab now represents today's cashflow (consumption + income).
+     *
+     * We keep storage backward-compatible by mapping the legacy value to the new one.
+     */
+    const legacyActiveTab = (prefs as any).activeTab
+    if (legacyActiveTab !== DATA_TYPE_CONSUMPTION) {
+      return {
+        ...prefs,
+        preferencesVersion: 8,
+      }
+    }
+
+    return {
+      ...prefs,
+      activeTab: DATA_TYPE_CASHFLOW as any,
+      preferencesVersion: 8,
     }
   },
 }

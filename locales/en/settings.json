@@ -19,12 +19,13 @@
     "description": "Customize the appearance and display preferences of the plugin",
     "defaultCurrency": "Default Currency Unit",
     "currencyUnit": "Currency Unit",
-    "currencyDesc": "Set the default currency unit for balance and consumption display",
+    "currencyDesc": "Set the default currency unit for balance and cashflow display",
     "usd": "USD ($)",
     "cny": "CNY (¥)",
     "defaultTab": "Default Tab",
     "defaultTabDesc": "Set the default tab displayed when the plugin starts",
-    "todayConsumption": "Today's Consumption",
+    "todayCashflow": "Today's Cashflow",
+    "todayConsumption": "Today's Cashflow",
     "totalBalance": "Total Balance"
   },
   "refresh": {

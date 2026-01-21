@@ -36,6 +36,7 @@
   },
   "stats": {
     "totalBalance": "Total Balance",
+    "todayCashflow": "Today's Cashflow",
     "todayConsumption": "Today's Consumption",
     "todayIncome": "Today's Income",
     "prompt": "Prompt",

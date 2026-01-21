@@ -1,4 +1,8 @@
-import { DATA_TYPE_BALANCE, DATA_TYPE_CONSUMPTION } from "~/constants"
+import {
+  DATA_TYPE_BALANCE,
+  DATA_TYPE_CASHFLOW,
+  DATA_TYPE_CONSUMPTION,
+} from "~/constants"
 import { TempWindowHealthStatusCode } from "~/types/tempWindow"
 
 export enum SiteHealthStatus {
@@ -249,7 +253,10 @@ export interface ApiResponse<T = any> {
 }
 
 // 用于排序的字段类型
-export type SortField = "name" | BalanceType
+export type SortField =
+  | "name"
+  | typeof DATA_TYPE_CONSUMPTION
+  | typeof DATA_TYPE_BALANCE
 export type SortOrder = "asc" | "desc"
 
 // 货币类型
@@ -344,9 +351,7 @@ export interface ApiToken {
   models?: string // 某些站点使用 models 而不是 model_limits
 }
 
-export type BalanceType =
-  | typeof DATA_TYPE_CONSUMPTION
-  | typeof DATA_TYPE_BALANCE
+export type BalanceType = typeof DATA_TYPE_CASHFLOW | typeof DATA_TYPE_BALANCE
 
 export enum AuthTypeEnum {
   AccessToken = "access_token",

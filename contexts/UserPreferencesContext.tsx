@@ -7,7 +7,7 @@ import {
   useState,
 } from "react"
 
-import { DATA_TYPE_CONSUMPTION } from "~/constants"
+import { DATA_TYPE_CASHFLOW } from "~/constants"
 import { NEW_API, type ManagedSiteType } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import {
@@ -923,7 +923,7 @@ export const UserPreferencesProvider = ({
   const value = {
     preferences,
     isLoading,
-    activeTab: preferences?.activeTab || DATA_TYPE_CONSUMPTION,
+    activeTab: preferences?.activeTab || DATA_TYPE_CASHFLOW,
     currencyType: preferences?.currencyType || "USD",
     sortField: preferences?.sortField || UI_CONSTANTS.SORT.DEFAULT_FIELD,
     sortOrder: preferences?.sortOrder || UI_CONSTANTS.SORT.DEFAULT_ORDER,

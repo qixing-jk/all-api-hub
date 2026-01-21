@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 
+import { DATA_TYPE_CASHFLOW, DATA_TYPE_CONSUMPTION } from "~/constants"
 import { NEW_API } from "~/constants/siteType"
 import {
   CURRENT_PREFERENCES_VERSION,
@@ -24,7 +25,8 @@ function createV0Preferences(
 ): UserPreferences {
   return {
     themeMode: "system" as const,
-    activeTab: "consumption" as const,
+    // Legacy stored value before the v7->v8 cashflow tab rename migration.
+    activeTab: DATA_TYPE_CONSUMPTION as any,
     currencyType: "USD" as const,
     sortField: "balance" as const,
     sortOrder: "desc" as const,
@@ -121,6 +123,7 @@ describe("preferencesMigration", () => {
     it("does not modify preferences at current version", () => {
       const prefs = createV0Preferences({
         preferencesVersion: CURRENT_PREFERENCES_VERSION,
+        activeTab: DATA_TYPE_CASHFLOW,
         managedSiteModelSync: {
           enabled: false,
           interval: 24 * 60 * 60 * 1000,
@@ -138,6 +141,29 @@ describe("preferencesMigration", () => {
 
       expect(result.preferencesVersion).toBe(CURRENT_PREFERENCES_VERSION)
       expect(result).toEqual(prefs)
+    })
+
+    it("migrates v7 activeTab consumption to cashflow", () => {
+      const prefs = createV0Preferences({
+        preferencesVersion: 7,
+        // Explicitly simulate a v7 prefs object that still has the legacy value.
+        activeTab: DATA_TYPE_CONSUMPTION as any,
+        managedSiteModelSync: {
+          enabled: false,
+          interval: 24 * 60 * 60 * 1000,
+          concurrency: 2,
+          maxRetries: 2,
+          rateLimit: { requestsPerMinute: 20, burst: 5 },
+          allowedModels: [],
+          globalChannelModelFilters: [],
+        },
+        newApiModelSync: undefined,
+      })
+
+      const result = migratePreferences(prefs)
+
+      expect(result.preferencesVersion).toBe(CURRENT_PREFERENCES_VERSION)
+      expect(result.activeTab).toBe(DATA_TYPE_CASHFLOW)
     })
 
     it("migrates v0 preferences to current version", () => {
@@ -346,7 +372,8 @@ describe("preferencesMigration", () => {
       // Manually build prefs without relying on helper to avoid pre-populated structures
       const prefs: UserPreferences = {
         themeMode: "system",
-        activeTab: "consumption",
+        // Legacy stored value before the v7->v8 cashflow tab rename migration.
+        activeTab: DATA_TYPE_CONSUMPTION as any,
         currencyType: "USD",
         sortField: "balance",
         sortOrder: "desc",

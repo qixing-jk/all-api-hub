@@ -4,7 +4,7 @@ import CountUp from "react-countup"
 import { useTranslation } from "react-i18next"
 
 import { BodySmall } from "~/components/ui"
-import { DATA_TYPE_BALANCE, DATA_TYPE_CONSUMPTION } from "~/constants"
+import { DATA_TYPE_BALANCE, DATA_TYPE_CASHFLOW } from "~/constants"
 import { ANIMATIONS, COLORS } from "~/constants/designTokens"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
@@ -108,7 +108,7 @@ export const BalanceTabs: React.FC = () => {
   }, [stats, displayData])
 
   const handleTabChange = (index: number) => {
-    const newTab = index === 0 ? DATA_TYPE_CONSUMPTION : DATA_TYPE_BALANCE
+    const newTab = index === 0 ? DATA_TYPE_CASHFLOW : DATA_TYPE_BALANCE
     updateActiveTab(newTab)
   }
 
@@ -118,7 +118,7 @@ export const BalanceTabs: React.FC = () => {
 
   return (
     <TabGroup
-      selectedIndex={activeTab === DATA_TYPE_CONSUMPTION ? 0 : 1}
+      selectedIndex={activeTab === DATA_TYPE_CASHFLOW ? 0 : 1}
       onChange={handleTabChange}
       className="space-y-2"
     >
@@ -126,7 +126,7 @@ export const BalanceTabs: React.FC = () => {
         <TabList
           className={`flex space-x-1 ${COLORS.background.tertiary} rounded-lg p-1`}
         >
-          <StyledTab>{t("account:stats.todayConsumption")}</StyledTab>
+          <StyledTab>{t("account:stats.todayCashflow")}</StyledTab>
           <StyledTab>{t("account:stats.totalBalance")}</StyledTab>
         </TabList>
       </div>
@@ -136,7 +136,7 @@ export const BalanceTabs: React.FC = () => {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <BodySmall className="font-medium">
-                {t("account:stats.todayConsumption")}
+                {t("account:stats.todayCashflow")}
               </BodySmall>
               <BalanceDisplay
                 value={totalConsumption[currencyType]}

@@ -19,12 +19,13 @@
     "description": "自定义插件的外观和显示偏好",
     "defaultCurrency": "默认货币单位",
     "currencyUnit": "货币单位",
-    "currencyDesc": "设置余额和消费显示的默认货币单位",
+    "currencyDesc": "设置余额和收支显示的默认货币单位",
     "usd": "美元 ($)",
     "cny": "人民币 (¥)",
     "defaultTab": "默认标签页",
     "defaultTabDesc": "设置插件启动时显示的默认标签页",
-    "todayConsumption": "今日消耗",
+    "todayCashflow": "今日收支",
+    "todayConsumption": "今日收支",
     "totalBalance": "总余额"
   },
   "refresh": {

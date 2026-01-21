@@ -36,6 +36,7 @@
   },
   "stats": {
     "totalBalance": "总余额",
+    "todayCashflow": "今日收支",
     "todayConsumption": "今日消耗",
     "todayIncome": "今日收入",
     "prompt": "提示",

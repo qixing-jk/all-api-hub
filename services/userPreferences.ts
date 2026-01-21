@@ -2,7 +2,7 @@ import { isEqual } from "lodash-es"
 
 import { Storage } from "@plasmohq/storage"
 
-import { DATA_TYPE_BALANCE, DATA_TYPE_CONSUMPTION } from "~/constants"
+import { DATA_TYPE_BALANCE, DATA_TYPE_CASHFLOW } from "~/constants"
 import { NEW_API, VELOERA, type ManagedSiteType } from "~/constants/siteType"
 import {
   CURRENT_PREFERENCES_VERSION,
@@ -295,7 +295,7 @@ const STORAGE_KEYS = {
 
 // 默认配置
 export const DEFAULT_PREFERENCES: UserPreferences = {
-  activeTab: DATA_TYPE_CONSUMPTION,
+  activeTab: DATA_TYPE_CASHFLOW,
   currencyType: "USD",
   sortField: DATA_TYPE_BALANCE, // 与 UI_CONSTANTS.SORT.DEFAULT_FIELD 保持一致
   sortOrder: "desc", // 与 UI_CONSTANTS.SORT.DEFAULT_ORDER 保持一致
