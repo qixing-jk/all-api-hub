@@ -46,6 +46,10 @@
     "reDetectInfo": "如果站点信息有变化，建议点击\"重新识别\"按钮（需要在目标站点先自行登录）"
   },
   "form": {
+    "manualBalanceUsd": "手动余额 (USD)",
+    "manualBalanceUsdPlaceholder": "留空则自动获取",
+    "manualBalanceUsdDesc": "当站点无法自动获取余额/额度时，可手动填写",
+    "manualBalanceUsdError": "请输入有效的金额（>= 0）",
     "siteName": "网站名称",
     "siteType": "站点类型",
     "username": "用户名",

@@ -138,12 +138,14 @@ export default function AccountDialog({
               userId={state.userId}
               accessToken={state.accessToken}
               exchangeRate={state.exchangeRate}
+              manualBalanceUsd={state.manualBalanceUsd}
               showAccessToken={state.showAccessToken}
               onSiteNameChange={setters.setSiteName}
               onUsernameChange={setters.setUsername}
               onUserIdChange={setters.setUserId}
               onAccessTokenChange={setters.setAccessToken}
               onExchangeRateChange={setters.setExchangeRate}
+              onManualBalanceUsdChange={setters.setManualBalanceUsd}
               onToggleShowAccessToken={() =>
                 setters.setShowAccessToken(!state.showAccessToken)
               }

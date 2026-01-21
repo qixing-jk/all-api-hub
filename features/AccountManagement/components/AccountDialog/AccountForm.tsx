@@ -36,6 +36,7 @@ interface AccountFormProps {
   userId: string
   accessToken: string
   exchangeRate: string
+  manualBalanceUsd: string
   showAccessToken: boolean
   notes: string
   selectedTagIds: string[]
@@ -46,6 +47,7 @@ interface AccountFormProps {
   onUserIdChange: (value: string) => void
   onAccessTokenChange: (value: string) => void
   onExchangeRateChange: (value: string) => void
+  onManualBalanceUsdChange: (value: string) => void
   onToggleShowAccessToken: () => void
   onNotesChange: (value: string) => void
   onSelectedTagIdsChange: (value: string[]) => void
@@ -103,6 +105,7 @@ export default function AccountForm({
   userId,
   accessToken,
   exchangeRate,
+  manualBalanceUsd,
   showAccessToken,
   notes,
   selectedTagIds,
@@ -113,6 +116,7 @@ export default function AccountForm({
   onUserIdChange,
   onAccessTokenChange,
   onExchangeRateChange,
+  onManualBalanceUsdChange,
   onToggleShowAccessToken,
   onNotesChange,
   onSelectedTagIdsChange,
@@ -281,6 +285,40 @@ export default function AccountForm({
               : "default"
           }
           required
+        />
+      </FormField>
+
+      <FormField
+        label={t("form.manualBalanceUsd")}
+        description={t("form.manualBalanceUsdDesc")}
+        error={
+          manualBalanceUsd.trim() &&
+          (!Number.isFinite(Number.parseFloat(manualBalanceUsd)) ||
+            Number.parseFloat(manualBalanceUsd) < 0)
+            ? t("form.manualBalanceUsdError")
+            : undefined
+        }
+      >
+        <Input
+          type="number"
+          step="any"
+          min="0"
+          value={manualBalanceUsd}
+          onChange={(e) => onManualBalanceUsdChange(e.target.value)}
+          placeholder={t("form.manualBalanceUsdPlaceholder")}
+          leftIcon={<CurrencyDollarIcon className="h-5 w-5" />}
+          rightIcon={
+            <span className="dark:text-dark-text-secondary text-sm text-gray-500">
+              USD
+            </span>
+          }
+          variant={
+            manualBalanceUsd.trim() &&
+            (!Number.isFinite(Number.parseFloat(manualBalanceUsd)) ||
+              Number.parseFloat(manualBalanceUsd) < 0)
+              ? "error"
+              : "default"
+          }
         />
       </FormField>
 
