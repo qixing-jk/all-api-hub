@@ -1,14 +1,12 @@
+import { useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { Modal } from "~/components/ui/Dialog/Modal"
+import { DestructiveConfirmDialog } from "~/components/ui"
 import { accountStorage } from "~/services/accountStorage"
 import type { DisplaySiteData } from "~/types"
 
 import { AccountInfo } from "./AccountInfo"
-import { ActionButtons } from "./ActionButtons"
-import { DialogHeader } from "./DialogHeader"
-import { WarningSection } from "./WarningSection"
 
 interface DelAccountDialogProps {
   isOpen: boolean
@@ -26,11 +24,13 @@ export default function DelAccountDialog({
   account,
   onDeleted,
 }: DelAccountDialogProps) {
-  const { t } = useTranslation(["ui", "messages"])
+  const { t } = useTranslation(["ui", "messages", "common"])
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const handleDelete = async () => {
     if (!account) return
 
+    setIsDeleting(true)
     try {
       await toast.promise(accountStorage.deleteAccount(account.id), {
         loading: t("ui:dialog.delete.deleting", { name: account.name }),
@@ -50,20 +50,33 @@ export default function DelAccountDialog({
     } catch (error) {
       // toast.promise already handles showing the error toast
       console.error("删除账号失败:", error)
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  const handleClose = () => {
+    if (!isDeleting) {
+      onClose()
     }
   }
 
   return (
-    <Modal
+    <DestructiveConfirmDialog
       isOpen={isOpen}
-      onClose={onClose}
-      header={<DialogHeader />}
-      footer={<ActionButtons onClose={onClose} onDelete={handleDelete} />}
-    >
-      <div>
-        <WarningSection accountName={account?.name} />
-        {account && <AccountInfo account={account} />}
-      </div>
-    </Modal>
+      onClose={handleClose}
+      title={t("ui:dialog.delete.title")}
+      warningTitle={t("ui:dialog.delete.confirmDeletion")}
+      description={t("ui:dialog.delete.warning", {
+        accountName: account?.name ?? "",
+      })}
+      cancelLabel={t("common:actions.cancel")}
+      confirmLabel={t("ui:dialog.delete.confirmDelete")}
+      onConfirm={() => {
+        void handleDelete()
+      }}
+      isWorking={isDeleting}
+      details={account ? <AccountInfo account={account} /> : null}
+    />
   )
 }

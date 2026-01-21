@@ -36,18 +36,8 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { useChannelDialog } from "~/components/ChannelDialog"
-import { Input } from "~/components/ui"
+import { DestructiveConfirmDialog, Input } from "~/components/ui"
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/Alert"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "~/components/ui/alert-dialog"
 import { Button } from "~/components/ui/button"
 import { Checkbox } from "~/components/ui/checkbox"
 import {
@@ -936,32 +926,27 @@ export default function ManagedSiteChannels({
         </div>
       </div>
 
-      <AlertDialog
-        open={isDeleteDialogOpen}
-        onOpenChange={setIsDeleteDialogOpen}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {pendingDeleteIds.length > 1
-                ? t("dialog.deleteTitlePlural")
-                : t("dialog.deleteTitle")}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("dialog.deleteDescription")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>
-              {t("dialog.cancel")}
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} disabled={isDeleting}>
-              {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {t("dialog.confirm")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DestructiveConfirmDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => {
+          if (!isDeleting) {
+            setIsDeleteDialogOpen(false)
+            setPendingDeleteIds([])
+          }
+        }}
+        title={
+          pendingDeleteIds.length > 1
+            ? t("dialog.deleteTitlePlural")
+            : t("dialog.deleteTitle")
+        }
+        description={t("dialog.deleteDescription")}
+        cancelLabel={t("dialog.cancel")}
+        confirmLabel={t("dialog.confirm")}
+        onConfirm={() => {
+          void handleDelete()
+        }}
+        isWorking={isDeleting}
+      />
 
       <ChannelFilterDialog
         channel={filterDialogChannel}

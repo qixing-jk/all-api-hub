@@ -9,17 +9,13 @@ import {
 import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Badge, Button, IconButton, Input } from "~/components/ui"
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "~/components/ui/alert-dialog"
+  Badge,
+  Button,
+  DestructiveConfirmDialog,
+  IconButton,
+  Input,
+} from "~/components/ui"
 import {
   Popover,
   PopoverContent,
@@ -86,7 +82,7 @@ export function TagPicker({
   disabled = false,
   placeholder,
 }: TagPickerProps) {
-  const { t } = useTranslation("accountDialog")
+  const { t } = useTranslation(["accountDialog", "ui"])
   const [query, setQuery] = useState("")
   const [isOpen, setIsOpen] = useState(false)
   const [editingTagId, setEditingTagId] = useState<string | null>(null)
@@ -328,7 +324,10 @@ export function TagPicker({
                             type="button"
                             variant="ghost"
                             size="sm"
-                            onClick={() => setDeleteTarget(tag)}
+                            onClick={() => {
+                              setIsOpen(false)
+                              setDeleteTarget(tag)
+                            }}
                             aria-label={t("form.tagsDelete")}
                             disabled={disabled || isWorking}
                           >
@@ -369,37 +368,20 @@ export function TagPicker({
         </div>
       )}
 
-      <AlertDialog
-        open={Boolean(deleteTarget)}
-        onOpenChange={(open) => {
-          if (!open) setDeleteTarget(null)
+      <DestructiveConfirmDialog
+        isOpen={Boolean(deleteTarget)}
+        onClose={() => setDeleteTarget(null)}
+        title={t("form.tagsDeleteTitle")}
+        description={t("form.tagsDeleteDescription", {
+          name: deleteTarget?.name ?? "",
+        })}
+        cancelLabel={t("form.tagsDeleteCancel")}
+        confirmLabel={t("form.tagsDeleteConfirm")}
+        onConfirm={() => {
+          void confirmDelete()
         }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("form.tagsDeleteTitle")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("form.tagsDeleteDescription", {
-                name: deleteTarget?.name ?? "",
-              })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isWorking}>
-              {t("form.tagsDeleteCancel")}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(e) => {
-                e.preventDefault()
-                void confirmDelete()
-              }}
-              disabled={isWorking}
-            >
-              {t("form.tagsDeleteConfirm")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        isWorking={isWorking}
+      />
     </div>
   )
 }

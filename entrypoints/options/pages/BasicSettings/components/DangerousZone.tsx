@@ -7,12 +7,11 @@ import {
   AlertTitle,
   BodySmall,
   Button,
+  DestructiveConfirmDialog,
   Heading5,
 } from "~/components/ui"
-import { Modal } from "~/components/ui/Dialog/Modal"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-
-import { showResetToast } from "../../../../../utils/toastHelpers"
+import { showResetToast } from "~/utils/toastHelpers"
 
 /**
  * Renders the destructive reset section with confirmation dialog for settings.
@@ -73,45 +72,23 @@ export default function DangerousZone() {
         </Alert>
       </section>
 
-      <Modal
+      <DestructiveConfirmDialog
         isOpen={isConfirmDialogOpen}
         onClose={handleCloseConfirmDialog}
         size="sm"
-        header={
-          <div className="pr-8">
-            <h3 className="dark:text-dark-text-primary text-lg font-semibold text-gray-900">
-              {t("messages.confirmReset")}
-            </h3>
-          </div>
+        title={t("messages.confirmReset")}
+        description={t("messages.resetConfirmDesc", {
+          name: t("danger.resetAllSettings"),
+        })}
+        cancelLabel={t("common:actions.cancel")}
+        confirmLabel={
+          isResetting ? t("common:status.resetting") : t("danger.resetSettings")
         }
-        footer={
-          <div className="flex justify-end gap-3">
-            <Button
-              onClick={handleCloseConfirmDialog}
-              variant="outline"
-              disabled={isResetting}
-            >
-              {t("common:actions.cancel")}
-            </Button>
-            <Button
-              onClick={handleResetConfirm}
-              variant="destructive"
-              loading={isResetting}
-              disabled={isResetting}
-            >
-              {isResetting
-                ? t("common:status.resetting")
-                : t("danger.resetSettings")}
-            </Button>
-          </div>
-        }
-      >
-        <p className="dark:text-dark-text-secondary text-sm text-gray-600">
-          {t("messages.resetConfirmDesc", {
-            name: t("danger.resetAllSettings"),
-          })}
-        </p>
-      </Modal>
+        onConfirm={() => {
+          void handleResetConfirm()
+        }}
+        isWorking={isResetting}
+      />
     </>
   )
 }

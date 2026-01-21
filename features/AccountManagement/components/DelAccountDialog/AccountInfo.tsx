@@ -31,7 +31,7 @@ export const AccountInfo: FC<{ account: DisplaySiteData }> = ({ account }) => {
   const { t } = useTranslation("ui")
 
   return (
-    <div className="dark:bg-dark-bg-secondary mb-4 space-y-1 rounded-lg bg-gray-50 p-3 text-sm">
+    <div className="dark:bg-dark-bg-secondary space-y-1 rounded-lg bg-gray-50 p-3 text-sm">
       <AccountInfoDetail
         label={t("dialog.delete.siteName")}
         value={account.name}
