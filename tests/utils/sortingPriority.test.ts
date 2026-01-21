@@ -1378,8 +1378,8 @@ describe("createDynamicSortComparator", () => {
         pinnedAccountIds,
       )
 
-      // account-1 is pinned, so despite account-2 being detected and having better health
-      expect(comparator(account1, account2)).toBeLessThan(0)
+      // CURRENT_SITE is evaluated before PINNED in the default config, so the detected account wins.
+      expect(comparator(account1, account2)).toBeGreaterThan(0)
     })
 
     it("should handle array.sort() correctly", () => {

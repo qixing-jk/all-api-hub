@@ -180,7 +180,7 @@ const migrations: Record<number, PreferencesMigrationFunction> = {
   },
   9: (prefs: UserPreferences): UserPreferences => {
     console.log(
-      "[PreferencesMigration] Migrating preferences from v8 to v9 (diabled accounts sorting config)",
+      "[PreferencesMigration] Migrating preferences from v8 to v9 (disabled accounts sorting config)",
     )
 
     const migratedSortingConfig = migrateSortingConfig(
