@@ -124,7 +124,7 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
           title={
             isAccountDisabled
               ? t("list.site.disabled")
-              : t("list.balance.refreshConsumption")
+              : t("list.balance.refreshCashflow")
           }
           onClick={isAccountDisabled ? undefined : handleRefreshClick}
           isRefreshing={isRefreshing}

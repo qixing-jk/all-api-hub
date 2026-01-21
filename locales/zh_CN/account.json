@@ -15,7 +15,7 @@
     },
     "balance": {
       "refreshBalance": "点击刷新余额",
-      "refreshConsumption": "点击刷新今日消费",
+      "refreshCashflow": "点击刷新今日消费",
       "refreshIncome": "点击刷新今日收入"
     },
     "site": {
