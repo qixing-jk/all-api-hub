@@ -37,6 +37,7 @@ interface AccountFormProps {
   accessToken: string
   exchangeRate: string
   manualBalanceUsd: string
+  isManualBalanceUsdInvalid: boolean
   showAccessToken: boolean
   notes: string
   selectedTagIds: string[]
@@ -106,6 +107,7 @@ export default function AccountForm({
   accessToken,
   exchangeRate,
   manualBalanceUsd,
+  isManualBalanceUsdInvalid,
   showAccessToken,
   notes,
   selectedTagIds,
@@ -133,12 +135,6 @@ export default function AccountForm({
   onCheckInChange,
 }: AccountFormProps) {
   const { t } = useTranslation("accountDialog")
-
-  const trimmedManualBalanceUsd = manualBalanceUsd.trim()
-  const parsedManualBalanceUsd = Number.parseFloat(manualBalanceUsd)
-  const isManualBalanceUsdInvalid =
-    trimmedManualBalanceUsd !== "" &&
-    (!Number.isFinite(parsedManualBalanceUsd) || parsedManualBalanceUsd < 0)
 
   return (
     <>

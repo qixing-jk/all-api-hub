@@ -139,6 +139,7 @@ export default function AccountDialog({
               accessToken={state.accessToken}
               exchangeRate={state.exchangeRate}
               manualBalanceUsd={state.manualBalanceUsd}
+              isManualBalanceUsdInvalid={state.isManualBalanceUsdInvalid}
               showAccessToken={state.showAccessToken}
               onSiteNameChange={setters.setSiteName}
               onUsernameChange={setters.setUsername}

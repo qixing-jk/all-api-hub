@@ -80,6 +80,7 @@ describe("accountOperations manual quota", () => {
     const saved = await accountStorage.getAccountById(accountId)
     expect(saved).not.toBeNull()
     expect(saved?.health.status).toBe(SiteHealthStatus.Warning)
+    expect((saved as any)?.manualBalanceUsd).toBe(manualBalanceUsd)
     expect(saved?.account_info.quota).toBe(expectedQuota)
 
     const display = accountStorage.convertToDisplayData(saved!)
@@ -105,6 +106,7 @@ describe("accountOperations manual quota", () => {
 
     expect(updatedResult.success).toBe(true)
     const updated = await accountStorage.getAccountById(accountId)
+    expect((updated as any)?.manualBalanceUsd).toBe("2")
     expect(updated?.account_info.quota).toBe(
       2 * UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR,
     )

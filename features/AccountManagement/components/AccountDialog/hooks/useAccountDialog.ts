@@ -9,6 +9,7 @@ import {
   autoDetectAccount,
   getSiteName,
   isValidAccount,
+  parseManualQuotaFromUsd,
   validateAndSaveAccount,
   validateAndUpdateAccount,
 } from "~/services/accountOperations"
@@ -156,7 +157,7 @@ export function useAccountDialog({
           setAccessToken(siteAccount.account_info.access_token)
           setUserId(siteAccount.account_info.id.toString())
           setExchangeRate(siteAccount.exchange_rate.toString())
-          setManualBalanceUsd("")
+          setManualBalanceUsd(siteAccount.manualBalanceUsd ?? "")
           setNotes(siteAccount.notes || "")
           setTagIds(siteAccount.tagIds || [])
           setCheckIn({
@@ -581,10 +582,9 @@ export function useAccountDialog({
     cookieAuthSessionCookie,
     exchangeRate,
   })
-  const parsedManualBalance = Number.parseFloat(manualBalanceUsd)
-  const isManualBalanceValid =
-    !manualBalanceUsd.trim() ||
-    (Number.isFinite(parsedManualBalance) && parsedManualBalance >= 0)
+  const isManualBalanceUsdInvalid =
+    manualBalanceUsd.trim() !== "" &&
+    parseManualQuotaFromUsd(manualBalanceUsd) === undefined
 
   return {
     state: {
@@ -602,13 +602,14 @@ export function useAccountDialog({
       showManualForm,
       exchangeRate,
       manualBalanceUsd,
+      isManualBalanceUsdInvalid,
       currentTabUrl,
       notes,
       tagIds,
       checkIn,
       siteType,
       authType,
-      isFormValid: isFormValid && isManualBalanceValid,
+      isFormValid: isFormValid && !isManualBalanceUsdInvalid,
       isAutoConfiguring,
       cookieAuthSessionCookie,
       isImportingCookies,

@@ -111,6 +111,12 @@ export interface SiteAccount {
    */
   checkIn: CheckInConfig
   /**
+   * Manual balance override in USD, as entered by the user.
+   *
+   * Empty/undefined means the account should rely on auto-fetched quota/balance.
+   */
+  manualBalanceUsd?: string
+  /**
    * Configuration version for migration tracking
    * 1.0.0: Initial version (no version field = version 0)
    * 1.1.0: Introduced `checkIn` object structure (configVersion = 1)

@@ -34,9 +34,13 @@ import { autoDetectSmart } from "./autoDetectService"
 const logger = createLogger("AccountOperations")
 
 /**
+ * Parses a manual balance in USD from a string value and converts it to quota
+ * units.
  *
+ * Returns undefined when the value is empty/undefined, not a finite number, or
+ * negative.
  */
-function parseManualQuotaFromUsd(
+export function parseManualQuotaFromUsd(
   value: string | undefined,
 ): number | undefined {
   if (value === undefined) return undefined
@@ -339,6 +343,8 @@ export async function validateAndSaveAccount(
   }
 
   const manualQuota = parseManualQuotaFromUsd(manualBalanceUsd)
+  const normalizedManualBalanceUsd =
+    manualQuota === undefined ? "" : manualBalanceUsd!.trim()
 
   try {
     // 获取账号余额和今日使用情况
@@ -378,6 +384,7 @@ export async function validateAndSaveAccount(
       exchange_rate:
         parseFloat(exchangeRate) || UI_CONSTANTS.EXCHANGE_RATE.DEFAULT, // 使用用户输入的汇率
       notes: notes || "",
+      manualBalanceUsd: normalizedManualBalanceUsd,
       tagIds: normalizedTagIds,
       checkIn: freshAccountData.checkIn,
       account_info: {
@@ -428,6 +435,7 @@ export async function validateAndSaveAccount(
       exchange_rate:
         parseFloat(exchangeRate) || UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
       notes: notes || "",
+      manualBalanceUsd: normalizedManualBalanceUsd,
       tagIds: normalizedTagIds,
       checkIn: checkInConfig,
       health: {
@@ -544,6 +552,8 @@ export async function validateAndUpdateAccount(
   }
 
   const manualQuota = parseManualQuotaFromUsd(manualBalanceUsd)
+  const normalizedManualBalanceUsd =
+    manualQuota === undefined ? "" : manualBalanceUsd!.trim()
 
   try {
     // 获取账号余额和今日使用情况
@@ -584,6 +594,7 @@ export async function validateAndUpdateAccount(
       exchange_rate:
         parseFloat(exchangeRate) || UI_CONSTANTS.EXCHANGE_RATE.DEFAULT, // 使用用户输入的汇率
       notes: notes,
+      manualBalanceUsd: normalizedManualBalanceUsd,
       tagIds: normalizedTagIds,
       checkIn: freshAccountData.checkIn,
       account_info: {
@@ -640,6 +651,7 @@ export async function validateAndUpdateAccount(
       exchange_rate:
         parseFloat(exchangeRate) || UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
       notes: notes,
+      manualBalanceUsd: normalizedManualBalanceUsd,
       tagIds: normalizedTagIds,
       checkIn: checkInConfig,
       health: {
