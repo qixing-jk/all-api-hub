@@ -7,6 +7,7 @@ import {
   XMarkIcon,
 } from "@heroicons/react/24/outline"
 import { useCallback, useEffect, useId, useMemo, useState } from "react"
+import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -23,6 +24,7 @@ import {
 } from "~/components/ui/popover"
 import { normalizeTagNameForUniqueness } from "~/services/accountTags/tagStoreUtils"
 import type { Tag } from "~/types"
+import { getErrorMessage } from "~/utils/error"
 
 export interface TagPickerProps {
   /**
@@ -70,6 +72,7 @@ export interface TagPickerProps {
  * - select existing tags by id
  * - create a new global tag while selecting
  * - rename and delete tags inline (global operations)
+ * - surfaces create/rename/delete errors via toast + inline message
  */
 export function TagPicker({
   tags,
@@ -91,6 +94,7 @@ export function TagPicker({
   const [deleteTarget, setDeleteTarget] = useState<Tag | null>(null)
   const [isWorking, setIsWorking] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
+  const [tagActionError, setTagActionError] = useState<string | null>(null)
 
   const tagById = useMemo(() => {
     const map = new Map<string, Tag>()
@@ -155,6 +159,12 @@ export function TagPicker({
     }
   }, [activeIndex, isOpen, optionCount, query])
 
+  useEffect(() => {
+    if (isOpen) {
+      setTagActionError(null)
+    }
+  }, [isOpen])
+
   const toggleTag = (tagId: string) => {
     if (disabled || isWorking) return
     if (selectedTagIds.includes(tagId)) {
@@ -173,6 +183,7 @@ export function TagPicker({
     const normalized = normalizeTagNameForUniqueness(query)
     if (!normalized || disabled || isWorking) return
     setIsWorking(true)
+    setTagActionError(null)
     try {
       const created = await onCreateTag(normalized.displayName)
       onSelectedTagIdsChange(
@@ -181,6 +192,13 @@ export function TagPicker({
           : [...selectedTagIds, created.id],
       )
       setQuery("")
+    } catch (error) {
+      const message = t("messages.operationFailed", {
+        error: getErrorMessage(error),
+      })
+      console.error("Failed to create tag:", error)
+      setTagActionError(message)
+      toast.error(message)
     } finally {
       setIsWorking(false)
     }
@@ -251,9 +269,17 @@ export function TagPicker({
     const normalized = normalizeTagNameForUniqueness(editingName)
     if (!normalized) return
     setIsWorking(true)
+    setTagActionError(null)
     try {
       await onRenameTag(editingTagId, normalized.displayName)
       cancelRename()
+    } catch (error) {
+      const message = t("messages.operationFailed", {
+        error: getErrorMessage(error),
+      })
+      console.error("Failed to rename tag:", error)
+      setTagActionError(message)
+      toast.error(message)
     } finally {
       setIsWorking(false)
     }
@@ -262,12 +288,20 @@ export function TagPicker({
   const confirmDelete = async () => {
     if (!deleteTarget || disabled || isWorking) return
     setIsWorking(true)
+    setTagActionError(null)
     try {
       await onDeleteTag(deleteTarget.id)
       // Ensure current selection is updated immediately in the form.
       onSelectedTagIdsChange(
         selectedTagIds.filter((id) => id !== deleteTarget.id),
       )
+    } catch (error) {
+      const message = t("messages.operationFailed", {
+        error: getErrorMessage(error),
+      })
+      console.error("Failed to delete tag:", error)
+      setTagActionError(message)
+      toast.error(message)
     } finally {
       setIsWorking(false)
       setDeleteTarget(null)
@@ -306,6 +340,12 @@ export function TagPicker({
               aria-controls={listboxId}
               aria-activedescendant={activeOptionId}
             />
+
+            {tagActionError && (
+              <div role="alert" className="text-destructive text-sm">
+                {tagActionError}
+              </div>
+            )}
 
             {canCreate && (
               <Button
