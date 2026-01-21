@@ -216,7 +216,7 @@ export function TagPicker({
             <ChevronDownIcon className="h-4 w-4 opacity-70" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[320px] p-3" align="start">
+        <PopoverContent className="p-3" align="start">
           <div className="space-y-3">
             <Input
               value={query}
