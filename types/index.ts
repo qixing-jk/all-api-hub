@@ -351,7 +351,9 @@ export interface ApiToken {
   models?: string // 某些站点使用 models 而不是 model_limits
 }
 
-export type BalanceType = typeof DATA_TYPE_CASHFLOW | typeof DATA_TYPE_BALANCE
+export type DashboardTabType =
+  | typeof DATA_TYPE_CASHFLOW
+  | typeof DATA_TYPE_BALANCE
 
 export enum AuthTypeEnum {
   AccessToken = "access_token",

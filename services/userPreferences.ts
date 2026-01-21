@@ -8,7 +8,7 @@ import {
   CURRENT_PREFERENCES_VERSION,
   migratePreferences,
 } from "~/services/configMigration/preferences/preferencesMigration"
-import { BalanceType, CurrencyType, SortField, SortOrder } from "~/types"
+import { CurrencyType, DashboardTabType, SortField, SortOrder } from "~/types"
 import {
   AccountAutoRefresh,
   DEFAULT_ACCOUNT_AUTO_REFRESH,
@@ -111,7 +111,7 @@ export interface UserPreferences {
   /**
    * 金额标签页状态
    */
-  activeTab: BalanceType
+  activeTab: DashboardTabType
   /**
    * 金额单位
    */
@@ -432,7 +432,7 @@ class UserPreferencesService {
   /**
    * Update active tab preference.
    */
-  async updateActiveTab(activeTab: BalanceType): Promise<boolean> {
+  async updateActiveTab(activeTab: DashboardTabType): Promise<boolean> {
     return this.savePreferences({ activeTab })
   }
 

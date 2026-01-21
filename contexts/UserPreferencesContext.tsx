@@ -18,7 +18,12 @@ import {
   type TempWindowFallbackReminderPreferences,
   type UserPreferences,
 } from "~/services/userPreferences"
-import type { BalanceType, CurrencyType, SortField, SortOrder } from "~/types"
+import type {
+  CurrencyType,
+  DashboardTabType,
+  SortField,
+  SortOrder,
+} from "~/types"
 import type { AutoCheckinPreferences } from "~/types/autoCheckin"
 import type { ModelRedirectPreferences } from "~/types/managedSiteModelRedirect"
 import type { SortingPriorityConfig } from "~/types/sorting"
@@ -35,7 +40,7 @@ type UserManagedSiteModelSyncConfig = NonNullable<
 interface UserPreferencesContextType {
   preferences: UserPreferences
   isLoading: boolean
-  activeTab: BalanceType
+  activeTab: DashboardTabType
   currencyType: CurrencyType
   sortingPriorityConfig: SortingPriorityConfig
   sortField: SortField
@@ -60,8 +65,8 @@ interface UserPreferencesContextType {
   tempWindowFallback: TempWindowFallbackPreferences
   tempWindowFallbackReminder: TempWindowFallbackReminderPreferences
 
-  updateActiveTab: (activeTab: BalanceType) => Promise<boolean>
-  updateDefaultTab: (activeTab: BalanceType) => Promise<boolean>
+  updateActiveTab: (activeTab: DashboardTabType) => Promise<boolean>
+  updateDefaultTab: (activeTab: DashboardTabType) => Promise<boolean>
   updateCurrencyType: (currencyType: CurrencyType) => Promise<boolean>
   updateSortConfig: (
     sortField: SortField,
@@ -165,7 +170,7 @@ export const UserPreferencesProvider = ({
    * Persist the currently visible balance tab and mirror it in React state.
    * @param activeTab - Consumption vs balance tab identifier.
    */
-  const updateActiveTab = useCallback(async (activeTab: BalanceType) => {
+  const updateActiveTab = useCallback(async (activeTab: DashboardTabType) => {
     const success = await userPreferences.updateActiveTab(activeTab)
     if (success) {
       setPreferences((prev) => (prev ? { ...prev, activeTab } : null))
@@ -296,7 +301,7 @@ export const UserPreferencesProvider = ({
     [],
   )
 
-  const updateDefaultTab = useCallback(async (activeTab: BalanceType) => {
+  const updateDefaultTab = useCallback(async (activeTab: DashboardTabType) => {
     const success = await userPreferences.updateActiveTab(activeTab)
     if (success) {
       setPreferences((prev) => (prev ? { ...prev, activeTab } : null))
