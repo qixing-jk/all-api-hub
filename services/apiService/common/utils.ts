@@ -1,6 +1,5 @@
 import i18next from "i18next"
 
-import { accountStorage } from "~/services/accountStorage"
 import { REQUEST_CONFIG } from "~/services/apiService/common/constant"
 import {
   API_ERROR_CODES,
@@ -288,6 +287,7 @@ const _fetchApi = async <T>(
       hasAccessToken: Boolean(request.auth?.accessToken),
       hasCookie: Boolean(request.auth?.cookie),
     })
+    const { accountStorage } = await import("~/services/accountStorage")
     accountInfo = await accountStorage.getAccountByBaseUrlAndUserId(
       baseUrl,
       userId,
