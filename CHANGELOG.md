@@ -1,5 +1,16 @@
 # Changelog
 
+## [3.6.0](https://github.com/qixing-jk/all-api-hub/compare/v3.5.2...v3.6.0) (2026-01-21)
+
+
+### Features
+
+* **dev:** add dev branding for local builds ([#380](https://github.com/qixing-jk/all-api-hub/issues/380)) ([ee9e8b6](https://github.com/qixing-jk/all-api-hub/commit/ee9e8b60f24c254137e37d0f891a91bd5572dfff))
+* Implement account disable/enable functionality with UI and scheduler support ([#378](https://github.com/qixing-jk/all-api-hub/issues/378)) ([1ac83ed](https://github.com/qixing-jk/all-api-hub/commit/1ac83ed70c4d2a27c1039d4288d425a0376a4bd7))
+* Implement global tag management and UI improvements ([#381](https://github.com/qixing-jk/all-api-hub/issues/381)) ([3f32fb1](https://github.com/qixing-jk/all-api-hub/commit/3f32fb1ff6b04658794165a691a2011b4880cfa1))
+* **popup:** display app version in header with changelog link ([#379](https://github.com/qixing-jk/all-api-hub/issues/379)) ([6e8b789](https://github.com/qixing-jk/all-api-hub/commit/6e8b7896f955d9375029235e273cf2b3bc87d650))
+* **ui:** add model selection with upstream API support in CCSwitch export ([#374](https://github.com/qixing-jk/all-api-hub/issues/374)) ([d844f16](https://github.com/qixing-jk/all-api-hub/commit/d844f16d581aa62edf272b14797e9be3b8ee8b24))
+
 ## [3.5.2](https://github.com/qixing-jk/all-api-hub/compare/v3.5.1...v3.5.2) (2026-01-16)
 
 
