@@ -16,6 +16,7 @@ import {
 import { DeepPartial } from "~/types/utils"
 import { deepOverride } from "~/utils"
 import { getErrorMessage } from "~/utils/error"
+import { safeRandomUUID } from "~/utils/identifier"
 
 import {
   migrateAccountConfig,
@@ -1063,7 +1064,7 @@ class AccountStorageService {
    * 生成唯一 ID
    */
   private generateId(): string {
-    return `account_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
+    return safeRandomUUID("account")
   }
 
   /**

@@ -207,13 +207,6 @@ export const createSortComparator = <T>(field: keyof T, order: SortOrder) => {
 }
 
 /**
- * 生成唯一ID
- */
-export const generateId = (prefix = "id"): string => {
-  return `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
-}
-
-/**
  * 防抖函数
  */
 export const debounce = <T extends (...args: any[]) => any>(

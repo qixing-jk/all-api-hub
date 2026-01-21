@@ -11,6 +11,7 @@ import {
 } from "../storageKeys"
 import { withExtensionStorageWriteLock } from "../storageWriteLock"
 import {
+  generateTagId,
   listTagsSorted,
   mergeTagStoresAndRemapAccounts,
   normalizeTagNameForUniqueness,
@@ -154,7 +155,7 @@ class TagStorageService {
           throw new Error("Tag name already exists.")
         }
 
-        const id = `tag_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`
+        const id = generateTagId()
         const now = Date.now()
         const tag: Tag = {
           id,

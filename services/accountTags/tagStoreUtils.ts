@@ -1,4 +1,5 @@
 import type { SiteAccount, Tag, TagStore } from "~/types"
+import { safeRandomUUID } from "~/utils/identifier"
 
 /**
  * Collapses user input into a stable comparison key.
@@ -99,8 +100,8 @@ export function sanitizeTagStore(input: unknown): TagStore {
  *
  * The format is intentionally simple and stable across environments.
  */
-export function generateTagId(now: number = Date.now()): string {
-  return `tag_${now}_${Math.random().toString(36).slice(2, 11)}`
+export function generateTagId(): string {
+  return safeRandomUUID("tag")
 }
 
 /**

@@ -13,7 +13,6 @@ import {
   formatTimestamp,
   formatTokenCount,
   formatUsedQuota,
-  generateId,
   getCurrencyDisplayName,
   getCurrencySymbol,
   getGroupBadgeStyle,
@@ -96,24 +95,6 @@ describe("formatters utilities", () => {
       const result = normalizeToDate(date)
       expect(result).toBeInstanceOf(Date)
       expect(result?.getTime()).toBe(date.getTime())
-    })
-  })
-
-  describe("generateId", () => {
-    it("should generate unique IDs", () => {
-      const id1 = generateId()
-      const id2 = generateId()
-      expect(id1).not.toBe(id2)
-    })
-
-    it("should use custom prefix", () => {
-      const id = generateId("test")
-      expect(id).toMatch(/^test-/)
-    })
-
-    it("should use default prefix", () => {
-      const id = generateId()
-      expect(id).toMatch(/^id-/)
     })
   })
 
