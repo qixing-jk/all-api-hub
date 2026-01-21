@@ -104,9 +104,9 @@ beforeAll(() => {
   server.listen({ onUnhandledRequest: "warn" })
 })
 
-beforeEach(() => {
-  // Reset fakeBrowser state before each test
+beforeEach(async () => {
   fakeBrowser.reset()
+  await fakeBrowser.windows.create({ focused: true })
 })
 
 afterEach(() => {
