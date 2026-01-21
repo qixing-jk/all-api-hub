@@ -25,7 +25,6 @@
     "defaultTab": "默认标签页",
     "defaultTabDesc": "设置插件启动时显示的默认标签页",
     "todayCashflow": "今日收支",
-    "todayConsumption": "今日收支",
     "totalBalance": "总余额"
   },
   "refresh": {

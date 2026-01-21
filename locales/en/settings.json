@@ -25,7 +25,6 @@
     "defaultTab": "Default Tab",
     "defaultTabDesc": "Set the default tab displayed when the plugin starts",
     "todayCashflow": "Today's Cashflow",
-    "todayConsumption": "Today's Cashflow",
     "totalBalance": "Total Balance"
   },
   "refresh": {
