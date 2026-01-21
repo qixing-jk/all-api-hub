@@ -23,6 +23,7 @@ import {
   Switch,
 } from "~/components/ui"
 import { accountStorage } from "~/services/accountStorage"
+import { tagStorage } from "~/services/accountTags/tagStorage"
 import { channelConfigStorage } from "~/services/channelConfigStorage"
 import { userPreferences } from "~/services/userPreferences"
 import {
@@ -137,15 +138,18 @@ export default function WebDAVSettings() {
     setUploading(true)
     try {
       await userPreferences.updateWebdavSettings(webdavConfig)
-      const [accountData, preferencesData, channelConfigs] = await Promise.all([
-        accountStorage.exportData(),
-        userPreferences.exportPreferences(),
-        channelConfigStorage.exportConfigs(),
-      ])
+      const [accountData, tagStore, preferencesData, channelConfigs] =
+        await Promise.all([
+          accountStorage.exportData(),
+          tagStorage.exportTagStore(),
+          userPreferences.exportPreferences(),
+          channelConfigStorage.exportConfigs(),
+        ])
       const exportData: BackupFullV2 = {
         version: BACKUP_VERSION,
         timestamp: Date.now(),
         accounts: accountData,
+        tagStore,
         preferences: preferencesData,
         channelConfigs,
       }

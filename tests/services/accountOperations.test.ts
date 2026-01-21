@@ -1,13 +1,115 @@
-import { describe, expect, it } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   extractDomainPrefix,
   isValidAccount,
   isValidExchangeRate,
+  validateAndUpdateAccount,
 } from "~/services/accountOperations"
 import { AuthTypeEnum } from "~/types"
 
+const { mockFetchAccountData, mockUpdateAccount } = vi.hoisted(() => ({
+  mockFetchAccountData: vi.fn(),
+  mockUpdateAccount: vi.fn(),
+}))
+
+vi.mock("~/services/apiService", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/services/apiService")>()
+  return {
+    ...actual,
+    getApiService: vi.fn(() => ({
+      fetchAccountData: mockFetchAccountData,
+    })),
+  }
+})
+
+vi.mock("~/services/accountStorage", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/accountStorage")>()
+
+  return {
+    ...actual,
+    accountStorage: {
+      ...actual.accountStorage,
+      updateAccount: mockUpdateAccount,
+    },
+  }
+})
+
 describe("accountOperations", () => {
+  beforeEach(() => {
+    mockFetchAccountData.mockReset()
+    mockUpdateAccount.mockReset()
+  })
+
+  describe("validateAndUpdateAccount", () => {
+    it("persists empty tagIds to clear account tags", async () => {
+      mockFetchAccountData.mockResolvedValueOnce({
+        quota: 1,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_quota_consumption: 0,
+        today_requests_count: 0,
+        today_income: 0,
+        checkIn: { enableDetection: false },
+      })
+      mockUpdateAccount.mockResolvedValueOnce(true)
+
+      const result = await validateAndUpdateAccount(
+        "account-1",
+        "https://api.example.com",
+        "Test Site",
+        "user",
+        "token",
+        "1",
+        "7.0",
+        "notes",
+        [],
+        { enableDetection: false },
+        "openai",
+        AuthTypeEnum.AccessToken,
+        "",
+      )
+
+      expect(result.success).toBe(true)
+      expect(mockUpdateAccount).toHaveBeenCalledWith(
+        "account-1",
+        expect.objectContaining({
+          tagIds: [],
+        }),
+      )
+    })
+
+    it("clears tagIds even when data refresh fails", async () => {
+      mockFetchAccountData.mockRejectedValueOnce(new Error("network error"))
+      mockUpdateAccount.mockResolvedValueOnce(true)
+
+      const result = await validateAndUpdateAccount(
+        "account-1",
+        "https://api.example.com",
+        "Test Site",
+        "user",
+        "token",
+        "1",
+        "7.0",
+        "notes",
+        [],
+        { enableDetection: false },
+        "openai",
+        AuthTypeEnum.AccessToken,
+        "",
+      )
+
+      expect(result.success).toBe(true)
+      expect(mockUpdateAccount).toHaveBeenCalledWith(
+        "account-1",
+        expect.objectContaining({
+          tagIds: [],
+        }),
+      )
+    })
+  })
+
   describe("isValidAccount", () => {
     it("validates complete account", () => {
       expect(

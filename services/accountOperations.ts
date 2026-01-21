@@ -231,31 +231,26 @@ export function isValidAccount({
   )
 }
 
-type TagsInput = string[] | string | undefined
+type TagIdsInput = string[] | undefined
 
 /**
- * Normalizes a tags input originating from various form widgets into a clean
- * string array, trimming whitespace and discarding empty values.
- * @param tags - Array, single string, or undefined tags payload from UI.
- * @returns An array of sanitized tag strings or undefined when no tags remain.
+ * Normalizes a tag id list originating from UI widgets into a de-duped string
+ * array, trimming whitespace and discarding empty values.
+ * @param tagIds - Optional tag id list from UI.
+ * @returns A de-duped array of sanitized tag ids or [] when empty.
  */
-function normalizeTagsInput(tags: TagsInput): string[] | undefined {
-  if (!tags) {
-    return undefined
+function normalizeTagIdsInput(tagIds: TagIdsInput): string[] {
+  if (!tagIds || tagIds.length === 0) {
+    return []
   }
 
-  if (Array.isArray(tags)) {
-    return tags
-      .map((tag) => (typeof tag === "string" ? tag.trim() : ""))
-      .filter((tag) => tag.length > 0)
-  }
-
-  if (typeof tags === "string") {
-    const trimmed = tags.trim()
-    return trimmed ? [trimmed] : undefined
-  }
-
-  return undefined
+  return Array.from(
+    new Set(
+      tagIds
+        .map((id) => (typeof id === "string" ? id.trim() : String(id ?? "")))
+        .filter((id) => id.length > 0),
+    ),
+  )
 }
 
 /**
@@ -270,7 +265,7 @@ function normalizeTagsInput(tags: TagsInput): string[] | undefined {
  * @param userId - Numeric user id in string form.
  * @param exchangeRate - Recharge exchange rate configured in UI.
  * @param notes - Free-form notes provided by user.
- * @param tags - Optional tags originating from the form field.
+ * @param tagIds - Optional tag ids originating from the tag picker.
  * @param checkInConfig - Check-in configuration captured from UI.
  * @param siteType - Classifier describing the site (OneAPI, etc.).
  * @param authType - Authentication strategy (cookie/token/none).
@@ -285,7 +280,7 @@ export async function validateAndSaveAccount(
   userId: string,
   exchangeRate: string,
   notes: string,
-  tags: TagsInput,
+  tagIds: TagIdsInput,
   checkInConfig: CheckInConfig,
   siteType: string,
   authType: AuthTypeEnum,
@@ -340,7 +335,7 @@ export async function validateAndSaveAccount(
       },
     })
 
-    const normalizedTags = normalizeTagsInput(tags)
+    const normalizedTagIds = normalizeTagIdsInput(tagIds)
 
     const accountData: Omit<SiteAccount, "id" | "created_at" | "updated_at"> = {
       site_name: siteName.trim(),
@@ -355,7 +350,7 @@ export async function validateAndSaveAccount(
       exchange_rate:
         parseFloat(exchangeRate) || UI_CONSTANTS.EXCHANGE_RATE.DEFAULT, // 使用用户输入的汇率
       notes: notes || "",
-      tags: normalizedTags,
+      tagIds: normalizedTagIds,
       checkIn: freshAccountData.checkIn,
       account_info: {
         id: parsedUserId,
@@ -388,7 +383,7 @@ export async function validateAndSaveAccount(
     console.warn("Data fetch failed, saving configuration only:", error)
 
     // Build partial account data without quota/usage data
-    const normalizedTags = normalizeTagsInput(tags)
+    const normalizedTagIds = normalizeTagIdsInput(tagIds)
 
     const partialAccountData: Omit<
       SiteAccount,
@@ -405,7 +400,7 @@ export async function validateAndSaveAccount(
       exchange_rate:
         parseFloat(exchangeRate) || UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
       notes: notes || "",
-      tags: normalizedTags,
+      tagIds: normalizedTagIds,
       checkIn: checkInConfig,
       health: {
         status: SiteHealthStatus.Warning,
@@ -465,7 +460,7 @@ export async function validateAndSaveAccount(
  * @param userId - Updated user id string.
  * @param exchangeRate - Updated recharge rate string.
  * @param notes - Updated notes.
- * @param tags - Updated tag collection.
+ * @param tagIds - Updated tag id collection.
  * @param checkInConfig - Updated check-in configuration.
  * @param siteType - Updated site type classification.
  * @param authType - Authentication mode in use.
@@ -481,7 +476,7 @@ export async function validateAndUpdateAccount(
   userId: string,
   exchangeRate: string,
   notes: string,
-  tags: TagsInput,
+  tagIds: TagIdsInput,
   checkInConfig: CheckInConfig,
   siteType: string,
   authType: AuthTypeEnum,
@@ -536,7 +531,7 @@ export async function validateAndUpdateAccount(
       },
     })
 
-    const normalizedTags = normalizeTagsInput(tags)
+    const normalizedTagIds = normalizeTagIdsInput(tagIds)
 
     const updateData: Partial<Omit<SiteAccount, "id" | "created_at">> = {
       site_name: siteName.trim(),
@@ -551,7 +546,7 @@ export async function validateAndUpdateAccount(
       exchange_rate:
         parseFloat(exchangeRate) || UI_CONSTANTS.EXCHANGE_RATE.DEFAULT, // 使用用户输入的汇率
       notes: notes,
-      tags: normalizedTags,
+      tagIds: normalizedTagIds,
       checkIn: freshAccountData.checkIn,
       account_info: {
         id: parsedUserId,
@@ -593,7 +588,7 @@ export async function validateAndUpdateAccount(
     console.warn("Data fetch failed, saving configuration only:", error)
 
     // Build partial update preserving quota/usage data
-    const normalizedTags = normalizeTagsInput(tags)
+    const normalizedTagIds = normalizeTagIdsInput(tagIds)
 
     const partialUpdateData = {
       site_name: siteName.trim(),
@@ -607,7 +602,7 @@ export async function validateAndUpdateAccount(
       exchange_rate:
         parseFloat(exchangeRate) || UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
       notes: notes,
-      tags: normalizedTags,
+      tagIds: normalizedTagIds,
       checkIn: checkInConfig,
       health: {
         status: SiteHealthStatus.Warning,

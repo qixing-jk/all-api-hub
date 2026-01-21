@@ -7,6 +7,19 @@ vi.mock("~/utils/error", () => ({
   getErrorMessage: (e: unknown) => String(e),
 }))
 
+vi.mock("~/services/accountTags/tagStorage", () => ({
+  tagStorage: {
+    // mergeData only needs this pure helper; tests not concerned with tag semantics.
+    mergeTagStoresForSync: (input: any) => ({
+      tagStore: input.localTagStore,
+      localAccounts: input.localAccounts,
+      remoteAccounts: input.remoteAccounts,
+    }),
+    exportTagStore: vi.fn(),
+    importTagStore: vi.fn(),
+  },
+}))
+
 // Mock WebDAV network helpers so syncWithWebdav can be tested in isolation if needed
 const mockTestConnection = vi.fn()
 const mockDownloadBackup = vi.fn()
@@ -56,6 +69,7 @@ describe("WebdavAutoSyncService.mergeData", () => {
     const local: any = {
       accounts: localAccounts,
       accountsTimestamp: 100,
+      tagStore: { version: 1, tagsById: {} },
       preferences: basePrefsLocal,
       preferencesTimestamp: 50,
       channelConfigs: {},
@@ -64,6 +78,7 @@ describe("WebdavAutoSyncService.mergeData", () => {
     const remote: any = {
       accounts: remoteAccounts,
       accountsTimestamp: 200,
+      tagStore: { version: 1, tagsById: {} },
       preferences: basePrefsRemote,
       preferencesTimestamp: 60,
       channelConfigs: {},
@@ -82,6 +97,7 @@ describe("WebdavAutoSyncService.mergeData", () => {
     const local: any = {
       accounts: [],
       accountsTimestamp: 0,
+      tagStore: { version: 1, tagsById: {} },
       preferences: { ...basePrefsLocal, themeMode: "local" },
       preferencesTimestamp: 10,
       channelConfigs: {},
@@ -90,6 +106,7 @@ describe("WebdavAutoSyncService.mergeData", () => {
     const remote: any = {
       accounts: [],
       accountsTimestamp: 0,
+      tagStore: { version: 1, tagsById: {} },
       preferences: { ...basePrefsRemote, themeMode: "remote" },
       preferencesTimestamp: 20,
       channelConfigs: {},
@@ -113,6 +130,7 @@ describe("WebdavAutoSyncService.mergeData", () => {
     const local: any = {
       accounts: [],
       accountsTimestamp: 0,
+      tagStore: { version: 1, tagsById: {} },
       preferences: basePrefsLocal,
       preferencesTimestamp: 0,
       channelConfigs: localChannels,
@@ -121,6 +139,7 @@ describe("WebdavAutoSyncService.mergeData", () => {
     const remote: any = {
       accounts: [],
       accountsTimestamp: 0,
+      tagStore: { version: 1, tagsById: {} },
       preferences: basePrefsRemote,
       preferencesTimestamp: 0,
       channelConfigs: remoteChannels,

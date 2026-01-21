@@ -22,13 +22,14 @@ import {
   migrateAccountsConfig,
   needsConfigMigration,
 } from "./configMigration/account/accountDataMigration"
+import { ensureAccountTagsStorageMigrated } from "./configMigration/accountTags/accountTagsStorageMigration"
 import { getSiteType } from "./detectSiteType"
+import { ACCOUNT_STORAGE_KEYS, STORAGE_LOCKS } from "./storageKeys"
+import { withExtensionStorageWriteLock } from "./storageWriteLock"
 import { userPreferences } from "./userPreferences"
 
-// 存储键名常量
-export const ACCOUNT_STORAGE_KEYS = {
-  ACCOUNTS: "site_accounts",
-} as const
+// Re-export for backward compatibility across the codebase.
+export { ACCOUNT_STORAGE_KEYS }
 
 // 默认配置
 const createDefaultAccountConfig = (): AccountStorageConfig => ({
@@ -40,13 +41,11 @@ const createDefaultAccountConfig = (): AccountStorageConfig => ({
 
 class AccountStorageService {
   private storage: Storage
-  private inMemoryWriteQueue: Promise<void>
 
   constructor() {
     this.storage = new Storage({
       area: "local",
     })
-    this.inMemoryWriteQueue = Promise.resolve()
   }
 
   /**
@@ -64,42 +63,7 @@ class AccountStorageService {
    * contexts; falls back to an in-memory queue when locks are not supported.
    */
   private async withStorageWriteLock<T>(work: () => Promise<T>): Promise<T> {
-    const runWithInMemoryQueue = async (
-      queuedWork: () => Promise<T>,
-    ): Promise<T> => {
-      const run = this.inMemoryWriteQueue.then(() => queuedWork())
-      this.inMemoryWriteQueue = run.then(
-        () => undefined,
-        () => undefined,
-      )
-      return run
-    }
-
-    const maybeLocks = (
-      globalThis as unknown as { navigator?: { locks?: unknown } }
-    ).navigator?.locks
-    if (
-      maybeLocks &&
-      typeof (maybeLocks as { request?: unknown }).request === "function"
-    ) {
-      type AsyncLockManager = {
-        request<T>(
-          name: string,
-          options: LockOptions,
-          callback: (lock: Lock | null) => Promise<T>,
-        ): Promise<T>
-      }
-      const asyncLocks = maybeLocks as AsyncLockManager
-      return runWithInMemoryQueue(() =>
-        asyncLocks.request(
-          "all-api-hub:account-storage",
-          { mode: "exclusive" },
-          () => work(),
-        ),
-      )
-    }
-
-    return runWithInMemoryQueue(work)
+    return withExtensionStorageWriteLock(STORAGE_LOCKS.ACCOUNT_STORAGE, work)
   }
 
   private cloneConfig(config: AccountStorageConfig): AccountStorageConfig {
@@ -145,6 +109,10 @@ class AccountStorageService {
    */
   async getAllAccounts(): Promise<SiteAccount[]> {
     try {
+      // Ensure tag data is migrated on reads so downstream consumers always see
+      // `tagIds` and a consistent global tag store.
+      await ensureAccountTagsStorageMigrated(this.storage)
+
       const config = await this.getStorageConfig()
       const { accounts, migratedCount } = migrateAccountsConfig(config.accounts)
 
@@ -935,6 +903,7 @@ class AccountStorageService {
       token: account.account_info.access_token,
       userId: account.account_info.id,
       notes: account.notes,
+      tagIds: account.tagIds || [],
       tags: account.tags || [],
       siteType: account.site_type,
       checkIn: account.checkIn,

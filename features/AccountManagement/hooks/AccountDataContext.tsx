@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next" // 1. 定义 Context 的值类型
 
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { accountStorage } from "~/services/accountStorage"
+import { tagStorage } from "~/services/accountTags/tagStorage"
 import { searchAccounts } from "~/services/search/accountSearch"
 import type {
   AccountStats,
@@ -22,6 +23,8 @@ import type {
   SiteAccount,
   SortField,
   SortOrder,
+  Tag,
+  TagStore,
 } from "~/types"
 import { SortingCriteriaType } from "~/types/sorting"
 import {
@@ -49,8 +52,12 @@ interface AccountDataContextType {
   detectedAccount: SiteAccount | null
   isDetecting: boolean
   pinnedAccountIds: string[]
-  availableTags: string[]
-  tagCounts: Record<string, number>
+  tagStore: TagStore
+  tags: Tag[]
+  tagCountsById: Record<string, number>
+  createTag: (name: string) => Promise<Tag>
+  renameTag: (tagId: string, name: string) => Promise<Tag>
+  deleteTag: (tagId: string) => Promise<{ updatedAccounts: number }>
   handleReorder: (ids: string[]) => Promise<void>
   isAccountPinned: (id: string) => boolean
   pinAccount: (id: string) => Promise<boolean>
@@ -113,6 +120,11 @@ export const AccountDataProvider = ({
   )
   const [isDetecting, setIsDetecting] = useState(true)
   const [pinnedAccountIds, setPinnedAccountIds] = useState<string[]>([])
+  const [tagStore, setTagStore] = useState<TagStore>({
+    version: 1,
+    tagsById: {},
+  })
+  const [tags, setTags] = useState<Tag[]>([])
 
   const isPinFeatureEnabled = useMemo(
     () =>
@@ -160,9 +172,27 @@ export const AccountDataProvider = ({
       const allAccounts = await accountStorage.getAllAccounts()
       const storedOrderedIds = await accountStorage.getOrderedList()
       const accountStats = await accountStorage.getAccountStats()
-      const displaySiteData = accountStorage.convertToDisplayData(
-        allAccounts,
-      ) as DisplaySiteData[]
+      const currentTagStore = await tagStorage.getTagStore()
+      const displaySiteData = (
+        accountStorage.convertToDisplayData(allAccounts) as DisplaySiteData[]
+      ).map((site) => {
+        const tagIds = site.tagIds ?? []
+        const resolvedNames = tagIds
+          .map((id) => currentTagStore.tagsById[id]?.name)
+          .filter((name): name is string => Boolean(name))
+        return {
+          ...site,
+          tagIds,
+          tags: resolvedNames.length > 0 ? resolvedNames : site.tags,
+        }
+      })
+
+      setTagStore(currentTagStore)
+      setTags(
+        Object.values(currentTagStore.tagsById).sort((a, b) =>
+          a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
+        ),
+      )
 
       if (!isInitialLoad) {
         setPrevTotalConsumption(prevTotalConsumption)
@@ -200,6 +230,39 @@ export const AccountDataProvider = ({
       console.error("Failed to load account data:", error)
     }
   }, [isInitialLoad, prevTotalConsumption, prevBalances])
+
+  /**
+   * Tag CRUD actions exposed to UIs (AccountDialog, filters).
+   *
+   * These delegate to tagStorage, then reload account/tag data so all views stay
+   * consistent across global rename/delete operations.
+   */
+  const createTag = useCallback(
+    async (name: string) => {
+      const created = await tagStorage.createTag(name)
+      await loadAccountData()
+      return created
+    },
+    [loadAccountData],
+  )
+
+  const renameTag = useCallback(
+    async (tagId: string, name: string) => {
+      const updated = await tagStorage.renameTag(tagId, name)
+      await loadAccountData()
+      return updated
+    },
+    [loadAccountData],
+  )
+
+  const deleteTag = useCallback(
+    async (tagId: string) => {
+      const result = await tagStorage.deleteTag(tagId)
+      await loadAccountData()
+      return result
+    },
+    [loadAccountData],
+  )
 
   const handleRefresh = useCallback(
     async (force: boolean = false) => {
@@ -316,6 +379,10 @@ export const AccountDataProvider = ({
         console.log(
           "[AccountContext] Background refresh completed, reloading data.",
         )
+        loadAccountData()
+      }
+      if (message.type === "TAG_STORE_UPDATE") {
+        console.log("[AccountContext] Tag store updated, reloading data.")
         loadAccountData()
       }
     })
@@ -491,21 +558,18 @@ export const AccountDataProvider = ({
     orderedAccountIds,
   ])
 
-  const { availableTags, tagCounts } = useMemo(() => {
+  const tagCountsById = useMemo(() => {
     const counts: Record<string, number> = {}
 
     for (const item of displayData) {
-      const tags = item.tags || []
-      for (const tag of tags) {
-        if (!tag) continue
-        counts[tag] = (counts[tag] ?? 0) + 1
+      const ids = item.tagIds || []
+      for (const id of ids) {
+        if (!id) continue
+        counts[id] = (counts[id] ?? 0) + 1
       }
     }
 
-    return {
-      availableTags: Object.keys(counts),
-      tagCounts: counts,
-    }
+    return counts
   }, [displayData])
 
   const value = useMemo(
@@ -523,8 +587,12 @@ export const AccountDataProvider = ({
       detectedAccount,
       isDetecting,
       pinnedAccountIds,
-      availableTags,
-      tagCounts,
+      tagStore,
+      tags,
+      tagCountsById,
+      createTag,
+      renameTag,
+      deleteTag,
       handleReorder,
       isAccountPinned,
       pinAccount,
@@ -552,8 +620,12 @@ export const AccountDataProvider = ({
       detectedAccount,
       isDetecting,
       pinnedAccountIds,
-      availableTags,
-      tagCounts,
+      tagStore,
+      tags,
+      tagCountsById,
+      createTag,
+      renameTag,
+      deleteTag,
       handleReorder,
       isAccountPinned,
       pinAccount,

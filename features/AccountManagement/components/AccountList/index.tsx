@@ -70,8 +70,8 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
     sortField,
     sortOrder,
     handleReorder,
-    availableTags,
-    tagCounts,
+    tags,
+    tagCountsById,
     isManualSortFeatureEnabled,
   } = useAccountDataContext()
   const { handleAddAccountClick } = useAddAccountHandler()
@@ -82,7 +82,7 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
     useState<DisplaySiteData | null>(null)
   const [copyKeyDialogAccount, setCopyKeyDialogAccount] =
     useState<DisplaySiteData | null>(null)
-  const [selectedTags, setSelectedTags] = useState<string[]>([])
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
 
   const { query, setQuery, clearSearch, searchResults, inSearchMode } =
     useAccountSearch(displayData, initialSearchQuery)
@@ -100,16 +100,16 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
   }
 
   const tagFilterOptions = useMemo(() => {
-    if (availableTags.length === 0) {
+    if (tags.length === 0) {
       return []
     }
 
-    return availableTags.map((tag) => ({
-      value: tag,
-      label: tag,
-      count: tagCounts[tag] ?? 0,
+    return tags.map((tag) => ({
+      value: tag.id,
+      label: tag.name,
+      count: tagCountsById[tag.id] ?? 0,
     }))
-  }, [availableTags, tagCounts])
+  }, [tags, tagCountsById])
 
   const baseResults = useMemo<
     Array<{
@@ -128,14 +128,14 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
   }, [inSearchMode, searchResults, sortedData])
 
   const displayedResults = useMemo(() => {
-    if (selectedTags.length === 0) {
+    if (selectedTagIds.length === 0) {
       return baseResults
     }
     return baseResults.filter(({ account }) => {
-      const tags = account.tags || []
-      return selectedTags.some((tag) => tags.includes(tag))
+      const ids = account.tagIds || []
+      return selectedTagIds.some((tagId) => ids.includes(tagId))
     })
-  }, [baseResults, selectedTags])
+  }, [baseResults, selectedTagIds])
 
   const filteredSites = useMemo(
     () => displayedResults.map((item) => item.account),
@@ -153,7 +153,7 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
   )
 
   const hasAccounts = displayData.length > 0
-  const showFilteredSummary = inSearchMode || selectedTags.length > 0
+  const showFilteredSummary = inSearchMode || selectedTagIds.length > 0
   const dragDisabled = inSearchMode || !isManualSortFeatureEnabled
   const handleLabel = t("account:list.dragHandle")
 
@@ -252,8 +252,8 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
           <div className="flex flex-col gap-2">
             <TagFilter
               options={tagFilterOptions}
-              value={selectedTags}
-              onChange={setSelectedTags}
+              value={selectedTagIds}
+              onChange={setSelectedTagIds}
               maxVisibleLines={maxTagFilterLines}
               allLabel={t("account:filter.tagsAllLabel")}
               allCount={displayData.length}

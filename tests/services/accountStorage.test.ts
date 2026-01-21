@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { accountStorage } from "~/services/accountStorage"
+import { ACCOUNT_STORAGE_KEYS } from "~/services/storageKeys"
 import {
   AuthTypeEnum,
   SiteHealthStatus,
@@ -9,12 +10,11 @@ import {
   type SiteAccount,
 } from "~/types"
 
-const storageData = new Map<string, AccountStorageConfig>()
-const STORAGE_KEY = "site_accounts"
+const storageData = new Map<string, any>()
 
 const storageHooks: {
   beforeGet: (key: string) => Promise<void>
-  beforeSet: (key: string, value: AccountStorageConfig) => Promise<void>
+  beforeSet: (key: string, value: any) => Promise<void>
   beforeRemove: (key: string) => Promise<void>
 } = {
   beforeGet: async () => {},
@@ -37,7 +37,7 @@ const {
 
 vi.mock("@plasmohq/storage", () => {
   class Storage {
-    async set(key: string, value: AccountStorageConfig) {
+    async set(key: string, value: any) {
       await storageHooks.beforeSet(key, value)
       storageData.set(key, value)
     }
@@ -73,7 +73,7 @@ const seedStorage = (
   accounts: SiteAccount[],
   pinnedAccountIds: string[] = [],
 ) => {
-  storageData.set(STORAGE_KEY, {
+  storageData.set(ACCOUNT_STORAGE_KEYS.ACCOUNTS, {
     accounts,
     pinnedAccountIds,
     last_updated: Date.now(),
@@ -108,6 +108,7 @@ const createAccount = (overrides: Partial<SiteAccount> = {}): SiteAccount => {
     updated_at: overrides.updated_at ?? Date.now(),
     created_at: overrides.created_at ?? Date.now(),
     notes: overrides.notes,
+    tagIds: overrides.tagIds ?? [],
     tags: overrides.tags,
     can_check_in: overrides.can_check_in,
     supports_check_in: overrides.supports_check_in,
@@ -156,6 +157,31 @@ describe("accountStorage core behaviors", () => {
     }))
 
     mockFetchTodayIncome.mockResolvedValue({ today_income: 0 })
+  })
+
+  it("migrates legacy string tags on reads (account.tags -> tagIds + global tag store)", async () => {
+    const account = createAccount({
+      id: "with-legacy-tags",
+      tags: [" Work "] as any,
+    })
+
+    seedStorage([account])
+
+    const accounts = await accountStorage.getAllAccounts()
+    expect(accounts).toHaveLength(1)
+    expect(accounts[0].tagIds).toHaveLength(1)
+    expect((accounts[0] as any).tags).toBeUndefined()
+
+    const persistedConfig = storageData.get(
+      ACCOUNT_STORAGE_KEYS.ACCOUNTS,
+    ) as AccountStorageConfig
+    expect(persistedConfig.accounts[0].tagIds).toHaveLength(1)
+    expect((persistedConfig.accounts[0] as any).tags).toBeUndefined()
+
+    const persistedTagStore = storageData.get("global_tag_store") as any
+    expect(
+      Object.values(persistedTagStore.tagsById).map((t: any) => t.name),
+    ).toEqual(["Work"])
   })
 
   it("convertToDisplayData should normalize currency values", () => {
@@ -259,22 +285,22 @@ describe("accountStorage core behaviors", () => {
     expect(await accountStorage.getOrderedList()).toEqual(["a-1"])
   })
 
-  it("updateAccount should allow clearing tags array", async () => {
+  it("updateAccount should allow clearing tagIds array", async () => {
     const account = createAccount({
       id: "with-tags",
-      tags: ["group-a", "group-b"],
+      tagIds: ["tag-1", "tag-2"],
     })
     seedStorage([account])
 
     const success = await accountStorage.updateAccount("with-tags", {
-      tags: [],
+      tagIds: [],
     })
     expect(success).toBe(true)
 
-    const config = storageData.get(STORAGE_KEY)
-    const updated = config?.accounts.find((acc) => acc.id === "with-tags")
+    const accounts = await accountStorage.getAllAccounts()
+    const updated = accounts.find((acc) => acc.id === "with-tags")
 
-    expect(updated?.tags).toEqual([])
+    expect(updated?.tagIds).toEqual([])
   })
 
   it("updateAccount should not lose parallel updates to different accounts", async () => {
@@ -304,7 +330,7 @@ describe("accountStorage core behaviors", () => {
       ),
     )
 
-    const saved = storageData.get(STORAGE_KEY)
+    const saved = storageData.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS)
     expect(saved?.accounts).toHaveLength(parallelUpdates)
     for (const account of saved?.accounts ?? []) {
       if (!expectedNotesById.has(account.id)) continue
@@ -329,9 +355,9 @@ describe("accountStorage core behaviors", () => {
 
     expect(success).toBe(true)
 
-    const updatedConfig = storageData.get(STORAGE_KEY)
+    const updatedConfig = storageData.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS)
     const updatedAccount = updatedConfig?.accounts.find(
-      (acc) => acc.id === "check-1",
+      (acc: { id: string }) => acc.id === "check-1",
     )
 
     expect(updatedAccount?.checkIn?.siteStatus?.isCheckedInToday).toBe(true)
@@ -357,10 +383,8 @@ describe("accountStorage core behaviors", () => {
 
     expect(success).toBe(true)
 
-    const updatedConfig = storageData.get(STORAGE_KEY)
-    const updatedAccount = updatedConfig?.accounts.find(
-      (acc) => acc.id === "custom-1",
-    )
+    const accounts = await accountStorage.getAllAccounts()
+    const updatedAccount = accounts.find((acc) => acc.id === "custom-1")
 
     expect(updatedAccount?.checkIn?.customCheckIn?.isCheckedInToday).toBe(true)
     expect(updatedAccount?.checkIn?.customCheckIn?.lastCheckInDate).toBe(today)
@@ -530,7 +554,7 @@ describe("accountStorage core behaviors", () => {
 
     await accountStorage.deleteAccount("to-delete")
 
-    const config = storageData.get(STORAGE_KEY)
+    const config = storageData.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS)
     expect(config?.accounts).toHaveLength(0)
     expect(config?.pinnedAccountIds).toEqual([])
   })
@@ -577,9 +601,9 @@ describe("accountStorage core behaviors", () => {
 
     await accountStorage.resetExpiredCheckIns()
 
-    const config = storageData.get(STORAGE_KEY)
-    const updatedStale = config?.accounts.find((acc) => acc.id === "stale")
-    const updatedFresh = config?.accounts.find((acc) => acc.id === "fresh")
+    const accounts = await accountStorage.getAllAccounts()
+    const updatedStale = accounts.find((acc) => acc.id === "stale")
+    const updatedFresh = accounts.find((acc) => acc.id === "fresh")
 
     expect(updatedStale?.checkIn?.customCheckIn?.isCheckedInToday).toBe(false)
     expect(updatedStale?.checkIn?.customCheckIn?.lastCheckInDate).toBe(

@@ -11,6 +11,7 @@ import {
   type RawBackupData,
 } from "~/entrypoints/options/pages/ImportExport/utils"
 import { accountStorage } from "~/services/accountStorage"
+import { tagStorage } from "~/services/accountTags/tagStorage"
 import { channelConfigStorage } from "~/services/channelConfigStorage"
 import { userPreferences } from "~/services/userPreferences"
 
@@ -40,6 +41,14 @@ vi.mock("~/services/channelConfigStorage", () => ({
   },
 }))
 
+vi.mock("~/services/accountTags/tagStorage", () => ({
+  tagStorage: {
+    ensureLegacyMigration: vi.fn(),
+    exportTagStore: vi.fn(),
+    importTagStore: vi.fn(),
+  },
+}))
+
 vi.mock("react-hot-toast", () => ({
   default: {
     success: vi.fn(),
@@ -61,6 +70,15 @@ const mockChannelConfigImport =
   channelConfigStorage.importConfigs as unknown as ReturnType<typeof vi.fn>
 const mockChannelConfigExport =
   channelConfigStorage.exportConfigs as unknown as ReturnType<typeof vi.fn>
+
+const mockEnsureLegacyMigration =
+  tagStorage.ensureLegacyMigration as unknown as ReturnType<typeof vi.fn>
+const mockTagStoreExport = tagStorage.exportTagStore as unknown as ReturnType<
+  typeof vi.fn
+>
+const mockTagStoreImport = tagStorage.importTagStore as unknown as ReturnType<
+  typeof vi.fn
+>
 
 describe("parseBackupSummary", () => {
   beforeEach(() => {
@@ -94,6 +112,7 @@ describe("parseBackupSummary", () => {
       expect(result.hasAccounts).toBe(true)
       expect(result.hasPreferences).toBe(true)
       expect(result.hasChannelConfigs).toBe(true)
+      expect(result.hasTagStore).toBe(false)
       expect(result.timestamp).not.toBe("unknown")
     }
   })
@@ -113,6 +132,7 @@ describe("parseBackupSummary", () => {
       expect(result.hasAccounts).toBe(true)
       expect(result.hasPreferences).toBe(false)
       expect(result.hasChannelConfigs).toBe(false)
+      expect(result.hasTagStore).toBe(false)
     }
   })
 
@@ -135,6 +155,11 @@ describe("importFromBackupObject", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockUserPreferencesImport.mockResolvedValue(true)
+    mockEnsureLegacyMigration.mockResolvedValue({
+      migratedAccountCount: 0,
+      createdTagCount: 0,
+    })
+    mockTagStoreImport.mockResolvedValue(undefined)
   })
 
   afterEach(() => {
@@ -166,6 +191,7 @@ describe("importFromBackupObject", () => {
     expect(mockAccountStorageImportData).toHaveBeenCalledWith({
       accounts: [{ id: "a1" }],
     })
+    expect(mockEnsureLegacyMigration).toHaveBeenCalled()
     // With type: "accounts" and no root-level preferences/channelConfigs,
     // importV1Backup only imports accounts.
     expect(mockUserPreferencesImport).not.toHaveBeenCalled()
@@ -188,6 +214,7 @@ describe("importFromBackupObject", () => {
         pinnedAccountIds: ["a2"],
         last_updated: Date.now(),
       } as any,
+      tagStore: { version: 1, tagsById: {} },
       preferences: { themeMode: "dark" } as any,
       channelConfigs: { 1: { enabled: true } } as any,
     }
@@ -198,6 +225,8 @@ describe("importFromBackupObject", () => {
       accounts: [{ id: "a1" }, { id: "a2" }],
       pinnedAccountIds: ["a2"],
     })
+    expect(mockTagStoreImport).toHaveBeenCalled()
+    expect(mockEnsureLegacyMigration).toHaveBeenCalled()
     expect(mockUserPreferencesImport).toHaveBeenCalledWith({
       themeMode: "dark",
     })
@@ -299,6 +328,7 @@ describe("normalizeBackupForMerge", () => {
       accountsTimestamp: 0,
       preferences: null,
       channelConfigs: null,
+      tagStore: null,
     })
   })
 
@@ -311,6 +341,7 @@ describe("normalizeBackupForMerge", () => {
         accounts: [{ id: "a1" } as any],
         last_updated: 456,
       } as any,
+      tagStore: { version: 1, tagsById: {} },
       preferences: { themeMode: "dark" } as any,
       channelConfigs: { 1: { enabled: true } } as any,
     }
@@ -321,6 +352,7 @@ describe("normalizeBackupForMerge", () => {
     expect(result.accountsTimestamp).toBe(456)
     expect(result.preferences).toEqual({ themeMode: "dark" })
     expect(result.channelConfigs).toEqual({ 1: { enabled: true } })
+    expect(result.tagStore).toEqual({ version: 1, tagsById: {} })
   })
 
   it("normalizes V1-style backup falling back to legacy shapes", () => {
@@ -341,6 +373,7 @@ describe("normalizeBackupForMerge", () => {
     expect(result.accountsTimestamp).toBe(999)
     expect(result.preferences).toEqual({ themeMode: "dark" })
     expect(result.channelConfigs).toEqual({ 2: { enabled: false } })
+    expect(result.tagStore).toBeNull()
   })
 })
 
@@ -372,6 +405,11 @@ describe("export handlers", () => {
       pinnedAccountIds: [],
       last_updated: 0,
     })
+    mockEnsureLegacyMigration.mockResolvedValue({
+      migratedAccountCount: 0,
+      createdTagCount: 0,
+    })
+    mockTagStoreExport.mockResolvedValue({ version: 1, tagsById: {} })
     mockUserPreferencesExport.mockResolvedValue({} as any)
     mockChannelConfigExport.mockResolvedValue({} as any)
   })
@@ -405,6 +443,7 @@ describe("export handlers", () => {
     expect(setIsExporting).toHaveBeenLastCalledWith(false)
 
     expect(mockAccountStorageExportData).toHaveBeenCalled()
+    expect(mockTagStoreExport).toHaveBeenCalled()
     expect(mockUserPreferencesExport).toHaveBeenCalled()
     expect(mockChannelConfigExport).toHaveBeenCalled()
   })
@@ -416,6 +455,7 @@ describe("export handlers", () => {
     await handleExportAccounts(setIsExporting)
 
     expect(mockAccountStorageExportData).toHaveBeenCalled()
+    expect(mockTagStoreExport).toHaveBeenCalled()
   })
 
   it("handleExportPreferences exports only preferences data", async () => {

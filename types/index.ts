@@ -62,7 +62,19 @@ export interface SiteAccount {
   updated_at: number // 更改时间 (timestamp)
   created_at: number // 创建时间 (timestamp)
   notes?: string // 备注
-  tags?: string[] // 标签
+  /**
+   * Global tag ids associated with this account.
+   *
+   * Tag ids reference {@link Tag.id} entries stored in the global tag store.
+   * This enables global rename/delete operations without touching every account.
+   */
+  tagIds: string[]
+  /**
+   * Legacy tag names stored on the account record.
+   * @deprecated Replaced by {@link SiteAccount.tagIds}. Kept only for backward
+   * compatibility and migration of old backups/storage.
+   */
+  tags?: string[] // 标签（旧格式：按名称存储）
   /**
    * Whether this stored account is disabled in the extension.
    *
@@ -198,6 +210,27 @@ export interface AccountStorageConfig {
   last_updated: number
 }
 
+/**
+ * A globally managed tag entity with a stable id.
+ *
+ * Tags are stored in a dedicated global tag store and referenced by accounts
+ * via {@link SiteAccount.tagIds}.
+ */
+export interface Tag {
+  id: string
+  name: string
+  createdAt: number
+  updatedAt: number
+}
+
+/**
+ * Persisted global tag store payload.
+ */
+export interface TagStore {
+  version: number
+  tagsById: Record<string, Tag>
+}
+
 // 账号统计信息 (用于展示)
 export interface AccountStats {
   total_quota: number
@@ -249,6 +282,17 @@ export interface DisplaySiteData {
   token: string // 访问令牌，用于复制功能
   userId: number // 真实的用户 ID，用于 API 调用
   notes?: string
+  /**
+   * Tag ids associated with this account (stable identifiers).
+   *
+   * UI logic should prefer filtering by ids to stay consistent across renames.
+   */
+  tagIds?: string[]
+  /**
+   * Display tag labels resolved from {@link DisplaySiteData.tagIds}.
+   *
+   * This is a UI convenience field; persistence uses tag ids.
+   */
   tags?: string[]
   /**
    * Disabled state projected from {@link SiteAccount.disabled}.

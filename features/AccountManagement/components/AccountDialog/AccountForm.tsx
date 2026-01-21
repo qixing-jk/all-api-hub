@@ -9,7 +9,6 @@ import {
   TicketIcon,
   UserIcon,
 } from "@heroicons/react/24/outline"
-import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -17,7 +16,6 @@ import {
   FormField,
   IconButton,
   Input,
-  MultiSelect,
   Select,
   SelectContent,
   SelectItem,
@@ -27,8 +25,9 @@ import {
   Textarea,
 } from "~/components/ui"
 import { SITE_TITLE_RULES } from "~/constants/siteType"
+import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
 import { isValidExchangeRate } from "~/services/accountOperations"
-import { AuthTypeEnum, type CheckInConfig } from "~/types"
+import { AuthTypeEnum, type CheckInConfig, type Tag } from "~/types"
 
 interface AccountFormProps {
   authType: AuthTypeEnum
@@ -39,7 +38,7 @@ interface AccountFormProps {
   exchangeRate: string
   showAccessToken: boolean
   notes: string
-  tags: string[]
+  selectedTagIds: string[]
   cookieAuthSessionCookie: string
   isImportingCookies: boolean
   onSiteNameChange: (value: string) => void
@@ -49,11 +48,14 @@ interface AccountFormProps {
   onExchangeRateChange: (value: string) => void
   onToggleShowAccessToken: () => void
   onNotesChange: (value: string) => void
-  onTagsChange: (value: string[]) => void
+  onSelectedTagIdsChange: (value: string[]) => void
   onCookieAuthSessionCookieChange: (value: string) => void
   onImportCookieAuthSessionCookie: () => void
-  availableTags: string[]
-  tagCounts?: Record<string, number>
+  tags: Tag[]
+  tagCountsById?: Record<string, number>
+  createTag: (name: string) => Promise<Tag>
+  renameTag: (tagId: string, name: string) => Promise<Tag>
+  deleteTag: (tagId: string) => Promise<{ updatedAccounts: number }>
   siteType: string
   onSiteTypeChange: (value: string) => void
   checkIn: CheckInConfig
@@ -71,7 +73,7 @@ interface AccountFormProps {
  * @param props.exchangeRate Top-up exchange rate value.
  * @param props.showAccessToken Whether the token input is visible.
  * @param props.notes User-provided notes.
- * @param props.tags Selected tag values.
+ * @param props.selectedTagIds Selected tag ids.
  * @param props.onSiteNameChange Handler to update site name.
  * @param props.onUsernameChange Handler to update username.
  * @param props.onUserIdChange Handler to update user id.
@@ -79,13 +81,16 @@ interface AccountFormProps {
  * @param props.onExchangeRateChange Handler to update exchange rate.
  * @param props.onToggleShowAccessToken Toggles token visibility.
  * @param props.onNotesChange Handler to update notes.
- * @param props.onTagsChange Handler to update tags selection.
+ * @param props.onSelectedTagIdsChange Handler to update tag id selection.
  * @param props.cookieAuthSessionCookie Cookie value used for cookie-based auth.
  * @param props.isImportingCookies Whether cookie import is in progress.
  * @param props.onCookieAuthSessionCookieChange Handler to update cookie value.
  * @param props.onImportCookieAuthSessionCookie Handler to trigger cookie import.
- * @param props.availableTags Tags available from other accounts.
- * @param props.tagCounts Optional counts associated with tags.
+ * @param props.tags Tags available from the global tag store.
+ * @param props.tagCountsById Optional usage counts keyed by tag id.
+ * @param props.createTag Creates a new global tag.
+ * @param props.renameTag Renames a global tag.
+ * @param props.deleteTag Deletes a global tag (removes from all accounts).
  * @param props.siteType Selected site type identifier.
  * @param props.onSiteTypeChange Handler when site type changes.
  * @param props.checkIn Check-in configuration payload.
@@ -100,7 +105,7 @@ export default function AccountForm({
   exchangeRate,
   showAccessToken,
   notes,
-  tags,
+  selectedTagIds,
   cookieAuthSessionCookie,
   isImportingCookies,
   onSiteNameChange,
@@ -110,28 +115,20 @@ export default function AccountForm({
   onExchangeRateChange,
   onToggleShowAccessToken,
   onNotesChange,
-  onTagsChange,
+  onSelectedTagIdsChange,
   onCookieAuthSessionCookieChange,
   onImportCookieAuthSessionCookie,
-  availableTags,
-  tagCounts,
+  tags,
+  tagCountsById,
+  createTag,
+  renameTag,
+  deleteTag,
   siteType,
   onSiteTypeChange,
   checkIn,
   onCheckInChange,
 }: AccountFormProps) {
   const { t } = useTranslation("accountDialog")
-  const tagOptions = useMemo(() => {
-    const uniqueTags = Array.from(new Set(availableTags.concat(tags))).filter(
-      Boolean,
-    )
-
-    return uniqueTags.map((tag) => {
-      const count = tagCounts?.[tag] ?? 0
-      const label = count > 0 ? `${tag} (${count})` : tag
-      return { value: tag, label }
-    })
-  }, [availableTags, tags, tagCounts])
 
   return (
     <>
@@ -421,12 +418,15 @@ export default function AccountForm({
 
       {/* 标签 */}
       <FormField label={t("form.tags")} description={t("form.tagsDescription")}>
-        <MultiSelect
-          options={tagOptions}
-          selected={tags}
-          onChange={onTagsChange}
+        <TagPicker
+          tags={tags}
+          tagCountsById={tagCountsById}
+          selectedTagIds={selectedTagIds}
+          onSelectedTagIdsChange={onSelectedTagIdsChange}
+          onCreateTag={createTag}
+          onRenameTag={renameTag}
+          onDeleteTag={deleteTag}
           placeholder={t("form.tagsPlaceholder")}
-          allowCustom
         />
       </FormField>
 

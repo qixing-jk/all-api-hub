@@ -2,6 +2,7 @@ import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { setupRuntimeMessageListeners } from "~/entrypoints/background/runtimeMessages"
 import { setupTempWindowListeners } from "~/entrypoints/background/tempWindowPool"
 import { accountStorage } from "~/services/accountStorage"
+import { tagStorage } from "~/services/accountTags/tagStorage"
 import { migrateAccountsConfig } from "~/services/configMigration/account/accountDataMigration"
 import {
   hasNewOptionalPermissions,
@@ -57,6 +58,10 @@ export default defineBackground(() => {
         // Migrate user preferences
         await userPreferences.getPreferences()
         console.log("[Background] User preferences migration completed")
+
+        // Migrate legacy tag strings into global tag store + tagIds.
+        await tagStorage.ensureLegacyMigration()
+        console.log("[Background] Tag store migration completed")
 
         // Load all accounts and migrate
         const accounts = await accountStorage.getAllAccounts()

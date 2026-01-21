@@ -5,7 +5,13 @@ import {
   normalizeBackupForMerge,
   type BackupFullV2,
 } from "~/entrypoints/options/pages/ImportExport/utils"
-import { SiteAccount } from "~/types"
+import { tagStorage } from "~/services/accountTags/tagStorage"
+import {
+  createDefaultTagStore,
+  sanitizeTagStore,
+} from "~/services/accountTags/tagStoreUtils"
+import { migrateAccountTagsData } from "~/services/configMigration/accountTags/accountTagsDataMigration"
+import type { SiteAccount, TagStore } from "~/types"
 import type { ChannelConfigMap } from "~/types/channelConfig"
 import { WEBDAV_SYNC_STRATEGIES, WebDAVSettings } from "~/types/webdav"
 import { getErrorMessage } from "~/utils/error"
@@ -191,13 +197,18 @@ class WebdavAutoSyncService {
       }
     }
 
-    // 获取本地数据
-    const [localAccountsConfig, localPreferences, localChannelConfigs] =
-      await Promise.all([
-        accountStorage.exportData(),
-        userPreferences.exportPreferences(),
-        channelConfigStorage.exportConfigs(),
-      ])
+    // 获取本地数据（`accountStorage.exportData()` will ensure legacy tags are migrated）
+    const [
+      localAccountsConfig,
+      localTagStore,
+      localPreferences,
+      localChannelConfigs,
+    ] = await Promise.all([
+      accountStorage.exportData(),
+      tagStorage.exportTagStore(),
+      userPreferences.exportPreferences(),
+      channelConfigStorage.exportConfigs(),
+    ])
 
     const localPinnedAccountIds = localAccountsConfig.pinnedAccountIds || []
 
@@ -223,6 +234,7 @@ class WebdavAutoSyncService {
       preferences.webdav.syncStrategy || WEBDAV_SYNC_STRATEGIES.MERGE
 
     let accountsToSave: SiteAccount[] = localAccountsConfig.accounts
+    let tagStoreToSave = localTagStore
     let preferencesToSave: UserPreferences = localPreferences
     let channelConfigsToSave: ChannelConfigMap = localChannelConfigs
     let pinnedAccountIdsToSave: string[] = localPinnedAccountIds
@@ -233,6 +245,7 @@ class WebdavAutoSyncService {
         {
           accounts: localAccountsConfig.accounts,
           accountsTimestamp: localAccountsConfig.last_updated,
+          tagStore: localTagStore,
           preferences: localPreferences,
           preferencesTimestamp: localPreferences.lastUpdated,
           channelConfigs: localChannelConfigs,
@@ -240,6 +253,9 @@ class WebdavAutoSyncService {
         {
           accounts: normalizedRemote.accounts,
           accountsTimestamp: normalizedRemote.accountsTimestamp,
+          tagStore: sanitizeTagStore(
+            normalizedRemote.tagStore ?? createDefaultTagStore(),
+          ),
           preferences: normalizedRemote.preferences || localPreferences,
           preferencesTimestamp:
             (normalizedRemote.preferences &&
@@ -250,6 +266,7 @@ class WebdavAutoSyncService {
       )
 
       accountsToSave = mergeResult.accounts
+      tagStoreToSave = mergeResult.tagStore
       preferencesToSave = mergeResult.preferences
       channelConfigsToSave = mergeResult.channelConfigs
 
@@ -272,6 +289,7 @@ class WebdavAutoSyncService {
     } else if (strategy === WEBDAV_SYNC_STRATEGIES.UPLOAD_ONLY || !remoteData) {
       // 覆盖策略或远程无数据
       accountsToSave = localAccountsConfig.accounts
+      tagStoreToSave = localTagStore
       preferencesToSave = localPreferences
       channelConfigsToSave = localChannelConfigs
       pinnedAccountIdsToSave = localPinnedAccountIds.filter((id) =>
@@ -280,7 +298,15 @@ class WebdavAutoSyncService {
       console.log("[WebdavAutoSync] 使用本地数据覆盖")
     } else if (strategy === WEBDAV_SYNC_STRATEGIES.DOWNLOAD_ONLY) {
       // 远程优先策略：直接使用远程数据（若存在），否则使用本地
-      accountsToSave = normalizedRemote.accounts
+      const remoteStore = sanitizeTagStore(
+        normalizedRemote.tagStore ?? createDefaultTagStore(),
+      )
+      const migratedRemote = migrateAccountTagsData({
+        accounts: normalizedRemote.accounts as SiteAccount[],
+        tagStore: remoteStore,
+      })
+      accountsToSave = migratedRemote.accounts
+      tagStoreToSave = migratedRemote.tagStore
       preferencesToSave = normalizedRemote.preferences || localPreferences
       channelConfigsToSave =
         normalizedRemote.channelConfigs || localChannelConfigs
@@ -301,6 +327,7 @@ class WebdavAutoSyncService {
         accounts: accountsToSave,
         pinnedAccountIds: pinnedAccountIdsToSave,
       }),
+      tagStorage.importTagStore(tagStoreToSave),
       userPreferences.importPreferences(preferencesToSave, {
         preserveWebdav: true,
       }),
@@ -316,6 +343,7 @@ class WebdavAutoSyncService {
         pinnedAccountIds: pinnedAccountIdsToSave,
         last_updated: Date.now(),
       },
+      tagStore: tagStoreToSave,
       preferences: preferencesToSave,
       channelConfigs: channelConfigsToSave,
     }
@@ -333,6 +361,7 @@ class WebdavAutoSyncService {
     local: {
       accounts: SiteAccount[]
       accountsTimestamp: number
+      tagStore: TagStore
       preferences: UserPreferences
       preferencesTimestamp: number
       channelConfigs: ChannelConfigMap
@@ -340,12 +369,14 @@ class WebdavAutoSyncService {
     remote: {
       accounts: SiteAccount[]
       accountsTimestamp: number
+      tagStore: TagStore
       preferences: UserPreferences
       preferencesTimestamp: number
       channelConfigs: ChannelConfigMap | null
     },
   ): {
     accounts: SiteAccount[]
+    tagStore: TagStore
     preferences: UserPreferences
     channelConfigs: ChannelConfigMap
   } {
@@ -353,16 +384,40 @@ class WebdavAutoSyncService {
       `[WebdavAutoSync] 开始合并数据 - 本地账号: ${local.accounts.length}, 远程账号: ${remote.accounts.length}`,
     )
 
+    // Migrate legacy string tags (if any) into tag ids on both sides.
+    const localTagStore = sanitizeTagStore(
+      local.tagStore ?? createDefaultTagStore(),
+    )
+    const remoteTagStore = sanitizeTagStore(
+      remote.tagStore ?? createDefaultTagStore(),
+    )
+    const migratedLocal = migrateAccountTagsData({
+      accounts: local.accounts,
+      tagStore: localTagStore,
+    })
+    const migratedRemote = migrateAccountTagsData({
+      accounts: remote.accounts,
+      tagStore: remoteTagStore,
+    })
+
+    // Merge tag stores and remap accounts so tag ids always resolve.
+    const tagMerge = tagStorage.mergeTagStoresForSync({
+      localTagStore: migratedLocal.tagStore,
+      remoteTagStore: migratedRemote.tagStore,
+      localAccounts: migratedLocal.accounts,
+      remoteAccounts: migratedRemote.accounts,
+    })
+
     // 合并账号数据
     const accountMap = new Map<string, SiteAccount>()
 
     // 首先添加本地账号
-    local.accounts.forEach((account) => {
+    tagMerge.localAccounts.forEach((account) => {
       accountMap.set(account.id, account)
     })
 
     // 然后处理远程账号（按 updated_at 选择较新版本）
-    remote.accounts.forEach((remoteAccount) => {
+    tagMerge.remoteAccounts.forEach((remoteAccount) => {
       const localAccount = accountMap.get(remoteAccount.id)
 
       if (!localAccount) {
@@ -440,6 +495,7 @@ class WebdavAutoSyncService {
 
     return {
       accounts: mergedAccounts,
+      tagStore: tagMerge.tagStore,
       preferences,
       channelConfigs: mergedChannelConfigs,
     }

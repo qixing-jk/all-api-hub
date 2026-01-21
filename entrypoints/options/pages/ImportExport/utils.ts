@@ -2,10 +2,11 @@ import { t } from "i18next"
 import toast from "react-hot-toast"
 
 import { accountStorage } from "~/services/accountStorage"
+import { tagStorage } from "~/services/accountTags/tagStorage"
 import { channelConfigStorage } from "~/services/channelConfigStorage"
 import type { UserPreferences } from "~/services/userPreferences"
 import { userPreferences } from "~/services/userPreferences"
-import type { AccountStorageConfig } from "~/types"
+import type { AccountStorageConfig, TagStore } from "~/types"
 import type { ChannelConfigMap } from "~/types/channelConfig"
 
 /**
@@ -24,6 +25,7 @@ export interface ParsedBackupSummary {
   hasAccounts: boolean
   hasPreferences: boolean
   hasChannelConfigs: boolean
+  hasTagStore: boolean
   timestamp: string
 }
 
@@ -35,6 +37,13 @@ export interface BackupFullV2 {
   version: string
   timestamp: number
   accounts: AccountStorageConfig
+  /**
+   * Global tag store snapshot.
+   *
+   * Optional for backward compatibility with early V2 backups; new exports MUST
+   * include this field so accounts with tagIds can resolve tag labels.
+   */
+  tagStore?: TagStore
   preferences: UserPreferences
   channelConfigs: ChannelConfigMap
 }
@@ -47,6 +56,13 @@ export interface BackupAccountsPartialV2 {
   timestamp: number
   type: "accounts"
   accounts: AccountStorageConfig
+  /**
+   * Global tag store snapshot.
+   *
+   * Optional for backward compatibility with early V2 backups; new exports MUST
+   * include this field so accounts with tagIds can resolve tag labels.
+   */
+  tagStore?: TagStore
 }
 
 /**
@@ -122,6 +138,7 @@ export function parseBackupSummary(
     const hasChannelConfigs = Boolean(
       data.channelConfigs || data.type === "channelConfigs",
     )
+    const hasTagStore = Boolean((data as any).tagStore)
 
     const ts =
       data.timestamp && !Number.isNaN(new Date(data.timestamp).getTime())
@@ -133,6 +150,7 @@ export function parseBackupSummary(
       hasAccounts,
       hasPreferences,
       hasChannelConfigs,
+      hasTagStore,
       timestamp: ts,
     }
   } catch {
@@ -161,6 +179,11 @@ async function importV1Backup(
 
   // accounts: support both legacy partial exports and older full exports
   if (accountsRequested) {
+    const rawTagStore = (data as any).tagStore ?? (data.data as any)?.tagStore
+    if (rawTagStore) {
+      await tagStorage.importTagStore(rawTagStore)
+    }
+
     const accountsData =
       (data.accounts as any)?.accounts ??
       (data.data as any)?.accounts ??
@@ -170,6 +193,8 @@ async function importV1Backup(
       await accountStorage.importData({
         accounts: accountsData,
       })
+      // Ensure legacy imports (string tags) are migrated to tag ids.
+      await tagStorage.ensureLegacyMigration()
       accountsImported = true
     }
   }
@@ -237,6 +262,7 @@ export function normalizeBackupForMerge(
   accountsTimestamp: number
   preferences: any | null
   channelConfigs: ChannelConfigMap | null
+  tagStore: TagStore | null
 } {
   if (!data) {
     return {
@@ -244,6 +270,7 @@ export function normalizeBackupForMerge(
       accountsTimestamp: 0,
       preferences: null,
       channelConfigs: null,
+      tagStore: null,
     }
   }
 
@@ -269,6 +296,7 @@ function normalizeV2BackupForMerge(
   accountsTimestamp: number
   preferences: any | null
   channelConfigs: ChannelConfigMap | null
+  tagStore: TagStore | null
 } {
   const accountsField: any = data.accounts
   const accounts = Array.isArray(accountsField)
@@ -288,6 +316,7 @@ function normalizeV2BackupForMerge(
     accountsTimestamp,
     preferences: data.preferences || localPreferences,
     channelConfigs,
+    tagStore: data.tagStore ?? null,
   }
 }
 
@@ -302,6 +331,7 @@ function normalizeV1BackupForMerge(
   accountsTimestamp: number
   preferences: any | null
   channelConfigs: ChannelConfigMap | null
+  tagStore: TagStore | null
 } {
   const accountsField: any = data.accounts
   const accounts =
@@ -326,6 +356,7 @@ function normalizeV1BackupForMerge(
     accountsTimestamp,
     preferences,
     channelConfigs,
+    tagStore: (data as any).tagStore ?? (data.data as any)?.tagStore ?? null,
   }
 }
 
@@ -348,6 +379,11 @@ async function importV2Backup(
   // V2 assumes flat structure: accounts / preferences / channelConfigs directly on root
 
   if (accountsRequested) {
+    // Prefer importing tag store first so account tagIds can resolve immediately.
+    if ("tagStore" in (data as any) && (data as any).tagStore) {
+      await tagStorage.importTagStore((data as any).tagStore)
+    }
+
     const accountsConfig = (data as BackupFullV2 | BackupAccountsPartialV2)
       .accounts
 
@@ -365,6 +401,8 @@ async function importV2Backup(
       accounts,
       pinnedAccountIds,
     })
+    // Ensure legacy imports (string tags) are migrated to tag ids.
+    await tagStorage.ensureLegacyMigration()
     accountsImported = true
   }
 
@@ -458,16 +496,19 @@ export const handleExportAll = async (
     setIsExporting(true)
 
     // 获取账号数据、用户偏好设置以及通道配置
-    const [accountData, preferencesData, channelConfigs] = await Promise.all([
-      accountStorage.exportData(),
-      userPreferences.exportPreferences(),
-      channelConfigStorage.exportConfigs(),
-    ])
+    const [accountData, tagStore, preferencesData, channelConfigs] =
+      await Promise.all([
+        accountStorage.exportData(),
+        tagStorage.exportTagStore(),
+        userPreferences.exportPreferences(),
+        channelConfigStorage.exportConfigs(),
+      ])
 
     const exportData: BackupFullV2 = {
       version: BACKUP_VERSION,
       timestamp: Date.now(),
       accounts: accountData,
+      tagStore,
       preferences: preferencesData,
       channelConfigs,
     }
@@ -505,12 +546,16 @@ export const handleExportAccounts = async (
   try {
     setIsExporting(true)
 
-    const accountData = await accountStorage.exportData()
+    const [accountData, tagStore] = await Promise.all([
+      accountStorage.exportData(),
+      tagStorage.exportTagStore(),
+    ])
     const exportData: BackupAccountsPartialV2 = {
       version: BACKUP_VERSION,
       timestamp: Date.now(),
       type: "accounts",
       accounts: accountData,
+      tagStore,
     }
 
     const blob = new Blob([JSON.stringify(exportData, null, 2)], {

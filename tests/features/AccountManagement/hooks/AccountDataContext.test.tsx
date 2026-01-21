@@ -18,6 +18,7 @@ const {
   mockResetExpiredCheckIns,
   mockSetPinnedList,
   mockSetOrderedList,
+  mockGetTagStore,
 } = vi.hoisted(() => ({
   mockGetAllAccounts: vi.fn(),
   mockGetOrderedList: vi.fn(),
@@ -27,6 +28,7 @@ const {
   mockResetExpiredCheckIns: vi.fn(),
   mockSetPinnedList: vi.fn(),
   mockSetOrderedList: vi.fn(),
+  mockGetTagStore: vi.fn(),
 }))
 
 vi.mock("~/services/accountStorage", () => ({
@@ -40,6 +42,15 @@ vi.mock("~/services/accountStorage", () => ({
     setPinnedList: mockSetPinnedList,
     setOrderedList: mockSetOrderedList,
     checkUrlExists: vi.fn(async () => null),
+  },
+}))
+
+vi.mock("~/services/accountTags/tagStorage", () => ({
+  tagStorage: {
+    getTagStore: mockGetTagStore,
+    createTag: vi.fn(),
+    renameTag: vi.fn(),
+    deleteTag: vi.fn(),
   },
 }))
 
@@ -91,6 +102,7 @@ function ContextProbe({
 describe("AccountDataContext handleReorder", () => {
   it("persists pinned order when pinned accounts are reordered", async () => {
     mockResetExpiredCheckIns.mockResolvedValue(undefined)
+    mockGetTagStore.mockResolvedValue({ version: 1, tagsById: {} })
     mockGetAllAccounts.mockResolvedValue([])
     mockGetOrderedList.mockResolvedValue(["p-1", "p-2", "u-1"])
     mockGetPinnedList.mockResolvedValue(["p-1", "p-2"])
@@ -135,6 +147,7 @@ describe("AccountDataContext handleReorder", () => {
 
   it("keeps pinned list stable when non-pinned items move around", async () => {
     mockResetExpiredCheckIns.mockResolvedValue(undefined)
+    mockGetTagStore.mockResolvedValue({ version: 1, tagsById: {} })
     mockGetAllAccounts.mockResolvedValue([])
     mockGetOrderedList.mockResolvedValue(["p-1", "p-2", "u-1"])
     mockGetPinnedList.mockResolvedValue(["p-1", "p-2"])

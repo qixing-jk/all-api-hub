@@ -40,8 +40,15 @@ export default function AccountDialog({
   onSuccess,
   onError,
 }: AccountDialogProps) {
-  const { displayData, detectedAccount, availableTags, tagCounts } =
-    useAccountDataContext()
+  const {
+    displayData,
+    detectedAccount,
+    tags,
+    tagCountsById,
+    createTag,
+    renameTag,
+    deleteTag,
+  } = useAccountDataContext()
   const { openEditAccount } = useDialogStateContext()
 
   const { state, setters, handlers } = useAccountDialog({
@@ -142,10 +149,13 @@ export default function AccountDialog({
               }
               notes={state.notes}
               onNotesChange={setters.setNotes}
-              tags={state.tags}
-              onTagsChange={setters.setTags}
-              availableTags={availableTags}
-              tagCounts={tagCounts}
+              selectedTagIds={state.tagIds}
+              onSelectedTagIdsChange={setters.setTagIds}
+              tags={tags}
+              tagCountsById={tagCountsById}
+              createTag={createTag}
+              renameTag={renameTag}
+              deleteTag={deleteTag}
               checkIn={state.checkIn}
               onCheckInChange={setters.setCheckIn}
               siteType={state.siteType}
