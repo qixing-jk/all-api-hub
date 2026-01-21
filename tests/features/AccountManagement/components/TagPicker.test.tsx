@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react"
+import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
@@ -75,8 +75,10 @@ describe("TagPicker", () => {
     await user.type(input, "NewTag")
     await user.keyboard("{Enter}")
 
-    expect(onCreateTag).toHaveBeenCalledWith("NewTag")
-    expect(onSelectedTagIdsChange).toHaveBeenCalledWith(["t-new"])
+    await waitFor(() => {
+      expect(onCreateTag).toHaveBeenCalledWith("NewTag")
+      expect(onSelectedTagIdsChange).toHaveBeenCalledWith(["t-new"])
+    })
   })
 
   it("creates a tag and selects it", async () => {
@@ -112,8 +114,10 @@ describe("TagPicker", () => {
     )
     await user.click(screen.getByRole("button", { name: "form.tagsCreate" }))
 
-    expect(onCreateTag).toHaveBeenCalledWith("NewTag")
-    expect(onSelectedTagIdsChange).toHaveBeenCalledWith(["t-new"])
+    await waitFor(() => {
+      expect(onCreateTag).toHaveBeenCalledWith("NewTag")
+      expect(onSelectedTagIdsChange).toHaveBeenCalledWith(["t-new"])
+    })
   })
 
   it("renames a tag inline", async () => {
@@ -180,7 +184,9 @@ describe("TagPicker", () => {
       screen.getByRole("button", { name: "form.tagsDeleteConfirm" }),
     )
 
-    expect(onDeleteTag).toHaveBeenCalledWith("t1")
-    expect(onSelectedTagIdsChange).toHaveBeenCalledWith([])
+    await waitFor(() => {
+      expect(onDeleteTag).toHaveBeenCalledWith("t1")
+      expect(onSelectedTagIdsChange).toHaveBeenCalledWith([])
+    })
   })
 })

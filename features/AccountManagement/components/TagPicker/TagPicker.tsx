@@ -352,16 +352,11 @@ export function TagPicker({
                         isActive ? "bg-accent" : "hover:bg-accent",
                       ].join(" ")}
                     >
-                      <button
-                        type="button"
-                        className="flex min-w-0 flex-1 items-center gap-2 text-left"
-                        onClick={() => toggleTag(tag.id)}
-                        disabled={disabled || isWorking}
-                      >
-                        <span className="flex h-4 w-4 items-center justify-center rounded-sm border">
-                          {isSelected && <CheckIcon className="h-3 w-3" />}
-                        </span>
-                        {isEditing ? (
+                      {isEditing ? (
+                        <div className="flex min-w-0 flex-1 items-center gap-2 text-left">
+                          <span className="flex h-4 w-4 items-center justify-center rounded-sm border">
+                            {isSelected && <CheckIcon className="h-3 w-3" />}
+                          </span>
                           <span className="flex min-w-0 flex-1 items-center gap-2">
                             <Input
                               value={editingName}
@@ -398,7 +393,17 @@ export function TagPicker({
                               <XMarkIcon className="h-4 w-4" />
                             </IconButton>
                           </span>
-                        ) : (
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                          onClick={() => toggleTag(tag.id)}
+                          disabled={disabled || isWorking}
+                        >
+                          <span className="flex h-4 w-4 items-center justify-center rounded-sm border">
+                            {isSelected && <CheckIcon className="h-3 w-3" />}
+                          </span>
                           <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
                             <span className="truncate">{tag.name}</span>
                             {count > 0 && (
@@ -407,8 +412,8 @@ export function TagPicker({
                               </Badge>
                             )}
                           </span>
-                        )}
-                      </button>
+                        </button>
+                      )}
 
                       {!isEditing && (
                         <span className="flex shrink-0 items-center gap-1">
