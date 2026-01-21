@@ -12,7 +12,7 @@ import type { UserPreferences } from "../../userPreferences"
 import { migrateSortingConfig } from "./sortingConfigMigration"
 
 // Current version of the preferences schema
-export const CURRENT_PREFERENCES_VERSION = 8
+export const CURRENT_PREFERENCES_VERSION = 9
 
 /**
  * Migration function type
@@ -176,6 +176,21 @@ const migrations: Record<number, PreferencesMigrationFunction> = {
       ...prefs,
       activeTab: DATA_TYPE_CASHFLOW as any,
       preferencesVersion: 8,
+    }
+  },
+  9: (prefs: UserPreferences): UserPreferences => {
+    console.log(
+      "[PreferencesMigration] Migrating preferences from v8 to v9 (diabled accounts sorting config)",
+    )
+
+    const migratedSortingConfig = migrateSortingConfig(
+      prefs.sortingPriorityConfig,
+    )
+
+    return {
+      ...prefs,
+      sortingPriorityConfig: migratedSortingConfig,
+      preferencesVersion: 9,
     }
   },
 }

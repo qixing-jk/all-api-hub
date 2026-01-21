@@ -16,6 +16,10 @@ import { SortingPriorityDragList } from "./SortingPriorityDragList"
 const getSortingCriteriaUiText = (
   t: (key: string) => string,
 ): Record<SortingCriteriaType, { label: string; description?: string }> => ({
+  [SortingCriteriaType.DISABLED_ACCOUNT]: {
+    label: t("settings:sorting.disabledAccount"),
+    description: t("settings:sorting.disabledAccountDesc"),
+  },
   [SortingCriteriaType.PINNED]: {
     label: t("settings:sorting.pinnedPriority"),
     description: t("settings:sorting.pinnedDesc"),

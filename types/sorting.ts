@@ -1,5 +1,11 @@
 // Enum for sorting criteria identifiers
 export enum SortingCriteriaType {
+  /**
+   * Disabled accounts should be placed at the bottom of the list.
+   * This criterion is intended to be evaluated with very high priority so that
+   * disabled accounts do not bubble to the top due to other criteria.
+   */
+  DISABLED_ACCOUNT = "disabled_account",
   PINNED = "pinned",
   MANUAL_ORDER = "manual_order",
   CURRENT_SITE = "current_site",

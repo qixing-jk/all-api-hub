@@ -72,6 +72,8 @@
     "title": "排序优先级设置",
     "description": "定义账户列表的排序优先级，以组织账户的显示方式。",
     "priority": "优先级",
+    "disabledAccount": "禁用账号沉底",
+    "disabledAccountDesc": "将被禁用的账号统一放到列表底部",
     "pinnedPriority": "置顶优先",
     "pinnedDesc": "将已置顶的账号按置顶顺序排在列表顶部",
     "currentSitePriority": "当前站点优先",

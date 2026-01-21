@@ -21,49 +21,54 @@ import {
 export const DEFAULT_SORTING_PRIORITY_CONFIG: SortingPriorityConfig = {
   criteria: [
     {
-      id: SortingCriteriaType.PINNED,
+      id: SortingCriteriaType.DISABLED_ACCOUNT,
       enabled: true,
       priority: 0,
     },
     {
-      id: SortingCriteriaType.MANUAL_ORDER,
+      id: SortingCriteriaType.CURRENT_SITE,
       enabled: true,
       priority: 1,
     },
     {
-      id: SortingCriteriaType.CURRENT_SITE,
+      id: SortingCriteriaType.PINNED,
       enabled: true,
       priority: 2,
     },
     {
-      id: SortingCriteriaType.CHECK_IN_REQUIREMENT,
+      id: SortingCriteriaType.MANUAL_ORDER,
       enabled: true,
       priority: 3,
     },
     {
-      id: SortingCriteriaType.MATCHED_OPEN_TABS,
+      id: SortingCriteriaType.CHECK_IN_REQUIREMENT,
       enabled: true,
       priority: 4,
     },
     {
-      id: SortingCriteriaType.HEALTH_STATUS,
+      id: SortingCriteriaType.MATCHED_OPEN_TABS,
       enabled: true,
       priority: 5,
     },
     {
-      id: SortingCriteriaType.CUSTOM_CHECK_IN_URL,
+      id: SortingCriteriaType.HEALTH_STATUS,
       enabled: true,
       priority: 6,
     },
     {
-      id: SortingCriteriaType.CUSTOM_REDEEM_URL,
+      id: SortingCriteriaType.CUSTOM_CHECK_IN_URL,
       enabled: true,
       priority: 7,
     },
     {
-      id: SortingCriteriaType.USER_SORT_FIELD,
+      id: SortingCriteriaType.CUSTOM_REDEEM_URL,
       enabled: true,
       priority: 8,
+    },
+    {
+      id: SortingCriteriaType.USER_SORT_FIELD,
+      enabled: true,
+      priority: 9,
     },
   ],
   lastModified: Date.now(),
@@ -134,6 +139,13 @@ function applySortingCriteria(
   manualOrderIndices?: Record<string, number>,
 ): number {
   switch (criteriaId) {
+    case SortingCriteriaType.DISABLED_ACCOUNT: {
+      const aDisabled = a.disabled === true ? 1 : 0
+      const bDisabled = b.disabled === true ? 1 : 0
+      // Disabled accounts should be pushed to the bottom.
+      return aDisabled - bDisabled
+    }
+
     case SortingCriteriaType.PINNED: {
       const indexA = pinnedAccountIds.indexOf(a.id)
       const indexB = pinnedAccountIds.indexOf(b.id)

@@ -72,6 +72,8 @@
     "title": "Sorting Priority Settings",
     "description": "Define the sorting priority of accounts in the list to organize the display of accounts",
     "priority": "Priority",
+    "disabledAccount": "Move Disabled Accounts to Bottom",
+    "disabledAccountDesc": "Disabled accounts will be uniformly moved to the bottom of the list",
     "pinnedPriority": "Pinned Priority",
     "pinnedDesc": "Place pinned accounts at the top of the list in the order they were pinned",
     "currentSitePriority": "Current Site Priority",

@@ -51,6 +51,24 @@ export function migrateSortingConfig(
   let modified = false
   const newCriteria = [...config.criteria]
 
+  // Safety rule: keep disabled accounts at the bottom by default.
+  // This criterion should be enabled when introduced so existing users get the expected behavior.
+  if (!existingIds.has(SortingCriteriaType.DISABLED_ACCOUNT)) {
+    const disabledDefault = DEFAULT_SORTING_PRIORITY_CONFIG.criteria.find(
+      (c) => c.id === SortingCriteriaType.DISABLED_ACCOUNT,
+    )
+    if (disabledDefault) {
+      newCriteria.push({
+        ...disabledDefault,
+        enabled: true,
+      })
+      modified = true
+      console.log(
+        "[SortingConfigMigration] Added DISABLED_ACCOUNT criterion with default priority",
+      )
+    }
+  }
+
   if (!existingIds.has(SortingCriteriaType.PINNED)) {
     const pinnedDefault = DEFAULT_SORTING_PRIORITY_CONFIG.criteria.find(
       (c) => c.id === SortingCriteriaType.PINNED,
@@ -93,6 +111,7 @@ export function migrateSortingConfig(
   // Handle remaining missing criteria (excluding PINNED and MANUAL_ORDER)
   const remainingMissing = missingIds.filter(
     (id) =>
+      id !== SortingCriteriaType.DISABLED_ACCOUNT &&
       id !== SortingCriteriaType.PINNED &&
       id !== SortingCriteriaType.MANUAL_ORDER,
   )
@@ -127,6 +146,8 @@ export function migrateSortingConfig(
     .sort((a, b) => {
       const getGroupRank = (id: SortingCriteriaType): number => {
         switch (id) {
+          case SortingCriteriaType.DISABLED_ACCOUNT:
+            return -1
           case SortingCriteriaType.CURRENT_SITE:
             return 0
           case SortingCriteriaType.PINNED:

@@ -122,7 +122,7 @@ describe("sortingConfigMigration", () => {
       // Both should be at the top - CURRENT_SITE comes first due to sort order in normalization
       expect(pinnedIndex).toBeGreaterThanOrEqual(0)
       expect(currentSiteIndex).toBeGreaterThanOrEqual(0)
-      expect(pinnedIndex).toBeLessThanOrEqual(2) // At most position 2 due to other top criteria
+      expect(pinnedIndex).toBeLessThanOrEqual(3) // At most position 3 due to other top criteria
     })
 
     it("adds missing criteria with expected enabled state", () => {
@@ -144,6 +144,12 @@ describe("sortingConfigMigration", () => {
 
       const result = migrateSortingConfig(config)
 
+      const disabledCriterion = result.criteria.find(
+        (c) => c.id === SortingCriteriaType.DISABLED_ACCOUNT,
+      )
+      expect(disabledCriterion).toBeDefined()
+      expect(disabledCriterion?.enabled).toBe(true)
+
       const manualOrderCriterion = result.criteria.find(
         (c) => c.id === SortingCriteriaType.MANUAL_ORDER,
       )
@@ -152,6 +158,7 @@ describe("sortingConfigMigration", () => {
 
       const otherMissingCriteria = result.criteria.filter(
         (c) =>
+          c.id !== SortingCriteriaType.DISABLED_ACCOUNT &&
           c.id !== SortingCriteriaType.CURRENT_SITE &&
           c.id !== SortingCriteriaType.PINNED &&
           c.id !== SortingCriteriaType.MANUAL_ORDER,
@@ -327,7 +334,7 @@ describe("sortingConfigMigration", () => {
       expect(healthStatus?.enabled).toBe(true)
     })
 
-    it("places CURRENT_SITE, PINNED, and MANUAL_ORDER at the top in that order", () => {
+    it("places DISABLED_ACCOUNT, CURRENT_SITE, PINNED, and MANUAL_ORDER at the top in that order", () => {
       const config = {
         criteria: [
           {
@@ -348,9 +355,10 @@ describe("sortingConfigMigration", () => {
 
       const ids = result.criteria.map((c) => c.id)
 
-      expect(ids.indexOf(SortingCriteriaType.CURRENT_SITE)).toBe(0)
-      expect(ids.indexOf(SortingCriteriaType.PINNED)).toBe(1)
-      expect(ids.indexOf(SortingCriteriaType.MANUAL_ORDER)).toBe(2)
+      expect(ids.indexOf(SortingCriteriaType.DISABLED_ACCOUNT)).toBe(0)
+      expect(ids.indexOf(SortingCriteriaType.CURRENT_SITE)).toBe(1)
+      expect(ids.indexOf(SortingCriteriaType.PINNED)).toBe(2)
+      expect(ids.indexOf(SortingCriteriaType.MANUAL_ORDER)).toBe(3)
     })
   })
 })
