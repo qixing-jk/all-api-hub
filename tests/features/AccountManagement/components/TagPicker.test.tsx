@@ -10,18 +10,85 @@ vi.mock("react-i18next", () => ({
 }))
 
 describe("TagPicker", () => {
+  it("supports ArrowUp/ArrowDown navigation and Enter to toggle a tag", async () => {
+    const user = userEvent.setup()
+
+    const onSelectedTagIdsChange = vi.fn()
+    const onCreateTag = vi.fn()
+    const onRenameTag = vi.fn()
+    const onDeleteTag = vi.fn()
+
+    render(
+      <TagPicker
+        tags={[
+          { id: "t1", name: "Work", createdAt: 1, updatedAt: 1 },
+          { id: "t2", name: "Personal", createdAt: 1, updatedAt: 1 },
+        ]}
+        selectedTagIds={[]}
+        onSelectedTagIdsChange={onSelectedTagIdsChange}
+        onCreateTag={onCreateTag}
+        onRenameTag={onRenameTag}
+        onDeleteTag={onDeleteTag}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "form.tagsPlaceholder" }),
+    )
+
+    // Focus the search input, move the active option, then activate it via Enter.
+    const input = screen.getByPlaceholderText("form.tagsSearchPlaceholder")
+    await user.click(input)
+    await user.keyboard("{ArrowDown}{Enter}")
+
+    expect(onSelectedTagIdsChange).toHaveBeenCalledWith(["t1"])
+  })
+
+  it("creates a tag via Enter when create is available", async () => {
+    const user = userEvent.setup()
+
+    const onSelectedTagIdsChange = vi.fn()
+    const onCreateTag = vi.fn().mockResolvedValue({
+      id: "t-new",
+      name: "NewTag",
+      createdAt: 1,
+      updatedAt: 1,
+    } satisfies Tag)
+    const onRenameTag = vi.fn()
+    const onDeleteTag = vi.fn()
+
+    render(
+      <TagPicker
+        tags={[]}
+        selectedTagIds={[]}
+        onSelectedTagIdsChange={onSelectedTagIdsChange}
+        onCreateTag={onCreateTag}
+        onRenameTag={onRenameTag}
+        onDeleteTag={onDeleteTag}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "form.tagsPlaceholder" }),
+    )
+    const input = screen.getByPlaceholderText("form.tagsSearchPlaceholder")
+    await user.type(input, "NewTag")
+    await user.keyboard("{Enter}")
+
+    expect(onCreateTag).toHaveBeenCalledWith("NewTag")
+    expect(onSelectedTagIdsChange).toHaveBeenCalledWith(["t-new"])
+  })
+
   it("creates a tag and selects it", async () => {
     const user = userEvent.setup()
 
     const onSelectedTagIdsChange = vi.fn()
-    const onCreateTag = vi
-      .fn()
-      .mockResolvedValue({
-        id: "t-new",
-        name: "NewTag",
-        createdAt: 1,
-        updatedAt: 1,
-      } satisfies Tag)
+    const onCreateTag = vi.fn().mockResolvedValue({
+      id: "t-new",
+      name: "NewTag",
+      createdAt: 1,
+      updatedAt: 1,
+    } satisfies Tag)
     const onRenameTag = vi.fn()
     const onDeleteTag = vi.fn()
 
@@ -54,14 +121,12 @@ describe("TagPicker", () => {
 
     const onSelectedTagIdsChange = vi.fn()
     const onCreateTag = vi.fn()
-    const onRenameTag = vi
-      .fn()
-      .mockResolvedValue({
-        id: "t1",
-        name: "Renamed",
-        createdAt: 1,
-        updatedAt: 2,
-      } satisfies Tag)
+    const onRenameTag = vi.fn().mockResolvedValue({
+      id: "t1",
+      name: "Renamed",
+      createdAt: 1,
+      updatedAt: 2,
+    } satisfies Tag)
     const onDeleteTag = vi.fn()
 
     render(

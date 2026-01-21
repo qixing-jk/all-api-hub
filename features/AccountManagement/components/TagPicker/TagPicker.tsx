@@ -6,7 +6,7 @@ import {
   TrashIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline"
-import { useMemo, useState } from "react"
+import { useCallback, useEffect, useId, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -21,7 +21,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "~/components/ui/popover"
-import { normalizeTagNameForUniqueness } from "~/services/tags/tagStoreUtils"
+import { normalizeTagNameForUniqueness } from "~/services/accountTags/tagStoreUtils"
 import type { Tag } from "~/types"
 
 export interface TagPickerProps {
@@ -83,12 +83,14 @@ export function TagPicker({
   placeholder,
 }: TagPickerProps) {
   const { t } = useTranslation(["accountDialog", "ui"])
+  const pickerId = useId()
   const [query, setQuery] = useState("")
   const [isOpen, setIsOpen] = useState(false)
   const [editingTagId, setEditingTagId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState("")
   const [deleteTarget, setDeleteTarget] = useState<Tag | null>(null)
   const [isWorking, setIsWorking] = useState(false)
+  const [activeIndex, setActiveIndex] = useState(-1)
 
   const tagById = useMemo(() => {
     const map = new Map<string, Tag>()
@@ -123,6 +125,36 @@ export function TagPicker({
     return !hasConflict
   }, [query, tags])
 
+  const listboxId = `${pickerId}-listbox`
+  const getOptionId = useCallback(
+    (key: string) => `${pickerId}-option-${key}`,
+    [pickerId],
+  )
+
+  const optionCount = (canCreate ? 1 : 0) + filteredTags.length
+
+  const activeOptionId = useMemo(() => {
+    if (activeIndex < 0) return undefined
+    if (canCreate && activeIndex === 0) return getOptionId("create")
+    const tagIndex = activeIndex - (canCreate ? 1 : 0)
+    const tag = filteredTags[tagIndex]
+    return tag ? getOptionId(tag.id) : undefined
+  }, [activeIndex, canCreate, filteredTags, getOptionId])
+
+  useEffect(() => {
+    if (!isOpen) {
+      setActiveIndex(-1)
+      return
+    }
+    if (optionCount === 0) {
+      setActiveIndex(-1)
+      return
+    }
+    if (activeIndex >= optionCount) {
+      setActiveIndex(-1)
+    }
+  }, [activeIndex, isOpen, optionCount, query])
+
   const toggleTag = (tagId: string) => {
     if (disabled || isWorking) return
     if (selectedTagIds.includes(tagId)) {
@@ -151,6 +183,55 @@ export function TagPicker({
       setQuery("")
     } finally {
       setIsWorking(false)
+    }
+  }
+
+  /**
+   * Keyboard behavior (when the search input is focused):
+   * - ArrowDown / ArrowUp: move the active option through create + filtered tags
+   * - Enter: activate the current option (or create when available)
+   */
+  const handleQueryKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (disabled || isWorking || editingTagId) return
+    if (optionCount === 0) return
+
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault()
+
+      const direction = e.key === "ArrowDown" ? 1 : -1
+      const nextIndex =
+        activeIndex < 0
+          ? direction > 0
+            ? 0
+            : optionCount - 1
+          : (activeIndex + direction + optionCount) % optionCount
+
+      setActiveIndex(nextIndex)
+      return
+    }
+
+    if (e.key === "Enter") {
+      const shouldCreateWithoutExplicitNavigation =
+        activeIndex < 0 && canCreate && query.trim().length > 0
+
+      if (shouldCreateWithoutExplicitNavigation) {
+        e.preventDefault()
+        void handleCreate()
+        return
+      }
+
+      if (activeIndex < 0) return
+      e.preventDefault()
+
+      if (canCreate && activeIndex === 0) {
+        void handleCreate()
+        return
+      }
+
+      const tagIndex = activeIndex - (canCreate ? 1 : 0)
+      const tag = filteredTags[tagIndex]
+      if (!tag) return
+      toggleTag(tag.id)
     }
   }
 
@@ -217,8 +298,13 @@ export function TagPicker({
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={handleQueryKeyDown}
               placeholder={t("form.tagsSearchPlaceholder")}
               disabled={disabled || isWorking}
+              role="combobox"
+              aria-expanded={isOpen}
+              aria-controls={listboxId}
+              aria-activedescendant={activeOptionId}
             />
 
             {canCreate && (
@@ -228,27 +314,43 @@ export function TagPicker({
                 className="w-full justify-start"
                 onClick={handleCreate}
                 disabled={disabled || isWorking}
+                id={getOptionId("create")}
+                data-active={activeIndex === 0}
+                aria-selected={activeIndex === 0}
               >
                 <PlusIcon className="mr-2 h-4 w-4" />
                 {t("form.tagsCreate", { name: query.trim() })}
               </Button>
             )}
 
-            <div className="max-h-64 space-y-1 overflow-auto">
+            <div
+              id={listboxId}
+              role="listbox"
+              className="max-h-64 space-y-1 overflow-auto"
+            >
               {filteredTags.length === 0 ? (
                 <div className="text-muted-foreground px-2 py-1 text-sm">
                   {t("form.tagsNoResults")}
                 </div>
               ) : (
-                filteredTags.map((tag) => {
+                filteredTags.map((tag, index) => {
                   const isSelected = selectedTagIds.includes(tag.id)
                   const isEditing = editingTagId === tag.id
                   const count = tagCountsById?.[tag.id] ?? 0
+                  const optionIndex = (canCreate ? 1 : 0) + index
+                  const isActive = optionIndex === activeIndex
 
                   return (
                     <div
                       key={tag.id}
-                      className="hover:bg-accent flex items-center justify-between gap-2 rounded-md px-2 py-1"
+                      id={getOptionId(tag.id)}
+                      role="option"
+                      aria-selected={isSelected}
+                      data-active={isActive}
+                      className={[
+                        "flex items-center justify-between gap-2 rounded-md px-2 py-1",
+                        isActive ? "bg-accent" : "hover:bg-accent",
+                      ].join(" ")}
                     >
                       <button
                         type="button"
