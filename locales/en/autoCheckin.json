@@ -20,14 +20,15 @@
     "retryInterval": "Retry interval (minutes)",
     "retryIntervalDesc": "How long to wait before the next retry attempt.",
     "retryMaxAttempts": "Max attempts per day",
-    "retryMaxAttemptsDesc": "Total number of runs (initial + retries) allowed each day.",
+    "retryMaxAttemptsDesc": "Max attempts per account per day (initial + retries).",
     "viewExecution": "Auto check-in history",
     "viewExecutionDesc": "View detailed results and logs for each automatic check-in run.",
     "viewExecutionButton": "Open results"
   },
   "status": {
     "lastRun": "Last run",
-    "nextScheduled": "Next scheduled run",
+    "nextDaily": "Next daily run",
+    "nextRetry": "Next retry run",
     "notScheduled": "Not scheduled",
     "pendingRetry": "Retry pending",
     "result": {

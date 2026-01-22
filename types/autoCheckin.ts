@@ -65,6 +65,22 @@ export const AUTO_CHECKIN_RUN_RESULTS = Object.values(
 ) as AutoCheckinRunResult[]
 
 /**
+ * Auto check-in execution run type.
+ *
+ * - `DAILY`: invoked by the scheduled daily alarm.
+ * - `MANUAL`: invoked by a user action (e.g., "Run now" in the UI).
+ */
+export const AUTO_CHECKIN_RUN_TYPE = {
+  DAILY: "daily",
+  MANUAL: "manual",
+} as const
+export type AutoCheckinRunType =
+  (typeof AUTO_CHECKIN_RUN_TYPE)[keyof typeof AUTO_CHECKIN_RUN_TYPE]
+export const AUTO_CHECKIN_RUN_TYPES = Object.values(
+  AUTO_CHECKIN_RUN_TYPE,
+) as AutoCheckinRunType[]
+
+/**
  * Auto check-in run summary
  */
 export interface AutoCheckinRunSummary {
@@ -82,6 +98,20 @@ export interface AutoCheckinRunSummary {
 export interface AutoCheckinAttemptsTracker {
   date: string // YYYY-MM-DD
   attempts: number
+}
+
+/**
+ * Account-level retry state for the current day.
+ *
+ * Notes:
+ * - `day` uses a local calendar day boundary (`YYYY-MM-DD`).
+ * - `attemptsByAccount` tracks total attempts for that account on `day`
+ *   (initial normal run + automatic retries).
+ */
+export interface AutoCheckinRetryState {
+  day: string // local YYYY-MM-DD
+  pendingAccountIds: string[]
+  attemptsByAccount: Record<string, number>
 }
 
 /**
@@ -107,11 +137,45 @@ export interface AutoCheckinStatus {
   lastRunAt?: string // ISO timestamp
   lastRunResult?: AutoCheckinRunResult
   perAccount?: Record<string, CheckinAccountResult>
-  nextScheduledAt?: string // ISO timestamp
   summary?: AutoCheckinRunSummary
-  attempts?: AutoCheckinAttemptsTracker
-  pendingRetry?: boolean
   accountsSnapshot?: AutoCheckinAccountSnapshot[]
+
+  /**
+   * Tracks the local calendar day (`YYYY-MM-DD`) when the last *normal* scheduled run executed.
+   * Used to ensure the normal schedule runs at most once per day.
+   */
+  lastDailyRunDay?: string
+
+  /**
+   * Next scheduled time for the *normal* daily alarm.
+   */
+  nextDailyScheduledAt?: string // ISO timestamp
+
+  /**
+   * Next scheduled time for the *retry* alarm (only present when retries are pending).
+   */
+  nextRetryScheduledAt?: string // ISO timestamp
+
+  /**
+   * Target day used to guard against stale alarms (local `YYYY-MM-DD`).
+   * When an alarm fires, the scheduler compares the stored target day with today's day and
+   * skips execution when they don't match.
+   */
+  dailyAlarmTargetDay?: string
+  retryAlarmTargetDay?: string
+
+  /**
+   * Automatic retry queue (scoped to one day only).
+   */
+  retryState?: AutoCheckinRetryState
+
+  /**
+   * Legacy fields kept for backward compatibility with previously stored status payloads.
+   * New code should prefer `nextDailyScheduledAt`, `nextRetryScheduledAt`, and `retryState`.
+   */
+  nextScheduledAt?: string // ISO timestamp (legacy: single alarm)
+  attempts?: AutoCheckinAttemptsTracker // legacy: global attempts tracker
+  pendingRetry?: boolean // legacy: derived from retry state
 }
 
 /**

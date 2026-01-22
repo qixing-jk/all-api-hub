@@ -32,6 +32,15 @@ export default function StatusCard({ status }: StatusCardProps) {
     }
   }
 
+  // Backward compatibility: older status payloads only store `nextScheduledAt` (single-alarm model).
+  const nextDailyScheduledAt =
+    status.nextDailyScheduledAt ?? status.nextScheduledAt
+  const nextRetryScheduledAt = status.nextRetryScheduledAt
+  // Pending retry is derived from retry state; `pendingRetry` is kept for legacy stored payloads.
+  const hasPendingRetry =
+    status.pendingRetry ||
+    (status.retryState?.pendingAccountIds?.length ?? 0) > 0
+
   const getResultBadgeColor = (result?: AutoCheckinRunResult): string => {
     switch (result) {
       case AUTO_CHECKIN_RUN_RESULT.SUCCESS:
@@ -93,7 +102,7 @@ export default function StatusCard({ status }: StatusCardProps) {
   return (
     <Card>
       <CardContent>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
           <div>
             <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
               {t("status.lastRun")}
@@ -105,11 +114,20 @@ export default function StatusCard({ status }: StatusCardProps) {
 
           <div>
             <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
-              {t("status.nextScheduled")}
+              {t("status.nextDaily")}
             </div>
             <div className="mt-1 text-lg font-semibold">
-              {formatDateTime(status.nextScheduledAt)}
-              {status.pendingRetry && (
+              {formatDateTime(nextDailyScheduledAt)}
+            </div>
+          </div>
+
+          <div>
+            <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
+              {t("status.nextRetry")}
+            </div>
+            <div className="mt-1 text-lg font-semibold">
+              {formatDateTime(nextRetryScheduledAt)}
+              {hasPendingRetry && (
                 <span className="ml-2 inline-flex items-center rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-semibold text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100">
                   {t("status.pendingRetry")}
                 </span>

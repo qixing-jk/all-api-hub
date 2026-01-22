@@ -20,14 +20,15 @@
     "retryInterval": "重试间隔（分钟）",
     "retryIntervalDesc": "每次重试之间等待的时间。",
     "retryMaxAttempts": "每日最大尝试次数",
-    "retryMaxAttemptsDesc": "每天允许的总运行次数（首次 + 重试）。",
+    "retryMaxAttemptsDesc": "每个账号每天允许的最大尝试次数（首次 + 重试）。",
     "viewExecution": "查看签到历史",
     "viewExecutionDesc": "查看每次自动签到的详细结果与日志。",
     "viewExecutionButton": "打开记录"
   },
   "status": {
     "lastRun": "最近运行",
-    "nextScheduled": "下次计划",
+    "nextDaily": "下次每日计划",
+    "nextRetry": "下次重试计划",
     "notScheduled": "未计划",
     "pendingRetry": "等待重试",
     "result": {
