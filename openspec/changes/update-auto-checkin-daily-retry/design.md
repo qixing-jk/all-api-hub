@@ -3,7 +3,8 @@
 ## Goals
 - Normal auto check-in executes at most once per day within the configured window.
 - Retry runs are driven by a separate alarm and only retry accounts that actually failed.
-- “Already checked today” is treated as not runnable (no provider calls).
+- The scheduler does not trust `checkIn.siteStatus.isCheckedInToday`; provider outcomes (including `already_checked`) are treated as the source of truth and are excluded from retries.
+- Retry state is scoped to today only; stale alarms (not for today) do not execute.
 - Status reporting is clear enough for the options UI to display the next daily run and any pending retry schedule.
 
 ## Non-goals
@@ -14,7 +15,7 @@
 ## Current Issues (Observed)
 - Normal scheduling in random mode can schedule repeated runs within the same day/window.
 - Retry scheduling is global and triggers a full re-run instead of focusing on failed accounts.
-- Runnable selection does not currently skip accounts already marked as checked-in today.
+- Scheduling/execution can re-run within the same day, causing duplicate provider calls and noisy history.
 
 ## Proposed Architecture
 
@@ -43,10 +44,21 @@ This lets retry executions target only failed accounts and enforce per-account l
 ### Retry scheduling
 - A retry is scheduled only when there are retry-eligible accounts and retries are enabled.
 - Each retry execution:
-  - re-evaluates account eligibility (enabled, detection on, auto-checkin enabled, provider ready, not checked today),
+  - re-evaluates account eligibility (enabled, detection on, auto-checkin enabled, provider ready),
   - attempts only the remaining failed accounts,
   - updates per-account attempt counts and clears successful accounts from the retry set,
   - schedules the next retry run only if at least one account remains eligible and under the per-day limit.
+
+## Retry Ordering and Day Scoping
+- The retry queue is derived only from the **normal run results for today**.
+- The retry alarm MUST NOT execute unless today’s normal run has already produced failures.
+- On day change, retry state for the prior day is cleared and the retry alarm is canceled.
+
+## Stale Alarm Handling
+Browser alarms can fire late (e.g., after sleep/wake). To prevent “yesterday’s work” from running today:
+- Each scheduled alarm stores an explicit **target day** (local `YYYY-MM-DD`).
+- When an alarm triggers, the handler compares the alarm’s target day to **today** (local `YYYY-MM-DD`).
+- If they differ, the handler **does not execute** and instead reschedules the next eligible run.
 
 ## Execution Rules (Eligibility)
 For both daily and retry executions, an account is runnable only if:
@@ -68,5 +80,5 @@ The UI can then render:
 - “Retry pending / next retry: …”
 
 ## Open Decisions
-- **Day boundary**: Current tracking uses UTC date strings while scheduling uses local times. Decide whether “today” should be local or UTC to align once-per-day behavior with user expectation.
+- **Day boundary**: Current tracking uses UTC date strings while scheduling uses local times. This change should standardize on a single definition of “today” (recommended: local calendar day) to avoid cross-midnight duplicates.
 - **Limits**: Interpret `maxAttemptsPerDay` as per-account (recommended by request) vs global cap (current behavior).

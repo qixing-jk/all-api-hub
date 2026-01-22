@@ -37,6 +37,30 @@ Automatic retries MUST be scheduled and triggered via a dedicated retry alarm di
 - **WHEN** the retry alarm is scheduled
 - **THEN** the next normal daily alarm schedule MUST remain unchanged
 
+### Requirement: Retry runs only after today’s normal run
+Automatic retries MUST only be scheduled/executed for accounts that failed in the normal run on the same local calendar day (local `YYYY-MM-DD`). Retry state MUST NOT carry over to other days.
+
+#### Scenario: Retry alarm does not run before normal run
+- **GIVEN** no normal auto check-in run has executed today
+- **WHEN** the retry alarm triggers
+- **THEN** the scheduler MUST NOT execute any check-in provider calls
+- **AND** the retry alarm MUST be cleared (or left unscheduled) until a normal run produces failures today
+
+### Requirement: Alarm handlers do not execute stale alarms
+When a daily or retry alarm triggers, the scheduler MUST verify the alarm’s target day matches today’s local calendar day (local `YYYY-MM-DD`). If it does not match, the scheduler MUST NOT execute check-ins and MUST reschedule for the next eligible run.
+
+#### Scenario: Late daily alarm is ignored
+- **GIVEN** the daily alarm was scheduled for yesterday but did not run (e.g., browser/device was asleep)
+- **WHEN** it triggers today
+- **THEN** the scheduler MUST NOT execute a normal run for yesterday
+- **AND** it MUST schedule the next normal run for the next eligible day/window
+
+#### Scenario: Late retry alarm is ignored and cleared
+- **GIVEN** a retry alarm exists for yesterday’s failures
+- **WHEN** it triggers today
+- **THEN** the scheduler MUST NOT execute retries for yesterday
+- **AND** the retry state for yesterday MUST be cleared
+
 ### Requirement: Automatic retries are account-scoped
 When retries are enabled, retry executions MUST only target accounts that failed in the latest eligible run, and MUST NOT rerun accounts that have already succeeded or were skipped.
 

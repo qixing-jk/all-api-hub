@@ -24,7 +24,7 @@ Auto check-in currently triggers multiple times per day in normal (non-retry) sc
 
 ## Risks / Mitigations
 - **State migration complexity** (new retry queue fields): keep new fields optional and treat missing values as “no retries pending”.
-- **Multi-device duplicate check-ins** (WebDAV sync across devices): not fully solvable in-extension; mitigate by ensuring per-device scheduling is once/day and by skipping already-checked accounts.
+- **Multi-device duplicate check-ins** (WebDAV sync across devices): not fully solvable in-extension; mitigate by ensuring per-device scheduling is once/day and by treating provider `already_checked` as success (so duplicates don’t cascade into retries).
 - **Behavior change for random mode**: random scheduling becomes “pick one time per day”, matching docs and user expectations.
 
 ## Open Questions
