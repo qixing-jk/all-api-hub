@@ -49,6 +49,10 @@
     "title": "自动签到",
     "runNow": "立即执行",
     "refresh": "刷新",
+    "debug": {
+      "triggerDailyAlarmNow": "调试：触发每日闹钟",
+      "triggerRetryAlarmNow": "调试：触发重试闹钟"
+    },
     "statistics": {
       "result": "执行结果",
       "accounts": "账号（成功 / 失败 / 总计）"
@@ -129,6 +133,8 @@
       "loadFailed": "获取自动签到设置失败：{{error}}",
       "runFailed": "执行自动签到失败：{{error}}",
       "retryFailed": "重新尝试失败：{{error}}",
+      "dailyAlarmTriggerFailed": "触发每日闹钟失败：{{error}}",
+      "retryAlarmTriggerFailed": "触发重试闹钟失败：{{error}}",
       "openManualFailed": "打开手动签到页面失败：{{error}}",
       "invalidTimeWindow": "无效的时间窗口，开始时间和结束时间不能相同。",
       "invalidDeterministicTime": "请输入合法的 HH:mm 格式时间。",
@@ -138,10 +144,14 @@
     "success": {
       "settingsSaved": "自动签到设置已保存。",
       "runCompleted": "自动签到已完成。",
-      "retryCompleted": "重新尝试已完成。"
+      "retryCompleted": "重新尝试已完成。",
+      "dailyAlarmTriggered": "已触发每日闹钟执行。",
+      "retryAlarmTriggered": "已触发重试闹钟执行。"
     },
     "loading": {
-      "running": "正在执行自动签到..."
+      "running": "正在执行自动签到...",
+      "triggeringDailyAlarm": "正在触发每日闹钟...",
+      "triggeringRetryAlarm": "正在触发重试闹钟..."
     }
   }
 }

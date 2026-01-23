@@ -37,6 +37,7 @@ export default function AutoCheckin(props: {
   const [searchKeyword, setSearchKeyword] = useState("")
   const [isLoading, setIsLoading] = useState(true)
   const [isRunning, setIsRunning] = useState(false)
+  const [isDebugTriggering, setIsDebugTriggering] = useState(false)
   const [retryingAccountId, setRetryingAccountId] = useState<string | null>(
     null,
   )
@@ -89,6 +90,70 @@ export default function AutoCheckin(props: {
       toast.error(t("messages.error.runFailed", { error: error.message }))
     } finally {
       setIsRunning(false)
+    }
+  }, [loadStatus, t])
+
+  const showDebugButtons = import.meta.env.MODE === "development"
+
+  const handleDebugTriggerDailyAlarmNow = useCallback(async () => {
+    try {
+      setIsDebugTriggering(true)
+      toast.loading(t("messages.loading.triggeringDailyAlarm"))
+
+      const response = await sendRuntimeMessage({
+        action: "autoCheckin:debugTriggerDailyAlarmNow",
+      })
+
+      toast.dismiss()
+
+      if (response.success) {
+        toast.success(t("messages.success.dailyAlarmTriggered"))
+        await loadStatus()
+      } else {
+        toast.error(
+          t("messages.error.dailyAlarmTriggerFailed", {
+            error: response.error ?? "",
+          }),
+        )
+      }
+    } catch (error: any) {
+      toast.dismiss()
+      toast.error(
+        t("messages.error.dailyAlarmTriggerFailed", { error: error.message }),
+      )
+    } finally {
+      setIsDebugTriggering(false)
+    }
+  }, [loadStatus, t])
+
+  const handleDebugTriggerRetryAlarmNow = useCallback(async () => {
+    try {
+      setIsDebugTriggering(true)
+      toast.loading(t("messages.loading.triggeringRetryAlarm"))
+
+      const response = await sendRuntimeMessage({
+        action: "autoCheckin:debugTriggerRetryAlarmNow",
+      })
+
+      toast.dismiss()
+
+      if (response.success) {
+        toast.success(t("messages.success.retryAlarmTriggered"))
+        await loadStatus()
+      } else {
+        toast.error(
+          t("messages.error.retryAlarmTriggerFailed", {
+            error: response.error ?? "",
+          }),
+        )
+      }
+    } catch (error: any) {
+      toast.dismiss()
+      toast.error(
+        t("messages.error.retryAlarmTriggerFailed", { error: error.message }),
+      )
+    } finally {
+      setIsDebugTriggering(false)
     }
   }, [loadStatus, t])
 
@@ -230,8 +295,12 @@ export default function AutoCheckin(props: {
       <div className="mb-6">
         <ActionBar
           isRunning={isRunning}
+          isDebugTriggering={isDebugTriggering}
           onRunNow={handleRunNow}
           onRefresh={handleRefresh}
+          showDebugButtons={showDebugButtons}
+          onDebugTriggerDailyAlarmNow={handleDebugTriggerDailyAlarmNow}
+          onDebugTriggerRetryAlarmNow={handleDebugTriggerRetryAlarmNow}
         />
       </div>
 

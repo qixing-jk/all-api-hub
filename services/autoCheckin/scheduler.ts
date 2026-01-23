@@ -942,6 +942,32 @@ class AutoCheckinScheduler {
   }
 
   /**
+   * Dev/test-only helper: simulate the daily alarm callback immediately.
+   *
+   * Used by Options UI debug buttons so developers can run the same code path as
+   * `chrome.alarms` without waiting for the scheduled time.
+   */
+  async debugTriggerDailyAlarmNow(): Promise<void> {
+    await this.handleDailyAlarm({
+      name: AutoCheckinScheduler.DAILY_ALARM_NAME,
+      scheduledTime: Date.now(),
+    } as browser.alarms.Alarm)
+  }
+
+  /**
+   * Dev/test-only helper: simulate the retry alarm callback immediately.
+   *
+   * Note: if there is no pending retry queue for today, this will no-op/clear state
+   * according to the normal retry logic.
+   */
+  async debugTriggerRetryAlarmNow(): Promise<void> {
+    await this.handleRetryAlarm({
+      name: AutoCheckinScheduler.RETRY_ALARM_NAME,
+      scheduledTime: Date.now(),
+    } as browser.alarms.Alarm)
+  }
+
+  /**
    * Execute check-ins for all eligible accounts.
    *
    * Run types:
@@ -1515,9 +1541,43 @@ export const handleAutoCheckinMessage = async (
           console.error("[AutoCheckin] Manual run failed:", e)
           sendResponse({ success: false, error: getErrorMessage(e) })
         } finally {
-          await autoCheckinScheduler.scheduleNextRun()
+          await autoCheckinScheduler.scheduleNextRun({ preserveExisting: true })
         }
         break
+
+      case "autoCheckin:debugTriggerDailyAlarmNow": {
+        if (
+          import.meta.env.MODE !== "development" &&
+          import.meta.env.MODE !== "test"
+        ) {
+          sendResponse({
+            success: false,
+            error:
+              "Debug action is only available in development/test mode (autoCheckin:debugTriggerDailyAlarmNow)",
+          })
+          break
+        }
+        await autoCheckinScheduler.debugTriggerDailyAlarmNow()
+        sendResponse({ success: true })
+        break
+      }
+
+      case "autoCheckin:debugTriggerRetryAlarmNow": {
+        if (
+          import.meta.env.MODE !== "development" &&
+          import.meta.env.MODE !== "test"
+        ) {
+          sendResponse({
+            success: false,
+            error:
+              "Debug action is only available in development/test mode (autoCheckin:debugTriggerRetryAlarmNow)",
+          })
+          break
+        }
+        await autoCheckinScheduler.debugTriggerRetryAlarmNow()
+        sendResponse({ success: true })
+        break
+      }
 
       case "autoCheckin:retryAccount":
         if (!request.accountId) {

@@ -399,6 +399,36 @@ describe("handleAutoCheckinMessage", () => {
     expect(sendResponse).toHaveBeenCalledWith({ success: true })
   })
 
+  it("should trigger daily alarm handler on autoCheckin:debugTriggerDailyAlarmNow", async () => {
+    const debugSpy = vi
+      .spyOn(autoCheckinScheduler as any, "debugTriggerDailyAlarmNow")
+      .mockResolvedValue(undefined)
+    const sendResponse = vi.fn()
+
+    await handleAutoCheckinMessage(
+      { action: "autoCheckin:debugTriggerDailyAlarmNow" },
+      sendResponse,
+    )
+
+    expect(debugSpy).toHaveBeenCalled()
+    expect(sendResponse).toHaveBeenCalledWith({ success: true })
+  })
+
+  it("should trigger retry alarm handler on autoCheckin:debugTriggerRetryAlarmNow", async () => {
+    const debugSpy = vi
+      .spyOn(autoCheckinScheduler as any, "debugTriggerRetryAlarmNow")
+      .mockResolvedValue(undefined)
+    const sendResponse = vi.fn()
+
+    await handleAutoCheckinMessage(
+      { action: "autoCheckin:debugTriggerRetryAlarmNow" },
+      sendResponse,
+    )
+
+    expect(debugSpy).toHaveBeenCalled()
+    expect(sendResponse).toHaveBeenCalledWith({ success: true })
+  })
+
   it("should return status on autoCheckin:getStatus", async () => {
     const status = { lastRunResult: "success" }
     mockedAutoCheckinStorage.getStatus.mockResolvedValue(status as any)
