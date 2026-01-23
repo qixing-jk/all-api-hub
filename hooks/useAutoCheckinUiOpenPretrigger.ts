@@ -75,7 +75,6 @@ export function useAutoCheckinUiOpenPretrigger(): {
     hasTriggeredRef.current = true
 
     const requestId = createRequestId()
-    let isMounted = true
 
     const unsubscribe = onRuntimeMessage((message) => {
       if (
@@ -92,10 +91,6 @@ export function useAutoCheckinUiOpenPretrigger(): {
           action: "autoCheckin:pretriggerDailyOnUiOpen",
           requestId,
         })
-
-        if (!isMounted) {
-          return
-        }
 
         if (!response?.success || !response?.started) {
           return
@@ -118,7 +113,6 @@ export function useAutoCheckinUiOpenPretrigger(): {
     })()
 
     return () => {
-      isMounted = false
       unsubscribe()
     }
   }, [shouldAttemptPretrigger, t])
