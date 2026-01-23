@@ -4,7 +4,9 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { PageHeader } from "~/entrypoints/options/components/PageHeader"
+import { DEFAULT_PREFERENCES } from "~/services/userPreferences"
 import { AutoCheckinStatus, CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { sendRuntimeMessage } from "~/utils/browserApi"
 import { navigateWithinOptionsPage, openCheckInPage } from "~/utils/navigation"
@@ -27,6 +29,9 @@ export default function AutoCheckin(props: {
   routeParams?: Record<string, string>
 }) {
   const { t } = useTranslation("autoCheckin")
+  const { preferences: userPrefs } = useUserPreferencesContext()
+  const autoCheckinPreferences =
+    userPrefs?.autoCheckin ?? DEFAULT_PREFERENCES.autoCheckin!
   const routeParams = props.routeParams
   const QUICK_RUN_PARAM = "runNow" as const
   const QUICK_RUN_VALUE = "true" as const
@@ -288,7 +293,7 @@ export default function AutoCheckin(props: {
 
       {status && (
         <div className="mb-6">
-          <StatusCard status={status} />
+          <StatusCard status={status} preferences={autoCheckinPreferences} />
         </div>
       )}
 

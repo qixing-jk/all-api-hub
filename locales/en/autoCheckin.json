@@ -30,6 +30,9 @@
     "nextDaily": "Next daily run",
     "nextRetry": "Next retry run",
     "notScheduled": "Not scheduled",
+    "disabled": "Disabled",
+    "retryDisabled": "Retry disabled",
+    "noPendingRetry": "No pending retries",
     "pendingRetry": "Retry pending",
     "result": {
       "success": "Success",

@@ -30,6 +30,9 @@
     "nextDaily": "下次每日计划",
     "nextRetry": "下次重试计划",
     "notScheduled": "未计划",
+    "disabled": "已禁用",
+    "retryDisabled": "重试未启用",
+    "noPendingRetry": "无待重试",
     "pendingRetry": "等待重试",
     "result": {
       "success": "成功",
