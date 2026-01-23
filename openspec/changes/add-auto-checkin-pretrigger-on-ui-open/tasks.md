@@ -1,5 +1,5 @@
 ## 1. Preferences + settings UI
-- [x] 1.1 Extend `AutoCheckinPreferences` with `pretriggerDailyOnUiOpen` (default true)
+- [x] 1.1 Extend `AutoCheckinPreferences` with `pretriggerDailyOnUiOpen` (default disabled)
 - [x] 1.2 Add a toggle in the sign-in/auto-checkin settings panel and wire it to `updateAutoCheckin`
 - [x] 1.3 Add i18n strings for the new toggle and prompts
 

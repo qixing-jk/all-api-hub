@@ -1,7 +1,7 @@
 # Design: UI-open pre-trigger for daily auto check-in
 
 ## Goals
-- Provide a user-controlled, default-on way to trigger today’s **scheduled daily** auto check-in early when any extension UI surface opens.
+- Provide a user-controlled, default-disabled way to trigger today’s **scheduled daily** auto check-in early when any extension UI surface opens.
 - Keep the change tightly scoped: do not change retry behavior, provider semantics, or scheduling rules beyond “run earlier than the planned daily alarm time”.
 - Provide user feedback:
   - toast when early trigger fires
