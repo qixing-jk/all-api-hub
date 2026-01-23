@@ -22,3 +22,10 @@
 - [x] 5.3 Run `openspec validate add-auto-checkin-pretrigger-on-ui-open --strict`
 - [x] 5.4 Run `pnpm test:ci` and report coverage gap + follow-up plan if below target
 
+## 6. Debug / simulation helpers
+- [x] 6.1 Add `dryRun` + `debug` response details to `autoCheckin:pretriggerDailyOnUiOpen` so eligibility can be evaluated without running
+- [x] 6.2 Add a dev-only Options UI debug section to evaluate / trigger the UI-open pre-trigger on demand
+- [x] 6.3 Add a dev-only debug action to reset `lastDailyRunDay` so the flow can be re-tested on the same day
+- [x] 6.4 Add unit tests covering `dryRun` behavior, reason codes, and the reset action
+- [x] 6.5 Add a dev-only debug action/button to schedule the daily alarm for **today** so the pre-trigger can be tested without waiting
+

@@ -55,8 +55,14 @@
     "runNow": "立即执行",
     "refresh": "刷新",
     "debug": {
-      "triggerDailyAlarmNow": "调试：触发每日闹钟",
-      "triggerRetryAlarmNow": "调试：触发重试闹钟"
+      "triggerDailyAlarmNow": "开发：立即运行每日自动签到（模拟每日签到闹钟回调）",
+      "triggerRetryAlarmNow": "开发：立即运行重试签到（模拟签到重试闹钟回调）",
+      "scheduleDailyAlarmForToday": "开发：将每日签到的闹钟设为今天稍后时间",
+      "evaluateUiOpenPretrigger": "开发：解释“打开界面时提前触发今日签到”是否满足条件",
+      "triggerUiOpenPretrigger": "开发：立即尝试“打开界面时提前触发今日签到",
+      "resetLastDailyRunDay": "开发：清除“今天已执行过每日签到”标记",
+      "uiOpenPretriggerDiagnosticsTitle": "打开界面时提前触发今日签到",
+      "uiOpenPretriggerDiagnosticsDesc": "展示是否满足条件，以及用于判断的输入信息。"
     },
     "statistics": {
       "result": "执行结果",
@@ -140,6 +146,12 @@
       "retryFailed": "重新尝试失败：{{error}}",
       "dailyAlarmTriggerFailed": "触发每日闹钟失败：{{error}}",
       "retryAlarmTriggerFailed": "触发重试闹钟失败：{{error}}",
+      "dailyAlarmScheduleForTodayFailed": "计划今日每日闹钟失败：{{error}}",
+      "uiOpenPretriggerIneligible": "界面打开预触发条件不满足：{{reason}}",
+      "uiOpenPretriggerEvaluationFailed": "评估界面打开预触发失败：{{error}}",
+      "uiOpenPretriggerTriggerFailed": "触发界面打开预触发失败：{{error}}",
+      "uiOpenPretriggerDidNotStart": "界面打开预触发未启动：{{reason}}",
+      "lastDailyRunDayResetFailed": "重置每日执行标记失败：{{error}}",
       "openManualFailed": "打开手动签到页面失败：{{error}}",
       "invalidTimeWindow": "无效的时间窗口，开始时间和结束时间不能相同。",
       "invalidDeterministicTime": "请输入合法的 HH:mm 格式时间。",
@@ -152,12 +164,19 @@
       "retryCompleted": "重新尝试已完成。",
       "dailyAlarmTriggered": "已触发每日闹钟执行。",
       "retryAlarmTriggered": "已触发重试闹钟执行。",
-      "pretriggerStarted": "已提前触发自动签到。"
+      "dailyAlarmScheduledForToday": "已计划今日每日闹钟。",
+      "pretriggerStarted": "已提前触发自动签到。",
+      "uiOpenPretriggerEligible": "界面打开预触发条件满足。",
+      "lastDailyRunDayReset": "已重置每日执行标记。"
     },
     "loading": {
       "running": "正在执行自动签到...",
       "triggeringDailyAlarm": "正在触发每日闹钟...",
-      "triggeringRetryAlarm": "正在触发重试闹钟..."
+      "triggeringRetryAlarm": "正在触发重试闹钟...",
+      "schedulingDailyAlarmForToday": "正在计划今日每日闹钟...",
+      "evaluatingUiOpenPretrigger": "正在评估界面打开预触发...",
+      "triggeringUiOpenPretrigger": "正在触发界面打开预触发...",
+      "resettingLastDailyRunDay": "正在重置每日执行标记..."
     }
   },
   "uiOpenPretrigger": {

@@ -5,17 +5,21 @@
  * Falls back to a time+random based identifier when `crypto.randomUUID` is not
  * available (e.g. certain test environments).
  */
-export function safeRandomUUID(customPrefix: string): string {
+export function safeRandomUUID(customPrefix?: string): string {
   const cryptoRef = globalThis.crypto
   const randomUUID = cryptoRef?.randomUUID
 
+  const finalPrefix = customPrefix ? `${customPrefix}-` : ""
+
   if (typeof randomUUID === "function") {
     try {
-      return `${customPrefix}-${randomUUID.call(cryptoRef)}`
+      return finalPrefix + `${randomUUID.call(cryptoRef)}`
     } catch (error) {
       console.error("Failed to generate UUID using crypto.randomUUID:", error)
     }
   }
 
-  return `${customPrefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+  return (
+    finalPrefix + `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+  )
 }

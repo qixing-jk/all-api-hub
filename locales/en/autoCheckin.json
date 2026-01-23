@@ -55,8 +55,14 @@
     "runNow": "Run now",
     "refresh": "Refresh",
     "debug": {
-      "triggerDailyAlarmNow": "Debug: trigger daily alarm",
-      "triggerRetryAlarmNow": "Debug: trigger retry alarm"
+      "triggerDailyAlarmNow": "Dev: Run daily check-in now (simulate daily check-in alarm callback)",
+      "triggerRetryAlarmNow": "Dev: Run retry check-in now (simulate check-in retry alarm callback)",
+      "scheduleDailyAlarmForToday": "Dev: Schedule daily check-in alarm for later today",
+      "evaluateUiOpenPretrigger": "Dev: Evaluate if 'Pre-trigger today's check-in when UI opens' conditions are met",
+      "triggerUiOpenPretrigger": "Dev: Immediately try 'Pre-trigger today's check-in when UI opens'",
+      "resetLastDailyRunDay": "Dev: Clear 'Daily check-in already run today' flag",
+      "uiOpenPretriggerDiagnosticsTitle": "Pre-trigger today's check-in when UI opens",
+      "uiOpenPretriggerDiagnosticsDesc": "Shows whether conditions are met, and the input information used for judgment."
     },
     "statistics": {
       "result": "Result",
@@ -140,6 +146,12 @@
       "retryFailed": "Retry failed: {{error}}",
       "dailyAlarmTriggerFailed": "Failed to trigger daily alarm: {{error}}",
       "retryAlarmTriggerFailed": "Failed to trigger retry alarm: {{error}}",
+      "dailyAlarmScheduleForTodayFailed": "Failed to schedule daily alarm for today: {{error}}",
+      "uiOpenPretriggerIneligible": "UI-open pre-trigger is not eligible: {{reason}}",
+      "uiOpenPretriggerEvaluationFailed": "Failed to evaluate UI-open pre-trigger: {{error}}",
+      "uiOpenPretriggerTriggerFailed": "Failed to trigger UI-open pre-trigger: {{error}}",
+      "uiOpenPretriggerDidNotStart": "UI-open pre-trigger did not start: {{reason}}",
+      "lastDailyRunDayResetFailed": "Failed to reset last daily marker: {{error}}",
       "openManualFailed": "Failed to open manual sign-in page: {{error}}",
       "invalidTimeWindow": "Invalid time window. Start and end cannot be the same.",
       "invalidDeterministicTime": "Please provide a valid deterministic time in HH:mm format.",
@@ -152,12 +164,19 @@
       "retryCompleted": "Retry completed.",
       "dailyAlarmTriggered": "Daily alarm execution triggered.",
       "retryAlarmTriggered": "Retry alarm execution triggered.",
-      "pretriggerStarted": "Auto check-in started early."
+      "dailyAlarmScheduledForToday": "Daily alarm scheduled for today.",
+      "pretriggerStarted": "Auto check-in started early.",
+      "uiOpenPretriggerEligible": "UI-open pre-trigger is eligible.",
+      "lastDailyRunDayReset": "Last daily marker reset."
     },
     "loading": {
       "running": "Running auto check-in...",
       "triggeringDailyAlarm": "Triggering daily alarm...",
-      "triggeringRetryAlarm": "Triggering retry alarm..."
+      "triggeringRetryAlarm": "Triggering retry alarm...",
+      "schedulingDailyAlarmForToday": "Scheduling daily alarm for today...",
+      "evaluatingUiOpenPretrigger": "Evaluating UI-open pre-trigger...",
+      "triggeringUiOpenPretrigger": "Triggering UI-open pre-trigger...",
+      "resettingLastDailyRunDay": "Resetting last daily marker..."
     }
   },
   "uiOpenPretrigger": {

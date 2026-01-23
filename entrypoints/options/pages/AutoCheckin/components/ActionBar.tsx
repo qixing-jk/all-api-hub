@@ -15,6 +15,10 @@ interface ActionBarProps {
   showDebugButtons?: boolean
   onDebugTriggerDailyAlarmNow?: () => void
   onDebugTriggerRetryAlarmNow?: () => void
+  onDebugScheduleDailyAlarmForToday?: () => void
+  onDebugEvaluateUiOpenPretrigger?: () => void
+  onDebugTriggerUiOpenPretrigger?: () => void
+  onDebugResetLastDailyRunDay?: () => void
 }
 
 /**
@@ -27,6 +31,10 @@ interface ActionBarProps {
  * @param props.showDebugButtons When true, shows dev-only alarm debug buttons.
  * @param props.onDebugTriggerDailyAlarmNow Triggers the daily alarm handler immediately (dev-only).
  * @param props.onDebugTriggerRetryAlarmNow Triggers the retry alarm handler immediately (dev-only).
+ * @param props.onDebugScheduleDailyAlarmForToday Schedules the daily alarm to run later today (dev-only).
+ * @param props.onDebugEvaluateUiOpenPretrigger Evaluates UI-open pre-trigger eligibility (dev-only).
+ * @param props.onDebugTriggerUiOpenPretrigger Triggers the UI-open pre-trigger flow immediately (dev-only).
+ * @param props.onDebugResetLastDailyRunDay Clears the stored last-daily marker so the flow can be rerun (dev-only).
  */
 export default function ActionBar({
   isRunning,
@@ -36,6 +44,10 @@ export default function ActionBar({
   showDebugButtons,
   onDebugTriggerDailyAlarmNow,
   onDebugTriggerRetryAlarmNow,
+  onDebugScheduleDailyAlarmForToday,
+  onDebugEvaluateUiOpenPretrigger,
+  onDebugTriggerUiOpenPretrigger,
+  onDebugResetLastDailyRunDay,
 }: ActionBarProps) {
   const { t } = useTranslation("autoCheckin")
   const isBusy = isRunning || isDebugTriggering === true
@@ -74,6 +86,38 @@ export default function ActionBar({
             leftIcon={<BugAntIcon className="h-4 w-4" />}
           >
             {t("execution.debug.triggerRetryAlarmNow")}
+          </Button>
+          <Button
+            onClick={onDebugScheduleDailyAlarmForToday}
+            variant="outline"
+            disabled={isBusy || !onDebugScheduleDailyAlarmForToday}
+            leftIcon={<BugAntIcon className="h-4 w-4" />}
+          >
+            {t("execution.debug.scheduleDailyAlarmForToday")}
+          </Button>
+          <Button
+            onClick={onDebugEvaluateUiOpenPretrigger}
+            variant="outline"
+            disabled={isBusy || !onDebugEvaluateUiOpenPretrigger}
+            leftIcon={<BugAntIcon className="h-4 w-4" />}
+          >
+            {t("execution.debug.evaluateUiOpenPretrigger")}
+          </Button>
+          <Button
+            onClick={onDebugTriggerUiOpenPretrigger}
+            variant="outline"
+            disabled={isBusy || !onDebugTriggerUiOpenPretrigger}
+            leftIcon={<BugAntIcon className="h-4 w-4" />}
+          >
+            {t("execution.debug.triggerUiOpenPretrigger")}
+          </Button>
+          <Button
+            onClick={onDebugResetLastDailyRunDay}
+            variant="outline"
+            disabled={isBusy || !onDebugResetLastDailyRunDay}
+            leftIcon={<BugAntIcon className="h-4 w-4" />}
+          >
+            {t("execution.debug.resetLastDailyRunDay")}
           </Button>
         </>
       )}

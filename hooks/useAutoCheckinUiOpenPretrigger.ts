@@ -9,23 +9,13 @@ import type {
   AutoCheckinRunSummary,
 } from "~/types/autoCheckin"
 import { onRuntimeMessage, sendRuntimeMessage } from "~/utils/browserApi"
+import { safeRandomUUID } from "~/utils/identifier"
 
 interface UiOpenPretriggerDialogState {
   isOpen: boolean
   summary: AutoCheckinRunSummary | null
   lastRunResult: AutoCheckinRunResult | null
   pendingRetry: boolean
-}
-
-const createRequestId = (): string => {
-  try {
-    return (
-      globalThis.crypto?.randomUUID?.() ??
-      `${Date.now()}-${Math.random().toString(16).slice(2)}`
-    )
-  } catch {
-    return `${Date.now()}-${Math.random().toString(16).slice(2)}`
-  }
 }
 
 /**
@@ -74,7 +64,7 @@ export function useAutoCheckinUiOpenPretrigger(): {
     }
     hasTriggeredRef.current = true
 
-    const requestId = createRequestId()
+    const requestId = safeRandomUUID()
 
     const unsubscribe = onRuntimeMessage((message) => {
       if (
