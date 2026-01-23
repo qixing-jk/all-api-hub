@@ -48,6 +48,7 @@ function createV0Preferences(
     },
     autoCheckin: {
       globalEnabled: false,
+      pretriggerDailyOnUiOpen: true,
       windowStart: "09:00",
       windowEnd: "18:00",
       scheduleMode: "random",
@@ -393,6 +394,7 @@ describe("preferencesMigration", () => {
         },
         autoCheckin: {
           globalEnabled: false,
+          pretriggerDailyOnUiOpen: true,
           windowStart: "09:00",
           windowEnd: "18:00",
           scheduleMode: "random",

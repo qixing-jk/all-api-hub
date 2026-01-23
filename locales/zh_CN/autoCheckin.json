@@ -4,6 +4,8 @@
     "title": "自动签到",
     "enable": "启用自动签到",
     "enableDesc": "控制全局自动签到功能开关，关闭后不会执行任何自动签到任务。",
+    "pretriggerDailyOnUiOpen": "打开界面时提前触发今日签到",
+    "pretriggerDailyOnUiOpenDesc": "当你在今日时间窗口内打开扩展界面且今日每日计划尚未执行时，立即触发一次每日自动签到。",
     "windowStart": "时间窗口开始",
     "windowStartDesc": "允许每日自动签到开始的最早本地时间。",
     "windowEnd": "时间窗口结束",
@@ -149,12 +151,19 @@
       "runCompleted": "自动签到已完成。",
       "retryCompleted": "重新尝试已完成。",
       "dailyAlarmTriggered": "已触发每日闹钟执行。",
-      "retryAlarmTriggered": "已触发重试闹钟执行。"
+      "retryAlarmTriggered": "已触发重试闹钟执行。",
+      "pretriggerStarted": "已提前触发自动签到。"
     },
     "loading": {
       "running": "正在执行自动签到...",
       "triggeringDailyAlarm": "正在触发每日闹钟...",
       "triggeringRetryAlarm": "正在触发重试闹钟..."
     }
+  },
+  "uiOpenPretrigger": {
+    "dialogTitle": "自动签到已完成",
+    "dialogDescription": "打开扩展界面时触发了今日计划的自动签到。",
+    "viewDetails": "查看详情",
+    "close": "关闭"
   }
 }

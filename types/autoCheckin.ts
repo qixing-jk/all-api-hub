@@ -199,6 +199,14 @@ export interface AutoCheckinRetryStrategy {
 
 export interface AutoCheckinPreferences {
   globalEnabled: boolean
+
+  /**
+   * When enabled, opening an extension UI surface (popup/side panel/options) will
+   * opportunistically trigger today's scheduled daily run early (only when the
+   * current time is inside the configured time window and the daily run has not
+   * executed yet).
+   */
+  pretriggerDailyOnUiOpen: boolean
   windowStart: string // HH:mm format (e.g., "09:00")
   windowEnd: string // HH:mm format (e.g., "18:00")
   scheduleMode: AutoCheckinScheduleMode

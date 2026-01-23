@@ -10,6 +10,7 @@ import type {
 describe("AutoCheckin StatusCard scheduling labels", () => {
   const basePreferences: AutoCheckinPreferences = {
     globalEnabled: true,
+    pretriggerDailyOnUiOpen: true,
     windowStart: "09:00",
     windowEnd: "18:00",
     scheduleMode: "random",

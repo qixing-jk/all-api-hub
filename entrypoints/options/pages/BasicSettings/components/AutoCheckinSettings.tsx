@@ -12,8 +12,8 @@ import {
   Input,
   Switch,
 } from "~/components/ui"
-import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { DEFAULT_PREFERENCES } from "~/services/userPreferences"
 import {
   AUTO_CHECKIN_SCHEDULE_MODE,
@@ -162,6 +162,21 @@ export default function AutoCheckinSettings() {
                 checked={preferences.globalEnabled}
                 onChange={(checked) =>
                   savePreferences({ globalEnabled: checked })
+                }
+                disabled={isSaving}
+              />
+            }
+          />
+
+          {/* UI-open daily pre-trigger */}
+          <CardItem
+            title={t("autoCheckin:settings.pretriggerDailyOnUiOpen")}
+            description={t("autoCheckin:settings.pretriggerDailyOnUiOpenDesc")}
+            rightContent={
+              <Switch
+                checked={preferences.pretriggerDailyOnUiOpen}
+                onChange={(checked) =>
+                  savePreferences({ pretriggerDailyOnUiOpen: checked })
                 }
                 disabled={isSaving}
               />

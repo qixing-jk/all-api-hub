@@ -64,6 +64,16 @@ class AutoCheckinScheduler {
   private isInitialized = false
 
   /**
+   * In-flight guard to prevent duplicate daily runs for the same local day.
+   *
+   * This specifically protects against:
+   * - multiple UI surfaces opening and triggering a pre-run simultaneously
+   * - the daily alarm firing while a UI-triggered daily run is executing
+   */
+  private dailyRunInFlightDay: string | null = null
+  private dailyRunInFlightPromise: Promise<void> | null = null
+
+  /**
    * Returns the local calendar day string for the provided date.
    *
    * We intentionally use a local day boundary for scheduling/retry scoping so that
@@ -872,35 +882,155 @@ class AutoCheckinScheduler {
   private async handleDailyAlarm(alarm: browser.alarms.Alarm) {
     const now = new Date()
     const today = this.getLocalDay(now)
-    const currentStatus = await autoCheckinStorage.getStatus()
-    const targetDay =
-      currentStatus?.dailyAlarmTargetDay ??
-      (alarm.scheduledTime != null
-        ? this.getLocalDay(new Date(alarm.scheduledTime))
-        : undefined)
 
-    // Stale-alarm guard: never execute a normal run for a past day.
-    if (targetDay && targetDay !== today) {
-      console.warn("[AutoCheckin] Ignoring stale daily alarm", {
-        targetDay,
-        today,
-      })
-      await this.scheduleNextRun()
+    if (this.dailyRunInFlightDay === today && this.dailyRunInFlightPromise) {
+      console.warn(
+        "[AutoCheckin] Daily run already in-flight, ignoring trigger",
+      )
       return
     }
 
-    console.log(
-      "[AutoCheckin] Daily alarm triggered, starting check-in execution",
-    )
-    try {
-      await this.runCheckins({ runType: AUTO_CHECKIN_RUN_TYPE.DAILY })
-    } catch (error) {
-      console.error(
-        "[AutoCheckin] Error during daily check-in execution:",
-        error,
+    const runPromise = (async () => {
+      const currentStatus = await autoCheckinStorage.getStatus()
+      const targetDay =
+        currentStatus?.dailyAlarmTargetDay ??
+        (alarm.scheduledTime != null
+          ? this.getLocalDay(new Date(alarm.scheduledTime))
+          : undefined)
+
+      // Stale-alarm guard: never execute a normal run for a past day.
+      if (targetDay && targetDay !== today) {
+        console.warn("[AutoCheckin] Ignoring stale daily alarm", {
+          targetDay,
+          today,
+        })
+        await this.scheduleNextRun()
+        return
+      }
+
+      console.log(
+        "[AutoCheckin] Daily alarm triggered, starting check-in execution",
       )
+      try {
+        await this.runCheckins({ runType: AUTO_CHECKIN_RUN_TYPE.DAILY })
+      } catch (error) {
+        console.error(
+          "[AutoCheckin] Error during daily check-in execution:",
+          error,
+        )
+      } finally {
+        await this.scheduleNextRun()
+      }
+    })()
+
+    this.dailyRunInFlightDay = today
+    this.dailyRunInFlightPromise = runPromise
+
+    try {
+      await runPromise
     } finally {
-      await this.scheduleNextRun()
+      if (this.dailyRunInFlightPromise === runPromise) {
+        this.dailyRunInFlightDay = null
+        this.dailyRunInFlightPromise = null
+      }
+    }
+  }
+
+  /**
+   * Pre-trigger today's scheduled daily run early when an extension UI opens.
+   *
+   * This method is intentionally scoped to the existing daily alarm path and
+   * does not change retry behavior or provider semantics.
+   */
+  async pretriggerDailyOnUiOpen(params?: { requestId?: string }): Promise<{
+    started: boolean
+    summary?: AutoCheckinRunSummary
+    lastRunResult?: AutoCheckinRunResult
+    pendingRetry?: boolean
+  }> {
+    const now = new Date()
+    const today = this.getLocalDay(now)
+
+    if (!hasAlarmsAPI()) {
+      return { started: false }
+    }
+
+    const prefs = await userPreferences.getPreferences()
+    const config = prefs.autoCheckin ?? DEFAULT_PREFERENCES.autoCheckin!
+
+    if (!config.globalEnabled || !config.pretriggerDailyOnUiOpen) {
+      return { started: false }
+    }
+
+    const currentStatus = await autoCheckinStorage.getStatus()
+
+    if (currentStatus?.lastDailyRunDay === today) {
+      return { started: false }
+    }
+
+    if (this.dailyRunInFlightDay === today && this.dailyRunInFlightPromise) {
+      return { started: false }
+    }
+
+    const windowStartMinutes = this.parseTimeToMinutes(config.windowStart)
+    const windowEndMinutes = this.parseTimeToMinutes(config.windowEnd)
+    const nowMinutes = now.getHours() * 60 + now.getMinutes()
+
+    if (
+      windowStartMinutes == null ||
+      windowEndMinutes == null ||
+      !this.isMinutesWithinWindow(
+        nowMinutes,
+        windowStartMinutes,
+        windowEndMinutes,
+      )
+    ) {
+      return { started: false }
+    }
+
+    const dailyAlarm = await getAlarm(AutoCheckinScheduler.DAILY_ALARM_NAME)
+
+    if (!dailyAlarm?.scheduledTime) {
+      return { started: false }
+    }
+
+    const scheduledTargetDay = this.getLocalDay(
+      new Date(dailyAlarm.scheduledTime),
+    )
+    const targetDay = currentStatus?.dailyAlarmTargetDay ?? scheduledTargetDay
+
+    if (targetDay !== today) {
+      return { started: false }
+    }
+
+    if (params?.requestId) {
+      try {
+        await browser.runtime.sendMessage({
+          action: "autoCheckinPretrigger:started",
+          requestId: params.requestId,
+        })
+      } catch {
+        // Ignore if no UI is listening (popup closed, no receivers, etc.).
+      }
+    }
+
+    await this.handleDailyAlarm({
+      name: AutoCheckinScheduler.DAILY_ALARM_NAME,
+      scheduledTime: dailyAlarm.scheduledTime,
+    } as browser.alarms.Alarm)
+
+    const updatedStatus = await autoCheckinStorage.getStatus()
+    const summary =
+      updatedStatus?.summary ??
+      (updatedStatus?.perAccount
+        ? this.recalculateSummaryFromResults(updatedStatus.perAccount)
+        : undefined)
+
+    return {
+      started: true,
+      summary,
+      lastRunResult: updatedStatus?.lastRunResult,
+      pendingRetry: updatedStatus?.pendingRetry,
     }
   }
 
@@ -1374,6 +1504,7 @@ class AutoCheckinScheduler {
       Pick<
         AutoCheckinPreferences,
         | "globalEnabled"
+        | "pretriggerDailyOnUiOpen"
         | "windowStart"
         | "windowEnd"
         | "scheduleMode"
@@ -1576,6 +1707,14 @@ export const handleAutoCheckinMessage = async (
         }
         await autoCheckinScheduler.debugTriggerRetryAlarmNow()
         sendResponse({ success: true })
+        break
+      }
+
+      case "autoCheckin:pretriggerDailyOnUiOpen": {
+        const result = await autoCheckinScheduler.pretriggerDailyOnUiOpen({
+          requestId: request.requestId,
+        })
+        sendResponse({ success: true, ...result })
         break
       }
 

@@ -4,6 +4,8 @@
     "title": "Auto Check-in",
     "enable": "Enable auto check-in",
     "enableDesc": "Toggle the global auto check-in feature. When disabled, no check-in tasks will run.",
+    "pretriggerDailyOnUiOpen": "Pre-trigger daily run when UI opens",
+    "pretriggerDailyOnUiOpenDesc": "When you open the extension UI during today's time window and the daily run has not executed yet, start it immediately.",
     "windowStart": "Time window start",
     "windowStartDesc": "The earliest local time when the daily check-in can start.",
     "windowEnd": "Time window end",
@@ -149,12 +151,19 @@
       "runCompleted": "Auto check-in completed.",
       "retryCompleted": "Retry completed.",
       "dailyAlarmTriggered": "Daily alarm execution triggered.",
-      "retryAlarmTriggered": "Retry alarm execution triggered."
+      "retryAlarmTriggered": "Retry alarm execution triggered.",
+      "pretriggerStarted": "Auto check-in started early."
     },
     "loading": {
       "running": "Running auto check-in...",
       "triggeringDailyAlarm": "Triggering daily alarm...",
       "triggeringRetryAlarm": "Triggering retry alarm..."
     }
+  },
+  "uiOpenPretrigger": {
+    "dialogTitle": "Auto check-in finished",
+    "dialogDescription": "Today's scheduled daily run was triggered early when the UI opened.",
+    "viewDetails": "View details",
+    "close": "Close"
   }
 }

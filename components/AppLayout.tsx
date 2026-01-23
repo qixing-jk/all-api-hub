@@ -2,6 +2,7 @@ import { ReactNode } from "react"
 
 import "~/styles/style.css"
 
+import AutoCheckinUiOpenPretrigger from "~/components/AutoCheckinUiOpenPretrigger"
 import {
   ChannelDialogContainer,
   ChannelDialogProvider,
@@ -25,6 +26,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         <ThemeProvider>
           <ChannelDialogProvider>
             {children}
+            <AutoCheckinUiOpenPretrigger />
             <ChannelDialogContainer />
           </ChannelDialogProvider>
           <ThemeAwareToaster reverseOrder={false} />
