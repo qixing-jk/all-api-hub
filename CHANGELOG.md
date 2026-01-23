@@ -1,5 +1,20 @@
 # Changelog
 
+## [3.7.0](https://github.com/qixing-jk/all-api-hub/compare/v3.6.0...v3.7.0) (2026-01-23)
+
+
+### Features
+
+* **account:** add income field to sorting options ([e2f7d8c](https://github.com/qixing-jk/all-api-hub/commit/e2f7d8cd72b5ff3d21111b61030830625296fab1))
+* Implement auto-checkin UI-open pre-trigger feature ([#392](https://github.com/qixing-jk/all-api-hub/issues/392)) ([60a855b](https://github.com/qixing-jk/all-api-hub/commit/60a855b7161dc3425e60509e9e51088952e25d2c))
+* **sorting:** add disabled account sorting criterion ([#386](https://github.com/qixing-jk/all-api-hub/issues/386)) ([3fdd779](https://github.com/qixing-jk/all-api-hub/commit/3fdd779be152be37d18d541e4a4a076d7074e9c2))
+
+
+### Bug Fixes
+
+* **auto-checkin:** run once per local day; retry only failed accounts ([#390](https://github.com/qixing-jk/all-api-hub/issues/390)) ([29eff91](https://github.com/qixing-jk/all-api-hub/commit/29eff91ebab5e911c43ebf4c0d0f97441d686071))
+* Rename BalanceType to DashboardTabType and update related i18n ([#383](https://github.com/qixing-jk/all-api-hub/issues/383)) ([4931dd6](https://github.com/qixing-jk/all-api-hub/commit/4931dd657d0ab9db2209d28935b500999aeb6991))
+
 ## [3.6.0](https://github.com/qixing-jk/all-api-hub/compare/v3.5.2...v3.6.0) (2026-01-21)
 
 
