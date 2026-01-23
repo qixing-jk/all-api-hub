@@ -462,7 +462,7 @@ describe("handleAutoCheckinMessage", () => {
   it("should pretrigger daily run on autoCheckin:pretriggerDailyOnUiOpen", async () => {
     const pretriggerSpy = vi
       .spyOn(autoCheckinScheduler as any, "pretriggerDailyOnUiOpen")
-      .mockResolvedValue({ started: false, eligible: false })
+      .mockResolvedValueOnce({ started: false, eligible: false })
     const sendResponse = vi.fn()
 
     await handleAutoCheckinMessage(
