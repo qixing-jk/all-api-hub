@@ -1077,6 +1077,14 @@ class AutoCheckinScheduler {
       return returnIneligible("daily_run_in_flight")
     }
 
+    /**
+     * Duplicate-run guard: never allow a second daily run on the same local day,
+     * even if the daily alarm schedule/state is inconsistent.
+     */
+    if (currentStatus?.lastDailyRunDay === today) {
+      return returnIneligible("already_ran_today")
+    }
+
     const windowStartMinutes = this.parseTimeToMinutes(config.windowStart)
     const windowEndMinutes = this.parseTimeToMinutes(config.windowEnd)
     const nowMinutes = now.getHours() * 60 + now.getMinutes()
