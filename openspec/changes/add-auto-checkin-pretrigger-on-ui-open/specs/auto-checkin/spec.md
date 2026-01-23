@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Pre-trigger today’s daily auto check-in on UI open
-The extension MUST support a user preference `autoCheckin.pretriggerDailyOnUiOpen` (default **enabled**) that controls whether opening an extension UI surface attempts to trigger today’s scheduled **daily** auto check-in run early.
+The extension MUST support a user preference `autoCheckin.pretriggerDailyOnUiOpen` (default **disabled**) that controls whether opening an extension UI surface attempts to trigger today’s scheduled **daily** auto check-in run early.
 
 #### Scenario: Pre-trigger runs within today’s window
 - **GIVEN** auto check-in is enabled and `pretriggerDailyOnUiOpen = true`

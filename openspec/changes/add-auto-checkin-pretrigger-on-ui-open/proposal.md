@@ -6,7 +6,7 @@ Auto check-in is currently driven by a scheduled daily alarm. When users open th
 This change adds an **early trigger** for the already-scheduled daily alarm. It is intentionally **unrelated to retry logic** and does not change eligibility, provider behavior, or retry scheduling rules.
 
 ## What Changes
-- Add a new preference toggle under the sign-in/auto-checkin settings: `autoCheckin.pretriggerDailyOnUiOpen` (default **enabled**).
+- Add a new preference toggle under the sign-in/auto-checkin settings: `autoCheckin.pretriggerDailyOnUiOpen` (default **disabled**).
 - When an extension UI surface is opened:
   - If the daily run is scheduled for **today**, the current time is **within the configured time window**, and today’s daily run has **not** executed yet, the UI triggers the daily run immediately via the existing scheduler path.
   - Show a toast when the early trigger fires.
@@ -16,7 +16,7 @@ This change adds an **early trigger** for the already-scheduled daily alarm. It 
 - No changes to retry behavior (alarm names, retry queue, max attempts, etc.).
 - No changes to manual “Run now” behavior beyond reusing the same result rendering primitives if helpful.
 - No new provider logic; the scheduler continues to own execution.
-- The early trigger is an **opt-in preference** (enabled by default) and can be disabled in settings.
+- The early trigger is an **opt-in preference** (disabled by default) and can be disabled in settings.
 
 ## Impact
 - UX: Users get a clear indication that auto check-in has started (toast) and a post-run summary (dialog) with a direct link to details.
