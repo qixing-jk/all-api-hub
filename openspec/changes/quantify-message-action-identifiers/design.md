@@ -73,6 +73,91 @@ This creates a cross-cutting maintenance risk: action names are a contract betwe
 
 Rollback strategy: revert the refactor commits; since wire values are preserved and no storage/schema changes are introduced, rollback is low-risk.
 
+## Current Action Inventory (wire values)
+
+This is the deduped set of runtime message `action` strings and routing prefixes currently used in the repo. These values are considered on-the-wire contracts and MUST NOT be renamed during this change.
+
+### Prefix-routed actions
+
+- `externalCheckIn:`
+- `webdavAutoSync:`
+- `modelSync:`
+- `autoCheckin:`
+- `redemptionAssist:`
+- `channelConfig:`
+- `usageHistory:`
+- `autoRefresh` (legacy group; matches a non-namespaced prefix)
+
+### Exact-match actions
+
+- `accountDialog:importCookieAuthSessionCookie`
+- `autoCheckin:debugResetLastDailyRunDay`
+- `autoCheckin:debugScheduleDailyAlarmForToday`
+- `autoCheckin:debugTriggerDailyAlarmNow`
+- `autoCheckin:debugTriggerRetryAlarmNow`
+- `autoCheckin:getAccountInfo`
+- `autoCheckin:getStatus`
+- `autoCheckin:pretriggerDailyOnUiOpen`
+- `autoCheckin:retryAccount`
+- `autoCheckin:runNow`
+- `autoCheckin:updateSettings`
+- `autoCheckinPretrigger:started`
+- `autoDetectSite`
+- `channelConfig:get`
+- `channelConfig:upsertFilters`
+- `checkCloudflareGuard`
+- `closeTempWindow`
+- `cloudflareGuardLog`
+- `cookieInterceptor:trackUrl`
+- `externalCheckIn:openAndMark`
+- `getAutoRefreshStatus`
+- `getLocalStorage`
+- `getRenderedTitle`
+- `getUserFromLocalStorage`
+- `modelSync:getChannelUpstreamModelOptions`
+- `modelSync:getLastExecution`
+- `modelSync:getNextRun`
+- `modelSync:getPreferences`
+- `modelSync:getProgress`
+- `modelSync:listChannels`
+- `modelSync:triggerAll`
+- `modelSync:triggerFailedOnly`
+- `modelSync:triggerSelected`
+- `modelSync:updateSettings`
+- `openSettings:checkinRedeem`
+- `openSettings:shieldBypass`
+- `openTempWindow`
+- `performTempWindowFetch`
+- `permissions:check`
+- `preferences:updateActionClickBehavior`
+- `redemptionAssist:autoRedeem`
+- `redemptionAssist:autoRedeemByUrl`
+- `redemptionAssist:contextMenuTrigger`
+- `redemptionAssist:shouldPrompt`
+- `redemptionAssist:updateSettings`
+- `refreshNow`
+- `setupAutoRefresh`
+- `showShieldBypassUi`
+- `stopAutoRefresh`
+- `tempWindowFetch`
+- `tempWindowGetRenderedTitle`
+- `updateAutoRefreshSettings`
+- `usageHistory:prune`
+- `usageHistory:syncNow`
+- `usageHistory:updateSettings`
+- `waitAndGetUserInfo`
+- `webdavAutoSync:getStatus`
+- `webdavAutoSync:setup`
+- `webdavAutoSync:stop`
+- `webdavAutoSync:syncNow`
+- `webdavAutoSync:updateSettings`
+
+### Notes
+
+- Auto-refresh currently uses a mixed router: a loose prefix match (`action.startsWith("autoRefresh")`) plus a hardcoded allow-list of legacy non-namespaced actions (`setupAutoRefresh`, `refreshNow`, `stopAutoRefresh`, `updateAutoRefreshSettings`, `getAutoRefreshStatus`). This group cannot be represented as a single strict `foo:` prefix and will be expressed via a dedicated matcher helper so router code contains no magic strings.
+- Tests intentionally use sentinel unknown values (e.g., `unknownAction`, `unknown`) to exercise the unknown/missing action branches; these are not shipped wire contracts.
+- Canonical mappings are defined in `constants/runtimeActions.ts` via `RuntimeActionIds` and `RuntimeActionPrefixes`. All call sites should reference these symbols so on-the-wire values remain unchanged.
+
 ## Resolved Questions
 
 - **Yes**: Introduce a follow-up capability/change to standardize legacy action names into a strict `<namespace>:<verb>` format while continuing to accept existing action names as aliases for backward compatibility.
