@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 
 import AutoCheckinUiOpenPretrigger from "~/components/AutoCheckinUiOpenPretrigger"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
@@ -38,10 +39,12 @@ describe("AutoCheckinUiOpenPretrigger", () => {
     const sendRuntimeMessageSpy = vi.spyOn(browserApi, "sendRuntimeMessage")
 
     sendRuntimeMessageSpy.mockImplementation(async (message: any) => {
-      if (message.action === "autoCheckin:pretriggerDailyOnUiOpen") {
+      if (
+        message.action === RuntimeActionIds.AutoCheckinPretriggerDailyOnUiOpen
+      ) {
         void browser.runtime
           .sendMessage({
-            action: "autoCheckinPretrigger:started",
+            action: RuntimeActionIds.AutoCheckinPretriggerStarted,
             requestId: message.requestId,
           })
           .catch(() => undefined)
@@ -70,7 +73,7 @@ describe("AutoCheckinUiOpenPretrigger", () => {
     await waitFor(() => {
       expect(sendRuntimeMessageSpy).toHaveBeenCalledWith(
         expect.objectContaining({
-          action: "autoCheckin:pretriggerDailyOnUiOpen",
+          action: RuntimeActionIds.AutoCheckinPretriggerDailyOnUiOpen,
         }),
       )
     })

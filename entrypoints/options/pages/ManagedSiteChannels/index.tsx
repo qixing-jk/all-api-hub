@@ -70,6 +70,7 @@ import {
   TableRow,
 } from "~/components/ui/table"
 import { ChannelTypeNames } from "~/constants/managedSite"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { PageHeader } from "~/entrypoints/options/components/PageHeader"
 import { cn } from "~/lib/utils"
 import { getManagedSiteService } from "~/services/managedSiteService"
@@ -151,7 +152,7 @@ export default function ManagedSiteChannels({
       setConfigMissing(false)
       setConfigMissingMessage(null)
       const response = await sendRuntimeMessage({
-        action: "modelSync:listChannels",
+        action: RuntimeActionIds.ModelSyncListChannels,
       })
       if (!response?.success) {
         throw new Error(response?.error || "Failed to load channels")
@@ -297,7 +298,7 @@ export default function ManagedSiteChannels({
       })
       try {
         const response = await sendRuntimeMessage({
-          action: "modelSync:triggerSelected",
+          action: RuntimeActionIds.ModelSyncTriggerSelected,
           channelIds,
         })
         if (!response?.success) {

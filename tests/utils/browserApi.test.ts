@@ -1,5 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   clearAlarm,
   createAlarm,
@@ -7,6 +8,7 @@ import {
   getAllAlarms,
   hasAlarmsAPI,
   onAlarm,
+  sendRuntimeActionMessage,
 } from "~/utils/browserApi"
 
 const originalBrowser = (globalThis as any).browser
@@ -168,5 +170,78 @@ describe("browserApi alarms helpers", () => {
   // restore original browser after all tests
   afterAll(() => {
     ;(globalThis as any).browser = originalBrowser
+  })
+})
+
+describe("browserApi sendRuntimeActionMessage", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+    ;(globalThis as any).browser = undefined
+  })
+
+  afterAll(() => {
+    ;(globalThis as any).browser = originalBrowser
+  })
+
+  it("forwards payload to browser.runtime.sendMessage unchanged", async () => {
+    const sendMessageMock = vi.fn().mockResolvedValue({ ok: true })
+    ;(globalThis as any).browser = { runtime: { sendMessage: sendMessageMock } }
+
+    const message = {
+      action: RuntimeActionIds.PermissionsCheck,
+      permissions: {},
+    }
+    const response = await sendRuntimeActionMessage(message)
+
+    expect(response).toEqual({ ok: true })
+    expect(sendMessageMock).toHaveBeenCalledTimes(1)
+    expect(sendMessageMock.mock.calls[0]?.[0]).toBe(message)
+  })
+
+  it("forwards retry options to sendMessageWithRetry behavior", async () => {
+    const recoverableError = new Error("Receiving end does not exist")
+    const message = {
+      action: RuntimeActionIds.PermissionsCheck,
+      permissions: {},
+    }
+
+    await expect(
+      (async () => {
+        const sendMessageMockNoRetry = vi
+          .fn()
+          .mockRejectedValue(recoverableError)
+        ;(globalThis as any).browser = {
+          runtime: { sendMessage: sendMessageMockNoRetry },
+        }
+        try {
+          await sendRuntimeActionMessage(message, {
+            maxAttempts: 1,
+            delayMs: 0,
+          })
+          throw new Error("Expected sendRuntimeActionMessage to reject")
+        } catch (error) {
+          expect(sendMessageMockNoRetry).toHaveBeenCalledTimes(1)
+          throw error
+        }
+      })(),
+    ).rejects.toThrow("Receiving end does not exist")
+
+    await expect(
+      (async () => {
+        const sendMessageMockRetry = vi
+          .fn()
+          .mockRejectedValueOnce(recoverableError)
+          .mockResolvedValueOnce({ ok: true })
+        ;(globalThis as any).browser = {
+          runtime: { sendMessage: sendMessageMockRetry },
+        }
+        const result = await sendRuntimeActionMessage(message, {
+          maxAttempts: 2,
+          delayMs: 0,
+        })
+        expect(sendMessageMockRetry).toHaveBeenCalledTimes(2)
+        return result
+      })(),
+    ).resolves.toEqual({ ok: true })
   })
 })

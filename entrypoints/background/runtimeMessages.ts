@@ -1,5 +1,10 @@
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import { RuntimeActionIds } from "~/constants/runtimeActions"
+import {
+  hasRuntimeActionPrefix,
+  isAutoRefreshRuntimeAction,
+  RuntimeActionIds,
+  RuntimeActionPrefixes,
+} from "~/constants/runtimeActions"
 import { applyActionClickBehavior } from "~/entrypoints/background/actionClickBehavior"
 import { handleAutoCheckinMessage } from "~/services/autoCheckin/scheduler"
 import { handleAutoRefreshMessage } from "~/services/autoRefreshService"
@@ -32,7 +37,7 @@ export function setupRuntimeMessageListeners() {
   // 处理来自 popup 的消息
   onRuntimeMessage((request, sender, sendResponse) => {
     try {
-      if (request.action === "permissions:check") {
+      if (request.action === RuntimeActionIds.PermissionsCheck) {
         void browser.permissions
           .contains(request.permissions)
           .then((hasPermission) => {
@@ -47,7 +52,7 @@ export function setupRuntimeMessageListeners() {
         return true
       }
 
-      if (request.action === "cloudflareGuardLog") {
+      if (request.action === RuntimeActionIds.CloudflareGuardLog) {
         try {
           console.log("[Background][CFGuardRelay]", {
             event: request.event ?? null,
@@ -67,33 +72,34 @@ export function setupRuntimeMessageListeners() {
         return true
       }
 
-      if (request.action === "openTempWindow") {
+      if (request.action === RuntimeActionIds.OpenTempWindow) {
         void handleOpenTempWindow(request, sendResponse)
         return true // 保持异步响应通道
       }
 
-      if (request.action === "closeTempWindow") {
+      if (request.action === RuntimeActionIds.CloseTempWindow) {
         void handleCloseTempWindow(request, sendResponse)
         return true
       }
 
-      if (request.action === "autoDetectSite") {
+      if (request.action === RuntimeActionIds.AutoDetectSite) {
         void handleAutoDetectSite(request, sendResponse)
         return true
       }
 
-      if (request.action === "tempWindowFetch") {
+      if (request.action === RuntimeActionIds.TempWindowFetch) {
         void handleTempWindowFetch(request, sendResponse)
         return true
       }
 
-      if (request.action === "tempWindowGetRenderedTitle") {
+      if (request.action === RuntimeActionIds.TempWindowGetRenderedTitle) {
         void handleTempWindowGetRenderedTitle(request, sendResponse)
         return true
       }
 
-      if (request.action === "cookieInterceptor:trackUrl") {
-        console.log("[Background] Runtime action cookieInterceptor:trackUrl", {
+      if (request.action === RuntimeActionIds.CookieInterceptorTrackUrl) {
+        console.log("[Background] Runtime action", {
+          action: RuntimeActionIds.CookieInterceptorTrackUrl,
           url: request.url,
           ttlMs: request.ttlMs,
         })
@@ -108,7 +114,12 @@ export function setupRuntimeMessageListeners() {
       }
 
       // Bulk external check-in must run in background so it isn't interrupted by popup teardown.
-      if (request.action && request.action.startsWith("externalCheckIn:")) {
+      if (
+        hasRuntimeActionPrefix(
+          request.action,
+          RuntimeActionPrefixes.ExternalCheckIn,
+        )
+      ) {
         void handleExternalCheckInMessage(request, sendResponse)
         return true
       }
@@ -135,7 +146,7 @@ export function setupRuntimeMessageListeners() {
         return true
       }
 
-      if (request.action === "openSettings:checkinRedeem") {
+      if (request.action === RuntimeActionIds.OpenSettingsCheckinRedeem) {
         openOrFocusOptionsMenuItem(MENU_ITEM_IDS.BASIC, {
           tab: "checkinRedeem",
           anchor: "redemption-assist",
@@ -144,7 +155,7 @@ export function setupRuntimeMessageListeners() {
         return true
       }
 
-      if (request.action === "openSettings:shieldBypass") {
+      if (request.action === RuntimeActionIds.OpenSettingsShieldBypass) {
         openOrFocusOptionsMenuItem(MENU_ITEM_IDS.BASIC, {
           tab: "refresh",
           anchor: "shield-settings",
@@ -153,59 +164,79 @@ export function setupRuntimeMessageListeners() {
         return true
       }
 
-      if (request.action === "preferences:updateActionClickBehavior") {
+      if (
+        request.action === RuntimeActionIds.PreferencesUpdateActionClickBehavior
+      ) {
         applyActionClickBehavior(request.behavior)
         sendResponse({ success: true })
         return true
       }
 
       // 处理自动刷新相关消息
-      if (
-        (request.action && request.action.startsWith("autoRefresh")) ||
-        [
-          "setupAutoRefresh",
-          "refreshNow",
-          "stopAutoRefresh",
-          "updateAutoRefreshSettings",
-          "getAutoRefreshStatus",
-        ].includes(request.action)
-      ) {
+      if (isAutoRefreshRuntimeAction(request.action)) {
         handleAutoRefreshMessage(request, sendResponse)
         return true
       }
 
       // 处理WebDAV自动同步相关消息
-      if (request.action && request.action.startsWith("webdavAutoSync:")) {
+      if (
+        hasRuntimeActionPrefix(
+          request.action,
+          RuntimeActionPrefixes.WebdavAutoSync,
+        )
+      ) {
         handleWebdavAutoSyncMessage(request, sendResponse)
         return true
       }
 
       // 处理模型同步相关消息
-      if (request.action && request.action.startsWith("modelSync:")) {
+      if (
+        hasRuntimeActionPrefix(request.action, RuntimeActionPrefixes.ModelSync)
+      ) {
         handleManagedSiteModelSyncMessage(request, sendResponse)
         return true
       }
 
       // 处理Auto Check-in相关消息
-      if (request.action && request.action.startsWith("autoCheckin:")) {
+      if (
+        hasRuntimeActionPrefix(
+          request.action,
+          RuntimeActionPrefixes.AutoCheckin,
+        )
+      ) {
         handleAutoCheckinMessage(request, sendResponse)
         return true
       }
 
       // 处理 Redemption Assist 相关消息
-      if (request.action && request.action.startsWith("redemptionAssist:")) {
+      if (
+        hasRuntimeActionPrefix(
+          request.action,
+          RuntimeActionPrefixes.RedemptionAssist,
+        )
+      ) {
         void handleRedemptionAssistMessage(request, sender, sendResponse)
         return true
       }
 
       // 处理Channel Config相关消息
-      if (request.action && request.action.startsWith("channelConfig:")) {
+      if (
+        hasRuntimeActionPrefix(
+          request.action,
+          RuntimeActionPrefixes.ChannelConfig,
+        )
+      ) {
         handleChannelConfigMessage(request, sendResponse)
         return true
       }
 
       // 处理 usage-history 相关消息
-      if (request.action && request.action.startsWith("usageHistory:")) {
+      if (
+        hasRuntimeActionPrefix(
+          request.action,
+          RuntimeActionPrefixes.UsageHistory,
+        )
+      ) {
         handleUsageHistoryMessage(request, sendResponse)
         return true
       }

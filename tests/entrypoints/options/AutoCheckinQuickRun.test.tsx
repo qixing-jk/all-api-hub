@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import AutoCheckin from "~/entrypoints/options/pages/AutoCheckin"
 import { render, screen } from "~/tests/test-utils/render"
 
@@ -27,10 +28,10 @@ describe("AutoCheckin quick run", () => {
       .mockImplementation(vi.fn() as any)
 
     sendRuntimeMessageSpy.mockImplementation(async (message: any) => {
-      if (message.action === "autoCheckin:getStatus") {
+      if (message.action === RuntimeActionIds.AutoCheckinGetStatus) {
         return { success: true, data: { perAccount: {} } }
       }
-      if (message.action === "autoCheckin:runNow") {
+      if (message.action === RuntimeActionIds.AutoCheckinRunNow) {
         return { success: true }
       }
       return { success: true }
@@ -41,10 +42,10 @@ describe("AutoCheckin quick run", () => {
     await screen.findByRole("button", { name: /execution\.runNow/i })
 
     expect(sendRuntimeMessageSpy).toHaveBeenCalledWith({
-      action: "autoCheckin:getStatus",
+      action: RuntimeActionIds.AutoCheckinGetStatus,
     })
     expect(sendRuntimeMessageSpy).toHaveBeenCalledWith({
-      action: "autoCheckin:runNow",
+      action: RuntimeActionIds.AutoCheckinRunNow,
     })
     expect(navigateWithinOptionsPageSpy).toHaveBeenCalled()
   })
@@ -63,10 +64,10 @@ describe("AutoCheckin quick run", () => {
     await screen.findByRole("button", { name: /execution\.runNow/i })
 
     expect(sendRuntimeMessageSpy).toHaveBeenCalledWith({
-      action: "autoCheckin:getStatus",
+      action: RuntimeActionIds.AutoCheckinGetStatus,
     })
     expect(sendRuntimeMessageSpy).not.toHaveBeenCalledWith({
-      action: "autoCheckin:runNow",
+      action: RuntimeActionIds.AutoCheckinRunNow,
     })
   })
 })

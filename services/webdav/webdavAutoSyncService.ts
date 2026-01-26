@@ -1,5 +1,6 @@
 import { t } from "i18next"
 
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   BACKUP_VERSION,
   normalizeBackupForMerge,
@@ -642,29 +643,29 @@ export const handleWebdavAutoSyncMessage = async (
 ) => {
   try {
     switch (request.action) {
-      case "webdavAutoSync:setup":
+      case RuntimeActionIds.WebdavAutoSyncSetup:
         await webdavAutoSyncService.setupAutoSync()
         sendResponse({ success: true })
         break
 
-      case "webdavAutoSync:syncNow": {
+      case RuntimeActionIds.WebdavAutoSyncSyncNow: {
         const result = await webdavAutoSyncService.syncNow()
         sendResponse({ success: result.success, message: result.message })
         break
       }
 
-      case "webdavAutoSync:stop":
+      case RuntimeActionIds.WebdavAutoSyncStop:
         webdavAutoSyncService.stopAutoSync()
         sendResponse({ success: true })
         break
 
-      case "webdavAutoSync:updateSettings": {
+      case RuntimeActionIds.WebdavAutoSyncUpdateSettings: {
         await webdavAutoSyncService.updateSettings(request.settings)
         sendResponse({ success: true })
         break
       }
 
-      case "webdavAutoSync:getStatus": {
+      case RuntimeActionIds.WebdavAutoSyncGetStatus: {
         const status = webdavAutoSyncService.getStatus()
         sendResponse({ success: true, data: status })
         break

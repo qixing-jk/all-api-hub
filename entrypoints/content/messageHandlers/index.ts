@@ -1,3 +1,4 @@
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   handleCheckCloudflareGuard,
   handleGetLocalStorage,
@@ -15,31 +16,31 @@ import {
  */
 export function setupContentMessageHandlers() {
   browser.runtime.onMessage.addListener((request, _sender, sendResponse) => {
-    if (request.action === "getLocalStorage") {
+    if (request.action === RuntimeActionIds.ContentGetLocalStorage) {
       return handleGetLocalStorage(request, sendResponse)
     }
 
-    if (request.action === "getUserFromLocalStorage") {
+    if (request.action === RuntimeActionIds.ContentGetUserFromLocalStorage) {
       return handleGetUserFromLocalStorage(request, sendResponse)
     }
 
-    if (request.action === "checkCloudflareGuard") {
+    if (request.action === RuntimeActionIds.ContentCheckCloudflareGuard) {
       return handleCheckCloudflareGuard(request, sendResponse)
     }
 
-    if (request.action === "waitAndGetUserInfo") {
+    if (request.action === RuntimeActionIds.ContentWaitAndGetUserInfo) {
       return handleWaitAndGetUserInfo(request, sendResponse)
     }
 
-    if (request.action === "performTempWindowFetch") {
+    if (request.action === RuntimeActionIds.ContentPerformTempWindowFetch) {
       return handlePerformTempWindowFetch(request, sendResponse)
     }
 
-    if (request.action === "getRenderedTitle") {
+    if (request.action === RuntimeActionIds.ContentGetRenderedTitle) {
       return handleGetRenderedTitle(request, sendResponse)
     }
 
-    if (request.action === "showShieldBypassUi") {
+    if (request.action === RuntimeActionIds.ContentShowShieldBypassUi) {
       return handleShowShieldBypassUi(request, sendResponse)
     }
   })

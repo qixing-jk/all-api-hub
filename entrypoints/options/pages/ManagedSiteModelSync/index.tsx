@@ -6,6 +6,7 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { Button, EmptyState, Input } from "~/components/ui"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { PageHeader } from "~/entrypoints/options/components/PageHeader"
 import type { ManagedSiteChannel } from "~/types/managedSite"
 import type {
@@ -77,7 +78,7 @@ export default function ManagedSiteModelSync({
     try {
       setIsLoading(true)
       const response = await sendRuntimeMessage({
-        action: "modelSync:getLastExecution",
+        action: RuntimeActionIds.ModelSyncGetLastExecution,
       })
 
       if (response.success) {
@@ -93,7 +94,7 @@ export default function ManagedSiteModelSync({
   const loadProgress = useCallback(async () => {
     try {
       const response = await sendRuntimeMessage({
-        action: "modelSync:getProgress",
+        action: RuntimeActionIds.ModelSyncGetProgress,
       })
 
       if (response.success) {
@@ -107,7 +108,7 @@ export default function ManagedSiteModelSync({
   const loadNextRun = useCallback(async () => {
     try {
       const response = await sendRuntimeMessage({
-        action: "modelSync:getNextRun",
+        action: RuntimeActionIds.ModelSyncGetNextRun,
       })
 
       if (response.success) {
@@ -121,7 +122,7 @@ export default function ManagedSiteModelSync({
   const loadPreferences = useCallback(async () => {
     try {
       const response = await sendRuntimeMessage({
-        action: "modelSync:getPreferences",
+        action: RuntimeActionIds.ModelSyncGetPreferences,
       })
 
       if (response.success) {
@@ -138,7 +139,7 @@ export default function ManagedSiteModelSync({
       setIsChannelsLoading(true)
       setChannelsError(null)
       const response = await sendRuntimeMessage({
-        action: "modelSync:listChannels",
+        action: RuntimeActionIds.ModelSyncListChannels,
       })
 
       if (response.success) {
@@ -277,7 +278,7 @@ export default function ManagedSiteModelSync({
   const handleRunAll = async () => {
     try {
       const response = await sendRuntimeMessage({
-        action: "modelSync:triggerAll",
+        action: RuntimeActionIds.ModelSyncTriggerAll,
       })
 
       if (response.success) {
@@ -307,7 +308,7 @@ export default function ManagedSiteModelSync({
 
     try {
       const response = await sendRuntimeMessage({
-        action: "modelSync:triggerSelected",
+        action: RuntimeActionIds.ModelSyncTriggerSelected,
         channelIds: Array.from(selectedSet),
       })
 
@@ -335,7 +336,7 @@ export default function ManagedSiteModelSync({
   const handleRetryFailed = async () => {
     try {
       const response = await sendRuntimeMessage({
-        action: "modelSync:triggerFailedOnly",
+        action: RuntimeActionIds.ModelSyncTriggerFailedOnly,
       })
 
       if (response.success) {
@@ -365,7 +366,7 @@ export default function ManagedSiteModelSync({
     setRunningChannelId(channelId)
     try {
       const response = await sendRuntimeMessage({
-        action: "modelSync:triggerSelected",
+        action: RuntimeActionIds.ModelSyncTriggerSelected,
         channelIds: [channelId],
       })
 

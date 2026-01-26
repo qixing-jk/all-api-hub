@@ -2,6 +2,7 @@ import { nanoid } from "nanoid"
 
 import { Storage } from "@plasmohq/storage"
 
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   createDefaultChannelConfig,
   type ChannelConfig,
@@ -173,7 +174,7 @@ export async function handleChannelConfigMessage(
 ) {
   try {
     switch (request.action) {
-      case "channelConfig:get": {
+      case RuntimeActionIds.ChannelConfigGet: {
         const channelId = Number(request.channelId)
         if (!Number.isFinite(channelId) || channelId <= 0) {
           throw new Error("channelId is required")
@@ -184,7 +185,7 @@ export async function handleChannelConfigMessage(
         break
       }
 
-      case "channelConfig:upsertFilters": {
+      case RuntimeActionIds.ChannelConfigUpsertFilters: {
         const channelId = Number(request.channelId)
         if (!Number.isFinite(channelId) || channelId <= 0) {
           throw new Error("channelId is required")

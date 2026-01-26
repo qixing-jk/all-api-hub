@@ -1,3 +1,4 @@
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   handleTempWindowFetch,
   handleTempWindowGetRenderedTitle,
@@ -106,7 +107,7 @@ export async function tempWindowFetch(
     })
   }
   return await sendRuntimeMessage({
-    action: "tempWindowFetch",
+    action: RuntimeActionIds.TempWindowFetch,
     ...payload,
   })
 }
@@ -120,7 +121,7 @@ export async function tempWindowGetRenderedTitle(params: {
   suppressMinimize?: boolean
 }): Promise<TempWindowRenderedTitleResponse> {
   const payload = {
-    action: "tempWindowGetRenderedTitle",
+    action: RuntimeActionIds.TempWindowGetRenderedTitle,
     ...params,
     suppressMinimize:
       params.suppressMinimize ??

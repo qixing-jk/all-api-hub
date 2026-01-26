@@ -1,5 +1,6 @@
 import { t } from "i18next"
 
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { ModelRedirectService } from "~/services/modelRedirect"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 import type { ManagedSiteChannel } from "~/types/managedSite"
@@ -476,7 +477,7 @@ export const handleManagedSiteModelSyncMessage = async (
 ) => {
   try {
     switch (request.action) {
-      case "modelSync:getNextRun": {
+      case RuntimeActionIds.ModelSyncGetNextRun: {
         const alarm = await getAlarm(ModelSyncScheduler.ALARM_NAME)
         const nextScheduledAt =
           alarm?.scheduledTime != null
@@ -493,13 +494,13 @@ export const handleManagedSiteModelSyncMessage = async (
         break
       }
 
-      case "modelSync:triggerAll": {
+      case RuntimeActionIds.ModelSyncTriggerAll: {
         const resultAll = await modelSyncScheduler.executeSync()
         sendResponse({ success: true, data: resultAll })
         break
       }
 
-      case "modelSync:triggerSelected": {
+      case RuntimeActionIds.ModelSyncTriggerSelected: {
         const resultSelected = await modelSyncScheduler.executeSync(
           request.channelIds,
         )
@@ -507,44 +508,44 @@ export const handleManagedSiteModelSyncMessage = async (
         break
       }
 
-      case "modelSync:triggerFailedOnly": {
+      case RuntimeActionIds.ModelSyncTriggerFailedOnly: {
         const resultFailed = await modelSyncScheduler.executeFailedOnly()
         sendResponse({ success: true, data: resultFailed })
         break
       }
 
-      case "modelSync:getLastExecution": {
+      case RuntimeActionIds.ModelSyncGetLastExecution: {
         const lastExecution =
           await managedSiteModelSyncStorage.getLastExecution()
         sendResponse({ success: true, data: lastExecution })
         break
       }
 
-      case "modelSync:getProgress": {
+      case RuntimeActionIds.ModelSyncGetProgress: {
         const progress = modelSyncScheduler.getProgress()
         sendResponse({ success: true, data: progress })
         break
       }
 
-      case "modelSync:updateSettings":
+      case RuntimeActionIds.ModelSyncUpdateSettings:
         await modelSyncScheduler.updateSettings(request.settings)
         sendResponse({ success: true })
         break
 
-      case "modelSync:getPreferences": {
+      case RuntimeActionIds.ModelSyncGetPreferences: {
         const prefs = await managedSiteModelSyncStorage.getPreferences()
         sendResponse({ success: true, data: prefs })
         break
       }
 
-      case "modelSync:getChannelUpstreamModelOptions": {
+      case RuntimeActionIds.ModelSyncGetChannelUpstreamModelOptions: {
         const upstreamOptions =
           await managedSiteModelSyncStorage.getChannelUpstreamModelOptions()
         sendResponse({ success: true, data: upstreamOptions })
         break
       }
 
-      case "modelSync:listChannels": {
+      case RuntimeActionIds.ModelSyncListChannels: {
         const channels = await modelSyncScheduler.listChannels()
         sendResponse({ success: true, data: channels })
         break

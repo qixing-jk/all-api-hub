@@ -5,6 +5,7 @@
 import { t } from "i18next"
 import toast from "react-hot-toast"
 
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TITLE_RULES, UNKNOWN_SITE } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { accountStorage } from "~/services/accountStorage"
@@ -53,7 +54,7 @@ export async function autoDetectAccount(
   try {
     try {
       await sendRuntimeMessage({
-        action: "cookieInterceptor:trackUrl",
+        action: RuntimeActionIds.CookieInterceptorTrackUrl,
         url: url.trim(),
       })
     } catch (error) {

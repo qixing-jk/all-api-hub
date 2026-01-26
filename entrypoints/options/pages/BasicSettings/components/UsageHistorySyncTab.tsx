@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
 import { Card, CardContent, Input } from "~/components/ui"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { accountStorage } from "~/services/accountStorage"
 import { usageHistoryStorage } from "~/services/usageHistory/storage"
@@ -114,7 +115,7 @@ export default function UsageHistorySyncTab() {
   const handleApplySettings = useCallback(async () => {
     try {
       const response = await sendRuntimeMessage({
-        action: "usageHistory:updateSettings",
+        action: RuntimeActionIds.UsageHistoryUpdateSettings,
         settings: {
           enabled,
           retentionDays,
@@ -179,7 +180,7 @@ export default function UsageHistorySyncTab() {
       try {
         toastId = toast.loading(t("messages.loading.syncing"))
         const response = await sendRuntimeMessage({
-          action: "usageHistory:syncNow",
+          action: RuntimeActionIds.UsageHistorySyncNow,
           ...(nextAccountIds ? { accountIds: nextAccountIds } : {}),
         })
 

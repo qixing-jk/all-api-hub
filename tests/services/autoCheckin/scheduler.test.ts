@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { accountStorage } from "~/services/accountStorage"
 import { resolveAutoCheckinProvider } from "~/services/autoCheckin/providers"
 import {
@@ -392,7 +393,7 @@ describe("handleAutoCheckinMessage", () => {
     const sendResponse = vi.fn()
 
     await handleAutoCheckinMessage(
-      { action: "autoCheckin:runNow" },
+      { action: RuntimeActionIds.AutoCheckinRunNow },
       sendResponse,
     )
 
@@ -407,7 +408,7 @@ describe("handleAutoCheckinMessage", () => {
     const sendResponse = vi.fn()
 
     await handleAutoCheckinMessage(
-      { action: "autoCheckin:debugTriggerDailyAlarmNow" },
+      { action: RuntimeActionIds.AutoCheckinDebugTriggerDailyAlarmNow },
       sendResponse,
     )
 
@@ -422,7 +423,7 @@ describe("handleAutoCheckinMessage", () => {
     const sendResponse = vi.fn()
 
     await handleAutoCheckinMessage(
-      { action: "autoCheckin:debugTriggerRetryAlarmNow" },
+      { action: RuntimeActionIds.AutoCheckinDebugTriggerRetryAlarmNow },
       sendResponse,
     )
 
@@ -436,7 +437,7 @@ describe("handleAutoCheckinMessage", () => {
     const sendResponse = vi.fn()
 
     await handleAutoCheckinMessage(
-      { action: "autoCheckin:getStatus" },
+      { action: RuntimeActionIds.AutoCheckinGetStatus },
       sendResponse,
     )
 
@@ -451,7 +452,7 @@ describe("handleAutoCheckinMessage", () => {
     const settings = { globalEnabled: false }
 
     await handleAutoCheckinMessage(
-      { action: "autoCheckin:updateSettings", settings },
+      { action: RuntimeActionIds.AutoCheckinUpdateSettings, settings },
       sendResponse,
     )
 
@@ -466,7 +467,10 @@ describe("handleAutoCheckinMessage", () => {
     const sendResponse = vi.fn()
 
     await handleAutoCheckinMessage(
-      { action: "autoCheckin:pretriggerDailyOnUiOpen", requestId: "req-1" },
+      {
+        action: RuntimeActionIds.AutoCheckinPretriggerDailyOnUiOpen,
+        requestId: "req-1",
+      },
       sendResponse,
     )
 
@@ -487,7 +491,7 @@ describe("handleAutoCheckinMessage", () => {
     const sendResponse = vi.fn()
 
     await handleAutoCheckinMessage(
-      { action: "autoCheckin:debugResetLastDailyRunDay" },
+      { action: RuntimeActionIds.AutoCheckinDebugResetLastDailyRunDay },
       sendResponse,
     )
 
@@ -503,7 +507,7 @@ describe("handleAutoCheckinMessage", () => {
 
     await handleAutoCheckinMessage(
       {
-        action: "autoCheckin:debugScheduleDailyAlarmForToday",
+        action: RuntimeActionIds.AutoCheckinDebugScheduleDailyAlarmForToday,
         minutesFromNow: 5,
       },
       sendResponse,
@@ -538,7 +542,7 @@ describe("handleAutoCheckinMessage", () => {
     const sendResponse = vi.fn()
 
     await handleAutoCheckinMessage(
-      { action: "autoCheckin:runNow" },
+      { action: RuntimeActionIds.AutoCheckinRunNow },
       sendResponse,
     )
 

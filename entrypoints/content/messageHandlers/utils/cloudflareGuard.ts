@@ -1,3 +1,4 @@
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { sendRuntimeMessage } from "~/utils/browserApi"
 
 const CF_LOG_PREFIX = "[Content][CloudflareGuard]"
@@ -21,7 +22,7 @@ export function logCloudflareGuard(
 
   try {
     void sendRuntimeMessage({
-      action: "cloudflareGuardLog",
+      action: RuntimeActionIds.CloudflareGuardLog,
       event,
       details: details ?? null,
     }).catch(() => {})

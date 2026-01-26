@@ -1,3 +1,4 @@
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { AccountAutoRefresh } from "~/types/accountAutoRefresh"
 
 import { getErrorMessage } from "../utils/error"
@@ -224,28 +225,28 @@ export const handleAutoRefreshMessage = async (
 ) => {
   try {
     switch (request.action) {
-      case "setupAutoRefresh":
+      case RuntimeActionIds.AutoRefreshSetup:
         await autoRefreshService.setupAutoRefresh()
         sendResponse({ success: true })
         break
 
-      case "refreshNow": {
+      case RuntimeActionIds.AutoRefreshRefreshNow: {
         const result = await autoRefreshService.refreshNow()
         sendResponse({ success: true, data: result })
         break
       }
 
-      case "stopAutoRefresh":
+      case RuntimeActionIds.AutoRefreshStop:
         autoRefreshService.stopAutoRefresh()
         sendResponse({ success: true })
         break
 
-      case "updateAutoRefreshSettings":
+      case RuntimeActionIds.AutoRefreshUpdateSettings:
         await autoRefreshService.updateSettings(request.settings)
         sendResponse({ success: true })
         break
 
-      case "getAutoRefreshStatus": {
+      case RuntimeActionIds.AutoRefreshGetStatus: {
         const status = autoRefreshService.getStatus()
         sendResponse({ success: true, data: status })
         break

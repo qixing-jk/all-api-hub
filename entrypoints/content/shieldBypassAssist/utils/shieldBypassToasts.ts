@@ -1,6 +1,7 @@
 import * as React from "react"
 import toast from "react-hot-toast/headless"
 
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { ensureRedemptionToastUi } from "~/entrypoints/content/redemptionAssist/uiRoot"
 import { sendRuntimeMessage } from "~/utils/browserApi"
 
@@ -20,7 +21,9 @@ export async function showShieldBypassPromptToast() {
         onDismiss: () => toast.dismiss(SHIELD_BYPASS_TOAST_ID),
         onOpenSettings: async () => {
           try {
-            await sendRuntimeMessage({ action: "openSettings:shieldBypass" })
+            await sendRuntimeMessage({
+              action: RuntimeActionIds.OpenSettingsShieldBypass,
+            })
           } catch (error) {
             console.error(
               "[ShieldBypass][Content] Failed to open settings page:",

@@ -11,6 +11,7 @@ import {
   Heading3,
   Link,
 } from "~/components/ui"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { sendRuntimeMessage } from "~/utils/browserApi"
 
 export type RedemptionPromptAction = "auto" | "cancel"
@@ -71,7 +72,7 @@ export const RedemptionPromptToast: React.FC<RedemptionPromptToastProps> = ({
     e.preventDefault()
     try {
       await sendRuntimeMessage({
-        action: "openSettings:checkinRedeem",
+        action: RuntimeActionIds.OpenSettingsCheckinRedeem,
       })
     } catch (error) {
       console.error("[RedemptionAssist] Failed to open settings page:", error)

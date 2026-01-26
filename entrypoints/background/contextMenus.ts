@@ -1,3 +1,5 @@
+import { RuntimeActionIds } from "~/constants/runtimeActions"
+
 const REDEMPTION_MENU_ID = "redemption-assist-context-menu"
 
 /**
@@ -44,7 +46,7 @@ export async function setupContextMenus() {
 
     try {
       await browser.tabs.sendMessage(tab.id, {
-        action: "redemptionAssist:contextMenuTrigger",
+        action: RuntimeActionIds.RedemptionAssistContextMenuTrigger,
         selectionText,
         pageUrl,
       })

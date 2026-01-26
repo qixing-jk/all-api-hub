@@ -1,3 +1,4 @@
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { channelConfigStorage } from "~/services/channelConfigStorage"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 import { sendRuntimeMessage } from "~/utils/browserApi"
@@ -16,7 +17,7 @@ export async function fetchChannelFilters(
 ): Promise<ChannelModelFilterRule[]> {
   try {
     const response = await sendRuntimeMessage({
-      action: "channelConfig:get",
+      action: RuntimeActionIds.ChannelConfigGet,
       channelId,
     })
     if (response?.success) {
@@ -46,7 +47,7 @@ export async function saveChannelFilters(
 ): Promise<void> {
   try {
     const response = await sendRuntimeMessage({
-      action: "channelConfig:upsertFilters",
+      action: RuntimeActionIds.ChannelConfigUpsertFilters,
       channelId,
       filters,
     })

@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { I18nextProvider } from "react-i18next"
 import { describe, expect, it, vi } from "vitest"
 
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import UsageHistorySyncTab from "~/entrypoints/options/pages/BasicSettings/components/UsageHistorySyncTab"
 import commonEn from "~/locales/en/common.json"
@@ -87,7 +88,7 @@ describe("UsageHistorySyncTab", () => {
 
     await waitFor(() => {
       expect(sendRuntimeMessage).toHaveBeenCalledWith({
-        action: "usageHistory:updateSettings",
+        action: RuntimeActionIds.UsageHistoryUpdateSettings,
         settings: {
           enabled: true,
           retentionDays: 14,
@@ -150,7 +151,7 @@ describe("UsageHistorySyncTab", () => {
 
     await waitFor(() => {
       expect(sendRuntimeMessage).toHaveBeenCalledWith({
-        action: "usageHistory:syncNow",
+        action: RuntimeActionIds.UsageHistorySyncNow,
         accountIds: ["a1"],
       })
     })

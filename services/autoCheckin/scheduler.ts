@@ -1,5 +1,6 @@
 import { t } from "i18next"
 
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { accountStorage } from "~/services/accountStorage"
 import {
   DEFAULT_PREFERENCES,
@@ -1154,7 +1155,7 @@ class AutoCheckinScheduler {
     if (params?.requestId) {
       try {
         await browser.runtime.sendMessage({
-          action: "autoCheckinPretrigger:started",
+          action: RuntimeActionIds.AutoCheckinPretriggerStarted,
           requestId: params.requestId,
         })
       } catch {
@@ -1912,7 +1913,7 @@ export const handleAutoCheckinMessage = async (
 ) => {
   try {
     switch (request.action) {
-      case "autoCheckin:runNow":
+      case RuntimeActionIds.AutoCheckinRunNow:
         try {
           await autoCheckinScheduler.runCheckins({
             runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
@@ -1927,15 +1928,14 @@ export const handleAutoCheckinMessage = async (
         }
         break
 
-      case "autoCheckin:debugTriggerDailyAlarmNow": {
+      case RuntimeActionIds.AutoCheckinDebugTriggerDailyAlarmNow: {
         if (
           import.meta.env.MODE !== "development" &&
           import.meta.env.MODE !== "test"
         ) {
           sendResponse({
             success: false,
-            error:
-              "Debug action is only available in development/test mode (autoCheckin:debugTriggerDailyAlarmNow)",
+            error: `Debug action is only available in development/test mode (${RuntimeActionIds.AutoCheckinDebugTriggerDailyAlarmNow})`,
           })
           break
         }
@@ -1944,15 +1944,14 @@ export const handleAutoCheckinMessage = async (
         break
       }
 
-      case "autoCheckin:debugTriggerRetryAlarmNow": {
+      case RuntimeActionIds.AutoCheckinDebugTriggerRetryAlarmNow: {
         if (
           import.meta.env.MODE !== "development" &&
           import.meta.env.MODE !== "test"
         ) {
           sendResponse({
             success: false,
-            error:
-              "Debug action is only available in development/test mode (autoCheckin:debugTriggerRetryAlarmNow)",
+            error: `Debug action is only available in development/test mode (${RuntimeActionIds.AutoCheckinDebugTriggerRetryAlarmNow})`,
           })
           break
         }
@@ -1961,15 +1960,14 @@ export const handleAutoCheckinMessage = async (
         break
       }
 
-      case "autoCheckin:debugResetLastDailyRunDay": {
+      case RuntimeActionIds.AutoCheckinDebugResetLastDailyRunDay: {
         if (
           import.meta.env.MODE !== "development" &&
           import.meta.env.MODE !== "test"
         ) {
           sendResponse({
             success: false,
-            error:
-              "Debug action is only available in development/test mode (autoCheckin:debugResetLastDailyRunDay)",
+            error: `Debug action is only available in development/test mode (${RuntimeActionIds.AutoCheckinDebugResetLastDailyRunDay})`,
           })
           break
         }
@@ -1978,15 +1976,14 @@ export const handleAutoCheckinMessage = async (
         break
       }
 
-      case "autoCheckin:debugScheduleDailyAlarmForToday": {
+      case RuntimeActionIds.AutoCheckinDebugScheduleDailyAlarmForToday: {
         if (
           import.meta.env.MODE !== "development" &&
           import.meta.env.MODE !== "test"
         ) {
           sendResponse({
             success: false,
-            error:
-              "Debug action is only available in development/test mode (autoCheckin:debugScheduleDailyAlarmForToday)",
+            error: `Debug action is only available in development/test mode (${RuntimeActionIds.AutoCheckinDebugScheduleDailyAlarmForToday})`,
           })
           break
         }
@@ -1998,7 +1995,7 @@ export const handleAutoCheckinMessage = async (
         break
       }
 
-      case "autoCheckin:pretriggerDailyOnUiOpen": {
+      case RuntimeActionIds.AutoCheckinPretriggerDailyOnUiOpen: {
         const result = await autoCheckinScheduler.pretriggerDailyOnUiOpen({
           requestId: request.requestId,
           dryRun: request.dryRun,
@@ -2008,7 +2005,7 @@ export const handleAutoCheckinMessage = async (
         break
       }
 
-      case "autoCheckin:retryAccount":
+      case RuntimeActionIds.AutoCheckinRetryAccount:
         if (!request.accountId) {
           sendResponse({ success: false, error: "Missing accountId" })
           break
@@ -2017,7 +2014,7 @@ export const handleAutoCheckinMessage = async (
         sendResponse({ success: true })
         break
 
-      case "autoCheckin:getAccountInfo": {
+      case RuntimeActionIds.AutoCheckinGetAccountInfo: {
         if (!request.accountId) {
           sendResponse({ success: false, error: "Missing accountId" })
           break
@@ -2029,13 +2026,13 @@ export const handleAutoCheckinMessage = async (
         break
       }
 
-      case "autoCheckin:getStatus": {
+      case RuntimeActionIds.AutoCheckinGetStatus: {
         const status = await autoCheckinStorage.getStatus()
         sendResponse({ success: true, data: status })
         break
       }
 
-      case "autoCheckin:updateSettings":
+      case RuntimeActionIds.AutoCheckinUpdateSettings:
         await autoCheckinScheduler.updateSettings(request.settings)
         sendResponse({ success: true })
         break

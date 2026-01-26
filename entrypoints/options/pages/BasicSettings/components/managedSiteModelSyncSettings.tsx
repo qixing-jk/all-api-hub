@@ -18,6 +18,7 @@ import {
   type MultiSelectOption,
 } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { modelMetadataService } from "~/services/modelMetadata"
 import type { ModelMetadata } from "~/services/modelMetadata/types"
@@ -112,7 +113,7 @@ export default function ManagedSiteModelSyncSettings() {
         setOptionsError(null)
 
         const response = await sendRuntimeMessage({
-          action: "modelSync:getChannelUpstreamModelOptions",
+          action: RuntimeActionIds.ModelSyncGetChannelUpstreamModelOptions,
         })
 
         if (

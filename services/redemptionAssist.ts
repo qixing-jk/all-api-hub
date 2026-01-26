@@ -1,5 +1,6 @@
 import { t } from "i18next"
 
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { getSiteApiRouter } from "~/constants/siteType"
 import { accountStorage } from "~/services/accountStorage"
 import { redeemService } from "~/services/redeemService"
@@ -27,16 +28,16 @@ interface RedemptionAssistRuntimeSettings {
 }
 
 /**
- * Request payload for redemptionAssist:shouldPrompt runtime messages.
+ * Request payload for `RuntimeActionIds.RedemptionAssistShouldPrompt` runtime messages.
  */
 export type RedemptionAssistShouldPromptRequest = {
-  action: "redemptionAssist:shouldPrompt"
+  action: typeof RuntimeActionIds.RedemptionAssistShouldPrompt
   url: string
   codes: string[]
 }
 
 /**
- * Response payload for redemptionAssist:shouldPrompt runtime messages.
+ * Response payload for `RuntimeActionIds.RedemptionAssistShouldPrompt` runtime messages.
  */
 export type RedemptionAssistShouldPromptResponse =
   | {
@@ -447,13 +448,13 @@ export const handleRedemptionAssistMessage = async (
 ) => {
   try {
     switch (request.action) {
-      case "redemptionAssist:updateSettings": {
+      case RuntimeActionIds.RedemptionAssistUpdateSettings: {
         redemptionAssistService.updateRuntimeSettings(request.settings || {})
         sendResponse({ success: true })
         break
       }
 
-      case "redemptionAssist:shouldPrompt": {
+      case RuntimeActionIds.RedemptionAssistShouldPrompt: {
         const { url, codes } = request
         if (!url || !Array.isArray(codes) || codes.length === 0) {
           sendResponse({ success: false, error: "Missing url or codes" })
@@ -473,7 +474,7 @@ export const handleRedemptionAssistMessage = async (
         break
       }
 
-      case "redemptionAssist:autoRedeem": {
+      case RuntimeActionIds.RedemptionAssistAutoRedeem: {
         const { accountId, code } = request
         if (!accountId || !code) {
           sendResponse({ success: false, error: "Missing accountId or code" })
@@ -484,7 +485,7 @@ export const handleRedemptionAssistMessage = async (
         break
       }
 
-      case "redemptionAssist:autoRedeemByUrl": {
+      case RuntimeActionIds.RedemptionAssistAutoRedeemByUrl: {
         const { url, code } = request
         if (!url || !code) {
           sendResponse({ success: false, error: "Missing url or code" })

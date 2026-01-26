@@ -8,6 +8,7 @@ import {
 } from "react"
 
 import { DATA_TYPE_CASHFLOW } from "~/constants"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { NEW_API, type ManagedSiteType } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import {
@@ -194,7 +195,7 @@ export const UserPreferencesProvider = ({
         )
 
         await sendRuntimeMessage({
-          action: "preferences:updateActionClickBehavior",
+          action: RuntimeActionIds.PreferencesUpdateActionClickBehavior,
           behavior,
         })
       }
@@ -360,7 +361,7 @@ export const UserPreferencesProvider = ({
     if (success) {
       setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
       sendRuntimeMessage({
-        action: "updateAutoRefreshSettings",
+        action: RuntimeActionIds.AutoRefreshUpdateSettings,
         settings: updates,
       })
     }
@@ -375,7 +376,7 @@ export const UserPreferencesProvider = ({
     if (success) {
       setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
       sendRuntimeMessage({
-        action: "updateAutoRefreshSettings",
+        action: RuntimeActionIds.AutoRefreshUpdateSettings,
         settings: updates,
       })
     }
@@ -390,7 +391,7 @@ export const UserPreferencesProvider = ({
     if (success) {
       setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
       sendRuntimeMessage({
-        action: "updateAutoRefreshSettings",
+        action: RuntimeActionIds.AutoRefreshUpdateSettings,
         settings: updates,
       })
     }
@@ -405,7 +406,7 @@ export const UserPreferencesProvider = ({
     if (success) {
       setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
       sendRuntimeMessage({
-        action: "updateAutoRefreshSettings",
+        action: RuntimeActionIds.AutoRefreshUpdateSettings,
         settings: updates,
       })
     }
@@ -520,7 +521,7 @@ export const UserPreferencesProvider = ({
 
         // Notify background to update alarm
         await sendRuntimeMessage({
-          action: "autoCheckin:updateSettings",
+          action: RuntimeActionIds.AutoCheckinUpdateSettings,
           settings: updates,
         })
       }
@@ -562,7 +563,7 @@ export const UserPreferencesProvider = ({
 
         // Notify background to update alarm
         await sendRuntimeMessage({
-          action: "modelSync:updateSettings",
+          action: RuntimeActionIds.ModelSyncUpdateSettings,
           settings: updates,
         })
       }
@@ -626,7 +627,7 @@ export const UserPreferencesProvider = ({
         })
 
         await sendRuntimeMessage({
-          action: "redemptionAssist:updateSettings",
+          action: RuntimeActionIds.RedemptionAssistUpdateSettings,
           settings: updates,
         })
       }
@@ -679,14 +680,14 @@ export const UserPreferencesProvider = ({
 
       // Notify auto-refresh service
       sendRuntimeMessage({
-        action: "updateAutoRefreshSettings",
+        action: RuntimeActionIds.AutoRefreshUpdateSettings,
         settings: { accountAutoRefresh: defaults.accountAutoRefresh },
       })
 
       // Notify auto-checkin service
       if (defaults.autoCheckin) {
         void sendRuntimeMessage({
-          action: "autoCheckin:updateSettings",
+          action: RuntimeActionIds.AutoCheckinUpdateSettings,
           settings: defaults.autoCheckin,
         })
       }
@@ -694,7 +695,7 @@ export const UserPreferencesProvider = ({
       // Notify New API model sync service
       if (defaults.managedSiteModelSync) {
         void sendRuntimeMessage({
-          action: "modelSync:updateSettings",
+          action: RuntimeActionIds.ModelSyncUpdateSettings,
           settings: defaults.managedSiteModelSync,
         })
       }
@@ -734,7 +735,7 @@ export const UserPreferencesProvider = ({
           : prev,
       )
       sendRuntimeMessage({
-        action: "updateAutoRefreshSettings",
+        action: RuntimeActionIds.AutoRefreshUpdateSettings,
         settings: { accountAutoRefresh: defaults },
       })
     }
@@ -787,7 +788,7 @@ export const UserPreferencesProvider = ({
       )
       if (defaults) {
         void sendRuntimeMessage({
-          action: "modelSync:updateSettings",
+          action: RuntimeActionIds.ModelSyncUpdateSettings,
           settings: defaults,
         })
       }
@@ -825,7 +826,7 @@ export const UserPreferencesProvider = ({
       )
       if (defaults) {
         void sendRuntimeMessage({
-          action: "autoCheckin:updateSettings",
+          action: RuntimeActionIds.AutoCheckinUpdateSettings,
           settings: defaults,
         })
       }
@@ -847,7 +848,7 @@ export const UserPreferencesProvider = ({
       )
       if (defaults) {
         void sendRuntimeMessage({
-          action: "redemptionAssist:updateSettings",
+          action: RuntimeActionIds.RedemptionAssistUpdateSettings,
           settings: defaults,
         })
       }

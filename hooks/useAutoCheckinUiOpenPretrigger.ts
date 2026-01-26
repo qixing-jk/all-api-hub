@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { DEFAULT_PREFERENCES } from "~/services/userPreferences"
 import type {
@@ -68,7 +69,7 @@ export function useAutoCheckinUiOpenPretrigger(): {
 
     const unsubscribe = onRuntimeMessage((message) => {
       if (
-        message?.action === "autoCheckinPretrigger:started" &&
+        message?.action === RuntimeActionIds.AutoCheckinPretriggerStarted &&
         message?.requestId === requestId
       ) {
         toast.success(t("messages.success.pretriggerStarted"))
@@ -78,7 +79,7 @@ export function useAutoCheckinUiOpenPretrigger(): {
     void (async () => {
       try {
         const response = await sendRuntimeMessage({
-          action: "autoCheckin:pretriggerDailyOnUiOpen",
+          action: RuntimeActionIds.AutoCheckinPretriggerDailyOnUiOpen,
           requestId,
         })
 

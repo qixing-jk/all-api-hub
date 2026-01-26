@@ -1,5 +1,6 @@
 import { t } from "i18next"
 
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { accountStorage } from "~/services/accountStorage"
 import { getSiteType } from "~/services/detectSiteType"
 import {
@@ -54,7 +55,7 @@ async function showShieldBypassUiInTab(meta: {
   for (let attempt = 1; attempt <= SHIELD_BYPASS_UI_MAX_RETRIES; attempt += 1) {
     try {
       await browser.tabs.sendMessage(meta.tabId, {
-        action: "showShieldBypassUi",
+        action: RuntimeActionIds.ContentShowShieldBypassUi,
         origin: meta.origin,
         requestId: meta.requestId,
       })
@@ -131,7 +132,7 @@ export async function handleTempWindowGetRenderedTitle(
     const { tabId } = context
 
     const response = await browser.tabs.sendMessage(tabId, {
-      action: "getRenderedTitle",
+      action: RuntimeActionIds.ContentGetRenderedTitle,
       requestId: tempRequestId,
     })
 
@@ -593,7 +594,7 @@ export async function handleTempWindowFetch(
     }
 
     const response = await browser.tabs.sendMessage(tabId, {
-      action: "performTempWindowFetch",
+      action: RuntimeActionIds.ContentPerformTempWindowFetch,
       requestId: tempRequestId,
       fetchUrl,
       fetchOptions: effectiveFetchOptions,
@@ -640,7 +641,7 @@ async function getSiteDataFromTab(
 
     // 通过 content script 获取用户信息
     const userResponse = await browser.tabs.sendMessage(tabId, {
-      action: "getUserFromLocalStorage",
+      action: RuntimeActionIds.ContentGetUserFromLocalStorage,
       url: url,
     })
 
@@ -1345,7 +1346,7 @@ function waitForTabComplete(
           let passed = false
           try {
             const response = await browser.tabs.sendMessage(tabId, {
-              action: "checkCloudflareGuard",
+              action: RuntimeActionIds.ContentCheckCloudflareGuard,
               requestId: meta?.requestId,
             })
             passed = Boolean(response?.success && response.passed)

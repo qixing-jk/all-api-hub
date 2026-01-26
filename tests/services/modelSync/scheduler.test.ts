@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   handleManagedSiteModelSyncMessage,
   modelSyncScheduler,
@@ -137,7 +138,7 @@ describe("handleManagedSiteModelSyncMessage", () => {
 
     const sendResponse = vi.fn()
     await handleManagedSiteModelSyncMessage(
-      { action: "modelSync:getNextRun" },
+      { action: RuntimeActionIds.ModelSyncGetNextRun },
       sendResponse,
     )
 

@@ -1,5 +1,6 @@
 import { t } from "i18next"
 
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import type {
   RedemptionAssistShouldPromptRequest,
   RedemptionAssistShouldPromptResponse,
@@ -121,7 +122,8 @@ function setupRedemptionAssistDetection() {
  */
 function registerContextMenuTriggerListener() {
   browser.runtime.onMessage.addListener((request) => {
-    if (request?.action !== "redemptionAssist:contextMenuTrigger") return
+    if (request?.action !== RuntimeActionIds.RedemptionAssistContextMenuTrigger)
+      return
 
     const selectionText = (request.selectionText ?? "").trim()
     const pageUrl = request.pageUrl || window.location.href
@@ -359,7 +361,7 @@ async function requestPromptableCodes(url: string, codes: string[]) {
   if (codes.length === 0) return []
 
   const response = (await sendRuntimeMessage({
-    action: "redemptionAssist:shouldPrompt",
+    action: RuntimeActionIds.RedemptionAssistShouldPrompt,
     url,
     codes,
   } as RedemptionAssistShouldPromptRequest)) as RedemptionAssistShouldPromptResponse
@@ -469,7 +471,7 @@ function maskCode(code: string): string {
  */
 async function redeemForAccount(accountId: string, code: string) {
   const manualResp: any = await sendRuntimeMessage({
-    action: "redemptionAssist:autoRedeem",
+    action: RuntimeActionIds.RedemptionAssistAutoRedeem,
     accountId,
     code,
   })
@@ -513,7 +515,7 @@ async function redeemCodesSequential(params: {
     }
 
     const redeemResp: any = await sendRuntimeMessage({
-      action: "redemptionAssist:autoRedeemByUrl",
+      action: RuntimeActionIds.RedemptionAssistAutoRedeemByUrl,
       url: params.url,
       code,
     })

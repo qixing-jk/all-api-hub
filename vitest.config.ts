@@ -9,6 +9,8 @@ export default defineConfig({
     // Test environment
     environment: "jsdom",
 
+    pool: "threads",
+
     // Setup files to run before tests
     setupFiles: ["./tests/setup.ts"],
 

@@ -1,7 +1,8 @@
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { showShieldBypassPromptToast } from "~/entrypoints/content/shieldBypassAssist/utils/shieldBypassToasts"
 
 type ShieldBypassUiMessage = {
-  action: "showShieldBypassUi"
+  action: typeof RuntimeActionIds.ContentShowShieldBypassUi
   origin?: string
   requestId?: string
 }

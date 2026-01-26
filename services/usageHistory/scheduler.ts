@@ -1,3 +1,4 @@
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { accountStorage } from "~/services/accountStorage"
 import { userPreferences } from "~/services/userPreferences"
 import type { UsageHistoryPreferences } from "~/types/usageHistory"
@@ -253,7 +254,7 @@ export const handleUsageHistoryMessage = async (
 ) => {
   try {
     switch (request.action) {
-      case "usageHistory:updateSettings": {
+      case RuntimeActionIds.UsageHistoryUpdateSettings: {
         const result = await usageHistoryScheduler.updateSettings(
           request.settings ?? {},
         )
@@ -261,7 +262,7 @@ export const handleUsageHistoryMessage = async (
         break
       }
 
-      case "usageHistory:syncNow": {
+      case RuntimeActionIds.UsageHistorySyncNow: {
         const accountIds = Array.isArray(request.accountIds)
           ? (request.accountIds as string[])
           : undefined
@@ -270,7 +271,7 @@ export const handleUsageHistoryMessage = async (
         break
       }
 
-      case "usageHistory:prune": {
+      case RuntimeActionIds.UsageHistoryPrune: {
         const prefs = await userPreferences.getPreferences()
         const config = prefs.usageHistory ?? DEFAULT_USAGE_HISTORY_PREFERENCES
         const ok = await usageHistoryStorage.pruneAllAccounts(

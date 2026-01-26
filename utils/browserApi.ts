@@ -4,6 +4,10 @@
  */
 
 import { APP_SHORT_NAME } from "~/constants/branding"
+import {
+  RuntimeActionIds,
+  type RuntimeActionId,
+} from "~/constants/runtimeActions"
 import { isNotEmptyArray } from "~/utils/index"
 
 // 确保 browser 全局对象可用
@@ -195,6 +199,19 @@ export async function sendRuntimeMessage(
   options?: SendMessageRetryOptions,
 ): Promise<any> {
   return await sendMessageWithRetry(message, options)
+}
+
+/**
+ * Sends a runtime message whose `action` is a canonical {@link RuntimeActionId}.
+ *
+ * This is a thin wrapper over {@link sendRuntimeMessage} that preserves payload
+ * and options unchanged while providing better type-safety for runtime action IDs.
+ */
+export async function sendRuntimeActionMessage(
+  message: { action: RuntimeActionId } & Record<string, unknown>,
+  options?: SendMessageRetryOptions,
+): Promise<any> {
+  return await sendRuntimeMessage(message, options)
 }
 
 export interface SendMessageRetryOptions {
@@ -576,8 +593,8 @@ export async function checkPermissionViaMessage(
   permissions: browser.permissions.Permissions,
 ): Promise<boolean> {
   try {
-    const response = await sendRuntimeMessage({
-      action: "permissions:check",
+    const response = await sendRuntimeActionMessage({
+      action: RuntimeActionIds.PermissionsCheck,
       permissions,
     })
     return response?.hasPermission ?? false

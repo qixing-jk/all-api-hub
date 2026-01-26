@@ -7,6 +7,7 @@ import { AutoCheckinPretriggerCompletionDialog } from "~/components/AutoCheckinP
 import { Button } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { PageHeader } from "~/entrypoints/options/components/PageHeader"
 import { DEFAULT_PREFERENCES } from "~/services/userPreferences"
@@ -82,7 +83,7 @@ export default function AutoCheckin(props: {
     try {
       setIsLoading(true)
       const response = await sendRuntimeMessage({
-        action: "autoCheckin:getStatus",
+        action: RuntimeActionIds.AutoCheckinGetStatus,
       })
 
       if (response.success) {
@@ -105,7 +106,7 @@ export default function AutoCheckin(props: {
       toast.loading(t("messages.loading.running"))
 
       const response = await sendRuntimeMessage({
-        action: "autoCheckin:runNow",
+        action: RuntimeActionIds.AutoCheckinRunNow,
       })
 
       toast.dismiss()
@@ -132,7 +133,7 @@ export default function AutoCheckin(props: {
       toast.loading(t("messages.loading.triggeringDailyAlarm"))
 
       const response = await sendRuntimeMessage({
-        action: "autoCheckin:debugTriggerDailyAlarmNow",
+        action: RuntimeActionIds.AutoCheckinDebugTriggerDailyAlarmNow,
       })
 
       toast.dismiss()
@@ -163,7 +164,7 @@ export default function AutoCheckin(props: {
       toast.loading(t("messages.loading.triggeringRetryAlarm"))
 
       const response = await sendRuntimeMessage({
-        action: "autoCheckin:debugTriggerRetryAlarmNow",
+        action: RuntimeActionIds.AutoCheckinDebugTriggerRetryAlarmNow,
       })
 
       toast.dismiss()
@@ -195,7 +196,7 @@ export default function AutoCheckin(props: {
       toast.loading(t("messages.loading.schedulingDailyAlarmForToday"))
 
       const response = await sendRuntimeMessage({
-        action: "autoCheckin:debugScheduleDailyAlarmForToday",
+        action: RuntimeActionIds.AutoCheckinDebugScheduleDailyAlarmForToday,
         minutesFromNow: 60,
       })
 
@@ -230,7 +231,7 @@ export default function AutoCheckin(props: {
       toast.loading(t("messages.loading.evaluatingUiOpenPretrigger"))
 
       const response = await sendRuntimeMessage({
-        action: "autoCheckin:pretriggerDailyOnUiOpen",
+        action: RuntimeActionIds.AutoCheckinPretriggerDailyOnUiOpen,
         dryRun: true,
         debug: true,
       })
@@ -290,7 +291,7 @@ export default function AutoCheckin(props: {
       })
 
       const response = await sendRuntimeMessage({
-        action: "autoCheckin:pretriggerDailyOnUiOpen",
+        action: RuntimeActionIds.AutoCheckinPretriggerDailyOnUiOpen,
         requestId,
         debug: true,
       })
@@ -345,7 +346,7 @@ export default function AutoCheckin(props: {
       toast.loading(t("messages.loading.resettingLastDailyRunDay"))
 
       const response = await sendRuntimeMessage({
-        action: "autoCheckin:debugResetLastDailyRunDay",
+        action: RuntimeActionIds.AutoCheckinDebugResetLastDailyRunDay,
       })
 
       toast.dismiss()
@@ -397,7 +398,7 @@ export default function AutoCheckin(props: {
     try {
       setRetryingAccountId(accountId)
       const response = await sendRuntimeMessage({
-        action: "autoCheckin:retryAccount",
+        action: RuntimeActionIds.AutoCheckinRetryAccount,
         accountId,
       })
 
@@ -420,7 +421,7 @@ export default function AutoCheckin(props: {
     try {
       setOpeningManualAccountId(accountId)
       const response = await sendRuntimeMessage({
-        action: "autoCheckin:getAccountInfo",
+        action: RuntimeActionIds.AutoCheckinGetAccountInfo,
         accountId,
       })
 

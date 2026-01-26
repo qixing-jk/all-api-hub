@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AUTO_DETECT_DOC_URL } from "~/constants/about"
 import {
@@ -24,10 +24,16 @@ vi.mock("i18next", () => ({
 }))
 
 // Mock browser.tabs
+const originalBrowser = (globalThis as any).browser
 vi.stubGlobal("browser", {
   tabs: {
     create: vi.fn(),
   },
+})
+
+afterAll(() => {
+  vi.unstubAllGlobals()
+  ;(globalThis as any).browser = originalBrowser
 })
 
 describe("autoDetectUtils", () => {

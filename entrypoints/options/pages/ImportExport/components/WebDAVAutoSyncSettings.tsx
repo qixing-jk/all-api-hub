@@ -25,6 +25,7 @@ import {
   SelectValue,
   Switch,
 } from "~/components/ui"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { WEBDAV_SYNC_STRATEGIES, WebDAVSettings } from "~/types/webdav"
 import { sendRuntimeMessage } from "~/utils/browserApi"
 import { formatTimestamp } from "~/utils/formatters"
@@ -75,7 +76,7 @@ export default function WebDAVAutoSyncSettings() {
   const loadStatus = async () => {
     try {
       const response = await sendRuntimeMessage({
-        action: "webdavAutoSync:getStatus",
+        action: RuntimeActionIds.WebdavAutoSyncGetStatus,
       })
       if (response.success && response.data) {
         setIsSyncing(response.data.isSyncing)
@@ -92,7 +93,7 @@ export default function WebDAVAutoSyncSettings() {
     setSavingSettings(true)
     try {
       const response = await sendRuntimeMessage({
-        action: "webdavAutoSync:updateSettings",
+        action: RuntimeActionIds.WebdavAutoSyncUpdateSettings,
         settings: {
           autoSync: autoSyncEnabled,
           syncInterval: syncInterval,
@@ -118,7 +119,7 @@ export default function WebDAVAutoSyncSettings() {
     setSyncing(true)
     try {
       const response = await sendRuntimeMessage({
-        action: "webdavAutoSync:syncNow",
+        action: RuntimeActionIds.WebdavAutoSyncSyncNow,
       })
 
       if (response.success) {
@@ -233,9 +234,7 @@ export default function WebDAVAutoSyncSettings() {
                 }
               >
                 <SelectTrigger>
-                  <SelectValue
-                    placeholder={t("webdav.autoSync.strategy")}
-                  />
+                  <SelectValue placeholder={t("webdav.autoSync.strategy")} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={WEBDAV_SYNC_STRATEGIES.MERGE}>

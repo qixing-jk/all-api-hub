@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { DEFAULT_PREFERENCES } from "~/services/userPreferences"
 
 vi.mock("i18next", () => ({
@@ -50,7 +51,7 @@ describe("redemptionAssist shouldPrompt batch filtering", () => {
 
     await handleRedemptionAssistMessage(
       {
-        action: "redemptionAssist:shouldPrompt",
+        action: RuntimeActionIds.RedemptionAssistShouldPrompt,
         url: "https://example.com/redeem",
         codes: [validHex, invalidHex, tooShort],
       },

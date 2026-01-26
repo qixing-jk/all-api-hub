@@ -9,6 +9,7 @@
  */
 import { t } from "i18next"
 
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { AuthTypeEnum } from "~/types"
 import {
   getActiveOrAllTabs,
@@ -148,7 +149,7 @@ async function getUserDataViaBackground(
   try {
     const requestId = `auto-detect-${Date.now()}`
     const response = await sendRuntimeMessage({
-      action: "autoDetectSite",
+      action: RuntimeActionIds.AutoDetectSite,
       url: url,
       requestId: requestId,
     })
@@ -220,7 +221,7 @@ async function getUserDataFromCurrentTab(
 
     // 2. 通过 content script 获取用户信息
     const userResponse = await browser.tabs.sendMessage(tabId, {
-      action: "getUserFromLocalStorage",
+      action: RuntimeActionIds.ContentGetUserFromLocalStorage,
       url: url,
     })
 
