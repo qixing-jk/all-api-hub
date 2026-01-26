@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.8.0](https://github.com/qixing-jk/all-api-hub/compare/v3.7.0...v3.8.0) (2026-01-26)
+
+
+### Features
+
+* **usage-history:** add usage analytics dashboard and sync system ([#376](https://github.com/qixing-jk/all-api-hub/issues/376)) ([c21138e](https://github.com/qixing-jk/all-api-hub/commit/c21138ea4d97a1c599a141555610258cdd3c34cc))
+
 ## [3.7.0](https://github.com/qixing-jk/all-api-hub/compare/v3.6.0...v3.7.0) (2026-01-23)
 
 
