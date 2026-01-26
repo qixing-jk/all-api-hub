@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest"
 import {
   composeRuntimeAction,
   hasRuntimeActionPrefix,
-  isAutoRefreshRuntimeAction,
   RuntimeActionIds,
   RuntimeActionPrefixes,
 } from "~/constants/runtimeActions"
@@ -61,27 +60,58 @@ describe("runtimeActions registry and helpers", () => {
     expect(RuntimeActionIds.PermissionsCheck).toBe("permissions:check")
   })
 
-  it("detects legacy auto-refresh actions (prefix + allow-list)", () => {
-    expect(isAutoRefreshRuntimeAction(undefined)).toBe(false)
-    expect(isAutoRefreshRuntimeAction("autoRefresh:ping")).toBe(true)
-    expect(isAutoRefreshRuntimeAction("autoRefreshSomething")).toBe(true)
-    expect(isAutoRefreshRuntimeAction(RuntimeActionIds.AutoRefreshSetup)).toBe(
-      true,
+  it("routes auto-refresh actions via a single namespaced prefix", () => {
+    expect(
+      hasRuntimeActionPrefix(undefined, RuntimeActionPrefixes.AutoRefresh),
+    ).toBe(false)
+    expect(
+      hasRuntimeActionPrefix(null, RuntimeActionPrefixes.AutoRefresh),
+    ).toBe(false)
+    expect(hasRuntimeActionPrefix(123, RuntimeActionPrefixes.AutoRefresh)).toBe(
+      false,
     )
+
     expect(
-      isAutoRefreshRuntimeAction(RuntimeActionIds.AutoRefreshRefreshNow),
-    ).toBe(true)
-    expect(isAutoRefreshRuntimeAction(RuntimeActionIds.AutoRefreshStop)).toBe(
-      true,
-    )
-    expect(
-      isAutoRefreshRuntimeAction(RuntimeActionIds.AutoRefreshUpdateSettings),
+      hasRuntimeActionPrefix(
+        "autoRefresh:ping",
+        RuntimeActionPrefixes.AutoRefresh,
+      ),
     ).toBe(true)
     expect(
-      isAutoRefreshRuntimeAction(RuntimeActionIds.AutoRefreshGetStatus),
+      hasRuntimeActionPrefix(
+        RuntimeActionIds.AutoRefreshSetup,
+        RuntimeActionPrefixes.AutoRefresh,
+      ),
     ).toBe(true)
     expect(
-      isAutoRefreshRuntimeAction(RuntimeActionIds.AutoCheckinGetStatus),
+      hasRuntimeActionPrefix(
+        RuntimeActionIds.AutoRefreshRefreshNow,
+        RuntimeActionPrefixes.AutoRefresh,
+      ),
+    ).toBe(true)
+    expect(
+      hasRuntimeActionPrefix(
+        RuntimeActionIds.AutoRefreshStop,
+        RuntimeActionPrefixes.AutoRefresh,
+      ),
+    ).toBe(true)
+    expect(
+      hasRuntimeActionPrefix(
+        RuntimeActionIds.AutoRefreshUpdateSettings,
+        RuntimeActionPrefixes.AutoRefresh,
+      ),
+    ).toBe(true)
+    expect(
+      hasRuntimeActionPrefix(
+        RuntimeActionIds.AutoRefreshGetStatus,
+        RuntimeActionPrefixes.AutoRefresh,
+      ),
+    ).toBe(true)
+    expect(
+      hasRuntimeActionPrefix(
+        RuntimeActionIds.AutoCheckinGetStatus,
+        RuntimeActionPrefixes.AutoRefresh,
+      ),
     ).toBe(false)
   })
 })

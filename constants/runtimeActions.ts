@@ -1,14 +1,24 @@
 /**
- * Canonical runtime message action prefixes used for prefix-based routing.
+ * Canonical runtime message action prefixes.
+ *
+ * Prefixes are used to:
+ * - Compose stable, namespaced action IDs (e.g., `permissions:check`)
+ * - Route messages by feature prefix when a handler owns a namespace
  *
  * Values are part of the on-the-wire contract between extension contexts and MUST remain stable.
  */
 export const RuntimeActionPrefixes = {
+  AccountDialog: "accountDialog:",
   AutoCheckin: "autoCheckin:",
-  AutoRefresh: "autoRefresh",
+  AutoCheckinPretrigger: "autoCheckinPretrigger:",
+  AutoRefresh: "autoRefresh:",
   ChannelConfig: "channelConfig:",
+  CookieInterceptor: "cookieInterceptor:",
   ExternalCheckIn: "externalCheckIn:",
   ModelSync: "modelSync:",
+  OpenSettings: "openSettings:",
+  Permissions: "permissions:",
+  Preferences: "preferences:",
   RedemptionAssist: "redemptionAssist:",
   UsageHistory: "usageHistory:",
   WebdavAutoSync: "webdavAutoSync:",
@@ -23,10 +33,15 @@ export type RuntimeActionPrefix =
  * Values are part of the on-the-wire contract between extension contexts and MUST remain stable.
  */
 export const RuntimeActionIds = {
-  AccountDialogImportCookieAuthSessionCookie:
-    "accountDialog:importCookieAuthSessionCookie",
+  AccountDialogImportCookieAuthSessionCookie: composeRuntimeAction(
+    RuntimeActionPrefixes.AccountDialog,
+    "importCookieAuthSessionCookie",
+  ),
 
-  PermissionsCheck: "permissions:check",
+  PermissionsCheck: composeRuntimeAction(
+    RuntimeActionPrefixes.Permissions,
+    "check",
+  ),
   CloudflareGuardLog: "cloudflareGuardLog",
 
   OpenTempWindow: "openTempWindow",
@@ -35,64 +50,200 @@ export const RuntimeActionIds = {
   TempWindowFetch: "tempWindowFetch",
   TempWindowGetRenderedTitle: "tempWindowGetRenderedTitle",
 
-  CookieInterceptorTrackUrl: "cookieInterceptor:trackUrl",
+  CookieInterceptorTrackUrl: composeRuntimeAction(
+    RuntimeActionPrefixes.CookieInterceptor,
+    "trackUrl",
+  ),
 
-  OpenSettingsCheckinRedeem: "openSettings:checkinRedeem",
-  OpenSettingsShieldBypass: "openSettings:shieldBypass",
+  OpenSettingsCheckinRedeem: composeRuntimeAction(
+    RuntimeActionPrefixes.OpenSettings,
+    "checkinRedeem",
+  ),
+  OpenSettingsShieldBypass: composeRuntimeAction(
+    RuntimeActionPrefixes.OpenSettings,
+    "shieldBypass",
+  ),
 
-  PreferencesUpdateActionClickBehavior: "preferences:updateActionClickBehavior",
+  PreferencesUpdateActionClickBehavior: composeRuntimeAction(
+    RuntimeActionPrefixes.Preferences,
+    "updateActionClickBehavior",
+  ),
 
-  AutoRefreshSetup: "setupAutoRefresh",
-  AutoRefreshRefreshNow: "refreshNow",
-  AutoRefreshStop: "stopAutoRefresh",
-  AutoRefreshUpdateSettings: "updateAutoRefreshSettings",
-  AutoRefreshGetStatus: "getAutoRefreshStatus",
+  AutoRefreshSetup: composeRuntimeAction(
+    RuntimeActionPrefixes.AutoRefresh,
+    "setup",
+  ),
+  AutoRefreshRefreshNow: composeRuntimeAction(
+    RuntimeActionPrefixes.AutoRefresh,
+    "refreshNow",
+  ),
+  AutoRefreshStop: composeRuntimeAction(
+    RuntimeActionPrefixes.AutoRefresh,
+    "stop",
+  ),
+  AutoRefreshUpdateSettings: composeRuntimeAction(
+    RuntimeActionPrefixes.AutoRefresh,
+    "updateSettings",
+  ),
+  AutoRefreshGetStatus: composeRuntimeAction(
+    RuntimeActionPrefixes.AutoRefresh,
+    "getStatus",
+  ),
 
-  AutoCheckinRunNow: "autoCheckin:runNow",
-  AutoCheckinDebugTriggerDailyAlarmNow: "autoCheckin:debugTriggerDailyAlarmNow",
-  AutoCheckinDebugTriggerRetryAlarmNow: "autoCheckin:debugTriggerRetryAlarmNow",
-  AutoCheckinDebugResetLastDailyRunDay: "autoCheckin:debugResetLastDailyRunDay",
-  AutoCheckinDebugScheduleDailyAlarmForToday:
-    "autoCheckin:debugScheduleDailyAlarmForToday",
-  AutoCheckinPretriggerDailyOnUiOpen: "autoCheckin:pretriggerDailyOnUiOpen",
-  AutoCheckinRetryAccount: "autoCheckin:retryAccount",
-  AutoCheckinGetAccountInfo: "autoCheckin:getAccountInfo",
-  AutoCheckinGetStatus: "autoCheckin:getStatus",
-  AutoCheckinUpdateSettings: "autoCheckin:updateSettings",
-  AutoCheckinPretriggerStarted: "autoCheckinPretrigger:started",
+  AutoCheckinRunNow: composeRuntimeAction(
+    RuntimeActionPrefixes.AutoCheckin,
+    "runNow",
+  ),
+  AutoCheckinDebugTriggerDailyAlarmNow: composeRuntimeAction(
+    RuntimeActionPrefixes.AutoCheckin,
+    "debugTriggerDailyAlarmNow",
+  ),
+  AutoCheckinDebugTriggerRetryAlarmNow: composeRuntimeAction(
+    RuntimeActionPrefixes.AutoCheckin,
+    "debugTriggerRetryAlarmNow",
+  ),
+  AutoCheckinDebugResetLastDailyRunDay: composeRuntimeAction(
+    RuntimeActionPrefixes.AutoCheckin,
+    "debugResetLastDailyRunDay",
+  ),
+  AutoCheckinDebugScheduleDailyAlarmForToday: composeRuntimeAction(
+    RuntimeActionPrefixes.AutoCheckin,
+    "debugScheduleDailyAlarmForToday",
+  ),
+  AutoCheckinPretriggerDailyOnUiOpen: composeRuntimeAction(
+    RuntimeActionPrefixes.AutoCheckin,
+    "pretriggerDailyOnUiOpen",
+  ),
+  AutoCheckinRetryAccount: composeRuntimeAction(
+    RuntimeActionPrefixes.AutoCheckin,
+    "retryAccount",
+  ),
+  AutoCheckinGetAccountInfo: composeRuntimeAction(
+    RuntimeActionPrefixes.AutoCheckin,
+    "getAccountInfo",
+  ),
+  AutoCheckinGetStatus: composeRuntimeAction(
+    RuntimeActionPrefixes.AutoCheckin,
+    "getStatus",
+  ),
+  AutoCheckinUpdateSettings: composeRuntimeAction(
+    RuntimeActionPrefixes.AutoCheckin,
+    "updateSettings",
+  ),
+  AutoCheckinPretriggerStarted: composeRuntimeAction(
+    RuntimeActionPrefixes.AutoCheckinPretrigger,
+    "started",
+  ),
 
-  ChannelConfigGet: "channelConfig:get",
-  ChannelConfigUpsertFilters: "channelConfig:upsertFilters",
+  ChannelConfigGet: composeRuntimeAction(
+    RuntimeActionPrefixes.ChannelConfig,
+    "get",
+  ),
+  ChannelConfigUpsertFilters: composeRuntimeAction(
+    RuntimeActionPrefixes.ChannelConfig,
+    "upsertFilters",
+  ),
 
-  ExternalCheckInOpenAndMark: "externalCheckIn:openAndMark",
+  ExternalCheckInOpenAndMark: composeRuntimeAction(
+    RuntimeActionPrefixes.ExternalCheckIn,
+    "openAndMark",
+  ),
 
-  ModelSyncGetNextRun: "modelSync:getNextRun",
-  ModelSyncTriggerAll: "modelSync:triggerAll",
-  ModelSyncTriggerSelected: "modelSync:triggerSelected",
-  ModelSyncTriggerFailedOnly: "modelSync:triggerFailedOnly",
-  ModelSyncGetLastExecution: "modelSync:getLastExecution",
-  ModelSyncGetProgress: "modelSync:getProgress",
-  ModelSyncUpdateSettings: "modelSync:updateSettings",
-  ModelSyncGetPreferences: "modelSync:getPreferences",
-  ModelSyncGetChannelUpstreamModelOptions:
-    "modelSync:getChannelUpstreamModelOptions",
-  ModelSyncListChannels: "modelSync:listChannels",
+  ModelSyncGetNextRun: composeRuntimeAction(
+    RuntimeActionPrefixes.ModelSync,
+    "getNextRun",
+  ),
+  ModelSyncTriggerAll: composeRuntimeAction(
+    RuntimeActionPrefixes.ModelSync,
+    "triggerAll",
+  ),
+  ModelSyncTriggerSelected: composeRuntimeAction(
+    RuntimeActionPrefixes.ModelSync,
+    "triggerSelected",
+  ),
+  ModelSyncTriggerFailedOnly: composeRuntimeAction(
+    RuntimeActionPrefixes.ModelSync,
+    "triggerFailedOnly",
+  ),
+  ModelSyncGetLastExecution: composeRuntimeAction(
+    RuntimeActionPrefixes.ModelSync,
+    "getLastExecution",
+  ),
+  ModelSyncGetProgress: composeRuntimeAction(
+    RuntimeActionPrefixes.ModelSync,
+    "getProgress",
+  ),
+  ModelSyncUpdateSettings: composeRuntimeAction(
+    RuntimeActionPrefixes.ModelSync,
+    "updateSettings",
+  ),
+  ModelSyncGetPreferences: composeRuntimeAction(
+    RuntimeActionPrefixes.ModelSync,
+    "getPreferences",
+  ),
+  ModelSyncGetChannelUpstreamModelOptions: composeRuntimeAction(
+    RuntimeActionPrefixes.ModelSync,
+    "getChannelUpstreamModelOptions",
+  ),
+  ModelSyncListChannels: composeRuntimeAction(
+    RuntimeActionPrefixes.ModelSync,
+    "listChannels",
+  ),
 
-  RedemptionAssistUpdateSettings: "redemptionAssist:updateSettings",
-  RedemptionAssistShouldPrompt: "redemptionAssist:shouldPrompt",
-  RedemptionAssistAutoRedeem: "redemptionAssist:autoRedeem",
-  RedemptionAssistAutoRedeemByUrl: "redemptionAssist:autoRedeemByUrl",
-  RedemptionAssistContextMenuTrigger: "redemptionAssist:contextMenuTrigger",
+  RedemptionAssistUpdateSettings: composeRuntimeAction(
+    RuntimeActionPrefixes.RedemptionAssist,
+    "updateSettings",
+  ),
+  RedemptionAssistShouldPrompt: composeRuntimeAction(
+    RuntimeActionPrefixes.RedemptionAssist,
+    "shouldPrompt",
+  ),
+  RedemptionAssistAutoRedeem: composeRuntimeAction(
+    RuntimeActionPrefixes.RedemptionAssist,
+    "autoRedeem",
+  ),
+  RedemptionAssistAutoRedeemByUrl: composeRuntimeAction(
+    RuntimeActionPrefixes.RedemptionAssist,
+    "autoRedeemByUrl",
+  ),
+  RedemptionAssistContextMenuTrigger: composeRuntimeAction(
+    RuntimeActionPrefixes.RedemptionAssist,
+    "contextMenuTrigger",
+  ),
 
-  UsageHistoryUpdateSettings: "usageHistory:updateSettings",
-  UsageHistorySyncNow: "usageHistory:syncNow",
-  UsageHistoryPrune: "usageHistory:prune",
+  UsageHistoryUpdateSettings: composeRuntimeAction(
+    RuntimeActionPrefixes.UsageHistory,
+    "updateSettings",
+  ),
+  UsageHistorySyncNow: composeRuntimeAction(
+    RuntimeActionPrefixes.UsageHistory,
+    "syncNow",
+  ),
+  UsageHistoryPrune: composeRuntimeAction(
+    RuntimeActionPrefixes.UsageHistory,
+    "prune",
+  ),
 
-  WebdavAutoSyncSetup: "webdavAutoSync:setup",
-  WebdavAutoSyncSyncNow: "webdavAutoSync:syncNow",
-  WebdavAutoSyncStop: "webdavAutoSync:stop",
-  WebdavAutoSyncUpdateSettings: "webdavAutoSync:updateSettings",
-  WebdavAutoSyncGetStatus: "webdavAutoSync:getStatus",
+  WebdavAutoSyncSetup: composeRuntimeAction(
+    RuntimeActionPrefixes.WebdavAutoSync,
+    "setup",
+  ),
+  WebdavAutoSyncSyncNow: composeRuntimeAction(
+    RuntimeActionPrefixes.WebdavAutoSync,
+    "syncNow",
+  ),
+  WebdavAutoSyncStop: composeRuntimeAction(
+    RuntimeActionPrefixes.WebdavAutoSync,
+    "stop",
+  ),
+  WebdavAutoSyncUpdateSettings: composeRuntimeAction(
+    RuntimeActionPrefixes.WebdavAutoSync,
+    "updateSettings",
+  ),
+  WebdavAutoSyncGetStatus: composeRuntimeAction(
+    RuntimeActionPrefixes.WebdavAutoSync,
+    "getStatus",
+  ),
 
   ContentGetLocalStorage: "getLocalStorage",
   ContentGetUserFromLocalStorage: "getUserFromLocalStorage",
@@ -129,25 +280,4 @@ export function composeRuntimeAction<
   S extends string,
 >(prefix: P, suffix: S): `${P}${S}` {
   return `${prefix}${suffix}`
-}
-
-/**
- * Legacy auto-refresh matcher.
- *
- * Auto-refresh routes are a mix of:
- * - a loose prefix match for names like `autoRefresh*`
- * - a small set of legacy un-namespaced actions (e.g., `setupAutoRefresh`)
- *
- * This helper keeps router code readable while avoiding inline magic strings.
- */
-export function isAutoRefreshRuntimeAction(action: unknown): boolean {
-  return (
-    typeof action === "string" &&
-    (hasRuntimeActionPrefix(action, RuntimeActionPrefixes.AutoRefresh) ||
-      action === RuntimeActionIds.AutoRefreshSetup ||
-      action === RuntimeActionIds.AutoRefreshRefreshNow ||
-      action === RuntimeActionIds.AutoRefreshStop ||
-      action === RuntimeActionIds.AutoRefreshUpdateSettings ||
-      action === RuntimeActionIds.AutoRefreshGetStatus)
-  )
 }

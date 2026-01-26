@@ -33,7 +33,7 @@
 ## 工作原理
 
 1. 用户保存设置后，通过 `UserPreferencesContext` 将 `accountAutoRefresh` 写入本地偏好。
-2. 背景页收到 `updateAutoRefreshSettings` 消息，调用 `autoRefreshService.setupAutoRefresh()`：
+2. 背景页收到 `RuntimeActionIds.AutoRefreshUpdateSettings`（wire: `autoRefresh:updateSettings`）消息，调用 `autoRefreshService.setupAutoRefresh()`：
    - 若开关关闭或配置不完整则停止定时器。
    - 否则根据间隔创建 `setInterval`，周期性执行 `accountStorage.refreshAllAccounts(false)`。
 3. 刷新结果（成功/失败）会通过 `AUTO_REFRESH_UPDATE` 消息广播到前端，若弹窗未打开则静默忽略。

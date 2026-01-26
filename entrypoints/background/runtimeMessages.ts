@@ -1,7 +1,6 @@
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import {
   hasRuntimeActionPrefix,
-  isAutoRefreshRuntimeAction,
   RuntimeActionIds,
   RuntimeActionPrefixes,
 } from "~/constants/runtimeActions"
@@ -173,7 +172,12 @@ export function setupRuntimeMessageListeners() {
       }
 
       // 处理自动刷新相关消息
-      if (isAutoRefreshRuntimeAction(request.action)) {
+      if (
+        hasRuntimeActionPrefix(
+          request.action,
+          RuntimeActionPrefixes.AutoRefresh,
+        )
+      ) {
         handleAutoRefreshMessage(request, sendResponse)
         return true
       }

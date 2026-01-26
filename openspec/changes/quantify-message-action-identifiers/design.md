@@ -12,13 +12,13 @@ This creates a cross-cutting maintenance risk: action names are a contract betwe
 **Goals:**
 - Establish a single, canonical registry for runtime message action IDs and action prefixes, with TypeScript literal types for autocomplete and safe refactors.
 - Ensure both full action IDs and prefix checks are expressed via shared constants/helpers (no scattered magic strings).
-- Preserve existing on-the-wire action string values (no behavioral change; compatibility across extension contexts).
+- Preserve existing on-the-wire action string values where feasible; standardize legacy auto-refresh actions into a strict `autoRefresh:` namespace to remove special-case routing.
 - Make it hard to accidentally introduce new inline action strings by providing a clear, reusable API and targeted tests.
 
 **Non-Goals:**
 - Redesigning the overall runtime messaging architecture (e.g., introducing a full message bus, new dependency, or framework-level dispatcher).
 - Changing message payload shapes or introducing a complete request/response type map for every message in this change.
-- Renaming or deprecating existing action values on the wire (future cleanup can be considered separately).
+- Wholesale renaming of existing action values on the wire (auto-refresh is standardized as part of this change).
 
 ## Decisions
 
@@ -37,13 +37,12 @@ This creates a cross-cutting maintenance risk: action names are a contract betwe
    - Rationale: keeps call sites uniform and reviewable; reduces subtle mistakes like missing `:` or inconsistent `startsWith` handling.
    - Alternative considered: only constants (no helpers); rejected because router code would still repeat `action && action.startsWith(prefix)` patterns.
 
-3) **Migrate routing and call sites without changing action strings.**
+3) **Migrate routing and call sites with minimal wire churn.**
    - Background router (`setupRuntimeMessageListeners`) will switch from inline strings to:
      - `request.action === RuntimeActionIds.<X>` for exact matches.
      - `hasRuntimeActionPrefix(request.action, RuntimeActionPrefixes.<Y>)` for prefix routes.
-   - For legacy groups that don’t share a strict prefix convention (e.g., auto-refresh’s mix of `autoRefresh*` and `setupAutoRefresh` style names), define explicit `RuntimeActionIds` entries and a small matcher helper (e.g., `isAutoRefreshRuntimeAction(action)`) so the router stays readable and still avoids inline strings.
-   - Rationale: compatibility first; ensures senders/receivers stay aligned during refactor.
-   - Alternative considered: rename all actions into a strict `<namespace>:<verb>` scheme now; rejected because it increases scope and risk (and would be an on-the-wire contract change).
+   - Auto-refresh actions are standardized into a strict `autoRefresh:<verb>` namespace and routed purely via `hasRuntimeActionPrefix(action, RuntimeActionPrefixes.AutoRefresh)`.
+   - Rationale: eliminates a special-case matcher and makes routing consistent with other feature namespaces.
 
 4) **Add tests that protect the registry and helpers as the “source of truth”.**
    - Add unit tests for `constants/runtimeActions.ts` to ensure:
@@ -75,7 +74,7 @@ Rollback strategy: revert the refactor commits; since wire values are preserved 
 
 ## Current Action Inventory (wire values)
 
-This is the deduped set of runtime message `action` strings and routing prefixes currently used in the repo. These values are considered on-the-wire contracts and MUST NOT be renamed during this change.
+This is the deduped set of runtime message `action` strings and routing prefixes currently used in the repo. These values are considered on-the-wire contracts; the only intentional renames in this change are the legacy auto-refresh actions moving into the strict `autoRefresh:` namespace.
 
 ### Prefix-routed actions
 
@@ -86,7 +85,7 @@ This is the deduped set of runtime message `action` strings and routing prefixes
 - `redemptionAssist:`
 - `channelConfig:`
 - `usageHistory:`
-- `autoRefresh` (legacy group; matches a non-namespaced prefix)
+- `autoRefresh:`
 
 ### Exact-match actions
 
@@ -110,7 +109,7 @@ This is the deduped set of runtime message `action` strings and routing prefixes
 - `cloudflareGuardLog`
 - `cookieInterceptor:trackUrl`
 - `externalCheckIn:openAndMark`
-- `getAutoRefreshStatus`
+- `autoRefresh:getStatus`
 - `getLocalStorage`
 - `getRenderedTitle`
 - `getUserFromLocalStorage`
@@ -135,13 +134,13 @@ This is the deduped set of runtime message `action` strings and routing prefixes
 - `redemptionAssist:contextMenuTrigger`
 - `redemptionAssist:shouldPrompt`
 - `redemptionAssist:updateSettings`
-- `refreshNow`
-- `setupAutoRefresh`
+- `autoRefresh:refreshNow`
+- `autoRefresh:setup`
 - `showShieldBypassUi`
-- `stopAutoRefresh`
+- `autoRefresh:stop`
 - `tempWindowFetch`
 - `tempWindowGetRenderedTitle`
-- `updateAutoRefreshSettings`
+- `autoRefresh:updateSettings`
 - `usageHistory:prune`
 - `usageHistory:syncNow`
 - `usageHistory:updateSettings`
@@ -154,9 +153,8 @@ This is the deduped set of runtime message `action` strings and routing prefixes
 
 ### Notes
 
-- Auto-refresh currently uses a mixed router: a loose prefix match (`action.startsWith("autoRefresh")`) plus a hardcoded allow-list of legacy non-namespaced actions (`setupAutoRefresh`, `refreshNow`, `stopAutoRefresh`, `updateAutoRefreshSettings`, `getAutoRefreshStatus`). This group cannot be represented as a single strict `foo:` prefix and will be expressed via a dedicated matcher helper so router code contains no magic strings.
 - Tests intentionally use sentinel unknown values (e.g., `unknownAction`, `unknown`) to exercise the unknown/missing action branches; these are not shipped wire contracts.
-- Canonical mappings are defined in `constants/runtimeActions.ts` via `RuntimeActionIds` and `RuntimeActionPrefixes`. All call sites should reference these symbols so on-the-wire values remain unchanged.
+- Canonical mappings are defined in `constants/runtimeActions.ts` via `RuntimeActionIds` and `RuntimeActionPrefixes`. All call sites should reference these symbols so on-the-wire values remain stable and refactors stay centralized.
 
 ## Resolved Questions
 

@@ -1,23 +1,23 @@
 ## 1. Inventory and wire-compatibility
 
 - [x] 1.1 Enumerate all runtime message action strings and prefixes used in the repo (search for `action: "..."`, `request.action ===`, `switch (request.action)`, and `startsWith("...")`), and dedupe into a single list.
-- [x] 1.2 Confirm which values are exact action IDs vs. routing prefixes, and document any legacy naming groups that cannot be represented as a single prefix (e.g., auto-refresh).
-- [x] 1.3 Verify the planned registry preserves all existing on-the-wire action values (no renames) by mapping each discovered string literal to a canonical constant.
+- [x] 1.2 Confirm which values are exact action IDs vs. routing prefixes, and document any legacy naming groups that should be standardized (e.g., auto-refresh).
+- [x] 1.3 Verify the planned registry preserves all existing on-the-wire action values where feasible by mapping each discovered string literal to a canonical constant.
 
 ## 2. Centralize runtime action IDs and prefixes
 
 - [x] 2.1 Expand `constants/runtimeActions.ts` to include a canonical `RuntimeActionPrefixes` registry for every prefix-based route (e.g., `externalCheckIn:`, `webdavAutoSync:`, `modelSync:`, `autoCheckin:`, `redemptionAssist:`, `channelConfig:`, `usageHistory:`).
-- [x] 2.2 Expand `constants/runtimeActions.ts` to include canonical `RuntimeActionIds` entries for every exact-match action currently used (including legacy non-namespaced actions used by auto-refresh).
+- [x] 2.2 Expand `constants/runtimeActions.ts` to include canonical `RuntimeActionIds` entries for every exact-match action currently used.
 - [x] 2.3 Add literal union types `RuntimeActionId` and `RuntimeActionPrefix` derived from the registries (TypeScript `as const` pattern).
 - [x] 2.4 Add a documented, null-safe prefix matcher helper (e.g., `hasRuntimeActionPrefix`) for router code.
 - [x] 2.5 Add a documented action composer helper (e.g., `composeRuntimeAction`) for building namespaced IDs from prefix + suffix.
-- [x] 2.6 Add any documented legacy “group matcher” needed to replace inline lists (e.g., `isAutoRefreshRuntimeAction`).
+- [x] 2.6 Standardize legacy auto-refresh actions into a strict `autoRefresh:` prefix so routing can be prefix-only (no special-case matcher needed).
 
 ## 3. Migrate the background message router
 
 - [x] 3.1 Update `entrypoints/background/runtimeMessages.ts` to replace all inline action string equality checks with `RuntimeActionIds` constants.
 - [x] 3.2 Update `entrypoints/background/runtimeMessages.ts` to replace all inline prefix checks (`startsWith("<prefix>")`) with `RuntimeActionPrefixes` + `hasRuntimeActionPrefix`.
-- [x] 3.3 Replace the auto-refresh mixed prefix/list routing with a single constant-driven matcher (e.g., `isAutoRefreshRuntimeAction`) so the router contains no magic strings.
+- [x] 3.3 Route auto-refresh messages via `RuntimeActionPrefixes.AutoRefresh` + `hasRuntimeActionPrefix` so the router contains no magic strings.
 
 ## 4. Migrate feature handlers and senders
 

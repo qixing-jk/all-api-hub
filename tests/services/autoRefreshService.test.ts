@@ -448,7 +448,7 @@ describe("handleAutoRefreshMessage", () => {
     autoRefreshService.destroy()
   })
 
-  describe("setupAutoRefresh action", () => {
+  describe("autoRefresh:setup action", () => {
     it("should setup auto refresh and send success response", async () => {
       const mockPreferences: UserPreferences = {
         accountAutoRefresh: {
@@ -485,7 +485,7 @@ describe("handleAutoRefreshMessage", () => {
     })
   })
 
-  describe("refreshNow action", () => {
+  describe("autoRefresh:refreshNow action", () => {
     it("should refresh now and send result", async () => {
       const mockResult = {
         success: 3,
@@ -523,7 +523,7 @@ describe("handleAutoRefreshMessage", () => {
     })
   })
 
-  describe("stopAutoRefresh action", () => {
+  describe("autoRefresh:stop action", () => {
     it("should stop auto refresh and send success response", async () => {
       await handleAutoRefreshMessage(
         { action: RuntimeActionIds.AutoRefreshStop },
@@ -535,7 +535,7 @@ describe("handleAutoRefreshMessage", () => {
     })
   })
 
-  describe("updateAutoRefreshSettings action", () => {
+  describe("autoRefresh:updateSettings action", () => {
     it("should update settings and send success response", async () => {
       const settings = { accountAutoRefresh: { enabled: false, interval: 600 } }
       vi.mocked(userPreferences.savePreferences).mockResolvedValue(true)
@@ -571,7 +571,7 @@ describe("handleAutoRefreshMessage", () => {
     })
   })
 
-  describe("getAutoRefreshStatus action", () => {
+  describe("autoRefresh:getStatus action", () => {
     it("should return current status", async () => {
       await handleAutoRefreshMessage(
         { action: RuntimeActionIds.AutoRefreshGetStatus },
