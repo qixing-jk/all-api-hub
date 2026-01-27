@@ -29,6 +29,12 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { WEBDAV_SYNC_STRATEGIES, WebDAVSettings } from "~/types/webdav"
 import { sendRuntimeMessage } from "~/utils/browserApi"
 import { formatTimestamp } from "~/utils/formatters"
+import { createLogger } from "~/utils/logger"
+
+/**
+ * Unified logger scoped to WebDAV auto-sync settings UI.
+ */
+const logger = createLogger("WebDAVAutoSyncSettings")
 
 /**
  * WebDAV automatic sync configuration card: toggles auto-sync, schedule, strategy, and shows status/actions.
@@ -69,7 +75,7 @@ export default function WebDAVAutoSyncSettings() {
       setSyncInterval(prefs.webdav.syncInterval ?? 3600)
       setSyncStrategy(prefs.webdav.syncStrategy ?? WEBDAV_SYNC_STRATEGIES.MERGE)
     } catch (error) {
-      console.error("Failed to load auto-sync settings:", error)
+      logger.error("Failed to load auto-sync settings", error)
     }
   }
 
@@ -85,7 +91,7 @@ export default function WebDAVAutoSyncSettings() {
         setLastSyncError(response.data.lastSyncError)
       }
     } catch (error) {
-      console.error("Failed to load sync status:", error)
+      logger.error("Failed to load sync status", error)
     }
   }
 
@@ -108,7 +114,7 @@ export default function WebDAVAutoSyncSettings() {
         toast.error(response.error || t("settings:messages.updateFailed"))
       }
     } catch (error: any) {
-      console.error(error)
+      logger.error("Failed to update auto-sync settings", error)
       toast.error(error?.message || t("settings:messages.updateFailed"))
     } finally {
       setSavingSettings(false)
@@ -129,7 +135,7 @@ export default function WebDAVAutoSyncSettings() {
         toast.error(response.message || t("webdav.syncFailed"))
       }
     } catch (error: any) {
-      console.error(error)
+      logger.error("Failed to trigger WebDAV auto-sync", error)
       toast.error(error?.message || t("webdav.syncFailed"))
     } finally {
       setSyncing(false)

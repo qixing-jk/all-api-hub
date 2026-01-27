@@ -2,7 +2,13 @@ import { t } from "i18next"
 import toast from "react-hot-toast"
 
 import type { ApiToken, DisplaySiteData } from "~/types"
+import { createLogger } from "~/utils/logger"
 import { normalizeHttpUrl } from "~/utils/url"
+
+/**
+ * Unified logger scoped to CC Switch deeplink integration.
+ */
+const logger = createLogger("CcSwitch")
 
 /**
  * Supported CC Switch client identifiers.
@@ -122,7 +128,7 @@ export function openInCCSwitch(options: OpenInCCSwitchOptions) {
     toast.success(t("messages:ccswitch.attemptingRedirect"))
     return true
   } catch (error) {
-    console.error("[ccSwitch] Failed to open deep link", error)
+    logger.warn("Failed to open deep link", error)
     toast.error(t("messages:ccswitch.unableToOpen"))
     return false
   }

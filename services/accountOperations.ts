@@ -27,8 +27,11 @@ import { analyzeAutoDetectError } from "~/utils/autoDetectUtils"
 import { sendRuntimeMessage } from "~/utils/browserApi"
 import { extractSessionCookieHeader } from "~/utils/cookieString"
 import { getErrorMessage } from "~/utils/error"
+import { createLogger } from "~/utils/logger"
 
 import { autoDetectSmart } from "./autoDetectService"
+
+const logger = createLogger("AccountOperations")
 
 /**
  * 智能自动识别账号信息
@@ -58,10 +61,10 @@ export async function autoDetectAccount(
         url: url.trim(),
       })
     } catch (error) {
-      console.log(
-        "[AutoDetect] Failed to track cookie interceptor url:",
-        getErrorMessage(error),
-      )
+      logger.warn("Failed to track cookie interceptor url", {
+        url: url.trim(),
+        error: getErrorMessage(error),
+      })
     }
 
     // 使用智能自动识别服务
@@ -180,7 +183,7 @@ export async function autoDetectAccount(
       },
     }
   } catch (error) {
-    console.error(t("messages:autodetect.failed"), error)
+    logger.error(t("messages:autodetect.failed"), error)
     const detailedError = analyzeAutoDetectError(error)
     const errorMessage = getErrorMessage(error)
     return {
@@ -320,7 +323,12 @@ export async function validateAndSaveAccount(
 
   try {
     // 获取账号余额和今日使用情况
-    console.log(t("messages:toast.loading.fetchingAccountData"))
+    logger.debug("Fetching account data for new account", {
+      baseUrl: url.trim(),
+      siteType,
+      authType,
+      userId: parsedUserId,
+    })
     const freshAccountData = await getApiService(siteType).fetchAccountData({
       baseUrl: url.trim(),
       checkIn: checkInConfig,
@@ -368,10 +376,10 @@ export async function validateAndSaveAccount(
     }
 
     const accountId = await accountStorage.addAccount(accountData)
-    console.log(t("messages:toast.success.accountSaveSuccess"), {
-      id: accountId,
-      siteName,
-      freshAccountData,
+    logger.info("Account saved with data refresh", {
+      accountId,
+      siteName: siteName.trim(),
+      siteType,
     })
 
     return {
@@ -381,7 +389,7 @@ export async function validateAndSaveAccount(
     }
   } catch (error) {
     // FALLBACK: 即使获取数据失败也要保存配置
-    console.warn("Data fetch failed, saving configuration only:", error)
+    logger.warn("Data fetch failed; saving configuration only", error)
 
     // Build partial account data without quota/usage data
     const normalizedTagIds = normalizeTagIdsInput(tagIds)
@@ -424,9 +432,10 @@ export async function validateAndSaveAccount(
     // Try to save partial account data
     try {
       const accountId = await accountStorage.addAccount(partialAccountData)
-      console.log("Account saved without data refresh:", {
-        id: accountId,
-        siteName,
+      logger.warn("Account saved without data refresh", {
+        accountId,
+        siteName: siteName.trim(),
+        siteType,
       })
 
       return {
@@ -435,7 +444,7 @@ export async function validateAndSaveAccount(
         accountId,
       }
     } catch (saveError) {
-      console.error("Failed to save account:", saveError)
+      logger.error("Failed to save account", saveError)
       const errorMessage = getErrorMessage(saveError)
       return {
         success: false,
@@ -516,7 +525,13 @@ export async function validateAndUpdateAccount(
 
   try {
     // 获取账号余额和今日使用情况
-    console.log(t("messages:toast.loading.fetchingAccountData"))
+    logger.debug("Fetching account data for update", {
+      accountId,
+      baseUrl: url.trim(),
+      siteType,
+      authType,
+      userId: parsedUserId,
+    })
     const freshAccountData = await getApiService(siteType).fetchAccountData({
       baseUrl: url.trim(),
       checkIn: checkInConfig,
@@ -573,10 +588,10 @@ export async function validateAndUpdateAccount(
       }
     }
 
-    console.log(t("messages:toast.success.accountUpdateSuccess"), {
-      id: accountId,
-      siteName,
-      freshAccountData,
+    logger.info("Account updated with data refresh", {
+      accountId,
+      siteName: siteName.trim(),
+      siteType,
     })
 
     return {
@@ -586,7 +601,7 @@ export async function validateAndUpdateAccount(
     }
   } catch (error) {
     // FALLBACK: 即使获取数据失败也要保存配置
-    console.warn("Data fetch failed, saving configuration only:", error)
+    logger.warn("Data fetch failed; saving configuration only", error)
 
     // Build partial update preserving quota/usage data
     const normalizedTagIds = normalizeTagIdsInput(tagIds)

@@ -14,6 +14,12 @@ import {
 } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { DEFAULT_PREFERENCES } from "~/services/userPreferences"
+import { createLogger } from "~/utils/logger"
+
+/**
+ * Unified logger scoped to the Basic Settings redemption assist section.
+ */
+const logger = createLogger("RedemptionAssistSettings")
 
 /**
  * Settings section for toggling redemption assist feature.
@@ -62,7 +68,7 @@ export default function RedemptionAssistSettings() {
         )
       }
     } catch (error) {
-      console.error("Failed to save redemption assist settings:", error)
+      logger.error("Failed to save redemption assist settings", error)
       toast.error(
         t("settings:messages.saveSettingsFailed", {
           defaultValue: "Failed to save settings",

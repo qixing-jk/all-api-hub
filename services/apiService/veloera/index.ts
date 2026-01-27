@@ -9,6 +9,12 @@ import type {
   ManagedSiteChannelListData,
   UpdateChannelPayload,
 } from "~/types/managedSite"
+import { createLogger } from "~/utils/logger"
+
+/**
+ * Unified logger scoped to Veloera API service calls.
+ */
+const logger = createLogger("ApiService.Veloera")
 
 const VELOERA_CHANNEL_ENDPOINT = "/api/channel"
 
@@ -127,7 +133,7 @@ export async function createChannel(
       },
     })
   } catch (error) {
-    console.error("[Veloera] Failed to create channel:", error)
+    logger.error("Failed to create channel", error)
     throw new Error("创建渠道失败，请检查网络或 Veloera 配置")
   }
 }
@@ -157,7 +163,7 @@ export async function updateChannel(
       },
     })
   } catch (error) {
-    console.error("[Veloera] Failed to update channel:", error)
+    logger.error("Failed to update channel", error)
     throw new Error("更新渠道失败，请检查网络或 Veloera 配置")
   }
 }
@@ -253,7 +259,7 @@ export async function searchChannel(
       type_counts: typeCounts,
     } as ManagedSiteChannelListData
   } catch (error) {
-    console.error("[Veloera] Failed to search channels:", error)
+    logger.error("Failed to search channels", error)
     return null
   }
 }

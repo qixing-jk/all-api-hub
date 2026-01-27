@@ -5,9 +5,15 @@ import {
   removeActionClickListener,
   setActionPopup,
 } from "~/utils/browserApi"
+import { createLogger } from "~/utils/logger"
 import { openOrFocusOptionsMenuItem } from "~/utils/navigation"
 
 export type ActionClickBehavior = "popup" | "sidepanel"
+
+/**
+ * Unified logger scoped to toolbar action click behavior wiring.
+ */
+const logger = createLogger("ActionClickBehavior")
 
 const POPUP_PAGE = "popup.html"
 
@@ -19,10 +25,7 @@ const handleActionClick = async () => {
   try {
     await openSidePanel()
   } catch (error) {
-    console.warn(
-      "[ActionClickBehavior] Side panel unavailable, opening settings instead",
-      error,
-    )
+    logger.warn("Side panel unavailable, opening settings instead", error)
     openOrFocusOptionsMenuItem(MENU_ITEM_IDS.BASIC)
   }
 }
@@ -46,14 +49,14 @@ export async function applyActionClickBehavior(
       openPanelOnActionClick: isSidePanel,
     })
   } catch (error) {
-    console.warn("sidePanel.setPanelBehavior not available", error)
+    logger.warn("sidePanel.setPanelBehavior not available", error)
   }
 
   // 当选择 sidepanel 时清空 popup；选择 popup 时恢复 popup.html
   try {
     await setActionPopup(isSidePanel ? "" : POPUP_PAGE)
   } catch (error) {
-    console.warn("action.setPopup not available", error)
+    logger.warn("action.setPopup not available", error)
   }
 
   // 确保监听已注册

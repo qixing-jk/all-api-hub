@@ -4,8 +4,11 @@
  */
 
 import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
+import { createLogger } from "~/utils/logger"
 
 import type { UserPreferences } from "../../userPreferences"
+
+const logger = createLogger("AutoRefreshConfigMigration")
 
 /**
  * Checks if the given user preferences object contains any of the old flat auto-refresh fields.
@@ -51,8 +54,8 @@ export function migrateAutoRefreshConfig(
       prefs.refreshOnOpen ?? DEFAULT_ACCOUNT_AUTO_REFRESH.refreshOnOpen,
   }
 
-  console.log(
-    "[PreferencesMigration] Migrated accountAutoRefresh settings:",
+  logger.debug(
+    "Migrated accountAutoRefresh settings",
     accountAutoRefreshSettings,
   )
 

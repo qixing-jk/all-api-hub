@@ -1,6 +1,13 @@
 import { Storage } from "@plasmohq/storage"
 
+import { createLogger } from "~/utils/logger"
+
 import { OPTIONAL_PERMISSIONS } from "./permissionManager"
+
+/**
+ * Unified logger scoped to persisted optional-permission acknowledgment state.
+ */
+const logger = createLogger("OptionalPermissionState")
 
 const STORAGE_KEY = "optional_permissions_state"
 
@@ -24,10 +31,7 @@ export async function getLastSeenOptionalPermissions(): Promise<
     )) as OptionalPermissionState | null
     return state?.lastSeen ?? null
   } catch (error) {
-    console.error(
-      "[Permissions] Failed to read last seen optional permissions",
-      error,
-    )
+    logger.error("Failed to read last seen optional permissions", error)
     return null
   }
 }
@@ -42,10 +46,7 @@ export async function setLastSeenOptionalPermissions(
     const sorted = [...permissions].sort()
     await storage.set(STORAGE_KEY, { lastSeen: sorted })
   } catch (error) {
-    console.error(
-      "[Permissions] Failed to store last seen optional permissions",
-      error,
-    )
+    logger.error("Failed to store last seen optional permissions", error)
   }
 }
 
@@ -56,10 +57,7 @@ export async function clearLastSeenOptionalPermissions(): Promise<void> {
   try {
     await storage.remove(STORAGE_KEY)
   } catch (error) {
-    console.error(
-      "[Permissions] Failed to clear last seen optional permissions",
-      error,
-    )
+    logger.error("Failed to clear last seen optional permissions", error)
   }
 }
 

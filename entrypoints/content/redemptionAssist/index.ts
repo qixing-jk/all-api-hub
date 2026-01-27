@@ -9,6 +9,7 @@ import {
   checkPermissionViaMessage,
   sendRuntimeMessage,
 } from "~/utils/browserApi"
+import { createLogger } from "~/utils/logger"
 import { extractRedemptionCodesFromText } from "~/utils/redemptionAssist"
 
 import {
@@ -21,6 +22,11 @@ import {
 } from "./utils/redemptionToasts"
 
 export const REDEMPTION_TOAST_HOST_TAG = "all-api-hub-redemption-toast"
+
+/**
+ * Unified logger scoped to redemption assist content-script flows.
+ */
+const logger = createLogger("RedemptionAssistContent")
 
 /**
  * Initializes redemption assist in content scripts (event listeners, toasts, etc.).
@@ -76,10 +82,7 @@ function setupRedemptionAssistDetection() {
               text = clipText.trim()
             }
           } catch (error) {
-            console.warn(
-              "[RedemptionAssist][Content] Clipboard read failed:",
-              error,
-            )
+            logger.warn("Clipboard read failed", error)
           }
         }
       }
@@ -129,9 +132,7 @@ function registerContextMenuTriggerListener() {
     const pageUrl = request.pageUrl || window.location.href
 
     if (!selectionText) {
-      console.warn(
-        "[RedemptionAssist][Content] Context menu trigger missing selection",
-      )
+      logger.warn("Context menu trigger missing selection")
       return
     }
 
@@ -206,10 +207,7 @@ async function handleContextMenuRedemption(
       dismissLoadingToast()
     }
   } catch (error) {
-    console.error(
-      "[RedemptionAssist][Content] context menu flow failed:",
-      error,
-    )
+    logger.error("Context menu flow failed", error)
   }
 }
 
@@ -395,7 +393,11 @@ async function scanForRedemptionCodes(sourceText?: string) {
       return
     }
 
-    console.log("[RedemptionAssist][Content] Detected codes:", codes, url)
+    logger.debug("Detected redemption codes", {
+      url,
+      codeCount: codes.length,
+      maskedCodes: codes.map(maskCode),
+    })
     const promptableCodes = await requestPromptableCodes(url, codes)
     if (promptableCodes.length === 0) {
       return
@@ -448,7 +450,7 @@ async function scanForRedemptionCodes(sourceText?: string) {
       dismissLoadingToast()
     }
   } catch (error) {
-    console.error("[RedemptionAssist][Content] scan failed:", error)
+    logger.error("Redemption scan failed", error)
   }
 }
 

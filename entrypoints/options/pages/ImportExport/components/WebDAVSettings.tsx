@@ -36,6 +36,7 @@ import {
   testWebdavConnection,
   uploadBackup,
 } from "~/services/webdav/webdavService"
+import { createLogger } from "~/utils/logger"
 
 import {
   BACKUP_VERSION,
@@ -43,6 +44,11 @@ import {
   type BackupFullV2,
 } from "../utils"
 import { WebDAVDecryptPasswordModal } from "./WebDAVDecryptPasswordModal"
+
+/**
+ * Unified logger scoped to WebDAV settings and backup import/export actions.
+ */
+const logger = createLogger("WebDAVSettings")
 
 /**
  * WebDAV backup configuration card handling save/test/upload/download actions.
@@ -105,7 +111,7 @@ export default function WebDAVSettings() {
       await userPreferences.updateWebdavSettings(webdavConfig)
       toast.success(t("settings:messages.updateSuccess"))
     } catch (e) {
-      console.error(e)
+      logger.error("Failed to save WebDAV settings", e)
       toast.error(t("settings:messages.saveSettingsFailed"))
     } finally {
       setSaving(false)
@@ -119,7 +125,7 @@ export default function WebDAVSettings() {
       await testWebdavConnection(webdavConfig)
       toast.success(t("webdav.testSuccess"))
     } catch (e: any) {
-      console.error(e)
+      logger.error("WebDAV connection test failed", e)
       toast.error(e?.message || t("webdav.testFailed"))
     } finally {
       setTesting(false)
@@ -156,7 +162,7 @@ export default function WebDAVSettings() {
       await uploadBackup(JSON.stringify(exportData, null, 2), webdavConfig)
       toast.success(t("export.dataExported"))
     } catch (e: any) {
-      console.error(e)
+      logger.error("Failed to upload backup to WebDAV", e)
       toast.error(e?.message || t("export.exportFailed"))
     } finally {
       setUploading(false)
@@ -210,7 +216,7 @@ export default function WebDAVSettings() {
         toast.success(t("importExport:import.importSuccess"))
       }
     } catch (e: any) {
-      console.error(e)
+      logger.error("Failed to download/import WebDAV backup", e)
       toast.error(e?.message || t("importExport:import.downloadImportFailed"))
     } finally {
       setDownloading(false)
@@ -253,7 +259,7 @@ export default function WebDAVSettings() {
       setDecryptDialogOpen(false)
       setPendingEnvelope(null)
     } catch (e: any) {
-      console.error(e)
+      logger.error("Failed to decrypt/import WebDAV backup", e)
       toast.error(e?.message || t("webdav.encryption.decryptFailed"))
     } finally {
       setDecrypting(false)

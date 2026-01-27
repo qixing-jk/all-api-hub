@@ -47,8 +47,11 @@ import type {
   UpdateChannelPayload,
 } from "~/types/managedSite"
 import { normalizeApiTokenKey } from "~/utils/apiKey"
+import { createLogger } from "~/utils/logger"
 
 const CHANNEL_API_BASE = "/api/channel/"
+
+const logger = createLogger("ApiServiceCommon")
 
 /**
  * 搜索指定关键词的渠道。
@@ -65,9 +68,9 @@ export async function searchChannel(
     })
   } catch (error) {
     if (error instanceof ApiError) {
-      console.error(`API 请求失败: ${error.message}`)
+      logger.error("API 请求失败", error)
     } else {
-      console.error("搜索渠道失败:", error)
+      logger.error("搜索渠道失败", error)
     }
     return null
   }
@@ -99,7 +102,7 @@ export async function createChannel(
       },
     })
   } catch (error) {
-    console.error("创建渠道失败:", error)
+    logger.error("创建渠道失败", error)
     throw new Error("创建渠道失败，请检查网络或 New API 配置。")
   }
 }
@@ -122,7 +125,7 @@ export async function updateChannel(
       },
     })
   } catch (error) {
-    console.error("更新渠道失败:", error)
+    logger.error("更新渠道失败", error)
     throw new Error("更新渠道失败，请检查网络或 New API 配置。")
   }
 }
@@ -144,7 +147,7 @@ export async function deleteChannel(
       },
     })
   } catch (error) {
-    console.error("删除渠道失败:", error)
+    logger.error("删除渠道失败", error)
     throw new Error("删除渠道失败，请检查网络或 New API 配置。")
   }
 }
@@ -381,7 +384,7 @@ export async function fetchSiteStatus(
       endpoint: "/api/status",
     })
   } catch (error) {
-    console.warn("获取站点状态信息失败:", error)
+    logger.warn("获取站点状态信息失败", error)
     return null
   }
 }
@@ -431,7 +434,7 @@ export async function fetchPaymentInfo(
       true,
     )
   } catch (error) {
-    console.error("获取支付信息失败:", error)
+    logger.error("获取支付信息失败", error)
     throw error
   }
 }
@@ -451,9 +454,9 @@ export async function getOrCreateAccessToken(
 
   // 如果没有访问令牌，则创建一个
   if (!accessToken) {
-    console.log("访问令牌为空，尝试自动创建...")
+    logger.info("访问令牌为空，尝试自动创建")
     accessToken = await createAccessToken(request)
-    console.log("自动创建访问令牌成功")
+    logger.info("自动创建访问令牌成功")
   }
 
   return {
@@ -500,7 +503,7 @@ export async function fetchCheckInStatus(
     ) {
       return undefined
     }
-    console.warn("获取签到状态失败:", error)
+    logger.warn("获取签到状态失败", error)
     return undefined // 其他错误也视为不支持
   }
 }
@@ -575,15 +578,15 @@ const fetchPaginatedLogs = async <T>(
       if (errorHandler) {
         errorHandler(error, logType)
       } else {
-        console.warn(`获取日志类型 ${logType} 失败:`, error)
+        logger.warn("获取日志类型失败", { logType, error })
       }
     }
   }
 
   if (maxPageReached) {
-    console.warn(
-      `达到最大分页限制(${REQUEST_CONFIG.MAX_PAGES}页)，数据可能不完整`,
-    )
+    logger.warn("达到最大分页限制，数据可能不完整", {
+      maxPages: REQUEST_CONFIG.MAX_PAGES,
+    })
   }
 
   return aggregatedData
@@ -669,7 +672,7 @@ export async function fetchTodayIncome(
     0,
     (error, logType) => {
       const typeName = logType === LogType.Topup ? "充值" : "签到"
-      console.warn(`获取${typeName}记录失败:`, error)
+      logger.warn("获取记录失败", { typeName, error })
     },
   )
 
@@ -733,7 +736,7 @@ export async function refreshAccountData(
       },
     }
   } catch (error) {
-    console.error("刷新账号数据失败:", error)
+    logger.error("刷新账号数据失败", error)
     return {
       success: false,
       healthStatus: determineHealthStatus(error),
@@ -753,7 +756,7 @@ export async function validateAccountConnection(
     await fetchAccountQuota(request)
     return true
   } catch (error) {
-    console.error("账号连接验证失败:", error)
+    logger.error("账号连接验证失败", error)
     return false
   }
 }
@@ -801,11 +804,17 @@ export async function fetchAccountTokens(
       return (tokensData.items || []).map(normalizeApiTokenKey)
     } else {
       // 其他情况，返回空数组
-      console.warn("Unexpected token response format:", tokensData)
+      logger.warn("Unexpected token response format", {
+        receivedType: Array.isArray(tokensData) ? "array" : typeof tokensData,
+        keys:
+          tokensData && typeof tokensData === "object"
+            ? Object.keys(tokensData as any)
+            : null,
+      })
       return []
     }
   } catch (error) {
-    console.error("获取令牌列表失败:", error)
+    logger.error("获取令牌列表失败", error)
     throw error
   }
 }
@@ -827,7 +836,7 @@ export async function fetchAccountAvailableModels(
       endpoint: "/api/user/models",
     })
   } catch (error) {
-    console.error("获取模型列表失败:", error)
+    logger.error("获取模型列表失败", error)
     throw error
   }
 }
@@ -848,7 +857,7 @@ export async function fetchUserGroups(
       endpoint: "/api/user/self/groups",
     })
   } catch (error) {
-    console.error("获取分组信息失败:", error)
+    logger.error("获取分组信息失败", error)
     throw error
   }
 }
@@ -871,7 +880,7 @@ export async function fetchSiteUserGroups(
       endpoint: "/api/group",
     })
   } catch (error) {
-    console.error("获取站点分组信息失败:", error)
+    logger.error("获取站点分组信息失败", error)
     throw error
   }
 }
@@ -907,7 +916,7 @@ export async function createApiToken(
 
     return true
   } catch (error) {
-    console.error("创建令牌失败:", error)
+    logger.error("创建令牌失败", error)
     throw error
   }
 }
@@ -929,7 +938,7 @@ export async function fetchTokenById(
     })
     return normalizeApiTokenKey(token)
   } catch (error) {
-    console.error("获取令牌详情失败:", error)
+    logger.error("获取令牌详情失败", error)
     throw error
   }
 }
@@ -966,7 +975,7 @@ export async function updateApiToken(
 
     return true
   } catch (error) {
-    console.error("更新令牌失败:", error)
+    logger.error("更新令牌失败", error)
     throw error
   }
 }
@@ -1000,7 +1009,7 @@ export async function deleteApiToken(
 
     return true
   } catch (error) {
-    console.error("删除令牌失败:", error)
+    logger.error("删除令牌失败", error)
     throw error
   }
 }
@@ -1025,7 +1034,7 @@ export async function fetchModelPricing(
       true,
     )
   } catch (error) {
-    console.error("获取模型定价失败:", error)
+    logger.error("获取模型定价失败", error)
     throw error
   }
 }
@@ -1054,7 +1063,7 @@ export async function redeemCode(
       },
     })
   } catch (error) {
-    console.error("兑换码充值失败:", error)
+    logger.error("兑换码充值失败", error)
     throw error
   }
 }

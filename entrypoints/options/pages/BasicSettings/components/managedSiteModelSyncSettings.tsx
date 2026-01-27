@@ -27,6 +27,7 @@ import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 import type { ManagedSiteModelSyncPreferences } from "~/types/managedSiteModelSync"
 import { sendRuntimeMessage } from "~/utils/browserApi"
 import { getErrorMessage } from "~/utils/error"
+import { createLogger } from "~/utils/logger"
 import { navigateWithinOptionsPage } from "~/utils/navigation"
 
 type UserManagedSiteModelSyncConfig = NonNullable<
@@ -34,6 +35,11 @@ type UserManagedSiteModelSyncConfig = NonNullable<
 >
 
 type EditableFilter = ChannelModelFilterRule
+
+/**
+ * Unified logger scoped to the Managed Site model sync settings section.
+ */
+const logger = createLogger("ManagedSiteModelSyncSettings")
 
 /**
  * Render the Managed Site Model Sync settings UI and manage its local state and interactions.
@@ -133,7 +139,7 @@ export default function ManagedSiteModelSyncSettings() {
           setChannelUpstreamModelOptions(buildModelOptions(models))
         }
       } catch (error: any) {
-        console.error("Failed to load allowed model options", error)
+        logger.error("Failed to load allowed model options", error)
         if (isMounted) {
           setOptionsError(error?.message || "Unknown error")
           setChannelUpstreamModelOptions([])
@@ -193,7 +199,7 @@ export default function ManagedSiteModelSyncSettings() {
         toast.success(t("managedSiteModelSync:messages.success.settingsSaved"))
       }
     } catch (error) {
-      console.error("Failed to save preferences:", error)
+      logger.error("Failed to save preferences", error)
       toast.error(t("settings:messages.saveSettingsFailed"))
     } finally {
       setIsSaving(false)

@@ -12,11 +12,17 @@ import {
   ALL_PRESET_STANDARD_MODELS,
   DEFAULT_MODEL_REDIRECT_PREFERENCES,
 } from "~/types/managedSiteModelRedirect"
+import { createLogger } from "~/utils/logger"
 import { getManagedSiteConfig } from "~/utils/managedSite"
 
 import { hasValidManagedSiteConfig } from "../managedSiteService"
 import { userPreferences } from "../userPreferences"
 import { renameModel } from "./modelNormalization"
+
+/**
+ * Unified logger scoped to model redirect generation and application.
+ */
+const logger = createLogger("ModelRedirect")
 
 /**
  * Model Redirect Service
@@ -45,10 +51,10 @@ export class ModelRedirectService {
       try {
         existingMapping = JSON.parse(channel.model_mapping)
       } catch (parseError) {
-        console.warn(
-          `[ModelRedirect] Failed to parse existing model_mapping for channel ${channel.id}:`,
-          parseError,
-        )
+        logger.warn("Failed to parse existing model_mapping for channel", {
+          channelId: channel.id,
+          error: parseError,
+        })
       }
     }
 
@@ -103,7 +109,7 @@ export class ModelRedirectService {
         : ALL_PRESET_STANDARD_MODELS
 
       await modelMetadataService.initialize().catch((error) => {
-        console.warn("[ModelRedirect] Failed to initialize metadata:", error)
+        logger.warn("Failed to initialize metadata", error)
       })
 
       const { siteType, config: managedConfig } = getManagedSiteConfig(prefs)
@@ -167,7 +173,7 @@ export class ModelRedirectService {
         errors,
       }
     } catch (error) {
-      console.error("[ModelRedirect] Failed to apply redirect:", error)
+      logger.error("Failed to apply redirect", error)
       return {
         success: false,
         updatedChannels: 0,

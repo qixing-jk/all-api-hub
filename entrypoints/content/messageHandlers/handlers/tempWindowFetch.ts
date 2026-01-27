@@ -3,6 +3,7 @@ import {
   EXTENSION_HEADER_VALUE,
 } from "~/utils/cookieHelper"
 import { getErrorMessage } from "~/utils/error"
+import { createLogger } from "~/utils/logger"
 import { sanitizeUrlForLog } from "~/utils/sanitizeUrlForLog"
 
 import { logCloudflareGuard } from "../utils/cloudflareGuard"
@@ -11,6 +12,11 @@ import {
   parseResponseData,
   TempWindowResponseType,
 } from "../utils/tempFetchUtils"
+
+/**
+ * Unified logger scoped to content-side temp window fetch message handling.
+ */
+const logger = createLogger("TempWindowFetchHandler")
 
 /**
  * Handles temporary window fetch requests.
@@ -65,7 +71,7 @@ export function handlePerformTempWindowFetch(
           responseType as TempWindowResponseType,
         )
       } catch (parseError) {
-        console.warn("[Content] Failed to parse response:", parseError)
+        logger.warn("Failed to parse response", parseError)
       }
 
       const errorMessage = response.ok

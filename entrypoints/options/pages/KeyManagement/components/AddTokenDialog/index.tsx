@@ -7,6 +7,7 @@ import { UI_CONSTANTS } from "~/constants/ui"
 import { getApiService } from "~/services/apiService"
 import type { CreateTokenRequest } from "~/services/apiService/common/type"
 import type { DisplaySiteData } from "~/types"
+import { createLogger } from "~/utils/logger"
 
 import { AccountToken } from "../../type"
 import { DialogHeader } from "./DialogHeader"
@@ -16,6 +17,11 @@ import { useTokenForm } from "./hooks/useTokenForm"
 import { LoadingIndicator } from "./LoadingIndicator"
 import { TokenForm } from "./TokenForm"
 import { WarningNote } from "./WarningNote"
+
+/**
+ * Unified logger scoped to the Key Management add/edit token dialog.
+ */
+const logger = createLogger("AddTokenDialog")
 
 interface AddTokenDialogProps {
   isOpen: boolean
@@ -112,7 +118,7 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
 
       handleClose()
     } catch (error) {
-      console.error(`${isEditMode ? "更新" : "创建"}密钥失败:`, error)
+      logger.error(`${isEditMode ? "更新" : "创建"}密钥失败`, error)
       toast.error(
         isEditMode ? t("dialog.updateFailed") : t("dialog.createFailed"),
       )

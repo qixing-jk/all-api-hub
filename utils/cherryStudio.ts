@@ -2,6 +2,12 @@ import { t } from "i18next"
 import toast from "react-hot-toast"
 
 import type { ApiToken, DisplaySiteData } from "~/types"
+import { createLogger } from "~/utils/logger"
+
+/**
+ * Unified logger scoped to Cherry Studio deeplink integration.
+ */
+const logger = createLogger("CherryStudio")
 
 /**
  * Shape expected by Cherry Studio import deeplink payloads.
@@ -50,7 +56,7 @@ export function OpenInCherryStudio(account: DisplaySiteData, token: ApiToken) {
   if (newWindow) {
     toast.success(t("messages:cherryStudio.attemptingRedirect"))
   } else {
-    console.error("Failed to open Cherry Studio URL")
+    logger.warn("Failed to open Cherry Studio URL")
     toast.error(t("messages:cherryStudio.unableToOpen"))
   }
 }

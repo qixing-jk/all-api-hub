@@ -16,9 +16,15 @@ import {
   OPTIONAL_PERMISSION_DEFINITIONS,
   OPTIONAL_PERMISSIONS,
 } from "~/services/permissions/permissionManager"
+import { createLogger } from "~/utils/logger"
 import { showResultToast } from "~/utils/toastHelpers"
 
 import { PermissionList } from "./PermissionList"
+
+/**
+ * Unified logger scoped to the optional-permissions onboarding dialog.
+ */
+const logger = createLogger("PermissionOnboardingDialog")
 
 const GITHUB_URL = "https://github.com/qixing-jk/all-api-hub"
 
@@ -102,10 +108,7 @@ export function PermissionOnboardingDialog({
         t("permissionsOnboarding.toasts.error"),
       )
     } catch (error) {
-      console.error(
-        "[Permissions] Failed to grant all optional permissions",
-        error,
-      )
+      logger.error("Failed to grant all optional permissions", error)
       success = false
       showResultToast(false, t("permissionsOnboarding.toasts.error"))
     } finally {

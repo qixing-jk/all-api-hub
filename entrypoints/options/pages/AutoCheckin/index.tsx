@@ -18,6 +18,7 @@ import {
 } from "~/types/autoCheckin"
 import { onRuntimeMessage, sendRuntimeMessage } from "~/utils/browserApi"
 import { safeRandomUUID } from "~/utils/identifier"
+import { createLogger } from "~/utils/logger"
 import { navigateWithinOptionsPage, openCheckInPage } from "~/utils/navigation"
 
 import AccountSnapshotTable from "./components/AccountSnapshotTable"
@@ -30,6 +31,11 @@ import FilterBar, {
 import LoadingSkeleton from "./components/LoadingSkeleton"
 import ResultsTable from "./components/ResultsTable"
 import StatusCard from "./components/StatusCard"
+
+/**
+ * Unified logger scoped to the Auto Check-in options page.
+ */
+const logger = createLogger("AutoCheckinOptionsPage")
 
 /**
  * Auto Check-in dashboard page: fetches status, runs jobs, filters/searches results, and shows snapshots.
@@ -90,7 +96,7 @@ export default function AutoCheckin(props: {
         setStatus(response.data)
       }
     } catch (error) {
-      console.error("Failed to load status:", error)
+      logger.error("Failed to load status", error)
     } finally {
       setIsLoading(false)
     }

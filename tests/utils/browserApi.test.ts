@@ -13,6 +13,7 @@ import {
 
 const originalBrowser = (globalThis as any).browser
 
+// Note: these helpers now use the unified logger, so tests avoid asserting on `console.*` output.
 describe("browserApi alarms helpers", () => {
   beforeEach(() => {
     vi.restoreAllMocks()
@@ -32,14 +33,11 @@ describe("browserApi alarms helpers", () => {
   })
 
   it("createAlarm should warn and not throw when alarms API is not supported", async () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
     ;(globalThis as any).browser = {}
 
     await expect(
       createAlarm("test", { when: Date.now() }),
     ).resolves.toBeUndefined()
-
-    expect(warnSpy).toHaveBeenCalledWith("Alarms API not supported")
   })
 
   it("createAlarm should delegate to browser.alarms.create when supported", async () => {
@@ -57,13 +55,11 @@ describe("browserApi alarms helpers", () => {
   })
 
   it("clearAlarm should return false and warn when alarms API is not supported", async () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
     ;(globalThis as any).browser = {}
 
     const result = await clearAlarm("missing")
 
     expect(result).toBe(false)
-    expect(warnSpy).toHaveBeenCalledWith("Alarms API not supported")
   })
 
   it("clearAlarm should delegate to browser.alarms.clear when supported", async () => {
@@ -81,13 +77,11 @@ describe("browserApi alarms helpers", () => {
   })
 
   it("getAlarm should return undefined and warn when alarms API is not supported", async () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
     ;(globalThis as any).browser = {}
 
     const result = await getAlarm("alarm-x")
 
     expect(result).toBeUndefined()
-    expect(warnSpy).toHaveBeenCalledWith("Alarms API not supported")
   })
 
   it("getAlarm should delegate to browser.alarms.get when supported", async () => {
@@ -106,13 +100,11 @@ describe("browserApi alarms helpers", () => {
   })
 
   it("getAllAlarms should return empty array and warn when alarms API is not supported", async () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
     ;(globalThis as any).browser = {}
 
     const result = await getAllAlarms()
 
     expect(result).toEqual([])
-    expect(warnSpy).toHaveBeenCalledWith("Alarms API not supported")
   })
 
   it("getAllAlarms should delegate to browser.alarms.getAll when supported", async () => {
@@ -131,7 +123,6 @@ describe("browserApi alarms helpers", () => {
   })
 
   it("onAlarm should warn and return no-op when alarms API is not supported", () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
     ;(globalThis as any).browser = {}
 
     const callback = vi.fn()
@@ -141,7 +132,6 @@ describe("browserApi alarms helpers", () => {
 
     // call cleanup to ensure it is safe
     cleanup()
-    expect(warnSpy).toHaveBeenCalledWith("Alarms API not supported")
   })
 
   it("onAlarm should register and unregister listener when supported", () => {

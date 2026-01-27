@@ -7,7 +7,10 @@ import {
   SortingCriteriaType,
   type SortingPriorityConfig,
 } from "~/types/sorting"
+import { createLogger } from "~/utils/logger"
 import { DEFAULT_SORTING_PRIORITY_CONFIG } from "~/utils/sortingPriority"
+
+const logger = createLogger("SortingConfigMigration")
 
 /**
  * Check if a sorting config needs migration
@@ -63,9 +66,7 @@ export function migrateSortingConfig(
         enabled: true,
       })
       modified = true
-      console.log(
-        "[SortingConfigMigration] Added DISABLED_ACCOUNT criterion with default priority",
-      )
+      logger.debug("Added DISABLED_ACCOUNT criterion with default priority")
     }
   }
 
@@ -79,9 +80,7 @@ export function migrateSortingConfig(
         enabled: true,
       })
       modified = true
-      console.log(
-        "[SortingConfigMigration] Added PINNED criterion with default priority",
-      )
+      logger.debug("Added PINNED criterion with default priority")
     }
   }
 
@@ -102,9 +101,9 @@ export function migrateSortingConfig(
         enabled: true,
       })
       modified = true
-      console.log(
-        `[SortingConfigMigration] Added MANUAL_ORDER criterion with default priority ${manualDefault.priority}, enabled: true`,
-      )
+      logger.debug("Added MANUAL_ORDER criterion with default priority", {
+        priority: manualDefault.priority,
+      })
     }
   }
 
@@ -131,9 +130,7 @@ export function migrateSortingConfig(
           enabled: false,
         })
         modified = true
-        console.log(
-          `[SortingConfigMigration] Adding new criterion: ${id} with priority ${priority}, enabled: false`,
-        )
+        logger.debug("Adding new criterion", { id, priority, enabled: false })
       }
     })
   }
@@ -175,9 +172,9 @@ export function migrateSortingConfig(
     lastModified: Date.now(),
   }
 
-  console.log(
-    `[SortingConfigMigration] Migrated sorting config, added ${missingIds.length} new criteria`,
-  )
+  logger.debug("Migrated sorting config", {
+    addedCriteriaCount: missingIds.length,
+  })
 
   return migratedConfig
 }

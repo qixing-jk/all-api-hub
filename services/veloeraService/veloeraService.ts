@@ -23,8 +23,14 @@ import type {
 } from "~/types/serviceResponse"
 import { isArraysEqual } from "~/utils"
 import { getErrorMessage } from "~/utils/error"
+import { createLogger } from "~/utils/logger"
 
 import { UserPreferences, userPreferences } from "../userPreferences"
+
+/**
+ * Unified logger scoped to the Veloera integration and auto-config flows.
+ */
+const logger = createLogger("VeloeraService")
 
 /**
  * Parses a comma-delimited string into a trimmed string array, skipping blanks.
@@ -157,7 +163,7 @@ export async function checkValidVeloeraConfig(): Promise<boolean> {
     const prefs = await userPreferences.getPreferences()
     return hasValidVeloeraConfig(prefs)
   } catch (error) {
-    console.error("[Veloera] Error checking config:", error)
+    logger.error("Error checking config", error)
     return false
   }
 }
@@ -182,7 +188,7 @@ export async function getVeloeraConfig(): Promise<{
     }
     return null
   } catch (error) {
-    console.error("[Veloera] Error getting config:", error)
+    logger.error("Error getting config", error)
     return null
   }
 }
@@ -210,7 +216,7 @@ export async function fetchAvailableModels(
       candidateSources.push(upstreamModels)
     }
   } catch (error) {
-    console.warn("Failed to fetch upstream models:", error)
+    logger.warn("Failed to fetch upstream models", error)
   }
 
   try {
@@ -230,7 +236,7 @@ export async function fetchAvailableModels(
       candidateSources.push(fallbackModels)
     }
   } catch (error) {
-    console.warn("Failed to fetch fallback models:", error)
+    logger.warn("Failed to fetch fallback models", error)
   }
 
   const merged = candidateSources.flat()

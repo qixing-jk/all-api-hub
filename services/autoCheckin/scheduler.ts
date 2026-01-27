@@ -32,9 +32,12 @@ import {
   onAlarm,
 } from "~/utils/browserApi"
 import { getErrorMessage } from "~/utils/error"
+import { createLogger } from "~/utils/logger"
 
 import { resolveAutoCheckinProvider } from "./providers"
 import { autoCheckinStorage } from "./storage"
+
+const logger = createLogger("AutoCheckin")
 
 /**
  * Reason codes describing why the UI-open pre-trigger is not eligible to run.
@@ -494,7 +497,11 @@ class AutoCheckinScheduler {
       const provider = resolveAutoCheckinProvider(account)
       if (!provider) {
         const messageKey = "autoCheckin:skipReasons.no_provider"
-        console.warn(`[AutoCheckin] ${account.site_name}: ${messageKey}`)
+        logger.warn("No check-in provider; skipping", {
+          accountId: account.id,
+          siteName: account.site_name,
+          messageKey,
+        })
         return {
           result: buildResult(CHECKIN_RESULT_STATUS.FAILED, {
             messageKey,
@@ -516,21 +523,29 @@ class AutoCheckinScheduler {
         providerResult.status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED
       ) {
         await accountStorage.markAccountAsSiteCheckedIn(account.id)
-        console.log(
-          `[AutoCheckin] ${account.site_name}: ${providerResult.status} - ${providerResult.rawMessage ?? providerResult.messageKey ?? ""}`,
-        )
+        logger.info("Check-in completed", {
+          accountId: account.id,
+          siteName: account.site_name,
+          status: providerResult.status,
+          message: providerResult.rawMessage ?? providerResult.messageKey ?? "",
+        })
         return { result, successful: true }
       }
 
-      console.error(
-        `[AutoCheckin] ${account.site_name}: failed - ${providerResult.rawMessage ?? providerResult.messageKey ?? ""}`,
-      )
+      logger.warn("Check-in failed", {
+        accountId: account.id,
+        siteName: account.site_name,
+        status: providerResult.status,
+        message: providerResult.rawMessage ?? providerResult.messageKey ?? "",
+      })
       return { result, successful: false }
     } catch (error) {
       const errorMessage = getErrorMessage(error)
-      console.error(
-        `[AutoCheckin] ${account.site_name}: error - ${errorMessage}`,
-      )
+      logger.error("Check-in error", {
+        accountId: account.id,
+        siteName: account.site_name,
+        error: errorMessage,
+      })
       return {
         result: buildResult(CHECKIN_RESULT_STATUS.FAILED, {
           rawMessage: errorMessage,
@@ -547,7 +562,7 @@ class AutoCheckinScheduler {
    */
   async initialize() {
     if (this.isInitialized) {
-      console.log("[AutoCheckin] Scheduler already initialized")
+      logger.debug("Scheduler already initialized")
       return
     }
 
@@ -557,45 +572,37 @@ class AutoCheckinScheduler {
         onAlarm((alarm) => {
           if (alarm.name === AutoCheckinScheduler.DAILY_ALARM_NAME) {
             void this.handleDailyAlarm(alarm).catch((error) => {
-              console.error(
-                "[AutoCheckin] Daily alarm execution failed:",
-                error,
-              )
+              logger.error("Daily alarm execution failed", error)
             })
             return
           }
 
           if (alarm.name === AutoCheckinScheduler.RETRY_ALARM_NAME) {
             void this.handleRetryAlarm(alarm).catch((error) => {
-              console.error(
-                "[AutoCheckin] Retry alarm execution failed:",
-                error,
-              )
+              logger.error("Retry alarm execution failed", error)
             })
             return
           }
 
           if (alarm.name === AutoCheckinScheduler.LEGACY_ALARM_NAME) {
-            console.warn(
-              "[AutoCheckin] Legacy alarm detected; clearing and restoring daily schedule",
+            logger.warn(
+              "Legacy alarm detected; clearing and restoring daily schedule",
             )
             void this.scheduleNextRun().catch((error) => {
-              console.error("[AutoCheckin] Failed to restore schedule:", error)
+              logger.error("Failed to restore schedule", error)
             })
           }
         })
 
         await this.scheduleNextRun({ preserveExisting: true })
       } else {
-        console.warn(
-          "[AutoCheckin] Alarms API not available, automatic check-in disabled",
-        )
+        logger.warn("Alarms API not available, automatic check-in disabled")
       }
 
       this.isInitialized = true
-      console.log("[AutoCheckin] Scheduler initialized")
+      logger.info("Scheduler initialized")
     } catch (error) {
-      console.error("[AutoCheckin] Failed to initialize scheduler:", error)
+      logger.error("Failed to initialize scheduler", error)
     }
   }
 
@@ -607,7 +614,7 @@ class AutoCheckinScheduler {
    */
   async scheduleNextRun(options?: { preserveExisting?: boolean }) {
     if (!hasAlarmsAPI()) {
-      console.warn("[AutoCheckin] Alarms API not supported, cannot schedule")
+      logger.warn("Alarms API not supported, cannot schedule")
       return
     }
 
@@ -621,7 +628,7 @@ class AutoCheckinScheduler {
     if (!config.globalEnabled) {
       await clearAlarm(AutoCheckinScheduler.DAILY_ALARM_NAME)
       await clearAlarm(AutoCheckinScheduler.RETRY_ALARM_NAME)
-      console.log("[AutoCheckin] Auto check-in disabled, alarms cleared")
+      logger.info("Auto check-in disabled; alarms cleared")
       await autoCheckinStorage.saveStatus({
         ...(currentStatus ?? {}),
         nextDailyScheduledAt: undefined,
@@ -670,15 +677,13 @@ class AutoCheckinScheduler {
           dailyAlarmTargetDay: targetDay,
           nextScheduledAt: scheduledIso, // legacy compatibility
         })
-        console.log(
-          "[AutoCheckin] Synced stored daily schedule with existing alarm",
-        )
+        logger.debug("Synced stored daily schedule with existing alarm")
       }
       return
     }
 
     if (options?.preserveExisting) {
-      console.warn("[AutoCheckin] Daily alarm missing on startup, restoring...")
+      logger.warn("Daily alarm missing on startup; restoring")
     }
 
     await clearAlarm(AutoCheckinScheduler.DAILY_ALARM_NAME)
@@ -691,9 +696,7 @@ class AutoCheckinScheduler {
     )
 
     if (!nextTriggerTime || Number.isNaN(nextTriggerTime.getTime())) {
-      console.warn(
-        "[AutoCheckin] Invalid schedule configuration; daily alarm not scheduled",
-      )
+      logger.warn("Invalid schedule configuration; daily alarm not scheduled")
       await autoCheckinStorage.saveStatus({
         ...(currentStatus ?? {}),
         nextDailyScheduledAt: undefined,
@@ -722,12 +725,12 @@ class AutoCheckinScheduler {
         nextScheduledAt: scheduledIso, // legacy compatibility
       })
 
-      console.log("[AutoCheckin] Daily alarm scheduled:", {
+      logger.info("Daily alarm scheduled", {
         name: AutoCheckinScheduler.DAILY_ALARM_NAME,
         scheduledTime: scheduledTime ?? nextTriggerTime,
       })
     } catch (error) {
-      console.error("[AutoCheckin] Failed to create daily alarm:", error)
+      logger.error("Failed to create daily alarm", error)
     }
   }
 
@@ -867,15 +870,13 @@ class AutoCheckinScheduler {
           },
           pendingRetry: true,
         })
-        console.log(
-          "[AutoCheckin] Synced stored retry schedule with existing alarm",
-        )
+        logger.debug("Synced stored retry schedule with existing alarm")
       }
       return
     }
 
     if (options?.preserveExisting) {
-      console.warn("[AutoCheckin] Retry alarm missing on startup, restoring...")
+      logger.warn("Retry alarm missing on startup; restoring")
     }
 
     await clearAlarm(AutoCheckinScheduler.RETRY_ALARM_NAME)
@@ -922,12 +923,12 @@ class AutoCheckinScheduler {
         pendingRetry: true,
       })
 
-      console.log("[AutoCheckin] Retry alarm scheduled:", {
+      logger.info("Retry alarm scheduled", {
         name: AutoCheckinScheduler.RETRY_ALARM_NAME,
         scheduledTime: scheduledTime ?? nextRetryTime,
       })
     } catch (error) {
-      console.error("[AutoCheckin] Failed to create retry alarm:", error)
+      logger.error("Failed to create retry alarm", error)
     }
   }
 
@@ -943,9 +944,7 @@ class AutoCheckinScheduler {
     const today = this.getLocalDay(now)
 
     if (this.dailyRunInFlightDay === today && this.dailyRunInFlightPromise) {
-      console.warn(
-        "[AutoCheckin] Daily run already in-flight, ignoring trigger",
-      )
+      logger.warn("Daily run already in-flight; ignoring trigger")
       return
     }
 
@@ -959,7 +958,7 @@ class AutoCheckinScheduler {
 
       // Stale-alarm guard: never execute a normal run for a past day.
       if (targetDay && targetDay !== today) {
-        console.warn("[AutoCheckin] Ignoring stale daily alarm", {
+        logger.warn("Ignoring stale daily alarm", {
           targetDay,
           today,
         })
@@ -967,16 +966,11 @@ class AutoCheckinScheduler {
         return
       }
 
-      console.log(
-        "[AutoCheckin] Daily alarm triggered, starting check-in execution",
-      )
+      logger.info("Daily alarm triggered; starting check-in execution")
       try {
         await this.runCheckins({ runType: AUTO_CHECKIN_RUN_TYPE.DAILY })
       } catch (error) {
-        console.error(
-          "[AutoCheckin] Error during daily check-in execution:",
-          error,
-        )
+        logger.error("Error during daily check-in execution", error)
       } finally {
         await this.scheduleNextRun()
       }
@@ -1202,7 +1196,7 @@ class AutoCheckinScheduler {
 
     // Stale-alarm guard: never retry failures from a past day.
     if (targetDay && targetDay !== today) {
-      console.warn("[AutoCheckin] Ignoring stale retry alarm", {
+      logger.warn("Ignoring stale retry alarm", {
         targetDay,
         today,
       })
@@ -1210,11 +1204,11 @@ class AutoCheckinScheduler {
       return
     }
 
-    console.log("[AutoCheckin] Retry alarm triggered, starting retries")
+    logger.info("Retry alarm triggered; starting retries")
     try {
       await this.runRetryCheckins()
     } catch (error) {
-      console.error("[AutoCheckin] Error during retry execution:", error)
+      logger.error("Error during retry execution", error)
     } finally {
       const prefs = await userPreferences.getPreferences()
       const config = prefs.autoCheckin ?? DEFAULT_PREFERENCES.autoCheckin!
@@ -1342,7 +1336,7 @@ class AutoCheckinScheduler {
       nextScheduledAt: scheduledIso, // legacy compatibility
     })
 
-    console.log("[AutoCheckin] Debug scheduled daily alarm for today:", {
+    logger.debug("Debug scheduled daily alarm for today", {
       when: scheduledWhen,
     })
 
@@ -1366,7 +1360,7 @@ class AutoCheckinScheduler {
     const runType = options?.runType ?? AUTO_CHECKIN_RUN_TYPE.MANUAL
     const isDailyRun = runType === AUTO_CHECKIN_RUN_TYPE.DAILY
 
-    console.log(`[AutoCheckin] Starting check-in execution (${runType})`)
+    logger.info("Starting check-in execution", { runType })
     const startTime = Date.now()
     const now = new Date()
     const today = this.getLocalDay(now)
@@ -1378,7 +1372,7 @@ class AutoCheckinScheduler {
       const config = prefs.autoCheckin ?? DEFAULT_PREFERENCES.autoCheckin!
 
       if (!config.globalEnabled) {
-        console.log("[AutoCheckin] Global feature disabled, skipping")
+        logger.info("Global feature disabled; skipping")
         return
       }
 
@@ -1440,9 +1434,10 @@ class AutoCheckinScheduler {
         }
       }
 
-      console.log(
-        `[AutoCheckin] Tracking ${detectionEnabledAccounts.length} accounts, runnable: ${runnableAccounts.length}`,
-      )
+      logger.debug("Prepared check-in execution set", {
+        detectionEnabledCount: detectionEnabledAccounts.length,
+        runnableCount: runnableAccounts.length,
+      })
 
       // If no accounts to run, save status and exit
       if (runnableAccounts.length === 0) {
@@ -1579,11 +1574,13 @@ class AutoCheckinScheduler {
       })
 
       const duration = Date.now() - startTime
-      console.log(
-        `[AutoCheckin] Execution completed in ${duration}ms: ${successCount} succeeded, ${failedCount} failed`,
-      )
+      logger.info("Execution completed", {
+        durationMs: duration,
+        successCount,
+        failedCount,
+      })
     } catch (error) {
-      console.error("[AutoCheckin] Execution failed:", error)
+      logger.error("Execution failed", error)
       await autoCheckinStorage.saveStatus({
         ...(currentStatus ?? {}),
         lastRunAt: new Date().toISOString(),
@@ -1622,7 +1619,7 @@ class AutoCheckinScheduler {
     const currentStatus = await autoCheckinStorage.getStatus()
 
     if (!config.globalEnabled || !config.retryStrategy?.enabled) {
-      console.log("[AutoCheckin] Retry skipped (feature disabled)")
+      logger.info("Retry skipped (feature disabled)")
       await this.clearRetryAlarmAndState(currentStatus)
       return
     }
@@ -1632,7 +1629,7 @@ class AutoCheckinScheduler {
       currentStatus?.lastDailyRunDay !== today ||
       currentStatus?.retryState?.day !== today
     ) {
-      console.log("[AutoCheckin] Retry skipped (no normal run today)")
+      logger.info("Retry skipped (no normal run today)")
       await this.clearRetryAlarmAndState(currentStatus)
       return
     }
@@ -1640,7 +1637,7 @@ class AutoCheckinScheduler {
     // Ensure we have a retry state with pending accounts
     const retryState = currentStatus.retryState
     if (!retryState || retryState.pendingAccountIds.length === 0) {
-      console.log("[AutoCheckin] Retry skipped (no pending accounts)")
+      logger.info("Retry skipped (no pending accounts)")
       await this.clearRetryAlarmAndState(currentStatus)
       return
     }
@@ -1781,7 +1778,7 @@ class AutoCheckinScheduler {
 
     await userPreferences.savePreferences({ autoCheckin: updated })
     await this.scheduleNextRun()
-    console.log("[AutoCheckin] Settings updated:", updated)
+    logger.info("Settings updated", updated)
   }
 
   /**
@@ -1921,7 +1918,7 @@ export const handleAutoCheckinMessage = async (
           sendResponse({ success: true })
         } catch (e) {
           // Propagate the error to the caller (options UI/content scripts) for user-visible feedback.
-          console.error("[AutoCheckin] Manual run failed:", e)
+          logger.error("Manual run failed", e)
           sendResponse({ success: false, error: getErrorMessage(e) })
         } finally {
           await autoCheckinScheduler.scheduleNextRun({ preserveExisting: true })
@@ -2041,7 +2038,7 @@ export const handleAutoCheckinMessage = async (
         sendResponse({ success: false, error: "Unknown action" })
     }
   } catch (error) {
-    console.error("[AutoCheckin] Message handling failed:", error)
+    logger.error("Message handling failed", error)
     sendResponse({ success: false, error: getErrorMessage(error) })
   }
 }

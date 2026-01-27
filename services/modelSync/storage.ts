@@ -4,8 +4,11 @@ import type {
   ExecutionResult,
   ManagedSiteModelSyncPreferences,
 } from "~/types/managedSiteModelSync"
+import { createLogger } from "~/utils/logger"
 
 import { DEFAULT_PREFERENCES, userPreferences } from "../userPreferences"
+
+const logger = createLogger("ManagedSiteModelSyncStorage")
 
 /**
  * Storage keys for New API Model Sync
@@ -92,7 +95,7 @@ class ManagedSiteModelSyncStorage {
         ],
       }
     } catch (error) {
-      console.error("[ManagedSiteModelSync] Failed to get preferences:", error)
+      logger.error("Failed to get preferences", error)
       return this.getDefaultPreferences()
     }
   }
@@ -139,10 +142,18 @@ class ManagedSiteModelSyncStorage {
       }
 
       await userPreferences.savePreferences({ managedSiteModelSync: updated })
-      console.log("[ManagedSiteModelSync] Preferences saved:", updated)
+      logger.info("Preferences saved", {
+        enabled: updated.enabled,
+        intervalMs: updated.interval,
+        concurrency: updated.concurrency,
+        maxRetries: updated.maxRetries,
+        allowedModelsCount: updated.allowedModels?.length ?? 0,
+        globalChannelModelFiltersCount:
+          updated.globalChannelModelFilters?.length ?? 0,
+      })
       return true
     } catch (error) {
-      console.error("[ManagedSiteModelSync] Failed to save preferences:", error)
+      logger.error("Failed to save preferences", error)
       return false
     }
   }
@@ -158,10 +169,7 @@ class ManagedSiteModelSyncStorage {
 
       return stored || null
     } catch (error) {
-      console.error(
-        "[ManagedSiteModelSync] Failed to get last execution:",
-        error,
-      )
+      logger.error("Failed to get last execution", error)
       return null
     }
   }
@@ -175,13 +183,10 @@ class ManagedSiteModelSyncStorage {
         STORAGE_KEY_MIGRATIONS.LAST_EXECUTION.canonical,
         result,
       )
-      console.log("[ManagedSiteModelSync] Execution result saved")
+      logger.debug("Execution result saved")
       return true
     } catch (error) {
-      console.error(
-        "[ManagedSiteModelSync] Failed to save execution result:",
-        error,
-      )
+      logger.error("Failed to save execution result", error)
       return false
     }
   }
@@ -192,13 +197,10 @@ class ManagedSiteModelSyncStorage {
   async clearLastExecution(): Promise<boolean> {
     try {
       await this.storage.remove(STORAGE_KEY_MIGRATIONS.LAST_EXECUTION.canonical)
-      console.log("[ManagedSiteModelSync] Last execution cleared")
+      logger.debug("Last execution cleared")
       return true
     } catch (error) {
-      console.error(
-        "[ManagedSiteModelSync] Failed to clear last execution:",
-        error,
-      )
+      logger.error("Failed to clear last execution", error)
       return false
     }
   }
@@ -222,10 +224,7 @@ class ManagedSiteModelSyncStorage {
 
       return normalized.sort((a, b) => a.localeCompare(b))
     } catch (error) {
-      console.error(
-        "[ManagedSiteModelSync] Failed to get channel upstream model cache:",
-        error,
-      )
+      logger.error("Failed to get channel upstream model cache", error)
       return []
     }
   }
@@ -243,15 +242,12 @@ class ManagedSiteModelSyncStorage {
         STORAGE_KEY_MIGRATIONS.CHANNEL_UPSTREAM_MODELS_CACHE.canonical,
         normalized,
       )
-      console.log(
-        `[ManagedSiteModelSync] Cached ${normalized.length} channel upstream models`,
-      )
+      logger.info("Cached channel upstream models", {
+        count: normalized.length,
+      })
       return true
     } catch (error) {
-      console.error(
-        "[ManagedSiteModelSync] Failed to save channel upstream model cache:",
-        error,
-      )
+      logger.error("Failed to save channel upstream model cache", error)
       return false
     }
   }

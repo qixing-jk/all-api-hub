@@ -8,6 +8,12 @@ import type { UserPreferences } from "~/services/userPreferences"
 import { userPreferences } from "~/services/userPreferences"
 import type { AccountStorageConfig, TagStore } from "~/types"
 import type { ChannelConfigMap } from "~/types/channelConfig"
+import { createLogger } from "~/utils/logger"
+
+/**
+ * Unified logger scoped to import/export helpers for backups and preferences.
+ */
+const logger = createLogger("ImportExportUtils")
 
 /**
  * Current backup schema version.
@@ -211,9 +217,7 @@ async function importV1Backup(
       if (success) {
         preferencesImported = true
       } else {
-        console.error(
-          "[Import] Failed to import user preferences from legacy backup",
-        )
+        logger.error("Failed to import user preferences from legacy backup")
       }
     }
   }
@@ -416,7 +420,7 @@ async function importV2Backup(
     if (success) {
       preferencesImported = true
     } else {
-      console.error("[Import] Failed to import user preferences from V2 backup")
+      logger.error("Failed to import user preferences from V2 backup")
     }
   }
 
@@ -528,7 +532,7 @@ export const handleExportAll = async (
 
     toast.success(t("importExport:export.dataExported"))
   } catch (error) {
-    console.error("导出失败:", error)
+    logger.error("导出失败", error)
     toast.error(t("importExport:export.exportFailed"))
   } finally {
     setIsExporting(false)
@@ -572,7 +576,7 @@ export const handleExportAccounts = async (
 
     toast.success(t("importExport:export.accountsExported"))
   } catch (error) {
-    console.error("导出账号数据失败:", error)
+    logger.error("导出账号数据失败", error)
     toast.error(t("importExport:export.exportFailed"))
   } finally {
     setIsExporting(false)
@@ -612,7 +616,7 @@ export const handleExportPreferences = async (
 
     toast.success(t("importExport:export.settingsExported"))
   } catch (error) {
-    console.error("导出用户设置失败:", error)
+    logger.error("导出用户设置失败", error)
     toast.error(t("importExport:export.exportFailed"))
   } finally {
     setIsExporting(false)

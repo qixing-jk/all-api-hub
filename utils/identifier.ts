@@ -5,6 +5,16 @@
  * Falls back to a time+random based identifier when `crypto.randomUUID` is not
  * available (e.g. certain test environments).
  */
+import { createLogger } from "~/utils/logger"
+
+/**
+ * Unified logger scoped to identifier helpers.
+ */
+const logger = createLogger("Identifier")
+
+/**
+ *
+ */
 export function safeRandomUUID(customPrefix?: string): string {
   const cryptoRef = globalThis.crypto
   const randomUUID = cryptoRef?.randomUUID
@@ -15,7 +25,7 @@ export function safeRandomUUID(customPrefix?: string): string {
     try {
       return finalPrefix + `${randomUUID.call(cryptoRef)}`
     } catch (error) {
-      console.error("Failed to generate UUID using crypto.randomUUID:", error)
+      logger.warn("Failed to generate UUID using crypto.randomUUID", error)
     }
   }
 

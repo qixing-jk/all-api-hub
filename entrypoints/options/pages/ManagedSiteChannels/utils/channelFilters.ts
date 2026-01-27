@@ -2,6 +2,12 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { channelConfigStorage } from "~/services/channelConfigStorage"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 import { sendRuntimeMessage } from "~/utils/browserApi"
+import { createLogger } from "~/utils/logger"
+
+/**
+ * Unified logger scoped to channel filter load/save helpers in the options UI.
+ */
+const logger = createLogger("ChannelFilters")
 
 /**
  * Load channel filter rules for the given channel.
@@ -25,10 +31,10 @@ export async function fetchChannelFilters(
     }
     throw new Error(response?.error || "Failed to load channel filters")
   } catch (runtimeError) {
-    console.warn(
-      `[ChannelFilters] Runtime fetch failed for channel ${channelId}, using fallback storage`,
-      runtimeError,
-    )
+    logger.warn("Runtime fetch failed for channel, using fallback storage", {
+      channelId,
+      error: runtimeError,
+    })
     const config = await channelConfigStorage.getConfig(channelId)
     return config.modelFilterSettings?.rules ?? []
   }
@@ -55,10 +61,10 @@ export async function saveChannelFilters(
       throw new Error(response?.error || "Failed to save channel filters")
     }
   } catch (runtimeError) {
-    console.warn(
-      `[ChannelFilters] Runtime save failed for channel ${channelId}, persisting locally`,
-      runtimeError,
-    )
+    logger.warn("Runtime save failed for channel, persisting locally", {
+      channelId,
+      error: runtimeError,
+    })
     const success = await channelConfigStorage.upsertFilters(channelId, filters)
     if (!success) {
       throw new Error("Failed to persist filters locally")

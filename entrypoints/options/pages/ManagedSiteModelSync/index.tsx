@@ -15,6 +15,7 @@ import type {
   ExecutionResult,
 } from "~/types/managedSiteModelSync"
 import { sendRuntimeMessage } from "~/utils/browserApi"
+import { createLogger } from "~/utils/logger"
 
 import ActionBar from "./components/ActionBar"
 import EmptyResults from "./components/EmptyResults"
@@ -24,6 +25,11 @@ import OverviewCard from "./components/OverviewCard"
 import ProgressCard from "./components/ProgressCard"
 import ResultsTable from "./components/ResultsTable"
 import StatisticsCard from "./components/StatisticsCard"
+
+/**
+ * Unified logger scoped to the Managed Site model sync options dashboard.
+ */
+const logger = createLogger("ManagedSiteModelSyncPage")
 
 const TAB_INDEX = {
   history: 0,
@@ -85,7 +91,7 @@ export default function ManagedSiteModelSync({
         setLastExecution(response.data)
       }
     } catch (error) {
-      console.error("Failed to load last execution:", error)
+      logger.error("Failed to load last execution", error)
     } finally {
       setIsLoading(false)
     }
@@ -101,7 +107,7 @@ export default function ManagedSiteModelSync({
         setProgress(response.data)
       }
     } catch (error) {
-      console.error("Failed to load progress:", error)
+      logger.error("Failed to load progress", error)
     }
   }, [])
 
@@ -115,7 +121,7 @@ export default function ManagedSiteModelSync({
         setNextScheduledAt(response.data?.nextScheduledAt ?? null)
       }
     } catch (error) {
-      console.error("Failed to load next run:", error)
+      logger.error("Failed to load next run", error)
     }
   }, [])
 
@@ -130,7 +136,7 @@ export default function ManagedSiteModelSync({
         setIntervalMs(response.data?.intervalMs)
       }
     } catch (error) {
-      console.error("Failed to load preferences:", error)
+      logger.error("Failed to load preferences", error)
     }
   }, [])
 

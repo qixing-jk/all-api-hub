@@ -285,6 +285,20 @@
     "clickSwitch": "点击切换到{{nextMode}}模式",
     "toggle": "主题切换，当前{{currentMode}}模式，点击切换到{{nextMode}}模式"
   },
+  "logging": {
+    "title": "日志",
+    "description": "控制是否在浏览器控制台输出日志，用于排查问题。",
+    "consoleEnabled": "启用控制台日志",
+    "consoleEnabledDesc": "关闭后，All API Hub 不会在浏览器控制台输出任何日志（包括错误）。",
+    "minLevel": "最小日志级别",
+    "minLevelDesc": "启用控制台日志后，仅输出不低于该级别的日志。",
+    "levels": {
+      "debug": "调试",
+      "info": "信息",
+      "warn": "警告",
+      "error": "错误"
+    }
+  },
   "messages": {
     "updateSuccess": "{{name}}更新成功",
     "updateFailed": "{{name}}更新失败",

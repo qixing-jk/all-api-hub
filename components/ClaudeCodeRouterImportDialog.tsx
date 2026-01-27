@@ -12,6 +12,7 @@ import {
 import { fetchOpenAICompatibleModels } from "~/services/apiService/openaiCompatible"
 import { importToClaudeCodeRouter } from "~/services/claudeCodeRouterService"
 import type { ApiToken, DisplaySiteData } from "~/types"
+import { createLogger } from "~/utils/logger"
 import { showResultToast } from "~/utils/toastHelpers"
 
 interface ClaudeCodeRouterImportDialogProps {
@@ -22,6 +23,11 @@ interface ClaudeCodeRouterImportDialogProps {
   routerBaseUrl: string
   routerApiKey?: string
 }
+
+/**
+ * Unified logger scoped to the Claude Code Router import dialog.
+ */
+const logger = createLogger("ClaudeCodeRouterImportDialog")
 
 /**
  * Build the default Claude Code Router `api_base_url` for a provider.
@@ -125,10 +131,7 @@ export function ClaudeCodeRouterImportDialog(
             setUpstreamModelOptions(options)
           }
         } catch (error) {
-          console.error(
-            "[ClaudeCodeRouter] Failed to fetch upstream models",
-            error,
-          )
+          logger.error("Failed to fetch upstream models", error)
           if (isMounted) {
             setUpstreamModelOptions([])
           }

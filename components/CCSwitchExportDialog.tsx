@@ -21,6 +21,7 @@ import {
   openInCCSwitch,
   type CCSwitchApp,
 } from "~/utils/ccSwitch"
+import { createLogger } from "~/utils/logger"
 import { normalizeHttpUrl, stripTrailingOpenAIV1 } from "~/utils/url"
 
 interface CCSwitchExportDialogProps {
@@ -29,6 +30,11 @@ interface CCSwitchExportDialogProps {
   account: DisplaySiteData
   token: ApiToken
 }
+
+/**
+ * Unified logger scoped to the CC Switch export dialog.
+ */
+const logger = createLogger("CCSwitchExportDialog")
 
 const DEFAULT_APP: CCSwitchApp = "claude"
 
@@ -100,7 +106,7 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
             setUpstreamModelOptions(normalized)
           }
         } catch (error) {
-          console.warn("[CCSwitch] Failed to fetch upstream model list", error)
+          logger.warn("Failed to fetch upstream model list", error)
           if (isMounted) {
             setUpstreamModelOptions([])
           }

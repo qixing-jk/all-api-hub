@@ -3,7 +3,13 @@ import { t } from "i18next"
 import { userPreferences } from "~/services/userPreferences"
 import { ApiToken, DisplaySiteData } from "~/types"
 import { ServiceResponse } from "~/types/serviceResponse"
+import { createLogger } from "~/utils/logger"
 import { joinUrl } from "~/utils/url"
+
+/**
+ * Unified logger scoped to the CLI Proxy integration service.
+ */
+const logger = createLogger("CliProxyService")
 
 interface OpenAICompatibilityProviderApiKeyEntry {
   "api-key": string
@@ -267,7 +273,7 @@ export async function importToCliProxy(
       }),
     }
   } catch (error: any) {
-    console.error("[CLIProxy] Import failed", error)
+    logger.error("Import failed", error)
     return {
       success: false,
       message:

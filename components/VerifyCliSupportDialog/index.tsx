@@ -24,10 +24,16 @@ import {
 } from "~/services/cliSupportVerification"
 import type { CliSupportResult } from "~/services/cliSupportVerification"
 import type { ApiToken } from "~/types"
+import { createLogger } from "~/utils/logger"
 
 import { ToolStatusBadge } from "./ToolStatusBadge"
 import type { ToolItemState, VerifyCliSupportDialogProps } from "./types"
 import { formatLatency, safeJsonStringify } from "./utils"
+
+/**
+ * Unified logger scoped to the CLI support verification dialog.
+ */
+const logger = createLogger("VerifyCliSupportDialog")
 
 /**
  * Build the initial UI state for all tool rows.
@@ -117,7 +123,14 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
         sorted.find((tok) => tok.status === 1) ?? sorted.at(0) ?? null
       setSelectedTokenId(defaultToken ? defaultToken.id.toString() : "")
     } catch (error) {
-      console.error("Failed to load tokens:", error)
+      logger.error("Failed to load tokens", {
+        message: toSanitizedErrorSummary(
+          error,
+          [account.token, account.cookieAuthSessionCookie].filter(
+            Boolean,
+          ) as string[],
+        ),
+      })
       setTokens([])
       setSelectedTokenId("")
     } finally {
@@ -181,10 +194,11 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
             ? { message: sanitizedMessage }
             : undefined
 
-      console.error(
-        `[VerifyCliSupportDialog] Tool run failed (${toolId}):`,
-        error,
-      )
+      logger.error("Tool run failed", {
+        toolId,
+        inferredStatus,
+        message: sanitizedMessage,
+      })
       setTools((prev) =>
         prev.map((t) => {
           if (t.toolId !== toolId) return t

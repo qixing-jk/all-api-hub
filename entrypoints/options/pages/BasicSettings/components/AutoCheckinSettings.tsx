@@ -20,7 +20,13 @@ import {
   AutoCheckinPreferences,
   AutoCheckinScheduleMode,
 } from "~/types/autoCheckin"
+import { createLogger } from "~/utils/logger"
 import { navigateWithinOptionsPage } from "~/utils/navigation"
+
+/**
+ * Unified logger scoped to the Basic Settings auto check-in section.
+ */
+const logger = createLogger("AutoCheckinSettings")
 
 /**
  * Basic settings panel for configuring auto check-in (window, schedule, retries, navigation).
@@ -66,7 +72,7 @@ export default function AutoCheckinSettings() {
         toast.error(t("settings:messages.saveSettingsFailed"))
       }
     } catch (error) {
-      console.error("Failed to save preferences:", error)
+      logger.error("Failed to save preferences", error)
       toast.error(t("settings:messages.saveSettingsFailed"))
     } finally {
       setIsSaving(false)

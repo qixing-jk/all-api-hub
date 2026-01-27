@@ -14,8 +14,14 @@ import { accountStorage } from "~/services/accountStorage"
 import type { DisplaySiteData } from "~/types"
 import { sendRuntimeMessage } from "~/utils/browserApi"
 import { getErrorMessage } from "~/utils/error"
+import { createLogger } from "~/utils/logger"
 
 import { useAccountDataContext } from "./AccountDataContext"
+
+/**
+ * Unified logger scoped to account action handlers (refresh, check-in, external flows).
+ */
+const logger = createLogger("AccountActionsContext")
 
 // 1. 定义 Context 的值类型
 interface AccountActionsContextType {
@@ -97,7 +103,7 @@ export const AccountActionsProvider = ({
           },
         )
       } catch (error) {
-        console.error("Error refreshing account:", error)
+        logger.error("Error refreshing account", error)
       } finally {
         setRefreshingAccountId(null)
       }
@@ -164,7 +170,7 @@ export const AccountActionsProvider = ({
           await loadAccountData()
         }
       } catch (error) {
-        console.error("Error marking account as checked in:", error)
+        logger.error("Error marking account as checked in", error)
       }
     },
     [loadAccountData],
@@ -218,7 +224,7 @@ export const AccountActionsProvider = ({
           return
         }
       } catch (error) {
-        console.error("Error opening external check-ins:", error)
+        logger.error("Error opening external check-ins", error)
         toast.error(
           i18next.t("messages:errors.operation.failed", {
             error: getErrorMessage(error),

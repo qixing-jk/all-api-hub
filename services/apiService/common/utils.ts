@@ -23,6 +23,7 @@ import {
   COOKIE_AUTH_HEADER_NAME,
   COOKIE_SESSION_OVERRIDE_HEADER_NAME,
 } from "~/utils/cookieHelper"
+import { createLogger } from "~/utils/logger"
 import {
   executeWithTempWindowFallback,
   TempWindowFallbackContext,
@@ -31,6 +32,8 @@ import {
 import { joinUrl } from "~/utils/url"
 
 type NormalizedAuthContext = AuthConfig
+
+const logger = createLogger("ApiServiceUtils")
 
 /**
  * Build request headers for New API calls.
@@ -277,7 +280,14 @@ const _fetchApi = async <T>(
 
   let accountInfo = null
   if (!accountId) {
-    console.warn("fetchApi called without accountId in request:", request)
+    logger.warn("fetchApi called without accountId in request", {
+      baseUrl,
+      userId,
+      endpoint: options.endpoint,
+      authType: request.auth?.authType ?? AuthTypeEnum.None,
+      hasAccessToken: Boolean(request.auth?.accessToken),
+      hasCookie: Boolean(request.auth?.cookie),
+    })
     accountInfo = await accountStorage.getAccountByBaseUrlAndUserId(
       baseUrl,
       userId,
@@ -408,7 +418,7 @@ export function isHttpUrl(url: string): boolean {
     const parsed = new URL(url)
     return parsed.protocol === "http:" || parsed.protocol === "https:"
   } catch (error) {
-    console.warn("Invalid URL for temp window fallback:", url, error)
+    logger.warn("Invalid URL for temp window fallback", { url, error })
     return false
   }
 }

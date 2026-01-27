@@ -9,6 +9,12 @@ import {
   CardHeader,
   Heading3,
 } from "~/components/ui"
+import { createLogger } from "~/utils/logger"
+
+/**
+ * Unified logger scoped to redemption assist batch result toasts.
+ */
+const logger = createLogger("RedemptionBatchResultToast")
 
 export interface RedemptionBatchResultItem {
   code: string
@@ -53,7 +59,7 @@ export const RedemptionBatchResultToast: React.FC<
         prev.map((item) => (item.code === code ? updated : item)),
       )
     } catch (error) {
-      console.error("[RedemptionAssist] Retry failed:", error)
+      logger.error("Retry failed", error)
       const errorMessage =
         error instanceof Error
           ? error.message

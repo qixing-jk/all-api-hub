@@ -4,7 +4,13 @@
  */
 import { checkCookieInterceptorRequirement } from "~/entrypoints/background/cookieInterceptor"
 import { mergeCookieHeaders } from "~/utils/cookieString"
+import { createLogger } from "~/utils/logger"
 import { isProtectionBypassFirefoxEnv } from "~/utils/protectionBypass"
+
+/**
+ * Unified logger scoped to the cookie helper utilities.
+ */
+const logger = createLogger("CookieHelper")
 
 // Cookie 缓存
 interface CookieCache {
@@ -58,7 +64,7 @@ export async function getCookieHeaderForUrl(
   // 检查缓存
   const cached = cookieCache.get(cacheKey)
   if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-    console.log("[Cookie Helper] 使用缓存 Cookie:", url)
+    logger.debug("使用缓存 Cookie", { url })
     return cached.cookies
   }
 
@@ -87,9 +93,7 @@ export async function getCookieHeaderForUrl(
       .map((c) => `${c.name}=${c.value}`)
       .join("; ")
 
-    console.log(
-      `[Cookie Helper] 获取到 ${validCookies.length} 个 Cookie: ${url}`,
-    )
+    logger.debug("获取到 Cookie", { url, cookieCount: validCookies.length })
 
     // 更新缓存
     if (cookieHeader) {
@@ -101,7 +105,7 @@ export async function getCookieHeaderForUrl(
 
     return cookieHeader
   } catch (error) {
-    console.warn("[Cookie Helper] 获取 Cookie 失败:", error)
+    logger.warn("获取 Cookie 失败", error)
     return ""
   }
 }
@@ -155,7 +159,7 @@ export async function handleWebRequest(
     return {}
   }
 
-  console.log("[Cookie Helper] 拦截请求:", details.url)
+  logger.debug("拦截请求", { url: details.url })
 
   // 获取 Cookie
   let cookieHeader = await getCookieHeaderForUrl(details.url, {
@@ -177,7 +181,7 @@ export async function handleWebRequest(
   }
 
   if (!cookieHeader) {
-    console.warn("[Cookie Helper] 未找到 Cookie:", details.url)
+    logger.warn("未找到 Cookie", { url: details.url })
     return {}
   }
 
@@ -195,7 +199,7 @@ export async function handleWebRequest(
       }
       // 替换 Cookie 头
       if (lower === "cookie") {
-        console.log("[Cookie Helper] 已替换 Cookie 头")
+        logger.debug("已替换 Cookie 头")
         return { name: h.name, value: cookieHeader }
       }
       return h
@@ -205,7 +209,7 @@ export async function handleWebRequest(
   // 如果没有 Cookie 头，添加
   if (!headers.some((h: any) => h.name.toLowerCase() === "cookie")) {
     newHeaders.push({ name: "Cookie", value: cookieHeader })
-    console.log("[Cookie Helper] 已添加 Cookie 头")
+    logger.debug("已添加 Cookie 头")
   }
 
   return { requestHeaders: newHeaders }
@@ -217,7 +221,7 @@ export async function handleWebRequest(
  */
 export function registerWebRequestInterceptor(urlPatterns: string[]): void {
   if (!isProtectionBypassFirefoxEnv()) {
-    console.log("[Cookie Helper] 非 Firefox 环境，跳过拦截器注册")
+    logger.debug("非 Firefox 环境，跳过拦截器注册")
     return
   }
 
@@ -226,12 +230,12 @@ export function registerWebRequestInterceptor(urlPatterns: string[]): void {
     if (isInterceptorRegistered) {
       browser.webRequest.onBeforeSendHeaders.removeListener(handleWebRequest)
       isInterceptorRegistered = false
-      console.log("[Cookie Helper] 已注销旧拦截器")
+      logger.debug("已注销旧拦截器")
     }
 
     // 如果没有 URL 模式，不注册
     if (!urlPatterns || urlPatterns.length === 0) {
-      console.log("[Cookie Helper] 无 URL 白名单，跳过注册")
+      logger.debug("无 URL 白名单，跳过注册")
       return
     }
 
@@ -243,12 +247,12 @@ export function registerWebRequestInterceptor(urlPatterns: string[]): void {
     )
 
     isInterceptorRegistered = true
-    console.log(
-      `[Cookie Helper] 拦截器注册成功，监控 ${urlPatterns.length} 个 URL 模式:`,
+    logger.info("拦截器注册成功", {
+      urlPatternCount: urlPatterns.length,
       urlPatterns,
-    )
+    })
   } catch (error) {
-    console.error("[Cookie Helper] 拦截器注册失败:", error)
+    logger.error("拦截器注册失败", error)
     isInterceptorRegistered = false
   }
 }
@@ -259,7 +263,7 @@ export function registerWebRequestInterceptor(urlPatterns: string[]): void {
  */
 export function setupWebRequestInterceptor(urlPatterns: string[] = []): void {
   if (!isProtectionBypassFirefoxEnv()) {
-    console.log("[Cookie Helper] 非 Firefox 环境，跳过初始化")
+    logger.debug("非 Firefox 环境，跳过初始化")
     return
   }
 

@@ -113,6 +113,28 @@ export default defineConfig([
       "jsdoc/require-returns": "off",
     },
   },
+  // Guardrails: avoid direct `console.*` usage in app/runtime code (use `utils/logger.ts`).
+  {
+    files: [
+      "services/**/*.{ts,tsx}",
+      "utils/**/*.{ts,tsx}",
+      "entrypoints/**/*.{ts,tsx}",
+      "features/**/*.{ts,tsx}",
+      "components/**/*.{ts,tsx}",
+      "contexts/**/*.{ts,tsx}",
+      "hooks/**/*.{ts,tsx}",
+    ],
+    rules: {
+      "no-console": "error",
+    },
+  },
+  // Allow `console.*` in the unified logger implementation and in tests.
+  {
+    files: ["utils/logger.ts", "tests/**/*.{ts,tsx}"],
+    rules: {
+      "no-console": "off",
+    },
+  },
   { rules },
   eslintConfigPrettier,
 ])

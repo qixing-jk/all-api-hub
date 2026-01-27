@@ -3,8 +3,14 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { getErrorMessage } from "~/utils/error"
+import { createLogger } from "~/utils/logger"
 
 import { importFromBackupObject, parseBackupSummary } from "../utils"
+
+/**
+ * Unified logger scoped to the Import/Export options page hook.
+ */
+const logger = createLogger("ImportExportHook")
 
 export const useImportExport = () => {
   const { t } = useTranslation()
@@ -41,7 +47,7 @@ export const useImportExport = () => {
         toast.success(t("importExport:import.importSuccess"))
       }
     } catch (error) {
-      console.error("导入失败:", error)
+      logger.error("导入失败", error)
       if (error instanceof SyntaxError) {
         toast.error(t("importExport:import.formatError"))
       } else {

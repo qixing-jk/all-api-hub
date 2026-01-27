@@ -17,6 +17,7 @@ import { onRuntimeMessage } from "~/utils/browserApi"
 import { getCookieHeaderForUrl } from "~/utils/cookieHelper"
 import { extractSessionCookieHeader } from "~/utils/cookieString"
 import { getErrorMessage } from "~/utils/error"
+import { createLogger } from "~/utils/logger"
 import { openOrFocusOptionsMenuItem } from "~/utils/navigation"
 
 import { trackCookieInterceptorUrl } from "./cookieInterceptor"
@@ -27,6 +28,11 @@ import {
   handleTempWindowFetch,
   handleTempWindowGetRenderedTitle,
 } from "./tempWindowPool"
+
+/**
+ * Unified logger scoped to background runtime message routing.
+ */
+const logger = createLogger("RuntimeMessages")
 
 /**
  * Registers runtime message handlers for background scripts.
@@ -53,7 +59,7 @@ export function setupRuntimeMessageListeners() {
 
       if (request.action === RuntimeActionIds.CloudflareGuardLog) {
         try {
-          console.log("[Background][CFGuardRelay]", {
+          logger.debug("CFGuardRelay", {
             event: request.event ?? null,
             requestId: request?.details?.requestId ?? null,
             details: request.details ?? null,
@@ -97,7 +103,7 @@ export function setupRuntimeMessageListeners() {
       }
 
       if (request.action === RuntimeActionIds.CookieInterceptorTrackUrl) {
-        console.log("[Background] Runtime action", {
+        logger.debug("Runtime action", {
           action: RuntimeActionIds.CookieInterceptorTrackUrl,
           url: request.url,
           ttlMs: request.ttlMs,
@@ -247,7 +253,7 @@ export function setupRuntimeMessageListeners() {
 
       return undefined
     } catch (error) {
-      console.error("[Background] Error handling runtime message:", error)
+      logger.error("Error handling runtime message", error)
       sendResponse({ success: false, error: getErrorMessage(error) })
       return true
     }

@@ -9,6 +9,12 @@ import {
   type RuntimeActionId,
 } from "~/constants/runtimeActions"
 import { isNotEmptyArray } from "~/utils/index"
+import { createLogger } from "~/utils/logger"
+
+/**
+ * Unified logger scoped to cross-browser WebExtension API helpers.
+ */
+const logger = createLogger("BrowserApi")
 
 // 确保 browser 全局对象可用
 if (typeof (globalThis as any).browser === "undefined") {
@@ -17,7 +23,7 @@ if (typeof (globalThis as any).browser === "undefined") {
     ;(globalThis as any).browser = (globalThis as any).chrome
   } else {
     // Optional: provide a minimal stub or log for non-extension environments
-    console.warn("browser API unavailable: running outside extension context?")
+    logger.warn("browser API unavailable: running outside extension context?")
   }
 }
 
@@ -34,7 +40,7 @@ export async function getActiveTabs(): Promise<browser.tabs.Tab[]> {
     }
   } catch (error) {
     // Firefox Android fallback
-    console.debug(
+    logger.debug(
       "getActiveTabs: currentWindow not supported, falling back to active-only",
       error,
     )
@@ -44,7 +50,7 @@ export async function getActiveTabs(): Promise<browser.tabs.Tab[]> {
   try {
     return await queryTabs({ active: true })
   } catch (error) {
-    console.warn(
+    logger.warn(
       "getActiveTabs: active query failed, returning empty array",
       error,
     )
@@ -134,9 +140,12 @@ export async function removeTabOrWindow(id: number): Promise<void> {
       return
     } catch (error) {
       // 如果不是窗口 ID，尝试作为标签页 ID
-      console.debug(
-        `removeTabOrWindow: Failed to remove as window (id=${id}), trying as tab`,
-        error,
+      logger.debug(
+        "removeTabOrWindow: Failed to remove as window, trying as tab",
+        {
+          id,
+          error,
+        },
       )
     }
   }
@@ -178,7 +187,7 @@ export async function focusTab(tab: browser.tabs.Tab): Promise<void> {
       await browser.windows.update(tab.windowId, { focused: true })
     } catch (error) {
       // Firefox Android 不支持，忽略错误
-      console.error(error)
+      logger.debug("focusTab: browser.windows.update failed", error)
     }
   }
 
@@ -432,7 +441,7 @@ export async function createAlarm(
   },
 ): Promise<void> {
   if (!hasAlarmsAPI()) {
-    console.warn("Alarms API not supported")
+    logger.warn("Alarms API not supported")
     return
   }
   return browser.alarms.create(name, alarmInfo)
@@ -444,7 +453,7 @@ export async function createAlarm(
  */
 export async function clearAlarm(name: string): Promise<boolean> {
   if (!hasAlarmsAPI()) {
-    console.warn("Alarms API not supported")
+    logger.warn("Alarms API not supported")
     return false
   }
   return (await browser.alarms.clear(name)) || false
@@ -458,7 +467,7 @@ export async function getAlarm(
   name: string,
 ): Promise<browser.alarms.Alarm | undefined> {
   if (!hasAlarmsAPI()) {
-    console.warn("Alarms API not supported")
+    logger.warn("Alarms API not supported")
     return undefined
   }
   return await browser.alarms.get(name)
@@ -469,7 +478,7 @@ export async function getAlarm(
  */
 export async function getAllAlarms(): Promise<browser.alarms.Alarm[]> {
   if (!hasAlarmsAPI()) {
-    console.warn("Alarms API not supported")
+    logger.warn("Alarms API not supported")
     return []
   }
   return (await browser.alarms.getAll()) || []
@@ -484,7 +493,7 @@ export function onAlarm(
   callback: (alarm: browser.alarms.Alarm) => void,
 ): () => void {
   if (!hasAlarmsAPI()) {
-    console.warn("Alarms API not supported")
+    logger.warn("Alarms API not supported")
     return () => {}
   }
   browser.alarms.onAlarm.addListener(callback)
@@ -500,7 +509,7 @@ export function getManifest(): browser._manifest.WebExtensionManifest {
   try {
     return browser.runtime.getManifest()
   } catch (error) {
-    console.warn(
+    logger.warn(
       "[browserApi] Failed to read manifest, falling back to minimal manifest",
       error,
     )
@@ -599,7 +608,7 @@ export async function checkPermissionViaMessage(
     })
     return response?.hasPermission ?? false
   } catch (error) {
-    console.error("checkPermissionViaMessage failed", permissions, error)
+    logger.error("checkPermissionViaMessage failed", { permissions, error })
     return false
   }
 }
@@ -616,7 +625,7 @@ export async function containsPermissions(
   try {
     return await browser.permissions.contains(permissions)
   } catch (error) {
-    console.error("permissions.contains failed", permissions, error)
+    logger.error("permissions.contains failed", { permissions, error })
     return false
   }
 }
@@ -632,7 +641,7 @@ export async function requestPermissions(
   try {
     return await browser.permissions.request(permissions)
   } catch (error) {
-    console.error("permissions.request failed", permissions, error)
+    logger.error("permissions.request failed", { permissions, error })
     return false
   }
 }
@@ -648,7 +657,7 @@ export async function removePermissions(
   try {
     return await browser.permissions.remove(permissions)
   } catch (error) {
-    console.error("permissions.remove failed", permissions, error)
+    logger.error("permissions.remove failed", { permissions, error })
     return false
   }
 }

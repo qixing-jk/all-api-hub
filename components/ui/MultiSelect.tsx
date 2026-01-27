@@ -18,6 +18,12 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { cn } from "~/lib/utils"
+import { createLogger } from "~/utils/logger"
+
+/**
+ * Unified logger scoped to the shared MultiSelect UI component.
+ */
+const logger = createLogger("MultiSelect")
 
 export interface MultiSelectOption {
   value: string
@@ -203,7 +209,7 @@ export function MultiSelect({
       await navigator.clipboard.writeText(text)
       toast.success(t("multiSelect.copySuccess"))
     } catch (error) {
-      console.error("Failed to copy selected values", error)
+      logger.warn("Failed to copy selected values", error)
       toast.error(t("multiSelect.copyError"))
     }
   }

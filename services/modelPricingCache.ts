@@ -1,6 +1,12 @@
 import { Storage } from "@plasmohq/storage"
 
 import type { PricingResponse } from "~/services/apiService/common/type"
+import { createLogger } from "~/utils/logger"
+
+/**
+ * Unified logger scoped to persisted model-pricing cache operations.
+ */
+const logger = createLogger("ModelPricingCache")
 
 const STORAGE_KEYS = {
   PRICING_CACHE: "modelPricing_cache_v1",
@@ -41,7 +47,7 @@ class ModelPricingCacheService {
       }
       return entry.pricing
     } catch (error) {
-      console.error("[ModelPricingCache] Failed to get cache:", error)
+      logger.error("Failed to get cache", error)
       return null
     }
   }
@@ -59,7 +65,7 @@ class ModelPricingCacheService {
 
       await this.storage.set(STORAGE_KEYS.PRICING_CACHE, cache)
     } catch (error) {
-      console.error("[ModelPricingCache] Failed to set cache:", error)
+      logger.error("Failed to set cache", error)
     }
   }
 
@@ -71,7 +77,7 @@ class ModelPricingCacheService {
       delete cache[this.getAccountKey(accountId)]
       await this.storage.set(STORAGE_KEYS.PRICING_CACHE, cache)
     } catch (error) {
-      console.error("[ModelPricingCache] Failed to invalidate cache:", error)
+      logger.error("Failed to invalidate cache", error)
     }
   }
 }

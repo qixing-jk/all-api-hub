@@ -1,4 +1,5 @@
 import { extractActualModel } from "~/services/modelRedirect/modelNormalization"
+import { createLogger } from "~/utils/logger"
 import { removeDateSuffix } from "~/utils/modelName"
 
 import {
@@ -6,6 +7,8 @@ import {
   MODEL_METADATA_URL,
 } from "./constants"
 import type { ModelMetadata, ModelMetadataCache, VendorRule } from "./types"
+
+const logger = createLogger("ModelMetadata")
 
 const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
   openai: "OpenAI",
@@ -71,13 +74,13 @@ class ModelMetadataService {
         this.cache &&
         now - this.lastFetch < MODEL_METADATA_REFRESH_INTERVAL
       ) {
-        console.log("[ModelMetadata] Using in-memory cache")
+        logger.debug("Using in-memory cache")
         return
       }
 
       await this.refreshMetadata()
     } catch (error) {
-      console.error("[ModelMetadata] Failed to initialize:", error)
+      logger.error("Failed to initialize", error)
       this.initializeFallback()
     }
   }
@@ -90,7 +93,9 @@ class ModelMetadataService {
    */
   async refreshMetadata(): Promise<void> {
     try {
-      console.log("[ModelMetadata] Fetching from", MODEL_METADATA_URL)
+      logger.debug("Fetching from remote metadata URL", {
+        url: MODEL_METADATA_URL,
+      })
       const response = await fetch(MODEL_METADATA_URL)
 
       if (!response.ok) {
@@ -124,11 +129,9 @@ class ModelMetadataService {
       this.buildMetaDataMapFromCache()
       this.buildVendorRules()
 
-      console.log("[ModelMetadata] Refreshed successfully", {
-        models: models.length,
-      })
+      logger.info("Refreshed successfully", { models: models.length })
     } catch (error) {
-      console.error("[ModelMetadata] Failed to refresh metadata:", error)
+      logger.error("Failed to refresh metadata", error)
       if (!this.cache) {
         this.initializeFallback()
       }
@@ -212,10 +215,10 @@ class ModelMetadataService {
         const pattern = new RegExp(patternStr, "i")
         rules.push({ providerID, displayName, pattern })
       } catch (error) {
-        console.warn(
-          `[ModelMetadata] Failed to build pattern for ${providerID}:`,
+        logger.warn("Failed to build pattern for provider", {
+          providerID,
           error,
-        )
+        })
       }
     }
 
@@ -241,7 +244,7 @@ class ModelMetadataService {
    * Seeds cache, metadata map, and vendor rules with bundled defaults.
    */
   private initializeFallback(): void {
-    console.warn("[ModelMetadata] Using fallback default data")
+    logger.warn("Using fallback default data")
 
     const defaultMetadata: ModelMetadata[] = [
       {

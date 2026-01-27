@@ -9,6 +9,7 @@ import {
   type UsageHistoryStore,
 } from "~/types/usageHistory"
 import { getErrorMessage } from "~/utils/error"
+import { createLogger } from "~/utils/logger"
 
 import { USAGE_HISTORY_STORAGE_KEYS } from "./constants"
 import {
@@ -18,6 +19,8 @@ import {
   parseDayKey,
   pruneUsageHistoryAccountStore,
 } from "./core"
+
+const logger = createLogger("UsageHistoryStorage")
 
 /**
  * Create a new empty top-level store (current schema).
@@ -545,7 +548,7 @@ class UsageHistoryStorage {
 
       return createEmptyStore()
     } catch (error) {
-      console.error("[UsageHistory] Failed to load store:", error)
+      logger.error("Failed to load store", error)
       return createEmptyStore()
     }
   }
@@ -555,7 +558,7 @@ class UsageHistoryStorage {
       await this.storage.set(USAGE_HISTORY_STORAGE_KEYS.STORE, store)
       return true
     } catch (error) {
-      console.error("[UsageHistory] Failed to persist store:", error)
+      logger.error("Failed to persist store", error)
       return false
     }
   }
@@ -616,10 +619,7 @@ class UsageHistoryStorage {
 
       return true
     } catch (error) {
-      console.error(
-        "[UsageHistory] Failed to prune store:",
-        getErrorMessage(error),
-      )
+      logger.error("Failed to prune store", { error: getErrorMessage(error) })
       return false
     }
   }

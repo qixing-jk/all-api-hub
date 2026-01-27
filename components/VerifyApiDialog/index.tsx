@@ -21,13 +21,20 @@ import type {
   ApiVerificationApiType,
   ApiVerificationProbeId,
 } from "~/services/aiApiVerification"
+import { toSanitizedErrorSummary } from "~/services/aiApiVerification/utils"
 import { getApiService } from "~/services/apiService"
 import type { ApiToken } from "~/types"
+import { createLogger } from "~/utils/logger"
 import { identifyProvider } from "~/utils/modelProviders"
 
 import { ProbeStatusBadge } from "./ProbeStatusBadge"
 import type { ProbeItemState, VerifyApiDialogProps } from "./types"
 import { formatLatency, safeJsonStringify } from "./utils"
+
+/**
+ * Unified logger scoped to the API verification dialog.
+ */
+const logger = createLogger("VerifyApiDialog")
 
 /**
  * Modal dialog that runs API verification for a selected account token + model.
@@ -118,7 +125,14 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
         sorted.find((tok) => tok.status === 1) ?? sorted.at(0) ?? null
       setSelectedTokenId(defaultToken ? defaultToken.id.toString() : "")
     } catch (error) {
-      console.error("Failed to load tokens:", error)
+      logger.error("Failed to load tokens", {
+        message: toSanitizedErrorSummary(
+          error,
+          [account.token, account.cookieAuthSessionCookie].filter(
+            Boolean,
+          ) as string[],
+        ),
+      })
       setTokens([])
       setSelectedTokenId("")
     } finally {
@@ -158,7 +172,17 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
         ),
       )
     } catch (error) {
-      console.error(`Probe ${probeId} failed:`, error)
+      logger.error("Probe failed", {
+        probeId,
+        message: toSanitizedErrorSummary(
+          error,
+          [
+            selectedToken.key,
+            account.token,
+            account.cookieAuthSessionCookie,
+          ].filter(Boolean) as string[],
+        ),
+      })
       setProbes((prev) =>
         prev.map((p) => {
           if (p.definition.id !== probeId) return p

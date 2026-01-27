@@ -22,6 +22,12 @@ import type {
 } from "~/services/apiService/common/type"
 import { fetchApi } from "~/services/apiService/common/utils"
 import { AuthTypeEnum, SiteHealthStatus, type CheckInConfig } from "~/types"
+import { createLogger } from "~/utils/logger"
+
+/**
+ * Unified logger scoped to WONG site API overrides.
+ */
+const logger = createLogger("ApiService.Wong")
 
 /**
  * Payload under `data` returned by WONG `/api/user/checkin`.
@@ -175,7 +181,7 @@ export async function fetchCheckInStatus(
 
     return undefined
   } catch (error) {
-    console.warn("[WONG] Failed to fetch check-in status:", error)
+    logger.warn("Failed to fetch check-in status", error)
     return undefined
   }
 }
@@ -234,7 +240,7 @@ export async function refreshAccountData(
       },
     }
   } catch (error) {
-    console.error("[WONG] Failed to refresh account data:", error)
+    logger.error("Failed to refresh account data", error)
     return {
       success: false,
       healthStatus: determineHealthStatus(error),

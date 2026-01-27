@@ -1,7 +1,8 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { sendRuntimeMessage } from "~/utils/browserApi"
+import { createLogger } from "~/utils/logger"
 
-const CF_LOG_PREFIX = "[Content][CloudflareGuard]"
+const logger = createLogger("CloudflareGuard")
 
 /**
  * Log Cloudflare guard events to console and extension background
@@ -10,14 +11,11 @@ export function logCloudflareGuard(
   event: string,
   details?: Record<string, unknown>,
 ) {
-  try {
-    if (details && Object.keys(details).length > 0) {
-      console.log(`${CF_LOG_PREFIX} ${event}`, details)
-    } else {
-      console.log(`${CF_LOG_PREFIX} ${event}`)
-    }
-  } catch {
-    // ignore sanitizeUrlForLog errors
+  const message = (event || "").trim() || "event"
+  if (/error|fail/i.test(message)) {
+    logger.error(message, details)
+  } else {
+    logger.debug(message, details)
   }
 
   try {

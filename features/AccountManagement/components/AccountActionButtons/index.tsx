@@ -24,6 +24,7 @@ import { useDialogStateContext } from "~/features/AccountManagement/hooks/Dialog
 import { getApiService } from "~/services/apiService"
 import type { DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/error"
+import { createLogger } from "~/utils/logger"
 import {
   openKeysPage,
   openModelsPage,
@@ -38,6 +39,11 @@ export interface ActionButtonsProps {
   onCopyKey: (site: DisplaySiteData) => void
   onDeleteAccount: (site: DisplaySiteData) => void
 }
+
+/**
+ * Logger scoped to per-account action buttons so token-fetch failures can be diagnosed without logging secrets.
+ */
+const logger = createLogger("AccountActionButtons")
 
 /**
  * Primary/secondary action controls for each account card.
@@ -119,11 +125,21 @@ export default function AccountActionButtons({
           toast.error(t("actions.noKeyFound"))
         }
       } else {
-        console.warn("Token response is not an array:", tokensResponse)
+        logger.warn("Token response is not an array", {
+          siteId: site.id,
+          baseUrl: site.baseUrl,
+          responseType: typeof tokensResponse,
+          siteType: site.siteType,
+        })
         toast.error(t("actions.fetchKeyInfoFailed"))
       }
     } catch (error) {
-      console.error("Failed to fetch key list:", error)
+      logger.error("Failed to fetch key list", {
+        error,
+        siteId: site.id,
+        baseUrl: site.baseUrl,
+        siteType: site.siteType,
+      })
       const errorMessage = getErrorMessage(error)
       toast.error(t("actions.fetchKeyListFailed", { errorMessage }))
       // Fallback to opening dialog

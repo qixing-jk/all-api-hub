@@ -1,6 +1,9 @@
 import { Storage } from "@plasmohq/storage"
 
 import type { AutoCheckinStatus } from "~/types/autoCheckin"
+import { createLogger } from "~/utils/logger"
+
+const logger = createLogger("AutoCheckinStorage")
 
 /**
  * Storage keys for Auto Check-in
@@ -32,7 +35,7 @@ class AutoCheckinStorage {
 
       return stored || null
     } catch (error) {
-      console.error("[AutoCheckin] Failed to get status:", error)
+      logger.error("Failed to get status", error)
       return null
     }
   }
@@ -43,10 +46,10 @@ class AutoCheckinStorage {
   async saveStatus(status: AutoCheckinStatus): Promise<boolean> {
     try {
       await this.storage.set(STORAGE_KEYS.AUTO_CHECKIN_STATUS, status)
-      console.log("[AutoCheckin] Status saved")
+      logger.debug("Status saved")
       return true
     } catch (error) {
-      console.error("[AutoCheckin] Failed to save status:", error)
+      logger.error("Failed to save status", error)
       return false
     }
   }
@@ -57,10 +60,10 @@ class AutoCheckinStorage {
   async clearStatus(): Promise<boolean> {
     try {
       await this.storage.remove(STORAGE_KEYS.AUTO_CHECKIN_STATUS)
-      console.log("[AutoCheckin] Status cleared")
+      logger.debug("Status cleared")
       return true
     } catch (error) {
-      console.error("[AutoCheckin] Failed to clear status:", error)
+      logger.error("Failed to clear status", error)
       return false
     }
   }

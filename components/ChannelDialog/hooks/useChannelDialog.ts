@@ -10,6 +10,12 @@ import { getManagedSiteService } from "~/services/managedSiteService"
 import type { ApiToken, DisplaySiteData, SiteAccount } from "~/types"
 import type { ManagedSiteChannel } from "~/types/managedSite"
 import { getErrorMessage } from "~/utils/error"
+import { createLogger } from "~/utils/logger"
+
+/**
+ * Unified logger scoped to channel dialog open helpers.
+ */
+const logger = createLogger("ChannelDialogHook")
 
 /**
  * Hook to easily trigger channel creation dialog from anywhere
@@ -113,7 +119,7 @@ export function useChannelDialog() {
         }),
         { id: toastId },
       )
-      console.error("[useChannelDialog] Failed to prepare channel data:", error)
+      logger.error("Failed to prepare channel data", error)
     }
   }
 

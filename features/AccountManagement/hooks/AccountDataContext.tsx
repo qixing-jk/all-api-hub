@@ -35,7 +35,13 @@ import {
   onTabRemoved,
   onTabUpdated,
 } from "~/utils/browserApi"
+import { createLogger } from "~/utils/logger"
 import { createDynamicSortComparator } from "~/utils/sortingPriority"
+
+/**
+ * Unified logger scoped to account data context and refresh orchestration.
+ */
+const logger = createLogger("AccountDataContext")
 
 // 1. 定义 Context 的值类型
 interface AccountDataContextType {
@@ -156,7 +162,7 @@ export const AccountDataProvider = ({
         setDetectedAccount(null)
       }
     } catch (error) {
-      console.error("Error detecting current tab account:", error)
+      logger.error("Error detecting current tab account", error)
       setDetectedAccount(null)
     } finally {
       setIsDetecting(false)
@@ -167,7 +173,7 @@ export const AccountDataProvider = ({
 
   const loadAccountData = useCallback(async () => {
     try {
-      console.log("[AccountContext] Loading account data...")
+      logger.debug("Loading account data")
       await accountStorage.resetExpiredCheckIns()
       const allAccounts = await accountStorage.getAllAccounts()
       const storedOrderedIds = await accountStorage.getOrderedList()
@@ -227,7 +233,7 @@ export const AccountDataProvider = ({
         setIsInitialLoad(false)
       }
     } catch (error) {
-      console.error("Failed to load account data:", error)
+      logger.error("Failed to load account data", error)
     }
   }, [isInitialLoad, prevTotalConsumption, prevBalances])
 
@@ -275,7 +281,7 @@ export const AccountDataProvider = ({
         }
         return refreshResult
       } catch (error) {
-        console.error("Failed to refresh data:", error)
+        logger.error("Failed to refresh data", error)
         await loadAccountData()
         throw error
       } finally {
@@ -298,7 +304,7 @@ export const AccountDataProvider = ({
       // 检查是否启用了打开插件时自动刷新
       if (refreshOnOpen) {
         hasRefreshedOnOpen.current = true // 标记已执行
-        console.log("[Popup] 打开插件时自动刷新已启用，开始刷新")
+        logger.info("打开插件时自动刷新已启用，开始刷新")
         try {
           if (toast) {
             await toast.promise(handleRefresh(false), {
@@ -324,7 +330,7 @@ export const AccountDataProvider = ({
                     skipped: sum - refreshedCount,
                   })
                 }
-                console.log("[Popup] 打开插件时自动刷新完成")
+                logger.debug("打开插件时自动刷新完成")
                 return t("refresh.refreshSuccess")
               },
               error: t("refresh.refreshFailed"),
@@ -333,7 +339,7 @@ export const AccountDataProvider = ({
             await handleRefresh(false)
           }
         } catch (error) {
-          console.error("[Popup] 打开插件时自动刷新失败:", error)
+          logger.error("打开插件时自动刷新失败", error)
         }
       }
     }
@@ -376,13 +382,11 @@ export const AccountDataProvider = ({
         message.type === "AUTO_REFRESH_UPDATE" &&
         message.payload.type === "refresh_completed"
       ) {
-        console.log(
-          "[AccountContext] Background refresh completed, reloading data.",
-        )
+        logger.debug("Background refresh completed, reloading data")
         loadAccountData()
       }
       if (message.type === "TAG_STORE_UPDATE") {
-        console.log("[AccountContext] Tag store updated, reloading data.")
+        logger.debug("Tag store updated, reloading data")
         loadAccountData()
       }
     })
@@ -467,7 +471,7 @@ export const AccountDataProvider = ({
 
       setMatchedAccountScores(scores)
     } catch (error) {
-      console.error("Error matching open tabs:", error)
+      logger.error("Error matching open tabs", error)
       setMatchedAccountScores({})
     }
   }, [displayData])

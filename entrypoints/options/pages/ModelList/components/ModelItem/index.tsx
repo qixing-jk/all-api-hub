@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next"
 import { Card, CardContent } from "~/components/ui"
 import type { ModelPricing } from "~/services/apiService/common/type"
 import type { DisplaySiteData } from "~/types"
+import { createLogger } from "~/utils/logger"
 import type { CalculatedPrice } from "~/utils/modelPricing"
 
 import { ModelItemDescription } from "./ModelItemDescription"
@@ -12,6 +13,11 @@ import { ModelItemDetails } from "./ModelItemDetails"
 import { ModelItemExpandButton } from "./ModelItemExpandButton"
 import { ModelItemHeader } from "./ModelItemHeader"
 import { ModelItemPricing } from "./ModelItemPricing"
+
+/**
+ * Unified logger scoped to model list item interactions.
+ */
+const logger = createLogger("ModelItem")
 
 interface ModelItemProps {
   model: ModelPricing
@@ -60,7 +66,7 @@ export default function ModelItem(props: ModelItemProps) {
       toast.success(t("messages.modelNameCopied"))
     } catch (error) {
       toast.error(t("messages.copyFailed"))
-      console.error(error)
+      logger.warn("Failed to copy model name to clipboard", error)
     }
   }
 

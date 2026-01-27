@@ -8,6 +8,7 @@ import DangerousZone from "~/entrypoints/options/pages/BasicSettings/components/
 import ThemeToggle from "../../../components/ThemeToggle"
 import ActionClickBehaviorSettings from "./ActionClickBehaviorSettings"
 import DisplaySettings from "./DisplaySettings"
+import LoggingSettings from "./LoggingSettings"
 
 /**
  * General Basic Settings tab for display preferences, theme/language, and dangerous zone.
@@ -19,6 +20,7 @@ export default function GeneralTab() {
     <div className="space-y-6">
       <DisplaySettings />
       <ActionClickBehaviorSettings />
+      <LoggingSettings />
 
       {/* Appearance & Language Section */}
       <section id="appearance" className="space-y-6">

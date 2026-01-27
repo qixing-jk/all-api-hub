@@ -5,8 +5,14 @@ import "~/styles/style.css"
 
 import { userPreferences } from "~/services/userPreferences"
 import type { ResolvedTheme, ThemeMode } from "~/types/theme"
+import { createLogger } from "~/utils/logger"
 
 import { RedemptionToaster } from "./RedemptionToaster"
+
+/**
+ * Unified logger scoped to redemption assist content UI root rendering.
+ */
+const logger = createLogger("ContentReactRoot")
 
 export const ContentReactRoot: React.FC = () => {
   const [themeMode, setThemeMode] = useState<ThemeMode>("system")
@@ -30,10 +36,7 @@ export const ContentReactRoot: React.FC = () => {
           setResolvedTheme(mode)
         }
       } catch (error) {
-        console.warn(
-          "[RedemptionAssist][Content] Failed to load theme preferences:",
-          error,
-        )
+        logger.warn("Failed to load theme preferences", error)
       }
     }
 

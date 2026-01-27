@@ -16,6 +16,12 @@ import {
   transformModelPricing,
   transformUserGroup,
 } from "~/utils/dataTransform/one-hub"
+import { createLogger } from "~/utils/logger"
+
+/**
+ * Unified logger scoped to OneHub API helpers.
+ */
+const logger = createLogger("ApiService.OneHub")
 
 export const fetchAvailableModel = async (request: ApiServiceRequest) => {
   return fetchApiData<OneHubModelPricing>(request, {
@@ -38,11 +44,11 @@ export const fetchModelPricing = async (
     ])
 
     const result = transformModelPricing(availableModel, userGroupMap)
-    console.log(result)
+    logger.debug("Fetched model pricing")
 
     return result
   } catch (error) {
-    console.error("获取模型定价失败:", error)
+    logger.error("获取模型定价失败", error)
     throw error
   }
 }
@@ -79,11 +85,13 @@ export const fetchAccountTokens = async (
       return (tokensData.data || []).map(normalizeApiTokenKey)
     } else {
       // 其他情况，返回空数组
-      console.warn("Unexpected token response format:", tokensData)
+      logger.warn("Unexpected token response format", {
+        responseType: tokensData === null ? "null" : typeof tokensData,
+      })
       return []
     }
   } catch (error) {
-    console.error("获取令牌列表失败:", error)
+    logger.error("获取令牌列表失败", error)
     throw error
   }
 }
@@ -103,7 +111,7 @@ export const fetchUserGroups = async (
     )
     return transformUserGroup(response)
   } catch (error) {
-    console.error("获取分组信息失败:", error)
+    logger.error("获取分组信息失败", error)
     throw error
   }
 }

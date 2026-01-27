@@ -14,6 +14,9 @@ import type {
   ChannelModelFilterRule,
 } from "~/types/channelModelFilters"
 import { getErrorMessage } from "~/utils/error"
+import { createLogger } from "~/utils/logger"
+
+const logger = createLogger("ChannelConfigStorage")
 
 const STORAGE_KEYS = {
   CHANNEL_CONFIGS: "channel_configs",
@@ -35,7 +38,7 @@ class ChannelConfigStorage {
         | undefined
       return stored ?? {}
     } catch (error) {
-      console.error("[ChannelConfig] Failed to load configs:", error)
+      logger.error("Failed to load configs", error)
       return {}
     }
   }
@@ -58,7 +61,7 @@ class ChannelConfigStorage {
       await this.storage.set(STORAGE_KEYS.CHANNEL_CONFIGS, next)
       return true
     } catch (error) {
-      console.error("[ChannelConfig] Failed to save config:", error)
+      logger.error("Failed to save config", error)
       return false
     }
   }
@@ -210,7 +213,7 @@ export async function handleChannelConfigMessage(
       }
     }
   } catch (error) {
-    console.error("[ChannelConfig] Message handling failed:", error)
+    logger.error("Message handling failed", error)
     sendResponse({ success: false, error: getErrorMessage(error) })
   }
 }

@@ -6,6 +6,16 @@
  * @param path - 需要连接的 URL 路径
  * @returns 连接后的 URL
  */
+import { createLogger } from "~/utils/logger"
+
+/**
+ * Unified logger scoped to URL utility helpers.
+ */
+const logger = createLogger("UrlUtils")
+
+/**
+ *
+ */
 export function joinUrl(base: string, path: string) {
   return `${base.replace(/\/+$/, "")}/${path.replace(/^\/+/, "")}`
 }
@@ -160,7 +170,7 @@ export function normalizeHttpUrl(
     }
     return parsed.toString().replace(/\/$/, "")
   } catch (e) {
-    console.error("[normalizeHttpUrl] Invalid URL:", e)
+    logger.warn("normalizeHttpUrl: Invalid URL", e)
     return null
   }
 }
@@ -186,7 +196,7 @@ export function stripTrailingOpenAIV1(baseUrl: string): string {
     url.pathname = pathname.replace(/\/v1$/, "") || "/"
     return url.toString().replace(/\/+$/, "")
   } catch (e) {
-    console.error("[stripTrailingOpenAIV1] Invalid URL:", e)
+    logger.warn("stripTrailingOpenAIV1: Invalid URL", e)
     return trimmed.replace(/\/v1\/?$/, "").replace(/\/+$/, "")
   }
 }
@@ -220,7 +230,7 @@ export function coerceBaseUrlToPathSuffix(
     url.pathname = `${pathname}${normalizedSuffix}`.replace(/\/{2,}/g, "/")
     return url.toString().replace(/\/+$/, "")
   } catch (e) {
-    console.error("[coerceBaseUrlToPathSuffix] Invalid URL:", e)
+    logger.warn("coerceBaseUrlToPathSuffix: Invalid URL", e)
     return trimmed.replace(/\/+$/, "")
   }
 }

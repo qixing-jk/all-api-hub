@@ -5,8 +5,14 @@ import { useTranslation } from "react-i18next"
 import { getApiService } from "~/services/apiService"
 import type { UserGroupInfo } from "~/services/apiService/common/type"
 import type { DisplaySiteData } from "~/types"
+import { createLogger } from "~/utils/logger"
 
 import type { FormData } from "./useTokenForm"
+
+/**
+ * Unified logger scoped to Key Management token dialog bootstrap data loading.
+ */
+const logger = createLogger("TokenDataHook")
 
 /**
  * Loads available models and user groups for the selected account when dialog opens.
@@ -61,7 +67,7 @@ export function useTokenData(
         }
       }
     } catch (error) {
-      console.error("Failed to load initial data:", error)
+      logger.error("Failed to load initial data", error)
       toast.error(t("dialog.loadDataFailed"))
     } finally {
       setIsLoading(false)

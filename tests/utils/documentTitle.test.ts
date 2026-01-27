@@ -30,19 +30,15 @@ describe("documentTitle", () => {
     it("catches errors from i18n.t without throwing", () => {
       const originalTitle = document.title
       const tSpy = vi.mocked(i18n.t as unknown as (key: string) => string)
-      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {})
 
       tSpy.mockImplementation(() => {
         throw new Error("boom")
       })
 
-      // Should not throw and should log the error
+      // Should not throw and should fall back to the existing title (errors are handled internally).
       documentTitleModule.setDocumentTitle("options")
 
-      expect(errorSpy).toHaveBeenCalled()
       expect(document.title).toBe(originalTitle)
-
-      errorSpy.mockRestore()
     })
   })
 

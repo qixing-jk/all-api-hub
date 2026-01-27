@@ -1,4 +1,10 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { createLogger } from "~/utils/logger"
+
+/**
+ * Unified logger scoped to background context menu wiring.
+ */
+const logger = createLogger("ContextMenus")
 
 const REDEMPTION_MENU_ID = "redemption-assist-context-menu"
 
@@ -9,7 +15,7 @@ const REDEMPTION_MENU_ID = "redemption-assist-context-menu"
  */
 export async function setupContextMenus() {
   if (!browser?.contextMenus) {
-    console.warn("[ContextMenu] contextMenus API unavailable")
+    logger.warn("contextMenus API unavailable")
     return
   }
 
@@ -27,7 +33,7 @@ export async function setupContextMenus() {
       contexts: ["selection"],
     })
   } catch (error) {
-    console.error("[ContextMenu] Failed to create menu", error)
+    logger.error("Failed to create menu", error)
   }
 
   browser.contextMenus.onClicked.addListener(async (info, tab) => {
@@ -38,9 +44,7 @@ export async function setupContextMenus() {
     const pageUrl = info.pageUrl || tab.url || ""
 
     if (!selectionText) {
-      console.warn(
-        "[ContextMenu] No selection text for redemption assist trigger",
-      )
+      logger.warn("No selection text for redemption assist trigger")
       return
     }
 
@@ -51,10 +55,7 @@ export async function setupContextMenus() {
         pageUrl,
       })
     } catch (error) {
-      console.error(
-        "[ContextMenu] Failed to forward redemption assist trigger",
-        error,
-      )
+      logger.error("Failed to forward redemption assist trigger", error)
     }
   })
 }

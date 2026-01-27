@@ -3,11 +3,14 @@ import { ApiError } from "~/services/apiService/common/errors"
 import { fetchApi, fetchApiData } from "~/services/apiService/common/utils"
 import { AuthTypeEnum } from "~/types"
 import { safeRandomUUID } from "~/utils/identifier"
+import { createLogger } from "~/utils/logger"
 import {
   canUseTempWindowFetch,
   tempWindowFetch,
   tempWindowGetRenderedTitle,
 } from "~/utils/tempWindowFetch"
+
+const logger = createLogger("DetectSiteType")
 
 /**
  * Fetch the raw HTML title from the site root.
@@ -31,15 +34,14 @@ export const fetchSiteOriginalTitle = async (url: string) => {
       })
 
       if (rendered?.success && rendered.title) {
-        console.log("原始 document title (rendered):", rendered.title)
+        logger.debug("原始 document title (rendered)", {
+          title: rendered.title,
+        })
         return rendered.title
       }
     }
   } catch (error) {
-    console.warn(
-      "[DetectSiteType] temp context rendered title failed, fallback to fetch",
-      error,
-    )
+    logger.warn("temp context rendered title failed, fallback to fetch", error)
   }
 
   // 优先尝试临时上下文获取标题，确保通过 WAF/盾后读取真实页面内容
@@ -58,15 +60,12 @@ export const fetchSiteOriginalTitle = async (url: string) => {
 
       if (tempResult?.success && typeof tempResult.data === "string") {
         const title = parseTitle(tempResult.data)
-        console.log("原始 document title (temp context):", title)
+        logger.debug("原始 document title (temp context)", { title })
         return title
       }
     }
   } catch (error) {
-    console.warn(
-      "[DetectSiteType] temp context title fetch failed, fallback",
-      error,
-    )
+    logger.warn("temp context title fetch failed, fallback", error)
   }
 
   const html = await fetchApi<string>(
@@ -84,7 +83,7 @@ export const fetchSiteOriginalTitle = async (url: string) => {
     true,
   )
   const title = parseTitle(html)
-  console.log("原始 document title (direct fetch):", title)
+  logger.debug("原始 document title (direct fetch)", { title })
   return title
 }
 

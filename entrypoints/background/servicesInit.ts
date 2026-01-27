@@ -6,6 +6,12 @@ import { redemptionAssistService } from "~/services/redemptionAssist"
 import { usageHistoryScheduler } from "~/services/usageHistory/scheduler"
 import { webdavAutoSyncService } from "~/services/webdav/webdavAutoSyncService"
 import { initBackgroundI18n } from "~/utils/background-i18n"
+import { createLogger } from "~/utils/logger"
+
+/**
+ * Unified logger scoped to background service initialization.
+ */
+const logger = createLogger("BackgroundServicesInit")
 
 let servicesInitialized = false
 let initializingPromise: Promise<void> | null = null
@@ -21,23 +27,23 @@ let initializingPromise: Promise<void> | null = null
 export async function initializeServices() {
   // 若已初始化，跳过
   if (servicesInitialized) {
-    console.log("[Background] 各项服务已初始化，跳过")
+    logger.debug("各项服务已初始化，跳过")
     return
   }
 
   // 正在初始化则等待已有 Promise
   if (initializingPromise) {
-    console.log("[Background] 各项服务正在初始化，等待中...")
+    logger.debug("各项服务正在初始化，等待中...")
     await initializingPromise
     return
   }
 
   // 标记为正在初始化（防止并发）
   initializingPromise = (async () => {
-    console.log("[Background] 初始化服务...")
+    logger.info("初始化服务")
     await initBackgroundI18n()
     await modelMetadataService.initialize().catch((error) => {
-      console.warn("[Background] Model metadata initialization failed:", error)
+      logger.warn("Model metadata initialization failed", error)
     })
     await autoRefreshService.initialize()
     await usageHistoryScheduler.initialize()

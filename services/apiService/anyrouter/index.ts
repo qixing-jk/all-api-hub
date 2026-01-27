@@ -15,6 +15,12 @@ import type {
 import { anyrouterProvider } from "~/services/autoCheckin/providers/anyrouter"
 import { SiteHealthStatus, type CheckInConfig } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+import { createLogger } from "~/utils/logger"
+
+/**
+ * Unified logger scoped to AnyRouter site API overrides.
+ */
+const logger = createLogger("ApiService.AnyRouter")
 
 /**
  * Check if site supports check-in based on status info.
@@ -47,7 +53,7 @@ export async function fetchCheckInStatus(
     })
     return checkInData.status !== CHECKIN_RESULT_STATUS.ALREADY_CHECKED
   } catch (error) {
-    console.warn("获取签到状态失败:", error)
+    logger.warn("获取签到状态失败", error)
     return undefined // 其他错误也视为不支持
   }
 }
@@ -105,7 +111,7 @@ export async function refreshAccountData(
       },
     }
   } catch (error) {
-    console.error("刷新账号数据失败:", error)
+    logger.error("刷新账号数据失败", error)
     return {
       success: false,
       healthStatus: determineHealthStatus(error),

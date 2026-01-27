@@ -3,6 +3,7 @@ import { Storage } from "@plasmohq/storage"
 import { ensureAccountTagsStorageMigrated } from "~/services/configMigration/accountTags/accountTagsStorageMigration"
 import type { AccountStorageConfig, SiteAccount, Tag, TagStore } from "~/types"
 import { sendRuntimeMessage } from "~/utils/browserApi"
+import { createLogger } from "~/utils/logger"
 
 import {
   ACCOUNT_STORAGE_KEYS,
@@ -20,6 +21,11 @@ import {
 } from "./tagStoreUtils"
 
 export { TAG_STORAGE_KEYS }
+
+/**
+ * Unified logger scoped to the global account tag storage service.
+ */
+const logger = createLogger("TagStorage")
 
 /**
  * Global tag storage service.
@@ -50,12 +56,12 @@ class TagStorageService {
       // never crash storage operations.
       if (maybePromise && typeof maybePromise.catch === "function") {
         void maybePromise.catch((error: unknown) => {
-          console.debug("[TagStorage] Runtime notify ignored:", error)
+          logger.debug("Runtime notify ignored", error)
         })
       }
     } catch (error) {
       // Non-fatal: tests and non-extension environments may not support runtime messaging.
-      console.debug("[TagStorage] Failed to notify runtime listeners:", error)
+      logger.debug("Failed to notify runtime listeners", error)
     }
   }
 

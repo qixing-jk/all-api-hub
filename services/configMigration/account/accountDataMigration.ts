@@ -7,10 +7,13 @@
  */
 
 import type { SiteAccount } from "~/types"
+import { createLogger } from "~/utils/logger"
 
 import { migrateCheckInDualStatusConfig } from "./checkInDualStatusMigration"
 import { migrateCheckInConfig } from "./checkInMigration"
 import { migrateDisabledFlagConfig } from "./disabledFlagMigration"
+
+const logger = createLogger("AccountDataMigration")
 
 // Current version of the configuration schema
 export const CURRENT_CONFIG_VERSION = 3
@@ -78,13 +81,15 @@ export function migrateAccountConfig(account: SiteAccount): SiteAccount {
     const migrationFn = migrations[nextVersion]
 
     if (!migrationFn) {
-      console.error(`No migration defined for version ${nextVersion}`)
+      logger.error(`No migration defined for version ${nextVersion}`)
       break
     }
 
-    console.log(
-      `Migrating account ${account.id} from v${currentVersion} to v${nextVersion}`,
-    )
+    logger.debug("Migrating account config", {
+      accountId: account.id,
+      from: currentVersion,
+      to: nextVersion,
+    })
     migratedAccount = migrationFn(migratedAccount)
     currentVersion = nextVersion
   }
@@ -111,9 +116,10 @@ export function migrateAccountsConfig(accounts: SiteAccount[]): {
   })
 
   if (migratedCount > 0) {
-    console.log(
-      `Successfully migrated ${migratedCount} account(s) to config version ${CURRENT_CONFIG_VERSION}`,
-    )
+    logger.info("Successfully migrated account config(s)", {
+      migratedCount,
+      targetVersion: CURRENT_CONFIG_VERSION,
+    })
   }
 
   return {

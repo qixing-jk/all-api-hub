@@ -5,6 +5,12 @@ import type {
 } from "~/services/apiService/common/type"
 import { fetchApiData } from "~/services/apiService/common/utils"
 import { AuthTypeEnum } from "~/types"
+import { createLogger } from "~/utils/logger"
+
+/**
+ * Unified logger scoped to OpenAI-compatible upstream model fetch helpers.
+ */
+const logger = createLogger("ApiService.OpenAICompatible")
 
 export const fetchOpenAICompatibleModels = async (params: OpenAIAuthParams) => {
   const request = {
@@ -19,7 +25,7 @@ export const fetchOpenAICompatibleModels = async (params: OpenAIAuthParams) => {
       endpoint: "/v1/models",
     })
   } catch (error) {
-    console.error("获取上游模型列表失败:", error)
+    logger.error("获取上游模型列表失败", error)
     throw error
   }
 }

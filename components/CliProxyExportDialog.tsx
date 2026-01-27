@@ -13,6 +13,7 @@ import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompa
 import { importToCliProxy } from "~/services/cliProxyService"
 import type { ApiToken, DisplaySiteData } from "~/types"
 import { safeRandomUUID } from "~/utils/identifier"
+import { createLogger } from "~/utils/logger"
 import { showResultToast } from "~/utils/toastHelpers"
 import { joinUrl, stripTrailingOpenAIV1 } from "~/utils/url"
 
@@ -22,6 +23,11 @@ interface CliProxyExportDialogProps {
   account: DisplaySiteData
   token: ApiToken
 }
+
+/**
+ * Unified logger scoped to the CLI Proxy export dialog.
+ */
+const logger = createLogger("CliProxyExportDialog")
 
 /**
  * Build the OpenAI-compatible upstream base URL for CLI Proxy providers.
@@ -84,7 +90,7 @@ export function CliProxyExportDialog(props: CliProxyExportDialogProps) {
         if (!isActive) return
         setAvailableUpstreamModels(normalized)
       } catch (error) {
-        console.warn("[CLIProxy] Failed to fetch upstream model list", error)
+        logger.warn("Failed to fetch upstream model list", error)
         if (!isActive) return
         setAvailableUpstreamModels([])
       }

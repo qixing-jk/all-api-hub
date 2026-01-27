@@ -1,4 +1,10 @@
 import i18n from "~/utils/i18n"
+import { createLogger } from "~/utils/logger"
+
+/**
+ * Unified logger scoped to document title initialization helpers.
+ */
+const logger = createLogger("DocumentTitle")
 
 /**
  * Initializes the document title and sets up a listener for language changes
@@ -27,6 +33,6 @@ export function setDocumentTitle(
   try {
     document.title = i18n.t(`ui:pageTitle.${pageType}`)
   } catch (error) {
-    console.error(error)
+    logger.warn("Failed to set document title", error)
   }
 }

@@ -5,6 +5,12 @@ import { useTranslation } from "react-i18next"
 
 import { BodySmall, Button, Heading3 } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
+import { createLogger } from "~/utils/logger"
+
+/**
+ * Unified logger scoped to shared settings section UI primitives.
+ */
+const logger = createLogger("SettingSection")
 
 interface SettingSectionProps {
   title: string
@@ -50,7 +56,7 @@ export function SettingSection({
         toast.error(t("messages.resetFailed", { name: title }))
       }
     } catch (error) {
-      console.error(`Failed to reset ${title}:`, error)
+      logger.error("Failed to reset setting section", { title, error })
       toast.error(t("messages.resetFailed", { name: title }))
     } finally {
       setIsResetting(false)

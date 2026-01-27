@@ -16,6 +16,7 @@ import {
   removePermission,
   requestPermission,
 } from "~/services/permissions/permissionManager"
+import { createLogger } from "~/utils/logger"
 import { showResultToast } from "~/utils/toastHelpers"
 
 import PermissionList from "./PermissionList"
@@ -32,6 +33,11 @@ const buildState = <T,>(value: T) =>
   >
 
 /**
+ * Unified logger scoped to optional permission settings in the options UI.
+ */
+const logger = createLogger("PermissionSettings")
+
+/**
  * Settings section for managing optional browser permissions: refresh, request, remove.
  */
 export default function PermissionSettings() {
@@ -44,17 +50,14 @@ export default function PermissionSettings() {
 
   const loadStatuses = useCallback(async () => {
     setIsRefreshing(true)
-    console.log("[Permissions] Checking optional permission statuses...")
+    logger.debug("Checking optional permission statuses")
     const results = await Promise.all(
       OPTIONAL_PERMISSIONS.map(async (id) => ({
         id,
         granted: await hasPermission(id),
       })),
     )
-
-    console.table(
-      results.map((item) => ({ permission: item.id, granted: item.granted })),
-    )
+    logger.debug("Optional permission statuses resolved", { results })
 
     setState((prev) => ({
       ...prev,
@@ -94,17 +97,17 @@ export default function PermissionSettings() {
         OPTIONAL_PERMISSION_DEFINITIONS.find((perm) => perm.id === id)
           ?.titleKey ?? id,
       )
-      console.log(
-        `[Permissions] ${shouldEnable ? "Request" : "Revoke"} ${id} triggered by user: ${label}`,
-      )
+      logger.debug("Permission toggle requested by user", {
+        id,
+        action: shouldEnable ? "request" : "revoke",
+        label,
+      })
       let success = false
 
       try {
         if (shouldEnable) {
           success = await requestPermission(id)
-          console.log(
-            `[Permissions] Request ${id} ${success ? "succeeded" : "failed"}`,
-          )
+          logger.debug("Permission request completed", { id, success })
           showResultToast(
             success,
             t("permissions.messages.granted", { name: label }),
@@ -112,9 +115,7 @@ export default function PermissionSettings() {
           )
         } else {
           success = await removePermission(id)
-          console.log(
-            `[Permissions] Remove ${id} ${success ? "succeeded" : "failed"}`,
-          )
+          logger.debug("Permission revoke completed", { id, success })
           showResultToast(
             success,
             t("permissions.messages.revoked", { name: label }),
@@ -133,7 +134,7 @@ export default function PermissionSettings() {
         }
       } catch (error) {
         success = false
-        console.error(`[Permissions] Failed to toggle ${id}`, error)
+        logger.error("Failed to toggle optional permission", { id, error })
         showResultToast(
           false,
           shouldEnable

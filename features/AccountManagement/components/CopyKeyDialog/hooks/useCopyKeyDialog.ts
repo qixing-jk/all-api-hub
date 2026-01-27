@@ -4,6 +4,12 @@ import { useTranslation } from "react-i18next"
 
 import { getApiService } from "~/services/apiService"
 import type { ApiToken, DisplaySiteData } from "~/types"
+import { createLogger } from "~/utils/logger"
+
+/**
+ * Logger scoped to the "copy key" dialog so token-loading and clipboard failures can be diagnosed safely.
+ */
+const logger = createLogger("CopyKeyDialogHook")
 
 /**
  * 将未知错误对象转换为字符串消息，方便展示。
@@ -57,11 +63,21 @@ export function useCopyKeyDialog(
       if (Array.isArray(tokensResponse)) {
         setTokens(tokensResponse)
       } else {
-        console.warn("Token response is not an array:", tokensResponse)
+        logger.warn("Token response is not an array", {
+          accountId: account.id,
+          baseUrl: account.baseUrl,
+          responseType: typeof tokensResponse,
+          siteType: account.siteType,
+        })
         setTokens([])
       }
     } catch (error) {
-      console.error("获取密钥列表失败:", error)
+      logger.error("Failed to load key list", {
+        error,
+        accountId: account.id,
+        baseUrl: account.baseUrl,
+        siteType: account.siteType,
+      })
       const errorMessage = getErrorMessage(error)
       setError(t("ui:dialog.copyKey.loadFailed", { error: errorMessage }))
     } finally {
@@ -90,7 +106,7 @@ export function useCopyKeyDialog(
         setCopiedKey(null)
       }, 2000)
     } catch (error) {
-      console.error("复制失败:", error)
+      logger.error("Failed to copy key to clipboard", { error })
       toast.error(t("ui:dialog.copyKey.copyFailedManual"))
     }
   }

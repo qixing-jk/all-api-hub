@@ -26,12 +26,16 @@ import type {
   SortOrder,
 } from "~/types"
 import type { AutoCheckinPreferences } from "~/types/autoCheckin"
+import type { LogLevel } from "~/types/logging"
 import type { ModelRedirectPreferences } from "~/types/managedSiteModelRedirect"
 import type { SortingPriorityConfig } from "~/types/sorting"
 import type { ThemeMode } from "~/types/theme"
 import { deepOverride } from "~/utils"
 import { sendRuntimeMessage } from "~/utils/browserApi"
+import { createLogger } from "~/utils/logger"
 import { DEFAULT_SORTING_PRIORITY_CONFIG } from "~/utils/sortingPriority"
+
+const logger = createLogger("UserPreferencesContext")
 
 type UserManagedSiteModelSyncConfig = NonNullable<
   UserPreferences["managedSiteModelSync"]
@@ -63,6 +67,8 @@ interface UserPreferencesContextType {
   claudeCodeRouterBaseUrl: string
   claudeCodeRouterApiKey: string
   themeMode: ThemeMode
+  loggingConsoleEnabled: boolean
+  loggingLevel: LogLevel
   tempWindowFallback: TempWindowFallbackPreferences
   tempWindowFallbackReminder: TempWindowFallbackReminderPreferences
 
@@ -95,6 +101,8 @@ interface UserPreferencesContextType {
   updateClaudeCodeRouterBaseUrl: (url: string) => Promise<boolean>
   updateClaudeCodeRouterApiKey: (key: string) => Promise<boolean>
   updateThemeMode: (themeMode: ThemeMode) => Promise<boolean>
+  updateLoggingConsoleEnabled: (enabled: boolean) => Promise<boolean>
+  updateLoggingLevel: (level: LogLevel) => Promise<boolean>
   updateAutoCheckin: (
     updates: Partial<AutoCheckinPreferences>,
   ) => Promise<boolean>
@@ -126,6 +134,7 @@ interface UserPreferencesContextType {
   resetModelRedirectConfig: () => Promise<boolean>
   resetWebdavConfig: () => Promise<boolean>
   resetThemeAndLanguage: () => Promise<boolean>
+  resetLoggingSettings: () => Promise<boolean>
   resetSortingPriorityConfig: () => Promise<boolean>
   loadPreferences: () => Promise<void>
 }
@@ -157,7 +166,7 @@ export const UserPreferencesProvider = ({
       const prefs = await userPreferences.getPreferences()
       setPreferences(prefs)
     } catch (error) {
-      console.error("加载用户偏好设置失败:", error)
+      logger.error("加载用户偏好设置失败", error)
     } finally {
       setIsLoading(false)
     }
@@ -496,6 +505,26 @@ export const UserPreferencesProvider = ({
     const success = await userPreferences.savePreferences({ themeMode })
     if (success) {
       setPreferences((prev) => (prev ? { ...prev, themeMode } : null))
+    }
+    return success
+  }, [])
+
+  const updateLoggingConsoleEnabled = useCallback(async (enabled: boolean) => {
+    const updates = { logging: { consoleEnabled: enabled } }
+    const success = await userPreferences.updateLoggingPreferences({
+      consoleEnabled: enabled,
+    })
+    if (success) {
+      setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
+    }
+    return success
+  }, [])
+
+  const updateLoggingLevel = useCallback(async (level: LogLevel) => {
+    const updates = { logging: { level } }
+    const success = await userPreferences.updateLoggingPreferences({ level })
+    if (success) {
+      setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
     }
     return success
   }, [])
@@ -906,6 +935,19 @@ export const UserPreferencesProvider = ({
     return success
   }, [])
 
+  const resetLoggingSettings = useCallback(async () => {
+    const defaults = DEFAULT_PREFERENCES.logging
+    const success = await userPreferences.updateLoggingPreferences(defaults)
+    if (success) {
+      setPreferences((prev) =>
+        prev
+          ? deepOverride(prev, { logging: defaults, lastUpdated: Date.now() })
+          : prev,
+      )
+    }
+    return success
+  }, [])
+
   const resetSortingPriorityConfig = useCallback(async () => {
     const success = await userPreferences.resetSortingPriorityConfig()
     if (success) {
@@ -952,6 +994,11 @@ export const UserPreferencesProvider = ({
     claudeCodeRouterBaseUrl: preferences?.claudeCodeRouter?.baseUrl || "",
     claudeCodeRouterApiKey: preferences?.claudeCodeRouter?.apiKey || "",
     themeMode: preferences?.themeMode || "system",
+    loggingConsoleEnabled:
+      preferences?.logging?.consoleEnabled ??
+      DEFAULT_PREFERENCES.logging.consoleEnabled,
+    loggingLevel:
+      preferences?.logging?.level ?? DEFAULT_PREFERENCES.logging.level,
     tempWindowFallback:
       preferences.tempWindowFallback ??
       (DEFAULT_PREFERENCES.tempWindowFallback as TempWindowFallbackPreferences),
@@ -980,6 +1027,8 @@ export const UserPreferencesProvider = ({
     updateClaudeCodeRouterBaseUrl,
     updateClaudeCodeRouterApiKey,
     updateThemeMode,
+    updateLoggingConsoleEnabled,
+    updateLoggingLevel,
     updateAutoCheckin,
     updateNewApiModelSync,
     updateModelRedirect,
@@ -999,6 +1048,7 @@ export const UserPreferencesProvider = ({
     resetModelRedirectConfig,
     resetWebdavConfig,
     resetThemeAndLanguage,
+    resetLoggingSettings,
     resetSortingPriorityConfig,
     loadPreferences,
   }

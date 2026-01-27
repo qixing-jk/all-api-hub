@@ -1,10 +1,13 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { AccountAutoRefresh } from "~/types/accountAutoRefresh"
+import { createLogger } from "~/utils/logger"
 
 import { getErrorMessage } from "../utils/error"
 import { accountStorage } from "./accountStorage"
 import { usageHistoryScheduler } from "./usageHistory/scheduler"
 import { userPreferences } from "./userPreferences"
+
+const logger = createLogger("AutoRefresh")
 
 /**
  * Manages account auto-refresh in the background.
@@ -25,16 +28,16 @@ class AutoRefreshService {
    */
   async initialize() {
     if (this.isInitialized) {
-      console.log("[AutoRefresh] 服务已初始化")
+      logger.debug("服务已初始化")
       return
     }
 
     try {
       await this.setupAutoRefresh()
       this.isInitialized = true
-      console.log("[AutoRefresh] 服务初始化成功")
+      logger.info("服务初始化成功")
     } catch (error) {
-      console.error("[AutoRefresh] 服务初始化失败:", error)
+      logger.error("服务初始化失败", error)
     }
   }
 
@@ -50,14 +53,14 @@ class AutoRefreshService {
       if (this.refreshTimer) {
         clearInterval(this.refreshTimer)
         this.refreshTimer = null
-        console.log("[AutoRefresh] 已清除现有定时器")
+        logger.debug("已清除现有定时器")
       }
 
       // 获取用户偏好设置（可能关闭自动刷新）
       const preferences = await userPreferences.getPreferences()
 
       if (!preferences.accountAutoRefresh?.enabled) {
-        console.log("[AutoRefresh] 自动刷新已关闭")
+        logger.info("自动刷新已关闭")
         return
       }
 
@@ -67,11 +70,11 @@ class AutoRefreshService {
         await this.performBackgroundRefresh()
       }, intervalMs)
 
-      console.log(
-        `[AutoRefresh] 自动刷新已启动，间隔: ${preferences.accountAutoRefresh.interval}秒`,
-      )
+      logger.info("自动刷新已启动", {
+        intervalSeconds: preferences.accountAutoRefresh.interval,
+      })
     } catch (error) {
-      console.error("[AutoRefresh] 设置自动刷新失败:", error)
+      logger.error("设置自动刷新失败", error)
     }
   }
 
@@ -83,26 +86,24 @@ class AutoRefreshService {
    */
   private async performBackgroundRefresh() {
     try {
-      console.log("[AutoRefresh] 开始执行后台刷新")
+      logger.info("开始执行后台刷新")
 
       // 直接调用accountStorage的刷新方法
       const result = await accountStorage.refreshAllAccounts(false)
-      console.log(
-        `[AutoRefresh] 后台刷新完成 - 成功: ${result.success}, 失败: ${result.failed}`,
-      )
+      logger.info("后台刷新完成", {
+        success: result.success,
+        failed: result.failed,
+      })
 
       // Opportunistically trigger usage-history sync after refresh cycles when enabled and due.
       void usageHistoryScheduler.runAfterRefreshSync().catch((error) => {
-        console.warn(
-          "[AutoRefresh] Usage-history sync after refresh failed:",
-          error,
-        )
+        logger.warn("Usage-history sync after refresh failed", error)
       })
 
       // 通知前端更新（如果popup是打开的）
       this.notifyFrontend("refresh_completed", result)
     } catch (error) {
-      console.error("[AutoRefresh] 后台刷新失败:", error)
+      logger.error("后台刷新失败", error)
       this.notifyFrontend("refresh_error", { error: getErrorMessage(error) })
     }
   }
@@ -113,14 +114,15 @@ class AutoRefreshService {
    */
   async refreshNow(): Promise<{ success: number; failed: number }> {
     try {
-      console.log("[AutoRefresh] 执行立即刷新")
+      logger.info("执行立即刷新")
       const result = await accountStorage.refreshAllAccounts(true)
-      console.log(
-        `[AutoRefresh] 立即刷新完成 - 成功: ${result.success}, 失败: ${result.failed}`,
-      )
+      logger.info("立即刷新完成", {
+        success: result.success,
+        failed: result.failed,
+      })
       return result
     } catch (error) {
-      console.error("[AutoRefresh] 立即刷新失败:", error)
+      logger.error("立即刷新失败", error)
       throw error
     }
   }
@@ -134,7 +136,7 @@ class AutoRefreshService {
     if (this.refreshTimer) {
       clearInterval(this.refreshTimer)
       this.refreshTimer = null
-      console.log("[AutoRefresh] 自动刷新已停止")
+      logger.info("自动刷新已停止")
     }
   }
 
@@ -150,9 +152,9 @@ class AutoRefreshService {
       await userPreferences.savePreferences(updates)
       // 重新设置定时器
       await this.setupAutoRefresh()
-      console.log("[AutoRefresh] 设置已更新:", updates)
+      logger.info("设置已更新", updates)
     } catch (error) {
-      console.error("[AutoRefresh] 更新设置失败:", error)
+      logger.error("更新设置失败", error)
     }
   }
 
@@ -188,15 +190,14 @@ class AutoRefreshService {
               "receiving end does not exist",
             )
           ) {
-            console.log("[AutoRefresh] 前端未打开，跳过通知")
+            logger.debug("前端未打开，跳过通知")
           } else {
-            console.warn("[AutoRefresh] 通知前端失败:", error)
+            logger.warn("通知前端失败", error)
           }
         })
     } catch (error) {
-      console.error(error)
       // 静默处理错误，避免影响后台刷新
-      console.warn("[AutoRefresh] 发送消息异常，可能前端未打开")
+      logger.warn("发送消息异常，可能前端未打开", error)
     }
   }
 
@@ -206,7 +207,7 @@ class AutoRefreshService {
   destroy() {
     this.stopAutoRefresh()
     this.isInitialized = false
-    console.log("[AutoRefresh] 服务已销毁")
+    logger.info("服务已销毁")
   }
 }
 
@@ -256,7 +257,7 @@ export const handleAutoRefreshMessage = async (
         sendResponse({ success: false, error: "未知的操作" })
     }
   } catch (error) {
-    console.error("[AutoRefresh] 处理消息失败:", error)
+    logger.error("处理消息失败", error)
     sendResponse({ success: false, error: getErrorMessage(error) })
   }
 }

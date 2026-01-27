@@ -20,3 +20,7 @@ export const ACCOUNT_STORAGE_KEYS = {
 export const TAG_STORAGE_KEYS = {
   TAG_STORE: "global_tag_store",
 } as const
+
+export const USER_PREFERENCES_STORAGE_KEYS = {
+  USER_PREFERENCES: "user_preferences",
+} as const

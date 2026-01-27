@@ -1,5 +1,11 @@
 import { getManifest } from "~/utils/browserApi"
 import { formatDevActionTitle, getDevBadgeText } from "~/utils/devBranding"
+import { createLogger } from "~/utils/logger"
+
+/**
+ * Unified logger scoped to development-only toolbar branding.
+ */
+const logger = createLogger("DevActionBranding")
 
 /**
  * Adds a small dev-only visual indicator on the extension toolbar icon.
@@ -31,6 +37,6 @@ export async function applyDevActionBranding() {
       await actionApi.setTitle({ title })
     }
   } catch (error) {
-    console.debug("[DevBranding] Failed to apply toolbar badge/title", error)
+    logger.debug("Failed to apply toolbar badge/title", error)
   }
 }

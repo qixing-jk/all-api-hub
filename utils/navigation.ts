@@ -11,7 +11,13 @@ import {
   focusTab,
   getExtensionURL,
 } from "~/utils/browserApi"
+import { createLogger } from "~/utils/logger"
 import { joinUrl } from "~/utils/url"
+
+/**
+ * Unified logger scoped to navigation helpers and options-page routing.
+ */
+const logger = createLogger("Navigation")
 
 /**
  * Closes the current window when running inside the extension popup.
@@ -51,7 +57,7 @@ const isOnOptionsPage = () => {
       currentUrl.pathname === optionsUrl.pathname
     )
   } catch (error) {
-    console.error("Failed to detect options page:", error)
+    logger.warn("Failed to detect options page", error)
     return false
   }
 }
@@ -180,7 +186,7 @@ const queryTabs = async (
       callback(tabs)
     }
   } catch (error) {
-    console.error(error)
+    logger.warn("Failed to query tabs", error)
   }
 }
 

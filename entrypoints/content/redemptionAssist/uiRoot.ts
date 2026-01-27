@@ -5,6 +5,12 @@ import { createShadowRootUi } from "wxt/utils/content-script-ui/shadow-root"
 
 import { REDEMPTION_TOAST_HOST_TAG } from "~/entrypoints/content/redemptionAssist"
 import { ContentReactRoot } from "~/entrypoints/content/redemptionAssist/components/ContentReactRoot"
+import { createLogger } from "~/utils/logger"
+
+/**
+ * Unified logger scoped to mounting the content-script redemption assist UI root.
+ */
+const logger = createLogger("RedemptionAssistUiRoot")
 
 let ctxRef: ContentScriptContext | null = null
 let redemptionToastRoot: Root | null = null
@@ -25,9 +31,7 @@ export function setContentScriptContext(ctx: ContentScriptContext) {
 export async function ensureRedemptionToastUi(): Promise<void> {
   if (redemptionToastRoot) return
   if (!ctxRef) {
-    console.warn(
-      "[RedemptionAssist][Content] ContentScriptContext not set, cannot mount UI.",
-    )
+    logger.warn("ContentScriptContext not set, cannot mount UI")
     return
   }
 

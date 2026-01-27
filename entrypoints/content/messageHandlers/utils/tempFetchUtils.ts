@@ -1,4 +1,11 @@
+import { createLogger } from "~/utils/logger"
+
 export type TempWindowResponseType = "json" | "text" | "arrayBuffer" | "blob"
+
+/**
+ * Unified logger scoped to content-side temp window fetch helpers.
+ */
+const logger = createLogger("TempFetchUtils")
 
 /**
  * Normalizes fetch options coming from background scripts.
@@ -76,10 +83,7 @@ export async function parseResponseData(
       try {
         return JSON.parse(text)
       } catch (error) {
-        console.warn(
-          "[Content] Failed to parse JSON response, fallback to text",
-          error,
-        )
+        logger.warn("Failed to parse JSON response, fallback to text", error)
         return text
       }
     }

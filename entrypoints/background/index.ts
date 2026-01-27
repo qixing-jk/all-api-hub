@@ -15,6 +15,7 @@ import {
 import { userPreferences } from "~/services/userPreferences"
 import { createTab, getManifest, onInstalled } from "~/utils/browserApi"
 import { getDocsChangelogUrl } from "~/utils/docsLinks"
+import { createLogger } from "~/utils/logger"
 import { openOrFocusOptionsMenuItem } from "~/utils/navigation"
 
 import { applyActionClickBehavior } from "./actionClickBehavior"
@@ -26,8 +27,13 @@ import {
 import { applyDevActionBranding } from "./devActionBranding"
 import { initializeServices } from "./servicesInit"
 
+/**
+ * Unified logger scoped to the background entrypoint and lifecycle hooks.
+ */
+const logger = createLogger("BackgroundEntrypoint")
+
 export default defineBackground(() => {
-  console.log("Hello background!", { id: browser.runtime.id })
+  logger.debug("Hello background", { id: browser.runtime.id })
 
   // Apply dev-only branding early so the toolbar action is visually distinguishable.
   void applyDevActionBranding()
@@ -45,23 +51,21 @@ export default defineBackground(() => {
    * 进行配置迁移和服务初始化
    */
   onInstalled((details) => {
-    console.log(
-      "[Background] 插件安装/更新，初始化自动刷新服务和WebDAV自动同步服务",
-    )
+    logger.info("插件安装/更新，初始化自动刷新服务和 WebDAV 自动同步服务")
 
     void (async () => {
       await initializeServices()
 
       if (details.reason === "install" || details.reason === "update") {
-        console.log(`Extension ${details.reason}: triggering config migration`)
+        logger.info("Triggering config migration", { reason: details.reason })
 
         // Migrate user preferences
         await userPreferences.getPreferences()
-        console.log("[Background] User preferences migration completed")
+        logger.info("User preferences migration completed")
 
         // Migrate legacy tag strings into global tag store + tagIds.
         await tagStorage.ensureLegacyMigration()
-        console.log("[Background] Tag store migration completed")
+        logger.info("Tag store migration completed")
 
         // Load all accounts and migrate
         const accounts = await accountStorage.getAllAccounts()
@@ -72,13 +76,11 @@ export default defineBackground(() => {
           // Save migrated accounts back
           const config = await accountStorage.exportData()
           await accountStorage.importData({ ...config, accounts: migrated })
-          console.log(`Migration complete: ${migratedCount} accounts updated`)
+          logger.info("Account migration completed", { migratedCount })
         }
 
         if (details.reason === "install" && OPTIONAL_PERMISSIONS.length > 0) {
-          console.log(
-            "[Background] First install detected, opening permissions onboarding",
-          )
+          logger.info("First install detected, opening permissions onboarding")
           openOrFocusOptionsMenuItem(MENU_ITEM_IDS.BASIC, {
             tab: "permissions",
             onboarding: "permissions",
@@ -92,12 +94,12 @@ export default defineBackground(() => {
             if (allGranted) {
               // No missing permissions; refresh snapshot quietly.
               await setLastSeenOptionalPermissions()
-              console.log(
-                "[Permissions] New optional permissions detected but already granted; snapshot refreshed without prompting.",
+              logger.info(
+                "New optional permissions detected but already granted; snapshot refreshed without prompting",
               )
             } else {
-              console.log(
-                "[Background] Update detected with new optional permissions; prompting user to re-confirm.",
+              logger.info(
+                "Update detected with new optional permissions; prompting user to re-confirm",
               )
               openOrFocusOptionsMenuItem(MENU_ITEM_IDS.BASIC, {
                 tab: "permissions",

@@ -13,11 +13,17 @@ import { USAGE_HISTORY_SCHEDULE_MODE } from "~/types/usageHistory"
 import type { UsageHistoryStore } from "~/types/usageHistory"
 import { hasAlarmsAPI, sendRuntimeMessage } from "~/utils/browserApi"
 import { getErrorMessage } from "~/utils/error"
+import { createLogger } from "~/utils/logger"
 
 import UsageHistorySyncSettingsSection from "./UsageHistorySyncSettingsSection"
 import UsageHistorySyncStateTable, {
   type UsageHistoryAccountRow,
 } from "./UsageHistorySyncStateTable"
+
+/**
+ * Unified logger scoped to the Basic Settings usage-history sync tab.
+ */
+const logger = createLogger("UsageHistorySyncTab")
 
 /**
  * Basic Settings tab for usage-history synchronization: sync settings + per-account sync state.
@@ -72,7 +78,7 @@ export default function UsageHistorySyncTab() {
       setAccounts(nextAccounts)
       setStore(nextStore)
     } catch (error) {
-      console.error("[UsageHistorySyncTab] Failed to load data:", error)
+      logger.error("Failed to load data", error)
     } finally {
       setIsLoading(false)
     }

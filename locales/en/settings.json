@@ -285,6 +285,20 @@
     "clickSwitch": "Click to switch to {{nextMode}} mode",
     "toggle": "Theme toggle, current {{currentMode}} mode, click to switch to {{nextMode}} mode"
   },
+  "logging": {
+    "title": "Logging",
+    "description": "Control console logging for troubleshooting and diagnostics.",
+    "consoleEnabled": "Enable console logging",
+    "consoleEnabledDesc": "When disabled, All API Hub will not emit any console output at any level (including errors).",
+    "minLevel": "Minimum log level",
+    "minLevelDesc": "When console logging is enabled, logs below this level are suppressed.",
+    "levels": {
+      "debug": "Debug",
+      "info": "Info",
+      "warn": "Warn",
+      "error": "Error"
+    }
+  },
   "messages": {
     "updateSuccess": "{{name}} Update successful",
     "updateFailed": "{{name}} Update failed",

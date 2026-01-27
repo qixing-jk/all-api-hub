@@ -15,6 +15,7 @@ import { VersionBadge } from "~/components/VersionBadge"
 import { COLORS } from "~/constants/designTokens"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { isExtensionSidePanel } from "~/utils/browser"
+import { createLogger } from "~/utils/logger"
 import {
   openFullAccountManagerPage,
   openSettingsPage,
@@ -22,6 +23,11 @@ import {
 } from "~/utils/navigation"
 
 import CompactThemeToggle from "./ThemeToggle"
+
+/**
+ * Unified logger scoped to the popup header component.
+ */
+const logger = createLogger("PopupHeaderSection")
 
 /**
  * Popup header with app identity (including version), theme toggle, and navigation controls.
@@ -48,7 +54,7 @@ export default function HeaderSection() {
         error: t("account:refresh.refreshFailed"),
       })
     } catch (error) {
-      console.error("Error during global refresh:", error)
+      logger.error("Error during global refresh", error)
     }
   }, [handleRefresh, t])
 

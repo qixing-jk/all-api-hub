@@ -32,6 +32,7 @@ import type {
 } from "~/types/usageHistory"
 import { getErrorMessage } from "~/utils/error"
 import { formatTokenCount } from "~/utils/formatters"
+import { createLogger } from "~/utils/logger"
 import { formatPriceCompact } from "~/utils/modelPricing"
 import { navigateWithinOptionsPage } from "~/utils/navigation"
 
@@ -54,6 +55,11 @@ import {
   resolveLatencyDailyForTokens,
   topNWithOther,
 } from "./echartsOptions"
+
+/**
+ * Unified logger scoped to the Usage Analytics options page.
+ */
+const logger = createLogger("UsageAnalyticsPage")
 
 type UsageAnalyticsChartDisplayType = "pie" | "bar"
 
@@ -170,7 +176,7 @@ export default function UsageAnalytics() {
       setAccounts(nextAccounts)
       setStore(nextStore)
     } catch (error) {
-      console.error("[UsageAnalytics] Failed to load data:", error)
+      logger.error("Failed to load data", error)
     } finally {
       setIsLoading(false)
     }

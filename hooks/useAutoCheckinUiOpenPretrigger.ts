@@ -11,6 +11,12 @@ import type {
 } from "~/types/autoCheckin"
 import { onRuntimeMessage, sendRuntimeMessage } from "~/utils/browserApi"
 import { safeRandomUUID } from "~/utils/identifier"
+import { createLogger } from "~/utils/logger"
+
+/**
+ * Unified logger scoped to UI-open auto check-in pretrigger hooks.
+ */
+const logger = createLogger("AutoCheckinUiOpenPretrigger")
 
 interface UiOpenPretriggerDialogState {
   isOpen: boolean
@@ -94,10 +100,7 @@ export function useAutoCheckinUiOpenPretrigger(): {
           pendingRetry: Boolean(response?.pendingRetry),
         })
       } catch (error) {
-        console.error(
-          "[AutoCheckin][UI] UI-open pretrigger request failed:",
-          error,
-        )
+        logger.error("UI-open pretrigger request failed", error)
       } finally {
         unsubscribe()
       }

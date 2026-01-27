@@ -8,6 +8,12 @@ import type {
   DisplaySiteData,
   SiteAccount,
 } from "~/types"
+import { createLogger } from "~/utils/logger"
+
+/**
+ * Unified logger scoped to account data loading and refresh hooks.
+ */
+const logger = createLogger("AccountDataHook")
 
 /**
  * Snapshot of account-derived state and handlers returned by {@link useAccountData}.
@@ -111,12 +117,12 @@ export const useAccountData = (): UseAccountDataResult => {
         setIsInitialLoad(false)
       }
 
-      console.log("账号数据加载完成:", {
+      logger.debug("账号数据加载完成", {
         accountCount: allAccounts.length,
         stats: accountStats,
       })
     } catch (error) {
-      console.error("加载账号数据失败:", error)
+      logger.error("加载账号数据失败", error)
     }
   }, [isInitialLoad, prevTotalConsumption, prevBalances])
 
@@ -129,7 +135,7 @@ export const useAccountData = (): UseAccountDataResult => {
     try {
       // 刷新所有账号数据
       const refreshResult = await accountStorage.refreshAllAccounts()
-      console.log("刷新结果:", refreshResult)
+      logger.debug("刷新结果", refreshResult)
 
       // 重新加载显示数据
       await loadAccountData()
@@ -138,7 +144,7 @@ export const useAccountData = (): UseAccountDataResult => {
       // 返回刷新结果，让组件层处理 UI 反馈
       return refreshResult
     } catch (error) {
-      console.error("刷新数据失败:", error)
+      logger.error("刷新数据失败", error)
       // 即使刷新失败也尝试加载本地数据
       await loadAccountData()
       throw error

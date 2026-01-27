@@ -17,6 +17,7 @@ import { DeepPartial } from "~/types/utils"
 import { deepOverride } from "~/utils"
 import { getErrorMessage } from "~/utils/error"
 import { safeRandomUUID } from "~/utils/identifier"
+import { createLogger } from "~/utils/logger"
 
 import {
   migrateAccountConfig,
@@ -31,6 +32,8 @@ import { userPreferences } from "./userPreferences"
 
 // Re-export for backward compatibility across the codebase.
 export { ACCOUNT_STORAGE_KEYS }
+
+const logger = createLogger("AccountStorage")
 
 // 默认配置
 const createDefaultAccountConfig = (): AccountStorageConfig => ({
@@ -119,15 +122,15 @@ class AccountStorageService {
 
       if (migratedCount > 0) {
         // If any account schemas were upgraded, persist the normalized set immediately
-        console.log(
-          `[AccountStorage] ${migratedCount} accounts migrated, saving updated accounts...`,
-        )
+        logger.info("Accounts migrated; persisting updated accounts", {
+          migratedCount,
+        })
         await this.saveAccounts(accounts)
       }
 
       return accounts
     } catch (error) {
-      console.error("获取账号信息失败:", error)
+      logger.error("获取账号信息失败", error)
       return []
     }
   }
@@ -155,9 +158,9 @@ class AccountStorageService {
       const account = accounts.find((acc) => acc.id === id)
 
       if (account && needsConfigMigration(account)) {
-        console.log(
-          `[AccountStorage] Migrating single account ${account.id} on fetch.`,
-        )
+        logger.debug("Migrating single account on fetch", {
+          accountId: account.id,
+        })
         const migratedAccount = migrateAccountConfig(account)
         await this.updateAccount(id, migratedAccount)
         return migratedAccount
@@ -165,7 +168,7 @@ class AccountStorageService {
 
       return account || null
     } catch (error) {
-      console.error("获取账号信息失败:", error)
+      logger.error("获取账号信息失败", error)
       return null
     }
   }
@@ -178,9 +181,10 @@ class AccountStorageService {
     userId?: string | number,
   ): Promise<SiteAccount | null> {
     try {
-      console.log(
-        `[AccountStorage] Searching for account with baseUrl: ${baseUrl}, userId: ${userId}`,
-      )
+      logger.debug("Searching for account by baseUrl + userId", {
+        baseUrl,
+        userId,
+      })
       const accounts = await this.getAllAccounts()
       const account = accounts.find(
         (acc) =>
@@ -189,30 +193,32 @@ class AccountStorageService {
       )
 
       if (account && needsConfigMigration(account)) {
-        console.log(
-          `[AccountStorage] Migrating account ${account.id} (baseUrl: ${baseUrl}, userId: ${userId}) on fetch.`,
-        )
+        logger.debug("Migrating account on fetch", {
+          accountId: account.id,
+          baseUrl,
+          userId,
+        })
         const migratedAccount = migrateAccountConfig(account)
         await this.updateAccount(account.id, migratedAccount)
         return migratedAccount
       }
 
       if (account) {
-        console.log(
-          `[AccountStorage] Found account: ${account.site_name} (id: ${account.id})`,
-        )
+        logger.debug("Account found", {
+          accountId: account.id,
+          siteName: account.site_name,
+        })
       } else {
-        console.log(
-          `[AccountStorage] No account found with baseUrl: ${baseUrl}, userId: ${userId}`,
-        )
+        logger.debug("No account found", { baseUrl, userId })
       }
 
       return account || null
     } catch (error) {
-      console.error(
-        `[AccountStorage] Failed to get account by baseUrl and userId:`,
+      logger.error("Failed to get account by baseUrl and userId", {
+        baseUrl,
+        userId,
         error,
-      )
+      })
       return null
     }
   }
@@ -237,7 +243,7 @@ class AccountStorageService {
         }) || null
       )
     } catch (error) {
-      console.error("检查 URL 是否存在时出错:", error)
+      logger.error("检查 URL 是否存在时出错", error)
       return null
     }
   }
@@ -249,7 +255,7 @@ class AccountStorageService {
     accountData: Omit<SiteAccount, "id" | "created_at" | "updated_at">,
   ): Promise<string> {
     try {
-      console.log("[AccountStorage] 开始添加新账号:", accountData.site_name)
+      logger.info("开始添加新账号", { siteName: accountData.site_name })
       return await this.mutateStorageConfig((config) => {
         const now = Date.now()
         const newAccount: SiteAccount = {
@@ -265,7 +271,7 @@ class AccountStorageService {
         return { result: newAccount.id, changed: true }
       })
     } catch (error) {
-      console.error("[AccountStorage] 添加账号失败:", error)
+      logger.error("添加账号失败", error)
       throw error
     }
   }
@@ -306,7 +312,7 @@ class AccountStorageService {
         return { result: true, changed: true }
       })
     } catch (error) {
-      console.error(t("messages:storage.updateFailed", { error: "" }), error)
+      logger.error(t("messages:storage.updateFailed", { error: "" }), error)
       return false
     }
   }
@@ -332,10 +338,13 @@ class AccountStorageService {
         const filteredAccounts = accounts.filter((account) => account.id !== id)
 
         if (filteredAccounts.length === accounts.length) {
-          console.error(
-            `账号 ${id} 不存在，当前账号列表:`,
-            accounts.map((acc) => ({ id: acc.id, name: acc.site_name })),
-          )
+          logger.warn("Attempted to delete missing account", {
+            accountId: id,
+            existingAccounts: accounts.map((acc) => ({
+              id: acc.id,
+              name: acc.site_name,
+            })),
+          })
           throw new Error(t("messages:storage.accountNotFound", { id }))
         }
 
@@ -349,7 +358,7 @@ class AccountStorageService {
         return { result: true, changed: true }
       })
     } catch (error) {
-      console.error("删除账号失败:", error)
+      logger.error("删除账号失败", { accountId: id, error })
       throw error // 重新抛出错误，让调用者处理
     }
   }
@@ -362,7 +371,7 @@ class AccountStorageService {
       const config = await this.getStorageConfig()
       return config.pinnedAccountIds || []
     } catch (error) {
-      console.error("获取置顶账号列表失败:", error)
+      logger.error("获取置顶账号列表失败", error)
       return []
     }
   }
@@ -375,7 +384,7 @@ class AccountStorageService {
       const config = await this.getStorageConfig()
       return config.orderedAccountIds || []
     } catch (error) {
-      console.error("获取自定义排序列表失败:", error)
+      logger.error("获取自定义排序列表失败", error)
       return []
     }
   }
@@ -394,7 +403,7 @@ class AccountStorageService {
         return { result: true, changed: true }
       })
     } catch (error) {
-      console.error("设置置顶账号列表失败:", error)
+      logger.error("设置置顶账号列表失败", error)
       return false
     }
   }
@@ -413,7 +422,7 @@ class AccountStorageService {
         return { result: true, changed: true }
       })
     } catch (error) {
-      console.error("设置自定义排序列表失败:", error)
+      logger.error("设置自定义排序列表失败", error)
       return false
     }
   }
@@ -433,7 +442,7 @@ class AccountStorageService {
 
       return await this.setPinnedList(newPinnedIds)
     } catch (error) {
-      console.error("置顶账号失败:", error)
+      logger.error("置顶账号失败", { accountId: id, error })
       return false
     }
   }
@@ -453,7 +462,7 @@ class AccountStorageService {
 
       return true
     } catch (error) {
-      console.error("取消置顶账号失败:", error)
+      logger.error("取消置顶账号失败", { accountId: id, error })
       return false
     }
   }
@@ -466,7 +475,7 @@ class AccountStorageService {
       const pinnedIds = await this.getPinnedList()
       return pinnedIds.includes(id)
     } catch (error) {
-      console.error("检查账号置顶状态失败:", error)
+      logger.error("检查账号置顶状态失败", { accountId: id, error })
       return false
     }
   }
@@ -510,7 +519,7 @@ class AccountStorageService {
         },
       })
     } catch (error) {
-      console.error("标记账号为已签到失败:", error)
+      logger.error("标记账号为已签到失败", { accountId: id, error })
       return false
     }
   }
@@ -550,7 +559,7 @@ class AccountStorageService {
         },
       })
     } catch (error) {
-      console.error("标记账号外部签到为已完成失败:", error)
+      logger.error("标记账号外部签到为已完成失败", { accountId: id, error })
       return false
     }
   }
@@ -582,10 +591,10 @@ class AccountStorageService {
       })
 
       if (didReset) {
-        console.log("[AccountStorage] 已重置过期的签到状态")
+        logger.info("已重置过期的签到状态")
       }
     } catch (error) {
-      console.error("重置签到状态失败:", error)
+      logger.error("重置签到状态失败", error)
     }
   }
 
@@ -601,18 +610,20 @@ class AccountStorageService {
       }
 
       if (AccountStorageService.isAccountDisabled(account)) {
-        console.log(
-          `[AccountStorage] 账号 ${account.site_name} 已禁用，跳过刷新`,
-        )
+        logger.debug("账号已禁用，跳过刷新", {
+          accountId: account.id,
+          siteName: account.site_name,
+        })
         return { account, refreshed: false, skippedReason: "account_disabled" }
       }
 
       account = await this.refreshSiteMetadataIfNeeded(account)
 
       if (await this.shouldSkipRefresh(account, force)) {
-        console.log(
-          `[AccountStorage] 账号 ${account.site_name} 刷新间隔未到，跳过刷新`,
-        )
+        logger.debug("账号刷新间隔未到，跳过刷新", {
+          accountId: account.id,
+          siteName: account.site_name,
+        })
         return { account, refreshed: false }
       }
 
@@ -647,10 +658,7 @@ class AccountStorageService {
           }
         }
       } catch (error) {
-        console.warn(
-          `[AccountStorage] Failed to determine check-in support for ${baseUrl}:`,
-          error,
-        )
+        logger.warn("Failed to determine check-in support", { baseUrl, error })
       }
 
       // 刷新账号数据
@@ -719,7 +727,11 @@ class AccountStorageService {
           today_income: todayIncome.today_income,
         }
       } catch (error) {
-        console.error(`获取账号 ${account.site_name} 今日收入失败:`, error)
+        logger.warn("获取账号今日收入失败", {
+          accountId: account.id,
+          siteName: account.site_name,
+          error,
+        })
         // 如果获取收入失败，设置为0
         updateData.account_info = {
           ...(updateData.account_info || account.account_info),
@@ -733,15 +745,18 @@ class AccountStorageService {
 
       // 记录健康状态变化
       if (account.health?.status !== result.healthStatus.status) {
-        console.log(
-          `账号 ${account.site_name} 健康状态变化: ${account.health?.status} -> ${result.healthStatus.status}`,
-        )
-        console.log(`状态详情: ${result.healthStatus.message}`)
+        logger.info("账号健康状态变化", {
+          accountId: account.id,
+          siteName: account.site_name,
+          from: account.health?.status,
+          to: result.healthStatus.status,
+          detail: result.healthStatus.message,
+        })
       }
 
       return { account: updatedAccount, refreshed: true }
     } catch (error) {
-      console.error("刷新账号数据失败:", error)
+      logger.error("刷新账号数据失败", { accountId: id, error })
       // 在出现异常时也尝试更新健康状态为unknown
       try {
         await this.updateAccount(id, {
@@ -753,7 +768,7 @@ class AccountStorageService {
           last_sync_time: Date.now(),
         })
       } catch (updateError) {
-        console.error("更新健康状态失败:", updateError)
+        logger.error("更新健康状态失败", { accountId: id, error: updateError })
       }
       return null
     }
@@ -786,10 +801,11 @@ class AccountStorageService {
         }
       } else {
         failedCount++
-        console.error(
-          `刷新账号 ${accounts[index].site_name} 失败:`,
-          result.status === "rejected" ? result.reason : "未知错误",
-        )
+        logger.error("刷新账号失败", {
+          accountId: accounts[index]?.id,
+          siteName: accounts[index]?.site_name,
+          reason: result.status === "rejected" ? result.reason : "未知错误",
+        })
       }
     })
 
@@ -836,7 +852,7 @@ class AccountStorageService {
         },
       )
     } catch (error) {
-      console.error("计算统计信息失败:", error)
+      logger.error("计算统计信息失败", error)
       return {
         total_quota: 0,
         today_total_consumption: 0,
@@ -931,7 +947,7 @@ class AccountStorageService {
       await this.storage.remove(ACCOUNT_STORAGE_KEYS.ACCOUNTS)
       return true
     } catch (error) {
-      console.error("清空数据失败:", error)
+      logger.error("清空数据失败", error)
       return false
     }
   }
@@ -964,9 +980,9 @@ class AccountStorageService {
           migrateAccountsConfig(accountsToImport)
 
         if (migratedCount > 0) {
-          console.log(
-            `[Migration] Upgraded ${migratedCount} imported account(s) to config v1`,
-          )
+          logger.info("Upgraded imported account(s) during import migration", {
+            migratedCount,
+          })
         }
 
         const filteredPinnedIds = (backupConfig.pinnedAccountIds || []).filter(
@@ -992,24 +1008,19 @@ class AccountStorageService {
         await this.storage.set(ACCOUNT_STORAGE_KEYS.ACCOUNTS, nextConfig)
 
         if (data.pinnedAccountIds) {
-          console.log(
-            `[Import] Imported ${pinnedToPersist.length} pinned account(s)`,
-          )
+          logger.info("Imported pinned account(s)", {
+            pinnedCount: pinnedToPersist.length,
+          })
         }
 
         return { migratedCount }
       } catch (error) {
-        console.error(
-          "[Migration Error] Import migration failed, restoring from backup:",
-          error,
-        )
+        logger.error("Import migration failed; restoring from backup", error)
         await this.storage.set(
           ACCOUNT_STORAGE_KEYS.ACCOUNTS,
           this.normalizeConfig(backupConfig),
         )
-        console.log(
-          "[Migration] Safety fallback: restored accounts from backup",
-        )
+        logger.warn("Safety fallback applied: restored accounts from backup")
         throw error // Re-throw to inform caller of failure
       }
     })
@@ -1025,7 +1036,7 @@ class AccountStorageService {
       )) as AccountStorageConfig
       return config || createDefaultAccountConfig()
     } catch (error) {
-      console.error("获取存储配置失败:", error)
+      logger.error("获取存储配置失败", error)
       return createDefaultAccountConfig()
     }
   }
@@ -1037,7 +1048,7 @@ class AccountStorageService {
    * accounts after deletions or imports.
    */
   private async saveAccounts(accounts: SiteAccount[]): Promise<void> {
-    console.log("[AccountStorage] 开始保存账号数据，数量:", accounts.length)
+    logger.debug("开始保存账号数据", { accountCount: accounts.length })
     await this.mutateStorageConfig((existingConfig) => {
       const filteredPinnedIds = (existingConfig.pinnedAccountIds || []).filter(
         (id) => accounts.some((account) => account.id === id),
@@ -1049,7 +1060,7 @@ class AccountStorageService {
       existingConfig.pinnedAccountIds = filteredPinnedIds
       existingConfig.orderedAccountIds = filteredOrderedIds
 
-      console.log("[AccountStorage] 保存的配置数据:", {
+      logger.debug("保存的配置数据", {
         accountCount: accounts.length,
         pinnedCount: filteredPinnedIds.length,
         orderedCount: filteredOrderedIds.length,
@@ -1057,7 +1068,7 @@ class AccountStorageService {
       })
       return { result: undefined, changed: true }
     })
-    console.log("[AccountStorage] 账号数据保存完成")
+    logger.debug("账号数据保存完成")
   }
 
   /**
@@ -1139,10 +1150,10 @@ class AccountStorageService {
           updates.site_type = detectedType
         }
       } catch (error) {
-        console.warn(
-          `[AccountStorage] Failed to detect site type for ${normalizedUrl}:`,
+        logger.warn("Failed to detect site type", {
+          baseUrl: normalizedUrl,
           error,
-        )
+        })
       }
     }
 

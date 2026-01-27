@@ -12,7 +12,13 @@ import { hasValidManagedSiteConfig } from "~/services/managedSiteService"
 import { ModelRedirectService } from "~/services/modelRedirect"
 import { AuthTypeEnum } from "~/types"
 import { ALL_PRESET_STANDARD_MODELS } from "~/types/managedSiteModelRedirect"
+import { createLogger } from "~/utils/logger"
 import { getManagedSiteAdminConfig } from "~/utils/managedSite"
+
+/**
+ * Unified logger scoped to the Basic Settings model redirect section.
+ */
+const logger = createLogger("ModelRedirectSettings")
 
 /**
  * Configures model redirect feature: enable toggle, model list, regeneration.
@@ -75,10 +81,7 @@ export default function ModelRedirectSettings() {
       }
       toast.success(t("messages.updateSuccess"))
     } catch (error) {
-      console.error(
-        "[ModelRedirectSettings] Failed to update preferences",
-        error,
-      )
+      logger.error("Failed to update preferences", error)
       toast.error(t("messages.updateFailed"))
     } finally {
       setIsUpdating(false)
@@ -97,7 +100,7 @@ export default function ModelRedirectSettings() {
         toast.error(t("messages.regenerateFailed", { error: errorMessage }))
       }
     } catch (error) {
-      console.error("Failed to regenerate mapping:", error)
+      logger.error("Failed to regenerate mapping", error)
       toast.error(t("messages.regenerateFailed", { error: String(error) }))
     } finally {
       setIsRegenerating(false)

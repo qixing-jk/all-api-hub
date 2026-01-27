@@ -15,8 +15,14 @@ import {
   ExecutionResult,
   ExecutionStatistics,
 } from "~/types/managedSiteModelSync"
+import { createLogger } from "~/utils/logger"
 
 import { RateLimiter } from "./rateLimiter"
+
+/**
+ * Unified logger scoped to managed-site model synchronization.
+ */
+const logger = createLogger("ManagedSiteModelSync")
 
 /**
  * New API Model Sync Service
@@ -121,7 +127,7 @@ export class ModelSyncService {
         },
       )
     } catch (error) {
-      console.error("[ManagedSiteModelSync] Failed to list channels:", error)
+      logger.error("Failed to list channels", error)
       throw error
     }
   }
@@ -147,7 +153,7 @@ export class ModelSyncService {
         channelId,
       )
     } catch (error: any) {
-      console.error("[ManagedSiteModelSync] Failed to fetch models:", error)
+      logger.error("Failed to fetch models", { channelId, error })
       throw error
     }
   }
@@ -177,7 +183,7 @@ export class ModelSyncService {
         models.join(","),
       )
     } catch (error: any) {
-      console.error("[ManagedSiteModelSync] Failed to update channel:", error)
+      logger.error("Failed to update channel", { channelId: channel.id, error })
       throw error
     }
   }
@@ -212,10 +218,10 @@ export class ModelSyncService {
         JSON.stringify(modelMapping),
       )
     } catch (error) {
-      console.error(
-        `[ManagedSiteModelSync] Failed to update channel mapping for channel ${channel.id}:`,
+      logger.error("Failed to update channel mapping", {
+        channelId: channel.id,
         error,
-      )
+      })
       throw error
     }
   }
@@ -271,10 +277,10 @@ export class ModelSyncService {
         }
       } catch (error: any) {
         lastError = error
-        console.error(
-          `[ManagedSiteModelSync] Unexpected error for channel ${channel.id}:`,
+        logger.error("Unexpected error for channel", {
+          channelId: channel.id,
           error,
-        )
+        })
 
         attempts += 1
         if (attempts > maxRetries) {
@@ -331,10 +337,10 @@ export class ModelSyncService {
         try {
           result = await this.runForChannel(channel, maxRetries)
         } catch (error: any) {
-          console.error(
-            `[ManagedSiteModelSync] Unexpected error for channel ${channel.id}:`,
+          logger.error("Unexpected error for channel", {
+            channelId: channel.id,
             error,
-          )
+          })
           result = {
             channelId: channel.id,
             channelName: channel.name,
@@ -504,10 +510,10 @@ export class ModelSyncService {
 
       return model.toLowerCase().includes(pattern.toLowerCase())
     } catch (error) {
-      console.warn(
-        `[ManagedSiteModelSync] Invalid channel filter pattern for channel rule ${rule.id}:`,
+      logger.warn("Invalid channel filter pattern for channel rule", {
+        ruleId: rule.id,
         error,
-      )
+      })
       return false
     }
   }

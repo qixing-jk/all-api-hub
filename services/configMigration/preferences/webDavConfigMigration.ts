@@ -1,5 +1,8 @@
 import { UserPreferences } from "~/services/userPreferences"
 import { DEFAULT_WEBDAV_SETTINGS } from "~/types/webdav"
+import { createLogger } from "~/utils/logger"
+
+const logger = createLogger("WebDavConfigMigration")
 
 /**
  * Checks if the given user preferences object contains any of the old flat WebDAV fields.
@@ -50,10 +53,18 @@ export function migrateWebDavConfig(prefs: UserPreferences) {
       prefs.webdavSyncStrategy ?? DEFAULT_WEBDAV_SETTINGS.syncStrategy,
   }
 
-  console.log(
-    "[PreferencesMigration] Migrated WebDAV settings:",
-    webdavSettings,
-  )
+  logger.debug("Migrated WebDAV settings", {
+    url: webdavSettings.url,
+    username: webdavSettings.username,
+    hasPassword: Boolean(webdavSettings.password),
+    backupEncryptionEnabled: webdavSettings.backupEncryptionEnabled,
+    hasBackupEncryptionPassword: Boolean(
+      webdavSettings.backupEncryptionPassword,
+    ),
+    autoSync: webdavSettings.autoSync,
+    syncInterval: webdavSettings.syncInterval,
+    syncStrategy: webdavSettings.syncStrategy,
+  })
 
   // Create new preferences object with nested webdav
   const {

@@ -28,13 +28,18 @@ import {
 } from "~/utils/dnrCookieInjector"
 import { getErrorMessage } from "~/utils/error"
 import { safeRandomUUID } from "~/utils/identifier"
+import { createLogger } from "~/utils/logger"
 import { isProtectionBypassFirefoxEnv } from "~/utils/protectionBypass"
 import { sanitizeUrlForLog } from "~/utils/sanitizeUrlForLog"
 import { TempWindowFetchParams } from "~/utils/tempWindowFetch"
 
+/**
+ * Unified logger scoped to background temp-window lifecycle and fetch helpers.
+ */
+const logger = createLogger("TempWindowPool")
+
 const TEMP_CONTEXT_IDLE_TIMEOUT = 5000
 const QUIET_WINDOW_IDLE_TIMEOUT = 3000
-const TEMP_WINDOW_LOG_PREFIX = "[Background][TempWindow]"
 const DEFAULT_TEMP_CONTEXT_MODE: TempWindowFallbackPreferences["tempContextMode"] =
   "composite"
 
@@ -157,17 +162,13 @@ export async function handleTempWindowGetRenderedTitle(
 }
 
 /**
- * Log temporary window events to console.
+ * Log temporary window events through the unified logger.
  */
 function logTempWindow(event: string, details?: Record<string, unknown>) {
   try {
-    if (details && Object.keys(details).length > 0) {
-      console.log(`${TEMP_WINDOW_LOG_PREFIX} ${event}`, details)
-    } else {
-      console.log(`${TEMP_WINDOW_LOG_PREFIX} ${event}`)
-    }
+    logger.debug(event, details)
   } catch {
-    // ignore sanitizeUrlForLog errors
+    // ignore logging errors
   }
 }
 
@@ -243,10 +244,7 @@ function handleTempWindowRemoved(windowId: number) {
         reason: "windowRemoved",
       }),
     ).catch((error) => {
-      console.error(
-        "[Background] Failed to cleanup removed window context",
-        error,
-      )
+      logger.error("Failed to cleanup removed window context", error)
     })
   }
 }
@@ -277,7 +275,7 @@ function handleTempTabRemoved(tabId: number) {
         reason: "tabRemoved",
       }),
     ).catch((error) => {
-      console.error("[Background] Failed to cleanup removed tab context", error)
+      logger.error("Failed to cleanup removed tab context", error)
     })
   }
 }
@@ -457,7 +455,11 @@ export async function handleAutoDetectSite(
         ...(userData ?? {}),
       }
     }
-    console.log("自动检测结果:", result)
+    logger.debug("自动检测结果", {
+      siteType: siteType ?? null,
+      userId: userData?.userId ?? null,
+      hasUser: Boolean(userData),
+    })
 
     // 返回结果
     sendResponse({
@@ -649,7 +651,7 @@ async function getSiteDataFromTab(
 
     // 检查响应并返回结果
     if (!userResponse || !userResponse.success) {
-      console.log("获取用户信息失败:", userResponse?.error)
+      logger.warn("获取用户信息失败", { reason: userResponse?.error ?? null })
       return null
     }
 
@@ -658,7 +660,7 @@ async function getSiteDataFromTab(
       user: userResponse.data?.user,
     }
   } catch (error) {
-    console.error(error)
+    logger.error("getSiteDataFromTab failed", error)
     logTempWindow("getSiteDataFromTabError", {
       requestId,
       origin: normalizeOrigin(url),
@@ -720,10 +722,11 @@ async function destroyOriginPool(
     contexts.map((ctx) =>
       destroyContext(ctx, { reason: reason ?? "destroyOriginPool" }).catch(
         (error) => {
-          console.error(
-            "[Background] Failed to destroy context from pool",
+          logger.error("Failed to destroy context from pool", {
+            contextId: ctx.id,
+            tabId: ctx.tabId,
             error,
-          )
+          })
         },
       ),
     ),
@@ -1065,8 +1068,8 @@ async function createTempContextInstance(
       try {
         await removeTabOrWindow(contextId)
       } catch (cleanupError) {
-        console.warn(
-          "[Background] Failed to cleanup temp context after creation error",
+        logger.warn(
+          "Failed to cleanup temp context after creation error",
           cleanupError,
         )
       }
@@ -1217,7 +1220,7 @@ function scheduleContextCleanup(context: TempContext) {
         type: context.type,
       })
       destroyContext(context).catch((error) => {
-        console.error("[Background] Failed to destroy idle temp context", error)
+        logger.error("Failed to destroy idle temp context", error)
       })
     }
   }, idleTimeoutMs)
@@ -1271,7 +1274,7 @@ async function destroyContext(
     try {
       await removeTabOrWindow(context.id)
     } catch (error) {
-      console.warn("[Background] Failed to remove temp context", error)
+      logger.warn("Failed to remove temp context", error)
     }
   }
 }
@@ -1351,10 +1354,7 @@ function waitForTabComplete(
             })
             passed = Boolean(response?.success && response.passed)
           } catch (error) {
-            console.warn(
-              "[Background] CF check via content script failed",
-              error,
-            )
+            logger.warn("CF check via content script failed", error)
           }
 
           if (lastPassed !== passed) {

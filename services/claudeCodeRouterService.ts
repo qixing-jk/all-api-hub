@@ -2,7 +2,13 @@ import { t } from "i18next"
 
 import type { ApiToken, DisplaySiteData } from "~/types"
 import type { ServiceResponse } from "~/types/serviceResponse"
+import { createLogger } from "~/utils/logger"
 import { joinUrl } from "~/utils/url"
+
+/**
+ * Unified logger scoped to the Claude Code Router integration service.
+ */
+const logger = createLogger("ClaudeCodeRouterService")
 
 interface ClaudeCodeRouterProvider {
   name: string
@@ -211,7 +217,7 @@ export async function importToClaudeCodeRouter(options: {
       }),
     }
   } catch (error: any) {
-    console.error("[ClaudeCodeRouter] Import failed", error)
+    logger.error("Import failed", error)
     return {
       success: false,
       message: error?.message || t("messages:claudeCodeRouter.importFailed"),

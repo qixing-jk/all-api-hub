@@ -4,8 +4,11 @@
  */
 
 import { DEFAULT_NEW_API_CONFIG } from "~/types/newApiConfig"
+import { createLogger } from "~/utils/logger"
 
 import type { UserPreferences } from "../../userPreferences"
+
+const logger = createLogger("NewApiConfigMigration")
 
 /**
  * Checks if the given user preferences object contains any of the old flat new-api fields.
@@ -45,10 +48,11 @@ export function migrateNewApiConfig(prefs: UserPreferences): UserPreferences {
     userId: prefs?.newApiUserId ?? DEFAULT_NEW_API_CONFIG.userId,
   }
 
-  console.log(
-    "[PreferencesMigration] Migrated newApi settings:",
-    newApiSettings,
-  )
+  logger.debug("Migrated newApi settings", {
+    baseUrl: newApiSettings.baseUrl,
+    userId: newApiSettings.userId,
+    hasAdminToken: Boolean(newApiSettings.adminToken),
+  })
 
   const { newApiBaseUrl, newApiAdminToken, newApiUserId, ...restOfPrefs } =
     prefs

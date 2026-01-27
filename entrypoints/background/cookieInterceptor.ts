@@ -6,7 +6,13 @@ import {
   registerWebRequestInterceptor,
   setupWebRequestInterceptor,
 } from "~/utils/cookieHelper"
+import { createLogger } from "~/utils/logger"
 import { isProtectionBypassFirefoxEnv } from "~/utils/protectionBypass"
+
+/**
+ * Unified logger scoped to the background cookie interceptor lifecycle.
+ */
+const logger = createLogger("CookieInterceptor")
 
 const temporaryUrlPatternExpiry = new Map<string, number>()
 const DEFAULT_TEMP_PATTERN_TTL_MS = 5 * 60 * 1000
@@ -21,8 +27,8 @@ export async function checkCookieInterceptorRequirement(): Promise<boolean> {
     // 检查权限
     const granted = await hasCookieInterceptorPermissions()
     if (!granted) {
-      console.warn(
-        "[Background] Required optional permissions (cookies/webRequest) are missing; skip cookie interception",
+      logger.warn(
+        "Required optional permissions (cookies/webRequest) are missing; skip cookie interception",
       )
     }
     return granted
@@ -44,10 +50,10 @@ function extractAccountUrlPatterns(accounts: SiteAccount[]): string[] {
         const url = new URL(acc.site_url)
         return `${url.origin}/*`
       } catch {
-        console.warn(
-          `[Background] 账户 ${acc.site_name} 的 URL 无效：`,
-          acc.site_url,
-        )
+        logger.warn("账户 URL 无效", {
+          siteName: acc.site_name,
+          url: acc.site_url,
+        })
         return null
       }
     })
@@ -70,10 +76,7 @@ function extractTemporaryUrlPatterns(now: number = Date.now()): string[] {
     if (expiry <= now) {
       temporaryUrlPatternExpiry.delete(pattern)
       changed = true
-      console.debug(
-        "[Background] Temporary cookie interceptor pattern expired:",
-        pattern,
-      )
+      logger.debug("Temporary cookie interceptor pattern expired", { pattern })
     }
   }
 
@@ -123,7 +126,7 @@ export async function trackCookieInterceptorUrl(
     temporaryUrlPatternExpiry.set(pattern, expiry)
   }
 
-  console.debug("[Background] Temporary cookie interceptor pattern tracked:", {
+  logger.debug("Temporary cookie interceptor pattern tracked", {
     pattern,
     ttlMs,
   })
@@ -151,7 +154,7 @@ export async function initializeCookieInterceptors(): Promise<void> {
     const urlPatterns = mergeUrlPatterns(extractAccountUrlPatterns(accounts))
     setupWebRequestInterceptor(urlPatterns)
   } catch (error) {
-    console.error("[Background] 初始化 cookie 拦截器失败：", error)
+    logger.error("初始化 cookie 拦截器失败", error)
   }
 }
 
@@ -168,7 +171,7 @@ async function updateCookieInterceptor(): Promise<void> {
     const urlPatterns = mergeUrlPatterns(extractAccountUrlPatterns(accounts))
     registerWebRequestInterceptor(urlPatterns)
   } catch (error) {
-    console.error("[Background] 更新 cookie 拦截器失败：", error)
+    logger.error("更新 cookie 拦截器失败", error)
   }
 }
 
@@ -191,7 +194,7 @@ function extractStoredAccountUrlPatternSet(value: unknown): Set<string> {
     try {
       data = JSON.parse(value)
     } catch (e) {
-      console.log("[Background] 解析变更数据失败：", e)
+      logger.warn("解析变更数据失败", e)
       return patterns
     }
   } else if (typeof value === "object" && value !== null) {
@@ -208,7 +211,7 @@ function extractStoredAccountUrlPatternSet(value: unknown): Set<string> {
       const url = new URL(siteUrl)
       patterns.add(url.origin)
     } catch {
-      console.warn("[Background] 无效的 URL:", siteUrl)
+      logger.warn("无效的 URL", { url: siteUrl })
     }
   }
   return patterns
@@ -250,9 +253,9 @@ async function handleStorageChanged(
     return
   }
 
-  console.log("[Background] 账户 URL 已变更，正在更新拦截器")
+  logger.info("账户 URL 已变更，正在更新拦截器")
   void updateCookieInterceptor().catch((error) => {
-    console.error("[Background] 更新 cookie 拦截器失败：", error)
+    logger.error("更新 cookie 拦截器失败", error)
   })
 }
 

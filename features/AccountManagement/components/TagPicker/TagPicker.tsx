@@ -25,6 +25,12 @@ import {
 import { normalizeTagNameForUniqueness } from "~/services/accountTags/tagStoreUtils"
 import type { Tag } from "~/types"
 import { getErrorMessage } from "~/utils/error"
+import { createLogger } from "~/utils/logger"
+
+/**
+ * Logger scoped to the tag picker UI so failures can be diagnosed without leaking sensitive data.
+ */
+const logger = createLogger("TagPicker")
 
 export interface TagPickerProps {
   /**
@@ -196,7 +202,10 @@ export function TagPicker({
       const message = t("messages.operationFailed", {
         error: getErrorMessage(error),
       })
-      console.error("Failed to create tag:", error)
+      logger.error("Failed to create tag", {
+        error,
+        displayName: normalized.displayName,
+      })
       setTagActionError(message)
       toast.error(message)
     } finally {
@@ -277,7 +286,11 @@ export function TagPicker({
       const message = t("messages.operationFailed", {
         error: getErrorMessage(error),
       })
-      console.error("Failed to rename tag:", error)
+      logger.error("Failed to rename tag", {
+        error,
+        tagId: editingTagId,
+        displayName: normalized.displayName,
+      })
       setTagActionError(message)
       toast.error(message)
     } finally {
@@ -299,7 +312,7 @@ export function TagPicker({
       const message = t("messages.operationFailed", {
         error: getErrorMessage(error),
       })
-      console.error("Failed to delete tag:", error)
+      logger.error("Failed to delete tag", { error, tagId: deleteTarget.id })
       setTagActionError(message)
       toast.error(message)
     } finally {

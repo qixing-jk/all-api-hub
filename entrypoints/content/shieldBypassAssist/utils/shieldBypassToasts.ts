@@ -4,10 +4,16 @@ import toast from "react-hot-toast/headless"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { ensureRedemptionToastUi } from "~/entrypoints/content/redemptionAssist/uiRoot"
 import { sendRuntimeMessage } from "~/utils/browserApi"
+import { createLogger } from "~/utils/logger"
 
 import { ShieldBypassPromptToast } from "../components/ShieldBypassPromptToast"
 
 const SHIELD_BYPASS_TOAST_ID = "shield-bypass-helper"
+
+/**
+ * Unified logger scoped to shield-bypass toast interactions.
+ */
+const logger = createLogger("ShieldBypassToasts")
 
 /**
  * Shows (or updates) the shield-bypass helper prompt toast in the content UI root.
@@ -25,10 +31,7 @@ export async function showShieldBypassPromptToast() {
               action: RuntimeActionIds.OpenSettingsShieldBypass,
             })
           } catch (error) {
-            console.error(
-              "[ShieldBypass][Content] Failed to open settings page:",
-              error,
-            )
+            logger.error("Failed to open settings page", error)
           }
         },
       }),

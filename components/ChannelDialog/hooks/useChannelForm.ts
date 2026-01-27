@@ -13,7 +13,13 @@ import type {
   ManagedSiteChannel,
   UpdateChannelPayload,
 } from "~/types/managedSite"
+import { createLogger } from "~/utils/logger"
 import { mergeUniqueOptions } from "~/utils/selectOptions"
+
+/**
+ * Unified logger scoped to channel dialog form state and submissions.
+ */
+const logger = createLogger("ChannelFormHook")
 
 export interface UseChannelFormProps {
   mode: DialogMode
@@ -134,7 +140,7 @@ export function useChannelForm({
       ).map((value) => ({ label: value, value }))
 
       if (!hasConfig) {
-        console.warn("[ChannelForm] No valid New API configuration")
+        logger.warn("No valid managed-site configuration")
         const fallback = [{ label: "default", value: "default" }]
         setAvailableGroups(mergeUniqueOptions(fallback, preselectedGroups))
         return
@@ -174,7 +180,7 @@ export function useChannelForm({
       groupOptions = mergeUniqueOptions(groupOptions, preselectedGroups)
       setAvailableGroups(groupOptions)
     } catch (error) {
-      console.error("[ChannelForm] Failed to load groups:", error)
+      logger.error("Failed to load groups", error)
       const fallback = [{ label: "default", value: "default" }]
       const preselectedGroups = (
         initialValues?.groups ??
@@ -201,7 +207,7 @@ export function useChannelForm({
 
       setAvailableModels(preselectedModels)
     } catch (error) {
-      console.error("[ChannelForm] Failed to load models:", error)
+      logger.error("Failed to load models", error)
       const preselectedModels = (
         initialValues?.models ??
         initialModels ??
@@ -308,7 +314,7 @@ export function useChannelForm({
         throw new Error(response.message)
       }
     } catch (error: any) {
-      console.error("[ChannelForm] Save failed:", error)
+      logger.error("Save failed", error)
       toast.error(
         t("channelDialog:messages.saveFailed", {
           error: error.message,

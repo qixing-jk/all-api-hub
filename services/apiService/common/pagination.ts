@@ -2,7 +2,11 @@
  * Pagination utilities for API calls
  */
 
+import { createLogger } from "~/utils/logger"
+
 import { REQUEST_CONFIG } from "./constant"
+
+const logger = createLogger("ApiPagination")
 
 export interface PaginationOptions {
   pageSize?: number
@@ -71,7 +75,7 @@ export async function fetchAllPaginated<T, R>(
     pageCount++
 
     if (pageCount >= maxPages) {
-      console.warn(`达到最大分页限制(${maxPages}页)，数据可能不完整`)
+      logger.warn("达到最大分页限制，数据可能不完整", { maxPages })
     }
   }
 

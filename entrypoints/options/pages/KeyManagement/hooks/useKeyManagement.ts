@@ -4,8 +4,14 @@ import { useTranslation } from "react-i18next"
 
 import { useAccountData } from "~/hooks/useAccountData"
 import { getApiService } from "~/services/apiService"
+import { createLogger } from "~/utils/logger"
 
 import { AccountToken } from "../type"
+
+/**
+ * Unified logger scoped to the Key Management options page hooks.
+ */
+const logger = createLogger("KeyManagementHook")
 
 /**
  * Manages key management page state: selection, loading, filtering, and CRUD handlers.
@@ -56,7 +62,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
 
         setTokens(tokensWithAccount)
       } catch (error) {
-        console.error(`获取账号密钥失败:`, error)
+        logger.error("获取账号密钥失败", error)
         toast.error(t("keyManagement:messages.loadFailed"))
         setTokens([])
       } finally {
@@ -98,7 +104,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       toast.success(t("keyManagement:messages.keyCopied", { name }))
     } catch (error) {
       toast.error(t("keyManagement:messages.copyFailed"))
-      console.error(error)
+      logger.warn("Failed to copy key to clipboard", error)
     }
   }
 
@@ -168,7 +174,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         loadTokens()
       }
     } catch (error) {
-      console.error("删除密钥失败:", error)
+      logger.error("删除密钥失败", error)
       toast.error(t("keyManagement:messages.deleteFailed"))
     }
   }

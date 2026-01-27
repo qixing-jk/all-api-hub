@@ -2,6 +2,12 @@ import {
   COOKIE_AUTH_HEADER_NAME,
   EXTENSION_HEADER_NAME,
 } from "~/utils/cookieHelper"
+import { createLogger } from "~/utils/logger"
+
+/**
+ * Unified logger scoped to DNR cookie header injection helpers.
+ */
+const logger = createLogger("DnrCookieInjector")
 
 /**
  * DeclarativeNetRequest session-rule helpers.
@@ -93,7 +99,7 @@ export async function applyTempWindowCookieRule(
     })
     return ruleId
   } catch (error) {
-    console.warn("[DNR] Failed to install temp-window cookie rule", error)
+    logger.warn("Failed to install temp-window cookie rule", error)
     return null
   }
 }
@@ -113,6 +119,6 @@ export async function removeTempWindowCookieRule(
       removeRuleIds: [ruleId],
     })
   } catch (error) {
-    console.warn("[DNR] Failed to remove temp-window cookie rule", error)
+    logger.warn("Failed to remove temp-window cookie rule", error)
   }
 }

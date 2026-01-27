@@ -8,6 +8,7 @@ import { searchAccounts } from "~/services/search/accountSearch"
 import { userPreferences } from "~/services/userPreferences"
 import type { DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/error"
+import { createLogger } from "~/utils/logger"
 import { isPossibleRedemptionCode } from "~/utils/redemptionAssist"
 import {
   buildOriginWhitelistPattern,
@@ -15,6 +16,11 @@ import {
   isUrlAllowedByRegexList,
 } from "~/utils/redemptionAssistWhitelist"
 import { joinUrl } from "~/utils/url"
+
+/**
+ * Unified logger scoped to the redemption assist background service.
+ */
+const logger = createLogger("RedemptionAssist")
 
 interface RedemptionAssistRuntimeSettings {
   enabled: boolean
@@ -90,11 +96,11 @@ class RedemptionAssistService {
         this.settings.urlWhitelist = prefs.redemptionAssist.urlWhitelist
       }
     } catch (error) {
-      console.warn("[RedemptionAssist] Failed to load preferences:", error)
+      logger.warn("Failed to load preferences", error)
     }
 
     this.initialized = true
-    console.log("[RedemptionAssist] Service initialized", this.settings)
+    logger.info("Service initialized", this.settings)
   }
 
   /**
@@ -133,7 +139,7 @@ class RedemptionAssistService {
     }
     this.settings = next
     this.derivedPatternsCache = null
-    console.log("[RedemptionAssist] Runtime settings updated", this.settings)
+    logger.info("Runtime settings updated", this.settings)
   }
 
   /**
@@ -500,7 +506,7 @@ export const handleRedemptionAssistMessage = async (
         sendResponse({ success: false, error: "Unknown action" })
     }
   } catch (error) {
-    console.error("[RedemptionAssist] Message handling failed:", error)
+    logger.error("Message handling failed", error)
     sendResponse({ success: false, error: getErrorMessage(error) })
   }
 }

@@ -16,6 +16,7 @@ import type { SiteAccount, TagStore } from "~/types"
 import type { ChannelConfigMap } from "~/types/channelConfig"
 import { WEBDAV_SYNC_STRATEGIES, WebDAVSettings } from "~/types/webdav"
 import { getErrorMessage } from "~/utils/error"
+import { createLogger } from "~/utils/logger"
 
 import { accountStorage } from "../accountStorage"
 import { channelConfigStorage } from "../channelConfigStorage"
@@ -25,6 +26,8 @@ import {
   testWebdavConnection,
   uploadBackup,
 } from "./webdavService"
+
+const logger = createLogger("WebdavAutoSync")
 
 /**
  * Manages WebDAV auto-sync in the background.
@@ -50,16 +53,16 @@ class WebdavAutoSyncService {
    */
   async initialize() {
     if (this.isInitialized) {
-      console.log("[WebdavAutoSync] 服务已初始化")
+      logger.debug("服务已初始化")
       return
     }
 
     try {
       await this.setupAutoSync()
       this.isInitialized = true
-      console.log("[WebdavAutoSync] 服务初始化成功")
+      logger.info("服务初始化成功")
     } catch (error) {
-      console.error("[WebdavAutoSync] 服务初始化失败:", error)
+      logger.error("服务初始化失败", error)
     }
   }
 
@@ -76,14 +79,14 @@ class WebdavAutoSyncService {
       if (this.syncTimer) {
         clearInterval(this.syncTimer)
         this.syncTimer = null
-        console.log("[WebdavAutoSync] 已清除现有定时器")
+        logger.debug("已清除现有定时器")
       }
 
       // 获取用户偏好设置
       const preferences = await userPreferences.getPreferences()
 
       if (!preferences.webdav.autoSync) {
-        console.log("[WebdavAutoSync] 自动同步已关闭")
+        logger.info("自动同步已关闭")
         return
       }
 
@@ -93,7 +96,7 @@ class WebdavAutoSyncService {
         !preferences.webdav.username ||
         !preferences.webdav.password
       ) {
-        console.log("[WebdavAutoSync] WebDAV配置不完整，无法启动自动同步")
+        logger.warn("WebDAV配置不完整，无法启动自动同步")
         return
       }
 
@@ -103,11 +106,11 @@ class WebdavAutoSyncService {
         await this.performBackgroundSync()
       }, intervalMs)
 
-      console.log(
-        `[WebdavAutoSync] 自动同步已启动，间隔: ${preferences.webdav.syncInterval || 3600}秒`,
-      )
+      logger.info("自动同步已启动", {
+        intervalSeconds: preferences.webdav.syncInterval || 3600,
+      })
     } catch (error) {
-      console.error("[WebdavAutoSync] 设置自动同步失败:", error)
+      logger.error("设置自动同步失败", error)
     }
   }
 
@@ -119,13 +122,13 @@ class WebdavAutoSyncService {
    */
   private async performBackgroundSync() {
     if (this.isSyncing) {
-      console.log("[WebdavAutoSync] 同步正在进行中，跳过本次执行")
+      logger.debug("同步正在进行中，跳过本次执行")
       return
     }
 
     this.isSyncing = true
     try {
-      console.log("[WebdavAutoSync] 开始执行后台同步")
+      logger.info("开始执行后台同步")
 
       await this.syncWithWebdav()
 
@@ -133,14 +136,14 @@ class WebdavAutoSyncService {
       this.lastSyncStatus = "success"
       this.lastSyncError = null
 
-      console.log("[WebdavAutoSync] 后台同步完成")
+      logger.info("后台同步完成")
 
       // 通知前端更新（如果popup是打开的）
       this.notifyFrontend("sync_completed", {
         timestamp: this.lastSyncTime,
       })
     } catch (error) {
-      console.error("[WebdavAutoSync] 后台同步失败:", error)
+      logger.error("后台同步失败", error)
       this.lastSyncStatus = "error"
       this.lastSyncError = getErrorMessage(error)
       this.notifyFrontend("sync_error", { error: getErrorMessage(error) })
@@ -175,7 +178,7 @@ class WebdavAutoSyncService {
     try {
       await testWebdavConnection()
     } catch (error) {
-      console.error("[WebdavAutoSync] WebDAV连接失败:", error)
+      logger.error("WebDAV连接失败", error)
       throw new Error(t("messages:webdav.connectionFailed", { status: "N/A" }))
     }
 
@@ -185,13 +188,10 @@ class WebdavAutoSyncService {
     try {
       const content = await downloadBackup()
       remoteData = JSON.parse(content)
-      console.log(
-        "[WebdavAutoSync] 成功下载远程数据，时间戳:",
-        remoteData?.timestamp,
-      )
+      logger.info("成功下载远程数据", { timestamp: remoteData?.timestamp })
     } catch (error: any) {
       if (error.message?.includes("404") || error.message?.includes("不存在")) {
-        console.log("[WebdavAutoSync] 远程文件不存在，将创建新备份")
+        logger.info("远程文件不存在，将创建新备份")
         remoteData = null
       } else {
         throw error
@@ -286,7 +286,7 @@ class WebdavAutoSyncService {
       pinnedAccountIdsToSave = uniqueMergedPinnedIds.filter((id) =>
         accountsToSave.some((account) => account.id === id),
       )
-      console.log(`[WebdavAutoSync] 合并完成: ${accountsToSave.length} 个账号`)
+      logger.info("合并完成", { accountCount: accountsToSave.length })
     } else if (strategy === WEBDAV_SYNC_STRATEGIES.UPLOAD_ONLY || !remoteData) {
       // 覆盖策略或远程无数据
       accountsToSave = localAccountsConfig.accounts
@@ -296,7 +296,7 @@ class WebdavAutoSyncService {
       pinnedAccountIdsToSave = localPinnedAccountIds.filter((id) =>
         accountsToSave.some((account) => account.id === id),
       )
-      console.log("[WebdavAutoSync] 使用本地数据覆盖")
+      logger.info("使用本地数据覆盖")
     } else if (strategy === WEBDAV_SYNC_STRATEGIES.DOWNLOAD_ONLY) {
       // 远程优先策略：直接使用远程数据（若存在），否则使用本地
       const remoteStore = sanitizeTagStore(
@@ -314,11 +314,11 @@ class WebdavAutoSyncService {
       pinnedAccountIdsToSave = remotePinnedAccountIds.filter((id) =>
         accountsToSave.some((account) => account.id === id),
       )
-      console.log("[WebdavAutoSync] 使用远程数据")
+      logger.info("使用远程数据")
     } else {
-      console.error(
-        `[WebdavAutoSync] 无效的同步策略: ${String(strategy)}, 将中止本次同步`,
-      )
+      logger.error("无效的同步策略，将中止本次同步", {
+        strategy: String(strategy),
+      })
       throw new Error(`Invalid WebDAV sync strategy: ${String(strategy)}`)
     }
 
@@ -350,7 +350,7 @@ class WebdavAutoSyncService {
     }
 
     await uploadBackup(JSON.stringify(exportData, null, 2))
-    console.log("[WebdavAutoSync] 数据已上传到WebDAV")
+    logger.info("数据已上传到WebDAV")
   }
 
   /**
@@ -381,9 +381,10 @@ class WebdavAutoSyncService {
     preferences: UserPreferences
     channelConfigs: ChannelConfigMap
   } {
-    console.log(
-      `[WebdavAutoSync] 开始合并数据 - 本地账号: ${local.accounts.length}, 远程账号: ${remote.accounts.length}`,
-    )
+    logger.debug("开始合并数据", {
+      localAccountCount: local.accounts.length,
+      remoteAccountCount: remote.accounts.length,
+    })
 
     // Migrate legacy string tags (if any) into tag ids on both sides.
     const localTagStore = sanitizeTagStore(
@@ -424,7 +425,10 @@ class WebdavAutoSyncService {
       if (!localAccount) {
         // 远程账号在本地不存在，直接添加
         accountMap.set(remoteAccount.id, remoteAccount)
-        console.log(`[WebdavAutoSync] 添加远程账号: ${remoteAccount.site_name}`)
+        logger.debug("添加远程账号", {
+          accountId: remoteAccount.id,
+          siteName: remoteAccount.site_name,
+        })
       } else {
         // 账号在两边都存在，比较时间戳
         const localUpdatedAt = localAccount.updated_at || 0
@@ -433,13 +437,15 @@ class WebdavAutoSyncService {
         if (remoteUpdatedAt > localUpdatedAt) {
           // 远程更新，使用远程数据
           accountMap.set(remoteAccount.id, remoteAccount)
-          console.log(
-            `[WebdavAutoSync] 使用远程账号: ${remoteAccount.site_name} (远程更新)`,
-          )
+          logger.debug("使用远程账号（远程更新）", {
+            accountId: remoteAccount.id,
+            siteName: remoteAccount.site_name,
+          })
         } else {
-          console.log(
-            `[WebdavAutoSync] 保留本地账号: ${localAccount.site_name} (本地更新)`,
-          )
+          logger.debug("保留本地账号（本地更新）", {
+            accountId: localAccount.id,
+            siteName: localAccount.site_name,
+          })
         }
       }
     })
@@ -486,13 +492,14 @@ class WebdavAutoSyncService {
       }
     }
 
-    console.log(
-      `[WebdavAutoSync] 合并完成 - 总账号数: ${mergedAccounts.length}, 使用${
+    logger.info("合并完成", {
+      accountCount: mergedAccounts.length,
+      preferencesSource:
         remote.preferencesTimestamp > local.preferencesTimestamp
-          ? "远程"
-          : "本地"
-      }偏好设置, 通道配置数: ${Object.keys(mergedChannelConfigs).length}`,
-    )
+          ? "remote"
+          : "local",
+      channelConfigCount: Object.keys(mergedChannelConfigs).length,
+    })
 
     return {
       accounts: mergedAccounts,
@@ -515,18 +522,18 @@ class WebdavAutoSyncService {
     }
 
     try {
-      console.log("[WebdavAutoSync] 执行立即同步")
+      logger.info("执行立即同步")
       await this.syncWithWebdav()
       this.lastSyncTime = Date.now()
       this.lastSyncStatus = "success"
       this.lastSyncError = null
-      console.log("[WebdavAutoSync] 立即同步完成")
+      logger.info("立即同步完成")
       return {
         success: true,
         message: "同步成功",
       }
     } catch (error) {
-      console.error("[WebdavAutoSync] 立即同步失败:", error)
+      logger.error("立即同步失败", error)
       this.lastSyncStatus = "error"
       this.lastSyncError = getErrorMessage(error)
       return {
@@ -545,7 +552,7 @@ class WebdavAutoSyncService {
     if (this.syncTimer) {
       clearInterval(this.syncTimer)
       this.syncTimer = null
-      console.log("[WebdavAutoSync] 自动同步已停止")
+      logger.info("自动同步已停止")
     }
   }
 
@@ -565,9 +572,9 @@ class WebdavAutoSyncService {
         webdav: settings,
       })
       await this.setupAutoSync() // 重新设置定时器
-      console.log("[WebdavAutoSync] 设置已更新:", settings)
+      logger.info("设置已更新", settings)
     } catch (error) {
-      console.error("[WebdavAutoSync] 更新设置失败:", error)
+      logger.error("更新设置失败", error)
     }
   }
 
@@ -607,15 +614,14 @@ class WebdavAutoSyncService {
               "receiving end does not exist",
             )
           ) {
-            console.log("[WebdavAutoSync] 前端未打开，跳过通知")
+            logger.debug("前端未打开，跳过通知")
           } else {
-            console.warn("[WebdavAutoSync] 通知前端失败:", error)
+            logger.warn("通知前端失败", error)
           }
         })
     } catch (error) {
       // 静默处理错误，避免影响后台同步
-      console.error(error)
-      console.warn("[WebdavAutoSync] 发送消息异常，可能前端未打开")
+      logger.warn("发送消息异常，可能前端未打开", error)
     }
   }
 
@@ -625,7 +631,7 @@ class WebdavAutoSyncService {
   destroy() {
     this.stopAutoSync()
     this.isInitialized = false
-    console.log("[WebdavAutoSync] 服务已销毁")
+    logger.info("服务已销毁")
   }
 }
 
@@ -675,7 +681,7 @@ export const handleWebdavAutoSyncMessage = async (
         sendResponse({ success: false, error: "未知的操作" })
     }
   } catch (error) {
-    console.error("[WebdavAutoSync] 处理消息失败:", error)
+    logger.error("处理消息失败", error)
     sendResponse({ success: false, error: getErrorMessage(error) })
   }
 }

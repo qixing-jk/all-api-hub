@@ -33,6 +33,7 @@ import {
   TEMP_WINDOW_HEALTH_STATUS_CODES,
   type DisplaySiteData,
 } from "~/types"
+import { createLogger } from "~/utils/logger"
 import {
   openCheckInAndRedeem,
   openCheckInPage,
@@ -44,6 +45,11 @@ interface SiteInfoProps {
   site: DisplaySiteData
   highlights?: SearchResultWithHighlight["highlights"]
 }
+
+/**
+ * Logger scoped to account list rows so navigation failures can be diagnosed without leaking account secrets.
+ */
+const logger = createLogger("AccountList.SiteInfo")
 
 /**
  * Renders highlighted fragments (such as search matches) with mark elements while preserving non-highlighted text.
@@ -128,7 +134,11 @@ export default function SiteInfo({ site, highlights }: SiteInfoProps) {
     try {
       await openCheckInPage(site)
     } catch (error) {
-      console.error("Failed to handle check-in navigation:", error)
+      logger.error("Failed to handle check-in navigation", {
+        error,
+        accountId: site.id,
+        baseUrl: site.baseUrl,
+      })
     }
   }
 
@@ -144,7 +154,11 @@ export default function SiteInfo({ site, highlights }: SiteInfoProps) {
         await openCustomCheckInPage(site)
       }
     } catch (error) {
-      console.error("Failed to handle check-in navigation:", error)
+      logger.error("Failed to handle custom check-in navigation", {
+        error,
+        accountId: site.id,
+        baseUrl: site.baseUrl,
+      })
     }
   }
 

@@ -13,6 +13,7 @@ import {
   onAlarm,
 } from "~/utils/browserApi"
 import { getErrorMessage } from "~/utils/error"
+import { createLogger } from "~/utils/logger"
 
 import { USAGE_HISTORY_ALARM_NAME } from "./constants"
 import { usageHistoryStorage } from "./storage"
@@ -20,6 +21,8 @@ import {
   syncUsageHistoryForAccount,
   type UsageHistorySyncTrigger,
 } from "./sync"
+
+const logger = createLogger("UsageHistoryScheduler")
 
 export interface UsageHistoryBatchSyncResult {
   totals: {
@@ -95,8 +98,8 @@ class UsageHistoryScheduler {
       }
 
       await userPreferences.savePreferences({ usageHistory: fallback })
-      console.warn(
-        "[UsageHistory] Alarms API unavailable; falling back to after-refresh schedule",
+      logger.warn(
+        "Alarms API unavailable; falling back to after-refresh schedule",
       )
       return
     }
@@ -238,7 +241,7 @@ class UsageHistoryScheduler {
 
       return { totals, perAccount }
     } catch (error) {
-      console.error("[UsageHistory] Sync run failed:", error)
+      logger.error("Sync run failed", error)
       return null
     } finally {
       this.isRunning = false
@@ -285,7 +288,7 @@ export const handleUsageHistoryMessage = async (
         sendResponse({ success: false, error: "Unknown action" })
     }
   } catch (error) {
-    console.error("[UsageHistory] Message handling failed:", error)
+    logger.error("Message handling failed", error)
     sendResponse({ success: false, error: getErrorMessage(error) })
   }
 }
