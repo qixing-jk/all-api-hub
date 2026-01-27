@@ -82,6 +82,7 @@ export function useAccountDialog({
   const [currentTabUrl, setCurrentTabUrl] = useState<string | null>(null)
   const [notes, setNotes] = useState("")
   const [tagIds, setTagIds] = useState<string[]>([])
+  const [excludeFromTotalBalance, setExcludeFromTotalBalance] = useState(false)
   const [checkIn, setCheckIn] = useState<CheckInConfig>({
     enableDetection: false,
     autoCheckInEnabled: true,
@@ -125,6 +126,7 @@ export function useAccountDialog({
     setCurrentTabUrl(null)
     setNotes("")
     setTagIds([])
+    setExcludeFromTotalBalance(false)
     setCheckIn({
       enableDetection: false,
       autoCheckInEnabled: true,
@@ -160,6 +162,9 @@ export function useAccountDialog({
           setManualBalanceUsd(siteAccount.manualBalanceUsd ?? "")
           setNotes(siteAccount.notes || "")
           setTagIds(siteAccount.tagIds || [])
+          setExcludeFromTotalBalance(
+            siteAccount.excludeFromTotalBalance === true,
+          )
           setCheckIn({
             enableDetection: siteAccount.checkIn?.enableDetection ?? false,
             autoCheckInEnabled: siteAccount.checkIn?.autoCheckInEnabled ?? true,
@@ -448,6 +453,7 @@ export function useAccountDialog({
               authType,
               cookieAuthSessionCookie.trim(),
               manualBalanceUsd,
+              excludeFromTotalBalance,
             )
           : await validateAndUpdateAccount(
               account!.id,
@@ -464,6 +470,7 @@ export function useAccountDialog({
               authType,
               cookieAuthSessionCookie.trim(),
               manualBalanceUsd,
+              excludeFromTotalBalance,
             )
 
       if (result.success) {
@@ -606,6 +613,7 @@ export function useAccountDialog({
       currentTabUrl,
       notes,
       tagIds,
+      excludeFromTotalBalance,
       checkIn,
       siteType,
       authType,
@@ -626,6 +634,7 @@ export function useAccountDialog({
       setManualBalanceUsd,
       setNotes,
       setTagIds,
+      setExcludeFromTotalBalance,
       setCheckIn,
       setSiteType,
       setAuthType,

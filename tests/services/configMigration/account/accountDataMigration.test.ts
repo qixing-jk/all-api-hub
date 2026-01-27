@@ -99,6 +99,7 @@ describe("accountDataMigration", () => {
 
       expect(migrated.configVersion).toBe(CURRENT_CONFIG_VERSION)
       expect(migrated.disabled).toBe(false)
+      expect(migrated.excludeFromTotalBalance).toBe(false)
       expect(migrated.checkIn).toBeDefined()
       expect(migrated.checkIn?.enableDetection).toBe(true)
       expect(migrated.checkIn?.siteStatus?.isCheckedInToday).toBe(true)
@@ -124,6 +125,7 @@ describe("accountDataMigration", () => {
 
       expect(migrated.configVersion).toBe(CURRENT_CONFIG_VERSION)
       expect(migrated.disabled).toBe(false)
+      expect(migrated.excludeFromTotalBalance).toBe(false)
       expect(migrated.checkIn?.customCheckIn).toEqual({
         url: "https://custom.example.com/checkin",
         redeemUrl: "https://custom.example.com/redeem",
@@ -150,6 +152,7 @@ describe("accountDataMigration", () => {
 
       expect(migrated.configVersion).toBe(CURRENT_CONFIG_VERSION)
       expect(migrated.disabled).toBe(false)
+      expect(migrated.excludeFromTotalBalance).toBe(false)
     })
 
     it("preserves disabled=true when migrating version 2 to current version", () => {
@@ -162,6 +165,33 @@ describe("accountDataMigration", () => {
 
       expect(migrated.configVersion).toBe(CURRENT_CONFIG_VERSION)
       expect(migrated.disabled).toBe(true)
+      expect(migrated.excludeFromTotalBalance).toBe(false)
+    })
+
+    it("ensures excludeFromTotalBalance exists when migrating version 3 to current version", () => {
+      const legacyV3Account = createSiteAccount({
+        configVersion: 3,
+      })
+
+      // Simulate pre-exclusion storage where the field was absent.
+      delete (legacyV3Account as any).excludeFromTotalBalance
+
+      const migrated = migrateAccountConfig(legacyV3Account)
+
+      expect(migrated.configVersion).toBe(CURRENT_CONFIG_VERSION)
+      expect(migrated.excludeFromTotalBalance).toBe(false)
+    })
+
+    it("preserves excludeFromTotalBalance=true when migrating version 3 to current version", () => {
+      const legacyV3Account = createSiteAccount({
+        configVersion: 3,
+        excludeFromTotalBalance: true,
+      })
+
+      const migrated = migrateAccountConfig(legacyV3Account)
+
+      expect(migrated.configVersion).toBe(CURRENT_CONFIG_VERSION)
+      expect(migrated.excludeFromTotalBalance).toBe(true)
     })
 
     it("migrates version 1 site check-in status into checkIn.siteStatus", () => {
@@ -178,6 +208,7 @@ describe("accountDataMigration", () => {
 
       expect(migrated.configVersion).toBe(CURRENT_CONFIG_VERSION)
       expect(migrated.disabled).toBe(false)
+      expect(migrated.excludeFromTotalBalance).toBe(false)
       expect(migrated.checkIn?.siteStatus).toEqual({
         isCheckedInToday: false,
         lastCheckInDate: "2000-01-02",

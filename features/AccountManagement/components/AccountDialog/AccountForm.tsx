@@ -41,6 +41,7 @@ interface AccountFormProps {
   showAccessToken: boolean
   notes: string
   selectedTagIds: string[]
+  excludeFromTotalBalance: boolean
   cookieAuthSessionCookie: string
   isImportingCookies: boolean
   onSiteNameChange: (value: string) => void
@@ -52,6 +53,7 @@ interface AccountFormProps {
   onToggleShowAccessToken: () => void
   onNotesChange: (value: string) => void
   onSelectedTagIdsChange: (value: string[]) => void
+  onExcludeFromTotalBalanceChange: (value: boolean) => void
   onCookieAuthSessionCookieChange: (value: string) => void
   onImportCookieAuthSessionCookie: () => void
   tags: Tag[]
@@ -77,6 +79,7 @@ interface AccountFormProps {
  * @param props.showAccessToken Whether the token input is visible.
  * @param props.notes User-provided notes.
  * @param props.selectedTagIds Selected tag ids.
+ * @param props.excludeFromTotalBalance Whether the account is excluded from Total Balance.
  * @param props.onSiteNameChange Handler to update site name.
  * @param props.onUsernameChange Handler to update username.
  * @param props.onUserIdChange Handler to update user id.
@@ -85,6 +88,7 @@ interface AccountFormProps {
  * @param props.onToggleShowAccessToken Toggles token visibility.
  * @param props.onNotesChange Handler to update notes.
  * @param props.onSelectedTagIdsChange Handler to update tag id selection.
+ * @param props.onExcludeFromTotalBalanceChange Handler to toggle Total Balance exclusion.
  * @param props.cookieAuthSessionCookie Cookie value used for cookie-based auth.
  * @param props.isImportingCookies Whether cookie import is in progress.
  * @param props.onCookieAuthSessionCookieChange Handler to update cookie value.
@@ -111,6 +115,7 @@ export default function AccountForm({
   showAccessToken,
   notes,
   selectedTagIds,
+  excludeFromTotalBalance,
   cookieAuthSessionCookie,
   isImportingCookies,
   onSiteNameChange,
@@ -122,6 +127,7 @@ export default function AccountForm({
   onToggleShowAccessToken,
   onNotesChange,
   onSelectedTagIdsChange,
+  onExcludeFromTotalBalanceChange,
   onCookieAuthSessionCookieChange,
   onImportCookieAuthSessionCookie,
   tags,
@@ -315,6 +321,29 @@ export default function AccountForm({
           variant={isManualBalanceUsdInvalid ? "error" : "default"}
         />
       </FormField>
+
+      {/* Exclude from Total Balance */}
+      <div className="flex w-full items-center justify-between">
+        <div className="flex-1">
+          <label
+            htmlFor="exclude-from-total-balance"
+            className="dark:text-dark-text-secondary text-sm font-medium text-gray-700"
+          >
+            {t("form.excludeFromTotalBalance")}
+          </label>
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            {t("form.excludeFromTotalBalanceDesc")}
+          </p>
+        </div>
+        <Switch
+          checked={excludeFromTotalBalance}
+          onChange={onExcludeFromTotalBalanceChange}
+          id="exclude-from-total-balance"
+          className={`${
+            excludeFromTotalBalance ? "bg-green-600" : "bg-gray-200"
+          } focus:ring-green-500`}
+        />
+      </div>
 
       {/* 签到功能开关 */}
       <div className="flex w-full items-center justify-between">

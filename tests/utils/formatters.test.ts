@@ -240,6 +240,19 @@ describe("formatters utilities", () => {
       expect(result.USD).toBeCloseTo(3.58, 2)
       expect(result.CNY).toBeCloseTo(16.0, 1)
     })
+
+    it("should exclude disabled and explicitly excluded accounts", () => {
+      const data = [
+        { balance: { USD: 10, CNY: 20 }, disabled: false },
+        { balance: { USD: 1, CNY: 2 }, excludeFromTotalBalance: true },
+        { balance: { USD: 5, CNY: 10 }, disabled: true },
+      ] as any
+
+      const result = calculateTotalBalance(data)
+
+      expect(result.USD).toBe(10)
+      expect(result.CNY).toBe(20)
+    })
   })
 
   describe("getCurrencyDisplayName", () => {

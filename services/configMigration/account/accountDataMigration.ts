@@ -12,11 +12,12 @@ import { createLogger } from "~/utils/logger"
 import { migrateCheckInDualStatusConfig } from "./checkInDualStatusMigration"
 import { migrateCheckInConfig } from "./checkInMigration"
 import { migrateDisabledFlagConfig } from "./disabledFlagMigration"
+import { migrateExcludeFromTotalBalanceConfig } from "./excludeFromTotalBalanceMigration"
 
 const logger = createLogger("AccountDataMigration")
 
 // Current version of the configuration schema
-export const CURRENT_CONFIG_VERSION = 3
+export const CURRENT_CONFIG_VERSION = 4
 
 /**
  * Migration function type
@@ -48,6 +49,13 @@ const migrations: Record<number, MigrationFunction> = {
   3: (account: SiteAccount): SiteAccount => {
     const migrated = migrateDisabledFlagConfig(account)
     migrated.configVersion = 3
+    return migrated
+  },
+
+  // Version 3 -> 4: Ensure `excludeFromTotalBalance` exists (default false) and is normalized.
+  4: (account: SiteAccount): SiteAccount => {
+    const migrated = migrateExcludeFromTotalBalanceConfig(account)
+    migrated.configVersion = 4
     return migrated
   },
 }

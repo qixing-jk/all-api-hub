@@ -60,6 +60,8 @@
     "manualBalanceUsdPlaceholder": "Leave blank to auto-fetch",
     "manualBalanceUsdDesc": "Use this when the site cannot fetch balance/quota automatically",
     "manualBalanceUsdError": "Please enter a valid amount (>= 0)",
+    "excludeFromTotalBalance": "Exclude from Total Balance",
+    "excludeFromTotalBalanceDesc": "Skips this account in the Total Balance aggregate without disabling refresh or check-in",
     "validRateError": "Please enter a valid exchange rate, greater than 0",
     "checkInStatus": "Check-in status detection (requires the site to have check-in enabled)",
     "customCheckInUrl": "External check-in site URL (optional)",

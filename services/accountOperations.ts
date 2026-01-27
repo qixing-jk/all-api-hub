@@ -310,6 +310,7 @@ export async function validateAndSaveAccount(
   authType: AuthTypeEnum,
   cookieAuthSessionCookie: string,
   manualBalanceUsd?: string,
+  excludeFromTotalBalance = false,
 ): Promise<AccountSaveResponse> {
   const sessionCookieHeader =
     authType === AuthTypeEnum.Cookie
@@ -377,6 +378,7 @@ export async function validateAndSaveAccount(
       health: { status: SiteHealthStatus.Healthy }, // 成功获取数据说明状态正常
       site_type: siteType,
       authType: authType,
+      excludeFromTotalBalance: excludeFromTotalBalance === true,
       cookieAuth:
         authType === AuthTypeEnum.Cookie
           ? { sessionCookie: sessionCookieHeader.trim() }
@@ -428,6 +430,7 @@ export async function validateAndSaveAccount(
       site_url: url.trim(),
       site_type: siteType,
       authType: authType,
+      excludeFromTotalBalance: excludeFromTotalBalance === true,
       cookieAuth:
         authType === AuthTypeEnum.Cookie
           ? { sessionCookie: sessionCookieHeader.trim() }
@@ -519,6 +522,7 @@ export async function validateAndUpdateAccount(
   authType: AuthTypeEnum,
   cookieAuthSessionCookie: string,
   manualBalanceUsd?: string,
+  excludeFromTotalBalance = false,
 ): Promise<AccountSaveResponse> {
   const sessionCookieHeader =
     authType === AuthTypeEnum.Cookie
@@ -587,6 +591,7 @@ export async function validateAndUpdateAccount(
       health: { status: SiteHealthStatus.Healthy }, // 成功获取数据说明状态正常
       site_type: siteType,
       authType: authType,
+      excludeFromTotalBalance: excludeFromTotalBalance === true,
       cookieAuth:
         authType === AuthTypeEnum.Cookie
           ? { sessionCookie: sessionCookieHeader.trim() }
@@ -644,6 +649,7 @@ export async function validateAndUpdateAccount(
       site_url: url.trim(),
       site_type: siteType,
       authType: authType,
+      excludeFromTotalBalance: excludeFromTotalBalance === true,
       cookieAuth:
         authType === AuthTypeEnum.Cookie
           ? { sessionCookie: sessionCookieHeader.trim() }

@@ -154,6 +154,10 @@ export default function AccountDialog({
               onNotesChange={setters.setNotes}
               selectedTagIds={state.tagIds}
               onSelectedTagIdsChange={setters.setTagIds}
+              excludeFromTotalBalance={state.excludeFromTotalBalance}
+              onExcludeFromTotalBalanceChange={
+                setters.setExcludeFromTotalBalance
+              }
               tags={tags}
               tagCountsById={tagCountsById}
               createTag={createTag}

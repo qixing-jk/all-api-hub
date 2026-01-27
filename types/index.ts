@@ -92,6 +92,16 @@ export interface SiteAccount {
    */
   disabled?: boolean
   /**
+   * Whether this stored account is excluded from the "Total Balance" aggregate.
+   *
+   * Unlike {@link SiteAccount.disabled}, excluded accounts remain enabled for refresh,
+   * check-in, and other background behaviors; they are only skipped when computing
+   * the Total Balance display value.
+   *
+   * Backward compatible: missing/undefined is treated as included (false).
+   */
+  excludeFromTotalBalance?: boolean
+  /**
    * Legacy flag indicating whether the account can be checked in today.
    * @deprecated Use `checkIn.siteStatus.isCheckedInToday` instead.
    */
@@ -122,6 +132,7 @@ export interface SiteAccount {
    * 1.1.0: Introduced `checkIn` object structure (configVersion = 1)
    * 1.1.1: Split site vs custom check-in state (configVersion = 2)
    * 1.2.0: Persist/normalize `disabled` flag (configVersion = 3)
+   * 1.2.1: Persist/normalize `excludeFromTotalBalance` flag (configVersion = 4)
    * @since 1.0.0
    */
   configVersion?: number
@@ -316,6 +327,13 @@ export interface DisplaySiteData {
    * re-querying storage.
    */
   disabled?: boolean
+  /**
+   * "Exclude from Total Balance" state projected from {@link SiteAccount.excludeFromTotalBalance}.
+   *
+   * This affects only the Total Balance aggregate; it must not be interpreted as
+   * a disabled state for actions like refresh or check-in.
+   */
+  excludeFromTotalBalance?: boolean
   /**
    * Legacy flag indicating whether the account can be checked in today.
    * @deprecated Use `checkIn.siteStatus.isCheckedInToday` instead.

@@ -50,6 +50,8 @@
     "manualBalanceUsdPlaceholder": "留空则自动获取",
     "manualBalanceUsdDesc": "当站点无法自动获取余额/额度时，可手动填写",
     "manualBalanceUsdError": "请输入有效的金额（>= 0）",
+    "excludeFromTotalBalance": "不计入总余额",
+    "excludeFromTotalBalanceDesc": "仅影响“总余额”统计，不会禁用刷新、签到等功能",
     "siteName": "网站名称",
     "siteType": "站点类型",
     "username": "用户名",

@@ -128,9 +128,15 @@ export const calculateTotalConsumption = (
 
 /**
  * 计算总余额
+ *
+ * Total Balance excludes:
+ * - disabled accounts ({@link DisplaySiteData.disabled})
+ * - enabled but explicitly excluded accounts ({@link DisplaySiteData.excludeFromTotalBalance})
  */
 export const calculateTotalBalance = (displayData: DisplaySiteData[]) => {
-  const enabledSites = displayData.filter((site) => !site.disabled)
+  const enabledSites = displayData.filter(
+    (site) => !site.disabled && site.excludeFromTotalBalance !== true,
+  )
   return {
     USD: enabledSites.reduce((sum, site) => sum + site.balance.USD, 0),
     CNY: enabledSites.reduce((sum, site) => sum + site.balance.CNY, 0),

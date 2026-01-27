@@ -60,6 +60,15 @@ class AccountStorageService {
   }
 
   /**
+   * Backward-compatible guard: treat missing/undefined as included in Total Balance.
+   */
+  private static isAccountExcludedFromTotalBalance(
+    account: Pick<SiteAccount, "excludeFromTotalBalance">,
+  ) {
+    return account.excludeFromTotalBalance === true
+  }
+
+  /**
    * Run a storage mutation under an exclusive lock to prevent cross-context
    * (popup/options/background) concurrent read-modify-write races.
    *
@@ -261,6 +270,7 @@ class AccountStorageService {
         const newAccount: SiteAccount = {
           ...accountData,
           disabled: accountData.disabled ?? false,
+          excludeFromTotalBalance: accountData.excludeFromTotalBalance ?? false,
           id: this.generateId(),
           created_at: now,
           updated_at: now,
@@ -895,6 +905,8 @@ class AccountStorageService {
       name: account.site_name,
       username: account.account_info.username,
       disabled: AccountStorageService.isAccountDisabled(account),
+      excludeFromTotalBalance:
+        AccountStorageService.isAccountExcludedFromTotalBalance(account),
       balance: {
         USD:
           account.account_info.quota /
