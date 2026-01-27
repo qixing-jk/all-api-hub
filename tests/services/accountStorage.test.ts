@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { UI_CONSTANTS } from "~/constants/ui"
 import { accountStorage } from "~/services/accountStorage"
 import { ACCOUNT_STORAGE_KEYS } from "~/services/storageKeys"
 import {
@@ -108,6 +109,7 @@ const createAccount = (overrides: Partial<SiteAccount> = {}): SiteAccount => {
     updated_at: overrides.updated_at ?? Date.now(),
     created_at: overrides.created_at ?? Date.now(),
     notes: overrides.notes,
+    manualBalanceUsd: overrides.manualBalanceUsd,
     tagIds: overrides.tagIds ?? [],
     tags: overrides.tags,
     can_check_in: overrides.can_check_in,
@@ -745,5 +747,25 @@ describe("accountStorage core behaviors", () => {
     await accountStorage.refreshAccount("temp-window", true)
     const clearedAccount = await accountStorage.getAccountById("temp-window")
     expect(clearedAccount?.health?.code).toBeUndefined()
+  })
+
+  it("refreshAccount should preserve manual balance quota when set", async () => {
+    const manualBalanceUsd = "1.23"
+    const manualQuota = Math.round(
+      Number.parseFloat(manualBalanceUsd) *
+        UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR,
+    )
+    const account = createAccount({
+      id: "manual-quota",
+      manualBalanceUsd,
+    })
+    account.account_info.quota = manualQuota
+    seedStorage([account])
+
+    await accountStorage.refreshAccount("manual-quota", true)
+
+    const updatedAccount = await accountStorage.getAccountById("manual-quota")
+    expect(updatedAccount?.manualBalanceUsd).toBe(manualBalanceUsd)
+    expect(updatedAccount?.account_info.quota).toBe(manualQuota)
   })
 })

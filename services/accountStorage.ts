@@ -681,6 +681,18 @@ class AccountStorageService {
 
       // 如果成功获取数据，更新账号信息
       if (result.success && result.data) {
+        const manualBalanceUsd = account.manualBalanceUsd?.trim()
+        const manualQuota =
+          manualBalanceUsd && manualBalanceUsd.length > 0
+            ? (() => {
+                const amount = Number.parseFloat(manualBalanceUsd)
+                if (!Number.isFinite(amount) || amount < 0) return undefined
+                return Math.round(
+                  amount * UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR,
+                )
+              })()
+            : undefined
+
         // Merge API check-in status (siteStatus) with local custom check-in state.
         const today = new Date().toISOString().split("T")[0]
         const nextCheckIn = { ...(result.data.checkIn ?? account.checkIn) }
@@ -701,7 +713,7 @@ class AccountStorageService {
 
         updateData.account_info = {
           ...account.account_info,
-          quota: result.data.quota,
+          quota: manualQuota ?? result.data.quota,
           today_prompt_tokens: result.data.today_prompt_tokens,
           today_completion_tokens: result.data.today_completion_tokens,
           today_quota_consumption: result.data.today_quota_consumption,
