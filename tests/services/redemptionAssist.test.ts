@@ -7,6 +7,13 @@ vi.mock("i18next", () => ({
   t: (key: string) => key,
 }))
 
+vi.mock("~/services/accountStorage", () => ({
+  accountStorage: {
+    getEnabledAccounts: vi.fn().mockResolvedValue([]),
+    convertToDisplayData: vi.fn(() => []),
+  },
+}))
+
 vi.mock("~/services/userPreferences", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("~/services/userPreferences")>()
@@ -60,6 +67,50 @@ describe("redemptionAssist shouldPrompt batch filtering", () => {
     )
 
     expect(sendResponse).toHaveBeenCalledWith({
+      success: true,
+      promptableCodes: [validHex],
+    })
+  })
+
+  it("allows prompt on common redemption sites by default", async () => {
+    vi.resetModules()
+    const { userPreferences } = await import("~/services/userPreferences")
+    const getPreferencesMock = vi.mocked(userPreferences.getPreferences)
+
+    getPreferencesMock.mockResolvedValue(DEFAULT_PREFERENCES)
+
+    const { handleRedemptionAssistMessage } = await import(
+      "~/services/redemptionAssist"
+    )
+
+    const validHex = "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6"
+    const sendResponse = vi.fn()
+
+    await handleRedemptionAssistMessage(
+      {
+        action: RuntimeActionIds.RedemptionAssistShouldPrompt,
+        url: "https://cdk.hybgzs.com/entertainment/wheel",
+        codes: [validHex],
+      },
+      { tab: { id: 99 } } as any,
+      sendResponse,
+    )
+
+    await handleRedemptionAssistMessage(
+      {
+        action: RuntimeActionIds.RedemptionAssistShouldPrompt,
+        url: "https://qd.x666.me",
+        codes: [validHex],
+      },
+      { tab: { id: 99 } } as any,
+      sendResponse,
+    )
+
+    expect(sendResponse).toHaveBeenNthCalledWith(1, {
+      success: true,
+      promptableCodes: [validHex],
+    })
+    expect(sendResponse).toHaveBeenNthCalledWith(2, {
       success: true,
       promptableCodes: [validHex],
     })
