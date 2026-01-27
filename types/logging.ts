@@ -34,7 +34,7 @@ export interface LoggingPreferences {
  * Compute default logging preferences based on build mode.
  *
  * - development: enabled + verbose (`debug`)
- * - production: disabled (user can opt-in via settings)
+ * - production: enabled (user can opt-in via settings)
  * - test: disabled by default to keep test output quiet (tests can override)
  */
 export function getDefaultLoggingPreferences(
@@ -48,5 +48,5 @@ export function getDefaultLoggingPreferences(
     return { consoleEnabled: false, level: "debug" }
   }
 
-  return { consoleEnabled: false, level: "warn" }
+  return { consoleEnabled: true, level: "info" }
 }
