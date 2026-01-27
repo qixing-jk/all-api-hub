@@ -47,7 +47,7 @@ export const useImportExport = () => {
         toast.success(t("importExport:import.importSuccess"))
       }
     } catch (error) {
-      logger.error("导入失败", error)
+      logger.error("Import failed", error)
       if (error instanceof SyntaxError) {
         toast.error(t("importExport:import.formatError"))
       } else {

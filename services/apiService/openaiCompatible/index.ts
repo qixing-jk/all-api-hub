@@ -25,7 +25,7 @@ export const fetchOpenAICompatibleModels = async (params: OpenAIAuthParams) => {
       endpoint: "/v1/models",
     })
   } catch (error) {
-    logger.error("获取上游模型列表失败", error)
+    logger.error("Failed to fetch upstream model list", error)
     throw error
   }
 }

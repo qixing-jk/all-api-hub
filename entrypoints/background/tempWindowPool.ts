@@ -457,7 +457,6 @@ export async function handleAutoDetectSite(
     }
     logger.debug("自动检测结果", {
       siteType: siteType ?? null,
-      userId: userData?.userId ?? null,
       hasUser: Boolean(userData),
     })
 
