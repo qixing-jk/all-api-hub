@@ -11,6 +11,20 @@ Constraints:
 - Security/privacy: never log secrets; logging must be safe by default.
 - Localization: any new user-facing settings need i18n strings.
 
+## Audit Findings
+
+The current codebase has widespread direct `console.*` usage. The highest-volume hotspots (by rough match count) are:
+- `services/accountStorage.ts` (~46)
+- `services/autoCheckin/scheduler.ts` (~42)
+- `services/webdav/webdavAutoSyncService.ts` (~37)
+- `services/apiService/common/index.ts` (~26)
+- `services/autoRefreshService.ts` (~23)
+- `services/modelSync/scheduler.ts` (~19)
+- `utils/browserApi.ts` (~15)
+- `utils/cookieHelper.ts` (~13)
+
+Potential sensitive-leakage risk areas include cookie interception helpers (`utils/cookieHelper.ts`, `entrypoints/background/cookieInterceptor.ts`) and token-bearing API flows that may log token-shaped payloads (e.g., `Unexpected token response format` warnings). These areas are prioritized during the refactor and are protected by logger-level redaction + URL sanitization.
+
 ## Goals / Non-Goals
 
 **Goals:**
