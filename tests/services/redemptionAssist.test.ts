@@ -84,35 +84,29 @@ describe("redemptionAssist shouldPrompt batch filtering", () => {
     )
 
     const validHex = "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6"
-    const sendResponse = vi.fn()
 
-    await handleRedemptionAssistMessage(
-      {
-        action: RuntimeActionIds.RedemptionAssistShouldPrompt,
-        url: "https://cdk.hybgzs.com/entertainment/wheel",
-        codes: [validHex],
-      },
-      { tab: { id: 99 } } as any,
-      sendResponse,
-    )
+    const testUrls = [
+      "https://cdk.hybgzs.com/entertainment/wheel",
+      "https://qd.x666.me",
+    ]
 
-    await handleRedemptionAssistMessage(
-      {
-        action: RuntimeActionIds.RedemptionAssistShouldPrompt,
-        url: "https://qd.x666.me",
-        codes: [validHex],
-      },
-      { tab: { id: 99 } } as any,
-      sendResponse,
-    )
+    for (const url of testUrls) {
+      const sendResponse = vi.fn()
 
-    expect(sendResponse).toHaveBeenNthCalledWith(1, {
-      success: true,
-      promptableCodes: [validHex],
-    })
-    expect(sendResponse).toHaveBeenNthCalledWith(2, {
-      success: true,
-      promptableCodes: [validHex],
-    })
+      await handleRedemptionAssistMessage(
+        {
+          action: RuntimeActionIds.RedemptionAssistShouldPrompt,
+          url,
+          codes: [validHex],
+        },
+        { tab: { id: 99 } } as any,
+        sendResponse,
+      )
+
+      expect(sendResponse).toHaveBeenCalledWith({
+        success: true,
+        promptableCodes: [validHex],
+      })
+    }
   })
 })
