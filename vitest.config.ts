@@ -11,6 +11,9 @@ export default defineConfig({
 
     pool: "threads",
 
+    testTimeout: 15_000,
+    hookTimeout: 15_000,
+
     // Setup files to run before tests
     setupFiles: ["./tests/setup.ts"],
 

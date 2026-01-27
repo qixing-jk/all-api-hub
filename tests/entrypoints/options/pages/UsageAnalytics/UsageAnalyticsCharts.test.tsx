@@ -11,7 +11,7 @@ import {
 } from "~/services/usageHistory/core"
 import { usageHistoryStorage } from "~/services/usageHistory/storage"
 import { testI18n } from "~/tests/test-utils/i18n"
-import { render, screen } from "~/tests/test-utils/render"
+import { render, screen, waitFor } from "~/tests/test-utils/render"
 
 const echartsInstances: Array<{
   setOption: ReturnType<typeof vi.fn>
@@ -146,7 +146,10 @@ describe("UsageAnalytics charts", () => {
     expect(screen.getAllByRole("button", { name: "Histogram" })).toHaveLength(5)
 
     // The first breakdown card is "Model distribution" and is mounted after the daily overview chart.
-    const modelDistributionInstance = echartsInstances[1]
+    await waitFor(() => {
+      expect(echartsInstances[1]).toBeDefined()
+    })
+    const modelDistributionInstance = echartsInstances[1]!
     const initialOption = modelDistributionInstance.setOption.mock
       .calls[0]?.[0] as any
     expect(initialOption.series?.[0]?.type).toBe("pie")
