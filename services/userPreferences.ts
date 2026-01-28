@@ -343,6 +343,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   autoCheckin: {
     globalEnabled: true,
     pretriggerDailyOnUiOpen: false,
+    notifyUiOnCompletion: true,
     windowStart: "09:00",
     windowEnd: "23:00",
     scheduleMode: AUTO_CHECKIN_SCHEDULE_MODE.RANDOM,

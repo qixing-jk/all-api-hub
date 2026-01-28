@@ -3,6 +3,7 @@ import { useEffect } from "react"
 import { I18nextProvider } from "react-i18next"
 import { describe, expect, it, vi } from "vitest"
 
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   AccountDataProvider,
   useAccountDataContext,
@@ -14,6 +15,7 @@ const {
   mockGetOrderedList,
   mockGetPinnedList,
   mockGetAccountStats,
+  mockGetAccountById,
   mockConvertToDisplayData,
   mockResetExpiredCheckIns,
   mockSetPinnedList,
@@ -24,6 +26,7 @@ const {
   mockGetOrderedList: vi.fn(),
   mockGetPinnedList: vi.fn(),
   mockGetAccountStats: vi.fn(),
+  mockGetAccountById: vi.fn(),
   mockConvertToDisplayData: vi.fn(),
   mockResetExpiredCheckIns: vi.fn(),
   mockSetPinnedList: vi.fn(),
@@ -35,6 +38,7 @@ vi.mock("~/services/accountStorage", () => ({
   accountStorage: {
     resetExpiredCheckIns: mockResetExpiredCheckIns,
     getAllAccounts: mockGetAllAccounts,
+    getAccountById: mockGetAccountById,
     getOrderedList: mockGetOrderedList,
     getPinnedList: mockGetPinnedList,
     getAccountStats: mockGetAccountStats,
@@ -74,7 +78,12 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
 vi.mock("~/utils/browserApi", () => ({
   getActiveTabs: vi.fn(async () => []),
   getAllTabs: vi.fn(async () => []),
-  onRuntimeMessage: vi.fn(() => () => {}),
+  onRuntimeMessage: vi.fn((listener: any) => {
+    ;(globalThis as any).__accountDataContextRuntimeListener = listener
+    return () => {
+      ;(globalThis as any).__accountDataContextRuntimeListener = undefined
+    }
+  }),
   onTabActivated: vi.fn(() => () => {}),
   onTabRemoved: vi.fn(() => () => {}),
   onTabUpdated: vi.fn(() => () => {}),
@@ -191,5 +200,134 @@ describe("AccountDataContext handleReorder", () => {
 
     expect(mockSetPinnedList).not.toHaveBeenCalled()
     expect(mockSetOrderedList).toHaveBeenCalledWith(["p-1", "p-2", "u-1"])
+  })
+})
+
+describe("AccountDataContext auto-checkin runCompleted handling", () => {
+  it("updates only accounts listed in updatedAccountIds", async () => {
+    mockResetExpiredCheckIns.mockResolvedValue(undefined)
+    mockGetTagStore.mockResolvedValue({ version: 1, tagsById: {} })
+
+    const accountA: any = {
+      id: "a",
+      checkIn: { siteStatus: { isCheckedInToday: false } },
+    }
+    const accountB: any = {
+      id: "b",
+      checkIn: { siteStatus: { isCheckedInToday: false } },
+    }
+
+    mockGetAllAccounts.mockResolvedValue([accountA, accountB])
+    mockGetOrderedList.mockResolvedValue(["a", "b"])
+    mockGetPinnedList.mockResolvedValue([])
+    mockGetAccountStats.mockResolvedValue({
+      total_quota: 0,
+      today_total_consumption: 0,
+      today_total_requests: 0,
+      today_total_prompt_tokens: 0,
+      today_total_completion_tokens: 0,
+      today_total_income: 0,
+    })
+
+    mockConvertToDisplayData.mockImplementation((input: any) => {
+      const accounts = Array.isArray(input) ? input : [input]
+      const display = accounts.map((account: any) => ({
+        id: account.id,
+        name: account.id,
+        checkIn: account.checkIn,
+      }))
+      return Array.isArray(input) ? display : display[0]
+    })
+
+    const updatedAccountA: any = {
+      id: "a",
+      checkIn: { siteStatus: { isCheckedInToday: true } },
+    }
+    mockGetAccountById.mockResolvedValue(updatedAccountA)
+
+    let latestCtx: ReturnType<typeof useAccountDataContext> | null = null
+
+    render(
+      <I18nextProvider i18n={i18nInstance}>
+        <AccountDataProvider>
+          <ContextProbe onChange={(ctx) => (latestCtx = ctx)} />
+        </AccountDataProvider>
+      </I18nextProvider>,
+    )
+
+    await waitFor(() => {
+      expect(latestCtx?.displayData).toHaveLength(2)
+    })
+
+    const listener = (globalThis as any).__accountDataContextRuntimeListener as
+      | ((message: any) => void)
+      | undefined
+    expect(listener).toBeTypeOf("function")
+
+    await act(async () => {
+      listener!({
+        action: RuntimeActionIds.AutoCheckinRunCompleted,
+        updatedAccountIds: ["a"],
+      })
+    })
+
+    await waitFor(() => {
+      const byId = Object.fromEntries(
+        (latestCtx?.displayData ?? []).map((item: any) => [item.id, item]),
+      )
+      expect(byId.a?.checkIn?.siteStatus?.isCheckedInToday).toBe(true)
+      expect(byId.b?.checkIn?.siteStatus?.isCheckedInToday).toBe(false)
+    })
+
+    expect(mockGetAccountById).toHaveBeenCalledTimes(1)
+    expect(mockGetAccountById).toHaveBeenCalledWith("a")
+  })
+
+  it("falls back to loadAccountData() when a targeted reload fails", async () => {
+    mockResetExpiredCheckIns.mockResolvedValue(undefined)
+    mockGetTagStore.mockResolvedValue({ version: 1, tagsById: {} })
+    mockGetAllAccounts.mockResolvedValue([{ id: "a" }, { id: "b" }])
+    mockGetOrderedList.mockResolvedValue(["a", "b"])
+    mockGetPinnedList.mockResolvedValue([])
+    mockGetAccountStats.mockResolvedValue({
+      total_quota: 0,
+      today_total_consumption: 0,
+      today_total_requests: 0,
+      today_total_prompt_tokens: 0,
+      today_total_completion_tokens: 0,
+      today_total_income: 0,
+    })
+    mockConvertToDisplayData.mockReturnValue([{ id: "a" }, { id: "b" }])
+
+    render(
+      <I18nextProvider i18n={i18nInstance}>
+        <AccountDataProvider>
+          <ContextProbe onChange={vi.fn()} />
+        </AccountDataProvider>
+      </I18nextProvider>,
+    )
+
+    await waitFor(() => {
+      expect(mockGetAllAccounts).toHaveBeenCalled()
+    })
+
+    mockGetAllAccounts.mockClear()
+    mockGetAccountById.mockResolvedValue(null)
+
+    const listener = (globalThis as any).__accountDataContextRuntimeListener as
+      | ((message: any) => void)
+      | undefined
+    expect(listener).toBeTypeOf("function")
+
+    await act(async () => {
+      listener!({
+        action: RuntimeActionIds.AutoCheckinRunCompleted,
+        updatedAccountIds: ["missing"],
+      })
+    })
+
+    await waitFor(() => {
+      expect(mockGetAllAccounts).toHaveBeenCalledTimes(1)
+    })
   })
 })

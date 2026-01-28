@@ -15,11 +15,13 @@ import {
   AutoCheckinAccountSnapshot,
   AutoCheckinPreferences,
   AutoCheckinRetryState,
+  AutoCheckinRunCompletedRuntimeMessage,
   AutoCheckinRunResult,
   AutoCheckinRunSummary,
   AutoCheckinSkipReason,
   AutoCheckinStatus,
   CHECKIN_RESULT_STATUS,
+  type AutoCheckinRunKind,
   type AutoCheckinRunType,
   type CheckinAccountResult,
   type CheckinResultStatus,
@@ -106,6 +108,65 @@ interface AutoCheckinUiOpenPretriggerResult {
  */
 class AutoCheckinScheduler {
   /**
+   * Post-checkin account refresh to ensure balances/quotas reflect the effect of a successful check-in.
+   *
+   * Notes:
+   * - This MUST NOT invoke provider `checkIn` again; it uses the existing account refresh pipeline.
+   * - Best-effort: failures are swallowed so check-in completion semantics are unchanged.
+   * - Uses a small concurrency limit to avoid spiking network load when many accounts were checked in.
+   */
+  private async refreshAccountsAfterSuccessfulCheckins(params: {
+    accountIds: string[]
+    force?: boolean
+  }): Promise<void> {
+    try {
+      const uniqueAccountIds = Array.from(new Set(params.accountIds)).filter(
+        (id) => typeof id === "string" && id.trim().length > 0,
+      )
+
+      if (uniqueAccountIds.length === 0) {
+        return
+      }
+
+      const force = params.force ?? true
+      const batchSize = 3
+      let refreshedCount = 0
+      let failedCount = 0
+
+      for (let i = 0; i < uniqueAccountIds.length; i += batchSize) {
+        const batch = uniqueAccountIds.slice(i, i + batchSize)
+        const results = await Promise.allSettled(
+          batch.map((accountId) =>
+            accountStorage.refreshAccount(accountId, force),
+          ),
+        )
+
+        for (const result of results) {
+          if (result.status === "fulfilled") {
+            if (result.value?.refreshed === true) {
+              refreshedCount += 1
+            } else if (result.value == null) {
+              failedCount += 1
+            }
+          } else {
+            failedCount += 1
+          }
+        }
+      }
+
+      logger.debug("Post-checkin refresh finished", {
+        total: uniqueAccountIds.length,
+        refreshedCount,
+        failedCount,
+      })
+    } catch (error) {
+      logger.warn("Post-checkin refresh failed", {
+        error: getErrorMessage(error),
+      })
+    }
+  }
+
+  /**
    * Alarm naming / migration notes.
    *
    * We keep a legacy alarm name for backward compatibility, but clear it when scheduling
@@ -134,6 +195,47 @@ class AutoCheckinScheduler {
    */
   private dailyRunInFlightDay: string | null = null
   private dailyRunInFlightPromise: Promise<void> | null = null
+
+  /**
+   * Best-effort broadcast so open UI surfaces can refresh after an execution completes.
+   *
+   * This notification MUST never crash the scheduler: UI pages may be closed or not listening.
+   */
+  private async notifyUiRunCompleted(params: {
+    runKind: AutoCheckinRunKind
+    updatedAccountIds: string[]
+    summary?: AutoCheckinRunSummary
+  }): Promise<void> {
+    const message: AutoCheckinRunCompletedRuntimeMessage = {
+      action: RuntimeActionIds.AutoCheckinRunCompleted,
+      runKind: params.runKind,
+      updatedAccountIds: params.updatedAccountIds,
+      timestamp: Date.now(),
+      summary: params.summary,
+    }
+
+    try {
+      await browser.runtime.sendMessage(message)
+    } catch (error) {
+      const errorMessage = getErrorMessage(error)
+      // Ignore "no receiver" errors (popup/options closed). Log others for diagnostics.
+      if (
+        /Receiving end does not exist/i.test(errorMessage) ||
+        /Could not establish connection/i.test(errorMessage)
+      ) {
+        logger.debug("Run-completed UI notification ignored (no receiver)", {
+          runKind: message.runKind,
+          error: errorMessage,
+        })
+        return
+      }
+
+      logger.warn("Run-completed UI notification failed", {
+        runKind: message.runKind,
+        error: errorMessage,
+      })
+    }
+  }
 
   /**
    * Returns the local calendar day string for the provided date.
@@ -1359,6 +1461,7 @@ class AutoCheckinScheduler {
     // Default to manual runs for UI-triggered or debug entry points.
     const runType = options?.runType ?? AUTO_CHECKIN_RUN_TYPE.MANUAL
     const isDailyRun = runType === AUTO_CHECKIN_RUN_TYPE.DAILY
+    let notifyUiOnCompletion: boolean | null = null
 
     logger.info("Starting check-in execution", { runType })
     const startTime = Date.now()
@@ -1370,6 +1473,8 @@ class AutoCheckinScheduler {
       // Get preferences
       const prefs = await userPreferences.getPreferences()
       const config = prefs.autoCheckin ?? DEFAULT_PREFERENCES.autoCheckin!
+      // Treat missing values as enabled to preserve backward compatibility with older stored prefs.
+      notifyUiOnCompletion = config.notifyUiOnCompletion !== false
 
       if (!config.globalEnabled) {
         logger.info("Global feature disabled; skipping")
@@ -1470,6 +1575,14 @@ class AutoCheckinScheduler {
               }
             : {}),
         })
+
+        if (notifyUiOnCompletion) {
+          await this.notifyUiRunCompleted({
+            runKind: runType,
+            updatedAccountIds: [],
+            summary,
+          })
+        }
         return
       }
 
@@ -1509,6 +1622,16 @@ class AutoCheckinScheduler {
         skippedCount,
         needsRetry: summaryNeedsRetry,
       }
+
+      const updatedAccountIds = checkinOutcomes
+        .filter((outcome) => outcome.successful)
+        .map((outcome) => outcome.result.accountId)
+
+      const accountIdsToRefresh = checkinOutcomes
+        .filter(
+          (outcome) => outcome.result.status === CHECKIN_RESULT_STATUS.SUCCESS,
+        )
+        .map((outcome) => outcome.result.accountId)
 
       let retryState: AutoCheckinRetryState | undefined =
         currentStatus?.retryState
@@ -1573,6 +1696,19 @@ class AutoCheckinScheduler {
           : {}),
       })
 
+      await this.refreshAccountsAfterSuccessfulCheckins({
+        accountIds: accountIdsToRefresh,
+        force: true,
+      })
+
+      if (notifyUiOnCompletion) {
+        await this.notifyUiRunCompleted({
+          runKind: runType,
+          updatedAccountIds,
+          summary,
+        })
+      }
+
       const duration = Date.now() - startTime
       logger.info("Execution completed", {
         durationMs: duration,
@@ -1596,6 +1732,23 @@ class AutoCheckinScheduler {
             }
           : {}),
       })
+
+      if (notifyUiOnCompletion === null) {
+        try {
+          const prefs = await userPreferences.getPreferences()
+          const config = prefs.autoCheckin ?? DEFAULT_PREFERENCES.autoCheckin!
+          notifyUiOnCompletion = config.notifyUiOnCompletion !== false
+        } catch {
+          // ignore; execution already persisted status
+        }
+      }
+
+      if (notifyUiOnCompletion) {
+        await this.notifyUiRunCompleted({
+          runKind: runType,
+          updatedAccountIds: [],
+        })
+      }
     }
   }
 
@@ -1616,6 +1769,8 @@ class AutoCheckinScheduler {
 
     const prefs = await userPreferences.getPreferences()
     const config = prefs.autoCheckin ?? DEFAULT_PREFERENCES.autoCheckin!
+    // Treat missing values as enabled to preserve backward compatibility with older stored prefs.
+    const notifyUiOnCompletion = config.notifyUiOnCompletion !== false
     const currentStatus = await autoCheckinStorage.getStatus()
 
     if (!config.globalEnabled || !config.retryStrategy?.enabled) {
@@ -1649,6 +1804,8 @@ class AutoCheckinScheduler {
 
     const updates: Record<string, CheckinAccountResult> = {}
     const remaining: string[] = []
+    const updatedAccountIds: string[] = []
+    const accountIdsToRefresh: string[] = []
 
     for (const accountId of retryState.pendingAccountIds) {
       // Default to 1 to represent the initial daily run failure when the stored map is missing.
@@ -1691,6 +1848,12 @@ class AutoCheckinScheduler {
       // Persist that we've attempted one more time for this account today, regardless of outcome.
       attemptsByAccount[accountId] = attempts + 1
       updates[accountId] = outcome.result
+      if (outcome.successful) {
+        updatedAccountIds.push(outcome.result.accountId)
+      }
+      if (outcome.result.status === CHECKIN_RESULT_STATUS.SUCCESS) {
+        accountIdsToRefresh.push(outcome.result.accountId)
+      }
 
       if (!outcome.successful && attemptsByAccount[accountId] < maxAttempts) {
         remaining.push(accountId)
@@ -1742,6 +1905,19 @@ class AutoCheckinScheduler {
       nextRetryScheduledAt: undefined,
       retryAlarmTargetDay: undefined,
     })
+
+    await this.refreshAccountsAfterSuccessfulCheckins({
+      accountIds: accountIdsToRefresh,
+      force: true,
+    })
+
+    if (notifyUiOnCompletion) {
+      await this.notifyUiRunCompleted({
+        runKind: "retry",
+        updatedAccountIds,
+        summary,
+      })
+    }
   }
 
   /**
@@ -1754,6 +1930,7 @@ class AutoCheckinScheduler {
         AutoCheckinPreferences,
         | "globalEnabled"
         | "pretriggerDailyOnUiOpen"
+        | "notifyUiOnCompletion"
         | "windowStart"
         | "windowEnd"
         | "scheduleMode"

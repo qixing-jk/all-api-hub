@@ -27,6 +27,7 @@ vi.mock("~/services/userPreferences", () => ({
     autoCheckin: {
       globalEnabled: true,
       pretriggerDailyOnUiOpen: true,
+      notifyUiOnCompletion: true,
       windowStart: "08:00",
       windowEnd: "10:00",
       scheduleMode: "random",
@@ -50,6 +51,7 @@ vi.mock("~/services/accountStorage", () => ({
     getEnabledAccounts: vi.fn(),
     updateAccount: vi.fn(),
     markAccountAsSiteCheckedIn: vi.fn(),
+    refreshAccount: vi.fn(),
     getAccountById: vi.fn(),
     convertToDisplayData: vi.fn(),
   },
@@ -96,6 +98,7 @@ const mockedAccountStorage = accountStorage as unknown as {
   getAccountById: ReturnType<typeof vi.fn>
   getAllAccounts: ReturnType<typeof vi.fn>
   markAccountAsSiteCheckedIn: ReturnType<typeof vi.fn>
+  refreshAccount: ReturnType<typeof vi.fn>
 }
 
 const mockedProviders = {
@@ -376,6 +379,227 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
     expect(storedStatus.retryState).toBeUndefined()
     expect(storedStatus.pendingRetry).toBe(false)
     expect(alarmStore.autoCheckinRetry).toBeUndefined()
+
+    vi.useRealTimers()
+  })
+})
+
+describe("autoCheckinScheduler run-completed notifications", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it("emits autoCheckin:runCompleted when notifyUiOnCompletion is enabled", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2024, 0, 1, 9, 0, 0))
+
+    const callOrder: string[] = []
+
+    const sendMessageSpy = vi
+      .spyOn(browser.runtime, "sendMessage")
+      .mockImplementation(async () => {
+        callOrder.push("send")
+        return undefined as any
+      })
+
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      autoCheckin: {
+        globalEnabled: true,
+        pretriggerDailyOnUiOpen: false,
+        notifyUiOnCompletion: true,
+        windowStart: "08:00",
+        windowEnd: "10:00",
+        scheduleMode: "random",
+        deterministicTime: "08:00",
+        retryStrategy: {
+          enabled: false,
+          intervalMinutes: 30,
+          maxAttemptsPerDay: 3,
+        },
+      },
+    })
+
+    const accountA: any = {
+      id: "a",
+      disabled: false,
+      site_name: "SiteA",
+      site_type: "veloera",
+      account_info: { username: "user-a" },
+      checkIn: { enableDetection: true },
+    }
+    const accountB: any = {
+      id: "b",
+      disabled: false,
+      site_name: "SiteB",
+      site_type: "veloera",
+      account_info: { username: "user-b" },
+      checkIn: { enableDetection: true },
+    }
+
+    mockedAccountStorage.getAllAccounts.mockResolvedValue([accountA, accountB])
+    mockedAccountStorage.refreshAccount.mockImplementation(
+      async (id: string) => {
+        callOrder.push("refresh")
+        return {
+          account: id === "a" ? accountA : accountB,
+          refreshed: true,
+        } as any
+      },
+    )
+
+    const provider = {
+      canCheckIn: vi.fn(() => true),
+      checkIn: vi.fn(async (account: any) => {
+        return account.id === "a"
+          ? { status: "success" }
+          : { status: "failed", rawMessage: "boom" }
+      }),
+    }
+    mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
+
+    await autoCheckinScheduler.runCheckins({
+      runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
+    })
+
+    expect(mockedAccountStorage.refreshAccount).toHaveBeenCalledWith("a", true)
+    expect(sendMessageSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: RuntimeActionIds.AutoCheckinRunCompleted,
+        runKind: "manual",
+        updatedAccountIds: ["a"],
+        timestamp: expect.any(Number),
+      }),
+    )
+    expect(callOrder).toEqual(["refresh", "send"])
+
+    vi.useRealTimers()
+  })
+
+  it("still emits autoCheckin:runCompleted when post-checkin refresh fails", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2024, 0, 1, 9, 0, 0))
+
+    const callOrder: string[] = []
+
+    const sendMessageSpy = vi
+      .spyOn(browser.runtime, "sendMessage")
+      .mockImplementation(async () => {
+        callOrder.push("send")
+        return undefined as any
+      })
+
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      autoCheckin: {
+        globalEnabled: true,
+        pretriggerDailyOnUiOpen: false,
+        notifyUiOnCompletion: true,
+        windowStart: "08:00",
+        windowEnd: "10:00",
+        scheduleMode: "random",
+        deterministicTime: "08:00",
+        retryStrategy: {
+          enabled: false,
+          intervalMinutes: 30,
+          maxAttemptsPerDay: 3,
+        },
+      },
+    })
+
+    const accountA: any = {
+      id: "a",
+      disabled: false,
+      site_name: "SiteA",
+      site_type: "veloera",
+      account_info: { username: "user-a" },
+      checkIn: { enableDetection: true },
+    }
+
+    mockedAccountStorage.getAllAccounts.mockResolvedValue([accountA])
+    mockedAccountStorage.refreshAccount.mockImplementation(async () => {
+      callOrder.push("refresh")
+      throw new Error("refresh boom")
+    })
+
+    const provider = {
+      canCheckIn: vi.fn(() => true),
+      checkIn: vi.fn(async () => ({ status: "success" })),
+    }
+    mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
+
+    await autoCheckinScheduler.runCheckins({
+      runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
+    })
+
+    expect(mockedAccountStorage.refreshAccount).toHaveBeenCalledWith("a", true)
+    expect(sendMessageSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: RuntimeActionIds.AutoCheckinRunCompleted,
+        runKind: "manual",
+        updatedAccountIds: ["a"],
+        timestamp: expect.any(Number),
+      }),
+    )
+    expect(callOrder).toEqual(["refresh", "send"])
+
+    vi.useRealTimers()
+  })
+
+  it("does not emit autoCheckin:runCompleted when notifyUiOnCompletion is disabled", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2024, 0, 1, 9, 0, 0))
+
+    const sendMessageSpy = vi
+      .spyOn(browser.runtime, "sendMessage")
+      .mockResolvedValue(undefined as any)
+
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      autoCheckin: {
+        globalEnabled: true,
+        pretriggerDailyOnUiOpen: false,
+        notifyUiOnCompletion: false,
+        windowStart: "08:00",
+        windowEnd: "10:00",
+        scheduleMode: "random",
+        deterministicTime: "08:00",
+        retryStrategy: {
+          enabled: false,
+          intervalMinutes: 30,
+          maxAttemptsPerDay: 3,
+        },
+      },
+    })
+
+    const accountA: any = {
+      id: "a",
+      disabled: false,
+      site_name: "SiteA",
+      site_type: "veloera",
+      account_info: { username: "user-a" },
+      checkIn: { enableDetection: true },
+    }
+
+    mockedAccountStorage.getAllAccounts.mockResolvedValue([accountA])
+    mockedAccountStorage.refreshAccount.mockResolvedValue({
+      account: accountA,
+      refreshed: true,
+    } as any)
+
+    const provider = {
+      canCheckIn: vi.fn(() => true),
+      checkIn: vi.fn(async () => ({ status: "success" })),
+    }
+    mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
+
+    await autoCheckinScheduler.runCheckins({
+      runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
+    })
+
+    expect(mockedAccountStorage.refreshAccount).toHaveBeenCalledWith("a", true)
+    expect(sendMessageSpy).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: RuntimeActionIds.AutoCheckinRunCompleted,
+      }),
+    )
 
     vi.useRealTimers()
   })

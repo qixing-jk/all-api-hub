@@ -11,6 +11,7 @@ import {
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next" // 1. 定义 Context 的值类型
 
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { accountStorage } from "~/services/accountStorage"
 import { tagStorage } from "~/services/accountTags/tagStorage"
@@ -377,6 +378,57 @@ export const AccountDataProvider = ({
 
   // 监听后台自动刷新的更新通知
   useEffect(() => {
+    const reloadAccountsById = async (accountIds: string[]) => {
+      const uniqueIds = Array.from(
+        new Set(
+          accountIds.filter((id): id is string => typeof id === "string" && id),
+        ),
+      )
+
+      if (uniqueIds.length === 0) {
+        return
+      }
+
+      try {
+        const reloadedAccounts = await Promise.all(
+          uniqueIds.map(async (accountId) => {
+            const account = await accountStorage.getAccountById(accountId)
+            if (!account) {
+              throw new Error(`Account not found: ${accountId}`)
+            }
+            return account
+          }),
+        )
+
+        const reloadedById = Object.fromEntries(
+          reloadedAccounts.map((account) => [account.id, account]),
+        )
+
+        const displayUpdates = accountStorage.convertToDisplayData(
+          reloadedAccounts,
+        ) as DisplaySiteData[]
+        const displayById = Object.fromEntries(
+          displayUpdates.map((display) => [display.id, display]),
+        )
+
+        setAccounts((prev) =>
+          prev.map((account) => reloadedById[account.id] ?? account),
+        )
+        setDisplayData((prev) =>
+          prev.map((display) => displayById[display.id] ?? display),
+        )
+      } catch (error) {
+        logger.warn(
+          "Account-scoped reload failed; falling back to full reload",
+          {
+            accountIds: uniqueIds,
+            error,
+          },
+        )
+        await loadAccountData()
+      }
+    }
+
     return onRuntimeMessage((message: any) => {
       if (
         message.type === "AUTO_REFRESH_UPDATE" &&
@@ -388,6 +440,13 @@ export const AccountDataProvider = ({
       if (message.type === "TAG_STORE_UPDATE") {
         logger.debug("Tag store updated, reloading data")
         loadAccountData()
+      }
+
+      if (message?.action === RuntimeActionIds.AutoCheckinRunCompleted) {
+        const updatedAccountIds = Array.isArray(message.updatedAccountIds)
+          ? message.updatedAccountIds
+          : []
+        void reloadAccountsById(updatedAccountIds)
       }
     })
   }, [loadAccountData])

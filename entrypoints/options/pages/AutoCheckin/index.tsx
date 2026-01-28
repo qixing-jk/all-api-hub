@@ -106,6 +106,14 @@ export default function AutoCheckin(props: {
     void loadStatus()
   }, [loadStatus])
 
+  useEffect(() => {
+    return onRuntimeMessage((message) => {
+      if (message?.action === RuntimeActionIds.AutoCheckinRunCompleted) {
+        void loadStatus()
+      }
+    })
+  }, [loadStatus])
+
   const handleRunNow = useCallback(async () => {
     try {
       setIsRunning(true)

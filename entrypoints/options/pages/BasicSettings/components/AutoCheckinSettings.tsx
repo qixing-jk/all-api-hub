@@ -189,6 +189,21 @@ export default function AutoCheckinSettings() {
             }
           />
 
+          {/* Post-run UI refresh notification */}
+          <CardItem
+            title={t("autoCheckin:settings.notifyUiOnCompletion")}
+            description={t("autoCheckin:settings.notifyUiOnCompletionDesc")}
+            rightContent={
+              <Switch
+                checked={preferences.notifyUiOnCompletion}
+                onChange={(checked) =>
+                  savePreferences({ notifyUiOnCompletion: checked })
+                }
+                disabled={isSaving}
+              />
+            }
+          />
+
           {/* Time Window Start */}
           <CardItem
             title={t("autoCheckin:settings.windowStart")}

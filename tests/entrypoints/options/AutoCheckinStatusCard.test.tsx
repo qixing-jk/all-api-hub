@@ -11,6 +11,7 @@ describe("AutoCheckin StatusCard scheduling labels", () => {
   const basePreferences: AutoCheckinPreferences = {
     globalEnabled: true,
     pretriggerDailyOnUiOpen: true,
+    notifyUiOnCompletion: true,
     windowStart: "09:00",
     windowEnd: "18:00",
     scheduleMode: "random",

@@ -94,6 +94,10 @@ export const RuntimeActionIds = {
     RuntimeActionPrefixes.AutoCheckin,
     "runNow",
   ),
+  AutoCheckinRunCompleted: composeRuntimeAction(
+    RuntimeActionPrefixes.AutoCheckin,
+    "runCompleted",
+  ),
   AutoCheckinDebugTriggerDailyAlarmNow: composeRuntimeAction(
     RuntimeActionPrefixes.AutoCheckin,
     "debugTriggerDailyAlarmNow",

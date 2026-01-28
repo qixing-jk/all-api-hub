@@ -3,6 +3,8 @@
  * Types for automatic daily check-in feature
  */
 
+import { RuntimeActionIds } from "~/constants/runtimeActions"
+
 /**
  * Check-in result status
  */
@@ -81,6 +83,15 @@ export const AUTO_CHECKIN_RUN_TYPES = Object.values(
 ) as AutoCheckinRunType[]
 
 /**
+ * Auto check-in run kind used for run-completion notifications.
+ *
+ * - `daily`: scheduled daily execution (including UI-open pretrigger runs).
+ * - `manual`: user-triggered execution (e.g. "Run now" from settings/controls).
+ * - `retry`: automatic retry execution scheduled by the retry alarm.
+ */
+export type AutoCheckinRunKind = AutoCheckinRunType | "retry"
+
+/**
  * Auto check-in run summary
  */
 export interface AutoCheckinRunSummary {
@@ -90,6 +101,21 @@ export interface AutoCheckinRunSummary {
   failedCount: number
   skippedCount: number
   needsRetry: boolean
+}
+
+/**
+ * Runtime message broadcast by the background after an auto check-in execution completes.
+ *
+ * This message is sent best-effort (it is safe when no UI surface is listening) and allows
+ * open UI surfaces to refresh account status and/or the Auto Check-in status view without a
+ * full page reload.
+ */
+export type AutoCheckinRunCompletedRuntimeMessage = {
+  action: typeof RuntimeActionIds.AutoCheckinRunCompleted
+  runKind: AutoCheckinRunKind
+  updatedAccountIds: string[]
+  timestamp: number
+  summary?: AutoCheckinRunSummary
 }
 
 /**
@@ -207,6 +233,12 @@ export interface AutoCheckinPreferences {
    * executed yet).
    */
   pretriggerDailyOnUiOpen: boolean
+
+  /**
+   * When enabled (default), the background broadcasts a completion notification after each
+   * auto check-in execution so open UI surfaces can refresh the affected accounts immediately.
+   */
+  notifyUiOnCompletion: boolean
   windowStart: string // HH:mm format (e.g., "09:00")
   windowEnd: string // HH:mm format (e.g., "18:00")
   scheduleMode: AutoCheckinScheduleMode
