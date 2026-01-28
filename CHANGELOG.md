@@ -1,5 +1,28 @@
 # Changelog
 
+## [3.9.0](https://github.com/qixing-jk/all-api-hub/compare/v3.8.0...v3.9.0) (2026-01-28)
+
+
+### Features
+
+* **account:** add manual balance (USD) override for quota ([#388](https://github.com/qixing-jk/all-api-hub/issues/388)) ([7a921b4](https://github.com/qixing-jk/all-api-hub/commit/7a921b49fdc3376f29a647856ec70f681a8cdff8))
+* **accounts:** add per-account “Exclude from Total Balance” toggle ([#404](https://github.com/qixing-jk/all-api-hub/issues/404)) ([69d8378](https://github.com/qixing-jk/all-api-hub/commit/69d8378d7f59e002f274502704c952285dbdf717))
+* add option to disable changelog open after update ([#406](https://github.com/qixing-jk/all-api-hub/issues/406)) ([1c185f0](https://github.com/qixing-jk/all-api-hub/commit/1c185f076f151a2d54d9073ff65fcbc022fd09da))
+* **auto-checkin:** add UI refresh after execution completes ([#405](https://github.com/qixing-jk/all-api-hub/issues/405)) ([1ee68d7](https://github.com/qixing-jk/all-api-hub/commit/1ee68d7e227ca265812b545332fc2459804f9411))
+* Centralize runtime message action IDs/prefixes and migrate routing to typed constants ([#397](https://github.com/qixing-jk/all-api-hub/issues/397)) ([690dcc7](https://github.com/qixing-jk/all-api-hub/commit/690dcc7e18f01d7972006cd6d0a3873b08957c1c))
+* **logging:** add unified logger and user-controlled console log settings ([#401](https://github.com/qixing-jk/all-api-hub/issues/401)) ([f4c4730](https://github.com/qixing-jk/all-api-hub/commit/f4c4730ef9434ca61a0ed0ae8b5ea52297ec2b72))
+
+
+### Bug Fixes
+
+* **ci:** resolve PR number reliably for forked PR workflows ([a95b190](https://github.com/qixing-jk/all-api-hub/commit/a95b1906acff7842617c26b60ef7e4dca75d447b))
+* **useModelData:** prevent premature all-accounts pricing fetch ([1ebc82f](https://github.com/qixing-jk/all-api-hub/commit/1ebc82fd4ac88e4198e62d3ca6ec5ef79cfc5a88))
+
+
+### Reverts
+
+* simplify wxt.config.ts manifest logic ([52616b6](https://github.com/qixing-jk/all-api-hub/commit/52616b6ed8189ca470f2a4700a874bbd627ecee5))
+
 ## [3.8.0](https://github.com/qixing-jk/all-api-hub/compare/v3.7.0...v3.8.0) (2026-01-26)
 
 
