@@ -1,7 +1,7 @@
 import { act, render, waitFor } from "@testing-library/react"
 import { useEffect } from "react"
 import { I18nextProvider } from "react-i18next"
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
@@ -92,6 +92,17 @@ vi.mock("~/utils/browserApi", () => ({
 vi.mock("~/services/search/accountSearch", () => ({
   searchAccounts: vi.fn(() => []),
 }))
+
+afterEach(() => {
+  /**
+   * Prevent leaked runtime listeners between tests.
+   *
+   * The mocked `onRuntimeMessage` stores its latest listener on `globalThis` so individual
+   * tests can invoke it directly. Tests may not always unmount cleanly, so delete the global
+   * reference here to ensure each test starts with no stale listener.
+   */
+  delete (globalThis as any).__accountDataContextRuntimeListener
+})
 
 /**
  * Captures the latest AccountDataContext value for assertions in tests.
