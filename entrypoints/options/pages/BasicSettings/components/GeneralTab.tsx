@@ -7,6 +7,7 @@ import DangerousZone from "~/entrypoints/options/pages/BasicSettings/components/
 
 import ThemeToggle from "../../../components/ThemeToggle"
 import ActionClickBehaviorSettings from "./ActionClickBehaviorSettings"
+import ChangelogOnUpdateSettings from "./ChangelogOnUpdateSettings"
 import DisplaySettings from "./DisplaySettings"
 import LoggingSettings from "./LoggingSettings"
 
@@ -21,6 +22,7 @@ export default function GeneralTab() {
       <DisplaySettings />
       <ActionClickBehaviorSettings />
       <LoggingSettings />
+      <ChangelogOnUpdateSettings />
 
       {/* Appearance & Language Section */}
       <section id="appearance" className="space-y-6">

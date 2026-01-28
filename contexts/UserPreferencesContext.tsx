@@ -55,6 +55,7 @@ interface UserPreferencesContextType {
   minRefreshInterval: number
   refreshOnOpen: boolean
   actionClickBehavior: "popup" | "sidepanel"
+  openChangelogOnUpdate: boolean
   newApiBaseUrl: string
   newApiAdminToken: string
   newApiUserId: string
@@ -89,6 +90,7 @@ interface UserPreferencesContextType {
   updateActionClickBehavior: (
     behavior: "popup" | "sidepanel",
   ) => Promise<boolean>
+  updateOpenChangelogOnUpdate: (enabled: boolean) => Promise<boolean>
   updateNewApiBaseUrl: (url: string) => Promise<boolean>
   updateNewApiAdminToken: (token: string) => Promise<boolean>
   updateNewApiUserId: (userId: string) => Promise<boolean>
@@ -212,6 +214,20 @@ export const UserPreferencesProvider = ({
     },
     [],
   )
+
+  /**
+   * Enable/disable automatically opening the docs changelog page after updates.
+   * @param enabled - When true, opens the changelog in a new tab on update.
+   */
+  const updateOpenChangelogOnUpdate = useCallback(async (enabled: boolean) => {
+    const success = await userPreferences.updateOpenChangelogOnUpdate(enabled)
+    if (success) {
+      setPreferences((prev) =>
+        prev ? { ...prev, openChangelogOnUpdate: enabled } : prev,
+      )
+    }
+    return success
+  }, [])
 
   const resetClaudeCodeRouterConfig = useCallback(async () => {
     const success = await userPreferences.resetClaudeCodeRouterConfig()
@@ -982,6 +998,10 @@ export const UserPreferencesProvider = ({
     minRefreshInterval: preferences?.accountAutoRefresh?.minInterval ?? 60,
     refreshOnOpen: preferences?.accountAutoRefresh?.refreshOnOpen ?? true,
     actionClickBehavior: preferences?.actionClickBehavior ?? "popup",
+    openChangelogOnUpdate:
+      preferences?.openChangelogOnUpdate ??
+      DEFAULT_PREFERENCES.openChangelogOnUpdate ??
+      true,
     newApiBaseUrl: preferences?.newApi?.baseUrl || "",
     newApiAdminToken: preferences?.newApi?.adminToken || "",
     newApiUserId: preferences?.newApi?.userId || "",
@@ -1015,6 +1035,7 @@ export const UserPreferencesProvider = ({
     updateMinRefreshInterval,
     updateRefreshOnOpen,
     updateActionClickBehavior,
+    updateOpenChangelogOnUpdate,
     updateNewApiBaseUrl,
     updateNewApiAdminToken,
     updateNewApiUserId,

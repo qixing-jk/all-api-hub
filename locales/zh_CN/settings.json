@@ -299,6 +299,12 @@
       "error": "错误"
     }
   },
+  "changelogOnUpdate": {
+    "title": "更新日志",
+    "description": "控制插件更新后是否自动打开文档更新日志页面。",
+    "toggleLabel": "更新后自动打开更新日志",
+    "toggleDesc": "开启后，插件更新完成会自动在新标签页打开更新日志页面。"
+  },
   "messages": {
     "updateSuccess": "{{name}}更新成功",
     "updateFailed": "{{name}}更新失败",

@@ -60,7 +60,9 @@ export default defineBackground(() => {
         logger.info("Triggering config migration", { reason: details.reason })
 
         // Migrate user preferences
-        await userPreferences.getPreferences()
+        // Keep the hydrated snapshot so we can reuse it later in the update flow
+        // without performing another storage read.
+        const prefs = await userPreferences.getPreferences()
         logger.info("User preferences migration completed")
 
         // Migrate legacy tag strings into global tag store + tagIds.
@@ -113,7 +115,10 @@ export default defineBackground(() => {
           }
         }
 
-        if (details.reason === "update") {
+        if (
+          details.reason === "update" &&
+          (prefs.openChangelogOnUpdate ?? true)
+        ) {
           const { version } = getManifest()
           const changelogUrl = getDocsChangelogUrl(version)
           await createTab(changelogUrl, true)

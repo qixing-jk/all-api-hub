@@ -299,6 +299,12 @@
       "error": "Error"
     }
   },
+  "changelogOnUpdate": {
+    "title": "Changelog",
+    "description": "Control whether All API Hub opens the docs changelog automatically after updates.",
+    "toggleLabel": "Open changelog after updates",
+    "toggleDesc": "When enabled, a new tab opens after the extension updates to show release notes."
+  },
   "messages": {
     "updateSuccess": "{{name}} Update successful",
     "updateFailed": "{{name}} Update failed",

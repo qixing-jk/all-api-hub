@@ -120,6 +120,15 @@ export interface UserPreferences {
   language?: string
 
   /**
+   * Controls whether the extension automatically opens the docs changelog page
+   * in a new active tab after an extension update.
+   *
+   * Optional for backward compatibility with stored preferences created before
+   * this flag existed. Missing values MUST be treated as enabled via defaults.
+   */
+  openChangelogOnUpdate?: boolean
+
+  /**
    * Console logging configuration shared across all extension contexts.
    *
    * When `consoleEnabled` is disabled, no logs are emitted at any level
@@ -318,6 +327,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   sortField: DATA_TYPE_BALANCE, // 与 UI_CONSTANTS.SORT.DEFAULT_FIELD 保持一致
   sortOrder: "desc", // 与 UI_CONSTANTS.SORT.DEFAULT_ORDER 保持一致
   actionClickBehavior: "popup",
+  openChangelogOnUpdate: true,
   accountAutoRefresh: DEFAULT_ACCOUNT_AUTO_REFRESH,
   usageHistory: DEFAULT_USAGE_HISTORY_PREFERENCES,
   showHealthStatus: true, // 默认显示健康状态
@@ -465,6 +475,14 @@ class UserPreferencesService {
    */
   async updateActiveTab(activeTab: DashboardTabType): Promise<boolean> {
     return this.savePreferences({ activeTab })
+  }
+
+  /**
+   * Enable/disable automatically opening the docs changelog page after updates.
+   * @param enabled - When true, opens the changelog in a new active tab on update.
+   */
+  async updateOpenChangelogOnUpdate(enabled: boolean): Promise<boolean> {
+    return this.savePreferences({ openChangelogOnUpdate: enabled })
   }
 
   /**
