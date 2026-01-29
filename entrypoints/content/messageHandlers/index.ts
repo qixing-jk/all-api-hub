@@ -1,5 +1,6 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
+  handleCheckCapGuard,
   handleCheckCloudflareGuard,
   handleGetLocalStorage,
   handleGetRenderedTitle,
@@ -22,6 +23,10 @@ export function setupContentMessageHandlers() {
 
     if (request.action === RuntimeActionIds.ContentGetUserFromLocalStorage) {
       return handleGetUserFromLocalStorage(request, sendResponse)
+    }
+
+    if (request.action === RuntimeActionIds.ContentCheckCapGuard) {
+      return handleCheckCapGuard(request, sendResponse)
     }
 
     if (request.action === RuntimeActionIds.ContentCheckCloudflareGuard) {

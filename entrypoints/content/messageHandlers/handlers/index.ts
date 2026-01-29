@@ -1,3 +1,4 @@
+export { handleCheckCapGuard } from "./capGuard"
 export { handleCheckCloudflareGuard } from "./cloudflareGuard"
 export { handlePerformTempWindowFetch } from "./tempWindowFetch"
 export { handleGetLocalStorage, handleGetUserFromLocalStorage } from "./storage"

@@ -1301,8 +1301,83 @@ function normalizeOrigin(url: string) {
   }
 }
 
+type GuardCheckMessageResponse = {
+  success: boolean
+  passed: boolean
+  detection?: unknown
+  error?: string
+}
+
+export type TempContextProtectionGuardStatus = {
+  passed: boolean
+  capPassed: boolean
+  cloudflarePassed: boolean
+  cap?: GuardCheckMessageResponse | null
+  cloudflare?: GuardCheckMessageResponse | null
+}
+
 /**
- * 等待标签页加载完成并通过 Cloudflare 盾校验，超时或错误时抛出异常。
+ *
+ */
+function parseGuardCheckResult(result: PromiseSettledResult<any>): {
+  passed: boolean
+  response: GuardCheckMessageResponse | null
+} {
+  if (result.status === "rejected") {
+    return { passed: false, response: null }
+  }
+
+  const response = result.value as GuardCheckMessageResponse | null | undefined
+  const isValid =
+    !!response &&
+    typeof response === "object" &&
+    typeof response.success === "boolean"
+
+  if (!isValid) {
+    return { passed: false, response: null }
+  }
+
+  return { passed: Boolean(response.success && response.passed), response }
+}
+
+/**
+ * Checks protection-bypass readiness for a temp context tab by querying content-side guards.
+ *
+ * The temp-window flow depends on the browser earning the correct cookies/session state
+ * before replaying API requests. Some sites use Cloudflare, others use CAP (cap.js).
+ *
+ * This helper runs both checks concurrently and returns a combined readiness verdict.
+ */
+export async function checkTempContextProtectionGuards(params: {
+  tabId: number
+  requestId?: string
+}): Promise<TempContextProtectionGuardStatus> {
+  const [capResult, cloudflareResult] = await Promise.allSettled([
+    browser.tabs.sendMessage(params.tabId, {
+      action: RuntimeActionIds.ContentCheckCapGuard,
+      requestId: params.requestId,
+    }),
+    browser.tabs.sendMessage(params.tabId, {
+      action: RuntimeActionIds.ContentCheckCloudflareGuard,
+      requestId: params.requestId,
+    }),
+  ])
+
+  const cap = parseGuardCheckResult(capResult)
+  const cloudflare = parseGuardCheckResult(cloudflareResult)
+
+  return {
+    passed: cap.passed && cloudflare.passed,
+    capPassed: cap.passed,
+    cloudflarePassed: cloudflare.passed,
+    cap: cap.response,
+    cloudflare: cloudflare.response,
+  }
+}
+
+/**
+ * Wait for the temp-context tab to finish loading and clear any protection pages
+ * (Cloudflare and/or CAP checkpoint). Rejects on timeout or errors.
  */
 function waitForTabComplete(
   tabId: number,
@@ -1320,6 +1395,8 @@ function waitForTabComplete(
 
     let attempts = 0
     let lastPassed: boolean | null = null
+    let lastCapPassed: boolean | null = null
+    let lastCloudflarePassed: boolean | null = null
     let lastTabStatus: string | undefined
 
     logTempWindow("waitForTabCompleteStart", {
@@ -1345,24 +1422,37 @@ function waitForTabComplete(
         }
 
         if (tab.status === "complete") {
-          let passed = false
+          let capPassed = false
+          let cloudflarePassed = false
+
           try {
-            const response = await browser.tabs.sendMessage(tabId, {
-              action: RuntimeActionIds.ContentCheckCloudflareGuard,
+            const result = await checkTempContextProtectionGuards({
+              tabId,
               requestId: meta?.requestId,
             })
-            passed = Boolean(response?.success && response.passed)
+            capPassed = result.capPassed
+            cloudflarePassed = result.cloudflarePassed
           } catch (error) {
-            logger.warn("CF check via content script failed", error)
+            logger.warn("Guard checks via content script failed", error)
           }
 
-          if (lastPassed !== passed) {
+          const passed = capPassed && cloudflarePassed
+
+          if (
+            lastPassed !== passed ||
+            lastCapPassed !== capPassed ||
+            lastCloudflarePassed !== cloudflarePassed
+          ) {
             lastPassed = passed
-            logTempWindow("cfGuardCheck", {
+            lastCapPassed = capPassed
+            lastCloudflarePassed = cloudflarePassed
+            logTempWindow("protectionGuardCheck", {
               tabId,
               requestId: meta?.requestId ?? null,
               origin: meta?.origin ?? null,
               passed,
+              capPassed,
+              cloudflarePassed,
               attempt: attempts,
             })
           }
