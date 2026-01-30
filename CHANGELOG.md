@@ -1,5 +1,22 @@
 # Changelog
 
+## [3.10.0](https://github.com/qixing-jk/all-api-hub/compare/v3.9.0...v3.10.0) (2026-01-30)
+
+
+### Features
+
+* **AccountManagement:** allow opening account site in same incognito window ([5057f1a](https://github.com/qixing-jk/all-api-hub/commit/5057f1a639aa5d115c75afebf83a0798c2cb3a25))
+* **AccountManagement:** allow site links for disabled accounts ([522816b](https://github.com/qixing-jk/all-api-hub/commit/522816b9fc19fdc5b1c83b405160d7494173eab8))
+* support CAP checkpoint in temp-window protection bypass ([#408](https://github.com/qixing-jk/all-api-hub/issues/408)) ([a762a4e](https://github.com/qixing-jk/all-api-hub/commit/a762a4ec90a198ef5c41b46bd733fb1bf1611a2f))
+* **usage-analytics:** show site name instead of username for single accounts ([0508105](https://github.com/qixing-jk/all-api-hub/commit/05081058da43aa01fea1b43223b87af25484d436))
+
+
+### Bug Fixes
+
+* **redemptionAssist:** prioritize clipboard over innerText extraction ([318996c](https://github.com/qixing-jk/all-api-hub/commit/318996c71918abd9546e9bca06667bbfa1b84d1a))
+* **test:** resolve pnpm compile errors by adding missing fields ([44491d6](https://github.com/qixing-jk/all-api-hub/commit/44491d6f8f04acf0855f161809c22c7bc575bd02))
+* **toaster:** update z-index to ensure toaster appears above all elements ([08226da](https://github.com/qixing-jk/all-api-hub/commit/08226da0b1186eec6e7d1a7ff592df157e046e22))
+
 ## [3.9.0](https://github.com/qixing-jk/all-api-hub/compare/v3.8.0...v3.9.0) (2026-01-28)
 
 
