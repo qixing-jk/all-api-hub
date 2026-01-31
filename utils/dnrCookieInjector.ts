@@ -1,4 +1,9 @@
 import {
+  DNR_UPDATE_SESSION_RULES_MAX_ATTEMPTS,
+  DNR_UPDATE_SESSION_RULES_RETRY_DELAY_MS,
+  DNR_UPDATE_SESSION_RULES_TIMEOUT_MS,
+} from "~/constants/dnr"
+import {
   COOKIE_AUTH_HEADER_NAME,
   EXTENSION_HEADER_NAME,
 } from "~/utils/cookieHelper"
@@ -9,10 +14,6 @@ import { sleep, withTimeout } from "~/utils/timeout"
  * Unified logger scoped to DNR cookie header injection helpers.
  */
 const logger = createLogger("DnrCookieInjector")
-
-const DNR_UPDATE_SESSION_RULES_TIMEOUT_MS = 5000
-const DNR_UPDATE_SESSION_RULES_MAX_ATTEMPTS = 2
-const DNR_UPDATE_SESSION_RULES_RETRY_DELAY_MS = 250
 
 /**
  * DeclarativeNetRequest session-rule helpers.
