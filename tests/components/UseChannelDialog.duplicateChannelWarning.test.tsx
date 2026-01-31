@@ -4,6 +4,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useChannelDialog } from "~/components/ChannelDialog/hooks/useChannelDialog"
 import { DIALOG_MODES } from "~/constants/dialogModes"
+import {
+  AuthTypeEnum,
+  SiteHealthStatus,
+  type ApiToken,
+  type SiteAccount,
+} from "~/types"
 
 const {
   mockOpenDialog,
@@ -25,6 +31,54 @@ const {
   mockConvertToDisplayData: vi.fn(),
   mockEnsureAccountApiToken: vi.fn(),
 }))
+
+const buildSiteAccount = (
+  overrides: Partial<SiteAccount> = {},
+): SiteAccount => ({
+  id: "account-id",
+  site_name: "Account",
+  site_url: "https://upstream.example.com",
+  health: {
+    status: SiteHealthStatus.Healthy,
+  },
+  site_type: "newapi",
+  exchange_rate: 7,
+  account_info: {
+    id: 1,
+    access_token: "access-token",
+    username: "user",
+    quota: 0,
+    today_prompt_tokens: 0,
+    today_completion_tokens: 0,
+    today_quota_consumption: 0,
+    today_requests_count: 0,
+    today_income: 0,
+  },
+  last_sync_time: 0,
+  updated_at: 0,
+  created_at: 1577836800,
+  tagIds: [],
+  authType: AuthTypeEnum.AccessToken,
+  checkIn: {
+    enableDetection: false,
+  },
+  ...overrides,
+})
+
+const buildApiToken = (overrides: Partial<ApiToken> = {}): ApiToken => ({
+  id: 1,
+  user_id: 1,
+  key: "token",
+  status: 1,
+  name: "Token",
+  created_time: 0,
+  accessed_time: 0,
+  expired_time: 0,
+  remain_quota: 0,
+  unlimited_quota: true,
+  used_quota: 0,
+  ...overrides,
+})
 
 vi.mock("react-hot-toast", () => ({
   default: {
@@ -98,10 +152,7 @@ describe("useChannelDialog duplicate channel warning", () => {
     const { result } = renderHook(() => useChannelDialog())
 
     await act(async () => {
-      await result.current.openWithAccount(
-        { id: "account-id", created_at: "2020-01-01" } as any,
-        { key: "token" } as any,
-      )
+      await result.current.openWithAccount(buildSiteAccount(), buildApiToken())
     })
 
     expect(mockRequestDuplicateChannelWarning).toHaveBeenCalledWith({
@@ -133,10 +184,7 @@ describe("useChannelDialog duplicate channel warning", () => {
     const { result } = renderHook(() => useChannelDialog())
 
     await act(async () => {
-      await result.current.openWithAccount(
-        { id: "account-id", created_at: "2020-01-01" } as any,
-        { key: "token" } as any,
-      )
+      await result.current.openWithAccount(buildSiteAccount(), buildApiToken())
     })
 
     expect(mockRequestDuplicateChannelWarning).toHaveBeenCalledWith({
