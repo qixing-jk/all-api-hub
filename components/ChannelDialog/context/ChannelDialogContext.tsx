@@ -20,8 +20,14 @@ interface ChannelDialogState {
   onSuccessCallback?: (result: any) => void
 }
 
+interface DuplicateChannelWarningState {
+  isOpen: boolean
+  existingChannelName: string | null
+}
+
 interface ChannelDialogContextValue {
   state: ChannelDialogState
+  duplicateChannelWarning: DuplicateChannelWarningState
   openDialog: (config: {
     mode?: DialogMode
     channel?: ManagedSiteChannel | null
@@ -32,6 +38,10 @@ interface ChannelDialogContextValue {
   }) => void
   closeDialog: () => void
   handleSuccess: (result: any) => void
+  requestDuplicateChannelWarning: (options: {
+    existingChannelName: string
+  }) => Promise<boolean>
+  resolveDuplicateChannelWarning: (shouldContinue: boolean) => void
 }
 
 const ChannelDialogContext = createContext<ChannelDialogContextValue | null>(
@@ -52,6 +62,11 @@ export function ChannelDialogProvider({
     mode: DIALOG_MODES.ADD,
     channel: null,
   })
+  const [duplicateChannelWarning, setDuplicateChannelWarning] =
+    useState<DuplicateChannelWarningState>({
+      isOpen: false,
+      existingChannelName: null,
+    })
 
   const openDialog = useCallback(
     (config: {
@@ -96,9 +111,59 @@ export function ChannelDialogProvider({
     [closeDialog],
   )
 
+  const duplicateWarningResolverRef = useRef<
+    ((shouldContinue: boolean) => void) | null
+  >(null)
+
+  useEffect(() => {
+    return () => {
+      duplicateWarningResolverRef.current?.(false)
+      duplicateWarningResolverRef.current = null
+    }
+  }, [])
+
+  const requestDuplicateChannelWarning = useCallback(
+    async (options: { existingChannelName: string }) => {
+      if (duplicateWarningResolverRef.current) {
+        duplicateWarningResolverRef.current(false)
+        duplicateWarningResolverRef.current = null
+      }
+
+      setDuplicateChannelWarning({
+        isOpen: true,
+        existingChannelName: options.existingChannelName,
+      })
+
+      return await new Promise<boolean>((resolve) => {
+        duplicateWarningResolverRef.current = resolve
+      })
+    },
+    [],
+  )
+
+  const resolveDuplicateChannelWarning = useCallback(
+    (shouldContinue: boolean) => {
+      duplicateWarningResolverRef.current?.(shouldContinue)
+      duplicateWarningResolverRef.current = null
+      setDuplicateChannelWarning({
+        isOpen: false,
+        existingChannelName: null,
+      })
+    },
+    [],
+  )
+
   return (
     <ChannelDialogContext.Provider
-      value={{ state, openDialog, closeDialog, handleSuccess }}
+      value={{
+        state,
+        duplicateChannelWarning,
+        openDialog,
+        closeDialog,
+        handleSuccess,
+        requestDuplicateChannelWarning,
+        resolveDuplicateChannelWarning,
+      }}
     >
       {children}
     </ChannelDialogContext.Provider>

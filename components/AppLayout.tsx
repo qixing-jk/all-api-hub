@@ -6,6 +6,7 @@ import AutoCheckinUiOpenPretrigger from "~/components/AutoCheckinUiOpenPretrigge
 import {
   ChannelDialogContainer,
   ChannelDialogProvider,
+  DuplicateChannelWarningDialogContainer,
 } from "~/components/ChannelDialog"
 import { ThemeAwareToaster } from "~/components/ThemeAwareToaster"
 import { DeviceProvider } from "~/contexts/DeviceContext"
@@ -28,6 +29,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             {children}
             <AutoCheckinUiOpenPretrigger />
             <ChannelDialogContainer />
+            <DuplicateChannelWarningDialogContainer />
           </ChannelDialogProvider>
           <ThemeAwareToaster reverseOrder={false} />
         </ThemeProvider>

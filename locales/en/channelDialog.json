@@ -27,6 +27,16 @@
     "keyRequired": "API key is required",
     "baseUrlRequired": "Base URL is required for this channel type"
   },
+  "warnings": {
+    "channelExists": {
+      "title": "Channel already exists",
+      "warningTitle": "Potential duplicate",
+      "description": "A channel named {{channelName}} already exists in your managed site. You can still create another channel, but duplicate routing may occur. Continue anyway?",
+      "actions": {
+        "continue": "Continue"
+      }
+    }
+  },
   "fields": {
     "name": {
       "label": "Channel Name",

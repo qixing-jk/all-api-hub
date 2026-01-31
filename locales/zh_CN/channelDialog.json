@@ -27,6 +27,16 @@
     "keyRequired": "API 密钥必填",
     "baseUrlRequired": "此渠道类型需要填写基础 URL"
   },
+  "warnings": {
+    "channelExists": {
+      "title": "渠道已存在",
+      "warningTitle": "可能存在重复渠道",
+      "description": "管理站点中已存在渠道 {{channelName}}。你仍可以继续创建新渠道，但可能会造成重复路由。是否继续？",
+      "actions": {
+        "continue": "继续添加"
+      }
+    }
+  },
   "fields": {
     "name": {
       "label": "渠道名称",

@@ -22,7 +22,8 @@ const logger = createLogger("ChannelDialogHook")
  */
 export function useChannelDialog() {
   const { t } = useTranslation(["messages", "channelDialog"])
-  const { openDialog } = useChannelDialogContext()
+  const { openDialog, requestDuplicateChannelWarning } =
+    useChannelDialogContext()
 
   /**
    * Prepare and open channel dialog with account data
@@ -89,16 +90,16 @@ export function useChannelDialog() {
       )
 
       if (existingChannel) {
-        toast.error(
-          t(`messages:${service.messagesKey}.channelExists`, {
-            channelName: existingChannel.name,
-          }),
-          { id: toastId },
-        )
-        return
+        toast.dismiss(toastId)
+        const shouldContinue = await requestDuplicateChannelWarning({
+          existingChannelName: existingChannel.name,
+        })
+        if (!shouldContinue) {
+          return
+        }
+      } else {
+        toast.dismiss(toastId)
       }
-
-      toast.dismiss(toastId)
 
       // Open dialog
       openDialog({
