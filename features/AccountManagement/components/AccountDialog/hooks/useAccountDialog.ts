@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 
 import { useChannelDialog } from "~/components/ChannelDialog"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
+import { DNR_UPDATE_SESSION_RULES_TIME_BUDGET_MS } from "~/constants/dnr"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   autoDetectAccount,
@@ -27,7 +28,7 @@ import {
 } from "~/utils/browserApi"
 import { createLogger } from "~/utils/logger"
 
-const AUTO_DETECT_SLOW_HINT_DELAY_MS = 10_000
+const AUTO_DETECT_SLOW_HINT_DELAY_MS = DNR_UPDATE_SESSION_RULES_TIME_BUDGET_MS
 
 /**
  * Logger scoped to the account dialog lifecycle. Ensure we never include raw tokens/cookies in log details.

@@ -17,6 +17,7 @@ describe("dnrCookieInjector", () => {
 
   afterEach(() => {
     ;(globalThis as any).chrome = originalChrome
+    vi.useRealTimers()
   })
 
   it("buildTempWindowCookieRule should create a per-tab rule with stable id and cookie header override", () => {
@@ -74,5 +75,32 @@ describe("dnrCookieInjector", () => {
 
     expect(updateSessionRules).toHaveBeenCalledTimes(1)
     expect(updateSessionRules).toHaveBeenCalledWith({ removeRuleIds: [42] })
+  })
+
+  it("applyTempWindowCookieRule should time out instead of hanging when updateSessionRules never settles", async () => {
+    vi.useFakeTimers()
+
+    const updateSessionRules = vi.fn().mockImplementation(
+      () =>
+        new Promise<void>(() => {
+          // never resolves
+        }),
+    )
+
+    ;(globalThis as any).chrome = {
+      declarativeNetRequest: { updateSessionRules },
+    }
+
+    const promise = applyTempWindowCookieRule({
+      tabId: 5,
+      url: "https://example.com/api",
+      cookieHeader: "cf_clearance=abc",
+    })
+
+    // Flush the internal timeout + retry timers.
+    await vi.runAllTimersAsync()
+
+    await expect(promise).resolves.toBeNull()
+    expect(updateSessionRules).toHaveBeenCalled()
   })
 })
