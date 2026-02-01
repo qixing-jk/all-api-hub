@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.11.0](https://github.com/qixing-jk/all-api-hub/compare/v3.10.0...v3.11.0) (2026-02-01)
+
+
+### Features
+
+* **channel-dialog:** replace error toast with warning dialog ([#412](https://github.com/qixing-jk/all-api-hub/issues/412)) ([c48e175](https://github.com/qixing-jk/all-api-hub/commit/c48e17534c283d88b84e7e9c6bd83c5f8c2a8f0e))
+
+
+### Bug Fixes
+
+* **AccountManagement:** prevent text overflow with truncate ([c2b2646](https://github.com/qixing-jk/all-api-hub/commit/c2b264602b0592675054ad095e201b0384ad7709))
+
 ## [3.10.0](https://github.com/qixing-jk/all-api-hub/compare/v3.9.0...v3.10.0) (2026-01-30)
 
 
