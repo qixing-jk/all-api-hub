@@ -13,7 +13,9 @@ import { CCSwitchIcon } from "~/components/icons/CCSwitchIcon"
 import { CherryIcon } from "~/components/icons/CherryIcon"
 import { ClaudeCodeRouterIcon } from "~/components/icons/ClaudeCodeRouterIcon"
 import { CliProxyIcon } from "~/components/icons/CliProxyIcon"
+import { KiloCodeIcon } from "~/components/icons/KiloCodeIcon"
 import { ManagedSiteIcon } from "~/components/icons/ManagedSiteIcon"
+import { KiloCodeExportDialog } from "~/components/KiloCodeExportDialog"
 import { Badge, Heading6, IconButton } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import type { DisplaySiteData } from "~/types"
@@ -80,6 +82,7 @@ function TokenActionButtons({
 
   const [isClaudeCodeRouterOpen, setIsClaudeCodeRouterOpen] = useState(false)
   const [isCliProxyDialogOpen, setIsCliProxyDialogOpen] = useState(false)
+  const [isKiloCodeDialogOpen, setIsKiloCodeDialogOpen] = useState(false)
 
   const managedSiteLabel = t(getManagedSiteLabelKey(managedSiteType))
 
@@ -113,6 +116,12 @@ function TokenActionButtons({
 
   return (
     <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
+      <KiloCodeExportDialog
+        isOpen={isKiloCodeDialogOpen}
+        onClose={() => setIsKiloCodeDialogOpen(false)}
+        initialSelectedSiteIds={[account.id]}
+        initialSelectedTokenIdsBySite={{ [account.id]: [`${token.id}`] }}
+      />
       <ClaudeCodeRouterImportDialog
         isOpen={isClaudeCodeRouterOpen}
         onClose={() => setIsClaudeCodeRouterOpen(false)}
@@ -153,6 +162,14 @@ function TokenActionButtons({
           <CCSwitchIcon />
         </IconButton>
       )}
+      <IconButton
+        aria-label={t("actions.exportToKiloCode")}
+        size="sm"
+        variant="ghost"
+        onClick={() => setIsKiloCodeDialogOpen(true)}
+      >
+        <KiloCodeIcon className="dark:text-dark-text-tertiary text-gray-500" />
+      </IconButton>
       <IconButton
         aria-label={t("actions.importToCliProxy")}
         size="sm"

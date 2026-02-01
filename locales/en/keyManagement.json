@@ -26,6 +26,7 @@
   "actions": {
     "copyKey": "Copy Key",
     "useInCherry": "Use in Cherry Studio",
+    "exportToKiloCode": "Export to Kilo Code",
     "exportToCCSwitch": "Export to CC Switch",
     "importToManagedSite": "Import to {{site}}",
     "importToCliProxy": "Import to CLIProxyAPI",

@@ -26,6 +26,7 @@
   "actions": {
     "copyKey": "复制密钥",
     "useInCherry": "在Cherry Studio中使用",
+    "exportToKiloCode": "导出到 Kilo Code",
     "exportToCCSwitch": "导出到CC Switch",
     "importToManagedSite": "导入到 {{site}}",
     "importToCliProxy": "导入到 CLIProxyAPI",

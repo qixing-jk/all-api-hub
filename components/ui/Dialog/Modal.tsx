@@ -118,7 +118,7 @@ export function Modal({
               )}
 
               {/* content area - 可滚动 */}
-              <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-4 sm:p-6">
+              <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 sm:space-y-4 sm:p-6">
                 {children}
               </div>
 

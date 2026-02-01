@@ -126,6 +126,65 @@
         "apiTypeHint": "缓存检测使用的接口类型：{{apiType}}"
       }
     },
+    "kiloCode": {
+      "title": "导出 Kilo Code JSON",
+      "description": "根据选中的站点和密钥生成 Kilo Code / Roo Code 的 providerProfiles 配置。",
+      "warning": {
+        "title": "明文 API Key",
+        "description": "导出的 JSON 含有明文 API Key，请妥善保存，切勿泄露。"
+      },
+      "help": {
+        "perSiteTitle": "按站点导出",
+        "perSiteDescription": "选择要导出的站点后将自动加载密钥，并默认选择第一个密钥（每个站点支持多选）。",
+        "afterExportTitle": "导出后怎么用",
+        "afterExportDescription": "推荐两种方式：",
+        "manualTitle": "方式一：手动粘贴（复制 apiConfigs）",
+        "manualDescription": "点击“复制 apiConfigs”，在 Kilo Code / Roo Code 的导出配置中找到 providerProfiles.apiConfigs 并粘贴进去。",
+        "importTitle": "方式二：导入文件（下载设置）",
+        "importDescription": "点击“下载设置”保存 {{filename}}，再在 Kilo Code 中导入。导入是增量添加 provider：不会清空/删除你已有的 provider（同名条目可能会被更新）。"
+      },
+      "labels": {
+        "selectedSites": "已选择的站点",
+        "selectedTokens": "已选择的密钥",
+        "modelId": "模型 ID",
+        "currentApiConfigName": "当前配置"
+      },
+      "descriptions": {
+        "selectedSites": "已选站点：{{sites}}，已选密钥：{{keys}}。",
+        "modelId": "推荐选择（按密钥，Kilo Code 实际使用通常需要模型 ID）。默认使用该密钥上游模型列表的第一个。",
+        "currentApiConfigName": "在下载的 {{filename}} 中将作为 providerProfiles.currentApiConfigName。"
+      },
+      "placeholders": {
+        "selectSites": "请选择站点",
+        "selectTokens": "请选择密钥",
+        "modelId": "搜索或输入模型 ID",
+        "currentApiConfigName": "请选择当前配置"
+      },
+      "actions": {
+        "createDefaultToken": "创建默认密钥",
+        "copyApiConfigs": "复制 apiConfigs",
+        "downloadSettings": "下载设置"
+      },
+      "messages": {
+        "accountNotFound": "未找到账号。",
+        "loadTokensFailed": "加载密钥失败。",
+        "loadModelsFailed": "加载该密钥的模型列表失败。",
+        "loadingTokens": "正在加载密钥列表…",
+        "noTokensTitle": "暂无密钥",
+        "noTokensDescription": "该站点将被跳过，直到创建密钥。",
+        "noModelsTitle": "无模型",
+        "noModelsDescription": "该密钥未返回可用模型。Kilo Code 实际使用通常需要模型 ID，请手动输入。",
+        "modelIdRequiredTitle": "需要模型 ID",
+        "modelIdRequiredDescription": "请为所有已选择的密钥选择或输入模型 ID 后再导出（还缺 {{count}} 个）。",
+        "tokenCreated": "密钥创建成功",
+        "createTokenFailed": "创建密钥失败。",
+        "copiedApiConfigs": "已复制 apiConfigs",
+        "copyFailed": "复制失败",
+        "downloadedSettings": "已下载设置文件",
+        "nothingToExportTitle": "无可导出的内容",
+        "nothingToExportDescription": "请至少选择一个可导出的站点/密钥后再进行复制/下载。"
+      }
+    },
     "cliproxy": {
       "title": "导入到 CLIProxyAPI",
       "description": "在 CLIProxyAPI 中创建或更新 OpenAI 兼容 Provider。",

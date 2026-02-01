@@ -126,6 +126,65 @@
         "apiTypeHint": "Cached check uses API type: {{apiType}}"
       }
     },
+    "kiloCode": {
+      "title": "Export Kilo Code JSON",
+      "description": "Generate Kilo Code / Roo Code provider profiles from your selected sites and tokens.",
+      "warning": {
+        "title": "Plaintext API keys",
+        "description": "The exported JSON contains API keys in plaintext. Store it securely and do not share it."
+      },
+      "help": {
+        "perSiteTitle": "Per-site export",
+        "perSiteDescription": "Select sites to load tokens automatically. The first token is preselected, and you can select multiple tokens per site.",
+        "afterExportTitle": "After export: how to use it",
+        "afterExportDescription": "Choose one of the following:",
+        "manualTitle": "1) Manual (Copy apiConfigs)",
+        "manualDescription": "Click \"Copy apiConfigs\" and find providerProfiles.apiConfigs in the Kilo Code / Roo Code export configurations and paste them in.",
+        "importTitle": "2) Import file (Download settings)",
+        "importDescription": "Click “Download settings” to save {{filename}}, then import it in Kilo Code. Import is incremental: it adds providers and won’t remove your existing providers (same-name entries may be updated)."
+      },
+      "labels": {
+        "selectedSites": "Selected sites",
+        "selectedTokens": "Selected tokens",
+        "modelId": "Model ID",
+        "currentApiConfigName": "Current profile"
+      },
+      "descriptions": {
+        "selectedSites": "Selected sites: {{sites}}, selected keys: {{keys}}.",
+        "modelId": "Recommended per API key (Kilo Code typically requires a model ID). Defaults to the first model from this API key's upstream model list.",
+        "currentApiConfigName": "Used as providerProfiles.currentApiConfigName in {{filename}}."
+      },
+      "placeholders": {
+        "selectSites": "Select sites",
+        "selectTokens": "Select tokens",
+        "modelId": "Search or enter model ID",
+        "currentApiConfigName": "Select current profile"
+      },
+      "actions": {
+        "createDefaultToken": "Create default token",
+        "copyApiConfigs": "Copy apiConfigs",
+        "downloadSettings": "Download settings"
+      },
+      "messages": {
+        "accountNotFound": "Account not found.",
+        "loadTokensFailed": "Failed to load tokens for this site.",
+        "loadModelsFailed": "Failed to load upstream models for this API key.",
+        "loadingTokens": "Loading token list…",
+        "noTokensTitle": "No tokens available",
+        "noTokensDescription": "This site will be skipped until a token is created.",
+        "noModelsTitle": "No models",
+        "noModelsDescription": "No upstream models were returned for this API key. Kilo Code typically requires a model ID — please enter one manually.",
+        "modelIdRequiredTitle": "Model ID required",
+        "modelIdRequiredDescription": "Select or enter a model ID for all selected API keys to enable export (missing: {{count}}).",
+        "tokenCreated": "Token created",
+        "createTokenFailed": "Failed to create token.",
+        "copiedApiConfigs": "apiConfigs copied to clipboard",
+        "copyFailed": "Copy failed",
+        "downloadedSettings": "Settings file downloaded",
+        "nothingToExportTitle": "Nothing to export",
+        "nothingToExportDescription": "Select at least one exportable token/site to enable copy/download."
+      }
+    },
     "cliproxy": {
       "title": "Import to CLIProxyAPI",
       "description": "Create or update an OpenAI-compatible provider in CLIProxyAPI.",

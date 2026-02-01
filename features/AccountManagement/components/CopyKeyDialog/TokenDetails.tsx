@@ -13,7 +13,9 @@ import { CCSwitchIcon } from "~/components/icons/CCSwitchIcon"
 import { CherryIcon } from "~/components/icons/CherryIcon"
 import { ClaudeCodeRouterIcon } from "~/components/icons/ClaudeCodeRouterIcon"
 import { CliProxyIcon } from "~/components/icons/CliProxyIcon"
+import { KiloCodeIcon } from "~/components/icons/KiloCodeIcon"
 import { ManagedSiteIcon } from "~/components/icons/ManagedSiteIcon"
+import { KiloCodeExportDialog } from "~/components/KiloCodeExportDialog"
 import { IconButton } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import type { ApiToken, DisplaySiteData } from "~/types"
@@ -52,6 +54,7 @@ export function TokenDetails({
 
   const [isClaudeCodeRouterOpen, setIsClaudeCodeRouterOpen] = useState(false)
   const [isCliProxyDialogOpen, setIsCliProxyDialogOpen] = useState(false)
+  const [isKiloCodeDialogOpen, setIsKiloCodeDialogOpen] = useState(false)
 
   const managedSiteLabel = t(getManagedSiteLabelKey(managedSiteType))
 
@@ -103,6 +106,12 @@ export function TokenDetails({
 
   return (
     <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-primary border-t border-gray-100 bg-gray-50/30 px-3 pb-3">
+      <KiloCodeExportDialog
+        isOpen={isKiloCodeDialogOpen}
+        onClose={() => setIsKiloCodeDialogOpen(false)}
+        initialSelectedSiteIds={[account.id]}
+        initialSelectedTokenIdsBySite={{ [account.id]: [`${token.id}`] }}
+      />
       <ClaudeCodeRouterImportDialog
         isOpen={isClaudeCodeRouterOpen}
         onClose={() => setIsClaudeCodeRouterOpen(false)}
@@ -193,6 +202,17 @@ export function TokenDetails({
                 <CCSwitchIcon />
               </IconButton>
             )}
+            <IconButton
+              aria-label={t("keyManagement:actions.exportToKiloCode")}
+              variant="ghost"
+              size="sm"
+              onClick={(event) => {
+                event.stopPropagation()
+                setIsKiloCodeDialogOpen(true)
+              }}
+            >
+              <KiloCodeIcon className="dark:text-dark-text-tertiary text-gray-500" />
+            </IconButton>
             <IconButton
               aria-label={t("keyManagement:actions.importToCliProxy")}
               variant="ghost"

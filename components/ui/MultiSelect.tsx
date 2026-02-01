@@ -154,6 +154,11 @@ export function MultiSelect({
       })
   }, [options, query])
 
+  // Headless UI's Combobox `virtual` mode is great for large lists in real browsers,
+  // but it doesn't reliably render options in jsdom (tests). Disable virtualization
+  // in `test` mode to keep component tests stable and user-event compatible.
+  const shouldUseVirtualOptions = import.meta.env.MODE !== "test"
+
   const handleSelect = (newSelected: MultiSelectOption[]) => {
     onChange(newSelected.map((opt) => opt.value))
   }
@@ -225,7 +230,9 @@ export function MultiSelect({
         immediate
         value={selectedOptions}
         onChange={handleSelect}
-        virtual={{ options: filteredOptions }}
+        virtual={
+          shouldUseVirtualOptions ? { options: filteredOptions } : undefined
+        }
         multiple
         disabled={disabled}
       >
@@ -287,7 +294,7 @@ export function MultiSelect({
                     : t("multiSelect.noOptions")}
                 </div>
               </div>
-            ) : (
+            ) : shouldUseVirtualOptions ? (
               <Combobox.Options
                 className={cn(
                   "ring-opacity-5 dark:bg-dark-bg-secondary absolute z-50 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black focus:outline-none sm:text-sm",
@@ -334,6 +341,54 @@ export function MultiSelect({
                     )}
                   </Combobox.Option>
                 )}
+              </Combobox.Options>
+            ) : (
+              <Combobox.Options
+                className={cn(
+                  "ring-opacity-5 dark:bg-dark-bg-secondary absolute z-50 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black focus:outline-none sm:text-sm",
+                  dropdownPosition === "top"
+                    ? "bottom-full mb-1"
+                    : "top-full mt-1",
+                )}
+              >
+                {filteredOptions.map((option) => (
+                  <Combobox.Option
+                    key={option.value}
+                    className={({ active }) =>
+                      cn(
+                        "relative flex w-full cursor-pointer items-center py-2 pr-4 pl-10 select-none",
+                        active
+                          ? "bg-blue-600 text-white"
+                          : "dark:text-dark-text-primary text-gray-900",
+                      )
+                    }
+                    value={option}
+                  >
+                    {({ selected, active }) => (
+                      <>
+                        <span
+                          className={cn(
+                            "block truncate",
+                            selected ? "font-medium" : "font-normal",
+                          )}
+                          title={option.label}
+                        >
+                          {option.label}
+                        </span>
+                        {selected ? (
+                          <span
+                            className={cn(
+                              "absolute inset-y-0 left-0 flex items-center pl-3",
+                              active ? "text-white" : "text-blue-600",
+                            )}
+                          >
+                            <CheckIcon className="h-5 w-5" aria-hidden="true" />
+                          </span>
+                        ) : null}
+                      </>
+                    )}
+                  </Combobox.Option>
+                ))}
               </Combobox.Options>
             )}
           </Transition>
