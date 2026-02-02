@@ -163,7 +163,7 @@ function TokenActionButtons({
         </IconButton>
       )}
       <IconButton
-        aria-label={t("actions.exportToKiloCode")}
+        aria-label={t("keyManagement:exportToKiloCode")}
         size="sm"
         variant="ghost"
         onClick={() => setIsKiloCodeDialogOpen(true)}

@@ -17,7 +17,8 @@ vi.mock("~/hooks/useAccountData", () => ({
 const mockFetchOpenAICompatibleModelIds = vi.fn()
 
 vi.mock("~/services/apiService/openaiCompatible", () => ({
-  fetchOpenAICompatibleModelIds: (...args: any[]) =>
+  // Forward through a typed wrapper so call sites avoid `any[]`.
+  fetchOpenAICompatibleModelIds: (...args: unknown[]) =>
     mockFetchOpenAICompatibleModelIds(...args),
 }))
 
@@ -25,7 +26,8 @@ const mockFetchAccountTokens = vi.fn()
 const mockGetApiService = vi.fn()
 
 vi.mock("~/services/apiService", () => ({
-  getApiService: (...args: any[]) => mockGetApiService(...args),
+  // Forward through a typed wrapper so call sites avoid `any[]`.
+  getApiService: (...args: unknown[]) => mockGetApiService(...args),
 }))
 
 vi.mock("~/services/accountOperations", () => ({
