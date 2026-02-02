@@ -1,5 +1,20 @@
 # Changelog
 
+## [3.12.0](https://github.com/qixing-jk/all-api-hub/compare/v3.11.0...v3.12.0) (2026-02-02)
+
+
+### Features
+
+* add Kilo Code settings export capability ([#418](https://github.com/qixing-jk/all-api-hub/issues/418)) ([6d6deea](https://github.com/qixing-jk/all-api-hub/commit/6d6deeaad0c84ab9895c30a3df273ee907815ef7))
+* **ui:** improve empty state handling in SearchableSelect ([cfb354b](https://github.com/qixing-jk/all-api-hub/commit/cfb354bed36c4ff64fbf093f2f461b943174dcb7))
+
+
+### Bug Fixes
+
+* **AccountList:** prevent site name overflow in account list items ([74af6d3](https://github.com/qixing-jk/all-api-hub/commit/74af6d3f75e7a9126192819a43226f93c4e4e5b7))
+* **CopyKeyDialog:** simplify dialog footer styling ([2112a4b](https://github.com/qixing-jk/all-api-hub/commit/2112a4b043782886c9c88b3648cc2c5c85a7f0f0))
+* **ui:** prevent overflow of long option labels in select ([fbeafab](https://github.com/qixing-jk/all-api-hub/commit/fbeafab913695b6f044d05da0c8cbb685018a5d8))
+
 ## [3.11.0](https://github.com/qixing-jk/all-api-hub/compare/v3.10.0...v3.11.0) (2026-02-01)
 
 
