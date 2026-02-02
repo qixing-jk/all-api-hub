@@ -29,7 +29,20 @@ const inputVariants = cva(
 
 export interface InputProps
   extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "size">,
-    VariantProps<typeof inputVariants> {
+    Omit<VariantProps<typeof inputVariants>, "size"> {
+  /**
+   * Controls both the visual size variant and the native `<input size>` attribute.
+   *
+   * This component historically used `size` for styling variants (`"sm" | "default" | "lg"`).
+   * Some call sites also need the native `size` attribute (character width). To stay
+   * backward compatible, we interpret:
+   *
+   * - `"sm" | "default" | "lg"` (string) as the **visual** size variant (no `size` attribute is set)
+   * - `number` as the **native** `<input size>` attribute (visual size falls back to default)
+   */
+  size?:
+    | VariantProps<typeof inputVariants>["size"]
+    | React.InputHTMLAttributes<HTMLInputElement>["size"]
   /**
    * Classes applied to the outer wrapper `<div>`.
    *
@@ -60,6 +73,8 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     ref,
   ) => {
     const inputVariant = error ? "error" : success ? "success" : variant
+    const variantSize = typeof size === "string" ? size : undefined
+    const nativeSize = typeof size === "number" ? size : undefined
 
     return (
       <div className={cn("relative", containerClassName)}>
@@ -70,10 +85,15 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         )}
         <input
           className={cn(
-            inputVariants({ variant: inputVariant, size, className }),
+            inputVariants({
+              variant: inputVariant,
+              size: variantSize,
+              className,
+            }),
             leftIcon && "pl-10",
             rightIcon && "pr-10",
           )}
+          size={nativeSize}
           ref={ref}
           {...props}
         />

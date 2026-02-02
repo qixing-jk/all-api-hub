@@ -98,6 +98,12 @@ globalAny.ResizeObserver = class ResizeObserver {
   unobserve() {}
 }
 
+// cmdk/shadcn Command components rely on Element.scrollIntoView, which is not
+// implemented by jsdom by default.
+if (!globalAny.HTMLElement?.prototype?.scrollIntoView) {
+  globalAny.HTMLElement.prototype.scrollIntoView = vi.fn()
+}
+
 configure({ testIdAttribute: "data-testid" })
 
 beforeAll(() => {

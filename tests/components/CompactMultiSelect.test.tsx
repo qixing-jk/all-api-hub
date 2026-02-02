@@ -1,0 +1,168 @@
+import { render, screen, waitFor } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
+import { useState } from "react"
+import { describe, expect, it, vi } from "vitest"
+
+import { CompactMultiSelect } from "~/components/ui/CompactMultiSelect"
+
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({ t: (key: string) => key }),
+}))
+
+describe("CompactMultiSelect", () => {
+  it("uses a dedicated clear button instead of a clear option item", async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+
+    render(
+      <CompactMultiSelect
+        options={[
+          { value: "a", label: "Alpha" },
+          { value: "b", label: "Beta" },
+        ]}
+        selected={["a"]}
+        onChange={onChange}
+      />,
+    )
+
+    // Clear-selection is a separate button, not a selectable row in the options list.
+    const cancelSelectedButton = screen.getByRole("button", {
+      name: "multiSelect.cancelSelected",
+    })
+    expect(cancelSelectedButton).toBeInTheDocument()
+
+    await user.click(screen.getByRole("combobox"))
+    expect(
+      screen.queryByRole("option", { name: "multiSelect.cancelSelected" }),
+    ).not.toBeInTheDocument()
+
+    await user.click(cancelSelectedButton)
+    expect(onChange).toHaveBeenCalledWith([])
+  })
+
+  it("supports chips display mode and filters by label", async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+
+    render(
+      <CompactMultiSelect
+        displayMode="chips"
+        options={[
+          { value: "id-alpha", label: "Alpha" },
+          { value: "id-beta", label: "Beta" },
+        ]}
+        selected={[]}
+        onChange={onChange}
+        placeholder="Pick"
+        searchPlaceholder="Search"
+      />,
+    )
+
+    const input = screen.getByPlaceholderText("Pick")
+    await user.click(input)
+    await user.type(input, "alp")
+
+    expect(screen.getByRole("option", { name: "Alpha" })).toBeInTheDocument()
+    expect(
+      screen.queryByRole("option", { name: "Beta" }),
+    ).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole("option", { name: "Alpha" }))
+    expect(onChange).toHaveBeenCalledWith(["id-alpha"])
+  })
+
+  it("shows a clear button for the search input", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <CompactMultiSelect
+        displayMode="summary"
+        options={[
+          { value: "a", label: "Alpha" },
+          { value: "b", label: "Beta" },
+        ]}
+        selected={[]}
+        onChange={vi.fn()}
+      />,
+    )
+
+    await user.click(screen.getByRole("combobox"))
+    const input = screen.getByPlaceholderText(
+      "searchableSelect.searchPlaceholder",
+    )
+
+    expect(
+      screen.queryByRole("button", { name: "multiSelect.clearInput" }),
+    ).not.toBeInTheDocument()
+
+    await user.type(input, "alp")
+    const clearInputButton = screen.getByRole("button", {
+      name: "multiSelect.clearInput",
+    })
+
+    await user.click(clearInputButton)
+    expect(input).toHaveValue("")
+    await waitFor(() => {
+      expect(input).toHaveFocus()
+    })
+  })
+
+  it("shows a bulk toggle button when the chips control is tall", async () => {
+    const user = userEvent.setup()
+
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
+      function (this: HTMLElement) {
+        const slot = this?.getAttribute?.("data-slot")
+        const height = slot === "combobox-chips" ? 80 : 0
+
+        return {
+          x: 0,
+          y: 0,
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: height,
+          width: 0,
+          height,
+          toJSON: () => "",
+        } as DOMRect
+      },
+    )
+
+    function Harness() {
+      const [selected, setSelected] = useState<string[]>([])
+
+      return (
+        <CompactMultiSelect
+          displayMode="chips"
+          options={[
+            { value: "a", label: "Alpha" },
+            { value: "b", label: "Beta" },
+          ]}
+          selected={selected}
+          onChange={setSelected}
+        />
+      )
+    }
+
+    render(<Harness />)
+
+    const selectAllButton = await screen.findByRole("button", {
+      name: "multiSelect.selectAll",
+    })
+    const cancelSelectedButton = await screen.findByRole("button", {
+      name: "multiSelect.cancelSelected",
+    })
+
+    expect(selectAllButton).toBeEnabled()
+    expect(cancelSelectedButton).toBeDisabled()
+
+    await user.click(selectAllButton)
+
+    expect(selectAllButton).toBeDisabled()
+    expect(cancelSelectedButton).toBeEnabled()
+    expect(
+      await screen.findByRole("button", { name: "multiSelect.cancelSelected" }),
+    ).toBeInTheDocument()
+  })
+})

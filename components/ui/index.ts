@@ -36,6 +36,11 @@ export {
   type MultiSelectProps,
 } from "./MultiSelect"
 export {
+  CompactMultiSelect,
+  type CompactMultiSelectOption,
+  type CompactMultiSelectProps,
+} from "./CompactMultiSelect"
+export {
   SearchableSelect,
   type SearchableSelectOption,
   type SearchableSelectProps,

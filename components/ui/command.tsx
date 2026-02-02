@@ -1,7 +1,7 @@
 "use client"
 
 import { Command as CommandPrimitive } from "cmdk"
-import { SearchIcon } from "lucide-react"
+import { SearchIcon, XIcon } from "lucide-react"
 import * as React from "react"
 
 import {
@@ -68,11 +68,30 @@ function CommandDialog({
 
 /**
  * CommandInput renders the searchable input with an icon wrapper.
+ *
+ * Optional clear button:
+ * - Provide `onClear` to show a trailing clear (X) control when the input has a string `value`.
+ * - This is used by combobox-like UIs (e.g. multi-select search inputs) to quickly reset filters.
+ */
+type CommandInputProps = React.ComponentProps<typeof CommandPrimitive.Input> & {
+  onClear?: () => void
+  clearButtonLabel?: string
+}
+
+/**
+ *
  */
 function CommandInput({
   className,
+  onClear,
+  clearButtonLabel = "Clear",
   ...props
-}: React.ComponentProps<typeof CommandPrimitive.Input>) {
+}: CommandInputProps) {
+  const inputRef = React.useRef<HTMLInputElement>(null)
+  const value = typeof props.value === "string" ? props.value : ""
+  const showClearButton =
+    Boolean(onClear) && value.length > 0 && !props.disabled
+
   return (
     <div
       data-slot="command-input-wrapper"
@@ -80,6 +99,7 @@ function CommandInput({
     >
       <SearchIcon className="size-4 shrink-0 opacity-50" />
       <CommandPrimitive.Input
+        ref={inputRef}
         data-slot="command-input"
         className={cn(
           "placeholder:text-muted-foreground flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-hidden disabled:cursor-not-allowed disabled:opacity-50",
@@ -87,6 +107,20 @@ function CommandInput({
         )}
         {...props}
       />
+      {showClearButton && (
+        <button
+          type="button"
+          onClick={() => {
+            onClear?.()
+            requestAnimationFrame(() => inputRef.current?.focus())
+          }}
+          className="text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring focus-visible:ring-offset-background inline-flex items-center justify-center rounded-sm p-1 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+          aria-label={clearButtonLabel}
+          title={clearButtonLabel}
+        >
+          <XIcon className="pointer-events-none size-4" />
+        </button>
+      )}
     </div>
   )
 }
