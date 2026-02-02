@@ -7,16 +7,16 @@ import {
   Badge,
   Button,
   Card,
+  CompactMultiSelect,
   FormField,
   Modal,
-  MultiSelect,
   SearchableSelect,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-  type MultiSelectOption,
+  type CompactMultiSelectOption,
 } from "~/components/ui"
 import { useAccountData } from "~/hooks/useAccountData"
 import { ensureAccountApiToken } from "~/services/accountOperations"
@@ -392,7 +392,7 @@ export function KiloCodeExportDialog({
     }
   }
 
-  const siteOptions: MultiSelectOption[] = useMemo(() => {
+  const siteOptions: CompactMultiSelectOption[] = useMemo(() => {
     return displayData
       .map((site) => ({
         value: site.id,
@@ -570,10 +570,12 @@ export function KiloCodeExportDialog({
     const isCreating = Boolean(isCreatingToken[siteId])
 
     const selectedTokenIds = selectedTokenIdsBySite[siteId] ?? []
-    const tokenOptions: MultiSelectOption[] = inventory.tokens.map((token) => ({
+    const tokenOptions: CompactMultiSelectOption[] = inventory.tokens.map(
+      (token) => ({
       value: `${token.id}`,
       label: getTokenLabel(token, t("common:labels.token")),
-    }))
+      }),
+    )
 
     const statusBadge =
       inventory.status === "error" ? (
@@ -684,7 +686,7 @@ export function KiloCodeExportDialog({
         {inventory.status === "loaded" && inventory.tokens.length > 0 && (
           <div className="space-y-3">
             <FormField label={t("common:labels.apiKey")}>
-              <MultiSelect
+              <CompactMultiSelect
                 options={tokenOptions}
                 selected={selectedTokenIds}
                 onChange={(values) => {
@@ -882,7 +884,7 @@ export function KiloCodeExportDialog({
         label={t("ui:dialog.kiloCode.labels.selectedSites")}
         description={selectionSummary}
       >
-        <MultiSelect
+        <CompactMultiSelect
           options={siteOptions}
           selected={selectedSiteIds}
           onChange={setSelectedSiteIds}

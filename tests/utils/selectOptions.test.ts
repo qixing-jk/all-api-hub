@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import type { MultiSelectOption } from "~/components/ui/MultiSelect"
+import type { CompactMultiSelectOption } from "~/components/ui"
 import type { ChannelGroup, ChannelModel } from "~/types/newapi"
 import {
   groupsToOptions,
@@ -63,11 +63,11 @@ describe("selectOptions", () => {
 
   describe("mergeUniqueOptions", () => {
     it("merges multiple option lists", () => {
-      const list1: MultiSelectOption[] = [
+      const list1: CompactMultiSelectOption[] = [
         { label: "A", value: "1" },
         { label: "B", value: "2" },
       ]
-      const list2: MultiSelectOption[] = [
+      const list2: CompactMultiSelectOption[] = [
         { label: "C", value: "3" },
         { label: "D", value: "4" },
       ]
@@ -76,8 +76,10 @@ describe("selectOptions", () => {
     })
 
     it("removes duplicates by value", () => {
-      const list1: MultiSelectOption[] = [{ label: "A", value: "1" }]
-      const list2: MultiSelectOption[] = [{ label: "A Duplicate", value: "1" }]
+      const list1: CompactMultiSelectOption[] = [{ label: "A", value: "1" }]
+      const list2: CompactMultiSelectOption[] = [
+        { label: "A Duplicate", value: "1" },
+      ]
       const result = mergeUniqueOptions(list1, list2)
       expect(result).toHaveLength(1)
       expect(result[0].label).toBe("A")
@@ -88,7 +90,7 @@ describe("selectOptions", () => {
     })
 
     it("handles single list", () => {
-      const list: MultiSelectOption[] = [{ label: "A", value: "1" }]
+      const list: CompactMultiSelectOption[] = [{ label: "A", value: "1" }]
       expect(mergeUniqueOptions(list)).toEqual(list)
     })
   })

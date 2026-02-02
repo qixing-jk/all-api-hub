@@ -255,7 +255,9 @@
     "noOptionsAllowCustom": "No options available. Type to create one",
     "noOptions": "No options available",
     "clearInput": "Clear input",
-    "clearSelected": "Clear all selected values"
+    "clearSelected": "Clear all selected values",
+    "selectAll": "Select all",
+    "cancelSelected": "Cancel selection"
   },
   "searchableSelect": {
     "searchPlaceholder": "Search...",

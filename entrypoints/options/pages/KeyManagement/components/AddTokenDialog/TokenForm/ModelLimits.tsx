@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next"
 
-import { MultiSelect, Switch } from "~/components/ui"
+import { CompactMultiSelect, Switch } from "~/components/ui"
 
 import type { FormData } from "../hooks/useTokenForm"
 
@@ -56,7 +56,7 @@ export function ModelLimits({
 
       {modelLimitsEnabled && (
         <div>
-          <MultiSelect
+          <CompactMultiSelect
             options={availableModels.map((model) => ({
               value: model,
               label: model,
@@ -65,7 +65,6 @@ export function ModelLimits({
             onChange={handleModelLimitsChange}
             placeholder={t("dialog.selectModels")}
             label={t("dialog.availableModels")}
-            className="dark:[&_input]:text-dark-text-primary"
           />
           <p className="dark:text-dark-text-tertiary mt-1 text-xs text-gray-500">
             {t("dialog.modelSelectHint", { count: modelLimits.length })}

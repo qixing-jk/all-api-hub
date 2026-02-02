@@ -114,7 +114,6 @@ describe("KiloCodeExportDialog", () => {
     await user.type(sitePicker, "Site B")
     await user.keyboard("{ArrowDown}")
     await user.click(await screen.findByRole("option", { name: "Site B" }))
-    await user.keyboard("{Escape}")
 
     await waitFor(() => {
       expect(mockFetchAccountTokens).toHaveBeenCalledWith(
@@ -206,7 +205,6 @@ describe("KiloCodeExportDialog", () => {
     await user.type(sitePicker, "Site B")
     await user.keyboard("{ArrowDown}")
     await user.click(await screen.findByRole("option", { name: "Site B" }))
-    await user.keyboard("{Escape}")
 
     await waitFor(() => {
       expect(mockFetchAccountTokens).toHaveBeenCalledWith(
@@ -279,7 +277,6 @@ describe("KiloCodeExportDialog", () => {
     await user.type(sitePicker, "Site B")
     await user.keyboard("{ArrowDown}")
     await user.click(await screen.findByRole("option", { name: "Site B" }))
-    await user.keyboard("{Escape}")
 
     await waitFor(() => {
       expect(mockFetchAccountTokens).toHaveBeenCalled()

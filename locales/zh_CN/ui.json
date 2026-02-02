@@ -255,7 +255,9 @@
     "noOptionsAllowCustom": "暂无可选项，可输入创建",
     "noOptions": "暂无可选项",
     "clearInput": "清空输入",
-    "clearSelected": "清空所有已选项"
+    "clearSelected": "清空所有已选项",
+    "selectAll": "全选",
+    "cancelSelected": "取消当前选中"
   },
   "searchableSelect": {
     "searchPlaceholder": "搜索...",

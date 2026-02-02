@@ -4,10 +4,10 @@ import { useTranslation } from "react-i18next"
 import {
   Button,
   Checkbox,
+  CompactMultiSelect,
   FormField,
   Input,
   Modal,
-  MultiSelect,
 } from "~/components/ui"
 import { fetchOpenAICompatibleModels } from "~/services/apiService/openaiCompatible"
 import { importToClaudeCodeRouter } from "~/services/claudeCodeRouterService"
@@ -237,7 +237,7 @@ export function ClaudeCodeRouterImportDialog(
           label={t("ui:dialog.claudeCodeRouter.fields.models")}
           description={t("ui:dialog.claudeCodeRouter.descriptions.models")}
         >
-          <MultiSelect
+          <CompactMultiSelect
             options={upstreamModelOptions}
             selected={selectedModels}
             onChange={setSelectedModels}

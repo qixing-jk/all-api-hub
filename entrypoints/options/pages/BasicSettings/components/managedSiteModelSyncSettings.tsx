@@ -11,11 +11,11 @@ import {
   Card,
   CardItem,
   CardList,
+  CompactMultiSelect,
   Input,
   Modal,
-  MultiSelect,
   Switch,
-  type MultiSelectOption,
+  type CompactMultiSelectOption,
 } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
@@ -64,7 +64,7 @@ export default function ManagedSiteModelSyncSettings() {
   } = useUserPreferencesContext()
   const [isSaving, setIsSaving] = useState(false)
   const [channelUpstreamModelOptions, setChannelUpstreamModelOptions] =
-    useState<MultiSelectOption[]>([])
+    useState<CompactMultiSelectOption[]>([])
   const [optionsLoading, setOptionsLoading] = useState(true)
   const [optionsError, setOptionsError] = useState<string | null>(null)
 
@@ -519,7 +519,7 @@ export default function ManagedSiteModelSyncSettings() {
             description={t("managedSiteModelSync:settings.allowedModelsDesc")}
           >
             <div className="w-full space-y-2">
-              <MultiSelect
+              <CompactMultiSelect
                 allowCustom
                 options={channelUpstreamModelOptions}
                 selected={preferences.allowedModels}
@@ -743,9 +743,11 @@ function parseJsonGlobalChannelModelFilters(rawJson: string): EditableFilter[] {
 /**
  * Builds sorted multi-select options from an array of model metadata.
  * @param metadata Array of model metadata objects to convert into select options.
- * @returns MultiSelect options with labels/values derived from model IDs.
+ * @returns Options consumable by compact multi-select inputs.
  */
-function buildModelOptions(metadata: ModelMetadata[]): MultiSelectOption[] {
+function buildModelOptions(
+  metadata: ModelMetadata[],
+): CompactMultiSelectOption[] {
   const options = metadata.map((model) => ({
     label: model.id,
     value: model.id,
@@ -754,11 +756,11 @@ function buildModelOptions(metadata: ModelMetadata[]): MultiSelectOption[] {
 }
 
 /**
- * Converts plain model ID strings into sorted MultiSelect options.
+ * Converts plain model ID strings into sorted compact multi-select options.
  * @param modelIds Array of model identifiers returned from remote APIs.
  * @returns Options list sorted alphabetically by label.
  */
-function buildOptionsFromIds(modelIds: string[]): MultiSelectOption[] {
+function buildOptionsFromIds(modelIds: string[]): CompactMultiSelectOption[] {
   const options = modelIds
     .map((model) => model.trim())
     .filter(Boolean)

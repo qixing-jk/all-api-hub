@@ -5,11 +5,11 @@ import { useTranslation } from "react-i18next"
 import { useChannelForm } from "~/components/ChannelDialog/hooks/useChannelForm"
 import {
   Button,
+  CompactMultiSelect,
   IconButton,
   Input,
   Label,
   Modal,
-  MultiSelect,
   Select,
   SelectContent,
   SelectItem,
@@ -299,7 +299,7 @@ export function ChannelDialog({
               </Button>
             </div>
           </div>
-          <MultiSelect
+          <CompactMultiSelect
             options={availableModels}
             selected={formData.models}
             onChange={(models) => updateField("models", models)}
@@ -318,7 +318,7 @@ export function ChannelDialog({
 
         {/* Groups */}
         <div>
-          <MultiSelect
+          <CompactMultiSelect
             label={t("channelDialog:fields.groups.label")}
             options={availableGroups}
             selected={formData.groups}

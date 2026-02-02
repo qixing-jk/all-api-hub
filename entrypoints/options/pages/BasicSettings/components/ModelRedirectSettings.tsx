@@ -3,8 +3,7 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
-import { Button, Card, CardContent } from "~/components/ui"
-import { MultiSelect } from "~/components/ui/MultiSelect"
+import { Button, Card, CardContent, CompactMultiSelect } from "~/components/ui"
 import { Switch } from "~/components/ui/Switch"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { getApiService } from "~/services/apiService"
@@ -137,7 +136,7 @@ export default function ModelRedirectSettings() {
           {modelRedirect?.enabled && (
             <>
               <div>
-                <MultiSelect
+                <CompactMultiSelect
                   label={t("standardModels")}
                   options={modelList.map((model) => ({
                     value: model,

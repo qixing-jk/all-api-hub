@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import type { MultiSelectOption } from "~/components/ui/MultiSelect"
+import type { CompactMultiSelectOption } from "~/components/ui"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { ChannelType, DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
 import { getApiService } from "~/services/apiService"
@@ -85,10 +85,12 @@ export function useChannelForm({
   const [isSaving, setIsSaving] = useState(false)
   const [isLoadingGroups, setIsLoadingGroups] = useState(false)
   const [isLoadingModels, setIsLoadingModels] = useState(false)
-  const [availableGroups, setAvailableGroups] = useState<MultiSelectOption[]>(
+  const [availableGroups, setAvailableGroups] =
+    useState<CompactMultiSelectOption[]>(
     [],
   )
-  const [availableModels, setAvailableModels] = useState<MultiSelectOption[]>(
+  const [availableModels, setAvailableModels] =
+    useState<CompactMultiSelectOption[]>(
     [],
   )
 
