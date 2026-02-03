@@ -28,6 +28,7 @@ import {
   getStatusIndicatorColor,
 } from "~/features/AccountManagement/utils/healthStatusUtils"
 import { getTempWindowFallbackSettingsTab } from "~/features/AccountManagement/utils/tempWindowFallbackReminder"
+import { getDayKeyFromUnixSeconds } from "~/services/usageHistory/core"
 import {
   SiteHealthStatus,
   TEMP_WINDOW_HEALTH_STATUS_CODES,
@@ -182,6 +183,23 @@ export default function SiteInfo({ site, highlights }: SiteInfoProps) {
       return null
     }
 
+    /**
+     * Check-in status is fetched and persisted during refresh operations.
+     * When the last detection date isn't today, we show a warning state to avoid
+     * misleading users with stale "checked in" / "not checked in" indicators.
+     */
+    const isCheckInStatusDetectedToday = (detectedAt?: number): boolean => {
+      if (typeof detectedAt !== "number" || !Number.isFinite(detectedAt)) {
+        return false
+      }
+
+      const todayKey = getDayKeyFromUnixSeconds(Math.floor(Date.now() / 1000))
+      const detectedKey = getDayKeyFromUnixSeconds(
+        Math.floor(detectedAt / 1000),
+      )
+      return detectedKey === todayKey
+    }
+
     const indicators: React.ReactNode[] = []
 
     const customUrl = site.checkIn?.customCheckIn?.url
@@ -199,6 +217,32 @@ export default function SiteInfo({ site, highlights }: SiteInfoProps) {
             wrapperClassName="flex items-center"
           >
             <ExclamationTriangleIcon className="h-4 w-4 text-yellow-500" />
+          </Tooltip>,
+        )
+      } else if (
+        !isCheckInStatusDetectedToday(site.checkIn.siteStatus?.lastDetectedAt)
+      ) {
+        const lastDetectedAt = site.checkIn.siteStatus?.lastDetectedAt
+        const staleStatusLabel = t("list.site.checkInStatusOutdated", {
+          time: lastDetectedAt
+            ? new Date(lastDetectedAt).toLocaleString()
+            : t("list.site.notAvailable"),
+        })
+        indicators.push(
+          <Tooltip
+            key="site-checkin"
+            content={staleStatusLabel}
+            position="top"
+            wrapperClassName="flex items-center"
+          >
+            <IconButton
+              onClick={() => void handleRefreshAccount(site, true)}
+              variant="ghost"
+              size="xs"
+              aria-label={staleStatusLabel}
+            >
+              <ExclamationTriangleIcon className="h-4 w-4 text-orange-500" />
+            </IconButton>
           </Tooltip>,
         )
       } else if (siteCheckedIn) {

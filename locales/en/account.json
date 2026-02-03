@@ -32,7 +32,8 @@
       "customCheckInUrl": "External check-in URL, click to go: {{url}}",
       "checkInUnsupported": "Site may not support check-in",
       "checkedInToday": "Checked in today, click to view",
-      "notCheckedInToday": "Not checked in today, click to go"
+      "notCheckedInToday": "Not checked in today, click to go",
+      "checkInStatusOutdated": "Check-in status wasn't detected today (last check time: {{time}}). Click to refresh"
     }
   },
   "stats": {

@@ -80,6 +80,11 @@ export async function fetchAccountData(
     checkInPromise,
   ])
 
+  const didDetectCheckInStatus = checkIn?.enableDetection === true
+  const checkInDetectedAt = didDetectCheckInStatus
+    ? Date.now()
+    : checkIn.siteStatus?.lastDetectedAt
+
   return {
     quota,
     ...todayUsage,
@@ -88,7 +93,15 @@ export async function fetchAccountData(
       ...checkIn,
       siteStatus: {
         ...(checkIn.siteStatus ?? {}),
-        isCheckedInToday: !(canCheckIn ?? true),
+        // `canCheckIn` means "can check in today" (i.e. NOT checked-in yet).
+        // Map it into the UI-facing `isCheckedInToday` flag and keep `undefined`
+        // when upstream does not provide a reliable status.
+        isCheckedInToday: didDetectCheckInStatus
+          ? canCheckIn === undefined
+            ? undefined
+            : !canCheckIn
+          : checkIn.siteStatus?.isCheckedInToday,
+        lastDetectedAt: checkInDetectedAt,
       },
     },
   }

@@ -178,6 +178,15 @@ export interface CheckInConfig {
      * Used by the auto check-in scheduler to reset the daily state.
      */
     lastCheckInDate?: string
+
+    /**
+     * Timestamp (ms) of the last successful check-in status detection for this account.
+     *
+     * This is used by the UI to warn users when the displayed check-in status may be stale
+     * (e.g., status was detected on a previous day, so "checked in" / "not checked in"
+     * might not represent today's real state).
+     */
+    lastDetectedAt?: number
   }
 
   /**

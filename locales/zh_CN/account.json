@@ -32,7 +32,8 @@
       "customCheckInUrl": "外部签到地址，点我去签到: {{url}}",
       "checkInUnsupported": "站点可能不支持签到",
       "checkedInToday": "今日已签到，点我查看",
-      "notCheckedInToday": "今日未签到，点我去签到"
+      "notCheckedInToday": "今日未签到，点我去签到",
+      "checkInStatusOutdated": "签到状态不是今日检测（上次检测时间：{{time}}），点我刷新"
     }
   },
   "stats": {

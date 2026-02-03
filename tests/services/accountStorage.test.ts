@@ -341,6 +341,10 @@ describe("accountStorage core behaviors", () => {
   })
 
   it("markAccountAsSiteCheckedIn should persist today's check-in state", async () => {
+    vi.useFakeTimers()
+    const fixedNow = new Date(2026, 0, 2, 10, 0, 0)
+    vi.setSystemTime(fixedNow)
+
     const account = createAccount({
       id: "check-1",
       checkIn: {
@@ -352,18 +356,25 @@ describe("accountStorage core behaviors", () => {
     })
     seedStorage([account])
 
-    const today = new Date().toISOString().split("T")[0]
-    const success = await accountStorage.markAccountAsSiteCheckedIn("check-1")
+    try {
+      const today = fixedNow.toISOString().split("T")[0]
+      const success = await accountStorage.markAccountAsSiteCheckedIn("check-1")
 
-    expect(success).toBe(true)
+      expect(success).toBe(true)
 
-    const updatedConfig = storageData.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS)
-    const updatedAccount = updatedConfig?.accounts.find(
-      (acc: { id: string }) => acc.id === "check-1",
-    )
+      const updatedConfig = storageData.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS)
+      const updatedAccount = updatedConfig?.accounts.find(
+        (acc: { id: string }) => acc.id === "check-1",
+      )
 
-    expect(updatedAccount?.checkIn?.siteStatus?.isCheckedInToday).toBe(true)
-    expect(updatedAccount?.checkIn?.siteStatus?.lastCheckInDate).toBe(today)
+      expect(updatedAccount?.checkIn?.siteStatus?.isCheckedInToday).toBe(true)
+      expect(updatedAccount?.checkIn?.siteStatus?.lastCheckInDate).toBe(today)
+      expect(updatedAccount?.checkIn?.siteStatus?.lastDetectedAt).toBe(
+        fixedNow.getTime(),
+      )
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it("markAccountAsCustomCheckedIn should persist today's custom check-in state", async () => {

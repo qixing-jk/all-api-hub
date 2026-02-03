@@ -516,6 +516,7 @@ class AccountStorageService {
 
       const today = new Date()
       const todayDate = today.toISOString().split("T")[0]
+      const detectedAt = today.getTime()
       const currentCheckIn = account.checkIn ?? { enableDetection: false }
 
       return this.updateAccount(id, {
@@ -525,6 +526,7 @@ class AccountStorageService {
             ...(currentCheckIn.siteStatus ?? {}),
             isCheckedInToday: true,
             lastCheckInDate: todayDate,
+            lastDetectedAt: detectedAt,
           },
         },
       })
