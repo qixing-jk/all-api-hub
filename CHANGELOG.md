@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.13.0](https://github.com/qixing-jk/all-api-hub/compare/v3.12.0...v3.13.0) (2026-02-03)
+
+
+### Features
+
+* **check-in:** add lastDetectedAt timestamp for stale status detection ([#422](https://github.com/qixing-jk/all-api-hub/issues/422)) ([86754bc](https://github.com/qixing-jk/all-api-hub/commit/86754bcf5b167ee54e34fb84a80405b8084cf36f))
+* **ui:** migrate MultiSelect to CompactMultiSelect ([#419](https://github.com/qixing-jk/all-api-hub/issues/419)) ([13d1919](https://github.com/qixing-jk/all-api-hub/commit/13d191965994ca3319a4727497b00410a93cacaa))
+
+
+### Bug Fixes
+
+* **apiService/veloera:** add account data refresh and check-in logic ([3c479ab](https://github.com/qixing-jk/all-api-hub/commit/3c479abb9967405eaf17fb10b6b78cb50d1afff9))
+* **cookieHelper:** remove cookie caching mechanism ([e76ceb7](https://github.com/qixing-jk/all-api-hub/commit/e76ceb7c84b1cf2dad307db6fc840ceeb64f1760))
+
 ## [3.12.0](https://github.com/qixing-jk/all-api-hub/compare/v3.11.0...v3.12.0) (2026-02-02)
 
 
