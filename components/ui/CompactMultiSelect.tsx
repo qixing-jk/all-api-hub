@@ -45,10 +45,14 @@ export interface CompactMultiSelectProps
   label?: string
   /**
    * Controls how selected values are displayed.
-   * - `summary`: button trigger with preview text + count (default)
+   * - `summary`: button trigger with preview text + count
    * - `chips`: inline chips with a searchable input
    */
   displayMode?: "summary" | "chips"
+  /**
+   * Placeholder shown when no selection is made.
+   * Defaults to the localized `ui:multiSelect.placeholder` string.
+   */
   placeholder?: string
   disabled?: boolean
   clearable?: boolean
@@ -87,7 +91,7 @@ export function CompactMultiSelect({
   onChange,
   label,
   displayMode = "chips",
-  placeholder = "Select...",
+  placeholder,
   disabled = false,
   clearable = true,
   allowCustom = false,
@@ -100,6 +104,7 @@ export function CompactMultiSelect({
   ...buttonProps
 }: CompactMultiSelectProps) {
   const { t } = useTranslation("ui")
+  const localizedPlaceholder = placeholder ?? t("ui:multiSelect.placeholder")
   const [open, setOpen] = React.useState(false)
   const [searchTerm, setSearchTerm] = React.useState("")
   const chipsAnchor = useComboboxAnchor()
@@ -148,7 +153,7 @@ export function CompactMultiSelect({
   const hasSelection = selected.length > 0
 
   const triggerText = React.useMemo(() => {
-    if (!hasSelection) return placeholder
+    if (!hasSelection) return localizedPlaceholder
 
     const safeMaxDisplayValues = Math.max(1, maxDisplayValues)
     const preview = selectedLabels.slice(0, safeMaxDisplayValues)
@@ -157,7 +162,7 @@ export function CompactMultiSelect({
     const base = preview.join(", ")
     if (remaining > 0) return `${base} +${remaining}`
     return base
-  }, [hasSelection, maxDisplayValues, placeholder, selectedLabels])
+  }, [hasSelection, localizedPlaceholder, maxDisplayValues, selectedLabels])
 
   const resolvedSearchPlaceholder =
     searchPlaceholder ?? t("searchableSelect.searchPlaceholder")
@@ -219,10 +224,12 @@ export function CompactMultiSelect({
       const trimmed = (raw ?? "").trim()
       if (!trimmed) return []
 
-      const parts =
-        allowCustom && parseCommaStrings && trimmed.includes(",")
-          ? trimmed.split(",")
-          : [trimmed]
+      // When parsing custom values, accept both comma-separated and newline-separated
+      // input (e.g. pasted lists). This keeps `allowCustom` + `parseCommaStrings`
+      // behavior consistent across typing and paste.
+      const shouldSplit =
+        allowCustom && parseCommaStrings && /[,\r\n]+/.test(trimmed)
+      const parts = shouldSplit ? trimmed.split(/[,\r\n]+/) : [trimmed]
 
       return parts
         .map((value) => value.trim())
@@ -305,7 +312,7 @@ export function CompactMultiSelect({
 
   const chipsInputPlaceholder = hasSelection
     ? resolvedSearchPlaceholder
-    : placeholder
+    : localizedPlaceholder
 
   const chipsInputAriaLabel =
     typeof buttonProps["aria-label"] === "string"
@@ -457,8 +464,8 @@ export function CompactMultiSelect({
             variant="outline"
             size={clearButtonSize}
             onClick={selectAllSelectableOptions}
-            aria-label={t("multiSelect.selectAll")}
-            title={t("multiSelect.selectAll")}
+            aria-label={t("ui:multiSelect.selectAll")}
+            title={t("ui:multiSelect.selectAll")}
             disabled={
               disabled ||
               selectableOptionValues.length === 0 ||
@@ -473,8 +480,8 @@ export function CompactMultiSelect({
             variant="outline"
             size={clearButtonSize}
             onClick={clearSelection}
-            aria-label={t("multiSelect.cancelSelected")}
-            title={t("multiSelect.cancelSelected")}
+            aria-label={t("ui:multiSelect.cancelSelected")}
+            title={t("ui:multiSelect.cancelSelected")}
             disabled={disabled || !hasSelection || !clearable}
             className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary dark:text-dark-text-primary dark:hover:bg-dark-bg-secondary/80"
           >
@@ -550,7 +557,7 @@ export function CompactMultiSelect({
                 value={searchTerm}
                 onValueChange={setSearchTerm}
                 onClear={() => setSearchTerm("")}
-                clearButtonLabel={t("multiSelect.clearInput")}
+                clearButtonLabel={t("ui:multiSelect.clearInput")}
               />
               <CommandList>
                 <CommandEmpty>{resolvedEmptyMessage}</CommandEmpty>
@@ -601,8 +608,8 @@ export function CompactMultiSelect({
             variant="outline"
             size={clearButtonSize}
             onClick={clearSelection}
-            aria-label={t("multiSelect.clearSelected")}
-            title={t("multiSelect.clearSelected")}
+            aria-label={t("ui:multiSelect.clearSelected")}
+            title={t("ui:multiSelect.clearSelected")}
             className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary dark:text-dark-text-primary dark:hover:bg-dark-bg-secondary/80 shrink-0"
           >
             <XIcon className="size-4" />

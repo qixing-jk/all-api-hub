@@ -254,6 +254,7 @@
     "emptyWithQueryAllowCustom": "Press Enter to add \"{{value}}\"",
     "noOptionsAllowCustom": "No options available. Type to create one",
     "noOptions": "No options available",
+    "placeholder": "Select...",
     "clearInput": "Clear input",
     "clearSelected": "Clear all selected values",
     "selectAll": "Select all",

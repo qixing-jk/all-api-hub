@@ -254,6 +254,7 @@
     "emptyWithQueryAllowCustom": "按 Enter 键添加“{{value}}”",
     "noOptionsAllowCustom": "暂无可选项，可输入创建",
     "noOptions": "暂无可选项",
+    "placeholder": "请选择...",
     "clearInput": "清空输入",
     "clearSelected": "清空所有已选项",
     "selectAll": "全选",

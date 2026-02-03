@@ -1,13 +1,20 @@
-import { render, screen, waitFor } from "@testing-library/react"
+import { fireEvent, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { useState } from "react"
 import { describe, expect, it, vi } from "vitest"
 
 import { CompactMultiSelect } from "~/components/ui/CompactMultiSelect"
+import { render } from "~/tests/test-utils/render"
 
-vi.mock("react-i18next", () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
-}))
+vi.mock("react-i18next", async () => {
+  const actual =
+    await vi.importActual<typeof import("react-i18next")>("react-i18next")
+
+  return {
+    ...actual,
+    useTranslation: () => ({ t: (key: string) => key }),
+  }
+})
 
 describe("CompactMultiSelect", () => {
   it("uses a dedicated clear button instead of a clear option item", async () => {
@@ -16,6 +23,7 @@ describe("CompactMultiSelect", () => {
 
     render(
       <CompactMultiSelect
+        displayMode="chips"
         options={[
           { value: "a", label: "Alpha" },
           { value: "b", label: "Beta" },
@@ -26,14 +34,14 @@ describe("CompactMultiSelect", () => {
     )
 
     // Clear-selection is a separate button, not a selectable row in the options list.
-    const cancelSelectedButton = screen.getByRole("button", {
-      name: "multiSelect.cancelSelected",
+    const cancelSelectedButton = await screen.findByRole("button", {
+      name: "ui:multiSelect.cancelSelected",
     })
     expect(cancelSelectedButton).toBeInTheDocument()
 
-    await user.click(screen.getByRole("combobox"))
+    await user.click(await screen.findByRole("combobox"))
     expect(
-      screen.queryByRole("option", { name: "multiSelect.cancelSelected" }),
+      screen.queryByRole("option", { name: "ui:multiSelect.cancelSelected" }),
     ).not.toBeInTheDocument()
 
     await user.click(cancelSelectedButton)
@@ -58,7 +66,7 @@ describe("CompactMultiSelect", () => {
       />,
     )
 
-    const input = screen.getByPlaceholderText("Pick")
+    const input = await screen.findByPlaceholderText("Pick")
     await user.click(input)
     await user.type(input, "alp")
 
@@ -86,18 +94,18 @@ describe("CompactMultiSelect", () => {
       />,
     )
 
-    await user.click(screen.getByRole("combobox"))
-    const input = screen.getByPlaceholderText(
+    await user.click(await screen.findByRole("combobox"))
+    const input = await screen.findByPlaceholderText(
       "searchableSelect.searchPlaceholder",
     )
 
     expect(
-      screen.queryByRole("button", { name: "multiSelect.clearInput" }),
+      screen.queryByRole("button", { name: "ui:multiSelect.clearInput" }),
     ).not.toBeInTheDocument()
 
     await user.type(input, "alp")
     const clearInputButton = screen.getByRole("button", {
-      name: "multiSelect.clearInput",
+      name: "ui:multiSelect.clearInput",
     })
 
     await user.click(clearInputButton)
@@ -129,6 +137,9 @@ describe("CompactMultiSelect", () => {
       },
     )
 
+    /**
+     *
+     */
     function Harness() {
       const [selected, setSelected] = useState<string[]>([])
 
@@ -148,10 +159,10 @@ describe("CompactMultiSelect", () => {
     render(<Harness />)
 
     const selectAllButton = await screen.findByRole("button", {
-      name: "multiSelect.selectAll",
+      name: "ui:multiSelect.selectAll",
     })
     const cancelSelectedButton = await screen.findByRole("button", {
-      name: "multiSelect.cancelSelected",
+      name: "ui:multiSelect.cancelSelected",
     })
 
     expect(selectAllButton).toBeEnabled()
@@ -162,7 +173,36 @@ describe("CompactMultiSelect", () => {
     expect(selectAllButton).toBeDisabled()
     expect(cancelSelectedButton).toBeEnabled()
     expect(
-      await screen.findByRole("button", { name: "multiSelect.cancelSelected" }),
+      await screen.findByRole("button", {
+        name: "ui:multiSelect.cancelSelected",
+      }),
     ).toBeInTheDocument()
+  })
+
+  it("splits pasted custom values on newlines when allowCustom is enabled", async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+
+    render(
+      <CompactMultiSelect
+        displayMode="chips"
+        allowCustom
+        options={[]}
+        selected={[]}
+        onChange={onChange}
+        placeholder="Pick"
+      />,
+    )
+
+    const input = await screen.findByPlaceholderText("Pick")
+    await user.click(input)
+
+    fireEvent.paste(input, {
+      clipboardData: {
+        getData: () => "alpha\nbeta\r\ngamma\n\n",
+      },
+    })
+
+    expect(onChange).toHaveBeenCalledWith(["alpha", "beta", "gamma"])
   })
 })
