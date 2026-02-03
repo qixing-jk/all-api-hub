@@ -62,7 +62,10 @@ function ComboboxClear({ className, ...props }: ComboboxPrimitive.Clear.Props) {
 }
 
 /**
+ * Combobox input rendered inside an `InputGroup`.
  *
+ * Note: `disabled` must be forwarded to both `ComboboxPrimitive.Input` and the
+ * rendered `InputGroupInput` slot so the whole control behaves consistently.
  */
 function ComboboxInput({
   className,
@@ -78,6 +81,7 @@ function ComboboxInput({
   return (
     <InputGroup className={cn("w-auto", className)}>
       <ComboboxPrimitive.Input
+        disabled={disabled}
         render={<InputGroupInput disabled={disabled} />}
         {...props}
       />
