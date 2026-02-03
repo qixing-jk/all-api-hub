@@ -16,14 +16,14 @@ import { cn } from "~/lib/utils"
 const Combobox = ComboboxPrimitive.Root
 
 /**
- *
+ * combobox value display
  */
 function ComboboxValue({ ...props }: ComboboxPrimitive.Value.Props) {
   return <ComboboxPrimitive.Value data-slot="combobox-value" {...props} />
 }
 
 /**
- *
+ * combobox trigger button
  */
 function ComboboxTrigger({
   className,
@@ -46,7 +46,7 @@ function ComboboxTrigger({
 }
 
 /**
- *
+ * combobox clear button
  */
 function ComboboxClear({ className, ...props }: ComboboxPrimitive.Clear.Props) {
   return (
@@ -106,7 +106,7 @@ function ComboboxInput({
 }
 
 /**
- *
+ * Combobox dropdown content
  */
 function ComboboxContent({
   className,
@@ -146,7 +146,7 @@ function ComboboxContent({
 }
 
 /**
- *
+ * combobox list
  */
 function ComboboxList({ className, ...props }: ComboboxPrimitive.List.Props) {
   return (
@@ -162,7 +162,7 @@ function ComboboxList({ className, ...props }: ComboboxPrimitive.List.Props) {
 }
 
 /**
- *
+ * combobox item
  */
 function ComboboxItem({
   className,
@@ -192,7 +192,7 @@ function ComboboxItem({
 }
 
 /**
- *
+ * combobox group
  */
 function ComboboxGroup({ className, ...props }: ComboboxPrimitive.Group.Props) {
   return (
@@ -205,7 +205,7 @@ function ComboboxGroup({ className, ...props }: ComboboxPrimitive.Group.Props) {
 }
 
 /**
- *
+ * combobox group label
  */
 function ComboboxLabel({
   className,
@@ -224,7 +224,7 @@ function ComboboxLabel({
 }
 
 /**
- *
+ * combobox collection
  */
 function ComboboxCollection({ ...props }: ComboboxPrimitive.Collection.Props) {
   return (
@@ -233,7 +233,7 @@ function ComboboxCollection({ ...props }: ComboboxPrimitive.Collection.Props) {
 }
 
 /**
- *
+ * combobox empty state
  */
 function ComboboxEmpty({ className, ...props }: ComboboxPrimitive.Empty.Props) {
   return (
@@ -249,7 +249,7 @@ function ComboboxEmpty({ className, ...props }: ComboboxPrimitive.Empty.Props) {
 }
 
 /**
- *
+ * combobox separator
  */
 function ComboboxSeparator({
   className,
@@ -265,7 +265,7 @@ function ComboboxSeparator({
 }
 
 /**
- *
+ * combobox chips container
  */
 function ComboboxChips({
   className,
@@ -285,7 +285,7 @@ function ComboboxChips({
 }
 
 /**
- *
+ * combobox chip item
  */
 function ComboboxChip({
   className,
@@ -319,7 +319,7 @@ function ComboboxChip({
 }
 
 /**
- *
+ * combobox chips input
  */
 function ComboboxChipsInput({
   className,
@@ -336,7 +336,7 @@ function ComboboxChipsInput({
 }
 
 /**
- *
+ * Hook to get a ref for the combobox anchor element.
  */
 function useComboboxAnchor() {
   return React.useRef<HTMLDivElement | null>(null)
