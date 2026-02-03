@@ -96,7 +96,7 @@ describe("CompactMultiSelect", () => {
 
     await user.click(await screen.findByRole("combobox"))
     const input = await screen.findByPlaceholderText(
-      "searchableSelect.searchPlaceholder",
+      "ui:searchableSelect.searchPlaceholder",
     )
 
     expect(
@@ -118,8 +118,11 @@ describe("CompactMultiSelect", () => {
   it("shows a bulk toggle button when the chips control is tall", async () => {
     const user = userEvent.setup()
 
-    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
-      function (this: HTMLElement) {
+    // Restore the prototype method after the test to avoid leaking the mocked
+    // implementation into other suites.
+    const getBoundingClientRectSpy = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockImplementation(function (this: HTMLElement) {
         const slot = this?.getAttribute?.("data-slot")
         const height = slot === "combobox-chips" ? 80 : 0
 
@@ -134,49 +137,53 @@ describe("CompactMultiSelect", () => {
           height,
           toJSON: () => "",
         } as DOMRect
-      },
-    )
+      })
 
-    /**
-     *
-     */
-    function Harness() {
-      const [selected, setSelected] = useState<string[]>([])
+    try {
+      /**
+       * Harness component to let `CompactMultiSelect` manage its own selection state
+       * while the test focuses on layout-driven behavior (chips height).
+       */
+      function Harness() {
+        const [selected, setSelected] = useState<string[]>([])
 
-      return (
-        <CompactMultiSelect
-          displayMode="chips"
-          options={[
-            { value: "a", label: "Alpha" },
-            { value: "b", label: "Beta" },
-          ]}
-          selected={selected}
-          onChange={setSelected}
-        />
-      )
-    }
+        return (
+          <CompactMultiSelect
+            displayMode="chips"
+            options={[
+              { value: "a", label: "Alpha" },
+              { value: "b", label: "Beta" },
+            ]}
+            selected={selected}
+            onChange={setSelected}
+          />
+        )
+      }
 
-    render(<Harness />)
+      render(<Harness />)
 
-    const selectAllButton = await screen.findByRole("button", {
-      name: "ui:multiSelect.selectAll",
-    })
-    const cancelSelectedButton = await screen.findByRole("button", {
-      name: "ui:multiSelect.cancelSelected",
-    })
-
-    expect(selectAllButton).toBeEnabled()
-    expect(cancelSelectedButton).toBeDisabled()
-
-    await user.click(selectAllButton)
-
-    expect(selectAllButton).toBeDisabled()
-    expect(cancelSelectedButton).toBeEnabled()
-    expect(
-      await screen.findByRole("button", {
+      const selectAllButton = await screen.findByRole("button", {
+        name: "ui:multiSelect.selectAll",
+      })
+      const cancelSelectedButton = await screen.findByRole("button", {
         name: "ui:multiSelect.cancelSelected",
-      }),
-    ).toBeInTheDocument()
+      })
+
+      expect(selectAllButton).toBeEnabled()
+      expect(cancelSelectedButton).toBeDisabled()
+
+      await user.click(selectAllButton)
+
+      expect(selectAllButton).toBeDisabled()
+      expect(cancelSelectedButton).toBeEnabled()
+      expect(
+        await screen.findByRole("button", {
+          name: "ui:multiSelect.cancelSelected",
+        }),
+      ).toBeInTheDocument()
+    } finally {
+      getBoundingClientRectSpy.mockRestore()
+    }
   })
 
   it("splits pasted custom values on newlines when allowCustom is enabled", async () => {

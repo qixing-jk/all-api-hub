@@ -165,12 +165,12 @@ export function CompactMultiSelect({
   }, [hasSelection, localizedPlaceholder, maxDisplayValues, selectedLabels])
 
   const resolvedSearchPlaceholder =
-    searchPlaceholder ?? t("searchableSelect.searchPlaceholder")
+    searchPlaceholder ?? t("ui:searchableSelect.searchPlaceholder")
 
   const defaultEmptyMessage =
     options.length === 0
-      ? t("searchableSelect.noOptions")
-      : t("searchableSelect.empty")
+      ? t("ui:searchableSelect.noOptions")
+      : t("ui:searchableSelect.empty")
 
   const resolvedEmptyMessage = emptyMessage ?? defaultEmptyMessage
 
