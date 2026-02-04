@@ -40,12 +40,14 @@ import ManagedSiteTab from "./components/managedSiteTab"
 import { PermissionOnboardingDialog } from "./components/PermissionOnboardingDialog"
 import PermissionsTab from "./components/PermissionsTab"
 import UsageHistorySyncTab from "./components/UsageHistorySyncTab"
+import WebAiApiCheckTab from "./components/WebAiApiCheckTab"
 
 type TabId =
   | "general"
   | "accountManagement"
   | "refresh"
   | "checkinRedeem"
+  | "webAiApiCheck"
   | "accountUsage"
   | "dataBackup"
   | "managedSite"
@@ -71,6 +73,7 @@ const TAB_CONFIGS = [
   { id: "accountUsage", component: UsageHistorySyncTab },
   { id: "refresh", component: AutoRefreshTab },
   { id: "checkinRedeem", component: CheckinRedeemTab },
+  { id: "webAiApiCheck", component: WebAiApiCheckTab },
   { id: "managedSite", component: ManagedSiteTab },
   { id: "cliProxy", component: CliProxyTab },
   { id: "claudeCodeRouter", component: ClaudeCodeRouterTab },
@@ -90,6 +93,7 @@ const ANCHOR_TO_TAB: Record<string, TabId> = {
   refresh: "refresh",
   "checkin-redeem": "checkinRedeem",
   checkin: "checkinRedeem",
+  "web-ai-api-check": "webAiApiCheck",
   "usage-history-sync": "accountUsage",
   "usage-history-sync-state": "accountUsage",
   webdav: "dataBackup",
