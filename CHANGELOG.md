@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.14.0](https://github.com/qixing-jk/all-api-hub/compare/v3.13.0...v3.14.0) (2026-02-04)
+
+
+### Features
+
+* **docs:** add changelog for v3.13.0 and v3.12.0 ([62baf62](https://github.com/qixing-jk/all-api-hub/commit/62baf625d6707d7ce9d8095b5856944b677d82ce))
+
 ## [3.13.0](https://github.com/qixing-jk/all-api-hub/compare/v3.12.0...v3.13.0) (2026-02-03)
 
 
