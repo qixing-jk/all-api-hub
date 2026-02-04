@@ -7,6 +7,39 @@ vi.mock("~/utils/error", () => ({
   getErrorMessage: (e: unknown) => String(e),
 }))
 
+const mockHasAlarmsAPI = vi.fn()
+const mockGetAlarm = vi.fn()
+const mockCreateAlarm = vi.fn()
+const mockClearAlarm = vi.fn()
+const mockOnAlarm = vi.fn()
+
+vi.mock(import("~/utils/browserApi"), async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    hasAlarmsAPI: (...args: any[]) => mockHasAlarmsAPI(...args),
+    getAlarm: (...args: any[]) => mockGetAlarm(...args),
+    createAlarm: (...args: any[]) => mockCreateAlarm(...args),
+    clearAlarm: (...args: any[]) => mockClearAlarm(...args),
+    onAlarm: (...args: any[]) => mockOnAlarm(...args),
+  }
+})
+
+const mockGetPreferences = vi.fn()
+const mockSavePreferences = vi.fn()
+
+vi.mock(import("~/services/userPreferences"), async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    userPreferences: {
+      ...actual.userPreferences,
+      getPreferences: (...args: any[]) => mockGetPreferences(...args),
+      savePreferences: (...args: any[]) => mockSavePreferences(...args),
+    },
+  }
+})
+
 vi.mock("~/services/accountTags/tagStorage", () => ({
   tagStorage: {
     // mergeData only needs this pure helper; tests not concerned with tag semantics.
@@ -155,5 +188,111 @@ describe("WebdavAutoSyncService.mergeData", () => {
 
     // id 2 should come from remote because of newer updatedAt
     expect(result.channelConfigs[2].updatedAt).toBe(20)
+  })
+})
+
+describe("WebdavAutoSyncService scheduling (alarms)", () => {
+  const createService = () => new (webdavAutoSyncService as any).constructor()
+
+  const basePreferences: any = {
+    webdav: {
+      autoSync: true,
+      url: "https://example.test/webdav",
+      username: "user",
+      password: "pass",
+      syncInterval: 3600,
+      syncStrategy: "merge",
+    },
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+
+    mockHasAlarmsAPI.mockReturnValue(true)
+    mockClearAlarm.mockResolvedValue(true)
+    mockCreateAlarm.mockResolvedValue(undefined)
+    mockGetAlarm.mockResolvedValue(undefined)
+    mockOnAlarm.mockReturnValue(() => {})
+
+    mockGetPreferences.mockResolvedValue(basePreferences)
+    mockSavePreferences.mockResolvedValue(undefined)
+  })
+
+  it("clears alarm and reports not running when autoSync is disabled", async () => {
+    const service = createService()
+    ;(service as any).isScheduled = true
+
+    mockGetPreferences.mockResolvedValueOnce({
+      ...basePreferences,
+      webdav: { ...basePreferences.webdav, autoSync: false },
+    })
+
+    await service.setupAutoSync()
+
+    expect(mockClearAlarm).toHaveBeenCalledWith("webdavAutoSync")
+    expect(mockCreateAlarm).not.toHaveBeenCalled()
+    expect(service.getStatus().isRunning).toBe(false)
+  })
+
+  it("clears alarm and reports not running when WebDAV config is incomplete", async () => {
+    const service = createService()
+
+    mockGetPreferences.mockResolvedValueOnce({
+      ...basePreferences,
+      webdav: { ...basePreferences.webdav, url: "" },
+    })
+
+    await service.setupAutoSync()
+
+    expect(mockClearAlarm).toHaveBeenCalledWith("webdavAutoSync")
+    expect(mockCreateAlarm).not.toHaveBeenCalled()
+    expect(service.getStatus().isRunning).toBe(false)
+  })
+
+  it("disables scheduling when alarms API is not available", async () => {
+    const service = createService()
+
+    mockHasAlarmsAPI.mockReturnValue(false)
+
+    await service.setupAutoSync()
+
+    expect(mockClearAlarm).toHaveBeenCalledWith("webdavAutoSync")
+    expect(mockCreateAlarm).not.toHaveBeenCalled()
+    expect(service.getStatus().isRunning).toBe(false)
+  })
+
+  it("creates an alarm using the configured interval in minutes", async () => {
+    const service = createService()
+
+    mockGetAlarm.mockResolvedValueOnce(undefined).mockResolvedValueOnce({
+      name: "webdavAutoSync",
+      periodInMinutes: 60,
+      scheduledTime: Date.now(),
+    })
+
+    await service.setupAutoSync()
+
+    expect(mockClearAlarm).toHaveBeenCalledWith("webdavAutoSync")
+    expect(mockCreateAlarm).toHaveBeenCalledWith("webdavAutoSync", {
+      delayInMinutes: 60,
+      periodInMinutes: 60,
+    })
+    expect(service.getStatus().isRunning).toBe(true)
+  })
+
+  it("preserves an existing alarm when the period matches", async () => {
+    const service = createService()
+
+    mockGetAlarm.mockResolvedValueOnce({
+      name: "webdavAutoSync",
+      periodInMinutes: 60,
+      scheduledTime: Date.now(),
+    })
+
+    await service.setupAutoSync()
+
+    expect(mockClearAlarm).not.toHaveBeenCalled()
+    expect(mockCreateAlarm).not.toHaveBeenCalled()
+    expect(service.getStatus().isRunning).toBe(true)
   })
 })

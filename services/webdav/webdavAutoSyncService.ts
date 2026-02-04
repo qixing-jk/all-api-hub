@@ -15,6 +15,13 @@ import { migrateAccountTagsData } from "~/services/configMigration/accountTags/a
 import type { SiteAccount, TagStore } from "~/types"
 import type { ChannelConfigMap } from "~/types/channelConfig"
 import { WEBDAV_SYNC_STRATEGIES, WebDAVSettings } from "~/types/webdav"
+import {
+  clearAlarm,
+  createAlarm,
+  getAlarm,
+  hasAlarmsAPI,
+  onAlarm,
+} from "~/utils/browserApi"
 import { getErrorMessage } from "~/utils/error"
 import { createLogger } from "~/utils/logger"
 
@@ -30,24 +37,41 @@ import {
 const logger = createLogger("WebdavAutoSync")
 
 /**
+ * Convert the persisted WebDAV sync interval (seconds) to a safe alarms cadence (minutes).
+ *
+ * Notes:
+ * - `browser.alarms` operates in minutes and generally requires >= 1 minute.
+ * - The options UI constrains WebDAV interval to [60..86400] seconds in 60s steps, but we still clamp defensively.
+ */
+function clampWebdavSyncIntervalMinutes(value: unknown): number {
+  const seconds = Number(value)
+  const safeSeconds = Number.isFinite(seconds) ? seconds : 3600
+  const minutes = Math.trunc(safeSeconds / 60)
+  return Math.min(24 * 60, Math.max(1, minutes))
+}
+
+/**
  * Manages WebDAV auto-sync in the background.
  * Responsibilities:
  * - Reads WebDAV preferences to decide if/when to sync.
- * - Maintains a single interval timer with an isSyncing guard to avoid overlap.
+ * - Uses WebExtension alarms (MV3-safe) with an isSyncing guard to avoid overlap.
  * - Merges or uploads backups according to user-selected strategy.
  * - Notifies frontends about sync status/results.
  */
 class WebdavAutoSyncService {
-  private syncTimer: ReturnType<typeof setInterval> | null = null
+  static readonly ALARM_NAME = "webdavAutoSync"
+
+  private removeAlarmListener: (() => void) | null = null
   private isInitialized = false
   private isSyncing = false
+  private isScheduled = false
   private lastSyncTime = 0
   private lastSyncStatus: "success" | "error" | "idle" = "idle"
   private lastSyncError: string | null = null
 
   /**
    * Initialize auto-sync (idempotent).
-   * Loads preferences and starts timer when enabled.
+   * Loads preferences and starts alarm schedule when enabled.
    *
    * Safe to call multiple times; returns early if already initialized.
    */
@@ -58,6 +82,15 @@ class WebdavAutoSyncService {
     }
 
     try {
+      // Register alarm listener early. In MV3 service workers, timers are unreliable; alarms are the stable scheduler.
+      this.removeAlarmListener = onAlarm((alarm) => {
+        if (alarm.name !== WebdavAutoSyncService.ALARM_NAME) {
+          return
+        }
+
+        void this.performBackgroundSync()
+      })
+
       await this.setupAutoSync()
       this.isInitialized = true
       logger.info("服务初始化成功")
@@ -68,24 +101,19 @@ class WebdavAutoSyncService {
 
   /**
    * Start or stop auto-sync based on current preferences.
-   * Always clears existing timer to prevent duplicate schedules.
+   * Always reconciles the alarms schedule to prevent duplicate schedules.
    *
    * Reads WebDAV creds and interval from user preferences; skips when config
    * is incomplete or disabled.
    */
   async setupAutoSync() {
     try {
-      // 清除现有定时器，避免重复的并发任务
-      if (this.syncTimer) {
-        clearInterval(this.syncTimer)
-        this.syncTimer = null
-        logger.debug("已清除现有定时器")
-      }
-
       // 获取用户偏好设置
       const preferences = await userPreferences.getPreferences()
 
       if (!preferences.webdav.autoSync) {
+        await clearAlarm(WebdavAutoSyncService.ALARM_NAME)
+        this.isScheduled = false
         logger.info("自动同步已关闭")
         return
       }
@@ -96,18 +124,55 @@ class WebdavAutoSyncService {
         !preferences.webdav.username ||
         !preferences.webdav.password
       ) {
+        await clearAlarm(WebdavAutoSyncService.ALARM_NAME)
+        this.isScheduled = false
         logger.warn("WebDAV配置不完整，无法启动自动同步")
         return
       }
 
-      // 启动定时同步；保存定时器引用以便后续清理
-      const intervalMs = (preferences.webdav.syncInterval || 3600) * 1000
-      this.syncTimer = setInterval(async () => {
-        await this.performBackgroundSync()
-      }, intervalMs)
+      if (!hasAlarmsAPI()) {
+        await clearAlarm(WebdavAutoSyncService.ALARM_NAME)
+        this.isScheduled = false
+        logger.warn("Alarms API not supported; WebDAV auto-sync is disabled")
+        return
+      }
+
+      const intervalMinutes = clampWebdavSyncIntervalMinutes(
+        preferences.webdav.syncInterval,
+      )
+
+      // Preserve a matching alarm when possible so background restarts do not shift the schedule.
+      const existingAlarm = await getAlarm(WebdavAutoSyncService.ALARM_NAME)
+      if (
+        existingAlarm &&
+        existingAlarm.periodInMinutes != null &&
+        Math.abs(existingAlarm.periodInMinutes - intervalMinutes) < 0.001
+      ) {
+        this.isScheduled = true
+        logger.debug("已存在相同周期的 WebDAV 自动同步 alarm，保持不变", {
+          periodInMinutes: existingAlarm.periodInMinutes,
+          scheduledTime: existingAlarm.scheduledTime
+            ? new Date(existingAlarm.scheduledTime)
+            : null,
+        })
+        return
+      }
+
+      await clearAlarm(WebdavAutoSyncService.ALARM_NAME)
+      await createAlarm(WebdavAutoSyncService.ALARM_NAME, {
+        // Match previous setInterval semantics: first run happens after the full interval.
+        delayInMinutes: intervalMinutes,
+        periodInMinutes: intervalMinutes,
+      })
+
+      this.isScheduled = Boolean(
+        await getAlarm(WebdavAutoSyncService.ALARM_NAME),
+      )
 
       logger.info("自动同步已启动", {
+        schedule: "alarm",
         intervalSeconds: preferences.webdav.syncInterval || 3600,
+        intervalMinutes,
       })
     } catch (error) {
       logger.error("设置自动同步失败", error)
@@ -546,13 +611,16 @@ class WebdavAutoSyncService {
   /**
    * 停止自动同步
    *
-   * Clears any active interval timer; idempotent.
+   * Clears the scheduled alarm; idempotent.
    */
-  stopAutoSync() {
-    if (this.syncTimer) {
-      clearInterval(this.syncTimer)
-      this.syncTimer = null
+  async stopAutoSync() {
+    const cleared = await clearAlarm(WebdavAutoSyncService.ALARM_NAME)
+    this.isScheduled = false
+
+    if (cleared) {
       logger.info("自动同步已停止")
+    } else {
+      logger.info("自动同步未运行或已停止")
     }
   }
 
@@ -571,7 +639,7 @@ class WebdavAutoSyncService {
       await userPreferences.savePreferences({
         webdav: settings,
       })
-      await this.setupAutoSync() // 重新设置定时器
+      await this.setupAutoSync() // 重新设置调度（alarm）
       logger.info("设置已更新", settings)
     } catch (error) {
       logger.error("更新设置失败", error)
@@ -584,7 +652,7 @@ class WebdavAutoSyncService {
    */
   getStatus() {
     return {
-      isRunning: this.syncTimer !== null,
+      isRunning: this.isScheduled,
       isInitialized: this.isInitialized,
       isSyncing: this.isSyncing,
       lastSyncTime: this.lastSyncTime,
@@ -629,7 +697,9 @@ class WebdavAutoSyncService {
    * 销毁服务
    */
   destroy() {
-    this.stopAutoSync()
+    void this.stopAutoSync()
+    this.removeAlarmListener?.()
+    this.removeAlarmListener = null
     this.isInitialized = false
     logger.info("服务已销毁")
   }
@@ -661,7 +731,7 @@ export const handleWebdavAutoSyncMessage = async (
       }
 
       case RuntimeActionIds.WebdavAutoSyncStop:
-        webdavAutoSyncService.stopAutoSync()
+        await webdavAutoSyncService.stopAutoSync()
         sendResponse({ success: true })
         break
 
