@@ -1,6 +1,11 @@
 import { t } from "i18next"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import {
+  CONTENT_UI_HOST_TAG,
+  isEventFromAllApiHubContentUi,
+} from "~/entrypoints/content/shared/contentUi"
+import { isLikelyCopyActionTarget } from "~/entrypoints/content/shared/copyActionTarget"
 import type {
   RedemptionAssistShouldPromptRequest,
   RedemptionAssistShouldPromptResponse,
@@ -21,7 +26,7 @@ import {
   showRedemptionPromptToast,
 } from "./utils/redemptionToasts"
 
-export const REDEMPTION_TOAST_HOST_TAG = "all-api-hub-redemption-toast"
+export const REDEMPTION_TOAST_HOST_TAG = CONTENT_UI_HOST_TAG
 
 /**
  * Unified logger scoped to redemption assist content-script flows.
@@ -47,7 +52,7 @@ function setupRedemptionAssistDetection() {
   const handleClick = async (event: MouseEvent) => {
     setTimeout(async () => {
       // Ignore clicks that originate from inside our own redemption assist UI
-      if (isEventFromRedemptionAssistUI(event.target)) {
+      if (isEventFromAllApiHubContentUi(event.target)) {
         return
       }
 
@@ -98,7 +103,7 @@ function setupRedemptionAssistDetection() {
 
   const handleClipboardEvent = (event: ClipboardEvent) => {
     // Ignore clipboard events that originate from inside our own redemption assist UI
-    if (isEventFromRedemptionAssistUI(event.target)) {
+    if (isEventFromAllApiHubContentUi(event.target)) {
       return
     }
     const selection = window.getSelection()
@@ -212,124 +217,6 @@ async function handleContextMenuRedemption(
   } catch (error) {
     logger.error("Context menu flow failed", error)
   }
-}
-
-/**
- * Guards against handling events triggered from inside the redemption assist UI.
- * @param target Event origin node.
- * @returns True when the event originated from our toast host.
- */
-function isEventFromRedemptionAssistUI(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false
-  // Events from inside the Shadow DOM toaster are retargeted to the shadow host
-  // <all-api-hub-redemption-toast data-wxt-shadow-root="">
-  // so we only need to check whether the event target is inside this host element.
-  return !!target.closest(REDEMPTION_TOAST_HOST_TAG)
-}
-
-/**
- * Heuristic check for copy-like UI controls to gate clipboard reads on click.
- * Supports multiple languages including Chinese, Japanese, Korean, etc.
- */
-function isLikelyCopyActionTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false
-
-  const COPY_SELECTORS = [
-    "button",
-    "[role='button']",
-    "a",
-    "input[type='button']",
-    "input[type='submit']",
-    "[data-clipboard-text]",
-    "[data-clipboard-target]",
-    "[data-copy]",
-    "[data-copy-text]",
-    "[data-clipboard]",
-    "[data-clipboard-value]",
-  ].join(", ")
-
-  const candidate = target.closest(COPY_SELECTORS) as HTMLElement | null
-  if (!candidate) return false
-
-  // 多语言复制关键词（包括常见的变体）
-  const COPY_KEYWORDS = [
-    // 英文
-    "copy",
-    "clipboard",
-    "clip",
-    // 中文（简体和繁体）
-    "复制",
-    "複製",
-    "拷贝",
-    "拷貝",
-    "剪贴板",
-    "剪貼板",
-    // 日文
-    "コピー",
-    "クリップボード",
-    "複写",
-    // 韩文
-    "복사",
-    "클립보드",
-    // 西班牙文
-    "copiar",
-    // 法文
-    "copier",
-    // 德文
-    "kopieren",
-    // 葡萄牙文
-    "copiar",
-    // 俄文
-    "копировать",
-    // 阿拉伯文
-    "نسخ",
-  ]
-
-  // 构建正则表达式（单词边界对中文等不适用，改用前后匹配）
-  const pattern = new RegExp(
-    COPY_KEYWORDS.map((kw) => kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(
-      "|",
-    ),
-    "i",
-  )
-
-  // 1. 优先检查明确的 data 属性（存在即表示复制意图）
-  const DATA_ATTRS = [
-    "data-clipboard-text",
-    "data-clipboard-target",
-    "data-copy",
-    "data-copy-text",
-    "data-clipboard",
-    "data-clipboard-value",
-  ] as const
-
-  for (const attr of DATA_ATTRS) {
-    if (candidate.hasAttribute(attr)) return true
-  }
-
-  // 2. 检查语义化属性内容
-  const SEMANTIC_ATTRS = [
-    "aria-label",
-    "title",
-    "data-action",
-    "data-tooltip",
-    "data-tooltip-title",
-  ] as const
-
-  for (const attr of SEMANTIC_ATTRS) {
-    const value = candidate.getAttribute(attr)
-    if (value && pattern.test(value)) return true
-  }
-
-  // 3. 检查可见文本内容
-  const textContent = candidate.textContent?.trim()
-  if (textContent && pattern.test(textContent)) return true
-
-  // 4. 检查 id 和 class
-  if (candidate.id && pattern.test(candidate.id)) return true
-  if (candidate.className && pattern.test(candidate.className)) return true
-
-  return false
 }
 
 const SCAN_DEDUP_INTERVAL_MS = 1000

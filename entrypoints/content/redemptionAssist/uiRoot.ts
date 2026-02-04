@@ -3,8 +3,8 @@ import { createRoot, type Root } from "react-dom/client"
 import { ContentScriptContext } from "wxt/utils/content-script-context"
 import { createShadowRootUi } from "wxt/utils/content-script-ui/shadow-root"
 
-import { REDEMPTION_TOAST_HOST_TAG } from "~/entrypoints/content/redemptionAssist"
 import { ContentReactRoot } from "~/entrypoints/content/redemptionAssist/components/ContentReactRoot"
+import { CONTENT_UI_HOST_TAG } from "~/entrypoints/content/shared/contentUi"
 import { createLogger } from "~/utils/logger"
 
 /**
@@ -41,7 +41,7 @@ export async function ensureRedemptionToastUi(): Promise<void> {
 
   mountingPromise = (async () => {
     const ui = await createShadowRootUi(ctxRef as ContentScriptContext, {
-      name: REDEMPTION_TOAST_HOST_TAG,
+      name: CONTENT_UI_HOST_TAG,
       position: "overlay",
       zIndex: 2147483647,
       anchor: "body",
