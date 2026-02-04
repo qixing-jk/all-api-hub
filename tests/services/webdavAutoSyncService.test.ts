@@ -30,13 +30,13 @@ const mockSavePreferences = vi.fn()
 
 vi.mock(import("~/services/userPreferences"), async (importOriginal) => {
   const actual = await importOriginal()
+  Object.assign(actual.userPreferences, {
+    getPreferences: (...args: any[]) => mockGetPreferences(...args),
+    savePreferences: (...args: any[]) => mockSavePreferences(...args),
+  })
   return {
     ...actual,
-    userPreferences: {
-      ...actual.userPreferences,
-      getPreferences: (...args: any[]) => mockGetPreferences(...args),
-      savePreferences: (...args: any[]) => mockSavePreferences(...args),
-    },
+    userPreferences: actual.userPreferences,
   }
 })
 

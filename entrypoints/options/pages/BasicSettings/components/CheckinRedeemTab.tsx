@@ -1,5 +1,6 @@
 import AutoCheckinSettings from "./AutoCheckinSettings"
 import RedemptionAssistSettings from "./RedemptionAssistSettings"
+import WebAiApiCheckSettings from "./WebAiApiCheckSettings"
 
 /**
  * Basic Settings tab combining auto-checkin and redemption assist panels.
@@ -12,6 +13,9 @@ export default function CheckinRedeemTab() {
       </section>
       <section id="redemption-assist">
         <RedemptionAssistSettings />
+      </section>
+      <section id="web-ai-api-check">
+        <WebAiApiCheckSettings />
       </section>
     </div>
   )

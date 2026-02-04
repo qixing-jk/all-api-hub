@@ -9,6 +9,7 @@
  */
 export const RuntimeActionPrefixes = {
   AccountDialog: "accountDialog:",
+  ApiCheck: "apiCheck:",
   AutoCheckin: "autoCheckin:",
   AutoCheckinPretrigger: "autoCheckinPretrigger:",
   AutoRefresh: "autoRefresh:",
@@ -36,6 +37,23 @@ export const RuntimeActionIds = {
   AccountDialogImportCookieAuthSessionCookie: composeRuntimeAction(
     RuntimeActionPrefixes.AccountDialog,
     "importCookieAuthSessionCookie",
+  ),
+
+  ApiCheckContextMenuTrigger: composeRuntimeAction(
+    RuntimeActionPrefixes.ApiCheck,
+    "contextMenuTrigger",
+  ),
+  ApiCheckShouldPrompt: composeRuntimeAction(
+    RuntimeActionPrefixes.ApiCheck,
+    "shouldPrompt",
+  ),
+  ApiCheckFetchModels: composeRuntimeAction(
+    RuntimeActionPrefixes.ApiCheck,
+    "fetchModels",
+  ),
+  ApiCheckRunProbe: composeRuntimeAction(
+    RuntimeActionPrefixes.ApiCheck,
+    "runProbe",
   ),
 
   PermissionsCheck: composeRuntimeAction(

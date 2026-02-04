@@ -12,6 +12,7 @@ import { handleExternalCheckInMessage } from "~/services/externalCheckInService"
 import { handleManagedSiteModelSyncMessage } from "~/services/modelSync"
 import { handleRedemptionAssistMessage } from "~/services/redemptionAssist"
 import { handleUsageHistoryMessage } from "~/services/usageHistory/scheduler"
+import { handleWebAiApiCheckMessage } from "~/services/webAiApiCheck/background"
 import { handleWebdavAutoSyncMessage } from "~/services/webdav/webdavAutoSyncService"
 import { onRuntimeMessage } from "~/utils/browserApi"
 import { getCookieHeaderForUrl } from "~/utils/cookieHelper"
@@ -215,6 +216,14 @@ export function setupRuntimeMessageListeners() {
         )
       ) {
         handleAutoCheckinMessage(request, sendResponse)
+        return true
+      }
+
+      // Web AI API Check runtime actions
+      if (
+        hasRuntimeActionPrefix(request.action, RuntimeActionPrefixes.ApiCheck)
+      ) {
+        void handleWebAiApiCheckMessage(request as any, sendResponse)
         return true
       }
 

@@ -105,6 +105,37 @@ export interface RedemptionAssistPreferences {
   urlWhitelist: RedemptionAssistUrlWhitelistPreferences
 }
 
+export interface WebAiApiCheckUrlWhitelistPreferences {
+  /**
+   * User-provided whitelist patterns, one RegExp pattern per entry.
+   *
+   * Patterns are evaluated using JavaScript RegExp syntax and treated as
+   * case-insensitive in the current implementation.
+   */
+  patterns: string[]
+}
+
+export interface WebAiApiCheckAutoDetectPreferences {
+  /**
+   * When enabled, the content script may attempt to detect API credentials
+   * from user actions (e.g., copy) on whitelisted pages.
+   *
+   * This MUST ship as disabled by default.
+   */
+  enabled: boolean
+  urlWhitelist: WebAiApiCheckUrlWhitelistPreferences
+}
+
+export interface WebAiApiCheckPreferences {
+  /**
+   * Master enable switch for Web AI API Check.
+   *
+   * Manual triggers can still be shown when enabled regardless of auto-detect.
+   */
+  enabled: boolean
+  autoDetect: WebAiApiCheckAutoDetectPreferences
+}
+
 // 用户偏好设置类型定义
 export interface UserPreferences {
   themeMode: ThemeMode
@@ -218,6 +249,9 @@ export interface UserPreferences {
 
   // Redemption Assist 配置
   redemptionAssist?: RedemptionAssistPreferences
+
+  // Web AI API Check 配置
+  webAiApiCheck?: WebAiApiCheckPreferences
 
   /**
    * 临时窗口过盾相关设置
@@ -373,6 +407,15 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
       patterns: ["cdk.linux.do"],
       includeAccountSiteUrls: true,
       includeCheckInAndRedeemUrls: true,
+    },
+  },
+  webAiApiCheck: {
+    enabled: true,
+    autoDetect: {
+      enabled: false,
+      urlWhitelist: {
+        patterns: [],
+      },
     },
   },
   sortingPriorityConfig: undefined,
@@ -781,6 +824,15 @@ class UserPreferencesService {
   async resetRedemptionAssist(): Promise<boolean> {
     return this.savePreferences({
       redemptionAssist: DEFAULT_PREFERENCES.redemptionAssist,
+    })
+  }
+
+  /**
+   * Reset Web AI API Check config.
+   */
+  async resetWebAiApiCheck(): Promise<boolean> {
+    return this.savePreferences({
+      webAiApiCheck: DEFAULT_PREFERENCES.webAiApiCheck,
     })
   }
 

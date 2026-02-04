@@ -1,0 +1,249 @@
+import { RuntimeActionIds } from "~/constants/runtimeActions"
+import {
+  API_TYPES,
+  runApiVerificationProbe,
+  type ApiVerificationApiType,
+  type ApiVerificationProbeId,
+  type ApiVerificationProbeResult,
+} from "~/services/aiApiVerification"
+import {
+  inferHttpStatus,
+  summaryKeyFromHttpStatus,
+  toSanitizedErrorSummary,
+} from "~/services/aiApiVerification/utils"
+import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompatible"
+import {
+  DEFAULT_PREFERENCES,
+  userPreferences,
+  type UserPreferences,
+} from "~/services/userPreferences"
+import { createLogger } from "~/utils/logger"
+import { isUrlAllowedByRegexList } from "~/utils/redemptionAssistWhitelist"
+import {
+  normalizeApiCheckBaseUrl,
+  normalizeOpenAiFamilyBaseUrl,
+} from "~/utils/webAiApiCheck"
+
+import type {
+  ApiCheckFetchModelsResponse,
+  ApiCheckRunProbeResponse,
+  ApiCheckRuntimeRequest,
+  ApiCheckShouldPromptResponse,
+} from "./types"
+
+/**
+ * Unified logger scoped to Web AI API Check background handlers.
+ */
+const logger = createLogger("WebAiApiCheck")
+
+/**
+ * Read Web AI API Check preferences with safe defaults.
+ */
+function getWebAiApiCheckPreferences(
+  prefs: UserPreferences,
+): NonNullable<UserPreferences["webAiApiCheck"]> {
+  return (
+    prefs.webAiApiCheck ??
+    DEFAULT_PREFERENCES.webAiApiCheck ?? {
+      enabled: true,
+      autoDetect: {
+        enabled: false,
+        urlWhitelist: { patterns: [] },
+      },
+    }
+  )
+}
+
+/**
+ * Normalize a base URL for probe execution, keeping behavior consistent across api types.
+ */
+function normalizeProbeBaseUrl(params: {
+  apiType: ApiVerificationApiType
+  baseUrl: string
+}): string | null {
+  if (
+    params.apiType === API_TYPES.OPENAI_COMPATIBLE ||
+    params.apiType === API_TYPES.OPENAI
+  ) {
+    return normalizeOpenAiFamilyBaseUrl(params.baseUrl)
+  }
+
+  return normalizeApiCheckBaseUrl(params.baseUrl)
+}
+
+/**
+ * Message handler for ApiCheck runtime actions.
+ * Centralizes background decision logic and sanitizes all outputs.
+ */
+export async function handleWebAiApiCheckMessage(
+  request: ApiCheckRuntimeRequest,
+  sendResponse: (response: unknown) => void,
+) {
+  try {
+    switch (request.action) {
+      case RuntimeActionIds.ApiCheckShouldPrompt: {
+        const { pageUrl } = request
+        if (!pageUrl?.trim()) {
+          const response: ApiCheckShouldPromptResponse = {
+            success: false,
+            error: "Missing pageUrl",
+          }
+          sendResponse(response)
+          return
+        }
+
+        const prefs = await userPreferences.getPreferences()
+        const config = getWebAiApiCheckPreferences(prefs)
+        const patterns = config.autoDetect?.urlWhitelist?.patterns ?? []
+        const shouldPrompt =
+          config.enabled &&
+          !!config.autoDetect?.enabled &&
+          isUrlAllowedByRegexList(pageUrl, patterns)
+
+        const response: ApiCheckShouldPromptResponse = {
+          success: true,
+          shouldPrompt,
+        }
+        sendResponse(response)
+        return
+      }
+
+      case RuntimeActionIds.ApiCheckFetchModels: {
+        const { apiType, baseUrl, apiKey } = request
+
+        if (!apiType || !baseUrl?.trim() || !apiKey?.trim()) {
+          const response: ApiCheckFetchModelsResponse = {
+            success: false,
+            error: "Missing apiType, baseUrl, or apiKey",
+          }
+          sendResponse(response)
+          return
+        }
+
+        if (
+          apiType !== API_TYPES.OPENAI_COMPATIBLE &&
+          apiType !== API_TYPES.OPENAI
+        ) {
+          const response: ApiCheckFetchModelsResponse = {
+            success: false,
+            error:
+              "Model listing is only supported for OpenAI/OpenAI-compatible",
+          }
+          sendResponse(response)
+          return
+        }
+
+        const normalizedBaseUrl = normalizeOpenAiFamilyBaseUrl(baseUrl)
+        if (!normalizedBaseUrl) {
+          const response: ApiCheckFetchModelsResponse = {
+            success: false,
+            error: "Invalid baseUrl",
+          }
+          sendResponse(response)
+          return
+        }
+
+        try {
+          const modelIds = await fetchOpenAICompatibleModelIds({
+            baseUrl: normalizedBaseUrl,
+            apiKey,
+          })
+          const response: ApiCheckFetchModelsResponse = {
+            success: true,
+            modelIds,
+          }
+          sendResponse(response)
+          return
+        } catch (error) {
+          const message = toSanitizedErrorSummary(error, [apiKey])
+          logger.error("Failed to fetch models", {
+            apiType,
+            baseUrl: normalizedBaseUrl,
+            message,
+          })
+
+          const response: ApiCheckFetchModelsResponse = {
+            success: false,
+            error: message,
+          }
+          sendResponse(response)
+          return
+        }
+      }
+
+      case RuntimeActionIds.ApiCheckRunProbe: {
+        const { apiType, baseUrl, apiKey, modelId, probeId } = request
+
+        if (!apiType || !baseUrl?.trim() || !apiKey?.trim() || !probeId) {
+          const response: ApiCheckRunProbeResponse = {
+            success: false,
+            error: "Missing apiType, baseUrl, apiKey, or probeId",
+          }
+          sendResponse(response)
+          return
+        }
+
+        const normalizedBaseUrl = normalizeProbeBaseUrl({ apiType, baseUrl })
+        if (!normalizedBaseUrl) {
+          const response: ApiCheckRunProbeResponse = {
+            success: false,
+            error: "Invalid baseUrl",
+          }
+          sendResponse(response)
+          return
+        }
+
+        try {
+          const result = await runApiVerificationProbe({
+            baseUrl: normalizedBaseUrl,
+            apiKey,
+            apiType,
+            modelId: modelId?.trim() || undefined,
+            probeId: probeId as ApiVerificationProbeId,
+          })
+
+          const response: ApiCheckRunProbeResponse = { success: true, result }
+          sendResponse(response)
+          return
+        } catch (error) {
+          const message = toSanitizedErrorSummary(error, [apiKey])
+          const status = inferHttpStatus(error, message)
+          const summaryKey = summaryKeyFromHttpStatus(status)
+
+          logger.error("Probe execution failed", {
+            apiType,
+            probeId,
+            baseUrl: normalizedBaseUrl,
+            message,
+            status,
+          })
+
+          const result: ApiVerificationProbeResult = {
+            id: probeId as ApiVerificationProbeId,
+            status: "fail",
+            latencyMs: 0,
+            summary: message,
+            summaryKey,
+            summaryParams: summaryKey ? { status } : undefined,
+            input: {
+              apiType,
+              baseUrl: normalizedBaseUrl,
+            },
+          }
+
+          const response: ApiCheckRunProbeResponse = { success: true, result }
+          sendResponse(response)
+          return
+        }
+      }
+
+      default:
+        sendResponse({ success: false, error: "Unknown action" })
+    }
+  } catch (error) {
+    logger.error("ApiCheck message handling failed", {
+      message: toSanitizedErrorSummary(error, []),
+    })
+    sendResponse({ success: false, error: "Failed to handle request" })
+  }
+}

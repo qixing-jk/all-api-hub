@@ -75,6 +75,14 @@ export interface SearchableSelectProps
    * current search term as the selected value.
    */
   allowCustomValue?: boolean
+
+  /**
+   * Optional portal container for the dropdown.
+   *
+   * When rendering inside a ShadowRoot (content-script UI), portaling to
+   * `document.body` would escape styles and be hidden behind high z-index overlays.
+   */
+  portalContainer?: HTMLElement
 }
 
 /**
@@ -92,6 +100,7 @@ export function SearchableSelect({
   searchPlaceholder,
   emptyMessage,
   allowCustomValue = false,
+  portalContainer,
   className,
   disabled,
   ...buttonProps
@@ -160,7 +169,10 @@ export function SearchableSelect({
           </span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-(--radix-popper-anchor-width) p-0">
+      <PopoverContent
+        container={portalContainer}
+        className="w-(--radix-popper-anchor-width) p-0"
+      >
         <Command>
           <CommandInput
             placeholder={resolvedSearchPlaceholder}

@@ -13,5 +13,8 @@
   },
   "context_menu_redeem_selection": {
     "message": "使用兑换助手兑换选中文本"
+  },
+  "context_menu_ai_api_check": {
+    "message": "快速测试 AI API 的功能可用性"
   }
 }

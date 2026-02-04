@@ -1,0 +1,61 @@
+{
+  "settings": {
+    "title": "网页 AI API 功能可用性测试",
+    "description": "手动右键菜单始终可用。自动检测为可选功能，仅在白名单页面运行，并在打开弹窗前请求确认。默认不会保存提取到的 API Key。",
+    "autoDetect": {
+      "enable": "启用自动检测",
+      "enableDesc": "启用后，扩展可能从复制操作中识别凭据，并在打开弹窗前请求确认。",
+      "whitelist": {
+        "patterns": "URL 白名单规则",
+        "patternsDesc": "每行一个 JavaScript RegExp。匹配时默认使用不区分大小写。无效规则会被忽略（视为不匹配）。",
+        "patternsPlaceholder": "^https://example\\.com/console",
+        "invalidTitle": "无效规则",
+        "invalidMore": "…以及更多"
+      }
+    }
+  },
+  "messages": {
+    "success": {
+      "settingsSaved": "AI API 检测设置已保存。"
+    }
+  },
+  "confirmToast": {
+    "title": "检测到有效 AI API 网址和API Key",
+    "body": "是否打开 AI API 测试面板，以检查并测试 AI API 可用性？",
+    "open": "打开"
+  },
+  "modal": {
+    "title": "AI API 功能可用性测试",
+    "sourceText": {
+      "label": "用于提取的文本",
+      "placeholder": "将 Base URL 和 API Key 粘贴到这里，或使用右键菜单从选中文本预填。"
+    },
+    "fields": {
+      "baseUrl": "Base URL",
+      "apiKey": "API Key",
+      "apiType": "API 类型",
+      "modelId": "模型 ID"
+    },
+    "actions": {
+      "reextract": "重新提取",
+      "showKey": "显示 Key",
+      "hideKey": "隐藏 Key",
+      "fetchModels": "获取模型列表",
+      "fetchingModels": "获取中…",
+      "test": "测试",
+      "testing": "测试中…",
+      "running": "运行中…",
+      "retry": "重试",
+      "runOne": "运行"
+    },
+    "errors": {
+      "missingBaseUrlOrKey": "请先填写 Base URL 与 API Key。",
+      "fetchModelsFailed": "获取模型列表失败。",
+      "runProbeFailed": "探测失败。"
+    },
+    "probes": {
+      "notRunYet": "尚未运行"
+    },
+    "privacyHint": "API Key 会被视为敏感信息：默认隐藏，且该功能不会持久化保存任何数据。"
+  }
+}

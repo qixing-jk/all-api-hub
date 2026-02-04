@@ -1,0 +1,61 @@
+{
+  "settings": {
+    "title": "Web AI API Functionality Availability Test",
+    "description": "Manual context-menu trigger is always available. Auto-detect is opt-in and only runs on whitelisted pages. Extracted API keys are not saved by default.",
+    "autoDetect": {
+      "enable": "Enable auto-detect",
+      "enableDesc": "When enabled, the extension may detect credentials from copy actions and will ask for confirmation before opening the modal.",
+      "whitelist": {
+        "patterns": "URL whitelist patterns",
+        "patternsDesc": "One JavaScript RegExp pattern per line. Case-insensitive match is applied. Invalid patterns are ignored (treated as non-matching).",
+        "patternsPlaceholder": "^https://example\\.com/console",
+        "invalidTitle": "Invalid patterns",
+        "invalidMore": "…and more"
+      }
+    }
+  },
+  "messages": {
+    "success": {
+      "settingsSaved": "AI API Check settings have been saved."
+    }
+  },
+  "confirmToast": {
+    "title": "Valid AI API URL and API Key Detected",
+    "body": "Do you want to open the AI API test Panel to check and test the AI API's availability?",
+    "open": "Open"
+  },
+  "modal": {
+    "title": "AI API Functionality Availability Test",
+    "sourceText": {
+      "label": "Text to extract from",
+      "placeholder": "Paste a base URL and API key here, or use the context menu to prefill from selection."
+    },
+    "fields": {
+      "baseUrl": "Base URL",
+      "apiKey": "API key",
+      "apiType": "API type",
+      "modelId": "Model ID"
+    },
+    "actions": {
+      "reextract": "Re-extract",
+      "showKey": "Show key",
+      "hideKey": "Hide key",
+      "fetchModels": "Fetch models",
+      "fetchingModels": "Fetching…",
+      "test": "Test",
+      "testing": "Testing…",
+      "running": "Running…",
+      "retry": "Retry",
+      "runOne": "Run"
+    },
+    "errors": {
+      "missingBaseUrlOrKey": "Please provide base URL and API key first.",
+      "fetchModelsFailed": "Failed to fetch models.",
+      "runProbeFailed": "Probe failed."
+    },
+    "probes": {
+      "notRunYet": "Not run yet"
+    },
+    "privacyHint": "API Keys will be considered sensitive information: hidden by default, and this feature does not persistently store any data."
+  }
+}

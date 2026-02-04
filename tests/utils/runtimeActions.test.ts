@@ -58,6 +58,7 @@ describe("runtimeActions registry and helpers", () => {
       ),
     ).toBe(RuntimeActionIds.ExternalCheckInOpenAndMark)
     expect(RuntimeActionIds.PermissionsCheck).toBe("permissions:check")
+    expect(RuntimeActionIds.ApiCheckShouldPrompt).toBe("apiCheck:shouldPrompt")
   })
 
   it("routes auto-refresh actions via a single namespaced prefix", () => {

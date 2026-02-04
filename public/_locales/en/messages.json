@@ -13,5 +13,8 @@
   },
   "context_menu_redeem_selection": {
     "message": "Redeem selection with Redemption Assist"
+  },
+  "context_menu_ai_api_check": {
+    "message": "Quickly test the functional availability of AI APIs"
   }
 }

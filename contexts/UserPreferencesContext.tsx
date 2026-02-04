@@ -18,6 +18,7 @@ import {
   type TempWindowFallbackPreferences,
   type TempWindowFallbackReminderPreferences,
   type UserPreferences,
+  type WebAiApiCheckPreferences,
 } from "~/services/userPreferences"
 import type {
   CurrencyType,
@@ -117,6 +118,9 @@ interface UserPreferencesContextType {
   updateRedemptionAssist: (
     updates: Partial<RedemptionAssistPreferences>,
   ) => Promise<boolean>
+  updateWebAiApiCheck: (
+    updates: Partial<WebAiApiCheckPreferences>,
+  ) => Promise<boolean>
   updateTempWindowFallback: (
     updates: Partial<TempWindowFallbackPreferences>,
   ) => Promise<boolean>
@@ -133,6 +137,7 @@ interface UserPreferencesContextType {
   resetClaudeCodeRouterConfig: () => Promise<boolean>
   resetAutoCheckinConfig: () => Promise<boolean>
   resetRedemptionAssistConfig: () => Promise<boolean>
+  resetWebAiApiCheckConfig: () => Promise<boolean>
   resetModelRedirectConfig: () => Promise<boolean>
   resetWebdavConfig: () => Promise<boolean>
   resetThemeAndLanguage: () => Promise<boolean>
@@ -682,6 +687,43 @@ export const UserPreferencesProvider = ({
     [],
   )
 
+  const updateWebAiApiCheck = useCallback(
+    async (updates: Partial<WebAiApiCheckPreferences>) => {
+      const success = await userPreferences.savePreferences({
+        webAiApiCheck: updates,
+      })
+
+      if (success) {
+        setPreferences((prev) => {
+          if (!prev) return null
+
+          const base =
+            prev.webAiApiCheck ??
+            DEFAULT_PREFERENCES.webAiApiCheck ??
+            ({
+              enabled: true,
+              autoDetect: {
+                enabled: false,
+                urlWhitelist: {
+                  patterns: [],
+                },
+              },
+            } satisfies WebAiApiCheckPreferences)
+
+          const merged = deepOverride(base, updates)
+          return {
+            ...prev,
+            webAiApiCheck: merged,
+            lastUpdated: Date.now(),
+          }
+        })
+      }
+
+      return success
+    },
+    [],
+  )
+
   const updateTempWindowFallback = useCallback(
     async (updates: Partial<TempWindowFallbackPreferences>) => {
       const success = await userPreferences.savePreferences({
@@ -901,6 +943,22 @@ export const UserPreferencesProvider = ({
     return success
   }, [])
 
+  const resetWebAiApiCheckConfig = useCallback(async () => {
+    const success = await userPreferences.resetWebAiApiCheck()
+    if (success) {
+      const defaults = DEFAULT_PREFERENCES.webAiApiCheck
+      setPreferences((prev) =>
+        prev
+          ? deepOverride(prev, {
+              webAiApiCheck: defaults,
+              lastUpdated: Date.now(),
+            })
+          : prev,
+      )
+    }
+    return success
+  }, [])
+
   const resetModelRedirectConfig = useCallback(async () => {
     const success = await userPreferences.resetModelRedirectConfig()
     if (success) {
@@ -1054,6 +1112,7 @@ export const UserPreferencesProvider = ({
     updateNewApiModelSync,
     updateModelRedirect,
     updateRedemptionAssist,
+    updateWebAiApiCheck,
     updateTempWindowFallback,
     updateTempWindowFallbackReminder,
     resetToDefaults,
@@ -1066,6 +1125,7 @@ export const UserPreferencesProvider = ({
     resetClaudeCodeRouterConfig,
     resetAutoCheckinConfig,
     resetRedemptionAssistConfig,
+    resetWebAiApiCheckConfig,
     resetModelRedirectConfig,
     resetWebdavConfig,
     resetThemeAndLanguage,

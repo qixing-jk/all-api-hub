@@ -1,6 +1,7 @@
 import { defineContentScript } from "wxt/utils/define-content-script"
 
 import { setupRedemptionAssistContent } from "~/entrypoints/content/redemptionAssist"
+import { setupWebAiApiCheckContent } from "~/entrypoints/content/webAiApiCheck"
 import { createLogger } from "~/utils/logger"
 
 import { setupContentMessageHandlers } from "./messageHandlers"
@@ -28,4 +29,5 @@ function mainLogic() {
 
   setupContentMessageHandlers()
   setupRedemptionAssistContent()
+  setupWebAiApiCheckContent()
 }
