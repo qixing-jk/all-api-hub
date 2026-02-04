@@ -6,9 +6,7 @@ import WebAiApiCheckSettings from "./WebAiApiCheckSettings"
 export default function WebAiApiCheckTab() {
   return (
     <div className="space-y-6">
-      <section id="web-ai-api-check">
-        <WebAiApiCheckSettings />
-      </section>
+      <WebAiApiCheckSettings />
     </div>
   )
 }
