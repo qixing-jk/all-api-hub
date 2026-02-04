@@ -8,7 +8,7 @@ import { userPreferences } from "~/services/userPreferences"
 import type { ResolvedTheme, ThemeMode } from "~/types/theme"
 import { createLogger } from "~/utils/logger"
 
-import { RedemptionToaster } from "./RedemptionToaster"
+import { RedemptionToaster } from "../redemptionAssist/components/RedemptionToaster"
 
 /**
  * Unified logger scoped to redemption assist content UI root rendering.

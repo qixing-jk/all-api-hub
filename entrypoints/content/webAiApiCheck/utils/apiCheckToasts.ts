@@ -1,7 +1,7 @@
 import * as React from "react"
 import toast from "react-hot-toast/headless"
 
-import { ensureRedemptionToastUi } from "~/entrypoints/content/redemptionAssist/uiRoot"
+import { ensureRedemptionToastUi } from "~/entrypoints/content/shared/uiRoot"
 import { ApiCheckConfirmToast } from "~/entrypoints/content/webAiApiCheck/components/ApiCheckConfirmToast"
 
 /**

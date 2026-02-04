@@ -3,6 +3,7 @@ import toast from "react-hot-toast/headless"
 
 import type { DisplaySiteData } from "~/types"
 
+import { ensureRedemptionToastUi } from "../../shared/uiRoot"
 import { RedemptionAccountSelectToast } from "../components/RedemptionAccountSelectToast"
 import {
   RedemptionBatchResultToast,
@@ -14,7 +15,6 @@ import {
   type RedemptionPromptCodeItem,
   type RedemptionPromptResult,
 } from "../components/RedemptionPromptToast"
-import { ensureRedemptionToastUi } from "../uiRoot"
 
 /**
  * Shows an indefinite loading toast while auto-redeem runs.

@@ -2,7 +2,7 @@ import { waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { ensureRedemptionToastUi } from "~/entrypoints/content/redemptionAssist/uiRoot"
+import { ensureRedemptionToastUi } from "~/entrypoints/content/shared/uiRoot"
 import { setupWebAiApiCheckContent } from "~/entrypoints/content/webAiApiCheck"
 import {
   dispatchOpenApiCheckModal,
@@ -27,7 +27,7 @@ vi.mock("~/entrypoints/content/webAiApiCheck/utils/apiCheckToasts", () => ({
   showApiCheckConfirmToast: vi.fn(),
 }))
 
-vi.mock("~/entrypoints/content/redemptionAssist/uiRoot", () => ({
+vi.mock("~/entrypoints/content/shared/uiRoot", () => ({
   ensureRedemptionToastUi: vi.fn(),
 }))
 

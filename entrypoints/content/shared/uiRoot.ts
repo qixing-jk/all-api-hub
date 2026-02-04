@@ -3,7 +3,7 @@ import { createRoot, type Root } from "react-dom/client"
 import { ContentScriptContext } from "wxt/utils/content-script-context"
 import { createShadowRootUi } from "wxt/utils/content-script-ui/shadow-root"
 
-import { ContentReactRoot } from "~/entrypoints/content/redemptionAssist/components/ContentReactRoot"
+import { ContentReactRoot } from "~/entrypoints/content/shared/ContentReactRoot"
 import { CONTENT_UI_HOST_TAG } from "~/entrypoints/content/shared/contentUi"
 import { createLogger } from "~/utils/logger"
 

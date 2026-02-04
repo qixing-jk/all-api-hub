@@ -6,9 +6,9 @@ import {
 import { createLogger } from "~/utils/logger"
 import { extractApiCheckCredentialsFromText } from "~/utils/webAiApiCheck"
 
-import { ensureRedemptionToastUi } from "../redemptionAssist/uiRoot"
 import { isEventFromAllApiHubContentUi } from "../shared/contentUi"
 import { isLikelyCopyActionTarget } from "../shared/copyActionTarget"
+import { ensureRedemptionToastUi } from "../shared/uiRoot"
 import {
   API_CHECK_MODAL_CLOSED_EVENT,
   dispatchOpenApiCheckModal,

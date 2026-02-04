@@ -2,7 +2,7 @@ import * as React from "react"
 import toast from "react-hot-toast/headless"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { ensureRedemptionToastUi } from "~/entrypoints/content/redemptionAssist/uiRoot"
+import { ensureRedemptionToastUi } from "~/entrypoints/content/shared/uiRoot"
 import { sendRuntimeMessage } from "~/utils/browserApi"
 import { createLogger } from "~/utils/logger"
 
