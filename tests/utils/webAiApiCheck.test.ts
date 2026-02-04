@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 
+import { buildApiKey } from "~/tests/test-utils/factories"
 import {
   extractApiCheckCredentialsFromText,
   normalizeApiCheckBaseUrl,
@@ -52,29 +53,30 @@ describe("webAiApiCheck utils", () => {
     })
 
     it("extracts baseUrl + apiKey from labeled text", () => {
+      const apiKey = buildApiKey()
       const result = extractApiCheckCredentialsFromText(
-        [
-          "Base URL: https://example.com/api/v1",
-          "API Key: sk-1234567890abcdef",
-        ].join("\n"),
+        ["Base URL: https://example.com/api/v1", `API Key: ${apiKey}`].join(
+          "\n",
+        ),
       )
 
       expect(result.baseUrl).toBe("https://example.com/api")
-      expect(result.apiKey).toBe("sk-1234567890abcdef")
+      expect(result.apiKey).toBe(apiKey)
       expect(result.baseUrlCandidates).toContain("https://example.com/api/v1")
     })
 
     it("extracts credentials from a curl snippet", () => {
+      const apiKey = buildApiKey()
       const result = extractApiCheckCredentialsFromText(
         [
           'curl "https://proxy.example.com/openai/v1/chat/completions" \\',
-          '  -H "Authorization: Bearer sk-abcdef1234567890" \\',
+          `  -H "Authorization: Bearer ${apiKey}" \\`,
           '  -d \'{"model":"gpt-4o-mini"}\'',
         ].join("\n"),
       )
 
       expect(result.baseUrl).toBe("https://proxy.example.com/openai")
-      expect(result.apiKey).toBe("sk-abcdef1234567890")
+      expect(result.apiKey).toBe(apiKey)
     })
   })
 })

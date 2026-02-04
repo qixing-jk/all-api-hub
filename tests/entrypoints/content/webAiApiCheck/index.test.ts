@@ -10,6 +10,10 @@ import {
 } from "~/entrypoints/content/webAiApiCheck/events"
 import { showApiCheckConfirmToast } from "~/entrypoints/content/webAiApiCheck/utils/apiCheckToasts"
 import {
+  buildApiCheckClipboardText,
+  buildApiKey,
+} from "~/tests/test-utils/factories"
+import {
   checkPermissionViaMessage,
   sendRuntimeMessage,
 } from "~/utils/browserApi"
@@ -82,6 +86,7 @@ describe("setupWebAiApiCheckContent", () => {
   })
 
   it("opens modal from auto-detect on copy when whitelisted + confirmed", async () => {
+    const apiKey = buildApiKey()
     vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
       if (message.action === RuntimeActionIds.ApiCheckShouldPrompt) {
         return { success: true, shouldPrompt: true }
@@ -93,10 +98,7 @@ describe("setupWebAiApiCheckContent", () => {
     const cleanup = setupWebAiApiCheckContent()
 
     document.dispatchEvent(
-      makeClipboardEvent(
-        "copy",
-        "Base URL: https://proxy.example.com/api/v1\nAPI Key: sk-abcdef123456",
-      ),
+      makeClipboardEvent("copy", buildApiCheckClipboardText({ apiKey })),
     )
 
     await waitFor(() =>
@@ -109,6 +111,7 @@ describe("setupWebAiApiCheckContent", () => {
   })
 
   it("does not open modal when background vetoes shouldPrompt", async () => {
+    const apiKey = buildApiKey()
     vi.mocked(sendRuntimeMessage).mockResolvedValue({
       success: true,
       shouldPrompt: false,
@@ -119,7 +122,10 @@ describe("setupWebAiApiCheckContent", () => {
     document.dispatchEvent(
       makeClipboardEvent(
         "copy",
-        "Base URL: https://proxy.example.com/api\nAPI Key: sk-abcdef123456",
+        buildApiCheckClipboardText({
+          baseUrl: "https://proxy.example.com/api",
+          apiKey,
+        }),
       ),
     )
 
@@ -133,6 +139,7 @@ describe("setupWebAiApiCheckContent", () => {
   })
 
   it("reads clipboard on click for copy-like targets and opens modal", async () => {
+    const apiKey = buildApiKey()
     vi.mocked(sendRuntimeMessage).mockResolvedValue({
       success: true,
       shouldPrompt: true,
@@ -143,11 +150,12 @@ describe("setupWebAiApiCheckContent", () => {
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
       value: {
-        readText: vi
-          .fn()
-          .mockResolvedValue(
-            "Base URL: https://proxy.example.com/api\nAPI Key: sk-abcdef123456",
-          ),
+        readText: vi.fn().mockResolvedValue(
+          buildApiCheckClipboardText({
+            baseUrl: "https://proxy.example.com/api",
+            apiKey,
+          }),
+        ),
       },
     })
 
@@ -171,6 +179,7 @@ describe("setupWebAiApiCheckContent", () => {
   })
 
   it("ignores events originating from the content UI host element", async () => {
+    const apiKey = buildApiKey()
     vi.mocked(sendRuntimeMessage).mockResolvedValue({
       success: true,
       shouldPrompt: true,
@@ -187,7 +196,10 @@ describe("setupWebAiApiCheckContent", () => {
     innerButton.dispatchEvent(
       makeClipboardEvent(
         "copy",
-        "Base URL: https://proxy.example.com/api\nAPI Key: sk-abcdef123456",
+        buildApiCheckClipboardText({
+          baseUrl: "https://proxy.example.com/api",
+          apiKey,
+        }),
       ),
     )
 
