@@ -51,6 +51,49 @@ export default function ResultsTable({
     return result.message ?? "-"
   }
 
+  /**
+   * Returns true when the backend message strongly suggests the stored access token is invalid/expired.
+   *
+   * Some deployments (One-API/New-API family and variants) may return a 200 response with a human-readable
+   * error such as "无权进行此操作，access token 无效", which is easy to miss without explicit guidance.
+   */
+  const isInvalidAccessTokenMessage = (message: string): boolean => {
+    if (!message) return false
+
+    const normalized = message.toLowerCase()
+
+    // Prefer strict matching on the known Chinese message, then fall back to broader heuristics.
+    if (normalized.includes("access token 无效")) return true
+
+    return (
+      normalized.includes("access token") &&
+      (normalized.includes("无效") ||
+        normalized.includes("失效") ||
+        normalized.includes("过期") ||
+        normalized.includes("invalid") ||
+        normalized.includes("expired"))
+    )
+  }
+
+  /**
+   * Map certain failure messages to a concise, localized troubleshooting hint shown under the raw message.
+   */
+  const getTroubleshootingHintKey = (
+    result: CheckinAccountResult,
+  ): string | null => {
+    if (result.status !== CHECKIN_RESULT_STATUS.FAILED) {
+      return null
+    }
+
+    const message = getResultMessage(result)
+
+    if (isInvalidAccessTokenMessage(message)) {
+      return "execution.hints.invalidAccessToken"
+    }
+
+    return null
+  }
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case CHECKIN_RESULT_STATUS.SUCCESS:
@@ -123,60 +166,75 @@ export default function ResultsTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-900">
-            {results.map((result) => (
-              <tr
-                key={result.accountId}
-                className="group hover:bg-gray-50 dark:hover:bg-gray-800"
-              >
-                <td className="px-6 py-4 text-sm font-medium whitespace-nowrap text-gray-900 dark:text-gray-100">
-                  <AccountLinkButton
-                    accountId={result.accountId}
-                    accountName={result.accountName}
-                  />
-                </td>
-                <td className="px-6 py-4 text-sm whitespace-nowrap">
-                  {getStatusBadge(result.status)}
-                </td>
-                <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                  {getResultMessage(result)}
-                </td>
-                <td className="px-6 py-4 text-sm whitespace-nowrap text-gray-500 dark:text-gray-400">
-                  {formatTimestamp(result.timestamp)}
-                </td>
-                <td className="sticky right-0 z-10 border-l border-gray-200 bg-white px-6 py-4 text-sm text-gray-500 group-hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400 dark:group-hover:bg-gray-800">
-                  <div className="flex flex-wrap gap-2">
-                    {onRetryAccount &&
-                      result.status === CHECKIN_RESULT_STATUS.FAILED && (
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          loading={retryingAccountId === result.accountId}
-                          disabled={retryingAccountId === result.accountId}
-                          onClick={() => onRetryAccount(result.accountId)}
-                          leftIcon={<ArrowPathIcon className="h-3.5 w-3.5" />}
-                        >
-                          {t("execution.actions.retryAccount")}
-                        </Button>
+            {results.map((result) => {
+              const troubleshootingHintKey = getTroubleshootingHintKey(result)
+
+              return (
+                <tr
+                  key={result.accountId}
+                  className="group hover:bg-gray-50 dark:hover:bg-gray-800"
+                >
+                  <td className="px-6 py-4 text-sm font-medium whitespace-nowrap text-gray-900 dark:text-gray-100">
+                    <AccountLinkButton
+                      accountId={result.accountId}
+                      accountName={result.accountName}
+                    />
+                  </td>
+                  <td className="px-6 py-4 text-sm whitespace-nowrap">
+                    {getStatusBadge(result.status)}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                    <div className="space-y-1">
+                      <div>{getResultMessage(result)}</div>
+                      {troubleshootingHintKey && (
+                        <div className="text-xs text-gray-400 dark:text-gray-500">
+                          {t(troubleshootingHintKey)}
+                        </div>
                       )}
-                    {onOpenManualSignIn &&
-                      result.status === CHECKIN_RESULT_STATUS.FAILED && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          loading={openingManualAccountId === result.accountId}
-                          disabled={openingManualAccountId === result.accountId}
-                          onClick={() => onOpenManualSignIn(result.accountId)}
-                          leftIcon={
-                            <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" />
-                          }
-                        >
-                          {t("execution.actions.openManual")}
-                        </Button>
-                      )}
-                  </div>
-                </td>
-              </tr>
-            ))}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-sm whitespace-nowrap text-gray-500 dark:text-gray-400">
+                    {formatTimestamp(result.timestamp)}
+                  </td>
+                  <td className="sticky right-0 z-10 border-l border-gray-200 bg-white px-6 py-4 text-sm text-gray-500 group-hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400 dark:group-hover:bg-gray-800">
+                    <div className="flex flex-wrap gap-2">
+                      {onRetryAccount &&
+                        result.status === CHECKIN_RESULT_STATUS.FAILED && (
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            loading={retryingAccountId === result.accountId}
+                            disabled={retryingAccountId === result.accountId}
+                            onClick={() => onRetryAccount(result.accountId)}
+                            leftIcon={<ArrowPathIcon className="h-3.5 w-3.5" />}
+                          >
+                            {t("execution.actions.retryAccount")}
+                          </Button>
+                        )}
+                      {onOpenManualSignIn &&
+                        result.status === CHECKIN_RESULT_STATUS.FAILED && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            loading={
+                              openingManualAccountId === result.accountId
+                            }
+                            disabled={
+                              openingManualAccountId === result.accountId
+                            }
+                            onClick={() => onOpenManualSignIn(result.accountId)}
+                            leftIcon={
+                              <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" />
+                            }
+                          >
+                            {t("execution.actions.openManual")}
+                          </Button>
+                        )}
+                    </div>
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>

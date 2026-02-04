@@ -87,6 +87,9 @@
       "retryAccount": "Retry",
       "openManual": "Manual sign-in"
     },
+    "hints": {
+      "invalidAccessToken": "Solution: The Access Token may have expired. Please log in to the site again, then in 'Account Management → Edit Account', automatically re-identify/refresh the Access Token. If this issue still occurs after automatic identification, please manually obtain and modify the Access Token."
+    },
     "filters": {
       "all": "All",
       "success": "Success",

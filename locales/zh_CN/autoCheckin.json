@@ -87,6 +87,9 @@
       "retryAccount": "重新尝试",
       "openManual": "手动签到"
     },
+    "hints": {
+      "invalidAccessToken": "解决方案：Access Token 可能已失效。请重新登录该站点，然后在「账号管理 → 编辑账号」中重新自动识别/刷新 Access Token；如自动识别后仍出现此问题，请手动获取并修改 Access Token。"
+    },
     "filters": {
       "all": "全部",
       "success": "成功",
