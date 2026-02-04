@@ -22,7 +22,7 @@ import { showApiCheckConfirmToast } from "./utils/apiCheckToasts"
  */
 const logger = createLogger("WebAiApiCheckContent")
 
-const AUTO_DETECT_COOLDOWN_MS = 30_000
+const AUTO_DETECT_COOLDOWN_MS = 2000
 const SCAN_DEDUP_INTERVAL_MS = 1000
 
 /**
