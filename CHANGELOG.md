@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.14.0](https://github.com/qixing-jk/all-api-hub/compare/v3.13.0...v3.14.0) (2026-02-05)
+
+
+### Features
+
+* add quick Web AI API Functionality Availability Test and shared content script part ([#428](https://github.com/qixing-jk/all-api-hub/issues/428)) ([98cc526](https://github.com/qixing-jk/all-api-hub/commit/98cc5262849211aa28b59dffcde12642bca8e55a))
+* **auto-checkin:** add hint for closed temporary tabs ([bed56b6](https://github.com/qixing-jk/all-api-hub/commit/bed56b67c8c92d760374d10f78d2681552a8ca50))
+* **auto-checkin:** add troubleshooting hints for invalid access token ([#426](https://github.com/qixing-jk/all-api-hub/issues/426)) ([5bad4d6](https://github.com/qixing-jk/all-api-hub/commit/5bad4d6a1b843fbde3bb5efafb348ff6c5911a78))
+
+
+### Bug Fixes
+
+* **webdav:** migrate auto-sync from timers to alarms API ([#424](https://github.com/qixing-jk/all-api-hub/issues/424)) ([792587e](https://github.com/qixing-jk/all-api-hub/commit/792587e6f9fa24a77ad8da59ffb27f078d021f98))
+
 ## [3.13.0](https://github.com/qixing-jk/all-api-hub/compare/v3.12.0...v3.13.0) (2026-02-03)
 
 
