@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.15.0](https://github.com/qixing-jk/all-api-hub/compare/v3.14.0...v3.15.0) (2026-02-06)
+
+
+### Features
+
+* **bookmarks:** add bookmark management and sync support ([#429](https://github.com/qixing-jk/all-api-hub/issues/429)) ([e148bfc](https://github.com/qixing-jk/all-api-hub/commit/e148bfca8ac80899f453eaa86899f5cd69add81e))
+
+
+### Bug Fixes
+
+* **accountStorage:** remove redundant income fetch logic ([6476e0d](https://github.com/qixing-jk/all-api-hub/commit/6476e0d15ad61c9e0f43f80749670c759176d82f))
+* **preferences:** enforce minimum auto-refresh intervals ([#432](https://github.com/qixing-jk/all-api-hub/issues/432)) ([59390fa](https://github.com/qixing-jk/all-api-hub/commit/59390fa19266cc43239bf5429ad434c4f661b942))
+
 ## [3.14.0](https://github.com/qixing-jk/all-api-hub/compare/v3.13.0...v3.14.0) (2026-02-05)
 
 
