@@ -42,7 +42,10 @@ interface BookmarksListProps {
 }
 
 /**
- * Normalize a string for tolerant bookmark searching (case-insensitive, URL-noise stripped).
+ * Normalize a string for tolerant bookmark searching (case-insensitive, whitespace-normalized).
+ *
+ * Note: URL-specific normalization (protocol/query/fragment stripping) is handled separately by
+ * `normalizeUrlForSearch` so punctuation in notes/tags doesn't truncate other fields.
  */
 function normalizeForSearch(value: string): string {
   if (!value) return ""
@@ -52,12 +55,39 @@ function normalizeForSearch(value: string): string {
   normalized = normalized.replace(/[\uff01-\uff5e]/g, (ch) =>
     String.fromCharCode(ch.charCodeAt(0) - 0xfee0),
   )
-  normalized = normalized.replace(/^https?:\/\//, "")
-  normalized = normalized.replace(/\/+$/, "")
-  normalized = normalized.replace(/[?#].*$/, "")
   normalized = normalized.replace(/\s+/g, " ").trim()
 
   return normalized
+}
+
+/**
+ * Normalize a URL for bookmark searching by stripping URL noise.
+ */
+function normalizeUrlForSearch(value: string): string {
+  if (!value) return ""
+
+  let normalized = normalizeForSearch(value)
+  normalized = normalized.replace(/^https?:\/\//, "")
+  normalized = normalized.replace(/\/+$/, "")
+  normalized = normalized.replace(/[?#].*$/, "")
+  return normalized
+}
+
+/**
+ * Normalize a single user-provided search token so URL-like tokens match URL-normalized haystacks.
+ */
+function normalizeSearchToken(token: string): string {
+  const normalized = normalizeForSearch(token)
+  if (!normalized) return ""
+
+  const probablyUrl =
+    normalized.includes("://") ||
+    normalized.includes("/") ||
+    normalized.includes(".") ||
+    ((normalized.includes("?") || normalized.includes("#")) &&
+      (normalized.includes(".") || normalized.includes("/")))
+
+  return probablyUrl ? normalizeUrlForSearch(token) : normalized
 }
 
 /**
@@ -163,19 +193,19 @@ export default function BookmarksList({
 
     const tokens = q
       .split(/\s+/)
-      .map((token) => normalizeForSearch(token))
+      .map((token) => normalizeSearchToken(token))
       .filter(Boolean)
     if (tokens.length === 0) return []
 
     return orderedBookmarks.filter((bookmark) => {
-      const haystack = normalizeForSearch(
-        [
-          bookmark.name,
-          bookmark.url,
-          bookmark.notes || "",
-          ...(bookmark.tags || []),
-        ].join(" "),
-      )
+      const haystackParts = [
+        normalizeForSearch(bookmark.name),
+        normalizeUrlForSearch(bookmark.url),
+        normalizeForSearch(bookmark.notes || ""),
+        ...(bookmark.tags || []).map((tag) => normalizeForSearch(tag)),
+      ].filter(Boolean)
+
+      const haystack = haystackParts.join(" ")
 
       return tokens.every((token) => haystack.includes(token))
     })
@@ -284,11 +314,7 @@ export default function BookmarksList({
     const wasPinned = isAccountPinned(bookmark.id)
     const success = await togglePinAccount(bookmark.id)
     if (!success) {
-      toast.error(
-        t("messages:toast.error.operationFailed", {
-          error: t("messages:storage.updateFailed", { error: "" }),
-        }),
-      )
+      toast.error(t("messages:toast.error.saveFailed"))
       return
     }
 
