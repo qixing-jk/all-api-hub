@@ -974,4 +974,134 @@ describe("accountStorage bookmarks", () => {
       "b-1",
     ])
   })
+
+  describe("replaceIdListSubset (via set*ListSubset APIs)", () => {
+    it("appends subset ids when existingIds is empty", async () => {
+      storageData.set(ACCOUNT_STORAGE_KEYS.ACCOUNTS, {
+        accounts: [createAccount({ id: "a-1" })],
+        bookmarks: [
+          createBookmark({ id: "b-1" }),
+          createBookmark({ id: "b-2" }),
+        ],
+        pinnedAccountIds: [],
+        orderedAccountIds: [],
+        last_updated: Date.now(),
+      } satisfies AccountStorageConfig)
+
+      const success = await accountStorage.setOrderedListSubset({
+        entryType: "bookmark",
+        ids: ["b-2", "b-1"],
+      })
+
+      expect(success).toBe(true)
+      expect(await accountStorage.getOrderedList()).toEqual(["b-2", "b-1"])
+    })
+
+    it("is a no-op when nextSubsetIds is empty", async () => {
+      storageData.set(ACCOUNT_STORAGE_KEYS.ACCOUNTS, {
+        accounts: [createAccount({ id: "a-1" }), createAccount({ id: "a-2" })],
+        bookmarks: [
+          createBookmark({ id: "b-1" }),
+          createBookmark({ id: "b-2" }),
+        ],
+        pinnedAccountIds: [],
+        orderedAccountIds: ["a-1", "b-1", "a-2", "b-2"],
+        last_updated: Date.now(),
+      } satisfies AccountStorageConfig)
+
+      const success = await accountStorage.setOrderedListSubset({
+        entryType: "bookmark",
+        ids: [],
+      })
+
+      expect(success).toBe(true)
+      expect(await accountStorage.getOrderedList()).toEqual([
+        "a-1",
+        "b-1",
+        "a-2",
+        "b-2",
+      ])
+    })
+
+    it("adds subset ids that are missing from existingIds", async () => {
+      storageData.set(ACCOUNT_STORAGE_KEYS.ACCOUNTS, {
+        accounts: [createAccount({ id: "a-1" }), createAccount({ id: "a-2" })],
+        bookmarks: [
+          createBookmark({ id: "b-1" }),
+          createBookmark({ id: "b-2" }),
+        ],
+        pinnedAccountIds: [],
+        orderedAccountIds: ["a-1", "a-2"],
+        last_updated: Date.now(),
+      } satisfies AccountStorageConfig)
+
+      const success = await accountStorage.setOrderedListSubset({
+        entryType: "bookmark",
+        ids: ["b-2"],
+      })
+
+      expect(success).toBe(true)
+      expect(await accountStorage.getOrderedList()).toEqual([
+        "a-1",
+        "a-2",
+        "b-2",
+      ])
+    })
+
+    it("de-dupes duplicates in existingIds and nextSubsetIds", async () => {
+      storageData.set(ACCOUNT_STORAGE_KEYS.ACCOUNTS, {
+        accounts: [createAccount({ id: "a-1" })],
+        bookmarks: [
+          createBookmark({ id: "b-1" }),
+          createBookmark({ id: "b-2" }),
+        ],
+        pinnedAccountIds: [],
+        orderedAccountIds: ["a-1", "b-1", "a-1", "b-1", "b-1"],
+        last_updated: Date.now(),
+      } satisfies AccountStorageConfig)
+
+      const success = await accountStorage.setOrderedListSubset({
+        entryType: "bookmark",
+        ids: ["b-2", "b-2", "b-1", "b-1"],
+      })
+
+      expect(success).toBe(true)
+      expect(await accountStorage.getOrderedList()).toEqual([
+        "a-1",
+        "b-2",
+        "b-1",
+      ])
+    })
+
+    it("preserves non-subset ids while replacing subset slots in order", async () => {
+      storageData.set(ACCOUNT_STORAGE_KEYS.ACCOUNTS, {
+        accounts: [
+          createAccount({ id: "a-1" }),
+          createAccount({ id: "a-2" }),
+          createAccount({ id: "a-3" }),
+        ],
+        bookmarks: [
+          createBookmark({ id: "b-1" }),
+          createBookmark({ id: "b-2" }),
+        ],
+        pinnedAccountIds: [],
+        orderedAccountIds: ["a-1", "b-1", "a-2", "b-2", "a-3"],
+        last_updated: Date.now(),
+      } satisfies AccountStorageConfig)
+
+      const success = await accountStorage.setOrderedListSubset({
+        entryType: "account",
+        ids: ["a-3", "a-1"],
+      })
+
+      expect(success).toBe(true)
+      expect(await accountStorage.getOrderedList()).toEqual([
+        "a-3",
+        "b-1",
+        "a-1",
+        "b-2",
+        "a-2",
+      ])
+    })
+  })
 })
