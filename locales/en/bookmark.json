@@ -1,5 +1,5 @@
 {
-  "title": "Bookmarks Management",
+  "title": "Bookmark Management",
   "description": "Save quick links (console/docs/admin pages) without creating full accounts.",
   "switch": {
     "accounts": "Accounts",
