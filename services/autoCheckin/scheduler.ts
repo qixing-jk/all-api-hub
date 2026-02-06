@@ -672,18 +672,24 @@ class AutoCheckinScheduler {
     try {
       // Set up alarm listener (if supported)
       if (hasAlarmsAPI()) {
-        onAlarm((alarm) => {
+        onAlarm(async (alarm) => {
           if (alarm.name === AutoCheckinScheduler.DAILY_ALARM_NAME) {
-            void this.handleDailyAlarm(alarm).catch((error) => {
+            // Await to keep the MV3 service worker alive for the full daily run.
+            try {
+              await this.handleDailyAlarm(alarm)
+            } catch (error) {
               logger.error("Daily alarm execution failed", error)
-            })
+            }
             return
           }
 
           if (alarm.name === AutoCheckinScheduler.RETRY_ALARM_NAME) {
-            void this.handleRetryAlarm(alarm).catch((error) => {
+            // Await to keep the MV3 service worker alive for the full retry run.
+            try {
+              await this.handleRetryAlarm(alarm)
+            } catch (error) {
               logger.error("Retry alarm execution failed", error)
-            })
+            }
             return
           }
 
@@ -691,9 +697,11 @@ class AutoCheckinScheduler {
             logger.warn(
               "Legacy alarm detected; clearing and restoring daily schedule",
             )
-            void this.scheduleNextRun().catch((error) => {
+            try {
+              await this.scheduleNextRun()
+            } catch (error) {
               logger.error("Failed to restore schedule", error)
-            })
+            }
           }
         })
 

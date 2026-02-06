@@ -374,7 +374,7 @@ export function onWindowRemoved(
  * 监听扩展启动事件
  * @param callback 扩展启动时执行的回调函数。
  */
-export function onStartup(callback: () => void): () => void {
+export function onStartup(callback: () => void | Promise<void>): () => void {
   browser.runtime.onStartup.addListener(callback)
   return () => {
     browser.runtime.onStartup.removeListener(callback)
@@ -386,7 +386,9 @@ export function onStartup(callback: () => void): () => void {
  * @param callback 安装或更新时触发的处理函数。
  */
 export function onInstalled(
-  callback: (details: browser.runtime._OnInstalledDetails) => void,
+  callback: (
+    details: browser.runtime._OnInstalledDetails,
+  ) => void | Promise<void>,
 ): () => void {
   browser.runtime.onInstalled.addListener(callback)
   return () => {
@@ -490,7 +492,7 @@ export async function getAllAlarms(): Promise<browser.alarms.Alarm[]> {
  * @param callback 定时任务触发时调用的处理函数。
  */
 export function onAlarm(
-  callback: (alarm: browser.alarms.Alarm) => void,
+  callback: (alarm: browser.alarms.Alarm) => void | Promise<void>,
 ): () => void {
   if (!hasAlarmsAPI()) {
     logger.warn("Alarms API not supported")

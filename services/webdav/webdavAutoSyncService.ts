@@ -137,12 +137,13 @@ class WebdavAutoSyncService {
 
     try {
       // Register alarm listener early. In MV3 service workers, timers are unreliable; alarms are the stable scheduler.
-      this.removeAlarmListener = onAlarm((alarm) => {
+      this.removeAlarmListener = onAlarm(async (alarm) => {
         if (alarm.name !== WebdavAutoSyncService.ALARM_NAME) {
           return
         }
 
-        void this.performBackgroundSync()
+        // Await to keep the MV3 service worker alive for the duration of the sync.
+        await this.performBackgroundSync()
       })
 
       await this.setupAutoSync()

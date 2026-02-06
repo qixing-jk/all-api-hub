@@ -13,7 +13,12 @@ import {
   OPTIONAL_PERMISSIONS,
 } from "~/services/permissions/permissionManager"
 import { userPreferences } from "~/services/userPreferences"
-import { createTab, getManifest, onInstalled } from "~/utils/browserApi"
+import {
+  createTab,
+  getManifest,
+  onInstalled,
+  onStartup,
+} from "~/utils/browserApi"
 import { getDocsChangelogUrl } from "~/utils/docsLinks"
 import { createLogger } from "~/utils/logger"
 import { openOrFocusOptionsMenuItem } from "~/utils/navigation"
@@ -50,10 +55,13 @@ export default defineBackground(() => {
    * 监听插件安装/更新事件
    * 进行配置迁移和服务初始化
    */
-  onInstalled((details) => {
+  onInstalled(async (details) => {
     logger.info("插件安装/更新，初始化自动刷新服务和 WebDAV 自动同步服务")
 
-    void (async () => {
+    try {
+      // Important: await initialization so MV3 service workers keep the install/update event alive.
+      // If the worker stops early, alarm-based schedulers may not restore their schedules, which
+      // can break features like auto check-in after updates.
       await initializeServices()
 
       if (details.reason === "install" || details.reason === "update") {
@@ -124,7 +132,26 @@ export default defineBackground(() => {
           await createTab(changelogUrl, true)
         }
       }
-    })()
+    } catch (error) {
+      logger.error("Failed to handle install/update initialization flow", error)
+    }
+  })
+
+  /**
+   * 监听浏览器启动事件
+   *
+   * Notes:
+   * - Chrome may clear alarms on browser restart; re-initializing here ensures alarm schedules
+   *   (auto check-in / model sync / WebDAV auto-sync / usage-history sync) are restored promptly.
+   * - Awaiting prevents the MV3 service worker from going idle before schedules are reconciled.
+   */
+  onStartup(async () => {
+    logger.info("浏览器启动，恢复后台服务与 alarms 调度")
+    try {
+      await initializeServices()
+    } catch (error) {
+      logger.error("Failed to initialize services on startup", error)
+    }
   })
 
   main()

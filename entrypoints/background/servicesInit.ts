@@ -21,7 +21,9 @@ let initializingPromise: Promise<void> | null = null
  *
  * Sequence notes:
  * - Guarded to avoid duplicate initialization; concurrent callers await one promise.
- * - i18n must be ready before downstream services log or emit user-facing messages.
+ * - Alarm listeners must be registered before the first await so MV3 service worker wake-up
+ *   events (e.g. `chrome.alarms`) are not missed during async initialization.
+ * - i18n should still be initialized early so downstream user-facing messages are localized.
  * - Each service handles its own retries; failures are logged but do not block others.
  */
 export async function initializeServices() {
@@ -41,19 +43,43 @@ export async function initializeServices() {
   // 标记为正在初始化（防止并发）
   initializingPromise = (async () => {
     logger.info("初始化服务")
-    await initBackgroundI18n()
-    await modelMetadataService.initialize().catch((error) => {
-      logger.warn("Model metadata initialization failed", error)
-    })
-    await autoRefreshService.initialize()
-    await usageHistoryScheduler.initialize()
-    await webdavAutoSyncService.initialize()
-    await modelSyncScheduler.initialize()
-    await autoCheckinScheduler.initialize()
-    await redemptionAssistService.initialize()
 
-    servicesInitialized = true
-    initializingPromise = null
+    try {
+      // Start alarm-based schedulers first so their listeners are registered synchronously
+      // during service worker startup (before any awaited work yields control).
+      const alarmSchedulersInit = Promise.allSettled([
+        usageHistoryScheduler.initialize(),
+        webdavAutoSyncService.initialize(),
+        modelSyncScheduler.initialize(),
+        autoCheckinScheduler.initialize(),
+      ])
+
+      await initBackgroundI18n().catch((error) => {
+        logger.warn("Background i18n initialization failed", error)
+      })
+
+      const alarmResults = await alarmSchedulersInit
+      const rejected = alarmResults.filter(
+        (result): result is PromiseRejectedResult =>
+          result.status === "rejected",
+      )
+      if (rejected.length > 0) {
+        logger.warn("Some alarm-based schedulers failed to initialize", {
+          rejectedCount: rejected.length,
+        })
+      }
+
+      await modelMetadataService.initialize().catch((error) => {
+        logger.warn("Model metadata initialization failed", error)
+      })
+
+      await autoRefreshService.initialize()
+      await redemptionAssistService.initialize()
+
+      servicesInitialized = true
+    } finally {
+      initializingPromise = null
+    }
   })()
 
   await initializingPromise

@@ -13,6 +13,7 @@ const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0))
  */
 describe("background onInstalled changelog opening", () => {
   let onInstalledListener: InstalledListener | undefined
+  let onStartupListener: (() => void | Promise<void>) | undefined
 
   let createTabMock: ReturnType<typeof vi.fn>
   let getDocsChangelogUrlMock: ReturnType<typeof vi.fn>
@@ -21,6 +22,7 @@ describe("background onInstalled changelog opening", () => {
 
   beforeEach(() => {
     onInstalledListener = undefined
+    onStartupListener = undefined
 
     createTabMock = vi.fn().mockResolvedValue(undefined)
     getDocsChangelogUrlMock = vi.fn((version?: string) =>
@@ -46,6 +48,9 @@ describe("background onInstalled changelog opening", () => {
         getManifest: getManifestMock,
         onInstalled: vi.fn((listener: InstalledListener) => {
           onInstalledListener = listener
+        }),
+        onStartup: vi.fn((listener: () => void | Promise<void>) => {
+          onStartupListener = listener
         }),
       }
     })
@@ -144,7 +149,8 @@ describe("background onInstalled changelog opening", () => {
     await import("~/entrypoints/background/index")
 
     expect(onInstalledListener).toBeTypeOf("function")
-    onInstalledListener?.({ reason: "update" })
+    expect(onStartupListener).toBeTypeOf("function")
+    await onInstalledListener?.({ reason: "update" })
     await flushPromises()
 
     expect(getPreferencesMock).toHaveBeenCalled()
@@ -165,7 +171,8 @@ describe("background onInstalled changelog opening", () => {
     await import("~/entrypoints/background/index")
 
     expect(onInstalledListener).toBeTypeOf("function")
-    onInstalledListener?.({ reason: "update" })
+    expect(onStartupListener).toBeTypeOf("function")
+    await onInstalledListener?.({ reason: "update" })
     await flushPromises()
 
     expect(getDocsChangelogUrlMock).not.toHaveBeenCalled()

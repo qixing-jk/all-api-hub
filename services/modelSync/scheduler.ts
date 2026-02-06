@@ -94,11 +94,14 @@ class ModelSyncScheduler {
     try {
       // Set up alarm listener using browserApi (if supported)
       if (hasAlarmsAPI()) {
-        onAlarm((alarm) => {
+        onAlarm(async (alarm) => {
           if (alarm.name === ModelSyncScheduler.ALARM_NAME) {
-            this.executeSync().catch((error) => {
+            try {
+              // Await to keep the MV3 service worker alive while the sync runs.
+              await this.executeSync()
+            } catch (error) {
               logger.error("Scheduled execution failed", error)
-            })
+            }
           }
         })
 

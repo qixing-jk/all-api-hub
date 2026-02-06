@@ -63,12 +63,13 @@ class UsageHistoryScheduler {
       return
     }
 
-    onAlarm((alarm) => {
+    onAlarm(async (alarm) => {
       if (alarm.name !== USAGE_HISTORY_ALARM_NAME) {
         return
       }
 
-      void this.runSync({
+      // Await to keep the MV3 service worker alive while the sync runs.
+      await this.runSync({
         trigger: "alarm",
       })
     })
