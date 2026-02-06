@@ -5,7 +5,11 @@ import { useTranslation } from "react-i18next"
 import { SettingSection } from "~/components/SettingSection"
 import { Card, CardItem, CardList, Input, Switch } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
+import {
+  ACCOUNT_AUTO_REFRESH_INTERVAL_MIN_SECONDS,
+  ACCOUNT_AUTO_REFRESH_MIN_INTERVAL_MIN_SECONDS,
+  DEFAULT_ACCOUNT_AUTO_REFRESH,
+} from "~/types/accountAutoRefresh"
 import { showUpdateToast } from "~/utils/toastHelpers"
 
 /**
@@ -50,8 +54,12 @@ export default function RefreshSettings() {
 
   const handleRefreshIntervalBlur = async () => {
     const value = parseInt(intervalInput, 10)
-    if (isNaN(value) || value < 10) {
-      toast.error(t("refresh.refreshIntervalInvalid"))
+    if (isNaN(value) || value < ACCOUNT_AUTO_REFRESH_INTERVAL_MIN_SECONDS) {
+      toast.error(
+        t("refresh.refreshIntervalInvalid", {
+          minSeconds: ACCOUNT_AUTO_REFRESH_INTERVAL_MIN_SECONDS,
+        }),
+      )
       setIntervalInput(refreshInterval.toString())
       return
     }
@@ -63,10 +71,14 @@ export default function RefreshSettings() {
 
   const handleMinRefreshIntervalBlur = async () => {
     const value = parseInt(minIntervalInput, 10)
-    // No upper bound: allow any non-negative integer to let users effectively
-    // disable automatic refresh-by-click by setting a very large interval.
-    if (isNaN(value) || value < 0) {
-      toast.error(t("refresh.minRefreshIntervalInvalid"))
+    // No upper bound: allow any integer >= MIN to let users effectively
+    // reduce non-forced refresh frequency by setting a very large interval.
+    if (isNaN(value) || value < ACCOUNT_AUTO_REFRESH_MIN_INTERVAL_MIN_SECONDS) {
+      toast.error(
+        t("refresh.minRefreshIntervalInvalid", {
+          minSeconds: ACCOUNT_AUTO_REFRESH_MIN_INTERVAL_MIN_SECONDS,
+        }),
+      )
       setMinIntervalInput(minRefreshInterval.toString())
       return
     }
@@ -106,7 +118,7 @@ export default function RefreshSettings() {
                 <div className="flex items-center space-x-2">
                   <Input
                     type="number"
-                    min={10}
+                    min={ACCOUNT_AUTO_REFRESH_INTERVAL_MIN_SECONDS}
                     value={intervalInput}
                     onChange={(e) => setIntervalInput(e.target.value)}
                     onBlur={handleRefreshIntervalBlur}
@@ -139,12 +151,14 @@ export default function RefreshSettings() {
 
           <CardItem
             title={t("refresh.minRefreshInterval")}
-            description={t("refresh.minRefreshIntervalDesc")}
+            description={t("refresh.minRefreshIntervalDesc", {
+              minSeconds: ACCOUNT_AUTO_REFRESH_MIN_INTERVAL_MIN_SECONDS,
+            })}
             rightContent={
               <div className="flex items-center space-x-2">
                 <Input
                   type="number"
-                  min={0}
+                  min={ACCOUNT_AUTO_REFRESH_MIN_INTERVAL_MIN_SECONDS}
                   value={minIntervalInput}
                   onChange={(e) => setMinIntervalInput(e.target.value)}
                   onBlur={handleMinRefreshIntervalBlur}

@@ -12,7 +12,11 @@ import {
   DEFAULT_PREFERENCES,
   type UserPreferences,
 } from "~/services/userPreferences"
-import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
+import {
+  ACCOUNT_AUTO_REFRESH_INTERVAL_MIN_SECONDS,
+  ACCOUNT_AUTO_REFRESH_MIN_INTERVAL_MIN_SECONDS,
+  DEFAULT_ACCOUNT_AUTO_REFRESH,
+} from "~/types/accountAutoRefresh"
 import { DEFAULT_NEW_API_CONFIG } from "~/types/newApiConfig"
 import { SortingCriteriaType } from "~/types/sorting"
 import { DEFAULT_VELOERA_CONFIG } from "~/types/veloeraConfig"
@@ -282,6 +286,28 @@ describe("preferencesMigration", () => {
         adminToken: "admin-token",
         userId: "user-id",
       })
+    })
+
+    it("clamps auto-refresh intervals to new minimums during migration", () => {
+      const prefs = createV0Preferences({
+        preferencesVersion: 9,
+        accountAutoRefresh: {
+          enabled: true,
+          interval: 10,
+          minInterval: 0,
+          refreshOnOpen: false,
+        },
+      })
+
+      const result = migratePreferences(prefs)
+
+      expect(result.preferencesVersion).toBe(CURRENT_PREFERENCES_VERSION)
+      expect(result.accountAutoRefresh.interval).toBe(
+        ACCOUNT_AUTO_REFRESH_INTERVAL_MIN_SECONDS,
+      )
+      expect(result.accountAutoRefresh.minInterval).toBe(
+        ACCOUNT_AUTO_REFRESH_MIN_INTERVAL_MIN_SECONDS,
+      )
     })
 
     it("sequentially migrates from v0 through all versions", () => {

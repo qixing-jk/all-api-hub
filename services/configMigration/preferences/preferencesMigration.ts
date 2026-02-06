@@ -7,6 +7,12 @@ import { DATA_TYPE_CASHFLOW, DATA_TYPE_CONSUMPTION } from "~/constants"
 import { migrateAutoRefreshConfig } from "~/services/configMigration/preferences/autoRefreshConfigMigration"
 import { migrateNewApiConfig } from "~/services/configMigration/preferences/newApiConfigMigration"
 import { migrateWebDavConfig } from "~/services/configMigration/preferences/webDavConfigMigration"
+import {
+  ACCOUNT_AUTO_REFRESH_INTERVAL_MIN_SECONDS,
+  ACCOUNT_AUTO_REFRESH_MIN_INTERVAL_MIN_SECONDS,
+  DEFAULT_ACCOUNT_AUTO_REFRESH,
+  type AccountAutoRefresh,
+} from "~/types/accountAutoRefresh"
 import { createLogger } from "~/utils/logger"
 
 import type { UserPreferences } from "../../userPreferences"
@@ -15,7 +21,7 @@ import { migrateSortingConfig } from "./sortingConfigMigration"
 const logger = createLogger("PreferencesMigration")
 
 // Current version of the preferences schema
-export const CURRENT_PREFERENCES_VERSION = 9
+export const CURRENT_PREFERENCES_VERSION = 10
 
 /**
  * Migration function type
@@ -190,6 +196,48 @@ const migrations: Record<number, PreferencesMigrationFunction> = {
       ...prefs,
       sortingPriorityConfig: migratedSortingConfig,
       preferencesVersion: 9,
+    }
+  },
+
+  // Version 9 -> 10: Enforce minimum auto-refresh intervals
+  10: (prefs: UserPreferences): UserPreferences => {
+    logger.debug(
+      "Migrating preferences from v9 to v10 (auto-refresh interval minimums)",
+    )
+
+    const storedAutoRefresh = (prefs as any).accountAutoRefresh as
+      | Partial<AccountAutoRefresh>
+      | undefined
+
+    const normalizedAutoRefresh: AccountAutoRefresh = {
+      ...DEFAULT_ACCOUNT_AUTO_REFRESH,
+      ...storedAutoRefresh,
+    }
+
+    const intervalSeconds = Number.isFinite(normalizedAutoRefresh.interval)
+      ? normalizedAutoRefresh.interval
+      : DEFAULT_ACCOUNT_AUTO_REFRESH.interval
+
+    const minIntervalSeconds = Number.isFinite(
+      normalizedAutoRefresh.minInterval,
+    )
+      ? normalizedAutoRefresh.minInterval
+      : DEFAULT_ACCOUNT_AUTO_REFRESH.minInterval
+
+    return {
+      ...prefs,
+      accountAutoRefresh: {
+        ...normalizedAutoRefresh,
+        interval: Math.max(
+          Math.trunc(intervalSeconds),
+          ACCOUNT_AUTO_REFRESH_INTERVAL_MIN_SECONDS,
+        ),
+        minInterval: Math.max(
+          Math.trunc(minIntervalSeconds),
+          ACCOUNT_AUTO_REFRESH_MIN_INTERVAL_MIN_SECONDS,
+        ),
+      },
+      preferencesVersion: 10,
     }
   },
 }
