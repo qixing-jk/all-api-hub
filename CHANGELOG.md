@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.15.1](https://github.com/qixing-jk/all-api-hub/compare/v3.15.0...v3.15.1) (2026-02-06)
+
+
+### Bug Fixes
+
+* ensure MV3 service worker stability during async operations ([#434](https://github.com/qixing-jk/all-api-hub/issues/434)) ([bdaa142](https://github.com/qixing-jk/all-api-hub/commit/bdaa1425e541c9023b511312509847c61fb0f3bc))
+
 ## [3.15.0](https://github.com/qixing-jk/all-api-hub/compare/v3.14.0...v3.15.0) (2026-02-06)
 
 
