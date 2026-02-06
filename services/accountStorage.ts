@@ -12,6 +12,7 @@ import {
   type AccountStorageConfig,
   type DisplaySiteData,
   type SiteAccount,
+  type SiteBookmark,
 } from "~/types"
 import { DeepPartial } from "~/types/utils"
 import { deepOverride } from "~/utils"
@@ -38,6 +39,7 @@ const logger = createLogger("AccountStorage")
 // 默认配置
 const createDefaultAccountConfig = (): AccountStorageConfig => ({
   accounts: [],
+  bookmarks: [],
   pinnedAccountIds: [],
   orderedAccountIds: [],
   last_updated: Date.now(),
@@ -91,9 +93,27 @@ class AccountStorageService {
       ...createDefaultAccountConfig(),
       ...config,
       accounts: config.accounts || [],
+      bookmarks: Array.isArray(config.bookmarks) ? config.bookmarks : [],
       pinnedAccountIds: config.pinnedAccountIds || [],
       orderedAccountIds: config.orderedAccountIds || [],
       last_updated: Date.now(),
+    }
+  }
+
+  private coerceConfigForRead(
+    raw: AccountStorageConfig | undefined,
+  ): AccountStorageConfig {
+    return {
+      accounts: Array.isArray(raw?.accounts) ? raw.accounts : [],
+      bookmarks: Array.isArray(raw?.bookmarks) ? raw.bookmarks : [],
+      pinnedAccountIds: Array.isArray(raw?.pinnedAccountIds)
+        ? raw.pinnedAccountIds
+        : [],
+      orderedAccountIds: Array.isArray(raw?.orderedAccountIds)
+        ? raw.orderedAccountIds
+        : [],
+      last_updated:
+        typeof raw?.last_updated === "number" ? raw.last_updated : Date.now(),
     }
   }
 
@@ -400,15 +420,14 @@ class AccountStorageService {
   }
 
   /**
-   * Set pinned ids (filters to existing accounts, de-dupes).
+   * Set pinned ids (filters to existing entries, de-dupes).
    */
   async setPinnedList(ids: string[]): Promise<boolean> {
     try {
       return await this.mutateStorageConfig((config) => {
         const uniqueIds = Array.from(new Set(ids))
-        const validIds = uniqueIds.filter((id) =>
-          (config.accounts || []).some((account) => account.id === id),
-        )
+        const { entryIds } = AccountStorageService.buildEntryIdSets(config)
+        const validIds = uniqueIds.filter((id) => entryIds.has(id))
         config.pinnedAccountIds = validIds
         return { result: true, changed: true }
       })
@@ -419,20 +438,77 @@ class AccountStorageService {
   }
 
   /**
-   * Set ordered ids (filters to existing accounts, de-dupes).
+   * Set ordered ids (filters to existing entries, de-dupes).
    */
   async setOrderedList(ids: string[]): Promise<boolean> {
     try {
       return await this.mutateStorageConfig((config) => {
         const uniqueIds = Array.from(new Set(ids))
-        const validIds = uniqueIds.filter((id) =>
-          (config.accounts || []).some((account) => account.id === id),
-        )
+        const { entryIds } = AccountStorageService.buildEntryIdSets(config)
+        const validIds = uniqueIds.filter((id) => entryIds.has(id))
         config.orderedAccountIds = validIds
         return { result: true, changed: true }
       })
     } catch (error) {
       logger.error("设置自定义排序列表失败", error)
+      return false
+    }
+  }
+
+  /**
+   * Update pinned ids for a single entry type (accounts vs bookmarks), preserving the other type.
+   */
+  async setPinnedListSubset(input: {
+    entryType: "account" | "bookmark"
+    ids: string[]
+  }): Promise<boolean> {
+    try {
+      return await this.mutateStorageConfig((config) => {
+        const { accountIds, bookmarkIds, entryIds } =
+          AccountStorageService.buildEntryIdSets(config)
+        const subsetIdSet =
+          input.entryType === "account" ? accountIds : bookmarkIds
+
+        const merged = AccountStorageService.replaceIdListSubset({
+          existingIds: config.pinnedAccountIds || [],
+          subsetIdSet,
+          nextSubsetIds: Array.from(new Set(input.ids)),
+        })
+
+        config.pinnedAccountIds = merged.filter((id) => entryIds.has(id))
+        return { result: true, changed: true }
+      })
+    } catch (error) {
+      logger.error("设置置顶列表失败", { entryType: input.entryType, error })
+      return false
+    }
+  }
+
+  /**
+   * Update ordered ids for a single entry type (accounts vs bookmarks), preserving the other type.
+   */
+  async setOrderedListSubset(input: {
+    entryType: "account" | "bookmark"
+    ids: string[]
+  }): Promise<boolean> {
+    try {
+      return await this.mutateStorageConfig((config) => {
+        const { accountIds, bookmarkIds, entryIds } =
+          AccountStorageService.buildEntryIdSets(config)
+        const subsetIdSet =
+          input.entryType === "account" ? accountIds : bookmarkIds
+
+        const merged = AccountStorageService.replaceIdListSubset({
+          existingIds: config.orderedAccountIds || [],
+          subsetIdSet,
+          nextSubsetIds: Array.from(new Set(input.ids)),
+        })
+
+        config.orderedAccountIds = merged.filter((id) => entryIds.has(id))
+        return { result: true, changed: true }
+      })
+    } catch (error) {
+      logger.error("设置排序列表失败", { entryType: input.entryType, error })
       return false
     }
   }
@@ -986,21 +1062,24 @@ class AccountStorageService {
   }
 
   /**
-   * Import a full config dump (accounts + optional pinned ids).
+   * Import a full config dump (accounts + bookmarks + optional pinned/order ids).
    *
    * Accounts are migrated before persisting to ensure compatibility. In case of
    * failure we restore the earlier snapshot to avoid partial imports.
    */
   async importData(data: {
     accounts?: SiteAccount[]
+    bookmarks?: SiteBookmark[]
     pinnedAccountIds?: string[]
-  }): Promise<{
-    migratedCount: number
-  }> {
+    orderedAccountIds?: string[]
+  }): Promise<{ migratedCount: number }> {
     return this.withStorageWriteLock(async () => {
       const backupConfig = this.cloneConfig(await this.getStorageConfig())
       try {
         const accountsToImport = data.accounts || []
+        const bookmarksToImport = data.bookmarks
+          ? AccountStorageService.sanitizeBookmarks(data.bookmarks)
+          : backupConfig.bookmarks || []
 
         const { accounts: migratedAccounts, migratedCount } =
           migrateAccountsConfig(accountsToImport)
@@ -1011,30 +1090,43 @@ class AccountStorageService {
           })
         }
 
+        const { entryIds } = AccountStorageService.buildEntryIdSets({
+          accounts: migratedAccounts,
+          bookmarks: bookmarksToImport,
+        })
+
         const filteredPinnedIds = (backupConfig.pinnedAccountIds || []).filter(
-          (id) => migratedAccounts.some((account) => account.id === id),
+          (id) => entryIds.has(id),
         )
+
         const filteredOrderedIds = (
           backupConfig.orderedAccountIds || []
-        ).filter((id) => migratedAccounts.some((account) => account.id === id))
+        ).filter((id) => entryIds.has(id))
 
         const pinnedToPersist = data.pinnedAccountIds
-          ? data.pinnedAccountIds.filter((id) =>
-              migratedAccounts.some((account) => account.id === id),
+          ? Array.from(new Set(data.pinnedAccountIds)).filter((id) =>
+              entryIds.has(id),
             )
           : filteredPinnedIds
+
+        const orderedToPersist = data.orderedAccountIds
+          ? Array.from(new Set(data.orderedAccountIds)).filter((id) =>
+              entryIds.has(id),
+            )
+          : filteredOrderedIds
 
         const nextConfig = this.normalizeConfig({
           ...backupConfig,
           accounts: migratedAccounts,
+          bookmarks: bookmarksToImport,
           pinnedAccountIds: pinnedToPersist,
-          orderedAccountIds: filteredOrderedIds,
+          orderedAccountIds: orderedToPersist,
         })
 
         await this.storage.set(ACCOUNT_STORAGE_KEYS.ACCOUNTS, nextConfig)
 
         if (data.pinnedAccountIds) {
-          logger.info("Imported pinned account(s)", {
+          logger.info("Imported pinned entry id(s)", {
             pinnedCount: pinnedToPersist.length,
           })
         }
@@ -1057,10 +1149,10 @@ class AccountStorageService {
    */
   private async getStorageConfig(): Promise<AccountStorageConfig> {
     try {
-      const config = (await this.storage.get(
-        ACCOUNT_STORAGE_KEYS.ACCOUNTS,
-      )) as AccountStorageConfig
-      return config || createDefaultAccountConfig()
+      const config = (await this.storage.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS)) as
+        | AccountStorageConfig
+        | undefined
+      return this.coerceConfigForRead(config)
     } catch (error) {
       logger.error("获取存储配置失败", error)
       return createDefaultAccountConfig()
@@ -1076,12 +1168,16 @@ class AccountStorageService {
   private async saveAccounts(accounts: SiteAccount[]): Promise<void> {
     logger.debug("开始保存账号数据", { accountCount: accounts.length })
     await this.mutateStorageConfig((existingConfig) => {
+      const { entryIds } = AccountStorageService.buildEntryIdSets({
+        accounts,
+        bookmarks: existingConfig.bookmarks || [],
+      })
       const filteredPinnedIds = (existingConfig.pinnedAccountIds || []).filter(
-        (id) => accounts.some((account) => account.id === id),
+        (id) => entryIds.has(id),
       )
       const filteredOrderedIds = (
         existingConfig.orderedAccountIds || []
-      ).filter((id) => accounts.some((account) => account.id === id))
+      ).filter((id) => entryIds.has(id))
       existingConfig.accounts = accounts
       existingConfig.pinnedAccountIds = filteredPinnedIds
       existingConfig.orderedAccountIds = filteredOrderedIds
@@ -1102,6 +1198,178 @@ class AccountStorageService {
    */
   private generateId(): string {
     return safeRandomUUID("account")
+  }
+
+  private generateBookmarkId(): string {
+    return safeRandomUUID("bookmark")
+  }
+
+  private static normalizeBookmarkInput(input: {
+    name: string
+    url: string
+    tagIds?: unknown
+    notes?: unknown
+  }): Pick<SiteBookmark, "name" | "url" | "tagIds" | "notes"> {
+    const name = input.name?.trim() ?? ""
+    const url = input.url?.trim() ?? ""
+    if (!name) {
+      throw new Error(t("messages:errors.validation.bookmarkNameRequired"))
+    }
+    if (!url) {
+      throw new Error(t("messages:errors.validation.bookmarkUrlRequired"))
+    }
+
+    const tagIds = Array.isArray(input.tagIds)
+      ? Array.from(
+          new Set(
+            input.tagIds
+              .filter((id): id is string => typeof id === "string")
+              .map((id) => id.trim())
+              .filter(Boolean),
+          ),
+        )
+      : []
+
+    const notes = typeof input.notes === "string" ? input.notes : ""
+
+    return { name, url, tagIds, notes }
+  }
+
+  private static sanitizeBookmarks(raw: unknown): SiteBookmark[] {
+    if (!Array.isArray(raw)) return []
+
+    const byId = new Map<string, SiteBookmark>()
+
+    for (const item of raw) {
+      if (!item || typeof item !== "object") continue
+      const candidate = item as Partial<Record<keyof SiteBookmark, unknown>>
+
+      const id = typeof candidate.id === "string" ? candidate.id.trim() : ""
+      const name =
+        typeof candidate.name === "string" ? candidate.name.trim() : ""
+      const url = typeof candidate.url === "string" ? candidate.url.trim() : ""
+
+      if (!id || !name || !url) continue
+
+      const tagIds = Array.isArray(candidate.tagIds)
+        ? Array.from(
+            new Set(
+              candidate.tagIds
+                .filter((value): value is string => typeof value === "string")
+                .map((value) => value.trim())
+                .filter(Boolean),
+            ),
+          )
+        : []
+
+      const notes = typeof candidate.notes === "string" ? candidate.notes : ""
+      const created_at =
+        typeof candidate.created_at === "number" ? candidate.created_at : 0
+      const updated_at =
+        typeof candidate.updated_at === "number"
+          ? candidate.updated_at
+          : created_at || 0
+
+      const bookmark: SiteBookmark = {
+        id,
+        name,
+        url,
+        tagIds,
+        notes,
+        created_at,
+        updated_at,
+      }
+
+      const existing = byId.get(id)
+      if (
+        !existing ||
+        (bookmark.updated_at || 0) >= (existing.updated_at || 0)
+      ) {
+        byId.set(id, bookmark)
+      }
+    }
+
+    return Array.from(byId.values())
+  }
+
+  private static buildEntryIdSets(
+    config: Pick<AccountStorageConfig, "accounts" | "bookmarks">,
+  ) {
+    const accountIds = new Set(
+      (Array.isArray(config.accounts) ? config.accounts : []).map(
+        (account) => account.id,
+      ),
+    )
+    const bookmarkIds = new Set(
+      (Array.isArray(config.bookmarks) ? config.bookmarks : []).map(
+        (bookmark) => bookmark.id,
+      ),
+    )
+    const entryIds = new Set<string>([...accountIds, ...bookmarkIds])
+    return { accountIds, bookmarkIds, entryIds }
+  }
+
+  private static replaceIdListSubset(input: {
+    existingIds: string[]
+    subsetIdSet: Set<string>
+    nextSubsetIds: string[]
+  }): string[] {
+    const existingIds = Array.isArray(input.existingIds)
+      ? input.existingIds
+      : []
+    const subsetIdSet = input.subsetIdSet
+
+    const seenSubset = new Set<string>()
+    const uniqueNextSubsetIds: string[] = []
+    for (const raw of input.nextSubsetIds) {
+      if (!subsetIdSet.has(raw)) continue
+      if (seenSubset.has(raw)) continue
+      seenSubset.add(raw)
+      uniqueNextSubsetIds.push(raw)
+    }
+
+    const existingSubsetIds = existingIds.filter((id) => subsetIdSet.has(id))
+    const missingExistingSubsetIds = existingSubsetIds.filter(
+      (id) => !seenSubset.has(id),
+    )
+
+    const queue = [...uniqueNextSubsetIds, ...missingExistingSubsetIds]
+
+    const result: string[] = []
+    const seen = new Set<string>()
+
+    const queueCursor = { index: 0 }
+    const takeNextSubset = () => {
+      while (queueCursor.index < queue.length) {
+        const next = queue[queueCursor.index]
+        queueCursor.index += 1
+        if (seen.has(next)) continue
+        seen.add(next)
+        return next
+      }
+      return null
+    }
+
+    for (const id of existingIds) {
+      if (subsetIdSet.has(id)) {
+        const next = takeNextSubset()
+        if (next) {
+          result.push(next)
+        }
+        continue
+      }
+      if (seen.has(id)) continue
+      seen.add(id)
+      result.push(id)
+    }
+
+    while (queueCursor.index < queue.length) {
+      const next = takeNextSubset()
+      if (!next) break
+      result.push(next)
+    }
+
+    return result
   }
 
   /**
@@ -1141,6 +1409,155 @@ class AccountStorageService {
       return `${parsed.protocol}//${parsed.host}`
     } catch {
       return null
+    }
+  }
+
+  /**
+   * List all stored bookmarks.
+   */
+  async getAllBookmarks(): Promise<SiteBookmark[]> {
+    try {
+      const config = await this.getStorageConfig()
+      return config.bookmarks || []
+    } catch (error) {
+      logger.error("获取书签信息失败", error)
+      return []
+    }
+  }
+
+  /**
+   * Get a bookmark by id.
+   */
+  async getBookmarkById(id: string): Promise<SiteBookmark | null> {
+    if (!id) return null
+    try {
+      const bookmarks = await this.getAllBookmarks()
+      return bookmarks.find((bookmark) => bookmark.id === id) || null
+    } catch (error) {
+      logger.error("根据ID获取书签失败", { bookmarkId: id, error })
+      return null
+    }
+  }
+
+  /**
+   * Add a new bookmark; generates id/timestamps and saves.
+   */
+  async addBookmark(input: {
+    name: string
+    url: string
+    tagIds?: unknown
+    notes?: unknown
+  }): Promise<string> {
+    try {
+      const normalized = AccountStorageService.normalizeBookmarkInput(input)
+      return await this.mutateStorageConfig((config) => {
+        const now = Date.now()
+
+        const existingEntryIds = new Set([
+          ...(config.accounts || []).map((account) => account.id),
+          ...(config.bookmarks || []).map((bookmark) => bookmark.id),
+        ])
+
+        let id = this.generateBookmarkId()
+        while (existingEntryIds.has(id)) {
+          id = this.generateBookmarkId()
+        }
+
+        const bookmark: SiteBookmark = {
+          id,
+          ...normalized,
+          created_at: now,
+          updated_at: now,
+        }
+
+        config.bookmarks = Array.isArray(config.bookmarks)
+          ? config.bookmarks
+          : []
+        config.bookmarks.push(bookmark)
+
+        return { result: bookmark.id, changed: true }
+      })
+    } catch (error) {
+      logger.error("添加书签失败", error)
+      throw error
+    }
+  }
+
+  /**
+   * Update a bookmark by id (partial), refreshes updated_at.
+   */
+  async updateBookmark(
+    id: string,
+    updates: Partial<Pick<SiteBookmark, "name" | "url" | "tagIds" | "notes">>,
+  ): Promise<boolean> {
+    try {
+      return await this.mutateStorageConfig((config) => {
+        const bookmarks = Array.isArray(config.bookmarks)
+          ? config.bookmarks
+          : []
+        const index = bookmarks.findIndex((bookmark) => bookmark.id === id)
+        if (index === -1) {
+          throw new Error(
+            t("messages:errors.operation.failed", {
+              error: "Bookmark not found",
+            }),
+          )
+        }
+
+        const current = bookmarks[index]
+        const normalized = AccountStorageService.normalizeBookmarkInput({
+          name: updates.name ?? current.name,
+          url: updates.url ?? current.url,
+          tagIds: updates.tagIds ?? current.tagIds,
+          notes: updates.notes ?? current.notes,
+        })
+
+        bookmarks[index] = {
+          ...current,
+          ...normalized,
+          created_at: current.created_at,
+          updated_at: Date.now(),
+        }
+
+        config.bookmarks = bookmarks
+        return { result: true, changed: true }
+      })
+    } catch (error) {
+      logger.error("更新书签失败", { bookmarkId: id, error })
+      return false
+    }
+  }
+
+  /**
+   * Delete a bookmark; also unpins and removes from ordered list.
+   */
+  async deleteBookmark(id: string): Promise<boolean> {
+    try {
+      return await this.mutateStorageConfig((config) => {
+        const bookmarks = Array.isArray(config.bookmarks)
+          ? config.bookmarks
+          : []
+        const filtered = bookmarks.filter((bookmark) => bookmark.id !== id)
+        if (filtered.length === bookmarks.length) {
+          throw new Error(
+            t("messages:errors.operation.failed", {
+              error: "Bookmark not found",
+            }),
+          )
+        }
+
+        config.bookmarks = filtered
+        config.pinnedAccountIds = (config.pinnedAccountIds || []).filter(
+          (pinnedId) => pinnedId !== id,
+        )
+        config.orderedAccountIds = (config.orderedAccountIds || []).filter(
+          (orderedId) => orderedId !== id,
+        )
+        return { result: true, changed: true }
+      })
+    } catch (error) {
+      logger.error("删除书签失败", { bookmarkId: id, error })
+      return false
     }
   }
 

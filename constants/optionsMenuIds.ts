@@ -7,6 +7,7 @@
 export const MENU_ITEM_IDS = {
   BASIC: "basic",
   ACCOUNT: "account",
+  BOOKMARK: "bookmark",
   AUTO_CHECKIN: "autoCheckin",
   USAGE_ANALYTICS: "usageAnalytics",
   MODELS: "models",

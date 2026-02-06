@@ -40,6 +40,9 @@ export async function ensureAccountTagsStorageMigrated(
   )) as AccountStorageConfig | undefined
   const accountsConfig: AccountStorageConfig = {
     accounts: rawAccountsConfig?.accounts ?? [],
+    bookmarks: Array.isArray(rawAccountsConfig?.bookmarks)
+      ? rawAccountsConfig.bookmarks
+      : [],
     pinnedAccountIds: rawAccountsConfig?.pinnedAccountIds ?? [],
     orderedAccountIds: rawAccountsConfig?.orderedAccountIds ?? [],
     last_updated: rawAccountsConfig?.last_updated ?? Date.now(),
@@ -57,6 +60,9 @@ export async function ensureAccountTagsStorageMigrated(
       )) as AccountStorageConfig | undefined
       const lockedAccountsConfig: AccountStorageConfig = {
         accounts: lockedRawAccountsConfig?.accounts ?? [],
+        bookmarks: Array.isArray(lockedRawAccountsConfig?.bookmarks)
+          ? lockedRawAccountsConfig.bookmarks
+          : [],
         pinnedAccountIds: lockedRawAccountsConfig?.pinnedAccountIds ?? [],
         orderedAccountIds: lockedRawAccountsConfig?.orderedAccountIds ?? [],
         last_updated: lockedRawAccountsConfig?.last_updated ?? Date.now(),

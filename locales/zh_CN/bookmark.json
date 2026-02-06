@@ -1,0 +1,54 @@
+{
+  "title": "书签管理",
+  "description": "保存站点控制台/文档/管理页等快捷链接，无需创建完整账号。",
+  "switch": {
+    "accounts": "账号",
+    "bookmarks": "书签"
+  },
+  "actions": {
+    "add": "添加书签",
+    "open": "打开",
+    "copyUrl": "复制链接",
+    "pin": "置顶",
+    "unpin": "取消置顶"
+  },
+  "search": {
+    "placeholder": "搜索书签..."
+  },
+  "list": {
+    "dragHandle": "拖拽排序书签"
+  },
+  "stats": {
+    "totalBookmarks": "书签总数",
+    "pinnedBookmarks": "置顶",
+    "usedTags": "使用标签"
+  },
+  "filter": {
+    "tagsAllLabel": "全部标签"
+  },
+  "emptyState": "暂无书签",
+  "addFirstBookmark": "添加第一个书签",
+  "dialog": {
+    "titleAdd": "添加书签",
+    "titleEdit": "编辑书签",
+    "description": "书签可以是任何链接，例如站点控制台、文档、管理页等。适用于无法创建完整账号的情况。"
+  },
+  "form": {
+    "nameLabel": "名称",
+    "namePlaceholder": "例如：站点控制台",
+    "urlLabel": "链接",
+    "urlPlaceholder": "https://example.com/...",
+    "notesLabel": "备注",
+    "notesPlaceholder": "可选备注...",
+    "tagsLabel": "标签",
+    "tagsPlaceholder": "选择标签..."
+  },
+  "validation": {
+    "nameRequired": "名称不能为空",
+    "urlRequired": "链接不能为空"
+  },
+  "delete": {
+    "title": "删除书签？",
+    "description": "将永久删除“{{name}}”。"
+  }
+}

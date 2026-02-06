@@ -1,6 +1,7 @@
 import {
   ArrowLeftRight,
   BarChart3,
+  Bookmark,
   CalendarCheck2,
   Cpu,
   Info,
@@ -17,6 +18,7 @@ import About from "./pages/About"
 import AccountManagement from "./pages/AccountManagement"
 import AutoCheckin from "./pages/AutoCheckin"
 import BasicSettings from "./pages/BasicSettings"
+import BookmarkManagement from "./pages/BookmarkManagement"
 import ImportExport from "./pages/ImportExport"
 import KeyManagement from "./pages/KeyManagement"
 import managedSiteChannels from "./pages/ManagedSiteChannels"
@@ -45,6 +47,12 @@ export const menuItems: MenuItem[] = [
     name: "账户管理",
     icon: UserRound,
     component: AccountManagement,
+  },
+  {
+    id: MENU_ITEM_IDS.BOOKMARK,
+    name: "书签",
+    icon: Bookmark,
+    component: BookmarkManagement,
   },
   {
     id: MENU_ITEM_IDS.USAGE_ANALYTICS,

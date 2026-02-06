@@ -67,6 +67,7 @@ describe("tagStorage", () => {
           tags: [" Work "] as any,
         },
       ] as any,
+      bookmarks: [],
       pinnedAccountIds: [],
       orderedAccountIds: [],
       last_updated: 0,
@@ -109,6 +110,7 @@ describe("tagStorage", () => {
           tagIds: ["t1"],
         },
       ] as any,
+      bookmarks: [],
       pinnedAccountIds: [],
       orderedAccountIds: [],
       last_updated: 0,
@@ -139,6 +141,7 @@ describe("tagStorage", () => {
           tags: ["Work"] as any,
         },
       ] as any,
+      bookmarks: [],
       pinnedAccountIds: [],
       orderedAccountIds: [],
       last_updated: 0,
@@ -151,7 +154,7 @@ describe("tagStorage", () => {
     expect(result.createdTagCount).toBe(1)
   })
 
-  it("deleteTag removes references from accounts", async () => {
+  it("deleteTag removes references from accounts and bookmarks", async () => {
     const store = {
       version: 1,
       tagsById: {
@@ -181,6 +184,26 @@ describe("tagStorage", () => {
           tagIds: ["t1"],
         },
       ] as any,
+      bookmarks: [
+        {
+          id: "b1",
+          name: "Docs",
+          url: "https://example.com/docs",
+          tagIds: ["t1"],
+          notes: "",
+          created_at: 0,
+          updated_at: 0,
+        },
+        {
+          id: "b2",
+          name: "Home",
+          url: "https://example.com",
+          tagIds: [],
+          notes: "",
+          created_at: 0,
+          updated_at: 0,
+        },
+      ],
       pinnedAccountIds: [],
       orderedAccountIds: [],
       last_updated: 0,
@@ -191,11 +214,15 @@ describe("tagStorage", () => {
 
     const result = await tagStorage.deleteTag("t1")
     expect(result.updatedAccounts).toBe(1)
+    expect(result.updatedBookmarks).toBe(1)
 
     const savedAccounts = storageData.get(
       "site_accounts",
     ) as AccountStorageConfig
     expect(savedAccounts.accounts[0].tagIds).toEqual([])
+    expect(savedAccounts.bookmarks).toHaveLength(2)
+    expect(savedAccounts.bookmarks[0].tagIds).toEqual([])
+    expect(savedAccounts.bookmarks[1].tagIds).toEqual([])
     const savedStore = storageData.get("global_tag_store") as any
     expect(savedStore.tagsById.t1).toBeUndefined()
   })

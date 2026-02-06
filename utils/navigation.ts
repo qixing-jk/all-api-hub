@@ -122,6 +122,11 @@ export const navigateWithinOptionsPage = (
 const getAccountHash = () => `#${MENU_ITEM_IDS.ACCOUNT}`
 
 /**
+ * Normalized hash used by bookmark manager navigations to keep routing consistent.
+ */
+const getBookmarkHash = () => `#${MENU_ITEM_IDS.BOOKMARK}`
+
+/**
  * Canonical hash for the default settings landing page, reused across helpers.
  */
 const getBasicSettingsHash = () => `#${MENU_ITEM_IDS.BASIC}`
@@ -253,6 +258,23 @@ const withPopupClose = <T extends any[]>(
  */
 const _openFullManagerPage = (params?: { search?: string }) => {
   const targetHash = getAccountHash()
+  const searchParams = params?.search ? { search: params.search } : undefined
+
+  if (isOnOptionsPage()) {
+    navigateWithinOptionsPage(targetHash, searchParams)
+    return
+  }
+
+  openOrFocusOptionsPage(targetHash, searchParams)
+}
+
+/**
+ * Opens or focuses the bookmark manager page, preferring in-page navigation when already on options.html.
+ * @param params Optional query parameters to prefilter bookmarks.
+ * @param params.search Search keyword applied to the bookmark list.
+ */
+const _openFullBookmarkManagerPage = (params?: { search?: string }) => {
+  const targetHash = getBookmarkHash()
   const searchParams = params?.search ? { search: params.search } : undefined
 
   if (isOnOptionsPage()) {
@@ -456,6 +478,22 @@ export const openFullAccountManagerPage = withPopupClose(() =>
  */
 export const openAccountManagerWithSearch = withPopupClose((search: string) =>
   _openFullManagerPage({ search }),
+)
+
+/**
+ * Launch the bookmark manager root view, auto-closing the popup when invoked
+ * from popup.html to prevent duplicate UI shells.
+ */
+export const openFullBookmarkManagerPage = withPopupClose(() =>
+  _openFullBookmarkManagerPage(),
+)
+
+/**
+ * Open the bookmark manager filtered by the provided search string before
+ * closing the popup, keeping the flow consistent with popup interactions.
+ */
+export const openBookmarkManagerWithSearch = withPopupClose((search: string) =>
+  _openFullBookmarkManagerPage({ search }),
 )
 
 /**

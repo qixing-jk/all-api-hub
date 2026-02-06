@@ -47,6 +47,8 @@ vi.mock("~/services/accountTags/tagStorage", () => ({
       tagStore: input.localTagStore,
       localAccounts: input.localAccounts,
       remoteAccounts: input.remoteAccounts,
+      localBookmarks: input.localBookmarks ?? [],
+      remoteBookmarks: input.remoteBookmarks ?? [],
     }),
     exportTagStore: vi.fn(),
     importTagStore: vi.fn(),
@@ -101,6 +103,7 @@ describe("WebdavAutoSyncService.mergeData", () => {
 
     const local: any = {
       accounts: localAccounts,
+      bookmarks: [],
       accountsTimestamp: 100,
       tagStore: { version: 1, tagsById: {} },
       preferences: basePrefsLocal,
@@ -110,6 +113,7 @@ describe("WebdavAutoSyncService.mergeData", () => {
 
     const remote: any = {
       accounts: remoteAccounts,
+      bookmarks: [],
       accountsTimestamp: 200,
       tagStore: { version: 1, tagsById: {} },
       preferences: basePrefsRemote,
@@ -126,9 +130,77 @@ describe("WebdavAutoSyncService.mergeData", () => {
     expect(a2.site_name).toBe("remote-2")
   })
 
+  it("merges bookmarks by id choosing the most recently updated", () => {
+    const local: any = {
+      accounts: [],
+      bookmarks: [
+        {
+          id: "b1",
+          name: "local-1",
+          url: "https://local.example.com",
+          tagIds: [],
+          notes: "",
+          created_at: 1,
+          updated_at: 10,
+        },
+        {
+          id: "b2",
+          name: "local-2",
+          url: "https://local2.example.com",
+          tagIds: [],
+          notes: "",
+          created_at: 2,
+          updated_at: 5,
+        },
+      ],
+      accountsTimestamp: 0,
+      tagStore: { version: 1, tagsById: {} },
+      preferences: basePrefsLocal,
+      preferencesTimestamp: 0,
+      channelConfigs: {},
+    }
+
+    const remote: any = {
+      accounts: [],
+      bookmarks: [
+        {
+          id: "b1",
+          name: "remote-1",
+          url: "https://remote.example.com",
+          tagIds: [],
+          notes: "",
+          created_at: 1,
+          updated_at: 20,
+        },
+        {
+          id: "b3",
+          name: "remote-3",
+          url: "https://remote3.example.com",
+          tagIds: [],
+          notes: "",
+          created_at: 3,
+          updated_at: 1,
+        },
+      ],
+      accountsTimestamp: 0,
+      tagStore: { version: 1, tagsById: {} },
+      preferences: basePrefsRemote,
+      preferencesTimestamp: 0,
+      channelConfigs: {},
+    }
+
+    const result = callMerge(local, remote)
+    const ids = result.bookmarks.map((b: any) => b.id).sort()
+    expect(ids).toEqual(["b1", "b2", "b3"])
+
+    const b1 = result.bookmarks.find((b: any) => b.id === "b1")!
+    expect(b1.name).toBe("remote-1")
+  })
+
   it("chooses preferences from the side with newer preferencesTimestamp", () => {
     const local: any = {
       accounts: [],
+      bookmarks: [],
       accountsTimestamp: 0,
       tagStore: { version: 1, tagsById: {} },
       preferences: { ...basePrefsLocal, themeMode: "local" },
@@ -138,6 +210,7 @@ describe("WebdavAutoSyncService.mergeData", () => {
 
     const remote: any = {
       accounts: [],
+      bookmarks: [],
       accountsTimestamp: 0,
       tagStore: { version: 1, tagsById: {} },
       preferences: { ...basePrefsRemote, themeMode: "remote" },
@@ -162,6 +235,7 @@ describe("WebdavAutoSyncService.mergeData", () => {
 
     const local: any = {
       accounts: [],
+      bookmarks: [],
       accountsTimestamp: 0,
       tagStore: { version: 1, tagsById: {} },
       preferences: basePrefsLocal,
@@ -171,6 +245,7 @@ describe("WebdavAutoSyncService.mergeData", () => {
 
     const remote: any = {
       accounts: [],
+      bookmarks: [],
       accountsTimestamp: 0,
       tagStore: { version: 1, tagsById: {} },
       preferences: basePrefsRemote,
@@ -188,6 +263,33 @@ describe("WebdavAutoSyncService.mergeData", () => {
 
     // id 2 should come from remote because of newer updatedAt
     expect(result.channelConfigs[2].updatedAt).toBe(20)
+  })
+})
+
+describe("WebdavAutoSyncService.normalizeOrderedEntryIds", () => {
+  const normalize = (input: any) =>
+    (webdavAutoSyncService as any).constructor.normalizeOrderedEntryIds(input)
+
+  it("filters invalid ids, de-dupes, and appends missing entries stably", () => {
+    const accounts = [
+      { id: "a1", created_at: 10 } as any,
+      { id: "a2", created_at: 20 } as any,
+    ]
+    const bookmarks = [
+      { id: "b1", created_at: 30 } as any,
+      { id: "b2", created_at: 40 } as any,
+    ]
+
+    const entryIdSet = new Set(["a1", "a2", "b1", "b2"])
+
+    const ordered = normalize({
+      baseOrderedIds: ["b2", "b2", "missing", "a2"],
+      entryIdSet,
+      accounts,
+      bookmarks,
+    })
+
+    expect(ordered).toEqual(["b2", "a2", "a1", "b1"])
   })
 })
 

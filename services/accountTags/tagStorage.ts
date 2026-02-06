@@ -72,6 +72,7 @@ class TagStorageService {
 
     return {
       accounts: raw?.accounts ?? [],
+      bookmarks: Array.isArray(raw?.bookmarks) ? raw.bookmarks : [],
       pinnedAccountIds: raw?.pinnedAccountIds ?? [],
       orderedAccountIds: raw?.orderedAccountIds ?? [],
       last_updated: raw?.last_updated ?? Date.now(),
@@ -81,6 +82,7 @@ class TagStorageService {
   private async saveAccountStorageConfig(config: AccountStorageConfig) {
     const next: AccountStorageConfig = {
       accounts: config.accounts ?? [],
+      bookmarks: Array.isArray(config.bookmarks) ? config.bookmarks : [],
       pinnedAccountIds: config.pinnedAccountIds ?? [],
       orderedAccountIds: config.orderedAccountIds ?? [],
       last_updated: Date.now(),
@@ -239,13 +241,15 @@ class TagStorageService {
    *
    * Returns how many accounts were modified.
    */
-  async deleteTag(tagId: string): Promise<{ updatedAccounts: number }> {
+  async deleteTag(
+    tagId: string,
+  ): Promise<{ updatedAccounts: number; updatedBookmarks: number }> {
     const result = await withExtensionStorageWriteLock(
       STORAGE_LOCKS.ACCOUNT_STORAGE,
       async () => {
         const store = await this.getTagStore()
         if (!store.tagsById[tagId]) {
-          return { updatedAccounts: 0 }
+          return { updatedAccounts: 0, updatedBookmarks: 0 }
         }
 
         const { [tagId]: _deleted, ...remaining } = store.tagsById
@@ -256,6 +260,7 @@ class TagStorageService {
 
         const accountConfig = await this.getAccountStorageConfig()
         let updatedAccounts = 0
+        let updatedBookmarks = 0
 
         const nextAccounts: SiteAccount[] = accountConfig.accounts.map(
           (account) => {
@@ -273,14 +278,34 @@ class TagStorageService {
           },
         )
 
-        if (updatedAccounts > 0) {
+        const nextBookmarks = (accountConfig.bookmarks || []).map(
+          (bookmark) => {
+            if (
+              !Array.isArray(bookmark.tagIds) ||
+              bookmark.tagIds.length === 0
+            ) {
+              return bookmark
+            }
+            if (!bookmark.tagIds.includes(tagId)) {
+              return bookmark
+            }
+            updatedBookmarks++
+            return {
+              ...bookmark,
+              tagIds: bookmark.tagIds.filter((id) => id !== tagId),
+            }
+          },
+        )
+
+        if (updatedAccounts > 0 || updatedBookmarks > 0) {
           await this.saveAccountStorageConfig({
             ...accountConfig,
             accounts: nextAccounts,
+            bookmarks: nextBookmarks,
           })
         }
 
-        return { updatedAccounts }
+        return { updatedAccounts, updatedBookmarks }
       },
     )
 
@@ -308,13 +333,15 @@ class TagStorageService {
 
   /**
    * Helper used by WebDAV merge flows:
-   * merges two stores and remaps accounts' tag ids accordingly.
+   * merges two stores and remaps tag ids for all tag-referencing entities.
    */
   mergeTagStoresForSync(input: {
     localTagStore: TagStore
     remoteTagStore: TagStore
     localAccounts: SiteAccount[]
     remoteAccounts: SiteAccount[]
+    localBookmarks?: AccountStorageConfig["bookmarks"]
+    remoteBookmarks?: AccountStorageConfig["bookmarks"]
   }) {
     return mergeTagStoresAndRemapAccounts(input)
   }

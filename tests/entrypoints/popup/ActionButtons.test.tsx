@@ -6,12 +6,6 @@ import { fireEvent, render, screen } from "~/tests/test-utils/render"
 let displayDataMock: any[] = []
 const handleOpenExternalCheckInsMock = vi.fn()
 
-vi.mock("~/hooks/useAddAccountHandler", () => ({
-  useAddAccountHandler: () => ({
-    handleAddAccountClick: vi.fn(),
-  }),
-}))
-
 vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
   useAccountDataContext: () => ({
     displayData: displayDataMock,
@@ -41,7 +35,12 @@ describe("popup ActionButtons", () => {
     const { default: ActionButtons } = await import(
       "~/entrypoints/popup/components/ActionButtons"
     )
-    render(<ActionButtons />)
+    render(
+      <ActionButtons
+        primaryActionLabel="addAccount"
+        onPrimaryAction={vi.fn()}
+      />,
+    )
 
     const quickCheckinButton = await screen.findByRole("button", {
       name: "navigation.autoCheckinRunNow",
@@ -56,7 +55,12 @@ describe("popup ActionButtons", () => {
     const { default: ActionButtons } = await import(
       "~/entrypoints/popup/components/ActionButtons"
     )
-    render(<ActionButtons />)
+    render(
+      <ActionButtons
+        primaryActionLabel="addAccount"
+        onPrimaryAction={vi.fn()}
+      />,
+    )
 
     expect(
       screen.queryByRole("button", {
@@ -75,7 +79,12 @@ describe("popup ActionButtons", () => {
     const { default: ActionButtons } = await import(
       "~/entrypoints/popup/components/ActionButtons"
     )
-    render(<ActionButtons />)
+    render(
+      <ActionButtons
+        primaryActionLabel="addAccount"
+        onPrimaryAction={vi.fn()}
+      />,
+    )
 
     const externalButton = await screen.findByRole("button", {
       name: "navigation.externalCheckinAll",
@@ -106,7 +115,12 @@ describe("popup ActionButtons", () => {
     const { default: ActionButtons } = await import(
       "~/entrypoints/popup/components/ActionButtons"
     )
-    render(<ActionButtons />)
+    render(
+      <ActionButtons
+        primaryActionLabel="addAccount"
+        onPrimaryAction={vi.fn()}
+      />,
+    )
 
     const externalButton = await screen.findByRole("button", {
       name: "navigation.externalCheckinAll",
@@ -133,7 +147,12 @@ describe("popup ActionButtons", () => {
     const { default: ActionButtons } = await import(
       "~/entrypoints/popup/components/ActionButtons"
     )
-    render(<ActionButtons />)
+    render(
+      <ActionButtons
+        primaryActionLabel="addAccount"
+        onPrimaryAction={vi.fn()}
+      />,
+    )
 
     const externalButton = await screen.findByRole("button", {
       name: "navigation.externalCheckinAll",
@@ -164,7 +183,12 @@ describe("popup ActionButtons", () => {
     const { default: ActionButtons } = await import(
       "~/entrypoints/popup/components/ActionButtons"
     )
-    render(<ActionButtons />)
+    render(
+      <ActionButtons
+        primaryActionLabel="addAccount"
+        onPrimaryAction={vi.fn()}
+      />,
+    )
 
     const externalButton = await screen.findByRole("button", {
       name: "navigation.externalCheckinAll",

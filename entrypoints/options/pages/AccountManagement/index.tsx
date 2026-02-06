@@ -1,5 +1,5 @@
 import { CalendarCheck2, UserRound } from "lucide-react"
-import type { MouseEvent } from "react"
+import { type MouseEvent } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Button } from "~/components/ui"
@@ -15,7 +15,7 @@ import { getExternalCheckInOpenOptions } from "~/utils/shortcutKeys"
  * Renders the Account Management page body: header with CTA and account list.
  */
 function AccountManagementContent({ searchQuery }: { searchQuery?: string }) {
-  const { t } = useTranslation("account")
+  const { t } = useTranslation(["account", "common"])
   const { openAddAccount } = useDialogStateContext()
   const { displayData } = useAccountDataContext()
   const { handleOpenExternalCheckIns } = useAccountActionsContext()
@@ -42,25 +42,24 @@ function AccountManagementContent({ searchQuery }: { searchQuery?: string }) {
     <div className="dark:bg-dark-bg-secondary flex flex-col bg-white p-6">
       <PageHeader
         icon={UserRound}
-        title={t("title")}
-        description={t("description")}
+        title={t("account:title")}
+        description={t("account:description")}
         actions={
-          <>
+          <div className="flex flex-wrap items-center gap-2">
             {canOpenExternalCheckIns && (
               <Button
                 onClick={handleOpenExternalCheckInsClick}
                 leftIcon={<CalendarCheck2 className="h-4 w-4" />}
-                title={t("actions.openAllExternalCheckInHint")}
+                title={t("account:actions.openAllExternalCheckInHint")}
               >
-                {t("actions.openAllExternalCheckIn")}
+                {t("account:actions.openAllExternalCheckIn")}
               </Button>
             )}
-            <Button onClick={openAddAccount}>{t("addAccount")}</Button>
-          </>
+            <Button onClick={openAddAccount}>{t("account:addAccount")}</Button>
+          </div>
         }
       />
 
-      {/* Account List */}
       <div className="dark:bg-dark-bg-secondary flex flex-col bg-white">
         <AccountList initialSearchQuery={searchQuery} />
       </div>

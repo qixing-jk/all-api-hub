@@ -12,7 +12,7 @@ import {
   sanitizeTagStore,
 } from "~/services/accountTags/tagStoreUtils"
 import { migrateAccountTagsData } from "~/services/configMigration/accountTags/accountTagsDataMigration"
-import type { SiteAccount, TagStore } from "~/types"
+import type { SiteAccount, SiteBookmark, TagStore } from "~/types"
 import type { ChannelConfigMap } from "~/types/channelConfig"
 import { WEBDAV_SYNC_STRATEGIES, WebDAVSettings } from "~/types/webdav"
 import {
@@ -61,6 +61,59 @@ function clampWebdavSyncIntervalMinutes(value: unknown): number {
  */
 class WebdavAutoSyncService {
   static readonly ALARM_NAME = "webdavAutoSync"
+
+  private static normalizeOrderedEntryIds(input: {
+    baseOrderedIds: unknown
+    entryIdSet: Set<string>
+    accounts: SiteAccount[]
+    bookmarks: SiteBookmark[]
+  }): string[] {
+    const rawIds = Array.isArray(input.baseOrderedIds)
+      ? input.baseOrderedIds
+      : []
+
+    const ordered: string[] = []
+    const seen = new Set<string>()
+
+    for (const id of rawIds) {
+      if (typeof id !== "string") continue
+      if (!input.entryIdSet.has(id)) continue
+      if (seen.has(id)) continue
+      seen.add(id)
+      ordered.push(id)
+    }
+
+    const entries = [
+      ...input.accounts.map((account) => ({
+        id: account.id,
+        createdAt: account.created_at || 0,
+      })),
+      ...input.bookmarks.map((bookmark) => ({
+        id: bookmark.id,
+        createdAt: bookmark.created_at || 0,
+      })),
+    ].sort((a, b) => {
+      if (a.createdAt !== b.createdAt) {
+        return a.createdAt - b.createdAt
+      }
+      return a.id.localeCompare(b.id)
+    })
+
+    for (const entry of entries) {
+      if (!input.entryIdSet.has(entry.id)) continue
+      if (seen.has(entry.id)) continue
+      seen.add(entry.id)
+      ordered.push(entry.id)
+    }
+
+    const remaining = Array.from(input.entryIdSet)
+      .filter((id) => !seen.has(id))
+      .sort((a, b) => a.localeCompare(b))
+
+    ordered.push(...remaining)
+
+    return ordered
+  }
 
   private removeAlarmListener: (() => void) | null = null
   private isInitialized = false
@@ -278,18 +331,8 @@ class WebdavAutoSyncService {
     ])
 
     const localPinnedAccountIds = localAccountsConfig.pinnedAccountIds || []
-
-    let remotePinnedAccountIds: string[] = []
-
-    if (remoteData && remoteData.version === BACKUP_VERSION) {
-      const remoteAccountsField = (remoteData as BackupFullV2).accounts as any
-      if (
-        remoteAccountsField &&
-        Array.isArray(remoteAccountsField.pinnedAccountIds)
-      ) {
-        remotePinnedAccountIds = remoteAccountsField.pinnedAccountIds
-      }
-    }
+    const localOrderedAccountIds = localAccountsConfig.orderedAccountIds || []
+    const localBookmarks = localAccountsConfig.bookmarks || []
 
     const normalizedRemote = normalizeBackupForMerge(
       remoteData,
@@ -301,16 +344,19 @@ class WebdavAutoSyncService {
       preferences.webdav.syncStrategy || WEBDAV_SYNC_STRATEGIES.MERGE
 
     let accountsToSave: SiteAccount[] = localAccountsConfig.accounts
+    let bookmarksToSave: SiteBookmark[] = localBookmarks
     let tagStoreToSave = localTagStore
     let preferencesToSave: UserPreferences = localPreferences
     let channelConfigsToSave: ChannelConfigMap = localChannelConfigs
     let pinnedAccountIdsToSave: string[] = localPinnedAccountIds
+    let orderedAccountIdsToSave: string[] = localOrderedAccountIds
 
     if (strategy === WEBDAV_SYNC_STRATEGIES.MERGE && remoteData) {
       // 合并策略
       const mergeResult = this.mergeData(
         {
           accounts: localAccountsConfig.accounts,
+          bookmarks: localBookmarks,
           accountsTimestamp: localAccountsConfig.last_updated,
           tagStore: localTagStore,
           preferences: localPreferences,
@@ -319,6 +365,7 @@ class WebdavAutoSyncService {
         },
         {
           accounts: normalizedRemote.accounts,
+          bookmarks: normalizedRemote.bookmarks,
           accountsTimestamp: normalizedRemote.accountsTimestamp,
           tagStore: sanitizeTagStore(
             normalizedRemote.tagStore ?? createDefaultTagStore(),
@@ -333,12 +380,18 @@ class WebdavAutoSyncService {
       )
 
       accountsToSave = mergeResult.accounts
+      bookmarksToSave = mergeResult.bookmarks
       tagStoreToSave = mergeResult.tagStore
       preferencesToSave = mergeResult.preferences
       channelConfigsToSave = mergeResult.channelConfigs
 
+      const entryIdSet = new Set<string>([
+        ...accountsToSave.map((account) => account.id),
+        ...bookmarksToSave.map((bookmark) => bookmark.id),
+      ])
+
       const mergedPinnedIds = [
-        ...remotePinnedAccountIds,
+        ...normalizedRemote.pinnedAccountIds,
         ...localPinnedAccountIds,
       ]
       const seenPinned = new Set<string>()
@@ -350,18 +403,42 @@ class WebdavAutoSyncService {
         }
       }
       pinnedAccountIdsToSave = uniqueMergedPinnedIds.filter((id) =>
-        accountsToSave.some((account) => account.id === id),
+        entryIdSet.has(id),
       )
+
+      orderedAccountIdsToSave = WebdavAutoSyncService.normalizeOrderedEntryIds({
+        baseOrderedIds:
+          normalizedRemote.accountsTimestamp > localAccountsConfig.last_updated
+            ? normalizedRemote.orderedAccountIds
+            : localOrderedAccountIds,
+        entryIdSet,
+        accounts: accountsToSave,
+        bookmarks: bookmarksToSave,
+      })
       logger.info("合并完成", { accountCount: accountsToSave.length })
     } else if (strategy === WEBDAV_SYNC_STRATEGIES.UPLOAD_ONLY || !remoteData) {
       // 覆盖策略或远程无数据
       accountsToSave = localAccountsConfig.accounts
+      bookmarksToSave = localBookmarks
       tagStoreToSave = localTagStore
       preferencesToSave = localPreferences
       channelConfigsToSave = localChannelConfigs
-      pinnedAccountIdsToSave = localPinnedAccountIds.filter((id) =>
-        accountsToSave.some((account) => account.id === id),
-      )
+      {
+        const entryIdSet = new Set<string>([
+          ...accountsToSave.map((account) => account.id),
+          ...bookmarksToSave.map((bookmark) => bookmark.id),
+        ])
+        pinnedAccountIdsToSave = localPinnedAccountIds.filter((id) =>
+          entryIdSet.has(id),
+        )
+        orderedAccountIdsToSave =
+          WebdavAutoSyncService.normalizeOrderedEntryIds({
+            baseOrderedIds: localOrderedAccountIds,
+            entryIdSet,
+            accounts: accountsToSave,
+            bookmarks: bookmarksToSave,
+          })
+      }
       logger.info("使用本地数据覆盖")
     } else if (strategy === WEBDAV_SYNC_STRATEGIES.DOWNLOAD_ONLY) {
       // 远程优先策略：直接使用远程数据（若存在），否则使用本地
@@ -374,12 +451,26 @@ class WebdavAutoSyncService {
       })
       accountsToSave = migratedRemote.accounts
       tagStoreToSave = migratedRemote.tagStore
+      bookmarksToSave = normalizedRemote.bookmarks as SiteBookmark[]
       preferencesToSave = normalizedRemote.preferences || localPreferences
       channelConfigsToSave =
         normalizedRemote.channelConfigs || localChannelConfigs
-      pinnedAccountIdsToSave = remotePinnedAccountIds.filter((id) =>
-        accountsToSave.some((account) => account.id === id),
-      )
+      {
+        const entryIdSet = new Set<string>([
+          ...accountsToSave.map((account) => account.id),
+          ...bookmarksToSave.map((bookmark) => bookmark.id),
+        ])
+        pinnedAccountIdsToSave = normalizedRemote.pinnedAccountIds.filter(
+          (id) => entryIdSet.has(id),
+        )
+        orderedAccountIdsToSave =
+          WebdavAutoSyncService.normalizeOrderedEntryIds({
+            baseOrderedIds: normalizedRemote.orderedAccountIds,
+            entryIdSet,
+            accounts: accountsToSave,
+            bookmarks: bookmarksToSave,
+          })
+      }
       logger.info("使用远程数据")
     } else {
       logger.error("无效的同步策略，将中止本次同步", {
@@ -393,6 +484,8 @@ class WebdavAutoSyncService {
       accountStorage.importData({
         accounts: accountsToSave,
         pinnedAccountIds: pinnedAccountIdsToSave,
+        orderedAccountIds: orderedAccountIdsToSave,
+        bookmarks: bookmarksToSave,
       }),
       tagStorage.importTagStore(tagStoreToSave),
       userPreferences.importPreferences(preferencesToSave, {
@@ -407,7 +500,9 @@ class WebdavAutoSyncService {
       timestamp: Date.now(),
       accounts: {
         accounts: accountsToSave,
+        bookmarks: bookmarksToSave,
         pinnedAccountIds: pinnedAccountIdsToSave,
+        orderedAccountIds: orderedAccountIdsToSave,
         last_updated: Date.now(),
       },
       tagStore: tagStoreToSave,
@@ -427,6 +522,7 @@ class WebdavAutoSyncService {
   private mergeData(
     local: {
       accounts: SiteAccount[]
+      bookmarks: SiteBookmark[]
       accountsTimestamp: number
       tagStore: TagStore
       preferences: UserPreferences
@@ -435,6 +531,7 @@ class WebdavAutoSyncService {
     },
     remote: {
       accounts: SiteAccount[]
+      bookmarks: SiteBookmark[]
       accountsTimestamp: number
       tagStore: TagStore
       preferences: UserPreferences
@@ -443,6 +540,7 @@ class WebdavAutoSyncService {
     },
   ): {
     accounts: SiteAccount[]
+    bookmarks: SiteBookmark[]
     tagStore: TagStore
     preferences: UserPreferences
     channelConfigs: ChannelConfigMap
@@ -450,6 +548,8 @@ class WebdavAutoSyncService {
     logger.debug("开始合并数据", {
       localAccountCount: local.accounts.length,
       remoteAccountCount: remote.accounts.length,
+      localBookmarkCount: local.bookmarks.length,
+      remoteBookmarkCount: remote.bookmarks.length,
     })
 
     // Migrate legacy string tags (if any) into tag ids on both sides.
@@ -474,6 +574,8 @@ class WebdavAutoSyncService {
       remoteTagStore: migratedRemote.tagStore,
       localAccounts: migratedLocal.accounts,
       remoteAccounts: migratedRemote.accounts,
+      localBookmarks: local.bookmarks,
+      remoteBookmarks: remote.bookmarks,
     })
 
     // 合并账号数据
@@ -517,6 +619,27 @@ class WebdavAutoSyncService {
     })
 
     const mergedAccounts = Array.from(accountMap.values())
+
+    const bookmarkMap = new Map<string, SiteBookmark>()
+    tagMerge.localBookmarks.forEach((bookmark) => {
+      bookmarkMap.set(bookmark.id, bookmark)
+    })
+
+    tagMerge.remoteBookmarks.forEach((remoteBookmark) => {
+      const localBookmark = bookmarkMap.get(remoteBookmark.id)
+      if (!localBookmark) {
+        bookmarkMap.set(remoteBookmark.id, remoteBookmark)
+        return
+      }
+
+      const localUpdatedAt = localBookmark.updated_at || 0
+      const remoteUpdatedAt = remoteBookmark.updated_at || 0
+      if (remoteUpdatedAt > localUpdatedAt) {
+        bookmarkMap.set(remoteBookmark.id, remoteBookmark)
+      }
+    })
+
+    const mergedBookmarks = Array.from(bookmarkMap.values())
 
     // 合并偏好设置
     // 比较lastUpdated字段，保留最新的
@@ -569,6 +692,7 @@ class WebdavAutoSyncService {
 
     return {
       accounts: mergedAccounts,
+      bookmarks: mergedBookmarks,
       tagStore: tagMerge.tagStore,
       preferences,
       channelConfigs: mergedChannelConfigs,

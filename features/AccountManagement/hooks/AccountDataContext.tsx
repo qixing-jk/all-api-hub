@@ -22,6 +22,7 @@ import type {
   CurrencyAmountMap,
   DisplaySiteData,
   SiteAccount,
+  SiteBookmark,
   SortField,
   SortOrder,
   Tag,
@@ -47,6 +48,7 @@ const logger = createLogger("AccountDataContext")
 // 1. 定义 Context 的值类型
 interface AccountDataContextType {
   accounts: SiteAccount[]
+  bookmarks: SiteBookmark[]
   displayData: DisplaySiteData[]
   sortedData: DisplaySiteData[]
   orderedAccountIds: string[]
@@ -66,6 +68,7 @@ interface AccountDataContextType {
   renameTag: (tagId: string, name: string) => Promise<Tag>
   deleteTag: (tagId: string) => Promise<{ updatedAccounts: number }>
   handleReorder: (ids: string[]) => Promise<void>
+  handleBookmarkReorder: (ids: string[]) => Promise<void>
   isAccountPinned: (id: string) => boolean
   pinAccount: (id: string) => Promise<boolean>
   unpinAccount: (id: string) => Promise<boolean>
@@ -104,6 +107,7 @@ export const AccountDataProvider = ({
     refreshOnOpen,
   } = useUserPreferencesContext()
   const [accounts, setAccounts] = useState<SiteAccount[]>([])
+  const [bookmarks, setBookmarks] = useState<SiteBookmark[]>([])
   const [displayData, setDisplayData] = useState<DisplaySiteData[]>([])
   const [orderedAccountIds, setOrderedAccountIds] = useState<string[]>([])
   const [stats, setStats] = useState<AccountStats>({
@@ -177,6 +181,7 @@ export const AccountDataProvider = ({
       logger.debug("Loading account data")
       await accountStorage.resetExpiredCheckIns()
       const allAccounts = await accountStorage.getAllAccounts()
+      const allBookmarks = await accountStorage.getAllBookmarks()
       const storedOrderedIds = await accountStorage.getOrderedList()
       const accountStats = await accountStorage.getAccountStats()
       const currentTagStore = await tagStorage.getTagStore()
@@ -207,19 +212,19 @@ export const AccountDataProvider = ({
       }
 
       setAccounts(allAccounts)
+      setBookmarks(allBookmarks)
       setStats(accountStats)
       setDisplayData(displaySiteData)
-      setOrderedAccountIds(
-        storedOrderedIds.filter((id) =>
-          displaySiteData.some((site) => site.id === id),
-        ),
-      )
+
+      const entryIdSet = new Set<string>([
+        ...displaySiteData.map((site) => site.id),
+        ...allBookmarks.map((bookmark) => bookmark.id),
+      ])
+
+      setOrderedAccountIds(storedOrderedIds.filter((id) => entryIdSet.has(id)))
 
       const pinnedIds = await accountStorage.getPinnedList()
-      const validPinnedIds = pinnedIds.filter((id) =>
-        displaySiteData.some((site) => site.id === id),
-      )
-      setPinnedAccountIds(validPinnedIds)
+      setPinnedAccountIds(pinnedIds.filter((id) => entryIdSet.has(id)))
 
       if (allAccounts.length > 0) {
         const latestSyncTime = Math.max(
@@ -473,24 +478,80 @@ export const AccountDataProvider = ({
     async (ids: string[]) => {
       // Ensure pinned accounts stay at top but allow pinned relative order to follow ids
       const pinnedSet = new Set(pinnedAccountIds)
+      const accountIdSet = new Set(ids)
       const pinnedSegment = ids.filter((id) => pinnedSet.has(id))
       const nonPinnedSegment = ids.filter((id) => !pinnedSet.has(id))
       const merged = [...pinnedSegment, ...nonPinnedSegment]
 
       // Check if pinned order has changed
+      const pinnedAccountsInState = pinnedAccountIds.filter((id) =>
+        accountIdSet.has(id),
+      )
       const shouldUpdatePinnedOrder =
-        pinnedAccountIds.length > 0 &&
-        pinnedSegment.length === pinnedAccountIds.length &&
-        pinnedSegment.some((id, index) => id !== pinnedAccountIds[index])
+        pinnedSegment.length > 0 &&
+        pinnedSegment.length === pinnedAccountsInState.length &&
+        pinnedSegment.some((id, index) => id !== pinnedAccountsInState[index])
 
       if (shouldUpdatePinnedOrder) {
-        setPinnedAccountIds(pinnedSegment)
-        await accountStorage.setPinnedList(pinnedSegment)
+        await accountStorage.setPinnedListSubset({
+          entryType: "account",
+          ids: pinnedSegment,
+        })
       }
 
       // Update overall order
-      setOrderedAccountIds(merged)
-      await accountStorage.setOrderedList(merged)
+      await accountStorage.setOrderedListSubset({
+        entryType: "account",
+        ids: merged,
+      })
+
+      const [nextPinnedIds, nextOrderedIds] = await Promise.all([
+        accountStorage.getPinnedList(),
+        accountStorage.getOrderedList(),
+      ])
+
+      setPinnedAccountIds(nextPinnedIds)
+      setOrderedAccountIds(nextOrderedIds)
+    },
+    [pinnedAccountIds],
+  )
+
+  const handleBookmarkReorder = useCallback(
+    async (ids: string[]) => {
+      const pinnedSet = new Set(pinnedAccountIds)
+      const bookmarkIdSet = new Set(ids)
+      const pinnedSegment = ids.filter((id) => pinnedSet.has(id))
+      const nonPinnedSegment = ids.filter((id) => !pinnedSet.has(id))
+      const merged = [...pinnedSegment, ...nonPinnedSegment]
+
+      const pinnedBookmarksInState = pinnedAccountIds.filter((id) =>
+        bookmarkIdSet.has(id),
+      )
+
+      const shouldUpdatePinnedOrder =
+        pinnedSegment.length > 0 &&
+        pinnedSegment.length === pinnedBookmarksInState.length &&
+        pinnedSegment.some((id, index) => id !== pinnedBookmarksInState[index])
+
+      if (shouldUpdatePinnedOrder) {
+        await accountStorage.setPinnedListSubset({
+          entryType: "bookmark",
+          ids: pinnedSegment,
+        })
+      }
+
+      await accountStorage.setOrderedListSubset({
+        entryType: "bookmark",
+        ids: merged,
+      })
+
+      const [nextPinnedIds, nextOrderedIds] = await Promise.all([
+        accountStorage.getPinnedList(),
+        accountStorage.getOrderedList(),
+      ])
+
+      setPinnedAccountIds(nextPinnedIds)
+      setOrderedAccountIds(nextOrderedIds)
     },
     [pinnedAccountIds],
   )
@@ -640,6 +701,7 @@ export const AccountDataProvider = ({
   const value = useMemo(
     () => ({
       accounts,
+      bookmarks,
       displayData,
       sortedData,
       orderedAccountIds,
@@ -659,6 +721,7 @@ export const AccountDataProvider = ({
       renameTag,
       deleteTag,
       handleReorder,
+      handleBookmarkReorder,
       isAccountPinned,
       pinAccount,
       unpinAccount,
@@ -673,6 +736,7 @@ export const AccountDataProvider = ({
     }),
     [
       accounts,
+      bookmarks,
       displayData,
       sortedData,
       orderedAccountIds,
@@ -692,6 +756,7 @@ export const AccountDataProvider = ({
       renameTag,
       deleteTag,
       handleReorder,
+      handleBookmarkReorder,
       isAccountPinned,
       pinAccount,
       unpinAccount,

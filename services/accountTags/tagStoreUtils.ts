@@ -1,4 +1,4 @@
-import type { SiteAccount, Tag, TagStore } from "~/types"
+import type { SiteAccount, SiteBookmark, Tag, TagStore } from "~/types"
 import { safeRandomUUID } from "~/utils/identifier"
 
 /**
@@ -139,10 +139,14 @@ export function mergeTagStoresAndRemapAccounts(input: {
   remoteTagStore: TagStore
   localAccounts: SiteAccount[]
   remoteAccounts: SiteAccount[]
+  localBookmarks?: SiteBookmark[]
+  remoteBookmarks?: SiteBookmark[]
 }): {
   tagStore: TagStore
   localAccounts: SiteAccount[]
   remoteAccounts: SiteAccount[]
+  localBookmarks: SiteBookmark[]
+  remoteBookmarks: SiteBookmark[]
 } {
   const localTagStore = sanitizeTagStore(input.localTagStore)
   const remoteTagStore = sanitizeTagStore(input.remoteTagStore)
@@ -192,18 +196,18 @@ export function mergeTagStoresAndRemapAccounts(input: {
     upsertIntoMerged(tag, "remote")
   }
 
-  const remapAccountTagIds = (
-    accounts: SiteAccount[],
+  const remapEntityTagIds = <T extends { tagIds?: string[] }>(
+    entities: T[],
     map: Map<string, string>,
-  ): SiteAccount[] => {
-    return accounts.map((account) => {
-      if (!Array.isArray(account.tagIds) || account.tagIds.length === 0) {
-        return account
+  ): T[] => {
+    return entities.map((entity) => {
+      if (!Array.isArray(entity.tagIds) || entity.tagIds.length === 0) {
+        return entity
       }
 
       const nextTagIds: string[] = []
       const seen = new Set<string>()
-      for (const rawId of account.tagIds) {
+      for (const rawId of entity.tagIds) {
         const remapped = map.get(rawId) ?? rawId
         if (!remapped) continue
         if (seen.has(remapped)) continue
@@ -211,7 +215,7 @@ export function mergeTagStoresAndRemapAccounts(input: {
         nextTagIds.push(remapped)
       }
       return {
-        ...account,
+        ...entity,
         tagIds: nextTagIds,
       }
     })
@@ -219,7 +223,12 @@ export function mergeTagStoresAndRemapAccounts(input: {
 
   return {
     tagStore: merged,
-    localAccounts: remapAccountTagIds(input.localAccounts, localIdMap),
-    remoteAccounts: remapAccountTagIds(input.remoteAccounts, remoteIdMap),
+    localAccounts: remapEntityTagIds(input.localAccounts, localIdMap),
+    remoteAccounts: remapEntityTagIds(input.remoteAccounts, remoteIdMap),
+    localBookmarks: remapEntityTagIds(input.localBookmarks ?? [], localIdMap),
+    remoteBookmarks: remapEntityTagIds(
+      input.remoteBookmarks ?? [],
+      remoteIdMap,
+    ),
   }
 }

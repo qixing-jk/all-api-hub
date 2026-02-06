@@ -18,6 +18,7 @@ import { isExtensionSidePanel } from "~/utils/browser"
 import { createLogger } from "~/utils/logger"
 import {
   openFullAccountManagerPage,
+  openFullBookmarkManagerPage,
   openSettingsPage,
   openSidePanelPage,
 } from "~/utils/navigation"
@@ -31,9 +32,15 @@ const logger = createLogger("PopupHeaderSection")
 
 /**
  * Popup header with app identity (including version), theme toggle, and navigation controls.
- * Provides refresh, account manager, settings, and side panel shortcuts.
+ * Provides refresh, open-full-page, settings, and side panel shortcuts.
  */
-export default function HeaderSection() {
+export default function HeaderSection({
+  showRefresh = true,
+  activeView = "accounts",
+}: {
+  showRefresh?: boolean
+  activeView?: "accounts" | "bookmarks"
+}) {
   const { t } = useTranslation(["ui", "account", "common"])
   const { isRefreshing, handleRefresh } = useAccountDataContext()
   const inSidePanel = isExtensionSidePanel()
@@ -58,7 +65,17 @@ export default function HeaderSection() {
     }
   }, [handleRefresh, t])
 
-  const handleOpenFullAccountManagerPage = async () => {
+  const openFullPageLabel =
+    activeView === "bookmarks"
+      ? t("ui:navigation.bookmark")
+      : t("ui:navigation.account")
+
+  const handleOpenFullPage = async () => {
+    if (activeView === "bookmarks") {
+      await openFullBookmarkManagerPage()
+      return
+    }
+
     await openFullAccountManagerPage()
   }
 
@@ -99,27 +116,29 @@ export default function HeaderSection() {
       <div className="flex shrink-0 items-center gap-1 sm:gap-2">
         <CompactThemeToggle />
 
-        <Tooltip content={t("common:actions.refresh")}>
-          <IconButton
-            onClick={handleGlobalRefresh}
-            disabled={isRefreshing}
-            variant="outline"
-            size="sm"
-            aria-label={t("common:actions.refresh")}
-            className="touch-manipulation"
-          >
-            <ArrowPathIcon
-              className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
-            />
-          </IconButton>
-        </Tooltip>
+        {showRefresh && (
+          <Tooltip content={t("common:actions.refresh")}>
+            <IconButton
+              onClick={handleGlobalRefresh}
+              disabled={isRefreshing}
+              variant="outline"
+              size="sm"
+              aria-label={t("common:actions.refresh")}
+              className="touch-manipulation"
+            >
+              <ArrowPathIcon
+                className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
+              />
+            </IconButton>
+          </Tooltip>
+        )}
 
-        <Tooltip content={t("ui:navigation.account")}>
+        <Tooltip content={openFullPageLabel}>
           <IconButton
-            onClick={handleOpenFullAccountManagerPage}
+            onClick={handleOpenFullPage}
             variant="outline"
             size="sm"
-            aria-label={t("ui:navigation.account")}
+            aria-label={openFullPageLabel}
             className="touch-manipulation"
           >
             <ArrowsPointingOutIcon className="h-4 w-4" />

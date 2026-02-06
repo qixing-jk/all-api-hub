@@ -205,13 +205,15 @@ describe("importFromBackupObject", () => {
     })
   })
 
-  it("imports full V2 backup and preserves pinnedAccountIds", async () => {
+  it("imports full V2 backup including bookmarks + pinned/ordered ids", async () => {
     const backup: BackupFullV2 = {
       version: BACKUP_VERSION,
       timestamp: Date.now(),
       accounts: {
         accounts: [{ id: "a1" } as any, { id: "a2" } as any],
-        pinnedAccountIds: ["a2"],
+        bookmarks: [{ id: "b1" } as any],
+        pinnedAccountIds: ["a2", "b1"],
+        orderedAccountIds: ["b1", "a1", "a2"],
         last_updated: Date.now(),
       } as any,
       tagStore: { version: 1, tagsById: {} },
@@ -223,7 +225,9 @@ describe("importFromBackupObject", () => {
 
     expect(mockAccountStorageImportData).toHaveBeenCalledWith({
       accounts: [{ id: "a1" }, { id: "a2" }],
-      pinnedAccountIds: ["a2"],
+      bookmarks: [{ id: "b1" }],
+      pinnedAccountIds: ["a2", "b1"],
+      orderedAccountIds: ["b1", "a1", "a2"],
     })
     expect(mockTagStoreImport).toHaveBeenCalled()
     expect(mockEnsureLegacyMigration).toHaveBeenCalled()
@@ -325,6 +329,9 @@ describe("normalizeBackupForMerge", () => {
 
     expect(result).toEqual({
       accounts: [],
+      bookmarks: [],
+      pinnedAccountIds: [],
+      orderedAccountIds: [],
       accountsTimestamp: 0,
       preferences: null,
       channelConfigs: null,
@@ -349,6 +356,9 @@ describe("normalizeBackupForMerge", () => {
     const result = normalizeBackupForMerge(backup, localPrefs)
 
     expect(result.accounts).toEqual([{ id: "a1" }])
+    expect(result.bookmarks).toEqual([])
+    expect(result.pinnedAccountIds).toEqual([])
+    expect(result.orderedAccountIds).toEqual([])
     expect(result.accountsTimestamp).toBe(456)
     expect(result.preferences).toEqual({ themeMode: "dark" })
     expect(result.channelConfigs).toEqual({ 1: { enabled: true } })
@@ -370,6 +380,9 @@ describe("normalizeBackupForMerge", () => {
     const result = normalizeBackupForMerge(payload, localPrefs)
 
     expect(result.accounts).toEqual([{ id: "legacy" }])
+    expect(result.bookmarks).toEqual([])
+    expect(result.pinnedAccountIds).toEqual([])
+    expect(result.orderedAccountIds).toEqual([])
     expect(result.accountsTimestamp).toBe(999)
     expect(result.preferences).toEqual({ themeMode: "dark" })
     expect(result.channelConfigs).toEqual({ 2: { enabled: false } })
@@ -402,7 +415,9 @@ describe("export handlers", () => {
 
     mockAccountStorageExportData.mockResolvedValue({
       accounts: [],
+      bookmarks: [],
       pinnedAccountIds: [],
+      orderedAccountIds: [],
       last_updated: 0,
     })
     mockEnsureLegacyMigration.mockResolvedValue({

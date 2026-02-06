@@ -1,0 +1,54 @@
+{
+  "title": "Bookmarks Management",
+  "description": "Save quick links (console/docs/admin pages) without creating full accounts.",
+  "switch": {
+    "accounts": "Accounts",
+    "bookmarks": "Bookmarks"
+  },
+  "actions": {
+    "add": "Add Bookmark",
+    "open": "Open",
+    "copyUrl": "Copy URL",
+    "pin": "Pin",
+    "unpin": "Unpin"
+  },
+  "search": {
+    "placeholder": "Search bookmarks..."
+  },
+  "list": {
+    "dragHandle": "Reorder bookmarks"
+  },
+  "stats": {
+    "totalBookmarks": "Total Bookmarks",
+    "pinnedBookmarks": "Pinned",
+    "usedTags": "Tags"
+  },
+  "filter": {
+    "tagsAllLabel": "All tags"
+  },
+  "emptyState": "No bookmarks yet",
+  "addFirstBookmark": "Add your first bookmark",
+  "dialog": {
+    "titleAdd": "Add Bookmark",
+    "titleEdit": "Edit Bookmark",
+    "description": "Bookmarks can be any link, such as to a site console, documentation, or an administration page. This is useful for situations where a full account cannot be created."
+  },
+  "form": {
+    "nameLabel": "Name",
+    "namePlaceholder": "e.g. Admin Console",
+    "urlLabel": "URL",
+    "urlPlaceholder": "https://example.com/...",
+    "notesLabel": "Notes",
+    "notesPlaceholder": "Optional notes...",
+    "tagsLabel": "Tags",
+    "tagsPlaceholder": "Select tags..."
+  },
+  "validation": {
+    "nameRequired": "Name cannot be empty",
+    "urlRequired": "URL cannot be empty"
+  },
+  "delete": {
+    "title": "Delete bookmark?",
+    "description": "This will permanently delete \"{{name}}\"."
+  }
+}

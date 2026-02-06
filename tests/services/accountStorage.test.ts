@@ -9,6 +9,7 @@ import {
   TEMP_WINDOW_HEALTH_STATUS_CODES,
   type AccountStorageConfig,
   type SiteAccount,
+  type SiteBookmark,
 } from "~/types"
 
 const storageData = new Map<string, any>()
@@ -120,6 +121,20 @@ const createAccount = (overrides: Partial<SiteAccount> = {}): SiteAccount => {
       autoCheckInEnabled: true,
       siteStatus: { isCheckedInToday: false },
     },
+  }
+}
+
+const createBookmark = (
+  overrides: Partial<SiteBookmark> = {},
+): SiteBookmark => {
+  return {
+    id: overrides.id ?? "bookmark-1",
+    name: overrides.name ?? "Bookmark 1",
+    url: overrides.url ?? "https://bookmark.example.com",
+    tagIds: overrides.tagIds ?? [],
+    notes: overrides.notes ?? "",
+    created_at: overrides.created_at ?? Date.now(),
+    updated_at: overrides.updated_at ?? Date.now(),
   }
 }
 
@@ -778,5 +793,185 @@ describe("accountStorage core behaviors", () => {
     const updatedAccount = await accountStorage.getAccountById("manual-quota")
     expect(updatedAccount?.manualBalanceUsd).toBe(manualBalanceUsd)
     expect(updatedAccount?.account_info.quota).toBe(manualQuota)
+  })
+})
+
+describe("accountStorage bookmarks", () => {
+  beforeEach(() => {
+    storageData.clear()
+  })
+
+  it("addBookmark persists a bookmark with normalized fields and timestamps", async () => {
+    vi.useFakeTimers()
+    const fixedNow = new Date(2026, 1, 5, 12, 0, 0)
+    vi.setSystemTime(fixedNow)
+
+    try {
+      seedStorage([createAccount({ id: "a-1" })])
+
+      const id = await accountStorage.addBookmark({
+        name: "  Console  ",
+        url: "  https://example.com/console  ",
+        tagIds: [" t1 ", "t1", 123 as any, "" as any],
+        notes: null as any,
+      })
+
+      expect(id).toMatch(/^bookmark-/)
+
+      const saved = storageData.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS) as
+        | AccountStorageConfig
+        | undefined
+
+      expect(saved?.bookmarks).toHaveLength(1)
+      expect(saved?.bookmarks?.[0]).toEqual(
+        expect.objectContaining({
+          id,
+          name: "Console",
+          url: "https://example.com/console",
+          tagIds: ["t1"],
+          notes: "",
+          created_at: fixedNow.getTime(),
+          updated_at: fixedNow.getTime(),
+        }),
+      )
+
+      // Persisted config always includes array fields.
+      expect(Array.isArray(saved?.bookmarks)).toBe(true)
+      expect(Array.isArray(saved?.orderedAccountIds)).toBe(true)
+      expect(Array.isArray(saved?.pinnedAccountIds)).toBe(true)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("updateBookmark preserves created_at and updates updated_at", async () => {
+    vi.useFakeTimers()
+    const initialNow = new Date(2026, 1, 5, 12, 0, 0)
+    vi.setSystemTime(initialNow)
+
+    const bookmark = createBookmark({
+      id: "b-1",
+      name: "Old",
+      url: "https://example.com/old",
+      tagIds: ["t1"],
+      notes: "old",
+      created_at: initialNow.getTime(),
+      updated_at: initialNow.getTime(),
+    })
+
+    storageData.set(ACCOUNT_STORAGE_KEYS.ACCOUNTS, {
+      accounts: [createAccount({ id: "a-1" })],
+      bookmarks: [bookmark],
+      pinnedAccountIds: [],
+      orderedAccountIds: [],
+      last_updated: initialNow.getTime(),
+    } satisfies AccountStorageConfig)
+
+    try {
+      const updatedNow = new Date(2026, 1, 5, 12, 5, 0)
+      vi.setSystemTime(updatedNow)
+
+      const success = await accountStorage.updateBookmark("b-1", {
+        name: "  New  ",
+        url: " https://example.com/new ",
+        tagIds: ["t2", "t2", ""],
+        notes: "",
+      })
+
+      expect(success).toBe(true)
+
+      const saved = storageData.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS) as
+        | AccountStorageConfig
+        | undefined
+
+      expect(saved?.bookmarks).toHaveLength(1)
+      expect(saved?.bookmarks?.[0]).toEqual(
+        expect.objectContaining({
+          id: "b-1",
+          name: "New",
+          url: "https://example.com/new",
+          tagIds: ["t2"],
+          notes: "",
+          created_at: initialNow.getTime(),
+          updated_at: updatedNow.getTime(),
+        }),
+      )
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("deleteBookmark removes bookmark id from pinned and ordered lists", async () => {
+    const bookmark = createBookmark({ id: "b-1" })
+
+    storageData.set(ACCOUNT_STORAGE_KEYS.ACCOUNTS, {
+      accounts: [createAccount({ id: "a-1" })],
+      bookmarks: [bookmark],
+      pinnedAccountIds: ["a-1", "b-1"],
+      orderedAccountIds: ["b-1", "a-1"],
+      last_updated: Date.now(),
+    } satisfies AccountStorageConfig)
+
+    const success = await accountStorage.deleteBookmark("b-1")
+    expect(success).toBe(true)
+
+    const saved = storageData.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS) as
+      | AccountStorageConfig
+      | undefined
+
+    expect(saved?.bookmarks).toEqual([])
+    expect(saved?.pinnedAccountIds).toEqual(["a-1"])
+    expect(saved?.orderedAccountIds).toEqual(["a-1"])
+  })
+
+  it("setOrderedListSubset updates bookmark ids without dropping account ids", async () => {
+    storageData.set(ACCOUNT_STORAGE_KEYS.ACCOUNTS, {
+      accounts: [
+        createAccount({ id: "a-1" }),
+        createAccount({ id: "a-2" }),
+        createAccount({ id: "a-3" }),
+      ],
+      bookmarks: [createBookmark({ id: "b-1" }), createBookmark({ id: "b-2" })],
+      pinnedAccountIds: [],
+      orderedAccountIds: ["a-1", "b-1", "a-2", "b-2", "a-3"],
+      last_updated: Date.now(),
+    } satisfies AccountStorageConfig)
+
+    const success = await accountStorage.setOrderedListSubset({
+      entryType: "bookmark",
+      ids: ["b-2", "b-1", "missing"],
+    })
+
+    expect(success).toBe(true)
+    expect(await accountStorage.getOrderedList()).toEqual([
+      "a-1",
+      "b-2",
+      "a-2",
+      "b-1",
+      "a-3",
+    ])
+  })
+
+  it("setPinnedListSubset updates bookmark pinned order while preserving account pinned order", async () => {
+    storageData.set(ACCOUNT_STORAGE_KEYS.ACCOUNTS, {
+      accounts: [createAccount({ id: "a-1" }), createAccount({ id: "a-2" })],
+      bookmarks: [createBookmark({ id: "b-1" }), createBookmark({ id: "b-2" })],
+      pinnedAccountIds: ["a-1", "b-1", "a-2", "b-2"],
+      orderedAccountIds: [],
+      last_updated: Date.now(),
+    } satisfies AccountStorageConfig)
+
+    const success = await accountStorage.setPinnedListSubset({
+      entryType: "bookmark",
+      ids: ["b-2", "b-1"],
+    })
+
+    expect(success).toBe(true)
+    expect(await accountStorage.getPinnedList()).toEqual([
+      "a-1",
+      "b-2",
+      "a-2",
+      "b-1",
+    ])
   })
 })

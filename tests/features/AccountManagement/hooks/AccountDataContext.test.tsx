@@ -12,6 +12,7 @@ import i18nInstance from "~/tests/test-utils/i18n"
 
 const {
   mockGetAllAccounts,
+  mockGetAllBookmarks,
   mockGetOrderedList,
   mockGetPinnedList,
   mockGetAccountStats,
@@ -20,9 +21,12 @@ const {
   mockResetExpiredCheckIns,
   mockSetPinnedList,
   mockSetOrderedList,
+  mockSetPinnedListSubset,
+  mockSetOrderedListSubset,
   mockGetTagStore,
 } = vi.hoisted(() => ({
   mockGetAllAccounts: vi.fn(),
+  mockGetAllBookmarks: vi.fn(),
   mockGetOrderedList: vi.fn(),
   mockGetPinnedList: vi.fn(),
   mockGetAccountStats: vi.fn(),
@@ -31,6 +35,8 @@ const {
   mockResetExpiredCheckIns: vi.fn(),
   mockSetPinnedList: vi.fn(),
   mockSetOrderedList: vi.fn(),
+  mockSetPinnedListSubset: vi.fn(),
+  mockSetOrderedListSubset: vi.fn(),
   mockGetTagStore: vi.fn(),
 }))
 
@@ -38,6 +44,7 @@ vi.mock("~/services/accountStorage", () => ({
   accountStorage: {
     resetExpiredCheckIns: mockResetExpiredCheckIns,
     getAllAccounts: mockGetAllAccounts,
+    getAllBookmarks: mockGetAllBookmarks,
     getAccountById: mockGetAccountById,
     getOrderedList: mockGetOrderedList,
     getPinnedList: mockGetPinnedList,
@@ -45,6 +52,8 @@ vi.mock("~/services/accountStorage", () => ({
     convertToDisplayData: mockConvertToDisplayData,
     setPinnedList: mockSetPinnedList,
     setOrderedList: mockSetOrderedList,
+    setPinnedListSubset: mockSetPinnedListSubset,
+    setOrderedListSubset: mockSetOrderedListSubset,
     checkUrlExists: vi.fn(async () => null),
   },
 }))
@@ -124,6 +133,7 @@ describe("AccountDataContext handleReorder", () => {
     mockResetExpiredCheckIns.mockResolvedValue(undefined)
     mockGetTagStore.mockResolvedValue({ version: 1, tagsById: {} })
     mockGetAllAccounts.mockResolvedValue([])
+    mockGetAllBookmarks.mockResolvedValue([])
     mockGetOrderedList.mockResolvedValue(["p-1", "p-2", "u-1"])
     mockGetPinnedList.mockResolvedValue(["p-1", "p-2"])
     mockGetAccountStats.mockResolvedValue({
@@ -139,8 +149,8 @@ describe("AccountDataContext handleReorder", () => {
       { id: "p-2" },
       { id: "u-1" },
     ])
-    mockSetPinnedList.mockResolvedValue(true)
-    mockSetOrderedList.mockResolvedValue(true)
+    mockSetPinnedListSubset.mockResolvedValue(true)
+    mockSetOrderedListSubset.mockResolvedValue(true)
 
     let latestCtx: ReturnType<typeof useAccountDataContext> | null = null
 
@@ -161,14 +171,21 @@ describe("AccountDataContext handleReorder", () => {
       await latestCtx!.handleReorder(["p-2", "p-1", "u-1"])
     })
 
-    expect(mockSetPinnedList).toHaveBeenCalledWith(["p-2", "p-1"])
-    expect(mockSetOrderedList).toHaveBeenCalledWith(["p-2", "p-1", "u-1"])
+    expect(mockSetPinnedListSubset).toHaveBeenCalledWith({
+      entryType: "account",
+      ids: ["p-2", "p-1"],
+    })
+    expect(mockSetOrderedListSubset).toHaveBeenCalledWith({
+      entryType: "account",
+      ids: ["p-2", "p-1", "u-1"],
+    })
   })
 
   it("keeps pinned list stable when non-pinned items move around", async () => {
     mockResetExpiredCheckIns.mockResolvedValue(undefined)
     mockGetTagStore.mockResolvedValue({ version: 1, tagsById: {} })
     mockGetAllAccounts.mockResolvedValue([])
+    mockGetAllBookmarks.mockResolvedValue([])
     mockGetOrderedList.mockResolvedValue(["p-1", "p-2", "u-1"])
     mockGetPinnedList.mockResolvedValue(["p-1", "p-2"])
     mockGetAccountStats.mockResolvedValue({
@@ -184,8 +201,8 @@ describe("AccountDataContext handleReorder", () => {
       { id: "p-2" },
       { id: "u-1" },
     ])
-    mockSetPinnedList.mockResolvedValue(true)
-    mockSetOrderedList.mockResolvedValue(true)
+    mockSetPinnedListSubset.mockResolvedValue(true)
+    mockSetOrderedListSubset.mockResolvedValue(true)
 
     let latestCtx: ReturnType<typeof useAccountDataContext> | null = null
 
@@ -202,15 +219,18 @@ describe("AccountDataContext handleReorder", () => {
       expect(latestCtx?.pinnedAccountIds).toEqual(["p-1", "p-2"])
     })
 
-    mockSetPinnedList.mockClear()
-    mockSetOrderedList.mockClear()
+    mockSetPinnedListSubset.mockClear()
+    mockSetOrderedListSubset.mockClear()
 
     await act(async () => {
       await latestCtx!.handleReorder(["u-1", "p-1", "p-2"])
     })
 
-    expect(mockSetPinnedList).not.toHaveBeenCalled()
-    expect(mockSetOrderedList).toHaveBeenCalledWith(["p-1", "p-2", "u-1"])
+    expect(mockSetPinnedListSubset).not.toHaveBeenCalled()
+    expect(mockSetOrderedListSubset).toHaveBeenCalledWith({
+      entryType: "account",
+      ids: ["p-1", "p-2", "u-1"],
+    })
   })
 })
 
@@ -229,6 +249,7 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
     }
 
     mockGetAllAccounts.mockResolvedValue([accountA, accountB])
+    mockGetAllBookmarks.mockResolvedValue([])
     mockGetOrderedList.mockResolvedValue(["a", "b"])
     mockGetPinnedList.mockResolvedValue([])
     mockGetAccountStats.mockResolvedValue({
@@ -298,6 +319,7 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
     mockResetExpiredCheckIns.mockResolvedValue(undefined)
     mockGetTagStore.mockResolvedValue({ version: 1, tagsById: {} })
     mockGetAllAccounts.mockResolvedValue([{ id: "a" }, { id: "b" }])
+    mockGetAllBookmarks.mockResolvedValue([])
     mockGetOrderedList.mockResolvedValue(["a", "b"])
     mockGetPinnedList.mockResolvedValue([])
     mockGetAccountStats.mockResolvedValue({

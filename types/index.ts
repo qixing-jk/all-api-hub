@@ -227,15 +227,45 @@ export interface CheckInConfig {
   }
 }
 
+/**
+ * Lightweight persisted bookmark entry for quickly opening a site URL.
+ *
+ * Bookmarks are stored in {@link AccountStorageConfig.bookmarks} and share the
+ * global tag system via {@link SiteBookmark.tagIds}.
+ */
+export interface SiteBookmark {
+  id: string
+  name: string
+  url: string
+  /**
+   * Global tag ids associated with this bookmark.
+   */
+  tagIds: string[]
+  /**
+   * Free-form notes for this bookmark.
+   *
+   * Always persisted as a string; default: "".
+   */
+  notes: string
+  created_at: number
+  updated_at: number
+}
+
 // 存储配置
 export interface AccountStorageConfig {
   accounts: SiteAccount[]
   /**
-   *  IDs of pinned accounts, in order (newest pinned first)
+   * Persisted bookmarks stored alongside accounts.
+   *
+   * Always persisted as an array; default: [].
+   */
+  bookmarks: SiteBookmark[]
+  /**
+   * IDs of pinned entries (accounts and/or bookmarks), in order (newest pinned first).
    */
   pinnedAccountIds: string[]
   /**
-   * Manual ordering of accounts (full list of ids), newest change first
+   * Manual ordering of entries (full list of ids), newest change first.
    */
   orderedAccountIds?: string[]
   last_updated: number

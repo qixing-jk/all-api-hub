@@ -1,6 +1,7 @@
 import { type ReactNode } from "react"
 
 import { TempWindowFallbackReminderGate } from "~/features/AccountManagement/components/TempWindowFallbackReminderGate"
+import { BookmarkDialogStateProvider } from "~/features/SiteBookmarks/hooks/BookmarkDialogStateContext"
 
 import { AccountActionsProvider } from "./AccountActionsContext"
 import { AccountDataProvider } from "./AccountDataContext"
@@ -16,7 +17,9 @@ export const AccountManagementProvider = ({
   return (
     <AccountDataProvider refreshKey={refreshKey}>
       <DialogStateProvider>
-        <AccountActionsProvider>{children}</AccountActionsProvider>
+        <BookmarkDialogStateProvider>
+          <AccountActionsProvider>{children}</AccountActionsProvider>
+        </BookmarkDialogStateProvider>
       </DialogStateProvider>
       <TempWindowFallbackReminderGate />
     </AccountDataProvider>
