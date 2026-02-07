@@ -55,6 +55,7 @@
     "userIdNumber": "User ID (number)",
     "accessToken": "Access Token",
     "toggleAccessTokenVisibility": "Toggle Access Token Visibility",
+    "toggleRefreshTokenVisibility": "Toggle Refresh Token Visibility",
     "sub2apiRefreshTokenMode": "Extension-managed session (multi-account)",
     "sub2apiRefreshTokenModeDesc": "Optional. Store the refresh_token of the current dashboard session in the extension so each Sub2API account can refresh/renew independently in the background (supports multiple accounts on one site).",
     "sub2apiRefreshTokenWarningTitle": "Note",

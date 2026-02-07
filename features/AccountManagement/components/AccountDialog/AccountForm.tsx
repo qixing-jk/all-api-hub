@@ -312,7 +312,7 @@ export default function AccountForm({
                         }
                         variant="ghost"
                         size="sm"
-                        aria-label={t("form.toggleAccessTokenVisibility")}
+                        aria-label={t("form.toggleRefreshTokenVisibility")}
                       >
                         {showSub2apiRefreshToken ? (
                           <EyeSlashIcon className="h-4 w-4" />

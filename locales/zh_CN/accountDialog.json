@@ -61,6 +61,7 @@
     "userIdNumber": "用户 ID（数字）",
     "accessToken": "访问令牌",
     "toggleAccessTokenVisibility": "切换访问令牌的可见性",
+    "toggleRefreshTokenVisibility": "切换 Refresh Token 的可见性",
     "sub2apiRefreshTokenMode": "插件托管会话（多账号）",
     "sub2apiRefreshTokenModeDesc": "可选。将当前登录账号的 refresh_token 存入扩展，使每个账号可后台自动独立刷新和续期认证，支持同站点多账号。",
     "sub2apiRefreshTokenWarningTitle": "提示",
