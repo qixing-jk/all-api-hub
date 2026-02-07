@@ -24,7 +24,7 @@ import {
   Switch,
   Textarea,
 } from "~/components/ui"
-import { SITE_TITLE_RULES } from "~/constants/siteType"
+import { SITE_TITLE_RULES, SUB2API } from "~/constants/siteType"
 import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
 import { isValidExchangeRate } from "~/services/accountOperations"
 import { AuthTypeEnum, type CheckInConfig, type Tag } from "~/types"
@@ -141,6 +141,7 @@ export default function AccountForm({
   onCheckInChange,
 }: AccountFormProps) {
   const { t } = useTranslation("accountDialog")
+  const isSub2Api = siteType === SUB2API
 
   return (
     <>
@@ -347,12 +348,19 @@ export default function AccountForm({
 
       {/* 签到功能开关 */}
       <div className="flex w-full items-center justify-between">
-        <label
-          htmlFor="supports-check-in"
-          className="dark:text-dark-text-secondary text-sm font-medium text-gray-700"
-        >
-          {t("form.checkInStatus")}
-        </label>
+        <div className="flex-1">
+          <label
+            htmlFor="supports-check-in"
+            className="dark:text-dark-text-secondary text-sm font-medium text-gray-700"
+          >
+            {t("form.checkInStatus")}
+          </label>
+          {isSub2Api && (
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              {t("form.sub2apiCheckInUnsupported")}
+            </p>
+          )}
+        </div>
         <Switch
           checked={checkIn.enableDetection}
           onChange={(enableDetection) =>
@@ -366,6 +374,7 @@ export default function AccountForm({
             })
           }
           id="supports-check-in"
+          disabled={isSub2Api}
           className={`${
             checkIn.enableDetection ? "bg-green-600" : "bg-gray-200"
           } focus:ring-green-500`}

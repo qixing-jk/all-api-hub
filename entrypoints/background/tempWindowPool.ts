@@ -657,6 +657,8 @@ async function getSiteDataFromTab(
     return {
       userId: userResponse.data?.userId,
       user: userResponse.data?.user,
+      accessToken: userResponse.data?.accessToken,
+      siteTypeHint: userResponse.data?.siteTypeHint,
     }
   } catch (error) {
     logger.error("getSiteDataFromTab failed", error)

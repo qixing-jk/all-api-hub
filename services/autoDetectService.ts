@@ -33,6 +33,7 @@ export interface AutoDetectResult {
     userId: number
     user: any
     siteType: string
+    accessToken?: string
   }
   error?: string
 }
@@ -40,6 +41,8 @@ export interface AutoDetectResult {
 export interface UserDataResult {
   userId: number
   user: any
+  accessToken?: string
+  siteTypeHint?: string
 }
 
 /**
@@ -80,13 +83,14 @@ async function combineUserDataAndSiteType(
   }
 
   try {
-    const siteType = await getSiteType(url)
+    const siteType = userData.siteTypeHint || (await getSiteType(url))
     return {
       success: true,
       data: {
         userId: userData.userId,
         user: userData.user,
         siteType,
+        accessToken: userData.accessToken,
       },
     }
   } catch (error) {
@@ -100,11 +104,15 @@ async function combineUserDataAndSiteType(
 /**
  * Fetch user data via upstream API (cookie-based).
  * @param url Base site URL used for API calls.
+ * @param siteType Detected site type used to select an API implementation.
  * @returns UserDataResult when ID present; otherwise null.
  */
-async function getUserDataViaAPI(url: string): Promise<UserDataResult | null> {
+async function getUserDataViaAPI(
+  url: string,
+  siteType: string,
+): Promise<UserDataResult | null> {
   try {
-    const userInfo = await getApiService(undefined).fetchUserInfo({
+    const userInfo = await getApiService(siteType).fetchUserInfo({
       baseUrl: url,
       auth: {
         authType: AuthTypeEnum.Cookie,
@@ -116,6 +124,7 @@ async function getUserDataViaAPI(url: string): Promise<UserDataResult | null> {
     return {
       userId: userInfo.id,
       user: userInfo,
+      siteTypeHint: siteType,
     }
   } catch (error) {
     logger.error("API 方式获取用户数据失败", error)
@@ -134,11 +143,21 @@ async function getUserDataViaAPI(url: string): Promise<UserDataResult | null> {
 export async function autoDetectDirect(url: string): Promise<AutoDetectResult> {
   logger.debug("使用直接方式", { url })
 
-  // 1. 通过 API 获取用户数据
-  const userData = await getUserDataViaAPI(url)
+  try {
+    // 检测站点类型，避免在未知站点上下文中使用默认 API
+    const siteType = await getSiteType(url)
 
-  // 2. 组合用户数据和站点类型（公共逻辑）
-  return await combineUserDataAndSiteType(userData, url)
+    // 通过 API 获取用户数据
+    const userData = await getUserDataViaAPI(url, siteType)
+
+    // 组合用户数据和站点类型（公共逻辑）
+    return await combineUserDataAndSiteType(userData, url)
+  } catch (error) {
+    return {
+      success: false,
+      error: getErrorMessage(error),
+    }
+  }
 }
 
 /**
@@ -147,10 +166,12 @@ export async function autoDetectDirect(url: string): Promise<AutoDetectResult> {
  * Creates a runtime request to content/background to read localStorage; if that
  * fails, attempts API-based fetch using cookies.
  * @param url Target site URL.
+ * @param siteType Detected site type used to select an API implementation.
  * @returns User data or null when both methods fail.
  */
 async function getUserDataViaBackground(
   url: string,
+  siteType: string,
 ): Promise<UserDataResult | null> {
   try {
     const requestId = `auto-detect-${Date.now()}`
@@ -162,7 +183,7 @@ async function getUserDataViaBackground(
 
     if (!response || !response.success || !response.data) {
       // Fallback: if content script/localStorage fetch fails, attempt API-based fetch
-      const userInfo = await getApiService(undefined).fetchUserInfo({
+      const userInfo = await getApiService(siteType).fetchUserInfo({
         baseUrl: url,
         auth: {
           authType: AuthTypeEnum.Cookie,
@@ -172,6 +193,7 @@ async function getUserDataViaBackground(
         return {
           userId: userInfo.id,
           user: userInfo,
+          siteTypeHint: siteType,
         }
       } else {
         return null
@@ -181,6 +203,8 @@ async function getUserDataViaBackground(
     return {
       userId: response.data.userId,
       user: response.data.user,
+      accessToken: response.data.accessToken,
+      siteTypeHint: response.data.siteTypeHint,
     }
   } catch (error) {
     logger.error("Background 方式获取用户数据失败", error)
@@ -199,20 +223,25 @@ export async function autoDetectViaBackground(
 ): Promise<AutoDetectResult> {
   logger.debug("使用 Background 方式", { url })
 
-  // 1. 通过 Background 获取用户数据
-  const userData = await getUserDataViaBackground(url)
+  // 检测站点类型，避免在未知站点上下文中使用默认 API
+  const siteType = await getSiteType(url)
 
-  // 2. 组合用户数据和站点类型（公共逻辑）
+  // 通过 Background 获取用户数据
+  const userData = await getUserDataViaBackground(url, siteType)
+
+  // 组合用户数据和站点类型（公共逻辑）
   return await combineUserDataAndSiteType(userData, url)
 }
 
 /**
  * Fetch user data from the active tab using content script, with API fallback.
  * @param url Target site URL.
+ * @param siteType Detected site type used to select an API implementation.
  * @returns User data or null when not available.
  */
 async function getUserDataFromCurrentTab(
   url: string,
+  siteType: string,
 ): Promise<UserDataResult | null> {
   try {
     // 1. 获取当前活动标签页
@@ -233,7 +262,7 @@ async function getUserDataFromCurrentTab(
 
     if (!userResponse || !userResponse.success || !userResponse.data) {
       // fallback
-      const userInfo = await getApiService(undefined).fetchUserInfo({
+      const userInfo = await getApiService(siteType).fetchUserInfo({
         baseUrl: url,
         auth: {
           authType: AuthTypeEnum.Cookie,
@@ -243,6 +272,7 @@ async function getUserDataFromCurrentTab(
         return {
           userId: userInfo.id,
           user: userInfo,
+          siteTypeHint: siteType,
         }
       } else {
         return null
@@ -252,6 +282,8 @@ async function getUserDataFromCurrentTab(
     return {
       userId: userResponse.data.userId,
       user: userResponse.data.user,
+      accessToken: userResponse.data.accessToken,
+      siteTypeHint: userResponse.data.siteTypeHint,
     }
   } catch (error) {
     logger.error("从当前标签页获取用户数据失败", error)
@@ -270,10 +302,13 @@ export async function autoDetectFromCurrentTab(
 ): Promise<AutoDetectResult> {
   logger.debug("使用当前标签页方式", { url })
 
-  // 1. 从当前标签页获取用户数据
-  const userData = await getUserDataFromCurrentTab(url)
+  // 检测站点类型，避免在未知站点上下文中使用默认 API
+  const siteType = await getSiteType(url)
 
-  // 2. 组合用户数据和站点类型（公共逻辑）
+  // 从当前标签页获取用户数据
+  const userData = await getUserDataFromCurrentTab(url, siteType)
+
+  // 组合用户数据和站点类型（公共逻辑）
   return await combineUserDataAndSiteType(userData, url)
 }
 

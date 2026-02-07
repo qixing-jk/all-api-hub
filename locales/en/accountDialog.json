@@ -27,6 +27,8 @@
     "alreadyAdded": "Current site already added",
     "editNow": "Edit Now",
     "cookieWarning": "Cookie authentication uses your current login account, cannot be used for multiple accounts on the same site, do not use unless necessary",
+    "sub2apiAuthOnly": "Sub2API only supports Access Token authentication (JWT)",
+    "sub2apiHint": "Sub2API requires you to stay logged in to the dashboard (reads auth_token/auth_user from localStorage). If refresh returns 401, log in again and retry.",
     "unknown": "Unable to get",
     "authMethodPlaceholder": "Authentication method",
     "authType": {
@@ -64,6 +66,7 @@
     "excludeFromTotalBalanceDesc": "Skips this account in the Total Balance aggregate without disabling refresh or check-in",
     "validRateError": "Please enter a valid exchange rate, greater than 0",
     "checkInStatus": "Check-in status detection (requires the site to have check-in enabled)",
+    "sub2apiCheckInUnsupported": "Sub2API does not support site check-in (disabled automatically).",
     "customCheckInUrl": "External check-in site URL (optional)",
     "customCheckInDesc": "External check-in/welfare site URL where you can get account balance or redeem codes",
     "customRedeemUrl": "Custom recharge/redeem page URL (optional)",

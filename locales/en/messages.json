@@ -111,6 +111,9 @@
       "getInfoFailed": "Failure to get username or access token"
     }
   },
+  "sub2api": {
+    "loginRequired": "Please log in to the Sub2API dashboard first (the extension reads auth_token/auth_user from localStorage) and try again."
+  },
   "newapi": {
     "configMissing": "Please configure New API address, admin token, and user ID in basic settings first",
     "dataFetchFailed": "Failed to fetch New API data, please check if the configuration is correct",

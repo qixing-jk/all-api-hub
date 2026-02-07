@@ -6,11 +6,12 @@ import { t } from "i18next"
 import toast from "react-hot-toast"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { SITE_TITLE_RULES, UNKNOWN_SITE } from "~/constants/siteType"
+import { SITE_TITLE_RULES, SUB2API, UNKNOWN_SITE } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { accountStorage } from "~/services/accountStorage"
 import { getApiService } from "~/services/apiService"
 import type { CreateTokenRequest } from "~/services/apiService/common/type"
+import { autoDetectSmart } from "~/services/autoDetectService"
 import {
   ApiToken,
   AuthTypeEnum,
@@ -28,8 +29,6 @@ import { sendRuntimeMessage } from "~/utils/browserApi"
 import { extractSessionCookieHeader } from "~/utils/cookieString"
 import { getErrorMessage } from "~/utils/error"
 import { createLogger } from "~/utils/logger"
-
-import { autoDetectSmart } from "./autoDetectService"
 
 const logger = createLogger("AccountOperations")
 
@@ -102,6 +101,8 @@ export async function autoDetectAccount(
     }
 
     const { userId, siteType } = detectResult.data
+    const isSub2Api = siteType === SUB2API
+    const effectiveAuthType = isSub2Api ? AuthTypeEnum.AccessToken : authType
 
     if (!userId) {
       const detailedError = analyzeAutoDetectError(
@@ -117,7 +118,21 @@ export async function autoDetectAccount(
     let tokenPromise: Promise<any>
 
     // 根据 authType 选择对应的 Promise
-    if (authType === AuthTypeEnum.Cookie) {
+    if (isSub2Api) {
+      const accessToken =
+        typeof detectResult.data.accessToken === "string"
+          ? detectResult.data.accessToken.trim()
+          : ""
+      const detectedUsername =
+        typeof detectResult.data.user?.username === "string"
+          ? detectResult.data.user.username.trim()
+          : ""
+
+      tokenPromise = Promise.resolve({
+        username: detectedUsername,
+        access_token: accessToken,
+      })
+    } else if (effectiveAuthType === AuthTypeEnum.Cookie) {
       tokenPromise = getApiService(siteType).fetchUserInfo({
         baseUrl: url,
         auth: {
@@ -125,7 +140,7 @@ export async function autoDetectAccount(
           userId,
         },
       })
-    } else if (authType === AuthTypeEnum.AccessToken) {
+    } else if (effectiveAuthType === AuthTypeEnum.AccessToken) {
       tokenPromise = getApiService(siteType).getOrCreateAccessToken({
         baseUrl: url,
         auth: {
@@ -144,7 +159,7 @@ export async function autoDetectAccount(
       getApiService(siteType).fetchSiteStatus({
         baseUrl: url,
         auth: {
-          authType: authType || AuthTypeEnum.None,
+          authType: effectiveAuthType || AuthTypeEnum.None,
         },
       }),
       getApiService(siteType).fetchSupportCheckIn({
@@ -160,8 +175,9 @@ export async function autoDetectAccount(
 
     // 验证获取到的用户信息是否完整
     if (
-      !detectedUsername ||
-      (authType === AuthTypeEnum.AccessToken && !access_token)
+      // Sub2API 默认可能返回空 username（""），此时不应阻止账号识别；但 AccessToken 仍然必须存在
+      (!isSub2Api && !detectedUsername) ||
+      (effectiveAuthType === AuthTypeEnum.AccessToken && !access_token)
     ) {
       const detailedError = analyzeAutoDetectError(
         t("messages:operations.detection.getInfoFailed"),
@@ -175,7 +191,8 @@ export async function autoDetectAccount(
 
     // 获取默认充值比例
     const defaultExchangeRate =
-      getApiService(undefined).extractDefaultExchangeRate(siteStatus)
+      getApiService(siteType).extractDefaultExchangeRate(siteStatus) ??
+      UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
 
     return {
       success: true,
@@ -187,8 +204,8 @@ export async function autoDetectAccount(
         userId: userId.toString(),
         exchangeRate: defaultExchangeRate,
         checkIn: {
-          enableDetection: checkSupport ?? false,
-          autoCheckInEnabled: true,
+          enableDetection: isSub2Api ? false : checkSupport ?? false,
+          autoCheckInEnabled: isSub2Api ? false : true,
           siteStatus: {
             isCheckedInToday: false,
           },
@@ -222,6 +239,7 @@ export async function autoDetectAccount(
  * @param params.siteName 站点名称
  * @param params.username 用户名
  * @param params.userId 用户 ID
+ * @param params.siteType 站点类型（用于特殊站点校验差异）
  * @param params.authType 认证类型
  * @param params.accessToken 访问令牌
  * @param params.cookieAuthSessionCookie Cookie 认证所需的会话 Cookie（Header 值）
@@ -232,6 +250,7 @@ export function isValidAccount({
   siteName,
   username,
   userId,
+  siteType,
   authType,
   accessToken,
   cookieAuthSessionCookie,
@@ -240,6 +259,7 @@ export function isValidAccount({
   siteName: string
   username: string
   userId: string
+  siteType?: string
   authType: AuthTypeEnum
   accessToken: string
   cookieAuthSessionCookie?: string
@@ -247,7 +267,8 @@ export function isValidAccount({
 }) {
   return (
     !!siteName.trim() &&
-    !!username.trim() &&
+    // Sub2API 默认可能返回空 username（""），允许保存账号信息
+    (siteType === SUB2API || !!username.trim()) &&
     !!userId.trim() &&
     isValidExchangeRate(exchangeRate) &&
     (authType !== AuthTypeEnum.AccessToken || !!accessToken.trim()) &&
@@ -323,6 +344,7 @@ export async function validateAndSaveAccount(
       siteName,
       username,
       userId,
+      siteType,
       authType,
       accessToken,
       cookieAuthSessionCookie: sessionCookieHeader,
@@ -535,6 +557,7 @@ export async function validateAndUpdateAccount(
       siteName,
       username,
       userId,
+      siteType,
       authType,
       accessToken,
       cookieAuthSessionCookie: sessionCookieHeader,

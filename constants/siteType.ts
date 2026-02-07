@@ -12,6 +12,7 @@ export const SUPER_API = "Super-API"
 export const RIX_API = "Rix-Api"
 export const NEO_API = "neo-Api"
 export const WONG_GONGYI = "wong-gongyi"
+export const SUB2API = "sub2api"
 export const UNKNOWN_SITE = "unknown"
 
 export type ManagedSiteType = typeof NEW_API | typeof VELOERA
@@ -34,6 +35,7 @@ export const SITE_TITLE_RULES = [
    * WONG公益站 uses localized titles; match the Chinese keyword with optional spacing.
    */
   { name: WONG_GONGYI, regex: /wong\s*公益站/i },
+  { name: SUB2API, regex: makeTitleRegex(SUB2API) },
   { name: UNKNOWN_SITE, regex: makeTitleRegex(UNKNOWN_SITE) },
 ]
 
@@ -73,6 +75,16 @@ export const SITE_API_ROUTER: Record<string, any> = {
   [RIX_API]: { usagePath: "/log", checkInPath: "/panel", redeemPath: "/topup" },
   [ANYROUTER]: { checkInPath: "/console/topup" },
   [WONG_GONGYI]: { checkInPath: "/console/topup" },
+  /**
+   * Sub2API frontends are often custom-branded single-page apps. Use root paths
+   * to avoid sending users to One-API-specific console routes.
+   */
+  [SUB2API]: {
+    usagePath: "/",
+    checkInPath: "/",
+    adminCredentialsPath: "/",
+    redeemPath: "/",
+  },
   Default: {
     usagePath: DEFAULT_USAGE_PATH,
     checkInPath: DEFAULT_CHECKIN_PATH,

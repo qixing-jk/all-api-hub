@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next"
 import { useChannelDialog } from "~/components/ChannelDialog"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { SUB2API } from "~/constants/siteType"
 import {
   autoDetectAccount,
   getSiteName,
@@ -101,6 +102,25 @@ export function useAccountDialog({
   const [isAutoConfiguring, setIsAutoConfiguring] = useState(false)
   const [cookieAuthSessionCookie, setCookieAuthSessionCookie] = useState("")
   const [isImportingCookies, setIsImportingCookies] = useState(false)
+
+  // Enforce Sub2API constraints: JWT-only (access token), no built-in check-in.
+  useEffect(() => {
+    if (siteType !== SUB2API) return
+
+    if (authType !== AuthTypeEnum.AccessToken) {
+      setAuthType(AuthTypeEnum.AccessToken)
+    }
+
+    if (cookieAuthSessionCookie.trim()) {
+      setCookieAuthSessionCookie("")
+    }
+
+    setCheckIn((prev) => ({
+      ...prev,
+      enableDetection: false,
+      autoCheckInEnabled: false,
+    }))
+  }, [authType, cookieAuthSessionCookie, siteType])
 
   // useRef 保存跨渲染引用
   const newAccountRef = useRef<any>(null)
@@ -390,11 +410,21 @@ export function useAccountDialog({
 
         if (resultData.siteType) {
           setSiteType(resultData.siteType)
+          if (resultData.siteType === SUB2API) {
+            setAuthType(AuthTypeEnum.AccessToken)
+            setCookieAuthSessionCookie("")
+            setCheckIn((prev) => ({
+              ...prev,
+              enableDetection: false,
+              autoCheckInEnabled: false,
+            }))
+          }
         }
 
         // Attempt to auto-import session cookies after detection for cookie-auth accounts.
         if (
           authType === AuthTypeEnum.Cookie &&
+          resultData.siteType !== SUB2API &&
           !cookieAuthSessionCookie.trim() &&
           url.trim()
         ) {
@@ -584,6 +614,7 @@ export function useAccountDialog({
     siteName,
     username,
     userId,
+    siteType,
     authType,
     accessToken,
     cookieAuthSessionCookie,

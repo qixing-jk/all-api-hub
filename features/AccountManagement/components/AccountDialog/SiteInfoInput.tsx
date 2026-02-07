@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui"
+import { SUB2API } from "~/constants/siteType"
 import { AuthTypeEnum, type DisplaySiteData } from "~/types"
 
 interface SiteInfoInputProps {
@@ -25,6 +26,7 @@ interface SiteInfoInputProps {
   onUrlChange: (url: string) => void
   isDetected: boolean
   onClearUrl: () => void
+  siteType?: string
   authType: AuthTypeEnum
   onAuthTypeChange: (authType: AuthTypeEnum) => void
   // Props for "add" mode
@@ -55,6 +57,7 @@ export default function SiteInfoInput({
   onUrlChange,
   isDetected,
   onClearUrl,
+  siteType,
   authType,
   onAuthTypeChange,
   currentTabUrl,
@@ -64,6 +67,7 @@ export default function SiteInfoInput({
   onEditAccount,
 }: SiteInfoInputProps) {
   const { t } = useTranslation("accountDialog")
+  const isSub2Api = siteType === SUB2API
 
   const handleEditClick = () => {
     if (detectedAccount && onEditAccount) {
@@ -112,11 +116,17 @@ export default function SiteInfoInput({
             }
           />
         </div>
-        <Tooltip content={t("siteInfo.cookieWarning")}>
+        <Tooltip
+          content={
+            isSub2Api
+              ? t("siteInfo.sub2apiAuthOnly")
+              : t("siteInfo.cookieWarning")
+          }
+        >
           <Select
             value={authType}
             onValueChange={(value) => onAuthTypeChange(value as AuthTypeEnum)}
-            disabled={isDetected}
+            disabled={isDetected || isSub2Api}
           >
             <SelectTrigger
               id="auth-type"
@@ -128,14 +138,22 @@ export default function SiteInfoInput({
               <SelectItem value={AuthTypeEnum.AccessToken}>
                 {t("siteInfo.authType.accessToken")}
               </SelectItem>
-              <SelectItem value={AuthTypeEnum.Cookie}>
-                {t("siteInfo.authType.cookieAuth")}
-              </SelectItem>
+              {!isSub2Api && (
+                <SelectItem value={AuthTypeEnum.Cookie}>
+                  {t("siteInfo.authType.cookieAuth")}
+                </SelectItem>
+              )}
             </SelectContent>
           </Select>
         </Tooltip>
       </div>
       <div className="flex flex-col justify-between gap-y-2 text-xs">
+        {isSub2Api && (
+          <div className="flex w-full items-start gap-2 rounded-md bg-blue-50 p-2 text-xs text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
+            <InformationCircleIcon className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>{t("siteInfo.sub2apiHint")}</span>
+          </div>
+        )}
         {isCurrentSiteAdded && handleEditClick && (
           <div className="flex w-full items-center justify-between rounded-md bg-yellow-50 p-2 text-xs text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-300">
             <div className="flex items-center">

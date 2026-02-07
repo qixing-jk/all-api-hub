@@ -119,6 +119,7 @@ export default function AccountDialog({
             onUrlChange={handlers.handleUrlChange}
             isDetected={state.isDetected}
             onClearUrl={() => setters.setUrl("")}
+            siteType={state.siteType}
             authType={state.authType}
             onAuthTypeChange={setters.setAuthType}
             {...(mode === DIALOG_MODES.ADD && {

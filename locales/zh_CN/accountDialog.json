@@ -27,6 +27,8 @@
     "alreadyAdded": "当前站点已添加",
     "editNow": "立即编辑",
     "cookieWarning": "Cookie 认证使用您的当前登录账号，无法站点多账号，非必要请勿使用",
+    "sub2apiAuthOnly": "Sub2API 仅支持访问令牌认证（JWT）",
+    "sub2apiHint": "Sub2API 需要在站点控制台保持登录状态（读取 auth_token/auth_user）。如刷新出现 401，请重新登录后再试。",
     "unknown": "无法获取",
     "authMethodPlaceholder": "认证方式",
     "authType": {
@@ -64,6 +66,7 @@
     "exchangeRateDesc": "表示充值 1 美元需要多少人民币。系统会尝试自动获取，如未获取到请手动填写",
     "validRateError": "请输入有效的汇率，大于 0",
     "checkInStatus": "签到状态检测（需站点本身已开启签到功能）",
+    "sub2apiCheckInUnsupported": "Sub2API 暂不支持站点签到功能（已自动关闭）。",
     "customCheckInUrl": "外部签到站点 URL（可选）",
     "customCheckInDesc": "外部签到站、福利站等可以获得账号余额或兑换码的站点地址",
     "customRedeemUrl": "自定义充值/兑换页面 URL（可选）",

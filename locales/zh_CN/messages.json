@@ -111,6 +111,9 @@
       "getInfoFailed": "未能获取到用户名或访问令牌"
     }
   },
+  "sub2api": {
+    "loginRequired": "请先登录 Sub2API 控制台（插件会读取 auth_token/auth_user）后再重试。"
+  },
   "newapi": {
     "configMissing": "请先在基础设置中配置 New API 地址、管理员令牌和用户 ID",
     "dataFetchFailed": "获取 New API 数据失败，请检查配置是否正确",

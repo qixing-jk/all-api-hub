@@ -151,6 +151,7 @@ use the upstream repository linked in this document as the default reference.
 - **AnyRouter (`anyrouter`)** and **WONG公益站 (`wong-gongyi`)** have site-specific check-in handling.
 - Many One-API/New-API family deployments still use `services/apiService/common/` for core calls; the request helper
   sends multiple compatible user-id header names via `services/apiService/common/utils.ts`.
+- **Sub2API (`sub2api`)** is *not* One-API/New-API compatible, using a JWT-based auth and a different API surface.
 
 ### One API (`one-api`)
 
@@ -221,6 +222,13 @@ use the upstream repository linked in this document as the default reference.
 - **Family**: New-API-like variants; uses `services/apiService/common/`.
 - **Naming**: in code the site type strings are `Rix-Api` and `neo-Api`.
 - **In repo**: compatibility user headers `Rix-Api-User` / `neo-api-user` in `services/apiService/common/utils.ts`.
+
+### Sub2API (`sub2api`)
+
+- **Family**: Sub2API-specific dashboard backend (totally different).
+- **Naming**: in code the site type string is `sub2api`.
+- **Links**:
+    - Upstream reference: https://github.com/Wei-Shaw/sub2api
 
 ### State Management
 

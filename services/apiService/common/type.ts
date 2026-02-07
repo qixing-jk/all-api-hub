@@ -50,6 +50,18 @@ export interface RefreshAccountResult {
   success: boolean
   data?: AccountData
   healthStatus: HealthCheckResult
+  /**
+   * Optional auth/identity updates discovered during refresh.
+   *
+   * This is used by site implementations that can re-sync credentials from a
+   * browser context (e.g., Sub2API JWT stored in localStorage) without
+   * re-authenticating the user.
+   */
+  authUpdate?: {
+    accessToken?: string
+    userId?: number
+    username?: string
+  }
 }
 
 export interface HealthCheckResult {

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SUB2API } from "~/constants/siteType"
 import {
   extractDomainPrefix,
   isValidAccount,
@@ -148,6 +149,20 @@ describe("accountOperations", () => {
           exchangeRate: "7.0",
         }),
       ).toBe(false)
+    })
+
+    it("allows empty username for Sub2API accounts", () => {
+      expect(
+        isValidAccount({
+          siteName: "Test",
+          username: "",
+          userId: "123",
+          siteType: SUB2API,
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "token",
+          exchangeRate: "7.0",
+        }),
+      ).toBe(true)
     })
 
     it("rejects empty userId", () => {

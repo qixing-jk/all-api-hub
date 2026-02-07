@@ -808,6 +808,27 @@ class AccountStorageService {
           today_requests_count: result.data.today_requests_count,
           today_income: result.data.today_income,
         }
+
+        // Persist any refreshed credentials/identity discovered during refresh.
+        // (Example: Sub2API JWT re-sync after an HTTP 401.)
+        const authUpdate = result.authUpdate
+        if (authUpdate) {
+          updateData.account_info = {
+            ...(updateData.account_info || account.account_info),
+            ...(typeof authUpdate.accessToken === "string" &&
+            authUpdate.accessToken.trim()
+              ? { access_token: authUpdate.accessToken.trim() }
+              : {}),
+            ...(typeof authUpdate.userId === "number" &&
+            Number.isFinite(authUpdate.userId)
+              ? { id: authUpdate.userId }
+              : {}),
+            ...(typeof authUpdate.username === "string" &&
+            authUpdate.username.trim()
+              ? { username: authUpdate.username.trim() }
+              : {}),
+          }
+        }
       }
 
       // 更新账号信息
