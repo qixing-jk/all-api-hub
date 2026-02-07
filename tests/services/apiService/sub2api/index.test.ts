@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { ApiError } from "~/services/apiService/common/errors"
+import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import type { ApiServiceAccountRequest } from "~/services/apiService/common/type"
 import { fetchApi } from "~/services/apiService/common/utils"
 import { refreshAccountData } from "~/services/apiService/sub2api"
@@ -50,13 +50,56 @@ describe("apiService sub2api parsing", () => {
     expect(data).toEqual({ value: 1 })
   })
 
-  it("parseSub2ApiEnvelope throws when code is non-zero", () => {
+  it("parseSub2ApiEnvelope throws when code is missing", () => {
     expect(() =>
       parseSub2ApiEnvelope(
-        { code: 123, message: "bad", data: null },
+        { message: "ok", data: { value: 1 } },
         "/api/v1/auth/me",
       ),
-    ).toThrow("bad")
+    ).toThrow("messages:errors.api.invalidResponseFormat")
+  })
+
+  it("parseSub2ApiEnvelope throws when code is not a number", () => {
+    expect(() =>
+      parseSub2ApiEnvelope(
+        { code: "0", message: "ok", data: { value: 1 } },
+        "/api/v1/auth/me",
+      ),
+    ).toThrow("messages:errors.api.invalidResponseFormat")
+  })
+
+  it("parseSub2ApiEnvelope throws when message is missing", () => {
+    expect(() =>
+      parseSub2ApiEnvelope({ code: 0, data: { value: 1 } }, "/api/v1/auth/me"),
+    ).toThrow("messages:errors.api.invalidResponseFormat")
+  })
+
+  it("parseSub2ApiEnvelope throws when message is not a string", () => {
+    expect(() =>
+      parseSub2ApiEnvelope(
+        { code: 0, message: 123, data: { value: 1 } },
+        "/api/v1/auth/me",
+      ),
+    ).toThrow("messages:errors.api.invalidResponseFormat")
+  })
+
+  it("parseSub2ApiEnvelope throws business error when code is non-zero", () => {
+    const thrown = (() => {
+      try {
+        parseSub2ApiEnvelope(
+          { code: 123, message: "bad", data: null },
+          "/api/v1/auth/me",
+        )
+      } catch (error) {
+        return error
+      }
+
+      return null
+    })()
+
+    expect(thrown).toBeInstanceOf(ApiError)
+    expect((thrown as ApiError).message).toBe("bad")
+    expect((thrown as ApiError).code).toBe(API_ERROR_CODES.BUSINESS_ERROR)
   })
 
   it("parseSub2ApiUserIdentity normalizes numeric fields and computes quota", () => {

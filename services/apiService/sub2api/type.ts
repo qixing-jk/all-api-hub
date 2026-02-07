@@ -10,8 +10,14 @@
  */
 
 export type Sub2ApiEnvelope<T> = {
-  code?: number
-  message?: string
+  /**
+   * Sub2API response code (0 indicates success; non-zero indicates a business error).
+   */
+  code: number
+  /**
+   * Sub2API response message.
+   */
+  message: string
   data?: T
 }
 

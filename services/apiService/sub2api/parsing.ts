@@ -99,6 +99,8 @@ export const parseSub2ApiUserIdentity = (
  * Parse `{ code, message, data }` envelope returned by Sub2API endpoints.
  *
  * Sub2API sometimes returns HTTP 200 with `code != 0` to indicate an error.
+ * The `code` field is required and must be a number.
+ * The `message` field is required and must be a string.
  */
 export const parseSub2ApiEnvelope = <T>(body: unknown, endpoint: string): T => {
   const invalidResponseMessage = i18next.t(
@@ -109,14 +111,22 @@ export const parseSub2ApiEnvelope = <T>(body: unknown, endpoint: string): T => {
     throw new ApiError(invalidResponseMessage, undefined, endpoint)
   }
 
-  const envelope = body as Sub2ApiEnvelope<T>
+  const envelope = body as Partial<Sub2ApiEnvelope<T>>
+
+  if (typeof envelope.code !== "number") {
+    throw new ApiError(invalidResponseMessage, undefined, endpoint)
+  }
+
+  if (typeof envelope.message !== "string") {
+    throw new ApiError(invalidResponseMessage, undefined, endpoint)
+  }
+
   const code = envelope.code
 
-  if (typeof code === "number" && code !== 0) {
-    const message =
-      typeof envelope.message === "string" && envelope.message.trim()
-        ? envelope.message.trim()
-        : invalidResponseMessage
+  if (code !== 0) {
+    const message = envelope.message.trim()
+      ? envelope.message.trim()
+      : invalidResponseMessage
     throw new ApiError(
       message,
       undefined,
