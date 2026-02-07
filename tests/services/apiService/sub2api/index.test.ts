@@ -142,6 +142,7 @@ describe("apiService sub2api parsing", () => {
 describe("apiService sub2api refreshAccountData", () => {
   beforeEach(() => {
     vi.unstubAllGlobals()
+    vi.restoreAllMocks()
     vi.clearAllMocks()
   })
 
