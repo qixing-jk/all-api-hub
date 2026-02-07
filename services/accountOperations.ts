@@ -12,6 +12,7 @@ import { accountStorage } from "~/services/accountStorage"
 import { getApiService } from "~/services/apiService"
 import type { CreateTokenRequest } from "~/services/apiService/common/type"
 import { autoDetectSmart } from "~/services/autoDetectService"
+import { userPreferences } from "~/services/userPreferences"
 import {
   ApiToken,
   AuthTypeEnum,
@@ -377,10 +378,13 @@ export async function validateAndSaveAccount(
       authType,
       userId: parsedUserId,
     })
+    const includeTodayCashflow =
+      (await userPreferences.getPreferences()).showTodayCashflow ?? true
     const freshAccountData = await getApiService(siteType).fetchAccountData({
       baseUrl: url.trim(),
       checkIn: checkInConfig,
       accountId: undefined, // New account, no ID yet
+      includeTodayCashflow,
       auth: {
         authType,
         userId: parsedUserId,
@@ -591,10 +595,13 @@ export async function validateAndUpdateAccount(
       authType,
       userId: parsedUserId,
     })
+    const includeTodayCashflow =
+      (await userPreferences.getPreferences()).showTodayCashflow ?? true
     const freshAccountData = await getApiService(siteType).fetchAccountData({
       baseUrl: url.trim(),
       checkIn: checkInConfig,
       accountId,
+      includeTodayCashflow,
       auth: {
         authType,
         userId: parsedUserId,

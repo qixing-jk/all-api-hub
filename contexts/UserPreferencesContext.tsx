@@ -7,7 +7,12 @@ import {
   useState,
 } from "react"
 
-import { DATA_TYPE_CASHFLOW } from "~/constants"
+import {
+  DATA_TYPE_BALANCE,
+  DATA_TYPE_CASHFLOW,
+  DATA_TYPE_CONSUMPTION,
+  DATA_TYPE_INCOME,
+} from "~/constants"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { NEW_API, type ManagedSiteType } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
@@ -49,6 +54,7 @@ interface UserPreferencesContextType {
   isLoading: boolean
   activeTab: DashboardTabType
   currencyType: CurrencyType
+  showTodayCashflow: boolean
   sortingPriorityConfig: SortingPriorityConfig
   sortField: SortField
   sortOrder: SortOrder
@@ -78,6 +84,7 @@ interface UserPreferencesContextType {
   updateActiveTab: (activeTab: DashboardTabType) => Promise<boolean>
   updateDefaultTab: (activeTab: DashboardTabType) => Promise<boolean>
   updateCurrencyType: (currencyType: CurrencyType) => Promise<boolean>
+  updateShowTodayCashflow: (enabled: boolean) => Promise<boolean>
   updateSortConfig: (
     sortField: SortField,
     sortOrder: SortOrder,
@@ -348,6 +355,49 @@ export const UserPreferencesProvider = ({
     }
     return success
   }, [])
+
+  /**
+   * Toggle whether today cashflow statistics are shown and fetched.
+   *
+   * When disabling, this also normalizes dependent selections so the UI does not
+   * default to hidden today-based metrics (dashboard tab + sort field fallback).
+   */
+  const updateShowTodayCashflow = useCallback(
+    async (enabled: boolean) => {
+      const currentActiveTab = preferences?.activeTab ?? DATA_TYPE_CASHFLOW
+      const currentSortField =
+        preferences?.sortField ?? UI_CONSTANTS.SORT.DEFAULT_FIELD
+
+      const nextActiveTab =
+        enabled || currentActiveTab !== DATA_TYPE_CASHFLOW
+          ? currentActiveTab
+          : DATA_TYPE_BALANCE
+
+      const nextSortField =
+        enabled ||
+        (currentSortField !== DATA_TYPE_CONSUMPTION &&
+          currentSortField !== DATA_TYPE_INCOME)
+          ? currentSortField
+          : DATA_TYPE_BALANCE
+
+      const updates: Partial<UserPreferences> = {
+        showTodayCashflow: enabled,
+        ...(nextActiveTab !== currentActiveTab
+          ? { activeTab: nextActiveTab }
+          : {}),
+        ...(nextSortField !== currentSortField
+          ? { sortField: nextSortField }
+          : {}),
+      }
+
+      const success = await userPreferences.savePreferences(updates)
+      if (success) {
+        setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
+      }
+      return success
+    },
+    [preferences],
+  )
 
   const updateSortConfig = useCallback(
     async (sortField: SortField, sortOrder: SortOrder) => {
@@ -1039,6 +1089,32 @@ export const UserPreferencesProvider = ({
     return success
   }, [])
 
+  useEffect(() => {
+    if (!preferences) return
+
+    const showTodayCashflow = preferences.showTodayCashflow ?? true
+    if (showTodayCashflow) return
+
+    const needsActiveTabFallback = preferences.activeTab === DATA_TYPE_CASHFLOW
+    const needsSortFallback =
+      preferences.sortField === DATA_TYPE_CONSUMPTION ||
+      preferences.sortField === DATA_TYPE_INCOME
+
+    if (!needsActiveTabFallback && !needsSortFallback) return
+
+    const updates: Partial<UserPreferences> = {
+      ...(needsActiveTabFallback ? { activeTab: DATA_TYPE_BALANCE } : {}),
+      ...(needsSortFallback ? { sortField: DATA_TYPE_BALANCE } : {}),
+    }
+
+    void (async () => {
+      const success = await userPreferences.savePreferences(updates)
+      if (success) {
+        setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
+      }
+    })()
+  }, [preferences])
+
   if (isLoading || !preferences) {
     return null
   }
@@ -1048,6 +1124,7 @@ export const UserPreferencesProvider = ({
     isLoading,
     activeTab: preferences?.activeTab || DATA_TYPE_CASHFLOW,
     currencyType: preferences?.currencyType || "USD",
+    showTodayCashflow: preferences?.showTodayCashflow ?? true,
     sortField: preferences?.sortField || UI_CONSTANTS.SORT.DEFAULT_FIELD,
     sortOrder: preferences?.sortOrder || UI_CONSTANTS.SORT.DEFAULT_ORDER,
     sortingPriorityConfig:
@@ -1095,6 +1172,7 @@ export const UserPreferencesProvider = ({
     updateActiveTab,
     updateDefaultTab,
     updateCurrencyType,
+    updateShowTodayCashflow,
     updateSortConfig,
     updateSortingPriorityConfig,
     updateAutoRefresh,

@@ -70,7 +70,8 @@ export default function AccountBalanceSummary() {
   const { t } = useTranslation(["account", "common"])
   const { accounts, displayData, stats, isInitialLoad, prevTotalConsumption } =
     useAccountDataContext()
-  const { currencyType, updateCurrencyType } = useUserPreferencesContext()
+  const { currencyType, showTodayCashflow, updateCurrencyType } =
+    useUserPreferencesContext()
 
   const totalConsumption = useMemo(
     () => calculateTotalConsumption(stats, accounts),
@@ -116,37 +117,41 @@ export default function AccountBalanceSummary() {
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1">
-          <Caption className="font-medium">
-            {t("account:stats.todayConsumption")}
-          </Caption>
-          <BalanceDisplay
-            value={totalConsumption[currencyType]}
-            startValue={isInitialLoad ? 0 : prevTotalConsumption[currencyType]}
-            isInitialLoad={isInitialLoad}
-            currencyType={currencyType}
-            onCurrencyToggle={handleCurrencyToggle}
-            prefix={totalConsumption[currencyType] > 0 ? "-" : ""}
-            size="md"
-          />
-        </div>
+      {showTodayCashflow && (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <Caption className="font-medium">
+              {t("account:stats.todayConsumption")}
+            </Caption>
+            <BalanceDisplay
+              value={totalConsumption[currencyType]}
+              startValue={
+                isInitialLoad ? 0 : prevTotalConsumption[currencyType]
+              }
+              isInitialLoad={isInitialLoad}
+              currencyType={currencyType}
+              onCurrencyToggle={handleCurrencyToggle}
+              prefix={totalConsumption[currencyType] > 0 ? "-" : ""}
+              size="md"
+            />
+          </div>
 
-        <div className="space-y-1">
-          <Caption className="font-medium">
-            {t("account:stats.todayIncome")}
-          </Caption>
-          <BalanceDisplay
-            value={totalIncome[currencyType]}
-            startValue={0}
-            isInitialLoad={isInitialLoad}
-            currencyType={currencyType}
-            onCurrencyToggle={handleCurrencyToggle}
-            prefix={totalIncome[currencyType] > 0 ? "+" : ""}
-            size="md"
-          />
+          <div className="space-y-1">
+            <Caption className="font-medium">
+              {t("account:stats.todayIncome")}
+            </Caption>
+            <BalanceDisplay
+              value={totalIncome[currencyType]}
+              startValue={0}
+              isInitialLoad={isInitialLoad}
+              currencyType={currencyType}
+              onCurrencyToggle={handleCurrencyToggle}
+              prefix={totalIncome[currencyType] > 0 ? "+" : ""}
+              size="md"
+            />
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

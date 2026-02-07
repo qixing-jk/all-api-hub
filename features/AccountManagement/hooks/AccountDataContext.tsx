@@ -11,6 +11,11 @@ import {
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next" // 1. 定义 Context 的值类型
 
+import {
+  DATA_TYPE_BALANCE,
+  DATA_TYPE_CONSUMPTION,
+  DATA_TYPE_INCOME,
+} from "~/constants"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { accountStorage } from "~/services/accountStorage"
@@ -100,6 +105,7 @@ export const AccountDataProvider = ({
   const { t } = useTranslation("account")
   const {
     currencyType,
+    showTodayCashflow,
     sortField: initialSortField,
     sortOrder: initialSortOrder,
     updateSortConfig,
@@ -460,6 +466,13 @@ export const AccountDataProvider = ({
 
   const handleSort = useCallback(
     (field: SortField) => {
+      if (
+        showTodayCashflow === false &&
+        (field === DATA_TYPE_CONSUMPTION || field === DATA_TYPE_INCOME)
+      ) {
+        return
+      }
+
       let newOrder: SortOrder
       if (sortField === field) {
         newOrder = sortOrder === "asc" ? "desc" : "asc"
@@ -471,8 +484,20 @@ export const AccountDataProvider = ({
       }
       updateSortConfig(field, newOrder)
     },
-    [sortField, sortOrder, updateSortConfig],
+    [showTodayCashflow, sortField, sortOrder, updateSortConfig],
   )
+
+  useEffect(() => {
+    if (showTodayCashflow !== false) return
+
+    if (sortField !== DATA_TYPE_CONSUMPTION && sortField !== DATA_TYPE_INCOME) {
+      return
+    }
+
+    const fallbackField: SortField = DATA_TYPE_BALANCE
+    setSortField(fallbackField)
+    void updateSortConfig(fallbackField, sortOrder)
+  }, [showTodayCashflow, sortField, sortOrder, updateSortConfig])
 
   const handleReorder = useCallback(
     async (ids: string[]) => {

@@ -177,6 +177,19 @@ export interface UserPreferences {
    */
   currencyType: CurrencyType
 
+  /**
+   * Whether to show and fetch "today cashflow" statistics (today consumption/income
+   * plus today token/request counts).
+   *
+   * When disabled, the UI hides today statistics and refresh flows skip the
+   * log-based network requests used to compute them.
+   *
+   * Optional for backward compatibility with stored preferences created before
+   * this flag existed. Missing values MUST be treated as enabled via defaults
+   * and migration.
+   */
+  showTodayCashflow?: boolean
+
   // AccountList 相关配置
   /**
    * 用户自定义排序字段
@@ -358,6 +371,7 @@ export interface UserPreferences {
 export const DEFAULT_PREFERENCES: UserPreferences = {
   activeTab: DATA_TYPE_CASHFLOW,
   currencyType: "USD",
+  showTodayCashflow: true,
   sortField: DATA_TYPE_BALANCE, // 与 UI_CONSTANTS.SORT.DEFAULT_FIELD 保持一致
   sortOrder: "desc", // 与 UI_CONSTANTS.SORT.DEFAULT_ORDER 保持一致
   actionClickBehavior: "popup",
@@ -533,6 +547,16 @@ class UserPreferencesService {
    */
   async updateCurrencyType(currencyType: CurrencyType): Promise<boolean> {
     return this.savePreferences({ currencyType })
+  }
+
+  /**
+   * Toggle whether "today cashflow" statistics are displayed and fetched.
+   *
+   * When disabled, expensive log pagination requests are skipped and today fields
+   * are treated as zero during refresh.
+   */
+  async updateShowTodayCashflow(showTodayCashflow: boolean): Promise<boolean> {
+    return this.savePreferences({ showTodayCashflow })
   }
 
   /**
@@ -714,6 +738,7 @@ class UserPreferencesService {
     return this.savePreferences({
       activeTab: DEFAULT_PREFERENCES.activeTab,
       currencyType: DEFAULT_PREFERENCES.currencyType,
+      showTodayCashflow: DEFAULT_PREFERENCES.showTodayCashflow,
     })
   }
 

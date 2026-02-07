@@ -321,6 +321,16 @@ export interface ApiServiceRequest {
  */
 export type ApiServiceAccountRequest = ApiServiceRequest & {
   checkIn: CheckInConfig
+  /**
+   * Whether account refresh should include fetching "today cashflow" statistics
+   * (today consumption/income plus token/request counts).
+   *
+   * When false, API services MUST skip the log pagination requests used solely
+   * for today stats and return zeroed today fields instead.
+   *
+   * Default: true (when undefined).
+   */
+  includeTodayCashflow?: boolean
 }
 
 /**

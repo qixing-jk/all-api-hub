@@ -27,7 +27,9 @@
     "defaultTab": "Default Tab",
     "defaultTabDesc": "Set the default tab displayed when the plugin starts",
     "todayCashflow": "Today's Cashflow",
-    "totalBalance": "Total Balance"
+    "totalBalance": "Total Balance",
+    "todayCashflowEnabled": "Show Today's Cashflow",
+    "todayCashflowEnabledDesc": "Controls whether today's consumption/income stats are displayed and fetched. When disabled, today stats are hidden and refresh skips the data requests used to compute them."
   },
   "refresh": {
     "title": "Refresh Settings",

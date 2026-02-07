@@ -192,6 +192,17 @@ describe("preferencesMigration", () => {
       expect((result as any).newApiModelSync).toBeUndefined()
     })
 
+    it("defaults showTodayCashflow to true when missing", () => {
+      const prefs = createV0Preferences({
+        preferencesVersion: 10,
+      })
+
+      const result = migratePreferences(prefs)
+
+      expect(result.preferencesVersion).toBe(CURRENT_PREFERENCES_VERSION)
+      expect(result.showTodayCashflow).toBe(true)
+    })
+
     it("processes v1 preferences with sorting config migration", () => {
       const prefs = createV0Preferences({
         preferencesVersion: 1,

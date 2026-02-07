@@ -21,7 +21,7 @@ import { migrateSortingConfig } from "./sortingConfigMigration"
 const logger = createLogger("PreferencesMigration")
 
 // Current version of the preferences schema
-export const CURRENT_PREFERENCES_VERSION = 10
+export const CURRENT_PREFERENCES_VERSION = 11
 
 /**
  * Migration function type
@@ -238,6 +238,22 @@ const migrations: Record<number, PreferencesMigrationFunction> = {
         ),
       },
       preferencesVersion: 10,
+    }
+  },
+
+  // Version 10 -> 11: Introduce today cashflow toggle (default enabled)
+  11: (prefs: UserPreferences): UserPreferences => {
+    logger.debug(
+      "Migrating preferences from v10 to v11 (today cashflow toggle)",
+    )
+
+    const stored = (prefs as any).showTodayCashflow
+    const showTodayCashflow = typeof stored === "boolean" ? stored : true
+
+    return {
+      ...prefs,
+      showTodayCashflow,
+      preferencesVersion: 11,
     }
   },
 }

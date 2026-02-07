@@ -1,8 +1,12 @@
-import { EyeIcon, GlobeAltIcon } from "@heroicons/react/24/outline"
+import {
+  CalendarDaysIcon,
+  EyeIcon,
+  GlobeAltIcon,
+} from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
-import { Card, CardItem, CardList, ToggleButton } from "~/components/ui"
+import { Card, CardItem, CardList, Switch, ToggleButton } from "~/components/ui"
 import { DATA_TYPE_BALANCE, DATA_TYPE_CASHFLOW } from "~/constants"
 import { ANIMATIONS, COLORS } from "~/constants/designTokens"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
@@ -17,8 +21,10 @@ export default function DisplaySettings() {
   const {
     currencyType,
     activeTab,
+    showTodayCashflow,
     updateCurrencyType,
     updateDefaultTab,
+    updateShowTodayCashflow,
     resetDisplaySettings,
   } = useUserPreferencesContext()
 
@@ -29,9 +35,15 @@ export default function DisplaySettings() {
   }
 
   const handleDefaultTabChange = async (tab: DashboardTabType) => {
+    if (!showTodayCashflow && tab === DATA_TYPE_CASHFLOW) return
     if (tab === activeTab) return
     const success = await updateDefaultTab(tab)
     showUpdateToast(success, t("display.defaultTab"))
+  }
+
+  const handleTodayCashflowToggle = async (enabled: boolean) => {
+    const success = await updateShowTodayCashflow(enabled)
+    showUpdateToast(success, t("display.todayCashflowEnabled"))
   }
 
   return (
@@ -75,6 +87,20 @@ export default function DisplaySettings() {
 
           <CardItem
             icon={
+              <CalendarDaysIcon className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+            }
+            title={t("display.todayCashflowEnabled")}
+            description={t("display.todayCashflowEnabledDesc")}
+            rightContent={
+              <Switch
+                checked={showTodayCashflow}
+                onChange={handleTodayCashflowToggle}
+              />
+            }
+          />
+
+          <CardItem
+            icon={
               <EyeIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             }
             title={t("display.defaultTab")}
@@ -86,6 +112,7 @@ export default function DisplaySettings() {
                 <ToggleButton
                   onClick={() => handleDefaultTabChange(DATA_TYPE_CASHFLOW)}
                   isActive={activeTab === DATA_TYPE_CASHFLOW}
+                  disabled={!showTodayCashflow}
                   size="default"
                   aria-label={t("display.todayCashflow")}
                 >

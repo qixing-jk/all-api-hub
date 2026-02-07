@@ -689,7 +689,13 @@ class AccountStorageService {
   /**
    * Refresh a single account (API calls, check-in resets, health/status updates).
    */
-  async refreshAccount(id: string, force: boolean = false) {
+  async refreshAccount(
+    id: string,
+    force: boolean = false,
+    options?: {
+      includeTodayCashflow?: boolean
+    },
+  ) {
     try {
       let account = await this.getAccountById(id)
 
@@ -749,12 +755,18 @@ class AccountStorageService {
         logger.warn("Failed to determine check-in support", { baseUrl, error })
       }
 
+      const includeTodayCashflow =
+        options?.includeTodayCashflow ??
+        (await userPreferences.getPreferences()).showTodayCashflow ??
+        true
+
       // 刷新账号数据
       const result = await getApiService(account.site_type).refreshAccountData({
         baseUrl: account.site_url,
         accountId: account.id,
         checkIn: checkInForRefresh,
         auth,
+        includeTodayCashflow,
       })
 
       // 构建更新数据
@@ -871,6 +883,8 @@ class AccountStorageService {
    */
   async refreshAllAccounts(force: boolean = false) {
     const accounts = await this.getAllAccounts()
+    const includeTodayCashflow =
+      (await userPreferences.getPreferences()).showTodayCashflow ?? true
     let successCount = 0
     let failedCount = 0
     let refreshedCount = 0
@@ -878,7 +892,9 @@ class AccountStorageService {
 
     // 使用 Promise.allSettled 来并发刷新，避免单个失败影响其他账号
     const results = await Promise.allSettled(
-      accounts.map((account) => this.refreshAccount(account.id, force)),
+      accounts.map((account) =>
+        this.refreshAccount(account.id, force, { includeTodayCashflow }),
+      ),
     )
 
     results.forEach((result, index) => {

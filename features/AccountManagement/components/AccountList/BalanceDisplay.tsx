@@ -77,7 +77,7 @@ const AnimatedValue: React.FC<{
 const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
   const { t } = useTranslation("account")
   const { isInitialLoad, prevBalances } = useAccountDataContext()
-  const { currencyType } = useUserPreferencesContext()
+  const { currencyType, showTodayCashflow } = useUserPreferencesContext()
   const { handleRefreshAccount, refreshingAccountId } =
     useAccountActionsContext()
 
@@ -110,45 +110,47 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
       />
 
       {/* Today's Statistics */}
-      <div className="space-y-0.5">
-        {/* Consumption */}
-        <AnimatedValue
-          value={site.todayConsumption[currencyType]}
-          startValue={0}
-          prefix="-"
-          className={`text-[10px] sm:text-xs ${
-            site.todayConsumption[currencyType] > 0
-              ? "text-green-500"
-              : "dark:text-dark-text-tertiary text-gray-400"
-          }`}
-          title={
-            isAccountDisabled
-              ? t("list.site.disabled")
-              : t("list.balance.refreshCashflow")
-          }
-          onClick={isAccountDisabled ? undefined : handleRefreshClick}
-          isRefreshing={isRefreshing}
-        />
+      {showTodayCashflow && (
+        <div className="space-y-0.5">
+          {/* Consumption */}
+          <AnimatedValue
+            value={site.todayConsumption[currencyType]}
+            startValue={0}
+            prefix="-"
+            className={`text-[10px] sm:text-xs ${
+              site.todayConsumption[currencyType] > 0
+                ? "text-green-500"
+                : "dark:text-dark-text-tertiary text-gray-400"
+            }`}
+            title={
+              isAccountDisabled
+                ? t("list.site.disabled")
+                : t("list.balance.refreshCashflow")
+            }
+            onClick={isAccountDisabled ? undefined : handleRefreshClick}
+            isRefreshing={isRefreshing}
+          />
 
-        {/* Income */}
-        <AnimatedValue
-          value={site.todayIncome[currencyType]}
-          startValue={0}
-          prefix="+"
-          className={`text-[10px] sm:text-xs ${
-            site.todayIncome[currencyType] > 0
-              ? "text-blue-500"
-              : "dark:text-dark-text-tertiary text-gray-400"
-          }`}
-          title={
-            isAccountDisabled
-              ? t("list.site.disabled")
-              : t("list.balance.refreshIncome")
-          }
-          onClick={isAccountDisabled ? undefined : handleRefreshClick}
-          isRefreshing={isRefreshing}
-        />
-      </div>
+          {/* Income */}
+          <AnimatedValue
+            value={site.todayIncome[currencyType]}
+            startValue={0}
+            prefix="+"
+            className={`text-[10px] sm:text-xs ${
+              site.todayIncome[currencyType] > 0
+                ? "text-blue-500"
+                : "dark:text-dark-text-tertiary text-gray-400"
+            }`}
+            title={
+              isAccountDisabled
+                ? t("list.site.disabled")
+                : t("list.balance.refreshIncome")
+            }
+            onClick={isAccountDisabled ? undefined : handleRefreshClick}
+            isRefreshing={isRefreshing}
+          />
+        </div>
+      )}
     </div>
   )
 })

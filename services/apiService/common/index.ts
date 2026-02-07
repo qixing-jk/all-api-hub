@@ -594,17 +594,21 @@ const fetchPaginatedLogs = async <T>(
 
 /**
  * Fetch today's usage (quota + token counts + request count).
- * @param request ApiServiceRequest.
+ * @param request ApiServiceAccountRequest (uses `includeTodayCashflow` to gate expensive log fetches).
  * @returns Usage totals for the current day.
  */
 export async function fetchTodayUsage(
-  request: ApiServiceRequest,
+  request: ApiServiceAccountRequest,
 ): Promise<TodayUsageData> {
   const initialState = {
     today_quota_consumption: 0,
     today_prompt_tokens: 0,
     today_completion_tokens: 0,
     today_requests_count: 0,
+  }
+
+  if (request.includeTodayCashflow === false) {
+    return initialState
   }
 
   const usageAggregator = (
@@ -629,12 +633,16 @@ export async function fetchTodayUsage(
 
 /**
  * Fetch today's income (recharge/system logs).
- * @param request ApiServiceRequest.
+ * @param request ApiServiceAccountRequest (uses `includeTodayCashflow` to gate expensive log fetches).
  * @returns Total income amount for today.
  */
 export async function fetchTodayIncome(
-  request: ApiServiceRequest,
+  request: ApiServiceAccountRequest,
 ): Promise<TodayIncomeData> {
+  if (request.includeTodayCashflow === false) {
+    return { today_income: 0 }
+  }
+
   const { baseUrl } = request
   const { userId } = request.auth
   let exchangeRate: number = UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
