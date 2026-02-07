@@ -11,6 +11,11 @@ export const STORAGE_LOCKS = {
    * storage and related derived blobs (e.g. global tag store).
    */
   ACCOUNT_STORAGE: "all-api-hub:account-storage",
+  /**
+   * Exclusive lock used for read-modify-write sequences touching the daily
+   * balance history store.
+   */
+  DAILY_BALANCE_HISTORY: "all-api-hub:daily-balance-history",
 } as const
 
 export const ACCOUNT_STORAGE_KEYS = {

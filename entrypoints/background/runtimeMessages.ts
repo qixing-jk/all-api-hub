@@ -9,6 +9,7 @@ import { handleAutoCheckinMessage } from "~/services/autoCheckin/scheduler"
 import { handleAutoRefreshMessage } from "~/services/autoRefreshService"
 import { handleChannelConfigMessage } from "~/services/channelConfigStorage"
 import { handleExternalCheckInMessage } from "~/services/externalCheckInService"
+import { handleDailyBalanceHistoryMessage } from "~/services/dailyBalanceHistory/scheduler"
 import { handleManagedSiteModelSyncMessage } from "~/services/modelSync"
 import { handleRedemptionAssistMessage } from "~/services/redemptionAssist"
 import { handleUsageHistoryMessage } from "~/services/usageHistory/scheduler"
@@ -257,6 +258,17 @@ export function setupRuntimeMessageListeners() {
         )
       ) {
         handleUsageHistoryMessage(request, sendResponse)
+        return true
+      }
+
+      // 处理 balance-history 相关消息
+      if (
+        hasRuntimeActionPrefix(
+          request.action,
+          RuntimeActionPrefixes.BalanceHistory,
+        )
+      ) {
+        handleDailyBalanceHistoryMessage(request, sendResponse)
         return true
       }
 

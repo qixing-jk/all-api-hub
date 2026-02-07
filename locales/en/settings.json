@@ -3,6 +3,7 @@
   "description": "Manage the basic configuration options of the plugin",
   "tabs": {
     "general": "General",
+    "balanceHistory": "Balance History",
     "accountManagement": "Account Management",
     "refresh": "Data Refresh",
     "checkinRedeem": "Check-in & Redeem",

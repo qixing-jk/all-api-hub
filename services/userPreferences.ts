@@ -42,6 +42,10 @@ import {
   DEFAULT_USAGE_HISTORY_PREFERENCES,
   type UsageHistoryPreferences,
 } from "~/types/usageHistory"
+import {
+  DEFAULT_BALANCE_HISTORY_PREFERENCES,
+  type BalanceHistoryPreferences,
+} from "~/types/dailyBalanceHistory"
 import { DeepPartial } from "~/types/utils"
 import { DEFAULT_VELOERA_CONFIG, VeloeraConfig } from "~/types/veloeraConfig"
 import {
@@ -205,6 +209,15 @@ export interface UserPreferences {
 
   // Usage history sync + analytics
   usageHistory?: UsageHistoryPreferences
+
+  /**
+   * Balance history (daily snapshot) capture + retention preferences.
+   *
+   * Optional for backward compatibility with stored preferences created before
+   * this capability existed. Missing values MUST be treated as disabled via
+   * defaults and migration.
+   */
+  balanceHistory?: BalanceHistoryPreferences
 
   // 是否显示健康状态
   showHealthStatus: boolean
@@ -378,6 +391,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   openChangelogOnUpdate: true,
   accountAutoRefresh: DEFAULT_ACCOUNT_AUTO_REFRESH,
   usageHistory: DEFAULT_USAGE_HISTORY_PREFERENCES,
+  balanceHistory: DEFAULT_BALANCE_HISTORY_PREFERENCES,
   showHealthStatus: true, // 默认显示健康状态
   webdav: DEFAULT_WEBDAV_SETTINGS,
   lastUpdated: Date.now(),

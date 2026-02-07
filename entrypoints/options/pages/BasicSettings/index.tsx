@@ -30,6 +30,7 @@ import {
 
 import AccountManagementTab from "./components/AccountManagementTab"
 import AutoRefreshTab from "./components/AutoRefreshTab"
+import BalanceHistoryTab from "./components/BalanceHistoryTab"
 import CheckinRedeemTab from "./components/CheckinRedeemTab"
 import ClaudeCodeRouterTab from "./components/ClaudeCodeRouterTab"
 import CliProxyTab from "./components/CliProxyTab"
@@ -44,6 +45,7 @@ import WebAiApiCheckTab from "./components/WebAiApiCheckTab"
 
 type TabId =
   | "general"
+  | "balanceHistory"
   | "accountManagement"
   | "refresh"
   | "checkinRedeem"
@@ -69,6 +71,7 @@ const PERMISSIONS_TAB_CONFIG: TabConfig = {
 
 const TAB_CONFIGS = [
   { id: "general", component: GeneralTab },
+  { id: "balanceHistory", component: BalanceHistoryTab },
   { id: "accountManagement", component: AccountManagementTab },
   { id: "accountUsage", component: UsageHistorySyncTab },
   { id: "refresh", component: AutoRefreshTab },
@@ -86,6 +89,7 @@ const ANCHOR_TO_TAB: Record<string, TabId> = {
   display: "general",
   appearance: "general",
   theme: "general",
+  "balance-history": "balanceHistory",
   "account-management": "accountManagement",
   "sorting-priority": "accountManagement",
   sorting: "accountManagement",

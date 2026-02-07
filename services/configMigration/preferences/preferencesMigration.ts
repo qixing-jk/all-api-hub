@@ -13,6 +13,10 @@ import {
   DEFAULT_ACCOUNT_AUTO_REFRESH,
   type AccountAutoRefresh,
 } from "~/types/accountAutoRefresh"
+import {
+  DEFAULT_BALANCE_HISTORY_PREFERENCES,
+  type BalanceHistoryPreferences,
+} from "~/types/dailyBalanceHistory"
 import { createLogger } from "~/utils/logger"
 
 import type { UserPreferences } from "../../userPreferences"
@@ -21,13 +25,23 @@ import { migrateSortingConfig } from "./sortingConfigMigration"
 const logger = createLogger("PreferencesMigration")
 
 // Current version of the preferences schema
-export const CURRENT_PREFERENCES_VERSION = 11
+export const CURRENT_PREFERENCES_VERSION = 12
 
 /**
  * Migration function type
  * Takes preferences at version N and returns it at version N+1
  */
 type PreferencesMigrationFunction = (prefs: UserPreferences) => UserPreferences
+
+/**
+ * Clamp balance-history retention days to a bounded, storage-safe range.
+ */
+function clampBalanceHistoryRetentionDays(value: unknown): number {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed))
+    return DEFAULT_BALANCE_HISTORY_PREFERENCES.retentionDays
+  return Math.min(3650, Math.max(1, Math.trunc(parsed)))
+}
 
 /**
  * Registry of migration functions
@@ -254,6 +268,39 @@ const migrations: Record<number, PreferencesMigrationFunction> = {
       ...prefs,
       showTodayCashflow,
       preferencesVersion: 11,
+    }
+  },
+
+  // Version 11 -> 12: Introduce balance-history preferences (default disabled)
+  12: (prefs: UserPreferences): UserPreferences => {
+    logger.debug(
+      "Migrating preferences from v11 to v12 (balance history preferences)",
+    )
+
+    const stored = (prefs as any).balanceHistory as
+      | Partial<BalanceHistoryPreferences>
+      | undefined
+
+    const enabled =
+      typeof stored?.enabled === "boolean"
+        ? stored.enabled
+        : DEFAULT_BALANCE_HISTORY_PREFERENCES.enabled
+
+    const endOfDayCaptureEnabled =
+      typeof stored?.endOfDayCapture?.enabled === "boolean"
+        ? stored.endOfDayCapture.enabled
+        : DEFAULT_BALANCE_HISTORY_PREFERENCES.endOfDayCapture.enabled
+
+    const retentionDays = clampBalanceHistoryRetentionDays(stored?.retentionDays)
+
+    return {
+      ...prefs,
+      balanceHistory: {
+        enabled,
+        endOfDayCapture: { enabled: endOfDayCaptureEnabled },
+        retentionDays,
+      },
+      preferencesVersion: 12,
     }
   },
 }

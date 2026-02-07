@@ -14,6 +14,11 @@ describe("userPreferences", () => {
       expect(DEFAULT_PREFERENCES.showTodayCashflow).toBe(true)
       expect(DEFAULT_PREFERENCES.showHealthStatus).toBe(true)
       expect(DEFAULT_PREFERENCES.themeMode).toBe("system")
+      expect(DEFAULT_PREFERENCES.balanceHistory?.enabled).toBe(false)
+      expect(DEFAULT_PREFERENCES.balanceHistory?.endOfDayCapture.enabled).toBe(
+        false,
+      )
+      expect(DEFAULT_PREFERENCES.balanceHistory?.retentionDays).toBe(365)
       expect(DEFAULT_PREFERENCES.redemptionAssist?.enabled).toBe(true)
       expect(DEFAULT_PREFERENCES.redemptionAssist?.relaxedCodeValidation).toBe(
         true,

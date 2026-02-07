@@ -2,7 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { UI_CONSTANTS } from "~/constants/ui"
 import { accountStorage } from "~/services/accountStorage"
-import { ACCOUNT_STORAGE_KEYS } from "~/services/storageKeys"
+import { DAILY_BALANCE_HISTORY_STORAGE_KEYS } from "~/services/dailyBalanceHistory/constants"
+import { getDayKeyFromUnixSeconds } from "~/services/dailyBalanceHistory/dayKeys"
+import { USER_PREFERENCES_STORAGE_KEYS, ACCOUNT_STORAGE_KEYS } from "~/services/storageKeys"
+import { DEFAULT_PREFERENCES } from "~/services/userPreferences"
 import {
   AuthTypeEnum,
   SiteHealthStatus,
@@ -908,6 +911,160 @@ describe("accountStorage core behaviors", () => {
     const updatedAccount = await accountStorage.getAccountById("manual-quota")
     expect(updatedAccount?.manualBalanceUsd).toBe(manualBalanceUsd)
     expect(updatedAccount?.account_info.quota).toBe(manualQuota)
+  })
+
+  it("refreshAccount captures daily balance snapshots when enabled", async () => {
+    vi.useFakeTimers()
+    const fixedNow = new Date(Date.UTC(2026, 1, 7, 12, 0, 0))
+    vi.setSystemTime(fixedNow)
+
+    try {
+      const account = createAccount({ id: "balance-history" })
+      seedStorage([account])
+
+      storageData.set(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES, {
+        ...DEFAULT_PREFERENCES,
+        showTodayCashflow: true,
+        balanceHistory: {
+          enabled: true,
+          endOfDayCapture: { enabled: false },
+          retentionDays: 365,
+        },
+      })
+
+      mockRefreshAccountData.mockResolvedValueOnce({
+        success: true,
+        data: {
+          quota: 123,
+          today_prompt_tokens: 0,
+          today_completion_tokens: 0,
+          today_quota_consumption: 7,
+          today_requests_count: 0,
+          today_income: 5,
+          checkIn: {
+            enableDetection: true,
+            siteStatus: { isCheckedInToday: false },
+          },
+        },
+        healthStatus: {
+          status: SiteHealthStatus.Healthy,
+          message: "",
+          code: undefined,
+        },
+      })
+
+      await accountStorage.refreshAccount("balance-history", true)
+
+      const nowUnixSeconds = Math.floor(Date.now() / 1000)
+      const dayKey = getDayKeyFromUnixSeconds(nowUnixSeconds)
+      const stored = storageData.get(
+        DAILY_BALANCE_HISTORY_STORAGE_KEYS.STORE,
+      ) as any
+
+      expect(stored?.snapshotsByAccountId?.["balance-history"]?.[dayKey]).toEqual(
+        expect.objectContaining({
+          quota: 123,
+          today_income: 5,
+          today_quota_consumption: 7,
+          source: "refresh",
+          capturedAt: fixedNow.getTime(),
+        }),
+      )
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("refreshAccount captures quota but leaves cashflow null when showTodayCashflow is disabled", async () => {
+    vi.useFakeTimers()
+    const fixedNow = new Date(Date.UTC(2026, 1, 7, 12, 0, 0))
+    vi.setSystemTime(fixedNow)
+
+    try {
+      const account = createAccount({ id: "balance-history-no-cashflow" })
+      seedStorage([account])
+
+      storageData.set(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES, {
+        ...DEFAULT_PREFERENCES,
+        showTodayCashflow: false,
+        balanceHistory: {
+          enabled: true,
+          endOfDayCapture: { enabled: false },
+          retentionDays: 365,
+        },
+      })
+
+      mockRefreshAccountData.mockResolvedValueOnce({
+        success: true,
+        data: {
+          quota: 456,
+          today_prompt_tokens: 0,
+          today_completion_tokens: 0,
+          today_quota_consumption: 0,
+          today_requests_count: 0,
+          today_income: 0,
+          checkIn: {
+            enableDetection: true,
+            siteStatus: { isCheckedInToday: false },
+          },
+        },
+        healthStatus: {
+          status: SiteHealthStatus.Healthy,
+          message: "",
+          code: undefined,
+        },
+      })
+
+      await accountStorage.refreshAccount("balance-history-no-cashflow", true)
+
+      const nowUnixSeconds = Math.floor(Date.now() / 1000)
+      const dayKey = getDayKeyFromUnixSeconds(nowUnixSeconds)
+      const stored = storageData.get(
+        DAILY_BALANCE_HISTORY_STORAGE_KEYS.STORE,
+      ) as any
+
+      expect(
+        stored?.snapshotsByAccountId?.["balance-history-no-cashflow"]?.[dayKey],
+      ).toEqual(
+        expect.objectContaining({
+          quota: 456,
+          today_income: null,
+          today_quota_consumption: null,
+          source: "refresh",
+          capturedAt: fixedNow.getTime(),
+        }),
+      )
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("refreshAccount skips snapshot capture when refresh fails", async () => {
+    const account = createAccount({ id: "balance-history-failed" })
+    seedStorage([account])
+
+    storageData.set(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES, {
+      ...DEFAULT_PREFERENCES,
+      balanceHistory: {
+        enabled: true,
+        endOfDayCapture: { enabled: false },
+        retentionDays: 365,
+      },
+    })
+
+    mockRefreshAccountData.mockResolvedValueOnce({
+      success: false,
+      healthStatus: {
+        status: SiteHealthStatus.Error,
+        message: "fail",
+        code: undefined,
+      },
+    })
+
+    await accountStorage.refreshAccount("balance-history-failed", true)
+
+    const stored = storageData.get(DAILY_BALANCE_HISTORY_STORAGE_KEYS.STORE)
+    expect(stored).toBeUndefined()
   })
 })
 

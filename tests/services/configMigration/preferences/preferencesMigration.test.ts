@@ -18,6 +18,7 @@ import {
   DEFAULT_ACCOUNT_AUTO_REFRESH,
 } from "~/types/accountAutoRefresh"
 import { DEFAULT_NEW_API_CONFIG } from "~/types/newApiConfig"
+import { DEFAULT_BALANCE_HISTORY_PREFERENCES } from "~/types/dailyBalanceHistory"
 import { SortingCriteriaType } from "~/types/sorting"
 import { DEFAULT_VELOERA_CONFIG } from "~/types/veloeraConfig"
 import { DEFAULT_WEBDAV_SETTINGS, WEBDAV_SYNC_STRATEGIES } from "~/types/webdav"
@@ -201,6 +202,17 @@ describe("preferencesMigration", () => {
 
       expect(result.preferencesVersion).toBe(CURRENT_PREFERENCES_VERSION)
       expect(result.showTodayCashflow).toBe(true)
+    })
+
+    it("defaults balanceHistory to disabled when missing", () => {
+      const prefs = createV0Preferences({
+        preferencesVersion: 11,
+      })
+
+      const result = migratePreferences(prefs)
+
+      expect(result.preferencesVersion).toBe(CURRENT_PREFERENCES_VERSION)
+      expect(result.balanceHistory).toEqual(DEFAULT_BALANCE_HISTORY_PREFERENCES)
     })
 
     it("processes v1 preferences with sorting config migration", () => {

@@ -7,6 +7,7 @@ import {
   Info,
   KeyRound,
   Layers,
+  LineChart,
   RefreshCcw,
   Settings,
   UserRound,
@@ -25,6 +26,7 @@ import managedSiteChannels from "./pages/ManagedSiteChannels"
 import ManagedSiteModelSync from "./pages/ManagedSiteModelSync"
 import ModelList from "./pages/ModelList"
 import UsageAnalytics from "./pages/UsageAnalytics"
+import BalanceHistory from "./pages/BalanceHistory"
 
 // 菜单项类型定义
 export interface MenuItem {
@@ -59,6 +61,12 @@ export const menuItems: MenuItem[] = [
     name: "用量分析",
     icon: BarChart3,
     component: UsageAnalytics,
+  },
+  {
+    id: MENU_ITEM_IDS.BALANCE_HISTORY,
+    name: "余额历史",
+    icon: LineChart,
+    component: BalanceHistory,
   },
   {
     id: MENU_ITEM_IDS.AUTO_CHECKIN,

@@ -14,6 +14,7 @@ import {
   type SiteAccount,
   type SiteBookmark,
 } from "~/types"
+import type { DailyBalanceHistoryCaptureSource } from "~/types/dailyBalanceHistory"
 import { DeepPartial } from "~/types/utils"
 import { deepOverride } from "~/utils"
 import { getErrorMessage } from "~/utils/error"
@@ -26,6 +27,7 @@ import {
   needsConfigMigration,
 } from "./configMigration/account/accountDataMigration"
 import { ensureAccountTagsStorageMigrated } from "./configMigration/accountTags/accountTagsStorageMigration"
+import { maybeCaptureDailyBalanceSnapshot } from "./dailyBalanceHistory/capture"
 import { getSiteType } from "./detectSiteType"
 import { ACCOUNT_STORAGE_KEYS, STORAGE_LOCKS } from "./storageKeys"
 import { withExtensionStorageWriteLock } from "./storageWriteLock"
@@ -694,6 +696,7 @@ class AccountStorageService {
     force: boolean = false,
     options?: {
       includeTodayCashflow?: boolean
+      balanceHistoryCaptureSource?: DailyBalanceHistoryCaptureSource
     },
   ) {
     const runRefresh = async () => {
@@ -757,10 +760,9 @@ class AccountStorageService {
         logger.warn("Failed to determine check-in support", { baseUrl, error })
       }
 
+      const prefs = await userPreferences.getPreferences()
       const includeTodayCashflow =
-        options?.includeTodayCashflow ??
-        (await userPreferences.getPreferences()).showTodayCashflow ??
-        true
+        options?.includeTodayCashflow ?? prefs.showTodayCashflow ?? true
 
       // 刷新账号数据
       const result = await getApiService(account.site_type).refreshAccountData({
@@ -857,6 +859,23 @@ class AccountStorageService {
                 : {}),
             }
           }
+        }
+
+        try {
+          await maybeCaptureDailyBalanceSnapshot({
+            config: prefs.balanceHistory,
+            accountId: account.id,
+            quota: manualQuota ?? result.data.quota,
+            today_income: result.data.today_income,
+            today_quota_consumption: result.data.today_quota_consumption,
+            includeTodayCashflow,
+            source: options?.balanceHistoryCaptureSource ?? "refresh",
+          })
+        } catch (error) {
+          logger.debug("Failed to capture daily balance snapshot", {
+            accountId: account.id,
+            error,
+          })
         }
       }
 

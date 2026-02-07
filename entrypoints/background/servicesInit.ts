@@ -1,5 +1,6 @@
 import { autoCheckinScheduler } from "~/services/autoCheckin/scheduler"
 import { autoRefreshService } from "~/services/autoRefreshService"
+import { dailyBalanceHistoryScheduler } from "~/services/dailyBalanceHistory/scheduler"
 import { modelMetadataService } from "~/services/modelMetadata"
 import { modelSyncScheduler } from "~/services/modelSync"
 import { redemptionAssistService } from "~/services/redemptionAssist"
@@ -52,6 +53,7 @@ export async function initializeServices() {
         webdavAutoSyncService.initialize(),
         modelSyncScheduler.initialize(),
         autoCheckinScheduler.initialize(),
+        dailyBalanceHistoryScheduler.initialize(),
       ])
 
       await initBackgroundI18n().catch((error) => {
