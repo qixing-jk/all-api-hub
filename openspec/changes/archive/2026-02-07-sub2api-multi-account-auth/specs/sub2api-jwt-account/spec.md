@@ -1,116 +1,4 @@
-# sub2api-jwt-account Specification
-
-## Purpose
-TBD - created by archiving change sub2api-support. Update Purpose after archive.
-## Requirements
-### Requirement: The extension SHALL support Sub2API accounts authenticated by dashboard JWT
-
-The system SHALL support a `sub2api` site type whose account data refresh uses a JWT access token (stored as `account_info.access_token`).
-
-The JWT MAY be sourced from:
-- a logged-in Sub2API dashboard session (dashboard-session mode), or
-- an extension-managed session derived from an account-scoped refresh token (refresh-token mode).
-
-#### Scenario: Account can be stored using existing account schema
-- **WHEN** a user adds a Sub2API account via auto-detect or manual configuration
-- **THEN** the stored account MUST persist `site_type = "sub2api"`
-- **AND** the stored account MUST persist `authType = "access_token"`
-- **AND** the stored account MUST persist `account_info.access_token` as the last-known Sub2API JWT access token
-- **AND** the stored account MUST persist `account_info.id` as the Sub2API user id
-- **AND** the stored account MUST persist `account_info.username` as the Sub2API username (which MAY be an empty string)
-
-#### Scenario: Account can persist refresh-token credentials for extension-managed sessions
-- **GIVEN** a `sub2api` account is configured with a refresh token
-- **WHEN** the account is persisted
-- **THEN** the stored account MUST persist `sub2apiAuth.refreshToken` as the Sub2API refresh token for that account
-
-### Requirement: Sub2API auto-detect MUST read Sub2API localStorage keys to obtain JWT and user identity
-
-When auto-detect is executed on a Sub2API dashboard origin, the system MUST attempt to read Sub2API session data from localStorage keys:
-
-- `auth_token` (JWT access token)
-- `auth_user` (JSON containing `id`, `username`/`email`, and optionally `balance`)
-- `refresh_token` (optional; refresh token for extension-managed session import)
-- `token_expires_at` (optional; access-token expiry timestamp in milliseconds since epoch)
-
-#### Scenario: Auto-detect succeeds when both auth_token and auth_user exist
-- **WHEN** localStorage contains a non-empty `auth_token`
-- **AND** localStorage contains a parseable `auth_user` object with `id`
-- **THEN** auto-detect MUST succeed
-- **AND** it MUST return `userId = auth_user.id`
-- **AND** it MUST return `username` derived from `auth_user.username` (or a fallback such as `auth_user.email` local-part when username is missing/empty)
-- **AND** it MUST return `accessToken = auth_token`
-- **AND** it MUST set `siteType = "sub2api"`
-
-#### Scenario: Auto-detect returns refresh token metadata when present
-- **GIVEN** localStorage contains a non-empty `refresh_token`
-- **WHEN** auto-detect succeeds on a Sub2API dashboard origin
-- **THEN** auto-detect MUST include the refresh token in its detection payload so the UI can persist it for the account when the user opts in
-- **AND** if localStorage contains a valid numeric `token_expires_at`, auto-detect MUST include the expiry timestamp in the detection payload
-
-#### Scenario: Auto-detect fails when JWT is missing
-- **WHEN** localStorage is missing `auth_token` or it is empty/whitespace
-- **THEN** auto-detect MUST fail with an error indicating the user needs to log in to the Sub2API dashboard
-
-#### Scenario: Auto-detect fails when auth_user is invalid
-- **WHEN** localStorage contains `auth_token`
-- **AND** localStorage is missing `auth_user` or `auth_user` is not valid JSON or lacks `id`
-- **THEN** auto-detect MUST fail with an error indicating the user needs to log in to the Sub2API dashboard
-
-### Requirement: Sub2API balance MUST be fetched from /api/v1/auth/me using JWT
-
-For `sub2api` accounts, account refresh MUST fetch the current user data from `GET /api/v1/auth/me` using `Authorization: Bearer <jwt>` and derive the extension `quota` from the returned USD balance.
-
-#### Scenario: Refresh converts USD balance into quota units
-- **WHEN** a Sub2API account refresh succeeds and the server returns `balance` in USD
-- **THEN** the system MUST set `account_info.quota = round(balance * UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR)`
-
-#### Scenario: Refresh does not require check-in support
-- **WHEN** a Sub2API account is refreshed
-- **THEN** the system MUST NOT attempt to perform any check-in operation
-- **AND** it MUST treat check-in as unsupported (disabled) for this account type
-
-### Requirement: Sub2API refresh MUST retry once after re-syncing JWT from localStorage on 401
-
-If a Sub2API refresh request to `/api/v1/auth/me` fails with HTTP 401, the system MUST attempt to restore a valid JWT access token and retry the request once.
-
-The restoration strategy MUST be:
-1. If the account has a configured refresh token (`sub2apiAuth.refreshToken`), refresh the JWT via Sub2API’s refresh endpoint and persist rotated credentials.
-2. Otherwise, attempt to re-sync the JWT from the site’s localStorage (dashboard-session mode).
-
-#### Scenario: 401 triggers refresh-token-based retry when refresh token is configured
-- **GIVEN** a `sub2api` account has `sub2apiAuth.refreshToken` configured
-- **WHEN** a Sub2API refresh to `/api/v1/auth/me` fails with HTTP 401
-- **THEN** the system MUST attempt to refresh the access token using the configured refresh token
-- **AND** it MUST retry `/api/v1/auth/me` once using the refreshed access token
-
-#### Scenario: Successful refresh-token rotation persists updated credentials
-- **GIVEN** a `sub2api` account has `sub2apiAuth.refreshToken` configured
-- **WHEN** the system refreshes tokens successfully
-- **THEN** the system MUST persist the new JWT into `account_info.access_token`
-- **AND** it MUST persist any rotated refresh token into `sub2apiAuth.refreshToken`
-- **AND** it MUST persist updated expiry metadata when available (e.g., `sub2apiAuth.tokenExpiresAt`)
-
-#### Scenario: 401 triggers a localStorage token re-sync retry when refresh token is not configured
-- **GIVEN** a `sub2api` account does not have `sub2apiAuth.refreshToken` configured
-- **WHEN** a Sub2API refresh to `/api/v1/auth/me` fails with HTTP 401
-- **THEN** the system MUST attempt to read `auth_token` from localStorage for that site origin
-- **AND** it MUST retry `/api/v1/auth/me` once using the refreshed token
-
-#### Scenario: Failed retry surfaces a health warning requiring re-import or re-login
-- **WHEN** a Sub2API refresh fails with HTTP 401
-- **AND** token restoration fails or the retry also fails with HTTP 401
-- **THEN** the stored account health MUST be updated to a warning/error state
-- **AND** the health message MUST instruct the user to restore credentials (re-import session or log in to the Sub2API dashboard again)
-
-### Requirement: Secret handling MUST avoid logging JWTs
-
-Sub2API JWT and refresh-token values are secrets. The system MUST NOT log them in plaintext and MUST avoid exposing them in UI surfaces beyond explicit, user-initiated secret entry/import flows.
-
-#### Scenario: Logs do not include raw auth_token or refresh_token
-- **WHEN** auto-detect, refresh, or import/export operations occur for a Sub2API account
-- **THEN** any emitted logs MUST NOT contain the raw `auth_token` value
-- **AND** any emitted logs MUST NOT contain the raw `refresh_token` value
+## ADDED Requirements
 
 ### Requirement: Users MUST be able to store an exportable Sub2API refresh token per account
 The system MUST allow users to configure a Sub2API account with an **extension-managed session** by providing a Sub2API refresh token credential that is persisted on the account record and included in account exports/backups.
@@ -172,3 +60,100 @@ When refreshing a Sub2API access token using a refresh token, the server may rot
 - **THEN** the stored account MUST persist `sub2apiAuth.refreshToken = token2`
 - **AND** the system MUST NOT overwrite `token2` with `token1` due to out-of-order persistence
 
+## MODIFIED Requirements
+
+### Requirement: The extension SHALL support Sub2API accounts authenticated by dashboard JWT
+
+The system SHALL support a `sub2api` site type whose account data refresh uses a JWT access token (stored as `account_info.access_token`).
+
+The JWT MAY be sourced from:
+- a logged-in Sub2API dashboard session (dashboard-session mode), or
+- an extension-managed session derived from an account-scoped refresh token (refresh-token mode).
+
+#### Scenario: Account can be stored using existing account schema
+- **WHEN** a user adds a Sub2API account via auto-detect or manual configuration
+- **THEN** the stored account MUST persist `site_type = "sub2api"`
+- **AND** the stored account MUST persist `authType = "access_token"`
+- **AND** the stored account MUST persist `account_info.access_token` as the last-known Sub2API JWT access token
+- **AND** the stored account MUST persist `account_info.id` as the Sub2API user id
+- **AND** the stored account MUST persist `account_info.username` as the Sub2API username (which MAY be an empty string)
+
+#### Scenario: Account can persist refresh-token credentials for extension-managed sessions
+- **GIVEN** a `sub2api` account is configured with a refresh token
+- **WHEN** the account is persisted
+- **THEN** the stored account MUST persist `sub2apiAuth.refreshToken` as the Sub2API refresh token for that account
+
+### Requirement: Sub2API auto-detect MUST read Sub2API localStorage keys to obtain JWT and user identity
+
+When auto-detect is executed on a Sub2API dashboard origin, the system MUST attempt to read Sub2API session data from localStorage keys:
+
+- `auth_token` (JWT access token)
+- `auth_user` (JSON containing `id`, `username`/`email`, and optionally `balance`)
+- `refresh_token` (optional; refresh token for extension-managed session import)
+- `token_expires_at` (optional; access-token expiry timestamp in milliseconds since epoch)
+
+#### Scenario: Auto-detect succeeds when both auth_token and auth_user exist
+- **WHEN** localStorage contains a non-empty `auth_token`
+- **AND** localStorage contains a parseable `auth_user` object with `id`
+- **THEN** auto-detect MUST succeed
+- **AND** it MUST return `userId = auth_user.id`
+- **AND** it MUST return `username` derived from `auth_user.username` (or a fallback such as `auth_user.email` local-part when username is missing/empty)
+- **AND** it MUST return `accessToken = auth_token`
+- **AND** it MUST set `siteType = "sub2api"`
+
+#### Scenario: Auto-detect returns refresh token metadata when present
+- **GIVEN** localStorage contains a non-empty `refresh_token`
+- **WHEN** auto-detect succeeds on a Sub2API dashboard origin
+- **THEN** auto-detect MUST include the refresh token in its detection payload so the UI can persist it for the account when the user opts in
+- **AND** if localStorage contains a valid numeric `token_expires_at`, auto-detect MUST include the expiry timestamp in the detection payload
+
+#### Scenario: Auto-detect fails when JWT is missing
+- **WHEN** localStorage is missing `auth_token` or it is empty/whitespace
+- **THEN** auto-detect MUST fail with an error indicating the user needs to log in to the Sub2API dashboard
+
+#### Scenario: Auto-detect fails when auth_user is invalid
+- **WHEN** localStorage contains `auth_token`
+- **AND** localStorage is missing `auth_user` or `auth_user` is not valid JSON or lacks `id`
+- **THEN** auto-detect MUST fail with an error indicating the user needs to log in to the Sub2API dashboard
+
+### Requirement: Sub2API refresh MUST retry once after re-syncing JWT from localStorage on 401
+
+If a Sub2API refresh request to `/api/v1/auth/me` fails with HTTP 401, the system MUST attempt to restore a valid JWT access token and retry the request once.
+
+The restoration strategy MUST be:
+1. If the account has a configured refresh token (`sub2apiAuth.refreshToken`), refresh the JWT via Sub2API’s refresh endpoint and persist rotated credentials.
+2. Otherwise, attempt to re-sync the JWT from the site’s localStorage (dashboard-session mode).
+
+#### Scenario: 401 triggers refresh-token-based retry when refresh token is configured
+- **GIVEN** a `sub2api` account has `sub2apiAuth.refreshToken` configured
+- **WHEN** a Sub2API refresh to `/api/v1/auth/me` fails with HTTP 401
+- **THEN** the system MUST attempt to refresh the access token using the configured refresh token
+- **AND** it MUST retry `/api/v1/auth/me` once using the refreshed access token
+
+#### Scenario: Successful refresh-token rotation persists updated credentials
+- **GIVEN** a `sub2api` account has `sub2apiAuth.refreshToken` configured
+- **WHEN** the system refreshes tokens successfully
+- **THEN** the system MUST persist the new JWT into `account_info.access_token`
+- **AND** it MUST persist any rotated refresh token into `sub2apiAuth.refreshToken`
+- **AND** it MUST persist updated expiry metadata when available (e.g., `sub2apiAuth.tokenExpiresAt`)
+
+#### Scenario: 401 triggers a localStorage token re-sync retry when refresh token is not configured
+- **GIVEN** a `sub2api` account does not have `sub2apiAuth.refreshToken` configured
+- **WHEN** a Sub2API refresh to `/api/v1/auth/me` fails with HTTP 401
+- **THEN** the system MUST attempt to read `auth_token` from localStorage for that site origin
+- **AND** it MUST retry `/api/v1/auth/me` once using the refreshed token
+
+#### Scenario: Failed retry surfaces a health warning requiring re-import or re-login
+- **WHEN** a Sub2API refresh fails with HTTP 401
+- **AND** token restoration fails or the retry also fails with HTTP 401
+- **THEN** the stored account health MUST be updated to a warning/error state
+- **AND** the health message MUST instruct the user to restore credentials (re-import session or log in to the Sub2API dashboard again)
+
+### Requirement: Secret handling MUST avoid logging JWTs
+
+Sub2API JWT and refresh-token values are secrets. The system MUST NOT log them in plaintext and MUST avoid exposing them in UI surfaces beyond explicit, user-initiated secret entry/import flows.
+
+#### Scenario: Logs do not include raw auth_token or refresh_token
+- **WHEN** auto-detect, refresh, or import/export operations occur for a Sub2API account
+- **THEN** any emitted logs MUST NOT contain the raw `auth_token` value
+- **AND** any emitted logs MUST NOT contain the raw `refresh_token` value

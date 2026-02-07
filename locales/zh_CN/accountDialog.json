@@ -28,7 +28,7 @@
     "editNow": "立即编辑",
     "cookieWarning": "Cookie 认证使用您的当前登录账号，无法站点多账号，非必要请勿使用",
     "sub2apiAuthOnly": "Sub2API 仅支持访问令牌认证（JWT）",
-    "sub2apiHint": "Sub2API 需要在站点控制台保持登录状态（读取 auth_token/auth_user）。如刷新出现 401，请重新登录后再试。",
+    "sub2apiHint": "Sub2API 使用短期 JWT，当失效时，扩展会自动使用临时窗口尝试获取新的 JWT（需要在该站点已登录）。启用“插件托管会话”后，每个账号可后台自动独立刷新和续期认证，支持同站点多账号。",
     "unknown": "无法获取",
     "authMethodPlaceholder": "认证方式",
     "authType": {
@@ -61,6 +61,14 @@
     "userIdNumber": "用户 ID（数字）",
     "accessToken": "访问令牌",
     "toggleAccessTokenVisibility": "切换访问令牌的可见性",
+    "sub2apiRefreshTokenMode": "插件托管会话（多账号）",
+    "sub2apiRefreshTokenModeDesc": "可选。将当前登录账号的 refresh_token 存入扩展，使每个账号可后台自动独立刷新和续期认证，支持同站点多账号。",
+    "sub2apiRefreshTokenWarningTitle": "提示",
+    "sub2apiRefreshTokenWarningDesc": "refresh_token 用于让扩展独立续期登录态，会随账号备份一起保存。为减少轮转冲突，建议在无痕/隐私窗口登录后导入，随后关闭该窗口，避免与日常控制台并行刷新同一会话。",
+    "sub2apiImportRefreshToken": "从当前登录账号导入",
+    "sub2apiRefreshToken": "Refresh Token",
+    "sub2apiRefreshTokenPlaceholder": "粘贴 refresh_token 值",
+    "sub2apiTokenExpiresAt": "访问令牌过期时间",
     "exchangeRate": "充值金额比例（CNY/USD）",
     "exchangeRatePlaceholder": "请输入充值比例",
     "exchangeRateDesc": "表示充值 1 美元需要多少人民币。系统会尝试自动获取，如未获取到请手动填写",
@@ -113,6 +121,8 @@
     "importCookiesSuccess": "Cookie 导入成功",
     "importCookiesEmpty": "未找到 Cookie，请先登录",
     "importCookiesPermissionDenied": "Cookie 权限被拒绝",
+    "importSub2apiSessionSuccess": "已导入 Sub2API 会话",
+    "importSub2apiSessionMissing": "未找到 refresh_token。请先登录 Sub2API 控制台后重试。",
     "urlRequired": "请先输入 URL"
   }
 }

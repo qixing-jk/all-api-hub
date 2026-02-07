@@ -2,7 +2,7 @@ import { t } from "i18next"
 
 import { Storage } from "@plasmohq/storage"
 
-import { UNKNOWN_SITE } from "~/constants/siteType"
+import { SUB2API, UNKNOWN_SITE } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { getApiService } from "~/services/apiService"
 import {
@@ -696,7 +696,7 @@ class AccountStorageService {
       includeTodayCashflow?: boolean
     },
   ) {
-    try {
+    const runRefresh = async () => {
       let account = await this.getAccountById(id)
 
       if (!account) {
@@ -728,6 +728,8 @@ class AccountStorageService {
         userId: account.account_info.id,
         accessToken: account.account_info.access_token,
         cookie: account.cookieAuth?.sessionCookie,
+        refreshToken: account.sub2apiAuth?.refreshToken,
+        tokenExpiresAt: account.sub2apiAuth?.tokenExpiresAt,
       }
 
       // Refresh check-in support status together with account refresh.
@@ -840,6 +842,21 @@ class AccountStorageService {
               ? { username: authUpdate.username.trim() }
               : {}),
           }
+
+          if (
+            account.site_type === SUB2API &&
+            authUpdate.sub2apiAuth &&
+            typeof authUpdate.sub2apiAuth.refreshToken === "string" &&
+            authUpdate.sub2apiAuth.refreshToken.trim()
+          ) {
+            updateData.sub2apiAuth = {
+              refreshToken: authUpdate.sub2apiAuth.refreshToken.trim(),
+              ...(typeof authUpdate.sub2apiAuth.tokenExpiresAt === "number" &&
+              Number.isFinite(authUpdate.sub2apiAuth.tokenExpiresAt)
+                ? { tokenExpiresAt: authUpdate.sub2apiAuth.tokenExpiresAt }
+                : {}),
+            }
+          }
         }
       }
 
@@ -859,6 +876,23 @@ class AccountStorageService {
       }
 
       return { account: updatedAccount, refreshed: true }
+    }
+
+    try {
+      const account = await this.getAccountById(id)
+      const shouldSerializeSub2ApiRefresh =
+        account?.site_type === SUB2API &&
+        typeof account.sub2apiAuth?.refreshToken === "string" &&
+        account.sub2apiAuth.refreshToken.trim().length > 0
+
+      if (shouldSerializeSub2ApiRefresh) {
+        return await withExtensionStorageWriteLock(
+          `all-api-hub:sub2api-refresh:${id}`,
+          runRefresh,
+        )
+      }
+
+      return await runRefresh()
     } catch (error) {
       logger.error("刷新账号数据失败", { accountId: id, error })
       // 在出现异常时也尝试更新健康状态为unknown

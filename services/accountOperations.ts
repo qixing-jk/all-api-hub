@@ -20,6 +20,7 @@ import {
   type CheckInConfig,
   type DisplaySiteData,
   type SiteAccount,
+  type Sub2ApiAuthConfig,
 } from "~/types"
 import type {
   AccountSaveResponse,
@@ -101,7 +102,7 @@ export async function autoDetectAccount(
       }
     }
 
-    const { userId, siteType } = detectResult.data
+    const { userId, siteType, sub2apiAuth } = detectResult.data
     const isSub2Api = siteType === SUB2API
     const effectiveAuthType = isSub2Api ? AuthTypeEnum.AccessToken : authType
 
@@ -218,6 +219,7 @@ export async function autoDetectAccount(
           },
         },
         siteType: siteType,
+        ...(isSub2Api && sub2apiAuth ? { sub2apiAuth } : {}),
       },
     }
   } catch (error) {
@@ -300,6 +302,32 @@ function normalizeTagIdsInput(tagIds: TagIdsInput): string[] {
 }
 
 /**
+ *
+ */
+function normalizeSub2ApiAuthInput(
+  siteType: string,
+  sub2apiAuth: Sub2ApiAuthConfig | undefined,
+): Sub2ApiAuthConfig | undefined {
+  if (siteType !== SUB2API) return undefined
+
+  const refreshToken =
+    typeof sub2apiAuth?.refreshToken === "string"
+      ? sub2apiAuth.refreshToken.trim()
+      : ""
+  if (!refreshToken) return undefined
+
+  const tokenExpiresAtRaw = sub2apiAuth?.tokenExpiresAt
+  const tokenExpiresAt =
+    typeof tokenExpiresAtRaw === "number" &&
+    Number.isFinite(tokenExpiresAtRaw) &&
+    tokenExpiresAtRaw > 0
+      ? tokenExpiresAtRaw
+      : undefined
+
+  return tokenExpiresAt ? { refreshToken, tokenExpiresAt } : { refreshToken }
+}
+
+/**
  * 验证并保存账号信息（用于新增）
  *
  * Validates user-supplied account form data, fetches the freshest remote
@@ -333,6 +361,7 @@ export async function validateAndSaveAccount(
   cookieAuthSessionCookie: string,
   manualBalanceUsd?: string,
   excludeFromTotalBalance = false,
+  sub2apiAuth?: Sub2ApiAuthConfig,
 ): Promise<AccountSaveResponse> {
   const sessionCookieHeader =
     authType === AuthTypeEnum.Cookie
@@ -369,6 +398,7 @@ export async function validateAndSaveAccount(
   const manualQuota = parseManualQuotaFromUsd(manualBalanceUsd)
   const normalizedManualBalanceUsd =
     manualQuota === undefined ? "" : manualBalanceUsd!.trim()
+  const normalizedSub2ApiAuth = normalizeSub2ApiAuthInput(siteType, sub2apiAuth)
 
   try {
     // 获取账号余额和今日使用情况
@@ -409,6 +439,7 @@ export async function validateAndSaveAccount(
         authType === AuthTypeEnum.Cookie
           ? { sessionCookie: sessionCookieHeader.trim() }
           : undefined,
+      sub2apiAuth: normalizedSub2ApiAuth,
       exchange_rate:
         parseFloat(exchangeRate) || UI_CONSTANTS.EXCHANGE_RATE.DEFAULT, // 使用用户输入的汇率
       notes: notes || "",
@@ -461,6 +492,7 @@ export async function validateAndSaveAccount(
         authType === AuthTypeEnum.Cookie
           ? { sessionCookie: sessionCookieHeader.trim() }
           : undefined,
+      sub2apiAuth: normalizedSub2ApiAuth,
       exchange_rate:
         parseFloat(exchangeRate) || UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
       notes: notes || "",
@@ -549,6 +581,7 @@ export async function validateAndUpdateAccount(
   cookieAuthSessionCookie: string,
   manualBalanceUsd?: string,
   excludeFromTotalBalance = false,
+  sub2apiAuth?: Sub2ApiAuthConfig,
 ): Promise<AccountSaveResponse> {
   const sessionCookieHeader =
     authType === AuthTypeEnum.Cookie
@@ -585,6 +618,7 @@ export async function validateAndUpdateAccount(
   const manualQuota = parseManualQuotaFromUsd(manualBalanceUsd)
   const normalizedManualBalanceUsd =
     manualQuota === undefined ? "" : manualBalanceUsd!.trim()
+  const normalizedSub2ApiAuth = normalizeSub2ApiAuthInput(siteType, sub2apiAuth)
 
   try {
     // 获取账号余额和今日使用情况
@@ -626,6 +660,7 @@ export async function validateAndUpdateAccount(
         authType === AuthTypeEnum.Cookie
           ? { sessionCookie: sessionCookieHeader.trim() }
           : undefined,
+      sub2apiAuth: normalizedSub2ApiAuth,
       exchange_rate:
         parseFloat(exchangeRate) || UI_CONSTANTS.EXCHANGE_RATE.DEFAULT, // 使用用户输入的汇率
       notes: notes,
@@ -684,6 +719,7 @@ export async function validateAndUpdateAccount(
         authType === AuthTypeEnum.Cookie
           ? { sessionCookie: sessionCookieHeader.trim() }
           : undefined,
+      sub2apiAuth: normalizedSub2ApiAuth,
       exchange_rate:
         parseFloat(exchangeRate) || UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
       notes: notes,

@@ -10,7 +10,7 @@
 import { t } from "i18next"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { AuthTypeEnum } from "~/types"
+import { AuthTypeEnum, type Sub2ApiAuthConfig } from "~/types"
 import {
   getActiveOrAllTabs,
   getActiveTabs,
@@ -34,6 +34,7 @@ export interface AutoDetectResult {
     user: any
     siteType: string
     accessToken?: string
+    sub2apiAuth?: Sub2ApiAuthConfig
   }
   error?: string
 }
@@ -42,6 +43,7 @@ export interface UserDataResult {
   userId: number
   user: any
   accessToken?: string
+  sub2apiAuth?: Sub2ApiAuthConfig
   siteTypeHint?: string
 }
 
@@ -91,6 +93,7 @@ async function combineUserDataAndSiteType(
         user: userData.user,
         siteType,
         accessToken: userData.accessToken,
+        sub2apiAuth: userData.sub2apiAuth,
       },
     }
   } catch (error) {
@@ -204,6 +207,7 @@ async function getUserDataViaBackground(
       userId: response.data.userId,
       user: response.data.user,
       accessToken: response.data.accessToken,
+      sub2apiAuth: response.data.sub2apiAuth,
       siteTypeHint: response.data.siteTypeHint,
     }
   } catch (error) {
@@ -283,6 +287,7 @@ async function getUserDataFromCurrentTab(
       userId: userResponse.data.userId,
       user: userResponse.data.user,
       accessToken: userResponse.data.accessToken,
+      sub2apiAuth: userResponse.data.sub2apiAuth,
       siteTypeHint: userResponse.data.siteTypeHint,
     }
   } catch (error) {

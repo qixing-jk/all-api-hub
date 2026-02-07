@@ -7,6 +7,7 @@ import {
   CheckInConfig,
   SiteHealthStatus,
   TempWindowHealthStatusCode,
+  type Sub2ApiAuthConfig,
 } from "~/types"
 import type { PerCallPrice } from "~/utils/modelPricing"
 import type { TempWindowResponseType } from "~/utils/tempWindowFetch"
@@ -61,6 +62,7 @@ export interface RefreshAccountResult {
     accessToken?: string
     userId?: number
     username?: string
+    sub2apiAuth?: Sub2ApiAuthConfig
   }
 }
 
@@ -286,6 +288,14 @@ export interface AuthConfig {
   accessToken?: string
   /** 用户 ID（用于 cookie 认证或通用标识） */
   userId?: number | string
+  /**
+   * Sub2API refresh token (optional; used for extension-managed sessions).
+   */
+  refreshToken?: string
+  /**
+   * Sub2API access-token expiry timestamp in milliseconds since epoch (optional).
+   */
+  tokenExpiresAt?: number
 }
 
 /**

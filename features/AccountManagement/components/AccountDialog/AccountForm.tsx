@@ -9,9 +9,11 @@ import {
   TicketIcon,
   UserIcon,
 } from "@heroicons/react/24/outline"
+import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
+  Alert,
   Button,
   FormField,
   IconButton,
@@ -44,6 +46,10 @@ interface AccountFormProps {
   excludeFromTotalBalance: boolean
   cookieAuthSessionCookie: string
   isImportingCookies: boolean
+  sub2apiUseRefreshToken: boolean
+  sub2apiRefreshToken: string
+  sub2apiTokenExpiresAt: number | null
+  isImportingSub2apiSession: boolean
   onSiteNameChange: (value: string) => void
   onUsernameChange: (value: string) => void
   onUserIdChange: (value: string) => void
@@ -56,6 +62,9 @@ interface AccountFormProps {
   onExcludeFromTotalBalanceChange: (value: boolean) => void
   onCookieAuthSessionCookieChange: (value: string) => void
   onImportCookieAuthSessionCookie: () => void
+  onSub2apiUseRefreshTokenChange: (value: boolean) => void
+  onSub2apiRefreshTokenChange: (value: string) => void
+  onImportSub2apiSession: () => void
   tags: Tag[]
   tagCountsById?: Record<string, number>
   createTag: (name: string) => Promise<Tag>
@@ -118,6 +127,10 @@ export default function AccountForm({
   excludeFromTotalBalance,
   cookieAuthSessionCookie,
   isImportingCookies,
+  sub2apiUseRefreshToken,
+  sub2apiRefreshToken,
+  sub2apiTokenExpiresAt,
+  isImportingSub2apiSession,
   onSiteNameChange,
   onUsernameChange,
   onUserIdChange,
@@ -130,6 +143,9 @@ export default function AccountForm({
   onExcludeFromTotalBalanceChange,
   onCookieAuthSessionCookieChange,
   onImportCookieAuthSessionCookie,
+  onSub2apiUseRefreshTokenChange,
+  onSub2apiRefreshTokenChange,
+  onImportSub2apiSession,
   tags,
   tagCountsById,
   createTag,
@@ -142,6 +158,7 @@ export default function AccountForm({
 }: AccountFormProps) {
   const { t } = useTranslation("accountDialog")
   const isSub2Api = siteType === SUB2API
+  const [showSub2apiRefreshToken, setShowSub2apiRefreshToken] = useState(false)
 
   return (
     <>
@@ -231,6 +248,97 @@ export default function AccountForm({
             required
           />
         </FormField>
+      )}
+
+      {isSub2Api && (
+        <div className="space-y-2">
+          <div className="flex w-full items-center justify-between">
+            <div className="flex-1">
+              <label
+                htmlFor="sub2api-refresh-token-mode"
+                className="dark:text-dark-text-secondary text-sm font-medium text-gray-700"
+              >
+                {t("form.sub2apiRefreshTokenMode")}
+              </label>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                {t("form.sub2apiRefreshTokenModeDesc")}
+              </p>
+            </div>
+            <Switch
+              checked={sub2apiUseRefreshToken}
+              onChange={onSub2apiUseRefreshTokenChange}
+              id="sub2api-refresh-token-mode"
+              className={`${
+                sub2apiUseRefreshToken ? "bg-green-600" : "bg-gray-200"
+              } focus:ring-green-500`}
+            />
+          </div>
+
+          {sub2apiUseRefreshToken && (
+            <div className="space-y-2">
+              <Alert
+                variant="info"
+                title={t("form.sub2apiRefreshTokenWarningTitle")}
+                description={t("form.sub2apiRefreshTokenWarningDesc")}
+              />
+
+              <FormField label={t("form.sub2apiRefreshToken")} required>
+                <div className="space-y-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={onImportSub2apiSession}
+                    disabled={isImportingSub2apiSession}
+                    loading={isImportingSub2apiSession}
+                    className="w-full"
+                    leftIcon={<ArrowDownTrayIcon className="h-4 w-4" />}
+                  >
+                    {t("form.sub2apiImportRefreshToken")}
+                  </Button>
+                  <Input
+                    type={showSub2apiRefreshToken ? "text" : "password"}
+                    value={sub2apiRefreshToken}
+                    onChange={(e) =>
+                      onSub2apiRefreshTokenChange(e.target.value)
+                    }
+                    placeholder={t("form.sub2apiRefreshTokenPlaceholder")}
+                    leftIcon={<KeyIcon className="h-5 w-5" />}
+                    rightIcon={
+                      <IconButton
+                        type="button"
+                        onClick={() =>
+                          setShowSub2apiRefreshToken(!showSub2apiRefreshToken)
+                        }
+                        variant="ghost"
+                        size="sm"
+                        aria-label={t("form.toggleAccessTokenVisibility")}
+                      >
+                        {showSub2apiRefreshToken ? (
+                          <EyeSlashIcon className="h-4 w-4" />
+                        ) : (
+                          <EyeIcon className="h-4 w-4" />
+                        )}
+                      </IconButton>
+                    }
+                    required
+                  />
+                </div>
+              </FormField>
+
+              {typeof sub2apiTokenExpiresAt === "number" && (
+                <FormField label={t("form.sub2apiTokenExpiresAt")}>
+                  <Input
+                    type="text"
+                    value={new Date(sub2apiTokenExpiresAt).toLocaleString()}
+                    leftIcon={<CalendarDaysIcon className="h-5 w-5" />}
+                    disabled
+                  />
+                </FormField>
+              )}
+            </div>
+          )}
+        </div>
       )}
 
       {/* Cookie Auth Session Cookie */}

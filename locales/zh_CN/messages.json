@@ -112,7 +112,8 @@
     }
   },
   "sub2api": {
-    "loginRequired": "请先登录 Sub2API 控制台（插件会读取 auth_token/auth_user）后再重试。"
+    "loginRequired": "请先登录 Sub2API 控制台（插件会读取 auth_token/auth_user 用于导入会话）后再重试。",
+    "refreshTokenInvalid": "Sub2API refresh_token 已失效/已轮转。请从控制台重新导入会话（推荐无痕/隐私窗口），或粘贴新的 refresh_token 后重试。"
   },
   "newapi": {
     "configMissing": "请先在基础设置中配置 New API 地址、管理员令牌和用户 ID",

@@ -13,11 +13,12 @@ import { migrateCheckInDualStatusConfig } from "./checkInDualStatusMigration"
 import { migrateCheckInConfig } from "./checkInMigration"
 import { migrateDisabledFlagConfig } from "./disabledFlagMigration"
 import { migrateExcludeFromTotalBalanceConfig } from "./excludeFromTotalBalanceMigration"
+import { migrateSub2ApiAuthConfig } from "./sub2apiAuthMigration"
 
 const logger = createLogger("AccountDataMigration")
 
 // Current version of the configuration schema
-export const CURRENT_CONFIG_VERSION = 4
+export const CURRENT_CONFIG_VERSION = 5
 
 /**
  * Migration function type
@@ -56,6 +57,13 @@ const migrations: Record<number, MigrationFunction> = {
   4: (account: SiteAccount): SiteAccount => {
     const migrated = migrateExcludeFromTotalBalanceConfig(account)
     migrated.configVersion = 4
+    return migrated
+  },
+
+  // Version 4 -> 5: Sanitize Sub2API refresh-token auth config.
+  5: (account: SiteAccount): SiteAccount => {
+    const migrated = migrateSub2ApiAuthConfig(account)
+    migrated.configVersion = 5
     return migrated
   },
 }

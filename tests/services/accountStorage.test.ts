@@ -111,6 +111,7 @@ const createAccount = (overrides: Partial<SiteAccount> = {}): SiteAccount => {
     created_at: overrides.created_at ?? Date.now(),
     notes: overrides.notes,
     manualBalanceUsd: overrides.manualBalanceUsd,
+    sub2apiAuth: overrides.sub2apiAuth,
     tagIds: overrides.tagIds ?? [],
     tags: overrides.tags,
     can_check_in: overrides.can_check_in,
@@ -761,6 +762,79 @@ describe("accountStorage core behaviors", () => {
     const updatedAccount = await accountStorage.getAccountById("income-sync")
     expect(updatedAccount?.account_info.today_income).toBe(123_456)
     expect(mockFetchTodayIncome).not.toHaveBeenCalled()
+  })
+
+  it("refreshAccount should persist Sub2API refresh-token auth updates", async () => {
+    const account = createAccount({
+      id: "sub2api-refresh",
+      site_url: "https://sub2.example.com",
+      site_type: "sub2api",
+      account_info: {
+        id: 1,
+        username: "alice",
+        access_token: "old-jwt",
+        quota: 1_000_000,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_quota_consumption: 0,
+        today_requests_count: 0,
+        today_income: 0,
+      },
+      sub2apiAuth: {
+        refreshToken: "old-refresh",
+        tokenExpiresAt: 123,
+      },
+    })
+    seedStorage([account])
+
+    mockFetchSupportCheckIn.mockResolvedValue(false)
+    mockRefreshAccountData.mockResolvedValueOnce({
+      success: true,
+      data: {
+        quota: 42,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_quota_consumption: 0,
+        today_requests_count: 0,
+        today_income: 0,
+        checkIn: {
+          enableDetection: false,
+        },
+      },
+      healthStatus: {
+        status: SiteHealthStatus.Healthy,
+        message: "",
+      },
+      authUpdate: {
+        accessToken: "new-jwt",
+        sub2apiAuth: {
+          refreshToken: "new-refresh",
+          tokenExpiresAt: 456,
+        },
+        userId: 1,
+        username: "alice",
+      },
+    })
+
+    await accountStorage.refreshAccount("sub2api-refresh", true)
+
+    expect(mockRefreshAccountData).toHaveBeenCalledWith(
+      expect.objectContaining({
+        baseUrl: "https://sub2.example.com",
+        auth: expect.objectContaining({
+          refreshToken: "old-refresh",
+          tokenExpiresAt: 123,
+        }),
+      }),
+    )
+
+    const updatedAccount =
+      await accountStorage.getAccountById("sub2api-refresh")
+    expect(updatedAccount?.account_info.access_token).toBe("new-jwt")
+    expect(updatedAccount?.sub2apiAuth).toEqual({
+      refreshToken: "new-refresh",
+      tokenExpiresAt: 456,
+    })
   })
 
   it("refreshAccount should persist health code for actionable UI", async () => {
