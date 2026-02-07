@@ -221,13 +221,15 @@ export async function refreshAccountData(
       ? storedTokenExpiresAtRaw
       : undefined
   const hasStoredRefreshToken = Boolean(storedRefreshToken)
+  // Keep a function-scoped refresh token so the 401 retry can use the latest
+  // (potentially rotated) value after proactive refresh.
+  let refreshToken = storedRefreshToken
 
   try {
     let accessToken =
       typeof request.auth?.accessToken === "string"
         ? request.auth.accessToken.trim()
         : ""
-    let refreshToken = storedRefreshToken
     let tokenExpiresAt = storedTokenExpiresAt
     let hasProactiveRefreshUpdate = false
 
@@ -295,7 +297,7 @@ export async function refreshAccountData(
           const refreshed = await refreshSub2ApiTokens({
             baseUrl: request.baseUrl,
             accessToken,
-            refreshToken: storedRefreshToken,
+            refreshToken,
           })
 
           const retryRequest: ApiServiceAccountRequest = {

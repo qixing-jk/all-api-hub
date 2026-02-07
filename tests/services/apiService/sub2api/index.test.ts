@@ -303,6 +303,87 @@ describe("apiService sub2api refreshAccountData", () => {
     nowSpy.mockRestore()
   })
 
+  it("uses rotated refresh token for 401 retry after proactive refresh", async () => {
+    const now = 1_700_000_000_000
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(now)
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            code: 0,
+            message: "ok",
+            data: {
+              access_token: "proactive-jwt",
+              refresh_token: "rotated-refresh",
+              expires_in: 3600,
+            },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            code: 0,
+            message: "ok",
+            data: {
+              access_token: "retry-jwt",
+              refresh_token: "final-refresh",
+              expires_in: 3600,
+            },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      )
+    vi.stubGlobal("fetch", fetchMock as any)
+
+    vi.mocked(fetchApi)
+      .mockRejectedValueOnce(
+        new ApiError("Unauthorized", 401, "/api/v1/auth/me"),
+      )
+      .mockResolvedValueOnce({
+        code: 0,
+        message: "ok",
+        data: { id: 2, username: "bob", balance: 1 },
+      } as any)
+
+    const request = createRequest({
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        userId: 1,
+        accessToken: "old-jwt",
+        refreshToken: "old-refresh",
+        tokenExpiresAt: now + 60_000,
+      },
+    })
+
+    const result = await refreshAccountData(request)
+
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+
+    const firstPayload = JSON.parse((fetchMock.mock.calls[0]?.[1] as any)?.body)
+    expect(firstPayload).toEqual({ refresh_token: "old-refresh" })
+
+    const secondPayload = JSON.parse(
+      (fetchMock.mock.calls[1]?.[1] as any)?.body,
+    )
+    expect(secondPayload).toEqual({ refresh_token: "rotated-refresh" })
+
+    expect(fetchApi).toHaveBeenCalledTimes(2)
+    expect(resyncSub2ApiAuthToken).not.toHaveBeenCalled()
+
+    expect(result.success).toBe(true)
+    expect(result.authUpdate?.accessToken).toBe("retry-jwt")
+    expect(result.authUpdate?.sub2apiAuth).toEqual({
+      refreshToken: "final-refresh",
+      tokenExpiresAt: now + 3600 * 1000,
+    })
+
+    nowSpy.mockRestore()
+  })
+
   it("refreshes via stored refresh token and retries once on HTTP 401 (success)", async () => {
     const now = 1_700_000_000_000
     const nowSpy = vi.spyOn(Date, "now").mockReturnValue(now)
@@ -362,18 +443,16 @@ describe("apiService sub2api refreshAccountData", () => {
   })
 
   it("does not fall back to localStorage re-sync when refresh token restore fails", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue(
-        new Response(
-          JSON.stringify({
-            code: 1,
-            message: "invalid_refresh_token",
-            data: null,
-          }),
-          { status: 401, headers: { "Content-Type": "application/json" } },
-        ),
-      )
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          code: 1,
+          message: "invalid_refresh_token",
+          data: null,
+        }),
+        { status: 401, headers: { "Content-Type": "application/json" } },
+      ),
+    )
     vi.stubGlobal("fetch", fetchMock as any)
 
     vi.mocked(fetchApi).mockRejectedValueOnce(
