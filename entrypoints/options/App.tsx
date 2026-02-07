@@ -1,11 +1,10 @@
 import { useState } from "react"
 
 import { AppLayout } from "~/components/AppLayout"
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 
 import Header from "./components/Header"
 import Sidebar from "./components/Sidebar"
-import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-
 import { menuItems } from "./constants"
 import { useHashNavigation } from "./hooks/useHashNavigation"
 import BasicSettings from "./pages/BasicSettings"

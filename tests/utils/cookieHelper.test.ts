@@ -30,20 +30,18 @@ describe("cookieHelper", () => {
   })
 
   it("filters out expired cookies", async () => {
-    const getAll = vi
-      .fn()
-      .mockResolvedValue([
-        {
-          name: "expired",
-          value: "1",
-          expirationDate: Date.now() / 1000 - 10,
-        } as any,
-        {
-          name: "valid",
-          value: "2",
-          expirationDate: Date.now() / 1000 + 10,
-        } as any,
-      ])
+    const getAll = vi.fn().mockResolvedValue([
+      {
+        name: "expired",
+        value: "1",
+        expirationDate: Date.now() / 1000 - 10,
+      } as any,
+      {
+        name: "valid",
+        value: "2",
+        expirationDate: Date.now() / 1000 + 10,
+      } as any,
+    ])
     ;(globalThis as any).browser.cookies.getAll = getAll
 
     const header = await getCookieHeaderForUrl("https://example.com")

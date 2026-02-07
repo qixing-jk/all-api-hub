@@ -3,7 +3,12 @@ import { isEqual } from "lodash-es"
 import { Storage } from "@plasmohq/storage"
 
 import { DATA_TYPE_BALANCE, DATA_TYPE_CASHFLOW } from "~/constants"
-import { NEW_API, VELOERA, type ManagedSiteType } from "~/constants/siteType"
+import {
+  NEW_API,
+  OCTOPUS,
+  VELOERA,
+  type ManagedSiteType,
+} from "~/constants/siteType"
 import {
   CURRENT_PREFERENCES_VERSION,
   migratePreferences,
@@ -36,6 +41,7 @@ import {
   type ModelRedirectPreferences,
 } from "~/types/managedSiteModelRedirect"
 import { DEFAULT_NEW_API_CONFIG, NewApiConfig } from "~/types/newApiConfig"
+import { DEFAULT_OCTOPUS_CONFIG, OctopusConfig } from "~/types/octopusConfig"
 import type { SortingPriorityConfig } from "~/types/sorting"
 import type { ThemeMode } from "~/types/theme"
 import {
@@ -218,7 +224,10 @@ export interface UserPreferences {
   // Veloera 相关配置
   veloera: VeloeraConfig
 
-  // 管理站点类型 (用户可以选择管理 New API 或 Veloera)
+  // Octopus 相关配置
+  octopus?: OctopusConfig
+
+  // 管理站点类型 (用户可以选择管理 New API 或 Veloera 或 Octopus)
   managedSiteType: ManagedSiteType
 
   // CLIProxyAPI 管理接口配置
@@ -383,6 +392,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   lastUpdated: Date.now(),
   newApi: DEFAULT_NEW_API_CONFIG,
   veloera: DEFAULT_VELOERA_CONFIG,
+  octopus: DEFAULT_OCTOPUS_CONFIG,
   managedSiteType: NEW_API,
   cliProxy: DEFAULT_CLI_PROXY_CONFIG,
   claudeCodeRouter: DEFAULT_CLAUDE_CODE_ROUTER_CONFIG,
@@ -779,7 +789,25 @@ class UserPreferencesService {
   }
 
   /**
-   * Update managed site type (new-api or veloera).
+   * Update Octopus config.
+   */
+  async updateOctopusConfig(config: Partial<OctopusConfig>): Promise<boolean> {
+    return this.savePreferences({
+      octopus: config,
+    })
+  }
+
+  /**
+   * Reset Octopus config.
+   */
+  async resetOctopusConfig(): Promise<boolean> {
+    return this.savePreferences({
+      octopus: DEFAULT_PREFERENCES.octopus,
+    })
+  }
+
+  /**
+   * Update managed site type (new-api or veloera or octopus).
    */
   async updateManagedSiteType(siteType: ManagedSiteType): Promise<boolean> {
     return this.savePreferences({
@@ -792,11 +820,18 @@ class UserPreferencesService {
    */
   async getManagedSiteConfig(): Promise<{
     siteType: ManagedSiteType
-    config: NewApiConfig | VeloeraConfig
+    config: NewApiConfig | VeloeraConfig | OctopusConfig
   }> {
     const prefs = await this.getPreferences()
     const siteType = prefs.managedSiteType || NEW_API
-    const config = siteType === VELOERA ? prefs.veloera : prefs.newApi
+    let config: NewApiConfig | VeloeraConfig | OctopusConfig
+    if (siteType === OCTOPUS) {
+      config = prefs.octopus || DEFAULT_OCTOPUS_CONFIG
+    } else if (siteType === VELOERA) {
+      config = prefs.veloera
+    } else {
+      config = prefs.newApi
+    }
     return { siteType, config }
   }
 

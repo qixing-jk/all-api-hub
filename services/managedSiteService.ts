@@ -1,4 +1,9 @@
-import { NEW_API, VELOERA, type ManagedSiteType } from "~/constants/siteType"
+import {
+  NEW_API,
+  OCTOPUS,
+  VELOERA,
+  type ManagedSiteType,
+} from "~/constants/siteType"
 import type { AccountToken } from "~/entrypoints/options/pages/KeyManagement/type"
 import type { ApiResponse } from "~/services/apiService/common/type"
 import type { ApiToken, DisplaySiteData, SiteAccount } from "~/types"
@@ -17,6 +22,7 @@ import {
 } from "~/utils/managedSite"
 
 import * as newApiService from "./newApiService/newApiService"
+import * as octopusService from "./octopusService/octopusService"
 import { userPreferences, type UserPreferences } from "./userPreferences"
 import * as veloeraService from "./veloeraService/veloeraService"
 
@@ -111,6 +117,25 @@ export function hasValidManagedSiteConfig(
 export async function getManagedSiteService(): Promise<ManagedSiteService> {
   const prefs = await userPreferences.getPreferences()
   const { siteType, messagesKey } = getManagedSiteContext(prefs)
+
+  if (siteType === OCTOPUS) {
+    return {
+      siteType,
+      messagesKey,
+      searchChannel: octopusService.searchChannel,
+      createChannel: octopusService.createChannel,
+      updateChannel: octopusService.updateChannel,
+      deleteChannel: octopusService.deleteChannel,
+      checkValidConfig: octopusService.checkValidOctopusConfig,
+      getConfig: octopusService.getOctopusConfig,
+      fetchAvailableModels: octopusService.fetchAvailableModels,
+      buildChannelName: octopusService.buildChannelName,
+      prepareChannelFormData: octopusService.prepareChannelFormData,
+      buildChannelPayload: octopusService.buildChannelPayload,
+      findMatchingChannel: octopusService.findMatchingChannel,
+      autoConfigToManagedSite: octopusService.autoConfigToOctopus,
+    }
+  }
 
   if (siteType === VELOERA) {
     return {

@@ -572,8 +572,8 @@ export function KiloCodeExportDialog({
     const selectedTokenIds = selectedTokenIdsBySite[siteId] ?? []
     const tokenOptions: CompactMultiSelectOption[] = inventory.tokens.map(
       (token) => ({
-      value: `${token.id}`,
-      label: getTokenLabel(token, t("common:labels.token")),
+        value: `${token.id}`,
+        label: getTokenLabel(token, t("common:labels.token")),
       }),
     )
 

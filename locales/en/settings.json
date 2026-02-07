@@ -165,7 +165,35 @@
     "siteTypeLabel": "Managed Site Type",
     "siteTypeDesc": "Choose the platform used for channel management and model sync",
     "newApi": "New API",
-    "veloera": "Veloera"
+    "veloera": "Veloera",
+    "octopus": "Octopus"
+  },
+  "octopus": {
+    "title": "Octopus Integration Settings",
+    "description": "Configure integration settings for connecting to Octopus self-hosted sites. The system will automatically log in using your credentials and manage the JWT Token.",
+    "fields": {
+      "baseUrlLabel": "Base URL",
+      "baseUrlDesc": "Set the base URL for Octopus site",
+      "baseUrlPlaceholder": "https://octopus.example.com",
+      "usernameLabel": "Username",
+      "usernameDesc": "Octopus admin username for automatic login",
+      "usernamePlaceholder": "admin",
+      "passwordLabel": "Password",
+      "passwordDesc": "Octopus admin password for automatic login",
+      "passwordPlaceholder": "Enter password",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password"
+    },
+    "validation": {
+      "title": "Validate Configuration",
+      "description": "Test if username and password are correct",
+      "validate": "Validate",
+      "validating": "Validating...",
+      "success": "Configuration validated successfully, connection is working",
+      "failed": "Configuration validation failed, please check username and password",
+      "error": "An error occurred during validation",
+      "missingFields": "Please fill in all required fields"
+    }
   },
   "cliProxy": {
     "title": "CLIProxyAPI Settings",

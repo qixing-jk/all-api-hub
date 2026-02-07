@@ -94,6 +94,7 @@
     "checkingApiKeys": "正在检查 API 密钥...",
     "importingToNewApi": "正在导入到 New API...",
     "importingToVeloera": "正在导入到 Veloera...",
+    "importingToOctopus": "正在导入到 Octopus...",
     "createTokenFailed": "创建 API 令牌失败",
     "tokenNotFound": "无法创建或找到 API 令牌",
     "retrying": "出现错误，进行第{{attempt}}次重试"
@@ -131,6 +132,17 @@
     "channelExists": "渠道 {{channelName}} 已存在，无需再次导入",
     "importSuccess": "成功导入新渠道 {{channelName}}",
     "importFailed": "导入失败，发生未知错误"
+  },
+  "octopus": {
+    "configMissing": "请先在基础设置中配置 Octopus 地址、用户名和密码",
+    "dataFetchFailed": "获取 Octopus 数据失败，请检查配置是否正确",
+    "noAnyModels": "暂无可用模型",
+    "noChannelsToSync": "没有可同步的渠道",
+    "channelExists": "渠道 {{channelName}} 已存在，无需再次导入",
+    "importSuccess": "成功导入新渠道 {{channelName}}",
+    "importFailed": "导入失败，发生未知错误",
+    "loginFailed": "登录 Octopus 失败，请检查用户名和密码",
+    "tokenExpired": "Octopus 登录已过期，正在重新登录..."
   },
   "cliproxy": {
     "configMissing": "请先在设置中配置 CLIProxyAPI 管理接口地址和密钥",

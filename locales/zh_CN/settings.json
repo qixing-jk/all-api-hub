@@ -165,7 +165,35 @@
     "siteTypeLabel": "站点类型",
     "siteTypeDesc": "选择用于渠道管理和模型同步的平台",
     "newApi": "New API",
-    "veloera": "Veloera"
+    "veloera": "Veloera",
+    "octopus": "Octopus"
+  },
+  "octopus": {
+    "title": "Octopus 集成设置",
+    "description": "配置用于连接 Octopus 自建站点的集成设置。系统将自动使用您的凭据登录并管理 JWT Token。",
+    "fields": {
+      "baseUrlLabel": "基础 URL",
+      "baseUrlDesc": "设置 Octopus 站点的基础 URL",
+      "baseUrlPlaceholder": "https://octopus.example.com",
+      "usernameLabel": "用户名",
+      "usernameDesc": "Octopus 管理员用户名，用于自动登录",
+      "usernamePlaceholder": "admin",
+      "passwordLabel": "密码",
+      "passwordDesc": "Octopus 管理员密码，用于自动登录",
+      "passwordPlaceholder": "输入密码",
+      "showPassword": "显示密码",
+      "hidePassword": "隐藏密码"
+    },
+    "validation": {
+      "title": "验证配置",
+      "description": "测试用户名和密码是否正确",
+      "validate": "验证配置",
+      "validating": "验证中...",
+      "success": "配置验证成功，连接正常",
+      "failed": "配置验证失败，请检查用户名和密码",
+      "error": "验证过程中发生错误",
+      "missingFields": "请填写所有必填字段"
+    }
   },
   "cliProxy": {
     "title": "CLIProxyAPI 设置",

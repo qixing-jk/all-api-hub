@@ -13,9 +13,10 @@ export const RIX_API = "Rix-Api"
 export const NEO_API = "neo-Api"
 export const WONG_GONGYI = "wong-gongyi"
 export const SUB2API = "sub2api"
+export const OCTOPUS = "octopus"
 export const UNKNOWN_SITE = "unknown"
 
-export type ManagedSiteType = typeof NEW_API | typeof VELOERA
+export type ManagedSiteType = typeof NEW_API | typeof VELOERA | typeof OCTOPUS
 
 export type SiteType = (typeof SITE_TITLE_RULES)[number]["name"]
 

@@ -94,6 +94,7 @@
     "checkingApiKeys": "Checking API key...",
     "importingToNewApi": "Importing to New API...",
     "importingToVeloera": "Importing to Veloera...",
+    "importingToOctopus": "Importing to Octopus...",
     "createTokenFailed": "Failed to create API token",
     "tokenNotFound": "Failed to create or find an API token",
     "retrying": "An error occurred, attempting retry #{{attempt}}"
@@ -131,6 +132,17 @@
     "channelExists": "Channel {{channelName}} already exists, no need to import again",
     "importSuccess": "Successfully imported new channel {{channelName}}",
     "importFailed": "Import failed, an unknown error occurred"
+  },
+  "octopus": {
+    "configMissing": "Please configure Octopus address, username, and password in basic settings first",
+    "dataFetchFailed": "Failed to fetch Octopus data, please check if the configuration is correct",
+    "noAnyModels": "No models available",
+    "noChannelsToSync": "No channels to sync",
+    "channelExists": "Channel {{channelName}} already exists, no need to import again",
+    "importSuccess": "Successfully imported new channel {{channelName}}",
+    "importFailed": "Import failed, an unknown error occurred",
+    "loginFailed": "Failed to log in to Octopus, please check username and password",
+    "tokenExpired": "Octopus login expired, re-authenticating..."
   },
   "cliproxy": {
     "configMissing": "Please configure CLIProxyAPI Management API base URL and key in settings first",

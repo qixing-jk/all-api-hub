@@ -1,16 +1,23 @@
-import { NEW_API, VELOERA, type ManagedSiteType } from "~/constants/siteType"
+import {
+  NEW_API,
+  OCTOPUS,
+  VELOERA,
+  type ManagedSiteType,
+} from "~/constants/siteType"
 import type { UserPreferences } from "~/services/userPreferences"
 import type { NewApiConfig } from "~/types/newApiConfig"
+import type { OctopusConfig } from "~/types/octopusConfig"
 import type { VeloeraConfig } from "~/types/veloeraConfig"
 
 export type ManagedSiteLabelKey =
   | "settings:managedSite.newApi"
   | "settings:managedSite.veloera"
+  | "settings:managedSite.octopus"
 
 /**
  * Managed site namespace key used under the `messages` i18n namespace.
  */
-export type ManagedSiteMessagesKey = "newapi" | "veloera"
+export type ManagedSiteMessagesKey = "newapi" | "veloera" | "octopus"
 
 export interface ManagedSiteAdminConfig {
   baseUrl: string
@@ -18,7 +25,7 @@ export interface ManagedSiteAdminConfig {
   userId: string
 }
 
-export type ManagedSiteConfig = NewApiConfig | VeloeraConfig
+export type ManagedSiteConfig = NewApiConfig | VeloeraConfig | OctopusConfig
 
 /**
  * Extracts the selected managed site type and its corresponding config from a
@@ -31,7 +38,14 @@ export function getManagedSiteConfigFromPreferences(
   config: ManagedSiteConfig
 } {
   const siteType: ManagedSiteType = preferences.managedSiteType || NEW_API
-  const config = siteType === VELOERA ? preferences.veloera : preferences.newApi
+  let config: ManagedSiteConfig
+  if (siteType === OCTOPUS) {
+    config = preferences.octopus || { baseUrl: "", username: "", password: "" }
+  } else if (siteType === VELOERA) {
+    config = preferences.veloera
+  } else {
+    config = preferences.newApi
+  }
   return { siteType, config }
 }
 
@@ -51,6 +65,9 @@ export function getManagedSiteConfig(prefs: UserPreferences): {
 export function getManagedSiteLabelKey(
   siteType: ManagedSiteType,
 ): ManagedSiteLabelKey {
+  if (siteType === OCTOPUS) {
+    return "settings:managedSite.octopus"
+  }
   return siteType === VELOERA
     ? "settings:managedSite.veloera"
     : "settings:managedSite.newApi"
@@ -62,6 +79,9 @@ export function getManagedSiteLabelKey(
 export function getManagedSiteMessagesKeyFromSiteType(
   siteType: ManagedSiteType,
 ): ManagedSiteMessagesKey {
+  if (siteType === OCTOPUS) {
+    return "octopus"
+  }
   return siteType === VELOERA ? "veloera" : "newapi"
 }
 
@@ -74,16 +94,39 @@ export function getManagedSiteMessagesKeyFromSiteType(
 export function getManagedSiteAdminConfig(
   preferences: UserPreferences,
 ): ManagedSiteAdminConfig | null {
-  const { config } = getManagedSiteConfigFromPreferences(preferences)
+  const { siteType, config } = getManagedSiteConfigFromPreferences(preferences)
 
-  if (!config?.baseUrl || !config?.adminToken || !config?.userId) {
+  // Octopus 使用不同的配置结构
+  if (siteType === OCTOPUS) {
+    const octopusConfig = config as OctopusConfig
+    if (
+      !octopusConfig?.baseUrl ||
+      !octopusConfig?.username ||
+      !octopusConfig?.password
+    ) {
+      return null
+    }
+    return {
+      baseUrl: octopusConfig.baseUrl,
+      adminToken: "", // Octopus 使用 JWT，动态获取
+      userId: octopusConfig.username,
+    }
+  }
+
+  // New API / Veloera 使用 adminToken
+  const legacyConfig = config as NewApiConfig | VeloeraConfig
+  if (
+    !legacyConfig?.baseUrl ||
+    !legacyConfig?.adminToken ||
+    !legacyConfig?.userId
+  ) {
     return null
   }
 
   return {
-    baseUrl: config.baseUrl,
-    adminToken: config.adminToken,
-    userId: config.userId,
+    baseUrl: legacyConfig.baseUrl,
+    adminToken: legacyConfig.adminToken,
+    userId: legacyConfig.userId,
   }
 }
 

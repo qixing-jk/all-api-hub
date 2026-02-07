@@ -31,7 +31,9 @@ export function groupsToOptions(
  * @param models Channel models from upstream.
  * @returns Options for model selection.
  */
-export function modelsToOptions(models: ChannelModel[]): CompactMultiSelectOption[] {
+export function modelsToOptions(
+  models: ChannelModel[],
+): CompactMultiSelectOption[] {
   return models.map((model) => ({ label: model.name, value: model.id }))
 }
 

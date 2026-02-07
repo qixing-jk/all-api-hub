@@ -13,6 +13,7 @@ import type {
   ManagedSiteChannel,
   UpdateChannelPayload,
 } from "~/types/managedSite"
+import type { OctopusOutboundType } from "~/types/octopus"
 import { createLogger } from "~/utils/logger"
 import { mergeUniqueOptions } from "~/utils/selectOptions"
 
@@ -85,14 +86,12 @@ export function useChannelForm({
   const [isSaving, setIsSaving] = useState(false)
   const [isLoadingGroups, setIsLoadingGroups] = useState(false)
   const [isLoadingModels, setIsLoadingModels] = useState(false)
-  const [availableGroups, setAvailableGroups] =
-    useState<CompactMultiSelectOption[]>(
-    [],
-  )
-  const [availableModels, setAvailableModels] =
-    useState<CompactMultiSelectOption[]>(
-    [],
-  )
+  const [availableGroups, setAvailableGroups] = useState<
+    CompactMultiSelectOption[]
+  >([])
+  const [availableModels, setAvailableModels] = useState<
+    CompactMultiSelectOption[]
+  >([])
 
   // Load groups and model suggestions on mount
   useEffect(() => {
@@ -231,7 +230,7 @@ export function useChannelForm({
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
-  const handleTypeChange = (newType: ChannelType) => {
+  const handleTypeChange = (newType: ChannelType | OctopusOutboundType) => {
     setFormData((prev) => ({
       ...prev,
       type: newType,

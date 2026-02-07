@@ -1,9 +1,14 @@
 import { t } from "i18next"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { OCTOPUS } from "~/constants/siteType"
+import * as octopusApi from "~/services/apiService/octopus"
 import { ModelRedirectService } from "~/services/modelRedirect"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
-import type { ManagedSiteChannel } from "~/types/managedSite"
+import type {
+  ManagedSiteChannel,
+  ManagedSiteChannelListData,
+} from "~/types/managedSite"
 import {
   ALL_PRESET_STANDARD_MODELS,
   DEFAULT_MODEL_REDIRECT_PREFERENCES,
@@ -12,6 +17,7 @@ import {
   ExecutionProgress,
   ExecutionResult,
 } from "~/types/managedSiteModelSync"
+import type { OctopusConfig } from "~/types/octopusConfig"
 import {
   clearAlarm,
   createAlarm,
@@ -24,13 +30,16 @@ import { getErrorMessage } from "~/utils/error"
 import { createLogger } from "~/utils/logger"
 import {
   getManagedSiteAdminConfig,
+  getManagedSiteConfig,
   getManagedSiteContext,
 } from "~/utils/managedSite"
 
 import { channelConfigStorage } from "../channelConfigStorage"
+import { octopusChannelToManagedSite } from "../octopusService/octopusService"
 import { DEFAULT_PREFERENCES, userPreferences } from "../userPreferences"
 import { collectModelsFromExecution } from "./modelCollection"
 import { ModelSyncService } from "./modelSyncService"
+import { runOctopusBatch } from "./octopusModelSync"
 import { managedSiteModelSyncStorage } from "./storage"
 
 const logger = createLogger("ManagedSiteModelSync")
@@ -189,7 +198,22 @@ class ModelSyncScheduler {
     }
   }
 
-  async listChannels() {
+  async listChannels(): Promise<ManagedSiteChannelListData> {
+    const userPrefs = await userPreferences.getPreferences()
+    const { siteType } = getManagedSiteContext(userPrefs)
+
+    // Octopus 使用独立的 API 服务
+    if (siteType === OCTOPUS) {
+      const { config } = getManagedSiteConfig(userPrefs)
+      const octopusConfig = config as OctopusConfig
+      const channels = await octopusApi.listChannels(octopusConfig)
+      return {
+        items: channels.map(octopusChannelToManagedSite),
+        total: channels.length,
+        type_counts: {},
+      }
+    }
+
     const service = await this.createService()
     return service.listChannels()
   }
@@ -203,16 +227,28 @@ class ModelSyncScheduler {
   async executeSync(channelIds?: number[]): Promise<ExecutionResult> {
     logger.info("Starting execution")
 
-    // Initialize service
-    const service = await this.createService()
-
     // Get preferences from userPreferences
     const prefs = await userPreferences.getPreferences()
-    const { messagesKey } = getManagedSiteContext(prefs)
+    const { siteType, messagesKey } = getManagedSiteContext(prefs)
+
     const config =
       prefs.managedSiteModelSync ?? DEFAULT_PREFERENCES.managedSiteModelSync!
     const concurrency = Math.max(1, config.concurrency)
     const { maxRetries } = config
+
+    // Octopus 使用独立的模型同步逻辑
+    if (siteType === OCTOPUS) {
+      return this.executeSyncForOctopus(
+        channelIds,
+        prefs,
+        messagesKey,
+        concurrency,
+        maxRetries,
+      )
+    }
+
+    // Initialize service (for non-Octopus sites)
+    const service = await this.createService()
 
     // List channels
     const channelListResponse = await service.listChannels()
@@ -339,6 +375,93 @@ class ModelSyncScheduler {
           failed: mappingErrorCount,
         })
       }
+
+      return result
+    } finally {
+      // Clear progress
+      this.currentProgress = null
+      this.notifyProgress()
+    }
+  }
+
+  /**
+   * Execute model sync for Octopus site.
+   * Octopus uses a different API structure for fetching and updating models.
+   */
+  private async executeSyncForOctopus(
+    channelIds: number[] | undefined,
+    prefs: Awaited<ReturnType<typeof userPreferences.getPreferences>>,
+    messagesKey: string,
+    concurrency: number,
+    maxRetries: number,
+  ): Promise<ExecutionResult> {
+    const { config } = getManagedSiteConfig(prefs)
+    const octopusConfig = config as OctopusConfig
+
+    // List channels using Octopus API
+    const octopusChannels = await octopusApi.listChannels(octopusConfig)
+    const allChannels = octopusChannels.map(octopusChannelToManagedSite)
+
+    // Filter channels if specific IDs provided
+    let channels: ManagedSiteChannel[]
+    if (channelIds && channelIds.length > 0) {
+      channels = allChannels.filter((c) => channelIds.includes(c.id))
+    } else {
+      channels = allChannels
+    }
+
+    if (channels.length === 0) {
+      throw new Error(t(`messages:${messagesKey}.noChannelsToSync`))
+    }
+
+    // Update progress
+    this.currentProgress = {
+      isRunning: true,
+      total: channels.length,
+      completed: 0,
+      failed: 0,
+    }
+
+    let failureCount = 0
+
+    let result
+    try {
+      // Execute batch sync using Octopus-specific implementation
+      result = await runOctopusBatch(octopusConfig, channels, {
+        concurrency,
+        maxRetries,
+        onProgress: async (payload) => {
+          if (!payload.lastResult.ok) {
+            failureCount += 1
+          }
+
+          if (this.currentProgress) {
+            this.currentProgress.completed = payload.completed
+            this.currentProgress.lastResult = payload.lastResult
+            this.currentProgress.currentChannel = payload.lastResult.channelName
+            this.currentProgress.failed = failureCount
+          }
+          this.notifyProgress()
+        },
+      })
+
+      // Save execution result
+      await managedSiteModelSyncStorage.saveLastExecution(result)
+
+      // Cache upstream model options for allow-list selection, only if full sync
+      if (!channelIds) {
+        const collectedModels = collectModelsFromExecution(result)
+        if (collectedModels.length > 0) {
+          await managedSiteModelSyncStorage.saveChannelUpstreamModelOptions(
+            collectedModels,
+          )
+        }
+      }
+
+      logger.info("Octopus execution completed", {
+        successCount: result.statistics.successCount,
+        total: result.statistics.total,
+      })
 
       return result
     } finally {

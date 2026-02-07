@@ -11,7 +11,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui"
-import { NEW_API, VELOERA, type ManagedSiteType } from "~/constants/siteType"
+import {
+  NEW_API,
+  OCTOPUS,
+  VELOERA,
+  type ManagedSiteType,
+} from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { showUpdateToast } from "~/utils/toastHelpers"
 
@@ -59,6 +64,9 @@ export default function ManagedSiteSelector() {
                   </SelectItem>
                   <SelectItem value={VELOERA}>
                     {t("managedSite.veloera")}
+                  </SelectItem>
+                  <SelectItem value={OCTOPUS}>
+                    {t("managedSite.octopus")}
                   </SelectItem>
                 </SelectContent>
               </Select>
