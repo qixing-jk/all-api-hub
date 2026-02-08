@@ -54,6 +54,19 @@ class OctopusAuthManager {
       body: JSON.stringify(credentials),
     })
 
+    if (!response.ok) {
+      let errorBody: string
+      try {
+        const errorJson = await response.json()
+        errorBody = errorJson.message || JSON.stringify(errorJson)
+      } catch {
+        errorBody = await response.text()
+      }
+      throw new Error(
+        `Login failed: HTTP ${response.status} - ${errorBody || "Unknown error"}`,
+      )
+    }
+
     const data = await response.json()
 
     if (data.code !== 200 || !data.data?.token) {
