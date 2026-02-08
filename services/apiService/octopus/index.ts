@@ -89,7 +89,7 @@ async function fetchOctopusApi<T>(
 
   return {
     success: true,
-    data: (responseData.data ?? data) as T,
+    data: (responseData.data as T | undefined) ?? null,
     message: (responseData.message as string) || "success",
   }
 }

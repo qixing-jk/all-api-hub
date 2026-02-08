@@ -253,8 +253,8 @@ export interface OctopusFetchModelRequest {
 export interface OctopusApiResponse<T = unknown> {
   /** 是否成功 */
   success: boolean
-  /** 响应数据 */
-  data?: T
+  /** 响应数据（无数据时为 null） */
+  data?: T | null
   /** 错误消息 */
   message?: string
 }
