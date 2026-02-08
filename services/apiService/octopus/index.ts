@@ -11,9 +11,10 @@ import type {
 } from "~/types/octopus"
 import type { OctopusConfig } from "~/types/octopusConfig"
 import { createLogger } from "~/utils/logger"
+import { normalizeBaseUrl } from "~/utils/url"
 
 import { octopusAuthManager } from "./auth"
-import { buildOctopusAuthHeaders, normalizeBaseUrl } from "./utils"
+import { buildOctopusAuthHeaders } from "./utils"
 
 const logger = createLogger("OctopusAPI")
 
@@ -205,31 +206,6 @@ export async function deleteChannel(
 }
 
 /**
- * 启用/禁用渠道
- */
-export async function toggleChannelEnabled(
-  config: OctopusConfig,
-  channelId: number,
-  enabled: boolean,
-): Promise<OctopusApiResponse<null>> {
-  try {
-    const result = await fetchOctopusApi<null>(
-      config,
-      "/api/v1/channel/enable",
-      {
-        method: "POST",
-        body: JSON.stringify({ id: channelId, enabled }),
-      },
-    )
-    logger.info("Channel toggled", { id: channelId, enabled })
-    return result
-  } catch (error) {
-    logger.error("Failed to toggle channel", error)
-    throw error
-  }
-}
-
-/**
  * 获取上游模型列表
  */
 export async function fetchRemoteModels(
@@ -249,35 +225,6 @@ export async function fetchRemoteModels(
   } catch (error) {
     logger.error("Failed to fetch remote models", error)
     throw error
-  }
-}
-
-/**
- * 触发模型同步
- */
-export async function triggerModelSync(
-  config: OctopusConfig,
-): Promise<OctopusApiResponse<null>> {
-  return await fetchOctopusApi<null>(config, "/api/v1/channel/sync", {
-    method: "POST",
-  })
-}
-
-/**
- * 获取上次同步时间
- */
-export async function getLastSyncTime(
-  config: OctopusConfig,
-): Promise<string | null> {
-  try {
-    const result = await fetchOctopusApi<string>(
-      config,
-      "/api/v1/channel/last-sync-time",
-    )
-    return result.data || null
-  } catch (error) {
-    logger.error("Failed to get last sync time", error)
-    return null
   }
 }
 

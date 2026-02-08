@@ -79,21 +79,6 @@ class OctopusAuthManager {
   }
 
   /**
-   * 检查 Octopus 认证状态
-   */
-  async checkStatus(baseUrl: string, jwtToken: string): Promise<boolean> {
-    try {
-      const url = `${baseUrl.replace(/\/$/, "")}/api/v1/user/status`
-      const response = await fetch(url, {
-        headers: { Authorization: `Bearer ${jwtToken}` },
-      })
-      return response.ok
-    } catch {
-      return false
-    }
-  }
-
-  /**
    * 获取有效的 JWT Token
    * - 如果内存缓存中有有效 Token，直接返回
    * - 如果 Token 过期或不存在，自动重新登录获取

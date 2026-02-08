@@ -41,26 +41,9 @@ import type { OctopusConfig } from "~/types/octopusConfig"
 import { getErrorMessage } from "~/utils/error"
 import { createLogger } from "~/utils/logger"
 import type { ManagedSiteMessagesKey } from "~/utils/managedSite"
+import { normalizeList, parseDelimitedList } from "~/utils/string"
 
 const logger = createLogger("OctopusService")
-
-/**
- * 解析逗号分隔的字符串为数组
- */
-function parseDelimitedList(value?: string | null): string[] {
-  if (!value) return []
-  return value
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean)
-}
-
-/**
- * 规范化列表（去重、去空）
- */
-function normalizeList(values: string[] = []): string[] {
-  return Array.from(new Set(values.map((item) => item.trim()).filter(Boolean)))
-}
 
 /**
  * 将 ChannelType (New API 渠道类型 0-55) 映射为 OctopusOutboundType (0-5)

@@ -24,6 +24,7 @@ import type {
 import { isArraysEqual } from "~/utils"
 import { getErrorMessage } from "~/utils/error"
 import { createLogger } from "~/utils/logger"
+import { normalizeList, parseDelimitedList } from "~/utils/string"
 
 import { UserPreferences, userPreferences } from "../userPreferences"
 
@@ -31,24 +32,6 @@ import { UserPreferences, userPreferences } from "../userPreferences"
  * Unified logger scoped to the New API integration and auto-config flows.
  */
 const logger = createLogger("NewApiService")
-
-/**
- * Parses a comma-delimited string into a trimmed string array, skipping blanks.
- */
-function parseDelimitedList(value?: string | null): string[] {
-  if (!value) return []
-  return value
-    .split(/[,]/)
-    .map((item) => item.trim())
-    .filter(Boolean)
-}
-
-/**
- * Normalizes a list of strings by trimming entries and removing duplicates.
- */
-function normalizeList(values: string[] = []): string[] {
-  return Array.from(new Set(values.map((item) => item.trim()).filter(Boolean)))
-}
 
 /**
  * 搜索指定关键词的渠道

@@ -234,3 +234,12 @@ export function coerceBaseUrlToPathSuffix(
     return trimmed.replace(/\/+$/, "")
   }
 }
+
+/**
+ * 移除 URL 尾部斜杠
+ * @param baseUrl - 原始 URL
+ * @returns 移除尾部斜杠后的 URL
+ */
+export function normalizeBaseUrl(baseUrl: string): string {
+  return baseUrl.replace(/\/$/, "")
+}
