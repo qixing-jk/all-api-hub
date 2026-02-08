@@ -34,11 +34,18 @@ interface CommonTagFilterProps {
   className?: string
   /**
    * Maximum number of tag options displayed inline before collapsing the
-   * remaining ones into an overflow popover. This does not include the
+   * remaining ones behind a "More" control. This does not include the
    * optional "All" chip.
    */
   maxVisible?: number
   maxVisibleLines?: number
+  /**
+   * How to display overflow tags once the visible limit is reached.
+   *
+   * - "expand" (default): Clicking "More" expands and shows all tags inline.
+   * - "popover": Keeps the legacy overflow popover panel behavior.
+   */
+  overflowDisplay?: "expand" | "popover"
   /** Whether to render an "All" chip that represents no active selection. */
   includeAllOption?: boolean
   /** Label for the "All" chip. If omitted, a localized "Total" label is used. */
@@ -73,7 +80,8 @@ export type TagFilterProps = CommonTagFilterProps &
 /**
  * TagFilter renders a row of pill-like tag buttons that supports both single
  * and multiple selection modes. It optionally shows an "All" chip when there
- * is no active selection and collapses overflow tags into a "More" popover.
+ * is no active selection and can expand overflow tags inline or render them in
+ * a legacy popover.
  */
 export function TagFilter(props: TagFilterProps) {
   const {
@@ -85,6 +93,7 @@ export function TagFilter(props: TagFilterProps) {
     allCount,
     disabled = false,
     maxVisibleLines,
+    overflowDisplay = "expand",
   } = props
 
   const { t } = useTranslation(["common"])
@@ -92,6 +101,7 @@ export function TagFilter(props: TagFilterProps) {
   const [lineVisibleCount, setLineVisibleCount] = React.useState<number | null>(
     null,
   )
+  const [isOverflowExpanded, setIsOverflowExpanded] = React.useState(false)
   const containerRef = React.useRef<HTMLDivElement | null>(null)
 
   // Normalize current selection into a set for quick lookup.
@@ -109,22 +119,28 @@ export function TagFilter(props: TagFilterProps) {
   let visibleOptions = options
   let overflowOptions: TagFilterOption[] = []
 
-  if (useLineBasedLimit) {
-    if (
-      lineVisibleCount !== null &&
-      lineVisibleCount >= 0 &&
-      lineVisibleCount < options.length
-    ) {
-      visibleOptions = options.slice(0, lineVisibleCount)
-      overflowOptions = options.slice(lineVisibleCount)
-    } else {
-      visibleOptions = options
-      overflowOptions = []
+  const shouldCollapseOverflow =
+    overflowDisplay === "popover" ||
+    (overflowDisplay === "expand" && !isOverflowExpanded)
+
+  if (shouldCollapseOverflow) {
+    if (useLineBasedLimit) {
+      if (
+        lineVisibleCount !== null &&
+        lineVisibleCount >= 0 &&
+        lineVisibleCount < options.length
+      ) {
+        visibleOptions = options.slice(0, lineVisibleCount)
+        overflowOptions = options.slice(lineVisibleCount)
+      } else {
+        visibleOptions = options
+        overflowOptions = []
+      }
+    } else if (options.length > normalizedMaxVisible) {
+      const visibleCount = Math.max(1, normalizedMaxVisible - 1)
+      visibleOptions = options.slice(0, visibleCount)
+      overflowOptions = options.slice(visibleCount)
     }
-  } else if (options.length > normalizedMaxVisible) {
-    const visibleCount = Math.max(1, normalizedMaxVisible - 1)
-    visibleOptions = options.slice(0, visibleCount)
-    overflowOptions = options.slice(visibleCount)
   }
 
   React.useLayoutEffect(() => {
@@ -331,45 +347,80 @@ export function TagFilter(props: TagFilterProps) {
       {/* Inline tag options */}
       {visibleOptions.map((option) => renderTagButton(option, false))}
 
-      {/* Overflow options collapsed into a popover. */}
-      {overflowOptions.length > 0 && (
-        <Popover>
-          <PopoverTrigger asChild>
-            <ToggleButton
-              type="button"
-              variant="ghost"
-              size="sm"
-              shape="pill"
-              disabled={disabled}
-              className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary/70 dark:text-dark-text-primary border border-gray-200 bg-white px-3 py-1 text-xs text-gray-900 shadow-xs sm:text-[13px]"
-              aria-label={moreLabel}
-            >
-              <span className="flex items-center gap-1">
-                <span>{moreLabel}</span>
-                <Badge
-                  variant="outline"
-                  size="sm"
-                  className="border-transparent px-1.5 text-[11px]"
-                >
-                  +{overflowOptions.length}
-                </Badge>
-                {overflowSelectedCount > 0 && (
+      {overflowOptions.length > 0 &&
+        (overflowDisplay === "popover" ? (
+          <Popover>
+            <PopoverTrigger asChild>
+              <ToggleButton
+                type="button"
+                variant="ghost"
+                size="sm"
+                shape="pill"
+                disabled={disabled}
+                className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary/70 dark:text-dark-text-primary border border-gray-200 bg-white px-3 py-1 text-xs text-gray-900 shadow-xs sm:text-[13px]"
+                aria-label={moreLabel}
+              >
+                <span className="flex items-center gap-1">
+                  <span>{moreLabel}</span>
                   <Badge
-                    variant="info"
+                    variant="outline"
                     size="sm"
                     className="border-transparent px-1.5 text-[11px]"
                   >
-                    {overflowSelectedCount}
+                    +{overflowOptions.length}
                   </Badge>
-                )}
-              </span>
-            </ToggleButton>
-          </PopoverTrigger>
-          <PopoverContent className="flex max-h-64 flex-col gap-2 overflow-y-auto p-2">
-            {overflowOptions.map((option) => renderTagButton(option, true))}
-          </PopoverContent>
-        </Popover>
-      )}
+                  {overflowSelectedCount > 0 && (
+                    <Badge
+                      variant="info"
+                      size="sm"
+                      className="border-transparent px-1.5 text-[11px]"
+                    >
+                      {overflowSelectedCount}
+                    </Badge>
+                  )}
+                </span>
+              </ToggleButton>
+            </PopoverTrigger>
+            <PopoverContent className="flex max-h-64 flex-col gap-2 overflow-y-auto p-2">
+              {overflowOptions.map((option) => renderTagButton(option, true))}
+            </PopoverContent>
+          </Popover>
+        ) : (
+          <ToggleButton
+            type="button"
+            variant="ghost"
+            size="sm"
+            shape="pill"
+            disabled={disabled}
+            className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary/70 dark:text-dark-text-primary border border-gray-200 bg-white px-3 py-1 text-xs text-gray-900 shadow-xs sm:text-[13px]"
+            aria-label={moreLabel}
+            onClick={() => {
+              if (!disabled) {
+                setIsOverflowExpanded(true)
+              }
+            }}
+          >
+            <span className="flex items-center gap-1">
+              <span>{moreLabel}</span>
+              <Badge
+                variant="outline"
+                size="sm"
+                className="border-transparent px-1.5 text-[11px]"
+              >
+                +{overflowOptions.length}
+              </Badge>
+              {overflowSelectedCount > 0 && (
+                <Badge
+                  variant="info"
+                  size="sm"
+                  className="border-transparent px-1.5 text-[11px]"
+                >
+                  {overflowSelectedCount}
+                </Badge>
+              )}
+            </span>
+          </ToggleButton>
+        ))}
     </div>
   )
 }
