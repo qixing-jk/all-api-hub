@@ -254,7 +254,7 @@ export default function BasicSettings() {
               <Tab key={tab.id} as={Fragment}>
                 {({ selected }) => (
                   <button
-                    className={`border-b-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors focus:outline-none ${
+                    className={`border-b-2 px-3 py-3 text-sm font-medium whitespace-nowrap transition-colors focus:outline-none ${
                       selected
                         ? "border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-400"
                         : "border-transparent text-gray-600 hover:border-gray-300 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
