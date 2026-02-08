@@ -71,11 +71,11 @@ const PERMISSIONS_TAB_CONFIG: TabConfig = {
 
 const TAB_CONFIGS = [
   { id: "general", component: GeneralTab },
-  { id: "balanceHistory", component: BalanceHistoryTab },
   { id: "accountManagement", component: AccountManagementTab },
-  { id: "accountUsage", component: UsageHistorySyncTab },
   { id: "refresh", component: AutoRefreshTab },
   { id: "checkinRedeem", component: CheckinRedeemTab },
+  { id: "balanceHistory", component: BalanceHistoryTab },
+  { id: "accountUsage", component: UsageHistorySyncTab },
   { id: "webAiApiCheck", component: WebAiApiCheckTab },
   { id: "managedSite", component: ManagedSiteTab },
   { id: "cliProxy", component: CliProxyTab },
