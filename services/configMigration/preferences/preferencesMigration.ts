@@ -13,6 +13,7 @@ import {
   DEFAULT_ACCOUNT_AUTO_REFRESH,
   type AccountAutoRefresh,
 } from "~/types/accountAutoRefresh"
+import { DEFAULT_OCTOPUS_CONFIG } from "~/types/octopusConfig"
 import { createLogger } from "~/utils/logger"
 
 import type { UserPreferences } from "../../userPreferences"
@@ -21,7 +22,7 @@ import { migrateSortingConfig } from "./sortingConfigMigration"
 const logger = createLogger("PreferencesMigration")
 
 // Current version of the preferences schema
-export const CURRENT_PREFERENCES_VERSION = 11
+export const CURRENT_PREFERENCES_VERSION = 12
 
 /**
  * Migration function type
@@ -254,6 +255,22 @@ const migrations: Record<number, PreferencesMigrationFunction> = {
       ...prefs,
       showTodayCashflow,
       preferencesVersion: 11,
+    }
+  },
+
+  // Version 11 -> 12: Initialize octopus config if missing
+  12: (prefs: UserPreferences): UserPreferences => {
+    logger.debug(
+      "Migrating preferences from v11 to v12 (octopus config initialization)",
+    )
+
+    const storedOctopus = (prefs as any).octopus
+    const octopus = storedOctopus ? storedOctopus : DEFAULT_OCTOPUS_CONFIG
+
+    return {
+      ...prefs,
+      octopus,
+      preferencesVersion: 12,
     }
   },
 }
