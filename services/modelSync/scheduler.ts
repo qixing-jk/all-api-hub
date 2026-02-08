@@ -200,12 +200,22 @@ class ModelSyncScheduler {
 
   async listChannels(): Promise<ManagedSiteChannelListData> {
     const userPrefs = await userPreferences.getPreferences()
-    const { siteType } = getManagedSiteContext(userPrefs)
+    const { siteType, messagesKey } = getManagedSiteContext(userPrefs)
 
     // Octopus 使用独立的 API 服务
     if (siteType === OCTOPUS) {
       const { config } = getManagedSiteConfig(userPrefs)
       const octopusConfig = config as OctopusConfig
+
+      // Validate config like createService does
+      if (
+        !octopusConfig?.baseUrl ||
+        !octopusConfig?.username ||
+        !octopusConfig?.password
+      ) {
+        throw new Error(t(`messages:${messagesKey}.configMissing`))
+      }
+
       const channels = await octopusApi.listChannels(octopusConfig)
       return {
         items: channels.map(octopusChannelToManagedSite),
@@ -397,6 +407,15 @@ class ModelSyncScheduler {
   ): Promise<ExecutionResult> {
     const { config } = getManagedSiteConfig(prefs)
     const octopusConfig = config as OctopusConfig
+
+    // Validate config like createService does
+    if (
+      !octopusConfig?.baseUrl ||
+      !octopusConfig?.username ||
+      !octopusConfig?.password
+    ) {
+      throw new Error(t(`messages:${messagesKey}.configMissing`))
+    }
 
     // List channels using Octopus API
     const octopusChannels = await octopusApi.listChannels(octopusConfig)
