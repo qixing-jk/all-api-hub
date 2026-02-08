@@ -4,6 +4,7 @@ import { userPreferences } from "~/services/userPreferences"
 import {
   DEFAULT_BALANCE_HISTORY_PREFERENCES,
   type BalanceHistoryPreferences,
+  type DailyBalanceHistoryCaptureSource,
 } from "~/types/dailyBalanceHistory"
 import {
   clearAlarm,
@@ -26,9 +27,17 @@ const END_OF_DAY_CAPTURE_TIME = {
   minute: 55,
 } as const
 
+/**
+ *
+ */
 function computeNextEndOfDayCaptureWhenMs(nowMs: number): number {
   const target = new Date(nowMs)
-  target.setHours(END_OF_DAY_CAPTURE_TIME.hour, END_OF_DAY_CAPTURE_TIME.minute, 0, 0)
+  target.setHours(
+    END_OF_DAY_CAPTURE_TIME.hour,
+    END_OF_DAY_CAPTURE_TIME.minute,
+    0,
+    0,
+  )
 
   if (target.getTime() <= nowMs) {
     target.setDate(target.getDate() + 1)
@@ -124,11 +133,14 @@ class DailyBalanceHistoryScheduler {
     let warning: string | undefined
     if (next.enabled && requestedEndOfDayEnabled && !hasAlarmsAPI()) {
       next.endOfDayCapture = { enabled: false }
-      warning = "Alarms API not supported; end-of-day capture has been disabled."
+      warning =
+        "Alarms API not supported; end-of-day capture has been disabled."
     }
 
     await userPreferences.savePreferences({ balanceHistory: next })
-    await dailyBalanceHistoryStorage.pruneAll({ retentionDays: next.retentionDays })
+    await dailyBalanceHistoryStorage.pruneAll({
+      retentionDays: next.retentionDays,
+    })
     await this.applyScheduleFromPreferences()
 
     return { warning }
@@ -148,16 +160,22 @@ class DailyBalanceHistoryScheduler {
     refreshedCount: number
   } | null> {
     const ids = Array.isArray(accountIds)
-      ? accountIds.filter((id) => typeof id === "string" && id.trim().length > 0)
+      ? accountIds.filter(
+          (id) => typeof id === "string" && id.trim().length > 0,
+        )
       : undefined
 
-    if (!ids?.length) {
+    if (accountIds == null) {
       const result = await accountStorage.refreshAllAccounts(true)
       return {
         success: result.success,
         failed: result.failed,
         refreshedCount: result.refreshedCount,
       }
+    }
+
+    if (!ids?.length) {
+      return { success: 0, failed: 0, refreshedCount: 0 }
     }
 
     const results = await Promise.allSettled(
@@ -182,7 +200,9 @@ class DailyBalanceHistoryScheduler {
     return { success, failed, refreshedCount }
   }
 
-  async runEndOfDayCapture(params: { trigger: "alarm" | "manual" }) {
+  async runEndOfDayCapture(params: {
+    trigger: DailyBalanceHistoryCaptureSource
+  }) {
     if (this.isRunning) {
       return null
     }
@@ -202,7 +222,7 @@ class DailyBalanceHistoryScheduler {
         accounts.map((account) =>
           accountStorage.refreshAccount(account.id, true, {
             includeTodayCashflow: true,
-            balanceHistoryCaptureSource: "alarm",
+            balanceHistoryCaptureSource: params.trigger,
           }),
         ),
       )
