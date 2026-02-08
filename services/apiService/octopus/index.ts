@@ -37,18 +37,60 @@ async function fetchOctopusApi<T>(
     },
   })
 
-  const data = await response.json()
+  // 检查 HTTP 状态码，处理非成功响应
+  if (!response.ok) {
+    const contentType = response.headers.get("Content-Type") || ""
+    let errorMessage: string
+
+    if (contentType.includes("application/json")) {
+      // 尝试解析 JSON 错误响应
+      try {
+        const errorData = await response.json()
+        errorMessage =
+          errorData.message || errorData.error || JSON.stringify(errorData)
+      } catch {
+        errorMessage = await response.text()
+      }
+    } else {
+      // 非 JSON 响应，读取文本
+      errorMessage = await response.text()
+    }
+
+    throw new Error(
+      `HTTP ${response.status} ${response.statusText}: ${errorMessage}`,
+    )
+  }
+
+  // 检查 Content-Type 是否为 JSON
+  const contentType = response.headers.get("Content-Type") || ""
+  if (!contentType.includes("application/json")) {
+    const text = await response.text()
+    throw new Error(
+      `Expected JSON response but got ${contentType || "unknown content type"}: ${text.slice(0, 200)}`,
+    )
+  }
+
+  let data: unknown
+  try {
+    data = await response.json()
+  } catch {
+    throw new Error(`Failed to parse JSON response from ${endpoint}`)
+  }
 
   // Octopus 返回格式: { success: boolean, data?: T, message?: string }
   // 或者 { code: number, message: string, data?: T }
-  if (data.success === false || (data.code && data.code !== 200)) {
-    throw new Error(data.message || "API request failed")
+  const responseData = data as Record<string, unknown>
+  if (
+    responseData.success === false ||
+    (responseData.code && responseData.code !== 200)
+  ) {
+    throw new Error((responseData.message as string) || "API request failed")
   }
 
   return {
     success: true,
-    data: data.data ?? data,
-    message: data.message || "success",
+    data: (responseData.data ?? data) as T,
+    message: (responseData.message as string) || "success",
   }
 }
 
