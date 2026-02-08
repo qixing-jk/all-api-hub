@@ -1,6 +1,6 @@
 import { Storage } from "@plasmohq/storage"
 
-import { STORAGE_LOCKS } from "~/services/storageKeys"
+import { STORAGE_KEYS, STORAGE_LOCKS } from "~/services/storageKeys"
 import { withExtensionStorageWriteLock } from "~/services/storageWriteLock"
 import type {
   DailyBalanceHistoryStore,
@@ -10,11 +10,13 @@ import { DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION } from "~/types/dailyBalance
 import { getErrorMessage } from "~/utils/error"
 import { createLogger } from "~/utils/logger"
 
-import { DAILY_BALANCE_HISTORY_STORAGE_KEYS } from "./constants"
 import { computeRetentionCutoffDayKey, parseDayKey } from "./dayKeys"
 
 const logger = createLogger("DailyBalanceHistoryStorage")
 
+/**
+ *
+ */
 function createEmptyStore(): DailyBalanceHistoryStore {
   return {
     schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
@@ -22,6 +24,9 @@ function createEmptyStore(): DailyBalanceHistoryStore {
   }
 }
 
+/**
+ *
+ */
 function sanitizeSnapshot(value: unknown): DailyBalanceSnapshot | null {
   if (!value || typeof value !== "object") {
     return null
@@ -35,7 +40,8 @@ function sanitizeSnapshot(value: unknown): DailyBalanceSnapshot | null {
       : null
 
   const capturedAt =
-    typeof payload.capturedAt === "number" && Number.isFinite(payload.capturedAt)
+    typeof payload.capturedAt === "number" &&
+    Number.isFinite(payload.capturedAt)
       ? payload.capturedAt
       : null
 
@@ -73,6 +79,9 @@ function sanitizeSnapshot(value: unknown): DailyBalanceSnapshot | null {
   }
 }
 
+/**
+ *
+ */
 function sanitizeStore(value: unknown): DailyBalanceHistoryStore {
   const base = createEmptyStore()
 
@@ -119,7 +128,13 @@ function sanitizeStore(value: unknown): DailyBalanceHistoryStore {
   }
 }
 
-function pruneStoreInPlace(store: DailyBalanceHistoryStore, cutoffDayKey: string) {
+/**
+ *
+ */
+function pruneStoreInPlace(
+  store: DailyBalanceHistoryStore,
+  cutoffDayKey: string,
+) {
   for (const accountId of Object.keys(store.snapshotsByAccountId)) {
     const perDay = store.snapshotsByAccountId[accountId]
     for (const dayKey of Object.keys(perDay)) {
@@ -145,14 +160,14 @@ class DailyBalanceHistoryStorage {
    * Read the store from extension storage and sanitize it to the latest schema.
    */
   async getStore(): Promise<DailyBalanceHistoryStore> {
-    const raw = await this.storage.get(DAILY_BALANCE_HISTORY_STORAGE_KEYS.STORE)
+    const raw = await this.storage.get(STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE)
     return sanitizeStore(raw)
   }
 
   private async setStore(store: DailyBalanceHistoryStore): Promise<boolean> {
     try {
       await this.storage.set(
-        DAILY_BALANCE_HISTORY_STORAGE_KEYS.STORE,
+        STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE,
         sanitizeStore(store),
       )
       return true
@@ -167,14 +182,19 @@ class DailyBalanceHistoryStorage {
    * read-modify-write races.
    */
   async updateStore(
-    updater: (store: DailyBalanceHistoryStore) => DailyBalanceHistoryStore | void,
+    updater: (
+      store: DailyBalanceHistoryStore,
+    ) => DailyBalanceHistoryStore | void,
   ): Promise<DailyBalanceHistoryStore> {
-    return withExtensionStorageWriteLock(STORAGE_LOCKS.DAILY_BALANCE_HISTORY, async () => {
-      const current = await this.getStore()
-      const updated = updater(current) ?? current
-      await this.setStore(updated)
-      return updated
-    })
+    return withExtensionStorageWriteLock(
+      STORAGE_LOCKS.DAILY_BALANCE_HISTORY,
+      async () => {
+        const current = await this.getStore()
+        const updated = updater(current) ?? current
+        await this.setStore(updated)
+        return updated
+      },
+    )
   }
 
   /**
@@ -207,7 +227,9 @@ class DailyBalanceHistoryStorage {
 
       return true
     } catch (error) {
-      logger.error("Failed to upsert snapshot", { error: getErrorMessage(error) })
+      logger.error("Failed to upsert snapshot", {
+        error: getErrorMessage(error),
+      })
       return false
     }
   }
@@ -242,4 +264,3 @@ class DailyBalanceHistoryStorage {
 }
 
 export const dailyBalanceHistoryStorage = new DailyBalanceHistoryStorage()
-

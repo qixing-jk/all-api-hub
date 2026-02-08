@@ -1,5 +1,3 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react"
-import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
@@ -8,11 +6,19 @@ import balanceHistoryEn from "~/locales/en/balanceHistory.json"
 import commonEn from "~/locales/en/common.json"
 import settingsEn from "~/locales/en/settings.json"
 import { testI18n } from "~/tests/test-utils/i18n"
+import { fireEvent, render, screen, waitFor } from "~/tests/test-utils/render"
 import { hasAlarmsAPI } from "~/utils/browserApi"
 
-vi.mock("~/contexts/UserPreferencesContext", () => ({
-  useUserPreferencesContext: vi.fn(),
-}))
+vi.mock("~/contexts/UserPreferencesContext", async () => {
+  const actual = await vi.importActual<
+    typeof import("~/contexts/UserPreferencesContext")
+  >("~/contexts/UserPreferencesContext")
+
+  return {
+    ...actual,
+    useUserPreferencesContext: vi.fn(),
+  }
+})
 
 vi.mock("~/utils/browserApi", () => ({
   hasAlarmsAPI: vi.fn(() => true),
@@ -29,7 +35,13 @@ vi.mock("react-hot-toast", () => {
 })
 
 describe("BalanceHistorySettings", () => {
-  testI18n.addResourceBundle("en", "balanceHistory", balanceHistoryEn, true, true)
+  testI18n.addResourceBundle(
+    "en",
+    "balanceHistory",
+    balanceHistoryEn,
+    true,
+    true,
+  )
   testI18n.addResourceBundle("en", "settings", settingsEn, true, true)
   testI18n.addResourceBundle("en", "common", commonEn, true, true)
 
@@ -38,12 +50,7 @@ describe("BalanceHistorySettings", () => {
     vi.mocked(hasAlarmsAPI).mockReturnValue(true)
   })
 
-  const renderSubject = () =>
-    render(
-      <I18nextProvider i18n={testI18n}>
-        <BalanceHistorySettings />
-      </I18nextProvider>,
-    )
+  const renderSubject = () => render(<BalanceHistorySettings />)
 
   it("sends balanceHistory:updateSettings with current form values", async () => {
     const updateBalanceHistory = vi.fn().mockResolvedValue(true)
@@ -97,4 +104,3 @@ describe("BalanceHistorySettings", () => {
     expect(switches[1]).toBeDisabled()
   })
 })
-

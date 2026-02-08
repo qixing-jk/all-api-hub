@@ -16,6 +16,7 @@ import {
 import { dailyBalanceHistoryStorage } from "~/services/dailyBalanceHistory/storage"
 import { testI18n } from "~/tests/test-utils/i18n"
 import { render, screen, waitFor } from "~/tests/test-utils/render"
+import { DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION } from "~/types/dailyBalanceHistory"
 
 vi.mock("~/components/charts/echarts", async () => {
   return {
@@ -118,7 +119,7 @@ describe("BalanceHistory options page", () => {
       tagsById: {},
     } as any)
     vi.mocked(dailyBalanceHistoryStorage.getStore).mockResolvedValue({
-      schemaVersion: 1,
+      schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
       snapshotsByAccountId: {},
     } as any)
 

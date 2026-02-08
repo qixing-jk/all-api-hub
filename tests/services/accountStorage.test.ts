@@ -2,9 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { UI_CONSTANTS } from "~/constants/ui"
 import { accountStorage } from "~/services/accountStorage"
-import { DAILY_BALANCE_HISTORY_STORAGE_KEYS } from "~/services/dailyBalanceHistory/constants"
 import { getDayKeyFromUnixSeconds } from "~/services/dailyBalanceHistory/dayKeys"
-import { USER_PREFERENCES_STORAGE_KEYS, ACCOUNT_STORAGE_KEYS } from "~/services/storageKeys"
+import {
+  ACCOUNT_STORAGE_KEYS,
+  STORAGE_KEYS,
+  USER_PREFERENCES_STORAGE_KEYS,
+} from "~/services/storageKeys"
 import { DEFAULT_PREFERENCES } from "~/services/userPreferences"
 import {
   AuthTypeEnum,
@@ -958,10 +961,12 @@ describe("accountStorage core behaviors", () => {
       const nowUnixSeconds = Math.floor(Date.now() / 1000)
       const dayKey = getDayKeyFromUnixSeconds(nowUnixSeconds)
       const stored = storageData.get(
-        DAILY_BALANCE_HISTORY_STORAGE_KEYS.STORE,
+        STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE,
       ) as any
 
-      expect(stored?.snapshotsByAccountId?.["balance-history"]?.[dayKey]).toEqual(
+      expect(
+        stored?.snapshotsByAccountId?.["balance-history"]?.[dayKey],
+      ).toEqual(
         expect.objectContaining({
           quota: 123,
           today_income: 5,
@@ -1020,7 +1025,7 @@ describe("accountStorage core behaviors", () => {
       const nowUnixSeconds = Math.floor(Date.now() / 1000)
       const dayKey = getDayKeyFromUnixSeconds(nowUnixSeconds)
       const stored = storageData.get(
-        DAILY_BALANCE_HISTORY_STORAGE_KEYS.STORE,
+        STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE,
       ) as any
 
       expect(
@@ -1063,7 +1068,7 @@ describe("accountStorage core behaviors", () => {
 
     await accountStorage.refreshAccount("balance-history-failed", true)
 
-    const stored = storageData.get(DAILY_BALANCE_HISTORY_STORAGE_KEYS.STORE)
+    const stored = storageData.get(STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE)
     expect(stored).toBeUndefined()
   })
 })

@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { DAILY_BALANCE_HISTORY_STORAGE_KEYS } from "~/services/dailyBalanceHistory/constants"
 import { getDayKeyFromUnixSeconds } from "~/services/dailyBalanceHistory/dayKeys"
 import { dailyBalanceHistoryStorage } from "~/services/dailyBalanceHistory/storage"
+import { STORAGE_KEYS } from "~/services/storageKeys"
 import { DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION } from "~/types/dailyBalanceHistory"
 
 const storageData = new Map<string, any>()
@@ -31,7 +31,7 @@ describe("dailyBalanceHistoryStorage", () => {
   })
 
   it("sanitizes invalid stored payloads", async () => {
-    storageData.set(DAILY_BALANCE_HISTORY_STORAGE_KEYS.STORE, { foo: "bar" })
+    storageData.set(STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE, { foo: "bar" })
 
     const store = await dailyBalanceHistoryStorage.getStore()
     expect(store.schemaVersion).toBe(DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION)
@@ -44,7 +44,7 @@ describe("dailyBalanceHistoryStorage", () => {
     vi.setSystemTime(fixedNow)
 
     try {
-      storageData.set(DAILY_BALANCE_HISTORY_STORAGE_KEYS.STORE, {
+      storageData.set(STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE, {
         schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
         snapshotsByAccountId: {
           a1: {
@@ -93,4 +93,3 @@ describe("dailyBalanceHistoryStorage", () => {
     }
   })
 })
-
