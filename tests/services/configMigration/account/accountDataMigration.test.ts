@@ -194,6 +194,51 @@ describe("accountDataMigration", () => {
       expect(migrated.excludeFromTotalBalance).toBe(true)
     })
 
+    it("drops sub2apiAuth when refreshToken is empty when migrating version 4 to current version", () => {
+      const legacyV4Sub2Api = createSiteAccount({
+        configVersion: 4,
+        site_type: "sub2api",
+        sub2apiAuth: { refreshToken: "   " } as any,
+      })
+
+      const migrated = migrateAccountConfig(legacyV4Sub2Api)
+
+      expect(migrated.configVersion).toBe(CURRENT_CONFIG_VERSION)
+      expect(migrated.sub2apiAuth).toBeUndefined()
+    })
+
+    it("normalizes sub2apiAuth refreshToken and tokenExpiresAt when migrating version 4 to current version", () => {
+      const legacyV4Sub2Api = createSiteAccount({
+        configVersion: 4,
+        site_type: "sub2api",
+        sub2apiAuth: {
+          refreshToken: "  token  ",
+          tokenExpiresAt: "1700",
+        } as any,
+      })
+
+      const migrated = migrateAccountConfig(legacyV4Sub2Api)
+
+      expect(migrated.configVersion).toBe(CURRENT_CONFIG_VERSION)
+      expect(migrated.sub2apiAuth).toEqual({
+        refreshToken: "token",
+        tokenExpiresAt: 1700,
+      })
+    })
+
+    it("drops sub2apiAuth for non-sub2api accounts when migrating version 4 to current version", () => {
+      const legacyV4NonSub2Api = createSiteAccount({
+        configVersion: 4,
+        site_type: "test-site",
+        sub2apiAuth: { refreshToken: "token" } as any,
+      })
+
+      const migrated = migrateAccountConfig(legacyV4NonSub2Api)
+
+      expect(migrated.configVersion).toBe(CURRENT_CONFIG_VERSION)
+      expect(migrated.sub2apiAuth).toBeUndefined()
+    })
+
     it("migrates version 1 site check-in status into checkIn.siteStatus", () => {
       const legacyV1Account = createSiteAccount({
         configVersion: 1,

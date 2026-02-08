@@ -1,5 +1,14 @@
 # Changelog
 
+## [3.16.0](https://github.com/qixing-jk/all-api-hub/compare/v3.15.1...v3.16.0) (2026-02-07)
+
+
+### Features
+
+* add toggle for today's cashflow stats ([#441](https://github.com/qixing-jk/all-api-hub/issues/441)) ([e8f07e6](https://github.com/qixing-jk/all-api-hub/commit/e8f07e6eb1b1aac6b3291b8237678d3e67347dab))
+* **api:** support Sub2API site type and balance enquiry ([#438](https://github.com/qixing-jk/all-api-hub/issues/438)) ([ab27652](https://github.com/qixing-jk/all-api-hub/commit/ab27652207e22be09d2597f7befd531654ce86ed))
+* **sub2api:** add refresh-token auth for extension-managed sessions ([#443](https://github.com/qixing-jk/all-api-hub/issues/443)) ([9378d2b](https://github.com/qixing-jk/all-api-hub/commit/9378d2bd3e2f5e57a58627c85f42d3baeb96eb78))
+
 ## [3.15.1](https://github.com/qixing-jk/all-api-hub/compare/v3.15.0...v3.15.1) (2026-02-06)
 
 

@@ -113,7 +113,8 @@
     }
   },
   "sub2api": {
-    "loginRequired": "Please log in to the Sub2API dashboard first (the extension reads auth_token/auth_user from localStorage) and try again."
+    "loginRequired": "Please log in to the Sub2API dashboard first (so the extension can read auth_token/auth_user from localStorage) and try again.",
+    "refreshTokenInvalid": "Sub2API refresh token is invalid/rotated. Re-import the session from the dashboard (recommended: incognito/private window) or paste an updated refresh_token, then try again."
   },
   "newapi": {
     "configMissing": "Please configure New API address, admin token, and user ID in basic settings first",

@@ -50,6 +50,7 @@ describe("content storage handler", () => {
     })
     expect(response.data?.accessToken).toBe("jwt-token")
     expect(response.data?.siteTypeHint).toBe("sub2api")
+    expect(response.data?.sub2apiAuth).toBeUndefined()
     expect(mockFetchUserInfo).not.toHaveBeenCalled()
   })
 
@@ -101,6 +102,10 @@ describe("content storage handler", () => {
 
     expect(response.success).toBe(true)
     expect(response.data?.accessToken).toBe("new-token")
+    expect(response.data?.sub2apiAuth).toEqual({
+      refreshToken: "new-refresh",
+      tokenExpiresAt: now + 3600 * 1000,
+    })
     expect(mockFetchUserInfo).not.toHaveBeenCalled()
 
     nowSpy.mockRestore()
@@ -175,6 +180,10 @@ describe("content storage handler", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(response.success).toBe(true)
     expect(response.data?.accessToken).toBe("old-token")
+    expect(response.data?.sub2apiAuth).toEqual({
+      refreshToken: "old-refresh",
+      tokenExpiresAt: now + 60_000,
+    })
     expect(mockFetchUserInfo).not.toHaveBeenCalled()
 
     nowSpy.mockRestore()

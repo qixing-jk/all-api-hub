@@ -138,6 +138,10 @@ export default function AccountDialog({
               username={state.username}
               userId={state.userId}
               accessToken={state.accessToken}
+              sub2apiUseRefreshToken={state.sub2apiUseRefreshToken}
+              sub2apiRefreshToken={state.sub2apiRefreshToken}
+              sub2apiTokenExpiresAt={state.sub2apiTokenExpiresAt}
+              isImportingSub2apiSession={state.isImportingSub2apiSession}
               exchangeRate={state.exchangeRate}
               manualBalanceUsd={state.manualBalanceUsd}
               isManualBalanceUsdInvalid={state.isManualBalanceUsdInvalid}
@@ -146,6 +150,11 @@ export default function AccountDialog({
               onUsernameChange={setters.setUsername}
               onUserIdChange={setters.setUserId}
               onAccessTokenChange={setters.setAccessToken}
+              onSub2apiUseRefreshTokenChange={
+                handlers.handleSub2apiUseRefreshTokenChange
+              }
+              onSub2apiRefreshTokenChange={setters.setSub2apiRefreshToken}
+              onImportSub2apiSession={handlers.handleImportSub2apiSession}
               onExchangeRateChange={setters.setExchangeRate}
               onManualBalanceUsdChange={setters.setManualBalanceUsd}
               onToggleShowAccessToken={() =>

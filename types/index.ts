@@ -49,6 +49,21 @@ export interface CookieAuthConfig {
   sessionCookie: string
 }
 
+export interface Sub2ApiAuthConfig {
+  /**
+   * Exportable refresh token used for extension-managed Sub2API sessions.
+   *
+   * Security: this is a long-lived secret and will be included in
+   * exports/WebDAV backups.
+   */
+  refreshToken: string
+  /**
+   * Access-token expiry timestamp in milliseconds since epoch (optional).
+   * Used for proactive refresh to avoid unnecessary 401 spikes.
+   */
+  tokenExpiresAt?: number
+}
+
 // 站点账号完整信息
 export interface SiteAccount {
   id: string // 此项 id
@@ -117,6 +132,14 @@ export interface SiteAccount {
    */
   cookieAuth?: CookieAuthConfig
   /**
+   * Optional Sub2API refresh-token configuration for extension-managed sessions.
+   *
+   * When configured, the extension can refresh and rotate Sub2API tokens per
+   * account, enabling multiple accounts on the same origin without relying on
+   * dashboard localStorage.
+   */
+  sub2apiAuth?: Sub2ApiAuthConfig
+  /**
    * 站点签到相关
    */
   checkIn: CheckInConfig
@@ -133,6 +156,7 @@ export interface SiteAccount {
    * 1.1.1: Split site vs custom check-in state (configVersion = 2)
    * 1.2.0: Persist/normalize `disabled` flag (configVersion = 3)
    * 1.2.1: Persist/normalize `excludeFromTotalBalance` flag (configVersion = 4)
+   * 1.2.2: Persist/normalize Sub2API refresh-token auth (configVersion = 5)
    * @since 1.0.0
    */
   configVersion?: number

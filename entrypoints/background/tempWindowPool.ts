@@ -658,6 +658,7 @@ async function getSiteDataFromTab(
       userId: userResponse.data?.userId,
       user: userResponse.data?.user,
       accessToken: userResponse.data?.accessToken,
+      sub2apiAuth: userResponse.data?.sub2apiAuth,
       siteTypeHint: userResponse.data?.siteTypeHint,
     }
   } catch (error) {

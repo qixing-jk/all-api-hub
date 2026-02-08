@@ -31,6 +31,10 @@ import { createLogger } from "~/utils/logger"
 
 import { parseSub2ApiEnvelope, parseSub2ApiUserIdentity } from "./parsing"
 import { getSafeErrorMessage } from "./redaction"
+import {
+  refreshSub2ApiTokens,
+  SUB2API_TOKEN_REFRESH_BUFFER_MS,
+} from "./tokenRefresh"
 import { resyncSub2ApiAuthToken } from "./tokenResync"
 import type { Sub2ApiAuthMeData, Sub2ApiAuthMeResponse } from "./type"
 
@@ -40,6 +44,11 @@ import type { Sub2ApiAuthMeData, Sub2ApiAuthMeResponse } from "./type"
 const logger = createLogger("ApiService.Sub2API")
 
 const AUTH_ME_ENDPOINT = "/api/v1/auth/me"
+
+const isCloseToExpiry = (tokenExpiresAt: number): boolean => {
+  const msUntilExpiry = tokenExpiresAt - Date.now()
+  return msUntilExpiry <= SUB2API_TOKEN_REFRESH_BUFFER_MS
+}
 
 const normalizeJwtRequest = (request: ApiServiceRequest): ApiServiceRequest => {
   const accessToken =
@@ -96,6 +105,11 @@ const createDisabledCheckInConfig = (
 const createLoginRequiredHealthStatus = () => ({
   status: SiteHealthStatus.Warning,
   message: t("messages:sub2api.loginRequired"),
+})
+
+const createRefreshTokenRestoreRequiredHealthStatus = () => ({
+  status: SiteHealthStatus.Warning,
+  message: t("messages:sub2api.refreshTokenInvalid"),
 })
 
 /**
@@ -196,8 +210,58 @@ export async function refreshAccountData(
     request.checkIn ?? { enableDetection: false },
   )
 
+  const storedRefreshToken =
+    typeof request.auth?.refreshToken === "string"
+      ? request.auth.refreshToken.trim()
+      : ""
+  const storedTokenExpiresAtRaw = request.auth?.tokenExpiresAt
+  const storedTokenExpiresAt =
+    typeof storedTokenExpiresAtRaw === "number" &&
+    Number.isFinite(storedTokenExpiresAtRaw)
+      ? storedTokenExpiresAtRaw
+      : undefined
+  const hasStoredRefreshToken = Boolean(storedRefreshToken)
+  // Keep a function-scoped refresh token so the 401 retry can use the latest
+  // (potentially rotated) value after proactive refresh.
+  let refreshToken = storedRefreshToken
+
   try {
-    const currentUser = await fetchCurrentUser(request)
+    let accessToken =
+      typeof request.auth?.accessToken === "string"
+        ? request.auth.accessToken.trim()
+        : ""
+    let tokenExpiresAt = storedTokenExpiresAt
+    let hasProactiveRefreshUpdate = false
+
+    // Best-effort: proactively refresh when expiry info exists and is close.
+    if (hasStoredRefreshToken && typeof tokenExpiresAt === "number") {
+      if (isCloseToExpiry(tokenExpiresAt)) {
+        try {
+          const refreshed = await refreshSub2ApiTokens({
+            baseUrl: request.baseUrl,
+            accessToken,
+            refreshToken,
+          })
+          accessToken = refreshed.accessToken
+          refreshToken = refreshed.refreshToken
+          tokenExpiresAt = refreshed.tokenExpiresAt
+          hasProactiveRefreshUpdate = true
+        } catch (refreshError) {
+          logger.warn("Sub2API proactive token refresh failed", {
+            error: getSafeErrorMessage(refreshError),
+          })
+        }
+      }
+    }
+
+    const currentUser = await fetchCurrentUser({
+      ...request,
+      auth: {
+        ...request.auth,
+        authType: AuthTypeEnum.AccessToken,
+        accessToken,
+      },
+    })
     return {
       success: true,
       data: createAccountData(currentUser, checkIn),
@@ -206,12 +270,77 @@ export async function refreshAccountData(
         message: t("account:healthStatus.normal"),
       },
       authUpdate: {
+        ...(hasProactiveRefreshUpdate
+          ? {
+              accessToken,
+              sub2apiAuth: {
+                refreshToken,
+                ...(typeof tokenExpiresAt === "number"
+                  ? { tokenExpiresAt }
+                  : {}),
+              },
+            }
+          : {}),
         userId: currentUser.userId,
         username: currentUser.username,
       },
     }
   } catch (error) {
     if (error instanceof ApiError && error.statusCode === 401) {
+      // Preferred restoration path: refresh-token-based retry (extension-managed session).
+      if (hasStoredRefreshToken) {
+        try {
+          const accessToken =
+            typeof request.auth?.accessToken === "string"
+              ? request.auth.accessToken.trim()
+              : ""
+          const refreshed = await refreshSub2ApiTokens({
+            baseUrl: request.baseUrl,
+            accessToken,
+            refreshToken,
+          })
+
+          const retryRequest: ApiServiceAccountRequest = {
+            ...request,
+            auth: {
+              ...request.auth,
+              authType: AuthTypeEnum.AccessToken,
+              accessToken: refreshed.accessToken,
+              refreshToken: refreshed.refreshToken,
+              tokenExpiresAt: refreshed.tokenExpiresAt,
+            },
+          }
+
+          const currentUser = await fetchCurrentUser(retryRequest)
+
+          return {
+            success: true,
+            data: createAccountData(currentUser, checkIn),
+            healthStatus: {
+              status: SiteHealthStatus.Healthy,
+              message: t("account:healthStatus.normal"),
+            },
+            authUpdate: {
+              accessToken: refreshed.accessToken,
+              sub2apiAuth: {
+                refreshToken: refreshed.refreshToken,
+                tokenExpiresAt: refreshed.tokenExpiresAt,
+              },
+              userId: currentUser.userId,
+              username: currentUser.username,
+            },
+          }
+        } catch (refreshError) {
+          logger.warn("Failed to restore Sub2API session via refresh token", {
+            error: getSafeErrorMessage(refreshError),
+          })
+          return {
+            success: false,
+            healthStatus: createRefreshTokenRestoreRequiredHealthStatus(),
+          }
+        }
+      }
+
       const resynced = await resyncSub2ApiAuthToken(request.baseUrl)
       if (!resynced) {
         return {

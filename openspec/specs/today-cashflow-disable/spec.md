@@ -1,10 +1,8 @@
 # today-cashflow-disable Specification
 
 ## Purpose
-Allow users to disable “today” cashflow/usage statistics (today consumption/outcome + today income, and related today token/request counts) across the extension UI, and ensure the extension skips the related network fetch logic while keeping balance/quota refresh and check-in features working.
-
+TBD - created by archiving change disable-today-income-outcome. Update Purpose after archive.
 ## Requirements
-
 ### Requirement: Persisted today cashflow toggle
 The system MUST provide a persisted user preference flag `showTodayCashflow` that controls whether “today” cashflow/usage statistics are displayed and fetched.
 

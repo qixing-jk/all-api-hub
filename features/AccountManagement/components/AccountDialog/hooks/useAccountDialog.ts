@@ -15,13 +15,19 @@ import {
   validateAndUpdateAccount,
 } from "~/services/accountOperations"
 import { accountStorage } from "~/services/accountStorage"
-import { AuthTypeEnum, type CheckInConfig, type DisplaySiteData } from "~/types"
+import {
+  AuthTypeEnum,
+  type CheckInConfig,
+  type DisplaySiteData,
+  type Sub2ApiAuthConfig,
+} from "~/types"
 import {
   analyzeAutoDetectError,
   AutoDetectError,
 } from "~/utils/autoDetectUtils"
 import {
   getActiveTabs,
+  getAllTabs,
   onTabActivated,
   onTabUpdated,
   sendRuntimeMessage,
@@ -102,6 +108,13 @@ export function useAccountDialog({
   const [isAutoConfiguring, setIsAutoConfiguring] = useState(false)
   const [cookieAuthSessionCookie, setCookieAuthSessionCookie] = useState("")
   const [isImportingCookies, setIsImportingCookies] = useState(false)
+  const [isImportingSub2apiSession, setIsImportingSub2apiSession] =
+    useState(false)
+  const [sub2apiUseRefreshToken, setSub2apiUseRefreshToken] = useState(false)
+  const [sub2apiRefreshToken, setSub2apiRefreshToken] = useState("")
+  const [sub2apiTokenExpiresAt, setSub2apiTokenExpiresAt] = useState<
+    number | null
+  >(null)
 
   // Enforce Sub2API constraints: JWT-only (access token), no built-in check-in.
   useEffect(() => {
@@ -121,6 +134,27 @@ export function useAccountDialog({
       autoCheckInEnabled: false,
     }))
   }, [authType, cookieAuthSessionCookie, siteType])
+
+  useEffect(() => {
+    if (siteType === SUB2API) return
+
+    if (sub2apiUseRefreshToken) {
+      setSub2apiUseRefreshToken(false)
+    }
+
+    if (sub2apiRefreshToken) {
+      setSub2apiRefreshToken("")
+    }
+
+    if (sub2apiTokenExpiresAt !== null) {
+      setSub2apiTokenExpiresAt(null)
+    }
+  }, [
+    siteType,
+    sub2apiRefreshToken,
+    sub2apiTokenExpiresAt,
+    sub2apiUseRefreshToken,
+  ])
 
   // useRef 保存跨渲染引用
   const newAccountRef = useRef<any>(null)
@@ -165,6 +199,9 @@ export function useAccountDialog({
     setIsAutoConfiguring(false)
     setCookieAuthSessionCookie("")
     setIsImportingCookies(false)
+    setSub2apiUseRefreshToken(false)
+    setSub2apiRefreshToken("")
+    setSub2apiTokenExpiresAt(null)
     targetAccountRef.current = null
   }, [mode])
 
@@ -210,6 +247,12 @@ export function useAccountDialog({
           setCookieAuthSessionCookie(
             siteAccount.cookieAuth?.sessionCookie || "",
           )
+          const refreshToken = siteAccount.sub2apiAuth?.refreshToken ?? ""
+          setSub2apiRefreshToken(refreshToken)
+          setSub2apiTokenExpiresAt(
+            siteAccount.sub2apiAuth?.tokenExpiresAt ?? null,
+          )
+          setSub2apiUseRefreshToken(Boolean(refreshToken.trim()))
         }
       } catch (error) {
         logger.error("Failed to load account data", { error, accountId })
@@ -361,6 +404,125 @@ export function useAccountDialog({
     }
   }
 
+  /**
+   * Import Sub2API dashboard session credentials (including refresh_token) into the form.
+   *
+   * Strategy:
+   * 1) Prefer any existing tab with the same origin (least intrusive; supports incognito tabs when allowed).
+   * 2) Fall back to the background temp-window auto-detect flow.
+   */
+  const handleImportSub2apiSession = async () => {
+    if (!url.trim()) {
+      toast.error(t("messages.urlRequired"))
+      return
+    }
+
+    setIsImportingSub2apiSession(true)
+    try {
+      const baseUrl = url.trim()
+      const targetOrigin = (() => {
+        try {
+          return new URL(baseUrl).origin
+        } catch {
+          return null
+        }
+      })()
+
+      let imported: any | null = null
+
+      if (targetOrigin && browser?.tabs?.sendMessage) {
+        const tabs = await getAllTabs().catch(() => [])
+        const candidates = tabs
+          .filter((tab) => {
+            if (!tab?.id || !tab.url) return false
+            try {
+              return new URL(tab.url).origin === targetOrigin
+            } catch {
+              return false
+            }
+          })
+          .sort((a, b) => Number(Boolean(b.active)) - Number(Boolean(a.active)))
+
+        for (const tab of candidates) {
+          const tabId = tab.id
+          if (typeof tabId !== "number") continue
+
+          try {
+            const response = await browser.tabs.sendMessage(tabId, {
+              action: RuntimeActionIds.ContentGetUserFromLocalStorage,
+              url: baseUrl,
+            })
+            if (response?.success && response.data) {
+              imported = response.data
+              break
+            }
+          } catch {
+            // Ignore and continue to the next candidate.
+          }
+        }
+      }
+
+      if (!imported) {
+        const response = await sendRuntimeMessage({
+          action: RuntimeActionIds.AutoDetectSite,
+          url: baseUrl,
+          requestId: `account-dialog-sub2api-import-${Date.now()}`,
+        })
+        if (response?.success && response.data) {
+          imported = response.data
+        }
+      }
+
+      const refreshToken =
+        typeof imported?.sub2apiAuth?.refreshToken === "string"
+          ? imported.sub2apiAuth.refreshToken.trim()
+          : ""
+      if (!refreshToken) {
+        toast.error(t("messages.importSub2apiSessionMissing"))
+        return
+      }
+
+      setSub2apiRefreshToken(refreshToken)
+      const tokenExpiresAtRaw = imported?.sub2apiAuth?.tokenExpiresAt
+      setSub2apiTokenExpiresAt(
+        typeof tokenExpiresAtRaw === "number" &&
+          Number.isFinite(tokenExpiresAtRaw)
+          ? tokenExpiresAtRaw
+          : null,
+      )
+
+      const importedAccessToken =
+        typeof imported?.accessToken === "string"
+          ? imported.accessToken.trim()
+          : ""
+      if (importedAccessToken) {
+        setAccessToken(importedAccessToken)
+      }
+
+      const importedUserId =
+        typeof imported?.userId === "number" && Number.isFinite(imported.userId)
+          ? imported.userId
+          : null
+      if (typeof importedUserId === "number") {
+        setUserId(String(importedUserId))
+      }
+
+      const importedUsername =
+        typeof imported?.user?.username === "string"
+          ? imported.user.username.trim()
+          : ""
+      setUsername(importedUsername)
+
+      toast.success(t("messages.importSub2apiSessionSuccess"))
+    } catch (error) {
+      toast.error(
+        t("messages.operationFailed", { error: getErrorMessage(error) }),
+      )
+    } finally {
+      setIsImportingSub2apiSession(false)
+    }
+  }
+
   const handleAutoDetect = async () => {
     if (!url.trim()) {
       return
@@ -383,6 +545,13 @@ export function useAccountDialog({
         setUsername(resultData.username)
         setAccessToken(resultData.accessToken)
         setUserId(resultData.userId)
+
+        if (resultData.siteType === SUB2API && resultData.sub2apiAuth) {
+          setSub2apiRefreshToken(resultData.sub2apiAuth.refreshToken)
+          setSub2apiTokenExpiresAt(
+            resultData.sub2apiAuth.tokenExpiresAt ?? null,
+          )
+        }
         setCheckIn({
           enableDetection: resultData.checkIn?.enableDetection ?? false,
           autoCheckInEnabled: resultData.checkIn?.autoCheckInEnabled ?? true,
@@ -467,6 +636,18 @@ export function useAccountDialog({
   const handleSaveAccount = async () => {
     setIsSaving(true)
     try {
+      const sub2apiAuth: Sub2ApiAuthConfig | undefined =
+        siteType === SUB2API &&
+        sub2apiUseRefreshToken &&
+        sub2apiRefreshToken.trim()
+          ? {
+              refreshToken: sub2apiRefreshToken.trim(),
+              ...(typeof sub2apiTokenExpiresAt === "number"
+                ? { tokenExpiresAt: sub2apiTokenExpiresAt }
+                : {}),
+            }
+          : undefined
+
       const result =
         mode === DIALOG_MODES.ADD
           ? await validateAndSaveAccount(
@@ -484,6 +665,7 @@ export function useAccountDialog({
               cookieAuthSessionCookie.trim(),
               manualBalanceUsd,
               excludeFromTotalBalance,
+              sub2apiAuth,
             )
           : await validateAndUpdateAccount(
               account!.id,
@@ -501,6 +683,7 @@ export function useAccountDialog({
               cookieAuthSessionCookie.trim(),
               manualBalanceUsd,
               excludeFromTotalBalance,
+              sub2apiAuth,
             )
 
       if (result.success) {
@@ -610,6 +793,17 @@ export function useAccountDialog({
     onClose()
   }
 
+  const handleSub2apiUseRefreshTokenChange = (enabled: boolean) => {
+    setSub2apiUseRefreshToken(enabled)
+
+    // If the user explicitly disables refresh-token mode, clear any captured
+    // credentials to avoid accidental persistence.
+    if (!enabled) {
+      setSub2apiRefreshToken("")
+      setSub2apiTokenExpiresAt(null)
+    }
+  }
+
   const isFormValid = isValidAccount({
     siteName,
     username,
@@ -620,6 +814,10 @@ export function useAccountDialog({
     cookieAuthSessionCookie,
     exchangeRate,
   })
+  const isSub2ApiRefreshTokenValid =
+    siteType !== SUB2API ||
+    !sub2apiUseRefreshToken ||
+    !!sub2apiRefreshToken.trim()
   const isManualBalanceUsdInvalid =
     manualBalanceUsd.trim() !== "" &&
     parseManualQuotaFromUsd(manualBalanceUsd) === undefined
@@ -648,10 +846,15 @@ export function useAccountDialog({
       checkIn,
       siteType,
       authType,
-      isFormValid: isFormValid && !isManualBalanceUsdInvalid,
+      sub2apiUseRefreshToken,
+      sub2apiRefreshToken,
+      sub2apiTokenExpiresAt,
+      isFormValid:
+        isFormValid && isSub2ApiRefreshTokenValid && !isManualBalanceUsdInvalid,
       isAutoConfiguring,
       cookieAuthSessionCookie,
       isImportingCookies,
+      isImportingSub2apiSession,
     },
     setters: {
       setUrl,
@@ -670,6 +873,8 @@ export function useAccountDialog({
       setSiteType,
       setAuthType,
       setCookieAuthSessionCookie,
+      setSub2apiRefreshToken,
+      setSub2apiTokenExpiresAt,
     },
     handlers: {
       handleUseCurrentTabUrl,
@@ -680,6 +885,8 @@ export function useAccountDialog({
       handleAutoConfig,
       handleClose,
       handleImportCookieAuthSessionCookie,
+      handleImportSub2apiSession,
+      handleSub2apiUseRefreshTokenChange,
     },
   }
 }

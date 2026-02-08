@@ -199,8 +199,8 @@ export function handleGetUserFromLocalStorage(
         const refreshTokenRaw = localStorage.getItem(
           SUB2API_AUTH_STORAGE_KEYS.refreshToken,
         )
-        const refreshToken = refreshTokenRaw?.trim() ?? ""
-        const tokenExpiresAt = tryParseTimestamp(
+        let refreshToken = refreshTokenRaw?.trim() ?? ""
+        let tokenExpiresAt = tryParseTimestamp(
           localStorage.getItem(SUB2API_AUTH_STORAGE_KEYS.tokenExpiresAt),
         )
         const baseUrl = typeof request?.url === "string" ? request.url : null
@@ -217,6 +217,8 @@ export function handleGetUserFromLocalStorage(
           })
           if (refreshed?.accessToken) {
             accessToken = refreshed.accessToken
+            refreshToken = refreshed.refreshToken
+            tokenExpiresAt = refreshed.tokenExpiresAt
           }
         } catch {
           // Fall through: if refresh fails, treat as login required.
@@ -240,6 +242,16 @@ export function handleGetUserFromLocalStorage(
                 balance: identity.balanceUsd,
               },
               accessToken,
+              ...(refreshToken
+                ? {
+                    sub2apiAuth: {
+                      refreshToken,
+                      ...(typeof tokenExpiresAt === "number"
+                        ? { tokenExpiresAt }
+                        : {}),
+                    },
+                  }
+                : {}),
               siteTypeHint: SUB2API,
             },
           })
