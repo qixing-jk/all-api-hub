@@ -122,6 +122,8 @@ export default function ManagedSiteChannels({
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
     base_url: false,
     group: !isOctopus, // Octopus 没有分组概念，隐藏分组列
+    priority: !isOctopus, // Octopus 没有优先级概念，隐藏优先级列
+    weight: !isOctopus, // Octopus 没有权重概念，隐藏权重列
   })
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
@@ -177,11 +179,13 @@ export default function ManagedSiteChannels({
     void refreshChannels()
   }, [refreshChannels])
 
-  // 当站点类型变化时，更新分组列的可见性
+  // 当站点类型变化时，更新分组、优先级、权重列的可见性
   useEffect(() => {
     setColumnVisibility((prev) => ({
       ...prev,
       group: !isOctopus,
+      priority: !isOctopus,
+      weight: !isOctopus,
     }))
   }, [isOctopus])
 
