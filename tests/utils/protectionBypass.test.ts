@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { isFirefox } from "~/utils/browser"
 import {
@@ -29,7 +29,9 @@ describe("protectionBypass", () => {
   it("should treat non-Firefox environments as temp-window-only", () => {
     expect(isProtectionBypassFirefoxEnv()).toBe(false)
     expect(shouldUseCookieInterceptorForProtectionBypass()).toBe(false)
-    expect(getProtectionBypassUiVariant()).toBe(ProtectionBypassUiVariants.TempWindowOnly)
+    expect(getProtectionBypassUiVariant()).toBe(
+      ProtectionBypassUiVariants.TempWindowOnly,
+    )
   })
 
   it("should use cookie-interceptor variant on Firefox", () => {
@@ -48,6 +50,8 @@ describe("protectionBypass", () => {
     })
 
     expect(isProtectionBypassFirefoxEnv()).toBe(false)
-    expect(getProtectionBypassUiVariant()).toBe(ProtectionBypassUiVariants.TempWindowOnly)
+    expect(getProtectionBypassUiVariant()).toBe(
+      ProtectionBypassUiVariants.TempWindowOnly,
+    )
   })
 })

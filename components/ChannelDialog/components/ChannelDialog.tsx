@@ -18,12 +18,16 @@ import {
 } from "~/components/ui"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { ChannelType, ChannelTypeOptions } from "~/constants/managedSite"
+import { OctopusOutboundTypeOptions } from "~/constants/octopus"
+import { OCTOPUS } from "~/constants/siteType"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import {
   CHANNEL_STATUS,
   type ChannelFormData,
   type ChannelStatus,
   type ManagedSiteChannel,
 } from "~/types/managedSite"
+import { OctopusOutboundType } from "~/types/octopus"
 
 export interface ChannelDialogProps {
   isOpen: boolean
@@ -61,6 +65,8 @@ export function ChannelDialog({
 }: ChannelDialogProps) {
   const { t } = useTranslation(["channelDialog", "common"])
   const [showKey, setShowKey] = useState(false)
+  const { managedSiteType } = useUserPreferencesContext()
+  const isOctopus = managedSiteType === OCTOPUS
 
   const {
     formData,
@@ -182,7 +188,9 @@ export function ChannelDialog({
                 : String(formData.type)
             }
             onValueChange={(value) =>
-              handleTypeChange(Number(value) as ChannelType)
+              handleTypeChange(
+                Number(value) as ChannelType | OctopusOutboundType,
+              )
             }
             disabled={isSaving || mode === DIALOG_MODES.EDIT}
             required
@@ -193,11 +201,17 @@ export function ChannelDialog({
               />
             </SelectTrigger>
             <SelectContent>
-              {ChannelTypeOptions.map((option) => (
-                <SelectItem key={option.value} value={String(option.value)}>
-                  {option.label}
-                </SelectItem>
-              ))}
+              {isOctopus
+                ? OctopusOutboundTypeOptions.map((option) => (
+                    <SelectItem key={option.value} value={String(option.value)}>
+                      {option.label}
+                    </SelectItem>
+                  ))
+                : ChannelTypeOptions.map((option) => (
+                    <SelectItem key={option.value} value={String(option.value)}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
             </SelectContent>
           </Select>
           <p className="dark:text-dark-text-secondary mt-1 text-xs text-gray-500">
@@ -316,25 +330,27 @@ export function ChannelDialog({
           </p>
         </div>
 
-        {/* Groups */}
-        <div>
-          <CompactMultiSelect
-            label={t("channelDialog:fields.groups.label")}
-            options={availableGroups}
-            selected={formData.groups}
-            onChange={(groups) => updateField("groups", groups)}
-            placeholder={
-              isLoadingGroups
-                ? t("channelDialog:fields.groups.loading")
-                : t("channelDialog:fields.groups.placeholder")
-            }
-            disabled={isSaving || isLoadingGroups}
-            allowCustom
-          />
-          <p className="dark:text-dark-text-secondary mt-1 text-xs text-gray-500">
-            {t("channelDialog:fields.groups.hint")}
-          </p>
-        </div>
+        {/* Groups - Octopus 没有分组概念，隐藏此字段 */}
+        {!isOctopus && (
+          <div>
+            <CompactMultiSelect
+              label={t("channelDialog:fields.groups.label")}
+              options={availableGroups}
+              selected={formData.groups}
+              onChange={(groups) => updateField("groups", groups)}
+              placeholder={
+                isLoadingGroups
+                  ? t("channelDialog:fields.groups.loading")
+                  : t("channelDialog:fields.groups.placeholder")
+              }
+              disabled={isSaving || isLoadingGroups}
+              allowCustom
+            />
+            <p className="dark:text-dark-text-secondary mt-1 text-xs text-gray-500">
+              {t("channelDialog:fields.groups.hint")}
+            </p>
+          </div>
+        )}
 
         {/* Advanced Settings */}
         <details className="dark:border-dark-bg-tertiary rounded-lg border border-gray-200 p-3">
@@ -342,47 +358,51 @@ export function ChannelDialog({
             {t("channelDialog:sections.advanced")}
           </summary>
           <div className="mt-3 space-y-4">
-            {/* Priority */}
-            <div>
-              <Label htmlFor="channel-priority">
-                {t("channelDialog:fields.priority.label")}
-              </Label>
-              <Input
-                id="channel-priority"
-                type="number"
-                value={formData.priority}
-                onChange={(e) =>
-                  updateField("priority", parseInt(e.target.value) || 0)
-                }
-                placeholder="0"
-                disabled={isSaving}
-                min="0"
-              />
-              <p className="dark:text-dark-text-secondary mt-1 text-xs text-gray-500">
-                {t("channelDialog:fields.priority.hint")}
-              </p>
-            </div>
+            {/* Priority - Octopus 不支持优先级 */}
+            {!isOctopus && (
+              <div>
+                <Label htmlFor="channel-priority">
+                  {t("channelDialog:fields.priority.label")}
+                </Label>
+                <Input
+                  id="channel-priority"
+                  type="number"
+                  value={formData.priority}
+                  onChange={(e) =>
+                    updateField("priority", parseInt(e.target.value) || 0)
+                  }
+                  placeholder="0"
+                  disabled={isSaving}
+                  min="0"
+                />
+                <p className="dark:text-dark-text-secondary mt-1 text-xs text-gray-500">
+                  {t("channelDialog:fields.priority.hint")}
+                </p>
+              </div>
+            )}
 
-            {/* Weight */}
-            <div>
-              <Label htmlFor="channel-weight">
-                {t("channelDialog:fields.weight.label")}
-              </Label>
-              <Input
-                id="channel-weight"
-                type="number"
-                value={formData.weight}
-                onChange={(e) =>
-                  updateField("weight", parseInt(e.target.value) || 0)
-                }
-                placeholder="0"
-                disabled={isSaving}
-                min="0"
-              />
-              <p className="dark:text-dark-text-secondary mt-1 text-xs text-gray-500">
-                {t("channelDialog:fields.weight.hint")}
-              </p>
-            </div>
+            {/* Weight - Octopus 不支持权重 */}
+            {!isOctopus && (
+              <div>
+                <Label htmlFor="channel-weight">
+                  {t("channelDialog:fields.weight.label")}
+                </Label>
+                <Input
+                  id="channel-weight"
+                  type="number"
+                  value={formData.weight}
+                  onChange={(e) =>
+                    updateField("weight", parseInt(e.target.value) || 0)
+                  }
+                  placeholder="0"
+                  disabled={isSaving}
+                  min="0"
+                />
+                <p className="dark:text-dark-text-secondary mt-1 text-xs text-gray-500">
+                  {t("channelDialog:fields.weight.hint")}
+                </p>
+              </div>
+            )}
 
             {/* Status */}
             <div>

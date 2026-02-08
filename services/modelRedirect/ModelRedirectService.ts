@@ -4,6 +4,7 @@
  * Based on gpt-api-sync logic with enhancements for weighted channel selection
  */
 
+import { OCTOPUS } from "~/constants/siteType"
 import { modelMetadataService } from "~/services/modelMetadata"
 import { ModelSyncService } from "~/services/modelSync"
 import type { ManagedSiteChannel } from "~/types/managedSite"
@@ -12,6 +13,8 @@ import {
   ALL_PRESET_STANDARD_MODELS,
   DEFAULT_MODEL_REDIRECT_PREFERENCES,
 } from "~/types/managedSiteModelRedirect"
+import type { NewApiConfig } from "~/types/newApiConfig"
+import type { VeloeraConfig } from "~/types/veloeraConfig"
 import { createLogger } from "~/utils/logger"
 import { getManagedSiteConfig } from "~/utils/managedSite"
 
@@ -114,10 +117,22 @@ export class ModelRedirectService {
 
       const { siteType, config: managedConfig } = getManagedSiteConfig(prefs)
 
+      // Octopus 站点暂不支持 Model Redirect 功能
+      if (siteType === OCTOPUS) {
+        return {
+          success: false,
+          updatedChannels: 0,
+          errors: ["Model redirect is not supported for Octopus sites"],
+          message: "Model redirect is not supported for Octopus sites",
+        }
+      }
+
+      const legacyConfig = managedConfig as NewApiConfig | VeloeraConfig
+
       const service = new ModelSyncService(
-        managedConfig.baseUrl!,
-        managedConfig.adminToken!,
-        managedConfig.userId!,
+        legacyConfig.baseUrl!,
+        legacyConfig.adminToken!,
+        legacyConfig.userId!,
         undefined,
         undefined,
         undefined,

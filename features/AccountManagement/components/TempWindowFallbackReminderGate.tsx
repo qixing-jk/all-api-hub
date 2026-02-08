@@ -14,10 +14,8 @@ import {
  */
 export function TempWindowFallbackReminderGate() {
   const { displayData } = useAccountDataContext()
-  const {
-    tempWindowFallbackReminder,
-    updateTempWindowFallbackReminder,
-  } = useUserPreferencesContext()
+  const { tempWindowFallbackReminder, updateTempWindowFallbackReminder } =
+    useUserPreferencesContext()
 
   const [isOpen, setIsOpen] = useState(false)
   const [hasShownInThisSession, setHasShownInThisSession] = useState(false)

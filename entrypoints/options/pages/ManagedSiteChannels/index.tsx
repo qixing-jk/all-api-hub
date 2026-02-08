@@ -70,7 +70,10 @@ import {
   TableRow,
 } from "~/components/ui/table"
 import { ChannelTypeNames } from "~/constants/managedSite"
+import { OctopusOutboundTypeNames } from "~/constants/octopus"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { OCTOPUS } from "~/constants/siteType"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { PageHeader } from "~/entrypoints/options/components/PageHeader"
 import { cn } from "~/lib/utils"
 import { getManagedSiteService } from "~/services/managedSiteService"
@@ -105,6 +108,9 @@ export default function ManagedSiteChannels({
   routeParams,
 }: ManagedSiteChannelsProps) {
   const { t } = useTranslation(["managedSiteChannels", "messages"])
+  const { managedSiteType } = useUserPreferencesContext()
+  const isOctopus = managedSiteType === OCTOPUS
+
   const [channels, setChannels] = useState<ChannelRow[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -115,7 +121,9 @@ export default function ManagedSiteChannels({
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
     base_url: false,
-    group: true,
+    group: !isOctopus, // Octopus 没有分组概念，隐藏分组列
+    priority: !isOctopus, // Octopus 没有优先级概念，隐藏优先级列
+    weight: !isOctopus, // Octopus 没有权重概念，隐藏权重列
   })
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
@@ -170,6 +178,16 @@ export default function ManagedSiteChannels({
   useEffect(() => {
     void refreshChannels()
   }, [refreshChannels])
+
+  // 当站点类型变化时，更新分组、优先级、权重列的可见性
+  useEffect(() => {
+    setColumnVisibility((prev) => ({
+      ...prev,
+      group: !isOctopus,
+      priority: !isOctopus,
+      weight: !isOctopus,
+    }))
+  }, [isOctopus])
 
   useEffect(() => {
     if (refreshKey) {
@@ -403,8 +421,12 @@ export default function ManagedSiteChannels({
       {
         accessorKey: "type",
         header: t("table.columns.type"),
-        cell: ({ row }: { row: Row<ChannelRow> }) =>
-          ChannelTypeNames[row.original.type] ?? "Unknown",
+        cell: ({ row }: { row: Row<ChannelRow> }) => {
+          const typeNames = isOctopus
+            ? OctopusOutboundTypeNames
+            : ChannelTypeNames
+          return typeNames[row.original.type] ?? "Unknown"
+        },
         size: 90,
       },
       {
@@ -491,6 +513,7 @@ export default function ManagedSiteChannels({
       handleOpenEditDialog,
       handleOpenFilterDialog,
       handleSyncChannels,
+      isOctopus,
       rowActionLabels,
       scheduleDelete,
       syncingIds,

@@ -7,11 +7,10 @@ import { useEffect } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Button, Heading3, IconButton, Separator } from "~/components/ui"
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { cn } from "~/lib/utils"
 import { hasValidManagedSiteConfig } from "~/services/managedSiteService"
-
-import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 
 import { menuItems } from "../constants"
 

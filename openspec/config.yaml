@@ -47,7 +47,6 @@ context: |
   - Security/privacy: treat tokens/API keys and backups as sensitive; avoid logging secrets; never commit credentials.
   - Localization: UI copy must be translatable; update locale keys alongside UI changes.
 
-
 # Per-artifact rules (optional)
 # Add custom rules for specific artifacts.
 # Example:

@@ -12,7 +12,11 @@ vi.mock("~/services/userPreferences", () => ({
 
 vi.mock("~/services/newApiService/newApiService", () => ({
   checkValidNewApiConfig: vi.fn(async () => true),
-  getNewApiConfig: vi.fn(async () => ({ baseUrl: "n", token: "t", userId: "u" })),
+  getNewApiConfig: vi.fn(async () => ({
+    baseUrl: "n",
+    token: "t",
+    userId: "u",
+  })),
   searchChannel: vi.fn(),
   createChannel: vi.fn(),
   updateChannel: vi.fn(),
@@ -27,7 +31,11 @@ vi.mock("~/services/newApiService/newApiService", () => ({
 
 vi.mock("~/services/veloeraService/veloeraService", () => ({
   checkValidVeloeraConfig: vi.fn(async () => true),
-  getVeloeraConfig: vi.fn(async () => ({ baseUrl: "v", token: "t", userId: "u" })),
+  getVeloeraConfig: vi.fn(async () => ({
+    baseUrl: "v",
+    token: "t",
+    userId: "u",
+  })),
   searchChannel: vi.fn(),
   createChannel: vi.fn(),
   updateChannel: vi.fn(),
@@ -42,7 +50,9 @@ vi.mock("~/services/veloeraService/veloeraService", () => ({
 
 describe("managedSiteService", () => {
   it("routes to New API service by default", async () => {
-    const { getManagedSiteService } = await import("~/services/managedSiteService")
+    const { getManagedSiteService } = await import(
+      "~/services/managedSiteService"
+    )
 
     mockGetPreferences.mockResolvedValueOnce({ managedSiteType: NEW_API })
 
@@ -55,7 +65,9 @@ describe("managedSiteService", () => {
   })
 
   it("routes to Veloera service when selected", async () => {
-    const { getManagedSiteService } = await import("~/services/managedSiteService")
+    const { getManagedSiteService } = await import(
+      "~/services/managedSiteService"
+    )
 
     mockGetPreferences.mockResolvedValueOnce({ managedSiteType: VELOERA })
 

@@ -70,6 +70,9 @@ interface UserPreferencesContextType {
   veloeraBaseUrl: string
   veloeraAdminToken: string
   veloeraUserId: string
+  octopusBaseUrl: string
+  octopusUsername: string
+  octopusPassword: string
   managedSiteType: ManagedSiteType
   cliProxyBaseUrl: string
   cliProxyManagementKey: string
@@ -106,6 +109,9 @@ interface UserPreferencesContextType {
   updateVeloeraBaseUrl: (url: string) => Promise<boolean>
   updateVeloeraAdminToken: (token: string) => Promise<boolean>
   updateVeloeraUserId: (userId: string) => Promise<boolean>
+  updateOctopusBaseUrl: (url: string) => Promise<boolean>
+  updateOctopusUsername: (username: string) => Promise<boolean>
+  updateOctopusPassword: (password: string) => Promise<boolean>
   updateManagedSiteType: (siteType: ManagedSiteType) => Promise<boolean>
   updateCliProxyBaseUrl: (url: string) => Promise<boolean>
   updateCliProxyManagementKey: (key: string) => Promise<boolean>
@@ -140,6 +146,7 @@ interface UserPreferencesContextType {
   resetAutoRefreshConfig: () => Promise<boolean>
   resetNewApiConfig: () => Promise<boolean>
   resetVeloeraConfig: () => Promise<boolean>
+  resetOctopusConfig: () => Promise<boolean>
   resetNewApiModelSyncConfig: () => Promise<boolean>
   resetCliProxyConfig: () => Promise<boolean>
   resetClaudeCodeRouterConfig: () => Promise<boolean>
@@ -560,6 +567,39 @@ export const UserPreferencesProvider = ({
     return success
   }, [])
 
+  const updateOctopusBaseUrl = useCallback(async (baseUrl: string) => {
+    const updates = {
+      octopus: { baseUrl },
+    }
+    const success = await userPreferences.savePreferences(updates)
+    if (success) {
+      setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
+    }
+    return success
+  }, [])
+
+  const updateOctopusUsername = useCallback(async (username: string) => {
+    const updates = {
+      octopus: { username },
+    }
+    const success = await userPreferences.savePreferences(updates)
+    if (success) {
+      setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
+    }
+    return success
+  }, [])
+
+  const updateOctopusPassword = useCallback(async (password: string) => {
+    const updates = {
+      octopus: { password },
+    }
+    const success = await userPreferences.savePreferences(updates)
+    if (success) {
+      setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
+    }
+    return success
+  }, [])
+
   const updateManagedSiteType = useCallback(
     async (siteType: ManagedSiteType) => {
       const success = await userPreferences.updateManagedSiteType(siteType)
@@ -912,6 +952,22 @@ export const UserPreferencesProvider = ({
     return success
   }, [])
 
+  const resetOctopusConfig = useCallback(async () => {
+    const success = await userPreferences.resetOctopusConfig()
+    if (success) {
+      const defaults = DEFAULT_PREFERENCES.octopus
+      setPreferences((prev) =>
+        prev
+          ? deepOverride(prev, {
+              octopus: defaults,
+              lastUpdated: Date.now(),
+            })
+          : prev,
+      )
+    }
+    return success
+  }, [])
+
   const resetNewApiModelSyncConfig = useCallback(async () => {
     const success = await userPreferences.resetNewApiModelSyncConfig()
     if (success) {
@@ -1152,6 +1208,9 @@ export const UserPreferencesProvider = ({
     veloeraBaseUrl: preferences?.veloera?.baseUrl || "",
     veloeraAdminToken: preferences?.veloera?.adminToken || "",
     veloeraUserId: preferences?.veloera?.userId || "",
+    octopusBaseUrl: preferences?.octopus?.baseUrl || "",
+    octopusUsername: preferences?.octopus?.username || "",
+    octopusPassword: preferences?.octopus?.password || "",
     managedSiteType: preferences?.managedSiteType || NEW_API,
     cliProxyBaseUrl: preferences?.cliProxy?.baseUrl || "",
     cliProxyManagementKey: preferences?.cliProxy?.managementKey || "",
@@ -1187,6 +1246,9 @@ export const UserPreferencesProvider = ({
     updateVeloeraBaseUrl,
     updateVeloeraAdminToken,
     updateVeloeraUserId,
+    updateOctopusBaseUrl,
+    updateOctopusUsername,
+    updateOctopusPassword,
     updateManagedSiteType,
     updateCliProxyBaseUrl,
     updateCliProxyManagementKey,
@@ -1207,6 +1269,7 @@ export const UserPreferencesProvider = ({
     resetAutoRefreshConfig,
     resetNewApiConfig,
     resetVeloeraConfig,
+    resetOctopusConfig,
     resetNewApiModelSyncConfig,
     resetCliProxyConfig,
     resetClaudeCodeRouterConfig,
