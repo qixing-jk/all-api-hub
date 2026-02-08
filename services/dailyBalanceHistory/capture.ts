@@ -4,9 +4,13 @@ import type {
   DailyBalanceSnapshot,
 } from "~/types/dailyBalanceHistory"
 import { DEFAULT_BALANCE_HISTORY_PREFERENCES } from "~/types/dailyBalanceHistory"
+import { getErrorMessage } from "~/utils/error"
+import { createLogger } from "~/utils/logger"
 
 import { getDayKeyFromUnixSeconds } from "./dayKeys"
 import { dailyBalanceHistoryStorage } from "./storage"
+
+const logger = createLogger("DailyBalanceHistoryCapture")
 
 /**
  * Best-effort snapshot upsert used by refresh-driven and alarm-driven capture.
@@ -31,7 +35,8 @@ export async function maybeCaptureDailyBalanceSnapshot(params: {
   }
 
   const capturedAtMs =
-    typeof params.capturedAtMs === "number" && Number.isFinite(params.capturedAtMs)
+    typeof params.capturedAtMs === "number" &&
+    Number.isFinite(params.capturedAtMs)
       ? params.capturedAtMs
       : Date.now()
 
@@ -50,12 +55,19 @@ export async function maybeCaptureDailyBalanceSnapshot(params: {
     source: params.source,
   }
 
-  return await dailyBalanceHistoryStorage.upsertSnapshot({
-    accountId: params.accountId,
-    dayKey,
-    snapshot,
-    retentionDays: config.retentionDays,
-    timeZone: params.timeZone,
-  })
+  try {
+    return await dailyBalanceHistoryStorage.upsertSnapshot({
+      accountId: params.accountId,
+      dayKey,
+      snapshot,
+      retentionDays: config.retentionDays,
+      timeZone: params.timeZone,
+    })
+  } catch (error) {
+    logger.error(
+      `Failed to upsert daily balance snapshot (accountId=${params.accountId}, dayKey=${dayKey})`,
+      getErrorMessage(error),
+    )
+    return false
+  }
 }
-
