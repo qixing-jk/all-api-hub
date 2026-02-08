@@ -4,7 +4,10 @@
  */
 import { ApiError } from "~/services/apiService/common/errors"
 import * as octopusApi from "~/services/apiService/octopus"
-import type { ManagedSiteChannel } from "~/types/managedSite"
+import type {
+  ManagedSiteChannel,
+  OctopusChannelWithData,
+} from "~/types/managedSite"
 import {
   BatchExecutionOptions,
   ExecutionItemResult,
@@ -19,15 +22,24 @@ import { createLogger } from "~/utils/logger"
 const logger = createLogger("OctopusModelSync")
 
 /**
+ * 类型守卫：检查 channel 是否为 OctopusChannelWithData
+ */
+function isOctopusChannelWithData(
+  channel: ManagedSiteChannel,
+): channel is OctopusChannelWithData {
+  return "_octopusData" in channel && channel._octopusData != null
+}
+
+/**
  * 从 ManagedSiteChannel 中提取 Octopus 原始数据
  */
 function getOctopusChannelData(
   channel: ManagedSiteChannel,
 ): OctopusChannel | null {
-  const octopusData = (
-    channel as ManagedSiteChannel & { _octopusData?: OctopusChannel }
-  )._octopusData
-  return octopusData ?? null
+  if (isOctopusChannelWithData(channel)) {
+    return channel._octopusData
+  }
+  return null
 }
 
 /**

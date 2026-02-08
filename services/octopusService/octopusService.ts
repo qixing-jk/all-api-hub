@@ -28,6 +28,7 @@ import type {
   CreateChannelPayload,
   ManagedSiteChannel,
   ManagedSiteChannelListData,
+  OctopusChannelWithData,
   UpdateChannelPayload,
 } from "~/types/managedSite"
 import type {
@@ -136,7 +137,7 @@ async function getFullOctopusConfig(): Promise<OctopusConfig | null> {
  */
 export function octopusChannelToManagedSite(
   channel: OctopusChannel,
-): ManagedSiteChannel {
+): OctopusChannelWithData {
   return {
     id: channel.id,
     name: channel.name,
@@ -156,14 +157,28 @@ export function octopusChannelToManagedSite(
     test_time: 0,
     response_time: 0,
     balance: 0,
+    balance_updated_time: 0,
     used_quota: 0,
     tag: null,
     remark: null,
     setting: "",
     settings: "",
+    // NewApiChannel 额外字段
+    openai_organization: null,
+    other: "",
+    other_info: "",
+    param_override: null,
+    header_override: null,
+    channel_info: {
+      is_multi_key: false,
+      multi_key_size: 0,
+      multi_key_status_list: null,
+      multi_key_polling_index: 0,
+      multi_key_mode: "",
+    },
     // 存储原始 Octopus 数据以便编辑
     _octopusData: channel,
-  } as ManagedSiteChannel & { _octopusData?: OctopusChannel }
+  }
 }
 
 /**
