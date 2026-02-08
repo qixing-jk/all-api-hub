@@ -1,0 +1,103 @@
+{
+  "title": "Balance History",
+  "description": "Record daily snapshots of balance and cashflow and visualize trends over time.",
+  "actions": {
+    "refreshNow": "Refresh now",
+    "prune": "Prune",
+    "applySettings": "Apply settings"
+  },
+  "settings": {
+    "enabled": "Enable Balance History",
+    "enabledHint": "When disabled, no snapshots are recorded and scheduled capture is turned off.",
+    "endOfDayCapture": "End-of-day capture",
+    "endOfDayCaptureHint": "Best-effort daily capture near {{time}} (requires Alarms API).",
+    "alarmUnsupported": "Alarms API is not available in this browser; end-of-day capture cannot be enabled.",
+    "retentionDays": "Retention (days)"
+  },
+  "warnings": {
+    "cashflowDisabled": {
+      "title": "Income/outcome history will be empty",
+      "description": "Today cashflow fetching is disabled and end-of-day capture is disabled. Enable either \"Show today cashflow\" or \"End-of-day capture\" to record income/outcome values."
+    }
+  },
+  "filters": {
+    "tags": "Tags",
+    "tagsHint": "Filter accounts by tags.",
+    "allTags": "All tags",
+    "accounts": "Accounts",
+    "accountsHint": "Select accounts to include in charts.",
+    "allAccounts": "All accounts",
+    "range": "Date range",
+    "rangeHint": "Bounded by retention window ({{days}} days).",
+    "quickRanges": {
+      "7d": "7 days",
+      "30d": "30 days",
+      "90d": "90 days",
+      "180d": "180 days",
+      "365d": "1 year"
+    },
+    "startDay": "Start",
+    "endDay": "End"
+  },
+  "summary": {
+    "coverage": "Days with data: balance {{snapshotAvailableDays}}/{{totalDays}} (complete {{snapshotCompleteDays}}/{{totalDays}}), cashflow {{cashflowAvailableDays}}/{{totalDays}} (complete {{cashflowCompleteDays}}/{{totalDays}})."
+  },
+  "emptyRange": {
+    "title": "No snapshots in this range",
+    "description": "Snapshots exist, but none fall within the selected date range. Try widening the range or refreshing an account."
+  },
+  "hints": {
+    "disabled": {
+      "title": "Balance History is disabled",
+      "description": "Enable Balance History in settings to start recording snapshots.",
+      "actions": {
+        "openSettings": "Open settings"
+      }
+    },
+    "incompleteSelection": {
+      "title": "Some data may be hidden",
+      "description": "The aggregated chart only shows days where all selected accounts have snapshots. Try selecting fewer accounts to view the available data.",
+      "actions": {
+        "viewBestAccount": "View best-covered account"
+      }
+    }
+  },
+  "empty": {
+    "title": "No snapshots yet",
+    "description": "Enable Balance History and refresh an account to record the first snapshot."
+  },
+  "charts": {
+    "balance": {
+      "title": "Balance trend",
+      "series": "Balance",
+      "yAxis": "Quota"
+    },
+    "cashflow": {
+      "title": "Daily cashflow",
+      "income": "Income",
+      "outcome": "Outcome",
+      "yAxis": "Quota"
+    }
+  },
+  "messages": {
+    "loading": {
+      "loadingData": "Loading…",
+      "savingSettings": "Saving settings…",
+      "refreshing": "Refreshing…",
+      "pruning": "Pruning…"
+    },
+    "success": {
+      "settingsSaved": "Settings saved",
+      "refreshCompleted": "Refresh completed",
+      "pruneCompleted": "Prune completed"
+    },
+    "warning": {
+      "settingsSavedWithWarning": "Settings saved ({{warning}})"
+    },
+    "error": {
+      "settingsSaveFailed": "Failed to save settings: {{error}}",
+      "refreshFailed": "Refresh failed: {{error}}",
+      "pruneFailed": "Prune failed: {{error}}"
+    }
+  }
+}

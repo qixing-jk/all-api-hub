@@ -9,6 +9,7 @@ import { AccountManagementProvider } from "~/features/AccountManagement/hooks/Ac
 import BookmarksList from "~/features/SiteBookmarks/components/BookmarksList"
 import { useBookmarkDialogContext } from "~/features/SiteBookmarks/hooks/BookmarkDialogStateContext"
 import { useAddAccountHandler } from "~/hooks/useAddAccountHandler"
+import { cn } from "~/lib/utils"
 import { isExtensionSidePanel, isMobileByUA } from "~/utils/browser"
 
 import ActionButtons from "./components/ActionButtons"
@@ -47,7 +48,11 @@ function PopupContent() {
 
   return (
     <div
-      className={`${popupWidthClass} ${popupHeightClass} dark:bg-dark-bg-primary flex flex-col bg-white`}
+      className={cn(
+        "dark:bg-dark-bg-primary flex flex-col overflow-y-auto bg-white",
+        popupWidthClass,
+        popupHeightClass,
+      )}
     >
       <HeaderSection
         showRefresh={activeView === "accounts"}
@@ -72,7 +77,7 @@ function PopupContent() {
         )}
       </section>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1">
         <ActionButtons
           primaryActionLabel={
             activeView === "accounts"

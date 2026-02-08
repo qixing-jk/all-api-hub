@@ -3,6 +3,7 @@
   "description": "管理插件的基本配置选项",
   "tabs": {
     "general": "通用",
+    "balanceHistory": "余额历史",
     "accountManagement": "账号管理",
     "refresh": "数据刷新",
     "checkinRedeem": "签到与兑换",

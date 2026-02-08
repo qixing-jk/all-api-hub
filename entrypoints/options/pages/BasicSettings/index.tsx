@@ -30,6 +30,7 @@ import {
 
 import AccountManagementTab from "./components/AccountManagementTab"
 import AutoRefreshTab from "./components/AutoRefreshTab"
+import BalanceHistoryTab from "./components/BalanceHistoryTab"
 import CheckinRedeemTab from "./components/CheckinRedeemTab"
 import ClaudeCodeRouterTab from "./components/ClaudeCodeRouterTab"
 import CliProxyTab from "./components/CliProxyTab"
@@ -44,6 +45,7 @@ import WebAiApiCheckTab from "./components/WebAiApiCheckTab"
 
 type TabId =
   | "general"
+  | "balanceHistory"
   | "accountManagement"
   | "refresh"
   | "checkinRedeem"
@@ -70,9 +72,10 @@ const PERMISSIONS_TAB_CONFIG: TabConfig = {
 const TAB_CONFIGS = [
   { id: "general", component: GeneralTab },
   { id: "accountManagement", component: AccountManagementTab },
-  { id: "accountUsage", component: UsageHistorySyncTab },
   { id: "refresh", component: AutoRefreshTab },
   { id: "checkinRedeem", component: CheckinRedeemTab },
+  { id: "balanceHistory", component: BalanceHistoryTab },
+  { id: "accountUsage", component: UsageHistorySyncTab },
   { id: "webAiApiCheck", component: WebAiApiCheckTab },
   { id: "managedSite", component: ManagedSiteTab },
   { id: "cliProxy", component: CliProxyTab },
@@ -86,6 +89,7 @@ const ANCHOR_TO_TAB: Record<string, TabId> = {
   display: "general",
   appearance: "general",
   theme: "general",
+  "balance-history": "balanceHistory",
   "account-management": "accountManagement",
   "sorting-priority": "accountManagement",
   sorting: "accountManagement",
@@ -250,7 +254,7 @@ export default function BasicSettings() {
               <Tab key={tab.id} as={Fragment}>
                 {({ selected }) => (
                   <button
-                    className={`border-b-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors focus:outline-none ${
+                    className={`border-b-2 px-3 py-3 text-sm font-medium whitespace-nowrap transition-colors focus:outline-none ${
                       selected
                         ? "border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-400"
                         : "border-transparent text-gray-600 hover:border-gray-300 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"

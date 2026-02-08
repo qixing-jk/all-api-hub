@@ -14,6 +14,10 @@ import {
   type AccountAutoRefresh,
 } from "~/types/accountAutoRefresh"
 import { DEFAULT_OCTOPUS_CONFIG } from "~/types/octopusConfig"
+import {
+  DEFAULT_BALANCE_HISTORY_PREFERENCES,
+  type BalanceHistoryPreferences,
+} from "~/types/dailyBalanceHistory"
 import { createLogger } from "~/utils/logger"
 
 import type { UserPreferences } from "../../userPreferences"
@@ -22,13 +26,23 @@ import { migrateSortingConfig } from "./sortingConfigMigration"
 const logger = createLogger("PreferencesMigration")
 
 // Current version of the preferences schema
-export const CURRENT_PREFERENCES_VERSION = 12
+export const CURRENT_PREFERENCES_VERSION = 13
 
 /**
  * Migration function type
  * Takes preferences at version N and returns it at version N+1
  */
 type PreferencesMigrationFunction = (prefs: UserPreferences) => UserPreferences
+
+/**
+ * Clamp balance-history retention days to a bounded, storage-safe range.
+ */
+function clampBalanceHistoryRetentionDays(value: unknown): number {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed))
+    return DEFAULT_BALANCE_HISTORY_PREFERENCES.retentionDays
+  return Math.min(3650, Math.max(1, Math.trunc(parsed)))
+}
 
 /**
  * Registry of migration functions
@@ -258,10 +272,43 @@ const migrations: Record<number, PreferencesMigrationFunction> = {
     }
   },
 
-  // Version 11 -> 12: Initialize octopus config if missing
+  // Version 11 -> 12: Introduce balance-history preferences (default disabled)
   12: (prefs: UserPreferences): UserPreferences => {
     logger.debug(
-      "Migrating preferences from v11 to v12 (octopus config initialization)",
+      "Migrating preferences from v11 to v12 (balance history preferences)",
+    )
+
+    const stored = (prefs as any).balanceHistory as
+      | Partial<BalanceHistoryPreferences>
+      | undefined
+
+    const enabled =
+      typeof stored?.enabled === "boolean"
+        ? stored.enabled
+        : DEFAULT_BALANCE_HISTORY_PREFERENCES.enabled
+
+    const endOfDayCaptureEnabled =
+      typeof stored?.endOfDayCapture?.enabled === "boolean"
+        ? stored.endOfDayCapture.enabled
+        : DEFAULT_BALANCE_HISTORY_PREFERENCES.endOfDayCapture.enabled
+
+    const retentionDays = clampBalanceHistoryRetentionDays(stored?.retentionDays)
+
+    return {
+      ...prefs,
+      balanceHistory: {
+        enabled,
+        endOfDayCapture: { enabled: endOfDayCaptureEnabled },
+        retentionDays,
+      },
+      preferencesVersion: 12,
+    }
+  },
+
+  // Version 12 -> 13: Initialize octopus config if missing
+  13: (prefs: UserPreferences): UserPreferences => {
+    logger.debug(
+      "Migrating preferences from v12 to v13 (octopus config initialization)",
     )
 
     const storedOctopus = (prefs as any).octopus
@@ -270,7 +317,7 @@ const migrations: Record<number, PreferencesMigrationFunction> = {
     return {
       ...prefs,
       octopus,
-      preferencesVersion: 12,
+      preferencesVersion: 13,
     }
   },
 }

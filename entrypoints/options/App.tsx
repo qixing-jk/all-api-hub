@@ -53,7 +53,7 @@ function OptionsPage() {
 
         {/* 右侧内容区域 */}
         <main className="flex-1">
-          <div className="mx-auto w-full max-w-7xl px-2 py-3 sm:px-4 sm:py-5 md:px-8 md:py-8 lg:px-10">
+          <div className="mx-auto w-full max-w-7xl px-2 py-3 sm:px-4 sm:py-5 md:px-6 md:py-6">
             <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary min-h-[400px] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm md:min-h-[600px]">
               <ActiveComponent
                 routeParams={routeParams}

@@ -635,8 +635,9 @@ export default function ManagedSiteChannels({
         </Alert>
       )}
 
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative w-full max-w-sm">
+      {/* Responsive toolbar: search input takes its own row on small screens, buttons wrap in a 2-column grid. */}
+      <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center">
+        <div className="relative w-full md:max-w-sm">
           <Input
             value={searchValue}
             onChange={(event) =>
@@ -658,121 +659,130 @@ export default function ManagedSiteChannels({
           )}
         </div>
 
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" leftIcon={<Filter className="h-4 w-4" />}>
-              {t("toolbar.status")}
-              {selectedStatuses.length > 0 && (
-                <span className="text-muted-foreground ml-2 text-xs">
-                  ({selectedStatuses.length})
-                </span>
-              )}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-64" align="start">
-            <div className="space-y-2">
-              <p className="text-muted-foreground text-xs font-medium">
-                {t("filter.statusLabel")}
-              </p>
+        <div className="grid grid-cols-2 gap-2 md:flex md:flex-1 md:items-center md:gap-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                leftIcon={<Filter className="h-4 w-4" />}
+              >
+                {t("toolbar.status")}
+                {selectedStatuses.length > 0 && (
+                  <span className="text-muted-foreground ml-2 text-xs">
+                    ({selectedStatuses.length})
+                  </span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64" align="start">
               <div className="space-y-2">
-                {uniqueStatusValues.map((value) => (
-                  <div
-                    key={value}
-                    className="flex items-center justify-between gap-2"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id={`status-${value}`}
-                        checked={selectedStatuses.includes(value)}
-                        onCheckedChange={(checked: CheckboxState) =>
-                          handleStatusChange(checked, value)
-                        }
-                      />
-                      <Label
-                        htmlFor={`status-${value}`}
-                        className="text-sm font-normal"
-                      >
-                        {t(
-                          STATUS_VARIANTS[Number(value)]?.labelKey ??
-                            STATUS_VARIANTS[0].labelKey,
-                        )}
-                      </Label>
+                <p className="text-muted-foreground text-xs font-medium">
+                  {t("filter.statusLabel")}
+                </p>
+                <div className="space-y-2">
+                  {uniqueStatusValues.map((value) => (
+                    <div
+                      key={value}
+                      className="flex items-center justify-between gap-2"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id={`status-${value}`}
+                          checked={selectedStatuses.includes(value)}
+                          onCheckedChange={(checked: CheckboxState) =>
+                            handleStatusChange(checked, value)
+                          }
+                        />
+                        <Label
+                          htmlFor={`status-${value}`}
+                          className="text-sm font-normal"
+                        >
+                          {t(
+                            STATUS_VARIANTS[Number(value)]?.labelKey ??
+                              STATUS_VARIANTS[0].labelKey,
+                          )}
+                        </Label>
+                      </div>
+                      <span className="text-muted-foreground text-xs">
+                        {statusCounts.get(value) ?? 0}
+                      </span>
                     </div>
-                    <span className="text-muted-foreground text-xs">
-                      {statusCounts.get(value) ?? 0}
-                    </span>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          </PopoverContent>
-        </Popover>
+            </PopoverContent>
+          </Popover>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                leftIcon={<Columns3 className="h-4 w-4" />}
+              >
+                {t("toolbar.columns")}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuLabel>
+                {t("toolbar.toggleColumns")}
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {table
+                .getAllLeafColumns()
+                .filter((column) => column.getCanHide())
+                .map((column) => (
+                  <DropdownMenuCheckboxItem
+                    key={column.id}
+                    className="capitalize"
+                    checked={column.getIsVisible()}
+                    onCheckedChange={(value: CheckboxState) =>
+                      column.toggleVisibility(!!value)
+                    }
+                    onSelect={(event: Event) => event.preventDefault()}
+                  >
+                    {t(`table.columns.${column.id}`, {
+                      defaultValue: column.id,
+                    })}
+                  </DropdownMenuCheckboxItem>
+                ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <div className="col-span-2 grid grid-cols-2 gap-2 md:ml-auto md:flex md:items-center md:justify-end md:gap-2">
             <Button
               variant="outline"
-              leftIcon={<Columns3 className="h-4 w-4" />}
+              disabled={!selectedCount}
+              onClick={() =>
+                scheduleDelete(selectedRows.map((row) => row.original.id))
+              }
+              leftIcon={<Trash2 className="h-4 w-4" />}
             >
-              {t("toolbar.columns")}
+              {t("toolbar.deleteSelected")}
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuLabel>{t("toolbar.toggleColumns")}</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {table
-              .getAllLeafColumns()
-              .filter((column) => column.getCanHide())
-              .map((column) => (
-                <DropdownMenuCheckboxItem
-                  key={column.id}
-                  className="capitalize"
-                  checked={column.getIsVisible()}
-                  onCheckedChange={(value: CheckboxState) =>
-                    column.toggleVisibility(!!value)
-                  }
-                  onSelect={(event: Event) => event.preventDefault()}
-                >
-                  {t(`table.columns.${column.id}`, { defaultValue: column.id })}
-                </DropdownMenuCheckboxItem>
-              ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        <div className="flex flex-1 items-center justify-end gap-2">
-          <Button
-            variant="outline"
-            disabled={!selectedCount}
-            onClick={() =>
-              scheduleDelete(selectedRows.map((row) => row.original.id))
-            }
-            leftIcon={<Trash2 className="h-4 w-4" />}
-          >
-            {t("toolbar.deleteSelected")}
-          </Button>
-          <Button
-            variant="outline"
-            disabled={!selectedCount}
-            onClick={() =>
-              handleSyncChannels(selectedRows.map((row) => row.original.id))
-            }
-            leftIcon={<RefreshCcw className="h-4 w-4" />}
-          >
-            {t("toolbar.syncSelected")}
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => void refreshChannels()}
-            leftIcon={<RefreshCcw className="h-4 w-4" />}
-          >
-            {t("toolbar.refresh")}
-          </Button>
-          <Button
-            onClick={handleOpenCreateDialog}
-            leftIcon={<Plus className="h-4 w-4" />}
-          >
-            {t("toolbar.addChannel")}
-          </Button>
+            <Button
+              variant="outline"
+              disabled={!selectedCount}
+              onClick={() =>
+                handleSyncChannels(selectedRows.map((row) => row.original.id))
+              }
+              leftIcon={<RefreshCcw className="h-4 w-4" />}
+            >
+              {t("toolbar.syncSelected")}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => void refreshChannels()}
+              leftIcon={<RefreshCcw className="h-4 w-4" />}
+            >
+              {t("toolbar.refresh")}
+            </Button>
+            <Button
+              onClick={handleOpenCreateDialog}
+              leftIcon={<Plus className="h-4 w-4" />}
+            >
+              {t("toolbar.addChannel")}
+            </Button>
+          </div>
         </div>
       </div>
 

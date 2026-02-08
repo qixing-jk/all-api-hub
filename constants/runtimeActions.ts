@@ -13,6 +13,7 @@ export const RuntimeActionPrefixes = {
   AutoCheckin: "autoCheckin:",
   AutoCheckinPretrigger: "autoCheckinPretrigger:",
   AutoRefresh: "autoRefresh:",
+  BalanceHistory: "balanceHistory:",
   ChannelConfig: "channelConfig:",
   CookieInterceptor: "cookieInterceptor:",
   ExternalCheckIn: "externalCheckIn:",
@@ -243,6 +244,19 @@ export const RuntimeActionIds = {
   ),
   UsageHistoryPrune: composeRuntimeAction(
     RuntimeActionPrefixes.UsageHistory,
+    "prune",
+  ),
+
+  BalanceHistoryUpdateSettings: composeRuntimeAction(
+    RuntimeActionPrefixes.BalanceHistory,
+    "updateSettings",
+  ),
+  BalanceHistoryRefreshNow: composeRuntimeAction(
+    RuntimeActionPrefixes.BalanceHistory,
+    "refreshNow",
+  ),
+  BalanceHistoryPrune: composeRuntimeAction(
+    RuntimeActionPrefixes.BalanceHistory,
     "prune",
   ),
 

@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.17.0](https://github.com/qixing-jk/all-api-hub/compare/v3.16.0...v3.17.0) (2026-02-08)
+
+
+### Features
+
+* Implement daily balance history feature with UI improvements ([#446](https://github.com/qixing-jk/all-api-hub/issues/446)) ([3a584ad](https://github.com/qixing-jk/all-api-hub/commit/3a584adea9faf30c2d25798150247a5b1345231a))
+* **ui:** improve responsive layout for ManagedSiteChannels toolbar ([75537c3](https://github.com/qixing-jk/all-api-hub/commit/75537c3621b93696b8d5fb4dbfbd4c48262a31d0))
+
+
+### Bug Fixes
+
+* **ExportSection:** resolve responsive display issues ([f849dff](https://github.com/qixing-jk/all-api-hub/commit/f849dff11484a70eee0b9a2143fb1f42ea8030a6))
+* **popup:** prevent double scrollbars in popup layout ([83bb22d](https://github.com/qixing-jk/all-api-hub/commit/83bb22dac049c19dc77f4e7c7bc346910afa68bb))
+
 ## [3.16.0](https://github.com/qixing-jk/all-api-hub/compare/v3.15.1...v3.16.0) (2026-02-07)
 
 

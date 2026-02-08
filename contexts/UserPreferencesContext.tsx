@@ -33,6 +33,10 @@ import type {
 } from "~/types"
 import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
 import type { AutoCheckinPreferences } from "~/types/autoCheckin"
+import {
+  DEFAULT_BALANCE_HISTORY_PREFERENCES,
+  type BalanceHistoryPreferences,
+} from "~/types/dailyBalanceHistory"
 import type { LogLevel } from "~/types/logging"
 import type { ModelRedirectPreferences } from "~/types/managedSiteModelRedirect"
 import type { SortingPriorityConfig } from "~/types/sorting"
@@ -122,6 +126,9 @@ interface UserPreferencesContextType {
   updateLoggingLevel: (level: LogLevel) => Promise<boolean>
   updateAutoCheckin: (
     updates: Partial<AutoCheckinPreferences>,
+  ) => Promise<boolean>
+  updateBalanceHistory: (
+    updates: Partial<BalanceHistoryPreferences>,
   ) => Promise<boolean>
   updateNewApiModelSync: (
     updates: Partial<UserManagedSiteModelSyncConfig>,
@@ -666,6 +673,37 @@ export const UserPreferencesProvider = ({
           settings: updates,
         })
       }
+      return success
+    },
+    [],
+  )
+
+  const updateBalanceHistory = useCallback(
+    async (updates: Partial<BalanceHistoryPreferences>) => {
+      const success = await userPreferences.savePreferences({
+        balanceHistory: updates,
+      })
+
+      if (success) {
+        setPreferences((prev) => {
+          if (!prev) return null
+          const base =
+            prev.balanceHistory ??
+            DEFAULT_PREFERENCES.balanceHistory ??
+            DEFAULT_BALANCE_HISTORY_PREFERENCES
+          const merged = deepOverride(base, updates)
+          return {
+            ...prev,
+            balanceHistory: merged,
+          }
+        })
+
+        await sendRuntimeMessage({
+          action: RuntimeActionIds.BalanceHistoryUpdateSettings,
+          settings: updates,
+        })
+      }
+
       return success
     },
     [],
@@ -1258,6 +1296,7 @@ export const UserPreferencesProvider = ({
     updateLoggingConsoleEnabled,
     updateLoggingLevel,
     updateAutoCheckin,
+    updateBalanceHistory,
     updateNewApiModelSync,
     updateModelRedirect,
     updateRedemptionAssist,

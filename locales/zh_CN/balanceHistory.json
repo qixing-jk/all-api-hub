@@ -1,0 +1,103 @@
+{
+  "title": "余额历史",
+  "description": "记录每日余额与收支快照，并可视化趋势。",
+  "actions": {
+    "refreshNow": "立即刷新",
+    "prune": "立即清理",
+    "applySettings": "应用设置"
+  },
+  "settings": {
+    "enabled": "启用余额历史",
+    "enabledHint": "关闭后不会记录快照，也不会安排日终抓取。",
+    "endOfDayCapture": "日终抓取",
+    "endOfDayCaptureHint": "在每天 {{time}} 左右尽力抓取一次（需要浏览器支持 Alarms API）。",
+    "alarmUnsupported": "当前浏览器不支持 Alarms API，无法启用日终抓取。",
+    "retentionDays": "保留天数"
+  },
+  "warnings": {
+    "cashflowDisabled": {
+      "title": "收入/支出历史将为空",
+      "description": "已关闭“显示今日收支”，且未启用“日终抓取”。请启用其中任意一项以记录收入/支出。"
+    }
+  },
+  "filters": {
+    "tags": "标签",
+    "tagsHint": "按标签过滤账户。",
+    "allTags": "全部标签",
+    "accounts": "账户",
+    "accountsHint": "选择要纳入图表的账户。",
+    "allAccounts": "全部账户",
+    "range": "时间范围",
+    "rangeHint": "受保留窗口限制（{{days}} 天）。",
+    "quickRanges": {
+      "7d": "近7天",
+      "30d": "近30天",
+      "90d": "近90天",
+      "180d": "近180天",
+      "365d": "近1年"
+    },
+    "startDay": "开始",
+    "endDay": "结束"
+  },
+  "summary": {
+    "coverage": "有数据天数：余额 {{snapshotAvailableDays}}/{{totalDays}}（完整 {{snapshotCompleteDays}}/{{totalDays}}），收支 {{cashflowAvailableDays}}/{{totalDays}}（完整 {{cashflowCompleteDays}}/{{totalDays}}）。"
+  },
+  "emptyRange": {
+    "title": "该范围内暂无快照",
+    "description": "已有快照数据，但当前选择的时间范围内没有记录。请扩大时间范围或刷新任意账户以生成快照。"
+  },
+  "hints": {
+    "disabled": {
+      "title": "余额历史已禁用",
+      "description": "请在设置中启用“余额历史”，以开始记录快照。",
+      "actions": {
+        "openSettings": "打开设置"
+      }
+    },
+    "incompleteSelection": {
+      "title": "部分数据可能被隐藏",
+      "description": "聚合图表仅显示“所选全部账户都存在快照”的日期。请尝试选择更少的账户以查看已有数据。",
+      "actions": {
+        "viewBestAccount": "查看覆盖最多的账户"
+      }
+    }
+  },
+  "empty": {
+    "title": "暂无快照",
+    "description": "启用余额历史并刷新任意账户，即可记录第一条快照。"
+  },
+  "charts": {
+    "balance": {
+      "title": "余额趋势",
+      "series": "余额",
+      "yAxis": "额度"
+    },
+    "cashflow": {
+      "title": "每日收支",
+      "income": "收入",
+      "outcome": "支出",
+      "yAxis": "额度"
+    }
+  },
+  "messages": {
+    "loading": {
+      "loadingData": "加载中…",
+      "savingSettings": "保存设置中…",
+      "refreshing": "刷新中…",
+      "pruning": "清理中…"
+    },
+    "success": {
+      "settingsSaved": "设置已保存",
+      "refreshCompleted": "刷新完成",
+      "pruneCompleted": "清理完成"
+    },
+    "warning": {
+      "settingsSavedWithWarning": "设置已保存（{{warning}}）"
+    },
+    "error": {
+      "settingsSaveFailed": "保存设置失败：{{error}}",
+      "refreshFailed": "刷新失败：{{error}}",
+      "pruneFailed": "清理失败：{{error}}"
+    }
+  }
+}

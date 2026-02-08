@@ -26,7 +26,7 @@ import {
   Switch,
   Textarea,
 } from "~/components/ui"
-import { SITE_TITLE_RULES, SUB2API } from "~/constants/siteType"
+import { SITE_TITLE_RULES, SUB2API, UNKNOWN_SITE } from "~/constants/siteType"
 import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
 import { isValidExchangeRate } from "~/services/accountOperations"
 import { AuthTypeEnum, type CheckInConfig, type Tag } from "~/types"
@@ -176,7 +176,10 @@ export default function AccountForm({
 
       {/* 站点类型 */}
       <FormField label={t("form.siteType")}>
-        <Select value={siteType ?? ""} onValueChange={onSiteTypeChange}>
+        <Select
+          value={siteType ?? UNKNOWN_SITE}
+          onValueChange={onSiteTypeChange}
+        >
           <SelectTrigger
             className="w-full"
             aria-label={t("form.siteType")}

@@ -10,6 +10,7 @@ export const MENU_ITEM_IDS = {
   BOOKMARK: "bookmark",
   AUTO_CHECKIN: "autoCheckin",
   USAGE_ANALYTICS: "usageAnalytics",
+  BALANCE_HISTORY: "balanceHistory",
   MODELS: "models",
   KEYS: "keys",
   MANAGED_SITE_CHANNELS: "managedSiteChannels",

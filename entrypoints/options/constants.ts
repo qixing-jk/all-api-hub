@@ -7,6 +7,7 @@ import {
   Info,
   KeyRound,
   Layers,
+  LineChart,
   RefreshCcw,
   Settings,
   UserRound,
@@ -17,6 +18,7 @@ import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import About from "./pages/About"
 import AccountManagement from "./pages/AccountManagement"
 import AutoCheckin from "./pages/AutoCheckin"
+import BalanceHistory from "./pages/BalanceHistory"
 import BasicSettings from "./pages/BasicSettings"
 import BookmarkManagement from "./pages/BookmarkManagement"
 import ImportExport from "./pages/ImportExport"
@@ -55,12 +57,6 @@ export const menuItems: MenuItem[] = [
     component: BookmarkManagement,
   },
   {
-    id: MENU_ITEM_IDS.USAGE_ANALYTICS,
-    name: "用量分析",
-    icon: BarChart3,
-    component: UsageAnalytics,
-  },
-  {
     id: MENU_ITEM_IDS.AUTO_CHECKIN,
     name: "自动签到",
     icon: CalendarCheck2,
@@ -77,6 +73,18 @@ export const menuItems: MenuItem[] = [
     name: "密钥管理",
     icon: KeyRound,
     component: KeyManagement,
+  },
+  {
+    id: MENU_ITEM_IDS.BALANCE_HISTORY,
+    name: "余额历史",
+    icon: LineChart,
+    component: BalanceHistory,
+  },
+  {
+    id: MENU_ITEM_IDS.USAGE_ANALYTICS,
+    name: "用量分析",
+    icon: BarChart3,
+    component: UsageAnalytics,
   },
   {
     id: MENU_ITEM_IDS.MANAGED_SITE_CHANNELS,
