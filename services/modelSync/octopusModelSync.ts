@@ -2,6 +2,7 @@
  * Octopus 模型同步服务
  * 实现 Octopus 站点的模型同步功能
  */
+import { ApiError } from "~/services/apiService/common/errors"
 import * as octopusApi from "~/services/apiService/octopus"
 import type { ManagedSiteChannel } from "~/types/managedSite"
 import {
@@ -12,6 +13,7 @@ import {
 } from "~/types/managedSiteModelSync"
 import type { OctopusChannel, OctopusFetchModelRequest } from "~/types/octopus"
 import type { OctopusConfig } from "~/types/octopusConfig"
+import { getErrorMessage } from "~/utils/error"
 import { createLogger } from "~/utils/logger"
 
 const logger = createLogger("OctopusModelSync")
@@ -93,7 +95,7 @@ async function runForChannel(
   maxRetries: number = 2,
 ): Promise<ExecutionItemResult> {
   let attempts = 0
-  let lastError: any = null
+  let lastError: unknown = null
 
   const oldModels = channel.models
     ? channel.models
@@ -111,7 +113,6 @@ async function runForChannel(
 
       if (haveModelsChanged(oldModels, normalizedModels)) {
         await updateChannelModels(config, channel, normalizedModels)
-        channel.models = normalizedModels.join(",")
       }
 
       return {
@@ -124,7 +125,7 @@ async function runForChannel(
         newModels: normalizedModels,
         message: "Success",
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       lastError = error
       logger.error("Unexpected error for channel", {
         channelId: channel.id,
@@ -146,8 +147,9 @@ async function runForChannel(
     channelId: channel.id,
     channelName: channel.name,
     ok: false,
-    httpStatus: lastError?.httpStatus,
-    message: lastError?.message || "Unknown error",
+    httpStatus:
+      lastError instanceof ApiError ? lastError.statusCode : undefined,
+    message: getErrorMessage(lastError),
     attempts,
     finishedAt: Date.now(),
     oldModels,
