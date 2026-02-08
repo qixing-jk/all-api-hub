@@ -68,7 +68,8 @@ export default function BalanceHistorySettings() {
       })
 
       if (!success) {
-        toast.error(t("settings:messages.saveSettingsFailed"))
+        toast.error(t("settings:messages.saveSettingsFailed"), { id: toastId })
+        return
       }
 
       toast.success(t("messages.success.settingsSaved"), { id: toastId })
