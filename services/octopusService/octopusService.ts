@@ -482,11 +482,14 @@ export async function findMatchingChannel(
 
     const channels = await octopusApi.listChannels(config)
 
+    // 规范化 accountBaseUrl，与 prepareChannelFormData 保持一致
+    const normalizedBase = buildOctopusBaseUrl(accountBaseUrl)
+
     const match = channels.find((ch) => {
       const chBaseUrl = ch.base_urls[0]?.url || ""
       const chModels = parseDelimitedList(ch.model)
       return (
-        chBaseUrl === accountBaseUrl &&
+        chBaseUrl === normalizedBase &&
         chModels.length === models.length &&
         chModels.every((m) => models.includes(m))
       )
