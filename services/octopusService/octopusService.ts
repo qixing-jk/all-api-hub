@@ -5,6 +5,7 @@
 import { t } from "i18next"
 import toast from "react-hot-toast"
 
+import { ChannelType } from "~/constants"
 import { DEFAULT_OCTOPUS_CHANNEL_FIELDS } from "~/constants/octopus"
 import { OCTOPUS } from "~/constants/siteType"
 import type { AccountToken } from "~/entrypoints/options/pages/KeyManagement/type"
@@ -31,10 +32,10 @@ import type {
   OctopusChannelWithData,
   UpdateChannelPayload,
 } from "~/types/managedSite"
+import { OctopusOutboundType } from "~/types/octopus"
 import type {
   OctopusChannel,
   OctopusCreateChannelRequest,
-  OctopusOutboundType,
 } from "~/types/octopus"
 import type { OctopusConfig } from "~/types/octopusConfig"
 import { getErrorMessage } from "~/utils/error"
@@ -59,6 +60,53 @@ function parseDelimitedList(value?: string | null): string[] {
  */
 function normalizeList(values: string[] = []): string[] {
   return Array.from(new Set(values.map((item) => item.trim()).filter(Boolean)))
+}
+
+/**
+ * 将 ChannelType (New API 渠道类型 0-55) 映射为 OctopusOutboundType (0-5)
+ * Octopus 使用不同的类型枚举来表示协议转换器类型
+ * @param channelType - New API 的 ChannelType 值或 OctopusOutboundType 值
+ * @param isOctopusType - 如果为 true，表示 channelType 已经是 OctopusOutboundType，直接返回
+ * @returns 对应的 OctopusOutboundType 值
+ */
+function mapChannelTypeToOctopusOutboundType(
+  channelType: ChannelType | OctopusOutboundType | number | undefined,
+  isOctopusType = false,
+): OctopusOutboundType {
+  // 如果明确指定是 Octopus 类型，且值在有效范围内，直接返回
+  if (isOctopusType && channelType !== undefined) {
+    if (
+      channelType >= OctopusOutboundType.OpenAIChat &&
+      channelType <= OctopusOutboundType.OpenAIEmbedding
+    ) {
+      return channelType as OctopusOutboundType
+    }
+    // 无效的 Octopus 类型，回退到默认值
+    return DEFAULT_OCTOPUS_CHANNEL_FIELDS.type
+  }
+
+  // 对于大于 5 的值，肯定是 ChannelType，需要映射
+  // 对于 0-5 范围内的值，如果不是明确的 isOctopusType，则当作 ChannelType 处理
+  switch (channelType) {
+    // Anthropic 系列 (ChannelType.Anthropic = 14)
+    case ChannelType.Anthropic:
+      return OctopusOutboundType.Anthropic
+
+    // Gemini 系列 (ChannelType.Gemini = 24, ChannelType.VertexAi = 41)
+    case ChannelType.Gemini:
+    case ChannelType.VertexAi:
+      return OctopusOutboundType.Gemini
+
+    // 火山引擎 (ChannelType.VolcEngine = 45)
+    case ChannelType.VolcEngine:
+      return OctopusOutboundType.Volcengine
+
+    // 其他所有类型都使用 OpenAI Chat 兼容模式
+    // 包括: OpenAI, Azure, Ollama, DeepSeek, Moonshot, OpenRouter, Mistral 等
+    // 以及 ChannelType 0-5 范围内的值（Unknown, OpenAI, Midjourney, Azure, Ollama, MidjourneyPlus）
+    default:
+      return DEFAULT_OCTOPUS_CHANNEL_FIELDS.type
+  }
 }
 
 /**
@@ -224,9 +272,8 @@ export async function createChannel(
     const channel = channelData.channel
     const request: OctopusCreateChannelRequest = {
       name: channel.name || "",
-      type:
-        (channel.type as unknown as OctopusOutboundType) ||
-        DEFAULT_OCTOPUS_CHANNEL_FIELDS.type,
+      // Octopus 表单使用 OctopusTypeSelector，type 已经是 OctopusOutboundType
+      type: mapChannelTypeToOctopusOutboundType(channel.type, true),
       enabled: channel.status === 1,
       base_urls: [{ url: channel.base_url || "" }],
       keys: [{ enabled: true, channel_key: channel.key || "" }],
@@ -268,7 +315,11 @@ export async function updateChannel(
     const result = await octopusApi.updateChannel(config, {
       id: channelData.id,
       name: channelData.name,
-      type: channelData.type as unknown as OctopusOutboundType,
+      // Octopus 表单使用 OctopusTypeSelector，type 已经是 OctopusOutboundType
+      type:
+        channelData.type !== undefined
+          ? mapChannelTypeToOctopusOutboundType(channelData.type, true)
+          : undefined,
       enabled: channelData.status === 1,
       base_urls: channelData.base_url
         ? [{ url: channelData.base_url }]
