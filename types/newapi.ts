@@ -90,7 +90,7 @@ export interface UpdateChannelPayload {
    * 渠道ID
    */
   id: number
-  type?: ChannelType
+  type?: ChannelType | OctopusOutboundType
   max_input_tokens?: number
   other?: string
   models?: string

@@ -55,12 +55,14 @@ class OctopusAuthManager {
     })
 
     if (!response.ok) {
+      // Read body once as text, then try to parse as JSON
+      const bodyText = await response.text()
       let errorBody: string
       try {
-        const errorJson = await response.json()
-        errorBody = errorJson.message || JSON.stringify(errorJson)
+        const errorJson = JSON.parse(bodyText)
+        errorBody = errorJson.message || bodyText
       } catch {
-        errorBody = await response.text()
+        errorBody = bodyText
       }
       throw new Error(
         `Login failed: HTTP ${response.status} - ${errorBody || "Unknown error"}`,
@@ -135,8 +137,18 @@ class OctopusAuthManager {
       password: config.password,
     })
 
-    // 解析过期时间
-    const expireAt = new Date(response.expire_at).getTime()
+    // 解析过期时间，验证有效性
+    const parsedExpireAt = new Date(response.expire_at).getTime()
+    const defaultTTL = 24 * 60 * 60 * 1000 // 24 hours fallback
+    let expireAt: number
+    if (Number.isFinite(parsedExpireAt)) {
+      expireAt = parsedExpireAt
+    } else {
+      logger.warn("Invalid expire_at from server, using default TTL", {
+        expire_at: response.expire_at,
+      })
+      expireAt = Date.now() + defaultTTL
+    }
 
     // 更新内存缓存
     this.tokenCache.set(cacheKey, {

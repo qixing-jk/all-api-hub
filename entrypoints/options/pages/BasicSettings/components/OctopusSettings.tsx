@@ -81,6 +81,11 @@ export default function OctopusSettings() {
       return
     }
 
+    // Persist trimmed values to ensure stored inputs match validated values
+    setLocalBaseUrl(trimmedUrl)
+    setLocalUsername(trimmedUsername)
+    setLocalPassword(trimmedPassword)
+
     setIsValidating(true)
     try {
       const isValid = await octopusAuthManager.validateConfig({
@@ -90,6 +95,12 @@ export default function OctopusSettings() {
       })
 
       if (isValid) {
+        // Persist validated config to storage
+        await Promise.all([
+          updateOctopusBaseUrl(trimmedUrl),
+          updateOctopusUsername(trimmedUsername),
+          updateOctopusPassword(trimmedPassword),
+        ])
         toast.success(t("octopus.validation.success"))
       } else {
         toast.error(t("octopus.validation.failed"))

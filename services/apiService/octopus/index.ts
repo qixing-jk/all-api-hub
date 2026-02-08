@@ -42,18 +42,21 @@ async function fetchOctopusApi<T>(
     const contentType = response.headers.get("Content-Type") || ""
     let errorMessage: string
 
+    // Read body once as text, then try to parse as JSON
+    const rawBody = await response.text()
+
     if (contentType.includes("application/json")) {
       // 尝试解析 JSON 错误响应
       try {
-        const errorData = await response.json()
+        const errorData = JSON.parse(rawBody)
         errorMessage =
           errorData.message || errorData.error || JSON.stringify(errorData)
       } catch {
-        errorMessage = await response.text()
+        errorMessage = rawBody
       }
     } else {
-      // 非 JSON 响应，读取文本
-      errorMessage = await response.text()
+      // 非 JSON 响应，使用已读取的文本
+      errorMessage = rawBody
     }
 
     throw new Error(
@@ -82,7 +85,7 @@ async function fetchOctopusApi<T>(
   const responseData = data as Record<string, unknown>
   if (
     responseData.success === false ||
-    (responseData.code && responseData.code !== 200)
+    (responseData.code !== undefined && responseData.code !== 200)
   ) {
     throw new Error((responseData.message as string) || "API request failed")
   }

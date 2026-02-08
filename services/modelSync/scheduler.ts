@@ -397,6 +397,15 @@ class ModelSyncScheduler {
   /**
    * Execute model sync for Octopus site.
    * Octopus uses a different API structure for fetching and updating models.
+   *
+   * NOTE: This Octopus-specific sync path intentionally omits ModelRedirectService
+   * mappings (unlike executeSync for New API/Veloera). This is because:
+   * 1. runOctopusBatch / octopusApi.updateChannel only update the model list directly
+   * 2. Octopus channels initialize model_mapping as an empty string
+   * 3. Redirect logic is not applicable to Octopus's channel architecture
+   *
+   * If redirect behavior is ever required for Octopus, refer to ModelRedirectService
+   * and the executeSync method for the pattern used by New API/Veloera channels.
    */
   private async executeSyncForOctopus(
     channelIds: number[] | undefined,
