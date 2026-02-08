@@ -1,9 +1,12 @@
 import { Tab } from "@headlessui/react"
 import { CpuChipIcon } from "@heroicons/react/24/outline"
-import { useEffect, useRef, type ReactNode } from "react"
+import { ChevronLeft, ChevronRight } from "lucide-react"
+import { useEffect, type ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
+import { Button } from "~/components/ui/button"
 import { ANIMATIONS, COLORS } from "~/constants/designTokens"
+import { useHorizontalScrollControls } from "~/hooks/useHorizontalScrollControls"
 import { getProviderConfig, type ProviderType } from "~/utils/modelProviders"
 
 interface ProviderTabsProps {
@@ -15,104 +18,60 @@ interface ProviderTabsProps {
   children: ReactNode
 }
 
+interface ProviderTabListProps {
+  providers: ProviderType[]
+  selectedIndex: number
+  baseFilteredModelsCount: number
+  getProviderFilteredCount: (provider: ProviderType) => number
+}
+
 /**
- * Provider filter tabs with horizontal scroll and counts.
- * @param props Component props container.
- * @param props.providers Provider list with available models.
- * @param props.selectedProvider Currently selected provider or "all".
- * @param props.setSelectedProvider Setter to change provider filter.
- * @param props.baseFilteredModelsCount Count of models before provider filter.
- * @param props.getProviderFilteredCount Helper to get count per provider.
- * @param props.children Tab panels content to render.
- * @returns Headless UI Tab group with provider tabs.
+ *
  */
-export function ProviderTabs({
+function ProviderTabList({
   providers,
-  selectedProvider,
-  setSelectedProvider,
+  selectedIndex,
   baseFilteredModelsCount,
   getProviderFilteredCount,
-  children,
-}: ProviderTabsProps) {
+}: ProviderTabListProps) {
   const { t } = useTranslation("modelList")
-  const tabListRef = useRef<HTMLDivElement>(null)
+  const {
+    scrollRef: tabListRef,
+    canScrollLeft,
+    canScrollRight,
+    scrollLeft,
+    scrollRight,
+    scrollChildIntoCenter,
+  } = useHorizontalScrollControls<HTMLDivElement>({
+    enableWheelScroll: true,
+  })
 
   useEffect(() => {
-    const tabList = tabListRef.current
-    if (!tabList) return
-
-    const onWheel = (e: WheelEvent) => {
-      if (e.deltaY === 0) return
-      e.preventDefault()
-      tabList.scrollTo({
-        left: tabList.scrollLeft + e.deltaY,
-        behavior: "auto",
-      })
-    }
-
-    tabList.addEventListener("wheel", onWheel)
-    return () => tabList.removeEventListener("wheel", onWheel)
-  }, [])
-
-  const scrollToSelectedTab = (selectedIndex: number) => {
-    if (!tabListRef.current) return
-
-    const tabList = tabListRef.current
-    const tabs = tabList.children
-
-    if (selectedIndex >= 0 && selectedIndex < tabs.length) {
-      const selectedTab = tabs[selectedIndex] as HTMLElement
-      const tabListRect = tabList.getBoundingClientRect()
-      const selectedTabRect = selectedTab.getBoundingClientRect()
-
-      const tabLeft =
-        selectedTabRect.left - tabListRect.left + tabList.scrollLeft
-      const idealScrollLeft =
-        tabLeft - tabList.clientWidth / 2 + selectedTabRect.width / 2
-
-      tabList.scrollTo({
-        left: Math.max(0, idealScrollLeft),
-        behavior: "smooth",
-      })
-    }
-  }
-
-  // Filter out providers with zero models
-  const filteredProviders = providers.filter(
-    (provider) => getProviderFilteredCount(provider) > 0,
-  )
-
-  useEffect(() => {
-    const selectedIndex =
-      selectedProvider === "all"
-        ? 0
-        : Math.max(
-            0,
-            filteredProviders.indexOf(selectedProvider as ProviderType) + 1,
-          )
-    setTimeout(() => scrollToSelectedTab(selectedIndex), 100)
-  }, [selectedProvider, filteredProviders])
-
-  const selectedIndex =
-    selectedProvider === "all"
-      ? 0
-      : Math.max(
-          0,
-          filteredProviders.indexOf(selectedProvider as ProviderType) + 1,
-        )
+    const rafId = window.requestAnimationFrame(() => {
+      scrollChildIntoCenter(selectedIndex)
+    })
+    return () => window.cancelAnimationFrame(rafId)
+  }, [selectedIndex, providers.length, scrollChildIntoCenter])
 
   return (
-    <Tab.Group
-      selectedIndex={selectedIndex}
-      onChange={(index) => {
-        const newProvider = index === 0 ? "all" : filteredProviders[index - 1]
-        setSelectedProvider(newProvider)
-        setTimeout(() => scrollToSelectedTab(index), 50)
-      }}
-    >
+    <div className="mb-6 flex items-center gap-2">
+      <Button
+        type="button"
+        size="icon-sm"
+        variant="ghost"
+        aria-label={t("providerTabs.scrollLeft", {
+          defaultValue: "Scroll provider tabs left",
+        })}
+        disabled={!canScrollLeft}
+        onClick={scrollLeft}
+        className="shrink-0"
+      >
+        <ChevronLeft className="h-4 w-4" />
+      </Button>
+
       <Tab.List
         ref={tabListRef}
-        className={`flex space-x-1 rounded-xl ${COLORS.background.tertiary} scrollbar-hide mb-6 touch-pan-x overflow-x-auto p-1`}
+        className={`flex min-w-0 flex-1 space-x-1 rounded-xl ${COLORS.background.tertiary} scrollbar-hide touch-pan-x overflow-x-auto p-1`}
       >
         <Tab
           className={({ selected }) =>
@@ -128,7 +87,7 @@ export function ProviderTabs({
             <span>{t("allProviders", { count: baseFilteredModelsCount })}</span>
           </div>
         </Tab>
-        {filteredProviders.map((provider) => {
+        {providers.map((provider) => {
           const providerConfig = getProviderConfig(
             provider.toLowerCase().replace(/\s/g, "-"),
           )
@@ -154,6 +113,70 @@ export function ProviderTabs({
           )
         })}
       </Tab.List>
+
+      <Button
+        type="button"
+        size="icon-sm"
+        variant="ghost"
+        aria-label={t("providerTabs.scrollRight", {
+          defaultValue: "Scroll provider tabs right",
+        })}
+        disabled={!canScrollRight}
+        onClick={scrollRight}
+        className="shrink-0"
+      >
+        <ChevronRight className="h-4 w-4" />
+      </Button>
+    </div>
+  )
+}
+
+/**
+ * Provider filter tabs with horizontal scroll and counts.
+ * @param props Component props container.
+ * @param props.providers Provider list with available models.
+ * @param props.selectedProvider Currently selected provider or "all".
+ * @param props.setSelectedProvider Setter to change provider filter.
+ * @param props.baseFilteredModelsCount Count of models before provider filter.
+ * @param props.getProviderFilteredCount Helper to get count per provider.
+ * @param props.children Tab panels content to render.
+ * @returns Headless UI Tab group with provider tabs.
+ */
+export function ProviderTabs({
+  providers,
+  selectedProvider,
+  setSelectedProvider,
+  baseFilteredModelsCount,
+  getProviderFilteredCount,
+  children,
+}: ProviderTabsProps) {
+  // Filter out providers with zero models
+  const filteredProviders = providers.filter(
+    (provider) => getProviderFilteredCount(provider) > 0,
+  )
+
+  const selectedIndex =
+    selectedProvider === "all"
+      ? 0
+      : Math.max(
+          0,
+          filteredProviders.indexOf(selectedProvider as ProviderType) + 1,
+        )
+
+  return (
+    <Tab.Group
+      selectedIndex={selectedIndex}
+      onChange={(index) => {
+        const newProvider = index === 0 ? "all" : filteredProviders[index - 1]
+        setSelectedProvider(newProvider)
+      }}
+    >
+      <ProviderTabList
+        providers={filteredProviders}
+        selectedIndex={selectedIndex}
+        baseFilteredModelsCount={baseFilteredModelsCount}
+        getProviderFilteredCount={getProviderFilteredCount}
+      />
       {children}
     </Tab.Group>
   )

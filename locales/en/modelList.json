@@ -28,6 +28,10 @@
   "noMatchingModels": "No matching models found",
   "pleaseSelectFirst": "Please select an account first to view model list",
   "allProviders": "All Providers ({{count}})",
+  "providerTabs": {
+    "scrollLeft": "Scroll provider tabs left",
+    "scrollRight": "Scroll provider tabs right"
+  },
   "available": "Available",
   "unavailable": "Unavailable",
   "expandDetails": "Expand details",

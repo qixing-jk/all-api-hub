@@ -1,5 +1,5 @@
 import { Tab } from "@headlessui/react"
-import { Settings } from "lucide-react"
+import { ChevronLeft, ChevronRight, Settings } from "lucide-react"
 import {
   Fragment,
   useCallback,
@@ -11,6 +11,7 @@ import {
 import { useTranslation } from "react-i18next"
 
 import {
+  Button,
   Select,
   SelectContent,
   SelectItem,
@@ -20,6 +21,7 @@ import {
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { PageHeader } from "~/entrypoints/options/components/PageHeader"
+import { useHorizontalScrollControls } from "~/hooks/useHorizontalScrollControls"
 import { setLastSeenOptionalPermissions } from "~/services/permissions/optionalPermissionState"
 import { OPTIONAL_PERMISSIONS } from "~/services/permissions/permissionManager"
 import {
@@ -111,6 +113,94 @@ const ANCHOR_TO_TAB: Record<string, TabId> = {
   ...(hasOptionalPermissions ? { permissions: "permissions" } : {}),
 }
 
+interface SettingsTabItem {
+  id: TabId
+  label: string
+}
+
+/**
+ *
+ */
+function DesktopTabs({
+  tabs,
+  selectedIndex,
+}: {
+  tabs: SettingsTabItem[]
+  selectedIndex: number
+}) {
+  const { t } = useTranslation("settings")
+  const {
+    scrollRef: tabListRef,
+    canScrollLeft,
+    canScrollRight,
+    scrollLeft,
+    scrollRight,
+    scrollChildIntoCenter,
+  } = useHorizontalScrollControls<HTMLDivElement>({
+    enableWheelScroll: true,
+  })
+
+  useEffect(() => {
+    const rafId = window.requestAnimationFrame(() => {
+      scrollChildIntoCenter(selectedIndex)
+    })
+    return () => window.cancelAnimationFrame(rafId)
+  }, [selectedIndex, tabs.length, scrollChildIntoCenter])
+
+  return (
+    <div className="dark:border-dark-bg-tertiary -mb-px hidden items-center gap-1 border-b border-gray-200 md:flex">
+      <Button
+        type="button"
+        size="icon-sm"
+        variant="ghost"
+        aria-label={t("tabs.scrollLeft", {
+          defaultValue: "Scroll tabs left",
+        })}
+        disabled={!canScrollLeft}
+        onClick={scrollLeft}
+        className="shrink-0"
+      >
+        <ChevronLeft className="h-4 w-4" />
+      </Button>
+
+      <Tab.List
+        ref={tabListRef}
+        className="scrollbar-hide flex min-w-0 flex-1 touch-pan-x items-center gap-2 overflow-x-auto"
+      >
+        {tabs.map((tab) => (
+          <Tab key={tab.id} as={Fragment}>
+            {({ selected }) => (
+              <button
+                className={`border-b-2 px-3 py-3 text-sm font-medium whitespace-nowrap transition-colors focus:outline-none ${
+                  selected
+                    ? "border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-400"
+                    : "border-transparent text-gray-600 hover:border-gray-300 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
+                }`}
+              >
+                {tab.label}
+              </button>
+            )}
+          </Tab>
+        ))}
+      </Tab.List>
+
+      <Button
+        type="button"
+        size="icon-sm"
+        variant="ghost"
+        aria-label={t("tabs.scrollRight", {
+          defaultValue: "Scroll tabs right",
+        })}
+        disabled={!canScrollRight}
+        onClick={scrollRight}
+        className="shrink-0"
+      >
+        <ChevronRight className="h-4 w-4" />
+      </Button>
+    </div>
+  )
+}
+
 /**
  * Basic Settings page: renders tabs for all settings sections and handles URL syncing/onboarding.
  */
@@ -118,7 +208,7 @@ export default function BasicSettings() {
   const { t } = useTranslation("settings")
   const { isLoading } = useUserPreferencesContext()
 
-  const tabs = useMemo(
+  const tabs = useMemo<SettingsTabItem[]>(
     () =>
       TAB_CONFIGS.map((config) => ({
         id: config.id,
@@ -249,23 +339,7 @@ export default function BasicSettings() {
             </Select>
           </div>
 
-          <Tab.List className="dark:border-dark-bg-tertiary -mb-px hidden flex-wrap items-center gap-2 border-b border-gray-200 md:flex">
-            {tabs.map((tab) => (
-              <Tab key={tab.id} as={Fragment}>
-                {({ selected }) => (
-                  <button
-                    className={`border-b-2 px-3 py-3 text-sm font-medium whitespace-nowrap transition-colors focus:outline-none ${
-                      selected
-                        ? "border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-400"
-                        : "border-transparent text-gray-600 hover:border-gray-300 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                )}
-              </Tab>
-            ))}
-          </Tab.List>
+          <DesktopTabs tabs={tabs} selectedIndex={selectedTabIndex} />
         </div>
 
         <Tab.Panels>

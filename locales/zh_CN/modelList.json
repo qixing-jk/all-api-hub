@@ -28,6 +28,10 @@
   "noMatchingModels": "没有找到匹配的模型",
   "pleaseSelectFirst": "请先选择一个账号查看模型列表",
   "allProviders": "所有厂商 ({{count}})",
+  "providerTabs": {
+    "scrollLeft": "向左滚动厂商标签",
+    "scrollRight": "向右滚动厂商标签"
+  },
   "available": "可用",
   "unavailable": "不可用",
   "expandDetails": "展开详细信息",
