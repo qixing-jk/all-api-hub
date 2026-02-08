@@ -95,8 +95,11 @@ class OctopusAuthManager {
 
   /**
    * 获取有效的 JWT Token
-   * - 如果缓存中有有效 Token，直接返回
+   * - 如果内存缓存中有有效 Token，直接返回
    * - 如果 Token 过期或不存在，自动重新登录获取
+   *
+   * 注意：Token 仅缓存在内存中，不持久化到存储。
+   * Octopus 默认 token 有效期为 15 分钟，可通过登录时的 expire 参数自定义。
    */
   async getValidToken(config: OctopusConfig): Promise<string> {
     if (!config.baseUrl || !config.username || !config.password) {
@@ -106,31 +109,13 @@ class OctopusAuthManager {
     const cacheKey = this.getCacheKey(config.baseUrl, config.username)
     const cached = this.tokenCache.get(cacheKey)
 
-    // 检查缓存是否有效（提前 5 分钟刷新）
-    const bufferTime = 5 * 60 * 1000
+    // 检查内存缓存是否有效（提前 1 分钟刷新，因为默认有效期较短）
+    const bufferTime = 1 * 60 * 1000
     if (cached && cached.expireAt > Date.now() + bufferTime) {
       return cached.token
     }
 
-    // 检查存储中的缓存 Token
-    if (
-      config.cachedToken &&
-      config.tokenExpireAt &&
-      config.tokenExpireAt > Date.now() + bufferTime
-    ) {
-      // 验证 Token 是否仍然有效
-      const isValid = await this.checkStatus(config.baseUrl, config.cachedToken)
-      if (isValid) {
-        // 更新内存缓存
-        this.tokenCache.set(cacheKey, {
-          token: config.cachedToken,
-          expireAt: config.tokenExpireAt,
-        })
-        return config.cachedToken
-      }
-    }
-
-    // 自动重新登录
+    // 自动登录获取新 Token
     logger.info("Auto-login to Octopus", { baseUrl: config.baseUrl })
     const response = await this.login(config.baseUrl, {
       username: config.username,
@@ -139,7 +124,7 @@ class OctopusAuthManager {
 
     // 解析过期时间，验证有效性
     const parsedExpireAt = new Date(response.expire_at).getTime()
-    const defaultTTL = 24 * 60 * 60 * 1000 // 24 hours fallback
+    const defaultTTL = 15 * 60 * 1000 // 15 minutes fallback (Octopus default)
     let expireAt: number
     if (Number.isFinite(parsedExpireAt)) {
       expireAt = parsedExpireAt
@@ -156,7 +141,6 @@ class OctopusAuthManager {
       expireAt,
     })
 
-    // 返回新 Token（调用方需要更新存储中的缓存）
     return response.token
   }
 

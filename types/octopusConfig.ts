@@ -9,10 +9,6 @@ export interface OctopusConfig {
   username: string
   /** 密码，用于自动登录 */
   password: string
-  /** 缓存的 JWT Token (系统自动管理) */
-  cachedToken?: string
-  /** Token 过期时间戳 (系统自动管理) */
-  tokenExpireAt?: number
 }
 
 export const DEFAULT_OCTOPUS_CONFIG: OctopusConfig = {
