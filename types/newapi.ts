@@ -1,5 +1,7 @@
 import { ChannelType } from "~/constants"
 
+import type { OctopusOutboundType } from "./octopus"
+
 /**
  * Group data from New API
  */
@@ -60,7 +62,7 @@ export interface ChannelDefaults {
  */
 export interface ChannelFormData {
   name: string
-  type: ChannelType
+  type: ChannelType | OctopusOutboundType
   key: string
   base_url: string
   models: string[]
