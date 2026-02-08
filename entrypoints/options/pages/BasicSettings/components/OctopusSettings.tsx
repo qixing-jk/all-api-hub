@@ -51,18 +51,21 @@ export default function OctopusSettings() {
   }, [octopusPassword])
 
   const handleBaseUrlChange = async (url: string) => {
+    url = url.trim()
     if (url === octopusBaseUrl) return
     const success = await updateOctopusBaseUrl(url)
     showUpdateToast(success, t("octopus.fields.baseUrlLabel"))
   }
 
   const handleUsernameChange = async (username: string) => {
+    username = username.trim()
     if (username === octopusUsername) return
     const success = await updateOctopusUsername(username)
     showUpdateToast(success, t("octopus.fields.usernameLabel"))
   }
 
   const handlePasswordChange = async (password: string) => {
+    password = password.trim()
     if (password === octopusPassword) return
     const success = await updateOctopusPassword(password)
     showUpdateToast(success, t("octopus.fields.passwordLabel"))
