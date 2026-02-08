@@ -47,6 +47,13 @@
     "description": "Snapshots exist, but none fall within the selected date range. Try widening the range or refreshing an account."
   },
   "hints": {
+    "disabled": {
+      "title": "Balance History is disabled",
+      "description": "Enable Balance History in settings to start recording snapshots.",
+      "actions": {
+        "openSettings": "Open settings"
+      }
+    },
     "incompleteSelection": {
       "title": "Some data may be hidden",
       "description": "The aggregated chart only shows days where all selected accounts have snapshots. Try selecting fewer accounts to view the available data.",
@@ -94,4 +101,3 @@
     }
   }
 }
-

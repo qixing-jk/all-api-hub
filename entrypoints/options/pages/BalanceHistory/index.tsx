@@ -10,9 +10,9 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useTheme } from "~/contexts/ThemeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { PageHeader } from "~/entrypoints/options/components/PageHeader"
+import { accountStorage } from "~/services/accountStorage"
 import { tagStorage } from "~/services/accountTags/tagStorage"
 import { listTagsSorted } from "~/services/accountTags/tagStoreUtils"
-import { accountStorage } from "~/services/accountStorage"
 import {
   computeRetentionCutoffDayKey,
   getDayKeyFromUnixSeconds,
@@ -21,15 +21,18 @@ import {
 import { buildAggregatedDailyBalanceSeries } from "~/services/dailyBalanceHistory/selectors"
 import { dailyBalanceHistoryStorage } from "~/services/dailyBalanceHistory/storage"
 import { clampBalanceHistoryRetentionDays } from "~/services/dailyBalanceHistory/utils"
+import type { SiteAccount, TagStore } from "~/types"
 import { DEFAULT_BALANCE_HISTORY_PREFERENCES } from "~/types/dailyBalanceHistory"
 import type { DailyBalanceHistoryStore } from "~/types/dailyBalanceHistory"
-import type { SiteAccount, TagStore } from "~/types"
 import { sendRuntimeMessage } from "~/utils/browserApi"
 import { getErrorMessage } from "~/utils/error"
 import { createLogger } from "~/utils/logger"
 import { navigateWithinOptionsPage } from "~/utils/navigation"
 
-import { buildBalanceTrendOption, buildIncomeOutcomeBarOption } from "./echartsOptions"
+import {
+  buildBalanceTrendOption,
+  buildIncomeOutcomeBarOption,
+} from "./echartsOptions"
 
 const logger = createLogger("BalanceHistoryPage")
 
@@ -41,10 +44,16 @@ const QUICK_RANGES = [
   { id: "365d", days: 365 },
 ] as const
 
+/**
+ * Clamp a retention-days value coming from user preferences or input.
+ */
 function clampRetentionDays(value: unknown): number {
   return clampBalanceHistoryRetentionDays(value)
 }
 
+/**
+ * Balance History options page that visualizes daily balance snapshots.
+ */
 export default function BalanceHistory() {
   const { t } = useTranslation("balanceHistory")
   const { resolvedTheme } = useTheme()
@@ -88,7 +97,9 @@ export default function BalanceHistory() {
       toastId = toast.loading(t("messages.loading.refreshing"))
       const response = await sendRuntimeMessage({
         action: RuntimeActionIds.BalanceHistoryRefreshNow,
-        ...(selectedAccountIds.length ? { accountIds: selectedAccountIds } : {}),
+        ...(selectedAccountIds.length
+          ? { accountIds: selectedAccountIds }
+          : {}),
       })
 
       if (!response?.success) {
@@ -126,6 +137,13 @@ export default function BalanceHistory() {
       )
     }
   }, [loadData, t])
+
+  const openBalanceHistorySettings = useCallback(() => {
+    navigateWithinOptionsPage(`#${MENU_ITEM_IDS.BASIC}`, {
+      tab: "balanceHistory",
+      anchor: "balance-history",
+    })
+  }, [])
 
   const tagOptions = useMemo(() => {
     if (!tagStore) return []
@@ -165,7 +183,9 @@ export default function BalanceHistory() {
   }, [accountsForSelectedTags])
 
   const effectiveAccountIds = useMemo(() => {
-    const available = new Set(accountsForSelectedTags.map((account) => account.id))
+    const available = new Set(
+      accountsForSelectedTags.map((account) => account.id),
+    )
 
     if (selectedAccountIds.length === 0) {
       return Array.from(available)
@@ -256,15 +276,19 @@ export default function BalanceHistory() {
     (preferences.showTodayCashflow ?? true) === false &&
     !endOfDayCaptureEnabled
 
-  const isStoreEmpty = (store?.snapshotsByAccountId
-    ? Object.keys(store.snapshotsByAccountId).length === 0
-    : true) as boolean
+  const isStoreEmpty = (
+    store?.snapshotsByAccountId
+      ? Object.keys(store.snapshotsByAccountId).length === 0
+      : true
+  ) as boolean
 
   const snapshotCompleteDays = useMemo(() => {
     const totals = series.coverage.reduce(
       (acc, item) => {
-        if (item.snapshotAccounts === item.totalAccounts) acc.snapshotComplete += 1
-        if (item.cashflowAccounts === item.totalAccounts) acc.cashflowComplete += 1
+        if (item.snapshotAccounts === item.totalAccounts)
+          acc.snapshotComplete += 1
+        if (item.cashflowAccounts === item.totalAccounts)
+          acc.cashflowComplete += 1
         return acc
       },
       { snapshotComplete: 0, cashflowComplete: 0 },
@@ -302,7 +326,8 @@ export default function BalanceHistory() {
 
       let count = 0
       for (const dayKey of Object.keys(perDay)) {
-        if (dayKey < effectiveStartDayKey || dayKey > effectiveEndDayKey) continue
+        if (dayKey < effectiveStartDayKey || dayKey > effectiveEndDayKey)
+          continue
         count += 1
       }
 
@@ -313,7 +338,14 @@ export default function BalanceHistory() {
     }
 
     return bestId
-  }, [accountsForSelectedTags, endDayKey, maxDayKey, minDayKey, startDayKey, store])
+  }, [
+    accountsForSelectedTags,
+    endDayKey,
+    maxDayKey,
+    minDayKey,
+    startDayKey,
+    store,
+  ])
 
   const shouldShowIncompleteSelectionHint =
     !isLoading &&
@@ -321,6 +353,10 @@ export default function BalanceHistory() {
     effectiveAccountIds.length > 1 &&
     snapshotAvailableDays > 0 &&
     snapshotCompleteDays.snapshotComplete === 0
+
+  // When balance history capture is disabled and no snapshots exist yet,
+  // show a clear CTA instead of rendering filters + an empty state.
+  const shouldShowEnableBalanceHistoryHint = !enabled && !isLoading
 
   return (
     <div className="space-y-6 p-6">
@@ -349,12 +385,7 @@ export default function BalanceHistory() {
             <Button
               size="sm"
               variant="outline"
-              onClick={() =>
-                navigateWithinOptionsPage(`#${MENU_ITEM_IDS.BASIC}`, {
-                  tab: "balanceHistory",
-                  anchor: "balance-history",
-                })
-              }
+              onClick={openBalanceHistorySettings}
               leftIcon={<Settings className="h-4 w-4" />}
             >
               {t("common:labels.settings")}
@@ -391,150 +422,187 @@ export default function BalanceHistory() {
         </Alert>
       )}
 
-      <Card padding="md">
-        <div className="space-y-4">
-          <div>
-            <Label className="text-sm font-medium">{t("filters.tags")}</Label>
-            <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
-              {t("filters.tagsHint")}
-            </div>
+      {shouldShowEnableBalanceHistoryHint ? (
+        <Alert
+          variant="info"
+          title={t("hints.disabled.title")}
+          description={t("hints.disabled.description")}
+        >
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={openBalanceHistorySettings}
+              leftIcon={<Settings className="h-4 w-4" />}
+            >
+              {t("hints.disabled.actions.openSettings")}
+            </Button>
           </div>
-          <TagFilter
-            options={tagOptions}
-            value={selectedTagIds}
-            onChange={setSelectedTagIds}
-            includeAllOption
-            allLabel={t("filters.allTags")}
-            maxVisibleLines={2}
-            disabled={tagOptions.length === 0}
-          />
-
-          <div>
-            <Label className="text-sm font-medium">{t("filters.accounts")}</Label>
-            <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
-              {t("filters.accountsHint")}
-            </div>
-          </div>
-          <TagFilter
-            options={accountOptions}
-            value={selectedAccountIds}
-            onChange={setSelectedAccountIds}
-            includeAllOption
-            allLabel={t("filters.allAccounts")}
-            maxVisibleLines={3}
-            disabled={accountOptions.length === 0}
-          />
-
-          <div>
-            <Label className="text-sm font-medium">{t("filters.range")}</Label>
-            <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
-              {t("filters.rangeHint", { days: safeRetentionDays })}
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {QUICK_RANGES.map((preset) => {
-              const label = t(`filters.quickRanges.${preset.id}`)
-              return (
-                <Button
-                  key={preset.id}
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    const desired = Math.min(preset.days, safeRetentionDays)
-                    setEndDayKey(maxDayKey)
-                    setStartDayKey(subtractDaysFromDayKey(maxDayKey, desired - 1))
-                  }}
-                >
-                  {label}
-                </Button>
-              )
-            })}
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">{t("filters.startDay")}</Label>
-              <Input
-                type="date"
-                value={startDayKey}
-                min={minDayKey || undefined}
-                max={maxDayKey || undefined}
-                aria-label={t("filters.startDay")}
-                onChange={(event) => setStartDayKey(event.target.value)}
-                disabled={!minDayKey}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">{t("filters.endDay")}</Label>
-              <Input
-                type="date"
-                value={endDayKey}
-                min={minDayKey || undefined}
-                max={maxDayKey || undefined}
-                aria-label={t("filters.endDay")}
-                onChange={(event) => setEndDayKey(event.target.value)}
-                disabled={!maxDayKey}
-              />
-            </div>
-          </div>
-
-          <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
-            {t("summary.coverage", {
-              snapshotAvailableDays,
-              snapshotCompleteDays: snapshotCompleteDays.snapshotComplete,
-              cashflowAvailableDays,
-              cashflowCompleteDays: snapshotCompleteDays.cashflowComplete,
-              totalDays: series.dayKeys.length,
-            })}
-          </div>
-        </div>
-      </Card>
-
-      {isLoading ? (
-        <div className="dark:text-dark-text-secondary text-sm text-gray-600">
-          {t("messages.loading.loadingData")}
-        </div>
-      ) : isStoreEmpty ? (
-        <Card padding="md">
-          <div className="space-y-1">
-            <div className="text-sm font-medium">{t("empty.title")}</div>
-            <div className="dark:text-dark-text-tertiary text-sm text-gray-600">
-              {t("empty.description")}
-            </div>
-          </div>
-        </Card>
-      ) : snapshotAvailableDays === 0 ? (
-        <Card padding="md">
-          <div className="space-y-1">
-            <div className="text-sm font-medium">{t("emptyRange.title")}</div>
-            <div className="dark:text-dark-text-tertiary text-sm text-gray-600">
-              {t("emptyRange.description")}
-            </div>
-          </div>
-        </Card>
+        </Alert>
       ) : (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <>
           <Card padding="md">
-            <div className="space-y-2">
-              <div className="text-sm font-medium">{t("charts.balance.title")}</div>
-              <div className="h-80 w-full">
-                <EChart option={balanceOption} />
+            <div className="space-y-4">
+              <div>
+                <Label className="text-sm font-medium">
+                  {t("filters.tags")}
+                </Label>
+                <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                  {t("filters.tagsHint")}
+                </div>
+              </div>
+              <TagFilter
+                options={tagOptions}
+                value={selectedTagIds}
+                onChange={setSelectedTagIds}
+                includeAllOption
+                allLabel={t("filters.allTags")}
+                maxVisibleLines={2}
+                disabled={tagOptions.length === 0}
+              />
+
+              <div>
+                <Label className="text-sm font-medium">
+                  {t("filters.accounts")}
+                </Label>
+                <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                  {t("filters.accountsHint")}
+                </div>
+              </div>
+              <TagFilter
+                options={accountOptions}
+                value={selectedAccountIds}
+                onChange={setSelectedAccountIds}
+                includeAllOption
+                allLabel={t("filters.allAccounts")}
+                maxVisibleLines={3}
+                disabled={accountOptions.length === 0}
+              />
+
+              <div>
+                <Label className="text-sm font-medium">
+                  {t("filters.range")}
+                </Label>
+                <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                  {t("filters.rangeHint", { days: safeRetentionDays })}
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {QUICK_RANGES.map((preset) => {
+                  const label = t(`filters.quickRanges.${preset.id}`)
+                  return (
+                    <Button
+                      key={preset.id}
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        const desired = Math.min(preset.days, safeRetentionDays)
+                        setEndDayKey(maxDayKey)
+                        setStartDayKey(
+                          subtractDaysFromDayKey(maxDayKey, desired - 1),
+                        )
+                      }}
+                    >
+                      {label}
+                    </Button>
+                  )
+                })}
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">
+                    {t("filters.startDay")}
+                  </Label>
+                  <Input
+                    type="date"
+                    value={startDayKey}
+                    min={minDayKey || undefined}
+                    max={maxDayKey || undefined}
+                    aria-label={t("filters.startDay")}
+                    onChange={(event) => setStartDayKey(event.target.value)}
+                    disabled={!minDayKey}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">
+                    {t("filters.endDay")}
+                  </Label>
+                  <Input
+                    type="date"
+                    value={endDayKey}
+                    min={minDayKey || undefined}
+                    max={maxDayKey || undefined}
+                    aria-label={t("filters.endDay")}
+                    onChange={(event) => setEndDayKey(event.target.value)}
+                    disabled={!maxDayKey}
+                  />
+                </div>
+              </div>
+
+              <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                {t("summary.coverage", {
+                  snapshotAvailableDays,
+                  snapshotCompleteDays: snapshotCompleteDays.snapshotComplete,
+                  cashflowAvailableDays,
+                  cashflowCompleteDays: snapshotCompleteDays.cashflowComplete,
+                  totalDays: series.dayKeys.length,
+                })}
               </div>
             </div>
           </Card>
 
-          <Card padding="md">
-            <div className="space-y-2">
-              <div className="text-sm font-medium">
-                {t("charts.cashflow.title")}
-              </div>
-              <div className="h-80 w-full">
-                <EChart option={cashflowOption} />
-              </div>
+          {isLoading ? (
+            <div className="dark:text-dark-text-secondary text-sm text-gray-600">
+              {t("messages.loading.loadingData")}
             </div>
-          </Card>
-        </div>
+          ) : isStoreEmpty ? (
+            <Card padding="md">
+              <div className="space-y-1">
+                <div className="text-sm font-medium">{t("empty.title")}</div>
+                <div className="dark:text-dark-text-tertiary text-sm text-gray-600">
+                  {t("empty.description")}
+                </div>
+              </div>
+            </Card>
+          ) : snapshotAvailableDays === 0 ? (
+            <Card padding="md">
+              <div className="space-y-1">
+                <div className="text-sm font-medium">
+                  {t("emptyRange.title")}
+                </div>
+                <div className="dark:text-dark-text-tertiary text-sm text-gray-600">
+                  {t("emptyRange.description")}
+                </div>
+              </div>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              <Card padding="md">
+                <div className="space-y-2">
+                  <div className="text-sm font-medium">
+                    {t("charts.balance.title")}
+                  </div>
+                  <div className="h-80 w-full">
+                    <EChart option={balanceOption} />
+                  </div>
+                </div>
+              </Card>
+
+              <Card padding="md">
+                <div className="space-y-2">
+                  <div className="text-sm font-medium">
+                    {t("charts.cashflow.title")}
+                  </div>
+                  <div className="h-80 w-full">
+                    <EChart option={cashflowOption} />
+                  </div>
+                </div>
+              </Card>
+            </div>
+          )}
+        </>
       )}
     </div>
   )

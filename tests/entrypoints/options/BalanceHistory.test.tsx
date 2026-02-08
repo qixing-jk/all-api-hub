@@ -61,11 +61,13 @@ vi.mock("~/utils/browserApi", async () => {
 describe("BalanceHistory options page", () => {
   const PAGE_TITLE = balanceHistoryEn.title
   const EMPTY_TITLE = balanceHistoryEn.empty.title
+  const DISABLED_HINT_TITLE = balanceHistoryEn.hints.disabled.title
   const CASHFLOW_WARNING_TITLE =
     balanceHistoryEn.warnings.cashflowDisabled.title
   const START_DAY_LABEL = balanceHistoryEn.filters.startDay
   const END_DAY_LABEL = balanceHistoryEn.filters.endDay
   const QUICK_RANGE_7D_LABEL = balanceHistoryEn.filters.quickRanges["7d"]
+  const TAG_FILTER_LABEL = balanceHistoryEn.filters.tags
 
   const DEFAULT_RETENTION_DAYS = 30
   const DEFAULT_THEME_MODE = "light" as const
@@ -121,8 +123,20 @@ describe("BalanceHistory options page", () => {
     } as any)
 
     vi.mocked(useUserPreferencesContext).mockReturnValue(
-      createMockUserPreferencesContext(),
+      createMockUserPreferencesContext({ enabled: true }),
     )
+  })
+
+  it("shows a hint to enable Balance History when capture is disabled", async () => {
+    vi.mocked(useUserPreferencesContext).mockReturnValue(
+      createMockUserPreferencesContext({ enabled: false }),
+    )
+
+    render(<BalanceHistory />)
+
+    expect(await screen.findByText(DISABLED_HINT_TITLE)).toBeInTheDocument()
+    expect(screen.queryByText(TAG_FILTER_LABEL)).toBeNull()
+    expect(screen.queryByText(EMPTY_TITLE)).toBeNull()
   })
 
   it("renders the empty state when no snapshots exist", async () => {
