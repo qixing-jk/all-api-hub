@@ -132,7 +132,7 @@ export async function searchChannels(
   return channels.filter(
     (ch) =>
       ch.name.toLowerCase().includes(lowerKeyword) ||
-      ch.base_urls.some((u) => u.url.toLowerCase().includes(lowerKeyword)),
+      ch.base_urls?.some((u) => u.url?.toLowerCase().includes(lowerKeyword)),
   )
 }
 
