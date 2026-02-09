@@ -262,14 +262,19 @@ export default function BalanceHistory() {
     [currencyType, updateCurrencyType],
   )
 
-  const formatAxisMoneyValue = useCallback((value: unknown): string => {
-    const numeric = typeof value === "number" ? value : Number(value)
-    if (!Number.isFinite(numeric)) return ""
-    return formatMoneyFixed(numeric)
-  }, [])
+  const formatAxisMoneyValue = useCallback(
+    (value: number | string, _index: number): string => {
+      void _index
+      const numeric = typeof value === "number" ? value : Number(value)
+      if (!Number.isFinite(numeric)) return ""
+      return formatMoneyFixed(numeric)
+    },
+    [],
+  )
 
   const formatTooltipMoneyValue = useCallback(
-    (value: unknown): string => {
+    (value: number | string, _dataIndex: number): string => {
+      void _dataIndex
       const numeric = typeof value === "number" ? value : Number(value)
       if (!Number.isFinite(numeric)) return "-"
       return `${currencySymbol}${formatMoneyFixed(numeric)}`
