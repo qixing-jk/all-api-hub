@@ -11,12 +11,25 @@ export function buildBalanceTrendOption(params: {
   seriesLabel: string
   yAxisLabel?: string
   isDark?: boolean
+  axisLabelFormatter?: (value: unknown) => string
+  valueFormatter?: (value: unknown) => string
 }): EChartsOption {
-  const { dayKeys, values, seriesLabel, yAxisLabel, isDark = false } = params
+  const {
+    dayKeys,
+    values,
+    seriesLabel,
+    yAxisLabel,
+    isDark = false,
+    axisLabelFormatter,
+    valueFormatter,
+  } = params
 
   return {
     backgroundColor: "transparent",
-    tooltip: { trigger: "axis" },
+    tooltip: {
+      trigger: "axis",
+      ...(valueFormatter ? { valueFormatter } : {}),
+    },
     grid: { left: 16, right: 16, top: 16, bottom: 24, containLabel: true },
     xAxis: {
       type: "category",
@@ -27,7 +40,10 @@ export function buildBalanceTrendOption(params: {
     yAxis: {
       type: "value",
       name: yAxisLabel,
-      axisLabel: { color: isDark ? "#9ca3af" : "#6b7280" },
+      axisLabel: {
+        color: isDark ? "#9ca3af" : "#6b7280",
+        ...(axisLabelFormatter ? { formatter: axisLabelFormatter as any } : {}),
+      },
       splitLine: { lineStyle: { color: isDark ? "#1f2937" : "#f3f4f6" } },
     },
     series: [
@@ -60,6 +76,8 @@ export function buildIncomeOutcomeBarOption(params: {
   outcomeLabel: string
   yAxisLabel?: string
   isDark?: boolean
+  axisLabelFormatter?: (value: unknown) => string
+  valueFormatter?: (value: unknown) => string
 }): EChartsOption {
   const {
     dayKeys,
@@ -69,11 +87,16 @@ export function buildIncomeOutcomeBarOption(params: {
     outcomeLabel,
     yAxisLabel,
     isDark = false,
+    axisLabelFormatter,
+    valueFormatter,
   } = params
 
   return {
     backgroundColor: "transparent",
-    tooltip: { trigger: "axis" },
+    tooltip: {
+      trigger: "axis",
+      ...(valueFormatter ? { valueFormatter } : {}),
+    },
     legend: {
       top: 0,
       textStyle: { color: isDark ? "#9ca3af" : "#6b7280" },
@@ -88,7 +111,10 @@ export function buildIncomeOutcomeBarOption(params: {
     yAxis: {
       type: "value",
       name: yAxisLabel,
-      axisLabel: { color: isDark ? "#9ca3af" : "#6b7280" },
+      axisLabel: {
+        color: isDark ? "#9ca3af" : "#6b7280",
+        ...(axisLabelFormatter ? { formatter: axisLabelFormatter as any } : {}),
+      },
       splitLine: { lineStyle: { color: isDark ? "#1f2937" : "#f3f4f6" } },
     },
     series: [
@@ -107,4 +133,3 @@ export function buildIncomeOutcomeBarOption(params: {
     ],
   }
 }
-

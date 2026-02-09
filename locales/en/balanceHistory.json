@@ -70,13 +70,13 @@
     "balance": {
       "title": "Balance trend",
       "series": "Balance",
-      "yAxis": "Quota"
+      "yAxis": "Amount"
     },
     "cashflow": {
       "title": "Daily cashflow",
       "income": "Income",
       "outcome": "Outcome",
-      "yAxis": "Quota"
+      "yAxis": "Amount"
     }
   },
   "messages": {

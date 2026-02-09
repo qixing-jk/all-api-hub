@@ -4,7 +4,16 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { EChart } from "~/components/charts/EChart"
-import { Alert, Button, Card, Input, Label, TagFilter } from "~/components/ui"
+import {
+  Alert,
+  Button,
+  Card,
+  Input,
+  Label,
+  TagFilter,
+  ToggleButton,
+} from "~/components/ui"
+import { ANIMATIONS, COLORS } from "~/constants/designTokens"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useTheme } from "~/contexts/ThemeContext"
@@ -18,15 +27,17 @@ import {
   getDayKeyFromUnixSeconds,
   subtractDaysFromDayKey,
 } from "~/services/dailyBalanceHistory/dayKeys"
-import { buildAggregatedDailyBalanceSeries } from "~/services/dailyBalanceHistory/selectors"
+import { buildAggregatedDailyBalanceMoneySeries } from "~/services/dailyBalanceHistory/selectors"
 import { dailyBalanceHistoryStorage } from "~/services/dailyBalanceHistory/storage"
 import { clampBalanceHistoryRetentionDays } from "~/services/dailyBalanceHistory/utils"
-import type { SiteAccount, TagStore } from "~/types"
+import type { CurrencyType, SiteAccount, TagStore } from "~/types"
 import { DEFAULT_BALANCE_HISTORY_PREFERENCES } from "~/types/dailyBalanceHistory"
 import type { DailyBalanceHistoryStore } from "~/types/dailyBalanceHistory"
 import { sendRuntimeMessage } from "~/utils/browserApi"
 import { getErrorMessage } from "~/utils/error"
+import { getCurrencySymbol } from "~/utils/formatters"
 import { createLogger } from "~/utils/logger"
+import { formatMoneyFixed } from "~/utils/money"
 import { navigateWithinOptionsPage } from "~/utils/navigation"
 
 import {
@@ -59,7 +70,8 @@ export default function BalanceHistory() {
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === "dark"
 
-  const { preferences } = useUserPreferencesContext()
+  const { preferences, currencyType, updateCurrencyType } =
+    useUserPreferencesContext()
 
   const [accounts, setAccounts] = useState<SiteAccount[]>([])
   const [tagStore, setTagStore] = useState<TagStore | null>(null)
@@ -234,26 +246,78 @@ export default function BalanceHistory() {
     if (nextEnd !== endDayKey) setEndDayKey(nextEnd)
   }, [endDayKey, maxDayKey, minDayKey, startDayKey])
 
+  const exchangeRateByAccountId = useMemo(() => {
+    return new Map(
+      accounts.map((account) => [account.id, account.exchange_rate]),
+    )
+  }, [accounts])
+
+  const currencySymbol = getCurrencySymbol(currencyType)
+
+  const handleCurrencyChange = useCallback(
+    (next: CurrencyType) => {
+      if (next === currencyType) return
+      void updateCurrencyType(next)
+    },
+    [currencyType, updateCurrencyType],
+  )
+
+  const formatAxisMoneyValue = useCallback((value: unknown): string => {
+    const numeric = typeof value === "number" ? value : Number(value)
+    if (!Number.isFinite(numeric)) return ""
+    return formatMoneyFixed(numeric)
+  }, [])
+
+  const formatTooltipMoneyValue = useCallback(
+    (value: unknown): string => {
+      const numeric = typeof value === "number" ? value : Number(value)
+      if (!Number.isFinite(numeric)) return "-"
+      return `${currencySymbol}${formatMoneyFixed(numeric)}`
+    },
+    [currencySymbol],
+  )
+
   const series = useMemo(() => {
     const effectiveStartDayKey = startDayKey || minDayKey
     const effectiveEndDayKey = endDayKey || maxDayKey
-    return buildAggregatedDailyBalanceSeries({
+    return buildAggregatedDailyBalanceMoneySeries({
       store,
       accountIds: effectiveAccountIds,
       startDayKey: effectiveStartDayKey,
       endDayKey: effectiveEndDayKey,
+      currencyType,
+      exchangeRateByAccountId,
     })
-  }, [effectiveAccountIds, endDayKey, maxDayKey, minDayKey, startDayKey, store])
+  }, [
+    currencyType,
+    effectiveAccountIds,
+    endDayKey,
+    exchangeRateByAccountId,
+    maxDayKey,
+    minDayKey,
+    startDayKey,
+    store,
+  ])
 
   const balanceOption = useMemo(() => {
     return buildBalanceTrendOption({
       dayKeys: series.dayKeys,
-      values: series.quotaTotals,
+      values: series.balanceTotals,
       seriesLabel: t("charts.balance.series"),
-      yAxisLabel: t("charts.balance.yAxis"),
+      yAxisLabel: `${t("charts.balance.yAxis")} (${currencySymbol})`,
       isDark,
+      axisLabelFormatter: formatAxisMoneyValue,
+      valueFormatter: formatTooltipMoneyValue,
     })
-  }, [isDark, series.dayKeys, series.quotaTotals, t])
+  }, [
+    currencySymbol,
+    formatAxisMoneyValue,
+    formatTooltipMoneyValue,
+    isDark,
+    series.balanceTotals,
+    series.dayKeys,
+    t,
+  ])
 
   const cashflowOption = useMemo(() => {
     return buildIncomeOutcomeBarOption({
@@ -262,10 +326,21 @@ export default function BalanceHistory() {
       outcomeValues: series.outcomeTotals,
       incomeLabel: t("charts.cashflow.income"),
       outcomeLabel: t("charts.cashflow.outcome"),
-      yAxisLabel: t("charts.cashflow.yAxis"),
+      yAxisLabel: `${t("charts.cashflow.yAxis")} (${currencySymbol})`,
       isDark,
+      axisLabelFormatter: formatAxisMoneyValue,
+      valueFormatter: formatTooltipMoneyValue,
     })
-  }, [isDark, series.dayKeys, series.incomeTotals, series.outcomeTotals, t])
+  }, [
+    currencySymbol,
+    formatAxisMoneyValue,
+    formatTooltipMoneyValue,
+    isDark,
+    series.dayKeys,
+    series.incomeTotals,
+    series.outcomeTotals,
+    t,
+  ])
 
   const enabled = preferences.balanceHistory?.enabled ?? false
   const endOfDayCaptureEnabled =
@@ -478,6 +553,36 @@ export default function BalanceHistory() {
                 maxVisibleLines={3}
                 disabled={accountOptions.length === 0}
               />
+
+              <div>
+                <Label className="text-sm font-medium">
+                  {t("settings:display.currencyUnit")}
+                </Label>
+                <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                  {t("settings:display.currencyDesc")}
+                </div>
+              </div>
+
+              <div
+                className={`inline-flex ${COLORS.background.tertiary} rounded-lg p-1 shadow-sm ${ANIMATIONS.transition.base}`}
+              >
+                <ToggleButton
+                  onClick={() => handleCurrencyChange("USD")}
+                  isActive={currencyType === "USD"}
+                  size="default"
+                  aria-label={t("settings:display.usd")}
+                >
+                  {t("settings:display.usd")}
+                </ToggleButton>
+                <ToggleButton
+                  onClick={() => handleCurrencyChange("CNY")}
+                  isActive={currencyType === "CNY"}
+                  size="default"
+                  aria-label={t("settings:display.cny")}
+                >
+                  {t("settings:display.cny")}
+                </ToggleButton>
+              </div>
 
               <div>
                 <Label className="text-sm font-medium">

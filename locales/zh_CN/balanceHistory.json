@@ -70,13 +70,13 @@
     "balance": {
       "title": "余额趋势",
       "series": "余额",
-      "yAxis": "额度"
+      "yAxis": "金额"
     },
     "cashflow": {
       "title": "每日收支",
       "income": "收入",
       "outcome": "支出",
-      "yAxis": "额度"
+      "yAxis": "金额"
     }
   },
   "messages": {
