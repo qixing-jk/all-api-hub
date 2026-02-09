@@ -4,7 +4,8 @@
   "emptyState": "暂无站点账号",
   "addFirstAccount": "添加你的第一个站点账号",
   "addAccount": "新增账号",
-  "currentSiteAdded": "⚠️当前站点 {{siteName}} 已被添加",
+  "currentSiteAdded": "⚠️当前站点 {{siteName}} 已存在已添加账号",
+  "currentLoginAdded": "⚠️当前登录账号已添加（{{siteName}}）",
   "list": {
     "sort": "排序",
     "dragHandle": "拖动排序",
@@ -20,7 +21,7 @@
       "refreshIncome": "点击刷新今日收入"
     },
     "site": {
-      "currentSiteExists": "当前标签页站点已存在",
+      "currentSiteExists": "与当前标签页站点相同",
       "currentSite": "当前站点",
       "disabled": "已禁用",
       "lastSync": "上次同步",

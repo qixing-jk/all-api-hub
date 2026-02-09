@@ -16,6 +16,7 @@ vi.mock("react-i18next", () => ({
 vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
   useAccountDataContext: () => ({
     detectedAccount: null,
+    detectedSiteAccounts: [],
     isAccountPinned: () => false,
     togglePinAccount: vi.fn(),
     isPinFeatureEnabled: false,

@@ -44,6 +44,7 @@ interface SiteInfoInputProps {
  * @param props.onUrlChange Handler updating the site URL.
  * @param props.isDetected Whether the site info was auto-detected (locks inputs when true).
  * @param props.onClearUrl Clears the URL field.
+ * @param props.siteType Detected or selected site type, used for contextual hints.
  * @param props.authType Selected authentication method.
  * @param props.onAuthTypeChange Handler updating the authentication method.
  * @param props.currentTabUrl URL detected from the active browser tab.
@@ -154,21 +155,28 @@ export default function SiteInfoInput({
             <span>{t("siteInfo.sub2apiHint")}</span>
           </div>
         )}
-        {isCurrentSiteAdded && handleEditClick && (
+        {isCurrentSiteAdded && (
           <div className="flex w-full items-center justify-between rounded-md bg-yellow-50 p-2 text-xs text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-300">
             <div className="flex items-center">
               <ExclamationTriangleIcon className="mr-1.5 h-4 w-4 shrink-0" />
-              <span>{t("siteInfo.alreadyAdded")}</span>
+              {/* Distinguish "site exists" vs "current login matches an existing account" for multi-account sites. */}
+              <span>
+                {detectedAccount
+                  ? t("siteInfo.currentLoginAlreadyAdded")
+                  : t("siteInfo.alreadyAdded")}
+              </span>
             </div>
-            <Button
-              type="button"
-              onClick={handleEditClick}
-              variant="warning"
-              size="sm"
-              leftIcon={<PencilIcon className="h-3 w-3" />}
-            >
-              {t("siteInfo.editNow")}
-            </Button>
+            {detectedAccount && onEditAccount && (
+              <Button
+                type="button"
+                onClick={handleEditClick}
+                variant="warning"
+                size="sm"
+                leftIcon={<PencilIcon className="h-3 w-3" />}
+              >
+                {t("siteInfo.editNow")}
+              </Button>
+            )}
           </div>
         )}
         {!isDetected && onUseCurrentTab && (

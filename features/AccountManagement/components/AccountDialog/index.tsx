@@ -42,6 +42,7 @@ export default function AccountDialog({
 }: AccountDialogProps) {
   const {
     displayData,
+    detectedSiteAccounts,
     detectedAccount,
     tags,
     tagCountsById,
@@ -124,7 +125,7 @@ export default function AccountDialog({
             onAuthTypeChange={setters.setAuthType}
             {...(mode === DIALOG_MODES.ADD && {
               currentTabUrl: state.currentTabUrl,
-              isCurrentSiteAdded: !!detectedAccount,
+              isCurrentSiteAdded: detectedSiteAccounts.length > 0,
               detectedAccount: detectedDisplayAccount,
               onUseCurrentTab: handlers.handleUseCurrentTabUrl,
               onEditAccount: openEditAccount,

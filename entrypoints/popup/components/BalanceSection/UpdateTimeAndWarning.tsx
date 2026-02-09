@@ -9,7 +9,8 @@ import { formatFullTime, formatRelativeTime } from "~/utils/formatters"
 
 export const UpdateTimeAndWarning = () => {
   const { t } = useTranslation("account")
-  const { lastUpdateTime, detectedAccount } = useAccountDataContext()
+  const { lastUpdateTime, detectedAccount, detectedSiteAccounts } =
+    useAccountDataContext()
   const [, setTick] = useState(0)
 
   useEffect(() => {
@@ -32,11 +33,13 @@ export const UpdateTimeAndWarning = () => {
           })}
         </Caption>
       </Tooltip>
-      {detectedAccount && (
+      {detectedSiteAccounts.length > 0 && (
         <Badge variant="warning" size="sm">
-          {t("currentSiteAdded", {
-            siteName: detectedAccount.site_name,
-          })}
+          {detectedAccount
+            ? t("currentLoginAdded", { siteName: detectedAccount.site_name })
+            : t("currentSiteAdded", {
+                siteName: detectedSiteAccounts[0].site_name,
+              })}
         </Badge>
       )}
     </div>

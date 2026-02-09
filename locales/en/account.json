@@ -4,7 +4,8 @@
   "emptyState": "No accounts yet",
   "addFirstAccount": "Add your first account",
   "addAccount": "Add Account",
-  "currentSiteAdded": "⚠️Current site {{siteName}} has been added",
+  "currentSiteAdded": "⚠️Saved accounts exist for {{siteName}}",
+  "currentLoginAdded": "⚠️Current login already added for {{siteName}}",
   "list": {
     "sort": "Sort",
     "dragHandle": "Drag to reorder",
@@ -20,7 +21,7 @@
       "refreshIncome": "Click to refresh today's income"
     },
     "site": {
-      "currentSiteExists": "Current tab site already exists",
+      "currentSiteExists": "Same site as the current tab",
       "currentSite": "Current Site",
       "disabled": "Disabled",
       "lastSync": "Last Sync",

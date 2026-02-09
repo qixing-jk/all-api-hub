@@ -11,6 +11,7 @@ import {
   XCircleIcon,
 } from "@heroicons/react/24/outline"
 import { PinIcon } from "lucide-react"
+import { useMemo } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
@@ -86,7 +87,7 @@ export default function SiteInfo({ site, highlights }: SiteInfoProps) {
   const { t } = useTranslation("account")
   const { t: tMessages } = useTranslation("messages")
   const {
-    detectedAccount,
+    detectedSiteAccounts,
     isAccountPinned,
     togglePinAccount,
     isPinFeatureEnabled,
@@ -96,7 +97,10 @@ export default function SiteInfo({ site, highlights }: SiteInfoProps) {
     refreshingAccountId,
     handleMarkCustomCheckInAsCheckedIn,
   } = useAccountActionsContext()
-  const detectedAccountId = detectedAccount?.id
+  const detectedAccountIdSet = useMemo(
+    () => new Set(detectedSiteAccounts.map((account) => account.id)),
+    [detectedSiteAccounts],
+  )
 
   const isPinned = isAccountPinned(site.id)
   const pinTooltipLabel = isPinned ? t("actions.unpin") : t("actions.pin")
@@ -423,7 +427,7 @@ export default function SiteInfo({ site, highlights }: SiteInfoProps) {
 
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center">
-          {site.id === detectedAccountId && (
+          {detectedAccountIdSet.has(site.id) && (
             <Tooltip content={t("list.site.currentSiteExists")} position="top">
               <Badge variant="warning" size="sm" className="whitespace-nowrap">
                 {t("list.site.currentSite")}

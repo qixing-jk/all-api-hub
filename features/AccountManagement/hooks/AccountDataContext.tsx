@@ -63,6 +63,17 @@ interface AccountDataContextType {
   isRefreshing: boolean
   prevTotalConsumption: CurrencyAmount
   prevBalances: CurrencyAmountMap
+  /**
+   * Accounts that share the same origin with the current active tab (site-level match).
+   *
+   * This indicates "having an account on this site", regardless of which user is currently logged in.
+   */
+  detectedSiteAccounts: SiteAccount[]
+  /**
+   * The specific account that matches the currently logged-in website user (user-level match).
+   *
+   * This is stricter than {@link detectedSiteAccounts} and requires verifying the website user ID.
+   */
   detectedAccount: SiteAccount | null
   isDetecting: boolean
   pinnedAccountIds: string[]
@@ -132,6 +143,9 @@ export const AccountDataProvider = ({
   const [prevBalances, setPrevBalances] = useState<CurrencyAmountMap>({})
   const [sortField, setSortField] = useState<SortField>(initialSortField)
   const [sortOrder, setSortOrder] = useState<SortOrder>(initialSortOrder)
+  const [detectedSiteAccounts, setDetectedSiteAccounts] = useState<
+    SiteAccount[]
+  >([])
   const [detectedAccount, setDetectedAccount] = useState<SiteAccount | null>(
     null,
   )
@@ -161,26 +175,191 @@ export const AccountDataProvider = ({
     [sortingPriorityConfig],
   )
 
-  const checkCurrentTab = useCallback(async () => {
-    setIsDetecting(true)
-    try {
-      const tabs = await getActiveTabs()
+  const accountsRef = useRef<SiteAccount[]>([])
+  accountsRef.current = accounts
 
-      if (tabs && tabs.length > 0 && tabs[0]?.url) {
-        const existingAccount = await accountStorage.checkUrlExists(tabs[0].url)
-        setDetectedAccount(existingAccount)
-      } else {
+  const currentTabUserCacheRef = useRef<{
+    tabId: number
+    url: string
+    userId: string | null
+    attemptedAt: number
+  } | null>(null)
+
+  const currentTabCheckSeqRef = useRef(0)
+
+  const checkCurrentTab = useCallback(async () => {
+    // Guard against stale async updates: if a newer check starts while this one is awaiting,
+    // this `seq` lets us no-op any state updates from older runs.
+    const seq = (currentTabCheckSeqRef.current += 1)
+    setIsDetecting(true)
+
+    try {
+      // Look up the currently active tab. We need both the URL (for origin matching) and the
+      // tab ID (for messaging + deduping repeated checks for the same tab).
+      const tabs = await getActiveTabs()
+      const tab = tabs?.[0]
+      const tabUrl = typeof tab?.url === "string" ? tab.url : null
+      const tabId = typeof tab?.id === "number" ? tab.id : null
+
+      if (!tabUrl || tabId === null) {
+        if (seq !== currentTabCheckSeqRef.current) return
+        // No valid tab context: clear both site-level and user-level detections.
+        currentTabUserCacheRef.current = null
+        setDetectedSiteAccounts([])
+        setDetectedAccount(null)
+        return
+      }
+
+      let parsedUrl: URL
+      try {
+        parsedUrl = new URL(tabUrl)
+      } catch (error) {
+        logger.debug("Failed to parse active tab URL", { tabUrl, error })
+        if (seq !== currentTabCheckSeqRef.current) return
+        // Invalid URL: clear detection to avoid showing stale state from a previous tab.
+        currentTabUserCacheRef.current = null
+        setDetectedSiteAccounts([])
+        setDetectedAccount(null)
+        return
+      }
+
+      if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+        if (seq !== currentTabCheckSeqRef.current) return
+        // Non-web pages (chrome://, about:, etc.) can't be matched to stored site accounts.
+        currentTabUserCacheRef.current = null
+        setDetectedSiteAccounts([])
+        setDetectedAccount(null)
+        return
+      }
+
+      const origin = parsedUrl.origin
+
+      // Site-level detection: find any stored accounts that belong to the same origin.
+      // This answers "does this site already exist in the user's accounts?".
+      const originAccounts = accountsRef.current.filter((account) => {
+        try {
+          return new URL(account.site_url).origin === origin
+        } catch {
+          return false
+        }
+      })
+
+      if (seq !== currentTabCheckSeqRef.current) return
+      setDetectedSiteAccounts(originAccounts)
+
+      // Dedupe based on tabId + full tabUrl to avoid duplicate checks when multiple tab events
+      // fire in quick succession (e.g. onUpdated, onActivated).
+      const cached = currentTabUserCacheRef.current
+      const cacheMatches =
+        cached && cached.tabId === tabId && cached.url === tabUrl
+      if (!cacheMatches) {
+        // Switching tabs/sites: clear the previous user-level match early to avoid stale UI highlights.
         setDetectedAccount(null)
       }
+
+      if (originAccounts.length === 0) {
+        // No accounts for this origin: nothing further to verify.
+        currentTabUserCacheRef.current = null
+        setDetectedAccount(null)
+        return
+      }
+
+      const now = Date.now()
+      const DEDUPE_MS = 1500
+
+      // User-level detection: re-verify the website's current user ID (via content script) so we
+      // can pick the *correct* stored account for multi-account scenarios on the same origin.
+      const cachedUserId: string | null =
+        cacheMatches && cached ? cached.userId : null
+
+      let verifiedUserId: string | null = cachedUserId
+
+      const shouldAttemptReadUserId =
+        verifiedUserId === null &&
+        (!cached || cached.tabId !== tabId || cached.url !== tabUrl) // new tab/url
+
+      const shouldRetryReadUserId =
+        verifiedUserId === null &&
+        cached &&
+        cached.tabId === tabId &&
+        cached.url === tabUrl &&
+        now - cached.attemptedAt > DEDUPE_MS
+
+      if (shouldAttemptReadUserId || shouldRetryReadUserId) {
+        // Record this attempt up-front so parallel tab events don't trigger another sendMessage.
+        currentTabUserCacheRef.current = {
+          tabId,
+          url: tabUrl,
+          userId: null,
+          attemptedAt: now,
+        }
+
+        try {
+          // Ask the content script to read the site's localStorage and return the current userId.
+          const userResponse = await browser.tabs.sendMessage(tabId, {
+            action: RuntimeActionIds.ContentGetUserFromLocalStorage,
+            url: origin,
+          })
+
+          const userIdRaw = userResponse?.success
+            ? userResponse?.data?.userId
+            : null
+          verifiedUserId =
+            userIdRaw === undefined || userIdRaw === null
+              ? null
+              : String(userIdRaw)
+
+          // Cache the verified user ID by tab+url to prevent duplicate reads.
+          currentTabUserCacheRef.current = {
+            tabId,
+            url: tabUrl,
+            userId: verifiedUserId,
+            attemptedAt: now,
+          }
+        } catch (error) {
+          logger.debug("Failed to re-verify website user ID from active tab", {
+            tabId,
+            origin,
+            error,
+          })
+          verifiedUserId = null
+          currentTabUserCacheRef.current = {
+            tabId,
+            url: tabUrl,
+            userId: null,
+            attemptedAt: now,
+          }
+        }
+      }
+
+      if (seq !== currentTabCheckSeqRef.current) return
+
+      if (!verifiedUserId) {
+        // We know the site exists in storage (originAccounts), but we can't confirm which login is active.
+        setDetectedAccount(null)
+        return
+      }
+
+      // If we can verify userId, match it to a specific stored account for this origin.
+      const matchedAccount =
+        originAccounts.find(
+          (account) => String(account.account_info.id) === verifiedUserId,
+        ) ?? null
+
+      setDetectedAccount(matchedAccount)
     } catch (error) {
       logger.error("Error detecting current tab account", error)
+      if (seq !== currentTabCheckSeqRef.current) return
+      // Defensive reset to avoid leaving the UI in a partially-updated state.
+      currentTabUserCacheRef.current = null
+      setDetectedSiteAccounts([])
       setDetectedAccount(null)
     } finally {
-      setIsDetecting(false)
+      if (seq === currentTabCheckSeqRef.current) {
+        setIsDetecting(false)
+      }
     }
-    // 确保展示数据刷新时，会重新检测
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [displayData])
+  }, [])
 
   const loadAccountData = useCallback(async () => {
     try {
@@ -364,9 +543,6 @@ export const AccountDataProvider = ({
   }, [loadAccountData, refreshKey])
 
   useEffect(() => {
-    // 打开 popup 时立即检测一次
-    checkCurrentTab()
-
     // Tab 激活变化时检测
     const cleanupActivated = onTabActivated(() => {
       checkCurrentTab()
@@ -386,6 +562,11 @@ export const AccountDataProvider = ({
       cleanupUpdated()
     }
   }, [checkCurrentTab])
+
+  useEffect(() => {
+    // accounts refresh/update may change origin matches; re-check current tab to keep UI hints accurate.
+    void checkCurrentTab()
+  }, [accounts, checkCurrentTab])
 
   // 监听后台自动刷新的更新通知
   useEffect(() => {
@@ -736,6 +917,7 @@ export const AccountDataProvider = ({
       isRefreshing,
       prevTotalConsumption,
       prevBalances,
+      detectedSiteAccounts,
       detectedAccount,
       isDetecting,
       pinnedAccountIds,
@@ -771,6 +953,7 @@ export const AccountDataProvider = ({
       isRefreshing,
       prevTotalConsumption,
       prevBalances,
+      detectedSiteAccounts,
       detectedAccount,
       isDetecting,
       pinnedAccountIds,
