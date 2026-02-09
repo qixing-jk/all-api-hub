@@ -24,7 +24,7 @@
     "authMethod": "Authentication Method",
     "currentSite": "Current Site",
     "useCurrent": "Use Current Site",
-    "alreadyAdded": "This site already has saved accounts",
+    "alreadyAdded": "Account(s) already exist for this site",
     "currentLoginAlreadyAdded": "Current login already added",
     "editNow": "Edit Now",
     "cookieWarning": "Cookie authentication uses your current login account, cannot be used for multiple accounts on the same site, do not use unless necessary",

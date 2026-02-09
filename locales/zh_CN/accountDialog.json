@@ -24,7 +24,7 @@
     "authMethod": "认证方式",
     "currentSite": "当前站点",
     "useCurrent": "使用当前站点",
-    "alreadyAdded": "该站点已存在已添加账号",
+    "alreadyAdded": "该站点已存在账号",
     "currentLoginAlreadyAdded": "当前登录账号已添加",
     "editNow": "立即编辑",
     "cookieWarning": "Cookie 认证使用您的当前登录账号，无法站点多账号，非必要请勿使用",
