@@ -1,5 +1,20 @@
 # Changelog
 
+## [3.18.0](https://github.com/qixing-jk/all-api-hub/compare/v3.17.0...v3.18.0) (2026-02-09)
+
+
+### Features
+
+* **balanceHistory:** add currency conversion for USD/CNY ([#454](https://github.com/qixing-jk/all-api-hub/issues/454)) ([e105cdf](https://github.com/qixing-jk/all-api-hub/commit/e105cdf9de0d6d5d9498bbc363d4b8a099348804))
+* **TagFilter:** add overflow display mode control ([#450](https://github.com/qixing-jk/all-api-hub/issues/450)) ([1cb3ea5](https://github.com/qixing-jk/all-api-hub/commit/1cb3ea58d1885e0bef787f796d9fc19cb1ef0f0b))
+* **ui:** add horizontal scroll controls for tabs ([#452](https://github.com/qixing-jk/all-api-hub/issues/452)) ([48b33ec](https://github.com/qixing-jk/all-api-hub/commit/48b33ec2d4fa4be627aaf5fac5b9a2b5ebdf7742))
+* **ui:** adjust default size classes for ToggleButton ([a8ec164](https://github.com/qixing-jk/all-api-hub/commit/a8ec164bbecd727e12c787ac0a71eed22955cdd6))
+
+
+### Bug Fixes
+
+* **detectSiteType:** fetch original HTML title instead of JS-modified one ([d51bd00](https://github.com/qixing-jk/all-api-hub/commit/d51bd00f3ce5ecf449089ebd4410de8f39de02d0))
+
 ## [3.17.0](https://github.com/qixing-jk/all-api-hub/compare/v3.16.0...v3.17.0) (2026-02-08)
 
 
