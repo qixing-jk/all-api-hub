@@ -2,6 +2,7 @@
  * Octopus API 服务
  * 提供与 Octopus 后端的所有 API 交互
  */
+import { userPreferences } from "~/services/userPreferences"
 import type {
   OctopusApiResponse,
   OctopusChannel,
@@ -13,6 +14,7 @@ import type { OctopusConfig } from "~/types/octopusConfig"
 import { createLogger } from "~/utils/logger"
 import { normalizeBaseUrl } from "~/utils/url"
 
+import type { ApiServiceRequest } from "../common/type"
 import { octopusAuthManager } from "./auth"
 import { buildOctopusAuthHeaders } from "./utils"
 
@@ -225,6 +227,132 @@ export async function fetchRemoteModels(
   } catch (error) {
     logger.error("Failed to fetch remote models", error)
     throw error
+  }
+}
+
+/**
+ * Octopus LLMInfo 类型（模型价格信息）
+ */
+interface OctopusLLMInfo {
+  name: string
+  input: number
+  output: number
+  cache_read: number
+  cache_write: number
+}
+
+/**
+ * Octopus Group 类型（分组信息）
+ */
+interface OctopusGroup {
+  id: number
+  name: string
+  mode: number
+  match_regex: string
+  first_token_time_out: number
+  items: Array<{
+    id: number
+    group_id: number
+    channel_id: number
+    model_name: string
+    priority: number
+    weight: number
+  }>
+}
+
+/**
+ * 获取可用模型列表
+ * 调用 Octopus 的 /api/v1/model/list 端点，返回模型名称数组
+ */
+export async function fetchAvailableModels(
+  config: OctopusConfig,
+): Promise<string[]> {
+  try {
+    const result = await fetchOctopusApi<OctopusLLMInfo[]>(
+      config,
+      "/api/v1/model/list",
+    )
+    return (result.data || []).map((model) => model.name)
+  } catch (error) {
+    logger.error("Failed to fetch available models", error)
+    throw error
+  }
+}
+
+/**
+ * 获取分组列表
+ * 调用 Octopus 的 /api/v1/group/list 端点，返回分组名称数组
+ */
+export async function fetchGroups(config: OctopusConfig): Promise<string[]> {
+  try {
+    const result = await fetchOctopusApi<OctopusGroup[]>(
+      config,
+      "/api/v1/group/list",
+    )
+    return (result.data || []).map((group) => group.name)
+  } catch (error) {
+    logger.error("Failed to fetch groups", error)
+    throw error
+  }
+}
+
+/**
+ * 获取站点分组列表（符合 common API 签名）
+ * 使用 Octopus JWT 认证调用 /api/v1/group/list
+ * 注意：忽略 request 中的 auth 参数，使用 Octopus 配置中的凭据
+ */
+export async function fetchSiteUserGroups(
+  _request: ApiServiceRequest,
+): Promise<string[]> {
+  try {
+    const prefs = await userPreferences.getPreferences()
+    const octopusConfig = prefs?.octopus
+    if (
+      !octopusConfig?.baseUrl ||
+      !octopusConfig?.username ||
+      !octopusConfig?.password
+    ) {
+      logger.warn("Octopus config not available, returning empty groups")
+      return []
+    }
+    return await fetchGroups({
+      baseUrl: octopusConfig.baseUrl,
+      username: octopusConfig.username,
+      password: octopusConfig.password,
+    })
+  } catch (error) {
+    logger.error("Failed to fetch site user groups", error)
+    return []
+  }
+}
+
+/**
+ * 获取账号可用模型列表（符合 common API 签名）
+ * 使用 Octopus JWT 认证调用 /api/v1/model/list
+ * 注意：忽略 request 中的 auth 参数，使用 Octopus 配置中的凭据
+ */
+export async function fetchAccountAvailableModels(
+  _request: ApiServiceRequest,
+): Promise<string[]> {
+  try {
+    const prefs = await userPreferences.getPreferences()
+    const octopusConfig = prefs?.octopus
+    if (
+      !octopusConfig?.baseUrl ||
+      !octopusConfig?.username ||
+      !octopusConfig?.password
+    ) {
+      logger.warn("Octopus config not available, returning empty models")
+      return []
+    }
+    return await fetchAvailableModels({
+      baseUrl: octopusConfig.baseUrl,
+      username: octopusConfig.username,
+      password: octopusConfig.password,
+    })
+  } catch (error) {
+    logger.error("Failed to fetch account available models", error)
+    return []
   }
 }
 

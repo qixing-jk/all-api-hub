@@ -2,6 +2,7 @@ import {
   ANYROUTER,
   DONE_HUB,
   NEW_API,
+  OCTOPUS,
   ONE_HUB,
   SUB2API,
   VELOERA,
@@ -11,6 +12,7 @@ import {
 
 import * as anyrouterAPI from "./anyrouter"
 import * as commonAPI from "./common"
+import * as octopusAPI from "./octopus"
 import * as oneHubAPI from "./oneHub"
 import * as sub2apiAPI from "./sub2api"
 import * as veloeraAPI from "./veloera"
@@ -25,6 +27,7 @@ const siteOverrideMap = {
   [NEW_API]: commonAPI,
   [WONG_GONGYI]: wongAPI,
   [SUB2API]: sub2apiAPI,
+  [OCTOPUS]: octopusAPI,
 } as const
 
 // 添加类型定义

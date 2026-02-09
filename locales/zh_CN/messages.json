@@ -143,7 +143,8 @@
     "importSuccess": "成功导入新渠道 {{channelName}}",
     "importFailed": "导入失败，发生未知错误",
     "loginFailed": "登录 Octopus 失败，请检查用户名和密码",
-    "tokenExpired": "Octopus 登录已过期，正在重新登录..."
+    "tokenExpired": "Octopus 登录已过期，正在重新登录...",
+    "corsError": "这可能是 CORS 配置问题。请在 Octopus 设置中检查 CORS 白名单配置。"
   },
   "cliproxy": {
     "configMissing": "请先在设置中配置 CLIProxyAPI 管理接口地址和密钥",
