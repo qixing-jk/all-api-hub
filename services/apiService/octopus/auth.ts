@@ -59,24 +59,24 @@ class OctopusAuthManager {
     if (!response.ok) {
       // Read body once as text, then try to parse as JSON
       const bodyText = await response.text()
-      let errorBody: string
+      let serverMessage: string | undefined
       try {
         const errorJson = JSON.parse(bodyText)
-        errorBody = errorJson.message || bodyText
+        serverMessage = errorJson.message || undefined
       } catch {
-        errorBody = bodyText
+        // not JSON, ignore
       }
 
       // 针对 403 错误添加 CORS 配置提示
       if (response.status === 403) {
         const corsHint = i18next.t("messages:octopus.corsError")
-        throw new Error(
-          `Login failed: HTTP 403 - ${errorBody || "Forbidden"}. ${corsHint}`,
-        )
+        const detail = serverMessage || "Forbidden"
+        throw new Error(`${detail}\n${corsHint}`)
       }
 
       throw new Error(
-        `Login failed: HTTP ${response.status} - ${errorBody || "Unknown error"}`,
+        serverMessage ||
+          `HTTP ${response.status} - ${bodyText || "Unknown error"}`,
       )
     }
 
@@ -142,14 +142,20 @@ class OctopusAuthManager {
 
   /**
    * 验证配置是否有效（尝试登录）
+   * 返回包含错误信息的结果，便于 UI 展示具体错误原因
    */
-  async validateConfig(config: OctopusConfig): Promise<boolean> {
+  async validateConfig(
+    config: OctopusConfig,
+  ): Promise<{ success: boolean; error?: string }> {
     try {
       await this.getValidToken(config)
-      return true
+      return { success: true }
     } catch (error) {
       logger.error("Config validation failed", error)
-      return false
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : undefined,
+      }
     }
   }
 

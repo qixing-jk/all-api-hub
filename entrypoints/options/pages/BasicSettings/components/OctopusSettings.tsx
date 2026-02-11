@@ -88,13 +88,13 @@ export default function OctopusSettings() {
 
     setIsValidating(true)
     try {
-      const isValid = await octopusAuthManager.validateConfig({
+      const result = await octopusAuthManager.validateConfig({
         baseUrl: trimmedUrl,
         username: trimmedUsername,
         password: trimmedPassword,
       })
 
-      if (isValid) {
+      if (result.success) {
         // Persist validated config to storage
         await Promise.all([
           updateOctopusBaseUrl(trimmedUrl),
@@ -103,7 +103,7 @@ export default function OctopusSettings() {
         ])
         toast.success(t("octopus.validation.success"))
       } else {
-        toast.error(t("octopus.validation.failed"))
+        toast.error(result.error || t("octopus.validation.failed"))
       }
     } catch {
       toast.error(t("octopus.validation.error"))
