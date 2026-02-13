@@ -1,4 +1,4 @@
-import { useMemo } from "react"
+import { useEffect, useMemo } from "react"
 
 import { useAccountData } from "~/hooks/useAccountData"
 
@@ -12,8 +12,8 @@ import { useModelListState } from "./useModelListState"
  */
 export function useModelListData() {
   // Single source of account data
-  const { displayData } = useAccountData()
-  const accounts = useMemo(() => displayData || [], [displayData])
+  const { enabledDisplayData } = useAccountData()
+  const accounts = useMemo(() => enabledDisplayData || [], [enabledDisplayData])
 
   // UI state
   const state = useModelListState()
@@ -23,6 +23,17 @@ export function useModelListData() {
     () => accounts.find((acc) => acc.id === state.selectedAccount),
     [accounts, state.selectedAccount],
   )
+
+  useEffect(() => {
+    if (!state.selectedAccount || state.selectedAccount === "all") return
+
+    const accountExists = accounts.some(
+      (acc) => acc.id === state.selectedAccount,
+    )
+    if (!accountExists) {
+      state.setSelectedAccount("")
+    }
+  }, [accounts, state, state.selectedAccount, state.setSelectedAccount])
 
   // Data loading (no longer calls useAccountData internally)
   const modelData = useModelData({

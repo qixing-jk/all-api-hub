@@ -20,7 +20,7 @@ const logger = createLogger("KeyManagementHook")
  */
 export function useKeyManagement(routeParams?: Record<string, string>) {
   const { t } = useTranslation(["keyManagement", "messages"])
-  const { displayData } = useAccountData()
+  const { enabledDisplayData } = useAccountData()
   const [selectedAccount, setSelectedAccount] = useState<string>("")
   const [searchTerm, setSearchTerm] = useState("")
   const [tokens, setTokens] = useState<AccountToken[]>([])
@@ -32,11 +32,13 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
   const loadTokens = useCallback(
     async (accountId?: string) => {
       const targetAccountId = accountId || selectedAccount
-      if (!targetAccountId || displayData.length === 0) return
+      if (!targetAccountId || enabledDisplayData.length === 0) return
 
       setIsLoading(true)
       try {
-        const account = displayData.find((acc) => acc.id === targetAccountId)
+        const account = enabledDisplayData.find(
+          (acc) => acc.id === targetAccountId,
+        )
         if (!account) {
           setTokens([])
           return
@@ -69,7 +71,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         setIsLoading(false)
       }
     },
-    [selectedAccount, displayData, t],
+    [selectedAccount, enabledDisplayData, t],
   )
 
   useEffect(() => {
@@ -78,18 +80,29 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     } else {
       setTokens([])
     }
-  }, [selectedAccount, displayData, loadTokens])
+  }, [selectedAccount, enabledDisplayData, loadTokens])
 
   useEffect(() => {
-    if (routeParams?.accountId && displayData.length > 0) {
-      const accountExists = displayData.some(
+    if (!selectedAccount) return
+
+    const accountExists = enabledDisplayData.some(
+      (account) => account.id === selectedAccount,
+    )
+    if (!accountExists) {
+      setSelectedAccount("")
+    }
+  }, [selectedAccount, enabledDisplayData])
+
+  useEffect(() => {
+    if (routeParams?.accountId && enabledDisplayData.length > 0) {
+      const accountExists = enabledDisplayData.some(
         (acc) => acc.id === routeParams.accountId,
       )
       if (accountExists) {
         setSelectedAccount(routeParams.accountId)
       }
     }
-  }, [routeParams?.accountId, displayData])
+  }, [routeParams?.accountId, enabledDisplayData])
 
   const filteredTokens = tokens.filter((token) => {
     return (
@@ -147,7 +160,9 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     }
 
     try {
-      const account = displayData.find((acc) => acc.name === token.accountName)
+      const account = enabledDisplayData.find(
+        (acc) => acc.name === token.accountName,
+      )
       if (!account) {
         toast.error(t("keyManagement:messages.accountNotFound"))
         return
@@ -180,7 +195,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
   }
 
   return {
-    displayData,
+    displayData: enabledDisplayData,
     selectedAccount,
     setSelectedAccount,
     searchTerm,

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { accountStorage } from "~/services/accountStorage"
 import type {
@@ -22,7 +22,19 @@ const logger = createLogger("AccountDataHook")
 interface UseAccountDataResult {
   // 数据状态
   accounts: SiteAccount[]
+  /**
+   * Convenience slice of accounts that are not disabled.
+   *
+   * Backward-compatible: missing/undefined `disabled` is treated as enabled.
+   */
+  enabledAccounts: SiteAccount[]
   displayData: DisplaySiteData[]
+  /**
+   * Convenience slice of display data that is not disabled.
+   *
+   * Backward-compatible: missing/undefined `disabled` is treated as enabled.
+   */
+  enabledDisplayData: DisplaySiteData[]
   stats: AccountStats
   lastUpdateTime: Date
 
@@ -69,6 +81,16 @@ export const useAccountData = (): UseAccountDataResult => {
   const [prevBalances, setPrevBalances] = useState<{
     [id: string]: CurrencyAmount
   }>({})
+
+  const enabledAccounts = useMemo(
+    () => accounts.filter((account) => account.disabled !== true),
+    [accounts],
+  )
+
+  const enabledDisplayData = useMemo(
+    () => displayData.filter((account) => account.disabled !== true),
+    [displayData],
+  )
 
   /**
    * Load the persisted account payloads and recompute UI-ready aggregates.
@@ -161,7 +183,9 @@ export const useAccountData = (): UseAccountDataResult => {
   return {
     // 数据状态
     accounts,
+    enabledAccounts,
     displayData,
+    enabledDisplayData,
     stats,
     lastUpdateTime,
 

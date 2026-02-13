@@ -69,8 +69,8 @@ describe("KiloCodeExportDialog", () => {
     const user = userEvent.setup()
 
     mockUseAccountData.mockReturnValue({
-      accounts: [],
-      displayData: [
+      enabledAccounts: [],
+      enabledDisplayData: [
         createDisplayAccount({
           id: "b",
           name: "Site B",
@@ -142,8 +142,8 @@ describe("KiloCodeExportDialog", () => {
 
   it("disables export actions when there is nothing exportable", async () => {
     mockUseAccountData.mockReturnValue({
-      accounts: [],
-      displayData: [],
+      enabledAccounts: [],
+      enabledDisplayData: [],
     })
 
     render(<KiloCodeExportDialog isOpen={true} onClose={() => {}} />)
@@ -169,8 +169,8 @@ describe("KiloCodeExportDialog", () => {
     const user = userEvent.setup()
 
     mockUseAccountData.mockReturnValue({
-      accounts: [],
-      displayData: [
+      enabledAccounts: [],
+      enabledDisplayData: [
         createDisplayAccount({
           id: "b",
           name: "Site B",
@@ -225,8 +225,8 @@ describe("KiloCodeExportDialog", () => {
     const user = userEvent.setup()
 
     mockUseAccountData.mockReturnValue({
-      accounts: [],
-      displayData: [
+      enabledAccounts: [],
+      enabledDisplayData: [
         createDisplayAccount({
           id: "a",
           name: "Site A",
@@ -294,8 +294,8 @@ describe("KiloCodeExportDialog", () => {
 
   it("preselects sites/tokens when initial selections are provided", async () => {
     mockUseAccountData.mockReturnValue({
-      accounts: [],
-      displayData: [
+      enabledAccounts: [],
+      enabledDisplayData: [
         createDisplayAccount({
           id: "b",
           name: "Site B",

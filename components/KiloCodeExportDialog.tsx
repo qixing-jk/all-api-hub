@@ -118,7 +118,8 @@ export function KiloCodeExportDialog({
   initialSelectedTokenIdsBySite,
 }: KiloCodeExportDialogProps) {
   const { t } = useTranslation(["ui", "common"])
-  const { accounts, displayData } = useAccountData()
+  const { enabledAccounts: accounts, enabledDisplayData: displayData } =
+    useAccountData()
 
   const [selectedSiteIds, setSelectedSiteIds] = useState<string[]>([])
   const [selectedTokenIdsBySite, setSelectedTokenIdsBySite] = useState<
@@ -407,6 +408,28 @@ export function KiloCodeExportDialog({
       .filter((site): site is DisplaySiteData => Boolean(site))
       .sort((a, b) => (a.name || a.baseUrl).localeCompare(b.name || b.baseUrl))
   }, [displayById, selectedSiteIds])
+
+  useEffect(() => {
+    if (!isOpen) return
+    if (selectedSiteIds.length === 0) return
+
+    const nextSelectedSiteIds = selectedSiteIds.filter((id) =>
+      displayById.has(id),
+    )
+    if (nextSelectedSiteIds.length === selectedSiteIds.length) return
+
+    setSelectedSiteIds(nextSelectedSiteIds)
+    setSelectedTokenIdsBySite((prev) => {
+      const next: Record<string, string[]> = {}
+      for (const siteId of nextSelectedSiteIds) {
+        const tokenIds = prev[siteId]
+        if (Array.isArray(tokenIds) && tokenIds.length > 0) {
+          next[siteId] = tokenIds
+        }
+      }
+      return next
+    })
+  }, [displayById, isOpen, selectedSiteIds])
 
   useEffect(() => {
     if (!isOpen) return
