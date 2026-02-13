@@ -31,6 +31,10 @@ i18n
     debug: process.env.NODE_ENV === "development",
     fallbackLng: DEFAULT_LANG,
     defaultNS: "common",
+    // default config: https://github.com/i18next/i18next-browser-languageDetector#detector-options
+    detection: {
+      lookupLocalStorage: "all-api-hub-i18nextLng",
+    },
     resources,
     interpolation: {
       escapeValue: false, // react already escapes by default
