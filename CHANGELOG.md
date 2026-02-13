@@ -1,5 +1,24 @@
 # Changelog
 
+## [3.19.0](https://github.com/qixing-jk/all-api-hub/compare/v3.18.0...v3.19.0) (2026-02-13)
+
+
+### Features
+
+* **account:** enhance site/account detection for multi-account support ([#458](https://github.com/qixing-jk/all-api-hub/issues/458)) ([e60e37d](https://github.com/qixing-jk/all-api-hub/commit/e60e37d3449949564e28baf6054f4282157140da))
+* add Octopus managed site integration ([#442](https://github.com/qixing-jk/all-api-hub/issues/442)) ([c1f9123](https://github.com/qixing-jk/all-api-hub/commit/c1f912382fffdbda37d188e071702f4711feb41c))
+* **api-verification:** support models probe for all API types ([#471](https://github.com/qixing-jk/all-api-hub/issues/471)) ([777dc9d](https://github.com/qixing-jk/all-api-hub/commit/777dc9df1ab95f8931f7be87d54552d38838f37c))
+* **apiService:** add rate limiting for log endpoints ([#472](https://github.com/qixing-jk/all-api-hub/issues/472)) ([fb8b987](https://github.com/qixing-jk/all-api-hub/commit/fb8b9874d2fdcbdf3694ac233aceda97d1dd315e))
+* auto-provision and manual add API keys for accounts ([#468](https://github.com/qixing-jk/all-api-hub/issues/468)) ([b5870dd](https://github.com/qixing-jk/all-api-hub/commit/b5870dd410d31508f0a330993322bc279f949643))
+* **managedSite:** add key parameter to prevent duplicate channels ([b11d8da](https://github.com/qixing-jk/all-api-hub/commit/b11d8da401f362e80e0aa53c3c378e057b945514))
+
+
+### Bug Fixes
+
+* **account:** filter out disabled accounts in UI components ([#464](https://github.com/qixing-jk/all-api-hub/issues/464)) ([9bc227a](https://github.com/qixing-jk/all-api-hub/commit/9bc227a20bf9ea9d9e04c5aa929fffbdd4ccf93e))
+* **i18n:** avoid affecting website language value ([#469](https://github.com/qixing-jk/all-api-hub/issues/469)) ([48bef57](https://github.com/qixing-jk/all-api-hub/commit/48bef57b6a6742f74d768ca344ffed16a7c8c985))
+* **i18n:** update auto check-in completion message ([bcbf0e3](https://github.com/qixing-jk/all-api-hub/commit/bcbf0e3a2bda0cef5987970adc492d35a4bca384))
+
 ## [3.18.0](https://github.com/qixing-jk/all-api-hub/compare/v3.17.0...v3.18.0) (2026-02-09)
 
 
