@@ -126,7 +126,10 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
   }, [visibleResults])
 
   const eligibleTotal = progress?.totals.eligibleAccounts ?? 0
-  const processedTotal = progress?.totals.processedAccounts ?? 0
+  const processedTotal =
+    progress?.totals.processedEligibleAccounts ??
+    progress?.totals.processedAccounts ??
+    0
   const progressMax = Math.max(1, eligibleTotal)
 
   const progressPercent = useMemo(() => {
@@ -326,7 +329,7 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
                     {t("repairMissingKeys.totalsLabels.processedAccounts")}
                   </p>
                   <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {progress.totals.processedAccounts}
+                    {processedTotal}
                   </p>
                 </div>
               </div>

@@ -37,6 +37,7 @@ function createIdleProgress(): AccountKeyRepairProgress {
       enabledAccounts: 0,
       eligibleAccounts: 0,
       processedAccounts: 0,
+      processedEligibleAccounts: 0,
     },
     summary: {
       created: 0,
@@ -123,6 +124,7 @@ class AccountKeyRepairRunner {
         enabledAccounts: 0,
         eligibleAccounts: 0,
         processedAccounts: 0,
+        processedEligibleAccounts: 0,
       },
       summary: {
         created: 0,
@@ -222,9 +224,30 @@ class AccountKeyRepairRunner {
   private async processEligibleAccount(account: SiteAccount): Promise<void> {
     const originKey = getOriginKey(account.site_url)
     try {
-      const displaySiteData = accountStorage.convertToDisplayData(
-        account,
-      ) as DisplaySiteData
+      const displaySiteData: DisplaySiteData =
+        accountStorage.convertToDisplayData(account)
+      const hasToken =
+        typeof displaySiteData?.token === "string" &&
+        displaySiteData.token.trim().length > 0
+      const hasCookie =
+        typeof displaySiteData?.cookieAuthSessionCookie === "string" &&
+        displaySiteData.cookieAuthSessionCookie.trim().length > 0
+      if (
+        typeof displaySiteData?.id !== "string" ||
+        displaySiteData.id.trim().length === 0 ||
+        typeof displaySiteData?.baseUrl !== "string" ||
+        displaySiteData.baseUrl.trim().length === 0 ||
+        typeof displaySiteData?.siteType !== "string" ||
+        displaySiteData.siteType.trim().length === 0 ||
+        displaySiteData.authType === AuthTypeEnum.None ||
+        !Number.isFinite(displaySiteData.userId) ||
+        (displaySiteData.authType === AuthTypeEnum.AccessToken && !hasToken) ||
+        (displaySiteData.authType === AuthTypeEnum.Cookie &&
+          !hasToken &&
+          !hasCookie)
+      ) {
+        throw new Error("invalid_display_site_data")
+      }
 
       const result = await ensureDefaultApiTokenForAccount({
         account,
@@ -286,13 +309,22 @@ class AccountKeyRepairRunner {
           break
       }
 
+      const isEligibleOutcome = result.outcome !== "skipped"
+      const nextProcessedEligibleAccounts = isEligibleOutcome
+        ? (prev.totals.processedEligibleAccounts ??
+            prev.totals.processedAccounts) + 1
+        : prev.totals.processedEligibleAccounts ?? prev.totals.processedAccounts
+
       return {
         ...prev,
         results: nextResults,
         summary: nextSummary,
         totals: {
           ...prev.totals,
-          processedAccounts: nextResults.length,
+          processedAccounts: isEligibleOutcome
+            ? prev.totals.processedAccounts + 1
+            : prev.totals.processedAccounts,
+          processedEligibleAccounts: nextProcessedEligibleAccounts,
         },
       }
     })

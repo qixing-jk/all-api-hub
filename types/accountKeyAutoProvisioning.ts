@@ -33,6 +33,12 @@ export interface AccountKeyRepairProgress {
     enabledAccounts: number
     eligibleAccounts: number
     processedAccounts: number
+    /**
+     * Count of processed eligible accounts (excludes skipped outcomes).
+     *
+     * Optional for backwards-compatibility with older stored progress blobs.
+     */
+    processedEligibleAccounts?: number
   }
   summary: {
     created: number

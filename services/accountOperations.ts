@@ -996,9 +996,30 @@ async function autoProvisionKeyOnAccountAdd(
       return
     }
 
-    const displaySiteData = accountStorage.convertToDisplayData(
-      account,
-    ) as DisplaySiteData
+    const displaySiteData = accountStorage.convertToDisplayData(account)
+    const hasToken =
+      typeof displaySiteData?.token === "string" &&
+      displaySiteData.token.trim().length > 0
+    const hasCookie =
+      typeof displaySiteData?.cookieAuthSessionCookie === "string" &&
+      displaySiteData.cookieAuthSessionCookie.trim().length > 0
+
+    if (
+      typeof displaySiteData?.id !== "string" ||
+      displaySiteData.id.trim().length === 0 ||
+      typeof displaySiteData?.baseUrl !== "string" ||
+      displaySiteData.baseUrl.trim().length === 0 ||
+      typeof displaySiteData?.siteType !== "string" ||
+      displaySiteData.siteType.trim().length === 0 ||
+      displaySiteData.authType === AuthTypeEnum.None ||
+      !Number.isFinite(displaySiteData.userId) ||
+      (displaySiteData.authType === AuthTypeEnum.AccessToken && !hasToken) ||
+      (displaySiteData.authType === AuthTypeEnum.Cookie &&
+        !hasToken &&
+        !hasCookie)
+    ) {
+      throw new Error("invalid_display_site_data")
+    }
 
     const { created } = await ensureDefaultApiTokenForAccount({
       account,

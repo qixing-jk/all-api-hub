@@ -191,6 +191,69 @@ const multiOutcomeProgress: AccountKeyRepairProgress = {
   ],
 }
 
+const inflatedProgress: AccountKeyRepairProgress = {
+  jobId: "job-3",
+  state: "running",
+  startedAt: 1,
+  updatedAt: 1,
+  totals: {
+    enabledAccounts: 5,
+    eligibleAccounts: 3,
+    processedAccounts: 5,
+    processedEligibleAccounts: 3,
+  },
+  summary: {
+    created: 2,
+    alreadyHad: 1,
+    skipped: 2,
+    failed: 0,
+  },
+  results: [
+    {
+      accountId: "account-disabled",
+      accountName: "Disabled Site",
+      siteType: "unknown",
+      siteUrlOrigin: "https://disabled.example.com",
+      outcome: "skipped",
+      skipReason: "noneAuth",
+      finishedAt: 1,
+    },
+    {
+      accountId: "account-enabled",
+      accountName: "Enabled Site",
+      siteType: "unknown",
+      siteUrlOrigin: "https://enabled.example.com",
+      outcome: "created",
+      finishedAt: 1,
+    },
+    {
+      accountId: "account-enabled-2",
+      accountName: "Another Site",
+      siteType: "unknown",
+      siteUrlOrigin: "https://another.example.com",
+      outcome: "alreadyHad",
+      finishedAt: 2,
+    },
+    {
+      accountId: "account-disabled-2",
+      accountName: "Another Disabled Site",
+      siteType: "unknown",
+      siteUrlOrigin: "https://disabled-2.example.com",
+      outcome: "skipped",
+      skipReason: "sub2api",
+      finishedAt: 2,
+    },
+    {
+      accountId: "account-enabled-3",
+      accountName: "Third Site",
+      siteType: "unknown",
+      siteUrlOrigin: "https://third.example.com",
+      outcome: "created",
+      finishedAt: 3,
+    },
+  ],
+}
+
 describe("KeyManagement repair missing keys entry point", () => {
   it("opens dialog, subscribes to progress, and hides disabled accounts", async () => {
     sendRuntimeActionMessageMock.mockImplementation(async (message: any) => {
@@ -252,6 +315,42 @@ describe("KeyManagement repair missing keys entry point", () => {
     })
 
     expect(screen.getByText("Another Site")).toBeInTheDocument()
+  })
+
+  it("uses processed eligible totals for progress UI", async () => {
+    sendRuntimeActionMessageMock.mockImplementation(async (message: any) => {
+      if (message?.action === RuntimeActionIds.AccountKeyRepairGetProgress) {
+        return { success: true, data: idleProgress }
+      }
+      if (message?.action === RuntimeActionIds.AccountKeyRepairStart) {
+        return { success: true, data: inflatedProgress }
+      }
+      return { success: false }
+    })
+
+    render(<KeyManagement />)
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: keyManagementEn.repairMissingKeys.action,
+      }),
+    )
+
+    await waitFor(() => {
+      expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith({
+        action: RuntimeActionIds.AccountKeyRepairStart,
+      })
+    })
+
+    expect(screen.getByText("3/3 (100%)")).toBeInTheDocument()
+    expect(screen.queryByText(/5\/3/)).not.toBeInTheDocument()
+
+    const progressBar = screen.getByRole("progressbar", {
+      name: keyManagementEn.repairMissingKeys.progressLabel,
+    })
+    expect(progressBar).toHaveAttribute("aria-valuetext", "3/3 (100%)")
+    expect(progressBar).toHaveAttribute("aria-valuemax", "3")
+    expect(progressBar).toHaveAttribute("aria-valuenow", "3")
   })
 
   it("supports search and outcome filtering in the dialog", async () => {
