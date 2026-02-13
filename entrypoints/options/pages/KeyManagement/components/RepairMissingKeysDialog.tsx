@@ -16,8 +16,10 @@ import {
   Spinner,
   TagFilter,
 } from "~/components/ui"
-import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { ACCOUNT_KEY_REPAIR_PROGRESS_MESSAGE_TYPE } from "~/services/accountKeyAutoProvisioning"
+import {
+  RuntimeActionIds,
+  RuntimeMessageTypes,
+} from "~/constants/runtimeActions"
 import type { DisplaySiteData } from "~/types"
 import type {
   AccountKeyRepairOutcome,
@@ -159,7 +161,7 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
     if (!isOpen) return
 
     return onRuntimeMessage((message) => {
-      if (message?.type !== ACCOUNT_KEY_REPAIR_PROGRESS_MESSAGE_TYPE) return
+      if (message?.type !== RuntimeMessageTypes.AccountKeyRepairProgress) return
       const payload = message?.payload as AccountKeyRepairProgress | undefined
       if (!payload) return
       setProgress(payload)

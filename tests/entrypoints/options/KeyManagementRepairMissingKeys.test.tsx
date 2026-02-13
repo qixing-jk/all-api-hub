@@ -1,10 +1,12 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { RuntimeActionIds } from "~/constants/runtimeActions"
+import {
+  RuntimeActionIds,
+  RuntimeMessageTypes,
+} from "~/constants/runtimeActions"
 import KeyManagement from "~/entrypoints/options/pages/KeyManagement"
 import commonEn from "~/locales/en/common.json"
 import keyManagementEn from "~/locales/en/keyManagement.json"
-import { ACCOUNT_KEY_REPAIR_PROGRESS_MESSAGE_TYPE } from "~/services/accountKeyAutoProvisioning"
 import { testI18n } from "~/tests/test-utils/i18n"
 import {
   act,
@@ -244,7 +246,7 @@ describe("KeyManagement repair missing keys entry point", () => {
 
     await act(async () => {
       runtimeMessageState.listener?.({
-        type: ACCOUNT_KEY_REPAIR_PROGRESS_MESSAGE_TYPE,
+        type: RuntimeMessageTypes.AccountKeyRepairProgress,
         payload: updated,
       })
     })

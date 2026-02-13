@@ -1,6 +1,9 @@
 import { Storage } from "@plasmohq/storage"
 
-import { RuntimeActionIds } from "~/constants/runtimeActions"
+import {
+  RuntimeActionIds,
+  RuntimeMessageTypes,
+} from "~/constants/runtimeActions"
 import { SUB2API } from "~/constants/siteType"
 import { accountStorage } from "~/services/accountStorage"
 import { ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS } from "~/services/storageKeys"
@@ -20,9 +23,6 @@ import { ensureDefaultApiTokenForAccount } from "./ensureDefaultToken"
 import { runPerKeySequential } from "./perOriginQueue"
 
 const logger = createLogger("AccountKeyRepair")
-
-export const ACCOUNT_KEY_REPAIR_PROGRESS_MESSAGE_TYPE =
-  "ACCOUNT_KEY_REPAIR_PROGRESS"
 
 /**
  * Creates a default idle progress snapshot used when no repair job has started
@@ -323,7 +323,7 @@ class AccountKeyRepairRunner {
     try {
       void sendRuntimeMessage(
         {
-          type: ACCOUNT_KEY_REPAIR_PROGRESS_MESSAGE_TYPE,
+          type: RuntimeMessageTypes.AccountKeyRepairProgress,
           payload: progress,
         },
         { maxAttempts: 1 },

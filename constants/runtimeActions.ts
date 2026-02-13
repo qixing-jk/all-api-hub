@@ -31,6 +31,15 @@ export type RuntimeActionPrefix =
   (typeof RuntimeActionPrefixes)[keyof typeof RuntimeActionPrefixes]
 
 /**
+ * Canonical runtime message `type` values used for broadcast updates.
+ *
+ * Values are part of the on-the-wire contract between extension contexts and MUST remain stable.
+ */
+export const RuntimeMessageTypes = {
+  AccountKeyRepairProgress: "ACCOUNT_KEY_REPAIR_PROGRESS",
+} as const
+
+/**
  * Canonical runtime message action IDs.
  *
  * Values are part of the on-the-wire contract between extension contexts and MUST remain stable.

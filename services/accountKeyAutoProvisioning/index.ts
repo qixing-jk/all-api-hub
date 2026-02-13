@@ -3,8 +3,4 @@ export {
   ensureDefaultApiTokenForAccount,
   generateDefaultTokenRequest,
 } from "./ensureDefaultToken"
-export {
-  ACCOUNT_KEY_REPAIR_PROGRESS_MESSAGE_TYPE,
-  accountKeyRepairRunner,
-  handleAccountKeyRepairMessage,
-} from "./repair"
+export { accountKeyRepairRunner, handleAccountKeyRepairMessage } from "./repair"
