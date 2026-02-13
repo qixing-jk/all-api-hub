@@ -3,6 +3,7 @@ import { Storage } from "@plasmohq/storage"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SUB2API } from "~/constants/siteType"
 import { accountStorage } from "~/services/accountStorage"
+import { ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS } from "~/services/storageKeys"
 import type { DisplaySiteData, SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
 import type {
@@ -20,13 +21,13 @@ import { runPerKeySequential } from "./perOriginQueue"
 
 const logger = createLogger("AccountKeyRepair")
 
-const STORAGE_KEY_PROGRESS = "accountKeyRepair_progress"
-
 export const ACCOUNT_KEY_REPAIR_PROGRESS_MESSAGE_TYPE =
   "ACCOUNT_KEY_REPAIR_PROGRESS"
 
 /**
- *
+ * Creates a default idle progress snapshot used when no repair job has started
+ * yet (or when the stored progress blob is missing).
+ * @returns Idle `AccountKeyRepairProgress` payload.
  */
 function createIdleProgress(): AccountKeyRepairProgress {
   return {
@@ -48,7 +49,10 @@ function createIdleProgress(): AccountKeyRepairProgress {
 }
 
 /**
- *
+ * Derives a stable queue key for a site URL so accounts on the same origin are
+ * processed sequentially.
+ * @param siteUrl - Raw site URL string.
+ * @returns Lowercased origin when parsable, otherwise the trimmed input.
  */
 function getOriginKey(siteUrl: string): string {
   try {
@@ -59,7 +63,9 @@ function getOriginKey(siteUrl: string): string {
 }
 
 /**
- *
+ * Computes whether an account should be skipped by the repair runner.
+ * @param account - Stored account record.
+ * @returns A skip reason when the account is ineligible, otherwise `null`.
  */
 function getSkipReason(
   account: SiteAccount,
@@ -90,9 +96,9 @@ class AccountKeyRepairRunner {
       return this.currentProgress
     }
 
-    const stored = (await this.storage.get(STORAGE_KEY_PROGRESS)) as
-      | AccountKeyRepairProgress
-      | undefined
+    const stored = (await this.storage.get(
+      ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS.REPAIR_PROGRESS,
+    )) as AccountKeyRepairProgress | undefined
 
     if (!stored) {
       return createIdleProgress()
@@ -309,7 +315,10 @@ class AccountKeyRepairRunner {
 
   private async persistAndNotify(): Promise<void> {
     const progress = this.currentProgress ?? createIdleProgress()
-    await this.storage.set(STORAGE_KEY_PROGRESS, progress)
+    await this.storage.set(
+      ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS.REPAIR_PROGRESS,
+      progress,
+    )
 
     try {
       void sendRuntimeMessage(

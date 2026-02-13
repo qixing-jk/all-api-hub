@@ -34,6 +34,10 @@ export const DAILY_BALANCE_HISTORY_STORAGE_KEYS = {
   STORE: "dailyBalanceHistory_store",
 } as const
 
+export const ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS = {
+  REPAIR_PROGRESS: "accountKeyRepair_progress",
+} as const
+
 /**
  * Centralized storage keys registry.
  *
@@ -43,6 +47,7 @@ export const DAILY_BALANCE_HISTORY_STORAGE_KEYS = {
 export const STORAGE_KEYS = {
   ...ACCOUNT_STORAGE_KEYS,
   ...TAG_STORAGE_KEYS,
+  ...ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS,
   ...USER_PREFERENCES_STORAGE_KEYS,
   DAILY_BALANCE_HISTORY_STORE: DAILY_BALANCE_HISTORY_STORAGE_KEYS.STORE,
 } as const
