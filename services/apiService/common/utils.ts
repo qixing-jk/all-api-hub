@@ -6,6 +6,7 @@ import {
   ApiError,
   type ApiErrorCode,
 } from "~/services/apiService/common/errors"
+import { createMinIntervalLimiter } from "~/services/apiService/common/minIntervalLimiter"
 import type {
   ApiResponse,
   ApiServiceRequest,
@@ -33,6 +34,68 @@ import { joinUrl } from "~/utils/url"
 type NormalizedAuthContext = AuthConfig
 
 const logger = createLogger("ApiServiceUtils")
+
+// Throttle log endpoints (`/api/log*`) to reduce burst traffic that can trigger
+// upstream rate limits (e.g. concurrent paging for usage + income).
+const LOG_REQUEST_MIN_INTERVAL_MS = 200
+
+const logRequestRateLimiter = createMinIntervalLimiter({
+  minIntervalMs:
+    import.meta.env.MODE === "test" ? 0 : LOG_REQUEST_MIN_INTERVAL_MS,
+})
+
+/**
+ * Determine if a given endpoint string matches log API patterns.
+ * - Accepts raw paths (e.g. "/api/log") or full URLs (e.g. "https://example.com/api/log").
+ * - Ignores leading/trailing whitespace and query parameters.
+ * @param endpoint Endpoint string to evaluate.
+ * @returns true if the endpoint is a log API; false otherwise.
+ */
+function isLogApiEndpoint(endpoint: string | undefined): boolean {
+  if (!endpoint) return false
+  const trimmed = endpoint.trim()
+  if (!trimmed) return false
+
+  const [rawPath] = trimmed.split("?")
+  const normalizedPath = rawPath.startsWith("/") ? rawPath : `/${rawPath}`
+  if (normalizedPath.startsWith("/api/log")) return true
+
+  try {
+    const parsed = new URL(trimmed)
+    return parsed.pathname.startsWith("/api/log")
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Extract the origin (scheme + host + port) from a base URL for rate limiting keys.
+ */
+function resolveLogRateLimitKey(baseUrl: string): string {
+  const trimmed = (baseUrl || "").trim()
+  if (!trimmed) return ""
+
+  try {
+    return new URL(trimmed).origin
+  } catch {
+    return trimmed.replace(/\/+$/, "")
+  }
+}
+
+/**
+ * Enforce rate limits on log API requests to prevent upstream throttling.
+ */
+async function enforceLogRequestRateLimit(options: {
+  baseUrl: string
+  endpoint?: string
+}): Promise<void> {
+  if (!isLogApiEndpoint(options.endpoint)) return
+
+  const key = resolveLogRateLimitKey(options.baseUrl)
+  if (!key) return
+
+  await logRequestRateLimiter(key)
+}
 
 /**
  * Build request headers for New API calls.
@@ -307,6 +370,8 @@ const _fetchApi = async <T>(
   }
 
   const fetchOptions = await createAuthRequest(resolvedAuth, options.options)
+
+  await enforceLogRequestRateLimit({ baseUrl, endpoint: options.endpoint })
 
   const context: TempWindowFallbackContext = {
     baseUrl: baseUrl,
