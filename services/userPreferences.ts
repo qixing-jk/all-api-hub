@@ -33,6 +33,10 @@ import {
   type CliProxyConfig,
 } from "~/types/cliProxyConfig"
 import {
+  DEFAULT_BALANCE_HISTORY_PREFERENCES,
+  type BalanceHistoryPreferences,
+} from "~/types/dailyBalanceHistory"
+import {
   getDefaultLoggingPreferences,
   type LoggingPreferences,
 } from "~/types/logging"
@@ -48,10 +52,6 @@ import {
   DEFAULT_USAGE_HISTORY_PREFERENCES,
   type UsageHistoryPreferences,
 } from "~/types/usageHistory"
-import {
-  DEFAULT_BALANCE_HISTORY_PREFERENCES,
-  type BalanceHistoryPreferences,
-} from "~/types/dailyBalanceHistory"
 import { DeepPartial } from "~/types/utils"
 import { DEFAULT_VELOERA_CONFIG, VeloeraConfig } from "~/types/veloeraConfig"
 import {
@@ -168,6 +168,15 @@ export interface UserPreferences {
    * this flag existed. Missing values MUST be treated as enabled via defaults.
    */
   openChangelogOnUpdate?: boolean
+
+  /**
+   * Controls whether the extension automatically provisions a default API key
+   * (token) after successfully adding an account.
+   *
+   * Optional for backward compatibility with stored preferences created before
+   * this flag existed. Missing values MUST be treated as enabled via defaults.
+   */
+  autoProvisionKeyOnAccountAdd?: boolean
 
   /**
    * Console logging configuration shared across all extension contexts.
@@ -398,6 +407,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   sortOrder: "desc", // 与 UI_CONSTANTS.SORT.DEFAULT_ORDER 保持一致
   actionClickBehavior: "popup",
   openChangelogOnUpdate: true,
+  autoProvisionKeyOnAccountAdd: true,
   accountAutoRefresh: DEFAULT_ACCOUNT_AUTO_REFRESH,
   usageHistory: DEFAULT_USAGE_HISTORY_PREFERENCES,
   balanceHistory: DEFAULT_BALANCE_HISTORY_PREFERENCES,
@@ -564,6 +574,15 @@ class UserPreferencesService {
    */
   async updateOpenChangelogOnUpdate(enabled: boolean): Promise<boolean> {
     return this.savePreferences({ openChangelogOnUpdate: enabled })
+  }
+
+  /**
+   * Enable/disable automatically provisioning a default API key (token) after
+   * successfully adding an account.
+   * @param enabled - When true, runs token provisioning after account add.
+   */
+  async updateAutoProvisionKeyOnAccountAdd(enabled: boolean): Promise<boolean> {
+    return this.savePreferences({ autoProvisionKeyOnAccountAdd: enabled })
   }
 
   /**

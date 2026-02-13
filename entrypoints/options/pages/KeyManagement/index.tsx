@@ -1,7 +1,13 @@
+import { useEffect, useState } from "react"
+
+import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { sendRuntimeActionMessage } from "~/utils/browserApi"
+
 import AddTokenDialog from "./components/AddTokenDialog"
 import { Controls } from "./components/Controls"
 import { Footer } from "./components/Footer"
 import { Header } from "./components/Header"
+import { RepairMissingKeysDialog } from "./components/RepairMissingKeysDialog"
 import { TokenList } from "./components/TokenList"
 import { useKeyManagement } from "./hooks/useKeyManagement"
 
@@ -15,6 +21,9 @@ export default function KeyManagement(props: {
   routeParams?: Record<string, string>
 }) {
   const { routeParams } = props
+  const [isRepairOpen, setIsRepairOpen] = useState(false)
+  const [repairStartOnOpen, setRepairStartOnOpen] = useState(false)
+
   const {
     displayData,
     selectedAccount,
@@ -36,14 +45,52 @@ export default function KeyManagement(props: {
     handleDeleteToken,
   } = useKeyManagement(routeParams)
 
+  useEffect(() => {
+    let cancelled = false
+
+    void (async () => {
+      try {
+        const response = await sendRuntimeActionMessage({
+          action: RuntimeActionIds.AccountKeyRepairGetProgress,
+        })
+
+        if (cancelled) return
+        if (!response?.success || !response?.data) return
+
+        if (response.data.state === "running") {
+          setRepairStartOnOpen(false)
+          setIsRepairOpen(true)
+        }
+      } catch {
+        // Silent: repair progress is optional UI enhancement
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const handleRepairMissingKeys = () => {
+    setRepairStartOnOpen(true)
+    setIsRepairOpen(true)
+  }
+
+  const handleCloseRepairMissingKeys = () => {
+    setIsRepairOpen(false)
+    setRepairStartOnOpen(false)
+  }
+
   return (
     <div className="p-6">
       <Header
         onAddToken={handleAddToken}
+        onRepairMissingKeys={handleRepairMissingKeys}
         onRefresh={() => selectedAccount && loadTokens()}
         selectedAccount={selectedAccount}
         isLoading={isLoading || !selectedAccount}
         isAddTokenDisabled={!selectedAccount || displayData.length === 0}
+        isRepairDisabled={displayData.length === 0}
       />
 
       <Controls
@@ -78,6 +125,13 @@ export default function KeyManagement(props: {
         availableAccounts={displayData}
         preSelectedAccountId={selectedAccount || null}
         editingToken={editingToken}
+      />
+
+      <RepairMissingKeysDialog
+        isOpen={isRepairOpen}
+        onClose={handleCloseRepairMissingKeys}
+        accounts={displayData}
+        startOnOpen={repairStartOnOpen}
       />
     </div>
   )

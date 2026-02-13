@@ -8,9 +8,12 @@ import toast from "react-hot-toast"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TITLE_RULES, SUB2API, UNKNOWN_SITE } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
+import {
+  ensureDefaultApiTokenForAccount,
+  generateDefaultTokenRequest,
+} from "~/services/accountKeyAutoProvisioning/ensureDefaultToken"
 import { accountStorage } from "~/services/accountStorage"
 import { getApiService } from "~/services/apiService"
-import type { CreateTokenRequest } from "~/services/apiService/common/type"
 import { autoDetectSmart } from "~/services/autoDetectService"
 import { userPreferences } from "~/services/userPreferences"
 import {
@@ -395,6 +398,10 @@ export async function validateAndSaveAccount(
     }
   }
 
+  const prefs = await userPreferences.getPreferences()
+  const shouldAutoProvisionKeyOnAccountAdd =
+    prefs.autoProvisionKeyOnAccountAdd ?? true
+
   const manualQuota = parseManualQuotaFromUsd(manualBalanceUsd)
   const normalizedManualBalanceUsd =
     manualQuota === undefined ? "" : manualBalanceUsd!.trim()
@@ -408,8 +415,7 @@ export async function validateAndSaveAccount(
       authType,
       userId: parsedUserId,
     })
-    const includeTodayCashflow =
-      (await userPreferences.getPreferences()).showTodayCashflow ?? true
+    const includeTodayCashflow = prefs.showTodayCashflow ?? true
     const freshAccountData = await getApiService(siteType).fetchAccountData({
       baseUrl: url.trim(),
       checkIn: checkInConfig,
@@ -466,6 +472,11 @@ export async function validateAndSaveAccount(
       siteName: siteName.trim(),
       siteType,
     })
+
+    void autoProvisionKeyOnAccountAdd(
+      accountId,
+      shouldAutoProvisionKeyOnAccountAdd,
+    )
 
     return {
       success: true,
@@ -525,6 +536,11 @@ export async function validateAndSaveAccount(
         siteName: siteName.trim(),
         siteType,
       })
+
+      void autoProvisionKeyOnAccountAdd(
+        accountId,
+        shouldAutoProvisionKeyOnAccountAdd,
+      )
 
       return {
         success: true,
@@ -863,31 +879,6 @@ export function isValidExchangeRate(rate: string): boolean {
 }
 
 /**
- * 生成默认的令牌信息
- *  该函数会返回一个 CreateTokenRequest 对象，用于生成一个默认的令牌
- *  该令牌的特性是：
- *    - 名称为 "user group (auto)"
- *    - 不限制调用次数
- *    - 永不过期
- *    - 不限制 IP
- *    - 不限制模型
- *    - 不指定分组，为用户分组
- */
-function generateDefaultToken(): CreateTokenRequest {
-  return {
-    name: `user group (auto)`,
-    unlimited_quota: true,
-    expired_time: -1, // Never expires
-    remain_quota: 0,
-    allow_ips: "", // No IP restriction
-    model_limits_enabled: false,
-    model_limits: "", // All models allowed
-    // 为空则是跟随用户分组
-    group: "",
-  }
-}
-
-/**
  * Ensures that an API token exists for the supplied account by checking the
  * remote token inventory and lazily issuing a default token when none exist.
  * Provides toast updates for the long-running request to improve UX feedback.
@@ -921,7 +912,7 @@ export async function ensureAccountApiToken(
   let apiToken: ApiToken | undefined = tokens.at(-1)
 
   if (!apiToken) {
-    const newTokenData = generateDefaultToken()
+    const newTokenData = generateDefaultTokenRequest()
     const createApiTokenResult = await getApiService(
       displaySiteData.siteType,
     ).createApiToken(
@@ -962,4 +953,66 @@ export async function ensureAccountApiToken(
   }
 
   return apiToken
+}
+
+/**
+ * Best-effort default API key auto-provisioning after account add.
+ *
+ * This is intentionally non-blocking for the save flow, but should provide
+ * explicit UX feedback so users can confirm whether a key was created or the
+ * account already had keys.
+ */
+async function autoProvisionKeyOnAccountAdd(
+  accountId: string,
+  enabled: boolean,
+): Promise<void> {
+  if (!enabled) return
+
+  try {
+    const account = await accountStorage.getAccountById(accountId)
+    if (!account) {
+      logger.warn("Auto-provision skipped: account not found", { accountId })
+      return
+    }
+
+    if (account.disabled === true) {
+      return
+    }
+
+    if (account.site_type === SUB2API) {
+      return
+    }
+
+    if (account.authType === AuthTypeEnum.None) {
+      return
+    }
+
+    const displaySiteData = accountStorage.convertToDisplayData(
+      account,
+    ) as DisplaySiteData
+
+    const { created } = await ensureDefaultApiTokenForAccount({
+      account,
+      displaySiteData,
+    })
+
+    toast.success(
+      t(
+        created
+          ? "messages:accountOperations.autoProvisionCreated"
+          : "messages:accountOperations.autoProvisionAlreadyHad",
+        { accountName: displaySiteData.name || account.site_name },
+      ),
+    )
+  } catch (error) {
+    toast.error(
+      t("messages:accountOperations.autoProvisionFailed", {
+        actionLabel: t("keyManagement:repairMissingKeys.action"),
+      }),
+    )
+    logger.warn("Auto-provision key after account add failed", {
+      accountId,
+      error: getErrorMessage(error),
+    })
+  }
 }

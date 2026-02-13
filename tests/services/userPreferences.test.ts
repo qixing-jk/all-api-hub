@@ -14,6 +14,7 @@ describe("userPreferences", () => {
       expect(DEFAULT_PREFERENCES.showTodayCashflow).toBe(true)
       expect(DEFAULT_PREFERENCES.showHealthStatus).toBe(true)
       expect(DEFAULT_PREFERENCES.themeMode).toBe("system")
+      expect(DEFAULT_PREFERENCES.autoProvisionKeyOnAccountAdd).toBe(true)
       expect(DEFAULT_PREFERENCES.balanceHistory?.enabled).toBe(false)
       expect(DEFAULT_PREFERENCES.balanceHistory?.endOfDayCapture.enabled).toBe(
         false,

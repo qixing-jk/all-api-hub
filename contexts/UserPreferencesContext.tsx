@@ -68,6 +68,7 @@ interface UserPreferencesContextType {
   refreshOnOpen: boolean
   actionClickBehavior: "popup" | "sidepanel"
   openChangelogOnUpdate: boolean
+  autoProvisionKeyOnAccountAdd: boolean
   newApiBaseUrl: string
   newApiAdminToken: string
   newApiUserId: string
@@ -107,6 +108,7 @@ interface UserPreferencesContextType {
     behavior: "popup" | "sidepanel",
   ) => Promise<boolean>
   updateOpenChangelogOnUpdate: (enabled: boolean) => Promise<boolean>
+  updateAutoProvisionKeyOnAccountAdd: (enabled: boolean) => Promise<boolean>
   updateNewApiBaseUrl: (url: string) => Promise<boolean>
   updateNewApiAdminToken: (token: string) => Promise<boolean>
   updateNewApiUserId: (userId: string) => Promise<boolean>
@@ -255,6 +257,25 @@ export const UserPreferencesProvider = ({
     }
     return success
   }, [])
+
+  /**
+   * Enable/disable automatically provisioning a default API key (token) after
+   * successfully adding an account.
+   * @param enabled - When true, runs token provisioning after account add.
+   */
+  const updateAutoProvisionKeyOnAccountAdd = useCallback(
+    async (enabled: boolean) => {
+      const success =
+        await userPreferences.updateAutoProvisionKeyOnAccountAdd(enabled)
+      if (success) {
+        setPreferences((prev) =>
+          prev ? { ...prev, autoProvisionKeyOnAccountAdd: enabled } : prev,
+        )
+      }
+      return success
+    },
+    [],
+  )
 
   const resetClaudeCodeRouterConfig = useCallback(async () => {
     const success = await userPreferences.resetClaudeCodeRouterConfig()
@@ -1240,6 +1261,10 @@ export const UserPreferencesProvider = ({
       preferences?.openChangelogOnUpdate ??
       DEFAULT_PREFERENCES.openChangelogOnUpdate ??
       true,
+    autoProvisionKeyOnAccountAdd:
+      preferences?.autoProvisionKeyOnAccountAdd ??
+      DEFAULT_PREFERENCES.autoProvisionKeyOnAccountAdd ??
+      true,
     newApiBaseUrl: preferences?.newApi?.baseUrl || "",
     newApiAdminToken: preferences?.newApi?.adminToken || "",
     newApiUserId: preferences?.newApi?.userId || "",
@@ -1278,6 +1303,7 @@ export const UserPreferencesProvider = ({
     updateRefreshOnOpen,
     updateActionClickBehavior,
     updateOpenChangelogOnUpdate,
+    updateAutoProvisionKeyOnAccountAdd,
     updateNewApiBaseUrl,
     updateNewApiAdminToken,
     updateNewApiUserId,

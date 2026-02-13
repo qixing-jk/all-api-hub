@@ -5,6 +5,7 @@ import { Button, Card, CardContent, Heading4 } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { navigateWithinOptionsPage } from "~/utils/navigation"
 
+import AutoProvisionKeyOnAccountAddSettings from "./AutoProvisionKeyOnAccountAddSettings"
 import SortingPrioritySettings from "./SortingPrioritySettings"
 
 /**
@@ -41,6 +42,8 @@ export default function AccountManagementTab() {
           </CardContent>
         </Card>
       </section>
+
+      <AutoProvisionKeyOnAccountAddSettings />
 
       <section id="sorting-priority">
         <SortingPrioritySettings />

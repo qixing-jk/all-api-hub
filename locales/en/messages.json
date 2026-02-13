@@ -95,6 +95,9 @@
     "importingToNewApi": "Importing to New API...",
     "importingToVeloera": "Importing to Veloera...",
     "importingToOctopus": "Importing to Octopus...",
+    "autoProvisionCreated": "Created a default API key for {{accountName}}.",
+    "autoProvisionAlreadyHad": "{{accountName}} already has an API key. Skipped auto-creation.",
+    "autoProvisionFailed": "Account saved, but failed to auto-create an API key. You can use “{{actionLabel}}” in Key Management to retry.",
     "createTokenFailed": "Failed to create API token",
     "tokenNotFound": "Failed to create or find an API token",
     "retrying": "An error occurred, attempting retry #{{attempt}}"

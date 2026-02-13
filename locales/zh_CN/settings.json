@@ -339,6 +339,12 @@
     "toggleLabel": "更新后自动打开更新日志",
     "toggleDesc": "开启后，插件更新完成会自动在新标签页打开更新日志页面。"
   },
+  "autoProvisionKeyOnAccountAdd": {
+    "title": "API 密钥",
+    "description": "控制添加账号后是否自动创建默认 API 密钥。",
+    "toggleLabel": "添加账号后自动创建默认密钥",
+    "toggleDesc": "开启后，账号保存完成会检查远端密钥列表；若没有密钥则自动创建一个默认密钥。"
+  },
   "messages": {
     "updateSuccess": "{{name}}更新成功",
     "updateFailed": "{{name}}更新失败",

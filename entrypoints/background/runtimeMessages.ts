@@ -5,11 +5,12 @@ import {
   RuntimeActionPrefixes,
 } from "~/constants/runtimeActions"
 import { applyActionClickBehavior } from "~/entrypoints/background/actionClickBehavior"
+import { handleAccountKeyRepairMessage } from "~/services/accountKeyAutoProvisioning"
 import { handleAutoCheckinMessage } from "~/services/autoCheckin/scheduler"
 import { handleAutoRefreshMessage } from "~/services/autoRefreshService"
 import { handleChannelConfigMessage } from "~/services/channelConfigStorage"
-import { handleExternalCheckInMessage } from "~/services/externalCheckInService"
 import { handleDailyBalanceHistoryMessage } from "~/services/dailyBalanceHistory/scheduler"
+import { handleExternalCheckInMessage } from "~/services/externalCheckInService"
 import { handleManagedSiteModelSyncMessage } from "~/services/modelSync"
 import { handleRedemptionAssistMessage } from "~/services/redemptionAssist"
 import { handleUsageHistoryMessage } from "~/services/usageHistory/scheduler"
@@ -206,6 +207,17 @@ export function setupRuntimeMessageListeners() {
         hasRuntimeActionPrefix(request.action, RuntimeActionPrefixes.ModelSync)
       ) {
         handleManagedSiteModelSyncMessage(request, sendResponse)
+        return true
+      }
+
+      // Bulk "Repair missing keys" must run in background so it isn't interrupted by options page teardown.
+      if (
+        hasRuntimeActionPrefix(
+          request.action,
+          RuntimeActionPrefixes.AccountKeyRepair,
+        )
+      ) {
+        void handleAccountKeyRepairMessage(request, sendResponse)
         return true
       }
 

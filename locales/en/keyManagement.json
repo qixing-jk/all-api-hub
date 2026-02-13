@@ -13,6 +13,49 @@
   "createFirstKey": "Create first key",
   "pleaseSelectFirst": "Please select an account first to view key list",
   "refreshTokenList": "Refresh Key List",
+  "repairMissingKeys": {
+    "action": "Ensure at least one key",
+    "title": "Ensure at least one key",
+    "description": "Scan stored accounts and create a default key for any eligible account with no keys, ensuring each eligible account has at least one key.",
+    "runningNote": "This job runs in the background. Closing this dialog will not cancel it.",
+    "progressLabel": "Progress",
+    "totalsLabels": {
+      "enabledAccounts": "Enabled accounts",
+      "eligibleAccounts": "Eligible accounts",
+      "processedAccounts": "Processed"
+    },
+    "filtersTitle": "Search & filter",
+    "searchLabel": "Search",
+    "searchPlaceholder": "Search account, origin, or site type...",
+    "outcomeLabel": "Outcome",
+    "resultsTitle": "Results",
+    "noMatchingResults": "No matching results",
+    "totals": {
+      "enabledAccounts": "Enabled accounts: {{count}}",
+      "eligibleAccounts": "Eligible accounts: {{count}}",
+      "processedAccounts": "Processed: {{count}}"
+    },
+    "summary": {
+      "created": "Created: {{count}}",
+      "alreadyHad": "Already had keys: {{count}}",
+      "skipped": "Skipped: {{count}}",
+      "failed": "Failed: {{count}}"
+    },
+    "outcomes": {
+      "created": "Created",
+      "alreadyHad": "Already had keys",
+      "skipped": "Skipped",
+      "failed": "Failed"
+    },
+    "skipReasons": {
+      "sub2api": "Unsupported site type (Sub2API)",
+      "noneAuth": "No credentials (auth type: none)"
+    },
+    "messages": {
+      "loadFailed": "Failed to load repair progress",
+      "startFailed": "Failed to start repair job"
+    }
+  },
   "keyDetails": {
     "key": "Key:",
     "group": "Group:",

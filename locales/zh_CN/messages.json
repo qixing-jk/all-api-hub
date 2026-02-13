@@ -95,6 +95,9 @@
     "importingToNewApi": "正在导入到 New API...",
     "importingToVeloera": "正在导入到 Veloera...",
     "importingToOctopus": "正在导入到 Octopus...",
+    "autoProvisionCreated": "已为 {{accountName}} 自动创建默认 API 密钥。",
+    "autoProvisionAlreadyHad": "{{accountName}} 已存在 API 密钥，已跳过自动创建。",
+    "autoProvisionFailed": "账号已保存，但自动创建 API 密钥失败。你可以在密钥管理中使用“{{actionLabel}}”重试。",
     "createTokenFailed": "创建 API 令牌失败",
     "tokenNotFound": "无法创建或找到 API 令牌",
     "retrying": "出现错误，进行第{{attempt}}次重试"

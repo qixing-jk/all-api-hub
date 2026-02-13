@@ -93,6 +93,7 @@ const ANCHOR_TO_TAB: Record<string, TabId> = {
   theme: "general",
   "balance-history": "balanceHistory",
   "account-management": "accountManagement",
+  "auto-provision-key-on-account-add": "accountManagement",
   "sorting-priority": "accountManagement",
   sorting: "accountManagement",
   "auto-refresh": "refresh",

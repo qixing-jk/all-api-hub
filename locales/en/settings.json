@@ -339,6 +339,12 @@
     "toggleLabel": "Open changelog after updates",
     "toggleDesc": "When enabled, a new tab opens after the extension updates to show release notes."
   },
+  "autoProvisionKeyOnAccountAdd": {
+    "title": "API keys",
+    "description": "Control whether All API Hub automatically provisions a default API key after you add an account.",
+    "toggleLabel": "Auto-create a default key on account add",
+    "toggleDesc": "When enabled, All API Hub checks your token inventory after saving an account and creates a default token if none exist."
+  },
   "messages": {
     "updateSuccess": "{{name}} Update successful",
     "updateFailed": "{{name}} Update failed",

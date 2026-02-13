@@ -13,6 +13,49 @@
   "createFirstKey": "创建第一个密钥",
   "pleaseSelectFirst": "请先选择一个账号查看密钥列表",
   "refreshTokenList": "刷新密钥列表",
+  "repairMissingKeys": {
+    "action": "确保至少有一个密钥",
+    "title": "确保至少有一个密钥",
+    "description": "扫描已保存账号，为符合条件且没有密钥的账号自动创建一个默认密钥，确保每个符合条件的账号至少有一个密钥。",
+    "runningNote": "任务在后台运行，关闭此对话框不会取消任务。",
+    "progressLabel": "进度",
+    "totalsLabels": {
+      "enabledAccounts": "已启用账号",
+      "eligibleAccounts": "符合条件账号",
+      "processedAccounts": "已处理"
+    },
+    "filtersTitle": "搜索与筛选",
+    "searchLabel": "搜索",
+    "searchPlaceholder": "搜索账号、域名或站点类型...",
+    "outcomeLabel": "结果",
+    "resultsTitle": "结果",
+    "noMatchingResults": "没有匹配的结果",
+    "totals": {
+      "enabledAccounts": "已启用账号：{{count}}",
+      "eligibleAccounts": "符合条件账号：{{count}}",
+      "processedAccounts": "已处理：{{count}}"
+    },
+    "summary": {
+      "created": "已创建：{{count}}",
+      "alreadyHad": "已存在：{{count}}",
+      "skipped": "已跳过：{{count}}",
+      "failed": "失败：{{count}}"
+    },
+    "outcomes": {
+      "created": "已创建",
+      "alreadyHad": "已存在",
+      "skipped": "已跳过",
+      "failed": "失败"
+    },
+    "skipReasons": {
+      "sub2api": "不支持的站点类型（Sub2API）",
+      "noneAuth": "无凭据（认证方式：无）"
+    },
+    "messages": {
+      "loadFailed": "加载修复进度失败",
+      "startFailed": "启动修复任务失败"
+    }
+  },
   "keyDetails": {
     "key": "密钥:",
     "group": "分组:",

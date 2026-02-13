@@ -1,4 +1,4 @@
-import { KeyRound, Plus } from "lucide-react"
+import { KeyRound, Plus, Wrench } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { Button } from "~/components/ui"
@@ -7,9 +7,11 @@ import { PageHeader } from "~/entrypoints/options/components/PageHeader"
 interface HeaderProps {
   selectedAccount: string
   onAddToken: () => void
+  onRepairMissingKeys: () => void
   onRefresh: () => void
   isLoading: boolean
   isAddTokenDisabled: boolean
+  isRepairDisabled: boolean
 }
 
 /**
@@ -23,10 +25,12 @@ interface HeaderProps {
  */
 export function Header({
   onAddToken,
+  onRepairMissingKeys,
   onRefresh,
   isLoading,
   selectedAccount,
   isAddTokenDisabled,
+  isRepairDisabled,
 }: HeaderProps) {
   const { t } = useTranslation("keyManagement")
   return (
@@ -45,6 +49,15 @@ export function Header({
               leftIcon={<Plus className="h-4 w-4" />}
             >
               {t("dialog.addToken")}
+            </Button>
+            <Button
+              onClick={onRepairMissingKeys}
+              disabled={isRepairDisabled}
+              size="sm"
+              variant="outline"
+              leftIcon={<Wrench className="h-4 w-4" />}
+            >
+              {t("repairMissingKeys.action")}
             </Button>
             <Button onClick={onRefresh} disabled={isLoading} size="sm">
               {isLoading && selectedAccount
