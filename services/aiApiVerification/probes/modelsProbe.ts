@@ -111,10 +111,14 @@ export async function runModelsProbe(
         })
       }
 
-      return fetchGoogleModelIds({
-        baseUrl: normalizedBaseUrl,
-        apiKey: params.apiKey,
-      })
+      if (params.apiType === API_TYPES.GOOGLE) {
+        return fetchGoogleModelIds({
+          baseUrl: normalizedBaseUrl,
+          apiKey: params.apiKey,
+        })
+      }
+
+      throw new Error("Unsupported apiType")
     })()
 
     const suggestedModelId = pickSuggestedModelId(params.apiType, modelIds)
