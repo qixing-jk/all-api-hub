@@ -5,6 +5,15 @@ import { AuthTypeEnum, TEMP_WINDOW_HEALTH_STATUS_CODES } from "~/types"
 let fetchApiData: typeof import("~/services/apiService/common/utils").fetchApiData
 let ApiError: typeof import("~/services/apiService/common/errors").ApiError
 
+const { mockLogRequestRateLimiter, mockCreateMinIntervalLimiter } = vi.hoisted(
+  () => {
+    const mockLogRequestRateLimiter = vi.fn().mockResolvedValue(undefined)
+    const mockCreateMinIntervalLimiter = vi.fn(() => mockLogRequestRateLimiter)
+
+    return { mockLogRequestRateLimiter, mockCreateMinIntervalLimiter }
+  },
+)
+
 const { mockHasCookieInterceptorPermissions, mockGetPreferences } = vi.hoisted(
   () => ({
     mockHasCookieInterceptorPermissions: vi.fn(),
@@ -35,6 +44,10 @@ vi.mock("~/services/userPreferences", () => ({
   userPreferences: {
     getPreferences: mockGetPreferences,
   },
+}))
+
+vi.mock("~/services/apiService/common/minIntervalLimiter", () => ({
+  createMinIntervalLimiter: mockCreateMinIntervalLimiter,
 }))
 
 const BASE_URL = "https://example.com/base/"
@@ -167,4 +180,44 @@ describe("apiService common fetchApi helpers", () => {
       originalCode: "HTTP_403",
     })
   })
+
+  it.each([
+    ["/api/log", true],
+    ["/api/log/", true],
+    ["/api/log/usage", true],
+    ["/api/login", false],
+    ["/api/logout", false],
+    ["/api/logs", false],
+    ["https://example.com/api/log", true],
+    ["https://example.com/api/log/usage", true],
+    ["https://example.com/api/login", false],
+  ])(
+    "fetchApiData should only rate-limit /api/log endpoints (endpoint=%s)",
+    async (endpoint, shouldRateLimit) => {
+      mockLogRequestRateLimiter.mockClear()
+
+      global.fetch = createFetchMock({
+        success: true,
+        data: { ok: true },
+        message: "ok",
+      })
+
+      await fetchApiData(
+        {
+          baseUrl: BASE_URL,
+          auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+        },
+        { endpoint },
+      )
+
+      if (shouldRateLimit) {
+        expect(mockLogRequestRateLimiter).toHaveBeenCalledTimes(1)
+        expect(mockLogRequestRateLimiter).toHaveBeenCalledWith(
+          "https://example.com",
+        )
+      } else {
+        expect(mockLogRequestRateLimiter).not.toHaveBeenCalled()
+      }
+    },
+  )
 })

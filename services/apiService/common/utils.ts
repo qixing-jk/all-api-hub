@@ -47,6 +47,7 @@ const logRequestRateLimiter = createMinIntervalLimiter({
 /**
  * Determine if a given endpoint string matches log API patterns.
  * - Accepts raw paths (e.g. "/api/log") or full URLs (e.g. "https://example.com/api/log").
+ * - Matches only the exact "/api/log" path or paths under it.
  * - Ignores leading/trailing whitespace and query parameters.
  * @param endpoint Endpoint string to evaluate.
  * @returns true if the endpoint is a log API; false otherwise.
@@ -58,11 +59,15 @@ function isLogApiEndpoint(endpoint: string | undefined): boolean {
 
   const [rawPath] = trimmed.split("?")
   const normalizedPath = rawPath.startsWith("/") ? rawPath : `/${rawPath}`
-  if (normalizedPath.startsWith("/api/log")) return true
+  if (normalizedPath === "/api/log" || normalizedPath.startsWith("/api/log/")) {
+    return true
+  }
 
   try {
     const parsed = new URL(trimmed)
-    return parsed.pathname.startsWith("/api/log")
+    return (
+      parsed.pathname === "/api/log" || parsed.pathname.startsWith("/api/log/")
+    )
   } catch {
     return false
   }
