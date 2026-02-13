@@ -43,11 +43,11 @@ You must first log in to the target website using your browser, so that the exte
 
 1. Open the extension main page and click `Add Account`
 
-![新增账号](./static/image/add-account-btn.png)
+![新增账号](../static/image/add-account-btn.png)
 
 2. Enter the proxy hub address and click `Automatic Recognition`
 
-![自动识别](./static/image/add-account-dialog-btn.png)
+![自动识别](../static/image/add-account-dialog-btn.png)
 
 3. After confirming the automatic recognition is correct, click `Confirm Addition`
 
@@ -74,7 +74,7 @@ The extension will automatically recognize various information about your accoun
 ::: info Note
 If automatic recognition fails, you can manually input and add the site account. You need to obtain the following information first. (The UI may vary for each site; please locate the information yourself.)
 :::
-![用户信息](./static/image/site-user-info.png)
+![用户信息](../static/image/site-user-info.png)
 
 If the target site is a modified version (e.g., AnyRouter), please manually switch to **Cookie Mode** when adding the account, and then perform automatic recognition or manual entry. When encountering sites with strict protection, you can also use it in conjunction with the Cloudflare Challenge Bypass Assistant. For details, see [FAQ](./faq.md#anyrouter-error).
 
