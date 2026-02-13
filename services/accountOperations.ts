@@ -398,9 +398,19 @@ export async function validateAndSaveAccount(
     }
   }
 
-  const prefs = await userPreferences.getPreferences()
-  const shouldAutoProvisionKeyOnAccountAdd =
-    prefs.autoProvisionKeyOnAccountAdd ?? true
+  let shouldAutoProvisionKeyOnAccountAdd = true
+  let includeTodayCashflow = true
+  try {
+    const prefs = await userPreferences.getPreferences()
+    shouldAutoProvisionKeyOnAccountAdd =
+      prefs.autoProvisionKeyOnAccountAdd ?? true
+    includeTodayCashflow = prefs.showTodayCashflow ?? true
+  } catch (error) {
+    logger.warn(
+      "Failed to read user preferences; falling back to defaults",
+      error,
+    )
+  }
 
   const manualQuota = parseManualQuotaFromUsd(manualBalanceUsd)
   const normalizedManualBalanceUsd =
@@ -415,7 +425,6 @@ export async function validateAndSaveAccount(
       authType,
       userId: parsedUserId,
     })
-    const includeTodayCashflow = prefs.showTodayCashflow ?? true
     const freshAccountData = await getApiService(siteType).fetchAccountData({
       baseUrl: url.trim(),
       checkIn: checkInConfig,

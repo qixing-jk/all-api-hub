@@ -6,7 +6,10 @@ import { SUB2API } from "~/constants/siteType"
 import { validateAndSaveAccount } from "~/services/accountOperations"
 import { accountStorage } from "~/services/accountStorage"
 import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/storageKeys"
-import { DEFAULT_PREFERENCES } from "~/services/userPreferences"
+import {
+  DEFAULT_PREFERENCES,
+  userPreferences,
+} from "~/services/userPreferences"
 import { AuthTypeEnum, type CheckInConfig } from "~/types"
 
 const {
@@ -158,6 +161,34 @@ describe("accountOperations auto-provision key on add", () => {
     expect(ensureDefaultApiTokenForAccountMock).not.toHaveBeenCalled()
     expect(toastSuccessMock).not.toHaveBeenCalled()
     expect(toastErrorMock).not.toHaveBeenCalled()
+  })
+
+  it("defaults to enabling auto-provision when preferences read fails", async () => {
+    vi.spyOn(userPreferences, "getPreferences").mockRejectedValueOnce(
+      new Error("prefs-fail"),
+    )
+
+    const result = await validateAndSaveAccount(
+      "https://api.example.com",
+      "Test Site",
+      "tester",
+      "test-token",
+      "1",
+      "7.0",
+      "",
+      [],
+      CHECK_IN_DISABLED,
+      "unknown",
+      AuthTypeEnum.AccessToken,
+      "",
+    )
+
+    expect(result.success).toBe(true)
+
+    await flushPromises()
+    await flushPromises()
+
+    expect(ensureDefaultApiTokenForAccountMock).toHaveBeenCalledTimes(1)
   })
 
   it("skips auto-provision for sub2api accounts", async () => {
