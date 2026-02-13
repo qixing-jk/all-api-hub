@@ -1,4 +1,7 @@
-import { NewApiCheckinResponse } from "~/services/apiService/common/type"
+import type {
+  CheckinRecord,
+  NewApiCheckinResponse,
+} from "~/services/apiService/common/type"
 import { fetchApi } from "~/services/apiService/common/utils"
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
@@ -58,7 +61,7 @@ async function performCheckin(
 ): Promise<NewApiCheckinResponse> {
   const { site_url, account_info, authType } = account
 
-  return await fetchApi<NewApiCheckinResponse>(
+  return await fetchApi<CheckinRecord>(
     {
       baseUrl: site_url,
       auth: {
@@ -74,7 +77,7 @@ async function performCheckin(
         body: "{}",
       },
     },
-    true,
+    false,
   )
 }
 

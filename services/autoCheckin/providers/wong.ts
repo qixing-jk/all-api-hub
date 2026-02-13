@@ -9,7 +9,10 @@
  *   into the project-wide `CheckinResultStatus` shape.
  */
 import { fetchApi } from "~/services/apiService/common/utils"
-import { WongCheckinApiResponse } from "~/services/apiService/wong"
+import type {
+  WongCheckinApiResponse,
+  WongCheckinStatusData,
+} from "~/services/apiService/wong"
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
 import {
@@ -68,7 +71,7 @@ async function performCheckin(
 ): Promise<WongCheckinApiResponse> {
   const { site_url, account_info, authType } = account
 
-  return (await fetchApi<WongCheckinApiResponse>(
+  return await fetchApi<WongCheckinStatusData | undefined>(
     {
       baseUrl: site_url,
       auth: {
@@ -84,8 +87,8 @@ async function performCheckin(
         body: "{}",
       },
     },
-    true,
-  )) as WongCheckinApiResponse
+    false,
+  )
 }
 
 /**

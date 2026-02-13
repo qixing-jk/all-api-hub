@@ -42,11 +42,7 @@ async function checkinVeloera(account: SiteAccount): Promise<CheckinResult> {
 
   try {
     // Call the check-in API endpoint
-    const response = (await fetchApi<{
-      success: boolean
-      message?: string
-      data?: any
-    }>(
+    const response = await fetchApi<any>(
       {
         baseUrl: site_url,
         auth: {
@@ -59,8 +55,7 @@ async function checkinVeloera(account: SiteAccount): Promise<CheckinResult> {
         endpoint: "/api/user/check_in",
         options: { method: "POST" },
       },
-      true,
-    )) as { success: boolean; message?: string; data?: any }
+    )
 
     const responseMessage =
       typeof response.message === "string" ? response.message : ""

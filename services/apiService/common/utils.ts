@@ -367,7 +367,11 @@ export async function fetchApiData<T>(
 }
 
 /**
- * Public helper: fetch API; returns ApiResponse<T> for JSON or raw for others.
+ * Public helper: fetch API.
+ *
+ * - Default: returns ApiResponse<T> for JSON, or the raw parsed value for non-JSON response types.
+ * - When `_normalResponseType` is true: returns the "normal" payload type `T`. If upstream responds
+ *   with a `{ success, message, data }` envelope, this unwraps and returns `data`.
  */
 export function fetchApi<T>(
   request: ApiServiceRequest,
@@ -382,10 +386,33 @@ export function fetchApi<T>(
 export async function fetchApi<T>(
   request: ApiServiceRequest,
   options: FetchApiOptions,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _normalResponseType?: boolean,
 ): Promise<T | ApiResponse<T>> {
-  return await _fetchApi(request, options)
+  const response = await _fetchApi<T>(request, options)
+  if (!_normalResponseType) {
+    return response as ApiResponse<T>
+  }
+
+  const responseType = options.responseType ?? "json"
+  if (responseType !== "json") {
+    return response as T
+  }
+
+  const isApiResponseBody = (value: unknown): value is ApiResponse<unknown> => {
+    if (!value || typeof value !== "object") return false
+    const record = value as Record<string, unknown>
+    return (
+      typeof record.success === "boolean" &&
+      typeof record.message === "string" &&
+      "data" in record
+    )
+  }
+
+  if (isApiResponseBody(response)) {
+    return extractDataFromApiResponseBody<T>(response, options.endpoint)
+  }
+
+  return response as T
 }
 
 /**

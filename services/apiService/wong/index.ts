@@ -146,7 +146,7 @@ export async function fetchCheckInStatus(
       : request
 
   try {
-    const response = (await fetchApi<WongCheckinApiResponse>(
+    const response = await fetchApi<WongCheckinStatusData | undefined>(
       normalizedRequest,
       {
         endpoint: ENDPOINT,
@@ -155,8 +155,8 @@ export async function fetchCheckInStatus(
           cache: "no-store",
         },
       },
-      true,
-    )) as WongCheckinApiResponse
+      false,
+    )
 
     const responseMessage = normalizeMessage(response.message)
 

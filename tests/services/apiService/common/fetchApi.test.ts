@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { AuthTypeEnum, TEMP_WINDOW_HEALTH_STATUS_CODES } from "~/types"
 
 let fetchApiData: typeof import("~/services/apiService/common/utils").fetchApiData
+let fetchApi: typeof import("~/services/apiService/common/utils").fetchApi
 let ApiError: typeof import("~/services/apiService/common/errors").ApiError
 
 const { mockHasCookieInterceptorPermissions, mockGetPreferences } = vi.hoisted(
@@ -60,6 +61,7 @@ describe("apiService common fetchApi helpers", () => {
       typeof import("~/services/apiService/common/utils")
     >("~/services/apiService/common/utils")
     fetchApiData = utils.fetchApiData
+    fetchApi = utils.fetchApi
 
     const errors = await vi.importActual<
       typeof import("~/services/apiService/common/errors")
@@ -109,6 +111,47 @@ describe("apiService common fetchApi helpers", () => {
     expect(options.credentials).toBe("omit")
     expect(options.headers.Authorization).toBe("Bearer token")
     expect(result).toEqual(data)
+  })
+
+  it("fetchApi should unwrap ApiResponse when _normalResponseType is true", async () => {
+    const payload = { models: [{ name: "models/gemini-1.5-pro" }] }
+    global.fetch = createFetchMock({
+      success: true,
+      data: payload,
+      message: "ok",
+    })
+
+    const result = await fetchApi<{ models: Array<{ name: string }> }>(
+      {
+        baseUrl: BASE_URL,
+        auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+      },
+      { endpoint: ENDPOINT },
+      true,
+    )
+
+    expect(result).toEqual(payload)
+  })
+
+  it("fetchApi should not unwrap non-ApiResponse JSON payloads that include success/data fields", async () => {
+    const pricingLikeResponse = {
+      data: [{ model_name: "gpt-4.1", model_ratio: 1 }],
+      group_ratio: { default: 1 },
+      success: true,
+      usable_group: { default: "Default" },
+    }
+    global.fetch = createFetchMock(pricingLikeResponse)
+
+    const result = await fetchApi<typeof pricingLikeResponse>(
+      {
+        baseUrl: BASE_URL,
+        auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+      },
+      { endpoint: ENDPOINT },
+      true,
+    )
+
+    expect(result).toEqual(pricingLikeResponse)
   })
 
   it("fetchApiData should throw ApiError when HTTP response is not ok", async () => {
