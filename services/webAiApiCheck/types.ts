@@ -38,7 +38,7 @@ export type ApiCheckShouldPromptResponse =
     }
 
 /**
- * Runtime request from content → background to fetch OpenAI/OpenAI-compatible models.
+ * Runtime request from content → background to fetch upstream model ids.
  *
  * NOTE: apiKey is transient and must never be persisted or returned in any response payload.
  */

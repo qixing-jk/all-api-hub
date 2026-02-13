@@ -108,7 +108,10 @@ export function ApiCheckModalHost() {
   const hasFetchedModels = modelIds.length > 0
 
   const modelListSupported =
-    apiType === API_TYPES.OPENAI_COMPATIBLE || apiType === API_TYPES.OPENAI
+    apiType === API_TYPES.OPENAI_COMPATIBLE ||
+    apiType === API_TYPES.OPENAI ||
+    apiType === API_TYPES.ANTHROPIC ||
+    apiType === API_TYPES.GOOGLE
 
   const resetProbeState = (nextApiType: ApiVerificationApiType) => {
     const defs = getApiVerificationProbeDefinitions(nextApiType)

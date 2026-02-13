@@ -11,6 +11,8 @@ import {
   summaryKeyFromHttpStatus,
   toSanitizedErrorSummary,
 } from "~/services/aiApiVerification/utils"
+import { fetchAnthropicModelIds } from "~/services/apiService/anthropic"
+import { fetchGoogleModelIds } from "~/services/apiService/google"
 import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompatible"
 import {
   DEFAULT_PREFERENCES,
@@ -21,6 +23,7 @@ import { createLogger } from "~/utils/logger"
 import { isUrlAllowedByRegexList } from "~/utils/redemptionAssistWhitelist"
 import {
   normalizeApiCheckBaseUrl,
+  normalizeGoogleFamilyBaseUrl,
   normalizeOpenAiFamilyBaseUrl,
 } from "~/utils/webAiApiCheck"
 
@@ -63,9 +66,14 @@ function normalizeProbeBaseUrl(params: {
 }): string | null {
   if (
     params.apiType === API_TYPES.OPENAI_COMPATIBLE ||
-    params.apiType === API_TYPES.OPENAI
+    params.apiType === API_TYPES.OPENAI ||
+    params.apiType === API_TYPES.ANTHROPIC
   ) {
     return normalizeOpenAiFamilyBaseUrl(params.baseUrl)
+  }
+
+  if (params.apiType === API_TYPES.GOOGLE) {
+    return normalizeGoogleFamilyBaseUrl(params.baseUrl)
   }
 
   return normalizeApiCheckBaseUrl(params.baseUrl)
@@ -120,20 +128,7 @@ export async function handleWebAiApiCheckMessage(
           return
         }
 
-        if (
-          apiType !== API_TYPES.OPENAI_COMPATIBLE &&
-          apiType !== API_TYPES.OPENAI
-        ) {
-          const response: ApiCheckFetchModelsResponse = {
-            success: false,
-            error:
-              "Model listing is only supported for OpenAI/OpenAI-compatible",
-          }
-          sendResponse(response)
-          return
-        }
-
-        const normalizedBaseUrl = normalizeOpenAiFamilyBaseUrl(baseUrl)
+        const normalizedBaseUrl = normalizeProbeBaseUrl({ apiType, baseUrl })
         if (!normalizedBaseUrl) {
           const response: ApiCheckFetchModelsResponse = {
             success: false,
@@ -144,10 +139,33 @@ export async function handleWebAiApiCheckMessage(
         }
 
         try {
-          const modelIds = await fetchOpenAICompatibleModelIds({
-            baseUrl: normalizedBaseUrl,
-            apiKey,
-          })
+          const modelIds = await (async () => {
+            if (
+              apiType === API_TYPES.OPENAI_COMPATIBLE ||
+              apiType === API_TYPES.OPENAI
+            ) {
+              return await fetchOpenAICompatibleModelIds({
+                baseUrl: normalizedBaseUrl,
+                apiKey,
+              })
+            }
+
+            if (apiType === API_TYPES.GOOGLE) {
+              return await fetchGoogleModelIds({
+                baseUrl: normalizedBaseUrl,
+                apiKey,
+              })
+            }
+
+            if (apiType === API_TYPES.ANTHROPIC) {
+              return await fetchAnthropicModelIds({
+                baseUrl: normalizedBaseUrl,
+                apiKey,
+              })
+            }
+
+            throw new Error("Unsupported apiType")
+          })()
           const response: ApiCheckFetchModelsResponse = {
             success: true,
             modelIds,

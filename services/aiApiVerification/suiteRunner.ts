@@ -5,7 +5,6 @@ import type {
   ApiVerificationApiType,
   ApiVerificationProbeResult,
 } from "./types"
-import { API_TYPES } from "./types"
 
 type RunApiVerificationSuiteParams = {
   baseUrl: string
@@ -28,60 +27,17 @@ export async function runApiVerificationSuite(
   const results: ApiVerificationProbeResult[] = []
   const definitions = getApiVerificationProbeDefinitions(params.apiType)
 
-  // OpenAI-compatible APIs can discover models before running the suite.
-  if (params.apiType === API_TYPES.OPENAI_COMPATIBLE) {
-    const modelsProbe = await runModelsProbe({
-      baseUrl: params.baseUrl,
-      apiKey: params.apiKey,
-    })
-    results.push(modelsProbe.result)
+  const modelsProbe = await runModelsProbe({
+    baseUrl: params.baseUrl,
+    apiKey: params.apiKey,
+    apiType: params.apiType,
+  })
+  results.push(modelsProbe.result)
 
-    const resolvedModelId = params.requestedModelId ?? modelsProbe.modelId
-    if (!resolvedModelId) {
-      for (const definition of definitions) {
-        if (definition.id === "models") continue
-        if (definition.id === "web-search") {
-          results.push({
-            id: "web-search",
-            status: "unsupported",
-            latencyMs: 0,
-            summary: "Web search probe requires explicit API type support",
-            summaryKey:
-              "verifyDialog.summaries.webSearchRequiresExplicitSupport",
-          })
-          continue
-        }
-
-        results.push({
-          id: definition.id,
-          status: "fail",
-          latencyMs: 0,
-          summary: "No model available to run probes",
-          summaryKey: "verifyDialog.summaries.noModelAvailableToRunProbes",
-        })
-      }
-
-      return { results }
-    }
-
+  const resolvedModelId = params.requestedModelId ?? modelsProbe.modelId
+  if (!resolvedModelId) {
     for (const definition of definitions) {
       if (definition.id === "models") continue
-      const entry = apiVerificationProbeRegistry[definition.id]
-      results.push(
-        await entry.run({
-          baseUrl: params.baseUrl,
-          apiKey: params.apiKey,
-          apiType: params.apiType,
-          modelId: resolvedModelId,
-        }),
-      )
-    }
-
-    return { results, modelId: resolvedModelId }
-  }
-
-  if (!params.requestedModelId) {
-    for (const definition of definitions) {
       if (definition.id === "web-search") {
         results.push({
           id: "web-search",
@@ -97,8 +53,8 @@ export async function runApiVerificationSuite(
         id: definition.id,
         status: "fail",
         latencyMs: 0,
-        summary: "No model id provided",
-        summaryKey: "verifyDialog.summaries.noModelIdProvided",
+        summary: "No model available to run probes",
+        summaryKey: "verifyDialog.summaries.noModelAvailableToRunProbes",
       })
     }
 
@@ -106,16 +62,17 @@ export async function runApiVerificationSuite(
   }
 
   for (const definition of definitions) {
+    if (definition.id === "models") continue
     const entry = apiVerificationProbeRegistry[definition.id]
     results.push(
       await entry.run({
         baseUrl: params.baseUrl,
         apiKey: params.apiKey,
         apiType: params.apiType,
-        modelId: params.requestedModelId,
+        modelId: resolvedModelId,
       }),
     )
   }
 
-  return { results, modelId: params.requestedModelId }
+  return { results, modelId: resolvedModelId }
 }

@@ -45,13 +45,12 @@ export function normalizeApiCheckBaseUrl(baseUrl: string): string | null {
 }
 
 /**
- * Normalize a base URL for OpenAI/OpenAI-compatible requests.
  *
- * This preserves any deployment subpath (e.g. https://example.com/api) while
- * stripping any `/v1` segment and anything after it so later joins like
- * `<base>/v1/models` never become `/v1/v1/models` or `/v1/chat/.../v1/models`.
  */
-export function normalizeOpenAiFamilyBaseUrl(baseUrl: string): string | null {
+function normalizeBaseUrlByStrippingPathSegment(
+  baseUrl: string,
+  segmentToStrip: string,
+): string | null {
   const normalized = normalizeApiCheckBaseUrl(baseUrl)
   if (!normalized) return null
 
@@ -59,12 +58,12 @@ export function normalizeOpenAiFamilyBaseUrl(baseUrl: string): string | null {
     const url = new URL(normalized)
     const rawSegments = url.pathname.replace(/\/+$/, "").split("/")
     const segments = rawSegments.filter(Boolean)
-    const v1Index = segments.findIndex(
-      (segment) => segment.toLowerCase() === "v1",
+    const segmentIndex = segments.findIndex(
+      (segment) => segment.toLowerCase() === segmentToStrip.toLowerCase(),
     )
 
-    if (v1Index >= 0) {
-      const prefixSegments = segments.slice(0, v1Index)
+    if (segmentIndex >= 0) {
+      const prefixSegments = segments.slice(0, segmentIndex)
       url.pathname = prefixSegments.length
         ? `/${prefixSegments.join("/")}`
         : "/"
@@ -76,6 +75,29 @@ export function normalizeOpenAiFamilyBaseUrl(baseUrl: string): string | null {
   } catch {
     return normalized
   }
+}
+
+/**
+ * Normalize a base URL for OpenAI/OpenAI-compatible requests.
+ *
+ * This preserves any deployment subpath (e.g. https://example.com/api) while
+ * stripping any `/v1` segment and anything after it so later joins like
+ * `<base>/v1/models` never become `/v1/v1/models` or `/v1/chat/.../v1/models`.
+ */
+export function normalizeOpenAiFamilyBaseUrl(baseUrl: string): string | null {
+  return normalizeBaseUrlByStrippingPathSegment(baseUrl, "v1")
+}
+
+/**
+ * Normalize a base URL for Google/Gemini requests.
+ *
+ * This preserves any deployment subpath (e.g. https://example.com/api) while
+ * stripping any `/v1beta` segment and anything after it so later joins like
+ * `<base>/v1beta/models` never become `/v1beta/v1beta/models` or
+ * `/v1beta/models/.../v1beta/models`.
+ */
+export function normalizeGoogleFamilyBaseUrl(baseUrl: string): string | null {
+  return normalizeBaseUrlByStrippingPathSegment(baseUrl, "v1beta")
 }
 
 /**

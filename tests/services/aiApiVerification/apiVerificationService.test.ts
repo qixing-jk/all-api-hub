@@ -8,10 +8,21 @@ import {
 } from "~/services/aiApiVerification"
 
 const mockFetchOpenAICompatibleModelIds = vi.fn()
+const mockFetchAnthropicModelIds = vi.fn()
+const mockFetchGoogleModelIds = vi.fn()
 
 vi.mock("~/services/apiService/openaiCompatible", () => ({
   fetchOpenAICompatibleModelIds: (...args: any[]) =>
     mockFetchOpenAICompatibleModelIds(...args),
+}))
+
+vi.mock("~/services/apiService/anthropic", () => ({
+  fetchAnthropicModelIds: (...args: any[]) =>
+    mockFetchAnthropicModelIds(...args),
+}))
+
+vi.mock("~/services/apiService/google", () => ({
+  fetchGoogleModelIds: (...args: any[]) => mockFetchGoogleModelIds(...args),
 }))
 
 const mockGenerateText = vi.fn()
@@ -56,6 +67,8 @@ describe("apiVerificationService", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockFetchOpenAICompatibleModelIds.mockReset()
+    mockFetchAnthropicModelIds.mockReset()
+    mockFetchGoogleModelIds.mockReset()
     mockGenerateText.mockReset()
   })
 
@@ -178,6 +191,7 @@ describe("apiVerificationService", () => {
   })
 
   it("runs google suite and reports probe outcomes", async () => {
+    mockFetchGoogleModelIds.mockResolvedValueOnce(["gemini-test"])
     mockGenerateText
       .mockResolvedValueOnce({ text: "OK" })
       .mockResolvedValueOnce({
@@ -205,6 +219,33 @@ describe("apiVerificationService", () => {
     )
   })
 
+  it("discovers modelId for google suite when omitted", async () => {
+    mockFetchGoogleModelIds.mockResolvedValueOnce([
+      "embedding-001",
+      "gemini-1.5-pro",
+    ])
+
+    mockGenerateText
+      .mockResolvedValueOnce({ text: "OK" })
+      .mockResolvedValueOnce({
+        toolCalls: [{ toolName: "verify_tool" }],
+        toolResults: [],
+      })
+      .mockResolvedValueOnce({ output: { ok: true } })
+      .mockResolvedValueOnce({ toolResults: [], sources: [] })
+
+    const report = await runApiVerification({
+      baseUrl: "https://example.com",
+      apiKey: "secret",
+      apiType: API_TYPES.GOOGLE,
+    })
+
+    expect(report.modelId).toBe("gemini-1.5-pro")
+    expect(mockGenerateText.mock.calls[0][0].model.modelId).toBe(
+      "gemini-1.5-pro",
+    )
+  })
+
   it("runs a single probe and returns input/output diagnostics", async () => {
     mockGenerateText.mockResolvedValueOnce({ text: "OK" })
 
@@ -226,16 +267,84 @@ describe("apiVerificationService", () => {
     expect(result.output).toMatchObject({ text: "OK" })
   })
 
-  it("returns unsupported for models probe on non-openai-compatible apiType", async () => {
+  it("runs models probe for openai apiType", async () => {
+    mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce(["gpt-test"])
+
     const result = await runApiVerificationProbe({
-      baseUrl: "https://example.com",
+      baseUrl: "https://example.com/v1",
       apiKey: "secret",
       apiType: API_TYPES.OPENAI,
-      modelId: "gpt-test",
       probeId: "models",
     })
 
-    expect(result.status).toBe("unsupported")
+    expect(result.status).toBe("pass")
+    expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledWith({
+      baseUrl: "https://example.com",
+      apiKey: "secret",
+    })
+    expect(result.input).toMatchObject({
+      apiType: API_TYPES.OPENAI,
+      endpoint: "/v1/models",
+      baseUrl: "https://example.com",
+    })
+    expect(result.output as any).toMatchObject({
+      suggestedModelId: "gpt-test",
+    })
+  })
+
+  it("runs models probe for anthropic apiType", async () => {
+    mockFetchAnthropicModelIds.mockResolvedValueOnce([
+      "claude-3-5-haiku-latest",
+    ])
+
+    const result = await runApiVerificationProbe({
+      baseUrl: "https://api.anthropic.com/v1/messages",
+      apiKey: "secret",
+      apiType: API_TYPES.ANTHROPIC,
+      probeId: "models",
+    })
+
+    expect(result.status).toBe("pass")
+    expect(mockFetchAnthropicModelIds).toHaveBeenCalledWith({
+      baseUrl: "https://api.anthropic.com",
+      apiKey: "secret",
+    })
+    expect(result.input).toMatchObject({
+      apiType: API_TYPES.ANTHROPIC,
+      endpoint: "/v1/models",
+      baseUrl: "https://api.anthropic.com",
+    })
+    expect(result.output as any).toMatchObject({
+      suggestedModelId: "claude-3-5-haiku-latest",
+    })
+  })
+
+  it("runs models probe for google apiType and prefers gemini model ids", async () => {
+    mockFetchGoogleModelIds.mockResolvedValueOnce([
+      "embedding-001",
+      "gemini-1.5-pro",
+    ])
+
+    const result = await runApiVerificationProbe({
+      baseUrl: "https://proxy.example.com/api/v1beta/models",
+      apiKey: "secret",
+      apiType: API_TYPES.GOOGLE,
+      probeId: "models",
+    })
+
+    expect(result.status).toBe("pass")
+    expect(mockFetchGoogleModelIds).toHaveBeenCalledWith({
+      baseUrl: "https://proxy.example.com/api",
+      apiKey: "secret",
+    })
+    expect(result.input).toMatchObject({
+      apiType: API_TYPES.GOOGLE,
+      endpoint: "/v1beta/models",
+      baseUrl: "https://proxy.example.com/api",
+    })
+    expect(result.output as any).toMatchObject({
+      suggestedModelId: "gemini-1.5-pro",
+    })
   })
 
   it("fails a probe when modelId is missing", async () => {
@@ -248,6 +357,23 @@ describe("apiVerificationService", () => {
 
     expect(result.status).toBe("fail")
     expect(result.summaryKey).toBe("verifyDialog.summaries.noModelIdProvided")
+  })
+
+  it("redacts secrets from models probe failure summaries", async () => {
+    mockFetchOpenAICompatibleModelIds.mockRejectedValueOnce(
+      new Error("Unauthorized: secret"),
+    )
+
+    const result = await runApiVerificationProbe({
+      baseUrl: "https://example.com",
+      apiKey: "secret",
+      apiType: API_TYPES.OPENAI,
+      probeId: "models",
+    })
+
+    expect(result.status).toBe("fail")
+    expect(result.summary).not.toContain("secret")
+    expect(result.summary).toContain("[REDACTED]")
   })
 
   it("returns unsupported for web-search probe on anthropic apiType", async () => {

@@ -202,12 +202,8 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
     }
   }
 
-  // Allow running without a model id only for OpenAI-compatible proxies.
-  const canRunAll =
-    !!selectedToken &&
-    (apiType === API_TYPES.OPENAI_COMPATIBLE ||
-      !!modelId.trim() ||
-      !!tokenModelHint)
+  // The suite can always run the models probe without a model id.
+  const canRunAll = !!selectedToken
 
   const runAll = async () => {
     if (!canRunAll) return

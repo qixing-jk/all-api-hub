@@ -2,7 +2,7 @@
   "verifyDialog": {
     "title": "API Verification",
     "loadingTokensHint": "Loading tokens...",
-    "idleHint": "Select a token and model to start verification.",
+    "idleHint": "Select a token to start verification. Model id is required for model-dependent probes.",
     "warning": "This feature is in beta. When support is detected, it is highly likely to be genuine. When support is not detected, it may still be supported. Results are for reference only; rely on actual tool usage.",
     "notRunYet": "Not run yet",
     "requiresModelId": "Enter a model id to run this test.",
@@ -26,7 +26,7 @@
       "webSearchGroundingNoResults": "No web search/grounding results.",
       "webSearchUnsupportedForApiType": "Web search probe is not supported for this API type.",
       "webSearchRequiresExplicitSupport": "Web search probe requires explicit API type support.",
-      "modelsProbeUnsupportedForApiType": "Models probe is only supported for OpenAI-compatible APIs.",
+      "modelsProbeUnsupportedForApiType": "Models probe is not supported for this API type.",
       "noModelIdProvided": "No model id provided.",
       "noModelIdProvidedToRunProbe": "No model id provided to run probe.",
       "noModelIdProvidedToRunProbes": "No model id provided to run probes.",

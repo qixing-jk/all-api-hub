@@ -8,7 +8,6 @@ import type {
   ApiVerificationProbeId,
   ApiVerificationProbeResult,
 } from "./types"
-import { API_TYPES } from "./types"
 
 /**
  * Input passed into a probe runner from the registry.
@@ -38,24 +37,12 @@ export const apiVerificationProbeRegistry: Record<
   models: {
     requiresModelId: false,
     run: async (params) => {
-      // Models probe is only valid for OpenAI-compatible APIs.
-      if (params.apiType !== API_TYPES.OPENAI_COMPATIBLE) {
-        return {
-          id: "models",
-          status: "unsupported",
-          latencyMs: 0,
-          summary: "Models probe is only supported for OpenAI-compatible APIs",
-          summaryKey: "verifyDialog.summaries.modelsProbeUnsupportedForApiType",
-          input: {
-            apiType: params.apiType,
-            baseUrl: params.baseUrl,
-            endpoint: "/v1/models",
-          },
-        }
-      }
-
       return (
-        await runModelsProbe({ baseUrl: params.baseUrl, apiKey: params.apiKey })
+        await runModelsProbe({
+          baseUrl: params.baseUrl,
+          apiKey: params.apiKey,
+          apiType: params.apiType,
+        })
       ).result
     },
   },

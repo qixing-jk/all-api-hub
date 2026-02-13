@@ -18,6 +18,14 @@ vi.mock("~/services/apiService/openaiCompatible", () => ({
   fetchOpenAICompatibleModelIds: vi.fn(),
 }))
 
+vi.mock("~/services/apiService/google", () => ({
+  fetchGoogleModelIds: vi.fn(),
+}))
+
+vi.mock("~/services/apiService/anthropic", () => ({
+  fetchAnthropicModelIds: vi.fn(),
+}))
+
 vi.mock("~/services/aiApiVerification", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("~/services/aiApiVerification")>()
@@ -123,6 +131,74 @@ describe("webAiApiCheck background handlers", () => {
     expect(sendResponse).toHaveBeenCalledWith({
       success: true,
       modelIds: ["m1", "m2"],
+    })
+  })
+
+  it("fetchModels supports google and strips /v1beta from baseUrl", async () => {
+    vi.resetModules()
+    const { fetchGoogleModelIds } = await import("~/services/apiService/google")
+    vi.mocked(fetchGoogleModelIds).mockResolvedValue([
+      "gemini-1.0",
+      "gemini-2.0",
+    ])
+
+    const { handleWebAiApiCheckMessage } = await import(
+      "~/services/webAiApiCheck/background"
+    )
+
+    const sendResponse = vi.fn()
+    await handleWebAiApiCheckMessage(
+      {
+        action: RuntimeActionIds.ApiCheckFetchModels,
+        apiType: "google",
+        baseUrl: "https://proxy.example.com/api/v1beta/models",
+        apiKey: "AIza-test-key",
+      },
+      sendResponse,
+    )
+
+    expect(fetchGoogleModelIds).toHaveBeenCalledWith({
+      baseUrl: "https://proxy.example.com/api",
+      apiKey: "AIza-test-key",
+    })
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: true,
+      modelIds: ["gemini-1.0", "gemini-2.0"],
+    })
+  })
+
+  it("fetchModels supports anthropic and strips /v1 from baseUrl", async () => {
+    vi.resetModules()
+    const { fetchAnthropicModelIds } = await import(
+      "~/services/apiService/anthropic"
+    )
+    vi.mocked(fetchAnthropicModelIds).mockResolvedValue([
+      "claude-3-7-sonnet-latest",
+      "claude-3-5-haiku-latest",
+    ])
+
+    const { handleWebAiApiCheckMessage } = await import(
+      "~/services/webAiApiCheck/background"
+    )
+
+    const sendResponse = vi.fn()
+    await handleWebAiApiCheckMessage(
+      {
+        action: RuntimeActionIds.ApiCheckFetchModels,
+        apiType: "anthropic",
+        baseUrl: "https://api.anthropic.com/v1/messages",
+        apiKey: "sk-ant-test-key",
+      },
+      sendResponse,
+    )
+
+    expect(fetchAnthropicModelIds).toHaveBeenCalledWith({
+      baseUrl: "https://api.anthropic.com",
+      apiKey: "sk-ant-test-key",
+    })
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: true,
+      modelIds: ["claude-3-7-sonnet-latest", "claude-3-5-haiku-latest"],
     })
   })
 

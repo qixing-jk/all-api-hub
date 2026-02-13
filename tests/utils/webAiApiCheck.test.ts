@@ -4,6 +4,7 @@ import { buildApiKey } from "~/tests/test-utils/factories"
 import {
   extractApiCheckCredentialsFromText,
   normalizeApiCheckBaseUrl,
+  normalizeGoogleFamilyBaseUrl,
   normalizeOpenAiFamilyBaseUrl,
 } from "~/utils/webAiApiCheck"
 
@@ -38,6 +39,30 @@ describe("webAiApiCheck utils", () => {
     it("avoids duplicated /v1 segments", () => {
       expect(
         normalizeOpenAiFamilyBaseUrl("https://example.com/v1/v1/models"),
+      ).toBe("https://example.com")
+    })
+  })
+
+  describe("normalizeGoogleFamilyBaseUrl", () => {
+    it("strips /v1beta and preserves subpaths", () => {
+      expect(
+        normalizeGoogleFamilyBaseUrl("https://example.com/api/v1beta"),
+      ).toBe("https://example.com/api")
+    })
+
+    it("strips endpoint suffixes after /v1beta", () => {
+      expect(
+        normalizeGoogleFamilyBaseUrl(
+          "https://example.com/api/v1beta/models/gemini-2.0-flash:predict",
+        ),
+      ).toBe("https://example.com/api")
+    })
+
+    it("avoids duplicated /v1beta segments", () => {
+      expect(
+        normalizeGoogleFamilyBaseUrl(
+          "https://example.com/v1beta/v1beta/models",
+        ),
       ).toBe("https://example.com")
     })
   })

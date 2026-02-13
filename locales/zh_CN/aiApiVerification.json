@@ -2,7 +2,7 @@
   "verifyDialog": {
     "title": "接口验证",
     "loadingTokensHint": "正在加载密钥...",
-    "idleHint": "请选择密钥和模型后开始验证。",
+    "idleHint": "请选择密钥开始验证；模型相关探测需要填写模型 ID。",
     "warning": "此功能为 Beta。检测到支持时，高概率为真实支持；未检测到支持时，也可能实际支持。结果仅供参考，请以工具的实际使用情况为准。",
     "notRunYet": "尚未运行",
     "requiresModelId": "请输入模型 ID 后运行该测试。",
@@ -26,7 +26,7 @@
       "webSearchGroundingNoResults": "未获取到联网搜索 / Grounding 结果。",
       "webSearchUnsupportedForApiType": "当前接口类型不支持联网搜索探测。",
       "webSearchRequiresExplicitSupport": "联网搜索探测需要显式的接口类型支持。",
-      "modelsProbeUnsupportedForApiType": "仅 OpenAI 兼容接口支持模型列表探测。",
+      "modelsProbeUnsupportedForApiType": "当前接口类型不支持模型列表探测。",
       "noModelIdProvided": "未提供模型 ID，无法运行探测。",
       "noModelIdProvidedToRunProbe": "未提供模型 ID，无法运行探测。",
       "noModelIdProvidedToRunProbes": "未提供模型 ID，无法运行探测。",
