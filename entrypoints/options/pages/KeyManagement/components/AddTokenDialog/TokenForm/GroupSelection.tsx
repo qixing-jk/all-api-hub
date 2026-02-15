@@ -29,7 +29,16 @@ export function GroupSelection({
       <SearchableSelect
         options={Object.entries(groups).map(([key, groupInfo]) => ({
           value: key,
-          label: `${groupInfo.desc} (${t("dialog.groupRate")}: ${groupInfo.ratio})`,
+          label: (() => {
+            const desc = groupInfo.desc?.trim()
+            const ratioLabel = `${t("dialog.groupRate")} ${groupInfo.ratio}`
+
+            if (!desc || desc === key) {
+              return `${key} (${ratioLabel})`
+            }
+
+            return `${key} - ${desc} (${ratioLabel})`
+          })(),
         }))}
         value={group ?? ""}
         onChange={handleSelectChange}
