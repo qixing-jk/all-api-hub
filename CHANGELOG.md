@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.20.0](https://github.com/qixing-jk/all-api-hub/compare/v3.19.0...v3.20.0) (2026-02-15)
+
+
+### Features
+
+* **key-management:** display group identifier in selection labels ([#482](https://github.com/qixing-jk/all-api-hub/issues/482)) ([b1bf115](https://github.com/qixing-jk/all-api-hub/commit/b1bf115c9042912e4aaef11e1eeff9876eb70718))
+
+
+### Bug Fixes
+
+* **user-preferences:** change autoProvisionKeyOnAccountAdd default to false ([#484](https://github.com/qixing-jk/all-api-hub/issues/484)) ([6d32600](https://github.com/qixing-jk/all-api-hub/commit/6d32600cee1a3ab88afa944670164cb9385cf0bb))
+
 ## [3.19.0](https://github.com/qixing-jk/all-api-hub/compare/v3.18.0...v3.19.0) (2026-02-13)
 
 
