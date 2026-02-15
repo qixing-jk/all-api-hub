@@ -1264,7 +1264,7 @@ export const UserPreferencesProvider = ({
     autoProvisionKeyOnAccountAdd:
       preferences?.autoProvisionKeyOnAccountAdd ??
       DEFAULT_PREFERENCES.autoProvisionKeyOnAccountAdd ??
-      true,
+      false,
     newApiBaseUrl: preferences?.newApi?.baseUrl || "",
     newApiAdminToken: preferences?.newApi?.adminToken || "",
     newApiUserId: preferences?.newApi?.userId || "",

@@ -163,7 +163,7 @@ describe("accountOperations auto-provision key on add", () => {
     expect(toastErrorMock).not.toHaveBeenCalled()
   })
 
-  it("defaults to enabling auto-provision when preferences read fails", async () => {
+  it("defaults to disabling auto-provision when preferences read fails", async () => {
     vi.spyOn(userPreferences, "getPreferences").mockRejectedValueOnce(
       new Error("prefs-fail"),
     )
@@ -188,7 +188,7 @@ describe("accountOperations auto-provision key on add", () => {
     await flushPromises()
     await flushPromises()
 
-    expect(ensureDefaultApiTokenForAccountMock).toHaveBeenCalledTimes(1)
+    expect(ensureDefaultApiTokenForAccountMock).not.toHaveBeenCalled()
   })
 
   it("skips auto-provision for sub2api accounts", async () => {

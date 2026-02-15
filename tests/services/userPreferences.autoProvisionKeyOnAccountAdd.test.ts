@@ -10,11 +10,11 @@ import {
 
 /**
  * Validates that autoProvisionKeyOnAccountAdd is:
- * - treated as enabled when missing from stored preferences
+ * - treated as disabled when missing from stored preferences
  * - persisted when updated through the UserPreferencesService helper
  */
 describe("userPreferences autoProvisionKeyOnAccountAdd", () => {
-  it("treats missing autoProvisionKeyOnAccountAdd as enabled and saves back", async () => {
+  it("treats missing autoProvisionKeyOnAccountAdd as disabled and saves back", async () => {
     const storage = new Storage({ area: "local" })
     const storedWithoutFlag: any = { ...DEFAULT_PREFERENCES }
     delete storedWithoutFlag.autoProvisionKeyOnAccountAdd
@@ -25,12 +25,12 @@ describe("userPreferences autoProvisionKeyOnAccountAdd", () => {
     )
 
     const prefs = await userPreferences.getPreferences()
-    expect(prefs.autoProvisionKeyOnAccountAdd).toBe(true)
+    expect(prefs.autoProvisionKeyOnAccountAdd).toBe(false)
 
     const storedAfter = await storage.get(
       USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
     )
-    expect((storedAfter as any)?.autoProvisionKeyOnAccountAdd).toBe(true)
+    expect((storedAfter as any)?.autoProvisionKeyOnAccountAdd).toBe(false)
   })
 
   it("persists updates via updateAutoProvisionKeyOnAccountAdd", async () => {

@@ -407,7 +407,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   sortOrder: "desc", // 与 UI_CONSTANTS.SORT.DEFAULT_ORDER 保持一致
   actionClickBehavior: "popup",
   openChangelogOnUpdate: true,
-  autoProvisionKeyOnAccountAdd: true,
+  autoProvisionKeyOnAccountAdd: false, // 默认关闭，避免添加账号时无意创建密钥
   accountAutoRefresh: DEFAULT_ACCOUNT_AUTO_REFRESH,
   usageHistory: DEFAULT_USAGE_HISTORY_PREFERENCES,
   balanceHistory: DEFAULT_BALANCE_HISTORY_PREFERENCES,

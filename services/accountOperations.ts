@@ -15,7 +15,10 @@ import {
 import { accountStorage } from "~/services/accountStorage"
 import { getApiService } from "~/services/apiService"
 import { autoDetectSmart } from "~/services/autoDetectService"
-import { userPreferences } from "~/services/userPreferences"
+import {
+  DEFAULT_PREFERENCES,
+  userPreferences,
+} from "~/services/userPreferences"
 import {
   ApiToken,
   AuthTypeEnum,
@@ -398,13 +401,14 @@ export async function validateAndSaveAccount(
     }
   }
 
-  let shouldAutoProvisionKeyOnAccountAdd = true
-  let includeTodayCashflow = true
+  let shouldAutoProvisionKeyOnAccountAdd =
+    DEFAULT_PREFERENCES.autoProvisionKeyOnAccountAdd ?? false
+  let includeTodayCashflow = DEFAULT_PREFERENCES.showTodayCashflow ?? true
   try {
     const prefs = await userPreferences.getPreferences()
     shouldAutoProvisionKeyOnAccountAdd =
-      prefs.autoProvisionKeyOnAccountAdd ?? true
-    includeTodayCashflow = prefs.showTodayCashflow ?? true
+      prefs.autoProvisionKeyOnAccountAdd ?? shouldAutoProvisionKeyOnAccountAdd
+    includeTodayCashflow = prefs.showTodayCashflow ?? includeTodayCashflow
   } catch (error) {
     logger.warn(
       "Failed to read user preferences; falling back to defaults",

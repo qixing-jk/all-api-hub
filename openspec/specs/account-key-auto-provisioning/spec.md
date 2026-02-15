@@ -6,7 +6,7 @@ TBD - created by archiving change auto-create-account-keys. Update Purpose after
 ### Requirement: Auto-provision on account add is configurable
 The system MUST provide a user setting to enable or disable automatic default-key (token) provisioning when adding an account.
 
-The setting MUST be persisted in user preferences as `autoProvisionKeyOnAccountAdd` and MUST default to **enabled**.
+The setting MUST be persisted in user preferences as `autoProvisionKeyOnAccountAdd` and MUST default to **disabled**.
 
 #### Scenario: Auto-provision enabled runs after successful add
 - **GIVEN** auto-provision on add is enabled
