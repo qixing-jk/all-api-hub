@@ -452,7 +452,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
     relaxedCodeValidation: true,
     urlWhitelist: {
       enabled: true,
-      patterns: ["cdk.linux.do"],
+      patterns: ["cdk\\.linux\\.do", "cdk\\.hybgzs\\.com", "qd\\.x666\\.me"],
       includeAccountSiteUrls: true,
       includeCheckInAndRedeemUrls: true,
     },
