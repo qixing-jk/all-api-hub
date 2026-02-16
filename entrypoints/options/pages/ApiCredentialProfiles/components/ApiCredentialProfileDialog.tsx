@@ -164,15 +164,15 @@ export function ApiCredentialProfileDialog({
       nextErrors.apiKey = t("apiCredentialProfiles:dialog.errors.keyRequired")
     }
 
-    const normalized = normalizeBaseUrl(apiType, baseUrl)
-    if (!normalized) {
+    const normalizedBaseUrl = normalizeBaseUrl(apiType, baseUrl)
+    if (!normalizedBaseUrl) {
       nextErrors.baseUrl = t(
         "apiCredentialProfiles:dialog.errors.baseUrlInvalid",
       )
     }
 
     setErrors(nextErrors)
-    return Object.keys(nextErrors).length === 0
+    return Object.keys(nextErrors).length === 0 ? normalizedBaseUrl : null
   }
 
   const handleClose = () => {
@@ -181,7 +181,8 @@ export function ApiCredentialProfileDialog({
   }
 
   const handleSave = async () => {
-    if (!validate()) return
+    const normalizedBaseUrl = validate()
+    if (!normalizedBaseUrl) return
 
     setIsSaving(true)
     try {
@@ -189,7 +190,7 @@ export function ApiCredentialProfileDialog({
         id: profile?.id,
         name: name.trim(),
         apiType,
-        baseUrl: baseUrl.trim(),
+        baseUrl: normalizedBaseUrl,
         apiKey: apiKey.trim(),
         tagIds,
         notes: notes.trim(),

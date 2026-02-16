@@ -385,11 +385,16 @@ describe("ApiCheckModalHost", () => {
     )
 
     await waitFor(() => {
-      expect(resolveModelsProbe).not.toBeNull()
+      expect(typeof resolveModelsProbe).toBe("function")
       expect(saveButton).not.toBeDisabled()
     })
 
-    resolveModelsProbe?.({
+    const resolveProbe = resolveModelsProbe as ((value: unknown) => void) | null
+    if (!resolveProbe) {
+      throw new Error("Expected models probe resolver to be available")
+    }
+
+    resolveProbe({
       success: true,
       result: {
         id: "models",

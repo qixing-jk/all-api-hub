@@ -29,7 +29,7 @@ type UpdateProfileInput = Partial<CreateProfileInput>
  */
 export function useApiCredentialProfiles() {
   const [profiles, setProfiles] = useState<ApiCredentialProfile[]>([])
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
   const reload = useCallback(async () => {
     setIsLoading(true)
