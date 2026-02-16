@@ -20,7 +20,7 @@
     "balanceHistory": "余额历史",
     "models": "模型列表",
     "keys": "密钥管理",
-    "apiCredentialProfiles": "API 凭证",
+    "apiCredentialProfiles": "API 凭证配置",
     "autoCheckin": "自动签到",
     "autoCheckinRunNow": "快速签到",
     "managedSiteChannels": "渠道管理",
@@ -184,6 +184,7 @@
         "copiedApiConfigs": "已复制 apiConfigs",
         "copyFailed": "复制失败",
         "downloadedSettings": "已下载设置文件",
+        "downloadFailed": "设置文件下载失败",
         "nothingToExportTitle": "无可导出的内容",
         "nothingToExportDescription": "请至少选择一个可导出的站点/密钥后再进行复制/下载。"
       }

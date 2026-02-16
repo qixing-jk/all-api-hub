@@ -134,24 +134,37 @@ export function KiloCodeProfileExportDialog({
       return
     }
 
-    const payload = buildKiloCodeSettingsFile({
-      currentApiConfigName,
-      apiConfigs,
-    })
+    let url: string | null = null
+    let link: HTMLAnchorElement | null = null
 
-    const blob = new Blob([JSON.stringify(payload, null, 2)], {
-      type: "application/json",
-    })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement("a")
-    link.href = url
-    link.download = filename
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
+    try {
+      const payload = buildKiloCodeSettingsFile({
+        currentApiConfigName,
+        apiConfigs,
+      })
 
-    toast.success(t("ui:dialog.kiloCode.messages.downloadedSettings"))
+      const blob = new Blob([JSON.stringify(payload, null, 2)], {
+        type: "application/json",
+      })
+      url = URL.createObjectURL(blob)
+      link = document.createElement("a")
+      link.href = url
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+
+      toast.success(t("ui:dialog.kiloCode.messages.downloadedSettings"))
+    } catch (error) {
+      logger.error("Failed to download Kilo Code settings file", error)
+      toast.error(t("ui:dialog.kiloCode.messages.downloadFailed"))
+    } finally {
+      if (link && document.body.contains(link)) {
+        document.body.removeChild(link)
+      }
+      if (url) {
+        URL.revokeObjectURL(url)
+      }
+    }
   }
 
   return (

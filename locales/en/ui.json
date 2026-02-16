@@ -184,6 +184,7 @@
         "copiedApiConfigs": "apiConfigs copied to clipboard",
         "copyFailed": "Copy failed",
         "downloadedSettings": "Settings file downloaded",
+        "downloadFailed": "Failed to download settings file",
         "nothingToExportTitle": "Nothing to export",
         "nothingToExportDescription": "Select at least one exportable token/site to enable copy/download."
       }
