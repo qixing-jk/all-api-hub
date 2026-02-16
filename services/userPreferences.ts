@@ -105,8 +105,13 @@ export interface RedemptionAssistUrlWhitelistPreferences {
   includeCheckInAndRedeemUrls: boolean
 }
 
+export interface ContextMenuVisibilityPreferences {
+  enabled: boolean
+}
+
 export interface RedemptionAssistPreferences {
   enabled: boolean
+  contextMenu: ContextMenuVisibilityPreferences
   /**
    * When enabled, treat any 32-character non-whitespace token as a possible
    * redemption code (do not require strict hex charset).
@@ -143,6 +148,7 @@ export interface WebAiApiCheckPreferences {
    * Manual triggers can still be shown when enabled regardless of auto-detect.
    */
   enabled: boolean
+  contextMenu: ContextMenuVisibilityPreferences
   autoDetect: WebAiApiCheckAutoDetectPreferences
 }
 
@@ -449,6 +455,9 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   modelRedirect: DEFAULT_MODEL_REDIRECT_PREFERENCES,
   redemptionAssist: {
     enabled: true,
+    contextMenu: {
+      enabled: true,
+    },
     relaxedCodeValidation: true,
     urlWhitelist: {
       enabled: true,
@@ -459,6 +468,9 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   },
   webAiApiCheck: {
     enabled: true,
+    contextMenu: {
+      enabled: true,
+    },
     autoDetect: {
       enabled: false,
       urlWhitelist: {

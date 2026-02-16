@@ -21,6 +21,9 @@ describe("userPreferences", () => {
       )
       expect(DEFAULT_PREFERENCES.balanceHistory?.retentionDays).toBe(365)
       expect(DEFAULT_PREFERENCES.redemptionAssist?.enabled).toBe(true)
+      expect(DEFAULT_PREFERENCES.redemptionAssist?.contextMenu.enabled).toBe(
+        true,
+      )
       expect(DEFAULT_PREFERENCES.redemptionAssist?.relaxedCodeValidation).toBe(
         true,
       )
@@ -39,6 +42,8 @@ describe("userPreferences", () => {
       expect(
         DEFAULT_PREFERENCES.redemptionAssist?.urlWhitelist.patterns,
       ).toEqual(["cdk.linux.do"])
+      expect(DEFAULT_PREFERENCES.webAiApiCheck?.enabled).toBe(true)
+      expect(DEFAULT_PREFERENCES.webAiApiCheck?.contextMenu.enabled).toBe(true)
       expect(DEFAULT_PREFERENCES.tempWindowFallbackReminder?.dismissed).toBe(
         false,
       )

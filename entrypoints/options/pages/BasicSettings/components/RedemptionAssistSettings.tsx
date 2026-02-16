@@ -36,6 +36,10 @@ export default function RedemptionAssistSettings() {
   const config =
     userPrefs.redemptionAssist ?? DEFAULT_PREFERENCES.redemptionAssist!
 
+  const contextMenu = config.contextMenu ?? {
+    enabled: true,
+  }
+
   const whitelist =
     config.urlWhitelist ?? DEFAULT_PREFERENCES.redemptionAssist!.urlWhitelist
 
@@ -102,6 +106,25 @@ export default function RedemptionAssistSettings() {
                 checked={config.enabled}
                 onChange={(checked) => {
                   void saveSettings({ enabled: checked })
+                }}
+                disabled={isSaving}
+              />
+            }
+          />
+
+          <CardItem
+            title={t("redemptionAssist:settings.contextMenu.enable")}
+            description={t("redemptionAssist:settings.contextMenu.enableDesc")}
+            rightContent={
+              <Switch
+                checked={!!contextMenu.enabled}
+                onChange={(checked) => {
+                  void saveSettings({
+                    contextMenu: {
+                      ...contextMenu,
+                      enabled: checked,
+                    },
+                  })
                 }}
                 disabled={isSaving}
               />

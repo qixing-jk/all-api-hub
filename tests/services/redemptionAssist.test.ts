@@ -28,6 +28,9 @@ describe("redemptionAssist shouldPrompt batch filtering", () => {
       ...DEFAULT_PREFERENCES,
       redemptionAssist: {
         enabled: true,
+        contextMenu: {
+          enabled: true,
+        },
         urlWhitelist: {
           enabled: false,
           patterns: [""],

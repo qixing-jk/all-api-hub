@@ -4,6 +4,10 @@
     "title": "兑换助手",
     "enable": "启用兑换助手",
     "enableDesc": "在支持的页面上自动检测兑换码并弹出兑换提示",
+    "contextMenu": {
+      "enable": "在浏览器右键菜单中显示",
+      "enableDesc": "启用后，在选中文本时的右键菜单中显示“兑换助手”入口。"
+    },
     "relaxedCodeValidation": "放宽兑换码格式限制",
     "relaxedCodeValidationDesc": "启用后，只要是 32 位字符的内容就会被视为可能的兑换码（不校验字符集）。",
     "description": "配置扩展在支持的页面上如何检测并辅助兑换兑换码",

@@ -809,6 +809,9 @@ export const UserPreferencesProvider = ({
             DEFAULT_PREFERENCES.redemptionAssist ??
             ({
               enabled: true,
+              contextMenu: {
+                enabled: true,
+              },
               relaxedCodeValidation: true,
               urlWhitelist: {
                 enabled: true,
@@ -830,6 +833,16 @@ export const UserPreferencesProvider = ({
           action: RuntimeActionIds.RedemptionAssistUpdateSettings,
           settings: updates,
         })
+
+        const shouldRefreshContextMenus =
+          typeof updates.contextMenu?.enabled === "boolean" ||
+          typeof updates.enabled === "boolean"
+
+        if (shouldRefreshContextMenus) {
+          void sendRuntimeMessage({
+            action: RuntimeActionIds.PreferencesRefreshContextMenus,
+          })
+        }
       }
 
       return success
@@ -852,6 +865,9 @@ export const UserPreferencesProvider = ({
             DEFAULT_PREFERENCES.webAiApiCheck ??
             ({
               enabled: true,
+              contextMenu: {
+                enabled: true,
+              },
               autoDetect: {
                 enabled: false,
                 urlWhitelist: {
@@ -867,6 +883,16 @@ export const UserPreferencesProvider = ({
             lastUpdated: Date.now(),
           }
         })
+
+        const shouldRefreshContextMenus =
+          typeof updates.contextMenu?.enabled === "boolean" ||
+          typeof updates.enabled === "boolean"
+
+        if (shouldRefreshContextMenus) {
+          void sendRuntimeMessage({
+            action: RuntimeActionIds.PreferencesRefreshContextMenus,
+          })
+        }
       }
 
       return success

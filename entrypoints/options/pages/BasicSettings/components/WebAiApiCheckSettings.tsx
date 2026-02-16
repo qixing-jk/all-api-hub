@@ -65,6 +65,10 @@ export default function WebAiApiCheckSettings() {
 
   const config = userPrefs.webAiApiCheck ?? DEFAULT_PREFERENCES.webAiApiCheck!
 
+  const contextMenu = config.contextMenu ?? {
+    enabled: true,
+  }
+
   const autoDetect =
     config.autoDetect ?? DEFAULT_PREFERENCES.webAiApiCheck!.autoDetect
   const whitelist =
@@ -115,6 +119,24 @@ export default function WebAiApiCheckSettings() {
     >
       <Card padding="none">
         <CardList>
+          <CardItem
+            title={t("webAiApiCheck:settings.contextMenu.enable")}
+            description={t("webAiApiCheck:settings.contextMenu.enableDesc")}
+            rightContent={
+              <Switch
+                checked={!!contextMenu.enabled}
+                onChange={(checked) => {
+                  void saveSettings({
+                    contextMenu: {
+                      ...contextMenu,
+                      enabled: checked,
+                    },
+                  })
+                }}
+                disabled={isSaving}
+              />
+            }
+          />
           <CardItem
             title={t("webAiApiCheck:settings.autoDetect.enable")}
             description={t("webAiApiCheck:settings.autoDetect.enableDesc")}

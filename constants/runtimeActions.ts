@@ -106,6 +106,10 @@ export const RuntimeActionIds = {
     RuntimeActionPrefixes.Preferences,
     "updateActionClickBehavior",
   ),
+  PreferencesRefreshContextMenus: composeRuntimeAction(
+    RuntimeActionPrefixes.Preferences,
+    "refreshContextMenus",
+  ),
 
   AutoRefreshSetup: composeRuntimeAction(
     RuntimeActionPrefixes.AutoRefresh,

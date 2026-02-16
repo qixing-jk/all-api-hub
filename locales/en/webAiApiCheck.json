@@ -2,6 +2,10 @@
   "settings": {
     "title": "Web AI API Functionality Availability Test",
     "description": "Manual context-menu trigger is always available. Auto-detect is opt-in and only runs on whitelisted pages. Extracted API keys are not saved by default.",
+    "contextMenu": {
+      "enable": "Show in browser right-click menu",
+      "enableDesc": "Adds an “AI API Check” item to the browser context menu."
+    },
     "autoDetect": {
       "enable": "Enable auto-detect",
       "enableDesc": "When enabled, the extension may detect credentials from copy actions and will ask for confirmation before opening the modal.",

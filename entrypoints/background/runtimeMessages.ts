@@ -23,6 +23,7 @@ import { getErrorMessage } from "~/utils/error"
 import { createLogger } from "~/utils/logger"
 import { openOrFocusOptionsMenuItem } from "~/utils/navigation"
 
+import { setupContextMenus } from "./contextMenus"
 import { trackCookieInterceptorUrl } from "./cookieInterceptor"
 import {
   handleAutoDetectSite,
@@ -177,6 +178,17 @@ export function setupRuntimeMessageListeners() {
       ) {
         applyActionClickBehavior(request.behavior)
         sendResponse({ success: true })
+        return true
+      }
+
+      if (request.action === RuntimeActionIds.PreferencesRefreshContextMenus) {
+        void setupContextMenus()
+          .then(() => {
+            sendResponse({ success: true })
+          })
+          .catch((error) => {
+            sendResponse({ success: false, error: getErrorMessage(error) })
+          })
         return true
       }
 

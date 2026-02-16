@@ -12,11 +12,13 @@ describe("setupRuntimeMessageListeners routing", () => {
   let runtimeMessageListener: RuntimeMessageListener | undefined
   let applyActionClickBehavior: ReturnType<typeof vi.fn>
   let handleManagedSiteModelSyncMessage: ReturnType<typeof vi.fn>
+  let setupContextMenus: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
     runtimeMessageListener = undefined
     applyActionClickBehavior = vi.fn()
     handleManagedSiteModelSyncMessage = vi.fn()
+    setupContextMenus = vi.fn().mockResolvedValue(undefined)
 
     vi.resetModules()
 
@@ -32,6 +34,10 @@ describe("setupRuntimeMessageListeners routing", () => {
 
     vi.doMock("~/entrypoints/background/actionClickBehavior", () => ({
       applyActionClickBehavior,
+    }))
+
+    vi.doMock("~/entrypoints/background/contextMenus", () => ({
+      setupContextMenus,
     }))
 
     vi.doMock("~/services/modelSync", () => ({
@@ -65,6 +71,7 @@ describe("setupRuntimeMessageListeners routing", () => {
   afterEach(() => {
     vi.doUnmock("~/utils/browserApi")
     vi.doUnmock("~/entrypoints/background/actionClickBehavior")
+    vi.doUnmock("~/entrypoints/background/contextMenus")
     vi.doUnmock("~/services/modelSync")
     vi.doUnmock("~/services/autoCheckin/scheduler")
     vi.doUnmock("~/services/autoRefreshService")
@@ -98,6 +105,30 @@ describe("setupRuntimeMessageListeners routing", () => {
     expect(applyActionClickBehavior).toHaveBeenCalledWith("openPopup")
     expect(sendResponse).toHaveBeenCalledWith({ success: true })
     expect(result).toBe(true)
+  })
+
+  it("refreshes context menus when requested", async () => {
+    const { setupRuntimeMessageListeners } = await import(
+      "~/entrypoints/background/runtimeMessages"
+    )
+
+    setupRuntimeMessageListeners()
+    expect(runtimeMessageListener).toBeTypeOf("function")
+
+    const sendResponse = vi.fn()
+    const result = runtimeMessageListener?.(
+      {
+        action: RuntimeActionIds.PreferencesRefreshContextMenus,
+      },
+      {},
+      sendResponse,
+    )
+
+    expect(result).toBe(true)
+    expect(setupContextMenus).toHaveBeenCalledTimes(1)
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(sendResponse).toHaveBeenCalledWith({ success: true })
   })
 
   it("routes prefix actions to the feature handler and keeps the response channel open", async () => {

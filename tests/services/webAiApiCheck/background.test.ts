@@ -43,6 +43,9 @@ describe("webAiApiCheck background handlers", () => {
       ...DEFAULT_PREFERENCES,
       webAiApiCheck: {
         enabled: true,
+        contextMenu: {
+          enabled: true,
+        },
         autoDetect: {
           enabled: false,
           urlWhitelist: { patterns: ["^https://example\\.com"] },
@@ -76,6 +79,9 @@ describe("webAiApiCheck background handlers", () => {
       ...DEFAULT_PREFERENCES,
       webAiApiCheck: {
         enabled: true,
+        contextMenu: {
+          enabled: true,
+        },
         autoDetect: {
           enabled: true,
           urlWhitelist: { patterns: ["^https://example\\.com"] },

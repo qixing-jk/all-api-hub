@@ -2,6 +2,10 @@
   "settings": {
     "title": "网页 AI API 功能可用性测试",
     "description": "手动右键菜单始终可用。自动检测为可选功能，仅在白名单页面运行，并在打开弹窗前请求确认。默认不会保存提取到的 API Key。",
+    "contextMenu": {
+      "enable": "在浏览器右键菜单中显示",
+      "enableDesc": "启用后，在网页右键菜单中显示“AI API 检测”入口。"
+    },
     "autoDetect": {
       "enable": "启用自动检测",
       "enableDesc": "启用后，扩展可能从复制操作中识别凭据，并在打开弹窗前请求确认。",

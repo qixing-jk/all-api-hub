@@ -49,6 +49,9 @@ function getWebAiApiCheckPreferences(
     prefs.webAiApiCheck ??
     DEFAULT_PREFERENCES.webAiApiCheck ?? {
       enabled: true,
+      contextMenu: {
+        enabled: true,
+      },
       autoDetect: {
         enabled: false,
         urlWhitelist: { patterns: [] },
