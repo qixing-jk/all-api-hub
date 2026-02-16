@@ -1,7 +1,8 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 import { CCSwitchExportDialog } from "~/components/CCSwitchExportDialog"
 import { Modal } from "~/components/ui"
+import AddTokenDialog from "~/entrypoints/options/pages/KeyManagement/components/AddTokenDialog"
 import { useCopyKeyDialog } from "~/features/AccountManagement/components/CopyKeyDialog/hooks/useCopyKeyDialog"
 import type { ApiToken, DisplaySiteData } from "~/types"
 
@@ -25,6 +26,7 @@ export default function CopyKeyDialog({
   onClose,
   account,
 }: CopyKeyDialogProps) {
+  const [isAddTokenDialogOpen, setIsAddTokenDialogOpen] = useState(false)
   const [ccSwitchContext, setCCSwitchContext] = useState<{
     token: ApiToken
     account: DisplaySiteData
@@ -33,12 +35,27 @@ export default function CopyKeyDialog({
     tokens,
     isLoading,
     error,
+    isCreating,
+    createError,
     copiedKey,
     expandedTokens,
+    canCreateDefaultKey,
     fetchTokens,
     copyKey,
+    createDefaultKey,
+    refreshTokensAfterCreate,
     toggleTokenExpansion,
   } = useCopyKeyDialog(isOpen, account)
+
+  const handleOpenAddTokenDialog = () => setIsAddTokenDialogOpen(true)
+  const handleCloseAddTokenDialog = () => setIsAddTokenDialogOpen(false)
+  const handleAddTokenSuccess = () => refreshTokensAfterCreate()
+
+  useEffect(() => {
+    if (!isOpen || !account) {
+      setIsAddTokenDialogOpen(false)
+    }
+  }, [isOpen, account])
 
   const handleOpenCCSwitchDialog = (
     token: ApiToken,
@@ -68,6 +85,11 @@ export default function CopyKeyDialog({
         onCopyKey={copyKey}
         account={account}
         onOpenCCSwitchDialog={handleOpenCCSwitchDialog}
+        canCreateDefaultKey={canCreateDefaultKey}
+        isCreating={isCreating}
+        createError={createError}
+        onCreateDefaultKey={createDefaultKey}
+        onOpenAddTokenDialog={handleOpenAddTokenDialog}
       />
     )
   }
@@ -91,6 +113,15 @@ export default function CopyKeyDialog({
           token={ccSwitchContext.token}
         />
       )}
+      {account ? (
+        <AddTokenDialog
+          isOpen={isAddTokenDialogOpen}
+          onClose={handleCloseAddTokenDialog}
+          availableAccounts={[account]}
+          preSelectedAccountId={account.id}
+          onSuccess={handleAddTokenSuccess}
+        />
+      ) : null}
     </>
   )
 }

@@ -4,12 +4,33 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import AccountActionButtons from "~/features/AccountManagement/components/AccountActionButtons"
 
-const { mockHandleSetAccountDisabled } = vi.hoisted(() => ({
+const {
+  mockHandleSetAccountDisabled,
+  fetchAccountTokensMock,
+  toastSuccessMock,
+  toastErrorMock,
+} = vi.hoisted(() => ({
   mockHandleSetAccountDisabled: vi.fn(),
+  fetchAccountTokensMock: vi.fn(),
+  toastSuccessMock: vi.fn(),
+  toastErrorMock: vi.fn(),
 }))
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
+}))
+
+vi.mock("react-hot-toast", () => ({
+  default: {
+    success: toastSuccessMock,
+    error: toastErrorMock,
+  },
+}))
+
+vi.mock("~/services/apiService", () => ({
+  getApiService: () => ({
+    fetchAccountTokens: fetchAccountTokensMock,
+  }),
 }))
 
 vi.mock("~/features/AccountManagement/hooks/AccountActionsContext", () => ({
@@ -191,5 +212,42 @@ describe("AccountActionButtons", () => {
     await waitFor(() => {
       expect(screen.queryByRole("menu")).toBeNull()
     })
+  })
+
+  it("opens CopyKeyDialog when smart copy finds zero tokens", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([])
+
+    const user = userEvent.setup()
+    const onCopyKey = vi.fn()
+
+    render(
+      <AccountActionButtons
+        site={
+          {
+            id: "acc-4",
+            disabled: false,
+            name: "Site",
+            siteType: "test",
+            baseUrl: "https://example.com",
+            token: "token",
+            userId: 1,
+            authType: "access_token",
+            checkIn: { enableDetection: false },
+          } as any
+        }
+        onCopyKey={onCopyKey}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: "actions.copyKey" }))
+
+    await waitFor(() => {
+      expect(onCopyKey).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "acc-4" }),
+      )
+    })
+
+    expect(toastErrorMock).not.toHaveBeenCalledWith("actions.noKeyFound")
   })
 })

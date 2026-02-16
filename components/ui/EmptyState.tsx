@@ -4,21 +4,28 @@ import { cn } from "~/lib/utils"
 
 import { Button } from "./button"
 
+export type EmptyStateAction = {
+  label: string
+  onClick: () => void
+  variant?: React.ComponentProps<typeof Button>["variant"]
+  icon?: React.ReactNode
+  disabled?: boolean
+  loading?: boolean
+}
+
 export interface EmptyStateProps {
   icon: React.ReactNode
   title: string
   description?: string
-  action?: {
-    label: string
-    onClick: () => void
-    variant?: React.ComponentProps<typeof Button>["variant"]
-    icon?: React.ReactNode
-  }
+  action?: EmptyStateAction
+  actions?: EmptyStateAction[]
   className?: string
 }
 
 export const EmptyState = React.forwardRef<HTMLDivElement, EmptyStateProps>(
-  ({ icon, title, description, action, className }, ref) => {
+  ({ icon, title, description, action, actions, className }, ref) => {
+    const resolvedActions = actions ?? (action ? [action] : [])
+
     return (
       <div
         ref={ref}
@@ -40,15 +47,32 @@ export const EmptyState = React.forwardRef<HTMLDivElement, EmptyStateProps>(
             {description}
           </p>
         )}
-        {action && (
+        {resolvedActions.length === 1 ? (
           <Button
-            variant={action.variant || "default"}
-            onClick={action.onClick}
-            leftIcon={action.icon}
+            variant={resolvedActions[0].variant || "default"}
+            onClick={resolvedActions[0].onClick}
+            leftIcon={resolvedActions[0].icon}
+            disabled={resolvedActions[0].disabled}
+            loading={resolvedActions[0].loading}
           >
-            {action.label}
+            {resolvedActions[0].label}
           </Button>
-        )}
+        ) : resolvedActions.length > 1 ? (
+          <div className="flex flex-col items-center gap-2 sm:flex-row sm:justify-center">
+            {resolvedActions.map((resolvedAction, index) => (
+              <Button
+                key={`${resolvedAction.label}-${index}`}
+                variant={resolvedAction.variant || "default"}
+                onClick={resolvedAction.onClick}
+                leftIcon={resolvedAction.icon}
+                disabled={resolvedAction.disabled}
+                loading={resolvedAction.loading}
+              >
+                {resolvedAction.label}
+              </Button>
+            ))}
+          </div>
+        ) : null}
       </div>
     )
   },

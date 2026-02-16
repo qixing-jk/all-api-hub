@@ -29,6 +29,7 @@ interface AddTokenDialogProps {
   availableAccounts: DisplaySiteData[]
   preSelectedAccountId?: string | null
   editingToken?: AccountToken | null
+  onSuccess?: () => void | Promise<void>
 }
 
 /**
@@ -37,7 +38,7 @@ interface AddTokenDialogProps {
  * @returns Modal element rendered through shared UI primitives.
  */
 export default function AddTokenDialog(props: AddTokenDialogProps) {
-  const { isOpen, onClose, availableAccounts, editingToken } = props
+  const { isOpen, onClose, availableAccounts, editingToken, onSuccess } = props
   const { t } = useTranslation("keyManagement")
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -117,6 +118,11 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
       }
 
       handleClose()
+      if (onSuccess) {
+        void Promise.resolve(onSuccess()).catch((error) => {
+          logger.error("AddTokenDialog onSuccess callback failed", error)
+        })
+      }
     } catch (error) {
       logger.error(`${isEditMode ? "更新" : "创建"}密钥失败`, error)
       toast.error(

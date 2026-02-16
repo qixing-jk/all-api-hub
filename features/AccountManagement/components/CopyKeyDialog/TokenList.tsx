@@ -1,7 +1,11 @@
-import { KeyIcon } from "@heroicons/react/24/outline"
+import {
+  KeyIcon,
+  PencilSquareIcon,
+  PlusIcon,
+} from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
-import { EmptyState } from "~/components/ui"
+import { Alert, EmptyState } from "~/components/ui"
 import type { ApiToken, DisplaySiteData } from "~/types"
 
 import { TokenItem } from "./TokenItem"
@@ -14,6 +18,11 @@ interface TokenListProps {
   onCopyKey: (key: string) => void
   account: DisplaySiteData
   onOpenCCSwitchDialog?: (token: ApiToken, account: DisplaySiteData) => void
+  canCreateDefaultKey?: boolean
+  isCreating?: boolean
+  createError?: string | null
+  onCreateDefaultKey?: () => void
+  onOpenAddTokenDialog?: () => void
 }
 
 /**
@@ -27,15 +36,54 @@ export function TokenList({
   onCopyKey,
   account,
   onOpenCCSwitchDialog,
+  canCreateDefaultKey = false,
+  isCreating = false,
+  createError,
+  onCreateDefaultKey,
+  onOpenAddTokenDialog,
 }: TokenListProps) {
   const { t } = useTranslation("ui")
 
   if (!Array.isArray(tokens) || tokens.length === 0) {
+    const actions = [
+      ...(onCreateDefaultKey
+        ? [
+            {
+              label: isCreating
+                ? t("dialog.copyKey.creatingKey")
+                : t("dialog.copyKey.createKey"),
+              onClick: onCreateDefaultKey,
+              icon: <PlusIcon className="h-4 w-4" />,
+              disabled: !canCreateDefaultKey || isCreating,
+              loading: isCreating,
+            },
+          ]
+        : []),
+      ...(onOpenAddTokenDialog
+        ? [
+            {
+              label: t("dialog.copyKey.createCustomKey"),
+              onClick: onOpenAddTokenDialog,
+              icon: <PencilSquareIcon className="h-4 w-4" />,
+              variant: "outline" as const,
+              disabled: !canCreateDefaultKey || isCreating,
+            },
+          ]
+        : []),
+    ]
+
     return (
-      <EmptyState
-        icon={<KeyIcon className="h-12 w-12" />}
-        title={t("dialog.copyKey.noKeys")}
-      />
+      <div className="space-y-4">
+        <EmptyState
+          icon={<KeyIcon className="h-12 w-12" />}
+          title={t("dialog.copyKey.noKeys")}
+          description={t("dialog.copyKey.noKeysDescription")}
+          actions={actions}
+        />
+        {createError ? (
+          <Alert variant="destructive" description={createError} />
+        ) : null}
+      </div>
     )
   }
 

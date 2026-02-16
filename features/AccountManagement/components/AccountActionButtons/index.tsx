@@ -121,8 +121,8 @@ export default function AccountActionButtons({
           // Multiple tokens - open dialog
           onCopyKey(site)
         } else {
-          // No tokens found
-          toast.error(t("actions.noKeyFound"))
+          // No tokens found - open dialog for actionable empty state
+          onCopyKey(site)
         }
       } else {
         logger.warn("Token response is not an array", {
