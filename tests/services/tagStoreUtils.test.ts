@@ -197,4 +197,33 @@ describe("tagStoreUtils.mergeTagStoresAndRemapAccounts", () => {
     expect(Object.keys(merged.tagStore.tagsById)).toEqual(["local"])
     expect(merged.remoteAccounts[0].tagIds).toEqual(["local"])
   })
+
+  it("remaps remote taggables (non-account entities) using the same id map", () => {
+    const localStore = createDefaultTagStore()
+    localStore.tagsById.local = {
+      id: "local",
+      name: "Work",
+      createdAt: 1,
+      updatedAt: 2,
+    }
+
+    const remoteStore = createDefaultTagStore()
+    remoteStore.tagsById.remote = {
+      id: "remote",
+      name: " work ",
+      createdAt: 10,
+      updatedAt: 20,
+    }
+
+    const merged = mergeTagStoresAndRemapAccounts({
+      localTagStore: localStore,
+      remoteTagStore: remoteStore,
+      localAccounts: [],
+      remoteAccounts: [],
+      localTaggables: [],
+      remoteTaggables: [{ id: "p1", tagIds: ["remote"] }],
+    })
+
+    expect(merged.remoteTaggables[0]?.tagIds).toEqual(["local"])
+  })
 })

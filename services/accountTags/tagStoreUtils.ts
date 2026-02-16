@@ -134,19 +134,25 @@ export function buildNormalizedNameIndex(store: TagStore): Map<string, string> {
  * - If local and remote share the same normalized name, prefer the local id.
  * - If remote id collides with an unrelated local id, generate a fresh id and remap.
  */
-export function mergeTagStoresAndRemapAccounts(input: {
+export function mergeTagStoresAndRemapAccounts<
+  TTaggable extends { tagIds?: string[] } = { tagIds?: string[] },
+>(input: {
   localTagStore: TagStore
   remoteTagStore: TagStore
   localAccounts: SiteAccount[]
   remoteAccounts: SiteAccount[]
   localBookmarks?: SiteBookmark[]
   remoteBookmarks?: SiteBookmark[]
+  localTaggables?: TTaggable[]
+  remoteTaggables?: TTaggable[]
 }): {
   tagStore: TagStore
   localAccounts: SiteAccount[]
   remoteAccounts: SiteAccount[]
   localBookmarks: SiteBookmark[]
   remoteBookmarks: SiteBookmark[]
+  localTaggables: TTaggable[]
+  remoteTaggables: TTaggable[]
 } {
   const localTagStore = sanitizeTagStore(input.localTagStore)
   const remoteTagStore = sanitizeTagStore(input.remoteTagStore)
@@ -228,6 +234,11 @@ export function mergeTagStoresAndRemapAccounts(input: {
     localBookmarks: remapEntityTagIds(input.localBookmarks ?? [], localIdMap),
     remoteBookmarks: remapEntityTagIds(
       input.remoteBookmarks ?? [],
+      remoteIdMap,
+    ),
+    localTaggables: remapEntityTagIds(input.localTaggables ?? [], localIdMap),
+    remoteTaggables: remapEntityTagIds(
+      input.remoteTaggables ?? [],
       remoteIdMap,
     ),
   }

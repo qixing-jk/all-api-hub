@@ -226,4 +226,189 @@ describe("ApiCheckModalHost", () => {
       await within(probeCard).findByText("Unauthorized: [REDACTED]"),
     ).toBeInTheDocument()
   })
+
+  it("saves credentials to API profiles", async () => {
+    const user = userEvent.setup()
+    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
+      if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
+        return { success: true, modelIds: [] }
+      }
+      if (message.action === RuntimeActionIds.ApiCheckRunProbe) {
+        return {
+          success: true,
+          result: {
+            id: message.probeId,
+            status: "success",
+            latencyMs: 1,
+            summary: "OK",
+          },
+        }
+      }
+      if (message.action === RuntimeActionIds.ApiCheckSaveProfile) {
+        return {
+          success: true,
+          profileId: "p-1",
+          name: "proxy.example.com (OpenAI-compatible)",
+          apiType: message.apiType,
+          baseUrl: "https://proxy.example.com/api",
+        }
+      }
+      return { success: false }
+    })
+
+    renderSubject()
+    await act(async () => {
+      window.dispatchEvent(
+        new CustomEvent(API_CHECK_OPEN_MODAL_EVENT, {
+          detail: {
+            sourceText: "",
+            pageUrl: "https://example.com",
+            trigger: "contextMenu",
+          },
+        }),
+      )
+    })
+
+    const baseUrlInput = await screen.findByPlaceholderText(
+      "https://example.com/api",
+    )
+    const apiKeyInput = await screen.findByPlaceholderText("sk-...")
+
+    await user.type(baseUrlInput, "https://proxy.example.com/api")
+    await user.type(apiKeyInput, "sk-secret-xyz")
+
+    await waitFor(() => {
+      expect(sendRuntimeMessage).toHaveBeenCalledWith({
+        action: RuntimeActionIds.ApiCheckFetchModels,
+        apiType: "openai-compatible",
+        baseUrl: "https://proxy.example.com/api",
+        apiKey: "sk-secret-xyz",
+      })
+    })
+
+    const saveButton = await screen.findByRole("button", {
+      name: webAiApiCheckEn.modal.actions.saveToProfiles,
+    })
+
+    await waitFor(() => {
+      expect(saveButton).not.toBeDisabled()
+    })
+
+    await user.click(saveButton)
+
+    await waitFor(() => {
+      expect(sendRuntimeMessage).toHaveBeenCalledWith({
+        action: RuntimeActionIds.ApiCheckSaveProfile,
+        apiType: "openai-compatible",
+        baseUrl: "https://proxy.example.com/api",
+        apiKey: "sk-secret-xyz",
+        pageUrl: "https://example.com",
+      })
+    })
+  })
+
+  it("allows saving credentials while tests are running", async () => {
+    const user = userEvent.setup()
+
+    let resolveModelsProbe: ((value: unknown) => void) | null = null
+
+    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
+      if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
+        return { success: true, modelIds: [] }
+      }
+
+      if (
+        message.action === RuntimeActionIds.ApiCheckRunProbe &&
+        message.probeId === "models"
+      ) {
+        return await new Promise((resolve) => {
+          resolveModelsProbe = resolve
+        })
+      }
+
+      if (message.action === RuntimeActionIds.ApiCheckRunProbe) {
+        return {
+          success: true,
+          result: {
+            id: message.probeId,
+            status: "pass",
+            latencyMs: 1,
+            summary: "OK",
+          },
+        }
+      }
+
+      if (message.action === RuntimeActionIds.ApiCheckSaveProfile) {
+        return {
+          success: true,
+          profileId: "p-1",
+          name: "proxy.example.com (OpenAI-compatible)",
+          apiType: message.apiType,
+          baseUrl: message.baseUrl,
+        }
+      }
+
+      return { success: false }
+    })
+
+    renderSubject()
+    await act(async () => {
+      window.dispatchEvent(
+        new CustomEvent(API_CHECK_OPEN_MODAL_EVENT, {
+          detail: {
+            sourceText: "",
+            pageUrl: "https://example.com",
+            trigger: "contextMenu",
+          },
+        }),
+      )
+    })
+
+    const baseUrlInput = await screen.findByPlaceholderText(
+      "https://example.com/api",
+    )
+    const apiKeyInput = await screen.findByPlaceholderText("sk-...")
+
+    await user.type(baseUrlInput, "https://proxy.example.com/api")
+    await user.type(apiKeyInput, "sk-secret-xyz")
+
+    const saveButton = await screen.findByRole("button", {
+      name: webAiApiCheckEn.modal.actions.saveToProfiles,
+    })
+
+    await waitFor(() => {
+      expect(saveButton).not.toBeDisabled()
+    })
+
+    await user.click(
+      await screen.findByText(webAiApiCheckEn.modal.actions.test),
+    )
+
+    await waitFor(() => {
+      expect(resolveModelsProbe).not.toBeNull()
+      expect(saveButton).not.toBeDisabled()
+    })
+
+    resolveModelsProbe?.({
+      success: true,
+      result: {
+        id: "models",
+        status: "pass",
+        latencyMs: 1,
+        summary: "OK",
+      },
+    })
+
+    await user.click(saveButton)
+
+    await waitFor(() => {
+      expect(sendRuntimeMessage).toHaveBeenCalledWith({
+        action: RuntimeActionIds.ApiCheckSaveProfile,
+        apiType: "openai-compatible",
+        baseUrl: "https://proxy.example.com/api",
+        apiKey: "sk-secret-xyz",
+        pageUrl: "https://example.com",
+      })
+    })
+  })
 })

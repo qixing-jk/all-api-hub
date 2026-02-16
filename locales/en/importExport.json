@@ -32,6 +32,7 @@
     "containsAccountData": "Contains account data",
     "containsUserSettings": "Contains user settings",
     "containsChannelConfigs": "Contains channel configuration",
+    "containsApiCredentialProfiles": "Contains API credential profiles",
     "backupTime": "Backup Time",
     "dataInvalid": "Data format error, please check JSON format",
     "selectFileImport": "Please select file or input data to import",
@@ -49,7 +50,7 @@
     "importWarning1": "Imported data will overwrite existing data of the same type, please operate with caution",
     "importWarning2": "It is recommended to export current data for backup before importing",
     "importWarning3": "Only supports JSON format files exported by this extension",
-    "importWarning4": "Imported account data contains sensitive information, please ensure the file source is trustworthy"
+    "importWarning4": "Imported data may contain sensitive information (account tokens and API keys). Keep backups secure and only import from trusted sources"
   },
   "webdav": {
     "title": "WebDAV Backup and Sync",

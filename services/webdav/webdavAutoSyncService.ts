@@ -11,8 +11,16 @@ import {
   createDefaultTagStore,
   sanitizeTagStore,
 } from "~/services/accountTags/tagStoreUtils"
+import {
+  apiCredentialProfilesStorage,
+  mergeApiCredentialProfilesConfigs,
+} from "~/services/apiCredentialProfilesStorage"
 import { migrateAccountTagsData } from "~/services/configMigration/accountTags/accountTagsDataMigration"
 import type { SiteAccount, SiteBookmark, TagStore } from "~/types"
+import {
+  API_CREDENTIAL_PROFILES_CONFIG_VERSION,
+  type ApiCredentialProfilesConfig,
+} from "~/types/apiCredentialProfiles"
 import type { ChannelConfigMap } from "~/types/channelConfig"
 import { WEBDAV_SYNC_STRATEGIES, WebDAVSettings } from "~/types/webdav"
 import {
@@ -324,11 +332,13 @@ class WebdavAutoSyncService {
       localTagStore,
       localPreferences,
       localChannelConfigs,
+      localApiCredentialProfiles,
     ] = await Promise.all([
       accountStorage.exportData(),
       tagStorage.exportTagStore(),
       userPreferences.exportPreferences(),
       channelConfigStorage.exportConfigs(),
+      apiCredentialProfilesStorage.exportConfig(),
     ])
 
     const localPinnedAccountIds = localAccountsConfig.pinnedAccountIds || []
@@ -349,11 +359,19 @@ class WebdavAutoSyncService {
     let tagStoreToSave = localTagStore
     let preferencesToSave: UserPreferences = localPreferences
     let channelConfigsToSave: ChannelConfigMap = localChannelConfigs
+    let apiCredentialProfilesToSave: ApiCredentialProfilesConfig =
+      localApiCredentialProfiles
     let pinnedAccountIdsToSave: string[] = localPinnedAccountIds
     let orderedAccountIdsToSave: string[] = localOrderedAccountIds
 
     if (strategy === WEBDAV_SYNC_STRATEGIES.MERGE && remoteData) {
       // 合并策略
+      const emptyProfiles: ApiCredentialProfilesConfig = {
+        version: API_CREDENTIAL_PROFILES_CONFIG_VERSION,
+        profiles: [],
+        lastUpdated: 0,
+      }
+
       const mergeResult = this.mergeData(
         {
           accounts: localAccountsConfig.accounts,
@@ -363,6 +381,7 @@ class WebdavAutoSyncService {
           preferences: localPreferences,
           preferencesTimestamp: localPreferences.lastUpdated,
           channelConfigs: localChannelConfigs,
+          apiCredentialProfiles: localApiCredentialProfiles,
         },
         {
           accounts: normalizedRemote.accounts,
@@ -377,6 +396,8 @@ class WebdavAutoSyncService {
               normalizedRemote.preferences.lastUpdated) ||
             0,
           channelConfigs: normalizedRemote.channelConfigs,
+          apiCredentialProfiles:
+            normalizedRemote.apiCredentialProfiles ?? emptyProfiles,
         },
       )
 
@@ -385,6 +406,7 @@ class WebdavAutoSyncService {
       tagStoreToSave = mergeResult.tagStore
       preferencesToSave = mergeResult.preferences
       channelConfigsToSave = mergeResult.channelConfigs
+      apiCredentialProfilesToSave = mergeResult.apiCredentialProfiles
 
       const entryIdSet = new Set<string>([
         ...accountsToSave.map((account) => account.id),
@@ -424,6 +446,7 @@ class WebdavAutoSyncService {
       tagStoreToSave = localTagStore
       preferencesToSave = localPreferences
       channelConfigsToSave = localChannelConfigs
+      apiCredentialProfilesToSave = localApiCredentialProfiles
       {
         const entryIdSet = new Set<string>([
           ...accountsToSave.map((account) => account.id),
@@ -456,6 +479,8 @@ class WebdavAutoSyncService {
       preferencesToSave = normalizedRemote.preferences || localPreferences
       channelConfigsToSave =
         normalizedRemote.channelConfigs || localChannelConfigs
+      apiCredentialProfilesToSave =
+        normalizedRemote.apiCredentialProfiles || localApiCredentialProfiles
       {
         const entryIdSet = new Set<string>([
           ...accountsToSave.map((account) => account.id),
@@ -493,6 +518,7 @@ class WebdavAutoSyncService {
         preserveWebdav: true,
       }),
       channelConfigStorage.importConfigs(channelConfigsToSave),
+      apiCredentialProfilesStorage.importConfig(apiCredentialProfilesToSave),
     ])
 
     // 上传到WebDAV
@@ -509,6 +535,7 @@ class WebdavAutoSyncService {
       tagStore: tagStoreToSave,
       preferences: preferencesToSave,
       channelConfigs: channelConfigsToSave,
+      apiCredentialProfiles: apiCredentialProfilesToSave,
     }
 
     await uploadBackup(JSON.stringify(exportData, null, 2))
@@ -529,6 +556,7 @@ class WebdavAutoSyncService {
       preferences: UserPreferences
       preferencesTimestamp: number
       channelConfigs: ChannelConfigMap
+      apiCredentialProfiles: ApiCredentialProfilesConfig
     },
     remote: {
       accounts: SiteAccount[]
@@ -538,6 +566,7 @@ class WebdavAutoSyncService {
       preferences: UserPreferences
       preferencesTimestamp: number
       channelConfigs: ChannelConfigMap | null
+      apiCredentialProfiles: ApiCredentialProfilesConfig
     },
   ): {
     accounts: SiteAccount[]
@@ -545,6 +574,7 @@ class WebdavAutoSyncService {
     tagStore: TagStore
     preferences: UserPreferences
     channelConfigs: ChannelConfigMap
+    apiCredentialProfiles: ApiCredentialProfilesConfig
   } {
     logger.debug("开始合并数据", {
       localAccountCount: local.accounts.length,
@@ -577,6 +607,8 @@ class WebdavAutoSyncService {
       remoteAccounts: migratedRemote.accounts,
       localBookmarks: local.bookmarks,
       remoteBookmarks: remote.bookmarks,
+      localTaggables: local.apiCredentialProfiles.profiles,
+      remoteTaggables: remote.apiCredentialProfiles.profiles,
     })
 
     // 合并账号数据
@@ -642,6 +674,17 @@ class WebdavAutoSyncService {
 
     const mergedBookmarks = Array.from(bookmarkMap.values())
 
+    const apiCredentialProfiles = mergeApiCredentialProfilesConfigs({
+      local: {
+        ...local.apiCredentialProfiles,
+        profiles: tagMerge.localTaggables,
+      },
+      incoming: {
+        ...remote.apiCredentialProfiles,
+        profiles: tagMerge.remoteTaggables,
+      },
+    })
+
     // 合并偏好设置
     // 比较lastUpdated字段，保留最新的
     const preferences =
@@ -697,6 +740,7 @@ class WebdavAutoSyncService {
       tagStore: tagMerge.tagStore,
       preferences,
       channelConfigs: mergedChannelConfigs,
+      apiCredentialProfiles,
     }
   }
 

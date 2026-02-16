@@ -12,4 +12,3 @@ export function clampBalanceHistoryRetentionDays(value: unknown): number {
     return DEFAULT_BALANCE_HISTORY_PREFERENCES.retentionDays
   return Math.min(3650, Math.max(1, Math.trunc(parsed)))
 }
-

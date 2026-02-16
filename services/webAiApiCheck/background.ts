@@ -11,6 +11,7 @@ import {
   summaryKeyFromHttpStatus,
   toSanitizedErrorSummary,
 } from "~/services/aiApiVerification/utils"
+import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfilesStorage"
 import { fetchAnthropicModelIds } from "~/services/apiService/anthropic"
 import { fetchGoogleModelIds } from "~/services/apiService/google"
 import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompatible"
@@ -31,6 +32,7 @@ import type {
   ApiCheckFetchModelsResponse,
   ApiCheckRunProbeResponse,
   ApiCheckRuntimeRequest,
+  ApiCheckSaveProfileResponse,
   ApiCheckShouldPromptResponse,
 } from "./types"
 
@@ -80,6 +82,42 @@ function normalizeProbeBaseUrl(params: {
   }
 
   return normalizeApiCheckBaseUrl(params.baseUrl)
+}
+
+/**
+ * Builds a stable, user-friendly default profile name for saved credentials.
+ */
+function buildDefaultProfileName(params: {
+  apiType: ApiVerificationApiType
+  normalizedBaseUrl: string
+  pageUrl?: string
+}): string {
+  const { apiType, normalizedBaseUrl, pageUrl } = params
+
+  const label =
+    apiType === API_TYPES.OPENAI_COMPATIBLE ? "OpenAI-compatible" : apiType
+
+  const hostname =
+    (() => {
+      try {
+        return new URL(normalizedBaseUrl).hostname
+      } catch {
+        return ""
+      }
+    })() ||
+    (() => {
+      try {
+        return pageUrl ? new URL(pageUrl).hostname : ""
+      } catch {
+        return ""
+      }
+    })()
+
+  if (hostname) {
+    return `${hostname} (${label})`
+  }
+
+  return `API Profile (${label})`
 }
 
 /**
@@ -253,6 +291,69 @@ export async function handleWebAiApiCheckMessage(
           }
 
           const response: ApiCheckRunProbeResponse = { success: true, result }
+          sendResponse(response)
+          return
+        }
+      }
+
+      case RuntimeActionIds.ApiCheckSaveProfile: {
+        const { apiType, baseUrl, apiKey, name, pageUrl } = request
+
+        if (!apiType || !baseUrl?.trim() || !apiKey?.trim()) {
+          const response: ApiCheckSaveProfileResponse = {
+            success: false,
+            error: "Missing apiType, baseUrl, or apiKey",
+          }
+          sendResponse(response)
+          return
+        }
+
+        const normalizedBaseUrl = normalizeProbeBaseUrl({ apiType, baseUrl })
+        if (!normalizedBaseUrl) {
+          const response: ApiCheckSaveProfileResponse = {
+            success: false,
+            error: "Invalid baseUrl",
+          }
+          sendResponse(response)
+          return
+        }
+
+        const providedName = typeof name === "string" ? name.trim() : ""
+        const profileName =
+          providedName ||
+          buildDefaultProfileName({ apiType, normalizedBaseUrl, pageUrl })
+
+        try {
+          const profile = await apiCredentialProfilesStorage.createProfile({
+            name: profileName,
+            apiType,
+            baseUrl: normalizedBaseUrl,
+            apiKey,
+            tagIds: [],
+            notes: "",
+          })
+
+          const response: ApiCheckSaveProfileResponse = {
+            success: true,
+            profileId: profile.id,
+            name: profile.name,
+            apiType: profile.apiType,
+            baseUrl: profile.baseUrl,
+          }
+          sendResponse(response)
+          return
+        } catch (error) {
+          const message = toSanitizedErrorSummary(error, [apiKey])
+          logger.error("Failed to save ApiCheck credentials to profiles", {
+            apiType,
+            baseUrl: normalizedBaseUrl,
+            message,
+          })
+
+          const response: ApiCheckSaveProfileResponse = {
+            success: false,
+            error: message,
+          }
           sendResponse(response)
           return
         }

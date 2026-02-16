@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { tagStorage } from "~/services/accountTags/tagStorage"
+import { API_TYPES } from "~/services/aiApiVerification"
+import { API_CREDENTIAL_PROFILES_STORAGE_KEYS } from "~/services/storageKeys"
 import type { AccountStorageConfig } from "~/types"
 
 const storageData = new Map<string, any>()
@@ -225,5 +227,53 @@ describe("tagStorage", () => {
     expect(savedAccounts.bookmarks[1].tagIds).toEqual([])
     const savedStore = storageData.get("global_tag_store") as any
     expect(savedStore.tagsById.t1).toBeUndefined()
+  })
+
+  it("deleteTag removes the tag id from API credential profiles", async () => {
+    const store = {
+      version: 1,
+      tagsById: {
+        t1: { id: "t1", name: "Work", createdAt: 1, updatedAt: 1 },
+      },
+    }
+
+    const accountsConfig: AccountStorageConfig = {
+      accounts: [],
+      bookmarks: [],
+      pinnedAccountIds: [],
+      orderedAccountIds: [],
+      last_updated: 0,
+    }
+
+    storageData.set("global_tag_store", store)
+    storageData.set("site_accounts", accountsConfig)
+    storageData.set(
+      API_CREDENTIAL_PROFILES_STORAGE_KEYS.API_CREDENTIAL_PROFILES,
+      {
+        version: 2,
+        profiles: [
+          {
+            id: "p-1",
+            name: "Profile",
+            apiType: API_TYPES.OPENAI_COMPATIBLE,
+            baseUrl: "https://example.com",
+            apiKey: "sk-test",
+            tagIds: ["t1"],
+            notes: "",
+            createdAt: 1,
+            updatedAt: 1,
+          },
+        ],
+        lastUpdated: 1,
+      },
+    )
+
+    const result = await tagStorage.deleteTag("t1")
+    expect(result.updatedApiCredentialProfiles).toBe(1)
+
+    const savedProfiles = storageData.get(
+      API_CREDENTIAL_PROFILES_STORAGE_KEYS.API_CREDENTIAL_PROFILES,
+    ) as any
+    expect(savedProfiles.profiles[0]?.tagIds).toEqual([])
   })
 })

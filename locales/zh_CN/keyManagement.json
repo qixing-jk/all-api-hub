@@ -68,6 +68,7 @@
   },
   "actions": {
     "copyKey": "复制密钥",
+    "saveToApiProfiles": "保存到 API 凭证",
     "useInCherry": "在Cherry Studio中使用",
     "exportToKiloCode": "导出到 Kilo Code",
     "exportToCCSwitch": "导出到CC Switch",
@@ -85,6 +86,8 @@
     "loadFailed": "加载密钥列表失败",
     "keyCopied": "密钥 {{name}} 已复制到剪贴板",
     "copyFailed": "复制失败",
+    "savedToApiProfiles": "已保存 {{name}} 到 API 凭证",
+    "saveToApiProfilesFailed": "保存到 API 凭证失败",
     "deleteConfirm": "确定要删除密钥 {{name}} 吗？此操作不可撤销",
     "accountNotFound": "找不到对应账号信息",
     "deleteSuccess": "密钥 {{name}} 删除成功",

@@ -1,5 +1,6 @@
 import { EyeIcon, EyeSlashIcon, XMarkIcon } from "@heroicons/react/24/outline"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import toast from "react-hot-toast/headless"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -93,6 +94,7 @@ export function ApiCheckModalHost() {
 
   const [probes, setProbes] = useState<ProbeItemState[]>([])
   const [isRunningAll, setIsRunningAll] = useState(false)
+  const [isSavingProfile, setIsSavingProfile] = useState(false)
   const [validationError, setValidationError] = useState<string | null>(null)
 
   const probeDefinitions = useMemo(
@@ -106,6 +108,7 @@ export function ApiCheckModalHost() {
   )
 
   const hasFetchedModels = modelIds.length > 0
+  const isAnyProbeRunning = probes.some((probe) => probe.isRunning)
 
   const modelListSupported =
     apiType === API_TYPES.OPENAI_COMPATIBLE ||
@@ -402,6 +405,49 @@ export function ApiCheckModalHost() {
     }
   }
 
+  // Users may want to persist credentials first, then verify later.
+  const canSaveProfile = !!baseUrl.trim() && !!apiKey.trim() && !isSavingProfile
+
+  const handleSaveProfile = async () => {
+    setValidationError(null)
+
+    const trimmedBaseUrl = baseUrl.trim()
+    const trimmedApiKey = apiKey.trim()
+
+    if (!trimmedBaseUrl || !trimmedApiKey) {
+      setValidationError(t("webAiApiCheck:modal.errors.missingBaseUrlOrKey"))
+      return
+    }
+
+    setIsSavingProfile(true)
+    try {
+      const response: any = await sendRuntimeMessage({
+        action: RuntimeActionIds.ApiCheckSaveProfile,
+        apiType,
+        baseUrl: trimmedBaseUrl,
+        apiKey: trimmedApiKey,
+        pageUrl: pageUrl || window.location.href,
+      })
+
+      if (response?.success) {
+        toast.success(
+          t("webAiApiCheck:modal.messages.savedToProfiles", {
+            name: typeof response.name === "string" ? response.name : "",
+          }),
+        )
+      } else {
+        toast.error(
+          response?.error ||
+            t("webAiApiCheck:modal.errors.saveToProfilesFailed"),
+        )
+      }
+    } catch {
+      toast.error(t("webAiApiCheck:modal.errors.saveToProfilesFailed"))
+    } finally {
+      setIsSavingProfile(false)
+    }
+  }
+
   const apiTypeOptions = useMemo(
     () => [
       { value: API_TYPES.OPENAI_COMPATIBLE, label: "OpenAI-compatible" },
@@ -445,7 +491,7 @@ export function ApiCheckModalHost() {
               variant="ghost"
               size="sm"
               onClick={close}
-              disabled={isRunningAll || probes.some((p) => p.isRunning)}
+              disabled={isRunningAll || isAnyProbeRunning}
             >
               <XMarkIcon className="h-4 w-4" />
             </IconButton>
@@ -555,6 +601,12 @@ export function ApiCheckModalHost() {
                 </div>
               ) : null}
 
+              {!hasAnyResult ? (
+                <div className="text-muted-foreground text-xs">
+                  {t("webAiApiCheck:modal.hints.saveWithoutTest")}
+                </div>
+              ) : null}
+
               <div className="flex flex-wrap items-center justify-end gap-2">
                 {modelListSupported ? (
                   <Button
@@ -573,14 +625,23 @@ export function ApiCheckModalHost() {
                   type="button"
                   onClick={runAll}
                   disabled={
-                    isRunningAll ||
-                    isFetchingModels ||
-                    probes.some((p) => p.isRunning)
+                    isRunningAll || isFetchingModels || isAnyProbeRunning
                   }
                 >
                   {isRunningAll
                     ? t("webAiApiCheck:modal.actions.testing")
                     : t("webAiApiCheck:modal.actions.test")}
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleSaveProfile}
+                  disabled={!canSaveProfile}
+                >
+                  {isSavingProfile
+                    ? t("webAiApiCheck:modal.actions.saving")
+                    : t("webAiApiCheck:modal.actions.saveToProfiles")}
                 </Button>
               </div>
 

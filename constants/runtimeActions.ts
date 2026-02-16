@@ -75,6 +75,10 @@ export const RuntimeActionIds = {
     RuntimeActionPrefixes.ApiCheck,
     "runProbe",
   ),
+  ApiCheckSaveProfile: composeRuntimeAction(
+    RuntimeActionPrefixes.ApiCheck,
+    "saveProfile",
+  ),
 
   PermissionsCheck: composeRuntimeAction(
     RuntimeActionPrefixes.Permissions,

@@ -92,9 +92,43 @@ export type ApiCheckRunProbeResponse =
     }
 
 /**
+ * Runtime request from content → background to persist the current credentials
+ * as an API credential profile.
+ *
+ * NOTE: apiKey is sensitive and must never be echoed back in any response payload.
+ */
+export type ApiCheckSaveProfileRequest = {
+  action: typeof RuntimeActionIds.ApiCheckSaveProfile
+  apiType: ApiVerificationApiType
+  baseUrl: string
+  apiKey: string
+  pageUrl?: string
+  name?: string
+}
+
+/**
+ * Runtime response for {@link ApiCheckSaveProfileRequest}.
+ *
+ * The returned payload MUST NOT include secrets (apiKey).
+ */
+export type ApiCheckSaveProfileResponse =
+  | {
+      success: true
+      profileId: string
+      name: string
+      apiType: ApiVerificationApiType
+      baseUrl: string
+    }
+  | {
+      success: false
+      error?: string
+    }
+
+/**
  * Union of ApiCheck runtime requests handled by the background router.
  */
 export type ApiCheckRuntimeRequest =
   | ApiCheckShouldPromptRequest
   | ApiCheckFetchModelsRequest
   | ApiCheckRunProbeRequest
+  | ApiCheckSaveProfileRequest

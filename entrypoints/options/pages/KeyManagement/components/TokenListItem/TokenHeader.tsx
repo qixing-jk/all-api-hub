@@ -1,9 +1,11 @@
 import {
   DocumentDuplicateIcon,
   PencilIcon,
+  PlusIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline"
 import { useState } from "react"
+import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { useChannelDialog } from "~/components/ChannelDialog"
@@ -18,12 +20,24 @@ import { ManagedSiteIcon } from "~/components/icons/ManagedSiteIcon"
 import { KiloCodeExportDialog } from "~/components/KiloCodeExportDialog"
 import { Badge, Heading6, IconButton } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import {
+  API_TYPES,
+  type ApiVerificationApiType,
+} from "~/services/aiApiVerification"
+import { toSanitizedErrorSummary } from "~/services/aiApiVerification/utils"
+import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfilesStorage"
 import type { DisplaySiteData } from "~/types"
 import { OpenInCherryStudio } from "~/utils/cherryStudio"
+import { createLogger } from "~/utils/logger"
 import { getManagedSiteLabelKey } from "~/utils/managedSite"
 import { showResultToast } from "~/utils/toastHelpers"
 
 import { AccountToken } from "../../type"
+
+/**
+ * Unified logger scoped to the Key Management token header actions.
+ */
+const logger = createLogger("TokenHeader")
 
 interface TokenHeaderProps {
   /**
@@ -114,6 +128,33 @@ function TokenActionButtons({
     setIsClaudeCodeRouterOpen(true)
   }
 
+  const handleSaveToApiCredentialProfiles = async () => {
+    const apiType: ApiVerificationApiType = API_TYPES.OPENAI_COMPATIBLE
+
+    try {
+      await apiCredentialProfilesStorage.createProfile({
+        name: token.name,
+        apiType,
+        baseUrl: account.baseUrl,
+        apiKey: token.key,
+        tagIds: account.tagIds ?? [],
+      })
+      toast.success(
+        t("keyManagement:messages.savedToApiProfiles", { name: token.name }),
+      )
+    } catch (error) {
+      logger.error("Failed to save token to API profiles", {
+        message: toSanitizedErrorSummary(
+          error,
+          [token.key, account.token, account.cookieAuthSessionCookie].filter(
+            Boolean,
+          ) as string[],
+        ),
+      })
+      toast.error(t("keyManagement:messages.saveToApiProfilesFailed"))
+    }
+  }
+
   return (
     <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
       <KiloCodeExportDialog
@@ -143,6 +184,14 @@ function TokenActionButtons({
         onClick={() => copyKey(token.key, token.name)}
       >
         <DocumentDuplicateIcon className="dark:text-dark-text-tertiary h-4 w-4 text-gray-500" />
+      </IconButton>
+      <IconButton
+        aria-label={t("keyManagement:actions.saveToApiProfiles")}
+        size="sm"
+        variant="ghost"
+        onClick={handleSaveToApiCredentialProfiles}
+      >
+        <PlusIcon className="dark:text-dark-text-tertiary h-4 w-4 text-gray-500" />
       </IconButton>
       <IconButton
         aria-label={t("actions.useInCherry")}

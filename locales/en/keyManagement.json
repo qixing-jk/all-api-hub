@@ -68,6 +68,7 @@
   },
   "actions": {
     "copyKey": "Copy Key",
+    "saveToApiProfiles": "Save to API profiles",
     "useInCherry": "Use in Cherry Studio",
     "exportToKiloCode": "Export to Kilo Code",
     "exportToCCSwitch": "Export to CC Switch",
@@ -85,6 +86,8 @@
     "loadFailed": "Failed to load key list",
     "keyCopied": "Key {{name}} copied to clipboard",
     "copyFailed": "Copy failed",
+    "savedToApiProfiles": "Saved {{name}} to API profiles",
+    "saveToApiProfilesFailed": "Failed to save to API profiles",
     "deleteConfirm": "Are you sure you want to delete key {{name}}? This action cannot be undone",
     "accountNotFound": "Account information not found",
     "deleteSuccess": "Key {{name}} deleted successfully",

@@ -48,18 +48,28 @@
       "fetchingModels": "获取中…",
       "test": "测试",
       "testing": "测试中…",
+      "saveToProfiles": "保存到 API 凭证",
+      "saving": "保存中…",
       "running": "运行中…",
       "retry": "重试",
       "runOne": "运行"
     },
+    "messages": {
+      "savedToProfiles": "已保存 {{name}} 到 API 凭证"
+    },
     "errors": {
       "missingBaseUrlOrKey": "请先填写 Base URL 与 API Key。",
+      "runTestBeforeSave": "请先测试后再保存。",
       "fetchModelsFailed": "获取模型列表失败。",
+      "saveToProfilesFailed": "保存到 API 凭证失败",
       "runProbeFailed": "探测失败。"
+    },
+    "hints": {
+      "saveWithoutTest": "提示：只要填写 Base URL 与 API Key 就能保存到 API 凭证（无需先测试或获取模型列表）。测试仅用于验证可用性。"
     },
     "probes": {
       "notRunYet": "尚未运行"
     },
-    "privacyHint": "API Key 会被视为敏感信息：默认隐藏，且该功能不会持久化保存任何数据。"
+    "privacyHint": "API Key 会被视为敏感信息：默认隐藏，且除非你主动保存到 API 凭证，否则不会持久化保存任何数据。"
   }
 }

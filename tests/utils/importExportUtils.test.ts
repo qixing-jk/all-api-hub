@@ -12,6 +12,7 @@ import {
 } from "~/entrypoints/options/pages/ImportExport/utils"
 import { accountStorage } from "~/services/accountStorage"
 import { tagStorage } from "~/services/accountTags/tagStorage"
+import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfilesStorage"
 import { channelConfigStorage } from "~/services/channelConfigStorage"
 import { userPreferences } from "~/services/userPreferences"
 
@@ -46,7 +47,24 @@ vi.mock("~/services/accountTags/tagStorage", () => ({
     ensureLegacyMigration: vi.fn(),
     exportTagStore: vi.fn(),
     importTagStore: vi.fn(),
+    mergeTagStoresForSync: vi.fn((input: any) => ({
+      tagStore: input.localTagStore,
+      localAccounts: input.localAccounts,
+      remoteAccounts: input.remoteAccounts,
+      localBookmarks: input.localBookmarks ?? [],
+      remoteBookmarks: input.remoteBookmarks ?? [],
+      localTaggables: input.localTaggables ?? [],
+      remoteTaggables: input.remoteTaggables ?? [],
+    })),
   },
+}))
+
+vi.mock("~/services/apiCredentialProfilesStorage", () => ({
+  apiCredentialProfilesStorage: {
+    mergeConfig: vi.fn(),
+    exportConfig: vi.fn(),
+  },
+  coerceApiCredentialProfilesConfig: (raw: unknown) => raw,
 }))
 
 vi.mock("react-hot-toast", () => ({
@@ -79,6 +97,15 @@ const mockTagStoreExport = tagStorage.exportTagStore as unknown as ReturnType<
 const mockTagStoreImport = tagStorage.importTagStore as unknown as ReturnType<
   typeof vi.fn
 >
+
+const mockApiCredentialProfilesMergeConfig =
+  apiCredentialProfilesStorage.mergeConfig as unknown as ReturnType<
+    typeof vi.fn
+  >
+const mockApiCredentialProfilesExportConfig =
+  apiCredentialProfilesStorage.exportConfig as unknown as ReturnType<
+    typeof vi.fn
+  >
 
 describe("parseBackupSummary", () => {
   beforeEach(() => {
@@ -113,7 +140,27 @@ describe("parseBackupSummary", () => {
       expect(result.hasPreferences).toBe(true)
       expect(result.hasChannelConfigs).toBe(true)
       expect(result.hasTagStore).toBe(false)
+      expect(result.hasApiCredentialProfiles).toBe(false)
       expect(result.timestamp).not.toBe("unknown")
+    }
+  })
+
+  it("detects API credential profiles section when present", () => {
+    const payload: RawBackupData = {
+      version: BACKUP_VERSION,
+      timestamp: Date.now(),
+      apiCredentialProfiles: {
+        version: 1,
+        profiles: [],
+        lastUpdated: Date.now(),
+      } as any,
+    }
+
+    const result = parseBackupSummary(JSON.stringify(payload), "unknown")
+
+    expect(result && "valid" in result && result.valid).toBe(true)
+    if (result && "valid" in result && result.valid) {
+      expect(result.hasApiCredentialProfiles).toBe(true)
     }
   })
 
@@ -133,6 +180,7 @@ describe("parseBackupSummary", () => {
       expect(result.hasPreferences).toBe(false)
       expect(result.hasChannelConfigs).toBe(false)
       expect(result.hasTagStore).toBe(false)
+      expect(result.hasApiCredentialProfiles).toBe(false)
     }
   })
 
@@ -160,6 +208,11 @@ describe("importFromBackupObject", () => {
       createdTagCount: 0,
     })
     mockTagStoreImport.mockResolvedValue(undefined)
+    mockApiCredentialProfilesMergeConfig.mockResolvedValue({
+      version: 1,
+      profiles: [],
+      lastUpdated: Date.now(),
+    } as any)
   })
 
   afterEach(() => {
@@ -202,6 +255,7 @@ describe("importFromBackupObject", () => {
       accounts: true,
       preferences: false,
       channelConfigs: false,
+      apiCredentialProfiles: false,
     })
   })
 
@@ -243,7 +297,33 @@ describe("importFromBackupObject", () => {
       accounts: true,
       preferences: true,
       channelConfigs: true,
+      apiCredentialProfiles: false,
     })
+  })
+
+  it("merges API credential profiles when present in V2 backup", async () => {
+    const backup: BackupFullV2 = {
+      version: BACKUP_VERSION,
+      timestamp: Date.now(),
+      accounts: {
+        accounts: [{ id: "a1" } as any],
+        last_updated: Date.now(),
+      } as any,
+      preferences: { themeMode: "dark" } as any,
+      channelConfigs: {},
+      apiCredentialProfiles: {
+        version: 1,
+        profiles: [],
+        lastUpdated: Date.now(),
+      } as any,
+    }
+
+    const result = await importFromBackupObject(backup as BackupV2)
+
+    expect(mockApiCredentialProfilesMergeConfig).toHaveBeenCalledWith(
+      backup.apiCredentialProfiles,
+    )
+    expect(result.sections.apiCredentialProfiles).toBe(true)
   })
 
   it("imports partial V2 preferences-only backup", async () => {
@@ -267,6 +347,7 @@ describe("importFromBackupObject", () => {
       accounts: false,
       preferences: true,
       channelConfigs: false,
+      apiCredentialProfiles: false,
     })
   })
 
@@ -336,6 +417,7 @@ describe("normalizeBackupForMerge", () => {
       preferences: null,
       channelConfigs: null,
       tagStore: null,
+      apiCredentialProfiles: null,
     })
   })
 
@@ -363,6 +445,32 @@ describe("normalizeBackupForMerge", () => {
     expect(result.preferences).toEqual({ themeMode: "dark" })
     expect(result.channelConfigs).toEqual({ 1: { enabled: true } })
     expect(result.tagStore).toEqual({ version: 1, tagsById: {} })
+  })
+
+  it("normalizes V2 backups including API credential profiles", () => {
+    const localPrefs = { themeMode: "system" }
+    const apiCredentialProfiles = {
+      version: 1,
+      profiles: [],
+      lastUpdated: 999,
+    }
+
+    const backup: BackupFullV2 = {
+      version: BACKUP_VERSION,
+      timestamp: 123,
+      accounts: {
+        accounts: [{ id: "a1" } as any],
+        last_updated: 456,
+      } as any,
+      tagStore: { version: 1, tagsById: {} },
+      preferences: { themeMode: "dark" } as any,
+      channelConfigs: { 1: { enabled: true } } as any,
+      apiCredentialProfiles: apiCredentialProfiles as any,
+    }
+
+    const result = normalizeBackupForMerge(backup, localPrefs)
+
+    expect(result.apiCredentialProfiles).toEqual(apiCredentialProfiles)
   })
 
   it("normalizes V1-style backup falling back to legacy shapes", () => {
@@ -461,6 +569,7 @@ describe("export handlers", () => {
     expect(mockTagStoreExport).toHaveBeenCalled()
     expect(mockUserPreferencesExport).toHaveBeenCalled()
     expect(mockChannelConfigExport).toHaveBeenCalled()
+    expect(mockApiCredentialProfilesExportConfig).toHaveBeenCalled()
   })
 
   it("handleExportAccounts exports only account data", async () => {

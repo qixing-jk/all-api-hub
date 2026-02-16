@@ -13,6 +13,7 @@ export const MENU_ITEM_IDS = {
   BALANCE_HISTORY: "balanceHistory",
   MODELS: "models",
   KEYS: "keys",
+  API_CREDENTIAL_PROFILES: "apiCredentialProfiles",
   MANAGED_SITE_CHANNELS: "managedSiteChannels",
   MANAGED_SITE_MODEL_SYNC: "managedSiteModelSync",
   IMPORT_EXPORT: "importExport",

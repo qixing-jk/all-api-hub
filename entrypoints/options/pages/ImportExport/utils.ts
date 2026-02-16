@@ -3,10 +3,15 @@ import toast from "react-hot-toast"
 
 import { accountStorage } from "~/services/accountStorage"
 import { tagStorage } from "~/services/accountTags/tagStorage"
+import {
+  apiCredentialProfilesStorage,
+  coerceApiCredentialProfilesConfig,
+} from "~/services/apiCredentialProfilesStorage"
 import { channelConfigStorage } from "~/services/channelConfigStorage"
 import type { UserPreferences } from "~/services/userPreferences"
 import { userPreferences } from "~/services/userPreferences"
 import type { AccountStorageConfig, TagStore } from "~/types"
+import type { ApiCredentialProfilesConfig } from "~/types/apiCredentialProfiles"
 import type { ChannelConfigMap } from "~/types/channelConfig"
 import { createLogger } from "~/utils/logger"
 
@@ -32,6 +37,7 @@ export interface ParsedBackupSummary {
   hasPreferences: boolean
   hasChannelConfigs: boolean
   hasTagStore: boolean
+  hasApiCredentialProfiles: boolean
   timestamp: string
 }
 
@@ -52,6 +58,12 @@ export interface BackupFullV2 {
   tagStore?: TagStore
   preferences: UserPreferences
   channelConfigs: ChannelConfigMap
+  /**
+   * Standalone API credential profiles snapshot (contains secrets).
+   *
+   * Optional for backward compatibility with early V2 backups.
+   */
+  apiCredentialProfiles?: ApiCredentialProfilesConfig
 }
 
 /**
@@ -97,6 +109,8 @@ type LegacyBackupLike = {
   accounts?: any
   preferences?: any
   channelConfigs?: any
+  tagStore?: any
+  apiCredentialProfiles?: any
   data?: any
 }
 
@@ -116,6 +130,7 @@ export interface ImportResult {
     accounts: boolean
     preferences: boolean
     channelConfigs: boolean
+    apiCredentialProfiles: boolean
   }
 }
 
@@ -145,6 +160,9 @@ export function parseBackupSummary(
       data.channelConfigs || data.type === "channelConfigs",
     )
     const hasTagStore = Boolean((data as any).tagStore)
+    const hasApiCredentialProfiles = Boolean(
+      (data as any).apiCredentialProfiles,
+    )
 
     const ts =
       data.timestamp && !Number.isNaN(new Date(data.timestamp).getTime())
@@ -157,6 +175,7 @@ export function parseBackupSummary(
       hasPreferences,
       hasChannelConfigs,
       hasTagStore,
+      hasApiCredentialProfiles,
       timestamp: ts,
     }
   } catch {
@@ -249,6 +268,7 @@ async function importV1Backup(
       accounts: accountsImported,
       preferences: preferencesImported,
       channelConfigs: channelConfigsImported,
+      apiCredentialProfiles: false,
     },
   }
 }
@@ -270,6 +290,7 @@ export function normalizeBackupForMerge(
   preferences: any | null
   channelConfigs: ChannelConfigMap | null
   tagStore: TagStore | null
+  apiCredentialProfiles: ApiCredentialProfilesConfig | null
 } {
   if (!data) {
     return {
@@ -281,6 +302,7 @@ export function normalizeBackupForMerge(
       preferences: null,
       channelConfigs: null,
       tagStore: null,
+      apiCredentialProfiles: null,
     }
   }
 
@@ -310,6 +332,7 @@ function normalizeV2BackupForMerge(
   preferences: any | null
   channelConfigs: ChannelConfigMap | null
   tagStore: TagStore | null
+  apiCredentialProfiles: ApiCredentialProfilesConfig | null
 } {
   const accountsField: any = data.accounts
   const accountsConfig = Array.isArray(accountsField)
@@ -347,6 +370,9 @@ function normalizeV2BackupForMerge(
     preferences: data.preferences || localPreferences,
     channelConfigs,
     tagStore: data.tagStore ?? null,
+    apiCredentialProfiles: data.apiCredentialProfiles
+      ? coerceApiCredentialProfilesConfig(data.apiCredentialProfiles)
+      : null,
   }
 }
 
@@ -365,6 +391,7 @@ function normalizeV1BackupForMerge(
   preferences: any | null
   channelConfigs: ChannelConfigMap | null
   tagStore: TagStore | null
+  apiCredentialProfiles: ApiCredentialProfilesConfig | null
 } {
   const accountsField: any = data.accounts
   const accountsConfig = Array.isArray(accountsField)
@@ -417,6 +444,7 @@ function normalizeV1BackupForMerge(
     preferences,
     channelConfigs,
     tagStore: (data as any).tagStore ?? (data.data as any)?.tagStore ?? null,
+    apiCredentialProfiles: null,
   }
 }
 
@@ -430,11 +458,15 @@ async function importV2Backup(
   let accountsImported = false
   let preferencesImported = false
   let channelConfigsImported = false
+  let apiCredentialProfilesImported = false
 
   const accountsRequested = "accounts" in data
   const preferencesRequested = "preferences" in data
   const channelConfigsRequested =
     "channelConfigs" in data && Boolean((data as BackupFullV2).channelConfigs)
+  const apiCredentialProfilesRequested =
+    "apiCredentialProfiles" in data &&
+    Boolean((data as BackupFullV2).apiCredentialProfiles)
 
   // V2 assumes flat structure: accounts / preferences / channelConfigs directly on root
 
@@ -501,8 +533,44 @@ async function importV2Backup(
     channelConfigsImported = true
   }
 
+  if (apiCredentialProfilesRequested) {
+    const incoming = coerceApiCredentialProfilesConfig(
+      (data as BackupFullV2).apiCredentialProfiles,
+    )
+
+    if (
+      !accountsRequested &&
+      "tagStore" in (data as any) &&
+      (data as any).tagStore
+    ) {
+      const tagMerge = tagStorage.mergeTagStoresForSync({
+        localTagStore: await tagStorage.exportTagStore(),
+        remoteTagStore: (data as any).tagStore,
+        localAccounts: [],
+        remoteAccounts: [],
+        localBookmarks: [],
+        remoteBookmarks: [],
+        localTaggables: [],
+        remoteTaggables: incoming.profiles,
+      })
+
+      await tagStorage.importTagStore(tagMerge.tagStore)
+
+      await apiCredentialProfilesStorage.mergeConfig({
+        ...incoming,
+        profiles: tagMerge.remoteTaggables,
+      })
+    } else {
+      await apiCredentialProfilesStorage.mergeConfig(incoming)
+    }
+    apiCredentialProfilesImported = true
+  }
+
   const anyImported =
-    accountsImported || preferencesImported || channelConfigsImported
+    accountsImported ||
+    preferencesImported ||
+    channelConfigsImported ||
+    apiCredentialProfilesImported
 
   if (!anyImported) {
     throw new Error(t("importExport:import.noImportableData"))
@@ -511,7 +579,8 @@ async function importV2Backup(
   const allImported =
     (!accountsRequested || accountsImported) &&
     (!preferencesRequested || preferencesImported) &&
-    (!channelConfigsRequested || channelConfigsImported)
+    (!channelConfigsRequested || channelConfigsImported) &&
+    (!apiCredentialProfilesRequested || apiCredentialProfilesImported)
 
   return {
     allImported,
@@ -519,6 +588,7 @@ async function importV2Backup(
       accounts: accountsImported,
       preferences: preferencesImported,
       channelConfigs: channelConfigsImported,
+      apiCredentialProfiles: apiCredentialProfilesImported,
     },
   }
 }
@@ -570,13 +640,19 @@ export const handleExportAll = async (
     setIsExporting(true)
 
     // 获取账号数据、用户偏好设置以及通道配置
-    const [accountData, tagStore, preferencesData, channelConfigs] =
-      await Promise.all([
-        accountStorage.exportData(),
-        tagStorage.exportTagStore(),
-        userPreferences.exportPreferences(),
-        channelConfigStorage.exportConfigs(),
-      ])
+    const [
+      accountData,
+      tagStore,
+      preferencesData,
+      channelConfigs,
+      apiCredentialProfiles,
+    ] = await Promise.all([
+      accountStorage.exportData(),
+      tagStorage.exportTagStore(),
+      userPreferences.exportPreferences(),
+      channelConfigStorage.exportConfigs(),
+      apiCredentialProfilesStorage.exportConfig(),
+    ])
 
     const exportData: BackupFullV2 = {
       version: BACKUP_VERSION,
@@ -585,6 +661,7 @@ export const handleExportAll = async (
       tagStore,
       preferences: preferencesData,
       channelConfigs,
+      apiCredentialProfiles,
     }
 
     // 创建下载链接

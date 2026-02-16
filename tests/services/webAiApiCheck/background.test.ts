@@ -26,6 +26,12 @@ vi.mock("~/services/apiService/anthropic", () => ({
   fetchAnthropicModelIds: vi.fn(),
 }))
 
+vi.mock("~/services/apiCredentialProfilesStorage", () => ({
+  apiCredentialProfilesStorage: {
+    createProfile: vi.fn(),
+  },
+}))
+
 vi.mock("~/services/aiApiVerification", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("~/services/aiApiVerification")>()
@@ -268,5 +274,58 @@ describe("webAiApiCheck background handlers", () => {
     expect(response?.success).toBe(true)
     expect(response?.result?.status).toBe("fail")
     expect(response?.result?.summary).toBe("Forbidden: [REDACTED]")
+  })
+
+  it("saveProfile normalizes baseUrl and persists a profile without echoing secrets", async () => {
+    vi.resetModules()
+
+    const { apiCredentialProfilesStorage } = await import(
+      "~/services/apiCredentialProfilesStorage"
+    )
+
+    vi.mocked(apiCredentialProfilesStorage.createProfile).mockResolvedValue({
+      id: "p-1",
+      name: "proxy.example.com (OpenAI-compatible)",
+      apiType: "openai-compatible",
+      baseUrl: "https://proxy.example.com/api",
+      apiKey: "sk-secret-xyz",
+      tagIds: [],
+      notes: "",
+      createdAt: 1,
+      updatedAt: 1,
+    } as any)
+
+    const { handleWebAiApiCheckMessage } = await import(
+      "~/services/webAiApiCheck/background"
+    )
+
+    const sendResponse = vi.fn()
+    await handleWebAiApiCheckMessage(
+      {
+        action: RuntimeActionIds.ApiCheckSaveProfile,
+        apiType: "openai-compatible",
+        baseUrl: "https://proxy.example.com/api/v1/chat/completions",
+        apiKey: "sk-secret-xyz",
+        pageUrl: "https://example.com/docs",
+      },
+      sendResponse,
+    )
+
+    expect(apiCredentialProfilesStorage.createProfile).toHaveBeenCalledWith({
+      name: "proxy.example.com (OpenAI-compatible)",
+      apiType: "openai-compatible",
+      baseUrl: "https://proxy.example.com/api",
+      apiKey: "sk-secret-xyz",
+      tagIds: [],
+      notes: "",
+    })
+
+    const response = sendResponse.mock.calls[0]?.[0] as any
+    expect(response?.success).toBe(true)
+    expect(response?.profileId).toBe("p-1")
+    expect(response?.baseUrl).toBe("https://proxy.example.com/api")
+    expect(response?.apiType).toBe("openai-compatible")
+    expect(response?.name).toBe("proxy.example.com (OpenAI-compatible)")
+    expect(response?.apiKey).toBeUndefined()
   })
 })

@@ -20,6 +20,7 @@
     "balanceHistory": "余额历史",
     "models": "模型列表",
     "keys": "密钥管理",
+    "apiCredentialProfiles": "API 凭证",
     "autoCheckin": "自动签到",
     "autoCheckinRunNow": "快速签到",
     "managedSiteChannels": "渠道管理",

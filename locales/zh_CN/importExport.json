@@ -32,6 +32,7 @@
     "containsAccountData": "包含账号数据",
     "containsUserSettings": "包含用户设置",
     "containsChannelConfigs": "包含渠道配置",
+    "containsApiCredentialProfiles": "包含 API 配置",
     "backupTime": "备份时间",
     "dataInvalid": "数据格式错误，请检查JSON格式",
     "selectFileImport": "请选择要导入的文件或输入数据",
@@ -49,7 +50,7 @@
     "importWarning1": "导入数据将覆盖现有的相同类型数据，请谨慎操作",
     "importWarning2": "建议在导入前先导出当前数据进行备份",
     "importWarning3": "仅支持本插件导出的JSON格式文件",
-    "importWarning4": "导入的账号数据包含敏感信息，请确保文件来源可信"
+    "importWarning4": "导入的数据可能包含敏感信息（账号令牌与 API Key），请妥善保管备份文件并确保来源可信"
   },
   "webdav": {
     "title": "WebDAV 备份与同步",

@@ -13,11 +13,11 @@ import {
   DEFAULT_ACCOUNT_AUTO_REFRESH,
   type AccountAutoRefresh,
 } from "~/types/accountAutoRefresh"
-import { DEFAULT_OCTOPUS_CONFIG } from "~/types/octopusConfig"
 import {
   DEFAULT_BALANCE_HISTORY_PREFERENCES,
   type BalanceHistoryPreferences,
 } from "~/types/dailyBalanceHistory"
+import { DEFAULT_OCTOPUS_CONFIG } from "~/types/octopusConfig"
 import { createLogger } from "~/utils/logger"
 
 import type { UserPreferences } from "../../userPreferences"
@@ -292,7 +292,9 @@ const migrations: Record<number, PreferencesMigrationFunction> = {
         ? stored.endOfDayCapture.enabled
         : DEFAULT_BALANCE_HISTORY_PREFERENCES.endOfDayCapture.enabled
 
-    const retentionDays = clampBalanceHistoryRetentionDays(stored?.retentionDays)
+    const retentionDays = clampBalanceHistoryRetentionDays(
+      stored?.retentionDays,
+    )
 
     return {
       ...prefs,

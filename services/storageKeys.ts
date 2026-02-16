@@ -16,6 +16,11 @@ export const STORAGE_LOCKS = {
    * balance history store.
    */
   DAILY_BALANCE_HISTORY: "all-api-hub:daily-balance-history",
+  /**
+   * Exclusive lock used for read-modify-write sequences touching API credential
+   * profiles storage.
+   */
+  API_CREDENTIAL_PROFILES: "all-api-hub:api-credential-profiles",
 } as const
 
 export const ACCOUNT_STORAGE_KEYS = {
@@ -34,6 +39,10 @@ export const DAILY_BALANCE_HISTORY_STORAGE_KEYS = {
   STORE: "dailyBalanceHistory_store",
 } as const
 
+export const API_CREDENTIAL_PROFILES_STORAGE_KEYS = {
+  API_CREDENTIAL_PROFILES: "api_credential_profiles",
+} as const
+
 export const ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS = {
   REPAIR_PROGRESS: "accountKeyRepair_progress",
 } as const
@@ -47,6 +56,7 @@ export const ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS = {
 export const STORAGE_KEYS = {
   ...ACCOUNT_STORAGE_KEYS,
   ...TAG_STORAGE_KEYS,
+  ...API_CREDENTIAL_PROFILES_STORAGE_KEYS,
   ...ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS,
   ...USER_PREFERENCES_STORAGE_KEYS,
   DAILY_BALANCE_HISTORY_STORE: DAILY_BALANCE_HISTORY_STORAGE_KEYS.STORE,

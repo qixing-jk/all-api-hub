@@ -24,6 +24,7 @@ import {
 } from "~/components/ui"
 import { accountStorage } from "~/services/accountStorage"
 import { tagStorage } from "~/services/accountTags/tagStorage"
+import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfilesStorage"
 import { channelConfigStorage } from "~/services/channelConfigStorage"
 import { userPreferences } from "~/services/userPreferences"
 import {
@@ -144,13 +145,19 @@ export default function WebDAVSettings() {
     setUploading(true)
     try {
       await userPreferences.updateWebdavSettings(webdavConfig)
-      const [accountData, tagStore, preferencesData, channelConfigs] =
-        await Promise.all([
-          accountStorage.exportData(),
-          tagStorage.exportTagStore(),
-          userPreferences.exportPreferences(),
-          channelConfigStorage.exportConfigs(),
-        ])
+      const [
+        accountData,
+        tagStore,
+        preferencesData,
+        channelConfigs,
+        apiCredentialProfiles,
+      ] = await Promise.all([
+        accountStorage.exportData(),
+        tagStorage.exportTagStore(),
+        userPreferences.exportPreferences(),
+        channelConfigStorage.exportConfigs(),
+        apiCredentialProfilesStorage.exportConfig(),
+      ])
       const exportData: BackupFullV2 = {
         version: BACKUP_VERSION,
         timestamp: Date.now(),
@@ -158,6 +165,7 @@ export default function WebDAVSettings() {
         tagStore,
         preferences: preferencesData,
         channelConfigs,
+        apiCredentialProfiles,
       }
       await uploadBackup(JSON.stringify(exportData, null, 2), webdavConfig)
       toast.success(t("export.dataExported"))

@@ -11,12 +11,14 @@ import {
   RefreshCcw,
   Settings,
   UserRound,
+  UserRoundKey,
 } from "lucide-react"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 
 import About from "./pages/About"
 import AccountManagement from "./pages/AccountManagement"
+import ApiCredentialProfiles from "./pages/ApiCredentialProfiles"
 import AutoCheckin from "./pages/AutoCheckin"
 import BalanceHistory from "./pages/BalanceHistory"
 import BasicSettings from "./pages/BasicSettings"
@@ -71,8 +73,14 @@ export const menuItems: MenuItem[] = [
   {
     id: MENU_ITEM_IDS.KEYS,
     name: "密钥管理",
-    icon: KeyRound,
+    icon: UserRoundKey,
     component: KeyManagement,
+  },
+  {
+    id: MENU_ITEM_IDS.API_CREDENTIAL_PROFILES,
+    name: "API 凭证",
+    icon: KeyRound,
+    component: ApiCredentialProfiles,
   },
   {
     id: MENU_ITEM_IDS.BALANCE_HISTORY,

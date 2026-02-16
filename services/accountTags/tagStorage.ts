@@ -1,5 +1,6 @@
 import { Storage } from "@plasmohq/storage"
 
+import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfilesStorage"
 import { ensureAccountTagsStorageMigrated } from "~/services/configMigration/accountTags/accountTagsStorageMigration"
 import type { AccountStorageConfig, SiteAccount, Tag, TagStore } from "~/types"
 import { sendRuntimeMessage } from "~/utils/browserApi"
@@ -237,19 +238,21 @@ class TagStorageService {
   }
 
   /**
-   * Delete a tag and remove it from all accounts.
+   * Delete a tag and remove it from all taggable entities.
    *
-   * Returns how many accounts were modified.
+   * Returns how many entities were modified.
    */
-  async deleteTag(
-    tagId: string,
-  ): Promise<{ updatedAccounts: number; updatedBookmarks: number }> {
+  async deleteTag(tagId: string): Promise<{
+    updatedAccounts: number
+    updatedBookmarks: number
+    updatedApiCredentialProfiles: number
+  }> {
     const result = await withExtensionStorageWriteLock(
       STORAGE_LOCKS.ACCOUNT_STORAGE,
       async () => {
         const store = await this.getTagStore()
         if (!store.tagsById[tagId]) {
-          return { updatedAccounts: 0, updatedBookmarks: 0 }
+          return { updatedAccounts: 0, updatedBookmarks: 0, tagDeleted: false }
         }
 
         const { [tagId]: _deleted, ...remaining } = store.tagsById
@@ -305,12 +308,30 @@ class TagStorageService {
           })
         }
 
-        return { updatedAccounts, updatedBookmarks }
+        return { updatedAccounts, updatedBookmarks, tagDeleted: true }
       },
     )
 
+    let updatedApiCredentialProfiles = 0
+    if (result.tagDeleted) {
+      try {
+        const profileResult =
+          await apiCredentialProfilesStorage.removeTagIdFromAllProfiles(tagId)
+        updatedApiCredentialProfiles = profileResult.updatedProfiles
+      } catch (error) {
+        logger.warn("Failed to remove tag id from API credential profiles", {
+          error,
+          tagId,
+        })
+      }
+    }
+
     this.notifyTagStoreUpdated()
-    return result
+    return {
+      updatedAccounts: result.updatedAccounts,
+      updatedBookmarks: result.updatedBookmarks,
+      updatedApiCredentialProfiles,
+    }
   }
 
   /**
@@ -335,13 +356,17 @@ class TagStorageService {
    * Helper used by WebDAV merge flows:
    * merges two stores and remaps tag ids for all tag-referencing entities.
    */
-  mergeTagStoresForSync(input: {
+  mergeTagStoresForSync<
+    TTaggable extends { tagIds?: string[] } = { tagIds?: string[] },
+  >(input: {
     localTagStore: TagStore
     remoteTagStore: TagStore
     localAccounts: SiteAccount[]
     remoteAccounts: SiteAccount[]
     localBookmarks?: AccountStorageConfig["bookmarks"]
     remoteBookmarks?: AccountStorageConfig["bookmarks"]
+    localTaggables?: TTaggable[]
+    remoteTaggables?: TTaggable[]
   }) {
     return mergeTagStoresAndRemapAccounts(input)
   }

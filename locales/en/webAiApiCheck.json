@@ -48,18 +48,28 @@
       "fetchingModels": "Fetching…",
       "test": "Test",
       "testing": "Testing…",
+      "saveToProfiles": "Save to API profiles",
+      "saving": "Saving…",
       "running": "Running…",
       "retry": "Retry",
       "runOne": "Run"
     },
+    "messages": {
+      "savedToProfiles": "Saved {{name}} to API profiles."
+    },
     "errors": {
       "missingBaseUrlOrKey": "Please provide base URL and API key first.",
+      "runTestBeforeSave": "Please run a test before saving.",
       "fetchModelsFailed": "Failed to fetch models.",
+      "saveToProfilesFailed": "Failed to save to API profiles.",
       "runProbeFailed": "Probe failed."
+    },
+    "hints": {
+      "saveWithoutTest": "Tip: you can save once base URL + API key are provided (no need to test or fetch models first). Testing is optional and only helps verify availability."
     },
     "probes": {
       "notRunYet": "Not run yet"
     },
-    "privacyHint": "API Keys will be considered sensitive information: hidden by default, and this feature does not persistently store any data."
+    "privacyHint": "API Keys will be considered sensitive information: hidden by default, and nothing is stored unless you choose to save to API profiles."
   }
 }

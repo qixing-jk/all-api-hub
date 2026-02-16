@@ -49,6 +49,8 @@ vi.mock("~/services/accountTags/tagStorage", () => ({
       remoteAccounts: input.remoteAccounts,
       localBookmarks: input.localBookmarks ?? [],
       remoteBookmarks: input.remoteBookmarks ?? [],
+      localTaggables: input.localTaggables ?? [],
+      remoteTaggables: input.remoteTaggables ?? [],
     }),
     exportTagStore: vi.fn(),
     importTagStore: vi.fn(),
@@ -69,6 +71,12 @@ vi.mock("~/services/webdav/webdavService", () => ({
 describe("WebdavAutoSyncService.mergeData", () => {
   const callMerge = (local: any, remote: any) =>
     (webdavAutoSyncService as any).mergeData(local, remote) as any
+
+  const emptyApiCredentialProfiles: any = {
+    version: 2,
+    profiles: [],
+    lastUpdated: 0,
+  }
 
   const basePrefsLocal: any = {
     themeMode: "light",
@@ -109,6 +117,7 @@ describe("WebdavAutoSyncService.mergeData", () => {
       preferences: basePrefsLocal,
       preferencesTimestamp: 50,
       channelConfigs: {},
+      apiCredentialProfiles: emptyApiCredentialProfiles,
     }
 
     const remote: any = {
@@ -119,6 +128,7 @@ describe("WebdavAutoSyncService.mergeData", () => {
       preferences: basePrefsRemote,
       preferencesTimestamp: 60,
       channelConfigs: {},
+      apiCredentialProfiles: emptyApiCredentialProfiles,
     }
 
     const result = callMerge(local, remote)
@@ -158,6 +168,7 @@ describe("WebdavAutoSyncService.mergeData", () => {
       preferences: basePrefsLocal,
       preferencesTimestamp: 0,
       channelConfigs: {},
+      apiCredentialProfiles: emptyApiCredentialProfiles,
     }
 
     const remote: any = {
@@ -187,6 +198,7 @@ describe("WebdavAutoSyncService.mergeData", () => {
       preferences: basePrefsRemote,
       preferencesTimestamp: 0,
       channelConfigs: {},
+      apiCredentialProfiles: emptyApiCredentialProfiles,
     }
 
     const result = callMerge(local, remote)
@@ -206,6 +218,7 @@ describe("WebdavAutoSyncService.mergeData", () => {
       preferences: { ...basePrefsLocal, themeMode: "local" },
       preferencesTimestamp: 10,
       channelConfigs: {},
+      apiCredentialProfiles: emptyApiCredentialProfiles,
     }
 
     const remote: any = {
@@ -216,6 +229,7 @@ describe("WebdavAutoSyncService.mergeData", () => {
       preferences: { ...basePrefsRemote, themeMode: "remote" },
       preferencesTimestamp: 20,
       channelConfigs: {},
+      apiCredentialProfiles: emptyApiCredentialProfiles,
     }
 
     const result = callMerge(local, remote)
@@ -241,6 +255,7 @@ describe("WebdavAutoSyncService.mergeData", () => {
       preferences: basePrefsLocal,
       preferencesTimestamp: 0,
       channelConfigs: localChannels,
+      apiCredentialProfiles: emptyApiCredentialProfiles,
     }
 
     const remote: any = {
@@ -251,6 +266,7 @@ describe("WebdavAutoSyncService.mergeData", () => {
       preferences: basePrefsRemote,
       preferencesTimestamp: 0,
       channelConfigs: remoteChannels,
+      apiCredentialProfiles: emptyApiCredentialProfiles,
     }
 
     const result = callMerge(local, remote)

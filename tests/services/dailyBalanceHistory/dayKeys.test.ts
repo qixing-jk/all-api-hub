@@ -11,16 +11,25 @@ import {
 describe("dailyBalanceHistory dayKeys", () => {
   it("returns [] when start or end is an invalid calendar day", () => {
     expect(
-      listDayKeysInRange({ startDayKey: "2026-02-31", endDayKey: "2026-03-01" }),
+      listDayKeysInRange({
+        startDayKey: "2026-02-31",
+        endDayKey: "2026-03-01",
+      }),
     ).toEqual([])
     expect(
-      listDayKeysInRange({ startDayKey: "2026-03-01", endDayKey: "2026-02-31" }),
+      listDayKeysInRange({
+        startDayKey: "2026-03-01",
+        endDayKey: "2026-02-31",
+      }),
     ).toEqual([])
   })
 
   it("returns a dense inclusive range for valid inputs", () => {
     expect(
-      listDayKeysInRange({ startDayKey: "2026-01-30", endDayKey: "2026-02-01" }),
+      listDayKeysInRange({
+        startDayKey: "2026-01-30",
+        endDayKey: "2026-02-01",
+      }),
     ).toEqual(["2026-01-30", "2026-01-31", "2026-02-01"])
   })
 
@@ -47,4 +56,3 @@ describe("dailyBalanceHistory dayKeys", () => {
     ).toBe("2026-02-05")
   })
 })
-

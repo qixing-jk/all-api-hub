@@ -2,6 +2,7 @@ import { render, type RenderOptions } from "@testing-library/react"
 import type { ReactElement, ReactNode } from "react"
 import { I18nextProvider } from "react-i18next"
 
+import { ChannelDialogProvider } from "~/components/ChannelDialog/context/ChannelDialogContext"
 import { DeviceProvider } from "~/contexts/DeviceContext"
 import { ThemeProvider } from "~/contexts/ThemeContext"
 import { UserPreferencesProvider } from "~/contexts/UserPreferencesContext"
@@ -16,7 +17,9 @@ const AppProviders = ({ children }: AppProvidersProps) => {
     <I18nextProvider i18n={testI18n}>
       <DeviceProvider>
         <UserPreferencesProvider>
-          <ThemeProvider>{children}</ThemeProvider>
+          <ChannelDialogProvider>
+            <ThemeProvider>{children}</ThemeProvider>
+          </ChannelDialogProvider>
         </UserPreferencesProvider>
       </DeviceProvider>
     </I18nextProvider>
