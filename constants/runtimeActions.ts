@@ -37,6 +37,7 @@ export type RuntimeActionPrefix =
  */
 export const RuntimeMessageTypes = {
   AccountKeyRepairProgress: "ACCOUNT_KEY_REPAIR_PROGRESS",
+  TAG_STORE_UPDATE: "TAG_STORE_UPDATE",
 } as const
 
 /**

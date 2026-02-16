@@ -16,6 +16,7 @@ import {
   Spinner,
   TagFilter,
 } from "~/components/ui"
+import { RuntimeMessageTypes } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { PageHeader } from "~/entrypoints/options/components/PageHeader"
 import { useIsDesktop, useIsSmallScreen } from "~/hooks/useMediaQuery"
@@ -51,6 +52,10 @@ import { useApiCredentialProfiles } from "./hooks/useApiCredentialProfiles"
  * Unified logger scoped to the API credential profiles options page.
  */
 const logger = createLogger("ApiCredentialProfilesPage")
+
+type RuntimeBroadcastMessage = {
+  type?: (typeof RuntimeMessageTypes)[keyof typeof RuntimeMessageTypes]
+}
 
 /**
  * Maps apiType values to the i18n key segment used by `aiApiVerification` labels.
@@ -164,8 +169,8 @@ export default function ApiCredentialProfiles() {
   }, [loadTags])
 
   useEffect(() => {
-    return onRuntimeMessage((message: any) => {
-      if (message.type === "TAG_STORE_UPDATE") {
+    return onRuntimeMessage((message: RuntimeBroadcastMessage) => {
+      if (message.type === RuntimeMessageTypes.TAG_STORE_UPDATE) {
         void loadTags()
       }
     })
