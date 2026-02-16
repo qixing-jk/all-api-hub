@@ -83,7 +83,9 @@ function extractModelsProbeOutput(
 
   const modelIdsPreview = Array.isArray(output.modelIdsPreview)
     ? output.modelIdsPreview
-        .filter((id): id is string => typeof id === "string" && id.trim())
+        .filter(
+          (id): id is string => typeof id === "string" && id.trim().length > 0,
+        )
         .map((id) => id.trim())
     : undefined
 
@@ -112,7 +114,7 @@ function pickSuggestedModelId(
   const preferred = normalized.find((id) => {
     const lower = id.toLowerCase()
     return preferredPrefixes.some((prefix) =>
-      prefix === "o" ? /^o\\d/i.test(id) : lower.startsWith(prefix),
+      prefix === "o" ? /^o\d/i.test(id) : lower.startsWith(prefix),
     )
   })
 
