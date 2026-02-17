@@ -83,7 +83,7 @@ const normalizeChannel = (raw: DoneHubChannelRaw): ManagedSiteChannel => {
 
   return {
     id: toNumberOrZero(raw.id),
-    type: raw.type as ManagedSiteChannel["type"],
+    type: toNumberOrZero(raw.type) as ManagedSiteChannel["type"],
     key: raw.key ?? "",
     name: raw.name ?? "",
     base_url: raw.base_url ?? "",

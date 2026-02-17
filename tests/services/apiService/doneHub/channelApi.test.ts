@@ -115,6 +115,30 @@ describe("apiService doneHub channel APIs", () => {
     expect(result!.total).toBe(1)
   })
 
+  it("searchChannel should coerce missing channel type to 0", async () => {
+    const request = {
+      baseUrl: "https://example.com",
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        accessToken: "token",
+        userId: 1,
+      },
+    }
+
+    mockFetchApiData.mockResolvedValueOnce({
+      data: [{ id: 1, name: "c1", base_url: "https://up.example.com" }],
+      page: 1,
+      size: 100,
+      total_count: 1,
+    })
+
+    const result = await searchChannel(request as any, "https://up.example.com")
+
+    expect(result).not.toBeNull()
+    expect(result!.items[0].type).toBe(0)
+    expect(result!.type_counts).toEqual({ "0": 1 })
+  })
+
   it("createChannel should post flat payload with group string", async () => {
     const request = {
       baseUrl: "https://example.com",

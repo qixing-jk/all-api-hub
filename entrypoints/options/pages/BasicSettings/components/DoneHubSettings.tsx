@@ -51,8 +51,9 @@ export default function DoneHubSettings() {
   }, [doneHubUserId])
 
   const handleBaseUrlChange = async (url: string) => {
-    if (url === doneHubBaseUrl) return
-    const success = await updateDoneHubBaseUrl(url)
+    const clean = url.trim()
+    if (clean === doneHubBaseUrl) return
+    const success = await updateDoneHubBaseUrl(clean)
     showUpdateToast(success, t("doneHub.fields.baseUrlLabel"))
   }
 

@@ -8,7 +8,7 @@ interface DoneHubIconProps {
 }
 
 /**
- * doneHubLogo renders the DoneHub brand mark at a chosen size.
+ * DoneHubIcon renders the DoneHub brand mark at a chosen size.
  */
 export function DoneHubIcon({ size = "sm" }: DoneHubIconProps) {
   return (

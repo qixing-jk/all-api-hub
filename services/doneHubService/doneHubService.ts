@@ -8,6 +8,7 @@ import { ensureAccountApiToken } from "~/services/accountOperations"
 import { accountStorage } from "~/services/accountStorage"
 import { getApiService } from "~/services/apiService"
 import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompatible"
+import { UserPreferences, userPreferences } from "~/services/userPreferences"
 import { ApiToken, AuthTypeEnum, DisplaySiteData, SiteAccount } from "~/types"
 import type { DoneHubConfig } from "~/types/doneHubConfig"
 import type {
@@ -26,8 +27,6 @@ import { isArraysEqual } from "~/utils"
 import { getErrorMessage } from "~/utils/error"
 import { createLogger } from "~/utils/logger"
 import { normalizeList, parseDelimitedList } from "~/utils/string"
-
-import { UserPreferences, userPreferences } from "../userPreferences"
 
 /**
  * Unified logger scoped to the Done Hub integration and auto-config flows.
