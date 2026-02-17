@@ -4,6 +4,7 @@ import { Storage } from "@plasmohq/storage"
 
 import { DATA_TYPE_BALANCE, DATA_TYPE_CASHFLOW } from "~/constants"
 import {
+  DONE_HUB,
   NEW_API,
   OCTOPUS,
   VELOERA,
@@ -36,6 +37,10 @@ import {
   DEFAULT_BALANCE_HISTORY_PREFERENCES,
   type BalanceHistoryPreferences,
 } from "~/types/dailyBalanceHistory"
+import {
+  DEFAULT_DONE_HUB_CONFIG,
+  type DoneHubConfig,
+} from "~/types/doneHubConfig"
 import {
   getDefaultLoggingPreferences,
   type LoggingPreferences,
@@ -249,13 +254,16 @@ export interface UserPreferences {
   // New API 相关配置
   newApi: NewApiConfig
 
+  // Done Hub 相关配置
+  doneHub?: DoneHubConfig
+
   // Veloera 相关配置
   veloera: VeloeraConfig
 
   // Octopus 相关配置
   octopus?: OctopusConfig
 
-  // 管理站点类型 (用户可以选择管理 New API 或 Veloera 或 Octopus)
+  // 管理站点类型 (用户可以选择管理 New API / Done Hub / Veloera / Octopus)
   managedSiteType: ManagedSiteType
 
   // CLIProxyAPI 管理接口配置
@@ -421,6 +429,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   webdav: DEFAULT_WEBDAV_SETTINGS,
   lastUpdated: Date.now(),
   newApi: DEFAULT_NEW_API_CONFIG,
+  doneHub: DEFAULT_DONE_HUB_CONFIG,
   veloera: DEFAULT_VELOERA_CONFIG,
   octopus: DEFAULT_OCTOPUS_CONFIG,
   managedSiteType: NEW_API,
@@ -825,11 +834,29 @@ class UserPreferencesService {
   }
 
   /**
+   * Update Done Hub config.
+   */
+  async updateDoneHubConfig(config: Partial<DoneHubConfig>): Promise<boolean> {
+    return this.savePreferences({
+      doneHub: config,
+    })
+  }
+
+  /**
    * Reset Veloera config.
    */
   async resetVeloeraConfig(): Promise<boolean> {
     return this.savePreferences({
       veloera: DEFAULT_PREFERENCES.veloera,
+    })
+  }
+
+  /**
+   * Reset Done Hub config.
+   */
+  async resetDoneHubConfig(): Promise<boolean> {
+    return this.savePreferences({
+      doneHub: DEFAULT_DONE_HUB_CONFIG,
     })
   }
 
@@ -852,7 +879,7 @@ class UserPreferencesService {
   }
 
   /**
-   * Update managed site type (new-api or veloera or octopus).
+   * Update managed site type (new-api, veloera, done-hub, or octopus).
    */
   async updateManagedSiteType(siteType: ManagedSiteType): Promise<boolean> {
     return this.savePreferences({
@@ -865,15 +892,17 @@ class UserPreferencesService {
    */
   async getManagedSiteConfig(): Promise<{
     siteType: ManagedSiteType
-    config: NewApiConfig | VeloeraConfig | OctopusConfig
+    config: NewApiConfig | DoneHubConfig | VeloeraConfig | OctopusConfig
   }> {
     const prefs = await this.getPreferences()
     const siteType = prefs.managedSiteType || NEW_API
-    let config: NewApiConfig | VeloeraConfig | OctopusConfig
+    let config: NewApiConfig | DoneHubConfig | VeloeraConfig | OctopusConfig
     if (siteType === OCTOPUS) {
       config = prefs.octopus || DEFAULT_OCTOPUS_CONFIG
     } else if (siteType === VELOERA) {
       config = prefs.veloera
+    } else if (siteType === DONE_HUB) {
+      config = prefs.doneHub ?? DEFAULT_DONE_HUB_CONFIG
     } else {
       config = prefs.newApi
     }

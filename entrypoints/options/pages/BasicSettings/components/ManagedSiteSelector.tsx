@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "~/components/ui"
 import {
+  DONE_HUB,
   NEW_API,
   OCTOPUS,
   VELOERA,
@@ -21,7 +22,7 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { showUpdateToast } from "~/utils/toastHelpers"
 
 /**
- * Component for selecting which managed site type to use (New API or Veloera).
+ * Component for selecting which managed site type to use.
  * @returns Section with dropdown to select managed site type.
  */
 export default function ManagedSiteSelector() {
@@ -61,6 +62,9 @@ export default function ManagedSiteSelector() {
                 <SelectContent>
                   <SelectItem value={NEW_API}>
                     {t("managedSite.newApi")}
+                  </SelectItem>
+                  <SelectItem value={DONE_HUB}>
+                    {t("managedSite.doneHub")}
                   </SelectItem>
                   <SelectItem value={VELOERA}>
                     {t("managedSite.veloera")}

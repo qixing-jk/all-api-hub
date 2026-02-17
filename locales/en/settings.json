@@ -162,12 +162,33 @@
       "hideToken": "Hide system access token"
     }
   },
+  "doneHub": {
+    "title": "Done Hub Integration Settings",
+    "description": "Configure integration settings for connecting to Done Hub compatible services.",
+    "urlDesc": "Set the base URL for Done Hub integration",
+    "tokenDesc": "System access token for the administrator user. Find it in Done Hub dashboard → Personal settings → Token.",
+    "userIdDesc": "Administrator user ID (numeric only). Root admin is usually 1.",
+    "adminCredentialsLink": {
+      "title": "Quick access",
+      "description": "Open the profile page to find the system access token and user ID.",
+      "open": "Open page"
+    },
+    "fields": {
+      "baseUrlLabel": "Base URL",
+      "baseUrlPlaceholder": "https://api.example.com",
+      "adminTokenLabel": "Administrator's system access token",
+      "userIdLabel": "Administrator user ID",
+      "showToken": "Show system access token",
+      "hideToken": "Hide system access token"
+    }
+  },
   "managedSite": {
     "title": "Managed Site Configuration",
     "description": "Select which API aggregator platform you want to manage. This determines which configuration will be used for channel management and model syncing.",
     "siteTypeLabel": "Managed Site Type",
     "siteTypeDesc": "Choose the platform used for channel management and model sync",
     "newApi": "New API",
+    "doneHub": "Done Hub",
     "veloera": "Veloera",
     "octopus": "Octopus"
   },

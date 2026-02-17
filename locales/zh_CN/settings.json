@@ -162,12 +162,33 @@
       "hideToken": "隐藏系统访问令牌"
     }
   },
+  "doneHub": {
+    "title": "Done Hub 集成设置",
+    "description": "配置用于连接 Done Hub 兼容服务的集成设置。",
+    "urlDesc": "设置用于 Done Hub 集成的基础 URL",
+    "tokenDesc": "管理员用户的系统访问令牌，请在 Done Hub 管理后台 -> 个人设置 -> 令牌 处生成",
+    "userIdDesc": "管理员用户 ID (纯数字)，root 管理员通常为 1",
+    "adminCredentialsLink": {
+      "title": "快速获取",
+      "description": "打开管理后台个人资料页面，快速获取系统访问令牌和用户 ID。",
+      "open": "打开页面"
+    },
+    "fields": {
+      "baseUrlLabel": "基础 URL",
+      "baseUrlPlaceholder": "https://api.example.com",
+      "adminTokenLabel": "管理员的系统访问令牌",
+      "userIdLabel": "管理员用户 ID",
+      "showToken": "显示系统访问令牌",
+      "hideToken": "隐藏系统访问令牌"
+    }
+  },
   "managedSite": {
     "title": "自建站点配置",
     "description": "选择您要管理的 API 聚合平台站点。这将决定用于渠道管理和模型同步的配置。",
     "siteTypeLabel": "站点类型",
     "siteTypeDesc": "选择用于渠道管理和模型同步的平台",
     "newApi": "New API",
+    "doneHub": "Done Hub",
     "veloera": "Veloera",
     "octopus": "Octopus"
   },

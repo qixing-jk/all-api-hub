@@ -16,7 +16,11 @@ export const SUB2API = "sub2api"
 export const OCTOPUS = "octopus"
 export const UNKNOWN_SITE = "unknown"
 
-export type ManagedSiteType = typeof NEW_API | typeof VELOERA | typeof OCTOPUS
+export type ManagedSiteType =
+  | typeof NEW_API
+  | typeof VELOERA
+  | typeof DONE_HUB
+  | typeof OCTOPUS
 
 export type SiteType = (typeof SITE_TITLE_RULES)[number]["name"]
 
@@ -71,8 +75,16 @@ export const SITE_API_ROUTER: Record<string, any> = {
     redeemPath: "/app/wallet",
     adminCredentialsPath: "/app/me",
   },
-  [ONE_HUB]: { usagePath: "/panel/log", redeemPath: "/panel/topup" },
-  [DONE_HUB]: { usagePath: "/panel/log", redeemPath: "/panel/topup" },
+  [ONE_HUB]: {
+    usagePath: "/panel/log",
+    redeemPath: "/panel/topup",
+    adminCredentialsPath: "/panel/profile",
+  },
+  [DONE_HUB]: {
+    usagePath: "/panel/log",
+    redeemPath: "/panel/topup",
+    adminCredentialsPath: "/panel/profile",
+  },
   [RIX_API]: { usagePath: "/log", checkInPath: "/panel", redeemPath: "/topup" },
   [ANYROUTER]: { checkInPath: "/console/topup" },
   [WONG_GONGYI]: { checkInPath: "/console/topup" },

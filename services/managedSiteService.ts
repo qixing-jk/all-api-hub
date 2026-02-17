@@ -1,4 +1,5 @@
 import {
+  DONE_HUB,
   NEW_API,
   OCTOPUS,
   VELOERA,
@@ -21,6 +22,7 @@ import {
   getManagedSiteContext,
 } from "~/utils/managedSite"
 
+import * as doneHubService from "./doneHubService/doneHubService"
 import * as newApiService from "./newApiService/newApiService"
 import * as octopusService from "./octopusService/octopusService"
 import { userPreferences, type UserPreferences } from "./userPreferences"
@@ -154,6 +156,25 @@ export async function getManagedSiteService(): Promise<ManagedSiteService> {
       buildChannelPayload: veloeraService.buildChannelPayload,
       findMatchingChannel: veloeraService.findMatchingChannel,
       autoConfigToManagedSite: veloeraService.autoConfigToVeloera,
+    }
+  }
+
+  if (siteType === DONE_HUB) {
+    return {
+      siteType,
+      messagesKey,
+      searchChannel: doneHubService.searchChannel,
+      createChannel: doneHubService.createChannel,
+      updateChannel: doneHubService.updateChannel,
+      deleteChannel: doneHubService.deleteChannel,
+      checkValidConfig: doneHubService.checkValidDoneHubConfig,
+      getConfig: doneHubService.getDoneHubConfig,
+      fetchAvailableModels: doneHubService.fetchAvailableModels,
+      buildChannelName: doneHubService.buildChannelName,
+      prepareChannelFormData: doneHubService.prepareChannelFormData,
+      buildChannelPayload: doneHubService.buildChannelPayload,
+      findMatchingChannel: doneHubService.findMatchingChannel,
+      autoConfigToManagedSite: doneHubService.autoConfigToDoneHub,
     }
   }
 

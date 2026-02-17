@@ -7,6 +7,7 @@
 import { OCTOPUS } from "~/constants/siteType"
 import { modelMetadataService } from "~/services/modelMetadata"
 import { ModelSyncService } from "~/services/modelSync"
+import type { DoneHubConfig } from "~/types/doneHubConfig"
 import type { ManagedSiteChannel } from "~/types/managedSite"
 import { CHANNEL_STATUS } from "~/types/managedSite"
 import {
@@ -127,7 +128,10 @@ export class ModelRedirectService {
         }
       }
 
-      const legacyConfig = managedConfig as NewApiConfig | VeloeraConfig
+      const legacyConfig = managedConfig as
+        | NewApiConfig
+        | DoneHubConfig
+        | VeloeraConfig
 
       const service = new ModelSyncService(
         legacyConfig.baseUrl!,

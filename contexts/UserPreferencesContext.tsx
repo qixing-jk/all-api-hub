@@ -37,6 +37,7 @@ import {
   DEFAULT_BALANCE_HISTORY_PREFERENCES,
   type BalanceHistoryPreferences,
 } from "~/types/dailyBalanceHistory"
+import { DEFAULT_DONE_HUB_CONFIG } from "~/types/doneHubConfig"
 import type { LogLevel } from "~/types/logging"
 import type { ModelRedirectPreferences } from "~/types/managedSiteModelRedirect"
 import type { SortingPriorityConfig } from "~/types/sorting"
@@ -72,6 +73,9 @@ interface UserPreferencesContextType {
   newApiBaseUrl: string
   newApiAdminToken: string
   newApiUserId: string
+  doneHubBaseUrl: string
+  doneHubAdminToken: string
+  doneHubUserId: string
   veloeraBaseUrl: string
   veloeraAdminToken: string
   veloeraUserId: string
@@ -112,6 +116,9 @@ interface UserPreferencesContextType {
   updateNewApiBaseUrl: (url: string) => Promise<boolean>
   updateNewApiAdminToken: (token: string) => Promise<boolean>
   updateNewApiUserId: (userId: string) => Promise<boolean>
+  updateDoneHubBaseUrl: (url: string) => Promise<boolean>
+  updateDoneHubAdminToken: (token: string) => Promise<boolean>
+  updateDoneHubUserId: (userId: string) => Promise<boolean>
   updateVeloeraBaseUrl: (url: string) => Promise<boolean>
   updateVeloeraAdminToken: (token: string) => Promise<boolean>
   updateVeloeraUserId: (userId: string) => Promise<boolean>
@@ -154,6 +161,7 @@ interface UserPreferencesContextType {
   resetDisplaySettings: () => Promise<boolean>
   resetAutoRefreshConfig: () => Promise<boolean>
   resetNewApiConfig: () => Promise<boolean>
+  resetDoneHubConfig: () => Promise<boolean>
   resetVeloeraConfig: () => Promise<boolean>
   resetOctopusConfig: () => Promise<boolean>
   resetNewApiModelSyncConfig: () => Promise<boolean>
@@ -554,6 +562,39 @@ export const UserPreferencesProvider = ({
   const updateNewApiUserId = useCallback(async (userId: string) => {
     const updates = {
       newApi: { userId },
+    }
+    const success = await userPreferences.savePreferences(updates)
+    if (success) {
+      setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
+    }
+    return success
+  }, [])
+
+  const updateDoneHubBaseUrl = useCallback(async (baseUrl: string) => {
+    const updates = {
+      doneHub: { baseUrl },
+    }
+    const success = await userPreferences.savePreferences(updates)
+    if (success) {
+      setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
+    }
+    return success
+  }, [])
+
+  const updateDoneHubAdminToken = useCallback(async (adminToken: string) => {
+    const updates = {
+      doneHub: { adminToken },
+    }
+    const success = await userPreferences.savePreferences(updates)
+    if (success) {
+      setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
+    }
+    return success
+  }, [])
+
+  const updateDoneHubUserId = useCallback(async (userId: string) => {
+    const updates = {
+      doneHub: { userId },
     }
     const success = await userPreferences.savePreferences(updates)
     if (success) {
@@ -1021,6 +1062,22 @@ export const UserPreferencesProvider = ({
     return success
   }, [])
 
+  const resetDoneHubConfig = useCallback(async () => {
+    const success = await userPreferences.resetDoneHubConfig()
+    if (success) {
+      const defaults = DEFAULT_DONE_HUB_CONFIG
+      setPreferences((prev) =>
+        prev
+          ? deepOverride(prev, {
+              doneHub: defaults,
+              lastUpdated: Date.now(),
+            })
+          : prev,
+      )
+    }
+    return success
+  }, [])
+
   const resetVeloeraConfig = useCallback(async () => {
     const success = await userPreferences.resetVeloeraConfig()
     if (success) {
@@ -1294,6 +1351,9 @@ export const UserPreferencesProvider = ({
     newApiBaseUrl: preferences?.newApi?.baseUrl || "",
     newApiAdminToken: preferences?.newApi?.adminToken || "",
     newApiUserId: preferences?.newApi?.userId || "",
+    doneHubBaseUrl: preferences?.doneHub?.baseUrl || "",
+    doneHubAdminToken: preferences?.doneHub?.adminToken || "",
+    doneHubUserId: preferences?.doneHub?.userId || "",
     veloeraBaseUrl: preferences?.veloera?.baseUrl || "",
     veloeraAdminToken: preferences?.veloera?.adminToken || "",
     veloeraUserId: preferences?.veloera?.userId || "",
@@ -1333,6 +1393,9 @@ export const UserPreferencesProvider = ({
     updateNewApiBaseUrl,
     updateNewApiAdminToken,
     updateNewApiUserId,
+    updateDoneHubBaseUrl,
+    updateDoneHubAdminToken,
+    updateDoneHubUserId,
     updateVeloeraBaseUrl,
     updateVeloeraAdminToken,
     updateVeloeraUserId,
@@ -1359,6 +1422,7 @@ export const UserPreferencesProvider = ({
     resetDisplaySettings,
     resetAutoRefreshConfig,
     resetNewApiConfig,
+    resetDoneHubConfig,
     resetVeloeraConfig,
     resetOctopusConfig,
     resetNewApiModelSyncConfig,

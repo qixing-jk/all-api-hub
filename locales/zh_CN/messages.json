@@ -57,6 +57,9 @@
       "newApiBaseUrlRequired": "New API 基础 URL 未配置",
       "newApiAdminTokenRequired": "New API 管理员令牌未配置",
       "newApiUserIdRequired": "New API 用户 ID 未配置",
+      "doneHubBaseUrlRequired": "Done Hub 基础 URL 未配置",
+      "doneHubAdminTokenRequired": "Done Hub 管理员令牌未配置",
+      "doneHubUserIdRequired": "Done Hub 用户 ID 未配置",
       "veloeraBaseUrlRequired": "Veloera 基础 URL 未配置",
       "veloeraAdminTokenRequired": "Veloera 管理员令牌未配置",
       "veloeraUserIdRequired": "Veloera 用户 ID 未配置"
@@ -93,6 +96,7 @@
   "accountOperations": {
     "checkingApiKeys": "正在检查 API 密钥...",
     "importingToNewApi": "正在导入到 New API...",
+    "importingToDoneHub": "正在导入到 Done Hub...",
     "importingToVeloera": "正在导入到 Veloera...",
     "importingToOctopus": "正在导入到 Octopus...",
     "autoProvisionCreated": "已为 {{accountName}} 自动创建默认 API 密钥。",
@@ -122,6 +126,15 @@
   "newapi": {
     "configMissing": "请先在基础设置中配置 New API 地址、管理员令牌和用户 ID",
     "dataFetchFailed": "获取 New API 数据失败，请检查配置是否正确",
+    "noAnyModels": "暂无可用模型",
+    "noChannelsToSync": "没有可同步的渠道",
+    "channelExists": "渠道 {{channelName}} 已存在，无需再次导入",
+    "importSuccess": "成功导入新渠道 {{channelName}}",
+    "importFailed": "导入失败，发生未知错误"
+  },
+  "donehub": {
+    "configMissing": "请先在基础设置中配置 Done Hub 地址、管理员令牌和用户 ID",
+    "dataFetchFailed": "获取 Done Hub 数据失败，请检查配置是否正确",
     "noAnyModels": "暂无可用模型",
     "noChannelsToSync": "没有可同步的渠道",
     "channelExists": "渠道 {{channelName}} 已存在，无需再次导入",

@@ -12,22 +12,25 @@ import {
 
 import * as anyrouterAPI from "./anyrouter"
 import * as commonAPI from "./common"
+import * as doneHubAPI from "./doneHub"
 import * as octopusAPI from "./octopus"
 import * as oneHubAPI from "./oneHub"
 import * as sub2apiAPI from "./sub2api"
 import * as veloeraAPI from "./veloera"
 import * as wongAPI from "./wong"
 
+type ApiOverrideModule = Record<string, unknown>
+
 // 映射表,只放需要覆盖的站点
 const siteOverrideMap = {
-  [ONE_HUB]: oneHubAPI,
-  [DONE_HUB]: oneHubAPI,
-  [VELOERA]: veloeraAPI,
-  [ANYROUTER]: anyrouterAPI,
-  [NEW_API]: commonAPI,
-  [WONG_GONGYI]: wongAPI,
-  [SUB2API]: sub2apiAPI,
-  [OCTOPUS]: octopusAPI,
+  [ONE_HUB]: [oneHubAPI],
+  [DONE_HUB]: [doneHubAPI, oneHubAPI],
+  [VELOERA]: [veloeraAPI],
+  [ANYROUTER]: [anyrouterAPI],
+  [NEW_API]: [commonAPI],
+  [WONG_GONGYI]: [wongAPI],
+  [SUB2API]: [sub2apiAPI],
+  [OCTOPUS]: [octopusAPI],
 } as const
 
 // 添加类型定义
@@ -55,14 +58,20 @@ function getApiFunc<T extends keyof typeof commonAPI>(
   funcName: T,
   currentSite: SiteType = "default",
 ): (typeof commonAPI)[T] {
-  const overrideModule =
+  const overrideModules =
     currentSite in siteOverrideMap
-      ? siteOverrideMap[currentSite as keyof SiteOverrideMap]
+      ? (siteOverrideMap[
+          currentSite as keyof SiteOverrideMap
+        ] as readonly ApiOverrideModule[])
       : null
 
-  if (overrideModule && funcName in overrideModule) {
-    // 使用类型断言避免索引类型错误
-    return (overrideModule as any)[funcName] as (typeof commonAPI)[T]
+  if (overrideModules) {
+    for (const overrideModule of overrideModules) {
+      if (overrideModule && funcName in overrideModule) {
+        // 使用类型断言避免索引类型错误
+        return (overrideModule as any)[funcName] as (typeof commonAPI)[T]
+      }
+    }
   }
   // eslint-disable-next-line import/namespace
   return commonAPI[funcName] as (typeof commonAPI)[T]

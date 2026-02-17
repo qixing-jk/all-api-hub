@@ -1,6 +1,7 @@
-import { NEW_API, OCTOPUS, VELOERA } from "~/constants/siteType"
+import { DONE_HUB, NEW_API, OCTOPUS, VELOERA } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 
+import DoneHubSettings from "./DoneHubSettings"
 import ManagedSiteModelSyncSettings from "./managedSiteModelSyncSettings"
 import ManagedSiteSelector from "./ManagedSiteSelector"
 import ModelRedirectSettings from "./ModelRedirectSettings"
@@ -9,7 +10,7 @@ import OctopusSettings from "./OctopusSettings"
 import VeloeraSettings from "./VeloeraSettings"
 
 /**
- * Basic Settings tab aggregating managed site selector, New API/Veloera/Octopus settings,
+ * Basic Settings tab aggregating managed site selector, managed site settings,
  * model sync, and model redirect.
  */
 export default function ManagedSiteTab() {
@@ -19,6 +20,8 @@ export default function ManagedSiteTab() {
     switch (managedSiteType) {
       case OCTOPUS:
         return <OctopusSettings />
+      case DONE_HUB:
+        return <DoneHubSettings />
       case VELOERA:
         return <VeloeraSettings />
       case NEW_API:

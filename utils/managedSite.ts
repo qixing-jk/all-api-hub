@@ -1,23 +1,33 @@
 import {
+  DONE_HUB,
   NEW_API,
   OCTOPUS,
   VELOERA,
   type ManagedSiteType,
 } from "~/constants/siteType"
 import type { UserPreferences } from "~/services/userPreferences"
+import {
+  DEFAULT_DONE_HUB_CONFIG,
+  type DoneHubConfig,
+} from "~/types/doneHubConfig"
 import type { NewApiConfig } from "~/types/newApiConfig"
 import type { OctopusConfig } from "~/types/octopusConfig"
 import type { VeloeraConfig } from "~/types/veloeraConfig"
 
 export type ManagedSiteLabelKey =
   | "settings:managedSite.newApi"
+  | "settings:managedSite.doneHub"
   | "settings:managedSite.veloera"
   | "settings:managedSite.octopus"
 
 /**
  * Managed site namespace key used under the `messages` i18n namespace.
  */
-export type ManagedSiteMessagesKey = "newapi" | "veloera" | "octopus"
+export type ManagedSiteMessagesKey =
+  | "newapi"
+  | "donehub"
+  | "veloera"
+  | "octopus"
 
 export interface ManagedSiteAdminConfig {
   baseUrl: string
@@ -25,7 +35,11 @@ export interface ManagedSiteAdminConfig {
   userId: string
 }
 
-export type ManagedSiteConfig = NewApiConfig | VeloeraConfig | OctopusConfig
+export type ManagedSiteConfig =
+  | NewApiConfig
+  | DoneHubConfig
+  | VeloeraConfig
+  | OctopusConfig
 
 /**
  * Extracts the selected managed site type and its corresponding config from a
@@ -41,6 +55,8 @@ export function getManagedSiteConfigFromPreferences(
   let config: ManagedSiteConfig
   if (siteType === OCTOPUS) {
     config = preferences.octopus || { baseUrl: "", username: "", password: "" }
+  } else if (siteType === DONE_HUB) {
+    config = preferences.doneHub ?? DEFAULT_DONE_HUB_CONFIG
   } else if (siteType === VELOERA) {
     config = preferences.veloera
   } else {
@@ -68,6 +84,9 @@ export function getManagedSiteLabelKey(
   if (siteType === OCTOPUS) {
     return "settings:managedSite.octopus"
   }
+  if (siteType === DONE_HUB) {
+    return "settings:managedSite.doneHub"
+  }
   return siteType === VELOERA
     ? "settings:managedSite.veloera"
     : "settings:managedSite.newApi"
@@ -81,6 +100,9 @@ export function getManagedSiteMessagesKeyFromSiteType(
 ): ManagedSiteMessagesKey {
   if (siteType === OCTOPUS) {
     return "octopus"
+  }
+  if (siteType === DONE_HUB) {
+    return "donehub"
   }
   return siteType === VELOERA ? "veloera" : "newapi"
 }
@@ -113,8 +135,8 @@ export function getManagedSiteAdminConfig(
     }
   }
 
-  // New API / Veloera 使用 adminToken
-  const legacyConfig = config as NewApiConfig | VeloeraConfig
+  // New API / Done Hub / Veloera 使用 adminToken
+  const legacyConfig = config as NewApiConfig | DoneHubConfig | VeloeraConfig
   if (
     !legacyConfig?.baseUrl ||
     !legacyConfig?.adminToken ||

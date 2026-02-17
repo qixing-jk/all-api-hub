@@ -57,6 +57,9 @@
       "newApiBaseUrlRequired": "New API base URL not configured",
       "newApiAdminTokenRequired": "New API admin token not configured",
       "newApiUserIdRequired": "New API user ID not configured",
+      "doneHubBaseUrlRequired": "Done Hub base URL not configured",
+      "doneHubAdminTokenRequired": "Done Hub admin token not configured",
+      "doneHubUserIdRequired": "Done Hub user ID not configured",
       "veloeraBaseUrlRequired": "Veloera base URL not configured",
       "veloeraAdminTokenRequired": "Veloera admin token not configured",
       "veloeraUserIdRequired": "Veloera user ID not configured"
@@ -93,6 +96,7 @@
   "accountOperations": {
     "checkingApiKeys": "Checking API key...",
     "importingToNewApi": "Importing to New API...",
+    "importingToDoneHub": "Importing to Done Hub...",
     "importingToVeloera": "Importing to Veloera...",
     "importingToOctopus": "Importing to Octopus...",
     "autoProvisionCreated": "Created a default API key for {{accountName}}.",
@@ -122,6 +126,15 @@
   "newapi": {
     "configMissing": "Please configure New API address, admin token, and user ID in basic settings first",
     "dataFetchFailed": "Failed to fetch New API data, please check if the configuration is correct",
+    "noAnyModels": "No models available",
+    "noChannelsToSync": "No channels to sync",
+    "channelExists": "Channel {{channelName}} already exists, no need to import again",
+    "importSuccess": "Successfully imported new channel {{channelName}}",
+    "importFailed": "Import failed, an unknown error occurred"
+  },
+  "donehub": {
+    "configMissing": "Please configure Done Hub address, admin token, and user ID in basic settings first",
+    "dataFetchFailed": "Failed to fetch Done Hub data, please check if the configuration is correct",
     "noAnyModels": "No models available",
     "noChannelsToSync": "No channels to sync",
     "channelExists": "Channel {{channelName}} already exists, no need to import again",
