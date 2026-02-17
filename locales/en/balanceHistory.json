@@ -37,8 +37,8 @@
       "180d": "180 days",
       "365d": "1 year"
     },
-    "startDay": "Start Time",
-    "endDay": "End Time"
+    "startDay": "Start Date",
+    "endDay": "End Date"
   },
   "summary": {
     "coverage": "Days with data: balance {{snapshotAvailableDays}}/{{totalDays}} (complete {{snapshotCompleteDays}}/{{totalDays}}), cashflow {{cashflowAvailableDays}}/{{totalDays}} (complete {{cashflowCompleteDays}}/{{totalDays}})."
