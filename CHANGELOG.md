@@ -1,5 +1,16 @@
 # Changelog
 
+## [3.21.0](https://github.com/qixing-jk/all-api-hub/compare/v3.20.0...v3.21.0) (2026-02-17)
+
+
+### Features
+
+* **api-credential-profiles:** add standalone API credential profiles ([#487](https://github.com/qixing-jk/all-api-hub/issues/487)) ([2d2969e](https://github.com/qixing-jk/all-api-hub/commit/2d2969ed2e6d546eb517fc6aa2eeb95be7e7a13c))
+* **balance-history:** add multi-account charts, overview, and unified table ([#491](https://github.com/qixing-jk/all-api-hub/issues/491)) ([3166f55](https://github.com/qixing-jk/all-api-hub/commit/3166f5554a4f64aa9ee3d398806033b84500802f))
+* **context-menus:** per-entry visibility toggles + live refresh ([#485](https://github.com/qixing-jk/all-api-hub/issues/485)) ([ee6d3f7](https://github.com/qixing-jk/all-api-hub/commit/ee6d3f76a57d383ead7c4e1ed460cde6a45bd107))
+* **done-hub:** add Done Hub management support ([#490](https://github.com/qixing-jk/all-api-hub/issues/490)) ([4aaaea3](https://github.com/qixing-jk/all-api-hub/commit/4aaaea3bb12d440e149117a45c177ad1b4a49d2c))
+* **key-empty-state:** introduce key creation options in the key empty state ([#488](https://github.com/qixing-jk/all-api-hub/issues/488)) ([995ebf2](https://github.com/qixing-jk/all-api-hub/commit/995ebf2dacfbea84dca4037277de1c972a69be69))
+
 ## [3.20.0](https://github.com/qixing-jk/all-api-hub/compare/v3.19.0...v3.20.0) (2026-02-15)
 
 
