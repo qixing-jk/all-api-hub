@@ -1,4 +1,10 @@
-import { LineChart, RefreshCcw, Scissors, Settings } from "lucide-react"
+import {
+  ChevronDown,
+  LineChart,
+  RefreshCcw,
+  Scissors,
+  Settings,
+} from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
@@ -13,6 +19,13 @@ import {
   TagFilter,
   ToggleButton,
 } from "~/components/ui"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu"
 import { ANIMATIONS, COLORS } from "~/constants/designTokens"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
@@ -25,9 +38,14 @@ import { listTagsSorted } from "~/services/accountTags/tagStoreUtils"
 import {
   computeRetentionCutoffDayKey,
   getDayKeyFromUnixSeconds,
+  listDayKeysInRange,
   subtractDaysFromDayKey,
 } from "~/services/dailyBalanceHistory/dayKeys"
-import { buildAggregatedDailyBalanceMoneySeries } from "~/services/dailyBalanceHistory/selectors"
+import {
+  buildAccountRangeSummaries,
+  buildPerAccountDailyBalanceMoneySeries,
+  type DailyBalanceHistoryMetric,
+} from "~/services/dailyBalanceHistory/selectors"
 import { dailyBalanceHistoryStorage } from "~/services/dailyBalanceHistory/storage"
 import { clampBalanceHistoryRetentionDays } from "~/services/dailyBalanceHistory/utils"
 import type { CurrencyType, SiteAccount, TagStore } from "~/types"
@@ -40,9 +58,14 @@ import { createLogger } from "~/utils/logger"
 import { formatMoneyFixed } from "~/utils/money"
 import { navigateWithinOptionsPage } from "~/utils/navigation"
 
+import BalanceHistoryAccountSummaryTable, {
+  type BalanceHistoryAccountSummaryRow,
+} from "./components/BalanceHistoryAccountSummaryTable"
 import {
-  buildBalanceTrendOption,
-  buildIncomeOutcomeBarOption,
+  buildAccountBreakdownBarOption,
+  buildAccountBreakdownPieOption,
+  buildMultiSeriesTrendOption,
+  type BalanceHistoryTrendChartType,
 } from "./echartsOptions"
 
 const logger = createLogger("BalanceHistoryPage")
@@ -54,6 +77,9 @@ const QUICK_RANGES = [
   { id: "180d", days: 180 },
   { id: "365d", days: 365 },
 ] as const
+
+type BalanceHistoryBreakdownChartType = "pie" | "bar"
+type BalanceHistoryTrendSeriesScope = "accounts" | "total"
 
 /**
  * Clamp a retention-days value coming from user preferences or input.
@@ -80,6 +106,20 @@ export default function BalanceHistory() {
 
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
   const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>([])
+
+  const [trendMetric, setTrendMetric] =
+    useState<DailyBalanceHistoryMetric>("balance")
+  const [trendChartType, setTrendChartType] =
+    useState<BalanceHistoryTrendChartType>("line")
+  const [trendScope, setTrendScope] =
+    useState<BalanceHistoryTrendSeriesScope>("accounts")
+
+  const [breakdownMetric, setBreakdownMetric] =
+    useState<DailyBalanceHistoryMetric>("balance")
+  const [breakdownChartType, setBreakdownChartType] =
+    useState<BalanceHistoryBreakdownChartType>("pie")
+  const [breakdownBalanceDayKey, setBreakdownBalanceDayKey] =
+    useState<string>("")
 
   const loadData = useCallback(async () => {
     try {
@@ -186,12 +226,82 @@ export default function BalanceHistory() {
     )
   }, [accounts, selectedTagIds])
 
-  const accountOptions = useMemo(() => {
-    return accountsForSelectedTags.map((account) => ({
-      value: account.id,
-      label: `${account.site_name} (${account.account_info.username})`,
-      title: `${account.site_name}\n${account.site_url}\n${account.site_type}`,
-    }))
+  const accountDisplayLabelById = useMemo(() => {
+    const getSiteHost = (value: string) => {
+      try {
+        return new URL(value).host
+      } catch {
+        return value
+      }
+    }
+
+    const shortenUsername = (value: string) => {
+      const trimmed = value.trim()
+      if (!trimmed) return trimmed
+
+      const atIndex = trimmed.indexOf("@")
+      const base = atIndex > 0 ? trimmed.slice(0, atIndex) : trimmed
+      const maxLength = 18
+      return base.length <= maxLength
+        ? base
+        : `${base.slice(0, maxLength - 1)}…`
+    }
+
+    const siteKeyCounts = new Map<string, number>()
+    for (const account of accountsForSelectedTags) {
+      const siteKey = account.site_url
+      siteKeyCounts.set(siteKey, (siteKeyCounts.get(siteKey) ?? 0) + 1)
+    }
+
+    const labelById = new Map<string, string>()
+    for (const account of accountsForSelectedTags) {
+      const needsAccountName = (siteKeyCounts.get(account.site_url) ?? 0) > 1
+      const label = needsAccountName
+        ? `${account.site_name} (${shortenUsername(account.account_info.username)})`
+        : account.site_name
+      labelById.set(account.id, label)
+    }
+
+    const labelCounts = new Map<string, number>()
+    for (const label of labelById.values()) {
+      labelCounts.set(label, (labelCounts.get(label) ?? 0) + 1)
+    }
+
+    for (const account of accountsForSelectedTags) {
+      const label = labelById.get(account.id)
+      if (!label) continue
+      if ((labelCounts.get(label) ?? 0) <= 1) continue
+      labelById.set(account.id, `${label} · ${getSiteHost(account.site_url)}`)
+    }
+
+    const disambiguationCounts = new Map<string, number>()
+    for (const label of labelById.values()) {
+      disambiguationCounts.set(
+        label,
+        (disambiguationCounts.get(label) ?? 0) + 1,
+      )
+    }
+
+    if (Array.from(disambiguationCounts.values()).some((count) => count > 1)) {
+      const duplicatesByLabel = new Map<string, string[]>()
+      for (const [accountId, label] of labelById.entries()) {
+        if ((disambiguationCounts.get(label) ?? 0) <= 1) continue
+        const list = duplicatesByLabel.get(label) ?? []
+        list.push(accountId)
+        duplicatesByLabel.set(label, list)
+      }
+
+      for (const [label, accountIds] of duplicatesByLabel.entries()) {
+        const sorted = [...accountIds].sort()
+        for (let index = 0; index < sorted.length; index += 1) {
+          const accountId = sorted[index]
+          if (!accountId) continue
+          labelById.set(accountId, `${label} #${index + 1}`)
+        }
+      }
+    }
+
+    return labelById
   }, [accountsForSelectedTags])
 
   const effectiveAccountIds = useMemo(() => {
@@ -230,6 +340,12 @@ export default function BalanceHistory() {
     setEndDayKey(maxDayKey)
     setStartDayKey(subtractDaysFromDayKey(maxDayKey, defaultDays - 1))
   }, [endDayKey, maxDayKey, safeRetentionDays, startDayKey])
+
+  // Initialize the breakdown reference day once the range is ready.
+  useEffect(() => {
+    if (breakdownBalanceDayKey || !endDayKey) return
+    setBreakdownBalanceDayKey(endDayKey)
+  }, [breakdownBalanceDayKey, endDayKey])
 
   // Clamp the range when retention changes or when the user types an out-of-bounds date.
   useEffect(() => {
@@ -282,56 +398,249 @@ export default function BalanceHistory() {
     [currencySymbol],
   )
 
-  const series = useMemo(() => {
-    const effectiveStartDayKey = startDayKey || minDayKey
-    const effectiveEndDayKey = endDayKey || maxDayKey
-    return buildAggregatedDailyBalanceMoneySeries({
+  const effectiveRange = useMemo(() => {
+    return {
+      startDayKey: startDayKey || minDayKey,
+      endDayKey: endDayKey || maxDayKey,
+    }
+  }, [endDayKey, maxDayKey, minDayKey, startDayKey])
+
+  const accountOptions = useMemo(() => {
+    const selected = new Set(selectedAccountIds)
+    const hasStore = Boolean(store)
+
+    const dayKeys = listDayKeysInRange({
+      startDayKey: effectiveRange.startDayKey,
+      endDayKey: effectiveRange.endDayKey,
+    })
+
+    type SortableOption = {
+      option: {
+        value: string
+        label: string
+        title: string
+        disabled?: boolean
+      }
+      isSelected: boolean
+      hasData: boolean
+    }
+
+    const sortable: SortableOption[] = accountsForSelectedTags.map(
+      (account) => {
+        const label = accountDisplayLabelById.get(account.id) ?? account.id
+        const perDay = store?.snapshotsByAccountId?.[account.id]
+
+        let snapshotDays = 0
+        if (perDay) {
+          for (const dayKey of dayKeys) {
+            if (perDay[dayKey]) snapshotDays += 1
+          }
+        }
+
+        const hasSnapshotData = snapshotDays > 0
+        const isSelected = selected.has(account.id)
+        const noDataInRange = hasStore && !hasSnapshotData
+
+        const titleLines = [
+          ...(noDataInRange ? [t("filters.noDataInRange")] : []),
+          account.site_name,
+          account.account_info.username,
+          account.site_url,
+          account.site_type,
+        ]
+
+        return {
+          option: {
+            value: account.id,
+            label,
+            title: titleLines.join("\n"),
+            disabled: noDataInRange && !isSelected,
+          },
+          isSelected,
+          hasData: !hasStore || hasSnapshotData,
+        }
+      },
+    )
+
+    sortable.sort((a, b) => {
+      if (a.isSelected !== b.isSelected) return a.isSelected ? -1 : 1
+      if (a.hasData !== b.hasData) return a.hasData ? -1 : 1
+      return a.option.label.localeCompare(b.option.label)
+    })
+
+    return sortable.map((item) => item.option)
+  }, [
+    accountDisplayLabelById,
+    accountsForSelectedTags,
+    effectiveRange.endDayKey,
+    effectiveRange.startDayKey,
+    selectedAccountIds,
+    store,
+    t,
+  ])
+
+  // Keep the breakdown reference day within the currently selected range.
+  useEffect(() => {
+    if (!breakdownBalanceDayKey) return
+
+    let next = breakdownBalanceDayKey
+    if (next < effectiveRange.startDayKey) next = effectiveRange.startDayKey
+    if (next > effectiveRange.endDayKey) next = effectiveRange.endDayKey
+
+    if (next !== breakdownBalanceDayKey) setBreakdownBalanceDayKey(next)
+  }, [
+    breakdownBalanceDayKey,
+    effectiveRange.endDayKey,
+    effectiveRange.startDayKey,
+  ])
+
+  const perAccountSeries = useMemo(() => {
+    return buildPerAccountDailyBalanceMoneySeries({
       store,
       accountIds: effectiveAccountIds,
-      startDayKey: effectiveStartDayKey,
-      endDayKey: effectiveEndDayKey,
+      startDayKey: effectiveRange.startDayKey,
+      endDayKey: effectiveRange.endDayKey,
       currencyType,
       exchangeRateByAccountId,
     })
   }, [
     currencyType,
     effectiveAccountIds,
-    endDayKey,
+    effectiveRange.endDayKey,
+    effectiveRange.startDayKey,
     exchangeRateByAccountId,
-    maxDayKey,
-    minDayKey,
-    startDayKey,
     store,
   ])
 
-  const balanceOption = useMemo(() => {
-    return buildBalanceTrendOption({
-      dayKeys: series.dayKeys,
-      values: series.balanceTotals,
-      seriesLabel: t("charts.balance.series"),
-      yAxisLabel: `${t("charts.balance.yAxis")} (${currencySymbol})`,
-      isDark,
-      axisLabelFormatter: formatAxisMoneyValue,
-      valueFormatter: formatTooltipMoneyValue,
-    })
+  const totalTrendValues = useMemo((): Array<number | null> => {
+    // Best-effort aggregation: sum accounts that have data for each day.
+    // Keep gaps only when no selected accounts have a value for that day.
+    const totals: Array<number | null> = perAccountSeries.dayKeys.map(
+      () => null,
+    )
+
+    for (let index = 0; index < perAccountSeries.dayKeys.length; index += 1) {
+      let sum = 0
+      let covered = 0
+
+      for (const accountId of effectiveAccountIds) {
+        const value =
+          perAccountSeries.seriesByAccountId[accountId]?.[trendMetric]?.[index]
+
+        if (typeof value !== "number" || !Number.isFinite(value)) continue
+        covered += 1
+        sum += value
+      }
+
+      totals[index] = covered > 0 ? sum : null
+    }
+
+    return totals
   }, [
-    currencySymbol,
-    formatAxisMoneyValue,
-    formatTooltipMoneyValue,
-    isDark,
-    series.balanceTotals,
-    series.dayKeys,
-    t,
+    effectiveAccountIds,
+    perAccountSeries.dayKeys,
+    perAccountSeries.seriesByAccountId,
+    trendMetric,
   ])
 
-  const cashflowOption = useMemo(() => {
-    return buildIncomeOutcomeBarOption({
-      dayKeys: series.dayKeys,
-      incomeValues: series.incomeTotals,
-      outcomeValues: series.outcomeTotals,
-      incomeLabel: t("charts.cashflow.income"),
-      outcomeLabel: t("charts.cashflow.outcome"),
-      yAxisLabel: `${t("charts.cashflow.yAxis")} (${currencySymbol})`,
+  const totalTrendCoverageSummary = useMemo(() => {
+    const totalAccounts = effectiveAccountIds.length
+
+    const coverageCounts = perAccountSeries.coverageByDay.map((coverage) => {
+      return trendMetric === "balance"
+        ? coverage.snapshotAccounts
+        : coverage.cashflowAccounts
+    })
+
+    const availableCoverage = coverageCounts.filter((count) => count > 0)
+    const availableDays = availableCoverage.length
+
+    const minCovered = availableDays > 0 ? Math.min(...availableCoverage) : 0
+    const maxCovered = availableDays > 0 ? Math.max(...availableCoverage) : 0
+
+    const partialDays = availableCoverage.filter(
+      (count) => count < totalAccounts,
+    ).length
+
+    return {
+      totalAccounts,
+      minCovered,
+      maxCovered,
+      partialDays,
+    }
+  }, [effectiveAccountIds.length, perAccountSeries.coverageByDay, trendMetric])
+
+  const rangeSummaries = useMemo(() => {
+    return buildAccountRangeSummaries({
+      store,
+      accountIds: effectiveAccountIds,
+      startDayKey: effectiveRange.startDayKey,
+      endDayKey: effectiveRange.endDayKey,
+      currencyType,
+      exchangeRateByAccountId,
+    })
+  }, [
+    currencyType,
+    effectiveAccountIds,
+    effectiveRange.endDayKey,
+    effectiveRange.startDayKey,
+    exchangeRateByAccountId,
+    store,
+  ])
+
+  const trendSeries = useMemo(() => {
+    const series: Array<{ name: string; values: Array<number | null> }> = []
+
+    if (trendScope === "total") {
+      const hasAnyData = totalTrendValues.some(
+        (value) => typeof value === "number" && Number.isFinite(value),
+      )
+
+      return hasAnyData
+        ? [
+            {
+              name: t("trend.scopes.total"),
+              values: totalTrendValues,
+            },
+          ]
+        : []
+    }
+
+    for (const accountId of effectiveAccountIds) {
+      const values =
+        perAccountSeries.seriesByAccountId[accountId]?.[trendMetric] ??
+        perAccountSeries.dayKeys.map(() => null)
+
+      const hasAnyData = values.some(
+        (value) => typeof value === "number" && Number.isFinite(value),
+      )
+      if (!hasAnyData) continue
+
+      series.push({
+        name: accountDisplayLabelById.get(accountId) ?? accountId,
+        values,
+      })
+    }
+
+    return series
+  }, [
+    accountDisplayLabelById,
+    effectiveAccountIds,
+    perAccountSeries.dayKeys,
+    perAccountSeries.seriesByAccountId,
+    t,
+    totalTrendValues,
+    trendMetric,
+    trendScope,
+  ])
+
+  const trendOption = useMemo(() => {
+    const metricLabel = t(`metrics.${trendMetric}`)
+    return buildMultiSeriesTrendOption({
+      dayKeys: perAccountSeries.dayKeys,
+      series: trendSeries,
+      chartType: trendChartType,
+      yAxisLabel: `${metricLabel} (${currencySymbol})`,
       isDark,
       axisLabelFormatter: formatAxisMoneyValue,
       valueFormatter: formatTooltipMoneyValue,
@@ -341,11 +650,174 @@ export default function BalanceHistory() {
     formatAxisMoneyValue,
     formatTooltipMoneyValue,
     isDark,
-    series.dayKeys,
-    series.incomeTotals,
-    series.outcomeTotals,
+    perAccountSeries.dayKeys,
     t,
+    trendChartType,
+    trendMetric,
+    trendSeries,
   ])
+
+  const breakdownData = useMemo(() => {
+    const entries: Array<{ name: string; value: number }> = []
+
+    if (breakdownMetric === "balance") {
+      const referenceDayKey = breakdownBalanceDayKey || effectiveRange.endDayKey
+      const referenceIndex = perAccountSeries.dayKeys.indexOf(referenceDayKey)
+
+      for (const accountId of effectiveAccountIds) {
+        const value =
+          referenceIndex >= 0
+            ? perAccountSeries.seriesByAccountId[accountId]?.balance?.[
+                referenceIndex
+              ]
+            : null
+
+        if (typeof value !== "number" || !Number.isFinite(value)) continue
+
+        entries.push({
+          name: accountDisplayLabelById.get(accountId) ?? accountId,
+          value,
+        })
+      }
+    } else {
+      for (const summary of rangeSummaries.summaries) {
+        const value =
+          breakdownMetric === "income"
+            ? summary.incomeTotal
+            : breakdownMetric === "outcome"
+              ? summary.outcomeTotal
+              : summary.netTotal
+
+        if (typeof value !== "number" || !Number.isFinite(value)) continue
+
+        entries.push({
+          name:
+            accountDisplayLabelById.get(summary.accountId) ?? summary.accountId,
+          value,
+        })
+      }
+    }
+
+    entries.sort((a, b) => b.value - a.value)
+
+    const values = entries.map((entry) => entry.value)
+    return {
+      categories: entries.map((entry) => entry.name),
+      values,
+      coveredAccounts: entries.length,
+      totalAccounts: effectiveAccountIds.length,
+      hasNegativeValues: values.some((value) => value < 0),
+    }
+  }, [
+    accountDisplayLabelById,
+    breakdownBalanceDayKey,
+    breakdownMetric,
+    effectiveAccountIds,
+    effectiveRange.endDayKey,
+    perAccountSeries.dayKeys,
+    perAccountSeries.seriesByAccountId,
+    rangeSummaries.summaries,
+  ])
+
+  useEffect(() => {
+    if (breakdownChartType === "pie" && breakdownData.hasNegativeValues) {
+      setBreakdownChartType("bar")
+    }
+  }, [breakdownChartType, breakdownData.hasNegativeValues])
+
+  const breakdownOption = useMemo(() => {
+    if (!breakdownData.values.length) return null
+
+    const valueLabel = `${t(`metrics.${breakdownMetric}`)} (${currencySymbol})`
+
+    return breakdownChartType === "pie"
+      ? buildAccountBreakdownPieOption({
+          categories: breakdownData.categories,
+          values: breakdownData.values,
+          valueLabel,
+          isDark,
+          valueFormatter: formatTooltipMoneyValue,
+        })
+      : buildAccountBreakdownBarOption({
+          categories: breakdownData.categories,
+          values: breakdownData.values,
+          valueLabel,
+          isDark,
+          axisLabelFormatter: formatAxisMoneyValue,
+          valueFormatter: formatTooltipMoneyValue,
+        })
+  }, [
+    breakdownChartType,
+    breakdownData.categories,
+    breakdownData.values,
+    currencySymbol,
+    formatAxisMoneyValue,
+    formatTooltipMoneyValue,
+    isDark,
+    t,
+    breakdownMetric,
+  ])
+
+  const overviewTotals = useMemo(() => {
+    let endBalanceCovered = 0
+    let endBalanceSum = 0
+    let netCovered = 0
+    let netSum = 0
+    let incomeCovered = 0
+    let incomeSum = 0
+    let outcomeCovered = 0
+    let outcomeSum = 0
+
+    for (const summary of rangeSummaries.summaries) {
+      if (typeof summary.endBalance === "number") {
+        endBalanceCovered += 1
+        endBalanceSum += summary.endBalance
+      }
+
+      if (typeof summary.netTotal === "number") {
+        netCovered += 1
+        netSum += summary.netTotal
+      }
+
+      if (typeof summary.incomeTotal === "number") {
+        incomeCovered += 1
+        incomeSum += summary.incomeTotal
+      }
+
+      if (typeof summary.outcomeTotal === "number") {
+        outcomeCovered += 1
+        outcomeSum += summary.outcomeTotal
+      }
+    }
+
+    return {
+      totalAccounts: effectiveAccountIds.length,
+      endBalance: endBalanceCovered ? endBalanceSum : null,
+      endBalanceCovered,
+      rangeNet: netCovered ? netSum : null,
+      rangeNetCovered: netCovered,
+      incomeTotal: incomeCovered ? incomeSum : null,
+      incomeCovered,
+      outcomeTotal: outcomeCovered ? outcomeSum : null,
+      outcomeCovered,
+    }
+  }, [effectiveAccountIds.length, rangeSummaries.summaries])
+
+  const tableRows = useMemo<BalanceHistoryAccountSummaryRow[]>(() => {
+    return rangeSummaries.summaries.map((summary) => ({
+      id: summary.accountId,
+      label:
+        accountDisplayLabelById.get(summary.accountId) ?? summary.accountId,
+      startBalance: summary.startBalance,
+      endBalance: summary.endBalance,
+      netTotal: summary.netTotal,
+      incomeTotal: summary.incomeTotal,
+      outcomeTotal: summary.outcomeTotal,
+      snapshotDays: summary.snapshotDays,
+      cashflowDays: summary.cashflowDays,
+      totalDays: summary.totalDays,
+    }))
+  }, [accountDisplayLabelById, rangeSummaries.summaries])
 
   const enabled = preferences.balanceHistory?.enabled ?? false
   const endOfDayCaptureEnabled =
@@ -363,7 +835,7 @@ export default function BalanceHistory() {
   ) as boolean
 
   const snapshotCompleteDays = useMemo(() => {
-    const totals = series.coverage.reduce(
+    const totals = perAccountSeries.coverageByDay.reduce(
       (acc, item) => {
         if (item.snapshotAccounts === item.totalAccounts)
           acc.snapshotComplete += 1
@@ -374,65 +846,43 @@ export default function BalanceHistory() {
       { snapshotComplete: 0, cashflowComplete: 0 },
     )
     return totals
-  }, [series.coverage])
+  }, [perAccountSeries.coverageByDay])
 
   const snapshotAvailableDays = useMemo(() => {
-    return series.coverage.reduce(
+    return perAccountSeries.coverageByDay.reduce(
       (acc, item) => acc + (item.snapshotAccounts > 0 ? 1 : 0),
       0,
     )
-  }, [series.coverage])
+  }, [perAccountSeries.coverageByDay])
 
   const cashflowAvailableDays = useMemo(() => {
-    return series.coverage.reduce(
+    return perAccountSeries.coverageByDay.reduce(
       (acc, item) => acc + (item.cashflowAccounts > 0 ? 1 : 0),
       0,
     )
-  }, [series.coverage])
+  }, [perAccountSeries.coverageByDay])
 
-  const bestCoveredAccountId = useMemo(() => {
-    const effectiveStartDayKey = startDayKey || minDayKey
-    const effectiveEndDayKey = endDayKey || maxDayKey
+  const hasAnyPerAccountTrendMetricData =
+    trendMetric === "balance"
+      ? snapshotAvailableDays > 0
+      : cashflowAvailableDays > 0
 
-    if (!store) return null
-    if (!effectiveStartDayKey || !effectiveEndDayKey) return null
+  const hasAnyTotalTrendMetricData = useMemo(() => {
+    return totalTrendValues.some(
+      (value) => typeof value === "number" && Number.isFinite(value),
+    )
+  }, [totalTrendValues])
 
-    let bestId: string | null = null
-    let bestCount = 0
+  const hasAnyTrendMetricData =
+    trendScope === "total"
+      ? hasAnyTotalTrendMetricData
+      : hasAnyPerAccountTrendMetricData
 
-    for (const account of accountsForSelectedTags) {
-      const perDay = store.snapshotsByAccountId[account.id]
-      if (!perDay) continue
-
-      let count = 0
-      for (const dayKey of Object.keys(perDay)) {
-        if (dayKey < effectiveStartDayKey || dayKey > effectiveEndDayKey)
-          continue
-        count += 1
-      }
-
-      if (count > bestCount) {
-        bestCount = count
-        bestId = account.id
-      }
-    }
-
-    return bestId
-  }, [
-    accountsForSelectedTags,
-    endDayKey,
-    maxDayKey,
-    minDayKey,
-    startDayKey,
-    store,
-  ])
-
-  const shouldShowIncompleteSelectionHint =
-    !isLoading &&
-    !isStoreEmpty &&
-    effectiveAccountIds.length > 1 &&
-    snapshotAvailableDays > 0 &&
-    snapshotCompleteDays.snapshotComplete === 0
+  const shouldShowIncompleteTotalHint =
+    trendScope === "total" &&
+    hasAnyTotalTrendMetricData &&
+    totalTrendCoverageSummary.partialDays > 0 &&
+    totalTrendCoverageSummary.totalAccounts > 1
 
   // When balance history capture is disabled and no snapshots exist yet,
   // show a clear CTA instead of rendering filters + an empty state.
@@ -480,26 +930,6 @@ export default function BalanceHistory() {
           title={t("warnings.cashflowDisabled.title")}
           description={t("warnings.cashflowDisabled.description")}
         />
-      )}
-
-      {shouldShowIncompleteSelectionHint && (
-        <Alert
-          variant="info"
-          title={t("hints.incompleteSelection.title")}
-          description={t("hints.incompleteSelection.description")}
-        >
-          {bestCoveredAccountId && (
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setSelectedAccountIds([bestCoveredAccountId])}
-              >
-                {t("hints.incompleteSelection.actions.viewBestAccount")}
-              </Button>
-            </div>
-          )}
-        </Alert>
       )}
 
       {shouldShowEnableBalanceHistoryHint ? (
@@ -598,28 +1028,6 @@ export default function BalanceHistory() {
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-2">
-                {QUICK_RANGES.map((preset) => {
-                  const label = t(`filters.quickRanges.${preset.id}`)
-                  return (
-                    <Button
-                      key={preset.id}
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        const desired = Math.min(preset.days, safeRetentionDays)
-                        setEndDayKey(maxDayKey)
-                        setStartDayKey(
-                          subtractDaysFromDayKey(maxDayKey, desired - 1),
-                        )
-                      }}
-                    >
-                      {label}
-                    </Button>
-                  )
-                })}
-              </div>
-
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">
@@ -651,13 +1059,35 @@ export default function BalanceHistory() {
                 </div>
               </div>
 
+              <div className="flex flex-wrap gap-2">
+                {QUICK_RANGES.map((preset) => {
+                  const label = t(`filters.quickRanges.${preset.id}`)
+                  return (
+                    <Button
+                      key={preset.id}
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        const desired = Math.min(preset.days, safeRetentionDays)
+                        setEndDayKey(maxDayKey)
+                        setStartDayKey(
+                          subtractDaysFromDayKey(maxDayKey, desired - 1),
+                        )
+                      }}
+                    >
+                      {label}
+                    </Button>
+                  )
+                })}
+              </div>
+
               <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
                 {t("summary.coverage", {
                   snapshotAvailableDays,
                   snapshotCompleteDays: snapshotCompleteDays.snapshotComplete,
                   cashflowAvailableDays,
                   cashflowCompleteDays: snapshotCompleteDays.cashflowComplete,
-                  totalDays: series.dayKeys.length,
+                  totalDays: perAccountSeries.dayKeys.length,
                 })}
               </div>
             </div>
@@ -688,26 +1118,350 @@ export default function BalanceHistory() {
               </div>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <div className="space-y-6">
               <Card padding="md">
-                <div className="space-y-2">
+                <div className="space-y-4">
                   <div className="text-sm font-medium">
-                    {t("charts.balance.title")}
+                    {t("overview.title")}
                   </div>
-                  <div className="h-80 w-full">
-                    <EChart option={balanceOption} />
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="dark:bg-dark-bg-secondary rounded-lg bg-gray-50 p-3">
+                      <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                        {t("overview.kpis.endBalance.label")}
+                      </div>
+                      <div className="text-lg font-semibold">
+                        {overviewTotals.endBalance === null
+                          ? "-"
+                          : `${currencySymbol}${formatMoneyFixed(overviewTotals.endBalance)}`}
+                      </div>
+                      <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                        {t("overview.kpis.coverageAccounts", {
+                          covered: overviewTotals.endBalanceCovered,
+                          total: overviewTotals.totalAccounts,
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="dark:bg-dark-bg-secondary rounded-lg bg-gray-50 p-3">
+                      <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                        {t("overview.kpis.rangeNet.label")}
+                      </div>
+                      <div className="text-lg font-semibold">
+                        {overviewTotals.rangeNet === null
+                          ? "-"
+                          : `${currencySymbol}${formatMoneyFixed(overviewTotals.rangeNet)}`}
+                      </div>
+                      <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                        {t("overview.kpis.coverageAccounts", {
+                          covered: overviewTotals.rangeNetCovered,
+                          total: overviewTotals.totalAccounts,
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="dark:bg-dark-bg-secondary rounded-lg bg-gray-50 p-3">
+                      <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                        {t("overview.kpis.incomeTotal.label")}
+                      </div>
+                      <div className="text-lg font-semibold">
+                        {overviewTotals.incomeTotal === null
+                          ? "-"
+                          : `${currencySymbol}${formatMoneyFixed(overviewTotals.incomeTotal)}`}
+                      </div>
+                      <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                        {t("overview.kpis.coverageAccounts", {
+                          covered: overviewTotals.incomeCovered,
+                          total: overviewTotals.totalAccounts,
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="dark:bg-dark-bg-secondary rounded-lg bg-gray-50 p-3">
+                      <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                        {t("overview.kpis.outcomeTotal.label")}
+                      </div>
+                      <div className="text-lg font-semibold">
+                        {overviewTotals.outcomeTotal === null
+                          ? "-"
+                          : `${currencySymbol}${formatMoneyFixed(overviewTotals.outcomeTotal)}`}
+                      </div>
+                      <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                        {t("overview.kpis.coverageAccounts", {
+                          covered: overviewTotals.outcomeCovered,
+                          total: overviewTotals.totalAccounts,
+                        })}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </Card>
 
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                <Card padding="md">
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0 space-y-1">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              type="button"
+                              className={`${ANIMATIONS.transition.base} dark:hover:bg-dark-bg-tertiary inline-flex min-w-0 items-center gap-1 rounded-md px-1 py-0.5 text-sm font-medium hover:bg-gray-100 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none`}
+                            >
+                              <span className="min-w-0 truncate">
+                                {t("breakdown.title")}:{" "}
+                                {t(`metrics.${breakdownMetric}`)}
+                              </span>
+                              <ChevronDown className="h-4 w-4 shrink-0 opacity-70" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start" className="w-44">
+                            <DropdownMenuRadioGroup
+                              value={breakdownMetric}
+                              onValueChange={(value) =>
+                                setBreakdownMetric(
+                                  value as DailyBalanceHistoryMetric,
+                                )
+                              }
+                            >
+                              <DropdownMenuRadioItem value="balance">
+                                {t("metrics.balance")}
+                              </DropdownMenuRadioItem>
+                              <DropdownMenuRadioItem value="income">
+                                {t("metrics.income")}
+                              </DropdownMenuRadioItem>
+                              <DropdownMenuRadioItem value="outcome">
+                                {t("metrics.outcome")}
+                              </DropdownMenuRadioItem>
+                              <DropdownMenuRadioItem value="net">
+                                {t("metrics.net")}
+                              </DropdownMenuRadioItem>
+                            </DropdownMenuRadioGroup>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                        <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                          {t("breakdown.coverage", {
+                            covered: breakdownData.coveredAccounts,
+                            total: breakdownData.totalAccounts,
+                          })}
+                        </div>
+                      </div>
+
+                      <div
+                        className={`inline-flex ${COLORS.background.tertiary} rounded-lg p-1 shadow-sm ${ANIMATIONS.transition.base}`}
+                        role="group"
+                        aria-label={t("breakdown.controls.chartType")}
+                      >
+                        <ToggleButton
+                          type="button"
+                          size="sm"
+                          isActive={breakdownChartType === "pie"}
+                          onClick={() => setBreakdownChartType("pie")}
+                          disabled={breakdownData.hasNegativeValues}
+                          aria-label={t("breakdown.chartTypes.pie")}
+                        >
+                          {t("breakdown.chartTypes.pie")}
+                        </ToggleButton>
+                        <ToggleButton
+                          type="button"
+                          size="sm"
+                          isActive={breakdownChartType === "bar"}
+                          onClick={() => setBreakdownChartType("bar")}
+                          aria-label={t("breakdown.chartTypes.histogram")}
+                        >
+                          {t("breakdown.chartTypes.histogram")}
+                        </ToggleButton>
+                      </div>
+                    </div>
+
+                    {breakdownMetric === "balance" && (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Label className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                          {t("breakdown.controls.reference")}
+                        </Label>
+                        <Input
+                          type="date"
+                          size="sm"
+                          containerClassName="w-40"
+                          value={
+                            breakdownBalanceDayKey || effectiveRange.endDayKey
+                          }
+                          min={effectiveRange.startDayKey}
+                          max={effectiveRange.endDayKey}
+                          aria-label={t("breakdown.controls.reference")}
+                          onChange={(event) =>
+                            setBreakdownBalanceDayKey(event.target.value)
+                          }
+                        />
+                      </div>
+                    )}
+
+                    {breakdownData.hasNegativeValues && (
+                      <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                        {t("breakdown.hints.pieDisabledForNegative")}
+                      </div>
+                    )}
+
+                    {breakdownOption ? (
+                      <div className="h-80 w-full">
+                        <EChart option={breakdownOption} />
+                      </div>
+                    ) : (
+                      <div className="dark:text-dark-text-secondary text-sm text-gray-600">
+                        {t("breakdown.empty")}
+                      </div>
+                    )}
+                  </div>
+                </Card>
+
+                <Card padding="md">
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 space-y-1">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                type="button"
+                                className={`${ANIMATIONS.transition.base} dark:hover:bg-dark-bg-tertiary inline-flex min-w-0 items-center gap-1 rounded-md px-1 py-0.5 text-sm font-medium hover:bg-gray-100 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none`}
+                              >
+                                <span className="min-w-0 truncate">
+                                  {t("trend.title")}:{" "}
+                                  {t(`metrics.${trendMetric}`)}
+                                </span>
+                                <ChevronDown className="h-4 w-4 shrink-0 opacity-70" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" className="w-44">
+                              <DropdownMenuRadioGroup
+                                value={trendMetric}
+                                onValueChange={(value) =>
+                                  setTrendMetric(
+                                    value as DailyBalanceHistoryMetric,
+                                  )
+                                }
+                              >
+                                <DropdownMenuRadioItem value="balance">
+                                  {t("metrics.balance")}
+                                </DropdownMenuRadioItem>
+                                <DropdownMenuRadioItem value="income">
+                                  {t("metrics.income")}
+                                </DropdownMenuRadioItem>
+                                <DropdownMenuRadioItem value="outcome">
+                                  {t("metrics.outcome")}
+                                </DropdownMenuRadioItem>
+                                <DropdownMenuRadioItem value="net">
+                                  {t("metrics.net")}
+                                </DropdownMenuRadioItem>
+                              </DropdownMenuRadioGroup>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                type="button"
+                                className={`${ANIMATIONS.transition.base} dark:hover:bg-dark-bg-tertiary inline-flex min-w-0 items-center gap-1 rounded-md px-1 py-0.5 text-sm font-medium hover:bg-gray-100 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none`}
+                              >
+                                <span className="min-w-0 truncate">
+                                  {t("trend.controls.scope")}:{" "}
+                                  {t(`trend.scopes.${trendScope}`)}
+                                </span>
+                                <ChevronDown className="h-4 w-4 shrink-0 opacity-70" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" className="w-40">
+                              <DropdownMenuRadioGroup
+                                value={trendScope}
+                                onValueChange={(value) =>
+                                  setTrendScope(
+                                    value as BalanceHistoryTrendSeriesScope,
+                                  )
+                                }
+                              >
+                                <DropdownMenuRadioItem value="accounts">
+                                  {t("trend.scopes.accounts")}
+                                </DropdownMenuRadioItem>
+                                <DropdownMenuRadioItem value="total">
+                                  {t("trend.scopes.total")}
+                                </DropdownMenuRadioItem>
+                              </DropdownMenuRadioGroup>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                        <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                          {trendScope === "total"
+                            ? t("trend.subtitleTotal")
+                            : t("trend.subtitle")}
+                        </div>
+                      </div>
+                      <div
+                        className={`inline-flex ${COLORS.background.tertiary} rounded-lg p-1 shadow-sm ${ANIMATIONS.transition.base}`}
+                        role="group"
+                        aria-label={t("trend.controls.chartType")}
+                      >
+                        <ToggleButton
+                          type="button"
+                          size="sm"
+                          isActive={trendChartType === "line"}
+                          onClick={() => setTrendChartType("line")}
+                          aria-label={t("trend.chartTypes.line")}
+                        >
+                          {t("trend.chartTypes.line")}
+                        </ToggleButton>
+                        <ToggleButton
+                          type="button"
+                          size="sm"
+                          isActive={trendChartType === "bar"}
+                          onClick={() => setTrendChartType("bar")}
+                          aria-label={t("trend.chartTypes.bar")}
+                        >
+                          {t("trend.chartTypes.bar")}
+                        </ToggleButton>
+                      </div>
+                    </div>
+
+                    {hasAnyTrendMetricData ? (
+                      <div className="space-y-3">
+                        <div className="h-80 w-full">
+                          <EChart option={trendOption} />
+                        </div>
+                        {shouldShowIncompleteTotalHint && (
+                          <Alert
+                            variant="info"
+                            title={t("hints.incompleteSelection.title")}
+                            description={t(
+                              "hints.incompleteSelection.description",
+                              {
+                                minCovered:
+                                  totalTrendCoverageSummary.minCovered,
+                                maxCovered:
+                                  totalTrendCoverageSummary.maxCovered,
+                                totalAccounts:
+                                  totalTrendCoverageSummary.totalAccounts,
+                              },
+                            )}
+                          />
+                        )}
+                      </div>
+                    ) : (
+                      <div className="dark:text-dark-text-secondary text-sm text-gray-600">
+                        {t("trend.emptyMetric", {
+                          metric: t(`metrics.${trendMetric}`),
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              </div>
+
               <Card padding="md">
-                <div className="space-y-2">
-                  <div className="text-sm font-medium">
-                    {t("charts.cashflow.title")}
-                  </div>
-                  <div className="h-80 w-full">
-                    <EChart option={cashflowOption} />
-                  </div>
+                <div className="space-y-3">
+                  <div className="text-sm font-medium">{t("table.title")}</div>
+                  <BalanceHistoryAccountSummaryTable
+                    rows={tableRows}
+                    isLoading={isLoading}
+                    currencySymbol={currencySymbol}
+                  />
                 </div>
               </Card>
             </div>

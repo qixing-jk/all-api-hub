@@ -27,6 +27,7 @@
     "accounts": "Accounts",
     "accountsHint": "Select accounts to include in charts.",
     "allAccounts": "All accounts",
+    "noDataInRange": "No data in this range",
     "range": "Date range",
     "rangeHint": "Bounded by retention window ({{days}} days).",
     "quickRanges": {
@@ -36,8 +37,8 @@
       "180d": "180 days",
       "365d": "1 year"
     },
-    "startDay": "Start",
-    "endDay": "End"
+    "startDay": "Start Time",
+    "endDay": "End Time"
   },
   "summary": {
     "coverage": "Days with data: balance {{snapshotAvailableDays}}/{{totalDays}} (complete {{snapshotCompleteDays}}/{{totalDays}}), cashflow {{cashflowAvailableDays}}/{{totalDays}} (complete {{cashflowCompleteDays}}/{{totalDays}})."
@@ -55,8 +56,8 @@
       }
     },
     "incompleteSelection": {
-      "title": "Some data may be hidden",
-      "description": "The aggregated chart only shows days where all selected accounts have snapshots. Try selecting fewer accounts to view the available data.",
+      "title": "Total may be incomplete",
+      "description": "Totals are computed on a best-effort basis by summing accounts that have data on each day. When coverage is incomplete ({{minCovered}}–{{maxCovered}}/{{totalAccounts}} accounts), totals may be underestimated.",
       "actions": {
         "viewBestAccount": "View best-covered account"
       }
@@ -77,6 +78,86 @@
       "income": "Income",
       "outcome": "Outcome",
       "yAxis": "Amount"
+    }
+  },
+  "metrics": {
+    "balance": "Balance",
+    "income": "Income",
+    "outcome": "Outcome",
+    "net": "Net change"
+  },
+  "overview": {
+    "title": "Overview",
+    "kpis": {
+      "endBalance": {
+        "label": "End balance"
+      },
+      "rangeNet": {
+        "label": "Range net"
+      },
+      "incomeTotal": {
+        "label": "Income total"
+      },
+      "outcomeTotal": {
+        "label": "Outcome total"
+      },
+      "coverageAccounts": "{{covered}}/{{total}} accounts"
+    }
+  },
+  "breakdown": {
+    "title": "Account breakdown",
+    "coverage": "{{covered}}/{{total}} accounts with data",
+    "empty": "No data to display for this breakdown.",
+    "controls": {
+      "metric": "Metric",
+      "reference": "Reference",
+      "chartType": "Chart type"
+    },
+    "references": {
+      "start": "Start",
+      "end": "End"
+    },
+    "chartTypes": {
+      "pie": "Pie",
+      "histogram": "Histogram"
+    },
+    "hints": {
+      "pieDisabledForNegative": "Pie charts are unavailable for negative values."
+    }
+  },
+  "trend": {
+    "title": "Trend",
+    "subtitle": "Per-account series with gaps for missing days.",
+    "subtitleTotal": "Total (sum) across selected accounts; values may be underestimated on days with incomplete coverage.",
+    "emptyMetric": "No {{metric}} data in this range.",
+    "controls": {
+      "metric": "Metric",
+      "scope": "View",
+      "chartType": "Chart type"
+    },
+    "scopes": {
+      "accounts": "By account",
+      "total": "Total"
+    },
+    "chartTypes": {
+      "line": "Line",
+      "bar": "Bar"
+    }
+  },
+  "table": {
+    "title": "Account summary",
+    "loading": "Loading…",
+    "empty": "No account summaries to display.",
+    "coverageFormat": "{{covered}}/{{total}}",
+    "columns": {
+      "account": "Account",
+      "startBalance": "Start balance",
+      "endBalance": "End balance",
+      "rangeNet": "Range net",
+      "incomeTotal": "Income total",
+      "outcomeTotal": "Outcome total",
+      "snapshotCoverage": "Snapshot coverage",
+      "cashflowCoverage": "Cashflow coverage"
     }
   },
   "messages": {

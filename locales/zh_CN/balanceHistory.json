@@ -27,6 +27,7 @@
     "accounts": "账户",
     "accountsHint": "选择要纳入图表的账户。",
     "allAccounts": "全部账户",
+    "noDataInRange": "该范围内无快照",
     "range": "时间范围",
     "rangeHint": "受保留窗口限制（{{days}} 天）。",
     "quickRanges": {
@@ -36,8 +37,8 @@
       "180d": "近180天",
       "365d": "近1年"
     },
-    "startDay": "开始",
-    "endDay": "结束"
+    "startDay": "开始时间",
+    "endDay": "结束时间"
   },
   "summary": {
     "coverage": "有数据天数：余额 {{snapshotAvailableDays}}/{{totalDays}}（完整 {{snapshotCompleteDays}}/{{totalDays}}），收支 {{cashflowAvailableDays}}/{{totalDays}}（完整 {{cashflowCompleteDays}}/{{totalDays}}）。"
@@ -55,8 +56,8 @@
       }
     },
     "incompleteSelection": {
-      "title": "部分数据可能被隐藏",
-      "description": "聚合图表仅显示“所选全部账户都存在快照”的日期。请尝试选择更少的账户以查看已有数据。",
+      "title": "汇总可能不完整",
+      "description": "汇总曲线会尽力按当日有数据的账户求和；覆盖不足时（{{minCovered}}–{{maxCovered}}/{{totalAccounts}} 个账户）可能低估。",
       "actions": {
         "viewBestAccount": "查看覆盖最多的账户"
       }
@@ -77,6 +78,86 @@
       "income": "收入",
       "outcome": "支出",
       "yAxis": "金额"
+    }
+  },
+  "metrics": {
+    "balance": "余额",
+    "income": "收入",
+    "outcome": "支出",
+    "net": "净变化"
+  },
+  "overview": {
+    "title": "概览",
+    "kpis": {
+      "endBalance": {
+        "label": "结束余额"
+      },
+      "rangeNet": {
+        "label": "区间净变化"
+      },
+      "incomeTotal": {
+        "label": "区间收入"
+      },
+      "outcomeTotal": {
+        "label": "区间支出"
+      },
+      "coverageAccounts": "{{covered}}/{{total}} 个账户"
+    }
+  },
+  "breakdown": {
+    "title": "账户分布",
+    "coverage": "{{covered}}/{{total}} 个账户有数据",
+    "empty": "该分布暂无可展示的数据。",
+    "controls": {
+      "metric": "指标",
+      "reference": "参考",
+      "chartType": "图表类型"
+    },
+    "references": {
+      "start": "开始",
+      "end": "结束"
+    },
+    "chartTypes": {
+      "pie": "饼图",
+      "histogram": "直方图"
+    },
+    "hints": {
+      "pieDisabledForNegative": "存在负值时无法使用饼图。"
+    }
+  },
+  "trend": {
+    "title": "趋势",
+    "subtitle": "按账户展示，缺失日期以空白断点表示。",
+    "subtitleTotal": "所选账户汇总（求和）展示；覆盖不足的日期可能低估。",
+    "emptyMetric": "该时间范围内暂无{{metric}}数据。",
+    "controls": {
+      "metric": "指标",
+      "scope": "视图",
+      "chartType": "图表类型"
+    },
+    "scopes": {
+      "accounts": "按账户",
+      "total": "汇总"
+    },
+    "chartTypes": {
+      "line": "折线",
+      "bar": "柱状"
+    }
+  },
+  "table": {
+    "title": "账户汇总",
+    "loading": "加载中…",
+    "empty": "暂无可展示的账户汇总。",
+    "coverageFormat": "{{covered}}/{{total}}",
+    "columns": {
+      "account": "账户",
+      "startBalance": "开始余额",
+      "endBalance": "结束余额",
+      "rangeNet": "区间净变化",
+      "incomeTotal": "区间收入",
+      "outcomeTotal": "区间支出",
+      "snapshotCoverage": "快照覆盖",
+      "cashflowCoverage": "收支覆盖"
     }
   },
   "messages": {

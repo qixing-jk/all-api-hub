@@ -19,6 +19,8 @@ export interface TagFilterOption {
    * When omitted, the label is used.
    */
   title?: string
+  /** Optional disabled state for the chip. */
+  disabled?: boolean
   /** Optional count to display next to the label. */
   count?: number
   /** Optional visual style variant for the count badge. */
@@ -257,8 +259,9 @@ export function TagFilter(props: TagFilterProps) {
 
   const renderTagButton = (option: TagFilterOption, isInOverflow: boolean) => {
     const isActive = selectedSet.has(option.value)
+    const isOptionDisabled = disabled || (option.disabled && !isActive)
     const handleClick = () => {
-      if (!disabled) {
+      if (!isOptionDisabled) {
         handleTagClick(option.value)
       }
     }
@@ -277,10 +280,10 @@ export function TagFilter(props: TagFilterProps) {
         size="sm"
         shape="pill"
         isActive={isActive}
-        disabled={disabled}
+        disabled={isOptionDisabled}
         data-tag-filter-chip="true"
         className={cn(
-          "border px-3 py-1 text-xs shadow-xs sm:text-[13px]",
+          "border px-3 py-1 text-xs shadow-xs disabled:cursor-not-allowed disabled:opacity-60 sm:text-[13px]",
           chipBaseClasses,
           isInOverflow && "w-full justify-between",
         )}
