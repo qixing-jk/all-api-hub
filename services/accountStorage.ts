@@ -935,7 +935,7 @@ class AccountStorageService {
    * Refresh all accounts concurrently; summarizes results.
    */
   async refreshAllAccounts(force: boolean = false) {
-    const accounts = await this.getAllAccounts()
+    const accounts = await this.getEnabledAccounts()
     const includeTodayCashflow =
       (await userPreferences.getPreferences()).showTodayCashflow ?? true
     let successCount = 0

@@ -18,7 +18,7 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
 }))
 
 vi.mock("~/services/accountStorage", () => ({
-  accountStorage: { getAllAccounts: vi.fn() },
+  accountStorage: { getAllAccounts: vi.fn(), getEnabledAccounts: vi.fn() },
 }))
 
 vi.mock("~/services/usageHistory/storage", () => ({
@@ -71,7 +71,7 @@ describe("UsageHistorySyncTab", () => {
       loadPreferences,
     } as any)
 
-    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([
+    vi.mocked(accountStorage.getEnabledAccounts).mockResolvedValue([
       { id: "a1", site_name: "Account 1" },
     ] as any)
     vi.mocked(usageHistoryStorage.getStore).mockResolvedValue({
@@ -116,7 +116,7 @@ describe("UsageHistorySyncTab", () => {
       loadPreferences: vi.fn().mockResolvedValue(undefined),
     } as any)
 
-    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([
+    vi.mocked(accountStorage.getEnabledAccounts).mockResolvedValue([
       { id: "a1", site_name: "Account 1" },
       { id: "a2", site_name: "Account 2" },
     ] as any)

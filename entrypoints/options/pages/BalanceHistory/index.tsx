@@ -125,7 +125,7 @@ export default function BalanceHistory() {
     try {
       setIsLoading(true)
       const [nextAccounts, nextStore, nextTagStore] = await Promise.all([
-        accountStorage.getAllAccounts(),
+        accountStorage.getEnabledAccounts(),
         dailyBalanceHistoryStorage.getStore(),
         tagStorage.getTagStore(),
       ])

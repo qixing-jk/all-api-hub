@@ -72,7 +72,7 @@ export default function UsageHistorySyncTab() {
     try {
       setIsLoading(true)
       const [nextAccounts, nextStore] = await Promise.all([
-        accountStorage.getAllAccounts(),
+        accountStorage.getEnabledAccounts(),
         usageHistoryStorage.getStore(),
       ])
       setAccounts(nextAccounts)

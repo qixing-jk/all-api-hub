@@ -124,6 +124,19 @@ export default function UsageAnalytics() {
   const [store, setStore] = useState<UsageHistoryStore | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
+  const enabledAccounts = useMemo(
+    () => accounts.filter((account) => account.disabled !== true),
+    [accounts],
+  )
+
+  const disabledAccountIdSet = useMemo(() => {
+    return new Set(
+      accounts
+        .filter((account) => account.disabled === true)
+        .map((account) => account.id),
+    )
+  }, [accounts])
+
   const [selectedSiteNames, setSelectedSiteNames] = useState<string[]>([])
   const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>([])
   const [selectedTokenIds, setSelectedTokenIds] = useState<string[]>([])
@@ -197,7 +210,7 @@ export default function UsageAnalytics() {
       }
     >()
 
-    for (const account of accounts) {
+    for (const account of enabledAccounts) {
       const entry = metaBySite.get(account.site_name) ?? {
         urls: new Set<string>(),
         types: new Set<string>(),
@@ -227,15 +240,15 @@ export default function UsageAnalytics() {
     }
 
     return out
-  }, [accounts, t])
+  }, [enabledAccounts, t])
 
   const siteAccountCountByName = useMemo(() => {
     const out = new Map<string, number>()
-    for (const account of accounts) {
+    for (const account of enabledAccounts) {
       out.set(account.site_name, (out.get(account.site_name) ?? 0) + 1)
     }
     return out
-  }, [accounts])
+  }, [enabledAccounts])
 
   const tokenCountByAccountId = useMemo(() => {
     const out = new Map<string, number>()
@@ -271,7 +284,9 @@ export default function UsageAnalytics() {
   }, [endDay, startDay, store])
 
   const siteOptions = useMemo(() => {
-    const siteNames = new Set(accounts.map((account) => account.site_name))
+    const siteNames = new Set(
+      enabledAccounts.map((account) => account.site_name),
+    )
     const options = Array.from(siteNames).map((siteName) => ({
       value: siteName,
       label: siteName,
@@ -281,30 +296,30 @@ export default function UsageAnalytics() {
 
     options.sort((a, b) => a.label.localeCompare(b.label))
     return options
-  }, [accounts, siteAccountCountByName, siteTitleByName])
+  }, [enabledAccounts, siteAccountCountByName, siteTitleByName])
 
   // Filtered accounts for the selected sites.
   const accountsForSelectedSites = useMemo(() => {
     if (selectedSiteNames.length === 0) {
-      return accounts
+      return enabledAccounts
     }
 
     const selected = new Set(selectedSiteNames)
-    return accounts.filter((account) => selected.has(account.site_name))
-  }, [accounts, selectedSiteNames])
+    return enabledAccounts.filter((account) => selected.has(account.site_name))
+  }, [enabledAccounts, selectedSiteNames])
 
   const usernameCounts = useMemo(() => {
     const counts = new Map<string, number>()
-    for (const account of accounts) {
+    for (const account of enabledAccounts) {
       const username = account.account_info.username
       counts.set(username, (counts.get(username) ?? 0) + 1)
     }
     return counts
-  }, [accounts])
+  }, [enabledAccounts])
 
   const accountLabelById = useMemo(() => {
     const out = new Map<string, string>()
-    for (const account of accounts) {
+    for (const account of enabledAccounts) {
       const username = account.account_info.username
       const disambiguate = (usernameCounts.get(username) ?? 0) > 1
       const label = disambiguate
@@ -313,7 +328,7 @@ export default function UsageAnalytics() {
       out.set(account.id, label)
     }
     return out
-  }, [accounts, usernameCounts])
+  }, [enabledAccounts, usernameCounts])
 
   const accountOptions = useMemo(() => {
     return accountsForSelectedSites.map((account) => ({
@@ -332,12 +347,12 @@ export default function UsageAnalytics() {
 
   const accountLabels = useMemo(() => {
     return Object.fromEntries(
-      accounts.map((account) => [
+      enabledAccounts.map((account) => [
         account.id,
         accountLabelById.get(account.id) ?? account.id,
       ]),
     ) as Record<string, string>
-  }, [accountLabelById, accounts])
+  }, [accountLabelById, enabledAccounts])
 
   useEffect(() => {
     if (selectedAccountIds.length === 0) {
@@ -352,6 +367,18 @@ export default function UsageAnalytics() {
     )
   }, [accountsForSelectedSites, selectedAccountIds.length])
 
+  useEffect(() => {
+    if (selectedSiteNames.length === 0) {
+      return
+    }
+
+    const available = new Set(siteOptions.map((option) => option.value))
+    setSelectedSiteNames((current) => {
+      const next = current.filter((siteName) => available.has(siteName))
+      return next.length === current.length ? current : next
+    })
+  }, [selectedSiteNames.length, siteOptions])
+
   const resolvedAccountIds = useMemo(() => {
     if (selectedAccountIds.length > 0) {
       return selectedAccountIds
@@ -362,12 +389,15 @@ export default function UsageAnalytics() {
     }
 
     if (store) {
-      return Object.keys(store.accounts)
+      return Object.keys(store.accounts).filter(
+        (accountId) => !disabledAccountIdSet.has(accountId),
+      )
     }
 
-    return accounts.map((account) => account.id)
+    return enabledAccounts.map((account) => account.id)
   }, [
-    accounts,
+    disabledAccountIdSet,
+    enabledAccounts,
     accountsForSelectedSites,
     selectedAccountIds,
     selectedSiteNames.length,
@@ -428,30 +458,15 @@ export default function UsageAnalytics() {
       return null
     }
 
-    const hasScopedAccountFilter =
-      selectedSiteNames.length > 0 || selectedAccountIds.length > 0
-
-    const scopedAccountIds =
-      selectedAccountIds.length > 0
-        ? selectedAccountIds
-        : accountsForSelectedSites.map((account) => account.id)
-
+    // Keep the export scoped to the same effective account id set that powers the UI.
+    // This ensures disabled accounts do not leak into the "All accounts" view.
     return {
-      accountIds: hasScopedAccountFilter
-        ? scopedAccountIds.length > 0
-          ? scopedAccountIds
-          : ["__none__"]
-        : [],
+      accountIds:
+        resolvedAccountIds.length > 0 ? resolvedAccountIds : ["__none__"],
       startDay,
       endDay,
     }
-  }, [
-    accountsForSelectedSites,
-    endDay,
-    selectedAccountIds,
-    selectedSiteNames.length,
-    startDay,
-  ])
+  }, [endDay, resolvedAccountIds, startDay])
 
   const exportPreview = useMemo(() => {
     if (!store || !exportSelection) {
@@ -473,7 +488,7 @@ export default function UsageAnalytics() {
     ])
 
     const accountIdentityById = new Map(
-      accounts.map((account) => [
+      enabledAccounts.map((account) => [
         account.id,
         `${account.site_name} - ${account.account_info.username}`,
       ]),
@@ -527,7 +542,7 @@ export default function UsageAnalytics() {
 
     options.sort((a, b) => a.label.localeCompare(b.label))
     return options
-  }, [accountLabels, accounts, exportPreview, t])
+  }, [accountLabels, enabledAccounts, exportPreview, t])
 
   useEffect(() => {
     if (selectedTokenIds.length === 0) {
@@ -643,7 +658,9 @@ export default function UsageAnalytics() {
     }
 
     const exchangeRateByAccountId = new Map(
-      accounts.map((account) => [account.id, account.exchange_rate] as const),
+      enabledAccounts.map(
+        (account) => [account.id, account.exchange_rate] as const,
+      ),
     )
 
     return accountTotalsFullRows.reduce((sum, row) => {
@@ -652,7 +669,7 @@ export default function UsageAnalytics() {
         UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
       return sum + (row.quotaConsumed / conversionFactor) * exchangeRate
     }, 0)
-  }, [accountTotalsFullRows, accounts, currencyType])
+  }, [accountTotalsFullRows, currencyType, enabledAccounts])
 
   const selectedLatencyAggregate = useMemo(() => {
     if (!exportPreview) {

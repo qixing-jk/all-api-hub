@@ -217,7 +217,7 @@ class DailyBalanceHistoryScheduler {
         return { started: false, skipped: true }
       }
 
-      const accounts = await accountStorage.getAllAccounts()
+      const accounts = await accountStorage.getEnabledAccounts()
       const results = await Promise.allSettled(
         accounts.map((account) =>
           accountStorage.refreshAccount(account.id, true, {

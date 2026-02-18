@@ -207,11 +207,13 @@ class UsageHistoryScheduler {
         ? await Promise.all(
             params.accountIds.map((id) => accountStorage.getAccountById(id)),
           ).then((values) =>
-            values.filter((value): value is NonNullable<typeof value> =>
-              Boolean(value),
-            ),
+            values
+              .filter((value): value is NonNullable<typeof value> =>
+                Boolean(value),
+              )
+              .filter((account) => account.disabled !== true),
           )
-        : await accountStorage.getAllAccounts()
+        : await accountStorage.getEnabledAccounts()
 
       const perAccount: Array<
         Awaited<ReturnType<typeof syncUsageHistoryForAccount>>

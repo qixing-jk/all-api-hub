@@ -148,4 +148,82 @@ describe("UsageAnalytics filters", () => {
       within(tokensFilter).queryByRole("button", { name: "Token A (#1)" }),
     ).toBeNull()
   })
+
+  it("excludes disabled accounts from the all-accounts view", async () => {
+    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([
+      {
+        id: "a1",
+        site_name: "Site A",
+        exchange_rate: 7.2,
+        account_info: { username: "User A" },
+      },
+      {
+        id: "a2",
+        site_name: "Site Disabled",
+        exchange_rate: 7.2,
+        disabled: true,
+        account_info: { username: "User B" },
+      },
+    ] as any)
+
+    const a1 = createEmptyUsageHistoryAccountStore()
+    a1.daily["2026-01-01"] = {
+      requests: 1,
+      promptTokens: 10,
+      completionTokens: 5,
+      totalTokens: 15,
+      quotaConsumed: 3,
+    }
+    a1.dailyByToken["1"] = {
+      "2026-01-01": { ...a1.daily["2026-01-01"] },
+    }
+    a1.tokenNamesById["1"] = "Token A"
+
+    const a2 = createEmptyUsageHistoryAccountStore()
+    a2.daily["2026-01-01"] = {
+      requests: 1,
+      promptTokens: 1,
+      completionTokens: 1,
+      totalTokens: 2,
+      quotaConsumed: 1,
+    }
+    a2.dailyByToken["2"] = {
+      "2026-01-01": { ...a2.daily["2026-01-01"] },
+    }
+    a2.tokenNamesById["2"] = "Token B"
+
+    vi.mocked(usageHistoryStorage.getStore).mockResolvedValue({
+      schemaVersion: 2,
+      accounts: { a1, a2 },
+    } as any)
+
+    render(<UsageAnalytics />)
+
+    await screen.findByText("Sites")
+
+    const sitesFilter = getFilterContainer("Sites")
+    const accountsFilter = getFilterContainer("Accounts")
+    const tokensFilter = getFilterContainer("API tokens")
+
+    expect(
+      await within(sitesFilter).findByRole("button", { name: /Site A/ }),
+    ).toBeInTheDocument()
+    expect(
+      within(sitesFilter).queryByRole("button", { name: /Site Disabled/ }),
+    ).toBeNull()
+
+    expect(
+      await within(accountsFilter).findByRole("button", { name: /Site A/ }),
+    ).toBeInTheDocument()
+    expect(
+      within(accountsFilter).queryByRole("button", { name: /Site Disabled/ }),
+    ).toBeNull()
+
+    expect(
+      await within(tokensFilter).findByRole("button", { name: "Token A (#1)" }),
+    ).toBeInTheDocument()
+    expect(
+      within(tokensFilter).queryByRole("button", { name: "Token B (#2)" }),
+    ).toBeNull()
+  })
 })

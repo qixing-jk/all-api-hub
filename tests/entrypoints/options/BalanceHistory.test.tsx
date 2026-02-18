@@ -36,7 +36,7 @@ vi.mock("~/components/charts/echarts", async () => {
 })
 
 vi.mock("~/services/accountStorage", () => ({
-  accountStorage: { getAllAccounts: vi.fn() },
+  accountStorage: { getAllAccounts: vi.fn(), getEnabledAccounts: vi.fn() },
 }))
 
 vi.mock("~/services/dailyBalanceHistory/storage", () => ({
@@ -119,7 +119,7 @@ describe("BalanceHistory options page", () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([] as any)
+    vi.mocked(accountStorage.getEnabledAccounts).mockResolvedValue([] as any)
     vi.mocked(tagStorage.getTagStore).mockResolvedValue({
       version: 1,
       tagsById: {},
@@ -198,7 +198,7 @@ describe("BalanceHistory options page", () => {
       `^${escapeRegExp(TAG_NAME_WORK)}\\D*${TAG_WORK_ACCOUNT_COUNT}$`,
     )
 
-    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([
+    vi.mocked(accountStorage.getEnabledAccounts).mockResolvedValue([
       {
         id: ACCOUNT_ID_A,
         site_name: SITE_A_NAME,
@@ -285,7 +285,7 @@ describe("BalanceHistory options page", () => {
       const nowUnixSeconds = Math.floor(fixedNowMs / 1000)
       const todayKey = getDayKeyFromUnixSeconds(nowUnixSeconds)
 
-      vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([
+      vi.mocked(accountStorage.getEnabledAccounts).mockResolvedValue([
         {
           id: "a1",
           site_name: "Site A",
@@ -360,7 +360,7 @@ describe("BalanceHistory options page", () => {
       const nowUnixSeconds = Math.floor(fixedNowMs / 1000)
       const todayKey = getDayKeyFromUnixSeconds(nowUnixSeconds)
 
-      vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([
+      vi.mocked(accountStorage.getEnabledAccounts).mockResolvedValue([
         {
           id: "a1",
           site_name: "Site A",
@@ -458,7 +458,7 @@ describe("BalanceHistory options page", () => {
       const nowUnixSeconds = Math.floor(fixedNowMs / 1000)
       const todayKey = getDayKeyFromUnixSeconds(nowUnixSeconds)
 
-      vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([
+      vi.mocked(accountStorage.getEnabledAccounts).mockResolvedValue([
         {
           id: "a1",
           site_name: "Site A",
