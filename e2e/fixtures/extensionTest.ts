@@ -6,21 +6,22 @@ import { test as base, expect as baseExpect, chromium } from "@playwright/test"
 import {
   assertBuiltExtensionExists,
   getExtensionIdFromServiceWorker,
-} from "../utils/extension"
+} from "~/e2e/utils/extension"
 
 type ExtensionFixtures = {
   extensionId: string
+  extensionDir: string
 }
 
 export const test = base.extend<ExtensionFixtures>({
-  context: async ({ browserName }, run, testInfo) => {
-    if (browserName !== "chromium") {
-      throw new Error(`E2E smoke only supports Chromium, got '${browserName}'.`)
-    }
-
+  extensionDir: async (_fixtures, run) => {
+    void _fixtures
     const extensionDir = path.resolve(process.cwd(), ".output", "chrome-mv3")
     await assertBuiltExtensionExists(extensionDir)
+    await run(extensionDir)
+  },
 
+  context: async ({ extensionDir }, run, testInfo) => {
     const headless = testInfo.project.use.headless ?? true
     const userDataDir = await fs.mkdtemp(
       path.join(os.tmpdir(), `all-api-hub-e2e-${testInfo.workerIndex}-`),
@@ -39,13 +40,30 @@ export const test = base.extend<ExtensionFixtures>({
       ignoreDefaultArgs: ["--disable-extensions"],
     }
 
-    const context = await chromium.launchPersistentContext(userDataDir, {
-      ...launchOptions,
-      ...(headless ? { channel: "chromium" } : {}),
-    })
+    let context:
+      | Awaited<ReturnType<typeof chromium.launchPersistentContext>>
+      | undefined
 
-    await run(context)
-    await context.close()
+    try {
+      context = await chromium.launchPersistentContext(userDataDir, {
+        ...launchOptions,
+        ...(headless ? { channel: "chromium" } : {}),
+      })
+
+      await run(context)
+    } finally {
+      try {
+        await context?.close()
+      } catch (error) {
+        console.warn("Failed to close persistent context", error)
+      }
+
+      try {
+        await fs.rm(userDataDir, { recursive: true, force: true })
+      } catch (error) {
+        console.warn(`Failed to remove userDataDir '${userDataDir}'`, error)
+      }
+    }
   },
   extensionId: async ({ context }, run) => {
     const extensionId = await getExtensionIdFromServiceWorker(context)

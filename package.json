@@ -24,7 +24,7 @@
     "test": "vitest --run",
     "test:watch": "vitest --watch",
     "test:ci": "vitest --run --coverage",
-    "e2e:install": "playwright install chromium",
+    "e2e:install": "playwright install --with-deps chromium",
     "e2e": "playwright test",
     "e2e:ui": "playwright test --ui",
     "prepare": "husky"

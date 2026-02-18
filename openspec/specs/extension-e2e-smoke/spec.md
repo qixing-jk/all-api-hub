@@ -1,7 +1,8 @@
 # extension-e2e-smoke Specification
 
 ## Purpose
-TBD - created by archiving change basic-e2e-smoke-ci. Update Purpose after archive.
+The `extension-e2e-smoke` suite validates that the built Chromium MV3 extension can load in a real browser runtime (headless on CI), that its service worker starts and can be discovered, and that core entrypoint pages (popup, options, and sidepanel if present) render without uncaught runtime errors.
+
 ## Requirements
 ### Requirement: CI can load the built Chromium MV3 extension
 

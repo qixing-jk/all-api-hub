@@ -4,6 +4,14 @@ const isCI = !!process.env.CI
 
 export default defineConfig({
   testDir: "./e2e",
+  projects: [
+    {
+      name: "chromium",
+      use: {
+        browserName: "chromium",
+      },
+    },
+  ],
   timeout: 60_000,
   expect: {
     timeout: 10_000,
