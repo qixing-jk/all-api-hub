@@ -65,7 +65,41 @@
   },
   "actions": {
     "copyModelName": "Copy model name",
+    "keyForModel": "Key for this model",
     "verifyApi": "Verify API",
     "verifyCliSupport": "Verify CLI Support"
+  },
+  "keyDialog": {
+    "title": "Key for model",
+    "subtitle": "Account: {{accountName}} · Model: {{modelId}}",
+    "loading": "Loading keys...",
+    "getFailed": "Failed to load keys",
+    "loadFailed": "Failed to load keys: {{error}}",
+    "createDisabledTitle": "Key creation unavailable",
+    "ineligible": {
+      "accountDisabled": "This account is disabled.",
+      "siteNotSupported": "This site type does not support token management.",
+      "missingAuth": "This account does not have authentication configured.",
+      "missingCredentials": "This account is missing required credentials."
+    },
+    "createErrorTitle": "Couldn’t create key",
+    "noCompatibleTitle": "No compatible keys for {{modelId}}",
+    "noCompatibleDescription": "Create a key for this model, or adjust existing key model limits.",
+    "createGroupLabel": "Group for new key",
+    "createGroupPlaceholder": "Select a group",
+    "createGroupHint": "Select a group. Only groups that support this model are listed.",
+    "createGroupRequired": "Select a group to create the key.",
+    "createKey": "Create key",
+    "createCustomKey": "Create custom key",
+    "createAnotherKey": "Create another key",
+    "selectLabel": "Compatible key",
+    "selectPlaceholder": "Select a key",
+    "selectHint": "Select which key you want to use for this model.",
+    "keyCopied": "Key copied",
+    "copyFailed": "Copy failed",
+    "createNotSupported": "Key creation is not available for this account.",
+    "noCompatibleFoundAfterCreate": "Key created, but no compatible key was found for {{modelId}}.",
+    "createSuccess": "Key created",
+    "createFailed": "Create failed: {{error}}"
   }
 }

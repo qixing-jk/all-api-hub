@@ -1,6 +1,7 @@
 import {
   CommandLineIcon,
   DocumentDuplicateIcon,
+  KeyIcon,
   WrenchScrewdriverIcon,
 } from "@heroicons/react/24/outline"
 import React from "react"
@@ -16,6 +17,7 @@ interface ModelItemHeaderProps {
   isAvailableForUser: boolean
   handleCopyModelName: () => void
   accountName?: string
+  onOpenKeyDialog?: () => void
   onVerifyApi?: () => void
   onVerifyCliSupport?: () => void
 }
@@ -25,6 +27,7 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
   isAvailableForUser,
   handleCopyModelName,
   accountName,
+  onOpenKeyDialog,
   onVerifyApi,
   onVerifyCliSupport,
 }) => {
@@ -71,6 +74,19 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
           >
             <DocumentDuplicateIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
           </IconButton>
+
+          {onOpenKeyDialog && (
+            <IconButton
+              variant="ghost"
+              size="sm"
+              onClick={onOpenKeyDialog}
+              title={t("actions.keyForModel")}
+              aria-label={t("actions.keyForModel")}
+              className="shrink-0"
+            >
+              <KeyIcon className="h-3 w-3 text-violet-600 sm:h-3.5 sm:w-3.5 dark:text-violet-400" />
+            </IconButton>
+          )}
 
           {onVerifyApi && (
             <IconButton

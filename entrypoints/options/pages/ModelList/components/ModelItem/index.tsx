@@ -34,6 +34,11 @@ interface ModelItemProps {
   accountName?: string
   onVerifyModel?: (account: DisplaySiteData, modelId: string) => void
   onVerifyCliSupport?: (account: DisplaySiteData, modelId: string) => void
+  onOpenModelKeyDialog?: (
+    account: DisplaySiteData,
+    modelId: string,
+    modelEnableGroups: string[],
+  ) => void
 }
 
 /**
@@ -57,6 +62,7 @@ export default function ModelItem(props: ModelItemProps) {
     accountName,
     onVerifyModel,
     onVerifyCliSupport,
+    onOpenModelKeyDialog,
   } = props
   const { t } = useTranslation("modelList")
   const [isExpanded, setIsExpanded] = useState(false)
@@ -92,6 +98,16 @@ export default function ModelItem(props: ModelItemProps) {
             isAvailableForUser={isAvailableForUser}
             handleCopyModelName={handleCopyModelName}
             accountName={accountName}
+            onOpenKeyDialog={
+              account && onOpenModelKeyDialog
+                ? () =>
+                    onOpenModelKeyDialog(
+                      account,
+                      model.model_name,
+                      model.enable_groups,
+                    )
+                : undefined
+            }
             onVerifyApi={
               account && onVerifyModel
                 ? () => onVerifyModel(account, model.model_name)

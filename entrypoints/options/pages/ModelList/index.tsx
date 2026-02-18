@@ -14,6 +14,7 @@ import { AccountSummaryBar } from "./components/AccountSummaryBar"
 import { ControlPanel } from "./components/ControlPanel"
 import { Footer } from "./components/Footer"
 import { ModelDisplay } from "./components/ModelDisplay"
+import ModelKeyDialog from "./components/ModelKeyDialog"
 import { ProviderTabs } from "./components/ProviderTabs"
 import { StatusIndicator } from "./components/StatusIndicator"
 import { useModelListData } from "./hooks/useModelListData"
@@ -136,6 +137,12 @@ export default function ModelList(props: {
     modelId: string
   } | null>(null)
 
+  const [modelKeyContext, setModelKeyContext] = useState<{
+    account: DisplaySiteData
+    modelId: string
+    modelEnableGroups: string[]
+  } | null>(null)
+
   const handleVerifyModel = (account: DisplaySiteData, modelId: string) => {
     setVerifyContext({ account, modelId })
   }
@@ -146,6 +153,12 @@ export default function ModelList(props: {
   ) => {
     setVerifyCliContext({ account, modelId })
   }
+
+  const handleOpenModelKeyDialog = (
+    account: DisplaySiteData,
+    modelId: string,
+    modelEnableGroups: string[],
+  ) => setModelKeyContext({ account, modelId, modelEnableGroups })
 
   return (
     <div className="p-6">
@@ -190,6 +203,16 @@ export default function ModelList(props: {
             />
           )}
 
+          {modelKeyContext && (
+            <ModelKeyDialog
+              isOpen={true}
+              onClose={() => setModelKeyContext(null)}
+              account={modelKeyContext.account}
+              modelId={modelKeyContext.modelId}
+              modelEnableGroups={modelKeyContext.modelEnableGroups}
+            />
+          )}
+
           {selectedAccount === "all" && accountSummaryItems.length > 0 && (
             <AccountSummaryBar
               items={accountSummaryItems}
@@ -230,6 +253,7 @@ export default function ModelList(props: {
                   currentAccount={currentAccount}
                   onVerifyModel={handleVerifyModel}
                   onVerifyCliSupport={handleVerifyCliSupport}
+                  onOpenModelKeyDialog={handleOpenModelKeyDialog}
                   showRealPrice={showRealPrice}
                   showRatioColumn={showRatioColumn}
                   showEndpointTypes={showEndpointTypes}
@@ -245,6 +269,7 @@ export default function ModelList(props: {
                     currentAccount={currentAccount}
                     onVerifyModel={handleVerifyModel}
                     onVerifyCliSupport={handleVerifyCliSupport}
+                    onOpenModelKeyDialog={handleOpenModelKeyDialog}
                     showRealPrice={showRealPrice}
                     showRatioColumn={showRatioColumn}
                     showEndpointTypes={showEndpointTypes}

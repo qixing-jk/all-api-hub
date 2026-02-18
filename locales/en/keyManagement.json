@@ -114,6 +114,7 @@
     "ipExample": "Example: 192.168.1.1,10.0.0.1 or use * for no limit",
     "groupLabel": "Group",
     "groupRate": "Rate:",
+    "groupRestrictedNote": "Only groups compatible with this model are selectable.",
     "expiration": "Expiration Time",
     "expirationPlaceholder": "Leave empty for never expires",
     "accountSelect": "Select Account",

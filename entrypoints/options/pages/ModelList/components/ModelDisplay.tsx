@@ -13,6 +13,11 @@ interface ModelDisplayProps {
   currentAccount: DisplaySiteData | undefined
   onVerifyModel?: (account: DisplaySiteData, modelId: string) => void
   onVerifyCliSupport?: (account: DisplaySiteData, modelId: string) => void
+  onOpenModelKeyDialog?: (
+    account: DisplaySiteData,
+    modelId: string,
+    modelEnableGroups: string[],
+  ) => void
   onModelClick?: (model: unknown) => void
   count?: number
   showRealPrice: boolean
@@ -34,6 +39,7 @@ export function ModelDisplay(props: ModelDisplayProps) {
     currentAccount,
     onVerifyModel,
     onVerifyCliSupport,
+    onOpenModelKeyDialog,
     showRealPrice,
     showRatioColumn,
     showEndpointTypes,
@@ -86,6 +92,7 @@ export function ModelDisplay(props: ModelDisplayProps) {
               accountName={accountForModel?.name}
               onVerifyModel={onVerifyModel}
               onVerifyCliSupport={onVerifyCliSupport}
+              onOpenModelKeyDialog={onOpenModelKeyDialog}
             />
           )
         }}

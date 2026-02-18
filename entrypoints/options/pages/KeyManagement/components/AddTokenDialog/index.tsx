@@ -29,6 +29,16 @@ interface AddTokenDialogProps {
   availableAccounts: DisplaySiteData[]
   preSelectedAccountId?: string | null
   editingToken?: AccountToken | null
+  createPrefill?: {
+    modelId: string
+    defaultName?: string
+    group?: string
+    /**
+     * Optional list of allowed group ids for create-mode. When provided, the group
+     * selection UI should restrict the user to these groups.
+     */
+    allowedGroups?: string[]
+  }
   onSuccess?: () => void | Promise<void>
 }
 
@@ -53,6 +63,7 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
     isOpen,
     currentAccount,
     setFormData,
+    !isEditMode ? props.createPrefill?.allowedGroups : undefined,
   )
 
   const handleClose = () => {
@@ -162,6 +173,9 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
             isEditMode={isEditMode}
             availableAccounts={availableAccounts}
             groups={groups}
+            allowedGroups={
+              !isEditMode ? props.createPrefill?.allowedGroups : undefined
+            }
             availableModels={availableModels}
           />
           <WarningNote />

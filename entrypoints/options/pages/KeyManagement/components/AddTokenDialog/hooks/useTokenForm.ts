@@ -21,6 +21,12 @@ interface AddTokenDialogProps {
   availableAccounts: Account[]
   preSelectedAccountId?: string | null
   editingToken?: AccountToken | null
+  createPrefill?: {
+    modelId: string
+    defaultName?: string
+    group?: string
+    allowedGroups?: string[]
+  }
 }
 
 export interface FormData {
@@ -70,6 +76,7 @@ const isValidIpList = (ips: string): boolean => {
  * @param props Props bag containing dialog visibility and editing data.
  * @param props.isOpen Whether the dialog is currently visible.
  * @param props.preSelectedAccountId Account to prefill when opening the dialog.
+ * @param props.createPrefill Optional create-mode prefill values for model-aware token creation.
  * @param props.availableAccounts Accounts that can be linked to a token.
  * @param props.editingToken Token being edited when in edit mode.
  * @returns Form state, setters, validation helper, edit-mode flag, reset helper.
@@ -79,6 +86,7 @@ export function useTokenForm({
   preSelectedAccountId,
   availableAccounts,
   editingToken,
+  createPrefill,
 }: AddTokenDialogProps) {
   const { t } = useTranslation("keyManagement")
   const [formData, setFormData] = useState<FormData>(initialFormData)
@@ -122,9 +130,31 @@ export function useTokenForm({
         const defaultAccountId =
           preSelectedAccountId ||
           (availableAccounts.length > 0 ? availableAccounts[0].id : "")
+
+        const normalizedModelId =
+          typeof createPrefill?.modelId === "string"
+            ? createPrefill.modelId.trim()
+            : ""
+        const shouldPrefillModel = normalizedModelId.length > 0
+        const resolvedDefaultName =
+          typeof createPrefill?.defaultName === "string" &&
+          createPrefill.defaultName.trim().length > 0
+            ? createPrefill.defaultName
+            : shouldPrefillModel
+              ? `model ${normalizedModelId}`
+              : ""
+
+        const normalizedGroup =
+          typeof createPrefill?.group === "string"
+            ? createPrefill.group.trim()
+            : ""
         setFormData({
           ...initialFormData,
           accountId: defaultAccountId,
+          name: resolvedDefaultName,
+          modelLimitsEnabled: shouldPrefillModel,
+          modelLimits: shouldPrefillModel ? [normalizedModelId] : [],
+          group: normalizedGroup || initialFormData.group,
         })
       }
     }
@@ -134,6 +164,9 @@ export function useTokenForm({
     availableAccounts,
     isEditMode,
     editingToken,
+    createPrefill?.modelId,
+    createPrefill?.defaultName,
+    createPrefill?.group,
   ])
 
   const validateForm = (): boolean => {

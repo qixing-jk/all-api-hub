@@ -14,6 +14,7 @@ interface AdvancedSettingsSectionProps {
   setFormData: React.Dispatch<React.SetStateAction<FormData>>
   errors: Record<string, string>
   groups: Record<string, UserGroupInfo>
+  allowedGroups?: string[]
   availableModels: string[]
   handleInputChange: (
     field: keyof FormData,
@@ -29,6 +30,7 @@ interface AdvancedSettingsSectionProps {
  * @param props.setFormData Setter used to update complex form fields.
  * @param props.errors Map of validation messages keyed by field name.
  * @param props.groups Available user groups keyed by identifier.
+ * @param props.allowedGroups Optional allow-list restricting selectable groups.
  * @param props.availableModels List of model IDs that can be targeted.
  * @param props.handleInputChange Factory for text input change handlers.
  * @param props.handleSelectChange Factory for select change handlers.
@@ -40,6 +42,7 @@ export function AdvancedSettingsSection({
   setFormData,
   errors,
   groups,
+  allowedGroups,
   availableModels,
   handleInputChange,
   handleSelectChange,
@@ -53,6 +56,7 @@ export function AdvancedSettingsSection({
         group={formData.group}
         handleSelectChange={handleSelectChange("group")}
         groups={groups}
+        allowedGroups={allowedGroups}
       />
       {isNotEmptyArray(availableModels) && (
         <ModelLimits

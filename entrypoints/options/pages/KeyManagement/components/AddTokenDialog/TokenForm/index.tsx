@@ -12,6 +12,7 @@ interface TokenFormProps {
   isEditMode: boolean
   availableAccounts: Account[]
   groups: Record<string, UserGroupInfo>
+  allowedGroups?: string[]
   availableModels: string[]
 }
 
@@ -26,6 +27,7 @@ export function TokenForm({
   isEditMode,
   availableAccounts,
   groups,
+  allowedGroups,
   availableModels,
 }: TokenFormProps) {
   const handleInputChange =
@@ -63,6 +65,7 @@ export function TokenForm({
         setFormData={setFormData}
         errors={errors}
         groups={groups}
+        allowedGroups={allowedGroups}
         availableModels={availableModels}
         handleInputChange={handleInputChange}
         handleSelectChange={handleSelectChange}

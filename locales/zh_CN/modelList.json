@@ -65,7 +65,41 @@
   },
   "actions": {
     "copyModelName": "复制模型名称",
+    "keyForModel": "创建对应密钥",
     "verifyApi": "验证接口",
     "verifyCliSupport": "验证 CLI 兼容性"
+  },
+  "keyDialog": {
+    "title": "模型对应密钥",
+    "subtitle": "账号：{{accountName}} · 模型：{{modelId}}",
+    "loading": "正在加载密钥...",
+    "getFailed": "加载密钥失败",
+    "loadFailed": "加载密钥失败：{{error}}",
+    "createDisabledTitle": "无法创建密钥",
+    "ineligible": {
+      "accountDisabled": "该账号已被禁用。",
+      "siteNotSupported": "该站点类型不支持密钥管理。",
+      "missingAuth": "该账号未配置认证信息。",
+      "missingCredentials": "该账号缺少必要的凭据。"
+    },
+    "createErrorTitle": "创建密钥失败",
+    "noCompatibleTitle": "{{modelId}} 无可用密钥",
+    "noCompatibleDescription": "当前账号没有可用于该模型的已启用密钥。",
+    "createGroupLabel": "新密钥分组",
+    "createGroupPlaceholder": "请选择分组",
+    "createGroupHint": "请选择分组（仅列出该模型可用分组）。",
+    "createGroupRequired": "请先选择分组再创建密钥。",
+    "createKey": "创建密钥",
+    "createCustomKey": "自定义创建",
+    "createAnotherKey": "再创建一个密钥",
+    "selectLabel": "可用密钥",
+    "selectPlaceholder": "请选择密钥",
+    "selectHint": "请选择要用于该模型的密钥。",
+    "keyCopied": "密钥已复制",
+    "copyFailed": "复制失败",
+    "createNotSupported": "该账号暂不支持创建密钥。",
+    "noCompatibleFoundAfterCreate": "密钥创建成功，但仍未找到可用于 {{modelId}} 的密钥。",
+    "createSuccess": "密钥创建成功",
+    "createFailed": "创建失败：{{error}}"
   }
 }

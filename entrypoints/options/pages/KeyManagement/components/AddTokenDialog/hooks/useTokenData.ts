@@ -25,6 +25,7 @@ export function useTokenData(
   isOpen: boolean,
   currentAccount: DisplaySiteData | undefined,
   setFormData: React.Dispatch<React.SetStateAction<FormData>>,
+  allowedGroups?: string[],
 ) {
   const { t } = useTranslation("keyManagement")
   const [isLoading, setIsLoading] = useState(false)
@@ -57,22 +58,56 @@ export function useTokenData(
       setAvailableModels(models)
       setGroups(groupsData)
 
-      // Set default group
-      if (groupsData.default) {
-        setFormData((prev) => ({ ...prev, group: "default" }))
-      } else {
-        const firstGroup = Object.keys(groupsData)[0]
-        if (firstGroup) {
-          setFormData((prev) => ({ ...prev, group: firstGroup }))
+      // Set default group (but keep existing selection when it's still valid).
+      setFormData((prev) => {
+        const currentGroup =
+          typeof prev.group === "string" ? prev.group.trim() : ""
+
+        const normalizedAllowedGroups = Array.isArray(allowedGroups)
+          ? allowedGroups.map((group) => group.trim()).filter(Boolean)
+          : []
+        const hasAllowedGroups = normalizedAllowedGroups.length > 0
+        const allowedGroupSet = new Set(normalizedAllowedGroups)
+
+        const isGroupEligible = (group: string) => {
+          if (!group) return false
+          if (!groupsData[group]) return false
+          if (!hasAllowedGroups) return true
+          return allowedGroupSet.has(group)
         }
-      }
+
+        if (isGroupEligible(currentGroup)) {
+          return prev
+        }
+
+        if (hasAllowedGroups) {
+          if (allowedGroupSet.has("default") && groupsData.default) {
+            return { ...prev, group: "default" }
+          }
+
+          const firstAllowedGroup = normalizedAllowedGroups.find(
+            (group) => groupsData[group],
+          )
+
+          return firstAllowedGroup
+            ? { ...prev, group: firstAllowedGroup }
+            : prev
+        }
+
+        if (groupsData.default) {
+          return { ...prev, group: "default" }
+        }
+
+        const firstGroup = Object.keys(groupsData)[0]
+        return firstGroup ? { ...prev, group: firstGroup } : prev
+      })
     } catch (error) {
       logger.error("Failed to load initial data", error)
       toast.error(t("dialog.loadDataFailed"))
     } finally {
       setIsLoading(false)
     }
-  }, [currentAccount, setFormData, t])
+  }, [allowedGroups, currentAccount, setFormData, t])
 
   useEffect(() => {
     if (isOpen && currentAccount) {
