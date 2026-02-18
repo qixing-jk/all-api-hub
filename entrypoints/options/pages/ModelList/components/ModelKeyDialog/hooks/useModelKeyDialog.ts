@@ -80,6 +80,7 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
 
   const ineligibleDescription = useMemo(() => {
     if (!account) return null
+    if (canCreateToken) return null
     if (account.disabled === true)
       return t("modelList:keyDialog.ineligible.accountDisabled")
     if (account.siteType === SUB2API)
@@ -87,7 +88,7 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
     if (account.authType === AuthTypeEnum.None)
       return t("modelList:keyDialog.ineligible.missingAuth")
     return t("modelList:keyDialog.ineligible.missingCredentials")
-  }, [account, t])
+  }, [account, canCreateToken, t])
 
   const fetchTokens = useCallback(async () => {
     if (!account) return
@@ -164,7 +165,10 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
     if (!isOpen) return
 
     setSelectedTokenId((prev) => {
-      if (prev && compatibleTokens.some((token) => token.id === prev)) {
+      if (
+        prev !== null &&
+        compatibleTokens.some((token) => token.id === prev)
+      ) {
         return prev
       }
 
@@ -178,7 +182,7 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
 
   const selectedToken = useMemo(
     () =>
-      selectedTokenId
+      selectedTokenId !== null
         ? compatibleTokens.find((token) => token.id === selectedTokenId) ?? null
         : null,
     [compatibleTokens, selectedTokenId],

@@ -1,5 +1,5 @@
 import { KeyIcon, PlusIcon } from "@heroicons/react/24/outline"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useId, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -15,9 +15,8 @@ import {
   Spinner,
 } from "~/components/ui"
 import AddTokenDialog from "~/entrypoints/options/pages/KeyManagement/components/AddTokenDialog"
+import { useModelKeyDialog } from "~/entrypoints/options/pages/ModelList/components/ModelKeyDialog/hooks/useModelKeyDialog"
 import type { DisplaySiteData } from "~/types"
-
-import { useModelKeyDialog } from "./hooks/useModelKeyDialog"
 
 /**
  * Modal used by the Model List to help users select or create a key compatible with a specific model.
@@ -38,6 +37,8 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
   const { t } = useTranslation(["modelList", "common"])
   const [isAddTokenDialogOpen, setIsAddTokenDialogOpen] = useState(false)
   const [createGroup, setCreateGroup] = useState("")
+  const createGroupSelectId = `model-key-dialog-create-group-${useId()}`
+  const compatibleKeySelectId = `model-key-dialog-compatible-key-${useId()}`
 
   const createGroupOptions = useMemo(() => {
     const seen = new Set<string>()
@@ -60,6 +61,7 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
   useEffect(() => {
     if (!isOpen) {
       setCreateGroup("")
+      setIsAddTokenDialogOpen(false)
       return
     }
 
@@ -175,7 +177,10 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
 
             <div className="space-y-3">
               <div>
-                <label className="dark:text-dark-text-secondary text-sm font-medium text-gray-700">
+                <label
+                  htmlFor={createGroupSelectId}
+                  className="dark:text-dark-text-secondary text-sm font-medium text-gray-700"
+                >
                   {t("modelList:keyDialog.createGroupLabel")}
                 </label>
                 <div className="mt-2">
@@ -187,6 +192,7 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
                     }
                   >
                     <SelectTrigger
+                      id={createGroupSelectId}
                       aria-label={t("modelList:keyDialog.createGroupLabel")}
                     >
                       <SelectValue
@@ -239,16 +245,22 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
         ) : (
           <div className="space-y-4">
             <div>
-              <label className="dark:text-dark-text-secondary text-sm font-medium text-gray-700">
+              <label
+                htmlFor={compatibleKeySelectId}
+                className="dark:text-dark-text-secondary text-sm font-medium text-gray-700"
+              >
                 {t("modelList:keyDialog.selectLabel")}
               </label>
               <div className="mt-2">
                 <Select
-                  value={selectedTokenId ? String(selectedTokenId) : ""}
+                  value={
+                    selectedTokenId === null ? "" : String(selectedTokenId)
+                  }
                   onValueChange={(value) => setSelectedTokenId(Number(value))}
                   disabled={compatibleTokens.length === 1}
                 >
                   <SelectTrigger
+                    id={compatibleKeySelectId}
                     aria-label={t("modelList:keyDialog.selectLabel")}
                   >
                     <SelectValue

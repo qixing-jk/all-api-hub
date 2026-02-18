@@ -65,7 +65,7 @@
   },
   "actions": {
     "copyModelName": "复制模型名称",
-    "keyForModel": "创建对应密钥",
+    "keyForModel": "模型对应密钥",
     "verifyApi": "验证接口",
     "verifyCliSupport": "验证 CLI 兼容性"
   },
@@ -84,7 +84,7 @@
     },
     "createErrorTitle": "创建密钥失败",
     "noCompatibleTitle": "{{modelId}} 无可用密钥",
-    "noCompatibleDescription": "当前账号没有可用于该模型的已启用密钥。",
+    "noCompatibleDescription": "为该模型创建一个密钥，或调整已有密钥的模型限制。",
     "createGroupLabel": "新密钥分组",
     "createGroupPlaceholder": "请选择分组",
     "createGroupHint": "请选择分组（仅列出该模型可用分组）。",

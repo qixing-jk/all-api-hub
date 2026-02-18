@@ -171,9 +171,9 @@ vi.mock(
 vi.mock(
   "~/entrypoints/options/pages/ModelList/components/ProviderTabs",
   async () => {
-    const { Tab } = await import("@headlessui/react")
+    const { TabGroup } = await import("@headlessui/react")
     return {
-      ProviderTabs: ({ children }: any) => <Tab.Group>{children}</Tab.Group>,
+      ProviderTabs: ({ children }: any) => <TabGroup>{children}</TabGroup>,
     }
   },
 )

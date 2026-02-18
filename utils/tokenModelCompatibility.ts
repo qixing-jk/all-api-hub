@@ -73,7 +73,10 @@ export function isTokenCompatibleWithModel(
   if (!normalizedModelId) return false
 
   const tokenGroup = normalizeTokenGroup(token.group)
-  if (!model.enableGroups.includes(tokenGroup)) {
+  const isModelGroupEnabled = model.enableGroups.some(
+    (group) => normalizeTokenGroup(group) === tokenGroup,
+  )
+  if (!isModelGroupEnabled) {
     return false
   }
 
