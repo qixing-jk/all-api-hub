@@ -14,8 +14,8 @@ type ExtensionFixtures = {
 }
 
 export const test = base.extend<ExtensionFixtures>({
-  extensionDir: async (_fixtures, run) => {
-    void _fixtures
+  extensionDir: async ({ browserName }, run) => {
+    void browserName
     const extensionDir = path.resolve(process.cwd(), ".output", "chrome-mv3")
     await assertBuiltExtensionExists(extensionDir)
     await run(extensionDir)
