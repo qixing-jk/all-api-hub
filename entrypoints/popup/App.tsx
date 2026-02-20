@@ -17,6 +17,7 @@ import BalanceSection from "./components/BalanceSection"
 import BookmarkStatsSection from "./components/BookmarkStatsSection"
 import HeaderSection from "./components/HeaderSection"
 import PopupViewSwitchTabs from "./components/PopupViewSwitchTabs"
+import ShareOverviewSnapshotButton from "./components/ShareOverviewSnapshotButton"
 
 /**
  * Popup body content for the extension popup and side panel.
@@ -60,12 +61,15 @@ function PopupContent() {
       />
 
       <section className="dark:border-dark-bg-tertiary shrink-0 space-y-2 border-b border-gray-200 bg-linear-to-br from-blue-50/50 to-indigo-50/30 p-3 sm:p-4 dark:from-blue-900/20 dark:to-indigo-900/10">
-        <PopupViewSwitchTabs
-          value={activeView}
-          onChange={setActiveView}
-          accountsLabel={t("bookmark:switch.accounts")}
-          bookmarksLabel={t("bookmark:switch.bookmarks")}
-        />
+        <div className="flex items-center justify-between gap-2">
+          <PopupViewSwitchTabs
+            value={activeView}
+            onChange={setActiveView}
+            accountsLabel={t("bookmark:switch.accounts")}
+            bookmarksLabel={t("bookmark:switch.bookmarks")}
+          />
+          {activeView === "accounts" && <ShareOverviewSnapshotButton />}
+        </div>
         {!isLoading && (
           <>
             {activeView === "accounts" ? (

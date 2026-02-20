@@ -35,6 +35,10 @@ vi.mock("~/entrypoints/popup/components/BalanceSection", () => ({
   default: () => <div>BalanceSection</div>,
 }))
 
+vi.mock("~/entrypoints/popup/components/ShareOverviewSnapshotButton", () => ({
+  default: () => <div>ShareOverviewSnapshotButton</div>,
+}))
+
 vi.mock("~/entrypoints/popup/components/BookmarkStatsSection", () => ({
   default: () => <div>BookmarkStatsSection</div>,
 }))

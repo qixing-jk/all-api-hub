@@ -55,6 +55,13 @@ vi.mock("~/features/AccountManagement/hooks/DialogStateContext", () => ({
   }),
 }))
 
+vi.mock("~/contexts/UserPreferencesContext", () => ({
+  useUserPreferencesContext: () => ({
+    currencyType: "USD",
+    showTodayCashflow: true,
+  }),
+}))
+
 vi.mock("~/utils/navigation", () => ({
   openKeysPage: vi.fn(),
   openModelsPage: vi.fn(),

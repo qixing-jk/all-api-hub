@@ -1,6 +1,7 @@
 import { Menu, MenuButton, MenuItems } from "@headlessui/react"
 import {
   ArrowPathIcon,
+  ArrowUpOnSquareIcon,
   BanknotesIcon,
   CheckCircleIcon,
   CpuChipIcon,
@@ -18,10 +19,14 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { IconButton } from "~/components/ui"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { useDialogStateContext } from "~/features/AccountManagement/hooks/DialogStateContext"
+import { exportShareSnapshotWithToast } from "~/features/ShareSnapshots/utils/exportShareSnapshotWithToast"
 import { getApiService } from "~/services/apiService"
+import { buildAccountShareSnapshotPayload } from "~/services/shareSnapshots/shareSnapshots"
+import { sanitizeOriginUrl } from "~/services/shareSnapshots/utils"
 import type { DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/error"
 import { createLogger } from "~/utils/logger"
@@ -54,7 +59,13 @@ export default function AccountActionButtons({
   onCopyKey,
   onDeleteAccount,
 }: ActionButtonsProps) {
-  const { t } = useTranslation("account")
+  const { t } = useTranslation([
+    "account",
+    "shareSnapshots",
+    "messages",
+    "common",
+  ])
+  const { currencyType, showTodayCashflow } = useUserPreferencesContext()
   const {
     refreshingAccountId,
     handleRefreshAccount,
@@ -187,6 +198,36 @@ export default function AccountActionButtons({
     void handleSetAccountDisabled(site, !isAccountDisabled)
   }
 
+  const handleShareSnapshot = async () => {
+    if (isAccountDisabled) {
+      toast.error(t("messages:toast.error.shareSnapshotAccountDisabled"))
+      return
+    }
+
+    const includeToday = showTodayCashflow !== false
+
+    // Build an allowlisted, share-safe payload (origin-only URL; no secret-bearing fields).
+    const payload = buildAccountShareSnapshotPayload({
+      currencyType,
+      siteName: site.name,
+      originUrl: sanitizeOriginUrl(site.baseUrl),
+      balance: site.balance?.[currencyType] ?? 0,
+      includeTodayCashflow: includeToday,
+      todayIncome: includeToday
+        ? site.todayIncome?.[currencyType] ?? 0
+        : undefined,
+      todayOutcome: includeToday
+        ? site.todayConsumption?.[currencyType] ?? 0
+        : undefined,
+      asOf:
+        site.last_sync_time && site.last_sync_time > 0
+          ? site.last_sync_time
+          : undefined,
+    })
+
+    await exportShareSnapshotWithToast({ payload })
+  }
+
   return (
     <div className="grid grid-cols-2 justify-end gap-2 sm:grid-cols-4">
       {/* Primary Level - Three standalone buttons */}
@@ -303,6 +344,12 @@ export default function AccountActionButtons({
                 icon={ArrowPathIcon}
                 label={t("actions.refresh")}
                 disabled={refreshingAccountId === site.id}
+              />
+
+              <AccountActionMenuItem
+                onClick={handleShareSnapshot}
+                icon={ArrowUpOnSquareIcon}
+                label={t("shareSnapshots:actions.shareAccountSnapshot")}
               />
 
               <hr className="dark:border-dark-bg-tertiary my-1 border-gray-200" />

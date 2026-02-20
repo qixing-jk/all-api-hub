@@ -27,6 +27,9 @@
       "bookmarkUnpinned": "{{name}} unpinned",
       "accountDisabled": "{{accountName}} disabled",
       "accountEnabled": "{{accountName}} enabled",
+      "shareSnapshotCopied": "Snapshot copied to clipboard",
+      "shareSnapshotDownloaded": "Snapshot downloaded",
+      "shareSnapshotCaptionCopied": "Caption copied",
       "externalCheckInOpened": "Opened external check-ins for {{count}} account(s) ({{mode}}).",
       "externalCheckInModeAll": "all",
       "externalCheckInModeUnchecked": "unchecked only"
@@ -43,7 +46,9 @@
       "deleteKeyFailed": "Failed to delete key, please try again later",
       "loadKeyFailed": "Failed to load key list",
       "findAccountDetailsFailed": "Could not find account details",
-      "importFailed": "Import failed: {{error}}"
+      "importFailed": "Import failed: {{error}}",
+      "shareSnapshotNoEnabledAccounts": "No enabled accounts to share",
+      "shareSnapshotAccountDisabled": "This account is disabled"
     }
   },
   "errors": {

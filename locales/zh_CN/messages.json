@@ -27,6 +27,9 @@
       "bookmarkUnpinned": "已取消置顶 {{name}}",
       "accountDisabled": "已禁用 {{accountName}}",
       "accountEnabled": "已启用 {{accountName}}",
+      "shareSnapshotCopied": "快照已复制到剪贴板",
+      "shareSnapshotDownloaded": "快照已下载",
+      "shareSnapshotCaptionCopied": "文案已复制",
       "externalCheckInOpened": "已为 {{count}} 个账号打开外部签到（{{mode}}）。",
       "externalCheckInModeAll": "全部",
       "externalCheckInModeUnchecked": "仅未签到"
@@ -43,7 +46,9 @@
       "deleteKeyFailed": "删除密钥失败，请稍后重试",
       "loadKeyFailed": "加载密钥列表失败",
       "findAccountDetailsFailed": "找不到账户详情",
-      "importFailed": "导入失败: {{error}}"
+      "importFailed": "导入失败: {{error}}",
+      "shareSnapshotNoEnabledAccounts": "没有可分享的已启用账号",
+      "shareSnapshotAccountDisabled": "账号已禁用"
     }
   },
   "errors": {

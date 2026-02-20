@@ -8,6 +8,7 @@ import {
   KeyRound,
   Layers,
   LineChart,
+  Palette,
   RefreshCcw,
   Settings,
   UserRound,
@@ -27,6 +28,7 @@ import ImportExport from "./pages/ImportExport"
 import KeyManagement from "./pages/KeyManagement"
 import managedSiteChannels from "./pages/ManagedSiteChannels"
 import ManagedSiteModelSync from "./pages/ManagedSiteModelSync"
+import MeshGradientLab from "./pages/MeshGradientLab"
 import ModelList from "./pages/ModelList"
 import UsageAnalytics from "./pages/UsageAnalytics"
 
@@ -39,7 +41,7 @@ export interface MenuItem {
 }
 
 // 菜单配置
-export const menuItems: MenuItem[] = [
+const BASE_MENU_ITEMS: MenuItem[] = [
   {
     id: MENU_ITEM_IDS.BASIC,
     name: "基本设置",
@@ -118,4 +120,18 @@ export const menuItems: MenuItem[] = [
     icon: Info,
     component: About,
   },
+]
+
+export const menuItems: MenuItem[] = [
+  ...BASE_MENU_ITEMS,
+  ...(import.meta.env.MODE === "development"
+    ? [
+        {
+          id: MENU_ITEM_IDS.MESH_GRADIENT_LAB,
+          name: "Mesh Gradient Lab (Dev)",
+          icon: Palette,
+          component: MeshGradientLab,
+        },
+      ]
+    : []),
 ]

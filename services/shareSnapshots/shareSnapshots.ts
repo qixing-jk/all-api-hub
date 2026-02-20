@@ -1,0 +1,393 @@
+import i18next from "i18next"
+
+import type { CurrencyType } from "~/types"
+
+import { drawMeshGradientBackground } from "./meshGradientBackground"
+import {
+  drawShareSnapshotOverlay,
+  type ShareSnapshotOverlayLabels,
+} from "./shareSnapshotOverlay"
+import type {
+  AccountShareSnapshotPayload,
+  OverviewShareSnapshotPayload,
+  ShareSnapshotExportResult,
+  ShareSnapshotPayload,
+} from "./types"
+import {
+  createShareSnapshotSeed,
+  formatAsOfTimestamp,
+  formatCurrencyAmount,
+  formatLocalDateStamp,
+  formatSignedCurrencyAmount,
+} from "./utils"
+
+export const SHARE_SNAPSHOT_IMAGE = {
+  width: 1200,
+  height: 1200,
+} as const
+
+const APP_WATERMARK_FALLBACK = "All API Hub"
+
+const getWatermarkText = (): string => {
+  const translated = i18next.t("ui:app.name")
+  return translated && translated !== "ui:app.name"
+    ? translated
+    : APP_WATERMARK_FALLBACK
+}
+
+const getLocale = (): string | undefined => {
+  const lng = i18next.language
+  return lng && lng !== "cimode"
+    ? lng.toLowerCase().replace(/_/g, "-")
+    : undefined
+}
+
+/**
+ * Builds the allowlisted payload for an overview snapshot (aggregated across enabled accounts only).
+ */
+export const buildOverviewShareSnapshotPayload = ({
+  currencyType,
+  enabledAccountCount,
+  totalBalance,
+  includeTodayCashflow,
+  todayIncome,
+  todayOutcome,
+  asOf,
+  backgroundSeed,
+}: {
+  currencyType: CurrencyType
+  enabledAccountCount: number
+  totalBalance: number
+  includeTodayCashflow: boolean
+  todayIncome?: number
+  todayOutcome?: number
+  asOf?: number
+  backgroundSeed?: number
+}): OverviewShareSnapshotPayload => {
+  const exportTime = Date.now()
+  const safeAsOf =
+    Number.isFinite(asOf) && (asOf ?? 0) > 0 ? (asOf as number) : exportTime
+  const seed =
+    Number.isFinite(backgroundSeed) && (backgroundSeed ?? 0) > 0
+      ? (backgroundSeed as number)
+      : createShareSnapshotSeed()
+
+  const payload: OverviewShareSnapshotPayload = {
+    kind: "overview",
+    currencyType,
+    enabledAccountCount: Math.max(0, Math.floor(enabledAccountCount)),
+    totalBalance: Number.isFinite(totalBalance) ? totalBalance : 0,
+    asOf: safeAsOf,
+    backgroundSeed: seed,
+  }
+
+  if (includeTodayCashflow) {
+    const income = Number.isFinite(todayIncome) ? (todayIncome as number) : 0
+    const outcome = Number.isFinite(todayOutcome) ? (todayOutcome as number) : 0
+    payload.todayIncome = income
+    payload.todayOutcome = outcome
+    payload.todayNet = income - outcome
+  }
+
+  return payload
+}
+
+/**
+ * Builds the allowlisted payload for an account snapshot.
+ * Callers MUST pass only safe, non-secret fields (e.g., site name, origin-only URL).
+ */
+export const buildAccountShareSnapshotPayload = ({
+  currencyType,
+  siteName,
+  originUrl,
+  balance,
+  includeTodayCashflow,
+  todayIncome,
+  todayOutcome,
+  asOf,
+  backgroundSeed,
+}: {
+  currencyType: CurrencyType
+  siteName: string
+  originUrl?: string
+  balance: number
+  includeTodayCashflow: boolean
+  todayIncome?: number
+  todayOutcome?: number
+  asOf?: number
+  backgroundSeed?: number
+}): AccountShareSnapshotPayload => {
+  const exportTime = Date.now()
+  const safeAsOf =
+    Number.isFinite(asOf) && (asOf ?? 0) > 0 ? (asOf as number) : exportTime
+  const seed =
+    Number.isFinite(backgroundSeed) && (backgroundSeed ?? 0) > 0
+      ? (backgroundSeed as number)
+      : createShareSnapshotSeed()
+
+  const payload: AccountShareSnapshotPayload = {
+    kind: "account",
+    currencyType,
+    siteName: siteName.trim(),
+    originUrl: originUrl?.trim() || undefined,
+    balance: Number.isFinite(balance) ? balance : 0,
+    asOf: safeAsOf,
+    backgroundSeed: seed,
+  }
+
+  if (includeTodayCashflow) {
+    const income = Number.isFinite(todayIncome) ? (todayIncome as number) : 0
+    const outcome = Number.isFinite(todayOutcome) ? (todayOutcome as number) : 0
+    payload.todayIncome = income
+    payload.todayOutcome = outcome
+    payload.todayNet = income - outcome
+  }
+
+  return payload
+}
+
+/**
+ * Generates a localized multi-line caption for the given snapshot payload.
+ * The caption is intended for social posts and is derived only from allowlisted data.
+ */
+export const generateShareSnapshotCaption = (
+  payload: ShareSnapshotPayload,
+): string => {
+  const appName = getWatermarkText()
+  const locale = getLocale()
+  const overviewLabel = i18next.t("shareSnapshots:labels.overview")
+  const totalBalanceLabel = i18next.t("shareSnapshots:labels.totalBalance")
+  const balanceLabel = i18next.t("shareSnapshots:labels.balance")
+  const accountsLabel = i18next.t("shareSnapshots:labels.accounts")
+  const todayLabel = i18next.t("shareSnapshots:labels.today")
+  const incomeLabel = i18next.t("shareSnapshots:labels.income")
+  const outcomeLabel = i18next.t("shareSnapshots:labels.outcome")
+  const netLabel = i18next.t("shareSnapshots:labels.net")
+  const asOfLabel = i18next.t("shareSnapshots:labels.asOf")
+
+  const asOfText = formatAsOfTimestamp(payload.asOf, locale)
+
+  if (payload.kind === "overview") {
+    const header = `${appName} — ${overviewLabel}`
+    const summary = `${totalBalanceLabel}: ${formatCurrencyAmount(
+      payload.totalBalance,
+      payload.currencyType,
+    )} · ${accountsLabel}: ${payload.enabledAccountCount}`
+
+    const lines = [header, summary]
+
+    if (
+      typeof payload.todayIncome === "number" &&
+      typeof payload.todayOutcome === "number" &&
+      typeof payload.todayNet === "number"
+    ) {
+      lines.push(
+        `${todayLabel}: ${incomeLabel} ${formatSignedCurrencyAmount(
+          payload.todayIncome,
+          payload.currencyType,
+        )} / ${outcomeLabel} ${formatSignedCurrencyAmount(
+          -payload.todayOutcome,
+          payload.currencyType,
+        )} · ${netLabel} ${formatSignedCurrencyAmount(
+          payload.todayNet,
+          payload.currencyType,
+        )}`,
+      )
+    }
+
+    lines.push(`${asOfLabel}: ${asOfText}`)
+    return lines.join("\n")
+  }
+
+  const header = `${appName} — ${payload.siteName}`
+  const originLine = payload.originUrl ? payload.originUrl : undefined
+  const summary = `${balanceLabel}: ${formatCurrencyAmount(
+    payload.balance,
+    payload.currencyType,
+  )}`
+
+  const lines = originLine ? [header, originLine, summary] : [header, summary]
+
+  if (
+    typeof payload.todayIncome === "number" &&
+    typeof payload.todayOutcome === "number" &&
+    typeof payload.todayNet === "number"
+  ) {
+    lines.push(
+      `${todayLabel}: ${incomeLabel} ${formatSignedCurrencyAmount(
+        payload.todayIncome,
+        payload.currencyType,
+      )} / ${outcomeLabel} ${formatSignedCurrencyAmount(
+        -payload.todayOutcome,
+        payload.currencyType,
+      )} · ${netLabel} ${formatSignedCurrencyAmount(
+        payload.todayNet,
+        payload.currencyType,
+      )}`,
+    )
+  }
+
+  lines.push(`${asOfLabel}: ${asOfText}`)
+  return lines.join("\n")
+}
+
+/**
+ * Renders the snapshot payload to a `1200x1200` PNG blob using a mesh gradient background.
+ */
+export const renderShareSnapshotToPng = async (
+  payload: ShareSnapshotPayload,
+): Promise<Blob> => {
+  const canvas = document.createElement("canvas")
+  canvas.width = SHARE_SNAPSHOT_IMAGE.width
+  canvas.height = SHARE_SNAPSHOT_IMAGE.height
+
+  const ctx = canvas.getContext("2d")
+  if (!ctx) {
+    throw new Error("Canvas not supported")
+  }
+
+  drawMeshGradientBackground(ctx, {
+    seed: payload.backgroundSeed,
+    width: canvas.width,
+    height: canvas.height,
+  })
+
+  const locale = getLocale()
+  const watermark = getWatermarkText()
+  const overviewLabel = i18next.t("shareSnapshots:labels.overview")
+  const totalBalanceLabel = i18next.t("shareSnapshots:labels.totalBalance")
+  const balanceLabel = i18next.t("shareSnapshots:labels.balance")
+  const accountsLabel = i18next.t("shareSnapshots:labels.accounts")
+  const siteLabel = i18next.t("shareSnapshots:labels.site")
+  const asOfLabel = i18next.t("shareSnapshots:labels.asOf")
+  const todayLabel = i18next.t("shareSnapshots:labels.today")
+  const incomeLabel = i18next.t("shareSnapshots:labels.income")
+  const outcomeLabel = i18next.t("shareSnapshots:labels.outcome")
+  const netLabel = i18next.t("shareSnapshots:labels.net")
+
+  const labels: ShareSnapshotOverlayLabels = {
+    overview: overviewLabel,
+    totalBalance: totalBalanceLabel,
+    balance: balanceLabel,
+    accounts: accountsLabel,
+    site: siteLabel,
+    asOf: asOfLabel,
+    today: todayLabel,
+    income: incomeLabel,
+    outcome: outcomeLabel,
+    net: netLabel,
+  }
+
+  drawShareSnapshotOverlay(ctx, {
+    payload,
+    width: canvas.width,
+    height: canvas.height,
+    locale,
+    watermarkText: watermark,
+    labels,
+  })
+
+  const blob = await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((result) => {
+      if (!result) {
+        reject(new Error("Failed to encode PNG"))
+        return
+      }
+      resolve(result)
+    }, "image/png")
+  })
+
+  return blob
+}
+
+const downloadBlob = (blob: Blob, filename: string) => {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement("a")
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+}
+
+const tryCopyImageToClipboard = async (
+  blob: Blob,
+  caption: string,
+): Promise<{ didCopyImage: boolean; didCopyCaption: boolean }> => {
+  const clipboard = navigator.clipboard
+  const ClipboardItemCtor = (window as any).ClipboardItem as
+    | (new (items: Record<string, Blob>) => ClipboardItem)
+    | undefined
+
+  if (!clipboard?.write || !ClipboardItemCtor) {
+    return { didCopyImage: false, didCopyCaption: false }
+  }
+
+  try {
+    const item = new ClipboardItemCtor({
+      "image/png": blob,
+      "text/plain": new Blob([caption], { type: "text/plain" }),
+    })
+    await clipboard.write([item])
+    return { didCopyImage: true, didCopyCaption: true }
+  } catch {
+    // Fallback: image only (caption can be provided via UI)
+  }
+
+  try {
+    const item = new ClipboardItemCtor({ "image/png": blob })
+    await clipboard.write([item])
+    return { didCopyImage: true, didCopyCaption: false }
+  } catch {
+    return { didCopyImage: false, didCopyCaption: false }
+  }
+}
+
+/**
+ * Generates the snapshot image + caption and exports it using clipboard-first behavior.
+ * Falls back to downloading the PNG when clipboard image copy is unsupported or fails.
+ */
+export const exportShareSnapshot = async (
+  payload: ShareSnapshotPayload,
+): Promise<ShareSnapshotExportResult> => {
+  const caption = generateShareSnapshotCaption(payload)
+  const imageBlob = await renderShareSnapshotToPng(payload)
+
+  const stamp = formatLocalDateStamp(Date.now())
+  const filename =
+    payload.kind === "overview"
+      ? `all-api-hub-snapshot-overview-${stamp}.png`
+      : `all-api-hub-snapshot-${stamp}.png`
+
+  const clipboardAttempt = await tryCopyImageToClipboard(imageBlob, caption)
+  if (clipboardAttempt.didCopyImage) {
+    return {
+      method: "clipboard",
+      caption,
+      didCopyImage: true,
+      didCopyCaption: clipboardAttempt.didCopyCaption,
+      filename,
+    }
+  }
+
+  downloadBlob(imageBlob, filename)
+
+  let didCopyCaption = false
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(caption)
+      didCopyCaption = true
+    }
+  } catch {
+    didCopyCaption = false
+  }
+
+  return {
+    method: "download",
+    caption,
+    didCopyImage: false,
+    didCopyCaption,
+    filename,
+  }
+}
