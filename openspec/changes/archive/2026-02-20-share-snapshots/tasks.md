@@ -21,7 +21,7 @@
 
 ## 3. Export UX (Clipboard + Download Fallback)
 
-- [x] 3.1 Implement export action that attempts clipboard image copy (`navigator.clipboard.write` + `ClipboardItem`) and falls back to PNG download.
+- [x] 3.1 Implement export action that attempts clipboard image copy (guard `navigator`/`navigator.clipboard`, then `navigator.clipboard.write` + `ClipboardItem`) and falls back to PNG download when unsupported or when clipboard writes reject (e.g., permission denial / non-secure contexts).
 - [x] 3.2 Ensure caption is always surfaced to the user (attempt copy; otherwise show a follow-up toast for one-click caption copy).
 - [x] 3.3 Add toast feedback for success/failure (copied, downloaded fallback, disabled/no accounts).
 - [x] 3.4 Add integration tests (where feasible) for the export decision logic (clipboard-supported vs fallback path).

@@ -17,7 +17,8 @@ export const redactShareSecrets = (value: string): string =>
 
 /**
  * Normalizes a URL string to origin-only (scheme + host + optional port).
- * Returns undefined when the input is missing or invalid.
+ * Returns undefined when the input is missing, invalid, or has an opaque origin
+ * (e.g. `"null"`).
  */
 export const sanitizeOriginUrl = (
   value: string | undefined,
@@ -26,7 +27,9 @@ export const sanitizeOriginUrl = (
   try {
     const trimmed = value.trim()
     if (!trimmed) return undefined
-    return new URL(trimmed).origin
+    const origin = new URL(trimmed).origin
+    if (!origin || origin === "null") return undefined
+    return origin
   } catch {
     return undefined
   }
@@ -78,10 +81,16 @@ export const formatAsOfTimestamp = (
 }
 
 /**
- * Creates a random seed for generating mesh gradient backgrounds.
+ * Creates a random uint32 seed for generating mesh gradient backgrounds.
  */
-export const createShareSnapshotSeed = (): number =>
-  Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)
+export const createShareSnapshotSeed = (): number => {
+  if (globalThis.crypto?.getRandomValues) {
+    return globalThis.crypto.getRandomValues(new Uint32Array(1))[0] >>> 0
+  }
+
+  const UINT32_RANGE = 2 ** 32
+  return Math.floor(Math.random() * UINT32_RANGE) >>> 0
+}
 
 /**
  * Deterministic PRNG for seeded visuals.

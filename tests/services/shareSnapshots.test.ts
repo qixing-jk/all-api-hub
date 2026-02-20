@@ -6,6 +6,7 @@ import {
   generateShareSnapshotCaption,
 } from "~/services/shareSnapshots/shareSnapshots"
 import {
+  createShareSnapshotSeed,
   redactShareSecrets,
   sanitizeOriginUrl,
 } from "~/services/shareSnapshots/utils"
@@ -51,8 +52,26 @@ describe("shareSnapshots", () => {
       expect(sanitizeOriginUrl("not-a-url")).toBeUndefined()
     })
 
+    it("returns undefined for opaque origins", () => {
+      expect(
+        sanitizeOriginUrl("file:///Users/example/secret.txt"),
+      ).toBeUndefined()
+    })
+
     it("returns undefined for empty input", () => {
       expect(sanitizeOriginUrl(undefined)).toBeUndefined()
+    })
+  })
+
+  describe("createShareSnapshotSeed", () => {
+    it("returns a uint32 seed compatible with mulberry32", () => {
+      const seed = createShareSnapshotSeed()
+      const UINT32_MAX = 0xffffffff
+
+      expect(Number.isInteger(seed)).toBe(true)
+      expect(seed).toBeGreaterThanOrEqual(0)
+      expect(seed).toBeLessThanOrEqual(UINT32_MAX)
+      expect(seed >>> 0).toBe(seed)
     })
   })
 

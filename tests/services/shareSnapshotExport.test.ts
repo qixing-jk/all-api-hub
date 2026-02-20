@@ -193,19 +193,30 @@ describe("exportShareSnapshot", () => {
   })
 
   it("falls back to download when clipboard image write is unsupported and still copies caption when possible", async () => {
-    Object.defineProperty(navigator, "clipboard", {
-      configurable: true,
-      value: {
-        writeText: vi.fn().mockResolvedValue(undefined),
-      },
-    })
+    vi.useFakeTimers()
+    try {
+      Object.defineProperty(navigator, "clipboard", {
+        configurable: true,
+        value: {
+          writeText: vi.fn().mockResolvedValue(undefined),
+        },
+      })
 
-    const result = await exportShareSnapshot(payload)
+      const result = await exportShareSnapshot(payload)
 
-    expect(result.method).toBe("download")
-    expect(result.didCopyImage).toBe(false)
-    expect(result.didCopyCaption).toBe(true)
-    expect(lastAnchor).not.toBeNull()
-    expect(vi.mocked(lastAnchor!.click)).toHaveBeenCalledTimes(1)
+      expect(result.method).toBe("download")
+      expect(result.didCopyImage).toBe(false)
+      expect(result.didCopyCaption).toBe(true)
+      expect(lastAnchor).not.toBeNull()
+      expect(vi.mocked(lastAnchor!.click)).toHaveBeenCalledTimes(1)
+      expect(URL.revokeObjectURL).not.toHaveBeenCalled()
+
+      const REVOKE_DELAY_MS = 1000
+      vi.advanceTimersByTime(REVOKE_DELAY_MS)
+      expect(URL.revokeObjectURL).toHaveBeenCalledTimes(1)
+      expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:mock-url")
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

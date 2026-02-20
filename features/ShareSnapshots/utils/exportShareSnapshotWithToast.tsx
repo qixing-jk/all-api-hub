@@ -3,13 +3,11 @@ import toast from "react-hot-toast"
 
 import { exportShareSnapshot } from "~/services/shareSnapshots/shareSnapshots"
 import type { ShareSnapshotPayload } from "~/services/shareSnapshots/types"
+import { getErrorMessage } from "~/utils/error"
 
 import { ShareSnapshotCaptionToast } from "../components/ShareSnapshotCaptionToast"
 
 const DEFAULT_CAPTION_TOAST_DURATION_MS = 12000
-
-const formatUnknownError = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error ?? "")
 
 /**
  * Exports a snapshot payload and provides user feedback via toasts.
@@ -64,7 +62,7 @@ export const exportShareSnapshotWithToast = async ({
   } catch (error) {
     toast.error(
       t("messages:toast.error.operationFailed", {
-        error: formatUnknownError(error),
+        error: getErrorMessage(error),
       }),
     )
     return null

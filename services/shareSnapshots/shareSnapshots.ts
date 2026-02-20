@@ -300,22 +300,30 @@ export const renderShareSnapshotToPng = async (
   return blob
 }
 
+/**
+ * Triggers a file download and defers Blob URL cleanup so the browser has time
+ * to start the download before the URL is revoked.
+ */
 const downloadBlob = (blob: Blob, filename: string) => {
+  const REVOKE_DELAY_MS = 1000
   const url = URL.createObjectURL(blob)
   const link = document.createElement("a")
   link.href = url
   link.download = filename
   document.body.appendChild(link)
   link.click()
-  link.remove()
-  URL.revokeObjectURL(url)
+  setTimeout(() => {
+    link.remove()
+    URL.revokeObjectURL(url)
+  }, REVOKE_DELAY_MS)
 }
 
 const tryCopyImageToClipboard = async (
   blob: Blob,
   caption: string,
 ): Promise<{ didCopyImage: boolean; didCopyCaption: boolean }> => {
-  const clipboard = navigator.clipboard
+  const clipboard =
+    typeof navigator !== "undefined" ? navigator.clipboard : undefined
   const ClipboardItemCtor = (window as any).ClipboardItem as
     | (new (items: Record<string, Blob>) => ClipboardItem)
     | undefined
@@ -373,10 +381,13 @@ export const exportShareSnapshot = async (
 
   downloadBlob(imageBlob, filename)
 
+  const clipboard =
+    typeof navigator !== "undefined" ? navigator.clipboard : undefined
+
   let didCopyCaption = false
   try {
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(caption)
+    if (clipboard?.writeText) {
+      await clipboard.writeText(caption)
       didCopyCaption = true
     }
   } catch {
