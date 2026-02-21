@@ -9,6 +9,10 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { exportShareSnapshotWithToast } from "~/features/ShareSnapshots/utils/exportShareSnapshotWithToast"
 import { buildOverviewShareSnapshotPayload } from "~/services/shareSnapshots/shareSnapshots"
+import { getErrorMessage } from "~/utils/error"
+import { createLogger } from "~/utils/logger"
+
+const logger = createLogger("ShareOverviewSnapshotButton")
 
 /**
  * Popup header action to export an aggregate (enabled-only) overview snapshot.
@@ -60,7 +64,7 @@ export default function ShareOverviewSnapshotButton() {
     // Overview snapshots are aggregate-only and must not include per-account identifiers.
     const payload = buildOverviewShareSnapshotPayload({
       currencyType,
-      enabledAccountCount: enabledAccountCount,
+      enabledAccountCount,
       totalBalance,
       includeTodayCashflow: includeToday,
       todayIncome: includeToday ? todayIncome : undefined,
@@ -68,7 +72,15 @@ export default function ShareOverviewSnapshotButton() {
       asOf: latestSyncTime > 0 ? latestSyncTime : undefined,
     })
 
-    await exportShareSnapshotWithToast({ payload })
+    try {
+      await exportShareSnapshotWithToast({ payload })
+    } catch (error) {
+      logger.error("Failed to export overview share snapshot", error)
+      const errorText = getErrorMessage(error) || t("messages:errors.unknown")
+      toast.error(
+        t("messages:toast.error.operationFailed", { error: errorText }),
+      )
+    }
   }
 
   const label = t("shareSnapshots:actions.shareOverviewSnapshot")
