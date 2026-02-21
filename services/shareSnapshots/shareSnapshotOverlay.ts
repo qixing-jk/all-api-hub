@@ -134,19 +134,46 @@ const getFittedFontSize = ({
   const safeMinFont = Math.max(8, Math.floor(minFontSize))
   const safeMaxFont = Math.max(safeMinFont, Math.floor(maxFontSize))
 
-  let size = safeMaxFont
-  while (size > safeMinFont) {
+  const setFont = (size: number) => {
     ctx.font = `${fontWeight} ${size}px ${fontFamily}`
-    if (ctx.measureText(safeText).width <= safeMaxWidth) {
-      break
-    }
-    size -= 1
   }
 
-  ctx.font = `${fontWeight} ${size}px ${fontFamily}`
-  while (size > 8 && ctx.measureText(safeText).width > safeMaxWidth) {
-    size -= 1
-    ctx.font = `${fontWeight} ${size}px ${fontFamily}`
+  let low = safeMinFont
+  let high = safeMaxFont
+  let bestFit = 0
+
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2)
+    setFont(mid)
+    if (ctx.measureText(safeText).width <= safeMaxWidth) {
+      bestFit = mid
+      low = mid + 1
+    } else {
+      high = mid - 1
+    }
+  }
+
+  let size = bestFit > 0 ? bestFit : safeMinFont
+  setFont(size)
+
+  if (ctx.measureText(safeText).width > safeMaxWidth && size > 8) {
+    let fallbackLow = 8
+    let fallbackHigh = Math.max(8, size - 1)
+    let fallbackBestFit = 0
+
+    while (fallbackLow <= fallbackHigh) {
+      const mid = Math.floor((fallbackLow + fallbackHigh) / 2)
+      setFont(mid)
+      if (ctx.measureText(safeText).width <= safeMaxWidth) {
+        fallbackBestFit = mid
+        fallbackLow = mid + 1
+      } else {
+        fallbackHigh = mid - 1
+      }
+    }
+
+    size = fallbackBestFit > 0 ? fallbackBestFit : 8
+    setFont(size)
   }
 
   return Math.max(8, size)

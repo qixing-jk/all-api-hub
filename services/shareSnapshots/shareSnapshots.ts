@@ -19,6 +19,7 @@ import {
   formatSignedCurrencyAmount,
 } from "~/services/shareSnapshots/utils"
 import type { CurrencyType } from "~/types"
+import { createLogger } from "~/utils/logger"
 
 export const SHARE_SNAPSHOT_IMAGE = {
   width: 1200,
@@ -26,6 +27,8 @@ export const SHARE_SNAPSHOT_IMAGE = {
 } as const
 
 const APP_WATERMARK_FALLBACK = "All API Hub"
+
+const logger = createLogger("ShareSnapshots")
 
 const getWatermarkText = (): string => {
   const translated = i18next.t("ui:app.name")
@@ -40,6 +43,19 @@ const getLocale = (): string | undefined => {
     ? lng.toLowerCase().replace(/_/g, "-")
     : undefined
 }
+
+const resolveOverlayLabels = (): ShareSnapshotOverlayLabels => ({
+  overview: i18next.t("shareSnapshots:labels.overview"),
+  totalBalance: i18next.t("shareSnapshots:labels.totalBalance"),
+  balance: i18next.t("shareSnapshots:labels.balance"),
+  accounts: i18next.t("shareSnapshots:labels.accounts"),
+  site: i18next.t("shareSnapshots:labels.site"),
+  asOf: i18next.t("shareSnapshots:labels.asOf"),
+  today: i18next.t("shareSnapshots:labels.today"),
+  income: i18next.t("shareSnapshots:labels.income"),
+  outcome: i18next.t("shareSnapshots:labels.outcome"),
+  net: i18next.t("shareSnapshots:labels.net"),
+})
 
 const resolveSafeAsOf = (asOf: number | undefined, fallback = Date.now()) =>
   Number.isFinite(asOf) && (asOf ?? 0) > 0 ? (asOf as number) : fallback
@@ -58,16 +74,20 @@ type ShareSnapshotCashflowPayload = {
   todayNet?: number
 }
 
-const applyCashflow = (
-  payload: ShareSnapshotCashflowPayload,
+const applyCashflow = <TPayload extends ShareSnapshotCashflowPayload>(
+  payload: TPayload,
   todayIncome: number | undefined,
   todayOutcome: number | undefined,
-) => {
+): TPayload => {
   const income = Number.isFinite(todayIncome) ? (todayIncome as number) : 0
   const outcome = Number.isFinite(todayOutcome) ? (todayOutcome as number) : 0
-  payload.todayIncome = income
-  payload.todayOutcome = outcome
-  payload.todayNet = income - outcome
+
+  return {
+    ...payload,
+    todayIncome: income,
+    todayOutcome: outcome,
+    todayNet: income - outcome,
+  }
 }
 
 /**
@@ -105,11 +125,9 @@ export const buildOverviewShareSnapshotPayload = ({
     backgroundSeed: seed,
   }
 
-  if (includeTodayCashflow) {
-    applyCashflow(payload, todayIncome, todayOutcome)
-  }
-
-  return payload
+  return includeTodayCashflow
+    ? applyCashflow(payload, todayIncome, todayOutcome)
+    : payload
 }
 
 /**
@@ -151,11 +169,9 @@ export const buildAccountShareSnapshotPayload = ({
     backgroundSeed: seed,
   }
 
-  if (includeTodayCashflow) {
-    applyCashflow(payload, todayIncome, todayOutcome)
-  }
-
-  return payload
+  return includeTodayCashflow
+    ? applyCashflow(payload, todayIncome, todayOutcome)
+    : payload
 }
 
 /**
@@ -167,24 +183,16 @@ export const generateShareSnapshotCaption = (
 ): string => {
   const appName = getWatermarkText()
   const locale = getLocale()
-  const overviewLabel = i18next.t("shareSnapshots:labels.overview")
-  const totalBalanceLabel = i18next.t("shareSnapshots:labels.totalBalance")
-  const balanceLabel = i18next.t("shareSnapshots:labels.balance")
-  const accountsLabel = i18next.t("shareSnapshots:labels.accounts")
-  const todayLabel = i18next.t("shareSnapshots:labels.today")
-  const incomeLabel = i18next.t("shareSnapshots:labels.income")
-  const outcomeLabel = i18next.t("shareSnapshots:labels.outcome")
-  const netLabel = i18next.t("shareSnapshots:labels.net")
-  const asOfLabel = i18next.t("shareSnapshots:labels.asOf")
+  const labels = resolveOverlayLabels()
 
   const asOfText = formatAsOfTimestamp(payload.asOf, locale)
 
   if (payload.kind === "overview") {
-    const header = `${appName} — ${overviewLabel}`
-    const summary = `${totalBalanceLabel}: ${formatCurrencyAmount(
+    const header = `${appName} — ${labels.overview}`
+    const summary = `${labels.totalBalance}: ${formatCurrencyAmount(
       payload.totalBalance,
       payload.currencyType,
-    )} · ${accountsLabel}: ${payload.enabledAccountCount}`
+    )} · ${labels.accounts}: ${payload.enabledAccountCount}`
 
     const lines = [header, summary]
 
@@ -194,26 +202,26 @@ export const generateShareSnapshotCaption = (
       typeof payload.todayNet === "number"
     ) {
       lines.push(
-        `${todayLabel}: ${incomeLabel} ${formatSignedCurrencyAmount(
+        `${labels.today}: ${labels.income} ${formatSignedCurrencyAmount(
           payload.todayIncome,
           payload.currencyType,
-        )} / ${outcomeLabel} ${formatSignedCurrencyAmount(
+        )} / ${labels.outcome} ${formatSignedCurrencyAmount(
           -payload.todayOutcome,
           payload.currencyType,
-        )} · ${netLabel} ${formatSignedCurrencyAmount(
+        )} · ${labels.net} ${formatSignedCurrencyAmount(
           payload.todayNet,
           payload.currencyType,
         )}`,
       )
     }
 
-    lines.push(`${asOfLabel}: ${asOfText}`)
+    lines.push(`${labels.asOf}: ${asOfText}`)
     return lines.join("\n")
   }
 
   const header = `${appName} — ${payload.siteName}`
   const originLine = payload.originUrl ? payload.originUrl : undefined
-  const summary = `${balanceLabel}: ${formatCurrencyAmount(
+  const summary = `${labels.balance}: ${formatCurrencyAmount(
     payload.balance,
     payload.currencyType,
   )}`
@@ -226,20 +234,20 @@ export const generateShareSnapshotCaption = (
     typeof payload.todayNet === "number"
   ) {
     lines.push(
-      `${todayLabel}: ${incomeLabel} ${formatSignedCurrencyAmount(
+      `${labels.today}: ${labels.income} ${formatSignedCurrencyAmount(
         payload.todayIncome,
         payload.currencyType,
-      )} / ${outcomeLabel} ${formatSignedCurrencyAmount(
+      )} / ${labels.outcome} ${formatSignedCurrencyAmount(
         -payload.todayOutcome,
         payload.currencyType,
-      )} · ${netLabel} ${formatSignedCurrencyAmount(
+      )} · ${labels.net} ${formatSignedCurrencyAmount(
         payload.todayNet,
         payload.currencyType,
       )}`,
     )
   }
 
-  lines.push(`${asOfLabel}: ${asOfText}`)
+  lines.push(`${labels.asOf}: ${asOfText}`)
   return lines.join("\n")
 }
 
@@ -266,29 +274,7 @@ export const renderShareSnapshotToPng = async (
 
   const locale = getLocale()
   const watermark = getWatermarkText()
-  const overviewLabel = i18next.t("shareSnapshots:labels.overview")
-  const totalBalanceLabel = i18next.t("shareSnapshots:labels.totalBalance")
-  const balanceLabel = i18next.t("shareSnapshots:labels.balance")
-  const accountsLabel = i18next.t("shareSnapshots:labels.accounts")
-  const siteLabel = i18next.t("shareSnapshots:labels.site")
-  const asOfLabel = i18next.t("shareSnapshots:labels.asOf")
-  const todayLabel = i18next.t("shareSnapshots:labels.today")
-  const incomeLabel = i18next.t("shareSnapshots:labels.income")
-  const outcomeLabel = i18next.t("shareSnapshots:labels.outcome")
-  const netLabel = i18next.t("shareSnapshots:labels.net")
-
-  const labels: ShareSnapshotOverlayLabels = {
-    overview: overviewLabel,
-    totalBalance: totalBalanceLabel,
-    balance: balanceLabel,
-    accounts: accountsLabel,
-    site: siteLabel,
-    asOf: asOfLabel,
-    today: todayLabel,
-    income: incomeLabel,
-    outcome: outcomeLabel,
-    net: netLabel,
-  }
+  const labels = resolveOverlayLabels()
 
   drawShareSnapshotOverlay(ctx, {
     payload,
@@ -356,7 +342,11 @@ const tryCopyImageToClipboard = async (
     })
     await clipboard.write([item])
     return { didCopyImage: true, didCopyCaption: true }
-  } catch {
+  } catch (error) {
+    logger.debug(
+      "Failed to write share snapshot image + caption to clipboard; falling back to image-only.",
+      error,
+    )
     // Fallback: image only (caption can be provided via UI)
   }
 
@@ -364,7 +354,8 @@ const tryCopyImageToClipboard = async (
     const item = new ClipboardItemCtor({ "image/png": blob })
     await clipboard.write([item])
     return { didCopyImage: true, didCopyCaption: false }
-  } catch {
+  } catch (error) {
+    logger.debug("Failed to write share snapshot image to clipboard.", error)
     return { didCopyImage: false, didCopyCaption: false }
   }
 }
