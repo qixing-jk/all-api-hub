@@ -6,6 +6,12 @@
  * - Keep values deterministic to avoid brittle snapshots/expectations.
  */
 
+import type {
+  AccountShareSnapshotPayload,
+  OverviewShareSnapshotPayload,
+  ShareSnapshotPayload,
+} from "~/services/shareSnapshots/types"
+
 /**
  * Build a dummy API key used by Web AI API Check tests.
  */
@@ -24,4 +30,38 @@ export function buildApiCheckClipboardText(params?: {
   const apiKey = params?.apiKey ?? buildApiKey()
 
   return [`Base URL: ${baseUrl}`, `API Key: ${apiKey}`].join("\n")
+}
+
+/**
+ * Build a share snapshot payload with deterministic, non-secret-like values.
+ */
+export function buildShareSnapshotPayload(
+  overrides:
+    | (Partial<AccountShareSnapshotPayload> & { kind?: "account" })
+    | (Partial<OverviewShareSnapshotPayload> & { kind: "overview" }) = {},
+): ShareSnapshotPayload {
+  if (overrides.kind === "overview") {
+    const base: OverviewShareSnapshotPayload = {
+      kind: "overview",
+      currencyType: "USD",
+      enabledAccountCount: 2,
+      totalBalance: 123.45,
+      asOf: 1700000000000,
+      backgroundSeed: 1,
+    }
+
+    return { ...base, ...overrides, kind: "overview" }
+  }
+
+  const base: AccountShareSnapshotPayload = {
+    kind: "account",
+    currencyType: "USD",
+    siteName: "Example Site",
+    originUrl: "https://example.com",
+    balance: 12.34,
+    asOf: 1700000000000,
+    backgroundSeed: 1,
+  }
+
+  return { ...base, ...overrides, kind: "account" }
 }

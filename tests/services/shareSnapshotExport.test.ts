@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { MESH_GRADIENT_NOISE_TILE_SIZE } from "~/services/shareSnapshots/meshGradient"
 import { exportShareSnapshot } from "~/services/shareSnapshots/shareSnapshots"
-import type { ShareSnapshotPayload } from "~/services/shareSnapshots/types"
+import { buildShareSnapshotPayload } from "~/tests/test-utils/factories"
 
 /**
  * Integration-ish tests for `exportShareSnapshot` decision logic.
@@ -150,7 +150,7 @@ describe("exportShareSnapshot", () => {
     }
   })
 
-  const payload: ShareSnapshotPayload = {
+  const payload = buildShareSnapshotPayload({
     kind: "account",
     currencyType: "USD",
     siteName: "Example Site",
@@ -158,7 +158,7 @@ describe("exportShareSnapshot", () => {
     balance: 12.34,
     asOf: 1700000000000,
     backgroundSeed: 1,
-  }
+  })
 
   it("uses clipboard when ClipboardItem+clipboard.write succeed (image + caption)", async () => {
     ;(window as any).ClipboardItem = ClipboardItemMock
