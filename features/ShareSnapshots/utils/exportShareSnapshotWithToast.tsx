@@ -48,7 +48,6 @@ export const exportShareSnapshotWithToast = async ({
               } catch {
                 toast.error(t("messages:toast.error.copyFailed"))
               }
-              toast.dismiss(toastInstance.id)
             }}
             onClose={() => toast.dismiss(toastInstance.id)}
           />
