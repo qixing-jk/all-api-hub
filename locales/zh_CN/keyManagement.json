@@ -3,10 +3,21 @@
   "description": "此页面显示所有账号的API密钥信息，包括使用情况和过期时间。可以通过右上角的\"添加密钥\"按钮或点击各密钥项目旁的\"+\"按钮为指定账号创建新密钥。请妥善保管您的API密钥，避免泄露给他人",
   "selectAccount": "选择账号",
   "pleaseSelectAccount": "请选择账号",
+  "allAccounts": "所有账号",
   "searchPlaceholder": "搜索密钥名称...",
   "totalKeys": "总计 {{count}} 个密钥",
   "enabledCount": "启用 {{count}} 个",
   "showingCount": "显示 {{count}} 个",
+  "allAccountsProgress": "已加载 {{loaded}}/{{total}} 个账号",
+  "allAccountsLoading": "{{count}} 个加载中",
+  "allAccountsFailed": "{{count}} 个失败",
+  "allAccountsLoadFailedTitle": "{{count}} 个账号加载失败",
+  "allAccountsLoadFailedDescription": "失败账号：{{accounts}}",
+  "accountSummary": {
+    "title": "账号概览",
+    "keys": "{{count}} 个密钥",
+    "loadFailed": "加载失败"
+  },
   "noKeys": "暂无密钥数据",
   "noMatchingKeys": "没有找到匹配的密钥",
   "pleaseAddAccount": "请先添加账号",
@@ -80,7 +91,10 @@
     "enable": "启用",
     "disable": "禁用",
     "showKey": "显示密钥",
-    "hideKey": "隐藏密钥"
+    "hideKey": "隐藏密钥",
+    "retryFailed": "重试失败账号",
+    "expandAll": "全部展开",
+    "collapseAll": "全部折叠"
   },
   "messages": {
     "loadFailed": "加载密钥列表失败",

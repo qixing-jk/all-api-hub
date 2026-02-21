@@ -97,7 +97,7 @@ export function useTokenForm({
     if (isOpen) {
       if (isEditMode && editingToken) {
         const matchingAccount = availableAccounts.find(
-          (acc) => acc.name === editingToken.accountName,
+          (acc) => acc.id === editingToken.accountId,
         )
         const accountId =
           matchingAccount?.id ||
@@ -128,8 +128,10 @@ export function useTokenForm({
         })
       } else {
         const defaultAccountId =
-          preSelectedAccountId ||
-          (availableAccounts.length > 0 ? availableAccounts[0].id : "")
+          preSelectedAccountId === null
+            ? ""
+            : preSelectedAccountId ||
+              (availableAccounts.length > 0 ? availableAccounts[0].id : "")
 
         const normalizedModelId =
           typeof createPrefill?.modelId === "string"

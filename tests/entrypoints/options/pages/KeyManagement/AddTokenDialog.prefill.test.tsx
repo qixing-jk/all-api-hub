@@ -122,6 +122,7 @@ describe("AddTokenDialog prefill", () => {
 
     const editingToken = {
       id: 123,
+      accountId: ACCOUNT.id,
       accountName: ACCOUNT.name,
       name: "Existing key",
       remain_quota: -1,

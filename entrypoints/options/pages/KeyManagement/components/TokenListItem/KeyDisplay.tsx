@@ -11,17 +11,17 @@ interface KeyDisplayProps {
    */
   tokenKey: string
   /**
-   * Identifier used to track visibility toggle state for this key.
+   * Identity key used to track visibility toggle state for this token.
    */
-  tokenId: number
+  tokenIdentityKey: string
   /**
-   * Set of token IDs currently visible in cleartext.
+   * Set of token identity keys currently visible in cleartext.
    */
-  visibleKeys: Set<number>
+  visibleKeys: Set<string>
   /**
-   * Toggle callback to switch visibility for the given token ID.
+   * Toggle callback to switch visibility for the given token identity key.
    */
-  toggleKeyVisibility: (id: number) => void
+  toggleKeyVisibility: (identityKey: string) => void
 }
 
 /**
@@ -34,7 +34,7 @@ interface KeyDisplayProps {
  */
 export function KeyDisplay({
   tokenKey,
-  tokenId,
+  tokenIdentityKey,
   visibleKeys,
   toggleKeyVisibility,
 }: KeyDisplayProps) {
@@ -47,20 +47,20 @@ export function KeyDisplay({
       </span>
       <div className="flex min-w-0 flex-1 items-center gap-2">
         <code className="dark:bg-dark-bg-tertiary dark:text-dark-text-secondary inline-block max-w-full truncate rounded bg-gray-100 px-1.5 py-0.5 align-middle font-mono text-[10px] text-gray-800 sm:px-2 sm:py-1 sm:text-xs">
-          {formatKey(tokenKey, tokenId, visibleKeys)}
+          {formatKey(tokenKey, tokenIdentityKey, visibleKeys)}
         </code>
         <IconButton
           variant="ghost"
           size="sm"
-          onClick={() => toggleKeyVisibility(tokenId)}
+          onClick={() => toggleKeyVisibility(tokenIdentityKey)}
           aria-label={
-            visibleKeys.has(tokenId)
+            visibleKeys.has(tokenIdentityKey)
               ? t("actions.hideKey")
               : t("actions.showKey")
           }
           className="shrink-0"
         >
-          {visibleKeys.has(tokenId) ? (
+          {visibleKeys.has(tokenIdentityKey) ? (
             <EyeSlashIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           ) : (
             <EyeIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />

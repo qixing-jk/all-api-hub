@@ -3,12 +3,15 @@ import { useEffect, useState } from "react"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { sendRuntimeActionMessage } from "~/utils/browserApi"
 
+import { AccountSelectorPanel } from "./components/AccountSelectorPanel"
+import { AccountSummaryBar } from "./components/AccountSummaryBar"
 import AddTokenDialog from "./components/AddTokenDialog"
-import { Controls } from "./components/Controls"
 import { Footer } from "./components/Footer"
 import { Header } from "./components/Header"
 import { RepairMissingKeysDialog } from "./components/RepairMissingKeysDialog"
 import { TokenList } from "./components/TokenList"
+import { TokenSearchBar } from "./components/TokenSearchBar"
+import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "./constants"
 import { useKeyManagement } from "./hooks/useKeyManagement"
 
 /**
@@ -35,10 +38,16 @@ export default function KeyManagement(props: {
     visibleKeys,
     isAddTokenOpen,
     editingToken,
+    tokenLoadProgress,
+    failedAccounts,
+    accountSummaryItems,
+    allAccountsFilterAccountId,
+    setAllAccountsFilterAccountId,
     loadTokens,
     filteredTokens,
     copyKey,
     toggleKeyVisibility,
+    retryFailedAccounts,
     handleAddToken,
     handleCloseAddToken,
     handleEditToken,
@@ -81,6 +90,14 @@ export default function KeyManagement(props: {
     setRepairStartOnOpen(false)
   }
 
+  const handleAccountSummaryClick = (accountId: string) => {
+    if (allAccountsFilterAccountId === accountId) {
+      setAllAccountsFilterAccountId(null)
+    } else {
+      setAllAccountsFilterAccountId(accountId)
+    }
+  }
+
   return (
     <div className="p-6">
       <Header
@@ -93,15 +110,33 @@ export default function KeyManagement(props: {
         isRepairDisabled={displayData.length === 0}
       />
 
-      <Controls
+      <AccountSelectorPanel
         selectedAccount={selectedAccount}
         setSelectedAccount={setSelectedAccount}
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
         displayData={displayData}
         tokens={tokens}
         filteredTokens={filteredTokens}
+        tokenLoadProgress={tokenLoadProgress}
+        failedAccounts={failedAccounts}
+        onRetryFailedAccounts={retryFailedAccounts}
       />
+
+      {selectedAccount === KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE &&
+        accountSummaryItems.length > 0 && (
+          <AccountSummaryBar
+            items={accountSummaryItems}
+            activeAccountId={allAccountsFilterAccountId}
+            onAccountClick={handleAccountSummaryClick}
+          />
+        )}
+
+      {selectedAccount ? (
+        <TokenSearchBar
+          selectedAccount={selectedAccount}
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+        />
+      ) : null}
 
       <TokenList
         isLoading={isLoading}
@@ -115,6 +150,7 @@ export default function KeyManagement(props: {
         handleAddToken={handleAddToken}
         selectedAccount={selectedAccount}
         displayData={displayData}
+        allAccountsFilterAccountId={allAccountsFilterAccountId}
       />
 
       <Footer />
@@ -123,7 +159,11 @@ export default function KeyManagement(props: {
         isOpen={isAddTokenOpen}
         onClose={handleCloseAddToken}
         availableAccounts={displayData}
-        preSelectedAccountId={selectedAccount || null}
+        preSelectedAccountId={
+          selectedAccount === KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE
+            ? null
+            : selectedAccount || null
+        }
         editingToken={editingToken}
       />
 
