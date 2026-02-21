@@ -4,7 +4,7 @@ import {
   buildAccountShareSnapshotPayload,
   buildOverviewShareSnapshotPayload,
   generateShareSnapshotCaption,
-} from "~/services/shareSnapshots/shareSnapshots"
+} from "~/services/shareSnapshots"
 import {
   createShareSnapshotSeed,
   redactShareSecrets,

@@ -25,7 +25,7 @@ import { useAccountDataContext } from "~/features/AccountManagement/hooks/Accoun
 import { useDialogStateContext } from "~/features/AccountManagement/hooks/DialogStateContext"
 import { exportShareSnapshotWithToast } from "~/features/ShareSnapshots/utils/exportShareSnapshotWithToast"
 import { getApiService } from "~/services/apiService"
-import { buildAccountShareSnapshotPayload } from "~/services/shareSnapshots/shareSnapshots"
+import { buildAccountShareSnapshotPayload } from "~/services/shareSnapshots"
 import { sanitizeOriginUrl } from "~/services/shareSnapshots/utils"
 import type { DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/error"

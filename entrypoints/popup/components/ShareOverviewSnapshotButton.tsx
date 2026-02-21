@@ -8,7 +8,7 @@ import { IconButton } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { exportShareSnapshotWithToast } from "~/features/ShareSnapshots/utils/exportShareSnapshotWithToast"
-import { buildOverviewShareSnapshotPayload } from "~/services/shareSnapshots/shareSnapshots"
+import { buildOverviewShareSnapshotPayload } from "~/services/shareSnapshots"
 import { getErrorMessage } from "~/utils/error"
 import { createLogger } from "~/utils/logger"
 
