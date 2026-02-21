@@ -49,7 +49,8 @@ const buttonVariants = cva(
 )
 
 /**
- * Button renders a styled Radix-aware button with variants, sizes, icons, and optional loading spinner.
+ * Button renders a styled Radix-aware button with variants, sizes, icons, and optional loading spinner
+ * (replacing the left icon while loading).
  */
 function Button({
   className,
@@ -79,16 +80,17 @@ function Button({
     variant: spinnerVariantProp,
     ...restSpinnerProps
   } = spinnerProps ?? {}
-  const resolvedSpinnerVariant =
-    spinnerVariantProp ??
-    (variant === "default" ||
-    variant === "destructive" ||
-    variant === "secondary" ||
-    variant === "success" ||
-    variant === "warning"
-      ? "white"
-      : "primary")
+  const resolvedSpinnerVariant = spinnerVariantProp ?? "primary"
   const resolvedSpinnerSize = spinnerSizeProp ?? "sm"
+  const resolvedLeftIcon = loading ? (
+    <Spinner
+      size={resolvedSpinnerSize}
+      variant={resolvedSpinnerVariant}
+      {...restSpinnerProps}
+    />
+  ) : (
+    leftIcon
+  )
 
   return (
     <Comp
@@ -96,16 +98,7 @@ function Button({
       className={cn(buttonVariants({ variant, size, bleed, className }))}
       {...props}
     >
-      {loading && (
-        <span className="pointer-events-none">
-          <Spinner
-            size={resolvedSpinnerSize}
-            variant={resolvedSpinnerVariant}
-            {...restSpinnerProps}
-          />
-        </span>
-      )}
-      {leftIcon && <span>{leftIcon}</span>}
+      {resolvedLeftIcon && <span>{resolvedLeftIcon}</span>}
       <Slottable>{children}</Slottable>
       {rightIcon && <span>{rightIcon}</span>}
     </Comp>
