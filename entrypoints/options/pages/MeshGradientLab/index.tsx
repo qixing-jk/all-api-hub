@@ -1,5 +1,6 @@
 import { Palette, Shuffle } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
+import { useTranslation } from "react-i18next"
 
 import {
   Button,
@@ -84,12 +85,16 @@ const MeshGradientCanvas = ({
     const canvas = canvasRef.current
     if (!canvas) return
 
-    canvas.width = PREVIEW_SIZE
-    canvas.height = PREVIEW_SIZE
+    const dpr = window.devicePixelRatio || 1
+    canvas.width = PREVIEW_SIZE * dpr
+    canvas.height = PREVIEW_SIZE * dpr
+    canvas.style.width = `${PREVIEW_SIZE}px`
+    canvas.style.height = `${PREVIEW_SIZE}px`
     const ctx = canvas.getContext("2d")
     if (!ctx) return
 
     ctx.setTransform(1, 0, 0, 1, 0, 0)
+    ctx.scale(dpr, dpr)
     ctx.globalCompositeOperation = "source-over"
     ctx.globalAlpha = 1
     ctx.filter = "none"
@@ -155,6 +160,7 @@ const PaletteSwatches = ({ colors }: { colors: readonly string[] }) => {
  * Developer tool for previewing and testing mesh gradient palettes and layouts.
  */
 export default function MeshGradientLab() {
+  const { t } = useTranslation("meshGradientLab")
   const paletteCount = MESH_GRADIENT_PALETTES.length
   const layoutCount = MESH_GRADIENT_LAYOUT_COUNT
   const maxPaletteIndex = Math.max(0, paletteCount - 1)
@@ -188,11 +194,11 @@ export default function MeshGradientLab() {
     <div className="p-6">
       <PageHeader
         icon={Palette}
-        title="Mesh Gradient Lab (Dev)"
+        title={t("meshGradientLab:title")}
         actions={
           <Button onClick={handleShuffleSeed} variant="secondary">
             <Shuffle className="mr-2 h-4 w-4" />
-            Shuffle Seed
+            {t("meshGradientLab:actions.shuffleSeed")}
           </Button>
         }
       />
@@ -203,27 +209,27 @@ export default function MeshGradientLab() {
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                 <div className="flex items-center gap-2">
-                  <Label size="sm">View</Label>
+                  <Label size="sm">{t("meshGradientLab:labels.view")}</Label>
                   <div className="dark:bg-dark-bg-tertiary inline-flex rounded-lg bg-gray-50 p-1">
                     <ToggleButton
                       size="sm"
                       isActive={viewMode === "palettes"}
                       onClick={() => setViewMode("palettes")}
                     >
-                      Palettes
+                      {t("meshGradientLab:view.palettes")}
                     </ToggleButton>
                     <ToggleButton
                       size="sm"
                       isActive={viewMode === "layouts"}
                       onClick={() => setViewMode("layouts")}
                     >
-                      Layouts
+                      {t("meshGradientLab:view.layouts")}
                     </ToggleButton>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <Label size="sm">Seed</Label>
+                  <Label size="sm">{t("meshGradientLab:labels.seed")}</Label>
                   <Input
                     type="number"
                     size="sm"
@@ -238,7 +244,9 @@ export default function MeshGradientLab() {
 
                 {viewMode === "palettes" ? (
                   <div className="flex items-center gap-2">
-                    <Label size="sm">Layout</Label>
+                    <Label size="sm">
+                      {t("meshGradientLab:labels.layout")}
+                    </Label>
                     <Input
                       type="number"
                       size="sm"
@@ -254,7 +262,9 @@ export default function MeshGradientLab() {
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
-                    <Label size="sm">Palette</Label>
+                    <Label size="sm">
+                      {t("meshGradientLab:labels.palette")}
+                    </Label>
                     <Input
                       type="number"
                       size="sm"
@@ -273,7 +283,7 @@ export default function MeshGradientLab() {
                 )}
 
                 <div className="flex items-center gap-2">
-                  <Label size="sm">Overlay</Label>
+                  <Label size="sm">{t("meshGradientLab:labels.overlay")}</Label>
                   <Switch
                     checked={showOverlay}
                     onChange={setShowOverlay}
@@ -283,7 +293,7 @@ export default function MeshGradientLab() {
               </div>
 
               <div className="dark:text-dark-text-tertiary text-sm text-gray-500">
-                {`${paletteCount} palettes · ${layoutCount} layouts`}
+                {t("meshGradientLab:summary", { paletteCount, layoutCount })}
               </div>
             </div>
           </CardContent>
@@ -300,7 +310,9 @@ export default function MeshGradientLab() {
                     layoutIndex={safeLayoutIndex}
                     showOverlay={showOverlay}
                   />
-                  <div className="dark:text-dark-text-primary mt-3 text-sm font-medium text-gray-900">{`#${index}`}</div>
+                  <div className="dark:text-dark-text-primary mt-3 text-sm font-medium text-gray-900">
+                    {t("meshGradientLab:captions.paletteIndex", { index })}
+                  </div>
                   <PaletteSwatches colors={palette.colors} />
                 </CardContent>
               </Card>
@@ -317,7 +329,9 @@ export default function MeshGradientLab() {
                     layoutIndex={index}
                     showOverlay={showOverlay}
                   />
-                  <div className="dark:text-dark-text-primary mt-3 text-sm font-medium text-gray-900">{`layout #${index}`}</div>
+                  <div className="dark:text-dark-text-primary mt-3 text-sm font-medium text-gray-900">
+                    {t("meshGradientLab:captions.layoutIndex", { index })}
+                  </div>
                   <PaletteSwatches
                     colors={
                       MESH_GRADIENT_PALETTES[safePaletteIndex]?.colors ?? []

@@ -69,4 +69,5 @@ function MyComponent() {
 | `messages` | 消息提示 | `t("messages:toast.success.accountAdded")` |
 | `ui` | UI 元素 | `t("ui:navigation.home")` |
 | `importExport` | 导入/导出 | `t("importExport:export.title")` |
+| `shareSnapshots` | 共享快照 | `t("shareSnapshots:<key>")` |
 | `about` | 关于 | `t("about:title")` |
