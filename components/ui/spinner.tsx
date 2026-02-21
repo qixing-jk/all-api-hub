@@ -32,7 +32,7 @@ export interface SpinnerProps
 }
 
 /**
- *
+ * Spinner renders a rotating loader icon with customizable size and color variants, and appropriate ARIA attributes for accessibility.
  */
 function Spinner({ className, size, variant, ...props }: SpinnerProps) {
   return (
