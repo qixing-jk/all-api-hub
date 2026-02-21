@@ -36,32 +36,31 @@ export default function ShareOverviewSnapshotButton() {
       0,
     )
 
-    const totalBalance = displayData
-      .filter(
-        (site) =>
-          site.disabled !== true && site.excludeFromTotalBalance !== true,
-      )
-      .reduce((sum, site) => sum + (site.balance?.[currencyType] ?? 0), 0)
-
     const includeToday = showTodayCashflow !== false
 
-    const todayIncome = includeToday
-      ? displayData
-          .filter((site) => site.disabled !== true)
-          .reduce(
-            (sum, site) => sum + (site.todayIncome?.[currencyType] ?? 0),
-            0,
-          )
-      : undefined
+    let totalBalance = 0
+    let todayIncome: number | undefined
+    let todayOutcome: number | undefined
 
-    const todayOutcome = includeToday
-      ? displayData
-          .filter((site) => site.disabled !== true)
-          .reduce(
-            (sum, site) => sum + (site.todayConsumption?.[currencyType] ?? 0),
-            0,
-          )
-      : undefined
+    if (includeToday) {
+      todayIncome = 0
+      todayOutcome = 0
+    }
+
+    for (const site of displayData) {
+      if (site.disabled === true) {
+        continue
+      }
+
+      if (site.excludeFromTotalBalance !== true) {
+        totalBalance += site.balance?.[currencyType] ?? 0
+      }
+
+      if (includeToday) {
+        todayIncome! += site.todayIncome?.[currencyType] ?? 0
+        todayOutcome! += site.todayConsumption?.[currencyType] ?? 0
+      }
+    }
 
     // Overview snapshots are aggregate-only and must not include per-account identifiers.
     const payload = buildOverviewShareSnapshotPayload({
