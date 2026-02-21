@@ -1,9 +1,12 @@
-import type { ShareSnapshotPayload } from "./types"
+import type { ShareSnapshotPayload } from "~/services/shareSnapshots/types"
 import {
   clamp,
+  clampByte,
   formatCurrencyAmount,
   formatSignedCurrencyAmount,
-} from "./utils"
+  relativeLuminanceFromRgb,
+  type Rgb,
+} from "~/services/shareSnapshots/utils"
 
 export type ShareSnapshotOverlayLabels = {
   overview: string
@@ -18,29 +21,8 @@ export type ShareSnapshotOverlayLabels = {
   net: string
 }
 
-type Rgb = {
-  r: number
-  g: number
-  b: number
-}
-
 const SHARE_SNAPSHOT_TEXT_RGB_LIGHT: Rgb = { r: 255, g: 255, b: 255 }
 const SHARE_SNAPSHOT_TEXT_RGB_DARK: Rgb = { r: 15, g: 23, b: 42 }
-
-const clampByte = (value: number): number => clamp(Math.round(value), 0, 255)
-
-// https://www.w3.org/TR/WCAG21/#dfn-relative-luminance
-const relativeLuminanceFromRgb = ({ r, g, b }: Rgb): number => {
-  const toLinear = (n: number) => {
-    const c = clamp(n / 255, 0, 1)
-    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
-  }
-
-  const rr = toLinear(r)
-  const gg = toLinear(g)
-  const bb = toLinear(b)
-  return 0.2126 * rr + 0.7152 * gg + 0.0722 * bb
-}
 
 const rgbaFromRgb = (rgb: Rgb, alpha: number): string =>
   `rgba(${clampByte(rgb.r)}, ${clampByte(rgb.g)}, ${clampByte(rgb.b)}, ${clamp(

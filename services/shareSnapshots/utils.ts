@@ -111,6 +111,28 @@ export const mulberry32 = (seed: number) => {
 export const clamp = (value: number, min: number, max: number): number =>
   Math.min(max, Math.max(min, value))
 
+export type Rgb = {
+  r: number
+  g: number
+  b: number
+}
+
+export const clampByte = (value: number): number =>
+  clamp(Math.round(value), 0, 255)
+
+// https://www.w3.org/TR/WCAG21/#dfn-relative-luminance
+export const relativeLuminanceFromRgb = ({ r, g, b }: Rgb): number => {
+  const toLinear = (n: number) => {
+    const c = clamp(n / 255, 0, 1)
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
+  }
+
+  const rr = toLinear(r)
+  const gg = toLinear(g)
+  const bb = toLinear(b)
+  return 0.2126 * rr + 0.7152 * gg + 0.0722 * bb
+}
+
 /**
  * Formats a local YYYY-MM-DD stamp for filenames.
  */

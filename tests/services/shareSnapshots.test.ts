@@ -124,18 +124,20 @@ describe("shareSnapshots", () => {
 
     it("falls back to export time when asOf is missing", () => {
       vi.useFakeTimers()
-      vi.setSystemTime(new Date("2026-02-10T12:00:00.000Z"))
+      try {
+        vi.setSystemTime(new Date("2026-02-10T12:00:00.000Z"))
 
-      const payload = buildOverviewShareSnapshotPayload({
-        currencyType: "USD",
-        enabledAccountCount: 1,
-        totalBalance: 1,
-        includeTodayCashflow: false,
-      })
+        const payload = buildOverviewShareSnapshotPayload({
+          currencyType: "USD",
+          enabledAccountCount: 1,
+          totalBalance: 1,
+          includeTodayCashflow: false,
+        })
 
-      expect(payload.asOf).toBe(Date.now())
-
-      vi.useRealTimers()
+        expect(payload.asOf).toBe(Date.now())
+      } finally {
+        vi.useRealTimers()
+      }
     })
   })
 

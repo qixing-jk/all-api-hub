@@ -1,25 +1,24 @@
 import i18next from "i18next"
 
-import type { CurrencyType } from "~/types"
-
-import { drawMeshGradientBackground } from "./meshGradientBackground"
+import { drawMeshGradientBackground } from "~/services/shareSnapshots/meshGradientBackground"
 import {
   drawShareSnapshotOverlay,
   type ShareSnapshotOverlayLabels,
-} from "./shareSnapshotOverlay"
+} from "~/services/shareSnapshots/shareSnapshotOverlay"
 import type {
   AccountShareSnapshotPayload,
   OverviewShareSnapshotPayload,
   ShareSnapshotExportResult,
   ShareSnapshotPayload,
-} from "./types"
+} from "~/services/shareSnapshots/types"
 import {
   createShareSnapshotSeed,
   formatAsOfTimestamp,
   formatCurrencyAmount,
   formatLocalDateStamp,
   formatSignedCurrencyAmount,
-} from "./utils"
+} from "~/services/shareSnapshots/utils"
+import type { CurrencyType } from "~/types"
 
 export const SHARE_SNAPSHOT_IMAGE = {
   width: 1200,
@@ -40,6 +39,35 @@ const getLocale = (): string | undefined => {
   return lng && lng !== "cimode"
     ? lng.toLowerCase().replace(/_/g, "-")
     : undefined
+}
+
+const resolveSafeAsOf = (asOf: number | undefined, fallback = Date.now()) =>
+  Number.isFinite(asOf) && (asOf ?? 0) > 0 ? (asOf as number) : fallback
+
+const resolveSeed = (
+  backgroundSeed: number | undefined,
+  createSeed: () => number,
+) =>
+  Number.isFinite(backgroundSeed) && (backgroundSeed ?? 0) > 0
+    ? (backgroundSeed as number)
+    : createSeed()
+
+type ShareSnapshotCashflowPayload = {
+  todayIncome?: number
+  todayOutcome?: number
+  todayNet?: number
+}
+
+const applyCashflow = (
+  payload: ShareSnapshotCashflowPayload,
+  todayIncome: number | undefined,
+  todayOutcome: number | undefined,
+) => {
+  const income = Number.isFinite(todayIncome) ? (todayIncome as number) : 0
+  const outcome = Number.isFinite(todayOutcome) ? (todayOutcome as number) : 0
+  payload.todayIncome = income
+  payload.todayOutcome = outcome
+  payload.todayNet = income - outcome
 }
 
 /**
@@ -65,12 +93,8 @@ export const buildOverviewShareSnapshotPayload = ({
   backgroundSeed?: number
 }): OverviewShareSnapshotPayload => {
   const exportTime = Date.now()
-  const safeAsOf =
-    Number.isFinite(asOf) && (asOf ?? 0) > 0 ? (asOf as number) : exportTime
-  const seed =
-    Number.isFinite(backgroundSeed) && (backgroundSeed ?? 0) > 0
-      ? (backgroundSeed as number)
-      : createShareSnapshotSeed()
+  const safeAsOf = resolveSafeAsOf(asOf, exportTime)
+  const seed = resolveSeed(backgroundSeed, createShareSnapshotSeed)
 
   const payload: OverviewShareSnapshotPayload = {
     kind: "overview",
@@ -82,11 +106,7 @@ export const buildOverviewShareSnapshotPayload = ({
   }
 
   if (includeTodayCashflow) {
-    const income = Number.isFinite(todayIncome) ? (todayIncome as number) : 0
-    const outcome = Number.isFinite(todayOutcome) ? (todayOutcome as number) : 0
-    payload.todayIncome = income
-    payload.todayOutcome = outcome
-    payload.todayNet = income - outcome
+    applyCashflow(payload, todayIncome, todayOutcome)
   }
 
   return payload
@@ -118,12 +138,8 @@ export const buildAccountShareSnapshotPayload = ({
   backgroundSeed?: number
 }): AccountShareSnapshotPayload => {
   const exportTime = Date.now()
-  const safeAsOf =
-    Number.isFinite(asOf) && (asOf ?? 0) > 0 ? (asOf as number) : exportTime
-  const seed =
-    Number.isFinite(backgroundSeed) && (backgroundSeed ?? 0) > 0
-      ? (backgroundSeed as number)
-      : createShareSnapshotSeed()
+  const safeAsOf = resolveSafeAsOf(asOf, exportTime)
+  const seed = resolveSeed(backgroundSeed, createShareSnapshotSeed)
 
   const payload: AccountShareSnapshotPayload = {
     kind: "account",
@@ -136,11 +152,7 @@ export const buildAccountShareSnapshotPayload = ({
   }
 
   if (includeTodayCashflow) {
-    const income = Number.isFinite(todayIncome) ? (todayIncome as number) : 0
-    const outcome = Number.isFinite(todayOutcome) ? (todayOutcome as number) : 0
-    payload.todayIncome = income
-    payload.todayOutcome = outcome
-    payload.todayNet = income - outcome
+    applyCashflow(payload, todayIncome, todayOutcome)
   }
 
   return payload
@@ -324,9 +336,14 @@ const tryCopyImageToClipboard = async (
 ): Promise<{ didCopyImage: boolean; didCopyCaption: boolean }> => {
   const clipboard =
     typeof navigator !== "undefined" ? navigator.clipboard : undefined
-  const ClipboardItemCtor = (window as any).ClipboardItem as
-    | (new (items: Record<string, Blob>) => ClipboardItem)
-    | undefined
+
+  type ClipboardItemConstructor = new (
+    items: Record<string, Blob>,
+  ) => ClipboardItem
+
+  const ClipboardItemCtor = (
+    window as unknown as { ClipboardItem?: ClipboardItemConstructor }
+  ).ClipboardItem
 
   if (!clipboard?.write || !ClipboardItemCtor) {
     return { didCopyImage: false, didCopyCaption: false }

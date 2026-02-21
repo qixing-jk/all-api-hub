@@ -8,11 +8,11 @@ describe("ShareSnapshotCaptionToast", () => {
   it("disables copy button while copying and ignores concurrent clicks", async () => {
     const user = userEvent.setup()
 
-    let resolveCopy: (() => void) | null = null
+    let resolveCopy: () => void = () => {}
     const onCopy = vi.fn(
       () =>
         new Promise<void>((resolve) => {
-          resolveCopy = resolve
+          resolveCopy = () => resolve()
         }),
     )
 
@@ -37,7 +37,7 @@ describe("ShareSnapshotCaptionToast", () => {
     await user.click(copyButton)
     expect(onCopy).toHaveBeenCalledTimes(1)
 
-    resolveCopy?.()
+    resolveCopy()
 
     await waitFor(() => {
       expect(copyButton).not.toBeDisabled()

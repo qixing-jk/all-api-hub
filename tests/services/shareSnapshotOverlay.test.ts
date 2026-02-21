@@ -67,10 +67,14 @@ describe("shareSnapshotOverlay", () => {
     })
 
     const texts = fillTextCalls.map((call) => call.text)
+    const year = String(new Date(payload.asOf).getFullYear())
 
     expect(texts.filter((text) => text === "—").length).toBeGreaterThanOrEqual(
       2,
     )
+    expect(texts).toContain("All API Hub")
+    expect(texts).toContain("As of")
+    expect(texts.some((text) => text.includes(year))).toBe(true)
     expect(texts.some((text) => text.includes("Today"))).toBe(false)
   })
 

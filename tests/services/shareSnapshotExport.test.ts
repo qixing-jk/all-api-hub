@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { MESH_GRADIENT_NOISE_TILE_SIZE } from "~/services/shareSnapshots/meshGradient"
 import { exportShareSnapshot } from "~/services/shareSnapshots/shareSnapshots"
 import type { ShareSnapshotPayload } from "~/services/shareSnapshots/types"
 
@@ -31,11 +32,17 @@ vi.mock("i18next", () => {
   }
 })
 
-class ClipboardItemMock {
-  items: Record<string, Blob>
+type ClipboardItemData = string | Blob | Promise<string | Blob>
 
-  constructor(items: Record<string, Blob>) {
+class ClipboardItemMock {
+  private readonly items: Record<string, ClipboardItemData>
+
+  constructor(items: Record<string, ClipboardItemData>) {
     this.items = items
+  }
+
+  getType(type: string) {
+    return this.items[type]
   }
 }
 
@@ -81,7 +88,11 @@ const createCanvasStub = () => {
     getContext: (type: string) => {
       if (type !== "2d") return null
       // Noise tiles are small canvases. Return null to skip grain generation.
-      if (canvas.width > 0 && canvas.width < 256) return null
+      if (
+        canvas.width === MESH_GRADIENT_NOISE_TILE_SIZE &&
+        canvas.height === MESH_GRADIENT_NOISE_TILE_SIZE
+      )
+        return null
       return ctx
     },
     toBlob: (cb: (blob: Blob | null) => void, type?: string) => {
@@ -171,8 +182,8 @@ describe("exportShareSnapshot", () => {
     ;(window as any).ClipboardItem = ClipboardItemMock
 
     const write = vi.fn().mockImplementation(async (items: any[]) => {
-      const record = items?.[0]?.items ?? {}
-      if (record["text/plain"]) {
+      const item = items?.[0]
+      if (item?.getType?.("text/plain")) {
         throw new Error("text payload not allowed")
       }
       return undefined

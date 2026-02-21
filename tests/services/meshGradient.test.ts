@@ -34,7 +34,7 @@ describe("meshGradient", () => {
     })
 
     const signature = plan.blobs
-      .filter((_, index) => index % 2 === 0)
+      .filter((blob) => blob.role === "main")
       .map((blob) => blob.color.toLowerCase())
       .join("|")
 

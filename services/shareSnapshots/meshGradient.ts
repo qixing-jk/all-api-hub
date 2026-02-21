@@ -1,6 +1,17 @@
-import { clamp, mulberry32 } from "./utils"
+import {
+  clamp,
+  clampByte,
+  mulberry32,
+  relativeLuminanceFromRgb,
+  type Rgb,
+} from "~/services/shareSnapshots/utils"
+
+export const MESH_GRADIENT_NOISE_TILE_SIZE = 128
+
+export type MeshGradientBlobRole = "main" | "echo" | "highlight"
 
 export interface MeshGradientBlob {
+  role: MeshGradientBlobRole
   x: number
   y: number
   radius: number
@@ -218,12 +229,6 @@ const MESH_GRADIENT_LAYOUTS: ReadonlyArray<
 
 export const MESH_GRADIENT_LAYOUT_COUNT = MESH_GRADIENT_LAYOUTS.length
 
-type Rgb = {
-  r: number
-  g: number
-  b: number
-}
-
 const parseHexRgb = (hex: string): Rgb | null => {
   const normalized = hex.trim().startsWith("#")
     ? hex.trim().slice(1)
@@ -238,7 +243,7 @@ const parseHexRgb = (hex: string): Rgb | null => {
 }
 
 const toHex = (value: number): string =>
-  clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0")
+  clampByte(value).toString(16).padStart(2, "0")
 
 const rgbToHex = (rgb: Rgb): string =>
   `#${toHex(rgb.r)}${toHex(rgb.g)}${toHex(rgb.b)}`
@@ -259,15 +264,7 @@ const mixHex = (a: string, b: string, t: number): string => {
 // https://www.w3.org/TR/WCAG21/#dfn-relative-luminance
 const relativeLuminance = (hex: string): number => {
   const rgb = parseHexRgb(hex)
-  if (!rgb) return 0
-  const toLinear = (n: number) => {
-    const c = clamp(n / 255, 0, 1)
-    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
-  }
-  const r = toLinear(rgb.r)
-  const g = toLinear(rgb.g)
-  const b = toLinear(rgb.b)
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b
+  return rgb ? relativeLuminanceFromRgb(rgb) : 0
 }
 
 /**
@@ -337,30 +334,31 @@ export const createMeshGradientPlan = ({
   const baseEnd = mixHex(baseB, palette.colors[1], baseTintB)
 
   const makeBlob = ({
+    role,
     x,
     y,
     radius,
     color,
     alpha,
-    isHighlight,
   }: {
+    role: MeshGradientBlobRole
     x: number
     y: number
     radius: number
     color: string
     alpha: number
-    isHighlight: boolean
   }): MeshGradientBlob => {
     const lum = relativeLuminance(color)
     // Brighter colors get less alpha so highlights don't blow out after "screen"
     // blending.
     const alphaScale = clamp(1.05 - lum * 0.6, 0.65, 1.15)
-    const baseScale = isHighlight ? 1 : 1.02
+    const baseScale = role === "highlight" ? 1 : 1.02
     const scaleX = baseScale * (0.78 + random() * 0.72)
     const scaleY = baseScale * (0.78 + random() * 0.72)
     const rotationLocal = (random() - 0.5) * 1.8
 
     return {
+      role,
       x,
       y,
       radius,
@@ -385,19 +383,19 @@ export const createMeshGradientPlan = ({
     // Alpha is the primary "brightness" control per blob.
     const alpha = 0.48 + random() * 0.2
 
-    const main = makeBlob({ x, y, radius, color, alpha, isHighlight: false })
+    const main = makeBlob({ role: "main", x, y, radius, color, alpha })
     blobs.push(main)
 
     // Echo blob: adds more "mesh-like" richness without fully random chaos.
     const echoOffsetX = (random() - 0.5) * width * 0.22
     const echoOffsetY = (random() - 0.5) * height * 0.22
     const echo = makeBlob({
+      role: "echo",
       x: clamp(main.x + echoOffsetX, 0, width),
       y: clamp(main.y + echoOffsetY, 0, height),
       radius: main.radius * (0.46 + random() * 0.18),
       color,
       alpha: main.alpha * (0.28 + random() * 0.12),
-      isHighlight: false,
     })
     blobs.push(echo)
   }
@@ -411,7 +409,7 @@ export const createMeshGradientPlan = ({
     const y = (0.22 + random() * 0.58) * height
     const radius = maxDim * (0.26 + random() * 0.24)
     const alpha = 0.14 + random() * 0.18
-    return makeBlob({ x, y, radius, color, alpha, isHighlight: true })
+    return makeBlob({ role: "highlight", x, y, radius, color, alpha })
   })
 
   const noiseAlpha = 0.05 + random() * 0.05
@@ -429,7 +427,7 @@ export const createMeshGradientPlan = ({
     blobs,
     highlights,
     noise: {
-      tileSize: 128,
+      tileSize: MESH_GRADIENT_NOISE_TILE_SIZE,
       alpha: noiseAlpha,
     },
   }

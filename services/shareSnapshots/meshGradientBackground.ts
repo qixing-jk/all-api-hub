@@ -1,5 +1,8 @@
-import { createMeshGradientPlan, type MeshGradientBlob } from "./meshGradient"
-import { clamp, mulberry32 } from "./utils"
+import {
+  createMeshGradientPlan,
+  type MeshGradientBlob,
+} from "~/services/shareSnapshots/meshGradient"
+import { clamp, clampByte, mulberry32 } from "~/services/shareSnapshots/utils"
 
 export type DrawMeshGradientBackgroundOptions = {
   seed: number
@@ -17,8 +20,6 @@ const withAlpha = (hex: string, alpha: number): string => {
   const b = parseInt(normalized.slice(4, 6), 16)
   return `rgba(${r}, ${g}, ${b}, ${safeAlpha})`
 }
-
-const clampByte = (value: number): number => clamp(Math.round(value), 0, 255)
 
 const createNoiseTileCanvas = (
   random: () => number,
