@@ -14,7 +14,9 @@ import {
   UserRound,
   UserRoundKey,
 } from "lucide-react"
+import { createElement, lazy, Suspense, type ComponentType } from "react"
 
+import { DEV_MENU_ITEM_IDS } from "~/constants/devOptionsMenuIds"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 
 import About from "./pages/About"
@@ -28,7 +30,6 @@ import ImportExport from "./pages/ImportExport"
 import KeyManagement from "./pages/KeyManagement"
 import managedSiteChannels from "./pages/ManagedSiteChannels"
 import ManagedSiteModelSync from "./pages/ManagedSiteModelSync"
-import MeshGradientLab from "./pages/MeshGradientLab"
 import ModelList from "./pages/ModelList"
 import UsageAnalytics from "./pages/UsageAnalytics"
 
@@ -36,8 +37,8 @@ import UsageAnalytics from "./pages/UsageAnalytics"
 export interface MenuItem {
   id: string
   name: string
-  icon: React.ComponentType<{ className?: string }>
-  component: React.ComponentType<any>
+  icon: ComponentType<{ className?: string }>
+  component: ComponentType<any>
 }
 
 // 菜单配置
@@ -122,16 +123,24 @@ const BASE_MENU_ITEMS: MenuItem[] = [
   },
 ]
 
-export const menuItems: MenuItem[] = [
-  ...BASE_MENU_ITEMS,
-  ...(import.meta.env.MODE === "development"
-    ? [
-        {
-          id: MENU_ITEM_IDS.MESH_GRADIENT_LAB,
-          name: "Mesh Gradient Lab (Dev)",
-          icon: Palette,
-          component: MeshGradientLab,
-        },
-      ]
-    : []),
-]
+const DEV_MENU_ITEMS: MenuItem[] = []
+
+if (import.meta.env.MODE === "development") {
+  const MeshGradientLab = lazy(() => import("./pages/MeshGradientLab"))
+
+  const MeshGradientLabComponent: ComponentType<any> = (props) =>
+    createElement(
+      Suspense,
+      { fallback: null },
+      createElement(MeshGradientLab, props),
+    )
+
+  DEV_MENU_ITEMS.push({
+    id: DEV_MENU_ITEM_IDS.MESH_GRADIENT_LAB,
+    name: "Mesh Gradient Lab (Dev)",
+    icon: Palette,
+    component: MeshGradientLabComponent,
+  })
+}
+
+export const menuItems: MenuItem[] = [...BASE_MENU_ITEMS, ...DEV_MENU_ITEMS]

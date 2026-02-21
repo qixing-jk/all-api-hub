@@ -18,7 +18,6 @@ export const MENU_ITEM_IDS = {
   MANAGED_SITE_MODEL_SYNC: "managedSiteModelSync",
   IMPORT_EXPORT: "importExport",
   ABOUT: "about",
-  MESH_GRADIENT_LAB: "meshGradientLab",
 } as const
 
 export type OptionsMenuItemId =
