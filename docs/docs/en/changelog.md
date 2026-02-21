@@ -2,366 +2,702 @@
 
 This page records the main updates for general users (feature changes / experience optimizations / bug fixes). For the complete history and more detailed technical changes, please visit [GitHub Releases](https://github.com/qixing-jk/all-api-hub/releases).
 
-::: tip New Users Read First
-- **How to confirm your current version**: Open the extension popup; the version number will be displayed in the title bar; you can also check it on the Settings page.
-- **How to stop this page from opening automatically**: You can control whether to "Automatically open Changelog after update" in 「Settings → General → Changelog」.
-- **Troubleshooting**: You can enable console logs in 「Settings → General → Logs」 and attach reproduction steps to [Issues](https://github.com/qixing-jk/all-api-hub/issues).
+::: tip New User Guide
+- **How to confirm your current version**: Open the extension popup, the version number will be displayed in the title bar; you can also check it on the settings page.
+- **How to stop automatically opening this page**: You can control whether to "Automatically open changelog after update" in "Settings → General → Changelog".
+- **Troubleshooting**: You can enable console logs in "Settings → General → Logs" and report reproducible steps to [Issues](https://github.com/qixing-jk/all-api-hub/issues).
 :::
+
+## 3.22.0
+- **New Features:**
+  - Model List: Added "Model Corresponding Key" tool (key icon) to check if the current model has an available key. If no key is available, you can create a default key with one click based on the model's available groups, or enter the custom creation process, with support for one-click key copying.
+  - Share Snapshot: Supports one-click sharing of "Overview Snapshot / Account Snapshot". It prioritizes copying the image to the clipboard, and automatically downloads a PNG if not supported. Snapshots only contain shareable information (will not include sensitive fields like `API Key`) and support one-click copying of the title and accompanying text.
+- **Experience Optimizations:**
+  - Disabled Accounts: Disabled accounts will be automatically skipped in refresh and scheduled tasks such as "Balance History / Usage Analysis / Usage Sync", reducing invalid requests and errors.
+- **Bug Fixes:**
+  - Buttons: Fixed an issue where the spinner was not visible when a button was in a "loading" state and simultaneously displayed a left-side icon.
+
+**Location Hints:**
+- Model Corresponding Key: In "Settings → Model List", click the key icon to the right of the model name (`Model Corresponding Key`).
+- Share Overview Snapshot: In the button to the right of the title bar on the overview page of the extension popup (`Share Overview Snapshot`).
+- Share Account Snapshot: In the operation menu for a single account in "Settings → Account Management" (`Share Account Snapshot`).
 
 ## 3.21.0
 - **New Features:**
-  - API Credentials: Added the "API Credentials" page, suitable for scenarios where you "don't have an account, only `Base URL` + `API Key`"; supports unified management via tags/remarks, and allows direct availability verification and quick export (e.g., for Cherry Studio / CC Switch / Kilo Code / CLIProxyAPI / Claude Code Router), reducing copy-pasting across different places.
-  - Balance History: Added multi-account views (Overview / Account Distribution / Trends) and provided a unified "Account Summary" table for quick comparison and summary statistics.
-  - Self-Hosted Site Management: Added `Done Hub` to hosted sites, supporting configuration of administrator credentials for use in "Channel Management," "Model Sync," and other features.
+  - API Credentials: Added "API Credentials" page, suitable for "no account, only `Base URL` + `API Key`" scenarios. Supports unified management of tags/remarks, and allows direct availability verification and quick export (e.g., Cherry Studio / CC Switch / Kilo Code / CLIProxyAPI / Claude Code Router), reducing copy-pasting.
+  - Balance History: Added multi-account view (Overview / Account Distribution / Trends), and provides a unified "Account Summary" table for quick comparison and statistical aggregation.
+  - Self-Hosted Site Management: Added `Done Hub` to hosted sites, supporting configuration of administrator credentials for use in "Channel Management", "Model Sync", and other functions.
 - **Experience Optimizations:**
-  - Right-Click Menu: The entries for "Redemption Assistant" and "AI API Test" can now be individually toggled on/off, taking effect immediately upon switching.
-  - Copy Key: When an account currently has no key, the popup provides entry points for "Quickly Create Default Key / Create Custom Key," reducing back-and-forth navigation.
+  - Context Menu: "Redemption Assistant" and "AI API Detection" entries can be individually enabled/disabled and will take effect immediately after switching.
+  - Copy Key: When an account has no key, the popup provides an entry for "Quickly Create Default Key / Create Custom Key", reducing back-and-forth navigation.
 
 **Location Hints:**
-- API Credentials: In 「Settings → API Credentials」.
-- Balance History: In 「Settings → Balance History」.
-- Done Hub Configuration: In 「Settings → Basic Settings → Self-Hosted Site Management」, select `Done Hub`, and fill in the 「Done Hub Integration Settings」.
-- Right-Click Menu Entry Toggles: In 「Settings → Basic Settings → Check-in & Redemption / AI API Test」, under the respective "Show in browser right-click menu" options.
-- Copy Key Popup: Opened by clicking "Copy Key" on pages like "Account Management."
+- API Credentials: In "Settings → API Credentials".
+- Balance History: In "Settings → Balance History".
+- Done Hub Configuration: In "Settings → Basic Settings → Self-Hosted Site Management", select `Done Hub`, and fill in "Done Hub Integration Settings".
+- Context Menu Entry Switch: In "Settings → Basic Settings → Sign-in & Redemption / AI API Testing", under their respective "Show in Browser Context Menu" options.
+- Copy Key Popup: Opened by clicking "Copy Key" on pages like "Account Management".
 
 ## 3.20.0
 - **Experience Optimizations:**
-  - Key Management: When adding a new key, the group dropdown option now simultaneously displays the Group ID and description, facilitating quick distinction and selection across multiple groups/routes.
+  - Key Management: The group dropdown option when adding a new key now displays both the Group ID and description, facilitating quick differentiation and selection among multiple groups/routes.
 - **Bug Fixes:**
-  - Account Management: The default setting for "Automatically create default key upon adding account" is now changed to off; if you wish to automatically generate a default key after adding an account, please manually enable it in settings.
+  - Account Management: The default for "Automatically create default key after adding account" is now disabled. If you wish to automatically generate a default key after adding an account, please enable it manually in the settings.
 
 **Location Hints:**
-- Group ID Display: In 「Settings → Key Management」, click "Add New Key," view in the group dropdown option.
-- Auto-Create Default Key Toggle: In 「Settings → Basic Settings → Account Management → API Keys」.
+- Group ID Display: In "Settings → Key Management", click "Add Key", and view in the group dropdown option.
+- Auto-Create Default Key Switch: In "Settings → Basic Settings → Account Management → API Keys".
 
 ## 3.19.0
 - **New Features:**
-  - Self-Hosted Site Management: Added support for `Octopus` hosted sites, allowing connection to the Octopus backend and importing account API keys as channels in "Channel Management," along with fetching the available model list.
-  - Key Management: Added "Automatically create default key upon adding account" (enabled by default), and provided a one-click option "Ensure at least one key exists" to automatically complete default keys for accounts missing them.
-  - AI API Test: The "Model List Probe" for interface verification now supports OpenAI/OpenAI-compatible, Anthropic, Google/Gemini, and other interface types, and will suggest available Model IDs, reducing manual guessing of models.
+  - Self-Hosted Site Management: Added `Octopus` hosted site support, allowing connection to the Octopus backend and importing account API keys as channels in "Channel Management", with support for fetching available model lists.
+  - Key Management: Added "Automatically create default key after adding account" (enabled by default), and provides a one-click "Ensure at least one key" option to automatically complete default keys for accounts missing them.
+  - AI API Testing: "Model List Probing" for interface verification supports OpenAI/OpenAI-compatible, Anthropic, Google/Gemini, and other interface types, and will provide suggested available model IDs, reducing manual model guessing.
 - **Experience Optimizations:**
-  - Account Management: Enhanced site/account recognition logic, improving stability in scenarios with multiple accounts on the same site.
-  - Usage/Log Fetching: Added rate limiting protection for log-type interfaces to reduce errors or triggering site rate limits caused by frequent refreshing.
-  - Channel Management: Improved duplicate detection when creating channels, providing a confirmation prompt to avoid accidental duplicate route creation.
+  - Account Management: Enhanced site/account identification logic to improve stability in scenarios with multiple accounts on the same site.
+  - Usage/Log Fetching: Added rate limiting protection for log-related interfaces to reduce errors caused by frequent refreshes or triggering site rate limits.
+  - Channel Management: When creating a channel, performs more precise duplicate detection and provides confirmation prompts to avoid accidental creation of duplicate routes.
 - **Bug Fixes:**
-  - Deactivating Accounts: Disabled accounts are now automatically filtered out from dropdowns/lists in Key Management and related areas, preventing invalid operations.
-  - Language: Fixed an issue where the extension language setting might affect the language value of the webpage itself.
+  - Deactivated Accounts: Deactivated accounts are now automatically filtered out from relevant dropdowns/lists in Key Management, preventing invalid operations.
+  - Language: Fixed an issue where the extension's language setting might affect the webpage's own language value.
 
 **Location Hints:**
-- Octopus Configuration: In 「Settings → Basic Settings → Self-Hosted Site Management」, select `Octopus` and fill in `Base URL` / Username / Password.
-- Channel Management Entry: In 「Settings → Channel Management」.
-- Auto-Create Default Key Toggle: In 「Settings → Basic Settings → Account Management → API Keys」.
-- One-Click Complete Default Key: In 「Settings → Key Management」, top right corner, "Ensure at least one key exists."
-- AI API Test Entry: Right-click menu on the webpage, "Quickly Test AI API Functionality."
+- Octopus Configuration: In "Settings → Basic Settings → Self-Hosted Site Management", select `Octopus` and fill in `Base URL` / Username / Password.
+- Channel Management Entry: In "Settings → Channel Management".
+- Auto-Create Default Key Switch: In "Settings → Basic Settings → Account Management → API Keys".
+- One-Click Complete Default Key: In "Settings → Key Management", at the top right, "Ensure at least one key".
+- AI API Testing Entry: Right-click menu "Quickly Test AI API Functionality Availability".
 
 ## 3.18.0
 - **New Features:**
-  - Balance History: Charts now support "Currency Unit" switching (`USD` / `CNY`), and currency symbols are displayed on axes/tooltips; when `CNY` is selected, conversion is performed based on the account's "Recharge Amount Ratio," facilitating trend viewing and reconciliation based on monetary value.
+  - Balance History: Charts now include a "Currency Unit" switch (`USD` / `CNY`), and currency symbols are displayed on axes/tooltips. When `CNY` is selected, it will be converted based on the account's "Recharge Amount Ratio", making it easier to view trends and reconcile by amount.
 - **Experience Optimizations:**
-  - Tag Filtering: When there are many tags/account options, the default is now "expanded display" for more intuitive browsing and selection.
-  - Tabs: Added left/right scroll buttons to the settings group tags and vendor tags in the "Model List" for easier switching in narrow windows.
+  - Tag Filtering: When there are too many tag/account options, it defaults to "Expand to display", making browsing and selection more intuitive.
+  - Tabs: Added left and right scroll buttons to the "Settings" group tabs and "Model List" vendor tabs, making switching more convenient in narrow windows.
 - **Bug Fixes:**
-  - Account Management: Site type "Auto-Detect" is more accurate, fixing the issue of unknown site types frequently appearing in recent versions.
+  - Account Management: Site type "Auto-detection" is more accurate, fixing issues with unknown site types that appeared frequently in recent versions.
 
 **Location Hints:**
-- Balance History Currency Unit: In 「Settings → Balance History」, in the filter area, "Currency Unit."
-- Account Exchange Rate (Recharge Amount Ratio): In 「Settings → Account Management」, in the Add/Edit Account form, "Recharge Amount Ratio."
+- Balance History Currency Unit: In "Settings → Balance History", in the filter area, "Currency Unit".
+- Account Exchange Rate (Recharge Amount Ratio): In "Settings → Account Management", in the add/edit account form, "Recharge Amount Ratio".
 
 ## 3.17.0
 - **New Features:**
-  - Balance History: Added "Balance History" feature (disabled by default), which records daily balance and income/expense snapshots, allowing trend viewing in charts; supports filtering by tags/accounts and time range, and provides convenient "Refresh Now / Clear Now" operations.
-  - Balance History: Added settings to control enabling, retention days, and "End-of-Day Fetch." Note: If you disable "Show Today's Income/Expense" and do not enable "End-of-Day Fetch," the "Daily Income/Expense" chart will have no data.
+  - Balance History: Added "Balance History" feature (disabled by default), which records daily balance and income/expense snapshots, and displays trends in charts. Supports filtering by tags/accounts and time range, and provides convenient "Refresh Now / Clear Now" operations.
+  - Balance History: Added a setting to control whether to enable it, the number of days to retain, and "End-of-Day Fetch". Note: If you disable "Show Today's Income/Expenses" and do not enable "End-of-Day Fetch", the "Daily Income/Expenses" chart will have no data.
 - **Experience Optimizations:**
-  - Channel Management: Optimized the responsive layout and usability of the "Channel Management" toolbar on small/narrow screens.
+  - Channel Management: Optimized the responsive layout and usability of the "Channel Management" toolbar in small/narrow screens.
 - **Bug Fixes:**
-  - Import/Export: Fixed responsive display issues for the export area on certain screen sizes.
-  - Popups: Fixed layout anomalies where the popup scrollbar position was incorrect.
+  - Import/Export: Fixed an issue with the responsive display of the export area on some screen sizes.
+  - Popups: Fixed a layout anomaly where the scrollbar position in popups was incorrect.
 
 **Location Hints:**
-- Balance History Toggle/Retention Days/End-of-Day Fetch: In 「Settings → Basic Settings → Balance History」.
-- Balance History Chart Entry: In 「Settings → Balance History」.
+- Balance History Switch/Retention Days/End-of-Day Fetch: In "Settings → Basic Settings → Balance History".
+- Balance History Chart Entry: In "Settings → Balance History".
 
 ## 3.16.0
 - **New Features:**
-  - Sub2API (JWT Sites): Added Sub2API site type, supporting balance/quota query; supports reading login status via "Auto-Detect"; and supports the "Plugin Hosted Session (Multi-Account, Recommended)" mode, allowing independent authentication renewal for each account, improving the multi-account experience on the same site.
-  - Display Settings: Added "Show Today's Income/Expense" toggle (enabled by default), which can hide and stop fetching statistics like "Today's Consumption/Income," reducing log fetching requests during refreshes.
+  - Sub2API (JWT Site): Added Sub2API site type, supporting balance/quota queries. Supports reading login status from the console via "Auto-detection". Also supports the "Plugin Hosted Session (Multiple Accounts, Recommended)" mode, which allows independent authentication renewal for each account, improving the experience for multiple accounts on the same site.
+  - Display Settings: Added a "Show Today's Income/Expenses" switch (enabled by default), which can hide and stop fetching statistics like "Today's Consumption/Income", reducing log fetching requests during refreshes.
 - **Notes:**
-  - Sub2API temporarily does not support site check-in / today's usage / income and related features, only basic balance/quota query. Related features will be gradually added based on site capabilities.
-  - "Plugin Hosted Session (Multi-Account)" saves the `refresh_token` as private credentials for the account and will be included in exports/WebDAV backups; please keep your backup files and WebDAV credentials safe.
+  - Sub2API currently does not support site sign-in / today's usage / income, and only provides basic balance/quota queries. Related features will be gradually improved based on site capabilities.
+  - "Plugin Hosted Session (Multiple Accounts)" saves `refresh_token` as private account credentials, which will be included in exports/WebDAV backups. Please keep backup files and WebDAV credentials secure.
 
 **Location Hints:**
-- Sub2API Addition/Mode Description: In 「Settings → Account Management」, add/edit an account, select Sub2API as the site type; see [FAQ](./faq.md) (search for "Sub2API") for more detailed steps.
-- Today's Income/Expense Toggle: In 「Settings → Basic Settings → Display Settings」.
+- Sub2API Addition/Mode Explanation: In "Settings → Account Management", add/edit account, select Sub2API as the site type; for more detailed steps, see [FAQ](./faq.md) (search for "Sub2API").
+- Today's Income/Expenses Switch: In "Settings → Basic Settings → Display Settings".
 
 ## 3.15.1
 - **Bug Fixes:**
-  - Chrome/Edge (MV3): Improved background Service Worker stability, reducing issues where asynchronous timed tasks (WebDAV auto-sync / usage sync / model sync / auto check-in, etc.) are missed due to early termination of the background process; and automatically resumes related timed tasks after browser restart.
+  - Chrome/Edge (MV3): Improved the stability of background Service Workers, reducing the issue of asynchronous scheduled tasks (WebDAV auto-sync / Usage Sync / Model Sync / Auto Sign-in, etc.) being missed due to early termination of the background process. Automatically resumes related scheduled tasks after browser restart.
   - Installation/Update/Startup Process: Enhanced error handling and logging during the initialization phase to prevent unexpected crashes.
 
 ## 3.15.0
 - **New Features:**
-  - Bookmark Management: Added "Bookmark Management" to save quick links to site consoles/documentation/management pages without needing to create a full account; supports adding/editing/deleting, pinning, tagging, search filtering, and drag-and-drop sorting; the popup now supports switching between "Account / Bookmark"; bookmark data will be included in backups/restores and WebDAV auto-sync.
+  - Bookmark Management: Added "Bookmark Management" to save quick links to site consoles/documentation/management pages without needing to create a full account. Supports adding/editing/deleting, pinning, tagging, search filtering, and drag-and-drop sorting. The popup now has an "Account / Bookmark" switch. Bookmark data will be included in backups/restores and WebDAV auto-sync.
 - **Bug Fixes:**
-  - Account Refresh: Removed duplicate "Today's Income" fetch requests, reducing unnecessary network calls (some sites already return `today_income` in the refresh interface).
-  - Auto Refresh: Minimum refresh interval is now 60 seconds, and the minimum refresh interval protection is now 30 seconds; upon update, old configurations will be automatically corrected to valid ranges, and related prompt texts and documentation have been improved.
+  - Account Refresh: Removed duplicate "Today's Income" fetch requests to reduce unnecessary network calls (some sites already return `today_income` in their refresh interface).
+  - Auto Refresh: The minimum refresh interval is now 60 seconds, and the minimum refresh interval protection is 30 seconds. After updating, old configurations will be automatically corrected to a valid range, and related prompts and documentation have been improved.
 
-::: warning Important: Auto-Refresh Configuration Will Be Forced Adjusted
-Due to feedback indicating that **overly short auto-refresh intervals can easily trigger site rate limits and cause excessive load on the site**
+::: warning Important: Auto-refresh configuration will be forcibly adjusted
+Feedback indicates that **overly short auto-refresh intervals can easily trigger site rate limits and place excessive load on sites**.
 
-v3.15.0 **has made forced adjustments to auto-refresh configurations**:
-- Both automatic refresh and refresh-on-plugin-open features are turned off. If you still need them, you must manually re-enable them.
-- The minimum `Refresh Interval` is 60 seconds, and the minimum `Minimum Refresh Interval Protection` is 30 seconds. If your setting before the upgrade was below these thresholds, it will be automatically raised to the minimum upon upgrade; if your previously set value is within the new valid range, there will be no impact.
+v3.15.0 **has forcibly modified the auto-refresh configuration**:
+- Auto-refresh and refresh on plugin open features have been turned off. If you still need them, you must re-enable them manually.
+- The minimum `Refresh Interval` is 60 seconds, and the `Minimum Refresh Interval Protection` is 30 seconds. If your settings before upgrading were below these thresholds, they will be automatically increased to the minimum values after upgrading. If your previously set values are within the new legal range, they will not be affected.
 :::
 
 **Location Hints:**
-- Bookmark Management: In 「Settings → Bookmark Management」; switch between "Account / Bookmark" at the top of the popup.
-- Auto-Refresh: In 「Settings → Basic Settings → Auto Refresh」.
+- Bookmark Management: In "Settings → Bookmark Management"; you can switch between "Account / Bookmark" at the top of the popup.
+- Auto Refresh: In "Settings → Basic Settings → Auto Refresh".
 
 ## 3.14.0
 - **New Features:**
-  - Web AI API Functionality Test (Beta): Added a right-click menu option "Quickly Test AI API Functionality" to open the test panel directly on the current webpage; supports filling in/pasting `Base URL` and `API Key`, and performs basic capability probing for OpenAI compatible / OpenAI / Anthropic / Google interfaces (OpenAI compatible also supports one-click model list fetching).
-  - (Optional) Auto Detection: Can be enabled in 「Settings → AI API Test」, with URL whitelisting configuration; when a usable `Base URL` and `API Key` are detected on a whitelisted page, a confirmation prompt will appear before opening the test panel (disabled by default, and the Key is not saved).
-  - Auto Check-in: The execution result list now includes more troubleshooting hints—including suggested actions and documentation links for common exceptions like "Temporary shield bypass tab manually closed" or "Access Token invalid."
+  - Web AI API Functionality Test (Beta): Added a right-click menu option "Quickly Test AI API Functionality Availability" to open the test panel directly on the current webpage. Supports filling in/pasting `Base URL` and `API Key`, and performs basic capability probing for OpenAI compatible / OpenAI / Anthropic / Google interfaces (OpenAI compatible also supports one-click model list fetching).
+  - (Optional) Auto-Detection: Can be enabled in "Settings → AI API Test" and configured with a URL whitelist. When available `Base URL` and `API Key` are detected on a whitelisted page, a confirmation prompt will appear first. The test panel will only open after confirmation (disabled by default, and keys are not saved).
+  - Auto Sign-in: The execution results list now includes more troubleshooting hints—including suggestions and documentation links for common exceptions like "Temporary shield bypass tab manually closed" and "Access Token invalid".
 - **Bug Fixes:**
-  - WebDAV: Auto-sync migrated from timers to the browser Alarms API, reducing the probability of missed synchronization caused by background sleep/power-saving policies.
+  - WebDAV: Auto-sync has been migrated from timers to the browser Alarms API, reducing the probability of missed syncs due to background sleep/power saving policies.
 
 **Location Hints:**
-- AI API Test Panel: Right-click menu on any webpage, select "Quickly Test AI API Functionality"; Auto-detection settings are in 「Settings → AI API Test」.
-- Auto Check-in Hints: View in the execution results list in 「Settings → Auto Check-in」.
+- AI API Test Panel: Right-click menu on any webpage, select "Quickly Test AI API Functionality Availability"; auto-detection related settings are in "Settings → AI API Test".
+- Auto Sign-in Hints: View in the execution results list in "Settings → Auto Sign-in".
 
 ## 3.13.0
 - **New Features:**
-  - Account Management: Added "Check-in Status Expired" prompt—when the "Checked in Today / Not Checked in Today" status is not detected for the current day, an orange warning icon will be displayed; clicking it allows one-click refresh of that account's data, preventing misleading by old status.
-  - Interface: Multi-select controls upgraded to a more compact selector (saves space, supports search, and clearer display of selected items).
+  - Account Management: Added "Sign-in Status Expired" prompt—when the "Signed in today / Not signed in today" status is not detected for the current day, an orange warning icon will be displayed. Clicking it will refresh the account data with one click, avoiding misleading information from old statuses.
+  - Interface: Multi-select controls have been upgraded to more compact selectors (space-saving, support search, and clearer display of selected items).
 - **Bug Fixes:**
-  - Veloera: Fixed account data refresh and check-in logic, improving usability.
-  - Cookie Authentication: Removed Cookie caching mechanism, reducing issues caused by reading old values after Cookie updates.
+  - Veloera: Fixed account data refresh and sign-in logic, improving usability.
+  - Cookie Authentication: Removed the Cookie caching mechanism, reducing issues caused by still reading old values after Cookie updates.
 
 **Location Hints:**
-- Check-in Status Expired Prompt: In 「Settings → Account Management」 account list, next to the site information's check-in icon.
+- Sign-in Status Expired Prompt: In "Settings → Account Management", in the account list, next to the sign-in icon for site information.
 
 ## 3.12.0
 - **New Features:**
-  - Key Management: Added "Export to Kilo Code"—generates Kilo Code / Roo Code providerProfiles configuration, supporting copying the apiConfigs snippet or downloading the settings JSON for import (import adds incrementally, it will not clear your existing providers).
+  - Key Management: Added "Export to Kilo Code"—generates `providerProfiles` configuration for Kilo Code / Roo Code, supporting copying `apiConfigs` snippets or downloading `settings.json` for import (imports are incremental and will not clear your existing providers).
 - **Bug Fixes:**
-  - Account Management: Fixed layout overflow issues caused by overly long text like site names, now truncated for display.
-  - Dropdown Selectors: Improved empty state prompts and fixed overflow issues when option text is too long.
+  - Account Management: Fixed layout overflow issues caused by long text like site names, now truncated automatically.
+  - Dropdown Selectors: Improved empty state prompts and fixed overflow issues with long option text.
 
 **Location Hints:**
-- Export to Kilo Code: In 「Settings → Key Management」 key list, click the Kilo Code icon in the top right corner of a specific key.
+- Export to Kilo Code: In "Settings → Key Management", in the key list, click the Kilo Code icon in the top right corner of a key.
 
 ## 3.11.0
 - **New Features:**
-  - New API Channel Management: Added "Duplicate Channel" reminder—when a duplicate/similar channel is detected, a warning dialog box will pop up, allowing you to choose to continue creation or cancel (no longer using error Toast to block creation).
+  - New API Channel Management: Added "Duplicate Channel" reminder—when a duplicate/similar channel is detected, a warning dialog box will pop up, allowing you to choose to continue creation or cancel (no longer blocking creation with error toasts).
 - **Bug Fixes:**
-  - Account Management: Fixed layout overflow issues caused by overly long text like site names, now truncated for display.
+  - Account Management: Fixed layout overflow issues caused by long text like site names, now truncated automatically.
 
 ## 3.10.0
 - **New Features:**
-  - Account Management: Clicking a site link in Incognito mode will open it in the current Incognito window (to maintain Incognito login status).
-  - Account Management: Disabled accounts also support clicking site links, useful as bookmarks.
+  - Account Management: When clicking a site link in incognito mode, it will open within the current incognito window (to maintain incognito login state).
+  - Account Management: Disabled accounts also support clicking site links, making them usable as bookmarks.
   - Usage Analysis: When there is only a single account, the chart and list prioritize displaying the site name (instead of the username) for more intuitive information.
-  - Shield Bypass Assistant: The temporary shield bypass window now supports CAP (cap.js) Pow verification, improving success rates.
+  - Shield Bypass Assistant: The temporary shield bypass window now supports CAP (cap.js) Pow verification, improving pass rates.
 - **Bug Fixes:**
   - Redemption Assistant: Prioritizes reading redemption codes from the clipboard, improving trigger accuracy.
-  - Toast Layer: Fixed Toaster layering issue, preventing prompts from being obscured by the webpage.
+  - Toast Notifications: Fixed Toaster layering issues, preventing notifications from being obscured by webpages.
 
 **Location Hints:**
-- Site Link: In 「Settings → Account Management」 account list, click the site name.
+- Site Link: In "Settings → Account Management", click the site name in the account list.
 - Shield Bypass Assistant: Refer to [Cloudflare Shield Bypass Assistant](./cloudflare-helper.md).
 
 ## 3.9.0
 - **New Features:**
-  - Account Management: Added "Manual Balance (USD)" field—when the site cannot automatically fetch balance/quota, you can manually fill this in for display and statistics.
-  - Account Management: Added "Exclude from Total Balance" toggle—used to remove a specific account from the "Total Balance" statistics (does not affect refresh/check-in functions).
-  - Settings: Added "Automatically open Changelog after update" toggle (can disable the behavior of automatically opening this page after an update).
-  - Settings: Added log settings to control whether console logs are output and the minimum log level, facilitating troubleshooting.
-  - Auto Check-in: Refreshes relevant data and updates the interface upon completion.
+  - Account Management: Added "Manual Balance (USD)" field to accounts—when the site cannot automatically fetch balance/quota, you can manually fill this in for display and statistics.
+  - Account Management: Added "Exclude from Total Balance" switch to accounts—used to remove specific accounts from the "Total Balance" statistics (does not affect refresh/sign-in functions).
+  - Settings: Added "Automatically open changelog after update" switch (can disable the behavior of automatically opening this page after an update).
+  - Settings: Added log settings to control whether to output console logs and the minimum log level, facilitating troubleshooting.
+  - Auto Sign-in: Refreshes relevant data and synchronizes the interface after execution.
 
 **Location Hints:**
-- Account Add/Edit: Open Add/Edit Account in 「Settings → Account Management」.
-- Changelog Toggle, Log Settings: Configured in 「Settings → General」.
+- Add/Edit Account: Open add/edit account in "Settings → Account Management".
+- Changelog Switch, Log Settings: Configure in "Settings → General".
 
 ## 3.8.0
 - **New Features:**
-  - Usage Analysis: Added "Usage Analysis" page, helping you chart the usage trends across multiple sites and accounts, allowing you to see at a glance "where usage/spending is high / where it's slowing down," facilitating cost control, reconciliation, and troubleshooting.
-  - Dashboard Content: Supports viewing daily overviews (request count, Tokens, quota), model distribution/spending distribution, account comparison, usage time hotspots, and latency trends/histograms.
-  - Usage History Sync: Added "Usage History Sync" capability to fetch and save "summarized usage data" (raw logs are not saved); supports setting retention days, automatic sync methods, and minimum sync intervals, and viewing sync results and error prompts for each account in "Sync Status."
+  - Usage Analysis: Added a "Usage Analysis" page to help you visualize usage trends across multiple sites and accounts, allowing you to quickly see "where usage/spending is high / where it's slowing down", facilitating cost control, reconciliation, and troubleshooting.
+  - Dashboard Content: Supports viewing daily overviews (request count, Tokens, quota), model distribution/spending distribution, account comparisons, usage time hotspots, as well as latency trends/histograms, etc.
+  - Usage History Sync: Added "Usage History Sync" capability to fetch and save "aggregated usage data" (raw logs are not saved). Supports setting retention days, automatic sync methods, and minimum sync intervals, and view sync results and error prompts for each account in "Sync Status".
 - **How to Use:**
-  - First, go to 「Settings → Account Usage」 to enable "Usage History Sync," set as needed, and click "Sync Now."
-  - Then, view the charts in the "Usage Analysis" menu on the left; click "Export" if you need to retain data or reconcile accounts.
+  - First, go to "Settings → Account Usage" to enable "Usage History Sync", set as needed, and click "Sync Now".
+  - Then, view charts in the left-side menu "Usage Analysis"; click "Export" when you need to retain or reconcile data.
 
 ## 3.7.0
 - **New Features:**
-  - Sorting: Account list now supports sorting by "Income"; sorting priority now includes "Disabled accounts at the bottom," preventing inactive/expired accounts from interfering with your daily use.
-  - Auto Check-in: Added "Trigger today's check-in early when opening the interface"—when opening the popup/sidebar/settings page within the time window, it will automatically attempt to run today's check-in early, without waiting for the scheduled time.
+  - Sorting: Account list supports sorting by "Income"; sorting priority now includes "Disabled accounts at the bottom", so deactivated/invalid accounts no longer interfere with your daily use.
+  - Auto Sign-in: Added "Trigger today's sign-in early when opening the interface"—when opening the popup/sidebar/settings page within the time window, it will automatically attempt to run today's sign-in early, without waiting for the scheduled time.
 - **Bug Fixes:**
-  - Auto Check-in: Each account is executed only once per day; retries are only for failed accounts, reducing unnecessary requests and repeated interruptions.
+  - Auto Sign-in: Each account will only execute once per day; retries are only for failed accounts, reducing meaningless requests and repeated disturbances.
 - **Location Hints:**
-  - Sorting Priority: Adjusted in 「Settings → Account Management」.
-  - Auto Check-in Pre-trigger/Retry: Configured in the "Auto Check-in" menu on the left.
+  - Sorting Priority: Adjust in "Settings → Account Management".
+  - Auto Sign-in Early Trigger/Retry: Configure in the left-side menu "Auto Sign-in".
 
 ## 3.6.0
 - **New Features:**
-  - Account Management: Supports one-click enable/disable accounts; disabled accounts are skipped by all features, making it easy to retain data after an account expires.
-  - Tags: Added global tag management and synchronized optimization of related interfaces and interactions, facilitating classified management of accounts.
-  - Popup: Displays the current version number in the title bar and provides a direct link to this Changelog.
-  - Quick Export: CCSwitch export supports selecting upstream models, making the export configuration closer to actual usage scenarios.
+  - Account Management: Supports enabling/disabling accounts with one click. After disabling, various functions will skip the account, making it easy to retain data after an account becomes invalid.
+  - Tags: Added global tag management, and optimized related interfaces and interactions accordingly, making it easier to classify and manage accounts.
+  - Popup: Displays the current version number in the title bar and provides a direct entry to this changelog.
+  - Quick Export: CCSwitch export supports selecting upstream models, making export configurations closer to actual usage scenarios.
 
 ## 3.5.2
 - **Bug Fixes:**
-  - Amount Display: Optimized display strategy for extremely small values, avoiding display discrepancies due to precision/rounding.
+  - Amount Display: Optimized the display strategy for extremely small values to avoid display inconsistencies due to precision/rounding.
 
 ## 3.5.1
 - **New Features:**
-  - Account Management: Adjusted the position of the "Auto Check-in" switch (moved above the custom check-in URL) for more intuitive configuration.
-  - Interface: Removed the gradient background from dialog box title icons for a cleaner, more unified look.
+  - Account Management: Adjusted the position of the "Auto Sign-in" switch (moved above the custom sign-in URL) for more intuitive configuration.
+  - Interface: Removed the gradient background from the dialog title icon for a cleaner, more unified visual appearance.
 - **Bug Fixes:**
-  - Key List: Fixed an issue where closing the dialog box while expanding key details caused a white screen.
+  - Key List: Fixed an issue where closing the dialog while expanding key details would cause a white screen.
 
 ## 3.5.0
 - **New Features:**
-  - Auto-Detection: Added "Detection is slow" prompts and relevant documentation links to help users troubleshoot and resolve issues.
-  - External Check-in Batch Open: Supports opening all in new windows, making it easier to close them in bulk and reduce interference.
+  - Auto-detection: Added "Slow Detection" prompts and links to relevant documentation to help users troubleshoot and resolve issues.
+  - Batch Opening External Sign-ins: Supports opening all in new windows, making batch closing easier and reducing interference.
 - **Bug Fixes:**
-  - External Check-in Batch Open: The process was refactored to execute in the background service, ensuring all sites can be correctly opened in the popup scenario.
+  - Batch Opening External Sign-ins: Refactored the process to execute in the background service, ensuring correct opening of all sites in popup scenarios.
 
 ## 3.4.0
 - **New Features:**
-  - CLIProxy: Enhanced model mapping configuration to support direct selection of upstream models, facilitating more precise model mapping.
+  - CLIProxy: Enhanced model mapping configuration to directly select upstream models, facilitating more precise model mapping.
 - **Bug Fixes:**
-  - API: Ensured access keys always carry the `sk-` prefix, avoiding recognition/copying issues caused by inconsistent formats.
+  - API: Ensured that access keys always have the `sk-` prefix, avoiding recognition/copying issues due to inconsistent formats.
 
 ## 3.3.0
 - **New Features:**
-  - Auto Check-in: Account recognition now includes "Username" information, facilitating distinction between accounts in multi-account scenarios.
-  - External Check-in: Supports batch triggering of external check-ins, reducing the steps required for individual operations.
-  - Auto Refresh: The minimum refresh interval no longer has a maximum limit, allowing setting a larger minimum interval to control refresh frequency.
+  - Auto Sign-in: Added "Username" information to account identification, making it easier to distinguish accounts in multi-account scenarios.
+  - External Sign-in: Supports batch triggering of external sign-ins, reducing the number of individual operations.
+  - Auto Refresh: The minimum refresh interval no longer has a maximum limit, allowing larger minimum intervals to control refresh frequency.
 - **Bug Fixes:**
-  - Clipboard Reading: Tightened trigger conditions to reduce false triggers in non-copy scenarios.
-  - Redemption Assistant: Validates all redemption codes before displaying the popup prompt, reducing invalid redemption notifications.
-  - Storage: Write locks added to write operations, improving data consistency during concurrent writes.
-  - Interface: Adjusted localization text related to "Copy Model Name."
+  - Clipboard Reading: Tightened trigger conditions to reduce false triggers in non-copying scenarios.
+  - Redemption Assistant: Validates all redemption codes before displaying prompts, reducing invalid redemption notifications.
+  - Storage: Added write locks to write operations, improving data consistency during concurrent writes.
+  - Interface: Adjusted localization text related to "Copy Model Name".
 
 ## 3.2.0
 - **New Features:**
-  - The "Model List" page now includes "Interface Availability Test" (Beta), used to quickly confirm if the current key is available for a specified model (e.g., text generation, tool/function calling, structured output (return as JSON structure), web search (Grounding), etc., detection items).
-  - The "Model List" page now includes "CLI Tool Compatibility Test" (Beta), simulating tool invocation flows for Claude Code / Codex CLI / Gemini CLI to assess interface compatibility in these tools.
-  - The "About" page now includes "Rate and Download": automatically identifies the current store source (Chrome / Edge / Firefox) and provides one-click rating and download links for other stores.
+  - "Model List" page now includes "Interface Availability Detection" (Beta) for quickly confirming if the current key is available for a specified model (e.g., text generation, tool/function calling, structured output (returning by JSON structure), web search (Grounding), etc.).
+  - "Model List" page now includes "CLI Tool Compatibility Detection" (Beta), simulating tool call flows for Claude Code / Codex CLI / Gemini CLI to assess interface compatibility in these tools.
+  - "About" page now includes "Rate and Download": Automatically detects the current store source (Chrome / Edge / Firefox) and provides one-click rating and download entry points for other stores.
 - **Bug Fixes:**
-  - When a site refresh encounters an HTTP error, the health status will display the status code and error reason, facilitating problem localization.
-  - In sidebar mode, the "Open in Sidebar" button is no longer displayed, avoiding duplicate openings.
+  - When site refresh encounters an HTTP error, the health status will display the status code and error reason, facilitating problem diagnosis.
+  - In sidebar mode, the "Open in Sidebar" button will no longer be displayed to avoid duplicate openings.
 
 ## 3.1.1
 - **Bug Fixes:**
-  - Expanded site access permissions (`host_permissions: <all_urls>`) to reduce failures in fetching Cookies due to insufficient permissions.
+  - Expanded site access permissions (`host_permissions: <all_urls>`) to reduce failures in obtaining Cookies due to insufficient permissions.
 
 ## 3.1.0
 - **New Features:**
-  - Added guidance for filling in administrator credentials in self-managed API settings.
-  - Redemption Assistant supports batch redemption and single-code retry.
+  - In self-managed API settings, added guidance for administrator credentials.
+  - Redemption Assistant now supports batch redemption and single-code retry.
 
 ## 3.0.0
 - **New Features:**
-  - Supports coexistence and full functionality for multiple cookie-authenticated accounts on a single site, mainly for sites that only support cookie authentication like AnyRouter.
-  - Supports setting proxy, model, and model alias lists when exporting for CLIProxyAPI.
-  - Separated site check-in and custom check-in logic, which no longer affect each other.
+  - Supports multiple cookie-authenticated accounts for a single site, allowing each account to coexist normally and all functions to be available. This is mainly for sites with only cookie authentication methods like AnyRouter.
+  - Supports setting proxy and model, as well as model alias lists when exporting CLIProxyAPI.
+  - Separated site sign-in and custom sign-in logic, so they no longer affect each other.
 - **Bug Fixes:**
-  - Fixed incorrect redirection path for manual check-in on New-API sites.
+  - Fixed an incorrect web page jump path for manual sign-in on New-API sites.
 
 ## 2.39.0
-- Automatically detects and modifies the check-in support status of the account site during account data refresh.
-- Upon version update, automatically opens the Changelog page and jumps to the corresponding version anchor.
+- Automatically detects and modifies the sign-in support status of account sites during account data refresh.
+- Automatically opens the changelog page and anchors to the corresponding version number upon version update.
 
 ## 2.38.0
 - Supports drag-and-drop sorting for pinned accounts.
 - Supports keyboard navigation for the Redemption Assistant:
-  - Use up/down arrow keys to select the specific redemption account directly.
+  - Directly select specific redemption accounts using the up/down arrow keys.
   - Press Enter to confirm redemption.
-- Added a prompt to the temporary shield bypass tab, explaining that the current tab originates from this extension and its specific purpose.
-- Better display method for shield bypass windows: single window with multiple tabs, meaning short-term requests reuse the same window, minimizing interference to the greatest extent.
-- Supports check-in status detection and auto check-in for New-API site accounts.
+- Added prompts to temporary shield bypass tabs, indicating that the current tab originates from this plugin and its purpose.
+- Improved shield bypass window display: single window with multiple tabs, meaning requests within a short period will reuse the same window, minimizing interference.
+- Supports sign-in status detection and automatic sign-in for New-API site accounts.
 
 ## 2.37.0
 - Optimized user experience for New-API channel management.
-- Support for more lenient redemption code format detection options, correctly identifying redemption codes and popping up the Redemption Assistant when encountering custom formats.
+- Added support for more lenient redemption code format detection options, correctly identifying redemption codes and popping up the Redemption Assistant when encountering custom formats.
 - Fixed some known issues.
 
 ## 2.36.0
-- Supports quick jumps to specific channels for management.
-- Fixed an issue where the channel model sync time was being reset.
+- Supports quick navigation to specific channels for management.
+- Fixed an issue that would reset the channel model sync time.
 
 ## 2.35.1
-- Fixed an issue where the auto check-in execution time was being reset.
-- UI optimization.
+- Fixed an issue that would reset the auto sign-in execution time.
+- UI optimizations.
 
 ## 2.35.0
-- Added optional clipboard reading permission to prompt for redemption when copying any potential redemption code.
-- Added cdk.linux.do to the default whitelist for the Redemption Assistant URL.
+- Added optional clipboard read permission to prompt for redemption when any potential redemption code is copied.
+- Added cdk.linux.do to the default URL whitelist for the Redemption Assistant.
 
 ## 2.34.0
 - **New Features:**
   - You can now customize the behavior when clicking the plugin icon, choosing to open the popup or the sidebar.
 - **Bug Fixes:**
-  - Fixed internal errors during account ID comparison.
+  - Fixed an internal error when comparing account IDs.
   - Ensured all temporary contexts are closed correctly.
 
 ## 2.33.0
 - **New Features:**
-  - Added "Temporary Context Mode" for more effective bypassing of website protection.
-  - API error messages now support internationalization.
-  - Optimized website type detection, now identifiable by the title of the temporary window.
+  - Introduced "Temporary Context Mode" for more effective bypassing of website protections.
+  - API error messages are now internationalized.
+  - Optimized website type detection, which can now be identified by the title of the temporary window.
   - Added optional permission status tracking.
 - **Bug Fixes:**
-  - Added validation messages for refresh interval settings.
+  - Added validation information for refresh interval settings.
+  - Fixed development dependency issues.
+
+## 3.22.0
+- **New Features:**
+  - Model List: Added "Model Corresponding Key" tool (key icon) to check if the current model has an available key. If no key is available, you can create a default key with one click based on the model's available groups, or enter the custom creation process, with support for one-click key copying.
+  - Share Snapshot: Supports one-click sharing of "Overview Snapshot / Account Snapshot". It prioritizes copying the image to the clipboard, and automatically downloads a PNG if not supported. Snapshots only contain shareable information (will not include sensitive fields like `API Key`) and support one-click copying of the title and accompanying text.
+- **Experience Optimizations:**
+  - Disabled Accounts: Disabled accounts will be automatically skipped in refresh and scheduled tasks such as "Balance History / Usage Analysis / Usage Sync", reducing invalid requests and errors.
+- **Bug Fixes:**
+  - Buttons: Fixed an issue where the spinner was not visible when a button was in a "loading" state and simultaneously displayed a left-side icon.
+
+**Location Hints:**
+- Model Corresponding Key: In "Settings → Model List", click the key icon to the right of the model name (`Model Corresponding Key`).
+- Share Overview Snapshot: In the button to the right of the title bar on the overview page of the extension popup (`Share Overview Snapshot`).
+- Share Account Snapshot: In the operation menu for a single account in "Settings → Account Management" (`Share Account Snapshot`).
+
+## 3.21.0
+- **New Features:**
+  - API Credentials: Added "API Credentials" page, suitable for "no account, only `Base URL` + `API Key`" scenarios. Supports unified management of tags/remarks, and allows direct availability verification and quick export (e.g., Cherry Studio / CC Switch / Kilo Code / CLIProxyAPI / Claude Code Router), reducing copy-pasting.
+  - Balance History: Added multi-account view (Overview / Account Distribution / Trends), and provides a unified "Account Summary" table for quick comparison and statistical aggregation.
+  - Self-Hosted Site Management: Added `Done Hub` to hosted sites, supporting configuration of administrator credentials for use in "Channel Management", "Model Sync", and other functions.
+- **Experience Optimizations:**
+  - Context Menu: "Redemption Assistant" and "AI API Detection" entries can be individually enabled/disabled and will take effect immediately after switching.
+  - Copy Key: When an account has no key, the popup provides an entry for "Quickly Create Default Key / Create Custom Key", reducing back-and-forth navigation.
+
+**Location Hints:**
+- API Credentials: In "Settings → API Credentials".
+- Balance History: In "Settings → Balance History".
+- Done Hub Configuration: In "Settings → Basic Settings → Self-Hosted Site Management", select `Done Hub`, and fill in "Done Hub Integration Settings".
+- Context Menu Entry Switch: In "Settings → Basic Settings → Sign-in & Redemption / AI API Testing", under their respective "Show in Browser Context Menu" options.
+- Copy Key Popup: Opened by clicking "Copy Key" on pages like "Account Management".
+
+## 3.20.0
+- **Experience Optimizations:**
+  - Key Management: The group dropdown option when adding a new key now displays both the Group ID and description, facilitating quick differentiation and selection among multiple groups/routes.
+- **Bug Fixes:**
+  - Account Management: The default for "Automatically create default key after adding account" is now disabled. If you wish to automatically generate a default key after adding an account, please enable it manually in the settings.
+
+**Location Hints:**
+- Group ID Display: In "Settings → Key Management", click "Add Key", and view in the group dropdown option.
+- Auto-Create Default Key Switch: In "Settings → Basic Settings → Account Management → API Keys".
+
+## 3.19.0
+- **New Features:**
+  - Self-Hosted Site Management: Added `Octopus` hosted site support, allowing connection to the Octopus backend and importing account API keys as channels in "Channel Management", with support for fetching available model lists.
+  - Key Management: Added "Automatically create default key after adding account" (enabled by default), and provides a one-click "Ensure at least one key" option to automatically complete default keys for accounts missing them.
+  - AI API Testing: "Model List Probing" for interface verification supports OpenAI/OpenAI-compatible, Anthropic, Google/Gemini, and other interface types, and will provide suggested model IDs, reducing manual model guessing.
+- **Experience Optimizations:**
+  - Account Management: Enhanced site/account identification logic to improve stability in scenarios with multiple accounts on the same site.
+  - Usage/Log Fetching: Added rate limiting protection for log-related interfaces to reduce errors caused by frequent refreshes or triggering site rate limits.
+  - Channel Management: When creating a channel, performs more precise duplicate detection and provides confirmation prompts to avoid accidental creation of duplicate routes.
+- **Bug Fixes:**
+  - Deactivated Accounts: Deactivated accounts are now automatically filtered out from relevant dropdowns/lists in Key Management, preventing invalid operations.
+  - Language: Fixed an issue where the extension's language setting might affect the webpage's own language value.
+
+**Location Hints:**
+- Octopus Configuration: In "Settings → Basic Settings → Self-Hosted Site Management", select `Octopus` and fill in `Base URL` / Username / Password.
+- Channel Management Entry: In "Settings → Channel Management".
+- Auto-Create Default Key Switch: In "Settings → Basic Settings → Account Management → API Keys".
+- One-Click Complete Default Key: In "Settings → Key Management", at the top right, "Ensure at least one key".
+- AI API Testing Entry: Right-click menu "Quickly Test AI API Functionality Availability".
+
+## 3.18.0
+- **New Features:**
+  - Balance History: Charts now include a "Currency Unit" switch (`USD` / `CNY`), and currency symbols are displayed on axes/tooltips. When `CNY` is selected, it will be converted based on the account's "Recharge Amount Ratio", making it easier to view trends and reconcile by amount.
+- **Experience Optimizations:**
+  - Tag Filtering: When there are too many tag/account options, it defaults to "Expand to display", making browsing and selection more intuitive.
+  - Tabs: Added left and right scroll buttons to the "Settings" group tabs and "Model List" vendor tabs, making switching more convenient in narrow windows.
+- **Bug Fixes:**
+  - Account Management: Site type "Auto-detection" is more accurate, fixing issues with unknown site types that appeared frequently in recent versions.
+
+**Location Hints:**
+- Balance History Currency Unit: In "Settings → Balance History", in the filter area, "Currency Unit".
+- Account Exchange Rate (Recharge Amount Ratio): In "Settings → Account Management", in the add/edit account form, "Recharge Amount Ratio".
+
+## 3.17.0
+- **New Features:**
+  - Balance History: Added "Balance History" feature (disabled by default), which records daily balance and income/expense snapshots, and displays trends in charts. Supports filtering by tags/accounts and time range, and provides convenient "Refresh Now / Clear Now" operations.
+  - Balance History: Added a setting to control whether to enable it, the number of days to retain, and "End-of-Day Fetch". Note: If you disable "Show Today's Income/Expenses" and do not enable "End-of-Day Fetch", the "Daily Income/Expenses" chart will have no data.
+- **Experience Optimizations:**
+  - Channel Management: Optimized the responsive layout and usability of the "Channel Management" toolbar in small/narrow screens.
+- **Bug Fixes:**
+  - Import/Export: Fixed an issue with the responsive display of the export area on some screen sizes.
+  - Popups: Fixed a layout anomaly where the scrollbar position in popups was incorrect.
+
+**Location Hints:**
+- Balance History Switch/Retention Days/End-of-Day Fetch: In "Settings → Basic Settings → Balance History".
+- Balance History Chart Entry: In "Settings → Balance History".
+
+## 3.16.0
+- **New Features:**
+  - Sub2API (JWT Site): Added Sub2API site type, supporting balance/quota queries. Supports reading login status from the console via "Auto-detection". Also supports the "Plugin Hosted Session (Multiple Accounts, Recommended)" mode, which allows independent authentication renewal for each account, improving the experience for multiple accounts on the same site.
+  - Display Settings: Added a "Show Today's Income/Expenses" switch (enabled by default), which can hide and stop fetching statistics like "Today's Consumption/Income", reducing log fetching requests during refreshes.
+- **Notes:**
+  - Sub2API currently does not support site sign-in / today's usage / income, and only provides basic balance/quota queries. Related features will be gradually improved based on site capabilities.
+  - "Plugin Hosted Session (Multiple Accounts)" saves `refresh_token` as private account credentials, which will be included in exports/WebDAV backups. Please keep backup files and WebDAV credentials secure.
+
+**Location Hints:**
+- Sub2API Addition/Mode Explanation: In "Settings → Account Management", add/edit account, select Sub2API as the site type; for more detailed steps, see [FAQ](./faq.md) (search for "Sub2API").
+- Today's Income/Expenses Switch: In "Settings → Basic Settings → Display Settings".
+
+## 3.15.1
+- **Bug Fixes:**
+  - Chrome/Edge (MV3): Improved the stability of background Service Workers, reducing the issue of asynchronous scheduled tasks (WebDAV auto-sync / Usage Sync / Model Sync / Auto Sign-in, etc.) being missed due to early termination of the background process. Automatically resumes related scheduled tasks after browser restart.
+  - Installation/Update/Startup Process: Enhanced error handling and logging during the initialization phase to prevent unexpected crashes.
+
+## 3.15.0
+- **New Features:**
+  - Bookmark Management: Added "Bookmark Management" to save quick links to site consoles/documentation/management pages without needing to create a full account. Supports adding/editing/deleting, pinning, tagging, search filtering, and drag-and-drop sorting. The popup now has an "Account / Bookmark" switch. Bookmark data will be included in backups/restores and WebDAV auto-sync.
+- **Bug Fixes:**
+  - Account Refresh: Removed duplicate "Today's Income" fetch requests to reduce unnecessary network calls (some sites already return `today_income` in their refresh interface).
+  - Auto Refresh: The minimum refresh interval is now 60 seconds, and the minimum refresh interval protection is 30 seconds. After updating, old configurations will be automatically corrected to a valid range, and related prompts and documentation have been improved.
+
+::: warning Important: Auto-refresh configuration will be forcibly adjusted
+Feedback indicates that **overly short auto-refresh intervals can easily trigger site rate limits and place excessive load on sites**.
+
+v3.15.0 **has forcibly modified the auto-refresh configuration**:
+- Auto-refresh and refresh on plugin open features have been turned off. If you still need them, you must re-enable them manually.
+- The minimum `Refresh Interval` is 60 seconds, and the `Minimum Refresh Interval Protection` is 30 seconds. If your settings before upgrading were below these thresholds, they will be automatically increased to the minimum values after upgrading. If your previously set values are within the new legal range, they will not be affected.
+:::
+
+**Location Hints:**
+- Bookmark Management: In "Settings → Bookmark Management"; you can switch between "Account / Bookmark" at the top of the popup.
+- Auto Refresh: In "Settings → Basic Settings → Auto Refresh".
+
+## 3.14.0
+- **New Features:**
+  - Web AI API Functionality Test (Beta): Added a right-click menu option "Quickly Test AI API Functionality Availability" to open the test panel directly on the current webpage. Supports filling in/pasting `Base URL` and `API Key`, and performs basic capability probing for OpenAI compatible / OpenAI / Anthropic / Google interfaces (OpenAI compatible also supports one-click model list fetching).
+  - (Optional) Auto-Detection: Can be enabled in "Settings → AI API Test" and configured with a URL whitelist. When available `Base URL` and `API Key` are detected on a whitelisted page, a confirmation prompt will appear first. The test panel will only open after confirmation (disabled by default, and keys are not saved).
+  - Auto Sign-in: The execution results list now includes more troubleshooting hints—including suggestions and documentation links for common exceptions like "Temporary shield bypass tab manually closed" and "Access Token invalid".
+- **Bug Fixes:**
+  - WebDAV: Auto-sync has been migrated from timers to the browser Alarms API, reducing the probability of missed syncs due to background sleep/power saving policies.
+
+**Location Hints:**
+- AI API Test Panel: Right-click menu on any webpage, select "Quickly Test AI API Functionality Availability"; auto-detection related settings are in "Settings → AI API Test".
+- Auto Sign-in Hints: View in the execution results list in "Settings → Auto Sign-in".
+
+## 3.13.0
+- **New Features:**
+  - Account Management: Added "Sign-in Status Expired" prompt—when the "Signed in today / Not signed in today" status is not detected for the current day, an orange warning icon will be displayed. Clicking it will refresh the account data with one click, avoiding misleading information from old statuses.
+  - Interface: Multi-select controls have been upgraded to more compact selectors (space-saving, support search, and clearer display of selected items).
+- **Bug Fixes:**
+  - Veloera: Fixed account data refresh and sign-in logic, improving usability.
+  - Cookie Authentication: Removed the Cookie caching mechanism, reducing issues caused by still reading old values after Cookie updates.
+
+**Location Hints:**
+- Sign-in Status Expired Prompt: In "Settings → Account Management", in the account list, next to the sign-in icon for site information.
+
+## 3.12.0
+- **New Features:**
+  - Key Management: Added "Export to Kilo Code"—generates `providerProfiles` configuration for Kilo Code / Roo Code, supporting copying `apiConfigs` snippets or downloading `settings.json` for import (imports are incremental and will not clear your existing providers).
+- **Bug Fixes:**
+  - Account Management: Fixed layout overflow issues caused by long text like site names, now truncated automatically.
+  - Dropdown Selectors: Improved empty state prompts and fixed overflow issues with long option text.
+
+**Location Hints:**
+- Export to Kilo Code: In "Settings → Key Management", in the key list, click the Kilo Code icon in the top right corner of a key.
+
+## 3.11.0
+- **New Features:**
+  - New API Channel Management: Added "Duplicate Channel" reminder—when a duplicate/similar channel is detected, a warning dialog box will pop up, allowing you to choose to continue creation or cancel (no longer blocking creation with error toasts).
+- **Bug Fixes:**
+  - Account Management: Fixed layout overflow issues caused by long text like site names, now truncated automatically.
+
+## 3.10.0
+- **New Features:**
+  - Account Management: When clicking a site link in incognito mode, it will open within the current incognito window (to maintain incognito login state).
+  - Account Management: Disabled accounts also support clicking site links, making them usable as bookmarks.
+  - Usage Analysis: When there is only a single account, the chart and list prioritize displaying the site name (instead of the username) for more intuitive information.
+  - Shield Bypass Assistant: The temporary shield bypass window now supports CAP (cap.js) Pow verification, improving pass rates.
+- **Bug Fixes:**
+  - Redemption Assistant: Prioritizes reading redemption codes from the clipboard, improving trigger accuracy.
+  - Toast Notifications: Fixed Toaster layering issues, preventing notifications from being obscured by webpages.
+
+**Location Hints:**
+- Site Link: In "Settings → Account Management", click the site name in the account list.
+- Shield Bypass Assistant: Refer to [Cloudflare Shield Bypass Assistant](./cloudflare-helper.md).
+
+## 3.9.0
+- **New Features:**
+  - Account Management: Added "Manual Balance (USD)" field to accounts—when the site cannot automatically fetch balance/quota, you can manually fill this in for display and statistics.
+  - Account Management: Added "Exclude from Total Balance" switch to accounts—used to remove specific accounts from the "Total Balance" statistics (does not affect refresh/sign-in functions).
+  - Settings: Added "Automatically open changelog after update" switch (can disable the behavior of automatically opening this page after an update).
+  - Settings: Added log settings to control whether to output console logs and the minimum log level, facilitating troubleshooting.
+  - Auto Sign-in: Refreshes relevant data and synchronizes the interface after execution.
+
+**Location Hints:**
+- Add/Edit Account: Open add/edit account in "Settings → Account Management".
+- Changelog Switch, Log Settings: Configure in "Settings → General".
+
+## 3.8.0
+- **New Features:**
+  - Usage Analysis: Added a "Usage Analysis" page to help you visualize usage trends across multiple sites and accounts, allowing you to quickly see "where usage/spending is high / where it's slowing down", facilitating cost control, reconciliation, and troubleshooting.
+  - Dashboard Content: Supports viewing daily overviews (request count, Tokens, quota), model distribution/spending distribution, account comparisons, usage time hotspots, as well as latency trends/histograms, etc.
+  - Usage History Sync: Added "Usage History Sync" capability to fetch and save "aggregated usage data" (raw logs are not saved). Supports setting retention days, automatic sync methods, and minimum sync intervals, and view sync results and error prompts for each account in "Sync Status".
+- **How to Use:**
+  - First, go to "Settings → Account Usage" to enable "Usage History Sync", set as needed, and click "Sync Now".
+  - Then, view charts in the left-side menu "Usage Analysis"; click "Export" when you need to retain or reconcile data.
+
+## 3.7.0
+- **New Features:**
+  - Sorting: Account list supports sorting by "Income"; sorting priority now includes "Disabled accounts at the bottom", so deactivated/invalid accounts no longer interfere with your daily use.
+  - Auto Sign-in: Added "Trigger today's sign-in early when opening the interface"—when opening the popup/sidebar/settings page within the time window, it will automatically attempt to run today's sign-in early, without waiting for the scheduled time.
+- **Bug Fixes:**
+  - Auto Sign-in: Each account will only execute once per day; retries are only for failed accounts, reducing meaningless requests and repeated disturbances.
+- **Location Hints:**
+  - Sorting Priority: Adjust in "Settings → Account Management".
+  - Auto Sign-in Early Trigger/Retry: Configure in the left-side menu "Auto Sign-in".
+
+## 3.6.0
+- **New Features:**
+  - Account Management: Supports enabling/disabling accounts with one click. After disabling, various functions will skip the account, making it easy to retain data after an account becomes invalid.
+  - Tags: Added global tag management, and optimized related interfaces and interactions accordingly, making it easier to classify and manage accounts.
+  - Popup: Displays the current version number in the title bar and provides a direct entry to this changelog.
+  - Quick Export: CCSwitch export supports selecting upstream models, making export configurations closer to actual usage scenarios.
+
+## 3.5.2
+- **Bug Fixes:**
+  - Amount Display: Optimized the display strategy for extremely small values to avoid display inconsistencies due to precision/rounding.
+
+## 3.5.1
+- **New Features:**
+  - Account Management: Adjusted the position of the "Auto Sign-in" switch (moved above the custom sign-in URL) for more intuitive configuration.
+  - Interface: Removed the gradient background from the dialog title icon for a cleaner, more unified visual appearance.
+- **Bug Fixes:**
+  - Key List: Fixed an issue where closing the dialog while expanding key details would cause a white screen.
+
+## 3.5.0
+- **New Features:**
+  - Auto-detection: Added "Slow Detection" prompts and links to relevant documentation to help users troubleshoot and resolve issues.
+  - Batch Opening External Sign-ins: Supports opening all in new windows, making batch closing easier and reducing interference.
+- **Bug Fixes:**
+  - Batch Opening External Sign-ins: Refactored the process to execute in the background service, ensuring correct opening of all sites in popup scenarios.
+
+## 3.4.0
+- **New Features:**
+  - CLIProxy: Enhanced model mapping configuration to directly select upstream models, facilitating more precise model mapping.
+- **Bug Fixes:**
+  - API: Ensured that access keys always have the `sk-` prefix, avoiding recognition/copying issues due to inconsistent formats.
+
+## 3.3.0
+- **New Features:**
+  - Auto Sign-in: Added "Username" information to account identification, making it easier to distinguish accounts in multi-account scenarios.
+  - External Sign-in: Supports batch triggering of external sign-ins, reducing the number of individual operations.
+  - Auto Refresh: The minimum refresh interval no longer has a maximum limit, allowing larger minimum intervals to control refresh frequency.
+- **Bug Fixes:**
+  - Clipboard Reading: Tightened trigger conditions to reduce false triggers in non-copying scenarios.
+  - Redemption Assistant: Validates all redemption codes before displaying prompts, reducing invalid redemption notifications.
+  - Storage: Added write locks to write operations, improving data consistency during concurrent writes.
+  - Interface: Adjusted localization text related to "Copy Model Name".
+
+## 3.2.0
+- **New Features:**
+  - "Model List" page now includes "Interface Availability Detection" (Beta) for quickly confirming if the current key is available for a specified model (e.g., text generation, tool/function calling, structured output (returning by JSON structure), web search (Grounding), etc.).
+  - "Model List" page now includes "CLI Tool Compatibility Detection" (Beta), simulating tool call flows for Claude Code / Codex CLI / Gemini CLI to assess interface compatibility in these tools.
+  - "About" page now includes "Rate and Download": Automatically detects the current store source (Chrome / Edge / Firefox) and provides one-click rating and download entry points for other stores.
+- **Bug Fixes:**
+  - When site refresh encounters an HTTP error, the health status will display the status code and error reason, facilitating problem diagnosis.
+  - In sidebar mode, the "Open in Sidebar" button will no longer be displayed to avoid duplicate openings.
+
+## 3.1.1
+- **Bug Fixes:**
+  - Expanded site access permissions (`host_permissions: <all_urls>`) to reduce failures in obtaining Cookies due to insufficient permissions.
+
+## 3.1.0
+- **New Features:**
+  - In self-managed API settings, added guidance for administrator credentials.
+  - Redemption Assistant now supports batch redemption and single-code retry.
+
+## 3.0.0
+- **New Features:**
+  - Supports multiple cookie-authenticated accounts for a single site, allowing each account to coexist normally and all functions to be available. This is mainly for sites with only cookie authentication methods like AnyRouter.
+  - Supports setting proxy and model, as well as model alias lists when exporting CLIProxyAPI.
+  - Separated site sign-in and custom sign-in logic, so they no longer affect each other.
+- **Bug Fixes:**
+  - Fixed an incorrect web page jump path for manual sign-in on New-API sites.
+
+## 2.39.0
+- Automatically detects and modifies the sign-in support status of account sites during account data refresh.
+- Automatically opens the changelog page and anchors to the corresponding version number upon version update.
+
+## 2.38.0
+- Supports drag-and-drop sorting for pinned accounts.
+- Supports keyboard navigation for the Redemption Assistant:
+  - Directly select specific redemption accounts using the up/down arrow keys.
+  - Press Enter to confirm redemption.
+- Added prompts to temporary shield bypass tabs, indicating that the current tab originates from this plugin and its purpose.
+- Improved shield bypass window display: single window with multiple tabs, meaning requests within a short period will reuse the same window, minimizing interference.
+- Supports sign-in status detection and automatic sign-in for New-API site accounts.
+
+## 2.37.0
+- Optimized user experience for New-API channel management.
+- Added support for more lenient redemption code format detection options, correctly identifying redemption codes and popping up the Redemption Assistant when encountering custom formats.
+- Fixed some known issues.
+
+## 2.36.0
+- Supports quick navigation to specific channels for management.
+- Fixed an issue that would reset the channel model sync time.
+
+## 2.35.1
+- Fixed an issue that would reset the auto sign-in execution time.
+- UI optimizations.
+
+## 2.35.0
+- Added optional clipboard read permission to prompt for redemption when any potential redemption code is copied.
+- Added cdk.linux.do to the default URL whitelist for the Redemption Assistant.
+
+## 2.34.0
+- **New Features:**
+  - You can now customize the behavior when clicking the plugin icon, choosing to open the popup or the sidebar.
+- **Bug Fixes:**
+  - Fixed an internal error when comparing account IDs.
+  - Ensured all temporary contexts are closed correctly.
+
+## 2.33.0
+- **New Features:**
+  - Introduced "Temporary Context Mode" for more effective bypassing of website protections.
+  - API error messages are now internationalized.
+  - Optimized website type detection, which can now be identified by the title of the temporary window.
+  - Added optional permission status tracking.
+- **Bug Fixes:**
+  - Added validation information for refresh interval settings.
   - Fixed development dependency issues.
 
 ## 2.32.0
 - **New Features:**
   - Model redirection is now smarter, supporting version numbers represented by hyphens and dots.
-  - Added functionality to directly redeem via the right-click menu after selecting text.
-  - Auto Check-in feature is enabled by default, and the check-in time window has been extended.
+  - Added the functionality to directly redeem via the right-click menu after selecting text.
+  - Auto sign-in is enabled by default, and the sign-in time window has been extended.
 
 ## 2.31.0
 - **New Features:**
   - Enhanced Cookie isolation for temporary windows, improving security.
-  - Check-in operations can now be executed quickly in the popup.
-  - Redemption Assistant added URL whitelist functionality, giving you better control over which sites can use the assistant.
+  - You can now quickly perform sign-in operations within the popup.
+  - Redemption Assistant now supports a URL whitelist feature, allowing you to better control which websites can use it.
 
 ## 2.30.0
 - **New Features:**
-  - Added check-in support for Wong sites.
-  - Added check-in support for AnyRouter sites.
-  - Optimized detection capability for Cloudflare challenge pages.
-  - WebDAV backup now supports encryption, and a decryption retry popup is added upon recovery, while your WebDAV configuration is retained.
+  - Added sign-in support for Wong sites.
+  - Added sign-in support for AnyRouter sites.
+  - Improved detection capabilities for Cloudflare challenge pages.
+  - WebDAV backup now supports encryption, and recovery includes a decryption retry popup, while retaining your WebDAV configuration.
 
 ## 2.29.0
 - **New Features:**
   - Integrated Claude Code Router.
 - **Bug Fixes:**
-  - Fixed website Cookie interception issues during automatic detection.
-  - Optimized centering display of blank content in Firefox.
+  - Fixed website Cookie interception issues during auto-detection.
+  - Optimized the centering of blank state content in Firefox.
   - Migrated the Switch component to a custom implementation for improved compatibility and stability.
 
 ## 2.28.0
 - **New Features:**
-  - Introduced the "Hosted Site" service, laying the foundation for integrating more sites in the future.
+  - Introduced "Hosted Sites" service, laying the foundation for future site integrations.
   - Added support for Veloera sites.
-  - Updated the term "New API" in settings to "Hosted Site" for better clarity.
+  - Updated the term "New API" in settings to "Hosted Sites" for clarity.
 - **Bug Fixes:**
-  - Optimized translation texts, removing redundant fallback strings.
+  - Optimized translation texts and removed redundant fallback strings.
 
 ## 2.27.0
 - **New Features:**
-  - Account health status now includes more detailed codes to help you understand specific issues.
-  - The temporary window bypass feature now includes a health status indicator.
-  - Optimized the description for bypassing website protection to make it clearer and easier to understand.
-  - Added a notification system for when temporary window bypass fails.
+  - Account health status now includes more detailed codes for easier problem diagnosis.
+  - Temporary window bypass feature now includes a health status indicator.
+  - Optimized the description for bypassing website protections to be clearer and more understandable.
+  - Added a reminder system for temporary window bypass failures.
 - **Bug Fixes:**
   - Ensured consistency in token selection strategy.
-  - Fixed display issues for Firefox popup notifications in Chinese settings.
-- **Performance Optimization:**
-  - Improved the performance of the sorting feature.
+  - Fixed display issues with Firefox popup prompts in Chinese settings.
+- **Performance Optimizations:**
+  - Improved the performance of the sorting function.
 
 ## 2.26.0
 - **New Features:**
@@ -376,72 +712,72 @@ v3.15.0 **has made forced adjustments to auto-refresh configurations**:
 ## 2.25.0
 - **New Features:**
   - Added a new user guide card when the account list is empty.
-  - When pinning or manual sorting features are disabled, related UI elements will automatically hide.
+  - When the pin/manual sort function is disabled, related UI elements will be automatically hidden.
   - You can now manually drag and drop to sort the account list.
 - **Bug Fixes:**
   - Fixed an issue where the tag array could be empty when updating an account.
 
 ## 2.24.0
 - **New Features:**
-  - Updated application description and About page content.
+  - Updated application description and about page content.
   - Extension name now includes a subtitle.
-  - Tag filter added visibility control based on the number of lines.
-  - WebDAV connection tests now support more success status codes.
+  - Tag filter now has visibility control based on line count.
+  - WebDAV connection test now supports more success status codes.
 - **Bug Fixes:**
-  - Removed the extraneous period at the end of JSON strings.
+  - Removed extra periods at the end of JSON strings.
 
 ## 2.23.0
 - **New Features:**
   - Enhanced account tagging functionality.
-  - The temporary window bypass feature now supports smarter judgment based on error codes.
+  - Temporary window bypass feature now supports more intelligent judgment based on error codes.
 
 ## 2.22.0
 - **New Features:**
-  - Account management now supports tagging for classified management of accounts.
-  - The Redemption Assistant popup UI now supports lazy loading and fixes an issue that might cause website style conflicts.
+  - Account management now includes a tagging feature for easy account classification.
+  - Redemption Assistant popup UI now supports lazy loading and fixes issues that could cause website style conflicts.
   - Added global channel filter and JSON editing mode.
 
 ## 2.21.0
 - **New Features:**
   - Integrated CLIProxyAPI and related settings.
 - **Bug Fixes:**
-  - Removed redundant "Checked in Today" checks from auto check-in.
-  - Simplified and fixed the logic for temporary window fetching.
-  - Restored the parsing function for search parameters in URL query strings.
+  - Removed duplicate "Signed in today" checks in auto sign-in.
+  - Simplified and fixed temporary window fetching logic.
+  - Restored parsing of search parameters in URL query strings.
 
 ## 2.20.0
 - **New Features:**
-  - Added permission guidance during initial installation to help you understand the required permissions.
+  - Added permission guidance during initial installation to help you understand required permissions.
   - Cookie interceptor headers can now be controlled via optional permissions, improving cross-browser compatibility.
 - **Bug Fixes:**
-  - Fixed overflow of operation buttons in the account dialog.
-  - Redemption amount conversion factors now use constants to improve accuracy.
-  - Restricted the Cookie Interceptor to be used only in the Firefox browser.
+  - Fixed an issue with operation buttons overflowing in the account dialog.
+  - Redemption amount conversion coefficients now use constants for improved accuracy.
+  - Limited the Cookie interceptor to only be used in Firefox browsers.
 
 ## 2.19.0
 - **New Features:**
-  - Added loading status and prompt information during the redemption process.
-  - Removed the clipboard reading feature from the Redemption Assistant.
+  - Added loading status and prompt messages during the redemption process.
+  - Removed clipboard reading functionality from the Redemption Assistant.
 - **Bug Fixes:**
-  - Added translations for missing background error messages.
+  - Added missing background error message translations.
   - Prevented concurrent initialization and race conditions in services, improving stability.
-  - Resolved intermittent "Cannot establish connection" errors.
-  - Prevented race conditions when destroying the temporary window pool.
+  - Resolved intermittent "Unable to establish connection" errors.
+  - Prevented race conditions during the destruction of the temporary window pool.
 
 ## 2.18.0
 - **New Features:**
   - Added protection settings for the temporary window bypass feature.
-  - Added documentation instructions for the Redemption Assistant feature.
-  - Firefox browser now supports Cookie injection based on WebRequest.
-  - Redemption functionality now supports themes and optimized prompt messages.
-  - Redemption prompts now include source information and a link to settings.
+  - Added documentation for the Redemption Assistant feature.
+  - Firefox browsers now support WebRequest-based Cookie injection.
+  - Redemption feature now supports themes and optimized prompt messages.
+  - Redemption prompt messages now include source information and setting links.
 - **Bug Fixes:**
-  - Fixed path issues for Tailwind CSS files.
+  - Fixed path issues with Tailwind CSS files.
 
 ## 2.17.0
 - **New Features:**
-  - Added one-click redemption automatic popup notification feature.
-  - Unified data formats for Import/Export and WebDAV backups using a V2 versioning scheme, improving compatibility and stability.
+  - Added automatic popup prompts for one-click redemption.
+  - Unified data format for import/export and WebDAV backup using a V2 versioning scheme for improved compatibility and stability.
 
 ## 2.16.0
 - **New Features:**
@@ -450,94 +786,94 @@ v3.15.0 **has made forced adjustments to auto-refresh configurations**:
 
 ## 2.15.0
 - **New Features:**
-  - The MultiSelect component now supports parsing comma-separated strings.
+  - MultiSelect component now supports parsing comma-separated strings.
 - **Bug Fixes:**
-  - Ensured caching only occurs during the complete channel data synchronization period.
-- **Performance Optimization:**
+  - Ensured caching only occurs during complete channel data sync.
+- **Performance Optimizations:**
   - Optimized upstream model caching logic.
 
 ## 2.14.0
 - **New Features:**
-  - Automatically detects site metadata upon refresh.
-  - Added retry and manual check-in options when auto check-in fails.
-  - Enhanced auto check-in functionality, including retry strategies, skip reasons, and account snapshots.
-  - Optimized auto check-in execution method to concurrent processing for improved efficiency.
+  - Site metadata will be automatically detected during refresh.
+  - When auto sign-in fails, retry and manual sign-in options are now available.
+  - Enhanced auto sign-in functionality, including retry strategies, skip reasons, and account snapshots.
+  - Optimized auto sign-in execution method to concurrent processing for improved efficiency.
 - **Bug Fixes:**
-  - Fixed the default behavior issue for the `autoCheckInEnabled` flag.
+  - Fixed default behavior issues with the `autoCheckInEnabled` flag.
 
 ## 2.13.0
 - **New Features:**
-  - Added "New API Channel Management" feature.
+  - Added "New API Channel Management" functionality.
   - Added "Warning" button style.
-  - Introduced Radix UI components and Tanstack Table to improve interface aesthetics and functionality.
+  - Introduced Radix UI components and Tanstack Table for improved interface aesthetics and functionality.
 - **Bug Fixes:**
-  - Fixed incorrect display and sorting of model counts in the channel table.
+  - Fixed issues with model count display and sorting in the channel table.
 
 ## 2.12.1
 - **Bug Fixes:**
-  - Fixed unnecessary reloading of channels when manually selecting tabs.
+  - Fixed unnecessary reloads of channels when manually selecting tabs.
   - The "New API Model Sync" option is hidden in the sidebar when the configuration is invalid.
 
 ## 2.12.0
 - **New Features:**
-  - "New API Model Sync" now includes a model allowlist filtering feature.
+  - "New API Model Sync" now includes an allowlist filtering feature for models.
   - The sidebar now supports collapsing/expanding with smooth animation effects.
 
 ## 2.11.0
 - **New Features:**
-  - Account management functionality has been enhanced with search functionality and navigation optimization.
+  - Account management functionality has been enhanced with search capabilities and navigation optimizations.
   - Added CC Switch export functionality.
 - **Bug Fixes:**
-  - Fixed logic errors in auto check-in status.
+  - Fixed logic errors in auto sign-in status.
 
 ## 2.10.0
 - **New Features:**
-  - Browser messaging now supports an exponential backoff retry mechanism to improve communication stability.
-  - Model sync added a manual execution tab, supporting channel selection.
+  - Browser messages now support exponential backoff retry mechanisms for improved communication stability.
+  - Model sync now includes a manual execution tab and supports channel selection.
 - **Bug Fixes:**
-  - Ensured missing fields in user preferences are populated with default values.
+  - Ensured that missing fields in user preferences are populated with default values.
 
 ## 2.9.0
 - **New Features:**
-  - Added Cloudflare challenge detection, with automatic attempts to bypass using a temporary window upon encountering protection.
+  - Added Cloudflare challenge detection and automatically attempts to bypass using temporary windows when protections are encountered.
   - Introduced a temporary context management system.
 
 ## 2.8.1
 - **Bug Fixes:**
-  - Model names now support date suffix patterns like "Month-Day" and "Month_Day."
+  - Model names now support date suffix patterns like "month-day" and "month_day".
   - Optimized dropdown menu positioning and accessibility for multi-select components.
 
 ## 2.8.0
 - **New Features:**
-  - Added fault tolerance mechanism for partial account updates.
+  - Added fault tolerance for partial account updates.
   - Account information can be saved even if data fetching fails during manual account addition.
-  - Settings page added "Settings Partition" feature, supporting resetting settings by area.
+  - The settings page now includes a "Settings Partition" feature for resetting settings by region.
 
 ## 2.7.1
 - **Bug Fixes:**
-  - Fixed a logic error in detecting check-in support during API sync where redirected models were not appearing in the model list.
+  - Fixed an issue where redirected models did not appear in the model list during API sync.
 
 ## 2.7.0
 - **New Features:**
-  - The account dialog can now dynamically update site data for newly added accounts.
+  - The account dialog can now dynamically update site data for new accounts.
 - **Bug Fixes:**
-  - Hidden the password visibility toggle button in Edge/IE browsers.
+  - Hidden the password visibility button in Edge/IE browsers.
 
 ## 2.6.1
 - **Important Update (Internal):**
-  - User preferences such as `newApiModelSync`, `autoCheckin`, and `modelRedirect` are now mandatory to ensure the completeness of default configurations.
+  - User preferences such as `newApiModelSync`, `autoCheckin`, and `modelRedirect` are now mandatory to ensure the integrity of default configurations.
 - **Bug Fixes:**
-  - Enhanced robustness of configuration migration checks.
-  - Fixed the issue of missing "New API Preferences" in configuration checks.
-  - Corrected check-in requirement sorting logic.
+  - Enhanced the robustness of configuration migration checks.
+  - Fixed the issue of missing "New API Preference Settings" in configuration checks.
+  - Corrected sign-in requirement sorting logic.
   - Prevented unnecessary WebDAV configuration resets during configuration migration.
 
 ## 2.6.0
 - **New Features:**
-  - Optimized the user interface for "New API Channel Import," supporting key switching and batch model selection.
-  - Model mapping now uses a multi-stage standardization process to improve accuracy.
+  - The user interface for "New API Channel Import" has been optimized to support key switching and batch model selection.
+  - Model mapping now uses a multi-stage standardization process for improved accuracy.
 - **Bug Fixes:**
-  - Model name standardization now aligns with the Veloera backend and retains hyphens.
+  - Model name standardization is now consistent with the Veloera backend and retains hyphens.
   - Resolved browser storage quota issues and improved model matching.
 
 ## 2.5.0
@@ -545,156 +881,156 @@ v3.15.0 **has made forced adjustments to auto-refresh configurations**:
   - Added support for the Neo-API site type.
 - **Bug Fixes:**
   - Fixed Base64 encoding issues during CherryStudio URL generation.
-  - Removed redundant account fetching and token verification from the channel dialog to improve efficiency.
+  - Removed redundant account fetching and token verification from the channel dialog for improved efficiency.
 
 ## 2.4.1
 - **Bug Fixes:**
-  - Ensured the settings page always opens in a new tab.
+  - Ensured that the settings page always opens in a new tab.
 
 ## 2.4.0
 - **New Features:**
-  - Auto-import functionality now integrates with the "New API Channel" dialog.
+  - Auto-import functionality now integrates the "New API Channel" dialog.
   - Added basic support for RIX_API.
   - Multi-select components now support collapsible selected areas and optimized input experience.
 - **Bug Fixes:**
   - Optimized retry mechanisms and added user feedback.
-  - Improved performance of multi-select components with large selections.
+  - Optimized performance of multi-select components with a large number of selections.
 
 ## 2.3.0
 - **New Features:**
-  - Added account pinning and unpinning functionality, supporting priority sorting for pinned accounts.
+  - Added account pinning and unpinning functionality, and supports prioritizing pinned accounts in sorting.
 - **Bug Fixes:**
   - Reduced the size of the pin icon and fixed configuration migration version issues.
-  - Optimized sorting configuration, increasing the priority of the current site condition.
+  - Optimized sorting configuration, prioritizing the current site condition.
 
 ## 2.2.1
 - **Bug Fixes:**
-  - Removed the `isDetected` check for the automatic configuration button.
-  - Ensured account detection correctly refreshes when data changes are displayed.
-  - Fixed the issue where Access Token was no longer required for Cookie authentication types.
+  - Removed the `isDetected` check for the auto-configuration button.
+  - Ensured that account detection correctly refreshes when displayed data changes.
+  - Fixed the issue where Access Tokens are no longer required for Cookie authentication types.
 
 ## 2.2.0
 - **New Features:**
-  - Auto Check-in feature added results/history interface and optimized default settings and user experience.
-  - Implemented daily site auto check-in, supporting time window settings and status display.
+  - Auto sign-in functionality now includes a results/history interface and optimized default settings and user experience.
+  - Implemented daily site auto sign-in, supporting time window settings and status display.
 - **Bug Fixes:**
-  - Fixed case sensitivity issues in auto check-in status detection.
-  - Handled edge cases in check-in time window calculation.
+  - Fixed case-sensitivity issues in auto sign-in status detection.
+  - Handled edge cases in sign-in time window calculations.
 
 ## 2.1.0
 - **New Features:**
-  - Account list added username search and highlighting functionality.
+  - Account list now includes username search and highlighting functionality.
 - **Bug Fixes:**
   - Added configuration validation warnings when API settings are missing.
-  - "New API" feature added configuration validation assistance and internationalized error messages.
+  - "New API" functionality now includes configuration validation assistance and internationalized error messages.
 
 ## 2.0.0
 - **New Features:**
   - The "New API Model Sync" filter bar now includes execution statistics.
-  - Added sync operation buttons to every row in the results table.
-  - Implemented the initial service, background logic, and settings interface for "New API Model Sync."
+  - Each row in the results table now includes sync operation buttons.
+  - Implemented the initial service, background logic, and settings interface for "New API Model Sync".
 - **Bug Fixes:**
   - Row retry operations now only update the target and progress UI.
   - Updated channel list response handling and types.
 
 ## 1.38.0
 - **New Features:**
-  - Supports pinning accounts configured with custom check-in or redemption URLs.
-  - Added custom redemption and open tab matching as sorting rules.
+  - Accounts with custom sign-in or redemption URLs set can now be pinned.
+  - Added custom redemption and opening tab matching as sorting rules.
 - **Bug Fixes:**
   - Ensured deep copying of default sorting rules.
   - New sorting conditions are disabled by default after migration.
 
 ## 1.37.0
 - **New Features:**
-  - Account search functionality has been enhanced to support multi-field composite search across UI interfaces.
-  - Added functionality to open the sidebar.
+  - Account search functionality has been enhanced to support multi-field composite searches across UI interfaces.
+  - Added the "Open Sidebar" functionality.
 - **Bug Fixes:**
   - Added translation for the "Clear" operation.
 
 ## 1.36.0
 - **New Features:**
-  - Accounts can now be configured with a redemption page path and support redirection.
-  - Option to automatically open the redemption page after check-in.
-  - Supports opening both check-in and redemption pages simultaneously.
+  - Accounts can now be configured with redemption page paths and support redirection.
+  - Option to automatically open the redemption page after sign-in.
+  - Supports opening both sign-in and redemption pages simultaneously.
 - **Bug Fixes:**
-  - Updated API routing paths for multiple sites.
+  - Updated API route paths for multiple sites.
 
 ## 1.35.0
 - **New Features:**
-  - Check-in icon updated to a "Yen" icon for better intuition.
+  - Sign-in icon updated to a "Yen" icon for better intuitiveness.
 - **Bug Fixes:**
-  - Custom check-in accounts now automatically reset their check-in status daily.
+  - Custom sign-in accounts will now have their sign-in status automatically reset daily.
   - Fixed the default value issue for the `isCheckedInToday` flag.
 
 ## 1.34.0
 - **New Features:**
   - WebDAV now supports automatic synchronization of account data using a merge strategy.
 - **Bug Fixes:**
-  - Replaced `chrome.runtime` with `browser.runtime` to improve cross-browser compatibility and optimized error handling.
+  - Replaced `chrome.runtime` with `browser.runtime` for improved cross-browser compatibility and optimized error handling.
 
 ## 1.33.0
 - **New Features:**
-  - Introduced a reusable `AppLayout` component to improve interface consistency.
+  - Introduced a reusable `AppLayout` component for improved interface consistency.
 
 ## 1.32.1
 - **Bug Fixes:**
-  - Fixed an issue where the width of the right content container was incorrect on small screens.
+  - Fixed an issue with incorrect width of the right content container on small screens.
 
 ## 1.32.0
 - **New Features:**
-  - Improved layout and responsiveness of the Account Management interface.
+  - Improved layout and responsiveness of the account management interface.
   - Added configurable React DevTools auto-plugin and caching.
 - **Bug Fixes:**
-  - Fixed the `z-index` issue for the overlay layer of the mobile sidebar.
+  - Fixed the `z-index` issue of the mobile sidebar overlay.
   - Buttons, cards, and icons now support responsive size adjustments.
 
 ## 1.31.0
 - **New Features:**
-  - Account Management added a "Create Account" button and optimized layout.
-  - Account Management added a "Usage Log" feature.
-  - Sorting priority settings now support drag-and-drop auto-saving, removing the manual save button.
+  - Account management now includes a "Create Account" button and optimized layout.
+  - Account management now includes a "Usage Log" feature.
+  - Sorting priority settings now support drag-and-drop auto-save, removing the manual save button.
 - **Bug Fixes:**
-  - Updated the size and accessibility label for the SiteInfo icon button.
+  - Updated the size and accessibility labels for SiteInfo icon buttons.
 
 ## 1.30.0
 - **New Features:**
-  - Replaced the dialog component with a custom `Modal` component for improved consistency.
-  - Added a comprehensive UI component library to enhance interface aesthetics and development efficiency.
+  - Dialog components have been replaced with a custom `Modal` component for improved consistency.
+  - Introduced a comprehensive UI component library for enhanced interface aesthetics and development efficiency.
 - **Bug Fixes:**
-  - Corrected check-in logic and sorting priorities.
-  - Optimized the transparency and layering of the mobile sidebar overlay for a better user experience.
+  - Corrected sign-in logic and sorting priority.
+  - Optimized the transparency and layering of the mobile sidebar overlay for an improved user experience.
 
 ## 1.29.0
 - **New Features:**
   - Popups now support detection and automatic closing.
-  - Popup added responsive layout for mobile devices to avoid the need for zooming on mobile devices.
+  - Popups now feature responsive mobile layout to avoid zooming on mobile devices.
 
 ## 1.28.0
 - **New Features:**
   - Implemented cross-platform intelligent auto-detection functionality.
   - Migrated `chrome.*` APIs to `browser.*` APIs, enhancing cross-browser compatibility and optimizing error handling.
-  - Fully ensured functional compatibility and UI design on mobile devices.
+  - Fully ensured functional compatibility and user interface design on mobile devices.
 - **Bug Fixes:**
-  - Fixed the issue of `tabId` parsing after window creation.
-  - Prevented the border rotation animation on buttons during refresh.
+  - Fixed `tabId` parsing issues after window creation.
+  - Prevented button border rotation animation during refresh.
 
 ## 1.27.0
 - **New Features:**
-  - When successfully auto-configured to a New API, the account dialog automatically closes.
-  - Implemented dynamic loading of localization resources to enhance internationalization support.
+  - The account dialog will automatically close after successful auto-configuration to New API.
+  - Implemented dynamic loading of localization resources for improved internationalization support.
 - **Bug Fixes:**
   - Added internationalization support for error messages.
   - Fixed template syntax errors in Chinese/English currency switching.
 
 ## 1.26.0
 - **Bug Fixes:**
-  - Account error messages now support internationalization.
+  - Account error messages are now internationalized.
   - Replaced hardcoded Chinese text in `newApiService` with internationalization keys.
 
 ## 1.25.0
 - **New Features:**
-  - Improved accessibility of the WebDAV settings form.
+  - Improved the accessibility of the WebDAV settings form.
 - **Bug Fixes:**
   - Replaced hardcoded Chinese text in the `TokenHeader` prompt with translation keys.
 
@@ -705,7 +1041,7 @@ v3.15.0 **has made forced adjustments to auto-refresh configurations**:
 
 ## 1.23.2
 - **Bug Fixes:**
-  - Fixed errors in the RMB currency conversion logic.
+  - Fixed logic errors in CNY currency conversion.
 
 ## 1.23.1
 - **Bug Fixes:**
@@ -714,28 +1050,28 @@ v3.15.0 **has made forced adjustments to auto-refresh configurations**:
 ## 1.23.0
 - **New Features:**
   - Added Chinese and English localization support.
-  - Added language switching functionality, supporting Suspense loading.
+  - Added language switching functionality and support for Suspense loading.
 - **Bug Fixes:**
-  - Completed internationalization of remaining hardcoded texts.
-  - Fixed the issue where a success message was displayed even when no account refresh occurred.
+  - Completed internationalization of remaining hardcoded text.
+  - Fixed the issue where a success message was still displayed when there were no accounts to refresh.
 
 ## 1.22.0
 - **New Features:**
-  - Accounts now have a "Today's Total Income" field and an income display interface.
+  - Accounts now include a "Today's Total Income" field and an income display interface.
   - Supports redemption code recharge types.
 - **Bug Fixes:**
-  - Fixed rendering logic for the custom URL check-in interface.
-  - Corrected check-in field names and return structures.
+  - Fixed rendering logic for the custom URL sign-in interface.
+  - Corrected sign-in field names and return structures.
 
 ## 1.21.0
 - **New Features:**
-  - Added favicon and extension icons for the popup, settings, and sidebar pages.
+  - Added favicon and extension icons for popup, settings, and sidebar pages.
   - Added keyboard shortcuts for sidebar and popup operations.
-  - Migrated the underlying framework from Plasmo to WXT, resulting in better performance and development experience.
+  - Migrated the underlying framework from Plasmo to WXT for better performance and development experience.
 
 ## 1.20.0
 - **New Features:**
-  - Balance and health status indicators now support refreshing.
+  - Balance and health status indicators now include a refresh function.
   - Operation button UI has been unified and optimized, supporting intelligent key handling.
 
 ## 1.19.0
@@ -743,31 +1079,31 @@ v3.15.0 **has made forced adjustments to auto-refresh configurations**:
   - All components now support dark mode.
   - Implemented a theme system supporting dark, light, and system-following modes.
 - **Bug Fixes:**
-  - The API configuration interface now mandates the `authType` field.
+  - API configuration interface now requires the `authType` field.
 
 ## 1.18.0
 - **New Features:**
-  - Accounts now have a custom check-in button (with a Yen icon).
+  - Accounts now include a custom sign-in button (with a Yen icon).
   - Implemented a versioned configuration migration system to ensure compatibility during updates.
-  - Sorting functionality now includes custom check-in URLs as sorting criteria.
+  - Sorting function now includes custom sign-in URL as a sorting condition.
 - **Bug Fixes:**
-  - Fixed an issue where the custom check-in URL was not correctly passed to the handler.
+  - Fixed an issue where the custom sign-in URL was not correctly passed to the handler.
 
 ## 1.17.0
 - **New Features:**
-  - Accounts now support selecting an authentication type.
-  - API authentication options now include a "No Authentication" type.
-  - The Tooltip component migrated to the `react-tooltip` library, resolving overflow display issues.
+  - Accounts now support selecting authentication types.
+  - API authentication options now include an "No Authentication" type.
+  - Tooltip component migrated to the `react-tooltip` library, resolving display overflow issues.
 
 ## 1.16.0
 - **New Features:**
-  - "New API" feature now supports automatic account configuration.
-  - Site accounts now support check-in functionality.
+  - "New API" functionality now supports automatic account configuration.
+  - Site accounts now include sign-in functionality.
   - Implemented a customizable sorting priority system.
 
 ## 1.15.0
 - **Bug Fixes:**
-  - Fixed an issue where unnecessary updates and notifications were triggered even when the value was unchanged.
+  - Fixed an issue where unnecessary updates and notifications were triggered even when values had not changed.
 
 ## 1.14.0
 - **New Features:**
@@ -776,7 +1112,7 @@ v3.15.0 **has made forced adjustments to auto-refresh configurations**:
 ## 1.13.0
 - **New Features:**
   - Added "New API" integration, supporting token import.
-  - Added "New API" integration settings in Preferences.
+  - Added "New API" integration settings in preferences.
   - Added password visibility toggle functionality.
 
 ## 1.12.1
@@ -787,12 +1123,12 @@ v3.15.0 **has made forced adjustments to auto-refresh configurations**:
 ## 1.12.0
 - **New Features:**
   - Account sorting now includes health status priority.
-  - Health status now contains more detailed reason information.
+  - Health status now includes more detailed reason information.
 
 ## 1.11.0
 - **New Features:**
   - Refresh functionality has been enhanced to support detailed status tracking.
-  - Added a minimum refresh interval to prevent overly frequent requests.
+  - Added a minimum refresh interval to prevent frequent requests.
 
 ## 1.10.0
 - **New Features:**
@@ -801,44 +1137,44 @@ v3.15.0 **has made forced adjustments to auto-refresh configurations**:
 ## 1.9.0
 - **New Features:**
   - Added OneHub token management and data fetching capabilities.
-  - Added user group data transformation and API integration.
+  - Added user group data conversion and API integration.
   - Implemented model fetching functionality for OneHub sites.
 
 ## 1.8.0
 - **New Features:**
-  - Account management now supports additional site types.
+  - Account management now supports site type.
   - Added site type detection and optimized the auto-detection process.
   - Implemented model pricing functionality for OneHub sites.
 
 ## 1.7.1
 - **Bug Fixes:**
-  - Fixed a logic error in detecting check-in support using site status detection.
+  - Fixed a logic error in using site status detection for sign-in support.
 
 ## 1.7.0
 - **New Features:**
-  - Added check-in support detection and switching functionality.
-  - Accounts now support check-in status.
+  - Added sign-in support detection and switching functionality.
+  - Accounts now support sign-in status.
 
 ## 1.6.0
 - **New Features:**
   - Account management now supports a remarks field.
 
 ## 1.5.0
-- **Performance Optimization:**
-  - The rendering method for the model list has been optimized, improving loading performance.
+- **Performance Optimizations:**
+  - Optimized the rendering method of the model list to improve loading performance.
 
 ## 1.4.1
 - **Bug Fixes:**
-  - Fixed an issue where the detected account status was automatically reset when no existing account was found.
+  - Fixed an issue where the status of detected accounts was reset when no existing accounts were found.
 
 ## 1.4.0
 - **New Features:**
-  - Control panel now includes a function to copy model names.
+  - Control panel now includes a "Copy Model Name" function.
   - Added support for Baidu and Yi model providers.
 
 ## 1.3.1
 - **Bug Fixes:**
-  - Updated the configuration for the release PR workflow.
+  - Updated PR release workflow configuration.
 
 ## 1.3.0
 - **New Features:**
@@ -846,8 +1182,8 @@ v3.15.0 **has made forced adjustments to auto-refresh configurations**:
 
 ## 1.2.0
 - **New Features:**
-  - Added an Account Management page supporting full CRUD operations.
-  - Custom dialogs in the popup have been replaced with direct function calls to simplify operations.
+  - Added an account management page with full CRUD functionality.
+  - Replaced custom dialogs in popups with direct function calls for simplified operations.
 
 ## 1.1.1
 - **Bug Fixes:**
@@ -855,36 +1191,36 @@ v3.15.0 **has made forced adjustments to auto-refresh configurations**:
 
 ## 1.1.0
 - **New Features:**
-  - Added manual addition support for accounts and optimized the UI flow.
+  - Accounts now support manual addition, with an optimized UI flow.
 
 ## 1.0.0
 - **New Features:**
-  - Implemented detection and highlighting for the current site.
-  - Added warning prompts for Firefox browser detection and when adding accounts.
-  - Introduced the sidebar feature, replacing automatic site configuration in the popup.
+  - Implemented detection and highlighting of the current site.
+  - Added Firefox browser detection and warning prompts when adding accounts.
+  - Introduced sidebar functionality, replacing popup-based auto site configuration.
 
 ## 0.0.3
 - **New Features:**
-  - Optimized account recognition process, now supporting automatic creation of access keys.
+  - Optimized account identification process, now supporting automatic access key creation.
   - Account list now includes sortable headers, a copy key dialog, and hover action buttons.
-  - Account management added a remarks field.
-  - Website names are clickable for navigation.
-  - Model list supports grouped selection.
-  - The popup page adds digital rolling animations and a site status indicator.
-  - Optimized the Add/Edit Account dialog, including recharge ratio settings and automatic extraction of site names.
-  - Fully implemented the settings page system, supporting persistence of user preferences and automatic refresh.
-  - Enhanced the frontend interface and background service for automatic refresh functionality.
+  - Account management now includes a remarks field.
+  - Website names are now clickable for navigation.
+  - Model list supports group selection.
+  - Popup pages feature digital rolling animations and site status indicators.
+  - Optimized add/edit account dialogs, including recharge ratio settings and automatic site name extraction.
+  - Fully implemented the settings page system, supporting persistent user preferences and auto-refresh.
+  - Enhanced frontend interface and backend services for auto-refresh functionality.
   - Automatically adds the `sk-` prefix when copying keys.
-  - Introduced industry-standard Tab scrolling interaction experience.
-  - Optimized dynamic updating and deletion of account health status.
+  - Introduced industry-standard tab scrolling interaction experience.
+  - Optimized dynamic updates and deletion of account health status.
   - Supports more AI model vendors (e.g., OneHub, DoneHub, Super-API, VoAPI, etc.).
-  - The popup interface was refactored to an API Manager style, adding display for today's total consumed amount.
+  - Popup interface refactored to API Manager style, with added display of total daily consumption amount.
   - Optimized overall scrolling layout and Tooltip animation effects.
 - **Bug Fixes:**
   - Fixed issues with incompatible model data formats, `localStorage` access, and API request credentials.
   - Corrected API authentication methods.
   - Optimized URL input handling and auto-refresh configuration.
-  - Added pagination logic to handle log data.
+  - Added pagination logic for handling log data.
   - Fixed multiple UI and compatibility issues.
 
 ## 0.0.1
