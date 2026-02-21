@@ -90,6 +90,35 @@ const applyCashflow = <TPayload extends ShareSnapshotCashflowPayload>(
   }
 }
 
+const appendCashflowAndAsOf = (
+  lines: string[],
+  payload: ShareSnapshotCashflowPayload,
+  labels: ShareSnapshotOverlayLabels,
+  asOfText: string,
+  currencyType: CurrencyType,
+) => {
+  if (
+    typeof payload.todayIncome === "number" &&
+    typeof payload.todayOutcome === "number" &&
+    typeof payload.todayNet === "number"
+  ) {
+    lines.push(
+      `${labels.today}: ${labels.income} ${formatSignedCurrencyAmount(
+        payload.todayIncome,
+        currencyType,
+      )} / ${labels.outcome} ${formatSignedCurrencyAmount(
+        -payload.todayOutcome,
+        currencyType,
+      )} · ${labels.net} ${formatSignedCurrencyAmount(
+        payload.todayNet,
+        currencyType,
+      )}`,
+    )
+  }
+
+  lines.push(`${labels.asOf}: ${asOfText}`)
+}
+
 /**
  * Builds the allowlisted payload for an overview snapshot (aggregated across enabled accounts only).
  */
@@ -196,31 +225,18 @@ export const generateShareSnapshotCaption = (
 
     const lines = [header, summary]
 
-    if (
-      typeof payload.todayIncome === "number" &&
-      typeof payload.todayOutcome === "number" &&
-      typeof payload.todayNet === "number"
-    ) {
-      lines.push(
-        `${labels.today}: ${labels.income} ${formatSignedCurrencyAmount(
-          payload.todayIncome,
-          payload.currencyType,
-        )} / ${labels.outcome} ${formatSignedCurrencyAmount(
-          -payload.todayOutcome,
-          payload.currencyType,
-        )} · ${labels.net} ${formatSignedCurrencyAmount(
-          payload.todayNet,
-          payload.currencyType,
-        )}`,
-      )
-    }
-
-    lines.push(`${labels.asOf}: ${asOfText}`)
+    appendCashflowAndAsOf(
+      lines,
+      payload,
+      labels,
+      asOfText,
+      payload.currencyType,
+    )
     return lines.join("\n")
   }
 
   const header = `${appName} — ${payload.siteName}`
-  const originLine = payload.originUrl ? payload.originUrl : undefined
+  const originLine = payload.originUrl
   const summary = `${labels.balance}: ${formatCurrencyAmount(
     payload.balance,
     payload.currencyType,
@@ -228,26 +244,7 @@ export const generateShareSnapshotCaption = (
 
   const lines = originLine ? [header, originLine, summary] : [header, summary]
 
-  if (
-    typeof payload.todayIncome === "number" &&
-    typeof payload.todayOutcome === "number" &&
-    typeof payload.todayNet === "number"
-  ) {
-    lines.push(
-      `${labels.today}: ${labels.income} ${formatSignedCurrencyAmount(
-        payload.todayIncome,
-        payload.currencyType,
-      )} / ${labels.outcome} ${formatSignedCurrencyAmount(
-        -payload.todayOutcome,
-        payload.currencyType,
-      )} · ${labels.net} ${formatSignedCurrencyAmount(
-        payload.todayNet,
-        payload.currencyType,
-      )}`,
-    )
-  }
-
-  lines.push(`${labels.asOf}: ${asOfText}`)
+  appendCashflowAndAsOf(lines, payload, labels, asOfText, payload.currencyType)
   return lines.join("\n")
 }
 
@@ -328,7 +325,7 @@ const tryCopyImageToClipboard = async (
   ) => ClipboardItem
 
   const ClipboardItemCtor = (
-    window as unknown as { ClipboardItem?: ClipboardItemConstructor }
+    globalThis as unknown as { ClipboardItem?: ClipboardItemConstructor }
   ).ClipboardItem
 
   if (!clipboard?.write || !ClipboardItemCtor) {
