@@ -1,7 +1,8 @@
 import { act, renderHook, waitFor } from "@testing-library/react"
 import type { ReactNode } from "react"
+import toast from "react-hot-toast"
 import { I18nextProvider } from "react-i18next"
-import { beforeAll, describe, expect, it, vi } from "vitest"
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useKeyManagement } from "~/entrypoints/options/pages/KeyManagement/hooks/useKeyManagement"
 import { useAccountData } from "~/hooks/useAccountData"
@@ -17,6 +18,13 @@ vi.mock("~/hooks/useAccountData", () => ({
 
 vi.mock("~/services/apiService", () => ({
   getApiService: vi.fn(),
+}))
+
+vi.mock("react-hot-toast", () => ({
+  default: {
+    success: vi.fn(),
+    error: vi.fn(),
+  },
 }))
 
 const createDisplayAccount = (
@@ -55,6 +63,11 @@ describe("useKeyManagement enabled account filtering", () => {
       true,
     )
     testI18n.addResourceBundle("en", "messages", messagesEn, true, true)
+  })
+
+  beforeEach(() => {
+    vi.mocked(toast.success).mockReset()
+    vi.mocked(toast.error).mockReset()
   })
 
   it("uses enabledDisplayData from useAccountData for selectors", () => {
@@ -104,6 +117,99 @@ describe("useKeyManagement enabled account filtering", () => {
     await waitFor(() => expect(result.current.selectedAccount).toBe(""))
   })
 
+  it("keeps selectedAccount when it is set to all", async () => {
+    const mockedUseAccountData = vi.mocked(useAccountData)
+    mockedUseAccountData.mockReturnValue({
+      enabledDisplayData: [
+        createDisplayAccount({
+          id: "enabled",
+          name: "Enabled",
+        }),
+      ],
+    } as any)
+
+    const fetchAccountTokens = vi.fn().mockResolvedValue([])
+    const mockedGetApiService = vi.mocked(getApiService)
+    mockedGetApiService.mockReturnValue({ fetchAccountTokens } as any)
+
+    const { result } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => {
+      result.current.setSelectedAccount("all")
+    })
+
+    await waitFor(() => expect(result.current.selectedAccount).toBe("all"))
+  })
+
+  it("starts token loads for all distinct origins without a global cap in all mode", async () => {
+    const mockedUseAccountData = vi.mocked(useAccountData)
+
+    const accountCount = 8
+    const accounts = Array.from({ length: accountCount }, (_, index) => {
+      const accountIndex = index + 1
+      return createDisplayAccount({
+        id: `acc-${accountIndex}`,
+        name: `Account ${accountIndex}`,
+        baseUrl: `https://${accountIndex}.example.com/v1`,
+      })
+    })
+
+    mockedUseAccountData.mockReturnValue({
+      enabledDisplayData: accounts,
+    } as any)
+
+    const createToken = (tokenId: number) => ({
+      id: tokenId,
+      user_id: 1,
+      key: `sk-${tokenId}`,
+      status: 1,
+      name: `Token ${tokenId}`,
+      created_time: 0,
+      accessed_time: 0,
+      expired_time: 0,
+      remain_quota: 0,
+      unlimited_quota: false,
+      used_quota: 0,
+    })
+
+    const resolversByAccountId = new Map<string, (tokens: any[]) => void>()
+
+    const fetchAccountTokens = vi.fn((request: any) => {
+      return new Promise<any[]>((resolve) => {
+        if (typeof request?.accountId === "string") {
+          resolversByAccountId.set(request.accountId, resolve)
+        }
+      })
+    })
+
+    const mockedGetApiService = vi.mocked(getApiService)
+    mockedGetApiService.mockReturnValue({ fetchAccountTokens } as any)
+
+    const { result } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => {
+      result.current.setSelectedAccount("all")
+    })
+
+    await waitFor(() =>
+      expect(fetchAccountTokens).toHaveBeenCalledTimes(accountCount),
+    )
+
+    accounts.forEach((account, index) => {
+      const resolver = resolversByAccountId.get(account.id)
+      expect(resolver).toBeDefined()
+      resolver?.([createToken(index + 1)])
+    })
+
+    await waitFor(() =>
+      expect(result.current.tokens).toHaveLength(accountCount),
+    )
+  })
+
   it("ignores routeParams.accountId when it points to a disabled account", async () => {
     const mockedUseAccountData = vi.mocked(useAccountData)
     const enabledAccount = createDisplayAccount({
@@ -126,5 +232,269 @@ describe("useKeyManagement enabled account filtering", () => {
     )
 
     await waitFor(() => expect(result.current.selectedAccount).toBe(""))
+  })
+
+  it("loads tokens across accounts and isolates per-account failures in all mode", async () => {
+    const mockedUseAccountData = vi.mocked(useAccountData)
+
+    const accountA = createDisplayAccount({
+      id: "acc-a",
+      name: "Account A",
+      baseUrl: "https://example.com/v1",
+    })
+    const accountB = createDisplayAccount({
+      id: "acc-b",
+      name: "Account B",
+      baseUrl: "https://example.com/v1",
+    })
+
+    mockedUseAccountData.mockReturnValue({
+      enabledDisplayData: [accountA, accountB],
+    } as any)
+
+    const fetchAccountTokens = vi.fn(async (request: any) => {
+      if (request?.accountId === accountA.id) {
+        return [
+          {
+            id: 1,
+            user_id: 1,
+            key: "sk-a",
+            status: 1,
+            name: "Token A",
+            created_time: 0,
+            accessed_time: 0,
+            expired_time: 0,
+            remain_quota: 0,
+            unlimited_quota: false,
+            used_quota: 0,
+          },
+        ]
+      }
+
+      if (request?.accountId === accountB.id) {
+        throw new Error("boom")
+      }
+
+      return []
+    })
+
+    const mockedGetApiService = vi.mocked(getApiService)
+    mockedGetApiService.mockReturnValue({ fetchAccountTokens } as any)
+
+    const { result } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => {
+      result.current.setSelectedAccount("all")
+    })
+
+    await waitFor(() => expect(result.current.tokens).toHaveLength(1))
+    expect(result.current.tokens[0]?.accountId).toBe(accountA.id)
+
+    await waitFor(() => expect(result.current.failedAccounts).toHaveLength(1))
+    expect(result.current.failedAccounts[0]).toMatchObject({
+      accountId: accountB.id,
+      accountName: accountB.name,
+      errorMessage: keyManagementEn.messages.loadFailed,
+    })
+
+    expect(vi.mocked(toast.error)).not.toHaveBeenCalled()
+  })
+
+  it("retries failed accounts in all mode", async () => {
+    const mockedUseAccountData = vi.mocked(useAccountData)
+
+    const accountA = createDisplayAccount({
+      id: "acc-a",
+      name: "Account A",
+      baseUrl: "https://example.com/v1",
+    })
+    const accountB = createDisplayAccount({
+      id: "acc-b",
+      name: "Account B",
+      baseUrl: "https://example.com/v1",
+    })
+
+    mockedUseAccountData.mockReturnValue({
+      enabledDisplayData: [accountA, accountB],
+    } as any)
+
+    let accountBCallCount = 0
+    const fetchAccountTokens = vi.fn(async (request: any) => {
+      if (request?.accountId === accountA.id) {
+        return [
+          {
+            id: 1,
+            user_id: 1,
+            key: "sk-a",
+            status: 1,
+            name: "Token A",
+            created_time: 0,
+            accessed_time: 0,
+            expired_time: 0,
+            remain_quota: 0,
+            unlimited_quota: false,
+            used_quota: 0,
+          },
+        ]
+      }
+
+      if (request?.accountId === accountB.id) {
+        accountBCallCount += 1
+        if (accountBCallCount === 1) {
+          throw new Error("boom")
+        }
+
+        return [
+          {
+            id: 2,
+            user_id: 1,
+            key: "sk-b",
+            status: 1,
+            name: "Token B",
+            created_time: 0,
+            accessed_time: 0,
+            expired_time: 0,
+            remain_quota: 0,
+            unlimited_quota: false,
+            used_quota: 0,
+          },
+        ]
+      }
+
+      return []
+    })
+
+    const mockedGetApiService = vi.mocked(getApiService)
+    mockedGetApiService.mockReturnValue({ fetchAccountTokens } as any)
+
+    const { result } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => {
+      result.current.setSelectedAccount("all")
+    })
+
+    await waitFor(() => expect(result.current.failedAccounts).toHaveLength(1))
+
+    await act(async () => {
+      await result.current.retryFailedAccounts()
+    })
+
+    await waitFor(() => expect(result.current.tokens).toHaveLength(2))
+    await waitFor(() => expect(result.current.failedAccounts).toHaveLength(0))
+
+    expect(vi.mocked(toast.error)).not.toHaveBeenCalled()
+  })
+
+  it("supports account filtering in all mode while keeping per-account summary counts", async () => {
+    const mockedUseAccountData = vi.mocked(useAccountData)
+
+    const accountA = createDisplayAccount({
+      id: "acc-a",
+      name: "Account A",
+      baseUrl: "https://example.com/v1",
+    })
+    const accountB = createDisplayAccount({
+      id: "acc-b",
+      name: "Account B",
+      baseUrl: "https://example.com/v1",
+    })
+
+    mockedUseAccountData.mockReturnValue({
+      enabledDisplayData: [accountA, accountB],
+    } as any)
+
+    const fetchAccountTokens = vi.fn(async (request: any) => {
+      if (request?.accountId === accountA.id) {
+        return [
+          {
+            id: 1,
+            user_id: 1,
+            key: "sk-a",
+            status: 1,
+            name: "Token A",
+            created_time: 0,
+            accessed_time: 0,
+            expired_time: 0,
+            remain_quota: 0,
+            unlimited_quota: false,
+            used_quota: 0,
+          },
+        ]
+      }
+
+      if (request?.accountId === accountB.id) {
+        return [
+          {
+            id: 1,
+            user_id: 1,
+            key: "sk-b",
+            status: 1,
+            name: "Token B",
+            created_time: 0,
+            accessed_time: 0,
+            expired_time: 0,
+            remain_quota: 0,
+            unlimited_quota: false,
+            used_quota: 0,
+          },
+        ]
+      }
+
+      return []
+    })
+
+    const mockedGetApiService = vi.mocked(getApiService)
+    mockedGetApiService.mockReturnValue({ fetchAccountTokens } as any)
+
+    const { result } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => {
+      result.current.setSelectedAccount("all")
+    })
+
+    await waitFor(() => expect(result.current.tokens).toHaveLength(2))
+
+    expect(result.current.accountSummaryItems).toEqual([
+      {
+        accountId: accountA.id,
+        name: accountA.name,
+        count: 1,
+        errorType: undefined,
+      },
+      {
+        accountId: accountB.id,
+        name: accountB.name,
+        count: 1,
+        errorType: undefined,
+      },
+    ])
+
+    act(() => {
+      result.current.setAllAccountsFilterAccountId(accountA.id)
+    })
+
+    await waitFor(() => expect(result.current.tokens).toHaveLength(1))
+    expect(result.current.tokens[0]?.accountId).toBe(accountA.id)
+
+    expect(result.current.accountSummaryItems).toEqual([
+      {
+        accountId: accountA.id,
+        name: accountA.name,
+        count: 1,
+        errorType: undefined,
+      },
+      {
+        accountId: accountB.id,
+        name: accountB.name,
+        count: 1,
+        errorType: undefined,
+      },
+    ])
   })
 })

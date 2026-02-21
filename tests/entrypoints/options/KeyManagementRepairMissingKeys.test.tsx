@@ -76,9 +76,9 @@ vi.mock(
 )
 
 vi.mock(
-  "~/entrypoints/options/pages/KeyManagement/components/Controls",
+  "~/entrypoints/options/pages/KeyManagement/components/AccountSelectorPanel",
   () => ({
-    Controls: () => <div data-testid="controls" />,
+    AccountSelectorPanel: () => <div data-testid="controls" />,
   }),
 )
 

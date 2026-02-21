@@ -4,6 +4,7 @@ import { Card, CardContent } from "~/components/ui"
 import type { DisplaySiteData } from "~/types"
 
 import { AccountToken } from "../../type"
+import { buildTokenIdentityKey } from "../../utils"
 import { KeyDisplay } from "./KeyDisplay"
 import { TokenDetails } from "./TokenDetails"
 import { TokenHeader } from "./TokenHeader"
@@ -14,13 +15,13 @@ interface TokenListItemProps {
    */
   token: AccountToken
   /**
-   * Set of token IDs currently visible (unmasked).
+   * Set of token identity keys currently visible (unmasked).
    */
-  visibleKeys: Set<number>
+  visibleKeys: Set<string>
   /**
-   * Toggles visibility of a token by ID.
+   * Toggles visibility of a token by identity key.
    */
-  toggleKeyVisibility: (id: number) => void
+  toggleKeyVisibility: (identityKey: string) => void
   /**
    * Copies the token key to clipboard.
    */
@@ -59,6 +60,7 @@ export function TokenListItem(props: TokenListItemProps) {
     onOpenCCSwitchDialog,
   } = props
   const { t } = useTranslation("keyManagement")
+  const tokenIdentityKey = buildTokenIdentityKey(token.accountId, token.id)
 
   return (
     <Card variant="interactive">
@@ -76,7 +78,7 @@ export function TokenListItem(props: TokenListItemProps) {
             <div className="dark:text-dark-text-secondary space-y-2 text-xs text-gray-600 sm:text-sm">
               <KeyDisplay
                 tokenKey={token.key}
-                tokenId={token.id}
+                tokenIdentityKey={tokenIdentityKey}
                 visibleKeys={visibleKeys}
                 toggleKeyVisibility={toggleKeyVisibility}
               />

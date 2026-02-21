@@ -3,10 +3,21 @@
   "description": "This page displays API key information for all accounts, including usage and expiration time. You can create new keys for specific accounts by clicking the 'Add Key' button in the upper right corner or the '+' button next to each key item. Please keep your API keys safe and avoid leaking them to others",
   "selectAccount": "Select Account",
   "pleaseSelectAccount": "Please select account",
+  "allAccounts": "All accounts",
   "searchPlaceholder": "Search key name...",
   "totalKeys": "Total {{count}} keys",
   "enabledCount": "Enabled {{count}}",
   "showingCount": "Showing {{count}}",
+  "allAccountsProgress": "{{loaded}}/{{total}} accounts loaded",
+  "allAccountsLoading": "{{count}} loading",
+  "allAccountsFailed": "{{count}} failed",
+  "allAccountsLoadFailedTitle": "{{count}} account(s) failed to load",
+  "allAccountsLoadFailedDescription": "Failed: {{accounts}}",
+  "accountSummary": {
+    "title": "Accounts overview",
+    "keys": "{{count}} keys",
+    "loadFailed": "load failed"
+  },
   "noKeys": "No key data yet",
   "noMatchingKeys": "No matching keys found",
   "pleaseAddAccount": "Please add an account first",
@@ -80,7 +91,10 @@
     "enable": "Enable",
     "disable": "Disable",
     "showKey": "Show Key",
-    "hideKey": "Hide Key"
+    "hideKey": "Hide Key",
+    "retryFailed": "Retry failed",
+    "expandAll": "Expand all",
+    "collapseAll": "Collapse all"
   },
   "messages": {
     "loadFailed": "Failed to load key list",

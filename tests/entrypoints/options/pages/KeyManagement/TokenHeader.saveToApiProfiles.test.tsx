@@ -107,6 +107,7 @@ describe("TokenHeader save to API profiles", () => {
       remain_quota: 0,
       unlimited_quota: false,
       used_quota: 0,
+      accountId: account.id,
       accountName: account.name,
     }
 

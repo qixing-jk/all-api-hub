@@ -3,12 +3,16 @@ import { t } from "i18next"
 
 import { UI_CONSTANTS } from "~/constants/ui"
 
+// 构建 token 在 UI 中的唯一标识 (accountId + tokenId)，避免跨账号 tokenId 冲突
+export const buildTokenIdentityKey = (accountId: string, tokenId: number) =>
+  `${accountId}:${tokenId}`
+
 export const formatKey = (
   key: string,
-  tokenId: number,
-  visibleKeys: Set<number>,
+  tokenIdentityKey: string,
+  visibleKeys: Set<string>,
 ) => {
-  if (visibleKeys.has(tokenId)) {
+  if (visibleKeys.has(tokenIdentityKey)) {
     return key
   }
   if (key.length < 12) {
