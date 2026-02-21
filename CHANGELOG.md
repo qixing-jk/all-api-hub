@@ -1,5 +1,26 @@
 # Changelog
 
+## [3.22.0](https://github.com/qixing-jk/all-api-hub/compare/v3.21.0...v3.22.0) (2026-02-21)
+
+
+### Features
+
+* **account:** exclude disabled accounts from refresh and UI operations ([#494](https://github.com/qixing-jk/all-api-hub/issues/494)) ([d6a31e8](https://github.com/qixing-jk/all-api-hub/commit/d6a31e84dcecbd8805b719dec846fdccf1802411))
+* **docs:** add sitemap plugin for SEO support ([634950d](https://github.com/qixing-jk/all-api-hub/commit/634950d861e98b9419abd5612b0fba888b3effc7))
+* **e2e:** add Playwright smoke tests for extension pages ([#496](https://github.com/qixing-jk/all-api-hub/issues/496)) ([afbcc37](https://github.com/qixing-jk/all-api-hub/commit/afbcc379cbb586c54d22e8525ad78a964888687e))
+* **model-list:** add key compatibility check and creation flow ([#495](https://github.com/qixing-jk/all-api-hub/issues/495)) ([beb19da](https://github.com/qixing-jk/all-api-hub/commit/beb19da39b4c411d645721dc99ced13785411772))
+* **share:** add account and overview snapshot sharing ([#497](https://github.com/qixing-jk/all-api-hub/issues/497)) ([2ef9db7](https://github.com/qixing-jk/all-api-hub/commit/2ef9db794b3ae57571e207179fb8f889587bbc49))
+
+
+### Bug Fixes
+
+* **spinner:** Can't see spinner and show left icon and spinner at the same time ([#498](https://github.com/qixing-jk/all-api-hub/issues/498)) ([d33be0a](https://github.com/qixing-jk/all-api-hub/commit/d33be0a1e2d49d54b4e1985acc2b58548a4a053c))
+
+
+### Reverts
+
+* remove Cloudflare Turnstile auto-checkin fallback feature docs ([4b777ad](https://github.com/qixing-jk/all-api-hub/commit/4b777ad9dfc553df42cd9eb01f5385f491426bfb))
+
 ## [3.21.0](https://github.com/qixing-jk/all-api-hub/compare/v3.20.0...v3.21.0) (2026-02-17)
 
 
