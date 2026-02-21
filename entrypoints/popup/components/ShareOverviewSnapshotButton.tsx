@@ -39,13 +39,8 @@ export default function ShareOverviewSnapshotButton() {
     const includeToday = showTodayCashflow !== false
 
     let totalBalance = 0
-    let todayIncome: number | undefined
-    let todayOutcome: number | undefined
-
-    if (includeToday) {
-      todayIncome = 0
-      todayOutcome = 0
-    }
+    let todayIncome = 0
+    let todayOutcome = 0
 
     for (const site of displayData) {
       if (site.disabled === true) {
@@ -57,8 +52,8 @@ export default function ShareOverviewSnapshotButton() {
       }
 
       if (includeToday) {
-        todayIncome! += site.todayIncome?.[currencyType] ?? 0
-        todayOutcome! += site.todayConsumption?.[currencyType] ?? 0
+        todayIncome += site.todayIncome?.[currencyType] ?? 0
+        todayOutcome += site.todayConsumption?.[currencyType] ?? 0
       }
     }
 
@@ -68,8 +63,8 @@ export default function ShareOverviewSnapshotButton() {
       enabledAccountCount: enabledAccountCount,
       totalBalance,
       includeTodayCashflow: includeToday,
-      todayIncome,
-      todayOutcome,
+      todayIncome: includeToday ? todayIncome : undefined,
+      todayOutcome: includeToday ? todayOutcome : undefined,
       asOf: latestSyncTime > 0 ? latestSyncTime : undefined,
     })
 

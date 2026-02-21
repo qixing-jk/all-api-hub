@@ -136,9 +136,9 @@ const PaletteSwatches = ({ colors }: { colors: readonly string[] }) => {
   return (
     <div className="mt-3 space-y-2">
       <div className="flex gap-1">
-        {colors.map((color) => (
+        {colors.map((color, index) => (
           <div
-            key={color}
+            key={`${color}-${index}`}
             className="h-3 flex-1 rounded-sm"
             style={{ backgroundColor: color }}
             title={color}
@@ -146,8 +146,8 @@ const PaletteSwatches = ({ colors }: { colors: readonly string[] }) => {
         ))}
       </div>
       <div className="dark:text-dark-text-tertiary grid grid-cols-2 gap-x-2 gap-y-1 text-xs text-gray-500">
-        {colors.map((color) => (
-          <span key={color} className="font-mono">
+        {colors.map((color, index) => (
+          <span key={`${color}-${index}`} className="font-mono">
             {color.toLowerCase()}
           </span>
         ))}
