@@ -112,7 +112,7 @@ Also guard against races:
 - Add token dialog:
   - If `selectedAccount === "all"`, open `AddTokenDialog` with `preSelectedAccountId = null` so the user chooses the target account.
 
-Search behavior remains unchanged: it continues to match against `token.name` and raw `token.key` (case-insensitive).
+Search matches against `token.name` only (case-insensitive). We intentionally do **not** search `token.key` because it is a secret value.
 
 ## Risks / Trade-offs
 
@@ -129,4 +129,6 @@ Search behavior remains unchanged: it continues to match against `token.name` an
 
 ## Open Questions
 
-- For accounts that cannot fetch tokens due to unsupported auth/site type, should we mark them as “unsupported” vs a generic “load failed” error?
+- **Resolved:** For now, treat unsupported auth/site types the same as other failures and surface a generic “load failed” state.
+  - Rationale: reliably detecting “unsupported” vs transient/network errors is backend-specific and easy to misclassify.
+  - Follow-up: if we later add explicit capability checks (or standardized error codes) per site type, introduce a distinct UI label (e.g. “unsupported”) and a separate `errorType` for `AccountSummaryBar`.

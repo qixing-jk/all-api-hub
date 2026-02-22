@@ -71,6 +71,7 @@ describe("Managed site logo", () => {
       remain_quota: 0,
       unlimited_quota: false,
       used_quota: 0,
+      accountId: "account-1",
       accountName: "Test Account",
     }
 
@@ -106,6 +107,7 @@ describe("Managed site logo", () => {
       remain_quota: 0,
       unlimited_quota: false,
       used_quota: 0,
+      accountId: "account-1",
       accountName: "Test Account",
     }
 

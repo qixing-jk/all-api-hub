@@ -11,8 +11,6 @@
   "allAccountsProgress": "已加载 {{loaded}}/{{total}} 个账号",
   "allAccountsLoading": "{{count}} 个加载中",
   "allAccountsFailed": "{{count}} 个失败",
-  "allAccountsLoadFailedTitle": "{{count}} 个账号加载失败",
-  "allAccountsLoadFailedDescription": "失败账号：{{accounts}}",
   "accountSummary": {
     "title": "账号概览",
     "keys": "{{count}} 个密钥",

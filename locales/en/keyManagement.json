@@ -16,7 +16,7 @@
   "accountSummary": {
     "title": "Accounts overview",
     "keys": "{{count}} keys",
-    "loadFailed": "load failed"
+    "loadFailed": "Load failed"
   },
   "noKeys": "No key data yet",
   "noMatchingKeys": "No matching keys found",
