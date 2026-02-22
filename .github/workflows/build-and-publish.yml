@@ -89,6 +89,9 @@ jobs:
 
       - name: Package Safari (Xcode project zip)
         if: ${{ steps.get_ref.outputs.ref != '' }}
+        env:
+          # Prevent Node.js OOM during the Safari (WXT/Vite) production build in CI.
+          NODE_OPTIONS: --max-old-space-size=4096
         run: pnpm build:safari:zip
 
       - name: Upload Safari Artifact (workflow_dispatch)
