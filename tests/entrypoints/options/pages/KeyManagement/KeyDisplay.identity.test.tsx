@@ -12,7 +12,7 @@ const TOKEN_A_KEY = "sk-a-12345678901234567890"
 const TOKEN_B_KEY = "sk-b-12345678901234567890"
 
 /**
- *
+ * Test harness rendering multiple KeyDisplay instances to verify identity-key isolation.
  */
 function TestKeyDisplayList() {
   const [visibleKeys, setVisibleKeys] = useState<Set<string>>(new Set())

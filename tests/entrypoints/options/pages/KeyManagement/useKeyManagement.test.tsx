@@ -10,6 +10,7 @@ import keyManagementEn from "~/locales/en/keyManagement.json"
 import messagesEn from "~/locales/en/messages.json"
 import { getApiService } from "~/services/apiService"
 import testI18n from "~/tests/test-utils/i18n"
+import { createToken } from "~/tests/utils/keyManagementFactories"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 
 vi.mock("~/hooks/useAccountData", () => ({
@@ -160,20 +161,6 @@ describe("useKeyManagement enabled account filtering", () => {
       enabledDisplayData: accounts,
     } as any)
 
-    const createToken = (tokenId: number) => ({
-      id: tokenId,
-      user_id: 1,
-      key: `sk-${tokenId}`,
-      status: 1,
-      name: `Token ${tokenId}`,
-      created_time: 0,
-      accessed_time: 0,
-      expired_time: 0,
-      remain_quota: 0,
-      unlimited_quota: false,
-      used_quota: 0,
-    })
-
     const resolversByAccountId = new Map<string, (tokens: any[]) => void>()
 
     const fetchAccountTokens = vi.fn((request: any) => {
@@ -202,7 +189,15 @@ describe("useKeyManagement enabled account filtering", () => {
     accounts.forEach((account, index) => {
       const resolver = resolversByAccountId.get(account.id)
       expect(resolver).toBeDefined()
-      resolver?.([createToken(index + 1)])
+      const tokenId = index + 1
+      resolver?.([
+        createToken({
+          id: tokenId,
+          key: `sk-${tokenId}`,
+          name: `Token ${tokenId}`,
+          expired_time: 0,
+        }),
+      ])
     })
 
     await waitFor(() =>
@@ -296,7 +291,7 @@ describe("useKeyManagement enabled account filtering", () => {
     expect(result.current.failedAccounts[0]).toMatchObject({
       accountId: accountB.id,
       accountName: accountB.name,
-      errorMessage: keyManagementEn.messages.loadFailed,
+      errorMessage: "boom",
     })
 
     expect(vi.mocked(toast.error)).not.toHaveBeenCalled()

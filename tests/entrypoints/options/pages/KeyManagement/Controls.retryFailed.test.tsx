@@ -2,28 +2,11 @@ import userEvent from "@testing-library/user-event"
 import { beforeAll, describe, expect, it, vi } from "vitest"
 
 import { AccountSelectorPanel } from "~/entrypoints/options/pages/KeyManagement/components/AccountSelectorPanel"
+import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "~/entrypoints/options/pages/KeyManagement/constants"
 import keyManagementEn from "~/locales/en/keyManagement.json"
 import { testI18n } from "~/tests/test-utils/i18n"
 import { render, screen } from "~/tests/test-utils/render"
-import { AuthTypeEnum, SiteHealthStatus } from "~/types"
-
-const createAccount = (overrides: Partial<any>) => ({
-  id: "account",
-  name: "Account",
-  username: "user",
-  balance: { USD: 0, CNY: 0 },
-  todayConsumption: { USD: 0, CNY: 0 },
-  todayIncome: { USD: 0, CNY: 0 },
-  todayTokens: { upload: 0, download: 0 },
-  health: { status: SiteHealthStatus.Healthy },
-  siteType: "new-api",
-  baseUrl: "https://example.com/v1",
-  token: "token",
-  userId: 1,
-  authType: AuthTypeEnum.AccessToken,
-  checkIn: { enableDetection: false },
-  ...overrides,
-})
+import { createAccount } from "~/tests/utils/keyManagementFactories"
 
 describe("KeyManagement AccountSelectorPanel retry failed", () => {
   beforeAll(() => {
@@ -42,7 +25,7 @@ describe("KeyManagement AccountSelectorPanel retry failed", () => {
 
     render(
       <AccountSelectorPanel
-        selectedAccount="all"
+        selectedAccount={KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE}
         setSelectedAccount={vi.fn()}
         displayData={[createAccount({ id: "acc-a", name: "Account A" })] as any}
         tokens={[]}
@@ -64,7 +47,11 @@ describe("KeyManagement AccountSelectorPanel retry failed", () => {
       />,
     )
 
-    expect(await screen.findByText("2 failed")).toBeInTheDocument()
+    const expectedFailedText = keyManagementEn.allAccountsFailed.replace(
+      "{{count}}",
+      "2",
+    )
+    expect(await screen.findByText(expectedFailedText)).toBeInTheDocument()
 
     const retryButton = await screen.findByRole("button", {
       name: keyManagementEn.actions.retryFailed,
