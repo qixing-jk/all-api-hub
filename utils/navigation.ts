@@ -516,7 +516,14 @@ export const openAutoCheckinPage = withPopupClose(
  * Open the extension side panel (if supported) and close the popup afterward to
  * avoid overlapping surfaces.
  */
-export const openSidePanelPage = withPopupClose(_openSidePanel)
+export const openSidePanelPage = withPopupClose(async () => {
+  try {
+    await _openSidePanel()
+  } catch (error) {
+    logger.warn("Side panel unavailable, opening settings instead", error)
+    openOrFocusOptionsMenuItem(MENU_ITEM_IDS.BASIC)
+  }
+})
 
 /**
  * Jump straight to the About section inside the options page and close the

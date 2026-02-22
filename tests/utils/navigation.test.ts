@@ -2,12 +2,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { getSiteApiRouter } from "~/constants/siteType"
 import { isExtensionPopup } from "~/utils/browser"
-import { createTab as createTabApi, getExtensionURL } from "~/utils/browserApi"
+import {
+  createTab as createTabApi,
+  getExtensionURL,
+  openSidePanel,
+} from "~/utils/browserApi"
 import {
   openCheckInAndRedeem,
   openKeysPage,
   openModelsPage,
   openMultiplePages,
+  openSidePanelPage,
   openUsagePage,
 } from "~/utils/navigation"
 import { joinUrl } from "~/utils/url"
@@ -50,6 +55,7 @@ const mockedCreateTab = vi.mocked(createTabApi)
 const mockedGetExtensionURL = vi.mocked(getExtensionURL)
 const mockedGetSiteApiRouter = vi.mocked(getSiteApiRouter)
 const mockedJoinUrl = vi.mocked(joinUrl)
+const mockedOpenSidePanel = vi.mocked(openSidePanel)
 
 describe("navigation utilities", () => {
   beforeEach(() => {
@@ -156,5 +162,18 @@ describe("navigation utilities", () => {
     const calls = mockedCreateTab.mock.calls.map((call) => call[0] as string)
     expect(calls).toContain("https://redeem.custom")
     expect(calls).toContain("https://checkin.custom")
+  })
+
+  it("openSidePanelPage should fall back to Basic settings when side panel is unavailable", async () => {
+    mockedOpenSidePanel.mockRejectedValue(new Error("Sidebar not supported"))
+
+    await openSidePanelPage()
+
+    // openOrFocusOptionsPage uses an async callback path; wait one tick for it.
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(mockedOpenSidePanel).toHaveBeenCalled()
+    expect(mockedCreateTab).toHaveBeenCalled()
+    expect(mockedCreateTab.mock.calls[0]?.[0]).toContain("#basic")
   })
 })

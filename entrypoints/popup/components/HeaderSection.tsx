@@ -15,6 +15,7 @@ import { VersionBadge } from "~/components/VersionBadge"
 import { COLORS } from "~/constants/designTokens"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { isExtensionSidePanel } from "~/utils/browser"
+import { supportsSidePanel } from "~/utils/browserApi"
 import { createLogger } from "~/utils/logger"
 import {
   openFullAccountManagerPage,
@@ -44,6 +45,7 @@ export default function HeaderSection({
   const { t } = useTranslation(["ui", "account", "common"])
   const { isRefreshing, handleRefresh } = useAccountDataContext()
   const inSidePanel = isExtensionSidePanel()
+  const canUseSidePanel = supportsSidePanel()
 
   const handleGlobalRefresh = useCallback(async () => {
     try {
@@ -156,7 +158,7 @@ export default function HeaderSection({
             <Cog6ToothIcon className="h-4 w-4" />
           </IconButton>
         </Tooltip>
-        {!inSidePanel && (
+        {!inSidePanel && canUseSidePanel && (
           <Tooltip content={t("common:actions.openSidePanel")}>
             <IconButton
               aria-label={t("common:actions.openSidePanel")}

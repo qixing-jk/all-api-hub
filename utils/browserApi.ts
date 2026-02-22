@@ -397,6 +397,30 @@ export function onInstalled(
 }
 
 /**
+ * Checks whether the current extension runtime exposes a side panel API.
+ *
+ * Notes:
+ * - Chrome exposes `chrome.sidePanel`.
+ * - Firefox uses `browser.sidebarAction` as a rough equivalent.
+ * - Safari does not support side panel APIs at the time of writing, so this
+ *   should return false there.
+ */
+export function supportsSidePanel(): boolean {
+  try {
+    const anyBrowser = typeof browser !== "undefined" ? (browser as any) : null
+    const anyChrome = typeof chrome !== "undefined" ? (chrome as any) : null
+
+    return (
+      typeof anyBrowser?.sidebarAction?.open === "function" ||
+      typeof anyBrowser?.sidePanel?.open === "function" ||
+      typeof anyChrome?.sidePanel?.open === "function"
+    )
+  } catch {
+    return false
+  }
+}
+
+/**
  * Open the extension side panel using the host browser's native APIs.
  * Automatically chooses the appropriate Chromium or Firefox pathway.
  * @throws {Error} When the current browser does not expose side panel support.

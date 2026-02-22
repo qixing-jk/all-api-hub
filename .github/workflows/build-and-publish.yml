@@ -5,20 +5,24 @@ on:
     types: [created] # 自动监听 GitHub Release 发布
   workflow_dispatch: # 允许手动触发
     inputs:
-      tag:
+      ref:
         description: "Release tag or commit hash to build. Leave empty to auto-detect latest."
         required: false
         default: ""
+      dry_run:
+        description: "Build + convert Safari only; do not upload to Release or submit to stores."
+        required: false
+        default: true
+        type: boolean
 
 permissions:
   contents: write # 上传构建产物到 Release 需要写权限
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
 
     steps:
-      # 先 checkout 完整仓库，后面要用 git 命令找 tag
       - name: Checkout code
         uses: actions/checkout@v5
         with:
@@ -79,24 +83,35 @@ jobs:
         if: ${{ steps.get_ref.outputs.ref != '' }}
         run: pnpm install
 
-      # 编译并打包扩展
-      - name: Package the extension
-        if: ${{ steps.get_ref.outputs.ref != '' }}
+      - name: Package the extension (Chrome/Firefox)
+        if: ${{ steps.get_ref.outputs.ref != '' && (github.event_name != 'workflow_dispatch' || github.event.inputs.dry_run != 'true') }}
         run: pnpm zip:all
+
+      - name: Package Safari (Xcode project zip)
+        if: ${{ steps.get_ref.outputs.ref != '' }}
+        run: pnpm build:safari:zip
+
+      - name: Upload Safari Artifact (workflow_dispatch)
+        if: ${{ steps.get_ref.outputs.ref != '' && github.event_name == 'workflow_dispatch' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: safari-mv2-xcode-${{ steps.get_ref.outputs.ref }}
+          path: build/safari-mv2-prod.zip
 
       # 上传 Release Artifact（仅当有 ref 时）
       - name: Upload Release Artifact
-        if: ${{ steps.get_ref.outputs.ref != '' }}
+        if: ${{ steps.get_ref.outputs.ref != '' && (github.event_name != 'workflow_dispatch' || github.event.inputs.dry_run != 'true') }}
         continue-on-error: true
         run: |
-          echo "Uploading .output/*.zip to release ${{ steps.get_ref.outputs.ref }}"
-          gh release upload "${{ steps.get_ref.outputs.ref }}" .output/*.zip
+          echo "Uploading artifacts to release ${{ steps.get_ref.outputs.ref }}"
+          gh release upload "${{ steps.get_ref.outputs.ref }}" .output/*.zip build/safari-mv2-prod.zip
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # 提交到浏览器商店
       - name: Browser Platform Publish
-        if: ${{ steps.get_ref.outputs.ref != '' }}
+        if: ${{ steps.get_ref.outputs.ref != '' && (github.event_name != 'workflow_dispatch' || github.event.inputs.dry_run != 'true') }}
         continue-on-error: true
         run: |
           pnpm wxt submit \
