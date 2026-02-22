@@ -4,13 +4,14 @@ import { Badge, Button, Heading3, SearchableSelect } from "~/components/ui"
 import type { DisplaySiteData } from "~/types"
 
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "../constants"
+import type { AccountToken } from "../type"
 
-interface ControlsProps {
+interface AccountSelectorPanelProps {
   selectedAccount: string
   setSelectedAccount: (value: string) => void
   displayData: DisplaySiteData[]
-  tokens: unknown[]
-  filteredTokens: unknown[]
+  tokens: AccountToken[]
+  filteredTokens: AccountToken[]
   tokenLoadProgress?: {
     total: number
     loaded: number
@@ -43,7 +44,7 @@ export function AccountSelectorPanel({
   tokenLoadProgress,
   failedAccounts = [],
   onRetryFailedAccounts,
-}: ControlsProps) {
+}: AccountSelectorPanelProps) {
   const { t } = useTranslation("keyManagement")
 
   const isAllAccountsMode =
@@ -84,7 +85,7 @@ export function AccountSelectorPanel({
             <span>{t("totalKeys", { count: tokens.length })}</span>
             <span>
               {t("enabledCount", {
-                count: tokens.filter((t: any) => t.status === 1).length,
+                count: tokens.filter((token) => token.status === 1).length,
               })}
             </span>
             <span>{t("showingCount", { count: filteredTokens.length })}</span>

@@ -46,8 +46,12 @@ export function AccountSummaryBar({
                     : "secondary"
                 }
                 size="default"
-                className="cursor-pointer"
-                onClick={() => onAccountClick?.(item.accountId)}
+                {...(onAccountClick
+                  ? {
+                      className: "cursor-pointer",
+                      onClick: () => onAccountClick(item.accountId),
+                    }
+                  : {})}
               >
                 <span className="truncate font-medium">{item.name}</span>
                 <span className="dark:text-dark-text-tertiary ml-2 text-gray-500">

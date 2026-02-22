@@ -19,6 +19,11 @@ interface Account {
 interface AddTokenDialogProps {
   isOpen: boolean
   availableAccounts: Account[]
+  /**
+   * Account to pre-select when opening the dialog in create mode.
+   * - `null`: intentionally unset (force user to pick; used for all-accounts mode)
+   * - `undefined`: not provided (fall back to the first available account)
+   */
   preSelectedAccountId?: string | null
   editingToken?: AccountToken | null
   createPrefill?: {

@@ -1,10 +1,10 @@
 import { useTranslation } from "react-i18next"
 
 import { Card, CardContent } from "~/components/ui"
+import { buildTokenIdentityKey } from "~/entrypoints/options/pages/KeyManagement/utils"
 import type { DisplaySiteData } from "~/types"
 
 import { AccountToken } from "../../type"
-import { buildTokenIdentityKey } from "../../utils"
 import { KeyDisplay } from "./KeyDisplay"
 import { TokenDetails } from "./TokenDetails"
 import { TokenHeader } from "./TokenHeader"

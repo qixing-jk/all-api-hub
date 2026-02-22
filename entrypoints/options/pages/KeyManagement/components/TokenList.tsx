@@ -4,7 +4,7 @@ import {
   KeyIcon,
   PlusIcon,
 } from "@heroicons/react/24/outline"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { CCSwitchExportDialog } from "~/components/CCSwitchExportDialog"
@@ -140,6 +140,10 @@ export function TokenList(props: TokenListProps) {
     account: DisplaySiteData
   } | null>(null)
 
+  const accountById = useMemo(() => {
+    return new Map(displayData.map((account) => [account.id, account]))
+  }, [displayData])
+
   const isAllAccountsMode =
     selectedAccount === KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE
   const [collapsedAccountIds, setCollapsedAccountIds] = useState<Set<string>>(
@@ -209,16 +213,17 @@ export function TokenList(props: TokenListProps) {
       })
   }, [displayData, filteredTokens, isAllAccountsMode, tokens])
 
-  const collapseAll = () => {
+  const collapseAll = useCallback(() => {
     if (!groupedTokens) return
     setCollapsedAccountIds(
       new Set(groupedTokens.map((group) => group.account.id)),
     )
-  }
+  }, [groupedTokens, setCollapsedAccountIds])
 
-  const expandAll = () => {
-    setCollapsedAccountIds(new Set())
-  }
+  const expandAll = useCallback(
+    () => setCollapsedAccountIds(new Set()),
+    [setCollapsedAccountIds],
+  )
 
   const toggleGroup = (accountId: string) => {
     setCollapsedAccountIds((prev) => {
@@ -258,13 +263,11 @@ export function TokenList(props: TokenListProps) {
 
   if (filteredTokens.length === 0) {
     return (
-      <>
-        <TokenEmptyState
-          tokens={tokens}
-          handleAddToken={handleAddToken}
-          displayData={displayData}
-        />
-      </>
+      <TokenEmptyState
+        tokens={tokens}
+        handleAddToken={handleAddToken}
+        displayData={displayData}
+      />
     )
   }
 
@@ -368,9 +371,7 @@ export function TokenList(props: TokenListProps) {
       ) : (
         <div className="space-y-3">
           {filteredTokens.map((token) => {
-            const account = displayData.find(
-              (item) => item.id === token.accountId,
-            )
+            const account = accountById.get(token.accountId)
             if (!account) {
               return null
             }

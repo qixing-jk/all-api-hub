@@ -28,7 +28,7 @@ interface KeyDisplayProps {
  * Shows an API key value with masking and a toggle button to reveal/hide it.
  * @param props Component props container.
  * @param props.tokenKey Raw token key value.
- * @param props.tokenId Identifier for visibility tracking.
+ * @param props.tokenIdentityKey Identifier for visibility tracking.
  * @param props.visibleKeys Set of currently visible key IDs.
  * @param props.toggleKeyVisibility Handler to toggle visibility.
  */

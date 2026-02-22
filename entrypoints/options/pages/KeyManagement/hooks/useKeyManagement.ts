@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 
 import { useAccountData } from "~/hooks/useAccountData"
 import { getApiService } from "~/services/apiService"
+import { getErrorMessage } from "~/utils/error"
 import { createLogger } from "~/utils/logger"
 
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "../constants"
@@ -35,12 +36,15 @@ interface TokenLoadProgress {
   error: number
 }
 
+const isFailedAccountTokenLoad = (
+  value: FailedAccountTokenLoad | null,
+): value is FailedAccountTokenLoad => value !== null
+
 const tokenMatchesSearch = (token: AccountToken, searchLower: string) => {
   if (!searchLower) return true
-  return (
-    token.name.toLowerCase().includes(searchLower) ||
-    token.key.toLowerCase().includes(searchLower)
-  )
+
+  // Search intentionally matches against token name only (never the raw secret key).
+  return token.name.toLowerCase().includes(searchLower)
 }
 
 const normalizeOrigin = (baseUrl: string) => {
@@ -67,9 +71,15 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
   const [tokenInventories, setTokenInventories] = useState<
     Record<string, TokenInventoryState>
   >({})
+  const tokenInventoriesRef = useRef(tokenInventories)
+  tokenInventoriesRef.current = tokenInventories
   const [visibleKeys, setVisibleKeys] = useState<Set<string>>(new Set())
   const [isAddTokenOpen, setIsAddTokenOpen] = useState(false)
   const [editingToken, setEditingToken] = useState<AccountToken | null>(null)
+
+  const loadFailedMessage = t("keyManagement:messages.loadFailed")
+  const loadFailedMessageRef = useRef(loadFailedMessage)
+  loadFailedMessageRef.current = loadFailedMessage
 
   const isAllAccountsMode =
     selectedAccount === KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE
@@ -150,16 +160,17 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         if (!isLatestAccountRequest(accountId, requestEpoch)) return
 
         if (!Array.isArray(tokens)) {
+          const errorMessage = loadFailedMessageRef.current
           setTokenInventories((prev) => ({
             ...prev,
             [accountId]: {
               status: "error",
               tokens: prev[accountId]?.tokens ?? [],
-              errorMessage: t("keyManagement:messages.loadFailed"),
+              errorMessage,
             },
           }))
           if (toastOnError) {
-            toast.error(t("keyManagement:messages.loadFailed"))
+            toast.error(errorMessage)
           }
           return
         }
@@ -182,17 +193,19 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         if (!isEpochActive(loadEpoch)) return
         if (!isLatestAccountRequest(accountId, requestEpoch)) return
 
-        logger.error("获取账号密钥失败", error)
+        const errorMessage =
+          getErrorMessage(error) || loadFailedMessageRef.current
+        logger.error("获取账号密钥失败", errorMessage)
         setTokenInventories((prev) => ({
           ...prev,
           [accountId]: {
             status: "error",
             tokens: prev[accountId]?.tokens ?? [],
-            errorMessage: t("keyManagement:messages.loadFailed"),
+            errorMessage,
           },
         }))
         if (toastOnError) {
-          toast.error(t("keyManagement:messages.loadFailed"))
+          toast.error(loadFailedMessageRef.current)
         }
       }
     },
@@ -201,7 +214,6 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       getNextAccountRequestEpoch,
       isEpochActive,
       isLatestAccountRequest,
-      t,
     ],
   )
 
@@ -311,11 +323,17 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     ],
   )
 
+  const loadTokensRef = useRef(loadTokens)
+  loadTokensRef.current = loadTokens
+
   const retryFailedAccounts = useCallback(async () => {
     if (!isAllAccountsMode) return
 
     const failedAccountIds = enabledDisplayData
-      .filter((account) => tokenInventories[account.id]?.status === "error")
+      .filter(
+        (account) =>
+          tokenInventoriesRef.current[account.id]?.status === "error",
+      )
       .map((account) => account.id)
 
     if (failedAccountIds.length === 0) return
@@ -323,12 +341,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       accountIds: failedAccountIds,
       loadEpoch: selectionEpochRef.current,
     })
-  }, [
-    enabledDisplayData,
-    isAllAccountsMode,
-    loadTokensForAccounts,
-    tokenInventories,
-  ])
+  }, [enabledDisplayData, isAllAccountsMode, loadTokensForAccounts])
 
   useEffect(() => {
     if (!selectedAccount) return
@@ -377,12 +390,12 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
 
   useEffect(() => {
     if (selectedAccount) {
-      void loadTokens()
+      void loadTokensRef.current()
     } else {
       setTokenInventories({})
       setVisibleKeys(new Set())
     }
-  }, [selectedAccount, enabledDisplayData, loadTokens])
+  }, [selectedAccount, enabledDisplayData])
 
   const allTokens = useMemo(() => {
     return enabledDisplayData.flatMap(
@@ -451,7 +464,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     if (!isAllAccountsMode) return []
 
     return enabledDisplayData
-      .map((account) => {
+      .map((account): FailedAccountTokenLoad | null => {
         const inventory = tokenInventories[account.id]
         if (inventory?.status !== "error") return null
         return {
@@ -460,7 +473,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
           errorMessage: inventory.errorMessage,
         }
       })
-      .filter(Boolean) as FailedAccountTokenLoad[]
+      .filter(isFailedAccountTokenLoad)
   }, [enabledDisplayData, isAllAccountsMode, tokenInventories])
 
   const accountSummaryItems = useMemo(() => {
@@ -479,7 +492,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       count: countMap.get(account.id) ?? 0,
       errorType:
         tokenInventories[account.id]?.status === "error"
-          ? "load-failed"
+          ? ("load-failed" as const)
           : undefined,
     }))
   }, [
@@ -574,7 +587,8 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         void loadTokens()
       }
     } catch (error) {
-      logger.error("删除密钥失败", error)
+      const errorMessage = getErrorMessage(error) || String(error)
+      logger.error("删除密钥失败", errorMessage)
       toast.error(t("keyManagement:messages.deleteFailed"))
     }
   }

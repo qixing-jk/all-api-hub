@@ -131,11 +131,7 @@ export default function KeyManagement(props: {
         )}
 
       {selectedAccount ? (
-        <TokenSearchBar
-          selectedAccount={selectedAccount}
-          searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm}
-        />
+        <TokenSearchBar searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
       ) : null}
 
       <TokenList
