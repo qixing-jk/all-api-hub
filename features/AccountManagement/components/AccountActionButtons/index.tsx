@@ -304,19 +304,20 @@ export default function AccountActionButtons({
    */
   const handleQuickCheckin = async () => {
     if (isAccountDisabled) {
-      toast.error(t("messages:toast.error.shareSnapshotAccountDisabled"))
+      toast.error(t("autoCheckin:toast.error.accountDisabled"))
       return
     }
 
+    let toastId: string | undefined
     try {
-      toast.loading(t("autoCheckin:messages.loading.running"))
+      toastId = toast.loading(t("autoCheckin:messages.loading.running"))
 
       const response = await sendRuntimeMessage({
         action: RuntimeActionIds.AutoCheckinRunNow,
         accountIds: [site.id],
       })
 
-      toast.dismiss()
+      if (toastId) toast.dismiss(toastId)
 
       if (!response?.success) {
         toast.error(
@@ -362,7 +363,7 @@ export default function AccountActionButtons({
 
       void loadAccountData()
     } catch (error) {
-      toast.dismiss()
+      if (toastId) toast.dismiss(toastId)
       toast.error(
         t("autoCheckin:messages.error.runFailed", {
           error: getErrorMessage(error),
