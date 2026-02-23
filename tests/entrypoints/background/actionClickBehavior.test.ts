@@ -1,29 +1,35 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+
 describe("background applyActionClickBehavior", () => {
   let addActionClickListener: ReturnType<typeof vi.fn>
   let removeActionClickListener: ReturnType<typeof vi.fn>
   let setActionPopup: ReturnType<typeof vi.fn>
   let getSidePanelSupport: ReturnType<typeof vi.fn>
+  let openSidePanel: ReturnType<typeof vi.fn>
+  let openOrFocusOptionsMenuItem: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
     addActionClickListener = vi.fn()
     removeActionClickListener = vi.fn()
     setActionPopup = vi.fn().mockResolvedValue(undefined)
     getSidePanelSupport = vi.fn()
+    openSidePanel = vi.fn()
+    openOrFocusOptionsMenuItem = vi.fn()
 
     vi.resetModules()
 
     vi.doMock("~/utils/browserApi", () => ({
       addActionClickListener,
       getSidePanelSupport,
-      openSidePanel: vi.fn(),
+      openSidePanel,
       removeActionClickListener,
       setActionPopup,
     }))
 
     vi.doMock("~/utils/navigation", () => ({
-      openOrFocusOptionsMenuItem: vi.fn(),
+      openOrFocusOptionsMenuItem,
     }))
   })
 
@@ -67,5 +73,43 @@ describe("background applyActionClickBehavior", () => {
     expect(removeActionClickListener).toHaveBeenCalledTimes(1)
     expect(setActionPopup).toHaveBeenCalledWith("")
     expect(addActionClickListener).toHaveBeenCalledTimes(1)
+  })
+
+  it("installs sidepanel wiring when Firefox sidebarAction is supported", async () => {
+    getSidePanelSupport.mockReturnValue({
+      supported: true,
+      kind: "firefox-sidebar-action",
+    })
+
+    const { applyActionClickBehavior } = await import(
+      "~/entrypoints/background/actionClickBehavior"
+    )
+
+    await applyActionClickBehavior("sidepanel")
+
+    expect(removeActionClickListener).toHaveBeenCalledTimes(1)
+    expect(setActionPopup).toHaveBeenCalledWith("")
+    expect(addActionClickListener).toHaveBeenCalledTimes(1)
+  })
+
+  it("falls back to options when openSidePanel throws despite support", async () => {
+    getSidePanelSupport.mockReturnValue({
+      supported: true,
+      kind: "chromium-side-panel",
+    })
+    openSidePanel.mockRejectedValueOnce(new Error("fail"))
+
+    const { applyActionClickBehavior } = await import(
+      "~/entrypoints/background/actionClickBehavior"
+    )
+
+    await applyActionClickBehavior("sidepanel")
+
+    const clickHandler = addActionClickListener.mock.calls[0]?.[0]
+    expect(typeof clickHandler).toBe("function")
+
+    await clickHandler?.()
+
+    expect(openOrFocusOptionsMenuItem).toHaveBeenCalledWith(MENU_ITEM_IDS.BASIC)
   })
 })

@@ -6,6 +6,7 @@ import {
   removeActionClickListener,
   setActionPopup,
 } from "~/utils/browserApi"
+import { getErrorMessage } from "~/utils/error"
 import { createLogger } from "~/utils/logger"
 import { openOrFocusOptionsMenuItem } from "~/utils/navigation"
 
@@ -26,7 +27,9 @@ const handleActionClick = async () => {
   try {
     await openSidePanel()
   } catch (error) {
-    logger.warn("Side panel unavailable, opening settings instead", error)
+    logger.warn(
+      `Side panel unavailable, opening settings instead:\n${getErrorMessage(error)}`,
+    )
     openOrFocusOptionsMenuItem(MENU_ITEM_IDS.BASIC)
   }
 }
@@ -56,7 +59,9 @@ export async function applyActionClickBehavior(
         openPanelOnActionClick: isSidePanel,
       })
     } catch (error) {
-      logger.warn("sidePanel.setPanelBehavior not available", error)
+      logger.warn(
+        `sidePanel.setPanelBehavior not available:\n${getErrorMessage(error)}`,
+      )
     }
   }
 
@@ -64,7 +69,7 @@ export async function applyActionClickBehavior(
   try {
     await setActionPopup(isSidePanel ? "" : POPUP_PAGE)
   } catch (error) {
-    logger.warn("action.setPopup not available", error)
+    logger.warn(`action.setPopup not available:\n${getErrorMessage(error)}`)
   }
 
   if (isSidePanel) {

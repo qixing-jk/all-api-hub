@@ -1,17 +1,21 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react"
-import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import ActionClickBehaviorSettings from "~/entrypoints/options/pages/BasicSettings/components/ActionClickBehaviorSettings"
 import settingsEn from "~/locales/en/settings.json"
 import { testI18n } from "~/tests/test-utils/i18n"
-import { getSidePanelSupport } from "~/utils/browserApi"
+import { fireEvent, render, screen, waitFor } from "~/tests/test-utils/render"
+import { getSidePanelSupport, type SidePanelSupport } from "~/utils/browserApi"
 import { showResultToast, showUpdateToast } from "~/utils/toastHelpers"
 
-vi.mock("~/contexts/UserPreferencesContext", () => ({
-  useUserPreferencesContext: vi.fn(),
-}))
+vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/contexts/UserPreferencesContext")>()
+  return {
+    ...actual,
+    useUserPreferencesContext: vi.fn(),
+  }
+})
 
 vi.mock("~/utils/browserApi", async (importOriginal) => {
   const actual = await importOriginal<typeof import("~/utils/browserApi")>()
@@ -33,23 +37,25 @@ describe("ActionClickBehaviorSettings (side panel fallback)", () => {
     vi.clearAllMocks()
   })
 
-  const renderSubject = () =>
-    render(
-      <I18nextProvider i18n={testI18n}>
-        <ActionClickBehaviorSettings />
-      </I18nextProvider>,
-    )
+  const renderSubject = () => render(<ActionClickBehaviorSettings />)
 
   it("shows unsupported helper even when stored preference is sidepanel", async () => {
-    vi.mocked(getSidePanelSupport).mockReturnValue({
+    const sidePanelSupport = {
       supported: false,
       kind: "unsupported",
       reason: "x",
-    } as any)
-    vi.mocked(useUserPreferencesContext).mockReturnValue({
+    } satisfies SidePanelSupport
+    vi.mocked(getSidePanelSupport).mockReturnValue(sidePanelSupport)
+
+    const userPreferencesContext = {
       actionClickBehavior: "sidepanel",
       updateActionClickBehavior: vi.fn(),
-    } as any)
+    } satisfies Partial<ReturnType<typeof useUserPreferencesContext>>
+    vi.mocked(useUserPreferencesContext).mockReturnValue(
+      userPreferencesContext as unknown as ReturnType<
+        typeof useUserPreferencesContext
+      >,
+    )
 
     renderSubject()
 
@@ -61,16 +67,23 @@ describe("ActionClickBehaviorSettings (side panel fallback)", () => {
   })
 
   it("persists sidepanel selection and shows fallback toast when unsupported", async () => {
-    vi.mocked(getSidePanelSupport).mockReturnValue({
+    const sidePanelSupport = {
       supported: false,
       kind: "unsupported",
       reason: "x",
-    } as any)
+    } satisfies SidePanelSupport
+    vi.mocked(getSidePanelSupport).mockReturnValue(sidePanelSupport)
+
     const updateActionClickBehavior = vi.fn().mockResolvedValue(true)
-    vi.mocked(useUserPreferencesContext).mockReturnValue({
+    const userPreferencesContext = {
       actionClickBehavior: "popup",
       updateActionClickBehavior,
-    } as any)
+    } satisfies Partial<ReturnType<typeof useUserPreferencesContext>>
+    vi.mocked(useUserPreferencesContext).mockReturnValue(
+      userPreferencesContext as unknown as ReturnType<
+        typeof useUserPreferencesContext
+      >,
+    )
 
     renderSubject()
 

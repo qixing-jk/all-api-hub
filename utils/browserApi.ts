@@ -416,12 +416,8 @@ export function getSidePanelSupport(): SidePanelSupport {
   }
 
   const reasons: string[] = []
-  if (typeof runtimeBrowser?.sidebarAction?.open !== "function") {
-    reasons.push("browser.sidebarAction.open missing")
-  }
-  if (typeof runtimeChrome?.sidePanel?.open !== "function") {
-    reasons.push("chrome.sidePanel.open missing")
-  }
+  reasons.push("browser.sidebarAction.open missing")
+  reasons.push("chrome.sidePanel.open missing")
 
   return {
     supported: false,
@@ -450,12 +446,7 @@ export const openSidePanel = async () => {
   const windowId = tab?.windowId
   const tabId = tab?.id
 
-  const sidePanel = (chrome as any)?.sidePanel
-  if (typeof sidePanel?.open !== "function") {
-    throw new Error(
-      "Side panel is not supported: chrome.sidePanel.open missing",
-    )
-  }
+  const sidePanel = (globalThis as any).chrome?.sidePanel
 
   if (typeof windowId === "number") {
     try {

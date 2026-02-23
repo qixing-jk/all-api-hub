@@ -1,4 +1,5 @@
 import { CursorArrowRaysIcon } from "@heroicons/react/24/outline"
+import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
@@ -15,7 +16,7 @@ export default function ActionClickBehaviorSettings() {
   const { t } = useTranslation("settings")
   const { actionClickBehavior, updateActionClickBehavior } =
     useUserPreferencesContext()
-  const sidePanelSupported = getSidePanelSupport().supported
+  const sidePanelSupported = useMemo(() => getSidePanelSupport().supported, [])
 
   const handleChange = async (behavior: "popup" | "sidepanel") => {
     if (behavior === actionClickBehavior) return

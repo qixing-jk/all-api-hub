@@ -59,7 +59,7 @@ This change standardizes side panel capability detection and ensures toolbar/com
 - Do not auto-normalize persisted preferences; runtime uses an effective behavior fallback without writing to storage.
 - Rollback: revert to the previous wiring; no user data loss expected.
 
-## Open Questions
+## Open Questions (Resolved)
 
-- Where should “unsupported + fallback” messaging live to balance clarity vs noise (inline settings text, toast on selection, optional notice on toolbar click)?
-- When `openSidePanel()` fails despite support being detected, should the fallback open popup (if possible) or options (always possible)?
+- “Unsupported + fallback” messaging is displayed via inline settings helper text, plus a toast when the user selects side panel on an unsupported device.
+- When `openSidePanel()` fails despite support being detected, the fallback opens the options/settings surface.
