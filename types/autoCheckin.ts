@@ -104,6 +104,17 @@ export interface AutoCheckinRunSummary {
 }
 
 /**
+ * Runtime message request for a manual auto check-in execution.
+ *
+ * When `accountIds` is provided and non-empty, the background scopes the run to that account set.
+ * When omitted, the background runs the full eligible set (backward compatible).
+ */
+export type AutoCheckinRunNowRuntimeMessage = {
+  action: typeof RuntimeActionIds.AutoCheckinRunNow
+  accountIds?: string[]
+}
+
+/**
  * Runtime message broadcast by the background after an auto check-in execution completes.
  *
  * This message is sent best-effort (it is safe when no UI surface is listening) and allows

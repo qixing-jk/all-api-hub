@@ -13,12 +13,13 @@ import {
   PencilIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline"
-import { ChartPieIcon, PinIcon, PinOffIcon } from "lucide-react"
+import { CalendarCheck2, ChartPieIcon, PinIcon, PinOffIcon } from "lucide-react"
 import React, { useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { IconButton } from "~/components/ui"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
@@ -28,6 +29,8 @@ import { getApiService } from "~/services/apiService"
 import { buildAccountShareSnapshotPayload } from "~/services/shareSnapshots"
 import { sanitizeOriginUrl } from "~/services/shareSnapshots/utils"
 import type { DisplaySiteData } from "~/types"
+import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+import { sendRuntimeMessage } from "~/utils/browserApi"
 import { getErrorMessage } from "~/utils/error"
 import { createLogger } from "~/utils/logger"
 import {
@@ -38,6 +41,64 @@ import {
 } from "~/utils/navigation"
 
 import { AccountActionMenuItem } from "./AccountActionMenuItem"
+
+/**
+ * Derives a user-facing toast message from the latest auto check-in result for one account.
+ */
+function resolveAutoCheckinResultMessage(params: {
+  t: (key: string, options?: Record<string, any>) => string
+  result: {
+    rawMessage?: unknown
+    messageKey?: unknown
+    messageParams?: unknown
+    message?: unknown
+  } | null
+  status: unknown
+}): string {
+  if (
+    typeof params.result?.rawMessage === "string" &&
+    params.result.rawMessage.trim().length > 0
+  ) {
+    return params.result.rawMessage
+  }
+
+  if (
+    typeof params.result?.messageKey === "string" &&
+    params.result.messageKey.trim().length > 0
+  ) {
+    const messageParams =
+      params.result?.messageParams &&
+      typeof params.result.messageParams === "object" &&
+      !Array.isArray(params.result.messageParams)
+        ? (params.result.messageParams as Record<string, any>)
+        : {}
+
+    return params.t(params.result.messageKey, {
+      ...messageParams,
+      defaultValue: params.result.messageKey,
+    })
+  }
+
+  if (
+    typeof params.result?.message === "string" &&
+    params.result.message.trim().length > 0
+  ) {
+    return params.result.message
+  }
+
+  const status = typeof params.status === "string" ? params.status : ""
+  if (status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED) {
+    return params.t("autoCheckin:providerFallback.alreadyCheckedToday")
+  }
+  if (status === CHECKIN_RESULT_STATUS.SUCCESS) {
+    return params.t("autoCheckin:providerFallback.checkinSuccessful")
+  }
+  if (status === CHECKIN_RESULT_STATUS.FAILED) {
+    return params.t("autoCheckin:providerFallback.checkinFailed")
+  }
+
+  return params.t("autoCheckin:providerFallback.unknownError")
+}
 
 export interface ActionButtonsProps {
   site: DisplaySiteData
@@ -64,6 +125,7 @@ export default function AccountActionButtons({
     "shareSnapshots",
     "messages",
     "common",
+    "autoCheckin",
   ])
   const { currencyType, showTodayCashflow } = useUserPreferencesContext()
   const {
@@ -71,12 +133,20 @@ export default function AccountActionButtons({
     handleRefreshAccount,
     handleSetAccountDisabled,
   } = useAccountActionsContext()
-  const { isAccountPinned, togglePinAccount, isPinFeatureEnabled } =
-    useAccountDataContext()
+  const {
+    isAccountPinned,
+    togglePinAccount,
+    isPinFeatureEnabled,
+    loadAccountData,
+  } = useAccountDataContext()
   const { openEditAccount } = useDialogStateContext()
   const [isCheckingTokens, setIsCheckingTokens] = useState(false)
 
   const isAccountDisabled = site.disabled === true
+  const isQuickCheckinEligible =
+    !isAccountDisabled &&
+    site.checkIn?.enableDetection === true &&
+    site.checkIn?.autoCheckInEnabled !== false
 
   const isPinned = isAccountPinned(site.id)
   const pinLabel = isPinned ? t("actions.unpin") : t("actions.pin")
@@ -228,6 +298,79 @@ export default function AccountActionButtons({
     await exportShareSnapshotWithToast({ payload })
   }
 
+  /**
+   * Trigger a manual auto check-in run scoped to this account only.
+   * Uses the shared background scheduler so provider/persistence behavior stays consistent.
+   */
+  const handleQuickCheckin = async () => {
+    if (isAccountDisabled) {
+      toast.error(t("messages:toast.error.shareSnapshotAccountDisabled"))
+      return
+    }
+
+    try {
+      toast.loading(t("autoCheckin:messages.loading.running"))
+
+      const response = await sendRuntimeMessage({
+        action: RuntimeActionIds.AutoCheckinRunNow,
+        accountIds: [site.id],
+      })
+
+      toast.dismiss()
+
+      if (!response?.success) {
+        toast.error(
+          t("autoCheckin:messages.error.runFailed", {
+            error: response?.error ?? "",
+          }),
+        )
+        return
+      }
+
+      const statusResponse = await sendRuntimeMessage({
+        action: RuntimeActionIds.AutoCheckinGetStatus,
+      })
+
+      const result =
+        statusResponse?.success && statusResponse?.data?.perAccount
+          ? statusResponse.data.perAccount[site.id]
+          : null
+
+      const status = result?.status
+
+      const displayMessage = resolveAutoCheckinResultMessage({
+        t,
+        result,
+        status,
+      })
+
+      const toastMessage = `${site.name}: ${displayMessage}`
+
+      if (
+        status === CHECKIN_RESULT_STATUS.SUCCESS ||
+        status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED
+      ) {
+        toast.success(toastMessage)
+      } else if (
+        status === CHECKIN_RESULT_STATUS.FAILED ||
+        status === CHECKIN_RESULT_STATUS.SKIPPED
+      ) {
+        toast.error(toastMessage)
+      } else {
+        toast.success(t("autoCheckin:messages.success.runCompleted"))
+      }
+
+      void loadAccountData()
+    } catch (error) {
+      toast.dismiss()
+      toast.error(
+        t("autoCheckin:messages.error.runFailed", {
+          error: getErrorMessage(error),
+        }),
+      )
+    }
+  }
+
   return (
     <div className="grid grid-cols-2 justify-end gap-2 sm:grid-cols-4">
       {/* Primary Level - Three standalone buttons */}
@@ -345,6 +488,14 @@ export default function AccountActionButtons({
                 label={t("actions.refresh")}
                 disabled={refreshingAccountId === site.id}
               />
+
+              {isQuickCheckinEligible && (
+                <AccountActionMenuItem
+                  onClick={handleQuickCheckin}
+                  icon={CalendarCheck2}
+                  label={t("actions.quickCheckin")}
+                />
+              )}
 
               <AccountActionMenuItem
                 onClick={handleShareSnapshot}
