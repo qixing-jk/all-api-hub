@@ -145,13 +145,9 @@
   "providerWong": {
     "checkinDisabled": "Check-in feature is disabled"
   },
-  "toast": {
-    "error": {
-      "accountDisabled": "This account is disabled"
-    }
-  },
   "messages": {
     "error": {
+      "accountDisabled": "Account is disabled",
       "loadFailed": "Failed to load auto check-in settings: {{error}}",
       "runFailed": "Failed to run auto check-in: {{error}}",
       "retryFailed": "Retry failed: {{error}}",

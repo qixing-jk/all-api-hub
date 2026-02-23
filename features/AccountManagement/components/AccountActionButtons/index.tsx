@@ -13,6 +13,8 @@ import {
   PencilIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline"
+import type { TFunction } from "i18next"
+import { isPlainObject } from "lodash-es"
 import { CalendarCheck2, ChartPieIcon, PinIcon, PinOffIcon } from "lucide-react"
 import React, { useState } from "react"
 import toast from "react-hot-toast"
@@ -46,14 +48,14 @@ import { AccountActionMenuItem } from "./AccountActionMenuItem"
  * Derives a user-facing toast message from the latest auto check-in result for one account.
  */
 function resolveAutoCheckinResultMessage(params: {
-  t: (key: string, options?: Record<string, any>) => string
+  t: TFunction
   result: {
     rawMessage?: unknown
     messageKey?: unknown
     messageParams?: unknown
     message?: unknown
   } | null
-  status: unknown
+  status?: string
 }): string {
   if (
     typeof params.result?.rawMessage === "string" &&
@@ -66,12 +68,11 @@ function resolveAutoCheckinResultMessage(params: {
     typeof params.result?.messageKey === "string" &&
     params.result.messageKey.trim().length > 0
   ) {
-    const messageParams =
-      params.result?.messageParams &&
-      typeof params.result.messageParams === "object" &&
-      !Array.isArray(params.result.messageParams)
-        ? (params.result.messageParams as Record<string, any>)
-        : {}
+    const messageParams: Record<string, unknown> = isPlainObject(
+      params.result.messageParams,
+    )
+      ? (params.result.messageParams as Record<string, unknown>)
+      : {}
 
     return params.t(params.result.messageKey, {
       ...messageParams,
@@ -86,14 +87,13 @@ function resolveAutoCheckinResultMessage(params: {
     return params.result.message
   }
 
-  const status = typeof params.status === "string" ? params.status : ""
-  if (status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED) {
+  if (params.status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED) {
     return params.t("autoCheckin:providerFallback.alreadyCheckedToday")
   }
-  if (status === CHECKIN_RESULT_STATUS.SUCCESS) {
+  if (params.status === CHECKIN_RESULT_STATUS.SUCCESS) {
     return params.t("autoCheckin:providerFallback.checkinSuccessful")
   }
-  if (status === CHECKIN_RESULT_STATUS.FAILED) {
+  if (params.status === CHECKIN_RESULT_STATUS.FAILED) {
     return params.t("autoCheckin:providerFallback.checkinFailed")
   }
 
@@ -304,7 +304,7 @@ export default function AccountActionButtons({
    */
   const handleQuickCheckin = async () => {
     if (isAccountDisabled) {
-      toast.error(t("autoCheckin:toast.error.accountDisabled"))
+      toast.error(t("autoCheckin:messages.error.accountDisabled"))
       return
     }
 

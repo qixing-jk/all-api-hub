@@ -145,13 +145,9 @@
   "providerWong": {
     "checkinDisabled": "该站点未开启签到功能"
   },
-  "toast": {
-    "error": {
-      "accountDisabled": "账号已禁用"
-    }
-  },
   "messages": {
     "error": {
+      "accountDisabled": "账号已禁用",
       "loadFailed": "获取自动签到设置失败：{{error}}",
       "runFailed": "执行自动签到失败：{{error}}",
       "retryFailed": "重新尝试失败：{{error}}",
