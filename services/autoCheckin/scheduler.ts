@@ -1493,6 +1493,62 @@ class AutoCheckinScheduler {
     const now = new Date()
     const today = this.getLocalDay(now)
     const currentStatus = await autoCheckinStorage.getStatus()
+    const mergeHistory = Boolean(targetAccountIdSet)
+
+    const mergePerAccountIfNeeded = (
+      nextResults: Record<string, CheckinAccountResult>,
+    ): Record<string, CheckinAccountResult> => {
+      if (!mergeHistory) return nextResults
+      return {
+        ...(currentStatus?.perAccount ?? {}),
+        ...nextResults,
+      }
+    }
+
+    const mergeAccountsSnapshotIfNeeded = (
+      currentRunSnapshots: AutoCheckinAccountSnapshot[],
+      nextResults: Record<string, CheckinAccountResult>,
+    ): AutoCheckinAccountSnapshot[] => {
+      if (!mergeHistory) {
+        return this.attachResultsToSnapshots(currentRunSnapshots, nextResults)
+      }
+
+      let nextSnapshots = currentStatus?.accountsSnapshot
+      if (!nextSnapshots || nextSnapshots.length === 0) {
+        return this.attachResultsToSnapshots(currentRunSnapshots, nextResults)
+      }
+
+      for (const result of Object.values(nextResults)) {
+        nextSnapshots =
+          this.updateSnapshotWithResult(nextSnapshots, result) ?? nextSnapshots
+      }
+
+      const existingIds = new Set(
+        nextSnapshots.map((snapshot) => snapshot.accountId),
+      )
+      const missing = currentRunSnapshots.filter(
+        (snapshot) => !existingIds.has(snapshot.accountId),
+      )
+      if (missing.length === 0) return nextSnapshots
+
+      return [
+        ...nextSnapshots,
+        ...this.attachResultsToSnapshots(missing, nextResults),
+      ]
+    }
+
+    const mergeSummaryIfNeeded = (
+      summary: AutoCheckinRunSummary,
+      perAccount: Record<string, CheckinAccountResult>,
+    ): AutoCheckinRunSummary => {
+      if (!mergeHistory) return summary
+      return {
+        ...summary,
+        totalEligible:
+          currentStatus?.summary?.totalEligible ??
+          Object.keys(perAccount).length,
+      }
+    }
 
     try {
       // Get preferences
@@ -1584,17 +1640,20 @@ class AutoCheckinScheduler {
           skippedCount: accountSnapshots.length,
           needsRetry: false,
         }
+        const perAccount = mergePerAccountIfNeeded(results)
+        const accountsSnapshot = mergeAccountsSnapshotIfNeeded(
+          accountSnapshots,
+          results,
+        )
+        const mergedSummary = mergeSummaryIfNeeded(summary, perAccount)
 
         await autoCheckinStorage.saveStatus({
           ...(currentStatus ?? {}),
           lastRunAt: new Date().toISOString(),
           lastRunResult: AUTO_CHECKIN_RUN_RESULT.SUCCESS,
-          perAccount: results,
-          summary,
-          accountsSnapshot: this.attachResultsToSnapshots(
-            accountSnapshots,
-            results,
-          ),
+          perAccount,
+          summary: mergedSummary,
+          accountsSnapshot,
           ...(isDailyRun
             ? {
                 lastDailyRunDay: today,
@@ -1610,7 +1669,7 @@ class AutoCheckinScheduler {
           await this.notifyUiRunCompleted({
             runKind: runType,
             updatedAccountIds: [],
-            summary,
+            summary: mergedSummary,
           })
         }
         return
@@ -1705,18 +1764,22 @@ class AutoCheckinScheduler {
         retryState?.day === today && retryState.pendingAccountIds.length > 0,
       )
 
+      const perAccount = mergePerAccountIfNeeded(results)
+      const accountsSnapshot = mergeAccountsSnapshotIfNeeded(
+        accountSnapshots,
+        results,
+      )
+      const mergedSummary = mergeSummaryIfNeeded(summary, perAccount)
+
       await autoCheckinStorage.saveStatus({
         ...(currentStatus ?? {}),
         lastRunAt: new Date().toISOString(),
         lastRunResult: overallResult,
-        perAccount: results,
-        summary,
+        perAccount,
+        summary: mergedSummary,
         retryState,
         pendingRetry,
-        accountsSnapshot: this.attachResultsToSnapshots(
-          accountSnapshots,
-          results,
-        ),
+        accountsSnapshot,
         ...(isDailyRun
           ? {
               lastDailyRunDay: today,
@@ -1735,7 +1798,7 @@ class AutoCheckinScheduler {
         await this.notifyUiRunCompleted({
           runKind: runType,
           updatedAccountIds,
-          summary,
+          summary: mergedSummary,
         })
       }
 
@@ -1751,7 +1814,7 @@ class AutoCheckinScheduler {
         ...(currentStatus ?? {}),
         lastRunAt: new Date().toISOString(),
         lastRunResult: AUTO_CHECKIN_RUN_RESULT.FAILED,
-        perAccount: {},
+        perAccount: mergeHistory ? currentStatus?.perAccount ?? {} : {},
         pendingRetry: false,
         retryState: isDailyRun ? undefined : currentStatus?.retryState,
         ...(isDailyRun
