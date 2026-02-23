@@ -404,7 +404,7 @@ export type SidePanelSupport =
 /**
  * Side panel capability is cached at module load time to avoid repeatedly touching globals.
  */
-const cachedSidePanelSupport: SidePanelSupport = (() => {
+const CACHED_SIDE_PANEL_SUPPORT: SidePanelSupport = (() => {
   const runtimeBrowser = (globalThis as any).browser
   if (typeof runtimeBrowser?.sidebarAction?.open === "function") {
     return { supported: true, kind: "firefox-sidebar-action" }
@@ -416,10 +416,10 @@ const cachedSidePanelSupport: SidePanelSupport = (() => {
   }
 
   const reasons: string[] = []
-  if (runtimeBrowser?.sidebarAction?.open === undefined) {
+  if (typeof runtimeBrowser?.sidebarAction?.open !== "function") {
     reasons.push("browser.sidebarAction.open missing")
   }
-  if (runtimeChrome?.sidePanel?.open === undefined) {
+  if (typeof runtimeChrome?.sidePanel?.open !== "function") {
     reasons.push("chrome.sidePanel.open missing")
   }
 
@@ -434,7 +434,7 @@ const cachedSidePanelSupport: SidePanelSupport = (() => {
  * Detects whether the current runtime can open a side panel/sidebar.
  */
 export function getSidePanelSupport(): SidePanelSupport {
-  return cachedSidePanelSupport
+  return CACHED_SIDE_PANEL_SUPPORT
 }
 
 /**
@@ -450,7 +450,7 @@ export const openSidePanel = async () => {
   }
 
   if (support.kind === "firefox-sidebar-action") {
-    return await Promise.resolve((browser as any).sidebarAction.open())
+    return await (browser as any).sidebarAction.open()
   }
 
   const tab = await getActiveTab()
@@ -461,17 +461,17 @@ export const openSidePanel = async () => {
 
   if (typeof windowId === "number") {
     try {
-      return await Promise.resolve(sidePanel.open({ windowId }))
+      return await sidePanel.open({ windowId })
     } catch (error) {
       if (typeof tabId === "number") {
-        return await Promise.resolve(sidePanel.open({ tabId }))
+        return await sidePanel.open({ tabId })
       }
       throw error
     }
   }
 
   if (typeof tabId === "number") {
-    return await Promise.resolve(sidePanel.open({ tabId }))
+    return await sidePanel.open({ tabId })
   }
 
   throw new Error("Side panel open failed: active tab/window not found")

@@ -325,7 +325,7 @@ describe("browserApi getSidePanelSupport", () => {
     })
   })
 
-  it("uses generic reason when APIs exist but are unusable", async () => {
+  it("uses specific reasons when APIs exist but are unusable", async () => {
     ;(globalThis as any).browser = {
       sidebarAction: {
         open: {},
@@ -345,6 +345,8 @@ describe("browserApi getSidePanelSupport", () => {
     if (result.supported) {
       throw new Error("Expected getSidePanelSupport to return unsupported")
     }
-    expect(result.reason).toBe("Side panel APIs not available")
+    expect(result.reason).toBe(
+      "browser.sidebarAction.open missing; chrome.sidePanel.open missing",
+    )
   })
 })
