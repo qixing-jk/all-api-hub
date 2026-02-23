@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { NEW_API } from "~/constants/siteType"
-import { hasValidManagedSiteConfig } from "~/services/managedSiteService"
 import { ModelRedirectService } from "~/services/modelRedirect/ModelRedirectService"
 import { userPreferences } from "~/services/userPreferences"
-import { getManagedSiteConfig } from "~/utils/managedSite"
+import {
+  getManagedSiteAdminConfig,
+  getManagedSiteConfig,
+} from "~/utils/managedSite"
 
 const listChannelsMock = vi.fn()
 const updateChannelModelMappingMock = vi.fn()
@@ -20,10 +22,6 @@ vi.mock("~/services/modelSync", () => {
   }
 })
 
-vi.mock("~/services/managedSiteService", () => ({
-  hasValidManagedSiteConfig: vi.fn(),
-}))
-
 vi.mock("~/services/userPreferences", () => ({
   userPreferences: {
     getPreferences: vi.fn(),
@@ -31,23 +29,26 @@ vi.mock("~/services/userPreferences", () => ({
 }))
 
 vi.mock("~/utils/managedSite", () => ({
+  getManagedSiteAdminConfig: vi.fn(),
   getManagedSiteConfig: vi.fn(),
 }))
-
-const mockedHasValidConfig = hasValidManagedSiteConfig as unknown as ReturnType<
-  typeof vi.fn
->
 const mockedUserPreferences = userPreferences as unknown as {
   getPreferences: ReturnType<typeof vi.fn>
 }
+const mockedGetManagedSiteAdminConfig =
+  getManagedSiteAdminConfig as unknown as ReturnType<typeof vi.fn>
 const mockedGetManagedSiteConfig =
   getManagedSiteConfig as unknown as ReturnType<typeof vi.fn>
 
 describe("ModelRedirectService.clearChannelModelMappings", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockedHasValidConfig.mockReturnValue(true)
     mockedUserPreferences.getPreferences.mockResolvedValue({})
+    mockedGetManagedSiteAdminConfig.mockReturnValue({
+      baseUrl: "https://example.com",
+      adminToken: "token",
+      userId: "1",
+    })
     mockedGetManagedSiteConfig.mockReturnValue({
       siteType: NEW_API,
       config: {
@@ -59,7 +60,7 @@ describe("ModelRedirectService.clearChannelModelMappings", () => {
   })
 
   it("returns a clear error when managed site config is missing", async () => {
-    mockedHasValidConfig.mockReturnValue(false)
+    mockedGetManagedSiteAdminConfig.mockReturnValue(null)
 
     const result = await ModelRedirectService.clearChannelModelMappings([1, 2])
 
@@ -93,6 +94,10 @@ describe("ModelRedirectService.clearChannelModelMappings", () => {
     expect(updateChannelModelMappingMock).toHaveBeenCalledTimes(2)
     expect(updateChannelModelMappingMock).toHaveBeenCalledWith(
       expect.objectContaining({ id: 1 }),
+      {},
+    )
+    expect(updateChannelModelMappingMock).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 2 }),
       {},
     )
   })

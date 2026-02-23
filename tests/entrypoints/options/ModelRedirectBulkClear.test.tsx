@@ -1,18 +1,27 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import toast from "react-hot-toast"
-import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import ModelRedirectSettings from "~/entrypoints/options/pages/BasicSettings/components/ModelRedirectSettings"
+import commonEn from "~/locales/en/common.json"
 import modelRedirectEn from "~/locales/en/modelRedirect.json"
+import settingsEn from "~/locales/en/settings.json"
+import uiEn from "~/locales/en/ui.json"
 import { hasValidManagedSiteConfig } from "~/services/managedSiteService"
 import { ModelRedirectService } from "~/services/modelRedirect"
 import { testI18n } from "~/tests/test-utils/i18n"
+import { fireEvent, render, screen, waitFor } from "~/tests/test-utils/render"
 
-vi.mock("~/contexts/UserPreferencesContext", () => ({
-  useUserPreferencesContext: vi.fn(),
-}))
+vi.mock("~/contexts/UserPreferencesContext", async () => {
+  const actual = await vi.importActual<
+    typeof import("~/contexts/UserPreferencesContext")
+  >("~/contexts/UserPreferencesContext")
+
+  return {
+    ...actual,
+    useUserPreferencesContext: vi.fn(),
+  }
+})
 
 vi.mock("~/services/managedSiteService", () => ({
   hasValidManagedSiteConfig: vi.fn(),
@@ -58,6 +67,9 @@ const mockedModelRedirectService = ModelRedirectService as unknown as {
 
 describe("Model redirect bulk clear flow", () => {
   testI18n.addResourceBundle("en", "modelRedirect", modelRedirectEn, true, true)
+  testI18n.addResourceBundle("en", "settings", settingsEn, true, true)
+  testI18n.addResourceBundle("en", "common", commonEn, true, true)
+  testI18n.addResourceBundle("en", "ui", uiEn, true, true)
 
   const t = testI18n.getFixedT("en", "modelRedirect")
 
@@ -91,17 +103,14 @@ describe("Model redirect bulk clear flow", () => {
     })
   })
 
-  const renderSubject = () =>
-    render(
-      <I18nextProvider i18n={testI18n}>
-        <ModelRedirectSettings />
-      </I18nextProvider>,
-    )
+  const renderSubject = () => render(<ModelRedirectSettings />)
 
   it("does not clear when confirmation is canceled", async () => {
     renderSubject()
 
-    fireEvent.click(screen.getByRole("button", { name: t("bulkClear.action") }))
+    fireEvent.click(
+      await screen.findByRole("button", { name: t("bulkClear.action") }),
+    )
 
     await screen.findByText("Channel One")
 
@@ -131,7 +140,9 @@ describe("Model redirect bulk clear flow", () => {
 
     renderSubject()
 
-    fireEvent.click(screen.getByRole("button", { name: t("bulkClear.action") }))
+    fireEvent.click(
+      await screen.findByRole("button", { name: t("bulkClear.action") }),
+    )
 
     await screen.findByText("Channel One")
 
@@ -156,7 +167,9 @@ describe("Model redirect bulk clear flow", () => {
   it("filters channels by search and previews mapping", async () => {
     renderSubject()
 
-    fireEvent.click(screen.getByRole("button", { name: t("bulkClear.action") }))
+    fireEvent.click(
+      await screen.findByRole("button", { name: t("bulkClear.action") }),
+    )
 
     await screen.findByText("Channel One")
 
@@ -190,7 +203,9 @@ describe("Model redirect bulk clear flow", () => {
 
     renderSubject()
 
-    fireEvent.click(screen.getByRole("button", { name: t("bulkClear.action") }))
+    fireEvent.click(
+      await screen.findByRole("button", { name: t("bulkClear.action") }),
+    )
 
     const many = await screen.findByText("Many")
     const few = screen.getByText("Few")

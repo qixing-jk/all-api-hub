@@ -6,6 +6,7 @@ import { SettingSection } from "~/components/SettingSection"
 import { Button, Card, CardContent, CompactMultiSelect } from "~/components/ui"
 import { Switch } from "~/components/ui/Switch"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { ClearModelRedirectMappingsDialog } from "~/entrypoints/options/pages/BasicSettings/components/ClearModelRedirectMappingsDialog"
 import { getApiService } from "~/services/apiService"
 import { hasValidManagedSiteConfig } from "~/services/managedSiteService"
 import { ModelRedirectService } from "~/services/modelRedirect"
@@ -13,8 +14,6 @@ import { AuthTypeEnum } from "~/types"
 import { ALL_PRESET_STANDARD_MODELS } from "~/types/managedSiteModelRedirect"
 import { createLogger } from "~/utils/logger"
 import { getManagedSiteAdminConfig } from "~/utils/managedSite"
-
-import { ClearModelRedirectMappingsDialog } from "./ClearModelRedirectMappingsDialog"
 
 /**
  * Unified logger scoped to the Basic Settings model redirect section.

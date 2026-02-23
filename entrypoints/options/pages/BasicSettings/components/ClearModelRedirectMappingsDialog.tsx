@@ -12,12 +12,57 @@ import {
   Modal,
 } from "~/components/ui"
 import { ModelRedirectService } from "~/services/modelRedirect"
+import { isEmptyModelMapping } from "~/services/modelRedirect/utils"
 import type { ManagedSiteChannel } from "~/types/managedSite"
 import { getErrorMessage } from "~/utils/error"
 
 interface ClearModelRedirectMappingsDialogProps {
   isOpen: boolean
   onClose: () => void
+}
+
+interface ModelMappingMeta {
+  count: number
+  isEmpty: boolean
+  isInvalid: boolean
+  previewText: string | null
+}
+
+/**
+ * Extracts metadata from a channel's model_mapping field for display in the bulk clear preview.
+ * @param channel Managed site channel to extract metadata from.
+ * @returns Metadata about the model mapping, including count, emptiness, validity, and preview
+ */
+function getModelMappingMeta(channel: ManagedSiteChannel): ModelMappingMeta {
+  const raw = channel.model_mapping ?? ""
+
+  if (isEmptyModelMapping(raw)) {
+    return {
+      count: 0,
+      isEmpty: true,
+      isInvalid: false,
+      previewText: null,
+    }
+  }
+
+  try {
+    const parsed = JSON.parse(raw)
+    const count =
+      parsed && typeof parsed === "object" ? Object.keys(parsed).length : 0
+    return {
+      count,
+      isEmpty: count === 0,
+      isInvalid: false,
+      previewText: JSON.stringify(parsed, null, 2),
+    }
+  } catch {
+    return {
+      count: -1,
+      isEmpty: false,
+      isInvalid: true,
+      previewText: raw,
+    }
+  }
 }
 
 /**
@@ -37,44 +82,6 @@ export function ClearModelRedirectMappingsDialog({
   const [isConfirmOpen, setIsConfirmOpen] = useState(false)
   const [isClearing, setIsClearing] = useState(false)
   const [resultErrors, setResultErrors] = useState<string[]>([])
-
-  const isEmptyModelMapping = (modelMapping: string | null | undefined) => {
-    const trimmed = (modelMapping ?? "").trim()
-    return !trimmed || trimmed === "{}"
-  }
-
-  const getModelMappingMeta = (channel: ManagedSiteChannel) => {
-    const raw = channel.model_mapping ?? ""
-    const trimmed = raw.trim()
-
-    if (!trimmed || trimmed === "{}") {
-      return {
-        count: 0,
-        isEmpty: true,
-        isInvalid: false,
-        previewText: null as string | null,
-      }
-    }
-
-    try {
-      const parsed = JSON.parse(raw)
-      const count =
-        parsed && typeof parsed === "object" ? Object.keys(parsed).length : 0
-      return {
-        count,
-        isEmpty: count === 0,
-        isInvalid: false,
-        previewText: JSON.stringify(parsed, null, 2),
-      }
-    } catch {
-      return {
-        count: -1,
-        isEmpty: false,
-        isInvalid: true,
-        previewText: raw,
-      }
-    }
-  }
 
   const sortedChannelItems = useMemo(() => {
     return channels
@@ -463,8 +470,8 @@ export function ClearModelRedirectMappingsDialog({
             <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
               <div className="font-medium">{t("bulkClear.result.title")}</div>
               <ul className="mt-2 list-disc space-y-1 pl-5">
-                {resultErrors.map((err) => (
-                  <li key={err}>{err}</li>
+                {resultErrors.map((err, index) => (
+                  <li key={`${err}-${index}`}>{err}</li>
                 ))}
               </ul>
             </div>

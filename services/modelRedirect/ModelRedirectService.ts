@@ -7,22 +7,23 @@
 import { OCTOPUS } from "~/constants/siteType"
 import { modelMetadataService } from "~/services/modelMetadata"
 import { ModelSyncService } from "~/services/modelSync"
-import type { DoneHubConfig } from "~/types/doneHubConfig"
 import type { ManagedSiteChannel } from "~/types/managedSite"
 import { CHANNEL_STATUS } from "~/types/managedSite"
 import {
   ALL_PRESET_STANDARD_MODELS,
   DEFAULT_MODEL_REDIRECT_PREFERENCES,
 } from "~/types/managedSiteModelRedirect"
-import type { NewApiConfig } from "~/types/newApiConfig"
-import type { VeloeraConfig } from "~/types/veloeraConfig"
 import { getErrorMessage } from "~/utils/error"
 import { createLogger } from "~/utils/logger"
-import { getManagedSiteConfig } from "~/utils/managedSite"
+import {
+  getManagedSiteAdminConfig,
+  getManagedSiteConfig,
+} from "~/utils/managedSite"
 
 import { hasValidManagedSiteConfig } from "../managedSiteService"
 import { userPreferences } from "../userPreferences"
 import { renameModel } from "./modelNormalization"
+import { isEmptyModelMapping } from "./utils"
 
 /**
  * Unified logger scoped to model redirect generation and application.
@@ -53,18 +54,13 @@ export interface ModelRedirectBulkClearResult {
  * Core algorithm for generating model redirect mappings
  */
 export class ModelRedirectService {
-  private static isEmptyModelMapping(modelMapping: string | null | undefined) {
-    const trimmed = (modelMapping ?? "").trim()
-    return !trimmed || trimmed === "{}"
-  }
-
   private static async getManagedSiteModelSyncService(): Promise<
     | { ok: true; service: ModelSyncService }
     | { ok: false; errors: string[]; message: string }
   > {
     const prefs = await userPreferences.getPreferences()
 
-    if (!hasValidManagedSiteConfig(prefs)) {
+    if (!prefs) {
       return {
         ok: false,
         errors: ["Managed site configuration is missing"],
@@ -72,7 +68,7 @@ export class ModelRedirectService {
       }
     }
 
-    const { siteType, config: managedConfig } = getManagedSiteConfig(prefs)
+    const { siteType } = getManagedSiteConfig(prefs)
 
     if (siteType === OCTOPUS) {
       return {
@@ -82,17 +78,21 @@ export class ModelRedirectService {
       }
     }
 
-    const legacyConfig = managedConfig as
-      | NewApiConfig
-      | DoneHubConfig
-      | VeloeraConfig
+    const adminConfig = getManagedSiteAdminConfig(prefs)
+    if (!adminConfig) {
+      return {
+        ok: false,
+        errors: ["Managed site configuration is missing"],
+        message: "Managed site configuration is missing",
+      }
+    }
 
     return {
       ok: true,
       service: new ModelSyncService(
-        legacyConfig.baseUrl!,
-        legacyConfig.adminToken!,
-        legacyConfig.userId!,
+        adminConfig.baseUrl,
+        adminConfig.adminToken,
+        adminConfig.userId,
         undefined,
         undefined,
         undefined,
@@ -233,7 +233,7 @@ export class ModelRedirectService {
           successCount += 1
         } catch (error) {
           errors.push(
-            `Channel ${channel.name} (${channel.id}): ${(error as Error).message || "Unknown error"}`,
+            `Channel ${channel.name} (${channel.id}): ${getErrorMessage(error)}`,
           )
         }
       }
@@ -245,12 +245,12 @@ export class ModelRedirectService {
       }
     } catch (error) {
       logger.error("Failed to apply redirect", error)
+      const message = getErrorMessage(error)
       return {
         success: false,
         updatedChannels: 0,
-        errors: [
-          error instanceof Error ? error.message : "Failed to apply redirect",
-        ],
+        errors: [message],
+        message,
       }
     }
   }
@@ -357,7 +357,7 @@ export class ModelRedirectService {
           continue
         }
 
-        if (ModelRedirectService.isEmptyModelMapping(channel.model_mapping)) {
+        if (isEmptyModelMapping(channel.model_mapping)) {
           results.push({
             channelId,
             channelName: channel.name,
