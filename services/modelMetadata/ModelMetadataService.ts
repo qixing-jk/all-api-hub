@@ -1,6 +1,6 @@
 import { extractActualModel } from "~/services/modelRedirect/modelNormalization"
 import { createLogger } from "~/utils/logger"
-import { removeDateSuffix } from "~/utils/modelName"
+import { removeDateSuffix, toModelTokenKey } from "~/utils/modelName"
 
 import {
   MODEL_METADATA_REFRESH_INTERVAL,
@@ -378,7 +378,7 @@ class ModelMetadataService {
       return null
     }
 
-    // 模糊匹配（处理别名情况，如 claude-haiku-4-5 → claude-3.5-haiku）
+    // 模糊匹配（处理同版本别名格式，如 claude-4.5-sonnet ↔ claude-sonnet-4-5）
     for (const [key, metadata] of this.metadataMap) {
       if (this.isFuzzyMatch(cleaned, key)) {
         const vendorName =
@@ -396,7 +396,9 @@ class ModelMetadataService {
 
   /**
    * Check if an input model name fuzzily matches a candidate.
-   * Ignores date suffixes and requires shared vendor keyword overlap.
+   *
+   * This is intentionally conservative: it supports harmless alias formats
+   * (separator/order differences) but MUST NOT match across model versions.
    */
   private isFuzzyMatch(input: string, candidate: string): boolean {
     const cleanedInput = removeDateSuffix(input)
@@ -407,48 +409,16 @@ class ModelMetadataService {
     const inputParts = cleanedInput.split("-")
     const candidateParts = cleanedCandidate.split("-")
 
-    if (inputParts.length === 0 || candidateParts.length === 0) {
-      return false
-    }
+    if (inputParts.length === 0 || candidateParts.length === 0) return false
 
-    if (inputParts[0] !== candidateParts[0]) {
-      return false
-    }
+    // Require the same vendor/model-family prefix to reduce accidental matches
+    if (inputParts[0] !== candidateParts[0]) return false
 
-    const isVersionNumber = (value: string) => /^\d+(\.\d+)?$/.test(value)
+    const inputKey = toModelTokenKey(cleanedInput)
+    const candidateKey = toModelTokenKey(cleanedCandidate)
+    if (!inputKey || !candidateKey) return false
 
-    const toKeywordSet = (parts: string[]) => {
-      const set = new Set<string>()
-      for (const part of parts) {
-        if (!isVersionNumber(part)) {
-          set.add(part)
-        }
-      }
-      return set
-    }
-
-    const inputKeywords = toKeywordSet(inputParts)
-    const candidateKeywords = toKeywordSet(candidateParts)
-
-    if (inputKeywords.size === 0 || candidateKeywords.size === 0) {
-      return false
-    }
-
-    // 新增：检查输入是否有候选名没有的额外关键词
-    for (const keyword of inputKeywords) {
-      if (!candidateKeywords.has(keyword)) {
-        return false // 有额外关键词，直接拒绝匹配
-      }
-    }
-
-    // 然后才检查匹配数量
-    let matchCount = 0
-    for (const keyword of candidateKeywords) {
-      if (inputKeywords.has(keyword)) {
-        matchCount++
-      }
-    }
-    return matchCount >= 2
+    return inputKey === candidateKey
   }
 
   /**

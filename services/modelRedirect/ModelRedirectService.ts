@@ -19,10 +19,11 @@ import {
   getManagedSiteAdminConfig,
   getManagedSiteConfig,
 } from "~/utils/managedSite"
+import { toModelTokenKey } from "~/utils/modelName"
 
 import { hasValidManagedSiteConfig } from "../managedSiteService"
 import { userPreferences, type UserPreferences } from "../userPreferences"
-import { renameModel } from "./modelNormalization"
+import { extractActualModel, renameModel } from "./modelNormalization"
 import { isEmptyModelMapping } from "./utils"
 
 /**
@@ -435,18 +436,15 @@ export class ModelRedirectService {
   }
 
   /**
-   * Build a version-agnostic comparison key by:
+   * Build an order-insensitive token key by:
    * - Lowercasing
+   * - Stripping date suffixes
    * - Treating dots and hyphens/underscores as the same separator
    * - Comparing as an unordered token set to align variants like
    *   "claude-4.5-sonnet" and "claude-sonnet-4-5".
    */
   static toVersionAgnosticKey = (modelName: string): string | null => {
-    const cleaned = modelName.replace(/\./g, "-")
-    const tokens = cleaned.split(/[-_]/).map((t) => t.trim().toLowerCase())
-    const validTokens = tokens.filter(Boolean)
-    if (validTokens.length === 0) return null
-    return validTokens.sort().join("-")
+    return toModelTokenKey(modelName)
   }
 
   /**
@@ -531,6 +529,17 @@ export class ModelRedirectService {
 
       // Map the standard model to the first available candidate
       if (availableCandidate) {
+        const standardKey = toModelTokenKey(extractActualModel(standardModel))
+        const candidateKey = toModelTokenKey(
+          extractActualModel(availableCandidate),
+        )
+
+        // Guardrail: never generate downgrade/upgrade mappings across versions.
+        // If the token signatures differ, treat as incompatible and leave unmapped.
+        if (!standardKey || !candidateKey || standardKey !== candidateKey) {
+          continue
+        }
+
         mapping[standardModel] = availableCandidate
         usedActualModels.add(availableCandidate)
       }

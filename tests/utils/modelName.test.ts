@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { removeDateSuffix } from "~/utils/modelName"
+import { removeDateSuffix, toModelTokenKey } from "~/utils/modelName"
 
 describe("removeDateSuffix", () => {
   describe("yyyymmdd format (8-digit date)", () => {
@@ -194,5 +194,30 @@ describe("removeDateSuffix", () => {
         "gemini-2.5-flash-preview",
       )
     })
+  })
+})
+
+describe("toModelTokenKey", () => {
+  it("treats dots and hyphens as equivalent and ignores ordering", () => {
+    expect(toModelTokenKey("claude-4.5-sonnet")).toBe(
+      toModelTokenKey("claude-sonnet-4-5"),
+    )
+  })
+
+  it("ignores trailing date suffixes", () => {
+    expect(toModelTokenKey("claude-4.5-sonnet")).toBe(
+      toModelTokenKey("claude-sonnet-4-5-20250929"),
+    )
+  })
+
+  it("distinguishes minor versions (4.5 vs 4.6)", () => {
+    expect(toModelTokenKey("claude-4.5-sonnet")).not.toBe(
+      toModelTokenKey("claude-4.6-sonnet"),
+    )
+  })
+
+  it("returns null for empty input", () => {
+    expect(toModelTokenKey("")).toBeNull()
+    expect(toModelTokenKey("   ")).toBeNull()
   })
 })
