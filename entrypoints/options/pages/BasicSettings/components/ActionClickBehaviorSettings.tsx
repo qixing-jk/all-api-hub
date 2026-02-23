@@ -5,7 +5,8 @@ import { SettingSection } from "~/components/SettingSection"
 import { Card, CardItem, CardList, ToggleButton } from "~/components/ui"
 import { COLORS } from "~/constants/designTokens"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { showUpdateToast } from "~/utils/toastHelpers"
+import { getSidePanelSupport } from "~/utils/browserApi"
+import { showResultToast, showUpdateToast } from "~/utils/toastHelpers"
 
 /**
  * Lets users choose what the toolbar icon does (popup vs side panel).
@@ -14,11 +15,22 @@ export default function ActionClickBehaviorSettings() {
   const { t } = useTranslation("settings")
   const { actionClickBehavior, updateActionClickBehavior } =
     useUserPreferencesContext()
+  const sidePanelSupported = getSidePanelSupport().supported
 
   const handleChange = async (behavior: "popup" | "sidepanel") => {
     if (behavior === actionClickBehavior) return
     const success = await updateActionClickBehavior(behavior)
-    showUpdateToast(success, t("actionClick.title"))
+    if (!success) {
+      showUpdateToast(false, t("actionClick.title"))
+      return
+    }
+
+    if (behavior === "sidepanel" && !sidePanelSupported) {
+      showResultToast(true, t("actionClick.sidepanelFallbackToast"))
+      return
+    }
+
+    showUpdateToast(true, t("actionClick.title"))
   }
 
   return (
@@ -35,6 +47,13 @@ export default function ActionClickBehaviorSettings() {
             }
             title={t("actionClick.actionIconClickTitle")}
             description={t("actionClick.actionIconClickDesc")}
+            leftContent={
+              !sidePanelSupported ? (
+                <div className="dark:text-dark-text-tertiary mt-1 text-xs text-gray-500">
+                  {t("actionClick.sidepanelUnsupportedHelper")}
+                </div>
+              ) : null
+            }
             rightContent={
               <div
                 className={`${COLORS.background.tertiary} flex flex-col rounded-lg p-1 shadow-sm sm:flex-row`}

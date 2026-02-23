@@ -20,9 +20,13 @@ vi.mock("~/contexts/UserPreferencesContext", async () => {
   }
 })
 
-vi.mock("~/utils/browserApi", () => ({
-  hasAlarmsAPI: vi.fn(() => true),
-}))
+vi.mock("~/utils/browserApi", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/browserApi")>()
+  return {
+    ...actual,
+    hasAlarmsAPI: vi.fn(() => true),
+  }
+})
 
 vi.mock("react-hot-toast", () => {
   const toast = Object.assign(vi.fn(), {

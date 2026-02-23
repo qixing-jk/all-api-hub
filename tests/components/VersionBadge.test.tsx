@@ -3,9 +3,13 @@ import { describe, expect, it, vi } from "vitest"
 import { VersionBadge } from "~/components/VersionBadge"
 import { render, screen } from "~/tests/test-utils/render"
 
-vi.mock("~/utils/browserApi", () => ({
-  getManifest: vi.fn(),
-}))
+vi.mock("~/utils/browserApi", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/browserApi")>()
+  return {
+    ...actual,
+    getManifest: vi.fn(),
+  }
+})
 
 vi.mock("~/utils/docsLinks", () => ({
   getDocsChangelogUrl: vi.fn(),

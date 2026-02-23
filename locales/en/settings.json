@@ -245,7 +245,9 @@
     "popupTitle": "Open popup",
     "popupLabel": "Popup",
     "sidepanelTitle": "Open side panel",
-    "sidepanelLabel": "Side panel"
+    "sidepanelLabel": "Side panel",
+    "sidepanelUnsupportedHelper": "Side panel is not supported on this device. Toolbar icon clicks will fall back to opening the popup.",
+    "sidepanelFallbackToast": "Side panel preference saved. This device will fall back to opening the popup."
   },
   "permissions": {
     "title": "Permissions",

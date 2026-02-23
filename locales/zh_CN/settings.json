@@ -245,7 +245,9 @@
     "popupTitle": "打开弹出窗口",
     "popupLabel": "弹窗",
     "sidepanelTitle": "打开侧边栏",
-    "sidepanelLabel": "侧边栏"
+    "sidepanelLabel": "侧边栏",
+    "sidepanelUnsupportedHelper": "当前设备不支持侧边栏。点击工具栏图标将回退为打开弹窗。",
+    "sidepanelFallbackToast": "已保存侧边栏偏好设置。本设备不支持侧边栏，将回退为打开弹窗。"
   },
   "permissions": {
     "title": "权限管理",
