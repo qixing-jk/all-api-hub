@@ -11,6 +11,7 @@ import type {
   OverviewShareSnapshotPayload,
   ShareSnapshotPayload,
 } from "~/services/shareSnapshots/types"
+import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 
 /**
  * Build a dummy API key used by Web AI API Check tests.
@@ -64,4 +65,37 @@ export function buildShareSnapshotPayload(
   }
 
   return { ...base, ...overrides, kind: "account" }
+}
+
+/**
+ * Build a minimal `DisplaySiteData` fixture with sensible defaults for UI tests.
+ */
+export function buildDisplaySiteData(
+  overrides: Partial<DisplaySiteData> = {},
+): DisplaySiteData {
+  const base: DisplaySiteData = {
+    id: "account-1",
+    name: "Test Account",
+    username: "test-user",
+    balance: { USD: 0, CNY: 0 },
+    todayConsumption: { USD: 0, CNY: 0 },
+    todayIncome: { USD: 0, CNY: 0 },
+    todayTokens: { upload: 0, download: 0 },
+    health: { status: SiteHealthStatus.Healthy },
+    siteType: "test",
+    baseUrl: "https://example.com",
+    token: "test-token",
+    userId: 1,
+    authType: AuthTypeEnum.AccessToken,
+    checkIn: { enableDetection: false },
+  }
+
+  return {
+    ...base,
+    ...overrides,
+    checkIn: {
+      ...base.checkIn,
+      ...overrides.checkIn,
+    },
+  }
 }

@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import AccountActionButtons from "~/features/AccountManagement/components/AccountActionButtons"
+import { buildDisplaySiteData } from "~/tests/test-utils/factories"
 import { render } from "~/tests/test-utils/render"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 
@@ -102,19 +103,11 @@ describe("AccountActionButtons", () => {
 
     render(
       <AccountActionButtons
-        site={
-          {
-            id: "acc-1",
-            disabled: true,
-            name: "Site",
-            siteType: "test",
-            baseUrl: "https://example.com",
-            token: "token",
-            userId: 1,
-            authType: "access_token",
-            checkIn: { enableDetection: false },
-          } as any
-        }
+        site={buildDisplaySiteData({
+          id: "acc-1",
+          disabled: true,
+          name: "Site",
+        })}
         onCopyKey={vi.fn()}
         onDeleteAccount={vi.fn()}
       />,
@@ -157,19 +150,11 @@ describe("AccountActionButtons", () => {
 
     render(
       <AccountActionButtons
-        site={
-          {
-            id: "acc-2",
-            disabled: false,
-            name: "Site",
-            siteType: "test",
-            baseUrl: "https://example.com",
-            token: "token",
-            userId: 1,
-            authType: "access_token",
-            checkIn: { enableDetection: false },
-          } as any
-        }
+        site={buildDisplaySiteData({
+          id: "acc-2",
+          disabled: false,
+          name: "Site",
+        })}
         onCopyKey={vi.fn()}
         onDeleteAccount={vi.fn()}
       />,
@@ -205,19 +190,11 @@ describe("AccountActionButtons", () => {
 
     render(
       <AccountActionButtons
-        site={
-          {
-            id: "acc-3",
-            disabled: false,
-            name: "Site",
-            siteType: "test",
-            baseUrl: "https://example.com",
-            token: "token",
-            userId: 1,
-            authType: "access_token",
-            checkIn: { enableDetection: false },
-          } as any
-        }
+        site={buildDisplaySiteData({
+          id: "acc-3",
+          disabled: false,
+          name: "Site",
+        })}
         onCopyKey={vi.fn()}
         onDeleteAccount={vi.fn()}
       />,
@@ -252,19 +229,11 @@ describe("AccountActionButtons", () => {
 
     render(
       <AccountActionButtons
-        site={
-          {
-            id: "acc-4",
-            disabled: false,
-            name: "Site",
-            siteType: "test",
-            baseUrl: "https://example.com",
-            token: "token",
-            userId: 1,
-            authType: "access_token",
-            checkIn: { enableDetection: false },
-          } as any
-        }
+        site={buildDisplaySiteData({
+          id: "acc-4",
+          disabled: false,
+          name: "Site",
+        })}
         onCopyKey={onCopyKey}
         onDeleteAccount={vi.fn()}
       />,
@@ -300,19 +269,12 @@ describe("AccountActionButtons", () => {
 
     render(
       <AccountActionButtons
-        site={
-          {
-            id: "acc-5",
-            disabled: false,
-            name: "Site",
-            siteType: "test",
-            baseUrl: "https://example.com",
-            token: "token",
-            userId: 1,
-            authType: "access_token",
-            checkIn: { enableDetection: true },
-          } as any
-        }
+        site={buildDisplaySiteData({
+          id: "acc-5",
+          disabled: false,
+          name: "Site",
+          checkIn: { enableDetection: true },
+        })}
         onCopyKey={vi.fn()}
         onDeleteAccount={vi.fn()}
       />,
@@ -332,17 +294,19 @@ describe("AccountActionButtons", () => {
     expect(toastLoadingMock).toHaveBeenCalledWith(
       "autoCheckin:messages.loading.running",
     )
-    expect(sendRuntimeMessageMock).toHaveBeenNthCalledWith(1, {
-      action: RuntimeActionIds.AutoCheckinRunNow,
-      accountIds: ["acc-5"],
+    await waitFor(() => {
+      expect(sendRuntimeMessageMock).toHaveBeenNthCalledWith(1, {
+        action: RuntimeActionIds.AutoCheckinRunNow,
+        accountIds: ["acc-5"],
+      })
+      expect(sendRuntimeMessageMock).toHaveBeenNthCalledWith(2, {
+        action: RuntimeActionIds.AutoCheckinGetStatus,
+      })
+      expect(toastDismissMock).toHaveBeenCalledWith("toast-quick-checkin")
+      expect(toastSuccessMock).toHaveBeenCalledWith(
+        "Site: autoCheckin:providerFallback.checkinSuccessful",
+      )
+      expect(loadAccountDataMock).toHaveBeenCalled()
     })
-    expect(sendRuntimeMessageMock).toHaveBeenNthCalledWith(2, {
-      action: RuntimeActionIds.AutoCheckinGetStatus,
-    })
-    expect(toastDismissMock).toHaveBeenCalledWith("toast-quick-checkin")
-    expect(toastSuccessMock).toHaveBeenCalledWith(
-      "Site: autoCheckin:providerFallback.checkinSuccessful",
-    )
-    expect(loadAccountDataMock).toHaveBeenCalled()
   })
 })
