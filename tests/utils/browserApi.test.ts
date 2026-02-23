@@ -6,7 +6,6 @@ import {
   createAlarm,
   getAlarm,
   getAllAlarms,
-  getSidePanelSupport,
   hasAlarmsAPI,
   onAlarm,
   sendRuntimeActionMessage,
@@ -243,6 +242,7 @@ describe("browserApi sendRuntimeActionMessage", () => {
 describe("browserApi getSidePanelSupport", () => {
   beforeEach(() => {
     vi.restoreAllMocks()
+    vi.resetModules()
     ;(globalThis as any).browser = undefined
     ;(globalThis as any).chrome = undefined
   })
@@ -252,7 +252,7 @@ describe("browserApi getSidePanelSupport", () => {
     ;(globalThis as any).chrome = originalChrome
   })
 
-  it("treats browser.sidebarAction.open as Firefox side panel support", () => {
+  it("treats browser.sidebarAction.open as Firefox side panel support", async () => {
     ;(globalThis as any).browser = {
       sidebarAction: {
         open: vi.fn(),
@@ -260,13 +260,14 @@ describe("browserApi getSidePanelSupport", () => {
     }
     ;(globalThis as any).chrome = {}
 
+    const { getSidePanelSupport } = await import("~/utils/browserApi")
     expect(getSidePanelSupport()).toEqual({
       supported: true,
       kind: "firefox-sidebar-action",
     })
   })
 
-  it("treats chrome.sidePanel.open as Chromium side panel support", () => {
+  it("treats chrome.sidePanel.open as Chromium side panel support", async () => {
     ;(globalThis as any).browser = {}
     ;(globalThis as any).chrome = {
       sidePanel: {
@@ -274,16 +275,18 @@ describe("browserApi getSidePanelSupport", () => {
       },
     }
 
+    const { getSidePanelSupport } = await import("~/utils/browserApi")
     expect(getSidePanelSupport()).toEqual({
       supported: true,
       kind: "chromium-side-panel",
     })
   })
 
-  it("returns unsupported when neither side panel API is available", () => {
+  it("returns unsupported when neither side panel API is available", async () => {
     ;(globalThis as any).browser = {}
     ;(globalThis as any).chrome = {}
 
+    const { getSidePanelSupport } = await import("~/utils/browserApi")
     const result = getSidePanelSupport()
 
     expect(result.supported).toBe(false)
@@ -293,5 +296,55 @@ describe("browserApi getSidePanelSupport", () => {
     }
     expect(result.reason).toContain("browser.sidebarAction.open missing")
     expect(result.reason).toContain("chrome.sidePanel.open missing")
+  })
+
+  it("caches support check at module load time", async () => {
+    ;(globalThis as any).browser = {
+      sidebarAction: {
+        open: vi.fn(),
+      },
+    }
+    ;(globalThis as any).chrome = {}
+
+    const { getSidePanelSupport } = await import("~/utils/browserApi")
+
+    expect(getSidePanelSupport()).toEqual({
+      supported: true,
+      kind: "firefox-sidebar-action",
+    })
+    ;(globalThis as any).browser = {}
+    ;(globalThis as any).chrome = {
+      sidePanel: {
+        open: vi.fn(),
+      },
+    }
+
+    expect(getSidePanelSupport()).toEqual({
+      supported: true,
+      kind: "firefox-sidebar-action",
+    })
+  })
+
+  it("uses generic reason when APIs exist but are unusable", async () => {
+    ;(globalThis as any).browser = {
+      sidebarAction: {
+        open: {},
+      },
+    }
+    ;(globalThis as any).chrome = {
+      sidePanel: {
+        open: {},
+      },
+    }
+
+    const { getSidePanelSupport } = await import("~/utils/browserApi")
+    const result = getSidePanelSupport()
+
+    expect(result.supported).toBe(false)
+    expect(result.kind).toBe("unsupported")
+    if (result.supported) {
+      throw new Error("Expected getSidePanelSupport to return unsupported")
+    }
+    expect(result.reason).toBe("Side panel APIs not available")
   })
 })

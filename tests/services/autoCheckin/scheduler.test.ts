@@ -427,9 +427,10 @@ describe("autoCheckinScheduler targeting support", () => {
 
     const provider = {
       canCheckIn: vi.fn(() => true),
-      checkIn: vi.fn<(account: any) => Promise<{ status: "success" }>>(
-        async () => ({ status: "success" }),
-      ),
+      checkIn: vi.fn(async (account: any) => {
+        void account
+        return { status: "success" }
+      }),
     }
     mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
 
