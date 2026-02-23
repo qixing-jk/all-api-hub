@@ -204,6 +204,12 @@ describe("toModelTokenKey", () => {
     )
   })
 
+  it("treats underscores as equivalent to hyphens", () => {
+    expect(toModelTokenKey("claude_4_5_sonnet")).toBe(
+      toModelTokenKey("claude-4-5-sonnet"),
+    )
+  })
+
   it("ignores trailing date suffixes", () => {
     expect(toModelTokenKey("claude-4.5-sonnet")).toBe(
       toModelTokenKey("claude-sonnet-4-5-20250929"),

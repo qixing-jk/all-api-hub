@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { extractActualModel } from "~/services/modelRedirect/modelNormalization"
 import { ModelRedirectService } from "~/services/modelRedirect/ModelRedirectService"
 
-const mockedMetadata = vi.hoisted(() => {
+const MOCKED_METADATA = vi.hoisted(() => {
   const mockMetadataMap = new Map<
     string,
     { standardName: string; vendorName: string }
@@ -34,7 +34,7 @@ const mockedMetadata = vi.hoisted(() => {
 vi.mock("~/services/modelMetadata", () => ({
   modelMetadataService: {
     initialize: vi.fn().mockResolvedValue(undefined),
-    findStandardModelName: mockedMetadata.findStandardModelNameMock,
+    findStandardModelName: MOCKED_METADATA.findStandardModelNameMock,
     findVendorByPattern: (modelName: string) => {
       const lower = modelName.toLowerCase()
       if (/^gpt/.test(lower)) return "OpenAI"
@@ -45,7 +45,7 @@ vi.mock("~/services/modelMetadata", () => ({
     getVendorRules: () => [],
     getCacheInfo: () => ({
       isLoaded: true,
-      modelCount: mockedMetadata.modelCount,
+      modelCount: MOCKED_METADATA.modelCount,
       lastUpdated: Date.now(),
     }),
   },
@@ -53,9 +53,9 @@ vi.mock("~/services/modelMetadata", () => ({
 
 describe("ModelRedirectService.generateModelMappingForChannel", () => {
   beforeEach(() => {
-    mockedMetadata.findStandardModelNameMock.mockClear()
-    mockedMetadata.findStandardModelNameMock.mockImplementation(
-      mockedMetadata.defaultFindStandardModelName,
+    MOCKED_METADATA.findStandardModelNameMock.mockClear()
+    MOCKED_METADATA.findStandardModelNameMock.mockImplementation(
+      MOCKED_METADATA.defaultFindStandardModelName,
     )
   })
 
@@ -150,6 +150,15 @@ describe("ModelRedirectService.generateModelMappingForChannel", () => {
     expect(mapping["claude-4.5-sonnet"]).toBe("claude-sonnet-4-5-20250929")
   })
 
+  it("does not map across versions (OpenAI)", () => {
+    const mapping = ModelRedirectService.generateModelMappingForChannel(
+      ["gpt-4o-mini"],
+      ["gpt-4.1-mini"],
+    )
+
+    expect(mapping).toEqual({})
+  })
+
   it("does not map across versions (Google)", () => {
     const mapping = ModelRedirectService.generateModelMappingForChannel(
       ["gemini-2.5-pro"],
@@ -169,7 +178,7 @@ describe("ModelRedirectService.generateModelMappingForChannel", () => {
   })
 
   it("should not downgrade/upgrade versions even if metadata mis-normalizes (Claude)", () => {
-    mockedMetadata.findStandardModelNameMock.mockImplementation(
+    MOCKED_METADATA.findStandardModelNameMock.mockImplementation(
       (modelName: string) => {
         const cleaned = modelName.trim().toLowerCase()
         if (cleaned === "claude-4.5-sonnet") {
@@ -179,7 +188,7 @@ describe("ModelRedirectService.generateModelMappingForChannel", () => {
             vendorName: "Anthropic",
           }
         }
-        return mockedMetadata.defaultFindStandardModelName(modelName)
+        return MOCKED_METADATA.defaultFindStandardModelName(modelName)
       },
     )
 
@@ -192,14 +201,14 @@ describe("ModelRedirectService.generateModelMappingForChannel", () => {
   })
 
   it("should not downgrade/upgrade versions even if metadata mis-normalizes (Google)", () => {
-    mockedMetadata.findStandardModelNameMock.mockImplementation(
+    MOCKED_METADATA.findStandardModelNameMock.mockImplementation(
       (modelName: string) => {
         const cleaned = modelName.trim().toLowerCase()
         if (cleaned === "gemini-2.5-pro") {
           // Simulate a buggy metadata normalization that would map 2.5-pro -> 3-pro
           return { standardName: "gemini-3-pro", vendorName: "Google" }
         }
-        return mockedMetadata.defaultFindStandardModelName(modelName)
+        return MOCKED_METADATA.defaultFindStandardModelName(modelName)
       },
     )
 
@@ -212,7 +221,7 @@ describe("ModelRedirectService.generateModelMappingForChannel", () => {
   })
 
   it("should not cross minor versions even if metadata mis-normalizes (Claude 4.5 -> 4.6)", () => {
-    mockedMetadata.findStandardModelNameMock.mockImplementation(
+    MOCKED_METADATA.findStandardModelNameMock.mockImplementation(
       (modelName: string) => {
         const cleaned = modelName.trim().toLowerCase()
         if (cleaned === "claude-4.5-sonnet") {
@@ -222,7 +231,7 @@ describe("ModelRedirectService.generateModelMappingForChannel", () => {
             vendorName: "Anthropic",
           }
         }
-        return mockedMetadata.defaultFindStandardModelName(modelName)
+        return MOCKED_METADATA.defaultFindStandardModelName(modelName)
       },
     )
 
@@ -235,14 +244,14 @@ describe("ModelRedirectService.generateModelMappingForChannel", () => {
   })
 
   it("should not downgrade/upgrade versions even if metadata mis-normalizes (OpenAI)", () => {
-    mockedMetadata.findStandardModelNameMock.mockImplementation(
+    MOCKED_METADATA.findStandardModelNameMock.mockImplementation(
       (modelName: string) => {
         const cleaned = modelName.trim().toLowerCase()
         if (cleaned === "gpt-4.1-mini") {
           // Simulate a buggy metadata normalization that would map 4.1-mini -> 4o-mini
           return { standardName: "gpt-4o-mini", vendorName: "OpenAI" }
         }
-        return mockedMetadata.defaultFindStandardModelName(modelName)
+        return MOCKED_METADATA.defaultFindStandardModelName(modelName)
       },
     )
 
