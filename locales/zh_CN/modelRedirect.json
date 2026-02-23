@@ -24,6 +24,7 @@
     "action": "清空模型重定向映射",
     "actionDesc": "将所选渠道的 model_mapping 设置为空对象（{}）。此操作不可撤销。",
     "search": {
+      "label": "搜索渠道",
       "placeholder": "搜索渠道（名称或 ID）…",
       "noResults": "未找到匹配的渠道",
       "filteredCount": "当前显示 {{filtered}}/{{total}}"

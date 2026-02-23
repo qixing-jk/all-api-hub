@@ -9,6 +9,7 @@ import settingsEn from "~/locales/en/settings.json"
 import uiEn from "~/locales/en/ui.json"
 import { hasValidManagedSiteConfig } from "~/services/managedSiteService"
 import { ModelRedirectService } from "~/services/modelRedirect"
+import { buildManagedSiteChannel } from "~/tests/test-utils/factories"
 import { testI18n } from "~/tests/test-utils/i18n"
 import { fireEvent, render, screen, waitFor } from "~/tests/test-utils/render"
 
@@ -92,12 +93,16 @@ describe("Model redirect bulk clear flow", () => {
     mockedModelRedirectService.listManagedSiteChannels.mockResolvedValue({
       success: true,
       channels: [
-        {
+        buildManagedSiteChannel({
           id: 1,
           name: "Channel One",
           model_mapping: '{"gpt-4o":"openai/gpt-4o"}',
-        },
-        { id: 2, name: "Channel Two", model_mapping: "{}" },
+        }),
+        buildManagedSiteChannel({
+          id: 2,
+          name: "Channel Two",
+          model_mapping: "{}",
+        }),
       ],
       errors: [],
     })
@@ -131,8 +136,9 @@ describe("Model redirect bulk clear flow", () => {
   it("calls the service with selected IDs", async () => {
     mockedModelRedirectService.clearChannelModelMappings.mockResolvedValue({
       success: true,
-      totalSelected: 1,
+      totalSelected: 2,
       clearedChannels: 1,
+      skippedChannels: 1,
       failedChannels: 0,
       results: [],
       errors: [],
@@ -158,7 +164,7 @@ describe("Model redirect bulk clear flow", () => {
     await waitFor(() => {
       expect(
         mockedModelRedirectService.clearChannelModelMappings,
-      ).toHaveBeenCalledWith([1])
+      ).toHaveBeenCalledWith([1, 2])
     })
 
     expect(toast.success).toHaveBeenCalled()
@@ -194,9 +200,17 @@ describe("Model redirect bulk clear flow", () => {
     mockedModelRedirectService.listManagedSiteChannels.mockResolvedValue({
       success: true,
       channels: [
-        { id: 1, name: "Few", model_mapping: '{"a":"b"}' },
-        { id: 2, name: "Many", model_mapping: '{"a":"b","c":"d"}' },
-        { id: 3, name: "Empty", model_mapping: "{}" },
+        buildManagedSiteChannel({
+          id: 1,
+          name: "Few",
+          model_mapping: '{"a":"b"}',
+        }),
+        buildManagedSiteChannel({
+          id: 2,
+          name: "Many",
+          model_mapping: '{"a":"b","c":"d"}',
+        }),
+        buildManagedSiteChannel({ id: 3, name: "Empty", model_mapping: "{}" }),
       ],
       errors: [],
     })

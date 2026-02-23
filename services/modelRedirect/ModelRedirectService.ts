@@ -21,7 +21,7 @@ import {
 } from "~/utils/managedSite"
 
 import { hasValidManagedSiteConfig } from "../managedSiteService"
-import { userPreferences } from "../userPreferences"
+import { userPreferences, type UserPreferences } from "../userPreferences"
 import { renameModel } from "./modelNormalization"
 import { isEmptyModelMapping } from "./utils"
 
@@ -54,13 +54,19 @@ export interface ModelRedirectBulkClearResult {
  * Core algorithm for generating model redirect mappings
  */
 export class ModelRedirectService {
-  private static async getManagedSiteModelSyncService(): Promise<
+  /**
+   * Build a managed-site `ModelSyncService` for the current preferences.
+   * When `prefs` is provided, avoids an extra storage read.
+   */
+  private static async getManagedSiteModelSyncService(
+    prefs?: UserPreferences,
+  ): Promise<
     | { ok: true; service: ModelSyncService }
     | { ok: false; errors: string[]; message: string }
   > {
-    const prefs = await userPreferences.getPreferences()
+    const resolvedPrefs = prefs ?? (await userPreferences.getPreferences())
 
-    if (!prefs) {
+    if (!resolvedPrefs) {
       return {
         ok: false,
         errors: ["Managed site configuration is missing"],
@@ -68,7 +74,7 @@ export class ModelRedirectService {
       }
     }
 
-    const { siteType } = getManagedSiteConfig(prefs)
+    const { siteType } = getManagedSiteConfig(resolvedPrefs)
 
     if (siteType === OCTOPUS) {
       return {
@@ -78,7 +84,7 @@ export class ModelRedirectService {
       }
     }
 
-    const adminConfig = getManagedSiteAdminConfig(prefs)
+    const adminConfig = getManagedSiteAdminConfig(resolvedPrefs)
     if (!adminConfig) {
       return {
         ok: false,
@@ -186,7 +192,7 @@ export class ModelRedirectService {
       })
 
       const serviceResult =
-        await ModelRedirectService.getManagedSiteModelSyncService()
+        await ModelRedirectService.getManagedSiteModelSyncService(prefs)
       if (!serviceResult.ok) {
         return {
           success: false,

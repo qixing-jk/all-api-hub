@@ -6,12 +6,14 @@
  * - Keep values deterministic to avoid brittle snapshots/expectations.
  */
 
+import { ChannelType } from "~/constants"
 import type {
   AccountShareSnapshotPayload,
   OverviewShareSnapshotPayload,
   ShareSnapshotPayload,
 } from "~/services/shareSnapshots/types"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
+import { CHANNEL_STATUS, type ManagedSiteChannel } from "~/types/managedSite"
 
 /**
  * Build a dummy API key used by Web AI API Check tests.
@@ -96,6 +98,61 @@ export function buildDisplaySiteData(
     checkIn: {
       ...base.checkIn,
       ...overrides.checkIn,
+    },
+  }
+}
+
+/**
+ * Build a managed-site channel fixture with deterministic, UI-friendly defaults.
+ */
+export function buildManagedSiteChannel(
+  overrides: Partial<ManagedSiteChannel> = {},
+): ManagedSiteChannel {
+  const base: ManagedSiteChannel = {
+    id: 1,
+    type: ChannelType.OpenAI,
+    key: "",
+    name: "Test Channel",
+    base_url: "https://example.com",
+    models: "",
+    status: CHANNEL_STATUS.Enable,
+    weight: 0,
+    priority: 0,
+    openai_organization: null,
+    test_model: null,
+    created_time: 1700000000,
+    test_time: 0,
+    response_time: 0,
+    other: "",
+    balance: 0,
+    balance_updated_time: 0,
+    group: "default",
+    used_quota: 0,
+    model_mapping: "{}",
+    status_code_mapping: "{}",
+    auto_ban: 0,
+    other_info: "{}",
+    tag: null,
+    param_override: null,
+    header_override: null,
+    remark: null,
+    channel_info: {
+      is_multi_key: false,
+      multi_key_size: 0,
+      multi_key_status_list: null,
+      multi_key_polling_index: 0,
+      multi_key_mode: "",
+    },
+    setting: "{}",
+    settings: "{}",
+  }
+
+  return {
+    ...base,
+    ...overrides,
+    channel_info: {
+      ...base.channel_info,
+      ...overrides.channel_info,
     },
   }
 }

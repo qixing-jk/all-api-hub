@@ -24,6 +24,7 @@
     "action": "Clear model redirect maps",
     "actionDesc": "Set selected channels' model_mapping to an empty object ({}). This cannot be undone.",
     "search": {
+      "label": "Search channels",
       "placeholder": "Search channels (name or ID)...",
       "noResults": "No matching channels.",
       "filteredCount": "Showing {{filtered}}/{{total}}"

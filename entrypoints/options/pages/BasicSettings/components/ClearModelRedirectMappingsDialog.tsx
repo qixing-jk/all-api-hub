@@ -135,6 +135,10 @@ export function ClearModelRedirectMappingsDialog({
       return
     }
 
+    let cancelled = false
+
+    setChannels([])
+    setSelectedIds(new Set())
     setIsLoading(true)
     setLoadError(null)
     setResultErrors([])
@@ -142,6 +146,7 @@ export function ClearModelRedirectMappingsDialog({
     void (async () => {
       try {
         const result = await ModelRedirectService.listManagedSiteChannels()
+        if (cancelled) return
         if (!result.success) {
           const message =
             result.message || result.errors.join("; ") || "Unknown"
@@ -150,19 +155,18 @@ export function ClearModelRedirectMappingsDialog({
         }
 
         setChannels(result.channels)
-        setSelectedIds(
-          new Set(
-            result.channels
-              .filter((c) => !isEmptyModelMapping(c.model_mapping))
-              .map((c) => c.id),
-          ),
-        )
+        setSelectedIds(new Set(result.channels.map((c) => c.id)))
       } catch (error) {
+        if (cancelled) return
         setLoadError(getErrorMessage(error))
       } finally {
-        setIsLoading(false)
+        if (!cancelled) setIsLoading(false)
       }
     })()
+
+    return () => {
+      cancelled = true
+    }
   }, [isOpen])
 
   const handleClose = () => {
@@ -185,10 +189,8 @@ export function ClearModelRedirectMappingsDialog({
   const handleSelectAll = () => {
     setSelectedIds((prev) => {
       const next = new Set(prev)
-      for (const { channel, meta } of filteredChannelItems) {
-        if (!meta.isEmpty) {
-          next.add(channel.id)
-        }
+      for (const { channel } of filteredChannelItems) {
+        next.add(channel.id)
       }
       return next
     })
@@ -197,10 +199,8 @@ export function ClearModelRedirectMappingsDialog({
   const handleSelectNone = () => {
     setSelectedIds((prev) => {
       const next = new Set(prev)
-      for (const { channel, meta } of filteredChannelItems) {
-        if (!meta.isEmpty) {
-          next.delete(channel.id)
-        }
+      for (const { channel } of filteredChannelItems) {
+        next.delete(channel.id)
       }
       return next
     })
@@ -357,6 +357,7 @@ export function ClearModelRedirectMappingsDialog({
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
             placeholder={t("bulkClear.search.placeholder")}
+            aria-label={t("bulkClear.search.label")}
             disabled={isLoading || isClearing || !channels.length}
           />
 
@@ -386,7 +387,7 @@ export function ClearModelRedirectMappingsDialog({
                 filteredChannelItems.map(({ channel, meta }) => {
                   const checked = selectedIds.has(channel.id)
                   const mappingIsEmpty = meta.isEmpty
-                  const checkboxDisabled = isClearing || mappingIsEmpty
+                  const checkboxDisabled = isClearing
 
                   return (
                     <div

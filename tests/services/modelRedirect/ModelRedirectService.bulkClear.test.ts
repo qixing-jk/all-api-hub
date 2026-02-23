@@ -102,6 +102,33 @@ describe("ModelRedirectService.clearChannelModelMappings", () => {
     )
   })
 
+  it("counts empty model_mapping channels as skipped and does not update them", async () => {
+    listChannelsMock.mockResolvedValue({
+      items: [
+        { id: 1, name: "empty", models: "a,b", model_mapping: "{}" },
+        { id: 2, name: "non-empty", models: "a,b", model_mapping: '{"x":"y"}' },
+      ],
+    })
+    updateChannelModelMappingMock.mockResolvedValue(undefined)
+
+    const result = await ModelRedirectService.clearChannelModelMappings([1, 2])
+
+    expect(result.success).toBe(true)
+    expect(result.totalSelected).toBe(2)
+    expect(result.clearedChannels).toBe(1)
+    expect(result.skippedChannels).toBe(1)
+    expect(result.failedChannels).toBe(0)
+    expect(updateChannelModelMappingMock).toHaveBeenCalledTimes(1)
+    expect(updateChannelModelMappingMock).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 2 }),
+      {},
+    )
+    expect(updateChannelModelMappingMock).not.toHaveBeenCalledWith(
+      expect.objectContaining({ id: 1 }),
+      {},
+    )
+  })
+
   it("continues on partial failures and reports per-channel errors", async () => {
     listChannelsMock.mockResolvedValue({
       items: [
