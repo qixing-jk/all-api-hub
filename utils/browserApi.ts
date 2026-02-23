@@ -402,9 +402,9 @@ export type SidePanelSupport =
   | { supported: false; kind: "unsupported"; reason: string }
 
 /**
- * Detects whether the current runtime can open a side panel/sidebar.
+ * Side panel capability is cached at module load time to avoid repeatedly touching globals.
  */
-export function getSidePanelSupport(): SidePanelSupport {
+const cachedSidePanelSupport: SidePanelSupport = (() => {
   const runtimeBrowser = (globalThis as any).browser
   if (typeof runtimeBrowser?.sidebarAction?.open === "function") {
     return { supported: true, kind: "firefox-sidebar-action" }
@@ -416,14 +416,25 @@ export function getSidePanelSupport(): SidePanelSupport {
   }
 
   const reasons: string[] = []
-  reasons.push("browser.sidebarAction.open missing")
-  reasons.push("chrome.sidePanel.open missing")
+  if (runtimeBrowser?.sidebarAction?.open === undefined) {
+    reasons.push("browser.sidebarAction.open missing")
+  }
+  if (runtimeChrome?.sidePanel?.open === undefined) {
+    reasons.push("chrome.sidePanel.open missing")
+  }
 
   return {
     supported: false,
     kind: "unsupported",
     reason: reasons.join("; ") || "Side panel APIs not available",
   }
+})()
+
+/**
+ * Detects whether the current runtime can open a side panel/sidebar.
+ */
+export function getSidePanelSupport(): SidePanelSupport {
+  return cachedSidePanelSupport
 }
 
 /**
