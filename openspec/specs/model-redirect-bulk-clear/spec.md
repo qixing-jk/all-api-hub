@@ -1,7 +1,11 @@
 # model-redirect-bulk-clear Specification
 
 ## Purpose
-TBD - created by syncing change clear-model-redirect-settings. Update Purpose after archive.
+This `model-redirect-bulk-clear` spec defines the bulk-clear workflow for managed-site channel model redirect mappings
+(`model_mapping`). It covers the goals and scope (previewing managed-site channels, selecting which channels are
+affected, and clearing only the selected channels’ redirect settings by writing an empty mapping `{}`), along with the
+expected safety and validation behavior (explicit confirmation, preventing destructive actions with empty selection, and
+reporting per-channel errors and outcomes so reviewers can verify acceptance criteria).
 ## Requirements
 
 ### Requirement: User can preview channels and choose which model redirect maps to clear
