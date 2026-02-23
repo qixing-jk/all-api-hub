@@ -16,6 +16,7 @@ import {
 } from "~/types/managedSiteModelRedirect"
 import type { NewApiConfig } from "~/types/newApiConfig"
 import type { VeloeraConfig } from "~/types/veloeraConfig"
+import { getErrorMessage } from "~/utils/error"
 import { createLogger } from "~/utils/logger"
 import { getManagedSiteConfig } from "~/utils/managedSite"
 
@@ -28,11 +29,79 @@ import { renameModel } from "./modelNormalization"
  */
 const logger = createLogger("ModelRedirect")
 
+export interface ModelRedirectChannelResult {
+  channelId: number
+  channelName: string
+  success: boolean
+  skipped?: boolean
+  error?: string
+}
+
+export interface ModelRedirectBulkClearResult {
+  success: boolean
+  totalSelected: number
+  clearedChannels: number
+  skippedChannels: number
+  failedChannels: number
+  results: ModelRedirectChannelResult[]
+  errors: string[]
+  message?: string
+}
+
 /**
  * Model Redirect Service
  * Core algorithm for generating model redirect mappings
  */
 export class ModelRedirectService {
+  private static isEmptyModelMapping(modelMapping: string | null | undefined) {
+    const trimmed = (modelMapping ?? "").trim()
+    return !trimmed || trimmed === "{}"
+  }
+
+  private static async getManagedSiteModelSyncService(): Promise<
+    | { ok: true; service: ModelSyncService }
+    | { ok: false; errors: string[]; message: string }
+  > {
+    const prefs = await userPreferences.getPreferences()
+
+    if (!hasValidManagedSiteConfig(prefs)) {
+      return {
+        ok: false,
+        errors: ["Managed site configuration is missing"],
+        message: "Managed site configuration is missing",
+      }
+    }
+
+    const { siteType, config: managedConfig } = getManagedSiteConfig(prefs)
+
+    if (siteType === OCTOPUS) {
+      return {
+        ok: false,
+        errors: ["Model redirect is not supported for Octopus sites"],
+        message: "Model redirect is not supported for Octopus sites",
+      }
+    }
+
+    const legacyConfig = managedConfig as
+      | NewApiConfig
+      | DoneHubConfig
+      | VeloeraConfig
+
+    return {
+      ok: true,
+      service: new ModelSyncService(
+        legacyConfig.baseUrl!,
+        legacyConfig.adminToken!,
+        legacyConfig.userId!,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        siteType,
+      ),
+    }
+  }
+
   /**
    * Apply model mapping to a channel with incremental merge
    * Merges new mapping with existing mapping (new keys override old keys)
@@ -116,35 +185,18 @@ export class ModelRedirectService {
         logger.warn("Failed to initialize metadata", error)
       })
 
-      const { siteType, config: managedConfig } = getManagedSiteConfig(prefs)
-
-      // Octopus 站点暂不支持 Model Redirect 功能
-      if (siteType === OCTOPUS) {
+      const serviceResult =
+        await ModelRedirectService.getManagedSiteModelSyncService()
+      if (!serviceResult.ok) {
         return {
           success: false,
           updatedChannels: 0,
-          errors: ["Model redirect is not supported for Octopus sites"],
-          message: "Model redirect is not supported for Octopus sites",
+          errors: serviceResult.errors,
+          message: serviceResult.message,
         }
       }
 
-      const legacyConfig = managedConfig as
-        | NewApiConfig
-        | DoneHubConfig
-        | VeloeraConfig
-
-      const service = new ModelSyncService(
-        legacyConfig.baseUrl!,
-        legacyConfig.adminToken!,
-        legacyConfig.userId!,
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        siteType,
-      )
-
-      const channelList = await service.listChannels()
+      const channelList = await serviceResult.service.listChannels()
 
       let successCount = 0
       const errors: string[] = []
@@ -176,7 +228,7 @@ export class ModelRedirectService {
           await ModelRedirectService.applyModelMappingToChannel(
             channel,
             newMapping,
-            service,
+            serviceResult.service,
           )
           successCount += 1
         } catch (error) {
@@ -199,6 +251,179 @@ export class ModelRedirectService {
         errors: [
           error instanceof Error ? error.message : "Failed to apply redirect",
         ],
+      }
+    }
+  }
+
+  /**
+   * List managed-site channels for preview/selection flows.
+   * @returns Success flag with channel list and error messages suitable for UI.
+   */
+  static async listManagedSiteChannels(): Promise<{
+    success: boolean
+    channels: ManagedSiteChannel[]
+    errors: string[]
+    message?: string
+  }> {
+    try {
+      const serviceResult =
+        await ModelRedirectService.getManagedSiteModelSyncService()
+      if (!serviceResult.ok) {
+        return {
+          success: false,
+          channels: [],
+          errors: serviceResult.errors,
+          message: serviceResult.message,
+        }
+      }
+
+      const channelList = await serviceResult.service.listChannels()
+
+      return {
+        success: true,
+        channels: channelList.items ?? [],
+        errors: [],
+      }
+    } catch (error) {
+      logger.error("Failed to list channels for bulk clear preview", error)
+      const message = getErrorMessage(error)
+      return {
+        success: false,
+        channels: [],
+        errors: [message],
+        message,
+      }
+    }
+  }
+
+  /**
+   * Clear channel model redirect mappings by writing an empty object to `model_mapping`.
+   * @param channelIds Channel IDs selected in the current managed-site context.
+   * @returns Bulk operation summary with per-channel results.
+   */
+  static async clearChannelModelMappings(
+    channelIds: number[],
+  ): Promise<ModelRedirectBulkClearResult> {
+    try {
+      if (!channelIds.length) {
+        return {
+          success: false,
+          totalSelected: 0,
+          clearedChannels: 0,
+          skippedChannels: 0,
+          failedChannels: 0,
+          results: [],
+          errors: ["No channels selected"],
+          message: "No channels selected",
+        }
+      }
+
+      const serviceResult =
+        await ModelRedirectService.getManagedSiteModelSyncService()
+      if (!serviceResult.ok) {
+        return {
+          success: false,
+          totalSelected: channelIds.length,
+          clearedChannels: 0,
+          skippedChannels: 0,
+          failedChannels: channelIds.length,
+          results: channelIds.map((channelId) => ({
+            channelId,
+            channelName: `#${channelId}`,
+            success: false,
+            error: serviceResult.message,
+          })),
+          errors: serviceResult.errors,
+          message: serviceResult.message,
+        }
+      }
+
+      const channelList = await serviceResult.service.listChannels()
+      const channelsById = new Map<number, ManagedSiteChannel>(
+        (channelList.items ?? []).map((channel) => [channel.id, channel]),
+      )
+
+      const results: ModelRedirectChannelResult[] = []
+
+      for (const channelId of channelIds) {
+        const channel = channelsById.get(channelId)
+        if (!channel) {
+          results.push({
+            channelId,
+            channelName: `#${channelId}`,
+            success: false,
+            error: "Channel not found",
+          })
+          continue
+        }
+
+        if (ModelRedirectService.isEmptyModelMapping(channel.model_mapping)) {
+          results.push({
+            channelId,
+            channelName: channel.name,
+            success: true,
+            skipped: true,
+          })
+          continue
+        }
+
+        try {
+          await serviceResult.service.updateChannelModelMapping(channel, {})
+          results.push({
+            channelId,
+            channelName: channel.name,
+            success: true,
+          })
+        } catch (error) {
+          results.push({
+            channelId,
+            channelName: channel.name,
+            success: false,
+            error: getErrorMessage(error),
+          })
+        }
+      }
+
+      const clearedChannels = results.filter(
+        (r) => r.success && !r.skipped,
+      ).length
+      const skippedChannels = results.filter(
+        (r) => r.success && r.skipped,
+      ).length
+      const failedChannels = results.length - clearedChannels - skippedChannels
+      const errors = results
+        .filter((r) => !r.success)
+        .map(
+          (r) =>
+            `Channel ${r.channelName} (${r.channelId}): ${r.error || "Unknown error"}`,
+        )
+
+      return {
+        success: failedChannels === 0,
+        totalSelected: channelIds.length,
+        clearedChannels,
+        skippedChannels,
+        failedChannels,
+        results,
+        errors,
+      }
+    } catch (error) {
+      logger.error("Failed to bulk clear channel model mappings", error)
+      const message = getErrorMessage(error)
+      return {
+        success: false,
+        totalSelected: channelIds.length,
+        clearedChannels: 0,
+        skippedChannels: 0,
+        failedChannels: channelIds.length,
+        results: channelIds.map((channelId) => ({
+          channelId,
+          channelName: `#${channelId}`,
+          success: false,
+          error: message,
+        })),
+        errors: [message],
+        message,
       }
     }
   }

@@ -14,6 +14,8 @@ import { ALL_PRESET_STANDARD_MODELS } from "~/types/managedSiteModelRedirect"
 import { createLogger } from "~/utils/logger"
 import { getManagedSiteAdminConfig } from "~/utils/managedSite"
 
+import { ClearModelRedirectMappingsDialog } from "./ClearModelRedirectMappingsDialog"
+
 /**
  * Unified logger scoped to the Basic Settings model redirect section.
  */
@@ -29,6 +31,7 @@ export default function ModelRedirectSettings() {
     useUserPreferencesContext()
   const [isRegenerating, setIsRegenerating] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
+  const [isBulkClearOpen, setIsBulkClearOpen] = useState(false)
 
   const modelRedirect = preferences?.modelRedirect
 
@@ -106,6 +109,10 @@ export default function ModelRedirectSettings() {
     }
   }
 
+  const canUseManagedSiteAdmin = Boolean(
+    preferences && hasValidManagedSiteConfig(preferences),
+  )
+
   return (
     <SettingSection
       id="managed-site-model-redirect"
@@ -168,8 +175,27 @@ export default function ModelRedirectSettings() {
               </div>
             </>
           )}
+
+          <div className="pt-2">
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={!canUseManagedSiteAdmin}
+              onClick={() => setIsBulkClearOpen(true)}
+            >
+              {t("bulkClear.action")}
+            </Button>
+            <p className="dark:text-dark-text-secondary mt-1 text-sm text-gray-500">
+              {t("bulkClear.actionDesc")}
+            </p>
+          </div>
         </CardContent>
       </Card>
+
+      <ClearModelRedirectMappingsDialog
+        isOpen={isBulkClearOpen}
+        onClose={() => setIsBulkClearOpen(false)}
+      />
     </SettingSection>
   )
 }

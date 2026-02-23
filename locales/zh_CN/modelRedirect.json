@@ -19,5 +19,56 @@
     "noModelsSelected": "请至少选择一个标准模型",
     "featureDisabled": "模型重定向功能未启用",
     "alreadyGenerating": "映射生成正在进行中"
+  },
+  "bulkClear": {
+    "action": "清空模型重定向映射",
+    "actionDesc": "将所选渠道的 model_mapping 设置为空对象（{}）。此操作不可撤销。",
+    "search": {
+      "placeholder": "搜索渠道（名称或 ID）…",
+      "noResults": "未找到匹配的渠道",
+      "filteredCount": "当前显示 {{filtered}}/{{total}}"
+    },
+    "preview": {
+      "title": "清空模型重定向映射",
+      "description": "请选择需要清空的渠道。未选择的渠道不会被修改。",
+      "channelListLabel": "渠道列表",
+      "selectedCount": "已选择 {{selected}}/{{total}}",
+      "mappingCount": "映射数：{{count}}",
+      "mappingInvalidBadge": "JSON 无效",
+      "mappingToggle": "预览当前 model_mapping",
+      "mappingEmptyInline": "当前 model_mapping 为空（{}）",
+      "mappingInvalid": "当前 model_mapping 不是有效 JSON，将展示原始文本。"
+    },
+    "confirm": {
+      "title": "确认清空模型重定向映射？",
+      "description": "即将清空 {{count}} 个渠道的模型重定向映射（model_mapping）。此操作不可撤销。",
+      "warningTitle": "危险操作",
+      "details": "已选择渠道数：{{count}}"
+    },
+    "actions": {
+      "close": "关闭",
+      "continue": "继续",
+      "selectAll": "全选",
+      "selectNone": "全不选",
+      "cancel": "取消",
+      "confirm": "清空"
+    },
+    "status": {
+      "loading": "正在加载渠道…",
+      "clearing": "正在清空…",
+      "loadFailed": "加载渠道失败：{{error}}",
+      "noChannels": "未找到任何渠道",
+      "emptySelection": "请至少选择一个渠道后继续。"
+    },
+    "messages": {
+      "allSuccess": "已成功清空 {{count}} 个渠道的模型重定向映射",
+      "successWithSkips": "已清空 {{cleared}} 个渠道，{{skipped}} 个本来就是空的",
+      "nothingToClear": "无需清空（所选渠道的 model_mapping 已为空）",
+      "partialFailure": "已清空 {{success}}/{{total}} 个渠道，{{failed}} 个失败",
+      "failed": "清空模型重定向映射失败：{{error}}"
+    },
+    "result": {
+      "title": "失败详情"
+    }
   }
 }

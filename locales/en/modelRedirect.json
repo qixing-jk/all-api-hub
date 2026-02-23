@@ -19,5 +19,56 @@
     "noModelsSelected": "Please select at least one standard model",
     "featureDisabled": "Model redirect feature is disabled",
     "alreadyGenerating": "Mapping generation already in progress"
+  },
+  "bulkClear": {
+    "action": "Clear model redirect maps",
+    "actionDesc": "Set selected channels' model_mapping to an empty object ({}). This cannot be undone.",
+    "search": {
+      "placeholder": "Search channels (name or ID)...",
+      "noResults": "No matching channels.",
+      "filteredCount": "Showing {{filtered}}/{{total}}"
+    },
+    "preview": {
+      "title": "Clear model redirect maps",
+      "description": "Select which channels to clear. Unselected channels will not be changed.",
+      "channelListLabel": "Channels",
+      "selectedCount": "{{selected}}/{{total}} selected",
+      "mappingCount": "Mappings: {{count}}",
+      "mappingInvalidBadge": "Invalid JSON",
+      "mappingToggle": "Preview current model_mapping",
+      "mappingEmptyInline": "Current model_mapping is empty ({}).",
+      "mappingInvalid": "Current model_mapping is not valid JSON; showing raw text."
+    },
+    "confirm": {
+      "title": "Clear model redirect maps?",
+      "description": "This will clear model redirect maps for {{count}} channel(s). This cannot be undone.",
+      "warningTitle": "Destructive action",
+      "details": "Selected channels: {{count}}"
+    },
+    "actions": {
+      "close": "Close",
+      "continue": "Continue",
+      "selectAll": "Select all",
+      "selectNone": "Select none",
+      "cancel": "Cancel",
+      "confirm": "Clear"
+    },
+    "status": {
+      "loading": "Loading channels...",
+      "clearing": "Clearing...",
+      "loadFailed": "Failed to load channels: {{error}}",
+      "noChannels": "No channels found.",
+      "emptySelection": "Select at least one channel to continue."
+    },
+    "messages": {
+      "allSuccess": "Cleared model redirect maps for {{count}} channel(s).",
+      "successWithSkips": "Cleared {{cleared}} channel(s); {{skipped}} already empty.",
+      "nothingToClear": "Nothing to clear (selected channels are already empty).",
+      "partialFailure": "Cleared {{success}}/{{total}} channel(s); {{failed}} failed.",
+      "failed": "Failed to clear model redirect maps: {{error}}"
+    },
+    "result": {
+      "title": "Failed channels"
+    }
   }
 }

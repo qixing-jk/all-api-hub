@@ -25,13 +25,12 @@ const listChannelsMock = vi.fn()
 const updateChannelModelMappingMock = vi.fn()
 
 vi.mock("~/services/modelSync", () => {
-  const NewApiModelSyncServiceMock = vi.fn().mockImplementation(() => ({
-    listChannels: listChannelsMock,
-    updateChannelModelMapping: updateChannelModelMappingMock,
-  }))
+  class ModelSyncServiceMock {
+    listChannels = listChannelsMock
+    updateChannelModelMapping = updateChannelModelMappingMock
+  }
   return {
-    NewApiModelSyncService: NewApiModelSyncServiceMock,
-    __esModule: true,
+    ModelSyncService: ModelSyncServiceMock,
   }
 })
 
