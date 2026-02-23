@@ -1542,12 +1542,10 @@ class AutoCheckinScheduler {
       perAccount: Record<string, CheckinAccountResult>,
     ): AutoCheckinRunSummary => {
       if (!mergeHistory) return summary
-      return {
-        ...summary,
-        totalEligible:
-          currentStatus?.summary?.totalEligible ??
-          Object.keys(perAccount).length,
-      }
+      return this.recalculateSummaryFromResults(
+        perAccount,
+        currentStatus?.summary ?? summary,
+      )
     }
 
     try {
