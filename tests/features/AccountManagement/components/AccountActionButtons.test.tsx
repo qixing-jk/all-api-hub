@@ -1,9 +1,10 @@
-import { render, screen, waitFor, within } from "@testing-library/react"
+import { screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import AccountActionButtons from "~/features/AccountManagement/components/AccountActionButtons"
+import { render } from "~/tests/test-utils/render"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 
 const {
@@ -26,9 +27,13 @@ const {
   toastErrorMock: vi.fn(),
 }))
 
-vi.mock("react-i18next", () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
-}))
+vi.mock("react-i18next", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("react-i18next")>()
+  return {
+    ...actual,
+    useTranslation: () => ({ t: (key: string) => key }),
+  }
+})
 
 vi.mock("react-hot-toast", () => ({
   default: {
@@ -73,6 +78,7 @@ vi.mock("~/features/AccountManagement/hooks/DialogStateContext", () => ({
 }))
 
 vi.mock("~/contexts/UserPreferencesContext", () => ({
+  UserPreferencesProvider: ({ children }: { children: any }) => children,
   useUserPreferencesContext: () => ({
     currencyType: "USD",
     showTodayCashflow: true,
@@ -276,6 +282,7 @@ describe("AccountActionButtons", () => {
   })
 
   it("sends a targeted autoCheckin:runNow payload when Quick check-in is clicked", async () => {
+    toastLoadingMock.mockReturnValue("toast-quick-checkin")
     sendRuntimeMessageMock
       .mockResolvedValueOnce({ success: true })
       .mockResolvedValueOnce({
@@ -332,7 +339,7 @@ describe("AccountActionButtons", () => {
     expect(sendRuntimeMessageMock).toHaveBeenNthCalledWith(2, {
       action: RuntimeActionIds.AutoCheckinGetStatus,
     })
-    expect(toastDismissMock).toHaveBeenCalled()
+    expect(toastDismissMock).toHaveBeenCalledWith("toast-quick-checkin")
     expect(toastSuccessMock).toHaveBeenCalledWith(
       "Site: autoCheckin:providerFallback.checkinSuccessful",
     )
