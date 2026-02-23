@@ -50,7 +50,7 @@ export default function ActionClickBehaviorSettings() {
             description={t("actionClick.actionIconClickDesc")}
             leftContent={
               !sidePanelSupported ? (
-                <div className="dark:text-dark-text-tertiary mt-1 text-xs text-gray-500">
+                <div className={`${COLORS.text.tertiary} mt-1 text-xs`}>
                   {t("actionClick.sidepanelUnsupportedHelper")}
                 </div>
               ) : null
