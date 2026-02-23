@@ -50,6 +50,8 @@ The current fuzzy match ignores version tokens and returns the first match encou
   - Mitigation: Keep exact/alias matching strong; document the behavior and provide clear guidance.
 - **[Vendor naming ambiguity]** → Some model identifiers embed non-version numbers (sizes, dates).
   - Mitigation: Reuse existing date-suffix stripping; keep the signature logic token-based and avoid treating size tokens (e.g., `70b`) as numeric versions.
+- **[Numeric-token commutativity]** → Because normalization uses an unordered token set, numeric version tokens can be treated as commutative (e.g., `claude-5.4-sonnet` and `claude-4.5-sonnet` normalize to the same token set).
+  - Mitigation: No live models currently exhibit this collision; if such models appear, add a deterministic tie-breaker or switch to an ordered-token strategy for numeric tokens.
 - **[Remote metadata inconsistencies]** → The remote model metadata source may include unexpected ids.
   - Mitigation: Apply the same compatibility guardrails in mapping generation (defense-in-depth) and cover with tests.
 

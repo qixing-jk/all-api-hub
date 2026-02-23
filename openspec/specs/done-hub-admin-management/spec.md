@@ -41,7 +41,7 @@ When `managedSiteType = done-hub`, model sync MUST be able to enumerate channels
 - **AND** MUST report per-channel success/failure results to the UI
 
 ### Requirement: Model redirect works for Done Hub
-When model redirect is enabled and `managedSiteType = done-hub`, the extension MUST be able to generate and apply a `model_mapping` update for eligible channels. The generated mapping MUST follow the Model Redirect Mapping Guardrails (no version downgrades/upgrades).
+When model redirect is enabled and `managedSiteType = done-hub`, the extension MUST be able to generate and apply a `model_mapping` update for eligible channels. The generated mapping MUST follow the [Model Redirect Mapping Guardrails](../model-redirect-mapping-guardrails/spec.md) (no version downgrades/upgrades).
 
 #### Scenario: Applying model redirect writes version-safe model_mapping for Done Hub channels
 - **WHEN** the user runs model redirect with `managedSiteType = done-hub`

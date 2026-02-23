@@ -33,6 +33,8 @@ When the standard model and an actual model represent the same version but diffe
 ### Requirement: Versioned normalization MUST NOT cross versions
 When the system normalizes model identifiers for redirect generation, it MUST treat model versions as part of identity. If multiple candidates share the same vendor/model-family keywords but have different versions, normalization MUST NOT resolve an input to a different version.
 
+**Note [Numeric-token commutativity]:** The current normalization approach is order-insensitive (unordered token set). Numeric version tokens can therefore be commutative (e.g., `claude-5.4-sonnet` vs `claude-4.5-sonnet` may normalize to the same token key). No live models currently exhibit this collision; if such models appear, introduce a deterministic tie-breaker or switch to an ordered numeric-token strategy to preserve version identity.
+
 #### Scenario: Normalizing a standard model does not downgrade its version
 - **WHEN** the system normalizes `claude-4.5-haiku` for redirect generation and metadata contains both `claude-3-5-haiku-20241022` and `claude-haiku-4-5-20251001`
 - **THEN** the normalized result MUST be version-compatible with `4.5` (and MUST NOT normalize to the `3.5` model)
