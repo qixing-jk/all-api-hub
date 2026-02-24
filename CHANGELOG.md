@@ -1,5 +1,22 @@
 # Changelog
 
+## [3.23.0](https://github.com/qixing-jk/all-api-hub/compare/v3.22.0...v3.23.0) (2026-02-24)
+
+
+### Features
+
+* **auto-checkin:** add support for single-account quick check-in ([#502](https://github.com/qixing-jk/all-api-hub/issues/502)) ([81dc734](https://github.com/qixing-jk/all-api-hub/commit/81dc734f364841faad95015e48fe57ebbcffaa7f))
+* **channels:** make channel URLs clickable and improve search behavior ([e7d2725](https://github.com/qixing-jk/all-api-hub/commit/e7d2725708a96117ce98253d3045c570eab2134a))
+* **key-management:** implement all-accounts view with per-account loading ([#500](https://github.com/qixing-jk/all-api-hub/issues/500)) ([774dfec](https://github.com/qixing-jk/all-api-hub/commit/774dfeccef343ae7dad9aca3862fde662d032f18))
+* **model-redirect:** add bulk clear functionality for channel mappings ([#503](https://github.com/qixing-jk/all-api-hub/issues/503)) ([af028b8](https://github.com/qixing-jk/all-api-hub/commit/af028b86cca688dea56277e063ed3b932380029e))
+
+
+### Bug Fixes
+
+* **locales:** correct priority hint text in channel dialog ([8b939aa](https://github.com/qixing-jk/all-api-hub/commit/8b939aa657c0e0af8097b612b4aed75c4596afc5))
+* **model-redirect:** add version-safety guardrails to mapping generation ([#506](https://github.com/qixing-jk/all-api-hub/issues/506)) ([d84e415](https://github.com/qixing-jk/all-api-hub/commit/d84e4155953f8718694c2497c7f499cb88ff6397))
+* **sidepanel:** add fallback support for unsupported side panel environments ([#505](https://github.com/qixing-jk/all-api-hub/issues/505)) ([e6b8774](https://github.com/qixing-jk/all-api-hub/commit/e6b87741387d860d32758d9465d9213d2ce6f3ab))
+
 ## [3.22.0](https://github.com/qixing-jk/all-api-hub/compare/v3.21.0...v3.22.0) (2026-02-21)
 
 
