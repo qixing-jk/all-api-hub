@@ -7,6 +7,7 @@ import LanguageDetector from "i18next-browser-languagedetector"
 import { initReactI18next } from "react-i18next"
 
 import { DEFAULT_LANG } from "~/constants"
+import { I18NEXT_LANGUAGE_STORAGE_KEY } from "~/constants/i18n"
 import { userPreferences } from "~/services/userPreferences"
 
 // 自动导入所有 locales 下的 json 文件
@@ -33,7 +34,7 @@ i18n
     defaultNS: "common",
     // default config: https://github.com/i18next/i18next-browser-languageDetector#detector-options
     detection: {
-      lookupLocalStorage: "all-api-hub-i18nextLng",
+      lookupLocalStorage: I18NEXT_LANGUAGE_STORAGE_KEY,
     },
     resources,
     interpolation: {

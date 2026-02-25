@@ -17,7 +17,8 @@ import packageJson from "~/package.json"
 import { isNotEmptyArray } from "~/utils"
 import type { ExtensionStoreId } from "~/utils/browser"
 import { detectExtensionStore } from "~/utils/browser"
-import { getHomepage, getPkgVersion, getRepository } from "~/utils/packageMeta"
+import { getDocsHomepageUrl } from "~/utils/docsLinks"
+import { getPkgVersion, getRepository } from "~/utils/packageMeta"
 
 import CreditsCard from "./components/CreditsCard"
 import PluginIntroCard from "./components/PluginIntroCard"
@@ -28,11 +29,11 @@ import TechStackGrid from "./components/TechStackGrid"
  * Options/About page: displays app metadata, links, features, tech stack, credits, and privacy notice.
  */
 export default function About() {
-  const { t } = useTranslation("about")
+  const { t, i18n } = useTranslation("about")
   const version = packageJson.version
 
   // 从工具函数获取元数据
-  const homepage = getHomepage()
+  const homepage = getDocsHomepageUrl(i18n.language)
   const repository = getRepository()
 
   // Store CTA: ask for a positive review on the current store, and provide download links for other stores.

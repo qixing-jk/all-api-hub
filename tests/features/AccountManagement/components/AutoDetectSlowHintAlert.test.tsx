@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { AUTO_DETECT_DOC_URL } from "~/constants/about"
 import AutoDetectSlowHintAlert from "~/features/AccountManagement/components/AccountDialog/AutoDetectSlowHintAlert"
 import { fireEvent, render, screen } from "~/tests/test-utils/render"
+import { getDocsAutoDetectUrl } from "~/utils/docsLinks"
 
 describe("AutoDetectSlowHintAlert", () => {
   it("opens auto-detect troubleshooting doc", async () => {
@@ -17,7 +17,7 @@ describe("AutoDetectSlowHintAlert", () => {
     fireEvent.click(helpButton)
 
     expect(createSpy).toHaveBeenCalledWith({
-      url: AUTO_DETECT_DOC_URL,
+      url: getDocsAutoDetectUrl(),
       active: true,
     })
   })

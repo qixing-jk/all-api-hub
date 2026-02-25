@@ -1,12 +1,18 @@
-import { REPO_URL } from "~/constants/about"
+import { DOCS_BASE_URL, REPO_URL } from "~/constants/about"
 import pkg from "~/package.json"
+import { getDocsLocalePath } from "~/utils/docsLocale"
+import { joinUrl } from "~/utils/url"
 
 /**
  * Resolve the documentation homepage for the current build.
- * Falls back to the public GitHub Pages URL when the package metadata omits it.
+ * Falls back to the public docs site URL when the package metadata omits it.
  */
-export const getHomepage = () => {
-  return (pkg as any).homepage ?? "https://qixing-jk.github.io/all-api-hub/"
+export const getDocsBaseUrl = () => {
+  return (pkg as any).homepage ?? DOCS_BASE_URL
+}
+
+export const getHomepage = (language?: string) => {
+  return joinUrl(getDocsBaseUrl(), getDocsLocalePath(language))
 }
 
 /**

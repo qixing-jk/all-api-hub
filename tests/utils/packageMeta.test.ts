@@ -9,6 +9,12 @@ describe("packageMeta", () => {
       expect(homepage).toBeTruthy()
       expect(typeof homepage).toBe("string")
     })
+
+    it("builds locale-aware homepage urls", () => {
+      expect(getHomepage("en")).toMatch(/\/en\/$/)
+      expect(getHomepage("ja")).toMatch(/\/ja\/$/)
+      expect(getHomepage("zh_CN")).not.toMatch(/\/(en|ja)\/$/)
+    })
   })
 
   describe("getRepository", () => {

@@ -24,7 +24,7 @@ export function UpdateLogDialog({
   onClose,
   version,
 }: UpdateLogDialogProps) {
-  const { t } = useTranslation(["ui", "common"])
+  const { t, i18n } = useTranslation(["ui", "common"])
   const [iframeStatus, setIframeStatus] = useState<IframeStatus>("loading")
   const { openChangelogOnUpdate, updateOpenChangelogOnUpdate } =
     useUserPreferencesContext()
@@ -33,7 +33,10 @@ export function UpdateLogDialog({
 
   const autoOpenEnabled = autoOpenOverride ?? openChangelogOnUpdate
 
-  const iframeUrl = useMemo(() => getDocsChangelogUrl(version), [version])
+  const iframeUrl = useMemo(
+    () => getDocsChangelogUrl(version, i18n.language),
+    [version, i18n.language],
+  )
 
   useEffect(() => {
     if (!isOpen) return
@@ -51,7 +54,7 @@ export function UpdateLogDialog({
 
   const handleOpenFullChangelog = async () => {
     try {
-      await createTab(getDocsChangelogUrl(version), true)
+      await createTab(getDocsChangelogUrl(version, i18n.language), true)
     } catch (error) {
       const logger = createLogger("UpdateLogDialog")
       logger.error(

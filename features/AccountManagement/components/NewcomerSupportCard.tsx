@@ -9,25 +9,16 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui"
-import { getHomepage, getRepository } from "~/utils/packageMeta"
-import { joinUrl } from "~/utils/url"
+import { getDocsGetStartedUrl, getDocsHomepageUrl } from "~/utils/docsLinks"
+import { getRepository } from "~/utils/packageMeta"
 
 const GITHUB_REPO_URL = getRepository()
-const OFFICIAL_SITE_URL = getHomepage()
 
 export const NewcomerSupportCard = () => {
   const { t, i18n } = useTranslation("account")
 
-  const language = i18n.language || "en"
-
-  const getStartedPath = (() => {
-    const normalized = language.toLowerCase()
-    if (normalized.startsWith("zh")) return "get-started"
-    if (normalized.startsWith("ja")) return "ja/get-started"
-    return "en/get-started"
-  })()
-
-  const getStartedUrl = joinUrl(OFFICIAL_SITE_URL, getStartedPath)
+  const docsHomepageUrl = getDocsHomepageUrl(i18n.language)
+  const getStartedUrl = getDocsGetStartedUrl(i18n.language)
 
   const handleOpenRepo = () => {
     window.open(GITHUB_REPO_URL, "_blank", "noopener,noreferrer")
@@ -38,7 +29,7 @@ export const NewcomerSupportCard = () => {
   }
 
   const handleOpenAbout = () => {
-    window.open(OFFICIAL_SITE_URL, "_blank", "noopener,noreferrer")
+    window.open(docsHomepageUrl, "_blank", "noopener,noreferrer")
   }
 
   return (

@@ -2,7 +2,7 @@ import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
 import { Alert, Button } from "~/components/ui"
-import { AUTO_DETECT_DOC_URL } from "~/constants/about"
+import { getDocsAutoDetectUrl } from "~/utils/docsLinks"
 
 export interface AutoDetectSlowHintAlertProps {
   helpDocUrl?: string
@@ -14,7 +14,7 @@ export interface AutoDetectSlowHintAlertProps {
  * Provides a direct link to the troubleshooting documentation.
  */
 export default function AutoDetectSlowHintAlert({
-  helpDocUrl = AUTO_DETECT_DOC_URL,
+  helpDocUrl = getDocsAutoDetectUrl(),
   onHelpClick,
 }: AutoDetectSlowHintAlertProps) {
   const { t } = useTranslation("accountDialog")

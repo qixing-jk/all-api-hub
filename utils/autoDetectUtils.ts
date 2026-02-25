@@ -17,7 +17,7 @@
  */
 import { t } from "i18next"
 
-import { AUTO_DETECT_DOC_URL } from "~/constants/about"
+import { getDocsAutoDetectUrl } from "~/utils/docsLinks"
 
 import { getErrorMessage } from "./error"
 
@@ -89,44 +89,44 @@ export function analyzeAutoDetectError(error: any): AutoDetectError {
           return {
             type: AutoDetectErrorType.TIMEOUT,
             message: t("messages:autodetect.timeout"),
-            helpDocUrl: AUTO_DETECT_DOC_URL,
+            helpDocUrl: getDocsAutoDetectUrl(),
           }
         case "UNAUTHORIZED":
           return {
             type: AutoDetectErrorType.UNAUTHORIZED,
             message: t("messages:autodetect.notLoggedIn"),
             actionText: t("messages:autodetect.loginThisSite"),
-            helpDocUrl: AUTO_DETECT_DOC_URL,
+            helpDocUrl: getDocsAutoDetectUrl(),
           }
         case "INVALID_RESPONSE":
           return {
             type: AutoDetectErrorType.INVALID_RESPONSE,
             message: t("messages:autodetect.unexpectedData"),
-            helpDocUrl: AUTO_DETECT_DOC_URL,
+            helpDocUrl: getDocsAutoDetectUrl(),
           }
         case "NETWORK_ERROR":
           return {
             type: AutoDetectErrorType.NETWORK_ERROR,
             message: t("messages:autodetect.networkError"),
-            helpDocUrl: AUTO_DETECT_DOC_URL,
+            helpDocUrl: getDocsAutoDetectUrl(),
           }
         case "FORBIDDEN":
           return {
             type: AutoDetectErrorType.FORBIDDEN,
             message: t("messages:autodetect.forbidden"),
-            helpDocUrl: AUTO_DETECT_DOC_URL,
+            helpDocUrl: getDocsAutoDetectUrl(),
           }
         case "NOT_FOUND":
           return {
             type: AutoDetectErrorType.NOT_FOUND,
             message: t("messages:autodetect.notFound"),
-            helpDocUrl: AUTO_DETECT_DOC_URL,
+            helpDocUrl: getDocsAutoDetectUrl(),
           }
         case "SERVER_ERROR":
           return {
             type: AutoDetectErrorType.SERVER_ERROR,
             message: t("messages:autodetect.serverError"),
-            helpDocUrl: AUTO_DETECT_DOC_URL,
+            helpDocUrl: getDocsAutoDetectUrl(),
           }
       }
     }
@@ -136,7 +136,7 @@ export function analyzeAutoDetectError(error: any): AutoDetectError {
   return {
     type: AutoDetectErrorType.UNKNOWN,
     message: t("messages:autodetect.failed") + errorMessage,
-    helpDocUrl: AUTO_DETECT_DOC_URL,
+    helpDocUrl: getDocsAutoDetectUrl(),
   }
 }
 

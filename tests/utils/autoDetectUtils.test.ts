@@ -1,12 +1,12 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { AUTO_DETECT_DOC_URL } from "~/constants/about"
 import {
   analyzeAutoDetectError,
   AutoDetectErrorType,
   getLoginUrl,
   openLoginTab,
 } from "~/utils/autoDetectUtils"
+import { getDocsAutoDetectUrl } from "~/utils/docsLinks"
 
 // Mock browser.tabs
 const originalBrowser = (globalThis as any).browser
@@ -30,7 +30,7 @@ describe("autoDetectUtils", () => {
 
         expect(result.type).toBe(AutoDetectErrorType.TIMEOUT)
         expect(result.message).toBe("messages:autodetect.timeout")
-        expect(result.helpDocUrl).toBe(AUTO_DETECT_DOC_URL)
+        expect(result.helpDocUrl).toBe(getDocsAutoDetectUrl())
         expect(result.actionText).toBeUndefined()
         expect(result.actionUrl).toBeUndefined()
       })
@@ -59,7 +59,7 @@ describe("autoDetectUtils", () => {
         expect(result.type).toBe(AutoDetectErrorType.UNAUTHORIZED)
         expect(result.message).toBe("messages:autodetect.notLoggedIn")
         expect(result.actionText).toBe("messages:autodetect.loginThisSite")
-        expect(result.helpDocUrl).toBe(AUTO_DETECT_DOC_URL)
+        expect(result.helpDocUrl).toBe(getDocsAutoDetectUrl())
       })
 
       it("should detect Chinese unauthorized text", () => {
@@ -84,7 +84,7 @@ describe("autoDetectUtils", () => {
 
         expect(result.type).toBe(AutoDetectErrorType.INVALID_RESPONSE)
         expect(result.message).toBe("messages:autodetect.unexpectedData")
-        expect(result.helpDocUrl).toBe(AUTO_DETECT_DOC_URL)
+        expect(result.helpDocUrl).toBe(getDocsAutoDetectUrl())
       })
 
       it("should detect parsing error", () => {
@@ -123,7 +123,7 @@ describe("autoDetectUtils", () => {
 
         expect(result.type).toBe(AutoDetectErrorType.NETWORK_ERROR)
         expect(result.message).toBe("messages:autodetect.networkError")
-        expect(result.helpDocUrl).toBe(AUTO_DETECT_DOC_URL)
+        expect(result.helpDocUrl).toBe(getDocsAutoDetectUrl())
       })
 
       it("should detect connection error", () => {
@@ -161,7 +161,7 @@ describe("autoDetectUtils", () => {
         expect(result.type).toBe(AutoDetectErrorType.UNKNOWN)
         expect(result.message).toContain("messages:autodetect.failed")
         expect(result.message).toContain("Something went wrong")
-        expect(result.helpDocUrl).toBe(AUTO_DETECT_DOC_URL)
+        expect(result.helpDocUrl).toBe(getDocsAutoDetectUrl())
       })
 
       it("should handle non-Error objects", () => {
@@ -428,7 +428,7 @@ describe("autoDetectUtils", () => {
         type: AutoDetectErrorType.UNAUTHORIZED,
         message: expect.any(String),
         actionText: expect.any(String),
-        helpDocUrl: AUTO_DETECT_DOC_URL,
+        helpDocUrl: getDocsAutoDetectUrl(),
       })
     })
 
