@@ -1,16 +1,4 @@
-# changelog-on-update Specification
-
-## Purpose
-Help users see release notes after an extension update without creating an unexpected changelog tab in the background. Instead, the changelog opens (at most once per version) the first time the user opens an extension UI surface after updating, when `openChangelogOnUpdate` is enabled.
-
-## Requirements
-### Requirement: Automatic changelog opening on update is configurable
-The extension MUST support a user preference `openChangelogOnUpdate` (default **enabled**) that controls whether the extension automatically opens the docs changelog page after an extension update.
-
-#### Scenario: Default is enabled
-- **GIVEN** a user has no stored `openChangelogOnUpdate` preference
-- **WHEN** the extension loads user preferences
-- **THEN** `openChangelogOnUpdate` MUST be treated as `true`
+## UPDATED Requirements
 
 ### Requirement: Changelog opens on first UI open after update
 When the extension is updated, the background entrypoint MUST persist a pending changelog marker containing the updated version.
@@ -18,8 +6,6 @@ When the extension is updated, the background entrypoint MUST persist a pending 
 When a user opens an extension UI surface (popup/options/sidepanel), the UI MUST atomically consume and clear the pending marker. If `openChangelogOnUpdate` is enabled (default **enabled**), the UI MUST open the docs changelog page in a new active tab using the consumed version as the anchor.
 
 The pending marker MUST be consumed at most once so the changelog is opened at most once per updated version, even if multiple UI contexts open concurrently.
-
-This preference MUST only control automatic changelog opening. It MUST NOT suppress other update-time flows (e.g., prompting for newly introduced optional permissions).
 
 #### Scenario: Update stores pending marker (no immediate tab)
 - **GIVEN** the extension update lifecycle event fires (install reason `update`)
@@ -42,14 +28,6 @@ This preference MUST only control automatic changelog opening. It MUST NOT suppr
 - **WHEN** an extension UI surface mounts
 - **THEN** the extension MUST NOT open any changelog tab
 - **AND** the pending marker MUST be cleared
-
-### Requirement: Users can change the preference and it persists
-The extension MUST provide a user-facing control to enable or disable `openChangelogOnUpdate`. The chosen value MUST be persisted and applied on subsequent extension updates.
-
-#### Scenario: Setting persists across reload
-- **GIVEN** a user disables `openChangelogOnUpdate`
-- **WHEN** the extension reloads user preferences at a later time
-- **THEN** `openChangelogOnUpdate` MUST remain `false` until the user changes it
 
 ## Verification
 

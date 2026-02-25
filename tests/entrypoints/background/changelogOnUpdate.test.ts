@@ -19,6 +19,7 @@ describe("background onInstalled changelog opening", () => {
   let getDocsChangelogUrlMock: ReturnType<typeof vi.fn>
   let getManifestMock: ReturnType<typeof vi.fn>
   let getPreferencesMock: ReturnType<typeof vi.fn>
+  let setPendingVersionMock: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
     onInstalledListener = undefined
@@ -35,6 +36,7 @@ describe("background onInstalled changelog opening", () => {
       actionClickBehavior: "popup",
       openChangelogOnUpdate: true,
     })
+    setPendingVersionMock = vi.fn().mockResolvedValue(undefined)
 
     vi.resetModules()
     ;(globalThis as any).defineBackground = (factory: () => unknown) =>
@@ -61,6 +63,12 @@ describe("background onInstalled changelog opening", () => {
 
     vi.doMock("~/services/userPreferences", () => ({
       userPreferences: { getPreferences: getPreferencesMock },
+    }))
+
+    vi.doMock("~/services/changelogOnUpdateState", () => ({
+      changelogOnUpdateState: {
+        setPendingVersion: setPendingVersionMock,
+      },
     }))
 
     // Avoid heavy side effects from the background entrypoint; only the update
@@ -126,6 +134,7 @@ describe("background onInstalled changelog opening", () => {
 
     vi.doUnmock("~/utils/browserApi")
     vi.doUnmock("~/utils/docsLinks")
+    vi.doUnmock("~/services/changelogOnUpdateState")
     vi.doUnmock("~/services/userPreferences")
     vi.doUnmock("~/entrypoints/background/runtimeMessages")
     vi.doUnmock("~/entrypoints/background/tempWindowPool")
@@ -145,7 +154,7 @@ describe("background onInstalled changelog opening", () => {
     vi.restoreAllMocks()
   })
 
-  it("opens the version-anchored changelog tab on update when enabled", async () => {
+  it("does not open any changelog tab on update and marks the pending version instead", async () => {
     await import("~/entrypoints/background/index")
 
     expect(onInstalledListener).toBeTypeOf("function")
@@ -155,14 +164,12 @@ describe("background onInstalled changelog opening", () => {
 
     expect(getPreferencesMock).toHaveBeenCalled()
     expect(getManifestMock).toHaveBeenCalled()
-    expect(getDocsChangelogUrlMock).toHaveBeenCalledWith("2.39.0")
-    expect(createTabMock).toHaveBeenCalledWith(
-      "https://docs.example.test/changelog.html#_2-39-0",
-      true,
-    )
+    expect(setPendingVersionMock).toHaveBeenCalledWith("2.39.0")
+    expect(getDocsChangelogUrlMock).not.toHaveBeenCalled()
+    expect(createTabMock).not.toHaveBeenCalled()
   })
 
-  it("does not open any changelog tab on update when disabled", async () => {
+  it("marks pending version even when openChangelogOnUpdate is disabled", async () => {
     getPreferencesMock.mockResolvedValue({
       actionClickBehavior: "popup",
       openChangelogOnUpdate: false,
@@ -175,6 +182,7 @@ describe("background onInstalled changelog opening", () => {
     await onInstalledListener?.({ reason: "update" })
     await flushPromises()
 
+    expect(setPendingVersionMock).toHaveBeenCalledWith("2.39.0")
     expect(getDocsChangelogUrlMock).not.toHaveBeenCalled()
     expect(createTabMock).not.toHaveBeenCalled()
   })

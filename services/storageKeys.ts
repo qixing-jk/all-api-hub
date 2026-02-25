@@ -21,6 +21,11 @@ export const STORAGE_LOCKS = {
    * profiles storage.
    */
   API_CREDENTIAL_PROFILES: "all-api-hub:api-credential-profiles",
+  /**
+   * Exclusive lock used for read-modify-write sequences touching the changelog
+   * on update state store.
+   */
+  CHANGELOG_ON_UPDATE: "all-api-hub:changelog-on-update",
 } as const
 
 export const ACCOUNT_STORAGE_KEYS = {
@@ -47,6 +52,10 @@ export const ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS = {
   REPAIR_PROGRESS: "accountKeyRepair_progress",
 } as const
 
+export const CHANGELOG_ON_UPDATE_STORAGE_KEYS = {
+  PENDING_VERSION: "changelogOnUpdate_pendingVersion",
+} as const
+
 /**
  * Centralized storage keys registry.
  *
@@ -59,5 +68,7 @@ export const STORAGE_KEYS = {
   ...API_CREDENTIAL_PROFILES_STORAGE_KEYS,
   ...ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS,
   ...USER_PREFERENCES_STORAGE_KEYS,
+  CHANGELOG_ON_UPDATE_PENDING_VERSION:
+    CHANGELOG_ON_UPDATE_STORAGE_KEYS.PENDING_VERSION,
   DAILY_BALANCE_HISTORY_STORE: DAILY_BALANCE_HISTORY_STORAGE_KEYS.STORE,
 } as const

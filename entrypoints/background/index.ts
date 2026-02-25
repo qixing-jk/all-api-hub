@@ -3,6 +3,7 @@ import { setupRuntimeMessageListeners } from "~/entrypoints/background/runtimeMe
 import { setupTempWindowListeners } from "~/entrypoints/background/tempWindowPool"
 import { accountStorage } from "~/services/accountStorage"
 import { tagStorage } from "~/services/accountTags/tagStorage"
+import { changelogOnUpdateState } from "~/services/changelogOnUpdateState"
 import { migrateAccountsConfig } from "~/services/configMigration/account/accountDataMigration"
 import {
   hasNewOptionalPermissions,
@@ -13,13 +14,7 @@ import {
   OPTIONAL_PERMISSIONS,
 } from "~/services/permissions/permissionManager"
 import { userPreferences } from "~/services/userPreferences"
-import {
-  createTab,
-  getManifest,
-  onInstalled,
-  onStartup,
-} from "~/utils/browserApi"
-import { getDocsChangelogUrl } from "~/utils/docsLinks"
+import { getManifest, onInstalled, onStartup } from "~/utils/browserApi"
 import { createLogger } from "~/utils/logger"
 import { openOrFocusOptionsMenuItem } from "~/utils/navigation"
 
@@ -67,10 +62,8 @@ export default defineBackground(() => {
       if (details.reason === "install" || details.reason === "update") {
         logger.info("Triggering config migration", { reason: details.reason })
 
-        // Migrate user preferences
-        // Keep the hydrated snapshot so we can reuse it later in the update flow
-        // without performing another storage read.
-        const prefs = await userPreferences.getPreferences()
+        // Migrate user preferences.
+        await userPreferences.getPreferences()
         logger.info("User preferences migration completed")
 
         // Migrate legacy tag strings into global tag store + tagIds.
@@ -97,6 +90,13 @@ export default defineBackground(() => {
           })
         }
 
+        if (details.reason === "update") {
+          const { version } = getManifest()
+          if (version) {
+            await changelogOnUpdateState.setPendingVersion(version)
+          }
+        }
+
         if (details.reason === "update" && OPTIONAL_PERMISSIONS.length > 0) {
           const hasNew = await hasNewOptionalPermissions()
           if (hasNew) {
@@ -121,15 +121,6 @@ export default defineBackground(() => {
             // Keep snapshot fresh on update when nothing new to prompt
             await setLastSeenOptionalPermissions()
           }
-        }
-
-        if (
-          details.reason === "update" &&
-          (prefs.openChangelogOnUpdate ?? true)
-        ) {
-          const { version } = getManifest()
-          const changelogUrl = getDocsChangelogUrl(version)
-          await createTab(changelogUrl, true)
         }
       }
     } catch (error) {

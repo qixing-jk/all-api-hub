@@ -358,9 +358,9 @@
   },
   "changelogOnUpdate": {
     "title": "更新日志",
-    "description": "控制插件更新后是否自动打开文档更新日志页面。",
+    "description": "控制插件更新完成后，首次打开插件界面时是否自动打开文档更新日志页面。",
     "toggleLabel": "更新后自动打开更新日志",
-    "toggleDesc": "开启后，插件更新完成会自动在新标签页打开更新日志页面。"
+    "toggleDesc": "开启后，插件更新完成后首次打开插件界面时，才会自动在新标签页打开更新日志页面（每个版本仅一次）。"
   },
   "autoProvisionKeyOnAccountAdd": {
     "title": "API 密钥",

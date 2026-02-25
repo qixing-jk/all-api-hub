@@ -8,7 +8,7 @@ import { showUpdateToast } from "~/utils/toastHelpers"
 
 /**
  * Settings section that controls whether the extension opens the docs changelog
- * page automatically after extension updates.
+ * page the first time the user opens the extension UI after updates.
  */
 export default function ChangelogOnUpdateSettings() {
   const { t } = useTranslation("settings")
