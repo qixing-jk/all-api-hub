@@ -1,7 +1,9 @@
 import cliProxyLogo from "~/assets/cli-proxy-api-logo.png"
+import {
+  ICON_SIZE_CLASSNAME,
+  type IconSize,
+} from "~/components/icons/iconSizes"
 import { cn } from "~/lib/utils"
-
-import { ICON_SIZE_CLASSNAME, type IconSize } from "./iconSizes"
 
 interface CliProxyIconProps {
   size?: IconSize

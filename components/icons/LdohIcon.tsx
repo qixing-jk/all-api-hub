@@ -1,7 +1,9 @@
 import ldohLogo from "~/assets/ldoh-logo.svg"
+import {
+  ICON_SIZE_CLASSNAME,
+  type IconSize,
+} from "~/components/icons/iconSizes"
 import { cn } from "~/lib/utils"
-
-import { ICON_SIZE_CLASSNAME, type IconSize } from "./iconSizes"
 
 interface LdohIconProps {
   size?: IconSize
