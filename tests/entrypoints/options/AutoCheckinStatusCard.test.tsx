@@ -32,14 +32,18 @@ describe("AutoCheckin StatusCard scheduling labels", () => {
       />,
     )
 
-    expect(await screen.findByText("status.disabled")).toBeInTheDocument()
+    expect(
+      await screen.findByText("autoCheckin:status.disabled"),
+    ).toBeInTheDocument()
   })
 
   it("shows retryDisabled for retry schedule when retry is disabled", async () => {
     const status: AutoCheckinStatus = {}
     render(<StatusCard status={status} preferences={basePreferences} />)
 
-    expect(await screen.findByText("status.retryDisabled")).toBeInTheDocument()
+    expect(
+      await screen.findByText("autoCheckin:status.retryDisabled"),
+    ).toBeInTheDocument()
   })
 
   it("shows noPendingRetry when retry is enabled but there is no retry queue", async () => {
@@ -54,7 +58,9 @@ describe("AutoCheckin StatusCard scheduling labels", () => {
       />,
     )
 
-    expect(await screen.findByText("status.noPendingRetry")).toBeInTheDocument()
+    expect(
+      await screen.findByText("autoCheckin:status.noPendingRetry"),
+    ).toBeInTheDocument()
   })
 
   it("falls back to notScheduled when retry is enabled and pending but no schedule exists", async () => {
@@ -75,13 +81,13 @@ describe("AutoCheckin StatusCard scheduling labels", () => {
       />,
     )
 
-    const retryLabel = await screen.findByText("status.nextRetry")
+    const retryLabel = await screen.findByText("autoCheckin:status.nextRetry")
     const retrySection = retryLabel.parentElement as HTMLElement
     expect(
-      within(retrySection).getByText("status.notScheduled"),
+      within(retrySection).getByText("autoCheckin:status.notScheduled"),
     ).toBeInTheDocument()
     expect(
-      within(retrySection).getByText("status.pendingRetry"),
+      within(retrySection).getByText("autoCheckin:status.pendingRetry"),
     ).toBeInTheDocument()
   })
 })

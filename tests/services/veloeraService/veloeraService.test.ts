@@ -6,10 +6,6 @@ import type { CreateChannelPayload, UpdateChannelPayload } from "~/types/newapi"
 // MOCKS
 // ============================================================================
 
-vi.mock("i18next", () => ({
-  t: vi.fn((key: string) => key),
-}))
-
 const mockToast = {
   loading: vi.fn(),
   success: vi.fn(),

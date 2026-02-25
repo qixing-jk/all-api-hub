@@ -15,10 +15,6 @@ vi.mock("react-hot-toast", () => ({
   },
 }))
 
-vi.mock("i18next", () => ({
-  t: vi.fn((key: string) => key),
-}))
-
 const mockAccount: DisplaySiteData = {
   id: "test-id",
   name: "Test Account",

@@ -2,10 +2,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import BalanceHistorySettings from "~/entrypoints/options/pages/BasicSettings/components/BalanceHistorySettings"
-import balanceHistoryEn from "~/locales/en/balanceHistory.json"
-import commonEn from "~/locales/en/common.json"
-import settingsEn from "~/locales/en/settings.json"
-import { testI18n } from "~/tests/test-utils/i18n"
 import { fireEvent, render, screen, waitFor } from "~/tests/test-utils/render"
 import { hasAlarmsAPI } from "~/utils/browserApi"
 
@@ -39,16 +35,6 @@ vi.mock("react-hot-toast", () => {
 })
 
 describe("BalanceHistorySettings", () => {
-  testI18n.addResourceBundle(
-    "en",
-    "balanceHistory",
-    balanceHistoryEn,
-    true,
-    true,
-  )
-  testI18n.addResourceBundle("en", "settings", settingsEn, true, true)
-  testI18n.addResourceBundle("en", "common", commonEn, true, true)
-
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(hasAlarmsAPI).mockReturnValue(true)
@@ -71,7 +57,9 @@ describe("BalanceHistorySettings", () => {
 
     renderSubject()
 
-    fireEvent.click(await screen.findByText("Apply settings"))
+    fireEvent.click(
+      await screen.findByText("balanceHistory:actions.applySettings"),
+    )
 
     await waitFor(() => {
       expect(updateBalanceHistory).toHaveBeenCalledWith({
@@ -98,9 +86,7 @@ describe("BalanceHistorySettings", () => {
     renderSubject()
 
     expect(
-      await screen.findByText(
-        "Alarms API is not available in this browser; end-of-day capture cannot be enabled.",
-      ),
+      await screen.findByText("balanceHistory:settings.alarmUnsupported"),
     ).toBeInTheDocument()
 
     const switches = screen.getAllByRole("switch")

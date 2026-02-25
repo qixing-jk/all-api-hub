@@ -59,9 +59,7 @@ function ProviderTabList({
         type="button"
         size="icon-sm"
         variant="ghost"
-        aria-label={t("providerTabs.scrollLeft", {
-          defaultValue: "Scroll provider tabs left",
-        })}
+        aria-label={t("providerTabs.scrollLeft")}
         disabled={!canScrollLeft}
         onClick={scrollLeft}
         className="shrink-0"
@@ -118,9 +116,7 @@ function ProviderTabList({
         type="button"
         size="icon-sm"
         variant="ghost"
-        aria-label={t("providerTabs.scrollRight", {
-          defaultValue: "Scroll provider tabs right",
-        })}
+        aria-label={t("providerTabs.scrollRight")}
         disabled={!canScrollRight}
         onClick={scrollRight}
         className="shrink-0"

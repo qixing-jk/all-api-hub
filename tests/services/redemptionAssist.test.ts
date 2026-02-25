@@ -3,10 +3,6 @@ import { describe, expect, it, vi } from "vitest"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { DEFAULT_PREFERENCES } from "~/services/userPreferences"
 
-vi.mock("i18next", () => ({
-  t: (key: string) => key,
-}))
-
 vi.mock("~/services/userPreferences", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("~/services/userPreferences")>()

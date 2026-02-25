@@ -5,8 +5,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import RefreshSettings from "~/entrypoints/options/pages/BasicSettings/components/RefreshSettings"
-import commonEn from "~/locales/en/common.json"
-import settingsEn from "~/locales/en/settings.json"
 import { testI18n } from "~/tests/test-utils/i18n"
 import {
   ACCOUNT_AUTO_REFRESH_INTERVAL_MIN_SECONDS,
@@ -27,9 +25,6 @@ vi.mock("react-hot-toast", () => ({
 }))
 
 describe("RefreshSettings (min refresh interval)", () => {
-  testI18n.addResourceBundle("en", "settings", settingsEn, true, true)
-  testI18n.addResourceBundle("en", "common", commonEn, true, true)
-
   beforeEach(() => {
     vi.clearAllMocks()
   })

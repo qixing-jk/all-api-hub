@@ -1,11 +1,9 @@
 import userEvent from "@testing-library/user-event"
 import { useState } from "react"
-import { beforeAll, describe, expect, it } from "vitest"
+import { describe, expect, it } from "vitest"
 
 import { KeyDisplay } from "~/entrypoints/options/pages/KeyManagement/components/TokenListItem/KeyDisplay"
 import { buildTokenIdentityKey } from "~/entrypoints/options/pages/KeyManagement/utils"
-import keyManagementEn from "~/locales/en/keyManagement.json"
-import { testI18n } from "~/tests/test-utils/i18n"
 import { render, screen } from "~/tests/test-utils/render"
 
 const TOKEN_A_KEY = "sk-a-12345678901234567890"
@@ -52,23 +50,13 @@ function TestKeyDisplayList() {
 }
 
 describe("KeyDisplay identity keys", () => {
-  beforeAll(() => {
-    testI18n.addResourceBundle(
-      "en",
-      "keyManagement",
-      keyManagementEn,
-      true,
-      true,
-    )
-  })
-
   it("keeps token visibility collision-safe across accounts", async () => {
     const user = userEvent.setup()
 
     render(<TestKeyDisplayList />)
 
     const showButtons = await screen.findAllByRole("button", {
-      name: keyManagementEn.actions.showKey,
+      name: "keyManagement:actions.showKey",
     })
     expect(screen.queryByText(TOKEN_A_KEY)).not.toBeInTheDocument()
     expect(screen.queryByText(TOKEN_B_KEY)).not.toBeInTheDocument()

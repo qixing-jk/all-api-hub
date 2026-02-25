@@ -37,7 +37,9 @@ describe("popup HeaderSection", () => {
     render(<HeaderSection />)
 
     expect(
-      await screen.findByRole("button", { name: "actions.openSidePanel" }),
+      await screen.findByRole("button", {
+        name: "common:actions.openSidePanel",
+      }),
     ).toBeInTheDocument()
   })
 
@@ -50,7 +52,7 @@ describe("popup HeaderSection", () => {
     render(<HeaderSection />)
 
     expect(
-      screen.queryByRole("button", { name: "actions.openSidePanel" }),
+      screen.queryByRole("button", { name: "common:actions.openSidePanel" }),
     ).not.toBeInTheDocument()
   })
 })

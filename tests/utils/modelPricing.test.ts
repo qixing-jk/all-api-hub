@@ -13,18 +13,6 @@ import {
   isTokenBillingType,
 } from "~/utils/modelPricing"
 
-// Mock i18next
-vi.mock("i18next", () => ({
-  t: (key: string) => {
-    const translations: Record<string, string> = {
-      "ui:billing.tokenBased": "按量计费",
-      "ui:billing.perCall": "按次计费",
-      "ui:billing.notProvided": "未提供",
-    }
-    return translations[key] || key
-  },
-}))
-
 describe("modelPricing utils", () => {
   describe("isTokenBillingType", () => {
     it("should return true for quota_type 0 (token billing)", () => {
@@ -391,16 +379,16 @@ describe("modelPricing utils", () => {
 
   describe("getBillingModeText", () => {
     it("should return token-based text for quota_type 0", () => {
-      expect(getBillingModeText(0)).toBe("按量计费")
+      expect(getBillingModeText(0)).toBe("ui:billing.tokenBased")
     })
 
     it("should return per-call text for quota_type 1", () => {
-      expect(getBillingModeText(1)).toBe("按次计费")
+      expect(getBillingModeText(1)).toBe("ui:billing.perCall")
     })
 
     it("should return per-call text for other quota types", () => {
-      expect(getBillingModeText(2)).toBe("按次计费")
-      expect(getBillingModeText(99)).toBe("按次计费")
+      expect(getBillingModeText(2)).toBe("ui:billing.perCall")
+      expect(getBillingModeText(99)).toBe("ui:billing.perCall")
     })
   })
 
@@ -476,12 +464,12 @@ describe("modelPricing utils", () => {
     })
 
     it("should return not provided text for undefined", () => {
-      expect(getEndpointTypesText(undefined)).toBe("未提供")
+      expect(getEndpointTypesText(undefined)).toBe("ui:billing.notProvided")
     })
 
     it("should return not provided text for non-array", () => {
-      expect(getEndpointTypesText("chat" as any)).toBe("未提供")
-      expect(getEndpointTypesText(123 as any)).toBe("未提供")
+      expect(getEndpointTypesText("chat" as any)).toBe("ui:billing.notProvided")
+      expect(getEndpointTypesText(123 as any)).toBe("ui:billing.notProvided")
     })
 
     it("should preserve endpoint type order", () => {

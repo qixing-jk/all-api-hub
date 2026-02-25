@@ -21,7 +21,7 @@ describe("AutoCheckin ResultsTable troubleshooting hints", () => {
     )
 
     expect(
-      await screen.findByText("execution.hints.invalidAccessToken"),
+      await screen.findByText("autoCheckin:execution.hints.invalidAccessToken"),
     ).toBeInTheDocument()
   })
 
@@ -41,7 +41,7 @@ describe("AutoCheckin ResultsTable troubleshooting hints", () => {
     )
 
     expect(
-      await screen.findByText("execution.hints.noTabWithId"),
+      await screen.findByText("autoCheckin:execution.hints.noTabWithId"),
     ).toBeInTheDocument()
   })
 
@@ -63,7 +63,7 @@ describe("AutoCheckin ResultsTable troubleshooting hints", () => {
     await screen.findByText("签到失败")
 
     expect(
-      screen.queryByText("execution.hints.invalidAccessToken"),
+      screen.queryByText("autoCheckin:execution.hints.invalidAccessToken"),
     ).not.toBeInTheDocument()
   })
 })

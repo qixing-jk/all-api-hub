@@ -15,7 +15,7 @@ export default defineConfig({
     hookTimeout: 15_000,
 
     // Setup files to run before tests
-    setupFiles: ["./tests/setup.ts"],
+    setupFiles: [path.resolve(rootDir, "tests/setup.ts")],
 
     // Global test APIs (describe, it, expect, etc.)
     globals: true,

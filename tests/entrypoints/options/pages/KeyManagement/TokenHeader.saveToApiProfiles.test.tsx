@@ -1,11 +1,8 @@
 import userEvent from "@testing-library/user-event"
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { TokenHeader } from "~/entrypoints/options/pages/KeyManagement/components/TokenListItem/TokenHeader"
-import commonEn from "~/locales/en/common.json"
-import keyManagementEn from "~/locales/en/keyManagement.json"
 import { API_TYPES } from "~/services/aiApiVerification"
-import { testI18n } from "~/tests/test-utils/i18n"
 import { render, screen, waitFor } from "~/tests/test-utils/render"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 
@@ -69,17 +66,6 @@ function createAccountStub(): DisplaySiteData {
 }
 
 describe("TokenHeader save to API profiles", () => {
-  beforeAll(() => {
-    testI18n.addResourceBundle("en", "common", commonEn, true, true)
-    testI18n.addResourceBundle(
-      "en",
-      "keyManagement",
-      keyManagementEn,
-      true,
-      true,
-    )
-  })
-
   beforeEach(() => {
     mockCreateProfile.mockReset()
     mockedUseUserPreferencesContext.mockReturnValue({
@@ -135,7 +121,7 @@ describe("TokenHeader save to API profiles", () => {
 
     await user.click(
       screen.getByRole("button", {
-        name: keyManagementEn.actions.saveToApiProfiles,
+        name: "keyManagement:actions.saveToApiProfiles",
       }),
     )
 

@@ -134,6 +134,28 @@ describe("LinkCard", () => {
 })
 ```
 
+#### i18n in Tests (Translation Key Assertions)
+
+By default, tests SHOULD assert **translation keys** (e.g. `ui:searchableSelect.noOptions`) instead of localized copy (English/Chinese strings). This keeps tests stable when translations change.
+
+The Vitest i18n test harness is configured so that **missing translations render as fully-qualified keys** (`<namespace>:<key>`). This lets you assert keys without loading any locale JSON.
+
+Recommended patterns:
+
+- Use `render` / `renderHook` from `~/tests/test-utils/render` (they wrap `I18nextProvider`).
+- Prefer key assertions over copy assertions (e.g. `expect(screen.getByText("ui:...")).toBeInTheDocument()`).
+- Avoid `vi.mock("react-i18next")` / `vi.mock("i18next")` unless you are explicitly testing i18n edge cases.
+
+Mocks are acceptable when you need to:
+
+- Force error branches (e.g. make `t()` throw)
+- Test language-change flows (`changeLanguage`) or resource-loading behavior
+- Isolate unrelated third-party behavior
+
+If a test truly needs to assert localized copy, it MUST explicitly load the required resource bundles within that test (e.g. via `testI18n.addResourceBundle(...)`) so it’s clear the test is intentionally copy-coupled.
+
+If you add resource bundles to the shared `testI18n`, prefer cleaning them up in `afterAll` (e.g. `removeResourceBundle`) to avoid leaking translations into other test files running in the same worker.
+
 ### Test Infrastructure
 
 #### Mocks

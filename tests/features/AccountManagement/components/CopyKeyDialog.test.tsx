@@ -1,11 +1,7 @@
 import userEvent from "@testing-library/user-event"
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import CopyKeyDialog from "~/features/AccountManagement/components/CopyKeyDialog"
-import commonEn from "~/locales/en/common.json"
-import keyManagementEn from "~/locales/en/keyManagement.json"
-import uiEn from "~/locales/en/ui.json"
-import { testI18n } from "~/tests/test-utils/i18n"
 import { render, screen, waitFor } from "~/tests/test-utils/render"
 import { AuthTypeEnum } from "~/types"
 
@@ -73,18 +69,6 @@ const TOKEN = {
 } as any
 
 describe("CopyKeyDialog", () => {
-  beforeAll(() => {
-    testI18n.addResourceBundle("en", "ui", uiEn, true, true)
-    testI18n.addResourceBundle("en", "common", commonEn, true, true)
-    testI18n.addResourceBundle(
-      "en",
-      "keyManagement",
-      keyManagementEn,
-      true,
-      true,
-    )
-  })
-
   beforeEach(() => {
     fetchAccountTokensMock.mockReset()
     createApiTokenMock.mockReset()
@@ -108,7 +92,7 @@ describe("CopyKeyDialog", () => {
     render(<CopyKeyDialog isOpen={true} onClose={() => {}} account={ACCOUNT} />)
 
     const createButton = await screen.findByRole("button", {
-      name: uiEn.dialog.copyKey.createKey,
+      name: "ui:dialog.copyKey.createKey",
     })
     await user.click(createButton)
 
@@ -135,18 +119,16 @@ describe("CopyKeyDialog", () => {
     render(<CopyKeyDialog isOpen={true} onClose={() => {}} account={ACCOUNT} />)
 
     const createButton = await screen.findByRole("button", {
-      name: uiEn.dialog.copyKey.createKey,
+      name: "ui:dialog.copyKey.createKey",
     })
     await user.click(createButton)
 
     expect(
-      await screen.findByText(
-        uiEn.dialog.copyKey.createFailed.replace("{{error}}", "boom"),
-      ),
+      await screen.findByText("ui:dialog.copyKey.createFailed"),
     ).toBeInTheDocument()
 
     await user.click(
-      screen.getByRole("button", { name: uiEn.dialog.copyKey.createKey }),
+      screen.getByRole("button", { name: "ui:dialog.copyKey.createKey" }),
     )
 
     await waitFor(() => {
@@ -171,16 +153,16 @@ describe("CopyKeyDialog", () => {
     render(<CopyKeyDialog isOpen={true} onClose={() => {}} account={ACCOUNT} />)
 
     const createButton = await screen.findByRole("button", {
-      name: uiEn.dialog.copyKey.createKey,
+      name: "ui:dialog.copyKey.createKey",
     })
     await user.click(createButton)
 
     expect(
-      await screen.findByText(uiEn.dialog.copyKey.noKeyFoundAfterCreate),
+      await screen.findByText("ui:dialog.copyKey.noKeyFoundAfterCreate"),
     ).toBeInTheDocument()
 
     await user.click(
-      screen.getByRole("button", { name: uiEn.dialog.copyKey.createKey }),
+      screen.getByRole("button", { name: "ui:dialog.copyKey.createKey" }),
     )
 
     await waitFor(() => {
@@ -208,14 +190,17 @@ describe("CopyKeyDialog", () => {
     render(<CopyKeyDialog isOpen={true} onClose={() => {}} account={ACCOUNT} />)
 
     const customCreateButton = await screen.findByRole("button", {
-      name: uiEn.dialog.copyKey.createCustomKey,
+      name: "ui:dialog.copyKey.createCustomKey",
     })
     await user.click(customCreateButton)
 
-    await user.type(await screen.findByLabelText(/token name/i), "My Key")
+    await user.type(
+      await screen.findByLabelText(/keyManagement:dialog\.tokenName/),
+      "My Key",
+    )
 
     await user.click(
-      screen.getByRole("button", { name: keyManagementEn.dialog.createToken }),
+      screen.getByRole("button", { name: "keyManagement:dialog.createToken" }),
     )
 
     await waitFor(() => {

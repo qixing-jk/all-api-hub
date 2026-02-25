@@ -49,7 +49,7 @@ export default function CliProxySettings() {
     <SettingSection
       id="cli-proxy"
       title={t("cliProxy.title")}
-      description={t("cliProxy.description", { defaultValue: "" })}
+      description={t("cliProxy.description")}
       onReset={resetCliProxyConfig}
     >
       <Card padding="none">

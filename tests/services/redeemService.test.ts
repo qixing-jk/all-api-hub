@@ -4,10 +4,6 @@ import { accountStorage } from "~/services/accountStorage"
 import { getApiService } from "~/services/apiService"
 import { redeemService } from "~/services/redeemService"
 
-vi.mock("i18next", () => ({
-  t: vi.fn((key: string) => key),
-}))
-
 vi.mock("~/services/accountStorage", () => ({
   accountStorage: {
     getAccountById: vi.fn(),

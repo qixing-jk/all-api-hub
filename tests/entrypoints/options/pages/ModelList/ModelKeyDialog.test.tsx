@@ -1,10 +1,7 @@
 import userEvent from "@testing-library/user-event"
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import ModelKeyDialog from "~/entrypoints/options/pages/ModelList/components/ModelKeyDialog"
-import commonEn from "~/locales/en/common.json"
-import modelListEn from "~/locales/en/modelList.json"
-import { testI18n } from "~/tests/test-utils/i18n"
 import { render, screen, waitFor } from "~/tests/test-utils/render"
 import { AuthTypeEnum } from "~/types"
 
@@ -68,11 +65,6 @@ const TOKEN = {
 } as any
 
 describe("ModelKeyDialog", () => {
-  beforeAll(() => {
-    testI18n.addResourceBundle("en", "common", commonEn, true, true)
-    testI18n.addResourceBundle("en", "modelList", modelListEn, true, true)
-  })
-
   beforeEach(() => {
     fetchAccountTokensMock.mockReset()
     createApiTokenMock.mockReset()
@@ -99,7 +91,7 @@ describe("ModelKeyDialog", () => {
     )
 
     await user.click(
-      await screen.findByRole("button", { name: commonEn.actions.copyKey }),
+      await screen.findByRole("button", { name: "common:actions.copyKey" }),
     )
 
     await waitFor(() => {
@@ -121,17 +113,15 @@ describe("ModelKeyDialog", () => {
     )
 
     expect(
-      await screen.findByText(
-        modelListEn.keyDialog.noCompatibleTitle.replace("{{modelId}}", "gpt-4"),
-      ),
+      await screen.findByText("modelList:keyDialog.noCompatibleTitle"),
     ).toBeInTheDocument()
 
     expect(
-      screen.getByRole("button", { name: modelListEn.keyDialog.createKey }),
+      screen.getByRole("button", { name: "modelList:keyDialog.createKey" }),
     ).toBeInTheDocument()
     expect(
       screen.getByRole("button", {
-        name: modelListEn.keyDialog.createCustomKey,
+        name: "modelList:keyDialog.createCustomKey",
       }),
     ).toBeInTheDocument()
   })
@@ -150,9 +140,7 @@ describe("ModelKeyDialog", () => {
     )
 
     expect(
-      await screen.findByText(
-        modelListEn.keyDialog.noCompatibleTitle.replace("{{modelId}}", "gpt-4"),
-      ),
+      await screen.findByText("modelList:keyDialog.noCompatibleTitle"),
     ).toBeInTheDocument()
   })
 
@@ -170,15 +158,15 @@ describe("ModelKeyDialog", () => {
     )
 
     expect(
-      await screen.findByText(modelListEn.keyDialog.ineligible.accountDisabled),
+      await screen.findByText("modelList:keyDialog.ineligible.accountDisabled"),
     ).toBeInTheDocument()
 
     expect(
-      screen.getByRole("button", { name: modelListEn.keyDialog.createKey }),
+      screen.getByRole("button", { name: "modelList:keyDialog.createKey" }),
     ).toBeDisabled()
     expect(
       screen.getByRole("button", {
-        name: modelListEn.keyDialog.createCustomKey,
+        name: "modelList:keyDialog.createCustomKey",
       }),
     ).toBeDisabled()
   })
@@ -201,13 +189,11 @@ describe("ModelKeyDialog", () => {
     )
 
     expect(
-      await screen.findByText(
-        modelListEn.keyDialog.loadFailed.replace("{{error}}", "boom"),
-      ),
+      await screen.findByText("modelList:keyDialog.loadFailed"),
     ).toBeInTheDocument()
 
     await user.click(
-      screen.getByRole("button", { name: commonEn.actions.retry }),
+      screen.getByRole("button", { name: "common:actions.retry" }),
     )
 
     await waitFor(() => {
@@ -215,7 +201,7 @@ describe("ModelKeyDialog", () => {
     })
 
     expect(
-      await screen.findByRole("button", { name: commonEn.actions.copyKey }),
+      await screen.findByRole("button", { name: "common:actions.copyKey" }),
     ).toBeInTheDocument()
   })
 })

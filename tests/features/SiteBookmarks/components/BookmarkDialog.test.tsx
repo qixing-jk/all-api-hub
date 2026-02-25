@@ -76,13 +76,15 @@ describe("BookmarkDialog", () => {
       />,
     )
 
-    fireEvent.click(await screen.findByRole("button", { name: "actions.add" }))
+    fireEvent.click(
+      await screen.findByRole("button", { name: "bookmark:actions.add" }),
+    )
 
     expect(
-      await screen.findByText("validation.nameRequired"),
+      await screen.findByText("bookmark:validation.nameRequired"),
     ).toBeInTheDocument()
     expect(
-      await screen.findByText("validation.urlRequired"),
+      await screen.findByText("bookmark:validation.urlRequired"),
     ).toBeInTheDocument()
 
     expect(addBookmarkMock).not.toHaveBeenCalled()
@@ -104,11 +106,13 @@ describe("BookmarkDialog", () => {
     )
 
     fireEvent.change(
-      await screen.findByPlaceholderText("form.namePlaceholder"),
+      await screen.findByPlaceholderText("bookmark:form.namePlaceholder"),
       { target: { value: "Docs" } },
     )
 
-    const urlField = (await screen.findByText("form.urlLabel")).closest("div")
+    const urlField = (
+      await screen.findByText("bookmark:form.urlLabel")
+    ).closest("div")
     if (!urlField) {
       throw new Error("Could not locate URL form field wrapper")
     }
@@ -117,7 +121,9 @@ describe("BookmarkDialog", () => {
       target: { value: "https://example.com/docs" },
     })
 
-    fireEvent.click(await screen.findByRole("button", { name: "actions.add" }))
+    fireEvent.click(
+      await screen.findByRole("button", { name: "bookmark:actions.add" }),
+    )
 
     await waitFor(() => {
       expect(addBookmarkMock).toHaveBeenCalledWith(
@@ -131,7 +137,9 @@ describe("BookmarkDialog", () => {
     })
 
     expect(loadAccountDataMock).toHaveBeenCalledTimes(1)
-    expect(toastSuccessMock).toHaveBeenCalledWith("toast.success.bookmarkAdded")
+    expect(toastSuccessMock).toHaveBeenCalledWith(
+      "messages:toast.success.bookmarkAdded",
+    )
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
@@ -161,11 +169,13 @@ describe("BookmarkDialog", () => {
     )
 
     fireEvent.change(
-      await screen.findByPlaceholderText("form.namePlaceholder"),
+      await screen.findByPlaceholderText("bookmark:form.namePlaceholder"),
       { target: { value: "New" } },
     )
 
-    fireEvent.click(await screen.findByRole("button", { name: "actions.save" }))
+    fireEvent.click(
+      await screen.findByRole("button", { name: "common:actions.save" }),
+    )
 
     await waitFor(() => {
       expect(updateBookmarkMock).toHaveBeenCalledWith(
@@ -178,7 +188,7 @@ describe("BookmarkDialog", () => {
 
     expect(loadAccountDataMock).toHaveBeenCalledTimes(1)
     expect(toastSuccessMock).toHaveBeenCalledWith(
-      "toast.success.bookmarkUpdated",
+      "messages:toast.success.bookmarkUpdated",
     )
     expect(onClose).toHaveBeenCalledTimes(1)
   })

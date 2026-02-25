@@ -1,10 +1,7 @@
 import userEvent from "@testing-library/user-event"
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { KiloCodeExportDialog } from "~/components/KiloCodeExportDialog"
-import commonEn from "~/locales/en/common.json"
-import uiEn from "~/locales/en/ui.json"
-import { testI18n } from "~/tests/test-utils/i18n"
 import { render, screen, waitFor } from "~/tests/test-utils/render"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 
@@ -55,11 +52,6 @@ const createDisplayAccount = (
 })
 
 describe("KiloCodeExportDialog", () => {
-  beforeAll(() => {
-    testI18n.addResourceBundle("en", "common", commonEn, true, true)
-    testI18n.addResourceBundle("en", "ui", uiEn, true, true)
-  })
-
   beforeEach(() => {
     mockFetchOpenAICompatibleModelIds.mockReset()
     mockFetchOpenAICompatibleModelIds.mockResolvedValue(["gpt-4o-mini"])
@@ -82,20 +74,20 @@ describe("KiloCodeExportDialog", () => {
     render(<KiloCodeExportDialog isOpen={true} onClose={() => {}} />)
 
     expect(
-      await screen.findByText(uiEn.dialog.kiloCode.help.perSiteTitle),
+      await screen.findByText("ui:dialog.kiloCode.help.perSiteTitle"),
     ).toBeInTheDocument()
 
     expect(
-      await screen.findByText(uiEn.dialog.kiloCode.help.afterExportTitle),
+      await screen.findByText("ui:dialog.kiloCode.help.afterExportTitle"),
     ).toBeInTheDocument()
 
     expect(
-      await screen.findByText(uiEn.dialog.kiloCode.help.manualTitle),
+      await screen.findByText("ui:dialog.kiloCode.help.manualTitle"),
     ).toBeInTheDocument()
 
     expect(
       await screen.findByRole("button", {
-        name: uiEn.dialog.kiloCode.actions.copyApiConfigs,
+        name: "ui:dialog.kiloCode.actions.copyApiConfigs",
       }),
     ).toBeDisabled()
 
@@ -107,7 +99,7 @@ describe("KiloCodeExportDialog", () => {
     })
 
     const sitePicker = await screen.findByPlaceholderText(
-      uiEn.dialog.kiloCode.placeholders.selectSites,
+      "ui:dialog.kiloCode.placeholders.selectSites",
     )
     await user.click(sitePicker)
     await user.clear(sitePicker)
@@ -124,18 +116,18 @@ describe("KiloCodeExportDialog", () => {
     await waitFor(() => {
       expect(
         screen.getByRole("button", {
-          name: uiEn.dialog.kiloCode.actions.copyApiConfigs,
+          name: "ui:dialog.kiloCode.actions.copyApiConfigs",
         }),
       ).not.toBeDisabled()
     })
     expect(
       screen.getByRole("button", {
-        name: uiEn.dialog.kiloCode.actions.downloadSettings,
+        name: "ui:dialog.kiloCode.actions.downloadSettings",
       }),
     ).toBeInTheDocument()
     expect(
       screen.getByRole("button", {
-        name: uiEn.dialog.kiloCode.actions.downloadSettings,
+        name: "ui:dialog.kiloCode.actions.downloadSettings",
       }),
     ).not.toBeDisabled()
   })
@@ -150,17 +142,17 @@ describe("KiloCodeExportDialog", () => {
 
     expect(
       await screen.findByRole("button", {
-        name: uiEn.dialog.kiloCode.actions.copyApiConfigs,
+        name: "ui:dialog.kiloCode.actions.copyApiConfigs",
       }),
     ).toBeDisabled()
     expect(
       await screen.findByRole("button", {
-        name: uiEn.dialog.kiloCode.actions.downloadSettings,
+        name: "ui:dialog.kiloCode.actions.downloadSettings",
       }),
     ).toBeDisabled()
     expect(
       await screen.findByText(
-        uiEn.dialog.kiloCode.messages.nothingToExportTitle,
+        "ui:dialog.kiloCode.messages.nothingToExportTitle",
       ),
     ).toBeInTheDocument()
   })
@@ -191,14 +183,14 @@ describe("KiloCodeExportDialog", () => {
     render(<KiloCodeExportDialog isOpen={true} onClose={() => {}} />)
 
     const copyButton = await screen.findByRole("button", {
-      name: uiEn.dialog.kiloCode.actions.copyApiConfigs,
+      name: "ui:dialog.kiloCode.actions.copyApiConfigs",
     })
     const downloadButton = await screen.findByRole("button", {
-      name: uiEn.dialog.kiloCode.actions.downloadSettings,
+      name: "ui:dialog.kiloCode.actions.downloadSettings",
     })
 
     const sitePicker = await screen.findByPlaceholderText(
-      uiEn.dialog.kiloCode.placeholders.selectSites,
+      "ui:dialog.kiloCode.placeholders.selectSites",
     )
     await user.click(sitePicker)
     await user.clear(sitePicker)
@@ -216,7 +208,7 @@ describe("KiloCodeExportDialog", () => {
     expect(downloadButton).toBeDisabled()
     expect(
       await screen.findByText(
-        uiEn.dialog.kiloCode.messages.modelIdRequiredTitle,
+        "ui:dialog.kiloCode.messages.modelIdRequiredTitle",
       ),
     ).toBeInTheDocument()
   })
@@ -255,17 +247,17 @@ describe("KiloCodeExportDialog", () => {
     render(<KiloCodeExportDialog isOpen={true} onClose={() => {}} />)
 
     const copyButton = await screen.findByRole("button", {
-      name: uiEn.dialog.kiloCode.actions.copyApiConfigs,
+      name: "ui:dialog.kiloCode.actions.copyApiConfigs",
     })
     const downloadButton = await screen.findByRole("button", {
-      name: uiEn.dialog.kiloCode.actions.downloadSettings,
+      name: "ui:dialog.kiloCode.actions.downloadSettings",
     })
 
     expect(copyButton).toBeDisabled()
     expect(downloadButton).toBeDisabled()
 
     const sitePicker = await screen.findByPlaceholderText(
-      uiEn.dialog.kiloCode.placeholders.selectSites,
+      "ui:dialog.kiloCode.placeholders.selectSites",
     )
     await user.click(sitePicker)
     await user.clear(sitePicker)
@@ -283,7 +275,7 @@ describe("KiloCodeExportDialog", () => {
     })
 
     expect(
-      await screen.findByText(uiEn.dialog.kiloCode.messages.loadTokensFailed),
+      await screen.findByText("ui:dialog.kiloCode.messages.loadTokensFailed"),
     ).toBeInTheDocument()
 
     await waitFor(() => {
@@ -329,7 +321,7 @@ describe("KiloCodeExportDialog", () => {
     await waitFor(() => {
       expect(
         screen.getByRole("button", {
-          name: uiEn.dialog.kiloCode.actions.copyApiConfigs,
+          name: "ui:dialog.kiloCode.actions.copyApiConfigs",
         }),
       ).not.toBeDisabled()
     })

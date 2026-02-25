@@ -1,15 +1,8 @@
 import userEvent from "@testing-library/user-event"
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import ApiCredentialProfiles from "~/entrypoints/options/pages/ApiCredentialProfiles"
-import apiVerificationEn from "~/locales/en/aiApiVerification.json"
-import apiCredentialProfilesEn from "~/locales/en/apiCredentialProfiles.json"
-import commonEn from "~/locales/en/common.json"
-import keyManagementEn from "~/locales/en/keyManagement.json"
-import settingsEn from "~/locales/en/settings.json"
-import uiEn from "~/locales/en/ui.json"
 import { API_TYPES } from "~/services/aiApiVerification"
-import { testI18n } from "~/tests/test-utils/i18n"
 import { render, screen, waitFor, within } from "~/tests/test-utils/render"
 import type { Tag } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
@@ -106,33 +99,6 @@ vi.mock("~/services/accountTags/tagStorage", () => ({
 }))
 
 describe("ApiCredentialProfiles page", () => {
-  beforeAll(() => {
-    testI18n.addResourceBundle(
-      "en",
-      "apiCredentialProfiles",
-      apiCredentialProfilesEn,
-      true,
-      true,
-    )
-    testI18n.addResourceBundle(
-      "en",
-      "aiApiVerification",
-      apiVerificationEn,
-      true,
-      true,
-    )
-    testI18n.addResourceBundle("en", "common", commonEn, true, true)
-    testI18n.addResourceBundle("en", "settings", settingsEn, true, true)
-    testI18n.addResourceBundle("en", "ui", uiEn, true, true)
-    testI18n.addResourceBundle(
-      "en",
-      "keyManagement",
-      keyManagementEn,
-      true,
-      true,
-    )
-  })
-
   beforeEach(() => {
     store = []
     mockListProfiles.mockClear()
@@ -151,39 +117,39 @@ describe("ApiCredentialProfiles page", () => {
     render(<ApiCredentialProfiles />)
 
     expect(
-      await screen.findByText(apiCredentialProfilesEn.empty.title),
+      await screen.findByText("apiCredentialProfiles:empty.title"),
     ).toBeInTheDocument()
 
     const addButtons = screen.getAllByRole("button", {
-      name: apiCredentialProfilesEn.actions.add,
+      name: "apiCredentialProfiles:actions.add",
     })
     await user.click(addButtons[0]!)
 
     expect(
-      await screen.findByText(apiCredentialProfilesEn.dialog.addTitle),
+      await screen.findByText("apiCredentialProfiles:dialog.addTitle"),
     ).toBeInTheDocument()
 
     await user.type(
       screen.getByPlaceholderText(
-        apiCredentialProfilesEn.dialog.placeholders.name,
+        "apiCredentialProfiles:dialog.placeholders.name",
       ),
       "My Profile",
     )
     await user.type(
       screen.getByPlaceholderText(
-        apiCredentialProfilesEn.dialog.placeholders.baseUrl,
+        "apiCredentialProfiles:dialog.placeholders.baseUrl",
       ),
       "https://example.com/v1/models",
     )
     await user.type(
       screen.getByPlaceholderText(
-        apiCredentialProfilesEn.dialog.placeholders.apiKey,
+        "apiCredentialProfiles:dialog.placeholders.apiKey",
       ),
       "sk-test",
     )
 
     await user.click(
-      screen.getByRole("button", { name: commonEn.actions.save }),
+      screen.getByRole("button", { name: "common:actions.save" }),
     )
 
     await waitFor(() => {
@@ -216,21 +182,21 @@ describe("ApiCredentialProfiles page", () => {
     expect(await screen.findByText("Original")).toBeInTheDocument()
 
     await user.click(
-      screen.getByRole("button", { name: commonEn.actions.edit }),
+      screen.getByRole("button", { name: "common:actions.edit" }),
     )
 
     expect(
-      await screen.findByText(apiCredentialProfilesEn.dialog.editTitle),
+      await screen.findByText("apiCredentialProfiles:dialog.editTitle"),
     ).toBeInTheDocument()
 
     const nameInput = screen.getByPlaceholderText(
-      apiCredentialProfilesEn.dialog.placeholders.name,
+      "apiCredentialProfiles:dialog.placeholders.name",
     )
     await user.clear(nameInput)
     await user.type(nameInput, "Updated")
 
     await user.click(
-      screen.getByRole("button", { name: commonEn.actions.save }),
+      screen.getByRole("button", { name: "common:actions.save" }),
     )
 
     await waitFor(() => {
@@ -262,16 +228,16 @@ describe("ApiCredentialProfiles page", () => {
     expect(await screen.findByText("To Delete")).toBeInTheDocument()
 
     await user.click(
-      screen.getByRole("button", { name: commonEn.actions.delete }),
+      screen.getByRole("button", { name: "common:actions.delete" }),
     )
 
     expect(
-      await screen.findByText(apiCredentialProfilesEn.delete.title),
+      await screen.findByText("apiCredentialProfiles:delete.title"),
     ).toBeInTheDocument()
 
     const dialog = await screen.findByRole("dialog")
     await user.click(
-      within(dialog).getByRole("button", { name: commonEn.actions.delete }),
+      within(dialog).getByRole("button", { name: "common:actions.delete" }),
     )
 
     await waitFor(() => {
@@ -279,7 +245,7 @@ describe("ApiCredentialProfiles page", () => {
     })
 
     expect(
-      await screen.findByText(apiCredentialProfilesEn.empty.title),
+      await screen.findByText("apiCredentialProfiles:empty.title"),
     ).toBeInTheDocument()
   })
 
@@ -327,7 +293,7 @@ describe("ApiCredentialProfiles page", () => {
 
     await user.type(
       screen.getByPlaceholderText(
-        apiCredentialProfilesEn.controls.searchPlaceholder,
+        "apiCredentialProfiles:controls.searchPlaceholder",
       ),
       "goog",
     )
@@ -343,7 +309,7 @@ describe("ApiCredentialProfiles page", () => {
 
     await user.clear(
       screen.getByPlaceholderText(
-        apiCredentialProfilesEn.controls.searchPlaceholder,
+        "apiCredentialProfiles:controls.searchPlaceholder",
       ),
     )
 
@@ -351,7 +317,7 @@ describe("ApiCredentialProfiles page", () => {
     await user.click(filter)
     await user.click(
       await screen.findByRole("option", {
-        name: apiVerificationEn.verifyDialog.apiTypes.google,
+        name: "aiApiVerification:verifyDialog.apiTypes.google",
       }),
     )
 
@@ -387,35 +353,35 @@ describe("ApiCredentialProfiles page", () => {
     expect(await screen.findByText("Exportable")).toBeInTheDocument()
 
     await user.click(
-      screen.getByRole("button", { name: commonEn.actions.export }),
+      screen.getByRole("button", { name: "common:actions.export" }),
     )
 
     await user.click(
       screen.getByRole("menuitem", {
-        name: new RegExp(keyManagementEn.actions.exportToCCSwitch, "i"),
+        name: /keyManagement:actions\.exportToCCSwitch/i,
       }),
     )
 
     expect(
-      await screen.findByText(uiEn.dialog.ccswitch.description),
+      await screen.findByText("ui:dialog.ccswitch.description"),
     ).toBeInTheDocument()
 
     await user.click(
-      screen.getByRole("button", { name: commonEn.actions.cancel }),
+      screen.getByRole("button", { name: "common:actions.cancel" }),
     )
 
     await user.click(
-      screen.getByRole("button", { name: commonEn.actions.export }),
+      screen.getByRole("button", { name: "common:actions.export" }),
     )
 
     await user.click(
       screen.getByRole("menuitem", {
-        name: new RegExp(keyManagementEn.actions.exportToKiloCode, "i"),
+        name: /keyManagement:actions\.exportToKiloCode/i,
       }),
     )
 
     expect(
-      await screen.findByText(uiEn.dialog.kiloCode.title),
+      await screen.findByText("ui:dialog.kiloCode.title"),
     ).toBeInTheDocument()
   })
 

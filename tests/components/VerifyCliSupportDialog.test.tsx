@@ -1,8 +1,6 @@
-import { beforeAll, describe, expect, it, vi } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import { VerifyCliSupportDialog } from "~/components/VerifyCliSupportDialog"
-import cliSupportVerificationEn from "~/locales/en/cliSupportVerification.json"
-import { testI18n } from "~/tests/test-utils/i18n"
 import {
   fireEvent,
   render,
@@ -27,16 +25,6 @@ vi.mock("~/services/cliSupportVerification", () => ({
 }))
 
 describe("VerifyCliSupportDialog", () => {
-  beforeAll(() => {
-    testI18n.addResourceBundle(
-      "en",
-      "cliSupportVerification",
-      cliSupportVerificationEn,
-      true,
-      true,
-    )
-  })
-
   it("renders tool items and a single model input before running", async () => {
     mockFetchAccountTokens.mockResolvedValueOnce([
       {
@@ -82,23 +70,23 @@ describe("VerifyCliSupportDialog", () => {
 
     expect(
       await screen.findAllByPlaceholderText(
-        cliSupportVerificationEn.verifyDialog.meta.modelPlaceholder,
+        "cliSupportVerification:verifyDialog.meta.modelPlaceholder",
       ),
     ).toHaveLength(1)
 
     expect(
       await screen.findByText(
-        cliSupportVerificationEn.verifyDialog.tools.claude,
+        "cliSupportVerification:verifyDialog.tools.claude",
       ),
     ).toBeInTheDocument()
     expect(
       await screen.findByText(
-        cliSupportVerificationEn.verifyDialog.tools.codex,
+        "cliSupportVerification:verifyDialog.tools.codex",
       ),
     ).toBeInTheDocument()
     expect(
       await screen.findByText(
-        cliSupportVerificationEn.verifyDialog.tools.gemini,
+        "cliSupportVerification:verifyDialog.tools.gemini",
       ),
     ).toBeInTheDocument()
   })
@@ -157,7 +145,7 @@ describe("VerifyCliSupportDialog", () => {
 
     const toolCard = await screen.findByTestId("verify-cli-claude")
     const runButton = within(toolCard).getByRole("button", {
-      name: cliSupportVerificationEn.verifyDialog.actions.runOne,
+      name: "cliSupportVerification:verifyDialog.actions.runOne",
     })
     await waitFor(() => expect(runButton).toBeEnabled())
     fireEvent.click(runButton)
@@ -174,24 +162,24 @@ describe("VerifyCliSupportDialog", () => {
 
     expect(
       await within(toolCard).findByText(
-        cliSupportVerificationEn.verifyDialog.summaries.supported,
+        "cliSupportVerification:verifyDialog.summaries.supported",
       ),
     ).toBeInTheDocument()
 
     expect(
       within(toolCard).getByRole("button", {
-        name: cliSupportVerificationEn.verifyDialog.actions.retry,
+        name: "cliSupportVerification:verifyDialog.actions.retry",
       }),
     ).toBeInTheDocument()
 
     const inputToggle = within(toolCard).getByRole("button", {
-      name: cliSupportVerificationEn.verifyDialog.details.input,
+      name: "cliSupportVerification:verifyDialog.details.input",
     })
     fireEvent.click(inputToggle)
     expect(await within(toolCard).findByText(/"foo": 1/)).toBeInTheDocument()
 
     const outputToggle = within(toolCard).getByRole("button", {
-      name: cliSupportVerificationEn.verifyDialog.details.output,
+      name: "cliSupportVerification:verifyDialog.details.output",
     })
     fireEvent.click(outputToggle)
     expect(await within(toolCard).findByText(/"bar": 2/)).toBeInTheDocument()
@@ -243,12 +231,12 @@ describe("VerifyCliSupportDialog", () => {
     const toolCard = await screen.findByTestId("verify-cli-codex")
     expect(
       await within(toolCard).findByText(
-        cliSupportVerificationEn.verifyDialog.requiresModelId,
+        "cliSupportVerification:verifyDialog.requiresModelId",
       ),
     ).toBeInTheDocument()
 
     const runButton = within(toolCard).getByRole("button", {
-      name: cliSupportVerificationEn.verifyDialog.actions.runOne,
+      name: "cliSupportVerification:verifyDialog.actions.runOne",
     })
     expect(runButton).toBeDisabled()
   })

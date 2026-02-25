@@ -6,16 +6,6 @@ import { describe, expect, it, vi } from "vitest"
 import { CompactMultiSelect } from "~/components/ui/CompactMultiSelect"
 import { render } from "~/tests/test-utils/render"
 
-vi.mock("react-i18next", async () => {
-  const actual =
-    await vi.importActual<typeof import("react-i18next")>("react-i18next")
-
-  return {
-    ...actual,
-    useTranslation: () => ({ t: (key: string) => key }),
-  }
-})
-
 describe("CompactMultiSelect", () => {
   it("uses a dedicated clear button instead of a clear option item", async () => {
     const user = userEvent.setup()

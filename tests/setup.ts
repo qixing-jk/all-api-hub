@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom/vitest"
 
 import { cleanup, configure } from "@testing-library/react"
+import i18next from "i18next"
 
 import "whatwg-fetch"
 
@@ -9,6 +10,17 @@ import { afterAll, afterEach, beforeAll, beforeEach, vi } from "vitest"
 import { fakeBrowser } from "wxt/testing/fake-browser"
 
 import { server } from "./msw/server"
+
+await i18next.init({
+  lng: "en",
+  fallbackLng: "en",
+  appendNamespaceToMissingKey: true,
+  initImmediate: false,
+  parseMissingKeyHandler: (key: string) => key,
+  interpolation: {
+    escapeValue: false,
+  },
+})
 
 vi.mock("@lobehub/icons", () => {
   const createIcon = () => () => null

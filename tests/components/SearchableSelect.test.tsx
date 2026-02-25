@@ -1,15 +1,9 @@
-import { beforeAll, describe, expect, it } from "vitest"
+import { describe, expect, it } from "vitest"
 
 import { SearchableSelect } from "~/components/ui"
-import uiEn from "~/locales/en/ui.json"
-import { testI18n } from "~/tests/test-utils/i18n"
 import { fireEvent, render, screen } from "~/tests/test-utils/render"
 
 describe("SearchableSelect", () => {
-  beforeAll(() => {
-    testI18n.addResourceBundle("en", "ui", uiEn, true, true)
-  })
-
   it("shows a custom-entry hint when options are empty and allowCustomValue is enabled", async () => {
     render(
       <SearchableSelect
@@ -24,7 +18,7 @@ describe("SearchableSelect", () => {
     fireEvent.click(combo)
 
     expect(
-      await screen.findByText(uiEn.searchableSelect.noOptionsAllowCustom),
+      await screen.findByText("ui:searchableSelect.noOptionsAllowCustom"),
     ).toBeInTheDocument()
   })
 
@@ -35,7 +29,7 @@ describe("SearchableSelect", () => {
     fireEvent.click(combo)
 
     expect(
-      await screen.findByText(uiEn.searchableSelect.noOptions),
+      await screen.findByText("ui:searchableSelect.noOptions"),
     ).toBeInTheDocument()
   })
 })

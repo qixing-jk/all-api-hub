@@ -43,7 +43,7 @@ describe("popup ActionButtons", () => {
     )
 
     const quickCheckinButton = await screen.findByRole("button", {
-      name: "navigation.autoCheckinRunNow",
+      name: "ui:navigation.autoCheckinRunNow",
     })
 
     fireEvent.click(quickCheckinButton)
@@ -64,7 +64,7 @@ describe("popup ActionButtons", () => {
 
     expect(
       screen.queryByRole("button", {
-        name: "navigation.externalCheckinAll",
+        name: "ui:navigation.externalCheckinAll",
       }),
     ).toBeNull()
   })
@@ -87,7 +87,7 @@ describe("popup ActionButtons", () => {
     )
 
     const externalButton = await screen.findByRole("button", {
-      name: "navigation.externalCheckinAll",
+      name: "ui:navigation.externalCheckinAll",
     })
 
     fireEvent.click(externalButton)
@@ -123,7 +123,7 @@ describe("popup ActionButtons", () => {
     )
 
     const externalButton = await screen.findByRole("button", {
-      name: "navigation.externalCheckinAll",
+      name: "ui:navigation.externalCheckinAll",
     })
 
     fireEvent.click(externalButton, { ctrlKey: true })
@@ -155,7 +155,7 @@ describe("popup ActionButtons", () => {
     )
 
     const externalButton = await screen.findByRole("button", {
-      name: "navigation.externalCheckinAll",
+      name: "ui:navigation.externalCheckinAll",
     })
 
     fireEvent.click(externalButton, { shiftKey: true })
@@ -191,7 +191,7 @@ describe("popup ActionButtons", () => {
     )
 
     const externalButton = await screen.findByRole("button", {
-      name: "navigation.externalCheckinAll",
+      name: "ui:navigation.externalCheckinAll",
     })
 
     fireEvent.click(externalButton, { ctrlKey: true, shiftKey: true })

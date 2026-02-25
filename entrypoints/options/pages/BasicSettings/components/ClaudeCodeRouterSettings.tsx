@@ -49,9 +49,7 @@ export default function ClaudeCodeRouterSettings() {
     <SettingSection
       id="claude-code-router"
       title={t("settings:claudeCodeRouter.title")}
-      description={t("settings:claudeCodeRouter.description", {
-        defaultValue: "",
-      })}
+      description={t("settings:claudeCodeRouter.description")}
       onReset={resetClaudeCodeRouterConfig}
     >
       <Card padding="none">

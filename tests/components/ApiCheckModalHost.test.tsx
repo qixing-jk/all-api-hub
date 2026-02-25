@@ -1,15 +1,11 @@
 import { act, render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { I18nextProvider } from "react-i18next"
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { ApiCheckModalHost } from "~/entrypoints/content/webAiApiCheck/components/ApiCheckModalHost"
 import { API_CHECK_OPEN_MODAL_EVENT } from "~/entrypoints/content/webAiApiCheck/events"
-import aiApiVerificationEn from "~/locales/en/aiApiVerification.json"
-import commonEn from "~/locales/en/common.json"
-import uiEn from "~/locales/en/ui.json"
-import webAiApiCheckEn from "~/locales/en/webAiApiCheck.json"
 import { testI18n } from "~/tests/test-utils/i18n"
 import { sendRuntimeMessage } from "~/utils/browserApi"
 
@@ -22,25 +18,6 @@ vi.mock("~/utils/browserApi", async (importOriginal) => {
 })
 
 describe("ApiCheckModalHost", () => {
-  beforeAll(() => {
-    testI18n.addResourceBundle("en", "ui", uiEn, true, true)
-    testI18n.addResourceBundle("en", "common", commonEn, true, true)
-    testI18n.addResourceBundle(
-      "en",
-      "webAiApiCheck",
-      webAiApiCheckEn,
-      true,
-      true,
-    )
-    testI18n.addResourceBundle(
-      "en",
-      "aiApiVerification",
-      aiApiVerificationEn,
-      true,
-      true,
-    )
-  })
-
   beforeEach(() => {
     vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
       if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
@@ -103,7 +80,7 @@ describe("ApiCheckModalHost", () => {
     })
 
     const textarea = await screen.findByPlaceholderText(
-      webAiApiCheckEn.modal.sourceText.placeholder,
+      "webAiApiCheck:modal.sourceText.placeholder",
     )
 
     await user.type(
@@ -220,7 +197,9 @@ describe("ApiCheckModalHost", () => {
       "api-check-probe-text-generation",
     )
 
-    await user.click(await screen.findByText("Test"))
+    await user.click(
+      await screen.findByText("webAiApiCheck:modal.actions.test"),
+    )
 
     expect(
       await within(probeCard).findByText("Unauthorized: [REDACTED]"),
@@ -287,7 +266,7 @@ describe("ApiCheckModalHost", () => {
     })
 
     const saveButton = await screen.findByRole("button", {
-      name: webAiApiCheckEn.modal.actions.saveToProfiles,
+      name: "webAiApiCheck:modal.actions.saveToProfiles",
     })
 
     await waitFor(() => {
@@ -373,7 +352,7 @@ describe("ApiCheckModalHost", () => {
     await user.type(apiKeyInput, "sk-secret-xyz")
 
     const saveButton = await screen.findByRole("button", {
-      name: webAiApiCheckEn.modal.actions.saveToProfiles,
+      name: "webAiApiCheck:modal.actions.saveToProfiles",
     })
 
     await waitFor(() => {
@@ -381,7 +360,7 @@ describe("ApiCheckModalHost", () => {
     })
 
     await user.click(
-      await screen.findByText(webAiApiCheckEn.modal.actions.test),
+      await screen.findByText("webAiApiCheck:modal.actions.test"),
     )
 
     await waitFor(() => {

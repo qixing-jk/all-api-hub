@@ -7,8 +7,6 @@ import { ONE_API } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import BalanceHistory from "~/entrypoints/options/pages/BalanceHistory"
-import balanceHistoryEn from "~/locales/en/balanceHistory.json"
-import commonEn from "~/locales/en/common.json"
 import { accountStorage } from "~/services/accountStorage"
 import { tagStorage } from "~/services/accountTags/tagStorage"
 import {
@@ -16,7 +14,6 @@ import {
   subtractDaysFromDayKey,
 } from "~/services/dailyBalanceHistory/dayKeys"
 import { dailyBalanceHistoryStorage } from "~/services/dailyBalanceHistory/storage"
-import { testI18n } from "~/tests/test-utils/i18n"
 import { render, screen, waitFor } from "~/tests/test-utils/render"
 import { DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION } from "~/types/dailyBalanceHistory"
 
@@ -62,15 +59,22 @@ vi.mock("~/utils/browserApi", async () => {
 })
 
 describe("BalanceHistory options page", () => {
-  const PAGE_TITLE = balanceHistoryEn.title
-  const EMPTY_TITLE = balanceHistoryEn.empty.title
-  const DISABLED_HINT_TITLE = balanceHistoryEn.hints.disabled.title
+  const PAGE_TITLE = "balanceHistory:title"
+  const EMPTY_TITLE = "balanceHistory:empty.title"
+  const DISABLED_HINT_TITLE = "balanceHistory:hints.disabled.title"
   const CASHFLOW_WARNING_TITLE =
-    balanceHistoryEn.warnings.cashflowDisabled.title
-  const START_DAY_LABEL = balanceHistoryEn.filters.startDay
-  const END_DAY_LABEL = balanceHistoryEn.filters.endDay
-  const QUICK_RANGE_7D_LABEL = balanceHistoryEn.filters.quickRanges["7d"]
-  const TAG_FILTER_LABEL = balanceHistoryEn.filters.tags
+    "balanceHistory:warnings.cashflowDisabled.title"
+  const START_DAY_LABEL = "balanceHistory:filters.startDay"
+  const END_DAY_LABEL = "balanceHistory:filters.endDay"
+  const QUICK_RANGE_7D_LABEL = "balanceHistory:filters.quickRanges.7d"
+  const TAG_FILTER_LABEL = "balanceHistory:filters.tags"
+
+  const TREND_CONTROLS_SCOPE = "balanceHistory:trend.controls.scope"
+  const TREND_SCOPE_ACCOUNTS = "balanceHistory:trend.scopes.accounts"
+  const TREND_SCOPE_TOTAL = "balanceHistory:trend.scopes.total"
+  const TREND_SCOPE_BUTTON_ACCOUNTS = `${TREND_CONTROLS_SCOPE}: ${TREND_SCOPE_ACCOUNTS}`
+  const INCOMPLETE_SELECTION_TITLE =
+    "balanceHistory:hints.incompleteSelection.title"
 
   const DEFAULT_RETENTION_DAYS = 30
   const DEFAULT_THEME_MODE = "light" as const
@@ -107,15 +111,6 @@ describe("BalanceHistory options page", () => {
       updateThemeMode: vi.fn(async () => {}),
       loadPreferences: vi.fn(),
     }) as unknown as MockUserPreferencesContextValue
-
-  testI18n.addResourceBundle(
-    "en",
-    "balanceHistory",
-    balanceHistoryEn,
-    true,
-    true,
-  )
-  testI18n.addResourceBundle("en", "common", commonEn, true, true)
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -404,19 +399,17 @@ describe("BalanceHistory options page", () => {
       const user = userEvent.setup()
       await user.click(
         screen.getByRole("button", {
-          name: `${balanceHistoryEn.trend.controls.scope}: ${balanceHistoryEn.trend.scopes.accounts}`,
+          name: TREND_SCOPE_BUTTON_ACCOUNTS,
         }),
       )
       await user.click(
         await screen.findByRole("menuitemradio", {
-          name: balanceHistoryEn.trend.scopes.total,
+          name: TREND_SCOPE_TOTAL,
         }),
       )
 
       expect(
-        await screen.findByText(
-          balanceHistoryEn.hints.incompleteSelection.title,
-        ),
+        await screen.findByText(INCOMPLETE_SELECTION_TITLE),
       ).toBeInTheDocument()
 
       await waitFor(() => {
@@ -436,7 +429,7 @@ describe("BalanceHistory options page", () => {
         expect(trendOption.series).toHaveLength(1)
 
         const [seriesTotal] = trendOption.series
-        expect(seriesTotal.name).toBe(balanceHistoryEn.trend.scopes.total)
+        expect(seriesTotal.name).toBe(TREND_SCOPE_TOTAL)
 
         const numericValues = seriesTotal.data.filter(
           (value: unknown) => typeof value === "number",
@@ -510,12 +503,12 @@ describe("BalanceHistory options page", () => {
       const user = userEvent.setup()
       await user.click(
         screen.getByRole("button", {
-          name: `${balanceHistoryEn.trend.controls.scope}: ${balanceHistoryEn.trend.scopes.accounts}`,
+          name: TREND_SCOPE_BUTTON_ACCOUNTS,
         }),
       )
       await user.click(
         await screen.findByRole("menuitemradio", {
-          name: balanceHistoryEn.trend.scopes.total,
+          name: TREND_SCOPE_TOTAL,
         }),
       )
 
@@ -536,7 +529,7 @@ describe("BalanceHistory options page", () => {
         expect(trendOption.series).toHaveLength(1)
 
         const [seriesTotal] = trendOption.series
-        expect(seriesTotal.name).toBe(balanceHistoryEn.trend.scopes.total)
+        expect(seriesTotal.name).toBe(TREND_SCOPE_TOTAL)
 
         const numericValues = seriesTotal.data.filter(
           (value: unknown) => typeof value === "number",

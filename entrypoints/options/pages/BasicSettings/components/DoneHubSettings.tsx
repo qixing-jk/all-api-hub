@@ -88,7 +88,7 @@ export default function DoneHubSettings() {
     <SettingSection
       id="done-hub"
       title={t("doneHub.title")}
-      description={t("doneHub.description", { defaultValue: "" })}
+      description={t("doneHub.description")}
       onReset={resetDoneHubConfig}
     >
       <Card padding="none">

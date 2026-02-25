@@ -1,8 +1,6 @@
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { VerifyApiDialog } from "~/components/VerifyApiDialog"
-import apiVerificationEn from "~/locales/en/aiApiVerification.json"
-import { testI18n } from "~/tests/test-utils/i18n"
 import {
   fireEvent,
   render,
@@ -32,16 +30,6 @@ vi.mock("~/services/aiApiVerification", async (importOriginal) => {
 })
 
 describe("VerifyApiDialog", () => {
-  beforeAll(() => {
-    testI18n.addResourceBundle(
-      "en",
-      "aiApiVerification",
-      apiVerificationEn,
-      true,
-      true,
-    )
-  })
-
   beforeEach(() => {
     // Prevent cross-test leakage from `mockResolvedValueOnce` and call counts.
     mockFetchAccountTokens.mockReset()
@@ -91,22 +79,22 @@ describe("VerifyApiDialog", () => {
 
     expect(
       await screen.findByText(
-        apiVerificationEn.verifyDialog.probes["text-generation"],
+        "aiApiVerification:verifyDialog.probes.text-generation",
       ),
     ).toBeInTheDocument()
     expect(
       await screen.findByText(
-        apiVerificationEn.verifyDialog.probes["tool-calling"],
+        "aiApiVerification:verifyDialog.probes.tool-calling",
       ),
     ).toBeInTheDocument()
     expect(
       await screen.findByText(
-        apiVerificationEn.verifyDialog.probes["structured-output"],
+        "aiApiVerification:verifyDialog.probes.structured-output",
       ),
     ).toBeInTheDocument()
     expect(
       await screen.findByText(
-        apiVerificationEn.verifyDialog.probes["web-search"],
+        "aiApiVerification:verifyDialog.probes.web-search",
       ),
     ).toBeInTheDocument()
   })
@@ -163,7 +151,7 @@ describe("VerifyApiDialog", () => {
 
     const probeCard = await screen.findByTestId("verify-probe-text-generation")
     const runButton = within(probeCard).getByRole("button", {
-      name: apiVerificationEn.verifyDialog.actions.runOne,
+      name: "aiApiVerification:verifyDialog.actions.runOne",
     })
 
     // The action button is disabled until tokens are fetched and a token is selected.
@@ -180,18 +168,18 @@ describe("VerifyApiDialog", () => {
 
     expect(
       within(probeCard).getByRole("button", {
-        name: apiVerificationEn.verifyDialog.actions.retry,
+        name: "aiApiVerification:verifyDialog.actions.retry",
       }),
     ).toBeInTheDocument()
 
     const inputToggle = within(probeCard).getByRole("button", {
-      name: apiVerificationEn.verifyDialog.details.input,
+      name: "aiApiVerification:verifyDialog.details.input",
     })
     fireEvent.click(inputToggle)
     expect(await within(probeCard).findByText(/"foo": 1/)).toBeInTheDocument()
 
     const outputToggle = within(probeCard).getByRole("button", {
-      name: apiVerificationEn.verifyDialog.details.output,
+      name: "aiApiVerification:verifyDialog.details.output",
     })
     fireEvent.click(outputToggle)
     expect(await within(probeCard).findByText(/"bar": 2/)).toBeInTheDocument()
@@ -247,7 +235,7 @@ describe("VerifyApiDialog", () => {
 
     const probeCard = await screen.findByTestId("verify-probe-web-search")
     const runButton = within(probeCard).getByRole("button", {
-      name: apiVerificationEn.verifyDialog.actions.runOne,
+      name: "aiApiVerification:verifyDialog.actions.runOne",
     })
 
     // Wait for async token load/selection so the click reliably triggers `runProbe`.
@@ -259,10 +247,7 @@ describe("VerifyApiDialog", () => {
     )
     expect(
       await within(probeCard).findByText(
-        testI18n.t("verifyDialog.unsupportedProbeForApiType", {
-          ns: "aiApiVerification",
-          probe: apiVerificationEn.verifyDialog.probes["web-search"],
-        }),
+        "aiApiVerification:verifyDialog.unsupportedProbeForApiType",
       ),
     ).toBeInTheDocument()
   })

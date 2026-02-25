@@ -276,11 +276,7 @@ export async function importToCliProxy(
     logger.error("Import failed", error)
     return {
       success: false,
-      message:
-        error?.message ||
-        t("messages:cliproxy.importFailed", {
-          defaultValue: "Failed to import provider to CLIProxyAPI",
-        }),
+      message: error?.message || t("messages:cliproxy.importFailed"),
     }
   }
 }

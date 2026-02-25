@@ -5,9 +5,6 @@ import {
   RuntimeMessageTypes,
 } from "~/constants/runtimeActions"
 import KeyManagement from "~/entrypoints/options/pages/KeyManagement"
-import commonEn from "~/locales/en/common.json"
-import keyManagementEn from "~/locales/en/keyManagement.json"
-import { testI18n } from "~/tests/test-utils/i18n"
 import {
   act,
   fireEvent,
@@ -16,9 +13,6 @@ import {
   waitFor,
 } from "~/tests/test-utils/render"
 import type { AccountKeyRepairProgress } from "~/types/accountKeyAutoProvisioning"
-
-testI18n.addResourceBundle("en", "keyManagement", keyManagementEn, true, true)
-testI18n.addResourceBundle("en", "common", commonEn, true, true)
 
 const { sendRuntimeActionMessageMock, runtimeMessageState } = vi.hoisted(
   () => ({
@@ -275,12 +269,12 @@ describe("KeyManagement repair missing keys entry point", () => {
     render(<KeyManagement />)
 
     const repairButton = await screen.findByRole("button", {
-      name: keyManagementEn.repairMissingKeys.action,
+      name: "keyManagement:repairMissingKeys.action",
     })
     fireEvent.click(repairButton)
 
     expect(
-      screen.getByText(keyManagementEn.repairMissingKeys.description),
+      screen.getByText("keyManagement:repairMissingKeys.description"),
     ).toBeInTheDocument()
 
     await waitFor(() => {
@@ -338,7 +332,7 @@ describe("KeyManagement repair missing keys entry point", () => {
 
     fireEvent.click(
       await screen.findByRole("button", {
-        name: keyManagementEn.repairMissingKeys.action,
+        name: "keyManagement:repairMissingKeys.action",
       }),
     )
 
@@ -352,7 +346,7 @@ describe("KeyManagement repair missing keys entry point", () => {
     expect(screen.queryByText(/5\/3/)).not.toBeInTheDocument()
 
     const progressBar = screen.getByRole("progressbar", {
-      name: keyManagementEn.repairMissingKeys.progressLabel,
+      name: "keyManagement:repairMissingKeys.progressLabel",
     })
     expect(progressBar).toHaveAttribute("aria-valuetext", "3/3 (100%)")
     expect(progressBar).toHaveAttribute("aria-valuemax", "3")
@@ -374,7 +368,7 @@ describe("KeyManagement repair missing keys entry point", () => {
 
     fireEvent.click(
       await screen.findByRole("button", {
-        name: keyManagementEn.repairMissingKeys.action,
+        name: "keyManagement:repairMissingKeys.action",
       }),
     )
 
@@ -388,7 +382,7 @@ describe("KeyManagement repair missing keys entry point", () => {
     expect(screen.getByText("Another Site")).toBeInTheDocument()
 
     const searchInput = screen.getByPlaceholderText(
-      keyManagementEn.repairMissingKeys.searchPlaceholder,
+      "keyManagement:repairMissingKeys.searchPlaceholder",
     )
 
     fireEvent.change(searchInput, { target: { value: "Another" } })
@@ -397,12 +391,12 @@ describe("KeyManagement repair missing keys entry point", () => {
     expect(screen.getByText("Another Site")).toBeInTheDocument()
 
     fireEvent.click(
-      screen.getByRole("button", { name: commonEn.actions.clear }),
+      screen.getByRole("button", { name: "common:actions.clear" }),
     )
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: new RegExp(keyManagementEn.repairMissingKeys.outcomes.failed),
+        name: /keyManagement:repairMissingKeys\.outcomes\.failed/,
       }),
     )
 
@@ -411,16 +405,14 @@ describe("KeyManagement repair missing keys entry point", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: new RegExp(keyManagementEn.repairMissingKeys.outcomes.created),
+        name: /keyManagement:repairMissingKeys\.outcomes\.created/,
       }),
     )
 
     expect(screen.getByText("Enabled Site")).toBeInTheDocument()
     expect(screen.queryByText("Another Site")).not.toBeInTheDocument()
 
-    fireEvent.click(
-      screen.getByRole("button", { name: new RegExp(commonEn.total) }),
-    )
+    fireEvent.click(screen.getByRole("button", { name: /common:total/ }))
 
     expect(screen.getByText("Enabled Site")).toBeInTheDocument()
     expect(screen.getByText("Another Site")).toBeInTheDocument()

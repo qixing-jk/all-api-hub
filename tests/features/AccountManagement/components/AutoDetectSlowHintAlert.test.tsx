@@ -12,7 +12,7 @@ describe("AutoDetectSlowHintAlert", () => {
     render(<AutoDetectSlowHintAlert />)
 
     const helpButton = await screen.findByRole("button", {
-      name: "actions.helpDocument",
+      name: "accountDialog:actions.helpDocument",
     })
     fireEvent.click(helpButton)
 

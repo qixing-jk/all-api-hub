@@ -8,14 +8,6 @@ import type { ChannelFormData, CreateChannelPayload } from "~/types/newapi"
 // MOCKS
 // ============================================================================
 
-// Mock i18next
-vi.mock("i18next", () => ({
-  t: vi.fn((key: string) => {
-    // Always return the key so tests can check for it
-    return key
-  }),
-}))
-
 // Mock react-hot-toast
 const mockToast = {
   loading: vi.fn(),

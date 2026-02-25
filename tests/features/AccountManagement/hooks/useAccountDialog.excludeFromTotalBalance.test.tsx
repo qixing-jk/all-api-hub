@@ -1,4 +1,3 @@
-import { act, renderHook, waitFor } from "@testing-library/react"
 import { http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -6,10 +5,10 @@ import { DIALOG_MODES } from "~/constants/dialogModes"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog"
 import { accountStorage } from "~/services/accountStorage"
 import { server } from "~/tests/msw/server"
+import { act, renderHook, waitFor } from "~/tests/test-utils/render"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 
-const { mockT, mockOpenWithAccount } = vi.hoisted(() => ({
-  mockT: vi.fn((key: string) => key),
+const { mockOpenWithAccount } = vi.hoisted(() => ({
   mockOpenWithAccount: vi.fn(),
 }))
 
@@ -19,10 +18,6 @@ vi.mock("react-hot-toast", () => ({
     error: vi.fn(),
     loading: vi.fn(),
   },
-}))
-
-vi.mock("react-i18next", () => ({
-  useTranslation: () => ({ t: mockT }),
 }))
 
 vi.mock("~/components/ChannelDialog", () => ({

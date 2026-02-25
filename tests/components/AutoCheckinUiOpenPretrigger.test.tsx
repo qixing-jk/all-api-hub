@@ -80,15 +80,17 @@ describe("AutoCheckinUiOpenPretrigger", () => {
 
     await waitFor(() => {
       expect(toast.success).toHaveBeenCalledWith(
-        "messages.success.pretriggerStarted",
+        "autoCheckin:messages.success.pretriggerStarted",
       )
     })
 
     expect(
-      await screen.findByText("uiOpenPretrigger.dialogTitle"),
+      await screen.findByText("autoCheckin:uiOpenPretrigger.dialogTitle"),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole("button", { name: "uiOpenPretrigger.viewDetails" }),
+      screen.getByRole("button", {
+        name: "autoCheckin:uiOpenPretrigger.viewDetails",
+      }),
     ).toBeInTheDocument()
   })
 })

@@ -2,15 +2,12 @@ import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
 import UsageAnalytics from "~/entrypoints/options/pages/UsageAnalytics"
-import commonEn from "~/locales/en/common.json"
-import usageAnalyticsEn from "~/locales/en/usageAnalytics.json"
 import { accountStorage } from "~/services/accountStorage"
 import {
   createEmptyUsageHistoryAccountStore,
   createEmptyUsageHistoryLatencyAggregate,
 } from "~/services/usageHistory/core"
 import { usageHistoryStorage } from "~/services/usageHistory/storage"
-import { testI18n } from "~/tests/test-utils/i18n"
 import { render, screen, waitFor } from "~/tests/test-utils/render"
 
 const echartsInstances: Array<{
@@ -49,15 +46,6 @@ vi.mock("~/services/usageHistory/storage", () => ({
 }))
 
 describe("UsageAnalytics charts", () => {
-  testI18n.addResourceBundle(
-    "en",
-    "usageAnalytics",
-    usageAnalyticsEn,
-    true,
-    true,
-  )
-  testI18n.addResourceBundle("en", "common", commonEn, true, true)
-
   it("mounts the ECharts dashboard without throwing", async () => {
     echartsInstances.length = 0
     vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([
@@ -97,9 +85,15 @@ describe("UsageAnalytics charts", () => {
 
     render(<UsageAnalytics />)
 
-    expect(await screen.findByText("Daily overview")).toBeInTheDocument()
-    expect(screen.getByText("Model distribution")).toBeInTheDocument()
-    expect(screen.getByText("Latency trend")).toBeInTheDocument()
+    expect(
+      await screen.findByText("usageAnalytics:charts.dailyOverview.title"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("usageAnalytics:charts.modelDistribution.title"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("usageAnalytics:charts.latencyTrend.title"),
+    ).toBeInTheDocument()
   })
 
   it("defaults breakdown charts to pie and allows switching to histogram", async () => {
@@ -140,10 +134,18 @@ describe("UsageAnalytics charts", () => {
     } as any)
 
     render(<UsageAnalytics />)
-    await screen.findByText("Model distribution")
+    await screen.findByText("usageAnalytics:charts.modelDistribution.title")
 
-    expect(screen.getAllByRole("button", { name: "Pie" })).toHaveLength(5)
-    expect(screen.getAllByRole("button", { name: "Histogram" })).toHaveLength(5)
+    expect(
+      screen.getAllByRole("button", {
+        name: "usageAnalytics:charts.common.chartType.pie",
+      }),
+    ).toHaveLength(5)
+    expect(
+      screen.getAllByRole("button", {
+        name: "usageAnalytics:charts.common.chartType.histogram",
+      }),
+    ).toHaveLength(5)
 
     // The first breakdown card is "Model distribution" and is mounted after the daily overview chart.
     await waitFor(() => {
@@ -155,7 +157,11 @@ describe("UsageAnalytics charts", () => {
     expect(initialOption.series?.[0]?.type).toBe("pie")
 
     const user = userEvent.setup()
-    await user.click(screen.getAllByRole("button", { name: "Histogram" })[0])
+    await user.click(
+      screen.getAllByRole("button", {
+        name: "usageAnalytics:charts.common.chartType.histogram",
+      })[0],
+    )
 
     const lastOption =
       modelDistributionInstance.setOption.mock.calls[

@@ -24,12 +24,6 @@ vi.mock("react-hot-toast", () => ({
   default: mockToast,
 }))
 
-vi.mock("i18next", () => ({
-  default: {
-    t: vi.fn((key: string) => key),
-  },
-}))
-
 vi.mock("~/services/accountStorage", () => ({
   accountStorage: {
     refreshAccount: vi.fn(),

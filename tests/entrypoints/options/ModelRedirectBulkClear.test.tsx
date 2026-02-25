@@ -3,10 +3,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import ModelRedirectSettings from "~/entrypoints/options/pages/BasicSettings/components/ModelRedirectSettings"
-import commonEn from "~/locales/en/common.json"
-import modelRedirectEn from "~/locales/en/modelRedirect.json"
-import settingsEn from "~/locales/en/settings.json"
-import uiEn from "~/locales/en/ui.json"
 import { hasValidManagedSiteConfig } from "~/services/managedSiteService"
 import { ModelRedirectService } from "~/services/modelRedirect"
 import { buildManagedSiteChannel } from "~/tests/test-utils/factories"
@@ -67,11 +63,6 @@ const mockedModelRedirectService = ModelRedirectService as unknown as {
 }
 
 describe("Model redirect bulk clear flow", () => {
-  testI18n.addResourceBundle("en", "modelRedirect", modelRedirectEn, true, true)
-  testI18n.addResourceBundle("en", "settings", settingsEn, true, true)
-  testI18n.addResourceBundle("en", "common", commonEn, true, true)
-  testI18n.addResourceBundle("en", "ui", uiEn, true, true)
-
   const t = testI18n.getFixedT("en", "modelRedirect")
 
   beforeEach(() => {

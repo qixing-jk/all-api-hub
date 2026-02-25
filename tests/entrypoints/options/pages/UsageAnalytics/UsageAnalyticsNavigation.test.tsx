@@ -2,12 +2,9 @@ import { fireEvent, within } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
 import UsageAnalytics from "~/entrypoints/options/pages/UsageAnalytics"
-import commonEn from "~/locales/en/common.json"
-import usageAnalyticsEn from "~/locales/en/usageAnalytics.json"
 import { accountStorage } from "~/services/accountStorage"
 import { createEmptyUsageHistoryAccountStore } from "~/services/usageHistory/core"
 import { usageHistoryStorage } from "~/services/usageHistory/storage"
-import { testI18n } from "~/tests/test-utils/i18n"
 import { render, screen } from "~/tests/test-utils/render"
 import { navigateWithinOptionsPage } from "~/utils/navigation"
 
@@ -48,15 +45,6 @@ vi.mock("~/utils/navigation", async () => {
 })
 
 describe("UsageAnalytics navigation", () => {
-  testI18n.addResourceBundle(
-    "en",
-    "usageAnalytics",
-    usageAnalyticsEn,
-    true,
-    true,
-  )
-  testI18n.addResourceBundle("en", "common", commonEn, true, true)
-
   it("navigates to account usage settings from header", async () => {
     vi.mocked(navigateWithinOptionsPage).mockClear()
     vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([] as any)
@@ -76,7 +64,7 @@ describe("UsageAnalytics navigation", () => {
     render(<UsageAnalytics />)
 
     const settingsButton = await screen.findByRole("button", {
-      name: "Usage settings",
+      name: "usageAnalytics:actions.openAccountUsageSettings",
     })
     fireEvent.click(settingsButton)
 
@@ -96,14 +84,14 @@ describe("UsageAnalytics navigation", () => {
 
     render(<UsageAnalytics />)
 
-    const emptyCardTitle = await screen.findByText("No usage history data yet")
+    const emptyCardTitle = await screen.findByText("usageAnalytics:empty.title")
     const emptyCardContent = emptyCardTitle.parentElement
     expect(emptyCardContent).not.toBeNull()
 
     const settingsButton = within(emptyCardContent as HTMLElement).getByRole(
       "button",
       {
-        name: "Usage settings",
+        name: "usageAnalytics:actions.openAccountUsageSettings",
       },
     )
     fireEvent.click(settingsButton)

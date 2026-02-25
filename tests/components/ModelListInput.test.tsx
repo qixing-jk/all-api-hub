@@ -1,16 +1,10 @@
 import React from "react"
-import { beforeAll, describe, expect, it } from "vitest"
+import { describe, expect, it } from "vitest"
 
 import { ModelListInput } from "~/components/ui"
-import uiEn from "~/locales/en/ui.json"
-import { testI18n } from "~/tests/test-utils/i18n"
 import { fireEvent, render, screen } from "~/tests/test-utils/render"
 
 describe("ModelListInput", () => {
-  beforeAll(() => {
-    testI18n.addResourceBundle("en", "ui", uiEn, true, true)
-  })
-
   it("renders model name and alias inputs", async () => {
     const Wrapper = () => {
       const [value, setValue] = React.useState<
@@ -22,14 +16,14 @@ describe("ModelListInput", () => {
     render(<Wrapper />)
 
     expect(
-      await screen.findByText(uiEn.modelListInput.title),
+      await screen.findByText("ui:modelListInput.title"),
     ).toBeInTheDocument()
     expect(
-      await screen.findByPlaceholderText(uiEn.modelListInput.placeholders.name),
+      await screen.findByPlaceholderText("ui:modelListInput.placeholders.name"),
     ).toBeInTheDocument()
     expect(
       await screen.findByPlaceholderText(
-        uiEn.modelListInput.placeholders.alias,
+        "ui:modelListInput.placeholders.alias",
       ),
     ).toBeInTheDocument()
   })
@@ -45,22 +39,22 @@ describe("ModelListInput", () => {
     render(<Wrapper />)
 
     const addButton = await screen.findByRole("button", {
-      name: uiEn.modelListInput.actions.add,
+      name: "ui:modelListInput.actions.add",
     })
     fireEvent.click(addButton)
 
     const modelNameInputs = await screen.findAllByPlaceholderText(
-      uiEn.modelListInput.placeholders.name,
+      "ui:modelListInput.placeholders.name",
     )
     expect(modelNameInputs.length).toBe(2)
 
     const removeButtons = await screen.findAllByRole("button", {
-      name: uiEn.modelListInput.actions.remove,
+      name: "ui:modelListInput.actions.remove",
     })
     fireEvent.click(removeButtons[0])
 
     const remainingNameInputs = await screen.findAllByPlaceholderText(
-      uiEn.modelListInput.placeholders.name,
+      "ui:modelListInput.placeholders.name",
     )
     expect(remainingNameInputs.length).toBe(1)
   })

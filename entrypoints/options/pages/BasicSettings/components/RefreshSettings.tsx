@@ -92,7 +92,7 @@ export default function RefreshSettings() {
     <SettingSection
       id="auto-refresh"
       title={t("refresh.title")}
-      description={t("refresh.description", { defaultValue: "" })}
+      description={t("refresh.description")}
       onReset={resetAutoRefreshConfig}
     >
       <Card padding="none">

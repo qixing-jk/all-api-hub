@@ -3,15 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import RedemptionAssistSettings from "~/entrypoints/options/pages/BasicSettings/components/RedemptionAssistSettings"
 import WebAiApiCheckSettings from "~/entrypoints/options/pages/BasicSettings/components/WebAiApiCheckSettings"
-import commonEn from "~/locales/en/common.json"
-import redemptionAssistEn from "~/locales/en/redemptionAssist.json"
-import settingsEn from "~/locales/en/settings.json"
-import webAiApiCheckEn from "~/locales/en/webAiApiCheck.json"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
 } from "~/services/userPreferences"
-import { testI18n } from "~/tests/test-utils/i18n"
 import { fireEvent, render, screen, waitFor } from "~/tests/test-utils/render"
 import * as browserApi from "~/utils/browserApi"
 
@@ -26,17 +21,6 @@ vi.mock("react-hot-toast", () => {
 })
 
 describe("Context menu visibility toggles", () => {
-  testI18n.addResourceBundle("en", "webAiApiCheck", webAiApiCheckEn, true, true)
-  testI18n.addResourceBundle(
-    "en",
-    "redemptionAssist",
-    redemptionAssistEn,
-    true,
-    true,
-  )
-  testI18n.addResourceBundle("en", "settings", settingsEn, true, true)
-  testI18n.addResourceBundle("en", "common", commonEn, true, true)
-
   beforeEach(() => {
     vi.restoreAllMocks()
   })
@@ -55,7 +39,7 @@ describe("Context menu visibility toggles", () => {
 
     render(<WebAiApiCheckSettings />)
 
-    await screen.findByText("Web AI API Functionality Availability Test")
+    await screen.findByText("webAiApiCheck:settings.title")
 
     const switches = screen.getAllByRole("switch")
     fireEvent.click(switches[0])
@@ -91,7 +75,7 @@ describe("Context menu visibility toggles", () => {
 
     render(<RedemptionAssistSettings />)
 
-    await screen.findByText("Redemption Assist")
+    await screen.findByText("redemptionAssist:settings.title")
 
     const switches = screen.getAllByRole("switch")
     fireEvent.click(switches[1])

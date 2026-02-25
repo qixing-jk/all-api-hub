@@ -6,13 +6,6 @@ const { mockFetchUserInfo } = vi.hoisted(() => ({
   mockFetchUserInfo: vi.fn(),
 }))
 
-vi.mock("i18next", () => ({
-  t: vi.fn((key: string) => key),
-  default: {
-    t: vi.fn((key: string) => key),
-  },
-}))
-
 vi.mock("~/services/apiService", () => ({
   getApiService: vi.fn(() => ({
     fetchUserInfo: mockFetchUserInfo,

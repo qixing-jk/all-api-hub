@@ -145,7 +145,7 @@ export default function SortingPrioritySettings() {
     <SettingSection
       id="sorting-priority"
       title={t("sorting.title")}
-      description={t("sorting.description", { defaultValue: "" })}
+      description={t("sorting.description")}
       onReset={resetSortingPriorityConfig}
     >
       <Card>

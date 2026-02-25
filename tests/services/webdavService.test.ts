@@ -8,14 +8,6 @@ import {
   uploadBackup,
 } from "~/services/webdav/webdavService"
 
-// Mock i18n so error messages are deterministic
-vi.mock("i18next", () => ({
-  t: (key: string, params?: { status?: number }) =>
-    params && typeof params.status !== "undefined"
-      ? `${key}:${params.status}`
-      : key,
-}))
-
 vi.mock("~/services/userPreferences", () => ({
   userPreferences: {
     getPreferences: vi.fn(),
@@ -98,7 +90,7 @@ describe("webdavService", () => {
       globalAny.fetch.mockResolvedValue({ status: 500 })
 
       await expect(testWebdavConnection()).rejects.toThrow(
-        "messages:webdav.connectionFailed:500",
+        "messages:webdav.connectionFailed",
       )
     })
   })
@@ -159,7 +151,7 @@ describe("webdavService", () => {
       globalAny.fetch.mockResolvedValue({ status: 500 })
 
       await expect(downloadBackup()).rejects.toThrow(
-        "messages:webdav.downloadFailed:500",
+        "messages:webdav.downloadFailed",
       )
     })
   })
@@ -218,7 +210,7 @@ describe("webdavService", () => {
         .mockResolvedValueOnce({ status: 500 })
 
       await expect(uploadBackup("{}")).rejects.toThrow(
-        "messages:webdav.uploadFailed:500",
+        "messages:webdav.uploadFailed",
       )
     })
   })

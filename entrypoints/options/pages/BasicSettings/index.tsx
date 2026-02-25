@@ -154,9 +154,7 @@ function DesktopTabs({
         type="button"
         size="icon-sm"
         variant="ghost"
-        aria-label={t("tabs.scrollLeft", {
-          defaultValue: "Scroll tabs left",
-        })}
+        aria-label={t("tabs.scrollLeft")}
         disabled={!canScrollLeft}
         onClick={scrollLeft}
         className="shrink-0"
@@ -189,9 +187,7 @@ function DesktopTabs({
         type="button"
         size="icon-sm"
         variant="ghost"
-        aria-label={t("tabs.scrollRight", {
-          defaultValue: "Scroll tabs right",
-        })}
+        aria-label={t("tabs.scrollRight")}
         disabled={!canScrollRight}
         onClick={scrollRight}
         className="shrink-0"

@@ -10,12 +10,6 @@ const { mockFetchApi } = vi.hoisted(() => ({
   mockFetchApi: vi.fn(),
 }))
 
-vi.mock("i18next", () => ({
-  default: {
-    t: vi.fn((key: string) => key),
-  },
-}))
-
 vi.mock("~/constants/ui", () => ({
   UI_CONSTANTS: {},
 }))

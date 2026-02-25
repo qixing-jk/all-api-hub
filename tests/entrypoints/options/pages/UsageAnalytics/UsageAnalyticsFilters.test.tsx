@@ -1,12 +1,9 @@
 import { describe, expect, it, vi } from "vitest"
 
 import UsageAnalytics from "~/entrypoints/options/pages/UsageAnalytics"
-import commonEn from "~/locales/en/common.json"
-import usageAnalyticsEn from "~/locales/en/usageAnalytics.json"
 import { accountStorage } from "~/services/accountStorage"
 import { createEmptyUsageHistoryAccountStore } from "~/services/usageHistory/core"
 import { usageHistoryStorage } from "~/services/usageHistory/storage"
-import { testI18n } from "~/tests/test-utils/i18n"
 import { fireEvent, render, screen, within } from "~/tests/test-utils/render"
 
 vi.mock("~/components/charts/echarts", async () => {
@@ -35,15 +32,6 @@ vi.mock("~/services/usageHistory/storage", () => ({
 }))
 
 describe("UsageAnalytics filters", () => {
-  testI18n.addResourceBundle(
-    "en",
-    "usageAnalytics",
-    usageAnalyticsEn,
-    true,
-    true,
-  )
-  testI18n.addResourceBundle("en", "common", commonEn, true, true)
-
   const getFilterContainer = (label: string): HTMLElement => {
     const labelNode = screen.getByText(label)
     const header = labelNode.closest("div")
@@ -105,11 +93,11 @@ describe("UsageAnalytics filters", () => {
 
     render(<UsageAnalytics />)
 
-    await screen.findByText("Sites")
+    await screen.findByText("usageAnalytics:filters.sites")
 
-    const sitesFilter = getFilterContainer("Sites")
-    const accountsFilter = getFilterContainer("Accounts")
-    const tokensFilter = getFilterContainer("API tokens")
+    const sitesFilter = getFilterContainer("usageAnalytics:filters.sites")
+    const accountsFilter = getFilterContainer("usageAnalytics:filters.accounts")
+    const tokensFilter = getFilterContainer("usageAnalytics:filters.tokens")
 
     const siteAButton = await within(sitesFilter).findByRole("button", {
       name: /Site A/,
@@ -132,7 +120,7 @@ describe("UsageAnalytics filters", () => {
     fireEvent.click(accountButton)
 
     const allSitesButton = await within(sitesFilter).findByRole("button", {
-      name: /All sites/,
+      name: /usageAnalytics:filters\.allSites/,
     })
     fireEvent.click(allSitesButton)
 
@@ -199,11 +187,11 @@ describe("UsageAnalytics filters", () => {
 
     render(<UsageAnalytics />)
 
-    await screen.findByText("Sites")
+    await screen.findByText("usageAnalytics:filters.sites")
 
-    const sitesFilter = getFilterContainer("Sites")
-    const accountsFilter = getFilterContainer("Accounts")
-    const tokensFilter = getFilterContainer("API tokens")
+    const sitesFilter = getFilterContainer("usageAnalytics:filters.sites")
+    const accountsFilter = getFilterContainer("usageAnalytics:filters.accounts")
+    const tokensFilter = getFilterContainer("usageAnalytics:filters.tokens")
 
     expect(
       await within(sitesFilter).findByRole("button", { name: /Site A/ }),

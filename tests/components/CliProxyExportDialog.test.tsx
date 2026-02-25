@@ -1,9 +1,6 @@
-import { beforeAll, describe, expect, it, vi } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import { CliProxyExportDialog } from "~/components/CliProxyExportDialog"
-import commonEn from "~/locales/en/common.json"
-import uiEn from "~/locales/en/ui.json"
-import { testI18n } from "~/tests/test-utils/i18n"
 import { fireEvent, render, screen, waitFor } from "~/tests/test-utils/render"
 
 const mockFetchOpenAICompatibleModelIds = vi.fn()
@@ -14,11 +11,6 @@ vi.mock("~/services/apiService/openaiCompatible", () => ({
 }))
 
 describe("CliProxyExportDialog", () => {
-  beforeAll(() => {
-    testI18n.addResourceBundle("en", "ui", uiEn, true, true)
-    testI18n.addResourceBundle("en", "common", commonEn, true, true)
-  })
-
   it("loads upstream model ids and exposes them as name suggestions", async () => {
     mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce(["gpt-4", "claude"])
 
@@ -67,7 +59,7 @@ describe("CliProxyExportDialog", () => {
 
     expect(
       await screen.findByPlaceholderText(
-        uiEn.dialog.cliproxy.placeholders.modelName,
+        "ui:dialog.cliproxy.placeholders.modelName",
       ),
     ).toBeInTheDocument()
     expect(screen.queryByRole("combobox")).toBeNull()

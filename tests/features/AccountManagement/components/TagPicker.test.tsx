@@ -1,13 +1,9 @@
-import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
 import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
+import { render, screen, waitFor } from "~/tests/test-utils/render"
 import type { Tag } from "~/types"
-
-vi.mock("react-i18next", () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
-}))
 
 describe("TagPicker", () => {
   it("supports ArrowUp/ArrowDown navigation and Enter to toggle a tag", async () => {
@@ -33,11 +29,15 @@ describe("TagPicker", () => {
     )
 
     await user.click(
-      screen.getByRole("button", { name: "form.tagsPlaceholder" }),
+      await screen.findByRole("button", {
+        name: "accountDialog:form.tagsPlaceholder",
+      }),
     )
 
     // Focus the search input, move the active option, then activate it via Enter.
-    const input = screen.getByPlaceholderText("form.tagsSearchPlaceholder")
+    const input = await screen.findByPlaceholderText(
+      "accountDialog:form.tagsSearchPlaceholder",
+    )
     await user.click(input)
     await user.keyboard("{ArrowDown}{Enter}")
 
@@ -69,9 +69,13 @@ describe("TagPicker", () => {
     )
 
     await user.click(
-      screen.getByRole("button", { name: "form.tagsPlaceholder" }),
+      await screen.findByRole("button", {
+        name: "accountDialog:form.tagsPlaceholder",
+      }),
     )
-    const input = screen.getByPlaceholderText("form.tagsSearchPlaceholder")
+    const input = await screen.findByPlaceholderText(
+      "accountDialog:form.tagsSearchPlaceholder",
+    )
     await user.type(input, "NewTag")
     await user.keyboard("{Enter}")
 
@@ -106,13 +110,21 @@ describe("TagPicker", () => {
     )
 
     await user.click(
-      screen.getByRole("button", { name: "form.tagsPlaceholder" }),
+      await screen.findByRole("button", {
+        name: "accountDialog:form.tagsPlaceholder",
+      }),
     )
     await user.type(
-      screen.getByPlaceholderText("form.tagsSearchPlaceholder"),
+      await screen.findByPlaceholderText(
+        "accountDialog:form.tagsSearchPlaceholder",
+      ),
       "NewTag",
     )
-    await user.click(screen.getByRole("button", { name: "form.tagsCreate" }))
+    await user.click(
+      await screen.findByRole("button", {
+        name: "accountDialog:form.tagsCreate",
+      }),
+    )
 
     await waitFor(() => {
       expect(onCreateTag).toHaveBeenCalledWith("NewTag")
@@ -145,13 +157,19 @@ describe("TagPicker", () => {
     )
 
     await user.click(
-      screen.getByRole("button", { name: "form.tagsSelectedCount" }),
+      await screen.findByRole("button", {
+        name: "accountDialog:form.tagsSelectedCount",
+      }),
     )
-    await user.click(screen.getByLabelText("form.tagsRename"))
-    const input = screen.getByDisplayValue("Work")
+    await user.click(
+      await screen.findByLabelText("accountDialog:form.tagsRename"),
+    )
+    const input = await screen.findByDisplayValue("Work")
     await user.clear(input)
     await user.type(input, "Renamed")
-    await user.click(screen.getByLabelText("form.tagsRenameSave"))
+    await user.click(
+      await screen.findByLabelText("accountDialog:form.tagsRenameSave"),
+    )
 
     expect(onRenameTag).toHaveBeenCalledWith("t1", "Renamed")
   })
@@ -176,12 +194,20 @@ describe("TagPicker", () => {
     )
 
     await user.click(
-      screen.getByRole("button", { name: "form.tagsSelectedCount" }),
+      await screen.findByRole("button", {
+        name: "accountDialog:form.tagsSelectedCount",
+      }),
     )
-    await user.click(screen.getByLabelText("form.tagsDelete"))
-    expect(screen.getByText("form.tagsDeleteTitle")).toBeInTheDocument()
     await user.click(
-      screen.getByRole("button", { name: "form.tagsDeleteConfirm" }),
+      await screen.findByLabelText("accountDialog:form.tagsDelete"),
+    )
+    expect(
+      await screen.findByText("accountDialog:form.tagsDeleteTitle"),
+    ).toBeInTheDocument()
+    await user.click(
+      await screen.findByRole("button", {
+        name: "accountDialog:form.tagsDeleteConfirm",
+      }),
     )
 
     await waitFor(() => {

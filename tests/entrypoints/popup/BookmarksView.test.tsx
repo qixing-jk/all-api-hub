@@ -85,7 +85,7 @@ describe("popup bookmarks view", () => {
     expect(screen.queryByText("BookmarksList")).not.toBeInTheDocument()
 
     fireEvent.click(
-      await screen.findByRole("button", { name: "switch.bookmarks" }),
+      await screen.findByRole("button", { name: "bookmark:switch.bookmarks" }),
     )
 
     expect(await screen.findByText("HeaderRefresh:false")).toBeInTheDocument()
@@ -95,7 +95,9 @@ describe("popup bookmarks view", () => {
     expect(screen.queryByText("AccountList")).not.toBeInTheDocument()
     expect(screen.getByText("BookmarksList")).toBeInTheDocument()
 
-    fireEvent.click(await screen.findByRole("button", { name: "actions.add" }))
+    fireEvent.click(
+      await screen.findByRole("button", { name: "bookmark:actions.add" }),
+    )
     expect(await screen.findByText("BookmarkDialogOpen")).toBeInTheDocument()
   })
 })

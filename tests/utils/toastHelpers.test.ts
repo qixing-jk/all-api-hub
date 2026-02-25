@@ -13,17 +13,6 @@ vi.mock("react-hot-toast", () => ({
   },
 }))
 
-vi.mock("i18next", () => ({
-  t: vi.fn((key: string, params?: any) => {
-    if (key === "settings:messages.updateSuccess")
-      return `${params?.name} updated`
-    if (key === "settings:messages.updateFailed")
-      return `${params?.name} failed`
-    if (key === "settings:danger.resetFailed") return "Reset failed"
-    return key
-  }),
-}))
-
 describe("toastHelpers", () => {
   describe("showResultToast", () => {
     it("shows success toast with boolean params", async () => {
@@ -56,13 +45,15 @@ describe("toastHelpers", () => {
     it("shows success toast for update", async () => {
       const toast = (await import("react-hot-toast")).default
       showUpdateToast(true, "Setting")
-      expect(toast.success).toHaveBeenCalledWith("Setting updated")
+      expect(toast.success).toHaveBeenCalledWith(
+        "settings:messages.updateSuccess",
+      )
     })
 
     it("shows error toast for update", async () => {
       const toast = (await import("react-hot-toast")).default
       showUpdateToast(false, "Setting")
-      expect(toast.error).toHaveBeenCalledWith("Setting failed")
+      expect(toast.error).toHaveBeenCalledWith("settings:messages.updateFailed")
     })
   })
 
@@ -70,13 +61,15 @@ describe("toastHelpers", () => {
     it("shows success toast for reset", async () => {
       const toast = (await import("react-hot-toast")).default
       showResetToast(true)
-      expect(toast.success).toHaveBeenCalled()
+      expect(toast.success).toHaveBeenCalledWith(
+        "settings:messages.updateSuccess",
+      )
     })
 
     it("shows error toast for reset", async () => {
       const toast = (await import("react-hot-toast")).default
       showResetToast(false)
-      expect(toast.error).toHaveBeenCalledWith("Reset failed")
+      expect(toast.error).toHaveBeenCalledWith("settings:danger.resetFailed")
     })
   })
 })

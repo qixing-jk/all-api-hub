@@ -8,21 +8,6 @@ import {
   openLoginTab,
 } from "~/utils/autoDetectUtils"
 
-// Mock i18next
-vi.mock("i18next", () => ({
-  t: (key: string) => {
-    const translations: Record<string, string> = {
-      "messages:autodetect.timeout": "自动识别超时",
-      "messages:autodetect.notLoggedIn": "未登录或会话已过期",
-      "messages:autodetect.loginThisSite": "登录该站点",
-      "messages:autodetect.unexpectedData": "返回数据格式不符合预期",
-      "messages:autodetect.networkError": "网络连接失败",
-      "messages:autodetect.failed": "自动识别失败: ",
-    }
-    return translations[key] || key
-  },
-}))
-
 // Mock browser.tabs
 const originalBrowser = (globalThis as any).browser
 vi.stubGlobal("browser", {
@@ -44,7 +29,7 @@ describe("autoDetectUtils", () => {
         const result = analyzeAutoDetectError(error)
 
         expect(result.type).toBe(AutoDetectErrorType.TIMEOUT)
-        expect(result.message).toBe("自动识别超时")
+        expect(result.message).toBe("messages:autodetect.timeout")
         expect(result.helpDocUrl).toBe(AUTO_DETECT_DOC_URL)
         expect(result.actionText).toBeUndefined()
         expect(result.actionUrl).toBeUndefined()
@@ -55,7 +40,7 @@ describe("autoDetectUtils", () => {
         const result = analyzeAutoDetectError(error)
 
         expect(result.type).toBe(AutoDetectErrorType.TIMEOUT)
-        expect(result.message).toBe("自动识别超时")
+        expect(result.message).toBe("messages:autodetect.timeout")
       })
 
       it("should detect timeout in error message", () => {
@@ -72,8 +57,8 @@ describe("autoDetectUtils", () => {
         const result = analyzeAutoDetectError(error)
 
         expect(result.type).toBe(AutoDetectErrorType.UNAUTHORIZED)
-        expect(result.message).toBe("未登录或会话已过期")
-        expect(result.actionText).toBe("登录该站点")
+        expect(result.message).toBe("messages:autodetect.notLoggedIn")
+        expect(result.actionText).toBe("messages:autodetect.loginThisSite")
         expect(result.helpDocUrl).toBe(AUTO_DETECT_DOC_URL)
       })
 
@@ -98,7 +83,7 @@ describe("autoDetectUtils", () => {
         const result = analyzeAutoDetectError(error)
 
         expect(result.type).toBe(AutoDetectErrorType.INVALID_RESPONSE)
-        expect(result.message).toBe("返回数据格式不符合预期")
+        expect(result.message).toBe("messages:autodetect.unexpectedData")
         expect(result.helpDocUrl).toBe(AUTO_DETECT_DOC_URL)
       })
 
@@ -137,7 +122,7 @@ describe("autoDetectUtils", () => {
         const result = analyzeAutoDetectError(error)
 
         expect(result.type).toBe(AutoDetectErrorType.NETWORK_ERROR)
-        expect(result.message).toBe("网络连接失败")
+        expect(result.message).toBe("messages:autodetect.networkError")
         expect(result.helpDocUrl).toBe(AUTO_DETECT_DOC_URL)
       })
 
@@ -174,7 +159,7 @@ describe("autoDetectUtils", () => {
         const result = analyzeAutoDetectError(error)
 
         expect(result.type).toBe(AutoDetectErrorType.UNKNOWN)
-        expect(result.message).toContain("自动识别失败")
+        expect(result.message).toContain("messages:autodetect.failed")
         expect(result.message).toContain("Something went wrong")
         expect(result.helpDocUrl).toBe(AUTO_DETECT_DOC_URL)
       })
@@ -452,7 +437,7 @@ describe("autoDetectUtils", () => {
       const analyzed = analyzeAutoDetectError(error)
 
       expect(analyzed.type).toBe(AutoDetectErrorType.UNAUTHORIZED)
-      expect(analyzed.actionText).toBe("登录该站点")
+      expect(analyzed.actionText).toBe("messages:autodetect.loginThisSite")
 
       // Simulate user clicking login action
       const siteUrl = "https://example.com"

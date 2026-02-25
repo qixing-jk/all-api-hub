@@ -25,10 +25,6 @@ vi.mock("~/services/apiService/octopus", () => ({
   fetchRemoteModels: vi.fn(),
 }))
 
-vi.mock("i18next", () => ({
-  t: (key: string) => key,
-}))
-
 vi.mock("react-hot-toast", () => ({
   default: {
     loading: vi.fn(),

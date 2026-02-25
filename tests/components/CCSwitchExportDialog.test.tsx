@@ -1,9 +1,6 @@
-import { beforeAll, describe, expect, it, vi } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import { CCSwitchExportDialog } from "~/components/CCSwitchExportDialog"
-import commonEn from "~/locales/en/common.json"
-import uiEn from "~/locales/en/ui.json"
-import { testI18n } from "~/tests/test-utils/i18n"
 import { fireEvent, render, screen, waitFor } from "~/tests/test-utils/render"
 
 const mockFetchOpenAICompatibleModelIds = vi.fn()
@@ -14,11 +11,6 @@ vi.mock("~/services/apiService/openaiCompatible", () => ({
 }))
 
 describe("CCSwitchExportDialog", () => {
-  beforeAll(() => {
-    testI18n.addResourceBundle("en", "ui", uiEn, true, true)
-    testI18n.addResourceBundle("en", "common", commonEn, true, true)
-  })
-
   it("loads upstream model ids and exposes them as a selectable default model", async () => {
     mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce(["gpt-4", "claude"])
 
@@ -41,7 +33,7 @@ describe("CCSwitchExportDialog", () => {
     })
 
     const modelCombo = await screen.findByLabelText(
-      uiEn.dialog.ccswitch.fields.model,
+      "ui:dialog.ccswitch.fields.model",
     )
     fireEvent.click(modelCombo)
     expect(await screen.findByText("gpt-4")).toBeInTheDocument()
@@ -69,9 +61,9 @@ describe("CCSwitchExportDialog", () => {
     })
 
     const modelCombo = await screen.findByLabelText(
-      uiEn.dialog.ccswitch.fields.model,
+      "ui:dialog.ccswitch.fields.model",
     )
-    expect(modelCombo).toHaveTextContent(uiEn.dialog.ccswitch.modelOptions.none)
+    expect(modelCombo).toHaveTextContent("ui:dialog.ccswitch.modelOptions.none")
     expect(screen.queryByText("gpt-4")).toBeNull()
     warnSpy.mockRestore()
   })

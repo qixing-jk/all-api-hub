@@ -16,11 +16,6 @@ import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfilesSt
 import { channelConfigStorage } from "~/services/channelConfigStorage"
 import { userPreferences } from "~/services/userPreferences"
 
-// Mock i18n so error messages are stable
-vi.mock("i18next", () => ({
-  t: (key: string) => key,
-}))
-
 vi.mock("~/services/accountStorage", () => ({
   accountStorage: {
     importData: vi.fn(),

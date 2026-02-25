@@ -87,7 +87,7 @@ export default function NewApiSettings() {
     <SettingSection
       id="new-api"
       title={t("newApi.title")}
-      description={t("newApi.description", { defaultValue: "" })}
+      description={t("newApi.description")}
       onReset={resetNewApiConfig}
     >
       <Card padding="none">

@@ -11,29 +11,6 @@ import {
   sanitizeOriginUrl,
 } from "~/services/shareSnapshots/utils"
 
-vi.mock("i18next", () => {
-  const translations: Record<string, string> = {
-    "ui:app.name": "All API Hub",
-    "shareSnapshots:labels.snapshot": "Snapshot",
-    "shareSnapshots:labels.overview": "Overview",
-    "shareSnapshots:labels.totalBalance": "Total balance",
-    "shareSnapshots:labels.balance": "Balance",
-    "shareSnapshots:labels.accounts": "Accounts",
-    "shareSnapshots:labels.today": "Today",
-    "shareSnapshots:labels.income": "Income",
-    "shareSnapshots:labels.outcome": "Outcome",
-    "shareSnapshots:labels.net": "Net",
-    "shareSnapshots:labels.asOf": "As of",
-  }
-
-  return {
-    default: {
-      language: "en",
-      t: (key: string) => translations[key] ?? key,
-    },
-  }
-})
-
 describe("shareSnapshots", () => {
   describe("sanitizeOriginUrl", () => {
     it("returns origin only and strips path/query/fragment", () => {
@@ -155,11 +132,11 @@ describe("shareSnapshots", () => {
       const caption = generateShareSnapshotCaption(payload)
 
       expect(caption).toContain("All API Hub")
-      expect(caption).toContain("Overview")
-      expect(caption).toContain("Total balance")
-      expect(caption).toContain("Accounts: 7")
-      expect(caption).toContain("As of")
-      expect(caption).not.toContain("Snapshot")
+      expect(caption).toContain("shareSnapshots:labels.overview")
+      expect(caption).toContain("shareSnapshots:labels.totalBalance")
+      expect(caption).toContain("shareSnapshots:labels.accounts: 7")
+      expect(caption).toContain("shareSnapshots:labels.asOf")
+      expect(caption).not.toContain("shareSnapshots:labels.snapshot")
       expect(caption).not.toContain("https://")
     })
 
@@ -180,12 +157,12 @@ describe("shareSnapshots", () => {
 
       expect(caption).toContain("Example Site")
       expect(caption).toContain("https://example.com")
-      expect(caption).toContain("Balance")
-      expect(caption).toContain("Today")
-      expect(caption).toContain("Income")
-      expect(caption).toContain("Outcome")
-      expect(caption).toContain("Net")
-      expect(caption).toContain("As of")
+      expect(caption).toContain("shareSnapshots:labels.balance")
+      expect(caption).toContain("shareSnapshots:labels.today")
+      expect(caption).toContain("shareSnapshots:labels.income")
+      expect(caption).toContain("shareSnapshots:labels.outcome")
+      expect(caption).toContain("shareSnapshots:labels.net")
+      expect(caption).toContain("shareSnapshots:labels.asOf")
     })
   })
 })

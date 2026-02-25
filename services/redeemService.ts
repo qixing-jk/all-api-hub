@@ -71,7 +71,6 @@ export class RedeemService {
           : ""
 
       const message = t("redemptionAssist:messages.redeemSuccess", {
-        defaultValue: "兑换成功，到账额度：{{amount}}",
         amount: amountStr,
       })
 
@@ -85,9 +84,7 @@ export class RedeemService {
       const message =
         (error as any)?.message ||
         getErrorMessage(error) ||
-        t("redemptionAssist:messages.redeemFailed", {
-          defaultValue: "兑换失败，请稍后重试",
-        })
+        t("redemptionAssist:messages.redeemFailed")
 
       return {
         success: false,

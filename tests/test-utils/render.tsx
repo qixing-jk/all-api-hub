@@ -1,4 +1,4 @@
-import { render, type RenderOptions } from "@testing-library/react"
+import { render, renderHook, type RenderOptions } from "@testing-library/react"
 import type { ReactElement, ReactNode } from "react"
 import { I18nextProvider } from "react-i18next"
 
@@ -30,7 +30,13 @@ const customRender = (ui: ReactElement, options?: RenderOptions) => {
   return render(ui, { wrapper: AppProviders, ...options })
 }
 
+const customRenderHook: typeof renderHook = (callback, options) => {
+  return renderHook(callback, { wrapper: AppProviders, ...options })
+}
+
 // eslint-disable-next-line import/export
 export * from "@testing-library/react"
 // eslint-disable-next-line import/export
 export { customRender as render }
+// eslint-disable-next-line import/export
+export { customRenderHook as renderHook }

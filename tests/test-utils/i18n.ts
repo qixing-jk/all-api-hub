@@ -6,11 +6,9 @@ export const testI18n = i18n.createInstance()
 await testI18n.use(initReactI18next).init({
   lng: "en",
   fallbackLng: "en",
-  resources: {
-    en: {
-      translation: {},
-    },
-  },
+  appendNamespaceToMissingKey: true,
+  parseMissingKeyHandler: (key: string) => key,
+  react: { useSuspense: false },
   interpolation: {
     escapeValue: false,
   },

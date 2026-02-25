@@ -2,12 +2,10 @@ import { act, renderHook, waitFor } from "@testing-library/react"
 import type { ReactNode } from "react"
 import toast from "react-hot-toast"
 import { I18nextProvider } from "react-i18next"
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useKeyManagement } from "~/entrypoints/options/pages/KeyManagement/hooks/useKeyManagement"
 import { useAccountData } from "~/hooks/useAccountData"
-import keyManagementEn from "~/locales/en/keyManagement.json"
-import messagesEn from "~/locales/en/messages.json"
 import { getApiService } from "~/services/apiService"
 import testI18n from "~/tests/test-utils/i18n"
 import { createToken } from "~/tests/utils/keyManagementFactories"
@@ -55,17 +53,6 @@ const createWrapper = () => {
 }
 
 describe("useKeyManagement enabled account filtering", () => {
-  beforeAll(() => {
-    testI18n.addResourceBundle(
-      "en",
-      "keyManagement",
-      keyManagementEn,
-      true,
-      true,
-    )
-    testI18n.addResourceBundle("en", "messages", messagesEn, true, true)
-  })
-
   beforeEach(() => {
     vi.mocked(toast.success).mockReset()
     vi.mocked(toast.error).mockReset()

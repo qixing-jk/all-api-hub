@@ -1,12 +1,7 @@
 import userEvent from "@testing-library/user-event"
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import ModelList from "~/entrypoints/options/pages/ModelList"
-import commonEn from "~/locales/en/common.json"
-import keyManagementEn from "~/locales/en/keyManagement.json"
-import modelListEn from "~/locales/en/modelList.json"
-import uiEn from "~/locales/en/ui.json"
-import { testI18n } from "~/tests/test-utils/i18n"
 import { render, screen, waitFor } from "~/tests/test-utils/render"
 import { AuthTypeEnum } from "~/types"
 
@@ -179,19 +174,6 @@ vi.mock(
 )
 
 describe("Model List → ModelKeyDialog", () => {
-  beforeAll(() => {
-    testI18n.addResourceBundle("en", "ui", uiEn, true, true)
-    testI18n.addResourceBundle("en", "common", commonEn, true, true)
-    testI18n.addResourceBundle("en", "modelList", modelListEn, true, true)
-    testI18n.addResourceBundle(
-      "en",
-      "keyManagement",
-      keyManagementEn,
-      true,
-      true,
-    )
-  })
-
   beforeEach(() => {
     fetchAccountTokensMock.mockReset()
     createApiTokenMock.mockReset()
@@ -221,16 +203,16 @@ describe("Model List → ModelKeyDialog", () => {
 
     await user.click(
       await screen.findByRole("button", {
-        name: modelListEn.keyDialog.createCustomKey,
+        name: "modelList:keyDialog.createCustomKey",
       }),
     )
 
-    expect(await screen.findByLabelText(/token name/i)).toHaveValue(
-      "model gpt-4",
-    )
+    expect(
+      await screen.findByLabelText(/keyManagement:dialog\.tokenName/),
+    ).toHaveValue("model gpt-4")
 
     await user.click(
-      screen.getByRole("button", { name: keyManagementEn.dialog.createToken }),
+      screen.getByRole("button", { name: "keyManagement:dialog.createToken" }),
     )
 
     await waitFor(() => {

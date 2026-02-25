@@ -12,13 +12,6 @@ import {
 import { resyncSub2ApiAuthToken } from "~/services/apiService/sub2api/tokenResync"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 
-vi.mock("i18next", () => ({
-  t: vi.fn((key: string) => key),
-  default: {
-    t: vi.fn((key: string) => key),
-  },
-}))
-
 vi.mock("~/services/apiService/common", () => ({
   determineHealthStatus: vi.fn(() => ({
     status: SiteHealthStatus.Unknown,

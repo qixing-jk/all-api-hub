@@ -1,4 +1,3 @@
-import { t } from "i18next"
 import { describe, expect, it, vi } from "vitest"
 
 import type { CurrencyType } from "~/types"
@@ -21,10 +20,6 @@ import {
   normalizeToDate,
   normalizeToMs,
 } from "~/utils/formatters"
-
-vi.mock("i18next", () => ({
-  t: vi.fn((key: string) => `__mocked__${key}`),
-}))
 
 describe("formatters utilities", () => {
   describe("formatTokenCount", () => {
@@ -150,10 +145,7 @@ describe("formatters utilities", () => {
   describe("formatKeyTime", () => {
     it("should return translation string when timestamp is non-positive", () => {
       const result = formatKeyTime(0)
-      expect(result).toBe("__mocked__keyManagement:keyDetails.neverExpires")
-      expect(vi.mocked(t)).toHaveBeenCalledWith(
-        "keyManagement:keyDetails.neverExpires",
-      )
+      expect(result).toBe("keyManagement:keyDetails.neverExpires")
     })
 
     it("should format timestamp using zh-CN locale when positive", () => {
@@ -257,20 +249,15 @@ describe("formatters utilities", () => {
 
   describe("getCurrencyDisplayName", () => {
     it("should use correct translation keys for USD and CNY", () => {
-      expect(getCurrencyDisplayName("USD")).toBe(
-        "__mocked__common:currency.usd",
-      )
-      expect(getCurrencyDisplayName("CNY")).toBe(
-        "__mocked__common:currency.cny",
-      )
+      expect(getCurrencyDisplayName("USD")).toBe("common:currency.usd")
+      expect(getCurrencyDisplayName("CNY")).toBe("common:currency.cny")
     })
   })
 
   describe("formatTimestamp", () => {
     it("should return translation when timestamp is non-positive", () => {
       const result = formatTimestamp(0)
-      expect(result).toBe("__mocked__common:time.neverExpires")
-      expect(vi.mocked(t)).toHaveBeenCalledWith("common:time.neverExpires")
+      expect(result).toBe("common:time.neverExpires")
     })
 
     it("should format timestamp using zh-CN locale when positive", () => {
@@ -299,12 +286,8 @@ describe("formatters utilities", () => {
         remain_quota: -1,
       } as any
 
-      expect(formatQuota(tokenUnlimited)).toBe(
-        "__mocked__common:quota.unlimited",
-      )
-      expect(formatQuota(tokenNegative)).toBe(
-        "__mocked__common:quota.unlimited",
-      )
+      expect(formatQuota(tokenUnlimited)).toBe("common:quota.unlimited")
+      expect(formatQuota(tokenNegative)).toBe("common:quota.unlimited")
     })
 
     it("should format remaining and used quota with $ and 2 decimals", () => {

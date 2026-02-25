@@ -1,11 +1,7 @@
 import userEvent from "@testing-library/user-event"
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import AddTokenDialog from "~/entrypoints/options/pages/KeyManagement/components/AddTokenDialog"
-import commonEn from "~/locales/en/common.json"
-import keyManagementEn from "~/locales/en/keyManagement.json"
-import uiEn from "~/locales/en/ui.json"
-import { testI18n } from "~/tests/test-utils/i18n"
 import { render, screen, waitFor } from "~/tests/test-utils/render"
 import { AuthTypeEnum } from "~/types"
 
@@ -55,18 +51,6 @@ const ACCOUNT = {
 } as any
 
 describe("AddTokenDialog prefill", () => {
-  beforeAll(() => {
-    testI18n.addResourceBundle("en", "ui", uiEn, true, true)
-    testI18n.addResourceBundle("en", "common", commonEn, true, true)
-    testI18n.addResourceBundle(
-      "en",
-      "keyManagement",
-      keyManagementEn,
-      true,
-      true,
-    )
-  })
-
   beforeEach(() => {
     createApiTokenMock.mockReset()
     updateApiTokenMock.mockReset()
@@ -95,11 +79,13 @@ describe("AddTokenDialog prefill", () => {
       />,
     )
 
-    const nameInput = await screen.findByLabelText(/token name/i)
+    const nameInput = await screen.findByLabelText(
+      /keyManagement:dialog\.tokenName/,
+    )
     expect(nameInput).toHaveValue("model gpt-4")
 
     await user.click(
-      screen.getByRole("button", { name: keyManagementEn.dialog.createToken }),
+      screen.getByRole("button", { name: "keyManagement:dialog.createToken" }),
     )
 
     await waitFor(() => {
@@ -147,11 +133,13 @@ describe("AddTokenDialog prefill", () => {
       />,
     )
 
-    const nameInput = await screen.findByLabelText(/token name/i)
+    const nameInput = await screen.findByLabelText(
+      /keyManagement:dialog\.tokenName/,
+    )
     expect(nameInput).toHaveValue("Existing key")
 
     await user.click(
-      screen.getByRole("button", { name: keyManagementEn.dialog.updateToken }),
+      screen.getByRole("button", { name: "keyManagement:dialog.updateToken" }),
     )
 
     await waitFor(() => {

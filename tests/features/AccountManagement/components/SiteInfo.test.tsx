@@ -1,16 +1,12 @@
-import { fireEvent, render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
 import SiteInfo from "~/features/AccountManagement/components/AccountList/SiteInfo"
+import { fireEvent, render, screen } from "~/tests/test-utils/render"
 
 const { mockOpenAccountBaseUrl, mockHandleRefreshAccount } = vi.hoisted(() => ({
   mockOpenAccountBaseUrl: vi.fn(),
   mockHandleRefreshAccount: vi.fn(),
-}))
-
-vi.mock("react-i18next", () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
 }))
 
 vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
@@ -67,9 +63,11 @@ describe("SiteInfo", () => {
       />,
     )
 
-    expect(screen.getByText("list.site.disabled")).toBeInTheDocument()
+    expect(
+      await screen.findByText("account:list.site.disabled"),
+    ).toBeInTheDocument()
 
-    const siteLinkButton = screen.getByRole("button", { name: "Site" })
+    const siteLinkButton = await screen.findByRole("button", { name: "Site" })
 
     // Regression: The link button must be able to shrink/truncate so it doesn't overlap the row action buttons.
     expect(siteLinkButton).toHaveClass("flex-1")
@@ -83,9 +81,10 @@ describe("SiteInfo", () => {
     )
   })
 
-  it("shows a warning check-in indicator when the last check-in status detection is not today", () => {
-    vi.useFakeTimers()
-    vi.setSystemTime(new Date(2026, 0, 2, 10, 0, 0))
+  it("shows a warning check-in indicator when the last check-in status detection is not today", async () => {
+    const dateNowSpy = vi
+      .spyOn(Date, "now")
+      .mockReturnValue(new Date(2026, 0, 2, 10, 0, 0).getTime())
 
     try {
       mockHandleRefreshAccount.mockClear()
@@ -119,16 +118,17 @@ describe("SiteInfo", () => {
         />,
       )
 
+      const staleStatusButton = await screen.findByRole("button", {
+        name: "account:list.site.checkInStatusOutdated",
+      })
+      expect(staleStatusButton).toBeInTheDocument()
       expect(
-        screen.getByRole("button", { name: "list.site.checkInStatusOutdated" }),
-      ).toBeInTheDocument()
-      expect(
-        screen.queryByRole("button", { name: "list.site.checkedInToday" }),
+        screen.queryByRole("button", {
+          name: "account:list.site.checkedInToday",
+        }),
       ).not.toBeInTheDocument()
 
-      fireEvent.click(
-        screen.getByRole("button", { name: "list.site.checkInStatusOutdated" }),
-      )
+      fireEvent.click(staleStatusButton)
 
       expect(mockHandleRefreshAccount).toHaveBeenCalledTimes(1)
       expect(mockHandleRefreshAccount).toHaveBeenCalledWith(
@@ -136,13 +136,14 @@ describe("SiteInfo", () => {
         true,
       )
     } finally {
-      vi.useRealTimers()
+      dateNowSpy.mockRestore()
     }
   })
 
-  it("shows the normal check-in indicator when status was detected today", () => {
-    vi.useFakeTimers()
-    vi.setSystemTime(new Date(2026, 0, 2, 10, 0, 0))
+  it("shows the normal check-in indicator when status was detected today", async () => {
+    const dateNowSpy = vi
+      .spyOn(Date, "now")
+      .mockReturnValue(new Date(2026, 0, 2, 10, 0, 0).getTime())
 
     try {
       render(
@@ -175,15 +176,17 @@ describe("SiteInfo", () => {
       )
 
       expect(
-        screen.getByRole("button", { name: "list.site.notCheckedInToday" }),
+        await screen.findByRole("button", {
+          name: "account:list.site.notCheckedInToday",
+        }),
       ).toBeInTheDocument()
       expect(
         screen.queryByRole("button", {
-          name: "list.site.checkInStatusOutdated",
+          name: "account:list.site.checkInStatusOutdated",
         }),
       ).not.toBeInTheDocument()
     } finally {
-      vi.useRealTimers()
+      dateNowSpy.mockRestore()
     }
   })
 })

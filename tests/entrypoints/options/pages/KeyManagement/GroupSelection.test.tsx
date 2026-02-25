@@ -1,23 +1,9 @@
-import { beforeAll, describe, expect, it, vi } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import { GroupSelection } from "~/entrypoints/options/pages/KeyManagement/components/AddTokenDialog/TokenForm/GroupSelection"
-import keyManagementEn from "~/locales/en/keyManagement.json"
-import uiEn from "~/locales/en/ui.json"
-import { testI18n } from "~/tests/test-utils/i18n"
 import { fireEvent, render, screen, within } from "~/tests/test-utils/render"
 
 describe("GroupSelection", () => {
-  beforeAll(() => {
-    testI18n.addResourceBundle("en", "ui", uiEn, true, true)
-    testI18n.addResourceBundle(
-      "en",
-      "keyManagement",
-      keyManagementEn,
-      true,
-      true,
-    )
-  })
-
   it("renders group options with the group identifier in the label", async () => {
     const handleSelectChange = vi.fn()
 
@@ -39,10 +25,14 @@ describe("GroupSelection", () => {
 
     const dropdown = await screen.findByRole("dialog")
     expect(
-      within(dropdown).getByText("level1 - Default Group (Rate: 1)"),
+      within(dropdown).getByText(
+        "level1 - Default Group (keyManagement:dialog.groupRate 1)",
+      ),
     ).toBeInTheDocument()
     expect(
-      within(dropdown).getByText("level3 - User Group (Rate: 1.5)"),
+      within(dropdown).getByText(
+        "level3 - User Group (keyManagement:dialog.groupRate 1.5)",
+      ),
     ).toBeInTheDocument()
   })
 
@@ -61,6 +51,8 @@ describe("GroupSelection", () => {
     fireEvent.click(combo)
 
     const dropdown = await screen.findByRole("dialog")
-    expect(within(dropdown).getByText("level2 (Rate: 1)")).toBeInTheDocument()
+    expect(
+      within(dropdown).getByText("level2 (keyManagement:dialog.groupRate 1)"),
+    ).toBeInTheDocument()
   })
 })

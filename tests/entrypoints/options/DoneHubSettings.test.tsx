@@ -4,8 +4,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import DoneHubSettings from "~/entrypoints/options/pages/BasicSettings/components/DoneHubSettings"
-import commonEn from "~/locales/en/common.json"
-import settingsEn from "~/locales/en/settings.json"
 import { testI18n } from "~/tests/test-utils/i18n"
 import { showUpdateToast } from "~/utils/toastHelpers"
 
@@ -18,9 +16,6 @@ vi.mock("~/utils/toastHelpers", () => ({
 }))
 
 describe("DoneHubSettings", () => {
-  testI18n.addResourceBundle("en", "settings", settingsEn, true, true)
-  testI18n.addResourceBundle("en", "common", commonEn, true, true)
-
   beforeEach(() => {
     vi.clearAllMocks()
   })
@@ -47,7 +42,7 @@ describe("DoneHubSettings", () => {
     renderSubject()
 
     const input = screen.getByPlaceholderText(
-      settingsEn.doneHub.fields.baseUrlPlaceholder,
+      "settings:doneHub.fields.baseUrlPlaceholder",
     )
 
     fireEvent.change(input, {
@@ -77,7 +72,7 @@ describe("DoneHubSettings", () => {
     renderSubject()
 
     const input = screen.getByPlaceholderText(
-      settingsEn.doneHub.fields.baseUrlPlaceholder,
+      "settings:doneHub.fields.baseUrlPlaceholder",
     )
 
     fireEvent.change(input, {

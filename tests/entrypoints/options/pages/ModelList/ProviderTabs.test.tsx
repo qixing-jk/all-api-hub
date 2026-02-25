@@ -1,9 +1,7 @@
 import { Tab } from "@headlessui/react"
-import { beforeAll, describe, expect, it, vi } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import { ProviderTabs } from "~/entrypoints/options/pages/ModelList/components/ProviderTabs"
-import modelListEn from "~/locales/en/modelList.json"
-import { testI18n } from "~/tests/test-utils/i18n"
 import { fireEvent, render, screen, waitFor } from "~/tests/test-utils/render"
 
 const createProviders = () => ["OpenAI", "Claude", "Gemini"] as any
@@ -11,12 +9,6 @@ const TABLIST_CLIENT_WIDTH_PX = 100
 const TABLIST_SCROLL_WIDTH_PX = 300
 const BASE_FILTERED_MODELS_COUNT = 10
 const PROVIDER_FILTERED_MODELS_COUNT = 1
-const SCROLL_LEFT_LABEL = modelListEn.providerTabs.scrollLeft
-const SCROLL_RIGHT_LABEL = modelListEn.providerTabs.scrollRight
-
-beforeAll(() => {
-  testI18n.addResourceBundle("en", "modelList", modelListEn, true, true)
-})
 
 describe("ProviderTabs scroll arrows", () => {
   it("enables right arrow when tab list overflows", async () => {
@@ -56,8 +48,10 @@ describe("ProviderTabs scroll arrows", () => {
 
     fireEvent.scroll(tabList)
 
-    const leftArrow = screen.getByLabelText(SCROLL_LEFT_LABEL)
-    const rightArrow = screen.getByLabelText(SCROLL_RIGHT_LABEL)
+    const leftArrow = screen.getByLabelText("modelList:providerTabs.scrollLeft")
+    const rightArrow = screen.getByLabelText(
+      "modelList:providerTabs.scrollRight",
+    )
 
     await waitFor(() => expect(leftArrow).toBeDisabled())
     await waitFor(() => expect(rightArrow).toBeEnabled())
@@ -106,7 +100,9 @@ describe("ProviderTabs scroll arrows", () => {
 
     fireEvent.scroll(tabList)
 
-    const rightArrow = screen.getByLabelText(SCROLL_RIGHT_LABEL)
+    const rightArrow = screen.getByLabelText(
+      "modelList:providerTabs.scrollRight",
+    )
     await waitFor(() => expect(rightArrow).toBeEnabled())
     fireEvent.click(rightArrow)
 

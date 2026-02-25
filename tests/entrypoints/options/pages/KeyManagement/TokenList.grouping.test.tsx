@@ -1,10 +1,8 @@
 import userEvent from "@testing-library/user-event"
-import { beforeAll, describe, expect, it, vi } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import { TokenList } from "~/entrypoints/options/pages/KeyManagement/components/TokenList"
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "~/entrypoints/options/pages/KeyManagement/constants"
-import keyManagementEn from "~/locales/en/keyManagement.json"
-import { testI18n } from "~/tests/test-utils/i18n"
 import { render, screen, waitFor } from "~/tests/test-utils/render"
 import {
   createAccount,
@@ -21,16 +19,6 @@ vi.mock(
 )
 
 describe("TokenList grouped all-accounts UX", () => {
-  beforeAll(() => {
-    testI18n.addResourceBundle(
-      "en",
-      "keyManagement",
-      keyManagementEn,
-      true,
-      true,
-    )
-  })
-
   it("groups tokens by account and supports collapse/expand all", async () => {
     const user = userEvent.setup()
 
@@ -86,7 +74,7 @@ describe("TokenList grouped all-accounts UX", () => {
 
     await user.click(
       await screen.findByRole("button", {
-        name: keyManagementEn.actions.expandAll,
+        name: "keyManagement:actions.expandAll",
       }),
     )
 
@@ -95,7 +83,7 @@ describe("TokenList grouped all-accounts UX", () => {
 
     await user.click(
       await screen.findByRole("button", {
-        name: keyManagementEn.actions.collapseAll,
+        name: "keyManagement:actions.collapseAll",
       }),
     )
 
@@ -144,7 +132,7 @@ describe("TokenList grouped all-accounts UX", () => {
 
     await user.click(
       await screen.findByRole("button", {
-        name: keyManagementEn.actions.expandAll,
+        name: "keyManagement:actions.expandAll",
       }),
     )
 

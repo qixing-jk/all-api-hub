@@ -1,11 +1,8 @@
 import userEvent from "@testing-library/user-event"
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { VerifyApiCredentialProfileDialog } from "~/entrypoints/options/pages/ApiCredentialProfiles/components/VerifyApiCredentialProfileDialog"
-import apiVerificationEn from "~/locales/en/aiApiVerification.json"
-import apiCredentialProfilesEn from "~/locales/en/apiCredentialProfiles.json"
 import { API_TYPES } from "~/services/aiApiVerification"
-import { testI18n } from "~/tests/test-utils/i18n"
 import { render, screen, waitFor, within } from "~/tests/test-utils/render"
 
 const mockRunApiVerificationProbe = vi.fn()
@@ -36,23 +33,6 @@ vi.mock("~/services/apiService/google", () => ({
 }))
 
 describe("VerifyApiCredentialProfileDialog", () => {
-  beforeAll(() => {
-    testI18n.addResourceBundle(
-      "en",
-      "aiApiVerification",
-      apiVerificationEn,
-      true,
-      true,
-    )
-    testI18n.addResourceBundle(
-      "en",
-      "apiCredentialProfiles",
-      apiCredentialProfilesEn,
-      true,
-      true,
-    )
-  })
-
   beforeEach(() => {
     mockRunApiVerificationProbe.mockReset()
     mockFetchOpenAICompatibleModelIds.mockReset()
@@ -79,16 +59,16 @@ describe("VerifyApiCredentialProfileDialog", () => {
     )
 
     expect(
-      await screen.findByText(apiVerificationEn.verifyDialog.probes.models),
+      await screen.findByText("aiApiVerification:verifyDialog.probes.models"),
     ).toBeInTheDocument()
     expect(
       await screen.findByText(
-        apiVerificationEn.verifyDialog.probes["text-generation"],
+        "aiApiVerification:verifyDialog.probes.text-generation",
       ),
     ).toBeInTheDocument()
     expect(
       await screen.findByText(
-        apiVerificationEn.verifyDialog.probes["tool-calling"],
+        "aiApiVerification:verifyDialog.probes.tool-calling",
       ),
     ).toBeInTheDocument()
   })
@@ -164,7 +144,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
     const probeCard = await screen.findByTestId("profile-verify-probe-models")
     await user.click(
       within(probeCard).getByRole("button", {
-        name: apiVerificationEn.verifyDialog.actions.runOne,
+        name: "aiApiVerification:verifyDialog.actions.runOne",
       }),
     )
 
@@ -178,7 +158,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
 
     await user.click(
       within(probeCard).getByRole("button", {
-        name: apiVerificationEn.verifyDialog.details.input,
+        name: "aiApiVerification:verifyDialog.details.input",
       }),
     )
     expect(
@@ -187,7 +167,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
 
     await user.click(
       within(probeCard).getByRole("button", {
-        name: apiVerificationEn.verifyDialog.details.output,
+        name: "aiApiVerification:verifyDialog.details.output",
       }),
     )
     expect(
@@ -233,7 +213,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
     )
     await user.click(
       within(modelsProbeCard).getByRole("button", {
-        name: apiVerificationEn.verifyDialog.actions.runOne,
+        name: "aiApiVerification:verifyDialog.actions.runOne",
       }),
     )
 
@@ -293,7 +273,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
     )
 
     const closeButton = await screen.findByText(
-      apiVerificationEn.verifyDialog.actions.close,
+      "aiApiVerification:verifyDialog.actions.close",
       { selector: "button" },
     )
     const footer = closeButton.parentElement
@@ -301,7 +281,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
 
     await user.click(
       within(footer).getByRole("button", {
-        name: apiVerificationEn.verifyDialog.actions.run,
+        name: "aiApiVerification:verifyDialog.actions.run",
       }),
     )
 

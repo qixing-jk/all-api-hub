@@ -59,11 +59,13 @@ describe("options AccountManagement page", () => {
 
     expect(await screen.findByText("AccountList")).toBeInTheDocument()
 
-    fireEvent.click(await screen.findByRole("button", { name: "addAccount" }))
+    fireEvent.click(
+      await screen.findByRole("button", { name: "account:addAccount" }),
+    )
     expect(openAddAccountMock).toHaveBeenCalledTimes(1)
 
     expect(
-      screen.queryByRole("button", { name: "switch.bookmarks" }),
+      screen.queryByRole("button", { name: "bookmark:switch.bookmarks" }),
     ).not.toBeInTheDocument()
   })
 })
@@ -78,7 +80,9 @@ describe("options BookmarkManagement page", () => {
 
     expect(await screen.findByText("BookmarksList")).toBeInTheDocument()
 
-    fireEvent.click(await screen.findByRole("button", { name: "actions.add" }))
+    fireEvent.click(
+      await screen.findByRole("button", { name: "bookmark:actions.add" }),
+    )
     expect(await screen.findByText("BookmarkDialogOpen")).toBeInTheDocument()
   })
 })

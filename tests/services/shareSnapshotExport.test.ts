@@ -9,29 +9,6 @@ import { buildShareSnapshotPayload } from "~/tests/test-utils/factories"
  * Verifies clipboard-first behavior and download fallback without relying on
  * real canvas implementations in jsdom.
  */
-vi.mock("i18next", () => {
-  const translations: Record<string, string> = {
-    "ui:app.name": "All API Hub",
-    "shareSnapshots:labels.overview": "Overview",
-    "shareSnapshots:labels.totalBalance": "Total balance",
-    "shareSnapshots:labels.balance": "Balance",
-    "shareSnapshots:labels.accounts": "Accounts",
-    "shareSnapshots:labels.today": "Today",
-    "shareSnapshots:labels.income": "Income",
-    "shareSnapshots:labels.outcome": "Outcome",
-    "shareSnapshots:labels.net": "Net",
-    "shareSnapshots:labels.asOf": "As of",
-    "shareSnapshots:labels.site": "Site",
-  }
-
-  return {
-    default: {
-      language: "en",
-      t: (key: string) => translations[key] ?? key,
-    },
-  }
-})
-
 type ClipboardItemData = string | Blob | Promise<string | Blob>
 
 class ClipboardItemMock {
