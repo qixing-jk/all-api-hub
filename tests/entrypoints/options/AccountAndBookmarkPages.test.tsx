@@ -1,6 +1,8 @@
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import AccountManagement from "~/entrypoints/options/pages/AccountManagement"
+import BookmarkManagement from "~/entrypoints/options/pages/BookmarkManagement"
 import { fireEvent, render, screen } from "~/tests/test-utils/render"
 
 const openAddAccountMock = vi.fn()
@@ -51,10 +53,6 @@ beforeEach(() => {
 
 describe("options AccountManagement page", () => {
   it("renders accounts view and opens add account dialog", async () => {
-    const { default: AccountManagement } = await import(
-      "~/entrypoints/options/pages/AccountManagement"
-    )
-
     render(<AccountManagement />)
 
     expect(await screen.findByText("AccountList")).toBeInTheDocument()
@@ -72,10 +70,6 @@ describe("options AccountManagement page", () => {
 
 describe("options BookmarkManagement page", () => {
   it("renders bookmarks view and opens bookmark dialog", async () => {
-    const { default: BookmarkManagement } = await import(
-      "~/entrypoints/options/pages/BookmarkManagement"
-    )
-
     render(<BookmarkManagement />)
 
     expect(await screen.findByText("BookmarksList")).toBeInTheDocument()

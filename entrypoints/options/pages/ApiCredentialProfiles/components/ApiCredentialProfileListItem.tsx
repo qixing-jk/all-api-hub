@@ -220,39 +220,51 @@ export function ApiCredentialProfileListItem({
                 <DropdownMenuItem
                   onSelect={() => onExport(profile, "cherryStudio")}
                 >
-                  <CherryIcon className="h-4 w-4" />
+                  <span aria-hidden="true">
+                    <CherryIcon className="h-4 w-4" />
+                  </span>
                   {t("keyManagement:actions.useInCherry")}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onSelect={() => onExport(profile, "ccSwitch")}
                 >
-                  <CCSwitchIcon size="sm" />
+                  <span aria-hidden="true">
+                    <CCSwitchIcon size="sm" />
+                  </span>
                   {t("keyManagement:actions.exportToCCSwitch")}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onSelect={() => onExport(profile, "kiloCode")}
                 >
-                  <KiloCodeIcon size="sm" />
+                  <span aria-hidden="true">
+                    <KiloCodeIcon size="sm" />
+                  </span>
                   {t("keyManagement:actions.exportToKiloCode")}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onSelect={() => onExport(profile, "cliProxy")}
                 >
-                  <CliProxyIcon size="sm" />
+                  <span aria-hidden="true">
+                    <CliProxyIcon size="sm" />
+                  </span>
                   {t("keyManagement:actions.importToCliProxy")}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onSelect={() => onExport(profile, "claudeCodeRouter")}
                 >
-                  <ClaudeCodeRouterIcon size="sm" />
+                  <span aria-hidden="true">
+                    <ClaudeCodeRouterIcon size="sm" />
+                  </span>
                   {t("keyManagement:actions.importToClaudeCodeRouter")}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onSelect={() => onExport(profile, "managedSite")}
                 >
-                  <ManagedSiteIcon siteType={managedSiteType} size="sm" />
+                  <span aria-hidden="true">
+                    <ManagedSiteIcon siteType={managedSiteType} size="sm" />
+                  </span>
                   {t("keyManagement:actions.importToManagedSite", {
                     site: managedSiteLabel,
                   })}

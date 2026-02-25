@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import BookmarksList from "~/features/SiteBookmarks/components/BookmarksList"
 import {
   fireEvent,
   render,
@@ -176,10 +177,6 @@ beforeEach(() => {
 
 describe("BookmarksList", () => {
   it("renders empty state and opens add bookmark dialog", async () => {
-    const { default: BookmarksList } = await import(
-      "~/features/SiteBookmarks/components/BookmarksList"
-    )
-
     render(<BookmarksList />)
 
     expect(await screen.findByText("bookmark:emptyState")).toBeInTheDocument()
@@ -224,10 +221,6 @@ describe("BookmarksList", () => {
       },
     }
 
-    const { default: BookmarksList } = await import(
-      "~/features/SiteBookmarks/components/BookmarksList"
-    )
-
     render(<BookmarksList initialSearchQuery="docs" />)
 
     expect(await screen.findByText("Docs")).toBeInTheDocument()
@@ -269,10 +262,6 @@ describe("BookmarksList", () => {
       },
     }
 
-    const { default: BookmarksList } = await import(
-      "~/features/SiteBookmarks/components/BookmarksList"
-    )
-
     render(<BookmarksList />)
 
     expect(await screen.findByText("Docs")).toBeInTheDocument()
@@ -299,10 +288,6 @@ describe("BookmarksList", () => {
 
     bookmarksMock = [bookmark]
     togglePinAccountMock.mockResolvedValue(true)
-
-    const { default: BookmarksList } = await import(
-      "~/features/SiteBookmarks/components/BookmarksList"
-    )
 
     render(<BookmarksList />)
 
@@ -356,10 +341,6 @@ describe("BookmarksList", () => {
 
     bookmarksMock = [bookmark]
 
-    const { default: BookmarksList } = await import(
-      "~/features/SiteBookmarks/components/BookmarksList"
-    )
-
     render(<BookmarksList />)
 
     fireEvent.click(await screen.findByRole("button", { name: "Docs" }))
@@ -401,10 +382,6 @@ describe("BookmarksList", () => {
 
     bookmarksMock = [bookmark]
 
-    const { default: BookmarksList } = await import(
-      "~/features/SiteBookmarks/components/BookmarksList"
-    )
-
     const { unmount } = render(<BookmarksList />)
     expect(
       await screen.findByRole("button", { name: "bookmark:list.dragHandle" }),
@@ -433,10 +410,6 @@ describe("BookmarksList", () => {
     togglePinAccountMock.mockResolvedValue(true)
     loadAccountDataMock.mockResolvedValue(undefined)
     mockDeleteBookmark.mockResolvedValue(true)
-
-    const { default: BookmarksList } = await import(
-      "~/features/SiteBookmarks/components/BookmarksList"
-    )
 
     render(<BookmarksList />)
 

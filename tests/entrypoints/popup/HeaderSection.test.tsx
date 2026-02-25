@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import HeaderSection from "~/entrypoints/popup/components/HeaderSection"
 import { render, screen } from "~/tests/test-utils/render"
 import { isExtensionSidePanel } from "~/utils/browser"
 
@@ -31,9 +32,6 @@ describe("popup HeaderSection", () => {
   })
 
   it("shows open side panel button in popup", async () => {
-    const { default: HeaderSection } = await import(
-      "~/entrypoints/popup/components/HeaderSection"
-    )
     render(<HeaderSection />)
 
     expect(
@@ -45,10 +43,6 @@ describe("popup HeaderSection", () => {
 
   it("hides open side panel button inside side panel", async () => {
     mockedIsExtensionSidePanel.mockReturnValue(true)
-
-    const { default: HeaderSection } = await import(
-      "~/entrypoints/popup/components/HeaderSection"
-    )
     render(<HeaderSection />)
 
     expect(

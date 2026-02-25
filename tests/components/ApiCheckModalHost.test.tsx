@@ -4,7 +4,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { ApiCheckModalHost } from "~/entrypoints/content/webAiApiCheck/components/ApiCheckModalHost"
-import { API_CHECK_OPEN_MODAL_EVENT } from "~/entrypoints/content/webAiApiCheck/events"
+import {
+  API_CHECK_MODAL_HOST_READY_EVENT,
+  dispatchOpenApiCheckModal,
+  type ApiCheckOpenModalDetail,
+} from "~/entrypoints/content/webAiApiCheck/events"
 import { render } from "~/tests/test-utils/render"
 import { sendRuntimeMessage } from "~/utils/browserApi"
 
@@ -28,20 +32,33 @@ describe("ApiCheckModalHost", () => {
 
   const renderSubject = () => render(<ApiCheckModalHost />)
 
-  it("opens with empty inputs for manual trigger without selection", async () => {
-    renderSubject()
+  const openModal = async (
+    detailOverrides?: Partial<ApiCheckOpenModalDetail>,
+  ) => {
+    const defaultDetail: ApiCheckOpenModalDetail = {
+      sourceText: "",
+      pageUrl: "https://example.com",
+      trigger: "contextMenu",
+    }
 
-    await act(async () => {
-      window.dispatchEvent(
-        new CustomEvent(API_CHECK_OPEN_MODAL_EVENT, {
-          detail: {
-            sourceText: "",
-            pageUrl: "https://example.com",
-            trigger: "contextMenu",
-          },
-        }),
+    const hostReady = new Promise<void>((resolve) => {
+      window.addEventListener(
+        API_CHECK_MODAL_HOST_READY_EVENT,
+        () => resolve(),
+        { once: true },
       )
     })
+
+    renderSubject()
+    await hostReady
+
+    await act(async () => {
+      dispatchOpenApiCheckModal({ ...defaultDetail, ...detailOverrides })
+    })
+  }
+
+  it("opens with empty inputs for manual trigger without selection", async () => {
+    await openModal()
 
     const modal = await screen.findByTestId("api-check-modal")
     expect(modal).toBeInTheDocument()
@@ -59,19 +76,7 @@ describe("ApiCheckModalHost", () => {
 
   it("auto-extract fills baseUrl + apiKey from pasted text", async () => {
     const user = userEvent.setup()
-    renderSubject()
-
-    await act(async () => {
-      window.dispatchEvent(
-        new CustomEvent(API_CHECK_OPEN_MODAL_EVENT, {
-          detail: {
-            sourceText: "",
-            pageUrl: "https://example.com",
-            trigger: "contextMenu",
-          },
-        }),
-      )
-    })
+    await openModal()
 
     const textarea = await screen.findByPlaceholderText(
       "webAiApiCheck:modal.sourceText.placeholder",
@@ -104,18 +109,7 @@ describe("ApiCheckModalHost", () => {
       return { success: false }
     })
 
-    renderSubject()
-    await act(async () => {
-      window.dispatchEvent(
-        new CustomEvent(API_CHECK_OPEN_MODAL_EVENT, {
-          detail: {
-            sourceText: "",
-            pageUrl: "https://example.com",
-            trigger: "contextMenu",
-          },
-        }),
-      )
-    })
+    await openModal()
 
     const baseUrlInput = await screen.findByPlaceholderText(
       "https://example.com/api",
@@ -166,18 +160,7 @@ describe("ApiCheckModalHost", () => {
       return { success: false }
     })
 
-    renderSubject()
-    await act(async () => {
-      window.dispatchEvent(
-        new CustomEvent(API_CHECK_OPEN_MODAL_EVENT, {
-          detail: {
-            sourceText: "",
-            pageUrl: "https://example.com",
-            trigger: "contextMenu",
-          },
-        }),
-      )
-    })
+    await openModal()
 
     const baseUrlInput = await screen.findByPlaceholderText(
       "https://example.com/api",
@@ -229,18 +212,7 @@ describe("ApiCheckModalHost", () => {
       return { success: false }
     })
 
-    renderSubject()
-    await act(async () => {
-      window.dispatchEvent(
-        new CustomEvent(API_CHECK_OPEN_MODAL_EVENT, {
-          detail: {
-            sourceText: "",
-            pageUrl: "https://example.com",
-            trigger: "contextMenu",
-          },
-        }),
-      )
-    })
+    await openModal()
 
     const baseUrlInput = await screen.findByPlaceholderText(
       "https://example.com/api",
@@ -324,18 +296,7 @@ describe("ApiCheckModalHost", () => {
       return { success: false }
     })
 
-    renderSubject()
-    await act(async () => {
-      window.dispatchEvent(
-        new CustomEvent(API_CHECK_OPEN_MODAL_EVENT, {
-          detail: {
-            sourceText: "",
-            pageUrl: "https://example.com",
-            trigger: "contextMenu",
-          },
-        }),
-      )
-    })
+    await openModal()
 
     const baseUrlInput = await screen.findByPlaceholderText(
       "https://example.com/api",

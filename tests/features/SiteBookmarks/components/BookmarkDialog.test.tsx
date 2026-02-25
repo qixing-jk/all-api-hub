@@ -1,12 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-  within,
-} from "~/tests/test-utils/render"
+import BookmarkDialog from "~/features/SiteBookmarks/components/BookmarkDialog"
+import { fireEvent, render, screen, waitFor } from "~/tests/test-utils/render"
 import type { SiteBookmark } from "~/types"
 
 const loadAccountDataMock = vi.fn()
@@ -63,9 +58,6 @@ beforeEach(() => {
 describe("BookmarkDialog", () => {
   it("validates required fields before submitting", async () => {
     const onClose = vi.fn()
-    const { default: BookmarkDialog } = await import(
-      "~/features/SiteBookmarks/components/BookmarkDialog"
-    )
 
     render(
       <BookmarkDialog
@@ -92,9 +84,6 @@ describe("BookmarkDialog", () => {
 
   it("creates a bookmark in add mode", async () => {
     const onClose = vi.fn()
-    const { default: BookmarkDialog } = await import(
-      "~/features/SiteBookmarks/components/BookmarkDialog"
-    )
 
     render(
       <BookmarkDialog
@@ -110,16 +99,10 @@ describe("BookmarkDialog", () => {
       { target: { value: "Docs" } },
     )
 
-    const urlField = (
-      await screen.findByText("bookmark:form.urlLabel")
-    ).closest("div")
-    if (!urlField) {
-      throw new Error("Could not locate URL form field wrapper")
-    }
-
-    fireEvent.change(within(urlField).getByRole("textbox"), {
-      target: { value: "https://example.com/docs" },
-    })
+    fireEvent.change(
+      await screen.findByPlaceholderText("bookmark:form.urlPlaceholder"),
+      { target: { value: "https://example.com/docs" } },
+    )
 
     fireEvent.click(
       await screen.findByRole("button", { name: "bookmark:actions.add" }),
@@ -154,10 +137,6 @@ describe("BookmarkDialog", () => {
       created_at: 0,
       updated_at: 0,
     }
-
-    const { default: BookmarkDialog } = await import(
-      "~/features/SiteBookmarks/components/BookmarkDialog"
-    )
 
     render(
       <BookmarkDialog

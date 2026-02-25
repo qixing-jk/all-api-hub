@@ -1,11 +1,64 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { initializeServices } from "~/entrypoints/background/servicesInit"
+
 type InitMock = ReturnType<typeof vi.fn>
+
+const {
+  usageInitMock,
+  webdavInitMock,
+  modelSyncInitMock,
+  autoCheckinInitMock,
+  modelMetadataInitMock,
+  autoRefreshInitMock,
+  redemptionAssistInitMock,
+  initBackgroundI18nMock,
+} = vi.hoisted(() => ({
+  usageInitMock: vi.fn(),
+  webdavInitMock: vi.fn(),
+  modelSyncInitMock: vi.fn(),
+  autoCheckinInitMock: vi.fn(),
+  modelMetadataInitMock: vi.fn(),
+  autoRefreshInitMock: vi.fn(),
+  redemptionAssistInitMock: vi.fn(),
+  initBackgroundI18nMock: vi.fn(),
+}))
+
+vi.mock("~/services/usageHistory/scheduler", () => ({
+  usageHistoryScheduler: { initialize: usageInitMock },
+}))
+
+vi.mock("~/services/webdav/webdavAutoSyncService", () => ({
+  webdavAutoSyncService: { initialize: webdavInitMock },
+}))
+
+vi.mock("~/services/modelSync", () => ({
+  modelSyncScheduler: { initialize: modelSyncInitMock },
+}))
+
+vi.mock("~/services/autoCheckin/scheduler", () => ({
+  autoCheckinScheduler: { initialize: autoCheckinInitMock },
+}))
+
+vi.mock("~/services/modelMetadata", () => ({
+  modelMetadataService: { initialize: modelMetadataInitMock },
+}))
+
+vi.mock("~/services/autoRefreshService", () => ({
+  autoRefreshService: { initialize: autoRefreshInitMock },
+}))
+
+vi.mock("~/services/redemptionAssist", () => ({
+  redemptionAssistService: { initialize: redemptionAssistInitMock },
+}))
+
+vi.mock("~/utils/background-i18n", () => ({
+  initBackgroundI18n: initBackgroundI18nMock,
+}))
 
 describe("initializeServices alarm bootstrap ordering", () => {
   beforeEach(() => {
-    vi.resetModules()
-    vi.restoreAllMocks()
+    vi.clearAllMocks()
   })
 
   it("starts alarm-based schedulers before awaiting i18n", async () => {
@@ -39,41 +92,22 @@ describe("initializeServices alarm bootstrap ordering", () => {
     const autoRefreshInit: InitMock = vi.fn(async () => {})
     const redemptionAssistInit: InitMock = vi.fn(async () => {})
 
-    vi.doMock("~/services/usageHistory/scheduler", () => ({
-      usageHistoryScheduler: { initialize: usageInit },
-    }))
-    vi.doMock("~/services/webdav/webdavAutoSyncService", () => ({
-      webdavAutoSyncService: { initialize: webdavInit },
-    }))
-    vi.doMock("~/services/modelSync", () => ({
-      modelSyncScheduler: { initialize: modelSyncInit },
-    }))
-    vi.doMock("~/services/autoCheckin/scheduler", () => ({
-      autoCheckinScheduler: { initialize: autoCheckinInit },
-    }))
-    vi.doMock("~/services/modelMetadata", () => ({
-      modelMetadataService: { initialize: modelMetadataInit },
-    }))
-    vi.doMock("~/services/autoRefreshService", () => ({
-      autoRefreshService: { initialize: autoRefreshInit },
-    }))
-    vi.doMock("~/services/redemptionAssist", () => ({
-      redemptionAssistService: { initialize: redemptionAssistInit },
-    }))
-    vi.doMock("~/utils/background-i18n", () => ({
-      initBackgroundI18n: vi.fn(() => {
-        i18nObservedAllAlarmInits =
-          alarmInitCalled.usageHistory &&
-          alarmInitCalled.webdav &&
-          alarmInitCalled.modelSync &&
-          alarmInitCalled.autoCheckin
-        return i18nPromise
-      }),
-    }))
+    usageInitMock.mockImplementation(usageInit)
+    webdavInitMock.mockImplementation(webdavInit)
+    modelSyncInitMock.mockImplementation(modelSyncInit)
+    autoCheckinInitMock.mockImplementation(autoCheckinInit)
+    modelMetadataInitMock.mockImplementation(modelMetadataInit)
+    autoRefreshInitMock.mockImplementation(autoRefreshInit)
+    redemptionAssistInitMock.mockImplementation(redemptionAssistInit)
 
-    const { initializeServices } = await import(
-      "~/entrypoints/background/servicesInit"
-    )
+    initBackgroundI18nMock.mockImplementation(() => {
+      i18nObservedAllAlarmInits =
+        alarmInitCalled.usageHistory &&
+        alarmInitCalled.webdav &&
+        alarmInitCalled.modelSync &&
+        alarmInitCalled.autoCheckin
+      return i18nPromise
+    })
 
     const initPromise = initializeServices()
 

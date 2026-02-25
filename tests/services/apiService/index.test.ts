@@ -1,13 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DONE_HUB, ONE_HUB } from "~/constants/siteType"
+import { getApiService } from "~/services/apiService"
 
-const commonFetchUserInfo = vi.fn()
-const commonFetchModelPricing = vi.fn()
-const commonFetchAccountTokens = vi.fn()
-
-const oneHubFetchModelPricing = vi.fn()
-const oneHubFetchAccountTokens = vi.fn()
+const {
+  commonFetchUserInfo,
+  commonFetchModelPricing,
+  commonFetchAccountTokens,
+  oneHubFetchModelPricing,
+  oneHubFetchAccountTokens,
+} = vi.hoisted(() => ({
+  commonFetchUserInfo: vi.fn(),
+  commonFetchModelPricing: vi.fn(),
+  commonFetchAccountTokens: vi.fn(),
+  oneHubFetchModelPricing: vi.fn(),
+  oneHubFetchAccountTokens: vi.fn(),
+}))
 
 vi.mock("~/services/apiService/common", () => ({
   fetchUserInfo: commonFetchUserInfo,
@@ -24,11 +32,9 @@ vi.mock("~/services/apiService/oneHub", () => ({
 describe("apiService index wrapper", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.resetModules()
   })
 
   it("should call common implementation by default when no site override provided", async () => {
-    const { getApiService } = await import("~/services/apiService")
     commonFetchUserInfo.mockResolvedValue({} as any)
 
     const request = {
@@ -43,7 +49,6 @@ describe("apiService index wrapper", () => {
   })
 
   it("should use override module when selecting a site-scoped api instance", async () => {
-    const { getApiService } = await import("~/services/apiService")
     oneHubFetchModelPricing.mockResolvedValue({} as any)
 
     const request = {
@@ -57,7 +62,6 @@ describe("apiService index wrapper", () => {
   })
 
   it("should route to override without relying on object siteType detection", async () => {
-    const { getApiService } = await import("~/services/apiService")
     oneHubFetchAccountTokens.mockResolvedValue([] as any)
 
     const request = {
@@ -71,7 +75,6 @@ describe("apiService index wrapper", () => {
   })
 
   it("should fall back to common implementation when override module does not implement function", async () => {
-    const { getApiService } = await import("~/services/apiService")
     commonFetchUserInfo.mockResolvedValue({} as any)
 
     const request = {
