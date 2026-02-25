@@ -2,8 +2,6 @@ import { getChangelogAnchorId } from "~/utils/changelogAnchor"
 import { getHomepage } from "~/utils/packageMeta"
 import { joinUrl } from "~/utils/url"
 
-export { getChangelogAnchorId }
-
 export const getDocsChangelogUrl = (version?: string) => {
   const base = getHomepage()
   const url = joinUrl(base, "changelog.html")

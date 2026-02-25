@@ -253,8 +253,8 @@ export const UserPreferencesProvider = ({
   )
 
   /**
-   * Enable/disable automatically opening the docs changelog page after updates.
-   * @param enabled - When true, opens the changelog in a new tab on update.
+   * Enable/disable automatically showing the inline update log after updates.
+   * @param enabled - When true, shows the update log on first UI open after update.
    */
   const updateOpenChangelogOnUpdate = useCallback(async (enabled: boolean) => {
     const success = await userPreferences.updateOpenChangelogOnUpdate(enabled)

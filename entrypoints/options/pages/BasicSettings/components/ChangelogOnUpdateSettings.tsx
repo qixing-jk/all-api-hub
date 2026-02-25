@@ -7,8 +7,8 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { showUpdateToast } from "~/utils/toastHelpers"
 
 /**
- * Settings section that controls whether the extension opens the docs changelog
- * page the first time the user opens the extension UI after updates.
+ * Settings section that controls whether the extension shows the inline update log
+ * the first time the user opens the extension UI after updates.
  */
 export default function ChangelogOnUpdateSettings() {
   const { t } = useTranslation("settings")

@@ -49,6 +49,15 @@
       "deleteFailed": "删除失败: {{error}}",
       "deleteFailedGeneric": "删除账号失败: {{error}}"
     },
+    "updateLog": {
+      "title": "更新内容",
+      "updatedTo": "已更新至 v{{version}}",
+      "loading": "正在加载更新日志…",
+      "openFullChangelog": "打开完整更新日志",
+      "disableAutoOpen": "不再自动打开",
+      "enableAutoOpen": "重新启用自动打开",
+      "missingSection": "更新日志预览加载失败（v{{version}}）。你可以打开完整更新日志查看。"
+    },
     "tempWindowFallbackReminder": {
       "title": "启用临时窗口模式以完成网络请求",
       "titleTempWindowOnly": "启用临时窗口模式以完成网络请求",

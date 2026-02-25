@@ -10,6 +10,10 @@ import {
   DuplicateChannelWarningDialogContainer,
 } from "~/components/ChannelDialog"
 import { ThemeAwareToaster } from "~/components/ThemeAwareToaster"
+import {
+  UpdateLogDialogContainer,
+  UpdateLogDialogProvider,
+} from "~/components/UpdateLogDialog"
 import { DeviceProvider } from "~/contexts/DeviceContext"
 import { ThemeProvider } from "~/contexts/ThemeContext"
 import { UserPreferencesProvider } from "~/contexts/UserPreferencesContext"
@@ -27,11 +31,14 @@ export function AppLayout({ children }: AppLayoutProps) {
       <UserPreferencesProvider>
         <ThemeProvider>
           <ChannelDialogProvider>
-            {children}
-            <ChangelogOnUpdateUiOpenHandler />
-            <AutoCheckinUiOpenPretrigger />
-            <ChannelDialogContainer />
-            <DuplicateChannelWarningDialogContainer />
+            <UpdateLogDialogProvider>
+              {children}
+              <ChangelogOnUpdateUiOpenHandler />
+              <AutoCheckinUiOpenPretrigger />
+              <UpdateLogDialogContainer />
+              <ChannelDialogContainer />
+              <DuplicateChannelWarningDialogContainer />
+            </UpdateLogDialogProvider>
           </ChannelDialogProvider>
           <ThemeAwareToaster reverseOrder={false} />
         </ThemeProvider>

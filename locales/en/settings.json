@@ -358,9 +358,9 @@
   },
   "changelogOnUpdate": {
     "title": "Changelog",
-    "description": "Control whether All API Hub opens the docs changelog in a new tab the first time you open the extension UI after updates.",
-    "toggleLabel": "Open changelog after updates",
-    "toggleDesc": "When enabled, the changelog opens in a new tab the first time you open the extension UI after an update (once per version)."
+    "description": "Control whether All API Hub shows a What's New dialog the first time you open the extension UI after updates.",
+    "toggleLabel": "Show What's New after updates",
+    "toggleDesc": "When enabled, the update log is shown inline on first UI open after an update (once per version). You can still open the full docs changelog manually."
   },
   "autoProvisionKeyOnAccountAdd": {
     "title": "API keys",

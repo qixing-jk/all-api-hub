@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
-import { getChangelogAnchorId, getDocsChangelogUrl } from "~/utils/docsLinks"
+import { getChangelogAnchorId } from "~/utils/changelogAnchor"
+import { getDocsChangelogUrl } from "~/utils/docsLinks"
 import { getHomepage } from "~/utils/packageMeta"
 
 describe("docsLinks", () => {

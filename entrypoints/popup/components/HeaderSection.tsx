@@ -1,6 +1,7 @@
 import {
   ArrowPathIcon,
   ArrowsPointingOutIcon,
+  BugAntIcon,
   Cog6ToothIcon,
 } from "@heroicons/react/24/outline"
 import { PanelRightClose } from "lucide-react"
@@ -11,10 +12,13 @@ import { useTranslation } from "react-i18next"
 import iconImage from "~/assets/icon.png"
 import Tooltip from "~/components/Tooltip"
 import { BodySmall, Caption, IconButton } from "~/components/ui"
+import { useUpdateLogDialogContext } from "~/components/UpdateLogDialog"
 import { VersionBadge } from "~/components/VersionBadge"
 import { COLORS } from "~/constants/designTokens"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
+import { changelogOnUpdateState } from "~/services/changelogOnUpdateState"
 import { isExtensionSidePanel } from "~/utils/browser"
+import { getManifest } from "~/utils/browserApi"
 import { createLogger } from "~/utils/logger"
 import {
   openFullAccountManagerPage,
@@ -29,6 +33,44 @@ import CompactThemeToggle from "./ThemeToggle"
  * Unified logger scoped to the popup header component.
  */
 const logger = createLogger("PopupHeaderSection")
+
+/**
+ *
+ */
+function DevTriggerUpdateLogButton() {
+  const { openDialog } = useUpdateLogDialogContext()
+
+  const handleClick = useCallback(async () => {
+    try {
+      const { version } = getManifest()
+      if (!version) return
+
+      await changelogOnUpdateState.setPendingVersion(version)
+      const pendingVersion =
+        await changelogOnUpdateState.consumePendingVersion()
+      if (!pendingVersion) return
+
+      openDialog(pendingVersion)
+    } catch (error) {
+      logger.debug("Failed to trigger update log (dev)", error)
+      toast.error("Failed to trigger update log (dev)")
+    }
+  }, [openDialog])
+
+  return (
+    <Tooltip content="Dev: Trigger update log">
+      <IconButton
+        onClick={() => void handleClick()}
+        variant="outline"
+        size="sm"
+        aria-label="Dev: Trigger update log"
+        className="touch-manipulation"
+      >
+        <BugAntIcon className="h-4 w-4" />
+      </IconButton>
+    </Tooltip>
+  )
+}
 
 /**
  * Popup header with app identity (including version), theme toggle, and navigation controls.
@@ -115,6 +157,10 @@ export default function HeaderSection({
       {/* Action Buttons Section */}
       <div className="flex shrink-0 items-center gap-1 sm:gap-2">
         <CompactThemeToggle />
+
+        {import.meta.env.MODE === "development" && (
+          <DevTriggerUpdateLogButton />
+        )}
 
         {showRefresh && (
           <Tooltip content={t("common:actions.refresh")}>

@@ -1,11 +1,7 @@
-# changelog-on-update Specification
+## MODIFIED Requirements
 
-## Purpose
-Help users see release notes after an extension update without creating an unexpected changelog tab. Instead, an inline update log is shown (at most once per version) the first time the user opens an extension UI surface after updating, when `openChangelogOnUpdate` is enabled. The inline update log UI provides a user-invoked action to open the full docs changelog page (version-anchored) in a new tab.
-
-## Requirements
 ### Requirement: Automatic changelog opening on update is configurable
-The extension MUST support a user preference `openChangelogOnUpdate` (default **enabled**) that controls whether the extension automatically shows the inline update log after an extension update.
+The extension MUST support a user preference `openChangelogOnUpdate` (default **enabled**) that controls whether the extension automatically shows the update log after an extension update.
 
 #### Scenario: Default is enabled
 - **GIVEN** a user has no stored `openChangelogOnUpdate` preference
@@ -46,18 +42,3 @@ This preference MUST only control automatic update-log opening. It MUST NOT supp
 - **THEN** the extension MUST NOT automatically show any update log UI
 - **AND** the extension MUST NOT automatically open any changelog tab
 - **AND** the pending marker MUST be cleared
-
-### Requirement: Users can change the preference and it persists
-The extension MUST provide a user-facing control to enable or disable `openChangelogOnUpdate`. The chosen value MUST be persisted and applied on subsequent extension updates.
-
-#### Scenario: Setting persists across reload
-- **GIVEN** a user disables `openChangelogOnUpdate`
-- **WHEN** the extension reloads user preferences at a later time
-- **THEN** `openChangelogOnUpdate` MUST remain `false` until the user changes it
-
-## Verification
-
-- Unit (background): `tests/entrypoints/background/changelogOnUpdate.test.ts`
-- Unit (UI handler): `tests/components/ChangelogOnUpdateUiOpenHandler.test.tsx`
-- E2E (Playwright): `e2e/changelogOnUpdate.spec.ts` (`pnpm -s e2e -- e2e/changelogOnUpdate.spec.ts`)
-

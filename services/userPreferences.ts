@@ -590,8 +590,8 @@ class UserPreferencesService {
   }
 
   /**
-   * Enable/disable automatically opening the docs changelog page after updates.
-   * @param enabled - When true, opens the changelog in a new active tab on update.
+   * Enable/disable automatically showing the inline update log after updates.
+   * @param enabled - When true, shows the update log on first UI open after update.
    */
   async updateOpenChangelogOnUpdate(enabled: boolean): Promise<boolean> {
     return this.savePreferences({ openChangelogOnUpdate: enabled })

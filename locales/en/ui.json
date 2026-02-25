@@ -49,6 +49,15 @@
       "deleteFailed": "Delete failed: {{error}}",
       "deleteFailedGeneric": "Failed to delete account: {{error}}"
     },
+    "updateLog": {
+      "title": "What's New",
+      "updatedTo": "Updated to v{{version}}",
+      "loading": "Loading changelog…",
+      "openFullChangelog": "Open full changelog",
+      "disableAutoOpen": "Don't show after updates",
+      "enableAutoOpen": "Re-enable after updates",
+      "missingSection": "Couldn't load the changelog preview for v{{version}}. You can open the full changelog."
+    },
     "tempWindowFallbackReminder": {
       "title": "Enable temporary window mode for requests",
       "titleTempWindowOnly": "Enable temporary window mode for requests",

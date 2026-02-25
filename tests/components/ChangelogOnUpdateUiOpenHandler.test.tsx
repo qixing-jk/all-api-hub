@@ -1,12 +1,16 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import ChangelogOnUpdateUiOpenHandler from "~/components/ChangelogOnUpdateUiOpenHandler"
+import {
+  UpdateLogDialogContainer,
+  UpdateLogDialogProvider,
+} from "~/components/UpdateLogDialog"
 import { changelogOnUpdateState } from "~/services/changelogOnUpdateState"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
 } from "~/services/userPreferences"
-import { render, waitFor } from "~/tests/test-utils/render"
+import { render, screen, waitFor } from "~/tests/test-utils/render"
 
 describe("ChangelogOnUpdateUiOpenHandler", () => {
   afterEach(() => {
@@ -28,35 +32,31 @@ describe("ChangelogOnUpdateUiOpenHandler", () => {
         return next
       })
 
-    const docsLinks = await import("~/utils/docsLinks")
-    const getDocsChangelogUrlSpy = vi
-      .spyOn(docsLinks, "getDocsChangelogUrl")
-      .mockReturnValue("https://docs.example.test/changelog.html#_2-39-0")
-
-    const browserApi = await import("~/utils/browserApi")
-    const createTabSpy = vi
-      .spyOn(browserApi, "createTab")
-      .mockResolvedValue(undefined)
-
-    const first = render(<ChangelogOnUpdateUiOpenHandler />)
+    const first = render(
+      <UpdateLogDialogProvider>
+        <ChangelogOnUpdateUiOpenHandler />
+        <UpdateLogDialogContainer />
+      </UpdateLogDialogProvider>,
+    )
 
     await waitFor(() => {
-      expect(getDocsChangelogUrlSpy).toHaveBeenCalledWith("2.39.0")
-      expect(createTabSpy).toHaveBeenCalledWith(
-        "https://docs.example.test/changelog.html#_2-39-0",
-        true,
-      )
+      expect(screen.getByTestId("update-log-dialog")).toBeInTheDocument()
     })
 
     first.unmount()
 
-    render(<ChangelogOnUpdateUiOpenHandler />)
+    render(
+      <UpdateLogDialogProvider>
+        <ChangelogOnUpdateUiOpenHandler />
+        <UpdateLogDialogContainer />
+      </UpdateLogDialogProvider>,
+    )
 
     await waitFor(() => {
       expect(consumeSpy).toHaveBeenCalledTimes(2)
     })
 
-    expect(createTabSpy).toHaveBeenCalledTimes(1)
+    expect(screen.queryByTestId("update-log-dialog")).toBeNull()
   })
 
   it("clears pending marker without opening when preference is disabled", async () => {
@@ -77,33 +77,33 @@ describe("ChangelogOnUpdateUiOpenHandler", () => {
         return next
       })
 
-    const docsLinks = await import("~/utils/docsLinks")
-    const getDocsChangelogUrlSpy = vi.spyOn(docsLinks, "getDocsChangelogUrl")
-
-    const browserApi = await import("~/utils/browserApi")
-    const createTabSpy = vi
-      .spyOn(browserApi, "createTab")
-      .mockResolvedValue(undefined)
-
-    const first = render(<ChangelogOnUpdateUiOpenHandler />)
+    const first = render(
+      <UpdateLogDialogProvider>
+        <ChangelogOnUpdateUiOpenHandler />
+        <UpdateLogDialogContainer />
+      </UpdateLogDialogProvider>,
+    )
 
     await waitFor(() => {
       expect(consumeSpy).toHaveBeenCalledTimes(1)
     })
 
-    expect(getDocsChangelogUrlSpy).not.toHaveBeenCalled()
-    expect(createTabSpy).not.toHaveBeenCalled()
+    expect(screen.queryByTestId("update-log-dialog")).toBeNull()
 
     openChangelogOnUpdate = true
     first.unmount()
 
-    render(<ChangelogOnUpdateUiOpenHandler />)
+    render(
+      <UpdateLogDialogProvider>
+        <ChangelogOnUpdateUiOpenHandler />
+        <UpdateLogDialogContainer />
+      </UpdateLogDialogProvider>,
+    )
 
     await waitFor(() => {
       expect(consumeSpy).toHaveBeenCalledTimes(2)
     })
 
-    expect(getDocsChangelogUrlSpy).not.toHaveBeenCalled()
-    expect(createTabSpy).not.toHaveBeenCalled()
+    expect(screen.queryByTestId("update-log-dialog")).toBeNull()
   })
 })
