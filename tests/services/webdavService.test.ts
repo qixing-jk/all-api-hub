@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { userPreferences } from "~/services/userPreferences"
 import {
@@ -17,12 +17,22 @@ vi.mock("~/services/userPreferences", () => ({
 const mockedUserPreferences = userPreferences as any
 
 const globalAny = globalThis as any
+const originalFetch = globalAny.fetch
 
 describe("webdavService", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     // Fresh fetch mock for each test
     globalAny.fetch = vi.fn()
+  })
+
+  afterAll(() => {
+    if (typeof originalFetch === "undefined") {
+      delete globalAny.fetch
+      return
+    }
+
+    globalAny.fetch = originalFetch
   })
 
   const basePrefs = {

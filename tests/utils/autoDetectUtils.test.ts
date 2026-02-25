@@ -455,7 +455,7 @@ describe("autoDetectUtils", () => {
 
       expect(cnError.type).toBe(AutoDetectErrorType.TIMEOUT)
       expect(enError.type).toBe(AutoDetectErrorType.TIMEOUT)
-      expect(cnError.message).toBe(enError.message) // Both get Chinese translation
+      expect(cnError.message).toBe(enError.message) // Both return the same translation key (key-based assertion)
     })
   })
 })

@@ -33,6 +33,8 @@ describe("ActionClickBehaviorSettings (side panel fallback)", () => {
     vi.clearAllMocks()
   })
 
+  // Note: `renderSubject()` uses the shared test renderer; i18n runs in key-assertion mode
+  // so `t()` returns fully-qualified keys (e.g. "settings:...").
   const renderSubject = () => render(<ActionClickBehaviorSettings />)
 
   it("shows unsupported helper even when stored preference is sidepanel", async () => {

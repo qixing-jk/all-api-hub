@@ -1,12 +1,11 @@
-import { act, render, screen, waitFor, within } from "@testing-library/react"
+import { act, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { ApiCheckModalHost } from "~/entrypoints/content/webAiApiCheck/components/ApiCheckModalHost"
 import { API_CHECK_OPEN_MODAL_EVENT } from "~/entrypoints/content/webAiApiCheck/events"
-import { testI18n } from "~/tests/test-utils/i18n"
+import { render } from "~/tests/test-utils/render"
 import { sendRuntimeMessage } from "~/utils/browserApi"
 
 vi.mock("~/utils/browserApi", async (importOriginal) => {
@@ -27,12 +26,7 @@ describe("ApiCheckModalHost", () => {
     })
   })
 
-  const renderSubject = () =>
-    render(
-      <I18nextProvider i18n={testI18n}>
-        <ApiCheckModalHost />
-      </I18nextProvider>,
-    )
+  const renderSubject = () => render(<ApiCheckModalHost />)
 
   it("opens with empty inputs for manual trigger without selection", async () => {
     renderSubject()

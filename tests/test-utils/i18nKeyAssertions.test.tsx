@@ -5,17 +5,17 @@ import { describe, expect, it } from "vitest"
 import { render, screen } from "~/tests/test-utils/render"
 
 describe("i18n test harness (key assertions)", () => {
-  const missingUiKey = "__tests__.i18nKeyAssertions.missing"
+  const MISSING_UI_KEY = "__tests__.i18nKeyAssertions.missing"
 
   it("returns stable namespaced keys for non-React i18next.t", () => {
-    expect(i18nextT(`ui:${missingUiKey}`)).toBe(`ui:${missingUiKey}`)
-    expect(i18nextT(missingUiKey, { ns: "ui" })).toBe(`ui:${missingUiKey}`)
+    expect(i18nextT(`ui:${MISSING_UI_KEY}`)).toBe(`ui:${MISSING_UI_KEY}`)
+    expect(i18nextT(MISSING_UI_KEY, { ns: "ui" })).toBe(`ui:${MISSING_UI_KEY}`)
     expect(
-      i18nextT(missingUiKey, {
+      i18nextT(MISSING_UI_KEY, {
         ns: "ui",
         defaultValue: "fallback",
       }),
-    ).toBe(`ui:${missingUiKey}`)
+    ).toBe(`ui:${MISSING_UI_KEY}`)
   })
 
   it("returns stable namespaced keys for react-i18next useTranslation", async () => {
@@ -26,10 +26,10 @@ describe("i18n test harness (key assertions)", () => {
       const { t } = useTranslation("ui")
       return (
         <div>
-          <div data-testid="implicit">{t(missingUiKey)}</div>
-          <div data-testid="explicit">{t(missingUiKey, { ns: "ui" })}</div>
+          <div data-testid="implicit">{t(MISSING_UI_KEY)}</div>
+          <div data-testid="explicit">{t(MISSING_UI_KEY, { ns: "ui" })}</div>
           <div data-testid="defaultValue">
-            {t(missingUiKey, { defaultValue: "fallback" })}
+            {t(MISSING_UI_KEY, { defaultValue: "fallback" })}
           </div>
         </div>
       )
@@ -38,13 +38,13 @@ describe("i18n test harness (key assertions)", () => {
     render(<Example />)
 
     expect(await screen.findByTestId("implicit")).toHaveTextContent(
-      `ui:${missingUiKey}`,
+      `ui:${MISSING_UI_KEY}`,
     )
     expect(await screen.findByTestId("explicit")).toHaveTextContent(
-      `ui:${missingUiKey}`,
+      `ui:${MISSING_UI_KEY}`,
     )
     expect(await screen.findByTestId("defaultValue")).toHaveTextContent(
-      `ui:${missingUiKey}`,
+      `ui:${MISSING_UI_KEY}`,
     )
   })
 })

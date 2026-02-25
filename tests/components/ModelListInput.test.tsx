@@ -5,14 +5,21 @@ import { ModelListInput } from "~/components/ui"
 import { fireEvent, render, screen } from "~/tests/test-utils/render"
 
 describe("ModelListInput", () => {
-  it("renders model name and alias inputs", async () => {
-    const Wrapper = () => {
-      const [value, setValue] = React.useState<
-        React.ComponentProps<typeof ModelListInput>["value"]
-      >([{ id: "1", name: "", alias: "" }])
-      return <ModelListInput value={value} onChange={setValue} />
-    }
+  const Wrapper = (props: { nameSuggestions?: string[] }) => {
+    const [value, setValue] = React.useState<
+      React.ComponentProps<typeof ModelListInput>["value"]
+    >(() => [{ id: "1", name: "", alias: "" }])
 
+    return (
+      <ModelListInput
+        value={value}
+        onChange={setValue}
+        nameSuggestions={props.nameSuggestions}
+      />
+    )
+  }
+
+  it("renders model name and alias inputs", async () => {
     render(<Wrapper />)
 
     expect(
@@ -29,13 +36,6 @@ describe("ModelListInput", () => {
   })
 
   it("adds and removes model rows", async () => {
-    const Wrapper = () => {
-      const [value, setValue] = React.useState<
-        React.ComponentProps<typeof ModelListInput>["value"]
-      >([{ id: "1", name: "", alias: "" }])
-      return <ModelListInput value={value} onChange={setValue} />
-    }
-
     render(<Wrapper />)
 
     const addButton = await screen.findByRole("button", {
@@ -60,20 +60,7 @@ describe("ModelListInput", () => {
   })
 
   it("uses SearchableSelect when name suggestions are provided", async () => {
-    const Wrapper = () => {
-      const [value, setValue] = React.useState<
-        React.ComponentProps<typeof ModelListInput>["value"]
-      >([{ id: "1", name: "", alias: "" }])
-      return (
-        <ModelListInput
-          value={value}
-          onChange={setValue}
-          nameSuggestions={["gpt-4", "claude-3-opus", "gpt-4"]}
-        />
-      )
-    }
-
-    render(<Wrapper />)
+    render(<Wrapper nameSuggestions={["gpt-4", "claude-3-opus", "gpt-4"]} />)
 
     const nameCombo = await screen.findByRole("combobox")
     fireEvent.click(nameCombo)

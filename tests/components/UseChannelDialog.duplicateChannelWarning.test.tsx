@@ -2,17 +2,21 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useChannelDialogContext } from "~/components/ChannelDialog/context/ChannelDialogContext"
 import { useChannelDialog } from "~/components/ChannelDialog/hooks/useChannelDialog"
+import { ChannelType } from "~/constants"
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import * as accountOperations from "~/services/accountOperations"
 import { accountStorage } from "~/services/accountStorage"
 import * as managedSiteService from "~/services/managedSiteService"
+import type { ManagedSiteService } from "~/services/managedSiteService"
 import { act, renderHook, waitFor } from "~/tests/test-utils/render"
 import {
   AuthTypeEnum,
   SiteHealthStatus,
   type ApiToken,
+  type DisplaySiteData,
   type SiteAccount,
 } from "~/types"
+import type { ChannelFormData, ManagedSiteChannel } from "~/types/managedSite"
 
 const { mockToastLoading, mockToastDismiss, mockToastError } = vi.hoisted(
   () => ({
@@ -26,7 +30,7 @@ const getManagedSiteServiceSpy = vi.spyOn(
   managedSiteService,
   "getManagedSiteService",
 )
-const convertToDisplayDataSpy = vi.spyOn(accountStorage, "convertToDisplayData")
+const getAccountByIdSpy = vi.spyOn(accountStorage, "getAccountById")
 const ensureAccountApiTokenSpy = vi.spyOn(
   accountOperations,
   "ensureAccountApiToken",
@@ -65,6 +69,26 @@ const buildSiteAccount = (
   ...overrides,
 })
 
+const buildDisplaySiteData = (
+  overrides: Partial<DisplaySiteData> = {},
+): DisplaySiteData => ({
+  id: "account-id",
+  name: "Account",
+  username: "user",
+  balance: { USD: 0, CNY: 0 },
+  todayConsumption: { USD: 0, CNY: 0 },
+  todayIncome: { USD: 0, CNY: 0 },
+  todayTokens: { upload: 0, download: 0 },
+  health: { status: SiteHealthStatus.Healthy },
+  siteType: "newapi",
+  baseUrl: "https://upstream.example.com",
+  token: "access-token",
+  userId: 1,
+  authType: AuthTypeEnum.AccessToken,
+  checkIn: { enableDetection: false },
+  ...overrides,
+})
+
 const buildApiToken = (overrides: Partial<ApiToken> = {}): ApiToken => ({
   id: 1,
   user_id: 1,
@@ -93,32 +117,41 @@ describe("useChannelDialog duplicate channel warning", () => {
     vi.clearAllMocks()
 
     mockToastLoading.mockReturnValue("toast-id")
-    convertToDisplayDataSpy.mockReturnValue({
-      id: "account-id",
-      name: "Account",
-      baseUrl: "https://upstream.example.com",
-    })
+    getAccountByIdSpy.mockResolvedValue(buildSiteAccount())
     ensureAccountApiTokenSpy.mockImplementation(() => {
       throw new Error("ensureAccountApiToken should not be called in this test")
     })
   })
 
   it("shows warning and cancels when user does not continue", async () => {
-    const mockService = {
+    const mockService: Partial<ManagedSiteService> = {
       messagesKey: "newapi",
       getConfig: vi.fn(async () => ({
         baseUrl: "https://managed.example.com",
         token: "admin-token",
         userId: "1",
       })),
-      prepareChannelFormData: vi.fn(async () => ({
-        name: "Auto channel",
-        models: ["gpt-4"],
-        groups: ["default"],
-      })),
-      findMatchingChannel: vi.fn(async () => ({ name: "Existing channel" })),
+      prepareChannelFormData: vi.fn(
+        async () =>
+          ({
+            name: "Auto channel",
+            type: ChannelType.OpenAI,
+            key: "sk-test",
+            base_url: "https://upstream.example.com",
+            models: ["gpt-4"],
+            groups: ["default"],
+            priority: 0,
+            weight: 0,
+            status: 1,
+          }) satisfies ChannelFormData,
+      ),
+      findMatchingChannel: vi.fn(
+        async () => ({ name: "Existing channel" }) as ManagedSiteChannel,
+      ),
     }
-    getManagedSiteServiceSpy.mockResolvedValue(mockService as any)
+    getManagedSiteServiceSpy.mockResolvedValue(
+      mockService as ManagedSiteService,
+    )
 
     const { result } = renderHook(() => ({
       dialog: useChannelDialog(),
@@ -130,7 +163,7 @@ describe("useChannelDialog duplicate channel warning", () => {
     })
 
     const openPromise = result.current.dialog.openWithAccount(
-      buildSiteAccount(),
+      buildDisplaySiteData(),
       buildApiToken(),
     )
 
@@ -152,21 +185,34 @@ describe("useChannelDialog duplicate channel warning", () => {
   })
 
   it("opens ChannelDialog when user continues despite duplicate", async () => {
-    const mockService = {
+    const mockService: Partial<ManagedSiteService> = {
       messagesKey: "newapi",
       getConfig: vi.fn(async () => ({
         baseUrl: "https://managed.example.com",
         token: "admin-token",
         userId: "1",
       })),
-      prepareChannelFormData: vi.fn(async () => ({
-        name: "Auto channel",
-        models: ["gpt-4"],
-        groups: ["default"],
-      })),
-      findMatchingChannel: vi.fn(async () => ({ name: "Existing channel" })),
+      prepareChannelFormData: vi.fn(
+        async () =>
+          ({
+            name: "Auto channel",
+            type: ChannelType.OpenAI,
+            key: "sk-test",
+            base_url: "https://upstream.example.com",
+            models: ["gpt-4"],
+            groups: ["default"],
+            priority: 0,
+            weight: 0,
+            status: 1,
+          }) satisfies ChannelFormData,
+      ),
+      findMatchingChannel: vi.fn(
+        async () => ({ name: "Existing channel" }) as ManagedSiteChannel,
+      ),
     }
-    getManagedSiteServiceSpy.mockResolvedValue(mockService as any)
+    getManagedSiteServiceSpy.mockResolvedValue(
+      mockService as ManagedSiteService,
+    )
 
     const { result } = renderHook(() => ({
       dialog: useChannelDialog(),

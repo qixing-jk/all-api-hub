@@ -1,11 +1,4 @@
-import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react"
-import { I18nextProvider } from "react-i18next"
+import { fireEvent, screen, waitFor, within } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
@@ -13,12 +6,17 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import UsageHistorySyncTab from "~/entrypoints/options/pages/BasicSettings/components/UsageHistorySyncTab"
 import { accountStorage } from "~/services/accountStorage"
 import { usageHistoryStorage } from "~/services/usageHistory/storage"
-import { testI18n } from "~/tests/test-utils/i18n"
+import { render } from "~/tests/test-utils/render"
 import { sendRuntimeMessage } from "~/utils/browserApi"
 
-vi.mock("~/contexts/UserPreferencesContext", () => ({
-  useUserPreferencesContext: vi.fn(),
-}))
+vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/contexts/UserPreferencesContext")>()
+  return {
+    ...actual,
+    useUserPreferencesContext: vi.fn(),
+  }
+})
 
 vi.mock("~/services/accountStorage", () => ({
   accountStorage: { getAllAccounts: vi.fn(), getEnabledAccounts: vi.fn() },
@@ -43,12 +41,7 @@ vi.mock("react-hot-toast", () => ({
 }))
 
 describe("UsageHistorySyncTab", () => {
-  const renderSubject = () =>
-    render(
-      <I18nextProvider i18n={testI18n}>
-        <UsageHistorySyncTab />
-      </I18nextProvider>,
-    )
+  const renderSubject = () => render(<UsageHistorySyncTab />)
 
   it("sends usageHistory:updateSettings with current form values", async () => {
     const loadPreferences = vi.fn().mockResolvedValue(undefined)

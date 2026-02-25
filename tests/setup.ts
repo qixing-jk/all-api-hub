@@ -116,6 +116,18 @@ if (!globalAny.HTMLElement?.prototype?.scrollIntoView) {
   globalAny.HTMLElement.prototype.scrollIntoView = vi.fn()
 }
 
+// Radix UI components rely on pointer capture APIs that are not implemented by
+// jsdom by default.
+if (!globalAny.HTMLElement?.prototype?.setPointerCapture) {
+  globalAny.HTMLElement.prototype.setPointerCapture = vi.fn()
+}
+if (!globalAny.HTMLElement?.prototype?.releasePointerCapture) {
+  globalAny.HTMLElement.prototype.releasePointerCapture = vi.fn()
+}
+if (!globalAny.HTMLElement?.prototype?.hasPointerCapture) {
+  globalAny.HTMLElement.prototype.hasPointerCapture = vi.fn(() => false)
+}
+
 configure({ testIdAttribute: "data-testid" })
 
 beforeAll(() => {

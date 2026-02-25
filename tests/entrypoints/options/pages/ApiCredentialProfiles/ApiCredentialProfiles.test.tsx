@@ -358,7 +358,7 @@ describe("ApiCredentialProfiles page", () => {
 
     await user.click(
       screen.getByRole("menuitem", {
-        name: /keyManagement:actions\.exportToCCSwitch/i,
+        name: "keyManagement:actions.exportToCCSwitch",
       }),
     )
 
@@ -376,7 +376,7 @@ describe("ApiCredentialProfiles page", () => {
 
     await user.click(
       screen.getByRole("menuitem", {
-        name: /keyManagement:actions\.exportToKiloCode/i,
+        name: "keyManagement:actions.exportToKiloCode",
       }),
     )
 

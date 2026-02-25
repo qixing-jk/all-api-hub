@@ -3,6 +3,7 @@ import { t } from "i18next"
 import { userPreferences } from "~/services/userPreferences"
 import { ApiToken, DisplaySiteData } from "~/types"
 import { ServiceResponse } from "~/types/serviceResponse"
+import { getErrorMessage } from "~/utils/error"
 import { createLogger } from "~/utils/logger"
 import { joinUrl } from "~/utils/url"
 
@@ -272,11 +273,11 @@ export async function importToCliProxy(
         name: newProvider.name,
       }),
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("Import failed", error)
     return {
       success: false,
-      message: error?.message || t("messages:cliproxy.importFailed"),
+      message: getErrorMessage(error) || t("messages:cliproxy.importFailed"),
     }
   }
 }
