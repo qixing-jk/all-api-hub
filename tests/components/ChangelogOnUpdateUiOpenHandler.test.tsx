@@ -1,4 +1,3 @@
-import { render, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import ChangelogOnUpdateUiOpenHandler from "~/components/ChangelogOnUpdateUiOpenHandler"
@@ -7,6 +6,7 @@ import {
   DEFAULT_PREFERENCES,
   userPreferences,
 } from "~/services/userPreferences"
+import { render, waitFor } from "~/tests/test-utils/render"
 
 describe("ChangelogOnUpdateUiOpenHandler", () => {
   afterEach(() => {
@@ -60,15 +60,13 @@ describe("ChangelogOnUpdateUiOpenHandler", () => {
   })
 
   it("clears pending marker without opening when preference is disabled", async () => {
-    vi.spyOn(userPreferences, "getPreferences")
-      .mockResolvedValueOnce({
+    let openChangelogOnUpdate = false
+    vi.spyOn(userPreferences, "getPreferences").mockImplementation(
+      async () => ({
         ...DEFAULT_PREFERENCES,
-        openChangelogOnUpdate: false,
-      })
-      .mockResolvedValueOnce({
-        ...DEFAULT_PREFERENCES,
-        openChangelogOnUpdate: true,
-      })
+        openChangelogOnUpdate,
+      }),
+    )
 
     let pending: string | null = "2.39.0"
     const consumeSpy = vi
@@ -96,6 +94,7 @@ describe("ChangelogOnUpdateUiOpenHandler", () => {
     expect(getDocsChangelogUrlSpy).not.toHaveBeenCalled()
     expect(createTabSpy).not.toHaveBeenCalled()
 
+    openChangelogOnUpdate = true
     first.unmount()
 
     render(<ChangelogOnUpdateUiOpenHandler />)

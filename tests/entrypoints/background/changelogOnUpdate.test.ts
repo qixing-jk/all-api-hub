@@ -9,7 +9,8 @@ const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0))
  *
  * The background entrypoint registers an onInstalled listener and then runs a
  * migration + update flow. These tests mock the WebExtension wrappers and
- * dependent services so we can assert whether the changelog tab is created.
+ * dependent services so we can assert that updates mark a pending version
+ * (consumed by the first UI open) instead of opening a tab directly.
  */
 describe("background onInstalled changelog opening", () => {
   let onInstalledListener: InstalledListener | undefined

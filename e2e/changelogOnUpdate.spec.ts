@@ -1,17 +1,12 @@
 import type { BrowserContext, Page, Worker } from "@playwright/test"
 
 import { expect, test } from "~/e2e/fixtures/extensionTest"
+import { STORAGE_KEYS } from "~/services/storageKeys"
+import { getChangelogAnchorId } from "~/utils/changelogAnchor"
+import { getErrorMessage } from "~/utils/error"
+import { createLogger } from "~/utils/logger"
 
-const STORAGE_KEYS = {
-  USER_PREFERENCES: "user_preferences",
-  CHANGELOG_PENDING_VERSION: "changelogOnUpdate_pendingVersion",
-} as const
-
-const getChangelogAnchorId = (version: string) => {
-  const normalized = version.trim().replace(/^v/i, "")
-  const dashed = normalized.replace(/\./g, "-")
-  return `_${dashed}`
-}
+const logger = createLogger("e2e/changelogOnUpdate")
 
 /**
  *
@@ -34,8 +29,8 @@ async function closeOtherPages(context: BrowserContext, keepPage: Page) {
       .map(async (existingPage) => {
         try {
           await existingPage.close()
-        } catch {
-          // Ignore if already closed.
+        } catch (err) {
+          logger.error("Failed to close existingPage", getErrorMessage(err))
         }
       }),
   )
@@ -112,10 +107,13 @@ test("opens changelog once on first UI open after update", async ({
 
   await closeOtherPages(context, page)
   await removeStorageKey(serviceWorker, STORAGE_KEYS.USER_PREFERENCES)
-  await removeStorageKey(serviceWorker, STORAGE_KEYS.CHANGELOG_PENDING_VERSION)
+  await removeStorageKey(
+    serviceWorker,
+    STORAGE_KEYS.CHANGELOG_ON_UPDATE_PENDING_VERSION,
+  )
   await setPlasmoStorageValue(
     serviceWorker,
-    STORAGE_KEYS.CHANGELOG_PENDING_VERSION,
+    STORAGE_KEYS.CHANGELOG_ON_UPDATE_PENDING_VERSION,
     version,
   )
 
@@ -153,16 +151,20 @@ test("opens changelog once on first UI open after update", async ({
     .poll(() =>
       getPlasmoStorageRawValue(
         serviceWorker,
-        STORAGE_KEYS.CHANGELOG_PENDING_VERSION,
+        STORAGE_KEYS.CHANGELOG_ON_UPDATE_PENDING_VERSION,
       ),
     )
     .toBeUndefined()
-  const unexpectedChangelogRequest = context
-    .waitForEvent("request", {
-      timeout: 2_000,
-      predicate: (request) => request.url().includes("changelog.html"),
-    })
-    .catch(() => null)
+  const unexpectedChangelogRequest = (async () => {
+    try {
+      return await context.waitForEvent("request", {
+        timeout: 2_000,
+        predicate: (request) => request.url().includes("changelog.html"),
+      })
+    } catch {
+      return null
+    }
+  })()
   await page.reload()
   const secondChangelogRequest = await unexpectedChangelogRequest
   expect(secondChangelogRequest).toBeNull()
@@ -182,13 +184,16 @@ test("does not open changelog tab when disabled, but still consumes pending mark
   })
 
   await closeOtherPages(context, page)
-  await removeStorageKey(serviceWorker, STORAGE_KEYS.CHANGELOG_PENDING_VERSION)
+  await removeStorageKey(
+    serviceWorker,
+    STORAGE_KEYS.CHANGELOG_ON_UPDATE_PENDING_VERSION,
+  )
   await setPlasmoStorageValue(serviceWorker, STORAGE_KEYS.USER_PREFERENCES, {
     openChangelogOnUpdate: false,
   })
   await setPlasmoStorageValue(
     serviceWorker,
-    STORAGE_KEYS.CHANGELOG_PENDING_VERSION,
+    STORAGE_KEYS.CHANGELOG_ON_UPDATE_PENDING_VERSION,
     version,
   )
 
@@ -209,7 +214,7 @@ test("does not open changelog tab when disabled, but still consumes pending mark
     .poll(() =>
       getPlasmoStorageRawValue(
         serviceWorker,
-        STORAGE_KEYS.CHANGELOG_PENDING_VERSION,
+        STORAGE_KEYS.CHANGELOG_ON_UPDATE_PENDING_VERSION,
       ),
     )
     .toBeUndefined()

@@ -1,13 +1,8 @@
+import { getChangelogAnchorId } from "~/utils/changelogAnchor"
 import { getHomepage } from "~/utils/packageMeta"
 import { joinUrl } from "~/utils/url"
 
-const normalizeVersion = (version: string) => version.trim().replace(/^v/i, "")
-
-export const getChangelogAnchorId = (version: string) => {
-  const normalized = normalizeVersion(version)
-  const dashed = normalized.replace(/\./g, "-")
-  return `_${dashed}`
-}
+export { getChangelogAnchorId }
 
 export const getDocsChangelogUrl = (version?: string) => {
   const base = getHomepage()
