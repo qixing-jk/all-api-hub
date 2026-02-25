@@ -11,6 +11,7 @@ import { handleAutoRefreshMessage } from "~/services/autoRefreshService"
 import { handleChannelConfigMessage } from "~/services/channelConfigStorage"
 import { handleDailyBalanceHistoryMessage } from "~/services/dailyBalanceHistory/scheduler"
 import { handleExternalCheckInMessage } from "~/services/externalCheckInService"
+import { handleLdohSiteLookupMessage } from "~/services/ldohSiteLookup/background"
 import { handleManagedSiteModelSyncMessage } from "~/services/modelSync"
 import { handleRedemptionAssistMessage } from "~/services/redemptionAssist"
 import { handleUsageHistoryMessage } from "~/services/usageHistory/scheduler"
@@ -130,6 +131,16 @@ export function setupRuntimeMessageListeners() {
         )
       ) {
         void handleExternalCheckInMessage(request, sendResponse)
+        return true
+      }
+
+      if (
+        hasRuntimeActionPrefix(
+          request.action,
+          RuntimeActionPrefixes.LdohSiteLookup,
+        )
+      ) {
+        void handleLdohSiteLookupMessage(request, sendResponse)
         return true
       }
 

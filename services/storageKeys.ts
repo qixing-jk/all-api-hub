@@ -26,6 +26,11 @@ export const STORAGE_LOCKS = {
    * on update state store.
    */
   CHANGELOG_ON_UPDATE: "all-api-hub:changelog-on-update",
+  /**
+   * Exclusive lock used for read-modify-write sequences touching the LDOH site
+   * lookup cache.
+   */
+  LDOH_SITE_LOOKUP: "all-api-hub:ldoh-site-lookup",
 } as const
 
 export const ACCOUNT_STORAGE_KEYS = {
@@ -48,6 +53,10 @@ export const API_CREDENTIAL_PROFILES_STORAGE_KEYS = {
   API_CREDENTIAL_PROFILES: "api_credential_profiles",
 } as const
 
+export const LDOH_SITE_LOOKUP_STORAGE_KEYS = {
+  SITE_LIST_CACHE: "ldohSiteLookup_siteListCache_v1",
+} as const
+
 export const ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS = {
   REPAIR_PROGRESS: "accountKeyRepair_progress",
 } as const
@@ -66,6 +75,7 @@ export const STORAGE_KEYS = {
   ...ACCOUNT_STORAGE_KEYS,
   ...TAG_STORAGE_KEYS,
   ...API_CREDENTIAL_PROFILES_STORAGE_KEYS,
+  ...LDOH_SITE_LOOKUP_STORAGE_KEYS,
   ...ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS,
   ...USER_PREFERENCES_STORAGE_KEYS,
   CHANGELOG_ON_UPDATE_PENDING_VERSION:

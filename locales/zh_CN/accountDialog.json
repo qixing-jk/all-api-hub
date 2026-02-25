@@ -46,7 +46,9 @@
     "manualInfo": "手动填写账号信息。账号将被安全地保存在本地存储中",
     "autoDetectInfo": "请先在目标站点进行登录，插件将自动检测站点类型，并自动获取访问令牌",
     "editInfoDesc": "修改账号信息后，系统会重新验证并获取最新的余额数据",
-    "reDetectInfo": "如果站点信息有变化，建议点击\"重新识别\"按钮（需要在目标站点先自行登录）"
+    "reDetectInfo": "如果站点信息有变化，建议点击\"重新识别\"按钮（需要在目标站点先自行登录）",
+    "ldohSiteListHint": "没有站点？LDOH 提供了 Linux.do 社区内大量公益 AI 站点的目录。",
+    "openLdohSiteList": "打开 LDOH 站点列表"
   },
   "form": {
     "manualBalanceUsd": "手动余额 (USD)",

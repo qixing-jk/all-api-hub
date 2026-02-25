@@ -374,7 +374,7 @@ export default function AccountActionButtons({
 
   return (
     <div className="grid grid-cols-2 justify-end gap-2 sm:grid-cols-4">
-      {/* Primary Level - Three standalone buttons */}
+      {/* Primary Level - Standalone buttons */}
       <IconButton
         onClick={handleCopyUrlLocal}
         variant="ghost"

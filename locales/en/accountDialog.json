@@ -46,7 +46,9 @@
     "manualInfo": "Manually fill in the account information. The account will be saved securely in local storage",
     "autoDetectInfo": "Please log in to the target site first, the extension will automatically detect the site type and automatically get the access token",
     "editInfoDesc": "After modifying the account information, the system will re-verify and get the latest balance data",
-    "reDetectInfo": "If the site information changes, it is recommended to click the 'Re-detect' button (you need to log in to the target site first by yourself)"
+    "reDetectInfo": "If the site information changes, it is recommended to click the 'Re-detect' button (you need to log in to the target site first by yourself)",
+    "ldohSiteListHint": "No site yet? LDOH provides a directory of many public-benefit AI sites from the Linux.do community.",
+    "openLdohSiteList": "Open LDOH site list"
   },
   "form": {
     "siteName": "Site Name",

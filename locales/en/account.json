@@ -85,6 +85,7 @@
     "modelManagement": "Model Management",
     "usageLog": "Usage Log",
     "redeemPage": "Redeem/Top-up",
+    "viewOnLdoh": "View on LDOH",
     "openAllExternalCheckIn": "Open all external check-ins",
     "openAllExternalCheckInHint": "Open unchecked external check-ins. Ctrl/Cmd: open all. Shift: open in new window. Ctrl/Cmd+Shift: open all in new window.",
     "pin": "Pin account",

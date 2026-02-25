@@ -15,6 +15,7 @@ import { useMemo } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
+import { LdohIcon } from "~/components/icons/LdohIcon"
 import Tooltip from "~/components/Tooltip"
 import { Badge, BodySmall, Button, Caption, IconButton } from "~/components/ui"
 import { UI_CONSTANTS } from "~/constants/ui"
@@ -29,12 +30,14 @@ import {
   getStatusIndicatorColor,
 } from "~/features/AccountManagement/utils/healthStatusUtils"
 import { getTempWindowFallbackSettingsTab } from "~/features/AccountManagement/utils/tempWindowFallbackReminder"
+import { useLdohSiteLookupContext } from "~/features/LdohSiteLookup/hooks/LdohSiteLookupContext"
 import { getDayKeyFromUnixSeconds } from "~/services/usageHistory/core"
 import {
   SiteHealthStatus,
   TEMP_WINDOW_HEALTH_STATUS_CODES,
   type DisplaySiteData,
 } from "~/types"
+import { createTab } from "~/utils/browserApi"
 import { createLogger } from "~/utils/logger"
 import {
   openAccountBaseUrl,
@@ -97,6 +100,7 @@ export default function SiteInfo({ site, highlights }: SiteInfoProps) {
     refreshingAccountId,
     handleMarkCustomCheckInAsCheckedIn,
   } = useAccountActionsContext()
+  const { getLdohSearchUrlForAccountUrl } = useLdohSiteLookupContext()
   const detectedAccountIdSet = useMemo(
     () => new Set(detectedSiteAccounts.map((account) => account.id)),
     [detectedSiteAccounts],
@@ -106,6 +110,7 @@ export default function SiteInfo({ site, highlights }: SiteInfoProps) {
   const pinTooltipLabel = isPinned ? t("actions.unpin") : t("actions.pin")
   const isRefreshing = refreshingAccountId === site.id
   const isAccountDisabled = site.disabled === true
+  const ldohSearchUrl = getLdohSearchUrlForAccountUrl(site.baseUrl)
   const customCheckInUrl = site.checkIn?.customCheckIn?.url
   const customRedeemUrl = site.checkIn?.customCheckIn?.redeemUrl
 
@@ -126,6 +131,21 @@ export default function SiteInfo({ site, highlights }: SiteInfoProps) {
       await openAccountBaseUrl(site)
     } catch (error) {
       logger.error("Failed to open account base URL", {
+        error,
+        accountId: site.id,
+        baseUrl: site.baseUrl,
+      })
+    }
+  }
+
+  const handleOpenLdoh = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!ldohSearchUrl) return
+    try {
+      await createTab(ldohSearchUrl, true)
+    } catch (error) {
+      logger.error("Failed to open LDOH site lookup", {
         error,
         accountId: site.id,
         baseUrl: site.baseUrl,
@@ -460,6 +480,25 @@ export default function SiteInfo({ site, highlights }: SiteInfoProps) {
               <div className="flex shrink-0 items-center">
                 {checkInIndicator}
               </div>
+            )}
+
+            {ldohSearchUrl && (
+              <Tooltip
+                content={t("actions.viewOnLdoh")}
+                position="top"
+                wrapperClassName="flex shrink-0 items-center"
+              >
+                <IconButton
+                  onClick={(e) => void handleOpenLdoh(e)}
+                  variant="ghost"
+                  size="xs"
+                  aria-label={t("actions.viewOnLdoh")}
+                >
+                  <span aria-hidden="true">
+                    <LdohIcon />
+                  </span>
+                </IconButton>
+              </Tooltip>
             )}
           </div>
         </div>

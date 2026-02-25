@@ -9,6 +9,7 @@ import {
   hasAlarmsAPI,
   onAlarm,
   sendRuntimeActionMessage,
+  sendTabMessageWithRetry,
 } from "~/utils/browserApi"
 
 const originalBrowser = (globalThis as any).browser
@@ -229,6 +230,80 @@ describe("browserApi sendRuntimeActionMessage", () => {
           runtime: { sendMessage: sendMessageMockRetry },
         }
         const result = await sendRuntimeActionMessage(message, {
+          maxAttempts: 2,
+          delayMs: 0,
+        })
+        expect(sendMessageMockRetry).toHaveBeenCalledTimes(2)
+        return result
+      })(),
+    ).resolves.toEqual({ ok: true })
+  })
+})
+
+describe("browserApi sendTabMessageWithRetry", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+    ;(globalThis as any).browser = undefined
+  })
+
+  afterAll(() => {
+    ;(globalThis as any).browser = originalBrowser
+    ;(globalThis as any).chrome = originalChrome
+  })
+
+  it("forwards payload to browser.tabs.sendMessage unchanged", async () => {
+    const sendMessageMock = vi.fn().mockResolvedValue({ ok: true })
+    ;(globalThis as any).browser = { tabs: { sendMessage: sendMessageMock } }
+
+    const message = {
+      action: RuntimeActionIds.PermissionsCheck,
+      payload: { ok: true },
+    }
+    const response = await sendTabMessageWithRetry(123, message)
+
+    expect(response).toEqual({ ok: true })
+    expect(sendMessageMock).toHaveBeenCalledTimes(1)
+    expect(sendMessageMock).toHaveBeenCalledWith(123, message)
+  })
+
+  it("forwards retry options to sendTabMessageWithRetry behavior", async () => {
+    const recoverableError = new Error("Receiving end does not exist")
+    const message = {
+      action: RuntimeActionIds.PermissionsCheck,
+      payload: { ok: true },
+    }
+
+    await expect(
+      (async () => {
+        const sendMessageMockNoRetry = vi
+          .fn()
+          .mockRejectedValue(recoverableError)
+        ;(globalThis as any).browser = {
+          tabs: { sendMessage: sendMessageMockNoRetry },
+        }
+        try {
+          await sendTabMessageWithRetry(123, message, {
+            maxAttempts: 1,
+            delayMs: 0,
+          })
+          throw new Error("Expected sendTabMessageWithRetry to reject")
+        } catch (error) {
+          expect(sendMessageMockNoRetry).toHaveBeenCalledTimes(1)
+          throw error
+        }
+      })(),
+    ).rejects.toThrow("Receiving end does not exist")
+
+    await expect(
+      (async () => {
+        const sendMessageMockRetry = vi
+          .fn()
+          .mockRejectedValueOnce(recoverableError)
+          .mockResolvedValueOnce({ ok: true })
+        ;(globalThis as any).browser = {
+          tabs: { sendMessage: sendMessageMockRetry },
+        }
+        const result = await sendTabMessageWithRetry(123, message, {
           maxAttempts: 2,
           delayMs: 0,
         })

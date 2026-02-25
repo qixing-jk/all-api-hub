@@ -4,9 +4,18 @@ import { describe, expect, it, vi } from "vitest"
 import SiteInfo from "~/features/AccountManagement/components/AccountList/SiteInfo"
 import { fireEvent, render, screen } from "~/tests/test-utils/render"
 
-const { mockOpenAccountBaseUrl, mockHandleRefreshAccount } = vi.hoisted(() => ({
+const {
+  mockOpenAccountBaseUrl,
+  mockHandleRefreshAccount,
+  createTabMock,
+  getLdohSearchUrlForAccountUrlMock,
+} = vi.hoisted(() => ({
   mockOpenAccountBaseUrl: vi.fn(),
   mockHandleRefreshAccount: vi.fn(),
+  createTabMock: vi.fn(),
+  getLdohSearchUrlForAccountUrlMock: vi.fn<(accountBaseUrl: string) => any>(
+    () => null,
+  ),
 }))
 
 vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
@@ -25,6 +34,16 @@ vi.mock("~/features/AccountManagement/hooks/AccountActionsContext", () => ({
     refreshingAccountId: null,
     handleMarkCustomCheckInAsCheckedIn: vi.fn(),
   }),
+}))
+
+vi.mock("~/features/LdohSiteLookup/hooks/LdohSiteLookupContext", () => ({
+  useLdohSiteLookupContext: () => ({
+    getLdohSearchUrlForAccountUrl: getLdohSearchUrlForAccountUrlMock,
+  }),
+}))
+
+vi.mock("~/utils/browserApi", () => ({
+  createTab: createTabMock,
 }))
 
 vi.mock("~/utils/navigation", () => ({
@@ -188,5 +207,74 @@ describe("SiteInfo", () => {
     } finally {
       dateNowSpy.mockRestore()
     }
+  })
+
+  it("hides View on LDOH when no match is available", async () => {
+    getLdohSearchUrlForAccountUrlMock.mockReturnValue(null)
+
+    render(
+      <SiteInfo
+        site={
+          {
+            id: "acc-ldoh-1",
+            disabled: false,
+            name: "Site",
+            username: "user",
+            baseUrl: "https://example.com",
+            siteType: "test",
+            token: "token",
+            userId: 1,
+            authType: "access_token",
+            balance: { USD: 0, CNY: 0 },
+            todayConsumption: { USD: 0, CNY: 0 },
+            todayIncome: { USD: 0, CNY: 0 },
+            todayTokens: { upload: 0, download: 0 },
+            health: { status: "healthy" },
+            checkIn: { enableDetection: false },
+          } as any
+        }
+      />,
+    )
+
+    expect(screen.queryByRole("button", { name: /viewOnLdoh/ })).toBeNull()
+  })
+
+  it("shows View on LDOH when match is available", async () => {
+    const user = userEvent.setup()
+    createTabMock.mockClear()
+
+    const ldohUrl = "https://ldoh.105117.xyz/?q=example.com"
+    getLdohSearchUrlForAccountUrlMock.mockReturnValue(ldohUrl)
+
+    render(
+      <SiteInfo
+        site={
+          {
+            id: "acc-ldoh-2",
+            disabled: false,
+            name: "Site",
+            username: "user",
+            baseUrl: "https://example.com",
+            siteType: "test",
+            token: "token",
+            userId: 1,
+            authType: "access_token",
+            balance: { USD: 0, CNY: 0 },
+            todayConsumption: { USD: 0, CNY: 0 },
+            todayIncome: { USD: 0, CNY: 0 },
+            todayTokens: { upload: 0, download: 0 },
+            health: { status: "healthy" },
+            checkIn: { enableDetection: false },
+          } as any
+        }
+      />,
+    )
+
+    const ldohButton = await screen.findByRole("button", {
+      name: /viewOnLdoh/,
+    })
+    await user.click(ldohButton)
+
+    expect(createTabMock).toHaveBeenCalledWith(ldohUrl, true)
   })
 })

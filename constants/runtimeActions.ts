@@ -18,6 +18,7 @@ export const RuntimeActionPrefixes = {
   ChannelConfig: "channelConfig:",
   CookieInterceptor: "cookieInterceptor:",
   ExternalCheckIn: "externalCheckIn:",
+  LdohSiteLookup: "ldohSiteLookup:",
   ModelSync: "modelSync:",
   OpenSettings: "openSettings:",
   Permissions: "permissions:",
@@ -198,6 +199,11 @@ export const RuntimeActionIds = {
   ExternalCheckInOpenAndMark: composeRuntimeAction(
     RuntimeActionPrefixes.ExternalCheckIn,
     "openAndMark",
+  ),
+
+  LdohSiteLookupRefreshSites: composeRuntimeAction(
+    RuntimeActionPrefixes.LdohSiteLookup,
+    "refreshSites",
   ),
 
   ModelSyncGetNextRun: composeRuntimeAction(

@@ -1,7 +1,10 @@
 import { SparklesIcon, UsersIcon } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
+import { LdohIcon } from "~/components/icons/LdohIcon"
+import { Button } from "~/components/ui"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
+import { LDOH_ORIGIN } from "~/services/ldohSiteLookup/constants"
 
 interface InfoPanelProps {
   mode: DialogMode
@@ -23,6 +26,11 @@ export default function InfoPanel({
 }: InfoPanelProps) {
   const { t } = useTranslation("accountDialog")
   const isAddMode = mode === DIALOG_MODES.ADD
+  const showLdohSiteListLink = isAddMode && !isDetected
+
+  const handleOpenLdohSiteList = () => {
+    browser.tabs.create({ url: LDOH_ORIGIN, active: true })
+  }
 
   const getTitle = () => {
     if (isAddMode) {
@@ -75,6 +83,26 @@ export default function InfoPanel({
               <p>{getDescription()}</p>
             ) : (
               getDescription()
+            )}
+
+            {showLdohSiteListLink && (
+              <div className={`${borderColor} mt-2 border-t pt-2`}>
+                <p className="mb-1">{t("infoPanel.ldohSiteListHint")}</p>
+                <Button
+                  type="button"
+                  onClick={handleOpenLdohSiteList}
+                  variant="link"
+                  size="sm"
+                  className="h-auto justify-start p-0 text-left"
+                  leftIcon={
+                    <span aria-hidden="true">
+                      <LdohIcon size="sm" />
+                    </span>
+                  }
+                >
+                  {t("infoPanel.openLdohSiteList")}
+                </Button>
+              </div>
             )}
           </div>
         </div>

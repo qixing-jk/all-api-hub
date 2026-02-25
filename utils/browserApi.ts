@@ -234,15 +234,53 @@ const RECOVERABLE_MESSAGE_SNIPPETS = [
 ]
 
 /**
- * Determines whether a runtime messaging error is transient and worth retrying.
- * @param error Error caught from `browser.runtime.sendMessage`.
- * @returns True when the error message matches a known recoverable snippet.
+ * Determines whether a WebExtension messaging error is transient and worth retrying.
+ *
+ * Applies to both `browser.runtime.sendMessage` and `browser.tabs.sendMessage`,
+ * where content scripts may not be ready yet.
  */
-function isRecoverableSendMessageError(error: any): boolean {
+function isRecoverableMessageError(error: any): boolean {
   const message = (error?.message || String(error || "")).toLowerCase()
   return RECOVERABLE_MESSAGE_SNIPPETS.some((snippet) =>
     message.includes(snippet.toLowerCase()),
   )
+}
+
+type MessageRetryDefaults = {
+  maxAttempts: number
+  delayMs: number
+}
+
+/**
+ * Internal helper to retry WebExtension messaging work with exponential backoff.
+ */
+async function withMessageRetry<T>(
+  work: () => Promise<T>,
+  options: SendMessageRetryOptions | undefined,
+  defaults: MessageRetryDefaults,
+): Promise<T> {
+  const maxAttempts = Math.max(1, options?.maxAttempts ?? defaults.maxAttempts)
+  const delayMs = options?.delayMs ?? defaults.delayMs
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      return await work()
+    } catch (error) {
+      const shouldRetry =
+        attempt < maxAttempts - 1 && isRecoverableMessageError(error)
+
+      if (!shouldRetry) {
+        throw error
+      }
+
+      await new Promise((resolve) =>
+        setTimeout(resolve, delayMs * Math.pow(2, attempt)),
+      )
+    }
+  }
+
+  // `work()` either returns or throws; this is just to satisfy TypeScript.
+  throw new Error("withMessageRetry: exhausted retries")
 }
 
 /**
@@ -255,25 +293,31 @@ export async function sendMessageWithRetry(
   message: any,
   options?: SendMessageRetryOptions,
 ) {
-  const maxAttempts = Math.max(1, options?.maxAttempts ?? 3)
-  const delayMs = options?.delayMs ?? 500
+  return await withMessageRetry(
+    () => browser.runtime.sendMessage(message),
+    options,
+    { maxAttempts: 3, delayMs: 500 },
+  )
+}
 
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    try {
-      return await browser.runtime.sendMessage(message)
-    } catch (error) {
-      const shouldRetry =
-        attempt < maxAttempts - 1 && isRecoverableSendMessageError(error)
-
-      if (!shouldRetry) {
-        throw error
-      }
-
-      await new Promise((resolve) =>
-        setTimeout(resolve, delayMs * Math.pow(2, attempt)),
-      )
-    }
-  }
+/**
+ * Sends a message to a tab content script with retry logic for recoverable failures.
+ *
+ * This is useful when a tab has just been created and the content script might
+ * not be ready to receive messages yet.
+ *
+ * Applies exponential backoff based on `maxAttempts` and `delayMs`.
+ */
+export async function sendTabMessageWithRetry(
+  tabId: number,
+  message: any,
+  options?: SendMessageRetryOptions,
+): Promise<any> {
+  return await withMessageRetry(
+    () => browser.tabs.sendMessage(tabId, message),
+    options,
+    { maxAttempts: 5, delayMs: 400 },
+  )
 }
 
 /**
