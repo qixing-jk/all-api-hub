@@ -5,6 +5,8 @@ import { Button, Modal } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { createTab } from "~/utils/browserApi"
 import { getDocsChangelogUrl } from "~/utils/docsLinks"
+import { getErrorMessage } from "~/utils/error"
+import { createLogger } from "~/utils/logger"
 
 export interface UpdateLogDialogProps {
   isOpen: boolean
@@ -48,7 +50,16 @@ export function UpdateLogDialog({
   }, [isOpen, iframeUrl])
 
   const handleOpenFullChangelog = async () => {
-    await createTab(getDocsChangelogUrl(version), true)
+    try {
+      await createTab(getDocsChangelogUrl(version), true)
+    } catch (error) {
+      const logger = createLogger("UpdateLogDialog")
+      logger.error(
+        `Failed opening full changelog: ${getErrorMessage(error)}`,
+        error,
+      )
+      throw error
+    }
   }
 
   const handleSetAutoOpenEnabled = async (enabled: boolean) => {
@@ -60,6 +71,13 @@ export function UpdateLogDialog({
       if (success) {
         setAutoOpenOverride(enabled)
       }
+    } catch (error) {
+      const logger = createLogger("UpdateLogDialog")
+      logger.error(
+        `Failed saving auto-open setting for version ${version}: ${getErrorMessage(error)}`,
+        error,
+      )
+      throw error
     } finally {
       setIsSavingAutoOpen(false)
     }

@@ -19,6 +19,7 @@ import { useAccountDataContext } from "~/features/AccountManagement/hooks/Accoun
 import { changelogOnUpdateState } from "~/services/changelogOnUpdateState"
 import { isExtensionSidePanel } from "~/utils/browser"
 import { getManifest } from "~/utils/browserApi"
+import { getErrorMessage } from "~/utils/error"
 import { createLogger } from "~/utils/logger"
 import {
   openFullAccountManagerPage,
@@ -52,8 +53,9 @@ function DevTriggerUpdateLogButton() {
 
       openDialog(pendingVersion)
     } catch (error) {
-      logger.debug("Failed to trigger update log (dev)", error)
-      toast.error("Failed to trigger update log (dev)")
+      const message = getErrorMessage(error)
+      logger.debug("Failed to trigger update log (dev)", { error: message })
+      toast.error(`Failed to trigger update log (dev): ${message}`)
     }
   }, [openDialog])
 

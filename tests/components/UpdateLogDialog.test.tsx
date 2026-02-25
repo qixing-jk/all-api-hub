@@ -1,10 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { UpdateLogDialog } from "~/components/UpdateLogDialog"
-import {
-  DEFAULT_PREFERENCES,
-  userPreferences,
-} from "~/services/userPreferences"
+import { userPreferences } from "~/services/userPreferences"
+import { buildUserPreferences } from "~/tests/test-utils/factories"
 import { fireEvent, render, screen, waitFor } from "~/tests/test-utils/render"
 
 describe("UpdateLogDialog", () => {
@@ -13,10 +11,9 @@ describe("UpdateLogDialog", () => {
   })
 
   it("toggles the open-changelog-on-update preference from the dialog", async () => {
-    vi.spyOn(userPreferences, "getPreferences").mockResolvedValue({
-      ...DEFAULT_PREFERENCES,
-      openChangelogOnUpdate: true,
-    })
+    vi.spyOn(userPreferences, "getPreferences").mockResolvedValue(
+      buildUserPreferences({ openChangelogOnUpdate: true }),
+    )
 
     const updateSpy = vi
       .spyOn(userPreferences, "updateOpenChangelogOnUpdate")

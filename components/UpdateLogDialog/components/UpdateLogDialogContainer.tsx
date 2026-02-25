@@ -1,6 +1,5 @@
+import { UpdateLogDialog } from "~/components/UpdateLogDialog/components/UpdateLogDialog"
 import { useUpdateLogDialogContext } from "~/components/UpdateLogDialog/context/UpdateLogDialogContext"
-
-import { UpdateLogDialog } from "./UpdateLogDialog"
 
 /**
  * Global UpdateLogDialog container that can be triggered from anywhere.

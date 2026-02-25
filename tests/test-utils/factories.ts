@@ -12,6 +12,10 @@ import type {
   OverviewShareSnapshotPayload,
   ShareSnapshotPayload,
 } from "~/services/shareSnapshots/types"
+import {
+  DEFAULT_PREFERENCES,
+  type UserPreferences,
+} from "~/services/userPreferences"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 import { CHANNEL_STATUS, type ManagedSiteChannel } from "~/types/managedSite"
 
@@ -155,4 +159,13 @@ export function buildManagedSiteChannel(
       ...overrides.channel_info,
     },
   }
+}
+
+/**
+ * Build a `UserPreferences` fixture with defaults and shallow overrides.
+ */
+export function buildUserPreferences(
+  overrides: Partial<UserPreferences> = {},
+): UserPreferences {
+  return { ...structuredClone(DEFAULT_PREFERENCES), ...overrides }
 }
