@@ -16,5 +16,5 @@
 
 ## 4. Validation
 
-- [x] 4.1 Run `pnpm -s test` and ensure refactored tests pass without i18n-related warnings/flakes
+- [x] 4.1 Run `pnpm lint && pnpm format:check && pnpm compile && pnpm test:ci` and ensure refactored tests pass without i18n-related warnings/flakes
 - [x] 4.2 Add a small focused test that verifies the key-assertion behavior (`appendNamespaceToMissingKey`) for both React and non-React code paths

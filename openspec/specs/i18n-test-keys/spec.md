@@ -1,7 +1,9 @@
 # i18n-test-keys Specification
 
 ## Purpose
-TBD - created by archiving change i18n-test-keys. Update Purpose after archive.
+
+Defines the requirements for deterministic, key-based i18n assertions in Vitest, covering both React (`react-i18next`) and non-React `i18next` usage, shared test fixtures/providers, and expected behaviors for translation key matching.
+
 ## Requirements
 ### Requirement: Vitest i18n returns stable namespaced keys by default
 

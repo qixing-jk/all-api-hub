@@ -23,4 +23,4 @@ Our Vitest suite currently mixes real locale bundles with ad-hoc mocks of `i18ne
 
 - Test infrastructure: `tests/setup.ts`, `tests/test-utils/i18n.ts`, `tests/test-utils/render.tsx` (and related test utilities).
 - Many unit/component tests currently mocking `i18next` / `react-i18next` or asserting localized copy.
-- Documentation updates for the project’s testing guidelines may be needed to codify the key-assertion convention.
+- Documentation updates for the project’s testing guidelines have been added to `CONTRIBUTING.md` to codify the key-assertion convention.
