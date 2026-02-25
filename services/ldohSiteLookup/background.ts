@@ -2,17 +2,19 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { ApiError } from "~/services/apiService/common/errors"
 import type { ApiServiceRequest } from "~/services/apiService/common/type"
 import { fetchApi } from "~/services/apiService/common/utils"
-import { AuthTypeEnum } from "~/types"
-import { getErrorMessage } from "~/utils/error"
-import { createLogger } from "~/utils/logger"
-
-import { writeLdohSiteListCache } from "./cache"
-import { LDOH_ORIGIN, LDOH_SITES_ENDPOINT } from "./constants"
+import { writeLdohSiteListCache } from "~/services/ldohSiteLookup/cache"
+import {
+  LDOH_ORIGIN,
+  LDOH_SITES_ENDPOINT,
+} from "~/services/ldohSiteLookup/constants"
 import type {
   LdohSiteLookupRefreshSitesResponse,
   LdohSiteLookupRuntimeRequest,
-} from "./runtime"
-import type { LdohSitesApiResponse } from "./types"
+} from "~/services/ldohSiteLookup/runtime"
+import type { LdohSitesApiResponse } from "~/services/ldohSiteLookup/types"
+import { AuthTypeEnum } from "~/types"
+import { getErrorMessage } from "~/utils/error"
+import { createLogger } from "~/utils/logger"
 
 const logger = createLogger("LdohSiteLookupBackground")
 

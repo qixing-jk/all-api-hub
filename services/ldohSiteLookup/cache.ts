@@ -1,14 +1,16 @@
 import { Storage } from "@plasmohq/storage"
 
 import {
+  coerceLdohSiteListCache,
+  coerceLdohSiteSummaryList,
+} from "~/services/ldohSiteLookup/coerce"
+import { LDOH_SITE_LIST_CACHE_TTL_MS } from "~/services/ldohSiteLookup/constants"
+import type { LdohSiteListCache } from "~/services/ldohSiteLookup/types"
+import {
   LDOH_SITE_LOOKUP_STORAGE_KEYS,
   STORAGE_LOCKS,
 } from "~/services/storageKeys"
 import { withExtensionStorageWriteLock } from "~/services/storageWriteLock"
-
-import { coerceLdohSiteListCache, coerceLdohSiteSummaryList } from "./coerce"
-import { LDOH_SITE_LIST_CACHE_TTL_MS } from "./constants"
-import type { LdohSiteListCache } from "./types"
 
 const storage = new Storage({ area: "local" })
 
@@ -48,18 +50,34 @@ export async function writeLdohSiteListCache(
   rawItems: unknown,
   options?: { now?: number; ttlMs?: number },
 ): Promise<LdohSiteListCache> {
-  const now = typeof options?.now === "number" ? options.now : Date.now()
+  const providedNow = options?.now
+  const now =
+    typeof providedNow === "number" &&
+    Number.isFinite(providedNow) &&
+    providedNow > 0
+      ? providedNow
+      : Date.now()
+
+  const providedTtlMs = options?.ttlMs
   const ttlMs =
-    typeof options?.ttlMs === "number" && options.ttlMs > 0
-      ? options.ttlMs
+    typeof providedTtlMs === "number" &&
+    Number.isFinite(providedTtlMs) &&
+    providedTtlMs > 0
+      ? providedTtlMs
       : LDOH_SITE_LIST_CACHE_TTL_MS
+
+  const expiresAtCandidate = now + ttlMs
+  const expiresAt =
+    Number.isFinite(expiresAtCandidate) && expiresAtCandidate >= now
+      ? expiresAtCandidate
+      : now + LDOH_SITE_LIST_CACHE_TTL_MS
 
   const deduped = coerceLdohSiteSummaryList(rawItems)
 
   const cache: LdohSiteListCache = {
     version: 1,
     fetchedAt: now,
-    expiresAt: now + ttlMs,
+    expiresAt,
     items: deduped,
   }
 

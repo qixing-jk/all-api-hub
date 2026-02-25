@@ -46,9 +46,35 @@ export async function requestLdohSiteLookupRefreshSites(
     options,
   )
 
-  if (response && typeof response === "object") {
-    return response as LdohSiteLookupRefreshSitesResponse
+  if (!response || typeof response !== "object") {
+    return { success: false, error: "No response from background." }
   }
 
-  return { success: false, error: "No response from background." }
+  const obj = response as Record<string, unknown>
+
+  if (obj.success === true) {
+    const cachedCount = obj.cachedCount
+    if (
+      typeof cachedCount === "number" &&
+      Number.isFinite(cachedCount) &&
+      cachedCount >= 0
+    ) {
+      return { success: true, cachedCount }
+    }
+  }
+
+  if (obj.success === false) {
+    const error = obj.error
+    if (typeof error === "string" && error) {
+      const unauthenticated = obj.unauthenticated
+      return {
+        success: false,
+        unauthenticated:
+          typeof unauthenticated === "boolean" ? unauthenticated : undefined,
+        error,
+      }
+    }
+  }
+
+  return { success: false, error: "Invalid response from background." }
 }

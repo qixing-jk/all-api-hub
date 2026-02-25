@@ -1,4 +1,7 @@
-import type { LdohSiteListCache, LdohSiteSummary } from "./types"
+import type {
+  LdohSiteListCache,
+  LdohSiteSummary,
+} from "~/services/ldohSiteLookup/types"
 
 /**
  * Coerces an unknown value into a safe {@link LdohSiteSummary} shape.
@@ -9,7 +12,7 @@ import type { LdohSiteListCache, LdohSiteSummary } from "./types"
  */
 export function coerceLdohSiteSummary(raw: unknown): LdohSiteSummary | null {
   if (!raw || typeof raw !== "object") return null
-  const obj = raw as any
+  const obj = raw as Record<string, unknown>
   const id = typeof obj.id === "string" ? obj.id.trim() : ""
   const apiBaseUrl =
     typeof obj.apiBaseUrl === "string" ? obj.apiBaseUrl.trim() : ""
@@ -54,7 +57,7 @@ export function coerceLdohSiteListCache(
   raw: unknown,
 ): LdohSiteListCache | null {
   if (!raw || typeof raw !== "object") return null
-  const obj = raw as any
+  const obj = raw as Record<string, unknown>
 
   const version = obj.version
   if (version !== 1) return null

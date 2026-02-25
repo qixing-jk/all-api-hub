@@ -38,6 +38,7 @@ import {
   type DisplaySiteData,
 } from "~/types"
 import { createTab } from "~/utils/browserApi"
+import { getErrorMessage } from "~/utils/error"
 import { createLogger } from "~/utils/logger"
 import {
   openAccountBaseUrl,
@@ -145,8 +146,9 @@ export default function SiteInfo({ site, highlights }: SiteInfoProps) {
     try {
       await createTab(ldohSearchUrl, true)
     } catch (error) {
+      const msg = getErrorMessage(error)
       logger.error("Failed to open LDOH site lookup", {
-        error,
+        error: msg,
         accountId: site.id,
         baseUrl: site.baseUrl,
       })

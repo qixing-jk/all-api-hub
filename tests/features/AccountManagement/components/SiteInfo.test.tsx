@@ -13,9 +13,9 @@ const {
   mockOpenAccountBaseUrl: vi.fn(),
   mockHandleRefreshAccount: vi.fn(),
   createTabMock: vi.fn(),
-  getLdohSearchUrlForAccountUrlMock: vi.fn<(accountBaseUrl: string) => any>(
-    () => null,
-  ),
+  getLdohSearchUrlForAccountUrlMock: vi.fn<
+    (accountBaseUrl: string) => string | null
+  >(() => null),
 }))
 
 vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
