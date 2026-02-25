@@ -7,7 +7,7 @@ import { getDocsChangelogUrl } from "~/utils/docsLinks"
 import { getErrorMessage } from "~/utils/error"
 import { createLogger } from "~/utils/logger"
 
-const logger = createLogger("ChangelogOnUpdateUiOpenHandler")
+const LOGGER = createLogger("ChangelogOnUpdateUiOpenHandler")
 
 /**
  * UI-open handler that consumes the pending changelog marker (written on update)
@@ -39,7 +39,7 @@ export function ChangelogOnUpdateUiOpenHandler() {
         const url = getDocsChangelogUrl(pendingVersion)
         await createTab(url, true)
       } catch (error) {
-        logger.error(
+        LOGGER.error(
           "Failed to consume pending changelog state",
           getErrorMessage(error),
         )
