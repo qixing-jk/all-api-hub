@@ -4,6 +4,11 @@ import { joinUrl } from "~/utils/url"
 
 /**
  * Resolve the documentation homepage URL for a given language.
+ *
+ * This intentionally wraps {@link getHomepage} so callers can depend on a
+ * semantically-named docs URL helper even if the docs homepage diverges from
+ * the package homepage in the future. Currently, it delegates to
+ * {@link getHomepage}.
  * @param language Optional language code to determine the localized docs path. Falls back to default if not provided.
  */
 export function getDocsHomepageUrl(language?: string): string {
@@ -20,10 +25,10 @@ export function getDocsPageUrl(path: string, language?: string): string {
 }
 
 export const getDocsAutoDetectUrl = (language?: string) =>
-  getDocsPageUrl("auto-detect.html", language)
+  getDocsPageUrl("auto-detect", language)
 
 export const getDocsGetStartedUrl = (language?: string) =>
-  getDocsPageUrl("get-started.html", language)
+  getDocsPageUrl("get-started", language)
 
 export const getDocsChangelogUrl = (version?: string, language?: string) => {
   const url = getDocsPageUrl("changelog.html", language)

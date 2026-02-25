@@ -20,12 +20,15 @@ describe("docsLinks", () => {
   it("maps extension language to docs locale path", () => {
     expect(getDocsLocalePath("en")).toBe("en/")
     expect(getDocsLocalePath("en-US")).toBe("en/")
+    expect(getDocsLocalePath("ja")).toBe("ja/")
+    expect(getDocsLocalePath("ja-JP")).toBe("ja/")
     expect(getDocsLocalePath("zh_CN")).toBe("")
     expect(getDocsLocalePath("zh-CN")).toBe("")
   })
 
   it("builds locale-aware docs page urls", () => {
     expect(getDocsPageUrl("faq.html", "en")).toContain("/en/faq.html")
+    expect(getDocsPageUrl("faq.html", "ja")).toContain("/ja/faq.html")
     expect(getDocsPageUrl("faq.html", "zh_CN")).toContain("/faq.html")
   })
 })

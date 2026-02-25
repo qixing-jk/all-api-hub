@@ -5,6 +5,11 @@
  * between storage services (e.g. account storage <-> tag storage).
  */
 
+/**
+ * localStorage key used by i18next-browser-languagedetector.
+ */
+export const I18NEXT_LANGUAGE_STORAGE_KEY = "all-api-hub-i18nextLng"
+
 export const STORAGE_LOCKS = {
   /**
    * Exclusive lock used for any read-modify-write sequences touching account

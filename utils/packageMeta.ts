@@ -3,12 +3,21 @@ import pkg from "~/package.json"
 import { getDocsLocalePath } from "~/utils/docsLocale"
 import { joinUrl } from "~/utils/url"
 
+interface PackageJsonMeta {
+  homepage?: string
+  repository?: string | { url?: string }
+  dependencies?: Record<string, string>
+  devDependencies?: Record<string, string>
+}
+
+const packageMeta = pkg as unknown as PackageJsonMeta
+
 /**
  * Resolve the documentation homepage for the current build.
  * Falls back to the public docs site URL when the package metadata omits it.
  */
 export const getDocsBaseUrl = () => {
-  return (pkg as any).homepage ?? DOCS_BASE_URL
+  return packageMeta.homepage ?? DOCS_BASE_URL
 }
 
 export const getHomepage = (language?: string) => {
@@ -20,7 +29,7 @@ export const getHomepage = (language?: string) => {
  * Supports both string and object repository definitions.
  */
 export const getRepository = () => {
-  const repo = (pkg as any).repository
+  const repo = packageMeta.repository
   if (!repo) return REPO_URL
   if (typeof repo === "string") return repo
   return repo.url ?? REPO_URL
@@ -33,7 +42,7 @@ export const getRepository = () => {
  */
 export const getPkgVersion = (name: string) => {
   const v =
-    (pkg as any).dependencies?.[name] ?? (pkg as any).devDependencies?.[name]
+    packageMeta.dependencies?.[name] ?? packageMeta.devDependencies?.[name]
   if (!v) return "—"
-  return String(v).replace(/^[~^><= ]+/, "")
+  return v.replace(/^[~^><= ]+/, "")
 }

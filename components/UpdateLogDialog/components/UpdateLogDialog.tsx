@@ -17,7 +17,7 @@ export interface UpdateLogDialogProps {
 type IframeStatus = "loading" | "loaded" | "failed"
 
 /**
- *
+ * A modal dialog that displays the update log for a specific version of the extension.
  */
 export function UpdateLogDialog({
   isOpen,
@@ -54,7 +54,7 @@ export function UpdateLogDialog({
 
   const handleOpenFullChangelog = async () => {
     try {
-      await createTab(getDocsChangelogUrl(version, i18n.language), true)
+      await createTab(iframeUrl, true)
     } catch (error) {
       const logger = createLogger("UpdateLogDialog")
       logger.error(

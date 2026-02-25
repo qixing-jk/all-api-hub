@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest"
 
-import { getHomepage, getPkgVersion, getRepository } from "~/utils/packageMeta"
+import {
+  getDocsBaseUrl,
+  getHomepage,
+  getPkgVersion,
+  getRepository,
+} from "~/utils/packageMeta"
 
 describe("packageMeta", () => {
   describe("getHomepage", () => {
@@ -14,6 +19,9 @@ describe("packageMeta", () => {
       expect(getHomepage("en")).toMatch(/\/en\/$/)
       expect(getHomepage("ja")).toMatch(/\/ja\/$/)
       expect(getHomepage("zh_CN")).not.toMatch(/\/(en|ja)\/$/)
+      expect(getHomepage("zh_CN")).toBe(
+        `${getDocsBaseUrl().replace(/\/+$/, "")}/`,
+      )
     })
   })
 

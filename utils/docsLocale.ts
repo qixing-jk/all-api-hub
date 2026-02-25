@@ -1,7 +1,7 @@
 import i18n from "i18next"
 
 import { DEFAULT_LANG } from "~/constants"
-import { I18NEXT_LANGUAGE_STORAGE_KEY } from "~/constants/i18n"
+import { I18NEXT_LANGUAGE_STORAGE_KEY } from "~/services/storageKeys"
 
 /**
  * resolvePreferredLanguage determines the most appropriate language to use for the documentation interface.
@@ -30,10 +30,7 @@ export function resolvePreferredLanguage(language?: string): string {
  * @param language - The language code to normalize (e.g., " en_US " becomes "en-us").
  */
 export function normalizeLanguage(language: string): string {
-  return String(language || "")
-    .trim()
-    .toLowerCase()
-    .replace(/_/g, "-")
+  return language.trim().toLowerCase().replace(/_/g, "-")
 }
 
 /**
