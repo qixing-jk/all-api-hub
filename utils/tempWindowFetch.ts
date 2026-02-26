@@ -165,8 +165,8 @@ export interface TempWindowFallbackAllowlist {
 
 /**
  * Determines whether a given error matches the status codes or error codes that should trigger temp window fallback.
- * @param error The error thrown by the primary request, which may contain a statusCode and/or code property.
- * @param allowlist Optional allowlist of status codes and error codes that should trigger temp window fallback. If not provided, defaults to common auth and rate limit errors.
+ * @param error The error thrown by the primary request, which may contain a `statusCode` and/or `code` property.
+ * @param allowlist Optional allowlist of status codes and error codes that should trigger temp window fallback. When omitted, defaults to common auth and rate limit errors. When provided, it fully overrides defaults: omitted fields (e.g. `statusCodes` or `codes`) are treated as empty lists.
  */
 export function matchesTempWindowFallbackAllowlist(
   error: { statusCode?: number; code?: ApiErrorCode },
@@ -210,6 +210,10 @@ export interface TempWindowFallbackContext {
   fetchOptions: RequestInit
   onlyData: boolean
   responseType: TempWindowResponseType
+  /**
+   * Allowlist controlling which `ApiError.statusCode` and/or `ApiError.code` values can trigger temp-window fallback.
+   * When provided, this fully overrides the default allowlist: omitted fields default to empty lists.
+   */
   tempWindowFallback?: TempWindowFallbackAllowlist
   /** Account ID for per-request cookie isolation */
   accountId?: string

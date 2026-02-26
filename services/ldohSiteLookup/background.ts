@@ -73,9 +73,22 @@ export async function refreshLdohSiteListCache(): Promise<LdohSiteLookupRefreshS
 
       return { success: true, cachedCount: cache.items.length }
     } catch (error) {
+      const isApiError = error instanceof ApiError
+      const code = isApiError ? (error.code as unknown) : null
+      const statusCode = isApiError ? error.statusCode : null
+
       const unauthenticated =
-        error instanceof ApiError && error.statusCode === 401
-      const isForbidden = error instanceof ApiError && error.statusCode === 403
+        isApiError &&
+        (statusCode === 401 ||
+          code === API_ERROR_CODES.HTTP_401 ||
+          code === 401 ||
+          code === "401")
+      const isForbidden =
+        isApiError &&
+        (statusCode === 403 ||
+          code === API_ERROR_CODES.HTTP_403 ||
+          code === 403 ||
+          code === "403")
 
       if (!unauthenticated && !isForbidden) {
         logger.warn("Failed to refresh LDOH site list cache", {

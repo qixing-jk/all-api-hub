@@ -62,5 +62,5 @@ For LDOH, `401` generally means the user is not logged in (or the session is inv
 
 ## Open Questions
 
-- Should LDOH treat `403` as `unauthenticated` in `refreshLdohSiteListCache()` (currently `401 || 403`), or should it distinguish “blocked/challenge” from “not logged in” for UI messaging?
+- Current behavior: `refreshLdohSiteListCache()` treats `401` as `unauthenticated` (logged-out). `403` is handled separately as “blocked/challenge” (not `unauthenticated`), and `fetchLdohSites()` only allows temp-window fallback for `403` via its `tempWindowFallback` allowlist—so the UI can message these cases distinctly.
 - Should LDOH allow temp-window fallback for `CONTENT_TYPE_MISMATCH` only when the HTTP status is `403`, or is `403` status alone sufficient for all practical cases?

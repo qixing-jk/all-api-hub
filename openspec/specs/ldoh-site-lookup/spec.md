@@ -55,7 +55,7 @@ The system MUST NOT store LDOH credentials and MUST NOT require users to enter c
 ### Requirement: LDOH site list refresh triggers temp context only on 403
 When refreshing the LDOH site list, the system MUST consider using a temporary browsing context (temp-window / `tempcontext`) only when the primary LDOH request fails with **HTTP 403**.
 
-The system MUST NOT create or reuse a temporary browsing context for **HTTP 401** (unauthenticated) or **HTTP 429** (rate limited) responses from the primary LDOH request.
+The system MUST NOT create or reuse a temporary browsing context for **HTTP 401** (unauthenticated) or **HTTP 429** (rate-limited) responses from the primary LDOH request.
 
 #### Scenario: HTTP 401 does not trigger temp context
 - **GIVEN** the system attempts to refresh the LDOH site list

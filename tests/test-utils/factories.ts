@@ -14,6 +14,7 @@ import type {
 } from "~/services/shareSnapshots/types"
 import {
   DEFAULT_PREFERENCES,
+  type TempWindowFallbackPreferences,
   type UserPreferences,
 } from "~/services/userPreferences"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
@@ -168,4 +169,23 @@ export function buildUserPreferences(
   overrides: Partial<UserPreferences> = {},
 ): UserPreferences {
   return { ...structuredClone(DEFAULT_PREFERENCES), ...overrides }
+}
+
+/**
+ * Build a `TempWindowFallbackPreferences` fixture with stable defaults.
+ */
+export function buildTempWindowPrefs(
+  overrides: Partial<TempWindowFallbackPreferences> = {},
+): TempWindowFallbackPreferences {
+  const base: TempWindowFallbackPreferences = {
+    enabled: true,
+    useInPopup: true,
+    useInSidePanel: true,
+    useInOptions: true,
+    useForAutoRefresh: true,
+    useForManualRefresh: true,
+    tempContextMode: "composite",
+  }
+
+  return { ...base, ...overrides }
 }

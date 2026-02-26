@@ -1,7 +1,11 @@
+import { http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { LDOH_ORIGIN, LDOH_SITES_ENDPOINT } from "~/services/ldohSiteLookup/constants"
 import { DEFAULT_PREFERENCES } from "~/services/userPreferences"
+import { server } from "~/tests/msw/server"
+import { buildTempWindowPrefs } from "~/tests/test-utils/factories"
 
 vi.mock("~/entrypoints/background/tempWindowPool", () => ({
   handleTempWindowFetch: vi.fn(),
@@ -42,6 +46,8 @@ vi.mock("~/services/userPreferences", async (importOriginal) => {
 })
 
 describe("ldohSiteLookup background refresh", () => {
+  const ldohSitesUrl = `${LDOH_ORIGIN}${LDOH_SITES_ENDPOINT}`
+
   beforeEach(() => {
     vi.unstubAllGlobals()
     vi.restoreAllMocks()
@@ -53,15 +59,7 @@ describe("ldohSiteLookup background refresh", () => {
     const { userPreferences } = await import("~/services/userPreferences")
     vi.mocked(userPreferences.getPreferences).mockResolvedValue({
       ...DEFAULT_PREFERENCES,
-      tempWindowFallback: {
-        enabled: true,
-        useInPopup: true,
-        useInSidePanel: true,
-        useInOptions: true,
-        useForAutoRefresh: true,
-        useForManualRefresh: true,
-        tempContextMode: "composite",
-      },
+      tempWindowFallback: buildTempWindowPrefs(),
     })
 
     const { sendRuntimeMessage } = await import("~/utils/browserApi")
@@ -76,15 +74,18 @@ describe("ldohSiteLookup background refresh", () => {
       "~/services/ldohSiteLookup/background"
     )
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(new Response("", { status: 401 })) as any,
+    server.use(
+      http.get(ldohSitesUrl, () => {
+        return new HttpResponse("", { status: 401 })
+      }),
     )
 
     const result = await refreshLdohSiteListCache()
 
     expect(result.success).toBe(false)
-    expect((result as any).unauthenticated).toBe(true)
+    if (!result.success) {
+      expect(result.unauthenticated).toBe(true)
+    }
     expect(vi.mocked(sendRuntimeMessage)).not.toHaveBeenCalled()
     expect(vi.mocked(writeLdohSiteListCache)).not.toHaveBeenCalled()
   })
@@ -95,15 +96,7 @@ describe("ldohSiteLookup background refresh", () => {
     const { userPreferences } = await import("~/services/userPreferences")
     vi.mocked(userPreferences.getPreferences).mockResolvedValue({
       ...DEFAULT_PREFERENCES,
-      tempWindowFallback: {
-        enabled: true,
-        useInPopup: true,
-        useInSidePanel: true,
-        useInOptions: true,
-        useForAutoRefresh: true,
-        useForManualRefresh: true,
-        tempContextMode: "composite",
-      },
+      tempWindowFallback: buildTempWindowPrefs(),
     })
 
     const { sendRuntimeMessage } = await import("~/utils/browserApi")
@@ -118,15 +111,18 @@ describe("ldohSiteLookup background refresh", () => {
       "~/services/ldohSiteLookup/background"
     )
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(new Response("", { status: 429 })) as any,
+    server.use(
+      http.get(ldohSitesUrl, () => {
+        return new HttpResponse("", { status: 429 })
+      }),
     )
 
     const result = await refreshLdohSiteListCache()
 
     expect(result.success).toBe(false)
-    expect((result as any).unauthenticated).toBeUndefined()
+    if (!result.success) {
+      expect(result.unauthenticated).toBeUndefined()
+    }
     expect(vi.mocked(sendRuntimeMessage)).not.toHaveBeenCalled()
     expect(vi.mocked(writeLdohSiteListCache)).not.toHaveBeenCalled()
   })
@@ -137,15 +133,7 @@ describe("ldohSiteLookup background refresh", () => {
     const { userPreferences } = await import("~/services/userPreferences")
     vi.mocked(userPreferences.getPreferences).mockResolvedValue({
       ...DEFAULT_PREFERENCES,
-      tempWindowFallback: {
-        enabled: true,
-        useInPopup: true,
-        useInSidePanel: true,
-        useInOptions: true,
-        useForAutoRefresh: true,
-        useForManualRefresh: true,
-        tempContextMode: "composite",
-      },
+      tempWindowFallback: buildTempWindowPrefs(),
     })
 
     const { sendRuntimeMessage } = await import("~/utils/browserApi")
@@ -175,19 +163,22 @@ describe("ldohSiteLookup background refresh", () => {
       "~/services/ldohSiteLookup/background"
     )
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(new Response("", { status: 403 })) as any,
+    server.use(
+      http.get(ldohSitesUrl, () => {
+        return new HttpResponse("", { status: 403 })
+      }),
     )
 
     const result = await refreshLdohSiteListCache()
 
     expect(result.success).toBe(true)
-    expect((result as any).cachedCount).toBe(1)
+    if (result.success === true) {
+      expect(result.cachedCount).toBe(1)
+    }
 
-    expect(vi.mocked(sendRuntimeMessage)).toHaveBeenCalled()
-    const call = vi.mocked(sendRuntimeMessage).mock.calls[0]?.[0] as any
-    expect(call?.action).toBe(RuntimeActionIds.TempWindowFetch)
+    expect(vi.mocked(sendRuntimeMessage)).toHaveBeenCalledWith(
+      expect.objectContaining({ action: RuntimeActionIds.TempWindowFetch }),
+    )
 
     expect(vi.mocked(writeLdohSiteListCache)).toHaveBeenCalledWith([
       { id: "site-1", apiBaseUrl: "https://api.example.com" },
