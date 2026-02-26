@@ -1,5 +1,20 @@
 # Changelog
 
+## [3.24.0](https://github.com/qixing-jk/all-api-hub/compare/v3.23.0...v3.24.0) (2026-02-26)
+
+
+### Features
+
+* **changelog:** implement inline update-log UI for extension updates ([#514](https://github.com/qixing-jk/all-api-hub/issues/514)) ([ec2283e](https://github.com/qixing-jk/all-api-hub/commit/ec2283e2d2d6a5dc8597c0ab392753105583b0df))
+* **changelog:** show changelog on first UI open after update ([#512](https://github.com/qixing-jk/all-api-hub/issues/512)) ([72f3da3](https://github.com/qixing-jk/all-api-hub/commit/72f3da330778fcd40823fda23e95bc0e25e939a9))
+* **dev:** enhance dev experience with dynamic manifest description ([7ffbc6d](https://github.com/qixing-jk/all-api-hub/commit/7ffbc6dfd99c5ae83819ef8ed5d497c3e8585ef1))
+* **docs-link:** add language-aware documentation URL generation ([#517](https://github.com/qixing-jk/all-api-hub/issues/517)) ([9304adb](https://github.com/qixing-jk/all-api-hub/commit/9304adbd34f9214d7389dc910bf1df9493f04f86))
+* **i18n:** update manifest description for all locales ([440d6fc](https://github.com/qixing-jk/all-api-hub/commit/440d6fc2ae2f2fa998ebb28f8a3f9ebb413e8875))
+* **ldoh:** add LDOH site lookup integration ([#515](https://github.com/qixing-jk/all-api-hub/issues/515)) ([d32f2bb](https://github.com/qixing-jk/all-api-hub/commit/d32f2bb387be22473780d5b83ac86c559a73fa74))
+* **ldoh:** restrict temp-window fallback to 403-only for LDOH site list ([#518](https://github.com/qixing-jk/all-api-hub/issues/518)) ([8326aa6](https://github.com/qixing-jk/all-api-hub/commit/8326aa63d5cf0bbc62597a2170b9ec66a8ea83a5))
+* **preferences:** re-enable changelog-on-update during v13-&gt;v14 migration ([406e321](https://github.com/qixing-jk/all-api-hub/commit/406e321935f6753c0218f5528427482d9fa735af))
+* **UpdateLogDialog:** increase iframe height and add max height constraint ([32aa929](https://github.com/qixing-jk/all-api-hub/commit/32aa929e7d0ecfcced243f5ceb650a7590f2b0b2))
+
 ## [3.23.0](https://github.com/qixing-jk/all-api-hub/compare/v3.22.0...v3.23.0) (2026-02-24)
 
 
