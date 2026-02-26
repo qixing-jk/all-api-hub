@@ -385,6 +385,7 @@ const _fetchApi = async <T>(
     fetchOptions,
     onlyData,
     responseType,
+    tempWindowFallback: options.tempWindowFallback,
     accountId: accountId ?? accountInfo?.id,
     authType: resolvedAuth.authType,
     cookieAuthSessionCookie:

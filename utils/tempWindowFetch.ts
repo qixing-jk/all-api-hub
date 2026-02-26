@@ -158,6 +158,34 @@ const TEMP_WINDOW_FALLBACK_CODES = new Set<ApiErrorCode>([
   API_ERROR_CODES.CONTENT_TYPE_MISMATCH,
 ])
 
+export interface TempWindowFallbackAllowlist {
+  statusCodes?: number[]
+  codes?: ApiErrorCode[]
+}
+
+/**
+ * Determines whether a given error matches the status codes or error codes that should trigger temp window fallback.
+ * @param error The error thrown by the primary request, which may contain a statusCode and/or code property.
+ * @param allowlist Optional allowlist of status codes and error codes that should trigger temp window fallback. If not provided, defaults to common auth and rate limit errors.
+ */
+export function matchesTempWindowFallbackAllowlist(
+  error: { statusCode?: number; code?: ApiErrorCode },
+  allowlist?: TempWindowFallbackAllowlist,
+): boolean {
+  const statusAllowlist = allowlist
+    ? new Set(allowlist.statusCodes ?? [])
+    : TEMP_WINDOW_FALLBACK_STATUS
+  const codeAllowlist = allowlist
+    ? new Set(allowlist.codes ?? [])
+    : TEMP_WINDOW_FALLBACK_CODES
+
+  const hasCodeFallback = !!error.code && codeAllowlist.has(error.code)
+  const hasStatusFallback =
+    !!error.statusCode && statusAllowlist.has(error.statusCode)
+
+  return hasCodeFallback || hasStatusFallback
+}
+
 /**
  * Mutates an {@link ApiError} to preserve its original code and attach a more
  * specific failure reason.
@@ -182,6 +210,7 @@ export interface TempWindowFallbackContext {
   fetchOptions: RequestInit
   onlyData: boolean
   responseType: TempWindowResponseType
+  tempWindowFallback?: TempWindowFallbackAllowlist
   /** Account ID for per-request cookie isolation */
   accountId?: string
   /** Auth type for cookie auth handling */
@@ -254,18 +283,15 @@ async function shouldUseTempWindowFallback(
     )
     return false
   }
-  const hasCodeFallback =
-    !!error.code && TEMP_WINDOW_FALLBACK_CODES.has(error.code)
-  const hasStatusFallback =
-    !!error.statusCode && TEMP_WINDOW_FALLBACK_STATUS.has(error.statusCode)
 
-  if (!hasCodeFallback && !hasStatusFallback) {
+  if (!matchesTempWindowFallbackAllowlist(error, context.tempWindowFallback)) {
     logSkipTempWindowFallback(
       "Error does not match any temp window fallback codes or statuses.",
       context,
       {
         statusCode: error.statusCode,
         code: error.code ?? null,
+        allowlist: context.tempWindowFallback ?? null,
       },
     )
     return false

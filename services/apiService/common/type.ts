@@ -10,7 +10,10 @@ import {
   type Sub2ApiAuthConfig,
 } from "~/types"
 import type { PerCallPrice } from "~/utils/modelPricing"
-import type { TempWindowResponseType } from "~/utils/tempWindowFetch"
+import type {
+  TempWindowFallbackAllowlist,
+  TempWindowResponseType,
+} from "~/utils/tempWindowFetch"
 
 // ============= 类型定义 =============
 export interface UserInfo {
@@ -352,6 +355,7 @@ export interface FetchApiOptions {
   endpoint: string
   options?: RequestInit
   responseType?: TempWindowResponseType
+  tempWindowFallback?: TempWindowFallbackAllowlist
 }
 
 /**

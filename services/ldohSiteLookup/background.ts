@@ -1,5 +1,5 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { ApiError } from "~/services/apiService/common/errors"
+import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import type { ApiServiceRequest } from "~/services/apiService/common/type"
 import { fetchApi } from "~/services/apiService/common/utils"
 import { writeLdohSiteListCache } from "~/services/ldohSiteLookup/cache"
@@ -41,6 +41,10 @@ async function fetchLdohSites(): Promise<LdohSitesApiResponse> {
     {
       endpoint: LDOH_SITES_ENDPOINT,
       responseType: "json",
+      tempWindowFallback: {
+        statusCodes: [403],
+        codes: [API_ERROR_CODES.HTTP_403],
+      },
       options: {
         credentials: "include",
       },
@@ -70,10 +74,10 @@ export async function refreshLdohSiteListCache(): Promise<LdohSiteLookupRefreshS
       return { success: true, cachedCount: cache.items.length }
     } catch (error) {
       const unauthenticated =
-        error instanceof ApiError &&
-        (error.statusCode === 401 || error.statusCode === 403)
+        error instanceof ApiError && error.statusCode === 401
+      const isForbidden = error instanceof ApiError && error.statusCode === 403
 
-      if (!unauthenticated) {
+      if (!unauthenticated && !isForbidden) {
         logger.warn("Failed to refresh LDOH site list cache", {
           error: getErrorMessage(error),
         })
