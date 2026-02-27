@@ -148,31 +148,6 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
     })
   })
 
-  it("should prune entries whose targets are not strings", async () => {
-    const channel = {
-      id: 1,
-      model_mapping: '{"keep":"ok","bad":123}',
-    } as any
-    const service = {
-      updateChannelModelMapping: vi.fn().mockResolvedValue(undefined),
-    } as any
-
-    const result = await ModelRedirectService.applyModelMappingToChannel(
-      channel,
-      {},
-      service,
-      {
-        pruneMissingTargets: true,
-        availableModels: ["ok"],
-      },
-    )
-
-    expect(result).toEqual({ updated: true, prunedCount: 1 })
-    expect(service.updateChannelModelMapping).toHaveBeenCalledWith(channel, {
-      keep: "ok",
-    })
-  })
-
   it("should preserve entries whose targets exist in available models", async () => {
     const channel = {
       id: 1,

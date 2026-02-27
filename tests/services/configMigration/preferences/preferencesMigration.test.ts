@@ -25,12 +25,12 @@ import { DEFAULT_VELOERA_CONFIG } from "~/types/veloeraConfig"
 import { DEFAULT_WEBDAV_SETTINGS, WEBDAV_SYNC_STRATEGIES } from "~/types/webdav"
 import { DEFAULT_SORTING_PRIORITY_CONFIG } from "~/utils/sortingPriority"
 
-const modelRedirectFixture = {
-  ...buildUserPreferences().modelRedirect,
+const buildModelRedirectFixture = () => ({
+  ...structuredClone(buildUserPreferences().modelRedirect),
   enabled: false,
   standardModels: [],
   pruneMissingTargetsOnModelSync: false,
-}
+})
 
 // Helper function to create a minimal v0 preferences object
 /**
@@ -79,7 +79,7 @@ function createV0Preferences(
         maxAttemptsPerDay: 3,
       },
     },
-    modelRedirect: modelRedirectFixture,
+    modelRedirect: buildModelRedirectFixture(),
     sortingPriorityConfig: undefined,
     lastUpdated: Date.now(),
     // v0 does not have preferencesVersion
@@ -481,7 +481,7 @@ describe("preferencesMigration", () => {
             maxAttemptsPerDay: 3,
           },
         },
-        modelRedirect: modelRedirectFixture,
+        modelRedirect: buildModelRedirectFixture(),
         webdav: DEFAULT_WEBDAV_SETTINGS,
         lastUpdated: Date.now(),
         preferencesVersion: 2,
