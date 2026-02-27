@@ -4,6 +4,7 @@ import { NEW_API } from "~/constants/siteType"
 import { ModelRedirectService } from "~/services/modelRedirect"
 import { modelSyncScheduler } from "~/services/modelSync/scheduler"
 import { userPreferences } from "~/services/userPreferences"
+import { buildManagedSiteChannel } from "~/tests/test-utils/factories"
 import { DEFAULT_MODEL_REDIRECT_PREFERENCES } from "~/types/managedSiteModelRedirect"
 
 const {
@@ -119,7 +120,11 @@ describe("modelSyncScheduler.executeSync - model redirect pruning", () => {
     oldModels?: string[]
     newModels?: string[]
   }) => {
-    const channel = { id: 1, name: "channel-1", model_mapping: "{}" } as any
+    const channel = buildManagedSiteChannel({
+      id: 1,
+      name: "channel-1",
+      model_mapping: "{}",
+    })
     mockListChannels.mockResolvedValue({ items: [channel] })
 
     mockRunBatch.mockImplementation(async (_channels: any, options: any) => {
