@@ -5,9 +5,12 @@ import { matchesTempWindowFallbackAllowlist } from "~/utils/tempWindowFetch"
 
 describe("matchesTempWindowFallbackAllowlist", () => {
   it("uses global defaults when no allowlist is provided", () => {
-    expect(matchesTempWindowFallbackAllowlist({ statusCode: 401 })).toBe(true)
+    expect(matchesTempWindowFallbackAllowlist({ statusCode: 401 })).toBe(false)
     expect(matchesTempWindowFallbackAllowlist({ statusCode: 403 })).toBe(true)
-    expect(matchesTempWindowFallbackAllowlist({ statusCode: 429 })).toBe(true)
+    expect(matchesTempWindowFallbackAllowlist({ statusCode: 429 })).toBe(false)
+    expect(
+      matchesTempWindowFallbackAllowlist({ code: API_ERROR_CODES.HTTP_403 }),
+    ).toBe(true)
     expect(
       matchesTempWindowFallbackAllowlist({
         code: API_ERROR_CODES.CONTENT_TYPE_MISMATCH,

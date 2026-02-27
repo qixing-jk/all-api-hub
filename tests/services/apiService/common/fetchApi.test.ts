@@ -5,6 +5,7 @@ import { AuthTypeEnum, TEMP_WINDOW_HEALTH_STATUS_CODES } from "~/types"
 let fetchApiData: typeof import("~/services/apiService/common/utils").fetchApiData
 let fetchApi: typeof import("~/services/apiService/common/utils").fetchApi
 let ApiError: typeof import("~/services/apiService/common/errors").ApiError
+let ApiErrorCodes: typeof import("~/services/apiService/common/errors").API_ERROR_CODES
 
 const { mockLogRequestRateLimiter, mockCreateMinIntervalLimiter } = vi.hoisted(
   () => {
@@ -65,6 +66,27 @@ const createFetchMock = (response: any) => {
   }) as any
 }
 
+const createErrorFetchMock = (params: {
+  status: number
+  headers?: Record<string, string>
+}) => {
+  const normalizedHeaders = Object.fromEntries(
+    Object.entries(params.headers ?? {}).map(([key, value]) => [
+      key.toLowerCase(),
+      value,
+    ]),
+  )
+
+  return vi.fn().mockResolvedValue({
+    ok: false,
+    status: params.status,
+    headers: {
+      get: (name: string) => normalizedHeaders[name.toLowerCase()] ?? null,
+    },
+    json: async () => ({}),
+  }) as any
+}
+
 declare const global: any
 
 describe("apiService common fetchApi helpers", () => {
@@ -80,6 +102,7 @@ describe("apiService common fetchApi helpers", () => {
       typeof import("~/services/apiService/common/errors")
     >("~/services/apiService/common/errors")
     ApiError = errors.ApiError
+    ApiErrorCodes = errors.API_ERROR_CODES
   })
 
   beforeEach(() => {
@@ -183,6 +206,98 @@ describe("apiService common fetchApi helpers", () => {
         { endpoint: ENDPOINT },
       ),
     ).rejects.toBeInstanceOf(ApiError)
+  })
+
+  it("classifies 401 HTML responses as CONTENT_TYPE_MISMATCH for JSON requests", async () => {
+    global.fetch = createErrorFetchMock({
+      status: 401,
+      headers: { "content-type": "text/html; charset=utf-8" },
+    })
+
+    await expect(
+      fetchApiData(
+        {
+          baseUrl: BASE_URL,
+          auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+        },
+        {
+          endpoint: ENDPOINT,
+          tempWindowFallback: { statusCodes: [], codes: [] },
+        },
+      ),
+    ).rejects.toMatchObject({
+      statusCode: 401,
+      code: ApiErrorCodes.CONTENT_TYPE_MISMATCH,
+    })
+  })
+
+  it("classifies 401 JSON responses as HTTP_401 for JSON requests", async () => {
+    global.fetch = createErrorFetchMock({
+      status: 401,
+      headers: { "content-type": "application/json" },
+    })
+
+    await expect(
+      fetchApiData(
+        {
+          baseUrl: BASE_URL,
+          auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+        },
+        {
+          endpoint: ENDPOINT,
+          tempWindowFallback: { statusCodes: [], codes: [] },
+        },
+      ),
+    ).rejects.toMatchObject({
+      statusCode: 401,
+      code: ApiErrorCodes.HTTP_401,
+    })
+  })
+
+  it("classifies 429 HTML responses without Retry-After as CONTENT_TYPE_MISMATCH for JSON requests", async () => {
+    global.fetch = createErrorFetchMock({
+      status: 429,
+      headers: { "content-type": "text/html" },
+    })
+
+    await expect(
+      fetchApiData(
+        {
+          baseUrl: BASE_URL,
+          auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+        },
+        {
+          endpoint: ENDPOINT,
+          tempWindowFallback: { statusCodes: [], codes: [] },
+        },
+      ),
+    ).rejects.toMatchObject({
+      statusCode: 429,
+      code: ApiErrorCodes.CONTENT_TYPE_MISMATCH,
+    })
+  })
+
+  it("classifies 429 responses with Retry-After as HTTP_429 for JSON requests", async () => {
+    global.fetch = createErrorFetchMock({
+      status: 429,
+      headers: { "content-type": "text/html", "retry-after": "60" },
+    })
+
+    await expect(
+      fetchApiData(
+        {
+          baseUrl: BASE_URL,
+          auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+        },
+        {
+          endpoint: ENDPOINT,
+          tempWindowFallback: { statusCodes: [], codes: [] },
+        },
+      ),
+    ).rejects.toMatchObject({
+      statusCode: 429,
+      code: ApiErrorCodes.HTTP_429,
+    })
   })
 
   it("fetchApiData should throw ApiError when success is false with message", async () => {

@@ -150,11 +150,10 @@ export async function tempWindowGetRenderedTitle(params: {
 
   return await sendRuntimeMessage(payload)
 }
-const TEMP_WINDOW_FALLBACK_STATUS = new Set([401, 403, 429])
+
+const TEMP_WINDOW_FALLBACK_STATUS = new Set([403])
 const TEMP_WINDOW_FALLBACK_CODES = new Set<ApiErrorCode>([
-  API_ERROR_CODES.HTTP_401,
   API_ERROR_CODES.HTTP_403,
-  API_ERROR_CODES.HTTP_429,
   API_ERROR_CODES.CONTENT_TYPE_MISMATCH,
 ])
 

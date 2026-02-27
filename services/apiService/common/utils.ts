@@ -305,6 +305,26 @@ const apiRequest = async <T>(
       errorCode = API_ERROR_CODES.HTTP_429
     }
 
+    if (
+      responseType === "json" &&
+      (response.status === 401 || response.status === 429)
+    ) {
+      const retryAfter =
+        response.status === 429 ? response.headers.get("retry-after") : null
+      const hasRetryAfter = response.status === 429 && retryAfter !== null
+
+      if (!hasRetryAfter) {
+        const contentType = response.headers.get("content-type") || ""
+        const looksLikeHtml =
+          /\btext\/html\b/i.test(contentType) ||
+          /\bapplication\/xhtml\+xml\b/i.test(contentType)
+
+        if (looksLikeHtml) {
+          errorCode = API_ERROR_CODES.CONTENT_TYPE_MISMATCH
+        }
+      }
+    }
+
     throw new ApiError(
       `请求失败: ${response.status}`,
       response.status,
