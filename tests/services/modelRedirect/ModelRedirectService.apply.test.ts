@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { DONE_HUB, NEW_API } from "~/constants/siteType"
 import { hasValidManagedSiteConfig } from "~/services/managedSiteService"
 import { modelMetadataService } from "~/services/modelMetadata"
 import { ModelRedirectService } from "~/services/modelRedirect/ModelRedirectService"
@@ -120,6 +121,156 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
       channel,
       newMapping,
     )
+  })
+
+  it("should prune entries whose targets are missing from available models", async () => {
+    const channel = {
+      id: 1,
+      model_mapping: '{"missing":"nope","keep":"ok"}',
+    } as any
+    const service = {
+      updateChannelModelMapping: vi.fn().mockResolvedValue(undefined),
+    } as any
+
+    const result = await ModelRedirectService.applyModelMappingToChannel(
+      channel,
+      {},
+      service,
+      {
+        pruneMissingTargets: true,
+        availableModels: ["ok"],
+      },
+    )
+
+    expect(result).toEqual({ updated: true, prunedCount: 1 })
+    expect(service.updateChannelModelMapping).toHaveBeenCalledWith(channel, {
+      keep: "ok",
+    })
+  })
+
+  it("should preserve entries whose targets exist in available models", async () => {
+    const channel = {
+      id: 1,
+      model_mapping: '{"keep":"ok"}',
+    } as any
+    const service = {
+      updateChannelModelMapping: vi.fn().mockResolvedValue(undefined),
+    } as any
+
+    const result = await ModelRedirectService.applyModelMappingToChannel(
+      channel,
+      {},
+      service,
+      {
+        pruneMissingTargets: true,
+        availableModels: ["ok"],
+      },
+    )
+
+    expect(result).toEqual({ updated: false, prunedCount: 0 })
+    expect(service.updateChannelModelMapping).not.toHaveBeenCalled()
+  })
+
+  it("should preserve chained mapping targets on New API sites", async () => {
+    const channel = {
+      id: 1,
+      model_mapping:
+        '{"gpt-4":"gpt-4o","gpt-4o":"gpt-4o-2024-05-13","keep":"gpt-4o-2024-05-13"}',
+    } as any
+    const service = {
+      updateChannelModelMapping: vi.fn().mockResolvedValue(undefined),
+    } as any
+
+    const result = await ModelRedirectService.applyModelMappingToChannel(
+      channel,
+      {},
+      service,
+      {
+        pruneMissingTargets: true,
+        availableModels: ["gpt-4o-2024-05-13"],
+        siteType: NEW_API,
+      },
+    )
+
+    expect(result).toEqual({ updated: false, prunedCount: 0 })
+    expect(service.updateChannelModelMapping).not.toHaveBeenCalled()
+  })
+
+  it("should treat '+target' as available on DoneHub sites", async () => {
+    const channel = {
+      id: 1,
+      model_mapping: '{"gpt-4":"+gpt-4o"}',
+    } as any
+    const service = {
+      updateChannelModelMapping: vi.fn().mockResolvedValue(undefined),
+    } as any
+
+    const result = await ModelRedirectService.applyModelMappingToChannel(
+      channel,
+      {},
+      service,
+      {
+        pruneMissingTargets: true,
+        availableModels: ["gpt-4o"],
+        siteType: DONE_HUB,
+      },
+    )
+
+    expect(result).toEqual({ updated: false, prunedCount: 0 })
+    expect(service.updateChannelModelMapping).not.toHaveBeenCalled()
+  })
+
+  it("should apply new mappings even when existing model_mapping is invalid JSON (no pruning)", async () => {
+    const channel = {
+      id: 1,
+      model_mapping: "invalid-json",
+    } as any
+    const service = {
+      updateChannelModelMapping: vi.fn().mockResolvedValue(undefined),
+    } as any
+
+    const newMapping = {
+      "gpt-4o": "new",
+    }
+
+    const result = await ModelRedirectService.applyModelMappingToChannel(
+      channel,
+      newMapping,
+      service,
+      {
+        pruneMissingTargets: true,
+        availableModels: ["new"],
+      },
+    )
+
+    expect(result).toEqual({ updated: true, prunedCount: 0 })
+    expect(service.updateChannelModelMapping).toHaveBeenCalledWith(
+      channel,
+      newMapping,
+    )
+  })
+
+  it("should persist pruning updates even when newMapping is empty", async () => {
+    const channel = {
+      id: 1,
+      model_mapping: '{"missing":"nope"}',
+    } as any
+    const service = {
+      updateChannelModelMapping: vi.fn().mockResolvedValue(undefined),
+    } as any
+
+    const result = await ModelRedirectService.applyModelMappingToChannel(
+      channel,
+      {},
+      service,
+      {
+        pruneMissingTargets: true,
+        availableModels: ["something-else"],
+      },
+    )
+
+    expect(result).toEqual({ updated: true, prunedCount: 1 })
+    expect(service.updateChannelModelMapping).toHaveBeenCalledWith(channel, {})
   })
 })
 

@@ -6,6 +6,8 @@
   "standardModels": "Standard Models",
   "standardModelsDesc": "Select the standard models to generate redirect mappings for",
   "standardModelsPlaceholder": "Select models...",
+  "pruneMissingTargetsOnModelSync": "Prune invalid redirect targets after sync",
+  "pruneMissingTargetsOnModelSyncDesc": "Destructive: after a model sync refresh, deletes existing model_mapping entries whose target models are missing from the refreshed model list",
   "regenerateButton": "Regenerate Mapping Now",
   "regenerating": "Regenerating...",
   "lastUpdated": "Last Updated",

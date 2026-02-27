@@ -320,6 +320,22 @@ class ModelSyncScheduler {
                 } else {
                   const actualModels = payload.lastResult.newModels || []
 
+                  const oldModelsSet = new Set(
+                    (payload.lastResult.oldModels ?? [])
+                      .map((model) => model.trim())
+                      .filter(Boolean),
+                  )
+                  const newModelsSet = new Set(
+                    (payload.lastResult.newModels ?? [])
+                      .map((model) => model.trim())
+                      .filter(Boolean),
+                  )
+                  const modelsChanged =
+                    oldModelsSet.size !== newModelsSet.size ||
+                    Array.from(oldModelsSet).some(
+                      (model) => !newModelsSet.has(model),
+                    )
+
                   const newMapping =
                     ModelRedirectService.generateModelMappingForChannel(
                       standardModels,
@@ -327,16 +343,34 @@ class ModelSyncScheduler {
                     )
 
                   // Use unified method for incremental merge and apply
-                  await ModelRedirectService.applyModelMappingToChannel(
-                    channel,
-                    newMapping,
-                    service,
-                  )
+                  const shouldPruneMissingTargetsOnSync =
+                    modelRedirectConfig.pruneMissingTargetsOnModelSync &&
+                    modelsChanged &&
+                    newModelsSet.size > 0
+
+                  const { prunedCount, updated } =
+                    await ModelRedirectService.applyModelMappingToChannel(
+                      channel,
+                      newMapping,
+                      service,
+                      shouldPruneMissingTargetsOnSync
+                        ? {
+                            pruneMissingTargets: true,
+                            availableModels: actualModels,
+                            siteType,
+                          }
+                        : undefined,
+                    )
                   mappingSuccessCount++
                   logger.info("Applied model redirects to channel", {
                     channelId: channel.id,
                     channelName: channel.name,
                     mappingCount: Object.keys(newMapping).length,
+                    modelsChanged,
+                    pruneMissingTargetsOnModelSync:
+                      shouldPruneMissingTargetsOnSync,
+                    prunedCount,
+                    updated,
                   })
                 }
               } catch (error) {

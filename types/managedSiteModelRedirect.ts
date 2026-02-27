@@ -4,6 +4,13 @@
 export interface ModelRedirectPreferences {
   enabled: boolean
   standardModels: string[]
+  /**
+   * When enabled, prune existing `model_mapping` entries whose **target** models
+   * are missing after a managed-site model sync refresh.
+   *
+   * This is destructive and MUST remain opt-in.
+   */
+  pruneMissingTargetsOnModelSync: boolean
 }
 
 /**
@@ -40,4 +47,5 @@ export const ALL_PRESET_STANDARD_MODELS = Object.values(
 export const DEFAULT_MODEL_REDIRECT_PREFERENCES: ModelRedirectPreferences = {
   enabled: false,
   standardModels: [...ALL_PRESET_STANDARD_MODELS],
+  pruneMissingTargetsOnModelSync: false,
 }

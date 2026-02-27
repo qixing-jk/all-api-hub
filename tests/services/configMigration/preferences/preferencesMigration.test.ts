@@ -74,6 +74,7 @@ function createV0Preferences(
     modelRedirect: {
       enabled: false,
       standardModels: [],
+      pruneMissingTargetsOnModelSync: false,
     },
     sortingPriorityConfig: undefined,
     lastUpdated: Date.now(),
@@ -479,6 +480,7 @@ describe("preferencesMigration", () => {
         modelRedirect: {
           enabled: false,
           standardModels: [],
+          pruneMissingTargetsOnModelSync: false,
         },
         webdav: DEFAULT_WEBDAV_SETTINGS,
         lastUpdated: Date.now(),

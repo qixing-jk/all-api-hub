@@ -161,6 +161,28 @@ export default function ModelRedirectSettings() {
                 </p>
               </div>
 
+              <div className="mt-4 flex items-start justify-between">
+                <div className="flex-1">
+                  <p className="dark:text-dark-text-primary text-sm font-medium text-gray-700">
+                    {t("pruneMissingTargetsOnModelSync")}
+                  </p>
+                  <p className="dark:text-dark-text-secondary mt-1 text-sm text-gray-500">
+                    {t("pruneMissingTargetsOnModelSyncDesc")}
+                  </p>
+                </div>
+                <Switch
+                  checked={
+                    modelRedirect?.pruneMissingTargetsOnModelSync ?? false
+                  }
+                  disabled={isUpdating}
+                  onChange={async (enabled) => {
+                    await handleUpdate({
+                      pruneMissingTargetsOnModelSync: enabled,
+                    })
+                  }}
+                />
+              </div>
+
               <div>
                 <Button
                   type="button"

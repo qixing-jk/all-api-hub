@@ -4,7 +4,12 @@
  * Based on gpt-api-sync logic with enhancements for weighted channel selection
  */
 
-import { OCTOPUS } from "~/constants/siteType"
+import {
+  DONE_HUB,
+  NEW_API,
+  OCTOPUS,
+  type ManagedSiteType,
+} from "~/constants/siteType"
 import { modelMetadataService } from "~/services/modelMetadata"
 import { ModelSyncService } from "~/services/modelSync"
 import type { ManagedSiteChannel } from "~/types/managedSite"
@@ -55,6 +60,86 @@ export interface ModelRedirectBulkClearResult {
  * Core algorithm for generating model redirect mappings
  */
 export class ModelRedirectService {
+  private static areModelMappingsEqual(
+    left: Record<string, unknown>,
+    right: Record<string, unknown>,
+  ): boolean {
+    const leftKeys = Object.keys(left)
+    const rightKeys = Object.keys(right)
+    if (leftKeys.length !== rightKeys.length) return false
+
+    for (const key of leftKeys) {
+      if (left[key] !== right[key]) return false
+    }
+
+    return true
+  }
+
+  private static pruneModelMappingMissingTargets(
+    existingMapping: Record<string, unknown>,
+    availableModels: ReadonlySet<string>,
+    options?: {
+      siteType?: ManagedSiteType
+    },
+  ): { prunedMapping: Record<string, unknown>; removedCount: number } {
+    let removedCount = 0
+    const prunedMapping: Record<string, unknown> = {}
+
+    const siteType = options?.siteType
+    const supportsChainedMapping = siteType === NEW_API
+    const supportsBillingPrefix = siteType === DONE_HUB
+
+    const normalizeTargetForAvailability = (targetModel: string): string => {
+      const trimmed = targetModel.trim()
+      if (supportsBillingPrefix && trimmed.startsWith("+")) {
+        return trimmed.slice(1).trim()
+      }
+      return trimmed
+    }
+
+    const resolvesToAvailableModel = (startModel: string): boolean => {
+      let current = startModel
+      const visited = new Set<string>([current])
+
+      while (true) {
+        if (availableModels.has(current)) return true
+
+        const nextRaw = existingMapping[current]
+        if (typeof nextRaw !== "string") return false
+
+        const next = normalizeTargetForAvailability(nextRaw)
+        if (!next) return false
+
+        if (visited.has(next)) return false
+        visited.add(next)
+        current = next
+      }
+    }
+
+    for (const [sourceModel, targetModel] of Object.entries(existingMapping)) {
+      if (typeof targetModel !== "string") {
+        prunedMapping[sourceModel] = targetModel
+        continue
+      }
+
+      const normalizedTarget = normalizeTargetForAvailability(targetModel)
+      const isAvailable =
+        Boolean(normalizedTarget) &&
+        (availableModels.has(normalizedTarget) ||
+          (supportsChainedMapping &&
+            resolvesToAvailableModel(normalizedTarget)))
+
+      if (!isAvailable) {
+        removedCount += 1
+        continue
+      }
+
+      prunedMapping[sourceModel] = targetModel
+    }
+
+    return { prunedMapping, removedCount }
+  }
+
   /**
    * Build a managed-site `ModelSyncService` for the current preferences.
    * When `prefs` is provided, avoids an extra storage read.
@@ -120,17 +205,35 @@ export class ModelRedirectService {
     channel: ManagedSiteChannel,
     newMapping: Record<string, string>,
     service: ModelSyncService,
-  ): Promise<void> {
-    if (Object.keys(newMapping).length === 0) {
-      return
+    options?: {
+      availableModels?: string[]
+      pruneMissingTargets?: boolean
+      siteType?: ManagedSiteType
+    },
+  ): Promise<{ updated: boolean; prunedCount: number }> {
+    const hasNewMapping = Object.keys(newMapping).length > 0
+    const shouldPrune =
+      Boolean(options?.pruneMissingTargets) &&
+      Array.isArray(options?.availableModels)
+
+    if (!hasNewMapping && !shouldPrune) {
+      return { updated: false, prunedCount: 0 }
     }
 
     // Parse existing model_mapping from channel
-    let existingMapping: Record<string, string> = {}
-    if (channel.model_mapping) {
+    let existingMapping: Record<string, unknown> = {}
+    let canPruneExisting = true
+
+    const rawExisting = channel.model_mapping
+    if (rawExisting) {
       try {
-        existingMapping = JSON.parse(channel.model_mapping)
+        const parsed = JSON.parse(rawExisting) as unknown
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+          throw new Error("existing model_mapping is not an object")
+        }
+        existingMapping = parsed as Record<string, unknown>
       } catch (parseError) {
+        canPruneExisting = false
         logger.warn("Failed to parse existing model_mapping for channel", {
           channelId: channel.id,
           error: parseError,
@@ -138,13 +241,50 @@ export class ModelRedirectService {
       }
     }
 
+    let prunedCount = 0
+    let baseMapping: Record<string, unknown> = existingMapping
+
+    if (shouldPrune && canPruneExisting) {
+      const availableModelsSet = new Set(
+        options?.availableModels?.map((model) => model.trim()).filter(Boolean),
+      )
+      const { prunedMapping, removedCount } =
+        ModelRedirectService.pruneModelMappingMissingTargets(
+          existingMapping,
+          availableModelsSet,
+          { siteType: options?.siteType },
+        )
+      baseMapping = prunedMapping
+      prunedCount = removedCount
+    }
+
     // Merge mappings: new mapping overrides existing keys
-    const mergedMapping = {
-      ...existingMapping,
+    const mergedMapping: Record<string, unknown> = {
+      ...baseMapping,
       ...newMapping,
     }
 
-    await service.updateChannelModelMapping(channel, mergedMapping)
+    if (canPruneExisting) {
+      const hasMeaningfulChange = !ModelRedirectService.areModelMappingsEqual(
+        mergedMapping,
+        existingMapping,
+      )
+
+      if (!hasMeaningfulChange) {
+        return { updated: false, prunedCount }
+      }
+    } else if (!hasNewMapping) {
+      // Best-effort safety: if the existing mapping is invalid and we're not
+      // applying any new mapping, skip any destructive action (including prune).
+      return { updated: false, prunedCount: 0 }
+    }
+
+    await service.updateChannelModelMapping(
+      channel,
+      mergedMapping as Record<string, string>,
+    )
+
+    return { updated: true, prunedCount }
   }
 
   /**

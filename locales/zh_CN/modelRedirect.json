@@ -6,6 +6,8 @@
   "standardModels": "标准模型",
   "standardModelsDesc": "选择需要生成重定向映射的标准模型",
   "standardModelsPlaceholder": "请选择模型…",
+  "pruneMissingTargetsOnModelSync": "同步后清理无效的重定向目标",
+  "pruneMissingTargetsOnModelSyncDesc": "危险操作：在模型同步刷新后，将删除 model_mapping 中目标模型不在最新模型列表里的映射",
   "regenerateButton": "立即重新生成映射",
   "regenerating": "正在重新生成…",
   "lastUpdated": "上次更新",
