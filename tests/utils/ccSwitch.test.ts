@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 
+import { buildDisplaySiteData } from "~/tests/test-utils/factories"
+import type { ApiToken } from "~/types"
 import { openInCCSwitch } from "~/utils/ccSwitch"
 
 vi.mock("react-hot-toast", () => ({
@@ -9,13 +11,25 @@ vi.mock("react-hot-toast", () => ({
   },
 }))
 
-const mockAccount = {
+const mockAccount = buildDisplaySiteData({
   id: "acc",
   name: "Example",
   baseUrl: "https://x.test",
-} as any
+})
 
-const mockToken = { id: "tok", key: "sk-test" } as any
+const mockToken: ApiToken = {
+  id: 1,
+  user_id: 1,
+  key: "test-api-key",
+  name: "Test Token",
+  created_time: Date.now(),
+  accessed_time: Date.now(),
+  expired_time: -1,
+  remain_quota: 1000000,
+  used_quota: 0,
+  unlimited_quota: true,
+  status: 1,
+}
 
 describe("ccSwitch", () => {
   describe("openInCCSwitch", () => {
