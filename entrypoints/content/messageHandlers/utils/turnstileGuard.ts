@@ -36,12 +36,25 @@ type TurnstileAutoStartState = {
   lastAttemptAt: number
 }
 
+declare global {
+   
+  var __aahTurnstileAutoStartState:
+    | Map<string, TurnstileAutoStartState>
+    | undefined
+   
+  var __aahTurnstilePreTriggerState:
+    | Map<string, TurnstileAutoStartState>
+    | undefined
+}
+
 const TURNSTILE_AUTOSTART_MIN_INTERVAL_MS = 1000
 const TURNSTILE_AUTOSTART_MAX_ATTEMPTS = 3
 
 const PRETRIGGER_DEFAULT_MIN_INTERVAL_MS = 1200
 const PRETRIGGER_DEFAULT_MAX_ATTEMPTS = 2
 const PRETRIGGER_SETTLE_DELAY_MS = 600
+
+const MAX_PATTERN_LENGTH = 200
 
 const DEFAULT_CHECKIN_TRIGGER_CANDIDATE_SELECTOR = 'button, a, [role="button"]'
 const DEFAULT_CHECKIN_TRIGGER_POSITIVE_PATTERN = "(签到|check\\s*in|checkin)"
@@ -59,17 +72,12 @@ const WAIT_POLL_INTERVAL_MS = 250
  * lifetime share throttling limits.
  */
 function getTurnstileAutoStartStateMap(): Map<string, TurnstileAutoStartState> {
-  const globalAny = globalThis as any
-  if (!globalAny.__aahTurnstileAutoStartState) {
-    globalAny.__aahTurnstileAutoStartState = new Map<
-      string,
-      TurnstileAutoStartState
-    >()
-  }
-  return globalAny.__aahTurnstileAutoStartState as Map<
-    string,
-    TurnstileAutoStartState
-  >
+  const existing = globalThis.__aahTurnstileAutoStartState
+  if (existing) return existing
+
+  const created = new Map<string, TurnstileAutoStartState>()
+  globalThis.__aahTurnstileAutoStartState = created
+  return created
 }
 
 /**
@@ -93,17 +101,12 @@ function getTurnstilePreTriggerStateMap(): Map<
   string,
   TurnstileAutoStartState
 > {
-  const globalAny = globalThis as any
-  if (!globalAny.__aahTurnstilePreTriggerState) {
-    globalAny.__aahTurnstilePreTriggerState = new Map<
-      string,
-      TurnstileAutoStartState
-    >()
-  }
-  return globalAny.__aahTurnstilePreTriggerState as Map<
-    string,
-    TurnstileAutoStartState
-  >
+  const existing = globalThis.__aahTurnstilePreTriggerState
+  if (existing) return existing
+
+  const created = new Map<string, TurnstileAutoStartState>()
+  globalThis.__aahTurnstilePreTriggerState = created
+  return created
 }
 
 /**
@@ -229,17 +232,14 @@ function readTurnstileTokenFromDom(): string | null {
   if (!fields || fields.length === 0) return null
 
   for (const field of Array.from(fields)) {
-    const value = (() => {
-      if (
-        field instanceof HTMLInputElement ||
-        field instanceof HTMLTextAreaElement
-      ) {
-        return field.value
-      }
-      return (field as any)?.value
-    })()
+    if (
+      !(field instanceof HTMLInputElement) &&
+      !(field instanceof HTMLTextAreaElement)
+    ) {
+      continue
+    }
 
-    const token = typeof value === "string" ? value.trim() : ""
+    const token = field.value.trim()
     if (token) {
       return token
     }
@@ -348,6 +348,7 @@ function compileCaseInsensitiveRegex(
 ): RegExp {
   const normalized = typeof pattern === "string" ? pattern.trim() : ""
   if (!normalized) return fallback
+  if (normalized.length > MAX_PATTERN_LENGTH) return fallback
   try {
     return new RegExp(normalized, "i")
   } catch {
@@ -360,14 +361,27 @@ function compileCaseInsensitiveRegex(
  */
 function compileOptionalCaseInsensitiveRegex(
   pattern: string | undefined,
+  fallback: RegExp | null = null,
 ): RegExp | null {
   const normalized = typeof pattern === "string" ? pattern.trim() : ""
-  if (!normalized) return null
+  if (!normalized) return fallback
+  if (normalized.length > MAX_PATTERN_LENGTH) return fallback
   try {
     return new RegExp(normalized, "i")
   } catch {
-    return null
+    return fallback
   }
+}
+
+/**
+ *
+ */
+function getPreTriggerLabel(preTrigger: TurnstilePreTrigger): string | null {
+  if (preTrigger.kind === "clickSelector" || preTrigger.kind === "clickText") {
+    const normalized = String(preTrigger.label ?? "").trim()
+    return normalized ? normalized : null
+  }
+  return null
 }
 
 /**
@@ -413,9 +427,14 @@ function resolvePreTriggerThrottle(preTrigger: TurnstilePreTrigger): {
   maxAttempts: number
   minIntervalMs: number
 } {
-  const throttle = (preTrigger as any)?.throttle as
-    | { maxAttempts?: unknown; minIntervalMs?: unknown }
-    | undefined
+  if (preTrigger.kind === "none") {
+    return {
+      maxAttempts: PRETRIGGER_DEFAULT_MAX_ATTEMPTS,
+      minIntervalMs: PRETRIGGER_DEFAULT_MIN_INTERVAL_MS,
+    }
+  }
+
+  const throttle = preTrigger.throttle
 
   const rawMaxAttempts = throttle?.maxAttempts
   const maxAttempts =
@@ -522,7 +541,7 @@ function maybePreTriggerTurnstileWidget(params: {
     logger.debug("Turnstile pre-trigger skipped: no target found", {
       requestId,
       kind: preTrigger.kind,
-      label: (preTrigger as any)?.label ?? null,
+      label: getPreTriggerLabel(preTrigger),
       url: params.detection?.url
         ? sanitizeUrlForLog(params.detection.url)
         : null,
@@ -540,7 +559,7 @@ function maybePreTriggerTurnstileWidget(params: {
     logger.debug("Turnstile pre-trigger via click()", {
       requestId,
       kind: preTrigger.kind,
-      label: (preTrigger as any)?.label ?? null,
+      label: getPreTriggerLabel(preTrigger),
       targetText: String(target.textContent ?? "")
         .trim()
         .slice(0, 80),

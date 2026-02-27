@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { NEW_API } from "~/constants/siteType"
 import { newApiProvider } from "~/services/autoCheckin/providers/newApi"
-import { AuthTypeEnum, SiteHealthStatus, type SiteAccount } from "~/types"
+import { buildSiteAccount } from "~/tests/test-utils/factories"
+import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 
 vi.mock("~/services/apiService/common/utils", () => ({
   fetchApi: vi.fn(),
@@ -18,7 +19,7 @@ vi.mock("~/utils/browserApi", async (importOriginal) => {
   return { ...actual, isAllowedIncognitoAccess: vi.fn() }
 })
 
-const mockAccount: SiteAccount = {
+const mockAccount = buildSiteAccount({
   id: "test-id",
   site_name: "Test",
   site_url: "https://test.com",
@@ -40,10 +41,7 @@ const mockAccount: SiteAccount = {
     today_requests_count: 0,
     today_income: 0,
   },
-  last_sync_time: Date.now(),
-  created_at: Date.now(),
-  updated_at: Date.now(),
-}
+})
 
 describe("newApiProvider", () => {
   beforeEach(() => {

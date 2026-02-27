@@ -1,9 +1,9 @@
 import { ANYROUTER, NEW_API, VELOERA, WONG_GONGYI } from "~/constants/siteType"
 import { newApiProvider } from "~/services/autoCheckin/providers/newApi"
+import type { AutoCheckinProviderResult } from "~/services/autoCheckin/providers/types"
 import type { SiteAccount } from "~/types"
 
 import { AnyrouterCheckInParams, anyrouterProvider } from "./anyrouter"
-import type { AutoCheckinProviderResult } from "./types"
 import { veloeraProvider } from "./veloera"
 import { wongGongyiProvider } from "./wong"
 

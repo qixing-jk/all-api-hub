@@ -9,8 +9,7 @@ import { AuthTypeEnum } from "~/types"
 export function resolveAuthTypeEnum(
   authType: unknown,
 ): AuthTypeEnum | undefined {
-  return authType &&
-    Object.values(AuthTypeEnum).includes(authType as AuthTypeEnum)
+  return Object.values(AuthTypeEnum).includes(authType as AuthTypeEnum)
     ? (authType as AuthTypeEnum)
     : undefined
 }

@@ -128,4 +128,55 @@ describe("tempWindowFetch helpers (background context)", () => {
     )
     expect(response).toEqual({ success: true, title: "https://example.com" })
   })
+
+  it("returns a default failure when tempWindowFetch handler never responds", async () => {
+    handleTempWindowFetchMock.mockImplementation(() => {})
+
+    const response = await tempWindowFetch({
+      originUrl: "https://example.com",
+      fetchUrl: "https://example.com/api/test",
+      fetchOptions: { method: "GET" },
+    })
+
+    expect(sendRuntimeMessageMock).not.toHaveBeenCalled()
+    expect(handleTempWindowFetchMock).toHaveBeenCalledTimes(1)
+    expect(response).toEqual({
+      success: false,
+      error: "Empty tempWindowFetch response",
+    })
+  })
+
+  it("returns a default failure when tempWindowTurnstileFetch handler never responds", async () => {
+    handleTempWindowTurnstileFetchMock.mockImplementation(() => {})
+
+    const response = await tempWindowTurnstileFetch({
+      originUrl: "https://example.com",
+      pageUrl: "https://example.com/checkin",
+      fetchUrl: "https://example.com/api/checkin",
+      fetchOptions: { method: "POST" },
+    })
+
+    expect(sendRuntimeMessageMock).not.toHaveBeenCalled()
+    expect(handleTempWindowTurnstileFetchMock).toHaveBeenCalledTimes(1)
+    expect(response).toEqual({
+      success: false,
+      error: "Empty tempWindowTurnstileFetch response",
+      turnstile: { status: "error", hasTurnstile: false },
+    })
+  })
+
+  it("returns a default failure when tempWindowGetRenderedTitle handler never responds", async () => {
+    handleTempWindowGetRenderedTitleMock.mockImplementation(() => {})
+
+    const response = await tempWindowGetRenderedTitle({
+      originUrl: "https://example.com",
+    })
+
+    expect(sendRuntimeMessageMock).not.toHaveBeenCalled()
+    expect(handleTempWindowGetRenderedTitleMock).toHaveBeenCalledTimes(1)
+    expect(response).toEqual({
+      success: false,
+      error: "Empty tempWindowGetRenderedTitle response",
+    })
+  })
 })

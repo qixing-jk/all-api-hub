@@ -131,19 +131,19 @@ async function resolveTempContextMode(): Promise<
 async function prepareTempContextFetchOptions(params: {
   tabId: number
   url: string
-  rawOptions: Record<string, any>
+  rawOptions: RequestInit
   resolvedAuthType?: AuthTypeEnum
   accountId?: string
   cookieAuthSessionCookie?: string
   addFirefoxAuthModeHeader?: boolean
 }): Promise<{
   ruleId: number | null
-  effectiveFetchOptions: Record<string, any>
+  effectiveFetchOptions: RequestInit
 }> {
   const { tabId, url, rawOptions, resolvedAuthType } = params
 
   let ruleId: number | null = null
-  let effectiveFetchOptions: Record<string, any> = rawOptions
+  let effectiveFetchOptions: RequestInit = rawOptions
 
   // Chromium-based browsers: for token-auth (credentials=omit) we still need WAF cookies,
   // but MUST exclude session cookies to prevent cross-account contamination (issue #204).
@@ -633,8 +633,8 @@ export async function handleTempWindowFetch(
 
   let ruleId: number | null = null
 
-  const rawOptions = (fetchOptions ?? {}) as Record<string, any>
-  let effectiveFetchOptions: Record<string, any> = rawOptions
+  const rawOptions = (fetchOptions ?? {}) as RequestInit
+  let effectiveFetchOptions: RequestInit = rawOptions
 
   const resolvedAuthType = resolveAuthTypeEnum(authType)
 
@@ -744,8 +744,8 @@ export async function handleTempWindowTurnstileFetch(
 
   let ruleId: number | null = null
 
-  const rawOptions = (fetchOptions ?? {}) as Record<string, any>
-  let effectiveFetchOptions: Record<string, any> = rawOptions
+  const rawOptions = (fetchOptions ?? {}) as RequestInit
+  let effectiveFetchOptions: RequestInit = rawOptions
 
   const resolvedAuthType = resolveAuthTypeEnum(authType)
 
@@ -1227,7 +1227,7 @@ async function createTempContextInstance(
         width: 420,
         height: 520,
         focused: false,
-        ...(useIncognito ? ({ incognito: true } as any) : {}),
+        incognito: useIncognito,
       })
 
       if (!window?.id) {

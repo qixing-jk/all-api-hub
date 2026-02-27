@@ -8,6 +8,7 @@ import {
   RuntimeActionIds,
   type RuntimeActionId,
 } from "~/constants/runtimeActions"
+import { getErrorMessage } from "~/utils/error"
 import { isNotEmptyArray } from "~/utils/index"
 import { createLogger } from "~/utils/logger"
 
@@ -691,7 +692,10 @@ export async function isAllowedIncognitoAccess(): Promise<boolean | null> {
   try {
     return browser.extension.isAllowedIncognitoAccess()
   } catch (error) {
-    logger.debug("extension.isAllowedIncognitoAccess failed", error)
+    logger.debug(
+      "extension.isAllowedIncognitoAccess failed",
+      getErrorMessage(error),
+    )
     return null
   }
 }

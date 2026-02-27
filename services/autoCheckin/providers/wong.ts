@@ -115,7 +115,7 @@ async function checkinWongGongyi(
         : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
       data: checkinResponse ?? undefined,
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     return resolveProviderErrorResult({ error })
   }
 }

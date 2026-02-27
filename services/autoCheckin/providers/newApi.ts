@@ -12,6 +12,7 @@ import { fetchApi, fetchApiData } from "~/services/apiService/common/utils"
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+import type { TempWindowTurnstileFetch } from "~/types/tempWindowFetch"
 import type { TurnstilePreTrigger } from "~/types/turnstile"
 import { isAllowedIncognitoAccess } from "~/utils/browserApi"
 import { tempWindowTurnstileFetch } from "~/utils/tempWindowFetch"
@@ -109,14 +110,14 @@ function resolveStandardCheckinResult(params: {
     }
   }
 
-  if (payload.success && payload.data) {
+  if (payload.success) {
     return {
       status: CHECKIN_RESULT_STATUS.SUCCESS,
       rawMessage: message || undefined,
       messageKey: message
         ? undefined
         : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
-      data: payload.data,
+      data: payload.data ?? undefined,
     }
   }
 
@@ -172,27 +173,17 @@ async function fetchCheckedInTodayStatus(
  * user action (e.g. clicking a "check-in" button).
  */
 function resolveTurnstilePreTrigger(account: SiteAccount): TurnstilePreTrigger {
-  const raw = (account.checkIn?.customCheckIn as any)?.turnstilePreTrigger as
-    | TurnstilePreTrigger
-    | undefined
-
-  if (
-    raw &&
-    typeof raw === "object" &&
-    typeof (raw as any)?.kind === "string"
-  ) {
-    return raw
-  }
-
-  return { kind: "checkinButton" }
+  return (
+    account.checkIn?.customCheckIn?.turnstilePreTrigger ?? {
+      kind: "checkinButton",
+    }
+  )
 }
 
 /**
  * Fetch options used for the Turnstile-assisted POST /api/user/checkin replay.
  */
-function getTurnstileAssistedFetchOptions(
-  account: SiteAccount,
-): Record<string, any> {
+function getTurnstileAssistedFetchOptions(account: SiteAccount): RequestInit {
   const authType = account.authType || AuthTypeEnum.AccessToken
 
   const userIdHeaders = buildCompatUserIdHeaders(account.account_info?.id)
@@ -243,7 +234,7 @@ function buildTurnstileAssistedParams(
  *
  */
 async function maybeRetryTurnstileInIncognito(params: {
-  assisted: any
+  assisted: TempWindowTurnstileFetch
   assistedParams: ReturnType<typeof buildTurnstileAssistedParams>
   checkInUrl: string
 }): Promise<CheckinResult | null> {
@@ -466,7 +457,7 @@ async function checkinNewApi(account: SiteAccount): Promise<CheckinResult> {
         : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
       data: checkinResponse ?? undefined,
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     return resolveProviderErrorResult({ error })
   }
 }

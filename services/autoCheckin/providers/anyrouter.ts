@@ -1,16 +1,16 @@
 import { fetchApi } from "~/services/apiService/common/utils"
-import type { SiteAccount } from "~/types"
-import { AuthTypeEnum } from "~/types"
-import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
-
-import type { AutoCheckinProvider } from "./index"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
   isAlreadyCheckedMessage,
   normalizeCheckinMessage,
   resolveProviderErrorResult,
-} from "./shared"
-import type { AutoCheckinProviderResult } from "./types"
+} from "~/services/autoCheckin/providers/shared"
+import type { AutoCheckinProviderResult } from "~/services/autoCheckin/providers/types"
+import type { SiteAccount } from "~/types"
+import { AuthTypeEnum } from "~/types"
+import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+
+import type { AutoCheckinProvider } from "./index"
 
 export type AnyrouterCheckInParams = {
   site_url: string
@@ -110,9 +110,11 @@ const checkinAnyRouter = async (
         : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
       data: response ?? undefined,
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const normalizedError =
+      error instanceof Error ? error : new Error(String(error))
     return resolveProviderErrorResult({
-      error,
+      error: normalizedError,
       isAlreadyChecked: isAnyrouterAlreadyCheckedMessage,
     })
   }

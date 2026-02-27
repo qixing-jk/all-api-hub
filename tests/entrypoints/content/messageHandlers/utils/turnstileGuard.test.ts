@@ -6,11 +6,24 @@ import {
   waitForTurnstileToken,
 } from "~/entrypoints/content/messageHandlers/utils/turnstileGuard"
 
+/**
+ *
+ */
+function createMockElement<K extends keyof HTMLElementTagNameMap>(
+  tagName: K,
+  setup?: (el: HTMLElementTagNameMap[K]) => void,
+): HTMLElementTagNameMap[K] {
+  const element = document.createElement(tagName)
+  setup?.(element)
+  return element
+}
+
 describe("turnstileGuard", () => {
   beforeEach(() => {
     document.title = ""
     document.body.innerHTML = ""
-    delete (globalThis as any).__aahTurnstileAutoStartState
+    globalThis.__aahTurnstileAutoStartState = undefined
+    globalThis.__aahTurnstilePreTriggerState = undefined
     vi.restoreAllMocks()
   })
 
@@ -60,9 +73,10 @@ describe("turnstileGuard", () => {
     })
 
     it("clicks the cf-turnstile container when present", () => {
-      const container = document.createElement("div") as any
-      container.className = "cf-turnstile"
-      container.click = vi.fn()
+      const container = createMockElement("div", (el) => {
+        el.className = "cf-turnstile"
+        el.click = vi.fn()
+      })
       document.body.appendChild(container)
 
       const attempt = maybeAutoStartTurnstile({ requestId: "req-2" })
@@ -72,9 +86,10 @@ describe("turnstileGuard", () => {
     })
 
     it("throttles repeated attempts for the same requestId", () => {
-      const container = document.createElement("div") as any
-      container.className = "cf-turnstile"
-      container.click = vi.fn()
+      const container = createMockElement("div", (el) => {
+        el.className = "cf-turnstile"
+        el.click = vi.fn()
+      })
       document.body.appendChild(container)
 
       const first = maybeAutoStartTurnstile({ requestId: "req-3" })
@@ -87,9 +102,10 @@ describe("turnstileGuard", () => {
     })
 
     it("stops after reaching max attempts", () => {
-      const container = document.createElement("div") as any
-      container.className = "cf-turnstile"
-      container.click = vi.fn()
+      const container = createMockElement("div", (el) => {
+        el.className = "cf-turnstile"
+        el.click = vi.fn()
+      })
       document.body.appendChild(container)
 
       let now = 10_000
@@ -134,14 +150,28 @@ describe("turnstileGuard", () => {
       expect(result.detection.hasTurnstile).toBe(false)
     })
 
+    it("returns timeout when Turnstile is present but token never appears", async () => {
+      document.body.innerHTML = '<div class="cf-turnstile"></div>'
+
+      const result = await waitForTurnstileToken({
+        requestId: "req-timeout",
+        timeoutMs: 100,
+      })
+
+      expect(result.status).toBe("timeout")
+      expect(result.token).toBeNull()
+      expect(result.detection.hasTurnstile).toBe(true)
+    })
+
     it("uses preTrigger to click a check-in button and obtain a token", async () => {
-      const button = document.createElement("button") as any
-      button.textContent = "签到"
-      button.click = vi.fn(() => {
-        const input = document.createElement("input")
-        input.setAttribute("name", "cf-turnstile-response")
-        ;(input as HTMLInputElement).value = "token-2"
-        document.body.appendChild(input)
+      const button = createMockElement("button", (el) => {
+        el.textContent = "签到"
+        el.click = vi.fn(() => {
+          const input = document.createElement("input")
+          input.setAttribute("name", "cf-turnstile-response")
+          input.value = "token-2"
+          document.body.appendChild(input)
+        })
       })
 
       document.body.appendChild(button)

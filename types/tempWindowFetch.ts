@@ -7,7 +7,7 @@ export type TempWindowResponseType = "json" | "text" | "arrayBuffer" | "blob"
 export interface TempWindowFetchParams {
   originUrl: string
   fetchUrl: string
-  fetchOptions?: Record<string, any>
+  fetchOptions?: RequestInit
   requestId?: string
   responseType?: TempWindowResponseType
   suppressMinimize?: boolean

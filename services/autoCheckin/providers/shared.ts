@@ -5,9 +5,8 @@
  * magic strings (message keys, message parsing heuristics) across backends.
  */
 
+import type { AutoCheckinProviderResult } from "~/services/autoCheckin/providers/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
-
-import type { AutoCheckinProviderResult } from "./types"
 
 export const AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS = {
   alreadyCheckedToday: "autoCheckin:providerFallback.alreadyCheckedToday",
@@ -55,10 +54,27 @@ export function isAlreadyCheckedMessage(message: string): boolean {
  * (e.g. AnyRouter treats an empty message as already-checked in some flows).
  */
 export function resolveProviderErrorResult(params: {
-  error: any
+  error: unknown
   isAlreadyChecked?: (message: string) => boolean
 }): AutoCheckinProviderResult {
-  const errorMessage = params.error?.message || String(params.error)
+  const errorMessage = (() => {
+    const error = params.error
+    if (typeof error === "string") return error
+    if (error instanceof Error) return error.message
+
+    if (error && typeof error === "object") {
+      const record = error as Record<string, unknown>
+      if (typeof record.message === "string") return record.message
+      try {
+        const serialized = JSON.stringify(error)
+        return serialized === "{}" ? String(error) : serialized
+      } catch {
+        return String(error)
+      }
+    }
+
+    return String(error)
+  })()
   const isAlreadyCheckedDetector =
     params.isAlreadyChecked ?? isAlreadyCheckedMessage
 
@@ -69,7 +85,14 @@ export function resolveProviderErrorResult(params: {
     }
   }
 
-  if (params.error?.statusCode === 404 || errorMessage.includes("404")) {
+  const statusCode = (() => {
+    const error = params.error
+    if (!error || typeof error !== "object") return null
+    const record = error as Record<string, unknown>
+    return typeof record.statusCode === "number" ? record.statusCode : null
+  })()
+
+  if (statusCode === 404 || errorMessage.includes("404")) {
     return {
       status: CHECKIN_RESULT_STATUS.FAILED,
       messageKey:

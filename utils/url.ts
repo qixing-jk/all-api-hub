@@ -40,8 +40,12 @@ export function appendQueryParam(url: string, key: string, value: string) {
   } catch {
     const encodedKey = encodeURIComponent(normalizedKey)
     const encodedValue = encodeURIComponent(String(value ?? ""))
-    const separator = url.includes("?") ? "&" : "?"
-    return `${url}${separator}${encodedKey}=${encodedValue}`
+    const hashIndex = url.indexOf("#")
+    const base = hashIndex >= 0 ? url.slice(0, hashIndex) : url
+    const fragment = hashIndex >= 0 ? url.slice(hashIndex + 1) : ""
+    const separator = base.includes("?") ? "&" : "?"
+    const next = `${base}${separator}${encodedKey}=${encodedValue}`
+    return hashIndex >= 0 ? `${next}#${fragment}` : next
   }
 }
 

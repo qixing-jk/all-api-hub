@@ -1,7 +1,20 @@
+import { waitForTurnstileToken } from "~/entrypoints/content/messageHandlers/utils/turnstileGuard"
+import type {
+  TurnstilePreTrigger,
+  TurnstileTokenWaitResult,
+} from "~/types/turnstile"
 import { getErrorMessage } from "~/utils/error"
 import { createLogger } from "~/utils/logger"
 
-import { waitForTurnstileToken } from "../utils/turnstileGuard"
+type WaitForTurnstileTokenRequest = {
+  requestId?: string
+  timeoutMs?: number
+  preTrigger?: TurnstilePreTrigger
+}
+
+type WaitForTurnstileTokenResponse =
+  | ({ success: true } & TurnstileTokenWaitResult)
+  | { success: false; error: string }
 
 /**
  * Unified logger scoped to Turnstile token waits in the content script.
@@ -15,19 +28,19 @@ const logger = createLogger("TurnstileGuardHandler")
  * for a `cf-turnstile-response` token without attempting to solve Turnstile.
  */
 export function handleWaitForTurnstileToken(
-  request: any,
-  sendResponse: (res: any) => void,
+  request: WaitForTurnstileTokenRequest,
+  sendResponse: (res: WaitForTurnstileTokenResponse) => void,
 ) {
   const perform = async () => {
     try {
       const result = await waitForTurnstileToken({
-        requestId: request?.requestId,
-        timeoutMs: request?.timeoutMs,
-        preTrigger: request?.preTrigger,
+        requestId: request.requestId,
+        timeoutMs: request.timeoutMs,
+        preTrigger: request.preTrigger,
       })
 
       logger.debug("Turnstile token wait completed", {
-        requestId: request?.requestId ?? null,
+        requestId: request.requestId ?? null,
         status: result.status,
         hasTurnstile: result.detection.hasTurnstile,
         score: result.detection.score,
@@ -37,7 +50,7 @@ export function handleWaitForTurnstileToken(
       sendResponse({ success: true, ...result })
     } catch (error) {
       logger.warn("Turnstile token wait failed", {
-        requestId: request?.requestId ?? null,
+        requestId: request.requestId ?? null,
         error: getErrorMessage(error),
       })
       sendResponse({ success: false, error: getErrorMessage(error) })

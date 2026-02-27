@@ -7,10 +7,13 @@ import type { CheckinResultStatus } from "~/types/autoCheckin"
  * - `messageKey` should be an i18n key (e.g. `autoCheckin:providerFallback.*`).
  * - `rawMessage` preserves a human-readable backend message when present.
  */
-export interface AutoCheckinProviderResult {
+export interface AutoCheckinProviderResult<
+  TData = unknown,
+  TMessageParams extends Record<string, unknown> = Record<string, unknown>,
+> {
   status: CheckinResultStatus
   messageKey?: string
-  messageParams?: Record<string, any>
+  messageParams?: TMessageParams
   rawMessage?: string
-  data?: any
+  data?: TData
 }

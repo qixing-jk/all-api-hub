@@ -5,18 +5,19 @@
  */
 
 import { fetchApi } from "~/services/apiService/common/utils"
-import type { SiteAccount } from "~/types"
-import { AuthTypeEnum } from "~/types"
-import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
-
-import type { AutoCheckinProvider } from "./index"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
   isAlreadyCheckedMessage,
   normalizeCheckinMessage,
   resolveProviderErrorResult,
-} from "./shared"
-import type { AutoCheckinProviderResult } from "./types"
+} from "~/services/autoCheckin/providers/shared"
+import type { AutoCheckinProviderResult } from "~/services/autoCheckin/providers/types"
+import type { SiteAccount } from "~/types"
+import { AuthTypeEnum } from "~/types"
+import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+import { getErrorMessage } from "~/utils/error"
+
+import type { AutoCheckinProvider } from "./index"
 
 export type CheckinResult = AutoCheckinProviderResult
 
@@ -32,7 +33,7 @@ async function checkinVeloera(account: SiteAccount): Promise<CheckinResult> {
 
   try {
     // Call the check-in API endpoint
-    const response = await fetchApi<any>(
+    const response = await fetchApi<unknown>(
       {
         baseUrl: site_url,
         auth: {
@@ -54,9 +55,6 @@ async function checkinVeloera(account: SiteAccount): Promise<CheckinResult> {
       return {
         status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
         rawMessage: responseMessage || undefined,
-        messageKey: responseMessage
-          ? undefined
-          : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.alreadyCheckedToday,
         data: response.data ?? undefined,
       }
     }
@@ -82,8 +80,8 @@ async function checkinVeloera(account: SiteAccount): Promise<CheckinResult> {
         : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
       data: response ?? undefined,
     }
-  } catch (error: any) {
-    return resolveProviderErrorResult({ error })
+  } catch (error: unknown) {
+    return resolveProviderErrorResult({ error: getErrorMessage(error) })
   }
 }
 

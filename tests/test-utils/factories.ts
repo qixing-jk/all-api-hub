@@ -17,7 +17,12 @@ import {
   type TempWindowFallbackPreferences,
   type UserPreferences,
 } from "~/services/userPreferences"
-import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
+import {
+  AuthTypeEnum,
+  SiteHealthStatus,
+  type DisplaySiteData,
+  type SiteAccount,
+} from "~/types"
 import { CHANNEL_STATUS, type ManagedSiteChannel } from "~/types/managedSite"
 
 /**
@@ -103,6 +108,57 @@ export function buildDisplaySiteData(
     checkIn: {
       ...base.checkIn,
       ...overrides.checkIn,
+    },
+  }
+}
+
+/**
+ * Build a `SiteAccount` fixture with stable defaults and shallow overrides.
+ */
+export function buildSiteAccount(
+  overrides: Partial<SiteAccount> = {},
+): SiteAccount {
+  const base: SiteAccount = {
+    id: "account-1",
+    site_name: "Test",
+    site_url: "https://example.com",
+    site_type: "test",
+    exchange_rate: 7,
+    notes: "",
+    tagIds: [],
+    checkIn: { enableDetection: true },
+    health: { status: SiteHealthStatus.Healthy },
+    authType: AuthTypeEnum.AccessToken,
+    account_info: {
+      id: 1,
+      access_token: "test-token",
+      username: "test-user",
+      quota: 1000,
+      today_prompt_tokens: 0,
+      today_completion_tokens: 0,
+      today_quota_consumption: 0,
+      today_requests_count: 0,
+      today_income: 0,
+    },
+    last_sync_time: 1700000000000,
+    created_at: 1700000000000,
+    updated_at: 1700000000000,
+  }
+
+  return {
+    ...base,
+    ...overrides,
+    health: {
+      ...base.health,
+      ...(overrides.health ?? {}),
+    },
+    account_info: {
+      ...base.account_info,
+      ...(overrides.account_info ?? {}),
+    },
+    checkIn: {
+      ...base.checkIn,
+      ...(overrides.checkIn ?? {}),
     },
   }
 }

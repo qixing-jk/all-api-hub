@@ -81,14 +81,28 @@ export async function tempWindowFetch(
   // Make sure works normally in all contexts, including background
   if (isExtensionBackground()) {
     return await new Promise<TempWindowFetch>((resolve) => {
-      void handleTempWindowFetch(payload, (response) => {
+      let responded = false
+
+      const finalize = (response?: TempWindowFetch) => {
+        if (responded) return
+        responded = true
         resolve(
-          (response ?? {
+          response ?? {
             success: false,
             error: "Empty tempWindowFetch response",
-          }) as TempWindowFetch,
+          },
         )
-      })
+      }
+
+      void (async () => {
+        try {
+          await handleTempWindowFetch(payload, (response) => {
+            finalize(response as TempWindowFetch)
+          })
+        } finally {
+          finalize()
+        }
+      })()
     })
   }
   return await sendRuntimeMessage({
@@ -115,15 +129,29 @@ export async function tempWindowTurnstileFetch(
   // Make sure works normally in all contexts, including background
   if (isExtensionBackground()) {
     return await new Promise<TempWindowTurnstileFetch>((resolve) => {
-      void handleTempWindowTurnstileFetch(payload, (response) => {
+      let responded = false
+
+      const finalize = (response?: TempWindowTurnstileFetch) => {
+        if (responded) return
+        responded = true
         resolve(
-          (response ?? {
+          response ?? {
             success: false,
             error: "Empty tempWindowTurnstileFetch response",
             turnstile: { status: "error", hasTurnstile: false },
-          }) as TempWindowTurnstileFetch,
+          },
         )
-      })
+      }
+
+      void (async () => {
+        try {
+          await handleTempWindowTurnstileFetch(payload, (response) => {
+            finalize(response as TempWindowTurnstileFetch)
+          })
+        } finally {
+          finalize()
+        }
+      })()
     })
   }
 
@@ -153,14 +181,28 @@ export async function tempWindowGetRenderedTitle(params: {
   if (isExtensionBackground()) {
     return await new Promise<TempWindowRenderedTitleResponse>((resolve) => {
       // reuse background handler directly for synchronous contexts
-      void handleTempWindowGetRenderedTitle(payload, (response: any) => {
+      let responded = false
+
+      const finalize = (response?: TempWindowRenderedTitleResponse) => {
+        if (responded) return
+        responded = true
         resolve(
-          (response ?? {
+          response ?? {
             success: false,
             error: "Empty tempWindowGetRenderedTitle response",
-          }) as TempWindowRenderedTitleResponse,
+          },
         )
-      })
+      }
+
+      void (async () => {
+        try {
+          await handleTempWindowGetRenderedTitle(payload, (response: any) => {
+            finalize(response as TempWindowRenderedTitleResponse)
+          })
+        } finally {
+          finalize()
+        }
+      })()
     })
   }
 
