@@ -9,11 +9,11 @@ import {
   TempWindowHealthStatusCode,
   type Sub2ApiAuthConfig,
 } from "~/types"
-import type { PerCallPrice } from "~/utils/modelPricing"
 import type {
   TempWindowFallbackAllowlist,
   TempWindowResponseType,
-} from "~/utils/tempWindowFetch"
+} from "~/types/tempWindowFetch"
+import type { PerCallPrice } from "~/utils/modelPricing"
 
 // ============= 类型定义 =============
 export interface UserInfo {

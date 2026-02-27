@@ -13,11 +13,36 @@ import { createLogger } from "~/utils/logger"
  */
 const logger = createLogger("UrlUtils")
 
+const TAB_QUERY_PARAM_NAME = "tab" as const
+const TAB_HASH_PREFIX = "tab=" as const
+
 /**
- *
+ * Join a base URL and a path, collapsing duplicate slashes.
  */
 export function joinUrl(base: string, path: string) {
   return `${base.replace(/\/+$/, "")}/${path.replace(/^\/+/, "")}`
+}
+
+/**
+ * Append (or overwrite) a query parameter on an absolute URL.
+ *
+ * This helper is used for replay URLs that must include short-lived parameters
+ * like Cloudflare Turnstile tokens.
+ */
+export function appendQueryParam(url: string, key: string, value: string) {
+  const normalizedKey = (key || "").trim()
+  if (!normalizedKey) return url
+
+  try {
+    const parsed = new URL(url)
+    parsed.searchParams.set(normalizedKey, value)
+    return parsed.toString()
+  } catch {
+    const encodedKey = encodeURIComponent(normalizedKey)
+    const encodedValue = encodeURIComponent(String(value ?? ""))
+    const separator = url.includes("?") ? "&" : "?"
+    return `${url}${separator}${encodedKey}=${encodedValue}`
+  }
 }
 
 /**
@@ -47,21 +72,21 @@ export function parseTabFromUrl(
   let anchor: string | null = null
   let isHeadingAnchor = false
 
-  if (search.has("tab")) {
-    tab = search.get("tab")
+  if (search.has(TAB_QUERY_PARAM_NAME)) {
+    tab = search.get(TAB_QUERY_PARAM_NAME)
   }
 
   if (rawHash) {
     const [hashPath, hashQuery] = rawHash.split("?")
 
     // If hash starts with tab=xxx, use it directly
-    if (!tab && hashPath?.startsWith("tab=")) {
-      tab = hashPath.split("tab=")[1] || null
+    if (!tab && hashPath?.startsWith(TAB_HASH_PREFIX)) {
+      tab = hashPath.slice(TAB_HASH_PREFIX.length) || null
     }
 
     if (!tab && hashQuery) {
       const params = new URLSearchParams(hashQuery)
-      tab = params.get("tab")
+      tab = params.get(TAB_QUERY_PARAM_NAME)
     }
 
     const normalizedPath = hashPath?.trim() ?? ""
@@ -96,7 +121,7 @@ export function updateUrlWithTab(
 ) {
   const { replaceHistory = true, hashPage } = options
   const url = new URL(window.location.href)
-  url.searchParams.set("tab", tab)
+  url.searchParams.set(TAB_QUERY_PARAM_NAME, tab)
 
   if (hashPage) {
     url.hash = hashPage.startsWith("#") ? hashPage : `#${hashPage}`

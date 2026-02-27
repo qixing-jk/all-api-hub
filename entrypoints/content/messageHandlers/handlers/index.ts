@@ -1,6 +1,7 @@
 export { handleCheckCapGuard } from "./capGuard"
 export { handleCheckCloudflareGuard } from "./cloudflareGuard"
 export { handlePerformTempWindowFetch } from "./tempWindowFetch"
+export { handleWaitForTurnstileToken } from "./turnstileGuard"
 export { handleGetLocalStorage, handleGetUserFromLocalStorage } from "./storage"
 export { handleWaitAndGetUserInfo } from "./waitUserInfo"
 export { handleGetRenderedTitle } from "./tempWindowTitle"

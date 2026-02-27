@@ -1,6 +1,7 @@
 import { t } from "i18next"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { TURNSTILE_DEFAULT_QUERY_PARAM_NAME } from "~/constants/turnstile"
 import { accountStorage } from "~/services/accountStorage"
 import { getSiteType } from "~/services/detectSiteType"
 import {
@@ -9,15 +10,24 @@ import {
   userPreferences,
 } from "~/services/userPreferences"
 import { AuthTypeEnum } from "~/types"
+import type {
+  TempWindowFetchParams,
+  TempWindowTurnstileFetchParams,
+  TempWindowTurnstileMeta,
+} from "~/types/tempWindowFetch"
+import { resolveAuthTypeEnum } from "~/utils/authType"
 import {
   createTab,
   createWindow,
   hasWindowsAPI,
+  isAllowedIncognitoAccess,
   onTabRemoved,
   onWindowRemoved,
   removeTabOrWindow,
 } from "~/utils/browserApi"
 import {
+  addAuthMethodHeader,
+  AUTH_MODE,
   COOKIE_SESSION_OVERRIDE_HEADER_NAME,
   getCookieHeaderForUrl,
 } from "~/utils/cookieHelper"
@@ -31,7 +41,7 @@ import { safeRandomUUID } from "~/utils/identifier"
 import { createLogger } from "~/utils/logger"
 import { isProtectionBypassFirefoxEnv } from "~/utils/protectionBypass"
 import { sanitizeUrlForLog } from "~/utils/sanitizeUrlForLog"
-import { TempWindowFetchParams } from "~/utils/tempWindowFetch"
+import { appendQueryParam } from "~/utils/url"
 
 /**
  * Unified logger scoped to background temp-window lifecycle and fetch helpers.
@@ -42,6 +52,8 @@ const TEMP_CONTEXT_IDLE_TIMEOUT = 5000
 const QUIET_WINDOW_IDLE_TIMEOUT = 3000
 const DEFAULT_TEMP_CONTEXT_MODE: TempWindowFallbackPreferences["tempContextMode"] =
   "composite"
+
+const TEMP_WINDOW_FETCH_NO_RESPONSE_ERROR = "No response from temp window fetch"
 
 /** Retry delay when the content script is not ready to receive messages. */
 const SHIELD_BYPASS_UI_RETRY_MS = 250
@@ -111,6 +123,119 @@ async function resolveTempContextMode(): Promise<
         .tempContextMode ?? DEFAULT_TEMP_CONTEXT_MODE
     )
   }
+}
+
+/**
+ * Prepares fetch options for temp-context requests by applying cookie/session overrides when needed.
+ */
+async function prepareTempContextFetchOptions(params: {
+  tabId: number
+  url: string
+  rawOptions: Record<string, any>
+  resolvedAuthType?: AuthTypeEnum
+  accountId?: string
+  cookieAuthSessionCookie?: string
+  addFirefoxAuthModeHeader?: boolean
+}): Promise<{
+  ruleId: number | null
+  effectiveFetchOptions: Record<string, any>
+}> {
+  const { tabId, url, rawOptions, resolvedAuthType } = params
+
+  let ruleId: number | null = null
+  let effectiveFetchOptions: Record<string, any> = rawOptions
+
+  // Chromium-based browsers: for token-auth (credentials=omit) we still need WAF cookies,
+  // but MUST exclude session cookies to prevent cross-account contamination (issue #204).
+  if (!isProtectionBypassFirefoxEnv() && rawOptions.credentials === "omit") {
+    const cookieHeader = await getCookieHeaderForUrl(url, {
+      includeSession: false,
+    })
+
+    if (cookieHeader) {
+      ruleId = await applyTempWindowCookieRule({
+        tabId,
+        url,
+        cookieHeader,
+      })
+
+      if (ruleId) {
+        effectiveFetchOptions = {
+          ...rawOptions,
+          credentials: "include",
+        }
+      }
+    }
+  }
+
+  // Multi-account cookie auth: merge WAF cookies (no session) + per-account session cookie bundle.
+  if (resolvedAuthType === AuthTypeEnum.Cookie) {
+    const sessionCookie =
+      typeof params.cookieAuthSessionCookie === "string" &&
+      params.cookieAuthSessionCookie.trim()
+        ? params.cookieAuthSessionCookie
+        : params.accountId
+          ? (await accountStorage.getAccountById(params.accountId))?.cookieAuth
+              ?.sessionCookie
+          : undefined
+
+    if (sessionCookie && sessionCookie.trim()) {
+      const wafCookieHeader = await getCookieHeaderForUrl(url, {
+        includeSession: false,
+      })
+      const mergedCookieHeader = mergeCookieHeaders(
+        wafCookieHeader,
+        sessionCookie,
+      )
+
+      if (!isProtectionBypassFirefoxEnv()) {
+        // Chromium: inject Cookie header per-tab using DNR.
+        ruleId = await applyTempWindowCookieRule({
+          tabId,
+          url,
+          cookieHeader: mergedCookieHeader,
+        })
+
+        if (ruleId) {
+          effectiveFetchOptions = {
+            ...rawOptions,
+            credentials: "include",
+          }
+        }
+      } else {
+        // Firefox: pass session cookie bundle through a private header.
+        const headers = new Headers(rawOptions.headers ?? {})
+        headers.set(COOKIE_SESSION_OVERRIDE_HEADER_NAME, sessionCookie)
+        effectiveFetchOptions = {
+          ...rawOptions,
+          credentials: rawOptions.credentials ?? "include",
+          headers: Object.fromEntries(headers.entries()),
+        }
+      }
+    }
+  }
+
+  // Firefox cookie interceptor: add auth-mode header so the webRequest layer knows
+  // whether to include session cookies for this request.
+  if (params.addFirefoxAuthModeHeader && isProtectionBypassFirefoxEnv()) {
+    const mode =
+      resolvedAuthType === AuthTypeEnum.Cookie
+        ? AUTH_MODE.COOKIE_AUTH_MODE
+        : resolvedAuthType === AuthTypeEnum.AccessToken ||
+            rawOptions.credentials === "omit"
+          ? AUTH_MODE.TOKEN_AUTH_MODE
+          : AUTH_MODE.COOKIE_AUTH_MODE
+
+    effectiveFetchOptions = {
+      ...effectiveFetchOptions,
+      headers: await addAuthMethodHeader(
+        effectiveFetchOptions.headers ?? {},
+        mode,
+      ),
+    }
+  }
+
+  return { ruleId, effectiveFetchOptions }
 }
 
 /**
@@ -292,7 +417,7 @@ export async function handleOpenTempWindow(
     const preferredMode = await resolveTempContextMode()
     const origin = normalizeOrigin(url)
 
-    logTempWindow("openTempWindow", {
+    logTempWindow(RuntimeActionIds.OpenTempWindow, {
       requestId,
       origin,
       url: sanitizeUrlForLog(url),
@@ -389,7 +514,7 @@ export async function handleCloseTempWindow(
     const { requestId } = request
     const id = tempWindows.get(requestId)
 
-    logTempWindow("closeTempWindow", {
+    logTempWindow(RuntimeActionIds.CloseTempWindow, {
       requestId,
       mappedId: id ?? null,
       hasRequestContext: requestId
@@ -511,10 +636,7 @@ export async function handleTempWindowFetch(
   const rawOptions = (fetchOptions ?? {}) as Record<string, any>
   let effectiveFetchOptions: Record<string, any> = rawOptions
 
-  const resolvedAuthType: AuthTypeEnum | undefined =
-    authType && Object.values(AuthTypeEnum).includes(authType)
-      ? (authType as AuthTypeEnum)
-      : undefined
+  const resolvedAuthType = resolveAuthTypeEnum(authType)
 
   try {
     const context = await acquireTempContext(
@@ -524,75 +646,16 @@ export async function handleTempWindowFetch(
     )
     const { tabId } = context
 
-    // Chromium-based browsers: for token-auth (credentials=omit) we still need WAF cookies,
-    // but MUST exclude session cookies to prevent cross-account contamination (issue #204).
-    if (!isProtectionBypassFirefoxEnv() && rawOptions.credentials === "omit") {
-      const cookieHeader = await getCookieHeaderForUrl(fetchUrl, {
-        includeSession: false,
-      })
-
-      if (cookieHeader) {
-        ruleId = await applyTempWindowCookieRule({
-          tabId,
-          url: fetchUrl,
-          cookieHeader,
-        })
-
-        if (ruleId) {
-          effectiveFetchOptions = {
-            ...rawOptions,
-            credentials: "include",
-          }
-        }
-      }
-    }
-
-    // Multi-account cookie auth: merge WAF cookies (no session) + per-account session cookie bundle.
-    if (resolvedAuthType === AuthTypeEnum.Cookie) {
-      const sessionCookie =
-        typeof cookieAuthSessionCookie === "string" &&
-        cookieAuthSessionCookie.trim()
-          ? cookieAuthSessionCookie
-          : accountId
-            ? (await accountStorage.getAccountById(accountId))?.cookieAuth
-                ?.sessionCookie
-            : undefined
-
-      if (sessionCookie && sessionCookie.trim()) {
-        const wafCookieHeader = await getCookieHeaderForUrl(fetchUrl, {
-          includeSession: false,
-        })
-        const mergedCookieHeader = mergeCookieHeaders(
-          wafCookieHeader,
-          sessionCookie,
-        )
-
-        if (!isProtectionBypassFirefoxEnv()) {
-          // Chromium: inject Cookie header per-tab using DNR.
-          ruleId = await applyTempWindowCookieRule({
-            tabId,
-            url: fetchUrl,
-            cookieHeader: mergedCookieHeader,
-          })
-
-          if (ruleId) {
-            effectiveFetchOptions = {
-              ...rawOptions,
-              credentials: "include",
-            }
-          }
-        } else {
-          // Firefox: pass session cookie bundle through a private header.
-          const headers = new Headers(rawOptions.headers ?? {})
-          headers.set(COOKIE_SESSION_OVERRIDE_HEADER_NAME, sessionCookie)
-          effectiveFetchOptions = {
-            ...rawOptions,
-            credentials: rawOptions.credentials ?? "include",
-            headers: Object.fromEntries(headers.entries()),
-          }
-        }
-      }
-    }
+    const prepared = await prepareTempContextFetchOptions({
+      tabId,
+      url: fetchUrl,
+      rawOptions,
+      resolvedAuthType,
+      accountId,
+      cookieAuthSessionCookie,
+    })
+    ruleId = prepared.ruleId
+    effectiveFetchOptions = prepared.effectiveFetchOptions
 
     const response = await browser.tabs.sendMessage(tabId, {
       action: RuntimeActionIds.ContentPerformTempWindowFetch,
@@ -603,7 +666,7 @@ export async function handleTempWindowFetch(
     })
 
     if (!response) {
-      throw new Error("No response from temp window fetch")
+      throw new Error(TEMP_WINDOW_FETCH_NO_RESPONSE_ERROR)
     }
 
     sendResponse(response)
@@ -617,6 +680,182 @@ export async function handleTempWindowFetch(
       reason: "tempWindowFetchError",
     })
     sendResponse({ success: false, error: getErrorMessage(error) })
+  } finally {
+    if (ruleId) {
+      await removeTempWindowCookieRule(ruleId)
+    }
+
+    await releaseTempContext(tempRequestId)
+  }
+}
+
+/**
+ * Executes a Turnstile-assisted temp-context fetch.
+ *
+ * This flow navigates the temporary tab to a page that can render Turnstile,
+ * waits for protection guards to clear, waits for a Turnstile token in the
+ * content script, then replays the target request in the same tab.
+ */
+export async function handleTempWindowTurnstileFetch(
+  request: TempWindowTurnstileFetchParams,
+  sendResponse: (response?: any) => void,
+) {
+  const {
+    originUrl,
+    pageUrl,
+    useIncognito,
+    fetchUrl,
+    fetchOptions,
+    responseType = "json",
+    requestId,
+    suppressMinimize,
+    accountId,
+    authType,
+    cookieAuthSessionCookie,
+    turnstileTimeoutMs,
+    turnstileParamName,
+    turnstilePreTrigger,
+  } = request
+
+  const turnstile: TempWindowTurnstileMeta = {
+    status: "error",
+    hasTurnstile: false,
+  }
+
+  if (!originUrl || !pageUrl || !fetchUrl) {
+    sendResponse({
+      success: false,
+      error: t("messages:background.invalidFetchRequest"),
+      turnstile,
+    })
+    return
+  }
+
+  const tempRequestId =
+    requestId || safeRandomUUID(`temp-turnstile-fetch-${fetchUrl}`)
+
+  logTempWindow("tempWindowTurnstileFetchStart", {
+    requestId: tempRequestId,
+    origin: originUrl ? normalizeOrigin(originUrl) : null,
+    pageUrl: pageUrl ? sanitizeUrlForLog(pageUrl) : null,
+    fetchUrl: fetchUrl ? sanitizeUrlForLog(fetchUrl) : null,
+    responseType,
+  })
+
+  let ruleId: number | null = null
+
+  const rawOptions = (fetchOptions ?? {}) as Record<string, any>
+  let effectiveFetchOptions: Record<string, any> = rawOptions
+
+  const resolvedAuthType = resolveAuthTypeEnum(authType)
+
+  try {
+    if (useIncognito) {
+      const allowed = await isAllowedIncognitoAccess()
+      if (allowed === false) {
+        sendResponse({
+          success: false,
+          error: t("messages:background.incognitoAccessRequired"),
+          turnstile,
+        })
+        return
+      }
+    }
+
+    const context = await acquireTempContext(
+      pageUrl,
+      tempRequestId,
+      suppressMinimize,
+      { incognito: Boolean(useIncognito) },
+    )
+    const { tabId } = context
+
+    // Ensure the temp tab is on the requested page URL so Turnstile can render.
+    await browser.tabs.update(tabId, { url: pageUrl })
+    await waitForTabComplete(tabId, {
+      requestId: tempRequestId,
+      origin: normalizeOrigin(originUrl),
+    })
+
+    const turnstileResponse = await browser.tabs.sendMessage(tabId, {
+      action: RuntimeActionIds.ContentWaitForTurnstileToken,
+      requestId: tempRequestId,
+      timeoutMs: turnstileTimeoutMs,
+      preTrigger: turnstilePreTrigger,
+    })
+
+    const token =
+      turnstileResponse?.success &&
+      typeof turnstileResponse?.token === "string" &&
+      turnstileResponse.token.trim()
+        ? turnstileResponse.token.trim()
+        : null
+
+    const status =
+      turnstileResponse?.success &&
+      typeof turnstileResponse?.status === "string"
+        ? String(turnstileResponse.status)
+        : "error"
+
+    turnstile.status =
+      status === "not_present" ||
+      status === "token_obtained" ||
+      status === "timeout"
+        ? status
+        : "error"
+    turnstile.hasTurnstile = Boolean(turnstileResponse?.detection?.hasTurnstile)
+
+    if (!token) {
+      sendResponse({
+        success: false,
+        error: "Turnstile token not available",
+        turnstile,
+      })
+      return
+    }
+
+    // Never log the token value. `sanitizeUrlForLog` strips the query string.
+    const paramName =
+      typeof turnstileParamName === "string" && turnstileParamName.trim()
+        ? turnstileParamName.trim()
+        : TURNSTILE_DEFAULT_QUERY_PARAM_NAME
+    const fetchUrlWithToken = appendQueryParam(fetchUrl, paramName, token)
+
+    const prepared = await prepareTempContextFetchOptions({
+      tabId,
+      url: fetchUrlWithToken,
+      rawOptions,
+      resolvedAuthType,
+      accountId,
+      cookieAuthSessionCookie,
+      addFirefoxAuthModeHeader: true,
+    })
+    ruleId = prepared.ruleId
+    effectiveFetchOptions = prepared.effectiveFetchOptions
+
+    const response = await browser.tabs.sendMessage(tabId, {
+      action: RuntimeActionIds.ContentPerformTempWindowFetch,
+      requestId: tempRequestId,
+      fetchUrl: fetchUrlWithToken,
+      fetchOptions: effectiveFetchOptions,
+      responseType,
+    })
+
+    if (!response) {
+      throw new Error(TEMP_WINDOW_FETCH_NO_RESPONSE_ERROR)
+    }
+
+    sendResponse({ ...(response as any), turnstile })
+  } catch (error) {
+    logTempWindow("tempWindowTurnstileFetchError", {
+      requestId: tempRequestId,
+      error: getErrorMessage(error),
+    })
+    await releaseTempContext(tempRequestId, {
+      forceClose: true,
+      reason: "tempWindowTurnstileFetchError",
+    })
+    sendResponse({ success: false, error: getErrorMessage(error), turnstile })
   } finally {
     if (ruleId) {
       await removeTempWindowCookieRule(ruleId)
@@ -745,8 +984,9 @@ async function acquireTempContext(
   url: string,
   requestId: string,
   suppressMinimize?: boolean,
+  options: { incognito?: boolean } = {},
 ) {
-  const origin = normalizeOrigin(url)
+  const origin = buildTempContextOriginKey(normalizeOrigin(url), options)
   const preferredMode = await resolveTempContextMode()
 
   logTempWindow("acquireTempContextStart", {
@@ -776,6 +1016,7 @@ async function acquireTempContext(
         requestId,
         preferredMode,
         suppressMinimize,
+        options,
       )
       registerContext(origin, context)
       logTempWindow("acquireTempContextCreated", {
@@ -955,14 +1196,18 @@ async function createTempContextInstance(
   requestId: string,
   preferredMode: TempWindowFallbackPreferences["tempContextMode"] = DEFAULT_TEMP_CONTEXT_MODE,
   suppressMinimize = false,
+  options: { incognito?: boolean } = {},
 ) {
   let contextId: number | undefined
   let tabId: number | undefined
   let type: "window" | "tab" = "window"
+  const useIncognito = Boolean(options.incognito)
 
   try {
-    const canUseWindow = preferredMode === "window" && hasWindowsAPI()
-    const canUseComposite = preferredMode === "composite" && hasWindowsAPI()
+    const canUseWindow =
+      hasWindowsAPI() && (useIncognito || preferredMode === "window")
+    const canUseComposite =
+      !useIncognito && preferredMode === "composite" && hasWindowsAPI()
 
     if (canUseComposite) {
       const opened = await openTabInCompositeWindow({
@@ -982,6 +1227,7 @@ async function createTempContextInstance(
         width: 420,
         height: 520,
         focused: false,
+        ...(useIncognito ? ({ incognito: true } as any) : {}),
       })
 
       if (!window?.id) {
@@ -1014,6 +1260,9 @@ async function createTempContextInstance(
         }
       }
     } else {
+      if (useIncognito) {
+        throw new Error("Incognito temp context requires window API support")
+      }
       const tab = await createTab(url, false)
       contextId = tab?.id
       tabId = tab?.id
@@ -1078,6 +1327,25 @@ async function createTempContextInstance(
     }
     throw error
   }
+}
+
+/**
+ * Build a temp-context pool key.
+ *
+ * The temp-window pool is keyed by origin. When `incognito` is enabled we must
+ * keep a separate pool so the temporary context does not inherit normal-mode
+ * storage (local/session storage) which can affect Turnstile rendering in
+ * multi-account scenarios.
+ */
+function buildTempContextOriginKey(
+  origin: string,
+  options: { incognito?: boolean } = {},
+): string {
+  if (options.incognito) {
+    return `incognito:${origin}`
+  }
+
+  return origin
 }
 
 /**
@@ -1260,10 +1528,12 @@ async function destroyContext(
 
   const pool = tempContextsByOrigin.get(context.origin)
   if (pool) {
-    tempContextsByOrigin.set(
-      context.origin,
-      pool.filter((item) => item !== context),
-    )
+    const remaining = pool.filter((item) => item !== context)
+    if (remaining.length === 0) {
+      tempContextsByOrigin.delete(context.origin)
+    } else {
+      tempContextsByOrigin.set(context.origin, remaining)
+    }
   }
 
   for (const [requestId, ctx] of tempRequestContextMap.entries()) {
@@ -1320,7 +1590,11 @@ export type TempContextProtectionGuardStatus = {
 }
 
 /**
+ * Parse a guard-check PromiseSettledResult into a stable status shape.
  *
+ * Guard checks are performed via content-script messaging and may fail when the
+ * page blocks scripts or the content script isn't ready. This helper enforces a
+ * defensive response schema before consuming the result.
  */
 function parseGuardCheckResult(result: PromiseSettledResult<any>): {
   passed: boolean

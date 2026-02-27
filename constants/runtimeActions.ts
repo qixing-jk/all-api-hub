@@ -92,6 +92,7 @@ export const RuntimeActionIds = {
   CloseTempWindow: "closeTempWindow",
   AutoDetectSite: "autoDetectSite",
   TempWindowFetch: "tempWindowFetch",
+  TempWindowTurnstileFetch: "tempWindowTurnstileFetch",
   TempWindowGetRenderedTitle: "tempWindowGetRenderedTitle",
 
   CookieInterceptorTrackUrl: composeRuntimeAction(
@@ -320,6 +321,7 @@ export const RuntimeActionIds = {
   // Content-side protection guard checks used by temp-window fallback readiness gating.
   ContentCheckCapGuard: "checkCapGuard",
   ContentCheckCloudflareGuard: "checkCloudflareGuard",
+  ContentWaitForTurnstileToken: "waitForTurnstileToken",
   ContentWaitAndGetUserInfo: "waitAndGetUserInfo",
   ContentPerformTempWindowFetch: "performTempWindowFetch",
   ContentGetRenderedTitle: "getRenderedTitle",

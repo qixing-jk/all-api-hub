@@ -85,7 +85,8 @@
     },
     "actions": {
       "retryAccount": "Retry",
-      "openManual": "Manual sign-in"
+      "openManual": "Manual sign-in",
+      "devModeHint": "Dev mode: action buttons are always shown for testing."
     },
     "hints": {
       "invalidAccessToken": "Solution: The Access Token may have expired. Please log in to the site again, then in 'Account Management → Edit Account', automatically re-identify/refresh the Access Token. If this issue still occurs after automatic identification, please manually obtain and modify the Access Token.",
@@ -139,6 +140,8 @@
     "checkinFailed": "Check-in failed",
     "checkinSuccessful": "Check-in successful",
     "alreadyCheckedToday": "Already checked in today",
+    "turnstileManualRequired": "Cloudflare Turnstile verification is required. Please open the check-in page to complete verification: {{checkInUrl}}",
+    "turnstileIncognitoAccessRequired": "The extension must be allowed to run in Incognito/Private windows to fetch the Turnstile token in a private temporary window (multi-account scenario). Please enable \"Allow in incognito\" for this extension and retry, or open the check-in page to complete verification: {{checkInUrl}}",
     "endpointNotSupported": "This check-in endpoint is not supported. Please check if your account's site type is the same as the actual site.",
     "unknownError": "Unknown error occurred"
   },

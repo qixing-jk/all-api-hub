@@ -15,26 +15,17 @@ import type {
 } from "~/services/apiService/wong"
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
-import {
-  CHECKIN_RESULT_STATUS,
-  type CheckinResultStatus,
-} from "~/types/autoCheckin"
+import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 
 import type { AutoCheckinProvider } from "./index"
-
-/**
- * Provider result that the scheduler/UI understands.
- *
- * - `messageKey` should be an i18n key (e.g. `autoCheckin:providerFallback.*`).
- * - `rawMessage` is kept when the backend returns a human readable message.
- */
-export interface CheckinResult {
-  status: CheckinResultStatus
-  messageKey?: string
-  messageParams?: Record<string, any>
-  rawMessage?: string
-  data?: any
-}
+import {
+  AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
+  AUTO_CHECKIN_USER_CHECKIN_ENDPOINT,
+  isAlreadyCheckedMessage,
+  normalizeCheckinMessage,
+  resolveProviderErrorResult,
+} from "./shared"
+import type { AutoCheckinProviderResult } from "./types"
 
 /**
  * WONG daily check-in endpoint.
@@ -42,26 +33,7 @@ export interface CheckinResult {
  * - GET: fetch current day's check-in status.
  * - POST: perform check-in.
  */
-const ENDPOINT = "/api/user/checkin"
-
-/**
- * Normalize unknown message payloads to a string.
- */
-function normalizeMessage(message: unknown): string {
-  return typeof message === "string" ? message : ""
-}
-
-/**
- * Determine whether a message indicates the user has already checked in today.
- */
-function isAlreadyCheckedMessage(message: string): boolean {
-  const normalized = message.toLowerCase()
-  return (
-    normalized.includes("今天已经签到") ||
-    normalized.includes("已签到") ||
-    normalized.includes("already")
-  )
-}
+const ENDPOINT = AUTO_CHECKIN_USER_CHECKIN_ENDPOINT
 
 /**
  * Call POST /api/user/checkin to perform the daily check-in.
@@ -94,10 +66,12 @@ async function performCheckin(
 /**
  * Provider entry: execute check-in directly and normalize the response.
  */
-async function checkinWongGongyi(account: SiteAccount): Promise<CheckinResult> {
+async function checkinWongGongyi(
+  account: SiteAccount,
+): Promise<AutoCheckinProviderResult> {
   try {
     const checkinResponse = await performCheckin(account)
-    const responseMessage = normalizeMessage(checkinResponse.message)
+    const responseMessage = normalizeCheckinMessage(checkinResponse.message)
 
     if (checkinResponse.data?.enabled === false) {
       return {
@@ -117,7 +91,7 @@ async function checkinWongGongyi(account: SiteAccount): Promise<CheckinResult> {
         rawMessage: responseMessage || undefined,
         messageKey: responseMessage
           ? undefined
-          : "autoCheckin:providerFallback.alreadyCheckedToday",
+          : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.alreadyCheckedToday,
         data: checkinResponse.data,
       }
     }
@@ -128,7 +102,7 @@ async function checkinWongGongyi(account: SiteAccount): Promise<CheckinResult> {
         rawMessage: responseMessage || undefined,
         messageKey: responseMessage
           ? undefined
-          : "autoCheckin:providerFallback.checkinSuccessful",
+          : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
         data: checkinResponse.data,
       }
     }
@@ -138,33 +112,11 @@ async function checkinWongGongyi(account: SiteAccount): Promise<CheckinResult> {
       rawMessage: responseMessage || undefined,
       messageKey: responseMessage
         ? undefined
-        : "autoCheckin:providerFallback.checkinFailed",
+        : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
       data: checkinResponse ?? undefined,
     }
   } catch (error: any) {
-    const errorMessage = error?.message || String(error)
-
-    if (errorMessage && isAlreadyCheckedMessage(errorMessage)) {
-      return {
-        status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
-        rawMessage: errorMessage,
-      }
-    }
-
-    if (error?.statusCode === 404 || errorMessage.includes("404")) {
-      return {
-        status: CHECKIN_RESULT_STATUS.FAILED,
-        messageKey: "autoCheckin:providerFallback.endpointNotSupported",
-      }
-    }
-
-    return {
-      status: CHECKIN_RESULT_STATUS.FAILED,
-      rawMessage: errorMessage || undefined,
-      messageKey: errorMessage
-        ? undefined
-        : "autoCheckin:providerFallback.unknownError",
-    }
+    return resolveProviderErrorResult({ error })
   }
 }
 

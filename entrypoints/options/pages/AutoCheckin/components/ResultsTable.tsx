@@ -10,12 +10,19 @@ import { useTranslation } from "react-i18next"
 import AccountLinkButton from "~/components/AccountLinkButton"
 import { Button, Card } from "~/components/ui"
 import {
+  formatTimestamp,
+  isInvalidAccessTokenMessage,
+  isNoTabWithIdMessage,
+} from "~/entrypoints/options/pages/AutoCheckin/utils/tableUtils"
+import {
   CHECKIN_RESULT_STATUS,
   CheckinAccountResult,
 } from "~/types/autoCheckin"
+import { stripAutoCheckinMessageKeyPrefix } from "~/utils/autoCheckin"
 
 interface ResultsTableProps {
   results: CheckinAccountResult[]
+  showDevActions?: boolean
   retryingAccountId?: string | null
   openingManualAccountId?: string | null
   onRetryAccount?: (accountId: string) => void | Promise<void>
@@ -33,56 +40,24 @@ interface ResultsTableProps {
  */
 export default function ResultsTable({
   results,
+  showDevActions,
   retryingAccountId,
   openingManualAccountId,
   onRetryAccount,
   onOpenManualSignIn,
 }: ResultsTableProps) {
   const { t } = useTranslation("autoCheckin")
+  const forceShowActions = Boolean(showDevActions)
 
   const getResultMessage = (result: CheckinAccountResult): string => {
     if (result.rawMessage) return result.rawMessage
     if (result.messageKey) {
-      return t(result.messageKey.replace(/^autoCheckin:/, ""), {
+      return t(stripAutoCheckinMessageKeyPrefix(result.messageKey), {
         ...(result.messageParams ?? {}),
         defaultValue: result.messageKey,
       }) as string
     }
     return result.message ?? "-"
-  }
-
-  /**
-   * Returns true when the backend message strongly suggests the stored access token is invalid/expired.
-   *
-   * Some deployments (One-API/New-API family and variants) may return a 200 response with a human-readable
-   * error such as "无权进行此操作，access token 无效", which is easy to miss without explicit guidance.
-   */
-  const isInvalidAccessTokenMessage = (message: string): boolean => {
-    if (!message) return false
-
-    const normalized = message.toLowerCase()
-
-    // Prefer strict matching on the known Chinese message, then fall back to broader heuristics.
-    if (normalized.includes("access token 无效")) return true
-
-    return (
-      normalized.includes("access token") &&
-      (normalized.includes("无效") ||
-        normalized.includes("失效") ||
-        normalized.includes("过期") ||
-        normalized.includes("invalid") ||
-        normalized.includes("expired"))
-    )
-  }
-
-  /**
-   * Returns true when the failure message indicates a temporary tab opened by the extension
-   * has been closed before the flow completed (e.g. "No tab with id: 123").
-   */
-  const isNoTabWithIdMessage = (message: string): boolean => {
-    if (!message) return false
-
-    return /no tab with id[: ]\s*\d+/i.test(message)
   }
 
   /**
@@ -147,17 +122,13 @@ export default function ResultsTable({
     }
   }
 
-  const formatTimestamp = (timestamp: number): string => {
-    try {
-      const date = new Date(timestamp)
-      return date.toLocaleString()
-    } catch {
-      return "-"
-    }
-  }
-
   return (
     <Card padding="none">
+      {forceShowActions && (
+        <div className="border-b border-yellow-200 bg-yellow-50 px-6 py-2 text-xs text-yellow-900 dark:border-yellow-900/50 dark:bg-yellow-950/30 dark:text-yellow-200">
+          {t("execution.actions.devModeHint")}
+        </div>
+      )}
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="bg-gray-50 dark:bg-gray-800">
@@ -213,7 +184,8 @@ export default function ResultsTable({
                   <td className="sticky right-0 z-10 border-l border-gray-200 bg-white px-6 py-4 text-sm text-gray-500 group-hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400 dark:group-hover:bg-gray-800">
                     <div className="flex flex-wrap gap-2">
                       {onRetryAccount &&
-                        result.status === CHECKIN_RESULT_STATUS.FAILED && (
+                        (forceShowActions ||
+                          result.status === CHECKIN_RESULT_STATUS.FAILED) && (
                           <Button
                             size="sm"
                             variant="secondary"
@@ -226,7 +198,8 @@ export default function ResultsTable({
                           </Button>
                         )}
                       {onOpenManualSignIn &&
-                        result.status === CHECKIN_RESULT_STATUS.FAILED && (
+                        (forceShowActions ||
+                          result.status === CHECKIN_RESULT_STATUS.FAILED) && (
                           <Button
                             size="sm"
                             variant="outline"

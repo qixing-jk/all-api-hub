@@ -1,20 +1,16 @@
 import { fetchApi } from "~/services/apiService/common/utils"
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
-import {
-  CHECKIN_RESULT_STATUS,
-  type CheckinResultStatus,
-} from "~/types/autoCheckin"
+import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 
 import type { AutoCheckinProvider } from "./index"
-
-type CheckinResult = {
-  status: CheckinResultStatus
-  messageKey?: string
-  messageParams?: Record<string, any>
-  rawMessage?: string
-  data?: any
-}
+import {
+  AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
+  isAlreadyCheckedMessage,
+  normalizeCheckinMessage,
+  resolveProviderErrorResult,
+} from "./shared"
+import type { AutoCheckinProviderResult } from "./types"
 
 export type AnyrouterCheckInParams = {
   site_url: string
@@ -24,26 +20,21 @@ export type AnyrouterCheckInParams = {
 }
 
 /**
- * Check if the message indicates already checked in
- * Actual returned data:
- *  - when check in success: {"message":"签到成功，获得 $25 额度","success":true}
- *  - when already checked: {"message":"","success":true}
- * @param message - The message to check
- * @returns true if already checked in
+ * AnyRouter returns an empty message string when the user has already checked in.
+ * This helper treats that case as already-checked, and falls back to the shared
+ * detection heuristics for non-empty strings.
+ * @param message - Message to evaluate.
+ * @returns true if the user is already checked in.
  */
-const isAlreadyChecked = (message: string): boolean => {
-  const normalized = message.toLowerCase()
-  return (
-    normalized === "" ||
-    normalized.includes("已签到") ||
-    normalized.includes("already checked") ||
-    normalized.includes("already signed")
-  )
+function isAnyrouterAlreadyCheckedMessage(message: string): boolean {
+  const normalized = normalizeCheckinMessage(message).trim()
+  if (!normalized) return true
+  return isAlreadyCheckedMessage(normalized)
 }
 
 const checkinAnyRouter = async (
   account: SiteAccount | AnyrouterCheckInParams,
-): Promise<CheckinResult> => {
+): Promise<AutoCheckinProviderResult> => {
   const { site_url, account_info } = account
 
   try {
@@ -73,8 +64,7 @@ const checkinAnyRouter = async (
       true,
     )
 
-    const rawResponseMessage =
-      typeof response.message === "string" ? response.message : ""
+    const rawResponseMessage = normalizeCheckinMessage(response.message)
     const normalizedResponseMessage = rawResponseMessage.toLowerCase()
 
     if (!response.success) {
@@ -83,7 +73,7 @@ const checkinAnyRouter = async (
         rawMessage: rawResponseMessage || undefined,
         messageKey: rawResponseMessage
           ? undefined
-          : "autoCheckin:providerFallback.checkinFailed",
+          : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
         data: response ?? undefined,
       }
     }
@@ -97,18 +87,18 @@ const checkinAnyRouter = async (
         rawMessage: rawResponseMessage || undefined,
         messageKey: rawResponseMessage
           ? undefined
-          : "autoCheckin:providerFallback.checkinSuccessful",
+          : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
         data: response,
       }
     }
 
-    if (isAlreadyChecked(normalizedResponseMessage)) {
+    if (isAnyrouterAlreadyCheckedMessage(rawResponseMessage)) {
       return {
         status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
         rawMessage: rawResponseMessage || undefined,
         messageKey: rawResponseMessage
           ? undefined
-          : "autoCheckin:providerFallback.alreadyCheckedToday",
+          : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.alreadyCheckedToday,
       }
     }
 
@@ -117,33 +107,14 @@ const checkinAnyRouter = async (
       rawMessage: rawResponseMessage || undefined,
       messageKey: rawResponseMessage
         ? undefined
-        : "autoCheckin:providerFallback.checkinFailed",
+        : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
       data: response ?? undefined,
     }
   } catch (error: any) {
-    const errorMessage = error?.message || String(error)
-
-    if (errorMessage && isAlreadyChecked(errorMessage)) {
-      return {
-        status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
-        rawMessage: errorMessage,
-      }
-    }
-
-    if (error?.statusCode === 404 || errorMessage.includes("404")) {
-      return {
-        status: CHECKIN_RESULT_STATUS.FAILED,
-        messageKey: "autoCheckin:providerFallback.endpointNotSupported",
-      }
-    }
-
-    return {
-      status: CHECKIN_RESULT_STATUS.FAILED,
-      rawMessage: errorMessage || undefined,
-      messageKey: errorMessage
-        ? undefined
-        : "autoCheckin:providerFallback.unknownError",
-    }
+    return resolveProviderErrorResult({
+      error,
+      isAlreadyChecked: isAnyrouterAlreadyCheckedMessage,
+    })
   }
 }
 

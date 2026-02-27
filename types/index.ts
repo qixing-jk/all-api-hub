@@ -5,6 +5,7 @@ import {
   DATA_TYPE_INCOME,
 } from "~/constants"
 import { TempWindowHealthStatusCode } from "~/types/tempWindow"
+import type { TurnstilePreTrigger } from "~/types/turnstile"
 
 export enum SiteHealthStatus {
   Healthy = "healthy",
@@ -223,6 +224,15 @@ export interface CheckInConfig {
      * When provided, the UI can open this URL in addition to the site check-in page.
      */
     url?: string
+
+    /**
+     * Optional Turnstile widget pre-trigger configuration used by temp-window
+     * Turnstile-assisted fetch flows.
+     *
+     * Advanced: this is typically only needed for deployments that render
+     * Turnstile only after a user action (e.g. a check-in button click).
+     */
+    turnstilePreTrigger?: TurnstilePreTrigger
 
     /**
      * Custom URL path for redeem/topup operations.

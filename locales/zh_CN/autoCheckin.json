@@ -85,7 +85,8 @@
     },
     "actions": {
       "retryAccount": "重新尝试",
-      "openManual": "手动签到"
+      "openManual": "手动签到",
+      "devModeHint": "开发模式：为便于测试，操作按钮将始终显示。"
     },
     "hints": {
       "invalidAccessToken": "解决方案：Access Token 可能已失效。请重新登录该站点，然后在「账号管理 → 编辑账号」中重新自动识别/刷新 Access Token；如自动识别后仍出现此问题，请手动获取并修改 Access Token。",
@@ -139,6 +140,8 @@
     "checkinFailed": "签到失败",
     "checkinSuccessful": "签到成功",
     "alreadyCheckedToday": "今日已签到",
+    "turnstileManualRequired": "需要完成 Cloudflare Turnstile 验证，请打开签到页面完成验证：{{checkInUrl}}",
+    "turnstileIncognitoAccessRequired": "需要允许扩展在无痕模式运行，才能在无痕页面获取 Turnstile Token（多账号场景）。请在扩展管理页开启“允许在无痕模式运行”后重试；或手动打开签到页面完成验证：{{checkInUrl}}",
     "endpointNotSupported": "不支持该签到接口，请检查账号的站点类型与实际站点是否相同",
     "unknownError": "发生未知错误"
   },

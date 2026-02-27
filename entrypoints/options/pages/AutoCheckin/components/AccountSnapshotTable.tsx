@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next"
 
 import AccountLinkButton from "~/components/AccountLinkButton"
 import { Card } from "~/components/ui"
+import { formatTimestamp } from "~/entrypoints/options/pages/AutoCheckin/utils/tableUtils"
 import {
   CHECKIN_RESULT_STATUS,
   type AutoCheckinAccountSnapshot,
@@ -33,15 +34,6 @@ export default function AccountSnapshotTable({
       a.accountName.localeCompare(b.accountName),
     )
   }, [snapshots])
-
-  const formatTimestamp = (timestamp?: number) => {
-    if (!timestamp) return "-"
-    try {
-      return new Date(timestamp).toLocaleString()
-    } catch {
-      return "-"
-    }
-  }
 
   const getSkipReasonLabel = (reason?: string) => {
     if (!reason) return "-"

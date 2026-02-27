@@ -16,6 +16,7 @@ import {
   AutoCheckinStatus,
   CHECKIN_RESULT_STATUS,
 } from "~/types/autoCheckin"
+import { stripAutoCheckinMessageKeyPrefix } from "~/utils/autoCheckin"
 import { onRuntimeMessage, sendRuntimeMessage } from "~/utils/browserApi"
 import { safeRandomUUID } from "~/utils/identifier"
 import { createLogger } from "~/utils/logger"
@@ -485,7 +486,7 @@ export default function AutoCheckin(props: {
       const displayMessage =
         result.rawMessage ??
         (result.messageKey
-          ? (t(result.messageKey.replace(/^autoCheckin:/, ""), {
+          ? (t(stripAutoCheckinMessageKeyPrefix(result.messageKey), {
               ...(result.messageParams ?? {}),
               defaultValue: result.messageKey,
             }) as string)
@@ -557,6 +558,7 @@ export default function AutoCheckin(props: {
       ) : (
         <ResultsTable
           results={filteredResults}
+          showDevActions={showDebugButtons}
           retryingAccountId={retryingAccountId}
           openingManualAccountId={openingManualAccountId}
           onRetryAccount={handleRetryAccount}

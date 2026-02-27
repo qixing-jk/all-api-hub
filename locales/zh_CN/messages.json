@@ -212,6 +212,7 @@
     "cannotCreateWindowOrTab": "无法创建窗口或获取标签页",
     "pageLoadTimeout": "页面加载超时",
     "windowNotFound": "未找到对应窗口或标签页",
+    "incognitoAccessRequired": "需要允许扩展在无痕模式运行才能使用无痕临时窗口，请在扩展管理页开启“允许在无痕模式运行”后重试",
     "invalidFetchRequest": "无效的请求参数"
   },
   "content": {

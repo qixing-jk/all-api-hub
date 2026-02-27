@@ -1,5 +1,6 @@
 import i18next from "i18next"
 
+import { buildCompatUserIdHeaders } from "~/services/apiService/common/compatHeaders"
 import { REQUEST_CONFIG } from "~/services/apiService/common/constant"
 import {
   API_ERROR_CODES,
@@ -16,6 +17,10 @@ import type {
   TodayUsageData,
 } from "~/services/apiService/common/type"
 import { AuthTypeEnum } from "~/types"
+import type {
+  TempWindowFallbackContext,
+  TempWindowResponseType,
+} from "~/types/tempWindowFetch"
 import {
   addAuthMethodHeader,
   addExtensionHeader,
@@ -24,11 +29,7 @@ import {
   COOKIE_SESSION_OVERRIDE_HEADER_NAME,
 } from "~/utils/cookieHelper"
 import { createLogger } from "~/utils/logger"
-import {
-  executeWithTempWindowFallback,
-  TempWindowFallbackContext,
-  TempWindowResponseType,
-} from "~/utils/tempWindowFetch"
+import { executeWithTempWindowFallback } from "~/utils/tempWindowFetch"
 import { joinUrl } from "~/utils/url"
 
 type NormalizedAuthContext = AuthConfig
@@ -122,16 +123,7 @@ const createRequestHeaders = async (
   }
 
   // Some deployments expect different header names; keep a fan-out map for compatibility.
-  const userHeaders: Record<string, string> = auth.userId
-    ? {
-        "New-API-User": auth.userId.toString(),
-        "Veloera-User": auth.userId.toString(),
-        "voapi-user": auth.userId.toString(),
-        "User-id": auth.userId.toString(),
-        "Rix-Api-User": auth.userId.toString(),
-        "neo-api-user": auth.userId.toString(),
-      }
-    : {}
+  const userHeaders = buildCompatUserIdHeaders(auth.userId)
 
   let headers: Record<string, string> = { ...baseHeaders, ...userHeaders }
 

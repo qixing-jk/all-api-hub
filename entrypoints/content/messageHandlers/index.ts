@@ -8,6 +8,7 @@ import {
   handlePerformTempWindowFetch,
   handleShowShieldBypassUi,
   handleWaitAndGetUserInfo,
+  handleWaitForTurnstileToken,
 } from "~/entrypoints/content/messageHandlers/handlers"
 
 /**
@@ -31,6 +32,10 @@ export function setupContentMessageHandlers() {
 
     if (request.action === RuntimeActionIds.ContentCheckCloudflareGuard) {
       return handleCheckCloudflareGuard(request, sendResponse)
+    }
+
+    if (request.action === RuntimeActionIds.ContentWaitForTurnstileToken) {
+      return handleWaitForTurnstileToken(request, sendResponse)
     }
 
     if (request.action === RuntimeActionIds.ContentWaitAndGetUserInfo) {

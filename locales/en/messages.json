@@ -212,6 +212,7 @@
     "cannotCreateWindowOrTab": "Unable to create window or get tab",
     "pageLoadTimeout": "Page load timeout",
     "windowNotFound": "Window or tab not found",
+    "incognitoAccessRequired": "Incognito access is required to use a private temporary window. Please enable \"Allow in incognito\" for this extension and retry.",
     "invalidFetchRequest": "Invalid fetch request"
   },
   "content": {

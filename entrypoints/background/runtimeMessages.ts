@@ -32,6 +32,7 @@ import {
   handleOpenTempWindow,
   handleTempWindowFetch,
   handleTempWindowGetRenderedTitle,
+  handleTempWindowTurnstileFetch,
 } from "./tempWindowPool"
 
 /**
@@ -99,6 +100,11 @@ export function setupRuntimeMessageListeners() {
 
       if (request.action === RuntimeActionIds.TempWindowFetch) {
         void handleTempWindowFetch(request, sendResponse)
+        return true
+      }
+
+      if (request.action === RuntimeActionIds.TempWindowTurnstileFetch) {
+        void handleTempWindowTurnstileFetch(request, sendResponse)
         return true
       }
 
