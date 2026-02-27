@@ -11,7 +11,9 @@ import {
 } from "~/services/userPreferences"
 import { AuthTypeEnum } from "~/types"
 import type {
+  TempWindowFetch,
   TempWindowFetchParams,
+  TempWindowTurnstileFetch,
   TempWindowTurnstileFetchParams,
   TempWindowTurnstileMeta,
 } from "~/types/tempWindowFetch"
@@ -137,12 +139,12 @@ async function prepareTempContextFetchOptions(params: {
   cookieAuthSessionCookie?: string
   addFirefoxAuthModeHeader?: boolean
 }): Promise<{
-  ruleId: number | null
+  ruleIds: number[]
   effectiveFetchOptions: RequestInit
 }> {
   const { tabId, url, rawOptions, resolvedAuthType } = params
 
-  let ruleId: number | null = null
+  const ruleIds = new Set<number>()
   let effectiveFetchOptions: RequestInit = rawOptions
 
   // Chromium-based browsers: for token-auth (credentials=omit) we still need WAF cookies,
@@ -153,13 +155,14 @@ async function prepareTempContextFetchOptions(params: {
     })
 
     if (cookieHeader) {
-      ruleId = await applyTempWindowCookieRule({
+      const precheckRuleId = await applyTempWindowCookieRule({
         tabId,
         url,
         cookieHeader,
       })
 
-      if (ruleId) {
+      if (precheckRuleId) {
+        ruleIds.add(precheckRuleId)
         effectiveFetchOptions = {
           ...rawOptions,
           credentials: "include",
@@ -190,13 +193,14 @@ async function prepareTempContextFetchOptions(params: {
 
       if (!isProtectionBypassFirefoxEnv()) {
         // Chromium: inject Cookie header per-tab using DNR.
-        ruleId = await applyTempWindowCookieRule({
+        const authRuleId = await applyTempWindowCookieRule({
           tabId,
           url,
           cookieHeader: mergedCookieHeader,
         })
 
-        if (ruleId) {
+        if (authRuleId) {
+          ruleIds.add(authRuleId)
           effectiveFetchOptions = {
             ...rawOptions,
             credentials: "include",
@@ -235,7 +239,7 @@ async function prepareTempContextFetchOptions(params: {
     }
   }
 
-  return { ruleId, effectiveFetchOptions }
+  return { ruleIds: Array.from(ruleIds), effectiveFetchOptions }
 }
 
 /**
@@ -631,7 +635,7 @@ export async function handleTempWindowFetch(
     responseType,
   })
 
-  let ruleId: number | null = null
+  const ruleIds = new Set<number>()
 
   const rawOptions = (fetchOptions ?? {}) as RequestInit
   let effectiveFetchOptions: RequestInit = rawOptions
@@ -654,7 +658,9 @@ export async function handleTempWindowFetch(
       accountId,
       cookieAuthSessionCookie,
     })
-    ruleId = prepared.ruleId
+    for (const ruleId of prepared.ruleIds) {
+      ruleIds.add(ruleId)
+    }
     effectiveFetchOptions = prepared.effectiveFetchOptions
 
     const response = await browser.tabs.sendMessage(tabId, {
@@ -681,7 +687,7 @@ export async function handleTempWindowFetch(
     })
     sendResponse({ success: false, error: getErrorMessage(error) })
   } finally {
-    if (ruleId) {
+    for (const ruleId of ruleIds) {
       await removeTempWindowCookieRule(ruleId)
     }
 
@@ -742,7 +748,7 @@ export async function handleTempWindowTurnstileFetch(
     responseType,
   })
 
-  let ruleId: number | null = null
+  const ruleIds = new Set<number>()
 
   const rawOptions = (fetchOptions ?? {}) as RequestInit
   let effectiveFetchOptions: RequestInit = rawOptions
@@ -830,22 +836,24 @@ export async function handleTempWindowTurnstileFetch(
       cookieAuthSessionCookie,
       addFirefoxAuthModeHeader: true,
     })
-    ruleId = prepared.ruleId
+    for (const ruleId of prepared.ruleIds) {
+      ruleIds.add(ruleId)
+    }
     effectiveFetchOptions = prepared.effectiveFetchOptions
 
-    const response = await browser.tabs.sendMessage(tabId, {
+    const response = (await browser.tabs.sendMessage(tabId, {
       action: RuntimeActionIds.ContentPerformTempWindowFetch,
       requestId: tempRequestId,
       fetchUrl: fetchUrlWithToken,
       fetchOptions: effectiveFetchOptions,
       responseType,
-    })
+    })) as TempWindowFetch | undefined
 
     if (!response) {
       throw new Error(TEMP_WINDOW_FETCH_NO_RESPONSE_ERROR)
     }
 
-    sendResponse({ ...(response as any), turnstile })
+    sendResponse({ ...response, turnstile } satisfies TempWindowTurnstileFetch)
   } catch (error) {
     logTempWindow("tempWindowTurnstileFetchError", {
       requestId: tempRequestId,
@@ -857,7 +865,7 @@ export async function handleTempWindowTurnstileFetch(
     })
     sendResponse({ success: false, error: getErrorMessage(error), turnstile })
   } finally {
-    if (ruleId) {
+    for (const ruleId of ruleIds) {
       await removeTempWindowCookieRule(ruleId)
     }
 

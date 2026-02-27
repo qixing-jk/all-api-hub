@@ -111,10 +111,8 @@ const checkinAnyRouter = async (
       data: response ?? undefined,
     }
   } catch (error: unknown) {
-    const normalizedError =
-      error instanceof Error ? error : new Error(String(error))
     return resolveProviderErrorResult({
-      error: normalizedError,
+      error,
       isAlreadyChecked: isAnyrouterAlreadyCheckedMessage,
     })
   }

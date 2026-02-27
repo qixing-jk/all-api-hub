@@ -17,15 +17,15 @@ import type { SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 
-import type { AutoCheckinProvider } from "./index"
+import type { AutoCheckinProvider } from "~/services/autoCheckin/providers"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
   AUTO_CHECKIN_USER_CHECKIN_ENDPOINT,
   isAlreadyCheckedMessage,
   normalizeCheckinMessage,
   resolveProviderErrorResult,
-} from "./shared"
-import type { AutoCheckinProviderResult } from "./types"
+} from "~/services/autoCheckin/providers/shared"
+import type { AutoCheckinProviderResult } from "~/services/autoCheckin/providers/types"
 
 /**
  * WONG daily check-in endpoint.

@@ -18,15 +18,15 @@ import { isAllowedIncognitoAccess } from "~/utils/browserApi"
 import { tempWindowTurnstileFetch } from "~/utils/tempWindowFetch"
 import { joinUrl } from "~/utils/url"
 
-import type { AutoCheckinProvider } from "./index"
+import type { AutoCheckinProvider } from "~/services/autoCheckin/providers"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
   AUTO_CHECKIN_USER_CHECKIN_ENDPOINT,
   isAlreadyCheckedMessage,
   normalizeCheckinMessage,
   resolveProviderErrorResult,
-} from "./shared"
-import type { AutoCheckinProviderResult } from "./types"
+} from "~/services/autoCheckin/providers/shared"
+import type { AutoCheckinProviderResult } from "~/services/autoCheckin/providers/types"
 
 const NEW_API_MESSAGE_KEYS = {
   turnstileManualRequired:

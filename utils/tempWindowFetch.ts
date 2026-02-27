@@ -48,6 +48,19 @@ import { isProtectionBypassFirefoxEnv } from "~/utils/protectionBypass"
  */
 const logger = createLogger("TempWindowFetch")
 
+function isTempWindowRenderedTitleResponse(
+  value: unknown,
+): value is TempWindowRenderedTitleResponse {
+  if (!value || typeof value !== "object") return false
+  const record = value as Record<string, unknown>
+
+  if (typeof record.success !== "boolean") return false
+  if (record.title !== undefined && typeof record.title !== "string") return false
+  if (record.error !== undefined && typeof record.error !== "string") return false
+
+  return true
+}
+
 /**
  * Checks whether the temp window fetch flow can be used in the current browser.
  * Firefox requires cookie interceptor permissions; other browsers always allow.
@@ -196,8 +209,16 @@ export async function tempWindowGetRenderedTitle(params: {
 
       void (async () => {
         try {
-          await handleTempWindowGetRenderedTitle(payload, (response: any) => {
-            finalize(response as TempWindowRenderedTitleResponse)
+          await handleTempWindowGetRenderedTitle(payload, (response: unknown) => {
+            if (isTempWindowRenderedTitleResponse(response)) {
+              finalize(response)
+              return
+            }
+
+            finalize({
+              success: false,
+              error: "Invalid tempWindowGetRenderedTitle response",
+            })
           })
         } finally {
           finalize()
