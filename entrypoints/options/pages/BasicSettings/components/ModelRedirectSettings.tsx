@@ -166,7 +166,10 @@ export default function ModelRedirectSettings() {
                   <p className="dark:text-dark-text-primary text-sm font-medium text-gray-700">
                     {t("pruneMissingTargetsOnModelSync")}
                   </p>
-                  <p className="dark:text-dark-text-secondary mt-1 text-sm text-gray-500">
+                  <p
+                    id="prune-missing-targets-desc"
+                    className="dark:text-dark-text-secondary mt-1 text-sm text-gray-500"
+                  >
                     {t("pruneMissingTargetsOnModelSyncDesc")}
                   </p>
                 </div>
@@ -175,6 +178,8 @@ export default function ModelRedirectSettings() {
                     modelRedirect?.pruneMissingTargetsOnModelSync ?? false
                   }
                   disabled={isUpdating}
+                  aria-label="Prune missing redirect targets on model sync"
+                  aria-describedby="prune-missing-targets-desc"
                   onChange={async (enabled) => {
                     await handleUpdate({
                       pruneMissingTargetsOnModelSync: enabled,
