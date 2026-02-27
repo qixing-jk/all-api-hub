@@ -22,7 +22,11 @@ import {
   type CCSwitchApp,
 } from "~/utils/ccSwitch"
 import { createLogger } from "~/utils/logger"
-import { normalizeHttpUrl, stripTrailingOpenAIV1 } from "~/utils/url"
+import {
+  coerceBaseUrlToPathSuffix,
+  normalizeHttpUrl,
+  stripTrailingOpenAIV1,
+} from "~/utils/url"
 
 interface CCSwitchExportDialogProps {
   isOpen: boolean
@@ -56,6 +60,7 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
   const [providerName, setProviderName] = useState(account.name)
   const [homepage, setHomepage] = useState(account.baseUrl)
   const [endpoint, setEndpoint] = useState(account.baseUrl)
+  const [isEndpointCustomized, setIsEndpointCustomized] = useState(false)
   const [upstreamModelOptions, setUpstreamModelOptions] = useState<
     { value: string; label: string }[]
   >([])
@@ -70,10 +75,22 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
       setProviderName(account.name)
       setHomepage(account.baseUrl)
       setEndpoint(account.baseUrl)
+      setIsEndpointCustomized(false)
       setUpstreamModelOptions([])
       setIsLoadingModels(false)
     }
   }, [account.name, account.baseUrl, isOpen])
+
+  useEffect(() => {
+    if (!isOpen) return
+    if (isEndpointCustomized) return
+
+    const defaultEndpoint =
+      app === "codex"
+        ? coerceBaseUrlToPathSuffix(account.baseUrl, "/v1")
+        : account.baseUrl
+    setEndpoint(defaultEndpoint)
+  }, [account.baseUrl, app, isEndpointCustomized, isOpen])
 
   useEffect(() => {
     if (!isOpen) return
@@ -207,7 +224,10 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
             value={endpoint}
             className="mt-1"
             placeholder={t("ui:dialog.ccswitch.placeholders.endpoint")}
-            onChange={(event) => setEndpoint(event.target.value)}
+            onChange={(event) => {
+              setIsEndpointCustomized(true)
+              setEndpoint(event.target.value)
+            }}
           />
         </div>
 

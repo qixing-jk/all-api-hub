@@ -96,8 +96,10 @@ export function openInCCSwitch(options: OpenInCCSwitchOptions) {
     return false
   }
 
-  const endpoint = normalizeHttpUrl(endpointOverride ?? account.baseUrl)
-  if (!endpoint) {
+  const normalizedEndpoint = normalizeHttpUrl(
+    endpointOverride ?? account.baseUrl,
+  )
+  if (!normalizedEndpoint) {
     toast.error(t("messages:ccswitch.invalidEndpoint"))
     return false
   }
@@ -117,7 +119,7 @@ export function openInCCSwitch(options: OpenInCCSwitchOptions) {
     app,
     name: name?.trim() || account.name,
     homepage,
-    endpoint,
+    endpoint: normalizedEndpoint,
     apiKey: token.key,
     model,
     notes,

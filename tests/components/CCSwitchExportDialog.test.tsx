@@ -1,3 +1,4 @@
+import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
 import { CCSwitchExportDialog } from "~/components/CCSwitchExportDialog"
@@ -37,6 +38,41 @@ describe("CCSwitchExportDialog", () => {
     )
     fireEvent.click(modelCombo)
     expect(await screen.findByText("gpt-4")).toBeInTheDocument()
+  })
+
+  it("appends /v1 to the default endpoint when switching to Codex", async () => {
+    const user = userEvent.setup()
+    mockFetchOpenAICompatibleModelIds.mockResolvedValue([])
+
+    render(
+      <CCSwitchExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={
+          { id: "acc", name: "Example", baseUrl: "https://x.test" } as any
+        }
+        token={{ id: "tok", key: "sk-test" } as any}
+      />,
+    )
+
+    const endpointInput = await screen.findByLabelText(
+      "ui:dialog.ccswitch.fields.endpoint",
+    )
+    expect(endpointInput).toHaveValue("https://x.test")
+
+    const appSelect = await screen.findByLabelText(
+      "ui:dialog.ccswitch.fields.app",
+    )
+    await user.click(appSelect)
+    await user.click(
+      await screen.findByRole("option", {
+        name: "ui:dialog.ccswitch.appOptions.codex",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(endpointInput).toHaveValue("https://x.test/v1")
+    })
   })
 
   it("keeps the model picker usable when upstream model fetch fails", async () => {
