@@ -1,5 +1,7 @@
+import { http, HttpResponse } from "msw"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { server } from "~/tests/msw/server"
 import { AuthTypeEnum, TEMP_WINDOW_HEALTH_STATUS_CODES } from "~/types"
 
 let fetchApiData: typeof import("~/services/apiService/common/utils").fetchApiData
@@ -54,40 +56,7 @@ vi.mock("~/services/apiService/common/minIntervalLimiter", () => ({
 
 const BASE_URL = "https://example.com/base/"
 const ENDPOINT = "/api/test"
-
-const createFetchMock = (response: any) => {
-  return vi.fn().mockResolvedValue({
-    ok: true,
-    status: 200,
-    headers: {
-      get: () => "application/json",
-    },
-    json: async () => response,
-  }) as any
-}
-
-const createErrorFetchMock = (params: {
-  status: number
-  headers?: Record<string, string>
-}) => {
-  const normalizedHeaders = Object.fromEntries(
-    Object.entries(params.headers ?? {}).map(([key, value]) => [
-      key.toLowerCase(),
-      value,
-    ]),
-  )
-
-  return vi.fn().mockResolvedValue({
-    ok: false,
-    status: params.status,
-    headers: {
-      get: (name: string) => normalizedHeaders[name.toLowerCase()] ?? null,
-    },
-    json: async () => ({}),
-  }) as any
-}
-
-declare const global: any
+const API_URL = "https://example.com/base/api/test"
 
 describe("apiService common fetchApi helpers", () => {
   beforeEach(async () => {
@@ -107,6 +76,7 @@ describe("apiService common fetchApi helpers", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks()
+    server.resetHandlers()
 
     mockHasCookieInterceptorPermissions.mockResolvedValue(true)
     mockGetPreferences.mockResolvedValue({
@@ -127,7 +97,20 @@ describe("apiService common fetchApi helpers", () => {
 
   it("fetchApiData should build URL with joinUrl and return data on success", async () => {
     const data = { foo: "bar" }
-    global.fetch = createFetchMock({ success: true, data, message: "ok" })
+    let callCount = 0
+    let capturedUrl: string | null = null
+    let capturedCredentials: RequestCredentials | null = null
+    let capturedAuthorization: string | null = null
+
+    server.use(
+      http.get(API_URL, ({ request }) => {
+        callCount += 1
+        capturedUrl = request.url
+        capturedCredentials = request.credentials
+        capturedAuthorization = request.headers.get("authorization")
+        return HttpResponse.json({ success: true, data, message: "ok" })
+      }),
+    )
 
     const result = await fetchApiData<{ foo: string }>(
       {
@@ -141,21 +124,24 @@ describe("apiService common fetchApi helpers", () => {
       { endpoint: ENDPOINT },
     )
 
-    expect(global.fetch).toHaveBeenCalledTimes(1)
-    const [url, options] = (global.fetch as any).mock.calls[0]
-    expect(url).toBe("https://example.com/base/api/test")
-    expect(options.credentials).toBe("omit")
-    expect(options.headers.Authorization).toBe("Bearer token")
+    expect(callCount).toBe(1)
+    expect(capturedUrl).toBe(API_URL)
+    expect(capturedCredentials).toBe("omit")
+    expect(capturedAuthorization).toBe("Bearer token")
     expect(result).toEqual(data)
   })
 
   it("fetchApi should unwrap ApiResponse when _normalResponseType is true", async () => {
     const payload = { models: [{ name: "models/gemini-1.5-pro" }] }
-    global.fetch = createFetchMock({
-      success: true,
-      data: payload,
-      message: "ok",
-    })
+    server.use(
+      http.get(API_URL, () => {
+        return HttpResponse.json({
+          success: true,
+          data: payload,
+          message: "ok",
+        })
+      }),
+    )
 
     const result = await fetchApi<{ models: Array<{ name: string }> }>(
       {
@@ -176,7 +162,11 @@ describe("apiService common fetchApi helpers", () => {
       success: true,
       usable_group: { default: "Default" },
     }
-    global.fetch = createFetchMock(pricingLikeResponse)
+    server.use(
+      http.get(API_URL, () => {
+        return HttpResponse.json(pricingLikeResponse)
+      }),
+    )
 
     const result = await fetchApi<typeof pricingLikeResponse>(
       {
@@ -191,11 +181,11 @@ describe("apiService common fetchApi helpers", () => {
   })
 
   it("fetchApiData should throw ApiError when HTTP response is not ok", async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: false,
-      status: 500,
-      json: async () => ({}),
-    }) as any
+    server.use(
+      http.get(API_URL, () => {
+        return HttpResponse.json({}, { status: 500 })
+      }),
+    )
 
     await expect(
       fetchApiData(
@@ -209,10 +199,14 @@ describe("apiService common fetchApi helpers", () => {
   })
 
   it("classifies 401 HTML responses as CONTENT_TYPE_MISMATCH for JSON requests", async () => {
-    global.fetch = createErrorFetchMock({
-      status: 401,
-      headers: { "content-type": "text/html; charset=utf-8" },
-    })
+    server.use(
+      http.get(API_URL, () => {
+        return new HttpResponse("<html></html>", {
+          status: 401,
+          headers: { "Content-Type": "text/html; charset=utf-8" },
+        })
+      }),
+    )
 
     await expect(
       fetchApiData(
@@ -231,11 +225,42 @@ describe("apiService common fetchApi helpers", () => {
     })
   })
 
+  it.each(["application/xhtml+xml", "application/xhtml+xml; charset=utf-8"])(
+    "classifies 401 XHTML responses (%s) as CONTENT_TYPE_MISMATCH for JSON requests",
+    async (contentType) => {
+      server.use(
+        http.get(API_URL, () => {
+          return new HttpResponse("<html></html>", {
+            status: 401,
+            headers: { "Content-Type": contentType },
+          })
+        }),
+      )
+
+      await expect(
+        fetchApiData(
+          {
+            baseUrl: BASE_URL,
+            auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+          },
+          {
+            endpoint: ENDPOINT,
+            tempWindowFallback: { statusCodes: [], codes: [] },
+          },
+        ),
+      ).rejects.toMatchObject({
+        statusCode: 401,
+        code: ApiErrorCodes.CONTENT_TYPE_MISMATCH,
+      })
+    },
+  )
+
   it("classifies 401 JSON responses as HTTP_401 for JSON requests", async () => {
-    global.fetch = createErrorFetchMock({
-      status: 401,
-      headers: { "content-type": "application/json" },
-    })
+    server.use(
+      http.get(API_URL, () => {
+        return HttpResponse.json({}, { status: 401 })
+      }),
+    )
 
     await expect(
       fetchApiData(
@@ -255,10 +280,14 @@ describe("apiService common fetchApi helpers", () => {
   })
 
   it("classifies 429 HTML responses without Retry-After as CONTENT_TYPE_MISMATCH for JSON requests", async () => {
-    global.fetch = createErrorFetchMock({
-      status: 429,
-      headers: { "content-type": "text/html" },
-    })
+    server.use(
+      http.get(API_URL, () => {
+        return new HttpResponse("<html></html>", {
+          status: 429,
+          headers: { "Content-Type": "text/html" },
+        })
+      }),
+    )
 
     await expect(
       fetchApiData(
@@ -277,11 +306,45 @@ describe("apiService common fetchApi helpers", () => {
     })
   })
 
+  it.each(["application/xhtml+xml", "application/xhtml+xml; charset=utf-8"])(
+    "classifies 429 XHTML responses without Retry-After (%s) as CONTENT_TYPE_MISMATCH for JSON requests",
+    async (contentType) => {
+      server.use(
+        http.get(API_URL, () => {
+          return new HttpResponse("<html></html>", {
+            status: 429,
+            headers: { "Content-Type": contentType },
+          })
+        }),
+      )
+
+      await expect(
+        fetchApiData(
+          {
+            baseUrl: BASE_URL,
+            auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+          },
+          {
+            endpoint: ENDPOINT,
+            tempWindowFallback: { statusCodes: [], codes: [] },
+          },
+        ),
+      ).rejects.toMatchObject({
+        statusCode: 429,
+        code: ApiErrorCodes.CONTENT_TYPE_MISMATCH,
+      })
+    },
+  )
+
   it("classifies 429 responses with Retry-After as HTTP_429 for JSON requests", async () => {
-    global.fetch = createErrorFetchMock({
-      status: 429,
-      headers: { "content-type": "text/html", "retry-after": "60" },
-    })
+    server.use(
+      http.get(API_URL, () => {
+        return new HttpResponse("<html></html>", {
+          status: 429,
+          headers: { "Content-Type": "text/html", "Retry-After": "60" },
+        })
+      }),
+    )
 
     await expect(
       fetchApiData(
@@ -300,12 +363,46 @@ describe("apiService common fetchApi helpers", () => {
     })
   })
 
+  it.each(["application/xhtml+xml", "application/xhtml+xml; charset=utf-8"])(
+    "classifies 429 XHTML responses with Retry-After (%s) as HTTP_429 for JSON requests",
+    async (contentType) => {
+      server.use(
+        http.get(API_URL, () => {
+          return new HttpResponse("<html></html>", {
+            status: 429,
+            headers: { "Content-Type": contentType, "Retry-After": "60" },
+          })
+        }),
+      )
+
+      await expect(
+        fetchApiData(
+          {
+            baseUrl: BASE_URL,
+            auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+          },
+          {
+            endpoint: ENDPOINT,
+            tempWindowFallback: { statusCodes: [], codes: [] },
+          },
+        ),
+      ).rejects.toMatchObject({
+        statusCode: 429,
+        code: ApiErrorCodes.HTTP_429,
+      })
+    },
+  )
+
   it("fetchApiData should throw ApiError when success is false with message", async () => {
-    global.fetch = createFetchMock({
-      success: false,
-      data: null,
-      message: "bad request",
-    })
+    server.use(
+      http.get(API_URL, () => {
+        return HttpResponse.json({
+          success: false,
+          data: null,
+          message: "bad request",
+        })
+      }),
+    )
 
     await expect(
       fetchApiData(
@@ -319,11 +416,11 @@ describe("apiService common fetchApi helpers", () => {
   })
 
   it("fetchApiData should tag eligible errors when temp-window fallback is disabled", async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: false,
-      status: 403,
-      json: async () => ({}),
-    }) as any
+    server.use(
+      http.get(API_URL, () => {
+        return HttpResponse.json({}, { status: 403 })
+      }),
+    )
 
     await expect(
       fetchApiData(
@@ -354,11 +451,15 @@ describe("apiService common fetchApi helpers", () => {
     async (endpoint, shouldRateLimit) => {
       mockLogRequestRateLimiter.mockClear()
 
-      global.fetch = createFetchMock({
-        success: true,
-        data: { ok: true },
-        message: "ok",
-      })
+      server.use(
+        http.get(/^https:\/\/example\.com\/base\//, () => {
+          return HttpResponse.json({
+            success: true,
+            data: { ok: true },
+            message: "ok",
+          })
+        }),
+      )
 
       await fetchApiData(
         {
