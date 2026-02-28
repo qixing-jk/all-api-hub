@@ -26,7 +26,7 @@ import {
   buildKiloCodeApiConfigs,
   buildKiloCodeSettingsFile,
   type KiloCodeExportTuple,
-} from "~/services/kiloCodeExport"
+} from "~/services/integrations/kiloCodeExport"
 import type { ApiToken, DisplaySiteData, SiteAccount } from "~/types"
 import { stripTrailingOpenAIV1 } from "~/utils/url"
 

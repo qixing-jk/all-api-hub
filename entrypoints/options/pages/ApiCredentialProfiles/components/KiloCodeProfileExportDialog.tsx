@@ -14,7 +14,7 @@ import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompa
 import {
   buildKiloCodeApiConfigs,
   buildKiloCodeSettingsFile,
-} from "~/services/kiloCodeExport"
+} from "~/services/integrations/kiloCodeExport"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { createLogger } from "~/utils/logger"
 import { stripTrailingOpenAIV1 } from "~/utils/url"
