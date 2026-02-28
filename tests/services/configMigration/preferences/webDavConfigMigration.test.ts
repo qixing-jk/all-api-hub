@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   migrateWebDavConfig,
   needWebDavConfigMigration,
-} from "~/services/configMigration/preferences/webDavConfigMigration"
+} from "~/services/preferences/migrations/webDavConfigMigration"
 import {
   DEFAULT_PREFERENCES,
   type UserPreferences,

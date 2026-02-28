@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { migrateAutoRefreshConfig } from "~/services/configMigration/preferences/autoRefreshConfigMigration"
+import { migrateAutoRefreshConfig } from "~/services/preferences/migrations/autoRefreshConfigMigration"
 import type { UserPreferences } from "~/services/userPreferences"
 import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
 

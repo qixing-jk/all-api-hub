@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   migrateSortingConfig,
   needsSortingConfigMigration,
-} from "~/services/configMigration/preferences/sortingConfigMigration"
+} from "~/services/preferences/migrations/sortingConfigMigration"
 import { SortingCriteriaType } from "~/types/sorting"
 import { DEFAULT_SORTING_PRIORITY_CONFIG } from "~/utils/sortingPriority"
 

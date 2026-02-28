@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { migrateNewApiConfig } from "~/services/configMigration/preferences/newApiConfigMigration"
+import { migrateNewApiConfig } from "~/services/preferences/migrations/newApiConfigMigration"
 import type { UserPreferences } from "~/services/userPreferences"
 
 describe("newApiConfigMigration", () => {

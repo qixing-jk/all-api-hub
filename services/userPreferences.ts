@@ -10,11 +10,11 @@ import {
   VELOERA,
   type ManagedSiteType,
 } from "~/constants/siteType"
+import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
 import {
   CURRENT_PREFERENCES_VERSION,
   migratePreferences,
-} from "~/services/configMigration/preferences/preferencesMigration"
-import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
+} from "~/services/preferences/migrations/preferencesMigration"
 import { CurrencyType, DashboardTabType, SortField, SortOrder } from "~/types"
 import {
   AccountAutoRefresh,

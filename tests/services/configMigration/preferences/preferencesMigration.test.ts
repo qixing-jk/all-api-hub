@@ -7,7 +7,7 @@ import {
   getPreferencesVersion,
   migratePreferences,
   needsPreferencesMigration,
-} from "~/services/configMigration/preferences/preferencesMigration"
+} from "~/services/preferences/migrations/preferencesMigration"
 import {
   DEFAULT_PREFERENCES,
   type UserPreferences,

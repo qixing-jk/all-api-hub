@@ -4,9 +4,9 @@
  */
 
 import { DATA_TYPE_CASHFLOW, DATA_TYPE_CONSUMPTION } from "~/constants"
-import { migrateAutoRefreshConfig } from "~/services/configMigration/preferences/autoRefreshConfigMigration"
-import { migrateNewApiConfig } from "~/services/configMigration/preferences/newApiConfigMigration"
-import { migrateWebDavConfig } from "~/services/configMigration/preferences/webDavConfigMigration"
+import { migrateAutoRefreshConfig } from "~/services/preferences/migrations/autoRefreshConfigMigration"
+import { migrateNewApiConfig } from "~/services/preferences/migrations/newApiConfigMigration"
+import { migrateWebDavConfig } from "~/services/preferences/migrations/webDavConfigMigration"
 import {
   ACCOUNT_AUTO_REFRESH_INTERVAL_MIN_SECONDS,
   ACCOUNT_AUTO_REFRESH_MIN_INTERVAL_MIN_SECONDS,
