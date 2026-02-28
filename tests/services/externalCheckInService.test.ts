@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { getSiteApiRouter } from "~/constants/siteType"
 import { accountStorage } from "~/services/accounts/accountStorage"
-import { handleExternalCheckInMessage } from "~/services/externalCheckInService"
+import { handleExternalCheckInMessage } from "~/services/checkin/externalCheckInService"
 import { createTab, createWindow, hasWindowsAPI } from "~/utils/browserApi"
 import { joinUrl } from "~/utils/url"
 
