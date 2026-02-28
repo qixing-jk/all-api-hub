@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   buildLdohSiteLookupIndex,
   matchLdohSiteForAccount,
-} from "~/services/ldohSiteLookup/matching"
+} from "~/services/integrations/ldohSiteLookup/matching"
 
 describe("ldohSiteLookup matching", () => {
   it("prefers exact origin matches", () => {

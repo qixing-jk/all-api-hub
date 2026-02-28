@@ -2,7 +2,10 @@ import { http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { LDOH_ORIGIN, LDOH_SITES_ENDPOINT } from "~/services/ldohSiteLookup/constants"
+import {
+  LDOH_ORIGIN,
+  LDOH_SITES_ENDPOINT,
+} from "~/services/integrations/ldohSiteLookup/constants"
 import { DEFAULT_PREFERENCES } from "~/services/userPreferences"
 import { server } from "~/tests/msw/server"
 import { buildTempWindowPrefs } from "~/tests/test-utils/factories"
@@ -12,7 +15,7 @@ vi.mock("~/entrypoints/background/tempWindowPool", () => ({
   handleTempWindowGetRenderedTitle: vi.fn(),
 }))
 
-vi.mock("~/services/ldohSiteLookup/cache", () => ({
+vi.mock("~/services/integrations/ldohSiteLookup/cache", () => ({
   writeLdohSiteListCache: vi.fn(),
 }))
 
@@ -68,10 +71,10 @@ describe("ldohSiteLookup background refresh", () => {
     })
 
     const { writeLdohSiteListCache } = await import(
-      "~/services/ldohSiteLookup/cache"
+      "~/services/integrations/ldohSiteLookup/cache"
     )
     const { refreshLdohSiteListCache } = await import(
-      "~/services/ldohSiteLookup/background"
+      "~/services/integrations/ldohSiteLookup/background"
     )
 
     server.use(
@@ -105,10 +108,10 @@ describe("ldohSiteLookup background refresh", () => {
     })
 
     const { writeLdohSiteListCache } = await import(
-      "~/services/ldohSiteLookup/cache"
+      "~/services/integrations/ldohSiteLookup/cache"
     )
     const { refreshLdohSiteListCache } = await import(
-      "~/services/ldohSiteLookup/background"
+      "~/services/integrations/ldohSiteLookup/background"
     )
 
     server.use(
@@ -150,7 +153,7 @@ describe("ldohSiteLookup background refresh", () => {
     })
 
     const { writeLdohSiteListCache } = await import(
-      "~/services/ldohSiteLookup/cache"
+      "~/services/integrations/ldohSiteLookup/cache"
     )
     vi.mocked(writeLdohSiteListCache).mockResolvedValue({
       version: 1,
@@ -160,7 +163,7 @@ describe("ldohSiteLookup background refresh", () => {
     })
 
     const { refreshLdohSiteListCache } = await import(
-      "~/services/ldohSiteLookup/background"
+      "~/services/integrations/ldohSiteLookup/background"
     )
 
     server.use(

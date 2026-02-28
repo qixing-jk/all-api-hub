@@ -1,7 +1,7 @@
 import type {
   LdohSiteListCache,
   LdohSiteSummary,
-} from "~/services/ldohSiteLookup/types"
+} from "~/services/integrations/ldohSiteLookup/types"
 
 /**
  * Coerces an unknown value into a safe {@link LdohSiteSummary} shape.

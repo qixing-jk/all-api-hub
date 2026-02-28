@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next"
 import { LdohIcon } from "~/components/icons/LdohIcon"
 import { Button } from "~/components/ui"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
-import { LDOH_ORIGIN } from "~/services/ldohSiteLookup/constants"
+import { LDOH_ORIGIN } from "~/services/integrations/ldohSiteLookup/constants"
 
 interface InfoPanelProps {
   mode: DialogMode

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import InfoPanel from "~/features/AccountManagement/components/AccountDialog/InfoPanel"
-import { LDOH_ORIGIN } from "~/services/ldohSiteLookup/constants"
+import { LDOH_ORIGIN } from "~/services/integrations/ldohSiteLookup/constants"
 import { fireEvent, render, screen } from "~/tests/test-utils/render"
 
 describe("AccountDialog InfoPanel", () => {

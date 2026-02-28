@@ -2,16 +2,16 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import type { ApiServiceRequest } from "~/services/apiService/common/type"
 import { fetchApi } from "~/services/apiService/common/utils"
-import { writeLdohSiteListCache } from "~/services/ldohSiteLookup/cache"
+import { writeLdohSiteListCache } from "~/services/integrations/ldohSiteLookup/cache"
 import {
   LDOH_ORIGIN,
   LDOH_SITES_ENDPOINT,
-} from "~/services/ldohSiteLookup/constants"
+} from "~/services/integrations/ldohSiteLookup/constants"
 import type {
   LdohSiteLookupRefreshSitesResponse,
   LdohSiteLookupRuntimeRequest,
-} from "~/services/ldohSiteLookup/runtime"
-import type { LdohSitesApiResponse } from "~/services/ldohSiteLookup/types"
+} from "~/services/integrations/ldohSiteLookup/runtime"
+import type { LdohSitesApiResponse } from "~/services/integrations/ldohSiteLookup/types"
 import { AuthTypeEnum } from "~/types"
 import { getErrorMessage } from "~/utils/error"
 import { createLogger } from "~/utils/logger"

@@ -1,7 +1,7 @@
 import {
   LDOH_ORIGIN,
   LDOH_SITE_SEARCH_QUERY_PARAM,
-} from "~/services/ldohSiteLookup/constants"
+} from "~/services/integrations/ldohSiteLookup/constants"
 import { normalizeHttpUrl } from "~/utils/url"
 
 export type NormalizedUrlMatchParts = {

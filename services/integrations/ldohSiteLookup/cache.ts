@@ -8,9 +8,9 @@ import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import {
   coerceLdohSiteListCache,
   coerceLdohSiteSummaryList,
-} from "~/services/ldohSiteLookup/coerce"
-import { LDOH_SITE_LIST_CACHE_TTL_MS } from "~/services/ldohSiteLookup/constants"
-import type { LdohSiteListCache } from "~/services/ldohSiteLookup/types"
+} from "~/services/integrations/ldohSiteLookup/coerce"
+import { LDOH_SITE_LIST_CACHE_TTL_MS } from "~/services/integrations/ldohSiteLookup/constants"
+import type { LdohSiteListCache } from "~/services/integrations/ldohSiteLookup/types"
 
 const storage = new Storage({ area: "local" })
 
