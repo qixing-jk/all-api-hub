@@ -38,14 +38,14 @@ import {
   getDayKeyFromUnixSeconds,
   listDayKeysInRange,
   subtractDaysFromDayKey,
-} from "~/services/dailyBalanceHistory/dayKeys"
+} from "~/services/history/dailyBalanceHistory/dayKeys"
 import {
   buildAccountRangeSummaries,
   buildPerAccountDailyBalanceMoneySeries,
   type DailyBalanceHistoryMetric,
-} from "~/services/dailyBalanceHistory/selectors"
-import { dailyBalanceHistoryStorage } from "~/services/dailyBalanceHistory/storage"
-import { clampBalanceHistoryRetentionDays } from "~/services/dailyBalanceHistory/utils"
+} from "~/services/history/dailyBalanceHistory/selectors"
+import { dailyBalanceHistoryStorage } from "~/services/history/dailyBalanceHistory/storage"
+import { clampBalanceHistoryRetentionDays } from "~/services/history/dailyBalanceHistory/utils"
 import { tagStorage } from "~/services/tags/tagStorage"
 import { listTagsSorted } from "~/services/tags/tagStoreUtils"
 import type { CurrencyType, SiteAccount, TagStore } from "~/types"

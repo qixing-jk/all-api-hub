@@ -10,7 +10,7 @@ import { handleAutoRefreshMessage } from "~/services/accounts/autoRefreshService
 import { handleChannelConfigMessage } from "~/services/channelConfigStorage"
 import { handleAutoCheckinMessage } from "~/services/checkin/autoCheckin/scheduler"
 import { handleExternalCheckInMessage } from "~/services/checkin/externalCheckInService"
-import { handleDailyBalanceHistoryMessage } from "~/services/dailyBalanceHistory/scheduler"
+import { handleDailyBalanceHistoryMessage } from "~/services/history/dailyBalanceHistory/scheduler"
 import { handleLdohSiteLookupMessage } from "~/services/integrations/ldohSiteLookup/background"
 import { handleManagedSiteModelSyncMessage } from "~/services/models/modelSync"
 import { handleRedemptionAssistMessage } from "~/services/redemptionAssist"

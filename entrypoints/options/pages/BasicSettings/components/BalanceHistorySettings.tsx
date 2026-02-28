@@ -12,7 +12,7 @@ import {
   Switch,
 } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { clampBalanceHistoryRetentionDays } from "~/services/dailyBalanceHistory/utils"
+import { clampBalanceHistoryRetentionDays } from "~/services/history/dailyBalanceHistory/utils"
 import { DEFAULT_BALANCE_HISTORY_PREFERENCES } from "~/types/dailyBalanceHistory"
 import { hasAlarmsAPI } from "~/utils/browserApi"
 import { getErrorMessage } from "~/utils/error"

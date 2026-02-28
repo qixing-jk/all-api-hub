@@ -10,6 +10,7 @@ import {
   STORAGE_LOCKS,
 } from "~/services/core/storageKeys"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
+import { maybeCaptureDailyBalanceSnapshot } from "~/services/history/dailyBalanceHistory/capture"
 import { ensureAccountTagsStorageMigrated } from "~/services/tags/migrations/accountTagsStorageMigration"
 import {
   AuthTypeEnum,
@@ -27,7 +28,6 @@ import { getErrorMessage } from "~/utils/error"
 import { safeRandomUUID } from "~/utils/identifier"
 import { createLogger } from "~/utils/logger"
 
-import { maybeCaptureDailyBalanceSnapshot } from "../dailyBalanceHistory/capture"
 import { getSiteType } from "../siteDetection/detectSiteType"
 import { userPreferences } from "../userPreferences"
 import {

@@ -11,8 +11,8 @@ import { accountStorage } from "~/services/accounts/accountStorage"
 import {
   getDayKeyFromUnixSeconds,
   subtractDaysFromDayKey,
-} from "~/services/dailyBalanceHistory/dayKeys"
-import { dailyBalanceHistoryStorage } from "~/services/dailyBalanceHistory/storage"
+} from "~/services/history/dailyBalanceHistory/dayKeys"
+import { dailyBalanceHistoryStorage } from "~/services/history/dailyBalanceHistory/storage"
 import { tagStorage } from "~/services/tags/tagStorage"
 import { render, screen, waitFor } from "~/tests/test-utils/render"
 import { DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION } from "~/types/dailyBalanceHistory"
@@ -36,7 +36,7 @@ vi.mock("~/services/accounts/accountStorage", () => ({
   accountStorage: { getAllAccounts: vi.fn(), getEnabledAccounts: vi.fn() },
 }))
 
-vi.mock("~/services/dailyBalanceHistory/storage", () => ({
+vi.mock("~/services/history/dailyBalanceHistory/storage", () => ({
   dailyBalanceHistoryStorage: { getStore: vi.fn() },
 }))
 

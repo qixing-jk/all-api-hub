@@ -6,7 +6,7 @@ import {
   getDayKeyFromUnixSeconds,
   listDayKeysInRange,
   subtractDaysFromDayKey,
-} from "~/services/dailyBalanceHistory/dayKeys"
+} from "~/services/history/dailyBalanceHistory/dayKeys"
 
 describe("dailyBalanceHistory dayKeys", () => {
   it("returns [] when start or end is an invalid calendar day", () => {

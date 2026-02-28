@@ -6,7 +6,7 @@ import {
   buildAggregatedDailyBalanceMoneySeries,
   buildAggregatedDailyBalanceSeries,
   buildPerAccountDailyBalanceMoneySeries,
-} from "~/services/dailyBalanceHistory/selectors"
+} from "~/services/history/dailyBalanceHistory/selectors"
 import type { DailyBalanceHistoryStore } from "~/types/dailyBalanceHistory"
 import { DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION } from "~/types/dailyBalanceHistory"
 
