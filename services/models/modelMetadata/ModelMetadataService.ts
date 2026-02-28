@@ -1,4 +1,4 @@
-import { extractActualModel } from "~/services/modelRedirect/modelNormalization"
+import { extractActualModel } from "~/services/models/modelRedirect/modelNormalization"
 import { createLogger } from "~/utils/logger"
 import { removeDateSuffix, toModelTokenKey } from "~/utils/modelName"
 

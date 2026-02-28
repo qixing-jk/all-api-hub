@@ -11,8 +11,8 @@ import {
   Input,
   Modal,
 } from "~/components/ui"
-import { ModelRedirectService } from "~/services/modelRedirect"
-import { isEmptyModelMapping } from "~/services/modelRedirect/utils"
+import { ModelRedirectService } from "~/services/models/modelRedirect"
+import { isEmptyModelMapping } from "~/services/models/modelRedirect/utils"
 import type { ManagedSiteChannel } from "~/types/managedSite"
 import { getErrorMessage } from "~/utils/error"
 

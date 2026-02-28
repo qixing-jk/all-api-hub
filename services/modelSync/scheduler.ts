@@ -3,7 +3,7 @@ import { t } from "i18next"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { OCTOPUS } from "~/constants/siteType"
 import * as octopusApi from "~/services/apiService/octopus"
-import { ModelRedirectService } from "~/services/modelRedirect"
+import { ModelRedirectService } from "~/services/models/modelRedirect"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 import type {
   ManagedSiteChannel,

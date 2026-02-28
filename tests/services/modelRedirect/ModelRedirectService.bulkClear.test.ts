@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { NEW_API } from "~/constants/siteType"
-import { ModelRedirectService } from "~/services/modelRedirect/ModelRedirectService"
+import { ModelRedirectService } from "~/services/models/modelRedirect/ModelRedirectService"
 import { userPreferences } from "~/services/userPreferences"
 import {
   getManagedSiteAdminConfig,

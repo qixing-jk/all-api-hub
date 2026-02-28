@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import ModelRedirectSettings from "~/entrypoints/options/pages/BasicSettings/components/ModelRedirectSettings"
 import { hasValidManagedSiteConfig } from "~/services/managedSiteService"
-import { ModelRedirectService } from "~/services/modelRedirect"
+import { ModelRedirectService } from "~/services/models/modelRedirect"
 import { buildManagedSiteChannel } from "~/tests/test-utils/factories"
 import { testI18n } from "~/tests/test-utils/i18n"
 import { fireEvent, render, screen, waitFor } from "~/tests/test-utils/render"
@@ -38,7 +38,7 @@ vi.mock("~/utils/managedSite", () => ({
   })),
 }))
 
-vi.mock("~/services/modelRedirect", () => ({
+vi.mock("~/services/models/modelRedirect", () => ({
   ModelRedirectService: {
     listManagedSiteChannels: vi.fn(),
     clearChannelModelMappings: vi.fn(),
