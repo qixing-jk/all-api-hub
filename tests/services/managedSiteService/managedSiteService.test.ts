@@ -10,7 +10,7 @@ vi.mock("~/services/userPreferences", () => ({
   },
 }))
 
-vi.mock("~/services/managedSites/providers/newApiService", () => ({
+vi.mock("~/services/managedSites/providers/newApi", () => ({
   checkValidNewApiConfig: vi.fn(async () => true),
   getNewApiConfig: vi.fn(async () => ({
     baseUrl: "n",
