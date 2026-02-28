@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next"
 import { useChannelDialogContext } from "~/components/ChannelDialog/context/ChannelDialogContext"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { AccountToken } from "~/entrypoints/options/pages/KeyManagement/type"
-import { ensureAccountApiToken } from "~/services/accountOperations"
+import { ensureAccountApiToken } from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accountStorage"
 import { getManagedSiteService } from "~/services/managedSiteService"
 import {

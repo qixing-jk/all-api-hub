@@ -13,7 +13,7 @@ import {
   parseManualQuotaFromUsd,
   validateAndSaveAccount,
   validateAndUpdateAccount,
-} from "~/services/accountOperations"
+} from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accountStorage"
 import {
   AuthTypeEnum,

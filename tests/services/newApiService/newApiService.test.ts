@@ -85,7 +85,7 @@ vi.mock("~/services/accountStorage", () => ({
 
 // Mock account operations
 const mockEnsureAccountApiToken = vi.fn()
-vi.mock("~/services/accountOperations", () => ({
+vi.mock("~/services/accounts/accountOperations", () => ({
   ensureAccountApiToken: mockEnsureAccountApiToken,
 }))
 

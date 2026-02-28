@@ -5,7 +5,7 @@ import { UI_CONSTANTS } from "~/constants/ui"
 import {
   validateAndSaveAccount,
   validateAndUpdateAccount,
-} from "~/services/accountOperations"
+} from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accountStorage"
 import { server } from "~/tests/msw/server"
 import { AuthTypeEnum, SiteHealthStatus, type CheckInConfig } from "~/types"

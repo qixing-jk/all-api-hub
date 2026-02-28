@@ -6,7 +6,7 @@ import {
   isValidAccount,
   isValidExchangeRate,
   validateAndUpdateAccount,
-} from "~/services/accountOperations"
+} from "~/services/accounts/accountOperations"
 import { AuthTypeEnum } from "~/types"
 
 const { mockFetchAccountData, mockUpdateAccount } = vi.hoisted(() => ({

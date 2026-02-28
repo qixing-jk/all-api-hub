@@ -28,7 +28,7 @@ import {
 } from "~/components/ui"
 import { SITE_TITLE_RULES, SUB2API, UNKNOWN_SITE } from "~/constants/siteType"
 import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
-import { isValidExchangeRate } from "~/services/accountOperations"
+import { isValidExchangeRate } from "~/services/accounts/accountOperations"
 import { AuthTypeEnum, type CheckInConfig, type Tag } from "~/types"
 
 interface AccountFormProps {

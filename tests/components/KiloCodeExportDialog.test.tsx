@@ -27,7 +27,7 @@ vi.mock("~/services/apiService", () => ({
   getApiService: (...args: unknown[]) => mockGetApiService(...args),
 }))
 
-vi.mock("~/services/accountOperations", () => ({
+vi.mock("~/services/accounts/accountOperations", () => ({
   ensureAccountApiToken: vi.fn(),
 }))
 

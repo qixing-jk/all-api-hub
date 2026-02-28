@@ -4,7 +4,7 @@ import { useChannelDialogContext } from "~/components/ChannelDialog/context/Chan
 import { useChannelDialog } from "~/components/ChannelDialog/hooks/useChannelDialog"
 import { ChannelType } from "~/constants"
 import { DIALOG_MODES } from "~/constants/dialogModes"
-import * as accountOperations from "~/services/accountOperations"
+import * as accountOperations from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accountStorage"
 import * as managedSiteService from "~/services/managedSiteService"
 import type { ManagedSiteService } from "~/services/managedSiteService"

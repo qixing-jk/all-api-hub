@@ -19,7 +19,7 @@ import {
   type CompactMultiSelectOption,
 } from "~/components/ui"
 import { useAccountData } from "~/hooks/useAccountData"
-import { ensureAccountApiToken } from "~/services/accountOperations"
+import { ensureAccountApiToken } from "~/services/accounts/accountOperations"
 import { getApiService } from "~/services/apiService"
 import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompatible"
 import {

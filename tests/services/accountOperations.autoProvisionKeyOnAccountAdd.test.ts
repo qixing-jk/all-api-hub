@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { Storage } from "@plasmohq/storage"
 
 import { SUB2API } from "~/constants/siteType"
-import { validateAndSaveAccount } from "~/services/accountOperations"
+import { validateAndSaveAccount } from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accountStorage"
 import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
 import {

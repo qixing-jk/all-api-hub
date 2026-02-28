@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SUB2API } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
-import { autoDetectAccount } from "~/services/accountOperations"
+import { autoDetectAccount } from "~/services/accounts/accountOperations"
 import { AuthTypeEnum } from "~/types"
 
 const {
