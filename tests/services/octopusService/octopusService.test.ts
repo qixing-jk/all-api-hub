@@ -42,7 +42,7 @@ describe("octopusService", () => {
   describe("findMatchingChannel", () => {
     it("should refine match by key when keys are available", async () => {
       const { findMatchingChannel } = await import(
-        "~/services/octopusService/octopusService"
+        "~/services/managedSites/providers/octopusService"
       )
 
       mockGetPreferences.mockResolvedValueOnce({
@@ -96,7 +96,7 @@ describe("octopusService", () => {
 
     it("should return null when key mismatches", async () => {
       const { findMatchingChannel } = await import(
-        "~/services/octopusService/octopusService"
+        "~/services/managedSites/providers/octopusService"
       )
 
       mockGetPreferences.mockResolvedValueOnce({
