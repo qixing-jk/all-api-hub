@@ -44,7 +44,7 @@ vi.mock("~/services/modelMetadata", () => ({
   modelMetadataService: { initialize: modelMetadataInitMock },
 }))
 
-vi.mock("~/services/autoRefreshService", () => ({
+vi.mock("~/services/accounts/autoRefreshService", () => ({
   autoRefreshService: { initialize: autoRefreshInitMock },
 }))
 

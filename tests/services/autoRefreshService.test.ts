@@ -13,7 +13,7 @@ import { accountStorage } from "~/services/accounts/accountStorage"
 import {
   autoRefreshService,
   handleAutoRefreshMessage,
-} from "~/services/autoRefreshService"
+} from "~/services/accounts/autoRefreshService"
 import type { UserPreferences } from "~/services/userPreferences"
 import { userPreferences } from "~/services/userPreferences"
 import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
