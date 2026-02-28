@@ -3,7 +3,7 @@ import type {
   ApiVerificationApiType,
   ApiVerificationProbeId,
   ApiVerificationProbeResult,
-} from "~/services/aiApiVerification"
+} from "~/services/verification/aiApiVerification"
 
 /**
  * Runtime message sent from background → content to open the in-page AI API Check modal.

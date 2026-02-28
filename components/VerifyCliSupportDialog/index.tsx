@@ -11,18 +11,18 @@ import {
   SearchableSelect,
 } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
-import { guessModelIdFromToken } from "~/services/aiApiVerification"
-import {
-  inferHttpStatus,
-  summaryKeyFromHttpStatus,
-  toSanitizedErrorSummary,
-} from "~/services/aiApiVerification/utils"
 import { getApiService } from "~/services/apiService"
 import {
   CLI_TOOL_IDS,
   runCliSupportTool,
 } from "~/services/cliSupportVerification"
 import type { CliSupportResult } from "~/services/cliSupportVerification"
+import { guessModelIdFromToken } from "~/services/verification/aiApiVerification"
+import {
+  inferHttpStatus,
+  summaryKeyFromHttpStatus,
+  toSanitizedErrorSummary,
+} from "~/services/verification/aiApiVerification/utils"
 import type { ApiToken } from "~/types"
 import { createLogger } from "~/utils/logger"
 

@@ -1,14 +1,14 @@
 import { Storage } from "@plasmohq/storage"
 
 import {
-  API_TYPES,
-  type ApiVerificationApiType,
-} from "~/services/aiApiVerification"
-import {
   API_CREDENTIAL_PROFILES_STORAGE_KEYS,
   STORAGE_LOCKS,
 } from "~/services/core/storageKeys"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
+import {
+  API_TYPES,
+  type ApiVerificationApiType,
+} from "~/services/verification/aiApiVerification"
 import type {
   ApiCredentialProfile,
   ApiCredentialProfilesConfig,

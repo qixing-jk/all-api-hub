@@ -20,11 +20,11 @@ import { RuntimeMessageTypes } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { PageHeader } from "~/entrypoints/options/components/PageHeader"
 import { useIsDesktop, useIsSmallScreen } from "~/hooks/useMediaQuery"
+import { tagStorage } from "~/services/tags/tagStorage"
 import {
   API_TYPES,
   type ApiVerificationApiType,
-} from "~/services/aiApiVerification"
-import { tagStorage } from "~/services/tags/tagStorage"
+} from "~/services/verification/aiApiVerification"
 import {
   AuthTypeEnum,
   SiteHealthStatus,

@@ -1,4 +1,4 @@
-import { API_TYPES } from "~/services/aiApiVerification"
+import { API_TYPES } from "~/services/verification/aiApiVerification"
 
 import { runCliToolCallingSimulation } from "./runners/toolCalling"
 import type { CliSupportResult, CliToolId } from "./types"

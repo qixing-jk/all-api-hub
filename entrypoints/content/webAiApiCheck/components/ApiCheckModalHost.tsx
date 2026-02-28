@@ -20,7 +20,7 @@ import {
   type ApiVerificationApiType,
   type ApiVerificationProbeId,
   type ApiVerificationProbeResult,
-} from "~/services/aiApiVerification"
+} from "~/services/verification/aiApiVerification"
 import { sendRuntimeMessage } from "~/utils/browserApi"
 import { extractApiCheckCredentialsFromText } from "~/utils/webAiApiCheck"
 

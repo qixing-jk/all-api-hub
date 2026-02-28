@@ -27,7 +27,7 @@ import type { ManagedSiteType } from "~/constants/siteType"
 import {
   API_TYPES,
   type ApiVerificationApiType,
-} from "~/services/aiApiVerification"
+} from "~/services/verification/aiApiVerification"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 
 /**

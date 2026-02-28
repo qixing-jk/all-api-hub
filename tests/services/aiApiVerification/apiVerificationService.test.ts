@@ -5,7 +5,7 @@ import {
   API_TYPES,
   runApiVerification,
   runApiVerificationProbe,
-} from "~/services/aiApiVerification"
+} from "~/services/verification/aiApiVerification"
 
 const mockFetchOpenAICompatibleModelIds = vi.fn()
 const mockFetchAnthropicModelIds = vi.fn()

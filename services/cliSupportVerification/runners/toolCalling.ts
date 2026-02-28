@@ -1,5 +1,5 @@
-import type { ApiVerificationApiType } from "~/services/aiApiVerification"
-import { runApiVerificationProbe } from "~/services/aiApiVerification"
+import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification"
+import { runApiVerificationProbe } from "~/services/verification/aiApiVerification"
 
 import type { CliSupportResult, CliSupportStatus, CliToolId } from "../types"
 
