@@ -25,7 +25,7 @@ import {
 import * as doneHubService from "../doneHubService/doneHubService"
 import { userPreferences, type UserPreferences } from "../userPreferences"
 import * as newApiService from "./providers/newApi"
-import * as octopusService from "./providers/octopusService"
+import * as octopusService from "./providers/octopus"
 import * as veloeraService from "./providers/veloera"
 
 export interface ManagedSiteConfig {

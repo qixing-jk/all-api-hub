@@ -573,7 +573,7 @@ export async function autoConfigToOctopus(
 /**
  * Octopus ManagedSiteService 实现
  */
-export const octopusService: ManagedSiteService = {
+export const octopus: ManagedSiteService = {
   siteType: OCTOPUS,
   messagesKey: "octopus" as ManagedSiteMessagesKey,
 

@@ -34,7 +34,7 @@ vi.mock("react-hot-toast", () => ({
   },
 }))
 
-describe("octopusService", () => {
+describe("octopus", () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
@@ -42,7 +42,7 @@ describe("octopusService", () => {
   describe("findMatchingChannel", () => {
     it("should refine match by key when keys are available", async () => {
       const { findMatchingChannel } = await import(
-        "~/services/managedSites/providers/octopusService"
+        "~/services/managedSites/providers/octopus"
       )
 
       mockGetPreferences.mockResolvedValueOnce({
@@ -96,7 +96,7 @@ describe("octopusService", () => {
 
     it("should return null when key mismatches", async () => {
       const { findMatchingChannel } = await import(
-        "~/services/managedSites/providers/octopusService"
+        "~/services/managedSites/providers/octopus"
       )
 
       mockGetPreferences.mockResolvedValueOnce({

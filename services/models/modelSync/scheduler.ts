@@ -35,7 +35,7 @@ import {
 } from "~/utils/managedSite"
 
 import { channelConfigStorage } from "../../channelConfigStorage"
-import { octopusChannelToManagedSite } from "../../managedSites/providers/octopusService"
+import { octopusChannelToManagedSite } from "../../managedSites/providers/octopus"
 import { DEFAULT_PREFERENCES, userPreferences } from "../../userPreferences"
 import { collectModelsFromExecution } from "./modelCollection"
 import { ModelSyncService } from "./modelSyncService"
