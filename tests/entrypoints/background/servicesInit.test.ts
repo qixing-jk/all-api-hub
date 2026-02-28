@@ -48,7 +48,7 @@ vi.mock("~/services/accounts/autoRefreshService", () => ({
   autoRefreshService: { initialize: autoRefreshInitMock },
 }))
 
-vi.mock("~/services/redemptionAssist", () => ({
+vi.mock("~/services/redemption/redemptionAssist", () => ({
   redemptionAssistService: { initialize: redemptionAssistInitMock },
 }))
 

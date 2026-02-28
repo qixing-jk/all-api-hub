@@ -9,7 +9,7 @@ import { isLikelyCopyActionTarget } from "~/entrypoints/content/shared/copyActio
 import type {
   RedemptionAssistShouldPromptRequest,
   RedemptionAssistShouldPromptResponse,
-} from "~/services/redemptionAssist"
+} from "~/services/redemption/redemptionAssist"
 import {
   checkPermissionViaMessage,
   sendRuntimeMessage,

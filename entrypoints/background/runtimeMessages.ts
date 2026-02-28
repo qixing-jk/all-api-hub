@@ -14,7 +14,7 @@ import { handleDailyBalanceHistoryMessage } from "~/services/history/dailyBalanc
 import { handleUsageHistoryMessage } from "~/services/history/usageHistory/scheduler"
 import { handleLdohSiteLookupMessage } from "~/services/integrations/ldohSiteLookup/background"
 import { handleManagedSiteModelSyncMessage } from "~/services/models/modelSync"
-import { handleRedemptionAssistMessage } from "~/services/redemptionAssist"
+import { handleRedemptionAssistMessage } from "~/services/redemption/redemptionAssist"
 import { handleWebAiApiCheckMessage } from "~/services/webAiApiCheck/background"
 import { handleWebdavAutoSyncMessage } from "~/services/webdav/webdavAutoSyncService"
 import { onRuntimeMessage } from "~/utils/browserApi"

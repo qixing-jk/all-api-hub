@@ -4,7 +4,7 @@ import { dailyBalanceHistoryScheduler } from "~/services/history/dailyBalanceHis
 import { usageHistoryScheduler } from "~/services/history/usageHistory/scheduler"
 import { modelMetadataService } from "~/services/models/modelMetadata"
 import { modelSyncScheduler } from "~/services/models/modelSync"
-import { redemptionAssistService } from "~/services/redemptionAssist"
+import { redemptionAssistService } from "~/services/redemption/redemptionAssist"
 import { webdavAutoSyncService } from "~/services/webdav/webdavAutoSyncService"
 import { initBackgroundI18n } from "~/utils/background-i18n"
 import { createLogger } from "~/utils/logger"
