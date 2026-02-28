@@ -27,14 +27,14 @@ import { getErrorMessage } from "~/utils/error"
 import { safeRandomUUID } from "~/utils/identifier"
 import { createLogger } from "~/utils/logger"
 
+import { maybeCaptureDailyBalanceSnapshot } from "../dailyBalanceHistory/capture"
+import { getSiteType } from "../detectSiteType"
+import { userPreferences } from "../userPreferences"
 import {
   migrateAccountConfig,
   migrateAccountsConfig,
   needsConfigMigration,
-} from "./accounts/migrations/accountDataMigration"
-import { maybeCaptureDailyBalanceSnapshot } from "./dailyBalanceHistory/capture"
-import { getSiteType } from "./detectSiteType"
-import { userPreferences } from "./userPreferences"
+} from "./migrations/accountDataMigration"
 
 // Re-export for backward compatibility across the codebase.
 export { ACCOUNT_STORAGE_KEYS }

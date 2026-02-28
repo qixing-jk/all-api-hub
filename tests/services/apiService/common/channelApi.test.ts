@@ -14,7 +14,7 @@ vi.mock("~/constants/ui", () => ({
   UI_CONSTANTS: {},
 }))
 
-vi.mock("~/services/accountStorage", () => ({
+vi.mock("~/services/accounts/accountStorage", () => ({
   accountStorage: {},
 }))
 

@@ -370,7 +370,9 @@ const _fetchApi = async <T>(
     // Only resolve account info when caller didn't provide an accountId. This is
     // intentionally a dynamic import to avoid a static import cycle between
     // apiService and accountStorage.
-    const { accountStorage } = await import("~/services/accountStorage")
+    const { accountStorage } = await import(
+      "~/services/accounts/accountStorage"
+    )
     accountInfo = await accountStorage.getAccountByBaseUrlAndUserId(
       baseUrl,
       userId,

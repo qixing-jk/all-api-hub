@@ -2,12 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { getSiteApiRouter } from "~/constants/siteType"
-import { accountStorage } from "~/services/accountStorage"
+import { accountStorage } from "~/services/accounts/accountStorage"
 import { handleExternalCheckInMessage } from "~/services/externalCheckInService"
 import { createTab, createWindow, hasWindowsAPI } from "~/utils/browserApi"
 import { joinUrl } from "~/utils/url"
 
-vi.mock("~/services/accountStorage", () => ({
+vi.mock("~/services/accounts/accountStorage", () => ({
   accountStorage: {
     getAccountById: vi.fn(),
     markAccountAsCustomCheckedIn: vi.fn(),

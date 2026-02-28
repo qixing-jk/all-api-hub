@@ -4,7 +4,7 @@ import { Storage } from "@plasmohq/storage"
 
 import { SUB2API } from "~/constants/siteType"
 import { validateAndSaveAccount } from "~/services/accounts/accountOperations"
-import { accountStorage } from "~/services/accountStorage"
+import { accountStorage } from "~/services/accounts/accountStorage"
 import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
 import {
   DEFAULT_PREFERENCES,

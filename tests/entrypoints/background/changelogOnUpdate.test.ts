@@ -101,7 +101,7 @@ describe("background onInstalled changelog opening", () => {
         ensureLegacyMigration: vi.fn().mockResolvedValue(undefined),
       },
     }))
-    vi.doMock("~/services/accountStorage", () => ({
+    vi.doMock("~/services/accounts/accountStorage", () => ({
       accountStorage: {
         getAllAccounts: vi.fn().mockResolvedValue([]),
         exportData: vi.fn().mockResolvedValue({ accounts: [] }),
@@ -142,7 +142,7 @@ describe("background onInstalled changelog opening", () => {
     vi.doUnmock("~/entrypoints/background/servicesInit")
     vi.doUnmock("~/entrypoints/background/actionClickBehavior")
     vi.doUnmock("~/services/tags/tagStorage")
-    vi.doUnmock("~/services/accountStorage")
+    vi.doUnmock("~/services/accounts/accountStorage")
     vi.doUnmock("~/services/accounts/migrations/accountDataMigration")
     vi.doUnmock("~/services/permissions/permissionManager")
     vi.doUnmock("~/services/permissions/optionalPermissionState")

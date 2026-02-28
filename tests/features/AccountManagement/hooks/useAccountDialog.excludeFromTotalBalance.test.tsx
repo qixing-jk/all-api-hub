@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog"
-import { accountStorage } from "~/services/accountStorage"
+import { accountStorage } from "~/services/accounts/accountStorage"
 import { server } from "~/tests/msw/server"
 import { act, renderHook, waitFor } from "~/tests/test-utils/render"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"

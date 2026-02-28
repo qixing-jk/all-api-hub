@@ -4,7 +4,7 @@ import { sendRuntimeMessage } from "~/utils/browserApi"
 import { createLogger } from "~/utils/logger"
 
 import { getErrorMessage } from "../utils/error"
-import { accountStorage } from "./accountStorage"
+import { accountStorage } from "./accounts/accountStorage"
 import { usageHistoryScheduler } from "./usageHistory/scheduler"
 import { userPreferences } from "./userPreferences"
 

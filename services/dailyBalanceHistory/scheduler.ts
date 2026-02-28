@@ -1,5 +1,5 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { accountStorage } from "~/services/accountStorage"
+import { accountStorage } from "~/services/accounts/accountStorage"
 import { userPreferences } from "~/services/userPreferences"
 import {
   DEFAULT_BALANCE_HISTORY_PREFERENCES,

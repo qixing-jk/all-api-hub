@@ -17,7 +17,7 @@ import { UI_CONSTANTS } from "~/constants/ui"
 import { useTheme } from "~/contexts/ThemeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { PageHeader } from "~/entrypoints/options/components/PageHeader"
-import { accountStorage } from "~/services/accountStorage"
+import { accountStorage } from "~/services/accounts/accountStorage"
 import { computeUsageHistoryExport } from "~/services/usageHistory/analytics"
 import {
   parseDayKey,

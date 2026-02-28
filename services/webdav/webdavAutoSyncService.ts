@@ -34,7 +34,7 @@ import {
 import { getErrorMessage } from "~/utils/error"
 import { createLogger } from "~/utils/logger"
 
-import { accountStorage } from "../accountStorage"
+import { accountStorage } from "../accounts/accountStorage"
 import { channelConfigStorage } from "../channelConfigStorage"
 import { userPreferences, type UserPreferences } from "../userPreferences"
 import {

@@ -10,13 +10,13 @@ import {
   type BackupV2,
   type RawBackupData,
 } from "~/entrypoints/options/pages/ImportExport/utils"
-import { accountStorage } from "~/services/accountStorage"
+import { accountStorage } from "~/services/accounts/accountStorage"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { channelConfigStorage } from "~/services/channelConfigStorage"
 import { tagStorage } from "~/services/tags/tagStorage"
 import { userPreferences } from "~/services/userPreferences"
 
-vi.mock("~/services/accountStorage", () => ({
+vi.mock("~/services/accounts/accountStorage", () => ({
   accountStorage: {
     importData: vi.fn(),
     exportData: vi.fn(),

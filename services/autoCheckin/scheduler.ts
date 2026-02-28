@@ -1,7 +1,7 @@
 import { t } from "i18next"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { accountStorage } from "~/services/accountStorage"
+import { accountStorage } from "~/services/accounts/accountStorage"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,

@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next"
 import { Button, FormField, Input, Modal, Textarea } from "~/components/ui"
 import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
-import { accountStorage } from "~/services/accountStorage"
+import { accountStorage } from "~/services/accounts/accountStorage"
 import type { SiteBookmark } from "~/types"
 import { getErrorMessage } from "~/utils/error"
 

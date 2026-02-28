@@ -2,7 +2,7 @@ import { t } from "i18next"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { getSiteApiRouter } from "~/constants/siteType"
-import { accountStorage } from "~/services/accountStorage"
+import { accountStorage } from "~/services/accounts/accountStorage"
 import { redeemService } from "~/services/redeemService"
 import { searchAccounts } from "~/services/search/accountSearch"
 import { userPreferences } from "~/services/userPreferences"

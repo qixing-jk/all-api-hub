@@ -2,7 +2,7 @@ import { t } from "i18next"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { TURNSTILE_DEFAULT_QUERY_PARAM_NAME } from "~/constants/turnstile"
-import { accountStorage } from "~/services/accountStorage"
+import { accountStorage } from "~/services/accounts/accountStorage"
 import { getSiteType } from "~/services/detectSiteType"
 import {
   DEFAULT_PREFERENCES,

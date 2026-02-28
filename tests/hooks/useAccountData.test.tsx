@@ -11,7 +11,7 @@ const { mockGetAllAccounts, mockGetAccountStats, mockConvertToDisplayData } =
     mockConvertToDisplayData: vi.fn(),
   }))
 
-vi.mock("~/services/accountStorage", () => ({
+vi.mock("~/services/accounts/accountStorage", () => ({
   accountStorage: {
     getAllAccounts: mockGetAllAccounts,
     getAccountStats: mockGetAccountStats,

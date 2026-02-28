@@ -40,7 +40,7 @@ const {
   mockGetTagStore: vi.fn(),
 }))
 
-vi.mock("~/services/accountStorage", () => ({
+vi.mock("~/services/accounts/accountStorage", () => ({
   accountStorage: {
     resetExpiredCheckIns: mockResetExpiredCheckIns,
     getAllAccounts: mockGetAllAccounts,

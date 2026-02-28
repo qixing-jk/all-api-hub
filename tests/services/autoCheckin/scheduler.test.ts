@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { accountStorage } from "~/services/accountStorage"
+import { accountStorage } from "~/services/accounts/accountStorage"
 import { resolveAutoCheckinProvider } from "~/services/autoCheckin/providers"
 import {
   autoCheckinScheduler,
@@ -45,7 +45,7 @@ vi.mock("~/services/userPreferences", () => ({
   },
 }))
 
-vi.mock("~/services/accountStorage", () => ({
+vi.mock("~/services/accounts/accountStorage", () => ({
   accountStorage: {
     getAllAccounts: vi.fn(),
     getEnabledAccounts: vi.fn(),

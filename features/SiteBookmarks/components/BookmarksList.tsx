@@ -28,7 +28,7 @@ import {
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { useBookmarkDialogContext } from "~/features/SiteBookmarks/hooks/BookmarkDialogStateContext"
 import { useIsDesktop, useIsSmallScreen } from "~/hooks/useMediaQuery"
-import { accountStorage } from "~/services/accountStorage"
+import { accountStorage } from "~/services/accounts/accountStorage"
 import type { SiteBookmark } from "~/types"
 import { createTab } from "~/utils/browserApi"
 import { getErrorMessage } from "~/utils/error"

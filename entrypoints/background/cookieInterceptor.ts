@@ -1,4 +1,7 @@
-import { ACCOUNT_STORAGE_KEYS, accountStorage } from "~/services/accountStorage"
+import {
+  ACCOUNT_STORAGE_KEYS,
+  accountStorage,
+} from "~/services/accounts/accountStorage"
 import { hasCookieInterceptorPermissions } from "~/services/permissions/permissionManager"
 import { AccountStorageConfig, type SiteAccount } from "~/types"
 import { isSameStringSet } from "~/utils"

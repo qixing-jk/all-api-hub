@@ -18,7 +18,7 @@ const {
   toastErrorMock: vi.fn(),
 }))
 
-vi.mock("~/services/accountStorage", () => ({
+vi.mock("~/services/accounts/accountStorage", () => ({
   accountStorage: {
     addBookmark: addBookmarkMock,
     updateBookmark: updateBookmarkMock,

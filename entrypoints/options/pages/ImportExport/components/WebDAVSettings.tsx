@@ -22,7 +22,7 @@ import {
   Input,
   Switch,
 } from "~/components/ui"
-import { accountStorage } from "~/services/accountStorage"
+import { accountStorage } from "~/services/accounts/accountStorage"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { channelConfigStorage } from "~/services/channelConfigStorage"
 import { tagStorage } from "~/services/tags/tagStorage"

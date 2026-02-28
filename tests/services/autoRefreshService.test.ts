@@ -9,7 +9,7 @@ import {
 } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { accountStorage } from "~/services/accountStorage"
+import { accountStorage } from "~/services/accounts/accountStorage"
 import {
   autoRefreshService,
   handleAutoRefreshMessage,
@@ -26,7 +26,7 @@ vi.mock("~/utils/error", () => ({
   getErrorMessage: vi.fn((error) => `${String(error)}`),
 }))
 
-vi.mock("~/services/accountStorage", () => ({
+vi.mock("~/services/accounts/accountStorage", () => ({
   accountStorage: {
     refreshAllAccounts: vi.fn(),
   },

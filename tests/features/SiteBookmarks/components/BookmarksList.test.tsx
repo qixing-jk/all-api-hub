@@ -40,7 +40,7 @@ const {
   openEditBookmarkMock: vi.fn(),
 }))
 
-vi.mock("~/services/accountStorage", () => ({
+vi.mock("~/services/accounts/accountStorage", () => ({
   accountStorage: {
     deleteBookmark: mockDeleteBookmark,
   },

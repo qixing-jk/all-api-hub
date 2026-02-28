@@ -3,7 +3,7 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { DestructiveConfirmDialog } from "~/components/ui"
-import { accountStorage } from "~/services/accountStorage"
+import { accountStorage } from "~/services/accounts/accountStorage"
 import type { DisplaySiteData } from "~/types"
 import { createLogger } from "~/utils/logger"
 

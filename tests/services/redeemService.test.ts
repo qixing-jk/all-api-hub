@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { accountStorage } from "~/services/accountStorage"
+import { accountStorage } from "~/services/accounts/accountStorage"
 import { getApiService } from "~/services/apiService"
 import { redeemService } from "~/services/redeemService"
 
-vi.mock("~/services/accountStorage", () => ({
+vi.mock("~/services/accounts/accountStorage", () => ({
   accountStorage: {
     getAccountById: vi.fn(),
     convertToDisplayData: vi.fn(),

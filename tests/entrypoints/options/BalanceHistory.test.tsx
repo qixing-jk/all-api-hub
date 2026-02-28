@@ -7,7 +7,7 @@ import { ONE_API } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import BalanceHistory from "~/entrypoints/options/pages/BalanceHistory"
-import { accountStorage } from "~/services/accountStorage"
+import { accountStorage } from "~/services/accounts/accountStorage"
 import {
   getDayKeyFromUnixSeconds,
   subtractDaysFromDayKey,
@@ -32,7 +32,7 @@ vi.mock("~/components/charts/echarts", async () => {
   }
 })
 
-vi.mock("~/services/accountStorage", () => ({
+vi.mock("~/services/accounts/accountStorage", () => ({
   accountStorage: { getAllAccounts: vi.fn(), getEnabledAccounts: vi.fn() },
 }))
 

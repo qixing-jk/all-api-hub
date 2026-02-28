@@ -14,7 +14,7 @@ import {
   validateAndSaveAccount,
   validateAndUpdateAccount,
 } from "~/services/accounts/accountOperations"
-import { accountStorage } from "~/services/accountStorage"
+import { accountStorage } from "~/services/accounts/accountStorage"
 import {
   AuthTypeEnum,
   type CheckInConfig,

@@ -1,6 +1,6 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { getSiteApiRouter } from "~/constants/siteType"
-import { accountStorage } from "~/services/accountStorage"
+import { accountStorage } from "~/services/accounts/accountStorage"
 import { createTab, createWindow, hasWindowsAPI } from "~/utils/browserApi"
 import { getErrorMessage } from "~/utils/error"
 import { joinUrl } from "~/utils/url"

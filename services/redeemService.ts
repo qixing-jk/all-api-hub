@@ -1,7 +1,7 @@
 import { t } from "i18next"
 
 import { UI_CONSTANTS } from "~/constants/ui"
-import { accountStorage } from "~/services/accountStorage"
+import { accountStorage } from "~/services/accounts/accountStorage"
 import { getApiService } from "~/services/apiService"
 import type { DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/error"

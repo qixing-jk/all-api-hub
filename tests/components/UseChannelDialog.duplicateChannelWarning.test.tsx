@@ -5,7 +5,7 @@ import { useChannelDialog } from "~/components/ChannelDialog/hooks/useChannelDia
 import { ChannelType } from "~/constants"
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import * as accountOperations from "~/services/accounts/accountOperations"
-import { accountStorage } from "~/services/accountStorage"
+import { accountStorage } from "~/services/accounts/accountStorage"
 import * as managedSiteService from "~/services/managedSiteService"
 import type { ManagedSiteService } from "~/services/managedSiteService"
 import { act, renderHook, waitFor } from "~/tests/test-utils/render"

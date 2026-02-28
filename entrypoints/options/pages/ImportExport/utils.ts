@@ -1,7 +1,7 @@
 import { t } from "i18next"
 import toast from "react-hot-toast"
 
-import { accountStorage } from "~/services/accountStorage"
+import { accountStorage } from "~/services/accounts/accountStorage"
 import {
   apiCredentialProfilesStorage,
   coerceApiCredentialProfilesConfig,
