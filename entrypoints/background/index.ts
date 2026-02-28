@@ -2,7 +2,6 @@ import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { setupRuntimeMessageListeners } from "~/entrypoints/background/runtimeMessages"
 import { setupTempWindowListeners } from "~/entrypoints/background/tempWindowPool"
 import { accountStorage } from "~/services/accountStorage"
-import { tagStorage } from "~/services/accountTags/tagStorage"
 import { changelogOnUpdateState } from "~/services/changelogOnUpdateState"
 import { migrateAccountsConfig } from "~/services/configMigration/account/accountDataMigration"
 import {
@@ -13,6 +12,7 @@ import {
   hasPermissions,
   OPTIONAL_PERMISSIONS,
 } from "~/services/permissions/permissionManager"
+import { tagStorage } from "~/services/tags/tagStorage"
 import { userPreferences } from "~/services/userPreferences"
 import { getManifest, onInstalled, onStartup } from "~/utils/browserApi"
 import { createLogger } from "~/utils/logger"

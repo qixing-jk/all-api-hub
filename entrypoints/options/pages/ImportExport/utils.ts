@@ -2,12 +2,12 @@ import { t } from "i18next"
 import toast from "react-hot-toast"
 
 import { accountStorage } from "~/services/accountStorage"
-import { tagStorage } from "~/services/accountTags/tagStorage"
 import {
   apiCredentialProfilesStorage,
   coerceApiCredentialProfilesConfig,
 } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { channelConfigStorage } from "~/services/channelConfigStorage"
+import { tagStorage } from "~/services/tags/tagStorage"
 import type { UserPreferences } from "~/services/userPreferences"
 import { userPreferences } from "~/services/userPreferences"
 import type { AccountStorageConfig, TagStore } from "~/types"

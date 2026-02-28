@@ -33,8 +33,6 @@ import { useTheme } from "~/contexts/ThemeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { PageHeader } from "~/entrypoints/options/components/PageHeader"
 import { accountStorage } from "~/services/accountStorage"
-import { tagStorage } from "~/services/accountTags/tagStorage"
-import { listTagsSorted } from "~/services/accountTags/tagStoreUtils"
 import {
   computeRetentionCutoffDayKey,
   getDayKeyFromUnixSeconds,
@@ -48,6 +46,8 @@ import {
 } from "~/services/dailyBalanceHistory/selectors"
 import { dailyBalanceHistoryStorage } from "~/services/dailyBalanceHistory/storage"
 import { clampBalanceHistoryRetentionDays } from "~/services/dailyBalanceHistory/utils"
+import { tagStorage } from "~/services/tags/tagStorage"
+import { listTagsSorted } from "~/services/tags/tagStoreUtils"
 import type { CurrencyType, SiteAccount, TagStore } from "~/types"
 import { DEFAULT_BALANCE_HISTORY_PREFERENCES } from "~/types/dailyBalanceHistory"
 import type { DailyBalanceHistoryStore } from "~/types/dailyBalanceHistory"

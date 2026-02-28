@@ -22,7 +22,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "~/components/ui/popover"
-import { normalizeTagNameForUniqueness } from "~/services/accountTags/tagStoreUtils"
+import { normalizeTagNameForUniqueness } from "~/services/tags/tagStoreUtils"
 import type { Tag } from "~/types"
 import { getErrorMessage } from "~/utils/error"
 import { createLogger } from "~/utils/logger"

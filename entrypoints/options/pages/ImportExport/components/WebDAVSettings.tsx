@@ -23,9 +23,9 @@ import {
   Switch,
 } from "~/components/ui"
 import { accountStorage } from "~/services/accountStorage"
-import { tagStorage } from "~/services/accountTags/tagStorage"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { channelConfigStorage } from "~/services/channelConfigStorage"
+import { tagStorage } from "~/services/tags/tagStorage"
 import { userPreferences } from "~/services/userPreferences"
 import {
   decryptWebdavBackupEnvelope,

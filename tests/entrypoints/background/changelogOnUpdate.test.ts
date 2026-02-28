@@ -96,7 +96,7 @@ describe("background onInstalled changelog opening", () => {
     vi.doMock("~/entrypoints/background/actionClickBehavior", () => ({
       applyActionClickBehavior: vi.fn().mockResolvedValue(undefined),
     }))
-    vi.doMock("~/services/accountTags/tagStorage", () => ({
+    vi.doMock("~/services/tags/tagStorage", () => ({
       tagStorage: {
         ensureLegacyMigration: vi.fn().mockResolvedValue(undefined),
       },
@@ -144,7 +144,7 @@ describe("background onInstalled changelog opening", () => {
     vi.doUnmock("~/entrypoints/background/devActionBranding")
     vi.doUnmock("~/entrypoints/background/servicesInit")
     vi.doUnmock("~/entrypoints/background/actionClickBehavior")
-    vi.doUnmock("~/services/accountTags/tagStorage")
+    vi.doUnmock("~/services/tags/tagStorage")
     vi.doUnmock("~/services/accountStorage")
     vi.doUnmock("~/services/configMigration/account/accountDataMigration")
     vi.doUnmock("~/services/permissions/permissionManager")

@@ -58,7 +58,7 @@ vi.mock("~/services/accountStorage", () => ({
   },
 }))
 
-vi.mock("~/services/accountTags/tagStorage", () => ({
+vi.mock("~/services/tags/tagStorage", () => ({
   tagStorage: {
     getTagStore: mockGetTagStore,
     createTag: vi.fn(),

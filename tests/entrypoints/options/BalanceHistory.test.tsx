@@ -8,12 +8,12 @@ import { UI_CONSTANTS } from "~/constants/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import BalanceHistory from "~/entrypoints/options/pages/BalanceHistory"
 import { accountStorage } from "~/services/accountStorage"
-import { tagStorage } from "~/services/accountTags/tagStorage"
 import {
   getDayKeyFromUnixSeconds,
   subtractDaysFromDayKey,
 } from "~/services/dailyBalanceHistory/dayKeys"
 import { dailyBalanceHistoryStorage } from "~/services/dailyBalanceHistory/storage"
+import { tagStorage } from "~/services/tags/tagStorage"
 import { render, screen, waitFor } from "~/tests/test-utils/render"
 import { DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION } from "~/types/dailyBalanceHistory"
 
@@ -40,7 +40,7 @@ vi.mock("~/services/dailyBalanceHistory/storage", () => ({
   dailyBalanceHistoryStorage: { getStore: vi.fn() },
 }))
 
-vi.mock("~/services/accountTags/tagStorage", () => ({
+vi.mock("~/services/tags/tagStorage", () => ({
   tagStorage: { getTagStore: vi.fn() },
 }))
 

@@ -11,9 +11,9 @@ import {
   type RawBackupData,
 } from "~/entrypoints/options/pages/ImportExport/utils"
 import { accountStorage } from "~/services/accountStorage"
-import { tagStorage } from "~/services/accountTags/tagStorage"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { channelConfigStorage } from "~/services/channelConfigStorage"
+import { tagStorage } from "~/services/tags/tagStorage"
 import { userPreferences } from "~/services/userPreferences"
 
 vi.mock("~/services/accountStorage", () => ({
@@ -37,7 +37,7 @@ vi.mock("~/services/channelConfigStorage", () => ({
   },
 }))
 
-vi.mock("~/services/accountTags/tagStorage", () => ({
+vi.mock("~/services/tags/tagStorage", () => ({
   tagStorage: {
     ensureLegacyMigration: vi.fn(),
     exportTagStore: vi.fn(),

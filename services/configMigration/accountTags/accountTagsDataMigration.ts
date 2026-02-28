@@ -3,7 +3,7 @@ import {
   generateTagId,
   normalizeTagNameForUniqueness,
   sanitizeTagStore,
-} from "~/services/accountTags/tagStoreUtils"
+} from "~/services/tags/tagStoreUtils"
 import type { SiteAccount, TagStore } from "~/types"
 
 export const CURRENT_ACCOUNT_TAG_DATA_VERSION = 1

@@ -19,8 +19,8 @@ import {
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { accountStorage } from "~/services/accountStorage"
-import { tagStorage } from "~/services/accountTags/tagStorage"
 import { searchAccounts } from "~/services/search/accountSearch"
+import { tagStorage } from "~/services/tags/tagStorage"
 import type {
   AccountStats,
   CurrencyAmount,

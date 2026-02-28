@@ -1,15 +1,15 @@
 import { describe, expect, it, vi } from "vitest"
 
 import {
+  migrateAccountTagsData,
+  needsAccountTagsDataMigration,
+} from "~/services/configMigration/accountTags/accountTagsDataMigration"
+import {
   createDefaultTagStore,
   mergeTagStoresAndRemapAccounts,
   normalizeTagNameForUniqueness,
   sanitizeTagStore,
-} from "~/services/accountTags/tagStoreUtils"
-import {
-  migrateAccountTagsData,
-  needsAccountTagsDataMigration,
-} from "~/services/configMigration/accountTags/accountTagsDataMigration"
+} from "~/services/tags/tagStoreUtils"
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
 

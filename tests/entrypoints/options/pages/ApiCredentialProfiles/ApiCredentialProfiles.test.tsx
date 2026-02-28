@@ -92,7 +92,7 @@ vi.mock(
   }),
 )
 
-vi.mock("~/services/accountTags/tagStorage", () => ({
+vi.mock("~/services/tags/tagStorage", () => ({
   tagStorage: {
     listTags: () => mockListTags(),
     createTag: (name: string) => mockCreateTag(name),

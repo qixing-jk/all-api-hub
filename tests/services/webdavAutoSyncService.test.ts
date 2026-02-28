@@ -40,7 +40,7 @@ vi.mock(import("~/services/userPreferences"), async (importOriginal) => {
   }
 })
 
-vi.mock("~/services/accountTags/tagStorage", () => ({
+vi.mock("~/services/tags/tagStorage", () => ({
   tagStorage: {
     // mergeData only needs this pure helper; tests not concerned with tag semantics.
     mergeTagStoresForSync: (input: any) => ({

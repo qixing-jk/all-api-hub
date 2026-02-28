@@ -6,16 +6,16 @@ import {
   normalizeBackupForMerge,
   type BackupFullV2,
 } from "~/entrypoints/options/pages/ImportExport/utils"
-import { tagStorage } from "~/services/accountTags/tagStorage"
-import {
-  createDefaultTagStore,
-  sanitizeTagStore,
-} from "~/services/accountTags/tagStoreUtils"
 import {
   apiCredentialProfilesStorage,
   mergeApiCredentialProfilesConfigs,
 } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { migrateAccountTagsData } from "~/services/configMigration/accountTags/accountTagsDataMigration"
+import { tagStorage } from "~/services/tags/tagStorage"
+import {
+  createDefaultTagStore,
+  sanitizeTagStore,
+} from "~/services/tags/tagStoreUtils"
 import type { SiteAccount, SiteBookmark, TagStore } from "~/types"
 import {
   API_CREDENTIAL_PROFILES_CONFIG_VERSION,
