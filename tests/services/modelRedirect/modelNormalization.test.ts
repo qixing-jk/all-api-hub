@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { modelMetadataService } from "~/services/modelMetadata"
 import {
   extractActualModel,
   renameModel,
 } from "~/services/modelRedirect/modelNormalization"
+import { modelMetadataService } from "~/services/models/modelMetadata"
 
 // Mock the modelMetadataService with controlled responses
-vi.mock("~/services/modelMetadata", () => ({
+vi.mock("~/services/models/modelMetadata", () => ({
   modelMetadataService: {
     initialize: vi.fn().mockResolvedValue(undefined),
     findStandardModelName: vi.fn(),

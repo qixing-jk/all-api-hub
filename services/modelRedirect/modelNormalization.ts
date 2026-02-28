@@ -1,4 +1,4 @@
-import { modelMetadataService } from "~/services/modelMetadata"
+import { modelMetadataService } from "~/services/models/modelMetadata"
 import { removeDateSuffix } from "~/utils/modelName"
 
 /**

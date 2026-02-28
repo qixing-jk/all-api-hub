@@ -11,13 +11,17 @@ describe("ModelMetadataService", () => {
   })
 
   it("initializes without errors", async () => {
-    const { modelMetadataService } = await import("~/services/modelMetadata")
+    const { modelMetadataService } = await import(
+      "~/services/models/modelMetadata"
+    )
     modelMetadataService.clearCache()
     await modelMetadataService.initialize()
   })
 
   it("handles getCacheInfo calls", async () => {
-    const { modelMetadataService } = await import("~/services/modelMetadata")
+    const { modelMetadataService } = await import(
+      "~/services/models/modelMetadata"
+    )
     modelMetadataService.clearCache()
     await modelMetadataService.initialize()
     const info = modelMetadataService.getCacheInfo()
@@ -44,7 +48,9 @@ describe("ModelMetadataService", () => {
       }),
     })
 
-    const { modelMetadataService } = await import("~/services/modelMetadata")
+    const { modelMetadataService } = await import(
+      "~/services/models/modelMetadata"
+    )
     modelMetadataService.clearCache()
     await modelMetadataService.initialize()
 
@@ -68,7 +74,9 @@ describe("ModelMetadataService", () => {
       }),
     })
 
-    const { modelMetadataService } = await import("~/services/modelMetadata")
+    const { modelMetadataService } = await import(
+      "~/services/models/modelMetadata"
+    )
     modelMetadataService.clearCache()
     await modelMetadataService.initialize()
 
@@ -96,7 +104,9 @@ describe("ModelMetadataService", () => {
       }),
     })
 
-    const { modelMetadataService } = await import("~/services/modelMetadata")
+    const { modelMetadataService } = await import(
+      "~/services/models/modelMetadata"
+    )
     modelMetadataService.clearCache()
     await modelMetadataService.initialize()
 
@@ -120,7 +130,9 @@ describe("ModelMetadataService", () => {
       }),
     })
 
-    const { modelMetadataService } = await import("~/services/modelMetadata")
+    const { modelMetadataService } = await import(
+      "~/services/models/modelMetadata"
+    )
     modelMetadataService.clearCache()
     await modelMetadataService.initialize()
 
@@ -143,7 +155,9 @@ describe("ModelMetadataService", () => {
       }),
     })
 
-    const { modelMetadataService } = await import("~/services/modelMetadata")
+    const { modelMetadataService } = await import(
+      "~/services/models/modelMetadata"
+    )
     modelMetadataService.clearCache()
     await modelMetadataService.initialize()
 

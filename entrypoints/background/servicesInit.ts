@@ -1,7 +1,7 @@
 import { autoRefreshService } from "~/services/accounts/autoRefreshService"
 import { autoCheckinScheduler } from "~/services/checkin/autoCheckin/scheduler"
 import { dailyBalanceHistoryScheduler } from "~/services/dailyBalanceHistory/scheduler"
-import { modelMetadataService } from "~/services/modelMetadata"
+import { modelMetadataService } from "~/services/models/modelMetadata"
 import { modelSyncScheduler } from "~/services/modelSync"
 import { redemptionAssistService } from "~/services/redemptionAssist"
 import { usageHistoryScheduler } from "~/services/usageHistory/scheduler"

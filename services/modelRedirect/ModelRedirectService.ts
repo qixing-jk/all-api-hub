@@ -10,7 +10,7 @@ import {
   OCTOPUS,
   type ManagedSiteType,
 } from "~/constants/siteType"
-import { modelMetadataService } from "~/services/modelMetadata"
+import { modelMetadataService } from "~/services/models/modelMetadata"
 import { ModelSyncService } from "~/services/modelSync"
 import type { ManagedSiteChannel } from "~/types/managedSite"
 import { CHANNEL_STATUS } from "~/types/managedSite"

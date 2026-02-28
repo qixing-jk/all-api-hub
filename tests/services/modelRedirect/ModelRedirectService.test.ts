@@ -31,7 +31,7 @@ const MOCKED_METADATA = vi.hoisted(() => {
   }
 })
 
-vi.mock("~/services/modelMetadata", () => ({
+vi.mock("~/services/models/modelMetadata", () => ({
   modelMetadataService: {
     initialize: vi.fn().mockResolvedValue(undefined),
     findStandardModelName: MOCKED_METADATA.findStandardModelNameMock,

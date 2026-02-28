@@ -40,7 +40,7 @@ vi.mock("~/services/checkin/autoCheckin/scheduler", () => ({
   autoCheckinScheduler: { initialize: autoCheckinInitMock },
 }))
 
-vi.mock("~/services/modelMetadata", () => ({
+vi.mock("~/services/models/modelMetadata", () => ({
   modelMetadataService: { initialize: modelMetadataInitMock },
 }))
 
