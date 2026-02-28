@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 
-import { computeUsageHistoryExport } from "~/services/usageHistory/analytics"
-import { createEmptyUsageHistoryAccountStore } from "~/services/usageHistory/core"
+import { computeUsageHistoryExport } from "~/services/history/usageHistory/analytics"
+import { createEmptyUsageHistoryAccountStore } from "~/services/history/usageHistory/core"
 import {
   USAGE_HISTORY_EXPORT_SCHEMA_VERSION,
   USAGE_HISTORY_STORE_SCHEMA_VERSION,

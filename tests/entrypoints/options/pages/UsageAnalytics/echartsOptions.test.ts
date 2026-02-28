@@ -21,11 +21,11 @@ import {
   resolveLatencyDailyForTokens,
   topNWithOther,
 } from "~/entrypoints/options/pages/UsageAnalytics/echartsOptions"
-import { computeUsageHistoryExport } from "~/services/usageHistory/analytics"
+import { computeUsageHistoryExport } from "~/services/history/usageHistory/analytics"
 import {
   createEmptyUsageHistoryAccountStore,
   createEmptyUsageHistoryLatencyAggregate,
-} from "~/services/usageHistory/core"
+} from "~/services/history/usageHistory/core"
 import type { UsageHistoryStore } from "~/types/usageHistory"
 
 describe("UsageAnalytics echartsOptions", () => {

@@ -9,7 +9,7 @@ import {
   pruneUsageHistoryAccountStore,
   USAGE_HISTORY_LATENCY_BUCKET_UPPER_BOUNDS_SECONDS,
   USAGE_HISTORY_SLOW_THRESHOLD_SECONDS,
-} from "~/services/usageHistory/core"
+} from "~/services/history/usageHistory/core"
 
 /**
  * Create a fully populated Consume log item for usage-history unit tests.

@@ -24,7 +24,7 @@ const {
   initBackgroundI18nMock: vi.fn(),
 }))
 
-vi.mock("~/services/usageHistory/scheduler", () => ({
+vi.mock("~/services/history/usageHistory/scheduler", () => ({
   usageHistoryScheduler: { initialize: usageInitMock },
 }))
 

@@ -5,7 +5,7 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import UsageHistorySyncTab from "~/entrypoints/options/pages/BasicSettings/components/UsageHistorySyncTab"
 import { accountStorage } from "~/services/accounts/accountStorage"
-import { usageHistoryStorage } from "~/services/usageHistory/storage"
+import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
 import { render } from "~/tests/test-utils/render"
 import { sendRuntimeMessage } from "~/utils/browserApi"
 
@@ -22,7 +22,7 @@ vi.mock("~/services/accounts/accountStorage", () => ({
   accountStorage: { getAllAccounts: vi.fn(), getEnabledAccounts: vi.fn() },
 }))
 
-vi.mock("~/services/usageHistory/storage", () => ({
+vi.mock("~/services/history/usageHistory/storage", () => ({
   usageHistoryStorage: { getStore: vi.fn() },
 }))
 

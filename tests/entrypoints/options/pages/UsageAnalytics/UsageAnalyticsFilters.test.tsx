@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from "vitest"
 
 import UsageAnalytics from "~/entrypoints/options/pages/UsageAnalytics"
 import { accountStorage } from "~/services/accounts/accountStorage"
-import { createEmptyUsageHistoryAccountStore } from "~/services/usageHistory/core"
-import { usageHistoryStorage } from "~/services/usageHistory/storage"
+import { createEmptyUsageHistoryAccountStore } from "~/services/history/usageHistory/core"
+import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
 import { fireEvent, render, screen, within } from "~/tests/test-utils/render"
 
 vi.mock("~/components/charts/echarts", async () => {
@@ -27,7 +27,7 @@ vi.mock("~/services/accounts/accountStorage", () => ({
   accountStorage: { getAllAccounts: vi.fn() },
 }))
 
-vi.mock("~/services/usageHistory/storage", () => ({
+vi.mock("~/services/history/usageHistory/storage", () => ({
   usageHistoryStorage: { getStore: vi.fn() },
 }))
 

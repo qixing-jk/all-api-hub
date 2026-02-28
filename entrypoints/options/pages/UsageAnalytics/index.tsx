@@ -18,12 +18,12 @@ import { useTheme } from "~/contexts/ThemeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { PageHeader } from "~/entrypoints/options/components/PageHeader"
 import { accountStorage } from "~/services/accounts/accountStorage"
-import { computeUsageHistoryExport } from "~/services/usageHistory/analytics"
+import { computeUsageHistoryExport } from "~/services/history/usageHistory/analytics"
 import {
   parseDayKey,
   subtractDaysFromDayKey,
-} from "~/services/usageHistory/core"
-import { usageHistoryStorage } from "~/services/usageHistory/storage"
+} from "~/services/history/usageHistory/core"
+import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
 import type { SiteAccount } from "~/types"
 import type {
   UsageHistoryAccountStore,

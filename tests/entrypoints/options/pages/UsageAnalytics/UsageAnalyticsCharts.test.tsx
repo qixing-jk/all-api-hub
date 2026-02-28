@@ -6,8 +6,8 @@ import { accountStorage } from "~/services/accounts/accountStorage"
 import {
   createEmptyUsageHistoryAccountStore,
   createEmptyUsageHistoryLatencyAggregate,
-} from "~/services/usageHistory/core"
-import { usageHistoryStorage } from "~/services/usageHistory/storage"
+} from "~/services/history/usageHistory/core"
+import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
 import { render, screen, waitFor } from "~/tests/test-utils/render"
 
 const echartsInstances: Array<{
@@ -41,7 +41,7 @@ vi.mock("~/services/accounts/accountStorage", () => ({
   accountStorage: { getAllAccounts: vi.fn() },
 }))
 
-vi.mock("~/services/usageHistory/storage", () => ({
+vi.mock("~/services/history/usageHistory/storage", () => ({
   usageHistoryStorage: { getStore: vi.fn() },
 }))
 

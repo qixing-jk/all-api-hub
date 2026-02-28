@@ -31,7 +31,7 @@ import {
 } from "~/features/AccountManagement/utils/healthStatusUtils"
 import { getTempWindowFallbackSettingsTab } from "~/features/AccountManagement/utils/tempWindowFallbackReminder"
 import { useLdohSiteLookupContext } from "~/features/LdohSiteLookup/hooks/LdohSiteLookupContext"
-import { getDayKeyFromUnixSeconds } from "~/services/usageHistory/core"
+import { getDayKeyFromUnixSeconds } from "~/services/history/usageHistory/core"
 import {
   SiteHealthStatus,
   TEMP_WINDOW_HEALTH_STATUS_CODES,

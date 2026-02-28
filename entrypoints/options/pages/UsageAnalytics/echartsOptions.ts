@@ -3,7 +3,7 @@ import {
   createEmptyUsageHistoryAggregate,
   createEmptyUsageHistoryLatencyAggregate,
   USAGE_HISTORY_LATENCY_BUCKET_UPPER_BOUNDS_SECONDS,
-} from "~/services/usageHistory/core"
+} from "~/services/history/usageHistory/core"
 import type {
   UsageHistoryAggregate,
   UsageHistoryExport,
@@ -58,7 +58,7 @@ export function getLatencyBucketLabels(): string[] {
 /**
  * Merge numeric usage aggregates in-place.
  *
- * This intentionally mirrors the aggregation semantics in `~/services/usageHistory/analytics`
+ * This intentionally mirrors the aggregation semantics in `~/services/history/usageHistory/analytics`
  * but is kept local to the UI layer to avoid coupling chart helpers to the export builder.
  */
 function addToAggregate(
