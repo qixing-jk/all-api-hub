@@ -6,7 +6,7 @@ import {
 } from "~/constants/runtimeActions"
 import { SUB2API } from "~/constants/siteType"
 import { accountStorage } from "~/services/accountStorage"
-import { ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS } from "~/services/storageKeys"
+import { ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS } from "~/services/core/storageKeys"
 import type { DisplaySiteData, SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
 import type {

@@ -1,4 +1,4 @@
-import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/storageKeys"
+import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
 import type { LoggingPreferences, LogLevel } from "~/types/logging"
 import { getDefaultLoggingPreferences } from "~/types/logging"
 import { sanitizeUrlForLog } from "~/utils/sanitizeUrlForLog"

@@ -19,7 +19,7 @@ import {
 import {
   API_CREDENTIAL_PROFILES_STORAGE_KEYS,
   STORAGE_LOCKS,
-} from "../storageKeys"
+} from "../core/storageKeys"
 import { withExtensionStorageWriteLock } from "../storageWriteLock"
 
 /**

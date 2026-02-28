@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import { getDayKeyFromUnixSeconds } from "~/services/dailyBalanceHistory/dayKeys"
 import { dailyBalanceHistoryStorage } from "~/services/dailyBalanceHistory/storage"
-import { STORAGE_KEYS } from "~/services/storageKeys"
 import { DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION } from "~/types/dailyBalanceHistory"
 
 const storageData = new Map<string, any>()

@@ -1,7 +1,7 @@
 import i18n from "i18next"
 
 import { DEFAULT_LANG } from "~/constants"
-import { I18NEXT_LANGUAGE_STORAGE_KEY } from "~/services/storageKeys"
+import { I18NEXT_LANGUAGE_STORAGE_KEY } from "~/services/core/storageKeys"
 
 /**
  * resolvePreferredLanguage determines the most appropriate language to use for the documentation interface.

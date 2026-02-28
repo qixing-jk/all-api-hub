@@ -2,12 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { UI_CONSTANTS } from "~/constants/ui"
 import { accountStorage } from "~/services/accountStorage"
-import { getDayKeyFromUnixSeconds } from "~/services/dailyBalanceHistory/dayKeys"
 import {
   ACCOUNT_STORAGE_KEYS,
   STORAGE_KEYS,
   USER_PREFERENCES_STORAGE_KEYS,
-} from "~/services/storageKeys"
+} from "~/services/core/storageKeys"
+import { getDayKeyFromUnixSeconds } from "~/services/dailyBalanceHistory/dayKeys"
 import { DEFAULT_PREFERENCES } from "~/services/userPreferences"
 import {
   AuthTypeEnum,

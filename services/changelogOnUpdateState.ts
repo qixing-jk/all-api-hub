@@ -1,6 +1,6 @@
 import { Storage } from "@plasmohq/storage"
 
-import { STORAGE_KEYS, STORAGE_LOCKS } from "~/services/storageKeys"
+import { STORAGE_KEYS, STORAGE_LOCKS } from "~/services/core/storageKeys"
 import { withExtensionStorageWriteLock } from "~/services/storageWriteLock"
 
 class ChangelogOnUpdateStateService {

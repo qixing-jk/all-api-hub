@@ -10,7 +10,7 @@ import {
   ACCOUNT_STORAGE_KEYS,
   STORAGE_LOCKS,
   TAG_STORAGE_KEYS,
-} from "../storageKeys"
+} from "../core/storageKeys"
 import { withExtensionStorageWriteLock } from "../storageWriteLock"
 import {
   generateTagId,

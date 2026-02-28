@@ -14,7 +14,7 @@ import {
   CURRENT_PREFERENCES_VERSION,
   migratePreferences,
 } from "~/services/configMigration/preferences/preferencesMigration"
-import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/storageKeys"
+import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
 import { CurrencyType, DashboardTabType, SortField, SortOrder } from "~/types"
 import {
   AccountAutoRefresh,

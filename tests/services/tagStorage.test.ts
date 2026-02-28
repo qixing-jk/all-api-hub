@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { tagStorage } from "~/services/accountTags/tagStorage"
 import { API_TYPES } from "~/services/aiApiVerification"
-import { API_CREDENTIAL_PROFILES_STORAGE_KEYS } from "~/services/storageKeys"
+import { API_CREDENTIAL_PROFILES_STORAGE_KEYS } from "~/services/core/storageKeys"
 import type { AccountStorageConfig } from "~/types"
 
 const storageData = new Map<string, any>()

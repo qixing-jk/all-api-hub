@@ -12,7 +12,7 @@ import {
   ACCOUNT_STORAGE_KEYS,
   STORAGE_LOCKS,
   TAG_STORAGE_KEYS,
-} from "~/services/storageKeys"
+} from "~/services/core/storageKeys"
 import { withExtensionStorageWriteLock } from "~/services/storageWriteLock"
 import type { AccountStorageConfig, TagStore } from "~/types"
 

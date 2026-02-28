@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import { Storage } from "@plasmohq/storage"
 
-import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/storageKeys"
+import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,

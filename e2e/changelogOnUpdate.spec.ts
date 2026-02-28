@@ -2,7 +2,7 @@ import type { BrowserContext, Page, Worker } from "@playwright/test"
 
 import { expect, test } from "~/e2e/fixtures/extensionTest"
 import { CURRENT_PREFERENCES_VERSION } from "~/services/configMigration/preferences/preferencesMigration"
-import { STORAGE_KEYS } from "~/services/storageKeys"
+import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import { getErrorMessage } from "~/utils/error"
 import { createLogger } from "~/utils/logger"
 

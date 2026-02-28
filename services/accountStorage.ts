@@ -27,9 +27,9 @@ import {
   needsConfigMigration,
 } from "./configMigration/account/accountDataMigration"
 import { ensureAccountTagsStorageMigrated } from "./configMigration/accountTags/accountTagsStorageMigration"
+import { ACCOUNT_STORAGE_KEYS, STORAGE_LOCKS } from "./core/storageKeys"
 import { maybeCaptureDailyBalanceSnapshot } from "./dailyBalanceHistory/capture"
 import { getSiteType } from "./detectSiteType"
-import { ACCOUNT_STORAGE_KEYS, STORAGE_LOCKS } from "./storageKeys"
 import { withExtensionStorageWriteLock } from "./storageWriteLock"
 import { userPreferences } from "./userPreferences"
 
