@@ -6,7 +6,7 @@ import type {
 } from "~/types/managedSiteModelSync"
 import { createLogger } from "~/utils/logger"
 
-import { DEFAULT_PREFERENCES, userPreferences } from "../userPreferences"
+import { DEFAULT_PREFERENCES, userPreferences } from "../../userPreferences"
 
 const logger = createLogger("ManagedSiteModelSyncStorage")
 

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import { VELOERA } from "~/constants/siteType"
 import { getApiService } from "~/services/apiService"
-import { ModelSyncService } from "~/services/modelSync/modelSyncService"
+import { ModelSyncService } from "~/services/models/modelSync/modelSyncService"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 
 const listAllChannelsMock = vi.fn()

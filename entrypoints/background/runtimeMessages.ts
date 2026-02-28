@@ -12,7 +12,7 @@ import { handleAutoCheckinMessage } from "~/services/checkin/autoCheckin/schedul
 import { handleExternalCheckInMessage } from "~/services/checkin/externalCheckInService"
 import { handleDailyBalanceHistoryMessage } from "~/services/dailyBalanceHistory/scheduler"
 import { handleLdohSiteLookupMessage } from "~/services/integrations/ldohSiteLookup/background"
-import { handleManagedSiteModelSyncMessage } from "~/services/modelSync"
+import { handleManagedSiteModelSyncMessage } from "~/services/models/modelSync"
 import { handleRedemptionAssistMessage } from "~/services/redemptionAssist"
 import { handleUsageHistoryMessage } from "~/services/usageHistory/scheduler"
 import { handleWebAiApiCheckMessage } from "~/services/webAiApiCheck/background"

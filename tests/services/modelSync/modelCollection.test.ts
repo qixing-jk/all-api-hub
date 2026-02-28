@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { collectModelsFromExecution } from "~/services/modelSync/modelCollection"
+import { collectModelsFromExecution } from "~/services/models/modelSync/modelCollection"
 import type { ExecutionResult } from "~/types/managedSiteModelSync"
 
 describe("collectModelsFromExecution", () => {

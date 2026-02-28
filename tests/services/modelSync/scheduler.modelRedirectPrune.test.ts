@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { NEW_API } from "~/constants/siteType"
 import { ModelRedirectService } from "~/services/models/modelRedirect"
-import { modelSyncScheduler } from "~/services/modelSync/scheduler"
+import { modelSyncScheduler } from "~/services/models/modelSync/scheduler"
 import { userPreferences } from "~/services/userPreferences"
 import { buildManagedSiteChannel } from "~/tests/test-utils/factories"
 import { DEFAULT_MODEL_REDIRECT_PREFERENCES } from "~/types/managedSiteModelRedirect"
@@ -27,7 +27,7 @@ vi.mock("~/services/channelConfigStorage", () => ({
   },
 }))
 
-vi.mock("~/services/modelSync/storage", () => ({
+vi.mock("~/services/models/modelSync/storage", () => ({
   managedSiteModelSyncStorage: {
     saveLastExecution: mockSaveLastExecution,
     saveChannelUpstreamModelOptions: vi.fn(),
@@ -37,7 +37,7 @@ vi.mock("~/services/modelSync/storage", () => ({
   },
 }))
 
-vi.mock("~/services/modelSync/modelSyncService", () => {
+vi.mock("~/services/models/modelSync/modelSyncService", () => {
   class ModelSyncServiceMock {
     listChannels = mockListChannels
     runBatch = mockRunBatch

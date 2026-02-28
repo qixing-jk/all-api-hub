@@ -40,7 +40,7 @@ describe("setupRuntimeMessageListeners routing", () => {
       setupContextMenus,
     }))
 
-    vi.doMock("~/services/modelSync", () => ({
+    vi.doMock("~/services/models/modelSync", () => ({
       handleManagedSiteModelSyncMessage,
     }))
 
@@ -72,7 +72,7 @@ describe("setupRuntimeMessageListeners routing", () => {
     vi.doUnmock("~/utils/browserApi")
     vi.doUnmock("~/entrypoints/background/actionClickBehavior")
     vi.doUnmock("~/entrypoints/background/contextMenus")
-    vi.doUnmock("~/services/modelSync")
+    vi.doUnmock("~/services/models/modelSync")
     vi.doUnmock("~/services/checkin/autoCheckin/scheduler")
     vi.doUnmock("~/services/accounts/autoRefreshService")
     vi.doUnmock("~/services/channelConfigStorage")

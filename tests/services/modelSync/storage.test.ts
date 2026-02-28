@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { Storage } from "@plasmohq/storage"
 
-import { managedSiteModelSyncStorage } from "~/services/modelSync/storage"
+import { managedSiteModelSyncStorage } from "~/services/models/modelSync/storage"
 
 vi.mock("@plasmohq/storage", () => {
   const set = vi.fn()

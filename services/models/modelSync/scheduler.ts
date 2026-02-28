@@ -34,9 +34,9 @@ import {
   getManagedSiteContext,
 } from "~/utils/managedSite"
 
-import { channelConfigStorage } from "../channelConfigStorage"
-import { octopusChannelToManagedSite } from "../octopusService/octopusService"
-import { DEFAULT_PREFERENCES, userPreferences } from "../userPreferences"
+import { channelConfigStorage } from "../../channelConfigStorage"
+import { octopusChannelToManagedSite } from "../../octopusService/octopusService"
+import { DEFAULT_PREFERENCES, userPreferences } from "../../userPreferences"
 import { collectModelsFromExecution } from "./modelCollection"
 import { ModelSyncService } from "./modelSyncService"
 import { runOctopusBatch } from "./octopusModelSync"

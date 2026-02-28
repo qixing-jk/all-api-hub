@@ -32,7 +32,7 @@ vi.mock("~/services/webdav/webdavAutoSyncService", () => ({
   webdavAutoSyncService: { initialize: webdavInitMock },
 }))
 
-vi.mock("~/services/modelSync", () => ({
+vi.mock("~/services/models/modelSync", () => ({
   modelSyncScheduler: { initialize: modelSyncInitMock },
 }))
 

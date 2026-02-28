@@ -11,7 +11,7 @@ import {
   type ManagedSiteType,
 } from "~/constants/siteType"
 import { modelMetadataService } from "~/services/models/modelMetadata"
-import { ModelSyncService } from "~/services/modelSync"
+import { ModelSyncService } from "~/services/models/modelSync"
 import type { ManagedSiteChannel } from "~/types/managedSite"
 import { CHANNEL_STATUS } from "~/types/managedSite"
 import {

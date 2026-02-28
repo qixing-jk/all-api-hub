@@ -4,7 +4,7 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   handleManagedSiteModelSyncMessage,
   modelSyncScheduler,
-} from "~/services/modelSync/scheduler"
+} from "~/services/models/modelSync/scheduler"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,

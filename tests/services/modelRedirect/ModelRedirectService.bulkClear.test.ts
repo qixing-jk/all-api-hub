@@ -11,7 +11,7 @@ import {
 const listChannelsMock = vi.fn()
 const updateChannelModelMappingMock = vi.fn()
 
-vi.mock("~/services/modelSync", () => {
+vi.mock("~/services/models/modelSync", () => {
   class ModelSyncServiceMock {
     listChannels = listChannelsMock
     updateChannelModelMapping = updateChannelModelMappingMock
