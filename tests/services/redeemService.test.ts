@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { getApiService } from "~/services/apiService"
-import { redeemService } from "~/services/redeemService"
+import { redeemService } from "~/services/redemption/redeemService"
 
 vi.mock("~/services/accounts/accountStorage", () => ({
   accountStorage: {
