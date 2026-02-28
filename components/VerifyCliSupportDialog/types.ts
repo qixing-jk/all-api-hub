@@ -1,7 +1,7 @@
 import type {
   CliSupportResult,
   CliToolId,
-} from "~/services/cliSupportVerification"
+} from "~/services/verification/cliSupportVerification"
 import type { DisplaySiteData } from "~/types"
 
 /**

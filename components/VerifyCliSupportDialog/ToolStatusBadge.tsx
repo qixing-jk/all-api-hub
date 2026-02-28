@@ -2,7 +2,7 @@ import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
 import { Badge } from "~/components/ui"
-import type { CliSupportResult } from "~/services/cliSupportVerification"
+import type { CliSupportResult } from "~/services/verification/cliSupportVerification"
 
 /**
  * Render a standardized status badge for a CLI tool result.

@@ -1,6 +1,6 @@
-import { runCliSupportToolFromRegistry } from "~/services/cliSupportVerification/registry"
+import { runCliSupportToolFromRegistry } from "~/services/verification/cliSupportVerification/registry"
 
-import { nowMs } from "../verification/aiApiVerification/probeTiming"
+import { nowMs } from "../aiApiVerification/probeTiming"
 import type { CliSupportReport, CliSupportResult, CliToolId } from "./types"
 import { CLI_TOOL_IDS } from "./types"
 

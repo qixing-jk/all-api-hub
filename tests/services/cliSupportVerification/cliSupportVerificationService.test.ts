@@ -3,11 +3,11 @@ import { describe, expect, it, vi } from "vitest"
 import {
   runCliSupportSimulation,
   runCliSupportTool,
-} from "~/services/cliSupportVerification/cliSupportVerificationService"
+} from "~/services/verification/cliSupportVerification/cliSupportVerificationService"
 
 const mockRunCliSupportToolFromRegistry = vi.fn()
 
-vi.mock("~/services/cliSupportVerification/registry", () => ({
+vi.mock("~/services/verification/cliSupportVerification/registry", () => ({
   runCliSupportToolFromRegistry: (...args: any[]) =>
     mockRunCliSupportToolFromRegistry(...args),
 }))
