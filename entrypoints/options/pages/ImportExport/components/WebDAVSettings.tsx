@@ -24,7 +24,7 @@ import {
 } from "~/components/ui"
 import { accountStorage } from "~/services/accountStorage"
 import { tagStorage } from "~/services/accountTags/tagStorage"
-import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfilesStorage"
+import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { channelConfigStorage } from "~/services/channelConfigStorage"
 import { userPreferences } from "~/services/userPreferences"
 import {

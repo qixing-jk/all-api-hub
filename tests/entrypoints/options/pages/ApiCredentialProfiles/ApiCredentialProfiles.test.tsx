@@ -79,15 +79,18 @@ const mockDeleteProfile = vi.fn(async (id: string) => {
   return store.length !== before
 })
 
-vi.mock("~/services/apiCredentialProfilesStorage", () => ({
-  apiCredentialProfilesStorage: {
-    listProfiles: () => mockListProfiles(),
-    createProfile: (input: any) => mockCreateProfile(input),
-    updateProfile: (id: string, updates: Partial<ApiCredentialProfile>) =>
-      mockUpdateProfile(id, updates),
-    deleteProfile: (id: string) => mockDeleteProfile(id),
-  },
-}))
+vi.mock(
+  "~/services/apiCredentialProfiles/apiCredentialProfilesStorage",
+  () => ({
+    apiCredentialProfilesStorage: {
+      listProfiles: () => mockListProfiles(),
+      createProfile: (input: any) => mockCreateProfile(input),
+      updateProfile: (id: string, updates: Partial<ApiCredentialProfile>) =>
+        mockUpdateProfile(id, updates),
+      deleteProfile: (id: string) => mockDeleteProfile(id),
+    },
+  }),
+)
 
 vi.mock("~/services/accountTags/tagStorage", () => ({
   tagStorage: {

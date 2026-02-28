@@ -6,7 +6,7 @@ import { tagStorage } from "~/services/accountTags/tagStorage"
 import {
   apiCredentialProfilesStorage,
   coerceApiCredentialProfilesConfig,
-} from "~/services/apiCredentialProfilesStorage"
+} from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { channelConfigStorage } from "~/services/channelConfigStorage"
 import type { UserPreferences } from "~/services/userPreferences"
 import { userPreferences } from "~/services/userPreferences"

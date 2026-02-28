@@ -19,8 +19,8 @@ import {
 import {
   API_CREDENTIAL_PROFILES_STORAGE_KEYS,
   STORAGE_LOCKS,
-} from "./storageKeys"
-import { withExtensionStorageWriteLock } from "./storageWriteLock"
+} from "../storageKeys"
+import { withExtensionStorageWriteLock } from "../storageWriteLock"
 
 /**
  * Unified logger scoped to API credential profiles storage.

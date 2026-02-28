@@ -25,7 +25,7 @@ import {
   type ApiVerificationApiType,
 } from "~/services/aiApiVerification"
 import { toSanitizedErrorSummary } from "~/services/aiApiVerification/utils"
-import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfilesStorage"
+import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import type { DisplaySiteData } from "~/types"
 import { OpenInCherryStudio } from "~/utils/cherryStudio"
 import { createLogger } from "~/utils/logger"

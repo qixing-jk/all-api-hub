@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react"
 
 import type { ApiVerificationApiType } from "~/services/aiApiVerification"
-import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfilesStorage"
+import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { createLogger } from "~/utils/logger"
 

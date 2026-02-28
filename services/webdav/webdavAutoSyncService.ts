@@ -14,7 +14,7 @@ import {
 import {
   apiCredentialProfilesStorage,
   mergeApiCredentialProfilesConfigs,
-} from "~/services/apiCredentialProfilesStorage"
+} from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { migrateAccountTagsData } from "~/services/configMigration/accountTags/accountTagsDataMigration"
 import type { SiteAccount, SiteBookmark, TagStore } from "~/types"
 import {

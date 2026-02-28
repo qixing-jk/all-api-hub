@@ -12,7 +12,7 @@ import {
 } from "~/entrypoints/options/pages/ImportExport/utils"
 import { accountStorage } from "~/services/accountStorage"
 import { tagStorage } from "~/services/accountTags/tagStorage"
-import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfilesStorage"
+import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { channelConfigStorage } from "~/services/channelConfigStorage"
 import { userPreferences } from "~/services/userPreferences"
 
@@ -54,13 +54,16 @@ vi.mock("~/services/accountTags/tagStorage", () => ({
   },
 }))
 
-vi.mock("~/services/apiCredentialProfilesStorage", () => ({
-  apiCredentialProfilesStorage: {
-    mergeConfig: vi.fn(),
-    exportConfig: vi.fn(),
-  },
-  coerceApiCredentialProfilesConfig: (raw: unknown) => raw,
-}))
+vi.mock(
+  "~/services/apiCredentialProfiles/apiCredentialProfilesStorage",
+  () => ({
+    apiCredentialProfilesStorage: {
+      mergeConfig: vi.fn(),
+      exportConfig: vi.fn(),
+    },
+    coerceApiCredentialProfilesConfig: (raw: unknown) => raw,
+  }),
+)
 
 vi.mock("react-hot-toast", () => ({
   default: {

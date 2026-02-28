@@ -8,11 +8,14 @@ import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 
 const mockCreateProfile = vi.fn()
 
-vi.mock("~/services/apiCredentialProfilesStorage", () => ({
-  apiCredentialProfilesStorage: {
-    createProfile: (...args: unknown[]) => mockCreateProfile(...args),
-  },
-}))
+vi.mock(
+  "~/services/apiCredentialProfiles/apiCredentialProfilesStorage",
+  () => ({
+    apiCredentialProfilesStorage: {
+      createProfile: (...args: unknown[]) => mockCreateProfile(...args),
+    },
+  }),
+)
 
 vi.mock("react-hot-toast", () => ({
   default: {

@@ -11,7 +11,7 @@ import {
   summaryKeyFromHttpStatus,
   toSanitizedErrorSummary,
 } from "~/services/aiApiVerification/utils"
-import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfilesStorage"
+import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { fetchAnthropicModelIds } from "~/services/apiService/anthropic"
 import { fetchGoogleModelIds } from "~/services/apiService/google"
 import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompatible"

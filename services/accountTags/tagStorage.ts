@@ -1,6 +1,6 @@
 import { Storage } from "@plasmohq/storage"
 
-import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfilesStorage"
+import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { ensureAccountTagsStorageMigrated } from "~/services/configMigration/accountTags/accountTagsStorageMigration"
 import type { AccountStorageConfig, SiteAccount, Tag, TagStore } from "~/types"
 import { sendRuntimeMessage } from "~/utils/browserApi"
