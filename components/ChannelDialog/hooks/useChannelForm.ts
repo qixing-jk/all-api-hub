@@ -6,7 +6,7 @@ import type { CompactMultiSelectOption } from "~/components/ui"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { ChannelType, DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
 import { getApiService } from "~/services/apiService"
-import { getManagedSiteService } from "~/services/managedSiteService"
+import { getManagedSiteService } from "~/services/managedSites/managedSiteService"
 import { AuthTypeEnum } from "~/types"
 import type {
   ChannelFormData,

@@ -22,11 +22,11 @@ import {
   getManagedSiteContext,
 } from "~/utils/managedSite"
 
-import * as doneHubService from "./doneHubService/doneHubService"
-import * as newApiService from "./newApiService/newApiService"
-import * as octopusService from "./octopusService/octopusService"
-import { userPreferences, type UserPreferences } from "./userPreferences"
-import * as veloeraService from "./veloeraService/veloeraService"
+import * as doneHubService from "../doneHubService/doneHubService"
+import * as newApiService from "../newApiService/newApiService"
+import * as octopusService from "../octopusService/octopusService"
+import { userPreferences, type UserPreferences } from "../userPreferences"
+import * as veloeraService from "../veloeraService/veloeraService"
 
 export interface ManagedSiteConfig {
   baseUrl: string

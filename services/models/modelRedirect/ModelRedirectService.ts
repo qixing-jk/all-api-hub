@@ -26,7 +26,7 @@ import {
 } from "~/utils/managedSite"
 import { toModelTokenKey } from "~/utils/modelName"
 
-import { hasValidManagedSiteConfig } from "../../managedSiteService"
+import { hasValidManagedSiteConfig } from "../../managedSites/managedSiteService"
 import { userPreferences, type UserPreferences } from "../../userPreferences"
 import { extractActualModel, renameModel } from "./modelNormalization"
 import { isEmptyModelMapping } from "./utils"

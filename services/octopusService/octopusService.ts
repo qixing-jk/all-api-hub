@@ -17,7 +17,7 @@ import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompa
 import type {
   ManagedSiteConfig,
   ManagedSiteService,
-} from "~/services/managedSiteService"
+} from "~/services/managedSites/managedSiteService"
 import {
   userPreferences,
   type UserPreferences,

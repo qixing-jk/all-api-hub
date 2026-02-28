@@ -51,7 +51,7 @@ vi.mock("~/services/veloeraService/veloeraService", () => ({
 describe("managedSiteService", () => {
   it("routes to New API service by default", async () => {
     const { getManagedSiteService } = await import(
-      "~/services/managedSiteService"
+      "~/services/managedSites/managedSiteService"
     )
 
     mockGetPreferences.mockResolvedValueOnce({ managedSiteType: NEW_API })
@@ -66,7 +66,7 @@ describe("managedSiteService", () => {
 
   it("routes to Veloera service when selected", async () => {
     const { getManagedSiteService } = await import(
-      "~/services/managedSiteService"
+      "~/services/managedSites/managedSiteService"
     )
 
     mockGetPreferences.mockResolvedValueOnce({ managedSiteType: VELOERA })
