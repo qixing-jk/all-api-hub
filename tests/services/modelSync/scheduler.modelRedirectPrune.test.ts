@@ -21,7 +21,7 @@ const {
   mockSaveLastExecution: vi.fn(),
 }))
 
-vi.mock("~/services/channelConfigStorage", () => ({
+vi.mock("~/services/managedSites/channelConfigStorage", () => ({
   channelConfigStorage: {
     getAllConfigs: mockGetAllChannelConfigs,
   },

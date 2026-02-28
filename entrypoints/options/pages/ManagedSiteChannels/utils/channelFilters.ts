@@ -1,5 +1,5 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { channelConfigStorage } from "~/services/channelConfigStorage"
+import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 import { sendRuntimeMessage } from "~/utils/browserApi"
 import { createLogger } from "~/utils/logger"

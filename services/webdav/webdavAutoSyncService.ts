@@ -35,7 +35,7 @@ import { getErrorMessage } from "~/utils/error"
 import { createLogger } from "~/utils/logger"
 
 import { accountStorage } from "../accounts/accountStorage"
-import { channelConfigStorage } from "../channelConfigStorage"
+import { channelConfigStorage } from "../managedSites/channelConfigStorage"
 import {
   userPreferences,
   type UserPreferences,

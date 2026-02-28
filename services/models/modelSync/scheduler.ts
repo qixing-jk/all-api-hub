@@ -34,7 +34,7 @@ import {
   getManagedSiteContext,
 } from "~/utils/managedSite"
 
-import { channelConfigStorage } from "../../channelConfigStorage"
+import { channelConfigStorage } from "../../managedSites/channelConfigStorage"
 import { octopusChannelToManagedSite } from "../../managedSites/providers/octopus"
 import {
   DEFAULT_PREFERENCES,

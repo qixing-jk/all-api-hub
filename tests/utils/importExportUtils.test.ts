@@ -12,7 +12,7 @@ import {
 } from "~/entrypoints/options/pages/ImportExport/utils"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
-import { channelConfigStorage } from "~/services/channelConfigStorage"
+import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { tagStorage } from "~/services/tags/tagStorage"
 
@@ -30,7 +30,7 @@ vi.mock("~/services/preferences/userPreferences", () => ({
   },
 }))
 
-vi.mock("~/services/channelConfigStorage", () => ({
+vi.mock("~/services/managedSites/channelConfigStorage", () => ({
   channelConfigStorage: {
     importConfigs: vi.fn(),
     exportConfigs: vi.fn(),
