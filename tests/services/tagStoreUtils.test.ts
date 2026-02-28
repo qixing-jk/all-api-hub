@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest"
 import {
   migrateAccountTagsData,
   needsAccountTagsDataMigration,
-} from "~/services/configMigration/accountTags/accountTagsDataMigration"
+} from "~/services/tags/migrations/accountTagsDataMigration"
 import {
   createDefaultTagStore,
   mergeTagStoresAndRemapAccounts,

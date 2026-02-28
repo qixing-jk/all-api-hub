@@ -1,15 +1,15 @@
 import { Storage } from "@plasmohq/storage"
 
 import {
-  migrateAccountTagsData,
-  needsAccountTagsDataMigration,
-} from "~/services/configMigration/accountTags/accountTagsDataMigration"
-import {
   ACCOUNT_STORAGE_KEYS,
   STORAGE_LOCKS,
   TAG_STORAGE_KEYS,
 } from "~/services/core/storageKeys"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
+import {
+  migrateAccountTagsData,
+  needsAccountTagsDataMigration,
+} from "~/services/tags/migrations/accountTagsDataMigration"
 import {
   createDefaultTagStore,
   sanitizeTagStore,

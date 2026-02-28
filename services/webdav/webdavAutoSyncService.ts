@@ -10,7 +10,7 @@ import {
   apiCredentialProfilesStorage,
   mergeApiCredentialProfilesConfigs,
 } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
-import { migrateAccountTagsData } from "~/services/configMigration/accountTags/accountTagsDataMigration"
+import { migrateAccountTagsData } from "~/services/tags/migrations/accountTagsDataMigration"
 import { tagStorage } from "~/services/tags/tagStorage"
 import {
   createDefaultTagStore,

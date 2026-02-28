@@ -10,6 +10,7 @@ import {
   STORAGE_LOCKS,
 } from "~/services/core/storageKeys"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
+import { ensureAccountTagsStorageMigrated } from "~/services/tags/migrations/accountTagsStorageMigration"
 import {
   AuthTypeEnum,
   SiteHealthStatus,
@@ -31,7 +32,6 @@ import {
   migrateAccountsConfig,
   needsConfigMigration,
 } from "./configMigration/account/accountDataMigration"
-import { ensureAccountTagsStorageMigrated } from "./configMigration/accountTags/accountTagsStorageMigration"
 import { maybeCaptureDailyBalanceSnapshot } from "./dailyBalanceHistory/capture"
 import { getSiteType } from "./detectSiteType"
 import { userPreferences } from "./userPreferences"
