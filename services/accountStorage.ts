@@ -5,6 +5,7 @@ import { Storage } from "@plasmohq/storage"
 import { SUB2API, UNKNOWN_SITE } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { getApiService } from "~/services/apiService"
+import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import {
   AuthTypeEnum,
   SiteHealthStatus,
@@ -30,7 +31,6 @@ import { ensureAccountTagsStorageMigrated } from "./configMigration/accountTags/
 import { ACCOUNT_STORAGE_KEYS, STORAGE_LOCKS } from "./core/storageKeys"
 import { maybeCaptureDailyBalanceSnapshot } from "./dailyBalanceHistory/capture"
 import { getSiteType } from "./detectSiteType"
-import { withExtensionStorageWriteLock } from "./storageWriteLock"
 import { userPreferences } from "./userPreferences"
 
 // Re-export for backward compatibility across the codebase.

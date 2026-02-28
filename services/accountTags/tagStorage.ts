@@ -2,6 +2,7 @@ import { Storage } from "@plasmohq/storage"
 
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { ensureAccountTagsStorageMigrated } from "~/services/configMigration/accountTags/accountTagsStorageMigration"
+import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import type { AccountStorageConfig, SiteAccount, Tag, TagStore } from "~/types"
 import { sendRuntimeMessage } from "~/utils/browserApi"
 import { createLogger } from "~/utils/logger"
@@ -11,7 +12,6 @@ import {
   STORAGE_LOCKS,
   TAG_STORAGE_KEYS,
 } from "../core/storageKeys"
-import { withExtensionStorageWriteLock } from "../storageWriteLock"
 import {
   generateTagId,
   listTagsSorted,

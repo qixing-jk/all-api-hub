@@ -13,7 +13,7 @@ import {
   STORAGE_LOCKS,
   TAG_STORAGE_KEYS,
 } from "~/services/core/storageKeys"
-import { withExtensionStorageWriteLock } from "~/services/storageWriteLock"
+import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import type { AccountStorageConfig, TagStore } from "~/types"
 
 export type LegacyTagsMigrationResult = {

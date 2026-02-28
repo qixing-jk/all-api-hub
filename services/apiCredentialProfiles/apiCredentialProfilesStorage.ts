@@ -4,6 +4,7 @@ import {
   API_TYPES,
   type ApiVerificationApiType,
 } from "~/services/aiApiVerification"
+import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import type {
   ApiCredentialProfile,
   ApiCredentialProfilesConfig,
@@ -20,7 +21,6 @@ import {
   API_CREDENTIAL_PROFILES_STORAGE_KEYS,
   STORAGE_LOCKS,
 } from "../core/storageKeys"
-import { withExtensionStorageWriteLock } from "../storageWriteLock"
 
 /**
  * Unified logger scoped to API credential profiles storage.
