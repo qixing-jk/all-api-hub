@@ -8,7 +8,7 @@ import type { PricingResponse } from "~/services/apiService/common/type"
 import {
   MODEL_PRICING_CACHE_TTL_MS,
   modelPricingCache,
-} from "~/services/modelPricingCache"
+} from "~/services/models/modelPricingCache"
 import type { DisplaySiteData } from "~/types"
 
 type SelectedAccountValue = string | "all"
