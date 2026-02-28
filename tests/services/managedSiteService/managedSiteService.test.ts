@@ -29,7 +29,7 @@ vi.mock("~/services/managedSites/providers/newApi", () => ({
   autoConfigToNewApi: vi.fn(),
 }))
 
-vi.mock("~/services/veloeraService/veloeraService", () => ({
+vi.mock("~/services/managedSites/providers/veloeraService", () => ({
   checkValidVeloeraConfig: vi.fn(async () => true),
   getVeloeraConfig: vi.fn(async () => ({
     baseUrl: "v",

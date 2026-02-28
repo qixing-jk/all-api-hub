@@ -72,7 +72,7 @@ describe("veloeraService", () => {
   describe("hasValidVeloeraConfig", () => {
     it("returns true with valid config", async () => {
       const { hasValidVeloeraConfig } = await import(
-        "~/services/veloeraService/veloeraService"
+        "~/services/managedSites/providers/veloeraService"
       )
 
       expect(
@@ -86,7 +86,7 @@ describe("veloeraService", () => {
 
     it("returns false when prefs is null", async () => {
       const { hasValidVeloeraConfig } = await import(
-        "~/services/veloeraService/veloeraService"
+        "~/services/managedSites/providers/veloeraService"
       )
 
       expect(hasValidVeloeraConfig(null)).toBe(false)
@@ -94,7 +94,7 @@ describe("veloeraService", () => {
 
     it("returns false when required fields are missing", async () => {
       const { hasValidVeloeraConfig } = await import(
-        "~/services/veloeraService/veloeraService"
+        "~/services/managedSites/providers/veloeraService"
       )
 
       const cases = [
@@ -118,7 +118,7 @@ describe("veloeraService", () => {
   describe("getVeloeraConfig", () => {
     it("returns config when preferences are valid", async () => {
       const { getVeloeraConfig } = await import(
-        "~/services/veloeraService/veloeraService"
+        "~/services/managedSites/providers/veloeraService"
       )
 
       mockGetPreferences.mockResolvedValueOnce(
@@ -135,7 +135,7 @@ describe("veloeraService", () => {
 
     it("returns null when preferences are invalid", async () => {
       const { getVeloeraConfig } = await import(
-        "~/services/veloeraService/veloeraService"
+        "~/services/managedSites/providers/veloeraService"
       )
 
       mockGetPreferences.mockResolvedValueOnce(
@@ -152,7 +152,7 @@ describe("veloeraService", () => {
   describe("searchChannel/createChannel/updateChannel/deleteChannel", () => {
     it("passes VELOERA site hint to apiService wrappers", async () => {
       const { searchChannel, createChannel, updateChannel, deleteChannel } =
-        await import("~/services/veloeraService/veloeraService")
+        await import("~/services/managedSites/providers/veloeraService")
 
       mockSearchChannel.mockResolvedValueOnce(null)
       await searchChannel("https://veloera.example.com", "token", "1", "k")
