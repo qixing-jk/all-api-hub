@@ -10,7 +10,7 @@ import {
   Modal,
 } from "~/components/ui"
 import { fetchOpenAICompatibleModels } from "~/services/apiService/openaiCompatible"
-import { importToClaudeCodeRouter } from "~/services/claudeCodeRouterService"
+import { importToClaudeCodeRouter } from "~/services/integrations/claudeCodeRouterService"
 import type { ApiToken, DisplaySiteData } from "~/types"
 import { createLogger } from "~/utils/logger"
 import { showResultToast } from "~/utils/toastHelpers"
