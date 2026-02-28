@@ -69,7 +69,7 @@ describe("webAiApiCheck background handlers", () => {
     })
 
     const { handleWebAiApiCheckMessage } = await import(
-      "~/services/webAiApiCheck/background"
+      "~/services/verification/webAiApiCheck/background"
     )
 
     const sendResponse = vi.fn()
@@ -107,7 +107,7 @@ describe("webAiApiCheck background handlers", () => {
     })
 
     const { handleWebAiApiCheckMessage } = await import(
-      "~/services/webAiApiCheck/background"
+      "~/services/verification/webAiApiCheck/background"
     )
 
     const sendResponse = vi.fn()
@@ -133,7 +133,7 @@ describe("webAiApiCheck background handlers", () => {
     vi.mocked(fetchOpenAICompatibleModelIds).mockResolvedValue(["m1", "m2"])
 
     const { handleWebAiApiCheckMessage } = await import(
-      "~/services/webAiApiCheck/background"
+      "~/services/verification/webAiApiCheck/background"
     )
 
     const sendResponse = vi.fn()
@@ -166,7 +166,7 @@ describe("webAiApiCheck background handlers", () => {
     ])
 
     const { handleWebAiApiCheckMessage } = await import(
-      "~/services/webAiApiCheck/background"
+      "~/services/verification/webAiApiCheck/background"
     )
 
     const sendResponse = vi.fn()
@@ -201,7 +201,7 @@ describe("webAiApiCheck background handlers", () => {
     ])
 
     const { handleWebAiApiCheckMessage } = await import(
-      "~/services/webAiApiCheck/background"
+      "~/services/verification/webAiApiCheck/background"
     )
 
     const sendResponse = vi.fn()
@@ -235,7 +235,7 @@ describe("webAiApiCheck background handlers", () => {
     )
 
     const { handleWebAiApiCheckMessage } = await import(
-      "~/services/webAiApiCheck/background"
+      "~/services/verification/webAiApiCheck/background"
     )
 
     const sendResponse = vi.fn()
@@ -265,7 +265,7 @@ describe("webAiApiCheck background handlers", () => {
     )
 
     const { handleWebAiApiCheckMessage } = await import(
-      "~/services/webAiApiCheck/background"
+      "~/services/verification/webAiApiCheck/background"
     )
 
     const sendResponse = vi.fn()
@@ -307,7 +307,7 @@ describe("webAiApiCheck background handlers", () => {
     } as any)
 
     const { handleWebAiApiCheckMessage } = await import(
-      "~/services/webAiApiCheck/background"
+      "~/services/verification/webAiApiCheck/background"
     )
 
     const sendResponse = vi.fn()
