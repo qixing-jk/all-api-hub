@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { Storage } from "@plasmohq/storage"
 
-import { autoCheckinStorage } from "~/services/autoCheckin/storage"
+import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
 
 vi.mock("@plasmohq/storage", () => {
   const set = vi.fn()

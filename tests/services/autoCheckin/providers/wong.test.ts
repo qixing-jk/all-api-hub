@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { WONG_GONGYI } from "~/constants/siteType"
-import { wongGongyiProvider } from "~/services/autoCheckin/providers/wong"
+import { wongGongyiProvider } from "~/services/checkin/autoCheckin/providers/wong"
 import { AuthTypeEnum, SiteHealthStatus, type SiteAccount } from "~/types"
 
 vi.mock("~/services/apiService/common/utils", () => ({

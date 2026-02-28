@@ -13,19 +13,18 @@ import type {
   WongCheckinApiResponse,
   WongCheckinStatusData,
 } from "~/services/apiService/wong"
-import type { SiteAccount } from "~/types"
-import { AuthTypeEnum } from "~/types"
-import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
-
-import type { AutoCheckinProvider } from "~/services/autoCheckin/providers"
+import type { AutoCheckinProvider } from "~/services/checkin/autoCheckin/providers/index"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
   AUTO_CHECKIN_USER_CHECKIN_ENDPOINT,
   isAlreadyCheckedMessage,
   normalizeCheckinMessage,
   resolveProviderErrorResult,
-} from "~/services/autoCheckin/providers/shared"
-import type { AutoCheckinProviderResult } from "~/services/autoCheckin/providers/types"
+} from "~/services/checkin/autoCheckin/providers/shared"
+import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/providers/types"
+import type { SiteAccount } from "~/types"
+import { AuthTypeEnum } from "~/types"
+import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 
 /**
  * WONG daily check-in endpoint.

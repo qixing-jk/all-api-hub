@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { ANYROUTER } from "~/constants/siteType"
-import { anyrouterProvider } from "~/services/autoCheckin/providers/anyrouter"
+import { anyrouterProvider } from "~/services/checkin/autoCheckin/providers/anyrouter"
 import { AuthTypeEnum, SiteHealthStatus, type SiteAccount } from "~/types"
 
 vi.mock("~/services/apiService/common/utils", () => ({

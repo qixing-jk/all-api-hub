@@ -10,8 +10,8 @@ import {
   isAlreadyCheckedMessage,
   normalizeCheckinMessage,
   resolveProviderErrorResult,
-} from "~/services/autoCheckin/providers/shared"
-import type { AutoCheckinProviderResult } from "~/services/autoCheckin/providers/types"
+} from "~/services/checkin/autoCheckin/providers/shared"
+import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/providers/types"
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"

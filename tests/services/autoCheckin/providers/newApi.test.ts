@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { NEW_API } from "~/constants/siteType"
-import { newApiProvider } from "~/services/autoCheckin/providers/newApi"
+import { newApiProvider } from "~/services/checkin/autoCheckin/providers/newApi"
 import { buildSiteAccount } from "~/tests/test-utils/factories"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 

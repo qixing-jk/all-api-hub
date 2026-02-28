@@ -12,7 +12,7 @@ import type {
   ApiServiceRequest,
   RefreshAccountResult,
 } from "~/services/apiService/common/type"
-import { anyrouterProvider } from "~/services/autoCheckin/providers/anyrouter"
+import { anyrouterProvider } from "~/services/checkin/autoCheckin/providers/anyrouter"
 import { SiteHealthStatus, type CheckInConfig } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { createLogger } from "~/utils/logger"

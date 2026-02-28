@@ -2,12 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { accountStorage } from "~/services/accounts/accountStorage"
-import { resolveAutoCheckinProvider } from "~/services/autoCheckin/providers"
+import { resolveAutoCheckinProvider } from "~/services/checkin/autoCheckin/providers"
 import {
   autoCheckinScheduler,
   handleAutoCheckinMessage,
-} from "~/services/autoCheckin/scheduler"
-import { autoCheckinStorage } from "~/services/autoCheckin/storage"
+} from "~/services/checkin/autoCheckin/scheduler"
+import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
@@ -57,11 +57,11 @@ vi.mock("~/services/accounts/accountStorage", () => ({
   },
 }))
 
-vi.mock("~/services/autoCheckin/providers", () => ({
+vi.mock("~/services/checkin/autoCheckin/providers", () => ({
   resolveAutoCheckinProvider: vi.fn(),
 }))
 
-vi.mock("~/services/autoCheckin/storage", () => ({
+vi.mock("~/services/checkin/autoCheckin/storage", () => ({
   autoCheckinStorage: {
     getStatus: vi.fn(),
     saveStatus: vi.fn(),

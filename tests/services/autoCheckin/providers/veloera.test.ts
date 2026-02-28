@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { VELOERA } from "~/constants/siteType"
-import { veloeraProvider } from "~/services/autoCheckin/providers/veloera"
+import { veloeraProvider } from "~/services/checkin/autoCheckin/providers/veloera"
 import { AuthTypeEnum, SiteHealthStatus, type SiteAccount } from "~/types"
 
 vi.mock("~/services/apiService/common/utils", () => ({

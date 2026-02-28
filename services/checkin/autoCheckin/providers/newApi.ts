@@ -9,6 +9,15 @@ import type {
   NewApiCheckinResponse,
 } from "~/services/apiService/common/type"
 import { fetchApi, fetchApiData } from "~/services/apiService/common/utils"
+import type { AutoCheckinProvider } from "~/services/checkin/autoCheckin/providers/index"
+import {
+  AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
+  AUTO_CHECKIN_USER_CHECKIN_ENDPOINT,
+  isAlreadyCheckedMessage,
+  normalizeCheckinMessage,
+  resolveProviderErrorResult,
+} from "~/services/checkin/autoCheckin/providers/shared"
+import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/providers/types"
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
@@ -17,16 +26,6 @@ import type { TurnstilePreTrigger } from "~/types/turnstile"
 import { isAllowedIncognitoAccess } from "~/utils/browserApi"
 import { tempWindowTurnstileFetch } from "~/utils/tempWindowFetch"
 import { joinUrl } from "~/utils/url"
-
-import type { AutoCheckinProvider } from "~/services/autoCheckin/providers"
-import {
-  AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
-  AUTO_CHECKIN_USER_CHECKIN_ENDPOINT,
-  isAlreadyCheckedMessage,
-  normalizeCheckinMessage,
-  resolveProviderErrorResult,
-} from "~/services/autoCheckin/providers/shared"
-import type { AutoCheckinProviderResult } from "~/services/autoCheckin/providers/types"
 
 const NEW_API_MESSAGE_KEYS = {
   turnstileManualRequired:
