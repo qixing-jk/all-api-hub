@@ -3,7 +3,7 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { SUB2API } from "~/constants/siteType"
-import { generateDefaultTokenRequest } from "~/services/accountKeyAutoProvisioning/ensureDefaultToken"
+import { generateDefaultTokenRequest } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import { getApiService } from "~/services/apiService"
 import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/error"

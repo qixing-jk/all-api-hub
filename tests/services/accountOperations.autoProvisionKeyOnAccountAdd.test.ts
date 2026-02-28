@@ -43,19 +43,22 @@ vi.mock("~/services/apiService", () => ({
   }),
 }))
 
-vi.mock("~/services/accountKeyAutoProvisioning/ensureDefaultToken", () => ({
-  ensureDefaultApiTokenForAccount: ensureDefaultApiTokenForAccountMock,
-  generateDefaultTokenRequest: () => ({
-    name: "user group (auto)",
-    unlimited_quota: true,
-    expired_time: -1,
-    remain_quota: 0,
-    allow_ips: "",
-    model_limits_enabled: false,
-    model_limits: "",
-    group: "",
+vi.mock(
+  "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken",
+  () => ({
+    ensureDefaultApiTokenForAccount: ensureDefaultApiTokenForAccountMock,
+    generateDefaultTokenRequest: () => ({
+      name: "user group (auto)",
+      unlimited_quota: true,
+      expired_time: -1,
+      remain_quota: 0,
+      allow_ips: "",
+      model_limits_enabled: false,
+      model_limits: "",
+      group: "",
+    }),
   }),
-}))
+)
 
 const CHECK_IN_DISABLED: CheckInConfig = {
   enableDetection: false,

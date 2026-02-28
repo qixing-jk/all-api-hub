@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { runPerKeySequential } from "~/services/accountKeyAutoProvisioning/perOriginQueue"
+import { runPerKeySequential } from "~/services/accounts/accountKeyAutoProvisioning/perOriginQueue"
 
 const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0))
 

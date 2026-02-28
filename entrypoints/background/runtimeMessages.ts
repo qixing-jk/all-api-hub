@@ -5,7 +5,7 @@ import {
   RuntimeActionPrefixes,
 } from "~/constants/runtimeActions"
 import { applyActionClickBehavior } from "~/entrypoints/background/actionClickBehavior"
-import { handleAccountKeyRepairMessage } from "~/services/accountKeyAutoProvisioning"
+import { handleAccountKeyRepairMessage } from "~/services/accounts/accountKeyAutoProvisioning"
 import { handleAutoRefreshMessage } from "~/services/accounts/autoRefreshService"
 import { handleAutoCheckinMessage } from "~/services/autoCheckin/scheduler"
 import { handleChannelConfigMessage } from "~/services/channelConfigStorage"
