@@ -14,11 +14,11 @@ import {
 } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { getApiService } from "~/services/apiService"
-import { autoDetectSmart } from "~/services/siteDetection/autoDetectService"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
-} from "~/services/userPreferences"
+} from "~/services/preferences/userPreferences"
+import { autoDetectSmart } from "~/services/siteDetection/autoDetectService"
 import {
   ApiToken,
   AuthTypeEnum,

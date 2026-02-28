@@ -10,7 +10,7 @@ import {
   type LogResponseData,
 } from "~/services/apiService/common/type"
 import { fetchApiData } from "~/services/apiService/common/utils"
-import { userPreferences } from "~/services/userPreferences"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import type { SiteAccount } from "~/types"
 import {
   DEFAULT_USAGE_HISTORY_PREFERENCES,

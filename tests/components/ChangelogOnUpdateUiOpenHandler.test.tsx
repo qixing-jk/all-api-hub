@@ -5,11 +5,11 @@ import {
   UpdateLogDialogContainer,
   UpdateLogDialogProvider,
 } from "~/components/UpdateLogDialog"
-import { changelogOnUpdateState } from "~/services/updates/changelogOnUpdateState"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
-} from "~/services/userPreferences"
+} from "~/services/preferences/userPreferences"
+import { changelogOnUpdateState } from "~/services/updates/changelogOnUpdateState"
 import { render, screen, waitFor } from "~/tests/test-utils/render"
 
 describe("ChangelogOnUpdateUiOpenHandler", () => {

@@ -8,7 +8,10 @@ import { ensureAccountApiToken } from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { getApiService } from "~/services/apiService"
 import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompatible"
-import { UserPreferences, userPreferences } from "~/services/userPreferences"
+import {
+  UserPreferences,
+  userPreferences,
+} from "~/services/preferences/userPreferences"
 import { ApiToken, AuthTypeEnum, DisplaySiteData, SiteAccount } from "~/types"
 import type { DoneHubConfig } from "~/types/doneHubConfig"
 import type {

@@ -22,7 +22,10 @@ import {
   getManagedSiteContext,
 } from "~/utils/managedSite"
 
-import { userPreferences, type UserPreferences } from "../userPreferences"
+import {
+  userPreferences,
+  type UserPreferences,
+} from "../preferences/userPreferences"
 import * as doneHubService from "./providers/doneHubService"
 import * as newApiService from "./providers/newApi"
 import * as octopusService from "./providers/octopus"

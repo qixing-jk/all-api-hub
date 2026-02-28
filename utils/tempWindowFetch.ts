@@ -22,7 +22,7 @@ import {
   DEFAULT_PREFERENCES,
   TempWindowFallbackPreferences,
   userPreferences,
-} from "~/services/userPreferences"
+} from "~/services/preferences/userPreferences"
 import type {
   TempWindowFallbackAllowlist,
   TempWindowFallbackContext,
@@ -55,8 +55,10 @@ function isTempWindowRenderedTitleResponse(
   const record = value as Record<string, unknown>
 
   if (typeof record.success !== "boolean") return false
-  if (record.title !== undefined && typeof record.title !== "string") return false
-  if (record.error !== undefined && typeof record.error !== "string") return false
+  if (record.title !== undefined && typeof record.title !== "string")
+    return false
+  if (record.error !== undefined && typeof record.error !== "string")
+    return false
 
   return true
 }
@@ -209,17 +211,20 @@ export async function tempWindowGetRenderedTitle(params: {
 
       void (async () => {
         try {
-          await handleTempWindowGetRenderedTitle(payload, (response: unknown) => {
-            if (isTempWindowRenderedTitleResponse(response)) {
-              finalize(response)
-              return
-            }
+          await handleTempWindowGetRenderedTitle(
+            payload,
+            (response: unknown) => {
+              if (isTempWindowRenderedTitleResponse(response)) {
+                finalize(response)
+                return
+              }
 
-            finalize({
-              success: false,
-              error: "Invalid tempWindowGetRenderedTitle response",
-            })
-          })
+              finalize({
+                success: false,
+                error: "Invalid tempWindowGetRenderedTitle response",
+              })
+            },
+          )
         } finally {
           finalize()
         }

@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next"
 
 import { ToggleButton } from "~/components/ui"
 import { ANIMATIONS, COLORS } from "~/constants/designTokens"
-import { userPreferences } from "~/services/userPreferences"
+import { userPreferences } from "~/services/preferences/userPreferences"
 
 const languageOptions = [
   { code: "en", label: "EN" },

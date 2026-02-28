@@ -6,7 +6,7 @@ import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
-} from "~/services/userPreferences"
+} from "~/services/preferences/userPreferences"
 
 /**
  * Validates that logging preferences are:

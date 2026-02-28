@@ -16,7 +16,7 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import {
   DEFAULT_PREFERENCES,
   type WebAiApiCheckPreferences,
-} from "~/services/userPreferences"
+} from "~/services/preferences/userPreferences"
 import { createLogger } from "~/utils/logger"
 
 /**

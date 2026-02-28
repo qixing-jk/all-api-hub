@@ -5,7 +5,7 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
-} from "~/services/userPreferences"
+} from "~/services/preferences/userPreferences"
 import { render, screen, waitFor } from "~/tests/test-utils/render"
 
 vi.mock("react-hot-toast", () => ({

@@ -92,7 +92,7 @@ vi.mock("~/services/accounts/accountOperations", () => ({
 // Mock user preferences
 const mockGetPreferences = vi.fn()
 const mockSavePreferences = vi.fn()
-vi.mock("~/services/userPreferences", () => ({
+vi.mock("~/services/preferences/userPreferences", () => ({
   userPreferences: {
     getPreferences: mockGetPreferences,
     savePreferences: mockSavePreferences,

@@ -10,7 +10,7 @@ import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { PageHeader } from "~/entrypoints/options/components/PageHeader"
-import { DEFAULT_PREFERENCES } from "~/services/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import {
   AutoCheckinRunSummary,
   AutoCheckinStatus,

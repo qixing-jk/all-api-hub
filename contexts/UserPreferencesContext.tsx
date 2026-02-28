@@ -24,7 +24,7 @@ import {
   type TempWindowFallbackReminderPreferences,
   type UserPreferences,
   type WebAiApiCheckPreferences,
-} from "~/services/userPreferences"
+} from "~/services/preferences/userPreferences"
 import type {
   CurrencyType,
   DashboardTabType,

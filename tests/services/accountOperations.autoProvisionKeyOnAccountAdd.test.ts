@@ -9,7 +9,7 @@ import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
-} from "~/services/userPreferences"
+} from "~/services/preferences/userPreferences"
 import { AuthTypeEnum, type CheckInConfig } from "~/types"
 
 const {

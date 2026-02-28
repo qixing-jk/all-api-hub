@@ -2,7 +2,7 @@
  * Octopus API 服务
  * 提供与 Octopus 后端的所有 API 交互
  */
-import { userPreferences } from "~/services/userPreferences"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import type {
   OctopusApiResponse,
   OctopusChannel,

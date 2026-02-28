@@ -4,7 +4,7 @@ import i18n from "i18next"
 import "dayjs/locale/zh-cn"
 
 import { DEFAULT_LANG } from "~/constants"
-import { userPreferences } from "~/services/userPreferences"
+import { userPreferences } from "~/services/preferences/userPreferences"
 
 // 自动导入 locales 下的 json 文件
 const modules = import.meta.glob("~/locales/*/*.json", { eager: true })

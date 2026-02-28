@@ -4,7 +4,7 @@ import "~/utils/i18n"
 import "~/styles/style.css"
 
 import { ApiCheckModalHost } from "~/entrypoints/content/webAiApiCheck/components/ApiCheckModalHost"
-import { userPreferences } from "~/services/userPreferences"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import type { ResolvedTheme, ThemeMode } from "~/types/theme"
 import { createLogger } from "~/utils/logger"
 

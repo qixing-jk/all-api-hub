@@ -2,7 +2,7 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   userPreferences,
   type UserPreferences,
-} from "~/services/userPreferences"
+} from "~/services/preferences/userPreferences"
 import { createLogger } from "~/utils/logger"
 
 /**

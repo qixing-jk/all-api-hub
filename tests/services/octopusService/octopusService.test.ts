@@ -8,7 +8,7 @@ import {
 
 const mockGetPreferences = vi.fn()
 
-vi.mock("~/services/userPreferences", () => ({
+vi.mock("~/services/preferences/userPreferences", () => ({
   userPreferences: {
     getPreferences: mockGetPreferences,
   },

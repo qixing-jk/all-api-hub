@@ -6,7 +6,7 @@ import WebAiApiCheckSettings from "~/entrypoints/options/pages/BasicSettings/com
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
-} from "~/services/userPreferences"
+} from "~/services/preferences/userPreferences"
 import { fireEvent, render, screen, waitFor } from "~/tests/test-utils/render"
 import * as browserApi from "~/utils/browserApi"
 

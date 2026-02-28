@@ -8,7 +8,7 @@ import { initReactI18next } from "react-i18next"
 
 import { DEFAULT_LANG } from "~/constants"
 import { I18NEXT_LANGUAGE_STORAGE_KEY } from "~/services/core/storageKeys"
-import { userPreferences } from "~/services/userPreferences"
+import { userPreferences } from "~/services/preferences/userPreferences"
 
 // 自动导入所有 locales 下的 json 文件
 const modules = import.meta.glob("~/locales/*/*.json", { eager: true })

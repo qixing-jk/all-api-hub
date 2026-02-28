@@ -69,7 +69,9 @@ export default function WebDAVAutoSyncSettings() {
 
   const loadSettings = async () => {
     try {
-      const { userPreferences } = await import("~/services/userPreferences")
+      const { userPreferences } = await import(
+        "~/services/preferences/userPreferences"
+      )
       const prefs = await userPreferences.getPreferences()
       setAutoSyncEnabled(prefs.webdav.autoSync ?? false)
       setSyncInterval(prefs.webdav.syncInterval ?? 3600)

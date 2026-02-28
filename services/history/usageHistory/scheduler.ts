@@ -1,6 +1,6 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { accountStorage } from "~/services/accounts/accountStorage"
-import { userPreferences } from "~/services/userPreferences"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import type { UsageHistoryPreferences } from "~/types/usageHistory"
 import {
   DEFAULT_USAGE_HISTORY_PREFERENCES,

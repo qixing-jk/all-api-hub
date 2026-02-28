@@ -4,7 +4,7 @@ import { NEW_API, VELOERA } from "~/constants/siteType"
 
 const mockGetPreferences = vi.fn()
 
-vi.mock("~/services/userPreferences", () => ({
+vi.mock("~/services/preferences/userPreferences", () => ({
   userPreferences: {
     getPreferences: mockGetPreferences,
   },

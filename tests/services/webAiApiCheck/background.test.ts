@@ -1,11 +1,13 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { DEFAULT_PREFERENCES } from "~/services/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 
-vi.mock("~/services/userPreferences", async (importOriginal) => {
+vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/services/userPreferences")>()
+    await importOriginal<
+      typeof import("~/services/preferences/userPreferences")
+    >()
   return {
     ...actual,
     userPreferences: {
@@ -47,7 +49,9 @@ vi.mock("~/services/aiApiVerification", async (importOriginal) => {
 describe("webAiApiCheck background handlers", () => {
   it("shouldPrompt returns false when auto-detect is disabled", async () => {
     vi.resetModules()
-    const { userPreferences } = await import("~/services/userPreferences")
+    const { userPreferences } = await import(
+      "~/services/preferences/userPreferences"
+    )
     vi.mocked(userPreferences.getPreferences).mockResolvedValue({
       ...DEFAULT_PREFERENCES,
       webAiApiCheck: {
@@ -83,7 +87,9 @@ describe("webAiApiCheck background handlers", () => {
 
   it("shouldPrompt returns true when enabled and whitelisted", async () => {
     vi.resetModules()
-    const { userPreferences } = await import("~/services/userPreferences")
+    const { userPreferences } = await import(
+      "~/services/preferences/userPreferences"
+    )
     vi.mocked(userPreferences.getPreferences).mockResolvedValue({
       ...DEFAULT_PREFERENCES,
       webAiApiCheck: {

@@ -20,7 +20,7 @@ import {
 import { DEFAULT_OCTOPUS_CONFIG } from "~/types/octopusConfig"
 import { createLogger } from "~/utils/logger"
 
-import type { UserPreferences } from "../../userPreferences"
+import type { UserPreferences } from "../userPreferences"
 import { migrateSortingConfig } from "./sortingConfigMigration"
 
 const logger = createLogger("PreferencesMigration")

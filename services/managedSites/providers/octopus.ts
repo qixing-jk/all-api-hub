@@ -21,7 +21,7 @@ import type {
 import {
   userPreferences,
   type UserPreferences,
-} from "~/services/userPreferences"
+} from "~/services/preferences/userPreferences"
 import type { ApiToken, DisplaySiteData, SiteAccount } from "~/types"
 import type {
   ChannelFormData,

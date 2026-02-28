@@ -1,11 +1,11 @@
 import { useEffect, useRef } from "react"
 
 import { useUpdateLogDialogContext } from "~/components/UpdateLogDialog"
-import { changelogOnUpdateState } from "~/services/updates/changelogOnUpdateState"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
-} from "~/services/userPreferences"
+} from "~/services/preferences/userPreferences"
+import { changelogOnUpdateState } from "~/services/updates/changelogOnUpdateState"
 import { getErrorMessage } from "~/utils/error"
 import { createLogger } from "~/utils/logger"
 

@@ -34,7 +34,7 @@ vi.mock("~/services/permissions/permissionManager", () => ({
   hasCookieInterceptorPermissions: mockHasCookieInterceptorPermissions,
 }))
 
-vi.mock("~/services/userPreferences", () => ({
+vi.mock("~/services/preferences/userPreferences", () => ({
   DEFAULT_PREFERENCES: {
     tempWindowFallback: {
       enabled: false,

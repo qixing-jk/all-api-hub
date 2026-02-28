@@ -1,11 +1,13 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { DEFAULT_PREFERENCES } from "~/services/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 
-vi.mock("~/services/userPreferences", async (importOriginal) => {
+vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/services/userPreferences")>()
+    await importOriginal<
+      typeof import("~/services/preferences/userPreferences")
+    >()
   return {
     ...actual,
     userPreferences: {
@@ -17,7 +19,9 @@ vi.mock("~/services/userPreferences", async (importOriginal) => {
 describe("redemptionAssist shouldPrompt batch filtering", () => {
   it("returns only prompt-eligible codes for a url", async () => {
     vi.resetModules()
-    const { userPreferences } = await import("~/services/userPreferences")
+    const { userPreferences } = await import(
+      "~/services/preferences/userPreferences"
+    )
     const getPreferencesMock = vi.mocked(userPreferences.getPreferences)
 
     getPreferencesMock.mockResolvedValue({
