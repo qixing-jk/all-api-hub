@@ -10,7 +10,7 @@ import {
   ModelListInput,
 } from "~/components/ui"
 import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompatible"
-import { importToCliProxy } from "~/services/cliProxyService"
+import { importToCliProxy } from "~/services/integrations/cliProxyService"
 import type { ApiToken, DisplaySiteData } from "~/types"
 import { safeRandomUUID } from "~/utils/identifier"
 import { createLogger } from "~/utils/logger"
