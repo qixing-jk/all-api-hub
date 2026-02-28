@@ -23,10 +23,10 @@ import {
 } from "~/utils/managedSite"
 
 import * as doneHubService from "../doneHubService/doneHubService"
-import * as newApiService from "../newApiService/newApiService"
 import * as octopusService from "../octopusService/octopusService"
 import { userPreferences, type UserPreferences } from "../userPreferences"
 import * as veloeraService from "../veloeraService/veloeraService"
+import * as newApiService from "./providers/newApiService"
 
 export interface ManagedSiteConfig {
   baseUrl: string
