@@ -6,7 +6,7 @@ import {
   migrateAccountConfig,
   migrateAccountsConfig,
   needsConfigMigration,
-} from "~/services/configMigration/account/accountDataMigration"
+} from "~/services/accounts/migrations/accountDataMigration"
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 

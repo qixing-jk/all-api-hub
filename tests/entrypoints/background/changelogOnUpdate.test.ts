@@ -108,15 +108,12 @@ describe("background onInstalled changelog opening", () => {
         importData: vi.fn().mockResolvedValue(undefined),
       },
     }))
-    vi.doMock(
-      "~/services/configMigration/account/accountDataMigration",
-      () => ({
-        migrateAccountsConfig: vi.fn((accounts: any[]) => ({
-          accounts,
-          migratedCount: 0,
-        })),
-      }),
-    )
+    vi.doMock("~/services/accounts/migrations/accountDataMigration", () => ({
+      migrateAccountsConfig: vi.fn((accounts: any[]) => ({
+        accounts,
+        migratedCount: 0,
+      })),
+    }))
     vi.doMock("~/services/permissions/permissionManager", () => ({
       OPTIONAL_PERMISSIONS: [],
       hasPermissions: vi.fn().mockResolvedValue(true),
@@ -146,7 +143,7 @@ describe("background onInstalled changelog opening", () => {
     vi.doUnmock("~/entrypoints/background/actionClickBehavior")
     vi.doUnmock("~/services/tags/tagStorage")
     vi.doUnmock("~/services/accountStorage")
-    vi.doUnmock("~/services/configMigration/account/accountDataMigration")
+    vi.doUnmock("~/services/accounts/migrations/accountDataMigration")
     vi.doUnmock("~/services/permissions/permissionManager")
     vi.doUnmock("~/services/permissions/optionalPermissionState")
     vi.doUnmock("~/utils/navigation")

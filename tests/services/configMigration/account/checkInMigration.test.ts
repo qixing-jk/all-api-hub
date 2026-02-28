@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { migrateCheckInConfig } from "~/services/configMigration/account/checkInMigration"
+import { migrateCheckInConfig } from "~/services/accounts/migrations/checkInMigration"
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 

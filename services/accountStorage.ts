@@ -31,7 +31,7 @@ import {
   migrateAccountConfig,
   migrateAccountsConfig,
   needsConfigMigration,
-} from "./configMigration/account/accountDataMigration"
+} from "./accounts/migrations/accountDataMigration"
 import { maybeCaptureDailyBalanceSnapshot } from "./dailyBalanceHistory/capture"
 import { getSiteType } from "./detectSiteType"
 import { userPreferences } from "./userPreferences"

@@ -1,9 +1,9 @@
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { setupRuntimeMessageListeners } from "~/entrypoints/background/runtimeMessages"
 import { setupTempWindowListeners } from "~/entrypoints/background/tempWindowPool"
+import { migrateAccountsConfig } from "~/services/accounts/migrations/accountDataMigration"
 import { accountStorage } from "~/services/accountStorage"
 import { changelogOnUpdateState } from "~/services/changelogOnUpdateState"
-import { migrateAccountsConfig } from "~/services/configMigration/account/accountDataMigration"
 import {
   hasNewOptionalPermissions,
   setLastSeenOptionalPermissions,
