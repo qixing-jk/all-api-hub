@@ -2,7 +2,7 @@ import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import ModelRedirectSettings from "~/entrypoints/options/pages/BasicSettings/components/ModelRedirectSettings"
+import ModelRedirectSettings from "~/entrypoints/options/pages/BasicSettings/components/tabs/ManagedSite/ModelRedirectSettings"
 import { hasValidManagedSiteConfig } from "~/services/managedSites/managedSiteService"
 import { ModelRedirectService } from "~/services/models/modelRedirect"
 import { buildManagedSiteChannel } from "~/tests/test-utils/factories"

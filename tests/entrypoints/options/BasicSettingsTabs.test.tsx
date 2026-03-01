@@ -1,25 +1,25 @@
 import { render, screen } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
-import CheckinRedeemTab from "~/entrypoints/options/pages/BasicSettings/components/CheckinRedeemTab"
-import WebAiApiCheckTab from "~/entrypoints/options/pages/BasicSettings/components/WebAiApiCheckTab"
+import CheckinRedeemTab from "~/entrypoints/options/pages/BasicSettings/components/tabs/CheckinRedeem/CheckinRedeemTab"
+import WebAiApiCheckTab from "~/entrypoints/options/pages/BasicSettings/components/tabs/WebAiApiCheck/WebAiApiCheckTab"
 
 vi.mock(
-  "~/entrypoints/options/pages/BasicSettings/components/AutoCheckinSettings",
+  "~/entrypoints/options/pages/BasicSettings/components/tabs/CheckinRedeem/AutoCheckinSettings",
   () => ({
     default: () => <div data-testid="auto-checkin-settings" />,
   }),
 )
 
 vi.mock(
-  "~/entrypoints/options/pages/BasicSettings/components/RedemptionAssistSettings",
+  "~/entrypoints/options/pages/BasicSettings/components/tabs/CheckinRedeem/RedemptionAssistSettings",
   () => ({
     default: () => <div data-testid="redemption-assist-settings" />,
   }),
 )
 
 vi.mock(
-  "~/entrypoints/options/pages/BasicSettings/components/WebAiApiCheckSettings",
+  "~/entrypoints/options/pages/BasicSettings/components/tabs/WebAiApiCheck/WebAiApiCheckSettings",
   () => ({
     default: () => <div data-testid="web-ai-api-check-settings" />,
   }),

@@ -16,7 +16,7 @@ import { showResetToast } from "~/utils/toastHelpers"
 /**
  * Renders the destructive reset section with confirmation dialog for settings.
  */
-export default function DangerousZone() {
+export default function ResetSettingsSection() {
   const { t } = useTranslation("settings")
   const { resetToDefaults } = useUserPreferencesContext()
   const [isResetting, setIsResetting] = useState(false)

@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import UsageHistorySyncTab from "~/entrypoints/options/pages/BasicSettings/components/UsageHistorySyncTab"
+import UsageHistorySyncTab from "~/entrypoints/options/pages/BasicSettings/components/tabs/UsageHistorySync/UsageHistorySyncTab"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
 import { render } from "~/tests/test-utils/render"

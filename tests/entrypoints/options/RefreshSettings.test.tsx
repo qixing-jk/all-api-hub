@@ -4,7 +4,7 @@ import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import RefreshSettings from "~/entrypoints/options/pages/BasicSettings/components/RefreshSettings"
+import RefreshSettings from "~/entrypoints/options/pages/BasicSettings/components/tabs/Refresh/RefreshSettings"
 import { testI18n } from "~/tests/test-utils/i18n"
 import {
   ACCOUNT_AUTO_REFRESH_INTERVAL_MIN_SECONDS,

@@ -1,7 +1,7 @@
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it } from "vitest"
 
-import ManagedSiteSelector from "~/entrypoints/options/pages/BasicSettings/components/ManagedSiteSelector"
+import ManagedSiteSelector from "~/entrypoints/options/pages/BasicSettings/components/tabs/ManagedSite/ManagedSiteSelector"
 import { render, screen } from "~/tests/test-utils/render"
 
 describe("ManagedSiteSelector", () => {

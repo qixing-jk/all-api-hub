@@ -6,10 +6,9 @@ import { useTranslation } from "react-i18next"
 
 import { Alert, Button, Card, CardContent, Heading4 } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import WebDAVAutoSyncSettings from "~/entrypoints/options/pages/ImportExport/components/WebDAVAutoSyncSettings"
+import WebDAVSettings from "~/entrypoints/options/pages/ImportExport/components/WebDAVSettings"
 import { navigateWithinOptionsPage } from "~/utils/navigation"
-
-import WebDAVAutoSyncSettings from "../../ImportExport/components/WebDAVAutoSyncSettings"
-import WebDAVSettings from "../../ImportExport/components/WebDAVSettings"
 
 /**
  * Basic Settings tab for data backup/import/export and WebDAV sync settings.
