@@ -1,8 +1,14 @@
 import {
+  DNR_UPDATE_SESSION_RULES_MAX_ATTEMPTS,
+  DNR_UPDATE_SESSION_RULES_RETRY_DELAY_MS,
+  DNR_UPDATE_SESSION_RULES_TIMEOUT_MS,
+} from "~/constants/dnr"
+import {
   COOKIE_AUTH_HEADER_NAME,
   EXTENSION_HEADER_NAME,
 } from "~/utils/cookieHelper"
 import { createLogger } from "~/utils/logger"
+import { sleep, withTimeout } from "~/utils/timeout"
 
 /**
  * Unified logger scoped to DNR cookie header injection helpers.
@@ -37,6 +43,78 @@ function hasDnrApi(): boolean {
   } catch {
     return false
   }
+}
+
+/**
+ * Best-effort wrapper around `declarativeNetRequest.updateSessionRules` that:
+ * - times out instead of hanging forever (Chromium quirk after permission changes)
+ * - retries once to smooth over short-lived initialization races
+ */
+async function updateSessionRulesSafe(
+  params: any,
+  meta: { label: string },
+): Promise<boolean> {
+  if (!hasDnrApi()) {
+    return false
+  }
+
+  const updateSessionRules = (globalThis as any).chrome.declarativeNetRequest
+    .updateSessionRules as ((details: any) => Promise<void>) | undefined
+
+  if (!updateSessionRules) {
+    return false
+  }
+
+  for (
+    let attempt = 1;
+    attempt <= DNR_UPDATE_SESSION_RULES_MAX_ATTEMPTS;
+    attempt += 1
+  ) {
+    try {
+      await withTimeout(updateSessionRules(params), {
+        timeoutMs: DNR_UPDATE_SESSION_RULES_TIMEOUT_MS,
+        label: meta.label,
+      })
+      return true
+    } catch (error) {
+      const message = (error as any)?.message || String(error || "")
+      const normalized = message.toLowerCase()
+      const isTimeout =
+        (error as any)?.name === "TimeoutError" ||
+        normalized.includes("timed out")
+      const isPermissionError =
+        normalized.includes("permission") &&
+        (normalized.includes("required") ||
+          normalized.includes("denied") ||
+          normalized.includes("not allowed"))
+
+      if (isPermissionError) {
+        logger.debug("DNR session rules blocked by missing permission", {
+          label: meta.label,
+          attempt,
+          error,
+        })
+        return false
+      }
+
+      logger.warn("Failed to update DNR session rules", {
+        attempt,
+        label: meta.label,
+        error,
+      })
+
+      // Retry only on timeouts; other failures are usually deterministic (e.g. invalid args).
+      if (!isTimeout) {
+        return false
+      }
+
+      if (attempt < DNR_UPDATE_SESSION_RULES_MAX_ATTEMPTS) {
+        await sleep(DNR_UPDATE_SESSION_RULES_RETRY_DELAY_MS)
+      }
+    }
+  }
+
+  return false
 }
 
 /**
@@ -92,16 +170,18 @@ export async function applyTempWindowCookieRule(
   const ruleId = buildRuleId(params.tabId)
   const rule = buildTempWindowCookieRule(params)
 
-  try {
-    await (globalThis as any).chrome.declarativeNetRequest.updateSessionRules({
+  const ok = await updateSessionRulesSafe(
+    {
       removeRuleIds: [ruleId],
       addRules: [rule],
-    })
-    return ruleId
-  } catch (error) {
-    logger.warn("Failed to install temp-window cookie rule", error)
-    return null
-  }
+    },
+    {
+      label:
+        "declarativeNetRequest.updateSessionRules(installTempWindowCookieRule)",
+    },
+  )
+
+  return ok ? ruleId : null
 }
 
 /**
@@ -114,11 +194,15 @@ export async function removeTempWindowCookieRule(
     return
   }
 
-  try {
-    await (globalThis as any).chrome.declarativeNetRequest.updateSessionRules({
-      removeRuleIds: [ruleId],
-    })
-  } catch (error) {
-    logger.warn("Failed to remove temp-window cookie rule", error)
+  const ok = await updateSessionRulesSafe(
+    { removeRuleIds: [ruleId] },
+    {
+      label:
+        "declarativeNetRequest.updateSessionRules(removeTempWindowCookieRule)",
+    },
+  )
+
+  if (!ok) {
+    logger.warn("Failed to remove temp-window cookie rule", { ruleId })
   }
 }
