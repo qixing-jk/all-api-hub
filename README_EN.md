@@ -30,6 +30,7 @@
 
 **[Documentation](https://all-api-hub.qixing1217.top/en) | [Getting Started](https://all-api-hub.qixing1217.top/en/get-started.html) | [FAQ](https://all-api-hub.qixing1217.top/en/faq.html) | [Changelog](https://all-api-hub.qixing1217.top/en/changelog.html) | [Contributing](CONTRIBUTING.md)**
 
+<a id="community"></a>
 <p align="center">
   <strong>💬 Community:</strong> 
   <a href="./resources/wechat_group.png">
@@ -44,6 +45,7 @@
 
 </div>
 
+<a id="introduction"></a>
 ## 📖 Introduction
 
 Nowadays, within the AI ecosystem, there's a growing number of aggregated relay stations and custom dashboards built upon the New API series. Checking balances and model lists across these platforms, while also managing and quickly using API keys, is often fragmented and time-consuming.
@@ -61,6 +63,7 @@ All API Hub is a browser extension for one-stop management of New API-style rela
 - RIX_API (closed source, basic functionality supported)
 - VoAPI (closed source, old versions supported)
 
+<a id="features"></a>
 ## ✨ Features
 
 - 🔍 **Smart Site Detection**  
@@ -105,6 +108,7 @@ All API Hub is a browser extension for one-stop management of New API-style rela
 > [!NOTE]
 > Originally based on [One API Hub](https://github.com/fxaxg/one-api-hub), now significantly refactored and expanded. Data format remains compatible, supporting direct import
 
+<a id="ui-preview"></a>
 ## 🖼️ UI Preview
 
 <table>
@@ -150,6 +154,7 @@ All API Hub is a browser extension for one-stop management of New API-style rela
   </tr>
 </table>
 
+<a id="installation"></a>
 ## 🚀 Installation
 
 | Channel | Download Link | Current Version |
@@ -170,14 +175,17 @@ All API Hub is a browser extension for one-stop management of New API-style rela
 
 </details>
 
+<a id="quick-start"></a>
 ## 🧑‍🚀 Quick Start Guide for New Users
 
 [Getting Started guide](https://all-api-hub.qixing1217.top/en/get-started.html).
 
+<a id="development-guide"></a>
 ## 🛠️ Development Guide
 
 Please refer to the [CONTRIBUTING](CONTRIBUTING.md) for more information.
 
+<a id="tech-stack"></a>
 ## 🏗️ Tech Stack
 
 - **Framework**: [WXT](https://wxt.dev) powers the multi-browser extension tooling and build pipeline
@@ -186,6 +194,7 @@ Please refer to the [CONTRIBUTING](CONTRIBUTING.md) for more information.
 - **Styling**: [Tailwind CSS](https://tailwindcss.com) supplies utility-first theming primitives
 - **Components**: [Headless UI](https://headlessui.com) provides unstyled accessible primitives for our design system
 
+<a id="acknowledgements"></a>
 ## 🙏 Acknowledgements
 
 - Thanks to [@AngleNaris](https://github.com/AngleNaris) for designing the project logo 🎨

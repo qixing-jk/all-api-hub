@@ -30,6 +30,7 @@
 
 **[文档教程](https://all-api-hub.qixing1217.top/) | [快速上手](https://all-api-hub.qixing1217.top/get-started.html) | [常见问题](https://all-api-hub.qixing1217.top/faq.html) | [更新日志](https://all-api-hub.qixing1217.top/changelog.html) | [贡献指南](CONTRIBUTING.md)**
 
+<a id="community"></a>
 <p align="center">
   <strong>💬 社区：</strong> 
   <a href="./resources/wechat_group.png">
@@ -44,6 +45,7 @@
 
 </div>
 
+<a id="introduction"></a>
 ## 📖 介绍
 
 现在 AI 生态里有越来越多基于 New API 系列的聚合中转站和自建面板，要查看各站点的余额和模型列表，并管理和快速使用API 密钥，往往既分散又费时。
@@ -60,6 +62,7 @@ All API Hub 作为浏览器扩展，一站式管理 New API 等中转站账号�
 - RIX_API（闭源，基本功能支持）
 - VoAPI（闭源，老版本支持）
 
+<a id="features"></a>
 ## ✨ 功能特性
 
 - 🔍 **智能站点识别**  
@@ -105,6 +108,7 @@ All API Hub 作为浏览器扩展，一站式管理 New API 等中转站账号�
 > 最初基于 [One API Hub](https://github.com/fxaxg/one-api-hub) 开发，现已大幅重构扩展。数据格式保持兼容，支持直接导入
 
 
+<a id="ui-preview"></a>
 ## 🖼️ 界面预览
 
 <table>
@@ -150,6 +154,7 @@ All API Hub 作为浏览器扩展，一站式管理 New API 等中转站账号�
   </tr>
 </table>
 
+<a id="installation"></a>
 ## 🚀 安装使用
 
 | 渠道 | 下载链接 | 当前版本 |
@@ -170,14 +175,17 @@ All API Hub 作为浏览器扩展，一站式管理 New API 等中转站账号�
 
 </details>
 
+<a id="quick-start"></a>
 ## 🧑‍🚀 新手快速上手
 
 [快速上手指南](https://all-api-hub.qixing1217.top/get-started.html)。
 
+<a id="development-guide"></a>
 ## 🛠️ 开发指南
 
 请参阅 [CONTRIBUTING](CONTRIBUTING.md) 以获取更多信息。
 
+<a id="tech-stack"></a>
 ## 🏗️ 技术栈
 
 - **框架**: [WXT](https://wxt.dev) 负责多浏览器扩展工具链与构建流程
@@ -187,6 +195,7 @@ All API Hub 作为浏览器扩展，一站式管理 New API 等中转站账号�
 - **组件**: [Headless UI](https://headlessui.com) 提供无样式可访问组件与设计系统基石
 
 
+<a id="acknowledgements"></a>
 ## 🙏 致谢
 
 - 感谢 [@AngleNaris](https://github.com/AngleNaris) 设计了项目 Logo 🎨
