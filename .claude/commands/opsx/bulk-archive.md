@@ -225,7 +225,7 @@ Failed K changes:
 ```
 ## No Changes to Archive
 
-No active changes found. Use `/opsx:new` to create a new change.
+No active changes found. Create a new change to get started.
 ```
 
 **Guardrails**
