@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import RedemptionAssistSettings from "~/entrypoints/options/pages/BasicSettings/components/tabs/CheckinRedeem/RedemptionAssistSettings"
-import WebAiApiCheckSettings from "~/entrypoints/options/pages/BasicSettings/components/WebAiApiCheckSettings"
+import WebAiApiCheckSettings from "~/entrypoints/options/pages/BasicSettings/components/tabs/WebAiApiCheck/WebAiApiCheckSettings"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,

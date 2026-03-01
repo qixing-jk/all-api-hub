@@ -43,7 +43,7 @@ import CheckinRedeemTab from "./components/tabs/CheckinRedeem/CheckinRedeemTab"
 import GeneralTab from "./components/tabs/General/GeneralTab"
 import AutoRefreshTab from "./components/tabs/Refresh/AutoRefreshTab"
 import UsageHistorySyncTab from "./components/tabs/UsageHistorySync/UsageHistorySyncTab"
-import WebAiApiCheckTab from "./components/WebAiApiCheckTab"
+import WebAiApiCheckTab from "./components/tabs/WebAiApiCheck/WebAiApiCheckTab"
 
 type TabId =
   | "general"

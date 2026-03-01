@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
 import CheckinRedeemTab from "~/entrypoints/options/pages/BasicSettings/components/tabs/CheckinRedeem/CheckinRedeemTab"
-import WebAiApiCheckTab from "~/entrypoints/options/pages/BasicSettings/components/WebAiApiCheckTab"
+import WebAiApiCheckTab from "~/entrypoints/options/pages/BasicSettings/components/tabs/WebAiApiCheck/WebAiApiCheckTab"
 
 vi.mock(
   "~/entrypoints/options/pages/BasicSettings/components/tabs/CheckinRedeem/AutoCheckinSettings",
@@ -19,7 +19,7 @@ vi.mock(
 )
 
 vi.mock(
-  "~/entrypoints/options/pages/BasicSettings/components/WebAiApiCheckSettings",
+  "~/entrypoints/options/pages/BasicSettings/components/tabs/WebAiApiCheck/WebAiApiCheckSettings",
   () => ({
     default: () => <div data-testid="web-ai-api-check-settings" />,
   }),
