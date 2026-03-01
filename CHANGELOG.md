@@ -1,5 +1,20 @@
 # Changelog
 
+## [3.25.0](https://github.com/qixing-jk/all-api-hub/compare/v3.24.0...v3.25.0) (2026-03-01)
+
+
+### Features
+
+* **auto-checkin:** add Cloudflare Turnstile support for auto check-in ([#525](https://github.com/qixing-jk/all-api-hub/issues/525)) ([f2b5e9a](https://github.com/qixing-jk/all-api-hub/commit/f2b5e9a2a45bcf65d248592671e41541c944c2e3))
+* **ccswitch:** add /v1 endpoint auto-appending for Codex app ([#523](https://github.com/qixing-jk/all-api-hub/issues/523)) ([e743574](https://github.com/qixing-jk/all-api-hub/commit/e743574c77d193358afb267fd4a57c3c236e52c4))
+* **model-redirect:** add opt-in prune for invalid mapping targets ([#524](https://github.com/qixing-jk/all-api-hub/issues/524)) ([0a6570f](https://github.com/qixing-jk/all-api-hub/commit/0a6570f77f3edc21c8d546f68a3c8e1000549858))
+* **temp-window:** add 401/429 response sniffing to reduce false positives ([#522](https://github.com/qixing-jk/all-api-hub/issues/522)) ([535e11e](https://github.com/qixing-jk/all-api-hub/commit/535e11e2cf8c74e0a9dc2b847262fb2de1321744))
+
+
+### Bug Fixes
+
+* ensure changelog dialog respects default preferences ([93fb345](https://github.com/qixing-jk/all-api-hub/commit/93fb34574c12e08da39531a05bc44d91bdbc62f5))
+
 ## [3.24.0](https://github.com/qixing-jk/all-api-hub/compare/v3.23.0...v3.24.0) (2026-02-26)
 
 
