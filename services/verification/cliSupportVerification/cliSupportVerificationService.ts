@@ -1,4 +1,4 @@
-import { runCliSupportToolFromRegistry } from "~/services/cliSupportVerification/registry"
+import { runCliSupportToolFromRegistry } from "~/services/verification/cliSupportVerification/registry"
 
 import { nowMs } from "../aiApiVerification/probeTiming"
 import type { CliSupportReport, CliSupportResult, CliToolId } from "./types"

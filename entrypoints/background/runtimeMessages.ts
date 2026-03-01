@@ -15,7 +15,7 @@ import { handleUsageHistoryMessage } from "~/services/history/usageHistory/sched
 import { handleLdohSiteLookupMessage } from "~/services/integrations/ldohSiteLookup/background"
 import { handleManagedSiteModelSyncMessage } from "~/services/models/modelSync"
 import { handleRedemptionAssistMessage } from "~/services/redemption/redemptionAssist"
-import { handleWebAiApiCheckMessage } from "~/services/webAiApiCheck/background"
+import { handleWebAiApiCheckMessage } from "~/services/verification/webAiApiCheck/background"
 import { handleWebdavAutoSyncMessage } from "~/services/webdav/webdavAutoSyncService"
 import { onRuntimeMessage } from "~/utils/browserApi"
 import { getCookieHeaderForUrl } from "~/utils/cookieHelper"

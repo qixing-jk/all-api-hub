@@ -23,7 +23,7 @@ import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
 import {
   API_TYPES,
   type ApiVerificationApiType,
-} from "~/services/aiApiVerification"
+} from "~/services/verification/aiApiVerification"
 import type { Tag } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { createLogger } from "~/utils/logger"

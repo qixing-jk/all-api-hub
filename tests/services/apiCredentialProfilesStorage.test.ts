@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { API_TYPES } from "~/services/aiApiVerification"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { API_CREDENTIAL_PROFILES_STORAGE_KEYS } from "~/services/core/storageKeys"
+import { API_TYPES } from "~/services/verification/aiApiVerification"
 
 const storageData = new Map<string, any>()
 

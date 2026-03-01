@@ -19,9 +19,11 @@ vi.mock("~/services/apiService", () => ({
 
 const mockRunApiVerificationProbe = vi.fn()
 
-vi.mock("~/services/aiApiVerification", async (importOriginal) => {
+vi.mock("~/services/verification/aiApiVerification", async (importOriginal) => {
   const original =
-    await importOriginal<typeof import("~/services/aiApiVerification")>()
+    await importOriginal<
+      typeof import("~/services/verification/aiApiVerification")
+    >()
   return {
     ...original,
     runApiVerificationProbe: (...args: any[]) =>

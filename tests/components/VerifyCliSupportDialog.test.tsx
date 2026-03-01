@@ -19,7 +19,7 @@ vi.mock("~/services/apiService", () => ({
 
 const mockRunCliSupportTool = vi.fn()
 
-vi.mock("~/services/cliSupportVerification", () => ({
+vi.mock("~/services/verification/cliSupportVerification", () => ({
   CLI_TOOL_IDS: ["claude", "codex", "gemini"],
   runCliSupportTool: (...args: any[]) => mockRunCliSupportTool(...args),
 }))

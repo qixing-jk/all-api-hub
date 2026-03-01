@@ -37,9 +37,11 @@ vi.mock(
   }),
 )
 
-vi.mock("~/services/aiApiVerification", async (importOriginal) => {
+vi.mock("~/services/verification/aiApiVerification", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/services/aiApiVerification")>()
+    await importOriginal<
+      typeof import("~/services/verification/aiApiVerification")
+    >()
   return {
     ...actual,
     runApiVerificationProbe: vi.fn(),
@@ -67,7 +69,7 @@ describe("webAiApiCheck background handlers", () => {
     })
 
     const { handleWebAiApiCheckMessage } = await import(
-      "~/services/webAiApiCheck/background"
+      "~/services/verification/webAiApiCheck/background"
     )
 
     const sendResponse = vi.fn()
@@ -105,7 +107,7 @@ describe("webAiApiCheck background handlers", () => {
     })
 
     const { handleWebAiApiCheckMessage } = await import(
-      "~/services/webAiApiCheck/background"
+      "~/services/verification/webAiApiCheck/background"
     )
 
     const sendResponse = vi.fn()
@@ -131,7 +133,7 @@ describe("webAiApiCheck background handlers", () => {
     vi.mocked(fetchOpenAICompatibleModelIds).mockResolvedValue(["m1", "m2"])
 
     const { handleWebAiApiCheckMessage } = await import(
-      "~/services/webAiApiCheck/background"
+      "~/services/verification/webAiApiCheck/background"
     )
 
     const sendResponse = vi.fn()
@@ -164,7 +166,7 @@ describe("webAiApiCheck background handlers", () => {
     ])
 
     const { handleWebAiApiCheckMessage } = await import(
-      "~/services/webAiApiCheck/background"
+      "~/services/verification/webAiApiCheck/background"
     )
 
     const sendResponse = vi.fn()
@@ -199,7 +201,7 @@ describe("webAiApiCheck background handlers", () => {
     ])
 
     const { handleWebAiApiCheckMessage } = await import(
-      "~/services/webAiApiCheck/background"
+      "~/services/verification/webAiApiCheck/background"
     )
 
     const sendResponse = vi.fn()
@@ -233,7 +235,7 @@ describe("webAiApiCheck background handlers", () => {
     )
 
     const { handleWebAiApiCheckMessage } = await import(
-      "~/services/webAiApiCheck/background"
+      "~/services/verification/webAiApiCheck/background"
     )
 
     const sendResponse = vi.fn()
@@ -256,14 +258,14 @@ describe("webAiApiCheck background handlers", () => {
   it("runProbe sanitizes apiKey when probe execution throws", async () => {
     vi.resetModules()
     const { runApiVerificationProbe } = await import(
-      "~/services/aiApiVerification"
+      "~/services/verification/aiApiVerification"
     )
     vi.mocked(runApiVerificationProbe).mockRejectedValue(
       new Error("Forbidden: sk-secret-xyz"),
     )
 
     const { handleWebAiApiCheckMessage } = await import(
-      "~/services/webAiApiCheck/background"
+      "~/services/verification/webAiApiCheck/background"
     )
 
     const sendResponse = vi.fn()
@@ -305,7 +307,7 @@ describe("webAiApiCheck background handlers", () => {
     } as any)
 
     const { handleWebAiApiCheckMessage } = await import(
-      "~/services/webAiApiCheck/background"
+      "~/services/verification/webAiApiCheck/background"
     )
 
     const sendResponse = vi.fn()

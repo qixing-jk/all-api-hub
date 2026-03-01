@@ -1,16 +1,4 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import {
-  API_TYPES,
-  runApiVerificationProbe,
-  type ApiVerificationApiType,
-  type ApiVerificationProbeId,
-  type ApiVerificationProbeResult,
-} from "~/services/aiApiVerification"
-import {
-  inferHttpStatus,
-  summaryKeyFromHttpStatus,
-  toSanitizedErrorSummary,
-} from "~/services/aiApiVerification/utils"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { fetchAnthropicModelIds } from "~/services/apiService/anthropic"
 import { fetchGoogleModelIds } from "~/services/apiService/google"
@@ -20,6 +8,18 @@ import {
   userPreferences,
   type UserPreferences,
 } from "~/services/preferences/userPreferences"
+import {
+  API_TYPES,
+  runApiVerificationProbe,
+  type ApiVerificationApiType,
+  type ApiVerificationProbeId,
+  type ApiVerificationProbeResult,
+} from "~/services/verification/aiApiVerification"
+import {
+  inferHttpStatus,
+  summaryKeyFromHttpStatus,
+  toSanitizedErrorSummary,
+} from "~/services/verification/aiApiVerification/utils"
 import { createLogger } from "~/utils/logger"
 import { isUrlAllowedByRegexList } from "~/utils/redemptionAssistWhitelist"
 import {

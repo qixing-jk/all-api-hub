@@ -15,6 +15,9 @@ import {
   formatLatency,
   safeJsonStringify,
 } from "~/components/VerifyApiDialog/utils"
+import { fetchAnthropicModelIds } from "~/services/apiService/anthropic"
+import { fetchGoogleModelIds } from "~/services/apiService/google"
+import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompatible"
 import {
   API_TYPES,
   getApiVerificationProbeDefinitions,
@@ -22,11 +25,8 @@ import {
   type ApiVerificationApiType,
   type ApiVerificationProbeId,
   type ApiVerificationProbeResult,
-} from "~/services/aiApiVerification"
-import { toSanitizedErrorSummary } from "~/services/aiApiVerification/utils"
-import { fetchAnthropicModelIds } from "~/services/apiService/anthropic"
-import { fetchGoogleModelIds } from "~/services/apiService/google"
-import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompatible"
+} from "~/services/verification/aiApiVerification"
+import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { createLogger } from "~/utils/logger"
 
