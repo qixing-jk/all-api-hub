@@ -8,8 +8,8 @@ import { Alert, Button, Card, CardContent, Heading4 } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { navigateWithinOptionsPage } from "~/utils/navigation"
 
-import WebDAVAutoSyncSettings from "../../ImportExport/components/WebDAVAutoSyncSettings"
-import WebDAVSettings from "../../ImportExport/components/WebDAVSettings"
+import WebDAVAutoSyncSettings from "../../../../ImportExport/components/WebDAVAutoSyncSettings"
+import WebDAVSettings from "../../../../ImportExport/components/WebDAVSettings"
 
 /**
  * Basic Settings tab for data backup/import/export and WebDAV sync settings.
