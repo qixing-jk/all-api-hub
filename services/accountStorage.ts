@@ -5,6 +5,10 @@ import { Storage } from "@plasmohq/storage"
 import { SUB2API, UNKNOWN_SITE } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { getApiService } from "~/services/apiService"
+import {
+  ACCOUNT_STORAGE_KEYS,
+  STORAGE_LOCKS,
+} from "~/services/core/storageKeys"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import {
   AuthTypeEnum,
@@ -28,7 +32,6 @@ import {
   needsConfigMigration,
 } from "./configMigration/account/accountDataMigration"
 import { ensureAccountTagsStorageMigrated } from "./configMigration/accountTags/accountTagsStorageMigration"
-import { ACCOUNT_STORAGE_KEYS, STORAGE_LOCKS } from "./core/storageKeys"
 import { maybeCaptureDailyBalanceSnapshot } from "./dailyBalanceHistory/capture"
 import { getSiteType } from "./detectSiteType"
 import { userPreferences } from "./userPreferences"

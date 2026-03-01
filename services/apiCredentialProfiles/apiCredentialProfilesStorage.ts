@@ -4,6 +4,10 @@ import {
   API_TYPES,
   type ApiVerificationApiType,
 } from "~/services/aiApiVerification"
+import {
+  API_CREDENTIAL_PROFILES_STORAGE_KEYS,
+  STORAGE_LOCKS,
+} from "~/services/core/storageKeys"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import type {
   ApiCredentialProfile,
@@ -16,11 +20,6 @@ import {
   normalizeGoogleFamilyBaseUrl,
   normalizeOpenAiFamilyBaseUrl,
 } from "~/utils/webAiApiCheck"
-
-import {
-  API_CREDENTIAL_PROFILES_STORAGE_KEYS,
-  STORAGE_LOCKS,
-} from "../core/storageKeys"
 
 /**
  * Unified logger scoped to API credential profiles storage.
