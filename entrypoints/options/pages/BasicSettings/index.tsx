@@ -42,7 +42,7 @@ import BalanceHistoryTab from "./components/tabs/BalanceHistory/BalanceHistoryTa
 import CheckinRedeemTab from "./components/tabs/CheckinRedeem/CheckinRedeemTab"
 import GeneralTab from "./components/tabs/General/GeneralTab"
 import AutoRefreshTab from "./components/tabs/Refresh/AutoRefreshTab"
-import UsageHistorySyncTab from "./components/UsageHistorySyncTab"
+import UsageHistorySyncTab from "./components/tabs/UsageHistorySync/UsageHistorySyncTab"
 import WebAiApiCheckTab from "./components/WebAiApiCheckTab"
 
 type TabId =
