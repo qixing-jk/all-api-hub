@@ -21,6 +21,20 @@ import {
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { PageHeader } from "~/entrypoints/options/components/PageHeader"
+import { PermissionOnboardingDialog } from "~/entrypoints/options/pages/BasicSettings/components/dialogs/PermissionOnboardingDialog"
+import LoadingSkeleton from "~/entrypoints/options/pages/BasicSettings/components/shared/LoadingSkeleton"
+import AccountManagementTab from "~/entrypoints/options/pages/BasicSettings/components/tabs/AccountManagement/AccountManagementTab"
+import BalanceHistoryTab from "~/entrypoints/options/pages/BasicSettings/components/tabs/BalanceHistory/BalanceHistoryTab"
+import CheckinRedeemTab from "~/entrypoints/options/pages/BasicSettings/components/tabs/CheckinRedeem/CheckinRedeemTab"
+import ClaudeCodeRouterTab from "~/entrypoints/options/pages/BasicSettings/components/tabs/ClaudeCodeRouter/ClaudeCodeRouterTab"
+import CliProxyTab from "~/entrypoints/options/pages/BasicSettings/components/tabs/CliProxy/CliProxyTab"
+import DataBackupTab from "~/entrypoints/options/pages/BasicSettings/components/tabs/DataBackup/DataBackupTab"
+import GeneralTab from "~/entrypoints/options/pages/BasicSettings/components/tabs/General/GeneralTab"
+import ManagedSiteTab from "~/entrypoints/options/pages/BasicSettings/components/tabs/ManagedSite/ManagedSiteTab"
+import PermissionsTab from "~/entrypoints/options/pages/BasicSettings/components/tabs/Permissions/PermissionsTab"
+import AutoRefreshTab from "~/entrypoints/options/pages/BasicSettings/components/tabs/Refresh/AutoRefreshTab"
+import UsageHistorySyncTab from "~/entrypoints/options/pages/BasicSettings/components/tabs/UsageHistorySync/UsageHistorySyncTab"
+import WebAiApiCheckTab from "~/entrypoints/options/pages/BasicSettings/components/tabs/WebAiApiCheck/WebAiApiCheckTab"
 import { useHorizontalScrollControls } from "~/hooks/useHorizontalScrollControls"
 import { setLastSeenOptionalPermissions } from "~/services/permissions/optionalPermissionState"
 import { OPTIONAL_PERMISSIONS } from "~/services/permissions/permissionManager"
@@ -29,21 +43,6 @@ import {
   parseTabFromUrl,
   updateUrlWithTab,
 } from "~/utils/url"
-
-import { PermissionOnboardingDialog } from "./components/dialogs/PermissionOnboardingDialog"
-import LoadingSkeleton from "./components/shared/LoadingSkeleton"
-import AccountManagementTab from "./components/tabs/AccountManagement/AccountManagementTab"
-import BalanceHistoryTab from "./components/tabs/BalanceHistory/BalanceHistoryTab"
-import CheckinRedeemTab from "./components/tabs/CheckinRedeem/CheckinRedeemTab"
-import ClaudeCodeRouterTab from "./components/tabs/ClaudeCodeRouter/ClaudeCodeRouterTab"
-import CliProxyTab from "./components/tabs/CliProxy/CliProxyTab"
-import DataBackupTab from "./components/tabs/DataBackup/DataBackupTab"
-import GeneralTab from "./components/tabs/General/GeneralTab"
-import ManagedSiteTab from "./components/tabs/ManagedSite/managedSiteTab"
-import PermissionsTab from "./components/tabs/Permissions/PermissionsTab"
-import AutoRefreshTab from "./components/tabs/Refresh/AutoRefreshTab"
-import UsageHistorySyncTab from "./components/tabs/UsageHistorySync/UsageHistorySyncTab"
-import WebAiApiCheckTab from "./components/tabs/WebAiApiCheck/WebAiApiCheckTab"
 
 type TabId =
   | "general"
@@ -110,7 +109,7 @@ const ANCHOR_TO_TAB: Record<string, TabId> = {
   "new-api-model-sync": "managedSite",
   "cli-proxy": "cliProxy",
   "claude-code-router": "claudeCodeRouter",
-  "dangerous-zone": "managedSite",
+  "dangerous-zone": "general",
   ...(hasOptionalPermissions ? { permissions: "permissions" } : {}),
 }
 

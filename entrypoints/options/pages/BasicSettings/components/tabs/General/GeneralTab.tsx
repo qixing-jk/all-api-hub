@@ -3,9 +3,9 @@ import { useTranslation } from "react-i18next"
 
 import { LanguageSwitcher } from "~/components/LanguageSwitcher"
 import { BodySmall, Card, CardItem, CardList, Heading3 } from "~/components/ui"
+import ThemeToggle from "~/entrypoints/options/components/ThemeToggle"
 import ResetSettingsSection from "~/entrypoints/options/pages/BasicSettings/components/tabs/General/ResetSettingsSection"
 
-import ThemeToggle from "../../../../../components/ThemeToggle"
 import ActionClickBehaviorSettings from "./ActionClickBehaviorSettings"
 import ChangelogOnUpdateSettings from "./ChangelogOnUpdateSettings"
 import DisplaySettings from "./DisplaySettings"

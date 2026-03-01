@@ -8,6 +8,7 @@ import { Badge } from "~/components/ui/badge"
 import { Button } from "~/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/Card"
 import { BodySmall, Heading3, Link } from "~/components/ui/Typography"
+import { PermissionList } from "~/entrypoints/options/pages/BasicSettings/components/tabs/Permissions/PermissionList"
 import {
   ensurePermissions,
   hasPermission,
@@ -18,8 +19,6 @@ import {
 } from "~/services/permissions/permissionManager"
 import { createLogger } from "~/utils/logger"
 import { showResultToast } from "~/utils/toastHelpers"
-
-import { PermissionList } from "../tabs/Permissions/PermissionList"
 
 /**
  * Unified logger scoped to the optional-permissions onboarding dialog.
