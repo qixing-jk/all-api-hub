@@ -19,7 +19,7 @@ import {
 import { createLogger } from "~/utils/logger"
 import { showResultToast } from "~/utils/toastHelpers"
 
-import { PermissionList } from "./tabs/Permissions/PermissionList"
+import { PermissionList } from "../tabs/Permissions/PermissionList"
 
 /**
  * Unified logger scoped to the optional-permissions onboarding dialog.

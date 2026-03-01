@@ -30,8 +30,8 @@ import {
   updateUrlWithTab,
 } from "~/utils/url"
 
+import { PermissionOnboardingDialog } from "./components/dialogs/PermissionOnboardingDialog"
 import LoadingSkeleton from "./components/LoadingSkeleton"
-import { PermissionOnboardingDialog } from "./components/PermissionOnboardingDialog"
 import AccountManagementTab from "./components/tabs/AccountManagement/AccountManagementTab"
 import BalanceHistoryTab from "./components/tabs/BalanceHistory/BalanceHistoryTab"
 import CheckinRedeemTab from "./components/tabs/CheckinRedeem/CheckinRedeemTab"
