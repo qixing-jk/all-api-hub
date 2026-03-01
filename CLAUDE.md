@@ -90,12 +90,12 @@ Example: `features/AccountManagement/` contains all account-related code.
 ### Service Layer
 
 Services in `services/` encapsulate business logic:
-- **accountStorage.ts**: Account CRUD with migration support
-- **autoRefreshService.ts**: Background refresh scheduler
-- **webdavAutoSyncService.ts**: Cloud backup/sync
-- **apiService/**: Multi-platform API client with override system
+- `services/accounts/accountStorage.ts`: Account CRUD with migration support
+- `services/accounts/autoRefreshService.ts`: Background refresh scheduler
+- `services/webdav/webdavAutoSyncService.ts`: Cloud backup/sync
+- `services/apiService/`: Multi-platform API client with override system
   - `common/`: Base API implementation
-  - `anyrouter/`, `oneHub/`, `sub2api/`, `veloera/`, `wong/`: Site-specific overrides/adapters
+  - `anyrouter/`, `doneHub/`, `octopus/`, `oneHub/`, `sub2api/`, `veloera/`, `wong/`: Site-specific overrides/adapters
   - `openaiCompatible/`: OpenAI-compatible backend adapter
 
 ### API Service Override System
@@ -122,7 +122,7 @@ This repo’s `siteType` values are **compatibility buckets** used to select API
 
 When working on a site type:
 
-1. **Confirm current in-repo behavior first**: check `constants/siteType.ts`, `services/detectSiteType.ts`,
+1. **Confirm current in-repo behavior first**: check `constants/siteType.ts`, `services/siteDetection/detectSiteType.ts`,
    and `services/apiService/index.ts` (override wiring).
 2. **Verify upstream behavior when the answer depends on it** (before making definitive claims or proposing changes):
     - Use any appropriate evidence source (e.g. upstream source/docs, a *redacted* network trace from the target site: URL + method + status + response shape; remove tokens/cookies, or a minimal reproduction).
@@ -146,8 +146,8 @@ use the upstream repository linked in this document as the default reference.
   features (channel management, model sync).
 - **OneHub (`one-hub`)** is downstream of **One API (`one-api`)**, but the API surface changes substantially.
   **DoneHub (`done-hub`)** is downstream of **OneHub (`one-hub`)**.
-    - In repo, `one-hub` and `done-hub` share the same override module (`services/apiService/oneHub/`) for token listing
-        + model pricing + group info.
+    - In repo, `one-hub` uses `services/apiService/oneHub/`; `done-hub` uses `services/apiService/doneHub/` + `services/apiService/oneHub/`
+      for token listing + model pricing + group info.
 - **AnyRouter (`anyrouter`)** and **WONG公益站 (`wong-gongyi`)** have site-specific check-in handling.
 - Many One-API/New-API family deployments still use `services/apiService/common/` for core calls; the request helper
   sends multiple compatible user-id header names via `services/apiService/common/utils.ts`.
@@ -181,7 +181,7 @@ use the upstream repository linked in this document as the default reference.
 - **Family**: OneHub-style backends with dedicated pricing/group/token endpoints (not New-API managed-site admin).
 - **Naming**: in code the site type strings are `one-hub` and `done-hub`.
 - **In repo**:
-    - overrides: `services/apiService/oneHub/` (used for both `one-hub` and `done-hub` in `services/apiService/index.ts`)
+    - overrides: `services/apiService/oneHub/` (`one-hub`), `services/apiService/doneHub/` + `services/apiService/oneHub/` (`done-hub`; see `services/apiService/index.ts`)
         - endpoints include `/api/available_model`, `/api/user_group_map`, `/api/token/` (see `services/apiService/oneHub/index.ts`)
     - UI routes: `constants/siteType.ts` (`/panel/*` paths)
 - **Links**:
@@ -208,7 +208,7 @@ use the upstream repository linked in this document as the default reference.
 - **Family**: heavily New-API customized deployment; often require **Cookie auth** for auto-detect/refresh.
 - **Naming**: in code the site type string is `anyrouter`.
 - **In repo**:
-    - overrides: `services/apiService/anyrouter/index.ts` (check-in status via `services/autoCheckin/providers/anyrouter`)
+    - overrides: `services/apiService/anyrouter/index.ts` (check-in status via `services/checkin/autoCheckin/providers/anyrouter.ts`)
 
 ### WONG公益站 (`wong-gongyi`)
 
@@ -250,7 +250,7 @@ Three-tier context architecture:
 
 **Storage Layer** (`@plasmohq/storage`):
 - Wraps `browser.storage.local` with reactive updates
-- Type-safe storage keys in `services/storageKeys.ts`
+- Type-safe storage keys in `services/core/storageKeys.ts`
 - Automatic serialization/deserialization
 
 **Concurrency Control**:
@@ -261,7 +261,7 @@ Three-tier context architecture:
 **Data Migration**:
 - Version-based migration system (`configVersion` field)
 - Automatic migration on read operations
-- Migration functions in `services/configMigration/`
+- Migration functions in `services/**/migrations/` (e.g., `services/accounts/migrations/`, `services/preferences/migrations/`)
 
 ### Temporary Window Pool
 
@@ -541,9 +541,9 @@ Hooks are automatically set up when you run `pnpm install`.
 
 ### Adding a New Storage Key
 
-1. Add key to `services/storageKeys.ts`
+1. Add key to `services/core/storageKeys.ts`
 2. Add type definition for stored data
-3. Add migration logic if needed in `services/configMigration/`
+3. Add migration logic if needed in `services/**/migrations/` (e.g., `services/accounts/migrations/`, `services/preferences/migrations/`)
 4. Use `@plasmohq/storage` to read/write
 
 ### Adding a New Runtime Message
