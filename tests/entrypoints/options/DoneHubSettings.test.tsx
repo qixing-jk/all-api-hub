@@ -3,7 +3,7 @@ import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import DoneHubSettings from "~/entrypoints/options/pages/BasicSettings/components/DoneHubSettings"
+import DoneHubSettings from "~/entrypoints/options/pages/BasicSettings/components/tabs/ManagedSite/DoneHubSettings"
 import { testI18n } from "~/tests/test-utils/i18n"
 import { showUpdateToast } from "~/utils/toastHelpers"
 
