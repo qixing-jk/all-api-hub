@@ -2,7 +2,7 @@ import { t } from "i18next"
 import toast from "react-hot-toast"
 
 import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
-import { VELOERA } from "~/constants/siteType"
+import { NEW_API } from "~/constants/siteType"
 import { AccountToken } from "~/entrypoints/options/pages/KeyManagement/type"
 import { ensureAccountApiToken } from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accounts/accountStorage"
@@ -26,15 +26,19 @@ import { getErrorMessage } from "~/utils/error"
 import { createLogger } from "~/utils/logger"
 import { normalizeList, parseDelimitedList } from "~/utils/string"
 
-import { UserPreferences, userPreferences } from "../userPreferences"
+import { UserPreferences, userPreferences } from "../../userPreferences"
 
 /**
- * Unified logger scoped to the Veloera integration and auto-config flows.
+ * Unified logger scoped to the New API integration and auto-config flows.
  */
-const logger = createLogger("VeloeraService")
+const logger = createLogger("NewApiService")
 
 /**
- * Searches channels matching the keyword.
+ * 搜索指定关键词的渠道
+ * @param baseUrl New API 的基础 URL
+ * @param accessToken 管理员令牌
+ * @param userId 用户 ID
+ * @param keyword 搜索关键词
  */
 export async function searchChannel(
   baseUrl: string,
@@ -42,7 +46,7 @@ export async function searchChannel(
   userId: number | string,
   keyword: string,
 ): Promise<ManagedSiteChannelListData | null> {
-  return await getApiService(VELOERA).searchChannel(
+  return await getApiService(NEW_API).searchChannel(
     {
       baseUrl,
       auth: {
@@ -56,7 +60,11 @@ export async function searchChannel(
 }
 
 /**
- * Creates a channel.
+ * 创建新渠道
+ * @param baseUrl New API 的基础 URL
+ * @param adminToken 管理员令牌
+ * @param userId 用户 ID
+ * @param channelData 渠道数据
  */
 export async function createChannel(
   baseUrl: string,
@@ -64,7 +72,7 @@ export async function createChannel(
   userId: number | string,
   channelData: CreateChannelPayload,
 ) {
-  return await getApiService(VELOERA).createChannel(
+  return await getApiService(NEW_API).createChannel(
     {
       baseUrl,
       auth: {
@@ -78,7 +86,11 @@ export async function createChannel(
 }
 
 /**
- * Updates a channel.
+ * 更新新渠道
+ * @param baseUrl New API 的基础 URL
+ * @param adminToken 管理员令牌
+ * @param userId 用户 ID
+ * @param channelData 渠道数据
  */
 export async function updateChannel(
   baseUrl: string,
@@ -86,7 +98,7 @@ export async function updateChannel(
   userId: number | string,
   channelData: UpdateChannelPayload,
 ) {
-  return await getApiService(VELOERA).updateChannel(
+  return await getApiService(NEW_API).updateChannel(
     {
       baseUrl,
       auth: {
@@ -100,7 +112,7 @@ export async function updateChannel(
 }
 
 /**
- * Deletes a channel.
+ * 删除渠道
  */
 export async function deleteChannel(
   baseUrl: string,
@@ -108,7 +120,7 @@ export async function deleteChannel(
   userId: number | string,
   channelId: number,
 ) {
-  return await getApiService(VELOERA).deleteChannel(
+  return await getApiService(NEW_API).deleteChannel(
     {
       baseUrl,
       auth: {
@@ -122,29 +134,29 @@ export async function deleteChannel(
 }
 
 /**
- * Checks whether the given user preferences contain a complete Veloera config.
+ * Checks whether the given user preferences contain a complete New API config.
  */
-export function hasValidVeloeraConfig(prefs: UserPreferences | null): boolean {
+export function hasValidNewApiConfig(prefs: UserPreferences | null): boolean {
   if (!prefs) {
     return false
   }
 
-  const { veloera } = prefs
+  const { newApi } = prefs
 
-  if (!veloera) {
+  if (!newApi) {
     return false
   }
 
-  return Boolean(veloera.baseUrl && veloera.adminToken && veloera.userId)
+  return Boolean(newApi.baseUrl && newApi.adminToken && newApi.userId)
 }
 
 /**
- * Validates Veloera configuration stored in user preferences.
+ * Validate New API configuration
  */
-export async function checkValidVeloeraConfig(): Promise<boolean> {
+export async function checkValidNewApiConfig(): Promise<boolean> {
   try {
     const prefs = await userPreferences.getPreferences()
-    return hasValidVeloeraConfig(prefs)
+    return hasValidNewApiConfig(prefs)
   } catch (error) {
     logger.error("Error checking config", error)
     return false
@@ -152,21 +164,21 @@ export async function checkValidVeloeraConfig(): Promise<boolean> {
 }
 
 /**
- * Gets Veloera configuration from user preferences.
+ * Get New API configuration from user preferences
  */
-export async function getVeloeraConfig(): Promise<{
+export async function getNewApiConfig(): Promise<{
   baseUrl: string
   token: string
   userId: string
 } | null> {
   try {
     const prefs = await userPreferences.getPreferences()
-    if (hasValidVeloeraConfig(prefs)) {
-      const { veloera } = prefs
+    if (hasValidNewApiConfig(prefs)) {
+      const { newApi } = prefs
       return {
-        baseUrl: veloera.baseUrl,
-        token: veloera.adminToken,
-        userId: veloera.userId,
+        baseUrl: newApi.baseUrl,
+        token: newApi.adminToken,
+        userId: newApi.userId,
       }
     }
     return null
@@ -177,7 +189,8 @@ export async function getVeloeraConfig(): Promise<{
 }
 
 /**
- * Gets the models available for the given account.
+ * 获取账号支持的模型列表。
+ * 优先使用 API 密钥携带的模型列表，回退到上游接口与账号可用模型。
  */
 export async function fetchAvailableModels(
   account: DisplaySiteData,
@@ -227,7 +240,7 @@ export async function fetchAvailableModels(
 }
 
 /**
- * Builds a default channel name.
+ * 构建默认渠道名称
  */
 export function buildChannelName(
   account: DisplaySiteData,
@@ -241,7 +254,7 @@ export function buildChannelName(
 }
 
 /**
- * Builds default channel form values.
+ * 构建渠道表单默认值
  */
 export async function prepareChannelFormData(
   account: DisplaySiteData,
@@ -253,7 +266,7 @@ export async function prepareChannelFormData(
   })
 
   if (!availableModels.length) {
-    throw new Error(t("messages:veloera.noAnyModels"))
+    throw new Error(t("messages:newapi.noAnyModels"))
   }
 
   const resolvedGroups = token.group
@@ -274,7 +287,7 @@ export async function prepareChannelFormData(
 }
 
 /**
- * Builds the create-channel payload from form state.
+ * 构建渠道创建 payload
  */
 export function buildChannelPayload(
   formData: ChannelFormData,
@@ -305,10 +318,10 @@ export function buildChannelPayload(
 }
 
 /**
- * Finds a channel that matches the account base URL and models.
+ * 查找是否存在匹配的渠道。
  *
- * When `key` is provided, the match is refined to include the key to avoid treating
- * different keys as duplicates.
+ * 默认匹配条件为 base_url + models；当传入 key 时，会进一步按 key 精确匹配，
+ * 避免把不同 key 的渠道误判为重复。
  */
 export async function findMatchingChannel(
   baseUrl: string,
@@ -352,35 +365,46 @@ export async function findMatchingChannel(
 }
 
 /**
- * Imports an account as a channel into Veloera.
+ * Additional options for importToNewApi to allow customization.
  */
-export async function importToVeloera(
+export interface ImportToNewApiOptions {
+  formOverrides?: Partial<ChannelFormData>
+  mode?: ChannelMode
+  skipExistingCheck?: boolean
+}
+
+/**
+ * 将账户导入到 New API 作为渠道。
+ * @param account 站点数据。
+ * @param token API 令牌，用于访问上游模型与构建渠道。
+ */
+export async function importToNewApi(
   account: DisplaySiteData,
   token: ApiToken,
 ): Promise<ServiceResponse<void>> {
   try {
     const prefs = await userPreferences.getPreferences()
 
-    if (!hasValidVeloeraConfig(prefs)) {
+    if (!hasValidNewApiConfig(prefs)) {
       return {
         success: false,
-        message: t("messages:veloera.configMissing"),
+        message: t("messages:newapi.configMissing"),
       }
     }
 
-    const { veloera } = prefs
+    const { newApi } = prefs
     const {
-      baseUrl: veloeraBaseUrl,
-      adminToken: veloeraAdminToken,
-      userId: veloeraUserId,
-    } = veloera
+      baseUrl: newApiBaseUrl,
+      adminToken: newApiAdminToken,
+      userId: newApiUserId,
+    } = newApi
 
     const formData = await prepareChannelFormData(account, token)
 
     const existingChannel = await findMatchingChannel(
-      veloeraBaseUrl!,
-      veloeraAdminToken!,
-      veloeraUserId!,
+      newApiBaseUrl!,
+      newApiAdminToken!,
+      newApiUserId!,
       account.baseUrl,
       formData.models,
       formData.key,
@@ -389,7 +413,7 @@ export async function importToVeloera(
     if (existingChannel) {
       return {
         success: false,
-        message: t("messages:veloera.channelExists", {
+        message: t("messages:newapi.channelExists", {
           channelName: existingChannel.name,
         }),
       }
@@ -398,16 +422,16 @@ export async function importToVeloera(
     const payload = buildChannelPayload(formData)
 
     const createdChannelResponse = await createChannel(
-      veloeraBaseUrl!,
-      veloeraAdminToken!,
-      veloeraUserId!,
+      newApiBaseUrl!,
+      newApiAdminToken!,
+      newApiUserId!,
       payload,
     )
 
     if (createdChannelResponse.success) {
       return {
         success: true,
-        message: t("messages:veloera.importSuccess", {
+        message: t("messages:newapi.importSuccess", {
           channelName: formData.name,
         }),
       }
@@ -420,33 +444,34 @@ export async function importToVeloera(
   } catch (error) {
     return {
       success: false,
-      message: getErrorMessage(error) || t("messages:veloera.importFailed"),
+      message: getErrorMessage(error) || t("messages:newapi.importFailed"),
     }
   }
 }
 
+// Helper function to validate New API configuration
 /**
- * Validates Veloera configuration and collects error messages.
+ * Validates New API configuration from user preferences and collects error messages.
  */
-async function validateVeloeraConfig(): Promise<{
+async function validateNewApiConfig(): Promise<{
   valid: boolean
   errors: string[]
 }> {
   const prefs = await userPreferences.getPreferences()
-  const errors: string[] = []
+  const errors = []
 
-  const baseUrl = prefs.veloera?.baseUrl
-  const adminToken = prefs.veloera?.adminToken
-  const userId = prefs.veloera?.userId
+  const baseUrl = prefs.newApi?.baseUrl || prefs.newApiBaseUrl
+  const adminToken = prefs.newApi?.adminToken || prefs.newApiAdminToken
+  const userId = prefs.newApi?.userId || prefs.newApiUserId
 
   if (!baseUrl) {
-    errors.push(t("messages:errors.validation.veloeraBaseUrlRequired"))
+    errors.push(t("messages:errors.validation.newApiBaseUrlRequired"))
   }
   if (!adminToken) {
-    errors.push(t("messages:errors.validation.veloeraAdminTokenRequired"))
+    errors.push(t("messages:errors.validation.newApiAdminTokenRequired"))
   }
   if (!userId) {
-    errors.push(t("messages:errors.validation.veloeraUserIdRequired"))
+    errors.push(t("messages:errors.validation.newApiUserIdRequired"))
   }
 
   return {
@@ -456,13 +481,15 @@ async function validateVeloeraConfig(): Promise<{
 }
 
 /**
- * Auto-imports into Veloera and reports progress via toast.
+ * 自动导入到 New API 中作为渠道，并通过 toast 展示进度与结果。
+ * @param account 需要导入的新 API 站点账号实体。
+ * @param toastId 可选 toast 标识，用于复用通知实例。
  */
-export async function autoConfigToVeloera(
+export async function autoConfigToNewApi(
   account: SiteAccount,
   toastId?: string,
 ): Promise<AutoConfigToNewApiResponse<{ token?: ApiToken }>> {
-  const configValidation = await validateVeloeraConfig()
+  const configValidation = await validateNewApiConfig()
   if (!configValidation.valid) {
     return { success: false, message: configValidation.errors.join(", ") }
   }
@@ -471,7 +498,7 @@ export async function autoConfigToVeloera(
     account,
   ) as DisplaySiteData
 
-  let lastError: unknown
+  let lastError: any
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
       const apiToken = await ensureAccountApiToken(
@@ -480,11 +507,11 @@ export async function autoConfigToVeloera(
         toastId,
       )
 
-      toast.loading(t("messages:accountOperations.importingToVeloera"), {
+      // 3. Import to New API as a channel
+      toast.loading(t("messages:accountOperations.importingToNewApi"), {
         id: toastId,
       })
-
-      const importResult = await importToVeloera(displaySiteData, apiToken)
+      const importResult = await importToNewApi(displaySiteData, apiToken)
 
       if (importResult.success) {
         toast.success(importResult.message, { id: toastId })
@@ -499,7 +526,6 @@ export async function autoConfigToVeloera(
       }
     } catch (error) {
       lastError = error
-
       if (
         error instanceof Error &&
         (error.message.includes("network") ||
@@ -514,15 +540,12 @@ export async function autoConfigToVeloera(
         await new Promise((resolve) => setTimeout(resolve, 1000 * attempt))
         continue
       }
-
       break
     }
   }
-
   toast.error(getErrorMessage(lastError), { id: toastId })
   return {
     success: false,
-    message:
-      (lastError as Error | undefined)?.message || t("messages:errors.unknown"),
+    message: lastError?.message || t("messages:errors.unknown"),
   }
 }

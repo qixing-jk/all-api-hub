@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DONE_HUB, NEW_API } from "~/constants/siteType"
-import { hasValidManagedSiteConfig } from "~/services/managedSiteService"
+import { hasValidManagedSiteConfig } from "~/services/managedSites/managedSiteService"
 import { modelMetadataService } from "~/services/models/modelMetadata"
 import { ModelRedirectService } from "~/services/models/modelRedirect/ModelRedirectService"
 import { userPreferences } from "~/services/userPreferences"
@@ -35,7 +35,7 @@ vi.mock("~/services/models/modelSync", () => {
   }
 })
 
-vi.mock("~/services/managedSiteService", () => ({
+vi.mock("~/services/managedSites/managedSiteService", () => ({
   hasValidManagedSiteConfig: vi.fn(),
 }))
 

@@ -17,7 +17,7 @@ import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompa
 import type {
   ManagedSiteConfig,
   ManagedSiteService,
-} from "~/services/managedSiteService"
+} from "~/services/managedSites/managedSiteService"
 import {
   userPreferences,
   type UserPreferences,
@@ -573,7 +573,7 @@ export async function autoConfigToOctopus(
 /**
  * Octopus ManagedSiteService 实现
  */
-export const octopusService: ManagedSiteService = {
+export const octopus: ManagedSiteService = {
   siteType: OCTOPUS,
   messagesKey: "octopus" as ManagedSiteMessagesKey,
 

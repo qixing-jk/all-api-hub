@@ -8,7 +8,7 @@ import { useTranslation } from "react-i18next"
 
 import { EmptyState } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import { hasValidManagedSiteConfig } from "~/services/managedSiteService"
+import { hasValidManagedSiteConfig } from "~/services/managedSites/managedSiteService"
 import { userPreferences } from "~/services/userPreferences"
 import { navigateWithinOptionsPage } from "~/utils/navigation"
 
