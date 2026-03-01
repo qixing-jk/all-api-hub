@@ -5,7 +5,7 @@ import { LanguageSwitcher } from "~/components/LanguageSwitcher"
 import { BodySmall, Card, CardItem, CardList, Heading3 } from "~/components/ui"
 import DangerousZone from "~/entrypoints/options/pages/BasicSettings/components/DangerousZone"
 
-import ThemeToggle from "../../../components/ThemeToggle"
+import ThemeToggle from "../../../../../components/ThemeToggle"
 import ActionClickBehaviorSettings from "./ActionClickBehaviorSettings"
 import ChangelogOnUpdateSettings from "./ChangelogOnUpdateSettings"
 import DisplaySettings from "./DisplaySettings"

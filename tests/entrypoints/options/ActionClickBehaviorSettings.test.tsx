@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import ActionClickBehaviorSettings from "~/entrypoints/options/pages/BasicSettings/components/ActionClickBehaviorSettings"
+import ActionClickBehaviorSettings from "~/entrypoints/options/pages/BasicSettings/components/tabs/General/ActionClickBehaviorSettings"
 import { fireEvent, render, screen, waitFor } from "~/tests/test-utils/render"
 import { getSidePanelSupport, type SidePanelSupport } from "~/utils/browserApi"
 import { showResultToast, showUpdateToast } from "~/utils/toastHelpers"
