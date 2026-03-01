@@ -30,7 +30,6 @@ import {
   updateUrlWithTab,
 } from "~/utils/url"
 
-import BalanceHistoryTab from "./components/BalanceHistoryTab"
 import ClaudeCodeRouterTab from "./components/ClaudeCodeRouterTab"
 import CliProxyTab from "./components/CliProxyTab"
 import DataBackupTab from "./components/DataBackupTab"
@@ -39,6 +38,7 @@ import ManagedSiteTab from "./components/managedSiteTab"
 import { PermissionOnboardingDialog } from "./components/PermissionOnboardingDialog"
 import PermissionsTab from "./components/PermissionsTab"
 import AccountManagementTab from "./components/tabs/AccountManagement/AccountManagementTab"
+import BalanceHistoryTab from "./components/tabs/BalanceHistory/BalanceHistoryTab"
 import CheckinRedeemTab from "./components/tabs/CheckinRedeem/CheckinRedeemTab"
 import GeneralTab from "./components/tabs/General/GeneralTab"
 import AutoRefreshTab from "./components/tabs/Refresh/AutoRefreshTab"
