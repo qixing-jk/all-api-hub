@@ -36,7 +36,10 @@ import { createLogger } from "~/utils/logger"
 
 import { accountStorage } from "../accounts/accountStorage"
 import { channelConfigStorage } from "../channelConfigStorage"
-import { userPreferences, type UserPreferences } from "../userPreferences"
+import {
+  userPreferences,
+  type UserPreferences,
+} from "../preferences/userPreferences"
 import {
   downloadBackup,
   testWebdavConnection,

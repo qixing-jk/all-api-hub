@@ -11,7 +11,7 @@ import {
 import {
   DEFAULT_PREFERENCES,
   type UserPreferences,
-} from "~/services/userPreferences"
+} from "~/services/preferences/userPreferences"
 import { buildUserPreferences } from "~/tests/test-utils/factories"
 import {
   ACCOUNT_AUTO_REFRESH_INTERVAL_MIN_SECONDS,

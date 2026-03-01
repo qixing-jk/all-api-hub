@@ -6,7 +6,7 @@
 import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
 import { createLogger } from "~/utils/logger"
 
-import type { UserPreferences } from "../../userPreferences"
+import type { UserPreferences } from "../userPreferences"
 
 const logger = createLogger("AutoRefreshConfigMigration")
 

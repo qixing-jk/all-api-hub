@@ -6,7 +6,7 @@ import {
   LDOH_ORIGIN,
   LDOH_SITES_ENDPOINT,
 } from "~/services/integrations/ldohSiteLookup/constants"
-import { DEFAULT_PREFERENCES } from "~/services/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { server } from "~/tests/msw/server"
 import { buildTempWindowPrefs } from "~/tests/test-utils/factories"
 
@@ -36,9 +36,11 @@ vi.mock("~/utils/protectionBypass", async (importOriginal) => {
   }
 })
 
-vi.mock("~/services/userPreferences", async (importOriginal) => {
+vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/services/userPreferences")>()
+    await importOriginal<
+      typeof import("~/services/preferences/userPreferences")
+    >()
   return {
     ...actual,
     userPreferences: {
@@ -59,7 +61,9 @@ describe("ldohSiteLookup background refresh", () => {
   it("does not invoke temp-window fallback for HTTP 401", async () => {
     vi.resetModules()
 
-    const { userPreferences } = await import("~/services/userPreferences")
+    const { userPreferences } = await import(
+      "~/services/preferences/userPreferences"
+    )
     vi.mocked(userPreferences.getPreferences).mockResolvedValue({
       ...DEFAULT_PREFERENCES,
       tempWindowFallback: buildTempWindowPrefs(),
@@ -96,7 +100,9 @@ describe("ldohSiteLookup background refresh", () => {
   it("does not invoke temp-window fallback for HTTP 429", async () => {
     vi.resetModules()
 
-    const { userPreferences } = await import("~/services/userPreferences")
+    const { userPreferences } = await import(
+      "~/services/preferences/userPreferences"
+    )
     vi.mocked(userPreferences.getPreferences).mockResolvedValue({
       ...DEFAULT_PREFERENCES,
       tempWindowFallback: buildTempWindowPrefs(),
@@ -133,7 +139,9 @@ describe("ldohSiteLookup background refresh", () => {
   it("invokes temp-window fallback for HTTP 403", async () => {
     vi.resetModules()
 
-    const { userPreferences } = await import("~/services/userPreferences")
+    const { userPreferences } = await import(
+      "~/services/preferences/userPreferences"
+    )
     vi.mocked(userPreferences.getPreferences).mockResolvedValue({
       ...DEFAULT_PREFERENCES,
       tempWindowFallback: buildTempWindowPrefs(),

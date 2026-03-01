@@ -7,16 +7,16 @@
  */
 
 import { ChannelType } from "~/constants"
+import {
+  DEFAULT_PREFERENCES,
+  type TempWindowFallbackPreferences,
+  type UserPreferences,
+} from "~/services/preferences/userPreferences"
 import type {
   AccountShareSnapshotPayload,
   OverviewShareSnapshotPayload,
   ShareSnapshotPayload,
 } from "~/services/sharing/shareSnapshots/types"
-import {
-  DEFAULT_PREFERENCES,
-  type TempWindowFallbackPreferences,
-  type UserPreferences,
-} from "~/services/userPreferences"
 import {
   AuthTypeEnum,
   SiteHealthStatus,

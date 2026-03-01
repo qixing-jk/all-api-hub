@@ -14,7 +14,7 @@ import {
 } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { DEFAULT_PREFERENCES } from "~/services/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import {
   AUTO_CHECKIN_SCHEDULE_MODE,
   AutoCheckinPreferences,

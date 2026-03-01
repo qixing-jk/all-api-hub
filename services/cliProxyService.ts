@@ -1,6 +1,6 @@
 import { t } from "i18next"
 
-import { userPreferences } from "~/services/userPreferences"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { ApiToken, DisplaySiteData } from "~/types"
 import { ServiceResponse } from "~/types/serviceResponse"
 import { getErrorMessage } from "~/utils/error"

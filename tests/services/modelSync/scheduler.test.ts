@@ -8,7 +8,7 @@ import {
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
-} from "~/services/userPreferences"
+} from "~/services/preferences/userPreferences"
 import {
   clearAlarm,
   createAlarm,
@@ -16,7 +16,7 @@ import {
   hasAlarmsAPI,
 } from "~/utils/browserApi"
 
-vi.mock("~/services/userPreferences", () => ({
+vi.mock("~/services/preferences/userPreferences", () => ({
   DEFAULT_PREFERENCES: {
     managedSiteModelSync: {
       enabled: true,

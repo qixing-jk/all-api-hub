@@ -1,6 +1,6 @@
 import { t } from "i18next"
 
-import { userPreferences } from "~/services/userPreferences"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import type { WebDAVConfig } from "~/types/webdav"
 
 import {

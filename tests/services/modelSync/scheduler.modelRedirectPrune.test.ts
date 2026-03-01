@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { NEW_API } from "~/constants/siteType"
 import { ModelRedirectService } from "~/services/models/modelRedirect"
 import { modelSyncScheduler } from "~/services/models/modelSync/scheduler"
-import { userPreferences } from "~/services/userPreferences"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { buildManagedSiteChannel } from "~/tests/test-utils/factories"
 import { DEFAULT_MODEL_REDIRECT_PREFERENCES } from "~/types/managedSiteModelRedirect"
 
@@ -47,7 +47,7 @@ vi.mock("~/services/models/modelSync/modelSyncService", () => {
   }
 })
 
-vi.mock("~/services/userPreferences", () => ({
+vi.mock("~/services/preferences/userPreferences", () => ({
   DEFAULT_PREFERENCES: {
     managedSiteModelSync: {
       enabled: true,

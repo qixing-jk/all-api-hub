@@ -14,8 +14,8 @@ import {
   autoRefreshService,
   handleAutoRefreshMessage,
 } from "~/services/accounts/autoRefreshService"
-import type { UserPreferences } from "~/services/userPreferences"
-import { userPreferences } from "~/services/userPreferences"
+import type { UserPreferences } from "~/services/preferences/userPreferences"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
 
 // Mock dependencies.
@@ -32,7 +32,7 @@ vi.mock("~/services/accounts/accountStorage", () => ({
   },
 }))
 
-vi.mock("~/services/userPreferences", () => ({
+vi.mock("~/services/preferences/userPreferences", () => ({
   userPreferences: {
     getPreferences: vi.fn(),
     savePreferences: vi.fn(),

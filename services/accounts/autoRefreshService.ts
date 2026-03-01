@@ -5,7 +5,7 @@ import { sendRuntimeMessage } from "~/utils/browserApi"
 import { createLogger } from "~/utils/logger"
 
 import { getErrorMessage } from "../../utils/error"
-import { userPreferences } from "../userPreferences"
+import { userPreferences } from "../preferences/userPreferences"
 import { accountStorage } from "./accountStorage"
 
 const logger = createLogger("AutoRefresh")

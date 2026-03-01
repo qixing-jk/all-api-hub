@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { importToCliProxy } from "~/services/cliProxyService"
-import { userPreferences } from "~/services/userPreferences"
+import { userPreferences } from "~/services/preferences/userPreferences"
 
 describe("cliProxyService.importToCliProxy", () => {
   beforeEach(() => {

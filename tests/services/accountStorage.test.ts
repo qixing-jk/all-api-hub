@@ -8,7 +8,7 @@ import {
   USER_PREFERENCES_STORAGE_KEYS,
 } from "~/services/core/storageKeys"
 import { getDayKeyFromUnixSeconds } from "~/services/history/dailyBalanceHistory/dayKeys"
-import { DEFAULT_PREFERENCES } from "~/services/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import {
   AuthTypeEnum,
   SiteHealthStatus,

@@ -4,7 +4,7 @@ import { DONE_HUB, NEW_API } from "~/constants/siteType"
 import { hasValidManagedSiteConfig } from "~/services/managedSites/managedSiteService"
 import { modelMetadataService } from "~/services/models/modelMetadata"
 import { ModelRedirectService } from "~/services/models/modelRedirect/ModelRedirectService"
-import { userPreferences } from "~/services/userPreferences"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { DEFAULT_MODEL_REDIRECT_PREFERENCES } from "~/types/managedSiteModelRedirect"
 import { CHANNEL_STATUS } from "~/types/newapi"
 
@@ -39,7 +39,7 @@ vi.mock("~/services/managedSites/managedSiteService", () => ({
   hasValidManagedSiteConfig: vi.fn(),
 }))
 
-vi.mock("~/services/userPreferences", () => ({
+vi.mock("~/services/preferences/userPreferences", () => ({
   userPreferences: {
     getPreferences: vi.fn(),
   },

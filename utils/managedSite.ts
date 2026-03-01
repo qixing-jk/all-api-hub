@@ -5,7 +5,7 @@ import {
   VELOERA,
   type ManagedSiteType,
 } from "~/constants/siteType"
-import type { UserPreferences } from "~/services/userPreferences"
+import type { UserPreferences } from "~/services/preferences/userPreferences"
 import {
   DEFAULT_DONE_HUB_CONFIG,
   type DoneHubConfig,

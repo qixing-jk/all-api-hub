@@ -6,7 +6,7 @@
 import { DEFAULT_NEW_API_CONFIG } from "~/types/newApiConfig"
 import { createLogger } from "~/utils/logger"
 
-import type { UserPreferences } from "../../userPreferences"
+import type { UserPreferences } from "../userPreferences"
 
 const logger = createLogger("NewApiConfigMigration")
 

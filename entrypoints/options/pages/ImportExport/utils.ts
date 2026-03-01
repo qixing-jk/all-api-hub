@@ -7,9 +7,9 @@ import {
   coerceApiCredentialProfilesConfig,
 } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { channelConfigStorage } from "~/services/channelConfigStorage"
+import type { UserPreferences } from "~/services/preferences/userPreferences"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { tagStorage } from "~/services/tags/tagStorage"
-import type { UserPreferences } from "~/services/userPreferences"
-import { userPreferences } from "~/services/userPreferences"
 import type { AccountStorageConfig, TagStore } from "~/types"
 import type { ApiCredentialProfilesConfig } from "~/types/apiCredentialProfiles"
 import type { ChannelConfigMap } from "~/types/channelConfig"

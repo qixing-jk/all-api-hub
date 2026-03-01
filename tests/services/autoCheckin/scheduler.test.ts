@@ -11,7 +11,7 @@ import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
-} from "~/services/userPreferences"
+} from "~/services/preferences/userPreferences"
 import { AUTO_CHECKIN_RUN_TYPE } from "~/types/autoCheckin"
 import {
   clearAlarm,
@@ -22,7 +22,7 @@ import {
 } from "~/utils/browserApi"
 import { getErrorMessage } from "~/utils/error"
 
-vi.mock("~/services/userPreferences", () => ({
+vi.mock("~/services/preferences/userPreferences", () => ({
   DEFAULT_PREFERENCES: {
     autoCheckin: {
       globalEnabled: true,

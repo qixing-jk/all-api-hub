@@ -28,8 +28,8 @@ import { getErrorMessage } from "~/utils/error"
 import { safeRandomUUID } from "~/utils/identifier"
 import { createLogger } from "~/utils/logger"
 
+import { userPreferences } from "../preferences/userPreferences"
 import { getSiteType } from "../siteDetection/detectSiteType"
-import { userPreferences } from "../userPreferences"
 import {
   migrateAccountConfig,
   migrateAccountsConfig,

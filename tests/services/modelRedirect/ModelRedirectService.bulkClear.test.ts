@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { NEW_API } from "~/constants/siteType"
 import { ModelRedirectService } from "~/services/models/modelRedirect/ModelRedirectService"
-import { userPreferences } from "~/services/userPreferences"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import {
   getManagedSiteAdminConfig,
   getManagedSiteConfig,
@@ -22,7 +22,7 @@ vi.mock("~/services/models/modelSync", () => {
   }
 })
 
-vi.mock("~/services/userPreferences", () => ({
+vi.mock("~/services/preferences/userPreferences", () => ({
   userPreferences: {
     getPreferences: vi.fn(),
   },

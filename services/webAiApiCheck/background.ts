@@ -19,7 +19,7 @@ import {
   DEFAULT_PREFERENCES,
   userPreferences,
   type UserPreferences,
-} from "~/services/userPreferences"
+} from "~/services/preferences/userPreferences"
 import { createLogger } from "~/utils/logger"
 import { isUrlAllowedByRegexList } from "~/utils/redemptionAssistWhitelist"
 import {

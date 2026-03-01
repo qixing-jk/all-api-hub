@@ -4,7 +4,7 @@ import { DONE_HUB, NEW_API } from "~/constants/siteType"
 import {
   DEFAULT_PREFERENCES,
   type UserPreferences,
-} from "~/services/userPreferences"
+} from "~/services/preferences/userPreferences"
 import {
   getManagedSiteAdminConfig,
   getManagedSiteConfigFromPreferences,

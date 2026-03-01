@@ -13,8 +13,8 @@ import {
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { channelConfigStorage } from "~/services/channelConfigStorage"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { tagStorage } from "~/services/tags/tagStorage"
-import { userPreferences } from "~/services/userPreferences"
 
 vi.mock("~/services/accounts/accountStorage", () => ({
   accountStorage: {
@@ -23,7 +23,7 @@ vi.mock("~/services/accounts/accountStorage", () => ({
   },
 }))
 
-vi.mock("~/services/userPreferences", () => ({
+vi.mock("~/services/preferences/userPreferences", () => ({
   userPreferences: {
     importPreferences: vi.fn(),
     exportPreferences: vi.fn(),

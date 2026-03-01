@@ -26,7 +26,10 @@ import { getErrorMessage } from "~/utils/error"
 import { createLogger } from "~/utils/logger"
 import { normalizeList, parseDelimitedList } from "~/utils/string"
 
-import { UserPreferences, userPreferences } from "../../userPreferences"
+import {
+  UserPreferences,
+  userPreferences,
+} from "../../preferences/userPreferences"
 
 /**
  * Unified logger scoped to the Veloera integration and auto-config flows.

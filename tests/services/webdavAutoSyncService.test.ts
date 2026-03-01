@@ -28,17 +28,20 @@ vi.mock(import("~/utils/browserApi"), async (importOriginal) => {
 const mockGetPreferences = vi.fn()
 const mockSavePreferences = vi.fn()
 
-vi.mock(import("~/services/userPreferences"), async (importOriginal) => {
-  const actual = await importOriginal()
-  Object.assign(actual.userPreferences, {
-    getPreferences: (...args: any[]) => mockGetPreferences(...args),
-    savePreferences: (...args: any[]) => mockSavePreferences(...args),
-  })
-  return {
-    ...actual,
-    userPreferences: actual.userPreferences,
-  }
-})
+vi.mock(
+  import("~/services/preferences/userPreferences"),
+  async (importOriginal) => {
+    const actual = await importOriginal()
+    Object.assign(actual.userPreferences, {
+      getPreferences: (...args: any[]) => mockGetPreferences(...args),
+      savePreferences: (...args: any[]) => mockSavePreferences(...args),
+    })
+    return {
+      ...actual,
+      userPreferences: actual.userPreferences,
+    }
+  },
+)
 
 vi.mock("~/services/tags/tagStorage", () => ({
   tagStorage: {

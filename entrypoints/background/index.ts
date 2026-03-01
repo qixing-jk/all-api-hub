@@ -11,9 +11,9 @@ import {
   hasPermissions,
   OPTIONAL_PERMISSIONS,
 } from "~/services/permissions/permissionManager"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { tagStorage } from "~/services/tags/tagStorage"
 import { changelogOnUpdateState } from "~/services/updates/changelogOnUpdateState"
-import { userPreferences } from "~/services/userPreferences"
 import { getManifest, onInstalled, onStartup } from "~/utils/browserApi"
 import { createLogger } from "~/utils/logger"
 import { openOrFocusOptionsMenuItem } from "~/utils/navigation"

@@ -25,8 +25,8 @@ import {
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { channelConfigStorage } from "~/services/channelConfigStorage"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { tagStorage } from "~/services/tags/tagStorage"
-import { userPreferences } from "~/services/userPreferences"
 import {
   decryptWebdavBackupEnvelope,
   tryParseEncryptedWebdavBackupEnvelope,
