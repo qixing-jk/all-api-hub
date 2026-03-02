@@ -7,6 +7,7 @@ import { CCSwitchExportDialog } from "~/components/CCSwitchExportDialog"
 import { useChannelDialog } from "~/components/ChannelDialog"
 import { ClaudeCodeRouterImportDialog } from "~/components/ClaudeCodeRouterImportDialog"
 import { CliProxyExportDialog } from "~/components/CliProxyExportDialog"
+import { PageHeader } from "~/components/PageHeader"
 import {
   Button,
   DestructiveConfirmDialog,
@@ -18,7 +19,6 @@ import {
 } from "~/components/ui"
 import { RuntimeMessageTypes } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { PageHeader } from "~/entrypoints/options/components/PageHeader"
 import { useIsDesktop, useIsSmallScreen } from "~/hooks/useMediaQuery"
 import { tagStorage } from "~/services/tags/tagStorage"
 import {

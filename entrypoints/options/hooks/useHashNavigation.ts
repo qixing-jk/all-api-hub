@@ -5,7 +5,6 @@ import { navigateWithinOptionsPage } from "~/utils/navigation"
 
 import { menuItems } from "../constants"
 
-// 解析URL hash和参数
 /**
  * Parses the current location hash + search params into page + param map.
  * @returns Active page id and query params.
@@ -36,7 +35,6 @@ function parseHash() {
   return { page: page || MENU_ITEM_IDS.BASIC, params }
 }
 
-// 更新URL hash
 /**
  * Updates the hash (and query params) while staying within the options page.
  * @param page Menu id to navigate to.

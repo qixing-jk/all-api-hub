@@ -36,6 +36,7 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { useChannelDialog } from "~/components/ChannelDialog"
+import { PageHeader } from "~/components/PageHeader"
 import {
   DestructiveConfirmDialog,
   ExternalUrlText,
@@ -79,7 +80,6 @@ import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { OCTOPUS } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { PageHeader } from "~/entrypoints/options/components/PageHeader"
 import { cn } from "~/lib/utils"
 import { getManagedSiteService } from "~/services/managedSites/managedSiteService"
 import { sendRuntimeMessage } from "~/utils/browserApi"

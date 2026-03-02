@@ -2,6 +2,7 @@ import { Palette, Shuffle } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import { PageHeader } from "~/components/PageHeader"
 import {
   Button,
   Card,
@@ -11,7 +12,6 @@ import {
   Switch,
   ToggleButton,
 } from "~/components/ui"
-import { PageHeader } from "~/entrypoints/options/components/PageHeader"
 import {
   MESH_GRADIENT_LAYOUT_COUNT,
   MESH_GRADIENT_PALETTES,

@@ -10,6 +10,7 @@ import {
 } from "react"
 import { useTranslation } from "react-i18next"
 
+import { PageHeader } from "~/components/PageHeader"
 import {
   Button,
   Select,
@@ -20,7 +21,6 @@ import {
 } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { PageHeader } from "~/entrypoints/options/components/PageHeader"
 import { useHorizontalScrollControls } from "~/hooks/useHorizontalScrollControls"
 import { setLastSeenOptionalPermissions } from "~/services/permissions/optionalPermissionState"
 import { OPTIONAL_PERMISSIONS } from "~/services/permissions/permissionManager"

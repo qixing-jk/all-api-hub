@@ -5,9 +5,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
+import { PageHeader } from "~/components/PageHeader"
 import { Button, EmptyState, Input } from "~/components/ui"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { PageHeader } from "~/entrypoints/options/components/PageHeader"
 import type { ManagedSiteChannel } from "~/types/managedSite"
 import type {
   ExecutionItemResult,

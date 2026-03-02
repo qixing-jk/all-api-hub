@@ -4,12 +4,12 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { AutoCheckinPretriggerCompletionDialog } from "~/components/AutoCheckinPretriggerCompletionDialog"
+import { PageHeader } from "~/components/PageHeader"
 import { Button } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { PageHeader } from "~/entrypoints/options/components/PageHeader"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import {
   AutoCheckinRunSummary,

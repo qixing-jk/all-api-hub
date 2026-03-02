@@ -4,6 +4,7 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { EChart } from "~/components/charts/EChart"
+import { PageHeader } from "~/components/PageHeader"
 import {
   Button,
   Card,
@@ -16,7 +17,6 @@ import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { useTheme } from "~/contexts/ThemeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { PageHeader } from "~/entrypoints/options/components/PageHeader"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { computeUsageHistoryExport } from "~/services/history/usageHistory/analytics"
 import {

@@ -3,9 +3,9 @@ import { Cpu } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import { PageHeader } from "~/components/PageHeader"
 import { VerifyApiDialog } from "~/components/VerifyApiDialog"
 import { VerifyCliSupportDialog } from "~/components/VerifyCliSupportDialog"
-import { PageHeader } from "~/entrypoints/options/components/PageHeader"
 import type { DisplaySiteData } from "~/types"
 import { getAllProviders } from "~/utils/modelProviders"
 

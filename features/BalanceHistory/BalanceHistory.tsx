@@ -10,6 +10,7 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { EChart } from "~/components/charts/EChart"
+import { PageHeader } from "~/components/PageHeader"
 import {
   Alert,
   Button,
@@ -31,7 +32,6 @@ import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useTheme } from "~/contexts/ThemeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { PageHeader } from "~/entrypoints/options/components/PageHeader"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import {
   computeRetentionCutoffDayKey,

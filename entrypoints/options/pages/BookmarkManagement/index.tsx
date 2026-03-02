@@ -1,8 +1,8 @@
 import { Bookmark } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
+import { PageHeader } from "~/components/PageHeader"
 import { Button } from "~/components/ui"
-import { PageHeader } from "~/entrypoints/options/components/PageHeader"
 import { AccountDataProvider } from "~/features/AccountManagement/hooks/AccountDataContext"
 import BookmarksList from "~/features/SiteBookmarks/components/BookmarksList"
 import {
