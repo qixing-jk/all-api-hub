@@ -9,11 +9,11 @@ import {
   ChannelDialogProvider,
   DuplicateChannelWarningDialogContainer,
 } from "~/components/dialogs/ChannelDialog"
-import { ThemeAwareToaster } from "~/components/ThemeAwareToaster"
 import {
   UpdateLogDialogContainer,
   UpdateLogDialogProvider,
-} from "~/components/UpdateLogDialog"
+} from "~/components/dialogs/UpdateLogDialog"
+import { ThemeAwareToaster } from "~/components/ThemeAwareToaster"
 import { DeviceProvider } from "~/contexts/DeviceContext"
 import { ThemeProvider } from "~/contexts/ThemeContext"
 import { UserPreferencesProvider } from "~/contexts/UserPreferencesContext"

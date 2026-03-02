@@ -4,7 +4,7 @@ import ChangelogOnUpdateUiOpenHandler from "~/components/ChangelogOnUpdateUiOpen
 import {
   UpdateLogDialogContainer,
   UpdateLogDialogProvider,
-} from "~/components/UpdateLogDialog"
+} from "~/components/dialogs/UpdateLogDialog"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
