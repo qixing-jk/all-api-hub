@@ -37,11 +37,10 @@ type TurnstileAutoStartState = {
 }
 
 declare global {
-   
   var __aahTurnstileAutoStartState:
     | Map<string, TurnstileAutoStartState>
     | undefined
-   
+
   var __aahTurnstilePreTriggerState:
     | Map<string, TurnstileAutoStartState>
     | undefined

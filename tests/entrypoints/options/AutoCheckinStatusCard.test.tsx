@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import StatusCard from "~/entrypoints/options/pages/AutoCheckin/components/StatusCard"
+import StatusCard from "~/features/AutoCheckin/components/StatusCard"
 import { render, screen, within } from "~/tests/test-utils/render"
 import type {
   AutoCheckinPreferences,

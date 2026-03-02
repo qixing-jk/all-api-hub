@@ -39,66 +39,54 @@ vi.mock("~/utils/browserApi", async (importOriginal) => {
   }
 })
 
-vi.mock(
-  "~/entrypoints/options/pages/KeyManagement/hooks/useKeyManagement",
-  () => ({
-    useKeyManagement: vi.fn(() => ({
-      displayData: [
-        { id: "account-enabled", name: "Enabled Site", disabled: false },
-        { id: "account-disabled", name: "Disabled Site", disabled: true },
-        { id: "account-enabled-2", name: "Another Site", disabled: false },
-      ],
-      selectedAccount: "",
-      setSelectedAccount: vi.fn(),
-      searchTerm: "",
-      setSearchTerm: vi.fn(),
-      tokens: [],
-      isLoading: false,
-      visibleKeys: new Set(),
-      isAddTokenOpen: false,
-      editingToken: null,
-      tokenLoadProgress: null,
-      failedAccounts: [],
-      accountSummaryItems: [],
-      allAccountsFilterAccountId: null,
-      setAllAccountsFilterAccountId: vi.fn(),
-      loadTokens: vi.fn(),
-      filteredTokens: [],
-      copyKey: vi.fn(),
-      toggleKeyVisibility: vi.fn(),
-      retryFailedAccounts: vi.fn(),
-      handleAddToken: vi.fn(),
-      handleCloseAddToken: vi.fn(),
-      handleEditToken: vi.fn(),
-      handleDeleteToken: vi.fn(),
-    })),
-  }),
-)
+vi.mock("~/features/KeyManagement/hooks/useKeyManagement", () => ({
+  useKeyManagement: vi.fn(() => ({
+    displayData: [
+      { id: "account-enabled", name: "Enabled Site", disabled: false },
+      { id: "account-disabled", name: "Disabled Site", disabled: true },
+      { id: "account-enabled-2", name: "Another Site", disabled: false },
+    ],
+    selectedAccount: "",
+    setSelectedAccount: vi.fn(),
+    searchTerm: "",
+    setSearchTerm: vi.fn(),
+    tokens: [],
+    isLoading: false,
+    visibleKeys: new Set(),
+    isAddTokenOpen: false,
+    editingToken: null,
+    tokenLoadProgress: null,
+    failedAccounts: [],
+    accountSummaryItems: [],
+    allAccountsFilterAccountId: null,
+    setAllAccountsFilterAccountId: vi.fn(),
+    loadTokens: vi.fn(),
+    filteredTokens: [],
+    copyKey: vi.fn(),
+    toggleKeyVisibility: vi.fn(),
+    retryFailedAccounts: vi.fn(),
+    handleAddToken: vi.fn(),
+    handleCloseAddToken: vi.fn(),
+    handleEditToken: vi.fn(),
+    handleDeleteToken: vi.fn(),
+  })),
+}))
 
-vi.mock(
-  "~/entrypoints/options/pages/KeyManagement/components/AccountSelectorPanel",
-  () => ({
-    AccountSelectorPanel: () => <div data-testid="controls" />,
-  }),
-)
+vi.mock("~/features/KeyManagement/components/AccountSelectorPanel", () => ({
+  AccountSelectorPanel: () => <div data-testid="controls" />,
+}))
 
-vi.mock(
-  "~/entrypoints/options/pages/KeyManagement/components/TokenList",
-  () => ({
-    TokenList: () => <div data-testid="token-list" />,
-  }),
-)
+vi.mock("~/features/KeyManagement/components/TokenList", () => ({
+  TokenList: () => <div data-testid="token-list" />,
+}))
 
-vi.mock("~/entrypoints/options/pages/KeyManagement/components/Footer", () => ({
+vi.mock("~/features/KeyManagement/components/Footer", () => ({
   Footer: () => <div data-testid="footer" />,
 }))
 
-vi.mock(
-  "~/entrypoints/options/pages/KeyManagement/components/AddTokenDialog",
-  () => ({
-    default: () => null,
-  }),
-)
+vi.mock("~/features/KeyManagement/components/AddTokenDialog", () => ({
+  default: () => null,
+}))
 
 const idleProgress: AccountKeyRepairProgress = {
   jobId: "idle",

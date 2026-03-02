@@ -1,7 +1,7 @@
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import AddTokenDialog from "~/entrypoints/options/pages/KeyManagement/components/AddTokenDialog"
+import AddTokenDialog from "~/features/KeyManagement/components/AddTokenDialog"
 import { render, screen, waitFor } from "~/tests/test-utils/render"
 import { AuthTypeEnum } from "~/types"
 

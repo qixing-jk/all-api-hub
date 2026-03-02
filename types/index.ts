@@ -459,5 +459,6 @@ export enum AuthTypeEnum {
   Cookie = "cookie",
   None = "none",
 }
+export type { AccountToken } from "~/types/accountToken"
 export type { TempWindowHealthStatusCode } from "~/types/tempWindow"
 export { TEMP_WINDOW_HEALTH_STATUS_CODES } from "~/types/tempWindow"

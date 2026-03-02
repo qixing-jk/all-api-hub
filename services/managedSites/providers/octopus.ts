@@ -8,7 +8,6 @@ import toast from "react-hot-toast"
 import { ChannelType } from "~/constants"
 import { DEFAULT_OCTOPUS_CHANNEL_FIELDS } from "~/constants/octopus"
 import { OCTOPUS } from "~/constants/siteType"
-import type { AccountToken } from "~/entrypoints/options/pages/KeyManagement/type"
 import { ensureAccountApiToken } from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import type { ApiResponse } from "~/services/apiService/common/type"
@@ -22,7 +21,12 @@ import {
   userPreferences,
   type UserPreferences,
 } from "~/services/preferences/userPreferences"
-import type { ApiToken, DisplaySiteData, SiteAccount } from "~/types"
+import type {
+  AccountToken,
+  ApiToken,
+  DisplaySiteData,
+  SiteAccount,
+} from "~/types"
 import type {
   ChannelFormData,
   ChannelMode,

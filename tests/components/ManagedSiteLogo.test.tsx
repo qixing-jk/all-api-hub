@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { NEW_API, VELOERA } from "~/constants/siteType"
-import { TokenHeader } from "~/entrypoints/options/pages/KeyManagement/components/TokenListItem/TokenHeader"
 import { TokenDetails } from "~/features/AccountManagement/components/CopyKeyDialog/TokenDetails"
+import { TokenHeader } from "~/features/KeyManagement/components/TokenListItem/TokenHeader"
 import { render, screen } from "~/tests/test-utils/render"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 

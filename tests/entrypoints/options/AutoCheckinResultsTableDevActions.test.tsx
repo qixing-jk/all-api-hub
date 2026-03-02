@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 
-import ResultsTable from "~/entrypoints/options/pages/AutoCheckin/components/ResultsTable"
+import ResultsTable from "~/features/AutoCheckin/components/ResultsTable"
 import { render, screen } from "~/tests/test-utils/render"
 import {
   CHECKIN_RESULT_STATUS,

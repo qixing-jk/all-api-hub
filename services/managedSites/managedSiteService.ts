@@ -5,9 +5,13 @@ import {
   VELOERA,
   type ManagedSiteType,
 } from "~/constants/siteType"
-import type { AccountToken } from "~/entrypoints/options/pages/KeyManagement/type"
 import type { ApiResponse } from "~/services/apiService/common/type"
-import type { ApiToken, DisplaySiteData, SiteAccount } from "~/types"
+import type {
+  AccountToken,
+  ApiToken,
+  DisplaySiteData,
+  SiteAccount,
+} from "~/types"
 import type {
   ChannelFormData,
   ChannelMode,

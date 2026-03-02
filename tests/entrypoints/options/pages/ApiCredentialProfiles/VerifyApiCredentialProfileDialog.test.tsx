@@ -1,7 +1,7 @@
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { VerifyApiCredentialProfileDialog } from "~/entrypoints/options/pages/ApiCredentialProfiles/components/VerifyApiCredentialProfileDialog"
+import { VerifyApiCredentialProfileDialog } from "~/features/ApiCredentialProfiles/components/VerifyApiCredentialProfileDialog"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { render, screen, waitFor, within } from "~/tests/test-utils/render"
 

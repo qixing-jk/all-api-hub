@@ -3,7 +3,6 @@ import toast from "react-hot-toast"
 
 import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
 import { DONE_HUB } from "~/constants/siteType"
-import { AccountToken } from "~/entrypoints/options/pages/KeyManagement/type"
 import { ensureAccountApiToken } from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { getApiService } from "~/services/apiService"
@@ -13,6 +12,7 @@ import {
   userPreferences,
 } from "~/services/preferences/userPreferences"
 import { ApiToken, AuthTypeEnum, DisplaySiteData, SiteAccount } from "~/types"
+import type { AccountToken } from "~/types"
 import type { DoneHubConfig } from "~/types/doneHubConfig"
 import type {
   ChannelFormData,

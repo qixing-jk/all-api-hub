@@ -2,8 +2,8 @@ import { useEffect, useState } from "react"
 
 import { CCSwitchExportDialog } from "~/components/CCSwitchExportDialog"
 import { Modal } from "~/components/ui"
-import AddTokenDialog from "~/entrypoints/options/pages/KeyManagement/components/AddTokenDialog"
 import { useCopyKeyDialog } from "~/features/AccountManagement/components/CopyKeyDialog/hooks/useCopyKeyDialog"
+import AddTokenDialog from "~/features/KeyManagement/components/AddTokenDialog"
 import type { ApiToken, DisplaySiteData } from "~/types"
 
 import { DialogFooter } from "./DialogFooter"

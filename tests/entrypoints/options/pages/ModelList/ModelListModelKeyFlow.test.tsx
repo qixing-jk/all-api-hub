@@ -77,7 +77,7 @@ const TOKEN = {
   group: "",
 } as any
 
-vi.mock("~/entrypoints/options/pages/ModelList/hooks/useModelListData", () => ({
+vi.mock("~/features/ModelList/hooks/useModelListData", () => ({
   useModelListData: vi.fn(() => ({
     // Account data
     accounts: [ACCOUNT],
@@ -121,57 +121,39 @@ vi.mock("~/entrypoints/options/pages/ModelList/hooks/useModelListData", () => ({
   })),
 }))
 
-vi.mock(
-  "~/entrypoints/options/pages/ModelList/components/ModelDisplay",
-  () => ({
-    ModelDisplay: ({ currentAccount, onOpenModelKeyDialog }: any) => (
-      <button
-        type="button"
-        onClick={() => onOpenModelKeyDialog(currentAccount, "gpt-4", ["vip"])}
-      >
-        Open key dialog
-      </button>
-    ),
-  }),
-)
+vi.mock("~/features/ModelList/components/ModelDisplay", () => ({
+  ModelDisplay: ({ currentAccount, onOpenModelKeyDialog }: any) => (
+    <button
+      type="button"
+      onClick={() => onOpenModelKeyDialog(currentAccount, "gpt-4", ["vip"])}
+    >
+      Open key dialog
+    </button>
+  ),
+}))
 
-vi.mock(
-  "~/entrypoints/options/pages/ModelList/components/AccountSelector",
-  () => ({
-    AccountSelector: () => null,
-  }),
-)
-vi.mock(
-  "~/entrypoints/options/pages/ModelList/components/AccountSummaryBar",
-  () => ({
-    AccountSummaryBar: () => null,
-  }),
-)
-vi.mock(
-  "~/entrypoints/options/pages/ModelList/components/ControlPanel",
-  () => ({
-    ControlPanel: () => null,
-  }),
-)
-vi.mock("~/entrypoints/options/pages/ModelList/components/Footer", () => ({
+vi.mock("~/features/ModelList/components/AccountSelector", () => ({
+  AccountSelector: () => null,
+}))
+vi.mock("~/features/ModelList/components/AccountSummaryBar", () => ({
+  AccountSummaryBar: () => null,
+}))
+vi.mock("~/features/ModelList/components/ControlPanel", () => ({
+  ControlPanel: () => null,
+}))
+vi.mock("~/features/ModelList/components/Footer", () => ({
   Footer: () => null,
 }))
-vi.mock(
-  "~/entrypoints/options/pages/ModelList/components/StatusIndicator",
-  () => ({
-    StatusIndicator: () => null,
-  }),
-)
+vi.mock("~/features/ModelList/components/StatusIndicator", () => ({
+  StatusIndicator: () => null,
+}))
 
-vi.mock(
-  "~/entrypoints/options/pages/ModelList/components/ProviderTabs",
-  async () => {
-    const { TabGroup } = await import("@headlessui/react")
-    return {
-      ProviderTabs: ({ children }: any) => <TabGroup>{children}</TabGroup>,
-    }
-  },
-)
+vi.mock("~/features/ModelList/components/ProviderTabs", async () => {
+  const { TabGroup } = await import("@headlessui/react")
+  return {
+    ProviderTabs: ({ children }: any) => <TabGroup>{children}</TabGroup>,
+  }
+})
 
 describe("Model List → ModelKeyDialog", () => {
   beforeEach(() => {

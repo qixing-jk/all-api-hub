@@ -2,14 +2,14 @@ import { t } from "i18next"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
-  BACKUP_VERSION,
-  normalizeBackupForMerge,
-  type BackupFullV2,
-} from "~/entrypoints/options/pages/ImportExport/utils"
-import {
   apiCredentialProfilesStorage,
   mergeApiCredentialProfilesConfigs,
 } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+import {
+  BACKUP_VERSION,
+  normalizeBackupForMerge,
+  type BackupFullV2,
+} from "~/services/importExport/importExportService"
 import { migrateAccountTagsData } from "~/services/tags/migrations/accountTagsDataMigration"
 import { tagStorage } from "~/services/tags/tagStorage"
 import {

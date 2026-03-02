@@ -4,7 +4,7 @@ import toast from "react-hot-toast"
 import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { useKeyManagement } from "~/entrypoints/options/pages/KeyManagement/hooks/useKeyManagement"
+import { useKeyManagement } from "~/features/KeyManagement/hooks/useKeyManagement"
 import { useAccountData } from "~/hooks/useAccountData"
 import { getApiService } from "~/services/apiService"
 import testI18n from "~/tests/test-utils/i18n"

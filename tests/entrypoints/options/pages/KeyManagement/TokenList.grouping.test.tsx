@@ -1,22 +1,19 @@
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
-import { TokenList } from "~/entrypoints/options/pages/KeyManagement/components/TokenList"
-import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "~/entrypoints/options/pages/KeyManagement/constants"
+import { TokenList } from "~/features/KeyManagement/components/TokenList"
+import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "~/features/KeyManagement/constants"
 import { render, screen, waitFor } from "~/tests/test-utils/render"
 import {
   createAccount,
   createToken,
 } from "~/tests/utils/keyManagementFactories"
 
-vi.mock(
-  "~/entrypoints/options/pages/KeyManagement/components/TokenListItem",
-  () => ({
-    TokenListItem: ({ token }: { token: { name: string } }) => (
-      <div>{token.name}</div>
-    ),
-  }),
-)
+vi.mock("~/features/KeyManagement/components/TokenListItem", () => ({
+  TokenListItem: ({ token }: { token: { name: string } }) => (
+    <div>{token.name}</div>
+  ),
+}))
 
 describe("TokenList grouped all-accounts UX", () => {
   it("groups tokens by account and supports collapse/expand all", async () => {

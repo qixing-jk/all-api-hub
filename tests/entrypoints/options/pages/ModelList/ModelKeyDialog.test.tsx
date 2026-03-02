@@ -1,7 +1,7 @@
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import ModelKeyDialog from "~/entrypoints/options/pages/ModelList/components/ModelKeyDialog"
+import ModelKeyDialog from "~/features/ModelList/components/ModelKeyDialog"
 import { render, screen, waitFor } from "~/tests/test-utils/render"
 import { AuthTypeEnum } from "~/types"
 
