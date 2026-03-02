@@ -8,7 +8,7 @@ import {
   ChannelDialogContainer,
   ChannelDialogProvider,
   DuplicateChannelWarningDialogContainer,
-} from "~/components/ChannelDialog"
+} from "~/components/dialogs/ChannelDialog"
 import { ThemeAwareToaster } from "~/components/ThemeAwareToaster"
 import {
   UpdateLogDialogContainer,

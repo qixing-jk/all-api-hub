@@ -10,7 +10,7 @@ const { mockOpenWithAccount } = vi.hoisted(() => ({
   mockOpenWithAccount: vi.fn(),
 }))
 
-vi.mock("~/components/ChannelDialog", () => ({
+vi.mock("~/components/dialogs/ChannelDialog", () => ({
   useChannelDialog: () => ({ openWithAccount: mockOpenWithAccount }),
 }))
 

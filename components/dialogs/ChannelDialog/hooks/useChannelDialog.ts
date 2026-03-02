@@ -1,7 +1,7 @@
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { useChannelDialogContext } from "~/components/ChannelDialog/context/ChannelDialogContext"
+import { useChannelDialogContext } from "~/components/dialogs/ChannelDialog/context/ChannelDialogContext"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { ensureAccountApiToken } from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accounts/accountStorage"

@@ -2,7 +2,7 @@ import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { useChannelForm } from "~/components/ChannelDialog/hooks/useChannelForm"
+import { useChannelForm } from "~/components/dialogs/ChannelDialog/hooks/useChannelForm"
 import {
   Button,
   CompactMultiSelect,

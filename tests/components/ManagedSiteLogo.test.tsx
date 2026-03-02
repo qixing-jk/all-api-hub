@@ -6,7 +6,7 @@ import { TokenHeader } from "~/features/KeyManagement/components/TokenListItem/T
 import { render, screen } from "~/tests/test-utils/render"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 
-vi.mock("~/components/ChannelDialog", () => {
+vi.mock("~/components/dialogs/ChannelDialog", () => {
   return {
     useChannelDialog: () => ({
       openWithAccount: vi.fn(),

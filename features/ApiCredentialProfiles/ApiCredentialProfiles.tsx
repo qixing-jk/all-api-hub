@@ -4,9 +4,9 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { CCSwitchExportDialog } from "~/components/CCSwitchExportDialog"
-import { useChannelDialog } from "~/components/ChannelDialog"
 import { ClaudeCodeRouterImportDialog } from "~/components/ClaudeCodeRouterImportDialog"
 import { CliProxyExportDialog } from "~/components/CliProxyExportDialog"
+import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
 import { PageHeader } from "~/components/PageHeader"
 import {
   Button,

@@ -35,7 +35,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { useChannelDialog } from "~/components/ChannelDialog"
+import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
 import { PageHeader } from "~/components/PageHeader"
 import {
   DestructiveConfirmDialog,

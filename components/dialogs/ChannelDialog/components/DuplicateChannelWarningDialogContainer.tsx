@@ -1,4 +1,4 @@
-import { useChannelDialogContext } from "~/components/ChannelDialog/context/ChannelDialogContext"
+import { useChannelDialogContext } from "~/components/dialogs/ChannelDialog/context/ChannelDialogContext"
 
 import { DuplicateChannelWarningDialog } from "./DuplicateChannelWarningDialog"
 

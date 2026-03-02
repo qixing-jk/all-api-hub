@@ -6,9 +6,9 @@ import {
 import { MouseEvent, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { useChannelDialog } from "~/components/ChannelDialog"
 import { ClaudeCodeRouterImportDialog } from "~/components/ClaudeCodeRouterImportDialog"
 import { CliProxyExportDialog } from "~/components/CliProxyExportDialog"
+import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
 import { CCSwitchIcon } from "~/components/icons/CCSwitchIcon"
 import { CherryIcon } from "~/components/icons/CherryIcon"
 import { ClaudeCodeRouterIcon } from "~/components/icons/ClaudeCodeRouterIcon"

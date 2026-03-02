@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { useChannelDialog } from "~/components/ChannelDialog"
+import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SUB2API } from "~/constants/siteType"
