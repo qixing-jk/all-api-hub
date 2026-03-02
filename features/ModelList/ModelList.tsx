@@ -4,8 +4,8 @@ import { useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { VerifyApiDialog } from "~/components/dialogs/VerifyApiDialog"
+import { VerifyCliSupportDialog } from "~/components/dialogs/VerifyCliSupportDialog"
 import { PageHeader } from "~/components/PageHeader"
-import { VerifyCliSupportDialog } from "~/components/VerifyCliSupportDialog"
 import type { DisplaySiteData } from "~/types"
 import { getAllProviders } from "~/utils/modelProviders"
 

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { VerifyCliSupportDialog } from "~/components/VerifyCliSupportDialog"
+import { VerifyCliSupportDialog } from "~/components/dialogs/VerifyCliSupportDialog"
 import {
   fireEvent,
   render,
