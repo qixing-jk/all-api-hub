@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import { ProbeStatusBadge } from "~/components/dialogs/VerifyApiDialog/ProbeStatusBadge"
+import {
+  formatLatency,
+  safeJsonStringify,
+} from "~/components/dialogs/VerifyApiDialog/utils"
 import {
   Alert,
   Badge,
@@ -10,11 +15,6 @@ import {
   SearchableSelect,
 } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
-import { ProbeStatusBadge } from "~/components/VerifyApiDialog/ProbeStatusBadge"
-import {
-  formatLatency,
-  safeJsonStringify,
-} from "~/components/VerifyApiDialog/utils"
 import { fetchAnthropicModelIds } from "~/services/apiService/anthropic"
 import { fetchGoogleModelIds } from "~/services/apiService/google"
 import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompatible"

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import toast from "react-hot-toast/headless"
 import { useTranslation } from "react-i18next"
 
+import { ProbeStatusBadge } from "~/components/dialogs/VerifyApiDialog/ProbeStatusBadge"
 import {
   Button,
   IconButton,
@@ -11,7 +12,6 @@ import {
   Textarea,
 } from "~/components/ui"
 import { inputVariants } from "~/components/ui/input"
-import { ProbeStatusBadge } from "~/components/VerifyApiDialog/ProbeStatusBadge"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { cn } from "~/lib/utils"
 import {

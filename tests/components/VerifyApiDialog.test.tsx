@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { VerifyApiDialog } from "~/components/VerifyApiDialog"
+import { VerifyApiDialog } from "~/components/dialogs/VerifyApiDialog"
 import {
   fireEvent,
   render,
