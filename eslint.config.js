@@ -135,6 +135,33 @@ export default defineConfig([
       "no-console": "off",
     },
   },
+  // Guardrails: prevent non-entrypoint code from depending on options page internals.
+  //
+  // Transition plan:
+  // - Start as a warning while we migrate existing violations out of `entrypoints/options/pages/**`.
+  // - Once the repo is clean, upgrade this to "error" so `pnpm -s lint` fails on new violations.
+  {
+    files: [
+      "services/**/*.{ts,tsx}",
+      "utils/**/*.{ts,tsx}",
+      "components/**/*.{ts,tsx}",
+      "features/**/*.{ts,tsx}",
+    ],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["~/entrypoints/options/pages/**"],
+              message:
+                "Do not import from `~/entrypoints/options/pages/**` outside the options entrypoint. Extract shared code into `features/`, `services/`, `utils/`, or `types/` instead.",
+            },
+          ],
+        },
+      ],
+    },
+  },
   { rules },
   eslintConfigPrettier,
 ])
