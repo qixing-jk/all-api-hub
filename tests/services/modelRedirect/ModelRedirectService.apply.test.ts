@@ -6,7 +6,7 @@ import { modelMetadataService } from "~/services/models/modelMetadata"
 import { ModelRedirectService } from "~/services/models/modelRedirect/ModelRedirectService"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { DEFAULT_MODEL_REDIRECT_PREFERENCES } from "~/types/managedSiteModelRedirect"
-import { CHANNEL_STATUS } from "~/types/newapi"
+import { CHANNEL_STATUS } from "~/types/newApi"
 
 vi.mock("~/services/models/modelMetadata", () => ({
   modelMetadataService: {

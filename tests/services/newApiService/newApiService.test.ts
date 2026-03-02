@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import type { ApiToken, DisplaySiteData, SiteAccount } from "~/types"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
-import type { ChannelFormData, CreateChannelPayload } from "~/types/newapi"
+import type { ChannelFormData, CreateChannelPayload } from "~/types/newApi"
 
 // ============================================================================
 // MOCKS

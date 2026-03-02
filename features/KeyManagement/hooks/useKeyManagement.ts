@@ -8,7 +8,7 @@ import { getErrorMessage } from "~/utils/error"
 import { createLogger } from "~/utils/logger"
 
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "../constants"
-import { AccountToken } from "../type"
+import type { AccountToken } from "../types"
 
 /**
  * Unified logger scoped to the Key Management options page hooks.

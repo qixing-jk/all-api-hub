@@ -32,7 +32,7 @@ import { createLogger } from "~/utils/logger"
 import { getManagedSiteLabelKey } from "~/utils/managedSite"
 import { showResultToast } from "~/utils/toastHelpers"
 
-import { AccountToken } from "../../type"
+import type { AccountToken } from "../../types"
 
 /**
  * Unified logger scoped to the Key Management token header actions.

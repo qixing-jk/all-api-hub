@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 
-import type { CreateChannelPayload, UpdateChannelPayload } from "~/types/newapi"
+import type { CreateChannelPayload, UpdateChannelPayload } from "~/types/newApi"
 
 // ============================================================================
 // MOCKS
