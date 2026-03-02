@@ -87,6 +87,20 @@ Features are self-contained modules in `features/` with their own:
 
 Example: `features/AccountManagement/` contains all account-related code.
 
+### UI Module Taxonomy (“Where does this code go?”)
+
+Use this decision tree when adding or moving UI code:
+
+- **Is this entrypoint wiring (routing/bootstrapping/integration glue)?** → `entrypoints/**`
+  - Options pages under `entrypoints/options/pages/**` should be thin wrappers that render feature modules.
+- **Is this page/feature UI code (components/hooks/utils)?** → `features/<Feature>/**`
+- **Is this a shared UI primitive/reusable component?** → `components/**` (UI primitives: `components/ui/**`)
+- **Is this business logic / storage / API integration?** → `services/**`
+- **Is this a shared non-UI helper?** → `utils/**`
+- **Is this a shared domain type?** → `types/**` (or feature-local types if truly feature-private)
+
+**Important module boundary rule:** non-entrypoint code MUST NOT import from `~/entrypoints/options/pages/**` (extract shared types/helpers into `types/**`, `services/**`, `utils/**`, or `features/**` instead).
+
 ### Service Layer
 
 Services in `services/` encapsulate business logic:

@@ -295,10 +295,10 @@ Make sure all tests pass before submitting a pull request.
 
 ```
 all-api-hub/
-├── components/       # Reusable React components
+├── components/       # Reusable React components (shared UI primitives live in components/ui/)
 ├── contexts/         # React context providers
-├── entrypoints/      # WXT entry points (popup, options, etc.)
-├── features/         # Feature modules
+├── entrypoints/      # WXT entry points (wiring-only: routing/bootstrapping/integration glue)
+├── features/         # Canonical home for UI feature/page modules (components/hooks/utils)
 ├── hooks/            # Custom React hooks
 ├── services/         # Business logic and API services
 ├── tests/            # Test setup and utilities
@@ -307,6 +307,22 @@ all-api-hub/
 ├── types/            # TypeScript type definitions
 └── utils/            # Utility functions
 ```
+
+## UI Module Taxonomy (Where Does UI Code Go?)
+
+To keep the options UI consistent and reusable, this repo follows a single module taxonomy:
+
+- `entrypoints/**` are **wiring-only**: routing, bootstrapping, and integration glue.
+  - Options pages under `entrypoints/options/pages/**` should be thin wrappers that render feature modules.
+  - Non-entrypoint code MUST NOT import from `~/entrypoints/options/pages/**`.
+- `features/<Feature>/**` are the **canonical home for UI modules** (page/feature code), including `components/`, `hooks/`, and `utils/`.
+- Shared layers:
+  - `components/**` / `components/ui/**`: shared UI primitives and reusable UI components
+  - `services/**`: business logic, storage, API clients, and background/runtime integrations
+  - `types/**`: shared domain types used across layers
+  - `utils/**`: shared non-UI helpers (keep UI concerns like toasts/i18n in features/entrypoints)
+
+Dependency direction should stay one-way: `entrypoints/**` → `features/**` → shared layers (`components/`, `services/`, `types/`, `utils/`).
 
 ## Getting Help
 
