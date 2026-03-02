@@ -30,6 +30,8 @@ export default defineConfig([
       ".wxt/**",
       "docs/**",
       "coverage/**",
+      "playwright-report/**",
+      "test-results/**",
       "tailwind.config.js",
       "public/react-devtools-backend.js",
     ],
