@@ -1,10 +1,9 @@
 import { useTranslation } from "react-i18next"
 
 import { Badge, Button, Heading3, SearchableSelect } from "~/components/ui"
-import type { DisplaySiteData } from "~/types"
+import type { AccountToken, DisplaySiteData } from "~/types"
 
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "../constants"
-import type { AccountToken } from "../types"
 
 interface AccountSelectorPanelProps {
   selectedAccount: string

@@ -26,13 +26,11 @@ import {
   type ApiVerificationApiType,
 } from "~/services/verification/aiApiVerification"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
-import type { DisplaySiteData } from "~/types"
+import type { AccountToken, DisplaySiteData } from "~/types"
 import { OpenInCherryStudio } from "~/utils/cherryStudio"
 import { createLogger } from "~/utils/logger"
 import { getManagedSiteLabelKey } from "~/utils/managedSite"
 import { showResultToast } from "~/utils/toastHelpers"
-
-import type { AccountToken } from "../../types"
 
 /**
  * Unified logger scoped to the Key Management token header actions.

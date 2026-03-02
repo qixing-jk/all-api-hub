@@ -10,10 +10,9 @@ import { useTranslation } from "react-i18next"
 import { CCSwitchExportDialog } from "~/components/CCSwitchExportDialog"
 import { Badge, Button, Card, EmptyState } from "~/components/ui"
 import { cn } from "~/lib/utils"
-import type { DisplaySiteData } from "~/types"
+import type { AccountToken, DisplaySiteData } from "~/types"
 
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "../constants"
-import type { AccountToken } from "../types"
 import { buildTokenIdentityKey } from "../utils"
 import { TokenListItem } from "./TokenListItem"
 

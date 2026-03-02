@@ -4,11 +4,11 @@ import { useTranslation } from "react-i18next"
 
 import { useAccountData } from "~/hooks/useAccountData"
 import { getApiService } from "~/services/apiService"
+import type { AccountToken } from "~/types"
 import { getErrorMessage } from "~/utils/error"
 import { createLogger } from "~/utils/logger"
 
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "../constants"
-import type { AccountToken } from "../types"
 
 /**
  * Unified logger scoped to the Key Management options page hooks.
