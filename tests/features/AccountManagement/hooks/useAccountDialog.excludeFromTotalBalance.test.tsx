@@ -1,4 +1,5 @@
 import { http, HttpResponse } from "msw"
+import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DIALOG_MODES } from "~/constants/dialogModes"
@@ -21,7 +22,7 @@ vi.mock("react-hot-toast", () => ({
 }))
 
 vi.mock("~/components/dialogs/ChannelDialog", () => ({
-  ChannelDialogProvider: ({ children }: { children: any }) => children,
+  ChannelDialogProvider: ({ children }: { children: ReactNode }) => children,
   useChannelDialog: () => ({ openWithAccount: mockOpenWithAccount }),
 }))
 

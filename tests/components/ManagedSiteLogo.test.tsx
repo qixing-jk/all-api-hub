@@ -1,3 +1,4 @@
+import type { ReactNode } from "react"
 import { describe, expect, it, vi } from "vitest"
 
 import { NEW_API, VELOERA } from "~/constants/siteType"
@@ -8,7 +9,7 @@ import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 
 vi.mock("~/components/dialogs/ChannelDialog", () => {
   return {
-    ChannelDialogProvider: ({ children }: { children: any }) => children,
+    ChannelDialogProvider: ({ children }: { children: ReactNode }) => children,
     useChannelDialog: () => ({
       openWithAccount: vi.fn(),
     }),

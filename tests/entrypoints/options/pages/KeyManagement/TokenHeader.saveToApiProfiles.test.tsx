@@ -1,4 +1,5 @@
 import userEvent from "@testing-library/user-event"
+import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { TokenHeader } from "~/features/KeyManagement/components/TokenListItem/TokenHeader"
@@ -26,7 +27,7 @@ vi.mock("react-hot-toast", () => ({
 
 vi.mock("~/components/dialogs/ChannelDialog", () => {
   return {
-    ChannelDialogProvider: ({ children }: { children: any }) => children,
+    ChannelDialogProvider: ({ children }: { children: ReactNode }) => children,
     useChannelDialog: () => ({
       openWithAccount: vi.fn(),
     }),
