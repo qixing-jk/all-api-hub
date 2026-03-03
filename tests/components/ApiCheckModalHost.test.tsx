@@ -1,4 +1,10 @@
-import { act, screen, waitFor, within } from "@testing-library/react"
+import {
+  act,
+  render as renderRtl,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import toast from "react-hot-toast/headless"
 import { beforeEach, describe, expect, it, vi } from "vitest"
@@ -65,6 +71,7 @@ describe("ApiCheckModalHost", () => {
     await hostReady
 
     await act(async () => {
+      dispatchOpenApiCheckModal({ ...defaultDetail, ...detailOverrides })
       dispatchOpenApiCheckModal({ ...defaultDetail, ...detailOverrides })
     })
   }
@@ -314,21 +321,16 @@ describe("ApiCheckModalHost", () => {
     const toastRenderer = (toast.success as any).mock.calls[0]?.[0]
     expect(toastRenderer).toEqual(expect.any(Function))
 
-    const toastElement: any = toastRenderer({ id: "toast-1" })
-    const toastChildren = toastElement?.props?.children
-    const toastChildList = Array.isArray(toastChildren)
-      ? toastChildren
-      : [toastChildren].filter(Boolean)
-
-    const openButton = toastChildList.find(
-      (child: any) => child?.type === "button",
+    const toastInstance = { id: "toast-1" } as any
+    const { container: toastContainer } = renderRtl(
+      toastRenderer(toastInstance),
     )
 
-    expect(openButton?.props?.children).toBe(
-      "webAiApiCheck:modal.actions.openApiProfiles",
+    await user.click(
+      within(toastContainer).getByRole("button", {
+        name: "webAiApiCheck:modal.actions.openApiProfiles",
+      }),
     )
-
-    openButton?.props?.onClick?.()
 
     expect(sendRuntimeMessage).toHaveBeenCalledWith({
       action: RuntimeActionIds.OpenSettingsApiCredentialProfiles,
