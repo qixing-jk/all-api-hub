@@ -1,5 +1,6 @@
 import { act, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import toast from "react-hot-toast/headless"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
@@ -12,6 +13,14 @@ import {
 import { render } from "~/tests/test-utils/render"
 import { sendRuntimeMessage } from "~/utils/browserApi"
 
+vi.mock("react-hot-toast/headless", () => ({
+  default: {
+    success: vi.fn(),
+    error: vi.fn(),
+    dismiss: vi.fn(),
+  },
+}))
+
 vi.mock("~/utils/browserApi", async (importOriginal) => {
   const actual = await importOriginal<typeof import("~/utils/browserApi")>()
   return {
@@ -22,6 +31,9 @@ vi.mock("~/utils/browserApi", async (importOriginal) => {
 
 describe("ApiCheckModalHost", () => {
   beforeEach(() => {
+    ;(toast.success as any).mockReset()
+    ;(toast.error as any).mockReset()
+    ;(toast.dismiss as any).mockReset()
     vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
       if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
         return { success: true, modelIds: [] }
@@ -250,6 +262,78 @@ describe("ApiCheckModalHost", () => {
         pageUrl: "https://example.com",
       })
     })
+  })
+
+  it("shows a quick-open button after saving to profiles", async () => {
+    const user = userEvent.setup()
+    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
+      if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
+        return { success: true, modelIds: [] }
+      }
+      if (message.action === RuntimeActionIds.ApiCheckSaveProfile) {
+        return {
+          success: true,
+          profileId: "p-1",
+          name: "proxy.example.com (OpenAI-compatible)",
+          apiType: message.apiType,
+          baseUrl: "https://proxy.example.com/api",
+        }
+      }
+      if (
+        message.action === RuntimeActionIds.OpenSettingsApiCredentialProfiles
+      ) {
+        return { success: true }
+      }
+      return { success: false }
+    })
+
+    await openModal()
+
+    const baseUrlInput = await screen.findByPlaceholderText(
+      "https://example.com/api",
+    )
+    const apiKeyInput = await screen.findByPlaceholderText("sk-...")
+
+    await user.type(baseUrlInput, "https://proxy.example.com/api")
+    await user.type(apiKeyInput, "sk-secret-xyz")
+
+    const saveButton = await screen.findByRole("button", {
+      name: "webAiApiCheck:modal.actions.saveToProfiles",
+    })
+
+    await waitFor(() => {
+      expect(saveButton).not.toBeDisabled()
+    })
+
+    await user.click(saveButton)
+
+    await waitFor(() => {
+      expect(toast.success).toHaveBeenCalled()
+    })
+
+    const toastRenderer = (toast.success as any).mock.calls[0]?.[0]
+    expect(toastRenderer).toEqual(expect.any(Function))
+
+    const toastElement: any = toastRenderer({ id: "toast-1" })
+    const toastChildren = toastElement?.props?.children
+    const toastChildList = Array.isArray(toastChildren)
+      ? toastChildren
+      : [toastChildren].filter(Boolean)
+
+    const openButton = toastChildList.find(
+      (child: any) => child?.type === "button",
+    )
+
+    expect(openButton?.props?.children).toBe(
+      "webAiApiCheck:modal.actions.openApiProfiles",
+    )
+
+    openButton?.props?.onClick?.()
+
+    expect(sendRuntimeMessage).toHaveBeenCalledWith({
+      action: RuntimeActionIds.OpenSettingsApiCredentialProfiles,
+    })
+    expect(toast.dismiss).toHaveBeenCalledWith("toast-1")
   })
 
   it("allows saving credentials while tests are running", async () => {

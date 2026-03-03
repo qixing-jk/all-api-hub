@@ -49,6 +49,7 @@
       "test": "Test",
       "testing": "Testing…",
       "saveToProfiles": "Save to API profiles",
+      "openApiProfiles": "Open API profiles",
       "saving": "Saving…",
       "running": "Running…",
       "retry": "Retry",

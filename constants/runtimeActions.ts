@@ -108,6 +108,10 @@ export const RuntimeActionIds = {
     RuntimeActionPrefixes.OpenSettings,
     "shieldBypass",
   ),
+  OpenSettingsApiCredentialProfiles: composeRuntimeAction(
+    RuntimeActionPrefixes.OpenSettings,
+    "apiCredentialProfiles",
+  ),
 
   PreferencesUpdateActionClickBehavior: composeRuntimeAction(
     RuntimeActionPrefixes.Preferences,

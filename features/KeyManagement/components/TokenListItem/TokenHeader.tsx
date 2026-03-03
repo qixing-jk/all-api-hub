@@ -30,6 +30,7 @@ import type { AccountToken, DisplaySiteData } from "~/types"
 import { OpenInCherryStudio } from "~/utils/cherryStudio"
 import { createLogger } from "~/utils/logger"
 import { getManagedSiteLabelKey } from "~/utils/managedSite"
+import { openApiCredentialProfilesPage } from "~/utils/navigation"
 import { showResultToast } from "~/utils/toastHelpers"
 
 /**
@@ -138,7 +139,26 @@ function TokenActionButtons({
         tagIds: account.tagIds ?? [],
       })
       toast.success(
-        t("keyManagement:messages.savedToApiProfiles", { name: token.name }),
+        (toastInstance) => (
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="min-w-0 truncate">
+              {t("keyManagement:messages.savedToApiProfiles", {
+                name: token.name,
+              })}
+            </span>
+            <button
+              type="button"
+              className="shrink-0 rounded-md bg-blue-600 px-2 py-1 text-xs font-medium text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+              onClick={() => {
+                openApiCredentialProfilesPage()
+                toast.dismiss(toastInstance.id)
+              }}
+            >
+              {t("keyManagement:actions.openApiProfiles")}
+            </button>
+          </div>
+        ),
+        { duration: 8000 },
       )
     } catch (error) {
       logger.error("Failed to save token to API profiles", {

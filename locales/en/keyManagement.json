@@ -80,6 +80,7 @@
   "actions": {
     "copyKey": "Copy Key",
     "saveToApiProfiles": "Save to API profiles",
+    "openApiProfiles": "Open API profiles",
     "useInCherry": "Use in Cherry Studio",
     "exportToKiloCode": "Export to Kilo Code",
     "exportToCCSwitch": "Export to CC Switch",

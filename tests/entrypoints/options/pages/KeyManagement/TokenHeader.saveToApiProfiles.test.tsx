@@ -1,5 +1,6 @@
 import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
+import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { TokenHeader } from "~/features/KeyManagement/components/TokenListItem/TokenHeader"
@@ -8,6 +9,7 @@ import { render, screen, waitFor } from "~/tests/test-utils/render"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 
 const mockCreateProfile = vi.fn()
+const mockOpenApiCredentialProfilesPage = vi.fn()
 
 vi.mock(
   "~/services/apiCredentialProfiles/apiCredentialProfilesStorage",
@@ -22,7 +24,13 @@ vi.mock("react-hot-toast", () => ({
   default: {
     success: vi.fn(),
     error: vi.fn(),
+    dismiss: vi.fn(),
   },
+}))
+
+vi.mock("~/utils/navigation", () => ({
+  openApiCredentialProfilesPage: (...args: unknown[]) =>
+    mockOpenApiCredentialProfilesPage(...args),
 }))
 
 vi.mock("~/components/dialogs/ChannelDialog", () => {
@@ -73,6 +81,10 @@ function createAccountStub(): DisplaySiteData {
 describe("TokenHeader save to API profiles", () => {
   beforeEach(() => {
     mockCreateProfile.mockReset()
+    mockOpenApiCredentialProfilesPage.mockReset()
+    ;(toast.success as any).mockReset()
+    ;(toast.error as any).mockReset()
+    ;(toast.dismiss as any).mockReset()
     mockedUseUserPreferencesContext.mockReturnValue({
       managedSiteType: "new-api",
       claudeCodeRouterBaseUrl: "",
@@ -139,5 +151,72 @@ describe("TokenHeader save to API profiles", () => {
         tagIds: [],
       })
     })
+  })
+
+  it("provides a quick-open button after saving", async () => {
+    const user = userEvent.setup()
+    const account = createAccountStub()
+
+    const token = {
+      id: 1,
+      user_id: 1,
+      key: "sk-test",
+      status: 1,
+      name: "Token",
+      created_time: 0,
+      accessed_time: 0,
+      expired_time: 0,
+      remain_quota: 0,
+      unlimited_quota: false,
+      used_quota: 0,
+      accountId: account.id,
+      accountName: account.name,
+    }
+
+    mockCreateProfile.mockResolvedValue({
+      id: "p-1",
+      name: token.name,
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: account.baseUrl,
+      apiKey: token.key,
+      tagIds: [],
+      notes: "",
+      createdAt: 1,
+      updatedAt: 1,
+    })
+
+    render(
+      <TokenHeader
+        token={token as any}
+        copyKey={vi.fn()}
+        handleEditToken={vi.fn()}
+        handleDeleteToken={vi.fn()}
+        account={account}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.saveToApiProfiles",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(toast.success).toHaveBeenCalled()
+    })
+
+    const toastMessageRenderer = (toast.success as any).mock.calls[0]?.[0]
+    expect(toastMessageRenderer).toEqual(expect.any(Function))
+
+    render(toastMessageRenderer({ id: "toast-1" }))
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.openApiProfiles",
+      }),
+    )
+
+    expect(mockOpenApiCredentialProfilesPage).toHaveBeenCalledTimes(1)
+    expect(toast.dismiss).toHaveBeenCalledWith("toast-1")
   })
 })

@@ -137,6 +137,12 @@ const getBasicSettingsHash = () => `#${MENU_ITEM_IDS.BASIC}`
 const getAboutHash = () => `#${MENU_ITEM_IDS.ABOUT}`
 
 /**
+ * Hash fragment pointing to API credential profiles inside options.html.
+ */
+const getApiCredentialProfilesHash = () =>
+  `#${MENU_ITEM_IDS.API_CREDENTIAL_PROFILES}`
+
+/**
  * Hash fragment pointing to Managed Site channel management inside options.html.
  */
 const getManagedSiteChannelsHash = () =>
@@ -374,6 +380,20 @@ const _openAboutPage = () => {
 }
 
 /**
+ * Opens the API credential profiles section, preferring in-page navigation when already on options.html.
+ */
+const _openApiCredentialProfilesPage = () => {
+  const targetHash = getApiCredentialProfilesHash()
+
+  if (isOnOptionsPage()) {
+    navigateWithinOptionsPage(targetHash)
+    return
+  }
+
+  openOrFocusOptionsPage(targetHash)
+}
+
+/**
  * Opens the Keys page, optionally pre-selecting an account.
  * @param accountId Optional account id to prefill.
  */
@@ -523,6 +543,13 @@ export const openSidePanelPage = withPopupClose(_openSidePanel)
  * popup to keep focus on the destination UI.
  */
 export const openAboutPage = withPopupClose(_openAboutPage)
+
+/**
+ * Open the API credential profiles page and close the popup afterward when applicable.
+ */
+export const openApiCredentialProfilesPage = withPopupClose(
+  _openApiCredentialProfilesPage,
+)
 
 /**
  * Open the Keys management page, forwarding optional account focus, then close

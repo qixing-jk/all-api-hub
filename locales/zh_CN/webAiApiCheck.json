@@ -49,6 +49,7 @@
       "test": "测试",
       "testing": "测试中…",
       "saveToProfiles": "保存到 API 凭证",
+      "openApiProfiles": "打开 API 凭证",
       "saving": "保存中…",
       "running": "运行中…",
       "retry": "重试",

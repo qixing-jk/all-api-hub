@@ -431,9 +431,28 @@ export function ApiCheckModalHost() {
 
       if (response?.success) {
         toast.success(
-          t("webAiApiCheck:modal.messages.savedToProfiles", {
-            name: typeof response.name === "string" ? response.name : "",
-          }),
+          (toastInstance) => (
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="min-w-0 flex-1 truncate">
+                {t("webAiApiCheck:modal.messages.savedToProfiles", {
+                  name: typeof response.name === "string" ? response.name : "",
+                })}
+              </span>
+              <button
+                type="button"
+                className="shrink-0 rounded-md bg-blue-600 px-2 py-1 text-xs font-medium text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+                onClick={() => {
+                  void sendRuntimeMessage({
+                    action: RuntimeActionIds.OpenSettingsApiCredentialProfiles,
+                  }).catch(() => {})
+                  toast.dismiss(toastInstance.id)
+                }}
+              >
+                {t("webAiApiCheck:modal.actions.openApiProfiles")}
+              </button>
+            </div>
+          ),
+          { duration: 8000 },
         )
       } else {
         toast.error(

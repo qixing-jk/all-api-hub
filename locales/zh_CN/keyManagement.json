@@ -78,6 +78,7 @@
   "actions": {
     "copyKey": "复制密钥",
     "saveToApiProfiles": "保存到 API 凭证",
+    "openApiProfiles": "打开 API 凭证",
     "useInCherry": "在Cherry Studio中使用",
     "exportToKiloCode": "导出到 Kilo Code",
     "exportToCCSwitch": "导出到CC Switch",

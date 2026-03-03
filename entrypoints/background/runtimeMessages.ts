@@ -191,6 +191,14 @@ export function setupRuntimeMessageListeners() {
       }
 
       if (
+        request.action === RuntimeActionIds.OpenSettingsApiCredentialProfiles
+      ) {
+        openOrFocusOptionsMenuItem(MENU_ITEM_IDS.API_CREDENTIAL_PROFILES)
+        sendResponse({ success: true })
+        return true
+      }
+
+      if (
         request.action === RuntimeActionIds.PreferencesUpdateActionClickBehavior
       ) {
         applyActionClickBehavior(request.behavior)
