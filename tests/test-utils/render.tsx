@@ -2,7 +2,7 @@ import { render, renderHook, type RenderOptions } from "@testing-library/react"
 import type { ReactElement, ReactNode } from "react"
 import { I18nextProvider } from "react-i18next"
 
-import { ChannelDialogProvider } from "~/components/dialogs/ChannelDialog/context/ChannelDialogContext"
+import { ChannelDialogProvider } from "~/components/dialogs/ChannelDialog"
 import { DeviceProvider } from "~/contexts/DeviceContext"
 import { ThemeProvider } from "~/contexts/ThemeContext"
 import { UserPreferencesProvider } from "~/contexts/UserPreferencesContext"

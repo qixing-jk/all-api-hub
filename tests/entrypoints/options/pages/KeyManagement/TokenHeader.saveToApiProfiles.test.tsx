@@ -26,6 +26,7 @@ vi.mock("react-hot-toast", () => ({
 
 vi.mock("~/components/dialogs/ChannelDialog", () => {
   return {
+    ChannelDialogProvider: ({ children }: { children: any }) => children,
     useChannelDialog: () => ({
       openWithAccount: vi.fn(),
     }),

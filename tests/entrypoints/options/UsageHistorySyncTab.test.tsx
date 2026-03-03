@@ -26,10 +26,14 @@ vi.mock("~/services/history/usageHistory/storage", () => ({
   usageHistoryStorage: { getStore: vi.fn() },
 }))
 
-vi.mock("~/utils/browserApi", () => ({
-  hasAlarmsAPI: vi.fn(() => true),
-  sendRuntimeMessage: vi.fn(),
-}))
+vi.mock("~/utils/browserApi", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/browserApi")>()
+  return {
+    ...actual,
+    hasAlarmsAPI: vi.fn(() => true),
+    sendRuntimeMessage: vi.fn(),
+  }
+})
 
 vi.mock("react-hot-toast", () => ({
   default: {

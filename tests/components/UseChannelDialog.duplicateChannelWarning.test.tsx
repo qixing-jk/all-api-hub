@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { useChannelDialogContext } from "~/components/dialogs/ChannelDialog/context/ChannelDialogContext"
-import { useChannelDialog } from "~/components/dialogs/ChannelDialog/hooks/useChannelDialog"
+import {
+  useChannelDialog,
+  useChannelDialogContext,
+} from "~/components/dialogs/ChannelDialog"
 import { ChannelType } from "~/constants"
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import * as accountOperations from "~/services/accounts/accountOperations"

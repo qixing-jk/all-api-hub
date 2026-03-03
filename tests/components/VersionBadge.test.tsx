@@ -7,7 +7,11 @@ vi.mock("~/utils/browserApi", async (importOriginal) => {
   const actual = await importOriginal<typeof import("~/utils/browserApi")>()
   return {
     ...actual,
-    getManifest: vi.fn(),
+    getManifest: vi.fn(() => ({
+      manifest_version: 3,
+      version: "0.0.0",
+      optional_permissions: [],
+    })),
   }
 })
 

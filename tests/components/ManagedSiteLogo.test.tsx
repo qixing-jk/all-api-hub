@@ -8,6 +8,7 @@ import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 
 vi.mock("~/components/dialogs/ChannelDialog", () => {
   return {
+    ChannelDialogProvider: ({ children }: { children: any }) => children,
     useChannelDialog: () => ({
       openWithAccount: vi.fn(),
     }),

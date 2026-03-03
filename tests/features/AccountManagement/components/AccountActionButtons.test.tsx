@@ -43,9 +43,13 @@ vi.mock("~/services/apiService", () => ({
   }),
 }))
 
-vi.mock("~/utils/browserApi", () => ({
-  sendRuntimeMessage: sendRuntimeMessageMock,
-}))
+vi.mock("~/utils/browserApi", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/browserApi")>()
+  return {
+    ...actual,
+    sendRuntimeMessage: sendRuntimeMessageMock,
+  }
+})
 
 vi.mock("~/features/AccountManagement/hooks/AccountActionsContext", () => ({
   useAccountActionsContext: () => ({
