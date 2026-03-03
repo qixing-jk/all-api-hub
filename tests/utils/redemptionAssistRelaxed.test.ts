@@ -4,7 +4,7 @@ import {
   extractRedemptionCodesFromText,
   isPossibleRedemptionCode,
   REDEMPTION_CODE_LENGTH,
-} from "~/utils/redemptionAssist"
+} from "~/services/redemption/utils/redemptionCode"
 
 describe("redemptionAssist (relaxed validation)", () => {
   it("accepts any 32-char non-whitespace token when relaxedCharset is enabled", () => {

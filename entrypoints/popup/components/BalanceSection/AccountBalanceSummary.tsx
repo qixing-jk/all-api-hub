@@ -11,7 +11,7 @@ import {
   calculateTotalConsumption,
   getCurrencySymbol,
   getOppositeCurrency,
-} from "~/utils/formatters"
+} from "~/utils/core/formatters"
 
 const BalanceDisplay: React.FC<{
   value: number

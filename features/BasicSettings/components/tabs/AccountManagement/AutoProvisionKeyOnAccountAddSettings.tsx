@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next"
 import { SettingSection } from "~/components/SettingSection"
 import { Card, CardItem, CardList, Switch } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { showUpdateToast } from "~/utils/toastHelpers"
+import { showUpdateToast } from "~/utils/core/toastHelpers"
 
 /**
  * Settings section controlling whether a default API key is provisioned

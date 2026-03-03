@@ -11,9 +11,9 @@ import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
 import type { SiteAccount } from "~/types"
 import { USAGE_HISTORY_SCHEDULE_MODE } from "~/types/usageHistory"
 import type { UsageHistoryStore } from "~/types/usageHistory"
-import { hasAlarmsAPI, sendRuntimeMessage } from "~/utils/browserApi"
-import { getErrorMessage } from "~/utils/error"
-import { createLogger } from "~/utils/logger"
+import { hasAlarmsAPI, sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 import UsageHistorySyncSettingsSection from "./UsageHistorySyncSettingsSection"
 import UsageHistorySyncStateTable, {

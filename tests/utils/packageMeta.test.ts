@@ -5,7 +5,7 @@ import {
   getHomepage,
   getPkgVersion,
   getRepository,
-} from "~/utils/packageMeta"
+} from "~/utils/navigation/packageMeta"
 
 describe("packageMeta", () => {
   describe("getHomepage", () => {

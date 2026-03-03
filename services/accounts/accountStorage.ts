@@ -24,9 +24,9 @@ import {
 import type { DailyBalanceHistoryCaptureSource } from "~/types/dailyBalanceHistory"
 import { DeepPartial } from "~/types/utils"
 import { deepOverride } from "~/utils"
-import { getErrorMessage } from "~/utils/error"
-import { safeRandomUUID } from "~/utils/identifier"
-import { createLogger } from "~/utils/logger"
+import { getErrorMessage } from "~/utils/core/error"
+import { safeRandomUUID } from "~/utils/core/identifier"
+import { createLogger } from "~/utils/core/logger"
 
 import { userPreferences } from "../preferences/userPreferences"
 import { getSiteType } from "../siteDetection/detectSiteType"

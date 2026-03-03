@@ -9,8 +9,8 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { exportShareSnapshotWithToast } from "~/features/ShareSnapshots/utils/exportShareSnapshotWithToast"
 import { buildOverviewShareSnapshotPayload } from "~/services/sharing/shareSnapshots"
-import { getErrorMessage } from "~/utils/error"
-import { createLogger } from "~/utils/logger"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("ShareOverviewSnapshotButton")
 

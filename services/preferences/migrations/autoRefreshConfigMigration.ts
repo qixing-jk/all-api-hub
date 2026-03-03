@@ -4,7 +4,7 @@
  */
 
 import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
-import { createLogger } from "~/utils/logger"
+import { createLogger } from "~/utils/core/logger"
 
 import type { UserPreferences } from "../userPreferences"
 

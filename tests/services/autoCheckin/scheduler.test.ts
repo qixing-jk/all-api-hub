@@ -19,8 +19,8 @@ import {
   getAlarm,
   hasAlarmsAPI,
   onAlarm,
-} from "~/utils/browserApi"
-import { getErrorMessage } from "~/utils/error"
+} from "~/utils/browser/browserApi"
+import { getErrorMessage } from "~/utils/core/error"
 
 vi.mock("~/services/preferences/userPreferences", () => ({
   DEFAULT_PREFERENCES: {
@@ -68,8 +68,9 @@ vi.mock("~/services/checkin/autoCheckin/storage", () => ({
   },
 }))
 
-vi.mock("~/utils/browserApi", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("~/utils/browserApi")>()
+vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/browser/browserApi")>()
   return {
     ...actual,
     clearAlarm: vi.fn(),
@@ -80,7 +81,7 @@ vi.mock("~/utils/browserApi", async (importOriginal) => {
   }
 })
 
-vi.mock("~/utils/error", () => ({
+vi.mock("~/utils/core/error", () => ({
   getErrorMessage: vi.fn((e: unknown) => String(e)),
 }))
 

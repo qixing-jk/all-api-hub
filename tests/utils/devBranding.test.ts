@@ -7,7 +7,7 @@ import {
   formatDevManifestName,
   formatDevVersionName,
   getDevBadgeText,
-} from "~/utils/devBranding"
+} from "~/utils/core/devBranding"
 
 /**
  * These tests cover the pure formatting helpers used to label dev builds.

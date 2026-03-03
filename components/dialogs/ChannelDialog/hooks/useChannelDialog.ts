@@ -15,8 +15,8 @@ import {
   type SiteAccount,
 } from "~/types"
 import type { ManagedSiteChannel } from "~/types/managedSite"
-import { getErrorMessage } from "~/utils/error"
-import { createLogger } from "~/utils/logger"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to channel dialog open helpers.

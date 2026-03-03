@@ -1,7 +1,7 @@
 import { Storage } from "@plasmohq/storage"
 
 import type { PricingResponse } from "~/services/apiService/common/type"
-import { createLogger } from "~/utils/logger"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to persisted model-pricing cache operations.

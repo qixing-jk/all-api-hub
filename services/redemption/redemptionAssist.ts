@@ -5,17 +5,17 @@ import { getSiteApiRouter } from "~/constants/siteType"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { redeemService } from "~/services/redemption/redeemService"
+import { isPossibleRedemptionCode } from "~/services/redemption/utils/redemptionCode"
 import { searchAccounts } from "~/services/search/accountSearch"
 import type { DisplaySiteData } from "~/types"
-import { getErrorMessage } from "~/utils/error"
-import { createLogger } from "~/utils/logger"
-import { isPossibleRedemptionCode } from "~/utils/redemptionAssist"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
+import { joinUrl } from "~/utils/core/url"
 import {
   buildOriginWhitelistPattern,
   buildUrlPrefixWhitelistPattern,
   isUrlAllowedByRegexList,
-} from "~/utils/redemptionAssistWhitelist"
-import { joinUrl } from "~/utils/url"
+} from "~/utils/core/urlWhitelist"
 
 /**
  * Unified logger scoped to the redemption assist background service.

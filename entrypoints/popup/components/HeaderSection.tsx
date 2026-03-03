@@ -18,9 +18,9 @@ import { COLORS } from "~/constants/designTokens"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { changelogOnUpdateState } from "~/services/updates/changelogOnUpdateState"
 import { isExtensionSidePanel } from "~/utils/browser"
-import { getManifest } from "~/utils/browserApi"
-import { getErrorMessage } from "~/utils/error"
-import { createLogger } from "~/utils/logger"
+import { getManifest } from "~/utils/browser/browserApi"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 import {
   openFullAccountManagerPage,
   openFullBookmarkManagerPage,

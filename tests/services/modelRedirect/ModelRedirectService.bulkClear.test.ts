@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { NEW_API } from "~/constants/siteType"
-import { ModelRedirectService } from "~/services/models/modelRedirect/ModelRedirectService"
-import { userPreferences } from "~/services/preferences/userPreferences"
 import {
   getManagedSiteAdminConfig,
   getManagedSiteConfig,
-} from "~/utils/managedSite"
+} from "~/services/managedSites/utils/managedSite"
+import { ModelRedirectService } from "~/services/models/modelRedirect/ModelRedirectService"
+import { userPreferences } from "~/services/preferences/userPreferences"
 
 const listChannelsMock = vi.fn()
 const updateChannelModelMappingMock = vi.fn()
@@ -28,7 +28,7 @@ vi.mock("~/services/preferences/userPreferences", () => ({
   },
 }))
 
-vi.mock("~/utils/managedSite", () => ({
+vi.mock("~/services/managedSites/utils/managedSite", () => ({
   getManagedSiteAdminConfig: vi.fn(),
   getManagedSiteConfig: vi.fn(),
 }))

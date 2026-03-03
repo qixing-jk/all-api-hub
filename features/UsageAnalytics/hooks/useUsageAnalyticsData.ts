@@ -4,7 +4,7 @@ import { accountStorage } from "~/services/accounts/accountStorage"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
 import type { SiteAccount } from "~/types"
 import type { UsageHistoryStore } from "~/types/usageHistory"
-import { createLogger } from "~/utils/logger"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to the Usage Analytics options page.

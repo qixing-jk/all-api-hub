@@ -17,7 +17,6 @@ import type {
   TempWindowTurnstileFetchParams,
   TempWindowTurnstileMeta,
 } from "~/types/tempWindowFetch"
-import { resolveAuthTypeEnum } from "~/utils/authType"
 import {
   createTab,
   createWindow,
@@ -26,24 +25,25 @@ import {
   onTabRemoved,
   onWindowRemoved,
   removeTabOrWindow,
-} from "~/utils/browserApi"
+} from "~/utils/browser/browserApi"
 import {
   addAuthMethodHeader,
   AUTH_MODE,
   COOKIE_SESSION_OVERRIDE_HEADER_NAME,
   getCookieHeaderForUrl,
-} from "~/utils/cookieHelper"
-import { mergeCookieHeaders } from "~/utils/cookieString"
+} from "~/utils/browser/cookieHelper"
+import { mergeCookieHeaders } from "~/utils/browser/cookieString"
 import {
   applyTempWindowCookieRule,
   removeTempWindowCookieRule,
-} from "~/utils/dnrCookieInjector"
-import { getErrorMessage } from "~/utils/error"
-import { safeRandomUUID } from "~/utils/identifier"
-import { createLogger } from "~/utils/logger"
-import { isProtectionBypassFirefoxEnv } from "~/utils/protectionBypass"
-import { sanitizeUrlForLog } from "~/utils/sanitizeUrlForLog"
-import { appendQueryParam } from "~/utils/url"
+} from "~/utils/browser/dnrCookieInjector"
+import { isProtectionBypassFirefoxEnv } from "~/utils/browser/protectionBypass"
+import { resolveAuthTypeEnum } from "~/utils/core/authType"
+import { getErrorMessage } from "~/utils/core/error"
+import { safeRandomUUID } from "~/utils/core/identifier"
+import { createLogger } from "~/utils/core/logger"
+import { sanitizeUrlForLog } from "~/utils/core/sanitizeUrlForLog"
+import { appendQueryParam } from "~/utils/core/url"
 
 /**
  * Unified logger scoped to background temp-window lifecycle and fetch helpers.

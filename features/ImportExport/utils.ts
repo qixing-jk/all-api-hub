@@ -21,7 +21,7 @@ import {
 import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { tagStorage } from "~/services/tags/tagStorage"
-import { createLogger } from "~/utils/logger"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to import/export UI wrappers for backups and preferences.
@@ -40,6 +40,9 @@ export type {
   ImportFromBackupOptions,
 }
 
+/**
+ * Import data from a backup object, which may be a full backup or a partial backup
+ */
 export async function importFromBackupObject(
   data: RawBackupData,
   options?: ImportFromBackupOptions,

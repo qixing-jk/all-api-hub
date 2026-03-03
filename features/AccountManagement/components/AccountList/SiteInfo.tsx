@@ -37,9 +37,9 @@ import {
   TEMP_WINDOW_HEALTH_STATUS_CODES,
   type DisplaySiteData,
 } from "~/types"
-import { createTab } from "~/utils/browserApi"
-import { getErrorMessage } from "~/utils/error"
-import { createLogger } from "~/utils/logger"
+import { createTab } from "~/utils/browser/browserApi"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 import {
   openAccountBaseUrl,
   openCheckInAndRedeem,

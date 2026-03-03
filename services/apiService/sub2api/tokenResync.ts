@@ -1,6 +1,6 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { getAllTabs, sendRuntimeMessage } from "~/utils/browserApi"
-import { createLogger } from "~/utils/logger"
+import { getAllTabs, sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { createLogger } from "~/utils/core/logger"
 
 import { getSafeErrorMessage } from "./redaction"
 

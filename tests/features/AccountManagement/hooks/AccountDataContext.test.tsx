@@ -84,7 +84,7 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
   }),
 }))
 
-vi.mock("~/utils/browserApi", () => ({
+vi.mock("~/utils/browser/browserApi", () => ({
   getActiveTabs: vi.fn(async () => []),
   getAllTabs: vi.fn(async () => []),
   onRuntimeMessage: vi.fn((listener: any) => {

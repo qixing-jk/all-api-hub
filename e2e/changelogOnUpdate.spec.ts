@@ -3,8 +3,8 @@ import type { BrowserContext, Page, Worker } from "@playwright/test"
 import { expect, test } from "~/e2e/fixtures/extensionTest"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import { CURRENT_PREFERENCES_VERSION } from "~/services/preferences/migrations/preferencesMigration"
-import { getErrorMessage } from "~/utils/error"
-import { createLogger } from "~/utils/logger"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("e2e/changelogOnUpdate")
 

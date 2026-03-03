@@ -7,7 +7,7 @@
  */
 
 import type { SiteAccount } from "~/types"
-import { createLogger } from "~/utils/logger"
+import { createLogger } from "~/utils/core/logger"
 
 import { migrateCheckInDualStatusConfig } from "./checkInDualStatusMigration"
 import { migrateCheckInConfig } from "./checkInMigration"

@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next"
 
 import { BodySmall } from "~/components/ui"
 import type { ApiToken } from "~/types"
-import { formatKeyTime } from "~/utils/formatters"
+import { formatKeyTime } from "~/utils/core/formatters"
 
 import { formatQuota } from "../../utils"
 

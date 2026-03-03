@@ -9,9 +9,12 @@ import type {
   AutoCheckinRunResult,
   AutoCheckinRunSummary,
 } from "~/types/autoCheckin"
-import { onRuntimeMessage, sendRuntimeMessage } from "~/utils/browserApi"
-import { safeRandomUUID } from "~/utils/identifier"
-import { createLogger } from "~/utils/logger"
+import {
+  onRuntimeMessage,
+  sendRuntimeMessage,
+} from "~/utils/browser/browserApi"
+import { safeRandomUUID } from "~/utils/core/identifier"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to UI-open auto check-in pretrigger hooks.

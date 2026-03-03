@@ -17,7 +17,7 @@ import {
   DEFAULT_PREFERENCES,
   type WebAiApiCheckPreferences,
 } from "~/services/preferences/userPreferences"
-import { createLogger } from "~/utils/logger"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to the Basic Settings Web AI API Check section.

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { getErrorMessage } from "~/utils/error"
+import { getErrorMessage } from "~/utils/core/error"
 
 describe("getErrorMessage", () => {
   describe("Error instance handling", () => {

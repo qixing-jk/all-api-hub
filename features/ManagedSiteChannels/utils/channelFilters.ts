@@ -1,8 +1,8 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
-import { sendRuntimeMessage } from "~/utils/browserApi"
-import { createLogger } from "~/utils/logger"
+import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to channel filter load/save helpers in the options UI.

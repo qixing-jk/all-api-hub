@@ -16,8 +16,9 @@ vi.mock("~/components/dialogs/ChannelDialog", () => ({
   useChannelDialog: () => ({ openWithAccount: mockOpenWithAccount }),
 }))
 
-vi.mock("~/utils/browserApi", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("~/utils/browserApi")>()
+vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/browser/browserApi")>()
   return {
     ...actual,
     getActiveTabs: vi.fn(async () => []),

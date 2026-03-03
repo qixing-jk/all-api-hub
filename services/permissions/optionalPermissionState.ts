@@ -1,6 +1,6 @@
 import { Storage } from "@plasmohq/storage"
 
-import { createLogger } from "~/utils/logger"
+import { createLogger } from "~/utils/core/logger"
 
 import { OPTIONAL_PERMISSIONS } from "./permissionManager"
 

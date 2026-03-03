@@ -10,7 +10,7 @@ import {
   ACCOUNT_AUTO_REFRESH_MIN_INTERVAL_MIN_SECONDS,
   DEFAULT_ACCOUNT_AUTO_REFRESH,
 } from "~/types/accountAutoRefresh"
-import { showUpdateToast } from "~/utils/toastHelpers"
+import { showUpdateToast } from "~/utils/core/toastHelpers"
 
 /**
  * Settings section for auto-refresh behavior (intervals, toggle, refresh on open).

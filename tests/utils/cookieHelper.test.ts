@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { getCookieHeaderForUrl } from "~/utils/cookieHelper"
+import { getCookieHeaderForUrl } from "~/utils/browser/cookieHelper"
 
 describe("cookieHelper", () => {
   beforeEach(() => {

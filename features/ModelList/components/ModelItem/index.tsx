@@ -4,9 +4,9 @@ import { useTranslation } from "react-i18next"
 
 import { Card, CardContent } from "~/components/ui"
 import type { ModelPricing } from "~/services/apiService/common/type"
+import type { CalculatedPrice } from "~/services/models/utils/modelPricing"
 import type { DisplaySiteData } from "~/types"
-import { createLogger } from "~/utils/logger"
-import type { CalculatedPrice } from "~/utils/modelPricing"
+import { createLogger } from "~/utils/core/logger"
 
 import { ModelItemDescription } from "./ModelItemDescription"
 import { ModelItemDetails } from "./ModelItemDetails"

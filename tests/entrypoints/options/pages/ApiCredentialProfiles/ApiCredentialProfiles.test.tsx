@@ -3,13 +3,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import ApiCredentialProfiles from "~/entrypoints/options/pages/ApiCredentialProfiles"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
-import { render, screen, waitFor, within } from "~/tests/test-utils/render"
-import type { Tag } from "~/types"
-import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import {
   normalizeGoogleFamilyBaseUrl,
   normalizeOpenAiFamilyBaseUrl,
-} from "~/utils/webAiApiCheck"
+} from "~/services/verification/webAiApiCheck/extractCredentials"
+import { render, screen, waitFor, within } from "~/tests/test-utils/render"
+import type { Tag } from "~/types"
+import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 
 let store: ApiCredentialProfile[] = []
 

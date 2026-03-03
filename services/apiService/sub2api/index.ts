@@ -27,7 +27,7 @@ import type {
 } from "~/services/apiService/common/type"
 import { fetchApi } from "~/services/apiService/common/utils"
 import { AuthTypeEnum, SiteHealthStatus, type CheckInConfig } from "~/types"
-import { createLogger } from "~/utils/logger"
+import { createLogger } from "~/utils/core/logger"
 
 import { parseSub2ApiEnvelope, parseSub2ApiUserIdentity } from "./parsing"
 import { getSafeErrorMessage } from "./redaction"

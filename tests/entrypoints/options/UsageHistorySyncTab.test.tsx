@@ -7,7 +7,7 @@ import UsageHistorySyncTab from "~/features/BasicSettings/components/tabs/UsageH
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
 import { render } from "~/tests/test-utils/render"
-import { sendRuntimeMessage } from "~/utils/browserApi"
+import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 
 vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
   const actual =
@@ -26,8 +26,9 @@ vi.mock("~/services/history/usageHistory/storage", () => ({
   usageHistoryStorage: { getStore: vi.fn() },
 }))
 
-vi.mock("~/utils/browserApi", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("~/utils/browserApi")>()
+vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/browser/browserApi")>()
   return {
     ...actual,
     hasAlarmsAPI: vi.fn(() => true),

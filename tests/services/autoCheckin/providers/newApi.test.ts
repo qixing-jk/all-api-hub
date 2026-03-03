@@ -10,12 +10,13 @@ vi.mock("~/services/apiService/common/utils", () => ({
   fetchApiData: vi.fn(),
 }))
 
-vi.mock("~/utils/tempWindowFetch", () => ({
+vi.mock("~/utils/browser/tempWindowFetch", () => ({
   tempWindowTurnstileFetch: vi.fn(),
 }))
 
-vi.mock("~/utils/browserApi", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("~/utils/browserApi")>()
+vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/browser/browserApi")>()
   return { ...actual, isAllowedIncognitoAccess: vi.fn() }
 })
 
@@ -80,7 +81,7 @@ describe("newApiProvider", () => {
     it("retries once via Turnstile-assisted temp context when message indicates Turnstile is required", async () => {
       const { fetchApi } = await import("~/services/apiService/common/utils")
       const { tempWindowTurnstileFetch } = await import(
-        "~/utils/tempWindowFetch"
+        "~/utils/browser/tempWindowFetch"
       )
 
       vi.mocked(fetchApi).mockResolvedValueOnce({
@@ -132,7 +133,7 @@ describe("newApiProvider", () => {
         "~/services/apiService/common/utils"
       )
       const { tempWindowTurnstileFetch } = await import(
-        "~/utils/tempWindowFetch"
+        "~/utils/browser/tempWindowFetch"
       )
 
       vi.mocked(fetchApi).mockResolvedValueOnce({
@@ -167,7 +168,7 @@ describe("newApiProvider", () => {
         "~/services/apiService/common/utils"
       )
       const { tempWindowTurnstileFetch } = await import(
-        "~/utils/tempWindowFetch"
+        "~/utils/browser/tempWindowFetch"
       )
 
       vi.mocked(fetchApi).mockResolvedValueOnce({
@@ -199,10 +200,12 @@ describe("newApiProvider", () => {
         "~/services/apiService/common/utils"
       )
       const { tempWindowTurnstileFetch } = await import(
-        "~/utils/tempWindowFetch"
+        "~/utils/browser/tempWindowFetch"
       )
 
-      const { isAllowedIncognitoAccess } = await import("~/utils/browserApi")
+      const { isAllowedIncognitoAccess } = await import(
+        "~/utils/browser/browserApi"
+      )
 
       vi.mocked(fetchApi).mockResolvedValueOnce({
         success: false,
@@ -249,9 +252,11 @@ describe("newApiProvider", () => {
         "~/services/apiService/common/utils"
       )
       const { tempWindowTurnstileFetch } = await import(
-        "~/utils/tempWindowFetch"
+        "~/utils/browser/tempWindowFetch"
       )
-      const { isAllowedIncognitoAccess } = await import("~/utils/browserApi")
+      const { isAllowedIncognitoAccess } = await import(
+        "~/utils/browser/browserApi"
+      )
 
       vi.mocked(fetchApi).mockResolvedValueOnce({
         success: false,
@@ -286,7 +291,7 @@ describe("newApiProvider", () => {
     it("does not trigger Turnstile flow for non-Turnstile failures", async () => {
       const { fetchApi } = await import("~/services/apiService/common/utils")
       const { tempWindowTurnstileFetch } = await import(
-        "~/utils/tempWindowFetch"
+        "~/utils/browser/tempWindowFetch"
       )
 
       vi.mocked(fetchApi).mockResolvedValueOnce({

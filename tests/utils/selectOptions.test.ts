@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest"
 
-import type { CompactMultiSelectOption } from "~/components/ui"
-import type { ChannelGroup, ChannelModel } from "~/types/newApi"
 import {
   groupsToOptions,
   mergeUniqueOptions,
   modelsToOptions,
   toSelectOptions,
-} from "~/utils/selectOptions"
+} from "~/components/dialogs/ChannelDialog/utils/selectOptions"
+import type { CompactMultiSelectOption } from "~/components/ui"
+import type { ChannelGroup, ChannelModel } from "~/types/newApi"
 
 describe("selectOptions", () => {
   describe("toSelectOptions", () => {

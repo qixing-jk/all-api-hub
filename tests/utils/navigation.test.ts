@@ -2,7 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { getSiteApiRouter } from "~/constants/siteType"
 import { isExtensionPopup } from "~/utils/browser"
-import { createTab as createTabApi, getExtensionURL } from "~/utils/browserApi"
+import {
+  createTab as createTabApi,
+  getExtensionURL,
+} from "~/utils/browser/browserApi"
+import { joinUrl } from "~/utils/core/url"
 import {
   openCheckInAndRedeem,
   openKeysPage,
@@ -10,15 +14,15 @@ import {
   openMultiplePages,
   openUsagePage,
 } from "~/utils/navigation"
-import { joinUrl } from "~/utils/url"
 
 vi.mock("~/utils/browser", () => ({
   isExtensionPopup: vi.fn().mockReturnValue(false),
   OPTIONS_PAGE_URL: "chrome-extension://options.html",
 }))
 
-vi.mock("~/utils/browserApi", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("~/utils/browserApi")>()
+vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/browser/browserApi")>()
   const createTab = vi.fn()
   const focusTab = vi.fn()
   const getExtensionURL = vi.fn((path: string) => `ext://${path}`)
@@ -41,7 +45,7 @@ vi.mock("~/constants/siteType", () => ({
   })),
 }))
 
-vi.mock("~/utils/url", () => ({
+vi.mock("~/utils/core/url", () => ({
   joinUrl: vi.fn((base: string, path: string) => `${base}${path}`),
 }))
 

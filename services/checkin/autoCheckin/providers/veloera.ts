@@ -15,7 +15,7 @@ import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/p
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
-import { getErrorMessage } from "~/utils/error"
+import { getErrorMessage } from "~/utils/core/error"
 
 import type { AutoCheckinProvider } from "./index"
 

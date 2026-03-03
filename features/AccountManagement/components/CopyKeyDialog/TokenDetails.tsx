@@ -18,11 +18,15 @@ import { ManagedSiteIcon } from "~/components/icons/ManagedSiteIcon"
 import { KiloCodeExportDialog } from "~/components/KiloCodeExportDialog"
 import { IconButton } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { OpenInCherryStudio } from "~/services/integrations/cherryStudio"
+import { getManagedSiteLabelKey } from "~/services/managedSites/utils/managedSite"
 import type { ApiToken, DisplaySiteData } from "~/types"
-import { OpenInCherryStudio } from "~/utils/cherryStudio"
-import { formatKeyTime, formatQuota, formatUsedQuota } from "~/utils/formatters"
-import { getManagedSiteLabelKey } from "~/utils/managedSite"
-import { showResultToast } from "~/utils/toastHelpers"
+import {
+  formatKeyTime,
+  formatQuota,
+  formatUsedQuota,
+} from "~/utils/core/formatters"
+import { showResultToast } from "~/utils/core/toastHelpers"
 
 interface TokenDetailsProps {
   token: ApiToken

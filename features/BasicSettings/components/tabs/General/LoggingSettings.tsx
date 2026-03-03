@@ -15,7 +15,7 @@ import {
 } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { LOG_LEVELS, type LogLevel } from "~/types/logging"
-import { showUpdateToast } from "~/utils/toastHelpers"
+import { showUpdateToast } from "~/utils/core/toastHelpers"
 
 /**
  * Settings section for unified logger preferences (console enablement + minimum level).

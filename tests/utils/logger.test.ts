@@ -5,7 +5,7 @@ import {
   createLogger,
   setLoggerContext,
   setLoggingPreferences,
-} from "~/utils/logger"
+} from "~/utils/core/logger"
 
 /**
  * Unit tests for the unified logger:

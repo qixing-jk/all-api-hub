@@ -22,8 +22,9 @@ describe("setupRuntimeMessageListeners routing", () => {
 
     vi.resetModules()
 
-    vi.doMock("~/utils/browserApi", async (importOriginal) => {
-      const actual = await importOriginal<typeof import("~/utils/browserApi")>()
+    vi.doMock("~/utils/browser/browserApi", async (importOriginal) => {
+      const actual =
+        await importOriginal<typeof import("~/utils/browser/browserApi")>()
       return {
         ...actual,
         onRuntimeMessage: vi.fn((listener: RuntimeMessageListener) => {
@@ -69,7 +70,7 @@ describe("setupRuntimeMessageListeners routing", () => {
   })
 
   afterEach(() => {
-    vi.doUnmock("~/utils/browserApi")
+    vi.doUnmock("~/utils/browser/browserApi")
     vi.doUnmock("~/entrypoints/background/actionClickBehavior")
     vi.doUnmock("~/entrypoints/background/contextMenus")
     vi.doUnmock("~/services/models/modelSync")

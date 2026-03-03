@@ -12,6 +12,7 @@ import {
 } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
 import { getApiService } from "~/services/apiService"
+import { identifyProvider } from "~/services/models/utils/modelProviders"
 import {
   API_TYPES,
   getApiVerificationProbeDefinitions,
@@ -24,8 +25,7 @@ import type {
 } from "~/services/verification/aiApiVerification"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import type { ApiToken } from "~/types"
-import { createLogger } from "~/utils/logger"
-import { identifyProvider } from "~/utils/modelProviders"
+import { createLogger } from "~/utils/core/logger"
 
 import { ProbeStatusBadge } from "./ProbeStatusBadge"
 import type { ProbeItemState, VerifyApiDialogProps } from "./types"

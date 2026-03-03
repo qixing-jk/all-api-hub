@@ -43,8 +43,9 @@ describe("background onInstalled changelog opening", () => {
     ;(globalThis as any).defineBackground = (factory: () => unknown) =>
       factory()
 
-    vi.doMock("~/utils/browserApi", async (importOriginal) => {
-      const actual = await importOriginal<typeof import("~/utils/browserApi")>()
+    vi.doMock("~/utils/browser/browserApi", async (importOriginal) => {
+      const actual =
+        await importOriginal<typeof import("~/utils/browser/browserApi")>()
       return {
         ...actual,
         createTab: createTabMock,
@@ -58,7 +59,7 @@ describe("background onInstalled changelog opening", () => {
       }
     })
 
-    vi.doMock("~/utils/docsLinks", () => ({
+    vi.doMock("~/utils/navigation/docsLinks", () => ({
       getDocsChangelogUrl: getDocsChangelogUrlMock,
     }))
 
@@ -130,8 +131,8 @@ describe("background onInstalled changelog opening", () => {
   afterEach(() => {
     delete (globalThis as any).defineBackground
 
-    vi.doUnmock("~/utils/browserApi")
-    vi.doUnmock("~/utils/docsLinks")
+    vi.doUnmock("~/utils/browser/browserApi")
+    vi.doUnmock("~/utils/navigation/docsLinks")
     vi.doUnmock("~/services/updates/changelogOnUpdateState")
     vi.doUnmock("~/services/preferences/userPreferences")
     vi.doUnmock("~/entrypoints/background/runtimeMessages")

@@ -15,6 +15,7 @@ import {
   CURRENT_PREFERENCES_VERSION,
   migratePreferences,
 } from "~/services/preferences/migrations/preferencesMigration"
+import { DEFAULT_SORTING_PRIORITY_CONFIG } from "~/services/preferences/utils/sortingPriority"
 import { CurrencyType, DashboardTabType, SortField, SortOrder } from "~/types"
 import {
   AccountAutoRefresh,
@@ -65,8 +66,7 @@ import {
   WebDAVSyncStrategy,
 } from "~/types/webdav"
 import { deepOverride } from "~/utils"
-import { createLogger } from "~/utils/logger"
-import { DEFAULT_SORTING_PRIORITY_CONFIG } from "~/utils/sortingPriority"
+import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("UserPreferences")
 

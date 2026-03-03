@@ -8,9 +8,9 @@ import { isSameStringSet } from "~/utils"
 import {
   registerWebRequestInterceptor,
   setupWebRequestInterceptor,
-} from "~/utils/cookieHelper"
-import { createLogger } from "~/utils/logger"
-import { isProtectionBypassFirefoxEnv } from "~/utils/protectionBypass"
+} from "~/utils/browser/cookieHelper"
+import { isProtectionBypassFirefoxEnv } from "~/utils/browser/protectionBypass"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to the background cookie interceptor lifecycle.

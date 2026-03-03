@@ -21,17 +21,17 @@ import { KiloCodeExportDialog } from "~/components/KiloCodeExportDialog"
 import { Badge, Heading6, IconButton } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+import { OpenInCherryStudio } from "~/services/integrations/cherryStudio"
+import { getManagedSiteLabelKey } from "~/services/managedSites/utils/managedSite"
 import {
   API_TYPES,
   type ApiVerificationApiType,
 } from "~/services/verification/aiApiVerification"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import type { AccountToken, DisplaySiteData } from "~/types"
-import { OpenInCherryStudio } from "~/utils/cherryStudio"
-import { createLogger } from "~/utils/logger"
-import { getManagedSiteLabelKey } from "~/utils/managedSite"
+import { createLogger } from "~/utils/core/logger"
+import { showResultToast } from "~/utils/core/toastHelpers"
 import { openApiCredentialProfilesPage } from "~/utils/navigation"
-import { showResultToast } from "~/utils/toastHelpers"
 
 /**
  * Unified logger scoped to the Key Management token header actions.

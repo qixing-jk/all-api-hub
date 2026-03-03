@@ -2,7 +2,7 @@ import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
 import { Alert, Button } from "~/components/ui"
-import { getDocsAutoDetectUrl } from "~/utils/docsLinks"
+import { getDocsAutoDetectUrl } from "~/utils/navigation/docsLinks"
 
 export interface AutoDetectSlowHintAlertProps {
   helpDocUrl?: string

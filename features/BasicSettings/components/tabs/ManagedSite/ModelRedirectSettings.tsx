@@ -8,11 +8,11 @@ import { Switch } from "~/components/ui/Switch"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { getApiService } from "~/services/apiService"
 import { hasValidManagedSiteConfig } from "~/services/managedSites/managedSiteService"
+import { getManagedSiteAdminConfig } from "~/services/managedSites/utils/managedSite"
 import { ModelRedirectService } from "~/services/models/modelRedirect"
 import { AuthTypeEnum } from "~/types"
 import { ALL_PRESET_STANDARD_MODELS } from "~/types/managedSiteModelRedirect"
-import { createLogger } from "~/utils/logger"
-import { getManagedSiteAdminConfig } from "~/utils/managedSite"
+import { createLogger } from "~/utils/core/logger"
 
 import { ClearModelRedirectMappingsDialog } from "../../dialogs/ClearModelRedirectMappingsDialog"
 

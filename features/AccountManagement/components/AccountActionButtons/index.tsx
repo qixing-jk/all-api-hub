@@ -32,9 +32,9 @@ import { buildAccountShareSnapshotPayload } from "~/services/sharing/shareSnapsh
 import { sanitizeOriginUrl } from "~/services/sharing/shareSnapshots/utils"
 import type { DisplaySiteData } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
-import { sendRuntimeMessage } from "~/utils/browserApi"
-import { getErrorMessage } from "~/utils/error"
-import { createLogger } from "~/utils/logger"
+import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 import {
   openKeysPage,
   openModelsPage,

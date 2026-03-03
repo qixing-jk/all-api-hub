@@ -14,8 +14,8 @@ import {
 } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
-import { getErrorMessage } from "~/utils/error"
-import { createLogger } from "~/utils/logger"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to the Basic Settings redemption assist section.

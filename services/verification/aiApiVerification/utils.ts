@@ -1,5 +1,5 @@
-import { getErrorMessage } from "~/utils/error"
-import { coerceBaseUrlToPathSuffix } from "~/utils/url"
+import { getErrorMessage } from "~/utils/core/error"
+import { coerceBaseUrlToPathSuffix } from "~/utils/core/url"
 
 /**
  * Redact any known secret strings from a message.

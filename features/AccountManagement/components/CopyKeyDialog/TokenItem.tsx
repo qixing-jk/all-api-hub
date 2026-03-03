@@ -7,7 +7,10 @@ import { useTranslation } from "react-i18next"
 
 import { Badge, Card, CardContent, IconButton } from "~/components/ui"
 import type { ApiToken, DisplaySiteData } from "~/types"
-import { getGroupBadgeStyle, getStatusBadgeStyle } from "~/utils/formatters"
+import {
+  getGroupBadgeStyle,
+  getStatusBadgeStyle,
+} from "~/utils/core/formatters"
 
 import { TokenDetails } from "./TokenDetails"
 

@@ -16,8 +16,8 @@ import {
 } from "~/types/managedSiteModelSync"
 import type { OctopusChannel, OctopusFetchModelRequest } from "~/types/octopus"
 import type { OctopusConfig } from "~/types/octopusConfig"
-import { getErrorMessage } from "~/utils/error"
-import { createLogger } from "~/utils/logger"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("OctopusModelSync")
 

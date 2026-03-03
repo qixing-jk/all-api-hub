@@ -1,5 +1,5 @@
 import { modelMetadataService } from "~/services/models/modelMetadata"
-import { removeDateSuffix } from "~/utils/modelName"
+import { removeDateSuffix } from "~/services/models/utils/modelName"
 
 /**
  * Normalizes a raw model identifier to its core name by stripping known

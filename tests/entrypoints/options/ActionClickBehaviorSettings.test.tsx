@@ -3,8 +3,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import ActionClickBehaviorSettings from "~/features/BasicSettings/components/tabs/General/ActionClickBehaviorSettings"
 import { fireEvent, render, screen, waitFor } from "~/tests/test-utils/render"
-import { getSidePanelSupport, type SidePanelSupport } from "~/utils/browserApi"
-import { showResultToast, showUpdateToast } from "~/utils/toastHelpers"
+import {
+  getSidePanelSupport,
+  type SidePanelSupport,
+} from "~/utils/browser/browserApi"
+import { showResultToast, showUpdateToast } from "~/utils/core/toastHelpers"
 
 vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
   const actual =
@@ -15,15 +18,16 @@ vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
   }
 })
 
-vi.mock("~/utils/browserApi", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("~/utils/browserApi")>()
+vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/browser/browserApi")>()
   return {
     ...actual,
     getSidePanelSupport: vi.fn(),
   }
 })
 
-vi.mock("~/utils/toastHelpers", () => ({
+vi.mock("~/utils/core/toastHelpers", () => ({
   showResultToast: vi.fn(),
   showUpdateToast: vi.fn(),
 }))

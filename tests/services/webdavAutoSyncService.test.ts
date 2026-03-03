@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { webdavAutoSyncService } from "~/services/webdav/webdavAutoSyncService"
 
 // Basic getErrorMessage passthrough to avoid noisy output
-vi.mock("~/utils/error", () => ({
+vi.mock("~/utils/core/error", () => ({
   getErrorMessage: (e: unknown) => String(e),
 }))
 
@@ -13,7 +13,7 @@ const mockCreateAlarm = vi.fn()
 const mockClearAlarm = vi.fn()
 const mockOnAlarm = vi.fn()
 
-vi.mock(import("~/utils/browserApi"), async (importOriginal) => {
+vi.mock(import("~/utils/browser/browserApi"), async (importOriginal) => {
   const actual = await importOriginal()
   return {
     ...actual,

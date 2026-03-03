@@ -12,8 +12,8 @@ import {
   Link,
 } from "~/components/ui"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { sendRuntimeMessage } from "~/utils/browserApi"
-import { createLogger } from "~/utils/logger"
+import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to redemption assist prompt toast interactions.

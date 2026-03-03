@@ -16,23 +16,23 @@ import {
 } from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import {
+  analyzeAutoDetectError,
+  AutoDetectError,
+} from "~/services/accounts/utils/autoDetectUtils"
+import {
   AuthTypeEnum,
   type CheckInConfig,
   type DisplaySiteData,
   type Sub2ApiAuthConfig,
 } from "~/types"
 import {
-  analyzeAutoDetectError,
-  AutoDetectError,
-} from "~/utils/autoDetectUtils"
-import {
   getActiveTabs,
   getAllTabs,
   onTabActivated,
   onTabUpdated,
   sendRuntimeMessage,
-} from "~/utils/browserApi"
-import { createLogger } from "~/utils/logger"
+} from "~/utils/browser/browserApi"
+import { createLogger } from "~/utils/core/logger"
 
 const AUTO_DETECT_SLOW_HINT_DELAY_MS = 10_000
 

@@ -48,8 +48,8 @@ import type { DisplaySiteData, SortField } from "~/types"
 import {
   calculateTotalBalanceForSites,
   calculateTotalConsumptionForSites,
-} from "~/utils/formatters"
-import { formatMoneyFixed } from "~/utils/money"
+} from "~/utils/core/formatters"
+import { formatMoneyFixed } from "~/utils/core/money"
 
 import CopyKeyDialog from "../CopyKeyDialog"
 import DelAccountDialog from "../DelAccountDialog"

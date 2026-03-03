@@ -3,8 +3,8 @@ import toast from "react-hot-toast/headless"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { ensureRedemptionToastUi } from "~/entrypoints/content/shared/uiRoot"
-import { sendRuntimeMessage } from "~/utils/browserApi"
-import { createLogger } from "~/utils/logger"
+import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { createLogger } from "~/utils/core/logger"
 
 import { ShieldBypassPromptToast } from "../components/ShieldBypassPromptToast"
 

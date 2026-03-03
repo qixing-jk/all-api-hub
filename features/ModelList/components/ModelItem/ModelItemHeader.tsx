@@ -9,8 +9,8 @@ import { useTranslation } from "react-i18next"
 
 import { Badge, IconButton } from "~/components/ui"
 import type { ModelPricing } from "~/services/apiService/common/type"
-import { getBillingModeText } from "~/utils/modelPricing"
-import { getProviderConfig } from "~/utils/modelProviders"
+import { getBillingModeText } from "~/services/models/utils/modelPricing"
+import { getProviderConfig } from "~/services/models/utils/modelProviders"
 
 interface ModelItemHeaderProps {
   model: ModelPricing

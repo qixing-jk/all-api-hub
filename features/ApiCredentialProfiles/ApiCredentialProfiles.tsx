@@ -20,6 +20,8 @@ import {
 import { RuntimeMessageTypes } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useIsDesktop, useIsSmallScreen } from "~/hooks/useMediaQuery"
+import { OpenInCherryStudio } from "~/services/integrations/cherryStudio"
+import { getManagedSiteLabelKey } from "~/services/managedSites/utils/managedSite"
 import { tagStorage } from "~/services/tags/tagStorage"
 import {
   API_TYPES,
@@ -33,11 +35,9 @@ import {
   type Tag,
 } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
-import { onRuntimeMessage } from "~/utils/browserApi"
-import { OpenInCherryStudio } from "~/utils/cherryStudio"
-import { createLogger } from "~/utils/logger"
-import { getManagedSiteLabelKey } from "~/utils/managedSite"
-import { showResultToast } from "~/utils/toastHelpers"
+import { onRuntimeMessage } from "~/utils/browser/browserApi"
+import { createLogger } from "~/utils/core/logger"
+import { showResultToast } from "~/utils/core/toastHelpers"
 
 import { ApiCredentialProfileDialog } from "./components/ApiCredentialProfileDialog"
 import {

@@ -1,10 +1,10 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { usageHistoryScheduler } from "~/services/history/usageHistory/scheduler"
 import { AccountAutoRefresh } from "~/types/accountAutoRefresh"
-import { sendRuntimeMessage } from "~/utils/browserApi"
-import { createLogger } from "~/utils/logger"
+import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
-import { getErrorMessage } from "../../utils/error"
 import { userPreferences } from "../preferences/userPreferences"
 import { accountStorage } from "./accountStorage"
 

@@ -11,8 +11,8 @@ import type {
   TurnstileTokenWaitStatus,
   TurnstileWidgetDetection,
 } from "~/types/turnstile"
-import { createLogger } from "~/utils/logger"
-import { sanitizeUrlForLog } from "~/utils/sanitizeUrlForLog"
+import { createLogger } from "~/utils/core/logger"
+import { sanitizeUrlForLog } from "~/utils/core/sanitizeUrlForLog"
 
 /**
  * Unified logger scoped to Turnstile detection/auto-start helpers.

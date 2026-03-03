@@ -5,10 +5,10 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import ManagedSiteChannels from "~/entrypoints/options/pages/ManagedSiteChannels"
 import { getManagedSiteService } from "~/services/managedSites/managedSiteService"
 import { fireEvent, render, screen, waitFor } from "~/tests/test-utils/render"
-import { sendRuntimeMessage } from "~/utils/browserApi"
+import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { navigateWithinOptionsPage } from "~/utils/navigation"
 
-vi.mock("~/utils/browserApi", async (importActual) => {
+vi.mock("~/utils/browser/browserApi", async (importActual) => {
   const actual = (await importActual()) as any
   return { ...actual, sendRuntimeMessage: vi.fn() }
 })

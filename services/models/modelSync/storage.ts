@@ -4,7 +4,7 @@ import type {
   ExecutionResult,
   ManagedSiteModelSyncPreferences,
 } from "~/types/managedSiteModelSync"
-import { createLogger } from "~/utils/logger"
+import { createLogger } from "~/utils/core/logger"
 
 import {
   DEFAULT_PREFERENCES,

@@ -10,8 +10,8 @@ import { UI_CONSTANTS } from "~/constants/ui"
 import { useTheme } from "~/contexts/ThemeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { parseDayKey } from "~/services/history/usageHistory/core"
-import { formatTokenCount } from "~/utils/formatters"
-import { formatPriceCompact } from "~/utils/modelPricing"
+import { formatPriceCompact } from "~/services/models/utils/modelPricing"
+import { formatTokenCount } from "~/utils/core/formatters"
 import { navigateWithinOptionsPage } from "~/utils/navigation"
 
 import {

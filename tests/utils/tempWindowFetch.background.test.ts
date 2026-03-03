@@ -5,7 +5,7 @@ import {
   tempWindowFetch,
   tempWindowGetRenderedTitle,
   tempWindowTurnstileFetch,
-} from "~/utils/tempWindowFetch"
+} from "~/utils/browser/tempWindowFetch"
 
 const {
   sendRuntimeMessageMock,
@@ -27,8 +27,9 @@ vi.mock("~/utils/browser", async (importOriginal) => {
   }
 })
 
-vi.mock("~/utils/browserApi", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("~/utils/browserApi")>()
+vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/browser/browserApi")>()
   return {
     ...actual,
     sendRuntimeMessage: sendRuntimeMessageMock,

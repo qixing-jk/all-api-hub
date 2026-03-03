@@ -17,7 +17,7 @@ import {
   USAGE_HISTORY_SCHEDULE_MODE,
   type UsageHistoryPreferences,
 } from "~/types/usageHistory"
-import { getErrorMessage } from "~/utils/error"
+import { getErrorMessage } from "~/utils/core/error"
 
 import {
   USAGE_HISTORY_LIMITS,

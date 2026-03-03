@@ -19,6 +19,7 @@ import {
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import { createDynamicSortComparator } from "~/services/preferences/utils/sortingPriority"
 import { searchAccounts } from "~/services/search/accountSearch"
 import { tagStorage } from "~/services/tags/tagStorage"
 import type {
@@ -41,9 +42,8 @@ import {
   onTabActivated,
   onTabRemoved,
   onTabUpdated,
-} from "~/utils/browserApi"
-import { createLogger } from "~/utils/logger"
-import { createDynamicSortComparator } from "~/utils/sortingPriority"
+} from "~/utils/browser/browserApi"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to account data context and refresh orchestration.

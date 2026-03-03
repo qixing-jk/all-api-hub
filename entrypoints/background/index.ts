@@ -14,8 +14,8 @@ import {
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { tagStorage } from "~/services/tags/tagStorage"
 import { changelogOnUpdateState } from "~/services/updates/changelogOnUpdateState"
-import { getManifest, onInstalled, onStartup } from "~/utils/browserApi"
-import { createLogger } from "~/utils/logger"
+import { getManifest, onInstalled, onStartup } from "~/utils/browser/browserApi"
+import { createLogger } from "~/utils/core/logger"
 import { openOrFocusOptionsMenuItem } from "~/utils/navigation"
 
 import { applyActionClickBehavior } from "./actionClickBehavior"

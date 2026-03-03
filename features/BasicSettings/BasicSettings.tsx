@@ -28,7 +28,7 @@ import {
   navigateToAnchor,
   parseTabFromUrl,
   updateUrlWithTab,
-} from "~/utils/url"
+} from "~/utils/core/url"
 
 import { PermissionOnboardingDialog } from "./components/dialogs/PermissionOnboardingDialog"
 import LoadingSkeleton from "./components/shared/LoadingSkeleton"

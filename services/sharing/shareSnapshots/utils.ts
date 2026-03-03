@@ -1,6 +1,6 @@
 import type { CurrencyType } from "~/types"
-import { getCurrencySymbol } from "~/utils/formatters"
-import { formatMoneyFixed } from "~/utils/money"
+import { getCurrencySymbol } from "~/utils/core/formatters"
+import { formatMoneyFixed } from "~/utils/core/money"
 
 const JWT_PATTERN = /\beyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\b/g
 const BEARER_PATTERN = /\bBearer\s+([a-zA-Z0-9._-]+)\b/gi

@@ -20,7 +20,7 @@ import {
   AutoCheckinPreferences,
   AutoCheckinScheduleMode,
 } from "~/types/autoCheckin"
-import { createLogger } from "~/utils/logger"
+import { createLogger } from "~/utils/core/logger"
 import { navigateWithinOptionsPage } from "~/utils/navigation"
 
 /**

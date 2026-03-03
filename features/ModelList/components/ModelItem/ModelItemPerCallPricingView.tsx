@@ -1,4 +1,8 @@
-import { formatPriceCompact, PerCallPrice } from "~/utils/modelPricing"
+import {
+  formatPriceCompact,
+  type CalculatedPrice,
+  type PerCallPrice,
+} from "~/services/models/utils/modelPricing"
 
 import { PriceView } from "./ModelItemPicingView"
 

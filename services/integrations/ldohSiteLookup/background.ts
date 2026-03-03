@@ -13,8 +13,8 @@ import type {
 } from "~/services/integrations/ldohSiteLookup/runtime"
 import type { LdohSitesApiResponse } from "~/services/integrations/ldohSiteLookup/types"
 import { AuthTypeEnum } from "~/types"
-import { getErrorMessage } from "~/utils/error"
-import { createLogger } from "~/utils/logger"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("LdohSiteLookupBackground")
 

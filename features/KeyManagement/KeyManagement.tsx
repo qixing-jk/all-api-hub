@@ -2,7 +2,7 @@ import { useEffect, useState } from "react"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import AddTokenDialog from "~/features/KeyManagement/components/AddTokenDialog"
-import { sendRuntimeActionMessage } from "~/utils/browserApi"
+import { sendRuntimeActionMessage } from "~/utils/browser/browserApi"
 
 import { AccountSelectorPanel } from "./components/AccountSelectorPanel"
 import { AccountSummaryBar } from "./components/AccountSummaryBar"

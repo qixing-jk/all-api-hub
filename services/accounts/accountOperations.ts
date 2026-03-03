@@ -13,6 +13,7 @@ import {
   generateDefaultTokenRequest,
 } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import { analyzeAutoDetectError } from "~/services/accounts/utils/autoDetectUtils"
 import { getApiService } from "~/services/apiService"
 import {
   DEFAULT_PREFERENCES,
@@ -32,11 +33,10 @@ import type {
   AccountSaveResponse,
   AccountValidationResponse,
 } from "~/types/serviceResponse"
-import { analyzeAutoDetectError } from "~/utils/autoDetectUtils"
-import { sendRuntimeMessage } from "~/utils/browserApi"
-import { extractSessionCookieHeader } from "~/utils/cookieString"
-import { getErrorMessage } from "~/utils/error"
-import { createLogger } from "~/utils/logger"
+import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { extractSessionCookieHeader } from "~/utils/browser/cookieString"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("AccountOperations")
 

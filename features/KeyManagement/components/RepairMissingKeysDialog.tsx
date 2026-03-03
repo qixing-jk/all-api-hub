@@ -25,7 +25,10 @@ import type {
   AccountKeyRepairOutcome,
   AccountKeyRepairProgress,
 } from "~/types/accountKeyAutoProvisioning"
-import { onRuntimeMessage, sendRuntimeActionMessage } from "~/utils/browserApi"
+import {
+  onRuntimeMessage,
+  sendRuntimeActionMessage,
+} from "~/utils/browser/browserApi"
 
 interface RepairMissingKeysDialogProps {
   isOpen: boolean

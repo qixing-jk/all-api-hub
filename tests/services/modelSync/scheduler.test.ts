@@ -14,7 +14,7 @@ import {
   createAlarm,
   getAlarm,
   hasAlarmsAPI,
-} from "~/utils/browserApi"
+} from "~/utils/browser/browserApi"
 
 vi.mock("~/services/preferences/userPreferences", () => ({
   DEFAULT_PREFERENCES: {
@@ -34,8 +34,9 @@ vi.mock("~/services/preferences/userPreferences", () => ({
   },
 }))
 
-vi.mock("~/utils/browserApi", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("~/utils/browserApi")>()
+vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/browser/browserApi")>()
   return {
     ...actual,
     clearAlarm: vi.fn(),

@@ -4,7 +4,7 @@ import {
   buildOriginWhitelistPattern,
   buildUrlPrefixWhitelistPattern,
   isUrlAllowedByRegexList,
-} from "~/utils/redemptionAssistWhitelist"
+} from "~/utils/core/urlWhitelist"
 
 describe("redemptionAssistWhitelist", () => {
   describe("buildOriginWhitelistPattern", () => {

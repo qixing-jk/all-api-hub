@@ -5,10 +5,10 @@ import { useTranslation } from "react-i18next"
 import { SUB2API } from "~/constants/siteType"
 import { generateDefaultTokenRequest } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import { getApiService } from "~/services/apiService"
+import { isTokenCompatibleWithModel } from "~/services/models/utils/tokenModelCompatibility"
 import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/types"
-import { getErrorMessage } from "~/utils/error"
-import { createLogger } from "~/utils/logger"
-import { isTokenCompatibleWithModel } from "~/utils/tokenModelCompatibility"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Logger scoped to the "model key" dialog so token loading and clipboard failures can be diagnosed safely.

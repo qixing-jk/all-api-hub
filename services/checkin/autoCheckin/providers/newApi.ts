@@ -23,9 +23,9 @@ import { AuthTypeEnum } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import type { TempWindowTurnstileFetch } from "~/types/tempWindowFetch"
 import type { TurnstilePreTrigger } from "~/types/turnstile"
-import { isAllowedIncognitoAccess } from "~/utils/browserApi"
-import { tempWindowTurnstileFetch } from "~/utils/tempWindowFetch"
-import { joinUrl } from "~/utils/url"
+import { isAllowedIncognitoAccess } from "~/utils/browser/browserApi"
+import { tempWindowTurnstileFetch } from "~/utils/browser/tempWindowFetch"
+import { joinUrl } from "~/utils/core/url"
 
 const NEW_API_MESSAGE_KEYS = {
   turnstileManualRequired:

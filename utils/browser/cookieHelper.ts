@@ -1,7 +1,7 @@
 import { checkCookieInterceptorRequirement } from "~/entrypoints/background/cookieInterceptor"
-import { mergeCookieHeaders } from "~/utils/cookieString"
-import { createLogger } from "~/utils/logger"
-import { isProtectionBypassFirefoxEnv } from "~/utils/protectionBypass"
+import { mergeCookieHeaders } from "~/utils/browser/cookieString"
+import { isProtectionBypassFirefoxEnv } from "~/utils/browser/protectionBypass"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to the cookie helper utilities.

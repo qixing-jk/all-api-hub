@@ -3,6 +3,11 @@ import { t } from "i18next"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { OCTOPUS } from "~/constants/siteType"
 import * as octopusApi from "~/services/apiService/octopus"
+import {
+  getManagedSiteAdminConfig,
+  getManagedSiteConfig,
+  getManagedSiteContext,
+} from "~/services/managedSites/utils/managedSite"
 import { ModelRedirectService } from "~/services/models/modelRedirect"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 import type {
@@ -25,14 +30,9 @@ import {
   hasAlarmsAPI,
   onAlarm,
   sendRuntimeMessage,
-} from "~/utils/browserApi"
-import { getErrorMessage } from "~/utils/error"
-import { createLogger } from "~/utils/logger"
-import {
-  getManagedSiteAdminConfig,
-  getManagedSiteConfig,
-  getManagedSiteContext,
-} from "~/utils/managedSite"
+} from "~/utils/browser/browserApi"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 import { channelConfigStorage } from "../../managedSites/channelConfigStorage"
 import { octopusChannelToManagedSite } from "../../managedSites/providers/octopus"

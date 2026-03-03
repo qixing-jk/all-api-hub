@@ -14,8 +14,8 @@ import type {
   ExecutionProgress,
   ExecutionResult,
 } from "~/types/managedSiteModelSync"
-import { sendRuntimeMessage } from "~/utils/browserApi"
-import { createLogger } from "~/utils/logger"
+import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { createLogger } from "~/utils/core/logger"
 
 import ActionBar from "./components/ActionBar"
 import EmptyResults from "./components/EmptyResults"

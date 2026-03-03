@@ -21,8 +21,8 @@ import {
   type ApiVerificationProbeId,
   type ApiVerificationProbeResult,
 } from "~/services/verification/aiApiVerification"
-import { sendRuntimeMessage } from "~/utils/browserApi"
-import { extractApiCheckCredentialsFromText } from "~/utils/webAiApiCheck"
+import { extractApiCheckCredentialsFromText } from "~/services/verification/webAiApiCheck/extractCredentials"
+import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 
 import {
   API_CHECK_OPEN_MODAL_EVENT,

@@ -19,7 +19,7 @@ import {
   formatSignedCurrencyAmount,
 } from "~/services/sharing/shareSnapshots/utils"
 import type { CurrencyType } from "~/types"
-import { createLogger } from "~/utils/logger"
+import { createLogger } from "~/utils/core/logger"
 
 export const SHARE_SNAPSHOT_IMAGE = {
   width: 1200,

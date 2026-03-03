@@ -9,8 +9,11 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui"
-import { getDocsGetStartedUrl, getDocsHomepageUrl } from "~/utils/docsLinks"
-import { getRepository } from "~/utils/packageMeta"
+import {
+  getDocsGetStartedUrl,
+  getDocsHomepageUrl,
+} from "~/utils/navigation/docsLinks"
+import { getRepository } from "~/utils/navigation/packageMeta"
 
 const GITHUB_REPO_URL = getRepository()
 

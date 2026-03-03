@@ -24,13 +24,13 @@ import {
   API_TYPES,
   type ApiVerificationApiType,
 } from "~/services/verification/aiApiVerification"
-import type { Tag } from "~/types"
-import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
-import { createLogger } from "~/utils/logger"
 import {
   normalizeGoogleFamilyBaseUrl,
   normalizeOpenAiFamilyBaseUrl,
-} from "~/utils/webAiApiCheck"
+} from "~/services/verification/webAiApiCheck/extractCredentials"
+import type { Tag } from "~/types"
+import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to the API credential profile dialog.

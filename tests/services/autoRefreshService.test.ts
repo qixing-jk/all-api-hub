@@ -22,7 +22,7 @@ import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
 //
 // The project uses the unified logger, which suppresses direct `console.*` output by default in tests.
 // These tests focus on behavior (timers, messages, storage calls) rather than console emission.
-vi.mock("~/utils/error", () => ({
+vi.mock("~/utils/core/error", () => ({
   getErrorMessage: vi.fn((error) => `${String(error)}`),
 }))
 

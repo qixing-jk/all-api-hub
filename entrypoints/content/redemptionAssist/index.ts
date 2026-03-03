@@ -10,12 +10,12 @@ import type {
   RedemptionAssistShouldPromptRequest,
   RedemptionAssistShouldPromptResponse,
 } from "~/services/redemption/redemptionAssist"
+import { extractRedemptionCodesFromText } from "~/services/redemption/utils/redemptionCode"
 import {
   checkPermissionViaMessage,
   sendRuntimeMessage,
-} from "~/utils/browserApi"
-import { createLogger } from "~/utils/logger"
-import { extractRedemptionCodesFromText } from "~/utils/redemptionAssist"
+} from "~/utils/browser/browserApi"
+import { createLogger } from "~/utils/core/logger"
 
 import {
   dismissToast,

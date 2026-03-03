@@ -15,13 +15,13 @@ import {
   Switch,
 } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { openSettingsTab } from "~/utils/navigation"
 import {
   getProtectionBypassUiVariant,
   isProtectionBypassFirefoxEnv,
   ProtectionBypassUiVariants,
-} from "~/utils/protectionBypass"
-import { canUseTempWindowFetch } from "~/utils/tempWindowFetch"
+} from "~/utils/browser/protectionBypass"
+import { canUseTempWindowFetch } from "~/utils/browser/tempWindowFetch"
+import { openSettingsTab } from "~/utils/navigation"
 
 /**
  * Settings section for shield/temp-window fallback controls and permissions.

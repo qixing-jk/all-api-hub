@@ -1,10 +1,10 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { extractApiCheckCredentialsFromText } from "~/services/verification/webAiApiCheck/extractCredentials"
 import {
   checkPermissionViaMessage,
   sendRuntimeMessage,
-} from "~/utils/browserApi"
-import { createLogger } from "~/utils/logger"
-import { extractApiCheckCredentialsFromText } from "~/utils/webAiApiCheck"
+} from "~/utils/browser/browserApi"
+import { createLogger } from "~/utils/core/logger"
 
 import { isEventFromAllApiHubContentUi } from "../shared/contentUi"
 import { isLikelyCopyActionTarget } from "../shared/copyActionTarget"

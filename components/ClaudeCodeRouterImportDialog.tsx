@@ -12,8 +12,8 @@ import {
 import { fetchOpenAICompatibleModels } from "~/services/apiService/openaiCompatible"
 import { importToClaudeCodeRouter } from "~/services/integrations/claudeCodeRouterService"
 import type { ApiToken, DisplaySiteData } from "~/types"
-import { createLogger } from "~/utils/logger"
-import { showResultToast } from "~/utils/toastHelpers"
+import { createLogger } from "~/utils/core/logger"
+import { showResultToast } from "~/utils/core/toastHelpers"
 
 interface ClaudeCodeRouterImportDialogProps {
   isOpen: boolean

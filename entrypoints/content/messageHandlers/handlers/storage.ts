@@ -2,7 +2,7 @@ import { t } from "i18next"
 
 import { SUB2API } from "~/constants/siteType"
 import { parseSub2ApiUserIdentity } from "~/services/apiService/sub2api/parsing"
-import { getErrorMessage } from "~/utils/error"
+import { getErrorMessage } from "~/utils/core/error"
 
 /**
  * Sub2API uses a short-lived JWT access token with a refresh-token flow.

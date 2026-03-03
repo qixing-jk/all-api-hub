@@ -24,8 +24,8 @@ import {
 } from "~/components/ui/popover"
 import { normalizeTagNameForUniqueness } from "~/services/tags/tagStoreUtils"
 import type { Tag } from "~/types"
-import { getErrorMessage } from "~/utils/error"
-import { createLogger } from "~/utils/logger"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Logger scoped to the tag picker UI so failures can be diagnosed without leaking sensitive data.

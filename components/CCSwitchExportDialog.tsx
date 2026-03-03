@@ -15,18 +15,18 @@ import {
   SelectValue,
 } from "~/components/ui"
 import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompatible"
-import type { ApiToken, DisplaySiteData } from "~/types"
 import {
   CCSWITCH_APPS,
   openInCCSwitch,
   type CCSwitchApp,
-} from "~/utils/ccSwitch"
-import { createLogger } from "~/utils/logger"
+} from "~/services/integrations/ccSwitch"
+import type { ApiToken, DisplaySiteData } from "~/types"
+import { createLogger } from "~/utils/core/logger"
 import {
   coerceBaseUrlToPathSuffix,
   normalizeHttpUrl,
   stripTrailingOpenAIV1,
-} from "~/utils/url"
+} from "~/utils/core/url"
 
 interface CCSwitchExportDialogProps {
   isOpen: boolean

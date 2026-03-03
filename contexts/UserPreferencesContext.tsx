@@ -25,6 +25,7 @@ import {
   type UserPreferences,
   type WebAiApiCheckPreferences,
 } from "~/services/preferences/userPreferences"
+import { DEFAULT_SORTING_PRIORITY_CONFIG } from "~/services/preferences/utils/sortingPriority"
 import type {
   CurrencyType,
   DashboardTabType,
@@ -43,9 +44,8 @@ import type { ModelRedirectPreferences } from "~/types/managedSiteModelRedirect"
 import type { SortingPriorityConfig } from "~/types/sorting"
 import type { ThemeMode } from "~/types/theme"
 import { deepOverride } from "~/utils"
-import { sendRuntimeMessage } from "~/utils/browserApi"
-import { createLogger } from "~/utils/logger"
-import { DEFAULT_SORTING_PRIORITY_CONFIG } from "~/utils/sortingPriority"
+import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("UserPreferencesContext")
 

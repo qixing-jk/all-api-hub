@@ -3,12 +3,12 @@
  * Handles version-based migrations for sorting priority configurations
  */
 
+import { DEFAULT_SORTING_PRIORITY_CONFIG } from "~/services/preferences/utils/sortingPriority"
 import {
   SortingCriteriaType,
   type SortingPriorityConfig,
 } from "~/types/sorting"
-import { createLogger } from "~/utils/logger"
-import { DEFAULT_SORTING_PRIORITY_CONFIG } from "~/utils/sortingPriority"
+import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("SortingConfigMigration")
 

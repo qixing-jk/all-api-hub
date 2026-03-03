@@ -27,9 +27,9 @@ import type {
   ServiceResponse,
 } from "~/types/serviceResponse"
 import { isArraysEqual } from "~/utils"
-import { getErrorMessage } from "~/utils/error"
-import { createLogger } from "~/utils/logger"
-import { normalizeList, parseDelimitedList } from "~/utils/string"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
+import { normalizeList, parseDelimitedList } from "~/utils/core/string"
 
 /**
  * Unified logger scoped to the Done Hub integration and auto-config flows.

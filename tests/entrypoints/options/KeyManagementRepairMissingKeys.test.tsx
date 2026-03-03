@@ -23,8 +23,9 @@ const { sendRuntimeActionMessageMock, runtimeMessageState } = vi.hoisted(
   }),
 )
 
-vi.mock("~/utils/browserApi", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("~/utils/browserApi")>()
+vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/browser/browserApi")>()
   return {
     ...actual,
     sendRuntimeActionMessage: sendRuntimeActionMessageMock,

@@ -4,8 +4,8 @@ import { UI_CONSTANTS } from "~/constants/ui"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { getApiService } from "~/services/apiService"
 import type { DisplaySiteData } from "~/types"
-import { getErrorMessage } from "~/utils/error"
-import { formatMoneyFixed } from "~/utils/money"
+import { getErrorMessage } from "~/utils/core/error"
+import { formatMoneyFixed } from "~/utils/core/money"
 
 export interface RedeemResult {
   success: boolean

@@ -11,7 +11,7 @@ import { DATA_TYPE_BALANCE, DATA_TYPE_CASHFLOW } from "~/constants"
 import { ANIMATIONS, COLORS } from "~/constants/designTokens"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import type { CurrencyType, DashboardTabType } from "~/types"
-import { showUpdateToast } from "~/utils/toastHelpers"
+import { showUpdateToast } from "~/utils/core/toastHelpers"
 
 /**
  * Settings section for display preferences (currency, default dashboard tab).

@@ -10,7 +10,7 @@ import type {
   DisplaySiteData,
   SortOrder,
 } from "~/types"
-import { formatMoneyFixed } from "~/utils/money"
+import { formatMoneyFixed } from "~/utils/core/money"
 
 // 初始化 dayjs
 dayjs.extend(relativeTime)

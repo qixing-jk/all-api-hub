@@ -12,6 +12,7 @@ import {
   DEFAULT_PREFERENCES,
   type UserPreferences,
 } from "~/services/preferences/userPreferences"
+import { DEFAULT_SORTING_PRIORITY_CONFIG } from "~/services/preferences/utils/sortingPriority"
 import { buildUserPreferences } from "~/tests/test-utils/factories"
 import {
   ACCOUNT_AUTO_REFRESH_INTERVAL_MIN_SECONDS,
@@ -23,7 +24,6 @@ import { DEFAULT_NEW_API_CONFIG } from "~/types/newApiConfig"
 import { SortingCriteriaType } from "~/types/sorting"
 import { DEFAULT_VELOERA_CONFIG } from "~/types/veloeraConfig"
 import { DEFAULT_WEBDAV_SETTINGS, WEBDAV_SYNC_STRATEGIES } from "~/types/webdav"
-import { DEFAULT_SORTING_PRIORITY_CONFIG } from "~/utils/sortingPriority"
 
 const buildModelRedirectFixture = () => ({
   ...structuredClone(buildUserPreferences().modelRedirect),

@@ -9,7 +9,7 @@ import type {
   ManagedSiteChannelListData,
   UpdateChannelPayload,
 } from "~/types/managedSite"
-import { createLogger } from "~/utils/logger"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to DoneHub API helpers.

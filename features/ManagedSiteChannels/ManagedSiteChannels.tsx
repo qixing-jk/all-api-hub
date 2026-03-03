@@ -82,8 +82,8 @@ import { OCTOPUS } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { cn } from "~/lib/utils"
 import { getManagedSiteService } from "~/services/managedSites/managedSiteService"
-import { sendRuntimeMessage } from "~/utils/browserApi"
-import { getErrorMessage } from "~/utils/error"
+import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { getErrorMessage } from "~/utils/core/error"
 import {
   navigateWithinOptionsPage,
   openManagedSiteModelSyncForChannel,

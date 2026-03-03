@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
+import { mergeUniqueOptions } from "~/components/dialogs/ChannelDialog/utils/selectOptions"
 import type { CompactMultiSelectOption } from "~/components/ui"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { ChannelType, DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
@@ -14,8 +15,7 @@ import type {
   UpdateChannelPayload,
 } from "~/types/managedSite"
 import type { OctopusOutboundType } from "~/types/octopus"
-import { createLogger } from "~/utils/logger"
-import { mergeUniqueOptions } from "~/utils/selectOptions"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to channel dialog form state and submissions.

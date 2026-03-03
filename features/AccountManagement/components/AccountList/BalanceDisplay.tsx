@@ -7,8 +7,8 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import type { DisplaySiteData } from "~/types"
-import { getCurrencySymbol } from "~/utils/formatters"
-import { getDisplayMoneyValue } from "~/utils/money"
+import { getCurrencySymbol } from "~/utils/core/formatters"
+import { getDisplayMoneyValue } from "~/utils/core/money"
 
 interface BalanceDisplayProps {
   site: DisplaySiteData

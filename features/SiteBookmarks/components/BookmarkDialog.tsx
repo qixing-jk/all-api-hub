@@ -7,7 +7,7 @@ import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import type { SiteBookmark } from "~/types"
-import { getErrorMessage } from "~/utils/error"
+import { getErrorMessage } from "~/utils/core/error"
 
 export type BookmarkDialogMode = "add" | "edit"
 

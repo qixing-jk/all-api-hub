@@ -16,7 +16,7 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
   useUserPreferencesContext: vi.fn(),
 }))
 
-vi.mock("~/utils/toastHelpers", () => ({
+vi.mock("~/utils/core/toastHelpers", () => ({
   showUpdateToast: vi.fn(),
 }))
 

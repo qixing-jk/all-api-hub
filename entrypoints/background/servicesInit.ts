@@ -6,8 +6,8 @@ import { modelMetadataService } from "~/services/models/modelMetadata"
 import { modelSyncScheduler } from "~/services/models/modelSync"
 import { redemptionAssistService } from "~/services/redemption/redemptionAssist"
 import { webdavAutoSyncService } from "~/services/webdav/webdavAutoSyncService"
-import { initBackgroundI18n } from "~/utils/background-i18n"
-import { createLogger } from "~/utils/logger"
+import { createLogger } from "~/utils/core/logger"
+import { initBackgroundI18n } from "~/utils/i18n/background"
 
 /**
  * Unified logger scoped to background service initialization.

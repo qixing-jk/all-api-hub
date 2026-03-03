@@ -19,17 +19,18 @@ vi.mock("~/services/integrations/ldohSiteLookup/cache", () => ({
   writeLdohSiteListCache: vi.fn(),
 }))
 
-vi.mock("~/utils/browserApi", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("~/utils/browserApi")>()
+vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/browser/browserApi")>()
   return {
     ...actual,
     sendRuntimeMessage: vi.fn(),
   }
 })
 
-vi.mock("~/utils/protectionBypass", async (importOriginal) => {
+vi.mock("~/utils/browser/protectionBypass", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/utils/protectionBypass")>()
+    await importOriginal<typeof import("~/utils/browser/protectionBypass")>()
   return {
     ...actual,
     isProtectionBypassFirefoxEnv: () => false,
@@ -69,7 +70,7 @@ describe("ldohSiteLookup background refresh", () => {
       tempWindowFallback: buildTempWindowPrefs(),
     })
 
-    const { sendRuntimeMessage } = await import("~/utils/browserApi")
+    const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
     vi.mocked(sendRuntimeMessage).mockImplementation(() => {
       throw new Error("temp-window fallback invoked")
     })
@@ -108,7 +109,7 @@ describe("ldohSiteLookup background refresh", () => {
       tempWindowFallback: buildTempWindowPrefs(),
     })
 
-    const { sendRuntimeMessage } = await import("~/utils/browserApi")
+    const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
     vi.mocked(sendRuntimeMessage).mockImplementation(() => {
       throw new Error("temp-window fallback invoked")
     })
@@ -147,7 +148,7 @@ describe("ldohSiteLookup background refresh", () => {
       tempWindowFallback: buildTempWindowPrefs(),
     })
 
-    const { sendRuntimeMessage } = await import("~/utils/browserApi")
+    const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
     vi.mocked(sendRuntimeMessage).mockResolvedValue({
       success: true,
       status: 200,

@@ -5,8 +5,8 @@ import { useTranslation } from "react-i18next"
 import { useAccountData } from "~/hooks/useAccountData"
 import { getApiService } from "~/services/apiService"
 import type { AccountToken } from "~/types"
-import { getErrorMessage } from "~/utils/error"
-import { createLogger } from "~/utils/logger"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "../constants"
 

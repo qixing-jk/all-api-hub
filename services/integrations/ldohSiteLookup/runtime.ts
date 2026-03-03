@@ -2,7 +2,7 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   sendRuntimeActionMessage,
   type SendMessageRetryOptions,
-} from "~/utils/browserApi"
+} from "~/utils/browser/browserApi"
 
 /**
  * Runtime request to refresh the cached LDOH site directory (background-only work).

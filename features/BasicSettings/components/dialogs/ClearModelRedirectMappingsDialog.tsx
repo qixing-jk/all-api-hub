@@ -14,7 +14,7 @@ import {
 import { ModelRedirectService } from "~/services/models/modelRedirect"
 import { isEmptyModelMapping } from "~/services/models/modelRedirect/utils"
 import type { ManagedSiteChannel } from "~/types/managedSite"
-import { getErrorMessage } from "~/utils/error"
+import { getErrorMessage } from "~/utils/core/error"
 
 interface ClearModelRedirectMappingsDialogProps {
   isOpen: boolean

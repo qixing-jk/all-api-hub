@@ -15,7 +15,7 @@ import {
   ExecutionResult,
   ExecutionStatistics,
 } from "~/types/managedSiteModelSync"
-import { createLogger } from "~/utils/logger"
+import { createLogger } from "~/utils/core/logger"
 
 import { RateLimiter } from "./rateLimiter"
 

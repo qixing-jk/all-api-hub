@@ -21,7 +21,7 @@ import {
   TableRow,
 } from "~/components/ui/table"
 import { cn } from "~/lib/utils"
-import { formatMoneyFixed } from "~/utils/money"
+import { formatMoneyFixed } from "~/utils/core/money"
 
 export type BalanceHistoryAccountSummaryRow = {
   id: string

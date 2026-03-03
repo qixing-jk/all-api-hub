@@ -5,7 +5,7 @@ import { createShadowRootUi } from "wxt/utils/content-script-ui/shadow-root"
 
 import { ContentReactRoot } from "~/entrypoints/content/shared/ContentReactRoot"
 import { CONTENT_UI_HOST_TAG } from "~/entrypoints/content/shared/contentUi"
-import { createLogger } from "~/utils/logger"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to mounting the content-script redemption assist UI root.

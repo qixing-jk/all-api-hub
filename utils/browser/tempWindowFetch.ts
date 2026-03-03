@@ -38,16 +38,19 @@ import {
   isExtensionSidePanel,
   OPTIONS_PAGE_URL,
 } from "~/utils/browser"
-import { sendRuntimeMessage } from "~/utils/browserApi"
-import { safeRandomUUID } from "~/utils/identifier"
-import { createLogger } from "~/utils/logger"
-import { isProtectionBypassFirefoxEnv } from "~/utils/protectionBypass"
+import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { isProtectionBypassFirefoxEnv } from "~/utils/browser/protectionBypass"
+import { safeRandomUUID } from "~/utils/core/identifier"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to temp window fetch helpers and fallback behavior.
  */
 const logger = createLogger("TempWindowFetch")
 
+/**
+ * Type guard to validate the shape of a temp window rendered title response.
+ */
 function isTempWindowRenderedTitleResponse(
   value: unknown,
 ): value is TempWindowRenderedTitleResponse {

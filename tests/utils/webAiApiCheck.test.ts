@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest"
 
-import { buildApiKey } from "~/tests/test-utils/factories"
 import {
   extractApiCheckCredentialsFromText,
   normalizeApiCheckBaseUrl,
   normalizeGoogleFamilyBaseUrl,
   normalizeOpenAiFamilyBaseUrl,
-} from "~/utils/webAiApiCheck"
+} from "~/services/verification/webAiApiCheck/extractCredentials"
+import { buildApiKey } from "~/tests/test-utils/factories"
 
 describe("webAiApiCheck utils", () => {
   describe("normalizeApiCheckBaseUrl", () => {

@@ -1,5 +1,5 @@
 // noinspection ES6PreferShortImport wxt config file dependency, can't parse any alias like
-import { APP_SHORT_NAME } from "../constants/branding"
+import { APP_SHORT_NAME } from "../../constants/branding"
 
 export type DevBuildInfo = {
   /**

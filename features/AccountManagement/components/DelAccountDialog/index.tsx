@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next"
 import { DestructiveConfirmDialog } from "~/components/ui"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import type { DisplaySiteData } from "~/types"
-import { createLogger } from "~/utils/logger"
+import { createLogger } from "~/utils/core/logger"
 
 import { AccountInfo } from "./AccountInfo"
 

@@ -8,7 +8,7 @@ import type {
   DisplaySiteData,
   SiteAccount,
 } from "~/types"
-import { createLogger } from "~/utils/logger"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to account data loading and refresh hooks.

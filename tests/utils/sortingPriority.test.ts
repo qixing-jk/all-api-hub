@@ -5,16 +5,16 @@ import {
   DATA_TYPE_CONSUMPTION,
   DATA_TYPE_INCOME,
 } from "~/constants"
+import {
+  createDynamicSortComparator,
+  DEFAULT_SORTING_PRIORITY_CONFIG,
+} from "~/services/preferences/utils/sortingPriority"
 import type { DisplaySiteData, SiteAccount } from "~/types"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import {
   SortingCriteriaType,
   type SortingPriorityConfig,
 } from "~/types/sorting"
-import {
-  createDynamicSortComparator,
-  DEFAULT_SORTING_PRIORITY_CONFIG,
-} from "~/utils/sortingPriority"
 
 describe("createDynamicSortComparator", () => {
   // Helper to create a minimal DisplaySiteData fixture

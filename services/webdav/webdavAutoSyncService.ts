@@ -30,9 +30,9 @@ import {
   hasAlarmsAPI,
   onAlarm,
   sendRuntimeMessage,
-} from "~/utils/browserApi"
-import { getErrorMessage } from "~/utils/error"
-import { createLogger } from "~/utils/logger"
+} from "~/utils/browser/browserApi"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 import { accountStorage } from "../accounts/accountStorage"
 import { channelConfigStorage } from "../managedSites/channelConfigStorage"

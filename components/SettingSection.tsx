@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next"
 
 import { BodySmall, Button, Heading3 } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
-import { createLogger } from "~/utils/logger"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to shared settings section UI primitives.

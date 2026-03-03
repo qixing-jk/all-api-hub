@@ -18,7 +18,7 @@ import {
   type BalanceHistoryPreferences,
 } from "~/types/dailyBalanceHistory"
 import { DEFAULT_OCTOPUS_CONFIG } from "~/types/octopusConfig"
-import { createLogger } from "~/utils/logger"
+import { createLogger } from "~/utils/core/logger"
 
 import type { UserPreferences } from "../userPreferences"
 import { migrateSortingConfig } from "./sortingConfigMigration"

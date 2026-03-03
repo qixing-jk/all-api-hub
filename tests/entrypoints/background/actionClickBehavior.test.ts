@@ -20,7 +20,7 @@ describe("background applyActionClickBehavior", () => {
 
     vi.resetModules()
 
-    vi.doMock("~/utils/browserApi", () => ({
+    vi.doMock("~/utils/browser/browserApi", () => ({
       addActionClickListener,
       getSidePanelSupport,
       openSidePanel,
@@ -34,7 +34,7 @@ describe("background applyActionClickBehavior", () => {
   })
 
   afterEach(() => {
-    vi.doUnmock("~/utils/browserApi")
+    vi.doUnmock("~/utils/browser/browserApi")
     vi.doUnmock("~/utils/navigation")
     vi.resetModules()
     vi.restoreAllMocks()

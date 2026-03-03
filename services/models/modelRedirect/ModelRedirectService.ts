@@ -10,21 +10,21 @@ import {
   OCTOPUS,
   type ManagedSiteType,
 } from "~/constants/siteType"
+import {
+  getManagedSiteAdminConfig,
+  getManagedSiteConfig,
+} from "~/services/managedSites/utils/managedSite"
 import { modelMetadataService } from "~/services/models/modelMetadata"
 import { ModelSyncService } from "~/services/models/modelSync"
+import { toModelTokenKey } from "~/services/models/utils/modelName"
 import type { ManagedSiteChannel } from "~/types/managedSite"
 import { CHANNEL_STATUS } from "~/types/managedSite"
 import {
   ALL_PRESET_STANDARD_MODELS,
   DEFAULT_MODEL_REDIRECT_PREFERENCES,
 } from "~/types/managedSiteModelRedirect"
-import { getErrorMessage } from "~/utils/error"
-import { createLogger } from "~/utils/logger"
-import {
-  getManagedSiteAdminConfig,
-  getManagedSiteConfig,
-} from "~/utils/managedSite"
-import { toModelTokenKey } from "~/utils/modelName"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 import { hasValidManagedSiteConfig } from "../../managedSites/managedSiteService"
 import {

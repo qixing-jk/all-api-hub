@@ -19,7 +19,7 @@ afterEach(() => {
 
 describe("AutoCheckin quick run", () => {
   it("auto-triggers runNow when routeParams.runNow is present", async () => {
-    const browserApi = await import("~/utils/browserApi")
+    const browserApi = await import("~/utils/browser/browserApi")
     const sendRuntimeMessageSpy = vi.spyOn(browserApi, "sendRuntimeMessage")
 
     const navigation = await import("~/utils/navigation")
@@ -51,7 +51,7 @@ describe("AutoCheckin quick run", () => {
   })
 
   it("does not auto-trigger runNow when routeParams.runNow is absent", async () => {
-    const browserApi = await import("~/utils/browserApi")
+    const browserApi = await import("~/utils/browser/browserApi")
     const sendRuntimeMessageSpy = vi
       .spyOn(browserApi, "sendRuntimeMessage")
       .mockResolvedValue({

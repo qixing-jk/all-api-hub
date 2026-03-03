@@ -3,8 +3,8 @@ import type {
   TurnstilePreTrigger,
   TurnstileTokenWaitResult,
 } from "~/types/turnstile"
-import { getErrorMessage } from "~/utils/error"
-import { createLogger } from "~/utils/logger"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 type WaitForTurnstileTokenRequest = {
   requestId?: string

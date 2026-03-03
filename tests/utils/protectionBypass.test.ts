@@ -6,7 +6,7 @@ import {
   isProtectionBypassFirefoxEnv,
   ProtectionBypassUiVariants,
   shouldUseCookieInterceptorForProtectionBypass,
-} from "~/utils/protectionBypass"
+} from "~/utils/browser/protectionBypass"
 
 vi.mock("~/utils/browser", () => ({
   isFirefox: vi.fn(),

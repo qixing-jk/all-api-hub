@@ -11,7 +11,7 @@ import {
   Heading5,
 } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { showResetToast } from "~/utils/toastHelpers"
+import { showResetToast } from "~/utils/core/toastHelpers"
 
 /**
  * Renders the destructive reset section with confirmation dialog for settings.

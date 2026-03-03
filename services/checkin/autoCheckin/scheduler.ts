@@ -33,9 +33,9 @@ import {
   hasAlarmsAPI,
   onAlarm,
   sendRuntimeMessage,
-} from "~/utils/browserApi"
-import { getErrorMessage } from "~/utils/error"
-import { createLogger } from "~/utils/logger"
+} from "~/utils/browser/browserApi"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 import { resolveAutoCheckinProvider } from "./providers"
 import { autoCheckinStorage } from "./storage"

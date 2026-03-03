@@ -18,7 +18,7 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { cn } from "~/lib/utils"
-import { createLogger } from "~/utils/logger"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to the shared MultiSelect UI component.

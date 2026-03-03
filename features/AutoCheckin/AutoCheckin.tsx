@@ -10,17 +10,20 @@ import { Modal } from "~/components/ui/Dialog/Modal"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { stripAutoCheckinMessageKeyPrefix } from "~/features/AutoCheckin/utils/autoCheckin"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import {
   AutoCheckinRunSummary,
   AutoCheckinStatus,
   CHECKIN_RESULT_STATUS,
 } from "~/types/autoCheckin"
-import { stripAutoCheckinMessageKeyPrefix } from "~/utils/autoCheckin"
-import { onRuntimeMessage, sendRuntimeMessage } from "~/utils/browserApi"
-import { getErrorMessage } from "~/utils/error"
-import { safeRandomUUID } from "~/utils/identifier"
-import { createLogger } from "~/utils/logger"
+import {
+  onRuntimeMessage,
+  sendRuntimeMessage,
+} from "~/utils/browser/browserApi"
+import { getErrorMessage } from "~/utils/core/error"
+import { safeRandomUUID } from "~/utils/core/identifier"
+import { createLogger } from "~/utils/core/logger"
 import { navigateWithinOptionsPage, openCheckInPage } from "~/utils/navigation"
 
 import AccountSnapshotTable from "./components/AccountSnapshotTable"

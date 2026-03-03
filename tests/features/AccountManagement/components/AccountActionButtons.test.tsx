@@ -43,8 +43,9 @@ vi.mock("~/services/apiService", () => ({
   }),
 }))
 
-vi.mock("~/utils/browserApi", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("~/utils/browserApi")>()
+vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/browser/browserApi")>()
   return {
     ...actual,
     sendRuntimeMessage: sendRuntimeMessageMock,

@@ -22,7 +22,7 @@ import type {
 } from "~/services/apiService/common/type"
 import { fetchApi } from "~/services/apiService/common/utils"
 import { AuthTypeEnum, SiteHealthStatus, type CheckInConfig } from "~/types"
-import { createLogger } from "~/utils/logger"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to WONG site API overrides.

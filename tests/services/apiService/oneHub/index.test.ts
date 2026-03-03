@@ -12,13 +12,13 @@ import {
 import {
   transformModelPricing,
   transformUserGroup,
-} from "~/utils/dataTransform/one-hub"
+} from "~/services/apiService/oneHub/transform"
 
 vi.mock("~/services/apiService/common/utils", () => ({
   fetchApiData: vi.fn(),
 }))
 
-vi.mock("~/utils/dataTransform/one-hub", () => ({
+vi.mock("~/services/apiService/oneHub/transform", () => ({
   transformModelPricing: vi.fn(),
   transformUserGroup: vi.fn(),
 }))

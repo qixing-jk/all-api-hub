@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next"
 import Tooltip from "~/components/Tooltip"
 import { BodySmall } from "~/components/ui"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
-import { formatTokenCount } from "~/utils/formatters"
+import { formatTokenCount } from "~/utils/core/formatters"
 
 export const TokenStats = React.memo(() => {
   const { t } = useTranslation("account")

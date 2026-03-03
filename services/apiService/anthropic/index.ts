@@ -1,6 +1,6 @@
 import { fetchApi } from "~/services/apiService/common/utils"
 import { AuthTypeEnum } from "~/types"
-import { createLogger } from "~/utils/logger"
+import { createLogger } from "~/utils/core/logger"
 
 type AnthropicAuthParams = {
   baseUrl: string

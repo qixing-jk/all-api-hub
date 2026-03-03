@@ -24,7 +24,7 @@ import {
 } from "~/services/verification/cliSupportVerification"
 import type { CliSupportResult } from "~/services/verification/cliSupportVerification"
 import type { ApiToken } from "~/types"
-import { createLogger } from "~/utils/logger"
+import { createLogger } from "~/utils/core/logger"
 
 import { ToolStatusBadge } from "./ToolStatusBadge"
 import type { ToolItemState, VerifyCliSupportDialogProps } from "./types"

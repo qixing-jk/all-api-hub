@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next"
 
 import { Card, CardContent } from "~/components/ui"
-import { formatFullTime } from "~/utils/formatters"
+import { formatFullTime } from "~/utils/core/formatters"
 
 interface OverviewCardProps {
   enabled: boolean

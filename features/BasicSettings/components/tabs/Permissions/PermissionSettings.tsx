@@ -16,8 +16,8 @@ import {
   removePermission,
   requestPermission,
 } from "~/services/permissions/permissionManager"
-import { createLogger } from "~/utils/logger"
-import { showResultToast } from "~/utils/toastHelpers"
+import { createLogger } from "~/utils/core/logger"
+import { showResultToast } from "~/utils/core/toastHelpers"
 
 import PermissionList from "./PermissionList"
 

@@ -20,13 +20,13 @@ import {
   summaryKeyFromHttpStatus,
   toSanitizedErrorSummary,
 } from "~/services/verification/aiApiVerification/utils"
-import { createLogger } from "~/utils/logger"
-import { isUrlAllowedByRegexList } from "~/utils/redemptionAssistWhitelist"
 import {
   normalizeApiCheckBaseUrl,
   normalizeGoogleFamilyBaseUrl,
   normalizeOpenAiFamilyBaseUrl,
-} from "~/utils/webAiApiCheck"
+} from "~/services/verification/webAiApiCheck/extractCredentials"
+import { createLogger } from "~/utils/core/logger"
+import { isUrlAllowedByRegexList } from "~/utils/core/urlWhitelist"
 
 import type {
   ApiCheckFetchModelsResponse,

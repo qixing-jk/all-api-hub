@@ -2,6 +2,7 @@ import i18next from "i18next"
 
 import { UI_CONSTANTS } from "~/constants/ui"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import { normalizeApiTokenKey } from "~/services/apiService/common/apiKey"
 import { REQUEST_CONFIG } from "~/services/apiService/common/constant"
 import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import { fetchAllItems } from "~/services/apiService/common/pagination"
@@ -46,8 +47,7 @@ import type {
   ManagedSiteChannelListData,
   UpdateChannelPayload,
 } from "~/types/managedSite"
-import { normalizeApiTokenKey } from "~/utils/apiKey"
-import { createLogger } from "~/utils/logger"
+import { createLogger } from "~/utils/core/logger"
 
 const CHANNEL_API_BASE = "/api/channel/"
 

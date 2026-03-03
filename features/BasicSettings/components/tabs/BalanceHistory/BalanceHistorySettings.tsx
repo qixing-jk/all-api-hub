@@ -14,9 +14,9 @@ import {
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { clampBalanceHistoryRetentionDays } from "~/services/history/dailyBalanceHistory/utils"
 import { DEFAULT_BALANCE_HISTORY_PREFERENCES } from "~/types/dailyBalanceHistory"
-import { hasAlarmsAPI } from "~/utils/browserApi"
-import { getErrorMessage } from "~/utils/error"
-import { createLogger } from "~/utils/logger"
+import { hasAlarmsAPI } from "~/utils/browser/browserApi"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("BalanceHistorySettings")
 

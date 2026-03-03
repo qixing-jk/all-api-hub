@@ -19,7 +19,7 @@ import {
   getStatusBadgeStyle,
   normalizeToDate,
   normalizeToMs,
-} from "~/utils/formatters"
+} from "~/utils/core/formatters"
 
 describe("formatters utilities", () => {
   describe("formatTokenCount", () => {

@@ -1,4 +1,4 @@
-import { AutoDetectError } from "~/utils/autoDetectUtils"
+import { AutoDetectError } from "~/services/accounts/utils/autoDetectUtils"
 
 import type { ApiToken, CheckInConfig, Sub2ApiAuthConfig } from "./index"
 

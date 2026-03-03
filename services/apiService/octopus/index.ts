@@ -11,8 +11,8 @@ import type {
   OctopusUpdateChannelRequest,
 } from "~/types/octopus"
 import type { OctopusConfig } from "~/types/octopusConfig"
-import { createLogger } from "~/utils/logger"
-import { normalizeBaseUrl } from "~/utils/url"
+import { createLogger } from "~/utils/core/logger"
+import { normalizeBaseUrl } from "~/utils/core/url"
 
 import type { ApiServiceRequest } from "../common/type"
 import { octopusAuthManager } from "./auth"

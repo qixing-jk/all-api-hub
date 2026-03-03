@@ -2,16 +2,16 @@ import { describe, expect, it } from "vitest"
 
 import { DONE_HUB, NEW_API } from "~/constants/siteType"
 import {
-  DEFAULT_PREFERENCES,
-  type UserPreferences,
-} from "~/services/preferences/userPreferences"
-import {
   getManagedSiteAdminConfig,
   getManagedSiteConfigFromPreferences,
   getManagedSiteContext,
   getManagedSiteLabelKey,
   getManagedSiteMessagesKeyFromSiteType,
-} from "~/utils/managedSite"
+} from "~/services/managedSites/utils/managedSite"
+import {
+  DEFAULT_PREFERENCES,
+  type UserPreferences,
+} from "~/services/preferences/userPreferences"
 
 describe("managedSite", () => {
   it("resolves Done Hub config when selected", () => {

@@ -7,7 +7,10 @@ import { useTranslation } from "react-i18next"
 import { Button } from "~/components/ui/button"
 import { ANIMATIONS, COLORS } from "~/constants/designTokens"
 import { useHorizontalScrollControls } from "~/hooks/useHorizontalScrollControls"
-import { getProviderConfig, type ProviderType } from "~/utils/modelProviders"
+import {
+  getProviderConfig,
+  type ProviderType,
+} from "~/services/models/utils/modelProviders"
 
 interface ProviderTabsProps {
   providers: ProviderType[]

@@ -7,7 +7,7 @@ import ChannelFiltersEditor from "~/components/ChannelFiltersEditor"
 import { Modal } from "~/components/ui"
 import { Button } from "~/components/ui/button"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
-import { getErrorMessage } from "~/utils/error"
+import { getErrorMessage } from "~/utils/core/error"
 
 import type { ChannelRow } from "../types"
 import {

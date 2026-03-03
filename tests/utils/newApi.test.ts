@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import { ChannelType } from "~/constants"
-import { getChannelTypeName } from "~/utils/newApi"
+import { getChannelTypeName } from "~/services/managedSites/utils/channelTypeName"
 
 describe("newApi", () => {
   describe("getChannelTypeName", () => {

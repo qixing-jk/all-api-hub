@@ -4,8 +4,12 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { getSiteApiRouter } from "~/constants/siteType"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { handleExternalCheckInMessage } from "~/services/checkin/externalCheckInService"
-import { createTab, createWindow, hasWindowsAPI } from "~/utils/browserApi"
-import { joinUrl } from "~/utils/url"
+import {
+  createTab,
+  createWindow,
+  hasWindowsAPI,
+} from "~/utils/browser/browserApi"
+import { joinUrl } from "~/utils/core/url"
 
 vi.mock("~/services/accounts/accountStorage", () => ({
   accountStorage: {
@@ -14,8 +18,9 @@ vi.mock("~/services/accounts/accountStorage", () => ({
   },
 }))
 
-vi.mock("~/utils/browserApi", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("~/utils/browserApi")>()
+vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/browser/browserApi")>()
   return {
     ...actual,
     createTab: vi.fn(),
@@ -28,7 +33,7 @@ vi.mock("~/constants/siteType", () => ({
   getSiteApiRouter: vi.fn(() => ({ redeemPath: "/redeem" })),
 }))
 
-vi.mock("~/utils/url", () => ({
+vi.mock("~/utils/core/url", () => ({
   joinUrl: vi.fn((base: string, path: string) => `${base}${path}`),
 }))
 

@@ -10,7 +10,7 @@ import {
   onAlarm,
   sendRuntimeActionMessage,
   sendTabMessageWithRetry,
-} from "~/utils/browserApi"
+} from "~/utils/browser/browserApi"
 
 const originalBrowser = (globalThis as any).browser
 const originalChrome = (globalThis as any).chrome
@@ -335,7 +335,7 @@ describe("browserApi getSidePanelSupport", () => {
     }
     ;(globalThis as any).chrome = {}
 
-    const { getSidePanelSupport } = await import("~/utils/browserApi")
+    const { getSidePanelSupport } = await import("~/utils/browser/browserApi")
     expect(getSidePanelSupport()).toEqual({
       supported: true,
       kind: "firefox-sidebar-action",
@@ -350,7 +350,7 @@ describe("browserApi getSidePanelSupport", () => {
       },
     }
 
-    const { getSidePanelSupport } = await import("~/utils/browserApi")
+    const { getSidePanelSupport } = await import("~/utils/browser/browserApi")
     expect(getSidePanelSupport()).toEqual({
       supported: true,
       kind: "chromium-side-panel",
@@ -361,7 +361,7 @@ describe("browserApi getSidePanelSupport", () => {
     ;(globalThis as any).browser = {}
     ;(globalThis as any).chrome = {}
 
-    const { getSidePanelSupport } = await import("~/utils/browserApi")
+    const { getSidePanelSupport } = await import("~/utils/browser/browserApi")
     const result = getSidePanelSupport()
 
     expect(result.supported).toBe(false)
@@ -381,7 +381,7 @@ describe("browserApi getSidePanelSupport", () => {
     }
     ;(globalThis as any).chrome = {}
 
-    const { getSidePanelSupport } = await import("~/utils/browserApi")
+    const { getSidePanelSupport } = await import("~/utils/browser/browserApi")
 
     expect(getSidePanelSupport()).toEqual({
       supported: true,
@@ -412,7 +412,7 @@ describe("browserApi getSidePanelSupport", () => {
       },
     }
 
-    const { getSidePanelSupport } = await import("~/utils/browserApi")
+    const { getSidePanelSupport } = await import("~/utils/browser/browserApi")
     const result = getSidePanelSupport()
 
     expect(result.supported).toBe(false)

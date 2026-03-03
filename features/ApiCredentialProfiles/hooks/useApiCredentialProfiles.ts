@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from "react"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
-import { createLogger } from "~/utils/logger"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to the API credential profiles hook.

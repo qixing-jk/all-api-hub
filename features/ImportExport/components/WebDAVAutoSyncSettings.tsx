@@ -27,9 +27,9 @@ import {
 } from "~/components/ui"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { WEBDAV_SYNC_STRATEGIES, WebDAVSettings } from "~/types/webdav"
-import { sendRuntimeMessage } from "~/utils/browserApi"
-import { formatTimestamp } from "~/utils/formatters"
-import { createLogger } from "~/utils/logger"
+import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { formatTimestamp } from "~/utils/core/formatters"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to WebDAV auto-sync settings UI.

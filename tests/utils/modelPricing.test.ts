@@ -11,7 +11,7 @@ import {
   getEndpointTypesText,
   isModelAvailableForGroup,
   isTokenBillingType,
-} from "~/utils/modelPricing"
+} from "~/services/models/utils/modelPricing"
 
 describe("modelPricing utils", () => {
   describe("isTokenBillingType", () => {

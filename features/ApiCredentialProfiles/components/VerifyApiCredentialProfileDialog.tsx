@@ -28,7 +28,7 @@ import {
 } from "~/services/verification/aiApiVerification"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
-import { createLogger } from "~/utils/logger"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to API credential profile verification dialog.

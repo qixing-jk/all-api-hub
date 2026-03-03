@@ -1,6 +1,6 @@
 import { useState } from "react"
 
-import type { ProviderType } from "~/utils/modelProviders"
+import type { ProviderType } from "~/services/models/utils/modelProviders"
 
 type SelectedAccountValue = string | "all"
 

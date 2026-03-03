@@ -13,8 +13,8 @@ import type {
   ChannelModelFilterInput,
   ChannelModelFilterRule,
 } from "~/types/channelModelFilters"
-import { getErrorMessage } from "~/utils/error"
-import { createLogger } from "~/utils/logger"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("ChannelConfigStorage")
 

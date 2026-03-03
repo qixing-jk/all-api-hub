@@ -7,7 +7,7 @@ import { UI_CONSTANTS } from "~/constants/ui"
 import { getApiService } from "~/services/apiService"
 import type { CreateTokenRequest } from "~/services/apiService/common/type"
 import type { AccountToken, DisplaySiteData } from "~/types"
-import { createLogger } from "~/utils/logger"
+import { createLogger } from "~/utils/core/logger"
 
 import { DialogHeader } from "./DialogHeader"
 import { FormActions } from "./FormActions"

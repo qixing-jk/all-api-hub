@@ -6,8 +6,8 @@ import { SettingSection } from "~/components/SettingSection"
 import { Card, CardItem, CardList, ToggleButton } from "~/components/ui"
 import { COLORS } from "~/constants/designTokens"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { getSidePanelSupport } from "~/utils/browserApi"
-import { showResultToast, showUpdateToast } from "~/utils/toastHelpers"
+import { getSidePanelSupport } from "~/utils/browser/browserApi"
+import { showResultToast, showUpdateToast } from "~/utils/core/toastHelpers"
 
 /**
  * Lets users choose what the toolbar icon does (popup vs side panel).

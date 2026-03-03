@@ -5,9 +5,9 @@ import {
   openSidePanel,
   removeActionClickListener,
   setActionPopup,
-} from "~/utils/browserApi"
-import { getErrorMessage } from "~/utils/error"
-import { createLogger } from "~/utils/logger"
+} from "~/utils/browser/browserApi"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 import { openOrFocusOptionsMenuItem } from "~/utils/navigation"
 
 export type ActionClickBehavior = "popup" | "sidepanel"

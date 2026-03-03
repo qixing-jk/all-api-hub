@@ -9,7 +9,7 @@ import {
   CardHeader,
   Heading3,
 } from "~/components/ui"
-import { createLogger } from "~/utils/logger"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to redemption assist batch result toasts.

@@ -6,8 +6,8 @@ import { SUB2API } from "~/constants/siteType"
 import { generateDefaultTokenRequest } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import { getApiService } from "~/services/apiService"
 import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/types"
-import { getErrorMessage } from "~/utils/error"
-import { createLogger } from "~/utils/logger"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Logger scoped to the "copy key" dialog so token-loading and clipboard failures can be diagnosed safely.

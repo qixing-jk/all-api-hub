@@ -37,7 +37,7 @@ import {
   testWebdavConnection,
   uploadBackup,
 } from "~/services/webdav/webdavService"
-import { createLogger } from "~/utils/logger"
+import { createLogger } from "~/utils/core/logger"
 
 import {
   BACKUP_VERSION,

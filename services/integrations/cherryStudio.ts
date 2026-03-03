@@ -2,7 +2,7 @@ import { t } from "i18next"
 import toast from "react-hot-toast"
 
 import type { ApiToken, DisplaySiteData } from "~/types"
-import { createLogger } from "~/utils/logger"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to Cherry Studio deeplink integration.

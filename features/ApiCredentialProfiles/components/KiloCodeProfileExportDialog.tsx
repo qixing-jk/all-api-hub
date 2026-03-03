@@ -16,8 +16,8 @@ import {
   buildKiloCodeSettingsFile,
 } from "~/services/integrations/kiloCodeExport"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
-import { createLogger } from "~/utils/logger"
-import { stripTrailingOpenAIV1 } from "~/utils/url"
+import { createLogger } from "~/utils/core/logger"
+import { stripTrailingOpenAIV1 } from "~/utils/core/url"
 
 /**
  * Unified logger scoped to the Kilo Code export dialog for API credential profiles.

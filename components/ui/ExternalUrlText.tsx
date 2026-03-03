@@ -1,7 +1,7 @@
 import type { AnchorHTMLAttributes, ReactNode } from "react"
 
 import { cn } from "~/lib/utils"
-import { normalizeHttpUrl } from "~/utils/url"
+import { normalizeHttpUrl } from "~/utils/core/url"
 
 export interface ExternalUrlTextProps
   extends Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "href" | "children"> {

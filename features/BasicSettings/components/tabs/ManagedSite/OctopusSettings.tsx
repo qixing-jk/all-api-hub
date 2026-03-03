@@ -14,7 +14,7 @@ import {
 } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { octopusAuthManager } from "~/services/apiService/octopus/auth"
-import { showUpdateToast } from "~/utils/toastHelpers"
+import { showUpdateToast } from "~/utils/core/toastHelpers"
 
 /**
  * Settings panel for configuring Octopus connection credentials (base URL, username, password).

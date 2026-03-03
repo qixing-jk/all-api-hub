@@ -6,7 +6,7 @@ import {
   formatPriceCompact,
   isTokenBillingType,
   type CalculatedPrice,
-} from "~/utils/modelPricing"
+} from "~/services/models/utils/modelPricing"
 
 import { ModelItemPerCallPricingView } from "./ModelItemPerCallPricingView"
 import { PriceView } from "./ModelItemPicingView"

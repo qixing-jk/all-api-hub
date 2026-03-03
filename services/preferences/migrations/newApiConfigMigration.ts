@@ -4,7 +4,7 @@
  */
 
 import { DEFAULT_NEW_API_CONFIG } from "~/types/newApiConfig"
-import { createLogger } from "~/utils/logger"
+import { createLogger } from "~/utils/core/logger"
 
 import type { UserPreferences } from "../userPreferences"
 

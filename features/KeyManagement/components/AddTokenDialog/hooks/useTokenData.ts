@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next"
 import { getApiService } from "~/services/apiService"
 import type { UserGroupInfo } from "~/services/apiService/common/type"
 import type { DisplaySiteData } from "~/types"
-import { createLogger } from "~/utils/logger"
+import { createLogger } from "~/utils/core/logger"
 
 import type { FormData } from "./useTokenForm"
 

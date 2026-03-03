@@ -19,7 +19,7 @@ afterEach(() => {
 
 describe("AutoCheckin status view refresh", () => {
   it("reloads status when autoCheckin:runCompleted is received", async () => {
-    const browserApi = await import("~/utils/browserApi")
+    const browserApi = await import("~/utils/browser/browserApi")
 
     const sendRuntimeMessageSpy = vi
       .spyOn(browserApi, "sendRuntimeMessage")

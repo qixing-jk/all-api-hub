@@ -39,8 +39,11 @@ vi.mock("~/services/apiService", () => ({
   }),
 }))
 
-vi.mock("~/utils/modelProviders", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("~/utils/modelProviders")>()
+vi.mock("~/services/models/utils/modelProviders", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("~/services/models/utils/modelProviders")
+    >()
   return {
     ...actual,
     getAllProviders: () => [],

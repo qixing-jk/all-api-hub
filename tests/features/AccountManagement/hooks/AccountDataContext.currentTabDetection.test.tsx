@@ -73,7 +73,7 @@ vi.mock("~/services/search/accountSearch", () => ({
   searchAccounts: vi.fn(() => []),
 }))
 
-vi.mock("~/utils/browserApi", () => ({
+vi.mock("~/utils/browser/browserApi", () => ({
   getActiveTabs: vi.fn(async () => activeTabs),
   getAllTabs: vi.fn(async () => []),
   onRuntimeMessage: vi.fn(() => () => {}),

@@ -27,10 +27,10 @@ import {
   AUTH_MODE,
   COOKIE_AUTH_HEADER_NAME,
   COOKIE_SESSION_OVERRIDE_HEADER_NAME,
-} from "~/utils/cookieHelper"
-import { createLogger } from "~/utils/logger"
-import { executeWithTempWindowFallback } from "~/utils/tempWindowFetch"
-import { joinUrl } from "~/utils/url"
+} from "~/utils/browser/cookieHelper"
+import { executeWithTempWindowFallback } from "~/utils/browser/tempWindowFetch"
+import { createLogger } from "~/utils/core/logger"
+import { joinUrl } from "~/utils/core/url"
 
 type NormalizedAuthContext = AuthConfig
 

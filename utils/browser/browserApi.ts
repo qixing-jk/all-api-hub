@@ -8,9 +8,9 @@ import {
   RuntimeActionIds,
   type RuntimeActionId,
 } from "~/constants/runtimeActions"
-import { getErrorMessage } from "~/utils/error"
-import { isNotEmptyArray } from "~/utils/index"
-import { createLogger } from "~/utils/logger"
+import { isNotEmptyArray } from "~/utils"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to cross-browser WebExtension API helpers.

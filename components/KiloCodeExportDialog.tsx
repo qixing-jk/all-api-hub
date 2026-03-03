@@ -28,7 +28,7 @@ import {
   type KiloCodeExportTuple,
 } from "~/services/integrations/kiloCodeExport"
 import type { ApiToken, DisplaySiteData, SiteAccount } from "~/types"
-import { stripTrailingOpenAIV1 } from "~/utils/url"
+import { stripTrailingOpenAIV1 } from "~/utils/core/url"
 
 interface KiloCodeExportDialogProps {
   isOpen: boolean

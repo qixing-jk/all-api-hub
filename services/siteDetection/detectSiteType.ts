@@ -2,9 +2,12 @@ import { SITE_TITLE_RULES, UNKNOWN_SITE } from "~/constants/siteType"
 import { ApiError } from "~/services/apiService/common/errors"
 import { fetchApi, fetchApiData } from "~/services/apiService/common/utils"
 import { AuthTypeEnum } from "~/types"
-import { safeRandomUUID } from "~/utils/identifier"
-import { createLogger } from "~/utils/logger"
-import { canUseTempWindowFetch, tempWindowFetch } from "~/utils/tempWindowFetch"
+import {
+  canUseTempWindowFetch,
+  tempWindowFetch,
+} from "~/utils/browser/tempWindowFetch"
+import { safeRandomUUID } from "~/utils/core/identifier"
+import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("DetectSiteType")
 

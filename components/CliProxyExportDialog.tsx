@@ -12,10 +12,10 @@ import {
 import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompatible"
 import { importToCliProxy } from "~/services/integrations/cliProxyService"
 import type { ApiToken, DisplaySiteData } from "~/types"
-import { safeRandomUUID } from "~/utils/identifier"
-import { createLogger } from "~/utils/logger"
-import { showResultToast } from "~/utils/toastHelpers"
-import { joinUrl, stripTrailingOpenAIV1 } from "~/utils/url"
+import { safeRandomUUID } from "~/utils/core/identifier"
+import { createLogger } from "~/utils/core/logger"
+import { showResultToast } from "~/utils/core/toastHelpers"
+import { joinUrl, stripTrailingOpenAIV1 } from "~/utils/core/url"
 
 interface CliProxyExportDialogProps {
   isOpen: boolean

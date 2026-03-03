@@ -14,10 +14,10 @@ import type {
   AccountKeyRepairProgress,
   AccountKeyRepairSkipReason,
 } from "~/types/accountKeyAutoProvisioning"
-import { sendRuntimeMessage } from "~/utils/browserApi"
-import { getErrorMessage } from "~/utils/error"
-import { safeRandomUUID } from "~/utils/identifier"
-import { createLogger } from "~/utils/logger"
+import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { getErrorMessage } from "~/utils/core/error"
+import { safeRandomUUID } from "~/utils/core/identifier"
+import { createLogger } from "~/utils/core/logger"
 
 import { ensureDefaultApiTokenForAccount } from "./ensureDefaultToken"
 import { runPerKeySequential } from "./perOriginQueue"

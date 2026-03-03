@@ -49,8 +49,8 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
   useUserPreferencesContext: vi.fn(),
 }))
 
-vi.mock("~/utils/browserApi", async () => {
-  const actual = await vi.importActual<any>("~/utils/browserApi")
+vi.mock("~/utils/browser/browserApi", async () => {
+  const actual = await vi.importActual<any>("~/utils/browser/browserApi")
   return {
     ...actual,
     hasAlarmsAPI: vi.fn(() => true),

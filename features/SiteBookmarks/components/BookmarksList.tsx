@@ -30,8 +30,8 @@ import { useBookmarkDialogContext } from "~/features/SiteBookmarks/hooks/Bookmar
 import { useIsDesktop, useIsSmallScreen } from "~/hooks/useMediaQuery"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import type { SiteBookmark } from "~/types"
-import { createTab } from "~/utils/browserApi"
-import { getErrorMessage } from "~/utils/error"
+import { createTab } from "~/utils/browser/browserApi"
+import { getErrorMessage } from "~/utils/core/error"
 import { closeIfPopup } from "~/utils/navigation"
 
 import BookmarkSearchInput from "./BookmarkSearchInput"

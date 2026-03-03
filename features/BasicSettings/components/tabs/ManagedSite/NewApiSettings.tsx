@@ -13,9 +13,9 @@ import {
 } from "~/components/ui"
 import { getSiteApiRouter, NEW_API } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { createTab } from "~/utils/browserApi"
-import { showUpdateToast } from "~/utils/toastHelpers"
-import { joinUrl } from "~/utils/url"
+import { createTab } from "~/utils/browser/browserApi"
+import { showUpdateToast } from "~/utils/core/toastHelpers"
+import { joinUrl } from "~/utils/core/url"
 
 /**
  * Settings panel for configuring New API connection credentials (base URL, admin token, user ID).

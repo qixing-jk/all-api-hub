@@ -10,7 +10,7 @@ import { tagStorage } from "~/services/tags/tagStorage"
 import type { AccountStorageConfig, TagStore } from "~/types"
 import type { ApiCredentialProfilesConfig } from "~/types/apiCredentialProfiles"
 import type { ChannelConfigMap } from "~/types/channelConfig"
-import { createLogger } from "~/utils/logger"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to import/export helpers for backups and preferences.

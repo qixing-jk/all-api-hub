@@ -4,7 +4,7 @@ import toast from "react-hot-toast"
 import { ShareSnapshotCaptionToast } from "~/features/ShareSnapshots/components/ShareSnapshotCaptionToast"
 import { exportShareSnapshot } from "~/services/sharing/shareSnapshots"
 import type { ShareSnapshotPayload } from "~/services/sharing/shareSnapshots/types"
-import { getErrorMessage } from "~/utils/error"
+import { getErrorMessage } from "~/utils/core/error"
 
 const DEFAULT_CAPTION_TOAST_DURATION_MS = 12000
 

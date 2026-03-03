@@ -13,12 +13,12 @@ import { Button, IconButton } from "~/components/ui"
 import { COLORS } from "~/constants/designTokens"
 import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
+import { getExternalCheckInOpenOptions } from "~/utils/core/shortcutKeys"
 import {
   openAutoCheckinPage,
   openKeysPage,
   openModelsPage,
 } from "~/utils/navigation"
-import { getExternalCheckInOpenOptions } from "~/utils/shortcutKeys"
 
 interface ActionButtonsProps {
   primaryActionLabel: string

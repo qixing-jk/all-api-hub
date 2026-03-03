@@ -6,8 +6,8 @@ import {
   userPreferences,
 } from "~/services/preferences/userPreferences"
 import { changelogOnUpdateState } from "~/services/updates/changelogOnUpdateState"
-import { getErrorMessage } from "~/utils/error"
-import { createLogger } from "~/utils/logger"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 const LOGGER = createLogger("ChangelogOnUpdateUiOpenHandler")
 

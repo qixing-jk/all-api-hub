@@ -30,7 +30,7 @@ vi.mock("~/services/apiService", () => ({
   })),
 }))
 
-vi.mock("~/utils/managedSite", () => ({
+vi.mock("~/services/managedSites/utils/managedSite", () => ({
   getManagedSiteAdminConfig: vi.fn(() => ({
     baseUrl: "https://example.com",
     adminToken: "token",

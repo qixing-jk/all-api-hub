@@ -25,9 +25,9 @@ import type { ModelMetadata } from "~/services/models/modelMetadata/types"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 import type { ManagedSiteModelSyncPreferences } from "~/types/managedSiteModelSync"
-import { sendRuntimeMessage } from "~/utils/browserApi"
-import { getErrorMessage } from "~/utils/error"
-import { createLogger } from "~/utils/logger"
+import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 import { navigateWithinOptionsPage } from "~/utils/navigation"
 
 type UserManagedSiteModelSyncConfig = NonNullable<

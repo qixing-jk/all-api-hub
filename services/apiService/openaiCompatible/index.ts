@@ -5,7 +5,7 @@ import type {
 } from "~/services/apiService/common/type"
 import { fetchApiData } from "~/services/apiService/common/utils"
 import { AuthTypeEnum } from "~/types"
-import { createLogger } from "~/utils/logger"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to OpenAI-compatible upstream model fetch helpers.

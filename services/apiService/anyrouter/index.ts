@@ -15,7 +15,7 @@ import type {
 import { anyrouterProvider } from "~/services/checkin/autoCheckin/providers/anyrouter"
 import { SiteHealthStatus, type CheckInConfig } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
-import { createLogger } from "~/utils/logger"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to AnyRouter site API overrides.

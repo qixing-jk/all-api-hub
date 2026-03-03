@@ -8,8 +8,8 @@ import {
   type UsageHistoryLatencyAggregate,
   type UsageHistoryStore,
 } from "~/types/usageHistory"
-import { getErrorMessage } from "~/utils/error"
-import { createLogger } from "~/utils/logger"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 import { USAGE_HISTORY_STORAGE_KEYS } from "./constants"
 import {

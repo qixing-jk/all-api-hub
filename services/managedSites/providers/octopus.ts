@@ -17,6 +17,7 @@ import type {
   ManagedSiteConfig,
   ManagedSiteService,
 } from "~/services/managedSites/managedSiteService"
+import type { ManagedSiteMessagesKey } from "~/services/managedSites/utils/managedSite"
 import {
   userPreferences,
   type UserPreferences,
@@ -42,10 +43,9 @@ import type {
   OctopusCreateChannelRequest,
 } from "~/types/octopus"
 import type { OctopusConfig } from "~/types/octopusConfig"
-import { getErrorMessage } from "~/utils/error"
-import { createLogger } from "~/utils/logger"
-import type { ManagedSiteMessagesKey } from "~/utils/managedSite"
-import { normalizeList, parseDelimitedList } from "~/utils/string"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
+import { normalizeList, parseDelimitedList } from "~/utils/core/string"
 
 const logger = createLogger("OctopusService")
 

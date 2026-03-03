@@ -1,5 +1,5 @@
-import { createLogger } from "~/utils/logger"
-import { sanitizeUrlForLog } from "~/utils/sanitizeUrlForLog"
+import { createLogger } from "~/utils/core/logger"
+import { sanitizeUrlForLog } from "~/utils/core/sanitizeUrlForLog"
 
 const logger = createLogger("CapGuard")
 

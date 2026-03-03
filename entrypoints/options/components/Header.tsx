@@ -5,7 +5,7 @@ import iconImage from "~/assets/icon.png"
 import { LanguageSwitcher } from "~/components/LanguageSwitcher"
 import { BodySmall, Heading5, IconButton } from "~/components/ui"
 import { VersionBadge } from "~/components/VersionBadge"
-import { getRepository } from "~/utils/packageMeta"
+import { getRepository } from "~/utils/navigation/packageMeta"
 
 interface HeaderProps {
   onTitleClick: () => void

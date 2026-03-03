@@ -52,7 +52,7 @@ vi.mock("~/services/redemption/redemptionAssist", () => ({
   redemptionAssistService: { initialize: redemptionAssistInitMock },
 }))
 
-vi.mock("~/utils/background-i18n", () => ({
+vi.mock("~/utils/i18n/background", () => ({
   initBackgroundI18n: initBackgroundI18nMock,
 }))
 

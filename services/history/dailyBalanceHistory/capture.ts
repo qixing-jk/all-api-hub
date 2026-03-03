@@ -4,8 +4,8 @@ import type {
   DailyBalanceSnapshot,
 } from "~/types/dailyBalanceHistory"
 import { DEFAULT_BALANCE_HISTORY_PREFERENCES } from "~/types/dailyBalanceHistory"
-import { getErrorMessage } from "~/utils/error"
-import { createLogger } from "~/utils/logger"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 import { getDayKeyFromUnixSeconds } from "./dayKeys"
 import { dailyBalanceHistoryStorage } from "./storage"

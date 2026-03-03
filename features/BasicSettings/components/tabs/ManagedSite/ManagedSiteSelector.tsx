@@ -19,7 +19,7 @@ import {
   type ManagedSiteType,
 } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { showUpdateToast } from "~/utils/toastHelpers"
+import { showUpdateToast } from "~/utils/core/toastHelpers"
 
 /**
  * Component for selecting which managed site type to use.

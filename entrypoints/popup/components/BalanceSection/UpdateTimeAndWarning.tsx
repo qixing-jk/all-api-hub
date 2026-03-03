@@ -5,7 +5,7 @@ import Tooltip from "~/components/Tooltip"
 import { Badge, Caption } from "~/components/ui"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
-import { formatFullTime, formatRelativeTime } from "~/utils/formatters"
+import { formatFullTime, formatRelativeTime } from "~/utils/core/formatters"
 
 export const UpdateTimeAndWarning = () => {
   const { t } = useTranslation("account")

@@ -35,7 +35,7 @@ describe("AutoCheckinUiOpenPretrigger", () => {
       },
     })
 
-    const browserApi = await import("~/utils/browserApi")
+    const browserApi = await import("~/utils/browser/browserApi")
     const sendRuntimeMessageSpy = vi.spyOn(browserApi, "sendRuntimeMessage")
 
     sendRuntimeMessageSpy.mockImplementation(async (message: any) => {

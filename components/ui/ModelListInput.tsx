@@ -3,7 +3,7 @@ import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
 import { cn } from "~/lib/utils"
-import { safeRandomUUID } from "~/utils/identifier"
+import { safeRandomUUID } from "~/utils/core/identifier"
 
 import { Input } from "./input"
 import { RepeatableInput } from "./RepeatableInput"

@@ -7,7 +7,7 @@ import type {
   UsageHistoryExportSelection,
   UsageHistoryStore,
 } from "~/types/usageHistory"
-import { getErrorMessage } from "~/utils/error"
+import { getErrorMessage } from "~/utils/core/error"
 
 export const useUsageAnalyticsExport = (params: {
   store: UsageHistoryStore | null

@@ -9,11 +9,11 @@ import { useTranslation } from "react-i18next"
 
 import AccountLinkButton from "~/components/AccountLinkButton"
 import { Button, Card } from "~/components/ui"
+import { stripAutoCheckinMessageKeyPrefix } from "~/features/AutoCheckin/utils/autoCheckin"
 import {
   CHECKIN_RESULT_STATUS,
   CheckinAccountResult,
 } from "~/types/autoCheckin"
-import { stripAutoCheckinMessageKeyPrefix } from "~/utils/autoCheckin"
 
 import {
   formatTimestamp,

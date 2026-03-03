@@ -17,7 +17,7 @@ import {
   type ApiCheckOpenModalDetail,
 } from "~/entrypoints/content/webAiApiCheck/events"
 import { render } from "~/tests/test-utils/render"
-import { sendRuntimeMessage } from "~/utils/browserApi"
+import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 
 vi.mock("react-hot-toast/headless", () => ({
   default: {
@@ -27,8 +27,9 @@ vi.mock("react-hot-toast/headless", () => ({
   },
 }))
 
-vi.mock("~/utils/browserApi", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("~/utils/browserApi")>()
+vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/browser/browserApi")>()
   return {
     ...actual,
     sendRuntimeMessage: vi.fn(),

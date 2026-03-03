@@ -3,10 +3,10 @@ import { useTranslation } from "react-i18next"
 
 import { Button, Modal } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { createTab } from "~/utils/browserApi"
-import { getDocsChangelogUrl } from "~/utils/docsLinks"
-import { getErrorMessage } from "~/utils/error"
-import { createLogger } from "~/utils/logger"
+import { createTab } from "~/utils/browser/browserApi"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
+import { getDocsChangelogUrl } from "~/utils/navigation/docsLinks"
 
 export interface UpdateLogDialogProps {
   isOpen: boolean

@@ -6,6 +6,11 @@ import {
   type ManagedSiteType,
 } from "~/constants/siteType"
 import type { ApiResponse } from "~/services/apiService/common/type"
+import type { ManagedSiteMessagesKey } from "~/services/managedSites/utils/managedSite"
+import {
+  getManagedSiteAdminConfig,
+  getManagedSiteContext,
+} from "~/services/managedSites/utils/managedSite"
 import type {
   AccountToken,
   ApiToken,
@@ -20,11 +25,6 @@ import type {
   ManagedSiteChannelListData,
   UpdateChannelPayload,
 } from "~/types/managedSite"
-import type { ManagedSiteMessagesKey } from "~/utils/managedSite"
-import {
-  getManagedSiteAdminConfig,
-  getManagedSiteContext,
-} from "~/utils/managedSite"
 
 import {
   userPreferences,

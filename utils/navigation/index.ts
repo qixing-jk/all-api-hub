@@ -10,9 +10,9 @@ import {
   createTab as createTabApi,
   focusTab,
   getExtensionURL,
-} from "~/utils/browserApi"
-import { createLogger } from "~/utils/logger"
-import { joinUrl } from "~/utils/url"
+} from "~/utils/browser/browserApi"
+import { createLogger } from "~/utils/core/logger"
+import { joinUrl } from "~/utils/core/url"
 
 /**
  * Unified logger scoped to navigation helpers and options-page routing.
