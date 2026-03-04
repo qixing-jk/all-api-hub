@@ -2,16 +2,10 @@ import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline"
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { SettingSection } from "~/src/components/SettingSection"
-import {
-  Card,
-  CardItem,
-  CardList,
-  IconButton,
-  Input,
-} from "~/src/components/ui"
-import { useUserPreferencesContext } from "~/src/contexts/UserPreferencesContext"
-import { showUpdateToast } from "~/src/utils/core/toastHelpers"
+import { SettingSection } from "~/components/SettingSection"
+import { Card, CardItem, CardList, IconButton, Input } from "~/components/ui"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { showUpdateToast } from "~/utils/core/toastHelpers"
 
 /**
  * Settings section for configuring Claude Code Router admin API connection.

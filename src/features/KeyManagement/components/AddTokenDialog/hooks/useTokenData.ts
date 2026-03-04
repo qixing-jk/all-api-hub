@@ -2,10 +2,10 @@ import { useCallback, useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { getApiService } from "~/src/services/apiService"
-import type { UserGroupInfo } from "~/src/services/apiService/common/type"
-import type { DisplaySiteData } from "~/src/types"
-import { createLogger } from "~/src/utils/core/logger"
+import { getApiService } from "~/services/apiService"
+import type { UserGroupInfo } from "~/services/apiService/common/type"
+import type { DisplaySiteData } from "~/types"
+import { createLogger } from "~/utils/core/logger"
 
 import type { FormData } from "./useTokenForm"
 

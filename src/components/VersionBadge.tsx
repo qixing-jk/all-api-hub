@@ -1,6 +1,6 @@
-import { Badge } from "~/src/components/ui"
-import { getManifest } from "~/src/utils/browser/browserApi"
-import { getDocsChangelogUrl } from "~/src/utils/navigation/docsLinks"
+import { Badge } from "~/components/ui"
+import { getManifest } from "~/utils/browser/browserApi"
+import { getDocsChangelogUrl } from "~/utils/navigation/docsLinks"
 
 export type VersionBadgeProps = {
   /**

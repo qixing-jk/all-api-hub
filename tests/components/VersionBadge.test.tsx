@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { VersionBadge } from "~/src/components/VersionBadge"
-import { render, screen } from "~/tests/test-utils/render"
+import { VersionBadge } from "~/components/VersionBadge"
+import { render, screen } from "~~/tests/test-utils/render"
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/src/utils/browser/browserApi")>()
+    await importOriginal<typeof import("~/utils/browser/browserApi")>()
   return {
     ...actual,
     getManifest: vi.fn(() => ({
@@ -22,10 +22,8 @@ vi.mock("~/utils/navigation/docsLinks", () => ({
 
 describe("VersionBadge", () => {
   it("renders current version and links to changelog", async () => {
-    const { getManifest } = await import("~/src/utils/browser/browserApi")
-    const { getDocsChangelogUrl } = await import(
-      "~/src/utils/navigation/docsLinks"
-    )
+    const { getManifest } = await import("~/utils/browser/browserApi")
+    const { getDocsChangelogUrl } = await import("~/utils/navigation/docsLinks")
 
     vi.mocked(getManifest).mockReturnValue({ version: "1.2.3" } as any)
     vi.mocked(getDocsChangelogUrl).mockReturnValue(
@@ -42,7 +40,7 @@ describe("VersionBadge", () => {
   })
 
   it("renders nothing when version is missing", async () => {
-    const { getManifest } = await import("~/src/utils/browser/browserApi")
+    const { getManifest } = await import("~/utils/browser/browserApi")
 
     vi.mocked(getManifest).mockReturnValue({} as any)
 

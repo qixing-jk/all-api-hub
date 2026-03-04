@@ -10,7 +10,7 @@ import {
 import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Badge, Button, Checkbox } from "~/src/components/ui"
+import { Badge, Button, Checkbox } from "~/components/ui"
 import {
   Table,
   TableBody,
@@ -18,8 +18,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "~/src/components/ui/table"
-import { cn } from "~/src/lib/utils"
+} from "~/components/ui/table"
+import { cn } from "~/lib/utils"
 
 import UsageHistorySyncRowActions from "./UsageHistorySyncRowActions"
 

@@ -7,10 +7,10 @@ import {
 import React from "react"
 import { useTranslation } from "react-i18next"
 
-import { Badge, IconButton } from "~/src/components/ui"
-import type { ModelPricing } from "~/src/services/apiService/common/type"
-import { getBillingModeText } from "~/src/services/models/utils/modelPricing"
-import { getProviderConfig } from "~/src/services/models/utils/modelProviders"
+import { Badge, IconButton } from "~/components/ui"
+import type { ModelPricing } from "~/services/apiService/common/type"
+import { getBillingModeText } from "~/services/models/utils/modelPricing"
+import { getProviderConfig } from "~/services/models/utils/modelProviders"
 
 interface ModelItemHeaderProps {
   model: ModelPricing

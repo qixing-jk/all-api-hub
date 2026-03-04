@@ -33,8 +33,14 @@ export function reactDevToolsAuto(options: ReactDevToolsOptions = {}): Plugin {
       options.forceFetch ?? boolEnv(env.REACT_DEVTOOLS_FORCE_FETCH, false),
   }
 
-  const publicDir = path.resolve(process.cwd(), "public")
-  const backendPath = path.join(publicDir, "react-devtools-backend.js")
+  let resolvedPublicDir = path.resolve(process.cwd(), "public")
+
+  /**
+   *
+   */
+  function getBackendPath() {
+    return path.join(resolvedPublicDir, "react-devtools-backend.js")
+  }
 
   /**
    * Read a boolean flag from environment variables with fallback default.
@@ -99,6 +105,7 @@ export function reactDevToolsAuto(options: ReactDevToolsOptions = {}): Plugin {
       const content = await fetch(`http://localhost:${config.port}`).then((r) =>
         r.text(),
       )
+      const backendPath = getBackendPath()
       await fs.mkdir(path.dirname(backendPath), { recursive: true })
       await fs.writeFile(backendPath, content)
       console.log("✅ React DevTools backend updated")
@@ -112,6 +119,10 @@ export function reactDevToolsAuto(options: ReactDevToolsOptions = {}): Plugin {
   return {
     name: "wxt-react-devtools-auto",
     apply: "serve",
+
+    configResolved(config) {
+      if (config.publicDir) resolvedPublicDir = config.publicDir
+    },
 
     async configureServer(server) {
       const { mode } = server.config
@@ -132,7 +143,7 @@ export function reactDevToolsAuto(options: ReactDevToolsOptions = {}): Plugin {
       }
 
       const ready = await waitForDevTools()
-      const expired = await isCacheExpired(backendPath)
+      const expired = await isCacheExpired(getBackendPath())
 
       if (config.forceFetch || (ready && expired)) {
         await fetchBackend()

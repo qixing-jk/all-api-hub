@@ -9,22 +9,22 @@ import {
   Heading5,
   Input,
   SearchableSelect,
-} from "~/src/components/ui"
-import { Modal } from "~/src/components/ui/Dialog/Modal"
-import { getApiService } from "~/src/services/apiService"
-import { guessModelIdFromToken } from "~/src/services/verification/aiApiVerification"
+} from "~/components/ui"
+import { Modal } from "~/components/ui/Dialog/Modal"
+import { getApiService } from "~/services/apiService"
+import { guessModelIdFromToken } from "~/services/verification/aiApiVerification"
 import {
   inferHttpStatus,
   summaryKeyFromHttpStatus,
   toSanitizedErrorSummary,
-} from "~/src/services/verification/aiApiVerification/utils"
+} from "~/services/verification/aiApiVerification/utils"
 import {
   CLI_TOOL_IDS,
   runCliSupportTool,
-} from "~/src/services/verification/cliSupportVerification"
-import type { CliSupportResult } from "~/src/services/verification/cliSupportVerification"
-import type { ApiToken } from "~/src/types"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/services/verification/cliSupportVerification"
+import type { CliSupportResult } from "~/services/verification/cliSupportVerification"
+import type { ApiToken } from "~/types"
+import { createLogger } from "~/utils/core/logger"
 
 import { ToolStatusBadge } from "./ToolStatusBadge"
 import type { ToolItemState, VerifyCliSupportDialogProps } from "./types"

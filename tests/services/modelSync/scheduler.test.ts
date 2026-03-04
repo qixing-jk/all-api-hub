@@ -1,20 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   handleManagedSiteModelSyncMessage,
   modelSyncScheduler,
-} from "~/src/services/models/modelSync/scheduler"
+} from "~/services/models/modelSync/scheduler"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
-} from "~/src/services/preferences/userPreferences"
+} from "~/services/preferences/userPreferences"
 import {
   clearAlarm,
   createAlarm,
   getAlarm,
   hasAlarmsAPI,
-} from "~/src/utils/browser/browserApi"
+} from "~/utils/browser/browserApi"
 
 vi.mock("~/services/preferences/userPreferences", () => ({
   DEFAULT_PREFERENCES: {
@@ -36,7 +36,7 @@ vi.mock("~/services/preferences/userPreferences", () => ({
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/src/utils/browser/browserApi")>()
+    await importOriginal<typeof import("~/utils/browser/browserApi")>()
   return {
     ...actual,
     clearAlarm: vi.fn(),

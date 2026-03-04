@@ -1,3 +1,3 @@
-import ModelList from "~/src/features/ModelList"
+import ModelList from "~/features/ModelList"
 
 export default ModelList

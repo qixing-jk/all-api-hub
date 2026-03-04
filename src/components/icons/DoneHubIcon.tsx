@@ -1,9 +1,9 @@
-import doneHubLogo from "~/src/assets/done-hub-logo.png"
+import doneHubLogo from "~/assets/done-hub-logo.png"
 import {
   ICON_SIZE_CLASSNAME,
   type IconSize,
-} from "~/src/components/icons/iconSizes"
-import { cn } from "~/src/lib/utils"
+} from "~/components/icons/iconSizes"
+import { cn } from "~/lib/utils"
 
 interface DoneHubIconProps {
   size?: IconSize

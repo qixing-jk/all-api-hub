@@ -1,3 +1,3 @@
-import ManagedSiteModelSync from "~/src/features/ManagedSiteModelSync"
+import ManagedSiteModelSync from "~/features/ManagedSiteModelSync"
 
 export default ManagedSiteModelSync

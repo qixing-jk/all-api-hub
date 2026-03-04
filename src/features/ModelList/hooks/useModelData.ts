@@ -3,13 +3,13 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { getApiService } from "~/src/services/apiService"
-import type { PricingResponse } from "~/src/services/apiService/common/type"
+import { getApiService } from "~/services/apiService"
+import type { PricingResponse } from "~/services/apiService/common/type"
 import {
   MODEL_PRICING_CACHE_TTL_MS,
   modelPricingCache,
-} from "~/src/services/models/modelPricingCache"
-import type { DisplaySiteData } from "~/src/types"
+} from "~/services/models/modelPricingCache"
+import type { DisplaySiteData } from "~/types"
 
 type SelectedAccountValue = string | "all"
 

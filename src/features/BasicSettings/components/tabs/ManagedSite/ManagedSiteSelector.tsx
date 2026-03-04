@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next"
 
-import { SettingSection } from "~/src/components/SettingSection"
+import { SettingSection } from "~/components/SettingSection"
 import {
   Card,
   CardItem,
@@ -10,16 +10,16 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "~/src/components/ui"
+} from "~/components/ui"
 import {
   DONE_HUB,
   NEW_API,
   OCTOPUS,
   VELOERA,
   type ManagedSiteType,
-} from "~/src/constants/siteType"
-import { useUserPreferencesContext } from "~/src/contexts/UserPreferencesContext"
-import { showUpdateToast } from "~/src/utils/core/toastHelpers"
+} from "~/constants/siteType"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { showUpdateToast } from "~/utils/core/toastHelpers"
 
 /**
  * Component for selecting which managed site type to use.

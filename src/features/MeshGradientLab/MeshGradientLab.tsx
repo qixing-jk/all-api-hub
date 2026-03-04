@@ -2,7 +2,7 @@ import { Palette, Shuffle } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { PageHeader } from "~/src/components/PageHeader"
+import { PageHeader } from "~/components/PageHeader"
 import {
   Button,
   Card,
@@ -11,18 +11,18 @@ import {
   Label,
   Switch,
   ToggleButton,
-} from "~/src/components/ui"
+} from "~/components/ui"
 import {
   MESH_GRADIENT_LAYOUT_COUNT,
   MESH_GRADIENT_PALETTES,
-} from "~/src/services/sharing/shareSnapshots/meshGradient"
-import { drawMeshGradientBackground } from "~/src/services/sharing/shareSnapshots/meshGradientBackground"
+} from "~/services/sharing/shareSnapshots/meshGradient"
+import { drawMeshGradientBackground } from "~/services/sharing/shareSnapshots/meshGradientBackground"
 import {
   drawShareSnapshotOverlay,
   type ShareSnapshotOverlayLabels,
-} from "~/src/services/sharing/shareSnapshots/shareSnapshotOverlay"
-import type { ShareSnapshotPayload } from "~/src/services/sharing/shareSnapshots/types"
-import { createShareSnapshotSeed } from "~/src/services/sharing/shareSnapshots/utils"
+} from "~/services/sharing/shareSnapshots/shareSnapshotOverlay"
+import type { ShareSnapshotPayload } from "~/services/sharing/shareSnapshots/types"
+import { createShareSnapshotSeed } from "~/services/sharing/shareSnapshots/utils"
 
 type ViewMode = "palettes" | "layouts"
 

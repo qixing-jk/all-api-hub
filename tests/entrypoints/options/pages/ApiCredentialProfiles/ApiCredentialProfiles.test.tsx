@@ -1,15 +1,15 @@
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import ApiCredentialProfiles from "~/src/entrypoints/options/pages/ApiCredentialProfiles"
-import { API_TYPES } from "~/src/services/verification/aiApiVerification"
+import ApiCredentialProfiles from "~/entrypoints/options/pages/ApiCredentialProfiles"
+import { API_TYPES } from "~/services/verification/aiApiVerification"
 import {
   normalizeGoogleFamilyBaseUrl,
   normalizeOpenAiFamilyBaseUrl,
-} from "~/src/services/verification/webAiApiCheck/extractCredentials"
-import type { Tag } from "~/src/types"
-import type { ApiCredentialProfile } from "~/src/types/apiCredentialProfiles"
-import { render, screen, waitFor, within } from "~/tests/test-utils/render"
+} from "~/services/verification/webAiApiCheck/extractCredentials"
+import type { Tag } from "~/types"
+import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
+import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 
 let store: ApiCredentialProfile[] = []
 

@@ -1,12 +1,8 @@
 import { renderHook, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import { useAccountData } from "~/src/hooks/useAccountData"
-import {
-  AuthTypeEnum,
-  SiteHealthStatus,
-  type DisplaySiteData,
-} from "~/src/types"
+import { useAccountData } from "~/hooks/useAccountData"
+import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 
 const { mockGetAllAccounts, mockGetAccountStats, mockConvertToDisplayData } =
   vi.hoisted(() => ({

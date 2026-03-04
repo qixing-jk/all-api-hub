@@ -1,21 +1,21 @@
 import { t } from "i18next"
 
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   CONTENT_UI_HOST_TAG,
   isEventFromAllApiHubContentUi,
-} from "~/src/entrypoints/content/shared/contentUi"
-import { isLikelyCopyActionTarget } from "~/src/entrypoints/content/shared/copyActionTarget"
+} from "~/entrypoints/content/shared/contentUi"
+import { isLikelyCopyActionTarget } from "~/entrypoints/content/shared/copyActionTarget"
 import type {
   RedemptionAssistShouldPromptRequest,
   RedemptionAssistShouldPromptResponse,
-} from "~/src/services/redemption/redemptionAssist"
-import { extractRedemptionCodesFromText } from "~/src/services/redemption/utils/redemptionCode"
+} from "~/services/redemption/redemptionAssist"
+import { extractRedemptionCodesFromText } from "~/services/redemption/utils/redemptionCode"
 import {
   checkPermissionViaMessage,
   sendRuntimeMessage,
-} from "~/src/utils/browser/browserApi"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/utils/browser/browserApi"
+import { createLogger } from "~/utils/core/logger"
 
 import {
   dismissToast,

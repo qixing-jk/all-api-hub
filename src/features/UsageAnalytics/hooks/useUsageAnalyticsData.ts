@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 
-import { accountStorage } from "~/src/services/accounts/accountStorage"
-import { usageHistoryStorage } from "~/src/services/history/usageHistory/storage"
-import type { SiteAccount } from "~/src/types"
-import type { UsageHistoryStore } from "~/src/types/usageHistory"
-import { createLogger } from "~/src/utils/core/logger"
+import { accountStorage } from "~/services/accounts/accountStorage"
+import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
+import type { SiteAccount } from "~/types"
+import type { UsageHistoryStore } from "~/types/usageHistory"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to the Usage Analytics options page.

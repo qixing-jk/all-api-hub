@@ -5,7 +5,7 @@ import {
 } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
-import { Button } from "~/src/components/ui"
+import { Button } from "~/components/ui"
 
 interface ActionBarProps {
   isRunning: boolean

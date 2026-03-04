@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from "react"
 
-import "~/src/utils/i18n"
-import "~/src/styles/style.css"
+import "~/utils/i18n"
+import "~/styles/style.css"
 
-import { ApiCheckModalHost } from "~/src/entrypoints/content/webAiApiCheck/components/ApiCheckModalHost"
-import { userPreferences } from "~/src/services/preferences/userPreferences"
-import type { ResolvedTheme, ThemeMode } from "~/src/types/theme"
-import { createLogger } from "~/src/utils/core/logger"
+import { ApiCheckModalHost } from "~/entrypoints/content/webAiApiCheck/components/ApiCheckModalHost"
+import { userPreferences } from "~/services/preferences/userPreferences"
+import type { ResolvedTheme, ThemeMode } from "~/types/theme"
+import { createLogger } from "~/utils/core/logger"
 
 import { RedemptionToaster } from "../redemptionAssist/components/RedemptionToaster"
 

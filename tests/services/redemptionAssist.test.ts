@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
-import { DEFAULT_PREFERENCES } from "~/src/services/preferences/userPreferences"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 
 vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
   const actual =
     await importOriginal<
-      typeof import("~/src/services/preferences/userPreferences")
+      typeof import("~/services/preferences/userPreferences")
     >()
   return {
     ...actual,
@@ -20,7 +20,7 @@ describe("redemptionAssist shouldPrompt batch filtering", () => {
   it("returns only prompt-eligible codes for a url", async () => {
     vi.resetModules()
     const { userPreferences } = await import(
-      "~/src/services/preferences/userPreferences"
+      "~/services/preferences/userPreferences"
     )
     const getPreferencesMock = vi.mocked(userPreferences.getPreferences)
 
@@ -43,7 +43,7 @@ describe("redemptionAssist shouldPrompt batch filtering", () => {
     })
 
     const { handleRedemptionAssistMessage } = await import(
-      "~/src/services/redemption/redemptionAssist"
+      "~/services/redemption/redemptionAssist"
     )
 
     const validHex = "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6"

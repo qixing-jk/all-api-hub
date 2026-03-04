@@ -8,7 +8,7 @@ import {
   VELOERA,
   WONG_GONGYI,
   type SiteType,
-} from "~/src/constants/siteType"
+} from "~/constants/siteType"
 
 import * as anyrouterAPI from "./anyrouter"
 import * as commonAPI from "./common"

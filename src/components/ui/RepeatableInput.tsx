@@ -22,7 +22,7 @@ import { GripVertical, X } from "lucide-react"
 import React from "react"
 import { useTranslation } from "react-i18next"
 
-import { cn } from "~/src/lib/utils"
+import { cn } from "~/lib/utils"
 
 import { Button } from "./button"
 import { IconButton } from "./IconButton"

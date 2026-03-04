@@ -1,4 +1,4 @@
-import type { ChannelDefaults } from "~/src/types/managedSite"
+import type { ChannelDefaults } from "~/types/managedSite"
 
 /**
  * Channel Type enumeration

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { SettingSection } from "~/src/components/SettingSection"
+import { SettingSection } from "~/components/SettingSection"
 import {
   Button,
   Card,
@@ -10,13 +10,13 @@ import {
   Input,
   Label,
   Switch,
-} from "~/src/components/ui"
-import { useUserPreferencesContext } from "~/src/contexts/UserPreferencesContext"
-import { clampBalanceHistoryRetentionDays } from "~/src/services/history/dailyBalanceHistory/utils"
-import { DEFAULT_BALANCE_HISTORY_PREFERENCES } from "~/src/types/dailyBalanceHistory"
-import { hasAlarmsAPI } from "~/src/utils/browser/browserApi"
-import { getErrorMessage } from "~/src/utils/core/error"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/components/ui"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { clampBalanceHistoryRetentionDays } from "~/services/history/dailyBalanceHistory/utils"
+import { DEFAULT_BALANCE_HISTORY_PREFERENCES } from "~/types/dailyBalanceHistory"
+import { hasAlarmsAPI } from "~/utils/browser/browserApi"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("BalanceHistorySettings")
 

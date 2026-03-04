@@ -1,9 +1,9 @@
 import { t } from "i18next"
 import toast from "react-hot-toast"
 
-import type { ApiToken, DisplaySiteData } from "~/src/types"
-import { createLogger } from "~/src/utils/core/logger"
-import { normalizeHttpUrl } from "~/src/utils/core/url"
+import type { ApiToken, DisplaySiteData } from "~/types"
+import { createLogger } from "~/utils/core/logger"
+import { normalizeHttpUrl } from "~/utils/core/url"
 
 /**
  * Unified logger scoped to CC Switch deeplink integration.

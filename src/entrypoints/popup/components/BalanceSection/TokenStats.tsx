@@ -2,10 +2,10 @@ import { ArrowDownIcon, ArrowUpIcon } from "@heroicons/react/24/outline"
 import React from "react"
 import { useTranslation } from "react-i18next"
 
-import Tooltip from "~/src/components/Tooltip"
-import { BodySmall } from "~/src/components/ui"
-import { useAccountDataContext } from "~/src/features/AccountManagement/hooks/AccountDataContext"
-import { formatTokenCount } from "~/src/utils/core/formatters"
+import Tooltip from "~/components/Tooltip"
+import { BodySmall } from "~/components/ui"
+import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
+import { formatTokenCount } from "~/utils/core/formatters"
 
 export const TokenStats = React.memo(() => {
   const { t } = useTranslation("account")

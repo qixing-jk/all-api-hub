@@ -6,27 +6,27 @@ import {
 import { MouseEvent, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { ClaudeCodeRouterImportDialog } from "~/src/components/ClaudeCodeRouterImportDialog"
-import { CliProxyExportDialog } from "~/src/components/CliProxyExportDialog"
-import { useChannelDialog } from "~/src/components/dialogs/ChannelDialog"
-import { CCSwitchIcon } from "~/src/components/icons/CCSwitchIcon"
-import { CherryIcon } from "~/src/components/icons/CherryIcon"
-import { ClaudeCodeRouterIcon } from "~/src/components/icons/ClaudeCodeRouterIcon"
-import { CliProxyIcon } from "~/src/components/icons/CliProxyIcon"
-import { KiloCodeIcon } from "~/src/components/icons/KiloCodeIcon"
-import { ManagedSiteIcon } from "~/src/components/icons/ManagedSiteIcon"
-import { KiloCodeExportDialog } from "~/src/components/KiloCodeExportDialog"
-import { IconButton } from "~/src/components/ui"
-import { useUserPreferencesContext } from "~/src/contexts/UserPreferencesContext"
-import { OpenInCherryStudio } from "~/src/services/integrations/cherryStudio"
-import { getManagedSiteLabelKey } from "~/src/services/managedSites/utils/managedSite"
-import type { ApiToken, DisplaySiteData } from "~/src/types"
+import { ClaudeCodeRouterImportDialog } from "~/components/ClaudeCodeRouterImportDialog"
+import { CliProxyExportDialog } from "~/components/CliProxyExportDialog"
+import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
+import { CCSwitchIcon } from "~/components/icons/CCSwitchIcon"
+import { CherryIcon } from "~/components/icons/CherryIcon"
+import { ClaudeCodeRouterIcon } from "~/components/icons/ClaudeCodeRouterIcon"
+import { CliProxyIcon } from "~/components/icons/CliProxyIcon"
+import { KiloCodeIcon } from "~/components/icons/KiloCodeIcon"
+import { ManagedSiteIcon } from "~/components/icons/ManagedSiteIcon"
+import { KiloCodeExportDialog } from "~/components/KiloCodeExportDialog"
+import { IconButton } from "~/components/ui"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { OpenInCherryStudio } from "~/services/integrations/cherryStudio"
+import { getManagedSiteLabelKey } from "~/services/managedSites/utils/managedSite"
+import type { ApiToken, DisplaySiteData } from "~/types"
 import {
   formatKeyTime,
   formatQuota,
   formatUsedQuota,
-} from "~/src/utils/core/formatters"
-import { showResultToast } from "~/src/utils/core/toastHelpers"
+} from "~/utils/core/formatters"
+import { showResultToast } from "~/utils/core/toastHelpers"
 
 interface TokenDetailsProps {
   token: ApiToken

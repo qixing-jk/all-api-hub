@@ -3,14 +3,14 @@ import { useMemo } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import Tooltip from "~/src/components/Tooltip"
-import { IconButton } from "~/src/components/ui"
-import { useUserPreferencesContext } from "~/src/contexts/UserPreferencesContext"
-import { useAccountDataContext } from "~/src/features/AccountManagement/hooks/AccountDataContext"
-import { exportShareSnapshotWithToast } from "~/src/features/ShareSnapshots/utils/exportShareSnapshotWithToast"
-import { buildOverviewShareSnapshotPayload } from "~/src/services/sharing/shareSnapshots"
-import { getErrorMessage } from "~/src/utils/core/error"
-import { createLogger } from "~/src/utils/core/logger"
+import Tooltip from "~/components/Tooltip"
+import { IconButton } from "~/components/ui"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
+import { exportShareSnapshotWithToast } from "~/features/ShareSnapshots/utils/exportShareSnapshotWithToast"
+import { buildOverviewShareSnapshotPayload } from "~/services/sharing/shareSnapshots"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("ShareOverviewSnapshotButton")
 

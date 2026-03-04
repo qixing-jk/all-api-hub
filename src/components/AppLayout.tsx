@@ -1,22 +1,22 @@
 import { ReactNode } from "react"
 
-import "~/src/styles/style.css"
+import "~/styles/style.css"
 
-import AutoCheckinUiOpenPretrigger from "~/src/components/AutoCheckinUiOpenPretrigger"
-import ChangelogOnUpdateUiOpenHandler from "~/src/components/ChangelogOnUpdateUiOpenHandler"
+import AutoCheckinUiOpenPretrigger from "~/components/AutoCheckinUiOpenPretrigger"
+import ChangelogOnUpdateUiOpenHandler from "~/components/ChangelogOnUpdateUiOpenHandler"
 import {
   ChannelDialogContainer,
   ChannelDialogProvider,
   DuplicateChannelWarningDialogContainer,
-} from "~/src/components/dialogs/ChannelDialog"
+} from "~/components/dialogs/ChannelDialog"
 import {
   UpdateLogDialogContainer,
   UpdateLogDialogProvider,
-} from "~/src/components/dialogs/UpdateLogDialog"
-import { ThemeAwareToaster } from "~/src/components/ThemeAwareToaster"
-import { DeviceProvider } from "~/src/contexts/DeviceContext"
-import { ThemeProvider } from "~/src/contexts/ThemeContext"
-import { UserPreferencesProvider } from "~/src/contexts/UserPreferencesContext"
+} from "~/components/dialogs/UpdateLogDialog"
+import { ThemeAwareToaster } from "~/components/ThemeAwareToaster"
+import { DeviceProvider } from "~/contexts/DeviceContext"
+import { ThemeProvider } from "~/contexts/ThemeContext"
+import { UserPreferencesProvider } from "~/contexts/UserPreferencesContext"
 
 interface AppLayoutProps {
   children: ReactNode

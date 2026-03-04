@@ -3,31 +3,28 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { AutoCheckinPretriggerCompletionDialog } from "~/src/components/AutoCheckinPretriggerCompletionDialog"
-import { PageHeader } from "~/src/components/PageHeader"
-import { Button } from "~/src/components/ui"
-import { Modal } from "~/src/components/ui/Dialog/Modal"
-import { MENU_ITEM_IDS } from "~/src/constants/optionsMenuIds"
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
-import { useUserPreferencesContext } from "~/src/contexts/UserPreferencesContext"
-import { stripAutoCheckinMessageKeyPrefix } from "~/src/features/AutoCheckin/utils/autoCheckin"
-import { DEFAULT_PREFERENCES } from "~/src/services/preferences/userPreferences"
+import { AutoCheckinPretriggerCompletionDialog } from "~/components/AutoCheckinPretriggerCompletionDialog"
+import { PageHeader } from "~/components/PageHeader"
+import { Button } from "~/components/ui"
+import { Modal } from "~/components/ui/Dialog/Modal"
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { stripAutoCheckinMessageKeyPrefix } from "~/features/AutoCheckin/utils/autoCheckin"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import {
   AutoCheckinRunSummary,
   AutoCheckinStatus,
   CHECKIN_RESULT_STATUS,
-} from "~/src/types/autoCheckin"
+} from "~/types/autoCheckin"
 import {
   onRuntimeMessage,
   sendRuntimeMessage,
-} from "~/src/utils/browser/browserApi"
-import { getErrorMessage } from "~/src/utils/core/error"
-import { safeRandomUUID } from "~/src/utils/core/identifier"
-import { createLogger } from "~/src/utils/core/logger"
-import {
-  navigateWithinOptionsPage,
-  openCheckInPage,
-} from "~/src/utils/navigation"
+} from "~/utils/browser/browserApi"
+import { getErrorMessage } from "~/utils/core/error"
+import { safeRandomUUID } from "~/utils/core/identifier"
+import { createLogger } from "~/utils/core/logger"
+import { navigateWithinOptionsPage, openCheckInPage } from "~/utils/navigation"
 
 import AccountSnapshotTable from "./components/AccountSnapshotTable"
 import ActionBar from "./components/ActionBar"

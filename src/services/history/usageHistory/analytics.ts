@@ -4,8 +4,8 @@ import type {
   UsageHistoryExportSelection,
   UsageHistoryLatencyAggregate,
   UsageHistoryStore,
-} from "~/src/types/usageHistory"
-import { USAGE_HISTORY_EXPORT_SCHEMA_VERSION } from "~/src/types/usageHistory"
+} from "~/types/usageHistory"
+import { USAGE_HISTORY_EXPORT_SCHEMA_VERSION } from "~/types/usageHistory"
 
 import {
   createEmptyUsageHistoryAggregate,

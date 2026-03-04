@@ -5,7 +5,7 @@
  * Falls back to a time+random based identifier when `crypto.randomUUID` is not
  * available (e.g. certain test environments).
  */
-import { createLogger } from "~/src/utils/core/logger"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to identifier helpers.

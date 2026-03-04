@@ -2,21 +2,18 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { SettingSection } from "~/src/components/SettingSection"
-import { Card, CardContent, Input } from "~/src/components/ui"
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
-import { useUserPreferencesContext } from "~/src/contexts/UserPreferencesContext"
-import { accountStorage } from "~/src/services/accounts/accountStorage"
-import { usageHistoryStorage } from "~/src/services/history/usageHistory/storage"
-import type { SiteAccount } from "~/src/types"
-import { USAGE_HISTORY_SCHEDULE_MODE } from "~/src/types/usageHistory"
-import type { UsageHistoryStore } from "~/src/types/usageHistory"
-import {
-  hasAlarmsAPI,
-  sendRuntimeMessage,
-} from "~/src/utils/browser/browserApi"
-import { getErrorMessage } from "~/src/utils/core/error"
-import { createLogger } from "~/src/utils/core/logger"
+import { SettingSection } from "~/components/SettingSection"
+import { Card, CardContent, Input } from "~/components/ui"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { accountStorage } from "~/services/accounts/accountStorage"
+import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
+import type { SiteAccount } from "~/types"
+import { USAGE_HISTORY_SCHEDULE_MODE } from "~/types/usageHistory"
+import type { UsageHistoryStore } from "~/types/usageHistory"
+import { hasAlarmsAPI, sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 import UsageHistorySyncSettingsSection from "./UsageHistorySyncSettingsSection"
 import UsageHistorySyncStateTable, {

@@ -12,7 +12,7 @@ describe("ModelMetadataService", () => {
 
   it("initializes without errors", async () => {
     const { modelMetadataService } = await import(
-      "~/src/services/models/modelMetadata"
+      "~/services/models/modelMetadata"
     )
     modelMetadataService.clearCache()
     await modelMetadataService.initialize()
@@ -20,7 +20,7 @@ describe("ModelMetadataService", () => {
 
   it("handles getCacheInfo calls", async () => {
     const { modelMetadataService } = await import(
-      "~/src/services/models/modelMetadata"
+      "~/services/models/modelMetadata"
     )
     modelMetadataService.clearCache()
     await modelMetadataService.initialize()
@@ -49,7 +49,7 @@ describe("ModelMetadataService", () => {
     })
 
     const { modelMetadataService } = await import(
-      "~/src/services/models/modelMetadata"
+      "~/services/models/modelMetadata"
     )
     modelMetadataService.clearCache()
     await modelMetadataService.initialize()
@@ -75,7 +75,7 @@ describe("ModelMetadataService", () => {
     })
 
     const { modelMetadataService } = await import(
-      "~/src/services/models/modelMetadata"
+      "~/services/models/modelMetadata"
     )
     modelMetadataService.clearCache()
     await modelMetadataService.initialize()
@@ -105,7 +105,7 @@ describe("ModelMetadataService", () => {
     })
 
     const { modelMetadataService } = await import(
-      "~/src/services/models/modelMetadata"
+      "~/services/models/modelMetadata"
     )
     modelMetadataService.clearCache()
     await modelMetadataService.initialize()
@@ -131,7 +131,7 @@ describe("ModelMetadataService", () => {
     })
 
     const { modelMetadataService } = await import(
-      "~/src/services/models/modelMetadata"
+      "~/services/models/modelMetadata"
     )
     modelMetadataService.clearCache()
     await modelMetadataService.initialize()
@@ -156,7 +156,7 @@ describe("ModelMetadataService", () => {
     })
 
     const { modelMetadataService } = await import(
-      "~/src/services/models/modelMetadata"
+      "~/services/models/modelMetadata"
     )
     modelMetadataService.clearCache()
     await modelMetadataService.initialize()

@@ -1,6 +1,6 @@
 import { t } from "i18next"
 
-import { createLogger } from "~/src/utils/core/logger"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to content-script user info polling helpers.

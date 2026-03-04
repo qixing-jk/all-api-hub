@@ -1,7 +1,7 @@
 import React from "react"
 import { useTranslation } from "react-i18next"
 
-import { cn } from "~/src/lib/utils"
+import { cn } from "~/lib/utils"
 
 import { Badge } from "./badge"
 import { Popover, PopoverContent, PopoverTrigger } from "./popover"

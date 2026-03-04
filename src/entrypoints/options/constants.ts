@@ -16,8 +16,8 @@ import {
 } from "lucide-react"
 import { createElement, lazy, Suspense, type ComponentType } from "react"
 
-import { DEV_MENU_ITEM_IDS } from "~/src/constants/devOptionsMenuIds"
-import { MENU_ITEM_IDS } from "~/src/constants/optionsMenuIds"
+import { DEV_MENU_ITEM_IDS } from "~/constants/devOptionsMenuIds"
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 
 import About from "./pages/About"
 import AccountManagement from "./pages/AccountManagement"

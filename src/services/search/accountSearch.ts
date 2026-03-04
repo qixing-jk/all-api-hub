@@ -1,4 +1,4 @@
-import type { DisplaySiteData } from "~/src/types"
+import type { DisplaySiteData } from "~/types"
 
 /**
  * Normalizes a string for search matching

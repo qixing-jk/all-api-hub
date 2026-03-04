@@ -2,12 +2,12 @@ import { CursorArrowRaysIcon } from "@heroicons/react/24/outline"
 import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
-import { SettingSection } from "~/src/components/SettingSection"
-import { Card, CardItem, CardList, ToggleButton } from "~/src/components/ui"
-import { COLORS } from "~/src/constants/designTokens"
-import { useUserPreferencesContext } from "~/src/contexts/UserPreferencesContext"
-import { getSidePanelSupport } from "~/src/utils/browser/browserApi"
-import { showResultToast, showUpdateToast } from "~/src/utils/core/toastHelpers"
+import { SettingSection } from "~/components/SettingSection"
+import { Card, CardItem, CardList, ToggleButton } from "~/components/ui"
+import { COLORS } from "~/constants/designTokens"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { getSidePanelSupport } from "~/utils/browser/browserApi"
+import { showResultToast, showUpdateToast } from "~/utils/core/toastHelpers"
 
 /**
  * Lets users choose what the toolbar icon does (popup vs side panel).

@@ -1,3 +1,3 @@
-import UsageAnalytics from "~/src/features/UsageAnalytics"
+import UsageAnalytics from "~/features/UsageAnalytics"
 
 export default UsageAnalytics

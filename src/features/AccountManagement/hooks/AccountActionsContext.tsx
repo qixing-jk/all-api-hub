@@ -9,12 +9,12 @@ import {
 } from "react"
 import toast from "react-hot-toast"
 
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
-import { accountStorage } from "~/src/services/accounts/accountStorage"
-import type { DisplaySiteData } from "~/src/types"
-import { sendRuntimeMessage } from "~/src/utils/browser/browserApi"
-import { getErrorMessage } from "~/src/utils/core/error"
-import { createLogger } from "~/src/utils/core/logger"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { accountStorage } from "~/services/accounts/accountStorage"
+import type { DisplaySiteData } from "~/types"
+import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 import { useAccountDataContext } from "./AccountDataContext"
 

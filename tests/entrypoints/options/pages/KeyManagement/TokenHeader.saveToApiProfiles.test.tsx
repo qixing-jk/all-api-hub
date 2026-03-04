@@ -3,14 +3,10 @@ import type { ReactNode } from "react"
 import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { TokenHeader } from "~/src/features/KeyManagement/components/TokenListItem/TokenHeader"
-import { API_TYPES } from "~/src/services/verification/aiApiVerification"
-import {
-  AuthTypeEnum,
-  SiteHealthStatus,
-  type DisplaySiteData,
-} from "~/src/types"
-import { render, screen, waitFor } from "~/tests/test-utils/render"
+import { TokenHeader } from "~/features/KeyManagement/components/TokenListItem/TokenHeader"
+import { API_TYPES } from "~/services/verification/aiApiVerification"
+import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
+import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const mockCreateProfile = vi.fn()
 const mockOpenApiCredentialProfilesPage = vi.fn()
@@ -50,7 +46,7 @@ const mockedUseUserPreferencesContext = vi.fn()
 
 vi.mock("~/contexts/UserPreferencesContext", async () => {
   const actual = await vi.importActual<
-    typeof import("~/src/contexts/UserPreferencesContext")
+    typeof import("~/contexts/UserPreferencesContext")
   >("~/contexts/UserPreferencesContext")
 
   return {

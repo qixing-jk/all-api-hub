@@ -24,12 +24,12 @@ import {
   SelectTrigger,
   SelectValue,
   Switch,
-} from "~/src/components/ui"
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
-import { WEBDAV_SYNC_STRATEGIES, WebDAVSettings } from "~/src/types/webdav"
-import { sendRuntimeMessage } from "~/src/utils/browser/browserApi"
-import { formatTimestamp } from "~/src/utils/core/formatters"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/components/ui"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { WEBDAV_SYNC_STRATEGIES, WebDAVSettings } from "~/types/webdav"
+import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { formatTimestamp } from "~/utils/core/formatters"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to WebDAV auto-sync settings UI.
@@ -70,7 +70,7 @@ export default function WebDAVAutoSyncSettings() {
   const loadSettings = async () => {
     try {
       const { userPreferences } = await import(
-        "~/src/services/preferences/userPreferences"
+        "~/services/preferences/userPreferences"
       )
       const prefs = await userPreferences.getPreferences()
       setAutoSyncEnabled(prefs.webdav.autoSync ?? false)

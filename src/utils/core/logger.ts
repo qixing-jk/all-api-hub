@@ -1,7 +1,7 @@
-import { USER_PREFERENCES_STORAGE_KEYS } from "~/src/services/core/storageKeys"
-import type { LoggingPreferences, LogLevel } from "~/src/types/logging"
-import { getDefaultLoggingPreferences } from "~/src/types/logging"
-import { sanitizeUrlForLog } from "~/src/utils/core/sanitizeUrlForLog"
+import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
+import type { LoggingPreferences, LogLevel } from "~/types/logging"
+import { getDefaultLoggingPreferences } from "~/types/logging"
+import { sanitizeUrlForLog } from "~/utils/core/sanitizeUrlForLog"
 
 export type ExtensionLogContext =
   | "Background"

@@ -1,7 +1,7 @@
 import type { ComponentType, ReactNode } from "react"
 
-import { BodySmall, Heading2 } from "~/src/components/ui"
-import { cn } from "~/src/lib/utils"
+import { BodySmall, Heading2 } from "~/components/ui"
+import { cn } from "~/lib/utils"
 
 interface PageHeaderProps {
   icon: ComponentType<{ className?: string }>

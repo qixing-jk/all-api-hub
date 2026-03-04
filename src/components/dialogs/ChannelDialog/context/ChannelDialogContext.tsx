@@ -7,11 +7,8 @@ import React, {
   useState,
 } from "react"
 
-import { DIALOG_MODES, type DialogMode } from "~/src/constants/dialogModes"
-import type {
-  ChannelFormData,
-  ManagedSiteChannel,
-} from "~/src/types/managedSite"
+import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
+import type { ChannelFormData, ManagedSiteChannel } from "~/types/managedSite"
 
 interface ChannelDialogState {
   isOpen: boolean

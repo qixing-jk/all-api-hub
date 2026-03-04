@@ -4,11 +4,11 @@ import {
 } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
-import { Alert, Button, Card, CardContent, Heading4 } from "~/src/components/ui"
-import { MENU_ITEM_IDS } from "~/src/constants/optionsMenuIds"
-import WebDAVAutoSyncSettings from "~/src/features/ImportExport/components/WebDAVAutoSyncSettings"
-import WebDAVSettings from "~/src/features/ImportExport/components/WebDAVSettings"
-import { navigateWithinOptionsPage } from "~/src/utils/navigation"
+import { Alert, Button, Card, CardContent, Heading4 } from "~/components/ui"
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import WebDAVAutoSyncSettings from "~/features/ImportExport/components/WebDAVAutoSyncSettings"
+import WebDAVSettings from "~/features/ImportExport/components/WebDAVSettings"
+import { navigateWithinOptionsPage } from "~/utils/navigation"
 
 /**
  * Basic Settings tab for data backup/import/export and WebDAV sync settings.

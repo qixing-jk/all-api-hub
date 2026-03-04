@@ -1,12 +1,12 @@
 import { t } from "i18next"
 
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
-import { accountStorage } from "~/src/services/accounts/accountStorage"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { accountStorage } from "~/services/accounts/accountStorage"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
-} from "~/src/services/preferences/userPreferences"
-import type { DisplaySiteData, SiteAccount } from "~/src/types"
+} from "~/services/preferences/userPreferences"
+import type { DisplaySiteData, SiteAccount } from "~/types"
 import {
   AUTO_CHECKIN_RUN_RESULT,
   AUTO_CHECKIN_RUN_TYPE,
@@ -25,7 +25,7 @@ import {
   type AutoCheckinRunType,
   type CheckinAccountResult,
   type CheckinResultStatus,
-} from "~/src/types/autoCheckin"
+} from "~/types/autoCheckin"
 import {
   clearAlarm,
   createAlarm,
@@ -33,9 +33,9 @@ import {
   hasAlarmsAPI,
   onAlarm,
   sendRuntimeMessage,
-} from "~/src/utils/browser/browserApi"
-import { getErrorMessage } from "~/src/utils/core/error"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/utils/browser/browserApi"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 import { resolveAutoCheckinProvider } from "./providers"
 import { autoCheckinStorage } from "./storage"

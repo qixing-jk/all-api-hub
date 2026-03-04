@@ -6,8 +6,8 @@ import {
   type ReactNode,
 } from "react"
 
-import { useUserPreferencesContext } from "~/src/contexts/UserPreferencesContext"
-import type { ResolvedTheme, ThemeMode } from "~/src/types/theme"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import type { ResolvedTheme, ThemeMode } from "~/types/theme"
 
 interface ThemeContextValue {
   themeMode: ThemeMode

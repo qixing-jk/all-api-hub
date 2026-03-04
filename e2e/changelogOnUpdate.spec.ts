@@ -1,10 +1,10 @@
 import type { BrowserContext, Page, Worker } from "@playwright/test"
 
-import { expect, test } from "~/e2e/fixtures/extensionTest"
-import { STORAGE_KEYS } from "~/src/services/core/storageKeys"
-import { CURRENT_PREFERENCES_VERSION } from "~/src/services/preferences/migrations/preferencesMigration"
-import { getErrorMessage } from "~/src/utils/core/error"
-import { createLogger } from "~/src/utils/core/logger"
+import { STORAGE_KEYS } from "~/services/core/storageKeys"
+import { CURRENT_PREFERENCES_VERSION } from "~/services/preferences/migrations/preferencesMigration"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
+import { expect, test } from "~~/e2e/fixtures/extensionTest"
 
 const logger = createLogger("e2e/changelogOnUpdate")
 

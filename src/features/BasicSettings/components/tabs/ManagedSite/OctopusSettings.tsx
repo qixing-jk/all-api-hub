@@ -3,7 +3,7 @@ import { useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { SettingSection } from "~/src/components/SettingSection"
+import { SettingSection } from "~/components/SettingSection"
 import {
   Button,
   Card,
@@ -11,10 +11,10 @@ import {
   CardList,
   IconButton,
   Input,
-} from "~/src/components/ui"
-import { useUserPreferencesContext } from "~/src/contexts/UserPreferencesContext"
-import { octopusAuthManager } from "~/src/services/apiService/octopus/auth"
-import { showUpdateToast } from "~/src/utils/core/toastHelpers"
+} from "~/components/ui"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { octopusAuthManager } from "~/services/apiService/octopus/auth"
+import { showUpdateToast } from "~/utils/core/toastHelpers"
 
 /**
  * Settings panel for configuring Octopus connection credentials (base URL, username, password).

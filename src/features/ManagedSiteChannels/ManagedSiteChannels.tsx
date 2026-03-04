@@ -35,16 +35,16 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { useChannelDialog } from "~/src/components/dialogs/ChannelDialog"
-import { PageHeader } from "~/src/components/PageHeader"
+import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
+import { PageHeader } from "~/components/PageHeader"
 import {
   DestructiveConfirmDialog,
   ExternalUrlText,
   Input,
-} from "~/src/components/ui"
-import { Alert, AlertDescription, AlertTitle } from "~/src/components/ui/Alert"
-import { Button } from "~/src/components/ui/button"
-import { Checkbox } from "~/src/components/ui/checkbox"
+} from "~/components/ui"
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/Alert"
+import { Button } from "~/components/ui/button"
+import { Checkbox } from "~/components/ui/checkbox"
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -52,20 +52,20 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "~/src/components/ui/dropdown-menu"
-import { Label } from "~/src/components/ui/label"
+} from "~/components/ui/dropdown-menu"
+import { Label } from "~/components/ui/label"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "~/src/components/ui/popover"
+} from "~/components/ui/popover"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "~/src/components/ui/select"
+} from "~/components/ui/select"
 import {
   Table,
   TableBody,
@@ -73,21 +73,21 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "~/src/components/ui/table"
-import { ChannelTypeNames } from "~/src/constants/managedSite"
-import { OctopusOutboundTypeNames } from "~/src/constants/octopus"
-import { MENU_ITEM_IDS } from "~/src/constants/optionsMenuIds"
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
-import { OCTOPUS } from "~/src/constants/siteType"
-import { useUserPreferencesContext } from "~/src/contexts/UserPreferencesContext"
-import { cn } from "~/src/lib/utils"
-import { getManagedSiteService } from "~/src/services/managedSites/managedSiteService"
-import { sendRuntimeMessage } from "~/src/utils/browser/browserApi"
-import { getErrorMessage } from "~/src/utils/core/error"
+} from "~/components/ui/table"
+import { ChannelTypeNames } from "~/constants/managedSite"
+import { OctopusOutboundTypeNames } from "~/constants/octopus"
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { OCTOPUS } from "~/constants/siteType"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { cn } from "~/lib/utils"
+import { getManagedSiteService } from "~/services/managedSites/managedSiteService"
+import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { getErrorMessage } from "~/utils/core/error"
 import {
   navigateWithinOptionsPage,
   openManagedSiteModelSyncForChannel,
-} from "~/src/utils/navigation"
+} from "~/utils/navigation"
 
 import ChannelFilterDialog from "./components/ChannelFilterDialog"
 import RowActions from "./components/RowActions"

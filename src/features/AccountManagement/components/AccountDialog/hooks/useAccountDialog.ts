@@ -2,10 +2,10 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { useChannelDialog } from "~/src/components/dialogs/ChannelDialog"
-import { DIALOG_MODES, type DialogMode } from "~/src/constants/dialogModes"
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
-import { SUB2API } from "~/src/constants/siteType"
+import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
+import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { SUB2API } from "~/constants/siteType"
 import {
   autoDetectAccount,
   getSiteName,
@@ -13,26 +13,26 @@ import {
   parseManualQuotaFromUsd,
   validateAndSaveAccount,
   validateAndUpdateAccount,
-} from "~/src/services/accounts/accountOperations"
-import { accountStorage } from "~/src/services/accounts/accountStorage"
+} from "~/services/accounts/accountOperations"
+import { accountStorage } from "~/services/accounts/accountStorage"
 import {
   analyzeAutoDetectError,
   AutoDetectError,
-} from "~/src/services/accounts/utils/autoDetectUtils"
+} from "~/services/accounts/utils/autoDetectUtils"
 import {
   AuthTypeEnum,
   type CheckInConfig,
   type DisplaySiteData,
   type Sub2ApiAuthConfig,
-} from "~/src/types"
+} from "~/types"
 import {
   getActiveTabs,
   getAllTabs,
   onTabActivated,
   onTabUpdated,
   sendRuntimeMessage,
-} from "~/src/utils/browser/browserApi"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/utils/browser/browserApi"
+import { createLogger } from "~/utils/core/logger"
 
 const AUTO_DETECT_SLOW_HINT_DELAY_MS = 10_000
 

@@ -1,14 +1,14 @@
-import { MENU_ITEM_IDS } from "~/src/constants/optionsMenuIds"
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import {
   addActionClickListener,
   getSidePanelSupport,
   openSidePanel,
   removeActionClickListener,
   setActionPopup,
-} from "~/src/utils/browser/browserApi"
-import { getErrorMessage } from "~/src/utils/core/error"
-import { createLogger } from "~/src/utils/core/logger"
-import { openOrFocusOptionsMenuItem } from "~/src/utils/navigation"
+} from "~/utils/browser/browserApi"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
+import { openOrFocusOptionsMenuItem } from "~/utils/navigation"
 
 export type ActionClickBehavior = "popup" | "sidepanel"
 

@@ -5,9 +5,9 @@ import {
 } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
-import { IconButton } from "~/src/components/ui"
-import { useTheme } from "~/src/contexts/ThemeContext"
-import type { ThemeMode } from "~/src/types/theme"
+import { IconButton } from "~/components/ui"
+import { useTheme } from "~/contexts/ThemeContext"
+import type { ThemeMode } from "~/types/theme"
 
 const getThemeOptions = (t: (key: string) => string) => {
   return [

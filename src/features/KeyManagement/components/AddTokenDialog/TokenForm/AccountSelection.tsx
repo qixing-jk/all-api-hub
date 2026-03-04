@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next"
 
-import { FormField, SearchableSelect } from "~/src/components/ui"
+import { FormField, SearchableSelect } from "~/components/ui"
 
 export interface Account {
   id: string

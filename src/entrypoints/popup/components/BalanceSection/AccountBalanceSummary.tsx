@@ -2,16 +2,16 @@ import React, { useMemo } from "react"
 import CountUp from "react-countup"
 import { useTranslation } from "react-i18next"
 
-import { BodySmall, Caption } from "~/src/components/ui"
-import { UI_CONSTANTS } from "~/src/constants/ui"
-import { useUserPreferencesContext } from "~/src/contexts/UserPreferencesContext"
-import { useAccountDataContext } from "~/src/features/AccountManagement/hooks/AccountDataContext"
+import { BodySmall, Caption } from "~/components/ui"
+import { UI_CONSTANTS } from "~/constants/ui"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import {
   calculateTotalBalance,
   calculateTotalConsumption,
   getCurrencySymbol,
   getOppositeCurrency,
-} from "~/src/utils/core/formatters"
+} from "~/utils/core/formatters"
 
 const BalanceDisplay: React.FC<{
   value: number

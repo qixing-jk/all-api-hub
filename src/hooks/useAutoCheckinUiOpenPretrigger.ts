@@ -2,19 +2,19 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
-import { useUserPreferencesContext } from "~/src/contexts/UserPreferencesContext"
-import { DEFAULT_PREFERENCES } from "~/src/services/preferences/userPreferences"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import type {
   AutoCheckinRunResult,
   AutoCheckinRunSummary,
-} from "~/src/types/autoCheckin"
+} from "~/types/autoCheckin"
 import {
   onRuntimeMessage,
   sendRuntimeMessage,
-} from "~/src/utils/browser/browserApi"
-import { safeRandomUUID } from "~/src/utils/core/identifier"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/utils/browser/browserApi"
+import { safeRandomUUID } from "~/utils/core/identifier"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to UI-open auto check-in pretrigger hooks.

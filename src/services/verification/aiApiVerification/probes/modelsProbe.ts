@@ -1,6 +1,6 @@
-import { fetchAnthropicModelIds } from "~/src/services/apiService/anthropic"
-import { fetchGoogleModelIds } from "~/src/services/apiService/google"
-import { fetchOpenAICompatibleModelIds } from "~/src/services/apiService/openaiCompatible"
+import { fetchAnthropicModelIds } from "~/services/apiService/anthropic"
+import { fetchGoogleModelIds } from "~/services/apiService/google"
+import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompatible"
 
 import { nowMs, okLatency } from "../probeTiming"
 import type {

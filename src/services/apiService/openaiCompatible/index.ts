@@ -2,10 +2,10 @@ import type {
   OpenAIAuthParams,
   UpstreamModelItem,
   UpstreamModelList,
-} from "~/src/services/apiService/common/type"
-import { fetchApiData } from "~/src/services/apiService/common/utils"
-import { AuthTypeEnum } from "~/src/types"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/services/apiService/common/type"
+import { fetchApiData } from "~/services/apiService/common/utils"
+import { AuthTypeEnum } from "~/types"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to OpenAI-compatible upstream model fetch helpers.

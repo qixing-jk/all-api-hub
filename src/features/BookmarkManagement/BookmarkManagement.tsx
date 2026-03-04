@@ -1,14 +1,14 @@
 import { Bookmark } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
-import { PageHeader } from "~/src/components/PageHeader"
-import { Button } from "~/src/components/ui"
-import { AccountDataProvider } from "~/src/features/AccountManagement/hooks/AccountDataContext"
-import BookmarksList from "~/src/features/SiteBookmarks/components/BookmarksList"
+import { PageHeader } from "~/components/PageHeader"
+import { Button } from "~/components/ui"
+import { AccountDataProvider } from "~/features/AccountManagement/hooks/AccountDataContext"
+import BookmarksList from "~/features/SiteBookmarks/components/BookmarksList"
 import {
   BookmarkDialogStateProvider,
   useBookmarkDialogContext,
-} from "~/src/features/SiteBookmarks/hooks/BookmarkDialogStateContext"
+} from "~/features/SiteBookmarks/hooks/BookmarkDialogStateContext"
 
 /**
  * Renders the Bookmark Management page body: header with CTA and bookmarks list.

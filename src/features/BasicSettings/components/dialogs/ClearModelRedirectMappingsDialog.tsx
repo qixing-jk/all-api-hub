@@ -10,11 +10,11 @@ import {
   DestructiveConfirmDialog,
   Input,
   Modal,
-} from "~/src/components/ui"
-import { ModelRedirectService } from "~/src/services/models/modelRedirect"
-import { isEmptyModelMapping } from "~/src/services/models/modelRedirect/utils"
-import type { ManagedSiteChannel } from "~/src/types/managedSite"
-import { getErrorMessage } from "~/src/utils/core/error"
+} from "~/components/ui"
+import { ModelRedirectService } from "~/services/models/modelRedirect"
+import { isEmptyModelMapping } from "~/services/models/modelRedirect/utils"
+import type { ManagedSiteChannel } from "~/types/managedSite"
+import { getErrorMessage } from "~/utils/core/error"
 
 interface ClearModelRedirectMappingsDialogProps {
   isOpen: boolean

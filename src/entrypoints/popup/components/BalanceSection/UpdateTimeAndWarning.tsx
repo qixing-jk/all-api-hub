@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import Tooltip from "~/src/components/Tooltip"
-import { Badge, Caption } from "~/src/components/ui"
-import { UI_CONSTANTS } from "~/src/constants/ui"
-import { useAccountDataContext } from "~/src/features/AccountManagement/hooks/AccountDataContext"
-import { formatFullTime, formatRelativeTime } from "~/src/utils/core/formatters"
+import Tooltip from "~/components/Tooltip"
+import { Badge, Caption } from "~/components/ui"
+import { UI_CONSTANTS } from "~/constants/ui"
+import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
+import { formatFullTime, formatRelativeTime } from "~/utils/core/formatters"
 
 export const UpdateTimeAndWarning = () => {
   const { t } = useTranslation("account")

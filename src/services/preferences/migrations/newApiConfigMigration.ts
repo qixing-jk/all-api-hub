@@ -3,8 +3,8 @@
  * Converts flat new-api fields to nested object structure
  */
 
-import { DEFAULT_NEW_API_CONFIG } from "~/src/types/newApiConfig"
-import { createLogger } from "~/src/utils/core/logger"
+import { DEFAULT_NEW_API_CONFIG } from "~/types/newApiConfig"
+import { createLogger } from "~/utils/core/logger"
 
 import type { UserPreferences } from "../userPreferences"
 

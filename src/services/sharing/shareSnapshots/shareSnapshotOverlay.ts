@@ -1,4 +1,4 @@
-import type { ShareSnapshotPayload } from "~/src/services/sharing/shareSnapshots/types"
+import type { ShareSnapshotPayload } from "~/services/sharing/shareSnapshots/types"
 import {
   clamp,
   clampByte,
@@ -6,7 +6,7 @@ import {
   formatSignedCurrencyAmount,
   relativeLuminanceFromRgb,
   type Rgb,
-} from "~/src/services/sharing/shareSnapshots/utils"
+} from "~/services/sharing/shareSnapshots/utils"
 
 export type ShareSnapshotOverlayLabels = {
   overview: string

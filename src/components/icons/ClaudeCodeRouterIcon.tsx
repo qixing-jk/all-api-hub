@@ -1,9 +1,9 @@
-import claudeCodeRouterLogo from "~/src/assets/claude-code-router-logo.png"
+import claudeCodeRouterLogo from "~/assets/claude-code-router-logo.png"
 import {
   ICON_SIZE_CLASSNAME,
   type IconSize,
-} from "~/src/components/icons/iconSizes"
-import { cn } from "~/src/lib/utils"
+} from "~/components/icons/iconSizes"
+import { cn } from "~/lib/utils"
 
 interface ClaudeCodeRouterIconProps {
   size?: IconSize

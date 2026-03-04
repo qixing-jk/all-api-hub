@@ -1,13 +1,13 @@
-import { autoRefreshService } from "~/src/services/accounts/autoRefreshService"
-import { autoCheckinScheduler } from "~/src/services/checkin/autoCheckin/scheduler"
-import { dailyBalanceHistoryScheduler } from "~/src/services/history/dailyBalanceHistory/scheduler"
-import { usageHistoryScheduler } from "~/src/services/history/usageHistory/scheduler"
-import { modelMetadataService } from "~/src/services/models/modelMetadata"
-import { modelSyncScheduler } from "~/src/services/models/modelSync"
-import { redemptionAssistService } from "~/src/services/redemption/redemptionAssist"
-import { webdavAutoSyncService } from "~/src/services/webdav/webdavAutoSyncService"
-import { createLogger } from "~/src/utils/core/logger"
-import { initBackgroundI18n } from "~/src/utils/i18n/background"
+import { autoRefreshService } from "~/services/accounts/autoRefreshService"
+import { autoCheckinScheduler } from "~/services/checkin/autoCheckin/scheduler"
+import { dailyBalanceHistoryScheduler } from "~/services/history/dailyBalanceHistory/scheduler"
+import { usageHistoryScheduler } from "~/services/history/usageHistory/scheduler"
+import { modelMetadataService } from "~/services/models/modelMetadata"
+import { modelSyncScheduler } from "~/services/models/modelSync"
+import { redemptionAssistService } from "~/services/redemption/redemptionAssist"
+import { webdavAutoSyncService } from "~/services/webdav/webdavAutoSyncService"
+import { createLogger } from "~/utils/core/logger"
+import { initBackgroundI18n } from "~/utils/i18n/background"
 
 /**
  * Unified logger scoped to background service initialization.

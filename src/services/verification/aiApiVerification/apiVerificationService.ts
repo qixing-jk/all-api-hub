@@ -1,4 +1,4 @@
-import type { ApiToken } from "~/src/types"
+import type { ApiToken } from "~/types"
 
 import { resolveRequestedModelId } from "./modelResolver"
 import { apiVerificationProbeRegistry } from "./probeRegistry"

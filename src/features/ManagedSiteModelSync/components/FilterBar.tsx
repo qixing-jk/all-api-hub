@@ -7,8 +7,8 @@ import {
 import { ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Input } from "~/src/components/ui"
-import { ExecutionStatistics } from "~/src/types/managedSiteModelSync"
+import { Input } from "~/components/ui"
+import { ExecutionStatistics } from "~/types/managedSiteModelSync"
 
 export type FilterStatus = "all" | "success" | "failed"
 

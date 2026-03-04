@@ -4,8 +4,8 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "~/src/components/ui/popover"
-import { fireEvent, render, screen } from "~/tests/test-utils/render"
+} from "~/components/ui/popover"
+import { fireEvent, render, screen } from "~~/tests/test-utils/render"
 
 describe("Popover", () => {
   it("renders PopoverContent with trigger-matching width by default", async () => {

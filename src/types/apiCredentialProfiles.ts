@@ -1,4 +1,4 @@
-import type { ApiVerificationApiType } from "~/src/services/verification/aiApiVerification"
+import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification"
 
 /**
  * Current schema version for the API credential profiles storage payload.

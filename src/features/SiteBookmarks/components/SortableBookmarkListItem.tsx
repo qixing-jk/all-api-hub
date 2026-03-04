@@ -2,9 +2,9 @@ import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { Bars3Icon } from "@heroicons/react/24/outline"
 
-import { IconButton } from "~/src/components/ui"
-import { cn } from "~/src/lib/utils"
-import type { SiteBookmark } from "~/src/types"
+import { IconButton } from "~/components/ui"
+import { cn } from "~/lib/utils"
+import type { SiteBookmark } from "~/types"
 
 import BookmarkListItem from "./BookmarkListItem"
 

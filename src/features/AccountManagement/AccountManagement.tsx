@@ -2,14 +2,14 @@ import { CalendarCheck2, UserRound } from "lucide-react"
 import { type MouseEvent } from "react"
 import { useTranslation } from "react-i18next"
 
-import { PageHeader } from "~/src/components/PageHeader"
-import { Button } from "~/src/components/ui"
-import AccountList from "~/src/features/AccountManagement/components/AccountList"
-import { useAccountActionsContext } from "~/src/features/AccountManagement/hooks/AccountActionsContext"
-import { useAccountDataContext } from "~/src/features/AccountManagement/hooks/AccountDataContext"
-import { AccountManagementProvider } from "~/src/features/AccountManagement/hooks/AccountManagementProvider"
-import { useDialogStateContext } from "~/src/features/AccountManagement/hooks/DialogStateContext"
-import { getExternalCheckInOpenOptions } from "~/src/utils/core/shortcutKeys"
+import { PageHeader } from "~/components/PageHeader"
+import { Button } from "~/components/ui"
+import AccountList from "~/features/AccountManagement/components/AccountList"
+import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
+import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
+import { AccountManagementProvider } from "~/features/AccountManagement/hooks/AccountManagementProvider"
+import { useDialogStateContext } from "~/features/AccountManagement/hooks/DialogStateContext"
+import { getExternalCheckInOpenOptions } from "~/utils/core/shortcutKeys"
 
 /**
  * Renders the Account Management page body: header with CTA and account list.

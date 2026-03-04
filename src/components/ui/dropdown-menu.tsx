@@ -2,7 +2,7 @@ import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu"
 import { CheckIcon, ChevronRightIcon, CircleIcon } from "lucide-react"
 import * as React from "react"
 
-import { cn } from "~/src/lib/utils"
+import { cn } from "~/lib/utils"
 
 /**
  * DropdownMenu wraps Radix dropdown root to manage menu state.

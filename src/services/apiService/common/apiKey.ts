@@ -1,4 +1,4 @@
-import type { ApiToken } from "~/src/types"
+import type { ApiToken } from "~/types"
 
 /**
  * Ensures API keys are consistently represented with an `sk-` prefix.

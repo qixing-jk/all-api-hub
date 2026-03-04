@@ -1,4 +1,4 @@
-import type { SiteAccount, Sub2ApiAuthConfig } from "~/src/types"
+import type { SiteAccount, Sub2ApiAuthConfig } from "~/types"
 
 const normalizeRefreshToken = (value: unknown): string | null => {
   if (typeof value !== "string") return null

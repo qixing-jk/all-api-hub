@@ -1,4 +1,4 @@
-import type { ExtensionStoreId } from "~/src/utils/browser"
+import type { ExtensionStoreId } from "~/utils/browser"
 
 export const EXTENSION_STORE_LISTING_URLS: Record<ExtensionStoreId, string> = {
   chrome:

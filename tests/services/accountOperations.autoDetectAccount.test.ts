@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { SUB2API } from "~/src/constants/siteType"
-import { UI_CONSTANTS } from "~/src/constants/ui"
-import { autoDetectAccount } from "~/src/services/accounts/accountOperations"
-import { AuthTypeEnum } from "~/src/types"
+import { SUB2API } from "~/constants/siteType"
+import { UI_CONSTANTS } from "~/constants/ui"
+import { autoDetectAccount } from "~/services/accounts/accountOperations"
+import { AuthTypeEnum } from "~/types"
 
 const {
   mockAutoDetectSmart,
@@ -25,7 +25,7 @@ vi.mock("~/services/siteDetection/autoDetectService", () => ({
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/src/utils/browser/browserApi")>()
+    await importOriginal<typeof import("~/utils/browser/browserApi")>()
   return {
     ...actual,
     sendRuntimeMessage: mockSendRuntimeMessage,
@@ -33,8 +33,7 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
 })
 
 vi.mock("~/services/apiService", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("~/src/services/apiService")>()
+  const actual = await importOriginal<typeof import("~/services/apiService")>()
   return {
     ...actual,
     getApiService: vi.fn(() => ({

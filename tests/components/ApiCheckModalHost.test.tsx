@@ -9,15 +9,15 @@ import userEvent from "@testing-library/user-event"
 import toast from "react-hot-toast/headless"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
-import { ApiCheckModalHost } from "~/src/entrypoints/content/webAiApiCheck/components/ApiCheckModalHost"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { ApiCheckModalHost } from "~/entrypoints/content/webAiApiCheck/components/ApiCheckModalHost"
 import {
   API_CHECK_MODAL_HOST_READY_EVENT,
   dispatchOpenApiCheckModal,
   type ApiCheckOpenModalDetail,
-} from "~/src/entrypoints/content/webAiApiCheck/events"
-import { sendRuntimeMessage } from "~/src/utils/browser/browserApi"
-import { render } from "~/tests/test-utils/render"
+} from "~/entrypoints/content/webAiApiCheck/events"
+import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { render } from "~~/tests/test-utils/render"
 
 vi.mock("react-hot-toast/headless", () => ({
   default: {
@@ -29,7 +29,7 @@ vi.mock("react-hot-toast/headless", () => ({
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/src/utils/browser/browserApi")>()
+    await importOriginal<typeof import("~/utils/browser/browserApi")>()
   return {
     ...actual,
     sendRuntimeMessage: vi.fn(),

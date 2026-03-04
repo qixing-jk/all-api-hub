@@ -3,8 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import {
   fetchChannelModels,
   listAllChannels,
-} from "~/src/services/apiService/common"
-import { AuthTypeEnum } from "~/src/types"
+} from "~/services/apiService/common"
+import { AuthTypeEnum } from "~/types"
 
 const { mockFetchApi } = vi.hoisted(() => ({
   mockFetchApi: vi.fn(),

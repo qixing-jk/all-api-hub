@@ -2,11 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { useAccountData } from "~/src/hooks/useAccountData"
-import { getApiService } from "~/src/services/apiService"
-import type { AccountToken } from "~/src/types"
-import { getErrorMessage } from "~/src/utils/core/error"
-import { createLogger } from "~/src/utils/core/logger"
+import { useAccountData } from "~/hooks/useAccountData"
+import { getApiService } from "~/services/apiService"
+import type { AccountToken } from "~/types"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "../constants"
 

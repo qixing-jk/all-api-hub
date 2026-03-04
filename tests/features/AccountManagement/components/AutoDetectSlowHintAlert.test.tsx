@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 
-import AutoDetectSlowHintAlert from "~/src/features/AccountManagement/components/AccountDialog/AutoDetectSlowHintAlert"
-import { fireEvent, render, screen } from "~/tests/test-utils/render"
+import AutoDetectSlowHintAlert from "~/features/AccountManagement/components/AccountDialog/AutoDetectSlowHintAlert"
+import { fireEvent, render, screen } from "~~/tests/test-utils/render"
 
 vi.mock("~/utils/navigation/docsLinks", () => ({
   getDocsAutoDetectUrl: vi.fn(),
@@ -10,7 +10,7 @@ vi.mock("~/utils/navigation/docsLinks", () => ({
 describe("AutoDetectSlowHintAlert", () => {
   it("opens auto-detect troubleshooting doc", async () => {
     const { getDocsAutoDetectUrl } = await import(
-      "~/src/utils/navigation/docsLinks"
+      "~/utils/navigation/docsLinks"
     )
     const expectedUrl = "https://example.com/auto-detect"
     vi.mocked(getDocsAutoDetectUrl).mockReturnValue(expectedUrl)

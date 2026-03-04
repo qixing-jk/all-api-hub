@@ -7,9 +7,9 @@ import {
   type UsageHistoryCursor,
   type UsageHistoryLatencyAggregate,
   type UsageHistoryStore,
-} from "~/src/types/usageHistory"
-import { getErrorMessage } from "~/src/utils/core/error"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/types/usageHistory"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 import { USAGE_HISTORY_STORAGE_KEYS } from "./constants"
 import {

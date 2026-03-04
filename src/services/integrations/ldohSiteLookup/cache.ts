@@ -3,14 +3,14 @@ import { Storage } from "@plasmohq/storage"
 import {
   LDOH_SITE_LOOKUP_STORAGE_KEYS,
   STORAGE_LOCKS,
-} from "~/src/services/core/storageKeys"
-import { withExtensionStorageWriteLock } from "~/src/services/core/storageWriteLock"
+} from "~/services/core/storageKeys"
+import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import {
   coerceLdohSiteListCache,
   coerceLdohSiteSummaryList,
-} from "~/src/services/integrations/ldohSiteLookup/coerce"
-import { LDOH_SITE_LIST_CACHE_TTL_MS } from "~/src/services/integrations/ldohSiteLookup/constants"
-import type { LdohSiteListCache } from "~/src/services/integrations/ldohSiteLookup/types"
+} from "~/services/integrations/ldohSiteLookup/coerce"
+import { LDOH_SITE_LIST_CACHE_TTL_MS } from "~/services/integrations/ldohSiteLookup/constants"
+import type { LdohSiteListCache } from "~/services/integrations/ldohSiteLookup/types"
 
 const storage = new Storage({ area: "local" })
 

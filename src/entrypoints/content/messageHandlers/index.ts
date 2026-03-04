@@ -1,4 +1,4 @@
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   handleCheckCapGuard,
   handleCheckCloudflareGuard,
@@ -9,7 +9,7 @@ import {
   handleShowShieldBypassUi,
   handleWaitAndGetUserInfo,
   handleWaitForTurnstileToken,
-} from "~/src/entrypoints/content/messageHandlers/handlers"
+} from "~/entrypoints/content/messageHandlers/handlers"
 
 /**
  * Registers content-script message handlers for fetching storage data,

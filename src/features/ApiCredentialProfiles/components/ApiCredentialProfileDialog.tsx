@@ -17,20 +17,20 @@ import {
   Input,
   SearchableSelect,
   Textarea,
-} from "~/src/components/ui"
-import { Modal } from "~/src/components/ui/Dialog/Modal"
-import { TagPicker } from "~/src/features/AccountManagement/components/TagPicker"
+} from "~/components/ui"
+import { Modal } from "~/components/ui/Dialog/Modal"
+import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
 import {
   API_TYPES,
   type ApiVerificationApiType,
-} from "~/src/services/verification/aiApiVerification"
+} from "~/services/verification/aiApiVerification"
 import {
   normalizeGoogleFamilyBaseUrl,
   normalizeOpenAiFamilyBaseUrl,
-} from "~/src/services/verification/webAiApiCheck/extractCredentials"
-import type { Tag } from "~/src/types"
-import type { ApiCredentialProfile } from "~/src/types/apiCredentialProfiles"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/services/verification/webAiApiCheck/extractCredentials"
+import type { Tag } from "~/types"
+import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to the API credential profile dialog.

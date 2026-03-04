@@ -1,25 +1,25 @@
 import i18next from "i18next"
 
-import { drawMeshGradientBackground } from "~/src/services/sharing/shareSnapshots/meshGradientBackground"
+import { drawMeshGradientBackground } from "~/services/sharing/shareSnapshots/meshGradientBackground"
 import {
   drawShareSnapshotOverlay,
   type ShareSnapshotOverlayLabels,
-} from "~/src/services/sharing/shareSnapshots/shareSnapshotOverlay"
+} from "~/services/sharing/shareSnapshots/shareSnapshotOverlay"
 import type {
   AccountShareSnapshotPayload,
   OverviewShareSnapshotPayload,
   ShareSnapshotExportResult,
   ShareSnapshotPayload,
-} from "~/src/services/sharing/shareSnapshots/types"
+} from "~/services/sharing/shareSnapshots/types"
 import {
   createShareSnapshotSeed,
   formatAsOfTimestamp,
   formatCurrencyAmount,
   formatLocalDateStamp,
   formatSignedCurrencyAmount,
-} from "~/src/services/sharing/shareSnapshots/utils"
-import type { CurrencyType } from "~/src/types"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/services/sharing/shareSnapshots/utils"
+import type { CurrencyType } from "~/types"
+import { createLogger } from "~/utils/core/logger"
 
 export const SHARE_SNAPSHOT_IMAGE = {
   width: 1200,

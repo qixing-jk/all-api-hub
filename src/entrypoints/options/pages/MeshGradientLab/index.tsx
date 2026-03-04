@@ -1,3 +1,3 @@
-import MeshGradientLab from "~/src/features/MeshGradientLab"
+import MeshGradientLab from "~/features/MeshGradientLab"
 
 export default MeshGradientLab

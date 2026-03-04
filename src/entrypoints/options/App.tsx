@@ -1,7 +1,7 @@
 import { useState } from "react"
 
-import { AppLayout } from "~/src/components/AppLayout"
-import { MENU_ITEM_IDS } from "~/src/constants/optionsMenuIds"
+import { AppLayout } from "~/components/AppLayout"
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 
 import Header from "./components/Header"
 import Sidebar from "./components/Sidebar"

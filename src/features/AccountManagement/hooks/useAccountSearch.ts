@@ -3,8 +3,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   searchAccounts,
   type SearchResult,
-} from "~/src/services/search/accountSearch"
-import type { DisplaySiteData } from "~/src/types"
+} from "~/services/search/accountSearch"
+import type { DisplaySiteData } from "~/types"
 
 export interface HighlightFragment {
   text: string

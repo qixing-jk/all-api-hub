@@ -1,4 +1,4 @@
-import { getErrorMessage } from "~/src/utils/core/error"
+import { getErrorMessage } from "~/utils/core/error"
 
 import {
   detectCloudflareChallengePage,

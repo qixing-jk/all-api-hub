@@ -4,8 +4,8 @@
 
 import { t } from "i18next"
 
-import type { ModelPricing } from "~/src/services/apiService/common/type"
-import type { CurrencyType } from "~/src/types"
+import type { ModelPricing } from "~/services/apiService/common/type"
+import type { CurrencyType } from "~/types"
 
 export interface CalculatedPrice {
   inputUSD: number // 每1M token输入价格（美元）

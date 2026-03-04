@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 
-import { Button } from "~/src/components/ui/button"
-import { render, screen } from "~/tests/test-utils/render"
+import { Button } from "~/components/ui/button"
+import { render, screen } from "~~/tests/test-utils/render"
 
 describe("Button", () => {
   it("renders leftIcon when not loading", async () => {

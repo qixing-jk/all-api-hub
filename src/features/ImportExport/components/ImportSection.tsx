@@ -11,7 +11,7 @@ import {
   CardTitle,
   FormField,
   Textarea,
-} from "~/src/components/ui"
+} from "~/components/ui"
 
 interface ImportSectionProps {
   importData: string

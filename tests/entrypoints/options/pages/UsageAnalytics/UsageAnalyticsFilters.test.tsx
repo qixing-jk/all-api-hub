@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest"
 
-import UsageAnalytics from "~/src/entrypoints/options/pages/UsageAnalytics"
-import { accountStorage } from "~/src/services/accounts/accountStorage"
-import { createEmptyUsageHistoryAccountStore } from "~/src/services/history/usageHistory/core"
-import { usageHistoryStorage } from "~/src/services/history/usageHistory/storage"
-import { fireEvent, render, screen, within } from "~/tests/test-utils/render"
+import UsageAnalytics from "~/entrypoints/options/pages/UsageAnalytics"
+import { accountStorage } from "~/services/accounts/accountStorage"
+import { createEmptyUsageHistoryAccountStore } from "~/services/history/usageHistory/core"
+import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
+import { fireEvent, render, screen, within } from "~~/tests/test-utils/render"
 
 vi.mock("~/components/charts/echarts", async () => {
   const instance = {

@@ -1,21 +1,21 @@
 import { union } from "lodash-es"
 
-import { NEW_API, type ManagedSiteType } from "~/src/constants/siteType"
-import { getApiService } from "~/src/services/apiService"
-import { AuthTypeEnum } from "~/src/types"
-import type { ChannelConfigMap } from "~/src/types/channelConfig"
-import type { ChannelModelFilterRule } from "~/src/types/channelModelFilters"
+import { NEW_API, type ManagedSiteType } from "~/constants/siteType"
+import { getApiService } from "~/services/apiService"
+import { AuthTypeEnum } from "~/types"
+import type { ChannelConfigMap } from "~/types/channelConfig"
+import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 import {
   type ManagedSiteChannel,
   type ManagedSiteChannelListData,
-} from "~/src/types/managedSite"
+} from "~/types/managedSite"
 import {
   BatchExecutionOptions,
   ExecutionItemResult,
   ExecutionResult,
   ExecutionStatistics,
-} from "~/src/types/managedSiteModelSync"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/types/managedSiteModelSync"
+import { createLogger } from "~/utils/core/logger"
 
 import { RateLimiter } from "./rateLimiter"
 

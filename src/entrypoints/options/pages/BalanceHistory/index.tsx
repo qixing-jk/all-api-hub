@@ -1,3 +1,3 @@
-import BalanceHistory from "~/src/features/BalanceHistory"
+import BalanceHistory from "~/features/BalanceHistory"
 
 export default BalanceHistory

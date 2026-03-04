@@ -1,11 +1,11 @@
 import { t } from "i18next"
 
-import { userPreferences } from "~/src/services/preferences/userPreferences"
-import { ApiToken, DisplaySiteData } from "~/src/types"
-import { ServiceResponse } from "~/src/types/serviceResponse"
-import { getErrorMessage } from "~/src/utils/core/error"
-import { createLogger } from "~/src/utils/core/logger"
-import { joinUrl } from "~/src/utils/core/url"
+import { userPreferences } from "~/services/preferences/userPreferences"
+import { ApiToken, DisplaySiteData } from "~/types"
+import { ServiceResponse } from "~/types/serviceResponse"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
+import { joinUrl } from "~/utils/core/url"
 
 /**
  * Unified logger scoped to the CLI Proxy integration service.

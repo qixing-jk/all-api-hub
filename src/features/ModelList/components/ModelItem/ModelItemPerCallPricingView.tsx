@@ -2,7 +2,7 @@ import {
   formatPriceCompact,
   type CalculatedPrice,
   type PerCallPrice,
-} from "~/src/services/models/utils/modelPricing"
+} from "~/services/models/utils/modelPricing"
 
 import { PriceView } from "./ModelItemPicingView"
 

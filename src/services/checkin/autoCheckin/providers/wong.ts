@@ -8,23 +8,23 @@
  * - Normalize backend variations (success flags, `checked_in`, and message strings)
  *   into the project-wide `CheckinResultStatus` shape.
  */
-import { fetchApi } from "~/src/services/apiService/common/utils"
+import { fetchApi } from "~/services/apiService/common/utils"
 import type {
   WongCheckinApiResponse,
   WongCheckinStatusData,
-} from "~/src/services/apiService/wong"
-import type { AutoCheckinProvider } from "~/src/services/checkin/autoCheckin/providers/index"
+} from "~/services/apiService/wong"
+import type { AutoCheckinProvider } from "~/services/checkin/autoCheckin/providers/index"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
   AUTO_CHECKIN_USER_CHECKIN_ENDPOINT,
   isAlreadyCheckedMessage,
   normalizeCheckinMessage,
   resolveProviderErrorResult,
-} from "~/src/services/checkin/autoCheckin/providers/shared"
-import type { AutoCheckinProviderResult } from "~/src/services/checkin/autoCheckin/providers/types"
-import type { SiteAccount } from "~/src/types"
-import { AuthTypeEnum } from "~/src/types"
-import { CHECKIN_RESULT_STATUS } from "~/src/types/autoCheckin"
+} from "~/services/checkin/autoCheckin/providers/shared"
+import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/providers/types"
+import type { SiteAccount } from "~/types"
+import { AuthTypeEnum } from "~/types"
+import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 
 /**
  * WONG daily check-in endpoint.

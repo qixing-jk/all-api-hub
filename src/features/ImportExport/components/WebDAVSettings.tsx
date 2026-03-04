@@ -21,23 +21,23 @@ import {
   IconButton,
   Input,
   Switch,
-} from "~/src/components/ui"
-import { accountStorage } from "~/src/services/accounts/accountStorage"
-import { apiCredentialProfilesStorage } from "~/src/services/apiCredentialProfiles/apiCredentialProfilesStorage"
-import { channelConfigStorage } from "~/src/services/managedSites/channelConfigStorage"
-import { userPreferences } from "~/src/services/preferences/userPreferences"
-import { tagStorage } from "~/src/services/tags/tagStorage"
+} from "~/components/ui"
+import { accountStorage } from "~/services/accounts/accountStorage"
+import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
+import { userPreferences } from "~/services/preferences/userPreferences"
+import { tagStorage } from "~/services/tags/tagStorage"
 import {
   decryptWebdavBackupEnvelope,
   tryParseEncryptedWebdavBackupEnvelope,
   type EncryptedWebdavBackupEnvelopeV1,
-} from "~/src/services/webdav/webdavBackupEncryption"
+} from "~/services/webdav/webdavBackupEncryption"
 import {
   downloadBackupRaw,
   testWebdavConnection,
   uploadBackup,
-} from "~/src/services/webdav/webdavService"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/services/webdav/webdavService"
+import { createLogger } from "~/utils/core/logger"
 
 import {
   BACKUP_VERSION,

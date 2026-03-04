@@ -1,16 +1,16 @@
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { VerifyApiCredentialProfileDialog } from "~/src/features/ApiCredentialProfiles/components/VerifyApiCredentialProfileDialog"
-import { API_TYPES } from "~/src/services/verification/aiApiVerification"
-import { render, screen, waitFor, within } from "~/tests/test-utils/render"
+import { VerifyApiCredentialProfileDialog } from "~/features/ApiCredentialProfiles/components/VerifyApiCredentialProfileDialog"
+import { API_TYPES } from "~/services/verification/aiApiVerification"
+import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 
 const mockRunApiVerificationProbe = vi.fn()
 
 vi.mock("~/services/verification/aiApiVerification", async (importOriginal) => {
   const original =
     await importOriginal<
-      typeof import("~/src/services/verification/aiApiVerification")
+      typeof import("~/services/verification/aiApiVerification")
     >()
   return {
     ...original,

@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next"
 
-import { Card } from "~/src/components/ui"
+import { Card } from "~/components/ui"
 
 interface EmptyResultsProps {
   hasHistory: boolean

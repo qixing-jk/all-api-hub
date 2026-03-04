@@ -2,8 +2,8 @@ import { ArrowRight } from "lucide-react"
 import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
-import { cn } from "~/src/lib/utils"
-import { safeRandomUUID } from "~/src/utils/core/identifier"
+import { cn } from "~/lib/utils"
+import { safeRandomUUID } from "~/utils/core/identifier"
 
 import { Input } from "./input"
 import { RepeatableInput } from "./RepeatableInput"

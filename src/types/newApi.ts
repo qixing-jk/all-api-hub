@@ -1,4 +1,4 @@
-import { ChannelType } from "~/src/constants"
+import { ChannelType } from "~/constants"
 
 import type { OctopusOutboundType } from "./octopus"
 

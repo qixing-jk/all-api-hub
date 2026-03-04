@@ -2,7 +2,7 @@ import { ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/24/outline"
 import React from "react"
 import { useTranslation } from "react-i18next"
 
-import { IconButton } from "~/src/components/ui"
+import { IconButton } from "~/components/ui"
 
 interface ModelItemExpandButtonProps {
   isExpanded: boolean

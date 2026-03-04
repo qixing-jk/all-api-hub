@@ -1,1 +1,1 @@
-export * from "~/src/features/UsageAnalytics/charts/echartsOptions"
+export * from "~/features/UsageAnalytics/charts/echartsOptions"

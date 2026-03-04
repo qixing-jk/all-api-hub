@@ -9,32 +9,26 @@ import {
 } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
-import { CCSwitchIcon } from "~/src/components/icons/CCSwitchIcon"
-import { CherryIcon } from "~/src/components/icons/CherryIcon"
-import { ClaudeCodeRouterIcon } from "~/src/components/icons/ClaudeCodeRouterIcon"
-import { CliProxyIcon } from "~/src/components/icons/CliProxyIcon"
-import { KiloCodeIcon } from "~/src/components/icons/KiloCodeIcon"
-import { ManagedSiteIcon } from "~/src/components/icons/ManagedSiteIcon"
-import {
-  Badge,
-  Card,
-  CardContent,
-  Heading6,
-  IconButton,
-} from "~/src/components/ui"
+import { CCSwitchIcon } from "~/components/icons/CCSwitchIcon"
+import { CherryIcon } from "~/components/icons/CherryIcon"
+import { ClaudeCodeRouterIcon } from "~/components/icons/ClaudeCodeRouterIcon"
+import { CliProxyIcon } from "~/components/icons/CliProxyIcon"
+import { KiloCodeIcon } from "~/components/icons/KiloCodeIcon"
+import { ManagedSiteIcon } from "~/components/icons/ManagedSiteIcon"
+import { Badge, Card, CardContent, Heading6, IconButton } from "~/components/ui"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "~/src/components/ui/dropdown-menu"
-import type { ManagedSiteType } from "~/src/constants/siteType"
+} from "~/components/ui/dropdown-menu"
+import type { ManagedSiteType } from "~/constants/siteType"
 import {
   API_TYPES,
   type ApiVerificationApiType,
-} from "~/src/services/verification/aiApiVerification"
-import type { ApiCredentialProfile } from "~/src/types/apiCredentialProfiles"
+} from "~/services/verification/aiApiVerification"
+import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 
 /**
  * Formats a secret for display (masked by default, revealable per-profile).

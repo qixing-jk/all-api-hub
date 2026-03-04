@@ -2,10 +2,10 @@ import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { Bars3Icon } from "@heroicons/react/24/outline"
 
-import { IconButton } from "~/src/components/ui"
-import type { SearchResultWithHighlight } from "~/src/features/AccountManagement/hooks/useAccountSearch"
-import { cn } from "~/src/lib/utils"
-import type { DisplaySiteData } from "~/src/types"
+import { IconButton } from "~/components/ui"
+import type { SearchResultWithHighlight } from "~/features/AccountManagement/hooks/useAccountSearch"
+import { cn } from "~/lib/utils"
+import type { DisplaySiteData } from "~/types"
 
 import AccountListItem from "./AccountListItem"
 

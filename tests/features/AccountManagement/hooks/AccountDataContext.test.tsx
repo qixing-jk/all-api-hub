@@ -3,12 +3,12 @@ import { useEffect } from "react"
 import { I18nextProvider } from "react-i18next"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   AccountDataProvider,
   useAccountDataContext,
-} from "~/src/features/AccountManagement/hooks/AccountDataContext"
-import i18nInstance from "~/tests/test-utils/i18n"
+} from "~/features/AccountManagement/hooks/AccountDataContext"
+import i18nInstance from "~~/tests/test-utils/i18n"
 
 const {
   mockGetAllAccounts,

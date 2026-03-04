@@ -2,7 +2,7 @@ import type {
   ApiVerificationProbeId,
   ApiVerificationProbeResult,
   ApiVerificationProbeStatus,
-} from "~/src/services/verification/aiApiVerification"
+} from "~/services/verification/aiApiVerification"
 
 /**
  * Stable identifiers for CLI tool simulations.

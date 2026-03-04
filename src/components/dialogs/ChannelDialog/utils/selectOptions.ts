@@ -1,5 +1,5 @@
-import type { CompactMultiSelectOption } from "~/src/components/ui"
-import type { ChannelGroup, ChannelModel } from "~/src/types/managedSite"
+import type { CompactMultiSelectOption } from "~/components/ui"
+import type { ChannelGroup, ChannelModel } from "~/types/managedSite"
 
 export interface SelectOption {
   label: string

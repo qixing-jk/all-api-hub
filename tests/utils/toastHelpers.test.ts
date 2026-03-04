@@ -4,7 +4,7 @@ import {
   showResetToast,
   showResultToast,
   showUpdateToast,
-} from "~/src/utils/core/toastHelpers"
+} from "~/utils/core/toastHelpers"
 
 vi.mock("react-hot-toast", () => ({
   default: {

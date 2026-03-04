@@ -2,9 +2,9 @@ import { DialogTitle } from "@headlessui/react"
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
-import { Alert } from "~/src/components/ui/Alert"
-import { Button } from "~/src/components/ui/button"
-import { Modal } from "~/src/components/ui/Dialog/Modal"
+import { Alert } from "~/components/ui/Alert"
+import { Button } from "~/components/ui/button"
+import { Modal } from "~/components/ui/Dialog/Modal"
 
 export interface DuplicateChannelWarningDialogProps {
   isOpen: boolean

@@ -1,6 +1,6 @@
-import { joinUrl } from "~/src/utils/core/url"
-import { getChangelogAnchorId } from "~/src/utils/navigation/changelogAnchor"
-import { getHomepage } from "~/src/utils/navigation/packageMeta"
+import { joinUrl } from "~/utils/core/url"
+import { getChangelogAnchorId } from "~/utils/navigation/changelogAnchor"
+import { getHomepage } from "~/utils/navigation/packageMeta"
 
 /**
  * Resolve the documentation homepage URL for a given language.

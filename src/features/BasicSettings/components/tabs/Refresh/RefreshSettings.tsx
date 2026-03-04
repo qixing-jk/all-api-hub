@@ -2,15 +2,15 @@ import { useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { SettingSection } from "~/src/components/SettingSection"
-import { Card, CardItem, CardList, Input, Switch } from "~/src/components/ui"
-import { useUserPreferencesContext } from "~/src/contexts/UserPreferencesContext"
+import { SettingSection } from "~/components/SettingSection"
+import { Card, CardItem, CardList, Input, Switch } from "~/components/ui"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import {
   ACCOUNT_AUTO_REFRESH_INTERVAL_MIN_SECONDS,
   ACCOUNT_AUTO_REFRESH_MIN_INTERVAL_MIN_SECONDS,
   DEFAULT_ACCOUNT_AUTO_REFRESH,
-} from "~/src/types/accountAutoRefresh"
-import { showUpdateToast } from "~/src/utils/core/toastHelpers"
+} from "~/types/accountAutoRefresh"
+import { showUpdateToast } from "~/utils/core/toastHelpers"
 
 /**
  * Settings section for auto-refresh behavior (intervals, toggle, refresh on open).

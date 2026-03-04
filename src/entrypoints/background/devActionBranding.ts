@@ -1,9 +1,6 @@
-import { getManifest } from "~/src/utils/browser/browserApi"
-import {
-  formatDevActionTitle,
-  getDevBadgeText,
-} from "~/src/utils/core/devBranding"
-import { createLogger } from "~/src/utils/core/logger"
+import { getManifest } from "~/utils/browser/browserApi"
+import { formatDevActionTitle, getDevBadgeText } from "~/utils/core/devBranding"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to development-only toolbar branding.

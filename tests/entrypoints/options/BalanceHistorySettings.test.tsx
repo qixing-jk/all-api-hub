@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { useUserPreferencesContext } from "~/src/contexts/UserPreferencesContext"
-import BalanceHistorySettings from "~/src/features/BasicSettings/components/tabs/BalanceHistory/BalanceHistorySettings"
-import { hasAlarmsAPI } from "~/src/utils/browser/browserApi"
-import { fireEvent, render, screen, waitFor } from "~/tests/test-utils/render"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import BalanceHistorySettings from "~/features/BasicSettings/components/tabs/BalanceHistory/BalanceHistorySettings"
+import { hasAlarmsAPI } from "~/utils/browser/browserApi"
+import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 vi.mock("~/contexts/UserPreferencesContext", async () => {
   const actual = await vi.importActual<
-    typeof import("~/src/contexts/UserPreferencesContext")
+    typeof import("~/contexts/UserPreferencesContext")
   >("~/contexts/UserPreferencesContext")
 
   return {
@@ -18,7 +18,7 @@ vi.mock("~/contexts/UserPreferencesContext", async () => {
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/src/utils/browser/browserApi")>()
+    await importOriginal<typeof import("~/utils/browser/browserApi")>()
   return {
     ...actual,
     hasAlarmsAPI: vi.fn(() => true),

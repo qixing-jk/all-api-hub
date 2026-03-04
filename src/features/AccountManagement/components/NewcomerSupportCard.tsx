@@ -8,12 +8,12 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "~/src/components/ui"
+} from "~/components/ui"
 import {
   getDocsGetStartedUrl,
   getDocsHomepageUrl,
-} from "~/src/utils/navigation/docsLinks"
-import { getRepository } from "~/src/utils/navigation/packageMeta"
+} from "~/utils/navigation/docsLinks"
+import { getRepository } from "~/utils/navigation/packageMeta"
 
 const GITHUB_REPO_URL = getRepository()
 

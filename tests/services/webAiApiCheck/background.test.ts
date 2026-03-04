@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
-import { DEFAULT_PREFERENCES } from "~/src/services/preferences/userPreferences"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 
 vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
   const actual =
     await importOriginal<
-      typeof import("~/src/services/preferences/userPreferences")
+      typeof import("~/services/preferences/userPreferences")
     >()
   return {
     ...actual,
@@ -40,7 +40,7 @@ vi.mock(
 vi.mock("~/services/verification/aiApiVerification", async (importOriginal) => {
   const actual =
     await importOriginal<
-      typeof import("~/src/services/verification/aiApiVerification")
+      typeof import("~/services/verification/aiApiVerification")
     >()
   return {
     ...actual,
@@ -52,7 +52,7 @@ describe("webAiApiCheck background handlers", () => {
   it("shouldPrompt returns false when auto-detect is disabled", async () => {
     vi.resetModules()
     const { userPreferences } = await import(
-      "~/src/services/preferences/userPreferences"
+      "~/services/preferences/userPreferences"
     )
     vi.mocked(userPreferences.getPreferences).mockResolvedValue({
       ...DEFAULT_PREFERENCES,
@@ -69,7 +69,7 @@ describe("webAiApiCheck background handlers", () => {
     })
 
     const { handleWebAiApiCheckMessage } = await import(
-      "~/src/services/verification/webAiApiCheck/background"
+      "~/services/verification/webAiApiCheck/background"
     )
 
     const sendResponse = vi.fn()
@@ -90,7 +90,7 @@ describe("webAiApiCheck background handlers", () => {
   it("shouldPrompt returns true when enabled and whitelisted", async () => {
     vi.resetModules()
     const { userPreferences } = await import(
-      "~/src/services/preferences/userPreferences"
+      "~/services/preferences/userPreferences"
     )
     vi.mocked(userPreferences.getPreferences).mockResolvedValue({
       ...DEFAULT_PREFERENCES,
@@ -107,7 +107,7 @@ describe("webAiApiCheck background handlers", () => {
     })
 
     const { handleWebAiApiCheckMessage } = await import(
-      "~/src/services/verification/webAiApiCheck/background"
+      "~/services/verification/webAiApiCheck/background"
     )
 
     const sendResponse = vi.fn()
@@ -128,12 +128,12 @@ describe("webAiApiCheck background handlers", () => {
   it("fetchModels normalizes baseUrl and returns model ids", async () => {
     vi.resetModules()
     const { fetchOpenAICompatibleModelIds } = await import(
-      "~/src/services/apiService/openaiCompatible"
+      "~/services/apiService/openaiCompatible"
     )
     vi.mocked(fetchOpenAICompatibleModelIds).mockResolvedValue(["m1", "m2"])
 
     const { handleWebAiApiCheckMessage } = await import(
-      "~/src/services/verification/webAiApiCheck/background"
+      "~/services/verification/webAiApiCheck/background"
     )
 
     const sendResponse = vi.fn()
@@ -159,16 +159,14 @@ describe("webAiApiCheck background handlers", () => {
 
   it("fetchModels supports google and strips /v1beta from baseUrl", async () => {
     vi.resetModules()
-    const { fetchGoogleModelIds } = await import(
-      "~/src/services/apiService/google"
-    )
+    const { fetchGoogleModelIds } = await import("~/services/apiService/google")
     vi.mocked(fetchGoogleModelIds).mockResolvedValue([
       "gemini-1.0",
       "gemini-2.0",
     ])
 
     const { handleWebAiApiCheckMessage } = await import(
-      "~/src/services/verification/webAiApiCheck/background"
+      "~/services/verification/webAiApiCheck/background"
     )
 
     const sendResponse = vi.fn()
@@ -195,7 +193,7 @@ describe("webAiApiCheck background handlers", () => {
   it("fetchModels supports anthropic and strips /v1 from baseUrl", async () => {
     vi.resetModules()
     const { fetchAnthropicModelIds } = await import(
-      "~/src/services/apiService/anthropic"
+      "~/services/apiService/anthropic"
     )
     vi.mocked(fetchAnthropicModelIds).mockResolvedValue([
       "claude-3-7-sonnet-latest",
@@ -203,7 +201,7 @@ describe("webAiApiCheck background handlers", () => {
     ])
 
     const { handleWebAiApiCheckMessage } = await import(
-      "~/src/services/verification/webAiApiCheck/background"
+      "~/services/verification/webAiApiCheck/background"
     )
 
     const sendResponse = vi.fn()
@@ -230,14 +228,14 @@ describe("webAiApiCheck background handlers", () => {
   it("fetchModels sanitizes apiKey in error messages", async () => {
     vi.resetModules()
     const { fetchOpenAICompatibleModelIds } = await import(
-      "~/src/services/apiService/openaiCompatible"
+      "~/services/apiService/openaiCompatible"
     )
     vi.mocked(fetchOpenAICompatibleModelIds).mockRejectedValue(
       new Error("Unauthorized: sk-secret-xyz"),
     )
 
     const { handleWebAiApiCheckMessage } = await import(
-      "~/src/services/verification/webAiApiCheck/background"
+      "~/services/verification/webAiApiCheck/background"
     )
 
     const sendResponse = vi.fn()
@@ -260,14 +258,14 @@ describe("webAiApiCheck background handlers", () => {
   it("runProbe sanitizes apiKey when probe execution throws", async () => {
     vi.resetModules()
     const { runApiVerificationProbe } = await import(
-      "~/src/services/verification/aiApiVerification"
+      "~/services/verification/aiApiVerification"
     )
     vi.mocked(runApiVerificationProbe).mockRejectedValue(
       new Error("Forbidden: sk-secret-xyz"),
     )
 
     const { handleWebAiApiCheckMessage } = await import(
-      "~/src/services/verification/webAiApiCheck/background"
+      "~/services/verification/webAiApiCheck/background"
     )
 
     const sendResponse = vi.fn()
@@ -293,7 +291,7 @@ describe("webAiApiCheck background handlers", () => {
     vi.resetModules()
 
     const { apiCredentialProfilesStorage } = await import(
-      "~/src/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+      "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
     )
 
     vi.mocked(apiCredentialProfilesStorage.createProfile).mockResolvedValue({
@@ -309,7 +307,7 @@ describe("webAiApiCheck background handlers", () => {
     } as any)
 
     const { handleWebAiApiCheckMessage } = await import(
-      "~/src/services/verification/webAiApiCheck/background"
+      "~/services/verification/webAiApiCheck/background"
     )
 
     const sendResponse = vi.fn()

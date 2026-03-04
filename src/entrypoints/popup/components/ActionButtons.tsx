@@ -8,17 +8,17 @@ import {
 import type { MouseEvent } from "react"
 import { useTranslation } from "react-i18next"
 
-import Tooltip from "~/src/components/Tooltip"
-import { Button, IconButton } from "~/src/components/ui"
-import { COLORS } from "~/src/constants/designTokens"
-import { useAccountActionsContext } from "~/src/features/AccountManagement/hooks/AccountActionsContext"
-import { useAccountDataContext } from "~/src/features/AccountManagement/hooks/AccountDataContext"
-import { getExternalCheckInOpenOptions } from "~/src/utils/core/shortcutKeys"
+import Tooltip from "~/components/Tooltip"
+import { Button, IconButton } from "~/components/ui"
+import { COLORS } from "~/constants/designTokens"
+import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
+import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
+import { getExternalCheckInOpenOptions } from "~/utils/core/shortcutKeys"
 import {
   openAutoCheckinPage,
   openKeysPage,
   openModelsPage,
-} from "~/src/utils/navigation"
+} from "~/utils/navigation"
 
 interface ActionButtonsProps {
   primaryActionLabel: string

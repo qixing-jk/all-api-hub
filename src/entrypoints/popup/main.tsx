@@ -1,9 +1,9 @@
 import React, { Suspense } from "react"
 import ReactDOM from "react-dom/client"
 
-import "~/src/utils/i18n" // Import the i18n configuration
+import "~/utils/i18n" // Import the i18n configuration
 
-import { setDocumentTitle } from "~/src/utils/navigation/documentTitle"
+import { setDocumentTitle } from "~/utils/navigation/documentTitle"
 
 import App from "./App"
 

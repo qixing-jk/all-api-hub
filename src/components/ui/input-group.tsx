@@ -1,10 +1,10 @@
 import { cva, type VariantProps } from "class-variance-authority"
 import * as React from "react"
 
-import { Button } from "~/src/components/ui/button"
-import { Input } from "~/src/components/ui/input"
-import { Textarea } from "~/src/components/ui/Textarea"
-import { cn } from "~/src/lib/utils"
+import { Button } from "~/components/ui/button"
+import { Input } from "~/components/ui/input"
+import { Textarea } from "~/components/ui/Textarea"
+import { cn } from "~/lib/utils"
 
 /**
  * Wrapper that groups an input control with addons/buttons and applies shared

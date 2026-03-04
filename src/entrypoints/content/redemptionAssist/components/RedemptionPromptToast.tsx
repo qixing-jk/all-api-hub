@@ -10,10 +10,10 @@ import {
   CardHeader,
   Heading3,
   Link,
-} from "~/src/components/ui"
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
-import { sendRuntimeMessage } from "~/src/utils/browser/browserApi"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/components/ui"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to redemption assist prompt toast interactions.

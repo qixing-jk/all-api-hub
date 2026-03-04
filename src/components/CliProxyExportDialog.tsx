@@ -1,21 +1,21 @@
 import { FormEvent, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { CliProxyIcon } from "~/src/components/icons/CliProxyIcon"
+import { CliProxyIcon } from "~/components/icons/CliProxyIcon"
 import {
   Button,
   FormField,
   Input,
   Modal,
   ModelListInput,
-} from "~/src/components/ui"
-import { fetchOpenAICompatibleModelIds } from "~/src/services/apiService/openaiCompatible"
-import { importToCliProxy } from "~/src/services/integrations/cliProxyService"
-import type { ApiToken, DisplaySiteData } from "~/src/types"
-import { safeRandomUUID } from "~/src/utils/core/identifier"
-import { createLogger } from "~/src/utils/core/logger"
-import { showResultToast } from "~/src/utils/core/toastHelpers"
-import { joinUrl, stripTrailingOpenAIV1 } from "~/src/utils/core/url"
+} from "~/components/ui"
+import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompatible"
+import { importToCliProxy } from "~/services/integrations/cliProxyService"
+import type { ApiToken, DisplaySiteData } from "~/types"
+import { safeRandomUUID } from "~/utils/core/identifier"
+import { createLogger } from "~/utils/core/logger"
+import { showResultToast } from "~/utils/core/toastHelpers"
+import { joinUrl, stripTrailingOpenAIV1 } from "~/utils/core/url"
 
 interface CliProxyExportDialogProps {
   isOpen: boolean

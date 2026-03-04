@@ -1,7 +1,7 @@
 import { MagnifyingGlassIcon } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
-import { Input } from "~/src/components/ui"
+import { Input } from "~/components/ui"
 
 interface TokenSearchBarProps {
   searchTerm: string

@@ -1,7 +1,7 @@
 export {
   isInvalidAccessTokenMessage,
   isNoTabWithIdMessage,
-} from "~/src/features/AutoCheckin/utils/autoCheckin"
+} from "~/features/AutoCheckin/utils/autoCheckin"
 
 /**
  * Format a timestamp (ms since epoch) into a user-friendly string.

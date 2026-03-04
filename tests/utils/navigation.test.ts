@@ -1,19 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { getSiteApiRouter } from "~/src/constants/siteType"
-import { isExtensionPopup } from "~/src/utils/browser"
+import { getSiteApiRouter } from "~/constants/siteType"
+import { isExtensionPopup } from "~/utils/browser"
 import {
   createTab as createTabApi,
   getExtensionURL,
-} from "~/src/utils/browser/browserApi"
-import { joinUrl } from "~/src/utils/core/url"
+} from "~/utils/browser/browserApi"
+import { joinUrl } from "~/utils/core/url"
 import {
   openCheckInAndRedeem,
   openKeysPage,
   openModelsPage,
   openMultiplePages,
   openUsagePage,
-} from "~/src/utils/navigation"
+} from "~/utils/navigation"
 
 vi.mock("~/utils/browser", () => ({
   isExtensionPopup: vi.fn().mockReturnValue(false),
@@ -22,7 +22,7 @@ vi.mock("~/utils/browser", () => ({
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/src/utils/browser/browserApi")>()
+    await importOriginal<typeof import("~/utils/browser/browserApi")>()
   const createTab = vi.fn()
   const focusTab = vi.fn()
   const getExtensionURL = vi.fn((path: string) => `ext://${path}`)

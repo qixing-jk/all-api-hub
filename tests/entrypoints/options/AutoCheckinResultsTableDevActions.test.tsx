@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest"
 
-import ResultsTable from "~/src/features/AutoCheckin/components/ResultsTable"
+import ResultsTable from "~/features/AutoCheckin/components/ResultsTable"
 import {
   CHECKIN_RESULT_STATUS,
   type CheckinAccountResult,
-} from "~/src/types/autoCheckin"
-import { render, screen } from "~/tests/test-utils/render"
+} from "~/types/autoCheckin"
+import { render, screen } from "~~/tests/test-utils/render"
 
 describe("AutoCheckin ResultsTable dev actions", () => {
   const baseResult: CheckinAccountResult = {

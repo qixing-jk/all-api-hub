@@ -1,11 +1,11 @@
 import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
-import iconImage from "~/src/assets/icon.png"
-import { LanguageSwitcher } from "~/src/components/LanguageSwitcher"
-import { BodySmall, Heading5, IconButton } from "~/src/components/ui"
-import { VersionBadge } from "~/src/components/VersionBadge"
-import { getRepository } from "~/src/utils/navigation/packageMeta"
+import iconImage from "~/assets/icon.png"
+import { LanguageSwitcher } from "~/components/LanguageSwitcher"
+import { BodySmall, Heading5, IconButton } from "~/components/ui"
+import { VersionBadge } from "~/components/VersionBadge"
+import { getRepository } from "~/utils/navigation/packageMeta"
 
 interface HeaderProps {
   onTitleClick: () => void

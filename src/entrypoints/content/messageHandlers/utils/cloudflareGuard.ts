@@ -1,6 +1,6 @@
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
-import { sendRuntimeMessage } from "~/src/utils/browser/browserApi"
-import { createLogger } from "~/src/utils/core/logger"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("CloudflareGuard")
 

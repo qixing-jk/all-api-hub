@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { SettingSection } from "~/src/components/SettingSection"
+import { SettingSection } from "~/components/SettingSection"
 import {
   Button,
   Card,
@@ -11,13 +11,13 @@ import {
   CardList,
   Switch,
   Textarea,
-} from "~/src/components/ui"
-import { useUserPreferencesContext } from "~/src/contexts/UserPreferencesContext"
+} from "~/components/ui"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import {
   DEFAULT_PREFERENCES,
   type WebAiApiCheckPreferences,
-} from "~/src/services/preferences/userPreferences"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/services/preferences/userPreferences"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to the Basic Settings Web AI API Check section.

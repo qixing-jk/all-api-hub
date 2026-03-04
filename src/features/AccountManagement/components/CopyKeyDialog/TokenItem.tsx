@@ -5,12 +5,12 @@ import {
 } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
-import { Badge, Card, CardContent, IconButton } from "~/src/components/ui"
-import type { ApiToken, DisplaySiteData } from "~/src/types"
+import { Badge, Card, CardContent, IconButton } from "~/components/ui"
+import type { ApiToken, DisplaySiteData } from "~/types"
 import {
   getGroupBadgeStyle,
   getStatusBadgeStyle,
-} from "~/src/utils/core/formatters"
+} from "~/utils/core/formatters"
 
 import { TokenDetails } from "./TokenDetails"
 

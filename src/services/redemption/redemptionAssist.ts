@@ -1,21 +1,21 @@
 import { t } from "i18next"
 
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
-import { getSiteApiRouter } from "~/src/constants/siteType"
-import { accountStorage } from "~/src/services/accounts/accountStorage"
-import { userPreferences } from "~/src/services/preferences/userPreferences"
-import { redeemService } from "~/src/services/redemption/redeemService"
-import { isPossibleRedemptionCode } from "~/src/services/redemption/utils/redemptionCode"
-import { searchAccounts } from "~/src/services/search/accountSearch"
-import type { DisplaySiteData } from "~/src/types"
-import { getErrorMessage } from "~/src/utils/core/error"
-import { createLogger } from "~/src/utils/core/logger"
-import { joinUrl } from "~/src/utils/core/url"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { getSiteApiRouter } from "~/constants/siteType"
+import { accountStorage } from "~/services/accounts/accountStorage"
+import { userPreferences } from "~/services/preferences/userPreferences"
+import { redeemService } from "~/services/redemption/redeemService"
+import { isPossibleRedemptionCode } from "~/services/redemption/utils/redemptionCode"
+import { searchAccounts } from "~/services/search/accountSearch"
+import type { DisplaySiteData } from "~/types"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
+import { joinUrl } from "~/utils/core/url"
 import {
   buildOriginWhitelistPattern,
   buildUrlPrefixWhitelistPattern,
   isUrlAllowedByRegexList,
-} from "~/src/utils/core/urlWhitelist"
+} from "~/utils/core/urlWhitelist"
 
 /**
  * Unified logger scoped to the redemption assist background service.

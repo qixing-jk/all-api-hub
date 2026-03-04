@@ -6,7 +6,7 @@
  * @param path - 需要连接的 URL 路径
  * @returns 连接后的 URL
  */
-import { createLogger } from "~/src/utils/core/logger"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to URL utility helpers.

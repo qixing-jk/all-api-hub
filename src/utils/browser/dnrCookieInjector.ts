@@ -1,8 +1,8 @@
 import {
   COOKIE_AUTH_HEADER_NAME,
   EXTENSION_HEADER_NAME,
-} from "~/src/utils/browser/cookieHelper"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/utils/browser/cookieHelper"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to DNR cookie header injection helpers.

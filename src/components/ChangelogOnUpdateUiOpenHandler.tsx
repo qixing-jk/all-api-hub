@@ -1,13 +1,13 @@
 import { useEffect, useRef } from "react"
 
-import { useUpdateLogDialogContext } from "~/src/components/dialogs/UpdateLogDialog"
+import { useUpdateLogDialogContext } from "~/components/dialogs/UpdateLogDialog"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
-} from "~/src/services/preferences/userPreferences"
-import { changelogOnUpdateState } from "~/src/services/updates/changelogOnUpdateState"
-import { getErrorMessage } from "~/src/utils/core/error"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/services/preferences/userPreferences"
+import { changelogOnUpdateState } from "~/services/updates/changelogOnUpdateState"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 const LOGGER = createLogger("ChangelogOnUpdateUiOpenHandler")
 

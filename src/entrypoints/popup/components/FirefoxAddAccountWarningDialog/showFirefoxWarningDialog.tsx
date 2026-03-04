@@ -1,6 +1,6 @@
 import { createRoot } from "react-dom/client"
 
-import { openSidePanelPage } from "~/src/utils/navigation"
+import { openSidePanelPage } from "~/utils/navigation"
 
 import FirefoxAddAccountWarningDialog from "./index"
 

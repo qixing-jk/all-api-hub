@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest"
 
-import StatusCard from "~/src/features/AutoCheckin/components/StatusCard"
+import StatusCard from "~/features/AutoCheckin/components/StatusCard"
 import type {
   AutoCheckinPreferences,
   AutoCheckinStatus,
-} from "~/src/types/autoCheckin"
-import { render, screen, within } from "~/tests/test-utils/render"
+} from "~/types/autoCheckin"
+import { render, screen, within } from "~~/tests/test-utils/render"
 
 describe("AutoCheckin StatusCard scheduling labels", () => {
   const basePreferences: AutoCheckinPreferences = {

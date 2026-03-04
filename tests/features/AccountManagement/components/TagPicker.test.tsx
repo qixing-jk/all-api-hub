@@ -1,9 +1,9 @@
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
-import { TagPicker } from "~/src/features/AccountManagement/components/TagPicker"
-import type { Tag } from "~/src/types"
-import { render, screen, waitFor } from "~/tests/test-utils/render"
+import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
+import type { Tag } from "~/types"
+import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 describe("TagPicker", () => {
   it("supports ArrowUp/ArrowDown navigation and Enter to toggle a tag", async () => {

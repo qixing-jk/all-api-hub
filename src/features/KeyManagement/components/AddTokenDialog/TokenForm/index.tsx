@@ -1,4 +1,4 @@
-import type { UserGroupInfo } from "~/src/services/apiService/common/type"
+import type { UserGroupInfo } from "~/services/apiService/common/type"
 
 import type { FormData } from "../hooks/useTokenForm"
 import type { Account } from "./AccountSelection"

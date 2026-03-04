@@ -2,13 +2,13 @@ import React from "react"
 import CountUp from "react-countup"
 import { useTranslation } from "react-i18next"
 
-import { UI_CONSTANTS } from "~/src/constants/ui"
-import { useUserPreferencesContext } from "~/src/contexts/UserPreferencesContext"
-import { useAccountActionsContext } from "~/src/features/AccountManagement/hooks/AccountActionsContext"
-import { useAccountDataContext } from "~/src/features/AccountManagement/hooks/AccountDataContext"
-import type { DisplaySiteData } from "~/src/types"
-import { getCurrencySymbol } from "~/src/utils/core/formatters"
-import { getDisplayMoneyValue } from "~/src/utils/core/money"
+import { UI_CONSTANTS } from "~/constants/ui"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
+import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
+import type { DisplaySiteData } from "~/types"
+import { getCurrencySymbol } from "~/utils/core/formatters"
+import { getDisplayMoneyValue } from "~/utils/core/money"
 
 interface BalanceDisplayProps {
   site: DisplaySiteData

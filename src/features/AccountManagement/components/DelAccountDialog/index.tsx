@@ -2,10 +2,10 @@ import { useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { DestructiveConfirmDialog } from "~/src/components/ui"
-import { accountStorage } from "~/src/services/accounts/accountStorage"
-import type { DisplaySiteData } from "~/src/types"
-import { createLogger } from "~/src/utils/core/logger"
+import { DestructiveConfirmDialog } from "~/components/ui"
+import { accountStorage } from "~/services/accounts/accountStorage"
+import type { DisplaySiteData } from "~/types"
+import { createLogger } from "~/utils/core/logger"
 
 import { AccountInfo } from "./AccountInfo"
 

@@ -7,12 +7,12 @@ import {
 import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
-import AccountLinkButton from "~/src/components/AccountLinkButton"
-import { Card } from "~/src/components/ui"
+import AccountLinkButton from "~/components/AccountLinkButton"
+import { Card } from "~/components/ui"
 import {
   CHECKIN_RESULT_STATUS,
   type AutoCheckinAccountSnapshot,
-} from "~/src/types/autoCheckin"
+} from "~/types/autoCheckin"
 
 import { formatTimestamp } from "../utils/tableUtils"
 

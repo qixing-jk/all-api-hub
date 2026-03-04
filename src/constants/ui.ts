@@ -1,4 +1,4 @@
-import { DATA_TYPE_BALANCE } from "~/src/constants/index"
+import { DATA_TYPE_BALANCE } from "~/constants/index"
 
 /**
  * UI 相关常量定义

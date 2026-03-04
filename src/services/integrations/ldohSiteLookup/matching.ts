@@ -1,5 +1,5 @@
-import type { LdohSiteSummary } from "~/src/services/integrations/ldohSiteLookup/types"
-import { normalizeUrlForLdohMatch } from "~/src/services/integrations/ldohSiteLookup/url"
+import type { LdohSiteSummary } from "~/services/integrations/ldohSiteLookup/types"
+import { normalizeUrlForLdohMatch } from "~/services/integrations/ldohSiteLookup/url"
 
 export type LdohSiteLookupIndex = {
   byOrigin: Map<string, LdohSiteSummary[]>

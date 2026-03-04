@@ -1,13 +1,7 @@
 import { HeartIcon } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
-import {
-  Badge,
-  BodySmall,
-  Card,
-  CardContent,
-  Heading6,
-} from "~/src/components/ui"
+import { Badge, BodySmall, Card, CardContent, Heading6 } from "~/components/ui"
 
 const CreditsCard = () => {
   const { t } = useTranslation("about")

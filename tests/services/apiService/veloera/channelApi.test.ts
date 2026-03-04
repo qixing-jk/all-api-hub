@@ -5,8 +5,8 @@ import {
   listAllChannels,
   searchChannel,
   updateChannel,
-} from "~/src/services/apiService/veloera"
-import { AuthTypeEnum } from "~/src/types"
+} from "~/services/apiService/veloera"
+import { AuthTypeEnum } from "~/types"
 
 const { mockFetchApiData } = vi.hoisted(() => ({
   mockFetchApiData: vi.fn(),

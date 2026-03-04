@@ -1,8 +1,8 @@
 import type { ReactNode } from "react"
 import { describe, expect, it, vi } from "vitest"
 
-import { BookmarkDialogStateProvider } from "~/src/features/SiteBookmarks/hooks/BookmarkDialogStateContext"
-import { fireEvent, render, screen } from "~/tests/test-utils/render"
+import { BookmarkDialogStateProvider } from "~/features/SiteBookmarks/hooks/BookmarkDialogStateContext"
+import { fireEvent, render, screen } from "~~/tests/test-utils/render"
 
 vi.mock("~/components/AppLayout", () => ({
   AppLayout: ({ children }: { children: ReactNode }) => <>{children}</>,
@@ -73,7 +73,7 @@ vi.mock("~/features/SiteBookmarks/components/BookmarkDialog", () => ({
 
 describe("popup bookmarks view", () => {
   it("switches between accounts and bookmarks layouts", async () => {
-    const { default: App } = await import("~/src/entrypoints/popup/App")
+    const { default: App } = await import("~/entrypoints/popup/App")
 
     render(<App />)
 

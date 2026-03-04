@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next"
 
-import { Card, Input, Label, TagFilter } from "~/src/components/ui"
+import { Card, Input, Label, TagFilter } from "~/components/ui"
 
 type UsageAnalyticsFilterOption = {
   value: string

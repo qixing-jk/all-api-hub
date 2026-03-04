@@ -2,17 +2,12 @@ import { Github, Sparkles, Star } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Modal } from "~/src/components/ui"
-import { Alert, AlertDescription } from "~/src/components/ui/Alert"
-import { Badge } from "~/src/components/ui/badge"
-import { Button } from "~/src/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "~/src/components/ui/Card"
-import { BodySmall, Heading3, Link } from "~/src/components/ui/Typography"
+import { Modal } from "~/components/ui"
+import { Alert, AlertDescription } from "~/components/ui/Alert"
+import { Badge } from "~/components/ui/badge"
+import { Button } from "~/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/Card"
+import { BodySmall, Heading3, Link } from "~/components/ui/Typography"
 import {
   ensurePermissions,
   hasPermission,
@@ -20,9 +15,9 @@ import {
   onOptionalPermissionsChanged,
   OPTIONAL_PERMISSION_DEFINITIONS,
   OPTIONAL_PERMISSIONS,
-} from "~/src/services/permissions/permissionManager"
-import { createLogger } from "~/src/utils/core/logger"
-import { showResultToast } from "~/src/utils/core/toastHelpers"
+} from "~/services/permissions/permissionManager"
+import { createLogger } from "~/utils/core/logger"
+import { showResultToast } from "~/utils/core/toastHelpers"
 
 import { PermissionList } from "../tabs/Permissions/PermissionList"
 

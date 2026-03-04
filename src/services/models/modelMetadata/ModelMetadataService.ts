@@ -1,9 +1,9 @@
-import { extractActualModel } from "~/src/services/models/modelRedirect/modelNormalization"
+import { extractActualModel } from "~/services/models/modelRedirect/modelNormalization"
 import {
   removeDateSuffix,
   toModelTokenKey,
-} from "~/src/services/models/utils/modelName"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/services/models/utils/modelName"
+import { createLogger } from "~/utils/core/logger"
 
 import {
   MODEL_METADATA_REFRESH_INTERVAL,

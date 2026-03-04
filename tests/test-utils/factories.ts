@@ -6,27 +6,24 @@
  * - Keep values deterministic to avoid brittle snapshots/expectations.
  */
 
-import { ChannelType } from "~/src/constants"
+import { ChannelType } from "~/constants"
 import {
   DEFAULT_PREFERENCES,
   type TempWindowFallbackPreferences,
   type UserPreferences,
-} from "~/src/services/preferences/userPreferences"
+} from "~/services/preferences/userPreferences"
 import type {
   AccountShareSnapshotPayload,
   OverviewShareSnapshotPayload,
   ShareSnapshotPayload,
-} from "~/src/services/sharing/shareSnapshots/types"
+} from "~/services/sharing/shareSnapshots/types"
 import {
   AuthTypeEnum,
   SiteHealthStatus,
   type DisplaySiteData,
   type SiteAccount,
-} from "~/src/types"
-import {
-  CHANNEL_STATUS,
-  type ManagedSiteChannel,
-} from "~/src/types/managedSite"
+} from "~/types"
+import { CHANNEL_STATUS, type ManagedSiteChannel } from "~/types/managedSite"
 
 /**
  * Build a dummy API key used by Web AI API Check tests.

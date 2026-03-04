@@ -1,6 +1,6 @@
-import { UserPreferences } from "~/src/services/preferences/userPreferences"
-import { DEFAULT_WEBDAV_SETTINGS } from "~/src/types/webdav"
-import { createLogger } from "~/src/utils/core/logger"
+import { UserPreferences } from "~/services/preferences/userPreferences"
+import { DEFAULT_WEBDAV_SETTINGS } from "~/types/webdav"
+import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("WebDavConfigMigration")
 

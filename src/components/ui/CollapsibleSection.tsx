@@ -1,7 +1,7 @@
 import { ChevronDownIcon } from "@heroicons/react/24/outline"
 import { useState, type ReactNode } from "react"
 
-import { cn } from "~/src/lib/utils"
+import { cn } from "~/lib/utils"
 
 import {
   Collapsible,

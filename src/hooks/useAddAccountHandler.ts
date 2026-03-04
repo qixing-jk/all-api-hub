@@ -1,10 +1,6 @@
-import { showFirefoxWarningDialog } from "~/src/entrypoints/popup/components/FirefoxAddAccountWarningDialog/showFirefoxWarningDialog"
-import { useDialogStateContext } from "~/src/features/AccountManagement/hooks/DialogStateContext"
-import {
-  isDesktopByUA,
-  isExtensionSidePanel,
-  isFirefox,
-} from "~/src/utils/browser"
+import { showFirefoxWarningDialog } from "~/entrypoints/popup/components/FirefoxAddAccountWarningDialog/showFirefoxWarningDialog"
+import { useDialogStateContext } from "~/features/AccountManagement/hooks/DialogStateContext"
+import { isDesktopByUA, isExtensionSidePanel, isFirefox } from "~/utils/browser"
 
 /**
  * Hook that returns a click handler for launching the Add Account dialog.

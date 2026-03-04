@@ -1,9 +1,9 @@
 import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
-import { Alert, Button } from "~/src/components/ui"
-import type { AutoDetectErrorProps } from "~/src/services/accounts/utils/autoDetectUtils"
-import { openLoginTab } from "~/src/services/accounts/utils/autoDetectUtils"
+import { Alert, Button } from "~/components/ui"
+import type { AutoDetectErrorProps } from "~/services/accounts/utils/autoDetectUtils"
+import { openLoginTab } from "~/services/accounts/utils/autoDetectUtils"
 
 /**
  * Alert displayed when automatic credential detection fails so users can recover.

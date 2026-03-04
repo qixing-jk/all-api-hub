@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next"
 
-import { Card, CardContent } from "~/src/components/ui"
-import type { AccountToken, DisplaySiteData } from "~/src/types"
+import { Card, CardContent } from "~/components/ui"
+import type { AccountToken, DisplaySiteData } from "~/types"
 
 import { buildTokenIdentityKey } from "../../utils"
 import { KeyDisplay } from "./KeyDisplay"

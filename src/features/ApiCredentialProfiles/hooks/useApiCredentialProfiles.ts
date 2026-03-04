@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from "react"
 
-import { apiCredentialProfilesStorage } from "~/src/services/apiCredentialProfiles/apiCredentialProfilesStorage"
-import type { ApiVerificationApiType } from "~/src/services/verification/aiApiVerification"
-import type { ApiCredentialProfile } from "~/src/types/apiCredentialProfiles"
-import { createLogger } from "~/src/utils/core/logger"
+import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification"
+import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to the API credential profiles hook.

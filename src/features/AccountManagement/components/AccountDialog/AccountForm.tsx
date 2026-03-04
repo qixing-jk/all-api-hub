@@ -25,15 +25,11 @@ import {
   SelectValue,
   Switch,
   Textarea,
-} from "~/src/components/ui"
-import {
-  SITE_TITLE_RULES,
-  SUB2API,
-  UNKNOWN_SITE,
-} from "~/src/constants/siteType"
-import { TagPicker } from "~/src/features/AccountManagement/components/TagPicker"
-import { isValidExchangeRate } from "~/src/services/accounts/accountOperations"
-import { AuthTypeEnum, type CheckInConfig, type Tag } from "~/src/types"
+} from "~/components/ui"
+import { SITE_TITLE_RULES, SUB2API, UNKNOWN_SITE } from "~/constants/siteType"
+import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
+import { isValidExchangeRate } from "~/services/accounts/accountOperations"
+import { AuthTypeEnum, type CheckInConfig, type Tag } from "~/types"
 
 interface AccountFormProps {
   authType: AuthTypeEnum

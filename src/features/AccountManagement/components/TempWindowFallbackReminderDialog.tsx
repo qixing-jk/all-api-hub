@@ -1,14 +1,14 @@
 import { useCallback, useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Button, Heading4, Modal } from "~/src/components/ui"
-import type { TempWindowFallbackIssue } from "~/src/features/AccountManagement/utils/tempWindowFallbackReminder"
-import { TEMP_WINDOW_HEALTH_STATUS_CODES } from "~/src/types"
+import { Button, Heading4, Modal } from "~/components/ui"
+import type { TempWindowFallbackIssue } from "~/features/AccountManagement/utils/tempWindowFallbackReminder"
+import { TEMP_WINDOW_HEALTH_STATUS_CODES } from "~/types"
 import {
   getProtectionBypassUiVariant,
   ProtectionBypassUiVariants,
-} from "~/src/utils/browser/protectionBypass"
-import { openSettingsTab } from "~/src/utils/navigation"
+} from "~/utils/browser/protectionBypass"
+import { openSettingsTab } from "~/utils/navigation"
 
 export interface TempWindowFallbackReminderDialogProps {
   isOpen: boolean

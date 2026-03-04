@@ -1,8 +1,8 @@
-import { Modal } from "~/src/components/ui/Dialog/Modal"
-import { DIALOG_MODES, type DialogMode } from "~/src/constants/dialogModes"
-import { useAccountDataContext } from "~/src/features/AccountManagement/hooks/AccountDataContext"
-import { useDialogStateContext } from "~/src/features/AccountManagement/hooks/DialogStateContext"
-import type { DisplaySiteData } from "~/src/types"
+import { Modal } from "~/components/ui/Dialog/Modal"
+import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
+import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
+import { useDialogStateContext } from "~/features/AccountManagement/hooks/DialogStateContext"
+import type { DisplaySiteData } from "~/types"
 
 import AccountForm from "./AccountForm"
 import ActionButtons from "./ActionButtons"

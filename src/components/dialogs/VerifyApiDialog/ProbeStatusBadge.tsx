@@ -1,8 +1,8 @@
 import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
-import { Badge } from "~/src/components/ui"
-import type { ApiVerificationProbeResult } from "~/src/services/verification/aiApiVerification"
+import { Badge } from "~/components/ui"
+import type { ApiVerificationProbeResult } from "~/services/verification/aiApiVerification"
 
 /**
  * Render a standardized status badge for a probe result.

@@ -1,4 +1,4 @@
-import { BodySmall, Button, Card, Heading5 } from "~/src/components/ui"
+import { BodySmall, Button, Card, Heading5 } from "~/components/ui"
 
 export interface LinkCardProps {
   Icon: any

@@ -1,3 +1,3 @@
-import BasicSettings from "~/src/features/BasicSettings"
+import BasicSettings from "~/features/BasicSettings"
 
 export default BasicSettings

@@ -1,14 +1,14 @@
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
-import UsageAnalytics from "~/src/entrypoints/options/pages/UsageAnalytics"
-import { accountStorage } from "~/src/services/accounts/accountStorage"
+import UsageAnalytics from "~/entrypoints/options/pages/UsageAnalytics"
+import { accountStorage } from "~/services/accounts/accountStorage"
 import {
   createEmptyUsageHistoryAccountStore,
   createEmptyUsageHistoryLatencyAggregate,
-} from "~/src/services/history/usageHistory/core"
-import { usageHistoryStorage } from "~/src/services/history/usageHistory/storage"
-import { render, screen, waitFor } from "~/tests/test-utils/render"
+} from "~/services/history/usageHistory/core"
+import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
+import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const echartsInstances: Array<{
   setOption: ReturnType<typeof vi.fn>

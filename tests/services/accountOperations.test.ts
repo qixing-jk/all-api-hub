@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { SUB2API } from "~/src/constants/siteType"
+import { SUB2API } from "~/constants/siteType"
 import {
   extractDomainPrefix,
   isValidAccount,
   isValidExchangeRate,
   validateAndUpdateAccount,
-} from "~/src/services/accounts/accountOperations"
-import { AuthTypeEnum } from "~/src/types"
+} from "~/services/accounts/accountOperations"
+import { AuthTypeEnum } from "~/types"
 
 const { mockFetchAccountData, mockUpdateAccount } = vi.hoisted(() => ({
   mockFetchAccountData: vi.fn(),
@@ -15,8 +15,7 @@ const { mockFetchAccountData, mockUpdateAccount } = vi.hoisted(() => ({
 }))
 
 vi.mock("~/services/apiService", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("~/src/services/apiService")>()
+  const actual = await importOriginal<typeof import("~/services/apiService")>()
   return {
     ...actual,
     getApiService: vi.fn(() => ({
@@ -27,9 +26,7 @@ vi.mock("~/services/apiService", async (importOriginal) => {
 
 vi.mock("~/services/accounts/accountStorage", async (importOriginal) => {
   const actual =
-    await importOriginal<
-      typeof import("~/src/services/accounts/accountStorage")
-    >()
+    await importOriginal<typeof import("~/services/accounts/accountStorage")>()
 
   return {
     ...actual,

@@ -1,5 +1,5 @@
-import type { SiteAccount, SiteBookmark, Tag, TagStore } from "~/src/types"
-import { safeRandomUUID } from "~/src/utils/core/identifier"
+import type { SiteAccount, SiteBookmark, Tag, TagStore } from "~/types"
+import { safeRandomUUID } from "~/utils/core/identifier"
 
 /**
  * Collapses user input into a stable comparison key.

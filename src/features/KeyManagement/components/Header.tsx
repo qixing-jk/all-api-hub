@@ -1,8 +1,8 @@
 import { KeyRound, Plus, Wrench } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
-import { PageHeader } from "~/src/components/PageHeader"
-import { Button } from "~/src/components/ui"
+import { PageHeader } from "~/components/PageHeader"
+import { Button } from "~/components/ui"
 
 interface HeaderProps {
   selectedAccount: string

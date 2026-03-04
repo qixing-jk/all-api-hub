@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { exportShareSnapshot } from "~/src/services/sharing/shareSnapshots"
-import { MESH_GRADIENT_NOISE_TILE_SIZE } from "~/src/services/sharing/shareSnapshots/meshGradient"
-import { buildShareSnapshotPayload } from "~/tests/test-utils/factories"
+import { exportShareSnapshot } from "~/services/sharing/shareSnapshots"
+import { MESH_GRADIENT_NOISE_TILE_SIZE } from "~/services/sharing/shareSnapshots/meshGradient"
+import { buildShareSnapshotPayload } from "~~/tests/test-utils/factories"
 
 /**
  * Integration-ish tests for `exportShareSnapshot` decision logic.

@@ -3,16 +3,16 @@ import { describe, expect, it, vi } from "vitest"
 import {
   RuntimeActionIds,
   RuntimeMessageTypes,
-} from "~/src/constants/runtimeActions"
-import KeyManagement from "~/src/entrypoints/options/pages/KeyManagement"
-import type { AccountKeyRepairProgress } from "~/src/types/accountKeyAutoProvisioning"
+} from "~/constants/runtimeActions"
+import KeyManagement from "~/entrypoints/options/pages/KeyManagement"
+import type { AccountKeyRepairProgress } from "~/types/accountKeyAutoProvisioning"
 import {
   act,
   fireEvent,
   render,
   screen,
   waitFor,
-} from "~/tests/test-utils/render"
+} from "~~/tests/test-utils/render"
 
 const { sendRuntimeActionMessageMock, runtimeMessageState } = vi.hoisted(
   () => ({
@@ -25,7 +25,7 @@ const { sendRuntimeActionMessageMock, runtimeMessageState } = vi.hoisted(
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/src/utils/browser/browserApi")>()
+    await importOriginal<typeof import("~/utils/browser/browserApi")>()
   return {
     ...actual,
     sendRuntimeActionMessage: sendRuntimeActionMessageMock,

@@ -4,19 +4,19 @@ import {
   OCTOPUS,
   VELOERA,
   type ManagedSiteType,
-} from "~/src/constants/siteType"
-import type { ApiResponse } from "~/src/services/apiService/common/type"
-import type { ManagedSiteMessagesKey } from "~/src/services/managedSites/utils/managedSite"
+} from "~/constants/siteType"
+import type { ApiResponse } from "~/services/apiService/common/type"
+import type { ManagedSiteMessagesKey } from "~/services/managedSites/utils/managedSite"
 import {
   getManagedSiteAdminConfig,
   getManagedSiteContext,
-} from "~/src/services/managedSites/utils/managedSite"
+} from "~/services/managedSites/utils/managedSite"
 import type {
   AccountToken,
   ApiToken,
   DisplaySiteData,
   SiteAccount,
-} from "~/src/types"
+} from "~/types"
 import type {
   ChannelFormData,
   ChannelMode,
@@ -24,7 +24,7 @@ import type {
   ManagedSiteChannel,
   ManagedSiteChannelListData,
   UpdateChannelPayload,
-} from "~/src/types/managedSite"
+} from "~/types/managedSite"
 
 import {
   userPreferences,

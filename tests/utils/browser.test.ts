@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { detectExtensionStore, isEdgeByUA } from "~/src/utils/browser"
+import { detectExtensionStore, isEdgeByUA } from "~/utils/browser"
 
 describe("browser", () => {
   describe("isEdgeByUA", () => {

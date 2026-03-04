@@ -1,4 +1,4 @@
-import type { SiteAccount } from "~/src/types"
+import type { SiteAccount } from "~/types"
 
 /**
  * This module handles the migration of check-in related configuration from version 0 to version 1.

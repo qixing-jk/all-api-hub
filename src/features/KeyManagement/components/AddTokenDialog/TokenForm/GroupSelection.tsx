@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next"
 
-import { FormField, SearchableSelect } from "~/src/components/ui"
-import type { UserGroupInfo } from "~/src/services/apiService/common/type"
+import { FormField, SearchableSelect } from "~/components/ui"
+import type { UserGroupInfo } from "~/services/apiService/common/type"
 
 interface GroupSelectionProps {
   group: string

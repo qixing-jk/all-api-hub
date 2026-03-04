@@ -2,16 +2,16 @@ import { t } from "i18next"
 
 import { Storage } from "@plasmohq/storage"
 
-import { SUB2API, UNKNOWN_SITE } from "~/src/constants/siteType"
-import { UI_CONSTANTS } from "~/src/constants/ui"
-import { getApiService } from "~/src/services/apiService"
+import { SUB2API, UNKNOWN_SITE } from "~/constants/siteType"
+import { UI_CONSTANTS } from "~/constants/ui"
+import { getApiService } from "~/services/apiService"
 import {
   ACCOUNT_STORAGE_KEYS,
   STORAGE_LOCKS,
-} from "~/src/services/core/storageKeys"
-import { withExtensionStorageWriteLock } from "~/src/services/core/storageWriteLock"
-import { maybeCaptureDailyBalanceSnapshot } from "~/src/services/history/dailyBalanceHistory/capture"
-import { ensureAccountTagsStorageMigrated } from "~/src/services/tags/migrations/accountTagsStorageMigration"
+} from "~/services/core/storageKeys"
+import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
+import { maybeCaptureDailyBalanceSnapshot } from "~/services/history/dailyBalanceHistory/capture"
+import { ensureAccountTagsStorageMigrated } from "~/services/tags/migrations/accountTagsStorageMigration"
 import {
   AuthTypeEnum,
   SiteHealthStatus,
@@ -20,13 +20,13 @@ import {
   type DisplaySiteData,
   type SiteAccount,
   type SiteBookmark,
-} from "~/src/types"
-import type { DailyBalanceHistoryCaptureSource } from "~/src/types/dailyBalanceHistory"
-import { DeepPartial } from "~/src/types/utils"
-import { deepOverride } from "~/src/utils"
-import { getErrorMessage } from "~/src/utils/core/error"
-import { safeRandomUUID } from "~/src/utils/core/identifier"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/types"
+import type { DailyBalanceHistoryCaptureSource } from "~/types/dailyBalanceHistory"
+import { DeepPartial } from "~/types/utils"
+import { deepOverride } from "~/utils"
+import { getErrorMessage } from "~/utils/core/error"
+import { safeRandomUUID } from "~/utils/core/identifier"
+import { createLogger } from "~/utils/core/logger"
 
 import { userPreferences } from "../preferences/userPreferences"
 import { getSiteType } from "../siteDetection/detectSiteType"

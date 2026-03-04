@@ -2,7 +2,7 @@ import { DialogTitle } from "@headlessui/react"
 import { KeyIcon } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
-import type { DisplaySiteData } from "~/src/types"
+import type { DisplaySiteData } from "~/types"
 
 interface DialogHeaderProps {
   account: DisplaySiteData | null

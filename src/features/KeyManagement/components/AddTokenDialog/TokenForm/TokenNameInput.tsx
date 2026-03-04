@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next"
 
-import { FormField, Input } from "~/src/components/ui"
+import { FormField, Input } from "~/components/ui"
 
 import type { FormData } from "../hooks/useTokenForm"
 

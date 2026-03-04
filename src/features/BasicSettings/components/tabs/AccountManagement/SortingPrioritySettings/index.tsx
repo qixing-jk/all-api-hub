@@ -3,14 +3,11 @@ import { arrayMove } from "@dnd-kit/sortable"
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { SettingSection } from "~/src/components/SettingSection"
-import { Card, CardContent } from "~/src/components/ui"
-import { useUserPreferencesContext } from "~/src/contexts/UserPreferencesContext"
-import {
-  SortingCriteriaType,
-  type SortingFieldConfig,
-} from "~/src/types/sorting"
-import { showUpdateToast } from "~/src/utils/core/toastHelpers"
+import { SettingSection } from "~/components/SettingSection"
+import { Card, CardContent } from "~/components/ui"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { SortingCriteriaType, type SortingFieldConfig } from "~/types/sorting"
+import { showUpdateToast } from "~/utils/core/toastHelpers"
 
 import { SortingPriorityDragList } from "./SortingPriorityDragList"
 

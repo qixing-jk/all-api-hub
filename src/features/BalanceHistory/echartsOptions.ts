@@ -1,4 +1,4 @@
-import type { EChartsOption } from "~/src/components/charts/echarts"
+import type { EChartsOption } from "~/components/charts/echarts"
 
 /**
  * ECharts tooltip value can be a scalar or an array (multi-dimension values).

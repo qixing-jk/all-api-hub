@@ -7,10 +7,10 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { CCSwitchExportDialog } from "~/src/components/CCSwitchExportDialog"
-import { Badge, Button, Card, EmptyState } from "~/src/components/ui"
-import { cn } from "~/src/lib/utils"
-import type { AccountToken, DisplaySiteData } from "~/src/types"
+import { CCSwitchExportDialog } from "~/components/CCSwitchExportDialog"
+import { Badge, Button, Card, EmptyState } from "~/components/ui"
+import { cn } from "~/lib/utils"
+import type { AccountToken, DisplaySiteData } from "~/types"
 
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "../constants"
 import { buildTokenIdentityKey } from "../utils"

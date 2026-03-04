@@ -5,7 +5,7 @@ import {
   onPermissionsRemoved,
   removePermissions,
   requestPermissions,
-} from "~/src/utils/browser/browserApi"
+} from "~/utils/browser/browserApi"
 
 /**
  * Aliases to manifest permission types for clearer signatures.

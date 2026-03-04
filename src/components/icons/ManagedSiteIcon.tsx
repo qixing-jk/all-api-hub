@@ -1,16 +1,16 @@
 import { NewAPI } from "@lobehub/icons"
 
-import { DoneHubIcon } from "~/src/components/icons/DoneHubIcon"
-import { ICON_SIZE_CLASSNAME, IconSize } from "~/src/components/icons/iconSizes"
-import { OctopusIcon } from "~/src/components/icons/OctopusIcon"
-import { VeloeraIcon } from "~/src/components/icons/VeloeraIcon"
+import { DoneHubIcon } from "~/components/icons/DoneHubIcon"
+import { ICON_SIZE_CLASSNAME, IconSize } from "~/components/icons/iconSizes"
+import { OctopusIcon } from "~/components/icons/OctopusIcon"
+import { VeloeraIcon } from "~/components/icons/VeloeraIcon"
 import {
   DONE_HUB,
   ManagedSiteType,
   OCTOPUS,
   VELOERA,
-} from "~/src/constants/siteType"
-import { cn } from "~/src/lib/utils"
+} from "~/constants/siteType"
+import { cn } from "~/lib/utils"
 
 interface ManagedSiteIconProps {
   siteType: ManagedSiteType

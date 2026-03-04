@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Button } from "~/src/components/ui"
-import AccountSearchInput from "~/src/features/AccountManagement/components/AccountList/AccountSearchInput"
-import { useAccountSearch } from "~/src/features/AccountManagement/hooks/useAccountSearch"
-import type { DisplaySiteData } from "~/src/types"
+import { Button } from "~/components/ui"
+import AccountSearchInput from "~/features/AccountManagement/components/AccountList/AccountSearchInput"
+import { useAccountSearch } from "~/features/AccountManagement/hooks/useAccountSearch"
+import type { DisplaySiteData } from "~/types"
 
 export interface RedemptionAccountSelectToastProps {
   title?: string

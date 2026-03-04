@@ -1,31 +1,31 @@
-import { getSiteApiRouter } from "~/src/constants/siteType"
-import { TURNSTILE_DEFAULT_WAIT_TIMEOUT_MS } from "~/src/constants/turnstile"
-import { buildCompatUserIdHeaders } from "~/src/services/apiService/common/compatHeaders"
-import { REQUEST_CONFIG } from "~/src/services/apiService/common/constant"
-import { ApiError } from "~/src/services/apiService/common/errors"
+import { getSiteApiRouter } from "~/constants/siteType"
+import { TURNSTILE_DEFAULT_WAIT_TIMEOUT_MS } from "~/constants/turnstile"
+import { buildCompatUserIdHeaders } from "~/services/apiService/common/compatHeaders"
+import { REQUEST_CONFIG } from "~/services/apiService/common/constant"
+import { ApiError } from "~/services/apiService/common/errors"
 import type {
   CheckinRecord,
   CheckInStatus,
   NewApiCheckinResponse,
-} from "~/src/services/apiService/common/type"
-import { fetchApi, fetchApiData } from "~/src/services/apiService/common/utils"
-import type { AutoCheckinProvider } from "~/src/services/checkin/autoCheckin/providers/index"
+} from "~/services/apiService/common/type"
+import { fetchApi, fetchApiData } from "~/services/apiService/common/utils"
+import type { AutoCheckinProvider } from "~/services/checkin/autoCheckin/providers/index"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
   AUTO_CHECKIN_USER_CHECKIN_ENDPOINT,
   isAlreadyCheckedMessage,
   normalizeCheckinMessage,
   resolveProviderErrorResult,
-} from "~/src/services/checkin/autoCheckin/providers/shared"
-import type { AutoCheckinProviderResult } from "~/src/services/checkin/autoCheckin/providers/types"
-import type { SiteAccount } from "~/src/types"
-import { AuthTypeEnum } from "~/src/types"
-import { CHECKIN_RESULT_STATUS } from "~/src/types/autoCheckin"
-import type { TempWindowTurnstileFetch } from "~/src/types/tempWindowFetch"
-import type { TurnstilePreTrigger } from "~/src/types/turnstile"
-import { isAllowedIncognitoAccess } from "~/src/utils/browser/browserApi"
-import { tempWindowTurnstileFetch } from "~/src/utils/browser/tempWindowFetch"
-import { joinUrl } from "~/src/utils/core/url"
+} from "~/services/checkin/autoCheckin/providers/shared"
+import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/providers/types"
+import type { SiteAccount } from "~/types"
+import { AuthTypeEnum } from "~/types"
+import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+import type { TempWindowTurnstileFetch } from "~/types/tempWindowFetch"
+import type { TurnstilePreTrigger } from "~/types/turnstile"
+import { isAllowedIncognitoAccess } from "~/utils/browser/browserApi"
+import { tempWindowTurnstileFetch } from "~/utils/browser/tempWindowFetch"
+import { joinUrl } from "~/utils/core/url"
 
 const NEW_API_MESSAGE_KEYS = {
   turnstileManualRequired:

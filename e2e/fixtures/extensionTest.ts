@@ -6,7 +6,7 @@ import { test as base, expect as baseExpect, chromium } from "@playwright/test"
 import {
   assertBuiltExtensionExists,
   getExtensionIdFromServiceWorker,
-} from "~/e2e/utils/extension"
+} from "~~/e2e/utils/extension"
 
 type ExtensionFixtures = {
   extensionId: string

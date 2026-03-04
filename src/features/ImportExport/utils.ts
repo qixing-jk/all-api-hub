@@ -1,8 +1,8 @@
 import { t } from "i18next"
 import toast from "react-hot-toast"
 
-import { accountStorage } from "~/src/services/accounts/accountStorage"
-import { apiCredentialProfilesStorage } from "~/src/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+import { accountStorage } from "~/services/accounts/accountStorage"
+import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import {
   BACKUP_VERSION,
   ImportExportError,
@@ -17,11 +17,11 @@ import {
   type ImportResult,
   type ParsedBackupSummary,
   type RawBackupData,
-} from "~/src/services/importExport/importExportService"
-import { channelConfigStorage } from "~/src/services/managedSites/channelConfigStorage"
-import { userPreferences } from "~/src/services/preferences/userPreferences"
-import { tagStorage } from "~/src/services/tags/tagStorage"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/services/importExport/importExportService"
+import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
+import { userPreferences } from "~/services/preferences/userPreferences"
+import { tagStorage } from "~/services/tags/tagStorage"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to import/export UI wrappers for backups and preferences.

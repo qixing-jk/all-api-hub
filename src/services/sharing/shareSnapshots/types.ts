@@ -1,4 +1,4 @@
-import type { CurrencyType } from "~/src/types"
+import type { CurrencyType } from "~/types"
 
 export type ShareSnapshotKind = "overview" | "account"
 

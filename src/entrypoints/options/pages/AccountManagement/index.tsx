@@ -1,3 +1,3 @@
-import AccountManagement from "~/src/features/AccountManagement"
+import AccountManagement from "~/features/AccountManagement"
 
 export default AccountManagement

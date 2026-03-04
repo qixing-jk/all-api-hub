@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest"
 
-import { migrateCheckInConfig } from "~/src/services/accounts/migrations/checkInMigration"
-import type { SiteAccount } from "~/src/types"
-import { AuthTypeEnum, SiteHealthStatus } from "~/src/types"
+import { migrateCheckInConfig } from "~/services/accounts/migrations/checkInMigration"
+import type { SiteAccount } from "~/types"
+import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 
 describe("checkInMigration", () => {
   // Helper to create a minimal SiteAccount fixture

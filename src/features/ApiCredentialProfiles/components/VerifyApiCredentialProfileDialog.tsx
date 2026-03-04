@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { ProbeStatusBadge } from "~/src/components/dialogs/VerifyApiDialog/ProbeStatusBadge"
+import { ProbeStatusBadge } from "~/components/dialogs/VerifyApiDialog/ProbeStatusBadge"
 import {
   formatLatency,
   safeJsonStringify,
-} from "~/src/components/dialogs/VerifyApiDialog/utils"
+} from "~/components/dialogs/VerifyApiDialog/utils"
 import {
   Alert,
   Badge,
@@ -13,11 +13,11 @@ import {
   CollapsibleSection,
   Heading5,
   SearchableSelect,
-} from "~/src/components/ui"
-import { Modal } from "~/src/components/ui/Dialog/Modal"
-import { fetchAnthropicModelIds } from "~/src/services/apiService/anthropic"
-import { fetchGoogleModelIds } from "~/src/services/apiService/google"
-import { fetchOpenAICompatibleModelIds } from "~/src/services/apiService/openaiCompatible"
+} from "~/components/ui"
+import { Modal } from "~/components/ui/Dialog/Modal"
+import { fetchAnthropicModelIds } from "~/services/apiService/anthropic"
+import { fetchGoogleModelIds } from "~/services/apiService/google"
+import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompatible"
 import {
   API_TYPES,
   getApiVerificationProbeDefinitions,
@@ -25,10 +25,10 @@ import {
   type ApiVerificationApiType,
   type ApiVerificationProbeId,
   type ApiVerificationProbeResult,
-} from "~/src/services/verification/aiApiVerification"
-import { toSanitizedErrorSummary } from "~/src/services/verification/aiApiVerification/utils"
-import type { ApiCredentialProfile } from "~/src/types/apiCredentialProfiles"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/services/verification/aiApiVerification"
+import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
+import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to API credential profile verification dialog.

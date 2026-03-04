@@ -15,11 +15,8 @@
  */
 import { t } from "i18next"
 
-import { determineHealthStatus } from "~/src/services/apiService/common"
-import {
-  API_ERROR_CODES,
-  ApiError,
-} from "~/src/services/apiService/common/errors"
+import { determineHealthStatus } from "~/services/apiService/common"
+import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import type {
   AccountData,
   ApiServiceAccountRequest,
@@ -27,10 +24,10 @@ import type {
   RefreshAccountResult,
   TodayIncomeData,
   TodayUsageData,
-} from "~/src/services/apiService/common/type"
-import { fetchApi } from "~/src/services/apiService/common/utils"
-import { AuthTypeEnum, SiteHealthStatus, type CheckInConfig } from "~/src/types"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/services/apiService/common/type"
+import { fetchApi } from "~/services/apiService/common/utils"
+import { AuthTypeEnum, SiteHealthStatus, type CheckInConfig } from "~/types"
+import { createLogger } from "~/utils/core/logger"
 
 import { parseSub2ApiEnvelope, parseSub2ApiUserIdentity } from "./parsing"
 import { getSafeErrorMessage } from "./redaction"

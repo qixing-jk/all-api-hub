@@ -1,4 +1,4 @@
-import { useUserPreferencesContext } from "~/src/contexts/UserPreferencesContext"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 
 import AccountBalanceSummary from "./AccountBalanceSummary"
 import { TokenStats } from "./TokenStats"

@@ -2,12 +2,12 @@ import { useCallback } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { computeUsageHistoryExport } from "~/src/services/history/usageHistory/analytics"
+import { computeUsageHistoryExport } from "~/services/history/usageHistory/analytics"
 import type {
   UsageHistoryExportSelection,
   UsageHistoryStore,
-} from "~/src/types/usageHistory"
-import { getErrorMessage } from "~/src/utils/core/error"
+} from "~/types/usageHistory"
+import { getErrorMessage } from "~/utils/core/error"
 
 export const useUsageAnalyticsExport = (params: {
   store: UsageHistoryStore | null

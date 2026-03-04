@@ -1,28 +1,28 @@
 import { t } from "i18next"
 
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   apiCredentialProfilesStorage,
   mergeApiCredentialProfilesConfigs,
-} from "~/src/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+} from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import {
   BACKUP_VERSION,
   normalizeBackupForMerge,
   type BackupFullV2,
-} from "~/src/services/importExport/importExportService"
-import { migrateAccountTagsData } from "~/src/services/tags/migrations/accountTagsDataMigration"
-import { tagStorage } from "~/src/services/tags/tagStorage"
+} from "~/services/importExport/importExportService"
+import { migrateAccountTagsData } from "~/services/tags/migrations/accountTagsDataMigration"
+import { tagStorage } from "~/services/tags/tagStorage"
 import {
   createDefaultTagStore,
   sanitizeTagStore,
-} from "~/src/services/tags/tagStoreUtils"
-import type { SiteAccount, SiteBookmark, TagStore } from "~/src/types"
+} from "~/services/tags/tagStoreUtils"
+import type { SiteAccount, SiteBookmark, TagStore } from "~/types"
 import {
   API_CREDENTIAL_PROFILES_CONFIG_VERSION,
   type ApiCredentialProfilesConfig,
-} from "~/src/types/apiCredentialProfiles"
-import type { ChannelConfigMap } from "~/src/types/channelConfig"
-import { WEBDAV_SYNC_STRATEGIES, WebDAVSettings } from "~/src/types/webdav"
+} from "~/types/apiCredentialProfiles"
+import type { ChannelConfigMap } from "~/types/channelConfig"
+import { WEBDAV_SYNC_STRATEGIES, WebDAVSettings } from "~/types/webdav"
 import {
   clearAlarm,
   createAlarm,
@@ -30,9 +30,9 @@ import {
   hasAlarmsAPI,
   onAlarm,
   sendRuntimeMessage,
-} from "~/src/utils/browser/browserApi"
-import { getErrorMessage } from "~/src/utils/core/error"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/utils/browser/browserApi"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 import { accountStorage } from "../accounts/accountStorage"
 import { channelConfigStorage } from "../managedSites/channelConfigStorage"

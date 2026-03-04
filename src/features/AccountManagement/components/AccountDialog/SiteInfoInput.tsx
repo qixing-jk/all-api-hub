@@ -7,7 +7,7 @@ import {
 } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
-import Tooltip from "~/src/components/Tooltip"
+import Tooltip from "~/components/Tooltip"
 import {
   Button,
   IconButton,
@@ -17,9 +17,9 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "~/src/components/ui"
-import { SUB2API } from "~/src/constants/siteType"
-import { AuthTypeEnum, type DisplaySiteData } from "~/src/types"
+} from "~/components/ui"
+import { SUB2API } from "~/constants/siteType"
+import { AuthTypeEnum, type DisplaySiteData } from "~/types"
 
 interface SiteInfoInputProps {
   url: string

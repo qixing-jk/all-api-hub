@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react"
 
-import type { BookmarkDialogMode } from "~/src/features/SiteBookmarks/components/BookmarkDialog"
-import type { SiteBookmark } from "~/src/types"
+import type { BookmarkDialogMode } from "~/features/SiteBookmarks/components/BookmarkDialog"
+import type { SiteBookmark } from "~/types"
 
 export interface BookmarkDialogState {
   isOpen: boolean

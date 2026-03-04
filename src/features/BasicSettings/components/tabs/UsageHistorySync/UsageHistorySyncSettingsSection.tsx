@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next"
 
-import { SettingSection } from "~/src/components/SettingSection"
+import { SettingSection } from "~/components/SettingSection"
 import {
   Button,
   Card,
@@ -13,8 +13,8 @@ import {
   SelectTrigger,
   SelectValue,
   Switch,
-} from "~/src/components/ui"
-import { USAGE_HISTORY_SCHEDULE_MODE } from "~/src/types/usageHistory"
+} from "~/components/ui"
+import { USAGE_HISTORY_SCHEDULE_MODE } from "~/types/usageHistory"
 
 interface UsageHistorySyncSettingsSectionProps {
   enabled: boolean

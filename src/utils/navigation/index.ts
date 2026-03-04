@@ -1,18 +1,18 @@
 import {
   MENU_ITEM_IDS,
   type OptionsMenuItemId,
-} from "~/src/constants/optionsMenuIds"
-import { getSiteApiRouter } from "~/src/constants/siteType"
-import type { DisplaySiteData } from "~/src/types"
-import { isExtensionPopup, OPTIONS_PAGE_URL } from "~/src/utils/browser"
+} from "~/constants/optionsMenuIds"
+import { getSiteApiRouter } from "~/constants/siteType"
+import type { DisplaySiteData } from "~/types"
+import { isExtensionPopup, OPTIONS_PAGE_URL } from "~/utils/browser"
 import {
   openSidePanel as _openSidePanel,
   createTab as createTabApi,
   focusTab,
   getExtensionURL,
-} from "~/src/utils/browser/browserApi"
-import { createLogger } from "~/src/utils/core/logger"
-import { joinUrl } from "~/src/utils/core/url"
+} from "~/utils/browser/browserApi"
+import { createLogger } from "~/utils/core/logger"
+import { joinUrl } from "~/utils/core/url"
 
 /**
  * Unified logger scoped to navigation helpers and options-page routing.

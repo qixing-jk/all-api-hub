@@ -1,8 +1,8 @@
 import { useTranslation } from "react-i18next"
 
-import { BodySmall } from "~/src/components/ui"
-import type { ApiToken } from "~/src/types"
-import { formatKeyTime } from "~/src/utils/core/formatters"
+import { BodySmall } from "~/components/ui"
+import type { ApiToken } from "~/types"
+import { formatKeyTime } from "~/utils/core/formatters"
 
 import { formatQuota } from "../../utils"
 

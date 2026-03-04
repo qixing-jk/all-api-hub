@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import type { LoggingPreferences } from "~/src/types/logging"
+import type { LoggingPreferences } from "~/types/logging"
 import {
   createLogger,
   setLoggerContext,
   setLoggingPreferences,
-} from "~/src/utils/core/logger"
+} from "~/utils/core/logger"
 
 /**
  * Unit tests for the unified logger:

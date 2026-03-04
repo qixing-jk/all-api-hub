@@ -1,10 +1,10 @@
 import * as React from "react"
 import toast from "react-hot-toast/headless"
 
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
-import { ensureRedemptionToastUi } from "~/src/entrypoints/content/shared/uiRoot"
-import { sendRuntimeMessage } from "~/src/utils/browser/browserApi"
-import { createLogger } from "~/src/utils/core/logger"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { ensureRedemptionToastUi } from "~/entrypoints/content/shared/uiRoot"
+import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { createLogger } from "~/utils/core/logger"
 
 import { ShieldBypassPromptToast } from "../components/ShieldBypassPromptToast"
 

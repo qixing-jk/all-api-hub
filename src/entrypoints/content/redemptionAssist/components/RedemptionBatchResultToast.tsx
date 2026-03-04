@@ -8,8 +8,8 @@ import {
   CardContent,
   CardHeader,
   Heading3,
-} from "~/src/components/ui"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/components/ui"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to redemption assist batch result toasts.

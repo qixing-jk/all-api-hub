@@ -1,20 +1,20 @@
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
-import { accountStorage } from "~/src/services/accounts/accountStorage"
-import { userPreferences } from "~/src/services/preferences/userPreferences"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { accountStorage } from "~/services/accounts/accountStorage"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import {
   DEFAULT_BALANCE_HISTORY_PREFERENCES,
   type BalanceHistoryPreferences,
   type DailyBalanceHistoryCaptureSource,
-} from "~/src/types/dailyBalanceHistory"
+} from "~/types/dailyBalanceHistory"
 import {
   clearAlarm,
   createAlarm,
   getAlarm,
   hasAlarmsAPI,
   onAlarm,
-} from "~/src/utils/browser/browserApi"
-import { getErrorMessage } from "~/src/utils/core/error"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/utils/browser/browserApi"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 import { DAILY_BALANCE_HISTORY_ALARM_NAME } from "./constants"
 import { dailyBalanceHistoryStorage } from "./storage"

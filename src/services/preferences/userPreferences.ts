@@ -2,82 +2,71 @@ import { isEqual } from "lodash-es"
 
 import { Storage } from "@plasmohq/storage"
 
-import { DATA_TYPE_BALANCE, DATA_TYPE_CASHFLOW } from "~/src/constants"
+import { DATA_TYPE_BALANCE, DATA_TYPE_CASHFLOW } from "~/constants"
 import {
   DONE_HUB,
   NEW_API,
   OCTOPUS,
   VELOERA,
   type ManagedSiteType,
-} from "~/src/constants/siteType"
-import { USER_PREFERENCES_STORAGE_KEYS } from "~/src/services/core/storageKeys"
+} from "~/constants/siteType"
+import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
 import {
   CURRENT_PREFERENCES_VERSION,
   migratePreferences,
-} from "~/src/services/preferences/migrations/preferencesMigration"
-import { DEFAULT_SORTING_PRIORITY_CONFIG } from "~/src/services/preferences/utils/sortingPriority"
-import {
-  CurrencyType,
-  DashboardTabType,
-  SortField,
-  SortOrder,
-} from "~/src/types"
+} from "~/services/preferences/migrations/preferencesMigration"
+import { DEFAULT_SORTING_PRIORITY_CONFIG } from "~/services/preferences/utils/sortingPriority"
+import { CurrencyType, DashboardTabType, SortField, SortOrder } from "~/types"
 import {
   AccountAutoRefresh,
   DEFAULT_ACCOUNT_AUTO_REFRESH,
-} from "~/src/types/accountAutoRefresh"
+} from "~/types/accountAutoRefresh"
 import {
   AUTO_CHECKIN_SCHEDULE_MODE,
   AutoCheckinPreferences,
-} from "~/src/types/autoCheckin"
-import type { ChannelModelFilterRule } from "~/src/types/channelModelFilters"
+} from "~/types/autoCheckin"
+import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 import {
   DEFAULT_CLAUDE_CODE_ROUTER_CONFIG,
   type ClaudeCodeRouterConfig,
-} from "~/src/types/claudeCodeRouterConfig"
+} from "~/types/claudeCodeRouterConfig"
 import {
   DEFAULT_CLI_PROXY_CONFIG,
   type CliProxyConfig,
-} from "~/src/types/cliProxyConfig"
+} from "~/types/cliProxyConfig"
 import {
   DEFAULT_BALANCE_HISTORY_PREFERENCES,
   type BalanceHistoryPreferences,
-} from "~/src/types/dailyBalanceHistory"
+} from "~/types/dailyBalanceHistory"
 import {
   DEFAULT_DONE_HUB_CONFIG,
   type DoneHubConfig,
-} from "~/src/types/doneHubConfig"
+} from "~/types/doneHubConfig"
 import {
   getDefaultLoggingPreferences,
   type LoggingPreferences,
-} from "~/src/types/logging"
+} from "~/types/logging"
 import {
   DEFAULT_MODEL_REDIRECT_PREFERENCES,
   type ModelRedirectPreferences,
-} from "~/src/types/managedSiteModelRedirect"
-import { DEFAULT_NEW_API_CONFIG, NewApiConfig } from "~/src/types/newApiConfig"
-import {
-  DEFAULT_OCTOPUS_CONFIG,
-  OctopusConfig,
-} from "~/src/types/octopusConfig"
-import type { SortingPriorityConfig } from "~/src/types/sorting"
-import type { ThemeMode } from "~/src/types/theme"
+} from "~/types/managedSiteModelRedirect"
+import { DEFAULT_NEW_API_CONFIG, NewApiConfig } from "~/types/newApiConfig"
+import { DEFAULT_OCTOPUS_CONFIG, OctopusConfig } from "~/types/octopusConfig"
+import type { SortingPriorityConfig } from "~/types/sorting"
+import type { ThemeMode } from "~/types/theme"
 import {
   DEFAULT_USAGE_HISTORY_PREFERENCES,
   type UsageHistoryPreferences,
-} from "~/src/types/usageHistory"
-import { DeepPartial } from "~/src/types/utils"
-import {
-  DEFAULT_VELOERA_CONFIG,
-  VeloeraConfig,
-} from "~/src/types/veloeraConfig"
+} from "~/types/usageHistory"
+import { DeepPartial } from "~/types/utils"
+import { DEFAULT_VELOERA_CONFIG, VeloeraConfig } from "~/types/veloeraConfig"
 import {
   DEFAULT_WEBDAV_SETTINGS,
   WebDAVSettings,
   WebDAVSyncStrategy,
-} from "~/src/types/webdav"
-import { deepOverride } from "~/src/utils"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/types/webdav"
+import { deepOverride } from "~/utils"
+import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("UserPreferences")
 

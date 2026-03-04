@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next"
 
-import { CompactMultiSelect, Switch } from "~/src/components/ui"
+import { CompactMultiSelect, Switch } from "~/components/ui"
 
 import type { FormData } from "../hooks/useTokenForm"
 

@@ -1,13 +1,13 @@
 import { Ellipsis } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
-import { Button } from "~/src/components/ui"
+import { Button } from "~/components/ui"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "~/src/components/ui/dropdown-menu"
+} from "~/components/ui/dropdown-menu"
 
 interface UsageHistorySyncRowActionsProps {
   accountId: string

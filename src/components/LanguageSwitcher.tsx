@@ -1,9 +1,9 @@
 import { Languages } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
-import { ToggleButton } from "~/src/components/ui"
-import { ANIMATIONS, COLORS } from "~/src/constants/designTokens"
-import { userPreferences } from "~/src/services/preferences/userPreferences"
+import { ToggleButton } from "~/components/ui"
+import { ANIMATIONS, COLORS } from "~/constants/designTokens"
+import { userPreferences } from "~/services/preferences/userPreferences"
 
 const languageOptions = [
   { code: "en", label: "EN" },

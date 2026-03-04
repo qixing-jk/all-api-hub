@@ -5,8 +5,8 @@
  */
 import { useEffect, useRef, useState } from "react"
 
-import { getErrorMessage } from "~/src/utils/core/error"
-import { createLogger } from "~/src/utils/core/logger"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("ShareSnapshotCaptionToast")
 

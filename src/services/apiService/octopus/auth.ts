@@ -4,9 +4,9 @@
  */
 import i18next from "i18next"
 
-import type { OctopusLoginResponse } from "~/src/types/octopus"
-import type { OctopusConfig } from "~/src/types/octopusConfig"
-import { createLogger } from "~/src/utils/core/logger"
+import type { OctopusLoginResponse } from "~/types/octopus"
+import type { OctopusConfig } from "~/types/octopusConfig"
+import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("OctopusAuth")
 

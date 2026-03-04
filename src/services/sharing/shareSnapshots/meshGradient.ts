@@ -4,7 +4,7 @@ import {
   mulberry32,
   relativeLuminanceFromRgb,
   type Rgb,
-} from "~/src/services/sharing/shareSnapshots/utils"
+} from "~/services/sharing/shareSnapshots/utils"
 
 export const MESH_GRADIENT_NOISE_TILE_SIZE = 128
 

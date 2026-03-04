@@ -1,9 +1,9 @@
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import type {
   ApiVerificationApiType,
   ApiVerificationProbeId,
   ApiVerificationProbeResult,
-} from "~/src/services/verification/aiApiVerification"
+} from "~/services/verification/aiApiVerification"
 
 /**
  * Runtime message sent from background → content to open the in-page AI API Check modal.

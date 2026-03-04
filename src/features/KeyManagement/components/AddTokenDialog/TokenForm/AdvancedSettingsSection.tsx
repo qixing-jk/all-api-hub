@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next"
 
-import type { UserGroupInfo } from "~/src/services/apiService/common/type"
-import { isNotEmptyArray } from "~/src/utils"
+import type { UserGroupInfo } from "~/services/apiService/common/type"
+import { isNotEmptyArray } from "~/utils"
 
 import type { FormData } from "../hooks/useTokenForm"
 import { FormSection } from "./FormSection"

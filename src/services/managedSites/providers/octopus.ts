@@ -5,29 +5,29 @@
 import { t } from "i18next"
 import toast from "react-hot-toast"
 
-import { ChannelType } from "~/src/constants"
-import { DEFAULT_OCTOPUS_CHANNEL_FIELDS } from "~/src/constants/octopus"
-import { OCTOPUS } from "~/src/constants/siteType"
-import { ensureAccountApiToken } from "~/src/services/accounts/accountOperations"
-import { accountStorage } from "~/src/services/accounts/accountStorage"
-import type { ApiResponse } from "~/src/services/apiService/common/type"
-import * as octopusApi from "~/src/services/apiService/octopus"
-import { fetchOpenAICompatibleModelIds } from "~/src/services/apiService/openaiCompatible"
+import { ChannelType } from "~/constants"
+import { DEFAULT_OCTOPUS_CHANNEL_FIELDS } from "~/constants/octopus"
+import { OCTOPUS } from "~/constants/siteType"
+import { ensureAccountApiToken } from "~/services/accounts/accountOperations"
+import { accountStorage } from "~/services/accounts/accountStorage"
+import type { ApiResponse } from "~/services/apiService/common/type"
+import * as octopusApi from "~/services/apiService/octopus"
+import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompatible"
 import type {
   ManagedSiteConfig,
   ManagedSiteService,
-} from "~/src/services/managedSites/managedSiteService"
-import type { ManagedSiteMessagesKey } from "~/src/services/managedSites/utils/managedSite"
+} from "~/services/managedSites/managedSiteService"
+import type { ManagedSiteMessagesKey } from "~/services/managedSites/utils/managedSite"
 import {
   userPreferences,
   type UserPreferences,
-} from "~/src/services/preferences/userPreferences"
+} from "~/services/preferences/userPreferences"
 import type {
   AccountToken,
   ApiToken,
   DisplaySiteData,
   SiteAccount,
-} from "~/src/types"
+} from "~/types"
 import type {
   ChannelFormData,
   ChannelMode,
@@ -36,16 +36,16 @@ import type {
   ManagedSiteChannelListData,
   OctopusChannelWithData,
   UpdateChannelPayload,
-} from "~/src/types/managedSite"
-import { OctopusOutboundType } from "~/src/types/octopus"
+} from "~/types/managedSite"
+import { OctopusOutboundType } from "~/types/octopus"
 import type {
   OctopusChannel,
   OctopusCreateChannelRequest,
-} from "~/src/types/octopus"
-import type { OctopusConfig } from "~/src/types/octopusConfig"
-import { getErrorMessage } from "~/src/utils/core/error"
-import { createLogger } from "~/src/utils/core/logger"
-import { normalizeList, parseDelimitedList } from "~/src/utils/core/string"
+} from "~/types/octopus"
+import type { OctopusConfig } from "~/types/octopusConfig"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
+import { normalizeList, parseDelimitedList } from "~/utils/core/string"
 
 const logger = createLogger("OctopusService")
 

@@ -1,9 +1,9 @@
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import ModelList from "~/src/entrypoints/options/pages/ModelList"
-import { AuthTypeEnum } from "~/src/types"
-import { render, screen, waitFor } from "~/tests/test-utils/render"
+import ModelList from "~/entrypoints/options/pages/ModelList"
+import { AuthTypeEnum } from "~/types"
+import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
   fetchAccountTokensMock,
@@ -42,7 +42,7 @@ vi.mock("~/services/apiService", () => ({
 vi.mock("~/services/models/utils/modelProviders", async (importOriginal) => {
   const actual =
     await importOriginal<
-      typeof import("~/src/services/models/utils/modelProviders")
+      typeof import("~/services/models/utils/modelProviders")
     >()
   return {
     ...actual,

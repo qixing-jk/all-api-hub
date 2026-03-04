@@ -5,10 +5,10 @@ import {
 } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
-import { Caption, CardItem, ToggleButton } from "~/src/components/ui"
-import { ANIMATIONS, COLORS } from "~/src/constants/designTokens"
-import { useTheme } from "~/src/contexts/ThemeContext"
-import type { ThemeMode } from "~/src/types/theme"
+import { Caption, CardItem, ToggleButton } from "~/components/ui"
+import { ANIMATIONS, COLORS } from "~/constants/designTokens"
+import { useTheme } from "~/contexts/ThemeContext"
+import type { ThemeMode } from "~/types/theme"
 
 const getThemeOptions = (t: (key: string) => string) => {
   return [

@@ -11,7 +11,7 @@ import {
   IconButton,
   Input,
   Modal,
-} from "~/src/components/ui"
+} from "~/components/ui"
 
 /**
  * Props for {@link WebDAVDecryptPasswordModal}.

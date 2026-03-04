@@ -1,6 +1,6 @@
-import { getApiService } from "~/src/services/apiService"
-import type { CreateTokenRequest } from "~/src/services/apiService/common/type"
-import type { ApiToken, DisplaySiteData, SiteAccount } from "~/src/types"
+import { getApiService } from "~/services/apiService"
+import type { CreateTokenRequest } from "~/services/apiService/common/type"
+import type { ApiToken, DisplaySiteData, SiteAccount } from "~/types"
 
 export const DEFAULT_AUTO_PROVISION_TOKEN_NAME = "user group (auto)"
 

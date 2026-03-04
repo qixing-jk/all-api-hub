@@ -7,11 +7,11 @@ import {
 import { ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Input } from "~/src/components/ui"
+import { Input } from "~/components/ui"
 import {
   CHECKIN_RESULT_STATUS,
   type CheckinAccountResult,
-} from "~/src/types/autoCheckin"
+} from "~/types/autoCheckin"
 
 export const FILTER_STATUS = {
   ALL: "all",

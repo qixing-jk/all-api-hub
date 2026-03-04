@@ -1,6 +1,6 @@
-import { UI_CONSTANTS } from "~/src/constants/ui"
-import type { CurrencyType } from "~/src/types"
-import type { DailyBalanceHistoryStore } from "~/src/types/dailyBalanceHistory"
+import { UI_CONSTANTS } from "~/constants/ui"
+import type { CurrencyType } from "~/types"
+import type { DailyBalanceHistoryStore } from "~/types/dailyBalanceHistory"
 
 import { listDayKeysInRange } from "./dayKeys"
 

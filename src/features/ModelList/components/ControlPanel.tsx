@@ -17,7 +17,7 @@ import {
   Label,
   SearchableSelect,
   Switch,
-} from "~/src/components/ui"
+} from "~/components/ui"
 
 interface ControlPanelProps {
   searchTerm: string

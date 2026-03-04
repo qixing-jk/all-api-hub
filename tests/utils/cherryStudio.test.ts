@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { OpenInCherryStudio } from "~/src/services/integrations/cherryStudio"
+import { OpenInCherryStudio } from "~/services/integrations/cherryStudio"
 import {
   AuthTypeEnum,
   SiteHealthStatus,
   type ApiToken,
   type DisplaySiteData,
-} from "~/src/types"
+} from "~/types"
 
 vi.mock("react-hot-toast", () => ({
   default: {

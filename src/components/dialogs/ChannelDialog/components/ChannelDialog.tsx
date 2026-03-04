@@ -2,7 +2,7 @@ import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { useChannelForm } from "~/src/components/dialogs/ChannelDialog/hooks/useChannelForm"
+import { useChannelForm } from "~/components/dialogs/ChannelDialog/hooks/useChannelForm"
 import {
   Button,
   CompactMultiSelect,
@@ -15,19 +15,19 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "~/src/components/ui"
-import { DIALOG_MODES, type DialogMode } from "~/src/constants/dialogModes"
-import { ChannelType, ChannelTypeOptions } from "~/src/constants/managedSite"
-import { OctopusOutboundTypeOptions } from "~/src/constants/octopus"
-import { OCTOPUS } from "~/src/constants/siteType"
-import { useUserPreferencesContext } from "~/src/contexts/UserPreferencesContext"
+} from "~/components/ui"
+import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
+import { ChannelType, ChannelTypeOptions } from "~/constants/managedSite"
+import { OctopusOutboundTypeOptions } from "~/constants/octopus"
+import { OCTOPUS } from "~/constants/siteType"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import {
   CHANNEL_STATUS,
   type ChannelFormData,
   type ChannelStatus,
   type ManagedSiteChannel,
-} from "~/src/types/managedSite"
-import { OctopusOutboundType } from "~/src/types/octopus"
+} from "~/types/managedSite"
+import { OctopusOutboundType } from "~/types/octopus"
 
 export interface ChannelDialogProps {
   isOpen: boolean

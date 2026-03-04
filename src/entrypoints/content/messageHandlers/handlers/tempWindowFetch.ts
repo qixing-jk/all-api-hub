@@ -1,10 +1,10 @@
 import {
   EXTENSION_HEADER_NAME,
   EXTENSION_HEADER_VALUE,
-} from "~/src/utils/browser/cookieHelper"
-import { getErrorMessage } from "~/src/utils/core/error"
-import { createLogger } from "~/src/utils/core/logger"
-import { sanitizeUrlForLog } from "~/src/utils/core/sanitizeUrlForLog"
+} from "~/utils/browser/cookieHelper"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
+import { sanitizeUrlForLog } from "~/utils/core/sanitizeUrlForLog"
 
 import { logCloudflareGuard } from "../utils/cloudflareGuard"
 import {

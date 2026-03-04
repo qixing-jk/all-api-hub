@@ -9,8 +9,8 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { EChart } from "~/src/components/charts/EChart"
-import { PageHeader } from "~/src/components/PageHeader"
+import { EChart } from "~/components/charts/EChart"
+import { PageHeader } from "~/components/PageHeader"
 import {
   Alert,
   Button,
@@ -19,44 +19,44 @@ import {
   Label,
   TagFilter,
   ToggleButton,
-} from "~/src/components/ui"
+} from "~/components/ui"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
-} from "~/src/components/ui/dropdown-menu"
-import { ANIMATIONS, COLORS } from "~/src/constants/designTokens"
-import { MENU_ITEM_IDS } from "~/src/constants/optionsMenuIds"
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
-import { useTheme } from "~/src/contexts/ThemeContext"
-import { useUserPreferencesContext } from "~/src/contexts/UserPreferencesContext"
-import { accountStorage } from "~/src/services/accounts/accountStorage"
+} from "~/components/ui/dropdown-menu"
+import { ANIMATIONS, COLORS } from "~/constants/designTokens"
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { useTheme } from "~/contexts/ThemeContext"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { accountStorage } from "~/services/accounts/accountStorage"
 import {
   computeRetentionCutoffDayKey,
   getDayKeyFromUnixSeconds,
   listDayKeysInRange,
   subtractDaysFromDayKey,
-} from "~/src/services/history/dailyBalanceHistory/dayKeys"
+} from "~/services/history/dailyBalanceHistory/dayKeys"
 import {
   buildAccountRangeSummaries,
   buildPerAccountDailyBalanceMoneySeries,
   type DailyBalanceHistoryMetric,
-} from "~/src/services/history/dailyBalanceHistory/selectors"
-import { dailyBalanceHistoryStorage } from "~/src/services/history/dailyBalanceHistory/storage"
-import { clampBalanceHistoryRetentionDays } from "~/src/services/history/dailyBalanceHistory/utils"
-import { tagStorage } from "~/src/services/tags/tagStorage"
-import { listTagsSorted } from "~/src/services/tags/tagStoreUtils"
-import type { CurrencyType, SiteAccount, TagStore } from "~/src/types"
-import { DEFAULT_BALANCE_HISTORY_PREFERENCES } from "~/src/types/dailyBalanceHistory"
-import type { DailyBalanceHistoryStore } from "~/src/types/dailyBalanceHistory"
-import { sendRuntimeMessage } from "~/src/utils/browser/browserApi"
-import { getErrorMessage } from "~/src/utils/core/error"
-import { getCurrencySymbol } from "~/src/utils/core/formatters"
-import { createLogger } from "~/src/utils/core/logger"
-import { formatMoneyFixed } from "~/src/utils/core/money"
-import { navigateWithinOptionsPage } from "~/src/utils/navigation"
+} from "~/services/history/dailyBalanceHistory/selectors"
+import { dailyBalanceHistoryStorage } from "~/services/history/dailyBalanceHistory/storage"
+import { clampBalanceHistoryRetentionDays } from "~/services/history/dailyBalanceHistory/utils"
+import { tagStorage } from "~/services/tags/tagStorage"
+import { listTagsSorted } from "~/services/tags/tagStoreUtils"
+import type { CurrencyType, SiteAccount, TagStore } from "~/types"
+import { DEFAULT_BALANCE_HISTORY_PREFERENCES } from "~/types/dailyBalanceHistory"
+import type { DailyBalanceHistoryStore } from "~/types/dailyBalanceHistory"
+import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { getErrorMessage } from "~/utils/core/error"
+import { getCurrencySymbol } from "~/utils/core/formatters"
+import { createLogger } from "~/utils/core/logger"
+import { formatMoneyFixed } from "~/utils/core/money"
+import { navigateWithinOptionsPage } from "~/utils/navigation"
 
 import BalanceHistoryAccountSummaryTable, {
   type BalanceHistoryAccountSummaryRow,

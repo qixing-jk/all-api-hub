@@ -2,7 +2,7 @@ import { DialogTitle } from "@headlessui/react"
 import { PencilIcon, SparklesIcon } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
-import { DIALOG_MODES, type DialogMode } from "~/src/constants/dialogModes"
+import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 
 interface DialogHeaderProps {
   mode: DialogMode

@@ -2,19 +2,19 @@ import { nanoid } from "nanoid"
 
 import { Storage } from "@plasmohq/storage"
 
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   createDefaultChannelConfig,
   type ChannelConfig,
   type ChannelConfigMap,
   type ChannelModelFilterSettings,
-} from "~/src/types/channelConfig"
+} from "~/types/channelConfig"
 import type {
   ChannelModelFilterInput,
   ChannelModelFilterRule,
-} from "~/src/types/channelModelFilters"
-import { getErrorMessage } from "~/src/utils/core/error"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/types/channelModelFilters"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("ChannelConfigStorage")
 

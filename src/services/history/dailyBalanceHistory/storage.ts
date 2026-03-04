@@ -1,14 +1,14 @@
 import { Storage } from "@plasmohq/storage"
 
-import { STORAGE_KEYS, STORAGE_LOCKS } from "~/src/services/core/storageKeys"
-import { withExtensionStorageWriteLock } from "~/src/services/core/storageWriteLock"
+import { STORAGE_KEYS, STORAGE_LOCKS } from "~/services/core/storageKeys"
+import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import type {
   DailyBalanceHistoryStore,
   DailyBalanceSnapshot,
-} from "~/src/types/dailyBalanceHistory"
-import { DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION } from "~/src/types/dailyBalanceHistory"
-import { getErrorMessage } from "~/src/utils/core/error"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/types/dailyBalanceHistory"
+import { DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION } from "~/types/dailyBalanceHistory"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 import { computeRetentionCutoffDayKey, parseDayKey } from "./dayKeys"
 

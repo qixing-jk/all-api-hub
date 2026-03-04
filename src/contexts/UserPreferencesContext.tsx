@@ -12,10 +12,10 @@ import {
   DATA_TYPE_CASHFLOW,
   DATA_TYPE_CONSUMPTION,
   DATA_TYPE_INCOME,
-} from "~/src/constants"
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
-import { NEW_API, type ManagedSiteType } from "~/src/constants/siteType"
-import { UI_CONSTANTS } from "~/src/constants/ui"
+} from "~/constants"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { NEW_API, type ManagedSiteType } from "~/constants/siteType"
+import { UI_CONSTANTS } from "~/constants/ui"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
@@ -24,28 +24,28 @@ import {
   type TempWindowFallbackReminderPreferences,
   type UserPreferences,
   type WebAiApiCheckPreferences,
-} from "~/src/services/preferences/userPreferences"
-import { DEFAULT_SORTING_PRIORITY_CONFIG } from "~/src/services/preferences/utils/sortingPriority"
+} from "~/services/preferences/userPreferences"
+import { DEFAULT_SORTING_PRIORITY_CONFIG } from "~/services/preferences/utils/sortingPriority"
 import type {
   CurrencyType,
   DashboardTabType,
   SortField,
   SortOrder,
-} from "~/src/types"
-import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/src/types/accountAutoRefresh"
-import type { AutoCheckinPreferences } from "~/src/types/autoCheckin"
+} from "~/types"
+import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
+import type { AutoCheckinPreferences } from "~/types/autoCheckin"
 import {
   DEFAULT_BALANCE_HISTORY_PREFERENCES,
   type BalanceHistoryPreferences,
-} from "~/src/types/dailyBalanceHistory"
-import { DEFAULT_DONE_HUB_CONFIG } from "~/src/types/doneHubConfig"
-import type { LogLevel } from "~/src/types/logging"
-import type { ModelRedirectPreferences } from "~/src/types/managedSiteModelRedirect"
-import type { SortingPriorityConfig } from "~/src/types/sorting"
-import type { ThemeMode } from "~/src/types/theme"
-import { deepOverride } from "~/src/utils"
-import { sendRuntimeMessage } from "~/src/utils/browser/browserApi"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/types/dailyBalanceHistory"
+import { DEFAULT_DONE_HUB_CONFIG } from "~/types/doneHubConfig"
+import type { LogLevel } from "~/types/logging"
+import type { ModelRedirectPreferences } from "~/types/managedSiteModelRedirect"
+import type { SortingPriorityConfig } from "~/types/sorting"
+import type { ThemeMode } from "~/types/theme"
+import { deepOverride } from "~/utils"
+import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("UserPreferencesContext")
 

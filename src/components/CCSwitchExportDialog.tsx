@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { CCSwitchIcon } from "~/src/components/icons/CCSwitchIcon"
+import { CCSwitchIcon } from "~/components/icons/CCSwitchIcon"
 import {
   Button,
   Input,
@@ -13,20 +13,20 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "~/src/components/ui"
-import { fetchOpenAICompatibleModelIds } from "~/src/services/apiService/openaiCompatible"
+} from "~/components/ui"
+import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompatible"
 import {
   CCSWITCH_APPS,
   openInCCSwitch,
   type CCSwitchApp,
-} from "~/src/services/integrations/ccSwitch"
-import type { ApiToken, DisplaySiteData } from "~/src/types"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/services/integrations/ccSwitch"
+import type { ApiToken, DisplaySiteData } from "~/types"
+import { createLogger } from "~/utils/core/logger"
 import {
   coerceBaseUrlToPathSuffix,
   normalizeHttpUrl,
   stripTrailingOpenAIV1,
-} from "~/src/utils/core/url"
+} from "~/utils/core/url"
 
 interface CCSwitchExportDialogProps {
   isOpen: boolean

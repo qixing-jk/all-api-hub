@@ -1,13 +1,13 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { VerifyCliSupportDialog } from "~/src/components/dialogs/VerifyCliSupportDialog"
+import { VerifyCliSupportDialog } from "~/components/dialogs/VerifyCliSupportDialog"
 import {
   fireEvent,
   render,
   screen,
   waitFor,
   within,
-} from "~/tests/test-utils/render"
+} from "~~/tests/test-utils/render"
 
 const mockFetchAccountTokens = vi.fn()
 

@@ -45,7 +45,7 @@ describe("background onInstalled changelog opening", () => {
 
     vi.doMock("~/utils/browser/browserApi", async (importOriginal) => {
       const actual =
-        await importOriginal<typeof import("~/src/utils/browser/browserApi")>()
+        await importOriginal<typeof import("~/utils/browser/browserApi")>()
       return {
         ...actual,
         createTab: createTabMock,
@@ -154,7 +154,7 @@ describe("background onInstalled changelog opening", () => {
   })
 
   it("does not open any changelog tab on update and marks the pending version instead", async () => {
-    await import("~/src/entrypoints/background/index")
+    await import("~/entrypoints/background/index")
 
     expect(onInstalledListener).toBeTypeOf("function")
     expect(onStartupListener).toBeTypeOf("function")
@@ -174,7 +174,7 @@ describe("background onInstalled changelog opening", () => {
       openChangelogOnUpdate: false,
     })
 
-    await import("~/src/entrypoints/background/index")
+    await import("~/entrypoints/background/index")
 
     expect(onInstalledListener).toBeTypeOf("function")
     expect(onStartupListener).toBeTypeOf("function")

@@ -2,10 +2,10 @@ import type {
   BalanceHistoryPreferences,
   DailyBalanceHistoryCaptureSource,
   DailyBalanceSnapshot,
-} from "~/src/types/dailyBalanceHistory"
-import { DEFAULT_BALANCE_HISTORY_PREFERENCES } from "~/src/types/dailyBalanceHistory"
-import { getErrorMessage } from "~/src/utils/core/error"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/types/dailyBalanceHistory"
+import { DEFAULT_BALANCE_HISTORY_PREFERENCES } from "~/types/dailyBalanceHistory"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 import { getDayKeyFromUnixSeconds } from "./dayKeys"
 import { dailyBalanceHistoryStorage } from "./storage"

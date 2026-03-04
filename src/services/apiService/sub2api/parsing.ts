@@ -1,10 +1,7 @@
 import i18next from "i18next"
 
-import { UI_CONSTANTS } from "~/src/constants/ui"
-import {
-  API_ERROR_CODES,
-  ApiError,
-} from "~/src/services/apiService/common/errors"
+import { UI_CONSTANTS } from "~/constants/ui"
+import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 
 import type { Sub2ApiAuthMeData, Sub2ApiEnvelope } from "./type"
 

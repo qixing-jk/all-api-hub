@@ -1,10 +1,10 @@
-import { LogType, type LogItem } from "~/src/services/apiService/common/type"
+import { LogType, type LogItem } from "~/services/apiService/common/type"
 import type {
   UsageHistoryAccountStore,
   UsageHistoryAggregate,
   UsageHistoryCursor,
   UsageHistoryLatencyAggregate,
-} from "~/src/types/usageHistory"
+} from "~/types/usageHistory"
 
 import { USAGE_HISTORY_LIMITS } from "./constants"
 

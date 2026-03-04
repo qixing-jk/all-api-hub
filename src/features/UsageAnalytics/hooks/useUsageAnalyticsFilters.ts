@@ -1,18 +1,18 @@
 import { useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { computeUsageHistoryExport } from "~/src/services/history/usageHistory/analytics"
+import { computeUsageHistoryExport } from "~/services/history/usageHistory/analytics"
 import {
   parseDayKey,
   subtractDaysFromDayKey,
-} from "~/src/services/history/usageHistory/core"
-import type { SiteAccount } from "~/src/types"
+} from "~/services/history/usageHistory/core"
+import type { SiteAccount } from "~/types"
 import type {
   UsageHistoryAccountStore,
   UsageHistoryExport,
   UsageHistoryExportSelection,
   UsageHistoryStore,
-} from "~/src/types/usageHistory"
+} from "~/types/usageHistory"
 
 import { listDayKeysInRange, type DayKey } from "../charts/dayKeys"
 

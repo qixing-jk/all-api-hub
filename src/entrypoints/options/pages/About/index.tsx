@@ -1,3 +1,3 @@
-import About from "~/src/features/About"
+import About from "~/features/About"
 
 export default About

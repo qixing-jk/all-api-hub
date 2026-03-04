@@ -1,8 +1,8 @@
 import { http, HttpResponse } from "msw"
 import { describe, expect, it, vi } from "vitest"
 
-import { runCliSupportToolFromRegistry } from "~/src/services/verification/cliSupportVerification"
-import { server } from "~/tests/msw/server"
+import { runCliSupportToolFromRegistry } from "~/services/verification/cliSupportVerification"
+import { server } from "~~/tests/msw/server"
 
 describe("cliSupportVerification", () => {
   it("returns fail without sending a request when model id is missing", async () => {

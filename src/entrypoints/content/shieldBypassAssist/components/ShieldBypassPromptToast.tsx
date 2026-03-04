@@ -8,7 +8,7 @@ import {
   CardContent,
   CardHeader,
   Heading3,
-} from "~/src/components/ui"
+} from "~/components/ui"
 
 /** Removes a previously applied prefix from a title string. */
 function stripPrefixedTitle(title: string, prefix: string) {

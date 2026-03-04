@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next"
 
-import { CalculatedPrice } from "~/src/services/models/utils/modelPricing"
-import { CurrencyType } from "~/src/types"
+import { CalculatedPrice } from "~/services/models/utils/modelPricing"
+import { CurrencyType } from "~/types"
 
 interface PriceViewProps {
   calculatedPrice: CalculatedPrice

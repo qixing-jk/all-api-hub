@@ -1,18 +1,18 @@
 import { Loader2, Plus, Settings2, Trash2 } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
-import { Input, Textarea } from "~/src/components/ui"
-import { Button } from "~/src/components/ui/button"
-import { Label } from "~/src/components/ui/label"
+import { Input, Textarea } from "~/components/ui"
+import { Button } from "~/components/ui/button"
+import { Label } from "~/components/ui/label"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "~/src/components/ui/select"
-import { Switch } from "~/src/components/ui/Switch"
-import type { ChannelModelFilterRule } from "~/src/types/channelModelFilters"
+} from "~/components/ui/select"
+import { Switch } from "~/components/ui/Switch"
+import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 
 export type EditableFilter = ChannelModelFilterRule
 

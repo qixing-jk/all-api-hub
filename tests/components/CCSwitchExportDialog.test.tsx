@@ -1,7 +1,7 @@
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
-import { fireEvent, render, screen, waitFor } from "~/tests/test-utils/render"
+import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const mockFetchOpenAICompatibleModelIds = vi.fn()
 
@@ -14,7 +14,7 @@ describe("CCSwitchExportDialog", () => {
   it("loads upstream model ids and exposes them as a selectable default model", async () => {
     vi.resetModules()
     const { CCSwitchExportDialog } = await import(
-      "~/src/components/CCSwitchExportDialog"
+      "~/components/CCSwitchExportDialog"
     )
     mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce(["gpt-4", "claude"])
 
@@ -46,7 +46,7 @@ describe("CCSwitchExportDialog", () => {
   it("appends /v1 to the default endpoint when switching to Codex", async () => {
     vi.resetModules()
     const { CCSwitchExportDialog } = await import(
-      "~/src/components/CCSwitchExportDialog"
+      "~/components/CCSwitchExportDialog"
     )
     const user = userEvent.setup()
     mockFetchOpenAICompatibleModelIds.mockResolvedValue([])
@@ -85,7 +85,7 @@ describe("CCSwitchExportDialog", () => {
   it("keeps the model picker usable when upstream model fetch fails", async () => {
     vi.resetModules()
     const { CCSwitchExportDialog } = await import(
-      "~/src/components/CCSwitchExportDialog"
+      "~/components/CCSwitchExportDialog"
     )
     mockFetchOpenAICompatibleModelIds.mockRejectedValueOnce(
       new Error("network error"),

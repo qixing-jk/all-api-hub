@@ -7,21 +7,18 @@ import {
 import { Info } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
-import packageJson from "~/package.json"
-import FeatureList from "~/src/components/FeatureList"
-import LinkCard from "~/src/components/LinkCard"
-import { PageHeader } from "~/src/components/PageHeader"
-import { Heading4 } from "~/src/components/ui"
-import { FEATURES, FUTURE_FEATURES } from "~/src/constants/about"
-import { EXTENSION_STORE_LISTING_URLS } from "~/src/constants/extensionStores"
-import { isNotEmptyArray } from "~/src/utils"
-import type { ExtensionStoreId } from "~/src/utils/browser"
-import { detectExtensionStore } from "~/src/utils/browser"
-import { getDocsHomepageUrl } from "~/src/utils/navigation/docsLinks"
-import {
-  getPkgVersion,
-  getRepository,
-} from "~/src/utils/navigation/packageMeta"
+import FeatureList from "~/components/FeatureList"
+import LinkCard from "~/components/LinkCard"
+import { PageHeader } from "~/components/PageHeader"
+import { Heading4 } from "~/components/ui"
+import { FEATURES, FUTURE_FEATURES } from "~/constants/about"
+import { EXTENSION_STORE_LISTING_URLS } from "~/constants/extensionStores"
+import { isNotEmptyArray } from "~/utils"
+import type { ExtensionStoreId } from "~/utils/browser"
+import { detectExtensionStore } from "~/utils/browser"
+import { getDocsHomepageUrl } from "~/utils/navigation/docsLinks"
+import { getPkgVersion, getRepository } from "~/utils/navigation/packageMeta"
+import packageJson from "~~/package.json"
 
 import CreditsCard from "./components/CreditsCard"
 import PluginIntroCard from "./components/PluginIntroCard"

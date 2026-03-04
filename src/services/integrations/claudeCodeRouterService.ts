@@ -1,9 +1,9 @@
 import { t } from "i18next"
 
-import type { ApiToken, DisplaySiteData } from "~/src/types"
-import type { ServiceResponse } from "~/src/types/serviceResponse"
-import { createLogger } from "~/src/utils/core/logger"
-import { joinUrl } from "~/src/utils/core/url"
+import type { ApiToken, DisplaySiteData } from "~/types"
+import type { ServiceResponse } from "~/types/serviceResponse"
+import { createLogger } from "~/utils/core/logger"
+import { joinUrl } from "~/utils/core/url"
 
 /**
  * Unified logger scoped to the Claude Code Router integration service.

@@ -2,17 +2,17 @@
  * Octopus API 服务
  * 提供与 Octopus 后端的所有 API 交互
  */
-import { userPreferences } from "~/src/services/preferences/userPreferences"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import type {
   OctopusApiResponse,
   OctopusChannel,
   OctopusCreateChannelRequest,
   OctopusFetchModelRequest,
   OctopusUpdateChannelRequest,
-} from "~/src/types/octopus"
-import type { OctopusConfig } from "~/src/types/octopusConfig"
-import { createLogger } from "~/src/utils/core/logger"
-import { normalizeBaseUrl } from "~/src/utils/core/url"
+} from "~/types/octopus"
+import type { OctopusConfig } from "~/types/octopusConfig"
+import { createLogger } from "~/utils/core/logger"
+import { normalizeBaseUrl } from "~/utils/core/url"
 
 import type { ApiServiceRequest } from "../common/type"
 import { octopusAuthManager } from "./auth"

@@ -13,9 +13,9 @@ import {
   SelectTrigger,
   SelectValue,
   Spinner,
-} from "~/src/components/ui"
-import AddTokenDialog from "~/src/features/KeyManagement/components/AddTokenDialog"
-import type { DisplaySiteData } from "~/src/types"
+} from "~/components/ui"
+import AddTokenDialog from "~/features/KeyManagement/components/AddTokenDialog"
+import type { DisplaySiteData } from "~/types"
 
 import { useModelKeyDialog } from "./hooks/useModelKeyDialog"
 

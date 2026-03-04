@@ -9,9 +9,9 @@ import {
   Button,
   DestructiveConfirmDialog,
   Heading5,
-} from "~/src/components/ui"
-import { useUserPreferencesContext } from "~/src/contexts/UserPreferencesContext"
-import { showResetToast } from "~/src/utils/core/toastHelpers"
+} from "~/components/ui"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { showResetToast } from "~/utils/core/toastHelpers"
 
 /**
  * Renders the destructive reset section with confirmation dialog for settings.

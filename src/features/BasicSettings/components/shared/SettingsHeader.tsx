@@ -1,7 +1,7 @@
 import { CogIcon } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
-import { BodySmall, Heading2 } from "~/src/components/ui"
+import { BodySmall, Heading2 } from "~/components/ui"
 
 /**
  * Basic settings page header with cog icon and description.

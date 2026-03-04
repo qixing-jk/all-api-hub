@@ -5,25 +5,25 @@ import {
   fetchAccountQuota,
   fetchTodayIncome,
   fetchTodayUsage,
-} from "~/src/services/apiService/common"
-import { REQUEST_CONFIG } from "~/src/services/apiService/common/constant"
-import { ApiError } from "~/src/services/apiService/common/errors"
-import { fetchAllItems } from "~/src/services/apiService/common/pagination"
+} from "~/services/apiService/common"
+import { REQUEST_CONFIG } from "~/services/apiService/common/constant"
+import { ApiError } from "~/services/apiService/common/errors"
+import { fetchAllItems } from "~/services/apiService/common/pagination"
 import type {
   AccountData,
   ApiServiceAccountRequest,
   ApiServiceRequest,
   RefreshAccountResult,
-} from "~/src/services/apiService/common/type"
-import { fetchApi, fetchApiData } from "~/src/services/apiService/common/utils"
-import { CheckInConfig, SiteHealthStatus } from "~/src/types"
+} from "~/services/apiService/common/type"
+import { fetchApi, fetchApiData } from "~/services/apiService/common/utils"
+import { CheckInConfig, SiteHealthStatus } from "~/types"
 import type {
   CreateChannelPayload,
   ManagedSiteChannel,
   ManagedSiteChannelListData,
   UpdateChannelPayload,
-} from "~/src/types/managedSite"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/types/managedSite"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to Veloera API service calls.

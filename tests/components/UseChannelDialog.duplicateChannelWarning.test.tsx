@@ -3,25 +3,22 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import {
   useChannelDialog,
   useChannelDialogContext,
-} from "~/src/components/dialogs/ChannelDialog"
-import { ChannelType } from "~/src/constants"
-import { DIALOG_MODES } from "~/src/constants/dialogModes"
-import * as accountOperations from "~/src/services/accounts/accountOperations"
-import { accountStorage } from "~/src/services/accounts/accountStorage"
-import * as managedSiteService from "~/src/services/managedSites/managedSiteService"
-import type { ManagedSiteService } from "~/src/services/managedSites/managedSiteService"
+} from "~/components/dialogs/ChannelDialog"
+import { ChannelType } from "~/constants"
+import { DIALOG_MODES } from "~/constants/dialogModes"
+import * as accountOperations from "~/services/accounts/accountOperations"
+import { accountStorage } from "~/services/accounts/accountStorage"
+import * as managedSiteService from "~/services/managedSites/managedSiteService"
+import type { ManagedSiteService } from "~/services/managedSites/managedSiteService"
 import {
   AuthTypeEnum,
   SiteHealthStatus,
   type ApiToken,
   type DisplaySiteData,
   type SiteAccount,
-} from "~/src/types"
-import type {
-  ChannelFormData,
-  ManagedSiteChannel,
-} from "~/src/types/managedSite"
-import { act, renderHook, waitFor } from "~/tests/test-utils/render"
+} from "~/types"
+import type { ChannelFormData, ManagedSiteChannel } from "~/types/managedSite"
+import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
 const { mockToastLoading, mockToastDismiss, mockToastError } = vi.hoisted(
   () => ({

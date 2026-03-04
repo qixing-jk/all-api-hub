@@ -1,11 +1,11 @@
 import { t } from "i18next"
 
-import { UI_CONSTANTS } from "~/src/constants/ui"
-import { accountStorage } from "~/src/services/accounts/accountStorage"
-import { getApiService } from "~/src/services/apiService"
-import type { DisplaySiteData } from "~/src/types"
-import { getErrorMessage } from "~/src/utils/core/error"
-import { formatMoneyFixed } from "~/src/utils/core/money"
+import { UI_CONSTANTS } from "~/constants/ui"
+import { accountStorage } from "~/services/accounts/accountStorage"
+import { getApiService } from "~/services/apiService"
+import type { DisplaySiteData } from "~/types"
+import { getErrorMessage } from "~/utils/core/error"
+import { formatMoneyFixed } from "~/utils/core/money"
 
 export interface RedeemResult {
   success: boolean

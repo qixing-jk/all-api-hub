@@ -3,14 +3,14 @@
  * 提供跨浏览器兼容的 API 封装和常用 fallback 逻辑
  */
 
-import { APP_SHORT_NAME } from "~/src/constants/branding"
+import { APP_SHORT_NAME } from "~/constants/branding"
 import {
   RuntimeActionIds,
   type RuntimeActionId,
-} from "~/src/constants/runtimeActions"
-import { isNotEmptyArray } from "~/src/utils"
-import { getErrorMessage } from "~/src/utils/core/error"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/constants/runtimeActions"
+import { isNotEmptyArray } from "~/utils"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to cross-browser WebExtension API helpers.

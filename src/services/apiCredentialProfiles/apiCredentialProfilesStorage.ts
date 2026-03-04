@@ -3,23 +3,23 @@ import { Storage } from "@plasmohq/storage"
 import {
   API_CREDENTIAL_PROFILES_STORAGE_KEYS,
   STORAGE_LOCKS,
-} from "~/src/services/core/storageKeys"
-import { withExtensionStorageWriteLock } from "~/src/services/core/storageWriteLock"
+} from "~/services/core/storageKeys"
+import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import {
   API_TYPES,
   type ApiVerificationApiType,
-} from "~/src/services/verification/aiApiVerification"
+} from "~/services/verification/aiApiVerification"
 import {
   normalizeGoogleFamilyBaseUrl,
   normalizeOpenAiFamilyBaseUrl,
-} from "~/src/services/verification/webAiApiCheck/extractCredentials"
+} from "~/services/verification/webAiApiCheck/extractCredentials"
 import type {
   ApiCredentialProfile,
   ApiCredentialProfilesConfig,
-} from "~/src/types/apiCredentialProfiles"
-import { API_CREDENTIAL_PROFILES_CONFIG_VERSION } from "~/src/types/apiCredentialProfiles"
-import { safeRandomUUID } from "~/src/utils/core/identifier"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/types/apiCredentialProfiles"
+import { API_CREDENTIAL_PROFILES_CONFIG_VERSION } from "~/types/apiCredentialProfiles"
+import { safeRandomUUID } from "~/utils/core/identifier"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to API credential profiles storage.

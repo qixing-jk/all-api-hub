@@ -1,28 +1,28 @@
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   handleTempWindowFetch,
   handleTempWindowGetRenderedTitle,
   handleTempWindowTurnstileFetch,
-} from "~/src/entrypoints/background/tempWindowPool"
+} from "~/entrypoints/background/tempWindowPool"
 import {
   API_ERROR_CODES,
   ApiError,
   type ApiErrorCode,
-} from "~/src/services/apiService/common/errors"
-import type { ApiResponse } from "~/src/services/apiService/common/type"
+} from "~/services/apiService/common/errors"
+import type { ApiResponse } from "~/services/apiService/common/type"
 import {
   extractDataFromApiResponseBody,
   isHttpUrl,
-} from "~/src/services/apiService/common/utils"
+} from "~/services/apiService/common/utils"
 import {
   COOKIE_INTERCEPTOR_PERMISSIONS,
   hasCookieInterceptorPermissions,
-} from "~/src/services/permissions/permissionManager"
+} from "~/services/permissions/permissionManager"
 import {
   DEFAULT_PREFERENCES,
   TempWindowFallbackPreferences,
   userPreferences,
-} from "~/src/services/preferences/userPreferences"
+} from "~/services/preferences/userPreferences"
 import type {
   TempWindowFallbackAllowlist,
   TempWindowFallbackContext,
@@ -31,17 +31,17 @@ import type {
   TempWindowRenderedTitleResponse,
   TempWindowTurnstileFetch,
   TempWindowTurnstileFetchParams,
-} from "~/src/types/tempWindowFetch"
-import { sendRuntimeMessage } from "~/src/utils/browser/browserApi"
+} from "~/types/tempWindowFetch"
+import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import {
   isExtensionBackground,
   isExtensionPopup,
   isExtensionSidePanel,
   OPTIONS_PAGE_URL,
-} from "~/src/utils/browser/index"
-import { isProtectionBypassFirefoxEnv } from "~/src/utils/browser/protectionBypass"
-import { safeRandomUUID } from "~/src/utils/core/identifier"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/utils/browser/index"
+import { isProtectionBypassFirefoxEnv } from "~/utils/browser/protectionBypass"
+import { safeRandomUUID } from "~/utils/core/identifier"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to temp window fetch helpers and fallback behavior.

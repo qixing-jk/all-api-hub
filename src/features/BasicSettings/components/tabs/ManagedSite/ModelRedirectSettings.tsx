@@ -2,22 +2,17 @@ import { useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { SettingSection } from "~/src/components/SettingSection"
-import {
-  Button,
-  Card,
-  CardContent,
-  CompactMultiSelect,
-} from "~/src/components/ui"
-import { Switch } from "~/src/components/ui/Switch"
-import { useUserPreferencesContext } from "~/src/contexts/UserPreferencesContext"
-import { getApiService } from "~/src/services/apiService"
-import { hasValidManagedSiteConfig } from "~/src/services/managedSites/managedSiteService"
-import { getManagedSiteAdminConfig } from "~/src/services/managedSites/utils/managedSite"
-import { ModelRedirectService } from "~/src/services/models/modelRedirect"
-import { AuthTypeEnum } from "~/src/types"
-import { ALL_PRESET_STANDARD_MODELS } from "~/src/types/managedSiteModelRedirect"
-import { createLogger } from "~/src/utils/core/logger"
+import { SettingSection } from "~/components/SettingSection"
+import { Button, Card, CardContent, CompactMultiSelect } from "~/components/ui"
+import { Switch } from "~/components/ui/Switch"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { getApiService } from "~/services/apiService"
+import { hasValidManagedSiteConfig } from "~/services/managedSites/managedSiteService"
+import { getManagedSiteAdminConfig } from "~/services/managedSites/utils/managedSite"
+import { ModelRedirectService } from "~/services/models/modelRedirect"
+import { AuthTypeEnum } from "~/types"
+import { ALL_PRESET_STANDARD_MODELS } from "~/types/managedSiteModelRedirect"
+import { createLogger } from "~/utils/core/logger"
 
 import { ClearModelRedirectMappingsDialog } from "../../dialogs/ClearModelRedirectMappingsDialog"
 

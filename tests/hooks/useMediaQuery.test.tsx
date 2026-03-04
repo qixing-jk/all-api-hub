@@ -8,7 +8,7 @@ import {
   useIsSmallScreen,
   useIsTablet,
   useMediaQuery,
-} from "~/src/hooks/useMediaQuery"
+} from "~/hooks/useMediaQuery"
 
 describe("useMediaQuery", () => {
   let matchMediaMock: any

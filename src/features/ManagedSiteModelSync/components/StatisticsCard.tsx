@@ -1,8 +1,8 @@
 import { useTranslation } from "react-i18next"
 
-import { Card, CardContent } from "~/src/components/ui"
-import type { ExecutionStatistics } from "~/src/types/managedSiteModelSync"
-import { formatFullTime } from "~/src/utils/core/formatters"
+import { Card, CardContent } from "~/components/ui"
+import type { ExecutionStatistics } from "~/types/managedSiteModelSync"
+import { formatFullTime } from "~/utils/core/formatters"
 
 interface StatisticsCardProps {
   statistics: ExecutionStatistics

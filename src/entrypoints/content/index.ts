@@ -1,8 +1,8 @@
 import { defineContentScript } from "wxt/utils/define-content-script"
 
-import { setupRedemptionAssistContent } from "~/src/entrypoints/content/redemptionAssist"
-import { setupWebAiApiCheckContent } from "~/src/entrypoints/content/webAiApiCheck"
-import { createLogger } from "~/src/utils/core/logger"
+import { setupRedemptionAssistContent } from "~/entrypoints/content/redemptionAssist"
+import { setupWebAiApiCheckContent } from "~/entrypoints/content/webAiApiCheck"
+import { createLogger } from "~/utils/core/logger"
 
 import { setupContentMessageHandlers } from "./messageHandlers"
 import { setContentScriptContext } from "./shared/uiRoot"

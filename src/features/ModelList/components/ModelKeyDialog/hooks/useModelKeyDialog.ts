@@ -2,13 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { SUB2API } from "~/src/constants/siteType"
-import { generateDefaultTokenRequest } from "~/src/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
-import { getApiService } from "~/src/services/apiService"
-import { isTokenCompatibleWithModel } from "~/src/services/models/utils/tokenModelCompatibility"
-import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/src/types"
-import { getErrorMessage } from "~/src/utils/core/error"
-import { createLogger } from "~/src/utils/core/logger"
+import { SUB2API } from "~/constants/siteType"
+import { generateDefaultTokenRequest } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
+import { getApiService } from "~/services/apiService"
+import { isTokenCompatibleWithModel } from "~/services/models/utils/tokenModelCompatibility"
+import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/types"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Logger scoped to the "model key" dialog so token loading and clipboard failures can be diagnosed safely.

@@ -1,16 +1,16 @@
-import { accountStorage } from "~/src/services/accounts/accountStorage"
+import { accountStorage } from "~/services/accounts/accountStorage"
 import {
   apiCredentialProfilesStorage,
   coerceApiCredentialProfilesConfig,
-} from "~/src/services/apiCredentialProfiles/apiCredentialProfilesStorage"
-import { channelConfigStorage } from "~/src/services/managedSites/channelConfigStorage"
-import type { UserPreferences } from "~/src/services/preferences/userPreferences"
-import { userPreferences } from "~/src/services/preferences/userPreferences"
-import { tagStorage } from "~/src/services/tags/tagStorage"
-import type { AccountStorageConfig, TagStore } from "~/src/types"
-import type { ApiCredentialProfilesConfig } from "~/src/types/apiCredentialProfiles"
-import type { ChannelConfigMap } from "~/src/types/channelConfig"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
+import type { UserPreferences } from "~/services/preferences/userPreferences"
+import { userPreferences } from "~/services/preferences/userPreferences"
+import { tagStorage } from "~/services/tags/tagStorage"
+import type { AccountStorageConfig, TagStore } from "~/types"
+import type { ApiCredentialProfilesConfig } from "~/types/apiCredentialProfiles"
+import type { ChannelConfigMap } from "~/types/channelConfig"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to import/export helpers for backups and preferences.

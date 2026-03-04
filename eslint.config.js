@@ -33,7 +33,7 @@ export default defineConfig([
       "playwright-report/**",
       "test-results/**",
       "tailwind.config.js",
-      "public/react-devtools-backend.js",
+      "src/public/react-devtools-backend.js",
     ],
   },
   { languageOptions: { globals: globalsConfig } },
@@ -118,13 +118,13 @@ export default defineConfig([
   // Guardrails: avoid direct `console.*` usage in app/runtime code (use `utils/logger.ts`).
   {
     files: [
-      "services/**/*.{ts,tsx}",
-      "utils/**/*.{ts,tsx}",
-      "entrypoints/**/*.{ts,tsx}",
-      "features/**/*.{ts,tsx}",
-      "components/**/*.{ts,tsx}",
-      "contexts/**/*.{ts,tsx}",
-      "hooks/**/*.{ts,tsx}",
+      "src/services/**/*.{ts,tsx}",
+      "src/utils/**/*.{ts,tsx}",
+      "src/entrypoints/**/*.{ts,tsx}",
+      "src/features/**/*.{ts,tsx}",
+      "src/components/**/*.{ts,tsx}",
+      "src/contexts/**/*.{ts,tsx}",
+      "src/hooks/**/*.{ts,tsx}",
     ],
     rules: {
       "no-console": "error",
@@ -132,7 +132,7 @@ export default defineConfig([
   },
   // Allow `console.*` in the unified logger implementation and in tests.
   {
-    files: ["utils/logger.ts", "tests/**/*.{ts,tsx}"],
+    files: ["src/utils/logger.ts", "tests/**/*.{ts,tsx}"],
     rules: {
       "no-console": "off",
     },
@@ -144,10 +144,10 @@ export default defineConfig([
   // - Once the repo is clean, upgrade this to "error" so `pnpm -s lint` fails on new violations.
   {
     files: [
-      "services/**/*.{ts,tsx}",
-      "utils/**/*.{ts,tsx}",
-      "components/**/*.{ts,tsx}",
-      "features/**/*.{ts,tsx}",
+      "src/services/**/*.{ts,tsx}",
+      "src/utils/**/*.{ts,tsx}",
+      "src/components/**/*.{ts,tsx}",
+      "src/features/**/*.{ts,tsx}",
     ],
     rules: {
       "no-restricted-imports": [

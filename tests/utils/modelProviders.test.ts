@@ -7,7 +7,7 @@ import {
   getProviderConfig,
   identifyProvider,
   PROVIDER_CONFIGS,
-} from "~/src/services/models/utils/modelProviders"
+} from "~/services/models/utils/modelProviders"
 
 describe("modelProviders utils", () => {
   describe("identifyProvider", () => {

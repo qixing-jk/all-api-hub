@@ -1,22 +1,22 @@
 import { t } from "i18next"
 
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
-import { TURNSTILE_DEFAULT_QUERY_PARAM_NAME } from "~/src/constants/turnstile"
-import { accountStorage } from "~/src/services/accounts/accountStorage"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { TURNSTILE_DEFAULT_QUERY_PARAM_NAME } from "~/constants/turnstile"
+import { accountStorage } from "~/services/accounts/accountStorage"
 import {
   DEFAULT_PREFERENCES,
   TempWindowFallbackPreferences,
   userPreferences,
-} from "~/src/services/preferences/userPreferences"
-import { getSiteType } from "~/src/services/siteDetection/detectSiteType"
-import { AuthTypeEnum } from "~/src/types"
+} from "~/services/preferences/userPreferences"
+import { getSiteType } from "~/services/siteDetection/detectSiteType"
+import { AuthTypeEnum } from "~/types"
 import type {
   TempWindowFetch,
   TempWindowFetchParams,
   TempWindowTurnstileFetch,
   TempWindowTurnstileFetchParams,
   TempWindowTurnstileMeta,
-} from "~/src/types/tempWindowFetch"
+} from "~/types/tempWindowFetch"
 import {
   createTab,
   createWindow,
@@ -25,25 +25,25 @@ import {
   onTabRemoved,
   onWindowRemoved,
   removeTabOrWindow,
-} from "~/src/utils/browser/browserApi"
+} from "~/utils/browser/browserApi"
 import {
   addAuthMethodHeader,
   AUTH_MODE,
   COOKIE_SESSION_OVERRIDE_HEADER_NAME,
   getCookieHeaderForUrl,
-} from "~/src/utils/browser/cookieHelper"
-import { mergeCookieHeaders } from "~/src/utils/browser/cookieString"
+} from "~/utils/browser/cookieHelper"
+import { mergeCookieHeaders } from "~/utils/browser/cookieString"
 import {
   applyTempWindowCookieRule,
   removeTempWindowCookieRule,
-} from "~/src/utils/browser/dnrCookieInjector"
-import { isProtectionBypassFirefoxEnv } from "~/src/utils/browser/protectionBypass"
-import { resolveAuthTypeEnum } from "~/src/utils/core/authType"
-import { getErrorMessage } from "~/src/utils/core/error"
-import { safeRandomUUID } from "~/src/utils/core/identifier"
-import { createLogger } from "~/src/utils/core/logger"
-import { sanitizeUrlForLog } from "~/src/utils/core/sanitizeUrlForLog"
-import { appendQueryParam } from "~/src/utils/core/url"
+} from "~/utils/browser/dnrCookieInjector"
+import { isProtectionBypassFirefoxEnv } from "~/utils/browser/protectionBypass"
+import { resolveAuthTypeEnum } from "~/utils/core/authType"
+import { getErrorMessage } from "~/utils/core/error"
+import { safeRandomUUID } from "~/utils/core/identifier"
+import { createLogger } from "~/utils/core/logger"
+import { sanitizeUrlForLog } from "~/utils/core/sanitizeUrlForLog"
+import { appendQueryParam } from "~/utils/core/url"
 
 /**
  * Unified logger scoped to background temp-window lifecycle and fetch helpers.

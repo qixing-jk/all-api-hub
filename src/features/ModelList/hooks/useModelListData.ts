@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react"
 
-import { useAccountData } from "~/src/hooks/useAccountData"
+import { useAccountData } from "~/hooks/useAccountData"
 
 import { useFilteredModels } from "./useFilteredModels"
 import { useModelData } from "./useModelData"

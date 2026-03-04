@@ -1,8 +1,8 @@
 import { ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline"
 import { useCallback } from "react"
 
-import { Button } from "~/src/components/ui"
-import { openManagedSiteChannelsForChannel } from "~/src/utils/navigation"
+import { Button } from "~/components/ui"
+import { openManagedSiteChannelsForChannel } from "~/utils/navigation"
 
 interface ManagedSiteChannelLinkButtonProps {
   channelId: number

@@ -1,1 +1,1 @@
-export * from "~/src/features/UsageAnalytics/charts/dayKeys"
+export * from "~/features/UsageAnalytics/charts/dayKeys"

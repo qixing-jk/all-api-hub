@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next"
 
-import { Heading3, SearchableSelect } from "~/src/components/ui"
-import type { DisplaySiteData } from "~/src/types"
+import { Heading3, SearchableSelect } from "~/components/ui"
+import type { DisplaySiteData } from "~/types"
 
 interface AccountSelectorProps {
   selectedAccount: string

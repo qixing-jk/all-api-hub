@@ -1,7 +1,7 @@
 import type { FC } from "react"
 import { useTranslation } from "react-i18next"
 
-import type { DisplaySiteData } from "~/src/types"
+import type { DisplaySiteData } from "~/types"
 
 const AccountInfoDetail: FC<{
   label: string

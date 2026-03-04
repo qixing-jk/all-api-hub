@@ -1,14 +1,14 @@
 import { http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   LDOH_ORIGIN,
   LDOH_SITES_ENDPOINT,
-} from "~/src/services/integrations/ldohSiteLookup/constants"
-import { DEFAULT_PREFERENCES } from "~/src/services/preferences/userPreferences"
-import { server } from "~/tests/msw/server"
-import { buildTempWindowPrefs } from "~/tests/test-utils/factories"
+} from "~/services/integrations/ldohSiteLookup/constants"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import { server } from "~~/tests/msw/server"
+import { buildTempWindowPrefs } from "~~/tests/test-utils/factories"
 
 vi.mock("~/entrypoints/background/tempWindowPool", () => ({
   handleTempWindowFetch: vi.fn(),
@@ -21,7 +21,7 @@ vi.mock("~/services/integrations/ldohSiteLookup/cache", () => ({
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/src/utils/browser/browserApi")>()
+    await importOriginal<typeof import("~/utils/browser/browserApi")>()
   return {
     ...actual,
     sendRuntimeMessage: vi.fn(),
@@ -30,9 +30,7 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
 
 vi.mock("~/utils/browser/protectionBypass", async (importOriginal) => {
   const actual =
-    await importOriginal<
-      typeof import("~/src/utils/browser/protectionBypass")
-    >()
+    await importOriginal<typeof import("~/utils/browser/protectionBypass")>()
   return {
     ...actual,
     isProtectionBypassFirefoxEnv: () => false,
@@ -42,7 +40,7 @@ vi.mock("~/utils/browser/protectionBypass", async (importOriginal) => {
 vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
   const actual =
     await importOriginal<
-      typeof import("~/src/services/preferences/userPreferences")
+      typeof import("~/services/preferences/userPreferences")
     >()
   return {
     ...actual,
@@ -65,25 +63,23 @@ describe("ldohSiteLookup background refresh", () => {
     vi.resetModules()
 
     const { userPreferences } = await import(
-      "~/src/services/preferences/userPreferences"
+      "~/services/preferences/userPreferences"
     )
     vi.mocked(userPreferences.getPreferences).mockResolvedValue({
       ...DEFAULT_PREFERENCES,
       tempWindowFallback: buildTempWindowPrefs(),
     })
 
-    const { sendRuntimeMessage } = await import(
-      "~/src/utils/browser/browserApi"
-    )
+    const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
     vi.mocked(sendRuntimeMessage).mockImplementation(() => {
       throw new Error("temp-window fallback invoked")
     })
 
     const { writeLdohSiteListCache } = await import(
-      "~/src/services/integrations/ldohSiteLookup/cache"
+      "~/services/integrations/ldohSiteLookup/cache"
     )
     const { refreshLdohSiteListCache } = await import(
-      "~/src/services/integrations/ldohSiteLookup/background"
+      "~/services/integrations/ldohSiteLookup/background"
     )
 
     server.use(
@@ -106,25 +102,23 @@ describe("ldohSiteLookup background refresh", () => {
     vi.resetModules()
 
     const { userPreferences } = await import(
-      "~/src/services/preferences/userPreferences"
+      "~/services/preferences/userPreferences"
     )
     vi.mocked(userPreferences.getPreferences).mockResolvedValue({
       ...DEFAULT_PREFERENCES,
       tempWindowFallback: buildTempWindowPrefs(),
     })
 
-    const { sendRuntimeMessage } = await import(
-      "~/src/utils/browser/browserApi"
-    )
+    const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
     vi.mocked(sendRuntimeMessage).mockImplementation(() => {
       throw new Error("temp-window fallback invoked")
     })
 
     const { writeLdohSiteListCache } = await import(
-      "~/src/services/integrations/ldohSiteLookup/cache"
+      "~/services/integrations/ldohSiteLookup/cache"
     )
     const { refreshLdohSiteListCache } = await import(
-      "~/src/services/integrations/ldohSiteLookup/background"
+      "~/services/integrations/ldohSiteLookup/background"
     )
 
     server.use(
@@ -147,16 +141,14 @@ describe("ldohSiteLookup background refresh", () => {
     vi.resetModules()
 
     const { userPreferences } = await import(
-      "~/src/services/preferences/userPreferences"
+      "~/services/preferences/userPreferences"
     )
     vi.mocked(userPreferences.getPreferences).mockResolvedValue({
       ...DEFAULT_PREFERENCES,
       tempWindowFallback: buildTempWindowPrefs(),
     })
 
-    const { sendRuntimeMessage } = await import(
-      "~/src/utils/browser/browserApi"
-    )
+    const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
     vi.mocked(sendRuntimeMessage).mockResolvedValue({
       success: true,
       status: 200,
@@ -170,7 +162,7 @@ describe("ldohSiteLookup background refresh", () => {
     })
 
     const { writeLdohSiteListCache } = await import(
-      "~/src/services/integrations/ldohSiteLookup/cache"
+      "~/services/integrations/ldohSiteLookup/cache"
     )
     vi.mocked(writeLdohSiteListCache).mockResolvedValue({
       version: 1,
@@ -180,7 +172,7 @@ describe("ldohSiteLookup background refresh", () => {
     })
 
     const { refreshLdohSiteListCache } = await import(
-      "~/src/services/integrations/ldohSiteLookup/background"
+      "~/services/integrations/ldohSiteLookup/background"
     )
 
     server.use(

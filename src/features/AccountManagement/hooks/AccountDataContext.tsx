@@ -15,13 +15,13 @@ import {
   DATA_TYPE_BALANCE,
   DATA_TYPE_CONSUMPTION,
   DATA_TYPE_INCOME,
-} from "~/src/constants"
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
-import { useUserPreferencesContext } from "~/src/contexts/UserPreferencesContext"
-import { accountStorage } from "~/src/services/accounts/accountStorage"
-import { createDynamicSortComparator } from "~/src/services/preferences/utils/sortingPriority"
-import { searchAccounts } from "~/src/services/search/accountSearch"
-import { tagStorage } from "~/src/services/tags/tagStorage"
+} from "~/constants"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { accountStorage } from "~/services/accounts/accountStorage"
+import { createDynamicSortComparator } from "~/services/preferences/utils/sortingPriority"
+import { searchAccounts } from "~/services/search/accountSearch"
+import { tagStorage } from "~/services/tags/tagStorage"
 import type {
   AccountStats,
   CurrencyAmount,
@@ -33,8 +33,8 @@ import type {
   SortOrder,
   Tag,
   TagStore,
-} from "~/src/types"
-import { SortingCriteriaType } from "~/src/types/sorting"
+} from "~/types"
+import { SortingCriteriaType } from "~/types/sorting"
 import {
   getActiveTabs,
   getAllTabs,
@@ -42,8 +42,8 @@ import {
   onTabActivated,
   onTabRemoved,
   onTabUpdated,
-} from "~/src/utils/browser/browserApi"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/utils/browser/browserApi"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to account data context and refresh orchestration.

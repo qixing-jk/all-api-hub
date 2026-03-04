@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { VELOERA } from "~/src/constants/siteType"
-import { getApiService } from "~/src/services/apiService"
-import { ModelSyncService } from "~/src/services/models/modelSync/modelSyncService"
-import type { ChannelModelFilterRule } from "~/src/types/channelModelFilters"
+import { VELOERA } from "~/constants/siteType"
+import { getApiService } from "~/services/apiService"
+import { ModelSyncService } from "~/services/models/modelSync/modelSyncService"
+import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 
 const listAllChannelsMock = vi.fn()
 const fetchChannelModelsMock = vi.fn()

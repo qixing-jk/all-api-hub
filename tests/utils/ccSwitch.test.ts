@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { openInCCSwitch } from "~/src/services/integrations/ccSwitch"
-import type { ApiToken } from "~/src/types"
-import { buildDisplaySiteData } from "~/tests/test-utils/factories"
+import { openInCCSwitch } from "~/services/integrations/ccSwitch"
+import type { ApiToken } from "~/types"
+import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 
 vi.mock("react-hot-toast", () => ({
   default: {

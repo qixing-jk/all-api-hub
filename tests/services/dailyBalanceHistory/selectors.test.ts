@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest"
 
-import { UI_CONSTANTS } from "~/src/constants/ui"
+import { UI_CONSTANTS } from "~/constants/ui"
 import {
   buildAccountRangeSummaries,
   buildAggregatedDailyBalanceMoneySeries,
   buildAggregatedDailyBalanceSeries,
   buildPerAccountDailyBalanceMoneySeries,
-} from "~/src/services/history/dailyBalanceHistory/selectors"
-import type { DailyBalanceHistoryStore } from "~/src/types/dailyBalanceHistory"
-import { DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION } from "~/src/types/dailyBalanceHistory"
+} from "~/services/history/dailyBalanceHistory/selectors"
+import type { DailyBalanceHistoryStore } from "~/types/dailyBalanceHistory"
+import { DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION } from "~/types/dailyBalanceHistory"
 
 const createStore = (
   snapshotsByAccountId: DailyBalanceHistoryStore["snapshotsByAccountId"],

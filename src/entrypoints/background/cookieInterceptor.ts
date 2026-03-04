@@ -1,15 +1,15 @@
 import {
   ACCOUNT_STORAGE_KEYS,
   accountStorage,
-} from "~/src/services/accounts/accountStorage"
-import { AccountStorageConfig, type SiteAccount } from "~/src/types"
-import { isSameStringSet } from "~/src/utils"
+} from "~/services/accounts/accountStorage"
+import { AccountStorageConfig, type SiteAccount } from "~/types"
+import { isSameStringSet } from "~/utils"
 import {
   checkCookieInterceptorRequirement,
   registerWebRequestInterceptor,
   setupWebRequestInterceptor,
-} from "~/src/utils/browser/cookieHelper"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/utils/browser/cookieHelper"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to the background cookie interceptor lifecycle.

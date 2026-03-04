@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 
-import { accountStorage } from "~/src/services/accounts/accountStorage"
+import { accountStorage } from "~/services/accounts/accountStorage"
 import type {
   AccountStats,
   CurrencyAmount,
   CurrencyAmountMap,
   DisplaySiteData,
   SiteAccount,
-} from "~/src/types"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/types"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to account data loading and refresh hooks.

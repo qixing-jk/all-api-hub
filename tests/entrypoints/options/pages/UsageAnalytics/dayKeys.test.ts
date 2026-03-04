@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { listDayKeysInRange } from "~/src/entrypoints/options/pages/UsageAnalytics/dayKeys"
+import { listDayKeysInRange } from "~/entrypoints/options/pages/UsageAnalytics/dayKeys"
 
 describe("UsageAnalytics dayKeys", () => {
   it("returns [] when start or end is an invalid calendar day", () => {

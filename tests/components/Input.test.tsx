@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 
-import { Input } from "~/src/components/ui/input"
-import { render, screen } from "~/tests/test-utils/render"
+import { Input } from "~/components/ui/input"
+import { render, screen } from "~~/tests/test-utils/render"
 
 describe("Input", () => {
   it("forwards numeric size to the native input element", async () => {

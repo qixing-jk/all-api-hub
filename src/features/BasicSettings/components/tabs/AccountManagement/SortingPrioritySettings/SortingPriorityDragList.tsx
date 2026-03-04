@@ -13,7 +13,7 @@ import {
 } from "@dnd-kit/modifiers"
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
 
-import type { SortingFieldConfig } from "~/src/types/sorting"
+import type { SortingFieldConfig } from "~/types/sorting"
 
 import { SortingCriteriaItem } from "./SortingCriteriaItem"
 

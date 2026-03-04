@@ -6,14 +6,14 @@ import {
 import React from "react"
 import { useTranslation } from "react-i18next"
 
-import { Badge } from "~/src/components/ui"
-import type { ModelPricing } from "~/src/services/apiService/common/type"
+import { Badge } from "~/components/ui"
+import type { ModelPricing } from "~/services/apiService/common/type"
 import {
   formatPrice,
   getEndpointTypesText,
   isTokenBillingType,
   type CalculatedPrice,
-} from "~/src/services/models/utils/modelPricing"
+} from "~/services/models/utils/modelPricing"
 
 interface ModelItemDetailsProps {
   model: ModelPricing

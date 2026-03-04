@@ -3,9 +3,9 @@ import {
   DATA_TYPE_CASHFLOW,
   DATA_TYPE_CONSUMPTION,
   DATA_TYPE_INCOME,
-} from "~/src/constants"
-import { TempWindowHealthStatusCode } from "~/src/types/tempWindow"
-import type { TurnstilePreTrigger } from "~/src/types/turnstile"
+} from "~/constants"
+import { TempWindowHealthStatusCode } from "~/types/tempWindow"
+import type { TurnstilePreTrigger } from "~/types/turnstile"
 
 export enum SiteHealthStatus {
   Healthy = "healthy",
@@ -459,6 +459,6 @@ export enum AuthTypeEnum {
   Cookie = "cookie",
   None = "none",
 }
-export type { AccountToken } from "~/src/types/accountToken"
-export type { TempWindowHealthStatusCode } from "~/src/types/tempWindow"
-export { TEMP_WINDOW_HEALTH_STATUS_CODES } from "~/src/types/tempWindow"
+export type { AccountToken } from "~/types/accountToken"
+export type { TempWindowHealthStatusCode } from "~/types/tempWindow"
+export { TEMP_WINDOW_HEALTH_STATUS_CODES } from "~/types/tempWindow"

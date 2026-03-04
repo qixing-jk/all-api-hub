@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { UI_CONSTANTS } from "~/src/constants/ui"
-import type { AccountToken } from "~/src/types"
+import { UI_CONSTANTS } from "~/constants/ui"
+import type { AccountToken } from "~/types"
 
 // We duplicate some types here to avoid circular dependencies
 // if we were to import them directly from the AddTokenDialog component.

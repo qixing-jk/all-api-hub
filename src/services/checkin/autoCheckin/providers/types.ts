@@ -1,4 +1,4 @@
-import type { CheckinResultStatus } from "~/src/types/autoCheckin"
+import type { CheckinResultStatus } from "~/types/autoCheckin"
 
 /**
  * Normalized provider result consumed by the auto check-in scheduler/UI.

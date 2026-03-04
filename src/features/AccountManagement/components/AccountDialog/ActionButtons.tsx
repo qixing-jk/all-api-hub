@@ -6,8 +6,8 @@ import {
 } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
-import { Button } from "~/src/components/ui"
-import { DIALOG_MODES, type DialogMode } from "~/src/constants/dialogModes"
+import { Button } from "~/components/ui"
+import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 
 interface ActionButtonsProps {
   mode: DialogMode

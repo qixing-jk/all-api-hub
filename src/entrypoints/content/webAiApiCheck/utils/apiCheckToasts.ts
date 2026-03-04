@@ -1,8 +1,8 @@
 import * as React from "react"
 import toast from "react-hot-toast/headless"
 
-import { ensureRedemptionToastUi } from "~/src/entrypoints/content/shared/uiRoot"
-import { ApiCheckConfirmToast } from "~/src/entrypoints/content/webAiApiCheck/components/ApiCheckConfirmToast"
+import { ensureRedemptionToastUi } from "~/entrypoints/content/shared/uiRoot"
+import { ApiCheckConfirmToast } from "~/entrypoints/content/webAiApiCheck/components/ApiCheckConfirmToast"
 
 /**
  * Show the top-right confirmation toast used by auto-detect.

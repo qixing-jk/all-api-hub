@@ -1,7 +1,7 @@
 /**
  * Returns the rendered document.title from the current tab context.
  */
-import { createLogger } from "~/src/utils/core/logger"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to temp window rendered-title message handling.

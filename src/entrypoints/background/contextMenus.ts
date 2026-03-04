@@ -1,9 +1,9 @@
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   userPreferences,
   type UserPreferences,
-} from "~/src/services/preferences/userPreferences"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/services/preferences/userPreferences"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to background context menu wiring.

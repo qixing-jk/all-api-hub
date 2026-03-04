@@ -3,11 +3,11 @@ import { useCallback, useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import ChannelFiltersEditor from "~/src/components/ChannelFiltersEditor"
-import { Modal } from "~/src/components/ui"
-import { Button } from "~/src/components/ui/button"
-import type { ChannelModelFilterRule } from "~/src/types/channelModelFilters"
-import { getErrorMessage } from "~/src/utils/core/error"
+import ChannelFiltersEditor from "~/components/ChannelFiltersEditor"
+import { Modal } from "~/components/ui"
+import { Button } from "~/components/ui/button"
+import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
+import { getErrorMessage } from "~/utils/core/error"
 
 import type { ChannelRow } from "../types"
 import {

@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
-import RedemptionAssistSettings from "~/src/features/BasicSettings/components/tabs/CheckinRedeem/RedemptionAssistSettings"
-import WebAiApiCheckSettings from "~/src/features/BasicSettings/components/tabs/WebAiApiCheck/WebAiApiCheckSettings"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
+import RedemptionAssistSettings from "~/features/BasicSettings/components/tabs/CheckinRedeem/RedemptionAssistSettings"
+import WebAiApiCheckSettings from "~/features/BasicSettings/components/tabs/WebAiApiCheck/WebAiApiCheckSettings"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
-} from "~/src/services/preferences/userPreferences"
-import * as browserApi from "~/src/utils/browser/browserApi"
-import { fireEvent, render, screen, waitFor } from "~/tests/test-utils/render"
+} from "~/services/preferences/userPreferences"
+import * as browserApi from "~/utils/browser/browserApi"
+import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 vi.mock("react-hot-toast", () => {
   const toast = Object.assign(vi.fn(), {

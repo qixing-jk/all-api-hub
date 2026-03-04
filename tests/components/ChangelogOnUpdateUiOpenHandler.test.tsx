@@ -1,16 +1,16 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import ChangelogOnUpdateUiOpenHandler from "~/src/components/ChangelogOnUpdateUiOpenHandler"
+import ChangelogOnUpdateUiOpenHandler from "~/components/ChangelogOnUpdateUiOpenHandler"
 import {
   UpdateLogDialogContainer,
   UpdateLogDialogProvider,
-} from "~/src/components/dialogs/UpdateLogDialog"
+} from "~/components/dialogs/UpdateLogDialog"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
-} from "~/src/services/preferences/userPreferences"
-import { changelogOnUpdateState } from "~/src/services/updates/changelogOnUpdateState"
-import { render, screen, waitFor } from "~/tests/test-utils/render"
+} from "~/services/preferences/userPreferences"
+import { changelogOnUpdateState } from "~/services/updates/changelogOnUpdateState"
+import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 describe("ChangelogOnUpdateUiOpenHandler", () => {
   afterEach(() => {

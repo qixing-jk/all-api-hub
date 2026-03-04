@@ -1,8 +1,8 @@
 import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog"
 import * as React from "react"
 
-import { buttonVariants } from "~/src/components/ui/button"
-import { cn } from "~/src/lib/utils"
+import { buttonVariants } from "~/components/ui/button"
+import { cn } from "~/lib/utils"
 
 /**
  * Root alert dialog container that wires Radix primitives into our design tokens.

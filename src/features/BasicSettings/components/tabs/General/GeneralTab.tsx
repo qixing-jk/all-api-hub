@@ -1,15 +1,9 @@
 import { LanguageIcon } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
-import { LanguageSwitcher } from "~/src/components/LanguageSwitcher"
-import {
-  BodySmall,
-  Card,
-  CardItem,
-  CardList,
-  Heading3,
-} from "~/src/components/ui"
-import ThemeToggle from "~/src/entrypoints/options/components/ThemeToggle"
+import { LanguageSwitcher } from "~/components/LanguageSwitcher"
+import { BodySmall, Card, CardItem, CardList, Heading3 } from "~/components/ui"
+import ThemeToggle from "~/entrypoints/options/components/ThemeToggle"
 
 import ActionClickBehaviorSettings from "./ActionClickBehaviorSettings"
 import ChangelogOnUpdateSettings from "./ChangelogOnUpdateSettings"

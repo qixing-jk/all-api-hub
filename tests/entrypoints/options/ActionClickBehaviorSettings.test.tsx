@@ -1,19 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { useUserPreferencesContext } from "~/src/contexts/UserPreferencesContext"
-import ActionClickBehaviorSettings from "~/src/features/BasicSettings/components/tabs/General/ActionClickBehaviorSettings"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import ActionClickBehaviorSettings from "~/features/BasicSettings/components/tabs/General/ActionClickBehaviorSettings"
 import {
   getSidePanelSupport,
   type SidePanelSupport,
-} from "~/src/utils/browser/browserApi"
-import { showResultToast, showUpdateToast } from "~/src/utils/core/toastHelpers"
-import { fireEvent, render, screen, waitFor } from "~/tests/test-utils/render"
+} from "~/utils/browser/browserApi"
+import { showResultToast, showUpdateToast } from "~/utils/core/toastHelpers"
+import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
   const actual =
-    await importOriginal<
-      typeof import("~/src/contexts/UserPreferencesContext")
-    >()
+    await importOriginal<typeof import("~/contexts/UserPreferencesContext")>()
   return {
     ...actual,
     useUserPreferencesContext: vi.fn(),
@@ -22,7 +20,7 @@ vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/src/utils/browser/browserApi")>()
+    await importOriginal<typeof import("~/utils/browser/browserApi")>()
   return {
     ...actual,
     getSidePanelSupport: vi.fn(),

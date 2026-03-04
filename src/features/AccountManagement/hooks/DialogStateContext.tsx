@@ -10,10 +10,10 @@ import {
 } from "react"
 import ReactDOM from "react-dom/client"
 
-import { DIALOG_MODES, type DialogMode } from "~/src/constants/dialogModes"
-import AccountDialog from "~/src/features/AccountManagement/components/AccountDialog"
-import { useAccountDataContext } from "~/src/features/AccountManagement/hooks/AccountDataContext"
-import type { DisplaySiteData } from "~/src/types"
+import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
+import AccountDialog from "~/features/AccountManagement/components/AccountDialog"
+import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
+import type { DisplaySiteData } from "~/types"
 
 interface DialogOptions {
   mode: DialogMode

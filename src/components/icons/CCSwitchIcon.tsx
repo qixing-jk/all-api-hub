@@ -1,9 +1,9 @@
-import ccSwitchLogo from "~/src/assets/cc-switch-logo.png"
+import ccSwitchLogo from "~/assets/cc-switch-logo.png"
 import {
   ICON_SIZE_CLASSNAME,
   type IconSize,
-} from "~/src/components/icons/iconSizes"
-import { cn } from "~/src/lib/utils"
+} from "~/components/icons/iconSizes"
+import { cn } from "~/lib/utils"
 
 interface CCSwitchIconProps {
   size?: IconSize

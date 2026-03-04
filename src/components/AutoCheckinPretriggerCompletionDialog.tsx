@@ -1,13 +1,13 @@
 import { useTranslation } from "react-i18next"
 
-import { Button } from "~/src/components/ui"
-import { Modal } from "~/src/components/ui/Dialog/Modal"
-import { MENU_ITEM_IDS } from "~/src/constants/optionsMenuIds"
-import type { AutoCheckinRunSummary } from "~/src/types/autoCheckin"
+import { Button } from "~/components/ui"
+import { Modal } from "~/components/ui/Dialog/Modal"
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import type { AutoCheckinRunSummary } from "~/types/autoCheckin"
 import {
   navigateWithinOptionsPage,
   openAutoCheckinPage,
-} from "~/src/utils/navigation"
+} from "~/utils/navigation"
 
 interface AutoCheckinPretriggerCompletionDialogProps {
   isOpen: boolean

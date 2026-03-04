@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Button, Modal } from "~/src/components/ui"
-import { useUserPreferencesContext } from "~/src/contexts/UserPreferencesContext"
-import { createTab } from "~/src/utils/browser/browserApi"
-import { getErrorMessage } from "~/src/utils/core/error"
-import { createLogger } from "~/src/utils/core/logger"
-import { getDocsChangelogUrl } from "~/src/utils/navigation/docsLinks"
+import { Button, Modal } from "~/components/ui"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { createTab } from "~/utils/browser/browserApi"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
+import { getDocsChangelogUrl } from "~/utils/navigation/docsLinks"
 
 export interface UpdateLogDialogProps {
   isOpen: boolean

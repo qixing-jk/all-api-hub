@@ -17,11 +17,11 @@ import {
   Caption,
   CardItem,
   IconButton,
-} from "~/src/components/ui"
-import { useDevice } from "~/src/contexts/DeviceContext"
-import { AccountActionMenuItem } from "~/src/features/AccountManagement/components/AccountActionButtons/AccountActionMenuItem"
-import { cn } from "~/src/lib/utils"
-import type { SiteBookmark } from "~/src/types"
+} from "~/components/ui"
+import { useDevice } from "~/contexts/DeviceContext"
+import { AccountActionMenuItem } from "~/features/AccountManagement/components/AccountActionButtons/AccountActionMenuItem"
+import { cn } from "~/lib/utils"
+import type { SiteBookmark } from "~/types"
 
 export interface BookmarkListItemProps {
   bookmark: SiteBookmark & { tags?: string[] }

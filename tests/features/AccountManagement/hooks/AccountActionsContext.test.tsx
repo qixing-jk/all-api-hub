@@ -2,11 +2,11 @@ import { act, render, waitFor } from "@testing-library/react"
 import { useEffect } from "react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   AccountActionsProvider,
   useAccountActionsContext,
-} from "~/src/features/AccountManagement/hooks/AccountActionsContext"
+} from "~/features/AccountManagement/hooks/AccountActionsContext"
 
 // Verifies bulk external check-in behavior (unchecked-only vs open-all) and toast feedback.
 const { mockLoadAccountData, mockSendRuntimeMessage, mockToast } = vi.hoisted(
@@ -32,7 +32,7 @@ vi.mock("~/services/accounts/accountStorage", () => ({
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/src/utils/browser/browserApi")>()
+    await importOriginal<typeof import("~/utils/browser/browserApi")>()
   return { ...actual, sendRuntimeMessage: mockSendRuntimeMessage }
 })
 

@@ -2,7 +2,7 @@
  * Pagination utilities for API calls
  */
 
-import { createLogger } from "~/src/utils/core/logger"
+import { createLogger } from "~/utils/core/logger"
 
 import { REQUEST_CONFIG } from "./constant"
 

@@ -1,3 +1,3 @@
-import AutoCheckin from "~/src/features/AutoCheckin"
+import AutoCheckin from "~/features/AutoCheckin"
 
 export default AutoCheckin

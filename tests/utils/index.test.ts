@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { deepOverride, isArraysEqual, isNotEmptyArray } from "~/src/utils"
+import { deepOverride, isArraysEqual, isNotEmptyArray } from "~/utils"
 
 describe("utils index exports", () => {
   describe("isNotEmptyArray", () => {

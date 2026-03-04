@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next"
 
-import { Badge, Button, Heading3, SearchableSelect } from "~/src/components/ui"
-import type { AccountToken, DisplaySiteData } from "~/src/types"
+import { Badge, Button, Heading3, SearchableSelect } from "~/components/ui"
+import type { AccountToken, DisplaySiteData } from "~/types"
 
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "../constants"
 

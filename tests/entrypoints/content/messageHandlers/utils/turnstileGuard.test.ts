@@ -4,7 +4,7 @@ import {
   detectTurnstileWidget,
   maybeAutoStartTurnstile,
   waitForTurnstileToken,
-} from "~/src/entrypoints/content/messageHandlers/utils/turnstileGuard"
+} from "~/entrypoints/content/messageHandlers/utils/turnstileGuard"
 
 /**
  *

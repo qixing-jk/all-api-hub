@@ -1,19 +1,19 @@
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
-import { accountStorage } from "~/src/services/accounts/accountStorage"
-import { userPreferences } from "~/src/services/preferences/userPreferences"
-import type { UsageHistoryPreferences } from "~/src/types/usageHistory"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { accountStorage } from "~/services/accounts/accountStorage"
+import { userPreferences } from "~/services/preferences/userPreferences"
+import type { UsageHistoryPreferences } from "~/types/usageHistory"
 import {
   DEFAULT_USAGE_HISTORY_PREFERENCES,
   USAGE_HISTORY_SCHEDULE_MODE,
-} from "~/src/types/usageHistory"
+} from "~/types/usageHistory"
 import {
   clearAlarm,
   createAlarm,
   hasAlarmsAPI,
   onAlarm,
-} from "~/src/utils/browser/browserApi"
-import { getErrorMessage } from "~/src/utils/core/error"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/utils/browser/browserApi"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 import { USAGE_HISTORY_ALARM_NAME } from "./constants"
 import { usageHistoryStorage } from "./storage"

@@ -4,15 +4,15 @@ import {
   TURNSTILE_IFRAME_SELECTOR,
   TURNSTILE_RESPONSE_FIELD_SELECTOR,
   TURNSTILE_SCRIPT_SELECTOR,
-} from "~/src/constants/turnstile"
+} from "~/constants/turnstile"
 import type {
   TurnstilePreTrigger,
   TurnstileTokenWaitResult,
   TurnstileTokenWaitStatus,
   TurnstileWidgetDetection,
-} from "~/src/types/turnstile"
-import { createLogger } from "~/src/utils/core/logger"
-import { sanitizeUrlForLog } from "~/src/utils/core/sanitizeUrlForLog"
+} from "~/types/turnstile"
+import { createLogger } from "~/utils/core/logger"
+import { sanitizeUrlForLog } from "~/utils/core/sanitizeUrlForLog"
 
 /**
  * Unified logger scoped to Turnstile detection/auto-start helpers.

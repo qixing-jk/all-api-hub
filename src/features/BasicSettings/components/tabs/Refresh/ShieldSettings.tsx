@@ -2,7 +2,7 @@ import { StarIcon } from "@heroicons/react/24/outline"
 import { useCallback, useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { SettingSection } from "~/src/components/SettingSection"
+import { SettingSection } from "~/components/SettingSection"
 import {
   Alert,
   BodySmall,
@@ -13,15 +13,15 @@ import {
   Checkbox,
   Muted,
   Switch,
-} from "~/src/components/ui"
-import { useUserPreferencesContext } from "~/src/contexts/UserPreferencesContext"
+} from "~/components/ui"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import {
   getProtectionBypassUiVariant,
   isProtectionBypassFirefoxEnv,
   ProtectionBypassUiVariants,
-} from "~/src/utils/browser/protectionBypass"
-import { canUseTempWindowFetch } from "~/src/utils/browser/tempWindowFetch"
-import { openSettingsTab } from "~/src/utils/navigation"
+} from "~/utils/browser/protectionBypass"
+import { canUseTempWindowFetch } from "~/utils/browser/tempWindowFetch"
+import { openSettingsTab } from "~/utils/navigation"
 
 /**
  * Settings section for shield/temp-window fallback controls and permissions.

@@ -1,3 +1,3 @@
-import KeyManagement from "~/src/features/KeyManagement"
+import KeyManagement from "~/features/KeyManagement"
 
 export default KeyManagement

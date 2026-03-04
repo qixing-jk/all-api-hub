@@ -3,7 +3,7 @@ import { useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { SettingSection } from "~/src/components/SettingSection"
+import { SettingSection } from "~/components/SettingSection"
 import {
   Button,
   Card,
@@ -11,17 +11,17 @@ import {
   CardList,
   Input,
   Switch,
-} from "~/src/components/ui"
-import { MENU_ITEM_IDS } from "~/src/constants/optionsMenuIds"
-import { useUserPreferencesContext } from "~/src/contexts/UserPreferencesContext"
-import { DEFAULT_PREFERENCES } from "~/src/services/preferences/userPreferences"
+} from "~/components/ui"
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import {
   AUTO_CHECKIN_SCHEDULE_MODE,
   AutoCheckinPreferences,
   AutoCheckinScheduleMode,
-} from "~/src/types/autoCheckin"
-import { createLogger } from "~/src/utils/core/logger"
-import { navigateWithinOptionsPage } from "~/src/utils/navigation"
+} from "~/types/autoCheckin"
+import { createLogger } from "~/utils/core/logger"
+import { navigateWithinOptionsPage } from "~/utils/navigation"
 
 /**
  * Unified logger scoped to the Basic Settings auto check-in section.

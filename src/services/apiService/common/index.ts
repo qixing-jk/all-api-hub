@@ -1,14 +1,11 @@
 import i18next from "i18next"
 
-import { UI_CONSTANTS } from "~/src/constants/ui"
-import { accountStorage } from "~/src/services/accounts/accountStorage"
-import { normalizeApiTokenKey } from "~/src/services/apiService/common/apiKey"
-import { REQUEST_CONFIG } from "~/src/services/apiService/common/constant"
-import {
-  API_ERROR_CODES,
-  ApiError,
-} from "~/src/services/apiService/common/errors"
-import { fetchAllItems } from "~/src/services/apiService/common/pagination"
+import { UI_CONSTANTS } from "~/constants/ui"
+import { accountStorage } from "~/services/accounts/accountStorage"
+import { normalizeApiTokenKey } from "~/services/apiService/common/apiKey"
+import { REQUEST_CONFIG } from "~/services/apiService/common/constant"
+import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
+import { fetchAllItems } from "~/services/apiService/common/pagination"
 import {
   AccessTokenInfo,
   AccountData,
@@ -29,28 +26,28 @@ import {
   TodayUsageData,
   UserGroupInfo,
   UserInfo,
-} from "~/src/services/apiService/common/type"
+} from "~/services/apiService/common/type"
 import {
   aggregateUsageData,
   extractAmount,
   fetchApi,
   fetchApiData,
   getTodayTimestampRange,
-} from "~/src/services/apiService/common/utils"
+} from "~/services/apiService/common/utils"
 import {
   AuthTypeEnum,
   CheckInConfig,
   SiteHealthStatus,
   TEMP_WINDOW_HEALTH_STATUS_CODES,
   type ApiToken,
-} from "~/src/types"
+} from "~/types"
 import type {
   CreateChannelPayload,
   ManagedSiteChannel,
   ManagedSiteChannelListData,
   UpdateChannelPayload,
-} from "~/src/types/managedSite"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/types/managedSite"
+import { createLogger } from "~/utils/core/logger"
 
 const CHANNEL_API_BASE = "/api/channel/"
 

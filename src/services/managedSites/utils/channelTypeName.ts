@@ -1,5 +1,5 @@
-import { ChannelType } from "~/src/constants"
-import { ChannelTypeNames } from "~/src/constants/managedSite"
+import { ChannelType } from "~/constants"
+import { ChannelTypeNames } from "~/constants/managedSite"
 
 /**
  * Resolve a user-facing name for the provided channel type.

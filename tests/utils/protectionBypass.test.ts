@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { isFirefox } from "~/src/utils/browser"
+import { isFirefox } from "~/utils/browser"
 import {
   getProtectionBypassUiVariant,
   isProtectionBypassFirefoxEnv,
   ProtectionBypassUiVariants,
   shouldUseCookieInterceptorForProtectionBypass,
-} from "~/src/utils/browser/protectionBypass"
+} from "~/utils/browser/protectionBypass"
 
 vi.mock("~/utils/browser", () => ({
   isFirefox: vi.fn(),

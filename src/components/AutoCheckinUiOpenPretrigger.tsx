@@ -1,5 +1,5 @@
-import { AutoCheckinPretriggerCompletionDialog } from "~/src/components/AutoCheckinPretriggerCompletionDialog"
-import { useAutoCheckinUiOpenPretrigger } from "~/src/hooks/useAutoCheckinUiOpenPretrigger"
+import { AutoCheckinPretriggerCompletionDialog } from "~/components/AutoCheckinPretriggerCompletionDialog"
+import { useAutoCheckinUiOpenPretrigger } from "~/hooks/useAutoCheckinUiOpenPretrigger"
 
 /**
  * Global UI helper that pre-triggers today's scheduled daily auto check-in when

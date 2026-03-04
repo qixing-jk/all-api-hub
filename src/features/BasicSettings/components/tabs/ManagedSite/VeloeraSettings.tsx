@@ -2,7 +2,7 @@ import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline"
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { SettingSection } from "~/src/components/SettingSection"
+import { SettingSection } from "~/components/SettingSection"
 import {
   Button,
   Card,
@@ -10,12 +10,12 @@ import {
   CardList,
   IconButton,
   Input,
-} from "~/src/components/ui"
-import { getSiteApiRouter, VELOERA } from "~/src/constants/siteType"
-import { useUserPreferencesContext } from "~/src/contexts/UserPreferencesContext"
-import { createTab } from "~/src/utils/browser/browserApi"
-import { showUpdateToast } from "~/src/utils/core/toastHelpers"
-import { joinUrl } from "~/src/utils/core/url"
+} from "~/components/ui"
+import { getSiteApiRouter, VELOERA } from "~/constants/siteType"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { createTab } from "~/utils/browser/browserApi"
+import { showUpdateToast } from "~/utils/core/toastHelpers"
+import { joinUrl } from "~/utils/core/url"
 
 /**
  * Settings panel for configuring Veloera connection credentials (base URL, admin token, user ID).

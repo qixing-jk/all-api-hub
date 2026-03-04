@@ -1,4 +1,4 @@
-import { createLogger } from "~/src/utils/core/logger"
+import { createLogger } from "~/utils/core/logger"
 
 export type TempWindowResponseType = "json" | "text" | "arrayBuffer" | "blob"
 

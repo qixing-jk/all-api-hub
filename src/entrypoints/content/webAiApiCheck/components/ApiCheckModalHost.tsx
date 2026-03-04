@@ -3,26 +3,26 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import toast from "react-hot-toast/headless"
 import { useTranslation } from "react-i18next"
 
-import { ProbeStatusBadge } from "~/src/components/dialogs/VerifyApiDialog/ProbeStatusBadge"
+import { ProbeStatusBadge } from "~/components/dialogs/VerifyApiDialog/ProbeStatusBadge"
 import {
   Button,
   IconButton,
   Input,
   SearchableSelect,
   Textarea,
-} from "~/src/components/ui"
-import { inputVariants } from "~/src/components/ui/input"
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
-import { cn } from "~/src/lib/utils"
+} from "~/components/ui"
+import { inputVariants } from "~/components/ui/input"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { cn } from "~/lib/utils"
 import {
   API_TYPES,
   getApiVerificationProbeDefinitions,
   type ApiVerificationApiType,
   type ApiVerificationProbeId,
   type ApiVerificationProbeResult,
-} from "~/src/services/verification/aiApiVerification"
-import { extractApiCheckCredentialsFromText } from "~/src/services/verification/webAiApiCheck/extractCredentials"
-import { sendRuntimeMessage } from "~/src/utils/browser/browserApi"
+} from "~/services/verification/aiApiVerification"
+import { extractApiCheckCredentialsFromText } from "~/services/verification/webAiApiCheck/extractCredentials"
+import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 
 import {
   API_CHECK_OPEN_MODAL_EVENT,

@@ -3,7 +3,7 @@
  * Types for automatic daily check-in feature
  */
 
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 
 /**
  * Check-in result status

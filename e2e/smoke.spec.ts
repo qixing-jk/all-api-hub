@@ -1,5 +1,5 @@
-import { expect, test } from "~/e2e/fixtures/extensionTest"
-import { getSidePanelPagePath } from "~/e2e/utils/extension"
+import { expect, test } from "~~/e2e/fixtures/extensionTest"
+import { getSidePanelPagePath } from "~~/e2e/utils/extension"
 
 test.beforeEach(({ page }) => {
   page.on("pageerror", (error) => {

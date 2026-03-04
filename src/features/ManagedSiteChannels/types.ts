@@ -1,4 +1,4 @@
-import type { ManagedSiteChannel } from "~/src/types/managedSite"
+import type { ManagedSiteChannel } from "~/types/managedSite"
 
 export type ChannelRow = ManagedSiteChannel
 

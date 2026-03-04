@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest"
 
-import { APP_SHORT_NAME } from "~/src/constants/branding"
+import { APP_SHORT_NAME } from "~/constants/branding"
 import {
   formatDevActionTitle,
   formatDevManifestDescription,
   formatDevManifestName,
   formatDevVersionName,
   getDevBadgeText,
-} from "~/src/utils/core/devBranding"
+} from "~/utils/core/devBranding"
 
 /**
  * These tests cover the pure formatting helpers used to label dev builds.

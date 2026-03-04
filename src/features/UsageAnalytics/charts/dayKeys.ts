@@ -1,7 +1,7 @@
 import {
   formatDayKeyUtc,
   parseDayKey,
-} from "~/src/services/history/usageHistory/core"
+} from "~/services/history/usageHistory/core"
 
 export type DayKey = string
 

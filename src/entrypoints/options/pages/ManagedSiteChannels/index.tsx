@@ -1,3 +1,3 @@
-import ManagedSiteChannels from "~/src/features/ManagedSiteChannels"
+import ManagedSiteChannels from "~/features/ManagedSiteChannels"
 
 export default ManagedSiteChannels

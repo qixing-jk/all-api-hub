@@ -1,11 +1,7 @@
 import { describe, expect, it } from "vitest"
 
-import { searchAccounts } from "~/src/services/search/accountSearch"
-import {
-  AuthTypeEnum,
-  SiteHealthStatus,
-  type DisplaySiteData,
-} from "~/src/types"
+import { searchAccounts } from "~/services/search/accountSearch"
+import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 
 const mockAccounts: DisplaySiteData[] = [
   {

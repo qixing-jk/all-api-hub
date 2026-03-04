@@ -1,7 +1,7 @@
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
-import { IconButton } from "~/src/components/ui"
+import { IconButton } from "~/components/ui"
 
 import { formatKey } from "../../utils"
 

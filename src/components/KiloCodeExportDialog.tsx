@@ -17,18 +17,18 @@ import {
   SelectTrigger,
   SelectValue,
   type CompactMultiSelectOption,
-} from "~/src/components/ui"
-import { useAccountData } from "~/src/hooks/useAccountData"
-import { ensureAccountApiToken } from "~/src/services/accounts/accountOperations"
-import { getApiService } from "~/src/services/apiService"
-import { fetchOpenAICompatibleModelIds } from "~/src/services/apiService/openaiCompatible"
+} from "~/components/ui"
+import { useAccountData } from "~/hooks/useAccountData"
+import { ensureAccountApiToken } from "~/services/accounts/accountOperations"
+import { getApiService } from "~/services/apiService"
+import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompatible"
 import {
   buildKiloCodeApiConfigs,
   buildKiloCodeSettingsFile,
   type KiloCodeExportTuple,
-} from "~/src/services/integrations/kiloCodeExport"
-import type { ApiToken, DisplaySiteData, SiteAccount } from "~/src/types"
-import { stripTrailingOpenAIV1 } from "~/src/utils/core/url"
+} from "~/services/integrations/kiloCodeExport"
+import type { ApiToken, DisplaySiteData, SiteAccount } from "~/types"
+import { stripTrailingOpenAIV1 } from "~/utils/core/url"
 
 interface KiloCodeExportDialogProps {
   isOpen: boolean

@@ -6,11 +6,11 @@ import {
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { EmptyState } from "~/src/components/ui"
-import { MENU_ITEM_IDS } from "~/src/constants/optionsMenuIds"
-import { hasValidManagedSiteConfig } from "~/src/services/managedSites/managedSiteService"
-import { userPreferences } from "~/src/services/preferences/userPreferences"
-import { navigateWithinOptionsPage } from "~/src/utils/navigation"
+import { EmptyState } from "~/components/ui"
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { hasValidManagedSiteConfig } from "~/services/managedSites/managedSiteService"
+import { userPreferences } from "~/services/preferences/userPreferences"
+import { navigateWithinOptionsPage } from "~/utils/navigation"
 
 interface EmptyResultsProps {
   hasHistory: boolean

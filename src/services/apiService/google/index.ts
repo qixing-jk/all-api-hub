@@ -1,6 +1,6 @@
-import { fetchApi } from "~/src/services/apiService/common/utils"
-import { AuthTypeEnum } from "~/src/types"
-import { createLogger } from "~/src/utils/core/logger"
+import { fetchApi } from "~/services/apiService/common/utils"
+import { AuthTypeEnum } from "~/types"
+import { createLogger } from "~/utils/core/logger"
 
 type GoogleAuthParams = {
   baseUrl: string

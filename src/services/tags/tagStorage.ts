@@ -1,21 +1,16 @@
 import { Storage } from "@plasmohq/storage"
 
-import { apiCredentialProfilesStorage } from "~/src/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import {
   ACCOUNT_STORAGE_KEYS,
   STORAGE_LOCKS,
   TAG_STORAGE_KEYS,
-} from "~/src/services/core/storageKeys"
-import { withExtensionStorageWriteLock } from "~/src/services/core/storageWriteLock"
-import { ensureAccountTagsStorageMigrated } from "~/src/services/tags/migrations/accountTagsStorageMigration"
-import type {
-  AccountStorageConfig,
-  SiteAccount,
-  Tag,
-  TagStore,
-} from "~/src/types"
-import { sendRuntimeMessage } from "~/src/utils/browser/browserApi"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/services/core/storageKeys"
+import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
+import { ensureAccountTagsStorageMigrated } from "~/services/tags/migrations/accountTagsStorageMigration"
+import type { AccountStorageConfig, SiteAccount, Tag, TagStore } from "~/types"
+import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { createLogger } from "~/utils/core/logger"
 
 import {
   generateTagId,

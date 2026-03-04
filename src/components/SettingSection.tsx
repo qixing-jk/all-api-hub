@@ -3,9 +3,9 @@ import { ReactNode, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { BodySmall, Button, Heading3 } from "~/src/components/ui"
-import { Modal } from "~/src/components/ui/Dialog/Modal"
-import { createLogger } from "~/src/utils/core/logger"
+import { BodySmall, Button, Heading3 } from "~/components/ui"
+import { Modal } from "~/components/ui/Dialog/Modal"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to shared settings section UI primitives.

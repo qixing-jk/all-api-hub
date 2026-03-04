@@ -1,8 +1,8 @@
 import { ArrowLeftRight } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
-import { PageHeader } from "~/src/components/PageHeader"
-import { Alert } from "~/src/components/ui"
+import { PageHeader } from "~/components/PageHeader"
+import { Alert } from "~/components/ui"
 
 import ExportSection from "./components/ExportSection"
 import ImportSection from "./components/ImportSection"

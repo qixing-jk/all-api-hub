@@ -6,9 +6,9 @@ import {
   migrateAccountConfig,
   migrateAccountsConfig,
   needsConfigMigration,
-} from "~/src/services/accounts/migrations/accountDataMigration"
-import type { SiteAccount } from "~/src/types"
-import { AuthTypeEnum, SiteHealthStatus } from "~/src/types"
+} from "~/services/accounts/migrations/accountDataMigration"
+import type { SiteAccount } from "~/types"
+import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 
 describe("accountDataMigration", () => {
   // Helper to create a minimal SiteAccount fixture

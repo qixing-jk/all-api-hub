@@ -1,4 +1,4 @@
-import { DEFAULT_BALANCE_HISTORY_PREFERENCES } from "~/src/types/dailyBalanceHistory"
+import { DEFAULT_BALANCE_HISTORY_PREFERENCES } from "~/types/dailyBalanceHistory"
 
 /**
  * Clamp balance-history retention days to a safe integer range.

@@ -3,17 +3,14 @@ import { describe, expect, it } from "vitest"
 import {
   migrateWebDavConfig,
   needWebDavConfigMigration,
-} from "~/src/services/preferences/migrations/webDavConfigMigration"
+} from "~/services/preferences/migrations/webDavConfigMigration"
 import {
   DEFAULT_PREFERENCES,
   type UserPreferences,
-} from "~/src/services/preferences/userPreferences"
-import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/src/types/accountAutoRefresh"
-import { DEFAULT_NEW_API_CONFIG } from "~/src/types/newApiConfig"
-import {
-  DEFAULT_WEBDAV_SETTINGS,
-  WEBDAV_SYNC_STRATEGIES,
-} from "~/src/types/webdav"
+} from "~/services/preferences/userPreferences"
+import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
+import { DEFAULT_NEW_API_CONFIG } from "~/types/newApiConfig"
+import { DEFAULT_WEBDAV_SETTINGS, WEBDAV_SYNC_STRATEGIES } from "~/types/webdav"
 
 const createPreferences = (
   overrides?: Partial<UserPreferences>,

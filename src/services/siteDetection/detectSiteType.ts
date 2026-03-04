@@ -1,13 +1,13 @@
-import { SITE_TITLE_RULES, UNKNOWN_SITE } from "~/src/constants/siteType"
-import { ApiError } from "~/src/services/apiService/common/errors"
-import { fetchApi, fetchApiData } from "~/src/services/apiService/common/utils"
-import { AuthTypeEnum } from "~/src/types"
+import { SITE_TITLE_RULES, UNKNOWN_SITE } from "~/constants/siteType"
+import { ApiError } from "~/services/apiService/common/errors"
+import { fetchApi, fetchApiData } from "~/services/apiService/common/utils"
+import { AuthTypeEnum } from "~/types"
 import {
   canUseTempWindowFetch,
   tempWindowFetch,
-} from "~/src/utils/browser/tempWindowFetch"
-import { safeRandomUUID } from "~/src/utils/core/identifier"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/utils/browser/tempWindowFetch"
+import { safeRandomUUID } from "~/utils/core/identifier"
+import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("DetectSiteType")
 

@@ -1,3 +1,3 @@
-import ApiCredentialProfiles from "~/src/features/ApiCredentialProfiles"
+import ApiCredentialProfiles from "~/features/ApiCredentialProfiles"
 
 export default ApiCredentialProfiles

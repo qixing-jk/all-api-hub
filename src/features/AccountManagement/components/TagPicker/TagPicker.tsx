@@ -16,16 +16,16 @@ import {
   DestructiveConfirmDialog,
   IconButton,
   Input,
-} from "~/src/components/ui"
+} from "~/components/ui"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "~/src/components/ui/popover"
-import { normalizeTagNameForUniqueness } from "~/src/services/tags/tagStoreUtils"
-import type { Tag } from "~/src/types"
-import { getErrorMessage } from "~/src/utils/core/error"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/components/ui/popover"
+import { normalizeTagNameForUniqueness } from "~/services/tags/tagStoreUtils"
+import type { Tag } from "~/types"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Logger scoped to the tag picker UI so failures can be diagnosed without leaking sensitive data.

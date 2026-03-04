@@ -3,11 +3,11 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { CCSwitchExportDialog } from "~/src/components/CCSwitchExportDialog"
-import { ClaudeCodeRouterImportDialog } from "~/src/components/ClaudeCodeRouterImportDialog"
-import { CliProxyExportDialog } from "~/src/components/CliProxyExportDialog"
-import { useChannelDialog } from "~/src/components/dialogs/ChannelDialog"
-import { PageHeader } from "~/src/components/PageHeader"
+import { CCSwitchExportDialog } from "~/components/CCSwitchExportDialog"
+import { ClaudeCodeRouterImportDialog } from "~/components/ClaudeCodeRouterImportDialog"
+import { CliProxyExportDialog } from "~/components/CliProxyExportDialog"
+import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
+import { PageHeader } from "~/components/PageHeader"
 import {
   Button,
   DestructiveConfirmDialog,
@@ -16,28 +16,28 @@ import {
   SearchableSelect,
   Spinner,
   TagFilter,
-} from "~/src/components/ui"
-import { RuntimeMessageTypes } from "~/src/constants/runtimeActions"
-import { useUserPreferencesContext } from "~/src/contexts/UserPreferencesContext"
-import { useIsDesktop, useIsSmallScreen } from "~/src/hooks/useMediaQuery"
-import { OpenInCherryStudio } from "~/src/services/integrations/cherryStudio"
-import { getManagedSiteLabelKey } from "~/src/services/managedSites/utils/managedSite"
-import { tagStorage } from "~/src/services/tags/tagStorage"
+} from "~/components/ui"
+import { RuntimeMessageTypes } from "~/constants/runtimeActions"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { useIsDesktop, useIsSmallScreen } from "~/hooks/useMediaQuery"
+import { OpenInCherryStudio } from "~/services/integrations/cherryStudio"
+import { getManagedSiteLabelKey } from "~/services/managedSites/utils/managedSite"
+import { tagStorage } from "~/services/tags/tagStorage"
 import {
   API_TYPES,
   type ApiVerificationApiType,
-} from "~/src/services/verification/aiApiVerification"
+} from "~/services/verification/aiApiVerification"
 import {
   AuthTypeEnum,
   SiteHealthStatus,
   type ApiToken,
   type DisplaySiteData,
   type Tag,
-} from "~/src/types"
-import type { ApiCredentialProfile } from "~/src/types/apiCredentialProfiles"
-import { onRuntimeMessage } from "~/src/utils/browser/browserApi"
-import { createLogger } from "~/src/utils/core/logger"
-import { showResultToast } from "~/src/utils/core/toastHelpers"
+} from "~/types"
+import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
+import { onRuntimeMessage } from "~/utils/browser/browserApi"
+import { createLogger } from "~/utils/core/logger"
+import { showResultToast } from "~/utils/core/toastHelpers"
 
 import { ApiCredentialProfileDialog } from "./components/ApiCredentialProfileDialog"
 import {

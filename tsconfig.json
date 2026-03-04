@@ -14,9 +14,6 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "paths": {
-      "~/*": ["./*"],
-    },
   },
   "exclude": ["node_modules"],
   "extends": "./.wxt/tsconfig.json",

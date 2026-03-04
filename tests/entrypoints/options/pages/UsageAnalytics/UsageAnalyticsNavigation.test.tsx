@@ -1,12 +1,12 @@
 import { fireEvent, within } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
-import UsageAnalytics from "~/src/entrypoints/options/pages/UsageAnalytics"
-import { accountStorage } from "~/src/services/accounts/accountStorage"
-import { createEmptyUsageHistoryAccountStore } from "~/src/services/history/usageHistory/core"
-import { usageHistoryStorage } from "~/src/services/history/usageHistory/storage"
-import { navigateWithinOptionsPage } from "~/src/utils/navigation"
-import { render, screen } from "~/tests/test-utils/render"
+import UsageAnalytics from "~/entrypoints/options/pages/UsageAnalytics"
+import { accountStorage } from "~/services/accounts/accountStorage"
+import { createEmptyUsageHistoryAccountStore } from "~/services/history/usageHistory/core"
+import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
+import { navigateWithinOptionsPage } from "~/utils/navigation"
+import { render, screen } from "~~/tests/test-utils/render"
 
 vi.mock("~/components/charts/echarts", async () => {
   const instance = {
@@ -35,7 +35,7 @@ vi.mock("~/services/history/usageHistory/storage", () => ({
 
 vi.mock("~/utils/navigation", async () => {
   const actual =
-    await vi.importActual<typeof import("~/src/utils/navigation")>(
+    await vi.importActual<typeof import("~/utils/navigation")>(
       "~/utils/navigation",
     )
   return {

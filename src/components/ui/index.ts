@@ -99,4 +99,4 @@ export {
   COMPONENTS,
   LAYOUT,
   Z_INDEX,
-} from "~/src/constants/designTokens"
+} from "~/constants/designTokens"

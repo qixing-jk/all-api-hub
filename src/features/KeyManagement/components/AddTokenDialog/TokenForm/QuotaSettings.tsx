@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next"
 
-import { FormField, Input, Switch } from "~/src/components/ui"
-import { UI_CONSTANTS } from "~/src/constants/ui"
+import { FormField, Input, Switch } from "~/components/ui"
+import { UI_CONSTANTS } from "~/constants/ui"
 
 import type { FormData } from "../hooks/useTokenForm"
 

@@ -4,15 +4,15 @@ import {
   OCTOPUS,
   VELOERA,
   type ManagedSiteType,
-} from "~/src/constants/siteType"
-import type { UserPreferences } from "~/src/services/preferences/userPreferences"
+} from "~/constants/siteType"
+import type { UserPreferences } from "~/services/preferences/userPreferences"
 import {
   DEFAULT_DONE_HUB_CONFIG,
   type DoneHubConfig,
-} from "~/src/types/doneHubConfig"
-import type { NewApiConfig } from "~/src/types/newApiConfig"
-import type { OctopusConfig } from "~/src/types/octopusConfig"
-import type { VeloeraConfig } from "~/src/types/veloeraConfig"
+} from "~/types/doneHubConfig"
+import type { NewApiConfig } from "~/types/newApiConfig"
+import type { OctopusConfig } from "~/types/octopusConfig"
+import type { VeloeraConfig } from "~/types/veloeraConfig"
 
 export type ManagedSiteLabelKey =
   | "settings:managedSite.newApi"

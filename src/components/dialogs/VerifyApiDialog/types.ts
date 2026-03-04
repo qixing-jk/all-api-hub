@@ -1,8 +1,8 @@
 import type {
   ApiVerificationProbeId,
   ApiVerificationProbeResult,
-} from "~/src/services/verification/aiApiVerification"
-import type { DisplaySiteData } from "~/src/types"
+} from "~/services/verification/aiApiVerification"
+import type { DisplaySiteData } from "~/types"
 
 /**
  * Props for {@link VerifyApiDialog}.

@@ -1,7 +1,7 @@
 import * as React from "react"
 import toast from "react-hot-toast/headless"
 
-import type { DisplaySiteData } from "~/src/types"
+import type { DisplaySiteData } from "~/types"
 
 import { ensureRedemptionToastUi } from "../../shared/uiRoot"
 import { RedemptionAccountSelectToast } from "../components/RedemptionAccountSelectToast"

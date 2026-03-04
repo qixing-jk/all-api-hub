@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 
 vi.mock("~/services/preferences/userPreferences", () => ({
   userPreferences: {
@@ -54,7 +54,7 @@ describe("background context menu refresh", () => {
 
   it("creates both context menu entries by default", async () => {
     const { refreshContextMenus } = await import(
-      "~/src/entrypoints/background/contextMenus"
+      "~/entrypoints/background/contextMenus"
     )
 
     await refreshContextMenus({
@@ -72,7 +72,7 @@ describe("background context menu refresh", () => {
 
   it("skips AI API Check menu creation when visibility is disabled", async () => {
     const { refreshContextMenus } = await import(
-      "~/src/entrypoints/background/contextMenus"
+      "~/entrypoints/background/contextMenus"
     )
 
     await refreshContextMenus({
@@ -90,7 +90,7 @@ describe("background context menu refresh", () => {
 
   it("keeps click handling idempotent across multiple refreshes", async () => {
     const { refreshContextMenus } = await import(
-      "~/src/entrypoints/background/contextMenus"
+      "~/entrypoints/background/contextMenus"
     )
 
     const preferences = {

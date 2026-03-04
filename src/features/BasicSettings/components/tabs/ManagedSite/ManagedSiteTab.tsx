@@ -1,5 +1,5 @@
-import { DONE_HUB, NEW_API, OCTOPUS, VELOERA } from "~/src/constants/siteType"
-import { useUserPreferencesContext } from "~/src/contexts/UserPreferencesContext"
+import { DONE_HUB, NEW_API, OCTOPUS, VELOERA } from "~/constants/siteType"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 
 import DoneHubSettings from "./DoneHubSettings"
 import ManagedSiteModelSyncSettings from "./managedSiteModelSyncSettings"

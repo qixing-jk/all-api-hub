@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react"
 
-import { CCSwitchExportDialog } from "~/src/components/CCSwitchExportDialog"
-import { Modal } from "~/src/components/ui"
-import { useCopyKeyDialog } from "~/src/features/AccountManagement/components/CopyKeyDialog/hooks/useCopyKeyDialog"
-import AddTokenDialog from "~/src/features/KeyManagement/components/AddTokenDialog"
-import type { ApiToken, DisplaySiteData } from "~/src/types"
+import { CCSwitchExportDialog } from "~/components/CCSwitchExportDialog"
+import { Modal } from "~/components/ui"
+import { useCopyKeyDialog } from "~/features/AccountManagement/components/CopyKeyDialog/hooks/useCopyKeyDialog"
+import AddTokenDialog from "~/features/KeyManagement/components/AddTokenDialog"
+import type { ApiToken, DisplaySiteData } from "~/types"
 
 import { DialogFooter } from "./DialogFooter"
 import { DialogHeader } from "./DialogHeader"

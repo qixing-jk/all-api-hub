@@ -15,20 +15,20 @@ import {
   Modal,
   Spinner,
   TagFilter,
-} from "~/src/components/ui"
+} from "~/components/ui"
 import {
   RuntimeActionIds,
   RuntimeMessageTypes,
-} from "~/src/constants/runtimeActions"
-import type { DisplaySiteData } from "~/src/types"
+} from "~/constants/runtimeActions"
+import type { DisplaySiteData } from "~/types"
 import type {
   AccountKeyRepairOutcome,
   AccountKeyRepairProgress,
-} from "~/src/types/accountKeyAutoProvisioning"
+} from "~/types/accountKeyAutoProvisioning"
 import {
   onRuntimeMessage,
   sendRuntimeActionMessage,
-} from "~/src/utils/browser/browserApi"
+} from "~/utils/browser/browserApi"
 
 interface RepairMissingKeysDialogProps {
   isOpen: boolean

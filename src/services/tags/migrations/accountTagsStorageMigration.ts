@@ -4,17 +4,17 @@ import {
   ACCOUNT_STORAGE_KEYS,
   STORAGE_LOCKS,
   TAG_STORAGE_KEYS,
-} from "~/src/services/core/storageKeys"
-import { withExtensionStorageWriteLock } from "~/src/services/core/storageWriteLock"
+} from "~/services/core/storageKeys"
+import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import {
   migrateAccountTagsData,
   needsAccountTagsDataMigration,
-} from "~/src/services/tags/migrations/accountTagsDataMigration"
+} from "~/services/tags/migrations/accountTagsDataMigration"
 import {
   createDefaultTagStore,
   sanitizeTagStore,
-} from "~/src/services/tags/tagStoreUtils"
-import type { AccountStorageConfig, TagStore } from "~/src/types"
+} from "~/services/tags/tagStoreUtils"
+import type { AccountStorageConfig, TagStore } from "~/types"
 
 export type LegacyTagsMigrationResult = {
   migratedAccountCount: number

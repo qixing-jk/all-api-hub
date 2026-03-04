@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   removeDateSuffix,
   toModelTokenKey,
-} from "~/src/services/models/utils/modelName"
+} from "~/services/models/utils/modelName"
 
 describe("removeDateSuffix", () => {
   describe("yyyymmdd format (8-digit date)", () => {

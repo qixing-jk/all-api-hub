@@ -17,8 +17,8 @@
  */
 import { t } from "i18next"
 
-import { getErrorMessage } from "~/src/utils/core/error"
-import { getDocsAutoDetectUrl } from "~/src/utils/navigation/docsLinks"
+import { getErrorMessage } from "~/utils/core/error"
+import { getDocsAutoDetectUrl } from "~/utils/navigation/docsLinks"
 
 // 自动识别错误类型
 export enum AutoDetectErrorType {

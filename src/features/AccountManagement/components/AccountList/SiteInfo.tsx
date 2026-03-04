@@ -15,44 +15,38 @@ import { useMemo } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { LdohIcon } from "~/src/components/icons/LdohIcon"
-import Tooltip from "~/src/components/Tooltip"
-import {
-  Badge,
-  BodySmall,
-  Button,
-  Caption,
-  IconButton,
-} from "~/src/components/ui"
-import { UI_CONSTANTS } from "~/src/constants/ui"
-import { useAccountActionsContext } from "~/src/features/AccountManagement/hooks/AccountActionsContext"
-import { useAccountDataContext } from "~/src/features/AccountManagement/hooks/AccountDataContext"
+import { LdohIcon } from "~/components/icons/LdohIcon"
+import Tooltip from "~/components/Tooltip"
+import { Badge, BodySmall, Button, Caption, IconButton } from "~/components/ui"
+import { UI_CONSTANTS } from "~/constants/ui"
+import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
+import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import type {
   HighlightFragment,
   SearchResultWithHighlight,
-} from "~/src/features/AccountManagement/hooks/useAccountSearch"
+} from "~/features/AccountManagement/hooks/useAccountSearch"
 import {
   getHealthStatusDisplay,
   getStatusIndicatorColor,
-} from "~/src/features/AccountManagement/utils/healthStatusUtils"
-import { getTempWindowFallbackSettingsTab } from "~/src/features/AccountManagement/utils/tempWindowFallbackReminder"
-import { useLdohSiteLookupContext } from "~/src/features/LdohSiteLookup/hooks/LdohSiteLookupContext"
-import { getDayKeyFromUnixSeconds } from "~/src/services/history/usageHistory/core"
+} from "~/features/AccountManagement/utils/healthStatusUtils"
+import { getTempWindowFallbackSettingsTab } from "~/features/AccountManagement/utils/tempWindowFallbackReminder"
+import { useLdohSiteLookupContext } from "~/features/LdohSiteLookup/hooks/LdohSiteLookupContext"
+import { getDayKeyFromUnixSeconds } from "~/services/history/usageHistory/core"
 import {
   SiteHealthStatus,
   TEMP_WINDOW_HEALTH_STATUS_CODES,
   type DisplaySiteData,
-} from "~/src/types"
-import { createTab } from "~/src/utils/browser/browserApi"
-import { getErrorMessage } from "~/src/utils/core/error"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/types"
+import { createTab } from "~/utils/browser/browserApi"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 import {
   openAccountBaseUrl,
   openCheckInAndRedeem,
   openCheckInPage,
   openCustomCheckInPage,
   openSettingsTab,
-} from "~/src/utils/navigation"
+} from "~/utils/navigation"
 
 interface SiteInfoProps {
   site: DisplaySiteData

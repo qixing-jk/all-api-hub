@@ -1,4 +1,4 @@
-import { OctopusOutboundType } from "~/src/types/octopus"
+import { OctopusOutboundType } from "~/types/octopus"
 
 /**
  * Octopus 渠道类型选项

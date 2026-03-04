@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { NEW_API } from "~/src/constants/siteType"
-import { ModelRedirectService } from "~/src/services/models/modelRedirect"
-import { modelSyncScheduler } from "~/src/services/models/modelSync/scheduler"
-import { userPreferences } from "~/src/services/preferences/userPreferences"
-import { DEFAULT_MODEL_REDIRECT_PREFERENCES } from "~/src/types/managedSiteModelRedirect"
-import { buildManagedSiteChannel } from "~/tests/test-utils/factories"
+import { NEW_API } from "~/constants/siteType"
+import { ModelRedirectService } from "~/services/models/modelRedirect"
+import { modelSyncScheduler } from "~/services/models/modelSync/scheduler"
+import { userPreferences } from "~/services/preferences/userPreferences"
+import { DEFAULT_MODEL_REDIRECT_PREFERENCES } from "~/types/managedSiteModelRedirect"
+import { buildManagedSiteChannel } from "~~/tests/test-utils/factories"
 
 const {
   mockGetAllChannelConfigs,

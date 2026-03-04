@@ -2,9 +2,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import React, { Suspense } from "react"
 import ReactDOM from "react-dom/client"
 
-import "~/src/utils/i18n"
+import "~/utils/i18n"
 
-import { setDocumentTitle } from "~/src/utils/navigation/documentTitle"
+import { setDocumentTitle } from "~/utils/navigation/documentTitle"
 
 import App from "./App"
 

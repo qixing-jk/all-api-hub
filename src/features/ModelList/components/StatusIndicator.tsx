@@ -5,8 +5,8 @@ import {
 } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
-import { Alert, Button, EmptyState, Spinner } from "~/src/components/ui"
-import type { DisplaySiteData } from "~/src/types"
+import { Alert, Button, EmptyState, Spinner } from "~/components/ui"
+import type { DisplaySiteData } from "~/types"
 
 interface StatusIndicatorProps {
   selectedAccount: string

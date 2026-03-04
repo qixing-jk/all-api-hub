@@ -1,4 +1,4 @@
-import { ToggleButton } from "~/src/components/ui"
+import { ToggleButton } from "~/components/ui"
 
 import type { UsageAnalyticsChartDisplayType } from "../types"
 

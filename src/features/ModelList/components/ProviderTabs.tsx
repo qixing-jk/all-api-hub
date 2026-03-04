@@ -4,13 +4,13 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 import { useEffect, type ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Button } from "~/src/components/ui/button"
-import { ANIMATIONS, COLORS } from "~/src/constants/designTokens"
-import { useHorizontalScrollControls } from "~/src/hooks/useHorizontalScrollControls"
+import { Button } from "~/components/ui/button"
+import { ANIMATIONS, COLORS } from "~/constants/designTokens"
+import { useHorizontalScrollControls } from "~/hooks/useHorizontalScrollControls"
 import {
   getProviderConfig,
   type ProviderType,
-} from "~/src/services/models/utils/modelProviders"
+} from "~/services/models/utils/modelProviders"
 
 interface ProviderTabsProps {
   providers: ProviderType[]

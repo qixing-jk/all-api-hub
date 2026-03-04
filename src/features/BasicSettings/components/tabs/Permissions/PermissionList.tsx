@@ -7,9 +7,9 @@ import {
 } from "lucide-react"
 import type { ReactNode } from "react"
 
-import { CardItem } from "~/src/components/ui/CardItem"
-import { CardList } from "~/src/components/ui/CardList"
-import type { ManifestOptionalPermissions } from "~/src/services/permissions/permissionManager"
+import { CardItem } from "~/components/ui/CardItem"
+import { CardList } from "~/components/ui/CardList"
+import type { ManifestOptionalPermissions } from "~/services/permissions/permissionManager"
 
 export const permissionIconMap: Partial<
   Record<ManifestOptionalPermissions, ReactNode>

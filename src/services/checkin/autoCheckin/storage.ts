@@ -1,7 +1,7 @@
 import { Storage } from "@plasmohq/storage"
 
-import type { AutoCheckinStatus } from "~/src/types/autoCheckin"
-import { createLogger } from "~/src/utils/core/logger"
+import type { AutoCheckinStatus } from "~/types/autoCheckin"
+import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("AutoCheckinStorage")
 

@@ -1,10 +1,10 @@
 import { t } from "i18next"
 import toast from "react-hot-toast"
 
-import { ShareSnapshotCaptionToast } from "~/src/features/ShareSnapshots/components/ShareSnapshotCaptionToast"
-import { exportShareSnapshot } from "~/src/services/sharing/shareSnapshots"
-import type { ShareSnapshotPayload } from "~/src/services/sharing/shareSnapshots/types"
-import { getErrorMessage } from "~/src/utils/core/error"
+import { ShareSnapshotCaptionToast } from "~/features/ShareSnapshots/components/ShareSnapshotCaptionToast"
+import { exportShareSnapshot } from "~/services/sharing/shareSnapshots"
+import type { ShareSnapshotPayload } from "~/services/sharing/shareSnapshots/types"
+import { getErrorMessage } from "~/utils/core/error"
 
 const DEFAULT_CAPTION_TOAST_DURATION_MS = 12000
 

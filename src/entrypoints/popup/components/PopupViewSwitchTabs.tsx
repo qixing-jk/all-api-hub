@@ -1,4 +1,4 @@
-import { ANIMATIONS, COLORS } from "~/src/constants/designTokens"
+import { ANIMATIONS, COLORS } from "~/constants/designTokens"
 
 export type PopupViewType = "accounts" | "bookmarks"
 

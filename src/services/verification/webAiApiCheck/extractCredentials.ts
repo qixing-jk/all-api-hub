@@ -1,4 +1,4 @@
-import { normalizeHttpUrl } from "~/src/utils/core/url"
+import { normalizeHttpUrl } from "~/utils/core/url"
 
 /**
  * Extraction result for the in-page Web AI API Check feature.

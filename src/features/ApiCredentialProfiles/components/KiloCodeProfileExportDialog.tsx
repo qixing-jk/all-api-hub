@@ -2,22 +2,22 @@ import { useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { KiloCodeIcon } from "~/src/components/icons/KiloCodeIcon"
+import { KiloCodeIcon } from "~/components/icons/KiloCodeIcon"
 import {
   Alert,
   Button,
   FormField,
   Modal,
   SearchableSelect,
-} from "~/src/components/ui"
-import { fetchOpenAICompatibleModelIds } from "~/src/services/apiService/openaiCompatible"
+} from "~/components/ui"
+import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompatible"
 import {
   buildKiloCodeApiConfigs,
   buildKiloCodeSettingsFile,
-} from "~/src/services/integrations/kiloCodeExport"
-import type { ApiCredentialProfile } from "~/src/types/apiCredentialProfiles"
-import { createLogger } from "~/src/utils/core/logger"
-import { stripTrailingOpenAIV1 } from "~/src/utils/core/url"
+} from "~/services/integrations/kiloCodeExport"
+import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
+import { createLogger } from "~/utils/core/logger"
+import { stripTrailingOpenAIV1 } from "~/utils/core/url"
 
 /**
  * Unified logger scoped to the Kilo Code export dialog for API credential profiles.

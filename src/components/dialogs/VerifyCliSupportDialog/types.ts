@@ -1,8 +1,8 @@
 import type {
   CliSupportResult,
   CliToolId,
-} from "~/src/services/verification/cliSupportVerification"
-import type { DisplaySiteData } from "~/src/types"
+} from "~/services/verification/cliSupportVerification"
+import type { DisplaySiteData } from "~/types"
 
 /**
  * Props for {@link VerifyCliSupportDialog}.

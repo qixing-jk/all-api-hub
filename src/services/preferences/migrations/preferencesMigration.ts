@@ -3,22 +3,22 @@
  * Handles version-based migrations for UserPreferences configurations
  */
 
-import { DATA_TYPE_CASHFLOW, DATA_TYPE_CONSUMPTION } from "~/src/constants"
-import { migrateAutoRefreshConfig } from "~/src/services/preferences/migrations/autoRefreshConfigMigration"
-import { migrateNewApiConfig } from "~/src/services/preferences/migrations/newApiConfigMigration"
-import { migrateWebDavConfig } from "~/src/services/preferences/migrations/webDavConfigMigration"
+import { DATA_TYPE_CASHFLOW, DATA_TYPE_CONSUMPTION } from "~/constants"
+import { migrateAutoRefreshConfig } from "~/services/preferences/migrations/autoRefreshConfigMigration"
+import { migrateNewApiConfig } from "~/services/preferences/migrations/newApiConfigMigration"
+import { migrateWebDavConfig } from "~/services/preferences/migrations/webDavConfigMigration"
 import {
   ACCOUNT_AUTO_REFRESH_INTERVAL_MIN_SECONDS,
   ACCOUNT_AUTO_REFRESH_MIN_INTERVAL_MIN_SECONDS,
   DEFAULT_ACCOUNT_AUTO_REFRESH,
   type AccountAutoRefresh,
-} from "~/src/types/accountAutoRefresh"
+} from "~/types/accountAutoRefresh"
 import {
   DEFAULT_BALANCE_HISTORY_PREFERENCES,
   type BalanceHistoryPreferences,
-} from "~/src/types/dailyBalanceHistory"
-import { DEFAULT_OCTOPUS_CONFIG } from "~/src/types/octopusConfig"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/types/dailyBalanceHistory"
+import { DEFAULT_OCTOPUS_CONFIG } from "~/types/octopusConfig"
+import { createLogger } from "~/utils/core/logger"
 
 import type { UserPreferences } from "../userPreferences"
 import { migrateSortingConfig } from "./sortingConfigMigration"

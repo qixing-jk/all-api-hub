@@ -24,15 +24,15 @@ import {
   DestructiveConfirmDialog,
   EmptyState,
   TagFilter,
-} from "~/src/components/ui"
-import { useAccountDataContext } from "~/src/features/AccountManagement/hooks/AccountDataContext"
-import { useBookmarkDialogContext } from "~/src/features/SiteBookmarks/hooks/BookmarkDialogStateContext"
-import { useIsDesktop, useIsSmallScreen } from "~/src/hooks/useMediaQuery"
-import { accountStorage } from "~/src/services/accounts/accountStorage"
-import type { SiteBookmark } from "~/src/types"
-import { createTab } from "~/src/utils/browser/browserApi"
-import { getErrorMessage } from "~/src/utils/core/error"
-import { closeIfPopup } from "~/src/utils/navigation"
+} from "~/components/ui"
+import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
+import { useBookmarkDialogContext } from "~/features/SiteBookmarks/hooks/BookmarkDialogStateContext"
+import { useIsDesktop, useIsSmallScreen } from "~/hooks/useMediaQuery"
+import { accountStorage } from "~/services/accounts/accountStorage"
+import type { SiteBookmark } from "~/types"
+import { createTab } from "~/utils/browser/browserApi"
+import { getErrorMessage } from "~/utils/core/error"
+import { closeIfPopup } from "~/utils/navigation"
 
 import BookmarkSearchInput from "./BookmarkSearchInput"
 import SortableBookmarkListItem from "./SortableBookmarkListItem"

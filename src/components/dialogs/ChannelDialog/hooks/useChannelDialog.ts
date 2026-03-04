@@ -1,11 +1,11 @@
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { useChannelDialogContext } from "~/src/components/dialogs/ChannelDialog/context/ChannelDialogContext"
-import { DIALOG_MODES, type DialogMode } from "~/src/constants/dialogModes"
-import { ensureAccountApiToken } from "~/src/services/accounts/accountOperations"
-import { accountStorage } from "~/src/services/accounts/accountStorage"
-import { getManagedSiteService } from "~/src/services/managedSites/managedSiteService"
+import { useChannelDialogContext } from "~/components/dialogs/ChannelDialog/context/ChannelDialogContext"
+import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
+import { ensureAccountApiToken } from "~/services/accounts/accountOperations"
+import { accountStorage } from "~/services/accounts/accountStorage"
+import { getManagedSiteService } from "~/services/managedSites/managedSiteService"
 import {
   AuthTypeEnum,
   SiteHealthStatus,
@@ -13,10 +13,10 @@ import {
   type ApiToken,
   type DisplaySiteData,
   type SiteAccount,
-} from "~/src/types"
-import type { ManagedSiteChannel } from "~/src/types/managedSite"
-import { getErrorMessage } from "~/src/utils/core/error"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/types"
+import type { ManagedSiteChannel } from "~/types/managedSite"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to channel dialog open helpers.

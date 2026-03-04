@@ -2,7 +2,7 @@ import { t as i18nextT } from "i18next"
 import { useTranslation } from "react-i18next"
 import { describe, expect, it } from "vitest"
 
-import { render, screen } from "~/tests/test-utils/render"
+import { render, screen } from "~~/tests/test-utils/render"
 
 describe("i18n test harness (key assertions)", () => {
   const MISSING_UI_KEY = "__tests__.i18nKeyAssertions.missing"

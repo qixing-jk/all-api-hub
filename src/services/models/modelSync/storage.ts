@@ -3,8 +3,8 @@ import { Storage } from "@plasmohq/storage"
 import type {
   ExecutionResult,
   ManagedSiteModelSyncPreferences,
-} from "~/src/types/managedSiteModelSync"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/types/managedSiteModelSync"
+import { createLogger } from "~/utils/core/logger"
 
 import {
   DEFAULT_PREFERENCES,

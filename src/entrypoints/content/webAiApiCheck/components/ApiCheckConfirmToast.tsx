@@ -8,7 +8,7 @@ import {
   CardContent,
   CardHeader,
   Heading3,
-} from "~/src/components/ui"
+} from "~/components/ui"
 
 export type ApiCheckConfirmToastAction = "confirm" | "cancel"
 

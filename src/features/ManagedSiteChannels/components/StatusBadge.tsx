@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next"
 
-import { Badge } from "~/src/components/ui/badge"
-import { cn } from "~/src/lib/utils"
+import { Badge } from "~/components/ui/badge"
+import { cn } from "~/lib/utils"
 
 export const STATUS_VARIANTS: Record<
   number,

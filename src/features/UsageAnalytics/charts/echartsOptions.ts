@@ -1,14 +1,14 @@
-import type { EChartsOption } from "~/src/components/charts/echarts"
+import type { EChartsOption } from "~/components/charts/echarts"
 import {
   createEmptyUsageHistoryAggregate,
   createEmptyUsageHistoryLatencyAggregate,
   USAGE_HISTORY_LATENCY_BUCKET_UPPER_BOUNDS_SECONDS,
-} from "~/src/services/history/usageHistory/core"
+} from "~/services/history/usageHistory/core"
 import type {
   UsageHistoryAggregate,
   UsageHistoryExport,
   UsageHistoryLatencyAggregate,
-} from "~/src/types/usageHistory"
+} from "~/types/usageHistory"
 
 export type UsageAnalyticsTokenSelection = string[]
 

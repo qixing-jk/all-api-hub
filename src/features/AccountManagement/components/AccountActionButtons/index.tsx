@@ -20,27 +20,27 @@ import React, { useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { IconButton } from "~/src/components/ui"
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
-import { useUserPreferencesContext } from "~/src/contexts/UserPreferencesContext"
-import { useAccountActionsContext } from "~/src/features/AccountManagement/hooks/AccountActionsContext"
-import { useAccountDataContext } from "~/src/features/AccountManagement/hooks/AccountDataContext"
-import { useDialogStateContext } from "~/src/features/AccountManagement/hooks/DialogStateContext"
-import { exportShareSnapshotWithToast } from "~/src/features/ShareSnapshots/utils/exportShareSnapshotWithToast"
-import { getApiService } from "~/src/services/apiService"
-import { buildAccountShareSnapshotPayload } from "~/src/services/sharing/shareSnapshots"
-import { sanitizeOriginUrl } from "~/src/services/sharing/shareSnapshots/utils"
-import type { DisplaySiteData } from "~/src/types"
-import { CHECKIN_RESULT_STATUS } from "~/src/types/autoCheckin"
-import { sendRuntimeMessage } from "~/src/utils/browser/browserApi"
-import { getErrorMessage } from "~/src/utils/core/error"
-import { createLogger } from "~/src/utils/core/logger"
+import { IconButton } from "~/components/ui"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
+import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
+import { useDialogStateContext } from "~/features/AccountManagement/hooks/DialogStateContext"
+import { exportShareSnapshotWithToast } from "~/features/ShareSnapshots/utils/exportShareSnapshotWithToast"
+import { getApiService } from "~/services/apiService"
+import { buildAccountShareSnapshotPayload } from "~/services/sharing/shareSnapshots"
+import { sanitizeOriginUrl } from "~/services/sharing/shareSnapshots/utils"
+import type { DisplaySiteData } from "~/types"
+import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 import {
   openKeysPage,
   openModelsPage,
   openRedeemPage,
   openUsagePage,
-} from "~/src/utils/navigation"
+} from "~/utils/navigation"
 
 import { AccountActionMenuItem } from "./AccountActionMenuItem"
 

@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from "react"
 
-import { useUserPreferencesContext } from "~/src/contexts/UserPreferencesContext"
-import { TempWindowFallbackReminderDialog } from "~/src/features/AccountManagement/components/TempWindowFallbackReminderDialog"
-import { useAccountDataContext } from "~/src/features/AccountManagement/hooks/AccountDataContext"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { TempWindowFallbackReminderDialog } from "~/features/AccountManagement/components/TempWindowFallbackReminderDialog"
+import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import {
   getTempWindowFallbackIssue,
   type TempWindowFallbackIssue,
-} from "~/src/features/AccountManagement/utils/tempWindowFallbackReminder"
+} from "~/features/AccountManagement/utils/tempWindowFallbackReminder"
 
 /**
  * Mount-point component that decides whether the temp-window fallback reminder dialog

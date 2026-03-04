@@ -8,12 +8,12 @@ import {
   FormField,
   Input,
   Modal,
-} from "~/src/components/ui"
-import { fetchOpenAICompatibleModels } from "~/src/services/apiService/openaiCompatible"
-import { importToClaudeCodeRouter } from "~/src/services/integrations/claudeCodeRouterService"
-import type { ApiToken, DisplaySiteData } from "~/src/types"
-import { createLogger } from "~/src/utils/core/logger"
-import { showResultToast } from "~/src/utils/core/toastHelpers"
+} from "~/components/ui"
+import { fetchOpenAICompatibleModels } from "~/services/apiService/openaiCompatible"
+import { importToClaudeCodeRouter } from "~/services/integrations/claudeCodeRouterService"
+import type { ApiToken, DisplaySiteData } from "~/types"
+import { createLogger } from "~/utils/core/logger"
+import { showResultToast } from "~/utils/core/toastHelpers"
 
 interface ClaudeCodeRouterImportDialogProps {
   isOpen: boolean

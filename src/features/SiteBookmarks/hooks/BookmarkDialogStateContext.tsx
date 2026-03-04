@@ -6,9 +6,9 @@ import {
   type ReactNode,
 } from "react"
 
-import BookmarkDialog from "~/src/features/SiteBookmarks/components/BookmarkDialog"
-import type { BookmarkDialogMode } from "~/src/features/SiteBookmarks/components/BookmarkDialog"
-import type { SiteBookmark } from "~/src/types"
+import BookmarkDialog from "~/features/SiteBookmarks/components/BookmarkDialog"
+import type { BookmarkDialogMode } from "~/features/SiteBookmarks/components/BookmarkDialog"
+import type { SiteBookmark } from "~/types"
 
 import { useBookmarkDialogState } from "./useBookmarkDialogState"
 

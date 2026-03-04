@@ -11,7 +11,7 @@ import { ChevronDown, ChevronUp } from "lucide-react"
 import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import AccountLinkButton from "~/src/components/AccountLinkButton"
+import AccountLinkButton from "~/components/AccountLinkButton"
 import {
   Table,
   TableBody,
@@ -19,9 +19,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "~/src/components/ui/table"
-import { cn } from "~/src/lib/utils"
-import { formatMoneyFixed } from "~/src/utils/core/money"
+} from "~/components/ui/table"
+import { cn } from "~/lib/utils"
+import { formatMoneyFixed } from "~/utils/core/money"
 
 export type BalanceHistoryAccountSummaryRow = {
   id: string

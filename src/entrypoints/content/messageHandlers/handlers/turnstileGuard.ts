@@ -1,10 +1,10 @@
-import { waitForTurnstileToken } from "~/src/entrypoints/content/messageHandlers/utils/turnstileGuard"
+import { waitForTurnstileToken } from "~/entrypoints/content/messageHandlers/utils/turnstileGuard"
 import type {
   TurnstilePreTrigger,
   TurnstileTokenWaitResult,
-} from "~/src/types/turnstile"
-import { getErrorMessage } from "~/src/utils/core/error"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/types/turnstile"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 type WaitForTurnstileTokenRequest = {
   requestId?: string

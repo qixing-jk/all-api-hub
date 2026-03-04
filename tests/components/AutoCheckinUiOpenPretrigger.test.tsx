@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from "vitest"
 
-import AutoCheckinUiOpenPretrigger from "~/src/components/AutoCheckinUiOpenPretrigger"
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
+import AutoCheckinUiOpenPretrigger from "~/components/AutoCheckinUiOpenPretrigger"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
-} from "~/src/services/preferences/userPreferences"
-import { render, screen, waitFor } from "~/tests/test-utils/render"
+} from "~/services/preferences/userPreferences"
+import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 vi.mock("react-hot-toast", () => ({
   default: {
@@ -35,7 +35,7 @@ describe("AutoCheckinUiOpenPretrigger", () => {
       },
     })
 
-    const browserApi = await import("~/src/utils/browser/browserApi")
+    const browserApi = await import("~/utils/browser/browserApi")
     const sendRuntimeMessageSpy = vi.spyOn(browserApi, "sendRuntimeMessage")
 
     sendRuntimeMessageSpy.mockImplementation(async (message: any) => {

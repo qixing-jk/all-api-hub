@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next"
 
-import { Badge, Card, CardContent } from "~/src/components/ui"
+import { Badge, Card, CardContent } from "~/components/ui"
 
 interface AccountSummaryItem {
   accountId: string

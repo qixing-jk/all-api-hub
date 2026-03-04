@@ -7,9 +7,9 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "~/src/components/ui"
-import { OctopusOutboundTypeOptions } from "~/src/constants/octopus"
-import { OctopusOutboundType } from "~/src/types/octopus"
+} from "~/components/ui"
+import { OctopusOutboundTypeOptions } from "~/constants/octopus"
+import { OctopusOutboundType } from "~/types/octopus"
 
 export interface OctopusTypeSelectorProps {
   value: OctopusOutboundType | undefined | null

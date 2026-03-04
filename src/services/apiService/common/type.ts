@@ -1,7 +1,7 @@
 /**
  * API 服务 - 用于与 One API/New API 站点进行交互
  */
-import type { PerCallPrice } from "~/src/services/models/utils/modelPricing"
+import type { PerCallPrice } from "~/services/models/utils/modelPricing"
 import {
   ApiToken,
   AuthTypeEnum,
@@ -9,11 +9,11 @@ import {
   SiteHealthStatus,
   TempWindowHealthStatusCode,
   type Sub2ApiAuthConfig,
-} from "~/src/types"
+} from "~/types"
 import type {
   TempWindowFallbackAllowlist,
   TempWindowResponseType,
-} from "~/src/types/tempWindowFetch"
+} from "~/types/tempWindowFetch"
 
 // ============= 类型定义 =============
 export interface UserInfo {

@@ -3,21 +3,21 @@ import { Storage } from "@plasmohq/storage"
 import {
   RuntimeActionIds,
   RuntimeMessageTypes,
-} from "~/src/constants/runtimeActions"
-import { SUB2API } from "~/src/constants/siteType"
-import { accountStorage } from "~/src/services/accounts/accountStorage"
-import { ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS } from "~/src/services/core/storageKeys"
-import type { DisplaySiteData, SiteAccount } from "~/src/types"
-import { AuthTypeEnum } from "~/src/types"
+} from "~/constants/runtimeActions"
+import { SUB2API } from "~/constants/siteType"
+import { accountStorage } from "~/services/accounts/accountStorage"
+import { ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS } from "~/services/core/storageKeys"
+import type { DisplaySiteData, SiteAccount } from "~/types"
+import { AuthTypeEnum } from "~/types"
 import type {
   AccountKeyRepairAccountResult,
   AccountKeyRepairProgress,
   AccountKeyRepairSkipReason,
-} from "~/src/types/accountKeyAutoProvisioning"
-import { sendRuntimeMessage } from "~/src/utils/browser/browserApi"
-import { getErrorMessage } from "~/src/utils/core/error"
-import { safeRandomUUID } from "~/src/utils/core/identifier"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/types/accountKeyAutoProvisioning"
+import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { getErrorMessage } from "~/utils/core/error"
+import { safeRandomUUID } from "~/utils/core/identifier"
+import { createLogger } from "~/utils/core/logger"
 
 import { ensureDefaultApiTokenForAccount } from "./ensureDefaultToken"
 import { runPerKeySequential } from "./perOriginQueue"

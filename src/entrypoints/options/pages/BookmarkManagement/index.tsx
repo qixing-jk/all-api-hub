@@ -1,3 +1,3 @@
-import BookmarkManagement from "~/src/features/BookmarkManagement"
+import BookmarkManagement from "~/features/BookmarkManagement"
 
 export default BookmarkManagement

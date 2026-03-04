@@ -4,7 +4,7 @@ import {
   formatMoneyFixed,
   getDisplayMoneyValue,
   normalizeMoneyForDisplay,
-} from "~/src/utils/core/money"
+} from "~/utils/core/money"
 
 describe("money utils", () => {
   it("normalizeMoneyForDisplay should map tiny non-zero values", () => {

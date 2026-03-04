@@ -1,13 +1,13 @@
 import { useTranslation } from "react-i18next"
 
-import { Card, CardContent } from "~/src/components/ui"
+import { Card, CardContent } from "~/components/ui"
 import {
   AUTO_CHECKIN_RUN_RESULT,
   CHECKIN_RESULT_STATUS,
   type AutoCheckinPreferences,
   type AutoCheckinRunResult,
   type AutoCheckinStatus,
-} from "~/src/types/autoCheckin"
+} from "~/types/autoCheckin"
 
 interface StatusCardProps {
   status: AutoCheckinStatus

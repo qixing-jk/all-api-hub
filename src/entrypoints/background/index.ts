@@ -1,26 +1,22 @@
-import { MENU_ITEM_IDS } from "~/src/constants/optionsMenuIds"
-import { setupRuntimeMessageListeners } from "~/src/entrypoints/background/runtimeMessages"
-import { setupTempWindowListeners } from "~/src/entrypoints/background/tempWindowPool"
-import { accountStorage } from "~/src/services/accounts/accountStorage"
-import { migrateAccountsConfig } from "~/src/services/accounts/migrations/accountDataMigration"
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { setupRuntimeMessageListeners } from "~/entrypoints/background/runtimeMessages"
+import { setupTempWindowListeners } from "~/entrypoints/background/tempWindowPool"
+import { accountStorage } from "~/services/accounts/accountStorage"
+import { migrateAccountsConfig } from "~/services/accounts/migrations/accountDataMigration"
 import {
   hasNewOptionalPermissions,
   setLastSeenOptionalPermissions,
-} from "~/src/services/permissions/optionalPermissionState"
+} from "~/services/permissions/optionalPermissionState"
 import {
   hasPermissions,
   OPTIONAL_PERMISSIONS,
-} from "~/src/services/permissions/permissionManager"
-import { userPreferences } from "~/src/services/preferences/userPreferences"
-import { tagStorage } from "~/src/services/tags/tagStorage"
-import { changelogOnUpdateState } from "~/src/services/updates/changelogOnUpdateState"
-import {
-  getManifest,
-  onInstalled,
-  onStartup,
-} from "~/src/utils/browser/browserApi"
-import { createLogger } from "~/src/utils/core/logger"
-import { openOrFocusOptionsMenuItem } from "~/src/utils/navigation"
+} from "~/services/permissions/permissionManager"
+import { userPreferences } from "~/services/preferences/userPreferences"
+import { tagStorage } from "~/services/tags/tagStorage"
+import { changelogOnUpdateState } from "~/services/updates/changelogOnUpdateState"
+import { getManifest, onInstalled, onStartup } from "~/utils/browser/browserApi"
+import { createLogger } from "~/utils/core/logger"
+import { openOrFocusOptionsMenuItem } from "~/utils/navigation"
 
 import { applyActionClickBehavior } from "./actionClickBehavior"
 import { setupContextMenus } from "./contextMenus"

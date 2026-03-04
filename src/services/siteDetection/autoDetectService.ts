@@ -9,15 +9,15 @@
  */
 import { t } from "i18next"
 
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
-import { AuthTypeEnum, type Sub2ApiAuthConfig } from "~/src/types"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { AuthTypeEnum, type Sub2ApiAuthConfig } from "~/types"
 import {
   getActiveOrAllTabs,
   getActiveTabs,
   sendRuntimeMessage,
-} from "~/src/utils/browser/browserApi"
-import { getErrorMessage } from "~/src/utils/core/error"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/utils/browser/browserApi"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 import { getApiService } from "../apiService"
 import { getSiteType } from "./detectSiteType"

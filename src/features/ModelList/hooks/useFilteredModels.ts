@@ -1,13 +1,13 @@
 import { useMemo } from "react"
 
-import { UI_CONSTANTS } from "~/src/constants/ui"
-import type { PricingResponse } from "~/src/services/apiService/common/type"
-import { calculateModelPrice } from "~/src/services/models/utils/modelPricing"
+import { UI_CONSTANTS } from "~/constants/ui"
+import type { PricingResponse } from "~/services/apiService/common/type"
+import { calculateModelPrice } from "~/services/models/utils/modelPricing"
 import {
   filterModelsByProvider,
   type ProviderType,
-} from "~/src/services/models/utils/modelProviders"
-import type { DisplaySiteData } from "~/src/types"
+} from "~/services/models/utils/modelProviders"
+import type { DisplaySiteData } from "~/types"
 
 import type { AccountPricingContext } from "./useModelData"
 

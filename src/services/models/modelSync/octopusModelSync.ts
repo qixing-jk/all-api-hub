@@ -2,25 +2,22 @@
  * Octopus 模型同步服务
  * 实现 Octopus 站点的模型同步功能
  */
-import { ApiError } from "~/src/services/apiService/common/errors"
-import * as octopusApi from "~/src/services/apiService/octopus"
+import { ApiError } from "~/services/apiService/common/errors"
+import * as octopusApi from "~/services/apiService/octopus"
 import type {
   ManagedSiteChannel,
   OctopusChannelWithData,
-} from "~/src/types/managedSite"
+} from "~/types/managedSite"
 import {
   BatchExecutionOptions,
   ExecutionItemResult,
   ExecutionResult,
   ExecutionStatistics,
-} from "~/src/types/managedSiteModelSync"
-import type {
-  OctopusChannel,
-  OctopusFetchModelRequest,
-} from "~/src/types/octopus"
-import type { OctopusConfig } from "~/src/types/octopusConfig"
-import { getErrorMessage } from "~/src/utils/core/error"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/types/managedSiteModelSync"
+import type { OctopusChannel, OctopusFetchModelRequest } from "~/types/octopus"
+import type { OctopusConfig } from "~/types/octopusConfig"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("OctopusModelSync")
 

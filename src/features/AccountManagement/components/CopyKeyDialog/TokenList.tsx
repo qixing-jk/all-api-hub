@@ -5,8 +5,8 @@ import {
 } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
-import { Alert, EmptyState } from "~/src/components/ui"
-import type { ApiToken, DisplaySiteData } from "~/src/types"
+import { Alert, EmptyState } from "~/components/ui"
+import type { ApiToken, DisplaySiteData } from "~/types"
 
 import { TokenItem } from "./TokenItem"
 

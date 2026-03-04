@@ -4,18 +4,18 @@
  * Endpoint: POST `/api/user/check_in`.
  */
 
-import { fetchApi } from "~/src/services/apiService/common/utils"
+import { fetchApi } from "~/services/apiService/common/utils"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
   isAlreadyCheckedMessage,
   normalizeCheckinMessage,
   resolveProviderErrorResult,
-} from "~/src/services/checkin/autoCheckin/providers/shared"
-import type { AutoCheckinProviderResult } from "~/src/services/checkin/autoCheckin/providers/types"
-import type { SiteAccount } from "~/src/types"
-import { AuthTypeEnum } from "~/src/types"
-import { CHECKIN_RESULT_STATUS } from "~/src/types/autoCheckin"
-import { getErrorMessage } from "~/src/utils/core/error"
+} from "~/services/checkin/autoCheckin/providers/shared"
+import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/providers/types"
+import type { SiteAccount } from "~/types"
+import { AuthTypeEnum } from "~/types"
+import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+import { getErrorMessage } from "~/utils/core/error"
 
 import type { AutoCheckinProvider } from "./index"
 

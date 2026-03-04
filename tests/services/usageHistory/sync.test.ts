@@ -1,17 +1,17 @@
 import { http, HttpResponse } from "msw"
 import { describe, expect, it } from "vitest"
 
-import { accountStorage } from "~/src/services/accounts/accountStorage"
-import { LogType, type LogItem } from "~/src/services/apiService/common/type"
-import { getDayKeyFromUnixSeconds } from "~/src/services/history/usageHistory/core"
-import { usageHistoryStorage } from "~/src/services/history/usageHistory/storage"
-import { syncUsageHistoryForAccount } from "~/src/services/history/usageHistory/sync"
-import { AuthTypeEnum, SiteHealthStatus, type SiteAccount } from "~/src/types"
+import { accountStorage } from "~/services/accounts/accountStorage"
+import { LogType, type LogItem } from "~/services/apiService/common/type"
+import { getDayKeyFromUnixSeconds } from "~/services/history/usageHistory/core"
+import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
+import { syncUsageHistoryForAccount } from "~/services/history/usageHistory/sync"
+import { AuthTypeEnum, SiteHealthStatus, type SiteAccount } from "~/types"
 import {
   USAGE_HISTORY_SCHEDULE_MODE,
   type UsageHistoryPreferences,
-} from "~/src/types/usageHistory"
-import { server } from "~/tests/msw/server"
+} from "~/types/usageHistory"
+import { server } from "~~/tests/msw/server"
 
 /**
  * Create a fully populated Consume log item for usage-history sync tests.

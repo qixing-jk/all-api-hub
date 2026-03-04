@@ -1,23 +1,23 @@
 import { t } from "i18next"
 
-import { accountStorage } from "~/src/services/accounts/accountStorage"
-import { REQUEST_CONFIG } from "~/src/services/apiService/common/constant"
-import { ApiError } from "~/src/services/apiService/common/errors"
+import { accountStorage } from "~/services/accounts/accountStorage"
+import { REQUEST_CONFIG } from "~/services/apiService/common/constant"
+import { ApiError } from "~/services/apiService/common/errors"
 import {
   LogType,
   type ApiServiceRequest,
   type LogItem,
   type LogResponseData,
-} from "~/src/services/apiService/common/type"
-import { fetchApiData } from "~/src/services/apiService/common/utils"
-import { userPreferences } from "~/src/services/preferences/userPreferences"
-import type { SiteAccount } from "~/src/types"
+} from "~/services/apiService/common/type"
+import { fetchApiData } from "~/services/apiService/common/utils"
+import { userPreferences } from "~/services/preferences/userPreferences"
+import type { SiteAccount } from "~/types"
 import {
   DEFAULT_USAGE_HISTORY_PREFERENCES,
   USAGE_HISTORY_SCHEDULE_MODE,
   type UsageHistoryPreferences,
-} from "~/src/types/usageHistory"
-import { getErrorMessage } from "~/src/utils/core/error"
+} from "~/types/usageHistory"
+import { getErrorMessage } from "~/utils/core/error"
 
 import {
   USAGE_HISTORY_LIMITS,

@@ -1,7 +1,7 @@
-import { hasCookieInterceptorPermissions } from "~/src/services/permissions/permissionManager"
-import { mergeCookieHeaders } from "~/src/utils/browser/cookieString"
-import { isProtectionBypassFirefoxEnv } from "~/src/utils/browser/protectionBypass"
-import { createLogger } from "~/src/utils/core/logger"
+import { hasCookieInterceptorPermissions } from "~/services/permissions/permissionManager"
+import { mergeCookieHeaders } from "~/utils/browser/cookieString"
+import { isProtectionBypassFirefoxEnv } from "~/utils/browser/protectionBypass"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to the cookie helper utilities.

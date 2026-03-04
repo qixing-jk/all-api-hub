@@ -1,7 +1,7 @@
 import { cva, type VariantProps } from "class-variance-authority"
 import React from "react"
 
-import { cn } from "~/src/lib/utils"
+import { cn } from "~/lib/utils"
 
 const toggleButtonVariants = cva(
   "relative inline-flex items-center justify-center rounded-md text-sm font-medium transition-all duration-200 touch-manipulation tap-highlight-transparent",

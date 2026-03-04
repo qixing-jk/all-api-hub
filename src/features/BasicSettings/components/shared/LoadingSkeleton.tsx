@@ -1,4 +1,4 @@
-import { Card } from "~/src/components/ui"
+import { Card } from "~/components/ui"
 
 /**
  * Skeleton placeholder while Basic Settings content loads.

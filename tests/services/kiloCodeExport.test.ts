@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { buildKiloCodeApiConfigs } from "~/src/services/integrations/kiloCodeExport"
+import { buildKiloCodeApiConfigs } from "~/services/integrations/kiloCodeExport"
 
 describe("buildKiloCodeApiConfigs", () => {
   it("normalizes openAiBaseUrl to end with /v1 without duplicating segments", () => {

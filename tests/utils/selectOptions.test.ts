@@ -5,9 +5,9 @@ import {
   mergeUniqueOptions,
   modelsToOptions,
   toSelectOptions,
-} from "~/src/components/dialogs/ChannelDialog/utils/selectOptions"
-import type { CompactMultiSelectOption } from "~/src/components/ui"
-import type { ChannelGroup, ChannelModel } from "~/src/types/newApi"
+} from "~/components/dialogs/ChannelDialog/utils/selectOptions"
+import type { CompactMultiSelectOption } from "~/components/ui"
+import type { ChannelGroup, ChannelModel } from "~/types/newApi"
 
 describe("selectOptions", () => {
   describe("toSelectOptions", () => {

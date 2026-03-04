@@ -1,28 +1,28 @@
 import { t } from "i18next"
 
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
-import { OCTOPUS } from "~/src/constants/siteType"
-import * as octopusApi from "~/src/services/apiService/octopus"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { OCTOPUS } from "~/constants/siteType"
+import * as octopusApi from "~/services/apiService/octopus"
 import {
   getManagedSiteAdminConfig,
   getManagedSiteConfig,
   getManagedSiteContext,
-} from "~/src/services/managedSites/utils/managedSite"
-import { ModelRedirectService } from "~/src/services/models/modelRedirect"
-import type { ChannelModelFilterRule } from "~/src/types/channelModelFilters"
+} from "~/services/managedSites/utils/managedSite"
+import { ModelRedirectService } from "~/services/models/modelRedirect"
+import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 import type {
   ManagedSiteChannel,
   ManagedSiteChannelListData,
-} from "~/src/types/managedSite"
+} from "~/types/managedSite"
 import {
   ALL_PRESET_STANDARD_MODELS,
   DEFAULT_MODEL_REDIRECT_PREFERENCES,
-} from "~/src/types/managedSiteModelRedirect"
+} from "~/types/managedSiteModelRedirect"
 import {
   ExecutionProgress,
   ExecutionResult,
-} from "~/src/types/managedSiteModelSync"
-import type { OctopusConfig } from "~/src/types/octopusConfig"
+} from "~/types/managedSiteModelSync"
+import type { OctopusConfig } from "~/types/octopusConfig"
 import {
   clearAlarm,
   createAlarm,
@@ -30,9 +30,9 @@ import {
   hasAlarmsAPI,
   onAlarm,
   sendRuntimeMessage,
-} from "~/src/utils/browser/browserApi"
-import { getErrorMessage } from "~/src/utils/core/error"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/utils/browser/browserApi"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 import { channelConfigStorage } from "../../managedSites/channelConfigStorage"
 import { octopusChannelToManagedSite } from "../../managedSites/providers/octopus"

@@ -5,25 +5,21 @@
 import { t } from "i18next"
 import toast from "react-hot-toast"
 
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
-import {
-  SITE_TITLE_RULES,
-  SUB2API,
-  UNKNOWN_SITE,
-} from "~/src/constants/siteType"
-import { UI_CONSTANTS } from "~/src/constants/ui"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { SITE_TITLE_RULES, SUB2API, UNKNOWN_SITE } from "~/constants/siteType"
+import { UI_CONSTANTS } from "~/constants/ui"
 import {
   ensureDefaultApiTokenForAccount,
   generateDefaultTokenRequest,
-} from "~/src/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
-import { accountStorage } from "~/src/services/accounts/accountStorage"
-import { analyzeAutoDetectError } from "~/src/services/accounts/utils/autoDetectUtils"
-import { getApiService } from "~/src/services/apiService"
+} from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
+import { accountStorage } from "~/services/accounts/accountStorage"
+import { analyzeAutoDetectError } from "~/services/accounts/utils/autoDetectUtils"
+import { getApiService } from "~/services/apiService"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
-} from "~/src/services/preferences/userPreferences"
-import { autoDetectSmart } from "~/src/services/siteDetection/autoDetectService"
+} from "~/services/preferences/userPreferences"
+import { autoDetectSmart } from "~/services/siteDetection/autoDetectService"
 import {
   ApiToken,
   AuthTypeEnum,
@@ -32,15 +28,15 @@ import {
   type DisplaySiteData,
   type SiteAccount,
   type Sub2ApiAuthConfig,
-} from "~/src/types"
+} from "~/types"
 import type {
   AccountSaveResponse,
   AccountValidationResponse,
-} from "~/src/types/serviceResponse"
-import { sendRuntimeMessage } from "~/src/utils/browser/browserApi"
-import { extractSessionCookieHeader } from "~/src/utils/browser/cookieString"
-import { getErrorMessage } from "~/src/utils/core/error"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/types/serviceResponse"
+import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { extractSessionCookieHeader } from "~/utils/browser/cookieString"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("AccountOperations")
 

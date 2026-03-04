@@ -1,7 +1,7 @@
 import { CpuChipIcon } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
-import { BodySmall, Heading2 } from "~/src/components/ui"
+import { BodySmall, Heading2 } from "~/components/ui"
 
 /**
  * Page header showing title and description for the model list.

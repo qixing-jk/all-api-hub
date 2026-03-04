@@ -4,8 +4,8 @@ import { useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import ChannelFiltersEditor from "~/src/components/ChannelFiltersEditor"
-import { SettingSection } from "~/src/components/SettingSection"
+import ChannelFiltersEditor from "~/components/ChannelFiltersEditor"
+import { SettingSection } from "~/components/SettingSection"
 import {
   Button,
   Card,
@@ -16,19 +16,19 @@ import {
   Modal,
   Switch,
   type CompactMultiSelectOption,
-} from "~/src/components/ui"
-import { MENU_ITEM_IDS } from "~/src/constants/optionsMenuIds"
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
-import { useUserPreferencesContext } from "~/src/contexts/UserPreferencesContext"
-import { modelMetadataService } from "~/src/services/models/modelMetadata"
-import type { ModelMetadata } from "~/src/services/models/modelMetadata/types"
-import { DEFAULT_PREFERENCES } from "~/src/services/preferences/userPreferences"
-import type { ChannelModelFilterRule } from "~/src/types/channelModelFilters"
-import type { ManagedSiteModelSyncPreferences } from "~/src/types/managedSiteModelSync"
-import { sendRuntimeMessage } from "~/src/utils/browser/browserApi"
-import { getErrorMessage } from "~/src/utils/core/error"
-import { createLogger } from "~/src/utils/core/logger"
-import { navigateWithinOptionsPage } from "~/src/utils/navigation"
+} from "~/components/ui"
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { modelMetadataService } from "~/services/models/modelMetadata"
+import type { ModelMetadata } from "~/services/models/modelMetadata/types"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
+import type { ManagedSiteModelSyncPreferences } from "~/types/managedSiteModelSync"
+import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
+import { navigateWithinOptionsPage } from "~/utils/navigation"
 
 type UserManagedSiteModelSyncConfig = NonNullable<
   typeof DEFAULT_PREFERENCES.managedSiteModelSync

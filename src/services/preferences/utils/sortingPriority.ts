@@ -2,17 +2,17 @@ import {
   DATA_TYPE_BALANCE,
   DATA_TYPE_CONSUMPTION,
   DATA_TYPE_INCOME,
-} from "~/src/constants"
+} from "~/constants"
 import type {
   CurrencyType,
   DisplaySiteData,
   SiteAccount,
   SortField,
-} from "~/src/types"
+} from "~/types"
 import {
   SortingCriteriaType,
   type SortingPriorityConfig,
-} from "~/src/types/sorting"
+} from "~/types/sorting"
 
 /**
  * This constant defines the default sorting priority configuration.

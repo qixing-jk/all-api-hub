@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 
-import { MENU_ITEM_IDS } from "~/src/constants/optionsMenuIds"
-import { navigateWithinOptionsPage } from "~/src/utils/navigation"
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { navigateWithinOptionsPage } from "~/utils/navigation"
 
 import { menuItems } from "../constants"
 

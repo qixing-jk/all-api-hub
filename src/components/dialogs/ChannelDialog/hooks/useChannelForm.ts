@@ -2,23 +2,20 @@ import { useCallback, useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { mergeUniqueOptions } from "~/src/components/dialogs/ChannelDialog/utils/selectOptions"
-import type { CompactMultiSelectOption } from "~/src/components/ui"
-import { DIALOG_MODES, type DialogMode } from "~/src/constants/dialogModes"
-import {
-  ChannelType,
-  DEFAULT_CHANNEL_FIELDS,
-} from "~/src/constants/managedSite"
-import { getApiService } from "~/src/services/apiService"
-import { getManagedSiteService } from "~/src/services/managedSites/managedSiteService"
-import { AuthTypeEnum } from "~/src/types"
+import { mergeUniqueOptions } from "~/components/dialogs/ChannelDialog/utils/selectOptions"
+import type { CompactMultiSelectOption } from "~/components/ui"
+import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
+import { ChannelType, DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
+import { getApiService } from "~/services/apiService"
+import { getManagedSiteService } from "~/services/managedSites/managedSiteService"
+import { AuthTypeEnum } from "~/types"
 import type {
   ChannelFormData,
   ManagedSiteChannel,
   UpdateChannelPayload,
-} from "~/src/types/managedSite"
-import type { OctopusOutboundType } from "~/src/types/octopus"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/types/managedSite"
+import type { OctopusOutboundType } from "~/types/octopus"
+import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to channel dialog form state and submissions.

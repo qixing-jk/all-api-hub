@@ -2,11 +2,11 @@ import { screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
-import AccountActionButtons from "~/src/features/AccountManagement/components/AccountActionButtons"
-import { CHECKIN_RESULT_STATUS } from "~/src/types/autoCheckin"
-import { buildDisplaySiteData } from "~/tests/test-utils/factories"
-import { render } from "~/tests/test-utils/render"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
+import AccountActionButtons from "~/features/AccountManagement/components/AccountActionButtons"
+import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
+import { render } from "~~/tests/test-utils/render"
 
 const {
   mockHandleSetAccountDisabled,
@@ -45,7 +45,7 @@ vi.mock("~/services/apiService", () => ({
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/src/utils/browser/browserApi")>()
+    await importOriginal<typeof import("~/utils/browser/browserApi")>()
   return {
     ...actual,
     sendRuntimeMessage: sendRuntimeMessageMock,

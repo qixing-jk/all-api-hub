@@ -1,4 +1,4 @@
-import type { SiteAccount } from "~/src/types"
+import type { SiteAccount } from "~/types"
 
 type LegacyCheckInConfigV1 = {
   enableDetection?: boolean

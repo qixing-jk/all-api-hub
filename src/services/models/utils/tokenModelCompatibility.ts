@@ -1,4 +1,4 @@
-import type { ApiToken } from "~/src/types"
+import type { ApiToken } from "~/types"
 
 /**
  * Parses a comma-separated model allow-list string into a normalized string array.

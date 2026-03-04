@@ -1,4 +1,4 @@
-import { AuthTypeEnum } from "~/src/types"
+import { AuthTypeEnum } from "~/types"
 
 /**
  * Runtime-safe coercion for {@link AuthTypeEnum} values.

@@ -1,7 +1,7 @@
 import { XMarkIcon } from "@heroicons/react/24/outline"
 import toast, { ToastBar, Toaster } from "react-hot-toast"
 
-import { useTheme } from "~/src/contexts/ThemeContext"
+import { useTheme } from "~/contexts/ThemeContext"
 
 interface ThemeAwareToasterProps {
   reverseOrder?: boolean

@@ -1,3 +1,3 @@
-import ImportExport from "~/src/features/ImportExport"
+import ImportExport from "~/features/ImportExport"
 
 export default ImportExport

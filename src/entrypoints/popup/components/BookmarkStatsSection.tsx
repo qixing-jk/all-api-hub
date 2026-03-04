@@ -2,9 +2,9 @@ import { useEffect, useMemo, useState } from "react"
 import CountUp from "react-countup"
 import { useTranslation } from "react-i18next"
 
-import { BodySmall, Caption } from "~/src/components/ui"
-import { UI_CONSTANTS } from "~/src/constants/ui"
-import { useAccountDataContext } from "~/src/features/AccountManagement/hooks/AccountDataContext"
+import { BodySmall, Caption } from "~/components/ui"
+import { UI_CONSTANTS } from "~/constants/ui"
+import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 
 const StatValue = ({
   value,

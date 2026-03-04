@@ -2,12 +2,12 @@ import { useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { Button, FormField, Input, Modal, Textarea } from "~/src/components/ui"
-import { TagPicker } from "~/src/features/AccountManagement/components/TagPicker"
-import { useAccountDataContext } from "~/src/features/AccountManagement/hooks/AccountDataContext"
-import { accountStorage } from "~/src/services/accounts/accountStorage"
-import type { SiteBookmark } from "~/src/types"
-import { getErrorMessage } from "~/src/utils/core/error"
+import { Button, FormField, Input, Modal, Textarea } from "~/components/ui"
+import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
+import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
+import { accountStorage } from "~/services/accounts/accountStorage"
+import type { SiteBookmark } from "~/types"
+import { getErrorMessage } from "~/utils/core/error"
 
 export type BookmarkDialogMode = "add" | "edit"
 

@@ -25,12 +25,12 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "json", "html", "lcov"],
       include: [
-        "components/**/*.{ts,tsx}",
-        "contexts/**/*.{ts,tsx}",
-        "features/**/*.{ts,tsx}",
-        "hooks/**/*.{ts,tsx}",
-        "services/**/*.{ts,tsx}",
-        "utils/**/*.{ts,tsx}",
+        "src/components/**/*.{ts,tsx}",
+        "src/contexts/**/*.{ts,tsx}",
+        "src/features/**/*.{ts,tsx}",
+        "src/hooks/**/*.{ts,tsx}",
+        "src/services/**/*.{ts,tsx}",
+        "src/utils/**/*.{ts,tsx}",
       ],
       exclude: [
         "**/*.d.ts",
@@ -65,7 +65,8 @@ export default defineConfig({
   resolve: {
     alias: {
       // Mirror WXT/Vite path aliases
-      "~": path.resolve(rootDir, "."),
+      "~": path.resolve(rootDir, "src"),
+      "~~": path.resolve(rootDir, "."),
     },
   },
 })

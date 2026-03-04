@@ -1,26 +1,26 @@
 import { waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
-import { ensureRedemptionToastUi } from "~/src/entrypoints/content/shared/uiRoot"
-import { setupWebAiApiCheckContent } from "~/src/entrypoints/content/webAiApiCheck"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { ensureRedemptionToastUi } from "~/entrypoints/content/shared/uiRoot"
+import { setupWebAiApiCheckContent } from "~/entrypoints/content/webAiApiCheck"
 import {
   dispatchOpenApiCheckModal,
   waitForApiCheckModalHostReady,
-} from "~/src/entrypoints/content/webAiApiCheck/events"
-import { showApiCheckConfirmToast } from "~/src/entrypoints/content/webAiApiCheck/utils/apiCheckToasts"
+} from "~/entrypoints/content/webAiApiCheck/events"
+import { showApiCheckConfirmToast } from "~/entrypoints/content/webAiApiCheck/utils/apiCheckToasts"
 import {
   checkPermissionViaMessage,
   sendRuntimeMessage,
-} from "~/src/utils/browser/browserApi"
+} from "~/utils/browser/browserApi"
 import {
   buildApiCheckClipboardText,
   buildApiKey,
-} from "~/tests/test-utils/factories"
+} from "~~/tests/test-utils/factories"
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/src/utils/browser/browserApi")>()
+    await importOriginal<typeof import("~/utils/browser/browserApi")>()
   return {
     ...actual,
     sendRuntimeMessage: vi.fn(),
@@ -41,7 +41,7 @@ vi.mock(
   async (importOriginal) => {
     const actual =
       await importOriginal<
-        typeof import("~/src/entrypoints/content/webAiApiCheck/events")
+        typeof import("~/entrypoints/content/webAiApiCheck/events")
       >()
     return {
       ...actual,

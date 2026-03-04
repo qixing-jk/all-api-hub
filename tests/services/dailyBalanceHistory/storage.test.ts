@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { STORAGE_KEYS } from "~/src/services/core/storageKeys"
-import { getDayKeyFromUnixSeconds } from "~/src/services/history/dailyBalanceHistory/dayKeys"
-import { dailyBalanceHistoryStorage } from "~/src/services/history/dailyBalanceHistory/storage"
-import { DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION } from "~/src/types/dailyBalanceHistory"
+import { STORAGE_KEYS } from "~/services/core/storageKeys"
+import { getDayKeyFromUnixSeconds } from "~/services/history/dailyBalanceHistory/dayKeys"
+import { dailyBalanceHistoryStorage } from "~/services/history/dailyBalanceHistory/storage"
+import { DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION } from "~/types/dailyBalanceHistory"
 
 const storageData = new Map<string, any>()
 

@@ -9,7 +9,7 @@ import {
   CardItem,
   CardList,
   CardTitle,
-} from "~/src/components/ui"
+} from "~/components/ui"
 
 import {
   handleExportAccounts,

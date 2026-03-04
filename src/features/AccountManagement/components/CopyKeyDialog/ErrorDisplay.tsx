@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next"
 
-import { Alert, Button } from "~/src/components/ui"
+import { Alert, Button } from "~/components/ui"
 
 interface ErrorDisplayProps {
   error: string

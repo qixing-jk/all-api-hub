@@ -9,23 +9,23 @@ import {
   Heading5,
   Input,
   SearchableSelect,
-} from "~/src/components/ui"
-import { Modal } from "~/src/components/ui/Dialog/Modal"
-import { getApiService } from "~/src/services/apiService"
-import { identifyProvider } from "~/src/services/models/utils/modelProviders"
+} from "~/components/ui"
+import { Modal } from "~/components/ui/Dialog/Modal"
+import { getApiService } from "~/services/apiService"
+import { identifyProvider } from "~/services/models/utils/modelProviders"
 import {
   API_TYPES,
   getApiVerificationProbeDefinitions,
   guessModelIdFromToken,
   runApiVerificationProbe,
-} from "~/src/services/verification/aiApiVerification"
+} from "~/services/verification/aiApiVerification"
 import type {
   ApiVerificationApiType,
   ApiVerificationProbeId,
-} from "~/src/services/verification/aiApiVerification"
-import { toSanitizedErrorSummary } from "~/src/services/verification/aiApiVerification/utils"
-import type { ApiToken } from "~/src/types"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/services/verification/aiApiVerification"
+import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
+import type { ApiToken } from "~/types"
+import { createLogger } from "~/utils/core/logger"
 
 import { ProbeStatusBadge } from "./ProbeStatusBadge"
 import type { ProbeItemState, VerifyApiDialogProps } from "./types"

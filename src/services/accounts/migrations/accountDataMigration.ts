@@ -6,8 +6,8 @@
  * install/update to normalize persisted account data in storage.
  */
 
-import type { SiteAccount } from "~/src/types"
-import { createLogger } from "~/src/utils/core/logger"
+import type { SiteAccount } from "~/types"
+import { createLogger } from "~/utils/core/logger"
 
 import { migrateCheckInDualStatusConfig } from "./checkInDualStatusMigration"
 import { migrateCheckInConfig } from "./checkInMigration"

@@ -6,9 +6,9 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import {
   AccountDataProvider,
   useAccountDataContext,
-} from "~/src/features/AccountManagement/hooks/AccountDataContext"
-import { AuthTypeEnum, SiteHealthStatus } from "~/src/types"
-import i18nInstance from "~/tests/test-utils/i18n"
+} from "~/features/AccountManagement/hooks/AccountDataContext"
+import { AuthTypeEnum, SiteHealthStatus } from "~/types"
+import i18nInstance from "~~/tests/test-utils/i18n"
 
 let activeTabs: any[] = []
 let tabUpdatedListener: any = null

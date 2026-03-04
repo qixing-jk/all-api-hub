@@ -5,17 +5,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { PageHeader } from "~/src/components/PageHeader"
-import { Button, EmptyState, Input } from "~/src/components/ui"
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
-import type { ManagedSiteChannel } from "~/src/types/managedSite"
+import { PageHeader } from "~/components/PageHeader"
+import { Button, EmptyState, Input } from "~/components/ui"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
+import type { ManagedSiteChannel } from "~/types/managedSite"
 import type {
   ExecutionItemResult,
   ExecutionProgress,
   ExecutionResult,
-} from "~/src/types/managedSiteModelSync"
-import { sendRuntimeMessage } from "~/src/utils/browser/browserApi"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/types/managedSiteModelSync"
+import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { createLogger } from "~/utils/core/logger"
 
 import ActionBar from "./components/ActionBar"
 import EmptyResults from "./components/EmptyResults"

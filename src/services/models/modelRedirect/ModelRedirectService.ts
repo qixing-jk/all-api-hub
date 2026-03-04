@@ -9,22 +9,22 @@ import {
   NEW_API,
   OCTOPUS,
   type ManagedSiteType,
-} from "~/src/constants/siteType"
+} from "~/constants/siteType"
 import {
   getManagedSiteAdminConfig,
   getManagedSiteConfig,
-} from "~/src/services/managedSites/utils/managedSite"
-import { modelMetadataService } from "~/src/services/models/modelMetadata"
-import { ModelSyncService } from "~/src/services/models/modelSync"
-import { toModelTokenKey } from "~/src/services/models/utils/modelName"
-import type { ManagedSiteChannel } from "~/src/types/managedSite"
-import { CHANNEL_STATUS } from "~/src/types/managedSite"
+} from "~/services/managedSites/utils/managedSite"
+import { modelMetadataService } from "~/services/models/modelMetadata"
+import { ModelSyncService } from "~/services/models/modelSync"
+import { toModelTokenKey } from "~/services/models/utils/modelName"
+import type { ManagedSiteChannel } from "~/types/managedSite"
+import { CHANNEL_STATUS } from "~/types/managedSite"
 import {
   ALL_PRESET_STANDARD_MODELS,
   DEFAULT_MODEL_REDIRECT_PREFERENCES,
-} from "~/src/types/managedSiteModelRedirect"
-import { getErrorMessage } from "~/src/utils/core/error"
-import { createLogger } from "~/src/utils/core/logger"
+} from "~/types/managedSiteModelRedirect"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 import { hasValidManagedSiteConfig } from "../../managedSites/managedSiteService"
 import {

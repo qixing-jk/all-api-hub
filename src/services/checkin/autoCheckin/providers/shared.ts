@@ -5,8 +5,8 @@
  * magic strings (message keys, message parsing heuristics) across backends.
  */
 
-import type { AutoCheckinProviderResult } from "~/src/services/checkin/autoCheckin/providers/types"
-import { CHECKIN_RESULT_STATUS } from "~/src/types/autoCheckin"
+import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/providers/types"
+import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 
 export const AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS = {
   alreadyCheckedToday: "autoCheckin:providerFallback.alreadyCheckedToday",

@@ -1,13 +1,13 @@
-import { RuntimeActionIds } from "~/src/constants/runtimeActions"
-import { getSiteApiRouter } from "~/src/constants/siteType"
-import { accountStorage } from "~/src/services/accounts/accountStorage"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { getSiteApiRouter } from "~/constants/siteType"
+import { accountStorage } from "~/services/accounts/accountStorage"
 import {
   createTab,
   createWindow,
   hasWindowsAPI,
-} from "~/src/utils/browser/browserApi"
-import { getErrorMessage } from "~/src/utils/core/error"
-import { joinUrl } from "~/src/utils/core/url"
+} from "~/utils/browser/browserApi"
+import { getErrorMessage } from "~/utils/core/error"
+import { joinUrl } from "~/utils/core/url"
 
 /**
  * External custom check-in flow (background-only).

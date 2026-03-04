@@ -9,24 +9,24 @@ import { useCallback } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import iconImage from "~/src/assets/icon.png"
-import { useUpdateLogDialogContext } from "~/src/components/dialogs/UpdateLogDialog"
-import Tooltip from "~/src/components/Tooltip"
-import { BodySmall, Caption, IconButton } from "~/src/components/ui"
-import { VersionBadge } from "~/src/components/VersionBadge"
-import { COLORS } from "~/src/constants/designTokens"
-import { useAccountDataContext } from "~/src/features/AccountManagement/hooks/AccountDataContext"
-import { changelogOnUpdateState } from "~/src/services/updates/changelogOnUpdateState"
-import { isExtensionSidePanel } from "~/src/utils/browser"
-import { getManifest } from "~/src/utils/browser/browserApi"
-import { getErrorMessage } from "~/src/utils/core/error"
-import { createLogger } from "~/src/utils/core/logger"
+import iconImage from "~/assets/icon.png"
+import { useUpdateLogDialogContext } from "~/components/dialogs/UpdateLogDialog"
+import Tooltip from "~/components/Tooltip"
+import { BodySmall, Caption, IconButton } from "~/components/ui"
+import { VersionBadge } from "~/components/VersionBadge"
+import { COLORS } from "~/constants/designTokens"
+import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
+import { changelogOnUpdateState } from "~/services/updates/changelogOnUpdateState"
+import { isExtensionSidePanel } from "~/utils/browser"
+import { getManifest } from "~/utils/browser/browserApi"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 import {
   openFullAccountManagerPage,
   openFullBookmarkManagerPage,
   openSettingsPage,
   openSidePanelPage,
-} from "~/src/utils/navigation"
+} from "~/utils/navigation"
 
 import CompactThemeToggle from "./ThemeToggle"
 

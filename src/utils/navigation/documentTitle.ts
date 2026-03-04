@@ -1,5 +1,5 @@
-import { createLogger } from "~/src/utils/core/logger"
-import i18n from "~/src/utils/i18n"
+import { createLogger } from "~/utils/core/logger"
+import i18n from "~/utils/i18n"
 
 /**
  * Unified logger scoped to document title initialization helpers.

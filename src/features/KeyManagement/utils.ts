@@ -1,7 +1,7 @@
 // 格式化密钥显示
 import { t } from "i18next"
 
-import { UI_CONSTANTS } from "~/src/constants/ui"
+import { UI_CONSTANTS } from "~/constants/ui"
 
 // 构建 token 在 UI 中的唯一标识 (accountId + tokenId)，避免跨账号 tokenId 冲突
 export const buildTokenIdentityKey = (accountId: string, tokenId: number) =>

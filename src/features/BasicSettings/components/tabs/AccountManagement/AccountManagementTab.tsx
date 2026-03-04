@@ -1,9 +1,9 @@
 import { UsersIcon } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
-import { Button, Card, CardContent, Heading4 } from "~/src/components/ui"
-import { MENU_ITEM_IDS } from "~/src/constants/optionsMenuIds"
-import { navigateWithinOptionsPage } from "~/src/utils/navigation"
+import { Button, Card, CardContent, Heading4 } from "~/components/ui"
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { navigateWithinOptionsPage } from "~/utils/navigation"
 
 import AutoProvisionKeyOnAccountAddSettings from "./AutoProvisionKeyOnAccountAddSettings"
 import SortingPrioritySettings from "./SortingPrioritySettings"

@@ -3,7 +3,7 @@ import { CSS } from "@dnd-kit/utilities"
 import { Bars2Icon } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
-import { Badge, Card, CardContent, Switch } from "~/src/components/ui"
+import { Badge, Card, CardContent, Switch } from "~/components/ui"
 
 import type { AugmentedSortingFieldConfig } from "./SortingPriorityDragList"
 

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest"
 
-import ResultsTable from "~/src/features/AutoCheckin/components/ResultsTable"
-import { CHECKIN_RESULT_STATUS } from "~/src/types/autoCheckin"
-import { render, screen } from "~/tests/test-utils/render"
+import ResultsTable from "~/features/AutoCheckin/components/ResultsTable"
+import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+import { render, screen } from "~~/tests/test-utils/render"
 
 describe("AutoCheckin ResultsTable troubleshooting hints", () => {
   it("shows invalidAccessToken hint when the backend reports an invalid access token", async () => {

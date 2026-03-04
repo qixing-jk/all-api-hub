@@ -1,7 +1,7 @@
 import { BugAntIcon } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
-import { SettingSection } from "~/src/components/SettingSection"
+import { SettingSection } from "~/components/SettingSection"
 import {
   Card,
   CardItem,
@@ -12,10 +12,10 @@ import {
   SelectTrigger,
   SelectValue,
   Switch,
-} from "~/src/components/ui"
-import { useUserPreferencesContext } from "~/src/contexts/UserPreferencesContext"
-import { LOG_LEVELS, type LogLevel } from "~/src/types/logging"
-import { showUpdateToast } from "~/src/utils/core/toastHelpers"
+} from "~/components/ui"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { LOG_LEVELS, type LogLevel } from "~/types/logging"
+import { showUpdateToast } from "~/utils/core/toastHelpers"
 
 /**
  * Settings section for unified logger preferences (console enablement + minimum level).

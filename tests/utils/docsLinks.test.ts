@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest"
 
-import { getChangelogAnchorId } from "~/src/utils/navigation/changelogAnchor"
+import { getChangelogAnchorId } from "~/utils/navigation/changelogAnchor"
 import {
   getDocsChangelogUrl,
   getDocsPageUrl,
-} from "~/src/utils/navigation/docsLinks"
-import { getDocsLocalePath } from "~/src/utils/navigation/docsLocale"
-import { getHomepage } from "~/src/utils/navigation/packageMeta"
+} from "~/utils/navigation/docsLinks"
+import { getDocsLocalePath } from "~/utils/navigation/docsLocale"
+import { getHomepage } from "~/utils/navigation/packageMeta"
 
 describe("docsLinks", () => {
   it("builds a stable changelog anchor id from version", () => {

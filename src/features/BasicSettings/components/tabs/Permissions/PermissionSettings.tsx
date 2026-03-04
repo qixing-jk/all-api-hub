@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { SettingSection } from "~/src/components/SettingSection"
-import { Alert } from "~/src/components/ui/Alert"
-import { Badge } from "~/src/components/ui/badge"
-import { Button } from "~/src/components/ui/button"
-import { Card } from "~/src/components/ui/Card"
-import { BodySmall } from "~/src/components/ui/Typography"
+import { SettingSection } from "~/components/SettingSection"
+import { Alert } from "~/components/ui/Alert"
+import { Badge } from "~/components/ui/badge"
+import { Button } from "~/components/ui/button"
+import { Card } from "~/components/ui/Card"
+import { BodySmall } from "~/components/ui/Typography"
 import {
   hasPermission,
   ManifestOptionalPermissions,
@@ -15,9 +15,9 @@ import {
   OPTIONAL_PERMISSIONS,
   removePermission,
   requestPermission,
-} from "~/src/services/permissions/permissionManager"
-import { createLogger } from "~/src/utils/core/logger"
-import { showResultToast } from "~/src/utils/core/toastHelpers"
+} from "~/services/permissions/permissionManager"
+import { createLogger } from "~/utils/core/logger"
+import { showResultToast } from "~/utils/core/toastHelpers"
 
 import PermissionList from "./PermissionList"
 

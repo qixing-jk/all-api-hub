@@ -6,9 +6,9 @@ import {
 import dayjs from "dayjs"
 import { useTranslation } from "react-i18next"
 
-import ManagedSiteChannelLinkButton from "~/src/components/ManagedSiteChannelLinkButton"
-import { Badge, Button, Card } from "~/src/components/ui"
-import type { ExecutionItemResult } from "~/src/types/managedSiteModelSync"
+import ManagedSiteChannelLinkButton from "~/components/ManagedSiteChannelLinkButton"
+import { Badge, Button, Card } from "~/components/ui"
+import type { ExecutionItemResult } from "~/types/managedSiteModelSync"
 
 interface ResultsTableProps {
   items: ExecutionItemResult[]

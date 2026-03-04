@@ -1,8 +1,8 @@
 import { type ReactNode } from "react"
 
-import { TempWindowFallbackReminderGate } from "~/src/features/AccountManagement/components/TempWindowFallbackReminderGate"
-import { LdohSiteLookupProvider } from "~/src/features/LdohSiteLookup/hooks/LdohSiteLookupContext"
-import { BookmarkDialogStateProvider } from "~/src/features/SiteBookmarks/hooks/BookmarkDialogStateContext"
+import { TempWindowFallbackReminderGate } from "~/features/AccountManagement/components/TempWindowFallbackReminderGate"
+import { LdohSiteLookupProvider } from "~/features/LdohSiteLookup/hooks/LdohSiteLookupContext"
+import { BookmarkDialogStateProvider } from "~/features/SiteBookmarks/hooks/BookmarkDialogStateContext"
 
 import { AccountActionsProvider } from "./AccountActionsContext"
 import { AccountDataProvider } from "./AccountDataContext"

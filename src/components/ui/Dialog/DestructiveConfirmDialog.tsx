@@ -2,8 +2,8 @@ import { DialogTitle } from "@headlessui/react"
 import { TrashIcon } from "@heroicons/react/24/outline"
 import type { ReactNode } from "react"
 
-import { Button } from "~/src/components/ui/button"
-import { Modal } from "~/src/components/ui/Dialog/Modal"
+import { Button } from "~/components/ui/button"
+import { Modal } from "~/components/ui/Dialog/Modal"
 
 interface DeleteConfirmModalProps {
   /**

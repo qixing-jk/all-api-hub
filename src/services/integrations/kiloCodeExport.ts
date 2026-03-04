@@ -1,5 +1,5 @@
-import { safeRandomUUID } from "~/src/utils/core/identifier"
-import { coerceBaseUrlToPathSuffix } from "~/src/utils/core/url"
+import { safeRandomUUID } from "~/utils/core/identifier"
+import { coerceBaseUrlToPathSuffix } from "~/utils/core/url"
 
 export type KiloCodeApiProvider = "openai"
 

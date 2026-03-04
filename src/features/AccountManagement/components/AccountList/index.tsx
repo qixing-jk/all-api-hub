@@ -28,28 +28,28 @@ import {
   EmptyState,
   IconButton,
   TagFilter,
-} from "~/src/components/ui"
+} from "~/components/ui"
 import {
   DATA_TYPE_BALANCE,
   DATA_TYPE_CONSUMPTION,
   DATA_TYPE_INCOME,
-} from "~/src/constants"
-import { useUserPreferencesContext } from "~/src/contexts/UserPreferencesContext"
-import { useAccountActionsContext } from "~/src/features/AccountManagement/hooks/AccountActionsContext"
-import { useAccountDataContext } from "~/src/features/AccountManagement/hooks/AccountDataContext"
+} from "~/constants"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
+import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import {
   useAccountSearch,
   type SearchResultWithHighlight,
-} from "~/src/features/AccountManagement/hooks/useAccountSearch"
-import { useAddAccountHandler } from "~/src/hooks/useAddAccountHandler"
-import { useIsDesktop, useIsSmallScreen } from "~/src/hooks/useMediaQuery"
-import { cn } from "~/src/lib/utils"
-import type { DisplaySiteData, SortField } from "~/src/types"
+} from "~/features/AccountManagement/hooks/useAccountSearch"
+import { useAddAccountHandler } from "~/hooks/useAddAccountHandler"
+import { useIsDesktop, useIsSmallScreen } from "~/hooks/useMediaQuery"
+import { cn } from "~/lib/utils"
+import type { DisplaySiteData, SortField } from "~/types"
 import {
   calculateTotalBalanceForSites,
   calculateTotalConsumptionForSites,
-} from "~/src/utils/core/formatters"
-import { formatMoneyFixed } from "~/src/utils/core/money"
+} from "~/utils/core/formatters"
+import { formatMoneyFixed } from "~/utils/core/money"
 
 import CopyKeyDialog from "../CopyKeyDialog"
 import DelAccountDialog from "../DelAccountDialog"

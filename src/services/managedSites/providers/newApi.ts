@@ -1,19 +1,14 @@
 import { t } from "i18next"
 import toast from "react-hot-toast"
 
-import { DEFAULT_CHANNEL_FIELDS } from "~/src/constants/managedSite"
-import { NEW_API } from "~/src/constants/siteType"
-import { ensureAccountApiToken } from "~/src/services/accounts/accountOperations"
-import { accountStorage } from "~/src/services/accounts/accountStorage"
-import { getApiService } from "~/src/services/apiService"
-import { fetchOpenAICompatibleModelIds } from "~/src/services/apiService/openaiCompatible"
-import {
-  ApiToken,
-  AuthTypeEnum,
-  DisplaySiteData,
-  SiteAccount,
-} from "~/src/types"
-import type { AccountToken } from "~/src/types"
+import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
+import { NEW_API } from "~/constants/siteType"
+import { ensureAccountApiToken } from "~/services/accounts/accountOperations"
+import { accountStorage } from "~/services/accounts/accountStorage"
+import { getApiService } from "~/services/apiService"
+import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompatible"
+import { ApiToken, AuthTypeEnum, DisplaySiteData, SiteAccount } from "~/types"
+import type { AccountToken } from "~/types"
 import type {
   ChannelFormData,
   ChannelMode,
@@ -21,15 +16,15 @@ import type {
   ManagedSiteChannel,
   ManagedSiteChannelListData,
   UpdateChannelPayload,
-} from "~/src/types/managedSite"
+} from "~/types/managedSite"
 import type {
   AutoConfigToNewApiResponse,
   ServiceResponse,
-} from "~/src/types/serviceResponse"
-import { isArraysEqual } from "~/src/utils"
-import { getErrorMessage } from "~/src/utils/core/error"
-import { createLogger } from "~/src/utils/core/logger"
-import { normalizeList, parseDelimitedList } from "~/src/utils/core/string"
+} from "~/types/serviceResponse"
+import { isArraysEqual } from "~/utils"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
+import { normalizeList, parseDelimitedList } from "~/utils/core/string"
 
 import {
   UserPreferences,

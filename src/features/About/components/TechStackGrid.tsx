@@ -1,4 +1,4 @@
-import { Badge, Card, CardContent } from "~/src/components/ui"
+import { Badge, Card, CardContent } from "~/components/ui"
 
 export interface TechItem {
   name: string

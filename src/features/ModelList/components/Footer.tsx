@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next"
 
-import { Alert } from "~/src/components/ui"
+import { Alert } from "~/components/ui"
 
 /**
  * Informational footer reminding users about pricing variability.

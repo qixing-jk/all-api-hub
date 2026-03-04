@@ -1,9 +1,9 @@
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import AddTokenDialog from "~/src/features/KeyManagement/components/AddTokenDialog"
-import { AuthTypeEnum } from "~/src/types"
-import { render, screen, waitFor } from "~/tests/test-utils/render"
+import AddTokenDialog from "~/features/KeyManagement/components/AddTokenDialog"
+import { AuthTypeEnum } from "~/types"
+import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
   createApiTokenMock,

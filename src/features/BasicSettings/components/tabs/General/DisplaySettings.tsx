@@ -5,19 +5,13 @@ import {
 } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
-import { SettingSection } from "~/src/components/SettingSection"
-import {
-  Card,
-  CardItem,
-  CardList,
-  Switch,
-  ToggleButton,
-} from "~/src/components/ui"
-import { DATA_TYPE_BALANCE, DATA_TYPE_CASHFLOW } from "~/src/constants"
-import { ANIMATIONS, COLORS } from "~/src/constants/designTokens"
-import { useUserPreferencesContext } from "~/src/contexts/UserPreferencesContext"
-import type { CurrencyType, DashboardTabType } from "~/src/types"
-import { showUpdateToast } from "~/src/utils/core/toastHelpers"
+import { SettingSection } from "~/components/SettingSection"
+import { Card, CardItem, CardList, Switch, ToggleButton } from "~/components/ui"
+import { DATA_TYPE_BALANCE, DATA_TYPE_CASHFLOW } from "~/constants"
+import { ANIMATIONS, COLORS } from "~/constants/designTokens"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import type { CurrencyType, DashboardTabType } from "~/types"
+import { showUpdateToast } from "~/utils/core/toastHelpers"
 
 /**
  * Settings section for display preferences (currency, default dashboard tab).

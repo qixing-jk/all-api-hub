@@ -1,7 +1,7 @@
 import type { FC } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Button } from "~/src/components/ui"
+import { Button } from "~/components/ui"
 
 interface ActionButtonsProps {
   onClose: () => void

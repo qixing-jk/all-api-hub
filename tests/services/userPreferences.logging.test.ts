@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest"
 
 import { Storage } from "@plasmohq/storage"
 
-import { USER_PREFERENCES_STORAGE_KEYS } from "~/src/services/core/storageKeys"
+import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
-} from "~/src/services/preferences/userPreferences"
+} from "~/services/preferences/userPreferences"
 
 /**
  * Validates that logging preferences are:

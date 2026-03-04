@@ -10,7 +10,7 @@ import {
 } from "react"
 import { useTranslation } from "react-i18next"
 
-import { PageHeader } from "~/src/components/PageHeader"
+import { PageHeader } from "~/components/PageHeader"
 import {
   Button,
   Select,
@@ -18,17 +18,17 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "~/src/components/ui"
-import { MENU_ITEM_IDS } from "~/src/constants/optionsMenuIds"
-import { useUserPreferencesContext } from "~/src/contexts/UserPreferencesContext"
-import { useHorizontalScrollControls } from "~/src/hooks/useHorizontalScrollControls"
-import { setLastSeenOptionalPermissions } from "~/src/services/permissions/optionalPermissionState"
-import { OPTIONAL_PERMISSIONS } from "~/src/services/permissions/permissionManager"
+} from "~/components/ui"
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { useHorizontalScrollControls } from "~/hooks/useHorizontalScrollControls"
+import { setLastSeenOptionalPermissions } from "~/services/permissions/optionalPermissionState"
+import { OPTIONAL_PERMISSIONS } from "~/services/permissions/permissionManager"
 import {
   navigateToAnchor,
   parseTabFromUrl,
   updateUrlWithTab,
-} from "~/src/utils/core/url"
+} from "~/utils/core/url"
 
 import { PermissionOnboardingDialog } from "./components/dialogs/PermissionOnboardingDialog"
 import LoadingSkeleton from "./components/shared/LoadingSkeleton"

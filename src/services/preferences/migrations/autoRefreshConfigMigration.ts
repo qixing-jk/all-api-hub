@@ -3,8 +3,8 @@
  * Converts flat auto-refresh fields to nested object structure
  */
 
-import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/src/types/accountAutoRefresh"
-import { createLogger } from "~/src/utils/core/logger"
+import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
+import { createLogger } from "~/utils/core/logger"
 
 import type { UserPreferences } from "../userPreferences"
 

@@ -1,13 +1,13 @@
 import i18next from "i18next"
 
-import { buildCompatUserIdHeaders } from "~/src/services/apiService/common/compatHeaders"
-import { REQUEST_CONFIG } from "~/src/services/apiService/common/constant"
+import { buildCompatUserIdHeaders } from "~/services/apiService/common/compatHeaders"
+import { REQUEST_CONFIG } from "~/services/apiService/common/constant"
 import {
   API_ERROR_CODES,
   ApiError,
   type ApiErrorCode,
-} from "~/src/services/apiService/common/errors"
-import { createMinIntervalLimiter } from "~/src/services/apiService/common/minIntervalLimiter"
+} from "~/services/apiService/common/errors"
+import { createMinIntervalLimiter } from "~/services/apiService/common/minIntervalLimiter"
 import type {
   ApiResponse,
   ApiServiceRequest,
@@ -15,22 +15,22 @@ import type {
   FetchApiOptions,
   LogItem,
   TodayUsageData,
-} from "~/src/services/apiService/common/type"
-import { AuthTypeEnum } from "~/src/types"
+} from "~/services/apiService/common/type"
+import { AuthTypeEnum } from "~/types"
 import type {
   TempWindowFallbackContext,
   TempWindowResponseType,
-} from "~/src/types/tempWindowFetch"
+} from "~/types/tempWindowFetch"
 import {
   addAuthMethodHeader,
   addExtensionHeader,
   AUTH_MODE,
   COOKIE_AUTH_HEADER_NAME,
   COOKIE_SESSION_OVERRIDE_HEADER_NAME,
-} from "~/src/utils/browser/cookieHelper"
-import { executeWithTempWindowFallback } from "~/src/utils/browser/tempWindowFetch"
-import { createLogger } from "~/src/utils/core/logger"
-import { joinUrl } from "~/src/utils/core/url"
+} from "~/utils/browser/cookieHelper"
+import { executeWithTempWindowFallback } from "~/utils/browser/tempWindowFetch"
+import { createLogger } from "~/utils/core/logger"
+import { joinUrl } from "~/utils/core/url"
 
 type NormalizedAuthContext = AuthConfig
 
@@ -371,7 +371,7 @@ const _fetchApi = async <T>(
     // intentionally a dynamic import to avoid a static import cycle between
     // apiService and accountStorage.
     const { accountStorage } = await import(
-      "~/src/services/accounts/accountStorage"
+      "~/services/accounts/accountStorage"
     )
     accountInfo = await accountStorage.getAccountByBaseUrlAndUserId(
       baseUrl,
