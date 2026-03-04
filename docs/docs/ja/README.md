@@ -1,68 +1,69 @@
----
+```yaml
 home: true
 title: ホーム
 heroImage: https://github.com/qixing-jk/all-api-hub/blob/main/src/assets/icon.png?raw=true
-heroText: All API Hub - AI 統合リレーハブ マネージャー
-tagline: "オープンソースのブラウザプラグイン。サードパーティのAI統合リレーハブと自前構築の New API を一元管理：アカウントの自動識別、残高確認、モデル同期、キー管理、クロスプラットフォームおよびクラウドバックアップに対応"
+heroText: All API Hub - AI集約中継ステーションマネージャー
+tagline: "オープンソースのブラウザ拡張機能。サードパーティのAI集約中継ステーションと自社構築のNew APIを一元管理。アカウントの自動認識、残高表示、モデル同期、キー管理をサポートし、クロスプラットフォームとクラウドバックアップにも対応。"
 actions:
-  - text: 利用開始
-    link: /get-started.html # 建议修改为您的实际文档路径，例如 /guide/
+  - text: 使用開始
+    link: /get-started.html # 実際のドキュメントパスに変更することを推奨します。例: /guide/
     type: primary
     
   - text: Chrome ウェブストア
     link: https://chromewebstore.google.com/detail/lapnciffpekdengooeolaienkeoilfeo
     type: secondary
 
-  - text: Edge アドオンストア
+  - text: Edge アドオン
     link: https://microsoftedge.microsoft.com/addons/detail/pcokpjaffghgipcgjhapgdpeddlhblaa
     type: secondary
 
-  - text: FireFox アドオンストア
+  - text: FireFox アドオン
     link: https://addons.mozilla.org/firefox/addon/{bc73541a-133d-4b50-b261-36ea20df0d24}
     type: secondary
 
 features:
   - title: スマートサイト管理
-    details: AI統合リレーサイトを自動識別し、アクセストークンを作成。サイト名とチャージレートをインテリジェントに取得し、重複検出と手動追加をサポートします。
+    details: AI集約中継サイトを自動認識し、アクセス用トークンを生成。サイト名とチャージ倍率をインテリジェントに取得。重複検出と手動追加をサポート。
   - title: マルチアカウントシステム
-    details: 各サイトで複数のアカウント追加、アカウントグループ化と高速切り替え、リアルタイム残高確認、詳細な利用ログをサポートします。
+    details: 各サイトに複数アカウントを追加可能。アカウントのグループ化と高速切り替え、残高と詳細な使用ログのリアルタイム表示をサポート。
   - title: トークンとキーの管理
-    details: すべての API Key を簡単に管理。表示、コピー、更新、一括操作をサポートします。
-  - title: モデル情報の確認
-    details: サイトがサポートするモデルリストと価格情報を明確に表示します。
-  - title: チェックインステータスの監視
-    details: どのサイトがチェックインをサポートしているかを自動検出し、当日未チェックインのアカウントにマークを付けます。一つのパネルで複数のサイトのチェックインを順番に完了させ、チェックイン忘れによる無料クォータの浪費を防ぎます。
+    details: 全てのAPI Keyを便利に管理。表示、コピー、リフレッシュ、一括操作をサポート。
+  - title: モデル情報の表示
+    details: サイトがサポートするモデルリストと価格情報を明確に表示。
+  - title: チェックイン状態の監視
+    details: チェックイン可能なサイトを自動検出。当日にチェックインしていないアカウントをマークし、一つのパネルで複数のサイトへのチェックインを順番に完了できるようにします。これにより、チェックイン忘れによる無料額度の浪費を削減します。
   - title: 高速エクスポートと統合
-    details: CherryStudio および New API への設定をワンクリックでエクスポートし、API利用プロセスを簡素化します。
-  - title: New API ライクなシステム管理
-    details: 自前構築の New API インスタンスに対するチャネル管理とモデルリスト同期をサポートし、専用のチャネル管理インターフェースを提供します。
+    details: 設定を一括でCherry StudioとNew APIにエクスポートし、API使用プロセスを簡素化。
+  - title: New API クラスシステム管理
+    details: 自社構築のNew APIインスタンスに対して、チャネル管理とモデルリスト同期をサポートし、専用のチャネル管理インターフェースを提供。
   - title: データバックアップと復元
-    details: JSON形式でのインポート/エクスポートと WebDav クラウドバックアップをサポートし、クロスデバイスデータ同期を実現します。
+    details: JSON形式でのインポート/エクスポートとWebDavによるクラウドバックアップをサポートし、デバイス間でのデータ同期を実現。
   - title: 全プラットフォーム対応
-    details: Chrome、Firefox ブラウザと互換性があり、Kiwi Browser などのモバイルブラウザをサポートし、ダークモードに対応します。
+    details: Chrome、Firefoxブラウザに対応。Kiwi Browserなどのモバイルブラウザもサポートし、ダークモードにも対応。
   - title: プライバシーとセキュリティ
-    details: 完全にオフラインで動作し、すべてのデータはローカルに保存されます。ネットワーク接続なしで全コア機能を利用可能です。
-  - title: Cloudflare シールド回避アシスタント
-    details: 5秒シールドに遭遇した場合、自動的にポップアップウィンドウでシールドを回避し、サイトが識別・記録されることを保証します。
+    details: 完全オフラインで動作。全てのデータはローカルに保存され、インターネット接続なしで全てのコア機能を使用可能。
+  - title: Cloudflare アンチボット対策ヘルパー
+    details: 5秒ルールに遭遇した場合、自動的にポップアップでアンチボット対策を解除し、サイトの認識と記録を確実にします。
   - title: 高速エクスポート
-    details: CherryStudio、New API、CC Switch へのサイト設定をワンクリックでエクスポートします。
+    details: サイト設定を一括でCherry Studio、New API、CC Switchにエクスポート。
 
-footer: AGPL-3.0 ライセンス | Copyright 2025-present All API Hub
+footer: AGPL-3.0 Licensed | Copyright 2025-present All API Hub
 ---
 
-## はじめに
+## 紹介
 
-現在のAIエコシステムでは、New API シリーズに基づいた統合リレーハブや自前構築パネルがますます増えています。これらの各サイトの残高、モデルリスト、APIキーを同時に管理するのは、分散していて時間がかかりがちです。
+現在、AIエコシステムにはNew APIシリーズをベースにした集約中継ステーションや自社構築パネルがますます増えています。各サイトの残高、モデルリスト、APIキーを同時に管理することは、しばしば分散し、時間を浪費します。
 
-All API Hub はブラウザプラグインとして、これらのサイトのアカウントを自動的に識別し、残高確認、モデル管理、キー管理、自動チェックインをワンクリックで実行できます。また、自前構築の New API 向けにモデル同期やチャネル管理などのツールを提供します。現在、以下のプロジェクトに基づいたリレーハブアカウントをサポートしています：
+All API Hubはブラウザ拡張機能として、これらのサイトのアカウントを自動認識し、残高の表示、モデルやキーの管理、自動チェックインを一括で行うことができます。また、自社構築のNew API向けに、モデル同期やチャネル管理などのツールも提供します。現在、以下のプロジェクトに基づく中継ステーションアカウントをサポートしています。
 
 - [one-api](https://github.com/songquanpeng/one-api)
 - [new-api](https://github.com/QuantumNous/new-api)
 - [Veloera](https://github.com/Veloera/Veloera)
 - [one-hub](https://github.com/MartialBE/one-hub)
 - [done-hub](https://github.com/deanxv/done-hub)
-- [Sub2API](https://github.com/Wei-Shaw/sub2api)（基本機能をサポート）
+- [Sub2API](https://github.com/Wei-Shaw/sub2api)（基本機能サポート）
 - Neo-API（クローズドソース）
 - Super-API（クローズドソース）
-- RIX_API（クローズドソース、基本機能をサポート）
-- VoAPI（クローズドソース、旧バージョンをサポート）
+- RIX_API（クローズドソース、基本機能サポート）
+- VoAPI（クローズドソース、旧バージョンサポート）
+```
