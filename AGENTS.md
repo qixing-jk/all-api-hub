@@ -2,23 +2,23 @@
 
 ## Project Structure & Module Organization
 
-- `entrypoints/`: WXT extension entry points (popup/options/background/content scripts).
-- `components/` and `components/ui/`: shared React components (UI primitives live in `components/ui/`).
-- `features/`: feature-oriented modules; keep UI thin and delegate logic to services/hooks.
-- `services/`: business logic, persistence, and WebExtension/Storage integrations.
-- `hooks/`, `contexts/`, `utils/`, `types/`, `constants/`: reusable app building blocks.
-- `locales/`: UI i18n resources (i18next). Manifest strings live in `public/_locales/`.
+- `src/entrypoints/`: WXT extension entry points (popup/options/background/content scripts).
+- `src/components/` and `src/components/ui/`: shared React components (UI primitives live in `src/components/ui/`).
+- `src/features/`: feature-oriented modules; keep UI thin and delegate logic to services/hooks.
+- `src/services/`: business logic, persistence, and WebExtension/Storage integrations.
+- `src/hooks/`, `src/contexts/`, `src/utils/`, `src/types/`, `src/constants/`: reusable app building blocks.
+- `src/locales/`: UI i18n resources (i18next). Manifest strings live in `src/public/_locales/`.
 - `tests/`: Vitest setup, MSW handlers, and test utilities. Build artifacts are written to `.output/`.
 
 ## Domain Knowledge: Site Types & Upstream Backends
 
 This repo’s `siteType` values are **compatibility buckets** used to select API overrides
-(`services/apiService/*`) and drive UI behavior.
+(`src/services/apiService/*`) and drive UI behavior.
 
 When working on a site type:
 
-1. **Confirm current in-repo behavior first**: check `constants/siteType.ts`, `services/detectSiteType.ts`,
-   and `services/apiService/index.ts` (override wiring).
+1. **Confirm current in-repo behavior first**: check `src/constants/siteType.ts`, `src/services/siteDetection/detectSiteType.ts`,
+   and `src/services/apiService/index.ts` (override wiring).
 2. **Verify upstream behavior when the answer depends on it** (before making definitive claims or proposing changes):
    - Use any appropriate evidence source (e.g. upstream source/docs, a *redacted* network trace from the target site: URL + method + status + response shape; remove tokens/cookies, or a minimal reproduction).
    - If upstream behavior cannot be verified, answer conditionally (state assumptions) and request the missing evidence instead of asserting a single “correct” behavior.
@@ -36,28 +36,28 @@ use the upstream repository linked in this document as the default reference.
 - **New API (`new-api`)** is downstream (fork family) of **One API (`one-api`)**.
 - **Veloera (`Veloera`)** (and most other supported variants like **VoAPI**, **Super-API**, **Rix-Api**, **neo-Api**)
   is downstream of **New API (`new-api`)**. Among supported variants, **Veloera’s API diverges the most**, so we
-  keep targeted adapters/overrides (notably channel APIs) in `services/apiService/veloera/`.
+  keep targeted adapters/overrides (notably channel APIs) in `src/services/apiService/veloera/`.
 - **New API (`new-api`)** and **Veloera (`Veloera`)** are treated as *managed sites* (`ManagedSiteType`) for admin
   features (channel management, model sync).
 - **OneHub (`one-hub`)** is downstream of **One API (`one-api`)**, but the API surface changes substantially.
   **DoneHub (`done-hub`)** is downstream of **OneHub (`one-hub`)**.
-  - In repo, `one-hub` and `done-hub` share the same override module (`services/apiService/oneHub/`) for token listing
+  - In repo, `one-hub` and `done-hub` share the same override module (`src/services/apiService/oneHub/`) for token listing
     + model pricing + group info.
 - **AnyRouter (`anyrouter`)** and **WONG公益站 (`wong-gongyi`)** have site-specific check-in handling.
-- Many One-API/New-API family deployments still use `services/apiService/common/` for core calls; the request helper
-  sends multiple compatible user-id header names via `services/apiService/common/utils.ts`.
+- Many One-API/New-API family deployments still use `src/services/apiService/common/` for core calls; the request helper
+  sends multiple compatible user-id header names via `src/services/apiService/common/utils.ts`.
 - **Sub2API (`sub2api`)** is *not* One-API/New-API compatible, using a JWT-based auth and a different API surface.
 
 ### One API (`one-api`)
 
-- **Family**: the original One-API project; most deployments are compatible with `services/apiService/common/`.
+- **Family**: the original One-API project; most deployments are compatible with `src/services/apiService/common/`.
 - **Naming**: in code the site type string is `one-api`.
 - **Links**:
   - one-api: https://github.com/songquanpeng/one-api
 
 ### New API (`new-api`)
 
-- **Family**: downstream of One API; this repo uses the shared `services/apiService/common/` implementation.
+- **Family**: downstream of One API; this repo uses the shared `src/services/apiService/common/` implementation.
 - **Naming**: in code the site type string is `new-api` (hyphenated).
 - **Links**:
   - one-api: https://github.com/songquanpeng/one-api
@@ -76,24 +76,24 @@ use the upstream repository linked in this document as the default reference.
 - **Family**: OneHub-style backends with dedicated pricing/group/token endpoints (not New-API managed-site admin).
 - **Naming**: in code the site type strings are `one-hub` and `done-hub`.
 - **In repo**:
-  - overrides: `services/apiService/oneHub/` (used for both `one-hub` and `done-hub` in `services/apiService/index.ts`)
-    - endpoints include `/api/available_model`, `/api/user_group_map`, `/api/token/` (see `services/apiService/oneHub/index.ts`)
-  - UI routes: `constants/siteType.ts` (`/panel/*` paths)
+  - overrides: `src/services/apiService/oneHub/` (used for both `one-hub` and `done-hub` in `src/services/apiService/index.ts`)
+    - endpoints include `/api/available_model`, `/api/user_group_map`, `/api/token/` (see `src/services/apiService/oneHub/index.ts`)
+  - UI routes: `src/constants/siteType.ts` (`/panel/*` paths)
 - **Links**:
   - one-hub: https://github.com/MartialBE/one-hub
   - done-hub: https://github.com/deanxv/done-hub
 
 ### VoAPI (`VoAPI`)
 
-- **Family**: New-API-like variant; uses `services/apiService/common/`.
+- **Family**: New-API-like variant; uses `src/services/apiService/common/`.
 - **Naming**: in code the site type string is `VoAPI` (case-sensitive in constants; matching is case-insensitive).
-- **In repo**: compatibility user header `voapi-user` in `services/apiService/common/utils.ts`.
+- **In repo**: compatibility user header `voapi-user` in `src/services/apiService/common/utils.ts`.
 - **Links**:
   - VoAPI: https://github.com/VoAPI/VoAPI
 
 ### Super-API (`Super-API`)
 
-- **Family**: New-API-like variant; uses `services/apiService/common/`.
+- **Family**: New-API-like variant; uses `src/services/apiService/common/`.
 - **Naming**: in code the site type string is `Super-API`.
 - **Links**:
   - Super-API: https://github.com/SuperAI-Api/Super-API
@@ -103,20 +103,20 @@ use the upstream repository linked in this document as the default reference.
 - **Family**: heavily New-API customized deployment; often require **Cookie auth** for auto-detect/refresh.
 - **Naming**: in code the site type string is `anyrouter`.
 - **In repo**:
-  - overrides: `services/apiService/anyrouter/index.ts` (check-in status via `services/autoCheckin/providers/anyrouter`)
+  - overrides: `src/services/apiService/anyrouter/index.ts` (check-in status via `src/services/checkin/autoCheckin/providers/anyrouter.ts`)
 
 ### WONG公益站 (`wong-gongyi`)
 
 - **Family**: heavily New-API customized deployment; WONG公益站 deployment with a custom check-in endpoint.
 - **Naming**: in code the site type string is `wong-gongyi`.
 - **In repo**:
-  - overrides: `services/apiService/wong/index.ts` (GET `/api/user/checkin` parsing + check-in capability)
+  - overrides: `src/services/apiService/wong/index.ts` (GET `/api/user/checkin` parsing + check-in capability)
 
 ### Rix-Api (`Rix-Api`) / neo-Api (`neo-Api`)
 
-- **Family**: New-API-like variants; uses `services/apiService/common/`.
+- **Family**: New-API-like variants; uses `src/services/apiService/common/`.
 - **Naming**: in code the site type strings are `Rix-Api` and `neo-Api`.
-- **In repo**: compatibility user headers `Rix-Api-User` / `neo-api-user` in `services/apiService/common/utils.ts`.
+- **In repo**: compatibility user headers `Rix-Api-User` / `neo-api-user` in `src/services/apiService/common/utils.ts`.
 
 ### Sub2API (`sub2api`)
 
@@ -138,7 +138,7 @@ Prereqs: Node.js 20+ and pnpm 10+.
 ## Coding Style & Naming Conventions
 
 - TypeScript + React. Formatting is enforced by Prettier (2 spaces, no semicolons, double quotes) and ESLint.
-- Prefer the repo-root import alias: `import { render } from "~/tests/test-utils/render"`.
+- Prefer the repo-root import alias: `import { render } from "~~/tests/test-utils/render"`.
 - Tests: `*.test.ts` / `*.test.tsx`, typically under `__tests__/` next to the code under test.
 
 ## Testing Guidelines

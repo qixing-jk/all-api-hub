@@ -64,7 +64,7 @@ pnpm zip:all          # Create distribution packages
 
 ### Browser Extension Structure
 
-**Entry Points** (in `entrypoints/`):
+**Entry Points** (in `src/entrypoints/`):
 - **background/**: Background runtime (Chromium MV3: event-driven service worker; Firefox MV2: background scripts/page)
   - Runtime message routing
   - Auto-refresh scheduler
@@ -80,34 +80,34 @@ pnpm zip:all          # Create distribution packages
 
 ### Feature-Based Organization
 
-Features are self-contained modules in `features/` with their own:
+Features are self-contained modules in `src/features/` with their own:
 - `components/`: Feature-specific UI components
 - `hooks/`: Feature-specific React hooks and context providers
 - `utils/`: Feature-specific utilities
 
-Example: `features/AccountManagement/` contains all account-related code.
+Example: `src/features/AccountManagement/` contains all account-related code.
 
 ### UI Module Taxonomy (“Where does this code go?”)
 
 Use this decision tree when adding or moving UI code:
 
-- **Is this entrypoint wiring (routing/bootstrapping/integration glue)?** → `entrypoints/**`
-  - Options pages under `entrypoints/options/pages/**` should be thin wrappers that render feature modules.
-- **Is this page/feature UI code (components/hooks/utils)?** → `features/<Feature>/**`
-- **Is this a shared UI primitive/reusable component?** → `components/**` (UI primitives: `components/ui/**`)
-- **Is this business logic / storage / API integration?** → `services/**`
-- **Is this a shared non-UI helper?** → `utils/**`
-- **Is this a shared domain type?** → `types/**` (or feature-local types if truly feature-private)
+- **Is this entrypoint wiring (routing/bootstrapping/integration glue)?** → `src/entrypoints/**`
+  - Options pages under `src/entrypoints/options/pages/**` should be thin wrappers that render feature modules.
+- **Is this page/feature UI code (components/hooks/utils)?** → `src/features/<Feature>/**`
+- **Is this a shared UI primitive/reusable component?** → `src/components/**` (UI primitives: `src/components/ui/**`)
+- **Is this business logic / storage / API integration?** → `src/services/**`
+- **Is this a shared non-UI helper?** → `src/utils/**`
+- **Is this a shared domain type?** → `src/types/**` (or feature-local types if truly feature-private)
 
-**Important module boundary rule:** non-entrypoint code MUST NOT import from `~/entrypoints/options/pages/**` (extract shared types/helpers into `types/**`, `services/**`, `utils/**`, or `features/**` instead).
+**Important module boundary rule:** non-entrypoint code MUST NOT import from `~/entrypoints/options/pages/**` (extract shared types/helpers into `src/types/**`, `src/services/**`, `src/utils/**`, or `src/features/**` instead).
 
 ### Service Layer
 
-Services in `services/` encapsulate business logic:
-- `services/accounts/accountStorage.ts`: Account CRUD with migration support
-- `services/accounts/autoRefreshService.ts`: Background refresh scheduler
-- `services/webdav/webdavAutoSyncService.ts`: Cloud backup/sync
-- `services/apiService/`: Multi-platform API client with override system
+Services in `src/services/` encapsulate business logic:
+- `src/services/accounts/accountStorage.ts`: Account CRUD with migration support
+- `src/services/accounts/autoRefreshService.ts`: Background refresh scheduler
+- `src/services/webdav/webdavAutoSyncService.ts`: Cloud backup/sync
+- `src/services/apiService/`: Multi-platform API client with override system
   - `common/`: Base API implementation
   - `anyrouter/`, `doneHub/`, `octopus/`, `oneHub/`, `sub2api/`, `veloera/`, `wong/`: Site-specific overrides/adapters
   - `openaiCompatible/`: OpenAI-compatible backend adapter
@@ -132,12 +132,12 @@ Common API methods:
 ## Domain Knowledge: Site Types & Upstream Backends
 
 This repo’s `siteType` values are **compatibility buckets** used to select API overrides
-(`services/apiService/*`) and drive UI behavior.
+(`src/services/apiService/*`) and drive UI behavior.
 
 When working on a site type:
 
-1. **Confirm current in-repo behavior first**: check `constants/siteType.ts`, `services/siteDetection/detectSiteType.ts`,
-   and `services/apiService/index.ts` (override wiring).
+1. **Confirm current in-repo behavior first**: check `src/constants/siteType.ts`, `src/services/siteDetection/detectSiteType.ts`,
+   and `src/services/apiService/index.ts` (override wiring).
 2. **Verify upstream behavior when the answer depends on it** (before making definitive claims or proposing changes):
     - Use any appropriate evidence source (e.g. upstream source/docs, a *redacted* network trace from the target site: URL + method + status + response shape; remove tokens/cookies, or a minimal reproduction).
     - If upstream behavior cannot be verified, answer conditionally (state assumptions) and request the missing evidence instead of asserting a single “correct” behavior.
@@ -155,28 +155,28 @@ use the upstream repository linked in this document as the default reference.
 - **New API (`new-api`)** is downstream (fork family) of **One API (`one-api`)**.
 - **Veloera (`Veloera`)** (and most other supported variants like **VoAPI**, **Super-API**, **Rix-Api**, **neo-Api**)
   is downstream of **New API (`new-api`)**. Among supported variants, **Veloera’s API diverges the most**, so we
-  keep targeted adapters/overrides (notably channel APIs) in `services/apiService/veloera/`.
+  keep targeted adapters/overrides (notably channel APIs) in `src/services/apiService/veloera/`.
 - **New API (`new-api`)** and **Veloera (`Veloera`)** are treated as *managed sites* (`ManagedSiteType`) for admin
   features (channel management, model sync).
 - **OneHub (`one-hub`)** is downstream of **One API (`one-api`)**, but the API surface changes substantially.
   **DoneHub (`done-hub`)** is downstream of **OneHub (`one-hub`)**.
-    - In repo, `one-hub` uses `services/apiService/oneHub/`; `done-hub` uses `services/apiService/doneHub/` + `services/apiService/oneHub/`
+    - In repo, `one-hub` uses `src/services/apiService/oneHub/`; `done-hub` uses `src/services/apiService/doneHub/` + `src/services/apiService/oneHub/`
       for token listing + model pricing + group info.
 - **AnyRouter (`anyrouter`)** and **WONG公益站 (`wong-gongyi`)** have site-specific check-in handling.
-- Many One-API/New-API family deployments still use `services/apiService/common/` for core calls; the request helper
-  sends multiple compatible user-id header names via `services/apiService/common/utils.ts`.
+- Many One-API/New-API family deployments still use `src/services/apiService/common/` for core calls; the request helper
+  sends multiple compatible user-id header names via `src/services/apiService/common/utils.ts`.
 - **Sub2API (`sub2api`)** is *not* One-API/New-API compatible, using a JWT-based auth and a different API surface.
 
 ### One API (`one-api`)
 
-- **Family**: the original One-API project; most deployments are compatible with `services/apiService/common/`.
+- **Family**: the original One-API project; most deployments are compatible with `src/services/apiService/common/`.
 - **Naming**: in code the site type string is `one-api`.
 - **Links**:
     - one-api: https://github.com/songquanpeng/one-api
 
 ### New API (`new-api`)
 
-- **Family**: downstream of One API; this repo uses the shared `services/apiService/common/` implementation.
+- **Family**: downstream of One API; this repo uses the shared `src/services/apiService/common/` implementation.
 - **Naming**: in code the site type string is `new-api` (hyphenated).
 - **Links**:
     - one-api: https://github.com/songquanpeng/one-api
@@ -195,24 +195,24 @@ use the upstream repository linked in this document as the default reference.
 - **Family**: OneHub-style backends with dedicated pricing/group/token endpoints (not New-API managed-site admin).
 - **Naming**: in code the site type strings are `one-hub` and `done-hub`.
 - **In repo**:
-    - overrides: `services/apiService/oneHub/` (`one-hub`), `services/apiService/doneHub/` + `services/apiService/oneHub/` (`done-hub`; see `services/apiService/index.ts`)
-        - endpoints include `/api/available_model`, `/api/user_group_map`, `/api/token/` (see `services/apiService/oneHub/index.ts`)
-    - UI routes: `constants/siteType.ts` (`/panel/*` paths)
+    - overrides: `src/services/apiService/oneHub/` (`one-hub`), `src/services/apiService/doneHub/` + `src/services/apiService/oneHub/` (`done-hub`; see `src/services/apiService/index.ts`)
+        - endpoints include `/api/available_model`, `/api/user_group_map`, `/api/token/` (see `src/services/apiService/oneHub/index.ts`)
+    - UI routes: `src/constants/siteType.ts` (`/panel/*` paths)
 - **Links**:
     - one-hub: https://github.com/MartialBE/one-hub
     - done-hub: https://github.com/deanxv/done-hub
 
 ### VoAPI (`VoAPI`)
 
-- **Family**: New-API-like variant; uses `services/apiService/common/`.
+- **Family**: New-API-like variant; uses `src/services/apiService/common/`.
 - **Naming**: in code the site type string is `VoAPI` (case-sensitive in constants; matching is case-insensitive).
-- **In repo**: compatibility user header `voapi-user` in `services/apiService/common/utils.ts`.
+- **In repo**: compatibility user header `voapi-user` in `src/services/apiService/common/utils.ts`.
 - **Links**:
     - VoAPI: https://github.com/VoAPI/VoAPI
 
 ### Super-API (`Super-API`)
 
-- **Family**: New-API-like variant; uses `services/apiService/common/`.
+- **Family**: New-API-like variant; uses `src/services/apiService/common/`.
 - **Naming**: in code the site type string is `Super-API`.
 - **Links**:
     - Super-API: https://github.com/SuperAI-Api/Super-API
@@ -222,20 +222,20 @@ use the upstream repository linked in this document as the default reference.
 - **Family**: heavily New-API customized deployment; often require **Cookie auth** for auto-detect/refresh.
 - **Naming**: in code the site type string is `anyrouter`.
 - **In repo**:
-    - overrides: `services/apiService/anyrouter/index.ts` (check-in status via `services/checkin/autoCheckin/providers/anyrouter.ts`)
+    - overrides: `src/services/apiService/anyrouter/index.ts` (check-in status via `src/services/checkin/autoCheckin/providers/anyrouter.ts`)
 
 ### WONG公益站 (`wong-gongyi`)
 
 - **Family**: heavily New-API customized deployment; WONG公益站 deployment with a custom check-in endpoint.
 - **Naming**: in code the site type string is `wong-gongyi`.
 - **In repo**:
-    - overrides: `services/apiService/wong/index.ts` (GET `/api/user/checkin` parsing + check-in capability)
+    - overrides: `src/services/apiService/wong/index.ts` (GET `/api/user/checkin` parsing + check-in capability)
 
 ### Rix-Api (`Rix-Api`) / neo-Api (`neo-Api`)
 
-- **Family**: New-API-like variants; uses `services/apiService/common/`.
+- **Family**: New-API-like variants; uses `src/services/apiService/common/`.
 - **Naming**: in code the site type strings are `Rix-Api` and `neo-Api`.
-- **In repo**: compatibility user headers `Rix-Api-User` / `neo-api-user` in `services/apiService/common/utils.ts`.
+- **In repo**: compatibility user headers `Rix-Api-User` / `neo-api-user` in `src/services/apiService/common/utils.ts`.
 
 ### Sub2API (`sub2api`)
 
@@ -248,12 +248,12 @@ use the upstream repository linked in this document as the default reference.
 
 Three-tier context architecture:
 
-1. **App-Level Contexts** (`contexts/`):
+1. **App-Level Contexts** (`src/contexts/`):
    - `UserPreferencesContext`: Global settings, auto-refresh config
    - `ThemeContext`: Dark/light mode management
    - `DeviceContext`: Device type detection
 
-2. **Feature-Level Contexts** (`features/*/hooks/`):
+2. **Feature-Level Contexts** (`src/features/*/hooks/`):
    - `AccountDataContext`: Account list, stats, refresh state
    - `AccountActionsContext`: Action handlers (add, edit, delete)
    - `DialogStateContext`: Dialog open/close state
@@ -264,7 +264,7 @@ Three-tier context architecture:
 
 **Storage Layer** (`@plasmohq/storage`):
 - Wraps `browser.storage.local` with reactive updates
-- Type-safe storage keys in `services/core/storageKeys.ts`
+- Type-safe storage keys in `src/services/core/storageKeys.ts`
 - Automatic serialization/deserialization
 
 **Concurrency Control**:
@@ -275,7 +275,7 @@ Three-tier context architecture:
 **Data Migration**:
 - Version-based migration system (`configVersion` field)
 - Automatic migration on read operations
-- Migration functions in `services/**/migrations/` (e.g., `services/accounts/migrations/`, `services/preferences/migrations/`)
+- Migration functions in `src/services/**/migrations/` (e.g., `src/services/accounts/migrations/`, `src/services/preferences/migrations/`)
 
 ### Temporary Window Pool
 
@@ -288,13 +288,13 @@ Three-tier context architecture:
 4. Execute fetch in context
 5. Release context (reuse or destroy after idle)
 
-**Implementation**: `entrypoints/background/tempWindowPool.ts`
+**Implementation**: `src/entrypoints/background/tempWindowPool.ts`
 
 ### Runtime Message System
 
-**Message Routing** (`entrypoints/background/runtimeMessages.ts`):
+**Message Routing** (`src/entrypoints/background/runtimeMessages.ts`):
 - Centralized message handler in background script
-- Action-based routing with prefixes (defined in `constants/runtimeActions.ts`)
+- Action-based routing with prefixes (defined in `src/constants/runtimeActions.ts`)
 - Async response handling
 
 **Message Prefixes**:
@@ -307,10 +307,11 @@ Three-tier context architecture:
 
 ### Path Aliases
 
-Use `~/` prefix for absolute imports (configured in `tsconfig.json`):
+Use `~/` prefix for absolute imports from `src/` (configured by WXT), and `~~/` for repo-root tooling (tests/e2e/config):
 ```typescript
 import { formatTokenCount } from "~/utils/formatters"
 import { SiteAccount } from "~/types"
+import { render } from "~~/tests/test-utils/render"
 ```
 
 ### Naming Conventions
@@ -327,7 +328,7 @@ import { SiteAccount } from "~/types"
 - **Co-location**: Tests in `__tests__/` next to source files
 - **Index files**: Re-export public API from `index.ts`
 - **Feature modules**: Self-contained with own components/hooks/utils
-- **Shared code**: In top-level `components/`, `hooks/`, `utils/`
+- **Shared code**: In top-level `src/components/`, `src/hooks/`, `src/utils/`
 
 ### Testing Patterns
 
@@ -359,12 +360,12 @@ describe("ComponentName", () => {
 ### Internationalization (i18n)
 
 **Structure**:
-```
-locales/
-├── en/
-│   ├── common.json
-│   ├── account.json
-│   └── messages.json
+  ```
+  src/locales/
+  ├── en/
+  │   ├── common.json
+  │   ├── account.json
+  │   └── messages.json
 └── zh_CN/
     ├── common.json
     ├── account.json
@@ -381,7 +382,7 @@ t("account:healthStatus.normal")  // namespace:key
 
 ### Logging
 
-**Structured Logging** (`utils/logger.ts`):
+**Structured Logging** (`src/utils/logger.ts`):
 ```typescript
 const logger = createLogger("ServiceName")
 
@@ -502,7 +503,7 @@ Hooks are automatically set up when you run `pnpm install`.
 
 ### WXT Framework
 
-- **Entry points**: Files in `entrypoints/` become extension components
+- **Entry points**: Files in `src/entrypoints/` become extension components
 - **Auto-imports**: WXT auto-imports browser APIs and common utilities
 - **Hot reload**: Dev server supports hot module replacement
 - **Build output**: `.output/<browser>-mv<2|3>-<mode>/` contains built extension (e.g., `.output/chrome-mv3-dev`, `.output/firefox-mv2-dev`)
@@ -516,7 +517,7 @@ Hooks are automatically set up when you run `pnpm install`.
 ### TypeScript
 
 - **Strict mode**: Enabled with `noUnusedLocals` and `noUnusedParameters`
-- **Path aliases**: Use `~/` for absolute imports
+- **Path aliases**: Use `~/` for `src/` imports and `~~/` for repo-root imports (tests/e2e/tooling)
 - **Type safety**: All code should be fully typed (no `any` unless necessary)
 
 ### Tailwind CSS 4
@@ -538,32 +539,32 @@ Hooks are automatically set up when you run `pnpm install`.
 
 ### Adding a New Feature
 
-1. Create feature directory in `features/[FeatureName]/`
-2. Add components in `features/[FeatureName]/components/`
-3. Add hooks/contexts in `features/[FeatureName]/hooks/`
-4. Add utilities in `features/[FeatureName]/utils/`
+1. Create feature directory in `src/features/[FeatureName]/`
+2. Add components in `src/features/[FeatureName]/components/`
+3. Add hooks/contexts in `src/features/[FeatureName]/hooks/`
+4. Add utilities in `src/features/[FeatureName]/utils/`
 5. Write tests in `tests/` directories
-6. Export public API from `features/[FeatureName]/index.ts`
+6. Export public API from `src/features/[FeatureName]/index.ts`
 
 ### Adding a New API Platform
 
-1. Create override file in `services/apiService/[platform]/`
+1. Create override file in `src/services/apiService/[platform]/`
 2. Implement platform-specific methods
-3. Register in `services/apiService/index.ts` siteOverrideMap
-4. Add platform constant to `constants/siteType.ts`
-5. Update type definitions in `types/index.ts`
+3. Register in `src/services/apiService/index.ts` siteOverrideMap
+4. Add platform constant to `src/constants/siteType.ts`
+5. Update type definitions in `src/types/index.ts`
 
 ### Adding a New Storage Key
 
-1. Add key to `services/core/storageKeys.ts`
+1. Add key to `src/services/core/storageKeys.ts`
 2. Add type definition for stored data
-3. Add migration logic if needed in `services/**/migrations/` (e.g., `services/accounts/migrations/`, `services/preferences/migrations/`)
+3. Add migration logic if needed in `src/services/**/migrations/` (e.g., `src/services/accounts/migrations/`, `src/services/preferences/migrations/`)
 4. Use `@plasmohq/storage` to read/write
 
 ### Adding a New Runtime Message
 
-1. Add action ID to `constants/runtimeActions.ts`
-2. Add handler in `entrypoints/background/runtimeMessages.ts`
+1. Add action ID to `src/constants/runtimeActions.ts`
+2. Add handler in `src/entrypoints/background/runtimeMessages.ts`
 3. Use `sendRuntimeMessage()` from frontend code
 
 ## Documentation

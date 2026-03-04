@@ -15,13 +15,14 @@ context: |
   Stack (verify against `package.json`)
   - Node.js >= 20, pnpm; scripts use `pnpm dev|build|test|lint|format|compile`.
   - WXT (`wxt`) + `@wxt-dev/module-react`; Vite config via `wxt.config.ts`.
-  - React 19 + TypeScript (strict; `tsconfig.json` sets `~/*` → repo root).
+  - React 19 + TypeScript (strict; `tsconfig.json` extends `.wxt/tsconfig.json` from `wxt prepare`).
+    - WXT aliases: `~/...` resolve to `src/`; `~~/...` resolve to repo root.
   - Tailwind CSS v4 (dark mode uses `class`; config in `tailwind.config.js`).
-  - UI primitives: Headless UI, Radix UI; shadcn-style components under `components/ui/`.
+  - UI primitives: Headless UI, Radix UI; shadcn-style components under `src/components/ui/`.
   - Async state: TanStack React Query.
   - i18n: i18next + react-i18next.
-    - UI resources: `locales/<lang>/<namespace>.json` loaded via `import.meta.glob` (`utils/i18n.ts`).
-    - Manifest strings: `public/_locales/<lang>/messages.json` (also read for dev branding in `wxt.config.ts`).
+    - UI resources: `src/locales/<lang>/<namespace>.json` loaded via `import.meta.glob` (`src/utils/i18n/*`).
+    - Manifest strings: `src/public/_locales/<lang>/messages.json` (served via WXT `publicDir`).
   - Storage: `@plasmohq/storage` wrapped by services (typically `new Storage({ area: "local" })`).
     - For read-modify-write flows, use `services/storageWriteLock.ts` to avoid cross-context races (popup/options/background).
   - Testing: Vitest (jsdom) + Testing Library; MSW for network mocking.
@@ -33,9 +34,9 @@ context: |
     - Husky pre-commit runs `pnpm lint-staged` (`.husky/pre-commit`).
 
   Code conventions
-  - Prefer `~/...` imports (repo-root alias) and keep imports auto-sorted via Prettier config.
-  - Keep business logic + persistence in `services/`; keep UI components focused on rendering and calling services/hooks.
-  - User-facing strings must be i18n’d; update `locales/` resources alongside UI changes.
+  - Prefer `~/...` imports for `src/` code; use `~~/...` for repo-root tooling (tests/e2e/config).
+  - Keep business logic + persistence in `src/services/`; keep UI components focused on rendering and calling services/hooks.
+  - User-facing strings must be i18n’d; update `src/locales/` resources alongside UI changes.
   - Treat tokens/API keys/backups as secrets: don’t log them; don’t commit them; redact in examples.
   - Keep Firefox MV2 vs Chromium MV3 differences in mind:
     - MV3 uses `background.service_worker`; MV2 uses `background.scripts`.

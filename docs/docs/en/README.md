@@ -1,7 +1,7 @@
 ---
 home: true
 title: Home
-heroImage: https://github.com/qixing-jk/all-api-hub/blob/main/assets/icon.png?raw=true
+heroImage: https://github.com/qixing-jk/all-api-hub/blob/main/src/assets/icon.png?raw=true
 heroText: All API Hub - AI Aggregation Proxy Manager
 tagline: "Open-source browser extension for unified management of third-party AI aggregation proxies and self-hosted New API instances: automatically identifies accounts, checks balances, syncs models, manages keys, and supports cross-platform and cloud backup."
 actions:

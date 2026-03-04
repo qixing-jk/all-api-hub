@@ -1,7 +1,7 @@
 ---
 home: true
 title: ホーム
-heroImage: https://github.com/qixing-jk/all-api-hub/blob/main/assets/icon.png?raw=true
+heroImage: https://github.com/qixing-jk/all-api-hub/blob/main/src/assets/icon.png?raw=true
 heroText: All API Hub - AI 統合リレーハブ マネージャー
 tagline: "オープンソースのブラウザプラグイン。サードパーティのAI統合リレーハブと自前構築の New API を一元管理：アカウントの自動識別、残高確認、モデル同期、キー管理、クロスプラットフォームおよびクラウドバックアップに対応"
 actions:

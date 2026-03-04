@@ -83,7 +83,7 @@ The project aims for reasonable test coverage targets (currently set to 5% globa
 Unit tests should be placed in a `__tests__` directory next to the file being tested:
 
 ```
-utils/
+src/utils/
 ├── formatters.ts
 └── __tests__/
     └── formatters.test.ts
@@ -111,7 +111,7 @@ describe("formatTokenCount", () => {
 Component tests should also be in `__tests__` directories. Use the custom render function from `tests/test-utils/render.tsx` which wraps components with required providers:
 
 ```
-components/
+src/components/
 ├── LinkCard.tsx
 └── __tests__/
     └── LinkCard.test.tsx
@@ -121,7 +121,7 @@ Example component test:
 
 ```typescript
 import { describe, it, expect } from "vitest"
-import { render, screen } from "~/tests/test-utils/render"
+import { render, screen } from "~~/tests/test-utils/render"
 import LinkCard from "../LinkCard"
 
 describe("LinkCard", () => {
@@ -142,7 +142,7 @@ The Vitest i18n test harness is configured so that **missing translations render
 
 Recommended patterns:
 
-- Use `render` / `renderHook` from `~/tests/test-utils/render` (they wrap `I18nextProvider`).
+- Use `render` / `renderHook` from `~~/tests/test-utils/render` (they wrap `I18nextProvider`).
 - Prefer key assertions over copy assertions (e.g. `expect(screen.getByText("ui:...")).toBeInTheDocument()`).
 - Avoid `vi.mock("react-i18next")` / `vi.mock("i18next")` unless you are explicitly testing i18n edge cases.
 
@@ -172,7 +172,7 @@ API mocks are defined in `tests/msw/handlers.ts`. Add or override handlers in in
 
 ```typescript
 import { http, HttpResponse } from "msw"
-import { server } from "~/tests/msw/server"
+import { server } from "~~/tests/msw/server"
 
 it("should handle API error", async () => {
   server.use(
@@ -295,34 +295,43 @@ Make sure all tests pass before submitting a pull request.
 
 ```
 all-api-hub/
-├── components/       # Reusable React components (shared UI primitives live in components/ui/)
-├── contexts/         # React context providers
-├── entrypoints/      # WXT entry points (wiring-only: routing/bootstrapping/integration glue)
-├── features/         # Canonical home for UI feature/page modules (components/hooks/utils)
-├── hooks/            # Custom React hooks
-├── services/         # Business logic and API services
-├── tests/            # Test setup and utilities
+├── src/              # Extension/runtime source code (WXT srcDir)
+│   ├── assets/       # Runtime images/icons bundled by Vite
+│   ├── components/   # Shared React components (UI primitives in src/components/ui/)
+│   ├── constants/    # Shared constants
+│   ├── contexts/     # React context providers
+│   ├── entrypoints/  # WXT entry points (wiring-only: routing/bootstrapping/integration glue)
+│   ├── features/     # Canonical home for UI feature/page modules (components/hooks/utils)
+│   ├── hooks/        # Custom React hooks
+│   ├── lib/          # Shared low-level helpers (e.g. cn())
+│   ├── locales/      # UI i18n resources (i18next)
+│   ├── public/       # Extension public assets (manifest i18n: src/public/_locales/)
+│   ├── services/     # Business logic and API services
+│   ├── styles/       # Global CSS (Tailwind entry)
+│   ├── types/        # Shared TypeScript type definitions
+│   └── utils/        # Utility functions
+├── e2e/              # Playwright end-to-end tests (repo-root tooling)
+├── plugins/          # Repo-root tooling (e.g. Vite/WXT plugins)
+├── tests/            # Vitest setup and utilities (repo-root tooling)
 │   ├── msw/          # MSW handlers and server setup
 │   └── test-utils/   # Testing utilities (custom render, etc.)
-├── types/            # TypeScript type definitions
-└── utils/            # Utility functions
 ```
 
 ## UI Module Taxonomy (Where Does UI Code Go?)
 
 To keep the options UI consistent and reusable, this repo follows a single module taxonomy:
 
-- `entrypoints/**` are **wiring-only**: routing, bootstrapping, and integration glue.
-  - Options pages under `entrypoints/options/pages/**` should be thin wrappers that render feature modules.
+- `src/entrypoints/**` are **wiring-only**: routing, bootstrapping, and integration glue.
+  - Options pages under `src/entrypoints/options/pages/**` should be thin wrappers that render feature modules.
   - Non-entrypoint code MUST NOT import from `~/entrypoints/options/pages/**`.
-- `features/<Feature>/**` are the **canonical home for UI modules** (page/feature code), including `components/`, `hooks/`, and `utils/`.
+- `src/features/<Feature>/**` are the **canonical home for UI modules** (page/feature code), including `components/`, `hooks/`, and `utils/`.
 - Shared layers:
-  - `components/**` / `components/ui/**`: shared UI primitives and reusable UI components
-  - `services/**`: business logic, storage, API clients, and background/runtime integrations
-  - `types/**`: shared domain types used across layers
-  - `utils/**`: shared non-UI helpers (keep UI concerns like toasts/i18n in features/entrypoints)
+  - `src/components/**` / `src/components/ui/**`: shared UI primitives and reusable UI components
+  - `src/services/**`: business logic, storage, API clients, and background/runtime integrations
+  - `src/types/**`: shared domain types used across layers
+  - `src/utils/**`: shared non-UI helpers (keep UI concerns like toasts/i18n in features/entrypoints)
 
-Dependency direction should stay one-way: `entrypoints/**` → `features/**` → shared layers (`components/`, `services/`, `types/`, `utils/`).
+Dependency direction should stay one-way: `src/entrypoints/**` → `src/features/**` → shared layers (`src/components/`, `src/services/`, `src/types/`, `src/utils/`).
 
 ## Getting Help
 

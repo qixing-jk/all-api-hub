@@ -1,7 +1,7 @@
 ---
 home: true
 title: 首页
-heroImage: https://github.com/qixing-jk/all-api-hub/blob/main/assets/icon.png?raw=true
+heroImage: https://github.com/qixing-jk/all-api-hub/blob/main/src/assets/icon.png?raw=true
 heroText: All API Hub - AI 聚合中转站管理器
 tagline: "开源浏览器插件，统一管理第三方 AI 聚合中转站与自建 New API：自动识别账号、查看余额、同步模型、管理密钥，并支持跨平台与云端备份"
 actions:
