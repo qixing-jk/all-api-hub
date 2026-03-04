@@ -5,11 +5,11 @@ import {
   readFreshLdohSiteListCache,
   readLdohSiteListCache,
   writeLdohSiteListCache,
-} from "~/services/integrations/ldohSiteLookup/cache"
+} from "~/src/services/integrations/ldohSiteLookup/cache"
 import {
   buildLdohSiteSearchUrlFromUrl,
   normalizeUrlForLdohMatch,
-} from "~/services/integrations/ldohSiteLookup/url"
+} from "~/src/services/integrations/ldohSiteLookup/url"
 
 describe("ldohSiteLookup cache + url helpers", () => {
   beforeEach(async () => {

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import { RuntimeActionIds } from "~/constants/runtimeActions"
-import AutoCheckin from "~/entrypoints/options/pages/AutoCheckin"
+import { RuntimeActionIds } from "~/src/constants/runtimeActions"
+import AutoCheckin from "~/src/entrypoints/options/pages/AutoCheckin"
 import { render, screen } from "~/tests/test-utils/render"
 
 vi.mock("react-hot-toast", () => ({
@@ -19,10 +19,10 @@ afterEach(() => {
 
 describe("AutoCheckin quick run", () => {
   it("auto-triggers runNow when routeParams.runNow is present", async () => {
-    const browserApi = await import("~/utils/browser/browserApi")
+    const browserApi = await import("~/src/utils/browser/browserApi")
     const sendRuntimeMessageSpy = vi.spyOn(browserApi, "sendRuntimeMessage")
 
-    const navigation = await import("~/utils/navigation")
+    const navigation = await import("~/src/utils/navigation")
     const navigateWithinOptionsPageSpy = vi
       .spyOn(navigation, "navigateWithinOptionsPage")
       .mockImplementation(vi.fn() as any)
@@ -51,7 +51,7 @@ describe("AutoCheckin quick run", () => {
   })
 
   it("does not auto-trigger runNow when routeParams.runNow is absent", async () => {
-    const browserApi = await import("~/utils/browser/browserApi")
+    const browserApi = await import("~/src/utils/browser/browserApi")
     const sendRuntimeMessageSpy = vi
       .spyOn(browserApi, "sendRuntimeMessage")
       .mockResolvedValue({

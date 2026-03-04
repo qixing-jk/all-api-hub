@@ -2,12 +2,12 @@ import { http, HttpResponse } from "msw"
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { DIALOG_MODES } from "~/constants/dialogModes"
-import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { DIALOG_MODES } from "~/src/constants/dialogModes"
+import { useAccountDialog } from "~/src/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog"
+import { accountStorage } from "~/src/services/accounts/accountStorage"
+import { AuthTypeEnum, SiteHealthStatus } from "~/src/types"
 import { server } from "~/tests/msw/server"
 import { act, renderHook, waitFor } from "~/tests/test-utils/render"
-import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 
 const { mockOpenWithAccount } = vi.hoisted(() => ({
   mockOpenWithAccount: vi.fn(),
@@ -28,7 +28,7 @@ vi.mock("~/components/dialogs/ChannelDialog", () => ({
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
+    await importOriginal<typeof import("~/src/utils/browser/browserApi")>()
   return {
     ...actual,
     getActiveTabs: vi.fn(async () => []),

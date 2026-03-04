@@ -1,7 +1,7 @@
 import React from "react"
 import { describe, expect, it } from "vitest"
 
-import { TagFilter } from "~/components/ui"
+import { TagFilter } from "~/src/components/ui"
 import { fireEvent, render, screen, within } from "~/tests/test-utils/render"
 
 /**

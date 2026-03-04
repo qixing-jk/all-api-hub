@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { API_CREDENTIAL_PROFILES_STORAGE_KEYS } from "~/services/core/storageKeys"
-import { tagStorage } from "~/services/tags/tagStorage"
-import { API_TYPES } from "~/services/verification/aiApiVerification"
-import type { AccountStorageConfig } from "~/types"
+import { API_CREDENTIAL_PROFILES_STORAGE_KEYS } from "~/src/services/core/storageKeys"
+import { tagStorage } from "~/src/services/tags/tagStorage"
+import { API_TYPES } from "~/src/services/verification/aiApiVerification"
+import type { AccountStorageConfig } from "~/src/types"
 
 const storageData = new Map<string, any>()
 

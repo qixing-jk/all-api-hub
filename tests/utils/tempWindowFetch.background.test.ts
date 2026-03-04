@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { RuntimeActionIds } from "~/src/constants/runtimeActions"
 import {
   tempWindowFetch,
   tempWindowGetRenderedTitle,
   tempWindowTurnstileFetch,
-} from "~/utils/browser/tempWindowFetch"
+} from "~/src/utils/browser/tempWindowFetch"
 
 const {
   sendRuntimeMessageMock,
@@ -20,7 +20,7 @@ const {
 }))
 
 vi.mock("~/utils/browser", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("~/utils/browser")>()
+  const actual = await importOriginal<typeof import("~/src/utils/browser")>()
   return {
     ...actual,
     isExtensionBackground: () => true,
@@ -29,7 +29,7 @@ vi.mock("~/utils/browser", async (importOriginal) => {
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
+    await importOriginal<typeof import("~/src/utils/browser/browserApi")>()
   return {
     ...actual,
     sendRuntimeMessage: sendRuntimeMessageMock,

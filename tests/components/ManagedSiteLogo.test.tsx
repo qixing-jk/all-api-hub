@@ -1,11 +1,15 @@
 import type { ReactNode } from "react"
 import { describe, expect, it, vi } from "vitest"
 
-import { NEW_API, VELOERA } from "~/constants/siteType"
-import { TokenDetails } from "~/features/AccountManagement/components/CopyKeyDialog/TokenDetails"
-import { TokenHeader } from "~/features/KeyManagement/components/TokenListItem/TokenHeader"
+import { NEW_API, VELOERA } from "~/src/constants/siteType"
+import { TokenDetails } from "~/src/features/AccountManagement/components/CopyKeyDialog/TokenDetails"
+import { TokenHeader } from "~/src/features/KeyManagement/components/TokenListItem/TokenHeader"
+import {
+  AuthTypeEnum,
+  SiteHealthStatus,
+  type DisplaySiteData,
+} from "~/src/types"
 import { render, screen } from "~/tests/test-utils/render"
-import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 
 vi.mock("~/components/dialogs/ChannelDialog", () => {
   return {
@@ -20,7 +24,7 @@ const mockedUseUserPreferencesContext = vi.fn()
 
 vi.mock("~/contexts/UserPreferencesContext", async () => {
   const actual = await vi.importActual<
-    typeof import("~/contexts/UserPreferencesContext")
+    typeof import("~/src/contexts/UserPreferencesContext")
   >("~/contexts/UserPreferencesContext")
 
   return new Proxy(actual, {

@@ -1,0 +1,25 @@
+import ccSwitchLogo from "~/src/assets/cc-switch-logo.png"
+import {
+  ICON_SIZE_CLASSNAME,
+  type IconSize,
+} from "~/src/components/icons/iconSizes"
+import { cn } from "~/src/lib/utils"
+
+interface CCSwitchIconProps {
+  size?: IconSize
+}
+
+/**
+ * CCSwitchIcon renders the CC Switch brand mark at a chosen size.
+ */
+export function CCSwitchIcon({ size = "sm" }: CCSwitchIconProps) {
+  return (
+    <img
+      src={ccSwitchLogo}
+      alt="CC Switch logo"
+      className={cn(ICON_SIZE_CLASSNAME[size])}
+      loading="lazy"
+      decoding="async"
+    />
+  )
+}

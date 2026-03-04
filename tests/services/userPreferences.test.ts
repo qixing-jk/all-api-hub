@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest"
 
-import { DATA_TYPE_BALANCE, DATA_TYPE_CASHFLOW } from "~/constants"
-import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
-import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
+import { DATA_TYPE_BALANCE, DATA_TYPE_CASHFLOW } from "~/src/constants"
+import { DEFAULT_PREFERENCES } from "~/src/services/preferences/userPreferences"
+import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/src/types/accountAutoRefresh"
 
 describe("userPreferences", () => {
   describe("DEFAULT_PREFERENCES", () => {

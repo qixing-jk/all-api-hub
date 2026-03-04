@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 
-import { collectModelsFromExecution } from "~/services/models/modelSync/modelCollection"
-import type { ExecutionResult } from "~/types/managedSiteModelSync"
+import { collectModelsFromExecution } from "~/src/services/models/modelSync/modelCollection"
+import type { ExecutionResult } from "~/src/types/managedSiteModelSync"
 
 describe("collectModelsFromExecution", () => {
   const baseResult = (items: ExecutionResult["items"]): ExecutionResult => ({

@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { VELOERA } from "~/constants/siteType"
-import { veloeraProvider } from "~/services/checkin/autoCheckin/providers/veloera"
-import { AuthTypeEnum, SiteHealthStatus, type SiteAccount } from "~/types"
+import { VELOERA } from "~/src/constants/siteType"
+import { veloeraProvider } from "~/src/services/checkin/autoCheckin/providers/veloera"
+import { AuthTypeEnum, SiteHealthStatus, type SiteAccount } from "~/src/types"
 
 vi.mock("~/services/apiService/common/utils", () => ({
   fetchApi: vi.fn(),
@@ -57,7 +57,9 @@ describe("veloeraProvider", () => {
 
   describe("checkIn", () => {
     it("returns success on successful check-in", async () => {
-      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { fetchApi } = await import(
+        "~/src/services/apiService/common/utils"
+      )
       vi.mocked(fetchApi).mockResolvedValueOnce({
         success: true,
         data: null,
@@ -69,7 +71,9 @@ describe("veloeraProvider", () => {
     })
 
     it("returns already_checked when already checked in", async () => {
-      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { fetchApi } = await import(
+        "~/src/services/apiService/common/utils"
+      )
       vi.mocked(fetchApi).mockResolvedValueOnce({
         success: true,
         data: null,
@@ -81,7 +85,9 @@ describe("veloeraProvider", () => {
     })
 
     it("handles errors gracefully", async () => {
-      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { fetchApi } = await import(
+        "~/src/services/apiService/common/utils"
+      )
       vi.mocked(fetchApi).mockRejectedValueOnce(new Error("Network error"))
 
       const result = await veloeraProvider.checkIn(mockAccount)

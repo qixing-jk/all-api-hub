@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { initializeServices } from "~/entrypoints/background/servicesInit"
+import { initializeServices } from "~/src/entrypoints/background/servicesInit"
 
 type InitMock = ReturnType<typeof vi.fn>
 

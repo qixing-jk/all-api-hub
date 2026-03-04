@@ -5,7 +5,7 @@
 <hr/>
 
 <div align="center">
-  <img src="assets/icon.png" alt="All API Hub Logo" width="128" height="128">
+  <img src="src/assets/icon.png" alt="All API Hub Logo" width="128" height="128">
 
 # All API Hub – AI Relay & New API Manager
 

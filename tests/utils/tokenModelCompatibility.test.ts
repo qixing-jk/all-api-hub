@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   isTokenCompatibleWithModel,
   parseTokenModelAllowList,
-} from "~/services/models/utils/tokenModelCompatibility"
+} from "~/src/services/models/utils/tokenModelCompatibility"
 
 describe("tokenModelCompatibility", () => {
   describe("parseTokenModelAllowList", () => {

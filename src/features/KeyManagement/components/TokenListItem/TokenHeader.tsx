@@ -1,0 +1,334 @@
+import {
+  DocumentDuplicateIcon,
+  PencilIcon,
+  PlusIcon,
+  TrashIcon,
+} from "@heroicons/react/24/outline"
+import { useState } from "react"
+import toast from "react-hot-toast"
+import { useTranslation } from "react-i18next"
+
+import { ClaudeCodeRouterImportDialog } from "~/src/components/ClaudeCodeRouterImportDialog"
+import { CliProxyExportDialog } from "~/src/components/CliProxyExportDialog"
+import { useChannelDialog } from "~/src/components/dialogs/ChannelDialog"
+import { CCSwitchIcon } from "~/src/components/icons/CCSwitchIcon"
+import { CherryIcon } from "~/src/components/icons/CherryIcon"
+import { ClaudeCodeRouterIcon } from "~/src/components/icons/ClaudeCodeRouterIcon"
+import { CliProxyIcon } from "~/src/components/icons/CliProxyIcon"
+import { KiloCodeIcon } from "~/src/components/icons/KiloCodeIcon"
+import { ManagedSiteIcon } from "~/src/components/icons/ManagedSiteIcon"
+import { KiloCodeExportDialog } from "~/src/components/KiloCodeExportDialog"
+import { Badge, Heading6, IconButton } from "~/src/components/ui"
+import { useUserPreferencesContext } from "~/src/contexts/UserPreferencesContext"
+import { apiCredentialProfilesStorage } from "~/src/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+import { OpenInCherryStudio } from "~/src/services/integrations/cherryStudio"
+import { getManagedSiteLabelKey } from "~/src/services/managedSites/utils/managedSite"
+import {
+  API_TYPES,
+  type ApiVerificationApiType,
+} from "~/src/services/verification/aiApiVerification"
+import { toSanitizedErrorSummary } from "~/src/services/verification/aiApiVerification/utils"
+import type { AccountToken, DisplaySiteData } from "~/src/types"
+import { createLogger } from "~/src/utils/core/logger"
+import { showResultToast } from "~/src/utils/core/toastHelpers"
+import { openApiCredentialProfilesPage } from "~/src/utils/navigation"
+
+/**
+ * Unified logger scoped to the Key Management token header actions.
+ */
+const logger = createLogger("TokenHeader")
+
+interface TokenHeaderProps {
+  /**
+   * Token data with account display name included.
+   */
+  token: AccountToken
+  /**
+   * Copy handler for placing the key on clipboard.
+   */
+  copyKey: (key: string, name: string) => void
+  /**
+   * Handler to open the edit dialog for the token.
+   */
+  handleEditToken: (token: AccountToken) => void
+  /**
+   * Handler to delete the token.
+   */
+  handleDeleteToken: (token: AccountToken) => void
+  /**
+   * Account metadata for linking cross-app actions.
+   */
+  account: DisplaySiteData
+  /**
+   * Optional opener for CCSwitch export dialog.
+   */
+  onOpenCCSwitchDialog?: () => void
+}
+
+/**
+ * Renders action buttons for a token (copy, export, edit/delete).
+ * @param props Component props container.
+ * @param props.token Token being acted upon.
+ * @param props.copyKey Clipboard copy handler.
+ * @param props.handleEditToken Edit action callback.
+ * @param props.handleDeleteToken Delete action callback.
+ * @param props.account Account context for integrations.
+ * @param props.onOpenCCSwitchDialog Optional CCSwitch export opener.
+ */
+function TokenActionButtons({
+  token,
+  copyKey,
+  handleEditToken,
+  handleDeleteToken,
+  account,
+  onOpenCCSwitchDialog,
+}: TokenHeaderProps) {
+  const { t } = useTranslation(["keyManagement", "settings"])
+  const {
+    managedSiteType,
+    claudeCodeRouterBaseUrl,
+    claudeCodeRouterApiKey,
+    cliProxyBaseUrl,
+    cliProxyManagementKey,
+  } = useUserPreferencesContext()
+  const { openWithAccount } = useChannelDialog()
+
+  const [isClaudeCodeRouterOpen, setIsClaudeCodeRouterOpen] = useState(false)
+  const [isCliProxyDialogOpen, setIsCliProxyDialogOpen] = useState(false)
+  const [isKiloCodeDialogOpen, setIsKiloCodeDialogOpen] = useState(false)
+
+  const managedSiteLabel = t(getManagedSiteLabelKey(managedSiteType))
+
+  const handleImportToManagedSite = async () => {
+    await openWithAccount(account, token, (result) => {
+      showResultToast(result)
+    })
+  }
+
+  const handleOpenCliProxyDialog = () => {
+    if (!cliProxyBaseUrl?.trim() || !cliProxyManagementKey?.trim()) {
+      showResultToast({
+        success: false,
+        message: t("messages:cliproxy.configMissing"),
+      })
+      return
+    }
+    setIsCliProxyDialogOpen(true)
+  }
+
+  const handleOpenClaudeCodeRouter = () => {
+    if (!claudeCodeRouterBaseUrl?.trim()) {
+      showResultToast({
+        success: false,
+        message: t("messages:claudeCodeRouter.configMissing"),
+      })
+      return
+    }
+    setIsClaudeCodeRouterOpen(true)
+  }
+
+  const handleSaveToApiCredentialProfiles = async () => {
+    const apiType: ApiVerificationApiType = API_TYPES.OPENAI_COMPATIBLE
+
+    try {
+      await apiCredentialProfilesStorage.createProfile({
+        name: token.name,
+        apiType,
+        baseUrl: account.baseUrl,
+        apiKey: token.key,
+        tagIds: account.tagIds ?? [],
+      })
+      toast.success(
+        (toastInstance) => (
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="min-w-0 truncate">
+              {t("keyManagement:messages.savedToApiProfiles", {
+                name: token.name,
+              })}
+            </span>
+            <button
+              type="button"
+              className="shrink-0 rounded-md bg-blue-600 px-2 py-1 text-xs font-medium text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+              onClick={() => {
+                openApiCredentialProfilesPage()
+                toast.dismiss(toastInstance.id)
+              }}
+            >
+              {t("keyManagement:actions.openApiProfiles")}
+            </button>
+          </div>
+        ),
+        { duration: 8000 },
+      )
+    } catch (error) {
+      logger.error("Failed to save token to API profiles", {
+        message: toSanitizedErrorSummary(
+          error,
+          [token.key, account.token, account.cookieAuthSessionCookie].filter(
+            Boolean,
+          ) as string[],
+        ),
+      })
+      toast.error(t("keyManagement:messages.saveToApiProfilesFailed"))
+    }
+  }
+
+  return (
+    <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
+      <KiloCodeExportDialog
+        isOpen={isKiloCodeDialogOpen}
+        onClose={() => setIsKiloCodeDialogOpen(false)}
+        initialSelectedSiteIds={[account.id]}
+        initialSelectedTokenIdsBySite={{ [account.id]: [`${token.id}`] }}
+      />
+      <ClaudeCodeRouterImportDialog
+        isOpen={isClaudeCodeRouterOpen}
+        onClose={() => setIsClaudeCodeRouterOpen(false)}
+        account={account}
+        token={token}
+        routerBaseUrl={claudeCodeRouterBaseUrl}
+        routerApiKey={claudeCodeRouterApiKey}
+      />
+      <CliProxyExportDialog
+        isOpen={isCliProxyDialogOpen}
+        onClose={() => setIsCliProxyDialogOpen(false)}
+        account={account}
+        token={token}
+      />
+      <IconButton
+        aria-label={t("common:actions.copyKey")}
+        size="sm"
+        variant="ghost"
+        onClick={() => copyKey(token.key, token.name)}
+      >
+        <DocumentDuplicateIcon className="dark:text-dark-text-tertiary h-4 w-4 text-gray-500" />
+      </IconButton>
+      <IconButton
+        aria-label={t("keyManagement:actions.saveToApiProfiles")}
+        size="sm"
+        variant="ghost"
+        onClick={handleSaveToApiCredentialProfiles}
+      >
+        <PlusIcon className="dark:text-dark-text-tertiary h-4 w-4 text-gray-500" />
+      </IconButton>
+      <IconButton
+        aria-label={t("actions.useInCherry")}
+        size="sm"
+        variant="ghost"
+        onClick={() => OpenInCherryStudio(account, token)}
+      >
+        <CherryIcon />
+      </IconButton>
+      {onOpenCCSwitchDialog && (
+        <IconButton
+          aria-label={t("actions.exportToCCSwitch")}
+          size="sm"
+          variant="ghost"
+          onClick={onOpenCCSwitchDialog}
+        >
+          <CCSwitchIcon />
+        </IconButton>
+      )}
+      <IconButton
+        aria-label={t("keyManagement:exportToKiloCode")}
+        size="sm"
+        variant="ghost"
+        onClick={() => setIsKiloCodeDialogOpen(true)}
+      >
+        <KiloCodeIcon className="dark:text-dark-text-tertiary text-gray-500" />
+      </IconButton>
+      <IconButton
+        aria-label={t("actions.importToCliProxy")}
+        size="sm"
+        variant="ghost"
+        onClick={handleOpenCliProxyDialog}
+      >
+        <CliProxyIcon size="sm" />
+      </IconButton>
+      <IconButton
+        aria-label={t("actions.importToClaudeCodeRouter")}
+        size="sm"
+        variant="ghost"
+        onClick={handleOpenClaudeCodeRouter}
+      >
+        <ClaudeCodeRouterIcon size="sm" />
+      </IconButton>
+      <IconButton
+        aria-label={t("actions.importToManagedSite", {
+          site: managedSiteLabel,
+        })}
+        size="sm"
+        variant="ghost"
+        onClick={handleImportToManagedSite}
+      >
+        <ManagedSiteIcon siteType={managedSiteType} size="sm" />
+      </IconButton>
+      <IconButton
+        aria-label={t("actions.editKey")}
+        size="sm"
+        variant="outline"
+        onClick={() => handleEditToken(token)}
+      >
+        <PencilIcon className="h-4 w-4 text-blue-500 dark:text-blue-400" />
+      </IconButton>
+      <IconButton
+        aria-label={t("actions.deleteKey")}
+        size="sm"
+        variant="destructive"
+        onClick={() => handleDeleteToken(token)}
+      >
+        <TrashIcon className="h-4 w-4" />
+      </IconButton>
+    </div>
+  )
+}
+
+/**
+ * Token header displaying name, status badges, and action buttons.
+ * @param props Component props container.
+ * @param props.token Token entity with account name.
+ * @param props.copyKey Clipboard copy handler.
+ * @param props.handleEditToken Edit action callback.
+ * @param props.handleDeleteToken Delete action callback.
+ * @param props.account Account context for cross-app operations.
+ * @param props.onOpenCCSwitchDialog Optional CCSwitch export opener.
+ */
+export function TokenHeader({
+  token,
+  copyKey,
+  handleEditToken,
+  handleDeleteToken,
+  account,
+  onOpenCCSwitchDialog,
+}: TokenHeaderProps) {
+  const { t } = useTranslation("keyManagement")
+  return (
+    <div className="flex min-w-0 items-start gap-2">
+      {/* 左侧：标题和标签 - 可压缩 */}
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 sm:gap-2">
+        <Heading6 className="truncate text-sm sm:text-base md:text-lg">
+          {token.name}
+        </Heading6>
+        <Badge
+          variant={token.status === 1 ? "success" : "destructive"}
+          size="sm"
+        >
+          {token.status === 1 ? t("actions.enable") : t("actions.disable")}
+        </Badge>
+        <Badge variant="outline" size="sm">
+          {token.accountName}
+        </Badge>
+      </div>
+
+      {/* 右侧：操作按钮 - 固定不压缩 */}
+      <TokenActionButtons
+        token={token}
+        copyKey={copyKey}
+        handleEditToken={handleEditToken}
+        handleDeleteToken={handleDeleteToken}
+        account={account}
+        onOpenCCSwitchDialog={onOpenCCSwitchDialog}
+      />
+    </div>
+  )
+}

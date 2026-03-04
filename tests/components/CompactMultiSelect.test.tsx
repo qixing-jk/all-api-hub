@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event"
 import { useState } from "react"
 import { describe, expect, it, vi } from "vitest"
 
-import { CompactMultiSelect } from "~/components/ui/CompactMultiSelect"
+import { CompactMultiSelect } from "~/src/components/ui/CompactMultiSelect"
 import { render } from "~/tests/test-utils/render"
 
 describe("CompactMultiSelect", () => {

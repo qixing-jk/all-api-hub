@@ -1,29 +1,32 @@
 import { describe, expect, it } from "vitest"
 
-import { DATA_TYPE_CASHFLOW, DATA_TYPE_CONSUMPTION } from "~/constants"
-import { NEW_API } from "~/constants/siteType"
+import { DATA_TYPE_CASHFLOW, DATA_TYPE_CONSUMPTION } from "~/src/constants"
+import { NEW_API } from "~/src/constants/siteType"
 import {
   CURRENT_PREFERENCES_VERSION,
   getPreferencesVersion,
   migratePreferences,
   needsPreferencesMigration,
-} from "~/services/preferences/migrations/preferencesMigration"
+} from "~/src/services/preferences/migrations/preferencesMigration"
 import {
   DEFAULT_PREFERENCES,
   type UserPreferences,
-} from "~/services/preferences/userPreferences"
-import { DEFAULT_SORTING_PRIORITY_CONFIG } from "~/services/preferences/utils/sortingPriority"
-import { buildUserPreferences } from "~/tests/test-utils/factories"
+} from "~/src/services/preferences/userPreferences"
+import { DEFAULT_SORTING_PRIORITY_CONFIG } from "~/src/services/preferences/utils/sortingPriority"
 import {
   ACCOUNT_AUTO_REFRESH_INTERVAL_MIN_SECONDS,
   ACCOUNT_AUTO_REFRESH_MIN_INTERVAL_MIN_SECONDS,
   DEFAULT_ACCOUNT_AUTO_REFRESH,
-} from "~/types/accountAutoRefresh"
-import { DEFAULT_BALANCE_HISTORY_PREFERENCES } from "~/types/dailyBalanceHistory"
-import { DEFAULT_NEW_API_CONFIG } from "~/types/newApiConfig"
-import { SortingCriteriaType } from "~/types/sorting"
-import { DEFAULT_VELOERA_CONFIG } from "~/types/veloeraConfig"
-import { DEFAULT_WEBDAV_SETTINGS, WEBDAV_SYNC_STRATEGIES } from "~/types/webdav"
+} from "~/src/types/accountAutoRefresh"
+import { DEFAULT_BALANCE_HISTORY_PREFERENCES } from "~/src/types/dailyBalanceHistory"
+import { DEFAULT_NEW_API_CONFIG } from "~/src/types/newApiConfig"
+import { SortingCriteriaType } from "~/src/types/sorting"
+import { DEFAULT_VELOERA_CONFIG } from "~/src/types/veloeraConfig"
+import {
+  DEFAULT_WEBDAV_SETTINGS,
+  WEBDAV_SYNC_STRATEGIES,
+} from "~/src/types/webdav"
+import { buildUserPreferences } from "~/tests/test-utils/factories"
 
 const buildModelRedirectFixture = () => ({
   ...structuredClone(buildUserPreferences().modelRedirect),

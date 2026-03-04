@@ -4,12 +4,16 @@ import toast from "react-hot-toast"
 import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { useKeyManagement } from "~/features/KeyManagement/hooks/useKeyManagement"
-import { useAccountData } from "~/hooks/useAccountData"
-import { getApiService } from "~/services/apiService"
+import { useKeyManagement } from "~/src/features/KeyManagement/hooks/useKeyManagement"
+import { useAccountData } from "~/src/hooks/useAccountData"
+import { getApiService } from "~/src/services/apiService"
+import {
+  AuthTypeEnum,
+  SiteHealthStatus,
+  type DisplaySiteData,
+} from "~/src/types"
 import testI18n from "~/tests/test-utils/i18n"
 import { createToken } from "~/tests/utils/keyManagementFactories"
-import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 
 vi.mock("~/hooks/useAccountData", () => ({
   useAccountData: vi.fn(),

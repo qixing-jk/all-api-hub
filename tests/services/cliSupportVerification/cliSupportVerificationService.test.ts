@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest"
 import {
   runCliSupportSimulation,
   runCliSupportTool,
-} from "~/services/verification/cliSupportVerification/cliSupportVerificationService"
+} from "~/src/services/verification/cliSupportVerification/cliSupportVerificationService"
 
 const mockRunCliSupportToolFromRegistry = vi.fn()
 

@@ -72,5 +72,5 @@ web-ext.config.ts
 
 .env
 .env.*
-public/react-devtools*
+src/public/react-devtools*
 .ace-tool/

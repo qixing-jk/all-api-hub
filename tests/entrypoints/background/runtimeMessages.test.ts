@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { RuntimeActionIds } from "~/src/constants/runtimeActions"
 
 type RuntimeMessageListener = (
   request: any,
@@ -24,7 +24,7 @@ describe("setupRuntimeMessageListeners routing", () => {
 
     vi.doMock("~/utils/browser/browserApi", async (importOriginal) => {
       const actual =
-        await importOriginal<typeof import("~/utils/browser/browserApi")>()
+        await importOriginal<typeof import("~/src/utils/browser/browserApi")>()
       return {
         ...actual,
         onRuntimeMessage: vi.fn((listener: RuntimeMessageListener) => {
@@ -87,7 +87,7 @@ describe("setupRuntimeMessageListeners routing", () => {
 
   it("routes exact-match actions and responds synchronously", async () => {
     const { setupRuntimeMessageListeners } = await import(
-      "~/entrypoints/background/runtimeMessages"
+      "~/src/entrypoints/background/runtimeMessages"
     )
 
     setupRuntimeMessageListeners()
@@ -110,7 +110,7 @@ describe("setupRuntimeMessageListeners routing", () => {
 
   it("refreshes context menus when requested", async () => {
     const { setupRuntimeMessageListeners } = await import(
-      "~/entrypoints/background/runtimeMessages"
+      "~/src/entrypoints/background/runtimeMessages"
     )
 
     setupRuntimeMessageListeners()
@@ -134,7 +134,7 @@ describe("setupRuntimeMessageListeners routing", () => {
 
   it("routes prefix actions to the feature handler and keeps the response channel open", async () => {
     const { setupRuntimeMessageListeners } = await import(
-      "~/entrypoints/background/runtimeMessages"
+      "~/src/entrypoints/background/runtimeMessages"
     )
 
     setupRuntimeMessageListeners()
@@ -154,7 +154,7 @@ describe("setupRuntimeMessageListeners routing", () => {
 
   it("returns undefined when action is missing", async () => {
     const { setupRuntimeMessageListeners } = await import(
-      "~/entrypoints/background/runtimeMessages"
+      "~/src/entrypoints/background/runtimeMessages"
     )
 
     setupRuntimeMessageListeners()
@@ -169,7 +169,7 @@ describe("setupRuntimeMessageListeners routing", () => {
 
   it("returns undefined when action is unknown", async () => {
     const { setupRuntimeMessageListeners } = await import(
-      "~/entrypoints/background/runtimeMessages"
+      "~/src/entrypoints/background/runtimeMessages"
     )
 
     setupRuntimeMessageListeners()

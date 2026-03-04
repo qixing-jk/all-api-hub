@@ -3,9 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import {
   fetchAccountTokens,
   fetchTokenById,
-} from "~/services/apiService/common"
-import { fetchApiData } from "~/services/apiService/common/utils"
-import { AuthTypeEnum } from "~/types"
+} from "~/src/services/apiService/common"
+import { fetchApiData } from "~/src/services/apiService/common/utils"
+import { AuthTypeEnum } from "~/src/types"
 
 const { mockFetchApi, mockFetchApiData } = vi.hoisted(() => ({
   mockFetchApi: vi.fn(),

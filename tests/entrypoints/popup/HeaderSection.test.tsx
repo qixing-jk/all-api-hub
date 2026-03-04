@@ -1,15 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import HeaderSection from "~/entrypoints/popup/components/HeaderSection"
+import HeaderSection from "~/src/entrypoints/popup/components/HeaderSection"
+import { isExtensionSidePanel } from "~/src/utils/browser"
 import { render, screen } from "~/tests/test-utils/render"
-import { isExtensionSidePanel } from "~/utils/browser"
 
 vi.mock("~/assets/icon.png", () => ({
   default: "icon.png",
 }))
 
 vi.mock("~/utils/browser", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("~/utils/browser")>()
+  const actual = await importOriginal<typeof import("~/src/utils/browser")>()
   return {
     ...actual,
     isExtensionSidePanel: vi.fn().mockReturnValue(false),

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { GroupSelection } from "~/features/KeyManagement/components/AddTokenDialog/TokenForm/GroupSelection"
+import { GroupSelection } from "~/src/features/KeyManagement/components/AddTokenDialog/TokenForm/GroupSelection"
 import { fireEvent, render, screen, within } from "~/tests/test-utils/render"
 
 describe("GroupSelection", () => {

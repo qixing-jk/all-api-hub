@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import { UpdateLogDialog } from "~/components/dialogs/UpdateLogDialog"
-import { userPreferences } from "~/services/preferences/userPreferences"
+import { UpdateLogDialog } from "~/src/components/dialogs/UpdateLogDialog"
+import { userPreferences } from "~/src/services/preferences/userPreferences"
 import { buildUserPreferences } from "~/tests/test-utils/factories"
 import { fireEvent, render, screen, waitFor } from "~/tests/test-utils/render"
 

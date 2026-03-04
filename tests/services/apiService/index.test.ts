@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { DONE_HUB, ONE_HUB } from "~/constants/siteType"
-import { getApiService } from "~/services/apiService"
+import { DONE_HUB, ONE_HUB } from "~/src/constants/siteType"
+import { getApiService } from "~/src/services/apiService"
 
 const {
   commonFetchUserInfo,

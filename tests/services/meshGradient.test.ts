@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   createMeshGradientPlan,
   MESH_GRADIENT_PALETTES,
-} from "~/services/sharing/shareSnapshots/meshGradient"
+} from "~/src/services/sharing/shareSnapshots/meshGradient"
 
 describe("meshGradient", () => {
   it("is deterministic for the same seed", () => {

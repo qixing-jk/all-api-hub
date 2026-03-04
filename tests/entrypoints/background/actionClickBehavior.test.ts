@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { MENU_ITEM_IDS } from "~/src/constants/optionsMenuIds"
 
 describe("background applyActionClickBehavior", () => {
   let addActionClickListener: ReturnType<typeof vi.fn>
@@ -48,7 +48,7 @@ describe("background applyActionClickBehavior", () => {
     })
 
     const { applyActionClickBehavior } = await import(
-      "~/entrypoints/background/actionClickBehavior"
+      "~/src/entrypoints/background/actionClickBehavior"
     )
 
     await applyActionClickBehavior("sidepanel")
@@ -65,7 +65,7 @@ describe("background applyActionClickBehavior", () => {
     })
 
     const { applyActionClickBehavior } = await import(
-      "~/entrypoints/background/actionClickBehavior"
+      "~/src/entrypoints/background/actionClickBehavior"
     )
 
     await applyActionClickBehavior("sidepanel")
@@ -82,7 +82,7 @@ describe("background applyActionClickBehavior", () => {
     })
 
     const { applyActionClickBehavior } = await import(
-      "~/entrypoints/background/actionClickBehavior"
+      "~/src/entrypoints/background/actionClickBehavior"
     )
 
     await applyActionClickBehavior("sidepanel")
@@ -100,7 +100,7 @@ describe("background applyActionClickBehavior", () => {
     openSidePanel.mockRejectedValueOnce(new Error("fail"))
 
     const { applyActionClickBehavior } = await import(
-      "~/entrypoints/background/actionClickBehavior"
+      "~/src/entrypoints/background/actionClickBehavior"
     )
 
     await applyActionClickBehavior("sidepanel")

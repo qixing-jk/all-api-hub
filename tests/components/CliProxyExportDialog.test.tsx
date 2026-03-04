@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { CliProxyExportDialog } from "~/components/CliProxyExportDialog"
+import { CliProxyExportDialog } from "~/src/components/CliProxyExportDialog"
 import { fireEvent, render, screen, waitFor } from "~/tests/test-utils/render"
 
 const mockFetchOpenAICompatibleModelIds = vi.fn()

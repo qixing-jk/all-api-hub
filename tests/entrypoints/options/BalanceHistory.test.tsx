@@ -2,20 +2,20 @@ import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { echarts } from "~/components/charts/echarts"
-import { ONE_API } from "~/constants/siteType"
-import { UI_CONSTANTS } from "~/constants/ui"
-import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import BalanceHistory from "~/entrypoints/options/pages/BalanceHistory"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { echarts } from "~/src/components/charts/echarts"
+import { ONE_API } from "~/src/constants/siteType"
+import { UI_CONSTANTS } from "~/src/constants/ui"
+import { useUserPreferencesContext } from "~/src/contexts/UserPreferencesContext"
+import BalanceHistory from "~/src/entrypoints/options/pages/BalanceHistory"
+import { accountStorage } from "~/src/services/accounts/accountStorage"
 import {
   getDayKeyFromUnixSeconds,
   subtractDaysFromDayKey,
-} from "~/services/history/dailyBalanceHistory/dayKeys"
-import { dailyBalanceHistoryStorage } from "~/services/history/dailyBalanceHistory/storage"
-import { tagStorage } from "~/services/tags/tagStorage"
+} from "~/src/services/history/dailyBalanceHistory/dayKeys"
+import { dailyBalanceHistoryStorage } from "~/src/services/history/dailyBalanceHistory/storage"
+import { tagStorage } from "~/src/services/tags/tagStorage"
+import { DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION } from "~/src/types/dailyBalanceHistory"
 import { render, screen, waitFor } from "~/tests/test-utils/render"
-import { DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION } from "~/types/dailyBalanceHistory"
 
 vi.mock("~/components/charts/echarts", async () => {
   return {

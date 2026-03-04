@@ -1,8 +1,8 @@
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import AccountManagement from "~/entrypoints/options/pages/AccountManagement"
-import BookmarkManagement from "~/entrypoints/options/pages/BookmarkManagement"
+import AccountManagement from "~/src/entrypoints/options/pages/AccountManagement"
+import BookmarkManagement from "~/src/entrypoints/options/pages/BookmarkManagement"
 import { fireEvent, render, screen } from "~/tests/test-utils/render"
 
 const openAddAccountMock = vi.fn()

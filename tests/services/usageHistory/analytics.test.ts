@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest"
 
-import { computeUsageHistoryExport } from "~/services/history/usageHistory/analytics"
-import { createEmptyUsageHistoryAccountStore } from "~/services/history/usageHistory/core"
+import { computeUsageHistoryExport } from "~/src/services/history/usageHistory/analytics"
+import { createEmptyUsageHistoryAccountStore } from "~/src/services/history/usageHistory/core"
 import {
   USAGE_HISTORY_EXPORT_SCHEMA_VERSION,
   USAGE_HISTORY_STORE_SCHEMA_VERSION,
   UsageHistoryStore,
-} from "~/types/usageHistory"
+} from "~/src/types/usageHistory"
 
 describe("usageHistory analytics", () => {
   it("builds a versioned export and fuses aggregates across accounts", () => {

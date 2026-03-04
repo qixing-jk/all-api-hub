@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 
-import i18n from "~/utils/i18n"
-import * as documentTitleModule from "~/utils/navigation/documentTitle"
+import i18n from "~/src/utils/i18n"
+import * as documentTitleModule from "~/src/utils/navigation/documentTitle"
 
 vi.mock("~/utils/i18n", () => ({
   default: {

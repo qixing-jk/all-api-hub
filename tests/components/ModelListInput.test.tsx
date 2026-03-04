@@ -1,7 +1,7 @@
 import React from "react"
 import { describe, expect, it } from "vitest"
 
-import { ModelListInput } from "~/components/ui"
+import { ModelListInput } from "~/src/components/ui"
 import { fireEvent, render, screen } from "~/tests/test-utils/render"
 
 describe("ModelListInput", () => {

@@ -3,9 +3,9 @@ import { describe, expect, it } from "vitest"
 import {
   migrateSortingConfig,
   needsSortingConfigMigration,
-} from "~/services/preferences/migrations/sortingConfigMigration"
-import { DEFAULT_SORTING_PRIORITY_CONFIG } from "~/services/preferences/utils/sortingPriority"
-import { SortingCriteriaType } from "~/types/sorting"
+} from "~/src/services/preferences/migrations/sortingConfigMigration"
+import { DEFAULT_SORTING_PRIORITY_CONFIG } from "~/src/services/preferences/utils/sortingPriority"
+import { SortingCriteriaType } from "~/src/types/sorting"
 
 describe("sortingConfigMigration", () => {
   describe("needsSortingConfigMigration", () => {

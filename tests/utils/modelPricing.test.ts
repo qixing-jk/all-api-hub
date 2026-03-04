@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import type { ModelPricing } from "~/services/apiService/common/type"
+import type { ModelPricing } from "~/src/services/apiService/common/type"
 import {
   calculateModelPrice,
   formatPrice,
@@ -11,7 +11,7 @@ import {
   getEndpointTypesText,
   isModelAvailableForGroup,
   isTokenBillingType,
-} from "~/services/models/utils/modelPricing"
+} from "~/src/services/models/utils/modelPricing"
 
 describe("modelPricing utils", () => {
   describe("isTokenBillingType", () => {

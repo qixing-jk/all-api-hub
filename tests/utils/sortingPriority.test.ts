@@ -4,17 +4,17 @@ import {
   DATA_TYPE_BALANCE,
   DATA_TYPE_CONSUMPTION,
   DATA_TYPE_INCOME,
-} from "~/constants"
+} from "~/src/constants"
 import {
   createDynamicSortComparator,
   DEFAULT_SORTING_PRIORITY_CONFIG,
-} from "~/services/preferences/utils/sortingPriority"
-import type { DisplaySiteData, SiteAccount } from "~/types"
-import { AuthTypeEnum, SiteHealthStatus } from "~/types"
+} from "~/src/services/preferences/utils/sortingPriority"
+import type { DisplaySiteData, SiteAccount } from "~/src/types"
+import { AuthTypeEnum, SiteHealthStatus } from "~/src/types"
 import {
   SortingCriteriaType,
   type SortingPriorityConfig,
-} from "~/types/sorting"
+} from "~/src/types/sorting"
 
 describe("createDynamicSortComparator", () => {
   // Helper to create a minimal DisplaySiteData fixture

@@ -9,8 +9,8 @@ import {
   updateChannel,
   updateChannelModelMapping,
   updateChannelModels,
-} from "~/services/apiService/doneHub"
-import { AuthTypeEnum } from "~/types"
+} from "~/src/services/apiService/doneHub"
+import { AuthTypeEnum } from "~/src/types"
 
 const { mockFetchApiData } = vi.hoisted(() => ({
   mockFetchApiData: vi.fn(),

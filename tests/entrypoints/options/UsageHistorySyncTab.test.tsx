@@ -1,17 +1,19 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
-import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import UsageHistorySyncTab from "~/features/BasicSettings/components/tabs/UsageHistorySync/UsageHistorySyncTab"
-import { accountStorage } from "~/services/accounts/accountStorage"
-import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
+import { RuntimeActionIds } from "~/src/constants/runtimeActions"
+import { useUserPreferencesContext } from "~/src/contexts/UserPreferencesContext"
+import UsageHistorySyncTab from "~/src/features/BasicSettings/components/tabs/UsageHistorySync/UsageHistorySyncTab"
+import { accountStorage } from "~/src/services/accounts/accountStorage"
+import { usageHistoryStorage } from "~/src/services/history/usageHistory/storage"
+import { sendRuntimeMessage } from "~/src/utils/browser/browserApi"
 import { render } from "~/tests/test-utils/render"
-import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 
 vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/contexts/UserPreferencesContext")>()
+    await importOriginal<
+      typeof import("~/src/contexts/UserPreferencesContext")
+    >()
   return {
     ...actual,
     useUserPreferencesContext: vi.fn(),
@@ -28,7 +30,7 @@ vi.mock("~/services/history/usageHistory/storage", () => ({
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
+    await importOriginal<typeof import("~/src/utils/browser/browserApi")>()
   return {
     ...actual,
     hasAlarmsAPI: vi.fn(() => true),

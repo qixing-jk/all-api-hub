@@ -5,7 +5,7 @@ import {
   normalizeApiCheckBaseUrl,
   normalizeGoogleFamilyBaseUrl,
   normalizeOpenAiFamilyBaseUrl,
-} from "~/services/verification/webAiApiCheck/extractCredentials"
+} from "~/src/services/verification/webAiApiCheck/extractCredentials"
 import { buildApiKey } from "~/tests/test-utils/factories"
 
 describe("webAiApiCheck utils", () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 
-import type { CurrencyType } from "~/types"
+import type { CurrencyType } from "~/src/types"
 import {
   calculateTotalBalance,
   calculateTotalConsumption,
@@ -19,7 +19,7 @@ import {
   getStatusBadgeStyle,
   normalizeToDate,
   normalizeToMs,
-} from "~/utils/core/formatters"
+} from "~/src/utils/core/formatters"
 
 describe("formatters utilities", () => {
   describe("formatTokenCount", () => {

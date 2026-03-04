@@ -20,13 +20,13 @@ import {
   resolveLatencyAggregateForSelection,
   resolveLatencyDailyForTokens,
   topNWithOther,
-} from "~/entrypoints/options/pages/UsageAnalytics/echartsOptions"
-import { computeUsageHistoryExport } from "~/services/history/usageHistory/analytics"
+} from "~/src/entrypoints/options/pages/UsageAnalytics/echartsOptions"
+import { computeUsageHistoryExport } from "~/src/services/history/usageHistory/analytics"
 import {
   createEmptyUsageHistoryAccountStore,
   createEmptyUsageHistoryLatencyAggregate,
-} from "~/services/history/usageHistory/core"
-import type { UsageHistoryStore } from "~/types/usageHistory"
+} from "~/src/services/history/usageHistory/core"
+import type { UsageHistoryStore } from "~/src/types/usageHistory"
 
 describe("UsageAnalytics echartsOptions", () => {
   it("topNWithOther is stable and aggregates the remainder", () => {

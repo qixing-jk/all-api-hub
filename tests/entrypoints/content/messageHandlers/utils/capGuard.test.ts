@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import {
   detectCapChallengePage,
   maybeAutoStartCapChallenge,
-} from "~/entrypoints/content/messageHandlers/utils/capGuard"
+} from "~/src/entrypoints/content/messageHandlers/utils/capGuard"
 
 describe("capGuard", () => {
   beforeEach(() => {

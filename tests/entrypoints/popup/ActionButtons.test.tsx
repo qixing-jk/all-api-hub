@@ -27,13 +27,13 @@ afterEach(() => {
 describe("popup ActionButtons", () => {
   it("opens auto check-in page and triggers run when quick check-in button clicked", async () => {
     vi.resetModules()
-    const navigation = await import("~/utils/navigation")
+    const navigation = await import("~/src/utils/navigation")
     const openAutoCheckinPageSpy = vi
       .spyOn(navigation, "openAutoCheckinPage")
       .mockImplementation(vi.fn() as any)
 
     const { default: ActionButtons } = await import(
-      "~/entrypoints/popup/components/ActionButtons"
+      "~/src/entrypoints/popup/components/ActionButtons"
     )
     render(
       <ActionButtons
@@ -53,7 +53,7 @@ describe("popup ActionButtons", () => {
 
   it("hides external check-in button when no custom check-in URLs exist", async () => {
     const { default: ActionButtons } = await import(
-      "~/entrypoints/popup/components/ActionButtons"
+      "~/src/entrypoints/popup/components/ActionButtons"
     )
     render(
       <ActionButtons
@@ -77,7 +77,7 @@ describe("popup ActionButtons", () => {
       },
     ]
     const { default: ActionButtons } = await import(
-      "~/entrypoints/popup/components/ActionButtons"
+      "~/src/entrypoints/popup/components/ActionButtons"
     )
     render(
       <ActionButtons
@@ -113,7 +113,7 @@ describe("popup ActionButtons", () => {
       },
     ]
     const { default: ActionButtons } = await import(
-      "~/entrypoints/popup/components/ActionButtons"
+      "~/src/entrypoints/popup/components/ActionButtons"
     )
     render(
       <ActionButtons
@@ -145,7 +145,7 @@ describe("popup ActionButtons", () => {
       },
     ]
     const { default: ActionButtons } = await import(
-      "~/entrypoints/popup/components/ActionButtons"
+      "~/src/entrypoints/popup/components/ActionButtons"
     )
     render(
       <ActionButtons
@@ -181,7 +181,7 @@ describe("popup ActionButtons", () => {
       },
     ]
     const { default: ActionButtons } = await import(
-      "~/entrypoints/popup/components/ActionButtons"
+      "~/src/entrypoints/popup/components/ActionButtons"
     )
     render(
       <ActionButtons

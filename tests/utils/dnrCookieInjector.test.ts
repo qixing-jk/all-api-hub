@@ -5,7 +5,7 @@ import {
   buildTempWindowCookieRule,
   removeTempWindowCookieRule,
   TEMP_WINDOW_DNR_RULE_ID_BASE,
-} from "~/utils/browser/dnrCookieInjector"
+} from "~/src/utils/browser/dnrCookieInjector"
 
 describe("dnrCookieInjector", () => {
   let originalChrome: unknown

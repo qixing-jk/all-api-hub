@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { handleGetUserFromLocalStorage } from "~/entrypoints/content/messageHandlers/handlers/storage"
+import { handleGetUserFromLocalStorage } from "~/src/entrypoints/content/messageHandlers/handlers/storage"
 
 const { mockFetchUserInfo } = vi.hoisted(() => ({
   mockFetchUserInfo: vi.fn(),

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { VerifyApiDialog } from "~/components/dialogs/VerifyApiDialog"
+import { VerifyApiDialog } from "~/src/components/dialogs/VerifyApiDialog"
 import {
   fireEvent,
   render,
@@ -22,7 +22,7 @@ const mockRunApiVerificationProbe = vi.fn()
 vi.mock("~/services/verification/aiApiVerification", async (importOriginal) => {
   const original =
     await importOriginal<
-      typeof import("~/services/verification/aiApiVerification")
+      typeof import("~/src/services/verification/aiApiVerification")
     >()
   return {
     ...original,

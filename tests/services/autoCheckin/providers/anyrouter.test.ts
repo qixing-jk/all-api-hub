@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { ANYROUTER } from "~/constants/siteType"
-import { anyrouterProvider } from "~/services/checkin/autoCheckin/providers/anyrouter"
-import { AuthTypeEnum, SiteHealthStatus, type SiteAccount } from "~/types"
+import { ANYROUTER } from "~/src/constants/siteType"
+import { anyrouterProvider } from "~/src/services/checkin/autoCheckin/providers/anyrouter"
+import { AuthTypeEnum, SiteHealthStatus, type SiteAccount } from "~/src/types"
 
 vi.mock("~/services/apiService/common/utils", () => ({
   fetchApi: vi.fn(),
@@ -57,7 +57,9 @@ describe("anyrouterProvider", () => {
 
   describe("checkIn", () => {
     it("returns success on successful check-in (message includes 签到成功)", async () => {
-      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { fetchApi } = await import(
+        "~/src/services/apiService/common/utils"
+      )
       const mockedFetchApi = vi.mocked(
         fetchApi as unknown as (...args: any[]) => Promise<any>,
       )
@@ -73,7 +75,9 @@ describe("anyrouterProvider", () => {
     })
 
     it("returns already_checked when response is success and message is empty", async () => {
-      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { fetchApi } = await import(
+        "~/src/services/apiService/common/utils"
+      )
       const mockedFetchApi = vi.mocked(
         fetchApi as unknown as (...args: any[]) => Promise<any>,
       )
@@ -89,7 +93,9 @@ describe("anyrouterProvider", () => {
     })
 
     it("returns failed when response is not success (even if message indicates already checked)", async () => {
-      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { fetchApi } = await import(
+        "~/src/services/apiService/common/utils"
+      )
       const mockedFetchApi = vi.mocked(
         fetchApi as unknown as (...args: any[]) => Promise<any>,
       )
@@ -105,7 +111,9 @@ describe("anyrouterProvider", () => {
     })
 
     it("returns failed when response indicates failure", async () => {
-      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { fetchApi } = await import(
+        "~/src/services/apiService/common/utils"
+      )
       const mockedFetchApi = vi.mocked(
         fetchApi as unknown as (...args: any[]) => Promise<any>,
       )
@@ -121,7 +129,9 @@ describe("anyrouterProvider", () => {
     })
 
     it("returns already_checked when request throws and error message indicates already checked", async () => {
-      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { fetchApi } = await import(
+        "~/src/services/apiService/common/utils"
+      )
       const mockedFetchApi = vi.mocked(
         fetchApi as unknown as (...args: any[]) => Promise<any>,
       )
@@ -132,7 +142,9 @@ describe("anyrouterProvider", () => {
     })
 
     it("handles errors gracefully", async () => {
-      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { fetchApi } = await import(
+        "~/src/services/apiService/common/utils"
+      )
       const mockedFetchApi = vi.mocked(
         fetchApi as unknown as (...args: any[]) => Promise<any>,
       )

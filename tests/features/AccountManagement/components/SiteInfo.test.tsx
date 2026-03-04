@@ -1,7 +1,7 @@
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
-import SiteInfo from "~/features/AccountManagement/components/AccountList/SiteInfo"
+import SiteInfo from "~/src/features/AccountManagement/components/AccountList/SiteInfo"
 import { fireEvent, render, screen } from "~/tests/test-utils/render"
 
 const {
@@ -44,7 +44,7 @@ vi.mock("~/features/LdohSiteLookup/hooks/LdohSiteLookupContext", () => ({
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
+    await importOriginal<typeof import("~/src/utils/browser/browserApi")>()
   return {
     ...actual,
     createTab: createTabMock,

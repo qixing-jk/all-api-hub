@@ -4,7 +4,7 @@ import {
   OctopusAutoGroupType,
   OctopusOutboundType,
   type OctopusChannel,
-} from "~/types/octopus"
+} from "~/src/types/octopus"
 
 const mockGetPreferences = vi.fn()
 
@@ -42,7 +42,7 @@ describe("octopus", () => {
   describe("findMatchingChannel", () => {
     it("should refine match by key when keys are available", async () => {
       const { findMatchingChannel } = await import(
-        "~/services/managedSites/providers/octopus"
+        "~/src/services/managedSites/providers/octopus"
       )
 
       mockGetPreferences.mockResolvedValueOnce({
@@ -96,7 +96,7 @@ describe("octopus", () => {
 
     it("should return null when key mismatches", async () => {
       const { findMatchingChannel } = await import(
-        "~/services/managedSites/providers/octopus"
+        "~/src/services/managedSites/providers/octopus"
       )
 
       mockGetPreferences.mockResolvedValueOnce({

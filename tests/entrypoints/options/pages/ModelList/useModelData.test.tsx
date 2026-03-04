@@ -4,10 +4,14 @@ import type { ReactNode } from "react"
 import { I18nextProvider } from "react-i18next"
 import { describe, expect, it, vi } from "vitest"
 
-import { useModelData } from "~/features/ModelList/hooks/useModelData"
-import { getApiService } from "~/services/apiService"
+import { useModelData } from "~/src/features/ModelList/hooks/useModelData"
+import { getApiService } from "~/src/services/apiService"
+import {
+  AuthTypeEnum,
+  SiteHealthStatus,
+  type DisplaySiteData,
+} from "~/src/types"
 import testI18n from "~/tests/test-utils/i18n"
-import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 
 vi.mock("~/services/apiService", () => ({
   getApiService: vi.fn(),

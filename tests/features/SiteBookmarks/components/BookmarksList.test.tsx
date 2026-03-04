@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import BookmarksList from "~/features/SiteBookmarks/components/BookmarksList"
+import BookmarksList from "~/src/features/SiteBookmarks/components/BookmarksList"
+import type { SiteBookmark, Tag, TagStore } from "~/src/types"
 import {
   fireEvent,
   render,
@@ -8,7 +9,6 @@ import {
   waitFor,
   within,
 } from "~/tests/test-utils/render"
-import type { SiteBookmark, Tag, TagStore } from "~/types"
 
 let bookmarksMock: SiteBookmark[] = []
 let pinnedAccountIdsMock: string[] = []
@@ -48,7 +48,7 @@ vi.mock("~/services/accounts/accountStorage", () => ({
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
+    await importOriginal<typeof import("~/src/utils/browser/browserApi")>()
   return {
     ...actual,
     createTab: mockCreateTab,
@@ -56,7 +56,7 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
 })
 
 vi.mock("~/utils/navigation", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("~/utils/navigation")>()
+  const actual = await importOriginal<typeof import("~/src/utils/navigation")>()
   return {
     ...actual,
     closeIfPopup: mockCloseIfPopup,

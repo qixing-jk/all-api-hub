@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { ApiError } from "~/services/apiService/common/errors"
+import { ApiError } from "~/src/services/apiService/common/errors"
 
 describe("ApiError", () => {
   describe("Constructor", () => {

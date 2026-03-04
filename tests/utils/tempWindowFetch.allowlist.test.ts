@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 
-import { API_ERROR_CODES } from "~/services/apiService/common/errors"
-import { matchesTempWindowFallbackAllowlist } from "~/utils/browser/tempWindowFetch"
+import { API_ERROR_CODES } from "~/src/services/apiService/common/errors"
+import { matchesTempWindowFallbackAllowlist } from "~/src/utils/browser/tempWindowFetch"
 
 describe("matchesTempWindowFallbackAllowlist", () => {
   it("uses global defaults when no allowlist is provided", () => {

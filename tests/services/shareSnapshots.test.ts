@@ -4,12 +4,12 @@ import {
   buildAccountShareSnapshotPayload,
   buildOverviewShareSnapshotPayload,
   generateShareSnapshotCaption,
-} from "~/services/sharing/shareSnapshots"
+} from "~/src/services/sharing/shareSnapshots"
 import {
   createShareSnapshotSeed,
   redactShareSecrets,
   sanitizeOriginUrl,
-} from "~/services/sharing/shareSnapshots/utils"
+} from "~/src/services/sharing/shareSnapshots/utils"
 
 describe("shareSnapshots", () => {
   describe("sanitizeOriginUrl", () => {

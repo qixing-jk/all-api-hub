@@ -1,16 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
-import type { ApiServiceAccountRequest } from "~/services/apiService/common/type"
-import { fetchApi } from "~/services/apiService/common/utils"
-import { refreshAccountData } from "~/services/apiService/sub2api"
+import {
+  API_ERROR_CODES,
+  ApiError,
+} from "~/src/services/apiService/common/errors"
+import type { ApiServiceAccountRequest } from "~/src/services/apiService/common/type"
+import { fetchApi } from "~/src/services/apiService/common/utils"
+import { refreshAccountData } from "~/src/services/apiService/sub2api"
 import {
   convertUsdBalanceToQuota,
   parseSub2ApiEnvelope,
   parseSub2ApiUserIdentity,
-} from "~/services/apiService/sub2api/parsing"
-import { resyncSub2ApiAuthToken } from "~/services/apiService/sub2api/tokenResync"
-import { AuthTypeEnum, SiteHealthStatus } from "~/types"
+} from "~/src/services/apiService/sub2api/parsing"
+import { resyncSub2ApiAuthToken } from "~/src/services/apiService/sub2api/tokenResync"
+import { AuthTypeEnum, SiteHealthStatus } from "~/src/types"
 
 vi.mock("~/services/apiService/common", () => ({
   determineHealthStatus: vi.fn(() => ({

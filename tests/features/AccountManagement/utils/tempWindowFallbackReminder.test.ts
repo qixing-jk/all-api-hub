@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest"
 
-import { getTempWindowFallbackIssue } from "~/features/AccountManagement/utils/tempWindowFallbackReminder"
+import { getTempWindowFallbackIssue } from "~/src/features/AccountManagement/utils/tempWindowFallbackReminder"
 import {
   SiteHealthStatus,
   TEMP_WINDOW_HEALTH_STATUS_CODES,
   type DisplaySiteData,
-} from "~/types"
+} from "~/src/types"
 
 /**
  * Build a DisplaySiteData object with overrides for test scenarios.

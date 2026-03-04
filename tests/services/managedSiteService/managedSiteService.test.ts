@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { NEW_API, VELOERA } from "~/constants/siteType"
+import { NEW_API, VELOERA } from "~/src/constants/siteType"
 
 const mockGetPreferences = vi.fn()
 
@@ -51,7 +51,7 @@ vi.mock("~/services/managedSites/providers/veloera", () => ({
 describe("managedSiteService", () => {
   it("routes to New API service by default", async () => {
     const { getManagedSiteService } = await import(
-      "~/services/managedSites/managedSiteService"
+      "~/src/services/managedSites/managedSiteService"
     )
 
     mockGetPreferences.mockResolvedValueOnce({ managedSiteType: NEW_API })
@@ -66,7 +66,7 @@ describe("managedSiteService", () => {
 
   it("routes to Veloera service when selected", async () => {
     const { getManagedSiteService } = await import(
-      "~/services/managedSites/managedSiteService"
+      "~/src/services/managedSites/managedSiteService"
     )
 
     mockGetPreferences.mockResolvedValueOnce({ managedSiteType: VELOERA })

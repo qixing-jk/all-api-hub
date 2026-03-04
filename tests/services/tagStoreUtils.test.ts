@@ -3,15 +3,15 @@ import { describe, expect, it, vi } from "vitest"
 import {
   migrateAccountTagsData,
   needsAccountTagsDataMigration,
-} from "~/services/tags/migrations/accountTagsDataMigration"
+} from "~/src/services/tags/migrations/accountTagsDataMigration"
 import {
   createDefaultTagStore,
   mergeTagStoresAndRemapAccounts,
   normalizeTagNameForUniqueness,
   sanitizeTagStore,
-} from "~/services/tags/tagStoreUtils"
-import type { SiteAccount } from "~/types"
-import { AuthTypeEnum } from "~/types"
+} from "~/src/services/tags/tagStoreUtils"
+import type { SiteAccount } from "~/src/types"
+import { AuthTypeEnum } from "~/src/types"
 
 /**
  * Creates a minimal SiteAccount fixture for tag-related tests.

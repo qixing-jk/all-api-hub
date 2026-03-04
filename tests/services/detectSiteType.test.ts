@@ -1,11 +1,11 @@
 import { http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it } from "vitest"
 
-import { SITE_TITLE_RULES, UNKNOWN_SITE } from "~/constants/siteType"
+import { SITE_TITLE_RULES, UNKNOWN_SITE } from "~/src/constants/siteType"
 import {
   fetchSiteOriginalTitle,
   getSiteType,
-} from "~/services/siteDetection/detectSiteType"
+} from "~/src/services/siteDetection/detectSiteType"
 import { server } from "~/tests/msw/server"
 
 describe("detectSiteType", () => {

@@ -1,14 +1,14 @@
 import { http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it } from "vitest"
 
-import { UI_CONSTANTS } from "~/constants/ui"
+import { UI_CONSTANTS } from "~/src/constants/ui"
 import {
   validateAndSaveAccount,
   validateAndUpdateAccount,
-} from "~/services/accounts/accountOperations"
-import { accountStorage } from "~/services/accounts/accountStorage"
+} from "~/src/services/accounts/accountOperations"
+import { accountStorage } from "~/src/services/accounts/accountStorage"
+import { AuthTypeEnum, SiteHealthStatus, type CheckInConfig } from "~/src/types"
 import { server } from "~/tests/msw/server"
-import { AuthTypeEnum, SiteHealthStatus, type CheckInConfig } from "~/types"
 
 const CHECK_IN_DISABLED: CheckInConfig = {
   enableDetection: false,

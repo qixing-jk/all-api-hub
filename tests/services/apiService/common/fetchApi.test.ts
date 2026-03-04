@@ -1,13 +1,13 @@
 import { http, HttpResponse } from "msw"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { AuthTypeEnum, TEMP_WINDOW_HEALTH_STATUS_CODES } from "~/src/types"
 import { server } from "~/tests/msw/server"
-import { AuthTypeEnum, TEMP_WINDOW_HEALTH_STATUS_CODES } from "~/types"
 
-let fetchApiData: typeof import("~/services/apiService/common/utils").fetchApiData
-let fetchApi: typeof import("~/services/apiService/common/utils").fetchApi
-let ApiError: typeof import("~/services/apiService/common/errors").ApiError
-let ApiErrorCodes: typeof import("~/services/apiService/common/errors").API_ERROR_CODES
+let fetchApiData: typeof import("~/src/services/apiService/common/utils").fetchApiData
+let fetchApi: typeof import("~/src/services/apiService/common/utils").fetchApi
+let ApiError: typeof import("~/src/services/apiService/common/errors").ApiError
+let ApiErrorCodes: typeof import("~/src/services/apiService/common/errors").API_ERROR_CODES
 
 const { mockLogRequestRateLimiter, mockCreateMinIntervalLimiter } = vi.hoisted(
   () => {
@@ -62,13 +62,13 @@ describe("apiService common fetchApi helpers", () => {
   beforeEach(async () => {
     // Ensure we always use the real implementations even if other tests mock these modules.
     const utils = await vi.importActual<
-      typeof import("~/services/apiService/common/utils")
+      typeof import("~/src/services/apiService/common/utils")
     >("~/services/apiService/common/utils")
     fetchApiData = utils.fetchApiData
     fetchApi = utils.fetchApi
 
     const errors = await vi.importActual<
-      typeof import("~/services/apiService/common/errors")
+      typeof import("~/src/services/apiService/common/errors")
     >("~/services/apiService/common/errors")
     ApiError = errors.ApiError
     ApiErrorCodes = errors.API_ERROR_CODES

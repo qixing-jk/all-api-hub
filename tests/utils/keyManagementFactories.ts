@@ -1,4 +1,4 @@
-import { AuthTypeEnum, SiteHealthStatus } from "~/types"
+import { AuthTypeEnum, SiteHealthStatus } from "~/src/types"
 
 export const createAccount = (overrides: Partial<any>) => ({
   id: "account",

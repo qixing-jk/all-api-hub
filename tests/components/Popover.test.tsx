@@ -4,7 +4,7 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "~/components/ui/popover"
+} from "~/src/components/ui/popover"
 import { fireEvent, render, screen } from "~/tests/test-utils/render"
 
 describe("Popover", () => {

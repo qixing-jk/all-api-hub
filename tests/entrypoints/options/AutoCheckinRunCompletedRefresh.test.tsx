@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import { RuntimeActionIds } from "~/constants/runtimeActions"
-import AutoCheckin from "~/entrypoints/options/pages/AutoCheckin"
+import { RuntimeActionIds } from "~/src/constants/runtimeActions"
+import AutoCheckin from "~/src/entrypoints/options/pages/AutoCheckin"
 import { act, render, screen, waitFor } from "~/tests/test-utils/render"
 
 vi.mock("react-hot-toast", () => ({
@@ -19,7 +19,7 @@ afterEach(() => {
 
 describe("AutoCheckin status view refresh", () => {
   it("reloads status when autoCheckin:runCompleted is received", async () => {
-    const browserApi = await import("~/utils/browser/browserApi")
+    const browserApi = await import("~/src/utils/browser/browserApi")
 
     const sendRuntimeMessageSpy = vi
       .spyOn(browserApi, "sendRuntimeMessage")

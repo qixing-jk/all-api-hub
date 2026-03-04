@@ -8,15 +8,15 @@ import {
   vi,
 } from "vitest"
 
-import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { RuntimeActionIds } from "~/src/constants/runtimeActions"
+import { accountStorage } from "~/src/services/accounts/accountStorage"
 import {
   autoRefreshService,
   handleAutoRefreshMessage,
-} from "~/services/accounts/autoRefreshService"
-import type { UserPreferences } from "~/services/preferences/userPreferences"
-import { userPreferences } from "~/services/preferences/userPreferences"
-import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
+} from "~/src/services/accounts/autoRefreshService"
+import type { UserPreferences } from "~/src/services/preferences/userPreferences"
+import { userPreferences } from "~/src/services/preferences/userPreferences"
+import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/src/types/accountAutoRefresh"
 
 // Mock dependencies.
 //

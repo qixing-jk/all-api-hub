@@ -5,8 +5,8 @@ import {
   AutoDetectErrorType,
   getLoginUrl,
   openLoginTab,
-} from "~/services/accounts/utils/autoDetectUtils"
-import { getDocsAutoDetectUrl } from "~/utils/navigation/docsLinks"
+} from "~/src/services/accounts/utils/autoDetectUtils"
+import { getDocsAutoDetectUrl } from "~/src/utils/navigation/docsLinks"
 
 // Mock browser.tabs
 const originalBrowser = (globalThis as any).browser

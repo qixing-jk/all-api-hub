@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   transformModelPricing,
   transformUserGroup,
-} from "~/services/apiService/oneHub/transform"
+} from "~/src/services/apiService/oneHub/transform"
 
 describe("OneHub data transformers", () => {
   describe("transformModelPricing", () => {

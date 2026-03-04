@@ -5,7 +5,7 @@ import {
   hasRuntimeActionPrefix,
   RuntimeActionIds,
   RuntimeActionPrefixes,
-} from "~/constants/runtimeActions"
+} from "~/src/constants/runtimeActions"
 
 describe("runtimeActions registry and helpers", () => {
   it("keeps RuntimeActionIds unique to prevent ambiguous routing", () => {

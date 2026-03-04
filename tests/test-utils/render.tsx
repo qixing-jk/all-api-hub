@@ -2,10 +2,10 @@ import { render, renderHook, type RenderOptions } from "@testing-library/react"
 import type { ReactElement, ReactNode } from "react"
 import { I18nextProvider } from "react-i18next"
 
-import { ChannelDialogProvider } from "~/components/dialogs/ChannelDialog"
-import { DeviceProvider } from "~/contexts/DeviceContext"
-import { ThemeProvider } from "~/contexts/ThemeContext"
-import { UserPreferencesProvider } from "~/contexts/UserPreferencesContext"
+import { ChannelDialogProvider } from "~/src/components/dialogs/ChannelDialog"
+import { DeviceProvider } from "~/src/contexts/DeviceContext"
+import { ThemeProvider } from "~/src/contexts/ThemeContext"
+import { UserPreferencesProvider } from "~/src/contexts/UserPreferencesContext"
 import testI18n from "~/tests/test-utils/i18n"
 
 interface AppProvidersProps {

@@ -2,10 +2,10 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import DoneHubSettings from "~/features/BasicSettings/components/tabs/ManagedSite/DoneHubSettings"
+import { useUserPreferencesContext } from "~/src/contexts/UserPreferencesContext"
+import DoneHubSettings from "~/src/features/BasicSettings/components/tabs/ManagedSite/DoneHubSettings"
+import { showUpdateToast } from "~/src/utils/core/toastHelpers"
 import { testI18n } from "~/tests/test-utils/i18n"
-import { showUpdateToast } from "~/utils/core/toastHelpers"
 
 vi.mock("~/contexts/UserPreferencesContext", () => ({
   useUserPreferencesContext: vi.fn(),

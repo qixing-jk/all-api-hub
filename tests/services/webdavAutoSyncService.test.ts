@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { webdavAutoSyncService } from "~/services/webdav/webdavAutoSyncService"
+import { webdavAutoSyncService } from "~/src/services/webdav/webdavAutoSyncService"
 
 // Basic getErrorMessage passthrough to avoid noisy output
 vi.mock("~/utils/core/error", () => ({
@@ -13,7 +13,7 @@ const mockCreateAlarm = vi.fn()
 const mockClearAlarm = vi.fn()
 const mockOnAlarm = vi.fn()
 
-vi.mock(import("~/utils/browser/browserApi"), async (importOriginal) => {
+vi.mock(import("~/src/utils/browser/browserApi"), async (importOriginal) => {
   const actual = await importOriginal()
   return {
     ...actual,
@@ -29,7 +29,7 @@ const mockGetPreferences = vi.fn()
 const mockSavePreferences = vi.fn()
 
 vi.mock(
-  import("~/services/preferences/userPreferences"),
+  import("~/src/services/preferences/userPreferences"),
   async (importOriginal) => {
     const actual = await importOriginal()
     Object.assign(actual.userPreferences, {

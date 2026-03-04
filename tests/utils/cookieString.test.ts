@@ -4,7 +4,7 @@ import {
   extractSessionCookieHeader,
   normalizeCookieHeaderValue,
   parseCookieHeader,
-} from "~/utils/browser/cookieString"
+} from "~/src/utils/browser/cookieString"
 
 describe("cookieString", () => {
   describe("normalizeCookieHeaderValue", () => {

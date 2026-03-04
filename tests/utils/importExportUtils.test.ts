@@ -9,12 +9,12 @@ import {
   type BackupPreferencesPartialV2,
   type BackupV2,
   type RawBackupData,
-} from "~/features/ImportExport/utils"
-import { accountStorage } from "~/services/accounts/accountStorage"
-import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
-import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
-import { userPreferences } from "~/services/preferences/userPreferences"
-import { tagStorage } from "~/services/tags/tagStorage"
+} from "~/src/features/ImportExport/utils"
+import { accountStorage } from "~/src/services/accounts/accountStorage"
+import { apiCredentialProfilesStorage } from "~/src/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+import { channelConfigStorage } from "~/src/services/managedSites/channelConfigStorage"
+import { userPreferences } from "~/src/services/preferences/userPreferences"
+import { tagStorage } from "~/src/services/tags/tagStorage"
 
 vi.mock("~/services/accounts/accountStorage", () => ({
   accountStorage: {
@@ -546,7 +546,7 @@ describe("export handlers", () => {
    * Lazily loads export handler functions from the ImportExport utilities module for testing.
    */
   async function loadHandlers() {
-    const mod = await import("~/features/ImportExport/utils")
+    const mod = await import("~/src/features/ImportExport/utils")
     return {
       handleExportAll: mod.handleExportAll,
       handleExportAccounts: mod.handleExportAccounts,

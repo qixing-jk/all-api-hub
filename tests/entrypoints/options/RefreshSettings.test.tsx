@@ -3,14 +3,14 @@ import toast from "react-hot-toast"
 import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import RefreshSettings from "~/features/BasicSettings/components/tabs/Refresh/RefreshSettings"
-import { testI18n } from "~/tests/test-utils/i18n"
+import { useUserPreferencesContext } from "~/src/contexts/UserPreferencesContext"
+import RefreshSettings from "~/src/features/BasicSettings/components/tabs/Refresh/RefreshSettings"
 import {
   ACCOUNT_AUTO_REFRESH_INTERVAL_MIN_SECONDS,
   ACCOUNT_AUTO_REFRESH_MIN_INTERVAL_MIN_SECONDS,
   DEFAULT_ACCOUNT_AUTO_REFRESH,
-} from "~/types/accountAutoRefresh"
+} from "~/src/types/accountAutoRefresh"
+import { testI18n } from "~/tests/test-utils/i18n"
 
 vi.mock("~/contexts/UserPreferencesContext", () => ({
   useUserPreferencesContext: vi.fn(),

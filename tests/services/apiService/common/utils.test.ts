@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import type { LogItem } from "~/services/apiService/common/type"
+import type { LogItem } from "~/src/services/apiService/common/type"
 import {
   aggregateUsageData,
   extractAmount,
   getTodayTimestampRange,
-} from "~/services/apiService/common/utils"
+} from "~/src/services/apiService/common/utils"
 
 describe("API Service Common Utils", () => {
   describe("getTodayTimestampRange", () => {

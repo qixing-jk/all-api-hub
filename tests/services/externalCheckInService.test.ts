@@ -1,15 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { getSiteApiRouter } from "~/constants/siteType"
-import { accountStorage } from "~/services/accounts/accountStorage"
-import { handleExternalCheckInMessage } from "~/services/checkin/externalCheckInService"
+import { RuntimeActionIds } from "~/src/constants/runtimeActions"
+import { getSiteApiRouter } from "~/src/constants/siteType"
+import { accountStorage } from "~/src/services/accounts/accountStorage"
+import { handleExternalCheckInMessage } from "~/src/services/checkin/externalCheckInService"
 import {
   createTab,
   createWindow,
   hasWindowsAPI,
-} from "~/utils/browser/browserApi"
-import { joinUrl } from "~/utils/core/url"
+} from "~/src/utils/browser/browserApi"
+import { joinUrl } from "~/src/utils/core/url"
 
 vi.mock("~/services/accounts/accountStorage", () => ({
   accountStorage: {
@@ -20,7 +20,7 @@ vi.mock("~/services/accounts/accountStorage", () => ({
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
+    await importOriginal<typeof import("~/src/utils/browser/browserApi")>()
   return {
     ...actual,
     createTab: vi.fn(),

@@ -1,8 +1,8 @@
 import { render, screen } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
-import CheckinRedeemTab from "~/features/BasicSettings/components/tabs/CheckinRedeem/CheckinRedeemTab"
-import WebAiApiCheckTab from "~/features/BasicSettings/components/tabs/WebAiApiCheck/WebAiApiCheckTab"
+import CheckinRedeemTab from "~/src/features/BasicSettings/components/tabs/CheckinRedeem/CheckinRedeemTab"
+import WebAiApiCheckTab from "~/src/features/BasicSettings/components/tabs/WebAiApiCheck/WebAiApiCheckTab"
 
 vi.mock(
   "~/features/BasicSettings/components/tabs/CheckinRedeem/AutoCheckinSettings",

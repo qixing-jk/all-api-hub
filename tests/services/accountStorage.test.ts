@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { UI_CONSTANTS } from "~/constants/ui"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { UI_CONSTANTS } from "~/src/constants/ui"
+import { accountStorage } from "~/src/services/accounts/accountStorage"
 import {
   ACCOUNT_STORAGE_KEYS,
   STORAGE_KEYS,
   USER_PREFERENCES_STORAGE_KEYS,
-} from "~/services/core/storageKeys"
-import { getDayKeyFromUnixSeconds } from "~/services/history/dailyBalanceHistory/dayKeys"
-import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+} from "~/src/services/core/storageKeys"
+import { getDayKeyFromUnixSeconds } from "~/src/services/history/dailyBalanceHistory/dayKeys"
+import { DEFAULT_PREFERENCES } from "~/src/services/preferences/userPreferences"
 import {
   AuthTypeEnum,
   SiteHealthStatus,
@@ -16,7 +16,7 @@ import {
   type AccountStorageConfig,
   type SiteAccount,
   type SiteBookmark,
-} from "~/types"
+} from "~/src/types"
 
 const storageData = new Map<string, any>()
 

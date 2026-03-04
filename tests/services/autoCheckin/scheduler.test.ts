@@ -1,26 +1,26 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { accountStorage } from "~/services/accounts/accountStorage"
-import { resolveAutoCheckinProvider } from "~/services/checkin/autoCheckin/providers"
+import { RuntimeActionIds } from "~/src/constants/runtimeActions"
+import { accountStorage } from "~/src/services/accounts/accountStorage"
+import { resolveAutoCheckinProvider } from "~/src/services/checkin/autoCheckin/providers"
 import {
   autoCheckinScheduler,
   handleAutoCheckinMessage,
-} from "~/services/checkin/autoCheckin/scheduler"
-import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
+} from "~/src/services/checkin/autoCheckin/scheduler"
+import { autoCheckinStorage } from "~/src/services/checkin/autoCheckin/storage"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
-} from "~/services/preferences/userPreferences"
-import { AUTO_CHECKIN_RUN_TYPE } from "~/types/autoCheckin"
+} from "~/src/services/preferences/userPreferences"
+import { AUTO_CHECKIN_RUN_TYPE } from "~/src/types/autoCheckin"
 import {
   clearAlarm,
   createAlarm,
   getAlarm,
   hasAlarmsAPI,
   onAlarm,
-} from "~/utils/browser/browserApi"
-import { getErrorMessage } from "~/utils/core/error"
+} from "~/src/utils/browser/browserApi"
+import { getErrorMessage } from "~/src/utils/core/error"
 
 vi.mock("~/services/preferences/userPreferences", () => ({
   DEFAULT_PREFERENCES: {
@@ -70,7 +70,7 @@ vi.mock("~/services/checkin/autoCheckin/storage", () => ({
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
+    await importOriginal<typeof import("~/src/utils/browser/browserApi")>()
   return {
     ...actual,
     clearAlarm: vi.fn(),

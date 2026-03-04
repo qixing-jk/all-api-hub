@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { fetchApiData } from "~/services/apiService/common/utils"
+import { fetchApiData } from "~/src/services/apiService/common/utils"
 import {
   fetchAccountAvailableModels,
   fetchAccountTokens,
@@ -8,11 +8,11 @@ import {
   fetchModelPricing,
   fetchUserGroupMap,
   fetchUserGroups,
-} from "~/services/apiService/oneHub"
+} from "~/src/services/apiService/oneHub"
 import {
   transformModelPricing,
   transformUserGroup,
-} from "~/services/apiService/oneHub/transform"
+} from "~/src/services/apiService/oneHub/transform"
 
 vi.mock("~/services/apiService/common/utils", () => ({
   fetchApiData: vi.fn(),

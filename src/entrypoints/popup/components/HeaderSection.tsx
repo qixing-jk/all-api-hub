@@ -1,0 +1,222 @@
+import {
+  ArrowPathIcon,
+  ArrowsPointingOutIcon,
+  BugAntIcon,
+  Cog6ToothIcon,
+} from "@heroicons/react/24/outline"
+import { PanelRightClose } from "lucide-react"
+import { useCallback } from "react"
+import toast from "react-hot-toast"
+import { useTranslation } from "react-i18next"
+
+import iconImage from "~/src/assets/icon.png"
+import { useUpdateLogDialogContext } from "~/src/components/dialogs/UpdateLogDialog"
+import Tooltip from "~/src/components/Tooltip"
+import { BodySmall, Caption, IconButton } from "~/src/components/ui"
+import { VersionBadge } from "~/src/components/VersionBadge"
+import { COLORS } from "~/src/constants/designTokens"
+import { useAccountDataContext } from "~/src/features/AccountManagement/hooks/AccountDataContext"
+import { changelogOnUpdateState } from "~/src/services/updates/changelogOnUpdateState"
+import { isExtensionSidePanel } from "~/src/utils/browser"
+import { getManifest } from "~/src/utils/browser/browserApi"
+import { getErrorMessage } from "~/src/utils/core/error"
+import { createLogger } from "~/src/utils/core/logger"
+import {
+  openFullAccountManagerPage,
+  openFullBookmarkManagerPage,
+  openSettingsPage,
+  openSidePanelPage,
+} from "~/src/utils/navigation"
+
+import CompactThemeToggle from "./ThemeToggle"
+
+/**
+ * Unified logger scoped to the popup header component.
+ */
+const logger = createLogger("PopupHeaderSection")
+
+/**
+ *
+ */
+function DevTriggerUpdateLogButton() {
+  const { openDialog } = useUpdateLogDialogContext()
+
+  const handleClick = useCallback(async () => {
+    try {
+      const { version } = getManifest()
+      if (!version) return
+
+      await changelogOnUpdateState.setPendingVersion(version)
+      const pendingVersion =
+        await changelogOnUpdateState.consumePendingVersion()
+      if (!pendingVersion) return
+
+      openDialog(pendingVersion)
+    } catch (error) {
+      const message = getErrorMessage(error)
+      logger.debug("Failed to trigger update log (dev)", { error: message })
+      toast.error(`Failed to trigger update log (dev): ${message}`)
+    }
+  }, [openDialog])
+
+  return (
+    <Tooltip content="Dev: Trigger update log">
+      <IconButton
+        onClick={() => void handleClick()}
+        variant="outline"
+        size="sm"
+        aria-label="Dev: Trigger update log"
+        className="touch-manipulation"
+      >
+        <BugAntIcon className="h-4 w-4" />
+      </IconButton>
+    </Tooltip>
+  )
+}
+
+/**
+ * Popup header with app identity (including version), theme toggle, and navigation controls.
+ * Provides refresh, open-full-page, settings, and side panel shortcuts.
+ */
+export default function HeaderSection({
+  showRefresh = true,
+  activeView = "accounts",
+}: {
+  showRefresh?: boolean
+  activeView?: "accounts" | "bookmarks"
+}) {
+  const { t } = useTranslation(["ui", "account", "common"])
+  const { isRefreshing, handleRefresh } = useAccountDataContext()
+  const inSidePanel = isExtensionSidePanel()
+
+  const handleGlobalRefresh = useCallback(async () => {
+    try {
+      await toast.promise(handleRefresh(true), {
+        loading: t("account:refresh.refreshingAll"),
+        success: (result) => {
+          if (result.failed > 0) {
+            return t("account:refresh.refreshComplete", {
+              success: result.success,
+              failed: result.failed,
+            })
+          }
+          return t("account:refresh.refreshSuccess")
+        },
+        error: t("account:refresh.refreshFailed"),
+      })
+    } catch (error) {
+      logger.error("Error during global refresh", error)
+    }
+  }, [handleRefresh, t])
+
+  const openFullPageLabel =
+    activeView === "bookmarks"
+      ? t("ui:navigation.bookmark")
+      : t("ui:navigation.account")
+
+  const handleOpenFullPage = async () => {
+    if (activeView === "bookmarks") {
+      await openFullBookmarkManagerPage()
+      return
+    }
+
+    await openFullAccountManagerPage()
+  }
+
+  const handleOpenSetting = async () => {
+    await openSettingsPage()
+  }
+
+  const handleOpenSidePanel = async () => {
+    await openSidePanelPage()
+  }
+
+  return (
+    <header
+      className={`flex items-center justify-between px-3 py-2 sm:px-5 sm:py-3 ${COLORS.background.primary} ${COLORS.border.default} shrink-0 border-b`}
+    >
+      {/* Logo and Title Section */}
+      <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+        <img
+          src={iconImage}
+          alt={t("ui:app.name")}
+          className="h-6 w-6 shrink-0 rounded-lg shadow-sm sm:h-7 sm:w-7"
+        />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <div className="flex min-w-0 items-center gap-2">
+            <BodySmall weight="semibold" className="truncate">
+              {t("ui:app.name")}
+            </BodySmall>
+            {/* Current extension version (links to the changelog). */}
+            <VersionBadge size="sm" className="shrink-0" />
+          </div>
+          <Caption className="xs:block hidden truncate">
+            {t("ui:app.description")}
+          </Caption>
+        </div>
+      </div>
+
+      {/* Action Buttons Section */}
+      <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+        <CompactThemeToggle />
+
+        {import.meta.env.MODE === "development" && (
+          <DevTriggerUpdateLogButton />
+        )}
+
+        {showRefresh && (
+          <Tooltip content={t("common:actions.refresh")}>
+            <IconButton
+              onClick={handleGlobalRefresh}
+              disabled={isRefreshing}
+              variant="outline"
+              size="sm"
+              aria-label={t("common:actions.refresh")}
+              className="touch-manipulation"
+            >
+              <ArrowPathIcon
+                className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
+              />
+            </IconButton>
+          </Tooltip>
+        )}
+
+        <Tooltip content={openFullPageLabel}>
+          <IconButton
+            onClick={handleOpenFullPage}
+            variant="outline"
+            size="sm"
+            aria-label={openFullPageLabel}
+            className="touch-manipulation"
+          >
+            <ArrowsPointingOutIcon className="h-4 w-4" />
+          </IconButton>
+        </Tooltip>
+
+        <Tooltip content={t("common:labels.settings")}>
+          <IconButton
+            onClick={handleOpenSetting}
+            variant="outline"
+            size="sm"
+            aria-label={t("common:labels.settings")}
+            className="touch-manipulation"
+          >
+            <Cog6ToothIcon className="h-4 w-4" />
+          </IconButton>
+        </Tooltip>
+        {!inSidePanel && (
+          <Tooltip content={t("common:actions.openSidePanel")}>
+            <IconButton
+              aria-label={t("common:actions.openSidePanel")}
+              size="sm"
+              variant="outline"
+              onClick={handleOpenSidePanel}
+            >
+              <PanelRightClose className="h-4 w-4" />
+            </IconButton>
+          </Tooltip>
+        )}
+      </div>
+    </header>
+  )
+}

@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest"
 
-import UsageAnalytics from "~/entrypoints/options/pages/UsageAnalytics"
-import { accountStorage } from "~/services/accounts/accountStorage"
-import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
+import UsageAnalytics from "~/src/entrypoints/options/pages/UsageAnalytics"
+import { accountStorage } from "~/src/services/accounts/accountStorage"
+import { usageHistoryStorage } from "~/src/services/history/usageHistory/storage"
 import { render, screen } from "~/tests/test-utils/render"
 
 vi.mock("~/services/accounts/accountStorage", () => ({

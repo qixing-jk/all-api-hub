@@ -1,12 +1,12 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { userPreferences } from "~/services/preferences/userPreferences"
+import { userPreferences } from "~/src/services/preferences/userPreferences"
 import {
   downloadBackup,
   downloadBackupRaw,
   testWebdavConnection,
   uploadBackup,
-} from "~/services/webdav/webdavService"
+} from "~/src/services/webdav/webdavService"
 
 vi.mock("~/services/preferences/userPreferences", () => ({
   userPreferences: {

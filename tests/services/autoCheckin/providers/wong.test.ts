@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { WONG_GONGYI } from "~/constants/siteType"
-import { wongGongyiProvider } from "~/services/checkin/autoCheckin/providers/wong"
-import { AuthTypeEnum, SiteHealthStatus, type SiteAccount } from "~/types"
+import { WONG_GONGYI } from "~/src/constants/siteType"
+import { wongGongyiProvider } from "~/src/services/checkin/autoCheckin/providers/wong"
+import { AuthTypeEnum, SiteHealthStatus, type SiteAccount } from "~/src/types"
 
 vi.mock("~/services/apiService/common/utils", () => ({
   fetchApi: vi.fn(),
@@ -61,7 +61,9 @@ describe("wongGongyiProvider", () => {
 
   describe("checkIn", () => {
     it("returns already_checked when POST indicates checked_in true", async () => {
-      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { fetchApi } = await import(
+        "~/src/services/apiService/common/utils"
+      )
       const mockedFetchApi = vi.mocked(fetchApi)
 
       mockedFetchApi.mockResolvedValueOnce({
@@ -78,7 +80,9 @@ describe("wongGongyiProvider", () => {
     })
 
     it("returns already_checked when POST success=true but message indicates already checked", async () => {
-      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { fetchApi } = await import(
+        "~/src/services/apiService/common/utils"
+      )
       const mockedFetchApi = vi.mocked(fetchApi)
 
       mockedFetchApi.mockResolvedValueOnce({
@@ -92,7 +96,9 @@ describe("wongGongyiProvider", () => {
     })
 
     it("returns failed when POST indicates enabled false", async () => {
-      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { fetchApi } = await import(
+        "~/src/services/apiService/common/utils"
+      )
       const mockedFetchApi = vi.mocked(fetchApi)
 
       mockedFetchApi.mockResolvedValueOnce({
@@ -107,7 +113,9 @@ describe("wongGongyiProvider", () => {
     })
 
     it("returns success when POST succeeds and user was not checked in", async () => {
-      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { fetchApi } = await import(
+        "~/src/services/apiService/common/utils"
+      )
       const mockedFetchApi = vi.mocked(fetchApi)
 
       mockedFetchApi.mockResolvedValueOnce({
@@ -124,7 +132,9 @@ describe("wongGongyiProvider", () => {
     })
 
     it("returns failed when POST returns success=false without already-checked signal", async () => {
-      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { fetchApi } = await import(
+        "~/src/services/apiService/common/utils"
+      )
       const mockedFetchApi = vi.mocked(fetchApi)
 
       mockedFetchApi.mockResolvedValueOnce({
@@ -141,7 +151,9 @@ describe("wongGongyiProvider", () => {
     })
 
     it("returns already_checked when POST returns already checked message", async () => {
-      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { fetchApi } = await import(
+        "~/src/services/apiService/common/utils"
+      )
       const mockedFetchApi = vi.mocked(fetchApi)
 
       mockedFetchApi.mockResolvedValueOnce({
@@ -155,7 +167,9 @@ describe("wongGongyiProvider", () => {
     })
 
     it("handles network errors gracefully", async () => {
-      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { fetchApi } = await import(
+        "~/src/services/apiService/common/utils"
+      )
       const mockedFetchApi = vi.mocked(fetchApi)
 
       mockedFetchApi.mockRejectedValueOnce(new Error("Network error"))
@@ -166,7 +180,9 @@ describe("wongGongyiProvider", () => {
     })
 
     it("returns endpointNotSupported when API returns 404", async () => {
-      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { fetchApi } = await import(
+        "~/src/services/apiService/common/utils"
+      )
       const mockedFetchApi = vi.mocked(fetchApi)
 
       mockedFetchApi.mockRejectedValueOnce({

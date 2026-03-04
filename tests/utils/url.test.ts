@@ -8,7 +8,7 @@ import {
   parseTabFromUrl,
   stripTrailingOpenAIV1,
   updateUrlWithTab,
-} from "~/utils/core/url"
+} from "~/src/utils/core/url"
 
 describe("joinUrl", () => {
   it("should join base and path with single slash", () => {

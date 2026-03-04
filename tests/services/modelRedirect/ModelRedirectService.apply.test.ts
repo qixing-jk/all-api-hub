@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { DONE_HUB, NEW_API } from "~/constants/siteType"
-import { hasValidManagedSiteConfig } from "~/services/managedSites/managedSiteService"
-import { modelMetadataService } from "~/services/models/modelMetadata"
-import { ModelRedirectService } from "~/services/models/modelRedirect/ModelRedirectService"
-import { userPreferences } from "~/services/preferences/userPreferences"
-import { DEFAULT_MODEL_REDIRECT_PREFERENCES } from "~/types/managedSiteModelRedirect"
-import { CHANNEL_STATUS } from "~/types/newApi"
+import { DONE_HUB, NEW_API } from "~/src/constants/siteType"
+import { hasValidManagedSiteConfig } from "~/src/services/managedSites/managedSiteService"
+import { modelMetadataService } from "~/src/services/models/modelMetadata"
+import { ModelRedirectService } from "~/src/services/models/modelRedirect/ModelRedirectService"
+import { userPreferences } from "~/src/services/preferences/userPreferences"
+import { DEFAULT_MODEL_REDIRECT_PREFERENCES } from "~/src/types/managedSiteModelRedirect"
+import { CHANNEL_STATUS } from "~/src/types/newApi"
 
 vi.mock("~/services/models/modelMetadata", () => ({
   modelMetadataService: {

@@ -1,9 +1,13 @@
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { KiloCodeExportDialog } from "~/components/KiloCodeExportDialog"
+import { KiloCodeExportDialog } from "~/src/components/KiloCodeExportDialog"
+import {
+  AuthTypeEnum,
+  SiteHealthStatus,
+  type DisplaySiteData,
+} from "~/src/types"
 import { render, screen, waitFor } from "~/tests/test-utils/render"
-import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 
 const mockUseAccountData = vi.fn()
 
