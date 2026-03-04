@@ -115,24 +115,16 @@ export default defineConfig([
       "jsdoc/require-returns": "off",
     },
   },
-  // Guardrails: avoid direct `console.*` usage in app/runtime code (use `utils/logger.ts`).
+  // Guardrails: avoid direct `console.*` usage in app/runtime code (use `~/utils/core/logger`).
   {
-    files: [
-      "src/services/**/*.{ts,tsx}",
-      "src/utils/**/*.{ts,tsx}",
-      "src/entrypoints/**/*.{ts,tsx}",
-      "src/features/**/*.{ts,tsx}",
-      "src/components/**/*.{ts,tsx}",
-      "src/contexts/**/*.{ts,tsx}",
-      "src/hooks/**/*.{ts,tsx}",
-    ],
+    files: ["src/**/*.{ts,tsx}"],
     rules: {
       "no-console": "error",
     },
   },
   // Allow `console.*` in the unified logger implementation and in tests.
   {
-    files: ["src/utils/logger.ts", "tests/**/*.{ts,tsx}"],
+    files: ["src/utils/core/logger.ts", "tests/**/*.{ts,tsx}"],
     rules: {
       "no-console": "off",
     },
@@ -143,12 +135,7 @@ export default defineConfig([
   // - Start as a warning while we migrate existing violations out of `entrypoints/options/pages/**`.
   // - Once the repo is clean, upgrade this to "error" so `pnpm -s lint` fails on new violations.
   {
-    files: [
-      "src/services/**/*.{ts,tsx}",
-      "src/utils/**/*.{ts,tsx}",
-      "src/components/**/*.{ts,tsx}",
-      "src/features/**/*.{ts,tsx}",
-    ],
+    files: ["src/**/*.{ts,tsx}"],
     rules: {
       "no-restricted-imports": [
         "error",
@@ -157,11 +144,18 @@ export default defineConfig([
             {
               group: ["~/entrypoints/options/pages/**"],
               message:
-                "Do not import from `~/entrypoints/options/pages/**` outside the options entrypoint. Extract shared code into `features/`, `services/`, `utils/`, or `types/` instead.",
+                "Do not import from `~/entrypoints/options/pages/**` outside the options entrypoint. Extract shared code into `~/features/`, `~/services/`, `~/utils/`, or `~/types/` instead.",
             },
           ],
         },
       ],
+    },
+  },
+  // Allow options entrypoint code to depend on options pages.
+  {
+    files: ["src/entrypoints/options/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": "off",
     },
   },
   { rules },
