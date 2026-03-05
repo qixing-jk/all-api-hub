@@ -16,6 +16,7 @@ import { cn } from "~/lib/utils"
 import { isExtensionSidePanel, isMobileByUA } from "~/utils/browser"
 
 import ActionButtons from "./components/ActionButtons"
+import ApiCredentialProfilesStatsSection from "./components/ApiCredentialProfilesStatsSection"
 import BalanceSection from "./components/BalanceSection"
 import BookmarkStatsSection from "./components/BookmarkStatsSection"
 import HeaderSection from "./components/HeaderSection"
@@ -74,6 +75,7 @@ function PopupContent() {
     },
     apiCredentialProfiles: {
       showRefresh: false,
+      statsSection: <ApiCredentialProfilesStatsSection />,
       primaryActionLabel: t("apiCredentialProfiles:actions.add"),
       onPrimaryAction: () =>
         apiCredentialProfilesViewRef.current?.openAddDialog(),

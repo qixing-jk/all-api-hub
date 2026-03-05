@@ -1,40 +1,11 @@
 import { useEffect, useMemo, useState } from "react"
-import CountUp from "react-countup"
 import { useTranslation } from "react-i18next"
 
 import { BodySmall, Caption } from "~/components/ui"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 
-const StatValue = ({
-  value,
-  size = "lg",
-  isInitialLoad,
-}: {
-  value: number
-  size?: "md" | "lg"
-  isInitialLoad: boolean
-}) => {
-  const sizeClass = size === "md" ? "text-2xl" : "text-4xl"
-
-  return (
-    <div
-      className={`${sizeClass} dark:text-dark-text-primary text-left font-bold tracking-tight text-gray-900`}
-    >
-      <CountUp
-        start={0}
-        end={value}
-        duration={
-          isInitialLoad
-            ? UI_CONSTANTS.ANIMATION.INITIAL_DURATION
-            : UI_CONSTANTS.ANIMATION.UPDATE_DURATION
-        }
-        decimals={0}
-        preserveValue
-      />
-    </div>
-  )
-}
+import { AnimatedStatValue } from "./AnimatedStatValue"
 
 /**
  * Popup bookmark statistics summary for the Bookmarks view.
@@ -78,7 +49,10 @@ export default function BookmarkStatsSection() {
           <BodySmall className="font-medium">
             {t("bookmark:stats.totalBookmarks")}
           </BodySmall>
-          <StatValue value={bookmarks.length} isInitialLoad={isInitialLoad} />
+          <AnimatedStatValue
+            value={bookmarks.length}
+            isInitialLoad={isInitialLoad}
+          />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
@@ -86,7 +60,7 @@ export default function BookmarkStatsSection() {
             <Caption className="font-medium">
               {t("bookmark:stats.pinnedBookmarks")}
             </Caption>
-            <StatValue
+            <AnimatedStatValue
               value={pinnedBookmarksCount}
               size="md"
               isInitialLoad={isInitialLoad}
@@ -96,7 +70,7 @@ export default function BookmarkStatsSection() {
             <Caption className="font-medium">
               {t("bookmark:stats.usedTags")}
             </Caption>
-            <StatValue
+            <AnimatedStatValue
               value={usedTagsCount}
               size="md"
               isInitialLoad={isInitialLoad}

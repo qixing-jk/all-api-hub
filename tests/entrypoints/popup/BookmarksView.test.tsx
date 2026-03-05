@@ -48,6 +48,13 @@ vi.mock("~/entrypoints/popup/components/BookmarkStatsSection", () => ({
   default: () => <div>BookmarkStatsSection</div>,
 }))
 
+vi.mock(
+  "~/entrypoints/popup/components/ApiCredentialProfilesStatsSection",
+  () => ({
+    default: () => <div>ApiCredentialProfilesStatsSection</div>,
+  }),
+)
+
 vi.mock("~/entrypoints/popup/components/ActionButtons", () => ({
   default: ({
     primaryActionLabel,
@@ -108,6 +115,9 @@ describe("popup bookmarks view", () => {
     expect(await screen.findByText("HeaderRefresh:true")).toBeInTheDocument()
     expect(screen.getByText("BalanceSection")).toBeInTheDocument()
     expect(screen.queryByText("BookmarkStatsSection")).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("ApiCredentialProfilesStatsSection"),
+    ).not.toBeInTheDocument()
     expect(screen.getByText("ActionButtons")).toBeInTheDocument()
     expect(screen.getByText("AccountList")).toBeInTheDocument()
     expect(screen.queryByText("BookmarksList")).not.toBeInTheDocument()
@@ -119,6 +129,9 @@ describe("popup bookmarks view", () => {
     expect(await screen.findByText("HeaderRefresh:false")).toBeInTheDocument()
     expect(screen.queryByText("BalanceSection")).not.toBeInTheDocument()
     expect(screen.getByText("BookmarkStatsSection")).toBeInTheDocument()
+    expect(
+      screen.queryByText("ApiCredentialProfilesStatsSection"),
+    ).not.toBeInTheDocument()
     expect(screen.getByText("ActionButtons")).toBeInTheDocument()
     expect(screen.queryByText("AccountList")).not.toBeInTheDocument()
     expect(screen.getByText("BookmarksList")).toBeInTheDocument()
@@ -132,6 +145,9 @@ describe("popup bookmarks view", () => {
     expect(await screen.findByText("HeaderRefresh:false")).toBeInTheDocument()
     expect(screen.queryByText("BalanceSection")).not.toBeInTheDocument()
     expect(screen.queryByText("BookmarkStatsSection")).not.toBeInTheDocument()
+    expect(
+      screen.getByText("ApiCredentialProfilesStatsSection"),
+    ).toBeInTheDocument()
     expect(screen.getByText("ActionButtons")).toBeInTheDocument()
     expect(screen.queryByText("AccountList")).not.toBeInTheDocument()
     expect(screen.queryByText("BookmarksList")).not.toBeInTheDocument()
