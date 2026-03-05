@@ -267,8 +267,9 @@ export default function AccountActionButtons({
       return
     }
 
+    const accountBaseUrl = site.baseUrl.trim()
     const normalizedAccountBaseUrl =
-      normalizeOpenAiFamilyBaseUrl(site.baseUrl) ?? site.baseUrl.trim()
+      normalizeOpenAiFamilyBaseUrl(accountBaseUrl) ?? accountBaseUrl
     if (!normalizedAccountBaseUrl) {
       return
     }
@@ -286,7 +287,7 @@ export default function AccountActionButtons({
       const tokensResponse = await getApiService(
         site.siteType,
       ).fetchAccountTokens({
-        baseUrl: normalizedAccountBaseUrl,
+        baseUrl: accountBaseUrl,
         accountId: site.id,
         auth: {
           authType: site.authType,
@@ -331,27 +332,36 @@ export default function AccountActionButtons({
         return
       }
 
-      const exactMatch = await service.findMatchingChannel(
-        managedConfig.baseUrl,
-        managedConfig.token,
-        managedConfig.userId,
-        formData.base_url,
-        formData.models,
-        formData.key,
-      )
+      const hasComparableKey = formData.key.trim() !== ""
+      const exactMatch = hasComparableKey
+        ? await service.findMatchingChannel(
+            managedConfig.baseUrl,
+            managedConfig.token,
+            managedConfig.userId,
+            formData.base_url,
+            formData.models,
+            formData.key,
+          )
+        : null
 
-      if (exactMatch?.id != null) {
+      if (
+        exactMatch?.id != null &&
+        hasComparableKey &&
+        exactMatch.key === formData.key
+      ) {
         openManagedSiteChannelsForChannel(exactMatch.id)
         return
       }
 
-      const baseUrlMatch = await service.findMatchingChannel(
-        managedConfig.baseUrl,
-        managedConfig.token,
-        managedConfig.userId,
-        formData.base_url,
-        formData.models,
-      )
+      const baseUrlMatch =
+        exactMatch ??
+        (await service.findMatchingChannel(
+          managedConfig.baseUrl,
+          managedConfig.token,
+          managedConfig.userId,
+          formData.base_url,
+          formData.models,
+        ))
 
       openManagedSiteChannelsPage({ search: formData.base_url })
 

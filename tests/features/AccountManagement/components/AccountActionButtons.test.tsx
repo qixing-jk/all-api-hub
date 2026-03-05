@@ -370,7 +370,9 @@ describe("AccountActionButtons", () => {
         models: ["gpt-4"],
         key: "sk-1",
       }),
-      findMatchingChannel: vi.fn().mockResolvedValueOnce({ id: 123 }),
+      findMatchingChannel: vi
+        .fn()
+        .mockResolvedValueOnce({ id: 123, key: "sk-1" }),
     }
 
     getManagedSiteServiceMock.mockResolvedValueOnce(managedService as any)
@@ -407,6 +409,79 @@ describe("AccountActionButtons", () => {
       expect(openManagedSiteChannelsForChannelMock).toHaveBeenCalledWith(123)
     })
     expect(openManagedSiteChannelsPageMock).not.toHaveBeenCalled()
+  })
+
+  it("does not treat base-url+models matches as exact when the account key is blank", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([{ key: "" }])
+
+    const managedService = {
+      messagesKey: "newapi",
+      getConfig: vi.fn().mockResolvedValue({
+        baseUrl: "https://admin.example",
+        token: "t",
+        userId: "1",
+      }),
+      prepareChannelFormData: vi.fn().mockResolvedValue({
+        base_url: "https://api.example.com",
+        models: ["gpt-4"],
+        key: "",
+      }),
+      findMatchingChannel: vi.fn().mockResolvedValueOnce({ id: 456 }),
+    }
+
+    getManagedSiteServiceMock.mockResolvedValueOnce(managedService as any)
+
+    const user = userEvent.setup()
+
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({
+          id: "acc-6b",
+          disabled: false,
+          name: "Site",
+          baseUrl: "https://api.example.com/v1/openai",
+        })}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+
+    const menu = await screen.findByRole("menu")
+    const label = await within(menu).findByText(
+      "account:actions.locateManagedSiteChannel",
+    )
+    const button = label.closest("button")
+    expect(button).not.toBeNull()
+
+    await user.click(button!)
+
+    await waitFor(() => {
+      expect(openManagedSiteChannelsPageMock).toHaveBeenCalledWith({
+        search: "https://api.example.com",
+      })
+      expect(toastSuccessMock).toHaveBeenCalledWith(
+        "account:actions.channelLocateKeyUnavailable",
+      )
+    })
+
+    expect(fetchAccountTokensMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        baseUrl: "https://api.example.com/v1/openai",
+      }),
+    )
+    expect(managedService.findMatchingChannel).toHaveBeenCalledTimes(1)
+    expect(managedService.findMatchingChannel).toHaveBeenCalledWith(
+      "https://admin.example",
+      "t",
+      "1",
+      "https://api.example.com",
+      ["gpt-4"],
+    )
+    expect(openManagedSiteChannelsForChannelMock).not.toHaveBeenCalled()
   })
 
   it("falls back to base URL search and shows a toast when key-precise matching is unavailable", async () => {
