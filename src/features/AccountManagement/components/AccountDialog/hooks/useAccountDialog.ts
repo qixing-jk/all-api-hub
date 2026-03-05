@@ -33,6 +33,7 @@ import {
   onTabUpdated,
   sendRuntimeMessage,
 } from "~/utils/browser/browserApi"
+import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
 const AUTO_DETECT_SLOW_HINT_DELAY_MS = 10_000
@@ -138,6 +139,24 @@ export function useAccountDialog({
     null,
   )
 
+  const cancelPendingDuplicateAccountWarning = useCallback(() => {
+    duplicateAccountWarningResolverRef.current?.(false)
+    duplicateAccountWarningResolverRef.current = null
+    duplicateAccountWarningAcknowledgedSiteUrlRef.current = null
+  }, [])
+
+  useEffect(() => {
+    if (!isOpen) {
+      setDuplicateAccountWarning((prev) =>
+        prev.isOpen ? { ...prev, isOpen: false } : prev,
+      )
+    }
+
+    return () => {
+      cancelPendingDuplicateAccountWarning()
+    }
+  }, [cancelPendingDuplicateAccountWarning, isOpen])
+
   const requestDuplicateAccountAddConfirmation = useCallback(
     (params: {
       siteUrl: string
@@ -172,19 +191,24 @@ export function useAccountDialog({
     }
 
     const baseUrl = url.trim()
+    const normalizedBaseUrl = normalizeSiteUrlForDuplicateCheck(baseUrl)
     const currentUserId = userId.trim()
 
     if (!baseUrl) {
       return true
     }
 
-    if (duplicateAccountWarningAcknowledgedSiteUrlRef.current === baseUrl) {
+    if (
+      duplicateAccountWarningAcknowledgedSiteUrlRef.current ===
+      normalizedBaseUrl
+    ) {
       return true
     }
 
     const accounts = await accountStorage.getAllAccounts()
     const existingSiteAccounts = accounts.filter(
-      (acc) => acc.site_url === baseUrl,
+      (acc) =>
+        normalizeSiteUrlForDuplicateCheck(acc.site_url) === normalizedBaseUrl,
     )
 
     if (existingSiteAccounts.length === 0) {
@@ -198,7 +222,7 @@ export function useAccountDialog({
       : undefined
 
     const shouldContinue = await requestDuplicateAccountAddConfirmation({
-      siteUrl: baseUrl,
+      siteUrl: normalizedBaseUrl,
       existingAccountsCount: existingSiteAccounts.length,
       ...(exactMatch
         ? {
@@ -212,7 +236,7 @@ export function useAccountDialog({
       return false
     }
 
-    duplicateAccountWarningAcknowledgedSiteUrlRef.current = baseUrl
+    duplicateAccountWarningAcknowledgedSiteUrlRef.current = normalizedBaseUrl
     return true
   }, [
     mode,
@@ -856,7 +880,9 @@ export function useAccountDialog({
       )
       return result
     } catch (error: any) {
-      toast.error(t("messages.operationFailed", { error: error.message }))
+      toast.error(
+        t("messages.operationFailed", { error: getErrorMessage(error) }),
+      )
       throw error
     } finally {
       setIsSaving(false)
@@ -939,6 +965,7 @@ export function useAccountDialog({
 
   const handleClose = () => {
     handleDuplicateAccountWarningCancel()
+    cancelPendingDuplicateAccountWarning()
     targetAccountRef.current = null
     onClose()
   }
@@ -1046,16 +1073,17 @@ export function useAccountDialog({
 }
 
 /**
- * Normalizes unknown error values into human-readable strings for toast notifications.
- * @param error Unknown error value thrown during account operations.
- * @returns Extracted error message string.
+ *
  */
-function getErrorMessage(error: any): string {
-  if (error instanceof Error) {
-    return error.message
+function normalizeSiteUrlForDuplicateCheck(value: string): string {
+  const trimmed = value.trim()
+  if (!trimmed) {
+    return ""
   }
-  if (typeof error === "string") {
-    return error
+
+  try {
+    return new URL(trimmed).origin.toLowerCase()
+  } catch {
+    return trimmed.replace(/\/+$/, "").toLowerCase()
   }
-  return String(error)
 }
