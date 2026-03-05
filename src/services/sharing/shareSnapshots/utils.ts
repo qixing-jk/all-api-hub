@@ -1,7 +1,6 @@
 import type { CurrencyType } from "~/types"
 import { getCurrencySymbol } from "~/utils/core/formatters"
 import { formatMoneyFixed } from "~/utils/core/money"
-import { tryParseOrigin } from "~/utils/core/urlParsing"
 
 const JWT_PATTERN = /\beyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\b/g
 const BEARER_PATTERN = /\bBearer\s+([a-zA-Z0-9._-]+)\b/gi
@@ -16,18 +15,6 @@ export const redactShareSecrets = (value: string): string =>
     .replace(BEARER_PATTERN, "Bearer [REDACTED]")
     .replace(JWT_PATTERN, "[REDACTED_JWT]")
 
-/**
- * Normalizes a URL string to origin-only (scheme + host + optional port).
- * Returns undefined when the input is missing, invalid, or has an opaque origin
- * (e.g. `"null"`).
- */
-export const sanitizeOriginUrl = (
-  value: string | undefined,
-): string | undefined => {
-  const origin = tryParseOrigin(value)
-  if (!origin || origin === "null") return undefined
-  return origin
-}
 
 /**
  * Formats a numeric amount into a currency string (e.g. `$12.34`), always using

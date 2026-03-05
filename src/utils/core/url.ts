@@ -205,6 +205,29 @@ export function normalizeHttpUrl(
 }
 
 /**
+ * Normalize a user-provided URL string to origin-only (scheme + host + optional port).
+ *
+ * Returns undefined when the input is missing, invalid, uses a non-HTTP(S) scheme,
+ * or has an opaque origin (e.g. `"null"`).
+ */
+export function sanitizeOriginUrl(
+  value: string | undefined | null,
+): string | undefined {
+  if (!value) return undefined
+  const trimmed = value.trim()
+  if (!trimmed) return undefined
+  try {
+    const url = new URL(trimmed)
+    if (url.protocol !== "http:" && url.protocol !== "https:") return undefined
+    const origin = url.origin
+    if (!origin || origin === "null") return undefined
+    return origin
+  } catch {
+    return undefined
+  }
+}
+
+/**
  * Strip a trailing `/v1` from a user-supplied OpenAI-compatible base URL.
  *
  * This is needed for APIs like `fetchOpenAICompatibleModelIds` that already append

@@ -399,6 +399,46 @@ class AccountStorageService {
   }
 
   /**
+   * Bulk delete accounts; also unpins and removes from ordered list.
+   *
+   * Ignores unknown ids to keep this operation resilient to concurrent changes.
+   */
+  async deleteAccounts(ids: string[]): Promise<{ deletedCount: number }> {
+    const uniqueIds = Array.from(new Set(ids)).filter(Boolean)
+    if (uniqueIds.length === 0) {
+      return { deletedCount: 0 }
+    }
+
+    const idSet = new Set(uniqueIds)
+
+    try {
+      return await this.mutateStorageConfig((config) => {
+        const accounts = config.accounts || []
+        const filteredAccounts = accounts.filter(
+          (account) => !idSet.has(account.id),
+        )
+        const deletedCount = accounts.length - filteredAccounts.length
+
+        if (deletedCount === 0) {
+          return { result: { deletedCount: 0 }, changed: false }
+        }
+
+        config.accounts = filteredAccounts
+        config.pinnedAccountIds = (config.pinnedAccountIds || []).filter(
+          (pinnedId) => !idSet.has(pinnedId),
+        )
+        config.orderedAccountIds = (config.orderedAccountIds || []).filter(
+          (orderedId) => !idSet.has(orderedId),
+        )
+        return { result: { deletedCount }, changed: true }
+      })
+    } catch (error) {
+      logger.error("批量删除账号失败", { accountIds: uniqueIds, error })
+      throw error
+    }
+  }
+
+  /**
    * Get pinned account ids.
    */
   async getPinnedList(): Promise<string[]> {

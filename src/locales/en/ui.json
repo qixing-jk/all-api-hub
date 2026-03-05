@@ -49,6 +49,58 @@
       "deleteFailed": "Delete failed: {{error}}",
       "deleteFailedGeneric": "Failed to delete account: {{error}}"
     },
+    "dedupeAccounts": {
+      "title": "Duplicate account cleanup",
+      "description": "Scan duplicate accounts by origin + user id, then delete duplicates after preview.",
+      "strategyLabel": "Keep strategy",
+      "strategy": {
+        "keepPinned": "Keep pinned (if any)",
+        "keepEnabled": "Keep enabled (if any)",
+        "keepMostRecentlyUpdated": "Keep most recently updated"
+      },
+      "summary": "{{groups}} duplicate set(s) · {{deleteCount}} account(s) to delete",
+      "manualPickHint": "You can manually choose which account to keep in each set. Manual choices override the keep strategy.",
+      "empty": "No duplicate accounts found.",
+      "userId": "User ID: {{userId}}",
+      "duplicateCount": "{{count}} accounts",
+      "keep": "Keep",
+      "delete": "Delete",
+      "recommended": "Recommended",
+      "unscannableHint": "{{count}} account(s) could not be scanned and were skipped.",
+      "previewDelete": "Preview deletion",
+      "detailsToggle": {
+        "show": "More info",
+        "hide": "Hide info"
+      },
+      "details": {
+        "accountId": "Account ID",
+        "siteType": "Site Type",
+        "authType": "Auth Type",
+        "health": "Health",
+        "healthReason": "Reason",
+        "lastSync": "Last Sync",
+        "updatedAt": "Updated At",
+        "createdAt": "Created At",
+        "userId": "User ID",
+        "quota": "Quota",
+        "todayConsumption": "Today's Consumption",
+        "todayRequests": "Today's Requests",
+        "todayTokens": "Today's Tokens",
+        "checkinDetection": "Check-in Detection",
+        "autoCheckin": "Auto Check-in",
+        "customCheckinUrl": "Custom Check-in URL",
+        "notes": "Notes",
+        "excludeFromTotalBalance": "Exclude from Total Balance"
+      },
+      "deleting": "Deleting duplicate accounts...",
+      "confirm": {
+        "title": "Delete duplicate accounts",
+        "description": "This will delete {{deleteCount}} account(s) across {{groups}} duplicate set(s).",
+        "confirmDelete": "Delete",
+        "warningPinned": "{{count}} pinned account(s) will be deleted.",
+        "warningOrder": "Manual ordering will be adjusted."
+      }
+    },
     "updateLog": {
       "title": "What's New",
       "updatedTo": "Updated to v{{version}}",

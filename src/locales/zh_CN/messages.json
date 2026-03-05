@@ -32,7 +32,8 @@
       "shareSnapshotCaptionCopied": "文案已复制",
       "externalCheckInOpened": "已为 {{count}} 个账号打开外部签到（{{mode}}）。",
       "externalCheckInModeAll": "全部",
-      "externalCheckInModeUnchecked": "仅未签到"
+      "externalCheckInModeUnchecked": "仅未签到",
+      "duplicateCleanupSuccess": "已从 {{groups}} 组重复中删除 {{count}} 个账号。"
     },
     "error": {
       "externalCheckInNonePending": "没有今日未打开过的外部签到站。",
@@ -48,7 +49,8 @@
       "findAccountDetailsFailed": "找不到账户详情",
       "importFailed": "导入失败: {{error}}",
       "shareSnapshotNoEnabledAccounts": "没有可分享的已启用账号",
-      "shareSnapshotAccountDisabled": "账号已禁用"
+      "shareSnapshotAccountDisabled": "账号已禁用",
+      "duplicateCleanupFailed": "删除重复账号失败：{{error}}"
     }
   },
   "errors": {

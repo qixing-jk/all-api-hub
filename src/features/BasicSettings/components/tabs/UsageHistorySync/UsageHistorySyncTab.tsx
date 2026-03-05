@@ -13,6 +13,7 @@ import { USAGE_HISTORY_SCHEDULE_MODE } from "~/types/usageHistory"
 import type { UsageHistoryStore } from "~/types/usageHistory"
 import { hasAlarmsAPI, sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
+import { formatLocaleDateTime } from "~/utils/core/formatters"
 import { createLogger } from "~/utils/core/logger"
 
 import UsageHistorySyncSettingsSection from "./UsageHistorySyncSettingsSection"
@@ -102,9 +103,10 @@ export default function UsageHistorySyncTab() {
       const state = status?.state ?? "never"
       const lastSyncAtMs =
         typeof status?.lastSyncAt === "number" ? status.lastSyncAt : null
-      const lastSyncAtLabel = lastSyncAtMs
-        ? new Date(lastSyncAtMs).toLocaleString()
-        : t("status.never")
+      const lastSyncAtLabel = formatLocaleDateTime(
+        lastSyncAtMs,
+        t("status.never"),
+      )
 
       return {
         id: account.id,

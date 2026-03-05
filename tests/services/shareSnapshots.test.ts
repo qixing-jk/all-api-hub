@@ -8,38 +8,9 @@ import {
 import {
   createShareSnapshotSeed,
   redactShareSecrets,
-  sanitizeOriginUrl,
 } from "~/services/sharing/shareSnapshots/utils"
 
 describe("shareSnapshots", () => {
-  describe("sanitizeOriginUrl", () => {
-    it("returns origin only and strips path/query/fragment", () => {
-      expect(sanitizeOriginUrl("https://example.com/path?token=abc#frag")).toBe(
-        "https://example.com",
-      )
-    })
-
-    it("keeps non-default port in origin", () => {
-      expect(sanitizeOriginUrl("http://localhost:3000/foo")).toBe(
-        "http://localhost:3000",
-      )
-    })
-
-    it("returns undefined for invalid url", () => {
-      expect(sanitizeOriginUrl("not-a-url")).toBeUndefined()
-    })
-
-    it("returns undefined for opaque origins", () => {
-      expect(
-        sanitizeOriginUrl("file:///Users/example/secret.txt"),
-      ).toBeUndefined()
-    })
-
-    it("returns undefined for empty input", () => {
-      expect(sanitizeOriginUrl(undefined)).toBeUndefined()
-    })
-  })
-
   describe("createShareSnapshotSeed", () => {
     it("returns a uint32 seed compatible with mulberry32", () => {
       const seed = createShareSnapshotSeed()

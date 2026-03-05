@@ -1,10 +1,11 @@
-import { CalendarCheck2, UserRound } from "lucide-react"
-import { type MouseEvent } from "react"
+import { CalendarCheck2, Search, UserRound } from "lucide-react"
+import { useState, type MouseEvent } from "react"
 import { useTranslation } from "react-i18next"
 
 import { PageHeader } from "~/components/PageHeader"
 import { Button } from "~/components/ui"
 import AccountList from "~/features/AccountManagement/components/AccountList"
+import DedupeAccountsDialog from "~/features/AccountManagement/components/DedupeAccountsDialog"
 import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { AccountManagementProvider } from "~/features/AccountManagement/hooks/AccountManagementProvider"
@@ -19,6 +20,7 @@ function AccountManagementContent({ searchQuery }: { searchQuery?: string }) {
   const { openAddAccount } = useDialogStateContext()
   const { displayData } = useAccountDataContext()
   const { handleOpenExternalCheckIns } = useAccountActionsContext()
+  const [isDedupeDialogOpen, setIsDedupeDialogOpen] = useState(false)
 
   const externalCheckInAccounts = displayData.filter((account) => {
     const customUrl = account.checkIn?.customCheckIn?.url
@@ -55,6 +57,14 @@ function AccountManagementContent({ searchQuery }: { searchQuery?: string }) {
                 {t("account:actions.openAllExternalCheckIn")}
               </Button>
             )}
+            <Button
+              onClick={() => setIsDedupeDialogOpen(true)}
+              variant="secondary"
+              leftIcon={<Search className="h-4 w-4" />}
+              title={t("account:actions.scanDuplicatesHint")}
+            >
+              {t("account:actions.scanDuplicates")}
+            </Button>
             <Button onClick={openAddAccount}>{t("account:addAccount")}</Button>
           </div>
         }
@@ -63,6 +73,11 @@ function AccountManagementContent({ searchQuery }: { searchQuery?: string }) {
       <div className="dark:bg-dark-bg-secondary flex flex-col bg-white">
         <AccountList initialSearchQuery={searchQuery} />
       </div>
+
+      <DedupeAccountsDialog
+        isOpen={isDedupeDialogOpen}
+        onClose={() => setIsDedupeDialogOpen(false)}
+      />
     </div>
   )
 }

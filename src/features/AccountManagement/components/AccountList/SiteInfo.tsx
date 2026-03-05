@@ -39,6 +39,7 @@ import {
 } from "~/types"
 import { createTab } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
+import { formatLocaleDateTime } from "~/utils/core/formatters"
 import { createLogger } from "~/utils/core/logger"
 import {
   openAccountBaseUrl,
@@ -250,9 +251,10 @@ export default function SiteInfo({ site, highlights }: SiteInfoProps) {
       ) {
         const lastDetectedAt = site.checkIn.siteStatus?.lastDetectedAt
         const staleStatusLabel = t("list.site.checkInStatusOutdated", {
-          time: lastDetectedAt
-            ? new Date(lastDetectedAt).toLocaleString()
-            : t("list.site.notAvailable"),
+          time: formatLocaleDateTime(
+            lastDetectedAt,
+            t("list.site.notAvailable"),
+          ),
         })
         indicators.push(
           <Tooltip
@@ -406,9 +408,10 @@ export default function SiteInfo({ site, highlights }: SiteInfoProps) {
               )}
               <p>
                 {t("list.site.lastSync")}:{" "}
-                {site.last_sync_time
-                  ? new Date(site.last_sync_time).toLocaleString()
-                  : t("list.site.notAvailable")}
+                {formatLocaleDateTime(
+                  site.last_sync_time,
+                  t("list.site.notAvailable"),
+                )}
               </p>
             </div>
           }

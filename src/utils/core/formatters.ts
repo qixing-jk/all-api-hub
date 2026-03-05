@@ -44,22 +44,43 @@ export function normalizeToMs(
   if (input == null) return null
 
   if (input instanceof Date) {
-    return input.getTime()
+    const time = input.getTime()
+    return Number.isNaN(time) ? null : time
   }
 
-  const ts = Number(input)
-  if (Number.isNaN(ts)) return null
+  if (typeof input === "string") {
+    const trimmed = input.trim()
+    if (!trimmed) return null
+
+    const ts = Number(trimmed)
+    if (Number.isFinite(ts)) {
+      if (ts < 1e12) {
+        return ts * 1000
+      }
+
+      return Math.round(ts)
+    }
+
+    const date = new Date(trimmed)
+    const time = date.getTime()
+    return Number.isNaN(time) ? null : time
+  }
+
+  if (!Number.isFinite(input)) return null
 
   // 判断是否为秒级时间戳（1e12 毫秒 ≈ 2001 年）
-  if (ts < 1e12) {
-    return ts * 1000
+  if (input < 1e12) {
+    return input * 1000
   }
 
-  return Math.round(ts)
+  return Math.round(input)
 }
 
 export function normalizeToDate(input: number | string | Date): Date
 export function normalizeToDate(input: null | undefined): null
+export function normalizeToDate(
+  input: number | string | Date | null | undefined,
+): Date | null
 
 /**
  * 将任意输入标准化为 Date 对象
@@ -71,6 +92,26 @@ export function normalizeToDate(
 ): Date | null {
   const ms = normalizeToMs(input)
   return ms == null ? null : new Date(ms)
+}
+
+/**
+ * Best-effort locale datetime formatter for timestamps (seconds/ms), Date
+ * objects, and ISO/date strings.
+ */
+export const formatLocaleDateTime = (
+  input: number | string | Date | null | undefined,
+  fallback: string = t("common:labels.notAvailable"),
+): string => {
+  const date = normalizeToDate(input)
+  if (!date || Number.isNaN(date.getTime()) || date.getTime() <= 0) {
+    return fallback
+  }
+
+  try {
+    return date.toLocaleString()
+  } catch {
+    return fallback
+  }
 }
 
 /**

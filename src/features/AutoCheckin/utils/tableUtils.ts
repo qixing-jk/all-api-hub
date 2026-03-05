@@ -1,16 +1,13 @@
+import { formatLocaleDateTime } from "~/utils/core/formatters"
+
 export {
   isInvalidAccessTokenMessage,
   isNoTabWithIdMessage,
 } from "~/features/AutoCheckin/utils/autoCheckin"
 
 /**
- * Format a timestamp (ms since epoch) into a user-friendly string.
+ * Format a timestamp (seconds/ms since epoch) into a user-friendly string.
  */
 export function formatTimestamp(timestamp?: number): string {
-  if (timestamp == null) return "-"
-  try {
-    return new Date(timestamp).toLocaleString()
-  } catch {
-    return "-"
-  }
+  return formatLocaleDateTime(timestamp, "-")
 }

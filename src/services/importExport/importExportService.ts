@@ -10,6 +10,7 @@ import { tagStorage } from "~/services/tags/tagStorage"
 import type { AccountStorageConfig, TagStore } from "~/types"
 import type { ApiCredentialProfilesConfig } from "~/types/apiCredentialProfiles"
 import type { ChannelConfigMap } from "~/types/channelConfig"
+import { formatLocaleDateTime } from "~/utils/core/formatters"
 import { createLogger } from "~/utils/core/logger"
 
 /**
@@ -173,10 +174,7 @@ export function parseBackupSummary(
       (data as any).apiCredentialProfiles,
     )
 
-    const ts =
-      data.timestamp && !Number.isNaN(new Date(data.timestamp).getTime())
-        ? new Date(data.timestamp).toLocaleString()
-        : unknownLabel
+    const ts = formatLocaleDateTime(data.timestamp, unknownLabel)
 
     return {
       valid: true,

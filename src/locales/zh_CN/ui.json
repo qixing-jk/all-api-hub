@@ -49,6 +49,58 @@
       "deleteFailed": "删除失败: {{error}}",
       "deleteFailedGeneric": "删除账号失败: {{error}}"
     },
+    "dedupeAccounts": {
+      "title": "重复账号清理",
+      "description": "按 URL 源站 + 用户 ID 扫描重复账号，并在预览确认后删除重复项。",
+      "strategyLabel": "保留策略",
+      "strategy": {
+        "keepPinned": "优先保留置顶（如有）",
+        "keepEnabled": "优先保留启用（如有）",
+        "keepMostRecentlyUpdated": "优先保留最近更新"
+      },
+      "summary": "{{groups}} 组重复 · 待删除 {{deleteCount}} 个账号",
+      "manualPickHint": "你可以在每组中手动选择要保留的账号（手动选择会覆盖保留策略）。",
+      "empty": "未发现重复账号。",
+      "userId": "用户 ID：{{userId}}",
+      "duplicateCount": "{{count}} 个账号",
+      "keep": "保留",
+      "delete": "删除",
+      "recommended": "推荐",
+      "unscannableHint": "{{count}} 个账号无法扫描，已跳过。",
+      "previewDelete": "预览删除",
+      "detailsToggle": {
+        "show": "更多信息",
+        "hide": "收起信息"
+      },
+      "details": {
+        "accountId": "账号 ID",
+        "siteType": "站点类型",
+        "authType": "认证方式",
+        "health": "健康状态",
+        "healthReason": "原因",
+        "lastSync": "最后同步",
+        "updatedAt": "更新时间",
+        "createdAt": "创建时间",
+        "userId": "用户 ID",
+        "quota": "余额点数",
+        "todayConsumption": "今日消耗点数",
+        "todayRequests": "今日请求次数",
+        "todayTokens": "今日 Tokens",
+        "checkinDetection": "签到检测",
+        "autoCheckin": "自动签到",
+        "customCheckinUrl": "自定义签到 URL",
+        "notes": "备注",
+        "excludeFromTotalBalance": "从总余额中排除"
+      },
+      "deleting": "正在删除重复账号...",
+      "confirm": {
+        "title": "删除重复账号",
+        "description": "将删除 {{deleteCount}} 个账号（共 {{groups}} 组重复）。",
+        "confirmDelete": "确认删除",
+        "warningPinned": "将删除 {{count}} 个已置顶的账号。",
+        "warningOrder": "自定义排序将被自动调整。"
+      }
+    },
     "updateLog": {
       "title": "更新内容",
       "updatedTo": "已更新至 v{{version}}",

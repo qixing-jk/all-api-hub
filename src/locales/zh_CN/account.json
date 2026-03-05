@@ -93,6 +93,8 @@
     "viewOnLdoh": "在 LDOH 查看",
     "openAllExternalCheckIn": "一键打开外部签到",
     "openAllExternalCheckInHint": "默认仅打开未签到；Ctrl/Cmd 打开全部；Shift 在新窗口打开；Ctrl/Cmd+Shift 同时生效。",
+    "scanDuplicates": "扫描重复账号",
+    "scanDuplicatesHint": "按 URL 源站 + 用户 ID 扫描重复账号并安全清理。",
     "pin": "置顶账号",
     "unpin": "取消置顶",
     "pinned": "已置顶",

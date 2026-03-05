@@ -34,13 +34,13 @@ import {
   hasValidManagedSiteConfig,
 } from "~/services/managedSites/managedSiteService"
 import { buildAccountShareSnapshotPayload } from "~/services/sharing/shareSnapshots"
-import { sanitizeOriginUrl } from "~/services/sharing/shareSnapshots/utils"
 import { normalizeOpenAiFamilyBaseUrl } from "~/services/verification/webAiApiCheck/extractCredentials"
 import type { DisplaySiteData } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
+import { sanitizeOriginUrl } from "~/utils/core/url"
 import {
   openKeysPage,
   openManagedSiteChannelsForChannel,

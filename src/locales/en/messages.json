@@ -32,7 +32,8 @@
       "shareSnapshotCaptionCopied": "Caption copied",
       "externalCheckInOpened": "Opened external check-ins for {{count}} account(s) ({{mode}}).",
       "externalCheckInModeAll": "all",
-      "externalCheckInModeUnchecked": "unchecked only"
+      "externalCheckInModeUnchecked": "unchecked only",
+      "duplicateCleanupSuccess": "Deleted {{count}} account(s) from {{groups}} duplicate set(s)."
     },
     "error": {
       "externalCheckInNonePending": "There are no external check-in stations that haven't been opened today.",
@@ -48,7 +49,8 @@
       "findAccountDetailsFailed": "Could not find account details",
       "importFailed": "Import failed: {{error}}",
       "shareSnapshotNoEnabledAccounts": "No enabled accounts to share",
-      "shareSnapshotAccountDisabled": "This account is disabled"
+      "shareSnapshotAccountDisabled": "This account is disabled",
+      "duplicateCleanupFailed": "Failed to delete duplicate accounts: {{error}}"
     }
   },
   "errors": {

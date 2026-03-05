@@ -8,6 +8,7 @@ import {
   type AutoCheckinRunResult,
   type AutoCheckinStatus,
 } from "~/types/autoCheckin"
+import { formatLocaleDateTime } from "~/utils/core/formatters"
 
 interface StatusCardProps {
   status: AutoCheckinStatus
@@ -22,18 +23,6 @@ interface StatusCardProps {
  */
 export default function StatusCard({ status, preferences }: StatusCardProps) {
   const { t } = useTranslation("autoCheckin")
-
-  const formatDateTime = (isoString?: string): string => {
-    if (!isoString) return t("status.notScheduled")
-    try {
-      const date = new Date(isoString)
-      return Number.isNaN(date.getTime())
-        ? t("status.notScheduled")
-        : date.toLocaleString()
-    } catch {
-      return t("status.notScheduled")
-    }
-  }
 
   // Backward compatibility: older status payloads only store `nextScheduledAt` (single-alarm model).
   const nextDailyScheduledAt =
@@ -52,13 +41,13 @@ export default function StatusCard({ status, preferences }: StatusCardProps) {
    */
   const getNextDailyText = (): string => {
     if (!preferences.globalEnabled) return t("status.disabled")
-    return formatDateTime(nextDailyScheduledAt)
+    return formatLocaleDateTime(nextDailyScheduledAt, t("status.notScheduled"))
   }
 
   const getNextRetryText = (): string => {
     if (!isRetryEnabled) return t("status.retryDisabled")
     if (!hasPendingRetry) return t("status.noPendingRetry")
-    return formatDateTime(nextRetryScheduledAt)
+    return formatLocaleDateTime(nextRetryScheduledAt, t("status.notScheduled"))
   }
 
   const getResultBadgeColor = (result?: AutoCheckinRunResult): string => {
@@ -128,7 +117,7 @@ export default function StatusCard({ status, preferences }: StatusCardProps) {
               {t("status.lastRun")}
             </div>
             <div className="mt-1 text-lg font-semibold">
-              {formatDateTime(status.lastRunAt)}
+              {formatLocaleDateTime(status.lastRunAt, t("status.notScheduled"))}
             </div>
           </div>
 

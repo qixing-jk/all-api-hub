@@ -30,6 +30,7 @@ import { SITE_TITLE_RULES, SUB2API, UNKNOWN_SITE } from "~/constants/siteType"
 import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
 import { isValidExchangeRate } from "~/services/accounts/accountOperations"
 import { AuthTypeEnum, type CheckInConfig, type Tag } from "~/types"
+import { formatLocaleDateTime } from "~/utils/core/formatters"
 
 interface AccountFormProps {
   authType: AuthTypeEnum
@@ -333,7 +334,10 @@ export default function AccountForm({
                 <FormField label={t("form.sub2apiTokenExpiresAt")}>
                   <Input
                     type="text"
-                    value={new Date(sub2apiTokenExpiresAt).toLocaleString()}
+                    value={formatLocaleDateTime(
+                      sub2apiTokenExpiresAt,
+                      t("common:labels.notAvailable"),
+                    )}
                     leftIcon={<CalendarDaysIcon className="h-5 w-5" />}
                     disabled
                   />
