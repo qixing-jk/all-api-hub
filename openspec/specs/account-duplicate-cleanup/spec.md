@@ -1,7 +1,7 @@
 # account-duplicate-cleanup Specification
 
 ## Purpose
-TBD - created by archiving change oneclick-dedupe-accounts-url-id. Update Purpose after archive.
+Define the duplicate-account scan and cleanup behavior: detect duplicates by normalized origin and safe upstream user id, then guide users through selecting a keep account and deleting the rest. Accounts with invalid URLs or missing/unsafe user IDs are treated as unscannable and excluded from automatic grouping.
 ## Requirements
 ### Requirement: System normalizes account URL to origin
 The system MUST normalize each account’s configured site URL to a stable **origin** value (scheme + host + optional port) for duplicate detection.
