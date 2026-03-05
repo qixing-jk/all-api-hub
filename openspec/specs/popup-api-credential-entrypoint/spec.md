@@ -1,7 +1,7 @@
 # popup-api-credential-entrypoint Specification
 
 ## Purpose
-Provide access to API credential profiles from the extension popup and side panel so users can quickly manage and use credentials without navigating to Options.
+Provide access to API credential profiles from the extension popup so users can quickly manage and use credentials without navigating to Options.
 
 ## Requirements
 
@@ -63,12 +63,12 @@ The popup UI MUST mask API keys by default and MUST NOT reveal the API key unles
 - **WHEN** the popup renders the profile’s API key
 - **THEN** the API key is displayed in a masked form
 
-### Requirement: Open full page routes to API credential profiles
+### Requirement: Open full-page routes to API credential profiles
 
-When the popup active view is API Credentials, the system SHALL open the Options UI API credential profiles section when the user triggers the “open full page” action.
+When the popup active view is API Credentials, the system SHALL open the Options UI API credential profiles section when the user triggers the “open full-page” action.
 
-#### Scenario: Open full page from API Credentials view
+#### Scenario: Open full-page from API Credentials view
 - **GIVEN** the popup active view is API Credentials
-- **WHEN** the user triggers the “open full page” action
+- **WHEN** the user triggers the “open full-page” action
 - **THEN** the system opens the Options UI focused on the API credential profiles section
 

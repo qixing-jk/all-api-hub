@@ -15,7 +15,7 @@ This change adds a third popup view to make API credential profiles accessible w
 **Non-Goals:**
 - No changes to the profile data model, storage keys, backup format, or verification probe behavior.
 - No new external dependencies.
-- No persistence of “last active popup tab” across popup opens (unless later required).
+- We will not persist the “last active popup tab” across popup opens (unless later required).
 - No attempt to fully replicate the desktop Options layout (sidebar, large page header) inside the popup.
 
 ## Decisions
