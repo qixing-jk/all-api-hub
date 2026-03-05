@@ -27,7 +27,7 @@ interface ApiCredentialProfilesDialogsProps {
 }
 
 /**
- *
+ * Dialog layer for API credential profile actions (edit, verify, export, delete).
  */
 export function ApiCredentialProfilesDialogs({
   controller,

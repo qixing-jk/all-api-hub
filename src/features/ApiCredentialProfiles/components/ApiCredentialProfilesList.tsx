@@ -9,7 +9,7 @@ interface ApiCredentialProfilesListProps {
 }
 
 /**
- *
+ * Renders API credential profiles with per-item actions wired to the controller.
  */
 export function ApiCredentialProfilesList({
   profiles,

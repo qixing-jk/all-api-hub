@@ -113,7 +113,7 @@ describe("popup bookmarks view", () => {
     expect(screen.queryByText("BookmarksList")).not.toBeInTheDocument()
 
     fireEvent.click(
-      await screen.findByRole("button", { name: "bookmark:switch.bookmarks" }),
+      await screen.findByRole("tab", { name: "bookmark:switch.bookmarks" }),
     )
 
     expect(await screen.findByText("HeaderRefresh:false")).toBeInTheDocument()
@@ -124,7 +124,7 @@ describe("popup bookmarks view", () => {
     expect(screen.getByText("BookmarksList")).toBeInTheDocument()
 
     fireEvent.click(
-      await screen.findByRole("button", {
+      await screen.findByRole("tab", {
         name: "apiCredentialProfiles:popup.tabLabel",
       }),
     )
@@ -149,7 +149,7 @@ describe("popup bookmarks view", () => {
     ).toBeInTheDocument()
 
     fireEvent.click(
-      await screen.findByRole("button", { name: "bookmark:switch.bookmarks" }),
+      await screen.findByRole("tab", { name: "bookmark:switch.bookmarks" }),
     )
 
     fireEvent.click(

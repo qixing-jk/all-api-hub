@@ -26,7 +26,7 @@ export interface ApiCredentialProfilesListViewProps {
 }
 
 /**
- *
+ * Normalize user-provided input for case/space-insensitive searching.
  */
 function normalizeForSearch(value: string): string {
   if (!value) return ""
@@ -41,7 +41,7 @@ function normalizeForSearch(value: string): string {
 }
 
 /**
- *
+ * Search/filterable API credential profiles view used in Options and Popup variants.
  */
 export function ApiCredentialProfilesListView({
   controller,
@@ -231,12 +231,12 @@ export function ApiCredentialProfilesListView({
           icon={<KeyRound className="h-8 w-8" />}
           title={
             controller.profiles.length === 0
-              ? t("empty.title")
+              ? t("apiCredentialProfiles:empty.title")
               : t("apiCredentialProfiles:empty.filteredTitle")
           }
           description={
             controller.profiles.length === 0
-              ? t("empty.description")
+              ? t("apiCredentialProfiles:empty.description")
               : t("apiCredentialProfiles:empty.filteredDescription")
           }
           action={
