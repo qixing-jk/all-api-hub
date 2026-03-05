@@ -22,6 +22,29 @@ import {
  */
 const logger = createLogger("RedemptionAssist")
 
+/**
+ * After a successful redeem, attempt to refresh the account data to reflect any changes.
+ * @param accountId ID of the account that was redeemed against.
+ */
+async function bestEffortRefreshAccountAfterSuccessfulRedeem(
+  accountId: string,
+) {
+  try {
+    const result = await accountStorage.refreshAccount(accountId, true)
+    if (result?.refreshed !== true) {
+      logger.debug("Post-redeem refresh did not refresh", {
+        accountId,
+        refreshed: result?.refreshed ?? null,
+      })
+    }
+  } catch (error) {
+    logger.warn("Post-redeem refresh failed", {
+      accountId,
+      error,
+    })
+  }
+}
+
 interface RedemptionAssistRuntimeSettings {
   enabled: boolean
   relaxedCodeValidation: boolean
@@ -367,7 +390,16 @@ class RedemptionAssistService {
    */
   async autoRedeem(accountId: string, code: string) {
     // Delegate to redeemService which handles i18n and error messages
-    return redeemService.redeemCodeForAccount(accountId, code)
+    const redeemResult = await redeemService.redeemCodeForAccount(
+      accountId,
+      code,
+    )
+
+    if (redeemResult.success) {
+      await bestEffortRefreshAccountAfterSuccessfulRedeem(accountId)
+    }
+
+    return redeemResult
   }
 
   /**
@@ -414,6 +446,11 @@ class RedemptionAssistService {
         account.id,
         code,
       )
+
+      if (redeemResult.success) {
+        await bestEffortRefreshAccountAfterSuccessfulRedeem(account.id)
+      }
+
       // Flatten the result so it matches the RedeemResult shape used elsewhere
       return {
         ...redeemResult,
