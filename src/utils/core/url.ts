@@ -16,6 +16,13 @@ const logger = createLogger("UrlUtils")
 const TAB_QUERY_PARAM_NAME = "tab" as const
 const TAB_HASH_PREFIX = "tab=" as const
 
+const looksLikePathFragmentOrQuery = (value: string): boolean =>
+  value.startsWith("?") ||
+  value.startsWith("#") ||
+  (value.startsWith("/") && !value.startsWith("//")) ||
+  value.startsWith("./") ||
+  value.startsWith("../")
+
 /**
  * Join a base URL and a path, collapsing duplicate slashes.
  */
@@ -183,6 +190,8 @@ export function normalizeHttpUrl(
   const trimmed = url.trim()
   if (!trimmed) return null
 
+  if (looksLikePathFragmentOrQuery(trimmed)) return null
+
   // Reject non-http schemes early
   if (/^[a-z][a-z0-9+.-]*:/i.test(trimmed) && !/^https?:/i.test(trimmed)) {
     return null
@@ -216,6 +225,8 @@ export function sanitizeOriginUrl(
   if (!value) return undefined
   const trimmed = value.trim()
   if (!trimmed) return undefined
+
+  if (looksLikePathFragmentOrQuery(trimmed)) return undefined
 
   const looksLikeHostWithPort =
     /^[a-zA-Z0-9.-]+:\d+($|[/?#])/.test(trimmed) ||

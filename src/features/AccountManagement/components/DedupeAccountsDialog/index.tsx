@@ -194,7 +194,12 @@ export default function DedupeAccountsDialog({
       if (deletedCount > 0) {
         onClose()
       }
-    } catch {
+    } catch (error) {
+      logger.error("handleConfirmDelete failed", {
+        error,
+        idsToDelete,
+        groupCount: groups.length,
+      })
       // toast.promise handles the error toast
     } finally {
       setIsWorking(false)

@@ -148,7 +148,7 @@ describe("formatters utilities", () => {
       expect(result).toBe("keyManagement:keyDetails.neverExpires")
     })
 
-    it("should format timestamp using zh-CN locale when positive", () => {
+    it("should format timestamp using the runtime locale when positive", () => {
       const timestamp = new Date(2024, 0, 1).getTime()
       const localeSpy = vi
         .spyOn(Date.prototype, "toLocaleDateString")
@@ -157,7 +157,7 @@ describe("formatters utilities", () => {
       const result = formatKeyTime(timestamp)
 
       expect(result).toBe("2024-01-01")
-      expect(localeSpy).toHaveBeenCalledWith("zh-CN")
+      expect(localeSpy).toHaveBeenCalledWith()
 
       localeSpy.mockRestore()
     })
@@ -260,7 +260,7 @@ describe("formatters utilities", () => {
       expect(result).toBe("common:time.neverExpires")
     })
 
-    it("should format timestamp using zh-CN locale when positive", () => {
+    it("should format timestamp using the runtime locale when positive", () => {
       const timestamp = new Date(2024, 0, 1).getTime()
       const localeSpy = vi
         .spyOn(Date.prototype, "toLocaleDateString")
@@ -269,7 +269,7 @@ describe("formatters utilities", () => {
       const result = formatTimestamp(timestamp)
 
       expect(result).toBe("2024-01-01")
-      expect(localeSpy).toHaveBeenCalledWith("zh-CN")
+      expect(localeSpy).toHaveBeenCalledWith()
 
       localeSpy.mockRestore()
     })

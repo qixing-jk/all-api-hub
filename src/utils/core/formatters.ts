@@ -124,7 +124,7 @@ export const formatKeyTime = (timestamp: number) => {
   const date = normalizeToDate(timestamp)
   if (!date) return t("common:labels.notAvailable")
 
-  return date.toLocaleDateString("zh-CN")
+  return date.toLocaleDateString()
 }
 
 /**
@@ -326,7 +326,7 @@ export const formatTimestamp = (timestamp: number) => {
   const date = normalizeToDate(timestamp)
   if (!date) return t("common:labels.notAvailable")
 
-  return date.toLocaleDateString("zh-CN")
+  return date.toLocaleDateString()
 }
 
 /**

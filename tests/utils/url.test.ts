@@ -6,6 +6,7 @@ import {
   navigateToAnchor,
   normalizeHttpUrl,
   parseTabFromUrl,
+  sanitizeOriginUrl,
   stripTrailingOpenAIV1,
   updateUrlWithTab,
 } from "~/utils/core/url"
@@ -89,6 +90,14 @@ describe("normalizeHttpUrl", () => {
     expect(normalizeHttpUrl("example.com/")).toBe("https://example.com")
   })
 
+  it("rejects path/fragment/query-like input", () => {
+    expect(normalizeHttpUrl("/path")).toBeNull()
+    expect(normalizeHttpUrl("?tab=basic")).toBeNull()
+    expect(normalizeHttpUrl("#section")).toBeNull()
+    expect(normalizeHttpUrl("./relative")).toBeNull()
+    expect(normalizeHttpUrl("../relative")).toBeNull()
+  })
+
   it("keeps http/https scheme and strips trailing slash", () => {
     expect(normalizeHttpUrl("https://example.com/")).toBe("https://example.com")
     expect(normalizeHttpUrl("http://example.com/")).toBe("http://example.com")
@@ -97,6 +106,38 @@ describe("normalizeHttpUrl", () => {
   it("rejects non-http schemes and invalid urls", () => {
     expect(normalizeHttpUrl("ftp://example.com")).toBeNull()
     expect(normalizeHttpUrl("not a url")).toBeNull()
+  })
+})
+
+describe("sanitizeOriginUrl", () => {
+  it("returns undefined for empty input", () => {
+    expect(sanitizeOriginUrl(undefined)).toBeUndefined()
+    expect(sanitizeOriginUrl(null)).toBeUndefined()
+    expect(sanitizeOriginUrl("")).toBeUndefined()
+    expect(sanitizeOriginUrl("   ")).toBeUndefined()
+  })
+
+  it("rejects path/fragment/query-like input", () => {
+    expect(sanitizeOriginUrl("/path")).toBeUndefined()
+    expect(sanitizeOriginUrl("?tab=basic")).toBeUndefined()
+    expect(sanitizeOriginUrl("#section")).toBeUndefined()
+    expect(sanitizeOriginUrl("./relative")).toBeUndefined()
+    expect(sanitizeOriginUrl("../relative")).toBeUndefined()
+  })
+
+  it("normalizes origins and prefixes https:// when needed", () => {
+    expect(sanitizeOriginUrl("example.com")).toBe("https://example.com")
+    expect(sanitizeOriginUrl("example.com/path")).toBe("https://example.com")
+    expect(sanitizeOriginUrl("//example.com")).toBe("https://example.com")
+    expect(sanitizeOriginUrl("https://example.com/path")).toBe(
+      "https://example.com",
+    )
+  })
+
+  it("supports host:port inputs and rejects non-http schemes", () => {
+    expect(sanitizeOriginUrl("localhost:3000")).toBe("https://localhost:3000")
+    expect(sanitizeOriginUrl("ftp://example.com")).toBeUndefined()
+    expect(sanitizeOriginUrl("file:///etc/hosts")).toBeUndefined()
   })
 })
 
