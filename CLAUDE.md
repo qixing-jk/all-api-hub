@@ -382,7 +382,7 @@ t("account:healthStatus.normal")  // namespace:key
 
 ### Logging
 
-**Structured Logging** (`/utils/core/logger`):
+**Structured Logging** (`~/utils/core/logger`):
 ```typescript
 const logger = createLogger("ServiceName")
 
