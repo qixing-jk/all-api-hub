@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useRef, useState, type ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
 import { AppLayout } from "~/components/AppLayout"
@@ -6,6 +6,9 @@ import { UI_CONSTANTS } from "~/constants/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import AccountList from "~/features/AccountManagement/components/AccountList"
 import { AccountManagementProvider } from "~/features/AccountManagement/hooks/AccountManagementProvider"
+import ApiCredentialProfilesPopupView, {
+  type ApiCredentialProfilesPopupViewHandle,
+} from "~/features/ApiCredentialProfiles/components/ApiCredentialProfilesPopupView"
 import BookmarksList from "~/features/SiteBookmarks/components/BookmarksList"
 import { useBookmarkDialogContext } from "~/features/SiteBookmarks/hooks/BookmarkDialogStateContext"
 import { useAddAccountHandler } from "~/hooks/useAddAccountHandler"
@@ -16,7 +19,9 @@ import ActionButtons from "./components/ActionButtons"
 import BalanceSection from "./components/BalanceSection"
 import BookmarkStatsSection from "./components/BookmarkStatsSection"
 import HeaderSection from "./components/HeaderSection"
-import PopupViewSwitchTabs from "./components/PopupViewSwitchTabs"
+import PopupViewSwitchTabs, {
+  type PopupViewType,
+} from "./components/PopupViewSwitchTabs"
 import ShareOverviewSnapshotButton from "./components/ShareOverviewSnapshotButton"
 
 /**
@@ -24,16 +29,61 @@ import ShareOverviewSnapshotButton from "./components/ShareOverviewSnapshotButto
  * Handles layout sizing, header/actions, and account list rendering.
  */
 function PopupContent() {
-  const { t } = useTranslation(["account", "bookmark", "common"])
+  const { t } = useTranslation([
+    "account",
+    "bookmark",
+    "common",
+    "apiCredentialProfiles",
+  ])
   const { isLoading } = useUserPreferencesContext()
   const { handleAddAccountClick } = useAddAccountHandler()
   const inSidePanel = isExtensionSidePanel()
 
-  const [activeView, setActiveView] = useState<"accounts" | "bookmarks">(
-    "accounts",
-  )
+  const [activeView, setActiveView] = useState<PopupViewType>("accounts")
 
   const { openAddBookmark } = useBookmarkDialogContext()
+
+  const apiCredentialProfilesViewRef =
+    useRef<ApiCredentialProfilesPopupViewHandle>(null)
+
+  const viewConfig: Record<
+    PopupViewType,
+    {
+      showRefresh: boolean
+      headerAction?: ReactNode
+      statsSection?: ReactNode
+      primaryActionLabel: string
+      onPrimaryAction: () => void
+      content: ReactNode
+    }
+  > = {
+    accounts: {
+      showRefresh: true,
+      headerAction: <ShareOverviewSnapshotButton />,
+      statsSection: <BalanceSection />,
+      primaryActionLabel: t("account:addAccount"),
+      onPrimaryAction: handleAddAccountClick,
+      content: <AccountList />,
+    },
+    bookmarks: {
+      showRefresh: false,
+      statsSection: <BookmarkStatsSection />,
+      primaryActionLabel: t("bookmark:actions.add"),
+      onPrimaryAction: openAddBookmark,
+      content: <BookmarksList />,
+    },
+    apiCredentialProfiles: {
+      showRefresh: false,
+      primaryActionLabel: t("apiCredentialProfiles:actions.add"),
+      onPrimaryAction: () =>
+        apiCredentialProfilesViewRef.current?.openAddDialog(),
+      content: (
+        <ApiCredentialProfilesPopupView ref={apiCredentialProfilesViewRef} />
+      ),
+    },
+  }
+
+  const activeViewConfig = viewConfig[activeView]
 
   const popupWidthClass = isMobileByUA()
     ? "w-full"
@@ -56,7 +106,7 @@ function PopupContent() {
       )}
     >
       <HeaderSection
-        showRefresh={activeView === "accounts"}
+        showRefresh={activeViewConfig.showRefresh}
         activeView={activeView}
       />
 
@@ -67,33 +117,24 @@ function PopupContent() {
             onChange={setActiveView}
             accountsLabel={t("bookmark:switch.accounts")}
             bookmarksLabel={t("bookmark:switch.bookmarks")}
-          />
-          {activeView === "accounts" && <ShareOverviewSnapshotButton />}
-        </div>
-        {!isLoading && (
-          <>
-            {activeView === "accounts" ? (
-              <BalanceSection />
-            ) : (
-              <BookmarkStatsSection />
+            apiCredentialProfilesLabel={t(
+              "apiCredentialProfiles:popup.tabLabel",
             )}
-          </>
-        )}
+          />
+          {activeViewConfig.headerAction}
+        </div>
+        {!isLoading && activeViewConfig.statsSection
+          ? activeViewConfig.statsSection
+          : null}
       </section>
 
       <div className="flex-1">
         <ActionButtons
-          primaryActionLabel={
-            activeView === "accounts"
-              ? t("account:addAccount")
-              : t("bookmark:actions.add")
-          }
-          onPrimaryAction={
-            activeView === "accounts" ? handleAddAccountClick : openAddBookmark
-          }
+          primaryActionLabel={activeViewConfig.primaryActionLabel}
+          onPrimaryAction={activeViewConfig.onPrimaryAction}
         />
 
-        {activeView === "accounts" ? <AccountList /> : <BookmarksList />}
+        {activeViewConfig.content}
       </div>
     </div>
   )

@@ -22,12 +22,14 @@ import { getManifest } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import {
+  openApiCredentialProfilesPage,
   openFullAccountManagerPage,
   openFullBookmarkManagerPage,
   openSettingsPage,
   openSidePanelPage,
 } from "~/utils/navigation"
 
+import type { PopupViewType } from "./PopupViewSwitchTabs"
 import CompactThemeToggle from "./ThemeToggle"
 
 /**
@@ -83,7 +85,7 @@ export default function HeaderSection({
   activeView = "accounts",
 }: {
   showRefresh?: boolean
-  activeView?: "accounts" | "bookmarks"
+  activeView?: PopupViewType
 }) {
   const { t } = useTranslation(["ui", "account", "common"])
   const { isRefreshing, handleRefresh } = useAccountDataContext()
@@ -112,11 +114,18 @@ export default function HeaderSection({
   const openFullPageLabel =
     activeView === "bookmarks"
       ? t("ui:navigation.bookmark")
-      : t("ui:navigation.account")
+      : activeView === "apiCredentialProfiles"
+        ? t("ui:navigation.apiCredentialProfiles")
+        : t("ui:navigation.account")
 
   const handleOpenFullPage = async () => {
     if (activeView === "bookmarks") {
       await openFullBookmarkManagerPage()
+      return
+    }
+
+    if (activeView === "apiCredentialProfiles") {
+      await openApiCredentialProfilesPage()
       return
     }
 

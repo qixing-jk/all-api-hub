@@ -1,12 +1,13 @@
 import { ANIMATIONS, COLORS } from "~/constants/designTokens"
 
-export type PopupViewType = "accounts" | "bookmarks"
+export type PopupViewType = "accounts" | "bookmarks" | "apiCredentialProfiles"
 
 interface PopupViewSwitchTabsProps {
   value: PopupViewType
   onChange: (value: PopupViewType) => void
   accountsLabel: string
   bookmarksLabel: string
+  apiCredentialProfilesLabel: string
 }
 
 /**
@@ -18,37 +19,38 @@ export default function PopupViewSwitchTabs({
   onChange,
   accountsLabel,
   bookmarksLabel,
+  apiCredentialProfilesLabel,
 }: PopupViewSwitchTabsProps) {
-  const baseClassName = `rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${ANIMATIONS.transition.base}`
+  const baseClassName = `rounded-md px-2 py-1 text-xs font-medium transition-colors ${ANIMATIONS.transition.base}`
   const activeClassName =
     "dark:bg-dark-bg-secondary dark:text-dark-text-primary bg-white text-gray-900 shadow-sm"
   const inactiveClassName =
     "dark:text-dark-text-secondary dark:hover:text-dark-text-primary text-gray-500 hover:text-gray-700"
 
+  const tabs = [
+    { value: "accounts", label: accountsLabel },
+    { value: "bookmarks", label: bookmarksLabel },
+    { value: "apiCredentialProfiles", label: apiCredentialProfilesLabel },
+  ] as const
+
   return (
     <div
-      className={`flex space-x-1 ${COLORS.background.tertiary} w-fit rounded-lg p-1`}
+      className={`flex min-w-0 flex-1 gap-1 ${COLORS.background.tertiary} rounded-lg p-1`}
     >
-      <button
-        type="button"
-        aria-pressed={value === "accounts"}
-        onClick={() => onChange("accounts")}
-        className={`${baseClassName} ${
-          value === "accounts" ? activeClassName : inactiveClassName
-        }`}
-      >
-        {accountsLabel}
-      </button>
-      <button
-        type="button"
-        aria-pressed={value === "bookmarks"}
-        onClick={() => onChange("bookmarks")}
-        className={`${baseClassName} ${
-          value === "bookmarks" ? activeClassName : inactiveClassName
-        }`}
-      >
-        {bookmarksLabel}
-      </button>
+      {tabs.map((tab) => (
+        <button
+          key={tab.value}
+          type="button"
+          aria-pressed={value === tab.value}
+          onClick={() => onChange(tab.value)}
+          title={tab.label}
+          className={`${baseClassName} flex min-w-0 flex-1 items-center justify-center truncate ${
+            value === tab.value ? activeClassName : inactiveClassName
+          }`}
+        >
+          {tab.label}
+        </button>
+      ))}
     </div>
   )
 }

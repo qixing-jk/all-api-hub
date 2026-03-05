@@ -2,7 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import HeaderSection from "~/entrypoints/popup/components/HeaderSection"
 import { isExtensionSidePanel } from "~/utils/browser"
-import { render, screen } from "~~/tests/test-utils/render"
+import {
+  openApiCredentialProfilesPage,
+  openFullAccountManagerPage,
+  openFullBookmarkManagerPage,
+} from "~/utils/navigation"
+import { fireEvent, render, screen } from "~~/tests/test-utils/render"
 
 vi.mock("~/assets/icon.png", () => ({
   default: "icon.png",
@@ -23,7 +28,20 @@ vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
   }),
 }))
 
+vi.mock("~/utils/navigation", () => ({
+  openApiCredentialProfilesPage: vi.fn(),
+  openFullAccountManagerPage: vi.fn(),
+  openFullBookmarkManagerPage: vi.fn(),
+  openSettingsPage: vi.fn(),
+  openSidePanelPage: vi.fn(),
+}))
+
 const mockedIsExtensionSidePanel = vi.mocked(isExtensionSidePanel)
+const mockedOpenApiCredentialProfilesPage = vi.mocked(
+  openApiCredentialProfilesPage,
+)
+const mockedOpenFullAccountManagerPage = vi.mocked(openFullAccountManagerPage)
+const mockedOpenFullBookmarkManagerPage = vi.mocked(openFullBookmarkManagerPage)
 
 describe("popup HeaderSection", () => {
   beforeEach(() => {
@@ -48,5 +66,37 @@ describe("popup HeaderSection", () => {
     expect(
       screen.queryByRole("button", { name: "common:actions.openSidePanel" }),
     ).not.toBeInTheDocument()
+  })
+
+  it("routes open full page to account manager for accounts view", async () => {
+    render(<HeaderSection activeView="accounts" />)
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "ui:navigation.account" }),
+    )
+
+    expect(mockedOpenFullAccountManagerPage).toHaveBeenCalledTimes(1)
+  })
+
+  it("routes open full page to bookmark manager for bookmarks view", async () => {
+    render(<HeaderSection activeView="bookmarks" />)
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "ui:navigation.bookmark" }),
+    )
+
+    expect(mockedOpenFullBookmarkManagerPage).toHaveBeenCalledTimes(1)
+  })
+
+  it("routes open full page to API credential profiles for API credentials view", async () => {
+    render(<HeaderSection activeView="apiCredentialProfiles" />)
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "ui:navigation.apiCredentialProfiles",
+      }),
+    )
+
+    expect(mockedOpenApiCredentialProfilesPage).toHaveBeenCalledTimes(1)
   })
 })

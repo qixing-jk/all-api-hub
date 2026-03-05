@@ -61,7 +61,7 @@ Users MUST be able to delete a bookmark. When a bookmark is deleted, its id MUST
 The system MUST provide a Bookmarks list UI in both Options and Popup:
 
 - **Options:** Bookmarks MUST be accessible via a dedicated Options sidebar/menu page (route `#bookmark`).
-- **Popup:** Users MUST be able to switch between Accounts and Bookmarks via an `Accounts | Bookmarks` control.
+- **Popup:** The popup view switch control MUST include entries for Accounts and Bookmarks, enabling users to switch between those views.
 
 #### Scenario: Bookmarks view does not show account-only sections
 - **WHEN** the user switches to the Bookmarks view in the Popup

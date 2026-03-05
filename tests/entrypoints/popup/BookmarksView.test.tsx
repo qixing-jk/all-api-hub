@@ -1,4 +1,9 @@
-import type { ReactNode } from "react"
+import {
+  forwardRef,
+  useImperativeHandle,
+  useState,
+  type ReactNode,
+} from "react"
 import { describe, expect, it, vi } from "vitest"
 
 import { BookmarkDialogStateProvider } from "~/features/SiteBookmarks/hooks/BookmarkDialogStateContext"
@@ -66,13 +71,36 @@ vi.mock("~/features/SiteBookmarks/components/BookmarksList", () => ({
   default: () => <div>BookmarksList</div>,
 }))
 
+vi.mock(
+  "~/features/ApiCredentialProfiles/components/ApiCredentialProfilesPopupView",
+  () => ({
+    default: forwardRef((_, ref) => {
+      const [isAddOpen, setIsAddOpen] = useState(false)
+      useImperativeHandle(
+        ref,
+        () => ({
+          openAddDialog: () => setIsAddOpen(true),
+        }),
+        [],
+      )
+
+      return (
+        <div>
+          <div>ApiCredentialProfilesPopupView</div>
+          {isAddOpen ? <div>ApiCredentialProfileDialogOpen</div> : null}
+        </div>
+      )
+    }),
+  }),
+)
+
 vi.mock("~/features/SiteBookmarks/components/BookmarkDialog", () => ({
   default: ({ isOpen }: { isOpen: boolean }) =>
     isOpen ? <div>BookmarkDialogOpen</div> : null,
 }))
 
 describe("popup bookmarks view", () => {
-  it("switches between accounts and bookmarks layouts", async () => {
+  it("switches between accounts, bookmarks, and api credentials layouts", async () => {
     const { default: App } = await import("~/entrypoints/popup/App")
 
     render(<App />)
@@ -94,6 +122,35 @@ describe("popup bookmarks view", () => {
     expect(screen.getByText("ActionButtons")).toBeInTheDocument()
     expect(screen.queryByText("AccountList")).not.toBeInTheDocument()
     expect(screen.getByText("BookmarksList")).toBeInTheDocument()
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "apiCredentialProfiles:popup.tabLabel",
+      }),
+    )
+
+    expect(await screen.findByText("HeaderRefresh:false")).toBeInTheDocument()
+    expect(screen.queryByText("BalanceSection")).not.toBeInTheDocument()
+    expect(screen.queryByText("BookmarkStatsSection")).not.toBeInTheDocument()
+    expect(screen.getByText("ActionButtons")).toBeInTheDocument()
+    expect(screen.queryByText("AccountList")).not.toBeInTheDocument()
+    expect(screen.queryByText("BookmarksList")).not.toBeInTheDocument()
+    expect(
+      screen.getByText("ApiCredentialProfilesPopupView"),
+    ).toBeInTheDocument()
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "apiCredentialProfiles:actions.add",
+      }),
+    )
+    expect(
+      await screen.findByText("ApiCredentialProfileDialogOpen"),
+    ).toBeInTheDocument()
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "bookmark:switch.bookmarks" }),
+    )
 
     fireEvent.click(
       await screen.findByRole("button", { name: "bookmark:actions.add" }),
