@@ -11,6 +11,7 @@ import type { DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { joinUrl } from "~/utils/core/url"
+import { tryParseOrigin } from "~/utils/core/urlParsing"
 import {
   buildOriginWhitelistPattern,
   buildUrlPrefixWhitelistPattern,
@@ -189,12 +190,7 @@ class RedemptionAssistService {
    * Extracts the URL origin (protocol + host) from a URL string.
    */
   private getOrigin(url: string): string | null {
-    try {
-      const parsed = new URL(url)
-      return parsed.origin
-    } catch {
-      return null
-    }
+    return tryParseOrigin(url)
   }
 
   private getRuntimeWhitelist() {

@@ -44,6 +44,7 @@ import {
   onTabUpdated,
 } from "~/utils/browser/browserApi"
 import { createLogger } from "~/utils/core/logger"
+import { tryParseOrigin } from "~/utils/core/urlParsing"
 
 /**
  * Unified logger scoped to account data context and refresh orchestration.
@@ -237,11 +238,7 @@ export const AccountDataProvider = ({
       // Site-level detection: find any stored accounts that belong to the same origin.
       // This answers "does this site already exist in the user's accounts?".
       const originAccounts = accountsRef.current.filter((account) => {
-        try {
-          return new URL(account.site_url).origin === origin
-        } catch {
-          return false
-        }
+        return tryParseOrigin(account.site_url) === origin
       })
 
       if (seq !== currentTabCheckSeqRef.current) return

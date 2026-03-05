@@ -7,6 +7,7 @@ import { getApiService } from "~/services/apiService"
 import type { AccountToken } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
+import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
 
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "../constants"
 
@@ -48,11 +49,7 @@ const tokenMatchesSearch = (token: AccountToken, searchLower: string) => {
 }
 
 const normalizeOrigin = (baseUrl: string) => {
-  try {
-    return new URL(baseUrl).origin
-  } catch {
-    return baseUrl.trim()
-  }
+  return normalizeUrlForOriginKey(baseUrl, { stripTrailingSlashes: false })
 }
 
 /**

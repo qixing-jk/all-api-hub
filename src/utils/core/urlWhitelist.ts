@@ -1,5 +1,7 @@
 import { escapeRegExp } from "lodash-es"
 
+import { tryParseOrigin, tryParseUrlPrefix } from "~/utils/core/urlParsing"
+
 /**
  * Creates a RegExp pattern string that matches any URL under the same origin as `url`.
  *
@@ -10,16 +12,10 @@ import { escapeRegExp } from "lodash-es"
  * Returns null when `url` is not a valid absolute URL.
  */
 export function buildOriginWhitelistPattern(url: string): string | null {
-  if (!url) return null
-  try {
-    const parsed = new URL(url)
-    const { origin } = parsed
-    if (!origin) return null
-    const escaped = escapeRegExp(origin)
-    return `^${escaped}(?:[/?#].*)?$`
-  } catch {
-    return null
-  }
+  const origin = tryParseOrigin(url)
+  if (!origin) return null
+  const escaped = escapeRegExp(origin)
+  return `^${escaped}(?:[/?#].*)?$`
 }
 
 /**
@@ -33,16 +29,12 @@ export function buildOriginWhitelistPattern(url: string): string | null {
  * Returns null when `url` is not a valid absolute URL.
  */
 export function buildUrlPrefixWhitelistPattern(url: string): string | null {
-  if (!url) return null
-  try {
-    const parsed = new URL(url)
-    const normalized = `${parsed.origin}${parsed.pathname}`.replace(/\/+$/, "")
-    if (!normalized) return null
-    const escaped = escapeRegExp(normalized)
-    return `^${escaped}(?:[/?#].*)?$`
-  } catch {
-    return null
-  }
+  const prefix = tryParseUrlPrefix(url)
+  if (!prefix) return null
+  const normalized = prefix.replace(/\/+$/, "")
+  if (!normalized) return null
+  const escaped = escapeRegExp(normalized)
+  return `^${escaped}(?:[/?#].*)?$`
 }
 
 /**

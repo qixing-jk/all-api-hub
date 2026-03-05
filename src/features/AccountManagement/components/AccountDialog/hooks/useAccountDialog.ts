@@ -35,6 +35,10 @@ import {
 } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
+import {
+  normalizeUrlForOriginKey,
+  tryParseOrigin,
+} from "~/utils/core/urlParsing"
 
 const AUTO_DETECT_SLOW_HINT_DELAY_MS = 10_000
 
@@ -567,13 +571,7 @@ export function useAccountDialog({
     setIsImportingSub2apiSession(true)
     try {
       const baseUrl = url.trim()
-      const targetOrigin = (() => {
-        try {
-          return new URL(baseUrl).origin
-        } catch {
-          return null
-        }
-      })()
+      const targetOrigin = tryParseOrigin(baseUrl)
 
       let imported: any | null = null
 
@@ -582,11 +580,7 @@ export function useAccountDialog({
         const candidates = tabs
           .filter((tab) => {
             if (!tab?.id || !tab.url) return false
-            try {
-              return new URL(tab.url).origin === targetOrigin
-            } catch {
-              return false
-            }
+            return tryParseOrigin(tab.url) === targetOrigin
           })
           .sort((a, b) => Number(Boolean(b.active)) - Number(Boolean(a.active)))
 
@@ -1073,17 +1067,8 @@ export function useAccountDialog({
 }
 
 /**
- *
+ * Normalizes user-supplied site URLs for duplicate-account checks.
  */
 function normalizeSiteUrlForDuplicateCheck(value: string): string {
-  const trimmed = value.trim()
-  if (!trimmed) {
-    return ""
-  }
-
-  try {
-    return new URL(trimmed).origin.toLowerCase()
-  } catch {
-    return trimmed.replace(/\/+$/, "").toLowerCase()
-  }
+  return normalizeUrlForOriginKey(value, { lowerCase: true })
 }

@@ -31,6 +31,7 @@ import {
 import { executeWithTempWindowFallback } from "~/utils/browser/tempWindowFetch"
 import { createLogger } from "~/utils/core/logger"
 import { joinUrl } from "~/utils/core/url"
+import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
 
 type NormalizedAuthContext = AuthConfig
 
@@ -78,14 +79,7 @@ function isLogApiEndpoint(endpoint: string | undefined): boolean {
  * Extract the origin (scheme + host + port) from a base URL for rate limiting keys.
  */
 function resolveLogRateLimitKey(baseUrl: string): string {
-  const trimmed = (baseUrl || "").trim()
-  if (!trimmed) return ""
-
-  try {
-    return new URL(trimmed).origin
-  } catch {
-    return trimmed.replace(/\/+$/, "")
-  }
+  return normalizeUrlForOriginKey(baseUrl, { stripTrailingSlashes: true })
 }
 
 /**

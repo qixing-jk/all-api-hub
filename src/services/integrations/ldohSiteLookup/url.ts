@@ -3,6 +3,7 @@ import {
   LDOH_SITE_SEARCH_QUERY_PARAM,
 } from "~/services/integrations/ldohSiteLookup/constants"
 import { normalizeHttpUrl } from "~/utils/core/url"
+import { tryParseUrl } from "~/utils/core/urlParsing"
 
 export type NormalizedUrlMatchParts = {
   origin: string | null
@@ -24,14 +25,14 @@ export function normalizeUrlForLdohMatch(
     return { origin: null, hostname: null }
   }
 
-  try {
-    const url = new URL(normalized)
-    return {
-      origin: url.origin.toLowerCase(),
-      hostname: url.hostname.toLowerCase(),
-    }
-  } catch {
+  const url = tryParseUrl(normalized)
+  if (!url) {
     return { origin: null, hostname: null }
+  }
+
+  return {
+    origin: url.origin.toLowerCase(),
+    hostname: url.hostname.toLowerCase(),
   }
 }
 

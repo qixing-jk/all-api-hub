@@ -18,6 +18,7 @@ import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
+import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
 
 import { ensureDefaultApiTokenForAccount } from "./ensureDefaultToken"
 import { runPerKeySequential } from "./perOriginQueue"
@@ -56,11 +57,10 @@ function createIdleProgress(): AccountKeyRepairProgress {
  * @returns Lowercased origin when parsable, otherwise the trimmed input.
  */
 function getOriginKey(siteUrl: string): string {
-  try {
-    return new URL(siteUrl).origin.toLowerCase()
-  } catch {
-    return siteUrl.trim().toLowerCase()
-  }
+  return normalizeUrlForOriginKey(siteUrl, {
+    lowerCase: true,
+    stripTrailingSlashes: false,
+  })
 }
 
 /**

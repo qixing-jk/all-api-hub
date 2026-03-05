@@ -1,6 +1,7 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { getAllTabs, sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { createLogger } from "~/utils/core/logger"
+import { tryParseOrigin } from "~/utils/core/urlParsing"
 
 import { getSafeErrorMessage } from "./redaction"
 
@@ -14,14 +15,6 @@ import { getSafeErrorMessage } from "./redaction"
  * IMPORTANT: Never log JWT values.
  */
 const logger = createLogger("Sub2ApiTokenResync")
-
-const tryParseOrigin = (value: string): string | null => {
-  try {
-    return new URL(value).origin
-  } catch {
-    return null
-  }
-}
 
 export type Sub2ApiResyncedToken = {
   accessToken: string
