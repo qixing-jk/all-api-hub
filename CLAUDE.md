@@ -400,7 +400,7 @@ logger.error("Operation failed", error)
 
 **Error Utilities**:
 ```typescript
-import { getErrorMessage } from "~/utils/error"
+import { getErrorMessage } from "~/utils/core/error"
 
 try {
   await operation()

@@ -12,8 +12,8 @@ import {
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
 import type { SiteAccount } from "~/types"
+import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
-import { getErrorMessage } from "~/utils/error"
 
 import { useAccountDataContext } from "../../hooks/AccountDataContext"
 import { DedupeAccountsConfirmDetails } from "./DedupeAccountsConfirmDetails"
