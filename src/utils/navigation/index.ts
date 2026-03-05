@@ -308,21 +308,31 @@ const navigateToBasicSettings = (tabId?: string) => {
 }
 
 /**
- * Opens Managed Site channel management, optionally focusing a channel id.
+ * Opens Managed Site channel management, optionally focusing a channel id or applying a search filter.
  */
 const _openManagedSiteChannelsPage = (params?: {
   channelId?: number | string
+  search?: string
 }) => {
   const targetHash = getManagedSiteChannelsHash()
-  const searchParams =
-    params?.channelId != null ? { channelId: String(params.channelId) } : {}
+  const searchParams: Record<string, string | undefined> = {}
+
+  if (params?.channelId != null) {
+    searchParams.channelId = String(params.channelId)
+  }
+
+  if (params?.search) {
+    searchParams.search = params.search
+  }
+
+  const resolvedParams = Object.keys(searchParams).length ? searchParams : {}
 
   if (isOnOptionsPage()) {
-    navigateWithinOptionsPage(targetHash, searchParams)
+    navigateWithinOptionsPage(targetHash, resolvedParams)
     return
   }
 
-  openOrFocusOptionsPage(targetHash, searchParams)
+  openOrFocusOptionsPage(targetHash, resolvedParams)
 }
 
 type ManagedSiteModelSyncTab = "history" | "manual"

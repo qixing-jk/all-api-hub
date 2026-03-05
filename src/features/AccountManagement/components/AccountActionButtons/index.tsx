@@ -9,6 +9,7 @@ import {
   KeyIcon,
   LinkIcon,
   ListBulletIcon,
+  MagnifyingGlassIcon,
   NoSymbolIcon,
   PencilIcon,
   TrashIcon,
@@ -28,8 +29,13 @@ import { useAccountDataContext } from "~/features/AccountManagement/hooks/Accoun
 import { useDialogStateContext } from "~/features/AccountManagement/hooks/DialogStateContext"
 import { exportShareSnapshotWithToast } from "~/features/ShareSnapshots/utils/exportShareSnapshotWithToast"
 import { getApiService } from "~/services/apiService"
+import {
+  getManagedSiteService,
+  hasValidManagedSiteConfig,
+} from "~/services/managedSites/managedSiteService"
 import { buildAccountShareSnapshotPayload } from "~/services/sharing/shareSnapshots"
 import { sanitizeOriginUrl } from "~/services/sharing/shareSnapshots/utils"
+import { normalizeOpenAiFamilyBaseUrl } from "~/services/verification/webAiApiCheck/extractCredentials"
 import type { DisplaySiteData } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
@@ -37,6 +43,8 @@ import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import {
   openKeysPage,
+  openManagedSiteChannelsForChannel,
+  openManagedSiteChannelsPage,
   openModelsPage,
   openRedeemPage,
   openUsagePage,
@@ -127,7 +135,8 @@ export default function AccountActionButtons({
     "common",
     "autoCheckin",
   ])
-  const { currencyType, showTodayCashflow } = useUserPreferencesContext()
+  const { currencyType, showTodayCashflow, preferences } =
+    useUserPreferencesContext()
   const {
     refreshingAccountId,
     handleRefreshAccount,
@@ -147,6 +156,7 @@ export default function AccountActionButtons({
     !isAccountDisabled &&
     site.checkIn?.enableDetection === true &&
     site.checkIn?.autoCheckInEnabled !== false
+  const canLocateManagedSiteChannel = hasValidManagedSiteConfig(preferences)
 
   const isPinned = isAccountPinned(site.id)
   const pinLabel = isPinned ? t("actions.unpin") : t("actions.pin")
@@ -250,6 +260,115 @@ export default function AccountActionButtons({
 
   const handleNavigateToRedeemPage = () => {
     openRedeemPage(site)
+  }
+
+  const handleLocateManagedSiteChannel = async () => {
+    if (!canLocateManagedSiteChannel) {
+      return
+    }
+
+    const normalizedAccountBaseUrl =
+      normalizeOpenAiFamilyBaseUrl(site.baseUrl) ?? site.baseUrl.trim()
+    if (!normalizedAccountBaseUrl) {
+      return
+    }
+
+    try {
+      const service = await getManagedSiteService()
+      const managedConfig = await service.getConfig()
+
+      if (!managedConfig) {
+        toast.error(t(`messages:${service.messagesKey}.configMissing`))
+        openManagedSiteChannelsPage({ search: normalizedAccountBaseUrl })
+        return
+      }
+
+      const tokensResponse = await getApiService(
+        site.siteType,
+      ).fetchAccountTokens({
+        baseUrl: normalizedAccountBaseUrl,
+        accountId: site.id,
+        auth: {
+          authType: site.authType,
+          userId: site.userId,
+          accessToken: site.token,
+          cookie: site.cookieAuthSessionCookie,
+        },
+      })
+
+      if (!Array.isArray(tokensResponse)) {
+        toast.error(t("actions.channelLocateFailed"))
+        openManagedSiteChannelsPage({ search: normalizedAccountBaseUrl })
+        return
+      }
+
+      if (tokensResponse.length !== 1) {
+        openManagedSiteChannelsPage({ search: normalizedAccountBaseUrl })
+        if (tokensResponse.length > 1) {
+          toast.success(t("actions.channelLocateMultipleKeysFallback"))
+        }
+        return
+      }
+
+      const apiToken = tokensResponse[0]
+      let formData: Awaited<ReturnType<typeof service.prepareChannelFormData>>
+      try {
+        formData = await service.prepareChannelFormData(
+          { ...site, baseUrl: normalizedAccountBaseUrl },
+          apiToken,
+        )
+      } catch (error) {
+        logger.warn(
+          "Failed to build channel match inputs; using URL-only match",
+          {
+            error,
+            siteId: site.id,
+            baseUrl: site.baseUrl,
+            siteType: site.siteType,
+          },
+        )
+        openManagedSiteChannelsPage({ search: normalizedAccountBaseUrl })
+        return
+      }
+
+      const exactMatch = await service.findMatchingChannel(
+        managedConfig.baseUrl,
+        managedConfig.token,
+        managedConfig.userId,
+        formData.base_url,
+        formData.models,
+        formData.key,
+      )
+
+      if (exactMatch?.id != null) {
+        openManagedSiteChannelsForChannel(exactMatch.id)
+        return
+      }
+
+      const baseUrlMatch = await service.findMatchingChannel(
+        managedConfig.baseUrl,
+        managedConfig.token,
+        managedConfig.userId,
+        formData.base_url,
+        formData.models,
+      )
+
+      openManagedSiteChannelsPage({ search: formData.base_url })
+
+      if (baseUrlMatch) {
+        toast.success(t("actions.channelLocateKeyUnavailable"))
+      }
+    } catch (error) {
+      logger.error("Failed to locate managed site channel", {
+        error,
+        siteId: site.id,
+        baseUrl: site.baseUrl,
+        siteType: site.siteType,
+      })
+
+      openManagedSiteChannelsPage({ search: normalizedAccountBaseUrl })
+      toast.error(t("actions.channelLocateFailed"))
+    }
   }
 
   const handleOpenKeyList = () => {
@@ -457,6 +576,14 @@ export default function AccountActionButtons({
                 icon={CpuChipIcon}
                 label={t("actions.modelManagement")}
               />
+
+              {canLocateManagedSiteChannel && (
+                <AccountActionMenuItem
+                  onClick={handleLocateManagedSiteChannel}
+                  icon={MagnifyingGlassIcon}
+                  label={t("actions.locateManagedSiteChannel")}
+                />
+              )}
 
               <hr className="dark:border-dark-bg-tertiary my-1 border-gray-200" />
 

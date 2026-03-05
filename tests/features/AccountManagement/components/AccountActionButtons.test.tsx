@@ -11,21 +11,42 @@ import { render } from "~~/tests/test-utils/render"
 const {
   mockHandleSetAccountDisabled,
   fetchAccountTokensMock,
+  getManagedSiteServiceMock,
+  openManagedSiteChannelsForChannelMock,
+  openManagedSiteChannelsPageMock,
   sendRuntimeMessageMock,
   loadAccountDataMock,
+  userPreferencesContextValue,
   toastDismissMock,
   toastLoadingMock,
   toastSuccessMock,
   toastErrorMock,
+  hasValidManagedSiteConfigMock,
 } = vi.hoisted(() => ({
   mockHandleSetAccountDisabled: vi.fn(),
   fetchAccountTokensMock: vi.fn(),
+  getManagedSiteServiceMock: vi.fn(),
+  openManagedSiteChannelsForChannelMock: vi.fn(),
+  openManagedSiteChannelsPageMock: vi.fn(),
   sendRuntimeMessageMock: vi.fn(),
   loadAccountDataMock: vi.fn(),
+  userPreferencesContextValue: {
+    currencyType: "USD",
+    showTodayCashflow: true,
+    preferences: {
+      managedSiteType: "new-api",
+      newApi: {
+        baseUrl: "https://admin.example",
+        adminToken: "t",
+        userId: "1",
+      },
+    },
+  },
   toastDismissMock: vi.fn(),
   toastLoadingMock: vi.fn(),
   toastSuccessMock: vi.fn(),
   toastErrorMock: vi.fn(),
+  hasValidManagedSiteConfigMock: vi.fn(() => true),
 }))
 
 vi.mock("react-hot-toast", () => ({
@@ -41,6 +62,11 @@ vi.mock("~/services/apiService", () => ({
   getApiService: () => ({
     fetchAccountTokens: fetchAccountTokensMock,
   }),
+}))
+
+vi.mock("~/services/managedSites/managedSiteService", () => ({
+  getManagedSiteService: getManagedSiteServiceMock,
+  hasValidManagedSiteConfig: hasValidManagedSiteConfigMock,
 }))
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
@@ -77,14 +103,13 @@ vi.mock("~/features/AccountManagement/hooks/DialogStateContext", () => ({
 
 vi.mock("~/contexts/UserPreferencesContext", () => ({
   UserPreferencesProvider: ({ children }: { children: any }) => children,
-  useUserPreferencesContext: () => ({
-    currencyType: "USD",
-    showTodayCashflow: true,
-  }),
+  useUserPreferencesContext: () => userPreferencesContextValue,
 }))
 
 vi.mock("~/utils/navigation", () => ({
   openKeysPage: vi.fn(),
+  openManagedSiteChannelsForChannel: openManagedSiteChannelsForChannelMock,
+  openManagedSiteChannelsPage: openManagedSiteChannelsPageMock,
   openModelsPage: vi.fn(),
   openRedeemPage: vi.fn(),
   openUsagePage: vi.fn(),
@@ -93,6 +118,15 @@ vi.mock("~/utils/navigation", () => ({
 describe("AccountActionButtons", () => {
   afterEach(() => {
     vi.clearAllMocks()
+    userPreferencesContextValue.preferences = {
+      managedSiteType: "new-api",
+      newApi: {
+        baseUrl: "https://admin.example",
+        adminToken: "t",
+        userId: "1",
+      },
+    }
+    hasValidManagedSiteConfigMock.mockReturnValue(true)
   })
 
   it("shows only Enable action when account is disabled", async () => {
@@ -319,5 +353,269 @@ describe("AccountActionButtons", () => {
       )
       expect(loadAccountDataMock).toHaveBeenCalled()
     })
+  })
+
+  it("navigates to managed site channels focused by channelId when an exact match is found", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([{ key: "sk-1" }])
+
+    const managedService = {
+      messagesKey: "newapi",
+      getConfig: vi.fn().mockResolvedValue({
+        baseUrl: "https://admin.example",
+        token: "t",
+        userId: "1",
+      }),
+      prepareChannelFormData: vi.fn().mockResolvedValue({
+        base_url: "https://api.example.com",
+        models: ["gpt-4"],
+        key: "sk-1",
+      }),
+      findMatchingChannel: vi.fn().mockResolvedValueOnce({ id: 123 }),
+    }
+
+    getManagedSiteServiceMock.mockResolvedValueOnce(managedService as any)
+
+    const user = userEvent.setup()
+
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({
+          id: "acc-6",
+          disabled: false,
+          name: "Site",
+          baseUrl: "https://api.example.com",
+        })}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+
+    const menu = await screen.findByRole("menu")
+    const label = await within(menu).findByText(
+      "account:actions.locateManagedSiteChannel",
+    )
+    const button = label.closest("button")
+    expect(button).not.toBeNull()
+
+    await user.click(button!)
+
+    await waitFor(() => {
+      expect(openManagedSiteChannelsForChannelMock).toHaveBeenCalledWith(123)
+    })
+    expect(openManagedSiteChannelsPageMock).not.toHaveBeenCalled()
+  })
+
+  it("falls back to base URL search and shows a toast when key-precise matching is unavailable", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([{ key: "sk-1" }])
+
+    const managedService = {
+      messagesKey: "newapi",
+      getConfig: vi.fn().mockResolvedValue({
+        baseUrl: "https://admin.example",
+        token: "t",
+        userId: "1",
+      }),
+      prepareChannelFormData: vi.fn().mockResolvedValue({
+        base_url: "https://api.example.com",
+        models: ["gpt-4"],
+        key: "sk-1",
+      }),
+      findMatchingChannel: vi
+        .fn()
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({ id: 456 }),
+    }
+
+    getManagedSiteServiceMock.mockResolvedValueOnce(managedService as any)
+
+    const user = userEvent.setup()
+
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({
+          id: "acc-7",
+          disabled: false,
+          name: "Site",
+          baseUrl: "https://api.example.com",
+        })}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+
+    const menu = await screen.findByRole("menu")
+    const label = await within(menu).findByText(
+      "account:actions.locateManagedSiteChannel",
+    )
+    const button = label.closest("button")
+    expect(button).not.toBeNull()
+
+    await user.click(button!)
+
+    await waitFor(() => {
+      expect(openManagedSiteChannelsPageMock).toHaveBeenCalledWith({
+        search: "https://api.example.com",
+      })
+      expect(toastSuccessMock).toHaveBeenCalledWith(
+        "account:actions.channelLocateKeyUnavailable",
+      )
+    })
+    expect(openManagedSiteChannelsForChannelMock).not.toHaveBeenCalled()
+  })
+
+  it("falls back to base URL search when multiple keys are present", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([
+      { key: "sk-1" },
+      { key: "sk-2" },
+    ])
+
+    const managedService = {
+      messagesKey: "newapi",
+      getConfig: vi.fn().mockResolvedValue({
+        baseUrl: "https://admin.example",
+        token: "t",
+        userId: "1",
+      }),
+      prepareChannelFormData: vi.fn(),
+      findMatchingChannel: vi.fn(),
+    }
+
+    getManagedSiteServiceMock.mockResolvedValueOnce(managedService as any)
+
+    const user = userEvent.setup()
+
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({
+          id: "acc-8",
+          disabled: false,
+          name: "Site",
+          baseUrl: "https://api.example.com/v1/",
+        })}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+
+    const menu = await screen.findByRole("menu")
+    const label = await within(menu).findByText(
+      "account:actions.locateManagedSiteChannel",
+    )
+    const button = label.closest("button")
+    expect(button).not.toBeNull()
+
+    await user.click(button!)
+
+    await waitFor(() => {
+      expect(openManagedSiteChannelsPageMock).toHaveBeenCalledWith({
+        search: "https://api.example.com",
+      })
+      expect(toastSuccessMock).toHaveBeenCalledWith(
+        "account:actions.channelLocateMultipleKeysFallback",
+      )
+    })
+    expect(managedService.prepareChannelFormData).not.toHaveBeenCalled()
+    expect(managedService.findMatchingChannel).not.toHaveBeenCalled()
+  })
+
+  it("hides the locate action when managed site config is missing", async () => {
+    hasValidManagedSiteConfigMock.mockReturnValue(false)
+
+    const user = userEvent.setup()
+
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({
+          id: "acc-9",
+          disabled: false,
+          name: "Site",
+          baseUrl: "https://api.example.com/v1/",
+        })}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+
+    const menu = await screen.findByRole("menu")
+    const label = within(menu).queryByText(
+      "account:actions.locateManagedSiteChannel",
+    )
+    expect(label).toBeNull()
+    expect(hasValidManagedSiteConfigMock).toHaveBeenCalledWith(
+      userPreferencesContextValue.preferences,
+    )
+    expect(getManagedSiteServiceMock).not.toHaveBeenCalled()
+  })
+
+  it("falls back to base URL search when token response is not an array", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce({} as any)
+
+    const managedService = {
+      messagesKey: "newapi",
+      getConfig: vi.fn().mockResolvedValue({
+        baseUrl: "https://admin.example",
+        token: "t",
+        userId: "1",
+      }),
+      prepareChannelFormData: vi.fn(),
+      findMatchingChannel: vi.fn(),
+    }
+
+    getManagedSiteServiceMock.mockResolvedValueOnce(managedService as any)
+
+    const user = userEvent.setup()
+
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({
+          id: "acc-10",
+          disabled: false,
+          name: "Site",
+          baseUrl: "https://api.example.com/v1/",
+        })}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+
+    const menu = await screen.findByRole("menu")
+    const label = await within(menu).findByText(
+      "account:actions.locateManagedSiteChannel",
+    )
+    const button = label.closest("button")
+    expect(button).not.toBeNull()
+
+    await user.click(button!)
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith(
+        "account:actions.channelLocateFailed",
+      )
+      expect(openManagedSiteChannelsPageMock).toHaveBeenCalledWith({
+        search: "https://api.example.com",
+      })
+    })
+    expect(managedService.prepareChannelFormData).not.toHaveBeenCalled()
+    expect(managedService.findMatchingChannel).not.toHaveBeenCalled()
   })
 })
