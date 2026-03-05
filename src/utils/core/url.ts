@@ -216,8 +216,21 @@ export function sanitizeOriginUrl(
   if (!value) return undefined
   const trimmed = value.trim()
   if (!trimmed) return undefined
+
+  const looksLikeHostWithPort =
+    /^[a-zA-Z0-9.-]+:\d+($|[/?#])/.test(trimmed) ||
+    /^\[[0-9a-fA-F:]+\]:\d+($|[/?#])/.test(trimmed)
+
+  const normalized = trimmed.includes("://")
+    ? trimmed
+    : trimmed.startsWith("//")
+      ? `https:${trimmed}`
+      : /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed) && !looksLikeHostWithPort
+        ? trimmed
+        : `https://${trimmed}`
+
   try {
-    const url = new URL(trimmed)
+    const url = new URL(normalized)
     if (url.protocol !== "http:" && url.protocol !== "https:") return undefined
     const origin = url.origin
     if (!origin || origin === "null") return undefined

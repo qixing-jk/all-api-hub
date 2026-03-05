@@ -12,7 +12,8 @@ import {
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
 import type { SiteAccount } from "~/types"
-import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
+import { getErrorMessage } from "~/utils/error"
 
 import { useAccountDataContext } from "../../hooks/AccountDataContext"
 import { DedupeAccountsConfirmDetails } from "./DedupeAccountsConfirmDetails"
@@ -32,6 +33,8 @@ const EMPTY_STRING_LIST: string[] = []
 const NOOP_ASYNC = async () => {}
 const EMPTY_KEEP_OVERRIDES: Record<string, string> = {}
 const EMPTY_DETAILS_OPEN_BY_ACCOUNT_ID: Record<string, true> = {}
+
+const logger = createLogger("DedupeAccountsDialog")
 
 /**
  * Scan for duplicate accounts and provide a previewed, one-click cleanup flow.
@@ -179,7 +182,12 @@ export default function DedupeAccountsDialog({
 
       void autoCheckinStorage
         .pruneStatusForDeletedAccounts(idsToDelete)
-        .catch(() => {})
+        .catch((error) => {
+          logger.error("pruneStatusForDeletedAccounts failed", {
+            error,
+            idsToDelete,
+          })
+        })
       await loadAccountData()
 
       setIsConfirmOpen(false)

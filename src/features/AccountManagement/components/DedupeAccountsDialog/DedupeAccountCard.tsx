@@ -48,7 +48,7 @@ export function DedupeAccountCard({
   const detailsOpen = detailsOpenByAccountId[account.id] === true
   const detailsId = `dedupe-account-details-${encodeURIComponent(account.id)}`
   const healthDisplay = getHealthStatusDisplay(account.health?.status, t)
-  const autoCheckinEnabled = account.checkIn.autoCheckInEnabled !== false
+  const autoCheckinEnabled = account.checkIn?.autoCheckInEnabled !== false
 
   const resolveTimestamp = (timestamp?: number) => formatTimestamp(timestamp, t)
 

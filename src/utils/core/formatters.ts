@@ -27,7 +27,7 @@ export const formatTokenCount = (count: number): string => {
   return count.toString()
 }
 
-export function normalizeToMs(input: number | string | Date): number
+export function normalizeToMs(input: number | string | Date): number | null
 export function normalizeToMs(input: null | undefined): null
 export function normalizeToMs(
   input: number | string | Date | null | undefined,
@@ -76,7 +76,7 @@ export function normalizeToMs(
   return Math.round(input)
 }
 
-export function normalizeToDate(input: number | string | Date): Date
+export function normalizeToDate(input: number | string | Date): Date | null
 export function normalizeToDate(input: null | undefined): null
 export function normalizeToDate(
   input: number | string | Date | null | undefined,
@@ -120,7 +120,11 @@ export const formatLocaleDateTime = (
  */
 export const formatKeyTime = (timestamp: number) => {
   if (timestamp <= 0) return t("keyManagement:keyDetails.neverExpires")
-  return normalizeToDate(timestamp).toLocaleDateString("zh-CN")
+
+  const date = normalizeToDate(timestamp)
+  if (!date) return t("common:labels.notAvailable")
+
+  return date.toLocaleDateString("zh-CN")
 }
 
 /**
@@ -318,7 +322,11 @@ export const formatTimestamp = (timestamp: number) => {
   if (timestamp <= 0) {
     return t("common:time.neverExpires")
   }
-  return normalizeToDate(timestamp).toLocaleDateString("zh-CN")
+
+  const date = normalizeToDate(timestamp)
+  if (!date) return t("common:labels.notAvailable")
+
+  return date.toLocaleDateString("zh-CN")
 }
 
 /**

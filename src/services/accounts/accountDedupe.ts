@@ -29,63 +29,63 @@ type AccountScoreInput = {
 }
 
 /**
- *
+ * checks if the account is not marked as disabled
  */
 function isEnabled(account: Pick<SiteAccount, "disabled">): boolean {
   return account.disabled !== true
 }
 
 /**
- *
+ * checks if the account is in the pinned set
  */
 function isPinned({ account, pinnedIds }: AccountScoreInput): boolean {
   return pinnedIds.has(account.id)
 }
 
 /**
- *
+ * compares two numbers in descending order (higher numbers come first)
  */
 function compareNumberDesc(a: number, b: number): number {
   return b - a
 }
 
 /**
- *
+ * compares two booleans in descending order (true comes before false)
  */
 function compareBooleanDesc(a: boolean, b: boolean): number {
   return Number(b) - Number(a)
 }
 
 /**
- *
+ * compares two strings in ascending order (A-Z)
  */
 function compareStringAsc(a: string, b: string): number {
   return a.localeCompare(b)
 }
 
 /**
- *
+ * coerces a value to a finite timestamp number, returning 0 for invalid inputs
  */
 function getComparableTimestamp(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0
 }
 
 /**
- *
+ * coerces a value to a finite user ID number, returning undefined for invalid inputs
  */
 function coerceFiniteUserId(value: unknown): number | undefined {
-  if (typeof value === "number" && Number.isFinite(value)) return value
+  if (typeof value === "number" && Number.isSafeInteger(value)) return value
   if (typeof value !== "string") return undefined
 
   const trimmed = value.trim()
   if (!/^\d+$/.test(trimmed)) return undefined
 
   const parsed = Number(trimmed)
-  return Number.isFinite(parsed) ? parsed : undefined
+  return Number.isSafeInteger(parsed) ? parsed : undefined
 }
 
 /**
- *
+ * builds a comparator function for sorting accounts based on the specified strategy
  */
 function buildKeepComparator(
   strategy: AccountDedupeKeepStrategy,
@@ -143,7 +143,7 @@ function buildKeepComparator(
 }
 
 /**
- *
+ * Scans a list of site accounts for duplicates based on their origin URL and user ID.
  */
 export function scanDuplicateAccounts(input: {
   accounts: SiteAccount[]

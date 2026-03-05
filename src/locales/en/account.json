@@ -94,7 +94,7 @@
     "openAllExternalCheckIn": "Open all external check-ins",
     "openAllExternalCheckInHint": "Open unchecked external check-ins. Ctrl/Cmd: open all. Shift: open in new window. Ctrl/Cmd+Shift: open all in new window.",
     "scanDuplicates": "Scan duplicates",
-    "scanDuplicatesHint": "Scan accounts for duplicates (origin + user id) and clean them up safely.",
+    "scanDuplicatesHint": "Scan accounts for duplicates (origin + upstream user id) and clean them up safely.",
     "pin": "Pin account",
     "unpin": "Unpin account",
     "pinned": "Pinned",
