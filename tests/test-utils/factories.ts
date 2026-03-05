@@ -17,12 +17,15 @@ import type {
   OverviewShareSnapshotPayload,
   ShareSnapshotPayload,
 } from "~/services/sharing/shareSnapshots/types"
+import { API_TYPES } from "~/services/verification/aiApiVerification"
 import {
   AuthTypeEnum,
   SiteHealthStatus,
   type DisplaySiteData,
   type SiteAccount,
+  type Tag,
 } from "~/types"
+import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { CHANNEL_STATUS, type ManagedSiteChannel } from "~/types/managedSite"
 
 /**
@@ -161,6 +164,41 @@ export function buildSiteAccount(
       ...(overrides.checkIn ?? {}),
     },
   }
+}
+
+/**
+ * Build a `Tag` fixture with stable defaults and shallow overrides.
+ */
+export function buildTag(overrides: Partial<Tag> = {}): Tag {
+  const base: Tag = {
+    id: "tag-1",
+    name: "Test Tag",
+    createdAt: 1700000000000,
+    updatedAt: 1700000000000,
+  }
+
+  return { ...base, ...overrides }
+}
+
+/**
+ * Build an `ApiCredentialProfile` fixture with deterministic, non-secret-like values.
+ */
+export function buildApiCredentialProfile(
+  overrides: Partial<ApiCredentialProfile> = {},
+): ApiCredentialProfile {
+  const base: ApiCredentialProfile = {
+    id: "profile-1",
+    name: "Test Profile",
+    apiType: API_TYPES.OPENAI,
+    baseUrl: "https://proxy.example.com",
+    apiKey: buildApiKey(),
+    tagIds: [],
+    notes: "",
+    createdAt: 1700000000000,
+    updatedAt: 1700000000000,
+  }
+
+  return { ...base, ...overrides }
 }
 
 /**

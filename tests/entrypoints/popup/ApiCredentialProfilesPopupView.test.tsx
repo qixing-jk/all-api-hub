@@ -5,6 +5,10 @@ import ApiCredentialProfilesPopupView from "~/features/ApiCredentialProfiles/com
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import type { Tag } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
+import {
+  buildApiCredentialProfile,
+  buildTag,
+} from "~~/tests/test-utils/factories"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 let store: ApiCredentialProfile[] = []
@@ -70,34 +74,42 @@ describe("ApiCredentialProfiles popup view", () => {
   it("filters profiles by search, api type, and tags", async () => {
     const user = userEvent.setup()
 
-    mockListTags.mockResolvedValue([
-      { id: "t-prod", name: "prod", createdAt: 1, updatedAt: 1 },
-      { id: "t-dev", name: "dev", createdAt: 1, updatedAt: 1 },
-    ])
+    const prodTag = buildTag({
+      id: "t-prod",
+      name: "prod",
+      createdAt: 1,
+      updatedAt: 1,
+    })
+    const devTag = buildTag({
+      id: "t-dev",
+      name: "dev",
+      createdAt: 1,
+      updatedAt: 1,
+    })
+
+    mockListTags.mockResolvedValue([prodTag, devTag])
 
     store = [
-      {
+      buildApiCredentialProfile({
         id: "p-1",
         name: "OpenAI",
         apiType: API_TYPES.OPENAI,
         baseUrl: "https://openai.example.com",
-        apiKey: "sk-openai",
-        tagIds: ["t-prod"],
-        notes: "",
+        apiKey: "test-openai-key",
+        tagIds: [prodTag.id],
         createdAt: 1,
         updatedAt: 1,
-      },
-      {
+      }),
+      buildApiCredentialProfile({
         id: "p-2",
         name: "Google",
         apiType: API_TYPES.GOOGLE,
         baseUrl: "https://google.example.com",
-        apiKey: "AIza-test",
-        tagIds: ["t-dev"],
-        notes: "",
+        apiKey: "test-google-key",
+        tagIds: [devTag.id],
         createdAt: 1,
         updatedAt: 1,
-      },
+      }),
     ]
 
     render(<ApiCredentialProfilesPopupView />)
