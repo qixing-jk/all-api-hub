@@ -6,8 +6,8 @@ import { DIALOG_MODES } from "~/constants/dialogModes"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { userPreferences } from "~/services/preferences/userPreferences"
-import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { server } from "~~/tests/msw/server"
+import { buildSiteAccount } from "~~/tests/test-utils/factories"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
 const { mockOpenWithAccount } = vi.hoisted(() => ({
@@ -63,29 +63,12 @@ describe("useAccountDialog duplicate account warning", () => {
       ),
     )
 
-    await accountStorage.addAccount({
-      site_name: "Existing",
-      site_url: "https://api.example.com",
-      health: { status: SiteHealthStatus.Healthy },
-      site_type: "unknown",
-      exchange_rate: 7,
-      account_info: {
-        id: 1,
-        access_token: "token",
-        username: "user",
-        quota: 0,
-        today_prompt_tokens: 0,
-        today_completion_tokens: 0,
-        today_quota_consumption: 0,
-        today_requests_count: 0,
-        today_income: 0,
-      },
-      last_sync_time: 0,
-      notes: "",
-      tagIds: [],
-      authType: AuthTypeEnum.AccessToken,
-      checkIn: { enableDetection: false } as any,
-    } as any)
+    await accountStorage.addAccount(
+      buildSiteAccount({
+        site_name: "Existing",
+        site_url: "https://api.example.com/v1/",
+      }),
+    )
 
     const onClose = vi.fn()
     const onSuccess = vi.fn()
@@ -158,29 +141,12 @@ describe("useAccountDialog duplicate account warning", () => {
 
     await userPreferences.updateWarnOnDuplicateAccountAdd(false)
 
-    await accountStorage.addAccount({
-      site_name: "Existing",
-      site_url: "https://api.example.com",
-      health: { status: SiteHealthStatus.Healthy },
-      site_type: "unknown",
-      exchange_rate: 7,
-      account_info: {
-        id: 1,
-        access_token: "token",
-        username: "user",
-        quota: 0,
-        today_prompt_tokens: 0,
-        today_completion_tokens: 0,
-        today_quota_consumption: 0,
-        today_requests_count: 0,
-        today_income: 0,
-      },
-      last_sync_time: 0,
-      notes: "",
-      tagIds: [],
-      authType: AuthTypeEnum.AccessToken,
-      checkIn: { enableDetection: false } as any,
-    } as any)
+    await accountStorage.addAccount(
+      buildSiteAccount({
+        site_name: "Existing",
+        site_url: "https://api.example.com",
+      }),
+    )
 
     const onClose = vi.fn()
     const onSuccess = vi.fn()
