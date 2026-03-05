@@ -368,6 +368,12 @@
     "toggleLabel": "添加账号后自动创建默认密钥",
     "toggleDesc": "开启后，账号保存完成会检查远端密钥列表；若没有密钥则自动创建一个默认密钥。"
   },
+  "duplicateAccountWarningOnAdd": {
+    "title": "账号",
+    "description": "控制添加账号时，如果该站点已存在账号，是否需要弹窗确认。",
+    "toggleLabel": "添加重复账号前提醒",
+    "toggleDesc": "开启后，当你尝试为同一站点 URL 再次添加账号时，会弹出确认对话框。"
+  },
   "messages": {
     "updateSuccess": "{{name}}更新成功",
     "updateFailed": "{{name}}更新失败",

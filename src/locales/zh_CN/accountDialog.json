@@ -109,6 +109,17 @@
     "importCookieAuthSessionCookie": "从当前登录导入",
     "cookieAuthSessionCookiePlaceholder": "粘贴 Cookie 头部值"
   },
+  "warnings": {
+    "duplicateAccount": {
+      "title": "重复账号",
+      "warningTitle": "该站点已存在账号",
+      "description": "你已在 {{siteUrl}} 添加了 {{count}} 个账号。继续添加可能会造成重复，是否继续？",
+      "descriptionExact": "在 {{siteUrl}} 上，用户 ID {{userId}} 的账号已存在（{{username}}）。继续添加可能会造成重复，是否继续？",
+      "actions": {
+        "continue": "继续"
+      }
+    }
+  },
   "messages": {
     "loadFailed": "加载账号数据失败",
     "urlParseError": "无法解析 URL: {{error}}",

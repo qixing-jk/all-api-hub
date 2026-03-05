@@ -190,6 +190,15 @@ export interface UserPreferences {
   autoProvisionKeyOnAccountAdd?: boolean
 
   /**
+   * Controls whether All API Hub shows a confirmation modal when adding an
+   * account whose site URL already exists in storage (possible duplicate).
+   *
+   * Optional for backward compatibility with stored preferences created before
+   * this flag existed. Missing values MUST be treated as enabled via defaults.
+   */
+  warnOnDuplicateAccountAdd?: boolean
+
+  /**
    * Console logging configuration shared across all extension contexts.
    *
    * When `consoleEnabled` is disabled, no logs are emitted at any level
@@ -422,6 +431,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   actionClickBehavior: "popup",
   openChangelogOnUpdate: true,
   autoProvisionKeyOnAccountAdd: false, // 默认关闭，避免添加账号时无意创建密钥
+  warnOnDuplicateAccountAdd: true,
   accountAutoRefresh: DEFAULT_ACCOUNT_AUTO_REFRESH,
   usageHistory: DEFAULT_USAGE_HISTORY_PREFERENCES,
   balanceHistory: DEFAULT_BALANCE_HISTORY_PREFERENCES,
@@ -604,6 +614,15 @@ class UserPreferencesService {
    */
   async updateAutoProvisionKeyOnAccountAdd(enabled: boolean): Promise<boolean> {
     return this.savePreferences({ autoProvisionKeyOnAccountAdd: enabled })
+  }
+
+  /**
+   * Enable/disable the duplicate-account add confirmation modal.
+   * @param enabled - When true, adding an account whose site URL already exists
+   * prompts for confirmation.
+   */
+  async updateWarnOnDuplicateAccountAdd(enabled: boolean): Promise<boolean> {
+    return this.savePreferences({ warnOnDuplicateAccountAdd: enabled })
   }
 
   /**

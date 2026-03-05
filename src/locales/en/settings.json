@@ -368,6 +368,12 @@
     "toggleLabel": "Auto-create a default key on account add",
     "toggleDesc": "When enabled, All API Hub checks your token inventory after saving an account and creates a default token if none exist."
   },
+  "duplicateAccountWarningOnAdd": {
+    "title": "Accounts",
+    "description": "Control whether All API Hub asks for confirmation when you add an account for a site that already exists.",
+    "toggleLabel": "Warn before adding duplicates",
+    "toggleDesc": "When enabled, All API Hub shows a confirmation dialog if you try to add another account for the same site URL."
+  },
   "messages": {
     "updateSuccess": "{{name}} Update successful",
     "updateFailed": "{{name}} Update failed",

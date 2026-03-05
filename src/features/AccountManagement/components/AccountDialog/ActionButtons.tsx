@@ -67,6 +67,7 @@ export default function ActionButtons({
         <Button
           type="button"
           onClick={onShowManualForm}
+          disabled={!url.trim()}
           bleed
           className="flex-1"
           variant="outline"

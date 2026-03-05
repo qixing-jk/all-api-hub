@@ -109,6 +109,17 @@
     "importCookieAuthSessionCookie": "Import from current login",
     "cookieAuthSessionCookiePlaceholder": "Paste Cookie header value"
   },
+  "warnings": {
+    "duplicateAccount": {
+      "title": "Duplicate account",
+      "warningTitle": "This site already has accounts",
+      "description": "You already have {{count}} account(s) for {{siteUrl}}. Adding another may create duplicates. Do you want to continue?",
+      "descriptionExact": "An account for {{siteUrl}} with user ID {{userId}} already exists ({{username}}). Adding another may create duplicates. Do you want to continue?",
+      "actions": {
+        "continue": "Continue"
+      }
+    }
+  },
   "messages": {
     "loadFailed": "Failed to load account data",
     "urlParseError": "Unable to parse URL: {{error}}",

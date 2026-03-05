@@ -70,6 +70,7 @@ interface UserPreferencesContextType {
   actionClickBehavior: "popup" | "sidepanel"
   openChangelogOnUpdate: boolean
   autoProvisionKeyOnAccountAdd: boolean
+  warnOnDuplicateAccountAdd: boolean
   newApiBaseUrl: string
   newApiAdminToken: string
   newApiUserId: string
@@ -113,6 +114,7 @@ interface UserPreferencesContextType {
   ) => Promise<boolean>
   updateOpenChangelogOnUpdate: (enabled: boolean) => Promise<boolean>
   updateAutoProvisionKeyOnAccountAdd: (enabled: boolean) => Promise<boolean>
+  updateWarnOnDuplicateAccountAdd: (enabled: boolean) => Promise<boolean>
   updateNewApiBaseUrl: (url: string) => Promise<boolean>
   updateNewApiAdminToken: (token: string) => Promise<boolean>
   updateNewApiUserId: (userId: string) => Promise<boolean>
@@ -278,6 +280,24 @@ export const UserPreferencesProvider = ({
       if (success) {
         setPreferences((prev) =>
           prev ? { ...prev, autoProvisionKeyOnAccountAdd: enabled } : prev,
+        )
+      }
+      return success
+    },
+    [],
+  )
+
+  /**
+   * Enable/disable the duplicate-account add confirmation modal.
+   * @param enabled - When true, prompts before adding an account whose site URL already exists.
+   */
+  const updateWarnOnDuplicateAccountAdd = useCallback(
+    async (enabled: boolean) => {
+      const success =
+        await userPreferences.updateWarnOnDuplicateAccountAdd(enabled)
+      if (success) {
+        setPreferences((prev) =>
+          prev ? { ...prev, warnOnDuplicateAccountAdd: enabled } : prev,
         )
       }
       return success
@@ -1348,6 +1368,10 @@ export const UserPreferencesProvider = ({
       preferences?.autoProvisionKeyOnAccountAdd ??
       DEFAULT_PREFERENCES.autoProvisionKeyOnAccountAdd ??
       false,
+    warnOnDuplicateAccountAdd:
+      preferences?.warnOnDuplicateAccountAdd ??
+      DEFAULT_PREFERENCES.warnOnDuplicateAccountAdd ??
+      true,
     newApiBaseUrl: preferences?.newApi?.baseUrl || "",
     newApiAdminToken: preferences?.newApi?.adminToken || "",
     newApiUserId: preferences?.newApi?.userId || "",
@@ -1390,6 +1414,7 @@ export const UserPreferencesProvider = ({
     updateActionClickBehavior,
     updateOpenChangelogOnUpdate,
     updateAutoProvisionKeyOnAccountAdd,
+    updateWarnOnDuplicateAccountAdd,
     updateNewApiBaseUrl,
     updateNewApiAdminToken,
     updateNewApiUserId,

@@ -6,6 +6,7 @@ import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SUB2API } from "~/constants/siteType"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import {
   autoDetectAccount,
   getSiteName,
@@ -67,6 +68,7 @@ export function useAccountDialog({
   onSuccess,
 }: UseAccountDialogProps) {
   const { t } = useTranslation("accountDialog")
+  const { warnOnDuplicateAccountAdd } = useUserPreferencesContext()
 
   const [url, setUrl] = useState("")
   const [isDetecting, setIsDetecting] = useState(false)
@@ -115,6 +117,126 @@ export function useAccountDialog({
   const [sub2apiTokenExpiresAt, setSub2apiTokenExpiresAt] = useState<
     number | null
   >(null)
+
+  const [duplicateAccountWarning, setDuplicateAccountWarning] = useState<{
+    isOpen: boolean
+    siteUrl: string
+    existingAccountsCount: number
+    existingUsername: string | null
+    existingUserId: string | number | null
+  }>({
+    isOpen: false,
+    siteUrl: "",
+    existingAccountsCount: 0,
+    existingUsername: null,
+    existingUserId: null,
+  })
+  const duplicateAccountWarningResolverRef = useRef<
+    ((shouldContinue: boolean) => void) | null
+  >(null)
+  const duplicateAccountWarningAcknowledgedSiteUrlRef = useRef<string | null>(
+    null,
+  )
+
+  const requestDuplicateAccountAddConfirmation = useCallback(
+    (params: {
+      siteUrl: string
+      existingAccountsCount: number
+      existingUsername?: string | null
+      existingUserId?: string | number | null
+    }) => {
+      // If the user triggers the same flow multiple times quickly, cancel the
+      // previous pending promise to avoid leaving it unresolved.
+      if (duplicateAccountWarningResolverRef.current) {
+        duplicateAccountWarningResolverRef.current(false)
+      }
+
+      setDuplicateAccountWarning({
+        isOpen: true,
+        siteUrl: params.siteUrl,
+        existingAccountsCount: params.existingAccountsCount,
+        existingUsername: params.existingUsername ?? null,
+        existingUserId: params.existingUserId ?? null,
+      })
+
+      return new Promise<boolean>((resolve) => {
+        duplicateAccountWarningResolverRef.current = resolve
+      })
+    },
+    [],
+  )
+
+  const ensureDuplicateAccountAddConfirmation = useCallback(async () => {
+    if (mode !== DIALOG_MODES.ADD || !warnOnDuplicateAccountAdd) {
+      return true
+    }
+
+    const baseUrl = url.trim()
+    const currentUserId = userId.trim()
+
+    if (!baseUrl) {
+      return true
+    }
+
+    if (duplicateAccountWarningAcknowledgedSiteUrlRef.current === baseUrl) {
+      return true
+    }
+
+    const accounts = await accountStorage.getAllAccounts()
+    const existingSiteAccounts = accounts.filter(
+      (acc) => acc.site_url === baseUrl,
+    )
+
+    if (existingSiteAccounts.length === 0) {
+      return true
+    }
+
+    const exactMatch = currentUserId
+      ? existingSiteAccounts.find(
+          (acc) => String(acc.account_info.id) === currentUserId,
+        )
+      : undefined
+
+    const shouldContinue = await requestDuplicateAccountAddConfirmation({
+      siteUrl: baseUrl,
+      existingAccountsCount: existingSiteAccounts.length,
+      ...(exactMatch
+        ? {
+            existingUserId: exactMatch.account_info.id,
+            existingUsername: exactMatch.account_info.username,
+          }
+        : {}),
+    })
+
+    if (!shouldContinue) {
+      return false
+    }
+
+    duplicateAccountWarningAcknowledgedSiteUrlRef.current = baseUrl
+    return true
+  }, [
+    mode,
+    requestDuplicateAccountAddConfirmation,
+    url,
+    userId,
+    warnOnDuplicateAccountAdd,
+  ])
+
+  const handleDuplicateAccountWarningCancel = useCallback(() => {
+    setDuplicateAccountWarning((prev) =>
+      prev.isOpen ? { ...prev, isOpen: false } : prev,
+    )
+    duplicateAccountWarningResolverRef.current?.(false)
+    duplicateAccountWarningResolverRef.current = null
+  }, [])
+
+  const handleDuplicateAccountWarningContinue = useCallback(() => {
+    setDuplicateAccountWarning((prev) =>
+      prev.isOpen ? { ...prev, isOpen: false } : prev,
+    )
+    duplicateAccountWarningResolverRef.current?.(true)
+    duplicateAccountWarningResolverRef.current = null
+  }, [])
 
   // Enforce Sub2API constraints: JWT-only (access token), no built-in check-in.
   useEffect(() => {
@@ -166,6 +288,7 @@ export function useAccountDialog({
   const { openWithAccount: openChannelDialog } = useChannelDialog()
 
   const resetForm = useCallback(() => {
+    duplicateAccountWarningAcknowledgedSiteUrlRef.current = null
     setUrl("")
     setIsDetected(false)
     setSiteName("")
@@ -528,6 +651,20 @@ export function useAccountDialog({
       return
     }
 
+    try {
+      const shouldContinue = await ensureDuplicateAccountAddConfirmation()
+      if (!shouldContinue) {
+        return
+      }
+    } catch (error) {
+      toast.error(
+        t("messages.operationFailed", {
+          error: getErrorMessage(error),
+        }),
+      )
+      return
+    }
+
     setIsDetecting(true)
     setDetectionError(null)
 
@@ -633,9 +770,25 @@ export function useAccountDialog({
     }
   }
 
-  const handleSaveAccount = async () => {
-    setIsSaving(true)
+  const handleShowManualForm = async () => {
     try {
+      const shouldContinue = await ensureDuplicateAccountAddConfirmation()
+      if (!shouldContinue) {
+        return
+      }
+      setShowManualForm(true)
+    } catch (error) {
+      toast.error(
+        t("messages.operationFailed", {
+          error: getErrorMessage(error),
+        }),
+      )
+    }
+  }
+
+  const handleSaveAccount = async () => {
+    try {
+      setIsSaving(true)
       const sub2apiAuth: Sub2ApiAuthConfig | undefined =
         siteType === SUB2API &&
         sub2apiUseRefreshToken &&
@@ -686,27 +839,22 @@ export function useAccountDialog({
               sub2apiAuth,
             )
 
-      if (result.success) {
-        toast.success(
-          result.message ??
-            t(
-              mode === DIALOG_MODES.ADD
-                ? "messages.addSuccess"
-                : "messages.updateSuccess",
-              {
-                name: siteName,
-              },
-            ),
-        )
-        return result
-      } else {
-        toast.error(
-          t("messages.operationFailed", {
-            error: result.message || t("messages.saveFailed"),
-          }),
-        )
+      if (!result.success) {
         throw new Error(result.message || t("messages.saveFailed"))
       }
+
+      toast.success(
+        result.message ??
+          t(
+            mode === DIALOG_MODES.ADD
+              ? "messages.addSuccess"
+              : "messages.updateSuccess",
+            {
+              name: siteName,
+            },
+          ),
+      )
+      return result
     } catch (error: any) {
       toast.error(t("messages.operationFailed", { error: error.message }))
       throw error
@@ -766,6 +914,7 @@ export function useAccountDialog({
   }
 
   const handleUrlChange = (newUrl: string) => {
+    duplicateAccountWarningAcknowledgedSiteUrlRef.current = null
     if (newUrl.trim()) {
       try {
         const urlObj = new URL(newUrl)
@@ -789,6 +938,7 @@ export function useAccountDialog({
   }
 
   const handleClose = () => {
+    handleDuplicateAccountWarningCancel()
     targetAccountRef.current = null
     onClose()
   }
@@ -855,6 +1005,7 @@ export function useAccountDialog({
       cookieAuthSessionCookie,
       isImportingCookies,
       isImportingSub2apiSession,
+      duplicateAccountWarning,
     },
     setters: {
       setUrl,
@@ -879,6 +1030,7 @@ export function useAccountDialog({
     handlers: {
       handleUseCurrentTabUrl,
       handleAutoDetect,
+      handleShowManualForm,
       handleSaveAccount,
       handleUrlChange,
       handleSubmit,
@@ -887,6 +1039,8 @@ export function useAccountDialog({
       handleImportCookieAuthSessionCookie,
       handleImportSub2apiSession,
       handleSub2apiUseRefreshTokenChange,
+      handleDuplicateAccountWarningCancel,
+      handleDuplicateAccountWarningContinue,
     },
   }
 }

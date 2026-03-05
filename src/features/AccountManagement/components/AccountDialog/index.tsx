@@ -9,6 +9,7 @@ import ActionButtons from "./ActionButtons"
 import AutoDetectErrorAlert from "./AutoDetectErrorAlert"
 import AutoDetectSlowHintAlert from "./AutoDetectSlowHintAlert"
 import DialogHeader from "./DialogHeader"
+import { DuplicateAccountWarningDialog } from "./DuplicateAccountWarningDialog"
 import { useAccountDialog } from "./hooks/useAccountDialog"
 import InfoPanel from "./InfoPanel"
 import SiteInfoInput from "./SiteInfoInput"
@@ -76,126 +77,140 @@ export default function AccountDialog({
     displayData.find((acc) => acc.id === detectedAccount?.id) ?? null
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={handlers.handleClose}
-      header={<DialogHeader mode={mode} />}
-      footer={
-        <ActionButtons
-          mode={mode}
-          url={state.url}
-          isDetecting={state.isDetecting}
-          onAutoDetect={handlers.handleAutoDetect}
-          onShowManualForm={() => setters.setShowManualForm(true)}
-          onClose={handlers.handleClose}
-          isFormValid={state.isFormValid}
-          isSaving={state.isSaving}
-          isDetected={state.isDetected}
-          onAutoConfig={handlers.handleAutoConfig}
-          isAutoConfiguring={state.isAutoConfiguring}
-          // ensure submit button in footer can submit the form by linking via form id
-          formId="account-form"
-        />
-      }
-    >
-      <div>
-        <form
-          id="account-form"
-          onSubmit={handleSubmit}
-          className="flex flex-col gap-2"
-        >
-          {state.detectionError && (
-            <AutoDetectErrorAlert
-              error={state.detectionError}
-              siteUrl={state.url}
-            />
-          )}
-
-          {state.isDetecting && state.isDetectingSlow && (
-            <AutoDetectSlowHintAlert />
-          )}
-
-          <SiteInfoInput
+    <>
+      <Modal
+        isOpen={isOpen}
+        onClose={handlers.handleClose}
+        header={<DialogHeader mode={mode} />}
+        footer={
+          <ActionButtons
+            mode={mode}
             url={state.url}
-            onUrlChange={handlers.handleUrlChange}
+            isDetecting={state.isDetecting}
+            onAutoDetect={handlers.handleAutoDetect}
+            onShowManualForm={handlers.handleShowManualForm}
+            onClose={handlers.handleClose}
+            isFormValid={state.isFormValid}
+            isSaving={state.isSaving}
             isDetected={state.isDetected}
-            onClearUrl={() => setters.setUrl("")}
-            siteType={state.siteType}
-            authType={state.authType}
-            onAuthTypeChange={setters.setAuthType}
-            {...(mode === DIALOG_MODES.ADD && {
-              currentTabUrl: state.currentTabUrl,
-              isCurrentSiteAdded: detectedSiteAccounts.length > 0,
-              detectedAccount: detectedDisplayAccount,
-              onUseCurrentTab: handlers.handleUseCurrentTabUrl,
-              onEditAccount: openEditAccount,
-            })}
+            onAutoConfig={handlers.handleAutoConfig}
+            isAutoConfiguring={state.isAutoConfiguring}
+            // ensure submit button in footer can submit the form by linking via form id
+            formId="account-form"
           />
+        }
+      >
+        <div>
+          <form
+            id="account-form"
+            onSubmit={handleSubmit}
+            className="flex flex-col gap-2"
+          >
+            {state.detectionError && (
+              <AutoDetectErrorAlert
+                error={state.detectionError}
+                siteUrl={state.url}
+              />
+            )}
 
-          {(state.isDetected || state.showManualForm) && (
-            <AccountForm
-              authType={state.authType}
-              siteName={state.siteName}
-              username={state.username}
-              userId={state.userId}
-              accessToken={state.accessToken}
-              sub2apiUseRefreshToken={state.sub2apiUseRefreshToken}
-              sub2apiRefreshToken={state.sub2apiRefreshToken}
-              sub2apiTokenExpiresAt={state.sub2apiTokenExpiresAt}
-              isImportingSub2apiSession={state.isImportingSub2apiSession}
-              exchangeRate={state.exchangeRate}
-              manualBalanceUsd={state.manualBalanceUsd}
-              isManualBalanceUsdInvalid={state.isManualBalanceUsdInvalid}
-              showAccessToken={state.showAccessToken}
-              onSiteNameChange={setters.setSiteName}
-              onUsernameChange={setters.setUsername}
-              onUserIdChange={setters.setUserId}
-              onAccessTokenChange={setters.setAccessToken}
-              onSub2apiUseRefreshTokenChange={
-                handlers.handleSub2apiUseRefreshTokenChange
-              }
-              onSub2apiRefreshTokenChange={setters.setSub2apiRefreshToken}
-              onImportSub2apiSession={handlers.handleImportSub2apiSession}
-              onExchangeRateChange={setters.setExchangeRate}
-              onManualBalanceUsdChange={setters.setManualBalanceUsd}
-              onToggleShowAccessToken={() =>
-                setters.setShowAccessToken(!state.showAccessToken)
-              }
-              notes={state.notes}
-              onNotesChange={setters.setNotes}
-              selectedTagIds={state.tagIds}
-              onSelectedTagIdsChange={setters.setTagIds}
-              excludeFromTotalBalance={state.excludeFromTotalBalance}
-              onExcludeFromTotalBalanceChange={
-                setters.setExcludeFromTotalBalance
-              }
-              tags={tags}
-              tagCountsById={tagCountsById}
-              createTag={createTag}
-              renameTag={renameTag}
-              deleteTag={deleteTag}
-              checkIn={state.checkIn}
-              onCheckInChange={setters.setCheckIn}
+            {state.isDetecting && state.isDetectingSlow && (
+              <AutoDetectSlowHintAlert />
+            )}
+
+            <SiteInfoInput
+              url={state.url}
+              onUrlChange={handlers.handleUrlChange}
+              isDetected={state.isDetected}
+              onClearUrl={() => setters.setUrl("")}
               siteType={state.siteType}
-              onSiteTypeChange={setters.setSiteType}
-              cookieAuthSessionCookie={state.cookieAuthSessionCookie}
-              isImportingCookies={state.isImportingCookies}
-              onCookieAuthSessionCookieChange={
-                setters.setCookieAuthSessionCookie
-              }
-              onImportCookieAuthSessionCookie={
-                handlers.handleImportCookieAuthSessionCookie
-              }
+              authType={state.authType}
+              onAuthTypeChange={setters.setAuthType}
+              {...(mode === DIALOG_MODES.ADD && {
+                currentTabUrl: state.currentTabUrl,
+                isCurrentSiteAdded: detectedSiteAccounts.length > 0,
+                detectedAccount: detectedDisplayAccount,
+                onUseCurrentTab: handlers.handleUseCurrentTabUrl,
+                onEditAccount: openEditAccount,
+              })}
             />
-          )}
-        </form>
-      </div>
 
-      <InfoPanel
-        mode={mode}
-        isDetected={state.isDetected}
-        showManualForm={state.showManualForm}
+            {(state.isDetected || state.showManualForm) && (
+              <AccountForm
+                authType={state.authType}
+                siteName={state.siteName}
+                username={state.username}
+                userId={state.userId}
+                accessToken={state.accessToken}
+                sub2apiUseRefreshToken={state.sub2apiUseRefreshToken}
+                sub2apiRefreshToken={state.sub2apiRefreshToken}
+                sub2apiTokenExpiresAt={state.sub2apiTokenExpiresAt}
+                isImportingSub2apiSession={state.isImportingSub2apiSession}
+                exchangeRate={state.exchangeRate}
+                manualBalanceUsd={state.manualBalanceUsd}
+                isManualBalanceUsdInvalid={state.isManualBalanceUsdInvalid}
+                showAccessToken={state.showAccessToken}
+                onSiteNameChange={setters.setSiteName}
+                onUsernameChange={setters.setUsername}
+                onUserIdChange={setters.setUserId}
+                onAccessTokenChange={setters.setAccessToken}
+                onSub2apiUseRefreshTokenChange={
+                  handlers.handleSub2apiUseRefreshTokenChange
+                }
+                onSub2apiRefreshTokenChange={setters.setSub2apiRefreshToken}
+                onImportSub2apiSession={handlers.handleImportSub2apiSession}
+                onExchangeRateChange={setters.setExchangeRate}
+                onManualBalanceUsdChange={setters.setManualBalanceUsd}
+                onToggleShowAccessToken={() =>
+                  setters.setShowAccessToken(!state.showAccessToken)
+                }
+                notes={state.notes}
+                onNotesChange={setters.setNotes}
+                selectedTagIds={state.tagIds}
+                onSelectedTagIdsChange={setters.setTagIds}
+                excludeFromTotalBalance={state.excludeFromTotalBalance}
+                onExcludeFromTotalBalanceChange={
+                  setters.setExcludeFromTotalBalance
+                }
+                tags={tags}
+                tagCountsById={tagCountsById}
+                createTag={createTag}
+                renameTag={renameTag}
+                deleteTag={deleteTag}
+                checkIn={state.checkIn}
+                onCheckInChange={setters.setCheckIn}
+                siteType={state.siteType}
+                onSiteTypeChange={setters.setSiteType}
+                cookieAuthSessionCookie={state.cookieAuthSessionCookie}
+                isImportingCookies={state.isImportingCookies}
+                onCookieAuthSessionCookieChange={
+                  setters.setCookieAuthSessionCookie
+                }
+                onImportCookieAuthSessionCookie={
+                  handlers.handleImportCookieAuthSessionCookie
+                }
+              />
+            )}
+          </form>
+        </div>
+
+        <InfoPanel
+          mode={mode}
+          isDetected={state.isDetected}
+          showManualForm={state.showManualForm}
+        />
+      </Modal>
+
+      <DuplicateAccountWarningDialog
+        isOpen={state.duplicateAccountWarning.isOpen}
+        siteUrl={state.duplicateAccountWarning.siteUrl}
+        existingAccountsCount={
+          state.duplicateAccountWarning.existingAccountsCount
+        }
+        existingUsername={state.duplicateAccountWarning.existingUsername}
+        existingUserId={state.duplicateAccountWarning.existingUserId}
+        onCancel={handlers.handleDuplicateAccountWarningCancel}
+        onContinue={handlers.handleDuplicateAccountWarningContinue}
       />
-    </Modal>
+    </>
   )
 }
