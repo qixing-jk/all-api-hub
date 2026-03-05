@@ -1,59 +1,21 @@
 import { describe, expect, it } from "vitest"
 
 import { scanDuplicateAccounts } from "~/services/accounts/accountDedupe"
-import { AuthTypeEnum, SiteHealthStatus, type SiteAccount } from "~/types"
-
-const createAccount = (overrides: Partial<SiteAccount> = {}): SiteAccount => {
-  const numericId = overrides.id?.replace(/\D/g, "") || "1"
-
-  return {
-    id: overrides.id || "account-1",
-    site_name: overrides.site_name || "Test Site",
-    site_url: overrides.site_url || "https://test.example.com",
-    health: overrides.health || { status: SiteHealthStatus.Healthy },
-    site_type: overrides.site_type || "test",
-    exchange_rate: overrides.exchange_rate ?? 7.2,
-    account_info: {
-      id: overrides.account_info?.id ?? Number(numericId),
-      access_token: overrides.account_info?.access_token || "token",
-      username: overrides.account_info?.username || "tester",
-      quota: overrides.account_info?.quota ?? 1_000_000,
-      today_prompt_tokens: overrides.account_info?.today_prompt_tokens ?? 0,
-      today_completion_tokens:
-        overrides.account_info?.today_completion_tokens ?? 0,
-      today_quota_consumption:
-        overrides.account_info?.today_quota_consumption ?? 0,
-      today_requests_count: overrides.account_info?.today_requests_count ?? 0,
-      today_income: overrides.account_info?.today_income ?? 0,
-    },
-    last_sync_time: overrides.last_sync_time ?? Date.now(),
-    updated_at: overrides.updated_at ?? Date.now(),
-    created_at: overrides.created_at ?? Date.now(),
-    notes: overrides.notes,
-    tagIds: overrides.tagIds ?? [],
-    disabled: overrides.disabled,
-    authType: overrides.authType ?? AuthTypeEnum.AccessToken,
-    checkIn: overrides.checkIn || {
-      enableDetection: false,
-      autoCheckInEnabled: false,
-      siteStatus: { isCheckedInToday: false },
-    },
-  }
-}
+import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
 describe("scanDuplicateAccounts", () => {
   it("groups duplicates by origin + upstream user id", () => {
-    const a1 = createAccount({
+    const a1 = buildSiteAccount({
       id: "acc-1",
       site_url: "https://api.example.com/panel",
       account_info: { id: 1 } as any,
     })
-    const a2 = createAccount({
+    const a2 = buildSiteAccount({
       id: "acc-2",
       site_url: "https://api.example.com/v1",
       account_info: { id: "1" } as any,
     })
-    const a3 = createAccount({
+    const a3 = buildSiteAccount({
       id: "acc-3",
       site_url: "https://api.example.com",
       account_info: { id: 2 } as any,
@@ -76,15 +38,40 @@ describe("scanDuplicateAccounts", () => {
     ])
   })
 
+  it("treats scheme-less site URLs as scannable origins", () => {
+    const a1 = buildSiteAccount({
+      id: "acc-1",
+      site_url: "api.example.com/panel",
+      account_info: { id: 1 } as any,
+    })
+    const a2 = buildSiteAccount({
+      id: "acc-2",
+      site_url: "https://api.example.com/v1",
+      account_info: { id: 1 } as any,
+    })
+
+    const result = scanDuplicateAccounts({
+      accounts: [a1, a2],
+      pinnedAccountIds: [],
+      strategy: "keepPinned",
+    })
+
+    expect(result.groups).toHaveLength(1)
+    expect(result.groups[0].key).toEqual({
+      origin: "https://api.example.com",
+      userId: 1,
+    })
+  })
+
   it("picks the pinned account when strategy is keepPinned", () => {
-    const older = createAccount({
+    const older = buildSiteAccount({
       id: "acc-1",
       site_url: "https://api.example.com",
       account_info: { id: 1 } as any,
       updated_at: 1,
       created_at: 1,
     })
-    const pinned = createAccount({
+    const pinned = buildSiteAccount({
       id: "acc-2",
       site_url: "https://api.example.com",
       account_info: { id: 1 } as any,
@@ -103,7 +90,7 @@ describe("scanDuplicateAccounts", () => {
   })
 
   it("picks an enabled account when strategy is keepEnabled (even if a disabled one is pinned)", () => {
-    const enabled = createAccount({
+    const enabled = buildSiteAccount({
       id: "acc-1",
       site_url: "https://api.example.com",
       account_info: { id: 1 } as any,
@@ -111,7 +98,7 @@ describe("scanDuplicateAccounts", () => {
       updated_at: 1,
       created_at: 1,
     })
-    const disabledPinned = createAccount({
+    const disabledPinned = buildSiteAccount({
       id: "acc-2",
       site_url: "https://api.example.com",
       account_info: { id: 1 } as any,
@@ -130,14 +117,14 @@ describe("scanDuplicateAccounts", () => {
   })
 
   it("picks the most recently updated account when strategy is keepMostRecentlyUpdated", () => {
-    const older = createAccount({
+    const older = buildSiteAccount({
       id: "acc-1",
       site_url: "https://api.example.com",
       account_info: { id: 1 } as any,
       updated_at: 10,
       created_at: 10,
     })
-    const newer = createAccount({
+    const newer = buildSiteAccount({
       id: "acc-2",
       site_url: "https://api.example.com",
       account_info: { id: 1 } as any,
@@ -155,14 +142,14 @@ describe("scanDuplicateAccounts", () => {
   })
 
   it("uses created_at then id as deterministic tie-breakers", () => {
-    const olderCreated = createAccount({
+    const olderCreated = buildSiteAccount({
       id: "acc-1",
       site_url: "https://api.example.com",
       account_info: { id: 1 } as any,
       updated_at: 10,
       created_at: 10,
     })
-    const newerCreated = createAccount({
+    const newerCreated = buildSiteAccount({
       id: "acc-2",
       site_url: "https://api.example.com",
       account_info: { id: 1 } as any,
@@ -178,14 +165,14 @@ describe("scanDuplicateAccounts", () => {
 
     expect(createdAtResult.groups[0].keepAccountId).toBe("acc-2")
 
-    const idTieA = createAccount({
+    const idTieA = buildSiteAccount({
       id: "acc-1",
       site_url: "https://api.example.com",
       account_info: { id: 1 } as any,
       updated_at: 10,
       created_at: 10,
     })
-    const idTieB = createAccount({
+    const idTieB = buildSiteAccount({
       id: "acc-2",
       site_url: "https://api.example.com",
       account_info: { id: 1 } as any,
@@ -202,13 +189,38 @@ describe("scanDuplicateAccounts", () => {
     expect(idResult.groups[0].keepAccountId).toBe("acc-1")
   })
 
+  it("skips accounts with unsafe upstream user ids as unscannable", () => {
+    const unsafeA = buildSiteAccount({
+      id: "acc-1",
+      site_url: "https://api.example.com",
+      account_info: { id: "9007199254740992" } as any,
+    })
+    const unsafeB = buildSiteAccount({
+      id: "acc-2",
+      site_url: "https://api.example.com",
+      account_info: { id: "9007199254740993" } as any,
+    })
+
+    const result = scanDuplicateAccounts({
+      accounts: [unsafeA, unsafeB],
+      pinnedAccountIds: [],
+      strategy: "keepPinned",
+    })
+
+    expect(result.groups).toHaveLength(0)
+    expect(result.unscannable.map((a) => a.id).sort()).toEqual([
+      "acc-1",
+      "acc-2",
+    ])
+  })
+
   it("skips accounts with invalid URLs as unscannable", () => {
-    const ok = createAccount({
+    const ok = buildSiteAccount({
       id: "acc-1",
       site_url: "https://api.example.com/v1",
       account_info: { id: 1 } as any,
     })
-    const bad = createAccount({
+    const bad = buildSiteAccount({
       id: "acc-2",
       site_url: "not a url",
       account_info: { id: 1 } as any,
