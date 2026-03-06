@@ -100,6 +100,15 @@ interface AutoCheckinUiOpenPretriggerResult {
   pendingRetry?: boolean
 }
 
+interface AutoCheckinDailyTriggerPlan {
+  triggerTime: Date
+  enforceTodayTarget?: boolean
+}
+
+interface AutoCheckinDailyPlanningOptions {
+  allowCatchUp?: boolean
+}
+
 /**
  * Scheduler service for Auto Check-in
  *
@@ -185,6 +194,7 @@ class AutoCheckinScheduler {
   private static readonly LEGACY_ALARM_NAME = "autoCheckin"
   private static readonly DAILY_ALARM_NAME = "autoCheckinDaily"
   private static readonly RETRY_ALARM_NAME = "autoCheckinRetry"
+  private static readonly DETERMINISTIC_CATCH_UP_DELAY_MS = 60_000
   private isInitialized = false
 
   /**
@@ -306,9 +316,9 @@ class AutoCheckinScheduler {
     return minutes >= windowStart || minutes <= windowEnd
   }
 
-  private calculateDeterministicTrigger(
+  private calculateDeterministicTriggerForDay(
     config: AutoCheckinPreferences,
-    now: Date,
+    day: Date,
   ): Date | null {
     const deterministicMinutes = this.parseTimeToMinutes(
       config.deterministicTime || config.windowStart,
@@ -334,7 +344,7 @@ class AutoCheckinScheduler {
       return null
     }
 
-    const target = new Date(now)
+    const target = new Date(day)
     target.setHours(
       Math.floor(deterministicMinutes / 60),
       deterministicMinutes % 60,
@@ -342,11 +352,23 @@ class AutoCheckinScheduler {
       0,
     )
 
-    if (target <= now) {
-      target.setDate(target.getDate() + 1)
+    return target
+  }
+
+  private calculateDeterministicCatchUpTrigger(now: Date): Date | null {
+    const endOfToday = new Date(now)
+    endOfToday.setHours(23, 59, 59, 999)
+
+    const desiredWhen = Math.min(
+      now.getTime() + AutoCheckinScheduler.DETERMINISTIC_CATCH_UP_DELAY_MS,
+      endOfToday.getTime(),
+    )
+
+    if (desiredWhen <= now.getTime()) {
+      return null
     }
 
-    return target
+    return new Date(desiredWhen)
   }
 
   private calculateRandomTrigger(
@@ -433,35 +455,175 @@ class AutoCheckinScheduler {
    * - Deterministic mode schedules the configured deterministic time (fallback: window start).
    * - Random mode picks one random time inside the target day's window.
    */
-  private computeNextDailyTriggerTime(
+  private computeNextDailyTriggerPlan(
     config: AutoCheckinPreferences,
     status: AutoCheckinStatus | null,
     now: Date,
-  ): Date | null {
-    const ranToday = status?.lastDailyRunDay === this.getLocalDay(now)
+    planningOptions?: AutoCheckinDailyPlanningOptions,
+  ): AutoCheckinDailyTriggerPlan | null {
+    const today = this.getLocalDay(now)
+    const ranToday = status?.lastDailyRunDay === today
+    const windowStartMinutes = this.parseTimeToMinutes(config.windowStart)
+    const windowEndMinutes = this.parseTimeToMinutes(config.windowEnd)
+    const nowMinutes = now.getHours() * 60 + now.getMinutes()
+    const isWithinWindow =
+      windowStartMinutes !== null &&
+      windowEndMinutes !== null &&
+      this.isMinutesWithinWindow(
+        nowMinutes,
+        windowStartMinutes,
+        windowEndMinutes,
+      )
+    const allowCatchUp = planningOptions?.allowCatchUp === true
 
     if (config.scheduleMode === AUTO_CHECKIN_SCHEDULE_MODE.DETERMINISTIC) {
-      const baseNow = ranToday ? this.addLocalDays(now, 1) : now
-      const deterministic = this.calculateDeterministicTrigger(config, baseNow)
-      if (deterministic) {
-        return deterministic
+      if (ranToday) {
+        const tomorrowTrigger = this.calculateDeterministicTriggerForDay(
+          config,
+          this.addLocalDays(now, 1),
+        )
+        if (tomorrowTrigger) {
+          return { triggerTime: tomorrowTrigger }
+        }
+      } else {
+        const todayTrigger = this.calculateDeterministicTriggerForDay(
+          config,
+          now,
+        )
+        if (todayTrigger) {
+          if (todayTrigger > now) {
+            return { triggerTime: todayTrigger }
+          }
+
+          if (allowCatchUp && isWithinWindow) {
+            const catchUpTrigger =
+              this.calculateDeterministicCatchUpTrigger(now)
+            if (catchUpTrigger) {
+              return {
+                triggerTime: catchUpTrigger,
+                enforceTodayTarget: true,
+              }
+            }
+          }
+
+          const tomorrowTrigger = this.calculateDeterministicTriggerForDay(
+            config,
+            this.addLocalDays(now, 1),
+          )
+          if (tomorrowTrigger) {
+            return { triggerTime: tomorrowTrigger }
+          }
+        }
       }
     }
 
     if (ranToday) {
       const tomorrowStart = this.startOfLocalDay(this.addLocalDays(now, 1))
-      return this.calculateRandomTriggerForDay(
+      const tomorrowTrigger = this.calculateRandomTriggerForDay(
         config.windowStart,
         config.windowEnd,
         tomorrowStart,
       )
+      return tomorrowTrigger ? { triggerTime: tomorrowTrigger } : null
     }
 
-    return this.calculateRandomTrigger(
-      config.windowStart,
-      config.windowEnd,
-      now,
+    return {
+      triggerTime: this.calculateRandomTrigger(
+        config.windowStart,
+        config.windowEnd,
+        now,
+      ),
+    }
+  }
+
+  private async syncDailyScheduleStatus(
+    currentStatus: AutoCheckinStatus | null,
+    scheduledTime: Date,
+    targetDay = this.getLocalDay(scheduledTime),
+  ) {
+    const scheduledIso = scheduledTime.toISOString()
+
+    await autoCheckinStorage.saveStatus({
+      ...(currentStatus ?? {}),
+      nextDailyScheduledAt: scheduledIso,
+      dailyAlarmTargetDay: targetDay,
+      nextScheduledAt: scheduledIso, // legacy compatibility
+    })
+  }
+
+  private isExistingDailyAlarmReusable(
+    config: AutoCheckinPreferences,
+    scheduledTime: Date,
+    nextTriggerPlan: AutoCheckinDailyTriggerPlan | null,
+  ): boolean {
+    if (Number.isNaN(scheduledTime.getTime()) || !nextTriggerPlan) {
+      return false
+    }
+
+    if (config.scheduleMode !== AUTO_CHECKIN_SCHEDULE_MODE.DETERMINISTIC) {
+      return true
+    }
+
+    if (nextTriggerPlan.enforceTodayTarget) {
+      return false
+    }
+
+    return (
+      this.getLocalDay(scheduledTime) ===
+        this.getLocalDay(nextTriggerPlan.triggerTime) &&
+      scheduledTime.getHours() === nextTriggerPlan.triggerTime.getHours() &&
+      scheduledTime.getMinutes() === nextTriggerPlan.triggerTime.getMinutes()
     )
+  }
+
+  private async createDailyAlarmForToday(desiredWhen: number): Promise<Date> {
+    const now = new Date()
+    const today = this.getLocalDay(now)
+    const endOfToday = new Date(now)
+    endOfToday.setHours(23, 59, 59, 999)
+
+    let nextWhen = desiredWhen
+    if (nextWhen > endOfToday.getTime()) {
+      nextWhen = endOfToday.getTime()
+    }
+
+    if (nextWhen <= now.getTime()) {
+      throw new Error(
+        "[AutoCheckin] Cannot schedule daily alarm for today (too close to day boundary)",
+      )
+    }
+
+    await createAlarm(AutoCheckinScheduler.DAILY_ALARM_NAME, {
+      when: nextWhen,
+    })
+
+    let alarm = await getAlarm(AutoCheckinScheduler.DAILY_ALARM_NAME)
+    let scheduledWhen = alarm?.scheduledTime ?? nextWhen
+    let scheduledDay = this.getLocalDay(new Date(scheduledWhen))
+
+    if (scheduledDay !== today) {
+      const fallbackWhen = endOfToday.getTime()
+      if (fallbackWhen <= now.getTime()) {
+        throw new Error(
+          "[AutoCheckin] Cannot schedule daily alarm for today (end-of-day already passed)",
+        )
+      }
+
+      await createAlarm(AutoCheckinScheduler.DAILY_ALARM_NAME, {
+        when: fallbackWhen,
+      })
+      alarm = await getAlarm(AutoCheckinScheduler.DAILY_ALARM_NAME)
+      scheduledWhen = alarm?.scheduledTime ?? fallbackWhen
+      scheduledDay = this.getLocalDay(new Date(scheduledWhen))
+    }
+
+    if (scheduledDay !== today) {
+      throw new Error(
+        `[AutoCheckin] Failed to schedule daily alarm for today (scheduledDay=${scheduledDay}, today=${today})`,
+      )
+    }
+
+    return new Date(scheduledWhen)
   }
 
   private recalculateSummaryFromResults(
@@ -698,14 +860,17 @@ class AutoCheckinScheduler {
               "Legacy alarm detected; clearing and restoring daily schedule",
             )
             try {
-              await this.scheduleNextRun()
+              await this.scheduleNextRun({ allowCatchUp: true })
             } catch (error) {
               logger.error("Failed to restore schedule", error)
             }
           }
         })
 
-        await this.scheduleNextRun({ preserveExisting: true })
+        await this.scheduleNextRun({
+          preserveExisting: true,
+          allowCatchUp: true,
+        })
       } else {
         logger.warn("Alarms API not available, automatic check-in disabled")
       }
@@ -723,7 +888,10 @@ class AutoCheckinScheduler {
    * When `preserveExisting` is true we reuse any surviving alarms to avoid
    * re-randomizing on background restarts, only recreating missing alarms.
    */
-  async scheduleNextRun(options?: { preserveExisting?: boolean }) {
+  async scheduleNextRun(options?: {
+    preserveExisting?: boolean
+    allowCatchUp?: boolean
+  }) {
     if (!hasAlarmsAPI()) {
       logger.warn("Alarms API not supported, cannot schedule")
       return
@@ -765,9 +933,16 @@ class AutoCheckinScheduler {
    */
   private async scheduleDailyAlarm(
     config: AutoCheckinPreferences,
-    options?: { preserveExisting?: boolean },
+    options?: { preserveExisting?: boolean; allowCatchUp?: boolean },
   ) {
     const currentStatus = await autoCheckinStorage.getStatus()
+    const now = new Date()
+    const nextTriggerPlan = this.computeNextDailyTriggerPlan(
+      config,
+      currentStatus,
+      now,
+      { allowCatchUp: options?.allowCatchUp },
+    )
     const existingAlarm = options?.preserveExisting
       ? await getAlarm(AutoCheckinScheduler.DAILY_ALARM_NAME)
       : undefined
@@ -778,19 +953,34 @@ class AutoCheckinScheduler {
       const targetDay = this.getLocalDay(scheduledTime)
 
       if (
+        !this.isExistingDailyAlarmReusable(
+          config,
+          scheduledTime,
+          nextTriggerPlan,
+        )
+      ) {
+        logger.warn(
+          "Existing daily alarm no longer matches scheduler state; recreating",
+          {
+            scheduledTime,
+            expectedTriggerTime: nextTriggerPlan?.triggerTime,
+          },
+        )
+      } else if (
         currentStatus?.nextDailyScheduledAt !== scheduledIso ||
         currentStatus?.dailyAlarmTargetDay !== targetDay ||
         currentStatus?.nextScheduledAt !== scheduledIso
       ) {
-        await autoCheckinStorage.saveStatus({
-          ...(currentStatus ?? {}),
-          nextDailyScheduledAt: scheduledIso,
-          dailyAlarmTargetDay: targetDay,
-          nextScheduledAt: scheduledIso, // legacy compatibility
-        })
+        await this.syncDailyScheduleStatus(
+          currentStatus,
+          scheduledTime,
+          targetDay,
+        )
         logger.debug("Synced stored daily schedule with existing alarm")
+        return
+      } else {
+        return
       }
-      return
     }
 
     if (options?.preserveExisting) {
@@ -799,14 +989,10 @@ class AutoCheckinScheduler {
 
     await clearAlarm(AutoCheckinScheduler.DAILY_ALARM_NAME)
 
-    const now = new Date()
-    const nextTriggerTime = this.computeNextDailyTriggerTime(
-      config,
-      currentStatus,
-      now,
-    )
-
-    if (!nextTriggerTime || Number.isNaN(nextTriggerTime.getTime())) {
+    if (
+      !nextTriggerPlan ||
+      Number.isNaN(nextTriggerPlan.triggerTime.getTime())
+    ) {
       logger.warn("Invalid schedule configuration; daily alarm not scheduled")
       await autoCheckinStorage.saveStatus({
         ...(currentStatus ?? {}),
@@ -818,27 +1004,26 @@ class AutoCheckinScheduler {
     }
 
     try {
-      await createAlarm(AutoCheckinScheduler.DAILY_ALARM_NAME, {
-        when: nextTriggerTime.getTime(),
-      })
+      const scheduledTime = nextTriggerPlan.enforceTodayTarget
+        ? await this.createDailyAlarmForToday(
+            nextTriggerPlan.triggerTime.getTime(),
+          )
+        : await (async () => {
+            await createAlarm(AutoCheckinScheduler.DAILY_ALARM_NAME, {
+              when: nextTriggerPlan.triggerTime.getTime(),
+            })
 
-      const alarm = await getAlarm(AutoCheckinScheduler.DAILY_ALARM_NAME)
-      const scheduledTime =
-        alarm?.scheduledTime != null ? new Date(alarm.scheduledTime) : null
+            const alarm = await getAlarm(AutoCheckinScheduler.DAILY_ALARM_NAME)
+            return alarm?.scheduledTime != null
+              ? new Date(alarm.scheduledTime)
+              : nextTriggerPlan.triggerTime
+          })()
 
-      const scheduledIso = (scheduledTime ?? nextTriggerTime).toISOString()
-      const targetDay = this.getLocalDay(scheduledTime ?? nextTriggerTime)
-
-      await autoCheckinStorage.saveStatus({
-        ...(currentStatus ?? {}),
-        nextDailyScheduledAt: scheduledIso,
-        dailyAlarmTargetDay: targetDay,
-        nextScheduledAt: scheduledIso, // legacy compatibility
-      })
+      await this.syncDailyScheduleStatus(currentStatus, scheduledTime)
 
       logger.info("Daily alarm scheduled", {
         name: AutoCheckinScheduler.DAILY_ALARM_NAME,
-        scheduledTime: scheduledTime ?? nextTriggerTime,
+        scheduledTime,
       })
     } catch (error) {
       logger.error("Failed to create daily alarm", error)
@@ -1394,67 +1579,18 @@ class AutoCheckinScheduler {
 
     const minutesFromNow = Math.max(1, Math.floor(params?.minutesFromNow ?? 60))
 
-    const now = new Date()
-    const today = this.getLocalDay(now)
-    const endOfToday = new Date(now)
-    endOfToday.setHours(23, 59, 59, 999)
-
-    let desiredWhen = now.getTime() + minutesFromNow * 60_000
-    if (desiredWhen > endOfToday.getTime()) {
-      desiredWhen = endOfToday.getTime()
-    }
-
-    if (desiredWhen <= now.getTime()) {
-      throw new Error(
-        "[AutoCheckin] Cannot schedule daily alarm for today (too close to day boundary)",
-      )
-    }
-
-    await createAlarm(AutoCheckinScheduler.DAILY_ALARM_NAME, {
-      when: desiredWhen,
-    })
-
-    let alarm = await getAlarm(AutoCheckinScheduler.DAILY_ALARM_NAME)
-    let scheduledWhen = alarm?.scheduledTime ?? desiredWhen
-    let scheduledDay = this.getLocalDay(new Date(scheduledWhen))
-
-    if (scheduledDay !== today) {
-      const fallbackWhen = endOfToday.getTime()
-      if (fallbackWhen <= now.getTime()) {
-        throw new Error(
-          "[AutoCheckin] Cannot schedule daily alarm for today (end-of-day already passed)",
-        )
-      }
-
-      await createAlarm(AutoCheckinScheduler.DAILY_ALARM_NAME, {
-        when: fallbackWhen,
-      })
-      alarm = await getAlarm(AutoCheckinScheduler.DAILY_ALARM_NAME)
-      scheduledWhen = alarm?.scheduledTime ?? fallbackWhen
-      scheduledDay = this.getLocalDay(new Date(scheduledWhen))
-    }
-
-    if (scheduledDay !== today) {
-      throw new Error(
-        `[AutoCheckin] Failed to schedule daily alarm for today (scheduledDay=${scheduledDay}, today=${today})`,
-      )
-    }
-
     const currentStatus = await autoCheckinStorage.getStatus()
-    const scheduledIso = new Date(scheduledWhen).toISOString()
+    const scheduledTime = await this.createDailyAlarmForToday(
+      Date.now() + minutesFromNow * 60_000,
+    )
 
-    await autoCheckinStorage.saveStatus({
-      ...(currentStatus ?? {}),
-      nextDailyScheduledAt: scheduledIso,
-      dailyAlarmTargetDay: today,
-      nextScheduledAt: scheduledIso, // legacy compatibility
-    })
+    await this.syncDailyScheduleStatus(currentStatus, scheduledTime)
 
     logger.debug("Debug scheduled daily alarm for today", {
-      when: scheduledWhen,
+      when: scheduledTime.getTime(),
     })
 
-    return scheduledWhen
+    return scheduledTime.getTime()
   }
 
   /**
@@ -2045,7 +2181,7 @@ class AutoCheckinScheduler {
     }
 
     await userPreferences.savePreferences({ autoCheckin: updated })
-    await this.scheduleNextRun()
+    await this.scheduleNextRun({ allowCatchUp: false })
     logger.info("Settings updated", updated)
   }
 
