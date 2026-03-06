@@ -397,11 +397,10 @@ describe("preferencesMigration", () => {
 
       // New nested structures should be set correctly
       expect(result.webdav).toEqual({
+        ...DEFAULT_WEBDAV_SETTINGS,
         url: "https://backup.example.com",
         username: "backupuser",
         password: "backuppass",
-        backupEncryptionEnabled: false,
-        backupEncryptionPassword: "",
         autoSync: true,
         syncInterval: 7200,
         syncStrategy: WEBDAV_SYNC_STRATEGIES.UPLOAD_ONLY,
@@ -502,6 +501,21 @@ describe("preferencesMigration", () => {
       const prefs = createV0Preferences({
         preferencesVersion: 2,
         // No legacy WebDAV fields
+      })
+
+      const result = migratePreferences(prefs)
+
+      expect(result.preferencesVersion).toBe(CURRENT_PREFERENCES_VERSION)
+      expect(result.webdav).toEqual(DEFAULT_WEBDAV_SETTINGS)
+    })
+
+    it("initializes missing WebDAV syncData during v14 to v15 migration", () => {
+      const { syncData: _syncData, ...legacyWebdav } = DEFAULT_WEBDAV_SETTINGS
+      void _syncData
+
+      const prefs = createV0Preferences({
+        preferencesVersion: 14,
+        webdav: legacyWebdav,
       })
 
       const result = migratePreferences(prefs)

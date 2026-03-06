@@ -26,7 +26,13 @@ import {
   Switch,
 } from "~/components/ui"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { WEBDAV_SYNC_STRATEGIES, WebDAVSettings } from "~/types/webdav"
+import { userPreferences } from "~/services/preferences/userPreferences"
+import {
+  isWebdavSyncDataSelectionEmpty,
+  resolveWebdavSyncDataSelection,
+  WEBDAV_SYNC_STRATEGIES,
+  WebDAVSettings,
+} from "~/types/webdav"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { formatTimestamp } from "~/utils/core/formatters"
 import { createLogger } from "~/utils/core/logger"
@@ -69,9 +75,6 @@ export default function WebDAVAutoSyncSettings() {
 
   const loadSettings = async () => {
     try {
-      const { userPreferences } = await import(
-        "~/services/preferences/userPreferences"
-      )
       const prefs = await userPreferences.getPreferences()
       setAutoSyncEnabled(prefs.webdav.autoSync ?? false)
       setSyncInterval(prefs.webdav.syncInterval ?? 3600)
@@ -126,6 +129,13 @@ export default function WebDAVAutoSyncSettings() {
   const handleSyncNow = async () => {
     setSyncing(true)
     try {
+      const prefs = await userPreferences.getPreferences()
+      const selection = resolveWebdavSyncDataSelection(prefs.webdav.syncData)
+      if (isWebdavSyncDataSelectionEmpty(selection)) {
+        toast.error(t("webdav.syncData.selectionRequired"))
+        return
+      }
+
       const response = await sendRuntimeMessage({
         action: RuntimeActionIds.WebdavAutoSyncSyncNow,
       })

@@ -668,6 +668,7 @@ class UserPreferencesService {
     password?: string
     backupEncryptionEnabled?: boolean
     backupEncryptionPassword?: string
+    syncData?: WebDAVSettings["syncData"]
   }): Promise<boolean> {
     return this.savePreferences({
       webdav: settings,

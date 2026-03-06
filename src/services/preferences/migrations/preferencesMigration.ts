@@ -18,6 +18,7 @@ import {
   type BalanceHistoryPreferences,
 } from "~/types/dailyBalanceHistory"
 import { DEFAULT_OCTOPUS_CONFIG } from "~/types/octopusConfig"
+import { resolveWebdavSyncDataSelection } from "~/types/webdav"
 import { createLogger } from "~/utils/core/logger"
 
 import type { UserPreferences } from "../userPreferences"
@@ -26,7 +27,7 @@ import { migrateSortingConfig } from "./sortingConfigMigration"
 const logger = createLogger("PreferencesMigration")
 
 // Current version of the preferences schema
-export const CURRENT_PREFERENCES_VERSION = 14
+export const CURRENT_PREFERENCES_VERSION = 15
 
 /**
  * Migration function type
@@ -333,6 +334,26 @@ const migrations: Record<number, PreferencesMigrationFunction> = {
       ...prefs,
       openChangelogOnUpdate: true,
       preferencesVersion: 14,
+    }
+  },
+
+  // Version 14 -> 15: Initialize WebDAV selective sync data selection (all checked by default)
+  15: (prefs: UserPreferences): UserPreferences => {
+    logger.debug(
+      "Migrating preferences from v14 to v15 (webdav syncData defaults)",
+    )
+
+    const syncData = resolveWebdavSyncDataSelection(
+      (prefs as any).webdav?.syncData,
+    )
+
+    return {
+      ...prefs,
+      webdav: {
+        ...prefs.webdav,
+        syncData,
+      },
+      preferencesVersion: 15,
     }
   },
 }

@@ -79,6 +79,15 @@
       "decryptAction": "Decrypt and import",
       "decryptFailed": "Decrypt failed"
     },
+    "syncData": {
+      "title": "Sync data",
+      "description": "Choose which data domains participate in WebDAV sync",
+      "accounts": "Accounts",
+      "bookmarks": "Bookmarks",
+      "apiCredentialProfiles": "API credential profiles",
+      "preferences": "Preferences",
+      "selectionRequired": "Select at least one data domain to sync"
+    },
     "saveConfig": "Save Configuration",
     "testConnection": "Test Connection",
     "uploadBackup": "Upload Backup",

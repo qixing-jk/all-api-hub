@@ -79,6 +79,15 @@
       "decryptAction": "解密并导入",
       "decryptFailed": "解密失败"
     },
+    "syncData": {
+      "title": "同步数据",
+      "description": "选择需要通过 WebDAV 同步的数据类型",
+      "accounts": "账号",
+      "bookmarks": "书签",
+      "apiCredentialProfiles": "API 凭据",
+      "preferences": "偏好设置",
+      "selectionRequired": "请至少选择一个要同步的数据类型"
+    },
     "saveConfig": "保存配置",
     "testConnection": "测试连接",
     "uploadBackup": "上传备份",

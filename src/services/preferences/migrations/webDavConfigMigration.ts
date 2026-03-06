@@ -34,6 +34,8 @@ export function needWebDavConfigMigration(prefs: UserPreferences): boolean {
  */
 export function migrateWebDavConfig(prefs: UserPreferences) {
   const hasNestedWebdav = "webdav" in prefs && typeof prefs.webdav === "object"
+  const existingWebdav = hasNestedWebdav ? prefs.webdav : undefined
+
   // If no old flat fields and has nested webdav, return as-is
   if (!needWebDavConfigMigration(prefs) && hasNestedWebdav) {
     return prefs
@@ -41,16 +43,29 @@ export function migrateWebDavConfig(prefs: UserPreferences) {
 
   // Migrate old flat fields to nested object
   const webdavSettings = {
-    url: prefs.webdavUrl ?? DEFAULT_WEBDAV_SETTINGS.url,
-    username: prefs.webdavUsername ?? DEFAULT_WEBDAV_SETTINGS.username,
-    password: prefs.webdavPassword ?? DEFAULT_WEBDAV_SETTINGS.password,
-    backupEncryptionEnabled: DEFAULT_WEBDAV_SETTINGS.backupEncryptionEnabled,
-    backupEncryptionPassword: DEFAULT_WEBDAV_SETTINGS.backupEncryptionPassword,
-    autoSync: prefs.webdavAutoSync ?? DEFAULT_WEBDAV_SETTINGS.autoSync,
+    ...DEFAULT_WEBDAV_SETTINGS,
+    ...(existingWebdav ?? {}),
+    url: prefs.webdavUrl ?? existingWebdav?.url ?? DEFAULT_WEBDAV_SETTINGS.url,
+    username:
+      prefs.webdavUsername ??
+      existingWebdav?.username ??
+      DEFAULT_WEBDAV_SETTINGS.username,
+    password:
+      prefs.webdavPassword ??
+      existingWebdav?.password ??
+      DEFAULT_WEBDAV_SETTINGS.password,
+    autoSync:
+      prefs.webdavAutoSync ??
+      existingWebdav?.autoSync ??
+      DEFAULT_WEBDAV_SETTINGS.autoSync,
     syncInterval:
-      prefs.webdavSyncInterval ?? DEFAULT_WEBDAV_SETTINGS.syncInterval,
+      prefs.webdavSyncInterval ??
+      existingWebdav?.syncInterval ??
+      DEFAULT_WEBDAV_SETTINGS.syncInterval,
     syncStrategy:
-      prefs.webdavSyncStrategy ?? DEFAULT_WEBDAV_SETTINGS.syncStrategy,
+      prefs.webdavSyncStrategy ??
+      existingWebdav?.syncStrategy ??
+      DEFAULT_WEBDAV_SETTINGS.syncStrategy,
   }
 
   logger.debug("Migrated WebDAV settings", {

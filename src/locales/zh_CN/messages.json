@@ -195,6 +195,7 @@
   },
   "webdav": {
     "configIncomplete": "请先完整填写 WebDAV URL、用户名和密码",
+    "syncDataSelectionRequired": "请至少选择一个要同步的数据类型",
     "authFailed": "鉴权失败，请检查用户名/密码",
     "connectionFailed": "连接失败，状态码: {{status}}",
     "fileNotFound": "远程备份文件不存在",

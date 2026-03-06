@@ -152,11 +152,10 @@ describe("webDavConfigMigration", () => {
       const result = migrateWebDavConfig(oldPrefs)
 
       expect(result.webdav).toEqual({
+        ...DEFAULT_WEBDAV_SETTINGS,
         url: "https://example.com/webdav",
         username: "testuser",
         password: "testpass",
-        backupEncryptionEnabled: false,
-        backupEncryptionPassword: "",
         autoSync: true,
         syncInterval: 1800,
         syncStrategy: WEBDAV_SYNC_STRATEGIES.UPLOAD_ONLY,
@@ -204,16 +203,9 @@ describe("webDavConfigMigration", () => {
       const result = migrateWebDavConfig(prefs)
 
       expect(result.webdav).toEqual({
+        ...DEFAULT_WEBDAV_SETTINGS,
         url: "https://example.com",
-        username: DEFAULT_WEBDAV_SETTINGS.username,
-        password: DEFAULT_WEBDAV_SETTINGS.password,
-        backupEncryptionEnabled:
-          DEFAULT_WEBDAV_SETTINGS.backupEncryptionEnabled,
-        backupEncryptionPassword:
-          DEFAULT_WEBDAV_SETTINGS.backupEncryptionPassword,
         autoSync: true,
-        syncInterval: DEFAULT_WEBDAV_SETTINGS.syncInterval,
-        syncStrategy: DEFAULT_WEBDAV_SETTINGS.syncStrategy,
       })
     })
 
@@ -257,11 +249,10 @@ describe("webDavConfigMigration", () => {
       const result = migrateWebDavConfig(mixedPrefs)
 
       expect(result.webdav).toEqual({
+        ...DEFAULT_WEBDAV_SETTINGS,
         url: "https://new.com",
         username: "newuser",
         password: "newpass",
-        backupEncryptionEnabled: false,
-        backupEncryptionPassword: "",
         autoSync: true,
         syncInterval: 3600,
         syncStrategy: WEBDAV_SYNC_STRATEGIES.MERGE,
@@ -320,16 +311,36 @@ describe("webDavConfigMigration", () => {
       const result = migrateWebDavConfig(prefs)
 
       expect(result.webdav).toEqual({
-        url: "",
-        username: "",
-        password: "",
-        backupEncryptionEnabled:
-          DEFAULT_WEBDAV_SETTINGS.backupEncryptionEnabled,
-        backupEncryptionPassword:
-          DEFAULT_WEBDAV_SETTINGS.backupEncryptionPassword,
-        autoSync: DEFAULT_WEBDAV_SETTINGS.autoSync,
-        syncInterval: DEFAULT_WEBDAV_SETTINGS.syncInterval,
-        syncStrategy: DEFAULT_WEBDAV_SETTINGS.syncStrategy,
+        ...DEFAULT_WEBDAV_SETTINGS,
+      })
+    })
+
+    it("preserves nested syncData when flat fields also exist", () => {
+      const mixedPrefs = createPreferences({
+        webdav: {
+          ...DEFAULT_WEBDAV_SETTINGS,
+          syncData: {
+            accounts: false,
+            bookmarks: true,
+            apiCredentialProfiles: false,
+            preferences: true,
+          },
+        },
+        webdavUrl: "https://override.example.com",
+        themeMode: "dark",
+      })
+
+      const result = migrateWebDavConfig(mixedPrefs)
+
+      expect(result.webdav).toEqual({
+        ...DEFAULT_WEBDAV_SETTINGS,
+        url: "https://override.example.com",
+        syncData: {
+          accounts: false,
+          bookmarks: true,
+          apiCredentialProfiles: false,
+          preferences: true,
+        },
       })
     })
 

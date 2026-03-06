@@ -195,6 +195,7 @@
   },
   "webdav": {
     "configIncomplete": "Please fill in WebDAV URL, username and password completely",
+    "syncDataSelectionRequired": "Select at least one data domain to sync",
     "authFailed": "Authentication failed, please check username/password",
     "connectionFailed": "Connection failed, status code: {{status}}",
     "fileNotFound": "Remote backup file does not exist",

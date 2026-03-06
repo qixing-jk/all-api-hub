@@ -2,6 +2,58 @@
  * WebDAV configuration types
  */
 
+export const WEBDAV_SYNC_DATA_KEYS = [
+  "accounts",
+  "bookmarks",
+  "apiCredentialProfiles",
+  "preferences",
+] as const
+
+export type WebDAVSyncDataKey = (typeof WEBDAV_SYNC_DATA_KEYS)[number]
+
+export type WebDAVSyncDataSelection = Record<WebDAVSyncDataKey, boolean>
+
+/**
+ * Builds a normalized WebDAV sync selection object from the canonical key list.
+ */
+function createWebdavSyncDataSelection(
+  resolver: (key: WebDAVSyncDataKey) => boolean,
+): WebDAVSyncDataSelection {
+  return Object.fromEntries(
+    WEBDAV_SYNC_DATA_KEYS.map((key) => [key, resolver(key)]),
+  ) as WebDAVSyncDataSelection
+}
+
+export const DEFAULT_WEBDAV_SYNC_DATA_SELECTION: WebDAVSyncDataSelection =
+  createWebdavSyncDataSelection(() => true)
+
+/**
+ * Resolve the effective sync data selection:
+ * - Missing values default to "all checked" (preserve legacy behavior).
+ * - Invalid values are ignored.
+ */
+export function resolveWebdavSyncDataSelection(
+  raw: unknown,
+): WebDAVSyncDataSelection {
+  const rawSelection =
+    raw && typeof raw === "object"
+      ? (raw as Partial<Record<WebDAVSyncDataKey, unknown>>)
+      : {}
+
+  return createWebdavSyncDataSelection((key) =>
+    typeof rawSelection[key] === "boolean" ? rawSelection[key] : true,
+  )
+}
+
+/**
+ * Returns true when no WebDAV sync domain is enabled.
+ */
+export function isWebdavSyncDataSelectionEmpty(
+  selection: WebDAVSyncDataSelection,
+): boolean {
+  return WEBDAV_SYNC_DATA_KEYS.every((key) => !selection[key])
+}
+
 export interface WebDAVSettings {
   url: string
   username: string
@@ -23,6 +75,12 @@ export interface WebDAVSettings {
    * Optional for backwards compatibility with older preferences.
    */
   backupEncryptionPassword?: string
+  /**
+   * Controls which domains participate in WebDAV sync.
+   *
+   * Optional for backwards compatibility with older preferences.
+   */
+  syncData?: Partial<WebDAVSyncDataSelection>
   autoSync: boolean
   syncInterval: number // seconds
   syncStrategy: WebDAVSyncStrategy
@@ -51,6 +109,7 @@ export const DEFAULT_WEBDAV_SETTINGS: WebDAVSettings = {
   // Encryption is opt-in and defaults to disabled.
   backupEncryptionEnabled: false,
   backupEncryptionPassword: "",
+  syncData: DEFAULT_WEBDAV_SYNC_DATA_SELECTION,
   autoSync: false,
   syncInterval: 3600,
   syncStrategy: WEBDAV_SYNC_STRATEGIES.MERGE,
