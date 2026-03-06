@@ -31,6 +31,8 @@ import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeList, parseDelimitedList } from "~/utils/core/string"
 
+import { resolveDefaultChannelGroups } from "./defaultChannelGroups"
+
 /**
  * Unified logger scoped to the Done Hub integration and auto-config flows.
  */
@@ -261,9 +263,13 @@ export async function prepareChannelFormData(
     throw new Error(t("messages:donehub.noAnyModels"))
   }
 
-  const resolvedGroups = token.group
-    ? [token.group]
-    : [...DEFAULT_CHANNEL_FIELDS.groups]
+  const resolvedGroups = await resolveDefaultChannelGroups({
+    siteType: DONE_HUB,
+    getConfig: getDoneHubConfig,
+    onError: (error) => {
+      logger.warn("Failed to resolve Done Hub default groups", error)
+    },
+  })
 
   return {
     name: buildChannelName(account, token),

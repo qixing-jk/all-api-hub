@@ -30,6 +30,7 @@ import {
   UserPreferences,
   userPreferences,
 } from "../../preferences/userPreferences"
+import { resolveDefaultChannelGroups } from "./defaultChannelGroups"
 
 /**
  * Unified logger scoped to the New API integration and auto-config flows.
@@ -272,9 +273,13 @@ export async function prepareChannelFormData(
     throw new Error(t("messages:newapi.noAnyModels"))
   }
 
-  const resolvedGroups = token.group
-    ? [token.group]
-    : [...DEFAULT_CHANNEL_FIELDS.groups]
+  const resolvedGroups = await resolveDefaultChannelGroups({
+    siteType: NEW_API,
+    getConfig: getNewApiConfig,
+    onError: (error) => {
+      logger.warn("Failed to resolve New API default groups", error)
+    },
+  })
 
   return {
     name: buildChannelName(account, token),

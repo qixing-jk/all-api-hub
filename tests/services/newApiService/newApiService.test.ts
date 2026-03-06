@@ -40,6 +40,7 @@ vi.mock("~/services/apiService/common/errors", () => ({
 // Mock higher-level API service functions
 const mockFetchAccountAvailableModels = vi.fn()
 const mockFetchOpenAICompatibleModelIds = vi.fn()
+const mockFetchSiteUserGroups = vi.fn()
 const mockSearchChannel = vi.fn()
 const mockCreateChannel = vi.fn()
 const mockUpdateChannel = vi.fn()
@@ -57,6 +58,7 @@ vi.mock("~/services/apiService/common", async () => {
   return {
     ...actual,
     fetchAccountAvailableModels: mockFetchAccountAvailableModels,
+    fetchSiteUserGroups: mockFetchSiteUserGroups,
     searchChannel: mockSearchChannel,
     createChannel: mockCreateChannel,
     updateChannel: mockUpdateChannel,
@@ -851,23 +853,27 @@ describe("newApiService", () => {
   // ========================================================================
 
   describe("prepareChannelFormData", () => {
-    it("should prepare form data successfully", async () => {
+    it("should prefer the target site's default group", async () => {
       const { prepareChannelFormData } = await import(
         "~/services/managedSites/providers/newApi"
       )
       const account = createMockDisplaySiteData()
       const token = createMockApiToken({ group: "custom-group" })
 
+      mockGetPreferences.mockResolvedValueOnce(
+        createMockUserPreferencesWithNewApi(),
+      )
       mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce([
         "gpt-4",
         "gpt-3.5-turbo",
       ])
+      mockFetchSiteUserGroups.mockResolvedValueOnce(["default", "vip"])
 
       const result = await prepareChannelFormData(account, token)
 
       expect(result.name).toContain("(auto)")
       expect(result.models).toContain("gpt-4")
-      expect(result.groups).toContain("custom-group")
+      expect(result.groups).toEqual(["default"])
       expect(result.key).toBe(token.key)
       expect(result.base_url).toBe(account.baseUrl)
     })
@@ -884,13 +890,36 @@ describe("newApiService", () => {
       await expect(prepareChannelFormData(account, token)).rejects.toThrow()
     })
 
-    it("should use default groups when token has no group", async () => {
+    it("should use the first target group when default is unavailable", async () => {
       const { prepareChannelFormData } = await import(
         "~/services/managedSites/providers/newApi"
       )
       const account = createMockDisplaySiteData()
-      const token = createMockApiToken({ group: undefined })
+      const token = createMockApiToken({ group: "custom-group" })
 
+      mockGetPreferences.mockResolvedValueOnce(
+        createMockUserPreferencesWithNewApi(),
+      )
+      mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce(["gpt-4"])
+      mockFetchSiteUserGroups.mockResolvedValueOnce(["vip", "beta"])
+
+      const result = await prepareChannelFormData(account, token)
+
+      expect(result.groups).toEqual(["vip"])
+    })
+
+    it("should fall back to default groups when site config is unavailable", async () => {
+      const { prepareChannelFormData } = await import(
+        "~/services/managedSites/providers/newApi"
+      )
+      const account = createMockDisplaySiteData()
+      const token = createMockApiToken({ group: "custom-group" })
+
+      mockGetPreferences.mockResolvedValueOnce(
+        createMockUserPreferencesWithNewApi({
+          newApi: { baseUrl: "", adminToken: "", userId: "" },
+        }),
+      )
       mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce(["gpt-4"])
 
       const result = await prepareChannelFormData(account, token)

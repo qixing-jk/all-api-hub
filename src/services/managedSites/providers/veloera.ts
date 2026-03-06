@@ -30,6 +30,7 @@ import {
   UserPreferences,
   userPreferences,
 } from "../../preferences/userPreferences"
+import { resolveDefaultChannelGroups } from "./defaultChannelGroups"
 
 /**
  * Unified logger scoped to the Veloera integration and auto-config flows.
@@ -259,9 +260,13 @@ export async function prepareChannelFormData(
     throw new Error(t("messages:veloera.noAnyModels"))
   }
 
-  const resolvedGroups = token.group
-    ? [token.group]
-    : [...DEFAULT_CHANNEL_FIELDS.groups]
+  const resolvedGroups = await resolveDefaultChannelGroups({
+    siteType: VELOERA,
+    getConfig: getVeloeraConfig,
+    onError: (error) => {
+      logger.warn("Failed to resolve Veloera default groups", error)
+    },
+  })
 
   return {
     name: buildChannelName(account, token),
