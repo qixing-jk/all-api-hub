@@ -6,6 +6,8 @@ import {
   downloadBackupRaw,
   testWebdavConnection,
   uploadBackup,
+  WEBDAV_FILE_NOT_FOUND_ERROR_CODE,
+  WebdavFileNotFoundError,
 } from "~/services/webdav/webdavService"
 
 vi.mock("~/services/preferences/userPreferences", () => ({
@@ -142,9 +144,11 @@ describe("webdavService", () => {
       mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
       globalAny.fetch.mockResolvedValue({ status: 404 })
 
-      await expect(downloadBackup()).rejects.toThrow(
-        "messages:webdav.fileNotFound",
-      )
+      const error = await downloadBackup().catch((thrown) => thrown)
+
+      expect(error).toBeInstanceOf(WebdavFileNotFoundError)
+      expect(error.code).toBe(WEBDAV_FILE_NOT_FOUND_ERROR_CODE)
+      expect(error.message).toBe("messages:webdav.fileNotFound")
     })
 
     it("throws authFailed for 401/403", async () => {

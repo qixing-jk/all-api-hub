@@ -89,6 +89,45 @@ describe("filterWebdavBackupPayloadBySelection", () => {
 })
 
 describe("mergeWebdavBackupPayloadBySelection", () => {
+  it("omits unselected domains when no remote backup exists", () => {
+    const backup: any = {
+      version: "2.0",
+      timestamp: 456,
+      accounts: {
+        accounts: [{ id: "local-account" }],
+        bookmarks: [{ id: "local-bookmark" }],
+        pinnedAccountIds: ["local-account", "local-bookmark"],
+        orderedAccountIds: ["local-account", "local-bookmark"],
+        last_updated: 456,
+      },
+      tagStore: { version: 1, tagsById: { local: { id: "local" } } },
+      preferences: { lastUpdated: 456, themeMode: "dark" },
+      channelConfigs: { 1: { enabled: true } },
+      apiCredentialProfiles: {
+        version: 1,
+        profiles: [{ id: "local-profile" }],
+        lastUpdated: 456,
+      },
+    }
+
+    const payload = mergeWebdavBackupPayloadBySelection({
+      backup,
+      selection: {
+        accounts: true,
+        bookmarks: false,
+        apiCredentialProfiles: false,
+        preferences: false,
+      },
+      remoteBackup: undefined,
+    })
+
+    expect((payload.accounts as any).accounts).toEqual([
+      { id: "local-account" },
+    ])
+    expect(payload.preferences).toBeUndefined()
+    expect(payload.apiCredentialProfiles).toBeUndefined()
+  })
+
   it("preserves remote accounts when only preferences are selected", () => {
     const backup: any = {
       version: "2.0",

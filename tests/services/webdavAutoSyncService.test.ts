@@ -112,6 +112,8 @@ const mockUploadBackup = vi.fn()
 vi.mock("~/services/webdav/webdavService", () => ({
   testWebdavConnection: (...args: any[]) => mockTestConnection(...args),
   downloadBackup: (...args: any[]) => mockDownloadBackup(...args),
+  isWebdavFileNotFoundError: (error: any) =>
+    error?.code === "WEBDAV_FILE_NOT_FOUND",
   uploadBackup: (...args: any[]) => mockUploadBackup(...args),
 }))
 
@@ -376,6 +378,61 @@ describe("WebdavAutoSyncService.syncWithWebdav (selective sync)", () => {
       profiles: [],
       lastUpdated: 0,
     })
+  })
+
+  it("rejects when no syncData domains are enabled", async () => {
+    const service = createService()
+
+    mockGetPreferences.mockResolvedValue({
+      webdav: {
+        syncStrategy: "merge",
+        syncData: {
+          accounts: false,
+          bookmarks: false,
+          apiCredentialProfiles: false,
+          preferences: false,
+        },
+      },
+    } as any)
+
+    await expect(service.syncWithWebdav()).rejects.toThrow()
+  })
+
+  it("treats a missing remote backup as first upload", async () => {
+    const service = createService()
+
+    mockGetPreferences.mockResolvedValue({
+      webdav: {
+        syncStrategy: "upload_only",
+        syncData: {
+          accounts: true,
+          bookmarks: false,
+          apiCredentialProfiles: false,
+          preferences: false,
+        },
+      },
+    } as any)
+
+    mockAccountStorageExportData.mockResolvedValue({
+      accounts: [{ id: "a1", created_at: 1, updated_at: 1 }],
+      bookmarks: [{ id: "b1", created_at: 2, updated_at: 2 }],
+      pinnedAccountIds: ["a1"],
+      orderedAccountIds: ["a1", "b1"],
+      last_updated: 100,
+    })
+
+    mockDownloadBackup.mockRejectedValue({
+      code: "WEBDAV_FILE_NOT_FOUND",
+      message: "messages:webdav.fileNotFound",
+    })
+
+    await expect(service.syncWithWebdav()).resolves.toBeUndefined()
+
+    const uploaded = JSON.parse(mockUploadBackup.mock.calls[0][0])
+    expect(
+      uploaded.accounts.accounts.map((account: any) => account.id),
+    ).toEqual(["a1"])
+    expect(uploaded.preferences).toBeUndefined()
   })
 
   it("download_only preserves local accounts when remote omits the accounts section", async () => {

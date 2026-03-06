@@ -524,6 +524,28 @@ describe("preferencesMigration", () => {
       expect(result.webdav).toEqual(DEFAULT_WEBDAV_SETTINGS)
     })
 
+    it("fills missing WebDAV syncData keys during v14 to v15 migration", () => {
+      const prefs = createV0Preferences({
+        preferencesVersion: 14,
+        webdav: {
+          ...DEFAULT_WEBDAV_SETTINGS,
+          syncData: {
+            accounts: false,
+            preferences: false,
+          },
+        },
+      })
+
+      const result = migratePreferences(prefs)
+
+      expect(result.preferencesVersion).toBe(CURRENT_PREFERENCES_VERSION)
+      expect(result.webdav.syncData).toEqual({
+        ...DEFAULT_WEBDAV_SETTINGS.syncData,
+        accounts: false,
+        preferences: false,
+      })
+    })
+
     it("handles mixed old and new field scenarios", () => {
       const prefs = createV0Preferences({
         preferencesVersion: 2,

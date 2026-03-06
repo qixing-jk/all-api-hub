@@ -3,7 +3,6 @@ import {
   EyeIcon,
   EyeSlashIcon,
 } from "@heroicons/react/24/outline"
-import { t as i18nT } from "i18next"
 import { useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
@@ -46,6 +45,7 @@ import {
 import {
   downloadBackup,
   downloadBackupRaw,
+  isWebdavFileNotFoundError,
   testWebdavConnection,
   uploadBackup,
 } from "~/services/webdav/webdavService"
@@ -250,7 +250,7 @@ export default function WebDAVSettings() {
         const remoteContent = await downloadBackup(webdavConfig)
         remoteBackup = JSON.parse(remoteContent)
       } catch (error: any) {
-        if (error?.message !== i18nT("messages:webdav.fileNotFound")) {
+        if (!isWebdavFileNotFoundError(error)) {
           throw error
         }
       }

@@ -18,7 +18,10 @@ import {
   type BalanceHistoryPreferences,
 } from "~/types/dailyBalanceHistory"
 import { DEFAULT_OCTOPUS_CONFIG } from "~/types/octopusConfig"
-import { resolveWebdavSyncDataSelection } from "~/types/webdav"
+import {
+  DEFAULT_WEBDAV_SETTINGS,
+  resolveWebdavSyncDataSelection,
+} from "~/types/webdav"
 import { createLogger } from "~/utils/core/logger"
 
 import type { UserPreferences } from "../userPreferences"
@@ -343,14 +346,17 @@ const migrations: Record<number, PreferencesMigrationFunction> = {
       "Migrating preferences from v14 to v15 (webdav syncData defaults)",
     )
 
-    const syncData = resolveWebdavSyncDataSelection(
-      (prefs as any).webdav?.syncData,
-    )
+    const normalizedWebdav = {
+      ...DEFAULT_WEBDAV_SETTINGS,
+      ...(prefs.webdav ?? {}),
+    }
+
+    const syncData = resolveWebdavSyncDataSelection(normalizedWebdav.syncData)
 
     return {
       ...prefs,
       webdav: {
-        ...prefs.webdav,
+        ...normalizedWebdav,
         syncData,
       },
       preferencesVersion: 15,

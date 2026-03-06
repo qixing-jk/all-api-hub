@@ -30,6 +30,37 @@ const CONFIG_VERSION = "1-0"
  */
 export const PROGRAM_NAME = "all-api-hub"
 
+export const WEBDAV_FILE_NOT_FOUND_ERROR_CODE = "WEBDAV_FILE_NOT_FOUND"
+
+export class WebdavFileNotFoundError extends Error {
+  readonly code = WEBDAV_FILE_NOT_FOUND_ERROR_CODE
+
+  constructor(message: string = t("messages:webdav.fileNotFound")) {
+    super(message)
+    this.name = "WebdavFileNotFoundError"
+    Object.setPrototypeOf(this, WebdavFileNotFoundError.prototype)
+  }
+}
+
+/**
+ * Type guard to detect WebDAV file-not-found errors, which may be represented
+ * @param error - The error object to check
+ */
+export function isWebdavFileNotFoundError(
+  error: unknown,
+): error is WebdavFileNotFoundError {
+  if (error instanceof WebdavFileNotFoundError) {
+    return true
+  }
+
+  if (!error || typeof error !== "object") {
+    return false
+  }
+
+  const candidate = error as { code?: unknown }
+  return candidate.code === WEBDAV_FILE_NOT_FOUND_ERROR_CODE
+}
+
 /**
  * Default WebDAV collection/directory name used for backups.
  */
@@ -197,7 +228,7 @@ export async function downloadBackupRaw(custom?: Partial<WebDAVConfig>) {
   if (res.status === 200) {
     return await res.text()
   }
-  if (res.status === 404) throw new Error(t("messages:webdav.fileNotFound"))
+  if (res.status === 404) throw new WebdavFileNotFoundError()
   if (res.status === 401 || res.status === 403)
     throw new Error(t("messages:webdav.authFailed"))
   throw new Error(t("messages:webdav.downloadFailed", { status: res.status }))

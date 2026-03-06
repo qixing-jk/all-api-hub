@@ -53,6 +53,7 @@ import {
 } from "./webdavSelectiveSync"
 import {
   downloadBackup,
+  isWebdavFileNotFoundError,
   testWebdavConnection,
   uploadBackup,
 } from "./webdavService"
@@ -286,7 +287,7 @@ class WebdavAutoSyncService {
       remoteData = JSON.parse(content)
       logger.info("成功下载远程数据", { timestamp: remoteData?.timestamp })
     } catch (error: any) {
-      if (error.message?.includes("404") || error.message?.includes("不存在")) {
+      if (isWebdavFileNotFoundError(error)) {
         logger.info("远程文件不存在，将创建新备份")
         remoteData = null
       } else {
