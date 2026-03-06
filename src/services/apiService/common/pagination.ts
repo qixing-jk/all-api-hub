@@ -27,6 +27,30 @@ export interface PageData<T> {
   hasMore?: boolean
 }
 
+export type ArrayOrItemsPayload<T> =
+  | T[]
+  | { items?: T[] | null }
+  | null
+  | undefined
+
+/**
+ * Normalize list responses that may be either a bare array or an object with
+ * an `items` array.
+ */
+export function extractItemsFromArrayOrItemsPayload<T>(
+  payload: ArrayOrItemsPayload<T>,
+): T[] {
+  if (Array.isArray(payload)) {
+    return payload
+  }
+
+  if (payload && typeof payload === "object" && Array.isArray(payload.items)) {
+    return payload.items
+  }
+
+  return []
+}
+
 /**
  * Generic paginated data fetcher with aggregation support
  * @param fetchPage - Function to fetch a single page of data

@@ -3,7 +3,7 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { useAccountData } from "~/hooks/useAccountData"
-import { getApiService } from "~/services/apiService"
+import { createDisplayAccountApiContext } from "~/services/accounts/utils/apiServiceRequest"
 import type { AccountToken } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -140,18 +140,8 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       }))
 
       try {
-        const tokens = await getApiService(account.siteType).fetchAccountTokens(
-          {
-            baseUrl: account.baseUrl,
-            accountId: account.id,
-            auth: {
-              authType: account.authType,
-              userId: account.userId,
-              accessToken: account.token,
-              cookie: account.cookieAuthSessionCookie,
-            },
-          },
-        )
+        const { service, request } = createDisplayAccountApiContext(account)
+        const tokens = await service.fetchAccountTokens(request)
 
         if (!isEpochActive(loadEpoch)) return
         if (!isLatestAccountRequest(accountId, requestEpoch)) return
@@ -202,7 +192,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
           },
         }))
         if (toastOnError) {
-          toast.error(loadFailedMessageRef.current)
+          toast.error(errorMessage)
         }
       }
     },
@@ -557,19 +547,8 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         return
       }
 
-      await getApiService(account.siteType).deleteApiToken(
-        {
-          baseUrl: account.baseUrl,
-          accountId: account.id,
-          auth: {
-            authType: account.authType,
-            userId: account.userId,
-            accessToken: account.token,
-            cookie: account.cookieAuthSessionCookie,
-          },
-        },
-        token.id,
-      )
+      const { service, request } = createDisplayAccountApiContext(account)
+      await service.deleteApiToken(request, token.id)
       toast.success(
         t("keyManagement:messages.deleteSuccess", { name: token.name }),
       )
@@ -586,7 +565,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     } catch (error) {
       const errorMessage = getErrorMessage(error) || String(error)
       logger.error("删除密钥失败", errorMessage)
-      toast.error(t("keyManagement:messages.deleteFailed"))
+      toast.error(errorMessage)
     }
   }
 

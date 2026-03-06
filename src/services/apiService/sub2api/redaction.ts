@@ -8,11 +8,13 @@
 
 const JWT_PATTERN = /\beyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\b/g
 const BEARER_PATTERN = /\bBearer\s+([a-zA-Z0-9._-]+)\b/gi
+const OPENAI_KEY_PATTERN = /\bsk-[a-z0-9_-]{10,}\b/gi
 
 export const redactSecrets = (value: string): string =>
   value
     .replace(BEARER_PATTERN, "Bearer [REDACTED]")
     .replace(JWT_PATTERN, "[REDACTED_JWT]")
+    .replace(OPENAI_KEY_PATTERN, "[REDACTED_KEY]")
 
 export const getSafeErrorMessage = (error: unknown): string => {
   const message =

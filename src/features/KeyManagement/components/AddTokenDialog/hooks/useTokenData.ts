@@ -2,9 +2,10 @@ import { useCallback, useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { getApiService } from "~/services/apiService"
+import { createDisplayAccountApiContext } from "~/services/accounts/utils/apiServiceRequest"
 import type { UserGroupInfo } from "~/services/apiService/common/type"
 import type { DisplaySiteData } from "~/types"
+import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
 import type { FormData } from "./useTokenForm"
@@ -37,22 +38,12 @@ export function useTokenData(
 
     setIsLoading(true)
     try {
-      const request = {
-        baseUrl: currentAccount.baseUrl,
-        accountId: currentAccount.id,
-        auth: {
-          authType: currentAccount.authType,
-          userId: currentAccount.userId,
-          accessToken: currentAccount.token,
-          cookie: currentAccount.cookieAuthSessionCookie,
-        },
-      }
+      const { service, request } =
+        createDisplayAccountApiContext(currentAccount)
 
       const [models, groupsData] = await Promise.all([
-        getApiService(currentAccount.siteType).fetchAccountAvailableModels(
-          request,
-        ),
-        getApiService(currentAccount.siteType).fetchUserGroups(request),
+        service.fetchAccountAvailableModels(request),
+        service.fetchUserGroups(request),
       ])
 
       setAvailableModels(models)
@@ -103,7 +94,7 @@ export function useTokenData(
       })
     } catch (error) {
       logger.error("Failed to load initial data", error)
-      toast.error(t("dialog.loadDataFailed"))
+      toast.error(getErrorMessage(error) || t("dialog.loadDataFailed"))
     } finally {
       setIsLoading(false)
     }

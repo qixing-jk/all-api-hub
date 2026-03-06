@@ -4,9 +4,10 @@ import { useTranslation } from "react-i18next"
 
 import { Modal } from "~/components/ui/Dialog/Modal"
 import { UI_CONSTANTS } from "~/constants/ui"
-import { getApiService } from "~/services/apiService"
+import { createDisplayAccountApiContext } from "~/services/accounts/utils/apiServiceRequest"
 import type { CreateTokenRequest } from "~/services/apiService/common/type"
 import type { AccountToken, DisplaySiteData } from "~/types"
+import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
 import { DialogHeader } from "./DialogHeader"
@@ -93,37 +94,14 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
         allow_ips: formData.allowIps.trim() || "",
         group: formData.group,
       }
+      const { service, request } =
+        createDisplayAccountApiContext(currentAccount)
 
       if (isEditMode && editingToken) {
-        await getApiService(currentAccount.siteType).updateApiToken(
-          {
-            baseUrl: currentAccount.baseUrl,
-            accountId: currentAccount.id,
-            auth: {
-              authType: currentAccount.authType,
-              userId: currentAccount.userId,
-              accessToken: currentAccount.token,
-              cookie: currentAccount.cookieAuthSessionCookie,
-            },
-          },
-          editingToken.id,
-          tokenData,
-        )
+        await service.updateApiToken(request, editingToken.id, tokenData)
         toast.success(t("dialog.updateSuccess"))
       } else {
-        await getApiService(currentAccount.siteType).createApiToken(
-          {
-            baseUrl: currentAccount.baseUrl,
-            accountId: currentAccount.id,
-            auth: {
-              authType: currentAccount.authType,
-              userId: currentAccount.userId,
-              accessToken: currentAccount.token,
-              cookie: currentAccount.cookieAuthSessionCookie,
-            },
-          },
-          tokenData,
-        )
+        await service.createApiToken(request, tokenData)
         toast.success(t("dialog.createSuccess"))
       }
 
@@ -136,7 +114,8 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
     } catch (error) {
       logger.error(`${isEditMode ? "更新" : "创建"}密钥失败`, error)
       toast.error(
-        isEditMode ? t("dialog.updateFailed") : t("dialog.createFailed"),
+        getErrorMessage(error) ||
+          (isEditMode ? t("dialog.updateFailed") : t("dialog.createFailed")),
       )
     } finally {
       setIsSubmitting(false)

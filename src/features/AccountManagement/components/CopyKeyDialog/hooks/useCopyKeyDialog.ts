@@ -2,10 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { SUB2API } from "~/constants/siteType"
 import { generateDefaultTokenRequest } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
-import { getApiService } from "~/services/apiService"
-import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/types"
+import {
+  canManageDisplayAccountTokens,
+  createDisplayAccountApiContext,
+} from "~/services/accounts/utils/apiServiceRequest"
+import type { ApiToken, DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
@@ -33,42 +35,10 @@ export function useCopyKeyDialog(
   const [copiedKey, setCopiedKey] = useState<string | null>(null)
   const [expandedTokens, setExpandedTokens] = useState<Set<number>>(new Set())
 
-  const canCreateDefaultKey = useMemo(() => {
-    if (!account) return false
-
-    if (account.disabled === true) {
-      return false
-    }
-
-    if (account.siteType === SUB2API) {
-      return false
-    }
-
-    if (account.authType === AuthTypeEnum.None) {
-      return false
-    }
-
-    const hasToken = typeof account.token === "string" && account.token.trim()
-    const hasCookie =
-      typeof account.cookieAuthSessionCookie === "string" &&
-      account.cookieAuthSessionCookie.trim()
-
-    if (
-      typeof account.id !== "string" ||
-      account.id.trim().length === 0 ||
-      typeof account.baseUrl !== "string" ||
-      account.baseUrl.trim().length === 0 ||
-      typeof account.siteType !== "string" ||
-      account.siteType.trim().length === 0 ||
-      !Number.isFinite(account.userId) ||
-      (account.authType === AuthTypeEnum.AccessToken && !hasToken) ||
-      (account.authType === AuthTypeEnum.Cookie && !hasToken && !hasCookie)
-    ) {
-      return false
-    }
-
-    return true
-  }, [account])
+  const canCreateDefaultKey = useMemo(
+    () => canManageDisplayAccountTokens(account),
+    [account],
+  )
 
   const fetchTokens = useCallback(async () => {
     if (!account) return
@@ -78,18 +48,8 @@ export function useCopyKeyDialog(
     setCreateError(null)
 
     try {
-      const tokensResponse = await getApiService(
-        account.siteType,
-      ).fetchAccountTokens({
-        baseUrl: account.baseUrl,
-        accountId: account.id,
-        auth: {
-          authType: account.authType,
-          userId: account.userId,
-          accessToken: account.token,
-          cookie: account.cookieAuthSessionCookie,
-        },
-      })
+      const { service, request } = createDisplayAccountApiContext(account)
+      const tokensResponse = await service.fetchAccountTokens(request)
       if (Array.isArray(tokensResponse)) {
         setTokens(tokensResponse)
       } else {
@@ -163,18 +123,7 @@ export function useCopyKeyDialog(
     setCreateError(null)
 
     try {
-      const service = getApiService(account.siteType)
-      const request = {
-        baseUrl: account.baseUrl,
-        accountId: account.id,
-        auth: {
-          authType: account.authType,
-          userId: account.userId,
-          accessToken: account.token,
-          cookie: account.cookieAuthSessionCookie,
-        },
-      }
-
+      const { service, request } = createDisplayAccountApiContext(account)
       const refreshedTokens = await service.fetchAccountTokens(request)
       if (!Array.isArray(refreshedTokens)) {
         throw new Error("token_refresh_failed")
@@ -221,18 +170,7 @@ export function useCopyKeyDialog(
     setCreateError(null)
 
     try {
-      const service = getApiService(account.siteType)
-      const request = {
-        baseUrl: account.baseUrl,
-        accountId: account.id,
-        auth: {
-          authType: account.authType,
-          userId: account.userId,
-          accessToken: account.token,
-          cookie: account.cookieAuthSessionCookie,
-        },
-      }
-
+      const { service, request } = createDisplayAccountApiContext(account)
       const tokenRequest = generateDefaultTokenRequest()
       const created = await service.createApiToken(request, tokenRequest)
       if (!created) {

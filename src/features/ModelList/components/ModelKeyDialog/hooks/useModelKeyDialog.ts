@@ -2,9 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { SUB2API } from "~/constants/siteType"
 import { generateDefaultTokenRequest } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
-import { getApiService } from "~/services/apiService"
+import {
+  canManageDisplayAccountTokens,
+  createDisplayAccountApiContext,
+} from "~/services/accounts/utils/apiServiceRequest"
 import { isTokenCompatibleWithModel } from "~/services/models/utils/tokenModelCompatibility"
 import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
@@ -41,50 +43,16 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
   const [isCreating, setIsCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
 
-  const canCreateToken = useMemo(() => {
-    if (!account) return false
-
-    if (account.disabled === true) {
-      return false
-    }
-
-    if (account.siteType === SUB2API) {
-      return false
-    }
-
-    if (account.authType === AuthTypeEnum.None) {
-      return false
-    }
-
-    const hasToken = typeof account.token === "string" && account.token.trim()
-    const hasCookie =
-      typeof account.cookieAuthSessionCookie === "string" &&
-      account.cookieAuthSessionCookie.trim()
-
-    if (
-      typeof account.id !== "string" ||
-      account.id.trim().length === 0 ||
-      typeof account.baseUrl !== "string" ||
-      account.baseUrl.trim().length === 0 ||
-      typeof account.siteType !== "string" ||
-      account.siteType.trim().length === 0 ||
-      !Number.isFinite(account.userId) ||
-      (account.authType === AuthTypeEnum.AccessToken && !hasToken) ||
-      (account.authType === AuthTypeEnum.Cookie && !hasToken && !hasCookie)
-    ) {
-      return false
-    }
-
-    return true
-  }, [account])
+  const canCreateToken = useMemo(
+    () => canManageDisplayAccountTokens(account),
+    [account],
+  )
 
   const ineligibleDescription = useMemo(() => {
     if (!account) return null
     if (canCreateToken) return null
     if (account.disabled === true)
       return t("modelList:keyDialog.ineligible.accountDisabled")
-    if (account.siteType === SUB2API)
-      return t("modelList:keyDialog.ineligible.siteNotSupported")
     if (account.authType === AuthTypeEnum.None)
       return t("modelList:keyDialog.ineligible.missingAuth")
     return t("modelList:keyDialog.ineligible.missingCredentials")
@@ -98,18 +66,8 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
     setCreateError(null)
 
     try {
-      const tokensResponse = await getApiService(
-        account.siteType,
-      ).fetchAccountTokens({
-        baseUrl: account.baseUrl,
-        accountId: account.id,
-        auth: {
-          authType: account.authType,
-          userId: account.userId,
-          accessToken: account.token,
-          cookie: account.cookieAuthSessionCookie,
-        },
-      })
+      const { service, request } = createDisplayAccountApiContext(account)
+      const tokensResponse = await service.fetchAccountTokens(request)
 
       if (Array.isArray(tokensResponse)) {
         setTokens(tokensResponse)
@@ -215,18 +173,7 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
     setIsLoading(true)
 
     try {
-      const service = getApiService(account.siteType)
-      const request = {
-        baseUrl: account.baseUrl,
-        accountId: account.id,
-        auth: {
-          authType: account.authType,
-          userId: account.userId,
-          accessToken: account.token,
-          cookie: account.cookieAuthSessionCookie,
-        },
-      }
-
+      const { service, request } = createDisplayAccountApiContext(account)
       const refreshedTokens = await service.fetchAccountTokens(request)
       if (!Array.isArray(refreshedTokens)) {
         throw new Error("token_refresh_failed")
@@ -286,18 +233,7 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
       setCreateError(null)
 
       try {
-        const service = getApiService(account.siteType)
-        const request = {
-          baseUrl: account.baseUrl,
-          accountId: account.id,
-          auth: {
-            authType: account.authType,
-            userId: account.userId,
-            accessToken: account.token,
-            cookie: account.cookieAuthSessionCookie,
-          },
-        }
-
+        const { service, request } = createDisplayAccountApiContext(account)
         const tokenRequest = generateDefaultTokenRequest()
         tokenRequest.group = normalizedGroup
         const created = await service.createApiToken(request, tokenRequest)
