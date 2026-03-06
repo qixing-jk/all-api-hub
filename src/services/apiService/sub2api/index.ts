@@ -422,6 +422,29 @@ const resyncSub2ApiRequestAuth = async <
 
 type AuthenticatedSub2ApiRunner<T> = (request: ApiServiceRequest) => Promise<T>
 
+const retrySub2ApiRunnerWithResyncedAuth = async <T>(params: {
+  request: ApiServiceRequest
+  endpoint: string
+  accountStorageRef: Sub2ApiAccountStorageRef
+  runner: AuthenticatedSub2ApiRunner<T>
+}): Promise<T> => {
+  const updatedRequest = await resyncSub2ApiRequestAuth({
+    request: params.request,
+    endpoint: params.endpoint,
+    accountStorageRef: params.accountStorageRef,
+  })
+
+  try {
+    return await params.runner(updatedRequest)
+  } catch (retryError) {
+    if (isUnauthorizedError(retryError)) {
+      throw createLoginRequiredError(params.endpoint)
+    }
+
+    throw retryError
+  }
+}
+
 /**
  * Execute a Sub2API API request with automatic handling of JWT hydration, proactive refresh, and reactive refresh/resync on 401 errors.
  * @param request The initial API request, which may have incomplete auth info that will be hydrated.
@@ -488,25 +511,36 @@ const executeAuthenticatedSub2ApiRequest = async <T>(
         if (isSub2ApiRefreshTokenContractError(refreshError)) {
           throw createRefreshTokenInvalidError(endpoint)
         }
-        throw refreshError
+
+        let updatedRequest: ApiServiceRequest
+        try {
+          updatedRequest = await resyncSub2ApiRequestAuth({
+            request: effectiveRequest,
+            endpoint,
+            accountStorageRef: hydrated.accountStorageRef,
+          })
+        } catch {
+          throw refreshError
+        }
+
+        try {
+          return await runner(updatedRequest)
+        } catch (retryError) {
+          if (isUnauthorizedError(retryError)) {
+            throw createLoginRequiredError(endpoint)
+          }
+
+          throw retryError
+        }
       }
     }
 
-    effectiveRequest = await resyncSub2ApiRequestAuth({
+    return await retrySub2ApiRunnerWithResyncedAuth({
       request: effectiveRequest,
       endpoint,
       accountStorageRef: hydrated.accountStorageRef,
+      runner,
     })
-
-    try {
-      return await runner(effectiveRequest)
-    } catch (retryError) {
-      if (isUnauthorizedError(retryError)) {
-        throw createLoginRequiredError(endpoint)
-      }
-
-      throw retryError
-    }
   }
 }
 
@@ -543,7 +577,7 @@ const fetchSub2ApiData = async <T>(
   options?: RequestInit,
   parserOptions?: { allowMissingData?: boolean },
 ): Promise<T> => {
-  const result = await fetchSub2ApiDataWithRequest(
+  const result = await fetchSub2ApiDataWithRequest<T>(
     request,
     endpoint,
     options,
@@ -602,7 +636,7 @@ const resolveSelectedGroupId = async (
 
   if (typeof groupId !== "number" || !Number.isFinite(groupId)) {
     throw new ApiError(
-      `Sub2API group '${normalizedGroup}' is no longer available. Refresh the group list and try again.`,
+      t("messages:sub2api.groupMissing", { group: normalizedGroup }),
       undefined,
       SUB2API_AVAILABLE_GROUPS_ENDPOINT,
       API_ERROR_CODES.BUSINESS_ERROR,
@@ -668,6 +702,24 @@ const createRefreshSuccessResult = (
     username: currentUser.username,
   },
 })
+
+const refreshSub2ApiAccountViaResync = async (params: {
+  request: ApiServiceRequest
+  accountStorageRef: Sub2ApiAccountStorageRef
+  checkIn: CheckInConfig
+}): Promise<RefreshAccountResult> => {
+  const retryRequest = await resyncSub2ApiRequestAuth({
+    request: params.request,
+    endpoint: SUB2API_AUTH_ME_ENDPOINT,
+    accountStorageRef: params.accountStorageRef,
+  })
+
+  const currentUser = await fetchCurrentUser(retryRequest)
+
+  return createRefreshSuccessResult(currentUser, params.checkIn, {
+    accessToken: retryRequest.auth.accessToken,
+  })
+}
 
 /**
  * Fetch the currently logged-in Sub2API user.
@@ -851,23 +903,27 @@ export async function refreshAccountData(
           logger.warn("Failed to restore Sub2API session via refresh token", {
             error: getSafeErrorMessage(refreshError),
           })
-          return {
-            success: false,
-            healthStatus: createRefreshTokenRestoreRequiredHealthStatus(),
+
+          try {
+            return await refreshSub2ApiAccountViaResync({
+              request: effectiveRequest,
+              accountStorageRef: hydratedRequest.accountStorageRef,
+              checkIn,
+            })
+          } catch {
+            return {
+              success: false,
+              healthStatus: createRefreshTokenRestoreRequiredHealthStatus(),
+            }
           }
         }
       }
 
       try {
-        const retryRequest = await resyncSub2ApiRequestAuth({
+        return await refreshSub2ApiAccountViaResync({
           request: hydratedRequest.request,
-          endpoint: SUB2API_AUTH_ME_ENDPOINT,
           accountStorageRef: hydratedRequest.accountStorageRef,
-        })
-
-        const currentUser = await fetchCurrentUser(retryRequest)
-        return createRefreshSuccessResult(currentUser, checkIn, {
-          accessToken: retryRequest.auth.accessToken,
+          checkIn,
         })
       } catch (retryError) {
         if (retryError instanceof ApiError && retryError.statusCode === 401) {

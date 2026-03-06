@@ -168,7 +168,7 @@ export function buildSub2ApiToken(overrides: Partial<ApiToken> = {}): ApiToken {
   return buildApiToken({
     id: 1,
     user_id: 1,
-    key: "sk-sub2api-key",
+    key: "sub2api-test-key",
     status: 1,
     name: "default",
     created_time: 0,

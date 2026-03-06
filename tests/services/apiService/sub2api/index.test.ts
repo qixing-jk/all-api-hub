@@ -1,9 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
-import type { ApiServiceAccountRequest } from "~/services/apiService/common/type"
+import type {
+  ApiServiceAccountRequest,
+  CreateTokenRequest,
+} from "~/services/apiService/common/type"
 import { fetchApi } from "~/services/apiService/common/utils"
-import { refreshAccountData } from "~/services/apiService/sub2api"
+import {
+  createApiToken,
+  fetchAccountTokens,
+  refreshAccountData,
+} from "~/services/apiService/sub2api"
 import {
   convertUsdBalanceToQuota,
   parseSub2ApiEnvelope,
@@ -157,6 +164,20 @@ describe("apiService sub2api refreshAccountData", () => {
       },
       ...overrides,
     }) as ApiServiceAccountRequest
+
+  const createTokenRequest = (
+    overrides: Partial<CreateTokenRequest> = {},
+  ): CreateTokenRequest => ({
+    name: "Test Token",
+    remain_quota: 0,
+    expired_time: -1,
+    unlimited_quota: true,
+    model_limits_enabled: false,
+    model_limits: "",
+    allow_ips: "",
+    group: "default",
+    ...overrides,
+  })
 
   it("returns success without retry when /api/v1/auth/me succeeds", async () => {
     vi.mocked(fetchApi).mockResolvedValueOnce({
@@ -436,7 +457,165 @@ describe("apiService sub2api refreshAccountData", () => {
     nowSpy.mockRestore()
   })
 
-  it("does not fall back to localStorage re-sync when refresh token restore fails", async () => {
+  it("re-syncs key requests when refresh token restore throws a non-contract error", async () => {
+    const fetchMock = vi.fn().mockRejectedValue(new Error("network down"))
+    vi.stubGlobal("fetch", fetchMock as any)
+
+    vi.mocked(fetchApi)
+      .mockRejectedValueOnce(new ApiError("Unauthorized", 401, "/api/v1/keys"))
+      .mockResolvedValueOnce({
+        code: 0,
+        message: "ok",
+        data: [
+          {
+            id: 1,
+            user_id: 1,
+            key: "sub2api-token",
+            status: 1,
+            name: "Token",
+            created_at: 0,
+            updated_at: 0,
+            expires_at: null,
+            quota: 0,
+            quota_used: 0,
+            ip_whitelist: [],
+            group: { name: "default" },
+          },
+        ],
+      } as any)
+
+    vi.mocked(resyncSub2ApiAuthToken).mockResolvedValueOnce({
+      accessToken: "resynced-jwt",
+      source: "existing_tab",
+    })
+
+    const request = createRequest({
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        userId: 1,
+        accessToken: "old-jwt",
+        refreshToken: "old-refresh",
+      },
+    })
+
+    const tokens = await fetchAccountTokens(request)
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith(request.baseUrl)
+    expect(fetchApi).toHaveBeenCalledTimes(2)
+    expect(
+      (vi.mocked(fetchApi).mock.calls[1]?.[0] as any)?.auth?.accessToken,
+    ).toBe("resynced-jwt")
+    expect(tokens).toHaveLength(1)
+    expect(tokens[0]).toMatchObject({
+      key: "sk-sub2api-token",
+      group: "default",
+    })
+  })
+
+  it("does not re-sync key requests when refresh token restore fails with a contract error", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          code: 1,
+          message: "invalid_refresh_token",
+          data: null,
+        }),
+        { status: 401, headers: { "Content-Type": "application/json" } },
+      ),
+    )
+    vi.stubGlobal("fetch", fetchMock as any)
+
+    vi.mocked(fetchApi).mockRejectedValueOnce(
+      new ApiError("Unauthorized", 401, "/api/v1/keys"),
+    )
+
+    const request = createRequest({
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        userId: 1,
+        accessToken: "old-jwt",
+        refreshToken: "old-refresh",
+      },
+    })
+
+    await expect(fetchAccountTokens(request)).rejects.toMatchObject({
+      message: "messages:sub2api.refreshTokenInvalid",
+      code: API_ERROR_CODES.HTTP_401,
+    })
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(resyncSub2ApiAuthToken).not.toHaveBeenCalled()
+    expect(fetchApi).toHaveBeenCalledTimes(1)
+  })
+
+  it("throws localized group-missing error when the selected Sub2API group disappears", async () => {
+    vi.mocked(fetchApi).mockResolvedValueOnce({
+      code: 0,
+      message: "ok",
+      data: [{ id: 1, name: "default" }],
+    } as any)
+
+    await expect(
+      createApiToken(createRequest(), createTokenRequest({ group: "vip" })),
+    ).rejects.toMatchObject({
+      message: "messages:sub2api.groupMissing",
+      code: API_ERROR_CODES.BUSINESS_ERROR,
+    })
+  })
+
+  it("falls back to dashboard re-sync when refresh token restore fails", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          code: 1,
+          message: "invalid_refresh_token",
+          data: null,
+        }),
+        { status: 401, headers: { "Content-Type": "application/json" } },
+      ),
+    )
+    vi.stubGlobal("fetch", fetchMock as any)
+
+    vi.mocked(fetchApi)
+      .mockRejectedValueOnce(
+        new ApiError("Unauthorized", 401, "/api/v1/auth/me"),
+      )
+      .mockResolvedValueOnce({
+        code: 0,
+        message: "ok",
+        data: { id: 2, username: "bob", balance: 1 },
+      } as any)
+
+    vi.mocked(resyncSub2ApiAuthToken).mockResolvedValueOnce({
+      accessToken: "resynced-jwt",
+      source: "temp_window",
+    })
+
+    const request = createRequest({
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        userId: 1,
+        accessToken: "old-jwt",
+        refreshToken: "old-refresh",
+      },
+    })
+
+    const result = await refreshAccountData(request)
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith(request.baseUrl)
+    expect(fetchApi).toHaveBeenCalledTimes(2)
+    expect(
+      (vi.mocked(fetchApi).mock.calls[1]?.[0] as any)?.auth?.accessToken,
+    ).toBe("resynced-jwt")
+    expect(result.success).toBe(true)
+    expect(result.authUpdate?.accessToken).toBe("resynced-jwt")
+    expect(result.authUpdate?.userId).toBe(2)
+    expect(result.authUpdate?.username).toBe("bob")
+  })
+
+  it("returns restore-required warning when refresh token restore and re-sync both fail", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(
         JSON.stringify({
@@ -452,6 +631,7 @@ describe("apiService sub2api refreshAccountData", () => {
     vi.mocked(fetchApi).mockRejectedValueOnce(
       new ApiError("Unauthorized", 401, "/api/v1/auth/me"),
     )
+    vi.mocked(resyncSub2ApiAuthToken).mockResolvedValueOnce(null)
 
     const request = createRequest({
       auth: {
@@ -465,7 +645,7 @@ describe("apiService sub2api refreshAccountData", () => {
     const result = await refreshAccountData(request)
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
-    expect(resyncSub2ApiAuthToken).not.toHaveBeenCalled()
+    expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith(request.baseUrl)
     expect(fetchApi).toHaveBeenCalledTimes(1)
     expect(result.success).toBe(false)
     expect(result.healthStatus.status).toBe(SiteHealthStatus.Warning)
