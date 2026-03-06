@@ -2,7 +2,10 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import ModelKeyDialog from "~/features/ModelList/components/ModelKeyDialog"
-import { AuthTypeEnum } from "~/types"
+import {
+  buildSub2ApiAccount,
+  buildSub2ApiToken,
+} from "~~/tests/test-utils/factories"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
@@ -34,35 +37,9 @@ vi.mock("~/services/apiService", () => ({
   }),
 }))
 
-const ACCOUNT = {
-  id: "sub2-acc",
-  name: "Sub2API",
-  username: "tester",
-  siteType: "sub2api",
-  baseUrl: "https://sub2.example.com",
-  token: "jwt-token",
-  userId: 1,
-  authType: AuthTypeEnum.AccessToken,
-  checkIn: { enableDetection: false },
-} as any
+const ACCOUNT = buildSub2ApiAccount()
 
-const TOKEN = {
-  id: 1,
-  user_id: 1,
-  key: "sk-sub2api-key",
-  status: 1,
-  name: "default",
-  created_time: 0,
-  accessed_time: 0,
-  expired_time: -1,
-  remain_quota: 0,
-  unlimited_quota: true,
-  used_quota: 0,
-  allow_ips: "",
-  model_limits_enabled: false,
-  model_limits: "",
-  group: "default",
-} as any
+const TOKEN = buildSub2ApiToken()
 
 describe("ModelKeyDialog sub2api support", () => {
   beforeEach(() => {

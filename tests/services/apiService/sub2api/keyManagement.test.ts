@@ -9,6 +9,7 @@ import {
   createApiToken,
   fetchAccountAvailableModels,
   fetchAccountTokens,
+  fetchTokenById,
   fetchUserGroups,
   updateApiToken,
 } from "~/services/apiService/sub2api"
@@ -102,6 +103,25 @@ describe("apiService sub2api key management parsing", () => {
     expect(token.group).toBe("vip")
     expect(token.unlimited_quota).toBe(false)
     expect(token.expired_time).toBe(1772971200)
+  })
+
+  it("treats non-positive numeric strings like numeric expiries", () => {
+    const token = parseSub2ApiKey({
+      id: 7,
+      user_id: 5,
+      key: "test-key",
+      name: "VIP Key",
+      status: "active",
+      quota: 1,
+      quota_used: 0,
+      expires_at: "0",
+      created_at: "2026-03-01T08:30:00.000Z",
+      updated_at: "2026-03-02T09:45:00.000Z",
+      ip_whitelist: [],
+      group: { id: 9, name: "vip" },
+    })
+
+    expect(token.expired_time).toBe(-1)
   })
 
   it("translates shared token requests into Sub2API create and update payloads", () => {
@@ -287,6 +307,171 @@ describe("apiService sub2api key management service", () => {
     })
   })
 
+  it("uses hydrated auth userId when listing keys without upstream user_id", async () => {
+    getAccountByIdMock.mockResolvedValue({
+      id: "acc-1",
+      account_info: { id: 42, access_token: "stored-jwt" },
+    })
+
+    fetchApiMock.mockResolvedValueOnce({
+      code: 0,
+      message: "ok",
+      data: {
+        items: [
+          {
+            id: 1,
+            key: "list-key",
+            name: "listed",
+            status: "active",
+            quota: 1,
+            quota_used: 0,
+            created_at: "2026-03-06T00:00:00.000Z",
+            updated_at: "2026-03-06T00:00:00.000Z",
+            expires_at: null,
+            ip_whitelist: [],
+            group: { id: 1, name: "default" },
+          },
+        ],
+        total: 1,
+        page: 1,
+        page_size: 100,
+        pages: 1,
+      },
+    })
+
+    const tokens = await fetchAccountTokens(
+      createRequest({
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "request-jwt",
+        },
+      }),
+    )
+
+    expect(tokens[0]?.user_id).toBe(42)
+  })
+
+  it("uses hydrated auth userId when fetching key detail without upstream user_id", async () => {
+    getAccountByIdMock.mockResolvedValue({
+      id: "acc-1",
+      account_info: { id: 42, access_token: "stored-jwt" },
+    })
+
+    fetchApiMock.mockResolvedValueOnce({
+      code: 0,
+      message: "ok",
+      data: {
+        id: 9,
+        key: "detail-key",
+        name: "detail",
+        status: "active",
+        quota: 1,
+        quota_used: 0,
+        created_at: "2026-03-06T00:00:00.000Z",
+        updated_at: "2026-03-06T00:00:00.000Z",
+        expires_at: null,
+        ip_whitelist: [],
+        group: { id: 1, name: "default" },
+      },
+    })
+
+    const token = await fetchTokenById(
+      createRequest({
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "request-jwt",
+        },
+      }),
+      9,
+    )
+
+    expect(token.user_id).toBe(42)
+  })
+
+  it("serializes concurrent refreshes for group fetches and reuses rotated auth", async () => {
+    const now = 1_772_713_600_000
+    vi.spyOn(Date, "now").mockReturnValue(now)
+
+    let currentAccount = {
+      id: "acc-1",
+      account_info: { id: 1, access_token: "stored-jwt" },
+      sub2apiAuth: {
+        refreshToken: "stored-refresh",
+        tokenExpiresAt: now + 30_000,
+      },
+    }
+
+    getAccountByIdMock.mockImplementation(async () =>
+      structuredClone(currentAccount),
+    )
+    updateAccountMock.mockImplementation(async (_id, updates) => {
+      currentAccount = {
+        ...currentAccount,
+        ...updates,
+        account_info: {
+          ...currentAccount.account_info,
+          ...(updates.account_info ?? {}),
+        },
+        sub2apiAuth: updates.sub2apiAuth
+          ? {
+              ...(currentAccount.sub2apiAuth ?? {}),
+              ...updates.sub2apiAuth,
+            }
+          : currentAccount.sub2apiAuth,
+      }
+
+      return true
+    })
+
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          code: 0,
+          message: "ok",
+          data: {
+            access_token: "new-jwt",
+            refresh_token: "rotated-refresh",
+            expires_in: 3600,
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    )
+    vi.stubGlobal("fetch", fetchMock as any)
+
+    fetchApiMock.mockImplementation(async (_request, options) => {
+      if (options?.endpoint === "/api/v1/groups/available") {
+        return {
+          code: 0,
+          message: "ok",
+          data: [{ id: 1, name: "default", description: "Default plan" }],
+        }
+      }
+
+      if (options?.endpoint === "/api/v1/groups/rates") {
+        return {
+          code: 0,
+          message: "ok",
+          data: { "1": 1 },
+        }
+      }
+
+      throw new Error(`Unexpected endpoint: ${options?.endpoint}`)
+    })
+
+    const [firstGroups, secondGroups] = await Promise.all([
+      fetchUserGroups(createRequest()),
+      fetchUserGroups(createRequest()),
+    ])
+
+    expect(firstGroups).toEqual({ default: { desc: "Default plan", ratio: 1 } })
+    expect(secondGroups).toEqual({
+      default: { desc: "Default plan", ratio: 1 },
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(updateAccountMock).toHaveBeenCalledTimes(1)
+  })
+
   it("retries key requests with refresh-token recovery and persists rotated auth", async () => {
     const now = 1_772_713_600_000
     vi.spyOn(Date, "now").mockReturnValue(now)
@@ -360,10 +545,7 @@ describe("apiService sub2api key management service", () => {
   })
 
   it("retries key requests with dashboard-session re-sync when no refresh token exists", async () => {
-    getAccountByIdMock.mockResolvedValue({
-      id: "acc-1",
-      account_info: { id: 1, access_token: "stored-jwt" },
-    })
+    getAccountByIdMock.mockResolvedValue(null)
     resyncSub2ApiAuthTokenMock.mockResolvedValue({
       accessToken: "resynced-jwt",
       source: "existing_tab",

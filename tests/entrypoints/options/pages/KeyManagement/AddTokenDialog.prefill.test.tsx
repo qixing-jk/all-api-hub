@@ -152,4 +152,36 @@ describe("AddTokenDialog prefill", () => {
       model_limits: "",
     })
   })
+
+  it("falls back to the localized create failure message when the error is blank", async () => {
+    fetchAccountAvailableModelsMock.mockResolvedValueOnce(["gpt-4", "gpt-3.5"])
+    fetchUserGroupsMock.mockResolvedValueOnce({
+      default: { desc: "default", ratio: 1 },
+    })
+    createApiTokenMock.mockRejectedValueOnce(new Error("   "))
+
+    const user = userEvent.setup()
+
+    render(
+      <AddTokenDialog
+        isOpen={true}
+        onClose={() => {}}
+        availableAccounts={[ACCOUNT]}
+        preSelectedAccountId={ACCOUNT.id}
+        createPrefill={{ modelId: "gpt-4", defaultName: "model gpt-4" }}
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:dialog.createToken",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith(
+        "keyManagement:dialog.createFailed",
+      )
+    })
+  })
 })

@@ -113,10 +113,14 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
       }
     } catch (error) {
       logger.error(`${isEditMode ? "更新" : "创建"}密钥失败`, error)
-      toast.error(
-        getErrorMessage(error) ||
-          (isEditMode ? t("dialog.updateFailed") : t("dialog.createFailed")),
-      )
+      const message = getErrorMessage(error)
+      const fallbackMessage = isEditMode
+        ? t("dialog.updateFailed")
+        : t("dialog.createFailed")
+      const displayMessage =
+        message && message.trim() ? message : fallbackMessage
+
+      toast.error(displayMessage)
     } finally {
       setIsSubmitting(false)
     }

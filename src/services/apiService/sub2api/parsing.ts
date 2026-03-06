@@ -111,6 +111,7 @@ const toParsedEpochSeconds = (value: unknown): number | null => {
 
     const numeric = Number(trimmed)
     if (Number.isFinite(numeric)) {
+      if (numeric <= 0) return null
       return numeric > 1_000_000_000_000
         ? Math.floor(numeric / 1000)
         : Math.floor(numeric)

@@ -60,23 +60,26 @@ import {
 const logger = createLogger("ApiService.Sub2API")
 const DEFAULT_KEYS_PAGE = 1
 const DEFAULT_KEYS_PAGE_SIZE = 100
+const sub2ApiAuthMutationLocks = new Map<string, Promise<void>>()
 
 const isCloseToExpiry = (tokenExpiresAt: number): boolean => {
   const msUntilExpiry = tokenExpiresAt - Date.now()
   return msUntilExpiry <= SUB2API_TOKEN_REFRESH_BUFFER_MS
 }
 
-const normalizeRefreshToken = (value: unknown): string =>
+const normalizeAccessToken = (value: unknown): string =>
   typeof value === "string" ? value.trim() : ""
+
+const normalizeRefreshToken = (value: unknown): string =>
+  normalizeAccessToken(value)
 
 const normalizeTokenExpiresAt = (value: unknown): number | undefined =>
   typeof value === "number" && Number.isFinite(value) ? value : undefined
 
-const normalizeJwtRequest = (request: ApiServiceRequest): ApiServiceRequest => {
-  const accessToken =
-    typeof request.auth?.accessToken === "string"
-      ? request.auth.accessToken.trim()
-      : ""
+const normalizeJwtRequest = <TRequest extends ApiServiceRequest>(
+  request: TRequest,
+): TRequest => {
+  const accessToken = normalizeAccessToken(request.auth?.accessToken)
 
   if (request.auth?.authType !== AuthTypeEnum.AccessToken || !accessToken) {
     throw new ApiError(
@@ -94,7 +97,7 @@ const normalizeJwtRequest = (request: ApiServiceRequest): ApiServiceRequest => {
       authType: AuthTypeEnum.AccessToken,
       accessToken,
     },
-  }
+  } as TRequest
 }
 
 const createLoginRequiredError = (endpoint: string) =>
@@ -125,34 +128,34 @@ type PersistableSub2ApiAuthUpdate = {
   tokenExpiresAt?: number
 }
 
-type RefreshedSub2ApiRequest = {
-  request: ApiServiceRequest
+type RefreshedSub2ApiRequest<
+  TRequest extends ApiServiceRequest = ApiServiceRequest,
+> = {
+  request: TRequest
   refreshToken: string
   tokenExpiresAt: number
 }
 
-type HydratedSub2ApiAuth = {
-  request: ApiServiceRequest
-  accountStorageRef: {
-    getAccountById: (id: string) => Promise<any>
-    updateAccount: (
-      id: string,
-      updates: Record<string, any>,
-    ) => Promise<boolean>
-  } | null
+type Sub2ApiAccountStorageRef = {
+  getAccountById: (id: string) => Promise<any>
+  updateAccount: (id: string, updates: Record<string, any>) => Promise<boolean>
+} | null
+
+type HydratedSub2ApiAuth<
+  TRequest extends ApiServiceRequest = ApiServiceRequest,
+> = {
+  request: TRequest
+  accountStorageRef: Sub2ApiAccountStorageRef
 }
 
-const hydrateSub2ApiAuthRequest = async (
-  request: ApiServiceRequest,
-): Promise<HydratedSub2ApiAuth> => {
-  let accessToken =
-    typeof request.auth?.accessToken === "string"
-      ? request.auth.accessToken.trim()
-      : ""
+const hydrateSub2ApiAuthRequest = async <TRequest extends ApiServiceRequest>(
+  request: TRequest,
+): Promise<HydratedSub2ApiAuth<TRequest>> => {
+  let accessToken = normalizeAccessToken(request.auth?.accessToken)
   let refreshToken = normalizeRefreshToken(request.auth?.refreshToken)
   let tokenExpiresAt = normalizeTokenExpiresAt(request.auth?.tokenExpiresAt)
   let userId = request.auth?.userId
-  let accountStorageRef: HydratedSub2ApiAuth["accountStorageRef"] = null
+  let accountStorageRef: Sub2ApiAccountStorageRef = null
 
   if (request.accountId) {
     const { accountStorage } = await import(
@@ -190,7 +193,7 @@ const hydrateSub2ApiAuthRequest = async (
     }
   }
 
-  const hydratedRequest: ApiServiceRequest = {
+  const hydratedRequest: TRequest = {
     ...request,
     auth: {
       ...request.auth,
@@ -200,10 +203,10 @@ const hydrateSub2ApiAuthRequest = async (
       ...(typeof tokenExpiresAt === "number" ? { tokenExpiresAt } : {}),
       ...(userId !== undefined ? { userId } : {}),
     },
-  }
+  } as TRequest
 
   return {
-    request: normalizeJwtRequest(hydratedRequest),
+    request: hydratedRequest,
     accountStorageRef,
   }
 }
@@ -211,7 +214,7 @@ const hydrateSub2ApiAuthRequest = async (
 const persistSub2ApiAuthUpdate = async (
   request: ApiServiceRequest,
   authUpdate: PersistableSub2ApiAuthUpdate,
-  accountStorageRef: HydratedSub2ApiAuth["accountStorageRef"],
+  accountStorageRef: Sub2ApiAccountStorageRef,
 ) => {
   if (!request.accountId) {
     return
@@ -251,75 +254,170 @@ const persistSub2ApiAuthUpdate = async (
   }
 }
 
-const applySub2ApiAuthUpdate = (
-  request: ApiServiceRequest,
+const applySub2ApiAuthUpdate = <TRequest extends ApiServiceRequest>(
+  request: TRequest,
   authUpdate: PersistableSub2ApiAuthUpdate,
-): ApiServiceRequest => ({
-  ...request,
-  auth: {
-    ...request.auth,
-    authType: AuthTypeEnum.AccessToken,
-    accessToken: authUpdate.accessToken,
-    ...(authUpdate.refreshToken
-      ? { refreshToken: authUpdate.refreshToken }
-      : {}),
-    ...(typeof authUpdate.tokenExpiresAt === "number"
-      ? { tokenExpiresAt: authUpdate.tokenExpiresAt }
-      : {}),
-  },
-})
+): TRequest =>
+  ({
+    ...request,
+    auth: {
+      ...request.auth,
+      authType: AuthTypeEnum.AccessToken,
+      accessToken: authUpdate.accessToken,
+      ...(authUpdate.refreshToken
+        ? { refreshToken: authUpdate.refreshToken }
+        : {}),
+      ...(typeof authUpdate.tokenExpiresAt === "number"
+        ? { tokenExpiresAt: authUpdate.tokenExpiresAt }
+        : {}),
+    },
+  }) as TRequest
 
-const refreshSub2ApiRequestAuth = async (params: {
-  request: ApiServiceRequest
-  refreshToken: string
-  accountStorageRef: HydratedSub2ApiAuth["accountStorageRef"]
-}): Promise<RefreshedSub2ApiRequest> => {
-  const refreshed = await refreshSub2ApiTokens({
-    baseUrl: params.request.baseUrl,
-    accessToken: params.request.auth?.accessToken,
-    refreshToken: params.refreshToken,
+const createSub2ApiAuthMutationLockKey = (
+  request: ApiServiceRequest,
+): string => {
+  if (request.accountId) {
+    return `account:${request.accountId}`
+  }
+
+  const lockToken =
+    normalizeRefreshToken(request.auth?.refreshToken) ||
+    normalizeAccessToken(request.auth?.accessToken) ||
+    "anonymous"
+
+  return `origin:${request.baseUrl}:${lockToken}`
+}
+
+const withSub2ApiAuthMutationLock = async <T>(
+  request: ApiServiceRequest,
+  runner: () => Promise<T>,
+): Promise<T> => {
+  const lockKey = createSub2ApiAuthMutationLockKey(request)
+  const previous = sub2ApiAuthMutationLocks.get(lockKey) ?? Promise.resolve()
+  let releaseCurrent!: () => void
+  const current = new Promise<void>((resolve) => {
+    releaseCurrent = resolve
   })
+  const queued = previous.catch(() => undefined).then(() => current)
 
-  const refreshedRequest = applySub2ApiAuthUpdate(params.request, refreshed)
-  await persistSub2ApiAuthUpdate(
-    refreshedRequest,
-    refreshed,
-    params.accountStorageRef,
-  )
+  sub2ApiAuthMutationLocks.set(lockKey, queued)
+  await previous.catch(() => undefined)
 
-  return {
-    request: refreshedRequest,
-    refreshToken: refreshed.refreshToken,
-    tokenExpiresAt: refreshed.tokenExpiresAt,
+  try {
+    return await runner()
+  } finally {
+    releaseCurrent()
+    if (sub2ApiAuthMutationLocks.get(lockKey) === queued) {
+      sub2ApiAuthMutationLocks.delete(lockKey)
+    }
   }
 }
 
-const resyncSub2ApiRequestAuth = async (params: {
-  request: ApiServiceRequest
-  endpoint: string
-  accountStorageRef: HydratedSub2ApiAuth["accountStorageRef"]
-}): Promise<ApiServiceRequest> => {
-  const resynced = await resyncSub2ApiAuthToken(params.request.baseUrl)
-  if (!resynced) {
-    throw createLoginRequiredError(params.endpoint)
-  }
-
-  logger.info("Retrying Sub2API key request after JWT re-sync", {
-    endpoint: params.endpoint,
-    source: resynced.source,
-  })
-
-  const resyncedRequest = applySub2ApiAuthUpdate(params.request, {
-    accessToken: resynced.accessToken,
-  })
-
-  await persistSub2ApiAuthUpdate(
-    resyncedRequest,
-    { accessToken: resynced.accessToken },
-    params.accountStorageRef,
+const didSub2ApiAuthChange = (
+  previousRequest: ApiServiceRequest,
+  nextRequest: ApiServiceRequest,
+): boolean => {
+  return (
+    normalizeAccessToken(previousRequest.auth?.accessToken) !==
+      normalizeAccessToken(nextRequest.auth?.accessToken) ||
+    normalizeRefreshToken(previousRequest.auth?.refreshToken) !==
+      normalizeRefreshToken(nextRequest.auth?.refreshToken) ||
+    normalizeTokenExpiresAt(previousRequest.auth?.tokenExpiresAt) !==
+      normalizeTokenExpiresAt(nextRequest.auth?.tokenExpiresAt)
   )
+}
 
-  return resyncedRequest
+const refreshSub2ApiRequestAuth = async <
+  TRequest extends ApiServiceRequest,
+>(params: {
+  request: TRequest
+  refreshToken: string
+  accountStorageRef: Sub2ApiAccountStorageRef
+}): Promise<RefreshedSub2ApiRequest<TRequest>> => {
+  return withSub2ApiAuthMutationLock(params.request, async () => {
+    const latestHydrated = await hydrateSub2ApiAuthRequest(params.request)
+    const latestRequest = latestHydrated.request
+    const latestStorageRef =
+      latestHydrated.accountStorageRef ?? params.accountStorageRef
+    const latestRefreshToken =
+      normalizeRefreshToken(latestRequest.auth?.refreshToken) ||
+      normalizeRefreshToken(params.refreshToken)
+    const latestTokenExpiresAt = normalizeTokenExpiresAt(
+      latestRequest.auth?.tokenExpiresAt,
+    )
+
+    if (
+      didSub2ApiAuthChange(params.request, latestRequest) &&
+      latestRefreshToken &&
+      typeof latestTokenExpiresAt === "number"
+    ) {
+      return {
+        request: latestRequest,
+        refreshToken: latestRefreshToken,
+        tokenExpiresAt: latestTokenExpiresAt,
+      }
+    }
+
+    const refreshed = await refreshSub2ApiTokens({
+      baseUrl: latestRequest.baseUrl,
+      accessToken: latestRequest.auth?.accessToken,
+      refreshToken: latestRefreshToken,
+    })
+
+    const refreshedRequest = applySub2ApiAuthUpdate(latestRequest, refreshed)
+    await persistSub2ApiAuthUpdate(
+      refreshedRequest,
+      refreshed,
+      latestStorageRef,
+    )
+
+    return {
+      request: refreshedRequest,
+      refreshToken: refreshed.refreshToken,
+      tokenExpiresAt: refreshed.tokenExpiresAt,
+    }
+  })
+}
+
+const resyncSub2ApiRequestAuth = async <
+  TRequest extends ApiServiceRequest,
+>(params: {
+  request: TRequest
+  endpoint: string
+  accountStorageRef: Sub2ApiAccountStorageRef
+}): Promise<TRequest> => {
+  return withSub2ApiAuthMutationLock(params.request, async () => {
+    const latestHydrated = await hydrateSub2ApiAuthRequest(params.request)
+    const latestRequest = latestHydrated.request
+    const latestStorageRef =
+      latestHydrated.accountStorageRef ?? params.accountStorageRef
+
+    if (didSub2ApiAuthChange(params.request, latestRequest)) {
+      return latestRequest
+    }
+
+    const resynced = await resyncSub2ApiAuthToken(latestRequest.baseUrl)
+    if (!resynced) {
+      throw createLoginRequiredError(params.endpoint)
+    }
+
+    logger.info("Retrying Sub2API key request after JWT re-sync", {
+      endpoint: params.endpoint,
+      source: resynced.source,
+    })
+
+    const resyncedRequest = applySub2ApiAuthUpdate(latestRequest, {
+      accessToken: resynced.accessToken,
+    })
+
+    await persistSub2ApiAuthUpdate(
+      resyncedRequest,
+      { accessToken: resynced.accessToken },
+      latestStorageRef,
+    )
+
+    return resyncedRequest
+  })
 }
 
 type AuthenticatedSub2ApiRunner<T> = (request: ApiServiceRequest) => Promise<T>
@@ -336,7 +434,7 @@ const executeAuthenticatedSub2ApiRequest = async <T>(
   runner: AuthenticatedSub2ApiRunner<T>,
 ): Promise<T> => {
   const hydrated = await hydrateSub2ApiAuthRequest(request)
-  let effectiveRequest = hydrated.request
+  let effectiveRequest = normalizeJwtRequest(hydrated.request)
   let refreshToken = normalizeRefreshToken(effectiveRequest.auth?.refreshToken)
   const tokenExpiresAt = normalizeTokenExpiresAt(
     effectiveRequest.auth?.tokenExpiresAt,
@@ -412,12 +510,12 @@ const executeAuthenticatedSub2ApiRequest = async <T>(
   }
 }
 
-const fetchSub2ApiData = async <T>(
+const fetchSub2ApiDataWithRequest = async <T>(
   request: ApiServiceRequest,
   endpoint: string,
   options?: RequestInit,
   parserOptions?: { allowMissingData?: boolean },
-): Promise<T> => {
+): Promise<{ data: T; request: ApiServiceRequest }> => {
   return executeAuthenticatedSub2ApiRequest(
     request,
     endpoint,
@@ -431,9 +529,28 @@ const fetchSub2ApiData = async <T>(
         true,
       )
 
-      return parseSub2ApiEnvelope<T>(body, endpoint, parserOptions)
+      return {
+        data: parseSub2ApiEnvelope<T>(body, endpoint, parserOptions),
+        request: authRequest,
+      }
     },
   )
+}
+
+const fetchSub2ApiData = async <T>(
+  request: ApiServiceRequest,
+  endpoint: string,
+  options?: RequestInit,
+  parserOptions?: { allowMissingData?: boolean },
+): Promise<T> => {
+  const result = await fetchSub2ApiDataWithRequest(
+    request,
+    endpoint,
+    options,
+    parserOptions,
+  )
+
+  return result.data
 }
 
 const fetchAvailableGroupsInternal = async (request: ApiServiceRequest) =>
@@ -652,37 +769,32 @@ export async function refreshAccountData(
   const checkIn = createDisabledCheckInConfig(
     request.checkIn ?? { enableDetection: false },
   )
-
-  const storedRefreshToken =
-    typeof request.auth?.refreshToken === "string"
-      ? request.auth.refreshToken.trim()
-      : ""
-  const storedTokenExpiresAtRaw = request.auth?.tokenExpiresAt
-  const storedTokenExpiresAt =
-    typeof storedTokenExpiresAtRaw === "number" &&
-    Number.isFinite(storedTokenExpiresAtRaw)
-      ? storedTokenExpiresAtRaw
-      : undefined
-  const hasStoredRefreshToken = Boolean(storedRefreshToken)
-  let refreshToken = storedRefreshToken
+  let hydratedRequest: HydratedSub2ApiAuth<ApiServiceAccountRequest> | null =
+    null
+  let effectiveRequest = request
+  let refreshToken = normalizeRefreshToken(request.auth?.refreshToken)
+  let tokenExpiresAt = normalizeTokenExpiresAt(request.auth?.tokenExpiresAt)
 
   try {
-    let accessToken =
-      typeof request.auth?.accessToken === "string"
-        ? request.auth.accessToken.trim()
-        : ""
-    let tokenExpiresAt = storedTokenExpiresAt
+    hydratedRequest = await hydrateSub2ApiAuthRequest(request)
+    effectiveRequest = hydratedRequest.request
+    refreshToken = normalizeRefreshToken(effectiveRequest.auth?.refreshToken)
+    tokenExpiresAt = normalizeTokenExpiresAt(
+      effectiveRequest.auth?.tokenExpiresAt,
+    )
+    const hasStoredRefreshToken = Boolean(refreshToken)
     let hasProactiveRefreshUpdate = false
 
     if (hasStoredRefreshToken && typeof tokenExpiresAt === "number") {
       if (isCloseToExpiry(tokenExpiresAt)) {
         try {
-          const refreshed = await refreshSub2ApiTokens({
-            baseUrl: request.baseUrl,
-            accessToken,
+          const refreshed = await refreshSub2ApiRequestAuth({
+            request: effectiveRequest,
             refreshToken,
+            accountStorageRef: hydratedRequest.accountStorageRef,
           })
-          accessToken = refreshed.accessToken
+
+          effectiveRequest = refreshed.request
           refreshToken = refreshed.refreshToken
           tokenExpiresAt = refreshed.tokenExpiresAt
           hasProactiveRefreshUpdate = true
@@ -694,18 +806,12 @@ export async function refreshAccountData(
       }
     }
 
-    const currentUser = await fetchCurrentUser({
-      ...request,
-      auth: {
-        ...request.auth,
-        authType: AuthTypeEnum.AccessToken,
-        accessToken,
-      },
-    })
+    const currentUser = await fetchCurrentUser(effectiveRequest)
+
     return createRefreshSuccessResult(currentUser, checkIn, {
       ...(hasProactiveRefreshUpdate
         ? {
-            accessToken,
+            accessToken: effectiveRequest.auth.accessToken,
             sub2apiAuth: {
               refreshToken,
               ...(typeof tokenExpiresAt === "number" ? { tokenExpiresAt } : {}),
@@ -715,33 +821,27 @@ export async function refreshAccountData(
     })
   } catch (error) {
     if (error instanceof ApiError && error.statusCode === 401) {
+      hydratedRequest ??= await hydrateSub2ApiAuthRequest(request)
+      effectiveRequest = didSub2ApiAuthChange(request, effectiveRequest)
+        ? effectiveRequest
+        : hydratedRequest.request
+      refreshToken = normalizeRefreshToken(effectiveRequest.auth?.refreshToken)
+      const hasStoredRefreshToken = Boolean(refreshToken)
+
       if (hasStoredRefreshToken) {
         try {
-          const accessToken =
-            typeof request.auth?.accessToken === "string"
-              ? request.auth.accessToken.trim()
-              : ""
-          const refreshed = await refreshSub2ApiTokens({
-            baseUrl: request.baseUrl,
-            accessToken,
+          const refreshed = await refreshSub2ApiRequestAuth({
+            request: effectiveRequest,
             refreshToken,
+            accountStorageRef: hydratedRequest.accountStorageRef,
           })
 
-          const retryRequest: ApiServiceAccountRequest = {
-            ...request,
-            auth: {
-              ...request.auth,
-              authType: AuthTypeEnum.AccessToken,
-              accessToken: refreshed.accessToken,
-              refreshToken: refreshed.refreshToken,
-              tokenExpiresAt: refreshed.tokenExpiresAt,
-            },
-          }
+          const retryRequest = refreshed.request
 
           const currentUser = await fetchCurrentUser(retryRequest)
 
           return createRefreshSuccessResult(currentUser, checkIn, {
-            accessToken: refreshed.accessToken,
+            accessToken: retryRequest.auth.accessToken,
             sub2apiAuth: {
               refreshToken: refreshed.refreshToken,
               tokenExpiresAt: refreshed.tokenExpiresAt,
@@ -758,31 +858,16 @@ export async function refreshAccountData(
         }
       }
 
-      const resynced = await resyncSub2ApiAuthToken(request.baseUrl)
-      if (!resynced) {
-        return {
-          success: false,
-          healthStatus: createLoginRequiredHealthStatus(),
-        }
-      }
-
-      logger.info("Retrying Sub2API refresh after JWT re-sync", {
-        source: resynced.source,
-      })
-
       try {
-        const retryRequest: ApiServiceAccountRequest = {
-          ...request,
-          auth: {
-            ...request.auth,
-            authType: AuthTypeEnum.AccessToken,
-            accessToken: resynced.accessToken,
-          },
-        }
+        const retryRequest = await resyncSub2ApiRequestAuth({
+          request: hydratedRequest.request,
+          endpoint: SUB2API_AUTH_ME_ENDPOINT,
+          accountStorageRef: hydratedRequest.accountStorageRef,
+        })
 
         const currentUser = await fetchCurrentUser(retryRequest)
         return createRefreshSuccessResult(currentUser, checkIn, {
-          accessToken: resynced.accessToken,
+          accessToken: retryRequest.auth.accessToken,
         })
       } catch (retryError) {
         if (retryError instanceof ApiError && retryError.statusCode === 401) {
@@ -824,14 +909,15 @@ export async function fetchAccountTokens(
   const endpoint = createSub2ApiKeysEndpoint(page, size)
 
   try {
-    const data = await fetchSub2ApiData<Sub2ApiKeyListData>(request, endpoint, {
-      method: "GET",
-      cache: "no-store",
-    })
+    const { data, request: hydratedRequest } =
+      await fetchSub2ApiDataWithRequest<Sub2ApiKeyListData>(request, endpoint, {
+        method: "GET",
+        cache: "no-store",
+      })
 
     return extractSub2ApiKeyItems(data).map((item) =>
       parseSub2ApiKey(item, {
-        defaultUserId: request.auth?.userId,
+        defaultUserId: hydratedRequest.auth?.userId,
         endpoint,
       }),
     )
@@ -855,13 +941,14 @@ export async function fetchTokenById(
   const endpoint = `${SUB2API_KEYS_ENDPOINT}/${tokenId}`
 
   try {
-    const data = await fetchSub2ApiData<Sub2ApiKeyData>(request, endpoint, {
-      method: "GET",
-      cache: "no-store",
-    })
+    const { data, request: hydratedRequest } =
+      await fetchSub2ApiDataWithRequest<Sub2ApiKeyData>(request, endpoint, {
+        method: "GET",
+        cache: "no-store",
+      })
 
     return parseSub2ApiKey(data, {
-      defaultUserId: request.auth?.userId,
+      defaultUserId: hydratedRequest.auth?.userId,
       endpoint,
     })
   } catch (error) {

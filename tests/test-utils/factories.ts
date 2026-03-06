@@ -21,6 +21,7 @@ import { API_TYPES } from "~/services/verification/aiApiVerification"
 import {
   AuthTypeEnum,
   SiteHealthStatus,
+  type ApiToken,
   type DisplaySiteData,
   type SiteAccount,
   type Tag,
@@ -113,6 +114,75 @@ export function buildDisplaySiteData(
       ...overrides.checkIn,
     },
   }
+}
+
+/**
+ * Build an `ApiToken` fixture with stable defaults and shallow overrides.
+ */
+export function buildApiToken(overrides: Partial<ApiToken> = {}): ApiToken {
+  const base: ApiToken = {
+    id: 1,
+    user_id: 1,
+    key: "test-key",
+    status: 1,
+    name: "Test Token",
+    created_time: 0,
+    accessed_time: 0,
+    expired_time: -1,
+    remain_quota: 0,
+    unlimited_quota: true,
+    model_limits_enabled: false,
+    model_limits: "",
+    allow_ips: "",
+    used_quota: 0,
+    group: "default",
+  }
+
+  return { ...base, ...overrides }
+}
+
+/**
+ * Build a Sub2API-flavored `DisplaySiteData` fixture for shared key-flow tests.
+ */
+export function buildSub2ApiAccount(
+  overrides: Partial<DisplaySiteData> = {},
+): DisplaySiteData {
+  return buildDisplaySiteData({
+    id: "sub2-acc",
+    name: "Sub2API",
+    username: "tester",
+    siteType: "sub2api",
+    baseUrl: "https://sub2.example.com",
+    token: "jwt-token",
+    userId: 1,
+    authType: AuthTypeEnum.AccessToken,
+    checkIn: { enableDetection: false },
+    ...overrides,
+  })
+}
+
+/**
+ * Build a Sub2API-flavored `ApiToken` fixture for shared key-flow tests.
+ */
+export function buildSub2ApiToken(overrides: Partial<ApiToken> = {}): ApiToken {
+  return buildApiToken({
+    id: 1,
+    user_id: 1,
+    key: "sk-sub2api-key",
+    status: 1,
+    name: "default",
+    created_time: 0,
+    accessed_time: 0,
+    expired_time: -1,
+    remain_quota: 0,
+    unlimited_quota: true,
+    used_quota: 0,
+    allow_ips: "",
+    model_limits_enabled: false,
+    model_limits: "",
+    group: "default",
+    ...overrides,
+  })
 }
 
 /**
