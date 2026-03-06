@@ -13,12 +13,31 @@ describe("resolveDefaultChannelGroups", () => {
     vi.clearAllMocks()
   })
 
-  it("prefers the managed site's default group", async () => {
+  it("prefers the managed site's default group case-insensitively", async () => {
     const { resolveDefaultChannelGroups } = await import(
       "~/services/managedSites/providers/defaultChannelGroups"
     )
 
-    mockFetchSiteUserGroups.mockResolvedValueOnce(["vip", "default"])
+    mockFetchSiteUserGroups.mockResolvedValueOnce(["vip", "Default"])
+
+    const result = await resolveDefaultChannelGroups({
+      siteType: "new-api",
+      getConfig: async () => ({
+        baseUrl: "https://managed.example.com",
+        token: "admin-token",
+        userId: "1",
+      }),
+    })
+
+    expect(result).toEqual(["Default"])
+  })
+
+  it("falls back to default when the managed site returns no groups", async () => {
+    const { resolveDefaultChannelGroups } = await import(
+      "~/services/managedSites/providers/defaultChannelGroups"
+    )
+
+    mockFetchSiteUserGroups.mockResolvedValueOnce([])
 
     const result = await resolveDefaultChannelGroups({
       siteType: "new-api",

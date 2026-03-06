@@ -934,11 +934,20 @@ describe("newApiService", () => {
       const account = createMockDisplaySiteData()
       const token = createMockApiToken()
 
+      mockGetPreferences.mockReset()
+      mockFetchOpenAICompatibleModelIds.mockReset()
+      mockFetchSiteUserGroups.mockReset()
+
+      mockGetPreferences.mockResolvedValueOnce(
+        createMockUserPreferencesWithNewApi(),
+      )
       mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce(["gpt-4"])
+      mockFetchSiteUserGroups.mockResolvedValueOnce([])
 
       const result = await prepareChannelFormData(account, token)
 
       expect(result.type).toBe(1) // OpenAI
+      expect(result.groups).toEqual(["default"])
       expect(result.priority).toBe(0)
       expect(result.weight).toBe(0)
       expect(result.status).toBe(1) // Enable

@@ -45,10 +45,18 @@ export async function resolveDefaultChannelGroups({
         },
       }),
     )
+    const siteGroupsByNormalizedName = new Map<string, string>()
 
-    const preferredDefaultGroup = fallbackGroups.find((group) =>
-      siteGroups.includes(group),
-    )
+    for (const siteGroup of siteGroups) {
+      const normalizedSiteGroup = siteGroup.toLowerCase()
+      if (!siteGroupsByNormalizedName.has(normalizedSiteGroup)) {
+        siteGroupsByNormalizedName.set(normalizedSiteGroup, siteGroup)
+      }
+    }
+
+    const preferredDefaultGroup = fallbackGroups
+      .map((group) => siteGroupsByNormalizedName.get(group.toLowerCase()))
+      .find((group): group is string => Boolean(group))
     if (preferredDefaultGroup) {
       return [preferredDefaultGroup]
     }
