@@ -1,7 +1,7 @@
 # sub2api-key-management Specification
 
 ## Purpose
-TBD - created by archiving change sub2api-key-manage. Update Purpose after archive.
+This specification defines the requirements for integrating Sub2API key management into the extension's shared token workflows.
 ## Requirements
 ### Requirement: The extension SHALL expose Sub2API key inventory through shared key workflows
 
