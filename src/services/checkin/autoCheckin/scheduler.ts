@@ -2,6 +2,7 @@ import { t } from "i18next"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
@@ -38,7 +39,7 @@ import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
 import { resolveAutoCheckinProvider } from "./providers"
-import { autoCheckinStorage } from "./storage"
+import { AUTO_CHECKIN_STATUS_STORAGE_LOCK, autoCheckinStorage } from "./storage"
 
 const logger = createLogger("AutoCheckin")
 
@@ -543,12 +544,39 @@ class AutoCheckinScheduler {
   ) {
     const scheduledIso = scheduledTime.toISOString()
 
-    await autoCheckinStorage.saveStatus({
-      ...(currentStatus ?? {}),
-      nextDailyScheduledAt: scheduledIso,
-      dailyAlarmTargetDay: targetDay,
-      nextScheduledAt: scheduledIso, // legacy compatibility
-    })
+    await withExtensionStorageWriteLock(
+      AUTO_CHECKIN_STATUS_STORAGE_LOCK,
+      async () => {
+        const latestStatus =
+          (await autoCheckinStorage.getStatus()) ?? currentStatus ?? {}
+
+        await autoCheckinStorage.saveStatus({
+          ...latestStatus,
+          nextDailyScheduledAt: scheduledIso,
+          dailyAlarmTargetDay: targetDay,
+          nextScheduledAt: scheduledIso, // legacy compatibility
+        })
+      },
+    )
+  }
+
+  private async clearDailyScheduleStatus(
+    currentStatus: AutoCheckinStatus | null,
+  ) {
+    await withExtensionStorageWriteLock(
+      AUTO_CHECKIN_STATUS_STORAGE_LOCK,
+      async () => {
+        const latestStatus =
+          (await autoCheckinStorage.getStatus()) ?? currentStatus ?? {}
+
+        await autoCheckinStorage.saveStatus({
+          ...latestStatus,
+          nextDailyScheduledAt: undefined,
+          dailyAlarmTargetDay: undefined,
+          nextScheduledAt: undefined,
+        })
+      },
+    )
   }
 
   private isExistingDailyAlarmReusable(
@@ -565,7 +593,11 @@ class AutoCheckinScheduler {
     }
 
     if (nextTriggerPlan.enforceTodayTarget) {
-      return false
+      return (
+        this.getLocalDay(scheduledTime) ===
+          this.getLocalDay(nextTriggerPlan.triggerTime) &&
+        scheduledTime.getTime() <= nextTriggerPlan.triggerTime.getTime()
+      )
     }
 
     return (
@@ -994,12 +1026,7 @@ class AutoCheckinScheduler {
       Number.isNaN(nextTriggerPlan.triggerTime.getTime())
     ) {
       logger.warn("Invalid schedule configuration; daily alarm not scheduled")
-      await autoCheckinStorage.saveStatus({
-        ...(currentStatus ?? {}),
-        nextDailyScheduledAt: undefined,
-        dailyAlarmTargetDay: undefined,
-        nextScheduledAt: undefined,
-      })
+      await this.clearDailyScheduleStatus(currentStatus)
       return
     }
 
@@ -1027,6 +1054,7 @@ class AutoCheckinScheduler {
       })
     } catch (error) {
       logger.error("Failed to create daily alarm", error)
+      await this.clearDailyScheduleStatus(currentStatus)
     }
   }
 
