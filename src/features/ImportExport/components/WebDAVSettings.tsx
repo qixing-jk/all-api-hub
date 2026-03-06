@@ -35,12 +35,8 @@ import {
   type EncryptedWebdavBackupEnvelopeV1,
 } from "~/services/webdav/webdavBackupEncryption"
 import {
-  collectWebdavEntryIds,
-  detectWebdavBackupPresence,
-  filterWebdavIdList,
+  buildWebdavImportPayloadBySelection,
   mergeWebdavBackupPayloadBySelection,
-  normalizeWebdavOrderedEntryIds,
-  normalizeWebdavStringIdList,
 } from "~/services/webdav/webdavSelectiveSync"
 import {
   downloadBackup,
@@ -61,7 +57,6 @@ import { createLogger } from "~/utils/core/logger"
 import {
   BACKUP_VERSION,
   importFromBackupObject,
-  normalizeBackupForMerge,
   type BackupFullV2,
 } from "../utils"
 import { WebDAVDecryptPasswordModal } from "./WebDAVDecryptPasswordModal"
@@ -272,139 +267,10 @@ export default function WebDAVSettings() {
   }
 
   const handleImportWithSelection = async (rawBackup: any) => {
-    const [
-      localAccountsConfig,
-      localTagStore,
-      localPreferences,
-      localChannelConfigs,
-    ] = await Promise.all([
-      accountStorage.exportData(),
-      tagStorage.exportTagStore(),
-      userPreferences.exportPreferences(),
-      channelConfigStorage.exportConfigs(),
-    ])
-
-    const presence = detectWebdavBackupPresence(rawBackup)
-    const normalizedRemote = normalizeBackupForMerge(
+    const payload = await buildWebdavImportPayloadBySelection({
       rawBackup,
-      localPreferences,
-    )
-
-    const remoteTimestamp =
-      typeof rawBackup?.timestamp === "number"
-        ? rawBackup.timestamp
-        : Number(rawBackup?.timestamp)
-    const timestamp = Number.isFinite(remoteTimestamp)
-      ? remoteTimestamp
-      : Date.now()
-
-    const importAccountsFromRemote =
-      syncDataSelection.accounts && presence.hasAccountsList
-    const importBookmarksFromRemote =
-      syncDataSelection.bookmarks && presence.hasBookmarksList
-    const shouldImportAccounts =
-      importAccountsFromRemote || importBookmarksFromRemote
-
-    const importPreferencesFromRemote =
-      syncDataSelection.preferences && presence.hasPreferences
-
-    const importApiCredentialProfilesFromRemote =
-      syncDataSelection.apiCredentialProfiles &&
-      presence.hasApiCredentialProfiles &&
-      Boolean(normalizedRemote.apiCredentialProfiles)
-
-    const payload: any = {
-      version: BACKUP_VERSION,
-      timestamp,
-      channelConfigs: normalizedRemote.channelConfigs || localChannelConfigs,
-    }
-
-    if (shouldImportAccounts) {
-      const accountsToImport = importAccountsFromRemote
-        ? normalizedRemote.accounts
-        : localAccountsConfig.accounts
-
-      const bookmarksToImport = importBookmarksFromRemote
-        ? normalizedRemote.bookmarks
-        : localAccountsConfig.bookmarks || []
-
-      const entryIdSet = new Set<string>([
-        ...collectWebdavEntryIds(accountsToImport),
-        ...collectWebdavEntryIds(bookmarksToImport),
-      ])
-
-      const selectedIdSet = new Set<string>([
-        ...(importAccountsFromRemote
-          ? collectWebdavEntryIds(accountsToImport)
-          : []),
-        ...(importBookmarksFromRemote
-          ? collectWebdavEntryIds(bookmarksToImport)
-          : []),
-      ])
-
-      const localPinned = normalizeWebdavStringIdList(
-        localAccountsConfig.pinnedAccountIds,
-      )
-      const localOrdered = normalizeWebdavStringIdList(
-        localAccountsConfig.orderedAccountIds,
-      )
-
-      const remotePinned = presence.hasPinnedAccountIds
-        ? normalizeWebdavStringIdList(normalizedRemote.pinnedAccountIds)
-        : []
-      const remoteOrdered = presence.hasOrderedAccountIds
-        ? normalizeWebdavStringIdList(normalizedRemote.orderedAccountIds)
-        : []
-
-      const pinnedAccountIds = presence.hasPinnedAccountIds
-        ? filterWebdavIdList(
-            [
-              ...remotePinned.filter((id) => selectedIdSet.has(id)),
-              ...localPinned.filter((id) => !selectedIdSet.has(id)),
-            ],
-            entryIdSet,
-          )
-        : filterWebdavIdList(localPinned, entryIdSet)
-
-      const baseOrderedIds = presence.hasOrderedAccountIds
-        ? [
-            ...remoteOrdered.filter((id) => selectedIdSet.has(id)),
-            ...localOrdered.filter((id) => !selectedIdSet.has(id)),
-          ]
-        : localOrdered
-
-      const orderedAccountIds = normalizeWebdavOrderedEntryIds({
-        baseOrderedIds,
-        entryIdSet,
-        accounts: accountsToImport,
-        bookmarks: bookmarksToImport,
-      })
-
-      payload.accounts = {
-        accounts: accountsToImport,
-        bookmarks: bookmarksToImport,
-        pinnedAccountIds,
-        orderedAccountIds,
-        last_updated: Date.now(),
-      }
-    }
-
-    if (
-      (shouldImportAccounts || importApiCredentialProfilesFromRemote) &&
-      (presence.hasTagStore || localTagStore)
-    ) {
-      payload.tagStore =
-        (presence.hasTagStore ? normalizedRemote.tagStore : null) ||
-        localTagStore
-    }
-
-    if (importPreferencesFromRemote) {
-      payload.preferences = normalizedRemote.preferences || localPreferences
-    }
-
-    if (importApiCredentialProfilesFromRemote) {
-      payload.apiCredentialProfiles = normalizedRemote.apiCredentialProfiles
-    }
+      selection: syncDataSelection,
+    })
 
     return await importFromBackupObject(payload, {
       preserveWebdav: true,

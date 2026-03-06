@@ -1,12 +1,48 @@
+import { accountStorage } from "~/services/accounts/accountStorage"
+import {
+  apiCredentialProfilesStorage,
+  coerceApiCredentialProfilesConfig,
+} from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import type {
   BackupFullV2,
   RawBackupData,
 } from "~/services/importExport/importExportService"
-import { normalizeBackupForMerge } from "~/services/importExport/importExportService"
+import {
+  BACKUP_VERSION,
+  normalizeBackupForMerge,
+} from "~/services/importExport/importExportService"
+import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
+import {
+  userPreferences,
+  type UserPreferences,
+} from "~/services/preferences/userPreferences"
+import { migrateAccountTagsData } from "~/services/tags/migrations/accountTagsDataMigration"
+import { tagStorage } from "~/services/tags/tagStorage"
+import {
+  createDefaultTagStore,
+  mergeTagStoresAndRemapAccounts,
+  sanitizeTagStore,
+} from "~/services/tags/tagStoreUtils"
+import type {
+  AccountStorageConfig,
+  SiteAccount,
+  SiteBookmark,
+  TagStore,
+} from "~/types"
+import type { ApiCredentialProfilesConfig } from "~/types/apiCredentialProfiles"
+import type { ChannelConfigMap } from "~/types/channelConfig"
 import {
   resolveWebdavSyncDataSelection,
   type WebDAVSyncDataSelection,
 } from "~/types/webdav"
+
+type WebdavImportLocalState = {
+  accountsConfig: AccountStorageConfig
+  tagStore: TagStore
+  preferences: UserPreferences
+  channelConfigs: ChannelConfigMap
+  apiCredentialProfiles: ApiCredentialProfilesConfig
+}
 
 /**
  * Type guard for checking if a value is a non-null object (Record).
@@ -576,6 +612,235 @@ export function mergeWebdavBackupPayloadBySelection(input: {
   }
 
   return payload
+}
+
+/**
+ * Build the import payload for a selective WebDAV restore.
+ *
+ * The returned payload is safe to hand to `importFromBackupObject()`:
+ * - Selected remote accounts/bookmarks keep their tag references valid.
+ * - Existing local tag-backed entities (notably API credential profiles) keep
+ *   their tags because the remote tag store is merged with the local store.
+ * - Incoming remote API credential profiles are remapped to the merged tag ids.
+ */
+export function createWebdavImportPayloadBySelection(input: {
+  rawBackup: RawBackupData
+  selection: WebDAVSyncDataSelection
+  localState: WebdavImportLocalState
+}): RawBackupData {
+  const { rawBackup, selection, localState } = input
+
+  const presence = detectWebdavBackupPresence(rawBackup)
+  const normalizedRemote = normalizeBackupForMerge(
+    rawBackup,
+    localState.preferences,
+  )
+
+  const remoteTimestamp =
+    typeof rawBackup?.timestamp === "number"
+      ? rawBackup.timestamp
+      : Number(rawBackup?.timestamp)
+  const timestamp = Number.isFinite(remoteTimestamp)
+    ? remoteTimestamp
+    : Date.now()
+
+  const importAccountsFromRemote =
+    selection.accounts && presence.hasAccountsList
+  const importBookmarksFromRemote =
+    selection.bookmarks && presence.hasBookmarksList
+  const shouldImportAccounts =
+    importAccountsFromRemote || importBookmarksFromRemote
+
+  const importPreferencesFromRemote =
+    selection.preferences && presence.hasPreferences
+
+  const remoteApiCredentialProfiles = coerceApiCredentialProfilesConfig(
+    normalizedRemote.apiCredentialProfiles,
+  )
+  const localApiCredentialProfiles = coerceApiCredentialProfilesConfig(
+    localState.apiCredentialProfiles,
+  )
+
+  const importApiCredentialProfilesFromRemote =
+    selection.apiCredentialProfiles &&
+    presence.hasApiCredentialProfiles &&
+    remoteApiCredentialProfiles.profiles.length > 0
+
+  const localTagStore = sanitizeTagStore(
+    localState.tagStore ?? createDefaultTagStore(),
+  )
+  const remoteTagStore = sanitizeTagStore(
+    normalizedRemote.tagStore ?? createDefaultTagStore(),
+  )
+
+  const migratedLocal = migrateAccountTagsData({
+    accounts: localState.accountsConfig.accounts,
+    tagStore: localTagStore,
+  })
+  const migratedRemote = migrateAccountTagsData({
+    accounts: normalizedRemote.accounts as SiteAccount[],
+    tagStore: remoteTagStore,
+  })
+
+  const mergedTagData =
+    shouldImportAccounts || importApiCredentialProfilesFromRemote
+      ? mergeTagStoresAndRemapAccounts({
+          localTagStore: migratedLocal.tagStore,
+          remoteTagStore: migratedRemote.tagStore,
+          localAccounts: migratedLocal.accounts,
+          remoteAccounts: migratedRemote.accounts,
+          localBookmarks: (localState.accountsConfig.bookmarks || []) as
+            | SiteBookmark[]
+            | undefined,
+          remoteBookmarks: normalizedRemote.bookmarks as SiteBookmark[],
+          localTaggables: localApiCredentialProfiles.profiles,
+          remoteTaggables: importApiCredentialProfilesFromRemote
+            ? remoteApiCredentialProfiles.profiles
+            : [],
+        })
+      : null
+
+  const localAccounts = mergedTagData
+    ? mergedTagData.localAccounts
+    : migratedLocal.accounts
+  const remoteAccounts = mergedTagData
+    ? mergedTagData.remoteAccounts
+    : migratedRemote.accounts
+  const localBookmarks = mergedTagData
+    ? mergedTagData.localBookmarks
+    : ((localState.accountsConfig.bookmarks || []) as SiteBookmark[])
+  const remoteBookmarks = mergedTagData
+    ? mergedTagData.remoteBookmarks
+    : (normalizedRemote.bookmarks as SiteBookmark[])
+
+  const payload: RawBackupData = {
+    version: BACKUP_VERSION,
+    timestamp,
+    channelConfigs:
+      normalizedRemote.channelConfigs || localState.channelConfigs,
+  }
+
+  if (shouldImportAccounts) {
+    const accountsToImport = importAccountsFromRemote
+      ? remoteAccounts
+      : localAccounts
+
+    const bookmarksToImport = importBookmarksFromRemote
+      ? remoteBookmarks
+      : localBookmarks
+
+    const entryIdSet = new Set<string>([
+      ...collectWebdavEntryIds(accountsToImport),
+      ...collectWebdavEntryIds(bookmarksToImport),
+    ])
+
+    const selectedIdSet = new Set<string>([
+      ...(importAccountsFromRemote
+        ? collectWebdavEntryIds(accountsToImport)
+        : []),
+      ...(importBookmarksFromRemote
+        ? collectWebdavEntryIds(bookmarksToImport)
+        : []),
+    ])
+
+    const localPinned = normalizeWebdavStringIdList(
+      localState.accountsConfig.pinnedAccountIds,
+    )
+    const localOrdered = normalizeWebdavStringIdList(
+      localState.accountsConfig.orderedAccountIds,
+    )
+
+    const remotePinned = presence.hasPinnedAccountIds
+      ? normalizeWebdavStringIdList(normalizedRemote.pinnedAccountIds)
+      : []
+    const remoteOrdered = presence.hasOrderedAccountIds
+      ? normalizeWebdavStringIdList(normalizedRemote.orderedAccountIds)
+      : []
+
+    const pinnedAccountIds = presence.hasPinnedAccountIds
+      ? filterWebdavIdList(
+          [
+            ...remotePinned.filter((id) => selectedIdSet.has(id)),
+            ...localPinned.filter((id) => !selectedIdSet.has(id)),
+          ],
+          entryIdSet,
+        )
+      : filterWebdavIdList(localPinned, entryIdSet)
+
+    const baseOrderedIds = presence.hasOrderedAccountIds
+      ? [
+          ...remoteOrdered.filter((id) => selectedIdSet.has(id)),
+          ...localOrdered.filter((id) => !selectedIdSet.has(id)),
+        ]
+      : localOrdered
+
+    const orderedAccountIds = normalizeWebdavOrderedEntryIds({
+      baseOrderedIds,
+      entryIdSet,
+      accounts: accountsToImport,
+      bookmarks: bookmarksToImport,
+    })
+
+    payload.accounts = {
+      accounts: accountsToImport,
+      bookmarks: bookmarksToImport,
+      pinnedAccountIds,
+      orderedAccountIds,
+      last_updated: Date.now(),
+    }
+  }
+
+  if (shouldImportAccounts || importApiCredentialProfilesFromRemote) {
+    payload.tagStore = mergedTagData?.tagStore ?? localTagStore
+  }
+
+  if (importPreferencesFromRemote) {
+    payload.preferences = normalizedRemote.preferences || localState.preferences
+  }
+
+  if (importApiCredentialProfilesFromRemote) {
+    payload.apiCredentialProfiles = {
+      ...remoteApiCredentialProfiles,
+      profiles:
+        mergedTagData?.remoteTaggables ?? remoteApiCredentialProfiles.profiles,
+    }
+  }
+
+  return payload
+}
+
+/**
+ * Load local state and build the selective import payload for WebDAV restore.
+ */
+export async function buildWebdavImportPayloadBySelection(input: {
+  rawBackup: RawBackupData
+  selection: WebDAVSyncDataSelection
+}): Promise<RawBackupData> {
+  const [
+    accountsConfig,
+    tagStore,
+    preferences,
+    channelConfigs,
+    apiCredentialProfiles,
+  ] = await Promise.all([
+    accountStorage.exportData(),
+    tagStorage.exportTagStore(),
+    userPreferences.exportPreferences(),
+    channelConfigStorage.exportConfigs(),
+    apiCredentialProfilesStorage.exportConfig(),
+  ])
+
+  return createWebdavImportPayloadBySelection({
+    rawBackup: input.rawBackup,
+    selection: input.selection,
+    localState: {
+      accountsConfig,
+      tagStore,
+      preferences,
+      channelConfigs,
+      apiCredentialProfiles,
+    },
+  })
 }
 
 /**

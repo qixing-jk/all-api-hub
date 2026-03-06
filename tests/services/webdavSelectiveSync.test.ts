@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  createWebdavImportPayloadBySelection,
   filterWebdavBackupPayloadBySelection,
   mergeWebdavBackupPayloadBySelection,
 } from "~/services/webdav/webdavSelectiveSync"
@@ -560,5 +561,185 @@ describe("mergeWebdavBackupPayloadBySelection", () => {
     expect(payload.preferences).toEqual(remoteBackup.preferences)
     expect(payload.apiCredentialProfiles).toEqual(backup.apiCredentialProfiles)
     expect(payload.tagStore).toEqual(backup.tagStore)
+  })
+})
+
+describe("createWebdavImportPayloadBySelection", () => {
+  const baseLocalState: any = {
+    accountsConfig: {
+      accounts: [],
+      bookmarks: [],
+      pinnedAccountIds: [],
+      orderedAccountIds: [],
+      last_updated: 50,
+    },
+    tagStore: {
+      version: 1,
+      tagsById: {
+        "local-vip": {
+          id: "local-vip",
+          name: "VIP",
+          createdAt: 1,
+          updatedAt: 1,
+        },
+      },
+    },
+    preferences: { lastUpdated: 10, themeMode: "dark" },
+    channelConfigs: {},
+    apiCredentialProfiles: {
+      version: 2,
+      profiles: [
+        {
+          id: "local-profile",
+          name: "Local",
+          apiType: "openai",
+          baseUrl: "https://local.example.com",
+          apiKey: "local-key",
+          tagIds: ["local-vip"],
+          notes: "",
+          createdAt: 1,
+          updatedAt: 1,
+        },
+      ],
+      lastUpdated: 10,
+    },
+  }
+
+  it("merges remote account tags with the local tag store during selective import", () => {
+    const payload = createWebdavImportPayloadBySelection({
+      rawBackup: {
+        version: "2.0",
+        timestamp: 200,
+        accounts: {
+          accounts: [
+            {
+              id: "remote-account",
+              tagIds: ["remote-vip"],
+              created_at: 1,
+              updated_at: 2,
+            },
+          ],
+          bookmarks: [],
+          pinnedAccountIds: ["remote-account"],
+          orderedAccountIds: ["remote-account"],
+          last_updated: 200,
+        },
+        tagStore: {
+          version: 1,
+          tagsById: {
+            "remote-vip": {
+              id: "remote-vip",
+              name: "VIP",
+              createdAt: 2,
+              updatedAt: 2,
+            },
+          },
+        },
+        channelConfigs: {},
+      } as any,
+      selection: {
+        accounts: true,
+        bookmarks: false,
+        apiCredentialProfiles: false,
+        preferences: false,
+      },
+      localState: baseLocalState,
+    })
+
+    expect((payload.tagStore as any).tagsById).toEqual({
+      "local-vip": expect.objectContaining({ id: "local-vip", name: "VIP" }),
+    })
+    expect((payload.accounts as any).accounts[0].tagIds).toEqual(["local-vip"])
+    expect(payload.apiCredentialProfiles).toBeUndefined()
+  })
+
+  it("remaps imported API credential profiles onto the merged tag store", () => {
+    const payload = createWebdavImportPayloadBySelection({
+      rawBackup: {
+        version: "2.0",
+        timestamp: 200,
+        tagStore: {
+          version: 1,
+          tagsById: {
+            "remote-vip": {
+              id: "remote-vip",
+              name: "VIP",
+              createdAt: 2,
+              updatedAt: 2,
+            },
+          },
+        },
+        apiCredentialProfiles: {
+          version: 2,
+          profiles: [
+            {
+              id: "remote-profile",
+              name: "Remote",
+              apiType: "openai",
+              baseUrl: "https://remote.example.com",
+              apiKey: "remote-key",
+              tagIds: ["remote-vip"],
+              notes: "",
+              createdAt: 2,
+              updatedAt: 2,
+            },
+          ],
+          lastUpdated: 20,
+        },
+        channelConfigs: {},
+      } as any,
+      selection: {
+        accounts: false,
+        bookmarks: false,
+        apiCredentialProfiles: true,
+        preferences: false,
+      },
+      localState: baseLocalState,
+    })
+
+    expect((payload.tagStore as any).tagsById).toEqual({
+      "local-vip": expect.objectContaining({ id: "local-vip", name: "VIP" }),
+    })
+    expect((payload.apiCredentialProfiles as any).profiles[0].tagIds).toEqual([
+      "local-vip",
+    ])
+  })
+
+  it("always emits a canonical V2 payload even for legacy WebDAV backups", () => {
+    const payload = createWebdavImportPayloadBySelection({
+      rawBackup: {
+        timestamp: 200,
+        data: {
+          apiCredentialProfiles: {
+            version: 2,
+            profiles: [
+              {
+                id: "remote-profile",
+                name: "Remote",
+                apiType: "openai",
+                baseUrl: "https://remote.example.com",
+                apiKey: "remote-key",
+                tagIds: [],
+                notes: "",
+                createdAt: 2,
+                updatedAt: 2,
+              },
+            ],
+            lastUpdated: 20,
+          },
+        },
+        channelConfigs: {},
+      } as any,
+      selection: {
+        accounts: false,
+        bookmarks: false,
+        apiCredentialProfiles: true,
+        preferences: false,
+      },
+      localState: baseLocalState,
+    })
+
+    expect(payload.version).toBe("2.0")
+    expect(payload.apiCredentialProfiles).toBeUndefined()
   })
 })

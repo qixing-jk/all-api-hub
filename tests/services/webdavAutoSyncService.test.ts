@@ -109,6 +109,19 @@ const mockTestConnection = vi.fn()
 const mockDownloadBackup = vi.fn()
 const mockUploadBackup = vi.fn()
 
+/**
+ *
+ */
+function createDeferred<T>() {
+  let resolve!: (value: T) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res
+    reject = rej
+  })
+  return { promise, resolve, reject }
+}
+
 vi.mock("~/services/webdav/webdavService", () => ({
   testWebdavConnection: (...args: any[]) => mockTestConnection(...args),
   downloadBackup: (...args: any[]) => mockDownloadBackup(...args),
@@ -822,6 +835,29 @@ describe("WebdavAutoSyncService scheduling (alarms)", () => {
     expect(service.getStatus().isRunning).toBe(true)
   })
 
+  it("clears alarm when the WebDAV sync selection is empty", async () => {
+    const service = createService()
+
+    mockGetPreferences.mockResolvedValueOnce({
+      ...basePreferences,
+      webdav: {
+        ...basePreferences.webdav,
+        syncData: {
+          accounts: false,
+          bookmarks: false,
+          apiCredentialProfiles: false,
+          preferences: false,
+        },
+      },
+    })
+
+    await service.setupAutoSync()
+
+    expect(mockClearAlarm).toHaveBeenCalledWith("webdavAutoSync")
+    expect(mockCreateAlarm).not.toHaveBeenCalled()
+    expect(service.getStatus().isRunning).toBe(false)
+  })
+
   it("preserves an existing alarm when the period matches", async () => {
     const service = createService()
 
@@ -836,5 +872,180 @@ describe("WebdavAutoSyncService scheduling (alarms)", () => {
     expect(mockClearAlarm).not.toHaveBeenCalled()
     expect(mockCreateAlarm).not.toHaveBeenCalled()
     expect(service.getStatus().isRunning).toBe(true)
+  })
+})
+
+describe("WebdavAutoSyncService local apply phase", () => {
+  const createService = () => new (webdavAutoSyncService as any).constructor()
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+
+    mockTestConnection.mockResolvedValue(true)
+    mockUploadBackup.mockResolvedValue(true)
+
+    mockChannelConfigImport.mockResolvedValue(undefined)
+    mockApiCredentialProfilesImport.mockResolvedValue(undefined)
+    mockTagStoreImport.mockResolvedValue(undefined)
+    mockImportPreferences.mockResolvedValue(true)
+
+    mockAccountStorageExportData.mockResolvedValue({
+      accounts: [{ id: "local-account", created_at: 1, updated_at: 10 }],
+      bookmarks: [{ id: "local-bookmark", created_at: 2, updated_at: 20 }],
+      pinnedAccountIds: ["local-account"],
+      orderedAccountIds: ["local-account", "local-bookmark"],
+      last_updated: 100,
+    })
+    mockTagStoreExport.mockResolvedValue({
+      version: 1,
+      tagsById: { local: { id: "local-tag" } },
+    })
+    mockExportPreferences.mockResolvedValue({
+      lastUpdated: 100,
+      themeMode: "dark",
+    } as any)
+    mockChannelConfigExport.mockResolvedValue({ 1: { enabled: true } })
+    mockApiCredentialProfilesExport.mockResolvedValue({
+      version: 2,
+      profiles: [
+        {
+          id: "local-profile",
+          name: "Local Profile",
+          apiType: "openai",
+          baseUrl: "https://local.example.com",
+          apiKey: "local-key",
+          tagIds: ["local-tag"],
+          notes: "",
+          createdAt: 100,
+          updatedAt: 100,
+        },
+      ],
+      lastUpdated: 100,
+    })
+
+    mockGetPreferences.mockResolvedValue({
+      webdav: {
+        syncStrategy: "download_only",
+        syncData: {
+          accounts: true,
+          bookmarks: true,
+          apiCredentialProfiles: true,
+          preferences: true,
+        },
+      },
+    } as any)
+
+    mockDownloadBackup.mockResolvedValue(
+      JSON.stringify({
+        version: "2.0",
+        timestamp: 200,
+        accounts: {
+          accounts: [{ id: "remote-account", created_at: 3, updated_at: 30 }],
+          bookmarks: [{ id: "remote-bookmark", created_at: 4, updated_at: 40 }],
+          pinnedAccountIds: ["remote-account"],
+          orderedAccountIds: ["remote-account", "remote-bookmark"],
+          last_updated: 200,
+        },
+        tagStore: { version: 1, tagsById: { remote: { id: "remote-tag" } } },
+        preferences: { lastUpdated: 200, themeMode: "light" },
+        channelConfigs: { 2: { enabled: false } },
+        apiCredentialProfiles: {
+          version: 2,
+          profiles: [
+            {
+              id: "remote-profile",
+              name: "Remote Profile",
+              apiType: "openai",
+              baseUrl: "https://remote.example.com",
+              apiKey: "remote-key",
+              tagIds: ["remote-tag"],
+              notes: "",
+              createdAt: 200,
+              updatedAt: 200,
+            },
+          ],
+          lastUpdated: 200,
+        },
+      }),
+    )
+  })
+
+  it("starts each local import only after the previous one completes", async () => {
+    const service = createService()
+    const accountDeferred = createDeferred<{ migratedCount: number }>()
+    const callOrder: string[] = []
+
+    mockAccountStorageImportData.mockImplementation(async () => {
+      callOrder.push("account:start")
+      const result = await accountDeferred.promise
+      callOrder.push("account:done")
+      return result
+    })
+    mockTagStoreImport.mockImplementation(async () => {
+      callOrder.push("tag")
+    })
+    mockImportPreferences.mockImplementation(async () => {
+      callOrder.push("preferences")
+      return true
+    })
+    mockChannelConfigImport.mockImplementation(async () => {
+      callOrder.push("channel")
+    })
+    mockApiCredentialProfilesImport.mockImplementation(async () => {
+      callOrder.push("api")
+      return { version: 2, profiles: [], lastUpdated: 0 }
+    })
+
+    const syncPromise = service.syncWithWebdav()
+
+    await vi.waitFor(() => {
+      expect(mockAccountStorageImportData).toHaveBeenCalledTimes(1)
+    })
+
+    expect(mockTagStoreImport).not.toHaveBeenCalled()
+    expect(mockImportPreferences).not.toHaveBeenCalled()
+    expect(mockChannelConfigImport).not.toHaveBeenCalled()
+    expect(mockApiCredentialProfilesImport).not.toHaveBeenCalled()
+
+    accountDeferred.resolve({ migratedCount: 0 })
+
+    await syncPromise
+
+    expect(callOrder).toEqual([
+      "account:start",
+      "account:done",
+      "tag",
+      "preferences",
+      "channel",
+      "api",
+    ])
+  })
+
+  it("rolls back earlier writes when a later local import fails", async () => {
+    const service = createService()
+
+    mockAccountStorageImportData.mockResolvedValue({ migratedCount: 0 })
+    mockTagStoreImport.mockResolvedValue(undefined)
+    mockImportPreferences.mockResolvedValue(true)
+    mockChannelConfigImport.mockRejectedValueOnce(new Error("channel failed"))
+
+    await expect(service.syncWithWebdav()).rejects.toThrow("channel failed")
+
+    expect(mockAccountStorageImportData).toHaveBeenNthCalledWith(1, {
+      accounts: [{ id: "remote-account", created_at: 3, updated_at: 30 }],
+      pinnedAccountIds: ["remote-account"],
+      orderedAccountIds: ["remote-account", "remote-bookmark"],
+      bookmarks: [{ id: "remote-bookmark", created_at: 4, updated_at: 40 }],
+    })
+    expect(mockTagStoreImport).toHaveBeenCalledTimes(2)
+    expect(mockImportPreferences).toHaveBeenCalledTimes(2)
+    expect(mockAccountStorageImportData).toHaveBeenNthCalledWith(2, {
+      accounts: [{ id: "local-account", created_at: 1, updated_at: 10 }],
+      bookmarks: [{ id: "local-bookmark", created_at: 2, updated_at: 20 }],
+      pinnedAccountIds: ["local-account"],
+      orderedAccountIds: ["local-account", "local-bookmark"],
+    })
+    expect(mockApiCredentialProfilesImport).not.toHaveBeenCalled()
+    expect(mockUploadBackup).not.toHaveBeenCalled()
   })
 })

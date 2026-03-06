@@ -41,6 +41,8 @@ import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
 import { accountStorage } from "../accounts/accountStorage"
+import { STORAGE_LOCKS } from "../core/storageKeys"
+import { withExtensionStorageWriteLock } from "../core/storageWriteLock"
 import { channelConfigStorage } from "../managedSites/channelConfigStorage"
 import {
   userPreferences,
@@ -152,6 +154,19 @@ class WebdavAutoSyncService {
         await clearAlarm(WebdavAutoSyncService.ALARM_NAME)
         this.isScheduled = false
         logger.warn("WebDAV配置不完整，无法启动自动同步")
+        return
+      }
+
+      const syncDataSelection = resolveWebdavSyncDataSelection(
+        preferences.webdav.syncData,
+      )
+
+      if (isWebdavSyncDataSelectionEmpty(syncDataSelection)) {
+        await clearAlarm(WebdavAutoSyncService.ALARM_NAME)
+        this.isScheduled = false
+        logger.warn(
+          "WebDAV sync selection is empty; auto-sync remains unscheduled",
+        )
         return
       }
 
@@ -612,46 +627,22 @@ class WebdavAutoSyncService {
       Boolean(remoteData) && strategy !== WEBDAV_SYNC_STRATEGIES.UPLOAD_ONLY
 
     if (shouldWriteLocal) {
-      const tasks: Array<Promise<any>> = []
-
-      if (syncDataSelection.accounts || syncDataSelection.bookmarks) {
-        tasks.push(
-          accountStorage.importData({
-            accounts: accountsToSave,
-            pinnedAccountIds: pinnedAccountIdsToSave,
-            orderedAccountIds: orderedAccountIdsToSave,
-            bookmarks: bookmarksToSave,
-          }),
-        )
-      }
-
-      if (
-        syncDataSelection.accounts ||
-        syncDataSelection.bookmarks ||
-        syncDataSelection.apiCredentialProfiles
-      ) {
-        tasks.push(tagStorage.importTagStore(tagStoreToSave))
-      }
-
-      if (syncDataSelection.preferences) {
-        tasks.push(
-          userPreferences.importPreferences(preferencesToSave, {
-            preserveWebdav: true,
-          }),
-        )
-      }
-
-      tasks.push(channelConfigStorage.importConfigs(channelConfigsToSave))
-
-      if (syncDataSelection.apiCredentialProfiles) {
-        tasks.push(
-          apiCredentialProfilesStorage.importConfig(
-            apiCredentialProfilesToSave,
-          ),
-        )
-      }
-
-      await Promise.all(tasks)
+      await this.applyLocalSyncResult({
+        syncDataSelection,
+        accountsToSave,
+        bookmarksToSave,
+        pinnedAccountIdsToSave,
+        orderedAccountIdsToSave,
+        tagStoreToSave,
+        preferencesToSave,
+        channelConfigsToSave,
+        apiCredentialProfilesToSave,
+        localAccountsConfig,
+        localTagStore,
+        localPreferences,
+        localChannelConfigs,
+        localApiCredentialProfiles,
+      })
     }
 
     // 上传到WebDAV
@@ -679,6 +670,120 @@ class WebdavAutoSyncService {
 
     await uploadBackup(JSON.stringify(payload, null, 2))
     logger.info("数据已上传到WebDAV")
+  }
+
+  private async importPreferencesOrThrow(preferences: UserPreferences) {
+    const imported = await userPreferences.importPreferences(preferences, {
+      preserveWebdav: true,
+    })
+
+    if (!imported) {
+      throw new Error("Failed to import WebDAV preferences")
+    }
+  }
+
+  private async applyLocalSyncResult(input: {
+    syncDataSelection: WebDAVSyncDataSelection
+    accountsToSave: SiteAccount[]
+    bookmarksToSave: SiteBookmark[]
+    pinnedAccountIdsToSave: string[]
+    orderedAccountIdsToSave: string[]
+    tagStoreToSave: TagStore
+    preferencesToSave: UserPreferences
+    channelConfigsToSave: ChannelConfigMap
+    apiCredentialProfilesToSave: ApiCredentialProfilesConfig
+    localAccountsConfig: {
+      accounts: SiteAccount[]
+      bookmarks?: SiteBookmark[]
+      pinnedAccountIds?: string[]
+      orderedAccountIds?: string[]
+    }
+    localTagStore: TagStore
+    localPreferences: UserPreferences
+    localChannelConfigs: ChannelConfigMap
+    localApiCredentialProfiles: ApiCredentialProfilesConfig
+  }) {
+    const rollbackSteps: Array<() => Promise<void>> = []
+
+    await withExtensionStorageWriteLock(
+      STORAGE_LOCKS.WEBDAV_SYNC_APPLY,
+      async () => {
+        try {
+          if (
+            input.syncDataSelection.accounts ||
+            input.syncDataSelection.bookmarks
+          ) {
+            await accountStorage.importData({
+              accounts: input.accountsToSave,
+              pinnedAccountIds: input.pinnedAccountIdsToSave,
+              orderedAccountIds: input.orderedAccountIdsToSave,
+              bookmarks: input.bookmarksToSave,
+            })
+
+            rollbackSteps.push(async () => {
+              await accountStorage.importData({
+                accounts: input.localAccountsConfig.accounts,
+                bookmarks: input.localAccountsConfig.bookmarks || [],
+                pinnedAccountIds:
+                  input.localAccountsConfig.pinnedAccountIds || [],
+                orderedAccountIds:
+                  input.localAccountsConfig.orderedAccountIds || [],
+              })
+            })
+          }
+
+          if (
+            input.syncDataSelection.accounts ||
+            input.syncDataSelection.bookmarks ||
+            input.syncDataSelection.apiCredentialProfiles
+          ) {
+            await tagStorage.importTagStore(input.tagStoreToSave)
+
+            rollbackSteps.push(async () => {
+              await tagStorage.importTagStore(input.localTagStore)
+            })
+          }
+
+          if (input.syncDataSelection.preferences) {
+            await this.importPreferencesOrThrow(input.preferencesToSave)
+
+            rollbackSteps.push(async () => {
+              await this.importPreferencesOrThrow(input.localPreferences)
+            })
+          }
+
+          await channelConfigStorage.importConfigs(input.channelConfigsToSave)
+          rollbackSteps.push(async () => {
+            await channelConfigStorage.importConfigs(input.localChannelConfigs)
+          })
+
+          if (input.syncDataSelection.apiCredentialProfiles) {
+            await apiCredentialProfilesStorage.importConfig(
+              input.apiCredentialProfilesToSave,
+            )
+
+            rollbackSteps.push(async () => {
+              await apiCredentialProfilesStorage.importConfig(
+                input.localApiCredentialProfiles,
+              )
+            })
+          }
+        } catch (error) {
+          for (const rollback of rollbackSteps.reverse()) {
+            try {
+              await rollback()
+            } catch (rollbackError) {
+              logger.error(
+                "Failed to rollback partially applied WebDAV sync writes",
+                rollbackError,
+              )
+            }
+          }
+
+          throw error
+        }
+      },
+    )
   }
 
   /**
