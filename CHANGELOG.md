@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.27.0](https://github.com/qixing-jk/all-api-hub/compare/v3.26.0...v3.27.0) (2026-03-07)
+
+
+### Features
+
+* **account:** add disabled/enabled account status filtering ([4ce7a9b](https://github.com/qixing-jk/all-api-hub/commit/4ce7a9b0a818fc0a98ee822bedccdac622f731f3)), closes [#541](https://github.com/qixing-jk/all-api-hub/issues/541)
+
 ## [3.26.0](https://github.com/qixing-jk/all-api-hub/compare/v3.25.0...v3.26.0) (2026-03-07)
 
 
