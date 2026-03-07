@@ -261,21 +261,49 @@
     },
     "cliproxy": {
       "title": "Import to CLIProxyAPI",
-      "description": "Create or update an OpenAI-compatible provider in CLIProxyAPI.",
+      "description": "Create or update a provider entry in CLIProxyAPI.",
       "fields": {
+        "providerType": "Provider type",
         "name": "Provider name",
         "baseUrl": "Provider base URL",
         "proxyUrl": "Proxy URL (optional)",
         "models": "Model mapping (optional)"
       },
       "descriptions": {
-        "baseUrl": "OpenAI-compatible upstream base URL, typically ending with /v1.",
+        "providerType": "Choose which CLIProxyAPI provider family to import into.",
+        "baseUrlOpenAICompatibility": "Required. CLIProxyAPI stores the OpenAI-compatible base URL and request paths are normalized to a single /v1 suffix.",
+        "baseUrlCodexApiKey": "Required. Paste the Codex host or a full backend endpoint; the /backend-api/codex path is stripped automatically.",
+        "baseUrlClaudeApiKey": "Optional. Leave blank to use CLIProxyAPI's default Claude upstream. Pasted /v1/messages endpoints are reduced to the provider base.",
+        "baseUrlGeminiApiKey": "Optional. Leave blank to use CLIProxyAPI's default Gemini upstream. Pasted /v1beta/models endpoints are reduced to the provider base.",
         "proxyUrl": "Optional proxy URL used for this API key entry.",
-        "models": "Map upstream model names to optional aliases (name → alias). When available, upstream models are loaded from /v1/models for selection."
+        "models": "Map upstream model names to optional aliases (name -> alias). When available, upstream models are loaded from /v1/models for selection.",
+        "modelsManual": "Map upstream model names to optional aliases (name -> alias). Enter values manually for this provider family in this release."
+      },
+      "providerTypes": {
+        "openaiCompatibility": {
+          "label": "OpenAI compatibility",
+          "description": "Best for OpenAI-compatible relays that expose a /v1-style upstream API."
+        },
+        "codexApiKey": {
+          "label": "Codex API key",
+          "description": "Uses CLIProxyAPI's dedicated Codex executor and management list."
+        },
+        "claudeApiKey": {
+          "label": "Claude API key",
+          "description": "Uses Claude's dedicated provider list and supports an empty base URL for the default upstream."
+        },
+        "geminiApiKey": {
+          "label": "Gemini API key",
+          "description": "Uses Gemini's dedicated provider list and supports an empty base URL for the default upstream."
+        }
       },
       "placeholders": {
+        "providerType": "Select a provider family",
         "name": "e.g. Acme Relay",
-        "baseUrl": "https://example.com/v1",
+        "baseUrlOpenAICompatibility": "https://example.com/v1",
+        "baseUrlCodexApiKey": "https://example.com/router",
+        "baseUrlClaudeApiKey": "https://example.com/proxy",
+        "baseUrlGeminiApiKey": "https://example.com/genai",
         "proxyUrl": "http://localhost:3000",
         "modelName": "Model name, e.g. claude",
         "modelAlias": "Model alias (optional)"

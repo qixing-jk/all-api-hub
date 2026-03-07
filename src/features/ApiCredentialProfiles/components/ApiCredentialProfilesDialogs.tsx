@@ -10,7 +10,11 @@ import {
 } from "~/services/verification/aiApiVerification"
 
 import type { ApiCredentialProfilesController } from "../hooks/useApiCredentialProfilesController"
-import { createExportAccount, createExportToken } from "../utils/exportShims"
+import {
+  createCliProxyExportPayload,
+  createExportAccount,
+  createExportToken,
+} from "../utils/exportShims"
 import { ApiCredentialProfileDialog } from "./ApiCredentialProfileDialog"
 import { KiloCodeProfileExportDialog } from "./KiloCodeProfileExportDialog"
 import { VerifyApiCredentialProfileDialog } from "./VerifyApiCredentialProfileDialog"
@@ -37,6 +41,9 @@ export function ApiCredentialProfilesDialogs({
     "aiApiVerification",
     "common",
   ])
+  const cliProxyPayload = controller.cliProxyProfile
+    ? createCliProxyExportPayload(controller.cliProxyProfile)
+    : null
 
   return (
     <>
@@ -74,12 +81,13 @@ export function ApiCredentialProfilesDialogs({
         />
       ) : null}
 
-      {controller.cliProxyProfile ? (
+      {cliProxyPayload ? (
         <CliProxyExportDialog
           isOpen={true}
           onClose={() => controller.setCliProxyProfile(null)}
-          account={createExportAccount(controller.cliProxyProfile)}
-          token={createExportToken(controller.cliProxyProfile)}
+          account={cliProxyPayload.account}
+          token={cliProxyPayload.token}
+          apiTypeHint={cliProxyPayload.apiTypeHint}
         />
       ) : null}
 

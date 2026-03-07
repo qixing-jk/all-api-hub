@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  normalizeUrlForBasePath,
   normalizeUrlForOriginKey,
+  normalizeUrlPathname,
+  transformNormalizedUrlPath,
   tryParseOrigin,
   tryParseUrlPrefix,
 } from "~/utils/core/urlParsing"
@@ -24,6 +27,59 @@ describe("urlParsing", () => {
       expect(
         tryParseUrlPrefix("https://example.com/console/topup?x=1#hash"),
       ).toBe("https://example.com/console/topup")
+    })
+  })
+
+  describe("normalizeUrlPathname", () => {
+    it("strips trailing slashes and keeps root as /", () => {
+      expect(normalizeUrlPathname("/proxy///")).toBe("/proxy")
+      expect(normalizeUrlPathname("///")).toBe("/")
+      expect(normalizeUrlPathname("")).toBe("/")
+    })
+  })
+
+  describe("normalizeUrlForBasePath", () => {
+    it("normalizes absolute urls without query/hash", () => {
+      expect(
+        normalizeUrlForBasePath(" https://example.com/proxy/?x=1#hash "),
+      ).toBe("https://example.com/proxy")
+    })
+
+    it("keeps root absolute urls at origin-only form", () => {
+      expect(normalizeUrlForBasePath("https://example.com/?x=1#hash")).toBe(
+        "https://example.com",
+      )
+    })
+
+    it("falls back to trimmed non-url input", () => {
+      expect(normalizeUrlForBasePath(" example.com/proxy///?x=1 ")).toBe(
+        "example.com/proxy",
+      )
+    })
+  })
+
+  describe("transformNormalizedUrlPath", () => {
+    it("transforms valid URL pathnames while preserving origin", () => {
+      expect(
+        transformNormalizedUrlPath(
+          "https://example.com/proxy/v1/messages?beta=true",
+          (pathname) => pathname.replace(/\/v1\/messages$/, ""),
+        ),
+      ).toBe("https://example.com/proxy")
+    })
+
+    it("supports transforming root paths", () => {
+      expect(
+        transformNormalizedUrlPath("https://example.com/?x=1", () => "/v1"),
+      ).toBe("https://example.com/v1")
+    })
+
+    it("applies the transform to normalized fallback strings", () => {
+      expect(
+        transformNormalizedUrlPath("example.com/proxy///?x=1", (pathname) => {
+          return `${pathname}/v1`
+        }),
+      ).toBe("example.com/proxy/v1")
     })
   })
 

@@ -1,7 +1,44 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { importToCliProxy } from "~/services/integrations/cliProxyService"
+import { CLI_PROXY_PROVIDER_TYPES } from "~/services/integrations/cliProxyProviderTypes"
+import {
+  importToCliProxy,
+  type ImportToCliProxyOptions,
+} from "~/services/integrations/cliProxyService"
 import { userPreferences } from "~/services/preferences/userPreferences"
+
+/**
+ *
+ */
+function mockCliProxyPreferences() {
+  vi.spyOn(userPreferences, "getPreferences").mockResolvedValue({
+    cliProxy: {
+      baseUrl: "http://localhost:8317/v0/management",
+      managementKey: "k",
+    },
+  } as any)
+}
+
+/**
+ *
+ */
+function createBaseOptions(
+  overrides: Partial<ImportToCliProxyOptions> = {},
+): ImportToCliProxyOptions {
+  return {
+    account: {
+      id: "acc",
+      name: "example",
+      baseUrl: "https://example.com/api",
+    } as any,
+    token: { id: "tok", key: "sk-test" } as any,
+    providerType: CLI_PROXY_PROVIDER_TYPES.OPENAI_COMPATIBILITY,
+    providerName: "example",
+    providerBaseUrl: "https://example.com/api/v1",
+    proxyUrl: "",
+    ...overrides,
+  }
+}
 
 describe("cliProxyService.importToCliProxy", () => {
   beforeEach(() => {
@@ -9,13 +46,8 @@ describe("cliProxyService.importToCliProxy", () => {
     vi.restoreAllMocks()
   })
 
-  it("includes models in the provider payload (PUT) when provided", async () => {
-    vi.spyOn(userPreferences, "getPreferences").mockResolvedValue({
-      cliProxy: {
-        baseUrl: "http://localhost:8317/v0/management",
-        managementKey: "k",
-      },
-    } as any)
+  it("includes models in the OpenAI-compatible PUT payload when provided", async () => {
+    mockCliProxyPreferences()
 
     const fetchMock = vi.fn().mockImplementation((input: any, init?: any) => {
       const url = String(input)
@@ -39,18 +71,11 @@ describe("cliProxyService.importToCliProxy", () => {
 
     vi.stubGlobal("fetch", fetchMock as any)
 
-    const result = await importToCliProxy({
-      account: {
-        id: "acc",
-        name: "openrouter",
-        baseUrl: "https://openrouter.ai/api",
-      } as any,
-      token: { id: "tok", key: "sk" } as any,
-      providerName: "openrouter",
-      providerBaseUrl: "https://openrouter.ai/api/v1",
-      proxyUrl: "",
-      models: [{ name: "m", alias: "a" }],
-    })
+    const result = await importToCliProxy(
+      createBaseOptions({
+        models: [{ name: "m", alias: "a" }],
+      }),
+    )
 
     expect(result.success).toBe(true)
 
@@ -59,32 +84,26 @@ describe("cliProxyService.importToCliProxy", () => {
     )
     expect(putCall).toBeTruthy()
 
-    const putInit = putCall?.[1]
-    const payload = JSON.parse(putInit.body) as any[]
+    const payload = JSON.parse(putCall?.[1].body) as any[]
 
     expect(payload[0]).toMatchObject({
-      name: "openrouter",
-      "base-url": "https://openrouter.ai/api/v1",
-      "api-key-entries": [{ "api-key": "sk", "proxy-url": "" }],
+      name: "example",
+      "base-url": "https://example.com/api/v1",
+      "api-key-entries": [{ "api-key": "sk-test", "proxy-url": "" }],
       models: [{ name: "m", alias: "a" }],
       headers: {},
     })
   })
 
-  it("keeps existing provider models when models are omitted", async () => {
-    vi.spyOn(userPreferences, "getPreferences").mockResolvedValue({
-      cliProxy: {
-        baseUrl: "http://localhost:8317/v0/management",
-        managementKey: "k",
-      },
-    } as any)
+  it("keeps existing OpenAI-compatible provider models when models are omitted", async () => {
+    mockCliProxyPreferences()
 
     const existingProvider = {
-      name: "openrouter",
-      "base-url": "https://openrouter.ai/api/v1",
+      name: "example",
+      "base-url": "https://example.com/api/v1",
       "api-key-entries": [{ "api-key": "sk-old", "proxy-url": "" }],
       models: [{ name: "existing", alias: "kept" }],
-      headers: { "X-Provider": "openrouter" },
+      headers: { "X-Provider": "example" },
     }
 
     const fetchMock = vi.fn().mockImplementation((input: any, init?: any) => {
@@ -109,17 +128,7 @@ describe("cliProxyService.importToCliProxy", () => {
 
     vi.stubGlobal("fetch", fetchMock as any)
 
-    const result = await importToCliProxy({
-      account: {
-        id: "acc",
-        name: "openrouter",
-        baseUrl: "https://openrouter.ai/api",
-      } as any,
-      token: { id: "tok", key: "sk-new" } as any,
-      providerName: "openrouter",
-      providerBaseUrl: "https://openrouter.ai/api/v1",
-      proxyUrl: "",
-    })
+    const result = await importToCliProxy(createBaseOptions())
 
     expect(result.success).toBe(true)
 
@@ -128,9 +137,134 @@ describe("cliProxyService.importToCliProxy", () => {
     )
     expect(patchCall).toBeTruthy()
 
-    const patchInit = patchCall?.[1]
-    const payload = JSON.parse(patchInit.body) as any
-
+    const payload = JSON.parse(patchCall?.[1].body) as any
     expect(payload.value.models).toEqual([{ name: "existing", alias: "kept" }])
+  })
+
+  it("updates matching Codex entries on the Codex management endpoint without PUT duplicates", async () => {
+    mockCliProxyPreferences()
+
+    const existingProvider = {
+      "api-key": "sk-codex",
+      "base-url": "https://example.com/router",
+      "proxy-url": "",
+      models: [{ name: "gpt-5-codex", alias: "codex" }],
+      headers: { "X-Provider": "codex" },
+    }
+
+    const fetchMock = vi.fn().mockImplementation((input: any, init?: any) => {
+      const url = String(input)
+      const method = init?.method ?? "GET"
+
+      if (url.endsWith("/codex-api-key") && method === "GET") {
+        return Promise.resolve(
+          new Response(JSON.stringify([existingProvider]), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        )
+      }
+
+      if (url.endsWith("/codex-api-key") && method === "PATCH") {
+        return Promise.resolve(new Response("", { status: 200 }))
+      }
+
+      return Promise.resolve(new Response("", { status: 500 }))
+    })
+
+    vi.stubGlobal("fetch", fetchMock as any)
+
+    const result = await importToCliProxy(
+      createBaseOptions({
+        account: {
+          id: "acc",
+          name: "OpenAI",
+          baseUrl: "https://example.com/router",
+        } as any,
+        token: { id: "tok", key: "sk-codex" } as any,
+        providerType: CLI_PROXY_PROVIDER_TYPES.CODEX_API_KEY,
+        providerBaseUrl:
+          "https://example.com/router/backend-api/codex/v1/chat/completions",
+      }),
+    )
+
+    expect(result.success).toBe(true)
+
+    expect(
+      fetchMock.mock.calls.some(
+        ([input, init]) =>
+          String(input).endsWith("/codex-api-key") && init?.method === "PATCH",
+      ),
+    ).toBe(true)
+    expect(
+      fetchMock.mock.calls.some(
+        ([input, init]) =>
+          String(input).endsWith("/codex-api-key") && init?.method === "PUT",
+      ),
+    ).toBe(false)
+
+    const patchCall = fetchMock.mock.calls.find(
+      ([input, init]) =>
+        String(input).endsWith("/codex-api-key") && init?.method === "PATCH",
+    )
+    const payload = JSON.parse(patchCall?.[1].body) as any
+
+    expect(payload.value).toMatchObject({
+      "api-key": "sk-codex",
+      "base-url": "https://example.com/router",
+      models: [{ name: "gpt-5-codex", alias: "codex" }],
+      headers: { "X-Provider": "codex" },
+    })
+  })
+
+  it("writes Gemini imports to the selected Gemini provider list", async () => {
+    mockCliProxyPreferences()
+
+    const fetchMock = vi.fn().mockImplementation((input: any, init?: any) => {
+      const url = String(input)
+      const method = init?.method ?? "GET"
+
+      if (url.endsWith("/gemini-api-key") && method === "GET") {
+        return Promise.resolve(
+          new Response(JSON.stringify([]), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        )
+      }
+
+      if (url.endsWith("/gemini-api-key") && method === "PUT") {
+        return Promise.resolve(new Response("", { status: 200 }))
+      }
+
+      return Promise.resolve(new Response("", { status: 500 }))
+    })
+
+    vi.stubGlobal("fetch", fetchMock as any)
+
+    const result = await importToCliProxy(
+      createBaseOptions({
+        providerType: CLI_PROXY_PROVIDER_TYPES.GEMINI_API_KEY,
+        providerBaseUrl:
+          "https://example.com/genai/v1beta/models/gemini-2.5-pro:generateContent",
+        token: { id: "tok", key: "gk" } as any,
+        models: [{ name: "gemini-2.5-pro", alias: "gemini" }],
+      }),
+    )
+
+    expect(result.success).toBe(true)
+
+    const putCall = fetchMock.mock.calls.find(
+      ([input, init]) =>
+        String(input).endsWith("/gemini-api-key") && init?.method === "PUT",
+    )
+    expect(putCall).toBeTruthy()
+
+    const payload = JSON.parse(putCall?.[1].body) as any[]
+    expect(payload[0]).toMatchObject({
+      "api-key": "gk",
+      "base-url": "https://example.com/genai",
+      models: [{ name: "gemini-2.5-pro", alias: "gemini" }],
+    })
   })
 })

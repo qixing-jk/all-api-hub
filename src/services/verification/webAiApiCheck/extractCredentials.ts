@@ -1,4 +1,9 @@
 import { normalizeHttpUrl } from "~/utils/core/url"
+import {
+  normalizeUrlForBasePath,
+  normalizeUrlPathname,
+  transformNormalizedUrlPath,
+} from "~/utils/core/urlParsing"
 
 /**
  * Extraction result for the in-page Web AI API Check feature.
@@ -34,18 +39,11 @@ export function normalizeApiCheckBaseUrl(baseUrl: string): string | null {
   const normalized = normalizeHttpUrl(trimWrappingPunctuation(baseUrl))
   if (!normalized) return null
 
-  try {
-    const url = new URL(normalized)
-    url.search = ""
-    url.hash = ""
-    return url.toString().replace(/\/$/, "")
-  } catch {
-    return normalized
-  }
+  return normalizeUrlForBasePath(normalized) || null
 }
 
 /**
- *
+ * Normalize a base URL by stripping a specific path segment and anything after it.
  */
 function normalizeBaseUrlByStrippingPathSegment(
   baseUrl: string,
@@ -54,27 +52,19 @@ function normalizeBaseUrlByStrippingPathSegment(
   const normalized = normalizeApiCheckBaseUrl(baseUrl)
   if (!normalized) return null
 
-  try {
-    const url = new URL(normalized)
-    const rawSegments = url.pathname.replace(/\/+$/, "").split("/")
-    const segments = rawSegments.filter(Boolean)
+  return transformNormalizedUrlPath(normalized, (pathname) => {
+    const segments = normalizeUrlPathname(pathname).split("/").filter(Boolean)
     const segmentIndex = segments.findIndex(
       (segment) => segment.toLowerCase() === segmentToStrip.toLowerCase(),
     )
 
-    if (segmentIndex >= 0) {
-      const prefixSegments = segments.slice(0, segmentIndex)
-      url.pathname = prefixSegments.length
-        ? `/${prefixSegments.join("/")}`
-        : "/"
+    if (segmentIndex < 0) {
+      return pathname
     }
 
-    url.search = ""
-    url.hash = ""
-    return url.toString().replace(/\/$/, "")
-  } catch {
-    return normalized
-  }
+    const prefixSegments = segments.slice(0, segmentIndex)
+    return prefixSegments.length ? `/${prefixSegments.join("/")}` : "/"
+  })
 }
 
 /**

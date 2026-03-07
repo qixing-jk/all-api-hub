@@ -1,3 +1,4 @@
+import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification"
 import {
   AuthTypeEnum,
   SiteHealthStatus,
@@ -5,6 +6,12 @@ import {
   type DisplaySiteData,
 } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
+
+export type CliProxyExportPayload = {
+  account: DisplaySiteData
+  token: ApiToken
+  apiTypeHint: ApiVerificationApiType
+}
 
 /**
  * Derive a stable numeric id from an arbitrary string.
@@ -68,5 +75,19 @@ export function createExportToken(profile: ApiCredentialProfile): ApiToken {
     remain_quota: 0,
     unlimited_quota: true,
     used_quota: 0,
+  }
+}
+
+/**
+ * Build a CLIProxy export payload that preserves the profile API type for
+ * provider-family preselection in the import dialog.
+ */
+export function createCliProxyExportPayload(
+  profile: ApiCredentialProfile,
+): CliProxyExportPayload {
+  return {
+    account: createExportAccount(profile),
+    token: createExportToken(profile),
+    apiTypeHint: profile.apiType,
   }
 }

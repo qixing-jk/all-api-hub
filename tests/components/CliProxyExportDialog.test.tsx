@@ -1,17 +1,55 @@
-import { describe, expect, it, vi } from "vitest"
+import userEvent from "@testing-library/user-event"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { CliProxyExportDialog } from "~/components/CliProxyExportDialog"
-import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
+import { CLI_PROXY_PROVIDER_TYPES } from "~/services/integrations/cliProxyProviderTypes"
+import { API_TYPES } from "~/services/verification/aiApiVerification"
+import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
+const mockFetchAnthropicModelIds = vi.fn()
+const mockFetchGoogleModelIds = vi.fn()
 const mockFetchOpenAICompatibleModelIds = vi.fn()
+const mockImportToCliProxy = vi.fn()
+const mockShowResultToast = vi.fn()
+
+vi.mock("~/services/apiService/anthropic", () => ({
+  fetchAnthropicModelIds: (...args: any[]) =>
+    mockFetchAnthropicModelIds(...args),
+}))
+
+vi.mock("~/services/apiService/google", () => ({
+  fetchGoogleModelIds: (...args: any[]) => mockFetchGoogleModelIds(...args),
+}))
 
 vi.mock("~/services/apiService/openaiCompatible", () => ({
   fetchOpenAICompatibleModelIds: (...args: any[]) =>
     mockFetchOpenAICompatibleModelIds(...args),
 }))
 
+vi.mock("~/services/integrations/cliProxyService", () => ({
+  importToCliProxy: (...args: any[]) => mockImportToCliProxy(...args),
+}))
+
+vi.mock("~/utils/core/toastHelpers", () => ({
+  showResultToast: (...args: any[]) => mockShowResultToast(...args),
+}))
+
 describe("CliProxyExportDialog", () => {
-  it("loads upstream model ids and exposes them as name suggestions", async () => {
+  beforeEach(() => {
+    mockFetchAnthropicModelIds.mockReset()
+    mockFetchGoogleModelIds.mockReset()
+    mockFetchOpenAICompatibleModelIds.mockReset()
+    mockImportToCliProxy.mockReset()
+    mockShowResultToast.mockReset()
+
+    mockImportToCliProxy.mockResolvedValue({
+      success: true,
+      message: "ok",
+    })
+  })
+
+  it("defaults to OpenAI compatibility and loads model suggestions", async () => {
+    const user = userEvent.setup()
     mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce(["gpt-4", "claude"])
 
     render(
@@ -32,36 +70,189 @@ describe("CliProxyExportDialog", () => {
       })
     })
 
-    const nameCombo = await screen.findByRole("combobox")
-    fireEvent.click(nameCombo)
+    await screen.findByRole("dialog")
+    const providerTypeTrigger = screen.getByLabelText(
+      "ui:dialog.cliproxy.fields.providerType",
+    )
+
+    expect(providerTypeTrigger).toHaveTextContent(
+      "ui:dialog.cliproxy.providerTypes.openaiCompatibility.label",
+    )
+    expect(
+      screen.getByLabelText("ui:dialog.cliproxy.fields.baseUrl"),
+    ).toHaveValue("https://x.test/v1")
+    expect(
+      screen.getByLabelText("ui:dialog.cliproxy.fields.baseUrl"),
+    ).toBeRequired()
+
+    const comboboxes = await screen.findAllByRole("combobox")
+    await user.click(comboboxes[comboboxes.length - 1])
+
     expect(await screen.findByText("gpt-4")).toBeInTheDocument()
   })
 
-  it("falls back to manual input when upstream model fetch fails", async () => {
-    mockFetchOpenAICompatibleModelIds.mockRejectedValueOnce(
-      new Error("network error"),
-    )
+  it("preselects Claude for Anthropic hints and loads Anthropic model suggestions", async () => {
+    const user = userEvent.setup()
+    mockFetchAnthropicModelIds.mockResolvedValueOnce(["claude-3-7-sonnet"])
 
     render(
       <CliProxyExportDialog
         isOpen={true}
         onClose={() => {}}
+        apiTypeHint={API_TYPES.ANTHROPIC}
         account={
-          { id: "acc", name: "Example", baseUrl: "https://x.test/v1" } as any
+          {
+            id: "acc",
+            name: "Anthropic",
+            baseUrl: "https://api.anthropic.com/v1/messages",
+          } as any
         }
-        token={{ id: "tok", key: "sk-test" } as any}
+        token={{ id: "tok", key: "sk-anthropic" } as any}
       />,
     )
 
     await waitFor(() => {
-      expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalled()
+      expect(mockFetchAnthropicModelIds).toHaveBeenCalledWith({
+        baseUrl: "https://api.anthropic.com",
+        apiKey: "sk-anthropic",
+      })
     })
 
+    expect(mockFetchOpenAICompatibleModelIds).not.toHaveBeenCalled()
+
+    await screen.findByRole("dialog")
+    const providerTypeTrigger = screen.getByLabelText(
+      "ui:dialog.cliproxy.fields.providerType",
+    )
+
+    expect(providerTypeTrigger).toHaveTextContent(
+      "ui:dialog.cliproxy.providerTypes.claudeApiKey.label",
+    )
+    expect(screen.queryByLabelText("ui:dialog.cliproxy.fields.name")).toBeNull()
     expect(
-      await screen.findByPlaceholderText(
-        "ui:dialog.cliproxy.placeholders.modelName",
-      ),
-    ).toBeInTheDocument()
-    expect(screen.queryByRole("combobox")).toBeNull()
+      screen.getByLabelText("ui:dialog.cliproxy.fields.baseUrl"),
+    ).toHaveValue("https://api.anthropic.com")
+    expect(
+      screen.getByLabelText("ui:dialog.cliproxy.fields.baseUrl"),
+    ).not.toBeRequired()
+
+    const comboboxes = await screen.findAllByRole("combobox")
+    await user.click(comboboxes[comboboxes.length - 1])
+
+    expect(await screen.findByText("claude-3-7-sonnet")).toBeInTheDocument()
+  })
+
+  it("preselects Codex for OpenAI hints, loads suggestions, and submits the selected provider type", async () => {
+    const user = userEvent.setup()
+    mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce(["gpt-4.1"])
+
+    render(
+      <CliProxyExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        apiTypeHint={API_TYPES.OPENAI}
+        account={
+          {
+            id: "acc",
+            name: "OpenAI",
+            baseUrl: "https://api.openai.com",
+          } as any
+        }
+        token={{ id: "tok", key: "sk-openai" } as any}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledWith({
+        baseUrl: "https://api.openai.com",
+        apiKey: "sk-openai",
+      })
+    })
+
+    await screen.findByRole("dialog")
+    const providerTypeTrigger = screen.getByLabelText(
+      "ui:dialog.cliproxy.fields.providerType",
+    )
+
+    expect(providerTypeTrigger).toHaveTextContent(
+      "ui:dialog.cliproxy.providerTypes.codexApiKey.label",
+    )
+    expect(
+      screen.getByLabelText("ui:dialog.cliproxy.fields.baseUrl"),
+    ).toHaveValue("https://api.openai.com")
+    expect(
+      screen.getByLabelText("ui:dialog.cliproxy.fields.baseUrl"),
+    ).toBeRequired()
+
+    const comboboxes = await screen.findAllByRole("combobox")
+    await user.click(comboboxes[comboboxes.length - 1])
+
+    expect(await screen.findByText("gpt-4.1")).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.import" }),
+    )
+
+    await waitFor(() => {
+      expect(mockImportToCliProxy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          apiTypeHint: API_TYPES.OPENAI,
+          providerType: CLI_PROXY_PROVIDER_TYPES.CODEX_API_KEY,
+          providerBaseUrl: "https://api.openai.com",
+        }),
+      )
+    })
+  })
+
+  it("preselects Gemini for Google hints and loads Gemini model suggestions", async () => {
+    const user = userEvent.setup()
+    mockFetchGoogleModelIds.mockResolvedValueOnce(["gemini-2.0-flash"])
+
+    render(
+      <CliProxyExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        apiTypeHint={API_TYPES.GOOGLE}
+        account={
+          {
+            id: "acc",
+            name: "Gemini",
+            baseUrl:
+              "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
+          } as any
+        }
+        token={{ id: "tok", key: "gm-test" } as any}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(mockFetchGoogleModelIds).toHaveBeenCalledWith({
+        baseUrl: "https://generativelanguage.googleapis.com",
+        apiKey: "gm-test",
+      })
+    })
+
+    expect(mockFetchOpenAICompatibleModelIds).not.toHaveBeenCalled()
+    expect(mockFetchAnthropicModelIds).not.toHaveBeenCalled()
+
+    await screen.findByRole("dialog")
+    const providerTypeTrigger = screen.getByLabelText(
+      "ui:dialog.cliproxy.fields.providerType",
+    )
+
+    expect(providerTypeTrigger).toHaveTextContent(
+      "ui:dialog.cliproxy.providerTypes.geminiApiKey.label",
+    )
+    expect(
+      screen.getByLabelText("ui:dialog.cliproxy.fields.baseUrl"),
+    ).toHaveValue("https://generativelanguage.googleapis.com")
+    expect(
+      screen.getByLabelText("ui:dialog.cliproxy.fields.baseUrl"),
+    ).not.toBeRequired()
+
+    const comboboxes = await screen.findAllByRole("combobox")
+    await user.click(comboboxes[comboboxes.length - 1])
+
+    expect(await screen.findByText("gemini-2.0-flash")).toBeInTheDocument()
   })
 })
