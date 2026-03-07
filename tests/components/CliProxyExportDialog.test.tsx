@@ -256,6 +256,120 @@ describe("CliProxyExportDialog", () => {
     expect(await screen.findByText("gemini-2.0-flash")).toBeInTheDocument()
   })
 
+  it("keeps in-progress edits when rerendered with an equivalent account object", async () => {
+    mockFetchOpenAICompatibleModelIds.mockResolvedValue([])
+
+    const token = buildApiToken({ id: 12, key: "sk-test" })
+    const initialAccount = buildDisplaySiteData({
+      id: "acc",
+      name: "Example",
+      baseUrl: "https://x.test/v1",
+    })
+
+    const { rerender } = render(
+      <CliProxyExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={initialAccount}
+        token={token}
+      />,
+    )
+
+    const baseUrlInput = await screen.findByLabelText(
+      "ui:dialog.cliproxy.fields.baseUrl",
+    )
+
+    fireEvent.change(baseUrlInput, {
+      target: { value: "https://edited.example.com/v1" },
+    })
+
+    await waitFor(() => {
+      expect(mockFetchOpenAICompatibleModelIds).toHaveBeenLastCalledWith({
+        baseUrl: "https://edited.example.com",
+        apiKey: "sk-test",
+      })
+    })
+
+    rerender(
+      <CliProxyExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={buildDisplaySiteData({
+          id: "acc",
+          name: "Example",
+          baseUrl: "https://x.test/v1",
+        })}
+        token={token}
+      />,
+    )
+
+    expect(
+      screen.getByLabelText("ui:dialog.cliproxy.fields.baseUrl"),
+    ).toHaveValue("https://edited.example.com/v1")
+  })
+
+  it("submits an empty models list after the user clears edited mappings", async () => {
+    const user = userEvent.setup()
+    mockFetchOpenAICompatibleModelIds.mockResolvedValue([])
+
+    render(
+      <CliProxyExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={buildDisplaySiteData({
+          id: "acc",
+          name: "Example",
+          baseUrl: "https://x.test/v1",
+        })}
+        token={buildApiToken({ key: "sk-test" })}
+      />,
+    )
+
+    const nameInput = await screen.findByPlaceholderText(
+      "ui:dialog.cliproxy.placeholders.modelName",
+    )
+    await user.type(nameInput, "gpt-4")
+    await user.clear(nameInput)
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.import" }),
+    )
+
+    await waitFor(() => {
+      expect(mockImportToCliProxy).toHaveBeenCalledWith(
+        expect.objectContaining({ models: [] }),
+      )
+    })
+  })
+
+  it("leaves models undefined when the mappings were never edited", async () => {
+    const user = userEvent.setup()
+    mockFetchOpenAICompatibleModelIds.mockResolvedValue([])
+
+    render(
+      <CliProxyExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={buildDisplaySiteData({
+          id: "acc",
+          name: "Example",
+          baseUrl: "https://x.test/v1",
+        })}
+        token={buildApiToken({ key: "sk-test" })}
+      />,
+    )
+
+    await screen.findByLabelText("ui:dialog.cliproxy.fields.baseUrl")
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.import" }),
+    )
+
+    await waitFor(() => {
+      expect(mockImportToCliProxy).toHaveBeenCalledWith(
+        expect.objectContaining({ models: undefined }),
+      )
+    })
+  })
+
   it("refetches model suggestions when the provider base URL changes", async () => {
     mockFetchOpenAICompatibleModelIds.mockResolvedValue([])
 

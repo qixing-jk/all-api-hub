@@ -49,8 +49,8 @@ const logger = createLogger("CliProxyExportDialog")
 /**
  * builds a provider name to pre-fill the form field. For some provider types, the name is not used and can be left empty, so we fall back to baseUrl to at least provide some context to the user.
  */
-function buildProviderName(account: DisplaySiteData) {
-  return account.name || account.baseUrl
+function buildProviderName(accountName: string, accountBaseUrl: string) {
+  return accountName || accountBaseUrl
 }
 
 /**
@@ -137,6 +137,7 @@ export function CliProxyExportDialog(props: CliProxyExportDialogProps) {
   const [availableUpstreamModels, setAvailableUpstreamModels] = useState<
     string[]
   >([])
+  const [hasEditedModels, setHasEditedModels] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const formResetKey = useMemo(() => {
     return [
@@ -183,16 +184,18 @@ export function CliProxyExportDialog(props: CliProxyExportDialogProps) {
   useEffect(() => {
     if (!isOpen) {
       setReadyFormKey(null)
+      setHasEditedModels(false)
       return
     }
 
     setProviderType(defaultProviderType)
-    setProviderName(buildProviderName(account))
+    setProviderName(buildProviderName(account.name, account.baseUrl))
     setProviderBaseUrl(
       buildDefaultCliProxyProviderBaseUrl(defaultProviderType, account.baseUrl),
     )
     setProxyUrl("")
     setAvailableUpstreamModels([])
+    setHasEditedModels(false)
     setModels([
       {
         id: safeRandomUUID("model"),
@@ -201,14 +204,7 @@ export function CliProxyExportDialog(props: CliProxyExportDialogProps) {
       },
     ])
     setReadyFormKey(formResetKey)
-  }, [
-    account,
-    account.baseUrl,
-    account.name,
-    defaultProviderType,
-    formResetKey,
-    isOpen,
-  ])
+  }, [account.baseUrl, account.name, defaultProviderType, formResetKey, isOpen])
 
   useEffect(() => {
     if (
@@ -308,7 +304,7 @@ export function CliProxyExportDialog(props: CliProxyExportDialogProps) {
           providerName: providerName.trim(),
           providerBaseUrl: providerBaseUrl.trim() || undefined,
           proxyUrl: proxyUrl.trim(),
-          models: normalizedModels.length > 0 ? normalizedModels : undefined,
+          models: hasEditedModels ? normalizedModels : undefined,
         }
 
         const result = await importToCliProxy(payload)
@@ -429,7 +425,10 @@ export function CliProxyExportDialog(props: CliProxyExportDialogProps) {
         >
           <ModelListInput
             value={models}
-            onChange={setModels}
+            onChange={(nextModels) => {
+              setHasEditedModels(true)
+              setModels(nextModels)
+            }}
             showHeader={false}
             nameSuggestions={
               providerTypeMetadata.supportsModelSuggestions
