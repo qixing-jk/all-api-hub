@@ -42,6 +42,8 @@ const buildModelRedirectFixture = () => ({
 function createV0Preferences(
   overrides?: Partial<UserPreferences>,
 ): UserPreferences {
+  const timestamp = Date.now()
+
   return {
     themeMode: "system" as const,
     logging: DEFAULT_PREFERENCES.logging,
@@ -81,7 +83,8 @@ function createV0Preferences(
     },
     modelRedirect: buildModelRedirectFixture(),
     sortingPriorityConfig: undefined,
-    lastUpdated: Date.now(),
+    lastUpdated: timestamp,
+    sharedPreferencesLastUpdated: timestamp,
     // v0 does not have preferencesVersion
     ...overrides,
   }
@@ -544,6 +547,34 @@ describe("preferencesMigration", () => {
         accounts: false,
         preferences: false,
       })
+    })
+
+    it("initializes sharedPreferencesLastUpdated during v15 to v16 migration", () => {
+      const legacyTimestamp = 123456
+      const prefs = createV0Preferences({
+        preferencesVersion: 15,
+        lastUpdated: legacyTimestamp,
+      })
+      delete (prefs as any).sharedPreferencesLastUpdated
+
+      const result = migratePreferences(prefs)
+
+      expect(result.sharedPreferencesLastUpdated).toBe(legacyTimestamp)
+      expect(result.preferencesVersion).toBe(CURRENT_PREFERENCES_VERSION)
+    })
+
+    it("backfills sharedPreferencesLastUpdated even when version is already current", () => {
+      const currentTimestamp = 654321
+      const prefs = createV0Preferences({
+        preferencesVersion: CURRENT_PREFERENCES_VERSION,
+        lastUpdated: currentTimestamp,
+      })
+      delete (prefs as any).sharedPreferencesLastUpdated
+
+      const result = migratePreferences(prefs)
+
+      expect(result.sharedPreferencesLastUpdated).toBe(currentTimestamp)
+      expect(result.preferencesVersion).toBe(CURRENT_PREFERENCES_VERSION)
     })
 
     it("handles mixed old and new field scenarios", () => {

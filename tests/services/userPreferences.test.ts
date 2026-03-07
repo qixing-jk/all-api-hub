@@ -60,6 +60,9 @@ describe("userPreferences", () => {
     it("has valid webdav config", () => {
       expect(DEFAULT_PREFERENCES.webdav).toBeDefined()
       expect(DEFAULT_PREFERENCES.webdav.autoSync).toBe(false)
+      expect(DEFAULT_PREFERENCES.sharedPreferencesLastUpdated).toBe(
+        DEFAULT_PREFERENCES.lastUpdated,
+      )
     })
 
     it("has valid managedSite config", () => {

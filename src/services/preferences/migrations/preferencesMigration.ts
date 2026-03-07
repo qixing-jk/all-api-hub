@@ -25,12 +25,13 @@ import {
 import { createLogger } from "~/utils/core/logger"
 
 import type { UserPreferences } from "../userPreferences"
+import { normalizeSharedPreferencesMetadata } from "../webdavSharedPreferences"
 import { migrateSortingConfig } from "./sortingConfigMigration"
 
 const logger = createLogger("PreferencesMigration")
 
 // Current version of the preferences schema
-export const CURRENT_PREFERENCES_VERSION = 15
+export const CURRENT_PREFERENCES_VERSION = 16
 
 /**
  * Migration function type
@@ -362,6 +363,18 @@ const migrations: Record<number, PreferencesMigrationFunction> = {
       preferencesVersion: 15,
     }
   },
+
+  // Version 15 -> 16: Track shared-preference recency separately from local-only writes
+  16: (prefs: UserPreferences): UserPreferences => {
+    logger.debug(
+      "Migrating preferences from v15 to v16 (shared preference timestamp)",
+    )
+
+    return {
+      ...normalizeSharedPreferencesMetadata(prefs),
+      preferencesVersion: 16,
+    }
+  },
 }
 
 /**
@@ -410,5 +423,5 @@ export function migratePreferences(
     currentVersion = nextVersion
   }
 
-  return migratedPrefs
+  return normalizeSharedPreferencesMetadata(migratedPrefs)
 }

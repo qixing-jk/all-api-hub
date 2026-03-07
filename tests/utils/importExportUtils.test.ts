@@ -15,6 +15,8 @@ import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/a
 import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { tagStorage } from "~/services/tags/tagStorage"
+import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
+import { DEFAULT_WEBDAV_SETTINGS } from "~/types/webdav"
 
 vi.mock("~/services/accounts/accountStorage", () => ({
   accountStorage: {
@@ -329,7 +331,21 @@ describe("importFromBackupObject", () => {
       version: BACKUP_VERSION,
       timestamp: Date.now(),
       type: "preferences",
-      preferences: { themeMode: "light" } as any,
+      preferences: {
+        themeMode: "light",
+        sharedPreferencesLastUpdated: 123,
+        accountAutoRefresh: {
+          ...DEFAULT_ACCOUNT_AUTO_REFRESH,
+          interval: DEFAULT_ACCOUNT_AUTO_REFRESH.interval + 60,
+        },
+        webdav: {
+          ...DEFAULT_WEBDAV_SETTINGS,
+          syncData: {
+            ...DEFAULT_WEBDAV_SETTINGS.syncData,
+            preferences: false,
+          },
+        },
+      } as any,
     }
 
     const result = await importFromBackupObject(backup as BackupV2)
@@ -338,6 +354,18 @@ describe("importFromBackupObject", () => {
     expect(mockChannelConfigImport).not.toHaveBeenCalled()
     expect(mockUserPreferencesImport).toHaveBeenCalledWith({
       themeMode: "light",
+      sharedPreferencesLastUpdated: 123,
+      accountAutoRefresh: {
+        ...DEFAULT_ACCOUNT_AUTO_REFRESH,
+        interval: DEFAULT_ACCOUNT_AUTO_REFRESH.interval + 60,
+      },
+      webdav: {
+        ...DEFAULT_WEBDAV_SETTINGS,
+        syncData: {
+          ...DEFAULT_WEBDAV_SETTINGS.syncData,
+          preferences: false,
+        },
+      },
     })
 
     expect(result.allImported).toBe(true)
@@ -369,7 +397,20 @@ describe("importFromBackupObject", () => {
       version: BACKUP_VERSION,
       timestamp: Date.now(),
       type: "preferences",
-      preferences: { themeMode: "light" } as any,
+      preferences: {
+        themeMode: "light",
+        accountAutoRefresh: {
+          ...DEFAULT_ACCOUNT_AUTO_REFRESH,
+          interval: DEFAULT_ACCOUNT_AUTO_REFRESH.interval + 60,
+        },
+        webdav: {
+          ...DEFAULT_WEBDAV_SETTINGS,
+          syncData: {
+            ...DEFAULT_WEBDAV_SETTINGS.syncData,
+            preferences: false,
+          },
+        },
+      } as any,
     }
 
     await importFromBackupObject(backup as BackupV2, { preserveWebdav: true })
@@ -377,6 +418,17 @@ describe("importFromBackupObject", () => {
     expect(mockUserPreferencesImport).toHaveBeenCalledWith(
       {
         themeMode: "light",
+        accountAutoRefresh: {
+          ...DEFAULT_ACCOUNT_AUTO_REFRESH,
+          interval: DEFAULT_ACCOUNT_AUTO_REFRESH.interval + 60,
+        },
+        webdav: {
+          ...DEFAULT_WEBDAV_SETTINGS,
+          syncData: {
+            ...DEFAULT_WEBDAV_SETTINGS.syncData,
+            preferences: false,
+          },
+        },
       },
       {
         preserveWebdav: true,

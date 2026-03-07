@@ -5,6 +5,8 @@ import {
   filterWebdavBackupPayloadBySelection,
   mergeWebdavBackupPayloadBySelection,
 } from "~/services/webdav/webdavSelectiveSync"
+import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
+import { DEFAULT_WEBDAV_SETTINGS } from "~/types/webdav"
 
 describe("filterWebdavBackupPayloadBySelection", () => {
   const baseBackup: any = {
@@ -18,7 +20,22 @@ describe("filterWebdavBackupPayloadBySelection", () => {
       last_updated: 456,
     },
     tagStore: { version: 1, tagsById: {} },
-    preferences: { lastUpdated: 1 },
+    preferences: {
+      lastUpdated: 1,
+      sharedPreferencesLastUpdated: 1,
+      themeMode: "dark",
+      accountAutoRefresh: {
+        ...DEFAULT_ACCOUNT_AUTO_REFRESH,
+        interval: DEFAULT_ACCOUNT_AUTO_REFRESH.interval + 60,
+      },
+      webdav: {
+        ...DEFAULT_WEBDAV_SETTINGS,
+        syncData: {
+          ...DEFAULT_WEBDAV_SETTINGS.syncData,
+          accounts: false,
+        },
+      },
+    },
     channelConfigs: { 1: { enabled: true } },
     apiCredentialProfiles: { version: 1, profiles: [], lastUpdated: 0 },
   }
@@ -84,7 +101,11 @@ describe("filterWebdavBackupPayloadBySelection", () => {
     expect(payload.accounts).toBeUndefined()
     expect(payload.tagStore).toBeUndefined()
     expect(payload.apiCredentialProfiles).toBeUndefined()
-    expect(payload.preferences).toEqual(baseBackup.preferences)
+    expect(payload.preferences).toEqual({
+      lastUpdated: 1,
+      sharedPreferencesLastUpdated: 1,
+      themeMode: "dark",
+    })
     expect(payload.channelConfigs).toEqual(baseBackup.channelConfigs)
   })
 })
@@ -102,7 +123,22 @@ describe("mergeWebdavBackupPayloadBySelection", () => {
         last_updated: 456,
       },
       tagStore: { version: 1, tagsById: { local: { id: "local" } } },
-      preferences: { lastUpdated: 456, themeMode: "dark" },
+      preferences: {
+        lastUpdated: 456,
+        sharedPreferencesLastUpdated: 456,
+        themeMode: "dark",
+        accountAutoRefresh: {
+          ...DEFAULT_ACCOUNT_AUTO_REFRESH,
+          interval: DEFAULT_ACCOUNT_AUTO_REFRESH.interval + 60,
+        },
+        webdav: {
+          ...DEFAULT_WEBDAV_SETTINGS,
+          syncData: {
+            ...DEFAULT_WEBDAV_SETTINGS.syncData,
+            accounts: false,
+          },
+        },
+      },
       channelConfigs: { 1: { enabled: true } },
       apiCredentialProfiles: {
         version: 1,
@@ -141,7 +177,22 @@ describe("mergeWebdavBackupPayloadBySelection", () => {
         last_updated: 456,
       },
       tagStore: { version: 1, tagsById: { local: { id: "local" } } },
-      preferences: { lastUpdated: 456, themeMode: "dark" },
+      preferences: {
+        lastUpdated: 456,
+        sharedPreferencesLastUpdated: 456,
+        themeMode: "dark",
+        accountAutoRefresh: {
+          ...DEFAULT_ACCOUNT_AUTO_REFRESH,
+          interval: DEFAULT_ACCOUNT_AUTO_REFRESH.interval + 60,
+        },
+        webdav: {
+          ...DEFAULT_WEBDAV_SETTINGS,
+          syncData: {
+            ...DEFAULT_WEBDAV_SETTINGS.syncData,
+            accounts: false,
+          },
+        },
+      },
       channelConfigs: { 1: { enabled: true } },
       apiCredentialProfiles: { version: 1, profiles: [], lastUpdated: 0 },
     }
@@ -190,7 +241,11 @@ describe("mergeWebdavBackupPayloadBySelection", () => {
       "remote-bookmark",
       "remote-account",
     ])
-    expect(payload.preferences).toEqual(backup.preferences)
+    expect(payload.preferences).toEqual({
+      lastUpdated: 456,
+      sharedPreferencesLastUpdated: 456,
+      themeMode: "dark",
+    })
     expect(payload.tagStore).toEqual(remoteBackup.tagStore)
     expect(payload.apiCredentialProfiles).toEqual(
       remoteBackup.apiCredentialProfiles,
@@ -584,7 +639,23 @@ describe("createWebdavImportPayloadBySelection", () => {
         },
       },
     },
-    preferences: { lastUpdated: 10, themeMode: "dark" },
+    preferences: {
+      lastUpdated: 10,
+      sharedPreferencesLastUpdated: 10,
+      themeMode: "dark",
+      accountAutoRefresh: {
+        ...DEFAULT_ACCOUNT_AUTO_REFRESH,
+        interval: DEFAULT_ACCOUNT_AUTO_REFRESH.interval + 120,
+      },
+      webdav: {
+        ...DEFAULT_WEBDAV_SETTINGS,
+        syncData: {
+          ...DEFAULT_WEBDAV_SETTINGS.syncData,
+          accounts: false,
+          bookmarks: false,
+        },
+      },
+    },
     channelConfigs: {},
     apiCredentialProfiles: {
       version: 2,
@@ -703,6 +774,47 @@ describe("createWebdavImportPayloadBySelection", () => {
     expect((payload.apiCredentialProfiles as any).profiles[0].tagIds).toEqual([
       "local-vip",
     ])
+  })
+
+  it("restores local-only preference fields during WebDAV preference import", () => {
+    const payload = createWebdavImportPayloadBySelection({
+      rawBackup: {
+        version: "2.0",
+        timestamp: 200,
+        preferences: {
+          lastUpdated: 200,
+          themeMode: "light",
+          accountAutoRefresh: {
+            ...DEFAULT_ACCOUNT_AUTO_REFRESH,
+            interval: DEFAULT_ACCOUNT_AUTO_REFRESH.interval + 300,
+          },
+          webdav: {
+            ...DEFAULT_WEBDAV_SETTINGS,
+            syncData: {
+              ...DEFAULT_WEBDAV_SETTINGS.syncData,
+              accounts: true,
+              preferences: false,
+            },
+          },
+        },
+        channelConfigs: {},
+      } as any,
+      selection: {
+        accounts: false,
+        bookmarks: false,
+        apiCredentialProfiles: false,
+        preferences: true,
+      },
+      localState: baseLocalState,
+    })
+
+    expect(payload.preferences).toMatchObject({
+      lastUpdated: 200,
+      sharedPreferencesLastUpdated: 200,
+      themeMode: "light",
+      accountAutoRefresh: baseLocalState.preferences.accountAutoRefresh,
+      webdav: baseLocalState.preferences.webdav,
+    })
   })
 
   it("always emits a canonical V2 payload even for legacy WebDAV backups", () => {

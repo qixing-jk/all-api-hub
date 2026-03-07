@@ -49,6 +49,10 @@ import {
   type UserPreferences,
 } from "../preferences/userPreferences"
 import {
+  getSharedPreferencesLastUpdated,
+  restoreWebdavLocalOnlyPreferences,
+} from "../preferences/webdavSharedPreferences"
+import {
   detectWebdavBackupPresence,
   mergeWebdavBackupPayloadBySelection,
   normalizeWebdavOrderedEntryIds,
@@ -334,6 +338,13 @@ class WebdavAutoSyncService {
       remoteData,
       localPreferences,
     )
+    const remotePreferences =
+      remotePresence.hasPreferences && normalizedRemote.preferences
+        ? restoreWebdavLocalOnlyPreferences(
+            normalizedRemote.preferences as UserPreferences,
+            localPreferences,
+          )
+        : localPreferences
 
     // 决定同步策略
     const strategy =
@@ -357,12 +368,9 @@ class WebdavAutoSyncService {
 
     if (strategy === WEBDAV_SYNC_STRATEGIES.MERGE && remoteData) {
       // 合并策略
-      const remotePreferencesTimestamp =
-        remotePresence.hasPreferences &&
-        normalizedRemote.preferences &&
-        typeof (normalizedRemote.preferences as any).lastUpdated === "number"
-          ? (normalizedRemote.preferences as any).lastUpdated
-          : 0
+      const remotePreferencesTimestamp = remotePresence.hasPreferences
+        ? getSharedPreferencesLastUpdated(normalizedRemote.preferences as any)
+        : 0
 
       const mergeResult = this.mergeData(
         {
@@ -371,7 +379,8 @@ class WebdavAutoSyncService {
           accountsTimestamp: localAccountsConfig.last_updated,
           tagStore: localTagStore,
           preferences: localPreferences,
-          preferencesTimestamp: localPreferences.lastUpdated,
+          preferencesTimestamp:
+            getSharedPreferencesLastUpdated(localPreferences),
           channelConfigs: localChannelConfigs,
           apiCredentialProfiles: localApiCredentialProfiles,
         },
@@ -382,9 +391,7 @@ class WebdavAutoSyncService {
           tagStore: sanitizeTagStore(
             normalizedRemote.tagStore ?? createDefaultTagStore(),
           ),
-          preferences:
-            (remotePresence.hasPreferences && normalizedRemote.preferences) ||
-            localPreferences,
+          preferences: remotePreferences,
           preferencesTimestamp: remotePreferencesTimestamp,
           channelConfigs: normalizedRemote.channelConfigs,
           apiCredentialProfiles:
@@ -517,7 +524,7 @@ class WebdavAutoSyncService {
 
       preferencesToSave =
         syncDataSelection.preferences && remotePresence.hasPreferences
-          ? normalizedRemote.preferences || localPreferences
+          ? remotePreferences
           : localPreferences
 
       channelConfigsToSave =
@@ -939,8 +946,8 @@ class WebdavAutoSyncService {
           profiles: tagMerge.localTaggables,
         }
 
-    // 合并偏好设置
-    // 比较lastUpdated字段，保留最新的
+    // Compare shared-preference timestamps so device-local WebDAV/refresh edits do
+    // not change merge arbitration.
     const preferences = selection.preferences
       ? remote.preferencesTimestamp > local.preferencesTimestamp
         ? remote.preferences

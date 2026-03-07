@@ -16,6 +16,10 @@ import {
   userPreferences,
   type UserPreferences,
 } from "~/services/preferences/userPreferences"
+import {
+  buildWebdavSharedPreferences,
+  restoreWebdavLocalOnlyPreferences,
+} from "~/services/preferences/webdavSharedPreferences"
 import { migrateAccountTagsData } from "~/services/tags/migrations/accountTagsDataMigration"
 import { tagStorage } from "~/services/tags/tagStorage"
 import {
@@ -244,6 +248,48 @@ function createWebdavEntryIdSet(input: {
     ...collectWebdavEntryIds(input.accounts),
     ...collectWebdavEntryIds(input.bookmarks),
   ])
+}
+
+/**
+ * Merges two ID lists while giving the prioritized list precedence for the
+ * selected entries and preserving the fallback list for everything else.
+ */
+function mergePrioritizedWebdavIdList(input: {
+  prioritizedIds: string[]
+  preservedIds: string[]
+  prioritizedEntryIds: Set<string>
+  entryIdSet: Set<string>
+}): string[] {
+  return filterWebdavIdList(
+    [
+      ...input.prioritizedIds.filter((id) => input.prioritizedEntryIds.has(id)),
+      ...input.preservedIds.filter((id) => !input.prioritizedEntryIds.has(id)),
+    ],
+    input.entryIdSet,
+  )
+}
+
+/**
+ * Merges ordered IDs using the same precedence rules as `mergePrioritizedWebdavIdList`
+ * and then re-normalizes the final order against the selected entries.
+ */
+function mergePrioritizedWebdavOrderedIdList(input: {
+  prioritizedIds: string[]
+  preservedIds: string[]
+  prioritizedEntryIds: Set<string>
+  entryIdSet: Set<string>
+  accounts: WebdavBackupEntry[]
+  bookmarks: WebdavBackupEntry[]
+}): string[] {
+  return normalizeWebdavOrderedEntryIds({
+    baseOrderedIds: [
+      ...input.prioritizedIds.filter((id) => input.prioritizedEntryIds.has(id)),
+      ...input.preservedIds.filter((id) => !input.prioritizedEntryIds.has(id)),
+    ],
+    entryIdSet: input.entryIdSet,
+    accounts: input.accounts,
+    bookmarks: input.bookmarks,
+  })
 }
 
 /**
@@ -476,6 +522,7 @@ export function mergeWebdavBackupPayloadBySelection(input: {
   remoteBackup?: RawBackupData | null
 }): RawBackupData {
   const { backup, selection, remoteBackup } = input
+  const sharedPreferences = buildWebdavSharedPreferences(backup.preferences)
 
   if (!remoteBackup) {
     return filterWebdavBackupPayloadBySelection({
@@ -514,7 +561,7 @@ export function mergeWebdavBackupPayloadBySelection(input: {
 
   const entryIdSet = createWebdavEntryIdSet({ accounts, bookmarks })
 
-  const selectedIdSet = createWebdavEntryIdSet({
+  const selectedEntryIdSet = createWebdavEntryIdSet({
     accounts: selection.accounts ? incomingAccounts : [],
     bookmarks: selection.bookmarks ? incomingBookmarks : [],
   })
@@ -530,21 +577,19 @@ export function mergeWebdavBackupPayloadBySelection(input: {
 
   const shouldMergeAccountsSection = selection.accounts || selection.bookmarks
   const pinnedAccountIds = shouldMergeAccountsSection
-    ? filterWebdavIdList(
-        [
-          ...incomingPinnedAccountIds.filter((id) => selectedIdSet.has(id)),
-          ...remotePinnedAccountIds.filter((id) => !selectedIdSet.has(id)),
-        ],
+    ? mergePrioritizedWebdavIdList({
+        prioritizedIds: incomingPinnedAccountIds,
+        preservedIds: remotePinnedAccountIds,
+        prioritizedEntryIds: selectedEntryIdSet,
         entryIdSet,
-      )
+      })
     : filterWebdavIdList(remotePinnedAccountIds, entryIdSet)
 
   const orderedAccountIds = shouldMergeAccountsSection
-    ? normalizeWebdavOrderedEntryIds({
-        baseOrderedIds: [
-          ...incomingOrderedAccountIds.filter((id) => selectedIdSet.has(id)),
-          ...remoteOrderedAccountIds.filter((id) => !selectedIdSet.has(id)),
-        ],
+    ? mergePrioritizedWebdavOrderedIdList({
+        prioritizedIds: incomingOrderedAccountIds,
+        preservedIds: remoteOrderedAccountIds,
+        prioritizedEntryIds: selectedEntryIdSet,
         entryIdSet,
         accounts,
         bookmarks,
@@ -582,7 +627,7 @@ export function mergeWebdavBackupPayloadBySelection(input: {
 
   const preferences = resolveWebdavUploadSection({
     selected: selection.preferences,
-    selectedValue: backup.preferences,
+    selectedValue: sharedPreferences,
     hasRemoteValue: remotePresence.hasPreferences,
     rawRemoteValue: remotePreferences,
     normalizedRemoteValue: normalizedRemote.preferences,
@@ -734,14 +779,10 @@ export function createWebdavImportPayloadBySelection(input: {
       ...collectWebdavEntryIds(bookmarksToImport),
     ])
 
-    const selectedIdSet = new Set<string>([
-      ...(importAccountsFromRemote
-        ? collectWebdavEntryIds(accountsToImport)
-        : []),
-      ...(importBookmarksFromRemote
-        ? collectWebdavEntryIds(bookmarksToImport)
-        : []),
-    ])
+    const selectedEntryIdSet = createWebdavEntryIdSet({
+      accounts: importAccountsFromRemote ? accountsToImport : [],
+      bookmarks: importBookmarksFromRemote ? bookmarksToImport : [],
+    })
 
     const localPinned = normalizeWebdavStringIdList(
       localState.accountsConfig.pinnedAccountIds,
@@ -758,28 +799,29 @@ export function createWebdavImportPayloadBySelection(input: {
       : []
 
     const pinnedAccountIds = presence.hasPinnedAccountIds
-      ? filterWebdavIdList(
-          [
-            ...remotePinned.filter((id) => selectedIdSet.has(id)),
-            ...localPinned.filter((id) => !selectedIdSet.has(id)),
-          ],
+      ? mergePrioritizedWebdavIdList({
+          prioritizedIds: remotePinned,
+          preservedIds: localPinned,
+          prioritizedEntryIds: selectedEntryIdSet,
           entryIdSet,
-        )
+        })
       : filterWebdavIdList(localPinned, entryIdSet)
 
-    const baseOrderedIds = presence.hasOrderedAccountIds
-      ? [
-          ...remoteOrdered.filter((id) => selectedIdSet.has(id)),
-          ...localOrdered.filter((id) => !selectedIdSet.has(id)),
-        ]
-      : localOrdered
-
-    const orderedAccountIds = normalizeWebdavOrderedEntryIds({
-      baseOrderedIds,
-      entryIdSet,
-      accounts: accountsToImport,
-      bookmarks: bookmarksToImport,
-    })
+    const orderedAccountIds = presence.hasOrderedAccountIds
+      ? mergePrioritizedWebdavOrderedIdList({
+          prioritizedIds: remoteOrdered,
+          preservedIds: localOrdered,
+          prioritizedEntryIds: selectedEntryIdSet,
+          entryIdSet,
+          accounts: accountsToImport,
+          bookmarks: bookmarksToImport,
+        })
+      : normalizeWebdavOrderedEntryIds({
+          baseOrderedIds: localOrdered,
+          entryIdSet,
+          accounts: accountsToImport,
+          bookmarks: bookmarksToImport,
+        })
 
     payload.accounts = {
       accounts: accountsToImport,
@@ -795,7 +837,11 @@ export function createWebdavImportPayloadBySelection(input: {
   }
 
   if (importPreferencesFromRemote) {
-    payload.preferences = normalizedRemote.preferences || localState.preferences
+    payload.preferences = restoreWebdavLocalOnlyPreferences(
+      (normalizedRemote.preferences ||
+        localState.preferences) as UserPreferences,
+      localState.preferences,
+    )
   }
 
   if (importApiCredentialProfilesFromRemote) {
@@ -886,7 +932,7 @@ export function filterWebdavBackupPayloadBySelection(input: {
   }
 
   if (selection.preferences) {
-    payload.preferences = backup.preferences
+    payload.preferences = buildWebdavSharedPreferences(backup.preferences)
   }
 
   if (selection.apiCredentialProfiles && backup.apiCredentialProfiles) {

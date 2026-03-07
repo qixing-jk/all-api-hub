@@ -10,6 +10,7 @@ import {
 } from "~/types/usageHistory"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
+import { isPlainObject } from "~/utils/core/object"
 
 import { USAGE_HISTORY_STORAGE_KEYS } from "./constants"
 import {
@@ -30,13 +31,6 @@ function createEmptyStore(): UsageHistoryStore {
     schemaVersion: USAGE_HISTORY_STORE_SCHEMA_VERSION,
     accounts: {},
   }
-}
-
-/**
- * Narrow unknown to a plain object.
- */
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value)
 }
 
 /**

@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { webdavAutoSyncService } from "~/services/webdav/webdavAutoSyncService"
 import { normalizeWebdavOrderedEntryIds } from "~/services/webdav/webdavSelectiveSync"
+import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
+import { DEFAULT_WEBDAV_SETTINGS } from "~/types/webdav"
 
 // Basic getErrorMessage passthrough to avoid noisy output
 vi.mock("~/utils/core/error", () => ({
@@ -605,6 +607,102 @@ describe("WebdavAutoSyncService.syncWithWebdav (selective sync)", () => {
     })
   })
 
+  it("ignores local-only edits when choosing newer shared remote preferences", async () => {
+    const service = createService()
+
+    mockGetPreferences.mockResolvedValue({
+      webdav: {
+        syncStrategy: "merge",
+        syncData: {
+          accounts: false,
+          bookmarks: false,
+          apiCredentialProfiles: false,
+          preferences: true,
+        },
+      },
+    } as any)
+
+    mockAccountStorageExportData.mockResolvedValue({
+      accounts: [],
+      bookmarks: [],
+      pinnedAccountIds: [],
+      orderedAccountIds: [],
+      last_updated: 400,
+    })
+
+    mockExportPreferences.mockResolvedValue({
+      lastUpdated: 400,
+      sharedPreferencesLastUpdated: 100,
+      themeMode: "local-theme",
+      accountAutoRefresh: {
+        ...DEFAULT_ACCOUNT_AUTO_REFRESH,
+        interval: DEFAULT_ACCOUNT_AUTO_REFRESH.interval + 60,
+      },
+      webdav: {
+        ...DEFAULT_WEBDAV_SETTINGS,
+        syncData: {
+          ...DEFAULT_WEBDAV_SETTINGS.syncData,
+          accounts: false,
+        },
+      },
+    } as any)
+
+    mockDownloadBackup.mockResolvedValue(
+      JSON.stringify({
+        version: "2.0",
+        timestamp: 200,
+        preferences: {
+          lastUpdated: 200,
+          sharedPreferencesLastUpdated: 300,
+          themeMode: "remote-theme",
+          accountAutoRefresh: {
+            ...DEFAULT_ACCOUNT_AUTO_REFRESH,
+            interval: DEFAULT_ACCOUNT_AUTO_REFRESH.interval + 300,
+          },
+          webdav: {
+            ...DEFAULT_WEBDAV_SETTINGS,
+            syncData: {
+              ...DEFAULT_WEBDAV_SETTINGS.syncData,
+              accounts: true,
+              preferences: false,
+            },
+          },
+        },
+        channelConfigs: {},
+      }),
+    )
+
+    await service.syncWithWebdav()
+
+    expect(mockImportPreferences).toHaveBeenCalledWith(
+      expect.objectContaining({
+        lastUpdated: 200,
+        sharedPreferencesLastUpdated: 300,
+        themeMode: "remote-theme",
+        accountAutoRefresh: expect.objectContaining({
+          interval: DEFAULT_ACCOUNT_AUTO_REFRESH.interval + 60,
+        }),
+        webdav: expect.objectContaining({
+          syncData: expect.objectContaining({
+            accounts: false,
+          }),
+        }),
+      }),
+      {
+        preserveWebdav: true,
+      },
+    )
+
+    const uploaded = JSON.parse(mockUploadBackup.mock.calls[0][0])
+    expect(uploaded.preferences).toMatchObject({
+      lastUpdated: 300,
+      sharedPreferencesLastUpdated: 300,
+      themeMode: "remote-theme",
+    })
+    expect(uploaded.preferences.accountAutoRefresh).toBeUndefined()
+    expect(uploaded.preferences.webdav).toBeUndefined()
+  })
+
   it("accounts-only sync preserves remote bookmarks metadata in uploaded backup", async () => {
     const service = createService()
 
@@ -902,7 +1000,19 @@ describe("WebdavAutoSyncService local apply phase", () => {
     })
     mockExportPreferences.mockResolvedValue({
       lastUpdated: 100,
+      sharedPreferencesLastUpdated: 100,
       themeMode: "dark",
+      accountAutoRefresh: {
+        ...DEFAULT_ACCOUNT_AUTO_REFRESH,
+        interval: DEFAULT_ACCOUNT_AUTO_REFRESH.interval + 60,
+      },
+      webdav: {
+        ...DEFAULT_WEBDAV_SETTINGS,
+        syncData: {
+          ...DEFAULT_WEBDAV_SETTINGS.syncData,
+          accounts: false,
+        },
+      },
     } as any)
     mockChannelConfigExport.mockResolvedValue({ 1: { enabled: true } })
     mockApiCredentialProfilesExport.mockResolvedValue({

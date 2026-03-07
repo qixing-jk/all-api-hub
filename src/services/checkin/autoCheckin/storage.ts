@@ -3,6 +3,7 @@ import { Storage } from "@plasmohq/storage"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import type { AutoCheckinStatus } from "~/types/autoCheckin"
 import { createLogger } from "~/utils/core/logger"
+import { isPlainObject } from "~/utils/core/object"
 
 const logger = createLogger("AutoCheckinStorage")
 
@@ -85,9 +86,6 @@ class AutoCheckinStorage {
     return withExtensionStorageWriteLock(
       AUTO_CHECKIN_STATUS_STORAGE_LOCK,
       async () => {
-        const isPlainObject = (value: unknown): value is Record<string, any> =>
-          typeof value === "object" && value !== null && !Array.isArray(value)
-
         try {
           const current = (await this.getStatus()) as unknown as any
           if (!current) return true
@@ -111,7 +109,9 @@ class AutoCheckinStorage {
             ) {
               next.perAccount =
                 nextPerAccountEntries.length > 0
-                  ? Object.fromEntries(nextPerAccountEntries)
+                  ? (Object.fromEntries(
+                      nextPerAccountEntries,
+                    ) as AutoCheckinStatus["perAccount"])
                   : undefined
               changed = true
             }
@@ -169,7 +169,11 @@ class AutoCheckinStorage {
                     pendingAccountIds: pendingAccountIdsFiltered,
                     attemptsByAccount: Object.fromEntries(
                       attemptsByAccountEntries,
-                    ),
+                    ) as NonNullable<
+                      NonNullable<
+                        AutoCheckinStatus["retryState"]
+                      >["attemptsByAccount"]
+                    >,
                   }
                 : undefined
 
