@@ -138,6 +138,24 @@ export function CliProxyExportDialog(props: CliProxyExportDialogProps) {
     string[]
   >([])
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const formResetKey = useMemo(() => {
+    return [
+      isOpen,
+      token.id,
+      account.id,
+      account.baseUrl,
+      account.name,
+      defaultProviderType,
+    ].join(":")
+  }, [
+    account.baseUrl,
+    account.id,
+    account.name,
+    defaultProviderType,
+    isOpen,
+    token.id,
+  ])
+  const [readyFormKey, setReadyFormKey] = useState<string | null>(null)
 
   const formId = useMemo(() => `cliproxy-export-form-${token.id}`, [token.id])
   const providerTypeFieldId = useMemo(
@@ -163,7 +181,10 @@ export function CliProxyExportDialog(props: CliProxyExportDialogProps) {
     : "ui:dialog.cliproxy.descriptions.modelsManual"
 
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen) {
+      setReadyFormKey(null)
+      return
+    }
 
     setProviderType(defaultProviderType)
     setProviderName(buildProviderName(account))
@@ -179,10 +200,22 @@ export function CliProxyExportDialog(props: CliProxyExportDialogProps) {
         alias: "",
       },
     ])
-  }, [account, account.baseUrl, account.name, defaultProviderType, isOpen])
+    setReadyFormKey(formResetKey)
+  }, [
+    account,
+    account.baseUrl,
+    account.name,
+    defaultProviderType,
+    formResetKey,
+    isOpen,
+  ])
 
   useEffect(() => {
-    if (!isOpen || !providerTypeMetadata.supportsModelSuggestions) {
+    if (
+      !isOpen ||
+      readyFormKey !== formResetKey ||
+      !providerTypeMetadata.supportsModelSuggestions
+    ) {
       setAvailableUpstreamModels([])
       return
     }
@@ -194,7 +227,7 @@ export function CliProxyExportDialog(props: CliProxyExportDialogProps) {
       try {
         const modelIds = await fetchProviderModelSuggestions({
           providerType,
-          baseUrl: account.baseUrl,
+          baseUrl: providerBaseUrl.trim() || account.baseUrl,
           apiKey: token.key,
         })
 
@@ -215,8 +248,11 @@ export function CliProxyExportDialog(props: CliProxyExportDialogProps) {
   }, [
     account.baseUrl,
     isOpen,
+    providerBaseUrl,
     providerType,
     providerTypeMetadata.supportsModelSuggestions,
+    readyFormKey,
+    formResetKey,
     token.key,
   ])
 

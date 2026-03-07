@@ -8,7 +8,7 @@ import {
   buildApiToken,
   buildDisplaySiteData,
 } from "~~/tests/test-utils/factories"
-import { render, screen, waitFor } from "~~/tests/test-utils/render"
+import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const mockFetchAnthropicModelIds = vi.fn()
 const mockFetchGoogleModelIds = vi.fn()
@@ -254,5 +254,47 @@ describe("CliProxyExportDialog", () => {
     await user.click(comboboxes[comboboxes.length - 1])
 
     expect(await screen.findByText("gemini-2.0-flash")).toBeInTheDocument()
+  })
+
+  it("refetches model suggestions when the provider base URL changes", async () => {
+    mockFetchOpenAICompatibleModelIds.mockResolvedValue([])
+
+    render(
+      <CliProxyExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={buildDisplaySiteData({
+          id: "acc",
+          name: "Example",
+          baseUrl: "https://x.test/v1",
+        })}
+        token={buildApiToken({ key: "sk-test" })}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledWith({
+        baseUrl: "https://x.test",
+        apiKey: "sk-test",
+      })
+    })
+
+    mockFetchOpenAICompatibleModelIds.mockClear()
+
+    fireEvent.change(
+      screen.getByLabelText("ui:dialog.cliproxy.fields.baseUrl"),
+      {
+        target: {
+          value: "https://proxy.example.com/openai/v1/chat/completions",
+        },
+      },
+    )
+
+    await waitFor(() => {
+      expect(mockFetchOpenAICompatibleModelIds).toHaveBeenLastCalledWith({
+        baseUrl: "https://proxy.example.com/openai",
+        apiKey: "sk-test",
+      })
+    })
   })
 })

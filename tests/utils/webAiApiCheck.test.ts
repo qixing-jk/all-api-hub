@@ -119,5 +119,29 @@ describe("webAiApiCheck utils", () => {
       expect(result.baseUrl).toBe("https://proxy.example.com/openai")
       expect(result.apiKey).toBe(apiKey)
     })
+
+    it("includes Google-normalized base URLs for labeled Gemini endpoints", () => {
+      const result = extractApiCheckCredentialsFromText(
+        "Base URL: https://proxy.example.com/google/v1beta/models/gemini-2.0-flash:generateContent",
+      )
+
+      expect(result.baseUrlCandidates).toEqual([
+        "https://proxy.example.com/google",
+        "https://proxy.example.com/google/v1beta/models/gemini-2.0-flash:generateContent",
+      ])
+      expect(result.baseUrl).toBe("https://proxy.example.com/google")
+    })
+
+    it("includes Google-normalized base URLs for unlabeled Gemini endpoints", () => {
+      const result = extractApiCheckCredentialsFromText(
+        'curl "https://proxy.example.com/google/v1beta/models/gemini-2.0-flash:generateContent"',
+      )
+
+      expect(result.baseUrlCandidates).toEqual([
+        "https://proxy.example.com/google",
+        "https://proxy.example.com/google/v1beta/models/gemini-2.0-flash:generateContent",
+      ])
+      expect(result.baseUrl).toBe("https://proxy.example.com/google")
+    })
   })
 })

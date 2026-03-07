@@ -200,7 +200,7 @@ function buildOpenAICompatibilityProviderDraft(options: {
         "proxy-url": proxyUrl,
       },
     ],
-    models: models ?? [],
+    ...(models !== undefined ? { models } : {}),
     headers: {},
   }
 }
@@ -296,7 +296,14 @@ function findExistingAPIKeyProviderIndex(
     return matchByApiKeyAndBaseUrl
   }
 
-  return providers.findIndex((provider) => provider["api-key"] === apiKey)
+  if (
+    !normalizedBaseUrl ||
+    providerType === CLI_PROXY_PROVIDER_TYPES.CODEX_API_KEY
+  ) {
+    return providers.findIndex((provider) => provider["api-key"] === apiKey)
+  }
+
+  return -1
 }
 
 /**

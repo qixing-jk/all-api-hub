@@ -134,7 +134,13 @@ export function extractApiCheckCredentialsFromText(
     const raw = trimWrappingPunctuation(match[1] ?? "")
     const normalized = normalizeApiCheckBaseUrl(raw)
     const openAiNormalized = normalizeOpenAiFamilyBaseUrl(raw)
-    pushUnique(baseUrlCandidates, openAiNormalized)
+    const googleNormalized = normalizeGoogleFamilyBaseUrl(raw)
+    if (openAiNormalized !== normalized) {
+      pushUnique(baseUrlCandidates, openAiNormalized)
+    }
+    if (googleNormalized !== normalized) {
+      pushUnique(baseUrlCandidates, googleNormalized)
+    }
     pushUnique(baseUrlCandidates, normalized)
   }
 
@@ -144,7 +150,13 @@ export function extractApiCheckCredentialsFromText(
     const raw = trimWrappingPunctuation(match[0] ?? "")
     const normalized = normalizeApiCheckBaseUrl(raw)
     const openAiNormalized = normalizeOpenAiFamilyBaseUrl(raw)
-    pushUnique(baseUrlCandidates, openAiNormalized)
+    const googleNormalized = normalizeGoogleFamilyBaseUrl(raw)
+    if (openAiNormalized !== normalized) {
+      pushUnique(baseUrlCandidates, openAiNormalized)
+    }
+    if (googleNormalized !== normalized) {
+      pushUnique(baseUrlCandidates, googleNormalized)
+    }
     pushUnique(baseUrlCandidates, normalized)
   }
 
