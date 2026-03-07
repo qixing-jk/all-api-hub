@@ -1,5 +1,31 @@
 # Changelog
 
+## [3.26.0](https://github.com/qixing-jk/all-api-hub/compare/v3.25.0...v3.26.0) (2026-03-07)
+
+
+### Features
+
+* **account-menu:** add locate channel action with filtered navigation ([#567](https://github.com/qixing-jk/all-api-hub/issues/567)) ([c3fd9f2](https://github.com/qixing-jk/all-api-hub/commit/c3fd9f20a09ff87f7438f8313e4b6d33f27c0893))
+* **account:** add configurable duplicate account warning ([#568](https://github.com/qixing-jk/all-api-hub/issues/568)) ([0582cdc](https://github.com/qixing-jk/all-api-hub/commit/0582cdcd4c3023aad80e3f411d763462102ab898))
+* **account:** add delete option for disabled accounts in action menu ([dc5c13c](https://github.com/qixing-jk/all-api-hub/commit/dc5c13c1608faed8faff649dcf405e44fdd75d98))
+* **accounts:** add one-click duplicate cleanup by origin + user id ([#570](https://github.com/qixing-jk/all-api-hub/issues/570)) ([ba31bd6](https://github.com/qixing-jk/all-api-hub/commit/ba31bd62f2d4cb17acaf42c527af44b2d518f323))
+* add support for token notes in credential profiles export ([aa32ac1](https://github.com/qixing-jk/all-api-hub/commit/aa32ac1381ac77068573d86319ef7a4b59d87f48))
+* **import:** add CLIProxy provider type selection and endpoint normalization ([#576](https://github.com/qixing-jk/all-api-hub/issues/576)) ([bd4c29f](https://github.com/qixing-jk/all-api-hub/commit/bd4c29ffccf357c3ad3e1258161c69a61966b9c3))
+* **navigation:** add API credential profiles page navigation support ([#557](https://github.com/qixing-jk/all-api-hub/issues/557)) ([08b8af2](https://github.com/qixing-jk/all-api-hub/commit/08b8af298d96564166943ff873b44a4dbb59ea0a))
+* **popup:** add API Credentials view to popup view switch ([#569](https://github.com/qixing-jk/all-api-hub/issues/569)) ([da71d52](https://github.com/qixing-jk/all-api-hub/commit/da71d52163127a85e2c5aedfc9f25f41b75d13f8))
+* **redemption:** add post-redeem account balance refresh ([#564](https://github.com/qixing-jk/all-api-hub/issues/564)) ([10e2c78](https://github.com/qixing-jk/all-api-hub/commit/10e2c784e963143d8b1a6072150e55bd33d2977c))
+* **sub2api:** add key management support for sub2api accounts ([#572](https://github.com/qixing-jk/all-api-hub/issues/572)) ([5214190](https://github.com/qixing-jk/all-api-hub/commit/5214190f2ef5ccf6a39a536d67a2b40d4fbff119))
+* **webdav:** add selective sync data selection ([#571](https://github.com/qixing-jk/all-api-hub/issues/571)) ([689a99f](https://github.com/qixing-jk/all-api-hub/commit/689a99f3efcea6739812cf42bef957310a1a5951))
+
+
+### Bug Fixes
+
+* **account:** preserve custom check-in data during account re-detection ([28b3f66](https://github.com/qixing-jk/all-api-hub/commit/28b3f664013662be6143533b237a0147ed01b830))
+* **auto-checkin:** add deterministic catch-up for missed fixed-time runs ([#574](https://github.com/qixing-jk/all-api-hub/issues/574)) ([bf6203c](https://github.com/qixing-jk/all-api-hub/commit/bf6203c1ca8faeb5638275b071764d01064aed21))
+* **auto-checkin:** remove custom check-in URL fallback in resolveCheckInUrl ([e3bce39](https://github.com/qixing-jk/all-api-hub/commit/e3bce3910c8ac198c0a98d56b581a9655f0a0f78))
+* prefer managed site's default group over source token groups ([#573](https://github.com/qixing-jk/all-api-hub/issues/573)) ([b90c212](https://github.com/qixing-jk/all-api-hub/commit/b90c212a8a678e2f23e26c70359a424f7d94e976))
+* **prefs:** keep WebDAV sync selection and refresh settings device-local ([#575](https://github.com/qixing-jk/all-api-hub/issues/575)) ([4486a1e](https://github.com/qixing-jk/all-api-hub/commit/4486a1e6b2ae0a1217c92d87d78a68833b49c276))
+
 ## [3.25.0](https://github.com/qixing-jk/all-api-hub/compare/v3.24.0...v3.25.0) (2026-03-02)
 
 
