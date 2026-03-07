@@ -81,7 +81,7 @@
     },
     "syncData": {
       "title": "Sync data",
-      "description": "Choose which shared data domains participate in WebDAV sync. Device-local preference items such as WebDAV settings, sync selection, and account auto-refresh stay on the current device.",
+      "description": "Choose which shared data domains participate in WebDAV sync. Device-local preference items such as WebDAV settings, sync selection, and account auto-refresh stay on the current device, while channel configurations remain synced for compatibility.",
       "accounts": "Accounts",
       "bookmarks": "Bookmarks",
       "apiCredentialProfiles": "API credential profiles",

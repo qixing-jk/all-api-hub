@@ -10,6 +10,10 @@ import {
   normalizeBackupForMerge,
   type BackupFullV2,
 } from "~/services/importExport/importExportService"
+import {
+  getSharedPreferencesLastUpdated,
+  restoreWebdavLocalOnlyPreferences,
+} from "~/services/preferences/webdavSharedPreferences"
 import { migrateAccountTagsData } from "~/services/tags/migrations/accountTagsDataMigration"
 import { tagStorage } from "~/services/tags/tagStorage"
 import {
@@ -48,10 +52,6 @@ import {
   userPreferences,
   type UserPreferences,
 } from "../preferences/userPreferences"
-import {
-  getSharedPreferencesLastUpdated,
-  restoreWebdavLocalOnlyPreferences,
-} from "../preferences/webdavSharedPreferences"
 import {
   detectWebdavBackupPresence,
   mergeWebdavBackupPayloadBySelection,

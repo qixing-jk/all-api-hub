@@ -10,7 +10,11 @@ import {
   VELOERA,
   type ManagedSiteType,
 } from "~/constants/siteType"
-import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
+import {
+  STORAGE_LOCKS,
+  USER_PREFERENCES_STORAGE_KEYS,
+} from "~/services/core/storageKeys"
+import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import {
   CURRENT_PREFERENCES_VERSION,
   migratePreferences,
@@ -434,7 +438,8 @@ export interface UserPreferences {
   webdavSyncStrategy?: WebDAVSyncStrategy
 }
 
-const DEFAULT_PREFERENCES_UPDATED_AT = Date.now()
+// Stable template used for field-level defaults.
+// Use `createDefaultPreferences()` when a fresh preference object is required.
 
 // 默认配置
 export const DEFAULT_PREFERENCES: UserPreferences = {
@@ -452,8 +457,8 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   balanceHistory: DEFAULT_BALANCE_HISTORY_PREFERENCES,
   showHealthStatus: true, // 默认显示健康状态
   webdav: DEFAULT_WEBDAV_SETTINGS,
-  lastUpdated: DEFAULT_PREFERENCES_UPDATED_AT,
-  sharedPreferencesLastUpdated: DEFAULT_PREFERENCES_UPDATED_AT,
+  lastUpdated: 0,
+  sharedPreferencesLastUpdated: 0,
   newApi: DEFAULT_NEW_API_CONFIG,
   doneHub: DEFAULT_DONE_HUB_CONFIG,
   veloera: DEFAULT_VELOERA_CONFIG,
@@ -533,7 +538,21 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
 }
 
 /**
- *
+ * Creates a new UserPreferences object with default values and current timestamps.
+ * @param now - Optional timestamp to use for lastUpdated and sharedPreferencesLastUpdated (defaults to current time)
+ */
+export function createDefaultPreferences(now = Date.now()): UserPreferences {
+  const timestamp = now
+
+  return {
+    ...structuredClone(DEFAULT_PREFERENCES),
+    lastUpdated: timestamp,
+    sharedPreferencesLastUpdated: timestamp,
+  }
+}
+
+/**
+ * Runs migrations and normalizes shared preference metadata for a given preferences object.
  */
 function migrateAndNormalizePreferences(
   preferences: UserPreferences,
@@ -542,7 +561,7 @@ function migrateAndNormalizePreferences(
 }
 
 /**
- *
+ * Stamps the given preferences object with updated timestamps and preferences version.
  */
 function stampPreferencesMetadata(
   preferences: UserPreferences,
@@ -568,6 +587,10 @@ class UserPreferencesService {
     })
   }
 
+  private async withStorageWriteLock<T>(work: () => Promise<T>): Promise<T> {
+    return withExtensionStorageWriteLock(STORAGE_LOCKS.USER_PREFERENCES, work)
+  }
+
   /**
    * Get user preferences (with migration + defaults merged).
    * Saves back if migration updated stored prefs.
@@ -577,13 +600,14 @@ class UserPreferencesService {
       const storedPreferences = (await this.storage.get(
         USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
       )) as UserPreferences | undefined
-      const preferences = storedPreferences || DEFAULT_PREFERENCES
+      const defaultPreferences = createDefaultPreferences()
+      const preferences = storedPreferences || defaultPreferences
 
       // Run migrations if needed
       const migratedPreferences = migrateAndNormalizePreferences(preferences)
 
       const finalPreferences = deepOverride(
-        DEFAULT_PREFERENCES,
+        defaultPreferences,
         migratedPreferences,
       )
 
@@ -598,7 +622,7 @@ class UserPreferencesService {
       return finalPreferences
     } catch (error) {
       logger.error("获取用户偏好设置失败", error)
-      return DEFAULT_PREFERENCES
+      return createDefaultPreferences()
     }
   }
 
@@ -609,26 +633,30 @@ class UserPreferencesService {
     preferences: DeepPartial<UserPreferences>,
   ): Promise<boolean> {
     try {
-      const currentPreferences = await this.getPreferences()
-      const timestamp = Date.now()
-      const sharedPreferencesLastUpdated = patchTouchesSharedPreferences(
-        preferences,
-      )
-        ? timestamp
-        : getSharedPreferencesLastUpdated(currentPreferences)
+      const updatedPreferences = await this.withStorageWriteLock(async () => {
+        const currentPreferences = await this.getPreferences()
+        const timestamp = Date.now()
+        const sharedPreferencesLastUpdated = patchTouchesSharedPreferences(
+          preferences,
+        )
+          ? timestamp
+          : getSharedPreferencesLastUpdated(currentPreferences)
 
-      const updatedPreferences = stampPreferencesMetadata(
-        deepOverride(currentPreferences, preferences),
-        {
-          lastUpdated: timestamp,
-          sharedPreferencesLastUpdated,
-        },
-      )
+        const nextPreferences = stampPreferencesMetadata(
+          deepOverride(currentPreferences, preferences),
+          {
+            lastUpdated: timestamp,
+            sharedPreferencesLastUpdated,
+          },
+        )
 
-      await this.storage.set(
-        USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
-        updatedPreferences,
-      )
+        await this.storage.set(
+          USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
+          nextPreferences,
+        )
+
+        return nextPreferences
+      })
       logger.debug("偏好设置保存成功", {
         lastUpdated: updatedPreferences.lastUpdated,
         sharedPreferencesLastUpdated:
@@ -743,10 +771,12 @@ class UserPreferencesService {
    */
   async resetToDefaults(): Promise<boolean> {
     try {
-      await this.storage.set(
-        USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
-        DEFAULT_PREFERENCES,
-      )
+      await this.withStorageWriteLock(async () => {
+        await this.storage.set(
+          USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
+          createDefaultPreferences(),
+        )
+      })
       logger.info("已重置为默认设置")
       return true
     } catch (error) {
@@ -760,7 +790,11 @@ class UserPreferencesService {
    */
   async clearPreferences(): Promise<boolean> {
     try {
-      await this.storage.remove(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES)
+      await this.withStorageWriteLock(async () => {
+        await this.storage.remove(
+          USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
+        )
+      })
       logger.info("偏好设置已清空")
       return true
     } catch (error) {
@@ -792,32 +826,38 @@ class UserPreferencesService {
     },
   ): Promise<boolean> {
     try {
-      const migratedPreferences = migrateAndNormalizePreferences(preferences)
+      await this.withStorageWriteLock(async () => {
+        const migratedPreferences = migrateAndNormalizePreferences(preferences)
 
-      const currentPreferences = options?.preserveWebdav
-        ? await this.getPreferences()
-        : null
-      const importedAt = Date.now()
+        const currentPreferences = options?.preserveWebdav
+          ? await this.getPreferences()
+          : null
+        const importedAt = Date.now()
 
-      const preferencesToStore =
-        options?.preserveWebdav && currentPreferences
-          ? restoreWebdavLocalOnlyPreferences(
-              migratedPreferences,
-              currentPreferences,
-            )
-          : migratedPreferences
+        const preferencesToStore =
+          options?.preserveWebdav && currentPreferences
+            ? restoreWebdavLocalOnlyPreferences(
+                migratedPreferences,
+                currentPreferences,
+              )
+            : migratedPreferences
 
-      const sharedPreferencesLastUpdated = options?.preserveWebdav
-        ? getSharedPreferencesLastUpdated(preferencesToStore)
-        : importedAt
+        const importedSharedPreferencesLastUpdated =
+          getSharedPreferencesLastUpdated(preferencesToStore)
+        const sharedPreferencesLastUpdated = options?.preserveWebdav
+          ? importedSharedPreferencesLastUpdated > 0
+            ? importedSharedPreferencesLastUpdated
+            : importedAt
+          : importedAt
 
-      await this.storage.set(
-        USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
-        stampPreferencesMetadata(preferencesToStore, {
-          lastUpdated: importedAt,
-          sharedPreferencesLastUpdated,
-        }),
-      )
+        await this.storage.set(
+          USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
+          stampPreferencesMetadata(preferencesToStore, {
+            lastUpdated: importedAt,
+            sharedPreferencesLastUpdated,
+          }),
+        )
+      })
       logger.info("偏好设置导入成功，已迁移至最新版本")
       return true
     } catch (error) {

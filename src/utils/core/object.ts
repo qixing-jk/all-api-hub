@@ -1,11 +1,17 @@
 /**
- * Determine whether an unknown value is a non-array object record.
+ * Determine whether an unknown value is a plain object record.
  *
- * This intentionally matches the loose storage/preferences guards previously
- * inlined at call sites: any non-null object except arrays is accepted.
+ * Accepts objects created via object literals or `Object.create(null)` and
+ * rejects arrays, built-in object instances, and custom class instances.
  */
 export function isPlainObject(
   value: unknown,
 ): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value)
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return false
+  }
+
+  const prototype = Object.getPrototypeOf(value)
+
+  return prototype === Object.prototype || prototype === null
 }

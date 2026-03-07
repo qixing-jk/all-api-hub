@@ -208,4 +208,40 @@ describe("userPreferences shared preference timestamps", () => {
     )
     expect(storedAfter.webdav.syncData.accounts).toBe(false)
   })
+
+  it("falls back to import time for legacy WebDAV imports without timestamps", async () => {
+    const localTimestamp = 11000
+    const importedAt = 12000
+
+    await storage.set(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES, {
+      ...DEFAULT_PREFERENCES,
+      lastUpdated: localTimestamp,
+      sharedPreferencesLastUpdated: localTimestamp,
+    })
+
+    vi.setSystemTime(importedAt)
+
+    const legacyImportedPreferences: any = {
+      ...DEFAULT_PREFERENCES,
+      themeMode: "dark",
+    }
+    delete legacyImportedPreferences.lastUpdated
+    delete legacyImportedPreferences.sharedPreferencesLastUpdated
+
+    const success = await userPreferences.importPreferences(
+      legacyImportedPreferences,
+      {
+        preserveWebdav: true,
+      },
+    )
+
+    expect(success).toBe(true)
+
+    const storedAfter = (await storage.get(
+      USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
+    )) as any
+    expect(storedAfter.themeMode).toBe("dark")
+    expect(storedAfter.lastUpdated).toBe(importedAt)
+    expect(storedAfter.sharedPreferencesLastUpdated).toBe(importedAt)
+  })
 })

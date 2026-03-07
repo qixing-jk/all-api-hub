@@ -8,7 +8,7 @@
 
 import { ChannelType } from "~/constants"
 import {
-  DEFAULT_PREFERENCES,
+  createDefaultPreferences,
   type TempWindowFallbackPreferences,
   type UserPreferences,
 } from "~/services/preferences/userPreferences"
@@ -332,7 +332,7 @@ export function buildManagedSiteChannel(
 export function buildUserPreferences(
   overrides: Partial<UserPreferences> = {},
 ): UserPreferences {
-  return { ...structuredClone(DEFAULT_PREFERENCES), ...overrides }
+  return { ...createDefaultPreferences(), ...overrides }
 }
 
 /**

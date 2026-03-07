@@ -27,6 +27,11 @@ export const STORAGE_LOCKS = {
    */
   API_CREDENTIAL_PROFILES: "all-api-hub:api-credential-profiles",
   /**
+   * Exclusive lock used for read-modify-write sequences touching user
+   * preferences storage.
+   */
+  USER_PREFERENCES: "all-api-hub:user-preferences",
+  /**
    * Best-effort lock used to serialize the WebDAV auto-sync apply/rollback
    * section itself. Individual storage services still enforce their own
    * storage-specific locks where applicable.

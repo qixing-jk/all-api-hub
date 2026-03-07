@@ -1,7 +1,10 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import { DATA_TYPE_BALANCE, DATA_TYPE_CASHFLOW } from "~/constants"
-import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import {
+  createDefaultPreferences,
+  DEFAULT_PREFERENCES,
+} from "~/services/preferences/userPreferences"
 import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
 
 describe("userPreferences", () => {
@@ -68,6 +71,30 @@ describe("userPreferences", () => {
     it("has valid managedSite config", () => {
       expect(DEFAULT_PREFERENCES.newApi).toBeDefined()
       expect(DEFAULT_PREFERENCES.newApi.baseUrl).toBe("")
+    })
+
+    it("creates fresh timestamps for new default snapshots", () => {
+      vi.useFakeTimers()
+
+      try {
+        vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"))
+        const firstDefaults = createDefaultPreferences()
+
+        vi.setSystemTime(new Date("2026-01-01T00:00:05.000Z"))
+        const secondDefaults = createDefaultPreferences()
+
+        expect(firstDefaults.lastUpdated).toBe(
+          firstDefaults.sharedPreferencesLastUpdated,
+        )
+        expect(secondDefaults.lastUpdated).toBe(
+          secondDefaults.sharedPreferencesLastUpdated,
+        )
+        expect(secondDefaults.lastUpdated).toBeGreaterThan(
+          firstDefaults.lastUpdated,
+        )
+      } finally {
+        vi.useRealTimers()
+      }
     })
   })
 })
