@@ -4,6 +4,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { CliProxyExportDialog } from "~/components/CliProxyExportDialog"
 import { CLI_PROXY_PROVIDER_TYPES } from "~/services/integrations/cliProxyProviderTypes"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
+import {
+  buildApiToken,
+  buildDisplaySiteData,
+} from "~~/tests/test-utils/factories"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const mockFetchAnthropicModelIds = vi.fn()
@@ -56,10 +60,12 @@ describe("CliProxyExportDialog", () => {
       <CliProxyExportDialog
         isOpen={true}
         onClose={() => {}}
-        account={
-          { id: "acc", name: "Example", baseUrl: "https://x.test/v1" } as any
-        }
-        token={{ id: "tok", key: "sk-test" } as any}
+        account={buildDisplaySiteData({
+          id: "acc",
+          name: "Example",
+          baseUrl: "https://x.test/v1",
+        })}
+        token={buildApiToken({ key: "sk-test" })}
       />,
     )
 
@@ -100,14 +106,12 @@ describe("CliProxyExportDialog", () => {
         isOpen={true}
         onClose={() => {}}
         apiTypeHint={API_TYPES.ANTHROPIC}
-        account={
-          {
-            id: "acc",
-            name: "Anthropic",
-            baseUrl: "https://api.anthropic.com/v1/messages",
-          } as any
-        }
-        token={{ id: "tok", key: "sk-anthropic" } as any}
+        account={buildDisplaySiteData({
+          id: "acc",
+          name: "Anthropic",
+          baseUrl: "https://api.anthropic.com/v1/messages",
+        })}
+        token={buildApiToken({ key: "sk-anthropic" })}
       />,
     )
 
@@ -151,14 +155,12 @@ describe("CliProxyExportDialog", () => {
         isOpen={true}
         onClose={() => {}}
         apiTypeHint={API_TYPES.OPENAI}
-        account={
-          {
-            id: "acc",
-            name: "OpenAI",
-            baseUrl: "https://api.openai.com",
-          } as any
-        }
-        token={{ id: "tok", key: "sk-openai" } as any}
+        account={buildDisplaySiteData({
+          id: "acc",
+          name: "OpenAI",
+          baseUrl: "https://api.openai.com",
+        })}
+        token={buildApiToken({ key: "sk-openai" })}
       />,
     )
 
@@ -213,15 +215,13 @@ describe("CliProxyExportDialog", () => {
         isOpen={true}
         onClose={() => {}}
         apiTypeHint={API_TYPES.GOOGLE}
-        account={
-          {
-            id: "acc",
-            name: "Gemini",
-            baseUrl:
-              "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
-          } as any
-        }
-        token={{ id: "tok", key: "gm-test" } as any}
+        account={buildDisplaySiteData({
+          id: "acc",
+          name: "Gemini",
+          baseUrl:
+            "https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent",
+        })}
+        token={buildApiToken({ key: "gm-test" })}
       />,
     )
 

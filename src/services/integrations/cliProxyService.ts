@@ -163,7 +163,7 @@ async function patchProviderByIndex<TProvider extends Record<string, unknown>>(
  * Normalizes model mapping entries by trimming whitespace and filtering out invalid entries.
  */
 function normalizeModelMappings(models?: CliProxyModelMapping[]) {
-  if (!models) return undefined
+  if (models === undefined) return undefined
 
   const normalizedModels = models
     .map((model) => {
@@ -176,7 +176,7 @@ function normalizeModelMappings(models?: CliProxyModelMapping[]) {
     })
     .filter((model) => model.name.length > 0)
 
-  return normalizedModels.length > 0 ? normalizedModels : undefined
+  return normalizedModels
 }
 
 /**
@@ -220,7 +220,7 @@ function buildAPIKeyProviderDraft(options: {
     "api-key": token.key,
     "base-url": providerBaseUrl,
     "proxy-url": proxyUrl,
-    ...(models ? { models } : {}),
+    ...(models !== undefined ? { models } : {}),
     headers: {},
   }
 }
@@ -324,9 +324,9 @@ function mergeOpenAICompatibilityProvider(
     name: draft.name || existing.name,
     "base-url": draft["base-url"],
     "api-key-entries": nextEntries,
-    ...(nextModels
+    ...(nextModels !== undefined
       ? { models: nextModels }
-      : existing.models
+      : existing.models !== undefined
         ? { models: existing.models }
         : {}),
   }
@@ -345,9 +345,9 @@ function mergeAPIKeyProvider(
     "api-key": draft["api-key"],
     "base-url": draft["base-url"],
     "proxy-url": draft["proxy-url"],
-    ...(nextModels
+    ...(nextModels !== undefined
       ? { models: nextModels }
-      : existing.models
+      : existing.models !== undefined
         ? { models: existing.models }
         : {}),
   }

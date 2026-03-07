@@ -36,10 +36,18 @@ describe("webAiApiCheck utils", () => {
       ).toBe("https://example.com/api")
     })
 
-    it("avoids duplicated /v1 segments", () => {
+    it("keeps the prefix before the last /v1 segment", () => {
       expect(
         normalizeOpenAiFamilyBaseUrl("https://example.com/v1/v1/models"),
-      ).toBe("https://example.com")
+      ).toBe("https://example.com/v1")
+    })
+
+    it("strips from the last /v1 segment when nested", () => {
+      expect(
+        normalizeOpenAiFamilyBaseUrl(
+          "https://example.com/proxy/v1/openai/v1/chat/completions",
+        ),
+      ).toBe("https://example.com/proxy/v1/openai")
     })
   })
 
@@ -58,12 +66,20 @@ describe("webAiApiCheck utils", () => {
       ).toBe("https://example.com/api")
     })
 
-    it("avoids duplicated /v1beta segments", () => {
+    it("keeps the prefix before the last /v1beta segment", () => {
       expect(
         normalizeGoogleFamilyBaseUrl(
           "https://example.com/v1beta/v1beta/models",
         ),
-      ).toBe("https://example.com")
+      ).toBe("https://example.com/v1beta")
+    })
+
+    it("strips from the last /v1beta segment when nested", () => {
+      expect(
+        normalizeGoogleFamilyBaseUrl(
+          "https://example.com/proxy/v1beta/google/v1beta/models/gemini-2.0-flash",
+        ),
+      ).toBe("https://example.com/proxy/v1beta/google")
     })
   })
 

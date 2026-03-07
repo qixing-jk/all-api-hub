@@ -19,8 +19,8 @@ import { fetchGoogleModelIds } from "~/services/apiService/google"
 import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompatible"
 import {
   buildDefaultCliProxyProviderBaseUrl,
+  CLI_PROXY_PROVIDER_METADATA,
   CLI_PROXY_PROVIDER_TYPES,
-  cliProxyProviderMetadata,
   mapApiTypeHintToCliProxyProviderType,
   normalizeCliProxyProviderBaseUrl,
   type CliProxyProviderType,
@@ -30,10 +30,7 @@ import {
   type ImportToCliProxyOptions,
 } from "~/services/integrations/cliProxyService"
 import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification"
-import {
-  normalizeGoogleFamilyBaseUrl,
-  normalizeOpenAiFamilyBaseUrl,
-} from "~/services/verification/webAiApiCheck/extractCredentials"
+import { normalizeOpenAiFamilyBaseUrl } from "~/services/verification/webAiApiCheck/extractCredentials"
 import type { ApiToken, DisplaySiteData } from "~/types"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
@@ -73,7 +70,9 @@ function resolveModelSuggestionsBaseUrl(
   baseUrl: string,
 ) {
   if (providerType === CLI_PROXY_PROVIDER_TYPES.GEMINI_API_KEY) {
-    return normalizeGoogleFamilyBaseUrl(baseUrl) ?? baseUrl.trim()
+    return (
+      normalizeCliProxyProviderBaseUrl(providerType, baseUrl) || baseUrl.trim()
+    )
   }
 
   return normalizeOpenAiFamilyBaseUrl(baseUrl) ?? baseUrl.trim()
@@ -157,7 +156,7 @@ export function CliProxyExportDialog(props: CliProxyExportDialogProps) {
     () => `cliproxy-provider-proxy-url-${token.id}`,
     [token.id],
   )
-  const providerTypeMetadata = cliProxyProviderMetadata[providerType]
+  const providerTypeMetadata = CLI_PROXY_PROVIDER_METADATA[providerType]
   const providerTypeDescription = `${t("ui:dialog.cliproxy.descriptions.providerType")} ${t(providerTypeMetadata.descriptionKey)}`
   const modelsDescriptionKey = providerTypeMetadata.supportsModelSuggestions
     ? "ui:dialog.cliproxy.descriptions.models"
@@ -332,7 +331,7 @@ export function CliProxyExportDialog(props: CliProxyExportDialogProps) {
             </SelectTrigger>
             <SelectContent>
               {Object.values(CLI_PROXY_PROVIDER_TYPES).map((value) => {
-                const metadata = cliProxyProviderMetadata[value]
+                const metadata = CLI_PROXY_PROVIDER_METADATA[value]
                 return (
                   <SelectItem key={value} value={value}>
                     {t(metadata.labelKey)}

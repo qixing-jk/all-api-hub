@@ -54,15 +54,21 @@ function normalizeBaseUrlByStrippingPathSegment(
 
   return transformNormalizedUrlPath(normalized, (pathname) => {
     const segments = normalizeUrlPathname(pathname).split("/").filter(Boolean)
-    const segmentIndex = segments.findIndex(
-      (segment) => segment.toLowerCase() === segmentToStrip.toLowerCase(),
-    )
+    const normalizedSegmentToStrip = segmentToStrip.toLowerCase()
+    let lastMatchIndex = -1
 
-    if (segmentIndex < 0) {
+    for (let index = segments.length - 1; index >= 0; index -= 1) {
+      if (segments[index].toLowerCase() === normalizedSegmentToStrip) {
+        lastMatchIndex = index
+        break
+      }
+    }
+
+    if (lastMatchIndex < 0) {
       return pathname
     }
 
-    const prefixSegments = segments.slice(0, segmentIndex)
+    const prefixSegments = segments.slice(0, lastMatchIndex)
     return prefixSegments.length ? `/${prefixSegments.join("/")}` : "/"
   })
 }

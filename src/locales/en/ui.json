@@ -285,8 +285,8 @@
           "description": "Best for OpenAI-compatible relays that expose a /v1-style upstream API."
         },
         "codexApiKey": {
-          "label": "Codex API key",
-          "description": "Uses CLIProxyAPI's dedicated Codex executor and management list."
+          "label": "OpenAI / Codex API key",
+          "description": "Uses CLIProxyAPI's dedicated OpenAI / Codex provider family, executor, and management list (mapped to codex-api-key)."
         },
         "claudeApiKey": {
           "label": "Claude API key",

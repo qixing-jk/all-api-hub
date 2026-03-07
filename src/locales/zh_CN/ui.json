@@ -276,8 +276,8 @@
         "baseUrlClaudeApiKey": "可选。留空时使用 CLIProxyAPI 默认的 Claude 上游。若粘贴 /v1/messages 端点，会自动收敛为 Provider 基础地址。",
         "baseUrlGeminiApiKey": "可选。留空时使用 CLIProxyAPI 默认的 Gemini 上游。若粘贴 /v1beta/models 端点，会自动收敛为 Provider 基础地址。",
         "proxyUrl": "可选。用于此 API Key 条目的代理 URL。",
-        "models": "将上游模型名称映射到可选别名（name -> alias）。若可用，会从 /v1/models 加载上游模型供选择。",
-        "modelsManual": "将上游模型名称映射到可选别名（name -> alias）。当前版本中此 Provider 类型需手动输入。"
+        "models": "将上游模型名称映射到可选别名（name -> alias）。若可用，会加载上游可用模型供选择。",
+        "modelsManual": "将上游模型名称映射到可选别名（name -> alias）。当前版本中此 Provider 类型需手动输入上游模型。"
       },
       "providerTypes": {
         "openaiCompatibility": {

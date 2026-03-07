@@ -34,7 +34,7 @@ type CliProxyProviderMetadata = {
   supportsModelSuggestions: boolean
 }
 
-export const cliProxyProviderMetadata: Record<
+export const CLI_PROXY_PROVIDER_METADATA: Record<
   CliProxyProviderType,
   CliProxyProviderMetadata
 > = {
@@ -297,7 +297,7 @@ export function getCliProxyProviderDisplayName(
     return normalizedName
   }
 
-  const label = translate(cliProxyProviderMetadata[providerType].labelKey)
+  const label = translate(CLI_PROXY_PROVIDER_METADATA[providerType].labelKey)
   const normalizedBaseUrl = normalizeCliProxyProviderBaseUrl(
     providerType,
     providerBaseUrl,
