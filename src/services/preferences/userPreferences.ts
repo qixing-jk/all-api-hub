@@ -1,5 +1,3 @@
-import { isEqual } from "lodash-es"
-
 import { Storage } from "@plasmohq/storage"
 
 import { DATA_TYPE_BALANCE, DATA_TYPE_CASHFLOW } from "~/constants"
@@ -552,6 +550,13 @@ export function createDefaultPreferences(now = Date.now()): UserPreferences {
 }
 
 /**
+ * Creates a read-only default preferences object with timestamps set to the last updated time of the default preferences.
+ */
+function createReadOnlyDefaultPreferences(): UserPreferences {
+  return createDefaultPreferences(DEFAULT_PREFERENCES.lastUpdated)
+}
+
+/**
  * Runs migrations and normalizes shared preference metadata for a given preferences object.
  */
 function migrateAndNormalizePreferences(
@@ -592,37 +597,22 @@ class UserPreferencesService {
   }
 
   /**
-   * Get user preferences (with migration + defaults merged).
-   * Saves back if migration updated stored prefs.
+   * Get user preferences (with migration + defaults merged) without mutating storage.
    */
   async getPreferences(): Promise<UserPreferences> {
     try {
       const storedPreferences = (await this.storage.get(
         USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
       )) as UserPreferences | undefined
-      const defaultPreferences = createDefaultPreferences()
-      const preferences = storedPreferences || defaultPreferences
+      const defaultPreferences = createReadOnlyDefaultPreferences()
+      const preferences = storedPreferences ?? defaultPreferences
 
-      // Run migrations if needed
       const migratedPreferences = migrateAndNormalizePreferences(preferences)
 
-      const finalPreferences = deepOverride(
-        defaultPreferences,
-        migratedPreferences,
-      )
-
-      // If migration changed preferences, save the updated version
-      if (!isEqual(finalPreferences, storedPreferences)) {
-        await this.storage.set(
-          USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
-          finalPreferences,
-        )
-      }
-
-      return finalPreferences
+      return deepOverride(defaultPreferences, migratedPreferences)
     } catch (error) {
       logger.error("获取用户偏好设置失败", error)
-      return createDefaultPreferences()
+      return createReadOnlyDefaultPreferences()
     }
   }
 

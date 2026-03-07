@@ -14,7 +14,7 @@ import {
  * - persisted when updated through the UserPreferencesService helper
  */
 describe("userPreferences autoProvisionKeyOnAccountAdd", () => {
-  it("treats missing autoProvisionKeyOnAccountAdd as disabled and saves back", async () => {
+  it("treats missing autoProvisionKeyOnAccountAdd as disabled without saving back", async () => {
     const storage = new Storage({ area: "local" })
     const storedWithoutFlag: any = { ...DEFAULT_PREFERENCES }
     delete storedWithoutFlag.autoProvisionKeyOnAccountAdd
@@ -30,7 +30,7 @@ describe("userPreferences autoProvisionKeyOnAccountAdd", () => {
     const storedAfter = await storage.get(
       USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
     )
-    expect((storedAfter as any)?.autoProvisionKeyOnAccountAdd).toBe(false)
+    expect((storedAfter as any)?.autoProvisionKeyOnAccountAdd).toBeUndefined()
   })
 
   it("persists updates via updateAutoProvisionKeyOnAccountAdd", async () => {

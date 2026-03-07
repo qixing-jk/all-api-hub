@@ -22,7 +22,7 @@ describe("userPreferences shared preference timestamps", () => {
     await storage.remove(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES)
   })
 
-  it("backfills missing sharedPreferencesLastUpdated from lastUpdated", async () => {
+  it("backfills missing sharedPreferencesLastUpdated from lastUpdated without mutating storage", async () => {
     const legacyTimestamp = 123456
     const storedPreferences: any = {
       ...DEFAULT_PREFERENCES,
@@ -42,7 +42,21 @@ describe("userPreferences shared preference timestamps", () => {
     const storedAfter = (await storage.get(
       USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
     )) as any
-    expect(storedAfter.sharedPreferencesLastUpdated).toBe(legacyTimestamp)
+    expect(storedAfter.sharedPreferencesLastUpdated).toBeUndefined()
+  })
+
+  it("returns neutral timestamps when preferences are missing", async () => {
+    vi.setSystemTime(13000)
+
+    const preferences = await userPreferences.getPreferences()
+
+    expect(preferences.lastUpdated).toBe(0)
+    expect(preferences.sharedPreferencesLastUpdated).toBe(0)
+
+    const storedAfter = await storage.get(
+      USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
+    )
+    expect(storedAfter).toBeUndefined()
   })
 
   it("keeps sharedPreferencesLastUpdated unchanged for local-only preference updates", async () => {
@@ -70,6 +84,38 @@ describe("userPreferences shared preference timestamps", () => {
     )) as any
     expect(storedAfter.lastUpdated).toBe(localOnlyUpdateTimestamp)
     expect(storedAfter.sharedPreferencesLastUpdated).toBe(initialTimestamp)
+  })
+
+  it("persists backfilled sharedPreferencesLastUpdated through the locked save path", async () => {
+    const legacyTimestamp = 14000
+    const localOnlyUpdateTimestamp = 15000
+    const storedPreferences: any = {
+      ...DEFAULT_PREFERENCES,
+      lastUpdated: legacyTimestamp,
+      preferencesVersion: CURRENT_PREFERENCES_VERSION,
+    }
+    delete storedPreferences.sharedPreferencesLastUpdated
+
+    await storage.set(
+      USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
+      storedPreferences,
+    )
+
+    vi.setSystemTime(localOnlyUpdateTimestamp)
+
+    const success = await userPreferences.savePreferences({
+      accountAutoRefresh: {
+        enabled: false,
+      },
+    })
+
+    expect(success).toBe(true)
+
+    const storedAfter = (await storage.get(
+      USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
+    )) as any
+    expect(storedAfter.lastUpdated).toBe(localOnlyUpdateTimestamp)
+    expect(storedAfter.sharedPreferencesLastUpdated).toBe(legacyTimestamp)
   })
 
   it("updates sharedPreferencesLastUpdated for shared preference updates", async () => {

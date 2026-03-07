@@ -15,7 +15,7 @@ import {
  */
 
 describe("userPreferences logging preferences", () => {
-  it("merges logging defaults and saves back when missing from storage", async () => {
+  it("merges logging defaults without saving back when missing from storage", async () => {
     const storage = new Storage({ area: "local" })
     const storedWithoutLogging: any = { ...DEFAULT_PREFERENCES }
     delete storedWithoutLogging.logging
@@ -31,7 +31,7 @@ describe("userPreferences logging preferences", () => {
     const storedAfter = await storage.get(
       USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
     )
-    expect((storedAfter as any)?.logging).toEqual(prefs.logging)
+    expect((storedAfter as any)?.logging).toBeUndefined()
   })
 
   it("persists updates to logging preferences via updateLoggingPreferences", async () => {

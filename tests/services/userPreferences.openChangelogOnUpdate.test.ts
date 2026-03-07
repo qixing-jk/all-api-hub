@@ -14,7 +14,7 @@ import {
  * - persisted when updated through the UserPreferencesService helper
  */
 describe("userPreferences openChangelogOnUpdate", () => {
-  it("treats missing openChangelogOnUpdate as enabled and saves back", async () => {
+  it("treats missing openChangelogOnUpdate as enabled without saving back", async () => {
     const storage = new Storage({ area: "local" })
     const storedWithoutFlag: any = { ...DEFAULT_PREFERENCES }
     delete storedWithoutFlag.openChangelogOnUpdate
@@ -30,10 +30,10 @@ describe("userPreferences openChangelogOnUpdate", () => {
     const storedAfter = await storage.get(
       USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
     )
-    expect((storedAfter as any)?.openChangelogOnUpdate).toBe(true)
+    expect((storedAfter as any)?.openChangelogOnUpdate).toBeUndefined()
   })
 
-  it("re-enables openChangelogOnUpdate during migration and saves back", async () => {
+  it("re-enables openChangelogOnUpdate during migration without saving back", async () => {
     const storage = new Storage({ area: "local" })
 
     await storage.set(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES, {
@@ -48,7 +48,7 @@ describe("userPreferences openChangelogOnUpdate", () => {
     const storedAfter = await storage.get(
       USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
     )
-    expect((storedAfter as any)?.openChangelogOnUpdate).toBe(true)
+    expect((storedAfter as any)?.openChangelogOnUpdate).toBe(false)
   })
 
   it("persists updates via updateOpenChangelogOnUpdate", async () => {
