@@ -39,7 +39,7 @@ export const openOrFocusOptionsMenuItem = (
   menuItemId: OptionsMenuItemId,
   searchParams?: Record<string, string | undefined>,
 ) => {
-  openOrFocusOptionsPage(`#${menuItemId}`, searchParams)
+  return openOrFocusOptionsPage(`#${menuItemId}`, searchParams)
 }
 
 /**
@@ -191,59 +191,52 @@ const focusWindow = async (tab: browser.tabs.Tab) => {
  */
 const queryTabs = async (
   queryInfo: browser.tabs._QueryQueryInfo,
-  callback: (tabs: browser.tabs.Tab[]) => void,
-): Promise<void> => {
+): Promise<browser.tabs.Tab[]> => {
   try {
-    const tabs = await browser.tabs.query(queryInfo)
-    if (tabs) {
-      callback(tabs)
-    }
+    return (await browser.tabs.query(queryInfo)) || []
   } catch (error) {
     logger.warn("Failed to query tabs", error)
+    return []
   }
 }
 
-export const openOrFocusOptionsPage = (
+export const openOrFocusOptionsPage = async (
   hash: string,
   searchParams?: Record<string, string | undefined>,
-) => {
+): Promise<void> => {
   const searchString = buildSearchString(searchParams)
   const baseUrl = `${OPTIONS_PAGE_URL}${searchString}${hash}`
+  const tabs = await queryTabs({})
 
-  queryTabs({}, (tabs) => {
-    // 查找是否已存在忽略查询参数的 options 页
-    const optionsPageTab = tabs.find((tab) => {
-      if (!tab.url) return false
-      try {
-        const tabUrl = new URL(tab.url)
-        const normalizedUrl = `${tabUrl.origin}${tabUrl.pathname}${tabUrl.search}${tabUrl.hash}`
-        return normalizedUrl === baseUrl
-      } catch {
-        return false
-      }
-    })
-
-    let urlWithHash: string
-
-    if (optionsPageTab) {
-      // 已存在 → 加上 refresh 参数以强制刷新
-      const url = new URL(baseUrl)
-      url.searchParams.set("refresh", "true")
-      url.searchParams.set("t", Date.now().toString())
-      urlWithHash = url.href
-    } else {
-      // 不存在 → 直接使用基础 URL
-      urlWithHash = baseUrl
-    }
-
-    // 打开或聚焦
-    if (optionsPageTab?.id) {
-      updateTab(optionsPageTab.id, { active: true, url: urlWithHash })
-      focusWindow(optionsPageTab)
-    } else {
-      createActiveTab(urlWithHash)
+  const optionsPageTab = tabs.find((tab) => {
+    if (!tab.url) return false
+    try {
+      const tabUrl = new URL(tab.url)
+      const normalizedUrl = `${tabUrl.origin}${tabUrl.pathname}${tabUrl.search}${tabUrl.hash}`
+      return normalizedUrl === baseUrl
+    } catch {
+      return false
     }
   })
+
+  let urlWithHash: string
+
+  if (optionsPageTab) {
+    const url = new URL(baseUrl)
+    url.searchParams.set("refresh", "true")
+    url.searchParams.set("t", Date.now().toString())
+    urlWithHash = url.href
+  } else {
+    urlWithHash = baseUrl
+  }
+
+  if (optionsPageTab?.id) {
+    await updateTab(optionsPageTab.id, { active: true, url: urlWithHash })
+    await focusWindow(optionsPageTab)
+    return
+  }
+
+  await createActiveTab(urlWithHash)
 }
 /**
  * Wraps a function to auto-close the popup after execution when applicable.
@@ -273,7 +266,7 @@ const _openFullManagerPage = (params?: { search?: string }) => {
     return
   }
 
-  openOrFocusOptionsPage(targetHash, searchParams)
+  return openOrFocusOptionsPage(targetHash, searchParams)
 }
 
 /**
@@ -290,7 +283,7 @@ const _openFullBookmarkManagerPage = (params?: { search?: string }) => {
     return
   }
 
-  openOrFocusOptionsPage(targetHash, searchParams)
+  return openOrFocusOptionsPage(targetHash, searchParams)
 }
 
 /**
@@ -306,7 +299,7 @@ const navigateToBasicSettings = (tabId?: string) => {
     return
   }
 
-  openOrFocusOptionsPage(targetHash, searchParams)
+  return openOrFocusOptionsPage(targetHash, searchParams)
 }
 
 /**
@@ -334,7 +327,7 @@ const _openManagedSiteChannelsPage = (params?: {
     return
   }
 
-  openOrFocusOptionsPage(targetHash, resolvedParams)
+  return openOrFocusOptionsPage(targetHash, resolvedParams)
 }
 
 type ManagedSiteModelSyncTab = "history" | "manual"
@@ -364,7 +357,7 @@ const _openManagedSiteModelSyncPage = (params?: {
     return
   }
 
-  openOrFocusOptionsPage(targetHash, resolvedParams)
+  return openOrFocusOptionsPage(targetHash, resolvedParams)
 }
 
 /**
@@ -372,7 +365,7 @@ const _openManagedSiteModelSyncPage = (params?: {
  * possible to minimize flicker and redundant windows.
  */
 const _openSettingsPage = () => {
-  navigateToBasicSettings()
+  return navigateToBasicSettings()
 }
 
 /**
@@ -380,7 +373,7 @@ const _openSettingsPage = () => {
  * @param tabId Unique identifier for the tab to activate.
  */
 const _openSettingsTab = (tabId: string) => {
-  navigateToBasicSettings(tabId)
+  return navigateToBasicSettings(tabId)
 }
 
 /**
@@ -388,7 +381,7 @@ const _openSettingsTab = (tabId: string) => {
  */
 const _openAboutPage = () => {
   const targetHash = getAboutHash()
-  openOrFocusOptionsPage(targetHash)
+  return openOrFocusOptionsPage(targetHash)
 }
 
 /**
@@ -423,7 +416,7 @@ const _openApiCredentialProfilesPage = () => {
     return
   }
 
-  openOrFocusOptionsPage(targetHash)
+  return openOrFocusOptionsPage(targetHash)
 }
 
 /**
@@ -578,7 +571,7 @@ export const openSidePanelWithFallback = async () => {
     logger.warn(
       `Failed to open side panel, falling back to settings:\n${getErrorMessage(error)}`,
     )
-    openOrFocusOptionsMenuItem(MENU_ITEM_IDS.BASIC)
+    await openOrFocusOptionsMenuItem(MENU_ITEM_IDS.BASIC)
   }
 }
 
