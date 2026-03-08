@@ -44,11 +44,11 @@ You must log in to the target website yourself using the browser first. This all
 
 1. Open the extension's main page and click `Add Account`
 
-![Add Account Button](./static/image/add-account-btn.png)
+![Add Account Button](../static/image/add-account-btn.png)
 
 2. Enter the proxy station address and click `Auto-Recognize`
 
-![Auto-Recognize Button](./static/image/add-account-dialog-btn.png)
+![Auto-Recognize Button](../static/image/add-account-dialog-btn.png)
 
 3. After confirming the automatic recognition is correct, click `Confirm Addition`
 
@@ -75,7 +75,7 @@ The extension will automatically recognize various information about your accoun
 ::: info Tip
 If automatic recognition fails, you can manually enter and add the site account. You will need to obtain the following information first. (The UI may vary for each site, please find it yourself.)
 :::
-![Site User Info](./static/image/site-user-info.png)
+![Site User Info](../static/image/site-user-info.png)
 
 If the target site is a modified version (e.g., AnyRouter), please manually switch to **Cookie Mode** when adding the account, and then perform automatic recognition or manual entry. When encountering sites with strict protection, you can also use the Cloudflare Bypass Assistant in conjunction. For details, see [FAQ](./faq.md#anyrouter-error).
 

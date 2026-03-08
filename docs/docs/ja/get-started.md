@@ -45,11 +45,11 @@ AI プロキシステーションアカウント（New API など）の管理体
 
 1. 拡張機能のメインページを開き、「アカウントを追加」をクリックします。
 
-![新增账号](./static/image/add-account-btn.png)
+![新增账号](../static/image/add-account-btn.png)
 
 2. プロキシステーションのアドレスを入力し、「自動認識」をクリックします。
 
-![自动识别](./static/image/add-account-dialog-btn.png)
+![自动识别](../static/image/add-account-dialog-btn.png)
 
 3. 自動認識された内容に誤りがないことを確認し、「追加を確定」をクリックします。
 
@@ -77,7 +77,7 @@ AI プロキシステーションアカウント（New API など）の管理体
 ::: info ヒント
 自動認識が成功しなかった場合、サイトアカウントを手動で入力して追加できます。以下の情報を事前に取得する必要があります。（各サイトで UI が異なる場合があるため、ご自身で探してください。）
 :::
-![用户信息](./static/image/site-user-info.png)
+![用户信息](../static/image/site-user-info.png)
 
 対象サイトがカスタマイズ版（例：AnyRouter）の場合は、アカウント追加時に手動で **Cookie モード** に切り替えてから、自動認識または手動入力を実行してください。厳格な保護が施されたサイトに遭遇した場合は、Cloudflare 盾越えヘルパーと組み合わせて使用することもできます。詳細は [よくある質問](./faq.md#anyrouter-error) を参照してください。
 
