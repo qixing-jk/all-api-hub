@@ -1,3 +1,4 @@
+import { OPTIONS_PAGE_PATH, POPUP_PAGE_PATH } from "~/constants/extensionPages"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import { getSidePanelPagePath } from "~~/e2e/utils/extension"
 
@@ -14,13 +15,13 @@ test.beforeEach(({ page }) => {
 })
 
 test("popup page boots", async ({ page, extensionId }) => {
-  await page.goto(`chrome-extension://${extensionId}/popup.html`)
+  await page.goto(`chrome-extension://${extensionId}/${POPUP_PAGE_PATH}`)
   await expect(page).toHaveTitle(/All API Hub/i)
   await expect(page.locator("#root > *")).not.toHaveCount(0)
 })
 
 test("options page boots", async ({ page, extensionId }) => {
-  await page.goto(`chrome-extension://${extensionId}/options.html`)
+  await page.goto(`chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}`)
   await expect(page).toHaveTitle(/All API Hub/i)
   await expect(page.locator("#root > *")).not.toHaveCount(0)
 })

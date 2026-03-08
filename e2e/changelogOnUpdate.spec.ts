@@ -1,5 +1,6 @@
 import type { BrowserContext, Page, Worker } from "@playwright/test"
 
+import { OPTIONS_PAGE_PATH, POPUP_PAGE_PATH } from "~/constants/extensionPages"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import { CURRENT_PREFERENCES_VERSION } from "~/services/preferences/migrations/preferencesMigration"
 import { getErrorMessage } from "~/utils/core/error"
@@ -217,7 +218,7 @@ test("shows update log inline once on first UI open after update", async ({
 
   // Use a lightweight options route to reduce flakiness from the heavier
   // BasicSettings page mounting all tab panels by default.
-  await page.goto(`chrome-extension://${extensionId}/options.html`)
+  await page.goto(`chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}`)
 
   // Options is heavier than popup and can take a bit longer to mount providers
   // + run the UI-open handler on slower CI machines.
@@ -323,7 +324,7 @@ test("shows update log inline in popup once on first UI open after update", asyn
     })
   })
 
-  await page.goto(`chrome-extension://${extensionId}/popup.html`)
+  await page.goto(`chrome-extension://${extensionId}/${POPUP_PAGE_PATH}`)
 
   const dialogPage = await waitForUpdateLogDialogPage(context, 60_000)
   await expect(dialogPage.locator(UPDATE_LOG_DIALOG_SELECTOR)).toBeVisible()
@@ -380,7 +381,7 @@ test("does not show update log when disabled, but still consumes pending marker"
     version,
   )
 
-  await page.goto(`chrome-extension://${extensionId}/options.html`)
+  await page.goto(`chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}`)
   await expect(page.locator("#root > *")).not.toHaveCount(0)
 
   await expect

@@ -11,6 +11,7 @@ import {
   focusTab,
   getExtensionURL,
 } from "~/utils/browser/browserApi"
+import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { joinUrl } from "~/utils/core/url"
 import { getFeedbackDestinationUrls } from "~/utils/navigation/feedbackLinks"
@@ -565,10 +566,27 @@ export const openAutoCheckinPage = withPopupClose(
 )
 
 /**
+ * Opens the side panel when available and otherwise falls back to the basic
+ * settings page so callers never leave the user without a visible destination.
+ * The fallback targets Basic settings because it already hosts side-panel
+ * behavior controls and related guidance.
+ */
+export const openSidePanelWithFallback = async () => {
+  try {
+    await _openSidePanel()
+  } catch (error) {
+    logger.warn(
+      `Failed to open side panel, falling back to settings:\n${getErrorMessage(error)}`,
+    )
+    openOrFocusOptionsMenuItem(MENU_ITEM_IDS.BASIC)
+  }
+}
+
+/**
  * Open the extension side panel (if supported) and close the popup afterward to
  * avoid overlapping surfaces.
  */
-export const openSidePanelPage = withPopupClose(_openSidePanel)
+export const openSidePanelPage = withPopupClose(openSidePanelWithFallback)
 
 /**
  * Jump straight to the About section inside the options page and close the

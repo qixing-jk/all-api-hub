@@ -41,11 +41,12 @@ describe("ActionClickBehaviorSettings (side panel fallback)", () => {
   // so `t()` returns fully-qualified keys (e.g. "settings:...").
   const renderSubject = () => render(<ActionClickBehaviorSettings />)
 
-  it("shows unsupported helper even when stored preference is sidepanel", async () => {
+  it("shows unsupported fallback messaging even when stored preference is sidepanel", async () => {
     const sidePanelSupport = {
       supported: false,
       kind: "unsupported",
-      reason: "x",
+      reason:
+        "Side panel API exposed, but current mobile runtime cannot present a usable side panel",
     } satisfies SidePanelSupport
     vi.mocked(getSidePanelSupport).mockReturnValue(sidePanelSupport)
 

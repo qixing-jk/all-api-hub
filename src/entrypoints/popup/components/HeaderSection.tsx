@@ -26,7 +26,7 @@ import { COLORS } from "~/constants/designTokens"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { changelogOnUpdateState } from "~/services/updates/changelogOnUpdateState"
 import { isExtensionSidePanel } from "~/utils/browser"
-import { getManifest } from "~/utils/browser/browserApi"
+import { getManifest, getSidePanelSupport } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import {
@@ -89,7 +89,8 @@ function DevTriggerUpdateLogButton() {
 
 /**
  * Popup header with app identity (including version), theme toggle, and navigation controls.
- * Provides refresh, open-full-page, settings, and side panel shortcuts.
+ * Provides refresh, open-full-page, settings, and side panel shortcuts, while
+ * hiding side-panel entry points on runtimes that report unsupported behavior.
  */
 export default function HeaderSection({
   showRefresh = true,
@@ -101,6 +102,7 @@ export default function HeaderSection({
   const { t } = useTranslation(["ui", "account", "common"])
   const { isRefreshing, handleRefresh } = useAccountDataContext()
   const inSidePanel = isExtensionSidePanel()
+  const sidePanelSupported = getSidePanelSupport().supported
 
   const handleGlobalRefresh = useCallback(async () => {
     try {
@@ -253,7 +255,7 @@ export default function HeaderSection({
             <Cog6ToothIcon className="h-4 w-4" />
           </IconButton>
         </Tooltip>
-        {!inSidePanel && (
+        {!inSidePanel && sidePanelSupported && (
           <Tooltip content={t("common:actions.openSidePanel")}>
             <IconButton
               aria-label={t("common:actions.openSidePanel")}

@@ -13,7 +13,7 @@ import BookmarksList from "~/features/SiteBookmarks/components/BookmarksList"
 import { useBookmarkDialogContext } from "~/features/SiteBookmarks/hooks/BookmarkDialogStateContext"
 import { useAddAccountHandler } from "~/hooks/useAddAccountHandler"
 import { cn } from "~/lib/utils"
-import { isExtensionSidePanel, isMobileByUA } from "~/utils/browser"
+import { isExtensionSidePanel, isMobileDevice } from "~/utils/browser"
 
 import ActionButtons from "./components/ActionButtons"
 import ApiCredentialProfilesStatsSection from "./components/ApiCredentialProfilesStatsSection"
@@ -27,7 +27,7 @@ import ShareOverviewSnapshotButton from "./components/ShareOverviewSnapshotButto
 
 /**
  * Popup body content for the extension popup and side panel.
- * Handles layout sizing, header/actions, and account list rendering.
+ * Handles device-aware layout sizing, header/actions, and account list rendering.
  */
 function PopupContent() {
   const { t } = useTranslation([
@@ -87,13 +87,13 @@ function PopupContent() {
 
   const activeViewConfig = viewConfig[activeView]
 
-  const popupWidthClass = isMobileByUA()
+  const popupWidthClass = isMobileDevice()
     ? "w-full"
     : inSidePanel
       ? ""
       : UI_CONSTANTS.POPUP.WIDTH
 
-  const popupHeightClass = isMobileByUA()
+  const popupHeightClass = isMobileDevice()
     ? ""
     : inSidePanel
       ? ""

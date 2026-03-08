@@ -5,6 +5,7 @@ import { isExtensionPopup } from "~/utils/browser"
 import {
   createTab as createTabApi,
   getExtensionURL,
+  openSidePanel as openSidePanelApi,
 } from "~/utils/browser/browserApi"
 import { joinUrl } from "~/utils/core/url"
 import {
@@ -12,6 +13,8 @@ import {
   openKeysPage,
   openModelsPage,
   openMultiplePages,
+  openSidePanelPage,
+  openSidePanelWithFallback,
   openUsagePage,
 } from "~/utils/navigation"
 
@@ -52,6 +55,7 @@ vi.mock("~/utils/core/url", () => ({
 const mockedIsExtensionPopup = vi.mocked(isExtensionPopup)
 const mockedCreateTab = vi.mocked(createTabApi)
 const mockedGetExtensionURL = vi.mocked(getExtensionURL)
+const mockedOpenSidePanel = vi.mocked(openSidePanelApi)
 const mockedGetSiteApiRouter = vi.mocked(getSiteApiRouter)
 const mockedJoinUrl = vi.mocked(joinUrl)
 
@@ -160,5 +164,30 @@ describe("navigation utilities", () => {
     const calls = mockedCreateTab.mock.calls.map((call) => call[0] as string)
     expect(calls).toContain("https://redeem.custom")
     expect(calls).toContain("https://checkin.custom")
+  })
+
+  it("openSidePanelWithFallback should open settings when side panel opening fails", async () => {
+    mockedOpenSidePanel.mockRejectedValueOnce(new Error("fail"))
+
+    await openSidePanelWithFallback()
+
+    await vi.waitFor(() => {
+      expect(mockedCreateTab).toHaveBeenCalledWith(
+        "chrome-extension://options.html#basic",
+        true,
+      )
+    })
+  })
+
+  it("openSidePanelPage should close the popup after fallback navigation", async () => {
+    const closeSpy = vi.spyOn(window, "close").mockImplementation(() => {})
+    mockedIsExtensionPopup.mockReturnValue(true)
+    mockedOpenSidePanel.mockRejectedValueOnce(new Error("fail"))
+
+    await openSidePanelPage()
+
+    expect(closeSpy).toHaveBeenCalledTimes(1)
+
+    closeSpy.mockRestore()
   })
 })

@@ -1,9 +1,4 @@
-# sidepanel-support-fallback Specification
-
-## Purpose
-Ensure the toolbar icon click behavior and related settings gracefully fall back when the host browser does not support opening a side panel/sidebar, without automatically rewriting persisted preferences (to avoid multi-device configuration sync side effects).
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Side panel support is detectable
 The system MUST detect whether the current runtime can effectively open a usable side panel/sidebar and classify the support pathway.
@@ -66,6 +61,8 @@ Even when side panel support is detected, opening the side panel may fail at run
 #### Scenario: Side panel open fails at runtime
 - **WHEN** the system attempts to open the side panel and the open call fails
 - **THEN** the system MUST open the Basic section of the extension options/settings surface as a fallback
+
+## ADDED Requirements
 
 ### Requirement: Direct side-panel entry points MUST not strand the user
 Any UI affordance that explicitly tries to open the side panel MUST use the same fallback principles as toolbar-click behavior so users are not left with a closed popup and no destination.

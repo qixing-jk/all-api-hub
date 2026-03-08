@@ -1,8 +1,21 @@
+import {
+  OPTIONS_PAGE_PATH,
+  POPUP_PAGE_PATH,
+  SIDEPANEL_PAGE_PATH,
+} from "~/constants/extensionPages"
 import { getExtensionURL } from "~/utils/browser/browserApi"
 
-export const OPTIONS_PAGE_URL = getExtensionURL("options.html")
+import {
+  getDeviceTypeInfo,
+  isDesktopDevice,
+  isMobileDevice,
+  isTabletDevice,
+} from "./device"
+
+export const OPTIONS_PAGE_URL = getExtensionURL(OPTIONS_PAGE_PATH)
 
 export type ExtensionStoreId = "chrome" | "edge" | "firefox"
+export { getDeviceTypeInfo, isDesktopDevice, isMobileDevice, isTabletDevice }
 
 /**
  * Detects Firefox-like user agents using UA string heuristics.
@@ -70,26 +83,6 @@ export function detectExtensionStore(options?: {
 }
 
 /**
- * Determines if the current device is a mobile device by matching known user-agent keywords.
- * @returns True when the UA string indicates a mobile platform.
- */
-export function isMobileByUA(): boolean {
-  // 检测是否为移动设备，如果不是移动设备则认为是桌面设备
-  const userAgent = navigator.userAgent.toLowerCase()
-  return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(
-    userAgent,
-  )
-}
-
-/**
- * Determines if the current device is a desktop device.
- * @returns True when the UA check does not match mobile patterns.
- */
-export function isDesktopByUA(): boolean {
-  return !isMobileByUA()
-}
-
-/**
  * Checks if the given URL is an extension page (chrome-extension:/moz-extension:).
  * @param url URL instance to check.
  * @returns True when the protocol contains "-extension:".
@@ -105,7 +98,7 @@ export function isExtensionPage(url: URL) {
 export function isExtensionPopup() {
   try {
     const url = new URL(window.location.href)
-    return isExtensionPage(url) && /popup.html/i.test(url.pathname)
+    return isExtensionPage(url) && url.pathname.endsWith(`/${POPUP_PAGE_PATH}`)
   } catch {
     return false
   }
@@ -118,7 +111,9 @@ export function isExtensionPopup() {
 export function isExtensionSidePanel() {
   try {
     const url = new URL(window.location.href)
-    return isExtensionPage(url) && /sidepanel.html/i.test(url.pathname)
+    return (
+      isExtensionPage(url) && url.pathname.endsWith(`/${SIDEPANEL_PAGE_PATH}`)
+    )
   } catch {
     return false
   }

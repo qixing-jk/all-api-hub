@@ -21,7 +21,7 @@ vi.mock("~/features/AccountManagement/hooks/AccountManagementProvider", () => ({
 
 vi.mock("~/utils/browser", () => ({
   isExtensionSidePanel: () => false,
-  isMobileByUA: () => false,
+  isMobileDevice: () => false,
 }))
 
 vi.mock("~/hooks/useAddAccountHandler", () => ({

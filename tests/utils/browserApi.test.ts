@@ -315,11 +315,15 @@ describe("browserApi sendTabMessageWithRetry", () => {
 })
 
 describe("browserApi getSidePanelSupport", () => {
+  const mockUserAgent = (userAgent: string) =>
+    vi.spyOn(window.navigator, "userAgent", "get").mockReturnValue(userAgent)
+
   beforeEach(() => {
     vi.restoreAllMocks()
     vi.resetModules()
     ;(globalThis as any).browser = undefined
     ;(globalThis as any).chrome = undefined
+    mockUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
   })
 
   afterAll(() => {
@@ -357,6 +361,90 @@ describe("browserApi getSidePanelSupport", () => {
     })
   })
 
+  it("treats exposed side panel APIs as unsupported on known mobile runtimes", async () => {
+    mockUserAgent(
+      "Mozilla/5.0 (Android 14; Mobile; rv:136.0) Gecko/136.0 Firefox/136.0",
+    )
+    ;(globalThis as any).browser = {
+      sidebarAction: {
+        open: vi.fn(),
+      },
+    }
+    ;(globalThis as any).chrome = {
+      sidePanel: {
+        open: vi.fn(),
+      },
+    }
+
+    const { getSidePanelSupport } = await import("~/utils/browser/browserApi")
+    const result = getSidePanelSupport()
+
+    expect(result.supported).toBe(false)
+    expect(result.kind).toBe("unsupported")
+    if (result.supported) {
+      throw new Error("Expected getSidePanelSupport to return unsupported")
+    }
+    expect(result.reason).toContain("mobile runtime")
+  })
+
+  it("treats exposed side panel APIs as unsupported on touch-tablet runtimes", async () => {
+    vi.doMock("~/utils/browser/device", async (importOriginal) => {
+      const actual =
+        await importOriginal<typeof import("~/utils/browser/device")>()
+      return {
+        ...actual,
+        getDeviceTypeInfo: vi.fn(() => ({
+          type: "tablet",
+          isMobile: false,
+          isTablet: true,
+          isDesktop: false,
+          isTouchDevice: true,
+        })),
+      }
+    })
+    ;(globalThis as any).browser = {
+      sidebarAction: {
+        open: vi.fn(),
+      },
+    }
+    ;(globalThis as any).chrome = {}
+
+    const { getSidePanelSupport } = await import("~/utils/browser/browserApi")
+    const result = getSidePanelSupport()
+
+    expect(result.supported).toBe(false)
+    expect(result.kind).toBe("unsupported")
+    if (result.supported) {
+      throw new Error("Expected getSidePanelSupport to return unsupported")
+    }
+    expect(result.reason).toContain("mobile runtime")
+
+    vi.doUnmock("~/utils/browser/device")
+  })
+
+  it("marks support as unsupported after an observed open failure", async () => {
+    ;(globalThis as any).browser = {
+      sidebarAction: {
+        open: vi.fn().mockRejectedValue(new Error("fail")),
+      },
+    }
+    ;(globalThis as any).chrome = {}
+
+    const { getSidePanelSupport, openSidePanel } = await import(
+      "~/utils/browser/browserApi"
+    )
+
+    await expect(openSidePanel()).rejects.toThrow("fail")
+
+    const result = getSidePanelSupport()
+    expect(result.supported).toBe(false)
+    expect(result.kind).toBe("unsupported")
+    if (result.supported) {
+      throw new Error("Expected getSidePanelSupport to return unsupported")
+    }
+    expect(result.reason).toContain("open failed")
+  })
+
   it("returns unsupported when neither side panel API is available", async () => {
     ;(globalThis as any).browser = {}
     ;(globalThis as any).chrome = {}
@@ -373,7 +461,7 @@ describe("browserApi getSidePanelSupport", () => {
     expect(result.reason).toContain("chrome.sidePanel.open missing")
   })
 
-  it("caches support check at module load time", async () => {
+  it("recomputes support on each call", async () => {
     ;(globalThis as any).browser = {
       sidebarAction: {
         open: vi.fn(),
@@ -396,7 +484,7 @@ describe("browserApi getSidePanelSupport", () => {
 
     expect(getSidePanelSupport()).toEqual({
       supported: true,
-      kind: "firefox-sidebar-action",
+      kind: "chromium-side-panel",
     })
   })
 

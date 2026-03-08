@@ -1,14 +1,13 @@
-import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { POPUP_PAGE_PATH } from "~/constants/extensionPages"
 import {
   addActionClickListener,
   getSidePanelSupport,
-  openSidePanel,
   removeActionClickListener,
   setActionPopup,
 } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
-import { openOrFocusOptionsMenuItem } from "~/utils/navigation"
+import { openSidePanelWithFallback } from "~/utils/navigation"
 
 export type ActionClickBehavior = "popup" | "sidepanel"
 
@@ -17,27 +16,19 @@ export type ActionClickBehavior = "popup" | "sidepanel"
  */
 const logger = createLogger("ActionClickBehavior")
 
-const POPUP_PAGE = "popup.html"
-
 /**
  * Singleton click handler used when the action is configured to open the side panel.
- * Falls back to options settings when side panel is unavailable.
+ * Uses the shared open-or-fallback path so toolbar clicks never dead-end.
  */
 const handleActionClick = async () => {
-  try {
-    await openSidePanel()
-  } catch (error) {
-    logger.warn(
-      `Side panel unavailable, opening settings instead:\n${getErrorMessage(error)}`,
-    )
-    openOrFocusOptionsMenuItem(MENU_ITEM_IDS.BASIC)
-  }
+  await openSidePanelWithFallback()
 }
 
 /**
  * Apply toolbar click behavior at runtime.
  * - "popup": restores the popup.html UI and removes side-panel click listeners.
- * - "sidepanel": disables the popup so onClicked fires and opens the side panel.
+ * - "sidepanel": disables the popup so onClicked fires and opens the shared
+ *   side-panel-or-settings fallback path.
  */
 export async function applyActionClickBehavior(
   behavior: ActionClickBehavior,
@@ -52,11 +43,11 @@ export async function applyActionClickBehavior(
   // 清理旧的点击监听
   removeActionClickListener(handleActionClick)
 
-  // 设置 sidePanel 行为 (chrome only)
+  // Keep Chromium on the extension-managed click path so runtime fallback always runs.
   if (typeof (chrome as any)?.sidePanel?.setPanelBehavior === "function") {
     try {
       await chrome.sidePanel.setPanelBehavior({
-        openPanelOnActionClick: isSidePanel,
+        openPanelOnActionClick: false,
       })
     } catch (error) {
       logger.warn(
@@ -65,9 +56,8 @@ export async function applyActionClickBehavior(
     }
   }
 
-  // 当选择 sidepanel 时清空 popup；选择 popup 时恢复 popup.html
   try {
-    await setActionPopup(isSidePanel ? "" : POPUP_PAGE)
+    await setActionPopup(isSidePanel ? "" : POPUP_PAGE_PATH)
   } catch (error) {
     logger.warn(`action.setPopup not available:\n${getErrorMessage(error)}`)
   }

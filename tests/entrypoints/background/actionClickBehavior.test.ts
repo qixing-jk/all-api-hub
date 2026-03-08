@@ -1,39 +1,44 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { POPUP_PAGE_PATH } from "~/constants/extensionPages"
 
 describe("background applyActionClickBehavior", () => {
   let addActionClickListener: ReturnType<typeof vi.fn>
   let removeActionClickListener: ReturnType<typeof vi.fn>
   let setActionPopup: ReturnType<typeof vi.fn>
   let getSidePanelSupport: ReturnType<typeof vi.fn>
-  let openSidePanel: ReturnType<typeof vi.fn>
-  let openOrFocusOptionsMenuItem: ReturnType<typeof vi.fn>
+  let openSidePanelWithFallback: ReturnType<typeof vi.fn>
+  let setPanelBehavior: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
     addActionClickListener = vi.fn()
     removeActionClickListener = vi.fn()
     setActionPopup = vi.fn().mockResolvedValue(undefined)
     getSidePanelSupport = vi.fn()
-    openSidePanel = vi.fn()
-    openOrFocusOptionsMenuItem = vi.fn()
+    openSidePanelWithFallback = vi.fn().mockResolvedValue(undefined)
+    setPanelBehavior = vi.fn().mockResolvedValue(undefined)
+    ;(globalThis as any).chrome = {
+      sidePanel: {
+        setPanelBehavior,
+      },
+    }
 
     vi.resetModules()
 
     vi.doMock("~/utils/browser/browserApi", () => ({
       addActionClickListener,
       getSidePanelSupport,
-      openSidePanel,
       removeActionClickListener,
       setActionPopup,
     }))
 
     vi.doMock("~/utils/navigation", () => ({
-      openOrFocusOptionsMenuItem,
+      openSidePanelWithFallback,
     }))
   })
 
   afterEach(() => {
+    ;(globalThis as any).chrome = undefined
     vi.doUnmock("~/utils/browser/browserApi")
     vi.doUnmock("~/utils/navigation")
     vi.resetModules()
@@ -54,7 +59,10 @@ describe("background applyActionClickBehavior", () => {
     await applyActionClickBehavior("sidepanel")
 
     expect(removeActionClickListener).toHaveBeenCalledTimes(1)
-    expect(setActionPopup).toHaveBeenCalledWith("popup.html")
+    expect(setPanelBehavior).toHaveBeenCalledWith({
+      openPanelOnActionClick: false,
+    })
+    expect(setActionPopup).toHaveBeenCalledWith(POPUP_PAGE_PATH)
     expect(addActionClickListener).not.toHaveBeenCalled()
   })
 
@@ -71,6 +79,9 @@ describe("background applyActionClickBehavior", () => {
     await applyActionClickBehavior("sidepanel")
 
     expect(removeActionClickListener).toHaveBeenCalledTimes(1)
+    expect(setPanelBehavior).toHaveBeenCalledWith({
+      openPanelOnActionClick: false,
+    })
     expect(setActionPopup).toHaveBeenCalledWith("")
     expect(addActionClickListener).toHaveBeenCalledTimes(1)
   })
@@ -88,16 +99,18 @@ describe("background applyActionClickBehavior", () => {
     await applyActionClickBehavior("sidepanel")
 
     expect(removeActionClickListener).toHaveBeenCalledTimes(1)
+    expect(setPanelBehavior).toHaveBeenCalledWith({
+      openPanelOnActionClick: false,
+    })
     expect(setActionPopup).toHaveBeenCalledWith("")
     expect(addActionClickListener).toHaveBeenCalledTimes(1)
   })
 
-  it("falls back to options when openSidePanel throws despite support", async () => {
+  it("routes action clicks through the shared side-panel fallback helper", async () => {
     getSidePanelSupport.mockReturnValue({
       supported: true,
       kind: "chromium-side-panel",
     })
-    openSidePanel.mockRejectedValueOnce(new Error("fail"))
 
     const { applyActionClickBehavior } = await import(
       "~/entrypoints/background/actionClickBehavior"
@@ -110,6 +123,6 @@ describe("background applyActionClickBehavior", () => {
 
     await clickHandler?.()
 
-    expect(openOrFocusOptionsMenuItem).toHaveBeenCalledWith(MENU_ITEM_IDS.BASIC)
+    expect(openSidePanelWithFallback).toHaveBeenCalledTimes(1)
   })
 })

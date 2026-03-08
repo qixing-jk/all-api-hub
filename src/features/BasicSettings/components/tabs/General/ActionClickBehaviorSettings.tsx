@@ -1,5 +1,4 @@
 import { CursorArrowRaysIcon } from "@heroicons/react/24/outline"
-import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
@@ -10,13 +9,15 @@ import { getSidePanelSupport } from "~/utils/browser/browserApi"
 import { showResultToast, showUpdateToast } from "~/utils/core/toastHelpers"
 
 /**
- * Lets users choose what the toolbar icon does (popup vs side panel).
+ * Lets users choose what the toolbar icon does (popup vs side panel), while
+ * reflecting runtime support and fallback messaging for unsupported devices.
  */
 export default function ActionClickBehaviorSettings() {
   const { t } = useTranslation("settings")
   const { actionClickBehavior, updateActionClickBehavior } =
     useUserPreferencesContext()
-  const sidePanelSupported = useMemo(() => getSidePanelSupport().supported, [])
+  const sidePanelSupport = getSidePanelSupport()
+  const sidePanelSupported = sidePanelSupport.supported
 
   const handleChange = async (behavior: "popup" | "sidepanel") => {
     if (behavior === actionClickBehavior) return
@@ -47,13 +48,10 @@ export default function ActionClickBehaviorSettings() {
               <CursorArrowRaysIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             }
             title={t("actionClick.actionIconClickTitle")}
-            description={t("actionClick.actionIconClickDesc")}
-            leftContent={
-              !sidePanelSupported ? (
-                <div className={`${COLORS.text.tertiary} mt-1 text-xs`}>
-                  {t("actionClick.sidepanelUnsupportedHelper")}
-                </div>
-              ) : null
+            description={
+              sidePanelSupported
+                ? t("actionClick.actionIconClickDesc")
+                : t("actionClick.sidepanelUnsupportedHelper")
             }
             rightContent={
               <div

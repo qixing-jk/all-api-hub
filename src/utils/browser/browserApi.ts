@@ -9,6 +9,7 @@ import {
   type RuntimeActionId,
 } from "~/constants/runtimeActions"
 import { isNotEmptyArray } from "~/utils"
+import { getDeviceTypeInfo } from "~/utils/browser/device"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
@@ -488,17 +489,49 @@ export type SidePanelSupport =
   | { supported: true; kind: "chromium-side-panel" }
   | { supported: false; kind: "unsupported"; reason: string }
 
+const OBSERVED_SIDE_PANEL_FAILURE_REASON =
+  "Side panel open failed on this runtime"
+let observedSidePanelFailure = false
+
 /**
- * Side panel capability is cached at module load time to avoid repeatedly touching globals.
+ * Mobile and touch-tablet extension shells may expose side panel APIs without
+ * being able to render a usable panel surface.
  */
-const CACHED_SIDE_PANEL_SUPPORT: SidePanelSupport = (() => {
+function isKnownUnsupportedMobileSidePanelRuntime(): boolean {
+  const deviceType = getDeviceTypeInfo()
+  return deviceType.isMobile || deviceType.isTablet
+}
+
+/**
+ * Computes support from the currently exposed browser APIs and runtime form
+ * factor, without considering any prior failed open attempts.
+ */
+function getBaseSidePanelSupport(): SidePanelSupport {
   const runtimeBrowser = (globalThis as any).browser
-  if (typeof runtimeBrowser?.sidebarAction?.open === "function") {
+  const hasFirefoxSidebarAction =
+    typeof runtimeBrowser?.sidebarAction?.open === "function"
+
+  const runtimeChrome = (globalThis as any).chrome
+  const hasChromiumSidePanel =
+    typeof runtimeChrome?.sidePanel?.open === "function"
+
+  if (
+    (hasFirefoxSidebarAction || hasChromiumSidePanel) &&
+    isKnownUnsupportedMobileSidePanelRuntime()
+  ) {
+    return {
+      supported: false,
+      kind: "unsupported",
+      reason:
+        "Side panel API exposed, but current mobile runtime cannot present a usable side panel",
+    }
+  }
+
+  if (hasFirefoxSidebarAction) {
     return { supported: true, kind: "firefox-sidebar-action" }
   }
 
-  const runtimeChrome = (globalThis as any).chrome
-  if (typeof runtimeChrome?.sidePanel?.open === "function") {
+  if (hasChromiumSidePanel) {
     return { supported: true, kind: "chromium-side-panel" }
   }
 
@@ -515,18 +548,44 @@ const CACHED_SIDE_PANEL_SUPPORT: SidePanelSupport = (() => {
     kind: "unsupported",
     reason: reasons.join("; ") || "Side panel APIs not available",
   }
-})()
+}
+
+/**
+ * Once a runtime has failed to open the side panel, keep reporting that failure
+ * so the rest of the UI can consistently fall back.
+ */
+function getObservedFailureSupport(): SidePanelSupport | null {
+  if (!observedSidePanelFailure) {
+    return null
+  }
+
+  return {
+    supported: false,
+    kind: "unsupported",
+    reason: OBSERVED_SIDE_PANEL_FAILURE_REASON,
+  }
+}
+
+/**
+ * Records a failed open attempt so later support checks stop advertising a side
+ * panel entry point that already proved unusable.
+ */
+async function markObservedSidePanelFailure(): Promise<void> {
+  observedSidePanelFailure = true
+}
 
 /**
  * Detects whether the current runtime can open a side panel/sidebar.
  */
 export function getSidePanelSupport(): SidePanelSupport {
-  return CACHED_SIDE_PANEL_SUPPORT
+  return getObservedFailureSupport() ?? getBaseSidePanelSupport()
 }
 
 /**
  * Open the extension side panel using the host browser's native APIs.
  * Automatically chooses the appropriate Chromium or Firefox pathway.
+ * Prefers Chromium's window-scoped open call before falling back to tab-scoped
+ * open requests when a runtime rejects the first variant.
  * @throws {Error} When the current browser does not expose side panel support.
  */
 export const openSidePanel = async () => {
@@ -536,32 +595,37 @@ export const openSidePanel = async () => {
     throw new Error(`Side panel is not supported: ${support.reason}`)
   }
 
-  if (support.kind === "firefox-sidebar-action") {
-    return await (browser as any).sidebarAction.open()
-  }
-
-  const tab = await getActiveTab()
-  const windowId = tab?.windowId
-  const tabId = tab?.id
-
-  const sidePanel = (globalThis as any).chrome?.sidePanel
-
-  if (typeof windowId === "number") {
-    try {
-      return await sidePanel.open({ windowId })
-    } catch (error) {
-      if (typeof tabId === "number") {
-        return await sidePanel.open({ tabId })
-      }
-      throw error
+  try {
+    if (support.kind === "firefox-sidebar-action") {
+      return await (browser as any).sidebarAction.open()
     }
-  }
 
-  if (typeof tabId === "number") {
-    return await sidePanel.open({ tabId })
-  }
+    const tab = await getActiveTab()
+    const windowId = tab?.windowId
+    const tabId = tab?.id
 
-  throw new Error("Side panel open failed: active tab/window not found")
+    const sidePanel = (globalThis as any).chrome?.sidePanel
+
+    if (typeof windowId === "number") {
+      try {
+        return await sidePanel.open({ windowId })
+      } catch (error) {
+        if (typeof tabId === "number") {
+          return await sidePanel.open({ tabId })
+        }
+        throw error
+      }
+    }
+
+    if (typeof tabId === "number") {
+      return await sidePanel.open({ tabId })
+    }
+
+    throw new Error("Side panel open failed: active tab/window not found")
+  } catch (error) {
+    await markObservedSidePanelFailure()
+    throw error
+  }
 }
 
 /**
