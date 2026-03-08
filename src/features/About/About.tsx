@@ -1,7 +1,10 @@
 import {
   ArrowDownTrayIcon,
+  BugAntIcon,
+  ChatBubbleLeftEllipsisIcon,
   CodeBracketIcon,
   GlobeAltIcon,
+  LightBulbIcon,
   StarIcon,
 } from "@heroicons/react/24/outline"
 import { Info } from "lucide-react"
@@ -17,7 +20,8 @@ import { isNotEmptyArray } from "~/utils"
 import type { ExtensionStoreId } from "~/utils/browser"
 import { detectExtensionStore } from "~/utils/browser"
 import { getDocsHomepageUrl } from "~/utils/navigation/docsLinks"
-import { getPkgVersion, getRepository } from "~/utils/navigation/packageMeta"
+import { getFeedbackDestinationUrls } from "~/utils/navigation/feedbackLinks"
+import { getPkgVersion } from "~/utils/navigation/packageMeta"
 import packageJson from "~~/package.json"
 
 import CreditsCard from "./components/CreditsCard"
@@ -34,7 +38,7 @@ export default function About() {
 
   // 从工具函数获取元数据
   const homepage = getDocsHomepageUrl(i18n.language)
-  const repository = getRepository()
+  const feedbackDestinations = getFeedbackDestinationUrls()
 
   // Store CTA: ask for a positive review on the current store, and provide download links for other stores.
   const currentStoreId = detectExtensionStore()
@@ -94,7 +98,7 @@ export default function About() {
               Icon={CodeBracketIcon}
               title={t("githubRepo")}
               description={t("githubDesc")}
-              href={repository}
+              href={feedbackDestinations.repository}
               buttonText={t("starRepo")}
               buttonVariant="default"
               iconClass="text-gray-900 dark:text-gray-100"
@@ -106,6 +110,39 @@ export default function About() {
               href={homepage}
               buttonText={t("visitHomepage")}
               buttonVariant="secondary"
+              iconClass="text-blue-600 dark:text-blue-400"
+            />
+          </div>
+        </section>
+
+        <section>
+          <Heading4 className="mb-4">{t("feedbackSection.title")}</Heading4>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <LinkCard
+              Icon={BugAntIcon}
+              title={t("ui:feedback.bugReport")}
+              description={t("feedbackSection.bugReport.description")}
+              href={feedbackDestinations.bugReport}
+              buttonText={t("feedbackSection.bugReport.button")}
+              buttonVariant="default"
+              iconClass="text-red-600 dark:text-red-400"
+            />
+            <LinkCard
+              Icon={LightBulbIcon}
+              title={t("ui:feedback.featureRequest")}
+              description={t("feedbackSection.featureRequest.description")}
+              href={feedbackDestinations.featureRequest}
+              buttonText={t("feedbackSection.featureRequest.button")}
+              buttonVariant="secondary"
+              iconClass="text-amber-500 dark:text-amber-400"
+            />
+            <LinkCard
+              Icon={ChatBubbleLeftEllipsisIcon}
+              title={t("ui:feedback.discussion")}
+              description={t("feedbackSection.discussion.description")}
+              href={feedbackDestinations.discussions}
+              buttonText={t("feedbackSection.discussion.button")}
+              buttonVariant="outline"
               iconClass="text-blue-600 dark:text-blue-400"
             />
           </div>

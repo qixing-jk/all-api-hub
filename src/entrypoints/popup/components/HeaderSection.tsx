@@ -2,7 +2,9 @@ import {
   ArrowPathIcon,
   ArrowsPointingOutIcon,
   BugAntIcon,
+  ChatBubbleLeftEllipsisIcon,
   Cog6ToothIcon,
+  LightBulbIcon,
 } from "@heroicons/react/24/outline"
 import { PanelRightClose } from "lucide-react"
 import { useCallback } from "react"
@@ -13,6 +15,12 @@ import iconImage from "~/assets/icon.png"
 import { useUpdateLogDialogContext } from "~/components/dialogs/UpdateLogDialog"
 import Tooltip from "~/components/Tooltip"
 import { BodySmall, Caption, IconButton } from "~/components/ui"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu"
 import { VersionBadge } from "~/components/VersionBadge"
 import { COLORS } from "~/constants/designTokens"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
@@ -23,6 +31,9 @@ import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import {
   openApiCredentialProfilesPage,
+  openBugReportPage,
+  openDiscussionsPage,
+  openFeatureRequestPage,
   openFullAccountManagerPage,
   openFullBookmarkManagerPage,
   openSettingsPage,
@@ -38,7 +49,7 @@ import CompactThemeToggle from "./ThemeToggle"
 const logger = createLogger("PopupHeaderSection")
 
 /**
- *
+ * Development-only shortcut for manually reopening the update log dialog.
  */
 function DevTriggerUpdateLogButton() {
   const { openDialog } = useUpdateLogDialogContext()
@@ -172,6 +183,35 @@ export default function HeaderSection({
         {import.meta.env.MODE === "development" && (
           <DevTriggerUpdateLogButton />
         )}
+
+        <DropdownMenu>
+          <Tooltip content={t("ui:feedback.triggerTooltip")}>
+            <DropdownMenuTrigger asChild>
+              <IconButton
+                variant="outline"
+                size="sm"
+                aria-label={t("ui:feedback.trigger")}
+                className="touch-manipulation"
+              >
+                <ChatBubbleLeftEllipsisIcon className="h-4 w-4" />
+              </IconButton>
+            </DropdownMenuTrigger>
+          </Tooltip>
+          <DropdownMenuContent align="end" className="w-52">
+            <DropdownMenuItem onClick={() => void openBugReportPage()}>
+              <BugAntIcon className="h-4 w-4" />
+              {t("ui:feedback.bugReport")}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => void openFeatureRequestPage()}>
+              <LightBulbIcon className="h-4 w-4" />
+              {t("ui:feedback.featureRequest")}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => void openDiscussionsPage()}>
+              <ChatBubbleLeftEllipsisIcon className="h-4 w-4" />
+              {t("ui:feedback.discussion")}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         {showRefresh && (
           <Tooltip content={t("common:actions.refresh")}>

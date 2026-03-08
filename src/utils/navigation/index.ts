@@ -13,6 +13,7 @@ import {
 } from "~/utils/browser/browserApi"
 import { createLogger } from "~/utils/core/logger"
 import { joinUrl } from "~/utils/core/url"
+import { getFeedbackDestinationUrls } from "~/utils/navigation/feedbackLinks"
 
 /**
  * Unified logger scoped to navigation helpers and options-page routing.
@@ -390,6 +391,27 @@ const _openAboutPage = () => {
 }
 
 /**
+ * Opens the repository bug report template in a new browser tab.
+ */
+const _openBugReportPage = async () => {
+  await createActiveTab(getFeedbackDestinationUrls().bugReport)
+}
+
+/**
+ * Opens the repository feature-request template in a new browser tab.
+ */
+const _openFeatureRequestPage = async () => {
+  await createActiveTab(getFeedbackDestinationUrls().featureRequest)
+}
+
+/**
+ * Opens the repository discussions page in a new browser tab.
+ */
+const _openDiscussionsPage = async () => {
+  await createActiveTab(getFeedbackDestinationUrls().discussions)
+}
+
+/**
  * Opens the API credential profiles section, preferring in-page navigation when already on options.html.
  */
 const _openApiCredentialProfilesPage = () => {
@@ -553,6 +575,21 @@ export const openSidePanelPage = withPopupClose(_openSidePanel)
  * popup to keep focus on the destination UI.
  */
 export const openAboutPage = withPopupClose(_openAboutPage)
+
+/**
+ * Open the bug-report issue template and close the popup afterward when needed.
+ */
+export const openBugReportPage = withPopupClose(_openBugReportPage)
+
+/**
+ * Open the feature-request issue template and close the popup afterward when needed.
+ */
+export const openFeatureRequestPage = withPopupClose(_openFeatureRequestPage)
+
+/**
+ * Open the GitHub Discussions page and close the popup afterward when needed.
+ */
+export const openDiscussionsPage = withPopupClose(_openDiscussionsPage)
 
 /**
  * Open the API credential profiles page and close the popup afterward when applicable.

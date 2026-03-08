@@ -1,9 +1,13 @@
+import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import HeaderSection from "~/entrypoints/popup/components/HeaderSection"
 import { isExtensionSidePanel } from "~/utils/browser"
 import {
   openApiCredentialProfilesPage,
+  openBugReportPage,
+  openDiscussionsPage,
+  openFeatureRequestPage,
   openFullAccountManagerPage,
   openFullBookmarkManagerPage,
 } from "~/utils/navigation"
@@ -30,6 +34,9 @@ vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
 
 vi.mock("~/utils/navigation", () => ({
   openApiCredentialProfilesPage: vi.fn(),
+  openBugReportPage: vi.fn(),
+  openDiscussionsPage: vi.fn(),
+  openFeatureRequestPage: vi.fn(),
   openFullAccountManagerPage: vi.fn(),
   openFullBookmarkManagerPage: vi.fn(),
   openSettingsPage: vi.fn(),
@@ -40,6 +47,9 @@ const mockedIsExtensionSidePanel = vi.mocked(isExtensionSidePanel)
 const mockedOpenApiCredentialProfilesPage = vi.mocked(
   openApiCredentialProfilesPage,
 )
+const mockedOpenBugReportPage = vi.mocked(openBugReportPage)
+const mockedOpenDiscussionsPage = vi.mocked(openDiscussionsPage)
+const mockedOpenFeatureRequestPage = vi.mocked(openFeatureRequestPage)
 const mockedOpenFullAccountManagerPage = vi.mocked(openFullAccountManagerPage)
 const mockedOpenFullBookmarkManagerPage = vi.mocked(openFullBookmarkManagerPage)
 
@@ -98,5 +108,40 @@ describe("popup HeaderSection", () => {
     )
 
     expect(mockedOpenApiCredentialProfilesPage).toHaveBeenCalledTimes(1)
+  })
+
+  it("opens feedback actions from the header menu", async () => {
+    const user = userEvent.setup()
+
+    render(<HeaderSection />)
+
+    await user.click(
+      await screen.findByRole("button", { name: "ui:feedback.trigger" }),
+    )
+    await user.click(
+      await screen.findByRole("menuitem", { name: "ui:feedback.bugReport" }),
+    )
+
+    expect(mockedOpenBugReportPage).toHaveBeenCalledTimes(1)
+
+    await user.click(
+      await screen.findByRole("button", { name: "ui:feedback.trigger" }),
+    )
+    await user.click(
+      await screen.findByRole("menuitem", {
+        name: "ui:feedback.featureRequest",
+      }),
+    )
+
+    expect(mockedOpenFeatureRequestPage).toHaveBeenCalledTimes(1)
+
+    await user.click(
+      await screen.findByRole("button", { name: "ui:feedback.trigger" }),
+    )
+    await user.click(
+      await screen.findByRole("menuitem", { name: "ui:feedback.discussion" }),
+    )
+
+    expect(mockedOpenDiscussionsPage).toHaveBeenCalledTimes(1)
   })
 })

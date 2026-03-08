@@ -34,6 +34,13 @@
     "expandSidebar": "展开侧边栏",
     "sidebarCollapsedHint": "侧边栏已折叠，仅显示图标"
   },
+  "feedback": {
+    "trigger": "反馈",
+    "triggerTooltip": "打开反馈快捷入口",
+    "bugReport": "反馈问题",
+    "featureRequest": "提出功能建议",
+    "discussion": "参与讨论"
+  },
   "dialog": {
     "delete": {
       "title": "删除账号",

@@ -35,6 +35,21 @@
       "button": "打开商店"
     }
   },
+  "feedbackSection": {
+    "title": "反馈与支持",
+    "bugReport": {
+      "description": "使用问题反馈模板提交异常行为、报错或与预期不符的结果。",
+      "button": "打开问题反馈"
+    },
+    "featureRequest": {
+      "description": "通过功能建议模板分享你的改进想法或使用场景需求。",
+      "button": "打开功能建议"
+    },
+    "discussion": {
+      "description": "前往 GitHub Discussions 提问、交流配置经验，或发起更广泛的社区讨论。",
+      "button": "打开讨论区"
+    }
+  },
   "techStack": {
     "title": "技术栈",
     "wxt": "浏览器扩展开发框架",

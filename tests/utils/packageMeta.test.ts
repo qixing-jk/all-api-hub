@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 
+import { getFeedbackDestinationUrls } from "~/utils/navigation/feedbackLinks"
 import {
   getDocsBaseUrl,
   getHomepage,
@@ -48,6 +49,19 @@ describe("packageMeta", () => {
     it("strips version prefixes", () => {
       const version = getPkgVersion("react")
       expect(version).not.toMatch(/^[~^><= ]/)
+    })
+  })
+
+  describe("getFeedbackDestinationUrls", () => {
+    it("builds the repository feedback destinations from the repository url", () => {
+      expect(getFeedbackDestinationUrls()).toEqual({
+        repository: "https://github.com/qixing-jk/all-api-hub",
+        bugReport:
+          "https://github.com/qixing-jk/all-api-hub/issues/new?template=bug_report.yml",
+        featureRequest:
+          "https://github.com/qixing-jk/all-api-hub/issues/new?template=feature_request.yml",
+        discussions: "https://github.com/qixing-jk/all-api-hub/discussions",
+      })
     })
   })
 })

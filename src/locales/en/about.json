@@ -35,6 +35,21 @@
       "button": "Open store"
     }
   },
+  "feedbackSection": {
+    "title": "Feedback & Support",
+    "bugReport": {
+      "description": "Report broken behavior, errors, or unexpected results with the bug-report template.",
+      "button": "Open bug report"
+    },
+    "featureRequest": {
+      "description": "Share an improvement idea or workflow request through the feature-request template.",
+      "button": "Open feature request"
+    },
+    "discussion": {
+      "description": "Ask questions, compare setups, or start a broader community discussion on GitHub Discussions.",
+      "button": "Open discussions"
+    }
+  },
   "techStack": {
     "title": "Tech Stack",
     "wxt": "Browser extension development framework",
