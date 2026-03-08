@@ -1,4 +1,4 @@
-```yaml
+---
 home: true
 title: ホーム
 heroImage: https://github.com/qixing-jk/all-api-hub/blob/main/src/assets/icon.png?raw=true
@@ -66,4 +66,3 @@ All API Hubはブラウザ拡張機能として、これらのサイトのアカ
 - Super-API（クローズドソース）
 - RIX_API（クローズドソース、基本機能サポート）
 - VoAPI（クローズドソース、旧バージョンサポート）
-```

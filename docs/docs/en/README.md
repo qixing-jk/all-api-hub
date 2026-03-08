@@ -1,4 +1,4 @@
-```yaml
+---
 home: true
 title: Home
 heroImage: https://github.com/qixing-jk/all-api-hub/blob/main/src/assets/icon.png?raw=true
@@ -66,4 +66,3 @@ All API Hub, as a browser extension, can automatically identify accounts on thes
 - Super-API (Closed Source)
 - RIX_API (Closed Source, basic functionality supported)
 - VoAPI (Closed Source, older versions supported)
-```
