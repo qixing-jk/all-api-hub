@@ -3,7 +3,7 @@ home: true
 title: Home
 heroImage: https://github.com/qixing-jk/all-api-hub/blob/main/src/assets/icon.png?raw=true
 heroText: All API Hub - AI Aggregation Relay Manager
-tagline: "Open-source browser extension to uniformly manage third-party AI aggregation relays and self-built New APIs: automatically identify accounts, view balances, synchronize models, manage keys, and support cross-platform and cloud backup."
+tagline: "Open-source browser extension to uniformly manage third-party AI aggregation relays and self-built New APIs: automatically identify accounts, view balances, sync models, manage keys, and support cross-platform and cloud backup."
 actions:
   - text: Get Started
     link: /get-started.html # Suggest modifying to your actual documentation path, e.g., /guide/
@@ -23,7 +23,7 @@ actions:
 
 features:
   - title: Intelligent Site Management
-    details: Automatically identify AI aggregation relay sites and create access tokens, intelligently obtain site names and recharge ratios, supporting duplicate detection and manual addition.
+    details: Automatically identify AI aggregation relay sites and create access tokens, intelligently obtain site names and top-up ratios, supporting duplicate detection and manual addition.
   - title: Multi-Account System
     details: Supports adding multiple accounts per site, account grouping and quick switching, real-time balance viewing and detailed usage logs.
   - title: Token and Key Management
@@ -52,9 +52,9 @@ footer: AGPL-3.0 Licensed | Copyright 2025-present All API Hub
 
 ## Introduction
 
-The AI ecosystem now has an increasing number of aggregation relays and self-built panels based on the New API series. Managing the balances, model lists, and API keys of various sites simultaneously is often scattered and time-consuming.
+The AI ecosystem now has an increasing number of aggregation relay stations and self-built panels based on the New API series. Managing the balances, model lists, and API keys of various sites simultaneously is often scattered and time-consuming.
 
-All API Hub, as a browser extension, can automatically identify accounts on these sites and provide one-click viewing of balances, management of models and keys, and automatic sign-in. It also offers tools like model synchronization and channel management for self-built New APIs. Currently, it supports accounts from aggregation relays based on the following projects:
+All API Hub, as a browser extension, can automatically identify accounts on these sites and provide one-click access to view balances, manage models, keys, and perform automatic sign-ins. It also offers tools like model synchronization and channel management for self-built New APIs. Currently, it supports accounts from relay stations based on the following projects:
 
 - [one-api](https://github.com/songquanpeng/one-api)
 - [new-api](https://github.com/QuantumNous/new-api)
@@ -62,6 +62,7 @@ All API Hub, as a browser extension, can automatically identify accounts on thes
 - [one-hub](https://github.com/MartialBE/one-hub)
 - [done-hub](https://github.com/deanxv/done-hub)
 - [Sub2API](https://github.com/Wei-Shaw/sub2api)
+- [AnyRouter](https://anyrouter.top)
 - Neo-API (Closed Source)
 - Super-API (Closed Source)
 - RIX_API (Closed Source, basic functionality supported)
