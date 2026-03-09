@@ -15,6 +15,7 @@ import {
   SortingCriteriaType,
   type SortingPriorityConfig,
 } from "~/types/sorting"
+import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
 describe("createDynamicSortComparator", () => {
   // Helper to create a minimal DisplaySiteData fixture
@@ -145,35 +146,16 @@ describe("createDynamicSortComparator", () => {
   // Helper to create a SiteAccount for detectedAccount parameter
   const createSiteAccount = (
     overrides: Partial<SiteAccount> = {},
-  ): SiteAccount => ({
-    id: "detected-account",
-    site_name: "Detected Site",
-    site_url: "https://detected.com",
-    health: { status: SiteHealthStatus.Healthy },
-    site_type: "test-site",
-    exchange_rate: 7.0,
-    account_info: {
-      id: 1,
-      access_token: "test-token",
-      username: "test-user",
-      quota: 1000,
-      today_prompt_tokens: 0,
-      today_completion_tokens: 0,
-      today_quota_consumption: 0,
-      today_requests_count: 0,
-      today_income: 0,
-    },
-    last_sync_time: Date.now(),
-    updated_at: Date.now(),
-    created_at: Date.now(),
-    notes: "",
-    tagIds: [],
-    disabled: false,
-    excludeFromTotalBalance: false,
-    authType: AuthTypeEnum.AccessToken,
-    checkIn: { enableDetection: false },
-    ...overrides,
-  })
+  ): SiteAccount =>
+    buildSiteAccount({
+      id: "detected-account",
+      site_name: "Detected Site",
+      site_url: "https://detected.com",
+      site_type: "test-site",
+      exchange_rate: 7.0,
+      checkIn: { enableDetection: false },
+      ...overrides,
+    })
 
   describe("PINNED criterion", () => {
     it("should pin accounts that are in the pinnedAccountIds list", () => {

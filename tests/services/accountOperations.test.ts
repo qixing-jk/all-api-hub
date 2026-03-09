@@ -231,6 +231,9 @@ describe("accountOperations", () => {
       expect(isValidExchangeRate("0")).toBe(false)
       expect(isValidExchangeRate("-1")).toBe(false)
       expect(isValidExchangeRate("abc")).toBe(false)
+      expect(isValidExchangeRate("7foo")).toBe(false)
+      expect(isValidExchangeRate("Infinity")).toBe(false)
+      expect(isValidExchangeRate("")).toBe(false)
     })
   })
 

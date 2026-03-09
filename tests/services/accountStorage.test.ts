@@ -285,6 +285,38 @@ describe("accountStorage core behaviors", () => {
     expect(await accountStorage.getPinnedList()).toEqual(["valid-1", "valid-2"])
   })
 
+  it("setPinnedList should fail closed when reading storage fails", async () => {
+    const accounts = [createAccount({ id: "valid-1" })]
+    seedStorage(accounts, ["valid-1"])
+
+    const originalConfig = JSON.parse(
+      JSON.stringify(storageData.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS)),
+    ) as AccountStorageConfig
+
+    storageHooks.beforeGet = async (key) => {
+      if (key === ACCOUNT_STORAGE_KEYS.ACCOUNTS) {
+        throw new Error("storage get failed")
+      }
+    }
+
+    const success = await accountStorage.setPinnedList(["missing"])
+
+    expect(success).toBe(false)
+    expect(storageData.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS)).toEqual(
+      originalConfig,
+    )
+  })
+
+  it("getPinnedList should keep a safe default when reading storage fails", async () => {
+    storageHooks.beforeGet = async (key) => {
+      if (key === ACCOUNT_STORAGE_KEYS.ACCOUNTS) {
+        throw new Error("storage get failed")
+      }
+    }
+
+    expect(await accountStorage.getPinnedList()).toEqual([])
+  })
+
   it("setOrderedList should dedupe and drop invalid ids then persist", async () => {
     const accounts = [
       createAccount({ id: "a-1" }),

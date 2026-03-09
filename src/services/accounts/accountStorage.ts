@@ -125,7 +125,7 @@ class AccountStorageService {
       // `tagIds` and a consistent global tag store.
       await ensureAccountTagsStorageMigrated(this.storage)
 
-      const config = await this.getStorageConfig()
+      const config = await this.getStorageConfigOrDefault()
       const { accounts, migratedCount } = migrateAccountsConfig(config.accounts)
       const normalizedAccounts = accounts.map(normalizeSiteAccount)
 
@@ -403,7 +403,7 @@ class AccountStorageService {
    */
   async getPinnedList(): Promise<string[]> {
     try {
-      const config = await this.getStorageConfig()
+      const config = await this.getStorageConfigOrDefault()
       return config.pinnedAccountIds
     } catch (error) {
       logger.error("获取置顶账号列表失败", error)
@@ -416,7 +416,7 @@ class AccountStorageService {
    */
   async getOrderedList(): Promise<string[]> {
     try {
-      const config = await this.getStorageConfig()
+      const config = await this.getStorageConfigOrDefault()
       return config.orderedAccountIds
     } catch (error) {
       logger.error("获取自定义排序列表失败", error)
@@ -1124,7 +1124,7 @@ class AccountStorageService {
     // see `tagIds` and a stable global tag store.
     await ensureAccountTagsStorageMigrated(this.storage)
 
-    const config = await this.getStorageConfig()
+    const config = await this.getStorageConfigOrDefault()
     const { accounts } = migrateAccountsConfig(config.accounts)
     return {
       ...config,
@@ -1217,14 +1217,24 @@ class AccountStorageService {
   }
 
   /**
-   * Read the persisted storage config (with DEFAULT fallback on first run).
+   * Read the persisted storage config.
+   *
+   * Throws when the underlying storage read fails so mutation paths fail
+   * closed instead of overwriting the user's data with an empty baseline.
    */
   private async getStorageConfig(): Promise<AccountStorageConfig> {
+    const config = (await this.storage.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS)) as
+      | AccountStorageConfig
+      | undefined
+    return normalizeAccountStorageConfigForRead(config)
+  }
+
+  /**
+   * Read the persisted storage config with a safe default for read-only flows.
+   */
+  private async getStorageConfigOrDefault(): Promise<AccountStorageConfig> {
     try {
-      const config = (await this.storage.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS)) as
-        | AccountStorageConfig
-        | undefined
-      return normalizeAccountStorageConfigForRead(config)
+      return await this.getStorageConfig()
     } catch (error) {
       logger.error("获取存储配置失败", error)
       return createDefaultAccountStorageConfig()
@@ -1489,7 +1499,7 @@ class AccountStorageService {
    */
   async getAllBookmarks(): Promise<SiteBookmark[]> {
     try {
-      const config = await this.getStorageConfig()
+      const config = await this.getStorageConfigOrDefault()
       return config.bookmarks || []
     } catch (error) {
       logger.error("获取书签信息失败", error)

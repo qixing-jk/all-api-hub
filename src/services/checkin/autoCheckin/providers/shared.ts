@@ -6,6 +6,7 @@
  */
 
 import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/providers/types"
+import { AuthTypeEnum, SiteAccount } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 
 export const AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS = {
@@ -107,4 +108,12 @@ export function resolveProviderErrorResult(params: {
       ? undefined
       : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.unknownError,
   }
+}
+
+/**
+ * Determine the effective authentication type for an account
+ * @param account Partial account object containing at least `authType`.
+ */
+export function getEffectiveAuthType(account: Pick<SiteAccount, "authType">) {
+  return account.authType ?? AuthTypeEnum.AccessToken
 }

@@ -75,6 +75,23 @@ describe("newApiProvider", () => {
       }
       expect(newApiProvider.canCheckIn(account)).toBe(false)
     })
+
+    it("treats missing authType as access-token auth", () => {
+      const account = {
+        ...mockAccount,
+        authType: undefined as any,
+      }
+      expect(newApiProvider.canCheckIn(account)).toBe(true)
+    })
+
+    it("requires an access token when authType is missing", () => {
+      const account = {
+        ...mockAccount,
+        authType: undefined as any,
+        account_info: { ...mockAccount.account_info, access_token: "" },
+      }
+      expect(newApiProvider.canCheckIn(account)).toBe(false)
+    })
   })
 
   describe("checkIn", () => {
@@ -124,6 +141,31 @@ describe("newApiProvider", () => {
           turnstileTimeoutMs: 12000,
           turnstilePreTrigger: { kind: "checkinButton" },
         }),
+      )
+    })
+
+    it("defaults missing authType to AccessToken for direct check-in requests", async () => {
+      const { fetchApi } = await import("~/services/apiService/common/utils")
+
+      vi.mocked(fetchApi).mockResolvedValueOnce({
+        success: true,
+        message: "签到成功",
+        data: { checkin_date: "2026-01-01", quota_awarded: 1 },
+      })
+
+      await newApiProvider.checkIn({
+        ...mockAccount,
+        authType: undefined as any,
+      })
+
+      expect(fetchApi).toHaveBeenCalledWith(
+        expect.objectContaining({
+          auth: expect.objectContaining({
+            authType: AuthTypeEnum.AccessToken,
+          }),
+        }),
+        expect.any(Object),
+        false,
       )
     })
 

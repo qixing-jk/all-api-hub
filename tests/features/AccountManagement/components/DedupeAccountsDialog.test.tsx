@@ -2,8 +2,62 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import DedupeAccountsDialog from "~/features/AccountManagement/components/DedupeAccountsDialog"
-import { AuthTypeEnum, SiteHealthStatus, type SiteAccount } from "~/types"
+import { buildSiteAccount } from "~~/tests/test-utils/factories"
 import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
+
+const accounts = [
+  buildSiteAccount({
+    id: "acc-keep",
+    site_name: "Example",
+    site_url: "https://api.example.com/panel",
+    site_type: "new-api",
+    exchange_rate: 7.2,
+    notes: "keep notes",
+    updated_at: 200,
+    created_at: 200,
+    excludeFromTotalBalance: true,
+    checkIn: {
+      enableDetection: true,
+      autoCheckInEnabled: true,
+      customCheckIn: { url: "https://checkin.example.com" },
+    },
+    account_info: {
+      id: 1,
+      access_token: "token",
+      username: "keep",
+      quota: 0,
+      today_prompt_tokens: 0,
+      today_completion_tokens: 0,
+      today_quota_consumption: 0,
+      today_requests_count: 0,
+      today_income: 0,
+    },
+    last_sync_time: 0,
+  }),
+  buildSiteAccount({
+    id: "acc-del",
+    site_name: "Example",
+    site_url: "https://api.example.com/v1",
+    site_type: "new-api",
+    exchange_rate: 7.2,
+    notes: "del notes",
+    updated_at: 100,
+    created_at: 100,
+    checkIn: { enableDetection: false, autoCheckInEnabled: false },
+    account_info: {
+      id: 1,
+      access_token: "token",
+      username: "del",
+      quota: 0,
+      today_prompt_tokens: 0,
+      today_completion_tokens: 0,
+      today_quota_consumption: 0,
+      today_requests_count: 0,
+      today_income: 0,
+    },
+    last_sync_time: 0,
+  }),
+]
 
 const {
   deleteAccountsMock,
@@ -38,68 +92,7 @@ vi.mock("~/services/checkin/autoCheckin/storage", () => ({
 
 vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
   useAccountDataContext: () => ({
-    accounts: [
-      {
-        id: "acc-keep",
-        site_name: "Example",
-        site_url: "https://api.example.com/panel",
-        site_type: "new-api",
-        authType: AuthTypeEnum.AccessToken,
-        exchange_rate: 7.2,
-        health: { status: SiteHealthStatus.Healthy },
-        notes: "keep notes",
-        disabled: false,
-        excludeFromTotalBalance: true,
-        account_info: {
-          id: 1,
-          access_token: "token",
-          username: "keep",
-          quota: 0,
-          today_prompt_tokens: 0,
-          today_completion_tokens: 0,
-          today_quota_consumption: 0,
-          today_requests_count: 0,
-          today_income: 0,
-        },
-        last_sync_time: 0,
-        updated_at: 200,
-        created_at: 200,
-        tagIds: [],
-        checkIn: {
-          enableDetection: true,
-          autoCheckInEnabled: true,
-          customCheckIn: { url: "https://checkin.example.com" },
-        },
-      } as SiteAccount,
-      {
-        id: "acc-del",
-        site_name: "Example",
-        site_url: "https://api.example.com/v1",
-        site_type: "new-api",
-        authType: AuthTypeEnum.AccessToken,
-        exchange_rate: 7.2,
-        health: { status: SiteHealthStatus.Healthy },
-        notes: "del notes",
-        disabled: false,
-        excludeFromTotalBalance: false,
-        account_info: {
-          id: 1,
-          access_token: "token",
-          username: "del",
-          quota: 0,
-          today_prompt_tokens: 0,
-          today_completion_tokens: 0,
-          today_quota_consumption: 0,
-          today_requests_count: 0,
-          today_income: 0,
-        },
-        last_sync_time: 0,
-        updated_at: 100,
-        created_at: 100,
-        tagIds: [],
-        checkIn: { enableDetection: false, autoCheckInEnabled: false },
-      } as SiteAccount,
-    ],
+    accounts,
     pinnedAccountIds: [],
     orderedAccountIds: ["acc-keep", "acc-del"],
     loadAccountData: loadAccountDataMock,

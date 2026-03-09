@@ -13,6 +13,7 @@ import type { AutoCheckinProvider } from "~/services/checkin/autoCheckin/provide
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
   AUTO_CHECKIN_USER_CHECKIN_ENDPOINT,
+  getEffectiveAuthType,
   isAlreadyCheckedMessage,
   normalizeCheckinMessage,
   resolveProviderErrorResult,
@@ -137,7 +138,7 @@ async function fetchCheckedInTodayStatus(
       {
         baseUrl: account.site_url,
         auth: {
-          authType: account.authType ?? AuthTypeEnum.AccessToken,
+          authType: getEffectiveAuthType(account),
           userId: account.account_info.id,
           accessToken: account.account_info.access_token,
         },
@@ -178,7 +179,7 @@ function resolveTurnstilePreTrigger(account: SiteAccount): TurnstilePreTrigger {
  * Fetch options used for the Turnstile-assisted POST /api/user/checkin replay.
  */
 function getTurnstileAssistedFetchOptions(account: SiteAccount): RequestInit {
-  const authType = account.authType
+  const authType = getEffectiveAuthType(account)
 
   const userIdHeaders = buildCompatUserIdHeaders(account.account_info?.id)
 
@@ -217,7 +218,7 @@ function buildTurnstileAssistedParams(
     fetchOptions: getTurnstileAssistedFetchOptions(account),
     responseType: "json",
     accountId: account.id,
-    authType: account.authType,
+    authType: getEffectiveAuthType(account),
     cookieAuthSessionCookie: account.cookieAuth?.sessionCookie,
     turnstileTimeoutMs: TURNSTILE_ASSIST_TIMEOUT_MS,
     turnstilePreTrigger: resolveTurnstilePreTrigger(account),
@@ -394,13 +395,13 @@ async function resolveTurnstileAssistedCheckinResult(params: {
 async function performCheckin(
   account: SiteAccount,
 ): Promise<NewApiCheckinResponse> {
-  const { site_url, account_info, authType } = account
+  const { site_url, account_info } = account
 
   return await fetchApi<CheckinRecord>(
     {
       baseUrl: site_url,
       auth: {
-        authType: authType ?? AuthTypeEnum.AccessToken,
+        authType: getEffectiveAuthType(account),
         userId: account_info.id,
         accessToken: account_info.access_token,
       },
@@ -468,7 +469,7 @@ function canCheckIn(account: SiteAccount): boolean {
     return false
   }
 
-  const authType = account.authType
+  const authType = getEffectiveAuthType(account)
 
   if (authType === AuthTypeEnum.AccessToken) {
     return !!account.account_info?.access_token

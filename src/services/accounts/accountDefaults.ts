@@ -300,16 +300,17 @@ export function applySiteAccountUpdates(params: {
     ...params.updates,
     updated_at: params.now,
   } as DeepPartial<SiteAccount>)
+  const result = normalizeSiteAccount(merged)
 
   if (
     params.updates.health &&
     Object.prototype.hasOwnProperty.call(params.updates.health, "code") &&
     params.updates.health.code === undefined &&
-    merged.health &&
-    Object.prototype.hasOwnProperty.call(merged.health, "code")
+    result.health &&
+    Object.prototype.hasOwnProperty.call(result.health, "code")
   ) {
-    delete (merged.health as { code?: unknown }).code
+    delete (result.health as { code?: unknown }).code
   }
 
-  return normalizeSiteAccount(merged)
+  return result
 }

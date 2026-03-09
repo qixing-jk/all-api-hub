@@ -338,8 +338,25 @@ function normalizeSub2ApiAuthInput(
  *
  * Returns {@link UI_CONSTANTS.EXCHANGE_RATE.DEFAULT} when the input is empty or invalid.
  */
+function parsePositiveExchangeRate(input: string): number | undefined {
+  const trimmed = input.trim()
+  if (!trimmed) return undefined
+
+  const value = Number(trimmed)
+  if (!Number.isFinite(value) || value <= 0) {
+    return undefined
+  }
+
+  return value
+}
+
+/**
+ * Parses the user-provided exchange rate (CNY per USD) with a safe fallback.
+ *
+ * Returns {@link UI_CONSTANTS.EXCHANGE_RATE.DEFAULT} when the input is empty or invalid.
+ */
 function resolveExchangeRate(input: string): number {
-  return parseFloat(input) || UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
+  return parsePositiveExchangeRate(input) ?? UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
 }
 
 /**
@@ -893,8 +910,7 @@ export async function getSiteName(
  * A valid exchange rate is a number greater than 0.
  */
 export function isValidExchangeRate(rate: string): boolean {
-  const num = parseFloat(rate)
-  return !isNaN(num) && num > 0
+  return parsePositiveExchangeRate(rate) !== undefined
 }
 
 /**

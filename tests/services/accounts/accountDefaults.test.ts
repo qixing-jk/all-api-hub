@@ -179,6 +179,9 @@ describe("accountDefaults", () => {
       })
 
       expect(updated.health.code).toBeUndefined()
+      expect(Object.prototype.hasOwnProperty.call(updated.health, "code")).toBe(
+        false,
+      )
       expect(JSON.stringify(updated.health)).not.toContain("code")
     })
   })

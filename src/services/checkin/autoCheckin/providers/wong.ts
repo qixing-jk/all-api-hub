@@ -17,6 +17,7 @@ import type { AutoCheckinProvider } from "~/services/checkin/autoCheckin/provide
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
   AUTO_CHECKIN_USER_CHECKIN_ENDPOINT,
+  getEffectiveAuthType,
   isAlreadyCheckedMessage,
   normalizeCheckinMessage,
   resolveProviderErrorResult,
@@ -40,13 +41,13 @@ const ENDPOINT = AUTO_CHECKIN_USER_CHECKIN_ENDPOINT
 async function performCheckin(
   account: SiteAccount,
 ): Promise<WongCheckinApiResponse> {
-  const { site_url, account_info, authType } = account
+  const { site_url, account_info } = account
 
   return await fetchApi<WongCheckinStatusData | undefined>(
     {
       baseUrl: site_url,
       auth: {
-        authType: authType ?? AuthTypeEnum.AccessToken,
+        authType: getEffectiveAuthType(account),
         userId: account_info.id,
         accessToken: account_info.access_token,
       },
@@ -131,7 +132,7 @@ function canCheckIn(account: SiteAccount): boolean {
     return false
   }
 
-  const authType = account.authType
+  const authType = getEffectiveAuthType(account)
 
   if (authType === AuthTypeEnum.AccessToken) {
     return !!account.account_info?.access_token

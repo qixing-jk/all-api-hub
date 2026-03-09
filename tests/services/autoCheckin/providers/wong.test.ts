@@ -59,6 +59,23 @@ describe("wongGongyiProvider", () => {
       }
       expect(wongGongyiProvider.canCheckIn(account)).toBe(false)
     })
+
+    it("treats missing authType as access-token auth", () => {
+      const account = {
+        ...mockAccount,
+        authType: undefined as any,
+      }
+      expect(wongGongyiProvider.canCheckIn(account)).toBe(true)
+    })
+
+    it("requires an access token when authType is missing", () => {
+      const account = {
+        ...mockAccount,
+        authType: undefined as any,
+        account_info: { ...mockAccount.account_info, access_token: "" },
+      }
+      expect(wongGongyiProvider.canCheckIn(account)).toBe(false)
+    })
   })
 
   describe("checkIn", () => {
