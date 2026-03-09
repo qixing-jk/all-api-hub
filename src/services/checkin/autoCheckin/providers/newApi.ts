@@ -178,7 +178,7 @@ function resolveTurnstilePreTrigger(account: SiteAccount): TurnstilePreTrigger {
  * Fetch options used for the Turnstile-assisted POST /api/user/checkin replay.
  */
 function getTurnstileAssistedFetchOptions(account: SiteAccount): RequestInit {
-  const authType = account.authType || AuthTypeEnum.AccessToken
+  const authType = account.authType
 
   const userIdHeaders = buildCompatUserIdHeaders(account.account_info?.id)
 
@@ -468,7 +468,7 @@ function canCheckIn(account: SiteAccount): boolean {
     return false
   }
 
-  const authType = account.authType || AuthTypeEnum.AccessToken
+  const authType = account.authType
 
   if (authType === AuthTypeEnum.AccessToken) {
     return !!account.account_info?.access_token

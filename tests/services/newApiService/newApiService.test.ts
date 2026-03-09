@@ -264,7 +264,10 @@ function createMockSiteAccount(overrides?: Partial<SiteAccount>): SiteAccount {
     health: { status: SiteHealthStatus.Healthy },
     site_type: "openai",
     exchange_rate: 7.0,
+    notes: "",
     tagIds: [],
+    disabled: false,
+    excludeFromTotalBalance: false,
     account_info: {
       id: 1,
       access_token: "token-123",

@@ -82,7 +82,14 @@ export interface SiteAccount {
   last_sync_time: number // 最后同步时间 (timestamp)
   updated_at: number // 更改时间 (timestamp)
   created_at: number // 创建时间 (timestamp)
-  notes?: string // 备注
+  /**
+   * Free-form notes for this account.
+   *
+   * Canonical persisted shape: always present as a string; default: "".
+   * Older backups/storage may omit it, but read normalization guarantees the
+   * runtime shape is stable.
+   */
+  notes: string // 备注
   /**
    * Global tag ids associated with this account.
    *
@@ -104,9 +111,9 @@ export interface SiteAccount {
    * - Must be excluded from aggregate stats computations
    * - Must have all account actions blocked except re-enabling
    *
-   * Backward compatible: missing/undefined is treated as enabled (false).
+   * Canonical persisted shape: always present as a boolean; default: false.
    */
-  disabled?: boolean
+  disabled: boolean
   /**
    * Whether this stored account is excluded from the "Total Balance" aggregate.
    *
@@ -114,9 +121,9 @@ export interface SiteAccount {
    * check-in, and other background behaviors; they are only skipped when computing
    * the Total Balance display value.
    *
-   * Backward compatible: missing/undefined is treated as included (false).
+   * Canonical persisted shape: always present as a boolean; default: false.
    */
-  excludeFromTotalBalance?: boolean
+  excludeFromTotalBalance: boolean
   /**
    * Legacy flag indicating whether the account can be checked in today.
    * @deprecated Use `checkIn.siteStatus.isCheckedInToday` instead.
@@ -285,7 +292,9 @@ export interface SiteBookmark {
   updated_at: number
 }
 
-// 存储配置
+/**
+ * Account and bookmark storage schema persisted in the extension's storage.
+ */
 export interface AccountStorageConfig {
   accounts: SiteAccount[]
   /**
@@ -301,7 +310,7 @@ export interface AccountStorageConfig {
   /**
    * Manual ordering of entries (full list of ids), newest change first.
    */
-  orderedAccountIds?: string[]
+  orderedAccountIds: string[]
   last_updated: number
 }
 

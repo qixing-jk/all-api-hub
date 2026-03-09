@@ -200,6 +200,8 @@ export function buildSiteAccount(
     exchange_rate: 7,
     notes: "",
     tagIds: [],
+    disabled: false,
+    excludeFromTotalBalance: false,
     checkIn: { enableDetection: true },
     health: { status: SiteHealthStatus.Healthy },
     authType: AuthTypeEnum.AccessToken,

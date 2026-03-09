@@ -48,6 +48,7 @@ vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
         exchange_rate: 7.2,
         health: { status: SiteHealthStatus.Healthy },
         notes: "keep notes",
+        disabled: false,
         excludeFromTotalBalance: true,
         account_info: {
           id: 1,
@@ -79,6 +80,8 @@ vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
         exchange_rate: 7.2,
         health: { status: SiteHealthStatus.Healthy },
         notes: "del notes",
+        disabled: false,
+        excludeFromTotalBalance: false,
         account_info: {
           id: 1,
           access_token: "token",

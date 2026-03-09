@@ -63,7 +63,10 @@ const buildSiteAccount = (
   last_sync_time: 0,
   updated_at: 0,
   created_at: 1577836800,
+  notes: "",
   tagIds: [],
+  disabled: false,
+  excludeFromTotalBalance: false,
   authType: AuthTypeEnum.AccessToken,
   checkIn: {
     enableDetection: false,

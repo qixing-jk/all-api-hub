@@ -17,6 +17,8 @@ const mockAccount: SiteAccount = {
   exchange_rate: 7.0,
   notes: "",
   tagIds: [],
+  disabled: false,
+  excludeFromTotalBalance: false,
   checkIn: { enableDetection: true },
   health: { status: SiteHealthStatus.Healthy },
   account_info: {

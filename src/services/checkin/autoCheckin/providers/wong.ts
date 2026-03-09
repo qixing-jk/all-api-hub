@@ -131,7 +131,7 @@ function canCheckIn(account: SiteAccount): boolean {
     return false
   }
 
-  const authType = account.authType || AuthTypeEnum.AccessToken
+  const authType = account.authType
 
   if (authType === AuthTypeEnum.AccessToken) {
     return !!account.account_info?.access_token

@@ -11,7 +11,6 @@ import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import { maybeCaptureDailyBalanceSnapshot } from "~/services/history/dailyBalanceHistory/capture"
 import { ensureAccountTagsStorageMigrated } from "~/services/tags/migrations/accountTagsStorageMigration"
 import {
-  AuthTypeEnum,
   SiteHealthStatus,
   type AccountStats,
   type AccountStorageConfig,
@@ -30,6 +29,14 @@ import { t } from "~/utils/i18n/core"
 import { userPreferences } from "../preferences/userPreferences"
 import { getSiteType } from "../siteDetection/detectSiteType"
 import {
+  applySiteAccountUpdates,
+  createDefaultAccountStorageConfig,
+  createPersistedSiteAccount,
+  normalizeAccountStorageConfigForRead,
+  normalizeAccountStorageConfigForWrite,
+  normalizeSiteAccount,
+} from "./accountDefaults"
+import {
   migrateAccountConfig,
   migrateAccountsConfig,
   needsConfigMigration,
@@ -39,15 +46,6 @@ import {
 export { ACCOUNT_STORAGE_KEYS }
 
 const logger = createLogger("AccountStorage")
-
-// 默认配置
-const createDefaultAccountConfig = (): AccountStorageConfig => ({
-  accounts: [],
-  bookmarks: [],
-  pinnedAccountIds: [],
-  orderedAccountIds: [],
-  last_updated: Date.now(),
-})
 
 class AccountStorageService {
   private storage: Storage
@@ -59,19 +57,25 @@ class AccountStorageService {
   }
 
   /**
-   * Backward-compatible guard: treat missing/undefined as enabled.
+   * Disabled state guard.
+   *
+   * Note: legacy persisted records may omit `disabled`, but read normalization
+   * ensures runtime accounts always have stable boolean values.
    */
   private static isAccountDisabled(account: Pick<SiteAccount, "disabled">) {
-    return account.disabled === true
+    return account.disabled
   }
 
   /**
-   * Backward-compatible guard: treat missing/undefined as included in Total Balance.
+   * "Exclude from Total Balance" guard.
+   *
+   * Note: legacy persisted records may omit `excludeFromTotalBalance`, but read
+   * normalization ensures runtime accounts always have stable boolean values.
    */
   private static isAccountExcludedFromTotalBalance(
     account: Pick<SiteAccount, "excludeFromTotalBalance">,
   ) {
-    return account.excludeFromTotalBalance === true
+    return account.excludeFromTotalBalance
   }
 
   /**
@@ -92,35 +96,6 @@ class AccountStorageService {
     return JSON.parse(JSON.stringify(config)) as AccountStorageConfig
   }
 
-  private normalizeConfig(config: AccountStorageConfig): AccountStorageConfig {
-    return {
-      ...createDefaultAccountConfig(),
-      ...config,
-      accounts: config.accounts || [],
-      bookmarks: Array.isArray(config.bookmarks) ? config.bookmarks : [],
-      pinnedAccountIds: config.pinnedAccountIds || [],
-      orderedAccountIds: config.orderedAccountIds || [],
-      last_updated: Date.now(),
-    }
-  }
-
-  private coerceConfigForRead(
-    raw: AccountStorageConfig | undefined,
-  ): AccountStorageConfig {
-    return {
-      accounts: Array.isArray(raw?.accounts) ? raw.accounts : [],
-      bookmarks: Array.isArray(raw?.bookmarks) ? raw.bookmarks : [],
-      pinnedAccountIds: Array.isArray(raw?.pinnedAccountIds)
-        ? raw.pinnedAccountIds
-        : [],
-      orderedAccountIds: Array.isArray(raw?.orderedAccountIds)
-        ? raw.orderedAccountIds
-        : [],
-      last_updated:
-        typeof raw?.last_updated === "number" ? raw.last_updated : Date.now(),
-    }
-  }
-
   /**
    * Atomically mutate the stored config (read-modify-write) under an exclusive lock.
    * The mutation callback receives a cloned config and may mutate it in-place.
@@ -135,7 +110,7 @@ class AccountStorageService {
         return result
       }
 
-      const next = this.normalizeConfig(current)
+      const next = normalizeAccountStorageConfigForWrite(current)
       await this.storage.set(ACCOUNT_STORAGE_KEYS.ACCOUNTS, next)
       return result
     })
@@ -152,16 +127,17 @@ class AccountStorageService {
 
       const config = await this.getStorageConfig()
       const { accounts, migratedCount } = migrateAccountsConfig(config.accounts)
+      const normalizedAccounts = accounts.map(normalizeSiteAccount)
 
       if (migratedCount > 0) {
         // If any account schemas were upgraded, persist the normalized set immediately
         logger.info("Accounts migrated; persisting updated accounts", {
           migratedCount,
         })
-        await this.saveAccounts(accounts)
+        await this.saveAccounts(normalizedAccounts)
       }
 
-      return accounts
+      return normalizedAccounts
     } catch (error) {
       logger.error("获取账号信息失败", error)
       return []
@@ -291,16 +267,12 @@ class AccountStorageService {
       logger.info("开始添加新账号", { siteName: accountData.site_name })
       return await this.mutateStorageConfig((config) => {
         const now = Date.now()
-        const newAccount: SiteAccount = {
-          ...accountData,
-          disabled: accountData.disabled ?? false,
-          excludeFromTotalBalance: accountData.excludeFromTotalBalance ?? false,
+        const newAccount = createPersistedSiteAccount({
+          account: accountData,
           id: this.generateId(),
-          created_at: now,
-          updated_at: now,
-        }
+          now,
+        })
 
-        config.accounts = config.accounts || []
         config.accounts.push(newAccount)
         return { result: newAccount.id, changed: true }
       })
@@ -319,29 +291,18 @@ class AccountStorageService {
   ): Promise<boolean> {
     try {
       return await this.mutateStorageConfig((config) => {
-        const accounts = config.accounts || []
+        const accounts = config.accounts
         const index = accounts.findIndex((account) => account.id === id)
 
         if (index === -1) {
           throw new Error(t("messages:storage.accountNotFound", { id }))
         }
 
-        const merged = deepOverride<SiteAccount>(accounts[index], {
-          ...updates,
-          updated_at: Date.now(),
-        } as DeepPartial<SiteAccount>)
-
-        if (
-          updates.health &&
-          Object.prototype.hasOwnProperty.call(updates.health, "code") &&
-          updates.health.code === undefined &&
-          merged.health &&
-          Object.prototype.hasOwnProperty.call(merged.health, "code")
-        ) {
-          delete (merged.health as { code?: unknown }).code
-        }
-
-        accounts[index] = merged
+        accounts[index] = applySiteAccountUpdates({
+          account: accounts[index],
+          updates,
+          now: Date.now(),
+        })
         config.accounts = accounts
         return { result: true, changed: true }
       })
@@ -368,7 +329,7 @@ class AccountStorageService {
   async deleteAccount(id: string): Promise<boolean> {
     try {
       return await this.mutateStorageConfig((config) => {
-        const accounts = config.accounts || []
+        const accounts = config.accounts
         const filteredAccounts = accounts.filter((account) => account.id !== id)
 
         if (filteredAccounts.length === accounts.length) {
@@ -383,10 +344,10 @@ class AccountStorageService {
         }
 
         config.accounts = filteredAccounts
-        config.pinnedAccountIds = (config.pinnedAccountIds || []).filter(
+        config.pinnedAccountIds = config.pinnedAccountIds.filter(
           (pinnedId) => pinnedId !== id,
         )
-        config.orderedAccountIds = (config.orderedAccountIds || []).filter(
+        config.orderedAccountIds = config.orderedAccountIds.filter(
           (orderedId) => orderedId !== id,
         )
         return { result: true, changed: true }
@@ -412,7 +373,7 @@ class AccountStorageService {
 
     try {
       return await this.mutateStorageConfig((config) => {
-        const accounts = config.accounts || []
+        const accounts = config.accounts
         const filteredAccounts = accounts.filter(
           (account) => !idSet.has(account.id),
         )
@@ -423,10 +384,10 @@ class AccountStorageService {
         }
 
         config.accounts = filteredAccounts
-        config.pinnedAccountIds = (config.pinnedAccountIds || []).filter(
+        config.pinnedAccountIds = config.pinnedAccountIds.filter(
           (pinnedId) => !idSet.has(pinnedId),
         )
-        config.orderedAccountIds = (config.orderedAccountIds || []).filter(
+        config.orderedAccountIds = config.orderedAccountIds.filter(
           (orderedId) => !idSet.has(orderedId),
         )
         return { result: { deletedCount }, changed: true }
@@ -443,7 +404,7 @@ class AccountStorageService {
   async getPinnedList(): Promise<string[]> {
     try {
       const config = await this.getStorageConfig()
-      return config.pinnedAccountIds || []
+      return config.pinnedAccountIds
     } catch (error) {
       logger.error("获取置顶账号列表失败", error)
       return []
@@ -456,7 +417,7 @@ class AccountStorageService {
   async getOrderedList(): Promise<string[]> {
     try {
       const config = await this.getStorageConfig()
-      return config.orderedAccountIds || []
+      return config.orderedAccountIds
     } catch (error) {
       logger.error("获取自定义排序列表失败", error)
       return []
@@ -471,8 +432,7 @@ class AccountStorageService {
       return await this.mutateStorageConfig((config) => {
         const uniqueIds = Array.from(new Set(ids))
         const { entryIds } = AccountStorageService.buildEntryIdSets(config)
-        const validIds = uniqueIds.filter((id) => entryIds.has(id))
-        config.pinnedAccountIds = validIds
+        config.pinnedAccountIds = uniqueIds.filter((id) => entryIds.has(id))
         return { result: true, changed: true }
       })
     } catch (error) {
@@ -489,8 +449,7 @@ class AccountStorageService {
       return await this.mutateStorageConfig((config) => {
         const uniqueIds = Array.from(new Set(ids))
         const { entryIds } = AccountStorageService.buildEntryIdSets(config)
-        const validIds = uniqueIds.filter((id) => entryIds.has(id))
-        config.orderedAccountIds = validIds
+        config.orderedAccountIds = uniqueIds.filter((id) => entryIds.has(id))
         return { result: true, changed: true }
       })
     } catch (error) {
@@ -514,7 +473,7 @@ class AccountStorageService {
           input.entryType === "account" ? accountIds : bookmarkIds
 
         const merged = AccountStorageService.replaceIdListSubset({
-          existingIds: config.pinnedAccountIds || [],
+          existingIds: config.pinnedAccountIds,
           subsetIdSet,
           nextSubsetIds: Array.from(new Set(input.ids)),
         })
@@ -543,7 +502,7 @@ class AccountStorageService {
           input.entryType === "account" ? accountIds : bookmarkIds
 
         const merged = AccountStorageService.replaceIdListSubset({
-          existingIds: config.orderedAccountIds || [],
+          existingIds: config.orderedAccountIds,
           subsetIdSet,
           nextSubsetIds: Array.from(new Set(input.ids)),
         })
@@ -637,7 +596,7 @@ class AccountStorageService {
       const today = new Date()
       const todayDate = today.toISOString().split("T")[0]
       const detectedAt = today.getTime()
-      const currentCheckIn = account.checkIn ?? { enableDetection: false }
+      const currentCheckIn = account.checkIn
 
       return this.updateAccount(id, {
         checkIn: {
@@ -678,7 +637,7 @@ class AccountStorageService {
 
       const today = new Date()
       const todayDate = today.toISOString().split("T")[0]
-      const currentCheckIn = account.checkIn ?? { enableDetection: false }
+      const currentCheckIn = account.checkIn
 
       return this.updateAccount(id, {
         checkIn: {
@@ -703,7 +662,7 @@ class AccountStorageService {
     try {
       const today = new Date().toISOString().split("T")[0]
       const didReset = await this.mutateStorageConfig((config) => {
-        const accounts = config.accounts || []
+        const accounts = config.accounts
         let needsSave = false
 
         for (const account of accounts) {
@@ -778,11 +737,8 @@ class AccountStorageService {
       }
 
       // Refresh check-in support status together with account refresh.
-      const currentCheckIn = account.checkIn ?? { enableDetection: false }
-      let checkInForRefresh = {
-        ...currentCheckIn,
-        enableDetection: currentCheckIn.enableDetection ?? false,
-      }
+      const currentCheckIn = account.checkIn
+      let checkInForRefresh = { ...currentCheckIn }
 
       try {
         const support = await getApiService(
@@ -1081,58 +1037,61 @@ class AccountStorageService {
   convertToDisplayData(
     input: SiteAccount | SiteAccount[],
   ): DisplaySiteData | DisplaySiteData[] {
-    const transform = (account: SiteAccount): DisplaySiteData => ({
-      id: account.id,
-      name: account.site_name,
-      username: account.account_info.username,
-      disabled: AccountStorageService.isAccountDisabled(account),
-      excludeFromTotalBalance:
-        AccountStorageService.isAccountExcludedFromTotalBalance(account),
-      balance: {
-        USD:
-          account.account_info.quota /
-          UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR,
-        CNY:
-          (account.account_info.quota /
-            UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR) *
-          account.exchange_rate,
-      },
-      todayConsumption: {
-        USD:
-          account.account_info.today_quota_consumption /
-          UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR,
-        CNY:
-          (account.account_info.today_quota_consumption /
-            UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR) *
-          account.exchange_rate,
-      },
-      todayIncome: {
-        USD:
-          (account.account_info.today_income || 0) /
-          UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR,
-        CNY:
-          ((account.account_info.today_income || 0) /
-            UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR) *
-          account.exchange_rate,
-      },
-      todayTokens: {
-        upload: account.account_info.today_prompt_tokens,
-        download: account.account_info.today_completion_tokens,
-      },
-      health: account.health,
-      last_sync_time: account.last_sync_time,
-      baseUrl: account.site_url,
-      token: account.account_info.access_token,
-      userId: account.account_info.id,
-      notes: account.notes,
-      tagIds: account.tagIds || [],
-      tags: account.tags || [],
-      siteType: account.site_type,
-      checkIn: account.checkIn,
-      can_check_in: account.can_check_in,
-      supports_check_in: account.supports_check_in,
-      authType: account.authType || AuthTypeEnum.AccessToken,
-    })
+    const transform = (account: SiteAccount): DisplaySiteData => {
+      const normalized = normalizeSiteAccount(account)
+      return {
+        id: normalized.id,
+        name: normalized.site_name,
+        username: normalized.account_info.username,
+        disabled: AccountStorageService.isAccountDisabled(normalized),
+        excludeFromTotalBalance:
+          AccountStorageService.isAccountExcludedFromTotalBalance(normalized),
+        balance: {
+          USD:
+            normalized.account_info.quota /
+            UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR,
+          CNY:
+            (normalized.account_info.quota /
+              UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR) *
+            normalized.exchange_rate,
+        },
+        todayConsumption: {
+          USD:
+            normalized.account_info.today_quota_consumption /
+            UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR,
+          CNY:
+            (normalized.account_info.today_quota_consumption /
+              UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR) *
+            normalized.exchange_rate,
+        },
+        todayIncome: {
+          USD:
+            normalized.account_info.today_income /
+            UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR,
+          CNY:
+            (normalized.account_info.today_income /
+              UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR) *
+            normalized.exchange_rate,
+        },
+        todayTokens: {
+          upload: normalized.account_info.today_prompt_tokens,
+          download: normalized.account_info.today_completion_tokens,
+        },
+        health: normalized.health,
+        last_sync_time: normalized.last_sync_time,
+        baseUrl: normalized.site_url,
+        token: normalized.account_info.access_token,
+        userId: normalized.account_info.id,
+        notes: normalized.notes,
+        tagIds: normalized.tagIds,
+        tags: normalized.tags,
+        siteType: normalized.site_type,
+        checkIn: normalized.checkIn,
+        can_check_in: normalized.can_check_in,
+        supports_check_in: normalized.supports_check_in,
+        authType: normalized.authType,
+      }
+    }
 
     // 判断是否是数组
     if (Array.isArray(input)) {
@@ -1161,7 +1120,16 @@ class AccountStorageService {
    * Export the current storage configuration, preserving ordering + pinned info.
    */
   async exportData(): Promise<AccountStorageConfig> {
-    return this.getStorageConfig()
+    // Ensure legacy tags are migrated so downstream sync/backup flows always
+    // see `tagIds` and a stable global tag store.
+    await ensureAccountTagsStorageMigrated(this.storage)
+
+    const config = await this.getStorageConfig()
+    const { accounts } = migrateAccountsConfig(config.accounts)
+    return {
+      ...config,
+      accounts: accounts.map(normalizeSiteAccount),
+    }
   }
 
   /**
@@ -1182,10 +1150,11 @@ class AccountStorageService {
         const accountsToImport = data.accounts || []
         const bookmarksToImport = data.bookmarks
           ? AccountStorageService.sanitizeBookmarks(data.bookmarks)
-          : backupConfig.bookmarks || []
+          : backupConfig.bookmarks
 
         const { accounts: migratedAccounts, migratedCount } =
           migrateAccountsConfig(accountsToImport)
+        const normalizedAccounts = migratedAccounts.map(normalizeSiteAccount)
 
         if (migratedCount > 0) {
           logger.info("Upgraded imported account(s) during import migration", {
@@ -1194,17 +1163,17 @@ class AccountStorageService {
         }
 
         const { entryIds } = AccountStorageService.buildEntryIdSets({
-          accounts: migratedAccounts,
+          accounts: normalizedAccounts,
           bookmarks: bookmarksToImport,
         })
 
-        const filteredPinnedIds = (backupConfig.pinnedAccountIds || []).filter(
-          (id) => entryIds.has(id),
+        const filteredPinnedIds = backupConfig.pinnedAccountIds.filter((id) =>
+          entryIds.has(id),
         )
 
-        const filteredOrderedIds = (
-          backupConfig.orderedAccountIds || []
-        ).filter((id) => entryIds.has(id))
+        const filteredOrderedIds = backupConfig.orderedAccountIds.filter((id) =>
+          entryIds.has(id),
+        )
 
         const pinnedToPersist = data.pinnedAccountIds
           ? Array.from(new Set(data.pinnedAccountIds)).filter((id) =>
@@ -1218,9 +1187,9 @@ class AccountStorageService {
             )
           : filteredOrderedIds
 
-        const nextConfig = this.normalizeConfig({
+        const nextConfig = normalizeAccountStorageConfigForWrite({
           ...backupConfig,
-          accounts: migratedAccounts,
+          accounts: normalizedAccounts,
           bookmarks: bookmarksToImport,
           pinnedAccountIds: pinnedToPersist,
           orderedAccountIds: orderedToPersist,
@@ -1239,7 +1208,7 @@ class AccountStorageService {
         logger.error("Import migration failed; restoring from backup", error)
         await this.storage.set(
           ACCOUNT_STORAGE_KEYS.ACCOUNTS,
-          this.normalizeConfig(backupConfig),
+          normalizeAccountStorageConfigForWrite(backupConfig),
         )
         logger.warn("Safety fallback applied: restored accounts from backup")
         throw error // Re-throw to inform caller of failure
@@ -1255,10 +1224,10 @@ class AccountStorageService {
       const config = (await this.storage.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS)) as
         | AccountStorageConfig
         | undefined
-      return this.coerceConfigForRead(config)
+      return normalizeAccountStorageConfigForRead(config)
     } catch (error) {
       logger.error("获取存储配置失败", error)
-      return createDefaultAccountConfig()
+      return createDefaultAccountStorageConfig()
     }
   }
 
@@ -1273,14 +1242,14 @@ class AccountStorageService {
     await this.mutateStorageConfig((existingConfig) => {
       const { entryIds } = AccountStorageService.buildEntryIdSets({
         accounts,
-        bookmarks: existingConfig.bookmarks || [],
+        bookmarks: existingConfig.bookmarks,
       })
-      const filteredPinnedIds = (existingConfig.pinnedAccountIds || []).filter(
-        (id) => entryIds.has(id),
+      const filteredPinnedIds = existingConfig.pinnedAccountIds.filter((id) =>
+        entryIds.has(id),
       )
-      const filteredOrderedIds = (
-        existingConfig.orderedAccountIds || []
-      ).filter((id) => entryIds.has(id))
+      const filteredOrderedIds = existingConfig.orderedAccountIds.filter((id) =>
+        entryIds.has(id),
+      )
       existingConfig.accounts = accounts
       existingConfig.pinnedAccountIds = filteredPinnedIds
       existingConfig.orderedAccountIds = filteredOrderedIds
@@ -1557,8 +1526,8 @@ class AccountStorageService {
         const now = Date.now()
 
         const existingEntryIds = new Set([
-          ...(config.accounts || []).map((account) => account.id),
-          ...(config.bookmarks || []).map((bookmark) => bookmark.id),
+          ...config.accounts.map((account) => account.id),
+          ...config.bookmarks.map((bookmark) => bookmark.id),
         ])
 
         let id = this.generateBookmarkId()
@@ -1573,9 +1542,6 @@ class AccountStorageService {
           updated_at: now,
         }
 
-        config.bookmarks = Array.isArray(config.bookmarks)
-          ? config.bookmarks
-          : []
         config.bookmarks.push(bookmark)
 
         return { result: bookmark.id, changed: true }
@@ -1650,10 +1616,10 @@ class AccountStorageService {
         }
 
         config.bookmarks = filtered
-        config.pinnedAccountIds = (config.pinnedAccountIds || []).filter(
+        config.pinnedAccountIds = config.pinnedAccountIds.filter(
           (pinnedId) => pinnedId !== id,
         )
-        config.orderedAccountIds = (config.orderedAccountIds || []).filter(
+        config.orderedAccountIds = config.orderedAccountIds.filter(
           (orderedId) => orderedId !== id,
         )
         return { result: true, changed: true }

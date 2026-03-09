@@ -93,7 +93,8 @@ const createAccount = (overrides: Partial<SiteAccount> = {}): SiteAccount => {
 
   return {
     id: overrides.id || "account-1",
-    disabled: overrides.disabled,
+    disabled: overrides.disabled === true,
+    excludeFromTotalBalance: overrides.excludeFromTotalBalance === true,
     site_name: overrides.site_name || "Test Site",
     site_url: overrides.site_url || "https://test.example.com",
     health: overrides.health || { status: SiteHealthStatus.Healthy },
@@ -115,7 +116,7 @@ const createAccount = (overrides: Partial<SiteAccount> = {}): SiteAccount => {
     last_sync_time: overrides.last_sync_time ?? Date.now(),
     updated_at: overrides.updated_at ?? Date.now(),
     created_at: overrides.created_at ?? Date.now(),
-    notes: overrides.notes,
+    notes: overrides.notes ?? "",
     manualBalanceUsd: overrides.manualBalanceUsd,
     sub2apiAuth: overrides.sub2apiAuth,
     tagIds: overrides.tagIds ?? [],
