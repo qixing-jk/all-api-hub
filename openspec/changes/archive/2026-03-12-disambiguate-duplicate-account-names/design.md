@@ -25,8 +25,8 @@ Constraints and inputs:
 - When and only when “same base name” collisions exist (global scope), disambiguate colliding entries by appending `username` to the rendered name.
 - Keep storage schema and persisted names unchanged (no migrations).
 - Ensure search and sorting behavior remains clear and stable:
-  - search should match both the base name and the appended username
-  - sorting by name should be deterministic and effectively behave as base-name first, then username
+  - search should match both the base name and the appended username using the same normalization pipeline as duplicate detection
+  - sorting by name should be deterministic and compare normalized base name first, normalized username second, then fall back to raw label/id
 - Minimize churn by implementing the core behavior once and reusing it broadly.
 
 **Non-Goals:**
@@ -35,6 +35,7 @@ Constraints and inputs:
 - Forcing users to rename accounts is out of scope.
 - Introducing new external dependencies is out of scope.
 - “Fixing” username-empty duplicates by adding other fallbacks (userId/origin) is out of scope for this change.
+- Adding a tertiary suffix for identical base-name + username pairs is out of scope for this change.
 
 ## Decisions
 
@@ -53,6 +54,7 @@ Implementation approach:
   - assign `DisplaySiteData.name` as either:
     - `site_name` when not duplicated, or when `username` is empty
     - `site_name + <separator> + username` when duplicated and username is non-empty
+  - preserve the unresolved base name alongside the rendered label so sort helpers can compare base name and username without reparsing presentation text
 
 Rationale:
 
@@ -71,15 +73,15 @@ Alternatives considered:
 
 **Decision:** Duplicate detection key uses a normalized version of the base display name:
 
+- apply Unicode NFKC normalization first
 - trim leading/trailing whitespace
 - collapse internal whitespace
 - case-insensitive comparison via `toLowerCase()`
-- convert full-width characters to half-width (consistent with existing search normalization)
 
 Rationale:
 
 - Prevents “looks-the-same” names from bypassing disambiguation.
-- Aligns with existing behavior in `src/services/search/accountSearch.ts` (which already normalizes full-width/half-width and whitespace).
+- Keeps duplicate detection, search matching, and sort ordering aligned on the same normalization pipeline.
 
 Alternative considered:
 
@@ -100,18 +102,19 @@ Alternative considered:
 - Localized separator string.
   - Deferred: likely unnecessary for punctuation and increases translation surface.
 
-### 4. Search and sort behavior piggybacks on existing account fields
+### 4. Search uses display fields while sorting uses shared normalized inputs
 
-**Decision:** Keep `DisplaySiteData.username` unchanged and rely on:
+**Decision:** Keep presentation fields intact and rely on:
 
 - label-based search (e.g. `SearchableSelect` that filters by `label`) working for duplicates because the label includes the username when needed
-- structured account search (`searchAccounts`) continuing to match both `account.name` and `account.username`
-- existing “sort by name” logic (which uses `DisplaySiteData.name`) naturally sorting by base name and then username for duplicated entries because the suffix is appended after the base name
+- structured account search (`searchAccounts`) continuing to match both `account.name` and `account.username`, normalizing query/account strings with the same shared pipeline used for duplicate detection
+- sort-by-name code paths calling the shared comparator with the normalized base name and normalized username (using `DisplaySiteData.baseName` / `DisplaySiteData.username` or equivalent source fields when available) instead of relying on raw `DisplaySiteData.name` string comparison alone
+- identical normalized base-name + username pairs falling back to rendered label and account id for determinism; this change does not add a tertiary suffix
 
 Rationale:
 
 - Minimal changes to search/sort infrastructure.
-- Avoids introducing a second “name” field (base vs display) unless proven necessary.
+- Keeps labels presentation-only while giving sort logic access to the source fields it actually needs.
 
 ## Risks / Trade-offs
 

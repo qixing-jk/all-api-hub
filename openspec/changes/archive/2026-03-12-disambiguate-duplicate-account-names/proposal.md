@@ -1,15 +1,16 @@
 ## Why
 
-Multiple accounts can share the same displayed name across the extension, which makes it easy to take actions against the wrong account (copying/exporting the wrong key, managing the wrong models, etc.). This change reduces mis-operations by making same-name accounts globally unambiguous at the display layer without changing stored account names.
+Multiple accounts can share the same displayed name across the extension, which makes it easy to take actions against the wrong account (copying/exporting the wrong key, managing the wrong models, etc.). This change reduces ambiguity at the display layer without changing stored account names.
 
 ## What Changes
 
 - Introduce a unified account **display name** disambiguation strategy used across UI surfaces that render account names.
-- When two or more accounts share the same base display name (global scope, not limited to the same site), and an account has a non-empty username field, the UI will display a disambiguated label: `<base name><separator><username>` for those colliding entries.
-- When an account has no username, its display name will remain unchanged (no disambiguation suffix).
-- Search behavior in account-name search inputs MUST match both the base name and the appended username (when present).
-- Sorting behavior for account lists that support sorting by name MUST be deterministic: primary key is the base name, secondary key is the username.
-- The persisted account `name` remains unchanged; this is a presentation-only normalization.
+- When two or more accounts share the same normalized base display name (global scope, not limited to the same site), and an account has a non-empty username field, the UI will display a disambiguated label: `<base name><separator><username>` for those colliding entries.
+- When an account has no username (`null` or empty string), its display name will remain unchanged (no disambiguation suffix).
+- Search behavior in account-name search inputs MUST match both the normalized base name and the appended username (when present) using the same normalization pipeline as duplicate detection.
+- Sorting behavior for account lists that support sorting by name MUST be deterministic: primary key is the normalized base name, secondary key is the normalized username, and ties fall back to the rendered label plus account id.
+- This change does not add a tertiary disambiguation token, so identical normalized base-name + username pairs may still share the same rendered label.
+- The persisted account base name remains unchanged; this is a presentation-only normalization.
 
 ## Capabilities
 
