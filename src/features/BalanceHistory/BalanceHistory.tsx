@@ -34,6 +34,10 @@ import { useTheme } from "~/contexts/ThemeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import {
+  buildAccountDisplayNameMap,
+  compareAccountDisplayNames,
+} from "~/services/accounts/utils/accountDisplayName"
+import {
   computeRetentionCutoffDayKey,
   getDayKeyFromUnixSeconds,
   listDayKeysInRange,
@@ -226,83 +230,10 @@ export default function BalanceHistory() {
     )
   }, [accounts, selectedTagIds])
 
-  const accountDisplayLabelById = useMemo(() => {
-    const getSiteHost = (value: string) => {
-      try {
-        return new URL(value).host
-      } catch {
-        return value
-      }
-    }
-
-    const shortenUsername = (value: string) => {
-      const trimmed = value.trim()
-      if (!trimmed) return trimmed
-
-      const atIndex = trimmed.indexOf("@")
-      const base = atIndex > 0 ? trimmed.slice(0, atIndex) : trimmed
-      const maxLength = 18
-      return base.length <= maxLength
-        ? base
-        : `${base.slice(0, maxLength - 1)}…`
-    }
-
-    const siteKeyCounts = new Map<string, number>()
-    for (const account of accountsForSelectedTags) {
-      const siteKey = account.site_url
-      siteKeyCounts.set(siteKey, (siteKeyCounts.get(siteKey) ?? 0) + 1)
-    }
-
-    const labelById = new Map<string, string>()
-    for (const account of accountsForSelectedTags) {
-      const needsAccountName = (siteKeyCounts.get(account.site_url) ?? 0) > 1
-      const label = needsAccountName
-        ? `${account.site_name} (${shortenUsername(account.account_info.username)})`
-        : account.site_name
-      labelById.set(account.id, label)
-    }
-
-    const labelCounts = new Map<string, number>()
-    for (const label of labelById.values()) {
-      labelCounts.set(label, (labelCounts.get(label) ?? 0) + 1)
-    }
-
-    for (const account of accountsForSelectedTags) {
-      const label = labelById.get(account.id)
-      if (!label) continue
-      if ((labelCounts.get(label) ?? 0) <= 1) continue
-      labelById.set(account.id, `${label} · ${getSiteHost(account.site_url)}`)
-    }
-
-    const disambiguationCounts = new Map<string, number>()
-    for (const label of labelById.values()) {
-      disambiguationCounts.set(
-        label,
-        (disambiguationCounts.get(label) ?? 0) + 1,
-      )
-    }
-
-    if (Array.from(disambiguationCounts.values()).some((count) => count > 1)) {
-      const duplicatesByLabel = new Map<string, string[]>()
-      for (const [accountId, label] of labelById.entries()) {
-        if ((disambiguationCounts.get(label) ?? 0) <= 1) continue
-        const list = duplicatesByLabel.get(label) ?? []
-        list.push(accountId)
-        duplicatesByLabel.set(label, list)
-      }
-
-      for (const [label, accountIds] of duplicatesByLabel.entries()) {
-        const sorted = [...accountIds].sort()
-        for (let index = 0; index < sorted.length; index += 1) {
-          const accountId = sorted[index]
-          if (!accountId) continue
-          labelById.set(accountId, `${label} #${index + 1}`)
-        }
-      }
-    }
-
-    return labelById
-  }, [accountsForSelectedTags])
+  const accountDisplayLabelById = useMemo(
+    () => buildAccountDisplayNameMap(accounts),
+    [accounts],
+  )
 
   const effectiveAccountIds = useMemo(() => {
     const available = new Set(
@@ -465,7 +396,10 @@ export default function BalanceHistory() {
     sortable.sort((a, b) => {
       if (a.isSelected !== b.isSelected) return a.isSelected ? -1 : 1
       if (a.hasData !== b.hasData) return a.hasData ? -1 : 1
-      return a.option.label.localeCompare(b.option.label)
+      return compareAccountDisplayNames(
+        { id: a.option.value, name: a.option.label },
+        { id: b.option.value, name: b.option.label },
+      )
     })
 
     return sortable.map((item) => item.option)

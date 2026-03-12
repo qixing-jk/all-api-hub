@@ -9,7 +9,7 @@ import type {
   DedupeAccountsDialogGroup,
   DedupeAccountsKeepChangeInput,
 } from "./types"
-import { formatTimestamp, getAccountLabel } from "./utils"
+import { formatTimestamp } from "./utils"
 
 type AccountCardGroup = Pick<
   DedupeAccountsDialogGroup,
@@ -19,6 +19,7 @@ type AccountCardGroup = Pick<
 export interface DedupeAccountCardProps {
   account: SiteAccount
   group: AccountCardGroup
+  accountLabelById: Map<string, string>
   pinnedAccountIds: string[]
   detailsOpenByAccountId: Record<string, true>
   isWorking: boolean
@@ -33,6 +34,7 @@ export interface DedupeAccountCardProps {
 export function DedupeAccountCard({
   account,
   group,
+  accountLabelById,
   pinnedAccountIds,
   detailsOpenByAccountId,
   isWorking,
@@ -49,6 +51,7 @@ export function DedupeAccountCard({
   const detailsId = `dedupe-account-details-${encodeURIComponent(account.id)}`
   const healthDisplay = getHealthStatusDisplay(account.health?.status, t)
   const autoCheckinEnabled = account.checkIn?.autoCheckInEnabled !== false
+  const accountLabel = accountLabelById.get(account.id) ?? account.id
 
   const resolveTimestamp = (timestamp?: number) => formatTimestamp(timestamp, t)
 
@@ -79,7 +82,7 @@ export function DedupeAccountCard({
 
           <div className="min-w-0">
             <div className="dark:text-dark-text-primary truncate text-sm font-medium text-gray-900">
-              {getAccountLabel(account)}
+              {accountLabel}
             </div>
             <div className="dark:text-dark-text-tertiary truncate text-xs text-gray-500">
               {account.site_url}

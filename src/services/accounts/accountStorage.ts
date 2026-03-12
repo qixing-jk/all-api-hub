@@ -41,6 +41,10 @@ import {
   migrateAccountsConfig,
   needsConfigMigration,
 } from "./migrations/accountDataMigration"
+import {
+  collectDuplicateAccountNameKeys,
+  resolveAccountDisplayName,
+} from "./utils/accountDisplayName"
 
 // Re-export for backward compatibility across the codebase.
 export { ACCOUNT_STORAGE_KEYS }
@@ -180,6 +184,54 @@ class AccountStorageService {
       logger.error("获取账号信息失败", error)
       return null
     }
+  }
+
+  /**
+   * Resolve display data for a single account using the full stored account set.
+   *
+   * This preserves global duplicate-name context so callers with only an
+   * account id still get the same user-facing label as list-based views.
+   */
+  async getDisplayDataById(id: string): Promise<DisplaySiteData | null> {
+    const allAccounts = await this.getAllAccounts()
+    const account = allAccounts.find((item) => item.id === id)
+
+    return account ? this.resolveDisplayData(account, allAccounts) : null
+  }
+
+  /**
+   * Resolve display data for one account while preserving duplicate-name
+   * context from a broader account set when available.
+   */
+  resolveDisplayData(
+    account: SiteAccount,
+    accountsContext: SiteAccount[] = [],
+  ): DisplaySiteData {
+    const normalizedAccount = normalizeSiteAccount(account)
+    const normalizedContext = accountsContext.map((item) =>
+      normalizeSiteAccount(item),
+    )
+
+    const contextWithAccount = Array.from(
+      new Map(
+        [...normalizedContext, normalizedAccount].map((item) => [
+          item.id,
+          item,
+        ]),
+      ).values(),
+    )
+
+    const displayAccounts = this.convertToDisplayData(
+      contextWithAccount,
+    ) as DisplaySiteData[]
+    const resolved = displayAccounts.find(
+      (displayAccount) => displayAccount.id === normalizedAccount.id,
+    )
+
+    return (
+      resolved ??
+      (this.convertToDisplayData(normalizedAccount) as DisplaySiteData)
+    )
   }
 
   /**
@@ -1037,11 +1089,21 @@ class AccountStorageService {
   convertToDisplayData(
     input: SiteAccount | SiteAccount[],
   ): DisplaySiteData | DisplaySiteData[] {
-    const transform = (account: SiteAccount): DisplaySiteData => {
-      const normalized = normalizeSiteAccount(account)
+    const normalizedAccounts = Array.isArray(input)
+      ? input.map((account) => normalizeSiteAccount(account))
+      : [normalizeSiteAccount(input)]
+    const duplicateKeys = Array.isArray(input)
+      ? collectDuplicateAccountNameKeys(normalizedAccounts)
+      : undefined
+
+    const transform = (normalized: SiteAccount): DisplaySiteData => {
       return {
         id: normalized.id,
-        name: normalized.site_name,
+        name: resolveAccountDisplayName({
+          baseName: normalized.site_name,
+          username: normalized.account_info.username,
+          duplicateKeys,
+        }),
         username: normalized.account_info.username,
         disabled: AccountStorageService.isAccountDisabled(normalized),
         excludeFromTotalBalance:
@@ -1093,11 +1155,10 @@ class AccountStorageService {
       }
     }
 
-    // 判断是否是数组
     if (Array.isArray(input)) {
-      return input.map(transform)
+      return normalizedAccounts.map(transform)
     } else {
-      return transform(input)
+      return transform(normalizedAccounts[0])
     }
   }
 

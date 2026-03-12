@@ -11,6 +11,7 @@ import type {
 
 export interface DedupeAccountsGroupsListProps {
   groups: DedupeAccountsDialogGroup[]
+  accountLabelById: Map<string, string>
   orderedIndexByAccountId: Map<string, number>
   pinnedAccountIds: string[]
   detailsOpenByAccountId: Record<string, true>
@@ -25,6 +26,7 @@ export interface DedupeAccountsGroupsListProps {
  */
 export function DedupeAccountsGroupsList({
   groups,
+  accountLabelById,
   orderedIndexByAccountId,
   pinnedAccountIds,
   detailsOpenByAccountId,
@@ -39,6 +41,7 @@ export function DedupeAccountsGroupsList({
         <DedupeAccountsGroupCard
           key={group.groupId}
           group={group}
+          accountLabelById={accountLabelById}
           orderedIndexByAccountId={orderedIndexByAccountId}
           pinnedAccountIds={pinnedAccountIds}
           detailsOpenByAccountId={detailsOpenByAccountId}
@@ -79,6 +82,7 @@ function sortAccountsByOrder({
  */
 function DedupeAccountsGroupCard({
   group,
+  accountLabelById,
   orderedIndexByAccountId,
   pinnedAccountIds,
   detailsOpenByAccountId,
@@ -88,6 +92,7 @@ function DedupeAccountsGroupCard({
   onToggleDetails,
 }: {
   group: DedupeAccountsDialogGroup
+  accountLabelById: Map<string, string>
   orderedIndexByAccountId: Map<string, number>
   pinnedAccountIds: string[]
   detailsOpenByAccountId: Record<string, true>
@@ -138,6 +143,7 @@ function DedupeAccountsGroupCard({
             key={account.id}
             account={account}
             group={group}
+            accountLabelById={accountLabelById}
             pinnedAccountIds={pinnedAccountIds}
             detailsOpenByAccountId={detailsOpenByAccountId}
             isWorking={isWorking}

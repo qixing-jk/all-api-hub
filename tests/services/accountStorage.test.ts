@@ -250,6 +250,87 @@ describe("accountStorage core behaviors", () => {
     expect((displayData as any[])[1].id).toBe("account-2")
   })
 
+  it("convertToDisplayData should disambiguate duplicate names only for list conversions", () => {
+    const duplicateNamed = createAccount({
+      id: "duplicate-a",
+      site_name: "My Site",
+      account_info: {
+        id: 1,
+        access_token: "token-a",
+        username: "alice",
+        quota: 100,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_quota_consumption: 0,
+        today_requests_count: 0,
+        today_income: 0,
+      },
+    })
+    const duplicateWithoutUsername = createAccount({
+      id: "duplicate-b",
+      site_name: "ｍｙ　 site",
+      account_info: {
+        id: 2,
+        access_token: "token-b",
+        username: "   ",
+        quota: 100,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_quota_consumption: 0,
+        today_requests_count: 0,
+        today_income: 0,
+      },
+    })
+    const uniqueNamed = createAccount({
+      id: "unique-c",
+      site_name: "Unique Site",
+      account_info: {
+        id: 3,
+        access_token: "token-c",
+        username: "carol",
+        quota: 100,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_quota_consumption: 0,
+        today_requests_count: 0,
+        today_income: 0,
+      },
+    })
+
+    const displayData = accountStorage.convertToDisplayData([
+      duplicateNamed,
+      duplicateWithoutUsername,
+      uniqueNamed,
+    ]) as any[]
+
+    expect(displayData.map((account) => account.name)).toEqual([
+      "My Site · alice",
+      "ｍｙ　 site",
+      "Unique Site",
+    ])
+  })
+
+  it("convertToDisplayData single-account overload should preserve the base name", () => {
+    const account = createAccount({
+      site_name: "My Site",
+      account_info: {
+        id: 1,
+        access_token: "token",
+        username: "alice",
+        quota: 100,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_quota_consumption: 0,
+        today_requests_count: 0,
+        today_income: 0,
+      },
+    })
+
+    const display = accountStorage.convertToDisplayData(account)
+
+    expect(display.name).toBe("My Site")
+  })
+
   it("pinAccount should move ids to the front without duplicates", async () => {
     const accounts = [
       createAccount({ id: "a-1" }),

@@ -1,17 +1,17 @@
 import type { TFunction } from "i18next"
 
+import { buildAccountDisplayNameMap } from "~/services/accounts/utils/accountDisplayName"
 import type { SiteAccount } from "~/types"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
 
 /**
- * Build a compact, user-facing label for an account without including secrets.
+ * Build stable dedupe-dialog labels using the same global display-name rules as
+ * the rest of the app.
  */
-export function getAccountLabel(account: SiteAccount): string {
-  const siteName = account.site_name || ""
-  const username = account.account_info?.username || ""
-  if (!siteName) return username || account.id
-  if (!username) return siteName
-  return `${siteName} · ${username}`
+export function buildDedupeAccountLabelMap(
+  accounts: readonly SiteAccount[],
+): Map<string, string> {
+  return buildAccountDisplayNameMap([...accounts])
 }
 
 /**

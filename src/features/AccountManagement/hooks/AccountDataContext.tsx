@@ -176,6 +176,24 @@ export const AccountDataProvider = ({
     [sortingPriorityConfig],
   )
 
+  const buildDisplayDataWithResolvedTags = useCallback(
+    (nextAccounts: SiteAccount[], currentTagStore: TagStore) =>
+      (
+        accountStorage.convertToDisplayData(nextAccounts) as DisplaySiteData[]
+      ).map((site) => {
+        const tagIds = site.tagIds ?? []
+        const resolvedNames = tagIds
+          .map((id) => currentTagStore.tagsById[id]?.name)
+          .filter((name): name is string => Boolean(name))
+        return {
+          ...site,
+          tagIds,
+          tags: resolvedNames.length > 0 ? resolvedNames : site.tags,
+        }
+      }),
+    [],
+  )
+
   const accountsRef = useRef<SiteAccount[]>([])
   accountsRef.current = accounts
 
@@ -367,19 +385,10 @@ export const AccountDataProvider = ({
       const storedOrderedIds = await accountStorage.getOrderedList()
       const accountStats = await accountStorage.getAccountStats()
       const currentTagStore = await tagStorage.getTagStore()
-      const displaySiteData = (
-        accountStorage.convertToDisplayData(allAccounts) as DisplaySiteData[]
-      ).map((site) => {
-        const tagIds = site.tagIds ?? []
-        const resolvedNames = tagIds
-          .map((id) => currentTagStore.tagsById[id]?.name)
-          .filter((name): name is string => Boolean(name))
-        return {
-          ...site,
-          tagIds,
-          tags: resolvedNames.length > 0 ? resolvedNames : site.tags,
-        }
-      })
+      const displaySiteData = buildDisplayDataWithResolvedTags(
+        allAccounts,
+        currentTagStore,
+      )
 
       setTagStore(currentTagStore)
       setTags(
@@ -423,7 +432,12 @@ export const AccountDataProvider = ({
     } catch (error) {
       logger.error("Failed to load account data", error)
     }
-  }, [isInitialLoad, prevTotalConsumption, prevBalances])
+  }, [
+    buildDisplayDataWithResolvedTags,
+    isInitialLoad,
+    prevTotalConsumption,
+    prevBalances,
+  ])
 
   /**
    * Tag CRUD actions exposed to UIs (AccountDialog, filters).
@@ -595,19 +609,18 @@ export const AccountDataProvider = ({
           reloadedAccounts.map((account) => [account.id, account]),
         )
 
-        const displayUpdates = accountStorage.convertToDisplayData(
-          reloadedAccounts,
-        ) as DisplaySiteData[]
-        const displayById = Object.fromEntries(
-          displayUpdates.map((display) => [display.id, display]),
+        const nextAccounts = accounts.map(
+          (account) => reloadedById[account.id] ?? account,
         )
+        const knownIds = new Set(nextAccounts.map((account) => account.id))
+        for (const account of reloadedAccounts) {
+          if (!knownIds.has(account.id)) {
+            nextAccounts.push(account)
+          }
+        }
 
-        setAccounts((prev) =>
-          prev.map((account) => reloadedById[account.id] ?? account),
-        )
-        setDisplayData((prev) =>
-          prev.map((display) => displayById[display.id] ?? display),
-        )
+        setAccounts(nextAccounts)
+        setDisplayData(buildDisplayDataWithResolvedTags(nextAccounts, tagStore))
       } catch (error) {
         logger.warn(
           "Account-scoped reload failed; falling back to full reload",
@@ -640,7 +653,7 @@ export const AccountDataProvider = ({
         void reloadAccountsById(updatedAccountIds)
       }
     })
-  }, [loadAccountData])
+  }, [accounts, buildDisplayDataWithResolvedTags, loadAccountData, tagStore])
 
   const handleSort = useCallback(
     (field: SortField) => {

@@ -31,7 +31,7 @@ export type UsageHistorySyncState =
 
 export type UsageHistoryAccountRow = {
   id: string
-  siteName: string
+  accountName: string
   state: UsageHistorySyncState
   lastSyncAtMs: number | null
   lastSyncAtLabel: string
@@ -65,7 +65,7 @@ export default function UsageHistorySyncStateTable({
 
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({})
   const [sorting, setSorting] = useState<SortingState>([
-    { id: "siteName", desc: false },
+    { id: "accountName", desc: false },
   ])
 
   const getStatusBadgeVariant = (state: UsageHistorySyncState) => {
@@ -102,7 +102,7 @@ export default function UsageHistorySyncStateTable({
               row.toggleSelected(!!value)
             }
             aria-label={t("syncTab.table.selectRow", {
-              name: row.original.siteName,
+              name: row.original.accountName,
             })}
             disabled={isSyncingAll}
           />
@@ -112,11 +112,11 @@ export default function UsageHistorySyncStateTable({
         enableHiding: false,
       },
       {
-        accessorKey: "siteName",
+        accessorKey: "accountName",
         header: t("syncTab.table.columns.account"),
         cell: ({ row }: { row: Row<UsageHistoryAccountRow> }) => (
           <div className="max-w-[260px] truncate text-sm font-medium">
-            {row.original.siteName}
+            {row.original.accountName}
           </div>
         ),
       },

@@ -345,6 +345,92 @@ describe("BalanceHistory options page", () => {
     }
   })
 
+  it("uses shared duplicate-name labels in account selectors and trend series", async () => {
+    const factor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+    const FIXED_NOW = new Date(2026, 1, 7, 12, 0, 0)
+    const fixedNowMs = FIXED_NOW.getTime()
+    const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(fixedNowMs)
+
+    try {
+      const nowUnixSeconds = Math.floor(fixedNowMs / 1000)
+      const todayKey = getDayKeyFromUnixSeconds(nowUnixSeconds)
+
+      vi.mocked(accountStorage.getEnabledAccounts).mockResolvedValue([
+        {
+          id: "a1",
+          site_name: "Shared Site",
+          site_url: "https://one.example.com",
+          site_type: ONE_API,
+          account_info: { username: "alice" },
+        },
+        {
+          id: "a2",
+          site_name: "Shared Site",
+          site_url: "https://two.example.com",
+          site_type: ONE_API,
+          account_info: { username: "bob" },
+        },
+      ] as any)
+
+      vi.mocked(dailyBalanceHistoryStorage.getStore).mockResolvedValue({
+        schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
+        snapshotsByAccountId: {
+          a1: {
+            [todayKey]: {
+              quota: 10 * factor,
+              today_income: 1 * factor,
+              today_quota_consumption: 2 * factor,
+              capturedAt: 0,
+              source: "refresh",
+            },
+          },
+          a2: {
+            [todayKey]: {
+              quota: 20 * factor,
+              today_income: 3 * factor,
+              today_quota_consumption: 4 * factor,
+              capturedAt: 0,
+              source: "refresh",
+            },
+          },
+        },
+      } as any)
+
+      render(<BalanceHistory />)
+
+      expect(
+        (await screen.findAllByText("Shared Site · alice")).length,
+      ).toBeGreaterThan(0)
+      expect(
+        (await screen.findAllByText("Shared Site · bob")).length,
+      ).toBeGreaterThan(0)
+
+      await waitFor(() => {
+        expect(vi.mocked(echarts.init)).toHaveBeenCalled()
+      })
+
+      const initResults = vi.mocked(echarts.init).mock.results
+      const options = initResults
+        .map((result) => result.value)
+        .flatMap((instance: any) =>
+          instance.setOption.mock.calls.map((c: any) => c[0]),
+        )
+
+      const trendOption = options.find((option: any) =>
+        option?.series?.some?.(
+          (series: any) => series?.name === "Shared Site · alice",
+        ),
+      )
+
+      expect(trendOption).toBeTruthy()
+      expect(trendOption.series.map((series: any) => series.name)).toEqual(
+        expect.arrayContaining(["Shared Site · alice", "Shared Site · bob"]),
+      )
+    } finally {
+      dateNowSpy.mockRestore()
+    }
+  })
+
   it("renders best-effort aggregated trend series for partial coverage in total view", async () => {
     const factor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
     const FIXED_NOW = new Date(2026, 1, 7, 12, 0, 0)

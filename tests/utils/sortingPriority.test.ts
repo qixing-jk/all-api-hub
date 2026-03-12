@@ -831,6 +831,43 @@ describe("createDynamicSortComparator", () => {
       expect(comparator(accountB, accountA)).toBeLessThan(0)
       expect(comparator(accountA, accountC)).toBeGreaterThan(0)
     })
+
+    it("should sort duplicate display names by appended username case-insensitively", () => {
+      const accountA = createDisplaySiteData({
+        id: "a",
+        name: "My Site · Bob",
+      })
+      const accountB = createDisplaySiteData({
+        id: "b",
+        name: "my   site · alice",
+      })
+      const accountC = createDisplaySiteData({
+        id: "c",
+        name: "Other Site",
+      })
+
+      const config = {
+        ...DEFAULT_SORTING_PRIORITY_CONFIG,
+        criteria: [
+          {
+            id: SortingCriteriaType.USER_SORT_FIELD,
+            enabled: true,
+            priority: 0,
+          },
+        ],
+      }
+
+      const comparator = createDynamicSortComparator(
+        config,
+        null,
+        "name",
+        "USD",
+        "asc",
+      )
+
+      const sorted = [accountA, accountB, accountC].sort(comparator)
+      expect(sorted.map((account) => account.id)).toEqual(["b", "a", "c"])
+    })
   })
 
   describe("USER_SORT_FIELD criterion - balance", () => {

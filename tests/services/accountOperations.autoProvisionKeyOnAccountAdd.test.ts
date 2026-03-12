@@ -166,6 +166,61 @@ describe("accountOperations auto-provision key on add", () => {
     expect(toastErrorMock).not.toHaveBeenCalled()
   })
 
+  it("uses the disambiguated account label for the auto-provision flow", async () => {
+    const firstResult = await validateAndSaveAccount(
+      "https://api.example.com",
+      "Test Site",
+      "tester-1",
+      "test-token-1",
+      "1",
+      "7.0",
+      "",
+      [],
+      CHECK_IN_DISABLED,
+      "unknown",
+      AuthTypeEnum.AccessToken,
+      "",
+    )
+
+    expect(firstResult.success).toBe(true)
+
+    await flushPromises()
+    await flushPromises()
+
+    toastSuccessMock.mockReset()
+    ensureDefaultApiTokenForAccountMock.mockClear()
+
+    const secondResult = await validateAndSaveAccount(
+      "https://api-2.example.com",
+      "Test Site",
+      "tester-2",
+      "test-token-2",
+      "2",
+      "7.0",
+      "",
+      [],
+      CHECK_IN_DISABLED,
+      "unknown",
+      AuthTypeEnum.AccessToken,
+      "",
+    )
+
+    expect(secondResult.success).toBe(true)
+
+    await flushPromises()
+    await flushPromises()
+
+    expect(ensureDefaultApiTokenForAccountMock).toHaveBeenCalledTimes(1)
+    expect(toastSuccessMock).toHaveBeenCalledTimes(1)
+    expect(ensureDefaultApiTokenForAccountMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        displaySiteData: expect.objectContaining({
+          name: "Test Site · tester-2",
+        }),
+      }),
+    )
+  })
+
   it("defaults to disabling auto-provision when preferences read fails", async () => {
     vi.spyOn(userPreferences, "getPreferences").mockRejectedValueOnce(
       new Error("prefs-fail"),

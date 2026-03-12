@@ -3,6 +3,7 @@ import {
   DATA_TYPE_CONSUMPTION,
   DATA_TYPE_INCOME,
 } from "~/constants"
+import { compareAccountDisplayNames } from "~/services/accounts/utils/accountDisplayName"
 import type {
   CurrencyType,
   DisplaySiteData,
@@ -93,9 +94,7 @@ function compareByUserSortField(
 ) {
   switch (sortField) {
     case "name":
-      return sortOrder === "asc"
-        ? a.name.localeCompare(b.name)
-        : b.name.localeCompare(a.name)
+      return compareAccountDisplayNames(a, b, sortOrder)
     case DATA_TYPE_BALANCE:
       return sortOrder === "asc"
         ? a.balance[currencyType] - b.balance[currencyType]

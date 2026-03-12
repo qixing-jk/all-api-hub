@@ -38,6 +38,7 @@ export interface DedupeAccountsDialogBodyProps {
   strategy: AccountDedupeKeepStrategy
   onStrategyChange: (strategy: AccountDedupeKeepStrategy) => void
   groups: DedupeAccountsDialogGroup[]
+  accountLabelById: Map<string, string>
   deleteCount: number
   pinnedAccountIds: string[]
   orderedIndexByAccountId: Map<string, number>
@@ -56,6 +57,7 @@ export function DedupeAccountsDialogBody({
   strategy,
   onStrategyChange,
   groups,
+  accountLabelById,
   deleteCount,
   pinnedAccountIds,
   orderedIndexByAccountId,
@@ -114,6 +116,7 @@ export function DedupeAccountsDialogBody({
       ) : (
         <DedupeAccountsGroupsList
           groups={groups}
+          accountLabelById={accountLabelById}
           orderedIndexByAccountId={orderedIndexByAccountId}
           pinnedAccountIds={pinnedAccountIds}
           detailsOpenByAccountId={detailsOpenByAccountId}

@@ -153,4 +153,65 @@ describe("UsageHistorySyncTab", () => {
       })
     })
   })
+
+  it("renders duplicate-named accounts with disambiguated labels", async () => {
+    vi.mocked(useUserPreferencesContext).mockReturnValue({
+      preferences: {
+        usageHistory: {
+          enabled: true,
+          retentionDays: 30,
+          scheduleMode: "afterRefresh",
+          syncIntervalMinutes: 360,
+        },
+      },
+      loadPreferences: vi.fn().mockResolvedValue(undefined),
+    } as any)
+
+    vi.mocked(accountStorage.getEnabledAccounts).mockResolvedValue([
+      {
+        id: "a1",
+        site_name: "Shared Site",
+        account_info: { username: "alice" },
+      },
+      {
+        id: "a2",
+        site_name: "Shared Site",
+        account_info: { username: "bob" },
+      },
+    ] as any)
+    vi.mocked(usageHistoryStorage.getStore).mockResolvedValue({
+      schemaVersion: 2,
+      accounts: {
+        a1: { status: { state: "never" } },
+        a2: { status: { state: "never" } },
+      },
+    } as any)
+
+    vi.mocked(sendRuntimeMessage).mockResolvedValue({
+      success: true,
+      data: { totals: { success: 1, skipped: 0, error: 0, unsupported: 0 } },
+    } as any)
+
+    renderSubject()
+
+    const aliceCell = await screen.findByText("Shared Site · alice")
+    expect(await screen.findByText("Shared Site · bob")).toBeInTheDocument()
+
+    const aliceRow = aliceCell.closest("tr")
+    if (!aliceRow) {
+      throw new Error("Missing account row for Shared Site · alice")
+    }
+
+    fireEvent.click(within(aliceRow).getByRole("checkbox"))
+    fireEvent.click(
+      await screen.findByText("usageAnalytics:syncTab.actions.syncSelected"),
+    )
+
+    await waitFor(() => {
+      expect(sendRuntimeMessage).toHaveBeenCalledWith({
+        action: RuntimeActionIds.UsageHistorySyncNow,
+        accountIds: ["a1"],
+      })
+    })
+  })
 })

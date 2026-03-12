@@ -1,5 +1,6 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import { buildAccountDisplayNameMap } from "~/services/accounts/utils/accountDisplayName"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import {
   DEFAULT_PREFERENCES,
@@ -722,6 +723,7 @@ class AutoCheckinScheduler {
 
   private buildAccountSnapshot(
     account: SiteAccount,
+    accountName: string,
   ): AutoCheckinAccountSnapshot {
     const detectionEnabled = account.checkIn?.enableDetection ?? false
     const autoCheckinEnabled = account.checkIn?.autoCheckInEnabled !== false
@@ -742,7 +744,7 @@ class AutoCheckinScheduler {
 
     return {
       accountId: account.id,
-      accountName: `${account.site_name} - ${account.account_info.username}`,
+      accountName,
       siteType: account.site_type,
       detectionEnabled,
       autoCheckinEnabled,
@@ -771,7 +773,10 @@ class AutoCheckinScheduler {
    * - Provider `already_checked` is treated as a successful outcome (and should not enter retries).
    * - We mark the account as checked-in only for successful outcomes to keep local status fresh.
    */
-  private async runAccountCheckin(account: SiteAccount): Promise<{
+  private async runAccountCheckin(
+    account: SiteAccount,
+    accountName: string,
+  ): Promise<{
     result: CheckinAccountResult
     successful: boolean
   }> {
@@ -783,7 +788,7 @@ class AutoCheckinScheduler {
       >,
     ): CheckinAccountResult => ({
       accountId: account.id,
-      accountName: `${account.site_name} - ${account.account_info.username}`,
+      accountName,
       status,
       ...(partial ?? {}),
       timestamp: Date.now(),
@@ -1727,6 +1732,8 @@ class AutoCheckinScheduler {
       // Disabled accounts must not participate, but we still record an explicit
       // skip reason so background status/history can explain why an account was skipped.
       const availableAccounts = await accountStorage.getAllAccounts()
+      const accountDisplayNameById =
+        buildAccountDisplayNameMap(availableAccounts)
       const allAccounts = targetAccountIdSet
         ? availableAccounts.filter((account) =>
             targetAccountIdSet.has(account.id),
@@ -1749,7 +1756,10 @@ class AutoCheckinScheduler {
 
       // Build snapshots and determine runnable accounts
       for (const account of detectionEnabledAccounts) {
-        const snapshot = this.buildAccountSnapshot(account)
+        const snapshot = this.buildAccountSnapshot(
+          account,
+          accountDisplayNameById.get(account.id) ?? account.id,
+        )
         accountSnapshots.push(snapshot)
         if (!snapshot.skipReason) {
           runnableAccounts.push(account)
@@ -1762,7 +1772,7 @@ class AutoCheckinScheduler {
       for (const account of disabledAccounts) {
         results[account.id] = {
           accountId: account.id,
-          accountName: `${account.site_name} - ${account.account_info.username}`,
+          accountName: accountDisplayNameById.get(account.id) ?? account.id,
           status: CHECKIN_RESULT_STATUS.SKIPPED,
           messageKey: this.getSkipReasonMessageKey(
             AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DISABLED,
@@ -1841,7 +1851,12 @@ class AutoCheckinScheduler {
       let failedCount = 0
 
       const checkinOutcomes = await Promise.all(
-        runnableAccounts.map((account) => this.runAccountCheckin(account)),
+        runnableAccounts.map((account) =>
+          this.runAccountCheckin(
+            account,
+            accountDisplayNameById.get(account.id) ?? account.id,
+          ),
+        ),
       )
 
       for (const outcome of checkinOutcomes) {
@@ -2026,6 +2041,8 @@ class AutoCheckinScheduler {
     // Treat missing values as enabled to preserve backward compatibility with older stored prefs.
     const notifyUiOnCompletion = config.notifyUiOnCompletion !== false
     const currentStatus = await autoCheckinStorage.getStatus()
+    const allAccounts = await accountStorage.getAllAccounts()
+    const accountDisplayNameById = buildAccountDisplayNameMap(allAccounts)
 
     if (!config.globalEnabled || !config.retryStrategy?.enabled) {
       logger.info("Retry skipped (feature disabled)")
@@ -2073,7 +2090,7 @@ class AutoCheckinScheduler {
         updates[accountId] = {
           accountId,
           accountName: account
-            ? `${account.site_name} - ${account.account_info.username}`
+            ? accountDisplayNameById.get(account.id) ?? account.id
             : accountId,
           status: CHECKIN_RESULT_STATUS.SKIPPED,
           messageKey: this.getSkipReasonMessageKey(
@@ -2085,7 +2102,10 @@ class AutoCheckinScheduler {
         continue
       }
 
-      const snapshot = this.buildAccountSnapshot(account)
+      const snapshot = this.buildAccountSnapshot(
+        account,
+        accountDisplayNameById.get(account.id) ?? account.id,
+      )
       if (snapshot.skipReason) {
         updates[accountId] = {
           accountId,
@@ -2098,7 +2118,10 @@ class AutoCheckinScheduler {
         continue
       }
 
-      const outcome = await this.runAccountCheckin(account)
+      const outcome = await this.runAccountCheckin(
+        account,
+        accountDisplayNameById.get(account.id) ?? account.id,
+      )
       // Persist that we've attempted one more time for this account today, regardless of outcome.
       attemptsByAccount[accountId] = attempts + 1
       updates[accountId] = outcome.result
@@ -2220,7 +2243,9 @@ class AutoCheckinScheduler {
    */
   async retryAccount(accountId: string) {
     const today = this.getLocalDay()
-    const account = await accountStorage.getAccountById(accountId)
+    const allAccounts = await accountStorage.getAllAccounts()
+    const account = allAccounts.find((item) => item.id === accountId)
+    const accountDisplayNameById = buildAccountDisplayNameMap(allAccounts)
 
     if (!account) {
       throw new Error(t("messages:storage.accountNotFound", { id: accountId }))
@@ -2230,7 +2255,7 @@ class AutoCheckinScheduler {
       account.disabled === true
         ? {
             accountId: account.id,
-            accountName: `${account.site_name} - ${account.account_info.username}`,
+            accountName: accountDisplayNameById.get(account.id) ?? account.id,
             status: CHECKIN_RESULT_STATUS.SKIPPED,
             messageKey: this.getSkipReasonMessageKey(
               AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DISABLED,
@@ -2238,7 +2263,12 @@ class AutoCheckinScheduler {
             reasonCode: AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DISABLED,
             timestamp: Date.now(),
           }
-        : (await this.runAccountCheckin(account)).result
+        : (
+            await this.runAccountCheckin(
+              account,
+              accountDisplayNameById.get(account.id) ?? account.id,
+            )
+          ).result
 
     const currentStatus = (await autoCheckinStorage.getStatus()) || {}
 
@@ -2322,7 +2352,12 @@ class AutoCheckinScheduler {
       throw new Error(t("messages:storage.accountDisabled", { id: accountId }))
     }
 
-    return accountStorage.convertToDisplayData(account) as DisplaySiteData
+    const displayAccount = await accountStorage.getDisplayDataById(accountId)
+
+    return (
+      displayAccount ??
+      (accountStorage.convertToDisplayData(account) as DisplaySiteData)
+    )
   }
 }
 

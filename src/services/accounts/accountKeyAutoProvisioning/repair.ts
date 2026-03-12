@@ -6,6 +6,7 @@ import {
 } from "~/constants/runtimeActions"
 import { SUB2API } from "~/constants/siteType"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import { buildAccountDisplayNameMap } from "~/services/accounts/utils/accountDisplayName"
 import { ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS } from "~/services/core/storageKeys"
 import type { DisplaySiteData, SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
@@ -148,6 +149,7 @@ class AccountKeyRepairRunner {
   private async run(jobId: string): Promise<void> {
     try {
       const enabledAccounts = await accountStorage.getEnabledAccounts()
+      const accountNameById = buildAccountDisplayNameMap(enabledAccounts)
 
       const eligibleAccounts: SiteAccount[] = []
 
@@ -165,7 +167,7 @@ class AccountKeyRepairRunner {
         if (skipReason) {
           await this.recordResult({
             accountId: account.id,
-            accountName: account.site_name,
+            accountName: accountNameById.get(account.id) ?? account.site_name,
             siteType: account.site_type,
             siteUrlOrigin: getOriginKey(account.site_url),
             outcome: "skipped",
@@ -191,7 +193,10 @@ class AccountKeyRepairRunner {
         items: eligibleAccounts,
         getKey: (account) => getOriginKey(account.site_url),
         worker: async (account) => {
-          await this.processEligibleAccount(account)
+          await this.processEligibleAccount(
+            account,
+            accountNameById.get(account.id) ?? account.site_name,
+          )
         },
       })
 
@@ -221,11 +226,15 @@ class AccountKeyRepairRunner {
     }
   }
 
-  private async processEligibleAccount(account: SiteAccount): Promise<void> {
+  private async processEligibleAccount(
+    account: SiteAccount,
+    accountName: string,
+  ): Promise<void> {
     const originKey = getOriginKey(account.site_url)
     try {
       const displaySiteData: DisplaySiteData =
-        accountStorage.convertToDisplayData(account)
+        (await accountStorage.getDisplayDataById(account.id)) ??
+        (accountStorage.convertToDisplayData(account) as DisplaySiteData)
       const hasToken =
         typeof displaySiteData?.token === "string" &&
         displaySiteData.token.trim().length > 0
@@ -256,7 +265,7 @@ class AccountKeyRepairRunner {
 
       await this.recordResult({
         accountId: account.id,
-        accountName: account.site_name,
+        accountName,
         siteType: account.site_type,
         siteUrlOrigin: originKey,
         outcome: result.created ? "created" : "alreadyHad",
@@ -265,7 +274,7 @@ class AccountKeyRepairRunner {
     } catch (error) {
       await this.recordResult({
         accountId: account.id,
-        accountName: account.site_name,
+        accountName,
         siteType: account.site_type,
         siteUrlOrigin: originKey,
         outcome: "failed",

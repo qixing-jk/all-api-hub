@@ -924,7 +924,9 @@ export function useAccountDialog({
           toast.error(t("messages:toast.error.findAccountDetailsFailed"))
           return
         }
-        displaySiteData = accountStorage.convertToDisplayData(siteAccount)
+        displaySiteData =
+          (await accountStorage.getDisplayDataById(siteAccount.id)) ??
+          (accountStorage.convertToDisplayData(siteAccount) as DisplaySiteData)
       } else {
         displaySiteData = targetAccount
       }

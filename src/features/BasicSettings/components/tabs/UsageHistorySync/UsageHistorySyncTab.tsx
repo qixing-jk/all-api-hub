@@ -7,6 +7,7 @@ import { Card, CardContent, Input } from "~/components/ui"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import { buildAccountDisplayNameMap } from "~/services/accounts/utils/accountDisplayName"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
 import type { SiteAccount } from "~/types"
 import { USAGE_HISTORY_SCHEDULE_MODE } from "~/types/usageHistory"
@@ -89,13 +90,22 @@ export default function UsageHistorySyncTab() {
     void loadData()
   }, [loadData])
 
+  const accountLabelById = useMemo(
+    () => buildAccountDisplayNameMap(accounts),
+    [accounts],
+  )
+
   const filteredAccounts = useMemo(() => {
     const query = accountSearch.trim().toLowerCase()
     if (!query) return accounts
-    return accounts.filter((account) =>
-      account.site_name.toLowerCase().includes(query),
-    )
-  }, [accountSearch, accounts])
+    return accounts.filter((account) => {
+      const label = accountLabelById.get(account.id) ?? account.site_name
+      return (
+        label.toLowerCase().includes(query) ||
+        account.site_name.toLowerCase().includes(query)
+      )
+    })
+  }, [accountLabelById, accountSearch, accounts])
 
   const tableRows = useMemo<UsageHistoryAccountRow[]>(() => {
     return filteredAccounts.map((account) => {
@@ -110,7 +120,7 @@ export default function UsageHistorySyncTab() {
 
       return {
         id: account.id,
-        siteName: account.site_name,
+        accountName: accountLabelById.get(account.id) ?? account.site_name,
         state,
         lastSyncAtMs,
         lastSyncAtLabel,
@@ -118,7 +128,7 @@ export default function UsageHistorySyncTab() {
         lastWarning: status?.lastWarning,
       }
     })
-  }, [filteredAccounts, store, t])
+  }, [accountLabelById, filteredAccounts, store, t])
 
   const handleApplySettings = useCallback(async () => {
     try {

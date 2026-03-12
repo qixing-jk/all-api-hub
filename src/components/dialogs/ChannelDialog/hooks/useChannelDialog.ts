@@ -93,9 +93,9 @@ export function useChannelDialog() {
 
       if ("created_at" in account) {
         siteAccount = account
-        displaySiteData = accountStorage.convertToDisplayData(
-          account,
-        ) as DisplaySiteData
+        displaySiteData =
+          (await accountStorage.getDisplayDataById(account.id)) ??
+          (accountStorage.convertToDisplayData(account) as DisplaySiteData)
       } else {
         displaySiteData = account
         const fetchedAccount = await accountStorage.getAccountById(account.id)

@@ -214,4 +214,98 @@ describe("UsageAnalytics filters", () => {
       within(tokensFilter).queryByRole("button", { name: "Token B (#2)" }),
     ).toBeNull()
   })
+
+  it("disambiguates duplicate account names in site and account filters", async () => {
+    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([
+      {
+        id: "a1",
+        site_name: "Site A",
+        site_url: "https://one.example.com",
+        exchange_rate: 7.2,
+        account_info: { username: "alice" },
+      },
+      {
+        id: "a2",
+        site_name: "site   a",
+        site_url: "https://two.example.com",
+        exchange_rate: 7.2,
+        account_info: { username: "bob" },
+      },
+    ] as any)
+
+    const a1 = createEmptyUsageHistoryAccountStore()
+    a1.daily["2026-01-01"] = {
+      requests: 1,
+      promptTokens: 10,
+      completionTokens: 5,
+      totalTokens: 15,
+      quotaConsumed: 3,
+    }
+    a1.dailyByToken["1"] = {
+      "2026-01-01": { ...a1.daily["2026-01-01"] },
+    }
+    a1.tokenNamesById["1"] = "Token A"
+
+    const a2 = createEmptyUsageHistoryAccountStore()
+    a2.daily["2026-01-01"] = {
+      requests: 1,
+      promptTokens: 4,
+      completionTokens: 2,
+      totalTokens: 6,
+      quotaConsumed: 1,
+    }
+    a2.dailyByToken["2"] = {
+      "2026-01-01": { ...a2.daily["2026-01-01"] },
+    }
+    a2.tokenNamesById["2"] = "Token B"
+
+    vi.mocked(usageHistoryStorage.getStore).mockResolvedValue({
+      schemaVersion: 2,
+      accounts: { a1, a2 },
+    } as any)
+
+    render(<UsageAnalytics />)
+
+    await screen.findByText("usageAnalytics:filters.accounts")
+
+    const sitesFilter = getFilterContainer("usageAnalytics:filters.sites")
+    const accountsFilter = getFilterContainer("usageAnalytics:filters.accounts")
+    expect(
+      await within(sitesFilter).findByRole("button", {
+        name: /Site A · alice/,
+      }),
+    ).toBeInTheDocument()
+    expect(
+      await within(sitesFilter).findByRole("button", {
+        name: /site a · bob/i,
+      }),
+    ).toBeInTheDocument()
+    expect(
+      await within(accountsFilter).findByRole("button", {
+        name: /Site A · alice/,
+      }),
+    ).toBeInTheDocument()
+    expect(
+      await within(accountsFilter).findByRole("button", {
+        name: /site a · bob/i,
+      }),
+    ).toBeInTheDocument()
+
+    fireEvent.click(
+      await within(sitesFilter).findByRole("button", {
+        name: /Site A · alice/,
+      }),
+    )
+
+    expect(
+      await within(accountsFilter).findByRole("button", {
+        name: /Site A · alice/,
+      }),
+    ).toBeInTheDocument()
+    expect(
+      within(accountsFilter).queryByRole("button", {
+        name: /site a · bob/i,
+      }),
+    ).toBeNull()
+  })
 })

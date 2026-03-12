@@ -5,6 +5,7 @@
   "addFirstAccount": "Add your first account",
   "addAccount": "Add Account",
   "currentSiteAdded": "⚠️Saved accounts exist for {{siteName}}",
+  "currentSiteAddedCount": "⚠️Saved accounts exist for this site ({{count}})",
   "currentLoginAdded": "⚠️Current login already added for {{siteName}}",
   "list": {
     "sort": "Sort",

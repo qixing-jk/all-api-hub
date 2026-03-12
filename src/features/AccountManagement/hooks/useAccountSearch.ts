@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
+import { compareAccountDisplayNames } from "~/services/accounts/utils/accountDisplayName"
 import {
   searchAccounts,
   type SearchResult,
@@ -294,7 +295,7 @@ export function useAccountSearch(
         return bTime - aTime
       }
 
-      return a.account.name.localeCompare(b.account.name)
+      return compareAccountDisplayNames(a.account, b.account)
     })
   }, [accounts, debouncedQuery])
 

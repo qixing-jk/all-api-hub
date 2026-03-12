@@ -22,6 +22,7 @@ import type {
   DedupeAccountsDialogGroup,
   DedupeAccountsKeepChangeInput,
 } from "./types"
+import { buildDedupeAccountLabelMap } from "./utils"
 
 interface DedupeAccountsDialogProps {
   isOpen: boolean
@@ -75,6 +76,10 @@ export default function DedupeAccountsDialog({
         strategy,
       }),
     [accounts, pinnedAccountIds, strategy],
+  )
+  const accountLabelById = useMemo(
+    () => buildDedupeAccountLabelMap(accounts),
+    [accounts],
   )
 
   const scanGroups = scan.groups
@@ -253,6 +258,7 @@ export default function DedupeAccountsDialog({
           strategy={strategy}
           onStrategyChange={setStrategy}
           groups={groups}
+          accountLabelById={accountLabelById}
           deleteCount={idsToDelete.length}
           pinnedAccountIds={pinnedAccountIds}
           orderedIndexByAccountId={orderedIndexByAccountId}
@@ -283,6 +289,7 @@ export default function DedupeAccountsDialog({
         details={
           <DedupeAccountsConfirmDetails
             groups={groups}
+            accountLabelById={accountLabelById}
             pinnedToDeleteCount={pinnedToDeleteCount}
             orderedToDeleteCount={orderedToDeleteCount}
             t={t}

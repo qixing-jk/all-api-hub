@@ -11,7 +11,7 @@ type UsageAnalyticsFilterOption = {
 
 interface UsageAnalyticsFiltersCardProps {
   siteOptions: UsageAnalyticsFilterOption[]
-  selectedSiteNames: string[]
+  selectedSiteIds: string[]
   onSiteChange: (value: string[]) => void
   accountOptions: UsageAnalyticsFilterOption[]
   selectedAccountIds: string[]
@@ -33,7 +33,7 @@ interface UsageAnalyticsFiltersCardProps {
  */
 export default function UsageAnalyticsFiltersCard({
   siteOptions,
-  selectedSiteNames,
+  selectedSiteIds,
   onSiteChange,
   accountOptions,
   selectedAccountIds,
@@ -63,7 +63,7 @@ export default function UsageAnalyticsFiltersCard({
         </div>
         <TagFilter
           options={siteOptions}
-          value={selectedSiteNames}
+          value={selectedSiteIds}
           onChange={onSiteChange}
           includeAllOption
           allLabel={t("filters.allSites")}

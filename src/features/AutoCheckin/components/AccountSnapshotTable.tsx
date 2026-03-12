@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next"
 
 import AccountLinkButton from "~/components/AccountLinkButton"
 import { Card } from "~/components/ui"
+import { compareAccountDisplayNames } from "~/services/accounts/utils/accountDisplayName"
 import {
   CHECKIN_RESULT_STATUS,
   type AutoCheckinAccountSnapshot,
@@ -32,7 +33,10 @@ export default function AccountSnapshotTable({
 
   const sortedSnapshots = useMemo(() => {
     return [...snapshots].sort((a, b) =>
-      a.accountName.localeCompare(b.accountName),
+      compareAccountDisplayNames(
+        { id: a.accountId, name: a.accountName },
+        { id: b.accountId, name: b.accountName },
+      ),
     )
   }, [snapshots])
 

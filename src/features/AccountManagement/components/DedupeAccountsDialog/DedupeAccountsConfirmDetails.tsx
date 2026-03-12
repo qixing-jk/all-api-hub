@@ -3,10 +3,10 @@ import type { TFunction } from "i18next"
 import { Separator } from "~/components/ui"
 
 import type { DedupeAccountsDialogGroup } from "./types"
-import { getAccountLabel } from "./utils"
 
 export interface DedupeAccountsConfirmDetailsProps {
   groups: DedupeAccountsDialogGroup[]
+  accountLabelById: Map<string, string>
   pinnedToDeleteCount: number
   orderedToDeleteCount: number
   t: TFunction
@@ -17,6 +17,7 @@ export interface DedupeAccountsConfirmDetailsProps {
  */
 export function DedupeAccountsConfirmDetails({
   groups,
+  accountLabelById,
   pinnedToDeleteCount,
   orderedToDeleteCount,
   t,
@@ -45,7 +46,7 @@ export function DedupeAccountsConfirmDetails({
           )
           const deleteLabels = group.accounts
             .filter((account) => account.id !== group.keepAccountId)
-            .map(getAccountLabel)
+            .map((account) => accountLabelById.get(account.id) ?? account.id)
             .join(", ")
 
           return (
@@ -63,7 +64,9 @@ export function DedupeAccountsConfirmDetails({
                 <span className="font-medium">
                   {t("ui:dialog.dedupeAccounts.keep")}:
                 </span>{" "}
-                {keep ? getAccountLabel(keep) : group.keepAccountId}
+                {keep
+                  ? accountLabelById.get(keep.id) ?? keep.id
+                  : group.keepAccountId}
               </div>
               <div className="text-sm">
                 <span className="font-medium">

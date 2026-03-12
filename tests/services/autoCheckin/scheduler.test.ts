@@ -851,6 +851,58 @@ describe("autoCheckinScheduler targeting support", () => {
 
     vi.useRealTimers()
   })
+
+  it("uses globally disambiguated account names in per-account results", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2024, 0, 1, 9, 0, 0))
+
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      autoCheckin: {
+        ...(DEFAULT_PREFERENCES as any).autoCheckin,
+        globalEnabled: true,
+        notifyUiOnCompletion: false,
+        retryStrategy: {
+          enabled: false,
+          intervalMinutes: 30,
+          maxAttemptsPerDay: 3,
+        },
+      },
+    })
+
+    const accountA: any = {
+      id: "a",
+      disabled: false,
+      site_name: "Same Name",
+      site_type: "veloera",
+      account_info: { username: "alice" },
+      checkIn: { enableDetection: true },
+    }
+    const accountB: any = {
+      id: "b",
+      disabled: false,
+      site_name: "same   name",
+      site_type: "veloera",
+      account_info: { username: "bob" },
+      checkIn: { enableDetection: true },
+    }
+
+    mockedAccountStorage.getAllAccounts.mockResolvedValue([accountA, accountB])
+
+    const provider = {
+      canCheckIn: vi.fn(() => true),
+      checkIn: vi.fn(async () => ({ status: "success" })),
+    }
+    mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
+
+    await autoCheckinScheduler.runCheckins({
+      runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
+    })
+
+    expect(storedStatus.perAccount.a.accountName).toBe("Same Name · alice")
+    expect(storedStatus.perAccount.b.accountName).toBe("same   name · bob")
+
+    vi.useRealTimers()
+  })
 })
 
 describe("autoCheckinScheduler run-completed notifications", () => {
@@ -1289,12 +1341,14 @@ describe("autoCheckinScheduler.retryAccount", () => {
   })
 
   it("skips disabled accounts with an explicit skip reason", async () => {
-    mockedAccountStorage.getAccountById.mockResolvedValueOnce({
-      id: "disabled-1",
-      disabled: true,
-      site_name: "Disabled",
-      account_info: { username: "user" },
-    })
+    mockedAccountStorage.getAllAccounts.mockResolvedValueOnce([
+      {
+        id: "disabled-1",
+        disabled: true,
+        site_name: "Disabled",
+        account_info: { username: "user" },
+      },
+    ])
     mockedAutoCheckinStorage.getStatus.mockResolvedValueOnce({
       perAccount: {},
       summary: {
