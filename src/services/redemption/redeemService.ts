@@ -60,8 +60,7 @@ export class RedeemService {
 
       const displayAccount =
         (await accountStorage.getDisplayDataById(accountId)) ??
-        ((accountStorage.convertToDisplayData(account) as DisplaySiteData) ||
-          undefined)
+        (accountStorage.convertToDisplayData(account) as DisplaySiteData)
 
       const amountStr =
         typeof creditedAmount === "number"

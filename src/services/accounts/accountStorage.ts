@@ -1104,6 +1104,7 @@ class AccountStorageService {
           username: normalized.account_info.username,
           duplicateKeys,
         }),
+        baseName: normalized.site_name,
         username: normalized.account_info.username,
         disabled: AccountStorageService.isAccountDisabled(normalized),
         excludeFromTotalBalance:

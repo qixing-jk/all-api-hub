@@ -378,6 +378,7 @@ export interface DisplaySiteData {
    */
   icon?: string
   name: string
+  baseName?: string
   username: string
   balance: CurrencyAmount
   todayConsumption: CurrencyAmount

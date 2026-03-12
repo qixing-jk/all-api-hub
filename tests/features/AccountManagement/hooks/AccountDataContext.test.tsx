@@ -363,4 +363,122 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
       expect(mockGetAllAccounts).toHaveBeenCalledTimes(1)
     })
   })
+
+  it("merges concurrent targeted reloads against the latest account snapshot", async () => {
+    mockResetExpiredCheckIns.mockResolvedValue(undefined)
+    mockGetTagStore.mockResolvedValue({ version: 1, tagsById: {} })
+
+    const accountA: any = {
+      id: "a",
+      checkIn: { siteStatus: { isCheckedInToday: false } },
+    }
+    const accountB: any = {
+      id: "b",
+      checkIn: { siteStatus: { isCheckedInToday: false } },
+    }
+
+    mockGetAllAccounts.mockResolvedValue([accountA, accountB])
+    mockGetAllBookmarks.mockResolvedValue([])
+    mockGetOrderedList.mockResolvedValue(["a", "b"])
+    mockGetPinnedList.mockResolvedValue([])
+    mockGetAccountStats.mockResolvedValue({
+      total_quota: 0,
+      today_total_consumption: 0,
+      today_total_requests: 0,
+      today_total_prompt_tokens: 0,
+      today_total_completion_tokens: 0,
+      today_total_income: 0,
+    })
+
+    mockConvertToDisplayData.mockImplementation((input: any) => {
+      const accounts = Array.isArray(input) ? input : [input]
+      const display = accounts.map((account: any) => ({
+        id: account.id,
+        name: account.id,
+        checkIn: account.checkIn,
+      }))
+      return Array.isArray(input) ? display : display[0]
+    })
+
+    let resolveReloadA!: (value: any) => void
+    let resolveReloadB!: (value: any) => void
+    const reloadAPromise = new Promise<any>((resolve) => {
+      resolveReloadA = resolve
+    })
+    const reloadBPromise = new Promise<any>((resolve) => {
+      resolveReloadB = resolve
+    })
+
+    mockGetAccountById.mockImplementation((accountId: string) => {
+      if (accountId === "a") {
+        return reloadAPromise
+      }
+      if (accountId === "b") {
+        return reloadBPromise
+      }
+      return Promise.resolve(null)
+    })
+
+    let latestCtx: ReturnType<typeof useAccountDataContext> | null = null
+
+    render(
+      <I18nextProvider i18n={i18nInstance}>
+        <AccountDataProvider>
+          <ContextProbe onChange={(ctx) => (latestCtx = ctx)} />
+        </AccountDataProvider>
+      </I18nextProvider>,
+    )
+
+    await waitFor(() => {
+      expect(latestCtx?.displayData).toHaveLength(2)
+    })
+
+    const listener = (globalThis as any).__accountDataContextRuntimeListener as
+      | ((message: any) => void)
+      | undefined
+    expect(listener).toBeTypeOf("function")
+
+    await act(async () => {
+      listener!({
+        action: RuntimeActionIds.AutoCheckinRunCompleted,
+        updatedAccountIds: ["a"],
+      })
+      listener!({
+        action: RuntimeActionIds.AutoCheckinRunCompleted,
+        updatedAccountIds: ["b"],
+      })
+    })
+
+    await act(async () => {
+      resolveReloadA({
+        id: "a",
+        checkIn: { siteStatus: { isCheckedInToday: true } },
+      })
+      await reloadAPromise
+    })
+
+    await waitFor(() => {
+      const byId = Object.fromEntries(
+        (latestCtx?.displayData ?? []).map((item: any) => [item.id, item]),
+      )
+      expect(byId.a?.checkIn?.siteStatus?.isCheckedInToday).toBe(true)
+      expect(byId.b?.checkIn?.siteStatus?.isCheckedInToday).toBe(false)
+    })
+
+    await act(async () => {
+      resolveReloadB({
+        id: "b",
+        checkIn: { siteStatus: { isCheckedInToday: true } },
+      })
+      await reloadBPromise
+    })
+
+    await waitFor(() => {
+      const byId = Object.fromEntries(
+        (latestCtx?.displayData ?? []).map((item: any) => [item.id, item]),
+      )
+      expect(byId.a?.checkIn?.siteStatus?.isCheckedInToday).toBe(true)
+      expect(byId.b?.checkIn?.siteStatus?.isCheckedInToday).toBe(true)
+    })
+  })
 })

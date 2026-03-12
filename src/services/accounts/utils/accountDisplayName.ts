@@ -10,14 +10,7 @@ export function normalizeAccountDisplayNamePart(value: string): string {
     return ""
   }
 
-  return value
-    .replace(/[\uff01-\uff5e]/g, (char) =>
-      String.fromCharCode(char.charCodeAt(0) - 0xfee0),
-    )
-    .replace(/\u3000/g, " ")
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, " ")
+  return value.normalize("NFKC").toLowerCase().trim().replace(/\s+/g, " ")
 }
 
 /**
@@ -94,25 +87,37 @@ export function buildAccountDisplayNameMap(
 }
 
 /**
- * Compare display names case-insensitively, then fall back to the raw label and id.
+ * Compare account display labels by normalized base name, then normalized
+ * username, then raw label, and finally id for deterministic ordering.
  */
 export function compareAccountDisplayNames(
-  a: Pick<DisplaySiteData, "id" | "name">,
-  b: Pick<DisplaySiteData, "id" | "name">,
+  a: Pick<DisplaySiteData, "id" | "name"> & {
+    baseName?: string
+    username?: string
+  },
+  b: Pick<DisplaySiteData, "id" | "name"> & {
+    baseName?: string
+    username?: string
+  },
   sortOrder: "asc" | "desc" = "asc",
 ): number {
   const direction = sortOrder === "asc" ? 1 : -1
-  const normalizedComparison = normalizeAccountDisplayNamePart(
-    a.name,
-  ).localeCompare(normalizeAccountDisplayNamePart(b.name))
+  const normalizedBaseComparison = normalizeAccountDisplayNamePart(
+    a.baseName ?? a.name,
+  ).localeCompare(normalizeAccountDisplayNamePart(b.baseName ?? b.name))
 
-  if (normalizedComparison !== 0) {
-    return normalizedComparison * direction
+  if (normalizedBaseComparison !== 0) {
+    return normalizedBaseComparison * direction
   }
 
-  const rawComparison = a.name.localeCompare(b.name, undefined, {
-    sensitivity: "base",
-  })
+  const normalizedUsernameComparison = normalizeAccountDisplayNamePart(
+    a.username ?? "",
+  ).localeCompare(normalizeAccountDisplayNamePart(b.username ?? ""))
+  if (normalizedUsernameComparison !== 0) {
+    return normalizedUsernameComparison * direction
+  }
+
+  const rawComparison = a.name.localeCompare(b.name)
   if (rawComparison !== 0) {
     return rawComparison * direction
   }

@@ -352,6 +352,8 @@ export default function BalanceHistory() {
         title: string
         disabled?: boolean
       }
+      baseName: string
+      username: string
       isSelected: boolean
       hasData: boolean
     }
@@ -387,6 +389,8 @@ export default function BalanceHistory() {
             title: titleLines.join("\n"),
             disabled: noDataInRange && !isSelected,
           },
+          baseName: account.site_name,
+          username: account.account_info.username,
           isSelected,
           hasData: !hasStore || hasSnapshotData,
         }
@@ -397,8 +401,18 @@ export default function BalanceHistory() {
       if (a.isSelected !== b.isSelected) return a.isSelected ? -1 : 1
       if (a.hasData !== b.hasData) return a.hasData ? -1 : 1
       return compareAccountDisplayNames(
-        { id: a.option.value, name: a.option.label },
-        { id: b.option.value, name: b.option.label },
+        {
+          id: a.option.value,
+          name: a.option.label,
+          baseName: a.baseName,
+          username: a.username,
+        },
+        {
+          id: b.option.value,
+          name: b.option.label,
+          baseName: b.baseName,
+          username: b.username,
+        },
       )
     })
 

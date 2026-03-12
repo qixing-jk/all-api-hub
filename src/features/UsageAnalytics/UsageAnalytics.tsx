@@ -55,8 +55,8 @@ export default function UsageAnalytics() {
     useUsageAnalyticsData()
 
   const {
-    selectedSiteIds,
-    setSelectedSiteIds,
+    selectedSiteAccountIds,
+    setSelectedSiteAccountIds,
     selectedAccountIds,
     setSelectedAccountIds,
     selectedTokenIds,
@@ -590,8 +590,8 @@ export default function UsageAnalytics() {
 
       <UsageAnalyticsFiltersCard
         siteOptions={siteOptions}
-        selectedSiteIds={selectedSiteIds}
-        onSiteChange={setSelectedSiteIds}
+        selectedSiteIds={selectedSiteAccountIds}
+        onSiteChange={setSelectedSiteAccountIds}
         accountOptions={accountOptions}
         selectedAccountIds={selectedAccountIds}
         onAccountChange={setSelectedAccountIds}

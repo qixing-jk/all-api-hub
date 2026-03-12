@@ -270,15 +270,20 @@ describe("UsageAnalytics filters", () => {
 
     const sitesFilter = getFilterContainer("usageAnalytics:filters.sites")
     const accountsFilter = getFilterContainer("usageAnalytics:filters.accounts")
+    const hasExactBobLabel = (_content: string, element: Element | null) =>
+      Boolean(
+        element?.tagName === "SPAN" &&
+          element.getAttribute("title")?.includes("site   a · bob") &&
+          element.textContent === "site   a · bob",
+      )
+
     expect(
       await within(sitesFilter).findByRole("button", {
         name: /Site A · alice/,
       }),
     ).toBeInTheDocument()
     expect(
-      await within(sitesFilter).findByRole("button", {
-        name: /site a · bob/i,
-      }),
+      await within(sitesFilter).findByText(hasExactBobLabel),
     ).toBeInTheDocument()
     expect(
       await within(accountsFilter).findByRole("button", {
@@ -286,9 +291,7 @@ describe("UsageAnalytics filters", () => {
       }),
     ).toBeInTheDocument()
     expect(
-      await within(accountsFilter).findByRole("button", {
-        name: /site a · bob/i,
-      }),
+      await within(accountsFilter).findByText(hasExactBobLabel),
     ).toBeInTheDocument()
 
     fireEvent.click(
@@ -302,10 +305,6 @@ describe("UsageAnalytics filters", () => {
         name: /Site A · alice/,
       }),
     ).toBeInTheDocument()
-    expect(
-      within(accountsFilter).queryByRole("button", {
-        name: /site a · bob/i,
-      }),
-    ).toBeNull()
+    expect(within(accountsFilter).queryByText(hasExactBobLabel)).toBeNull()
   })
 })

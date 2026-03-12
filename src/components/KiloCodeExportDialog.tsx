@@ -395,29 +395,19 @@ export function KiloCodeExportDialog({
   }
 
   const siteOptions: CompactMultiSelectOption[] = useMemo(() => {
-    return displayData
+    return [...displayData]
+      .sort((a, b) => compareAccountDisplayNames(a, b))
       .map((site) => ({
         value: site.id,
         label: site.name || site.baseUrl,
       }))
-      .sort((a, b) =>
-        compareAccountDisplayNames(
-          { id: a.value, name: a.label },
-          { id: b.value, name: b.label },
-        ),
-      )
   }, [displayData])
 
   const selectedSites = useMemo(() => {
     return selectedSiteIds
       .map((id) => displayById.get(id))
       .filter((site): site is DisplaySiteData => Boolean(site))
-      .sort((a, b) =>
-        compareAccountDisplayNames(
-          { id: a.id, name: a.name || a.baseUrl },
-          { id: b.id, name: b.name || b.baseUrl },
-        ),
-      )
+      .sort((a, b) => compareAccountDisplayNames(a, b))
   }, [displayById, selectedSiteIds])
 
   useEffect(() => {

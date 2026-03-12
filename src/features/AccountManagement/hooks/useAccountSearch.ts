@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import { compareAccountDisplayNames } from "~/services/accounts/utils/accountDisplayName"
 import {
+  normalizeSearchText,
+  normalizeSearchUrl,
   searchAccounts,
   type SearchResult,
 } from "~/services/search/accountSearch"
@@ -25,39 +27,22 @@ export interface SearchResultWithHighlight extends SearchResult {
 
 interface TokenInfo {
   original: string
-  normalized: string
+  normalizedText: string
+  normalizedUrl: string
 }
 
 /**
- * Normalizes a string for matching by lowercasing, trimming, and removing protocols/query params.
- * @param value 原始文本
- * @returns 规范化后的文本
+ * Normalizes a literal text field for matching/highlighting.
  */
-function normalizeForMatching(value: string): string {
-  if (!value) {
-    return ""
-  }
+function normalizeTextForMatching(value: string): string {
+  return normalizeSearchText(value)
+}
 
-  let normalized = value.toLowerCase().trim()
-
-  // Convert full-width characters to half-width
-  normalized = normalized.replace(/[\uff01-\uff5e]/g, (char) =>
-    String.fromCharCode(char.charCodeAt(0) - 0xfee0),
-  )
-
-  // Remove http/https protocol
-  normalized = normalized.replace(/^https?:\/\//, "")
-
-  // Remove trailing slashes
-  normalized = normalized.replace(/\/+$/, "")
-
-  // Remove query string and hash
-  normalized = normalized.replace(/[?#].*$/, "")
-
-  // Normalize whitespace
-  normalized = normalized.replace(/\s+/g, " ").trim()
-
-  return normalized
+/**
+ * Normalizes URL-like fields for matching/highlighting.
+ */
+function normalizeUrlForMatching(value: string): string {
+  return normalizeSearchUrl(value)
 }
 
 /**
@@ -139,17 +124,21 @@ function generateHighlights(
     .split(/\s+/)
     .map((token) => ({
       original: token,
-      normalized: normalizeForMatching(token),
+      normalizedText: normalizeTextForMatching(token),
+      normalizedUrl: normalizeUrlForMatching(token),
     }))
-    .filter((token) => token.normalized.length > 0)
+    .filter(
+      (token) =>
+        token.normalizedText.length > 0 || token.normalizedUrl.length > 0,
+    )
 
   return results.map((result) => {
     const highlights: SearchResultWithHighlight["highlights"] = {}
 
     if (result.matchedFields.includes("name")) {
-      const normalizedName = normalizeForMatching(result.account.name)
+      const normalizedName = normalizeTextForMatching(result.account.name)
       const nameTokens = tokenInfos.filter((token) =>
-        normalizedName.includes(token.normalized),
+        normalizedName.includes(token.normalizedText),
       )
 
       if (nameTokens.length > 0) {
@@ -161,9 +150,9 @@ function generateHighlights(
     }
 
     if (result.matchedFields.includes("baseUrl")) {
-      const normalizedUrl = normalizeForMatching(result.account.baseUrl)
+      const normalizedUrl = normalizeUrlForMatching(result.account.baseUrl)
       const urlTokens = tokenInfos.filter((token) =>
-        normalizedUrl.includes(token.normalized),
+        normalizedUrl.includes(token.normalizedUrl),
       )
 
       if (urlTokens.length > 0) {
@@ -177,9 +166,9 @@ function generateHighlights(
     if (result.matchedFields.includes("customCheckInUrl")) {
       const customCheckInUrl = result.account.checkIn?.customCheckIn?.url
       if (customCheckInUrl) {
-        const normalizedCheckIn = normalizeForMatching(customCheckInUrl)
+        const normalizedCheckIn = normalizeUrlForMatching(customCheckInUrl)
         const checkInTokens = tokenInfos.filter((token) =>
-          normalizedCheckIn.includes(token.normalized),
+          normalizedCheckIn.includes(token.normalizedUrl),
         )
 
         if (checkInTokens.length > 0) {
@@ -194,9 +183,9 @@ function generateHighlights(
     if (result.matchedFields.includes("customRedeemUrl")) {
       const customRedeemUrl = result.account.checkIn?.customCheckIn?.redeemUrl
       if (customRedeemUrl) {
-        const normalizedRedeem = normalizeForMatching(customRedeemUrl)
+        const normalizedRedeem = normalizeUrlForMatching(customRedeemUrl)
         const redeemTokens = tokenInfos.filter((token) =>
-          normalizedRedeem.includes(token.normalized),
+          normalizedRedeem.includes(token.normalizedUrl),
         )
 
         if (redeemTokens.length > 0) {
@@ -211,13 +200,16 @@ function generateHighlights(
     if (result.matchedFields.includes("username")) {
       const { username } = result.account
       if (username) {
-        const normalizedRedeem = normalizeForMatching(username)
-        const redeemTokens = tokenInfos.filter((token) =>
-          normalizedRedeem.includes(token.normalized),
+        const normalizedUsername = normalizeTextForMatching(username)
+        const usernameTokens = tokenInfos.filter((token) =>
+          normalizedUsername.includes(token.normalizedText),
         )
 
-        if (redeemTokens.length > 0) {
-          highlights.username = createHighlightFragments(username, redeemTokens)
+        if (usernameTokens.length > 0) {
+          highlights.username = createHighlightFragments(
+            username,
+            usernameTokens,
+          )
         }
       }
     }
@@ -226,9 +218,9 @@ function generateHighlights(
       const tags = result.account.tags || []
       if (tags.length > 0) {
         const joined = tags.join(", ")
-        const normalizedTags = normalizeForMatching(joined)
+        const normalizedTags = normalizeTextForMatching(joined)
         const tagTokens = tokenInfos.filter((token) =>
-          normalizedTags.includes(token.normalized),
+          normalizedTags.includes(token.normalizedText),
         )
 
         if (tagTokens.length > 0) {

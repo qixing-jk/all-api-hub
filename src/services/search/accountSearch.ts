@@ -1,27 +1,26 @@
+import { normalizeAccountDisplayNamePart } from "~/services/accounts/utils/accountDisplayName"
 import type { DisplaySiteData } from "~/types"
 
 /**
- * Normalizes a string for search matching
- * - Converts to lowercase
- * - Removes http/https protocol
- * - Removes trailing slashes
- * - Removes query parameters and hash
- * - Normalizes whitespace (trim and collapse multiple spaces)
- * - Converts full-width characters to half-width
+ * Normalizes general text fields for search matching using the shared
+ * account-display normalization pipeline.
  */
-function normalizeString(str: string): string {
+export function normalizeSearchText(str: string): string {
+  if (!str) return ""
+  return normalizeAccountDisplayNamePart(str)
+}
+
+/**
+ * Normalizes URL-like search text while preserving literal matching for
+ * non-URL fields such as names and usernames.
+ */
+export function normalizeSearchUrl(str: string): string {
   if (!str) return ""
 
-  // Convert to lowercase
-  let normalized = str.toLowerCase().trim()
-
-  // Convert full-width to half-width characters
-  normalized = normalized.replace(/[\uff01-\uff5e]/g, (ch) =>
-    String.fromCharCode(ch.charCodeAt(0) - 0xfee0),
-  )
+  let normalized = str.trim()
 
   // Remove protocol for URLs
-  normalized = normalized.replace(/^https?:\/\//, "")
+  normalized = normalized.replace(/^https?:\/\//i, "")
 
   // Remove trailing slashes
   normalized = normalized.replace(/\/+$/, "")
@@ -29,17 +28,14 @@ function normalizeString(str: string): string {
   // Remove query parameters and hash
   normalized = normalized.replace(/[?#].*$/, "")
 
-  // Normalize whitespace
-  normalized = normalized.replace(/\s+/g, " ").trim()
-
-  return normalized
+  return normalizeSearchText(normalized)
 }
 
 /**
  * Extracts domain and path from a normalized URL string
  */
 function parseUrl(url: string): { domain: string; path: string } {
-  const normalized = normalizeString(url)
+  const normalized = normalizeSearchUrl(url)
   const slashIndex = normalized.indexOf("/")
 
   if (slashIndex === -1) {
@@ -70,14 +66,14 @@ function scoreTagMatch(tags: string[] | undefined, query: string): number {
     return 0
   }
 
-  const normalizedQuery = normalizeString(query)
+  const normalizedQuery = normalizeSearchText(query)
   if (!normalizedQuery) {
     return 0
   }
 
   let score = 0
   for (const tag of tags) {
-    const normalizedTag = normalizeString(tag)
+    const normalizedTag = normalizeSearchText(tag)
     if (!normalizedTag) continue
     if (normalizedTag === normalizedQuery) {
       score = Math.max(score, 4)
@@ -94,7 +90,7 @@ function scoreTagMatch(tags: string[] | undefined, query: string): number {
  */
 function scoreUrlMatch(url: string, query: string): number {
   const { domain, path } = parseUrl(url)
-  const normalizedQuery = normalizeString(query)
+  const normalizedQuery = normalizeSearchUrl(query)
 
   let score = 0
 
@@ -123,8 +119,8 @@ function scoreUrlMatch(url: string, query: string): number {
  * Calculates the score for access token matching
  */
 function scoreTokenMatch(token: string, query: string): number {
-  const normalized = normalizeString(token)
-  const normalizedQuery = normalizeString(query)
+  const normalized = normalizeSearchText(token)
+  const normalizedQuery = normalizeSearchText(query)
 
   if (normalized.includes(normalizedQuery)) {
     return 1 // Lowest weight for token matching
@@ -141,8 +137,8 @@ function scoreAccountIdMatch(accountId: string, query: string): number {
     return 0
   }
 
-  const normalizedId = normalizeString(accountId)
-  const normalizedQuery = normalizeString(query)
+  const normalizedId = normalizeSearchText(accountId)
+  const normalizedQuery = normalizeSearchText(query)
 
   if (normalizedId.includes(normalizedQuery)) {
     return 1 // Lowest priority, same as token matching
@@ -175,8 +171,11 @@ export function searchAccounts(
   const tokens = query
     .trim()
     .split(/\s+/)
-    .map((token) => normalizeString(token))
-    .filter((token) => token.length > 0)
+    .map((token) => ({
+      text: normalizeSearchText(token),
+      url: normalizeSearchUrl(token),
+    }))
+    .filter((token) => token.text.length > 0 || token.url.length > 0)
 
   if (tokens.length === 0) {
     return []
@@ -194,14 +193,17 @@ export function searchAccounts(
       const tokenMatchedFields = new Set<string>()
 
       // Match against name
-      const nameScore = scoreNameMatch(normalizeString(account.name), token)
+      const nameScore = scoreNameMatch(
+        normalizeSearchText(account.name),
+        token.text,
+      )
       if (nameScore > 0) {
         tokenScore += nameScore
         tokenMatchedFields.add("name")
       }
 
       // Match against baseUrl (site_url)
-      const baseUrlScore = scoreUrlMatch(account.baseUrl, token)
+      const baseUrlScore = scoreUrlMatch(account.baseUrl, token.url)
       if (baseUrlScore > 0) {
         tokenScore += baseUrlScore
         tokenMatchedFields.add("baseUrl")
@@ -210,7 +212,7 @@ export function searchAccounts(
       // Match against customCheckInUrl
       const customCheckInUrl = account.checkIn?.customCheckIn?.url
       if (customCheckInUrl) {
-        const checkInScore = scoreUrlMatch(customCheckInUrl, token)
+        const checkInScore = scoreUrlMatch(customCheckInUrl, token.url)
         if (checkInScore > 0) {
           tokenScore += checkInScore
           tokenMatchedFields.add("customCheckInUrl")
@@ -220,7 +222,7 @@ export function searchAccounts(
       // Match against customRedeemUrl
       const customRedeemUrl = account.checkIn?.customCheckIn?.redeemUrl
       if (customRedeemUrl) {
-        const redeemScore = scoreUrlMatch(customRedeemUrl, token)
+        const redeemScore = scoreUrlMatch(customRedeemUrl, token.url)
         if (redeemScore > 0) {
           tokenScore += redeemScore
           tokenMatchedFields.add("customRedeemUrl")
@@ -229,29 +231,29 @@ export function searchAccounts(
 
       // Match against username
       const usernameScore = scoreNameMatch(
-        normalizeString(account.username),
-        token,
+        normalizeSearchText(account.username),
+        token.text,
       )
       if (usernameScore > 0) {
         tokenScore += usernameScore
         tokenMatchedFields.add("username")
       }
 
-      const accountIdScore = scoreAccountIdMatch(account.id, token)
+      const accountIdScore = scoreAccountIdMatch(account.id, token.text)
       if (accountIdScore > 0) {
         tokenScore += accountIdScore
         // accountId is internal-only, no highlight needed
       }
 
       // Match against tags
-      const tagScore = scoreTagMatch(account.tags, token)
+      const tagScore = scoreTagMatch(account.tags, token.text)
       if (tagScore > 0) {
         tokenScore += tagScore
         tokenMatchedFields.add("tags")
       }
 
       // Match against accessToken (lowest weight, not added to matchedFields for UI)
-      const accessTokenScore = scoreTokenMatch(account.token, token)
+      const accessTokenScore = scoreTokenMatch(account.token, token.text)
       if (accessTokenScore > 0) {
         tokenScore += accessTokenScore
         // Note: We don't add "accessToken" to matchedFields as it should not be displayed/highlighted

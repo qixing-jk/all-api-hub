@@ -4,6 +4,7 @@ import {
   ACCOUNT_DISPLAY_NAME_SEPARATOR,
   buildAccountDisplayNameMap,
   collectDuplicateAccountNameKeys,
+  compareAccountDisplayNames,
   formatDisambiguatedAccountDisplayName,
   normalizeAccountDisplayNamePart,
   resolveAccountDisplayName,
@@ -112,5 +113,23 @@ describe("accountDisplayName helpers", () => {
     expect(displayNameById.get("a")).toBe("Shared · alice")
     expect(displayNameById.get("b")).toBe("shared · bob")
     expect(displayNameById.get("c")).toBe("Unique")
+  })
+
+  it("sorts by normalized base name and normalized username before raw label/id", () => {
+    const alice = {
+      id: "a",
+      name: "Ｍｙ　Ｓｉｔｅ · Alice",
+      baseName: "Ｍｙ　Ｓｉｔｅ",
+      username: "Alice",
+    }
+    const bob = {
+      id: "b",
+      name: "my   site · bob",
+      baseName: "my   site",
+      username: "bob",
+    }
+
+    expect(compareAccountDisplayNames(alice, bob)).toBeLessThan(0)
+    expect(compareAccountDisplayNames(bob, alice)).toBeGreaterThan(0)
   })
 })

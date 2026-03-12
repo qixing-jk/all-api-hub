@@ -11,7 +11,7 @@ import { formatLocaleDateTime } from "~/utils/core/formatters"
 export function buildDedupeAccountLabelMap(
   accounts: readonly SiteAccount[],
 ): Map<string, string> {
-  return buildAccountDisplayNameMap([...accounts])
+  return buildAccountDisplayNameMap(accounts)
 }
 
 /**

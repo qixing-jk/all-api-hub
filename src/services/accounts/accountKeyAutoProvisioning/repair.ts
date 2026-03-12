@@ -148,8 +148,11 @@ class AccountKeyRepairRunner {
 
   private async run(jobId: string): Promise<void> {
     try {
-      const enabledAccounts = await accountStorage.getEnabledAccounts()
-      const accountNameById = buildAccountDisplayNameMap(enabledAccounts)
+      const allAccounts = await accountStorage.getAllAccounts()
+      const enabledAccounts = allAccounts.filter(
+        (account) => account.disabled !== true,
+      )
+      const accountNameById = buildAccountDisplayNameMap(allAccounts)
 
       const eligibleAccounts: SiteAccount[] = []
 

@@ -92,6 +92,23 @@ describe("accountSearch", () => {
       expect(results[0].matchedFields).toContain("username")
     })
 
+    it("treats username punctuation literally instead of URL-normalizing it", () => {
+      const results = searchAccounts(
+        [
+          {
+            ...mockAccounts[0],
+            id: "3",
+            username: "alice#1",
+          },
+        ],
+        "alice#1",
+      )
+
+      expect(results).toHaveLength(1)
+      expect(results[0].account.username).toBe("alice#1")
+      expect(results[0].matchedFields).toContain("username")
+    })
+
     it("finds customCheckInUrl match", () => {
       const results = searchAccounts(mockAccounts, "checkin.openai.com")
       expect(results).toHaveLength(1)

@@ -609,18 +609,21 @@ export const AccountDataProvider = ({
           reloadedAccounts.map((account) => [account.id, account]),
         )
 
-        const nextAccounts = accounts.map(
+        const mergedAccounts = accountsRef.current.map(
           (account) => reloadedById[account.id] ?? account,
         )
-        const knownIds = new Set(nextAccounts.map((account) => account.id))
+        const knownIds = new Set(mergedAccounts.map((account) => account.id))
         for (const account of reloadedAccounts) {
           if (!knownIds.has(account.id)) {
-            nextAccounts.push(account)
+            mergedAccounts.push(account)
           }
         }
 
-        setAccounts(nextAccounts)
-        setDisplayData(buildDisplayDataWithResolvedTags(nextAccounts, tagStore))
+        accountsRef.current = mergedAccounts
+        setAccounts(mergedAccounts)
+        setDisplayData(
+          buildDisplayDataWithResolvedTags(mergedAccounts, tagStore),
+        )
       } catch (error) {
         logger.warn(
           "Account-scoped reload failed; falling back to full reload",
@@ -653,7 +656,7 @@ export const AccountDataProvider = ({
         void reloadAccountsById(updatedAccountIds)
       }
     })
-  }, [accounts, buildDisplayDataWithResolvedTags, loadAccountData, tagStore])
+  }, [buildDisplayDataWithResolvedTags, loadAccountData, tagStore])
 
   const handleSort = useCallback(
     (field: SortField) => {

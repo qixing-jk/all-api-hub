@@ -28,7 +28,9 @@ export const useUsageAnalyticsFilters = (params: {
   const { enabledAccounts, store, disabledAccountIdSet } = params
   const { t } = useTranslation("usageAnalytics")
 
-  const [selectedSiteIds, setSelectedSiteIds] = useState<string[]>([])
+  const [selectedSiteAccountIds, setSelectedSiteAccountIds] = useState<
+    string[]
+  >([])
   const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>([])
   const [selectedTokenIds, setSelectedTokenIds] = useState<string[]>([])
   const [startDay, setStartDay] = useState<DayKey>("")
@@ -100,32 +102,48 @@ export const useUsageAnalyticsFilters = (params: {
       value: account.id,
       label: accountLabelById.get(account.id) ?? account.id,
       title: siteTitleById.get(account.id),
+      baseName: account.site_name,
+      username: account.account_info?.username ?? "",
     }))
 
     options.sort((a, b) =>
       compareAccountDisplayNames(
-        { id: a.value, name: a.label },
-        { id: b.value, name: b.label },
+        {
+          id: a.value,
+          name: a.label,
+          baseName: a.baseName,
+          username: a.username,
+        },
+        {
+          id: b.value,
+          name: b.label,
+          baseName: b.baseName,
+          username: b.username,
+        },
       ),
     )
-    return options
+    return options.map(
+      ({ baseName: _baseName, username: _username, ...rest }) => rest,
+    )
   }, [accountLabelById, enabledAccounts, siteTitleById])
 
   // Filtered accounts for the selected sites.
   const accountsForSelectedSites = useMemo(() => {
-    if (selectedSiteIds.length === 0) {
+    if (selectedSiteAccountIds.length === 0) {
       return enabledAccounts
     }
 
-    const selected = new Set(selectedSiteIds)
+    const selected = new Set(selectedSiteAccountIds)
     return enabledAccounts.filter((account) => selected.has(account.id))
-  }, [enabledAccounts, selectedSiteIds])
+  }, [enabledAccounts, selectedSiteAccountIds])
 
   const accountOptions = useMemo(() => {
     const options = accountsForSelectedSites.map((account) => ({
       value: account.id,
       label: accountLabelById.get(account.id) ?? account.id,
       count: tokenCountByAccountId.get(account.id) ?? 0,
+      baseName: account.site_name,
+      username: account.account_info?.username ?? "",
       title: [
         `${t("hover.account")}: ${accountLabelById.get(account.id) ?? account.id}`,
         `${t("hover.site")}: ${account.site_name}`,
@@ -137,11 +155,23 @@ export const useUsageAnalyticsFilters = (params: {
 
     options.sort((a, b) =>
       compareAccountDisplayNames(
-        { id: a.value, name: a.label },
-        { id: b.value, name: b.label },
+        {
+          id: a.value,
+          name: a.label,
+          baseName: a.baseName,
+          username: a.username,
+        },
+        {
+          id: b.value,
+          name: b.label,
+          baseName: b.baseName,
+          username: b.username,
+        },
       ),
     )
-    return options
+    return options.map(
+      ({ baseName: _baseName, username: _username, ...rest }) => rest,
+    )
   }, [accountLabelById, accountsForSelectedSites, t, tokenCountByAccountId])
 
   const accountLabels = useMemo(() => {
@@ -167,23 +197,23 @@ export const useUsageAnalyticsFilters = (params: {
   }, [accountsForSelectedSites, selectedAccountIds.length])
 
   useEffect(() => {
-    if (selectedSiteIds.length === 0) {
+    if (selectedSiteAccountIds.length === 0) {
       return
     }
 
     const available = new Set(siteOptions.map((option) => option.value))
-    setSelectedSiteIds((current) => {
+    setSelectedSiteAccountIds((current) => {
       const next = current.filter((siteId) => available.has(siteId))
       return next.length === current.length ? current : next
     })
-  }, [selectedSiteIds.length, siteOptions])
+  }, [selectedSiteAccountIds, siteOptions])
 
   const resolvedAccountIds = useMemo(() => {
     if (selectedAccountIds.length > 0) {
       return selectedAccountIds
     }
 
-    if (selectedSiteIds.length > 0) {
+    if (selectedSiteAccountIds.length > 0) {
       return accountsForSelectedSites.map((account) => account.id)
     }
 
@@ -199,7 +229,7 @@ export const useUsageAnalyticsFilters = (params: {
     enabledAccounts,
     accountsForSelectedSites,
     selectedAccountIds,
-    selectedSiteIds.length,
+    selectedSiteAccountIds.length,
     store,
   ])
 
@@ -348,8 +378,8 @@ export const useUsageAnalyticsFilters = (params: {
   }, [endDay, startDay])
 
   return {
-    selectedSiteIds,
-    setSelectedSiteIds,
+    selectedSiteAccountIds,
+    setSelectedSiteAccountIds,
     selectedAccountIds,
     setSelectedAccountIds,
     selectedTokenIds,
