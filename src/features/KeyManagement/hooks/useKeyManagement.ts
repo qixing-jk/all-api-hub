@@ -2,14 +2,18 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
+import { DONE_HUB, OCTOPUS, VELOERA } from "~/constants/siteType"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountData } from "~/hooks/useAccountData"
 import { createDisplayAccountApiContext } from "~/services/accounts/utils/apiServiceRequest"
+import { getManagedSiteTokenChannelStatus } from "~/services/managedSites/tokenChannelStatus"
 import type { AccountToken } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
 
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "../constants"
+import { buildTokenIdentityKey } from "../utils"
 
 /**
  * Unified logger scoped to the Key Management options page hooks.
@@ -37,9 +41,18 @@ interface TokenLoadProgress {
   error: number
 }
 
+interface ManagedSiteTokenStatusState {
+  cacheKey: string
+  isChecking: boolean
+  result?: Awaited<ReturnType<typeof getManagedSiteTokenChannelStatus>>
+  checkedAt?: number
+}
+
 const isFailedAccountTokenLoad = (
   value: FailedAccountTokenLoad | null,
 ): value is FailedAccountTokenLoad => value !== null
+
+const MANAGED_SITE_STATUS_CONCURRENCY = 4
 
 const tokenMatchesSearch = (token: AccountToken, searchLower: string) => {
   if (!searchLower) return true
@@ -52,6 +65,17 @@ const normalizeOrigin = (baseUrl: string) => {
   return normalizeUrlForOriginKey(baseUrl, { stripTrailingSlashes: false })
 }
 
+const hashStringForCache = (value: string) => {
+  let hash = 2166136261
+
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index)
+    hash = Math.imul(hash, 16777619)
+  }
+
+  return (hash >>> 0).toString(16)
+}
+
 /**
  * Manages key management page state: selection, loading, filtering, and CRUD handlers.
  * @param routeParams Optional route params containing preselected accountId.
@@ -60,6 +84,21 @@ const normalizeOrigin = (baseUrl: string) => {
 export function useKeyManagement(routeParams?: Record<string, string>) {
   const { t } = useTranslation(["keyManagement", "messages"])
   const { enabledDisplayData } = useAccountData()
+  const {
+    managedSiteType,
+    newApiBaseUrl,
+    newApiAdminToken,
+    newApiUserId,
+    doneHubBaseUrl,
+    doneHubAdminToken,
+    doneHubUserId,
+    veloeraBaseUrl,
+    veloeraAdminToken,
+    veloeraUserId,
+    octopusBaseUrl,
+    octopusUsername,
+    octopusPassword,
+  } = useUserPreferencesContext()
   const [selectedAccount, setSelectedAccount] = useState<string>("")
   const [searchTerm, setSearchTerm] = useState("")
   const [allAccountsFilterAccountId, setAllAccountsFilterAccountId] = useState<
@@ -73,6 +112,13 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
   const [visibleKeys, setVisibleKeys] = useState<Set<string>>(new Set())
   const [isAddTokenOpen, setIsAddTokenOpen] = useState(false)
   const [editingToken, setEditingToken] = useState<AccountToken | null>(null)
+  const [managedSiteTokenStatuses, setManagedSiteTokenStatuses] = useState<
+    Record<string, ManagedSiteTokenStatusState>
+  >({})
+  const managedSiteTokenStatusesRef = useRef(managedSiteTokenStatuses)
+  managedSiteTokenStatusesRef.current = managedSiteTokenStatuses
+  const [isManagedSiteStatusRefreshing, setIsManagedSiteStatusRefreshing] =
+    useState(false)
 
   const loadFailedMessage = t("keyManagement:messages.loadFailed")
   const loadFailedMessageRef = useRef(loadFailedMessage)
@@ -85,10 +131,62 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     return new Map(enabledDisplayData.map((account) => [account.id, account]))
   }, [enabledDisplayData])
 
+  const managedSiteConfigFingerprint = useMemo(() => {
+    if (managedSiteType === OCTOPUS) {
+      return [
+        managedSiteType,
+        (octopusBaseUrl ?? "").trim(),
+        (octopusUsername ?? "").trim(),
+        hashStringForCache((octopusPassword ?? "").trim()),
+      ].join("|")
+    }
+
+    if (managedSiteType === DONE_HUB) {
+      return [
+        managedSiteType,
+        (doneHubBaseUrl ?? "").trim(),
+        (doneHubUserId ?? "").trim(),
+        hashStringForCache((doneHubAdminToken ?? "").trim()),
+      ].join("|")
+    }
+
+    if (managedSiteType === VELOERA) {
+      return [
+        managedSiteType,
+        (veloeraBaseUrl ?? "").trim(),
+        (veloeraUserId ?? "").trim(),
+        hashStringForCache((veloeraAdminToken ?? "").trim()),
+      ].join("|")
+    }
+
+    return [
+      managedSiteType,
+      (newApiBaseUrl ?? "").trim(),
+      (newApiUserId ?? "").trim(),
+      hashStringForCache((newApiAdminToken ?? "").trim()),
+    ].join("|")
+  }, [
+    doneHubAdminToken,
+    doneHubBaseUrl,
+    doneHubUserId,
+    managedSiteType,
+    newApiAdminToken,
+    newApiBaseUrl,
+    newApiUserId,
+    octopusBaseUrl,
+    octopusPassword,
+    octopusUsername,
+    veloeraAdminToken,
+    veloeraBaseUrl,
+    veloeraUserId,
+  ])
+
   const normalizedSearchTerm = searchTerm.trim().toLowerCase()
 
   const selectionEpochRef = useRef(0)
   const accountRequestEpochRef = useRef<Record<string, number>>({})
+  const managedSiteStatusRunIdRef = useRef(0)
+  const isMountedRef = useRef(true)
 
   const startNewLoadEpoch = useCallback(() => {
     selectionEpochRef.current += 1
@@ -112,6 +210,168 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     [],
   )
 
+  const buildManagedSiteStatusCacheKey = useCallback(
+    (token: Pick<AccountToken, "accountId" | "id">) => {
+      return [
+        buildTokenIdentityKey(token.accountId, token.id),
+        managedSiteConfigFingerprint,
+      ].join("|")
+    },
+    [managedSiteConfigFingerprint],
+  )
+
+  const invalidateManagedSiteStatuses = useCallback(
+    (shouldRemove: (identityKey: string) => boolean) => {
+      setManagedSiteTokenStatuses((prev) => {
+        let didChange = false
+        const next: Record<string, ManagedSiteTokenStatusState> = {}
+
+        for (const [identityKey, entry] of Object.entries(prev)) {
+          if (shouldRemove(identityKey)) {
+            didChange = true
+            continue
+          }
+
+          next[identityKey] = entry
+        }
+
+        return didChange ? next : prev
+      })
+    },
+    [],
+  )
+
+  const invalidateManagedSiteStatusesForAccount = useCallback(
+    (accountId: string) => {
+      invalidateManagedSiteStatuses((identityKey) =>
+        identityKey.startsWith(`${accountId}:`),
+      )
+    },
+    [invalidateManagedSiteStatuses],
+  )
+
+  const invalidateManagedSiteStatusForToken = useCallback(
+    (token: Pick<AccountToken, "accountId" | "id">) => {
+      const identityKey = buildTokenIdentityKey(token.accountId, token.id)
+      invalidateManagedSiteStatuses(
+        (candidateIdentityKey) => candidateIdentityKey === identityKey,
+      )
+    },
+    [invalidateManagedSiteStatuses],
+  )
+
+  const runManagedSiteStatusChecks = useCallback(
+    async (params: { tokens: AccountToken[]; force?: boolean }) => {
+      const { tokens, force = false } = params
+      const uniqueTargets = new Map<
+        string,
+        {
+          token: AccountToken
+          account: (typeof enabledDisplayData)[number]
+          identityKey: string
+          cacheKey: string
+        }
+      >()
+
+      for (const token of tokens) {
+        const account = accountById.get(token.accountId)
+        if (!account) {
+          continue
+        }
+
+        const identityKey = buildTokenIdentityKey(token.accountId, token.id)
+        const cacheKey = buildManagedSiteStatusCacheKey(token)
+        const existingEntry = managedSiteTokenStatusesRef.current[identityKey]
+
+        if (
+          !force &&
+          existingEntry?.cacheKey === cacheKey &&
+          !existingEntry.isChecking
+        ) {
+          continue
+        }
+
+        uniqueTargets.set(identityKey, {
+          token,
+          account,
+          identityKey,
+          cacheKey,
+        })
+      }
+
+      const targets = Array.from(uniqueTargets.values())
+
+      if (targets.length === 0) {
+        return
+      }
+
+      const runId = managedSiteStatusRunIdRef.current + 1
+      managedSiteStatusRunIdRef.current = runId
+
+      setManagedSiteTokenStatuses((prev) => {
+        const next = { ...prev }
+
+        for (const target of targets) {
+          next[target.identityKey] = {
+            cacheKey: target.cacheKey,
+            isChecking: true,
+          }
+        }
+
+        return next
+      })
+
+      const queue = [...targets]
+      const workerCount = Math.min(
+        MANAGED_SITE_STATUS_CONCURRENCY,
+        queue.length,
+      )
+
+      await Promise.allSettled(
+        Array.from({ length: workerCount }, async () => {
+          while (queue.length > 0) {
+            const target = queue.shift()
+
+            if (!target) {
+              return
+            }
+
+            const result = await getManagedSiteTokenChannelStatus({
+              account: target.account,
+              token: target.token,
+            })
+
+            if (
+              !isMountedRef.current ||
+              managedSiteStatusRunIdRef.current !== runId
+            ) {
+              return
+            }
+
+            setManagedSiteTokenStatuses((prev) => {
+              const currentEntry = prev[target.identityKey]
+
+              if (!currentEntry || currentEntry.cacheKey !== target.cacheKey) {
+                return prev
+              }
+
+              return {
+                ...prev,
+                [target.identityKey]: {
+                  cacheKey: target.cacheKey,
+                  isChecking: false,
+                  result,
+                  checkedAt: Date.now(),
+                },
+              }
+            })
+          }
+        }),
+      )
+    },
+    [accountById, buildManagedSiteStatusCacheKey],
+  )
+
   /**
    * Loads tokens for a single account and updates inventory state.
    * Uses (loadEpoch, requestEpoch) guards to prevent stale writes when selection
@@ -130,6 +390,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       const requestEpoch = getNextAccountRequestEpoch(accountId)
 
       if (!isEpochActive(loadEpoch)) return
+      invalidateManagedSiteStatusesForAccount(accountId)
       setTokenInventories((prev) => ({
         ...prev,
         [accountId]: {
@@ -199,6 +460,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     [
       accountById,
       getNextAccountRequestEpoch,
+      invalidateManagedSiteStatusesForAccount,
       isEpochActive,
       isLatestAccountRequest,
     ],
@@ -490,6 +752,69 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     tokenInventories,
   ])
 
+  const statusCheckTokens = useMemo(() => {
+    return tokens.filter(
+      (token) => tokenInventories[token.accountId]?.status === "loaded",
+    )
+  }, [tokenInventories, tokens])
+
+  const refreshManagedSiteTokenStatuses = useCallback(async () => {
+    if (statusCheckTokens.length === 0) {
+      return
+    }
+
+    setIsManagedSiteStatusRefreshing(true)
+
+    try {
+      await runManagedSiteStatusChecks({
+        tokens: statusCheckTokens,
+        force: true,
+      })
+    } finally {
+      if (isMountedRef.current) {
+        setIsManagedSiteStatusRefreshing(false)
+      }
+    }
+  }, [runManagedSiteStatusChecks, statusCheckTokens])
+
+  const refreshManagedSiteTokenStatusForToken = useCallback(
+    async (token: AccountToken) => {
+      if (tokenInventoriesRef.current[token.accountId]?.status !== "loaded") {
+        return
+      }
+
+      invalidateManagedSiteStatusForToken(token)
+
+      await runManagedSiteStatusChecks({
+        tokens: [token],
+        force: true,
+      })
+    },
+    [invalidateManagedSiteStatusForToken, runManagedSiteStatusChecks],
+  )
+
+  useEffect(() => {
+    isMountedRef.current = true
+
+    return () => {
+      isMountedRef.current = false
+      managedSiteStatusRunIdRef.current += 1
+    }
+  }, [])
+
+  useEffect(() => {
+    managedSiteStatusRunIdRef.current += 1
+    setManagedSiteTokenStatuses({})
+  }, [managedSiteConfigFingerprint])
+
+  useEffect(() => {
+    if (statusCheckTokens.length === 0) {
+      return
+    }
+
+    void runManagedSiteStatusChecks({ tokens: statusCheckTokens })
+  }, [runManagedSiteStatusChecks, statusCheckTokens])
+
   const copyKey = async (key: string, name: string) => {
     try {
       await navigator.clipboard.writeText(key)
@@ -549,6 +874,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
 
       const { service, request } = createDisplayAccountApiContext(account)
       await service.deleteApiToken(request, token.id)
+      invalidateManagedSiteStatusForToken(token)
       toast.success(
         t("keyManagement:messages.deleteSuccess", { name: token.name }),
       )
@@ -584,10 +910,14 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     tokenLoadProgress,
     failedAccounts,
     accountSummaryItems,
+    managedSiteTokenStatuses,
+    isManagedSiteStatusRefreshing,
     allAccountsFilterAccountId,
     setAllAccountsFilterAccountId,
     loadTokens,
     filteredTokens,
+    refreshManagedSiteTokenStatuses,
+    refreshManagedSiteTokenStatusForToken,
     copyKey,
     toggleKeyVisibility,
     retryFailedAccounts,

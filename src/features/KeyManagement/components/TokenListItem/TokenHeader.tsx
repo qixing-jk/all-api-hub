@@ -1,9 +1,11 @@
 import {
+  ArrowPathIcon,
   DocumentDuplicateIcon,
   PencilIcon,
   PlusIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline"
+import type { TFunction } from "i18next"
 import { useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
@@ -18,10 +20,18 @@ import { CliProxyIcon } from "~/components/icons/CliProxyIcon"
 import { KiloCodeIcon } from "~/components/icons/KiloCodeIcon"
 import { ManagedSiteIcon } from "~/components/icons/ManagedSiteIcon"
 import { KiloCodeExportDialog } from "~/components/KiloCodeExportDialog"
+import ManagedSiteChannelLinkButton from "~/components/ManagedSiteChannelLinkButton"
 import { Badge, Heading6, IconButton } from "~/components/ui"
+import { NEW_API } from "~/constants/siteType"
+import type { ManagedSiteType } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { OpenInCherryStudio } from "~/services/integrations/cherryStudio"
+import {
+  MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS,
+  MANAGED_SITE_TOKEN_CHANNEL_STATUSES,
+  type ManagedSiteTokenChannelStatus,
+} from "~/services/managedSites/tokenChannelStatus"
 import { getManagedSiteLabelKey } from "~/services/managedSites/utils/managedSite"
 import {
   API_TYPES,
@@ -63,6 +73,124 @@ interface TokenHeaderProps {
    * Optional opener for CCSwitch export dialog.
    */
   onOpenCCSwitchDialog?: () => void
+  /**
+   * Current managed-site status for the token, when available.
+   */
+  managedSiteStatus?: ManagedSiteTokenChannelStatus
+  /**
+   * Whether a managed-site status check is currently running for the token.
+   */
+  isManagedSiteStatusChecking?: boolean
+  /**
+   * Optional callback invoked after a successful managed-site import.
+   */
+  onManagedSiteImportSuccess?: (token: AccountToken) => void | Promise<void>
+}
+
+const getManagedSiteStatusBadgeVariant = (params: {
+  isChecking: boolean
+  managedSiteStatus?: ManagedSiteTokenChannelStatus
+}) => {
+  if (params.isChecking) {
+    return "info" as const
+  }
+
+  if (
+    params.managedSiteStatus?.status ===
+    MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED
+  ) {
+    return "success" as const
+  }
+
+  if (
+    params.managedSiteStatus?.status ===
+    MANAGED_SITE_TOKEN_CHANNEL_STATUSES.NOT_ADDED
+  ) {
+    return "outline" as const
+  }
+
+  return "warning" as const
+}
+
+const getManagedSiteStatusLabel = (
+  t: TFunction,
+  params: {
+    isChecking: boolean
+    managedSiteStatus?: ManagedSiteTokenChannelStatus
+  },
+) => {
+  if (params.isChecking) {
+    return t("managedSiteStatus.badges.checking")
+  }
+
+  if (
+    params.managedSiteStatus?.status ===
+    MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED
+  ) {
+    return t("managedSiteStatus.badges.added")
+  }
+
+  if (
+    params.managedSiteStatus?.status ===
+    MANAGED_SITE_TOKEN_CHANNEL_STATUSES.NOT_ADDED
+  ) {
+    return t("managedSiteStatus.badges.notAdded")
+  }
+
+  return t("managedSiteStatus.badges.unknown")
+}
+
+const getManagedSiteStatusDescription = (
+  t: TFunction,
+  managedSiteType: ManagedSiteType,
+  managedSiteStatus?: ManagedSiteTokenChannelStatus,
+) => {
+  if (!managedSiteStatus) {
+    return null
+  }
+
+  if (managedSiteStatus.status === MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED) {
+    return t("managedSiteStatus.descriptions.exactKeyMatch")
+  }
+
+  if (
+    managedSiteStatus.status === MANAGED_SITE_TOKEN_CHANNEL_STATUSES.NOT_ADDED
+  ) {
+    return t("managedSiteStatus.descriptions.noMatch")
+  }
+
+  const appendNewApiRetrieveKeyHint = (message: string) => {
+    if (managedSiteType !== NEW_API) {
+      return message
+    }
+
+    return `${message} ${t("managedSiteStatus.descriptions.newApiRetrieveKeyHint")}`
+  }
+
+  switch (managedSiteStatus.reason) {
+    case MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.CONFIG_MISSING:
+      return t("managedSiteStatus.descriptions.configMissing")
+    case MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.INPUT_PREPARATION_FAILED:
+      return t("managedSiteStatus.descriptions.inputPreparationFailed")
+    case MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE:
+      return appendNewApiRetrieveKeyHint(
+        t("managedSiteStatus.descriptions.exactVerificationUnavailable"),
+      )
+    case MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.VELOERA_BASE_URL_SEARCH_UNSUPPORTED:
+      return t("managedSiteStatus.descriptions.veloeraBaseUrlSearchUnsupported")
+    case MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.URL_MODELS_MATCH_ONLY:
+      return appendNewApiRetrieveKeyHint(
+        t("managedSiteStatus.descriptions.urlModelsMatchOnly"),
+      )
+    case MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.URL_ONLY_MATCH_ONLY:
+      return appendNewApiRetrieveKeyHint(
+        t("managedSiteStatus.descriptions.urlOnlyMatchOnly"),
+      )
+    case MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.BACKEND_SEARCH_FAILED:
+      return t("managedSiteStatus.descriptions.backendSearchFailed")
+    default:
+      return null
+  }
 }
 
 /**
@@ -74,6 +202,7 @@ interface TokenHeaderProps {
  * @param props.handleDeleteToken Delete action callback.
  * @param props.account Account context for integrations.
  * @param props.onOpenCCSwitchDialog Optional CCSwitch export opener.
+ * @param props.onManagedSiteImportSuccess Optional managed-site import success callback.
  */
 function TokenActionButtons({
   token,
@@ -82,6 +211,7 @@ function TokenActionButtons({
   handleDeleteToken,
   account,
   onOpenCCSwitchDialog,
+  onManagedSiteImportSuccess,
 }: TokenHeaderProps) {
   const { t } = useTranslation(["keyManagement", "settings"])
   const {
@@ -102,6 +232,12 @@ function TokenActionButtons({
   const handleImportToManagedSite = async () => {
     await openWithAccount(account, token, (result) => {
       showResultToast(result)
+
+      if (result?.success && onManagedSiteImportSuccess) {
+        void Promise.resolve(onManagedSiteImportSuccess(token)).catch((error) =>
+          logger.error("Managed-site import success callback failed", error),
+        )
+      }
     })
   }
 
@@ -292,6 +428,9 @@ function TokenActionButtons({
  * @param props.handleDeleteToken Delete action callback.
  * @param props.account Account context for cross-app operations.
  * @param props.onOpenCCSwitchDialog Optional CCSwitch export opener.
+ * @param props.managedSiteStatus Current managed-site status for the token.
+ * @param props.isManagedSiteStatusChecking Whether the managed-site status is checking.
+ * @param props.onManagedSiteImportSuccess Optional callback after successful managed-site import.
  */
 export function TokenHeader({
   token,
@@ -300,27 +439,76 @@ export function TokenHeader({
   handleDeleteToken,
   account,
   onOpenCCSwitchDialog,
+  managedSiteStatus,
+  isManagedSiteStatusChecking = false,
+  onManagedSiteImportSuccess,
 }: TokenHeaderProps) {
   const { t } = useTranslation("keyManagement")
+  const { managedSiteType } = useUserPreferencesContext()
+
+  const shouldRenderManagedSiteStatus =
+    isManagedSiteStatusChecking || Boolean(managedSiteStatus)
+  const managedSiteStatusDescription = getManagedSiteStatusDescription(
+    t,
+    managedSiteType,
+    managedSiteStatus,
+  )
+  const matchedManagedSiteChannel =
+    managedSiteStatus && "matchedChannel" in managedSiteStatus
+      ? managedSiteStatus.matchedChannel
+      : undefined
+
   return (
     <div className="flex min-w-0 items-start gap-2">
-      {/* 左侧：标题和标签 - 可压缩 */}
-      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 sm:gap-2">
-        <Heading6 className="truncate text-sm sm:text-base md:text-lg">
-          {token.name}
-        </Heading6>
-        <Badge
-          variant={token.status === 1 ? "success" : "destructive"}
-          size="sm"
-        >
-          {token.status === 1 ? t("actions.enable") : t("actions.disable")}
-        </Badge>
-        <Badge variant="outline" size="sm">
-          {token.accountName}
-        </Badge>
+      <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 flex-wrap items-center gap-1.5 sm:gap-2">
+          <Heading6 className="truncate text-sm sm:text-base md:text-lg">
+            {token.name}
+          </Heading6>
+          <Badge
+            variant={token.status === 1 ? "success" : "destructive"}
+            size="sm"
+          >
+            {token.status === 1 ? t("actions.enable") : t("actions.disable")}
+          </Badge>
+          <Badge variant="outline" size="sm">
+            {token.accountName}
+          </Badge>
+        </div>
+
+        {shouldRenderManagedSiteStatus ? (
+          <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+            <Badge
+              variant={getManagedSiteStatusBadgeVariant({
+                isChecking: isManagedSiteStatusChecking,
+                managedSiteStatus,
+              })}
+              size="sm"
+            >
+              {isManagedSiteStatusChecking ? (
+                <ArrowPathIcon className="h-3 w-3 animate-spin" />
+              ) : null}
+              {getManagedSiteStatusLabel(t, {
+                isChecking: isManagedSiteStatusChecking,
+                managedSiteStatus,
+              })}
+            </Badge>
+            {managedSiteStatusDescription ? (
+              <span className="min-w-0 truncate">
+                {managedSiteStatusDescription}
+              </span>
+            ) : null}
+            {matchedManagedSiteChannel ? (
+              <ManagedSiteChannelLinkButton
+                channelId={matchedManagedSiteChannel.id}
+                channelName={matchedManagedSiteChannel.name}
+                className="h-auto px-0 py-0 text-xs"
+              />
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
-      {/* 右侧：操作按钮 - 固定不压缩 */}
       <TokenActionButtons
         token={token}
         copyKey={copyKey}
@@ -328,6 +516,7 @@ export function TokenHeader({
         handleDeleteToken={handleDeleteToken}
         account={account}
         onOpenCCSwitchDialog={onOpenCCSwitchDialog}
+        onManagedSiteImportSuccess={onManagedSiteImportSuccess}
       />
     </div>
   )

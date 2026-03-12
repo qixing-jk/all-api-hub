@@ -20,7 +20,6 @@ import type {
   AutoConfigToNewApiResponse,
   ServiceResponse,
 } from "~/types/serviceResponse"
-import { isArraysEqual } from "~/utils"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeList, parseDelimitedList } from "~/utils/core/string"
@@ -30,6 +29,7 @@ import {
   UserPreferences,
   userPreferences,
 } from "../../preferences/userPreferences"
+import { findManagedSiteChannelByComparableInputs } from "../utils/channelMatching"
 import { resolveDefaultChannelGroups } from "./defaultChannelGroups"
 
 /**
@@ -317,6 +317,11 @@ export function buildChannelPayload(
  *
  * When `key` is provided, the match is refined to include the key to avoid treating
  * different keys as duplicates.
+ *
+ * Warning: this feature is not supported on Veloera for reliable absence
+ * checks. The helper depends on Veloera's keyword search endpoint, which does
+ * not reliably support base URL search, so negative results must not be treated
+ * as conclusive proof that a channel is absent.
  */
 export async function findMatchingChannel(
   baseUrl: string,
@@ -337,26 +342,12 @@ export async function findMatchingChannel(
     return null
   }
 
-  const normalizedDesiredKey = (key ?? "").trim()
-  const shouldMatchKey = normalizedDesiredKey.length > 0
-
-  return (
-    searchResults.items.find((channel: ManagedSiteChannel) => {
-      if (channel.base_url !== accountBaseUrl) return false
-      if (!isArraysEqual(parseDelimitedList(channel.models), models)) {
-        return false
-      }
-
-      if (!shouldMatchKey) return true
-
-      const candidates = (channel.key ?? "")
-        .split(/[\n,]/)
-        .map((item) => item.trim())
-        .filter(Boolean)
-
-      return candidates.includes(normalizedDesiredKey)
-    }) ?? null
-  )
+  return findManagedSiteChannelByComparableInputs({
+    channels: searchResults.items,
+    accountBaseUrl,
+    models,
+    key,
+  })
 }
 
 /**

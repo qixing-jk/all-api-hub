@@ -24,6 +24,30 @@
   "createFirstKey": "Create first key",
   "pleaseSelectFirst": "Please select an account first to view key list",
   "refreshTokenList": "Refresh Key List",
+  "managedSiteStatus": {
+    "actions": {
+      "refresh": "Refresh Managed-Site Status",
+      "refreshing": "Refreshing Managed-Site Status"
+    },
+    "badges": {
+      "checking": "Managed site: checking",
+      "added": "Managed site: added",
+      "notAdded": "Managed site: not added",
+      "unknown": "Managed site: unknown"
+    },
+    "descriptions": {
+      "exactKeyMatch": "Matched by exact key, base URL, and models.",
+      "noMatch": "No exact key match, no base URL + models match, and no base URL-only match were found.",
+      "configMissing": "Configure managed-site admin credentials before verification can run.",
+      "inputPreparationFailed": "Verification could not prepare comparable channel inputs.",
+      "exactVerificationUnavailable": "Exact key verification is unavailable, and no base URL + models or base URL-only match was found.",
+      "newApiRetrieveKeyHint": "For the New API, channel keys can only be viewed after completing 2FA verification. Therefore, precise verification cannot be performed at this time.",
+      "veloeraBaseUrlSearchUnsupported": "This feature is not supported on Veloera because Veloera does not support base URL search for channel lookup.",
+      "urlModelsMatchOnly": "A base URL + models match was found, but exact key verification did not match.",
+      "urlOnlyMatchOnly": "A base URL-only match was found, but models or exact key verification did not match.",
+      "backendSearchFailed": "Managed-site verification could not be completed."
+    }
+  },
   "repairMissingKeys": {
     "action": "Ensure at least one key",
     "title": "Ensure at least one key",

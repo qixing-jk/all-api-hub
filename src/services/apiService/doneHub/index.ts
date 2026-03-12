@@ -324,6 +324,22 @@ export async function listAllChannels(
 }
 
 /**
+ * Fetch a single DoneHub channel detail payload and normalize it to
+ * `ManagedSiteChannel`.
+ */
+export async function fetchChannel(
+  request: ApiServiceRequest,
+  channelId: number,
+): Promise<ManagedSiteChannel> {
+  const endpoint = `${DONE_HUB_CHANNEL_ENDPOINT}${channelId}`
+  const result = await fetchApiData<unknown>(request, {
+    endpoint,
+  })
+
+  return normalizeChannel(result as DoneHubChannelRaw)
+}
+
+/**
  * Fetch the current model list for a given channel.
  *
  * DoneHub does not expose `fetch_models/{id}` (New API style). Instead, the
@@ -334,10 +350,7 @@ export async function fetchChannelModels(
   request: ApiServiceRequest,
   channelId: number,
 ): Promise<string[]> {
-  const channelEndpoint = `${DONE_HUB_CHANNEL_ENDPOINT}${channelId}`
-  const channel = await fetchApiData<Record<string, unknown>>(request, {
-    endpoint: channelEndpoint,
-  })
+  const channel = await fetchChannel(request, channelId)
 
   const requestData = {
     ...channel,

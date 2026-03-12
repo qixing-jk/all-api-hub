@@ -11,12 +11,36 @@ import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import { createToken } from "~~/tests/utils/keyManagementFactories"
 
+const {
+  getManagedSiteTokenChannelStatusMock,
+  managedSiteTokenChannelStatuses,
+  mockedUseUserPreferencesContext,
+} = vi.hoisted(() => ({
+  getManagedSiteTokenChannelStatusMock: vi.fn(),
+  managedSiteTokenChannelStatuses: {
+    ADDED: "added",
+    NOT_ADDED: "not-added",
+    UNKNOWN: "unknown",
+  },
+  mockedUseUserPreferencesContext: vi.fn(),
+}))
+
 vi.mock("~/hooks/useAccountData", () => ({
   useAccountData: vi.fn(),
 }))
 
 vi.mock("~/services/apiService", () => ({
   getApiService: vi.fn(),
+}))
+
+vi.mock("~/services/managedSites/tokenChannelStatus", () => ({
+  MANAGED_SITE_TOKEN_CHANNEL_STATUSES: managedSiteTokenChannelStatuses,
+  getManagedSiteTokenChannelStatus: (...args: unknown[]) =>
+    getManagedSiteTokenChannelStatusMock(...args),
+}))
+
+vi.mock("~/contexts/UserPreferencesContext", () => ({
+  useUserPreferencesContext: () => mockedUseUserPreferencesContext(),
 }))
 
 vi.mock("react-hot-toast", () => ({
@@ -56,6 +80,26 @@ describe("useKeyManagement enabled account filtering", () => {
   beforeEach(() => {
     vi.mocked(toast.success).mockReset()
     vi.mocked(toast.error).mockReset()
+    getManagedSiteTokenChannelStatusMock.mockReset()
+    getManagedSiteTokenChannelStatusMock.mockResolvedValue({
+      status: managedSiteTokenChannelStatuses.NOT_ADDED,
+    })
+    mockedUseUserPreferencesContext.mockReset()
+    mockedUseUserPreferencesContext.mockReturnValue({
+      managedSiteType: "new-api",
+      newApiBaseUrl: "https://managed.example",
+      newApiAdminToken: "managed-admin-token",
+      newApiUserId: "1",
+      doneHubBaseUrl: "",
+      doneHubAdminToken: "",
+      doneHubUserId: "",
+      veloeraBaseUrl: "",
+      veloeraAdminToken: "",
+      veloeraUserId: "",
+      octopusBaseUrl: "",
+      octopusUsername: "",
+      octopusPassword: "",
+    })
   })
 
   it("uses enabledDisplayData from useAccountData for selectors", () => {
@@ -478,5 +522,232 @@ describe("useKeyManagement enabled account filtering", () => {
         errorType: undefined,
       },
     ])
+  })
+
+  it("starts managed-site status checks after tokens load and reuses cached results across rerenders", async () => {
+    const mockedUseAccountData = vi.mocked(useAccountData)
+    const account = createDisplayAccount({
+      id: "managed-acc",
+      name: "Managed Account",
+    })
+
+    mockedUseAccountData.mockReturnValue({
+      enabledDisplayData: [account],
+    } as any)
+
+    const fetchAccountTokens = vi.fn().mockResolvedValue([
+      createToken({
+        id: 101,
+        key: "token-101",
+        name: "Token 101",
+        expired_time: 0,
+      }),
+    ])
+    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+
+    const { result } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => {
+      result.current.setSelectedAccount(account.id)
+    })
+
+    await waitFor(() =>
+      expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(1),
+    )
+
+    expect(
+      result.current.managedSiteTokenStatuses["managed-acc:101"]?.result,
+    ).toEqual({
+      status: managedSiteTokenChannelStatuses.NOT_ADDED,
+    })
+
+    act(() => {
+      result.current.setSearchTerm("token")
+    })
+
+    await waitFor(() => expect(result.current.filteredTokens).toHaveLength(1))
+    expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("reruns managed-site status checks on manual refresh and replaces the prior result", async () => {
+    const mockedUseAccountData = vi.mocked(useAccountData)
+    const account = createDisplayAccount({
+      id: "refresh-acc",
+      name: "Refresh Account",
+    })
+
+    mockedUseAccountData.mockReturnValue({
+      enabledDisplayData: [account],
+    } as any)
+
+    getManagedSiteTokenChannelStatusMock
+      .mockResolvedValueOnce({
+        status: managedSiteTokenChannelStatuses.NOT_ADDED,
+      })
+      .mockResolvedValueOnce({
+        status: managedSiteTokenChannelStatuses.ADDED,
+        matchedChannel: {
+          id: 55,
+          name: "Managed Channel 55",
+        },
+      })
+
+    const fetchAccountTokens = vi.fn().mockResolvedValue([
+      createToken({
+        id: 202,
+        key: "token-202",
+        name: "Token 202",
+        expired_time: 0,
+      }),
+    ])
+    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+
+    const { result } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => {
+      result.current.setSelectedAccount(account.id)
+    })
+
+    await waitFor(() =>
+      expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(1),
+    )
+
+    await act(async () => {
+      await result.current.refreshManagedSiteTokenStatuses()
+    })
+
+    await waitFor(() =>
+      expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(2),
+    )
+
+    expect(
+      result.current.managedSiteTokenStatuses["refresh-acc:202"]?.result,
+    ).toEqual({
+      status: managedSiteTokenChannelStatuses.ADDED,
+      matchedChannel: {
+        id: 55,
+        name: "Managed Channel 55",
+      },
+    })
+  })
+
+  it("invalidates managed-site status when a token is deleted", async () => {
+    const mockedUseAccountData = vi.mocked(useAccountData)
+    const account = createDisplayAccount({
+      id: "delete-acc",
+      name: "Delete Account",
+    })
+
+    mockedUseAccountData.mockReturnValue({
+      enabledDisplayData: [account],
+    } as any)
+
+    const fetchAccountTokens = vi
+      .fn()
+      .mockResolvedValueOnce([
+        createToken({
+          id: 303,
+          key: "token-303",
+          name: "Token 303",
+          expired_time: 0,
+        }),
+      ])
+      .mockResolvedValueOnce([])
+    const deleteApiToken = vi.fn().mockResolvedValue(true)
+    vi.mocked(getApiService).mockReturnValue({
+      fetchAccountTokens,
+      deleteApiToken,
+    } as any)
+
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true)
+
+    const { result } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => {
+      result.current.setSelectedAccount(account.id)
+    })
+
+    await waitFor(() => expect(result.current.tokens).toHaveLength(1))
+    await waitFor(() =>
+      expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(1),
+    )
+
+    await act(async () => {
+      await result.current.handleDeleteToken(result.current.tokens[0]!)
+    })
+
+    await waitFor(() => expect(result.current.tokens).toHaveLength(0))
+    expect(deleteApiToken).toHaveBeenCalledWith(expect.anything(), 303)
+    expect(
+      result.current.managedSiteTokenStatuses["delete-acc:303"],
+    ).toBeUndefined()
+
+    confirmSpy.mockRestore()
+  })
+
+  it("invalidates cached managed-site status when managed-site preferences change", async () => {
+    const mockedUseAccountData = vi.mocked(useAccountData)
+    const account = createDisplayAccount({
+      id: "prefs-acc",
+      name: "Preferences Account",
+    })
+
+    mockedUseAccountData.mockReturnValue({
+      enabledDisplayData: [account],
+    } as any)
+
+    const managedSiteContextValue = {
+      managedSiteType: "new-api",
+      newApiBaseUrl: "https://managed.example",
+      newApiAdminToken: "managed-admin-token",
+      newApiUserId: "1",
+      doneHubBaseUrl: "",
+      doneHubAdminToken: "",
+      doneHubUserId: "",
+      veloeraBaseUrl: "",
+      veloeraAdminToken: "",
+      veloeraUserId: "",
+      octopusBaseUrl: "",
+      octopusUsername: "",
+      octopusPassword: "",
+    }
+    mockedUseUserPreferencesContext.mockImplementation(
+      () => managedSiteContextValue,
+    )
+
+    const fetchAccountTokens = vi.fn().mockResolvedValue([
+      createToken({
+        id: 404,
+        key: "token-404",
+        name: "Token 404",
+        expired_time: 0,
+      }),
+    ])
+    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+
+    const { result, rerender } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => {
+      result.current.setSelectedAccount(account.id)
+    })
+
+    await waitFor(() =>
+      expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(1),
+    )
+
+    managedSiteContextValue.newApiBaseUrl = "https://managed-2.example"
+    rerender()
+
+    await waitFor(() =>
+      expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(2),
+    )
   })
 })

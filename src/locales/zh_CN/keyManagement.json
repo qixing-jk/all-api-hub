@@ -22,6 +22,30 @@
   "createFirstKey": "创建第一个密钥",
   "pleaseSelectFirst": "请先选择一个账号查看密钥列表",
   "refreshTokenList": "刷新密钥列表",
+  "managedSiteStatus": {
+    "actions": {
+      "refresh": "刷新托管站渠道状态",
+      "refreshing": "正在刷新托管站渠道状态"
+    },
+    "badges": {
+      "checking": "托管站：检查中",
+      "added": "托管站：已添加",
+      "notAdded": "托管站：未添加",
+      "unknown": "托管站：未知"
+    },
+    "descriptions": {
+      "exactKeyMatch": "已通过精确密钥、基础地址和模型完成匹配。",
+      "noMatch": "未找到精确密钥匹配，也未找到基础地址 + 模型匹配或仅基础地址匹配。",
+      "configMissing": "请先配置托管站管理员凭据后再进行校验。",
+      "inputPreparationFailed": "无法准备可比对的渠道输入，暂时无法完成校验。",
+      "exactVerificationUnavailable": "当前无法执行精确密钥校验，且未找到基础地址 + 模型匹配或仅基础地址匹配。",
+      "newApiRetrieveKeyHint": "对于 New API，渠道 key 只有完成 2FA 验证后才能查看，因此暂无无法进行精确校验。",
+      "veloeraBaseUrlSearchUnsupported": "该功能在 Veloera 上不受支持，因为 Veloera 不支持按基础地址搜索渠道。",
+      "urlModelsMatchOnly": "找到了基础地址 + 模型匹配的渠道，但未通过精确密钥校验。",
+      "urlOnlyMatchOnly": "仅找到了基础地址匹配的渠道，模型或精确密钥校验未通过。",
+      "backendSearchFailed": "托管站校验暂时无法完成。"
+    }
+  },
   "repairMissingKeys": {
     "action": "确保至少有一个密钥",
     "title": "确保至少有一个密钥",

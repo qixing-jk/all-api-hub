@@ -10,6 +10,7 @@ import { useTranslation } from "react-i18next"
 import { CCSwitchExportDialog } from "~/components/CCSwitchExportDialog"
 import { Badge, Button, Card, EmptyState } from "~/components/ui"
 import { cn } from "~/lib/utils"
+import type { ManagedSiteTokenChannelStatus } from "~/services/managedSites/tokenChannelStatus"
 import type { AccountToken, DisplaySiteData } from "~/types"
 
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "../constants"
@@ -28,6 +29,14 @@ interface TokenListProps {
   handleAddToken: () => void
   selectedAccount: string
   displayData: DisplaySiteData[]
+  managedSiteTokenStatuses?: Record<
+    string,
+    {
+      isChecking: boolean
+      result?: ManagedSiteTokenChannelStatus
+    }
+  >
+  onManagedSiteImportSuccess?: (token: AccountToken) => void | Promise<void>
   allAccountsFilterAccountId?: string | null
 }
 
@@ -131,6 +140,8 @@ export function TokenList(props: TokenListProps) {
     handleAddToken,
     selectedAccount,
     displayData,
+    managedSiteTokenStatuses,
+    onManagedSiteImportSuccess,
     allAccountsFilterAccountId,
   } = props
   const { t } = useTranslation("keyManagement")
@@ -345,21 +356,37 @@ export function TokenList(props: TokenListProps) {
 
                   {!isCollapsed ? (
                     <div className="space-y-3 p-3">
-                      {group.filteredTokens.map((token) => (
-                        <TokenListItem
-                          key={buildTokenIdentityKey(token.accountId, token.id)}
-                          token={token}
-                          visibleKeys={visibleKeys}
-                          toggleKeyVisibility={toggleKeyVisibility}
-                          copyKey={copyKey}
-                          handleEditToken={handleEditToken}
-                          handleDeleteToken={handleDeleteToken}
-                          account={account}
-                          onOpenCCSwitchDialog={() =>
-                            handleOpenCCSwitchDialog(token, account)
-                          }
-                        />
-                      ))}
+                      {group.filteredTokens.map((token) => {
+                        const tokenIdentityKey = buildTokenIdentityKey(
+                          token.accountId,
+                          token.id,
+                        )
+                        const managedSiteStatusEntry =
+                          managedSiteTokenStatuses?.[tokenIdentityKey]
+
+                        return (
+                          <TokenListItem
+                            key={tokenIdentityKey}
+                            token={token}
+                            visibleKeys={visibleKeys}
+                            toggleKeyVisibility={toggleKeyVisibility}
+                            copyKey={copyKey}
+                            handleEditToken={handleEditToken}
+                            handleDeleteToken={handleDeleteToken}
+                            account={account}
+                            managedSiteStatus={managedSiteStatusEntry?.result}
+                            isManagedSiteStatusChecking={
+                              managedSiteStatusEntry?.isChecking === true
+                            }
+                            onManagedSiteImportSuccess={
+                              onManagedSiteImportSuccess
+                            }
+                            onOpenCCSwitchDialog={() =>
+                              handleOpenCCSwitchDialog(token, account)
+                            }
+                          />
+                        )
+                      })}
                     </div>
                   ) : null}
                 </Card>
@@ -375,9 +402,16 @@ export function TokenList(props: TokenListProps) {
               return null
             }
 
+            const tokenIdentityKey = buildTokenIdentityKey(
+              token.accountId,
+              token.id,
+            )
+            const managedSiteStatusEntry =
+              managedSiteTokenStatuses?.[tokenIdentityKey]
+
             return (
               <TokenListItem
-                key={buildTokenIdentityKey(token.accountId, token.id)}
+                key={tokenIdentityKey}
                 token={token}
                 visibleKeys={visibleKeys}
                 toggleKeyVisibility={toggleKeyVisibility}
@@ -385,6 +419,11 @@ export function TokenList(props: TokenListProps) {
                 handleEditToken={handleEditToken}
                 handleDeleteToken={handleDeleteToken}
                 account={account}
+                managedSiteStatus={managedSiteStatusEntry?.result}
+                isManagedSiteStatusChecking={
+                  managedSiteStatusEntry?.isChecking === true
+                }
+                onManagedSiteImportSuccess={onManagedSiteImportSuccess}
                 onOpenCCSwitchDialog={() =>
                   handleOpenCCSwitchDialog(token, account)
                 }

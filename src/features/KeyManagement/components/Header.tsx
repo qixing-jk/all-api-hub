@@ -1,4 +1,4 @@
-import { KeyRound, Plus, Wrench } from "lucide-react"
+import { KeyRound, Plus, RefreshCw, Wrench } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { PageHeader } from "~/components/PageHeader"
@@ -9,9 +9,12 @@ interface HeaderProps {
   onAddToken: () => void
   onRepairMissingKeys: () => void
   onRefresh: () => void
+  onRefreshManagedSiteStatus?: () => void
   isLoading: boolean
+  isManagedSiteStatusRefreshing?: boolean
   isAddTokenDisabled: boolean
   isRepairDisabled: boolean
+  isManagedSiteStatusRefreshDisabled?: boolean
 }
 
 /**
@@ -21,10 +24,13 @@ export function Header({
   onAddToken,
   onRepairMissingKeys,
   onRefresh,
+  onRefreshManagedSiteStatus,
   isLoading,
+  isManagedSiteStatusRefreshing = false,
   selectedAccount,
   isAddTokenDisabled,
   isRepairDisabled,
+  isManagedSiteStatusRefreshDisabled = false,
 }: HeaderProps) {
   const { t } = useTranslation("keyManagement")
   return (
@@ -53,6 +59,20 @@ export function Header({
             >
               {t("repairMissingKeys.action")}
             </Button>
+            {onRefreshManagedSiteStatus ? (
+              <Button
+                onClick={onRefreshManagedSiteStatus}
+                disabled={isManagedSiteStatusRefreshDisabled}
+                size="sm"
+                variant="outline"
+                loading={isManagedSiteStatusRefreshing}
+                leftIcon={<RefreshCw className="h-4 w-4" />}
+              >
+                {isManagedSiteStatusRefreshing
+                  ? t("managedSiteStatus.actions.refreshing")
+                  : t("managedSiteStatus.actions.refresh")}
+              </Button>
+            ) : null}
             <Button onClick={onRefresh} disabled={isLoading} size="sm">
               {isLoading && selectedAccount
                 ? t("common:status.refreshing")

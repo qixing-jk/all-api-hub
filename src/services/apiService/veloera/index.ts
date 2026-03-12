@@ -240,6 +240,10 @@ export async function listAllChannels(
  *
  * Veloera implementations often return a bare array (no `total`/`type_counts`).
  * This adapter normalizes that payload to New API compatible `ManagedSiteChannelListData`.
+ *
+ * Important: Veloera does not reliably support base URL search semantics for
+ * this endpoint. Callers that pass a base URL as the keyword must not treat an
+ * empty result as proof that no matching channel exists.
  */
 export async function searchChannel(
   request: ApiServiceRequest,

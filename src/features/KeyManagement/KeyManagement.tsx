@@ -41,10 +41,14 @@ export default function KeyManagement(props: {
     tokenLoadProgress,
     failedAccounts,
     accountSummaryItems,
+    managedSiteTokenStatuses,
+    isManagedSiteStatusRefreshing,
     allAccountsFilterAccountId,
     setAllAccountsFilterAccountId,
     loadTokens,
     filteredTokens,
+    refreshManagedSiteTokenStatuses,
+    refreshManagedSiteTokenStatusForToken,
     copyKey,
     toggleKeyVisibility,
     retryFailedAccounts,
@@ -104,10 +108,17 @@ export default function KeyManagement(props: {
         onAddToken={handleAddToken}
         onRepairMissingKeys={handleRepairMissingKeys}
         onRefresh={() => selectedAccount && loadTokens()}
+        onRefreshManagedSiteStatus={() =>
+          void refreshManagedSiteTokenStatuses()
+        }
         selectedAccount={selectedAccount}
         isLoading={isLoading || !selectedAccount}
+        isManagedSiteStatusRefreshing={isManagedSiteStatusRefreshing}
         isAddTokenDisabled={!selectedAccount || displayData.length === 0}
         isRepairDisabled={displayData.length === 0}
+        isManagedSiteStatusRefreshDisabled={
+          !selectedAccount || tokens.length === 0 || isLoading
+        }
       />
 
       <AccountSelectorPanel
@@ -146,6 +157,8 @@ export default function KeyManagement(props: {
         handleAddToken={handleAddToken}
         selectedAccount={selectedAccount}
         displayData={displayData}
+        managedSiteTokenStatuses={managedSiteTokenStatuses}
+        onManagedSiteImportSuccess={refreshManagedSiteTokenStatusForToken}
         allAccountsFilterAccountId={allAccountsFilterAccountId}
       />
 

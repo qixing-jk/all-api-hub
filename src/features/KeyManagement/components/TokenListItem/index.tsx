@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next"
 
 import { Card, CardContent } from "~/components/ui"
+import type { ManagedSiteTokenChannelStatus } from "~/services/managedSites/tokenChannelStatus"
 import type { AccountToken, DisplaySiteData } from "~/types"
 
 import { buildTokenIdentityKey } from "../../utils"
@@ -41,6 +42,18 @@ interface TokenListItemProps {
    * Opens CCSwitch dialog for exporting the token.
    */
   onOpenCCSwitchDialog: (token: AccountToken, account: DisplaySiteData) => void
+  /**
+   * Current managed-site status for the token, when available.
+   */
+  managedSiteStatus?: ManagedSiteTokenChannelStatus
+  /**
+   * Whether the token's managed-site status is currently being checked.
+   */
+  isManagedSiteStatusChecking?: boolean
+  /**
+   * Callback invoked after a successful managed-site import for this token.
+   */
+  onManagedSiteImportSuccess?: (token: AccountToken) => void | Promise<void>
 }
 
 /**
@@ -57,6 +70,9 @@ export function TokenListItem(props: TokenListItemProps) {
     handleDeleteToken,
     account,
     onOpenCCSwitchDialog,
+    managedSiteStatus,
+    isManagedSiteStatusChecking,
+    onManagedSiteImportSuccess,
   } = props
   const { t } = useTranslation("keyManagement")
   const tokenIdentityKey = buildTokenIdentityKey(token.accountId, token.id)
@@ -71,6 +87,9 @@ export function TokenListItem(props: TokenListItemProps) {
             handleEditToken={handleEditToken}
             handleDeleteToken={handleDeleteToken}
             account={account}
+            managedSiteStatus={managedSiteStatus}
+            isManagedSiteStatusChecking={isManagedSiteStatusChecking}
+            onManagedSiteImportSuccess={onManagedSiteImportSuccess}
             onOpenCCSwitchDialog={() => onOpenCCSwitchDialog(token, account)}
           />
           <div className="min-w-0 flex-1">
