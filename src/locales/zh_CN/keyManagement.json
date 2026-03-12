@@ -39,7 +39,7 @@
       "configMissing": "请先配置托管站管理员凭据后再进行校验。",
       "inputPreparationFailed": "无法准备可比对的渠道输入，暂时无法完成校验。",
       "exactVerificationUnavailable": "当前无法执行精确密钥校验，且未找到基础地址 + 模型匹配或仅基础地址匹配。",
-      "newApiRetrieveKeyHint": "对于 New API，渠道 key 只有完成 2FA 验证后才能查看，因此暂无无法进行精确校验。",
+      "newApiRetrieveKeyHint": "对于 New API，渠道 key 只有完成 2FA 验证后才能查看，因此暂无法进行精确校验。",
       "veloeraBaseUrlSearchUnsupported": "该功能在 Veloera 上不受支持，因为 Veloera 不支持按基础地址搜索渠道。",
       "urlModelsMatchOnly": "找到了基础地址 + 模型匹配的渠道，但未通过精确密钥校验。",
       "urlOnlyMatchOnly": "仅找到了基础地址匹配的渠道，模型或精确密钥校验未通过。",

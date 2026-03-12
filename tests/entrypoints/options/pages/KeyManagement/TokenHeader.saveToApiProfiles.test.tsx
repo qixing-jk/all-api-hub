@@ -10,6 +10,7 @@ import {
 } from "~/services/managedSites/tokenChannelStatus"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
+import { testI18n } from "~~/tests/test-utils/i18n"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const mockCreateProfile = vi.fn()
@@ -228,6 +229,10 @@ describe("TokenHeader save to API profiles", () => {
 
   it("renders managed-site status copy and follow-up link when a weak match exists", async () => {
     const account = createAccountStub()
+    const matchedChannel = {
+      id: 88,
+      name: "Managed Channel 88",
+    }
 
     const token = {
       id: 2,
@@ -256,10 +261,7 @@ describe("TokenHeader save to API profiles", () => {
           status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
           reason:
             MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.URL_MODELS_MATCH_ONLY,
-          matchedChannel: {
-            id: 88,
-            name: "Managed Channel 88",
-          },
+          matchedChannel,
         }}
       />,
     )
@@ -273,8 +275,10 @@ describe("TokenHeader save to API profiles", () => {
       ),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole("button", { name: /Manage channel/i }),
-    ).toHaveTextContent("Managed Channel 88")
+      screen.getByRole("button", {
+        name: `${testI18n.t("managedSiteModelSync:actions.manageChannel")}: ${matchedChannel.name}`,
+      }),
+    ).toHaveTextContent(matchedChannel.name)
   })
 
   it("renders the exact-match explanation when the token is already added", async () => {

@@ -1,5 +1,6 @@
 import { ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline"
 import { useCallback } from "react"
+import { useTranslation } from "react-i18next"
 
 import { Button } from "~/components/ui"
 import { openManagedSiteChannelsForChannel } from "~/utils/navigation"
@@ -18,6 +19,8 @@ export default function ManagedSiteChannelLinkButton({
   channelName,
   className,
 }: ManagedSiteChannelLinkButtonProps) {
+  const { t } = useTranslation(["managedSiteModelSync"])
+
   const handleClick = useCallback(async () => {
     await openManagedSiteChannelsForChannel(channelId)
   }, [channelId])
@@ -27,7 +30,7 @@ export default function ManagedSiteChannelLinkButton({
       variant="link"
       className={className}
       onClick={handleClick}
-      aria-label={`Manage channel ${channelName}`}
+      aria-label={`${t("actions.manageChannel")}: ${channelName}`}
       rightIcon={
         <ArrowTopRightOnSquareIcon className="h-4 w-4" aria-hidden="true" />
       }

@@ -494,7 +494,10 @@ export function TokenHeader({
               })}
             </Badge>
             {managedSiteStatusDescription ? (
-              <span className="min-w-0 truncate">
+              <span
+                className="break-words whitespace-normal"
+                title={managedSiteStatusDescription}
+              >
                 {managedSiteStatusDescription}
               </span>
             ) : null}
