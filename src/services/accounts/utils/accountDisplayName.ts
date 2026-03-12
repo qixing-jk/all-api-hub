@@ -40,8 +40,13 @@ export function formatDisambiguatedAccountDisplayName(
   baseName: string,
   username: string,
 ): string {
+  const trimmedBaseName = baseName.trim()
   const trimmedUsername = username.trim()
-  if (!baseName || !trimmedUsername) {
+  if (!trimmedBaseName) {
+    return trimmedUsername
+  }
+
+  if (!trimmedUsername) {
     return baseName
   }
 
@@ -57,13 +62,18 @@ export function resolveAccountDisplayName(params: {
   duplicateKeys?: ReadonlySet<string>
 }): string {
   const { baseName, username, duplicateKeys } = params
+  const trimmedUsername = username.trim()
   const duplicateKey = normalizeAccountDisplayNamePart(baseName)
 
-  if (!duplicateKeys?.has(duplicateKey) || !username.trim()) {
+  if (!duplicateKey) {
+    return trimmedUsername || baseName
+  }
+
+  if (!duplicateKeys?.has(duplicateKey) || !trimmedUsername) {
     return baseName
   }
 
-  return formatDisambiguatedAccountDisplayName(baseName, username)
+  return formatDisambiguatedAccountDisplayName(baseName, trimmedUsername)
 }
 
 /**

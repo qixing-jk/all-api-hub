@@ -2,6 +2,10 @@ import { Storage } from "@plasmohq/storage"
 
 import { SUB2API, UNKNOWN_SITE } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
+import {
+  collectDuplicateAccountNameKeys,
+  resolveAccountDisplayName,
+} from "~/services/accounts/utils/accountDisplayName"
 import { getApiService } from "~/services/apiService"
 import {
   ACCOUNT_STORAGE_KEYS,
@@ -41,10 +45,6 @@ import {
   migrateAccountsConfig,
   needsConfigMigration,
 } from "./migrations/accountDataMigration"
-import {
-  collectDuplicateAccountNameKeys,
-  resolveAccountDisplayName,
-} from "./utils/accountDisplayName"
 
 // Re-export for backward compatibility across the codebase.
 export { ACCOUNT_STORAGE_KEYS }
@@ -230,7 +230,10 @@ class AccountStorageService {
 
     return (
       resolved ??
-      (this.convertToDisplayData(normalizedAccount) as DisplaySiteData)
+      (this.convertToDisplayData(
+        normalizedAccount,
+        contextWithAccount,
+      ) as DisplaySiteData)
     )
   }
 
@@ -1082,19 +1085,33 @@ class AccountStorageService {
    * helpers like tags and health summaries. This adapter ensures we never leak
    * the raw storage format into presentation logic.
    * @param input Single account or array of accounts.
+   * @param displayNameAccountsContext Optional broader account snapshot used to
+   * compute globally consistent duplicate-name disambiguation.
    * @returns Display-ready representation preserving existing metadata.
    */
-  convertToDisplayData(input: SiteAccount): DisplaySiteData
-  convertToDisplayData(input: SiteAccount[]): DisplaySiteData[]
+  convertToDisplayData(
+    input: SiteAccount,
+    displayNameAccountsContext?: readonly SiteAccount[],
+  ): DisplaySiteData
+  convertToDisplayData(
+    input: SiteAccount[],
+    displayNameAccountsContext?: readonly SiteAccount[],
+  ): DisplaySiteData[]
   convertToDisplayData(
     input: SiteAccount | SiteAccount[],
+    displayNameAccountsContext?: readonly SiteAccount[],
   ): DisplaySiteData | DisplaySiteData[] {
     const normalizedAccounts = Array.isArray(input)
       ? input.map((account) => normalizeSiteAccount(account))
       : [normalizeSiteAccount(input)]
-    const duplicateKeys = Array.isArray(input)
-      ? collectDuplicateAccountNameKeys(normalizedAccounts)
-      : undefined
+    const normalizedDisplayNameContext = displayNameAccountsContext
+      ? displayNameAccountsContext.map((account) =>
+          normalizeSiteAccount(account),
+        )
+      : normalizedAccounts
+    const duplicateKeys = collectDuplicateAccountNameKeys(
+      normalizedDisplayNameContext,
+    )
 
     const transform = (normalized: SiteAccount): DisplaySiteData => {
       return {

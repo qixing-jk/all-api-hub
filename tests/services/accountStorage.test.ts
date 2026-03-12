@@ -310,6 +310,49 @@ describe("accountStorage core behaviors", () => {
     ])
   })
 
+  it("convertToDisplayData should honor a broader duplicate-name context", () => {
+    const visibleAccount = createAccount({
+      id: "visible-a",
+      site_name: "Shared Site",
+      account_info: {
+        id: 1,
+        access_token: "token-a",
+        username: "alice",
+        quota: 100,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_quota_consumption: 0,
+        today_requests_count: 0,
+        today_income: 0,
+      },
+    })
+    const hiddenDuplicate = createAccount({
+      id: "hidden-b",
+      site_name: " shared   site ",
+      disabled: true,
+      account_info: {
+        id: 2,
+        access_token: "token-b",
+        username: "bob",
+        quota: 100,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_quota_consumption: 0,
+        today_requests_count: 0,
+        today_income: 0,
+      },
+    })
+
+    const displayData = accountStorage.convertToDisplayData(
+      [visibleAccount],
+      [visibleAccount, hiddenDuplicate],
+    ) as any[]
+
+    expect(displayData.map((account) => account.name)).toEqual([
+      "Shared Site · alice",
+    ])
+  })
+
   it("convertToDisplayData single-account overload should preserve the base name", () => {
     const account = createAccount({
       site_name: "My Site",

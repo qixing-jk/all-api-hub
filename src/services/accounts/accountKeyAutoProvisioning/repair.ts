@@ -6,7 +6,6 @@ import {
 } from "~/constants/runtimeActions"
 import { SUB2API } from "~/constants/siteType"
 import { accountStorage } from "~/services/accounts/accountStorage"
-import { buildAccountDisplayNameMap } from "~/services/accounts/utils/accountDisplayName"
 import { ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS } from "~/services/core/storageKeys"
 import type { DisplaySiteData, SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
@@ -152,7 +151,14 @@ class AccountKeyRepairRunner {
       const enabledAccounts = allAccounts.filter(
         (account) => account.disabled !== true,
       )
-      const accountNameById = buildAccountDisplayNameMap(allAccounts)
+      const displaySiteDataById = new Map(
+        (
+          accountStorage.convertToDisplayData(
+            allAccounts,
+            allAccounts,
+          ) as DisplaySiteData[]
+        ).map((account) => [account.id, account] as const),
+      )
 
       const eligibleAccounts: SiteAccount[] = []
 
@@ -170,7 +176,8 @@ class AccountKeyRepairRunner {
         if (skipReason) {
           await this.recordResult({
             accountId: account.id,
-            accountName: accountNameById.get(account.id) ?? account.site_name,
+            accountName:
+              displaySiteDataById.get(account.id)?.name ?? account.site_name,
             siteType: account.site_type,
             siteUrlOrigin: getOriginKey(account.site_url),
             outcome: "skipped",
@@ -198,7 +205,8 @@ class AccountKeyRepairRunner {
         worker: async (account) => {
           await this.processEligibleAccount(
             account,
-            accountNameById.get(account.id) ?? account.site_name,
+            displaySiteDataById.get(account.id)?.name ?? account.site_name,
+            displaySiteDataById,
           )
         },
       })
@@ -232,11 +240,12 @@ class AccountKeyRepairRunner {
   private async processEligibleAccount(
     account: SiteAccount,
     accountName: string,
+    displaySiteDataById: ReadonlyMap<string, DisplaySiteData>,
   ): Promise<void> {
     const originKey = getOriginKey(account.site_url)
     try {
       const displaySiteData: DisplaySiteData =
-        (await accountStorage.getDisplayDataById(account.id)) ??
+        displaySiteDataById.get(account.id) ??
         (accountStorage.convertToDisplayData(account) as DisplaySiteData)
       const hasToken =
         typeof displaySiteData?.token === "string" &&

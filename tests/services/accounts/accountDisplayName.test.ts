@@ -33,6 +33,17 @@ describe("accountDisplayName helpers", () => {
     )
   })
 
+  it("falls back to the username when the base name is blank", () => {
+    expect(formatDisambiguatedAccountDisplayName("", " alice ")).toBe("alice")
+    expect(
+      resolveAccountDisplayName({
+        baseName: "   ",
+        username: "alice",
+        duplicateKeys: new Set([normalizeAccountDisplayNamePart("")]),
+      }),
+    ).toBe("alice")
+  })
+
   it("disambiguates only duplicate names that have a username", () => {
     const duplicateKeys = new Set([normalizeAccountDisplayNamePart("My Site")])
 
