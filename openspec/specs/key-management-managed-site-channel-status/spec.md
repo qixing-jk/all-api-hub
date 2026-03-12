@@ -62,7 +62,7 @@ The status model MUST distinguish at least these outcomes:
 - **AND** the managed-site type is `new-api`
 - **AND** the token status resolves to `unknown` because exact verification is unavailable from the current comparable inputs or only a weak match was found
 - **WHEN** the system renders the status explanation
-- **THEN** the system explains that managed-site channel keys may remain unavailable until backend verification is completed
+- **THEN** the system clarifies that managed-site channel keys may remain unavailable until backend verification is completed
 
 #### Scenario: Managed-site configuration is missing
 - **GIVEN** a token is rendered in Key Management
@@ -119,7 +119,7 @@ The system MUST invalidate affected managed-site status results when local token
 - **GIVEN** a token is shown with managed-site status `not added` or `unknown`
 - **WHEN** the user successfully imports that token to the managed site from Key Management
 - **THEN** the system invalidates the cached managed-site status for that token
-- **AND** the system refreshes the token's managed-site status without requiring a full page reload
+- **AND** the system refreshes the token's managed-site status without requiring a full-page reload
 
 #### Scenario: Token edits or deletion invalidate prior status
 - **GIVEN** a token already has a managed-site status result

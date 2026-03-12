@@ -22,7 +22,7 @@ None.
 
 ## Impact
 
-- Affects Key Management token list and token header UI under `src/features/KeyManagement/**`.
-- Affects managed-site matching, config validation, and provider-specific channel lookup behavior under `src/services/managedSites/**`.
-- Affects localized Key Management copy in `src/locales/**/keyManagement.json`.
-- Affects targeted UI/service tests for managed-site matching states, refresh behavior, and unknown-state handling.
+- Updates Key Management token list and token header UI under `src/features/KeyManagement/**`.
+- Modifies managed-site matching, config validation, and provider-specific channel lookup behavior under `src/services/managedSites/**`.
+- Updates localized Key Management copy in `src/locales/**/keyManagement.json`.
+- Adjusts targeted UI/service tests for managed-site matching states, refresh behavior, and unknown-state handling.
