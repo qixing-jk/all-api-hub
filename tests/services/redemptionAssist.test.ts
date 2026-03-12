@@ -148,7 +148,7 @@ describe("redemptionAssist post-redeem refresh", () => {
     vi.doMock("~/services/accounts/accountStorage", () => ({
       accountStorage: {
         refreshAccount,
-        getEnabledAccounts: vi.fn().mockResolvedValue([]),
+        getAllAccounts: vi.fn().mockResolvedValue([]),
         convertToDisplayData: vi.fn().mockReturnValue([displayAccount]),
       },
     }))
