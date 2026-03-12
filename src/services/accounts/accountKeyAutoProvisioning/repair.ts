@@ -152,12 +152,9 @@ class AccountKeyRepairRunner {
         (account) => account.disabled !== true,
       )
       const displaySiteDataById = new Map(
-        (
-          accountStorage.convertToDisplayData(
-            allAccounts,
-            allAccounts,
-          ) as DisplaySiteData[]
-        ).map((account) => [account.id, account] as const),
+        accountStorage
+          .convertToDisplayData(allAccounts, allAccounts)
+          .map((account) => [account.id, account] as const),
       )
 
       const eligibleAccounts: SiteAccount[] = []
@@ -246,7 +243,7 @@ class AccountKeyRepairRunner {
     try {
       const displaySiteData: DisplaySiteData =
         displaySiteDataById.get(account.id) ??
-        (accountStorage.convertToDisplayData(account) as DisplaySiteData)
+        accountStorage.convertToDisplayData(account)
       const hasToken =
         typeof displaySiteData?.token === "string" &&
         displaySiteData.token.trim().length > 0

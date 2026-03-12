@@ -1024,7 +1024,7 @@ async function autoProvisionKeyOnAccountAdd(
 
     const displaySiteData =
       (await accountStorage.getDisplayDataById(accountId)) ??
-      (accountStorage.convertToDisplayData(account) as DisplaySiteData)
+      accountStorage.convertToDisplayData(account)
     const hasToken =
       typeof displaySiteData?.token === "string" &&
       displaySiteData.token.trim().length > 0

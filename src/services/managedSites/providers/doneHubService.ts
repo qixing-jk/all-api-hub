@@ -478,9 +478,7 @@ export async function autoConfigToDoneHub(
     return { success: false, message: configValidation.errors.join(", ") }
   }
 
-  const displaySiteData = accountStorage.convertToDisplayData(
-    account,
-  ) as DisplaySiteData
+  const displaySiteData = accountStorage.convertToDisplayData(account)
 
   let lastError: unknown
   for (let attempt = 1; attempt <= 3; attempt++) {

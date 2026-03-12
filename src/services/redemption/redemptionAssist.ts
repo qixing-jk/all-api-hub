@@ -182,7 +182,7 @@ class RedemptionAssistService {
     const displayAccounts = accountStorage.convertToDisplayData(
       siteAccounts,
       siteAccounts,
-    ) as DisplaySiteData[]
+    )
     return displayAccounts.filter((account) => account.disabled !== true)
   }
 

@@ -926,7 +926,7 @@ export function useAccountDialog({
         }
         displaySiteData =
           (await accountStorage.getDisplayDataById(siteAccount.id)) ??
-          (accountStorage.convertToDisplayData(siteAccount) as DisplaySiteData)
+          accountStorage.convertToDisplayData(siteAccount)
       } else {
         displaySiteData = targetAccount
       }

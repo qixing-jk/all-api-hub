@@ -178,9 +178,7 @@ export const AccountDataProvider = ({
 
   const buildDisplayDataWithResolvedTags = useCallback(
     (nextAccounts: SiteAccount[], currentTagStore: TagStore) =>
-      (
-        accountStorage.convertToDisplayData(nextAccounts) as DisplaySiteData[]
-      ).map((site) => {
+      accountStorage.convertToDisplayData(nextAccounts).map((site) => {
         const tagIds = site.tagIds ?? []
         const resolvedNames = tagIds
           .map((id) => currentTagStore.tagsById[id]?.name)

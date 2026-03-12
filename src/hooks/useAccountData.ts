@@ -100,9 +100,7 @@ export const useAccountData = (): UseAccountDataResult => {
     try {
       const allAccounts = await accountStorage.getAllAccounts()
       const accountStats = await accountStorage.getAccountStats()
-      const displaySiteData = accountStorage.convertToDisplayData(
-        allAccounts,
-      ) as DisplaySiteData[]
+      const displaySiteData = accountStorage.convertToDisplayData(allAccounts)
 
       // 计算新的余额数据
       const newBalances: CurrencyAmountMap = {}

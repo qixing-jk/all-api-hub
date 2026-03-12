@@ -95,7 +95,7 @@ export function useChannelDialog() {
         siteAccount = account
         displaySiteData =
           (await accountStorage.getDisplayDataById(account.id)) ??
-          (accountStorage.convertToDisplayData(account) as DisplaySiteData)
+          accountStorage.convertToDisplayData(account)
       } else {
         displaySiteData = account
         const fetchedAccount = await accountStorage.getAccountById(account.id)

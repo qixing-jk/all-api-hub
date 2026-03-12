@@ -513,9 +513,7 @@ export async function autoConfigToOctopus(
       return { success: false, message: t("messages:octopus.configMissing") }
     }
 
-    const displaySiteData = accountStorage.convertToDisplayData(
-      account,
-    ) as DisplaySiteData
+    const displaySiteData = accountStorage.convertToDisplayData(account)
 
     const apiToken = await ensureAccountApiToken(
       account,

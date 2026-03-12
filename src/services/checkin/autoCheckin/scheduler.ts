@@ -2354,10 +2354,7 @@ class AutoCheckinScheduler {
 
     const displayAccount = await accountStorage.getDisplayDataById(accountId)
 
-    return (
-      displayAccount ??
-      (accountStorage.convertToDisplayData(account) as DisplaySiteData)
-    )
+    return displayAccount ?? accountStorage.convertToDisplayData(account)
   }
 }
 

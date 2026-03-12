@@ -221,19 +221,14 @@ class AccountStorageService {
       ).values(),
     )
 
-    const displayAccounts = this.convertToDisplayData(
-      contextWithAccount,
-    ) as DisplaySiteData[]
+    const displayAccounts = this.convertToDisplayData(contextWithAccount)
     const resolved = displayAccounts.find(
       (displayAccount) => displayAccount.id === normalizedAccount.id,
     )
 
     return (
       resolved ??
-      (this.convertToDisplayData(
-        normalizedAccount,
-        contextWithAccount,
-      ) as DisplaySiteData)
+      this.convertToDisplayData(normalizedAccount, contextWithAccount)
     )
   }
 
