@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.27.0](https://github.com/qixing-jk/all-api-hub/compare/v3.26.0...v3.27.0) (2026-03-12)
+
+
+### Features
+
+* **account:** add disabled/enabled account status filtering ([4ce7a9b](https://github.com/qixing-jk/all-api-hub/commit/4ce7a9b0a818fc0a98ee822bedccdac622f731f3)), closes [#541](https://github.com/qixing-jk/all-api-hub/issues/541)
+* **account:** disambiguate duplicate account names globally ([#591](https://github.com/qixing-jk/all-api-hub/issues/591)) ([4dacbee](https://github.com/qixing-jk/all-api-hub/commit/4dacbee8595ab37b02e49537502e8f89f2cb3bd1))
+* **ui:** add feedback & support section with GitHub integration ([#585](https://github.com/qixing-jk/all-api-hub/issues/585)) ([913d9d7](https://github.com/qixing-jk/all-api-hub/commit/913d9d71aa8f2b7676f8f1a0f90e10fb6399c4ba))
+
+
+### Bug Fixes
+
+* refine side panel support detection with mobile fallback ([#586](https://github.com/qixing-jk/all-api-hub/issues/586)) ([9a20758](https://github.com/qixing-jk/all-api-hub/commit/9a2075899b7b23a97411d636d27c5efbda3a481a))
+
 ## [3.26.0](https://github.com/qixing-jk/all-api-hub/compare/v3.25.0...v3.26.0) (2026-03-07)
 
 
