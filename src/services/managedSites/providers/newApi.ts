@@ -6,6 +6,7 @@ import { ensureAccountApiToken } from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { getApiService } from "~/services/apiService"
 import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompatible"
+import { findManagedSiteChannelByComparableInputs } from "~/services/managedSites/utils/channelMatching"
 import { ApiToken, AuthTypeEnum, DisplaySiteData, SiteAccount } from "~/types"
 import type { AccountToken } from "~/types"
 import type {
@@ -29,7 +30,6 @@ import {
   UserPreferences,
   userPreferences,
 } from "../../preferences/userPreferences"
-import { findManagedSiteChannelByComparableInputs } from "../utils/channelMatching"
 import { resolveDefaultChannelGroups } from "./defaultChannelGroups"
 
 /**

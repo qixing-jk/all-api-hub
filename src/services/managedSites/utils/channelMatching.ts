@@ -34,10 +34,11 @@ export function findManagedSiteChannelsByBaseUrlAndModels(
       return false
     }
 
-    return isArraysEqual(
+    const normalizedChannelModels = normalizeList(
       parseDelimitedList(channel.models),
-      normalizedDesiredModels,
     )
+
+    return isArraysEqual(normalizedChannelModels, normalizedDesiredModels)
   })
 }
 

@@ -16,6 +16,7 @@ import type {
   ManagedSiteConfig,
   ManagedSiteService,
 } from "~/services/managedSites/managedSiteService"
+import { findManagedSiteChannelByComparableInputs } from "~/services/managedSites/utils/channelMatching"
 import type { ManagedSiteMessagesKey } from "~/services/managedSites/utils/managedSite"
 import {
   userPreferences,
@@ -46,8 +47,6 @@ import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeList, parseDelimitedList } from "~/utils/core/string"
 import { t } from "~/utils/i18n/core"
-
-import { findManagedSiteChannelByComparableInputs } from "../utils/channelMatching"
 
 const logger = createLogger("OctopusService")
 

@@ -8,6 +8,10 @@ import { getApiService } from "~/services/apiService"
 import { fetchChannel as fetchDoneHubChannel } from "~/services/apiService/doneHub"
 import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompatible"
 import {
+  findManagedSiteChannelByComparableInputs,
+  findManagedSiteChannelsByBaseUrlAndModels,
+} from "~/services/managedSites/utils/channelMatching"
+import {
   UserPreferences,
   userPreferences,
 } from "~/services/preferences/userPreferences"
@@ -31,16 +35,28 @@ import { createLogger } from "~/utils/core/logger"
 import { normalizeList, parseDelimitedList } from "~/utils/core/string"
 import { t } from "~/utils/i18n/core"
 
-import {
-  findManagedSiteChannelByComparableInputs,
-  findManagedSiteChannelsByBaseUrlAndModels,
-} from "../utils/channelMatching"
 import { resolveDefaultChannelGroups } from "./defaultChannelGroups"
 
 /**
  * Unified logger scoped to the Done Hub integration and auto-config flows.
  */
 const logger = createLogger("DoneHubService")
+
+const toSafeDoneHubChannelDetailDiagnostic = (error: unknown): string => {
+  const message = getErrorMessage(error) || "Unknown error"
+
+  if (
+    error &&
+    typeof error === "object" &&
+    "code" in error &&
+    typeof error.code === "string" &&
+    error.code.trim() !== ""
+  ) {
+    return `${message} (${error.code})`
+  }
+
+  return message
+}
 
 /**
  * Searches channels matching the keyword.
@@ -400,17 +416,12 @@ export async function findMatchingChannel(
     } catch (error) {
       logger.warn("Failed to fetch Done Hub channel detail for key matching", {
         channelId: channel.id,
-        error,
+        diagnostic: toSafeDoneHubChannelDetailDiagnostic(error),
       })
     }
   }
 
-  return findManagedSiteChannelByComparableInputs({
-    channels: comparableChannels,
-    accountBaseUrl,
-    models,
-    key,
-  })
+  return null
 }
 
 /**

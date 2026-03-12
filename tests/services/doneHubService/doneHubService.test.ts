@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { buildManagedSiteChannel } from "~~/tests/test-utils/factories"
 
@@ -16,6 +16,11 @@ vi.mock("~/services/apiService/doneHub", () => ({
 }))
 
 describe("doneHubService findMatchingChannel", () => {
+  beforeEach(() => {
+    mockFetchDoneHubChannel.mockReset()
+    mockSearchChannel.mockReset()
+  })
+
   it("fetches channel detail to compare the exact key when the list payload omits it", async () => {
     const { findMatchingChannel } = await import(
       "~/services/managedSites/providers/doneHubService"
@@ -102,5 +107,45 @@ describe("doneHubService findMatchingChannel", () => {
       id: 12,
       name: "Done Hub Channel 12",
     })
+  })
+
+  it("returns null when the detailed payload still does not match the key", async () => {
+    const { findMatchingChannel } = await import(
+      "~/services/managedSites/providers/doneHubService"
+    )
+
+    mockSearchChannel.mockResolvedValueOnce({
+      items: [
+        buildManagedSiteChannel({
+          id: 13,
+          name: "Done Hub Channel 13",
+          base_url: "https://api.example.com",
+          models: "gpt-4o",
+          key: "",
+        }),
+      ],
+      total: 1,
+      type_counts: {},
+    })
+    mockFetchDoneHubChannel.mockResolvedValueOnce(
+      buildManagedSiteChannel({
+        id: 13,
+        name: "Done Hub Channel 13",
+        base_url: "https://api.example.com",
+        models: "gpt-4o",
+        key: "different-token-key",
+      }),
+    )
+
+    const result = await findMatchingChannel(
+      "https://done-hub.example.com",
+      "admin-token",
+      "1",
+      "https://api.example.com",
+      ["gpt-4o"],
+      "target-token-key",
+    )
+
+    expect(result).toBeNull()
   })
 })
