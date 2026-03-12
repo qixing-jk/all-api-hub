@@ -76,7 +76,12 @@ export default function UsageAnalytics() {
     exportSelection,
     exportPreview,
     dayKeysInRange,
-  } = useUsageAnalyticsFilters({ enabledAccounts, store, disabledAccountIdSet })
+  } = useUsageAnalyticsFilters({
+    enabledAccounts,
+    store,
+    disabledAccountIdSet,
+    isLoading,
+  })
 
   const { handleExport } = useUsageAnalyticsExport({ store, exportSelection })
 

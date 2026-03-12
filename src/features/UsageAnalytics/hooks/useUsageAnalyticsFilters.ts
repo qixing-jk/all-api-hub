@@ -24,8 +24,9 @@ export const useUsageAnalyticsFilters = (params: {
   enabledAccounts: SiteAccount[]
   store: UsageHistoryStore | null
   disabledAccountIdSet: Set<string>
+  isLoading: boolean
 }) => {
-  const { enabledAccounts, store, disabledAccountIdSet } = params
+  const { enabledAccounts, store, disabledAccountIdSet, isLoading } = params
   const { t } = useTranslation("usageAnalytics")
 
   const [selectedSiteAccountIds, setSelectedSiteAccountIds] = useState<
@@ -197,7 +198,7 @@ export const useUsageAnalyticsFilters = (params: {
   }, [accountsForSelectedSites, selectedAccountIds.length])
 
   useEffect(() => {
-    if (selectedSiteAccountIds.length === 0) {
+    if (isLoading || selectedSiteAccountIds.length === 0) {
       return
     }
 
@@ -206,7 +207,7 @@ export const useUsageAnalyticsFilters = (params: {
       const next = current.filter((siteId) => available.has(siteId))
       return next.length === current.length ? current : next
     })
-  }, [selectedSiteAccountIds, siteOptions])
+  }, [isLoading, selectedSiteAccountIds, siteOptions])
 
   const resolvedAccountIds = useMemo(() => {
     if (selectedAccountIds.length > 0) {
