@@ -43,6 +43,7 @@ interface TokenLoadProgress {
 
 interface ManagedSiteTokenStatusState {
   cacheKey: string
+  runId: number
   isChecking: boolean
   result?: Awaited<ReturnType<typeof getManagedSiteTokenChannelStatus>>
   checkedAt?: number
@@ -283,11 +284,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         const cacheKey = buildManagedSiteStatusCacheKey(token)
         const existingEntry = managedSiteTokenStatusesRef.current[identityKey]
 
-        if (
-          !force &&
-          existingEntry?.cacheKey === cacheKey &&
-          !existingEntry.isChecking
-        ) {
+        if (!force && existingEntry?.cacheKey === cacheKey) {
           continue
         }
 
@@ -305,8 +302,13 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         return
       }
 
-      const runId = managedSiteStatusRunIdRef.current + 1
-      managedSiteStatusRunIdRef.current = runId
+      const runId = force
+        ? managedSiteStatusRunIdRef.current + 1
+        : managedSiteStatusRunIdRef.current
+
+      if (force) {
+        managedSiteStatusRunIdRef.current = runId
+      }
 
       setManagedSiteTokenStatuses((prev) => {
         const next = { ...prev }
@@ -314,6 +316,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         for (const target of targets) {
           next[target.identityKey] = {
             cacheKey: target.cacheKey,
+            runId,
             isChecking: true,
           }
         }
@@ -341,17 +344,18 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
               token: target.token,
             })
 
-            if (
-              !isMountedRef.current ||
-              managedSiteStatusRunIdRef.current !== runId
-            ) {
+            if (!isMountedRef.current) {
               return
             }
 
             setManagedSiteTokenStatuses((prev) => {
               const currentEntry = prev[target.identityKey]
 
-              if (!currentEntry || currentEntry.cacheKey !== target.cacheKey) {
+              if (
+                !currentEntry ||
+                currentEntry.cacheKey !== target.cacheKey ||
+                currentEntry.runId !== runId
+              ) {
                 return prev
               }
 
@@ -359,6 +363,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
                 ...prev,
                 [target.identityKey]: {
                   cacheKey: target.cacheKey,
+                  runId,
                   isChecking: false,
                   result,
                   checkedAt: Date.now(),
