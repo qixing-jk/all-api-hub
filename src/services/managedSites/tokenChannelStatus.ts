@@ -165,6 +165,17 @@ export async function getManagedSiteTokenChannelStatus(
 
   const secretsToRedact = collectSecrets(token, managedConfig)
 
+  // This feature is not supported on Veloera because Veloera's
+  // `/api/channel/search` does not support reliable base URL lookup, so this
+  // verification flow cannot produce a trustworthy presence/absence result.
+  if (service.siteType === VELOERA) {
+    return {
+      status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
+      reason:
+        MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.VELOERA_BASE_URL_SEARCH_UNSUPPORTED,
+    }
+  }
+
   try {
     const normalizedAccountBaseUrl = normalizeManagedSiteChannelBaseUrl(
       account.baseUrl,
@@ -184,17 +195,6 @@ export async function getManagedSiteTokenChannelStatus(
         reason:
           MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.INPUT_PREPARATION_FAILED,
         diagnostic: "missing-comparable-inputs",
-      }
-    }
-
-    // This feature is not supported on Veloera because Veloera's
-    // `/api/channel/search` does not support reliable base URL lookup, so this
-    // verification flow cannot produce a trustworthy presence/absence result.
-    if (service.siteType === VELOERA) {
-      return {
-        status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
-        reason:
-          MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.VELOERA_BASE_URL_SEARCH_UNSUPPORTED,
       }
     }
 
@@ -225,6 +225,18 @@ export async function getManagedSiteTokenChannelStatus(
     }
 
     if (
+      !formData.key.trim() ||
+      (resolution.url.matched && !resolution.key.comparable)
+    ) {
+      return {
+        status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
+        reason:
+          MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE,
+        assessment,
+      }
+    }
+
+    if (
       resolution.key.matched ||
       resolution.models.matched ||
       resolution.url.matched
@@ -233,18 +245,6 @@ export async function getManagedSiteTokenChannelStatus(
         status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
         reason:
           MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.MATCH_REQUIRES_CONFIRMATION,
-        assessment,
-      }
-    }
-
-    if (
-      !formData.key.trim() ||
-      (resolution.url.matched && !resolution.key.comparable)
-    ) {
-      return {
-        status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
-        reason:
-          MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE,
         assessment,
       }
     }

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   MANAGED_SITE_CHANNEL_MATCH_LEVELS,
   MANAGED_SITE_CHANNEL_MATCH_REASONS,
+  MANAGED_SITE_CHANNEL_MODEL_SIMILARITY_THRESHOLD,
 } from "~/services/managedSites/channelMatch"
 import {
   findBestManagedSiteChannelMatch,
@@ -94,6 +95,47 @@ describe("channelMatching", () => {
     )
     expect(result.channel?.id).toBe(similarChannel.id)
     expect(result.similarityScore).toBeCloseTo(0.5)
+  })
+
+  it("keeps a similarity score exactly at the configured threshold as a secondary match", () => {
+    const thresholdChannel = buildManagedSiteChannel({
+      id: 5_1,
+      base_url: "https://api.example.com",
+      models: "gpt-4,gpt-4o,claude-3",
+    })
+
+    const result = findBestManagedSiteChannelMatch({
+      channels: [thresholdChannel],
+      accountBaseUrl: "https://api.example.com",
+      models: ["gpt-4", "gpt-4o", "gemini-2.0"],
+    })
+
+    expect(result.level).toBe(MANAGED_SITE_CHANNEL_MATCH_LEVELS.SECONDARY)
+    expect(result.reason).toBe(
+      MANAGED_SITE_CHANNEL_MATCH_REASONS.URL_MODELS_SIMILAR,
+    )
+    expect(result.channel?.id).toBe(thresholdChannel.id)
+    expect(result.similarityScore).toBe(
+      MANAGED_SITE_CHANNEL_MODEL_SIMILARITY_THRESHOLD,
+    )
+  })
+
+  it("keeps similarity scores below the configured threshold in fuzzy URL-only fallback", () => {
+    const belowThresholdChannel = buildManagedSiteChannel({
+      id: 5_2,
+      base_url: "https://api.example.com",
+      models: "gpt-4,gpt-4o,claude-3,deepseek-r1",
+    })
+
+    const result = findBestManagedSiteChannelMatch({
+      channels: [belowThresholdChannel],
+      accountBaseUrl: "https://api.example.com",
+      models: ["gpt-4", "gpt-4o", "gemini-2.0"],
+    })
+
+    expect(result.level).toBe(MANAGED_SITE_CHANNEL_MATCH_LEVELS.FUZZY)
+    expect(result.reason).toBe(MANAGED_SITE_CHANNEL_MATCH_REASONS.URL_ONLY)
+    expect(result.channel?.id).toBe(belowThresholdChannel.id)
   })
 
   it("falls back to a fuzzy URL-only match when no ranked model match exists", () => {

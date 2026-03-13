@@ -319,8 +319,8 @@ export default function AccountActionButtons({
       const managedConfig = await service.getConfig()
 
       if (!managedConfig) {
-        toast.error(t(`messages:${service.messagesKey}.configMissing`))
         openManagedSiteChannelsPage({ search: normalizedAccountBaseUrl })
+        toast.success(t("actions.channelLocateConfigMissing"))
         return
       }
 

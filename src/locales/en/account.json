@@ -89,6 +89,7 @@
     "locateManagedSiteChannel": "Locate channel",
     "channelLocateNoKeyFallback": "No API key is available for ranked matching. Filtered channels by URL only.",
     "channelLocateMultipleKeysFallback": "Multiple keys found. Filtered channels by URL only.",
+    "channelLocateConfigMissing": "Managed-site admin config is unavailable. Filtered channels by URL for review.",
     "channelLocateInputPreparationFallback": "Ranked matching inputs could not be prepared. Filtered channels by URL only.",
     "channelLocateSecondaryExactModels": "Found a secondary match by exact model set. Filtered channels by URL for review.",
     "channelLocateSecondaryModelsContained": "Found a secondary match by model containment. Filtered channels by URL for review.",

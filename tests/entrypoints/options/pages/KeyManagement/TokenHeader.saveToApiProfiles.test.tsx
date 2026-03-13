@@ -96,7 +96,7 @@ function createAccountStub(): DisplaySiteData {
 }
 
 /**
- *
+ * Creates a baseline managed-site assessment that individual tests can override.
  */
 function createManagedSiteAssessment(
   overrides: Partial<ManagedSiteTokenChannelAssessment> = {},

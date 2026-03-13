@@ -89,6 +89,7 @@
     "locateManagedSiteChannel": "定位对应渠道",
     "channelLocateNoKeyFallback": "当前没有可用于排序匹配的 API 密钥，已仅按 URL 过滤渠道列表。",
     "channelLocateMultipleKeysFallback": "检测到多个密钥，已仅按 URL 过滤渠道列表。",
+    "channelLocateConfigMissing": "托管站点管理员配置不可用，已按 URL 过滤渠道列表供你确认。",
     "channelLocateInputPreparationFallback": "无法准备排序匹配所需的输入，已仅按 URL 过滤渠道列表。",
     "channelLocateSecondaryExactModels": "已找到一个按模型集合完全一致的次级匹配，已按 URL 过滤渠道列表供你确认。",
     "channelLocateSecondaryModelsContained": "已找到一个按模型包含关系命中的次级匹配，已按 URL 过滤渠道列表供你确认。",

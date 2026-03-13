@@ -658,6 +658,153 @@ describe("AccountActionButtons", () => {
     })
   })
 
+  it("shows a same-channel drift explanation when key and approximate models point to the same channel", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([{ key: "sk-1" }])
+
+    const managedService = {
+      messagesKey: "newapi",
+      getConfig: vi.fn().mockResolvedValue({
+        baseUrl: "https://admin.example",
+        token: "t",
+        userId: "1",
+      }),
+      prepareChannelFormData: vi.fn().mockResolvedValue({
+        base_url: "https://api.example.com",
+        models: ["gpt-4", "gpt-4o"],
+        key: "sk-1",
+      }),
+      findMatchingChannel: vi.fn().mockResolvedValueOnce(null),
+      searchChannel: vi.fn().mockResolvedValue({
+        items: [
+          {
+            id: 458,
+            name: "Managed Channel 458",
+            base_url: "https://api.example.com",
+            models: "gpt-4,gpt-4o,gpt-4.1",
+            key: "sk-1",
+          },
+        ],
+      }),
+    }
+
+    getManagedSiteServiceMock.mockResolvedValueOnce(managedService as any)
+
+    const user = userEvent.setup()
+
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({
+          id: "acc-7k-drift",
+          disabled: false,
+          name: "Site",
+          baseUrl: "https://api.example.com",
+        })}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+
+    const menu = await screen.findByRole("menu")
+    const label = await within(menu).findByText(
+      "account:actions.locateManagedSiteChannel",
+    )
+    const button = label.closest("button")
+    expect(button).not.toBeNull()
+
+    await user.click(button!)
+
+    await waitFor(() => {
+      expect(openManagedSiteChannelsPageMock).toHaveBeenCalledWith({
+        search: "https://api.example.com",
+      })
+      expect(toastSuccessMock).toHaveBeenCalledWith(
+        "account:actions.channelLocateKeyMatchedModelsDrifted",
+      )
+    })
+    expect(openManagedSiteChannelsForChannelMock).not.toHaveBeenCalled()
+  })
+
+  it("shows a conflict explanation when key and model signals point to different channels", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([{ key: "sk-1" }])
+
+    const managedService = {
+      messagesKey: "newapi",
+      getConfig: vi.fn().mockResolvedValue({
+        baseUrl: "https://admin.example",
+        token: "t",
+        userId: "1",
+      }),
+      prepareChannelFormData: vi.fn().mockResolvedValue({
+        base_url: "https://api.example.com",
+        models: ["gpt-4", "gpt-4o"],
+        key: "sk-1",
+      }),
+      findMatchingChannel: vi.fn().mockResolvedValueOnce(null),
+      searchChannel: vi.fn().mockResolvedValue({
+        items: [
+          {
+            id: 459,
+            name: "Managed Channel 459",
+            base_url: "https://api.example.com",
+            models: "claude-3",
+            key: "sk-1",
+          },
+          {
+            id: 460,
+            name: "Managed Channel 460",
+            base_url: "https://api.example.com",
+            models: "gpt-4,gpt-4o,gpt-4.1",
+            key: "sk-2",
+          },
+        ],
+      }),
+    }
+
+    getManagedSiteServiceMock.mockResolvedValueOnce(managedService as any)
+
+    const user = userEvent.setup()
+
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({
+          id: "acc-7k-conflict",
+          disabled: false,
+          name: "Site",
+          baseUrl: "https://api.example.com",
+        })}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+
+    const menu = await screen.findByRole("menu")
+    const label = await within(menu).findByText(
+      "account:actions.locateManagedSiteChannel",
+    )
+    const button = label.closest("button")
+    expect(button).not.toBeNull()
+
+    await user.click(button!)
+
+    await waitFor(() => {
+      expect(openManagedSiteChannelsPageMock).toHaveBeenCalledWith({
+        search: "https://api.example.com",
+      })
+      expect(toastSuccessMock).toHaveBeenCalledWith(
+        "account:actions.channelLocateSignalsConflict",
+      )
+    })
+    expect(openManagedSiteChannelsForChannelMock).not.toHaveBeenCalled()
+  })
+
   it("uses a secondary model-similarity explanation when the closest candidate only overlaps by similarity", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([{ key: "sk-1" }])
 
@@ -936,6 +1083,57 @@ describe("AccountActionButtons", () => {
       userPreferencesContextValue.preferences,
     )
     expect(getManagedSiteServiceMock).not.toHaveBeenCalled()
+  })
+
+  it("shows the account-specific config-missing fallback when admin config disappears at click-time", async () => {
+    const managedService = {
+      messagesKey: "newapi",
+      getConfig: vi.fn().mockResolvedValue(null),
+      prepareChannelFormData: vi.fn(),
+      findMatchingChannel: vi.fn(),
+      searchChannel: vi.fn(),
+    }
+
+    getManagedSiteServiceMock.mockResolvedValueOnce(managedService as any)
+
+    const user = userEvent.setup()
+
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({
+          id: "acc-9b",
+          disabled: false,
+          name: "Site",
+          baseUrl: "https://api.example.com/v1/",
+        })}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+
+    const menu = await screen.findByRole("menu")
+    const label = await within(menu).findByText(
+      "account:actions.locateManagedSiteChannel",
+    )
+    const button = label.closest("button")
+    expect(button).not.toBeNull()
+
+    await user.click(button!)
+
+    await waitFor(() => {
+      expect(openManagedSiteChannelsPageMock).toHaveBeenCalledWith({
+        search: "https://api.example.com",
+      })
+      expect(toastSuccessMock).toHaveBeenCalledWith(
+        "account:actions.channelLocateConfigMissing",
+      )
+    })
+    expect(fetchAccountTokensMock).not.toHaveBeenCalled()
+    expect(managedService.prepareChannelFormData).not.toHaveBeenCalled()
   })
 
   it("falls back to base URL search when token response is not an array", async () => {
