@@ -14,8 +14,8 @@ export function normalizeAppLanguage(
 
   const normalized = language.trim().toLowerCase().replace(/_/g, "-")
 
-  if (normalized.startsWith("en")) return "en"
-  if (normalized.startsWith("zh")) return DEFAULT_LANG
+  if (/^en(?:-|$)/.test(normalized)) return "en"
+  if (/^zh(?:-|$)/.test(normalized)) return DEFAULT_LANG
 
   return undefined
 }

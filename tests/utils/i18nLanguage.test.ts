@@ -15,6 +15,8 @@ describe("i18n language helpers", () => {
 
   it("returns undefined for unsupported languages", () => {
     expect(normalizeAppLanguage("fr-FR")).toBeUndefined()
+    expect(normalizeAppLanguage("english")).toBeUndefined()
+    expect(normalizeAppLanguage("zhongwen")).toBeUndefined()
     expect(normalizeAppLanguage("")).toBeUndefined()
     expect(normalizeAppLanguage(undefined)).toBeUndefined()
   })
