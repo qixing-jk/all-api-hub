@@ -25,7 +25,8 @@
   "managedSiteStatus": {
     "actions": {
       "refresh": "刷新托管站渠道状态",
-      "refreshing": "正在刷新托管站渠道状态"
+      "refreshing": "正在刷新托管站渠道状态",
+      "reviewChannels": "查看候选渠道"
     },
     "badges": {
       "checking": "托管站：检查中",
@@ -34,16 +35,53 @@
       "unknown": "托管站：未知"
     },
     "descriptions": {
-      "exactKeyMatch": "已通过精确密钥、基础地址和模型完成匹配。",
-      "noMatch": "未找到精确密钥匹配，也未找到基础地址 + 模型匹配或仅基础地址匹配。",
+      "exactKeyMatch": "已在同一规范化基础地址下通过精确 key 和精确模型集合完成匹配。",
+      "secondaryExactModelsMatch": "已找到一个按模型集合完全一致的次级匹配，在确认前请先核对该渠道。",
+      "secondaryModelsContainedMatch": "已找到一个按模型包含关系命中的次级匹配，在确认前请先核对该渠道。",
+      "secondaryModelsSimilarMatch": "已找到一个按模型相似度命中的次级匹配，在确认前请先核对该渠道。",
+      "keyMatchedModelsMismatch": "在同一规范化 URL 范围内找到了 key 命中的渠道，但模型集合不匹配。",
+      "keyMatchedModelsDrifted": "同一渠道命中了 key，但模型集合只达到了近似匹配，仍需人工确认。",
+      "keyModelsConflict": "key 和模型检查都找到了候选渠道，但指向了不同渠道，仍需人工确认。",
+      "fuzzyUrlOnlyMatch": "目前只能确认 URL 级别的模糊匹配，在确认前请先核对该渠道。",
+      "noMatch": "已完成精确校验，但仍未找到精确、次级或模糊渠道匹配。",
       "configMissing": "请先配置托管站管理员凭据后再进行校验。",
       "inputPreparationFailed": "无法准备可比对的渠道输入，暂时无法完成校验。",
-      "exactVerificationUnavailable": "当前无法执行精确密钥校验，且未找到基础地址 + 模型匹配或仅基础地址匹配。",
+      "exactVerificationUnavailable": "当前无法执行精确密钥校验，且未找到次级或模糊渠道匹配。",
       "newApiRetrieveKeyHint": "对于 New API，渠道 key 只有完成 2FA 验证后才能查看，因此暂无法进行精确校验。",
       "veloeraBaseUrlSearchUnsupported": "该功能在 Veloera 上不受支持，因为 Veloera 不支持按基础地址搜索渠道。",
-      "urlModelsMatchOnly": "找到了基础地址 + 模型匹配的渠道，但未通过精确密钥校验。",
-      "urlOnlyMatchOnly": "仅找到了基础地址匹配的渠道，模型或精确密钥校验未通过。",
       "backendSearchFailed": "托管站校验暂时无法完成。"
+    },
+    "signals": {
+      "url": {
+        "matched": "URL 已命中",
+        "noMatch": "URL 未找到",
+        "tooltipMatched": "在相同规范化 URL 范围内找到了 {{count}} 个候选渠道。示例候选：{{channelName}}。",
+        "tooltipNoMatch": "在相同规范化 URL 范围内未找到任何渠道。"
+      },
+      "key": {
+        "matched": "Key 已命中",
+        "noMatch": "Key 未命中",
+        "unavailable": "Key 不可比对",
+        "notProvided": "Key 缺失",
+        "tooltipMatched": "在相同规范化 URL 范围内，有渠道命中了该 key：{{channelName}}。",
+        "tooltipNoMatch": "存在可比较的渠道 key，但没有任何一个命中当前 key。",
+        "tooltipUnavailable": "由于后端没有暴露可比较的渠道 key，当前无法完成 key 比对。",
+        "tooltipNotProvided": "当前 token 没有可用于比较的 key。"
+      },
+      "models": {
+        "exact": "模型完全一致",
+        "contained": "模型包含命中",
+        "similar": "模型相似命中",
+        "noMatch": "模型未命中",
+        "unavailable": "模型不可比对",
+        "notProvided": "模型缺失",
+        "tooltipExact": "规范化后的模型集合与渠道 {{channelName}} 完全一致。",
+        "tooltipContained": "规范化后的模型集合与渠道 {{channelName}} 通过包含关系命中。",
+        "tooltipSimilar": "规范化后的模型集合与渠道 {{channelName}} 通过相似度命中（{{score}}%）。",
+        "tooltipNoMatch": "在当前规范化 URL 范围内，没有确认到模型命中。",
+        "tooltipUnavailable": "由于没有可比较的 URL 范围，当前无法完成模型比对。",
+        "tooltipNotProvided": "当前 token 没有可用于比较的模型列表。"
+      }
     }
   },
   "repairMissingKeys": {

@@ -30,11 +30,17 @@ import { useDialogStateContext } from "~/features/AccountManagement/hooks/Dialog
 import { exportShareSnapshotWithToast } from "~/features/ShareSnapshots/utils/exportShareSnapshotWithToast"
 import { getApiService } from "~/services/apiService"
 import {
+  getManagedSiteChannelExactMatch,
+  MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS,
+  type ManagedSiteChannelMatchInspection,
+} from "~/services/managedSites/channelMatch"
+import { resolveManagedSiteChannelMatch } from "~/services/managedSites/channelMatchResolver"
+import {
   getManagedSiteService,
   hasValidManagedSiteConfig,
 } from "~/services/managedSites/managedSiteService"
+import { normalizeManagedSiteChannelBaseUrl } from "~/services/managedSites/utils/channelMatching"
 import { buildAccountShareSnapshotPayload } from "~/services/sharing/shareSnapshots"
-import { normalizeOpenAiFamilyBaseUrl } from "~/services/verification/webAiApiCheck/extractCredentials"
 import type { DisplaySiteData } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
@@ -118,6 +124,40 @@ export interface ActionButtonsProps {
  * Logger scoped to per-account action buttons so token-fetch failures can be diagnosed without logging secrets.
  */
 const logger = createLogger("AccountActionButtons")
+
+const getLocateManagedSiteChannelToastKey = (
+  inspection: ManagedSiteChannelMatchInspection,
+) => {
+  if (inspection.key.matched && inspection.models.matched) {
+    if (
+      inspection.key.channel?.id != null &&
+      inspection.key.channel.id === inspection.models.channel?.id
+    ) {
+      return "actions.channelLocateKeyMatchedModelsDrifted"
+    }
+
+    return "actions.channelLocateSignalsConflict"
+  }
+
+  if (inspection.key.matched) {
+    return "actions.channelLocateKeyMatchOnly"
+  }
+
+  switch (inspection.models.reason) {
+    case MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT:
+      return "actions.channelLocateSecondaryExactModels"
+    case MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.CONTAINED:
+      return "actions.channelLocateSecondaryModelsContained"
+    case MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.SIMILAR:
+      return "actions.channelLocateSecondaryModelsSimilar"
+  }
+
+  if (inspection.url.matched) {
+    return "actions.channelLocateFuzzyUrlOnly"
+  }
+
+  return "actions.channelLocateUnresolved"
+}
 
 /**
  * Primary/secondary action controls for each account card.
@@ -269,7 +309,7 @@ export default function AccountActionButtons({
 
     const accountBaseUrl = site.baseUrl.trim()
     const normalizedAccountBaseUrl =
-      normalizeOpenAiFamilyBaseUrl(accountBaseUrl) ?? accountBaseUrl
+      normalizeManagedSiteChannelBaseUrl(accountBaseUrl)
     if (!normalizedAccountBaseUrl) {
       return
     }
@@ -303,11 +343,15 @@ export default function AccountActionButtons({
         return
       }
 
-      if (tokensResponse.length !== 1) {
+      if (tokensResponse.length === 0) {
         openManagedSiteChannelsPage({ search: normalizedAccountBaseUrl })
-        if (tokensResponse.length > 1) {
-          toast.success(t("actions.channelLocateMultipleKeysFallback"))
-        }
+        toast.success(t("actions.channelLocateNoKeyFallback"))
+        return
+      }
+
+      if (tokensResponse.length > 1) {
+        openManagedSiteChannelsPage({ search: normalizedAccountBaseUrl })
+        toast.success(t("actions.channelLocateMultipleKeysFallback"))
         return
       }
 
@@ -329,45 +373,47 @@ export default function AccountActionButtons({
           },
         )
         openManagedSiteChannelsPage({ search: normalizedAccountBaseUrl })
+        toast.success(t("actions.channelLocateInputPreparationFallback"))
         return
       }
 
-      const hasComparableKey = formData.key.trim() !== ""
-      const exactMatch = hasComparableKey
-        ? await service.findMatchingChannel(
-            managedConfig.baseUrl,
-            managedConfig.token,
-            managedConfig.userId,
-            formData.base_url,
-            formData.models,
-            formData.key,
-          )
-        : null
+      const searchBaseUrl = normalizeManagedSiteChannelBaseUrl(
+        formData.base_url,
+      )
+
+      if (!searchBaseUrl || formData.models.length === 0) {
+        openManagedSiteChannelsPage({ search: normalizedAccountBaseUrl })
+        toast.success(t("actions.channelLocateInputPreparationFallback"))
+        return
+      }
+
+      const resolution = await resolveManagedSiteChannelMatch({
+        service,
+        managedConfig,
+        accountBaseUrl: searchBaseUrl,
+        models: formData.models,
+        key: formData.key,
+      })
+      const exactMatch = getManagedSiteChannelExactMatch(resolution)
 
       if (
-        exactMatch?.id != null &&
-        hasComparableKey &&
-        exactMatch.key === formData.key
+        exactMatch &&
+        exactMatch.id != null &&
+        resolution.models.reason ===
+          MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT
       ) {
         openManagedSiteChannelsForChannel(exactMatch.id)
         return
       }
 
-      const baseUrlMatch =
-        exactMatch ??
-        (await service.findMatchingChannel(
-          managedConfig.baseUrl,
-          managedConfig.token,
-          managedConfig.userId,
-          formData.base_url,
-          formData.models,
-        ))
+      openManagedSiteChannelsPage({ search: resolution.searchBaseUrl })
 
-      openManagedSiteChannelsPage({ search: formData.base_url })
-
-      if (baseUrlMatch) {
-        toast.success(t("actions.channelLocateKeyUnavailable"))
+      if (!resolution.searchCompleted) {
+        toast.error(t("actions.channelLocateFailed"))
+        return
       }
+
+      toast.success(t(getLocateManagedSiteChannelToastKey(resolution)))
     } catch (error) {
       logger.error("Failed to locate managed site channel", {
         error,

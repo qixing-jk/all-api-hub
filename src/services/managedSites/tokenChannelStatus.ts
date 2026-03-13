@@ -1,13 +1,17 @@
 import { VELOERA } from "~/constants/siteType"
+import {
+  getManagedSiteChannelExactMatch,
+  type ManagedSiteChannelKeyMatchReasonValue,
+  type ManagedSiteChannelMatchInspection,
+  type ManagedSiteChannelModelsMatchReasonValue,
+} from "~/services/managedSites/channelMatch"
+import { resolveManagedSiteChannelMatch } from "~/services/managedSites/channelMatchResolver"
 import type {
   ManagedSiteConfig,
   ManagedSiteService,
 } from "~/services/managedSites/managedSiteService"
 import { getManagedSiteService } from "~/services/managedSites/managedSiteService"
-import {
-  findManagedSiteChannelByBaseUrl,
-  findManagedSiteChannelByComparableInputs,
-} from "~/services/managedSites/utils/channelMatching"
+import { normalizeManagedSiteChannelBaseUrl } from "~/services/managedSites/utils/channelMatching"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import type { AccountToken, ApiToken, DisplaySiteData } from "~/types"
 import type { ManagedSiteChannel } from "~/types/managedSite"
@@ -26,8 +30,7 @@ export const MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS = {
   INPUT_PREPARATION_FAILED: "input-preparation-failed",
   EXACT_VERIFICATION_UNAVAILABLE: "exact-verification-unavailable",
   VELOERA_BASE_URL_SEARCH_UNSUPPORTED: "veloera-base-url-search-unsupported",
-  URL_MODELS_MATCH_ONLY: "url-models-match-only",
-  URL_ONLY_MATCH_ONLY: "url-only-match-only",
+  MATCH_REQUIRES_CONFIRMATION: "match-requires-confirmation",
   BACKEND_SEARCH_FAILED: "backend-search-failed",
 } as const
 
@@ -39,6 +42,29 @@ export interface ManagedSiteTokenChannelStatusMatchedChannel {
   name: string
 }
 
+export interface ManagedSiteTokenChannelAssessment {
+  searchBaseUrl: string
+  searchCompleted: boolean
+  url: {
+    matched: boolean
+    candidateCount: number
+    channel?: ManagedSiteTokenChannelStatusMatchedChannel
+  }
+  key: {
+    comparable: boolean
+    matched: boolean
+    reason: ManagedSiteChannelKeyMatchReasonValue
+    channel?: ManagedSiteTokenChannelStatusMatchedChannel
+  }
+  models: {
+    comparable: boolean
+    matched: boolean
+    reason: ManagedSiteChannelModelsMatchReasonValue
+    channel?: ManagedSiteTokenChannelStatusMatchedChannel
+    similarityScore?: number
+  }
+}
+
 export type ManagedSiteTokenChannelStatusValue =
   (typeof MANAGED_SITE_TOKEN_CHANNEL_STATUSES)[keyof typeof MANAGED_SITE_TOKEN_CHANNEL_STATUSES]
 
@@ -46,15 +72,27 @@ export type ManagedSiteTokenChannelStatus =
   | {
       status: typeof MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED
       matchedChannel: ManagedSiteTokenChannelStatusMatchedChannel
+      assessment: ManagedSiteTokenChannelAssessment
     }
   | {
       status: typeof MANAGED_SITE_TOKEN_CHANNEL_STATUSES.NOT_ADDED
+      assessment: ManagedSiteTokenChannelAssessment
     }
   | {
       status: typeof MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN
-      reason: ManagedSiteTokenChannelStatusUnknownReason
+      reason:
+        | typeof MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.MATCH_REQUIRES_CONFIRMATION
+        | typeof MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE
+      assessment: ManagedSiteTokenChannelAssessment
+    }
+  | {
+      status: typeof MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN
+      reason: Exclude<
+        ManagedSiteTokenChannelStatusUnknownReason,
+        | typeof MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.MATCH_REQUIRES_CONFIRMATION
+        | typeof MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE
+      >
       diagnostic?: string
-      matchedChannel?: ManagedSiteTokenChannelStatusMatchedChannel
     }
 
 interface GetManagedSiteTokenChannelStatusParams {
@@ -69,6 +107,34 @@ const toMatchedChannelSummary = (
 ): ManagedSiteTokenChannelStatusMatchedChannel => ({
   id: channel.id,
   name: channel.name,
+})
+
+const toOptionalMatchedChannelSummary = (channel: ManagedSiteChannel | null) =>
+  channel ? toMatchedChannelSummary(channel) : undefined
+
+const toManagedSiteTokenChannelAssessment = (
+  inspection: ManagedSiteChannelMatchInspection,
+): ManagedSiteTokenChannelAssessment => ({
+  searchBaseUrl: inspection.searchBaseUrl,
+  searchCompleted: inspection.searchCompleted,
+  url: {
+    matched: inspection.url.matched,
+    candidateCount: inspection.url.candidateCount,
+    channel: toOptionalMatchedChannelSummary(inspection.url.channel),
+  },
+  key: {
+    comparable: inspection.key.comparable,
+    matched: inspection.key.matched,
+    reason: inspection.key.reason,
+    channel: toOptionalMatchedChannelSummary(inspection.key.channel),
+  },
+  models: {
+    comparable: inspection.models.comparable,
+    matched: inspection.models.matched,
+    reason: inspection.models.reason,
+    channel: toOptionalMatchedChannelSummary(inspection.models.channel),
+    similarityScore: inspection.models.similarityScore,
+  },
 })
 
 const collectSecrets = (
@@ -100,9 +166,19 @@ export async function getManagedSiteTokenChannelStatus(
   const secretsToRedact = collectSecrets(token, managedConfig)
 
   try {
-    const formData = await service.prepareChannelFormData(account, token)
+    const normalizedAccountBaseUrl = normalizeManagedSiteChannelBaseUrl(
+      account.baseUrl,
+    )
+    const formData = await service.prepareChannelFormData(
+      {
+        ...account,
+        baseUrl: normalizedAccountBaseUrl,
+      },
+      token,
+    )
+    const searchBaseUrl = normalizeManagedSiteChannelBaseUrl(formData.base_url)
 
-    if (!formData.base_url.trim() || formData.models.length === 0) {
+    if (!searchBaseUrl || formData.models.length === 0) {
       return {
         status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
         reason:
@@ -122,32 +198,25 @@ export async function getManagedSiteTokenChannelStatus(
       }
     }
 
-    const exactMatch = formData.key.trim()
-      ? await service.findMatchingChannel(
-          managedConfig.baseUrl,
-          managedConfig.token,
-          managedConfig.userId,
-          formData.base_url,
-          formData.models,
-          formData.key,
-        )
-      : null
+    const resolution = await resolveManagedSiteChannelMatch({
+      service,
+      managedConfig,
+      accountBaseUrl: searchBaseUrl,
+      models: formData.models,
+      key: formData.key,
+    })
+    const assessment = toManagedSiteTokenChannelAssessment(resolution)
+    const exactMatch = getManagedSiteChannelExactMatch(resolution)
 
     if (exactMatch) {
       return {
         status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED,
         matchedChannel: toMatchedChannelSummary(exactMatch),
+        assessment,
       }
     }
 
-    const searchResults = await service.searchChannel(
-      managedConfig.baseUrl,
-      managedConfig.token,
-      managedConfig.userId,
-      formData.base_url,
-    )
-
-    if (!searchResults) {
+    if (!resolution.searchCompleted) {
       return {
         status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
         reason:
@@ -155,45 +224,34 @@ export async function getManagedSiteTokenChannelStatus(
       }
     }
 
-    const urlAndModelsMatch = findManagedSiteChannelByComparableInputs({
-      channels: searchResults.items ?? [],
-      accountBaseUrl: formData.base_url,
-      models: formData.models,
-    })
-
-    if (urlAndModelsMatch) {
+    if (
+      resolution.key.matched ||
+      resolution.models.matched ||
+      resolution.url.matched
+    ) {
       return {
         status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
         reason:
-          MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.URL_MODELS_MATCH_ONLY,
-        matchedChannel: toMatchedChannelSummary(urlAndModelsMatch),
+          MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.MATCH_REQUIRES_CONFIRMATION,
+        assessment,
       }
     }
 
-    const urlOnlyMatch = findManagedSiteChannelByBaseUrl({
-      channels: searchResults.items ?? [],
-      accountBaseUrl: formData.base_url,
-    })
-
-    if (urlOnlyMatch) {
-      return {
-        status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
-        reason:
-          MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.URL_ONLY_MATCH_ONLY,
-        matchedChannel: toMatchedChannelSummary(urlOnlyMatch),
-      }
-    }
-
-    if (!formData.key.trim()) {
+    if (
+      !formData.key.trim() ||
+      (resolution.url.matched && !resolution.key.comparable)
+    ) {
       return {
         status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
         reason:
           MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE,
+        assessment,
       }
     }
 
     return {
       status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.NOT_ADDED,
+      assessment,
     }
   } catch (error) {
     const diagnostic = toSanitizedErrorSummary(error, secretsToRedact)

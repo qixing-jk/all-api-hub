@@ -21,6 +21,7 @@ import { KiloCodeIcon } from "~/components/icons/KiloCodeIcon"
 import { ManagedSiteIcon } from "~/components/icons/ManagedSiteIcon"
 import { KiloCodeExportDialog } from "~/components/KiloCodeExportDialog"
 import ManagedSiteChannelLinkButton from "~/components/ManagedSiteChannelLinkButton"
+import Tooltip from "~/components/Tooltip"
 import { Badge, Heading6, IconButton } from "~/components/ui"
 import { NEW_API } from "~/constants/siteType"
 import type { ManagedSiteType } from "~/constants/siteType"
@@ -28,8 +29,13 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { OpenInCherryStudio } from "~/services/integrations/cherryStudio"
 import {
+  MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS,
+  MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS,
+} from "~/services/managedSites/channelMatch"
+import {
   MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS,
   MANAGED_SITE_TOKEN_CHANNEL_STATUSES,
+  type ManagedSiteTokenChannelAssessment,
   type ManagedSiteTokenChannelStatus,
 } from "~/services/managedSites/tokenChannelStatus"
 import { getManagedSiteLabelKey } from "~/services/managedSites/utils/managedSite"
@@ -142,29 +148,14 @@ const getManagedSiteStatusLabel = (
 
 const getManagedSiteStatusDescription = (
   t: TFunction,
-  managedSiteType: ManagedSiteType,
   managedSiteStatus?: ManagedSiteTokenChannelStatus,
 ) => {
   if (!managedSiteStatus) {
     return null
   }
 
-  if (managedSiteStatus.status === MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED) {
-    return t("managedSiteStatus.descriptions.exactKeyMatch")
-  }
-
-  if (
-    managedSiteStatus.status === MANAGED_SITE_TOKEN_CHANNEL_STATUSES.NOT_ADDED
-  ) {
-    return t("managedSiteStatus.descriptions.noMatch")
-  }
-
-  const appendNewApiRetrieveKeyHint = (message: string) => {
-    if (managedSiteType !== NEW_API) {
-      return message
-    }
-
-    return `${message} ${t("managedSiteStatus.descriptions.newApiRetrieveKeyHint")}`
+  if ("assessment" in managedSiteStatus) {
+    return null
   }
 
   switch (managedSiteStatus.reason) {
@@ -172,25 +163,204 @@ const getManagedSiteStatusDescription = (
       return t("managedSiteStatus.descriptions.configMissing")
     case MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.INPUT_PREPARATION_FAILED:
       return t("managedSiteStatus.descriptions.inputPreparationFailed")
-    case MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE:
-      return appendNewApiRetrieveKeyHint(
-        t("managedSiteStatus.descriptions.exactVerificationUnavailable"),
-      )
     case MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.VELOERA_BASE_URL_SEARCH_UNSUPPORTED:
       return t("managedSiteStatus.descriptions.veloeraBaseUrlSearchUnsupported")
-    case MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.URL_MODELS_MATCH_ONLY:
-      return appendNewApiRetrieveKeyHint(
-        t("managedSiteStatus.descriptions.urlModelsMatchOnly"),
-      )
-    case MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.URL_ONLY_MATCH_ONLY:
-      return appendNewApiRetrieveKeyHint(
-        t("managedSiteStatus.descriptions.urlOnlyMatchOnly"),
-      )
     case MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.BACKEND_SEARCH_FAILED:
       return t("managedSiteStatus.descriptions.backendSearchFailed")
     default:
       return null
   }
+}
+
+const appendManagedSiteKeyHintToTooltip = (
+  t: TFunction,
+  managedSiteType: ManagedSiteType,
+  message: string,
+  assessment: ManagedSiteTokenChannelAssessment,
+) => {
+  if (
+    managedSiteType !== NEW_API ||
+    assessment.key.reason !==
+      MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.COMPARISON_UNAVAILABLE
+  ) {
+    return message
+  }
+
+  return `${message} ${t("managedSiteStatus.descriptions.newApiRetrieveKeyHint")}`
+}
+
+const getManagedSiteSignalBadgeVariant = (params: {
+  assessment: ManagedSiteTokenChannelAssessment
+  signal: "url" | "key" | "models"
+}) => {
+  if (params.signal === "url") {
+    return params.assessment.url.matched
+      ? ("success" as const)
+      : ("outline" as const)
+  }
+
+  if (params.signal === "key") {
+    if (params.assessment.key.matched) {
+      return "success" as const
+    }
+
+    if (
+      params.assessment.key.reason ===
+        MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.NO_KEY_PROVIDED ||
+      params.assessment.key.reason ===
+        MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.COMPARISON_UNAVAILABLE
+    ) {
+      return "warning" as const
+    }
+
+    return "outline" as const
+  }
+
+  if (params.assessment.models.matched) {
+    return params.assessment.models.reason ===
+      MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT
+      ? ("success" as const)
+      : ("info" as const)
+  }
+
+  if (
+    params.assessment.models.reason ===
+      MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.NO_MODELS_PROVIDED ||
+    params.assessment.models.reason ===
+      MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.COMPARISON_UNAVAILABLE
+  ) {
+    return "warning" as const
+  }
+
+  return "outline" as const
+}
+
+const getManagedSiteUrlSignalLabel = (
+  t: TFunction,
+  assessment: ManagedSiteTokenChannelAssessment,
+) =>
+  assessment.url.matched
+    ? t("managedSiteStatus.signals.url.matched")
+    : t("managedSiteStatus.signals.url.noMatch")
+
+const getManagedSiteKeySignalLabel = (
+  t: TFunction,
+  assessment: ManagedSiteTokenChannelAssessment,
+) => {
+  switch (assessment.key.reason) {
+    case MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.MATCHED:
+      return t("managedSiteStatus.signals.key.matched")
+    case MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.NO_KEY_PROVIDED:
+      return t("managedSiteStatus.signals.key.notProvided")
+    case MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.COMPARISON_UNAVAILABLE:
+      return t("managedSiteStatus.signals.key.unavailable")
+    default:
+      return t("managedSiteStatus.signals.key.noMatch")
+  }
+}
+
+const getManagedSiteModelsSignalLabel = (
+  t: TFunction,
+  assessment: ManagedSiteTokenChannelAssessment,
+) => {
+  switch (assessment.models.reason) {
+    case MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT:
+      return t("managedSiteStatus.signals.models.exact")
+    case MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.CONTAINED:
+      return t("managedSiteStatus.signals.models.contained")
+    case MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.SIMILAR:
+      return t("managedSiteStatus.signals.models.similar")
+    case MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.NO_MODELS_PROVIDED:
+      return t("managedSiteStatus.signals.models.notProvided")
+    case MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.COMPARISON_UNAVAILABLE:
+      return t("managedSiteStatus.signals.models.unavailable")
+    default:
+      return t("managedSiteStatus.signals.models.noMatch")
+  }
+}
+
+const getManagedSiteUrlSignalTooltip = (
+  t: TFunction,
+  assessment: ManagedSiteTokenChannelAssessment,
+) => {
+  if (assessment.url.matched) {
+    return t("managedSiteStatus.signals.url.tooltipMatched", {
+      count: assessment.url.candidateCount,
+      channelName: assessment.url.channel?.name ?? "",
+    })
+  }
+
+  return t("managedSiteStatus.signals.url.tooltipNoMatch")
+}
+
+const getManagedSiteKeySignalTooltip = (
+  t: TFunction,
+  managedSiteType: ManagedSiteType,
+  assessment: ManagedSiteTokenChannelAssessment,
+) => {
+  switch (assessment.key.reason) {
+    case MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.MATCHED:
+      return t("managedSiteStatus.signals.key.tooltipMatched", {
+        channelName: assessment.key.channel?.name ?? "",
+      })
+    case MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.NO_KEY_PROVIDED:
+      return t("managedSiteStatus.signals.key.tooltipNotProvided")
+    case MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.COMPARISON_UNAVAILABLE:
+      return appendManagedSiteKeyHintToTooltip(
+        t,
+        managedSiteType,
+        t("managedSiteStatus.signals.key.tooltipUnavailable"),
+        assessment,
+      )
+    default:
+      return t("managedSiteStatus.signals.key.tooltipNoMatch")
+  }
+}
+
+const getManagedSiteModelsSignalTooltip = (
+  t: TFunction,
+  assessment: ManagedSiteTokenChannelAssessment,
+) => {
+  switch (assessment.models.reason) {
+    case MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT:
+      return t("managedSiteStatus.signals.models.tooltipExact", {
+        channelName: assessment.models.channel?.name ?? "",
+      })
+    case MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.CONTAINED:
+      return t("managedSiteStatus.signals.models.tooltipContained", {
+        channelName: assessment.models.channel?.name ?? "",
+      })
+    case MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.SIMILAR:
+      return t("managedSiteStatus.signals.models.tooltipSimilar", {
+        channelName: assessment.models.channel?.name ?? "",
+        score: Math.round((assessment.models.similarityScore ?? 0) * 100),
+      })
+    case MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.NO_MODELS_PROVIDED:
+      return t("managedSiteStatus.signals.models.tooltipNotProvided")
+    case MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.COMPARISON_UNAVAILABLE:
+      return t("managedSiteStatus.signals.models.tooltipUnavailable")
+    default:
+      return t("managedSiteStatus.signals.models.tooltipNoMatch")
+  }
+}
+
+/**
+ *
+ */
+function ManagedSiteSignalBadge(props: {
+  badgeText: string
+  tooltipText: string
+  variant: "success" | "info" | "outline" | "warning"
+}) {
+  return (
+    <Tooltip content={props.tooltipText} position="top">
+      <span title={props.tooltipText} className="inline-flex">
+        <Badge variant={props.variant} size="sm" className="cursor-help">
+          {props.badgeText}
+        </Badge>
+      </span>
+    </Tooltip>
+  )
 }
 
 /**
@@ -450,9 +620,12 @@ export function TokenHeader({
     isManagedSiteStatusChecking || Boolean(managedSiteStatus)
   const managedSiteStatusDescription = getManagedSiteStatusDescription(
     t,
-    managedSiteType,
     managedSiteStatus,
   )
+  const managedSiteAssessment =
+    managedSiteStatus && "assessment" in managedSiteStatus
+      ? managedSiteStatus.assessment
+      : undefined
   const matchedManagedSiteChannel =
     managedSiteStatus && "matchedChannel" in managedSiteStatus
       ? managedSiteStatus.matchedChannel
@@ -501,10 +674,74 @@ export function TokenHeader({
                 {managedSiteStatusDescription}
               </span>
             ) : null}
+            {managedSiteAssessment ? (
+              <>
+                <ManagedSiteSignalBadge
+                  badgeText={getManagedSiteUrlSignalLabel(
+                    t,
+                    managedSiteAssessment,
+                  )}
+                  tooltipText={getManagedSiteUrlSignalTooltip(
+                    t,
+                    managedSiteAssessment,
+                  )}
+                  variant={getManagedSiteSignalBadgeVariant({
+                    assessment: managedSiteAssessment,
+                    signal: "url",
+                  })}
+                />
+                <ManagedSiteSignalBadge
+                  badgeText={getManagedSiteKeySignalLabel(
+                    t,
+                    managedSiteAssessment,
+                  )}
+                  tooltipText={getManagedSiteKeySignalTooltip(
+                    t,
+                    managedSiteType,
+                    managedSiteAssessment,
+                  )}
+                  variant={getManagedSiteSignalBadgeVariant({
+                    assessment: managedSiteAssessment,
+                    signal: "key",
+                  })}
+                />
+                <ManagedSiteSignalBadge
+                  badgeText={getManagedSiteModelsSignalLabel(
+                    t,
+                    managedSiteAssessment,
+                  )}
+                  tooltipText={getManagedSiteModelsSignalTooltip(
+                    t,
+                    managedSiteAssessment,
+                  )}
+                  variant={getManagedSiteSignalBadgeVariant({
+                    assessment: managedSiteAssessment,
+                    signal: "models",
+                  })}
+                />
+              </>
+            ) : null}
             {matchedManagedSiteChannel ? (
               <ManagedSiteChannelLinkButton
-                channelId={matchedManagedSiteChannel.id}
                 channelName={matchedManagedSiteChannel.name}
+                channelId={
+                  managedSiteStatus?.status ===
+                  MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED
+                    ? matchedManagedSiteChannel.id
+                    : undefined
+                }
+                search={
+                  managedSiteStatus?.status ===
+                  MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED
+                    ? undefined
+                    : managedSiteAssessment?.searchBaseUrl
+                }
+                className="h-auto px-0 py-0 text-xs"
+              />
+            ) : managedSiteAssessment?.searchBaseUrl ? (
+              <ManagedSiteChannelLinkButton
+                channelName={t("managedSiteStatus.actions.reviewChannels")}
+                search={managedSiteAssessment.searchBaseUrl}
                 className="h-auto px-0 py-0 text-xs"
               />
             ) : null}

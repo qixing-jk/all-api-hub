@@ -3,11 +3,15 @@ import { useCallback } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Button } from "~/components/ui"
-import { openManagedSiteChannelsForChannel } from "~/utils/navigation"
+import {
+  openManagedSiteChannelsForChannel,
+  openManagedSiteChannelsPage,
+} from "~/utils/navigation"
 
 interface ManagedSiteChannelLinkButtonProps {
-  channelId: number
   channelName: string
+  channelId?: number
+  search?: string
   className?: string
 }
 
@@ -15,21 +19,30 @@ interface ManagedSiteChannelLinkButtonProps {
  * A link-style button that opens channel management filtered to a channel ID.
  */
 export default function ManagedSiteChannelLinkButton({
-  channelId,
   channelName,
+  channelId,
+  search,
   className,
 }: ManagedSiteChannelLinkButtonProps) {
   const { t } = useTranslation(["managedSiteModelSync"])
 
   const handleClick = useCallback(async () => {
-    await openManagedSiteChannelsForChannel(channelId)
-  }, [channelId])
+    if (channelId != null) {
+      await openManagedSiteChannelsForChannel(channelId)
+      return
+    }
+
+    if (search) {
+      await openManagedSiteChannelsPage({ search })
+    }
+  }, [channelId, search])
 
   return (
     <Button
       variant="link"
       className={className}
       onClick={handleClick}
+      disabled={channelId == null && !search}
       aria-label={`${t("actions.manageChannel")}: ${channelName}`}
       rightIcon={
         <ArrowTopRightOnSquareIcon className="h-4 w-4" aria-hidden="true" />

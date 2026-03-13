@@ -27,7 +27,8 @@
   "managedSiteStatus": {
     "actions": {
       "refresh": "Refresh Managed-Site Status",
-      "refreshing": "Refreshing Managed-Site Status"
+      "refreshing": "Refreshing Managed-Site Status",
+      "reviewChannels": "Review channels"
     },
     "badges": {
       "checking": "Managed site: checking",
@@ -36,16 +37,53 @@
       "unknown": "Managed site: unknown"
     },
     "descriptions": {
-      "exactKeyMatch": "Matched by exact key, base URL, and models.",
-      "noMatch": "No exact key match, no base URL + models match, and no base URL-only match were found.",
+      "exactKeyMatch": "Matched by exact key and exact model set under the same normalized base URL.",
+      "secondaryExactModelsMatch": "Secondary match found by exact model-set comparison. Review the matched channel before treating it as confirmed.",
+      "secondaryModelsContainedMatch": "Secondary match found by model containment. Review the matched channel before treating it as confirmed.",
+      "secondaryModelsSimilarMatch": "Secondary match found by model similarity. Review the matched channel before treating it as confirmed.",
+      "keyMatchedModelsMismatch": "A channel under the same normalized URL bucket matched the key, but the model set did not match.",
+      "keyMatchedModelsDrifted": "The same channel matched the key, but the model set only matched approximately and still needs manual review.",
+      "keyModelsConflict": "Key and model checks both found candidates, but they point to different channels and need manual review.",
+      "fuzzyUrlOnlyMatch": "Only a fuzzy URL-level match was found. Review the matched channel before treating it as confirmed.",
+      "noMatch": "Exact verification completed without finding any exact, secondary, or fuzzy channel match.",
       "configMissing": "Configure managed-site admin credentials before verification can run.",
       "inputPreparationFailed": "Verification could not prepare comparable channel inputs.",
-      "exactVerificationUnavailable": "Exact key verification is unavailable, and no base URL + models or base URL-only match was found.",
+      "exactVerificationUnavailable": "Exact key verification is unavailable, and no secondary or fuzzy channel match was found.",
       "newApiRetrieveKeyHint": "For the New API, channel keys can only be viewed after completing 2FA verification. Therefore, precise verification cannot be performed at this time.",
       "veloeraBaseUrlSearchUnsupported": "This feature is not supported on Veloera because Veloera does not support base URL search for channel lookup.",
-      "urlModelsMatchOnly": "A base URL + models match was found, but exact key verification did not match.",
-      "urlOnlyMatchOnly": "A base URL-only match was found, but models or exact key verification did not match.",
       "backendSearchFailed": "Managed-site verification could not be completed."
+    },
+    "signals": {
+      "url": {
+        "matched": "URL matched",
+        "noMatch": "URL not found",
+        "tooltipMatched": "Found {{count}} candidate channel(s) under the same normalized URL bucket. Example candidate: {{channelName}}.",
+        "tooltipNoMatch": "No channel was found under the same normalized URL bucket."
+      },
+      "key": {
+        "matched": "Key matched",
+        "noMatch": "Key no match",
+        "unavailable": "Key unavailable",
+        "notProvided": "Key missing",
+        "tooltipMatched": "A channel under the same normalized URL bucket matched this key: {{channelName}}.",
+        "tooltipNoMatch": "Comparable channel keys were available, but none matched this key.",
+        "tooltipUnavailable": "Key comparison could not be completed because comparable channel keys were unavailable.",
+        "tooltipNotProvided": "No comparable key was available for this token."
+      },
+      "models": {
+        "exact": "Models exact",
+        "contained": "Models contained",
+        "similar": "Models similar",
+        "noMatch": "Models no match",
+        "unavailable": "Models unavailable",
+        "notProvided": "Models missing",
+        "tooltipExact": "The normalized model set exactly matched channel {{channelName}}.",
+        "tooltipContained": "The normalized model set matched channel {{channelName}} by containment.",
+        "tooltipSimilar": "The normalized model set matched channel {{channelName}} by similarity ({{score}}%).",
+        "tooltipNoMatch": "No model match was confirmed inside the normalized URL bucket.",
+        "tooltipUnavailable": "Model comparison could not be completed because no comparable URL bucket was available.",
+        "tooltipNotProvided": "No comparable model list was available for this token."
+      }
     }
   },
   "repairMissingKeys": {

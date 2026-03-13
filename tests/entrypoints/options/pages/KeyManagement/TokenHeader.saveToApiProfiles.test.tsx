@@ -5,8 +5,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { TokenHeader } from "~/features/KeyManagement/components/TokenListItem/TokenHeader"
 import {
+  MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS,
+  MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS,
+} from "~/services/managedSites/channelMatch"
+import {
   MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS,
   MANAGED_SITE_TOKEN_CHANNEL_STATUSES,
+  type ManagedSiteTokenChannelAssessment,
 } from "~/services/managedSites/tokenChannelStatus"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
@@ -15,6 +20,8 @@ import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const mockCreateProfile = vi.fn()
 const mockOpenApiCredentialProfilesPage = vi.fn()
+const mockOpenManagedSiteChannelsForChannel = vi.fn()
+const mockOpenManagedSiteChannelsPage = vi.fn()
 const mockOpenWithAccount = vi.fn()
 
 vi.mock(
@@ -37,6 +44,10 @@ vi.mock("react-hot-toast", () => ({
 vi.mock("~/utils/navigation", () => ({
   openApiCredentialProfilesPage: (...args: unknown[]) =>
     mockOpenApiCredentialProfilesPage(...args),
+  openManagedSiteChannelsForChannel: (...args: unknown[]) =>
+    mockOpenManagedSiteChannelsForChannel(...args),
+  openManagedSiteChannelsPage: (...args: unknown[]) =>
+    mockOpenManagedSiteChannelsPage(...args),
 }))
 
 vi.mock("~/components/dialogs/ChannelDialog", () => {
@@ -84,10 +95,69 @@ function createAccountStub(): DisplaySiteData {
   }
 }
 
+/**
+ *
+ */
+function createManagedSiteAssessment(
+  overrides: Partial<ManagedSiteTokenChannelAssessment> = {},
+): ManagedSiteTokenChannelAssessment {
+  const base: ManagedSiteTokenChannelAssessment = {
+    searchBaseUrl: "https://example.com",
+    searchCompleted: true,
+    url: {
+      matched: true,
+      candidateCount: 1,
+      channel: {
+        id: 88,
+        name: "Managed Channel 88",
+      },
+    },
+    key: {
+      comparable: true,
+      matched: false,
+      reason: MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.NO_MATCH,
+    },
+    models: {
+      comparable: true,
+      matched: true,
+      reason: MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT,
+      channel: {
+        id: 88,
+        name: "Managed Channel 88",
+      },
+      similarityScore: 1,
+    },
+  }
+
+  return {
+    ...base,
+    ...overrides,
+    url: {
+      ...base.url,
+      ...overrides.url,
+    },
+    key: {
+      ...base.key,
+      ...overrides.key,
+    },
+    models: {
+      ...base.models,
+      ...overrides.models,
+    },
+  }
+}
+
+const getBadgeTooltip = (label: string) => {
+  const element = screen.getByText(label)
+  return element.closest("span[title]")
+}
+
 describe("TokenHeader save to API profiles", () => {
   beforeEach(() => {
     mockCreateProfile.mockReset()
     mockOpenApiCredentialProfilesPage.mockReset()
+    mockOpenManagedSiteChannelsForChannel.mockReset()
+    mockOpenManagedSiteChannelsPage.mockReset()
     mockOpenWithAccount.mockReset()
     ;(toast.success as any).mockReset()
     ;(toast.error as any).mockReset()
@@ -229,10 +299,6 @@ describe("TokenHeader save to API profiles", () => {
 
   it("renders managed-site status copy and follow-up link when a weak match exists", async () => {
     const account = createAccountStub()
-    const matchedChannel = {
-      id: 88,
-      name: "Managed Channel 88",
-    }
 
     const token = {
       id: 2,
@@ -260,8 +326,8 @@ describe("TokenHeader save to API profiles", () => {
         managedSiteStatus={{
           status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
           reason:
-            MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.URL_MODELS_MATCH_ONLY,
-          matchedChannel,
+            MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.MATCH_REQUIRES_CONFIRMATION,
+          assessment: createManagedSiteAssessment(),
         }}
       />,
     )
@@ -270,15 +336,39 @@ describe("TokenHeader save to API profiles", () => {
       screen.getByText("keyManagement:managedSiteStatus.badges.unknown"),
     ).toBeInTheDocument()
     expect(
-      screen.getByText(
-        /keyManagement:managedSiteStatus\.descriptions\.urlModelsMatchOnly .*keyManagement:managedSiteStatus\.descriptions\.newApiRetrieveKeyHint/,
+      screen.queryByText(
+        "keyManagement:managedSiteStatus.descriptions.secondaryExactModelsMatch",
       ),
+    ).toBeNull()
+    expect(
+      screen.getByText("keyManagement:managedSiteStatus.signals.url.matched"),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole("button", {
-        name: `${testI18n.t("managedSiteModelSync:actions.manageChannel")}: ${matchedChannel.name}`,
-      }),
-    ).toHaveTextContent(matchedChannel.name)
+      screen.getByText("keyManagement:managedSiteStatus.signals.key.noMatch"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("keyManagement:managedSiteStatus.signals.models.exact"),
+    ).toBeInTheDocument()
+    expect(
+      getBadgeTooltip("keyManagement:managedSiteStatus.signals.key.noMatch"),
+    )?.toHaveAttribute("title")
+    expect(
+      getBadgeTooltip(
+        "keyManagement:managedSiteStatus.signals.key.noMatch",
+      )?.getAttribute("title"),
+    ).toContain("keyManagement:managedSiteStatus.signals.key.tooltipNoMatch")
+    const button = screen.getByRole("button", {
+      name: `${testI18n.t("managedSiteModelSync:actions.manageChannel")}: keyManagement:managedSiteStatus.actions.reviewChannels`,
+    })
+    expect(button).toHaveTextContent(
+      "keyManagement:managedSiteStatus.actions.reviewChannels",
+    )
+
+    await userEvent.setup().click(button)
+
+    expect(mockOpenManagedSiteChannelsPage).toHaveBeenCalledWith({
+      search: "https://example.com",
+    })
   })
 
   it("renders the exact-match explanation when the token is already added", async () => {
@@ -313,6 +403,35 @@ describe("TokenHeader save to API profiles", () => {
             id: 99,
             name: "Managed Channel 99",
           },
+          assessment: createManagedSiteAssessment({
+            url: {
+              matched: true,
+              candidateCount: 1,
+              channel: {
+                id: 99,
+                name: "Managed Channel 99",
+              },
+            },
+            key: {
+              comparable: true,
+              matched: true,
+              reason: MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.MATCHED,
+              channel: {
+                id: 99,
+                name: "Managed Channel 99",
+              },
+            },
+            models: {
+              comparable: true,
+              matched: true,
+              reason: MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT,
+              channel: {
+                id: 99,
+                name: "Managed Channel 99",
+              },
+              similarityScore: 1,
+            },
+          }),
         }}
       />,
     )
@@ -321,10 +440,24 @@ describe("TokenHeader save to API profiles", () => {
       screen.getByText("keyManagement:managedSiteStatus.badges.added"),
     ).toBeInTheDocument()
     expect(
-      screen.getByText(
+      screen.queryByText(
         "keyManagement:managedSiteStatus.descriptions.exactKeyMatch",
       ),
+    ).toBeNull()
+    expect(
+      screen.getByText("keyManagement:managedSiteStatus.signals.key.matched"),
     ).toBeInTheDocument()
+    expect(
+      screen.getByText("keyManagement:managedSiteStatus.signals.models.exact"),
+    ).toBeInTheDocument()
+
+    await userEvent.setup().click(
+      screen.getByRole("button", {
+        name: `${testI18n.t("managedSiteModelSync:actions.manageChannel")}: Managed Channel 99`,
+      }),
+    )
+
+    expect(mockOpenManagedSiteChannelsForChannel).toHaveBeenCalledWith(99)
   })
 
   it("adds the New API 2FA hint when exact key verification is unavailable", async () => {
@@ -357,20 +490,252 @@ describe("TokenHeader save to API profiles", () => {
           status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
           reason:
             MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE,
+          assessment: createManagedSiteAssessment({
+            url: {
+              matched: false,
+              candidateCount: 0,
+            },
+            key: {
+              comparable: false,
+              matched: false,
+              reason:
+                MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.COMPARISON_UNAVAILABLE,
+            },
+            models: {
+              comparable: false,
+              matched: false,
+              reason:
+                MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.COMPARISON_UNAVAILABLE,
+            },
+          }),
         }}
       />,
     )
 
     expect(
+      screen.queryByText(
+        "keyManagement:managedSiteStatus.descriptions.exactVerificationUnavailable",
+      ),
+    ).toBeNull()
+    expect(
+      screen.queryByText(
+        "keyManagement:managedSiteStatus.descriptions.newApiRetrieveKeyHint",
+      ),
+    ).toBeNull()
+    expect(
       screen.getByText(
-        /keyManagement:managedSiteStatus\.descriptions\.exactVerificationUnavailable/,
+        "keyManagement:managedSiteStatus.signals.key.unavailable",
       ),
     ).toBeInTheDocument()
     expect(
+      getBadgeTooltip(
+        "keyManagement:managedSiteStatus.signals.key.unavailable",
+      ),
+    )?.toHaveAttribute("title")
+    expect(
+      getBadgeTooltip(
+        "keyManagement:managedSiteStatus.signals.key.unavailable",
+      )?.getAttribute("title"),
+    ).toContain(
+      "keyManagement:managedSiteStatus.signals.key.tooltipUnavailable",
+    )
+    expect(
+      getBadgeTooltip(
+        "keyManagement:managedSiteStatus.signals.key.unavailable",
+      )?.getAttribute("title"),
+    ).toContain(
+      "keyManagement:managedSiteStatus.descriptions.newApiRetrieveKeyHint",
+    )
+  })
+
+  it("renders fuzzy and similarity explanations for non-exact managed-site matches", () => {
+    const account = createAccountStub()
+
+    const fuzzyToken = {
+      id: 6,
+      user_id: 1,
+      key: "sk-fuzzy",
+      status: 1,
+      name: "Fuzzy Token",
+      created_time: 0,
+      accessed_time: 0,
+      expired_time: 0,
+      remain_quota: 0,
+      unlimited_quota: false,
+      used_quota: 0,
+      accountId: account.id,
+      accountName: account.name,
+    }
+
+    const { rerender } = render(
+      <TokenHeader
+        token={fuzzyToken as any}
+        copyKey={vi.fn()}
+        handleEditToken={vi.fn()}
+        handleDeleteToken={vi.fn()}
+        account={account}
+        managedSiteStatus={{
+          status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
+          reason:
+            MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.MATCH_REQUIRES_CONFIRMATION,
+          assessment: createManagedSiteAssessment({
+            url: {
+              matched: true,
+              candidateCount: 1,
+              channel: {
+                id: 77,
+                name: "Managed Channel 77",
+              },
+            },
+            key: {
+              comparable: true,
+              matched: false,
+              reason: MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.NO_MATCH,
+            },
+            models: {
+              comparable: true,
+              matched: false,
+              reason: MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.NO_MATCH,
+            },
+          }),
+        }}
+      />,
+    )
+
+    expect(
+      screen.queryByText(
+        "keyManagement:managedSiteStatus.descriptions.fuzzyUrlOnlyMatch",
+      ),
+    ).toBeNull()
+    expect(
       screen.getByText(
-        /keyManagement:managedSiteStatus\.descriptions\.newApiRetrieveKeyHint/,
+        "keyManagement:managedSiteStatus.signals.models.noMatch",
       ),
     ).toBeInTheDocument()
+
+    rerender(
+      <TokenHeader
+        token={fuzzyToken as any}
+        copyKey={vi.fn()}
+        handleEditToken={vi.fn()}
+        handleDeleteToken={vi.fn()}
+        account={account}
+        managedSiteStatus={{
+          status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
+          reason:
+            MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.MATCH_REQUIRES_CONFIRMATION,
+          assessment: createManagedSiteAssessment({
+            url: {
+              matched: true,
+              candidateCount: 1,
+              channel: {
+                id: 78,
+                name: "Managed Channel 78",
+              },
+            },
+            key: {
+              comparable: false,
+              matched: false,
+              reason:
+                MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.COMPARISON_UNAVAILABLE,
+            },
+            models: {
+              comparable: true,
+              matched: true,
+              reason: MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.SIMILAR,
+              channel: {
+                id: 78,
+                name: "Managed Channel 78",
+              },
+              similarityScore: 0.5,
+            },
+          }),
+        }}
+      />,
+    )
+
+    expect(
+      screen.queryByText(
+        "keyManagement:managedSiteStatus.descriptions.secondaryModelsSimilarMatch",
+      ),
+    ).toBeNull()
+    expect(
+      screen.getByText(
+        "keyManagement:managedSiteStatus.signals.models.similar",
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it("renders separate key and model badges when key matches but models do not", () => {
+    const account = createAccountStub()
+    const token = {
+      id: 7,
+      user_id: 1,
+      key: "sk-key-only",
+      status: 1,
+      name: "Key Only Token",
+      created_time: 0,
+      accessed_time: 0,
+      expired_time: 0,
+      remain_quota: 0,
+      unlimited_quota: false,
+      used_quota: 0,
+      accountId: account.id,
+      accountName: account.name,
+    }
+
+    render(
+      <TokenHeader
+        token={token as any}
+        copyKey={vi.fn()}
+        handleEditToken={vi.fn()}
+        handleDeleteToken={vi.fn()}
+        account={account}
+        managedSiteStatus={{
+          status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
+          reason:
+            MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.MATCH_REQUIRES_CONFIRMATION,
+          assessment: createManagedSiteAssessment({
+            key: {
+              comparable: true,
+              matched: true,
+              reason: MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.MATCHED,
+              channel: {
+                id: 91,
+                name: "Managed Channel 91",
+              },
+            },
+            models: {
+              comparable: true,
+              matched: false,
+              reason: MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.NO_MATCH,
+            },
+          }),
+        }}
+      />,
+    )
+
+    expect(
+      screen.queryByText(
+        "keyManagement:managedSiteStatus.descriptions.keyMatchedModelsMismatch",
+      ),
+    ).toBeNull()
+    expect(
+      screen.getByText("keyManagement:managedSiteStatus.signals.key.matched"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        "keyManagement:managedSiteStatus.signals.models.noMatch",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      getBadgeTooltip("keyManagement:managedSiteStatus.signals.key.matched"),
+    )?.toHaveAttribute("title")
+    expect(
+      getBadgeTooltip(
+        "keyManagement:managedSiteStatus.signals.key.matched",
+      )?.getAttribute("title"),
+    ).toContain("keyManagement:managedSiteStatus.signals.key.tooltipMatched")
   })
 
   it("refreshes the token status after a successful managed-site import", async () => {
