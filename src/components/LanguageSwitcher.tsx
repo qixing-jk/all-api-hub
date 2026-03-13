@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 import { ToggleButton } from "~/components/ui"
 import { ANIMATIONS, COLORS } from "~/constants/designTokens"
 import { userPreferences } from "~/services/preferences/userPreferences"
+import { normalizeAppLanguage } from "~/utils/i18n/language"
 
 const languageOptions = [
   { code: "en", label: "EN" },
@@ -15,6 +16,9 @@ const languageOptions = [
  */
 export function LanguageSwitcher() {
   const { i18n } = useTranslation()
+  const activeLanguage = normalizeAppLanguage(
+    i18n.resolvedLanguage || i18n.language,
+  )
 
   const handleLanguageChange = async (lng: string) => {
     await i18n.changeLanguage(lng)
@@ -28,7 +32,7 @@ export function LanguageSwitcher() {
         className={`flex ${COLORS.background.tertiary} rounded-lg p-0.5 shadow-sm sm:p-1 ${ANIMATIONS.transition.base}`}
       >
         {languageOptions.map(({ code, label }) => {
-          const isActive = i18n.language === code
+          const isActive = activeLanguage === code
           return (
             <ToggleButton
               key={code}

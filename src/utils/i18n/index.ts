@@ -10,6 +10,7 @@ import { I18NEXT_LANGUAGE_STORAGE_KEY } from "~/services/core/storageKeys"
 import { userPreferences } from "~/services/preferences/userPreferences"
 
 import i18n from "./core"
+import { resolveInitialAppLanguage } from "./language"
 import { mapToDayjsLocale, resources } from "./resources"
 
 i18n
@@ -34,9 +35,20 @@ i18n
     },
   })
   .then(async () => {
-    const storedLanguage = (await userPreferences.getLanguage()) || DEFAULT_LANG
-    await i18n.changeLanguage(storedLanguage)
-    dayjs.locale(mapToDayjsLocale(storedLanguage.toLowerCase()))
+    const storedLanguage = await userPreferences.getLanguage()
+    const initialLanguage = resolveInitialAppLanguage({
+      userPreferenceLanguage: storedLanguage,
+      detectedLanguage: i18n.resolvedLanguage || i18n.language,
+    })
+
+    if (
+      initialLanguage !== i18n.resolvedLanguage &&
+      initialLanguage !== i18n.language
+    ) {
+      await i18n.changeLanguage(initialLanguage)
+    }
+
+    dayjs.locale(mapToDayjsLocale(initialLanguage))
   })
 
 export default i18n

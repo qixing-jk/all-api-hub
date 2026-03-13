@@ -6,6 +6,7 @@ import { DEFAULT_LANG } from "~/constants"
 import { userPreferences } from "~/services/preferences/userPreferences"
 
 import i18n from "./core"
+import { resolveInitialAppLanguage } from "./language"
 import { mapToDayjsLocale, resources } from "./resources"
 
 /**
@@ -20,12 +21,17 @@ export async function initBackgroundI18n() {
     returnEmptyString: false,
   })
 
-  // 尝试读取用户偏好语言
-  const storedLanguage = (await userPreferences.getLanguage()) || DEFAULT_LANG
-  await i18n.changeLanguage(storedLanguage)
+  const storedLanguage = await userPreferences.getLanguage()
+  const initialLanguage = resolveInitialAppLanguage({
+    userPreferenceLanguage: storedLanguage,
+    detectedLanguage:
+      typeof navigator !== "undefined" ? navigator.language : undefined,
+  })
+
+  await i18n.changeLanguage(initialLanguage)
 
   // 同步 dayjs locale
-  dayjs.locale(mapToDayjsLocale(storedLanguage))
+  dayjs.locale(mapToDayjsLocale(initialLanguage))
 }
 
 // 监听语言变更，保持 dayjs 一致
