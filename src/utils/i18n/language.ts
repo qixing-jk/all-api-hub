@@ -4,6 +4,20 @@ export const SUPPORTED_UI_LANGUAGES = ["en", DEFAULT_LANG] as const
 
 export type SupportedUiLanguage = (typeof SUPPORTED_UI_LANGUAGES)[number]
 
+export const UI_LANGUAGE_OPTIONS = [
+  {
+    code: "en",
+    translationKey: "appearanceLanguage.switcher.options.en",
+  },
+  {
+    code: DEFAULT_LANG,
+    translationKey: "appearanceLanguage.switcher.options.zh_CN",
+  },
+] as const satisfies ReadonlyArray<{
+  code: SupportedUiLanguage
+  translationKey: string
+}>
+
 /**
  * Normalize runtime/browser language codes to the app's supported locale keys.
  */

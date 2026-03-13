@@ -1,7 +1,8 @@
-import { Github, Sparkles, Star } from "lucide-react"
+import { Github, Languages, Sparkles, Star } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import { LanguageSwitcher } from "~/components/LanguageSwitcher"
 import { Modal } from "~/components/ui"
 import { Alert, AlertDescription } from "~/components/ui/Alert"
 import { Badge } from "~/components/ui/badge"
@@ -185,48 +186,39 @@ export function PermissionOnboardingDialog({
       footer={footer}
     >
       <div className="space-y-4">
-        <Card padding="md" className="space-y-4">
-          {reason === "new-permissions" && (
-            <Alert variant="warning">
-              <AlertDescription>
-                <BodySmall className="dark:text-dark-text-secondary text-gray-500">
-                  {t("permissionsOnboarding.reason.newPermissions")}
-                </BodySmall>
-              </AlertDescription>
-            </Alert>
-          )}
-          <div className="flex flex-wrap items-center gap-3">
-            <Badge variant="info">
-              {t("permissionsOnboarding.openSourceBadge")}
-            </Badge>
-            <BodySmall className="dark:text-dark-text-secondary text-gray-500">
-              {t("permissionsOnboarding.intro")}
-            </BodySmall>
-          </div>
-          <Alert
-            variant="info"
-            title={t("permissionsOnboarding.project.label")}
+        <Card padding="none" className="overflow-hidden">
+          <CardHeader
+            bordered
+            padding="sm"
+            className="dark:bg-dark-bg-tertiary/40 bg-sky-50/80"
           >
-            <AlertDescription>
-              <div>
-                <Link
-                  href={GITHUB_URL}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-1"
-                >
-                  {GITHUB_URL}
-                  <Github className="h-4 w-4" />
-                </Link>
-                <BodySmall className="dark:text-dark-text-secondary text-gray-500">
-                  {t("permissionsOnboarding.project.cta")}
-                </BodySmall>
-              </div>
-            </AlertDescription>
-          </Alert>
+            <CardTitle className="flex items-center gap-2 text-base font-semibold">
+              <Languages className="h-5 w-5 text-sky-600 dark:text-sky-400" />
+              {t("appearanceLanguage.onboardingLabel")}
+            </CardTitle>
+            <BodySmall className="dark:text-dark-text-secondary text-gray-500">
+              {t("appearanceLanguage.onboardingHelper")}
+            </BodySmall>
+          </CardHeader>
+          <CardContent padding="sm" spacing="sm" className="space-y-3">
+            <LanguageSwitcher
+              showIcon={false}
+              className="w-full justify-between sm:w-auto sm:justify-start"
+            />
+          </CardContent>
         </Card>
 
-        <Card padding="none">
+        {reason === "new-permissions" && (
+          <Alert variant="warning">
+            <AlertDescription>
+              <BodySmall className="dark:text-dark-text-secondary text-gray-500">
+                {t("permissionsOnboarding.reason.newPermissions")}
+              </BodySmall>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <Card padding="none" className="overflow-hidden">
           <CardHeader bordered padding="sm">
             <CardTitle className="flex items-center gap-2 text-base font-semibold">
               <Sparkles className="h-5 w-5" />
@@ -236,6 +228,37 @@ export function PermissionOnboardingDialog({
               {t("permissionsOnboarding.permissionListDescription")}
             </BodySmall>
           </CardHeader>
+          <CardContent padding="sm" spacing="sm" className="space-y-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <Badge variant="info">
+                {t("permissionsOnboarding.openSourceBadge")}
+              </Badge>
+              <BodySmall className="dark:text-dark-text-secondary text-gray-500">
+                {t("permissionsOnboarding.intro")}
+              </BodySmall>
+            </div>
+            <Alert
+              variant="info"
+              title={t("permissionsOnboarding.project.label")}
+            >
+              <AlertDescription>
+                <div>
+                  <Link
+                    href={GITHUB_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-1"
+                  >
+                    {GITHUB_URL}
+                    <Github className="h-4 w-4" />
+                  </Link>
+                  <BodySmall className="dark:text-dark-text-secondary text-gray-500">
+                    {t("permissionsOnboarding.project.cta")}
+                  </BodySmall>
+                </div>
+              </AlertDescription>
+            </Alert>
+          </CardContent>
           <CardContent padding="none" spacing="none">
             <PermissionList
               items={permissionList.map((permission) => ({

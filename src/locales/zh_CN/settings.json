@@ -115,7 +115,24 @@
   },
   "appearanceLanguage": {
     "language": "语言",
-    "languageDesc": "选择您偏好的显示语言"
+    "languageDesc": "选择您偏好的显示语言",
+    "onboardingLabel": "选择界面语言",
+    "onboardingHelper": "切换后会立即更新引导内容，并作为后续设置页面的显示语言。",
+    "switcher": {
+      "groupLabel": "界面语言选择",
+      "currentLanguage": "当前界面语言：{{language}}",
+      "switchToLanguage": "切换界面语言为{{language}}",
+      "options": {
+        "en": {
+          "label": "EN",
+          "name": "英文"
+        },
+        "zh_CN": {
+          "label": "中文",
+          "name": "中文"
+        }
+      }
+    }
   },
   "accountManagement": {
     "title": "账号管理",

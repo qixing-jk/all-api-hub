@@ -115,7 +115,24 @@
   },
   "appearanceLanguage": {
     "language": "Language",
-    "languageDesc": "Choose your preferred language"
+    "languageDesc": "Choose your preferred language",
+    "onboardingLabel": "Choose your language",
+    "onboardingHelper": "Update the onboarding text immediately and keep this language for later settings pages.",
+    "switcher": {
+      "groupLabel": "Interface language selector",
+      "currentLanguage": "Current interface language: {{language}}",
+      "switchToLanguage": "Switch interface language to {{language}}",
+      "options": {
+        "en": {
+          "label": "EN",
+          "name": "English"
+        },
+        "zh_CN": {
+          "label": "中文",
+          "name": "Chinese"
+        }
+      }
+    }
   },
   "accountManagement": {
     "title": "Account Management",
