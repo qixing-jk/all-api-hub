@@ -15,6 +15,22 @@ const mockFetchGoogleModelIds = vi.fn()
 const mockFetchOpenAICompatibleModelIds = vi.fn()
 const mockImportToCliProxy = vi.fn()
 const mockShowResultToast = vi.fn()
+const mockResolveDisplayAccountTokenForSecret = vi.fn()
+
+vi.mock(
+  "~/services/accounts/utils/apiServiceRequest",
+  async (importOriginal) => {
+    const original =
+      await importOriginal<
+        typeof import("~/services/accounts/utils/apiServiceRequest")
+      >()
+    return {
+      ...original,
+      resolveDisplayAccountTokenForSecret: (...args: any[]) =>
+        mockResolveDisplayAccountTokenForSecret(...args),
+    }
+  },
+)
 
 vi.mock("~/services/apiService/anthropic", () => ({
   fetchAnthropicModelIds: (...args: any[]) =>
@@ -45,6 +61,10 @@ describe("CliProxyExportDialog", () => {
     mockFetchOpenAICompatibleModelIds.mockReset()
     mockImportToCliProxy.mockReset()
     mockShowResultToast.mockReset()
+    mockResolveDisplayAccountTokenForSecret.mockReset()
+    mockResolveDisplayAccountTokenForSecret.mockImplementation(
+      async (_account, token) => token,
+    )
 
     mockImportToCliProxy.mockResolvedValue({
       success: true,

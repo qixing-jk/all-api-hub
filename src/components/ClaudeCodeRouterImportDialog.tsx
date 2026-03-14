@@ -9,6 +9,7 @@ import {
   Input,
   Modal,
 } from "~/components/ui"
+import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
 import { fetchOpenAICompatibleModels } from "~/services/apiService/openaiCompatible"
 import { importToClaudeCodeRouter } from "~/services/integrations/claudeCodeRouterService"
 import type { ApiToken, DisplaySiteData } from "~/types"
@@ -115,9 +116,13 @@ export function ClaudeCodeRouterImportDialog(
       void (async () => {
         try {
           setIsLoadingModels(true)
+          const resolvedToken = await resolveDisplayAccountTokenForSecret(
+            account,
+            token,
+          )
           const models = await fetchOpenAICompatibleModels({
             baseUrl: upstreamBaseUrl,
-            apiKey: token.key,
+            apiKey: resolvedToken.key,
           })
           const options = (models || [])
             .map((item) => item?.id)
@@ -147,7 +152,7 @@ export function ClaudeCodeRouterImportDialog(
       isMounted = false
       clearTimeout(handle)
     }
-  }, [isOpen, providerApiBaseUrl, token.key])
+  }, [account, isOpen, providerApiBaseUrl, token])
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -157,9 +162,13 @@ export function ClaudeCodeRouterImportDialog(
     void (async () => {
       try {
         setIsSubmitting(true)
-        const result = await importToClaudeCodeRouter({
+        const resolvedToken = await resolveDisplayAccountTokenForSecret(
           account,
           token,
+        )
+        const result = await importToClaudeCodeRouter({
+          account,
+          token: resolvedToken,
           routerBaseUrl,
           routerApiKey,
           providerName: providerName.trim(),
@@ -171,6 +180,13 @@ export function ClaudeCodeRouterImportDialog(
         if (result.success) {
           onClose()
         }
+      } catch (error) {
+        showResultToast({
+          success: false,
+          message: t("messages:errors.operation.failed", {
+            error: error instanceof Error ? error.message : String(error),
+          }),
+        })
       } finally {
         setIsSubmitting(false)
       }

@@ -21,6 +21,7 @@ import {
 import { useAccountData } from "~/hooks/useAccountData"
 import { ensureAccountApiToken } from "~/services/accounts/accountOperations"
 import { compareAccountDisplayNames } from "~/services/accounts/utils/accountDisplayName"
+import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
 import { getApiService } from "~/services/apiService"
 import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompatible"
 import {
@@ -305,9 +306,13 @@ export function KiloCodeExportDialog({
       }))
 
       try {
+        const resolvedToken = await resolveDisplayAccountTokenForSecret(
+          site,
+          token,
+        )
         const modelIds = await fetchOpenAICompatibleModelIds({
           baseUrl: stripTrailingOpenAIV1(site.baseUrl),
-          apiKey: token.key,
+          apiKey: resolvedToken.key,
         })
 
         const normalized = modelIds
@@ -520,11 +525,57 @@ export function KiloCodeExportDialog({
     selectedTokenIdsBySite,
   ])
 
-  const { apiConfigs, profileNames } = useMemo(() => {
+  const { profileNames } = useMemo(() => {
     return buildKiloCodeApiConfigs({
       selections: exportSelections,
     })
   }, [exportSelections])
+
+  const buildResolvedExportSelections = useCallback(async () => {
+    const selections: KiloCodeExportTuple[] = []
+
+    for (const siteId of selectedSiteIds) {
+      const tokenIds = selectedTokenIdsBySite[siteId] ?? []
+      if (tokenIds.length === 0) continue
+
+      const site = displayById.get(siteId)
+      if (!site) continue
+
+      const inventory = getTokenInventory(siteId)
+      const uniqueTokenIds = Array.from(new Set(tokenIds))
+
+      for (const tokenId of uniqueTokenIds) {
+        const token = inventory.tokens.find(
+          (candidate) => `${candidate.id}` === tokenId,
+        )
+        if (!token) continue
+
+        const resolvedToken = await resolveDisplayAccountTokenForSecret(
+          site,
+          token,
+        )
+        const tokenSelectionKey = getTokenSelectionKey(siteId, token.id)
+
+        selections.push({
+          accountId: siteId,
+          siteName: site.name || site.baseUrl,
+          baseUrl: site.baseUrl,
+          tokenId: token.id,
+          tokenName: token.name,
+          tokenKey: resolvedToken.key,
+          modelId: selectedModelIdByToken[tokenSelectionKey],
+        })
+      }
+    }
+
+    return selections
+  }, [
+    displayById,
+    getTokenInventory,
+    selectedModelIdByToken,
+    selectedSiteIds,
+    selectedTokenIdsBySite,
+  ])
 
   useEffect(() => {
     if (profileNames.length === 0) {
@@ -555,7 +606,13 @@ export function KiloCodeExportDialog({
     if (!canExport) return
 
     try {
-      await navigator.clipboard.writeText(JSON.stringify(apiConfigs, null, 2))
+      const resolvedSelections = await buildResolvedExportSelections()
+      const { apiConfigs: resolvedApiConfigs } = buildKiloCodeApiConfigs({
+        selections: resolvedSelections,
+      })
+      await navigator.clipboard.writeText(
+        JSON.stringify(resolvedApiConfigs, null, 2),
+      )
       toast.success(t("ui:dialog.kiloCode.messages.copiedApiConfigs"))
     } catch {
       toast.error(t("ui:dialog.kiloCode.messages.copyFailed"))
@@ -566,9 +623,13 @@ export function KiloCodeExportDialog({
     if (!canExport) return
     if (!effectiveCurrentApiConfigName) return
 
+    const resolvedSelections = await buildResolvedExportSelections()
+    const { apiConfigs: resolvedApiConfigs } = buildKiloCodeApiConfigs({
+      selections: resolvedSelections,
+    })
     const payload = buildKiloCodeSettingsFile({
       currentApiConfigName: effectiveCurrentApiConfigName,
-      apiConfigs,
+      apiConfigs: resolvedApiConfigs,
     })
 
     const blob = new Blob([JSON.stringify(payload, null, 2)], {

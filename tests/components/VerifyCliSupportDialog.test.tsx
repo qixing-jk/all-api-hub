@@ -11,11 +11,19 @@ import {
 
 const mockFetchAccountTokens = vi.fn()
 const mockFetchApiCredentialModelIds = vi.fn()
+const mockResolveDisplayAccountTokenForSecret = vi.fn()
 
 vi.mock("~/services/apiService", () => ({
   getApiService: () => ({
     fetchAccountTokens: (...args: any[]) => mockFetchAccountTokens(...args),
+    resolveApiTokenKey: async (_request: unknown, token: { key: string }) =>
+      token.key,
   }),
+}))
+
+vi.mock("~/services/accounts/utils/apiServiceRequest", () => ({
+  resolveDisplayAccountTokenForSecret: (...args: any[]) =>
+    mockResolveDisplayAccountTokenForSecret(...args),
 }))
 
 vi.mock("~/services/apiCredentialProfiles/modelCatalog", async () => {
@@ -42,6 +50,10 @@ describe("VerifyCliSupportDialog", () => {
     mockFetchAccountTokens.mockReset()
     mockFetchApiCredentialModelIds.mockReset()
     mockFetchApiCredentialModelIds.mockResolvedValue([])
+    mockResolveDisplayAccountTokenForSecret.mockReset()
+    mockResolveDisplayAccountTokenForSecret.mockImplementation(
+      async (_account, token) => token,
+    )
     mockRunCliSupportTool.mockReset()
   })
 
@@ -351,5 +363,92 @@ describe("VerifyCliSupportDialog", () => {
       name: "cliSupportVerification:verifyDialog.actions.runOne",
     })
     expect(runButton).toBeDisabled()
+  })
+
+  it("runs account-mode verification with a fully redacted token after resolving the secret", async () => {
+    mockFetchAccountTokens.mockResolvedValueOnce([
+      {
+        id: 1,
+        user_id: 1,
+        key: "",
+        status: 1,
+        name: "token-1",
+        models: "",
+        model_limits: "",
+        created_time: 0,
+        accessed_time: 0,
+        expired_time: 0,
+        remain_quota: 0,
+        unlimited_quota: true,
+        used_quota: 0,
+      },
+    ])
+    mockResolveDisplayAccountTokenForSecret.mockResolvedValueOnce({
+      id: 1,
+      user_id: 1,
+      key: "resolved-secret",
+      status: 1,
+      name: "token-1",
+      models: "",
+      model_limits: "",
+      created_time: 0,
+      accessed_time: 0,
+      expired_time: 0,
+      remain_quota: 0,
+      unlimited_quota: true,
+      used_quota: 0,
+    })
+    mockRunCliSupportTool.mockResolvedValueOnce({
+      id: "claude",
+      probeId: "tool-calling",
+      status: "pass",
+      latencyMs: 12,
+      summary: "Supported",
+      summaryKey: "verifyDialog.summaries.supported",
+      input: { foo: 1 },
+      output: { bar: 2 },
+    })
+
+    render(
+      <VerifyCliSupportDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={{
+          id: "a1",
+          name: "Account",
+          username: "u",
+          balance: { USD: 0, CNY: 0 },
+          todayConsumption: { USD: 0, CNY: 0 },
+          todayIncome: { USD: 0, CNY: 0 },
+          todayTokens: { upload: 0, download: 0 },
+          health: { status: "healthy" as any },
+          siteType: "newapi",
+          baseUrl: "https://example.com",
+          token: "t",
+          userId: 1,
+          authType: "access_token" as any,
+          checkIn: { enableDetection: false } as any,
+        }}
+        initialModelId="gpt-test"
+      />,
+    )
+
+    const toolCard = await screen.findByTestId("verify-cli-claude")
+    const runButton = within(toolCard).getByRole("button", {
+      name: "cliSupportVerification:verifyDialog.actions.runOne",
+    })
+
+    await waitFor(() => expect(runButton).toBeEnabled())
+    fireEvent.click(runButton)
+
+    await waitFor(() => {
+      expect(mockResolveDisplayAccountTokenForSecret).toHaveBeenCalledTimes(1)
+      expect(mockRunCliSupportTool).toHaveBeenCalledWith({
+        toolId: "claude",
+        baseUrl: "https://example.com",
+        apiKey: "resolved-secret",
+        modelId: "gpt-test",
+      })
+    })
   })
 })

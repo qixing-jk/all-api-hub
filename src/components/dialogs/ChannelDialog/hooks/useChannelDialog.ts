@@ -5,7 +5,9 @@ import { useChannelDialogContext } from "~/components/dialogs/ChannelDialog/cont
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { ensureAccountApiToken } from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
 import { getManagedSiteService } from "~/services/managedSites/managedSiteService"
+import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import {
   AuthTypeEnum,
   SiteHealthStatus,
@@ -85,11 +87,12 @@ export function useChannelDialog() {
     const toastId = toast.loading(
       t("messages:accountOperations.checkingApiKeys"),
     )
+    let displaySiteData: DisplaySiteData | null = null
+    let secretsToRedact: string[] = []
 
     try {
       // Get full account if needed
       let siteAccount: SiteAccount
-      let displaySiteData: DisplaySiteData
 
       if ("created_at" in account) {
         siteAccount = account
@@ -125,9 +128,20 @@ export function useChannelDialog() {
         )
       }
 
-      const formData = await service.prepareChannelFormData(
+      const resolvedToken = await resolveDisplayAccountTokenForSecret(
         displaySiteData,
         apiToken,
+      )
+      secretsToRedact = [
+        apiToken.key,
+        resolvedToken.key,
+        managedConfig.token,
+        displaySiteData.token,
+        displaySiteData.cookieAuthSessionCookie,
+      ].filter(Boolean) as string[]
+      const formData = await service.prepareChannelFormData(
+        displaySiteData,
+        resolvedToken,
       )
 
       const existingChannel = await service.findMatchingChannel(
@@ -164,13 +178,17 @@ export function useChannelDialog() {
         },
       })
     } catch (error) {
+      const diagnostic = toSanitizedErrorSummary(error, secretsToRedact)
       toast.error(
         t("messages:errors.operation.failed", {
-          error: getErrorMessage(error),
+          error: diagnostic || getErrorMessage(error),
         }),
         { id: toastId },
       )
-      logger.error("Failed to prepare channel data", error)
+      logger.error("Failed to prepare channel data", {
+        accountId: displaySiteData?.id,
+        diagnostic,
+      })
     }
   }
 
@@ -185,6 +203,7 @@ export function useChannelDialog() {
     const toastId = toast.loading(
       t("messages:accountOperations.checkingApiKeys"),
     )
+    let secretsToRedact: string[] = []
 
     try {
       const service = await getManagedSiteService()
@@ -204,6 +223,9 @@ export function useChannelDialog() {
         name: credentials.name,
         apiKey: credentials.apiKey,
       })
+      secretsToRedact = [apiToken.key, managedConfig.token].filter(
+        Boolean,
+      ) as string[]
 
       const formData = await service.prepareChannelFormData(
         displaySiteData,
@@ -241,13 +263,14 @@ export function useChannelDialog() {
         },
       })
     } catch (error) {
+      const diagnostic = toSanitizedErrorSummary(error, secretsToRedact)
       toast.error(
         t("messages:errors.operation.failed", {
-          error: getErrorMessage(error),
+          error: diagnostic || getErrorMessage(error),
         }),
         { id: toastId },
       )
-      logger.error("Failed to prepare channel data", error)
+      logger.error("Failed to prepare channel data", { diagnostic })
     }
   }
 

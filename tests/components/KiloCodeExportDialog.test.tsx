@@ -21,6 +21,7 @@ vi.mock("~/services/apiService/openaiCompatible", () => ({
 
 const mockFetchAccountTokens = vi.fn()
 const mockGetApiService = vi.fn()
+const mockResolveApiTokenKey = vi.fn()
 
 vi.mock("~/services/apiService", () => ({
   // Forward through a typed wrapper so call sites avoid `any[]`.
@@ -55,6 +56,10 @@ describe("KiloCodeExportDialog", () => {
   beforeEach(() => {
     mockFetchOpenAICompatibleModelIds.mockReset()
     mockFetchOpenAICompatibleModelIds.mockResolvedValue(["gpt-4o-mini"])
+    mockResolveApiTokenKey.mockReset()
+    mockResolveApiTokenKey.mockImplementation(
+      async (_request, token: { key: string }) => token.key,
+    )
   })
 
   it("auto loads tokens after selecting sites and enables export actions", async () => {
@@ -96,6 +101,7 @@ describe("KiloCodeExportDialog", () => {
     ])
     mockGetApiService.mockReturnValue({
       fetchAccountTokens: mockFetchAccountTokens,
+      resolveApiTokenKey: mockResolveApiTokenKey,
     })
 
     const sitePicker = await screen.findByPlaceholderText(
@@ -178,6 +184,7 @@ describe("KiloCodeExportDialog", () => {
     ])
     mockGetApiService.mockReturnValue({
       fetchAccountTokens: mockFetchAccountTokens,
+      resolveApiTokenKey: mockResolveApiTokenKey,
     })
 
     render(<KiloCodeExportDialog isOpen={true} onClose={() => {}} />)
@@ -242,6 +249,7 @@ describe("KiloCodeExportDialog", () => {
     )
     mockGetApiService.mockReturnValue({
       fetchAccountTokens: mockFetchAccountTokens,
+      resolveApiTokenKey: mockResolveApiTokenKey,
     })
 
     render(<KiloCodeExportDialog isOpen={true} onClose={() => {}} />)
@@ -301,6 +309,7 @@ describe("KiloCodeExportDialog", () => {
     ])
     mockGetApiService.mockReturnValue({
       fetchAccountTokens: mockFetchAccountTokens,
+      resolveApiTokenKey: mockResolveApiTokenKey,
     })
 
     render(
@@ -325,5 +334,58 @@ describe("KiloCodeExportDialog", () => {
         }),
       ).not.toBeDisabled()
     })
+  })
+
+  it("copies export configs with resolved full keys instead of masked inventory values", async () => {
+    const user = userEvent.setup()
+    const writeText = vi
+      .spyOn(navigator.clipboard, "writeText")
+      .mockResolvedValue(undefined)
+
+    mockUseAccountData.mockReturnValue({
+      enabledAccounts: [],
+      enabledDisplayData: [
+        createDisplayAccount({
+          id: "b",
+          name: "Site B",
+          baseUrl: "https://b.test",
+        }),
+      ],
+    })
+
+    mockFetchAccountTokens.mockResolvedValueOnce([
+      { id: 1, name: "Default", key: "sk-abcd************wxyz" },
+    ])
+    mockResolveApiTokenKey.mockResolvedValue("sk-full-secret")
+    mockGetApiService.mockReturnValue({
+      fetchAccountTokens: mockFetchAccountTokens,
+      resolveApiTokenKey: mockResolveApiTokenKey,
+    })
+
+    render(<KiloCodeExportDialog isOpen={true} onClose={() => {}} />)
+
+    const sitePicker = await screen.findByPlaceholderText(
+      "ui:dialog.kiloCode.placeholders.selectSites",
+    )
+    await user.click(sitePicker)
+    await user.clear(sitePicker)
+    await user.type(sitePicker, "Site B")
+    await user.keyboard("{ArrowDown}")
+    await user.click(await screen.findByRole("option", { name: "Site B" }))
+
+    const copyButton = await screen.findByRole("button", {
+      name: "ui:dialog.kiloCode.actions.copyApiConfigs",
+    })
+    await waitFor(() => expect(copyButton).toBeEnabled())
+
+    await user.click(copyButton)
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledTimes(1)
+    })
+
+    const copiedPayload = String(writeText.mock.calls[0]?.[0] ?? "")
+    expect(copiedPayload).toContain("sk-full-secret")
+    expect(copiedPayload).not.toContain("sk-abcd************wxyz")
   })
 })

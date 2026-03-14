@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { VELOERA } from "~/constants/siteType"
 import {
@@ -50,6 +50,15 @@ const buildExpectedAssessment = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 })
 
+const { resolveDisplayAccountTokenForSecretMock } = vi.hoisted(() => ({
+  resolveDisplayAccountTokenForSecretMock: vi.fn(),
+}))
+
+vi.mock("~/services/accounts/utils/apiServiceRequest", () => ({
+  resolveDisplayAccountTokenForSecret: (...args: unknown[]) =>
+    resolveDisplayAccountTokenForSecretMock(...args),
+}))
+
 const createManagedSiteServiceStub = (
   overrides: Record<string, unknown> = {},
 ) =>
@@ -90,6 +99,13 @@ const createManagedSiteServiceStub = (
   }) as any
 
 describe("getManagedSiteTokenChannelStatus", () => {
+  beforeEach(() => {
+    resolveDisplayAccountTokenForSecretMock.mockReset()
+    resolveDisplayAccountTokenForSecretMock.mockImplementation(
+      async (_account, token) => token,
+    )
+  })
+
   it("returns added when an exact comparable channel match exists", async () => {
     const account = buildDisplaySiteData({ baseUrl: "https://api.example.com" })
     const token = buildApiToken({ key: "test-token-key" })
@@ -511,5 +527,34 @@ describe("getManagedSiteTokenChannelStatus", () => {
     expect(result.diagnostic).toContain("[REDACTED]")
     expect(result.diagnostic).not.toContain("secret-token-value")
     expect(result.diagnostic).not.toContain("secret-admin-value")
+  })
+
+  it("returns unknown exact-verification-unavailable when secret resolution fails", async () => {
+    const account = buildDisplaySiteData({ baseUrl: "https://api.example.com" })
+    const token = buildApiToken({ key: "sk-abcd************wxyz" })
+    const service = createManagedSiteServiceStub({
+      getConfig: vi.fn().mockResolvedValue({
+        baseUrl: "https://managed.example",
+        token: "secret-admin-value",
+        userId: "1",
+      }),
+    })
+
+    resolveDisplayAccountTokenForSecretMock.mockRejectedValueOnce(
+      new Error("sk-abcd************wxyz secret-admin-value blocked"),
+    )
+
+    const result = await getManagedSiteTokenChannelStatus({
+      account,
+      token,
+      service,
+    })
+
+    expect(result).toEqual({
+      status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
+      reason:
+        MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE,
+      diagnostic: "[REDACTED] [REDACTED] blocked",
+    })
   })
 })

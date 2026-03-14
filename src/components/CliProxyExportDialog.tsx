@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui"
+import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
 import { fetchAnthropicModelIds } from "~/services/apiService/anthropic"
 import { fetchGoogleModelIds } from "~/services/apiService/google"
 import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompatible"
@@ -224,7 +225,8 @@ export function CliProxyExportDialog(props: CliProxyExportDialogProps) {
         const modelIds = await fetchProviderModelSuggestions({
           providerType,
           baseUrl: providerBaseUrl.trim() || account.baseUrl,
-          apiKey: token.key,
+          apiKey: (await resolveDisplayAccountTokenForSecret(account, token))
+            .key,
         })
 
         const normalized = normalizeSuggestedModelIds(modelIds)
@@ -242,14 +244,14 @@ export function CliProxyExportDialog(props: CliProxyExportDialogProps) {
       isActive = false
     }
   }, [
-    account.baseUrl,
     isOpen,
     providerBaseUrl,
     providerType,
     providerTypeMetadata.supportsModelSuggestions,
     readyFormKey,
     formResetKey,
-    token.key,
+    account,
+    token,
   ])
 
   const handleProviderTypeChange = (nextProviderType: string) => {
@@ -284,6 +286,10 @@ export function CliProxyExportDialog(props: CliProxyExportDialogProps) {
     void (async () => {
       try {
         setIsSubmitting(true)
+        const resolvedToken = await resolveDisplayAccountTokenForSecret(
+          account,
+          token,
+        )
 
         const normalizedModels = models
           .map((item) => {
@@ -298,7 +304,7 @@ export function CliProxyExportDialog(props: CliProxyExportDialogProps) {
 
         const payload: ImportToCliProxyOptions = {
           account,
-          token,
+          token: resolvedToken,
           apiTypeHint,
           providerType,
           providerName: providerName.trim(),
@@ -312,6 +318,13 @@ export function CliProxyExportDialog(props: CliProxyExportDialogProps) {
         if (result.success) {
           onClose()
         }
+      } catch (error) {
+        showResultToast({
+          success: false,
+          message: t("messages:errors.operation.failed", {
+            error: error instanceof Error ? error.message : String(error),
+          }),
+        })
       } finally {
         setIsSubmitting(false)
       }

@@ -17,9 +17,9 @@ import { TokenDetails } from "./TokenDetails"
 interface TokenItemProps {
   token: ApiToken
   isExpanded: boolean
-  copiedKey: string | null
+  copiedTokenId: number | null
   onToggle: () => void
-  onCopyKey: (key: string) => void
+  onCopyKey: (token: ApiToken) => void
   account: DisplaySiteData
   onOpenCCSwitchDialog?: (token: ApiToken, account: DisplaySiteData) => void
 }
@@ -30,7 +30,7 @@ interface TokenItemProps {
 export function TokenItem({
   token,
   isExpanded,
-  copiedKey,
+  copiedTokenId,
   onToggle,
   onCopyKey,
   account,
@@ -93,7 +93,7 @@ export function TokenItem({
       {isExpanded && (
         <TokenDetails
           token={token}
-          copiedKey={copiedKey}
+          copiedTokenId={copiedTokenId}
           onCopyKey={onCopyKey}
           account={account}
           onOpenCCSwitchDialog={onOpenCCSwitchDialog}

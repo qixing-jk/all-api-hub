@@ -25,7 +25,7 @@ interface TokenListItemProps {
   /**
    * Copies the token key to clipboard.
    */
-  copyKey: (key: string, name: string) => void
+  copyKey: (account: DisplaySiteData, token: AccountToken) => Promise<void>
   /**
    * Opens the edit dialog for the token.
    */

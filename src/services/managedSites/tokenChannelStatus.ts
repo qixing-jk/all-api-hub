@@ -1,3 +1,4 @@
+import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
 import {
   getManagedSiteChannelExactMatch,
   type ManagedSiteChannelKeyMatchReasonValue,
@@ -80,10 +81,14 @@ export type ManagedSiteTokenChannelStatus =
     }
   | {
       status: typeof MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN
-      reason:
-        | typeof MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.MATCH_REQUIRES_CONFIRMATION
-        | typeof MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE
+      reason: typeof MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.MATCH_REQUIRES_CONFIRMATION
       assessment: ManagedSiteTokenChannelAssessment
+    }
+  | {
+      status: typeof MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN
+      reason: typeof MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE
+      assessment?: ManagedSiteTokenChannelAssessment
+      diagnostic?: string
     }
   | {
       status: typeof MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN
@@ -163,7 +168,8 @@ export async function getManagedSiteTokenChannelStatus(
     }
   }
 
-  const secretsToRedact = collectSecrets(token, managedConfig)
+  let resolvedToken = token
+  let secretsToRedact = collectSecrets(token, managedConfig)
 
   // This feature is not supported on Veloera because Veloera's
   // `/api/channel/search` does not support reliable base URL lookup, so this
@@ -177,6 +183,32 @@ export async function getManagedSiteTokenChannelStatus(
   }
 
   try {
+    resolvedToken = await resolveDisplayAccountTokenForSecret(account, token)
+    secretsToRedact = Array.from(
+      new Set([
+        ...secretsToRedact,
+        ...collectSecrets(resolvedToken, managedConfig),
+      ]),
+    )
+  } catch (error) {
+    const diagnostic = toSanitizedErrorSummary(error, secretsToRedact)
+
+    logger.warn("Managed-site token secret resolution failed", {
+      accountId: account.id,
+      tokenId: token.id,
+      siteType: service.siteType,
+      diagnostic,
+    })
+
+    return {
+      status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
+      reason:
+        MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE,
+      diagnostic,
+    }
+  }
+
+  try {
     const normalizedAccountBaseUrl = normalizeManagedSiteChannelBaseUrl(
       account.baseUrl,
     )
@@ -185,7 +217,7 @@ export async function getManagedSiteTokenChannelStatus(
         ...account,
         baseUrl: normalizedAccountBaseUrl,
       },
-      token,
+      resolvedToken,
     )
     const searchBaseUrl = normalizeManagedSiteChannelBaseUrl(formData.base_url)
 

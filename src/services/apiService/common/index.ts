@@ -5,6 +5,10 @@ import { REQUEST_CONFIG } from "~/services/apiService/common/constant"
 import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import { fetchAllItems } from "~/services/apiService/common/pagination"
 import {
+  invalidateResolvedApiTokenKeyCache,
+  syncResolvedApiTokenKeyCache,
+} from "~/services/apiService/common/tokenKeyResolver"
+import {
   AccessTokenInfo,
   AccountData,
   ApiServiceAccountRequest,
@@ -51,6 +55,11 @@ import { t } from "~/utils/i18n/core"
 const CHANNEL_API_BASE = "/api/channel/"
 
 const logger = createLogger("ApiServiceCommon")
+
+export {
+  fetchTokenSecretKeyById,
+  resolveApiTokenKey,
+} from "~/services/apiService/common/tokenKeyResolver"
 
 /**
  * 搜索指定关键词的渠道。
@@ -814,16 +823,23 @@ export async function fetchAccountTokens(
     // 处理不同的响应格式
     if (Array.isArray(tokensData)) {
       // 直接返回数组格式
-      return tokensData.map(normalizeApiTokenKey)
+      const normalizedTokens = tokensData.map(normalizeApiTokenKey)
+      syncResolvedApiTokenKeyCache(request, normalizedTokens)
+      return normalizedTokens
     } else if (
       tokensData &&
       typeof tokensData === "object" &&
       "items" in tokensData
     ) {
       // 分页格式，返回 items 数组
-      return (tokensData.items || []).map(normalizeApiTokenKey)
+      const normalizedTokens = (tokensData.items || []).map(
+        normalizeApiTokenKey,
+      )
+      syncResolvedApiTokenKeyCache(request, normalizedTokens)
+      return normalizedTokens
     } else {
       // 其他情况，返回空数组
+      syncResolvedApiTokenKeyCache(request, [])
       logger.warn("Unexpected token response format", {
         receivedType: Array.isArray(tokensData) ? "array" : typeof tokensData,
         keys:
@@ -934,6 +950,7 @@ export async function createApiToken(
       )
     }
 
+    invalidateResolvedApiTokenKeyCache(request)
     return true
   } catch (error) {
     logger.error("创建令牌失败", error)
@@ -993,6 +1010,7 @@ export async function updateApiToken(
       )
     }
 
+    invalidateResolvedApiTokenKeyCache(request)
     return true
   } catch (error) {
     logger.error("更新令牌失败", error)
@@ -1027,6 +1045,7 @@ export async function deleteApiToken(
       )
     }
 
+    invalidateResolvedApiTokenKeyCache(request)
     return true
   } catch (error) {
     logger.error("删除令牌失败", error)

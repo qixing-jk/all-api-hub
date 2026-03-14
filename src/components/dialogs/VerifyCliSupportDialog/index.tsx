@@ -11,6 +11,7 @@ import {
   SearchableSelect,
 } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
+import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
 import {
   fetchApiCredentialModelIds,
   normalizeApiCredentialModelIds,
@@ -99,6 +100,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
     (tok) => tok.id.toString() === selectedTokenId,
   )
   const activeApiKey = profile?.apiKey ?? selectedToken?.key ?? null
+  const hasRunnableSource = isProfileSource ? !!activeApiKey : !!selectedToken
   const modelOptions = useMemo(() => {
     if (isProfileSource) return profileModelOptions
     if (!selectedToken) return []
@@ -225,10 +227,16 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
   const runTool = async (
     toolId: (typeof CLI_TOOL_IDS)[number],
   ): Promise<CliSupportResult | null> => {
-    if (!activeApiKey) return null
+    if (isProfileSource && !activeApiKey) return null
+    const sourceAccount = account
+    const accountToken = selectedToken
+
+    if (!isProfileSource && (!sourceAccount || !accountToken)) return null
 
     if (!resolvedModelId.trim()) return null
 
+    let resolvedApiKey = activeApiKey
+    const secretsToRedact = new Set<string>(activeApiKey ? [activeApiKey] : [])
     const startedAt = Date.now()
     setTools((prev) =>
       prev.map((t) =>
@@ -239,10 +247,28 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
     )
 
     try {
+      if (!isProfileSource) {
+        if (!sourceAccount || !accountToken) return null
+
+        const resolvedToken = await resolveDisplayAccountTokenForSecret(
+          sourceAccount,
+          accountToken,
+        )
+        resolvedApiKey = resolvedToken.key
+        if (accountToken.key) {
+          secretsToRedact.add(accountToken.key)
+        }
+        if (resolvedToken.key) {
+          secretsToRedact.add(resolvedToken.key)
+        }
+      }
+
+      if (!resolvedApiKey) return null
+
       const result = await runCliSupportTool({
         toolId,
         baseUrl: sourceBaseUrl,
-        apiKey: activeApiKey,
+        apiKey: resolvedApiKey,
         modelId: resolvedModelId,
       })
 
@@ -254,7 +280,10 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
       return result
     } catch (error) {
       const finishedAt = Date.now()
-      const sanitizedMessage = toSanitizedErrorSummary(error, [activeApiKey])
+      const sanitizedMessage = toSanitizedErrorSummary(
+        error,
+        Array.from(secretsToRedact),
+      )
       const inferredStatus = inferHttpStatus(error, sanitizedMessage)
       const summaryKey =
         summaryKeyFromHttpStatus(inferredStatus) ??
@@ -310,7 +339,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
   }
 
   const runAll = async () => {
-    if (!activeApiKey) return
+    if (!hasRunnableSource) return
     setIsRunning(true)
     setTools(buildInitialToolState())
 
@@ -339,7 +368,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
     setModelId(initialModelId?.trim() ?? "")
   }, [initialModelId, isOpen, isProfileSource, loadProfileModels, loadTokens])
 
-  const canRunAll = !!activeApiKey && resolvedModelId.trim().length > 0
+  const canRunAll = hasRunnableSource && resolvedModelId.trim().length > 0
 
   const footer = (
     <div className="flex justify-end gap-2">
@@ -510,7 +539,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
                       isRunning ||
                       isLoadingTokens ||
                       tool.isRunning ||
-                      !activeApiKey ||
+                      !hasRunnableSource ||
                       isDisabledForModel
                     }
                   >

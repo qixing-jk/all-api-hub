@@ -26,6 +26,7 @@ import { Badge, Heading6, IconButton } from "~/components/ui"
 import { NEW_API } from "~/constants/siteType"
 import type { ManagedSiteType } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { OpenInCherryStudio } from "~/services/integrations/cherryStudio"
 import {
@@ -48,6 +49,7 @@ import {
 } from "~/services/verification/aiApiVerification"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import type { AccountToken, DisplaySiteData } from "~/types"
+import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { showResultToast } from "~/utils/core/toastHelpers"
 import { openApiCredentialProfilesPage } from "~/utils/navigation"
@@ -85,7 +87,7 @@ interface TokenHeaderProps {
   /**
    * Copy handler for placing the key on clipboard.
    */
-  copyKey: (key: string, name: string) => void
+  copyKey: (account: DisplaySiteData, token: AccountToken) => Promise<void>
   /**
    * Handler to open the edit dialog for the token.
    */
@@ -456,6 +458,23 @@ function TokenActionButtons({
     setIsClaudeCodeRouterOpen(true)
   }
 
+  const handleUseInCherry = async () => {
+    try {
+      const resolvedToken = await resolveDisplayAccountTokenForSecret(
+        account,
+        token,
+      )
+      OpenInCherryStudio(account, resolvedToken)
+    } catch (error) {
+      showResultToast({
+        success: false,
+        message: t("messages:errors.operation.failed", {
+          error: getErrorMessage(error),
+        }),
+      })
+    }
+  }
+
   const handleSaveToApiCredentialProfiles = async () => {
     const apiType: ApiVerificationApiType = API_TYPES.OPENAI_COMPATIBLE
     const profileName = buildApiCredentialProfileName({
@@ -463,13 +482,15 @@ function TokenActionButtons({
       fallbackAccountName: token.accountName,
       tokenName: token.name,
     })
+    let resolvedToken = token
 
     try {
+      resolvedToken = await resolveDisplayAccountTokenForSecret(account, token)
       const profile = await apiCredentialProfilesStorage.createProfile({
         name: profileName,
         apiType,
         baseUrl: account.baseUrl,
-        apiKey: token.key,
+        apiKey: resolvedToken.key,
         tagIds: account.tagIds ?? [],
       })
       toast.success(
@@ -498,9 +519,12 @@ function TokenActionButtons({
       logger.error("Failed to save token to API profiles", {
         message: toSanitizedErrorSummary(
           error,
-          [token.key, account.token, account.cookieAuthSessionCookie].filter(
-            Boolean,
-          ) as string[],
+          [
+            token.key,
+            resolvedToken.key,
+            account.token,
+            account.cookieAuthSessionCookie,
+          ].filter(Boolean) as string[],
         ),
       })
       toast.error(t("keyManagement:messages.saveToApiProfilesFailed"))
@@ -533,7 +557,7 @@ function TokenActionButtons({
         aria-label={t("common:actions.copyKey")}
         size="sm"
         variant="ghost"
-        onClick={() => copyKey(token.key, token.name)}
+        onClick={() => void copyKey(account, token)}
       >
         <DocumentDuplicateIcon className="dark:text-dark-text-tertiary h-4 w-4 text-gray-500" />
       </IconButton>
@@ -549,7 +573,7 @@ function TokenActionButtons({
         aria-label={t("actions.useInCherry")}
         size="sm"
         variant="ghost"
-        onClick={() => OpenInCherryStudio(account, token)}
+        onClick={() => void handleUseInCherry()}
       >
         <CherryIcon />
       </IconButton>

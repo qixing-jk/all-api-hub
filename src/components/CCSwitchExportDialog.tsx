@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from "react"
+import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { CCSwitchIcon } from "~/components/icons/CCSwitchIcon"
@@ -14,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui"
+import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
 import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompatible"
 import {
   CCSWITCH_APPS,
@@ -21,6 +23,7 @@ import {
   type CCSwitchApp,
 } from "~/services/integrations/ccSwitch"
 import type { ApiToken, DisplaySiteData } from "~/types"
+import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import {
   coerceBaseUrlToPathSuffix,
@@ -109,9 +112,13 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
       void (async () => {
         try {
           setIsLoadingModels(true)
+          const resolvedToken = await resolveDisplayAccountTokenForSecret(
+            account,
+            token,
+          )
           const modelIds = await fetchOpenAICompatibleModelIds({
             baseUrl: upstreamBaseUrl,
-            apiKey: token.key,
+            apiKey: resolvedToken.key,
           })
           const normalized = modelIds
             .map((item) => (typeof item === "string" ? item.trim() : ""))
@@ -139,25 +146,40 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
       isMounted = false
       clearTimeout(handle)
     }
-  }, [endpoint, isOpen, token.key])
+  }, [account, endpoint, isOpen, token])
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
-    const success = openInCCSwitch({
-      account,
-      token,
-      app,
-      model: model.trim() || undefined,
-      notes: notes.trim() || undefined,
-      name: providerName,
-      homepage,
-      endpoint,
-    })
+    void (async () => {
+      try {
+        const resolvedToken = await resolveDisplayAccountTokenForSecret(
+          account,
+          token,
+        )
+        const opened = openInCCSwitch({
+          account,
+          token: resolvedToken,
+          app,
+          model: model.trim() || undefined,
+          notes: notes.trim() || undefined,
+          name: providerName,
+          homepage,
+          endpoint,
+        })
 
-    if (success) {
-      onClose()
-    }
+        if (opened) {
+          onClose()
+        }
+      } catch (error) {
+        logger.warn("Failed to resolve token for CC Switch export", error)
+        toast.error(
+          t("messages:errors.operation.failed", {
+            error: getErrorMessage(error),
+          }),
+        )
+      }
+    })()
   }
 
   return (

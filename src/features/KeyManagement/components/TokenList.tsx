@@ -23,7 +23,7 @@ interface TokenListProps {
   filteredTokens: AccountToken[]
   visibleKeys: Set<string>
   toggleKeyVisibility: (identityKey: string) => void
-  copyKey: (key: string, name: string) => void
+  copyKey: (account: DisplaySiteData, token: AccountToken) => Promise<void>
   handleEditToken: (token: AccountToken) => void
   handleDeleteToken: (token: AccountToken) => void
   handleAddToken: () => void

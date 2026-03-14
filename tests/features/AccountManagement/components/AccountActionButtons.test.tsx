@@ -62,6 +62,8 @@ vi.mock("react-hot-toast", () => ({
 vi.mock("~/services/apiService", () => ({
   getApiService: () => ({
     fetchAccountTokens: fetchAccountTokensMock,
+    resolveApiTokenKey: async (_request: unknown, token: { key: string }) =>
+      token.key,
   }),
 }))
 

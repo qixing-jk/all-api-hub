@@ -13,9 +13,9 @@ import { TokenItem } from "./TokenItem"
 interface TokenListProps {
   tokens: ApiToken[]
   expandedTokens: Set<number>
-  copiedKey: string | null
+  copiedTokenId: number | null
   onToggleToken: (id: number) => void
-  onCopyKey: (key: string) => void
+  onCopyKey: (token: ApiToken) => void
   account: DisplaySiteData
   onOpenCCSwitchDialog?: (token: ApiToken, account: DisplaySiteData) => void
   canCreateDefaultKey?: boolean
@@ -31,7 +31,7 @@ interface TokenListProps {
 export function TokenList({
   tokens,
   expandedTokens,
-  copiedKey,
+  copiedTokenId,
   onToggleToken,
   onCopyKey,
   account,
@@ -94,7 +94,7 @@ export function TokenList({
           key={token.id}
           token={token}
           isExpanded={expandedTokens.has(token.id)}
-          copiedKey={copiedKey}
+          copiedTokenId={copiedTokenId}
           onToggle={() => onToggleToken(token.id)}
           onCopyKey={onCopyKey}
           account={account}

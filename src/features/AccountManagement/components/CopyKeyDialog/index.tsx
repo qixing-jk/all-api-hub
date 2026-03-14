@@ -37,7 +37,7 @@ export default function CopyKeyDialog({
     error,
     isCreating,
     createError,
-    copiedKey,
+    copiedTokenId,
     expandedTokens,
     canCreateDefaultKey,
     fetchTokens,
@@ -80,7 +80,7 @@ export default function CopyKeyDialog({
       <TokenList
         tokens={tokens}
         expandedTokens={expandedTokens}
-        copiedKey={copiedKey}
+        copiedTokenId={copiedTokenId}
         onToggleToken={toggleTokenExpansion}
         onCopyKey={copyKey}
         account={account}

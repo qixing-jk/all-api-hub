@@ -5,10 +5,13 @@ import { useTranslation } from "react-i18next"
 import { DONE_HUB, OCTOPUS, VELOERA } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountData } from "~/hooks/useAccountData"
-import { createDisplayAccountApiContext } from "~/services/accounts/utils/apiServiceRequest"
+import {
+  createDisplayAccountApiContext,
+  resolveDisplayAccountTokenForSecret,
+} from "~/services/accounts/utils/apiServiceRequest"
 import { getManagedSiteTokenChannelStatus } from "~/services/managedSites/tokenChannelStatus"
 import { supportsManagedSiteBaseUrlChannelLookup } from "~/services/managedSites/utils/managedSite"
-import type { AccountToken } from "~/types"
+import type { AccountToken, DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
@@ -862,10 +865,14 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     setIsManagedSiteStatusRefreshing(false)
   }, [isManagedSiteChannelStatusSupported])
 
-  const copyKey = async (key: string, name: string) => {
+  const copyKey = async (account: DisplaySiteData, token: AccountToken) => {
     try {
-      await navigator.clipboard.writeText(key)
-      toast.success(t("keyManagement:messages.keyCopied", { name }))
+      const resolvedToken = await resolveDisplayAccountTokenForSecret(
+        account,
+        token,
+      )
+      await navigator.clipboard.writeText(resolvedToken.key)
+      toast.success(t("keyManagement:messages.keyCopied", { name: token.name }))
     } catch (error) {
       toast.error(t("keyManagement:messages.copyFailed"))
       logger.warn("Failed to copy key to clipboard", error)
