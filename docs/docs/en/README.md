@@ -1,4 +1,4 @@
-```yaml
+---
 home: true
 title: Home
 heroImage: /512.png
@@ -66,4 +66,3 @@ All API Hub, as a browser extension, can automatically identify accounts on thes
 - Super-API (Closed Source)
 - RIX_API (Closed Source, basic functionality supported)
 - VoAPI (Closed Source, older versions supported)
-```

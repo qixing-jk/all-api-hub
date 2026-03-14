@@ -80,6 +80,8 @@ export default defineUserConfig({
           {
             text: 'Guides',
             children: [
+              { text: 'Supported Tools', link: '/supported-export-tools' },
+              { text: 'Supported Sites', link: '/supported-sites' },
               { text: 'Cloudflare Helper', link: '/en/cloudflare-helper' },
               { text: 'Quick Export', link: '/en/quick-export' },
               { text: 'Auto Refresh', link: '/en/auto-refresh' },
@@ -110,6 +112,8 @@ export default defineUserConfig({
           {
             text: '機能ガイド',
             children: [
+              { text: '対応ツール', link: '/supported-export-tools' },
+              { text: '対応サイト', link: '/supported-sites' },
               { text: 'Cloudflare ヘルパー', link: '/ja/cloudflare-helper' },
               { text: 'クイックエクスポート', link: '/ja/quick-export' },
               { text: '自動更新', link: '/ja/auto-refresh' },
