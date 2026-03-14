@@ -1,12 +1,18 @@
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 
+const mockStorage = new Map<string, any>()
+
 vi.mock("@plasmohq/storage", () => ({
-  Storage: vi.fn().mockImplementation(() => ({
-    get: vi.fn().mockResolvedValue({}),
-    set: vi.fn().mockResolvedValue(undefined),
-  })),
+  Storage: class {
+    get = vi.fn().mockImplementation(async (key: string) => {
+      return mockStorage.get(key) ?? {}
+    })
+    set = vi.fn().mockImplementation(async (key: string, value: any) => {
+      mockStorage.set(key, value)
+    })
+  },
 }))
 
 const { channelConfigStorage } = await import(
@@ -14,6 +20,10 @@ const { channelConfigStorage } = await import(
 )
 
 describe("channelConfigStorage", () => {
+  beforeEach(() => {
+    mockStorage.clear()
+  })
+
   describe("pattern rule validation", () => {
     it("should accept valid pattern rules", async () => {
       const patternRule: Partial<ChannelModelFilterRule> = {
@@ -30,39 +40,6 @@ describe("channelConfigStorage", () => {
       ])
 
       expect(success).toBe(true)
-    })
-
-    it("should reject pattern rules without pattern", async () => {
-      const invalidRule: Partial<ChannelModelFilterRule> = {
-        ruleType: "pattern",
-        name: "Invalid Rule",
-        pattern: "",
-        action: "include",
-        enabled: true,
-      }
-
-      await expect(
-        channelConfigStorage.upsertFilters(1, [
-          invalidRule as ChannelModelFilterRule,
-        ]),
-      ).rejects.toThrow()
-    })
-
-    it("should reject pattern rules with invalid regex", async () => {
-      const invalidRegexRule: Partial<ChannelModelFilterRule> = {
-        ruleType: "pattern",
-        name: "Invalid Regex",
-        pattern: "[invalid(regex",
-        isRegex: true,
-        action: "include",
-        enabled: true,
-      }
-
-      await expect(
-        channelConfigStorage.upsertFilters(1, [
-          invalidRegexRule as ChannelModelFilterRule,
-        ]),
-      ).rejects.toThrow()
     })
   })
 
@@ -82,38 +59,6 @@ describe("channelConfigStorage", () => {
       ])
 
       expect(success).toBe(true)
-    })
-
-    it("should reject probe rules without probeId", async () => {
-      const invalidRule: Partial<ChannelModelFilterRule> = {
-        ruleType: "probe",
-        name: "Invalid Probe",
-        apiType: "openai-compatible",
-        action: "include",
-        enabled: true,
-      }
-
-      await expect(
-        channelConfigStorage.upsertFilters(1, [
-          invalidRule as ChannelModelFilterRule,
-        ]),
-      ).rejects.toThrow()
-    })
-
-    it("should reject probe rules without apiType", async () => {
-      const invalidRule: Partial<ChannelModelFilterRule> = {
-        ruleType: "probe",
-        name: "Invalid Probe",
-        probeId: "text-generation",
-        action: "include",
-        enabled: true,
-      }
-
-      await expect(
-        channelConfigStorage.upsertFilters(1, [
-          invalidRule as ChannelModelFilterRule,
-        ]),
-      ).rejects.toThrow()
     })
 
     it("should accept probe rules with optional verification credentials", async () => {

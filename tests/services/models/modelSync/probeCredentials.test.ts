@@ -161,8 +161,13 @@ describe("resolveProbeCredentials", () => {
       verificationApiKey: "",
     }
 
+    const channelWithoutKey: ManagedSiteChannel = {
+      ...mockChannel,
+      key: "",
+    }
+
     const result = resolveProbeCredentials({
-      channel: mockChannel,
+      channel: channelWithoutKey,
       rule: ruleWithPartialCreds,
     })
 

@@ -341,7 +341,35 @@ export function useChannelForm({
       }
 
       if (response.success) {
-        onSuccess?.(response)
+        // New API / Veloera / DoneHub 创建渠道接口不返回新渠道 id，需通过查询补全
+        let responseToNotify = response
+        if (
+          mode === DIALOG_MODES.ADD &&
+          (!response.data || (response.data as any)?.id == null)
+        ) {
+          // 通过 searchChannel 查询渠道列表，取 id 最大的即为新创建的渠道
+          const searchResults = await service.searchChannel(
+            apiConfig.baseUrl,
+            apiConfig.token,
+            apiConfig.userId,
+            formData.base_url?.trim() ?? "",
+          )
+          
+          if (searchResults?.items && searchResults.items.length > 0) {
+            // 找到 id 最大的渠道
+            const maxIdChannel = searchResults.items.reduce((max, current) => {
+              return current.id > max.id ? current : max
+            })
+            
+            if (maxIdChannel?.id != null) {
+              responseToNotify = {
+                ...response,
+                data: { ...(response.data && typeof response.data === "object" ? response.data : {}), id: maxIdChannel.id },
+              }
+            }
+          }
+        }
+        onSuccess?.(responseToNotify)
         onClose()
         resetForm()
       } else {

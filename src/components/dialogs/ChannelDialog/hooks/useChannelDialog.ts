@@ -159,7 +159,27 @@ export function useChannelDialog() {
         initialValues: formData,
         initialModels: formData.models,
         initialGroups: formData.groups,
-        onSuccess: (result) => {
+        onSuccess: async (result) => {
+          // Save verification credentials for the created channel
+          if (result.data?.id) {
+            const verificationCreds: VerificationCredentials = {
+              baseUrl: displaySiteData.baseUrl,
+              apiKey: formData.key,
+              apiType: displaySiteData.siteType,
+              updatedAt: Date.now(),
+            }
+
+            await channelConfigStorage.upsertVerificationCredentials(
+              result.data.id,
+              verificationCreds,
+            )
+
+            logger.info("Saved verification credentials for channel", {
+              channelId: result.data.id,
+              apiType: displaySiteData.siteType,
+            })
+          }
+
           if (onSuccess) {
             onSuccess(result)
           }
