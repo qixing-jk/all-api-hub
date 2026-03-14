@@ -1,16 +1,13 @@
 import { Tab } from "@headlessui/react"
 import { Cpu } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { VerifyApiDialog } from "~/components/dialogs/VerifyApiDialog"
 import { VerifyCliSupportDialog } from "~/components/dialogs/VerifyCliSupportDialog"
 import { PageHeader } from "~/components/PageHeader"
 import { VerifyApiCredentialProfileDialog } from "~/features/ApiCredentialProfiles/components/VerifyApiCredentialProfileDialog"
-import {
-  toAccountSourceValue,
-  type ModelManagementItemSource,
-} from "~/features/ModelList/modelManagementSources"
+import { type ModelManagementItemSource } from "~/features/ModelList/modelManagementSources"
 import { getAllProviders } from "~/services/models/utils/modelProviders"
 import type { DisplaySiteData } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
@@ -77,7 +74,7 @@ export default function ModelList(props: {
     accountQueryStates,
     allAccountsFilterAccountId,
     setAllAccountsFilterAccountId,
-  } = useModelListData()
+  } = useModelListData(routeParams)
 
   const providers = getAllProviders()
 
@@ -88,17 +85,6 @@ export default function ModelList(props: {
       ),
     [providers, getProviderFilteredCount],
   )
-
-  useEffect(() => {
-    if (routeParams?.accountId && accounts.length > 0) {
-      const accountExists = accounts.some(
-        (acc) => acc.id === routeParams.accountId,
-      )
-      if (accountExists) {
-        setSelectedSourceValue(toAccountSourceValue(routeParams.accountId))
-      }
-    }
-  }, [routeParams?.accountId, accounts, setSelectedSourceValue])
 
   const handleGroupClick = (group: string) => {
     setSelectedGroup(group)

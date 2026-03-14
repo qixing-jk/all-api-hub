@@ -31,6 +31,7 @@ export function ApiCredentialProfilesList({
           onCopyBaseUrl={controller.handleCopyBaseUrl}
           onCopyApiKey={controller.handleCopyApiKey}
           onCopyBundle={controller.handleCopyBundle}
+          onOpenModelManagement={controller.handleOpenModelManagement}
           onExport={controller.handleExport}
           managedSiteType={controller.managedSiteType}
           managedSiteLabel={controller.managedSiteLabel}

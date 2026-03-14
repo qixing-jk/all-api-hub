@@ -1,6 +1,7 @@
 import {
   ArrowUpTrayIcon,
   CommandLineIcon,
+  CpuChipIcon,
   DocumentDuplicateIcon,
   EyeIcon,
   EyeSlashIcon,
@@ -69,6 +70,7 @@ interface ApiCredentialProfileListItemProps {
   onCopyBaseUrl: (profile: ApiCredentialProfile) => void
   onCopyApiKey: (profile: ApiCredentialProfile) => void
   onCopyBundle: (profile: ApiCredentialProfile) => void
+  onOpenModelManagement: (profile: ApiCredentialProfile) => void
   onVerify: (profile: ApiCredentialProfile) => void
   onVerifyCliSupport: (profile: ApiCredentialProfile) => void
   onEdit: (profile: ApiCredentialProfile) => void
@@ -92,6 +94,7 @@ export function ApiCredentialProfileListItem({
   onCopyBaseUrl,
   onCopyApiKey,
   onCopyBundle,
+  onOpenModelManagement,
   onVerify,
   onVerifyCliSupport,
   onEdit,
@@ -216,6 +219,16 @@ export function ApiCredentialProfileListItem({
               onClick={() => onVerifyCliSupport(profile)}
             >
               <CommandLineIcon className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+            </IconButton>
+            <IconButton
+              aria-label={t(
+                "apiCredentialProfiles:actions.openModelManagement",
+              )}
+              size="sm"
+              variant="ghost"
+              onClick={() => onOpenModelManagement(profile)}
+            >
+              <CpuChipIcon className="h-4 w-4" />
             </IconButton>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

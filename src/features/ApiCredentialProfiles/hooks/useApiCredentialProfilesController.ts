@@ -13,6 +13,7 @@ import type { Tag } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { onRuntimeMessage } from "~/utils/browser/browserApi"
 import { showResultToast } from "~/utils/core/toastHelpers"
+import { openModelsPage } from "~/utils/navigation"
 
 import type { ApiCredentialProfileExportAction } from "../components/ApiCredentialProfileListItem"
 import { createExportAccount, createExportToken } from "../utils/exportShims"
@@ -208,6 +209,13 @@ export function useApiCredentialProfilesController() {
     [copyToClipboard, t],
   )
 
+  const handleOpenModelManagement = useCallback(
+    (profile: ApiCredentialProfile) => {
+      void openModelsPage({ profileId: profile.id })
+    },
+    [],
+  )
+
   const [verifyingProfile, setVerifyingProfile] =
     useState<ApiCredentialProfile | null>(null)
   const [cliVerifyingProfile, setCliVerifyingProfile] =
@@ -363,6 +371,7 @@ export function useApiCredentialProfilesController() {
     handleCopyBaseUrl,
     handleCopyApiKey,
     handleCopyBundle,
+    handleOpenModelManagement,
     handleExport,
 
     deletingProfile,

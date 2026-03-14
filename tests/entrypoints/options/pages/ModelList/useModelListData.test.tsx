@@ -184,4 +184,55 @@ describe("useModelListData", () => {
 
     expect(result.current.selectedSource).toBeNull()
   })
+
+  it("selects a stored profile when routeParams.profileId resolves", async () => {
+    const { result } = renderHook(() =>
+      useModelListData({ profileId: "profile-1" }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.selectedSourceValue).toBe("profile:profile-1")
+    })
+
+    expect(result.current.selectedSource?.kind).toBe("profile")
+  })
+
+  it("prefers a valid route profile over a simultaneous account target", async () => {
+    const { result } = renderHook(() =>
+      useModelListData({ profileId: "profile-1", accountId: "acc-1" }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.selectedSourceValue).toBe("profile:profile-1")
+    })
+
+    expect(result.current.selectedSource?.kind).toBe("profile")
+  })
+
+  it("waits for profile storage before falling back from a stale profile deep link to accountId", async () => {
+    mockUseApiCredentialProfiles.mockReturnValue({
+      profiles: [],
+      isLoading: true,
+    })
+
+    const { result, rerender } = renderHook(() =>
+      useModelListData({ profileId: "missing-profile", accountId: "acc-1" }),
+    )
+
+    expect(result.current.selectedSourceValue).toBe("")
+    expect(result.current.selectedSource).toBeNull()
+
+    mockUseApiCredentialProfiles.mockReturnValue({
+      profiles: [],
+      isLoading: false,
+    })
+
+    rerender()
+
+    await waitFor(() => {
+      expect(result.current.selectedSourceValue).toBe("account:acc-1")
+    })
+
+    expect(result.current.selectedSource?.kind).toBe("account")
+  })
 })
