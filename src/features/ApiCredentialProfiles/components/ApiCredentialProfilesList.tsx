@@ -35,6 +35,7 @@ export function ApiCredentialProfilesList({
           managedSiteType={controller.managedSiteType}
           managedSiteLabel={controller.managedSiteLabel}
           onVerify={(p) => controller.setVerifyingProfile(p)}
+          onVerifyCliSupport={(p) => controller.setCliVerifyingProfile(p)}
           onEdit={controller.openEditDialog}
           onDelete={controller.handleRequestDelete}
         />

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -11,6 +11,10 @@ import {
   SearchableSelect,
 } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
+import {
+  fetchApiCredentialModelIds,
+  normalizeApiCredentialModelIds,
+} from "~/services/apiCredentialProfiles/modelCatalog"
 import { getApiService } from "~/services/apiService"
 import { guessModelIdFromToken } from "~/services/verification/aiApiVerification"
 import {
@@ -48,7 +52,25 @@ function buildInitialToolState(): ToolItemState[] {
 }
 
 /**
- * Modal dialog that runs CLI support simulation for a selected account token.
+ * Parse token-provided model metadata into distinct selectable ids.
+ */
+function extractTokenModelIds(
+  token: Pick<ApiToken, "models" | "model_limits">,
+) {
+  return normalizeApiCredentialModelIds(
+    [token.models, token.model_limits]
+      .filter(
+        (value): value is string =>
+          typeof value === "string" && value.trim().length > 0,
+      )
+      .flatMap((value) => value.split(/[, \n]+/g))
+      .map((value) => value.trim()),
+  )
+}
+
+/**
+ * Modal dialog that runs CLI support simulation for a selected account token or
+ * a stored profile.
  *
  * Each CLI tool implies a fixed API family and endpoint style, so users do not need
  * to pick an API type manually.
@@ -67,12 +89,21 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
   const [isLoadingTokens, setIsLoadingTokens] = useState(false)
   const [tokens, setTokens] = useState<ApiToken[]>([])
   const [selectedTokenId, setSelectedTokenId] = useState<string>("")
+  const [profileModelOptions, setProfileModelOptions] = useState<string[]>([])
+  const [isLoadingModels, setIsLoadingModels] = useState(false)
+  const [fetchModelsError, setFetchModelsError] = useState<string | null>(null)
   const [tools, setTools] = useState<ToolItemState[]>([])
+  const fetchModelsRequestIdRef = useRef(0)
 
   const selectedToken = tokens.find(
     (tok) => tok.id.toString() === selectedTokenId,
   )
   const activeApiKey = profile?.apiKey ?? selectedToken?.key ?? null
+  const modelOptions = useMemo(() => {
+    if (isProfileSource) return profileModelOptions
+    if (!selectedToken) return []
+    return extractTokenModelIds(selectedToken)
+  }, [isProfileSource, profileModelOptions, selectedToken])
 
   const tokenModelHint = useMemo(() => {
     if (!selectedToken || isProfileSource) return ""
@@ -150,6 +181,46 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
       setIsLoadingTokens(false)
     }
   }, [account])
+
+  const loadProfileModels = useCallback(async () => {
+    if (!profile) {
+      setProfileModelOptions([])
+      setFetchModelsError(null)
+      setIsLoadingModels(false)
+      return
+    }
+
+    const requestId = (fetchModelsRequestIdRef.current += 1)
+    setFetchModelsError(null)
+    setIsLoadingModels(true)
+
+    try {
+      const normalized = normalizeApiCredentialModelIds(
+        await fetchApiCredentialModelIds({
+          apiType: profile.apiType,
+          baseUrl: profile.baseUrl,
+          apiKey: profile.apiKey,
+        }),
+      )
+
+      if (fetchModelsRequestIdRef.current !== requestId) return
+      setProfileModelOptions(normalized)
+    } catch (error) {
+      const message =
+        toSanitizedErrorSummary(error, [profile.apiKey, profile.baseUrl]) ||
+        t("verifyDialog.modelsFetchFailed")
+
+      logger.error("Failed to fetch profile models", { message })
+
+      if (fetchModelsRequestIdRef.current !== requestId) return
+      setProfileModelOptions([])
+      setFetchModelsError(message)
+    } finally {
+      if (fetchModelsRequestIdRef.current === requestId) {
+        setIsLoadingModels(false)
+      }
+    }
+  }, [profile, t])
 
   const runTool = async (
     toolId: (typeof CLI_TOOL_IDS)[number],
@@ -254,15 +325,19 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
   useEffect(() => {
     if (!isOpen) return
     setTools(buildInitialToolState())
+    setProfileModelOptions([])
+    setFetchModelsError(null)
     if (isProfileSource) {
       setTokens([])
       setSelectedTokenId("")
       setIsLoadingTokens(false)
+      void loadProfileModels()
     } else {
+      setIsLoadingModels(false)
       void loadTokens()
     }
     setModelId(initialModelId?.trim() ?? "")
-  }, [initialModelId, isOpen, isProfileSource, loadTokens])
+  }, [initialModelId, isOpen, isProfileSource, loadProfileModels, loadTokens])
 
   const canRunAll = !!activeApiKey && resolvedModelId.trim().length > 0
 
@@ -324,27 +399,57 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
             <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
               {t("verifyDialog.meta.model")}
             </div>
-            <Input
-              value={modelId}
-              onChange={(e) => setModelId(e.target.value)}
-              placeholder={t("verifyDialog.meta.modelPlaceholder")}
-              disabled={isRunning}
-            />
-            {tokenModelHint && !modelId.trim() && (
-              <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
-                {t("verifyDialog.modelHint", {
-                  modelId: tokenModelHint,
-                })}
-              </div>
+            {isProfileSource ? (
+              <>
+                <SearchableSelect
+                  aria-label={t("verifyDialog.meta.model")}
+                  data-testid="verify-cli-model-id"
+                  options={modelOptions.map((id) => ({ value: id, label: id }))}
+                  value={modelId}
+                  onChange={setModelId}
+                  placeholder={
+                    isLoadingModels
+                      ? t("verifyDialog.loadingModelsHint")
+                      : t("verifyDialog.modelPickerPlaceholder")
+                  }
+                  allowCustomValue
+                  disabled={isRunning}
+                />
+                {fetchModelsError ? (
+                  <div className="dark:text-dark-text-tertiary text-xs text-red-600">
+                    {fetchModelsError}
+                  </div>
+                ) : null}
+              </>
+            ) : (
+              <>
+                <Input
+                  value={modelId}
+                  onChange={(e) => setModelId(e.target.value)}
+                  placeholder={t("verifyDialog.meta.modelPlaceholder")}
+                  disabled={isRunning}
+                />
+                {tokenModelHint && !modelId.trim() && (
+                  <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                    {t("verifyDialog.modelHint", {
+                      modelId: tokenModelHint,
+                    })}
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
 
         {!hasAnyResult && (
           <div className="dark:text-dark-text-secondary text-sm text-gray-600">
-            {!isProfileSource && isLoadingTokens
-              ? t("verifyDialog.loadingTokensHint")
-              : t("verifyDialog.idleHint")}
+            {isProfileSource
+              ? isLoadingModels
+                ? t("verifyDialog.loadingModelsHint")
+                : t("verifyDialog.profileIdleHint")
+              : isLoadingTokens
+                ? t("verifyDialog.loadingTokensHint")
+                : t("verifyDialog.idleHint")}
           </div>
         )}
 

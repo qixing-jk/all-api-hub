@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { VerifyCliSupportDialog } from "~/components/dialogs/VerifyCliSupportDialog"
 import {
@@ -10,12 +10,25 @@ import {
 } from "~~/tests/test-utils/render"
 
 const mockFetchAccountTokens = vi.fn()
+const mockFetchApiCredentialModelIds = vi.fn()
 
 vi.mock("~/services/apiService", () => ({
   getApiService: () => ({
     fetchAccountTokens: (...args: any[]) => mockFetchAccountTokens(...args),
   }),
 }))
+
+vi.mock("~/services/apiCredentialProfiles/modelCatalog", async () => {
+  const actual = await vi.importActual<
+    typeof import("~/services/apiCredentialProfiles/modelCatalog")
+  >("~/services/apiCredentialProfiles/modelCatalog")
+
+  return {
+    ...actual,
+    fetchApiCredentialModelIds: (...args: any[]) =>
+      mockFetchApiCredentialModelIds(...args),
+  }
+})
 
 const mockRunCliSupportTool = vi.fn()
 
@@ -25,6 +38,13 @@ vi.mock("~/services/verification/cliSupportVerification", () => ({
 }))
 
 describe("VerifyCliSupportDialog", () => {
+  beforeEach(() => {
+    mockFetchAccountTokens.mockReset()
+    mockFetchApiCredentialModelIds.mockReset()
+    mockFetchApiCredentialModelIds.mockResolvedValue([])
+    mockRunCliSupportTool.mockReset()
+  })
+
   it("runs CLI support directly from a stored profile without loading account tokens", async () => {
     mockRunCliSupportTool.mockResolvedValueOnce({
       id: "claude",
@@ -73,6 +93,48 @@ describe("VerifyCliSupportDialog", () => {
     })
 
     expect(mockFetchAccountTokens).not.toHaveBeenCalled()
+  })
+
+  it("fetches profile models and lets the user choose one", async () => {
+    mockFetchApiCredentialModelIds.mockResolvedValueOnce([
+      "gpt-4o-mini",
+      "o3-mini",
+    ])
+
+    render(
+      <VerifyCliSupportDialog
+        isOpen={true}
+        onClose={() => {}}
+        profile={{
+          id: "p1",
+          name: "Profile",
+          apiType: "openai-compatible" as any,
+          baseUrl: "https://example.com",
+          apiKey: "profile-secret",
+          tagIds: [],
+          notes: "",
+          createdAt: 1,
+          updatedAt: 1,
+        }}
+        initialModelId=""
+      />,
+    )
+
+    await waitFor(() => {
+      expect(mockFetchApiCredentialModelIds).toHaveBeenCalledWith({
+        apiType: "openai-compatible",
+        baseUrl: "https://example.com",
+        apiKey: "profile-secret",
+      })
+    })
+
+    const modelPicker = screen.getByRole("combobox", {
+      name: "cliSupportVerification:verifyDialog.meta.model",
+    })
+    fireEvent.click(modelPicker)
+    fireEvent.click(await screen.findByRole("option", { name: "gpt-4o-mini" }))
+
+    expect(modelPicker).toHaveTextContent("gpt-4o-mini")
   })
 
   it("renders tool items and a single model input before running", async () => {
@@ -142,7 +204,6 @@ describe("VerifyCliSupportDialog", () => {
   })
 
   it("runs and retries a single tool and shows collapsible input/output", async () => {
-    mockFetchAccountTokens.mockReset()
     mockFetchAccountTokens.mockResolvedValueOnce([
       {
         id: 1,
@@ -237,7 +298,6 @@ describe("VerifyCliSupportDialog", () => {
   })
 
   it("disables tool runs when no model id is available", async () => {
-    mockFetchAccountTokens.mockReset()
     mockFetchAccountTokens.mockResolvedValueOnce([
       {
         id: 1,

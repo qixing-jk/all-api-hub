@@ -1,11 +1,12 @@
 import {
   ArrowUpTrayIcon,
-  CheckCircleIcon,
+  CommandLineIcon,
   DocumentDuplicateIcon,
   EyeIcon,
   EyeSlashIcon,
   PencilIcon,
   TrashIcon,
+  WrenchScrewdriverIcon,
 } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
@@ -69,6 +70,7 @@ interface ApiCredentialProfileListItemProps {
   onCopyApiKey: (profile: ApiCredentialProfile) => void
   onCopyBundle: (profile: ApiCredentialProfile) => void
   onVerify: (profile: ApiCredentialProfile) => void
+  onVerifyCliSupport: (profile: ApiCredentialProfile) => void
   onEdit: (profile: ApiCredentialProfile) => void
   onDelete: (profile: ApiCredentialProfile) => void
   onExport: (
@@ -80,7 +82,7 @@ interface ApiCredentialProfileListItemProps {
 }
 
 /**
- * Renders a single profile row/card with copy, verify, edit, delete actions.
+ * Renders a single profile row/card with copy, verify, export, edit, delete actions.
  */
 export function ApiCredentialProfileListItem({
   profile,
@@ -91,6 +93,7 @@ export function ApiCredentialProfileListItem({
   onCopyApiKey,
   onCopyBundle,
   onVerify,
+  onVerifyCliSupport,
   onEdit,
   onDelete,
   onExport,
@@ -199,12 +202,20 @@ export function ApiCredentialProfileListItem({
               <DocumentDuplicateIcon className="h-4 w-4" />
             </IconButton>
             <IconButton
-              aria-label={t("apiCredentialProfiles:actions.verify")}
+              aria-label={t("apiCredentialProfiles:actions.verifyApi")}
               size="sm"
               variant="ghost"
               onClick={() => onVerify(profile)}
             >
-              <CheckCircleIcon className="h-4 w-4" />
+              <WrenchScrewdriverIcon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            </IconButton>
+            <IconButton
+              aria-label={t("apiCredentialProfiles:actions.verifyCliSupport")}
+              size="sm"
+              variant="ghost"
+              onClick={() => onVerifyCliSupport(profile)}
+            >
+              <CommandLineIcon className="h-4 w-4 text-sky-600 dark:text-sky-400" />
             </IconButton>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

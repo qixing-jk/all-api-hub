@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next"
 import { CCSwitchExportDialog } from "~/components/CCSwitchExportDialog"
 import { ClaudeCodeRouterImportDialog } from "~/components/ClaudeCodeRouterImportDialog"
 import { CliProxyExportDialog } from "~/components/CliProxyExportDialog"
+import { VerifyCliSupportDialog } from "~/components/dialogs/VerifyCliSupportDialog"
 import { DestructiveConfirmDialog } from "~/components/ui"
 import {
   API_TYPES,
@@ -63,6 +64,15 @@ export function ApiCredentialProfilesDialogs({
         onClose={() => controller.setVerifyingProfile(null)}
         profile={controller.verifyingProfile}
       />
+
+      {controller.cliVerifyingProfile ? (
+        // Reuse the shared profile-backed CLI dialog so stored profiles skip token selection.
+        <VerifyCliSupportDialog
+          isOpen={true}
+          onClose={() => controller.setCliVerifyingProfile(null)}
+          profile={controller.cliVerifyingProfile}
+        />
+      ) : null}
 
       {controller.ccSwitchProfile ? (
         <CCSwitchExportDialog

@@ -210,6 +210,8 @@ export function useApiCredentialProfilesController() {
 
   const [verifyingProfile, setVerifyingProfile] =
     useState<ApiCredentialProfile | null>(null)
+  const [cliVerifyingProfile, setCliVerifyingProfile] =
+    useState<ApiCredentialProfile | null>(null)
 
   const [ccSwitchProfile, setCCSwitchProfile] =
     useState<ApiCredentialProfile | null>(null)
@@ -344,6 +346,8 @@ export function useApiCredentialProfilesController() {
 
     verifyingProfile,
     setVerifyingProfile,
+    cliVerifyingProfile,
+    setCliVerifyingProfile,
 
     ccSwitchProfile,
     setCCSwitchProfile,
