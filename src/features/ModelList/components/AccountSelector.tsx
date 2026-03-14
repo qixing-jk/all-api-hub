@@ -1,6 +1,10 @@
 import { useTranslation } from "react-i18next"
 
 import { Heading3, SearchableSelect } from "~/components/ui"
+import {
+  toAccountSourceValue,
+  toProfileSourceValue,
+} from "~/features/ModelList/modelManagementSources"
 import type { DisplaySiteData } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { tryParseUrl } from "~/utils/core/urlParsing"
@@ -35,11 +39,11 @@ export function AccountSelector({
         options={[
           { value: "all", label: t("allAccounts") },
           ...accounts.map((account) => ({
-            value: `account:${account.id}`,
+            value: toAccountSourceValue(account.id),
             label: account.name,
           })),
           ...profiles.map((profile) => ({
-            value: `profile:${profile.id}`,
+            value: toProfileSourceValue(profile.id),
             label: t("sourceLabels.profileOption", {
               name: profile.name,
               host: tryParseUrl(profile.baseUrl)?.hostname ?? profile.baseUrl,

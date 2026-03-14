@@ -181,44 +181,47 @@ export function VerifyApiCredentialProfileDialog({
     )
   }, [profile, t])
 
-  const fetchModels = useCallback(async () => {
-    if (!profile) return
+  const fetchModels = useCallback(
+    async (nextApiType: ApiVerificationApiType) => {
+      if (!profile) return
 
-    const requestId = (fetchModelsRequestIdRef.current += 1)
-    setFetchModelsError(null)
-    setIsFetchingModels(true)
+      const requestId = (fetchModelsRequestIdRef.current += 1)
+      setFetchModelsError(null)
+      setIsFetchingModels(true)
 
-    try {
-      const normalized = normalizeApiCredentialModelIds(
-        await fetchApiCredentialModelIds({
-          apiType,
-          baseUrl: profile.baseUrl,
-          apiKey: profile.apiKey,
-        }),
-      )
+      try {
+        const normalized = normalizeApiCredentialModelIds(
+          await fetchApiCredentialModelIds({
+            apiType: nextApiType,
+            baseUrl: profile.baseUrl,
+            apiKey: profile.apiKey,
+          }),
+        )
 
-      if (fetchModelsRequestIdRef.current !== requestId) return
+        if (fetchModelsRequestIdRef.current !== requestId) return
 
-      setModelOptions(normalized)
-      const suggestedModelId = pickSuggestedModelId(apiType, normalized)
-      if (suggestedModelId) {
-        setModelId((current) => (current.trim() ? current : suggestedModelId))
+        setModelOptions(normalized)
+        const suggestedModelId = pickSuggestedModelId(nextApiType, normalized)
+        if (suggestedModelId) {
+          setModelId((current) => (current.trim() ? current : suggestedModelId))
+        }
+      } catch (error) {
+        const message = toSanitizedErrorSummary(error, [profile.apiKey])
+        logger.error("Failed to fetch models", { message })
+
+        if (fetchModelsRequestIdRef.current !== requestId) return
+
+        setFetchModelsError(
+          message || t("apiCredentialProfiles:verify.modelsFetchFailed"),
+        )
+      } finally {
+        if (fetchModelsRequestIdRef.current === requestId) {
+          setIsFetchingModels(false)
+        }
       }
-    } catch (error) {
-      const message = toSanitizedErrorSummary(error, [profile.apiKey])
-      logger.error("Failed to fetch models", { message })
-
-      if (fetchModelsRequestIdRef.current !== requestId) return
-
-      setFetchModelsError(
-        message || t("apiCredentialProfiles:verify.modelsFetchFailed"),
-      )
-    } finally {
-      if (fetchModelsRequestIdRef.current === requestId) {
-        setIsFetchingModels(false)
-      }
-    }
-  }, [apiType, profile, t])
+    },
+    [profile, t],
+  )
 
   useEffect(() => {
     if (!isOpen || !profile) return
@@ -226,15 +229,9 @@ export function VerifyApiCredentialProfileDialog({
     setModelId(initialModelId?.trim() ?? "")
     setModelOptions([])
     setFetchModelsError(null)
-  }, [initialModelId, isOpen, profile])
-
-  useEffect(() => {
-    if (!isOpen || !profile) return
-    setModelOptions([])
-    setFetchModelsError(null)
-    setProbes(buildProbeState(apiType))
-    void fetchModels()
-  }, [apiType, fetchModels, isOpen, profile])
+    setProbes(buildProbeState(profile.apiType))
+    void fetchModels(profile.apiType)
+  }, [fetchModels, initialModelId, isOpen, profile])
 
   const runProbe = async (
     probeId: ApiVerificationProbeId,
@@ -408,9 +405,14 @@ export function VerifyApiCredentialProfileDialog({
                   },
                 ]}
                 value={apiType}
-                onChange={(value) =>
-                  setApiType(value as ApiVerificationApiType)
-                }
+                onChange={(value) => {
+                  const nextApiType = value as ApiVerificationApiType
+                  setApiType(nextApiType)
+                  setModelOptions([])
+                  setFetchModelsError(null)
+                  setProbes(buildProbeState(nextApiType))
+                  void fetchModels(nextApiType)
+                }}
                 disabled={!canClose}
               />
             </div>

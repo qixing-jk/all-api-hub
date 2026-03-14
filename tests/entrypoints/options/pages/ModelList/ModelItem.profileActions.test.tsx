@@ -1,17 +1,10 @@
-import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import type { ReactNode } from "react"
-import { I18nextProvider } from "react-i18next"
 import { describe, expect, it, vi } from "vitest"
 
 import ModelItem from "~/features/ModelList/components/ModelItem"
 import { createProfileSource } from "~/features/ModelList/modelManagementSources"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
-import { testI18n } from "~~/tests/test-utils/i18n"
-
-const Wrapper = ({ children }: { children: ReactNode }) => (
-  <I18nextProvider i18n={testI18n}>{children}</I18nextProvider>
-)
+import { render, screen } from "~~/tests/test-utils/render"
 
 describe("ModelItem profile actions", () => {
   it("exposes credential-based API and CLI verification for profile-backed rows", async () => {
@@ -58,11 +51,10 @@ describe("ModelItem profile actions", () => {
         onVerifyModel={onVerifyModel}
         onVerifyCliSupport={onVerifyCliSupport}
       />,
-      { wrapper: Wrapper },
     )
 
     expect(
-      screen.getByRole("button", {
+      await screen.findByRole("button", {
         name: "modelList:actions.verifyApi",
       }),
     ).toBeInTheDocument()
@@ -72,7 +64,7 @@ describe("ModelItem profile actions", () => {
       }),
     ).not.toBeInTheDocument()
     expect(
-      screen.getByRole("button", {
+      await screen.findByRole("button", {
         name: "modelList:actions.verifyCliSupport",
       }),
     ).toBeInTheDocument()
@@ -83,7 +75,7 @@ describe("ModelItem profile actions", () => {
     ).not.toBeInTheDocument()
 
     await user.click(
-      screen.getByRole("button", {
+      await screen.findByRole("button", {
         name: "modelList:actions.verifyApi",
       }),
     )
@@ -91,7 +83,7 @@ describe("ModelItem profile actions", () => {
     expect(onVerifyModel).toHaveBeenCalledWith(profileSource, "gpt-4o-mini")
 
     await user.click(
-      screen.getByRole("button", {
+      await screen.findByRole("button", {
         name: "modelList:actions.verifyCliSupport",
       }),
     )

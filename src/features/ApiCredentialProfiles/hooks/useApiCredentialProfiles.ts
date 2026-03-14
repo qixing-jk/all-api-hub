@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from "react"
 
-import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
-import { API_CREDENTIAL_PROFILES_STORAGE_KEYS } from "~/services/core/storageKeys"
+import {
+  apiCredentialProfilesStorage,
+  subscribeToApiCredentialProfilesChanges,
+} from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { createLogger } from "~/utils/core/logger"
@@ -50,22 +52,9 @@ export function useApiCredentialProfiles() {
   }, [reload])
 
   useEffect(() => {
-    const listener = (
-      changes: Record<string, browser.storage.StorageChange>,
-      areaName: string,
-    ) => {
-      if (areaName !== "local") return
-      if (
-        !changes[API_CREDENTIAL_PROFILES_STORAGE_KEYS.API_CREDENTIAL_PROFILES]
-      ) {
-        return
-      }
-
+    return subscribeToApiCredentialProfilesChanges(() => {
       void reload()
-    }
-
-    browser.storage.onChanged.addListener(listener)
-    return () => browser.storage.onChanged.removeListener(listener)
+    })
   }, [reload])
 
   const createProfile = useCallback(

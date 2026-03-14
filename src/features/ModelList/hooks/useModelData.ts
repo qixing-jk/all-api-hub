@@ -363,8 +363,13 @@ function useProfileModelData(
       return null
     }
 
+    const secretsToRedact = [
+      currentProfile.apiKey,
+      currentProfile.baseUrl,
+    ].filter(Boolean)
+
     return (
-      toSanitizedErrorSummary(query.error, [currentProfile.apiKey]) ||
+      toSanitizedErrorSummary(query.error, secretsToRedact) ||
       t("status.loadFailed")
     )
   }, [currentProfile, query.error, query.isError, t])

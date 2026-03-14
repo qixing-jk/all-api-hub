@@ -24,7 +24,7 @@ interface UseFilteredModelsProps {
   accountFilterAccountId?: string | null
 }
 
-type CalculatedModelItem = {
+export type CalculatedModelItem = {
   model: PricingResponse["data"][number]
   calculatedPrice: ReturnType<typeof calculateModelPrice>
   source:
@@ -186,7 +186,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
 
     return baseFilteredModels.filter(
       (item) =>
-        item.source.kind === "account" &&
+        item.source.kind !== "account" ||
         item.source.account.id === accountFilterAccountId,
     )
   }, [baseFilteredModels, accountFilterAccountId])
@@ -202,7 +202,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
   }, [accountFilteredBaseModels, selectedProvider])
 
   const getProviderFilteredCount = (provider: ProviderType) => {
-    return baseFilteredModels.filter(
+    return accountFilteredBaseModels.filter(
       (item) => filterModelsByProvider([item.model], provider).length > 0,
     ).length
   }

@@ -70,6 +70,7 @@ describe("useModelListData", () => {
     })
     mockUseApiCredentialProfiles.mockReturnValue({
       profiles: [PROFILE],
+      isLoading: false,
     })
     mockUseModelData.mockReturnValue({
       pricingData: null,
@@ -103,6 +104,7 @@ describe("useModelListData", () => {
 
     mockUseApiCredentialProfiles.mockReturnValue({
       profiles: [{ ...PROFILE, name: "Updated Profile", updatedAt: 2 }],
+      isLoading: false,
     })
 
     rerender()
@@ -129,12 +131,36 @@ describe("useModelListData", () => {
 
     mockUseApiCredentialProfiles.mockReturnValue({
       profiles: [],
+      isLoading: false,
     })
 
     rerender()
 
     await waitFor(() => {
       expect(result.current.selectedSourceValue).toBe("")
+    })
+
+    expect(result.current.selectedSource).toBeNull()
+  })
+
+  it("keeps a persisted profile selection while profiles are still loading", async () => {
+    const { result, rerender } = renderHook(() => useModelListData())
+
+    act(() => {
+      result.current.setSelectedSourceValue("profile:profile-1")
+    })
+
+    expect(result.current.selectedSource?.kind).toBe("profile")
+
+    mockUseApiCredentialProfiles.mockReturnValue({
+      profiles: [],
+      isLoading: true,
+    })
+
+    rerender()
+
+    await waitFor(() => {
+      expect(result.current.selectedSourceValue).toBe("profile:profile-1")
     })
 
     expect(result.current.selectedSource).toBeNull()

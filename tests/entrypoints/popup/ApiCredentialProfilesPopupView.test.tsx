@@ -39,6 +39,7 @@ const mockDeleteTag = vi.fn(async (_tagId: string) => ({ updatedAccounts: 0 }))
 vi.mock(
   "~/services/apiCredentialProfiles/apiCredentialProfilesStorage",
   () => ({
+    subscribeToApiCredentialProfilesChanges: () => () => {},
     apiCredentialProfilesStorage: {
       listProfiles: () => mockListProfiles(),
       createProfile: (input: any) => mockCreateProfile(input),

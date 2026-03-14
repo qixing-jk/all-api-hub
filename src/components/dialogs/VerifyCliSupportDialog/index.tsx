@@ -239,7 +239,6 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
   }
 
   const runAll = async () => {
-    if (!isProfileSource && (!selectedTokenId || !selectedToken)) return
     if (!activeApiKey) return
     setIsRunning(true)
     setTools(buildInitialToolState())

@@ -44,6 +44,30 @@ const createDefaultConfig = (): ApiCredentialProfilesConfig => ({
 })
 
 /**
+ * Subscribe to local-storage writes affecting API credential profiles.
+ */
+export function subscribeToApiCredentialProfilesChanges(
+  callback: () => void,
+): () => void {
+  const listener = (
+    changes: Record<string, browser.storage.StorageChange>,
+    areaName: string,
+  ) => {
+    if (areaName !== "local") return
+    if (
+      !changes[API_CREDENTIAL_PROFILES_STORAGE_KEYS.API_CREDENTIAL_PROFILES]
+    ) {
+      return
+    }
+
+    callback()
+  }
+
+  browser.storage.onChanged.addListener(listener)
+  return () => browser.storage.onChanged.removeListener(listener)
+}
+
+/**
  * Clones the config.
  */
 function cloneConfig(

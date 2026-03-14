@@ -5,11 +5,12 @@ import { Virtuoso } from "react-virtuoso"
 import { EmptyState } from "~/components/ui"
 import { UI_CONSTANTS } from "~/constants/ui"
 import type { ModelManagementItemSource } from "~/features/ModelList/modelManagementSources"
+import type { CalculatedModelItem } from "~/features/ModelList/hooks/useFilteredModels"
 
 import ModelItem from "./ModelItem"
 
 interface ModelDisplayProps {
-  models: any[]
+  models: CalculatedModelItem[]
   onVerifyModel?: (source: ModelManagementItemSource, modelId: string) => void
   onVerifyCliSupport?: (
     source: ModelManagementItemSource,
@@ -20,7 +21,7 @@ interface ModelDisplayProps {
     modelId: string,
     modelEnableGroups: string[],
   ) => void
-  onModelClick?: (model: unknown) => void
+  onModelClick?: (model: CalculatedModelItem) => void
   count?: number
   showRealPrice: boolean
   showRatioColumn: boolean

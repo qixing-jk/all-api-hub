@@ -20,7 +20,7 @@ export function useModelListData() {
   // Single source of account data
   const { enabledDisplayData } = useAccountData()
   const accounts = useMemo(() => enabledDisplayData || [], [enabledDisplayData])
-  const { profiles } = useApiCredentialProfiles()
+  const { profiles, isLoading: profilesLoading } = useApiCredentialProfiles()
 
   // UI state
   const state = useModelListState()
@@ -46,10 +46,16 @@ export function useModelListData() {
 
   useEffect(() => {
     if (!selectedSourceValue) return
+    if (profilesLoading) return
     if (selectedSource) return
 
     setSelectedSourceValue("")
-  }, [selectedSource, selectedSourceValue, setSelectedSourceValue])
+  }, [
+    profilesLoading,
+    selectedSource,
+    selectedSourceValue,
+    setSelectedSourceValue,
+  ])
 
   useEffect(() => {
     if (selectedSource?.kind === "all-accounts") return

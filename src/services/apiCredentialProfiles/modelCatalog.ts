@@ -52,11 +52,13 @@ export async function fetchApiCredentialModelIds(
 /**
  * Normalize and de-duplicate model ids returned by upstream model-list endpoints.
  */
-export function normalizeApiCredentialModelIds(modelIds: string[]) {
+export function normalizeApiCredentialModelIds(modelIds: unknown[]) {
   return Array.from(
     new Set(
       modelIds
-        .filter((id) => typeof id === "string" && id.trim().length > 0)
+        .filter(
+          (id): id is string => typeof id === "string" && id.trim().length > 0,
+        )
         .map((id) => id.trim()),
     ),
   )

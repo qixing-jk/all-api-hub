@@ -82,6 +82,7 @@ const mockDeleteProfile = vi.fn(async (id: string) => {
 vi.mock(
   "~/services/apiCredentialProfiles/apiCredentialProfilesStorage",
   () => ({
+    subscribeToApiCredentialProfilesChanges: () => () => {},
     apiCredentialProfilesStorage: {
       listProfiles: () => mockListProfiles(),
       createProfile: (input: any) => mockCreateProfile(input),

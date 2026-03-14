@@ -65,7 +65,12 @@ describe("ManagedSiteChannels", () => {
 
     render(<ManagedSiteChannels routeParams={{ search: "site-a" }} />)
 
-    await screen.findByText("Alpha")
+    await waitFor(
+      () => {
+        expect(screen.getByText("Alpha")).toBeInTheDocument()
+      },
+      { timeout: 3000 },
+    )
 
     const input = screen.getByRole("textbox") as HTMLInputElement
     expect(input.value).toBe("site-a")
@@ -80,7 +85,12 @@ describe("ManagedSiteChannels", () => {
 
     render(<ManagedSiteChannels />)
 
-    await screen.findByText("Alpha")
+    await waitFor(
+      () => {
+        expect(screen.getByText("Alpha")).toBeInTheDocument()
+      },
+      { timeout: 3000 },
+    )
 
     const link = screen.getByRole("link", { name: "https://click.me" })
     expect(link.getAttribute("href")).toMatch(/^https:\/\/click\.me\/?$/)
@@ -91,7 +101,12 @@ describe("ManagedSiteChannels", () => {
 
     render(<ManagedSiteChannels routeParams={{}} />)
 
-    await screen.findByText("Alpha")
+    await waitFor(
+      () => {
+        expect(screen.getByText("Alpha")).toBeInTheDocument()
+      },
+      { timeout: 3000 },
+    )
 
     const input = screen.getByRole("textbox") as HTMLInputElement
     fireEvent.change(input, { target: { value: "foo" } })

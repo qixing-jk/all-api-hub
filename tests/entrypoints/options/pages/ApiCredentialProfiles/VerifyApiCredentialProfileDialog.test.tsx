@@ -112,6 +112,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
         apiKey: "sk-test",
       }),
     )
+    expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledTimes(1)
 
     await waitFor(() => {
       expect(screen.getByTestId("profile-verify-model-id")).toHaveTextContent(

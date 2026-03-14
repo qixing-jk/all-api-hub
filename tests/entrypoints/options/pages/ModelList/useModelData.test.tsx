@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { renderHook, waitFor } from "@testing-library/react"
 import type { ReactNode } from "react"
 import { I18nextProvider } from "react-i18next"
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useModelData } from "~/features/ModelList/hooks/useModelData"
 import {
@@ -85,6 +85,11 @@ const createWrapper = () => {
 }
 
 describe("useModelData all-accounts loading", () => {
+  beforeEach(() => {
+    mockFetchApiCredentialModelIds.mockReset()
+    vi.mocked(getApiService).mockReset()
+  })
+
   it("does not fetch all-account pricing until selectedAccount is 'all'", async () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
