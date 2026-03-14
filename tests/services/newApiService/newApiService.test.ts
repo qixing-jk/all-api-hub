@@ -812,7 +812,7 @@ describe("newApiService", () => {
   // ========================================================================
 
   describe("buildChannelName", () => {
-    it("should build channel name with auto suffix", async () => {
+    it("should build channel name with auto suffix (no groups)", async () => {
       const { buildChannelName } = await import(
         "~/services/managedSites/providers/newApi"
       )
@@ -824,6 +824,30 @@ describe("newApiService", () => {
       expect(result).toBe("My Site | My Token (auto)")
     })
 
+    it("should build channel name with groups suffix", async () => {
+      const { buildChannelName } = await import(
+        "~/services/managedSites/providers/newApi"
+      )
+      const account = createMockDisplaySiteData({ name: "My Site" })
+      const token = createMockApiToken({ name: "My Token" })
+
+      const result = buildChannelName(account, token, ["group1", "group2"])
+
+      expect(result).toBe("My Site | My Token (auto) [group1,group2]")
+    })
+
+    it("should show default when empty groups array provided", async () => {
+      const { buildChannelName } = await import(
+        "~/services/managedSites/providers/newApi"
+      )
+      const account = createMockDisplaySiteData({ name: "My Site" })
+      const token = createMockApiToken({ name: "My Token" })
+
+      const result = buildChannelName(account, token, [])
+
+      expect(result).toBe("My Site | My Token (auto) [default]")
+    })
+
     it("should not add duplicate auto suffix", async () => {
       const { buildChannelName } = await import(
         "~/services/managedSites/providers/newApi"
@@ -831,9 +855,9 @@ describe("newApiService", () => {
       const account = createMockDisplaySiteData({ name: "My Site" })
       const token = createMockApiToken({ name: "My Token (auto)" })
 
-      const result = buildChannelName(account, token)
+      const result = buildChannelName(account, token, ["group1"])
 
-      expect(result).toBe("My Site | My Token (auto)")
+      expect(result).toBe("My Site | My Token (auto) [group1]")
       expect(result.match(/\(auto\)/g)).toHaveLength(1)
     })
 
@@ -844,7 +868,7 @@ describe("newApiService", () => {
       const account = createMockDisplaySiteData()
       const token = createMockApiToken()
 
-      const result = buildChannelName(account, token)
+      const result = buildChannelName(account, token, ["default"])
 
       expect(result).not.toMatch(/^\s/)
       expect(result).not.toMatch(/\s$/)

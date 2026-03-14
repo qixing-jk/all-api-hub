@@ -54,14 +54,24 @@ export default defineConfig({
           strict_min_version: "120.0",
         },
       },
-      commands: {
-        _execute_sidebar_action: {
-          description: "__MSG_manifest_commands_sidebar_action__",
-        },
-        _execute_browser_action: {
-          description: "__MSG_manifest_commands_browser_action__",
-        },
-      },
+      commands:
+        env.manifestVersion === 2
+          ? {
+              _execute_sidebar_action: {
+                description: "__MSG_manifest_commands_sidebar_action__",
+              },
+              _execute_browser_action: {
+                description: "__MSG_manifest_commands_browser_action__",
+              },
+            }
+          : {
+              _execute_action: {
+                description: "__MSG_manifest_commands_browser_action__",
+              },
+              _execute_side_panel: {
+                description: "__MSG_manifest_commands_sidebar_action__",
+              },
+            },
     }
   },
   vite: (env) => {
