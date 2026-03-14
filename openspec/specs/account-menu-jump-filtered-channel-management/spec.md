@@ -5,14 +5,29 @@ The `account-menu-jump-filtered-channel-management` specification exists to help
 
 ## Requirements
 ### Requirement: Account menu includes a channel-location entry
-The system MUST provide an entry in the account card “more actions / context menu” that helps the user locate the channel corresponding to the current account.
+The system MUST provide an entry in the account card “more actions / context menu” that helps the user locate the channel corresponding to the current account when the user has configured managed-site admin credentials in settings and the account is enabled.
 
-#### Scenario: Menu entry is available for enabled accounts with managed-site admin configured
+The entry state MUST reflect whether the active managed-site provider supports reliable base-URL channel lookup for review/navigation flows:
+
+- providers that support reliable base-URL lookup MUST render the entry as an actionable “Locate channel” command
+- providers that do not support reliable base-URL lookup MUST render the same entry in a disabled state with visible explanatory text
+
+#### Scenario: Menu entry is actionable for supported managed-site providers
 - **GIVEN** the user has configured managed-site admin credentials in settings
+- **AND** the active managed-site provider supports reliable base-url channel lookup
 - **WHEN** the user opens the account “more actions” menu for an enabled account
-- **THEN** the system shows an action to “Locate channel” in Managed Site channel management
+- **THEN** the system shows an actionable “Locate channel” entry in Managed Site channel management
+
+#### Scenario: Menu entry is disabled with an explanation for Veloera
+- **GIVEN** the user has configured managed-site admin credentials in settings
+- **AND** the active managed-site provider is `Veloera`
+- **WHEN** the user opens the account “more actions” menu for an enabled account
+- **THEN** the system shows the “Locate channel” entry in a disabled state
+- **AND** the menu shows visible guidance that Veloera does not support reliable base-url channel lookup
 
 ### Requirement: Location action navigates to channel management with exact-only focus and search-based review fallbacks
+This requirement applies only when the active managed-site provider supports reliable base-URL channel lookup for review/navigation flows.
+
 When the user triggers the location action, the system MUST search candidate managed-site channels by normalized base URL and derive three reusable signals from the shared inspection:
 
 - URL-bucket evidence: whether any channel exists under the normalized `base_url`

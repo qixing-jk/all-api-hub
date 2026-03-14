@@ -6,7 +6,9 @@ Define requirements for showing managed-site channel status in Key Management, i
 ## Requirements
 
 ### Requirement: Key Management shows managed-site verification status and review signals for each loaded key
-The system MUST display a managed-site channel status for each token rendered in Key Management for the currently configured managed-site context.
+The system MUST display a managed-site channel status for each token rendered in Key Management when the currently configured managed-site provider supports reliable base-URL channel lookup for review/navigation flows.
+
+When the active managed-site provider does not support reliable base-URL channel lookup, the system MUST suppress per-token managed-site status badges, signal badges, and channel review links, and MUST rely on page-level unsupported guidance instead of token-level verification output.
 
 The status model MUST distinguish at least these outcomes:
 
@@ -39,6 +41,7 @@ When assessment metadata exists, the rendered Key Management row MUST:
 #### Scenario: Exact channel match is shown as added
 - **GIVEN** a token is rendered in Key Management
 - **AND** managed-site admin configuration is valid
+- **AND** the active managed-site provider supports reliable base-url channel lookup
 - **AND** the system can prepare comparable channel inputs
 - **WHEN** the shared resolver finds that the same channel satisfies key matching and exact model equality
 - **THEN** the system shows the token status as `added`
@@ -47,6 +50,7 @@ When assessment metadata exists, the rendered Key Management row MUST:
 #### Scenario: Search completes without any URL, key, or model signal
 - **GIVEN** a token is rendered in Key Management
 - **AND** managed-site admin configuration is valid
+- **AND** the active managed-site provider supports reliable base-url channel lookup
 - **AND** the token has a non-empty comparable key
 - **AND** backend search completes without finding any URL-bucket, key, or model signal
 - **WHEN** the managed-site status check completes
@@ -55,6 +59,7 @@ When assessment metadata exists, the rendered Key Management row MUST:
 #### Scenario: Secondary exact model-set review match is shown as unknown
 - **GIVEN** a token is rendered in Key Management
 - **AND** managed-site admin configuration is valid
+- **AND** the active managed-site provider supports reliable base-url channel lookup
 - **AND** no exact channel can be confirmed
 - **AND** the managed-site status check finds a candidate whose normalized `url + models` exactly match the token inputs
 - **WHEN** the managed-site status check completes
@@ -65,6 +70,7 @@ When assessment metadata exists, the rendered Key Management row MUST:
 #### Scenario: Secondary model containment review match is shown as unknown
 - **GIVEN** a token is rendered in Key Management
 - **AND** managed-site admin configuration is valid
+- **AND** the active managed-site provider supports reliable base-url channel lookup
 - **AND** no exact channel or exact model-set match can be confirmed
 - **AND** the managed-site status check finds a candidate whose normalized models contain the token models or are contained by them
 - **WHEN** the managed-site status check completes
@@ -75,6 +81,7 @@ When assessment metadata exists, the rendered Key Management row MUST:
 #### Scenario: Secondary model similarity review match is shown as unknown
 - **GIVEN** a token is rendered in Key Management
 - **AND** managed-site admin configuration is valid
+- **AND** the active managed-site provider supports reliable base-url channel lookup
 - **AND** no exact, exact-model, or containment-based match can be confirmed
 - **AND** the managed-site status check finds a candidate whose normalized model similarity meets or exceeds the configured threshold
 - **WHEN** the managed-site status check completes
@@ -85,6 +92,7 @@ When assessment metadata exists, the rendered Key Management row MUST:
 #### Scenario: URL-only evidence is shown as unknown review state
 - **GIVEN** a token is rendered in Key Management
 - **AND** managed-site admin configuration is valid
+- **AND** the active managed-site provider supports reliable base-url channel lookup
 - **AND** no exact or secondary model match can be confirmed
 - **AND** the managed-site status check can only confirm that a normalized URL bucket exists
 - **WHEN** the managed-site status check completes
@@ -95,6 +103,7 @@ When assessment metadata exists, the rendered Key Management row MUST:
 #### Scenario: Key-only evidence is shown as unknown review state
 - **GIVEN** a token is rendered in Key Management
 - **AND** managed-site admin configuration is valid
+- **AND** the active managed-site provider supports reliable base-url channel lookup
 - **AND** a channel under the normalized URL bucket matches the comparable key
 - **AND** no model-based match can be confirmed
 - **WHEN** the managed-site status check completes
@@ -105,6 +114,7 @@ When assessment metadata exists, the rendered Key Management row MUST:
 #### Scenario: Exact verification is unavailable when no comparable key is available
 - **GIVEN** a token is rendered in Key Management
 - **AND** managed-site admin configuration is valid
+- **AND** the active managed-site provider supports reliable base-url channel lookup
 - **AND** the prepared comparable inputs do not include a non-empty key
 - **AND** no URL, key, or model signal can be confirmed
 - **WHEN** the managed-site status check completes
@@ -125,17 +135,18 @@ When assessment metadata exists, the rendered Key Management row MUST:
 - **THEN** the system shows the token status as `unknown`
 - **AND** the reason is `config-missing`
 
-#### Scenario: Veloera short-circuits because base URL search is unsupported
+#### Scenario: Veloera suppresses per-token status UI and short-circuits verification
 - **GIVEN** a token is rendered in Key Management
 - **AND** the managed-site type is `Veloera`
-- **WHEN** the system determines the token's managed-site channel status
-- **THEN** the system shows the token status as `unknown`
-- **AND** the reason is `veloera-base-url-search-unsupported`
-- **AND** the system does not attempt the shared base-URL search flow
+- **WHEN** the system determines whether managed-site verification is available for that token
+- **THEN** the system does not show per-token managed-site status badges, signal badges, or review links for that token
+- **AND** the system does not attempt the shared base-URL search flow for that token
+- **AND** any defensive token-status resolution is classified as `unknown` with reason `veloera-base-url-search-unsupported`
 
 #### Scenario: Backend search fails unexpectedly
 - **GIVEN** a token is rendered in Key Management
 - **AND** managed-site admin configuration is valid
+- **AND** the active managed-site provider supports reliable base-url channel lookup
 - **WHEN** backend search does not return a usable result
 - **THEN** the system shows the token status as `unknown`
 - **AND** the reason is `backend-search-failed`
@@ -143,26 +154,31 @@ When assessment metadata exists, the rendered Key Management row MUST:
 #### Scenario: Comparable channel inputs cannot be prepared
 - **GIVEN** a token is rendered in Key Management
 - **AND** managed-site admin configuration is valid
+- **AND** the active managed-site provider supports reliable base-url channel lookup
 - **WHEN** input preparation fails or omits required comparable base URL or models data
 - **THEN** the system shows the token status as `unknown`
 - **AND** the reason is `input-preparation-failed`
 
 ### Requirement: Status checks run automatically and support manual refresh
-The system MUST begin managed-site status checks for the tokens in the current Key Management selection after their token inventory is available.
+The system MUST begin managed-site status checks for the tokens in the current Key Management selection after their token inventory is available when the active managed-site provider supports reliable base-URL channel lookup for review/navigation flows.
 
-The system MUST provide a page-level manual refresh action that reruns managed-site status checks for the current Key Management selection.
+The system MUST provide a page-level manual refresh action that reruns managed-site status checks for the current Key Management selection when the active managed-site provider supports reliable base-URL channel lookup for review/navigation flows.
 
 The system MUST reuse in-memory status results for unchanged tokens until a refresh or invalidation event occurs.
 
 The system MUST use bounded concurrency for bulk status checks so the managed-site backend is not flooded with one request per rendered token at once.
 
+When the active managed-site provider does not support reliable base-URL channel lookup, the system MUST skip automatic status checks, MUST suppress the managed-site status refresh action, and MUST show localized page-level guidance that the verification flow is unsupported for that provider.
+
 #### Scenario: Status checks start after token inventory loads
 - **GIVEN** Key Management finishes loading token inventory for the current selection
+- **AND** the active managed-site provider supports reliable base-url channel lookup
 - **WHEN** the token list is rendered
 - **THEN** the system begins managed-site status checks for those tokens without requiring the user to start an import flow
 
 #### Scenario: Manual refresh reruns current-selection checks
 - **GIVEN** Key Management is showing managed-site status results for the current selection
+- **AND** the active managed-site provider supports reliable base-url channel lookup
 - **WHEN** the user triggers the refresh action for managed-site status checks
 - **THEN** the system reruns status checks for the tokens in the current selection
 - **AND** the system replaces the prior results with the refreshed results when the rerun completes
@@ -173,8 +189,18 @@ The system MUST use bounded concurrency for bulk status checks so the managed-si
 - **WHEN** Key Management rerenders without a refresh or invalidation event
 - **THEN** the system reuses the existing managed-site status result for that token
 
+#### Scenario: Veloera selection shows unsupported guidance instead of running checks
+- **GIVEN** Key Management finishes loading token inventory for the current selection
+- **AND** the active managed-site provider is `Veloera`
+- **WHEN** the page renders its managed-site status controls
+- **THEN** the system does not start managed-site status checks for the current selection
+- **AND** the system does not show a managed-site status refresh action
+- **AND** the page shows localized guidance that managed-site channel verification is unsupported for Veloera
+
 ### Requirement: Status results stay in sync with token and managed-site changes
 The system MUST invalidate affected managed-site status results when local token state or managed-site configuration changes could make those results stale.
+
+When the active managed-site provider changes to one that does not support reliable base-URL channel lookup, the system MUST clear previously rendered per-token managed-site status results and switch to the unsupported guidance state instead of rerunning verification checks.
 
 #### Scenario: Successful managed-site import refreshes the affected token
 - **GIVEN** a token is shown with managed-site status `not added` or `unknown`
@@ -188,11 +214,19 @@ The system MUST invalidate affected managed-site status results when local token
 - **THEN** the system invalidates the affected managed-site status result
 - **AND** the system does not continue to show the stale result as final
 
-#### Scenario: Managed-site preference changes invalidate prior results
+#### Scenario: Managed-site preference changes invalidate prior results for supported providers
 - **GIVEN** one or more tokens already have managed-site status results
+- **AND** the updated managed-site provider supports reliable base-url channel lookup
 - **WHEN** the managed-site type or managed-site admin configuration changes
 - **THEN** the system invalidates the affected managed-site status results
 - **AND** the system reruns managed-site status checks before showing refreshed final results
+
+#### Scenario: Managed-site preference changes to Veloera clear prior results
+- **GIVEN** one or more tokens already have managed-site status results
+- **WHEN** the managed-site type changes to `Veloera`
+- **THEN** the system clears the affected per-token managed-site status results
+- **AND** the system stops showing token-level managed-site verification output
+- **AND** the page shows localized guidance that managed-site channel verification is unsupported for Veloera
 
 ### Requirement: Status feedback does not expose secrets
 The system MUST NOT include raw token keys, managed-site admin tokens, or other plaintext credentials in managed-site status labels, explanations, error messages, toasts, or logs emitted for this feature.
