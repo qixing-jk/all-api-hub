@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next"
 
 import { Heading3, SearchableSelect } from "~/components/ui"
 import {
+  ALL_ACCOUNTS_SOURCE_VALUE,
   toAccountSourceValue,
   toProfileSourceValue,
 } from "~/features/ModelList/modelManagementSources"
@@ -37,7 +38,7 @@ export function AccountSelector({
       <Heading3 className="mb-3">{t("selectSource")}</Heading3>
       <SearchableSelect
         options={[
-          { value: "all", label: t("allAccounts") },
+          { value: ALL_ACCOUNTS_SOURCE_VALUE, label: t("allAccounts") },
           ...accounts.map((account) => ({
             value: toAccountSourceValue(account.id),
             label: account.name,

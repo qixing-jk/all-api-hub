@@ -165,4 +165,23 @@ describe("useModelListData", () => {
 
     expect(result.current.selectedSource).toBeNull()
   })
+
+  it("clears a stale account selection even while profiles are still loading", async () => {
+    mockUseApiCredentialProfiles.mockReturnValue({
+      profiles: [],
+      isLoading: true,
+    })
+
+    const { result } = renderHook(() => useModelListData())
+
+    act(() => {
+      result.current.setSelectedSourceValue("account:account-1")
+    })
+
+    await waitFor(() => {
+      expect(result.current.selectedSourceValue).toBe("")
+    })
+
+    expect(result.current.selectedSource).toBeNull()
+  })
 })

@@ -5,7 +5,10 @@ import { VerifyApiCredentialProfileDialog } from "~/features/ApiCredentialProfil
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 
-const mockRunApiVerificationProbe = vi.fn()
+const { loggerErrorMock, mockRunApiVerificationProbe } = vi.hoisted(() => ({
+  loggerErrorMock: vi.fn(),
+  mockRunApiVerificationProbe: vi.fn(),
+}))
 
 vi.mock("~/services/verification/aiApiVerification", async (importOriginal) => {
   const original =
@@ -37,8 +40,23 @@ vi.mock("~/services/apiService/google", () => ({
   fetchGoogleModelIds: (...args: unknown[]) => mockFetchGoogleModelIds(...args),
 }))
 
+vi.mock("~/utils/core/logger", async (importOriginal) => {
+  const original = await importOriginal<typeof import("~/utils/core/logger")>()
+
+  return {
+    ...original,
+    createLogger: () => ({
+      debug: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: (...args: unknown[]) => loggerErrorMock(...args),
+    }),
+  }
+})
+
 describe("VerifyApiCredentialProfileDialog", () => {
   beforeEach(() => {
+    loggerErrorMock.mockReset()
     mockRunApiVerificationProbe.mockReset()
     mockFetchOpenAICompatibleModelIds.mockReset()
     mockFetchAnthropicModelIds.mockReset()
@@ -123,7 +141,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
 
   it("redacts secrets when the initial model fetch fails", async () => {
     mockFetchOpenAICompatibleModelIds.mockRejectedValueOnce(
-      new Error("401 sk-test invalid"),
+      new Error("401 https://example.com sk-test invalid"),
     )
 
     render(
@@ -145,10 +163,15 @@ describe("VerifyApiCredentialProfileDialog", () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText("401 [REDACTED] invalid")).toBeInTheDocument()
+      expect(
+        screen.getByText("401 [REDACTED] [REDACTED] invalid"),
+      ).toBeInTheDocument()
     })
 
     expect(screen.queryByText(/sk-test/)).not.toBeInTheDocument()
+    expect(loggerErrorMock).toHaveBeenCalledWith("Failed to fetch models", {
+      message: "401 [REDACTED] [REDACTED] invalid",
+    })
   })
 
   it("runs a single probe and shows collapsible input/output", async () => {
@@ -213,6 +236,46 @@ describe("VerifyApiCredentialProfileDialog", () => {
     expect(
       await within(probeCard).findByText(/"modelCount": 1/),
     ).toBeInTheDocument()
+  })
+
+  it("redacts baseUrl and apiKey when a probe throws", async () => {
+    const user = userEvent.setup()
+
+    mockRunApiVerificationProbe.mockRejectedValueOnce(
+      new Error("https://example.com sk-test probe failed"),
+    )
+
+    render(
+      <VerifyApiCredentialProfileDialog
+        isOpen={true}
+        onClose={() => {}}
+        profile={{
+          id: "p-1",
+          name: "Profile",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://example.com",
+          apiKey: "sk-test",
+          tagIds: [],
+          notes: "",
+          createdAt: 1,
+          updatedAt: 1,
+        }}
+      />,
+    )
+
+    const probeCard = await screen.findByTestId("profile-verify-probe-models")
+    await user.click(
+      within(probeCard).getByRole("button", {
+        name: "aiApiVerification:verifyDialog.actions.runOne",
+      }),
+    )
+
+    await waitFor(() =>
+      expect(loggerErrorMock).toHaveBeenCalledWith("Probe failed", {
+        probeId: "models",
+        message: "[REDACTED] [REDACTED] probe failed",
+      }),
+    )
   })
 
   it("auto-fills model id from the models probe output", async () => {

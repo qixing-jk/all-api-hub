@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest"
-import { renderHook } from "@testing-library/react"
 
-import { API_TYPES } from "~/services/verification/aiApiVerification"
-import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
+import { useFilteredModels } from "~/features/ModelList/hooks/useFilteredModels"
 import {
   createAllAccountsSource,
   createProfileSource,
 } from "~/features/ModelList/modelManagementSources"
-import { useFilteredModels } from "~/features/ModelList/hooks/useFilteredModels"
 import type { PricingResponse } from "~/services/apiService/common/type"
+import { API_TYPES } from "~/services/verification/aiApiVerification"
+import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
+import { renderHook, waitFor } from "~~/tests/test-utils/render"
 
 const createDisplayAccount = (
   overrides: Partial<DisplaySiteData>,
@@ -46,7 +46,7 @@ const createPricingResponse = (modelNames: string[]): PricingResponse => ({
 })
 
 describe("useFilteredModels", () => {
-  it("preserves profile-backed items when an account filter is active", () => {
+  it("preserves profile-backed items when an account filter is active", async () => {
     const profileSource = createProfileSource({
       id: "profile-1",
       name: "Reusable Key",
@@ -71,11 +71,13 @@ describe("useFilteredModels", () => {
       }),
     )
 
+    await waitFor(() => expect(result.current).not.toBeNull())
+
     expect(result.current.filteredModels).toHaveLength(1)
     expect(result.current.filteredModels[0]?.source.kind).toBe("profile")
   })
 
-  it("computes provider counts from the account-filtered model set", () => {
+  it("computes provider counts from the account-filtered model set", async () => {
     const accountA = createDisplayAccount({
       id: "account-a",
       name: "Account A",
@@ -112,6 +114,8 @@ describe("useFilteredModels", () => {
         accountFilterAccountId: "account-a",
       }),
     )
+
+    await waitFor(() => expect(result.current).not.toBeNull())
 
     expect(result.current.filteredModels).toHaveLength(2)
     expect(result.current.getProviderFilteredCount("OpenAI")).toBe(1)

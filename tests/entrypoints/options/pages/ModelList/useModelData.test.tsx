@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useModelData } from "~/features/ModelList/hooks/useModelData"
 import {
+  createAccountSource,
   createAllAccountsSource,
   createProfileSource,
 } from "~/features/ModelList/modelManagementSources"
@@ -218,5 +219,51 @@ describe("useModelData all-accounts loading", () => {
       result.current.pricingData?.data.map((item) => item.model_name),
     ).toEqual(["gpt-4o-mini", "claude-3-5-sonnet"])
     expect(fetchModelPricing).not.toHaveBeenCalled()
+  })
+
+  it("clears single-account errors when the query becomes idle", async () => {
+    toastSuccessMock.mockReset()
+    toastErrorMock.mockReset()
+
+    const fetchModelPricing = vi.fn().mockRejectedValue(new Error("boom"))
+    vi.mocked(getApiService).mockReturnValue({ fetchModelPricing } as any)
+
+    const account = createDisplayAccount({
+      id: "error-account",
+      baseUrl: "https://error.example.com",
+      userId: 9,
+    })
+    type HookProps = {
+      selectedSource: ReturnType<typeof createAccountSource> | null
+    }
+    const initialProps: HookProps = {
+      selectedSource: createAccountSource(account),
+    }
+
+    const { result, rerender } = renderHook(
+      ({ selectedSource }: HookProps) =>
+        useModelData({
+          selectedSource,
+          accounts: [account],
+        }),
+      {
+        initialProps,
+        wrapper: createWrapper(),
+      },
+    )
+
+    await waitFor(
+      () => {
+        expect(result.current.loadErrorMessage).not.toBeNull()
+      },
+      { timeout: 3000 },
+    )
+
+    rerender({ selectedSource: null })
+
+    await waitFor(() => {
+      expect(result.current.loadErrorMessage).toBeNull()
+      expect(result.current.dataFormatError).toBe(false)
+    })
   })
 })

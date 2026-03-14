@@ -5,6 +5,7 @@ import { useAccountData } from "~/hooks/useAccountData"
 
 import {
   EMPTY_MODEL_MANAGEMENT_CAPABILITIES,
+  isProfileSourceValue,
   resolveModelManagementSource,
   type ModelManagementSource,
 } from "../modelManagementSources"
@@ -46,7 +47,7 @@ export function useModelListData() {
 
   useEffect(() => {
     if (!selectedSourceValue) return
-    if (profilesLoading) return
+    if (profilesLoading && isProfileSourceValue(selectedSourceValue)) return
     if (selectedSource) return
 
     setSelectedSourceValue("")

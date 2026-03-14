@@ -206,14 +206,15 @@ export function VerifyApiCredentialProfileDialog({
           setModelId((current) => (current.trim() ? current : suggestedModelId))
         }
       } catch (error) {
-        const message = toSanitizedErrorSummary(error, [profile.apiKey])
+        const message =
+          toSanitizedErrorSummary(error, [profile.apiKey, profile.baseUrl]) ||
+          t("apiCredentialProfiles:verify.modelsFetchFailed")
+
         logger.error("Failed to fetch models", { message })
 
         if (fetchModelsRequestIdRef.current !== requestId) return
 
-        setFetchModelsError(
-          message || t("apiCredentialProfiles:verify.modelsFetchFailed"),
-        )
+        setFetchModelsError(message)
       } finally {
         if (fetchModelsRequestIdRef.current === requestId) {
           setIsFetchingModels(false)
@@ -283,7 +284,10 @@ export function VerifyApiCredentialProfileDialog({
     } catch (error) {
       logger.error("Probe failed", {
         probeId,
-        message: toSanitizedErrorSummary(error, [profile.apiKey]),
+        message: toSanitizedErrorSummary(error, [
+          profile.apiKey,
+          profile.baseUrl,
+        ]),
       })
 
       const fallback: ApiVerificationProbeResult = {

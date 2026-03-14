@@ -129,6 +129,12 @@ function useSingleAccountModelData(params: {
   })
 
   useEffect(() => {
+    if (selectedSource?.kind !== "account" || !currentAccount) {
+      setDataFormatError(false)
+      setLoadErrorMessage(null)
+      return
+    }
+
     if (query.isFetching) {
       setLoadErrorMessage(null)
       return
@@ -164,6 +170,8 @@ function useSingleAccountModelData(params: {
     query.isFetching,
     query.isSuccess,
     query.error,
+    currentAccount,
+    selectedSource?.kind,
     t,
   ])
 

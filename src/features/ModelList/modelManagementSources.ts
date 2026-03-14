@@ -90,6 +90,13 @@ export function toProfileSourceValue(profileId: string) {
 }
 
 /**
+ * Check whether a serialized selector value refers to a profile-backed source.
+ */
+export function isProfileSourceValue(value: string) {
+  return value.startsWith(PROFILE_SOURCE_PREFIX)
+}
+
+/**
  * Build the aggregate "all accounts" source.
  */
 export function createAllAccountsSource(): ModelManagementSource {

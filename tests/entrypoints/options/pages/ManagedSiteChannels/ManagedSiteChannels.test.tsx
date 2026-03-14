@@ -36,6 +36,11 @@ vi.mock("react-hot-toast", () => ({
   },
 }))
 
+const waitForRowText = (text: string) =>
+  waitFor(() => expect(screen.getByText(text)).toBeInTheDocument(), {
+    timeout: 3000,
+  })
+
 describe("ManagedSiteChannels", () => {
   const mockChannels = (channels: any[]) => {
     vi.mocked(useUserPreferencesContext).mockReturnValue({
@@ -65,12 +70,7 @@ describe("ManagedSiteChannels", () => {
 
     render(<ManagedSiteChannels routeParams={{ search: "site-a" }} />)
 
-    await waitFor(
-      () => {
-        expect(screen.getByText("Alpha")).toBeInTheDocument()
-      },
-      { timeout: 3000 },
-    )
+    await waitForRowText("Alpha")
 
     const input = screen.getByRole("textbox") as HTMLInputElement
     expect(input.value).toBe("site-a")
@@ -85,12 +85,7 @@ describe("ManagedSiteChannels", () => {
 
     render(<ManagedSiteChannels />)
 
-    await waitFor(
-      () => {
-        expect(screen.getByText("Alpha")).toBeInTheDocument()
-      },
-      { timeout: 3000 },
-    )
+    await waitForRowText("Alpha")
 
     const link = screen.getByRole("link", { name: "https://click.me" })
     expect(link.getAttribute("href")).toMatch(/^https:\/\/click\.me\/?$/)
@@ -101,12 +96,7 @@ describe("ManagedSiteChannels", () => {
 
     render(<ManagedSiteChannels routeParams={{}} />)
 
-    await waitFor(
-      () => {
-        expect(screen.getByText("Alpha")).toBeInTheDocument()
-      },
-      { timeout: 3000 },
-    )
+    await waitForRowText("Alpha")
 
     const input = screen.getByRole("textbox") as HTMLInputElement
     fireEvent.change(input, { target: { value: "foo" } })
