@@ -90,27 +90,79 @@
       "description": "Add include/exclude rules with optional regex to control synced models."
     },
     "addRule": "Add filter rule",
+    "ruleTypes": {
+      "pattern": "Pattern matching rule",
+      "probe": "Probe-based rule"
+    },
     "labels": {
+      "ruleType": "Rule type",
       "name": "Filter name",
       "pattern": "Match pattern",
       "description": "Description",
       "action": "Action",
       "enabled": "Enabled",
       "regex": "Regex mode",
-      "delete": "Delete filter"
+      "delete": "Delete filter",
+      "probeType": "Probe type",
+      "apiType": "API type",
+      "verificationBaseUrl": "Verification Base URL",
+      "verificationApiKey": "Verification API key"
     },
     "placeholders": {
       "name": "e.g. Allow GPT-4",
       "pattern": "Exact string or regex pattern",
-      "description": "Optional notes about this rule"
+      "description": "Optional notes about this rule",
+      "verificationBaseUrl": "Leave empty to use channel default credentials",
+      "verificationApiKey": "Leave empty to use channel default credentials"
     },
     "actionOptions": {
       "include": "Include matching models",
       "exclude": "Exclude matching models"
     },
+    "probeTypes": {
+      "models": "Models list probe",
+      "text-generation": "Text generation probe",
+      "tool-calling": "Tool calling probe",
+      "structured-output": "Structured output probe",
+      "web-search": "Web search probe"
+    },
     "hints": {
       "regex": "Regex rules support advanced matching using JavaScript syntax.",
-      "substring": "Plain rules match case-sensitive substrings inside model names."
+      "substring": "Plain rules match case-sensitive substrings inside model names.",
+      "probeCredentials": "Probe rules require credentials to run. If the rule itself doesn't specify credentials, the channel's default verification credentials will be used. If the channel has no verification credentials configured, the channel's own Base URL and Key will be used (if available).",
+      "probePerformance": "Probe rules make actual API calls for each model, which can be slow and consume quota. It's recommended to use pattern matching rules first to narrow down the list, then apply probe rules."
+    },
+    "verificationCredentials": {
+      "title": "Channel verification credentials",
+      "description": "Configure default verification credentials for probe-based rules. If not configured, probe rules will use the channel's own Base URL and Key (if available).",
+      "labels": {
+        "baseUrl": "Base URL",
+        "apiKey": "API key",
+        "apiType": "API type",
+        "sourceProfile": "Source profile",
+        "updatedAt": "Updated at"
+      },
+      "placeholders": {
+        "baseUrl": "e.g. https://api.openai.com/v1",
+        "apiKey": "sk-...",
+        "apiType": "Select API type"
+      },
+      "actions": {
+        "edit": "Edit verification credentials",
+        "save": "Save verification credentials",
+        "clear": "Clear verification credentials",
+        "cancel": "Cancel"
+      },
+      "messages": {
+        "saved": "Verification credentials saved",
+        "cleared": "Verification credentials cleared",
+        "saveFailed": "Failed to save verification credentials: {{error}}",
+        "clearFailed": "Failed to clear verification credentials: {{error}}",
+        "validationBaseUrl": "Base URL is required",
+        "validationApiKey": "API key is required",
+        "validationApiType": "Please select an API type"
+      },
+      "sourceProfileLabel": "From API credential: {{name}}"
     },
     "viewMode": {
       "label": "Edit mode",
@@ -134,6 +186,8 @@
       "validationName": "Please provide a name for each filter.",
       "validationPattern": "Filter pattern cannot be empty.",
       "validationRegex": "Invalid regex pattern: {{error}}",
+      "validationProbeId": "Please select a probe type.",
+      "validationApiType": "Please select an API type.",
       "jsonInvalid": "Invalid filter JSON: {{error}}"
     }
   }

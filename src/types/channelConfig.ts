@@ -5,9 +5,18 @@ export interface ChannelModelFilterSettings {
   updatedAt: number
 }
 
+export interface VerificationCredentials {
+  baseUrl: string
+  apiKey: string
+  apiType: string
+  sourceProfileId?: string
+  updatedAt: number
+}
+
 export interface ChannelConfig {
   channelId: number
   modelFilterSettings: ChannelModelFilterSettings
+  verificationCredentials?: VerificationCredentials
   createdAt: number
   updatedAt: number
 }

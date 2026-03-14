@@ -17,6 +17,7 @@ import {
 } from "~/types/managedSiteModelSync"
 import { createLogger } from "~/utils/core/logger"
 
+import { filterModelsByProbeRules } from "./probeFilterExecutor"
 import { RateLimiter } from "./rateLimiter"
 
 /**
@@ -254,9 +255,10 @@ export class ModelSyncService {
           this.globalChannelModelFilters,
           allowListedModels,
         )
-        const channelScopedModels = this.applyChannelFilters(
+        const channelScopedModels = await this.applyChannelFilters(
           channel.id,
           globallyScopedModels,
+          channel,
         )
 
         if (this.haveModelsChanged(oldModels, channelScopedModels)) {
@@ -453,8 +455,11 @@ export class ModelSyncService {
       return normalized
     }
 
-    const includeRules = filters.filter((rule) => rule.action === "include")
-    const excludeRules = filters.filter((rule) => rule.action === "exclude")
+    const patternRules = filters.filter(
+      (rule) => !rule.ruleType || rule.ruleType === "pattern",
+    )
+    const includeRules = patternRules.filter((rule) => rule.action === "include")
+    const excludeRules = patternRules.filter((rule) => rule.action === "exclude")
 
     let result = normalized
 
@@ -483,11 +488,36 @@ export class ModelSyncService {
    * to the provided models.
    * @param channelId Channel id for looking up config rules.
    * @param models Models after global filtering.
+   * @param channel Full channel object for probe credential resolution.
    */
-  private applyChannelFilters(channelId: number, models: string[]): string[] {
+  private async applyChannelFilters(
+    channelId: number,
+    models: string[],
+    channel: ManagedSiteChannel,
+  ): Promise<string[]> {
     const rules =
       this.channelConfigs?.[channelId]?.modelFilterSettings?.rules ?? []
-    return this.applyFilters(rules, models)
+    const patternFiltered = this.applyFilters(rules, models)
+
+    const probeRules = rules.filter(
+      (rule) => rule.enabled && rule.ruleType === "probe",
+    )
+
+    if (probeRules.length === 0) {
+      return patternFiltered
+    }
+
+    const channelConfig = this.channelConfigs?.[channelId]
+
+    const probeFiltered = await filterModelsByProbeRules({
+      models: patternFiltered,
+      channel,
+      probeRules,
+      channelConfig,
+      rateLimiter: this.rateLimiter ?? undefined,
+    })
+
+    return probeFiltered
   }
 
   /**
