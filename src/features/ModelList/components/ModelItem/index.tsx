@@ -3,10 +3,11 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { Card, CardContent } from "~/components/ui"
+import type { ModelManagementItemSource } from "~/features/ModelList/modelManagementSources"
 import type { ModelPricing } from "~/services/apiService/common/type"
 import type { CalculatedPrice } from "~/services/models/utils/modelPricing"
-import type { DisplaySiteData } from "~/types"
 import { createLogger } from "~/utils/core/logger"
+import { tryParseUrl } from "~/utils/core/urlParsing"
 
 import { ModelItemDescription } from "./ModelItemDescription"
 import { ModelItemDetails } from "./ModelItemDetails"
@@ -30,12 +31,14 @@ interface ModelItemProps {
   onGroupClick?: (group: string) => void // 新增：点击分组时的回调函数
   availableGroups?: string[] // 新增：用户的所有可用分组列表
   isAllGroupsMode?: boolean // 新增：是否为"所有分组"模式
-  account?: DisplaySiteData
-  accountName?: string
-  onVerifyModel?: (account: DisplaySiteData, modelId: string) => void
-  onVerifyCliSupport?: (account: DisplaySiteData, modelId: string) => void
+  source: ModelManagementItemSource
+  onVerifyModel?: (source: ModelManagementItemSource, modelId: string) => void
+  onVerifyCliSupport?: (
+    source: ModelManagementItemSource,
+    modelId: string,
+  ) => void
   onOpenModelKeyDialog?: (
-    account: DisplaySiteData,
+    account: Extract<ModelManagementItemSource, { kind: "account" }>["account"],
     modelId: string,
     modelEnableGroups: string[],
   ) => void
@@ -58,8 +61,7 @@ export default function ModelItem(props: ModelItemProps) {
     onGroupClick,
     availableGroups = [],
     isAllGroupsMode = false,
-    account,
-    accountName,
+    source,
     onVerifyModel,
     onVerifyCliSupport,
     onOpenModelKeyDialog,
@@ -76,10 +78,28 @@ export default function ModelItem(props: ModelItemProps) {
     }
   }
 
+  const sourceLabel =
+    source.kind === "profile"
+      ? t("sourceLabels.profileBadge", {
+          name: source.profile.name,
+          host:
+            tryParseUrl(source.profile.baseUrl)?.hostname ??
+            source.profile.baseUrl,
+        })
+      : source.account.name
+
+  const showGroupDetails = source.capabilities.supportsGroupFiltering
+  const showPricing = source.capabilities.supportsPricing
+  const canExpand =
+    source.kind !== "profile" &&
+    (showEndpointTypes || showGroupDetails || showPricing)
+
   // 检查模型是否对当前用户分组可用
-  const isAvailableForUser = isAllGroupsMode
-    ? availableGroups.some((group) => model.enable_groups.includes(group)) // 所有分组模式：任何一个用户分组可用即可
-    : model.enable_groups.includes(userGroup) // 特定分组模式：必须该分组可用
+  const isAvailableForUser = showGroupDetails
+    ? isAllGroupsMode
+      ? availableGroups.some((group) => model.enable_groups.includes(group)) // 所有分组模式：任何一个用户分组可用即可
+      : model.enable_groups.includes(userGroup) // 特定分组模式：必须该分组可用
+    : true
 
   return (
     <Card
@@ -97,32 +117,39 @@ export default function ModelItem(props: ModelItemProps) {
             model={model}
             isAvailableForUser={isAvailableForUser}
             handleCopyModelName={handleCopyModelName}
-            accountName={accountName}
+            sourceLabel={sourceLabel}
+            showPricingMetadata={showPricing}
+            showAvailabilityBadge={showGroupDetails}
             onOpenKeyDialog={
-              account && onOpenModelKeyDialog
+              source.kind === "account" &&
+              source.capabilities.supportsTokenCompatibility &&
+              onOpenModelKeyDialog
                 ? () =>
                     onOpenModelKeyDialog(
-                      account,
+                      source.account,
                       model.model_name,
                       model.enable_groups,
                     )
                 : undefined
             }
             onVerifyApi={
-              account && onVerifyModel
-                ? () => onVerifyModel(account, model.model_name)
+              source.capabilities.supportsCredentialVerification &&
+              onVerifyModel
+                ? () => onVerifyModel(source, model.model_name)
                 : undefined
             }
             onVerifyCliSupport={
-              account && onVerifyCliSupport
-                ? () => onVerifyCliSupport(account, model.model_name)
+              source.capabilities.supportsCliVerification && onVerifyCliSupport
+                ? () => onVerifyCliSupport(source, model.model_name)
                 : undefined
             }
           />
-          <ModelItemExpandButton
-            isExpanded={isExpanded}
-            onToggleExpand={() => setIsExpanded(!isExpanded)}
-          />
+          {canExpand && (
+            <ModelItemExpandButton
+              isExpanded={isExpanded}
+              onToggleExpand={() => setIsExpanded(!isExpanded)}
+            />
+          )}
         </div>
         <ModelItemDescription
           model={model}
@@ -133,6 +160,7 @@ export default function ModelItem(props: ModelItemProps) {
           calculatedPrice={calculatedPrice}
           exchangeRate={exchangeRate}
           showRealPrice={showRealPrice}
+          showPricing={showPricing}
           showRatioColumn={showRatioColumn}
           isAvailableForUser={isAvailableForUser}
         />
@@ -144,6 +172,8 @@ export default function ModelItem(props: ModelItemProps) {
             calculatedPrice={calculatedPrice}
             showEndpointTypes={showEndpointTypes}
             userGroup={userGroup}
+            showGroupDetails={showGroupDetails}
+            showPricingDetails={showPricing}
             onGroupClick={onGroupClick}
           />
         )}

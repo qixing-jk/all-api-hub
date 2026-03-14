@@ -16,6 +16,7 @@ interface ModelItemPricingProps {
   calculatedPrice: CalculatedPrice
   exchangeRate: number
   showRealPrice: boolean
+  showPricing: boolean
   showRatioColumn: boolean
   isAvailableForUser: boolean
 }
@@ -25,10 +26,15 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
   calculatedPrice,
   exchangeRate,
   showRealPrice,
+  showPricing,
   showRatioColumn,
   isAvailableForUser,
 }) => {
   const { t } = useTranslation("modelList")
+  if (!showPricing) {
+    return null
+  }
+
   const tokenBillingType = isTokenBillingType(model.quota_type)
   const perCallPrice = calculatedPrice.perCallPrice
   return (

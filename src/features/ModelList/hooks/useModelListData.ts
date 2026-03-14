@@ -1,7 +1,13 @@
 import { useEffect, useMemo } from "react"
 
+import { useApiCredentialProfiles } from "~/features/ApiCredentialProfiles/hooks/useApiCredentialProfiles"
 import { useAccountData } from "~/hooks/useAccountData"
 
+import {
+  EMPTY_MODEL_MANAGEMENT_CAPABILITIES,
+  resolveModelManagementSource,
+  type ModelManagementSource,
+} from "../modelManagementSources"
 import { useFilteredModels } from "./useFilteredModels"
 import { useModelData } from "./useModelData"
 import { useModelListState } from "./useModelListState"
@@ -14,58 +20,87 @@ export function useModelListData() {
   // Single source of account data
   const { enabledDisplayData } = useAccountData()
   const accounts = useMemo(() => enabledDisplayData || [], [enabledDisplayData])
+  const { profiles } = useApiCredentialProfiles()
 
   // UI state
   const state = useModelListState()
+  const {
+    selectedSourceValue,
+    setSelectedSourceValue,
+    selectedGroup,
+    searchTerm,
+    selectedProvider,
+    allAccountsFilterAccountId,
+    setAllAccountsFilterAccountId,
+  } = state
 
-  // Compute current account
-  const currentAccount = useMemo(
-    () => accounts.find((acc) => acc.id === state.selectedAccount),
-    [accounts, state.selectedAccount],
+  const selectedSource = useMemo<ModelManagementSource | null>(
+    () =>
+      resolveModelManagementSource({
+        value: selectedSourceValue,
+        accounts,
+        profiles,
+      }),
+    [accounts, profiles, selectedSourceValue],
   )
 
   useEffect(() => {
-    if (!state.selectedAccount || state.selectedAccount === "all") return
+    if (!selectedSourceValue) return
+    if (selectedSource) return
 
-    const accountExists = accounts.some(
-      (acc) => acc.id === state.selectedAccount,
-    )
-    if (!accountExists) {
-      state.setSelectedAccount("")
-    }
-  }, [accounts, state, state.selectedAccount, state.setSelectedAccount])
+    setSelectedSourceValue("")
+  }, [selectedSource, selectedSourceValue, setSelectedSourceValue])
 
-  // Data loading (no longer calls useAccountData internally)
+  useEffect(() => {
+    if (selectedSource?.kind === "all-accounts") return
+    if (allAccountsFilterAccountId === null) return
+    setAllAccountsFilterAccountId(null)
+  }, [
+    allAccountsFilterAccountId,
+    selectedSource?.kind,
+    setAllAccountsFilterAccountId,
+  ])
+
+  const currentAccount = useMemo(
+    () =>
+      selectedSource?.kind === "account" ? selectedSource.account : undefined,
+    [selectedSource],
+  )
+
+  const currentProfile = useMemo(
+    () =>
+      selectedSource?.kind === "profile" ? selectedSource.profile : undefined,
+    [selectedSource],
+  )
+
+  const sourceCapabilities =
+    selectedSource?.capabilities ?? EMPTY_MODEL_MANAGEMENT_CAPABILITIES
+
   const modelData = useModelData({
-    selectedAccount: state.selectedAccount,
+    selectedSource,
     accounts,
-    selectedGroup: state.selectedGroup,
   })
 
-  // Filtering
   const filteredData = useFilteredModels({
     pricingData: modelData.pricingData,
     pricingContexts: modelData.pricingContexts,
-    currentAccount,
-    selectedGroup: state.selectedGroup,
-    searchTerm: state.searchTerm,
-    selectedProvider: state.selectedProvider,
-    accountFilterAccountId: state.allAccountsFilterAccountId,
+    selectedSource,
+    selectedGroup,
+    searchTerm,
+    selectedProvider,
+    accountFilterAccountId: allAccountsFilterAccountId,
   })
 
-  // Return unified state
   return {
-    // Account data
     accounts,
+    profiles,
+    selectedSource,
     currentAccount,
+    currentProfile,
+    sourceCapabilities,
 
-    // Spread UI state
     ...state,
-
-    // Spread model data
     ...modelData,
-
-    // Spread filtered data
     ...filteredData,
   }
 }

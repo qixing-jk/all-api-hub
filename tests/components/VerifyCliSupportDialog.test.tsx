@@ -25,6 +25,56 @@ vi.mock("~/services/verification/cliSupportVerification", () => ({
 }))
 
 describe("VerifyCliSupportDialog", () => {
+  it("runs CLI support directly from a stored profile without loading account tokens", async () => {
+    mockRunCliSupportTool.mockResolvedValueOnce({
+      id: "claude",
+      probeId: "tool-calling",
+      status: "pass",
+      latencyMs: 12,
+      summary: "Supported",
+      summaryKey: "verifyDialog.summaries.supported",
+      input: { foo: 1 },
+      output: { bar: 2 },
+    })
+
+    render(
+      <VerifyCliSupportDialog
+        isOpen={true}
+        onClose={() => {}}
+        profile={{
+          id: "p1",
+          name: "Profile",
+          apiType: "openai-compatible" as any,
+          baseUrl: "https://example.com",
+          apiKey: "profile-secret",
+          tagIds: [],
+          notes: "",
+          createdAt: 1,
+          updatedAt: 1,
+        }}
+        initialModelId="gpt-test"
+      />,
+    )
+
+    const toolCard = await screen.findByTestId("verify-cli-claude")
+    const runButton = within(toolCard).getByRole("button", {
+      name: "cliSupportVerification:verifyDialog.actions.runOne",
+    })
+    await waitFor(() => expect(runButton).toBeEnabled())
+    fireEvent.click(runButton)
+
+    await waitFor(() => {
+      expect(mockRunCliSupportTool).toHaveBeenCalledWith({
+        toolId: "claude",
+        baseUrl: "https://example.com",
+        apiKey: "profile-secret",
+        modelId: "gpt-test",
+      })
+    })
+
+    expect(mockFetchAccountTokens).not.toHaveBeenCalled()
+  })
+
   it("renders tool items and a single model input before running", async () => {
     mockFetchAccountTokens.mockResolvedValueOnce([
       {
@@ -92,6 +142,7 @@ describe("VerifyCliSupportDialog", () => {
   })
 
   it("runs and retries a single tool and shows collapsible input/output", async () => {
+    mockFetchAccountTokens.mockReset()
     mockFetchAccountTokens.mockResolvedValueOnce([
       {
         id: 1,
@@ -186,6 +237,7 @@ describe("VerifyCliSupportDialog", () => {
   })
 
   it("disables tool runs when no model id is available", async () => {
+    mockFetchAccountTokens.mockReset()
     mockFetchAccountTokens.mockResolvedValueOnce([
       {
         id: 1,

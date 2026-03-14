@@ -3,20 +3,23 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
+import type { ModelManagementSource } from "~/features/ModelList/modelManagementSources"
+import {
+  buildApiCredentialProfilePricingResponse,
+  fetchApiCredentialModelIds,
+} from "~/services/apiCredentialProfiles/modelCatalog"
 import { getApiService } from "~/services/apiService"
 import type { PricingResponse } from "~/services/apiService/common/type"
 import {
   MODEL_PRICING_CACHE_TTL_MS,
   modelPricingCache,
 } from "~/services/models/modelPricingCache"
+import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import type { DisplaySiteData } from "~/types"
 
-type SelectedAccountValue = string | "all"
-
 interface UseModelDataProps {
-  selectedAccount: SelectedAccountValue
+  selectedSource: ModelManagementSource | null
   accounts: DisplaySiteData[]
-  selectedGroup: string
 }
 
 export interface AccountPricingContext {
@@ -39,29 +42,34 @@ interface UseModelDataReturn {
   isLoading: boolean
   dataFormatError: boolean
   accountQueryStates: AccountQueryState[]
-  loadPricingData: (accountId: string) => Promise<void>
+  loadPricingData: () => Promise<void>
+  loadErrorMessage: string | null
 }
 
 /**
  * Fetches pricing data for a single selected account with caching and error handling.
  * @param params Input parameters for the hook.
- * @param params.selectedAccount Account id to load pricing for.
+ * @param params.selectedSource Account-backed source to load pricing for.
  * @param params.accounts All available accounts.
  * @returns Pricing data, loading flags, query states, and reload helper.
  */
 function useSingleAccountModelData(params: {
-  selectedAccount: string
+  selectedSource: ModelManagementSource | null
   accounts: DisplaySiteData[]
 }): UseModelDataReturn {
-  const { selectedAccount, accounts } = params
+  const { selectedSource, accounts } = params
   const { t } = useTranslation("modelList")
   const [dataFormatError, setDataFormatError] = useState(false)
+  const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null)
 
   const safeDisplayData = useMemo(() => accounts || [], [accounts])
 
   const currentAccount = useMemo(
-    () => safeDisplayData.find((acc) => acc.id === selectedAccount),
-    [safeDisplayData, selectedAccount],
+    () =>
+      selectedSource?.kind === "account"
+        ? safeDisplayData.find((acc) => acc.id === selectedSource.account.id)
+        : undefined,
+    [safeDisplayData, selectedSource],
   )
 
   const queryKey = useMemo(
@@ -121,8 +129,14 @@ function useSingleAccountModelData(params: {
   })
 
   useEffect(() => {
+    if (query.isFetching) {
+      setLoadErrorMessage(null)
+      return
+    }
+
     if (query.isSuccess) {
       setDataFormatError(false)
+      setLoadErrorMessage(null)
       toast.success(t("status.dataLoaded"))
       return
     }
@@ -134,24 +148,30 @@ function useSingleAccountModelData(params: {
 
       if (typedError?.code === "INVALID_FORMAT") {
         setDataFormatError(true)
+        setLoadErrorMessage(null)
         toast.error(t("status.formatNotStandard"))
         return
       }
 
       setDataFormatError(false)
-      toast.error(t("status.loadFailed"))
+      const message = t("status.loadFailed")
+      setLoadErrorMessage(message)
+      toast.error(message)
     }
-  }, [query.data, query.isSuccess, query.isError, query.error, t])
+  }, [
+    query.data,
+    query.isError,
+    query.isFetching,
+    query.isSuccess,
+    query.error,
+    t,
+  ])
 
-  const loadPricingData = useCallback(
-    async (accountId: string) => {
-      if (!currentAccount) return
-      if (accountId !== currentAccount.id) return
-      await modelPricingCache.invalidate(currentAccount.id)
-      await query.refetch()
-    },
-    [currentAccount, query],
-  )
+  const loadPricingData = useCallback(async () => {
+    if (!currentAccount) return
+    await modelPricingCache.invalidate(currentAccount.id)
+    await query.refetch()
+  }, [currentAccount, query])
 
   const pricingContexts: AccountPricingContext[] = useMemo(
     () =>
@@ -168,6 +188,7 @@ function useSingleAccountModelData(params: {
     dataFormatError,
     accountQueryStates: [],
     loadPricingData,
+    loadErrorMessage,
   }
 }
 
@@ -181,6 +202,7 @@ function useAllAccountsModelData(
   accounts: DisplaySiteData[],
   enabled: boolean,
 ): UseModelDataReturn {
+  const { t } = useTranslation("modelList")
   const safeDisplayData = useMemo(() => accounts || [], [accounts])
 
   const queries = useQueries({
@@ -289,23 +311,116 @@ function useAllAccountsModelData(
     dataFormatError,
     accountQueryStates,
     loadPricingData,
+    loadErrorMessage: queries.some((query) => query.isError)
+      ? t("status.loadFailed")
+      : null,
+  }
+}
+
+/**
+ * Loads a model catalog directly from a stored API credential profile.
+ * @param selectedSource Profile-backed source, when selected.
+ * @returns Profile-backed pricing response shim plus loading metadata.
+ */
+function useProfileModelData(
+  selectedSource: ModelManagementSource | null,
+): UseModelDataReturn {
+  const { t } = useTranslation("modelList")
+
+  const currentProfile =
+    selectedSource?.kind === "profile" ? selectedSource.profile : null
+
+  const query = useQuery<PricingResponse, Error>({
+    queryKey: currentProfile
+      ? [
+          "model-catalog",
+          "profile",
+          currentProfile.id,
+          currentProfile.updatedAt,
+        ]
+      : ["model-catalog", "profile", "none"],
+    enabled: !!currentProfile,
+    staleTime: MODEL_PRICING_CACHE_TTL_MS,
+    refetchOnWindowFocus: false,
+    retry: 1,
+    queryFn: async () => {
+      if (!currentProfile) {
+        throw new Error("No profile selected")
+      }
+
+      const modelIds = await fetchApiCredentialModelIds({
+        apiType: currentProfile.apiType,
+        baseUrl: currentProfile.baseUrl,
+        apiKey: currentProfile.apiKey,
+      })
+
+      return buildApiCredentialProfilePricingResponse(modelIds)
+    },
+  })
+
+  const loadErrorMessage = useMemo(() => {
+    if (!currentProfile || !query.isError) {
+      return null
+    }
+
+    return (
+      toSanitizedErrorSummary(query.error, [currentProfile.apiKey]) ||
+      t("status.loadFailed")
+    )
+  }, [currentProfile, query.error, query.isError, t])
+
+  useEffect(() => {
+    if (!currentProfile) return
+
+    if (query.isFetching) {
+      return
+    }
+
+    if (query.isSuccess) {
+      toast.success(t("status.dataLoaded"))
+      return
+    }
+
+    if (loadErrorMessage) {
+      toast.error(
+        t("status.profileLoadFailed", {
+          errorMessage: loadErrorMessage,
+        }),
+      )
+    }
+  }, [currentProfile, loadErrorMessage, query.isFetching, query.isSuccess, t])
+
+  const loadPricingData = useCallback(async () => {
+    if (!currentProfile) return
+    await query.refetch()
+  }, [currentProfile, query])
+
+  return {
+    pricingData: query.data ?? null,
+    pricingContexts: [],
+    isLoading: query.isFetching,
+    dataFormatError: false,
+    accountQueryStates: [],
+    loadPricingData,
+    loadErrorMessage,
   }
 }
 
 /**
  * Provides model pricing data for either a single account or all accounts.
  * @param params Hook input parameters.
- * @param params.selectedAccount Selected account id or "all".
+ * @param params.selectedSource Selected model-management source.
  * @param params.accounts Available accounts list.
  * @returns Pricing data, contexts, loading state, and query summaries.
  */
 export function useModelData(params: UseModelDataProps): UseModelDataReturn {
-  const { selectedAccount, accounts } = params
+  const { selectedSource, accounts } = params
   const safeDisplayData = useMemo(() => accounts || [], [accounts])
-  const isAllAccounts = selectedAccount === "all"
+  const isAllAccounts = selectedSource?.kind === "all-accounts"
+  const isProfileSource = selectedSource?.kind === "profile"
 
   const singleAccountResult = useSingleAccountModelData({
-    selectedAccount: isAllAccounts ? "" : selectedAccount,
+    selectedSource: isAllAccounts || isProfileSource ? null : selectedSource,
     accounts: safeDisplayData,
   })
 
@@ -314,5 +429,11 @@ export function useModelData(params: UseModelDataProps): UseModelDataReturn {
     isAllAccounts,
   )
 
-  return isAllAccounts ? allAccountsResult : singleAccountResult
+  const profileResult = useProfileModelData(
+    isProfileSource ? selectedSource : null,
+  )
+
+  if (isAllAccounts) return allAccountsResult
+  if (isProfileSource) return profileResult
+  return singleAccountResult
 }

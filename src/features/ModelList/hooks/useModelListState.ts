@@ -2,8 +2,6 @@ import { useState } from "react"
 
 import type { ProviderType } from "~/services/models/utils/modelProviders"
 
-type SelectedAccountValue = string | "all"
-
 /**
  * Manages view state for the model list page.
  * Keeps selected account, provider, group, search term, and display toggles.
@@ -11,8 +9,7 @@ type SelectedAccountValue = string | "all"
  */
 export function useModelListState() {
   // 状态管理
-  const [selectedAccount, setSelectedAccount] =
-    useState<SelectedAccountValue>("") // 当前选中的账号ID
+  const [selectedSourceValue, setSelectedSourceValue] = useState("") // 当前选中的数据源
   const [searchTerm, setSearchTerm] = useState("") // 搜索关键词
   const [selectedProvider, setSelectedProvider] = useState<
     ProviderType | "all"
@@ -28,8 +25,8 @@ export function useModelListState() {
   const [showEndpointTypes, setShowEndpointTypes] = useState(true) // 是否显示端点类型
 
   return {
-    selectedAccount,
-    setSelectedAccount,
+    selectedSourceValue,
+    setSelectedSourceValue,
     searchTerm,
     setSearchTerm,
     selectedProvider,

@@ -4,9 +4,15 @@
   "provider": "Provider",
   "account": "Account",
   "search": "Search",
+  "selectSource": "Select Source",
   "selectAccount": "Select Account",
+  "pleaseSelectSource": "Please select a source",
   "pleaseSelectAccount": "Please select account",
   "allAccounts": "All accounts",
+  "sourceLabels": {
+    "profileOption": "API Credential: {{name}} · {{host}}",
+    "profileBadge": "Profile: {{name}} · {{host}}"
+  },
   "searchModels": "Search Models",
   "searchPlaceholder": "Enter model name or description...",
   "userGroup": "User Group",
@@ -26,7 +32,11 @@
     "incompatible": "format incompatible"
   },
   "noMatchingModels": "No matching models found",
-  "pleaseSelectFirst": "Please select an account first to view model list",
+  "pleaseSelectFirst": "Please select an account or API credential profile first to view model list",
+  "profileSourceNotice": {
+    "title": "Profile-backed model catalog",
+    "description": "Stored API credential profiles only provide model discovery and verification. Pricing, group filters, account summaries, and key compatibility are unavailable for this source."
+  },
   "allProviders": "All Providers ({{count}})",
   "providerTabs": {
     "scrollLeft": "Scroll provider tabs left",
@@ -52,6 +62,9 @@
     "loading": "Loading model data...",
     "dataLoaded": "Model data loaded successfully",
     "loadFailed": "Failed to load model data, please try again later",
+    "genericLoadFailedTitle": "Failed to load model data",
+    "profileLoadFailedTitle": "Failed to load models for this API credential profile",
+    "profileLoadFailed": "Failed to load models for this API credential profile: {{errorMessage}}",
     "incompatibleFormat": "Data format incompatible",
     "incompatibleDesc": "The model data interface of the current site does not conform to the standard specification, possibly due to secondary development of the site. The extension cannot parse the model pricing information of this site for the time being",
     "goToSitePricing": "Go to site to view pricing information",

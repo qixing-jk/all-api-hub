@@ -20,6 +20,8 @@ vi.mock("~/services/verification/aiApiVerification", async (importOriginal) => {
 })
 
 const mockFetchOpenAICompatibleModelIds = vi.fn()
+const mockFetchAnthropicModelIds = vi.fn()
+const mockFetchGoogleModelIds = vi.fn()
 
 vi.mock("~/services/apiService/openaiCompatible", () => ({
   fetchOpenAICompatibleModelIds: (...args: unknown[]) =>
@@ -27,18 +29,23 @@ vi.mock("~/services/apiService/openaiCompatible", () => ({
 }))
 
 vi.mock("~/services/apiService/anthropic", () => ({
-  fetchAnthropicModelIds: vi.fn(),
+  fetchAnthropicModelIds: (...args: unknown[]) =>
+    mockFetchAnthropicModelIds(...args),
 }))
 
 vi.mock("~/services/apiService/google", () => ({
-  fetchGoogleModelIds: vi.fn(),
+  fetchGoogleModelIds: (...args: unknown[]) => mockFetchGoogleModelIds(...args),
 }))
 
 describe("VerifyApiCredentialProfileDialog", () => {
   beforeEach(() => {
     mockRunApiVerificationProbe.mockReset()
     mockFetchOpenAICompatibleModelIds.mockReset()
+    mockFetchAnthropicModelIds.mockReset()
+    mockFetchGoogleModelIds.mockReset()
     mockFetchOpenAICompatibleModelIds.mockResolvedValue([])
+    mockFetchAnthropicModelIds.mockResolvedValue([])
+    mockFetchGoogleModelIds.mockResolvedValue([])
   })
 
   it("renders probe items before running", async () => {
@@ -111,6 +118,36 @@ describe("VerifyApiCredentialProfileDialog", () => {
         "gpt-4o-mini",
       )
     })
+  })
+
+  it("redacts secrets when the initial model fetch fails", async () => {
+    mockFetchOpenAICompatibleModelIds.mockRejectedValueOnce(
+      new Error("401 sk-test invalid"),
+    )
+
+    render(
+      <VerifyApiCredentialProfileDialog
+        isOpen={true}
+        onClose={() => {}}
+        profile={{
+          id: "p-1",
+          name: "Profile",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://example.com",
+          apiKey: "sk-test",
+          tagIds: [],
+          notes: "",
+          createdAt: 1,
+          updatedAt: 1,
+        }}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText("401 [REDACTED] invalid")).toBeInTheDocument()
+    })
+
+    expect(screen.queryByText(/sk-test/)).not.toBeInTheDocument()
   })
 
   it("runs a single probe and shows collapsible input/output", async () => {
@@ -228,6 +265,82 @@ describe("VerifyApiCredentialProfileDialog", () => {
         "m2",
       )
     })
+  })
+
+  it("allows temporarily switching apiType for profile verification", async () => {
+    const user = userEvent.setup()
+
+    mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce(["gpt-4o-mini"])
+    mockFetchAnthropicModelIds.mockResolvedValueOnce(["claude-3-5-sonnet"])
+    mockRunApiVerificationProbe.mockResolvedValueOnce({
+      id: "models",
+      status: "pass",
+      latencyMs: 10,
+      summary: "Fetched models",
+      output: {
+        modelCount: 1,
+        suggestedModelId: "claude-3-5-sonnet",
+        modelIdsPreview: ["claude-3-5-sonnet"],
+      },
+    })
+
+    render(
+      <VerifyApiCredentialProfileDialog
+        isOpen={true}
+        onClose={() => {}}
+        profile={{
+          id: "p-1",
+          name: "Profile",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://example.com",
+          apiKey: "sk-test",
+          tagIds: [],
+          notes: "",
+          createdAt: 1,
+          updatedAt: 1,
+        }}
+      />,
+    )
+
+    await waitFor(() =>
+      expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledWith({
+        baseUrl: "https://example.com",
+        apiKey: "sk-test",
+      }),
+    )
+
+    const apiTypeSelect = screen.getAllByRole("combobox")[0]
+    await user.click(apiTypeSelect)
+    await user.click(
+      await screen.findByText(
+        "aiApiVerification:verifyDialog.apiTypes.anthropic",
+      ),
+    )
+
+    await waitFor(() =>
+      expect(mockFetchAnthropicModelIds).toHaveBeenCalledWith({
+        baseUrl: "https://example.com",
+        apiKey: "sk-test",
+      }),
+    )
+
+    const modelsProbeCard = await screen.findByTestId(
+      "profile-verify-probe-models",
+    )
+    await user.click(
+      within(modelsProbeCard).getByRole("button", {
+        name: "aiApiVerification:verifyDialog.actions.runOne",
+      }),
+    )
+
+    await waitFor(() =>
+      expect(mockRunApiVerificationProbe).toHaveBeenCalledWith(
+        expect.objectContaining({
+          apiType: API_TYPES.ANTHROPIC,
+          probeId: "models",
+        }),
+      ),
+    )
   })
 
   it("run all uses models probe suggestion for dependent probes", async () => {

@@ -54,8 +54,13 @@ function buildInitialToolState(): ToolItemState[] {
  * to pick an API type manually.
  */
 export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
-  const { isOpen, onClose, account, initialModelId } = props
+  const { isOpen, onClose, initialModelId } = props
   const { t } = useTranslation("cliSupportVerification")
+  const account = "account" in props ? props.account : null
+  const profile = "profile" in props ? props.profile : null
+  const isProfileSource = profile !== null
+  const sourceBaseUrl = profile?.baseUrl ?? account?.baseUrl ?? ""
+  const sourceName = profile?.name ?? account?.name ?? ""
 
   const [modelId, setModelId] = useState<string>(initialModelId?.trim() ?? "")
   const [isRunning, setIsRunning] = useState(false)
@@ -67,16 +72,17 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
   const selectedToken = tokens.find(
     (tok) => tok.id.toString() === selectedTokenId,
   )
+  const activeApiKey = profile?.apiKey ?? selectedToken?.key ?? null
 
   const tokenModelHint = useMemo(() => {
-    if (!selectedToken) return ""
+    if (!selectedToken || isProfileSource) return ""
     return (
       guessModelIdFromToken({
         models: selectedToken.models,
         model_limits: selectedToken.model_limits,
       }) ?? ""
     )
-  }, [selectedToken])
+  }, [isProfileSource, selectedToken])
 
   const resolvedModelId = (modelId.trim() || tokenModelHint.trim() || "").trim()
 
@@ -90,13 +96,20 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
       <div className="min-w-0">
         <Heading5 className="truncate">{t("verifyDialog.title")}</Heading5>
         <div className="dark:text-dark-text-tertiary mt-1 truncate text-xs text-gray-500">
-          {account.baseUrl} · {account.name}
+          {sourceBaseUrl} · {sourceName}
         </div>
       </div>
     )
-  }, [account.baseUrl, account.name, t])
+  }, [sourceBaseUrl, sourceName, t])
 
   const loadTokens = useCallback(async () => {
+    if (!account) {
+      setTokens([])
+      setSelectedTokenId("")
+      setIsLoadingTokens(false)
+      return
+    }
+
     setIsLoadingTokens(true)
     try {
       const accountTokens = await getApiService(
@@ -136,20 +149,12 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
     } finally {
       setIsLoadingTokens(false)
     }
-  }, [
-    account.authType,
-    account.baseUrl,
-    account.cookieAuthSessionCookie,
-    account.id,
-    account.siteType,
-    account.token,
-    account.userId,
-  ])
+  }, [account])
 
   const runTool = async (
     toolId: (typeof CLI_TOOL_IDS)[number],
   ): Promise<CliSupportResult | null> => {
-    if (!selectedToken) return null
+    if (!activeApiKey) return null
 
     if (!resolvedModelId.trim()) return null
 
@@ -165,8 +170,8 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
     try {
       const result = await runCliSupportTool({
         toolId,
-        baseUrl: account.baseUrl,
-        apiKey: selectedToken.key,
+        baseUrl: sourceBaseUrl,
+        apiKey: activeApiKey,
         modelId: resolvedModelId,
       })
 
@@ -178,9 +183,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
       return result
     } catch (error) {
       const finishedAt = Date.now()
-      const sanitizedMessage = toSanitizedErrorSummary(error, [
-        selectedToken.key,
-      ])
+      const sanitizedMessage = toSanitizedErrorSummary(error, [activeApiKey])
       const inferredStatus = inferHttpStatus(error, sanitizedMessage)
       const summaryKey =
         summaryKeyFromHttpStatus(inferredStatus) ??
@@ -214,9 +217,9 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
             summaryParams,
             input: {
               toolId,
-              baseUrl: account.baseUrl,
+              baseUrl: sourceBaseUrl,
               modelId: resolvedModelId,
-              tokenId: selectedTokenId,
+              ...(selectedTokenId ? { tokenId: selectedTokenId } : {}),
             },
             output: {
               error: sanitizedMessage,
@@ -236,7 +239,8 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
   }
 
   const runAll = async () => {
-    if (!selectedTokenId || !selectedToken) return
+    if (!isProfileSource && (!selectedTokenId || !selectedToken)) return
+    if (!activeApiKey) return
     setIsRunning(true)
     setTools(buildInitialToolState())
 
@@ -251,11 +255,17 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
   useEffect(() => {
     if (!isOpen) return
     setTools(buildInitialToolState())
-    void loadTokens()
+    if (isProfileSource) {
+      setTokens([])
+      setSelectedTokenId("")
+      setIsLoadingTokens(false)
+    } else {
+      void loadTokens()
+    }
     setModelId(initialModelId?.trim() ?? "")
-  }, [initialModelId, isOpen, loadTokens])
+  }, [initialModelId, isOpen, isProfileSource, loadTokens])
 
-  const canRunAll = !!selectedToken && resolvedModelId.trim().length > 0
+  const canRunAll = !!activeApiKey && resolvedModelId.trim().length > 0
 
   const footer = (
     <div className="flex justify-end gap-2">
@@ -285,25 +295,31 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
       closeOnBackdropClick={canClose}
     >
       <div className="space-y-3">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
-              {t("verifyDialog.meta.token")}
+        <div
+          className={`grid grid-cols-1 gap-3 ${
+            isProfileSource ? "" : "sm:grid-cols-2"
+          }`}
+        >
+          {!isProfileSource && (
+            <div className="space-y-1.5">
+              <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                {t("verifyDialog.meta.token")}
+              </div>
+              <SearchableSelect
+                options={[
+                  { value: "", label: t("verifyDialog.meta.tokenPlaceholder") },
+                  ...tokens.map((tok) => ({
+                    value: tok.id.toString(),
+                    label: tok.name,
+                  })),
+                ]}
+                value={selectedTokenId}
+                onChange={setSelectedTokenId}
+                disabled={isLoadingTokens}
+                placeholder={t("verifyDialog.meta.tokenPlaceholder")}
+              />
             </div>
-            <SearchableSelect
-              options={[
-                { value: "", label: t("verifyDialog.meta.tokenPlaceholder") },
-                ...tokens.map((tok) => ({
-                  value: tok.id.toString(),
-                  label: tok.name,
-                })),
-              ]}
-              value={selectedTokenId}
-              onChange={setSelectedTokenId}
-              disabled={isLoadingTokens}
-              placeholder={t("verifyDialog.meta.tokenPlaceholder")}
-            />
-          </div>
+          )}
 
           <div className="space-y-1.5">
             <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
@@ -327,7 +343,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
 
         {!hasAnyResult && (
           <div className="dark:text-dark-text-secondary text-sm text-gray-600">
-            {isLoadingTokens
+            {!isProfileSource && isLoadingTokens
               ? t("verifyDialog.loadingTokensHint")
               : t("verifyDialog.idleHint")}
           </div>
@@ -390,7 +406,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
                       isRunning ||
                       isLoadingTokens ||
                       tool.isRunning ||
-                      !selectedToken ||
+                      !activeApiKey ||
                       isDisabledForModel
                     }
                   >

@@ -3,16 +3,26 @@ import type {
   CliToolId,
 } from "~/services/verification/cliSupportVerification"
 import type { DisplaySiteData } from "~/types"
+import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 
 /**
  * Props for {@link VerifyCliSupportDialog}.
  */
-export type VerifyCliSupportDialogProps = {
+type VerifyCliSupportDialogBaseProps = {
   isOpen: boolean
   onClose: () => void
-  account: DisplaySiteData
   initialModelId?: string
 }
+
+export type VerifyCliSupportDialogProps =
+  | (VerifyCliSupportDialogBaseProps & {
+      account: DisplaySiteData
+      profile?: never
+    })
+  | (VerifyCliSupportDialogBaseProps & {
+      profile: ApiCredentialProfile
+      account?: never
+    })
 
 /**
  * Local UI state for a single tool row.

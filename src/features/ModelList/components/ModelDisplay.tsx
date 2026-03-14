@@ -4,17 +4,19 @@ import { Virtuoso } from "react-virtuoso"
 
 import { EmptyState } from "~/components/ui"
 import { UI_CONSTANTS } from "~/constants/ui"
-import type { DisplaySiteData } from "~/types"
+import type { ModelManagementItemSource } from "~/features/ModelList/modelManagementSources"
 
 import ModelItem from "./ModelItem"
 
 interface ModelDisplayProps {
   models: any[]
-  currentAccount: DisplaySiteData | undefined
-  onVerifyModel?: (account: DisplaySiteData, modelId: string) => void
-  onVerifyCliSupport?: (account: DisplaySiteData, modelId: string) => void
+  onVerifyModel?: (source: ModelManagementItemSource, modelId: string) => void
+  onVerifyCliSupport?: (
+    source: ModelManagementItemSource,
+    modelId: string,
+  ) => void
   onOpenModelKeyDialog?: (
-    account: DisplaySiteData,
+    account: Extract<ModelManagementItemSource, { kind: "account" }>["account"],
     modelId: string,
     modelEnableGroups: string[],
   ) => void
@@ -36,7 +38,6 @@ interface ModelDisplayProps {
 export function ModelDisplay(props: ModelDisplayProps) {
   const {
     models,
-    currentAccount,
     onVerifyModel,
     onVerifyCliSupport,
     onOpenModelKeyDialog,
@@ -69,7 +70,11 @@ export function ModelDisplay(props: ModelDisplayProps) {
           ),
         }}
         itemContent={(index, item) => {
-          const accountForModel = item.account || currentAccount
+          const sourceForModel = item.source as ModelManagementItemSource
+          const accountForModel =
+            sourceForModel.kind === "account"
+              ? sourceForModel.account
+              : undefined
           const exchangeRate =
             accountForModel && accountForModel.balance?.USD > 0
               ? accountForModel.balance.CNY / accountForModel.balance.USD
@@ -88,8 +93,7 @@ export function ModelDisplay(props: ModelDisplayProps) {
               onGroupClick={handleGroupClick}
               availableGroups={availableGroups}
               isAllGroupsMode={selectedGroup === "all"}
-              account={accountForModel}
-              accountName={accountForModel?.name}
+              source={sourceForModel}
               onVerifyModel={onVerifyModel}
               onVerifyCliSupport={onVerifyCliSupport}
               onOpenModelKeyDialog={onOpenModelKeyDialog}

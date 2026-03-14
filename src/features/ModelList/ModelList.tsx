@@ -6,8 +6,14 @@ import { useTranslation } from "react-i18next"
 import { VerifyApiDialog } from "~/components/dialogs/VerifyApiDialog"
 import { VerifyCliSupportDialog } from "~/components/dialogs/VerifyCliSupportDialog"
 import { PageHeader } from "~/components/PageHeader"
+import { VerifyApiCredentialProfileDialog } from "~/features/ApiCredentialProfiles/components/VerifyApiCredentialProfileDialog"
+import {
+  toAccountSourceValue,
+  type ModelManagementItemSource,
+} from "~/features/ModelList/modelManagementSources"
 import { getAllProviders } from "~/services/models/utils/modelProviders"
 import type { DisplaySiteData } from "~/types"
+import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 
 import { AccountSelector } from "./components/AccountSelector"
 import { AccountSummaryBar } from "./components/AccountSummaryBar"
@@ -31,13 +37,14 @@ export default function ModelList(props: {
   const { routeParams } = props
   const { t } = useTranslation("modelList")
   const {
-    // Account data
     accounts,
+    profiles,
+    selectedSource,
     currentAccount,
+    sourceCapabilities,
 
-    // UI state
-    selectedAccount,
-    setSelectedAccount,
+    selectedSourceValue,
+    setSelectedSourceValue,
     searchTerm,
     setSearchTerm,
     selectedProvider,
@@ -58,8 +65,8 @@ export default function ModelList(props: {
     pricingContexts,
     isLoading,
     dataFormatError,
+    loadErrorMessage,
 
-    // Computed data
     filteredModels,
     baseFilteredModels,
     availableGroups,
@@ -88,10 +95,10 @@ export default function ModelList(props: {
         (acc) => acc.id === routeParams.accountId,
       )
       if (accountExists) {
-        setSelectedAccount(routeParams.accountId)
+        setSelectedSourceValue(toAccountSourceValue(routeParams.accountId))
       }
     }
-  }, [routeParams?.accountId, accounts, setSelectedAccount])
+  }, [routeParams?.accountId, accounts, setSelectedSourceValue])
 
   const handleGroupClick = (group: string) => {
     setSelectedGroup(group)
@@ -106,7 +113,7 @@ export default function ModelList(props: {
   }
 
   const hasModelData =
-    selectedAccount === "all"
+    selectedSource?.kind === "all-accounts"
       ? pricingContexts && pricingContexts.length > 0
       : !!pricingData
 
@@ -114,8 +121,8 @@ export default function ModelList(props: {
     const countMap = new Map<string, number>()
 
     baseFilteredModels.forEach((item: any) => {
-      const account = item.account
-      if (!account) return
+      if (item.source?.kind !== "account") return
+      const account = item.source.account
       countMap.set(account.id, (countMap.get(account.id) ?? 0) + 1)
     })
 
@@ -133,7 +140,12 @@ export default function ModelList(props: {
   } | null>(null)
 
   const [verifyCliContext, setVerifyCliContext] = useState<{
-    account: DisplaySiteData
+    source: ModelManagementItemSource
+    modelId: string
+  } | null>(null)
+
+  const [verifyProfileContext, setVerifyProfileContext] = useState<{
+    profile: ApiCredentialProfile
     modelId: string
   } | null>(null)
 
@@ -143,15 +155,26 @@ export default function ModelList(props: {
     modelEnableGroups: string[]
   } | null>(null)
 
-  const handleVerifyModel = (account: DisplaySiteData, modelId: string) => {
-    setVerifyContext({ account, modelId })
+  const handleVerifyModel = (
+    source: ModelManagementItemSource,
+    modelId: string,
+  ) => {
+    if (source.kind === "profile") {
+      setVerifyProfileContext({
+        profile: source.profile,
+        modelId,
+      })
+      return
+    }
+
+    setVerifyContext({ account: source.account, modelId })
   }
 
   const handleVerifyCliSupport = (
-    account: DisplaySiteData,
+    source: ModelManagementItemSource,
     modelId: string,
   ) => {
-    setVerifyCliContext({ account, modelId })
+    setVerifyCliContext({ source, modelId })
   }
 
   const handleOpenModelKeyDialog = (
@@ -168,22 +191,24 @@ export default function ModelList(props: {
         description={t("description")}
       />
       <AccountSelector
-        selectedAccount={selectedAccount}
-        setSelectedAccount={setSelectedAccount}
+        selectedSourceValue={selectedSourceValue}
+        setSelectedSourceValue={setSelectedSourceValue}
         accounts={accounts}
+        profiles={profiles}
       />
 
-      {selectedAccount && !hasModelData && (
+      {selectedSourceValue && !hasModelData && (
         <StatusIndicator
-          selectedAccount={selectedAccount as string}
+          selectedSource={selectedSource}
           isLoading={isLoading}
           dataFormatError={dataFormatError}
+          loadErrorMessage={loadErrorMessage}
           currentAccount={currentAccount}
-          loadPricingData={() => loadPricingData(selectedAccount as string)}
+          loadPricingData={loadPricingData}
         />
       )}
 
-      {selectedAccount && hasModelData && (
+      {selectedSourceValue && hasModelData && (
         <>
           {verifyContext && (
             <VerifyApiDialog
@@ -195,11 +220,31 @@ export default function ModelList(props: {
           )}
 
           {verifyCliContext && (
-            <VerifyCliSupportDialog
+            <>
+              {verifyCliContext.source.kind === "account" ? (
+                <VerifyCliSupportDialog
+                  isOpen={true}
+                  onClose={() => setVerifyCliContext(null)}
+                  account={verifyCliContext.source.account}
+                  initialModelId={verifyCliContext.modelId}
+                />
+              ) : (
+                <VerifyCliSupportDialog
+                  isOpen={true}
+                  onClose={() => setVerifyCliContext(null)}
+                  profile={verifyCliContext.source.profile}
+                  initialModelId={verifyCliContext.modelId}
+                />
+              )}
+            </>
+          )}
+
+          {verifyProfileContext && (
+            <VerifyApiCredentialProfileDialog
               isOpen={true}
-              onClose={() => setVerifyCliContext(null)}
-              account={verifyCliContext.account}
-              initialModelId={verifyCliContext.modelId}
+              onClose={() => setVerifyProfileContext(null)}
+              profile={verifyProfileContext.profile}
+              initialModelId={verifyProfileContext.modelId}
             />
           )}
 
@@ -213,21 +258,25 @@ export default function ModelList(props: {
             />
           )}
 
-          {selectedAccount === "all" && accountSummaryItems.length > 0 && (
-            <AccountSummaryBar
-              items={accountSummaryItems}
-              activeAccountId={allAccountsFilterAccountId}
-              onAccountClick={handleAccountSummaryClick}
-            />
-          )}
+          {selectedSource?.kind === "all-accounts" &&
+            sourceCapabilities.supportsAccountSummary &&
+            accountSummaryItems.length > 0 && (
+              <AccountSummaryBar
+                items={accountSummaryItems}
+                activeAccountId={allAccountsFilterAccountId}
+                onAccountClick={handleAccountSummaryClick}
+              />
+            )}
           <ControlPanel
+            selectedSource={selectedSource}
+            sourceCapabilities={sourceCapabilities}
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}
             selectedGroup={selectedGroup}
             setSelectedGroup={setSelectedGroup}
             availableGroups={availableGroups}
             pricingData={pricingData}
-            loadPricingData={() => loadPricingData(selectedAccount)}
+            loadPricingData={loadPricingData}
             isLoading={isLoading}
             showRealPrice={showRealPrice}
             setShowRealPrice={setShowRealPrice}
@@ -250,7 +299,6 @@ export default function ModelList(props: {
               <Tab.Panel>
                 <ModelDisplay
                   models={filteredModels}
-                  currentAccount={currentAccount}
                   onVerifyModel={handleVerifyModel}
                   onVerifyCliSupport={handleVerifyCliSupport}
                   onOpenModelKeyDialog={handleOpenModelKeyDialog}
@@ -266,7 +314,6 @@ export default function ModelList(props: {
                 <Tab.Panel key={provider}>
                   <ModelDisplay
                     models={filteredModels}
-                    currentAccount={currentAccount}
                     onVerifyModel={handleVerifyModel}
                     onVerifyCliSupport={handleVerifyCliSupport}
                     onOpenModelKeyDialog={handleOpenModelKeyDialog}
@@ -282,7 +329,7 @@ export default function ModelList(props: {
             </Tab.Panels>
           </ProviderTabs>
 
-          <Footer />
+          <Footer showPricingNote={sourceCapabilities.supportsPricing} />
         </>
       )}
     </div>

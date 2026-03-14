@@ -4,9 +4,15 @@
   "provider": "提供商",
   "account": "账号",
   "search": "搜索",
+  "selectSource": "选择数据源",
   "selectAccount": "选择账号",
+  "pleaseSelectSource": "请选择数据源",
   "pleaseSelectAccount": "请选择账号",
   "allAccounts": "所有账号",
+  "sourceLabels": {
+    "profileOption": "API 凭据：{{name}} · {{host}}",
+    "profileBadge": "凭据：{{name}} · {{host}}"
+  },
   "searchModels": "搜索模型",
   "searchPlaceholder": "输入模型名称或描述...",
   "userGroup": "用户分组",
@@ -26,7 +32,11 @@
     "incompatible": "格式不兼容"
   },
   "noMatchingModels": "没有找到匹配的模型",
-  "pleaseSelectFirst": "请先选择一个账号查看模型列表",
+  "pleaseSelectFirst": "请先选择一个账号或 API 凭据查看模型列表",
+  "profileSourceNotice": {
+    "title": "API 凭据模型目录",
+    "description": "已保存的 API 凭据仅支持模型发现与验证，不提供定价、分组筛选、账号概览或密钥兼容性能力。"
+  },
   "allProviders": "所有厂商 ({{count}})",
   "providerTabs": {
     "scrollLeft": "向左滚动厂商标签",
@@ -52,6 +62,9 @@
     "loading": "正在加载模型数据...",
     "dataLoaded": "模型数据加载成功",
     "loadFailed": "加载模型数据失败，请稍后重试",
+    "genericLoadFailedTitle": "加载模型数据失败",
+    "profileLoadFailedTitle": "加载该 API 凭据的模型失败",
+    "profileLoadFailed": "加载该 API 凭据的模型失败：{{errorMessage}}",
     "incompatibleFormat": "数据格式不兼容",
     "incompatibleDesc": "当前站点的模型数据接口返回格式不符合标准规范，可能是经过二次开发的站点。插件暂时无法解析该站点的模型定价信息",
     "goToSitePricing": "前往站点查看定价信息",

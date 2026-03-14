@@ -20,6 +20,8 @@ interface ModelItemDetailsProps {
   calculatedPrice: CalculatedPrice
   showEndpointTypes: boolean
   userGroup: string
+  showGroupDetails: boolean
+  showPricingDetails: boolean
   onGroupClick?: (group: string) => void
 }
 
@@ -28,47 +30,58 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
   calculatedPrice,
   showEndpointTypes,
   userGroup,
+  showGroupDetails,
+  showPricingDetails,
   onGroupClick,
 }) => {
   const { t } = useTranslation("modelList")
+
+  if (!showGroupDetails && !showEndpointTypes && !showPricingDetails) {
+    return null
+  }
+
   return (
     <>
       <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
         {/* 可用分组 */}
-        <div>
-          <div className="mb-2 flex items-center space-x-2">
-            <TagIcon className="dark:text-dark-text-tertiary h-4 w-4 text-gray-400" />
-            <span className="dark:text-dark-text-secondary font-medium text-gray-700">
-              {t("availableGroups")}
-            </span>
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {model.enable_groups.map((group, index) => {
-              const isCurrentGroup = group === userGroup
-              const isClickable = onGroupClick && !isCurrentGroup
+        {showGroupDetails && (
+          <div>
+            <div className="mb-2 flex items-center space-x-2">
+              <TagIcon className="dark:text-dark-text-tertiary h-4 w-4 text-gray-400" />
+              <span className="dark:text-dark-text-secondary font-medium text-gray-700">
+                {t("availableGroups")}
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {model.enable_groups.map((group, index) => {
+                const isCurrentGroup = group === userGroup
+                const isClickable = onGroupClick && !isCurrentGroup
 
-              return (
-                <Badge
-                  key={index}
-                  variant={isCurrentGroup ? "default" : "secondary"}
-                  size="sm"
-                  onClick={isClickable ? () => onGroupClick(group) : undefined}
-                  className={
-                    isClickable
-                      ? "cursor-pointer transition-opacity hover:opacity-80"
-                      : ""
-                  }
-                  title={
-                    isClickable ? t("clickSwitchGroup", { group }) : undefined
-                  }
-                >
-                  {isCurrentGroup && <TagIcon className="h-3 w-3" />}
-                  {group}
-                </Badge>
-              )
-            })}
+                return (
+                  <Badge
+                    key={index}
+                    variant={isCurrentGroup ? "default" : "secondary"}
+                    size="sm"
+                    onClick={
+                      isClickable ? () => onGroupClick(group) : undefined
+                    }
+                    className={
+                      isClickable
+                        ? "cursor-pointer transition-opacity hover:opacity-80"
+                        : ""
+                    }
+                    title={
+                      isClickable ? t("clickSwitchGroup", { group }) : undefined
+                    }
+                  >
+                    {isCurrentGroup && <TagIcon className="h-3 w-3" />}
+                    {group}
+                  </Badge>
+                )
+              })}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* 可用端点类型 */}
         {showEndpointTypes && (
@@ -86,7 +99,7 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
         )}
 
         {/* 详细定价信息（仅按量计费模型） */}
-        {isTokenBillingType(model.quota_type) && (
+        {showPricingDetails && isTokenBillingType(model.quota_type) && (
           <div className="md:col-span-2">
             <div className="mb-2 flex items-center space-x-2">
               <CurrencyDollarIcon className="dark:text-dark-text-tertiary h-4 w-4 text-gray-400" />

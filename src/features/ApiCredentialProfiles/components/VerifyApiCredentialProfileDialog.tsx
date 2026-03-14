@@ -15,9 +15,10 @@ import {
   SearchableSelect,
 } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
-import { fetchAnthropicModelIds } from "~/services/apiService/anthropic"
-import { fetchGoogleModelIds } from "~/services/apiService/google"
-import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompatible"
+import {
+  fetchApiCredentialModelIds,
+  normalizeApiCredentialModelIds,
+} from "~/services/apiCredentialProfiles/modelCatalog"
 import {
   API_TYPES,
   getApiVerificationProbeDefinitions,
@@ -46,6 +47,7 @@ interface VerifyApiCredentialProfileDialogProps {
   isOpen: boolean
   onClose: () => void
   profile: ApiCredentialProfile | null
+  initialModelId?: string
 }
 
 type ModelsProbeOutput = {
@@ -144,10 +146,14 @@ export function VerifyApiCredentialProfileDialog({
   isOpen,
   onClose,
   profile,
+  initialModelId,
 }: VerifyApiCredentialProfileDialogProps) {
   const { t } = useTranslation(["aiApiVerification", "apiCredentialProfiles"])
 
   const [isRunning, setIsRunning] = useState(false)
+  const [apiType, setApiType] = useState<ApiVerificationApiType>(
+    profile?.apiType ?? API_TYPES.OPENAI_COMPATIBLE,
+  )
   const [modelId, setModelId] = useState("")
   const [probes, setProbes] = useState<ProbeItemState[]>([])
   const [modelOptions, setModelOptions] = useState<string[]>([])
@@ -183,46 +189,18 @@ export function VerifyApiCredentialProfileDialog({
     setIsFetchingModels(true)
 
     try {
-      const modelIds = await (async () => {
-        if (
-          profile.apiType === API_TYPES.OPENAI_COMPATIBLE ||
-          profile.apiType === API_TYPES.OPENAI
-        ) {
-          return fetchOpenAICompatibleModelIds({
-            baseUrl: profile.baseUrl,
-            apiKey: profile.apiKey,
-          })
-        }
-
-        if (profile.apiType === API_TYPES.ANTHROPIC) {
-          return fetchAnthropicModelIds({
-            baseUrl: profile.baseUrl,
-            apiKey: profile.apiKey,
-          })
-        }
-
-        if (profile.apiType === API_TYPES.GOOGLE) {
-          return fetchGoogleModelIds({
-            baseUrl: profile.baseUrl,
-            apiKey: profile.apiKey,
-          })
-        }
-
-        throw new Error("Unsupported apiType")
-      })()
-
-      const normalized = Array.from(
-        new Set(
-          modelIds
-            .filter((id) => typeof id === "string" && id.trim())
-            .map((id) => id.trim()),
-        ),
+      const normalized = normalizeApiCredentialModelIds(
+        await fetchApiCredentialModelIds({
+          apiType,
+          baseUrl: profile.baseUrl,
+          apiKey: profile.apiKey,
+        }),
       )
 
       if (fetchModelsRequestIdRef.current !== requestId) return
 
       setModelOptions(normalized)
-      const suggestedModelId = pickSuggestedModelId(profile.apiType, normalized)
+      const suggestedModelId = pickSuggestedModelId(apiType, normalized)
       if (suggestedModelId) {
         setModelId((current) => (current.trim() ? current : suggestedModelId))
       }
@@ -240,16 +218,23 @@ export function VerifyApiCredentialProfileDialog({
         setIsFetchingModels(false)
       }
     }
-  }, [profile, t])
+  }, [apiType, profile, t])
 
   useEffect(() => {
     if (!isOpen || !profile) return
-    setModelId("")
+    setApiType(profile.apiType)
+    setModelId(initialModelId?.trim() ?? "")
     setModelOptions([])
     setFetchModelsError(null)
-    setProbes(buildProbeState(profile.apiType))
+  }, [initialModelId, isOpen, profile])
+
+  useEffect(() => {
+    if (!isOpen || !profile) return
+    setModelOptions([])
+    setFetchModelsError(null)
+    setProbes(buildProbeState(apiType))
     void fetchModels()
-  }, [fetchModels, isOpen, profile])
+  }, [apiType, fetchModels, isOpen, profile])
 
   const runProbe = async (
     probeId: ApiVerificationProbeId,
@@ -270,7 +255,7 @@ export function VerifyApiCredentialProfileDialog({
       const result = await runApiVerificationProbe({
         baseUrl: profile.baseUrl,
         apiKey: profile.apiKey,
-        apiType: profile.apiType,
+        apiType,
         modelId: modelForProbe || undefined,
         probeId,
       })
@@ -334,7 +319,7 @@ export function VerifyApiCredentialProfileDialog({
     )
 
     try {
-      const ordered = getApiVerificationProbeDefinitions(profile.apiType)
+      const ordered = getApiVerificationProbeDefinitions(apiType)
       let modelIdForSuite = modelId.trim()
 
       for (const probe of ordered) {
@@ -398,15 +383,35 @@ export function VerifyApiCredentialProfileDialog({
               <SearchableSelect
                 options={[
                   {
-                    value: profile.apiType,
+                    value: API_TYPES.OPENAI_COMPATIBLE,
                     label: t(
-                      `aiApiVerification:verifyDialog.apiTypes.${apiTypeLabelKey(profile.apiType)}`,
+                      `aiApiVerification:verifyDialog.apiTypes.${apiTypeLabelKey(API_TYPES.OPENAI_COMPATIBLE)}`,
+                    ),
+                  },
+                  {
+                    value: API_TYPES.OPENAI,
+                    label: t(
+                      `aiApiVerification:verifyDialog.apiTypes.${apiTypeLabelKey(API_TYPES.OPENAI)}`,
+                    ),
+                  },
+                  {
+                    value: API_TYPES.ANTHROPIC,
+                    label: t(
+                      `aiApiVerification:verifyDialog.apiTypes.${apiTypeLabelKey(API_TYPES.ANTHROPIC)}`,
+                    ),
+                  },
+                  {
+                    value: API_TYPES.GOOGLE,
+                    label: t(
+                      `aiApiVerification:verifyDialog.apiTypes.${apiTypeLabelKey(API_TYPES.GOOGLE)}`,
                     ),
                   },
                 ]}
-                value={profile.apiType}
-                onChange={() => {}}
-                disabled={true}
+                value={apiType}
+                onChange={(value) =>
+                  setApiType(value as ApiVerificationApiType)
+                }
+                disabled={!canClose}
               />
             </div>
 
