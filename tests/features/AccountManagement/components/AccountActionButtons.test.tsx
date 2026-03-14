@@ -1052,6 +1052,95 @@ describe("AccountActionButtons", () => {
     expect(managedService.findMatchingChannel).not.toHaveBeenCalled()
   })
 
+  it("shows an actionable locate action for providers with reliable base-url lookup", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({
+          id: "acc-8b",
+          disabled: false,
+          name: "Site",
+          baseUrl: "https://api.example.com/v1/",
+        })}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+
+    const menu = await screen.findByRole("menu")
+    const label = await within(menu).findByText(
+      "account:actions.locateManagedSiteChannel",
+    )
+    const button = label.closest("button")
+    expect(button).not.toBeNull()
+    expect(button!).toBeEnabled()
+    expect(
+      within(menu).queryByText(
+        "account:actions.locateManagedSiteChannelUnsupportedHint",
+      ),
+    ).toBeNull()
+  })
+
+  it("shows a disabled locate action with visible Veloera guidance", async () => {
+    userPreferencesContextValue.preferences = {
+      managedSiteType: "Veloera",
+      veloera: {
+        baseUrl: "https://veloera-admin.example",
+        adminToken: "veloera-admin-token",
+        userId: "1",
+      },
+    }
+
+    const user = userEvent.setup()
+
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({
+          id: "acc-8c",
+          disabled: false,
+          name: "Veloera Site",
+          baseUrl: "https://api.example.com/v1/",
+        })}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+
+    const menu = await screen.findByRole("menu")
+    const label = await within(menu).findByText(
+      "account:actions.locateManagedSiteChannel",
+    )
+    const button = label.closest("button")
+    expect(button).not.toBeNull()
+    expect(button!).toBeDisabled()
+    const hint = within(menu).getByText(
+      "account:actions.locateManagedSiteChannelUnsupportedHint",
+    )
+    expect(hint).toBeInTheDocument()
+    const description = within(menu).getByText(
+      "account:actions.locateManagedSiteChannelUnsupported",
+    )
+    expect(button!).toHaveAttribute(
+      "title",
+      "account:actions.locateManagedSiteChannelUnsupported",
+    )
+    expect(button!).toHaveAttribute("aria-describedby", description.id)
+
+    await user.click(button!)
+
+    expect(getManagedSiteServiceMock).not.toHaveBeenCalled()
+    expect(openManagedSiteChannelsPageMock).not.toHaveBeenCalled()
+  })
+
   it("hides the locate action when managed site config is missing", async () => {
     hasValidManagedSiteConfigMock.mockReturnValue(false)
 

@@ -25,9 +25,10 @@
   "pleaseSelectFirst": "Please select an account first to view key list",
   "refreshTokenList": "Refresh Key List",
   "managedSiteStatus": {
+    "pageUnsupported": "Managed-site channel checks are unavailable on this page because Veloera does not currently support searching channels by URL.",
     "actions": {
-      "refresh": "Refresh Managed-Site Status",
-      "refreshing": "Refreshing Managed-Site Status",
+      "refresh": "Refresh Managed-Site Channel Status",
+      "refreshing": "Refreshing Managed-Site Channel Status",
       "reviewChannels": "Review channels"
     },
     "badges": {
@@ -46,12 +47,12 @@
       "keyModelsConflict": "Key and model checks both found candidates, but they point to different channels and need manual review.",
       "fuzzyUrlOnlyMatch": "Only a fuzzy URL-level match was found. Review the matched channel before treating it as confirmed.",
       "noMatch": "Exact verification completed without finding any exact, secondary, or fuzzy channel match.",
-      "configMissing": "Configure managed-site admin credentials before verification can run.",
+      "configMissing": "Configure managed-site admin credentials before checks can run.",
       "inputPreparationFailed": "Verification could not prepare comparable channel inputs.",
       "exactVerificationUnavailable": "Exact key verification is unavailable, and no secondary or fuzzy channel match was found.",
       "newApiRetrieveKeyHint": "For the New API, channel keys can only be viewed after completing 2FA verification. Therefore, precise verification cannot be performed at this time.",
       "veloeraBaseUrlSearchUnsupported": "This feature is not supported on Veloera because Veloera does not support base URL search for channel lookup.",
-      "backendSearchFailed": "Managed-site verification could not be completed."
+      "backendSearchFailed": "Managed-site checks could not be completed."
     },
     "signals": {
       "url": {

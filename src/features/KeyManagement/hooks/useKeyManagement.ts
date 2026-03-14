@@ -7,6 +7,7 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountData } from "~/hooks/useAccountData"
 import { createDisplayAccountApiContext } from "~/services/accounts/utils/apiServiceRequest"
 import { getManagedSiteTokenChannelStatus } from "~/services/managedSites/tokenChannelStatus"
+import { supportsManagedSiteBaseUrlChannelLookup } from "~/services/managedSites/utils/managedSite"
 import type { AccountToken } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -127,6 +128,9 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
 
   const isAllAccountsMode =
     selectedAccount === KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE
+  const isManagedSiteChannelStatusSupported = useMemo(() => {
+    return supportsManagedSiteBaseUrlChannelLookup(managedSiteType)
+  }, [managedSiteType])
 
   const accountById = useMemo(() => {
     return new Map(enabledDisplayData.map((account) => [account.id, account]))
@@ -263,6 +267,10 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
 
   const runManagedSiteStatusChecks = useCallback(
     async (params: { tokens: AccountToken[]; force?: boolean }) => {
+      if (!isManagedSiteChannelStatusSupported) {
+        return
+      }
+
       const { tokens, force = false } = params
       const uniqueTargets = new Map<
         string,
@@ -374,7 +382,11 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         }),
       )
     },
-    [accountById, buildManagedSiteStatusCacheKey],
+    [
+      accountById,
+      buildManagedSiteStatusCacheKey,
+      isManagedSiteChannelStatusSupported,
+    ],
   )
 
   /**
@@ -764,7 +776,10 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
   }, [tokenInventories, tokens])
 
   const refreshManagedSiteTokenStatuses = useCallback(async () => {
-    if (statusCheckTokens.length === 0) {
+    if (
+      !isManagedSiteChannelStatusSupported ||
+      statusCheckTokens.length === 0
+    ) {
       return
     }
 
@@ -780,10 +795,18 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         setIsManagedSiteStatusRefreshing(false)
       }
     }
-  }, [runManagedSiteStatusChecks, statusCheckTokens])
+  }, [
+    isManagedSiteChannelStatusSupported,
+    runManagedSiteStatusChecks,
+    statusCheckTokens,
+  ])
 
   const refreshManagedSiteTokenStatusForToken = useCallback(
     async (token: AccountToken) => {
+      if (!isManagedSiteChannelStatusSupported) {
+        return
+      }
+
       if (tokenInventoriesRef.current[token.accountId]?.status !== "loaded") {
         return
       }
@@ -795,7 +818,11 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         force: true,
       })
     },
-    [invalidateManagedSiteStatusForToken, runManagedSiteStatusChecks],
+    [
+      invalidateManagedSiteStatusForToken,
+      isManagedSiteChannelStatusSupported,
+      runManagedSiteStatusChecks,
+    ],
   )
 
   useEffect(() => {
@@ -813,12 +840,27 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
   }, [managedSiteConfigFingerprint])
 
   useEffect(() => {
-    if (statusCheckTokens.length === 0) {
+    if (
+      !isManagedSiteChannelStatusSupported ||
+      statusCheckTokens.length === 0
+    ) {
       return
     }
 
     void runManagedSiteStatusChecks({ tokens: statusCheckTokens })
-  }, [runManagedSiteStatusChecks, statusCheckTokens])
+  }, [
+    isManagedSiteChannelStatusSupported,
+    runManagedSiteStatusChecks,
+    statusCheckTokens,
+  ])
+
+  useEffect(() => {
+    if (isManagedSiteChannelStatusSupported) {
+      return
+    }
+
+    setIsManagedSiteStatusRefreshing(false)
+  }, [isManagedSiteChannelStatusSupported])
 
   const copyKey = async (key: string, name: string) => {
     try {
@@ -916,6 +958,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     failedAccounts,
     accountSummaryItems,
     managedSiteTokenStatuses,
+    isManagedSiteChannelStatusSupported,
     isManagedSiteStatusRefreshing,
     allAccountsFilterAccountId,
     setAllAccountsFilterAccountId,

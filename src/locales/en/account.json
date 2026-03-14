@@ -87,6 +87,8 @@
     "usageLog": "Usage Log",
     "redeemPage": "Redeem/Top-up",
     "locateManagedSiteChannel": "Locate channel",
+    "locateManagedSiteChannelUnsupportedHint": "Unsupported",
+    "locateManagedSiteChannelUnsupported": "These features are unavailable because Veloera does not currently support searching channels by URL.",
     "channelLocateNoKeyFallback": "No API key is available for ranked matching. Filtered channels by URL only.",
     "channelLocateMultipleKeysFallback": "Multiple keys found. Filtered channels by URL only.",
     "channelLocateConfigMissing": "Managed-site admin config is unavailable. Filtered channels by URL for review.",

@@ -10,6 +10,7 @@ import {
   MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS,
   MANAGED_SITE_TOKEN_CHANNEL_STATUSES,
 } from "~/services/managedSites/tokenChannelStatus"
+import { supportsManagedSiteBaseUrlChannelLookup } from "~/services/managedSites/utils/managedSite"
 import {
   buildApiToken,
   buildDisplaySiteData,
@@ -440,6 +441,9 @@ describe("getManagedSiteTokenChannelStatus", () => {
       service,
     })
 
+    expect(supportsManagedSiteBaseUrlChannelLookup(service.siteType)).toBe(
+      false,
+    )
     expect(result).toEqual({
       status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
       reason:

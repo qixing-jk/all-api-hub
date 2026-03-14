@@ -160,6 +160,16 @@ export function getManagedSiteType(prefs: UserPreferences): ManagedSiteType {
 }
 
 /**
+ * Whether the managed-site provider can reliably find channels by normalized
+ * base URL for non-mutating review/navigation flows.
+ */
+export function supportsManagedSiteBaseUrlChannelLookup(
+  siteType: ManagedSiteType,
+): boolean {
+  return siteType !== VELOERA
+}
+
+/**
  * Returns both the selected managed site type and its corresponding i18n messages key.
  */
 export function getManagedSiteContext(prefs: UserPreferences): {

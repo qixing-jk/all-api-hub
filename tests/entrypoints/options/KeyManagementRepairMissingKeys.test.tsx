@@ -59,6 +59,7 @@ vi.mock("~/features/KeyManagement/hooks/useKeyManagement", () => ({
     tokenLoadProgress: null,
     failedAccounts: [],
     accountSummaryItems: [],
+    isManagedSiteChannelStatusSupported: true,
     allAccountsFilterAccountId: null,
     setAllAccountsFilterAccountId: vi.fn(),
     loadTokens: vi.fn(),

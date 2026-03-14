@@ -23,16 +23,17 @@
   "pleaseSelectFirst": "请先选择一个账号查看密钥列表",
   "refreshTokenList": "刷新密钥列表",
   "managedSiteStatus": {
+    "pageUnsupported": "由于 Veloera 暂不支持使用URL搜索渠道，暂不提供管理站点渠道检查功能。",
     "actions": {
-      "refresh": "刷新托管站渠道状态",
-      "refreshing": "正在刷新托管站渠道状态",
+      "refresh": "刷新管理站点渠道状态",
+      "refreshing": "正在刷新管理站点渠道状态",
       "reviewChannels": "查看候选渠道"
     },
     "badges": {
-      "checking": "托管站：检查中",
-      "added": "托管站：已添加",
-      "notAdded": "托管站：未添加",
-      "unknown": "托管站：未知"
+      "checking": "管理站点：检查中",
+      "added": "管理站点：已添加",
+      "notAdded": "管理站点：未添加",
+      "unknown": "管理站点：未知"
     },
     "descriptions": {
       "exactKeyMatch": "已在同一规范化基础地址下通过精确 key 和精确模型集合完成匹配。",
@@ -44,12 +45,12 @@
       "keyModelsConflict": "key 和模型检查都找到了候选渠道，但指向了不同渠道，仍需人工确认。",
       "fuzzyUrlOnlyMatch": "目前只能确认 URL 级别的模糊匹配，在确认前请先核对该渠道。",
       "noMatch": "已完成精确校验，但仍未找到精确、次级或模糊渠道匹配。",
-      "configMissing": "请先配置托管站管理员凭据后再进行校验。",
+      "configMissing": "请先配置管理站点管理员凭据后再进行校验。",
       "inputPreparationFailed": "无法准备可比对的渠道输入，暂时无法完成校验。",
       "exactVerificationUnavailable": "当前无法执行精确密钥校验，且未找到次级或模糊渠道匹配。",
       "newApiRetrieveKeyHint": "对于 New API，渠道 key 只有完成 2FA 验证后才能查看，因此暂无法进行精确校验。",
       "veloeraBaseUrlSearchUnsupported": "该功能在 Veloera 上不受支持，因为 Veloera 不支持按基础地址搜索渠道。",
-      "backendSearchFailed": "托管站校验暂时无法完成。"
+      "backendSearchFailed": "管理站点校验暂时无法完成。"
     },
     "signals": {
       "url": {

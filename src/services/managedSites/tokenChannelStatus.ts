@@ -1,4 +1,3 @@
-import { VELOERA } from "~/constants/siteType"
 import {
   getManagedSiteChannelExactMatch,
   type ManagedSiteChannelKeyMatchReasonValue,
@@ -12,6 +11,7 @@ import type {
 } from "~/services/managedSites/managedSiteService"
 import { getManagedSiteService } from "~/services/managedSites/managedSiteService"
 import { normalizeManagedSiteChannelBaseUrl } from "~/services/managedSites/utils/channelMatching"
+import { supportsManagedSiteBaseUrlChannelLookup } from "~/services/managedSites/utils/managedSite"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import type { AccountToken, ApiToken, DisplaySiteData } from "~/types"
 import type { ManagedSiteChannel } from "~/types/managedSite"
@@ -168,7 +168,7 @@ export async function getManagedSiteTokenChannelStatus(
   // This feature is not supported on Veloera because Veloera's
   // `/api/channel/search` does not support reliable base URL lookup, so this
   // verification flow cannot produce a trustworthy presence/absence result.
-  if (service.siteType === VELOERA) {
+  if (!supportsManagedSiteBaseUrlChannelLookup(service.siteType)) {
     return {
       status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
       reason:

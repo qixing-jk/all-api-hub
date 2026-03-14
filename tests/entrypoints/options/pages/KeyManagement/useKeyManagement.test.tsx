@@ -636,6 +636,68 @@ describe("useKeyManagement enabled account filtering", () => {
     })
   })
 
+  it("skips automatic and manual managed-site status checks when Veloera is selected", async () => {
+    const mockedUseAccountData = vi.mocked(useAccountData)
+    const account = createDisplayAccount({
+      id: "veloera-acc",
+      name: "Veloera Account",
+    })
+
+    mockedUseAccountData.mockReturnValue({
+      enabledDisplayData: [account],
+    } as any)
+
+    mockedUseUserPreferencesContext.mockReturnValue({
+      managedSiteType: "Veloera",
+      newApiBaseUrl: "",
+      newApiAdminToken: "",
+      newApiUserId: "",
+      doneHubBaseUrl: "",
+      doneHubAdminToken: "",
+      doneHubUserId: "",
+      veloeraBaseUrl: "https://veloera.example",
+      veloeraAdminToken: "veloera-admin-token",
+      veloeraUserId: "1",
+      octopusBaseUrl: "",
+      octopusUsername: "",
+      octopusPassword: "",
+    })
+
+    const fetchAccountTokens = vi.fn().mockResolvedValue([
+      createToken({
+        id: 303,
+        key: "token-303",
+        name: "Token 303",
+        expired_time: 0,
+      }),
+    ])
+    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+
+    const { result } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => {
+      result.current.setSelectedAccount(account.id)
+    })
+
+    await waitFor(() => expect(result.current.tokens).toHaveLength(1))
+
+    expect(result.current.isManagedSiteChannelStatusSupported).toBe(false)
+    expect(getManagedSiteTokenChannelStatusMock).not.toHaveBeenCalled()
+    expect(result.current.managedSiteTokenStatuses).toEqual({})
+
+    await act(async () => {
+      await result.current.refreshManagedSiteTokenStatuses()
+      await result.current.refreshManagedSiteTokenStatusForToken(
+        result.current.tokens[0]!,
+      )
+    })
+
+    expect(getManagedSiteTokenChannelStatusMock).not.toHaveBeenCalled()
+    expect(result.current.managedSiteTokenStatuses).toEqual({})
+  })
+
   it("reuses in-flight managed-site status checks while all-accounts loading adds new tokens", async () => {
     const mockedUseAccountData = vi.mocked(useAccountData)
     const firstAccount = createDisplayAccount({
@@ -1000,5 +1062,80 @@ describe("useKeyManagement enabled account filtering", () => {
     await waitFor(() =>
       expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(2),
     )
+  })
+
+  it("clears cached managed-site status when preferences switch to Veloera", async () => {
+    const mockedUseAccountData = vi.mocked(useAccountData)
+    const account = createDisplayAccount({
+      id: "veloera-switch-acc",
+      name: "Switch Account",
+    })
+
+    mockedUseAccountData.mockReturnValue({
+      enabledDisplayData: [account],
+    } as any)
+
+    const managedSiteContextValue = {
+      managedSiteType: "new-api",
+      newApiBaseUrl: "https://managed.example",
+      newApiAdminToken: "managed-admin-token",
+      newApiUserId: "1",
+      doneHubBaseUrl: "",
+      doneHubAdminToken: "",
+      doneHubUserId: "",
+      veloeraBaseUrl: "",
+      veloeraAdminToken: "",
+      veloeraUserId: "",
+      octopusBaseUrl: "",
+      octopusUsername: "",
+      octopusPassword: "",
+    }
+    mockedUseUserPreferencesContext.mockImplementation(
+      () => managedSiteContextValue,
+    )
+
+    const fetchAccountTokens = vi.fn().mockResolvedValue([
+      createToken({
+        id: 404,
+        key: "token-404",
+        name: "Token 404",
+        expired_time: 0,
+      }),
+    ])
+    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+
+    const { result, rerender } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => {
+      result.current.setSelectedAccount(account.id)
+    })
+
+    await waitFor(() =>
+      expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(1),
+    )
+    expect(
+      result.current.managedSiteTokenStatuses["veloera-switch-acc:404"]?.result,
+    ).toEqual({
+      status: managedSiteTokenChannelStatuses.NOT_ADDED,
+    })
+
+    managedSiteContextValue.managedSiteType = "Veloera"
+    managedSiteContextValue.newApiBaseUrl = ""
+    managedSiteContextValue.newApiAdminToken = ""
+    managedSiteContextValue.newApiUserId = ""
+    managedSiteContextValue.veloeraBaseUrl = "https://veloera.example"
+    managedSiteContextValue.veloeraAdminToken = "veloera-admin-token"
+    managedSiteContextValue.veloeraUserId = "1"
+    rerender()
+
+    await waitFor(() =>
+      expect(result.current.isManagedSiteChannelStatusSupported).toBe(false),
+    )
+    await waitFor(() =>
+      expect(result.current.managedSiteTokenStatuses).toEqual({}),
+    )
+    expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(1)
   })
 })

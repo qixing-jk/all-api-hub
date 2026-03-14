@@ -38,7 +38,10 @@ import {
   type ManagedSiteTokenChannelAssessment,
   type ManagedSiteTokenChannelStatus,
 } from "~/services/managedSites/tokenChannelStatus"
-import { getManagedSiteLabelKey } from "~/services/managedSites/utils/managedSite"
+import {
+  getManagedSiteLabelKey,
+  supportsManagedSiteBaseUrlChannelLookup,
+} from "~/services/managedSites/utils/managedSite"
 import {
   API_TYPES,
   type ApiVerificationApiType,
@@ -615,9 +618,12 @@ export function TokenHeader({
 }: TokenHeaderProps) {
   const { t } = useTranslation("keyManagement")
   const { managedSiteType } = useUserPreferencesContext()
+  const isManagedSiteStatusSupported =
+    supportsManagedSiteBaseUrlChannelLookup(managedSiteType)
 
   const shouldRenderManagedSiteStatus =
-    isManagedSiteStatusChecking || Boolean(managedSiteStatus)
+    isManagedSiteStatusSupported &&
+    (isManagedSiteStatusChecking || Boolean(managedSiteStatus))
   const managedSiteStatusDescription = getManagedSiteStatusDescription(
     t,
     managedSiteStatus,

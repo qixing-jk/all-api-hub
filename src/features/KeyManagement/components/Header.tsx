@@ -1,4 +1,5 @@
 import { KeyRound, Plus, RefreshCw, Wrench } from "lucide-react"
+import type { ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
 import { PageHeader } from "~/components/PageHeader"
@@ -10,6 +11,7 @@ interface HeaderProps {
   onRepairMissingKeys: () => void
   onRefresh: () => void
   onRefreshManagedSiteStatus?: () => void
+  managedSiteStatusHint?: string
   isLoading: boolean
   isManagedSiteStatusRefreshing?: boolean
   isAddTokenDisabled: boolean
@@ -25,6 +27,7 @@ export function Header({
   onRepairMissingKeys,
   onRefresh,
   onRefreshManagedSiteStatus,
+  managedSiteStatusHint,
   isLoading,
   isManagedSiteStatusRefreshing = false,
   selectedAccount,
@@ -33,12 +36,25 @@ export function Header({
   isManagedSiteStatusRefreshDisabled = false,
 }: HeaderProps) {
   const { t } = useTranslation("keyManagement")
+  let description: ReactNode = t("description")
+
+  if (managedSiteStatusHint) {
+    description = (
+      <>
+        <span className="block">{t("description")}</span>
+        <span className="mt-1 block font-medium text-amber-700 dark:text-amber-300">
+          {managedSiteStatusHint}
+        </span>
+      </>
+    )
+  }
+
   return (
     <div className="mb-8">
       <PageHeader
         icon={KeyRound}
         title={t("title")}
-        description={t("description")}
+        description={description}
         actions={
           <>
             <Button

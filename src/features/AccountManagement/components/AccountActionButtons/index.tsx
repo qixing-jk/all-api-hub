@@ -40,6 +40,10 @@ import {
   hasValidManagedSiteConfig,
 } from "~/services/managedSites/managedSiteService"
 import { normalizeManagedSiteChannelBaseUrl } from "~/services/managedSites/utils/channelMatching"
+import {
+  getManagedSiteType,
+  supportsManagedSiteBaseUrlChannelLookup,
+} from "~/services/managedSites/utils/managedSite"
 import { buildAccountShareSnapshotPayload } from "~/services/sharing/shareSnapshots"
 import type { DisplaySiteData } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
@@ -197,6 +201,9 @@ export default function AccountActionButtons({
     site.checkIn?.enableDetection === true &&
     site.checkIn?.autoCheckInEnabled !== false
   const canLocateManagedSiteChannel = hasValidManagedSiteConfig(preferences)
+  const isManagedSiteChannelLookupSupported = preferences
+    ? supportsManagedSiteBaseUrlChannelLookup(getManagedSiteType(preferences))
+    : true
 
   const isPinned = isAccountPinned(site.id)
   const pinLabel = isPinned ? t("actions.unpin") : t("actions.pin")
@@ -303,7 +310,7 @@ export default function AccountActionButtons({
   }
 
   const handleLocateManagedSiteChannel = async () => {
-    if (!canLocateManagedSiteChannel) {
+    if (!canLocateManagedSiteChannel || !isManagedSiteChannelLookupSupported) {
       return
     }
 
@@ -649,6 +656,17 @@ export default function AccountActionButtons({
                   onClick={handleLocateManagedSiteChannel}
                   icon={MagnifyingGlassIcon}
                   label={t("actions.locateManagedSiteChannel")}
+                  hint={
+                    !isManagedSiteChannelLookupSupported
+                      ? t("actions.locateManagedSiteChannelUnsupportedHint")
+                      : undefined
+                  }
+                  description={
+                    !isManagedSiteChannelLookupSupported
+                      ? t("actions.locateManagedSiteChannelUnsupported")
+                      : undefined
+                  }
+                  disabled={!isManagedSiteChannelLookupSupported}
                 />
               )}
 

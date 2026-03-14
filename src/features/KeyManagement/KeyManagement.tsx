@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { useTranslation } from "react-i18next"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import AddTokenDialog from "~/features/KeyManagement/components/AddTokenDialog"
@@ -24,6 +25,7 @@ export default function KeyManagement(props: {
   routeParams?: Record<string, string>
 }) {
   const { routeParams } = props
+  const { t } = useTranslation("keyManagement")
   const [isRepairOpen, setIsRepairOpen] = useState(false)
   const [repairStartOnOpen, setRepairStartOnOpen] = useState(false)
 
@@ -42,6 +44,7 @@ export default function KeyManagement(props: {
     failedAccounts,
     accountSummaryItems,
     managedSiteTokenStatuses,
+    isManagedSiteChannelStatusSupported,
     isManagedSiteStatusRefreshing,
     allAccountsFilterAccountId,
     setAllAccountsFilterAccountId,
@@ -108,8 +111,15 @@ export default function KeyManagement(props: {
         onAddToken={handleAddToken}
         onRepairMissingKeys={handleRepairMissingKeys}
         onRefresh={() => selectedAccount && loadTokens()}
-        onRefreshManagedSiteStatus={() =>
-          void refreshManagedSiteTokenStatuses()
+        onRefreshManagedSiteStatus={
+          isManagedSiteChannelStatusSupported
+            ? () => void refreshManagedSiteTokenStatuses()
+            : undefined
+        }
+        managedSiteStatusHint={
+          isManagedSiteChannelStatusSupported
+            ? undefined
+            : t("managedSiteStatus.pageUnsupported")
         }
         selectedAccount={selectedAccount}
         isLoading={isLoading || !selectedAccount}
@@ -158,7 +168,11 @@ export default function KeyManagement(props: {
         selectedAccount={selectedAccount}
         displayData={displayData}
         managedSiteTokenStatuses={managedSiteTokenStatuses}
-        onManagedSiteImportSuccess={refreshManagedSiteTokenStatusForToken}
+        onManagedSiteImportSuccess={
+          isManagedSiteChannelStatusSupported
+            ? refreshManagedSiteTokenStatusForToken
+            : undefined
+        }
         allAccountsFilterAccountId={allAccountsFilterAccountId}
       />
 

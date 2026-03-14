@@ -87,6 +87,8 @@
     "usageLog": "用量日志",
     "redeemPage": "充值页面",
     "locateManagedSiteChannel": "定位对应渠道",
+    "locateManagedSiteChannelUnsupportedHint": "不支持",
+    "locateManagedSiteChannelUnsupported": "因为 Veloera 暂不支持使用URL搜索渠道，相关功能无法正常工作",
     "channelLocateNoKeyFallback": "当前没有可用于排序匹配的 API 密钥，已仅按 URL 过滤渠道列表。",
     "channelLocateMultipleKeysFallback": "检测到多个密钥，已仅按 URL 过滤渠道列表。",
     "channelLocateConfigMissing": "托管站点管理员配置不可用，已按 URL 过滤渠道列表供你确认。",

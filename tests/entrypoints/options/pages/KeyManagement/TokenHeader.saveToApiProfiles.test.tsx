@@ -371,6 +371,61 @@ describe("TokenHeader save to API profiles", () => {
     })
   })
 
+  it("suppresses managed-site status badges and review links when Veloera is selected", () => {
+    mockedUseUserPreferencesContext.mockReturnValue({
+      managedSiteType: "Veloera",
+      claudeCodeRouterBaseUrl: "",
+      claudeCodeRouterApiKey: "",
+      cliProxyBaseUrl: "",
+      cliProxyManagementKey: "",
+    })
+
+    const account = createAccountStub()
+    const token = {
+      id: 2,
+      user_id: 1,
+      key: "sk-veloera",
+      status: 1,
+      name: "Veloera Token",
+      created_time: 0,
+      accessed_time: 0,
+      expired_time: 0,
+      remain_quota: 0,
+      unlimited_quota: false,
+      used_quota: 0,
+      accountId: account.id,
+      accountName: account.name,
+    }
+
+    render(
+      <TokenHeader
+        token={token as any}
+        copyKey={vi.fn()}
+        handleEditToken={vi.fn()}
+        handleDeleteToken={vi.fn()}
+        account={account}
+        managedSiteStatus={{
+          status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
+          reason:
+            MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.MATCH_REQUIRES_CONFIRMATION,
+          assessment: createManagedSiteAssessment(),
+        }}
+      />,
+    )
+
+    expect(
+      screen.queryByText("keyManagement:managedSiteStatus.badges.unknown"),
+    ).toBeNull()
+    expect(
+      screen.queryByText("keyManagement:managedSiteStatus.signals.url.matched"),
+    ).toBeNull()
+    expect(
+      screen.queryByRole("button", {
+        name: `${testI18n.t("managedSiteModelSync:actions.manageChannel")}: keyManagement:managedSiteStatus.actions.reviewChannels`,
+      }),
+    ).toBeNull()
+  })
+
   it("renders the exact-match explanation when the token is already added", async () => {
     const account = createAccountStub()
 
