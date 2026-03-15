@@ -1,5 +1,27 @@
 # Changelog
 
+## [3.28.0](https://github.com/qixing-jk/all-api-hub/compare/v3.27.0...v3.28.0) (2026-03-14)
+
+
+### Features
+
+* **api-credential-profiles:** add API type override indicator ([c8856fc](https://github.com/qixing-jk/all-api-hub/commit/c8856fcd2e855f834d527b01e59cfe5c6d04bcbb))
+* **api-credential-profiles:** add CLI support verification ([#602](https://github.com/qixing-jk/all-api-hub/issues/602)) ([5cc15ad](https://github.com/qixing-jk/all-api-hub/commit/5cc15ad77dac619f685a03672086cb4e0ec17e66))
+* **api-credential-profiles:** add profile deep link to Model Management ([#603](https://github.com/qixing-jk/all-api-hub/issues/603)) ([cfabb66](https://github.com/qixing-jk/all-api-hub/commit/cfabb666568d2aade18b5d0e7643d5133ca12c71))
+* **key-management:** add managed-site channel status to Key Management ([#593](https://github.com/qixing-jk/all-api-hub/issues/593)) ([0f3b05f](https://github.com/qixing-jk/all-api-hub/commit/0f3b05f01734184c37e3a87670074e64777d0d3c))
+* **key-management:** add Veloera managed-site status support guard ([#599](https://github.com/qixing-jk/all-api-hub/issues/599)) ([c946831](https://github.com/qixing-jk/all-api-hub/commit/c9468317718ebafaea34a12468e91b278e1eedec))
+* **key-management:** improve API credential profile naming ([3df7c7e](https://github.com/qixing-jk/all-api-hub/commit/3df7c7ed52252704ec324d1cfa506fef3d7ecc8c))
+* **managed-site:** ranked channel matching with shared inspection flow ([#597](https://github.com/qixing-jk/all-api-hub/issues/597)) ([145c7fe](https://github.com/qixing-jk/all-api-hub/commit/145c7fe85836af52c6b87778a2cd27efb297eee3))
+* **managed-sites:** support masked token keys in channel status ([#604](https://github.com/qixing-jk/all-api-hub/issues/604)) ([0bf75b1](https://github.com/qixing-jk/all-api-hub/commit/0bf75b1f6fad55558e64704fc937f2025d9f495b))
+* **model-list:** add API credential profile support in model list ([#600](https://github.com/qixing-jk/all-api-hub/issues/600)) ([03999a3](https://github.com/qixing-jk/all-api-hub/commit/03999a322ea5766860af7eb0bd991fa230dfc777))
+* **onboarding:** add language selector with persistence  ([#596](https://github.com/qixing-jk/all-api-hub/issues/596)) ([e811fd5](https://github.com/qixing-jk/all-api-hub/commit/e811fd5b62cc7c98fe607ba98b2303367946f3a5))
+
+
+### Bug Fixes
+
+* **BasicSettings:** improve permission dialog button layout ([775569f](https://github.com/qixing-jk/all-api-hub/commit/775569f4578ee8f3f8164d34b2113eeae656b44b))
+* **i18n:** respect detected browser language during startup ([#595](https://github.com/qixing-jk/all-api-hub/issues/595)) ([858319a](https://github.com/qixing-jk/all-api-hub/commit/858319a922e02ce4b06d041505530e24e666cc5d))
+
 ## [3.27.0](https://github.com/qixing-jk/all-api-hub/compare/v3.26.0...v3.27.0) (2026-03-12)
 
 
