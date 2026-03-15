@@ -74,4 +74,37 @@ describe("ManagedSiteTab", () => {
       ),
     ).toBeInTheDocument()
   })
+
+  it("does not render the New API login-assist fields when the managed site is not new-api", () => {
+    mockedUseUserPreferencesContext.mockReturnValue(
+      createContextValue({
+        managedSiteType: "Veloera",
+        veloeraBaseUrl: "",
+        veloeraAdminToken: "",
+        veloeraUserId: "",
+        updateVeloeraBaseUrl: vi.fn().mockResolvedValue(true),
+        updateVeloeraAdminToken: vi.fn().mockResolvedValue(true),
+        updateVeloeraUserId: vi.fn().mockResolvedValue(true),
+        resetVeloeraConfig: vi.fn().mockResolvedValue(true),
+      }),
+    )
+
+    render(<ManagedSiteTab />)
+
+    expect(
+      screen.queryByPlaceholderText(
+        "settings:newApi.fields.usernamePlaceholder",
+      ),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByPlaceholderText(
+        "settings:newApi.fields.passwordPlaceholder",
+      ),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByPlaceholderText(
+        "settings:newApi.fields.totpSecretPlaceholder",
+      ),
+    ).not.toBeInTheDocument()
+  })
 })

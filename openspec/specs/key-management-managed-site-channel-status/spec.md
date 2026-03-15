@@ -142,7 +142,7 @@ If either required New API login-assist credential field (`username` or `passwor
 - **GIVEN** a token is rendered in Key Management
 - **AND** the managed-site type is `new-api`
 - **AND** the token status resolves to `unknown` with reason `exact-verification-unavailable`
-- **AND** the configured New API managed-site settings omit either the `username` field, the `password` field, or both required login-assist credential fields
+- **AND** the configured New API managed-site settings omit or provide empty values for the `username` field, the `password` field, or both required login-assist credential fields
 - **WHEN** the row renders its status affordances
 - **THEN** the row MUST keep the `unknown` status
 - **AND** the row MUST expose an action that opens the New API login credential configuration flow before retrying exact verification
@@ -154,7 +154,7 @@ If either required New API login-assist credential field (`username` or `passwor
 - **AND** the managed-site type is `new-api`
 - **WHEN** the user completes verification-assisted retry successfully for that token
 - **THEN** the system MUST rerun the managed-site status check for that token
-- **AND** the row MUST replace the prior `unknown` result with the refreshed final status without requiring a full page reload
+- **AND** the row MUST replace the prior `unknown` result with the refreshed final status without requiring a full-page reload
 
 #### Scenario: Verification-assisted retry fails because New API login-assist credentials are invalid or expired
 - **GIVEN** a token is rendered in Key Management with status `unknown`

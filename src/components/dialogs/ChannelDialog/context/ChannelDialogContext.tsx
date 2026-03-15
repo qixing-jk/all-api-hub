@@ -18,7 +18,7 @@ interface ChannelDialogState {
   initialModels?: string[]
   initialGroups?: string[]
   onRequestRealKey?:
-    | ((options: { setKey: (key: string) => void }) => void | Promise<void>)
+    | ((options: { setKey: (key: string) => void }) => Promise<void>)
     | null
   onSuccessCallback?: (result: any) => void
 }
@@ -39,7 +39,7 @@ interface ChannelDialogContextValue {
     initialGroups?: string[]
     onRequestRealKey?: (options: {
       setKey: (key: string) => void
-    }) => void | Promise<void>
+    }) => Promise<void>
     onSuccess?: (result: any) => void
   }) => void
   closeDialog: () => void
@@ -83,7 +83,7 @@ export function ChannelDialogProvider({
       initialGroups?: string[]
       onRequestRealKey?: (options: {
         setKey: (key: string) => void
-      }) => void | Promise<void>
+      }) => Promise<void>
       onSuccess?: (result: any) => void
     }) => {
       setState({

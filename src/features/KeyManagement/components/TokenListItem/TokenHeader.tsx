@@ -734,7 +734,9 @@ export function TokenHeader({
   }
 
   const handleOpenManagedSiteSettings = () => {
-    void openSettingsTab("managedSite")
+    void openSettingsTab("managedSite").catch((error) =>
+      logger.error("Failed to open managed-site settings", error),
+    )
   }
 
   return (
@@ -861,7 +863,7 @@ export function TokenHeader({
                 {managedSiteRecoveryMessage}
               </span>
             ) : null}
-            {shouldShowManagedSiteVerificationRetry && managedSiteStatus ? (
+            {shouldShowManagedSiteVerificationRetry ? (
               <Button
                 size="sm"
                 variant="outline"

@@ -292,6 +292,7 @@ describe("KeyManagement managed-site status support", () => {
       }),
     )
     expect(refreshManagedSiteTokenStatusForToken).not.toHaveBeenCalled()
+    expect(openNewApiManagedVerificationMock).not.toHaveBeenCalled()
   })
 
   it("refreshes the token status before opening verification retry", async () => {

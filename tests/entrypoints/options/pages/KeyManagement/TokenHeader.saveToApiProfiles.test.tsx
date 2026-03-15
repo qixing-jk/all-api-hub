@@ -24,6 +24,7 @@ const mockOpenManagedSiteChannelsForChannel = vi.fn()
 const mockOpenManagedSiteChannelsPage = vi.fn()
 const mockOpenSettingsTab = vi.fn()
 const mockOpenWithAccount = vi.fn()
+const mockLoggerError = vi.fn()
 
 vi.mock(
   "~/services/apiCredentialProfiles/apiCredentialProfilesStorage",
@@ -51,6 +52,22 @@ vi.mock("~/utils/navigation", () => ({
     mockOpenManagedSiteChannelsPage(...args),
   openSettingsTab: (...args: unknown[]) => mockOpenSettingsTab(...args),
 }))
+
+vi.mock("~/utils/core/logger", async () => {
+  const actual = await vi.importActual<typeof import("~/utils/core/logger")>(
+    "~/utils/core/logger",
+  )
+
+  return {
+    ...actual,
+    createLogger: () => ({
+      debug: vi.fn(),
+      error: (...args: unknown[]) => mockLoggerError(...args),
+      info: vi.fn(),
+      warn: vi.fn(),
+    }),
+  }
+})
 
 vi.mock("~/components/dialogs/ChannelDialog", () => {
   return {
@@ -162,6 +179,7 @@ describe("TokenHeader save to API profiles", () => {
     mockOpenManagedSiteChannelsPage.mockReset()
     mockOpenSettingsTab.mockReset()
     mockOpenWithAccount.mockReset()
+    mockLoggerError.mockReset()
     ;(toast.success as any).mockReset()
     ;(toast.error as any).mockReset()
     ;(toast.dismiss as any).mockReset()
@@ -821,6 +839,75 @@ describe("TokenHeader save to API profiles", () => {
         name: "common:settings",
       }),
     ).toBeInTheDocument()
+  })
+
+  it("logs a settings navigation failure instead of leaving the rejection unhandled", async () => {
+    const user = userEvent.setup()
+    const account = createAccountStub()
+
+    const token = {
+      id: 9_1,
+      user_id: 1,
+      key: "sk-config-needed-error",
+      status: 1,
+      name: "Config Needed Error Token",
+      created_time: 0,
+      accessed_time: 0,
+      expired_time: 0,
+      remain_quota: 0,
+      unlimited_quota: false,
+      used_quota: 0,
+      accountId: account.id,
+      accountName: account.name,
+    }
+
+    const navigationError = new Error("navigation failed")
+    mockOpenSettingsTab.mockRejectedValueOnce(navigationError)
+
+    render(
+      <TokenHeader
+        token={token as any}
+        copyKey={vi.fn()}
+        handleEditToken={vi.fn()}
+        handleDeleteToken={vi.fn()}
+        account={account}
+        managedSiteStatus={{
+          status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
+          reason:
+            MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE,
+          assessment: createManagedSiteAssessment({
+            key: {
+              comparable: false,
+              matched: false,
+              reason:
+                MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.COMPARISON_UNAVAILABLE,
+            },
+          }),
+          recovery: {
+            siteType: "new-api",
+            managedBaseUrl: "https://managed.example",
+            searchBaseUrl: "https://example.com",
+            loginCredentialsConfigured: false,
+            authenticatedBrowserSessionExists: false,
+            automaticCodeConfigured: false,
+          },
+        }}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "common:settings",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockOpenSettingsTab).toHaveBeenCalledWith("managedSite")
+      expect(mockLoggerError).toHaveBeenCalledWith(
+        "Failed to open managed-site settings",
+        navigationError,
+      )
+    })
   })
 
   it("renders fuzzy and similarity explanations for non-exact managed-site matches", () => {

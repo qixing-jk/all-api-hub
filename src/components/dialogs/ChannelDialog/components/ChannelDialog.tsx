@@ -1,5 +1,5 @@
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline"
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
@@ -41,7 +41,7 @@ export interface ChannelDialogProps {
   initialGroups?: string[]
   onRequestRealKey?: (options: {
     setKey: (key: string) => void
-  }) => void | Promise<void>
+  }) => Promise<void>
 }
 
 /**
@@ -73,6 +73,7 @@ export function ChannelDialog({
   const { t } = useTranslation(["channelDialog", "common"])
   const [showKey, setShowKey] = useState(false)
   const [isLoadingRealKey, setIsLoadingRealKey] = useState(false)
+  const requestIdRef = useRef(0)
   const { managedSiteType } = useUserPreferencesContext()
   const isOctopus = managedSiteType === OCTOPUS
 
@@ -119,19 +120,32 @@ export function ChannelDialog({
     updateField("models", [])
   }
 
+  useEffect(() => {
+    requestIdRef.current += 1
+    setIsLoadingRealKey(false)
+  }, [channel?.id, isOpen, mode])
+
   const handleLoadRealKey = async () => {
     if (!onRequestRealKey) return
 
+    const requestId = requestIdRef.current + 1
+    requestIdRef.current = requestId
+    let resolvedKey: string | null = null
+
     setIsLoadingRealKey(true)
     try {
-      await Promise.resolve(
-        onRequestRealKey({
-          setKey: (key) => {
-            updateField("key", key)
-            setShowKey(true)
-          },
-        }),
-      )
+      await onRequestRealKey({
+        setKey: (key) => {
+          resolvedKey = key
+        },
+      })
+
+      if (requestId !== requestIdRef.current || resolvedKey === null) {
+        return
+      }
+
+      updateField("key", resolvedKey)
+      setShowKey(true)
     } catch (error) {
       toast.error(
         t("channelDialog:messages.loadRealKeyFailed", {
@@ -139,7 +153,9 @@ export function ChannelDialog({
         }),
       )
     } finally {
-      setIsLoadingRealKey(false)
+      if (requestId === requestIdRef.current) {
+        setIsLoadingRealKey(false)
+      }
     }
   }
 

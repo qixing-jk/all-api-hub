@@ -207,4 +207,121 @@ describe("ManagedSiteChannels", () => {
       ).toBeInTheDocument()
     })
   })
+
+  it("ignores stale real-key responses after reopening the dialog for another channel", async () => {
+    const user = userEvent.setup()
+    let resolveFirstRealKey: ((key: string) => void) | undefined
+
+    mockChannels([
+      {
+        id: 208,
+        name: "Alpha",
+        base_url: "https://example.com/alpha",
+        type: 1,
+        models: "gpt-4o",
+        group: "default",
+        status: 1,
+        priority: 0,
+        weight: 0,
+        key: "",
+      },
+      {
+        id: 209,
+        name: "Beta",
+        base_url: "https://example.com/beta",
+        type: 1,
+        models: "gpt-4o-mini",
+        group: "default",
+        status: 1,
+        priority: 0,
+        weight: 0,
+        key: "",
+      },
+    ])
+
+    vi.mocked(fetchNewApiChannelKey).mockImplementation(({ channelId }) => {
+      if (channelId === 208) {
+        return new Promise((resolve) => {
+          resolveFirstRealKey = resolve
+        })
+      }
+
+      return Promise.resolve("sk-beta-channel-key")
+    })
+
+    render(
+      <>
+        <ManagedSiteChannels />
+        <ChannelDialogContainer />
+      </>,
+    )
+
+    await waitForRowText("Alpha")
+    await waitForRowText("Beta")
+
+    const alphaRow = screen.getByText("Alpha").closest("tr")
+    expect(alphaRow).toBeTruthy()
+    await user.click(
+      within(alphaRow!).getByRole("button", {
+        name: "managedSiteChannels:table.columns.actions",
+      }),
+    )
+
+    await user.click(
+      await screen.findByRole("menuitem", {
+        name: "managedSiteChannels:table.rowActions.edit",
+      }),
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "channelDialog:actions.loadRealKey",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(fetchNewApiChannelKey).toHaveBeenCalledWith({
+        baseUrl: "https://admin.example",
+        userId: "1",
+        channelId: 208,
+      })
+    })
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "common:actions.cancel",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    })
+
+    const betaRow = screen.getByText("Beta").closest("tr")
+    expect(betaRow).toBeTruthy()
+    await user.click(
+      within(betaRow!).getByRole("button", {
+        name: "managedSiteChannels:table.columns.actions",
+      }),
+    )
+
+    await user.click(
+      await screen.findByRole("menuitem", {
+        name: "managedSiteChannels:table.rowActions.edit",
+      }),
+    )
+
+    resolveFirstRealKey?.("sk-stale-alpha-key")
+
+    const keyInput = await screen.findByPlaceholderText(
+      "channelDialog:fields.key.placeholder",
+    )
+
+    await waitFor(() => {
+      expect(keyInput).toHaveValue("")
+      expect(
+        screen.queryByDisplayValue("sk-stale-alpha-key"),
+      ).not.toBeInTheDocument()
+    })
+  })
 })

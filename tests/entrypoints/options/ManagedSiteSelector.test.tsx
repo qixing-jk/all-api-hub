@@ -35,7 +35,7 @@ vi.mock(
   }),
 )
 
-const createContextValue = (overrides: Record<string, unknown> = {}) => ({
+const defaultContextValue = {
   managedSiteType: "new-api",
   updateManagedSiteType: vi.fn().mockResolvedValue(true),
   newApiBaseUrl: "https://managed.example",
@@ -44,6 +44,20 @@ const createContextValue = (overrides: Record<string, unknown> = {}) => ({
   newApiUsername: "admin",
   newApiPassword: "secret-password",
   newApiTotpSecret: "JBSWY3DPEHPK3PXP",
+  updateNewApiBaseUrl: vi.fn().mockResolvedValue(true),
+  updateNewApiAdminToken: vi.fn().mockResolvedValue(true),
+  updateNewApiUserId: vi.fn().mockResolvedValue(true),
+  updateNewApiUsername: vi.fn().mockResolvedValue(true),
+  updateNewApiPassword: vi.fn().mockResolvedValue(true),
+  updateNewApiTotpSecret: vi.fn().mockResolvedValue(true),
+  resetNewApiConfig: vi.fn().mockResolvedValue(true),
+}
+
+const createContextValue = (
+  overrides: Partial<typeof defaultContextValue> = {},
+) => ({
+  ...defaultContextValue,
+  updateManagedSiteType: vi.fn().mockResolvedValue(true),
   updateNewApiBaseUrl: vi.fn().mockResolvedValue(true),
   updateNewApiAdminToken: vi.fn().mockResolvedValue(true),
   updateNewApiUserId: vi.fn().mockResolvedValue(true),

@@ -310,7 +310,7 @@ export function useChannelDialog() {
     initialGroups?: string[]
     onRequestRealKey?: (options: {
       setKey: (key: string) => void
-    }) => void | Promise<void>
+    }) => Promise<void>
     onSuccess?: (channel: any) => void
   }) => {
     openDialog(options)

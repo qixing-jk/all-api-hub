@@ -11,6 +11,10 @@ import {
   MatchResolutionUnresolvedError,
 } from "~/services/managedSites/channelMatch"
 import {
+  fetchNewApiChannelKey,
+  NewApiChannelKeyRequirementError,
+} from "~/services/managedSites/providers/newApiSession"
+import {
   findManagedSiteChannelByComparableInputs,
   findManagedSiteChannelsByBaseUrlAndModels,
 } from "~/services/managedSites/utils/channelMatching"
@@ -39,10 +43,6 @@ import {
   userPreferences,
 } from "../../preferences/userPreferences"
 import { resolveDefaultChannelGroups } from "./defaultChannelGroups"
-import {
-  fetchNewApiChannelKey,
-  NewApiChannelKeyRequirementError,
-} from "./newApiSession"
 
 /**
  * Unified logger scoped to the New API integration and auto-config flows.
