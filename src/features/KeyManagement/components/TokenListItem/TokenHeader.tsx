@@ -696,17 +696,21 @@ export function TokenHeader({
       MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE
       ? managedSiteStatus.recovery
       : undefined
+  const canRetryManagedSiteVerification = Boolean(
+    managedSiteRecovery?.loginCredentialsConfigured ||
+      managedSiteRecovery?.authenticatedBrowserSessionExists,
+  )
   const matchedManagedSiteChannel =
     managedSiteStatus && "matchedChannel" in managedSiteStatus
       ? managedSiteStatus.matchedChannel
       : undefined
   const shouldShowManagedSiteVerificationRetry = Boolean(
-    managedSiteRecovery?.loginCredentialsConfigured &&
+    canRetryManagedSiteVerification &&
       managedSiteStatus &&
       onManagedSiteVerificationRetry,
   )
   const managedSiteRecoveryMessage = managedSiteRecovery
-    ? managedSiteRecovery.loginCredentialsConfigured
+    ? canRetryManagedSiteVerification
       ? t("managedSiteStatus.recovery.verificationRequired")
       : t("managedSiteStatus.recovery.configureLogin")
     : null

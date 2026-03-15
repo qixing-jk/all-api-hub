@@ -64,7 +64,7 @@ const normalizeConfig = (
   baseUrl: config.baseUrl.trim(),
   userId: config.userId?.trim() ?? "",
   username: config.username?.trim() ?? "",
-  password: config.password?.trim() ?? "",
+  password: config.password ?? "",
   totpSecret: config.totpSecret?.trim() ?? "",
 })
 
@@ -251,6 +251,7 @@ export function useNewApiManagedVerification() {
         ...prev,
         isBusy: false,
         busyMessage: undefined,
+        code: "",
         errorMessage:
           error instanceof Error ? error.message : String(error ?? ""),
       }))

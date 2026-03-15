@@ -12,16 +12,18 @@ import type {
   ManagedSiteService,
 } from "~/services/managedSites/managedSiteService"
 import { getManagedSiteService } from "~/services/managedSites/managedSiteService"
+import { getNewApiLoginAssistConfig } from "~/services/managedSites/providers/newApi"
+import {
+  hasNewApiAuthenticatedBrowserSession,
+  hasNewApiLoginAssistCredentials,
+} from "~/services/managedSites/providers/newApiSession"
+import { hasNewApiTotpSecret } from "~/services/managedSites/providers/newApiTotp"
 import { normalizeManagedSiteChannelBaseUrl } from "~/services/managedSites/utils/channelMatching"
 import { supportsManagedSiteBaseUrlChannelLookup } from "~/services/managedSites/utils/managedSite"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import type { AccountToken, ApiToken, DisplaySiteData } from "~/types"
 import type { ManagedSiteChannel } from "~/types/managedSite"
 import { createLogger } from "~/utils/core/logger"
-
-import { getNewApiLoginAssistConfig } from "./providers/newApi"
-import { hasNewApiLoginAssistCredentials } from "./providers/newApiSession"
-import { hasNewApiTotpSecret } from "./providers/newApiTotp"
 
 const logger = createLogger("ManagedSiteTokenChannelStatus")
 
@@ -76,6 +78,7 @@ export interface ManagedSiteTokenChannelRecovery {
   managedBaseUrl: string
   searchBaseUrl?: string
   loginCredentialsConfigured: boolean
+  authenticatedBrowserSessionExists: boolean
   automaticCodeConfigured: boolean
 }
 
@@ -176,6 +179,11 @@ const buildNewApiRecoveryMetadata = async (params: {
     searchBaseUrl: params.assessment?.searchBaseUrl,
     loginCredentialsConfigured:
       hasNewApiLoginAssistCredentials(loginAssistConfig),
+    authenticatedBrowserSessionExists:
+      await hasNewApiAuthenticatedBrowserSession({
+        baseUrl: params.managedConfig.baseUrl,
+        userId: params.managedConfig.userId,
+      }),
     automaticCodeConfigured: hasNewApiTotpSecret(loginAssistConfig?.totpSecret),
   }
 }
@@ -292,15 +300,31 @@ export async function getManagedSiteTokenChannelStatus(
       !formData.key.trim() ||
       (resolution.url.matched && !resolution.key.comparable)
     ) {
-      const recovery =
+      let recovery: ManagedSiteTokenChannelRecovery | undefined
+
+      if (
         service.siteType === NEW_API &&
         resolution.url.matched &&
         !resolution.key.comparable
-          ? await buildNewApiRecoveryMetadata({
-              managedConfig,
-              assessment,
-            })
-          : undefined
+      ) {
+        try {
+          recovery = await buildNewApiRecoveryMetadata({
+            managedConfig,
+            assessment,
+          })
+        } catch (error) {
+          logger.warn("buildNewApiRecoveryMetadata failed", {
+            managedConfig: {
+              baseUrl: managedConfig.baseUrl,
+              userId: managedConfig.userId,
+            },
+            assessment: {
+              searchBaseUrl: assessment?.searchBaseUrl,
+            },
+            diagnostic: toSanitizedErrorSummary(error, secretsToRedact),
+          })
+        }
+      }
 
       return {
         status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,

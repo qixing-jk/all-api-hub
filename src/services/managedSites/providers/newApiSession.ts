@@ -202,6 +202,19 @@ export const hasNewApiLoginAssistCredentials = (
 ) => Boolean(config?.username?.trim() && config?.password?.trim())
 
 /**
+ * Uses the same browser-session probe as ensureNewApiManagedSession so callers
+ * can tell whether verification can resume immediately without stored login
+ * credentials.
+ */
+export async function hasNewApiAuthenticatedBrowserSession(
+  config: Pick<NewApiConfig, "baseUrl" | "userId">,
+) {
+  return Boolean(
+    await readNewApiVerificationMethods(config.baseUrl, config.userId),
+  )
+}
+
+/**
  * Checks the cached verified-session window for the current runtime.
  */
 export const isNewApiVerifiedSessionActive = (baseUrl: string) => {
@@ -309,7 +322,7 @@ async function postNewApiLogin(
       method: "POST",
       body: JSON.stringify({
         username: config.username?.trim(),
-        password: config.password?.trim(),
+        password: config.password ?? "",
       }),
     },
   })

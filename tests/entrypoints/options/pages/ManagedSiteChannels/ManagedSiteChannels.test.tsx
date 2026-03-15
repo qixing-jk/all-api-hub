@@ -163,12 +163,15 @@ describe("ManagedSiteChannels", () => {
 
     const row = screen.getByText("Alpha").closest("tr")
     expect(row).toBeTruthy()
-    const rowButtons = within(row!).getAllByRole("button")
-    await user.click(rowButtons[rowButtons.length - 1]!)
-
-    const editItem = await screen.findByText(
-      "managedSiteChannels:table.rowActions.edit",
+    await user.click(
+      within(row!).getByRole("button", {
+        name: "managedSiteChannels:table.columns.actions",
+      }),
     )
+
+    const editItem = await screen.findByRole("menuitem", {
+      name: "managedSiteChannels:table.rowActions.edit",
+    })
     await user.click(editItem)
 
     const loadRealKeyButton = await screen.findByRole("button", {

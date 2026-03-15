@@ -137,6 +137,7 @@
     "noAnyModels": "No models available",
     "noChannelsToSync": "No channels to sync",
     "channelExists": "Channel {{channelName}} already exists, no need to import again",
+    "channelMatchUnresolved": "A potential duplicate channel exists, but confirming it requires a New API verification step. Complete verification first, then retry the import.",
     "importSuccess": "Successfully imported new channel {{channelName}}",
     "importFailed": "Import failed, an unknown error occurred"
   },

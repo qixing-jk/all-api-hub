@@ -170,7 +170,7 @@ For New API, `unknown` with `exact-verification-unavailable` should be enriched 
 - whether automatic TOTP is configured
 - the search base URL / candidate channel context needed for the eventual retry
 
-`TokenHeader` should continue rendering the existing badge/description pattern, but add a small action such as `Verify now` when the unknown state is recoverable. After successful interactive recovery, `useKeyManagement.refreshManagedSiteTokenStatusForToken(...)` should rerun the one-token check instead of forcing a full page refresh.
+`TokenHeader` should continue rendering the existing badge/description pattern, but add a small action such as `Verify now` when the unknown state is recoverable. After successful interactive recovery, `useKeyManagement.refreshManagedSiteTokenStatusForToken(...)` should rerun the one-token check instead of forcing a full-page refresh.
 
 Rationale:
 

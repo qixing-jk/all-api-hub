@@ -146,7 +146,7 @@ If the required New API login-assist credentials are missing, the row MUST expos
 - **AND** the managed-site type is `new-api`
 - **WHEN** the user completes verification-assisted retry successfully for that token
 - **THEN** the system MUST rerun the managed-site status check for that token
-- **AND** the row MUST replace the prior `unknown` result with the refreshed final status without requiring a full page reload
+- **AND** the row MUST replace the prior `unknown` result with the refreshed final status without requiring a full-page reload
 
 #### Scenario: New API key-unavailable tooltip includes hidden-key guidance
 - **GIVEN** a token is rendered in Key Management

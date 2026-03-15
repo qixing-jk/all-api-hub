@@ -118,7 +118,7 @@ export default function ManagedSiteChannels({
   refreshKey,
   routeParams,
 }: ManagedSiteChannelsProps) {
-  const { t } = useTranslation(["managedSiteChannels", "messages"])
+  const { t } = useTranslation(["managedSiteChannels", "messages", "common"])
   const {
     managedSiteType,
     newApiBaseUrl,
@@ -160,6 +160,7 @@ export default function ManagedSiteChannels({
   const [filterDialogChannel, setFilterDialogChannel] =
     useState<ChannelRow | null>(null)
   const verification = useNewApiManagedVerification()
+  const { openNewApiManagedVerification } = verification
 
   const { openWithCustom } = useChannelDialog()
 
@@ -262,8 +263,7 @@ export default function ManagedSiteChannels({
                       totpSecret: newApiTotpSecret,
                     },
                     setKey,
-                    openVerification:
-                      verification.openNewApiManagedVerification,
+                    openVerification: openNewApiManagedVerification,
                   })
                 } catch (error) {
                   toast.error(
@@ -293,7 +293,7 @@ export default function ManagedSiteChannels({
       openWithCustom,
       refreshChannels,
       t,
-      verification,
+      openNewApiManagedVerification,
     ],
   )
 
@@ -406,6 +406,7 @@ export default function ManagedSiteChannels({
 
   const rowActionLabels = useMemo<RowActionsLabels>(
     () => ({
+      trigger: t("table.columns.actions"),
       edit: t("table.rowActions.edit"),
       sync: t("table.rowActions.sync"),
       syncing: t("table.rowActions.syncing"),

@@ -1,5 +1,6 @@
 import {
   MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS,
+  MatchResolutionUnresolvedError,
   type ManagedSiteChannelMatchInspection,
 } from "~/services/managedSites/channelMatch"
 import type {
@@ -117,14 +118,22 @@ export async function resolveManagedSiteChannelMatch(
     keyAssessment.channel.id === modelsAssessment.channel?.id
 
   if (key?.trim() && models.length > 0 && !hasLocalExactMatch) {
-    const exactMatch = await service.findMatchingChannel(
-      managedConfig.baseUrl,
-      managedConfig.token,
-      managedConfig.userId,
-      searchBaseUrl,
-      models,
-      key,
-    )
+    let exactMatch = null
+
+    try {
+      exactMatch = await service.findMatchingChannel(
+        managedConfig.baseUrl,
+        managedConfig.token,
+        managedConfig.userId,
+        searchBaseUrl,
+        models,
+        key,
+      )
+    } catch (error) {
+      if (!(error instanceof MatchResolutionUnresolvedError)) {
+        throw error
+      }
+    }
 
     if (exactMatch) {
       keyAssessment = inspectManagedSiteChannelKeyMatch({

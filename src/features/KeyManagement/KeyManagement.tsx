@@ -47,7 +47,10 @@ const canRetryNewApiManagedVerification = (
     return false
   }
 
-  return Boolean(managedSiteStatus.recovery?.loginCredentialsConfigured)
+  return Boolean(
+    managedSiteStatus.recovery?.loginCredentialsConfigured ||
+      managedSiteStatus.recovery?.authenticatedBrowserSessionExists,
+  )
 }
 
 const getRecoverableNewApiCandidateChannel = (

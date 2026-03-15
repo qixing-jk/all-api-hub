@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react"
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
 import { I18nextProvider } from "react-i18next"
@@ -135,11 +141,13 @@ describe("BasicSettings tab layout", () => {
     expect(passwordInput).toHaveAttribute("type", "text")
     expect(totpInput).toHaveAttribute("type", "text")
 
-    fireEvent.change(usernameInput, { target: { value: "next-admin" } })
+    fireEvent.change(usernameInput, { target: { value: " next-admin " } })
     fireEvent.blur(usernameInput)
-    fireEvent.change(passwordInput, { target: { value: "next-password" } })
+    fireEvent.change(passwordInput, { target: { value: " next-password " } })
     fireEvent.blur(passwordInput)
-    fireEvent.change(totpInput, { target: { value: "JBSWY3DPEHPK3PXQ" } })
+    fireEvent.change(totpInput, {
+      target: { value: " JBSWY3DPEHPK3PXQ " },
+    })
     fireEvent.blur(totpInput)
 
     await waitFor(() =>
@@ -149,7 +157,7 @@ describe("BasicSettings tab layout", () => {
     )
     await waitFor(() =>
       expect(contextValue.updateNewApiPassword).toHaveBeenCalledWith(
-        "next-password",
+        " next-password ",
       ),
     )
     await waitFor(() =>
@@ -166,15 +174,21 @@ describe("BasicSettings tab layout", () => {
 
     renderWithI18n(<NewApiSettings />)
 
-    const resetButtons = screen.getAllByRole("button", {
-      name: "common:actions.reset",
-    })
-    await user.click(resetButtons[0]!)
+    const section = screen.getByText("settings:newApi.title").closest("section")
+    expect(section).toBeTruthy()
 
-    const confirmButtons = await screen.findAllByRole("button", {
-      name: "common:actions.reset",
-    })
-    await user.click(confirmButtons[1]!)
+    await user.click(
+      within(section!).getByRole("button", {
+        name: "common:actions.reset",
+      }),
+    )
+
+    const dialog = await screen.findByRole("dialog")
+    await user.click(
+      within(dialog).getByRole("button", {
+        name: "common:actions.reset",
+      }),
+    )
 
     await waitFor(() =>
       expect(contextValue.resetNewApiConfig).toHaveBeenCalledTimes(1),

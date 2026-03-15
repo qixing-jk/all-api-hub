@@ -272,6 +272,7 @@ describe("KeyManagement managed-site status support", () => {
         managedBaseUrl: "https://managed.example",
         searchBaseUrl: "https://example.com",
         loginCredentialsConfigured: true,
+        authenticatedBrowserSessionExists: false,
         automaticCodeConfigured: true,
       },
     })
@@ -297,7 +298,8 @@ describe("KeyManagement managed-site status support", () => {
         siteType: "new-api",
         managedBaseUrl: "https://managed.example",
         searchBaseUrl: "https://example.com",
-        loginCredentialsConfigured: true,
+        loginCredentialsConfigured: false,
+        authenticatedBrowserSessionExists: true,
         automaticCodeConfigured: true,
       },
     })
@@ -327,7 +329,8 @@ describe("KeyManagement managed-site status support", () => {
         siteType: "new-api",
         managedBaseUrl: "https://managed.example",
         searchBaseUrl: "https://example.com",
-        loginCredentialsConfigured: true,
+        loginCredentialsConfigured: false,
+        authenticatedBrowserSessionExists: true,
         automaticCodeConfigured: true,
       },
     })
@@ -392,6 +395,7 @@ describe("KeyManagement managed-site status support", () => {
         managedBaseUrl: "https://managed.example",
         searchBaseUrl: "https://example.com",
         loginCredentialsConfigured: true,
+        authenticatedBrowserSessionExists: false,
         automaticCodeConfigured: true,
       },
     })

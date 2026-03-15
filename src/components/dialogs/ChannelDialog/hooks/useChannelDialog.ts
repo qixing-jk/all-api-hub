@@ -6,6 +6,7 @@ import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { ensureAccountApiToken } from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
+import { MatchResolutionUnresolvedError } from "~/services/managedSites/channelMatch"
 import { getManagedSiteService } from "~/services/managedSites/managedSiteService"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import {
@@ -88,6 +89,7 @@ export function useChannelDialog() {
       t("messages:accountOperations.checkingApiKeys"),
     )
     let displaySiteData: DisplaySiteData | null = null
+    let serviceKey: string | null = null
     let secretsToRedact: string[] = []
 
     try {
@@ -109,6 +111,7 @@ export function useChannelDialog() {
       }
 
       const service = await getManagedSiteService()
+      serviceKey = service.messagesKey
       const managedConfig = await service.getConfig()
       if (!managedConfig) {
         toast.error(t(`messages:${service.messagesKey}.configMissing`), {
@@ -178,6 +181,16 @@ export function useChannelDialog() {
         },
       })
     } catch (error) {
+      if (
+        error instanceof MatchResolutionUnresolvedError &&
+        serviceKey === "newapi"
+      ) {
+        toast.error(t("messages:newapi.channelMatchUnresolved"), {
+          id: toastId,
+        })
+        return
+      }
+
       const diagnostic = toSanitizedErrorSummary(error, secretsToRedact)
       toast.error(
         t("messages:errors.operation.failed", {
@@ -203,10 +216,12 @@ export function useChannelDialog() {
     const toastId = toast.loading(
       t("messages:accountOperations.checkingApiKeys"),
     )
+    let serviceKey: string | null = null
     let secretsToRedact: string[] = []
 
     try {
       const service = await getManagedSiteService()
+      serviceKey = service.messagesKey
       const managedConfig = await service.getConfig()
       if (!managedConfig) {
         toast.error(t(`messages:${service.messagesKey}.configMissing`), {
@@ -263,6 +278,16 @@ export function useChannelDialog() {
         },
       })
     } catch (error) {
+      if (
+        error instanceof MatchResolutionUnresolvedError &&
+        serviceKey === "newapi"
+      ) {
+        toast.error(t("messages:newapi.channelMatchUnresolved"), {
+          id: toastId,
+        })
+        return
+      }
+
       const diagnostic = toSanitizedErrorSummary(error, secretsToRedact)
       toast.error(
         t("messages:errors.operation.failed", {

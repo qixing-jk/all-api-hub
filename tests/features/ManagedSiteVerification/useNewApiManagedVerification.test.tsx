@@ -43,6 +43,18 @@ vi.mock("~/services/managedSites/providers/newApiSession", async () => {
   }
 })
 
+const BASE_REQUEST = {
+  kind: "token" as const,
+  label: "Token A",
+  config: {
+    baseUrl: "https://managed.example",
+    userId: "1",
+    username: "admin",
+    password: "  secret  ",
+    totpSecret: "",
+  },
+}
+
 describe("useNewApiManagedVerification", () => {
   beforeEach(() => {
     ensureNewApiManagedSessionMock.mockReset()
@@ -60,33 +72,169 @@ describe("useNewApiManagedVerification", () => {
         passkeyEnabled: false,
       },
     })
-
     const onVerified = vi.fn().mockResolvedValue(undefined)
-
     const { result } = renderHook(() => useNewApiManagedVerification())
 
     act(() => {
       result.current.openNewApiManagedVerification({
-        kind: "token",
-        label: "Token A",
-        config: {
-          baseUrl: "https://managed.example",
-          userId: "1",
-          username: "admin",
-          password: "secret",
-          totpSecret: "",
-        },
+        ...BASE_REQUEST,
         onVerified,
       })
     })
 
     await waitFor(() => {
+      expect(ensureNewApiManagedSessionMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          password: "  secret  ",
+        }),
+      )
       expect(onVerified).toHaveBeenCalledTimes(1)
       expect(toast.success).toHaveBeenCalledTimes(1)
       expect(result.current.dialogState.isOpen).toBe(false)
       expect(result.current.dialogState.step).toBe(
         NEW_API_MANAGED_VERIFICATION_STEPS.LOGGING_IN,
       )
+    })
+  })
+
+  it("opens the credentials-missing step without calling onVerified", async () => {
+    ensureNewApiManagedSessionMock.mockResolvedValue({
+      status: NEW_API_MANAGED_SESSION_STATUSES.CREDENTIALS_MISSING,
+    })
+
+    const onVerified = vi.fn()
+    const { result } = renderHook(() => useNewApiManagedVerification())
+
+    act(() => {
+      result.current.openNewApiManagedVerification({
+        ...BASE_REQUEST,
+        onVerified,
+      })
+    })
+
+    await waitFor(() => {
+      expect(result.current.dialogState.isOpen).toBe(true)
+      expect(result.current.dialogState.step).toBe(
+        NEW_API_MANAGED_VERIFICATION_STEPS.CREDENTIALS_MISSING,
+      )
+      expect(onVerified).not.toHaveBeenCalled()
+    })
+  })
+
+  it("opens the login-2fa step when the session requires a login code", async () => {
+    ensureNewApiManagedSessionMock.mockResolvedValue({
+      status: NEW_API_MANAGED_SESSION_STATUSES.LOGIN_2FA_REQUIRED,
+      automaticAttempted: false,
+    })
+
+    const onVerified = vi.fn()
+    const { result } = renderHook(() => useNewApiManagedVerification())
+
+    act(() => {
+      result.current.openNewApiManagedVerification({
+        ...BASE_REQUEST,
+        onVerified,
+      })
+    })
+
+    await waitFor(() => {
+      expect(result.current.dialogState.isOpen).toBe(true)
+      expect(result.current.dialogState.step).toBe(
+        NEW_API_MANAGED_VERIFICATION_STEPS.LOGIN_2FA,
+      )
+      expect(onVerified).not.toHaveBeenCalled()
+    })
+  })
+
+  it("opens the secure-verification step when login succeeded but verification is still required", async () => {
+    ensureNewApiManagedSessionMock.mockResolvedValue({
+      status: NEW_API_MANAGED_SESSION_STATUSES.SECURE_VERIFICATION_REQUIRED,
+      automaticAttempted: false,
+      methods: {
+        twoFactorEnabled: true,
+        passkeyEnabled: false,
+      },
+    })
+
+    const onVerified = vi.fn()
+    const { result } = renderHook(() => useNewApiManagedVerification())
+
+    act(() => {
+      result.current.openNewApiManagedVerification({
+        ...BASE_REQUEST,
+        onVerified,
+      })
+    })
+
+    await waitFor(() => {
+      expect(result.current.dialogState.isOpen).toBe(true)
+      expect(result.current.dialogState.step).toBe(
+        NEW_API_MANAGED_VERIFICATION_STEPS.SECURE_VERIFICATION,
+      )
+      expect(onVerified).not.toHaveBeenCalled()
+    })
+  })
+
+  it("opens the passkey-manual step when passkey verification is required", async () => {
+    ensureNewApiManagedSessionMock.mockResolvedValue({
+      status: NEW_API_MANAGED_SESSION_STATUSES.PASSKEY_MANUAL_REQUIRED,
+      methods: {
+        twoFactorEnabled: false,
+        passkeyEnabled: true,
+      },
+    })
+
+    const onVerified = vi.fn()
+    const { result } = renderHook(() => useNewApiManagedVerification())
+
+    act(() => {
+      result.current.openNewApiManagedVerification({
+        ...BASE_REQUEST,
+        onVerified,
+      })
+    })
+
+    await waitFor(() => {
+      expect(result.current.dialogState.isOpen).toBe(true)
+      expect(result.current.dialogState.step).toBe(
+        NEW_API_MANAGED_VERIFICATION_STEPS.PASSKEY_MANUAL,
+      )
+      expect(onVerified).not.toHaveBeenCalled()
+    })
+  })
+
+  it("clears the one-time code after a failed submit", async () => {
+    ensureNewApiManagedSessionMock.mockResolvedValue({
+      status: NEW_API_MANAGED_SESSION_STATUSES.LOGIN_2FA_REQUIRED,
+      automaticAttempted: false,
+    })
+    submitNewApiLoginTwoFactorCodeMock.mockRejectedValue(
+      new Error("invalid code"),
+    )
+
+    const { result } = renderHook(() => useNewApiManagedVerification())
+
+    act(() => {
+      result.current.openNewApiManagedVerification(BASE_REQUEST)
+    })
+
+    await waitFor(() => {
+      expect(result.current.dialogState.step).toBe(
+        NEW_API_MANAGED_VERIFICATION_STEPS.LOGIN_2FA,
+      )
+    })
+
+    act(() => {
+      result.current.setCode("123456")
+    })
+
+    act(() => {
+      result.current.submitCode()
+    })
+
+    await waitFor(() => {
+      expect(result.current.dialogState.errorMessage).toBe("invalid code")
+      expect(result.current.dialogState.code).toBe("")
     })
   })
 })

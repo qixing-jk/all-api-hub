@@ -58,6 +58,10 @@ const { getNewApiLoginAssistConfigMock } = vi.hoisted(() => ({
   getNewApiLoginAssistConfigMock: vi.fn(),
 }))
 
+const { hasNewApiAuthenticatedBrowserSessionMock } = vi.hoisted(() => ({
+  hasNewApiAuthenticatedBrowserSessionMock: vi.fn(),
+}))
+
 vi.mock("~/services/accounts/utils/apiServiceRequest", () => ({
   resolveDisplayAccountTokenForSecret: (...args: unknown[]) =>
     resolveDisplayAccountTokenForSecretMock(...args),
@@ -75,6 +79,22 @@ vi.mock("~/services/managedSites/providers/newApi", async (importOriginal) => {
       getNewApiLoginAssistConfigMock(...args),
   }
 })
+
+vi.mock(
+  "~/services/managedSites/providers/newApiSession",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/managedSites/providers/newApiSession")
+      >()
+
+    return {
+      ...actual,
+      hasNewApiAuthenticatedBrowserSession: (...args: unknown[]) =>
+        hasNewApiAuthenticatedBrowserSessionMock(...args),
+    }
+  },
+)
 
 const createManagedSiteServiceStub = (
   overrides: Record<string, unknown> = {},
@@ -128,6 +148,8 @@ describe("getManagedSiteTokenChannelStatus", () => {
       password: "secret-password",
       totpSecret: "JBSWY3DPEHPK3PXP",
     })
+    hasNewApiAuthenticatedBrowserSessionMock.mockReset()
+    hasNewApiAuthenticatedBrowserSessionMock.mockResolvedValue(false)
   })
 
   it("returns added when an exact comparable channel match exists", async () => {
@@ -331,6 +353,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
         managedBaseUrl: "https://managed.example",
         searchBaseUrl: "https://api.example.com",
         loginCredentialsConfigured: true,
+        authenticatedBrowserSessionExists: false,
         automaticCodeConfigured: true,
       },
     })
@@ -516,6 +539,71 @@ describe("getManagedSiteTokenChannelStatus", () => {
           reason:
             MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.COMPARISON_UNAVAILABLE,
           channel: undefined,
+        },
+      },
+    })
+    expect(result).not.toHaveProperty("recovery")
+  })
+
+  it("degrades recovery metadata gracefully when the browser-session probe fails", async () => {
+    const account = buildDisplaySiteData({ baseUrl: "https://api.example.com" })
+    const token = buildApiToken({ key: "test-token-key" })
+    const service = createManagedSiteServiceStub({
+      searchChannel: vi.fn().mockResolvedValue({
+        items: [
+          buildManagedSiteChannel({
+            id: 23_1,
+            name: "Managed Channel 23 Hidden Key",
+            base_url: "https://api.example.com",
+            models: "gpt-4o",
+            key: "",
+          }),
+        ],
+        total: 1,
+        type_counts: {},
+      }),
+    })
+
+    hasNewApiAuthenticatedBrowserSessionMock.mockRejectedValueOnce(
+      new Error("session probe failed"),
+    )
+
+    const result = await getManagedSiteTokenChannelStatus({
+      account,
+      token,
+      service,
+    })
+
+    expect(result).toEqual({
+      status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
+      reason:
+        MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE,
+      assessment: {
+        searchBaseUrl: "https://api.example.com",
+        searchCompleted: true,
+        url: {
+          matched: true,
+          candidateCount: 1,
+          channel: {
+            id: 23_1,
+            name: "Managed Channel 23 Hidden Key",
+          },
+        },
+        key: {
+          comparable: false,
+          matched: false,
+          reason: MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.COMPARISON_UNAVAILABLE,
+          channel: undefined,
+        },
+        models: {
+          comparable: true,
+          matched: true,
+          reason: MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT,
+          channel: {
+            id: 23_1,
+            name: "Managed Channel 23 Hidden Key",
+          },
+          similarityScore: 1,
         },
       },
     })

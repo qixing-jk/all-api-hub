@@ -651,6 +651,7 @@ describe("TokenHeader save to API profiles", () => {
             managedBaseUrl: "https://managed.example",
             searchBaseUrl: "https://example.com",
             loginCredentialsConfigured: true,
+            authenticatedBrowserSessionExists: false,
             automaticCodeConfigured: true,
           },
         }}
@@ -671,6 +672,80 @@ describe("TokenHeader save to API profiles", () => {
 
     expect(onManagedSiteVerificationRetry).toHaveBeenCalledWith(
       expect.objectContaining({ id: 8 }),
+      expect.objectContaining({
+        reason:
+          MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE,
+      }),
+    )
+  })
+
+  it("shows retry guidance when an authenticated browser session already exists", async () => {
+    const user = userEvent.setup()
+    const onManagedSiteVerificationRetry = vi.fn()
+    const account = createAccountStub()
+
+    const token = {
+      id: 8_1,
+      user_id: 1,
+      key: "sk-session-ready",
+      status: 1,
+      name: "Session Ready Token",
+      created_time: 0,
+      accessed_time: 0,
+      expired_time: 0,
+      remain_quota: 0,
+      unlimited_quota: false,
+      used_quota: 0,
+      accountId: account.id,
+      accountName: account.name,
+    }
+
+    render(
+      <TokenHeader
+        token={token as any}
+        copyKey={vi.fn()}
+        handleEditToken={vi.fn()}
+        handleDeleteToken={vi.fn()}
+        account={account}
+        onManagedSiteVerificationRetry={onManagedSiteVerificationRetry}
+        managedSiteStatus={{
+          status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
+          reason:
+            MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE,
+          assessment: createManagedSiteAssessment({
+            key: {
+              comparable: false,
+              matched: false,
+              reason:
+                MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.COMPARISON_UNAVAILABLE,
+            },
+          }),
+          recovery: {
+            siteType: "new-api",
+            managedBaseUrl: "https://managed.example",
+            searchBaseUrl: "https://example.com",
+            loginCredentialsConfigured: false,
+            authenticatedBrowserSessionExists: true,
+            automaticCodeConfigured: false,
+          },
+        }}
+      />,
+    )
+
+    expect(
+      screen.getByText(
+        "keyManagement:managedSiteStatus.recovery.verificationRequired",
+      ),
+    ).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:managedSiteStatus.actions.verifyNow",
+      }),
+    )
+
+    expect(onManagedSiteVerificationRetry).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 8_1 }),
       expect.objectContaining({
         reason:
           MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE,
@@ -721,6 +796,7 @@ describe("TokenHeader save to API profiles", () => {
             managedBaseUrl: "https://managed.example",
             searchBaseUrl: "https://example.com",
             loginCredentialsConfigured: false,
+            authenticatedBrowserSessionExists: false,
             automaticCodeConfigured: false,
           },
         }}

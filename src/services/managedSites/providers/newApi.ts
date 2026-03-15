@@ -7,6 +7,10 @@ import { accountStorage } from "~/services/accounts/accountStorage"
 import { getApiService } from "~/services/apiService"
 import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompatible"
 import {
+  MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
+  MatchResolutionUnresolvedError,
+} from "~/services/managedSites/channelMatch"
+import {
   findManagedSiteChannelByComparableInputs,
   findManagedSiteChannelsByBaseUrlAndModels,
 } from "~/services/managedSites/utils/channelMatching"
@@ -423,7 +427,9 @@ export async function findMatchingChannel(
       })
     } catch (error) {
       if (error instanceof NewApiChannelKeyRequirementError) {
-        return null
+        throw new MatchResolutionUnresolvedError(
+          MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.VERIFICATION_REQUIRED,
+        )
       }
 
       logger.warn("Failed to fetch hidden New API channel key", {
@@ -520,6 +526,13 @@ export async function importToNewApi(
       message: createdChannelResponse.message,
     }
   } catch (error) {
+    if (error instanceof MatchResolutionUnresolvedError) {
+      return {
+        success: false,
+        message: t("messages:newapi.channelMatchUnresolved"),
+      }
+    }
+
     return {
       success: false,
       message: getErrorMessage(error) || t("messages:newapi.importFailed"),

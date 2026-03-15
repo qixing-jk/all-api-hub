@@ -140,13 +140,23 @@ export function NewApiManagedVerificationDialog(
     >
       <div className="space-y-4">
         {props.isBusy ? (
-          <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-200">
+          <div
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-200"
+          >
             {props.busyMessage || t("dialog.messages.starting")}
           </div>
         ) : null}
 
         {props.errorMessage ? (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200">
+          <div
+            role="alert"
+            aria-live="assertive"
+            aria-atomic="true"
+            className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200"
+          >
             {props.errorMessage}
           </div>
         ) : null}

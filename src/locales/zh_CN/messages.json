@@ -137,6 +137,7 @@
     "noAnyModels": "暂无可用模型",
     "noChannelsToSync": "没有可同步的渠道",
     "channelExists": "渠道 {{channelName}} 已存在，无需再次导入",
+    "channelMatchUnresolved": "可能已经存在重复渠道，但当前需要先完成 New API 验证才能确认。请先完成验证后再重试导入。",
     "importSuccess": "成功导入新渠道 {{channelName}}",
     "importFailed": "导入失败，发生未知错误"
   },

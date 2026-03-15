@@ -1,10 +1,9 @@
 import { render, screen } from "@testing-library/react"
-import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
 import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import ManagedSiteSelector from "~/features/BasicSettings/components/tabs/ManagedSite/ManagedSiteSelector"
+import ManagedSiteTab from "~/features/BasicSettings/components/tabs/ManagedSite/ManagedSiteTab"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
 const { mockedUseUserPreferencesContext } = vi.hoisted(() => ({
@@ -58,24 +57,25 @@ const createContextValue = (overrides: Record<string, unknown> = {}) => ({
 const renderWithI18n = (ui: ReactNode) =>
   render(<I18nextProvider i18n={testI18n}>{ui}</I18nextProvider>)
 
-describe("ManagedSiteSelector", () => {
+describe("ManagedSiteTab", () => {
   beforeEach(() => {
     mockedUseUserPreferencesContext.mockReset()
     mockedUseUserPreferencesContext.mockReturnValue(createContextValue())
   })
 
-  it("includes Done Hub as a selectable managed site type", async () => {
-    const user = userEvent.setup()
-    renderWithI18n(<ManagedSiteSelector />)
-
-    const trigger = await screen.findByRole("combobox", {
-      name: "settings:managedSite.siteTypeLabel",
-    })
-
-    await user.click(trigger)
+  it("renders the New API login-assist fields when new-api is the active managed site", () => {
+    renderWithI18n(<ManagedSiteTab />)
 
     expect(
-      await screen.findByText("settings:managedSite.doneHub"),
+      screen.getByPlaceholderText("settings:newApi.fields.usernamePlaceholder"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByPlaceholderText("settings:newApi.fields.passwordPlaceholder"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByPlaceholderText(
+        "settings:newApi.fields.totpSecretPlaceholder",
+      ),
     ).toBeInTheDocument()
   })
 })

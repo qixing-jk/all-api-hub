@@ -102,7 +102,6 @@ export default function NewApiSettings() {
   }
 
   const handleNewApiPasswordChange = async (password: string) => {
-    password = password.trim()
     if (password === newApiPassword) return
     const success = await updateNewApiPassword(password)
     showUpdateToast(success, t("newApi.fields.passwordLabel"))
