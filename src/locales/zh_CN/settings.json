@@ -155,8 +155,27 @@
       "baseUrlPlaceholder": "https://api.example.com",
       "adminTokenLabel": "管理员的系统访问令牌",
       "userIdLabel": "管理员用户 ID",
+      "usernameLabel": "登录用户名",
+      "usernameDesc": "可选。用于登录 New API 管理后台，并在需要时完成两步验证。主要用于渠道管理中查看真实渠道 key，以及密钥管理中判断某个 key 是否已在渠道中使用。",
+      "usernamePlaceholder": "admin",
+      "passwordLabel": "登录密码",
+      "passwordDesc": "可选。与登录用户名配合使用，用于登录 New API 管理后台，并在需要查看渠道 key 或执行完整 key 比对时建立登录会话。",
+      "passwordPlaceholder": "输入密码",
+      "showPassword": "显示登录密码",
+      "hidePassword": "隐藏登录密码",
+      "totpSecretLabel": "TOTP 密钥",
+      "totpSecretDesc": "可选。填写后，All API Hub 可自动生成 TOTP 验证码，用于完成登录 2FA，以及查看渠道 key 所需的安全验证。",
+      "totpSecretPlaceholder": "粘贴 Base32 TOTP 密钥",
+      "showTotpSecret": "显示 TOTP 密钥",
+      "hideTotpSecret": "隐藏 TOTP 密钥",
       "showToken": "显示系统访问令牌",
       "hideToken": "隐藏系统访问令牌"
+    },
+    "sessionTest": {
+      "title": "测试登录与两步验证配置",
+      "description": "测试已填写的登录用户名、密码和 TOTP 密钥是否正确可用。验证成功后，即可继续执行需要登录和两步验证的相关操作。",
+      "action": "测试配置",
+      "testing": "正在测试配置..."
     }
   },
   "veloera": {

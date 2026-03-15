@@ -12,6 +12,8 @@
     "update": "保存更改",
     "showKey": "显示密钥",
     "hideKey": "隐藏密钥",
+    "loadRealKey": "加载真实 key",
+    "loadingRealKey": "正在加载真实 key...",
     "selectAll": "全选",
     "inverse": "反选",
     "deselectAll": "全不选"
@@ -20,7 +22,8 @@
     "createSuccess": "渠道创建成功",
     "updateSuccess": "渠道更新成功",
     "saveFailed": "保存渠道失败：{{error}}",
-    "missingChannelId": "缺少现有渠道 ID"
+    "missingChannelId": "缺少现有渠道 ID",
+    "loadRealKeyFailed": "加载真实渠道 key 失败：{{error}}"
   },
   "validation": {
     "nameRequired": "渠道名称必填",
@@ -49,7 +52,8 @@
     },
     "key": {
       "label": "API 密钥",
-      "placeholder": "输入上游提供商的 API 密钥"
+      "placeholder": "输入上游提供商的 API 密钥",
+      "realKeyHint": "对于 New API，查看真实渠道 key 本身需要先完成 2FA 验证；如果未在设置中填写登录与两步验证辅助信息，则无法读取该 key。"
     },
     "baseUrl": {
       "label": "基础 URL",

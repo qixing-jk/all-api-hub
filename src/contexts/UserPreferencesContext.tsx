@@ -74,6 +74,9 @@ interface UserPreferencesContextType {
   newApiBaseUrl: string
   newApiAdminToken: string
   newApiUserId: string
+  newApiUsername: string
+  newApiPassword: string
+  newApiTotpSecret: string
   doneHubBaseUrl: string
   doneHubAdminToken: string
   doneHubUserId: string
@@ -118,6 +121,9 @@ interface UserPreferencesContextType {
   updateNewApiBaseUrl: (url: string) => Promise<boolean>
   updateNewApiAdminToken: (token: string) => Promise<boolean>
   updateNewApiUserId: (userId: string) => Promise<boolean>
+  updateNewApiUsername: (username: string) => Promise<boolean>
+  updateNewApiPassword: (password: string) => Promise<boolean>
+  updateNewApiTotpSecret: (totpSecret: string) => Promise<boolean>
   updateDoneHubBaseUrl: (url: string) => Promise<boolean>
   updateDoneHubAdminToken: (token: string) => Promise<boolean>
   updateDoneHubUserId: (userId: string) => Promise<boolean>
@@ -582,6 +588,39 @@ export const UserPreferencesProvider = ({
   const updateNewApiUserId = useCallback(async (userId: string) => {
     const updates = {
       newApi: { userId },
+    }
+    const success = await userPreferences.savePreferences(updates)
+    if (success) {
+      setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
+    }
+    return success
+  }, [])
+
+  const updateNewApiUsername = useCallback(async (username: string) => {
+    const updates = {
+      newApi: { username },
+    }
+    const success = await userPreferences.savePreferences(updates)
+    if (success) {
+      setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
+    }
+    return success
+  }, [])
+
+  const updateNewApiPassword = useCallback(async (password: string) => {
+    const updates = {
+      newApi: { password },
+    }
+    const success = await userPreferences.savePreferences(updates)
+    if (success) {
+      setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
+    }
+    return success
+  }, [])
+
+  const updateNewApiTotpSecret = useCallback(async (totpSecret: string) => {
+    const updates = {
+      newApi: { totpSecret },
     }
     const success = await userPreferences.savePreferences(updates)
     if (success) {
@@ -1375,6 +1414,9 @@ export const UserPreferencesProvider = ({
     newApiBaseUrl: preferences?.newApi?.baseUrl || "",
     newApiAdminToken: preferences?.newApi?.adminToken || "",
     newApiUserId: preferences?.newApi?.userId || "",
+    newApiUsername: preferences?.newApi?.username || "",
+    newApiPassword: preferences?.newApi?.password || "",
+    newApiTotpSecret: preferences?.newApi?.totpSecret || "",
     doneHubBaseUrl: preferences?.doneHub?.baseUrl || "",
     doneHubAdminToken: preferences?.doneHub?.adminToken || "",
     doneHubUserId: preferences?.doneHub?.userId || "",
@@ -1418,6 +1460,9 @@ export const UserPreferencesProvider = ({
     updateNewApiBaseUrl,
     updateNewApiAdminToken,
     updateNewApiUserId,
+    updateNewApiUsername,
+    updateNewApiPassword,
+    updateNewApiTotpSecret,
     updateDoneHubBaseUrl,
     updateDoneHubAdminToken,
     updateDoneHubUserId,

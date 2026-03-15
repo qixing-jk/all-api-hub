@@ -6,7 +6,10 @@ import { ensureAccountApiToken } from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { getApiService } from "~/services/apiService"
 import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompatible"
-import { findManagedSiteChannelByComparableInputs } from "~/services/managedSites/utils/channelMatching"
+import {
+  findManagedSiteChannelByComparableInputs,
+  findManagedSiteChannelsByBaseUrlAndModels,
+} from "~/services/managedSites/utils/channelMatching"
 import { ApiToken, AuthTypeEnum, DisplaySiteData, SiteAccount } from "~/types"
 import type { AccountToken } from "~/types"
 import type {
@@ -17,6 +20,7 @@ import type {
   ManagedSiteChannelListData,
   UpdateChannelPayload,
 } from "~/types/managedSite"
+import type { NewApiConfig } from "~/types/newApiConfig"
 import type {
   AutoConfigToNewApiResponse,
   ServiceResponse,
@@ -31,6 +35,10 @@ import {
   userPreferences,
 } from "../../preferences/userPreferences"
 import { resolveDefaultChannelGroups } from "./defaultChannelGroups"
+import {
+  fetchNewApiChannelKey,
+  NewApiChannelKeyRequirementError,
+} from "./newApiSession"
 
 /**
  * Unified logger scoped to the New API integration and auto-config flows.
@@ -193,6 +201,34 @@ export async function getNewApiConfig(): Promise<{
 }
 
 /**
+ * Reads the optional New API login-assist fields used by the session-backed
+ * verification flow without changing the existing admin-token config contract.
+ */
+export async function getNewApiLoginAssistConfig(): Promise<Pick<
+  NewApiConfig,
+  "baseUrl" | "username" | "password" | "totpSecret"
+> | null> {
+  try {
+    const prefs = await userPreferences.getPreferences()
+    const { newApi } = prefs
+
+    if (!newApi?.baseUrl) {
+      return null
+    }
+
+    return {
+      baseUrl: newApi.baseUrl,
+      username: newApi.username ?? "",
+      password: newApi.password ?? "",
+      totpSecret: newApi.totpSecret ?? "",
+    }
+  } catch (error) {
+    logger.error("Error getting New API login-assist config", error)
+    return null
+  }
+}
+
+/**
  * 获取账号支持的模型列表。
  * 优先使用 API 密钥携带的模型列表，回退到上游接口与账号可用模型。
  */
@@ -350,8 +386,56 @@ export async function findMatchingChannel(
     return null
   }
 
-  return findManagedSiteChannelByComparableInputs({
+  const exactMatch = findManagedSiteChannelByComparableInputs({
     channels: searchResults.items,
+    accountBaseUrl,
+    models,
+    key,
+  })
+
+  if (exactMatch || !key?.trim()) {
+    return exactMatch
+  }
+
+  const narrowedCandidates = findManagedSiteChannelsByBaseUrlAndModels({
+    channels: searchResults.items,
+    accountBaseUrl,
+    models,
+  }).filter((channel) => !channel.key?.trim())
+
+  if (narrowedCandidates.length === 0) {
+    return null
+  }
+
+  const resolvedCandidates: ManagedSiteChannel[] = []
+
+  for (const candidate of narrowedCandidates) {
+    try {
+      const resolvedKey = await fetchNewApiChannelKey({
+        baseUrl,
+        userId,
+        channelId: candidate.id,
+      })
+
+      resolvedCandidates.push({
+        ...candidate,
+        key: resolvedKey,
+      })
+    } catch (error) {
+      if (error instanceof NewApiChannelKeyRequirementError) {
+        return null
+      }
+
+      logger.warn("Failed to fetch hidden New API channel key", {
+        baseUrl,
+        channelId: candidate.id,
+        error: getErrorMessage(error),
+      })
+    }
+  }
+
+  return findManagedSiteChannelByComparableInputs({
+    channels: resolvedCandidates,
     accountBaseUrl,
     models,
     key,

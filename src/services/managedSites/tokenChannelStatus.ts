@@ -1,3 +1,4 @@
+import { NEW_API } from "~/constants/siteType"
 import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
 import {
   getManagedSiteChannelExactMatch,
@@ -17,6 +18,10 @@ import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerificati
 import type { AccountToken, ApiToken, DisplaySiteData } from "~/types"
 import type { ManagedSiteChannel } from "~/types/managedSite"
 import { createLogger } from "~/utils/core/logger"
+
+import { getNewApiLoginAssistConfig } from "./providers/newApi"
+import { hasNewApiLoginAssistCredentials } from "./providers/newApiSession"
+import { hasNewApiTotpSecret } from "./providers/newApiTotp"
 
 const logger = createLogger("ManagedSiteTokenChannelStatus")
 
@@ -66,6 +71,14 @@ export interface ManagedSiteTokenChannelAssessment {
   }
 }
 
+export interface ManagedSiteTokenChannelRecovery {
+  siteType: typeof NEW_API
+  managedBaseUrl: string
+  searchBaseUrl?: string
+  loginCredentialsConfigured: boolean
+  automaticCodeConfigured: boolean
+}
+
 export type ManagedSiteTokenChannelStatusValue =
   (typeof MANAGED_SITE_TOKEN_CHANNEL_STATUSES)[keyof typeof MANAGED_SITE_TOKEN_CHANNEL_STATUSES]
 
@@ -89,6 +102,7 @@ export type ManagedSiteTokenChannelStatus =
       reason: typeof MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE
       assessment?: ManagedSiteTokenChannelAssessment
       diagnostic?: string
+      recovery?: ManagedSiteTokenChannelRecovery
     }
   | {
       status: typeof MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN
@@ -105,6 +119,7 @@ interface GetManagedSiteTokenChannelStatusParams {
   token: ApiToken | AccountToken
   service?: ManagedSiteService
   managedConfig?: ManagedSiteConfig | null
+  resolvedChannelKeysById?: Record<number, string>
 }
 
 const toMatchedChannelSummary = (
@@ -147,6 +162,22 @@ const collectSecrets = (
   managedConfig: ManagedSiteConfig | null,
 ) => {
   return [token.key, managedConfig?.token].filter(Boolean) as string[]
+}
+
+const buildNewApiRecoveryMetadata = async (params: {
+  managedConfig: ManagedSiteConfig
+  assessment?: ManagedSiteTokenChannelAssessment
+}): Promise<ManagedSiteTokenChannelRecovery> => {
+  const loginAssistConfig = await getNewApiLoginAssistConfig()
+
+  return {
+    siteType: NEW_API,
+    managedBaseUrl: params.managedConfig.baseUrl,
+    searchBaseUrl: params.assessment?.searchBaseUrl,
+    loginCredentialsConfigured:
+      hasNewApiLoginAssistCredentials(loginAssistConfig),
+    automaticCodeConfigured: hasNewApiTotpSecret(loginAssistConfig?.totpSecret),
+  }
 }
 
 /**
@@ -236,6 +267,7 @@ export async function getManagedSiteTokenChannelStatus(
       accountBaseUrl: searchBaseUrl,
       models: formData.models,
       key: formData.key,
+      resolvedChannelKeysById: params.resolvedChannelKeysById,
     })
     const assessment = toManagedSiteTokenChannelAssessment(resolution)
     const exactMatch = getManagedSiteChannelExactMatch(resolution)
@@ -260,11 +292,22 @@ export async function getManagedSiteTokenChannelStatus(
       !formData.key.trim() ||
       (resolution.url.matched && !resolution.key.comparable)
     ) {
+      const recovery =
+        service.siteType === NEW_API &&
+        resolution.url.matched &&
+        !resolution.key.comparable
+          ? await buildNewApiRecoveryMetadata({
+              managedConfig,
+              assessment,
+            })
+          : undefined
+
       return {
         status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
         reason:
           MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE,
         assessment,
+        ...(recovery ? { recovery } : {}),
       }
     }
 

@@ -1,5 +1,6 @@
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline"
 import { useState } from "react"
+import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { useChannelForm } from "~/components/dialogs/ChannelDialog/hooks/useChannelForm"
@@ -38,6 +39,7 @@ export interface ChannelDialogProps {
   initialValues?: Partial<ChannelFormData>
   initialModels?: string[]
   initialGroups?: string[]
+  onRequestRealKey?: (options: { setKey: (key: string) => void }) => void
 }
 
 /**
@@ -52,6 +54,8 @@ export interface ChannelDialogProps {
  * @param props.initialValues Pre-filled form values when reusing data.
  * @param props.initialModels Models to seed multi-select state.
  * @param props.initialGroups Groups to seed multi-select state.
+ * @param props.onRequestRealKey Optional edit-mode hook that can load the real
+ * managed-site key into the dialog when the list payload only provides a masked value.
  */
 export function ChannelDialog({
   isOpen,
@@ -62,9 +66,11 @@ export function ChannelDialog({
   initialValues,
   initialModels,
   initialGroups,
+  onRequestRealKey,
 }: ChannelDialogProps) {
   const { t } = useTranslation(["channelDialog", "common"])
   const [showKey, setShowKey] = useState(false)
+  const [isLoadingRealKey, setIsLoadingRealKey] = useState(false)
   const { managedSiteType } = useUserPreferencesContext()
   const isOctopus = managedSiteType === OCTOPUS
 
@@ -109,6 +115,30 @@ export function ChannelDialog({
 
   const handleDeselectAllModels = () => {
     updateField("models", [])
+  }
+
+  const handleLoadRealKey = async () => {
+    if (!onRequestRealKey) return
+
+    setIsLoadingRealKey(true)
+    try {
+      await Promise.resolve(
+        onRequestRealKey({
+          setKey: (key) => {
+            updateField("key", key)
+            setShowKey(true)
+          },
+        }),
+      )
+    } catch (error) {
+      toast.error(
+        t("channelDialog:messages.loadRealKeyFailed", {
+          error: error instanceof Error ? error.message : String(error ?? ""),
+        }),
+      )
+    } finally {
+      setIsLoadingRealKey(false)
+    }
   }
 
   const header = (
@@ -253,6 +283,24 @@ export function ChannelDialog({
               </IconButton>
             }
           />
+          {mode === DIALOG_MODES.EDIT && onRequestRealKey ? (
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <p className="dark:text-dark-text-secondary text-xs text-gray-500">
+                {t("channelDialog:fields.key.realKeyHint")}
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => void handleLoadRealKey()}
+                disabled={isSaving || isLoadingRealKey}
+              >
+                {isLoadingRealKey
+                  ? t("channelDialog:actions.loadingRealKey")
+                  : t("channelDialog:actions.loadRealKey")}
+              </Button>
+            </div>
+          ) : null}
         </div>
 
         {/* Base URL */}

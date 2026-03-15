@@ -22,7 +22,7 @@ import { ManagedSiteIcon } from "~/components/icons/ManagedSiteIcon"
 import { KiloCodeExportDialog } from "~/components/KiloCodeExportDialog"
 import ManagedSiteChannelLinkButton from "~/components/ManagedSiteChannelLinkButton"
 import Tooltip from "~/components/Tooltip"
-import { Badge, Heading6, IconButton } from "~/components/ui"
+import { Badge, Button, Heading6, IconButton } from "~/components/ui"
 import { NEW_API } from "~/constants/siteType"
 import type { ManagedSiteType } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
@@ -116,6 +116,13 @@ interface TokenHeaderProps {
    * Optional callback invoked after a successful managed-site import.
    */
   onManagedSiteImportSuccess?: (token: AccountToken) => void | Promise<void>
+  /**
+   * Optional callback invoked to recover a New API exact-verification state.
+   */
+  onManagedSiteVerificationRetry?: (
+    token: AccountToken,
+    managedSiteStatus: ManagedSiteTokenChannelStatus,
+  ) => void | Promise<void>
 }
 
 const getManagedSiteStatusBadgeVariant = (params: {
@@ -653,6 +660,7 @@ function TokenActionButtons({
  * @param props.managedSiteStatus Current managed-site status for the token.
  * @param props.isManagedSiteStatusChecking Whether the managed-site status is checking.
  * @param props.onManagedSiteImportSuccess Optional callback after successful managed-site import.
+ * @param props.onManagedSiteVerificationRetry Optional callback for New API verification-assisted retry.
  */
 export function TokenHeader({
   token,
@@ -664,6 +672,7 @@ export function TokenHeader({
   managedSiteStatus,
   isManagedSiteStatusChecking = false,
   onManagedSiteImportSuccess,
+  onManagedSiteVerificationRetry,
 }: TokenHeaderProps) {
   const { t } = useTranslation("keyManagement")
   const { managedSiteType } = useUserPreferencesContext()
@@ -681,10 +690,26 @@ export function TokenHeader({
     managedSiteStatus && "assessment" in managedSiteStatus
       ? managedSiteStatus.assessment
       : undefined
+  const managedSiteRecovery =
+    managedSiteStatus?.status === MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN &&
+    managedSiteStatus.reason ===
+      MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE
+      ? managedSiteStatus.recovery
+      : undefined
   const matchedManagedSiteChannel =
     managedSiteStatus && "matchedChannel" in managedSiteStatus
       ? managedSiteStatus.matchedChannel
       : undefined
+  const shouldShowManagedSiteVerificationRetry = Boolean(
+    managedSiteRecovery?.loginCredentialsConfigured &&
+      managedSiteStatus &&
+      onManagedSiteVerificationRetry,
+  )
+  const managedSiteRecoveryMessage = managedSiteRecovery
+    ? managedSiteRecovery.loginCredentialsConfigured
+      ? t("managedSiteStatus.recovery.verificationRequired")
+      : t("managedSiteStatus.recovery.configureLogin")
+    : null
 
   return (
     <div className="flex min-w-0 items-start gap-2">
@@ -706,6 +731,7 @@ export function TokenHeader({
 
         {shouldRenderManagedSiteStatus ? (
           <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+            {/* managed site status badge with optional description and signal badges - only show if the managed site supports base URL channel lookup and there's a status to show (either checking or a known status) */}
             <Badge
               variant={getManagedSiteStatusBadgeVariant({
                 isChecking: isManagedSiteStatusChecking,
@@ -776,6 +802,8 @@ export function TokenHeader({
                 />
               </>
             ) : null}
+
+            {/* channel link button - only show if there's a matched channel or a search URL available (which indicates the user can review potential matches on the managed site) */}
             {matchedManagedSiteChannel ? (
               <ManagedSiteChannelLinkButton
                 channelName={matchedManagedSiteChannel.name}
@@ -799,6 +827,28 @@ export function TokenHeader({
                 search={managedSiteAssessment.searchBaseUrl}
                 className="h-auto px-0 py-0 text-xs"
               />
+            ) : null}
+
+            {/* verification retry button - only show if the token is in an exact-verification-unavailable unknown status with login credentials configured, which indicates the user can take action to potentially recover to an added status without needing to re-import */}
+            {managedSiteRecoveryMessage ? (
+              <span className="break-words whitespace-normal">
+                {managedSiteRecoveryMessage}
+              </span>
+            ) : null}
+            {shouldShowManagedSiteVerificationRetry && managedSiteStatus ? (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-auto px-2 py-0.5 text-xs"
+                onClick={() =>
+                  void onManagedSiteVerificationRetry?.(
+                    token,
+                    managedSiteStatus,
+                  )
+                }
+              >
+                {t("managedSiteStatus.actions.verifyNow")}
+              </Button>
             ) : null}
           </div>
         ) : null}

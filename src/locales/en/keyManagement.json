@@ -29,7 +29,8 @@
     "actions": {
       "refresh": "Refresh Managed-Site Channel Status",
       "refreshing": "Refreshing Managed-Site Channel Status",
-      "reviewChannels": "Review channels"
+      "reviewChannels": "Review channels",
+      "verifyNow": "Verify now"
     },
     "badges": {
       "checking": "Managed site: checking",
@@ -50,7 +51,7 @@
       "configMissing": "Configure managed-site admin credentials before checks can run.",
       "inputPreparationFailed": "Verification could not prepare comparable channel inputs.",
       "exactVerificationUnavailable": "Exact key verification is unavailable, and no secondary or fuzzy channel match was found.",
-      "newApiRetrieveKeyHint": "For the New API, channel keys can only be viewed after completing 2FA verification. Therefore, precise verification cannot be performed at this time.",
+      "newApiRetrieveKeyHint": "For New API, full key comparison depends on the channel key, and viewing that channel key itself requires 2FA verification, so full key comparison is currently unavailable.",
       "veloeraBaseUrlSearchUnsupported": "This feature is not supported on Veloera because Veloera does not support base URL search for channel lookup.",
       "backendSearchFailed": "Managed-site checks could not be completed."
     },
@@ -85,6 +86,10 @@
         "tooltipUnavailable": "Model comparison could not be completed because no comparable URL bucket was available.",
         "tooltipNotProvided": "No comparable model list was available for this token."
       }
+    },
+    "recovery": {
+      "verificationRequired": "Full key comparison first needs a short-lived New API verification step, because viewing a New API channel key itself requires 2FA.",
+      "configureLogin": "Add the New API login and 2FA-assist fields in Settings first. Until then, the channel key cannot be read and full key comparison cannot be completed."
     }
   },
   "repairMissingKeys": {

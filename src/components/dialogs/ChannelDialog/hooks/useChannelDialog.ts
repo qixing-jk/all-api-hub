@@ -283,6 +283,7 @@ export function useChannelDialog() {
     initialValues?: any
     initialModels?: string[]
     initialGroups?: string[]
+    onRequestRealKey?: (options: { setKey: (key: string) => void }) => void
     onSuccess?: (channel: any) => void
   }) => {
     openDialog(options)

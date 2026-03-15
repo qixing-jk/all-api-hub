@@ -12,6 +12,8 @@
     "update": "Save Changes",
     "showKey": "Show Key",
     "hideKey": "Hide Key",
+    "loadRealKey": "Load real key",
+    "loadingRealKey": "Loading real key...",
     "selectAll": "Select All",
     "inverse": "Inverse",
     "deselectAll": "Deselect All"
@@ -20,7 +22,8 @@
     "createSuccess": "Channel created successfully",
     "updateSuccess": "Channel updated successfully",
     "saveFailed": "Failed to save channel: {{error}}",
-    "missingChannelId": "Existing channel ID is missing"
+    "missingChannelId": "Existing channel ID is missing",
+    "loadRealKeyFailed": "Failed to load the real channel key: {{error}}"
   },
   "validation": {
     "nameRequired": "Channel name is required",
@@ -49,7 +52,8 @@
     },
     "key": {
       "label": "API Key",
-      "placeholder": "Enter the upstream provider API key"
+      "placeholder": "Enter the upstream provider API key",
+      "realKeyHint": "For New API, viewing the real channel key itself requires 2FA. If the login and 2FA-assist fields are not filled in under Settings, this key cannot be read."
     },
     "baseUrl": {
       "label": "Base URL",

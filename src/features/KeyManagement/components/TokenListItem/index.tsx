@@ -54,6 +54,13 @@ interface TokenListItemProps {
    * Callback invoked after a successful managed-site import for this token.
    */
   onManagedSiteImportSuccess?: (token: AccountToken) => void | Promise<void>
+  /**
+   * Starts verification-assisted retry for recoverable managed-site states.
+   */
+  onManagedSiteVerificationRetry?: (
+    token: AccountToken,
+    managedSiteStatus: ManagedSiteTokenChannelStatus,
+  ) => void | Promise<void>
 }
 
 /**
@@ -73,6 +80,7 @@ export function TokenListItem(props: TokenListItemProps) {
     managedSiteStatus,
     isManagedSiteStatusChecking,
     onManagedSiteImportSuccess,
+    onManagedSiteVerificationRetry,
   } = props
   const { t } = useTranslation("keyManagement")
   const tokenIdentityKey = buildTokenIdentityKey(token.accountId, token.id)
@@ -90,6 +98,7 @@ export function TokenListItem(props: TokenListItemProps) {
             managedSiteStatus={managedSiteStatus}
             isManagedSiteStatusChecking={isManagedSiteStatusChecking}
             onManagedSiteImportSuccess={onManagedSiteImportSuccess}
+            onManagedSiteVerificationRetry={onManagedSiteVerificationRetry}
             onOpenCCSwitchDialog={() => onOpenCCSwitchDialog(token, account)}
           />
           <div className="min-w-0 flex-1">

@@ -49,8 +49,16 @@ interface ManagedSiteTokenStatusState {
   cacheKey: string
   runId: number
   isChecking: boolean
-  result?: Awaited<ReturnType<typeof getManagedSiteTokenChannelStatus>>
+  result?: ManagedSiteTokenChannelStatusResult
   checkedAt?: number
+}
+
+type ManagedSiteTokenChannelStatusResult = Awaited<
+  ReturnType<typeof getManagedSiteTokenChannelStatus>
+>
+
+interface RefreshManagedSiteTokenStatusOptions {
+  resolvedChannelKeysById?: Record<number, string>
 }
 
 const isFailedAccountTokenLoad = (
@@ -94,6 +102,9 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     newApiBaseUrl,
     newApiAdminToken,
     newApiUserId,
+    newApiUsername,
+    newApiPassword,
+    newApiTotpSecret,
     doneHubBaseUrl,
     doneHubAdminToken,
     doneHubUserId,
@@ -172,6 +183,9 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       (newApiBaseUrl ?? "").trim(),
       (newApiUserId ?? "").trim(),
       hashStringForCache((newApiAdminToken ?? "").trim()),
+      (newApiUsername ?? "").trim(),
+      hashStringForCache((newApiPassword ?? "").trim()),
+      hashStringForCache((newApiTotpSecret ?? "").trim()),
     ].join("|")
   }, [
     doneHubAdminToken,
@@ -180,7 +194,10 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     managedSiteType,
     newApiAdminToken,
     newApiBaseUrl,
+    newApiPassword,
+    newApiTotpSecret,
     newApiUserId,
+    newApiUsername,
     octopusBaseUrl,
     octopusPassword,
     octopusUsername,
@@ -269,12 +286,25 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
   )
 
   const runManagedSiteStatusChecks = useCallback(
-    async (params: { tokens: AccountToken[]; force?: boolean }) => {
+    async (params: {
+      tokens: AccountToken[]
+      force?: boolean
+      resolvedChannelKeysByIdentityKey?: Record<string, Record<number, string>>
+    }): Promise<Record<string, ManagedSiteTokenChannelStatusResult>> => {
+      const resultsByIdentityKey: Record<
+        string,
+        ManagedSiteTokenChannelStatusResult
+      > = {}
+
       if (!isManagedSiteChannelStatusSupported) {
-        return
+        return resultsByIdentityKey
       }
 
-      const { tokens, force = false } = params
+      const {
+        tokens,
+        force = false,
+        resolvedChannelKeysByIdentityKey = {},
+      } = params
       const uniqueTargets = new Map<
         string,
         {
@@ -282,6 +312,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
           account: (typeof enabledDisplayData)[number]
           identityKey: string
           cacheKey: string
+          resolvedChannelKeysById?: Record<number, string>
         }
       >()
 
@@ -304,13 +335,15 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
           account,
           identityKey,
           cacheKey,
+          resolvedChannelKeysById:
+            resolvedChannelKeysByIdentityKey[identityKey],
         })
       }
 
       const targets = Array.from(uniqueTargets.values())
 
       if (targets.length === 0) {
-        return
+        return resultsByIdentityKey
       }
 
       const runId = force
@@ -353,7 +386,9 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
             const result = await getManagedSiteTokenChannelStatus({
               account: target.account,
               token: target.token,
+              resolvedChannelKeysById: target.resolvedChannelKeysById,
             })
+            resultsByIdentityKey[target.identityKey] = result
 
             if (!isMountedRef.current) {
               return
@@ -384,6 +419,8 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
           }
         }),
       )
+
+      return resultsByIdentityKey
     },
     [
       accountById,
@@ -805,7 +842,10 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
   ])
 
   const refreshManagedSiteTokenStatusForToken = useCallback(
-    async (token: AccountToken) => {
+    async (
+      token: AccountToken,
+      options?: RefreshManagedSiteTokenStatusOptions,
+    ) => {
       if (!isManagedSiteChannelStatusSupported) {
         return
       }
@@ -815,11 +855,19 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       }
 
       invalidateManagedSiteStatusForToken(token)
+      const identityKey = buildTokenIdentityKey(token.accountId, token.id)
 
-      await runManagedSiteStatusChecks({
+      const results = await runManagedSiteStatusChecks({
         tokens: [token],
         force: true,
+        resolvedChannelKeysByIdentityKey: options?.resolvedChannelKeysById
+          ? {
+              [identityKey]: options.resolvedChannelKeysById,
+            }
+          : undefined,
       })
+
+      return results[identityKey]
     },
     [
       invalidateManagedSiteStatusForToken,

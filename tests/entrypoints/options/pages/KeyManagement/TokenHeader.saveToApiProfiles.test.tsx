@@ -605,6 +605,140 @@ describe("TokenHeader save to API profiles", () => {
     )
   })
 
+  it("shows a New API verification retry action when login-assist credentials are configured", async () => {
+    const user = userEvent.setup()
+    const account = createAccountStub()
+    const onManagedSiteVerificationRetry = vi.fn()
+
+    const token = {
+      id: 8,
+      user_id: 1,
+      key: "sk-recoverable",
+      status: 1,
+      name: "Recoverable Token",
+      created_time: 0,
+      accessed_time: 0,
+      expired_time: 0,
+      remain_quota: 0,
+      unlimited_quota: false,
+      used_quota: 0,
+      accountId: account.id,
+      accountName: account.name,
+    }
+
+    render(
+      <TokenHeader
+        token={token as any}
+        copyKey={vi.fn()}
+        handleEditToken={vi.fn()}
+        handleDeleteToken={vi.fn()}
+        account={account}
+        onManagedSiteVerificationRetry={onManagedSiteVerificationRetry}
+        managedSiteStatus={{
+          status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
+          reason:
+            MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE,
+          assessment: createManagedSiteAssessment({
+            key: {
+              comparable: false,
+              matched: false,
+              reason:
+                MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.COMPARISON_UNAVAILABLE,
+            },
+          }),
+          recovery: {
+            siteType: "new-api",
+            managedBaseUrl: "https://managed.example",
+            searchBaseUrl: "https://example.com",
+            loginCredentialsConfigured: true,
+            automaticCodeConfigured: true,
+          },
+        }}
+      />,
+    )
+
+    expect(
+      screen.getByText(
+        "keyManagement:managedSiteStatus.recovery.verificationRequired",
+      ),
+    ).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:managedSiteStatus.actions.verifyNow",
+      }),
+    )
+
+    expect(onManagedSiteVerificationRetry).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 8 }),
+      expect.objectContaining({
+        reason:
+          MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE,
+      }),
+    )
+  })
+
+  it("directs the user to Settings instead of showing retry when login-assist credentials are missing", () => {
+    const account = createAccountStub()
+
+    const token = {
+      id: 9,
+      user_id: 1,
+      key: "sk-config-needed",
+      status: 1,
+      name: "Config Needed Token",
+      created_time: 0,
+      accessed_time: 0,
+      expired_time: 0,
+      remain_quota: 0,
+      unlimited_quota: false,
+      used_quota: 0,
+      accountId: account.id,
+      accountName: account.name,
+    }
+
+    render(
+      <TokenHeader
+        token={token as any}
+        copyKey={vi.fn()}
+        handleEditToken={vi.fn()}
+        handleDeleteToken={vi.fn()}
+        account={account}
+        managedSiteStatus={{
+          status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
+          reason:
+            MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE,
+          assessment: createManagedSiteAssessment({
+            key: {
+              comparable: false,
+              matched: false,
+              reason:
+                MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.COMPARISON_UNAVAILABLE,
+            },
+          }),
+          recovery: {
+            siteType: "new-api",
+            managedBaseUrl: "https://managed.example",
+            searchBaseUrl: "https://example.com",
+            loginCredentialsConfigured: false,
+            automaticCodeConfigured: false,
+          },
+        }}
+      />,
+    )
+
+    expect(
+      screen.getByText(
+        "keyManagement:managedSiteStatus.recovery.configureLogin",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: "keyManagement:managedSiteStatus.actions.verifyNow",
+      }),
+    ).toBeNull()
+  })
+
   it("renders fuzzy and similarity explanations for non-exact managed-site matches", () => {
     const account = createAccountStub()
 

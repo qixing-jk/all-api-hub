@@ -91,6 +91,9 @@ describe("useKeyManagement enabled account filtering", () => {
       newApiBaseUrl: "https://managed.example",
       newApiAdminToken: "managed-admin-token",
       newApiUserId: "1",
+      newApiUsername: "",
+      newApiPassword: "",
+      newApiTotpSecret: "",
       doneHubBaseUrl: "",
       doneHubAdminToken: "",
       doneHubUserId: "",
@@ -652,6 +655,9 @@ describe("useKeyManagement enabled account filtering", () => {
       newApiBaseUrl: "",
       newApiAdminToken: "",
       newApiUserId: "",
+      newApiUsername: "",
+      newApiPassword: "",
+      newApiTotpSecret: "",
       doneHubBaseUrl: "",
       doneHubAdminToken: "",
       doneHubUserId: "",
@@ -1020,6 +1026,9 @@ describe("useKeyManagement enabled account filtering", () => {
       newApiBaseUrl: "https://managed.example",
       newApiAdminToken: "managed-admin-token",
       newApiUserId: "1",
+      newApiUsername: "",
+      newApiPassword: "",
+      newApiTotpSecret: "",
       doneHubBaseUrl: "",
       doneHubAdminToken: "",
       doneHubUserId: "",
@@ -1080,6 +1089,9 @@ describe("useKeyManagement enabled account filtering", () => {
       newApiBaseUrl: "https://managed.example",
       newApiAdminToken: "managed-admin-token",
       newApiUserId: "1",
+      newApiUsername: "",
+      newApiPassword: "",
+      newApiTotpSecret: "",
       doneHubBaseUrl: "",
       doneHubAdminToken: "",
       doneHubUserId: "",
@@ -1125,6 +1137,9 @@ describe("useKeyManagement enabled account filtering", () => {
     managedSiteContextValue.newApiBaseUrl = ""
     managedSiteContextValue.newApiAdminToken = ""
     managedSiteContextValue.newApiUserId = ""
+    managedSiteContextValue.newApiUsername = ""
+    managedSiteContextValue.newApiPassword = ""
+    managedSiteContextValue.newApiTotpSecret = ""
     managedSiteContextValue.veloeraBaseUrl = "https://veloera.example"
     managedSiteContextValue.veloeraAdminToken = "veloera-admin-token"
     managedSiteContextValue.veloeraUserId = "1"

@@ -2,7 +2,19 @@ import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { NEW_API } from "~/constants/siteType"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import AddTokenDialog from "~/features/KeyManagement/components/AddTokenDialog"
+import { loadNewApiChannelKeyWithVerification } from "~/features/ManagedSiteVerification/loadNewApiChannelKeyWithVerification"
+import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
+import { useNewApiManagedVerification } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
+import { MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS } from "~/services/managedSites/channelMatch"
+import {
+  MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS,
+  MANAGED_SITE_TOKEN_CHANNEL_STATUSES,
+  type ManagedSiteTokenChannelStatus,
+} from "~/services/managedSites/tokenChannelStatus"
+import type { AccountToken } from "~/types"
 import { sendRuntimeActionMessage } from "~/utils/browser/browserApi"
 
 import { AccountSelectorPanel } from "./components/AccountSelectorPanel"
@@ -14,6 +26,68 @@ import { TokenList } from "./components/TokenList"
 import { TokenSearchBar } from "./components/TokenSearchBar"
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "./constants"
 import { useKeyManagement } from "./hooks/useKeyManagement"
+
+const canRetryNewApiManagedVerification = (
+  managedSiteStatus?: ManagedSiteTokenChannelStatus,
+) => {
+  if (!managedSiteStatus) {
+    return false
+  }
+
+  if (
+    managedSiteStatus.status !== MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN
+  ) {
+    return false
+  }
+
+  if (
+    managedSiteStatus.reason !==
+    MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE
+  ) {
+    return false
+  }
+
+  return Boolean(managedSiteStatus.recovery?.loginCredentialsConfigured)
+}
+
+const getRecoverableNewApiCandidateChannel = (
+  managedSiteStatus?: ManagedSiteTokenChannelStatus,
+) => {
+  if (!managedSiteStatus) {
+    return null
+  }
+
+  if (
+    managedSiteStatus.status !== MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN
+  ) {
+    return null
+  }
+
+  if (
+    managedSiteStatus.reason !==
+    MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE
+  ) {
+    return null
+  }
+
+  const exactModelsChannel = managedSiteStatus.assessment?.models.channel
+
+  if (
+    exactModelsChannel &&
+    managedSiteStatus.assessment?.models.reason ===
+      MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT
+  ) {
+    return exactModelsChannel
+  }
+
+  const urlChannel = managedSiteStatus.assessment?.url.channel
+
+  if (urlChannel && managedSiteStatus.assessment?.url.candidateCount === 1) {
+    return urlChannel
+  }
+
+  return null
+}
 
 /**
  * Key management page rendering header, filters, token list, and dialogs.
@@ -28,6 +102,15 @@ export default function KeyManagement(props: {
   const { t } = useTranslation("keyManagement")
   const [isRepairOpen, setIsRepairOpen] = useState(false)
   const [repairStartOnOpen, setRepairStartOnOpen] = useState(false)
+  const verification = useNewApiManagedVerification()
+  const {
+    managedSiteType,
+    newApiBaseUrl,
+    newApiUserId,
+    newApiUsername,
+    newApiPassword,
+    newApiTotpSecret,
+  } = useUserPreferencesContext()
 
   const {
     displayData,
@@ -105,6 +188,73 @@ export default function KeyManagement(props: {
     }
   }
 
+  const handleManagedSiteVerificationRetry = async (
+    token: AccountToken,
+    managedSiteStatus: ManagedSiteTokenChannelStatus,
+  ) => {
+    if (managedSiteType !== NEW_API) {
+      return
+    }
+
+    const candidateChannel =
+      getRecoverableNewApiCandidateChannel(managedSiteStatus)
+
+    if (candidateChannel) {
+      let resolvedChannelKey = ""
+
+      await loadNewApiChannelKeyWithVerification({
+        channelId: candidateChannel.id,
+        label: token.name,
+        requestKind: "token",
+        config: {
+          baseUrl: newApiBaseUrl,
+          userId: newApiUserId,
+          username: newApiUsername,
+          password: newApiPassword,
+          totpSecret: newApiTotpSecret,
+        },
+        setKey: (key) => {
+          resolvedChannelKey = key
+        },
+        onLoaded: async () => {
+          await refreshManagedSiteTokenStatusForToken(token, {
+            resolvedChannelKeysById: {
+              [candidateChannel.id]: resolvedChannelKey,
+            },
+          })
+        },
+        openVerification: verification.openNewApiManagedVerification,
+      })
+      return
+    }
+
+    const refreshedStatus =
+      (await refreshManagedSiteTokenStatusForToken(token)) ?? managedSiteStatus
+
+    if (!canRetryNewApiManagedVerification(refreshedStatus)) {
+      return
+    }
+
+    verification.openNewApiManagedVerification({
+      kind: "token",
+      label: token.name,
+      config: {
+        baseUrl: newApiBaseUrl,
+        userId: newApiUserId,
+        username: newApiUsername,
+        password: newApiPassword,
+        totpSecret: newApiTotpSecret,
+      },
+      onVerified: async () => {
+        await refreshManagedSiteTokenStatusForToken(token)
+      },
+    })
+  }
+
+  const handleManagedSiteImportSuccess = async (token: AccountToken) => {
+    await refreshManagedSiteTokenStatusForToken(token)
+  }
+
   return (
     <div className="p-6">
       <Header
@@ -170,7 +320,12 @@ export default function KeyManagement(props: {
         managedSiteTokenStatuses={managedSiteTokenStatuses}
         onManagedSiteImportSuccess={
           isManagedSiteChannelStatusSupported
-            ? refreshManagedSiteTokenStatusForToken
+            ? handleManagedSiteImportSuccess
+            : undefined
+        }
+        onManagedSiteVerificationRetry={
+          isManagedSiteChannelStatusSupported
+            ? handleManagedSiteVerificationRetry
             : undefined
         }
         allAccountsFilterAccountId={allAccountsFilterAccountId}
@@ -195,6 +350,21 @@ export default function KeyManagement(props: {
         onClose={handleCloseRepairMissingKeys}
         accounts={displayData}
         startOnOpen={repairStartOnOpen}
+      />
+
+      <NewApiManagedVerificationDialog
+        isOpen={verification.dialogState.isOpen}
+        step={verification.dialogState.step}
+        request={verification.dialogState.request}
+        code={verification.dialogState.code}
+        errorMessage={verification.dialogState.errorMessage}
+        isBusy={verification.dialogState.isBusy}
+        busyMessage={verification.dialogState.busyMessage}
+        onCodeChange={verification.setCode}
+        onClose={verification.closeDialog}
+        onSubmit={verification.submitCode}
+        onRetry={verification.retryVerification}
+        onOpenSite={verification.openBaseUrl}
       />
     </div>
   )

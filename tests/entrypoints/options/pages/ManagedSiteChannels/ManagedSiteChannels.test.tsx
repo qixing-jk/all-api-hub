@@ -1,12 +1,21 @@
+import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
+import { ChannelDialogContainer } from "~/components/dialogs/ChannelDialog"
 import { NEW_API } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import ManagedSiteChannels from "~/entrypoints/options/pages/ManagedSiteChannels"
 import { getManagedSiteService } from "~/services/managedSites/managedSiteService"
+import { fetchNewApiChannelKey } from "~/services/managedSites/providers/newApiSession"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { navigateWithinOptionsPage } from "~/utils/navigation"
-import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "~~/tests/test-utils/render"
 
 vi.mock("~/utils/browser/browserApi", async (importActual) => {
   const actual = (await importActual()) as any
@@ -16,6 +25,17 @@ vi.mock("~/utils/browser/browserApi", async (importActual) => {
 vi.mock("~/services/managedSites/managedSiteService", () => ({
   getManagedSiteService: vi.fn(),
 }))
+
+vi.mock(
+  "~/services/managedSites/providers/newApiSession",
+  async (importActual) => {
+    const actual = (await importActual()) as any
+    return {
+      ...actual,
+      fetchNewApiChannelKey: vi.fn(),
+    }
+  },
+)
 
 vi.mock("~/contexts/UserPreferencesContext", async (importActual) => {
   const actual = (await importActual()) as any
@@ -45,6 +65,11 @@ describe("ManagedSiteChannels", () => {
   const mockChannels = (channels: any[]) => {
     vi.mocked(useUserPreferencesContext).mockReturnValue({
       managedSiteType: NEW_API,
+      newApiBaseUrl: "https://admin.example",
+      newApiUserId: "1",
+      newApiUsername: "admin",
+      newApiPassword: "secret-password",
+      newApiTotpSecret: "JBSWY3DPEHPK3PXP",
     } as any)
 
     vi.mocked(getManagedSiteService).mockResolvedValue({
@@ -107,5 +132,58 @@ describe("ManagedSiteChannels", () => {
         { search: "foo" },
       )
     })
+  })
+
+  it("loads the real channel key from the edit dialog", async () => {
+    const user = userEvent.setup()
+    mockChannels([
+      {
+        id: 208,
+        name: "Alpha",
+        base_url: "https://example.com",
+        type: 1,
+        models: "gpt-4o",
+        group: "default",
+        status: 1,
+        priority: 0,
+        weight: 0,
+        key: "",
+      },
+    ])
+    vi.mocked(fetchNewApiChannelKey).mockResolvedValue("sk-real-channel-key")
+
+    render(
+      <>
+        <ManagedSiteChannels />
+        <ChannelDialogContainer />
+      </>,
+    )
+
+    await waitForRowText("Alpha")
+
+    const row = screen.getByText("Alpha").closest("tr")
+    expect(row).toBeTruthy()
+    const rowButtons = within(row!).getAllByRole("button")
+    await user.click(rowButtons[rowButtons.length - 1]!)
+
+    const editItem = await screen.findByText(
+      "managedSiteChannels:table.rowActions.edit",
+    )
+    await user.click(editItem)
+
+    const loadRealKeyButton = await screen.findByRole("button", {
+      name: "channelDialog:actions.loadRealKey",
+    })
+    await user.click(loadRealKeyButton)
+
+    await waitFor(() => {
+      expect(fetchNewApiChannelKey).toHaveBeenCalledWith({
+        baseUrl: "https://admin.example",
+        userId: "1",
+        channelId: 208,
+      })
+    })
+
+    expect(screen.getByDisplayValue("sk-real-channel-key")).toBeInTheDocument()
   })
 })
