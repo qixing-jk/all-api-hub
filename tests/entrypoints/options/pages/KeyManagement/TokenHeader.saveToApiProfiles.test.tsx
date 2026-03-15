@@ -22,6 +22,7 @@ const mockCreateProfile = vi.fn()
 const mockOpenApiCredentialProfilesPage = vi.fn()
 const mockOpenManagedSiteChannelsForChannel = vi.fn()
 const mockOpenManagedSiteChannelsPage = vi.fn()
+const mockOpenSettingsTab = vi.fn()
 const mockOpenWithAccount = vi.fn()
 
 vi.mock(
@@ -48,6 +49,7 @@ vi.mock("~/utils/navigation", () => ({
     mockOpenManagedSiteChannelsForChannel(...args),
   openManagedSiteChannelsPage: (...args: unknown[]) =>
     mockOpenManagedSiteChannelsPage(...args),
+  openSettingsTab: (...args: unknown[]) => mockOpenSettingsTab(...args),
 }))
 
 vi.mock("~/components/dialogs/ChannelDialog", () => {
@@ -158,6 +160,7 @@ describe("TokenHeader save to API profiles", () => {
     mockOpenApiCredentialProfilesPage.mockReset()
     mockOpenManagedSiteChannelsForChannel.mockReset()
     mockOpenManagedSiteChannelsPage.mockReset()
+    mockOpenSettingsTab.mockReset()
     mockOpenWithAccount.mockReset()
     ;(toast.success as any).mockReset()
     ;(toast.error as any).mockReset()
@@ -813,6 +816,11 @@ describe("TokenHeader save to API profiles", () => {
         name: "keyManagement:managedSiteStatus.actions.verifyNow",
       }),
     ).toBeNull()
+    expect(
+      screen.getByRole("button", {
+        name: "common:settings",
+      }),
+    ).toBeInTheDocument()
   })
 
   it("renders fuzzy and similarity explanations for non-exact managed-site matches", () => {

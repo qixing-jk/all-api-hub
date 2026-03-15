@@ -52,7 +52,10 @@ import type { AccountToken, DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { showResultToast } from "~/utils/core/toastHelpers"
-import { openApiCredentialProfilesPage } from "~/utils/navigation"
+import {
+  openApiCredentialProfilesPage,
+  openSettingsTab,
+} from "~/utils/navigation"
 
 /**
  * Unified logger scoped to the Key Management token header actions.
@@ -674,7 +677,7 @@ export function TokenHeader({
   onManagedSiteImportSuccess,
   onManagedSiteVerificationRetry,
 }: TokenHeaderProps) {
-  const { t } = useTranslation("keyManagement")
+  const { t } = useTranslation(["keyManagement", "common"])
   const { managedSiteType } = useUserPreferencesContext()
   const isManagedSiteStatusSupported =
     supportsManagedSiteBaseUrlChannelLookup(managedSiteType)
@@ -709,11 +712,30 @@ export function TokenHeader({
       managedSiteStatus &&
       onManagedSiteVerificationRetry,
   )
+  const shouldShowManagedSiteSettingsAction = Boolean(
+    managedSiteRecovery && !canRetryManagedSiteVerification,
+  )
   const managedSiteRecoveryMessage = managedSiteRecovery
     ? canRetryManagedSiteVerification
       ? t("managedSiteStatus.recovery.verificationRequired")
       : t("managedSiteStatus.recovery.configureLogin")
     : null
+
+  const handleManagedSiteVerificationRetryClick = () => {
+    if (!managedSiteStatus || !onManagedSiteVerificationRetry) {
+      return
+    }
+
+    void Promise.resolve(
+      onManagedSiteVerificationRetry(token, managedSiteStatus),
+    ).catch((error) =>
+      logger.error("Managed-site verification retry callback failed", error),
+    )
+  }
+
+  const handleOpenManagedSiteSettings = () => {
+    void openSettingsTab("managedSite")
+  }
 
   return (
     <div className="flex min-w-0 items-start gap-2">
@@ -844,14 +866,20 @@ export function TokenHeader({
                 size="sm"
                 variant="outline"
                 className="h-auto px-2 py-0.5 text-xs"
-                onClick={() =>
-                  void onManagedSiteVerificationRetry?.(
-                    token,
-                    managedSiteStatus,
-                  )
-                }
+                onClick={handleManagedSiteVerificationRetryClick}
               >
                 {t("managedSiteStatus.actions.verifyNow")}
+              </Button>
+            ) : null}
+            {shouldShowManagedSiteSettingsAction ? (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-auto px-2 py-0.5 text-xs"
+                onClick={handleOpenManagedSiteSettings}
+                title={managedSiteRecoveryMessage ?? undefined}
+              >
+                {t("common:settings")}
               </Button>
             ) : null}
           </div>

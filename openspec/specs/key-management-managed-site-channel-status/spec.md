@@ -38,11 +38,13 @@ When assessment metadata exists, the rendered Key Management row MUST:
 - open channel management by `channelId=<id>` only for `added`
 - otherwise provide a review affordance that opens channel management with `search=<searchBaseUrl>`
 
+**Definition.** Login-assist credentials are the New API managed-site authentication credentials including username, password, and an optional TOTP secret used for session-assisted verification flows.
+
 When the status resolves to `unknown` with reason `exact-verification-unavailable` for `new-api`, the rendered row MUST keep the `unknown` status until a retry completes and MUST expose localized verification-recovery guidance.
 
-If New API login-assist credentials are configured well enough to start session-assisted recovery, the row MUST expose a row-level action that starts verification-assisted retry for the affected token.
+If the configured New API login-assist credentials include non-empty `username` and `password` values, with TOTP/2FA-assist fields treated as optional additional fields, the row MUST expose a row-level action that starts verification-assisted retry for the affected token.
 
-If the required New API login-assist credentials are missing, the row MUST expose guidance that directs the user to configure New API login credentials before retrying exact verification.
+If either required New API login-assist credential field (`username` or `password`) is missing or empty, the row MUST keep the `unknown` status, MUST expose localized guidance, and MUST expose an action that opens the New API login credential configuration flow before retrying exact verification. The action label and tooltip MUST make it clear that `username` and `password` are required while TOTP/2FA-assist fields remain optional.
 
 #### Scenario: Exact channel match is shown as added
 - **GIVEN** a token is rendered in Key Management
@@ -131,7 +133,7 @@ If the required New API login-assist credentials are missing, the row MUST expos
 - **GIVEN** a token is rendered in Key Management
 - **AND** the managed-site type is `new-api`
 - **AND** the token status resolves to `unknown` with reason `exact-verification-unavailable`
-- **AND** the configured New API managed-site settings include the login-assist credentials required to start session-assisted recovery
+- **AND** the configured New API managed-site settings include non-empty `username` and `password` login-assist credentials, with TOTP/2FA-assist fields optional
 - **WHEN** the row renders its status affordances
 - **THEN** the row MUST show localized guidance that exact verification requires New API verification
 - **AND** the row MUST expose an action that starts verification-assisted retry for that token
@@ -140,10 +142,11 @@ If the required New API login-assist credentials are missing, the row MUST expos
 - **GIVEN** a token is rendered in Key Management
 - **AND** the managed-site type is `new-api`
 - **AND** the token status resolves to `unknown` with reason `exact-verification-unavailable`
-- **AND** the configured New API managed-site settings do not include the login-assist credentials required to start session-assisted recovery
+- **AND** the configured New API managed-site settings omit either the `username` field, the `password` field, or both required login-assist credential fields
 - **WHEN** the row renders its status affordances
 - **THEN** the row MUST keep the `unknown` status
-- **AND** the row MUST direct the user to configure New API login credentials before retrying exact verification
+- **AND** the row MUST expose an action that opens the New API login credential configuration flow before retrying exact verification
+- **AND** the action label and tooltip MUST explain that `username` and `password` are required while TOTP/2FA-assist fields remain optional
 
 #### Scenario: Successful verification-assisted retry refreshes only the affected token row
 - **GIVEN** a token is rendered in Key Management with status `unknown`
@@ -152,6 +155,39 @@ If the required New API login-assist credentials are missing, the row MUST expos
 - **WHEN** the user completes verification-assisted retry successfully for that token
 - **THEN** the system MUST rerun the managed-site status check for that token
 - **AND** the row MUST replace the prior `unknown` result with the refreshed final status without requiring a full page reload
+
+#### Scenario: Verification-assisted retry fails because New API login-assist credentials are invalid or expired
+- **GIVEN** a token is rendered in Key Management with status `unknown`
+- **AND** the reason is `exact-verification-unavailable`
+- **AND** the managed-site type is `new-api`
+- **AND** the row exposes the verification-assisted retry action
+- **WHEN** verification-assisted retry fails because the stored login-assist credentials are invalid or expired
+- **THEN** the system MUST refresh only the affected token row
+- **AND** the row MUST keep the `unknown` status with reason `exact-verification-unavailable`
+- **AND** the UI MUST surface a localized credential error
+- **AND** the row MUST expose an action that opens the New API login credential configuration flow before the user retries
+
+#### Scenario: Verification-assisted retry encounters a transient network or service failure
+- **GIVEN** a token is rendered in Key Management with status `unknown`
+- **AND** the reason is `exact-verification-unavailable`
+- **AND** the managed-site type is `new-api`
+- **AND** the row exposes the verification-assisted retry action
+- **WHEN** verification-assisted retry encounters a network or service failure before exact verification completes
+- **THEN** the row MUST keep the `unknown` status with reason `exact-verification-unavailable`
+- **AND** the UI MUST surface a localized transient error
+- **AND** the row MUST continue to offer the verification-assisted retry action for that token
+- **AND** the system MUST NOT require a full-page reload
+
+#### Scenario: Verification-assisted retry completes but exact verification remains unavailable
+- **GIVEN** a token is rendered in Key Management with status `unknown`
+- **AND** the reason is `exact-verification-unavailable`
+- **AND** the managed-site type is `new-api`
+- **AND** the row exposes the verification-assisted retry action
+- **WHEN** verification-assisted retry completes but the refreshed token status still resolves to `unknown` with reason `exact-verification-unavailable`
+- **THEN** the system MUST refresh only the affected token row
+- **AND** the row MUST keep the `unknown` status
+- **AND** the UI MUST surface a persistent-failure message that explains exact verification is still unavailable
+- **AND** the row MUST offer next-step guidance after the retry completes
 
 #### Scenario: New API key-unavailable tooltip includes hidden-key guidance
 - **GIVEN** a token is rendered in Key Management

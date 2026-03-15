@@ -136,6 +136,7 @@ describe("ManagedSiteChannels", () => {
 
   it("loads the real channel key from the edit dialog", async () => {
     const user = userEvent.setup()
+    let resolveRealKey: ((key: string) => void) | undefined
     mockChannels([
       {
         id: 208,
@@ -150,7 +151,12 @@ describe("ManagedSiteChannels", () => {
         key: "",
       },
     ])
-    vi.mocked(fetchNewApiChannelKey).mockResolvedValue("sk-real-channel-key")
+    vi.mocked(fetchNewApiChannelKey).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveRealKey = resolve
+        }),
+    )
 
     render(
       <>
@@ -187,6 +193,18 @@ describe("ManagedSiteChannels", () => {
       })
     })
 
-    expect(screen.getByDisplayValue("sk-real-channel-key")).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", {
+        name: "channelDialog:actions.loadingRealKey",
+      }),
+    ).toBeDisabled()
+
+    resolveRealKey?.("sk-real-channel-key")
+
+    await waitFor(() => {
+      expect(
+        screen.getByDisplayValue("sk-real-channel-key"),
+      ).toBeInTheDocument()
+    })
   })
 })

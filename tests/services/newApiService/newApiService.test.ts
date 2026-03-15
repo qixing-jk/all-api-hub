@@ -108,9 +108,8 @@ vi.mock("~/services/preferences/userPreferences", () => ({
 vi.mock(
   "~/services/managedSites/providers/newApiSession",
   async (importOriginal) => {
-    const actual = await importOriginal<
-      typeof import("~/services/managedSites/providers/newApiSession")
-    >("~/services/managedSites/providers/newApiSession")
+    const actual =
+      (await importOriginal()) as typeof import("~/services/managedSites/providers/newApiSession")
 
     return {
       ...actual,
@@ -1330,6 +1329,40 @@ describe("newApiService", () => {
         ),
       ).rejects.toBeInstanceOf(MatchResolutionUnresolvedError)
     })
+
+    it("should surface an unresolved match when hidden-key comparison fails unexpectedly", async () => {
+      const { findMatchingChannel } = await import(
+        "~/services/managedSites/providers/newApi"
+      )
+      const { MatchResolutionUnresolvedError } = await import(
+        "~/services/managedSites/channelMatch"
+      )
+
+      const hiddenKeyChannel = createMockNewApiChannel({
+        id: 4,
+        base_url: "https://api.example.com",
+        models: "gpt-4",
+        key: "",
+      })
+
+      mockSearchChannel.mockResolvedValueOnce(
+        createMockNewApiChannelListData([hiddenKeyChannel]),
+      )
+      fetchNewApiChannelKeyMock.mockRejectedValueOnce(
+        new Error("backend unavailable"),
+      )
+
+      await expect(
+        findMatchingChannel(
+          "https://new-api.example.com",
+          "admin-token",
+          "user-123",
+          "https://api.example.com",
+          ["gpt-4"],
+          "sk-key-a",
+        ),
+      ).rejects.toBeInstanceOf(MatchResolutionUnresolvedError)
+    })
   })
 
   // ========================================================================
@@ -1431,6 +1464,40 @@ describe("newApiService", () => {
         new NewApiChannelKeyRequirementError(
           NEW_API_CHANNEL_KEY_ERROR_KINDS.SECURE_VERIFICATION_REQUIRED,
         ),
+      )
+
+      const result = await importToNewApi(account, token)
+
+      expect(result).toEqual({
+        success: false,
+        message: "messages:newapi.channelMatchUnresolved",
+      })
+      expect(mockCreateChannel).not.toHaveBeenCalled()
+    })
+
+    it("should stop importing when hidden-key lookup fails unexpectedly during duplicate resolution", async () => {
+      const { importToNewApi } = await import(
+        "~/services/managedSites/providers/newApi"
+      )
+      const account = createMockDisplaySiteData()
+      const token = createMockApiToken({ models: "gpt-4" })
+
+      const hiddenKeyChannel = createMockNewApiChannel({
+        id: 4,
+        base_url: account.baseUrl,
+        models: "gpt-4",
+        key: "",
+      })
+
+      mockGetPreferences.mockResolvedValueOnce(
+        createMockUserPreferencesWithNewApi(),
+      )
+      mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce(["gpt-4"])
+      mockSearchChannel.mockResolvedValueOnce(
+        createMockNewApiChannelListData([hiddenKeyChannel]),
+      )
+      fetchNewApiChannelKeyMock.mockRejectedValueOnce(
+        new Error("backend unavailable"),
       )
 
       const result = await importToNewApi(account, token)

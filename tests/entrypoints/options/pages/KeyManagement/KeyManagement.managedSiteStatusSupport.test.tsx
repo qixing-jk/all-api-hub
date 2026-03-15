@@ -282,6 +282,13 @@ describe("KeyManagement managed-site status support", () => {
         channelId: 88,
         requestKind: "token",
         label: "Token 1",
+        config: expect.objectContaining({
+          baseUrl: "https://managed.example",
+          userId: "1",
+          username: "admin",
+          password: "secret-password",
+          totpSecret: "JBSWY3DPEHPK3PXP",
+        }),
       }),
     )
     expect(refreshManagedSiteTokenStatusForToken).not.toHaveBeenCalled()

@@ -39,7 +39,9 @@ export interface ChannelDialogProps {
   initialValues?: Partial<ChannelFormData>
   initialModels?: string[]
   initialGroups?: string[]
-  onRequestRealKey?: (options: { setKey: (key: string) => void }) => void
+  onRequestRealKey?: (options: {
+    setKey: (key: string) => void
+  }) => void | Promise<void>
 }
 
 /**

@@ -274,7 +274,7 @@ export default function ManagedSiteChannels({
                 }
               }
 
-              void loadRealKey()
+              return loadRealKey()
             }
           : undefined,
         onSuccess: () => {

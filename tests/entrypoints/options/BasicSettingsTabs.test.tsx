@@ -1,19 +1,17 @@
+import userEvent from "@testing-library/user-event"
+import type { ReactNode } from "react"
+import { beforeEach, describe, expect, it, vi } from "vitest"
+
+import CheckinRedeemTab from "~/features/BasicSettings/components/tabs/CheckinRedeem/CheckinRedeemTab"
+import NewApiSettings from "~/features/BasicSettings/components/tabs/ManagedSite/NewApiSettings"
+import WebAiApiCheckTab from "~/features/BasicSettings/components/tabs/WebAiApiCheck/WebAiApiCheckTab"
 import {
   fireEvent,
   render,
   screen,
   waitFor,
   within,
-} from "@testing-library/react"
-import userEvent from "@testing-library/user-event"
-import type { ReactNode } from "react"
-import { I18nextProvider } from "react-i18next"
-import { beforeEach, describe, expect, it, vi } from "vitest"
-
-import CheckinRedeemTab from "~/features/BasicSettings/components/tabs/CheckinRedeem/CheckinRedeemTab"
-import NewApiSettings from "~/features/BasicSettings/components/tabs/ManagedSite/NewApiSettings"
-import WebAiApiCheckTab from "~/features/BasicSettings/components/tabs/WebAiApiCheck/WebAiApiCheckTab"
-import { testI18n } from "~~/tests/test-utils/i18n"
+} from "~~/tests/test-utils/render"
 
 const { mockedUseUserPreferencesContext, showUpdateToastMock } = vi.hoisted(
   () => ({
@@ -23,12 +21,13 @@ const { mockedUseUserPreferencesContext, showUpdateToastMock } = vi.hoisted(
 )
 
 vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
-  const actual = await importOriginal<
-    typeof import("~/contexts/UserPreferencesContext")
-  >("~/contexts/UserPreferencesContext")
+  const actual =
+    (await importOriginal()) as typeof import("~/contexts/UserPreferencesContext")
 
   return {
     ...actual,
+    UserPreferencesProvider: ({ children }: { children: ReactNode }) =>
+      children,
     useUserPreferencesContext: () => mockedUseUserPreferencesContext(),
   }
 })
@@ -75,9 +74,6 @@ const createContextValue = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 })
 
-const renderWithI18n = (ui: ReactNode) =>
-  render(<I18nextProvider i18n={testI18n}>{ui}</I18nextProvider>)
-
 describe("BasicSettings tab layout", () => {
   beforeEach(() => {
     mockedUseUserPreferencesContext.mockReset()
@@ -86,7 +82,7 @@ describe("BasicSettings tab layout", () => {
   })
 
   it("keeps WebAiApiCheck out of CheckinRedeemTab", () => {
-    renderWithI18n(<CheckinRedeemTab />)
+    render(<CheckinRedeemTab />)
 
     expect(screen.getByTestId("auto-checkin-settings")).toBeInTheDocument()
     expect(screen.getByTestId("redemption-assist-settings")).toBeInTheDocument()
@@ -96,7 +92,7 @@ describe("BasicSettings tab layout", () => {
   })
 
   it("renders WebAiApiCheckSettings inside WebAiApiCheckTab", () => {
-    renderWithI18n(<WebAiApiCheckTab />)
+    render(<WebAiApiCheckTab />)
 
     expect(screen.getByTestId("web-ai-api-check-settings")).toBeInTheDocument()
     expect(
@@ -112,7 +108,7 @@ describe("BasicSettings tab layout", () => {
     const contextValue = createContextValue()
     mockedUseUserPreferencesContext.mockReturnValue(contextValue)
 
-    renderWithI18n(<NewApiSettings />)
+    render(<NewApiSettings />)
 
     const usernameInput = screen.getByPlaceholderText(
       "settings:newApi.fields.usernamePlaceholder",
@@ -172,7 +168,7 @@ describe("BasicSettings tab layout", () => {
     const contextValue = createContextValue()
     mockedUseUserPreferencesContext.mockReturnValue(contextValue)
 
-    renderWithI18n(<NewApiSettings />)
+    render(<NewApiSettings />)
 
     const section = screen.getByText("settings:newApi.title").closest("section")
     expect(section).toBeTruthy()

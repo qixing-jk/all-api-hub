@@ -316,7 +316,6 @@ export async function getManagedSiteTokenChannelStatus(
           logger.warn("buildNewApiRecoveryMetadata failed", {
             managedConfig: {
               baseUrl: managedConfig.baseUrl,
-              userId: managedConfig.userId,
             },
             assessment: {
               searchBaseUrl: assessment?.searchBaseUrl,

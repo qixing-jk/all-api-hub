@@ -1,23 +1,22 @@
-import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
-import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import ManagedSiteSelector from "~/features/BasicSettings/components/tabs/ManagedSite/ManagedSiteSelector"
-import { testI18n } from "~~/tests/test-utils/i18n"
+import { render, screen } from "~~/tests/test-utils/render"
 
 const { mockedUseUserPreferencesContext } = vi.hoisted(() => ({
   mockedUseUserPreferencesContext: vi.fn(),
 }))
 
 vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
-  const actual = await importOriginal<
-    typeof import("~/contexts/UserPreferencesContext")
-  >("~/contexts/UserPreferencesContext")
+  const actual =
+    (await importOriginal()) as typeof import("~/contexts/UserPreferencesContext")
 
   return {
     ...actual,
+    UserPreferencesProvider: ({ children }: { children: ReactNode }) =>
+      children,
     useUserPreferencesContext: () => mockedUseUserPreferencesContext(),
   }
 })
@@ -55,9 +54,6 @@ const createContextValue = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 })
 
-const renderWithI18n = (ui: ReactNode) =>
-  render(<I18nextProvider i18n={testI18n}>{ui}</I18nextProvider>)
-
 describe("ManagedSiteSelector", () => {
   beforeEach(() => {
     mockedUseUserPreferencesContext.mockReset()
@@ -66,7 +62,7 @@ describe("ManagedSiteSelector", () => {
 
   it("includes Done Hub as a selectable managed site type", async () => {
     const user = userEvent.setup()
-    renderWithI18n(<ManagedSiteSelector />)
+    render(<ManagedSiteSelector />)
 
     const trigger = await screen.findByRole("combobox", {
       name: "settings:managedSite.siteTypeLabel",

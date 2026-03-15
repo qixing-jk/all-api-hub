@@ -437,6 +437,10 @@ export async function findMatchingChannel(
         channelId: candidate.id,
         error: getErrorMessage(error),
       })
+
+      throw new MatchResolutionUnresolvedError(
+        MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.VERIFICATION_REQUIRED,
+      )
     }
   }
 

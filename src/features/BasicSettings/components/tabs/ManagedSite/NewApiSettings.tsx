@@ -95,9 +95,10 @@ export default function NewApiSettings() {
   }
 
   const handleNewApiUsernameChange = async (username: string) => {
-    username = username.trim()
-    if (username === newApiUsername) return
-    const success = await updateNewApiUsername(username)
+    const trimmedUsername = username.trim()
+    setLocalUsername(trimmedUsername)
+    if (trimmedUsername === newApiUsername) return
+    const success = await updateNewApiUsername(trimmedUsername)
     showUpdateToast(success, t("newApi.fields.usernameLabel"))
   }
 
@@ -108,9 +109,10 @@ export default function NewApiSettings() {
   }
 
   const handleNewApiTotpSecretChange = async (totpSecret: string) => {
-    totpSecret = totpSecret.trim()
-    if (totpSecret === newApiTotpSecret) return
-    const success = await updateNewApiTotpSecret(totpSecret)
+    const trimmedTotpSecret = totpSecret.trim()
+    setLocalTotpSecret(trimmedTotpSecret)
+    if (trimmedTotpSecret === newApiTotpSecret) return
+    const success = await updateNewApiTotpSecret(trimmedTotpSecret)
     showUpdateToast(success, t("newApi.fields.totpSecretLabel"))
   }
 
