@@ -170,6 +170,9 @@ export function useChannelDialog() {
         toast.dismiss(toastId)
       }
 
+      // Capture displaySiteData for closure
+      const capturedDisplaySiteData = displaySiteData
+
       // Open dialog
       openDialog({
         mode: DIALOG_MODES.ADD,
@@ -180,9 +183,9 @@ export function useChannelDialog() {
           // Save verification credentials for the created channel
           if (result.data?.id) {
             const verificationCreds: VerificationCredentials = {
-              baseUrl: displaySiteData.baseUrl,
+              baseUrl: capturedDisplaySiteData.baseUrl,
               apiKey: formData.key,
-              apiType: displaySiteData.siteType,
+              apiType: capturedDisplaySiteData.siteType,
               updatedAt: Date.now(),
             }
 
@@ -193,7 +196,7 @@ export function useChannelDialog() {
 
             logger.info("Saved verification credentials for channel", {
               channelId: result.data.id,
-              apiType: displaySiteData.siteType,
+              apiType: capturedDisplaySiteData.siteType,
             })
           }
 
