@@ -224,7 +224,7 @@ describe("ApiCheckModalHost", () => {
         return {
           success: true,
           profileId: "p-1",
-          name: "proxy.example.com (OpenAI-compatible)",
+          name: "proxy.example.com",
           apiType: message.apiType,
           baseUrl: "https://proxy.example.com/api",
         }
@@ -282,7 +282,7 @@ describe("ApiCheckModalHost", () => {
         return {
           success: true,
           profileId: "p-1",
-          name: "proxy.example.com (OpenAI-compatible)",
+          name: "proxy.example.com",
           apiType: message.apiType,
           baseUrl: "https://proxy.example.com/api",
         }
@@ -374,7 +374,7 @@ describe("ApiCheckModalHost", () => {
         return {
           success: true,
           profileId: "p-1",
-          name: "proxy.example.com (OpenAI-compatible)",
+          name: "proxy.example.com",
           apiType: message.apiType,
           baseUrl: message.baseUrl,
         }

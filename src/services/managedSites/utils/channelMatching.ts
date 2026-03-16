@@ -127,7 +127,7 @@ const pickBetterCandidate = (
 }
 
 /**
- *
+ * Normalize a managed-site base URL before duplicate checks or channel matching.
  */
 export function normalizeManagedSiteChannelBaseUrl(baseUrl: string): string {
   return normalizeOpenAiFamilyBaseUrl(baseUrl) ?? baseUrl.trim()

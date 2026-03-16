@@ -435,15 +435,33 @@ const _openKeysPage = async (accountId?: string) => {
 }
 
 /**
- * Opens the Models page, optionally pre-selecting an account.
- * @param accountId Optional account id to prefill.
+ * Target descriptor for Model Management deep links.
+ * Passing a string keeps the legacy account-only helper contract working.
  */
-const _openModelsPage = async (accountId?: string) => {
+type ModelManagementNavigationTarget =
+  | string
+  | {
+      accountId?: string
+      profileId?: string
+    }
+
+/**
+ * Opens the Models page, optionally pre-selecting an account or stored profile.
+ */
+const _openModelsPage = async (target?: ModelManagementNavigationTarget) => {
   const baseUrl = getExtensionURL("options.html")
   const url = new URL(baseUrl)
 
-  if (accountId) {
-    url.searchParams.set("accountId", accountId)
+  if (typeof target === "string") {
+    url.searchParams.set("accountId", target)
+  } else if (target) {
+    if (target.accountId) {
+      url.searchParams.set("accountId", target.accountId)
+    }
+
+    if (target.profileId) {
+      url.searchParams.set("profileId", target.profileId)
+    }
   }
 
   url.hash = MENU_ITEM_IDS.MODELS

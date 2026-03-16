@@ -22,10 +22,11 @@ import { ManagedSiteIcon } from "~/components/icons/ManagedSiteIcon"
 import { KiloCodeExportDialog } from "~/components/KiloCodeExportDialog"
 import ManagedSiteChannelLinkButton from "~/components/ManagedSiteChannelLinkButton"
 import Tooltip from "~/components/Tooltip"
-import { Badge, Heading6, IconButton } from "~/components/ui"
+import { Badge, Button, Heading6, IconButton } from "~/components/ui"
 import { NEW_API } from "~/constants/siteType"
 import type { ManagedSiteType } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { OpenInCherryStudio } from "~/services/integrations/cherryStudio"
 import {
@@ -48,14 +49,38 @@ import {
 } from "~/services/verification/aiApiVerification"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import type { AccountToken, DisplaySiteData } from "~/types"
+import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { showResultToast } from "~/utils/core/toastHelpers"
-import { openApiCredentialProfilesPage } from "~/utils/navigation"
+import {
+  openApiCredentialProfilesPage,
+  openSettingsTab,
+} from "~/utils/navigation"
 
 /**
  * Unified logger scoped to the Key Management token header actions.
  */
 const logger = createLogger("TokenHeader")
+
+/**
+ * Build a stable API credential profile name from token and account labels.
+ */
+function buildApiCredentialProfileName(params: {
+  accountName: string
+  fallbackAccountName?: string
+  tokenName: string
+}) {
+  const parts = [
+    params.accountName,
+    params.fallbackAccountName ?? "",
+    params.tokenName,
+  ]
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .filter((value, index, list) => list.indexOf(value) === index)
+
+  return parts.join(" - ")
+}
 
 interface TokenHeaderProps {
   /**
@@ -65,7 +90,7 @@ interface TokenHeaderProps {
   /**
    * Copy handler for placing the key on clipboard.
    */
-  copyKey: (key: string, name: string) => void
+  copyKey: (account: DisplaySiteData, token: AccountToken) => Promise<void>
   /**
    * Handler to open the edit dialog for the token.
    */
@@ -94,6 +119,13 @@ interface TokenHeaderProps {
    * Optional callback invoked after a successful managed-site import.
    */
   onManagedSiteImportSuccess?: (token: AccountToken) => void | Promise<void>
+  /**
+   * Optional callback invoked to recover a New API exact-verification state.
+   */
+  onManagedSiteVerificationRetry?: (
+    token: AccountToken,
+    managedSiteStatus: ManagedSiteTokenChannelStatus,
+  ) => void | Promise<void>
 }
 
 const getManagedSiteStatusBadgeVariant = (params: {
@@ -348,7 +380,7 @@ const getManagedSiteModelsSignalTooltip = (
 }
 
 /**
- *
+ * Compact managed-site signal badge with a tooltip describing the match result.
  */
 function ManagedSiteSignalBadge(props: {
   badgeText: string
@@ -436,15 +468,39 @@ function TokenActionButtons({
     setIsClaudeCodeRouterOpen(true)
   }
 
+  const handleUseInCherry = async () => {
+    try {
+      const resolvedToken = await resolveDisplayAccountTokenForSecret(
+        account,
+        token,
+      )
+      OpenInCherryStudio(account, resolvedToken)
+    } catch (error) {
+      showResultToast({
+        success: false,
+        message: t("messages:errors.operation.failed", {
+          error: getErrorMessage(error),
+        }),
+      })
+    }
+  }
+
   const handleSaveToApiCredentialProfiles = async () => {
     const apiType: ApiVerificationApiType = API_TYPES.OPENAI_COMPATIBLE
+    const profileName = buildApiCredentialProfileName({
+      accountName: account.name,
+      fallbackAccountName: token.accountName,
+      tokenName: token.name,
+    })
+    let resolvedToken = token
 
     try {
-      await apiCredentialProfilesStorage.createProfile({
-        name: token.name,
+      resolvedToken = await resolveDisplayAccountTokenForSecret(account, token)
+      const profile = await apiCredentialProfilesStorage.createProfile({
+        name: profileName,
         apiType,
         baseUrl: account.baseUrl,
-        apiKey: token.key,
+        apiKey: resolvedToken.key,
         tagIds: account.tagIds ?? [],
       })
       toast.success(
@@ -452,7 +508,7 @@ function TokenActionButtons({
           <div className="flex min-w-0 items-center gap-2">
             <span className="min-w-0 truncate">
               {t("keyManagement:messages.savedToApiProfiles", {
-                name: token.name,
+                name: profile.name,
               })}
             </span>
             <button
@@ -473,9 +529,12 @@ function TokenActionButtons({
       logger.error("Failed to save token to API profiles", {
         message: toSanitizedErrorSummary(
           error,
-          [token.key, account.token, account.cookieAuthSessionCookie].filter(
-            Boolean,
-          ) as string[],
+          [
+            token.key,
+            resolvedToken.key,
+            account.token,
+            account.cookieAuthSessionCookie,
+          ].filter(Boolean) as string[],
         ),
       })
       toast.error(t("keyManagement:messages.saveToApiProfilesFailed"))
@@ -508,7 +567,7 @@ function TokenActionButtons({
         aria-label={t("common:actions.copyKey")}
         size="sm"
         variant="ghost"
-        onClick={() => copyKey(token.key, token.name)}
+        onClick={() => void copyKey(account, token)}
       >
         <DocumentDuplicateIcon className="dark:text-dark-text-tertiary h-4 w-4 text-gray-500" />
       </IconButton>
@@ -524,7 +583,7 @@ function TokenActionButtons({
         aria-label={t("actions.useInCherry")}
         size="sm"
         variant="ghost"
-        onClick={() => OpenInCherryStudio(account, token)}
+        onClick={() => void handleUseInCherry()}
       >
         <CherryIcon />
       </IconButton>
@@ -604,6 +663,7 @@ function TokenActionButtons({
  * @param props.managedSiteStatus Current managed-site status for the token.
  * @param props.isManagedSiteStatusChecking Whether the managed-site status is checking.
  * @param props.onManagedSiteImportSuccess Optional callback after successful managed-site import.
+ * @param props.onManagedSiteVerificationRetry Optional callback for New API verification-assisted retry.
  */
 export function TokenHeader({
   token,
@@ -615,8 +675,9 @@ export function TokenHeader({
   managedSiteStatus,
   isManagedSiteStatusChecking = false,
   onManagedSiteImportSuccess,
+  onManagedSiteVerificationRetry,
 }: TokenHeaderProps) {
-  const { t } = useTranslation("keyManagement")
+  const { t } = useTranslation(["keyManagement", "common"])
   const { managedSiteType } = useUserPreferencesContext()
   const isManagedSiteStatusSupported =
     supportsManagedSiteBaseUrlChannelLookup(managedSiteType)
@@ -632,10 +693,51 @@ export function TokenHeader({
     managedSiteStatus && "assessment" in managedSiteStatus
       ? managedSiteStatus.assessment
       : undefined
+  const managedSiteRecovery =
+    managedSiteStatus?.status === MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN &&
+    managedSiteStatus.reason ===
+      MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE
+      ? managedSiteStatus.recovery
+      : undefined
+  const canRetryManagedSiteVerification = Boolean(
+    managedSiteRecovery?.loginCredentialsConfigured ||
+      managedSiteRecovery?.authenticatedBrowserSessionExists,
+  )
   const matchedManagedSiteChannel =
     managedSiteStatus && "matchedChannel" in managedSiteStatus
       ? managedSiteStatus.matchedChannel
       : undefined
+  const shouldShowManagedSiteVerificationRetry = Boolean(
+    canRetryManagedSiteVerification &&
+      managedSiteStatus &&
+      onManagedSiteVerificationRetry,
+  )
+  const shouldShowManagedSiteSettingsAction = Boolean(
+    managedSiteRecovery && !canRetryManagedSiteVerification,
+  )
+  const managedSiteRecoveryMessage = managedSiteRecovery
+    ? canRetryManagedSiteVerification
+      ? t("managedSiteStatus.recovery.verificationRequired")
+      : t("managedSiteStatus.recovery.configureLogin")
+    : null
+
+  const handleManagedSiteVerificationRetryClick = () => {
+    if (!managedSiteStatus || !onManagedSiteVerificationRetry) {
+      return
+    }
+
+    void Promise.resolve(
+      onManagedSiteVerificationRetry(token, managedSiteStatus),
+    ).catch((error) =>
+      logger.error("Managed-site verification retry callback failed", error),
+    )
+  }
+
+  const handleOpenManagedSiteSettings = () => {
+    void openSettingsTab("managedSite").catch((error) =>
+      logger.error("Failed to open managed-site settings", error),
+    )
+  }
 
   return (
     <div className="flex min-w-0 items-start gap-2">
@@ -657,6 +759,7 @@ export function TokenHeader({
 
         {shouldRenderManagedSiteStatus ? (
           <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+            {/* managed site status badge with optional description and signal badges - only show if the managed site supports base URL channel lookup and there's a status to show (either checking or a known status) */}
             <Badge
               variant={getManagedSiteStatusBadgeVariant({
                 isChecking: isManagedSiteStatusChecking,
@@ -727,6 +830,8 @@ export function TokenHeader({
                 />
               </>
             ) : null}
+
+            {/* channel link button - only show if there's a matched channel or a search URL available (which indicates the user can review potential matches on the managed site) */}
             {matchedManagedSiteChannel ? (
               <ManagedSiteChannelLinkButton
                 channelName={matchedManagedSiteChannel.name}
@@ -750,6 +855,34 @@ export function TokenHeader({
                 search={managedSiteAssessment.searchBaseUrl}
                 className="h-auto px-0 py-0 text-xs"
               />
+            ) : null}
+
+            {/* verification retry button - only show if the token is in an exact-verification-unavailable unknown status with login credentials configured, which indicates the user can take action to potentially recover to an added status without needing to re-import */}
+            {managedSiteRecoveryMessage ? (
+              <span className="break-words whitespace-normal">
+                {managedSiteRecoveryMessage}
+              </span>
+            ) : null}
+            {shouldShowManagedSiteVerificationRetry ? (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-auto px-2 py-0.5 text-xs"
+                onClick={handleManagedSiteVerificationRetryClick}
+              >
+                {t("managedSiteStatus.actions.verifyNow")}
+              </Button>
+            ) : null}
+            {shouldShowManagedSiteSettingsAction ? (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-auto px-2 py-0.5 text-xs"
+                onClick={handleOpenManagedSiteSettings}
+                title={managedSiteRecoveryMessage ?? undefined}
+              >
+                {t("common:settings")}
+              </Button>
             ) : null}
           </div>
         ) : null}

@@ -79,7 +79,8 @@
     "syncCompleted": "模型同步完成（{{success}}/{{total}}）",
     "syncFailed": "模型同步失败：{{error}}",
     "loadFailed": "渠道加载失败：{{error}}",
-    "genericError": "请求失败：{{error}}"
+    "genericError": "请求失败：{{error}}",
+    "revealKeyFailed": "加载真实渠道 key 失败：{{error}}"
   },
   "filters": {
     "title": "渠道过滤规则",

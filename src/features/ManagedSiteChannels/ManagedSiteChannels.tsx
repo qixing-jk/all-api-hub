@@ -78,8 +78,11 @@ import { ChannelTypeNames } from "~/constants/managedSite"
 import { OctopusOutboundTypeNames } from "~/constants/octopus"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { OCTOPUS } from "~/constants/siteType"
+import { NEW_API, OCTOPUS } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { loadNewApiChannelKeyWithVerification } from "~/features/ManagedSiteVerification/loadNewApiChannelKeyWithVerification"
+import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
+import { useNewApiManagedVerification } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
 import { cn } from "~/lib/utils"
 import { getManagedSiteService } from "~/services/managedSites/managedSiteService"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
@@ -115,9 +118,17 @@ export default function ManagedSiteChannels({
   refreshKey,
   routeParams,
 }: ManagedSiteChannelsProps) {
-  const { t } = useTranslation(["managedSiteChannels", "messages"])
-  const { managedSiteType } = useUserPreferencesContext()
+  const { t } = useTranslation(["managedSiteChannels", "messages", "common"])
+  const {
+    managedSiteType,
+    newApiBaseUrl,
+    newApiUserId,
+    newApiUsername,
+    newApiPassword,
+    newApiTotpSecret,
+  } = useUserPreferencesContext()
   const isOctopus = managedSiteType === OCTOPUS
+  const isNewApiManagedSite = managedSiteType === NEW_API
 
   const [channels, setChannels] = useState<ChannelRow[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -148,6 +159,8 @@ export default function ManagedSiteChannels({
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false)
   const [filterDialogChannel, setFilterDialogChannel] =
     useState<ChannelRow | null>(null)
+  const verification = useNewApiManagedVerification()
+  const { openNewApiManagedVerification } = verification
 
   const { openWithCustom } = useChannelDialog()
 
@@ -235,13 +248,53 @@ export default function ManagedSiteChannels({
         },
         initialGroups: groups,
         initialModels: models,
+        onRequestRealKey: isNewApiManagedSite
+          ? ({ setKey }) => {
+              const loadRealKey = async () => {
+                try {
+                  await loadNewApiChannelKeyWithVerification({
+                    channelId: channel.id,
+                    label: channel.name,
+                    config: {
+                      baseUrl: newApiBaseUrl,
+                      userId: newApiUserId,
+                      username: newApiUsername,
+                      password: newApiPassword,
+                      totpSecret: newApiTotpSecret,
+                    },
+                    setKey,
+                    openVerification: openNewApiManagedVerification,
+                  })
+                } catch (error) {
+                  toast.error(
+                    t("managedSiteChannels:toasts.revealKeyFailed", {
+                      error: getErrorMessage(error),
+                    }),
+                  )
+                }
+              }
+
+              return loadRealKey()
+            }
+          : undefined,
         onSuccess: () => {
           toast.success(t("toasts.channelUpdated"))
           void refreshChannels()
         },
       })
     },
-    [openWithCustom, refreshChannels, t],
+    [
+      isNewApiManagedSite,
+      newApiBaseUrl,
+      newApiPassword,
+      newApiTotpSecret,
+      newApiUserId,
+      newApiUsername,
+      openWithCustom,
+      refreshChannels,
+      t,
+      openNewApiManagedVerification,
+    ],
   )
 
   const scheduleDelete = useCallback((ids: number[]) => {
@@ -353,6 +406,7 @@ export default function ManagedSiteChannels({
 
   const rowActionLabels = useMemo<RowActionsLabels>(
     () => ({
+      trigger: t("table.columns.actions"),
       edit: t("table.rowActions.edit"),
       sync: t("table.rowActions.sync"),
       syncing: t("table.rowActions.syncing"),
@@ -1029,6 +1083,21 @@ export default function ManagedSiteChannels({
         channel={filterDialogChannel}
         open={isFilterDialogOpen}
         onClose={handleCloseFilterDialog}
+      />
+
+      <NewApiManagedVerificationDialog
+        isOpen={verification.dialogState.isOpen}
+        step={verification.dialogState.step}
+        request={verification.dialogState.request}
+        code={verification.dialogState.code}
+        errorMessage={verification.dialogState.errorMessage}
+        isBusy={verification.dialogState.isBusy}
+        busyMessage={verification.dialogState.busyMessage}
+        onCodeChange={verification.setCode}
+        onClose={verification.closeDialog}
+        onSubmit={verification.submitCode}
+        onRetry={verification.retryVerification}
+        onOpenSite={verification.openBaseUrl}
       />
     </div>
   )

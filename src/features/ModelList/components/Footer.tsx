@@ -6,8 +6,16 @@ import { Alert } from "~/components/ui"
  * Informational footer reminding users about pricing variability.
  * @returns Info alert with pricing note and description.
  */
-export function Footer() {
+export function Footer({
+  showPricingNote = true,
+}: {
+  showPricingNote?: boolean
+}) {
   const { t } = useTranslation("modelList")
+  if (!showPricingNote) {
+    return null
+  }
+
   return (
     <Alert variant="info" className="mt-8">
       <div>

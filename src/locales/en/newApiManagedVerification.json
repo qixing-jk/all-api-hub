@@ -1,0 +1,45 @@
+{
+  "dialog": {
+    "title": {
+      "settings": "New API session check",
+      "token": "New API verification retry",
+      "channel": "New API channel key verification"
+    },
+    "body": {
+      "loggingIn": "Checking the current New API session and preparing verification if it is needed.",
+      "credentialsMissing": "Add a New API login username and password in Settings before session-assisted verification can run.",
+      "loginTwoFactor": "The New API login step requires a verification code before the browser-backed admin session can continue.",
+      "secureVerification": "The admin session is logged in, but New API still requires a secure verification code before hidden channel keys can be read.",
+      "passkeyManual": "This account currently exposes passkey verification for the secure step. Complete the passkey check on the site, then return here and retry.",
+      "successSettings": "The New API login and verification flow completed successfully. You can now continue with actions that require login and verification.",
+      "successToken": "Verification succeeded for {{label}}. The managed-site status has been refreshed.",
+      "successChannel": "Verification succeeded for {{label}}. The real channel key has been loaded.",
+      "failure": "The New API verification flow could not be completed."
+    },
+    "fields": {
+      "codeLabel": "Verification code",
+      "codePlaceholder": "Enter code"
+    },
+    "actions": {
+      "close": "Close",
+      "retry": "Retry",
+      "submitLoginCode": "Submit login code",
+      "submitVerificationCode": "Submit verification code",
+      "retryAfterPasskey": "Retry after passkey",
+      "openSite": "Open site"
+    },
+    "messages": {
+      "starting": "Starting the New API verification flow...",
+      "submitting": "Submitting verification code...",
+      "refreshingToken": "Refreshing this token's managed-site status...",
+      "refreshingChannel": "Loading the real channel key...",
+      "finishing": "Finalizing the New API session check...",
+      "missingBaseUrl": "Add the New API base URL before testing the session flow.",
+      "missingCode": "Enter the verification code first."
+    },
+    "hints": {
+      "manualFallback": "Manual code entry stays available even when automatic TOTP is configured.",
+      "passkey": "Open the site, complete the passkey prompt there, then come back here and retry."
+    }
+  }
+}

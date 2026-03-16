@@ -64,3 +64,4 @@ rules:
     - Start with a repo recon/reuse task that names the existing modules, abstractions, or UI patterns to inspect before implementation.
     - If implementation would duplicate nearby logic, add a scoped refactor or extraction task instead of a parallel implementation task.
     - When non-obvious logic or constraints are expected, note that implementation should add brief clarifying comments rather than relying on implicit knowledge.
+    - Add an explicit verification section for every change. The minimum verification tasks must include `pnpm lint` and the smallest related automated test command for the touched behavior; prefer repo-native related/affected flows when available (for example `vitest related --run` or the direct equivalent of Husky/`lint-staged` validation without creating a commit), expand validation when shared hooks, services, utils, types, or contracts are touched, and require blockers to be documented if validation cannot run.

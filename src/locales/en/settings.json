@@ -155,8 +155,27 @@
       "baseUrlPlaceholder": "https://api.example.com",
       "adminTokenLabel": "Administrator's system access token",
       "userIdLabel": "Administrator user ID",
+      "usernameLabel": "Login username",
+      "usernameDesc": "Optional. Used to sign in to the New API admin console and complete 2FA when needed. This is mainly used for viewing the real channel key in Channel Management and for checking whether a key is already used by a channel in Key Management.",
+      "usernamePlaceholder": "admin",
+      "passwordLabel": "Login password",
+      "passwordDesc": "Optional. Used together with the login username to sign in to the New API admin console and establish a login session when viewing a channel key or running full key comparison.",
+      "passwordPlaceholder": "Enter password",
+      "showPassword": "Show login password",
+      "hidePassword": "Hide login password",
+      "totpSecretLabel": "TOTP secret",
+      "totpSecretDesc": "Optional. When provided, All API Hub can automatically generate TOTP codes for login 2FA and the secure verification required to view channel keys.",
+      "totpSecretPlaceholder": "Paste Base32 TOTP secret",
+      "showTotpSecret": "Show TOTP secret",
+      "hideTotpSecret": "Hide TOTP secret",
       "showToken": "Show system access token",
       "hideToken": "Hide system access token"
+    },
+    "sessionTest": {
+      "title": "Test login & 2FA config",
+      "description": "Test whether the entered login username, password, and TOTP secret are correct and usable. After a successful check, you can continue with actions that require login and 2FA.",
+      "action": "Test config",
+      "testing": "Testing config..."
     }
   },
   "veloera": {

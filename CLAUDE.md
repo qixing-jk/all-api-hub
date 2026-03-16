@@ -167,5 +167,5 @@ When making a change:
 1. Check the nearest existing abstraction and current wiring.
 2. Confirm whether the behavior is site-type-specific or shared.
 3. Make the smallest change that fits the current architecture.
-4. Run the narrowest useful validation.
+4. Run `pnpm lint` and the narrowest related test scope that still validates the touched behavior.
 5. Update nearby docs when behavior or workflow guidance changes.

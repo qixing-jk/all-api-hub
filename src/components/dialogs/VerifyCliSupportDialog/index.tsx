@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -11,6 +11,11 @@ import {
   SearchableSelect,
 } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
+import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
+import {
+  fetchApiCredentialModelIds,
+  normalizeApiCredentialModelIds,
+} from "~/services/apiCredentialProfiles/modelCatalog"
 import { getApiService } from "~/services/apiService"
 import { guessModelIdFromToken } from "~/services/verification/aiApiVerification"
 import {
@@ -48,35 +53,69 @@ function buildInitialToolState(): ToolItemState[] {
 }
 
 /**
- * Modal dialog that runs CLI support simulation for a selected account token.
+ * Parse token-provided model metadata into distinct selectable ids.
+ */
+function extractTokenModelIds(
+  token: Pick<ApiToken, "models" | "model_limits">,
+) {
+  return normalizeApiCredentialModelIds(
+    [token.models, token.model_limits]
+      .filter(
+        (value): value is string =>
+          typeof value === "string" && value.trim().length > 0,
+      )
+      .flatMap((value) => value.split(/[, \n]+/g))
+      .map((value) => value.trim()),
+  )
+}
+
+/**
+ * Modal dialog that runs CLI support simulation for a selected account token or
+ * a stored profile.
  *
  * Each CLI tool implies a fixed API family and endpoint style, so users do not need
  * to pick an API type manually.
  */
 export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
-  const { isOpen, onClose, account, initialModelId } = props
+  const { isOpen, onClose, initialModelId } = props
   const { t } = useTranslation("cliSupportVerification")
+  const account = "account" in props ? props.account : null
+  const profile = "profile" in props ? props.profile : null
+  const isProfileSource = profile !== null
+  const sourceBaseUrl = profile?.baseUrl ?? account?.baseUrl ?? ""
+  const sourceName = profile?.name ?? account?.name ?? ""
 
   const [modelId, setModelId] = useState<string>(initialModelId?.trim() ?? "")
   const [isRunning, setIsRunning] = useState(false)
   const [isLoadingTokens, setIsLoadingTokens] = useState(false)
   const [tokens, setTokens] = useState<ApiToken[]>([])
   const [selectedTokenId, setSelectedTokenId] = useState<string>("")
+  const [profileModelOptions, setProfileModelOptions] = useState<string[]>([])
+  const [isLoadingModels, setIsLoadingModels] = useState(false)
+  const [fetchModelsError, setFetchModelsError] = useState<string | null>(null)
   const [tools, setTools] = useState<ToolItemState[]>([])
+  const fetchModelsRequestIdRef = useRef(0)
 
   const selectedToken = tokens.find(
     (tok) => tok.id.toString() === selectedTokenId,
   )
+  const activeApiKey = profile?.apiKey ?? selectedToken?.key ?? null
+  const hasRunnableSource = isProfileSource ? !!activeApiKey : !!selectedToken
+  const modelOptions = useMemo(() => {
+    if (isProfileSource) return profileModelOptions
+    if (!selectedToken) return []
+    return extractTokenModelIds(selectedToken)
+  }, [isProfileSource, profileModelOptions, selectedToken])
 
   const tokenModelHint = useMemo(() => {
-    if (!selectedToken) return ""
+    if (!selectedToken || isProfileSource) return ""
     return (
       guessModelIdFromToken({
         models: selectedToken.models,
         model_limits: selectedToken.model_limits,
       }) ?? ""
     )
-  }, [selectedToken])
+  }, [isProfileSource, selectedToken])
 
   const resolvedModelId = (modelId.trim() || tokenModelHint.trim() || "").trim()
 
@@ -90,13 +129,20 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
       <div className="min-w-0">
         <Heading5 className="truncate">{t("verifyDialog.title")}</Heading5>
         <div className="dark:text-dark-text-tertiary mt-1 truncate text-xs text-gray-500">
-          {account.baseUrl} · {account.name}
+          {sourceBaseUrl} · {sourceName}
         </div>
       </div>
     )
-  }, [account.baseUrl, account.name, t])
+  }, [sourceBaseUrl, sourceName, t])
 
   const loadTokens = useCallback(async () => {
+    if (!account) {
+      setTokens([])
+      setSelectedTokenId("")
+      setIsLoadingTokens(false)
+      return
+    }
+
     setIsLoadingTokens(true)
     try {
       const accountTokens = await getApiService(
@@ -136,23 +182,61 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
     } finally {
       setIsLoadingTokens(false)
     }
-  }, [
-    account.authType,
-    account.baseUrl,
-    account.cookieAuthSessionCookie,
-    account.id,
-    account.siteType,
-    account.token,
-    account.userId,
-  ])
+  }, [account])
+
+  const loadProfileModels = useCallback(async () => {
+    if (!profile) {
+      setProfileModelOptions([])
+      setFetchModelsError(null)
+      setIsLoadingModels(false)
+      return
+    }
+
+    const requestId = (fetchModelsRequestIdRef.current += 1)
+    setFetchModelsError(null)
+    setIsLoadingModels(true)
+
+    try {
+      const normalized = normalizeApiCredentialModelIds(
+        await fetchApiCredentialModelIds({
+          apiType: profile.apiType,
+          baseUrl: profile.baseUrl,
+          apiKey: profile.apiKey,
+        }),
+      )
+
+      if (fetchModelsRequestIdRef.current !== requestId) return
+      setProfileModelOptions(normalized)
+    } catch (error) {
+      const message =
+        toSanitizedErrorSummary(error, [profile.apiKey, profile.baseUrl]) ||
+        t("verifyDialog.modelsFetchFailed")
+
+      logger.error("Failed to fetch profile models", { message })
+
+      if (fetchModelsRequestIdRef.current !== requestId) return
+      setProfileModelOptions([])
+      setFetchModelsError(message)
+    } finally {
+      if (fetchModelsRequestIdRef.current === requestId) {
+        setIsLoadingModels(false)
+      }
+    }
+  }, [profile, t])
 
   const runTool = async (
     toolId: (typeof CLI_TOOL_IDS)[number],
   ): Promise<CliSupportResult | null> => {
-    if (!selectedToken) return null
+    if (isProfileSource && !activeApiKey) return null
+    const sourceAccount = account
+    const accountToken = selectedToken
+
+    if (!isProfileSource && (!sourceAccount || !accountToken)) return null
 
     if (!resolvedModelId.trim()) return null
 
+    let resolvedApiKey = activeApiKey
+    const secretsToRedact = new Set<string>(activeApiKey ? [activeApiKey] : [])
     const startedAt = Date.now()
     setTools((prev) =>
       prev.map((t) =>
@@ -163,10 +247,28 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
     )
 
     try {
+      if (!isProfileSource) {
+        if (!sourceAccount || !accountToken) return null
+
+        const resolvedToken = await resolveDisplayAccountTokenForSecret(
+          sourceAccount,
+          accountToken,
+        )
+        resolvedApiKey = resolvedToken.key
+        if (accountToken.key) {
+          secretsToRedact.add(accountToken.key)
+        }
+        if (resolvedToken.key) {
+          secretsToRedact.add(resolvedToken.key)
+        }
+      }
+
+      if (!resolvedApiKey) return null
+
       const result = await runCliSupportTool({
         toolId,
-        baseUrl: account.baseUrl,
-        apiKey: selectedToken.key,
+        baseUrl: sourceBaseUrl,
+        apiKey: resolvedApiKey,
         modelId: resolvedModelId,
       })
 
@@ -178,9 +280,10 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
       return result
     } catch (error) {
       const finishedAt = Date.now()
-      const sanitizedMessage = toSanitizedErrorSummary(error, [
-        selectedToken.key,
-      ])
+      const sanitizedMessage = toSanitizedErrorSummary(
+        error,
+        Array.from(secretsToRedact),
+      )
       const inferredStatus = inferHttpStatus(error, sanitizedMessage)
       const summaryKey =
         summaryKeyFromHttpStatus(inferredStatus) ??
@@ -214,9 +317,9 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
             summaryParams,
             input: {
               toolId,
-              baseUrl: account.baseUrl,
+              baseUrl: sourceBaseUrl,
               modelId: resolvedModelId,
-              tokenId: selectedTokenId,
+              ...(selectedTokenId ? { tokenId: selectedTokenId } : {}),
             },
             output: {
               error: sanitizedMessage,
@@ -236,7 +339,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
   }
 
   const runAll = async () => {
-    if (!selectedTokenId || !selectedToken) return
+    if (!hasRunnableSource) return
     setIsRunning(true)
     setTools(buildInitialToolState())
 
@@ -251,11 +354,21 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
   useEffect(() => {
     if (!isOpen) return
     setTools(buildInitialToolState())
-    void loadTokens()
+    setProfileModelOptions([])
+    setFetchModelsError(null)
+    if (isProfileSource) {
+      setTokens([])
+      setSelectedTokenId("")
+      setIsLoadingTokens(false)
+      void loadProfileModels()
+    } else {
+      setIsLoadingModels(false)
+      void loadTokens()
+    }
     setModelId(initialModelId?.trim() ?? "")
-  }, [initialModelId, isOpen, loadTokens])
+  }, [initialModelId, isOpen, isProfileSource, loadProfileModels, loadTokens])
 
-  const canRunAll = !!selectedToken && resolvedModelId.trim().length > 0
+  const canRunAll = hasRunnableSource && resolvedModelId.trim().length > 0
 
   const footer = (
     <div className="flex justify-end gap-2">
@@ -285,51 +398,87 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
       closeOnBackdropClick={canClose}
     >
       <div className="space-y-3">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
-              {t("verifyDialog.meta.token")}
+        <div
+          className={`grid grid-cols-1 gap-3 ${
+            isProfileSource ? "" : "sm:grid-cols-2"
+          }`}
+        >
+          {!isProfileSource && (
+            <div className="space-y-1.5">
+              <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                {t("verifyDialog.meta.token")}
+              </div>
+              <SearchableSelect
+                options={[
+                  { value: "", label: t("verifyDialog.meta.tokenPlaceholder") },
+                  ...tokens.map((tok) => ({
+                    value: tok.id.toString(),
+                    label: tok.name,
+                  })),
+                ]}
+                value={selectedTokenId}
+                onChange={setSelectedTokenId}
+                disabled={isLoadingTokens}
+                placeholder={t("verifyDialog.meta.tokenPlaceholder")}
+              />
             </div>
-            <SearchableSelect
-              options={[
-                { value: "", label: t("verifyDialog.meta.tokenPlaceholder") },
-                ...tokens.map((tok) => ({
-                  value: tok.id.toString(),
-                  label: tok.name,
-                })),
-              ]}
-              value={selectedTokenId}
-              onChange={setSelectedTokenId}
-              disabled={isLoadingTokens}
-              placeholder={t("verifyDialog.meta.tokenPlaceholder")}
-            />
-          </div>
+          )}
 
           <div className="space-y-1.5">
             <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
               {t("verifyDialog.meta.model")}
             </div>
-            <Input
-              value={modelId}
-              onChange={(e) => setModelId(e.target.value)}
-              placeholder={t("verifyDialog.meta.modelPlaceholder")}
-              disabled={isRunning}
-            />
-            {tokenModelHint && !modelId.trim() && (
-              <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
-                {t("verifyDialog.modelHint", {
-                  modelId: tokenModelHint,
-                })}
-              </div>
+            {isProfileSource ? (
+              <>
+                <SearchableSelect
+                  aria-label={t("verifyDialog.meta.model")}
+                  data-testid="verify-cli-model-id"
+                  options={modelOptions.map((id) => ({ value: id, label: id }))}
+                  value={modelId}
+                  onChange={setModelId}
+                  placeholder={
+                    isLoadingModels
+                      ? t("verifyDialog.loadingModelsHint")
+                      : t("verifyDialog.modelPickerPlaceholder")
+                  }
+                  allowCustomValue
+                  disabled={isRunning}
+                />
+                {fetchModelsError ? (
+                  <div className="dark:text-dark-text-tertiary text-xs text-red-600">
+                    {fetchModelsError}
+                  </div>
+                ) : null}
+              </>
+            ) : (
+              <>
+                <Input
+                  value={modelId}
+                  onChange={(e) => setModelId(e.target.value)}
+                  placeholder={t("verifyDialog.meta.modelPlaceholder")}
+                  disabled={isRunning}
+                />
+                {tokenModelHint && !modelId.trim() && (
+                  <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                    {t("verifyDialog.modelHint", {
+                      modelId: tokenModelHint,
+                    })}
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
 
         {!hasAnyResult && (
           <div className="dark:text-dark-text-secondary text-sm text-gray-600">
-            {isLoadingTokens
-              ? t("verifyDialog.loadingTokensHint")
-              : t("verifyDialog.idleHint")}
+            {isProfileSource
+              ? isLoadingModels
+                ? t("verifyDialog.loadingModelsHint")
+                : t("verifyDialog.profileIdleHint")
+              : isLoadingTokens
+                ? t("verifyDialog.loadingTokensHint")
+                : t("verifyDialog.idleHint")}
           </div>
         )}
 
@@ -390,7 +539,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
                       isRunning ||
                       isLoadingTokens ||
                       tool.isRunning ||
-                      !selectedToken ||
+                      !hasRunnableSource ||
                       isDisabledForModel
                     }
                   >

@@ -22,7 +22,9 @@ const mockCreateProfile = vi.fn()
 const mockOpenApiCredentialProfilesPage = vi.fn()
 const mockOpenManagedSiteChannelsForChannel = vi.fn()
 const mockOpenManagedSiteChannelsPage = vi.fn()
+const mockOpenSettingsTab = vi.fn()
 const mockOpenWithAccount = vi.fn()
+const mockLoggerError = vi.fn()
 
 vi.mock(
   "~/services/apiCredentialProfiles/apiCredentialProfilesStorage",
@@ -48,7 +50,24 @@ vi.mock("~/utils/navigation", () => ({
     mockOpenManagedSiteChannelsForChannel(...args),
   openManagedSiteChannelsPage: (...args: unknown[]) =>
     mockOpenManagedSiteChannelsPage(...args),
+  openSettingsTab: (...args: unknown[]) => mockOpenSettingsTab(...args),
 }))
+
+vi.mock("~/utils/core/logger", async () => {
+  const actual = await vi.importActual<typeof import("~/utils/core/logger")>(
+    "~/utils/core/logger",
+  )
+
+  return {
+    ...actual,
+    createLogger: () => ({
+      debug: vi.fn(),
+      error: (...args: unknown[]) => mockLoggerError(...args),
+      info: vi.fn(),
+      warn: vi.fn(),
+    }),
+  }
+})
 
 vi.mock("~/components/dialogs/ChannelDialog", () => {
   return {
@@ -158,7 +177,9 @@ describe("TokenHeader save to API profiles", () => {
     mockOpenApiCredentialProfilesPage.mockReset()
     mockOpenManagedSiteChannelsForChannel.mockReset()
     mockOpenManagedSiteChannelsPage.mockReset()
+    mockOpenSettingsTab.mockReset()
     mockOpenWithAccount.mockReset()
+    mockLoggerError.mockReset()
     ;(toast.success as any).mockReset()
     ;(toast.error as any).mockReset()
     ;(toast.dismiss as any).mockReset()
@@ -174,6 +195,7 @@ describe("TokenHeader save to API profiles", () => {
   it("creates an openai-compatible profile from token + account baseUrl", async () => {
     const user = userEvent.setup()
     const account = createAccountStub()
+    const expectedProfileName = `${account.name} - Token`
 
     const token = {
       id: 1,
@@ -193,7 +215,7 @@ describe("TokenHeader save to API profiles", () => {
 
     mockCreateProfile.mockResolvedValue({
       id: "p-1",
-      name: token.name,
+      name: expectedProfileName,
       apiType: API_TYPES.OPENAI_COMPATIBLE,
       baseUrl: account.baseUrl,
       apiKey: token.key,
@@ -221,7 +243,7 @@ describe("TokenHeader save to API profiles", () => {
 
     await waitFor(() => {
       expect(mockCreateProfile).toHaveBeenCalledWith({
-        name: token.name,
+        name: expectedProfileName,
         apiType: API_TYPES.OPENAI_COMPATIBLE,
         baseUrl: account.baseUrl,
         apiKey: token.key,
@@ -233,6 +255,7 @@ describe("TokenHeader save to API profiles", () => {
   it("provides a quick-open button after saving", async () => {
     const user = userEvent.setup()
     const account = createAccountStub()
+    const expectedProfileName = `${account.name} - Token`
 
     const token = {
       id: 1,
@@ -252,7 +275,7 @@ describe("TokenHeader save to API profiles", () => {
 
     mockCreateProfile.mockResolvedValue({
       id: "p-1",
-      name: token.name,
+      name: expectedProfileName,
       apiType: API_TYPES.OPENAI_COMPATIBLE,
       baseUrl: account.baseUrl,
       apiKey: token.key,
@@ -601,6 +624,290 @@ describe("TokenHeader save to API profiles", () => {
     ).toContain(
       "keyManagement:managedSiteStatus.descriptions.newApiRetrieveKeyHint",
     )
+  })
+
+  it("shows a New API verification retry action when login-assist credentials are configured", async () => {
+    const user = userEvent.setup()
+    const account = createAccountStub()
+    const onManagedSiteVerificationRetry = vi.fn()
+
+    const token = {
+      id: 8,
+      user_id: 1,
+      key: "sk-recoverable",
+      status: 1,
+      name: "Recoverable Token",
+      created_time: 0,
+      accessed_time: 0,
+      expired_time: 0,
+      remain_quota: 0,
+      unlimited_quota: false,
+      used_quota: 0,
+      accountId: account.id,
+      accountName: account.name,
+    }
+
+    render(
+      <TokenHeader
+        token={token as any}
+        copyKey={vi.fn()}
+        handleEditToken={vi.fn()}
+        handleDeleteToken={vi.fn()}
+        account={account}
+        onManagedSiteVerificationRetry={onManagedSiteVerificationRetry}
+        managedSiteStatus={{
+          status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
+          reason:
+            MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE,
+          assessment: createManagedSiteAssessment({
+            key: {
+              comparable: false,
+              matched: false,
+              reason:
+                MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.COMPARISON_UNAVAILABLE,
+            },
+          }),
+          recovery: {
+            siteType: "new-api",
+            managedBaseUrl: "https://managed.example",
+            searchBaseUrl: "https://example.com",
+            loginCredentialsConfigured: true,
+            authenticatedBrowserSessionExists: false,
+            automaticCodeConfigured: true,
+          },
+        }}
+      />,
+    )
+
+    expect(
+      screen.getByText(
+        "keyManagement:managedSiteStatus.recovery.verificationRequired",
+      ),
+    ).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:managedSiteStatus.actions.verifyNow",
+      }),
+    )
+
+    expect(onManagedSiteVerificationRetry).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 8 }),
+      expect.objectContaining({
+        reason:
+          MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE,
+      }),
+    )
+  })
+
+  it("shows retry guidance when an authenticated browser session already exists", async () => {
+    const user = userEvent.setup()
+    const onManagedSiteVerificationRetry = vi.fn()
+    const account = createAccountStub()
+
+    const token = {
+      id: 8_1,
+      user_id: 1,
+      key: "sk-session-ready",
+      status: 1,
+      name: "Session Ready Token",
+      created_time: 0,
+      accessed_time: 0,
+      expired_time: 0,
+      remain_quota: 0,
+      unlimited_quota: false,
+      used_quota: 0,
+      accountId: account.id,
+      accountName: account.name,
+    }
+
+    render(
+      <TokenHeader
+        token={token as any}
+        copyKey={vi.fn()}
+        handleEditToken={vi.fn()}
+        handleDeleteToken={vi.fn()}
+        account={account}
+        onManagedSiteVerificationRetry={onManagedSiteVerificationRetry}
+        managedSiteStatus={{
+          status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
+          reason:
+            MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE,
+          assessment: createManagedSiteAssessment({
+            key: {
+              comparable: false,
+              matched: false,
+              reason:
+                MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.COMPARISON_UNAVAILABLE,
+            },
+          }),
+          recovery: {
+            siteType: "new-api",
+            managedBaseUrl: "https://managed.example",
+            searchBaseUrl: "https://example.com",
+            loginCredentialsConfigured: false,
+            authenticatedBrowserSessionExists: true,
+            automaticCodeConfigured: false,
+          },
+        }}
+      />,
+    )
+
+    expect(
+      screen.getByText(
+        "keyManagement:managedSiteStatus.recovery.verificationRequired",
+      ),
+    ).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:managedSiteStatus.actions.verifyNow",
+      }),
+    )
+
+    expect(onManagedSiteVerificationRetry).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 8_1 }),
+      expect.objectContaining({
+        reason:
+          MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE,
+      }),
+    )
+  })
+
+  it("directs the user to Settings instead of showing retry when login-assist credentials are missing", () => {
+    const account = createAccountStub()
+
+    const token = {
+      id: 9,
+      user_id: 1,
+      key: "sk-config-needed",
+      status: 1,
+      name: "Config Needed Token",
+      created_time: 0,
+      accessed_time: 0,
+      expired_time: 0,
+      remain_quota: 0,
+      unlimited_quota: false,
+      used_quota: 0,
+      accountId: account.id,
+      accountName: account.name,
+    }
+
+    render(
+      <TokenHeader
+        token={token as any}
+        copyKey={vi.fn()}
+        handleEditToken={vi.fn()}
+        handleDeleteToken={vi.fn()}
+        account={account}
+        managedSiteStatus={{
+          status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
+          reason:
+            MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE,
+          assessment: createManagedSiteAssessment({
+            key: {
+              comparable: false,
+              matched: false,
+              reason:
+                MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.COMPARISON_UNAVAILABLE,
+            },
+          }),
+          recovery: {
+            siteType: "new-api",
+            managedBaseUrl: "https://managed.example",
+            searchBaseUrl: "https://example.com",
+            loginCredentialsConfigured: false,
+            authenticatedBrowserSessionExists: false,
+            automaticCodeConfigured: false,
+          },
+        }}
+      />,
+    )
+
+    expect(
+      screen.getByText(
+        "keyManagement:managedSiteStatus.recovery.configureLogin",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: "keyManagement:managedSiteStatus.actions.verifyNow",
+      }),
+    ).toBeNull()
+    expect(
+      screen.getByRole("button", {
+        name: "common:settings",
+      }),
+    ).toBeInTheDocument()
+  })
+
+  it("logs a settings navigation failure instead of leaving the rejection unhandled", async () => {
+    const user = userEvent.setup()
+    const account = createAccountStub()
+
+    const token = {
+      id: 9_1,
+      user_id: 1,
+      key: "sk-config-needed-error",
+      status: 1,
+      name: "Config Needed Error Token",
+      created_time: 0,
+      accessed_time: 0,
+      expired_time: 0,
+      remain_quota: 0,
+      unlimited_quota: false,
+      used_quota: 0,
+      accountId: account.id,
+      accountName: account.name,
+    }
+
+    const navigationError = new Error("navigation failed")
+    mockOpenSettingsTab.mockRejectedValueOnce(navigationError)
+
+    render(
+      <TokenHeader
+        token={token as any}
+        copyKey={vi.fn()}
+        handleEditToken={vi.fn()}
+        handleDeleteToken={vi.fn()}
+        account={account}
+        managedSiteStatus={{
+          status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
+          reason:
+            MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE,
+          assessment: createManagedSiteAssessment({
+            key: {
+              comparable: false,
+              matched: false,
+              reason:
+                MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.COMPARISON_UNAVAILABLE,
+            },
+          }),
+          recovery: {
+            siteType: "new-api",
+            managedBaseUrl: "https://managed.example",
+            searchBaseUrl: "https://example.com",
+            loginCredentialsConfigured: false,
+            authenticatedBrowserSessionExists: false,
+            automaticCodeConfigured: false,
+          },
+        }}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "common:settings",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockOpenSettingsTab).toHaveBeenCalledWith("managedSite")
+      expect(mockLoggerError).toHaveBeenCalledWith(
+        "Failed to open managed-site settings",
+        navigationError,
+      )
+    })
   })
 
   it("renders fuzzy and similarity explanations for non-exact managed-site matches", () => {

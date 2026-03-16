@@ -28,6 +28,7 @@ import { useAccountActionsContext } from "~/features/AccountManagement/hooks/Acc
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { useDialogStateContext } from "~/features/AccountManagement/hooks/DialogStateContext"
 import { exportShareSnapshotWithToast } from "~/features/ShareSnapshots/utils/exportShareSnapshotWithToast"
+import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
 import { getApiService } from "~/services/apiService"
 import {
   getManagedSiteChannelExactMatch,
@@ -45,6 +46,7 @@ import {
   supportsManagedSiteBaseUrlChannelLookup,
 } from "~/services/managedSites/utils/managedSite"
 import { buildAccountShareSnapshotPayload } from "~/services/sharing/shareSnapshots"
+import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import type { DisplaySiteData } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
@@ -253,7 +255,11 @@ export default function AccountActionButtons({
         if (tokensResponse.length === 1) {
           // Single token - copy directly
           const token = tokensResponse[0]
-          await navigator.clipboard.writeText(token.key)
+          const resolvedToken = await resolveDisplayAccountTokenForSecret(
+            site,
+            token,
+          )
+          await navigator.clipboard.writeText(resolvedToken.key)
           toast.success(t("actions.keyCopied"))
         } else if (tokensResponse.length > 1) {
           // Multiple tokens - open dialog
@@ -321,6 +327,10 @@ export default function AccountActionButtons({
       return
     }
 
+    const secretsToRedact = new Set<string>(
+      [site.token, site.cookieAuthSessionCookie].filter(Boolean) as string[],
+    )
+
     try {
       const service = await getManagedSiteService()
       const managedConfig = await service.getConfig()
@@ -329,6 +339,10 @@ export default function AccountActionButtons({
         openManagedSiteChannelsPage({ search: normalizedAccountBaseUrl })
         toast.success(t("actions.channelLocateConfigMissing"))
         return
+      }
+
+      if (managedConfig.token) {
+        secretsToRedact.add(managedConfig.token)
       }
 
       const tokensResponse = await getApiService(
@@ -363,17 +377,30 @@ export default function AccountActionButtons({
       }
 
       const apiToken = tokensResponse[0]
+      if (apiToken.key) {
+        secretsToRedact.add(apiToken.key)
+      }
+      const resolvedToken = await resolveDisplayAccountTokenForSecret(
+        site,
+        apiToken,
+      )
+      if (resolvedToken.key) {
+        secretsToRedact.add(resolvedToken.key)
+      }
       let formData: Awaited<ReturnType<typeof service.prepareChannelFormData>>
       try {
         formData = await service.prepareChannelFormData(
           { ...site, baseUrl: normalizedAccountBaseUrl },
-          apiToken,
+          resolvedToken,
         )
       } catch (error) {
         logger.warn(
           "Failed to build channel match inputs; using URL-only match",
           {
-            error,
+            diagnostic: toSanitizedErrorSummary(
+              error,
+              Array.from(secretsToRedact),
+            ),
             siteId: site.id,
             baseUrl: site.baseUrl,
             siteType: site.siteType,
@@ -423,7 +450,7 @@ export default function AccountActionButtons({
       toast.success(t(getLocateManagedSiteChannelToastKey(resolution)))
     } catch (error) {
       logger.error("Failed to locate managed site channel", {
-        error,
+        diagnostic: toSanitizedErrorSummary(error, Array.from(secretsToRedact)),
         siteId: site.id,
         baseUrl: site.baseUrl,
         siteType: site.siteType,

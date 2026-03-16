@@ -1,24 +1,35 @@
 import { useMemo } from "react"
 
 import { UI_CONSTANTS } from "~/constants/ui"
+import {
+  createAccountSource,
+  type ModelManagementSource,
+} from "~/features/ModelList/modelManagementSources"
 import type { PricingResponse } from "~/services/apiService/common/type"
 import { calculateModelPrice } from "~/services/models/utils/modelPricing"
 import {
   filterModelsByProvider,
   type ProviderType,
 } from "~/services/models/utils/modelProviders"
-import type { DisplaySiteData } from "~/types"
 
 import type { AccountPricingContext } from "./useModelData"
 
 interface UseFilteredModelsProps {
   pricingData: PricingResponse | null
   pricingContexts: AccountPricingContext[]
-  currentAccount: DisplaySiteData | undefined
+  selectedSource: ModelManagementSource | null
   selectedGroup: string
   searchTerm: string
   selectedProvider: ProviderType | "all"
   accountFilterAccountId?: string | null
+}
+
+export type CalculatedModelItem = {
+  model: PricingResponse["data"][number]
+  calculatedPrice: ReturnType<typeof calculateModelPrice>
+  source:
+    | ReturnType<typeof createAccountSource>
+    | Extract<NonNullable<ModelManagementSource>, { kind: "profile" }>
 }
 
 /**
@@ -27,7 +38,7 @@ interface UseFilteredModelsProps {
  * @param params Hook input parameters.
  * @param params.pricingData Pricing response for a single account.
  * @param params.pricingContexts Pricing data across multiple accounts.
- * @param params.currentAccount Currently selected account for single-account mode.
+ * @param params.selectedSource Currently selected model-management source.
  * @param params.selectedGroup User group to filter models by.
  * @param params.searchTerm Search keyword for model name/description.
  * @param params.selectedProvider Provider filter value or "all".
@@ -38,13 +49,18 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
   const {
     pricingData,
     pricingContexts,
-    currentAccount,
+    selectedSource,
     selectedGroup,
     searchTerm,
     selectedProvider,
     accountFilterAccountId,
   } = params
-  const modelsWithPricing = useMemo(() => {
+  const modelGroup = useMemo(
+    () => (selectedGroup === "all" ? "default" : selectedGroup),
+    [selectedGroup],
+  )
+
+  const modelsWithPricing = useMemo<CalculatedModelItem[]>(() => {
     if (pricingContexts && pricingContexts.length > 0) {
       return pricingContexts.flatMap(({ account, pricing }) => {
         if (!pricing || !Array.isArray(pricing.data)) {
@@ -61,47 +77,63 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
             model,
             pricing.group_ratio || {},
             exchangeRate,
-            selectedGroup === "all" ? "default" : selectedGroup,
+            modelGroup,
           )
 
           return {
             model,
             calculatedPrice,
-            account,
+            source: createAccountSource(account),
           }
         })
       })
     }
 
-    if (!pricingData || !currentAccount || !Array.isArray(pricingData.data)) {
+    if (!pricingData || !selectedSource || !Array.isArray(pricingData.data)) {
+      return []
+    }
+
+    if (selectedSource.kind === "profile") {
+      return pricingData.data.map((model) => ({
+        model,
+        calculatedPrice: calculateModelPrice(model, {}, 1, modelGroup),
+        source: selectedSource,
+      }))
+    }
+
+    if (selectedSource.kind !== "account") {
       return []
     }
 
     return pricingData.data.map((model) => {
       const exchangeRate =
-        currentAccount.balance?.USD > 0
-          ? currentAccount.balance.CNY / currentAccount.balance.USD
+        selectedSource.account.balance?.USD > 0
+          ? selectedSource.account.balance.CNY /
+            selectedSource.account.balance.USD
           : UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
 
       const calculatedPrice = calculateModelPrice(
         model,
         pricingData.group_ratio || {},
         exchangeRate,
-        selectedGroup === "all" ? "default" : selectedGroup,
+        modelGroup,
       )
 
       return {
         model,
         calculatedPrice,
-        account: currentAccount,
+        source: selectedSource,
       }
     })
-  }, [pricingContexts, pricingData, currentAccount, selectedGroup])
+  }, [modelGroup, pricingContexts, pricingData, selectedSource])
 
   const baseFilteredModels = useMemo(() => {
     let filtered = modelsWithPricing
 
-    if (selectedGroup !== "all") {
+    const supportsGroupFiltering =
+      selectedSource?.capabilities.supportsGroupFiltering ?? false
+
+    if (supportsGroupFiltering && selectedGroup !== "all") {
       const groupSet = new Set<string>()
 
       if (pricingContexts && pricingContexts.length > 0) {
@@ -140,6 +172,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     return filtered
   }, [
     modelsWithPricing,
+    selectedSource?.capabilities.supportsGroupFiltering,
     selectedGroup,
     searchTerm,
     pricingData,
@@ -152,7 +185,9 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     }
 
     return baseFilteredModels.filter(
-      (item) => item.account?.id === accountFilterAccountId,
+      (item) =>
+        item.source.kind !== "account" ||
+        item.source.account.id === accountFilterAccountId,
     )
   }, [baseFilteredModels, accountFilterAccountId])
 
@@ -167,12 +202,16 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
   }, [accountFilteredBaseModels, selectedProvider])
 
   const getProviderFilteredCount = (provider: ProviderType) => {
-    return baseFilteredModels.filter(
+    return accountFilteredBaseModels.filter(
       (item) => filterModelsByProvider([item.model], provider).length > 0,
     ).length
   }
 
   const availableGroups = useMemo(() => {
+    if (!selectedSource?.capabilities.supportsGroupFiltering) {
+      return []
+    }
+
     const groupSet = new Set<string>()
 
     if (pricingContexts && pricingContexts.length > 0) {
@@ -193,7 +232,11 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     }
 
     return Array.from(groupSet)
-  }, [pricingContexts, pricingData])
+  }, [
+    pricingContexts,
+    pricingData,
+    selectedSource?.capabilities.supportsGroupFiltering,
+  ])
 
   return {
     filteredModels,

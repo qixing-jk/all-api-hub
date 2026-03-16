@@ -1,11 +1,15 @@
 {
   "verifyDialog": {
     "title": "CLI Support Simulation",
+    "loadingModelsHint": "Loading models...",
     "loadingTokensHint": "Loading tokens...",
     "idleHint": "Select a token, then run the simulation. Provide a model id if the token cannot be used to infer one.",
+    "profileIdleHint": "Choose a model, then run the simulation. You can still enter a model id manually if the fetched list misses it.",
     "warning": "This feature is Beta. A detected pass is likely real; a fail may still work in some clients. Treat the result as guidance and verify with the actual CLI when possible.",
     "notRunYet": "Not run yet",
     "requiresModelId": "Provide a model id before running this check.",
+    "modelsFetchFailed": "Failed to fetch models",
+    "modelPickerPlaceholder": "Select or enter model id",
     "unsupportedToolForApiType": "The selected API type does not support {{tool}} simulation.",
     "modelHint": "Model hint from token: {{modelId}}",
     "meta": {

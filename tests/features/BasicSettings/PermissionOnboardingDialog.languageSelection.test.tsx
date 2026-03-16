@@ -104,7 +104,7 @@ const SETTINGS_RESOURCES = {
 } as const
 
 /**
- *
+ * Create an isolated settings-only i18n instance for language-selection tests.
  */
 async function createSettingsI18n(language: SupportedUiLanguage = "en") {
   const i18n = createInstance()
@@ -127,7 +127,7 @@ async function createSettingsI18n(language: SupportedUiLanguage = "en") {
 }
 
 /**
- *
+ * Render a test tree with the provided isolated i18n instance.
  */
 function renderWithI18n(
   ui: ReactNode,

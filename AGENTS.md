@@ -90,6 +90,7 @@ Prereqs: Node.js 20+ and pnpm 10+.
 
 - Inspect nearby existing abstractions before planning or implementing new helpers, modules, or UI patterns; prefer reuse or small extensions over parallel implementations.
 - Add brief inline comments or short code-block comments when non-obvious intent, invariants, edge cases, or protocol/browser constraints need clarification; do not narrate obvious code.
+- the minimum validation bar is `pnpm lint` plus the smallest related automated test scope that exercises the touched behavior.
 
 ## Testing Guidelines
 

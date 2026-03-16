@@ -32,6 +32,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
         with:
+          ref: ${{ github.event.repository.default_branch }}
           fetch-depth: 0
 
       # 决定要 checkout 的 ref（tag 或 commit）
@@ -68,39 +69,23 @@ jobs:
         uses: actions/checkout@v5
         with:
           ref: ${{ steps.get_ref.outputs.ref }}
+          path: source
           fetch-depth: 0 # 确保获取完整历史，以便 tag、commit 都能找到
 
-      # 安装 pnpm
-      - uses: pnpm/action-setup@v4
+      - name: Package extension
+        id: package
         if: ${{ steps.get_ref.outputs.ref != '' }}
+        uses: ./.github/actions/package-extension
         with:
-          version: 10
-          run_install: false
-
-      # 设置 Node.js 环境 + pnpm 缓存
-      - uses: actions/setup-node@v4
-        if: ${{ steps.get_ref.outputs.ref != '' }}
-        with:
-          node-version: 20
-          cache: "pnpm"
-
-      # 安装依赖
-      - name: Install dependencies
-        if: ${{ steps.get_ref.outputs.ref != '' }}
-        run: pnpm install
-
-      # 编译并打包扩展
-      - name: Package the extension
-        if: ${{ steps.get_ref.outputs.ref != '' }}
-        run: pnpm zip:all
+          working-directory: source
 
       # 上传 Release Artifact（仅当有 ref 时）
       - name: Upload Release Artifact
         if: ${{ steps.get_ref.outputs.ref != '' }}
         continue-on-error: true
         run: |
-          echo "Uploading .output/*.zip to release ${{ steps.get_ref.outputs.ref }}"
-          gh release upload "${{ steps.get_ref.outputs.ref }}" .output/*.zip
+          echo "Uploading source/.output/*.zip to release ${{ steps.get_ref.outputs.ref }}"
+          gh release upload "${{ steps.get_ref.outputs.ref }}" source/.output/*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -112,7 +97,7 @@ jobs:
           echo "Chrome review: $([ "$CHROME_SKIP_SUBMIT_REVIEW" = "true" ] && echo skipped || echo submitted)"
           echo "Edge review: $([ "$EDGE_SKIP_SUBMIT_REVIEW" = "true" ] && echo skipped || echo submitted)"
 
-          pnpm wxt submit \
+          pnpm --dir source wxt submit \
             --chrome-zip .output/*-chrome.zip \
             --firefox-zip .output/*-firefox.zip --firefox-sources-zip .output/*-sources.zip \
             --edge-zip .output/*-chrome.zip

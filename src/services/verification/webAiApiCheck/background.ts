@@ -88,14 +88,10 @@ function normalizeProbeBaseUrl(params: {
  * Builds a stable, user-friendly default profile name for saved credentials.
  */
 function buildDefaultProfileName(params: {
-  apiType: ApiVerificationApiType
   normalizedBaseUrl: string
   pageUrl?: string
 }): string {
-  const { apiType, normalizedBaseUrl, pageUrl } = params
-
-  const label =
-    apiType === API_TYPES.OPENAI_COMPATIBLE ? "OpenAI-compatible" : apiType
+  const { normalizedBaseUrl, pageUrl } = params
 
   const hostname =
     (() => {
@@ -114,10 +110,10 @@ function buildDefaultProfileName(params: {
     })()
 
   if (hostname) {
-    return `${hostname} (${label})`
+    return hostname
   }
 
-  return `API Profile (${label})`
+  return "API Profile"
 }
 
 /**
@@ -321,7 +317,7 @@ export async function handleWebAiApiCheckMessage(
         const providedName = typeof name === "string" ? name.trim() : ""
         const profileName =
           providedName ||
-          buildDefaultProfileName({ apiType, normalizedBaseUrl, pageUrl })
+          buildDefaultProfileName({ normalizedBaseUrl, pageUrl })
 
         try {
           const profile = await apiCredentialProfilesStorage.createProfile({

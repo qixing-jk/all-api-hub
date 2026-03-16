@@ -152,7 +152,7 @@ describe("Managed site logo", () => {
     render(
       <TokenDetails
         token={token}
-        copiedKey={null}
+        copiedTokenId={null}
         onCopyKey={vi.fn()}
         account={createAccountStub()}
       />,

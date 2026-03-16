@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { VELOERA } from "~/constants/siteType"
 import {
@@ -50,6 +50,52 @@ const buildExpectedAssessment = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 })
 
+const { resolveDisplayAccountTokenForSecretMock } = vi.hoisted(() => ({
+  resolveDisplayAccountTokenForSecretMock: vi.fn(),
+}))
+
+const { getNewApiLoginAssistConfigMock } = vi.hoisted(() => ({
+  getNewApiLoginAssistConfigMock: vi.fn(),
+}))
+
+const { hasNewApiAuthenticatedBrowserSessionMock } = vi.hoisted(() => ({
+  hasNewApiAuthenticatedBrowserSessionMock: vi.fn(),
+}))
+
+vi.mock("~/services/accounts/utils/apiServiceRequest", () => ({
+  resolveDisplayAccountTokenForSecret: (...args: unknown[]) =>
+    resolveDisplayAccountTokenForSecretMock(...args),
+}))
+
+vi.mock("~/services/managedSites/providers/newApi", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("~/services/managedSites/providers/newApi")
+    >()
+
+  return {
+    ...actual,
+    getNewApiLoginAssistConfig: (...args: unknown[]) =>
+      getNewApiLoginAssistConfigMock(...args),
+  }
+})
+
+vi.mock(
+  "~/services/managedSites/providers/newApiSession",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/managedSites/providers/newApiSession")
+      >()
+
+    return {
+      ...actual,
+      hasNewApiAuthenticatedBrowserSession: (...args: unknown[]) =>
+        hasNewApiAuthenticatedBrowserSessionMock(...args),
+    }
+  },
+)
+
 const createManagedSiteServiceStub = (
   overrides: Record<string, unknown> = {},
 ) =>
@@ -90,6 +136,22 @@ const createManagedSiteServiceStub = (
   }) as any
 
 describe("getManagedSiteTokenChannelStatus", () => {
+  beforeEach(() => {
+    resolveDisplayAccountTokenForSecretMock.mockReset()
+    resolveDisplayAccountTokenForSecretMock.mockImplementation(
+      async (_account, token) => token,
+    )
+    getNewApiLoginAssistConfigMock.mockReset()
+    getNewApiLoginAssistConfigMock.mockResolvedValue({
+      baseUrl: "https://managed.example",
+      username: "admin",
+      password: "secret-password",
+      totpSecret: "JBSWY3DPEHPK3PXP",
+    })
+    hasNewApiAuthenticatedBrowserSessionMock.mockReset()
+    hasNewApiAuthenticatedBrowserSessionMock.mockResolvedValue(false)
+  })
+
   it("returns added when an exact comparable channel match exists", async () => {
     const account = buildDisplaySiteData({ baseUrl: "https://api.example.com" })
     const token = buildApiToken({ key: "test-token-key" })
@@ -286,6 +348,83 @@ describe("getManagedSiteTokenChannelStatus", () => {
           similarityScore: 1,
         },
       },
+      recovery: {
+        siteType: "new-api",
+        managedBaseUrl: "https://managed.example",
+        searchBaseUrl: "https://api.example.com",
+        loginCredentialsConfigured: true,
+        authenticatedBrowserSessionExists: false,
+        automaticCodeConfigured: true,
+      },
+    })
+  })
+
+  it("uses a resolved hidden channel key for exact matching even when the list payload still masks it", async () => {
+    const account = buildDisplaySiteData({ baseUrl: "https://api.example.com" })
+    const token = buildApiToken({ key: "test-token-key" })
+    const service = createManagedSiteServiceStub({
+      searchChannel: vi.fn().mockResolvedValue({
+        items: [
+          buildManagedSiteChannel({
+            id: 23_1,
+            name: "Managed Channel 23 Hidden Key",
+            base_url: "https://api.example.com",
+            models: "gpt-4o",
+            key: "",
+          }),
+        ],
+        total: 1,
+        type_counts: {},
+      }),
+      findMatchingChannel: vi.fn().mockResolvedValue(null),
+    })
+
+    const result = await getManagedSiteTokenChannelStatus({
+      account,
+      token,
+      service,
+      resolvedChannelKeysById: {
+        23_1: "test-token-key",
+      },
+    })
+
+    expect(result).toEqual({
+      status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED,
+      matchedChannel: {
+        id: 23_1,
+        name: "Managed Channel 23 Hidden Key",
+      },
+      assessment: {
+        searchBaseUrl: "https://api.example.com",
+        searchCompleted: true,
+        url: {
+          matched: true,
+          candidateCount: 1,
+          channel: {
+            id: 23_1,
+            name: "Managed Channel 23 Hidden Key",
+          },
+        },
+        key: {
+          comparable: true,
+          matched: true,
+          reason: MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.MATCHED,
+          channel: {
+            id: 23_1,
+            name: "Managed Channel 23 Hidden Key",
+          },
+        },
+        models: {
+          comparable: true,
+          matched: true,
+          reason: MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT,
+          channel: {
+            id: 23_1,
+            name: "Managed Channel 23 Hidden Key",
+          },
+          similarityScore: 1,
+        },
+      },
     })
   })
 
@@ -403,6 +542,72 @@ describe("getManagedSiteTokenChannelStatus", () => {
         },
       },
     })
+    expect(result).not.toHaveProperty("recovery")
+  })
+
+  it("degrades recovery metadata gracefully when the browser-session probe fails", async () => {
+    const account = buildDisplaySiteData({ baseUrl: "https://api.example.com" })
+    const token = buildApiToken({ key: "test-token-key" })
+    const service = createManagedSiteServiceStub({
+      searchChannel: vi.fn().mockResolvedValue({
+        items: [
+          buildManagedSiteChannel({
+            id: 23_1,
+            name: "Managed Channel 23 Hidden Key",
+            base_url: "https://api.example.com",
+            models: "gpt-4o",
+            key: "",
+          }),
+        ],
+        total: 1,
+        type_counts: {},
+      }),
+    })
+
+    hasNewApiAuthenticatedBrowserSessionMock.mockRejectedValueOnce(
+      new Error("session probe failed"),
+    )
+
+    const result = await getManagedSiteTokenChannelStatus({
+      account,
+      token,
+      service,
+    })
+
+    expect(result).toEqual({
+      status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
+      reason:
+        MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE,
+      assessment: {
+        searchBaseUrl: "https://api.example.com",
+        searchCompleted: true,
+        url: {
+          matched: true,
+          candidateCount: 1,
+          channel: {
+            id: 23_1,
+            name: "Managed Channel 23 Hidden Key",
+          },
+        },
+        key: {
+          comparable: false,
+          matched: false,
+          reason: MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.COMPARISON_UNAVAILABLE,
+          channel: undefined,
+        },
+        models: {
+          comparable: true,
+          matched: true,
+          reason: MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT,
+          channel: {
+            id: 23_1,
+            name: "Managed Channel 23 Hidden Key",
+          },
+          similarityScore: 1,
+        },
+      },
+    })
+    expect(result).not.toHaveProperty("recovery")
   })
 
   it("returns unknown config-missing when managed-site admin config is unavailable", async () => {
@@ -511,5 +716,35 @@ describe("getManagedSiteTokenChannelStatus", () => {
     expect(result.diagnostic).toContain("[REDACTED]")
     expect(result.diagnostic).not.toContain("secret-token-value")
     expect(result.diagnostic).not.toContain("secret-admin-value")
+  })
+
+  it("returns unknown exact-verification-unavailable when secret resolution fails", async () => {
+    const account = buildDisplaySiteData({ baseUrl: "https://api.example.com" })
+    const token = buildApiToken({ key: "sk-abcd************wxyz" })
+    const service = createManagedSiteServiceStub({
+      getConfig: vi.fn().mockResolvedValue({
+        baseUrl: "https://managed.example",
+        token: "secret-admin-value",
+        userId: "1",
+      }),
+    })
+
+    resolveDisplayAccountTokenForSecretMock.mockRejectedValueOnce(
+      new Error("sk-abcd************wxyz secret-admin-value blocked"),
+    )
+
+    const result = await getManagedSiteTokenChannelStatus({
+      account,
+      token,
+      service,
+    })
+
+    expect(result).toEqual({
+      status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
+      reason:
+        MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE,
+      diagnostic: "[REDACTED] [REDACTED] blocked",
+    })
+    expect(result).not.toHaveProperty("recovery")
   })
 })

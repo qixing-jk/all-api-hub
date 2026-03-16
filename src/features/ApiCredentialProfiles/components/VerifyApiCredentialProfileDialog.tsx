@@ -15,9 +15,10 @@ import {
   SearchableSelect,
 } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
-import { fetchAnthropicModelIds } from "~/services/apiService/anthropic"
-import { fetchGoogleModelIds } from "~/services/apiService/google"
-import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompatible"
+import {
+  fetchApiCredentialModelIds,
+  normalizeApiCredentialModelIds,
+} from "~/services/apiCredentialProfiles/modelCatalog"
 import {
   API_TYPES,
   getApiVerificationProbeDefinitions,
@@ -46,6 +47,7 @@ interface VerifyApiCredentialProfileDialogProps {
   isOpen: boolean
   onClose: () => void
   profile: ApiCredentialProfile | null
+  initialModelId?: string
 }
 
 type ModelsProbeOutput = {
@@ -144,10 +146,14 @@ export function VerifyApiCredentialProfileDialog({
   isOpen,
   onClose,
   profile,
+  initialModelId,
 }: VerifyApiCredentialProfileDialogProps) {
   const { t } = useTranslation(["aiApiVerification", "apiCredentialProfiles"])
 
   const [isRunning, setIsRunning] = useState(false)
+  const [apiType, setApiType] = useState<ApiVerificationApiType>(
+    profile?.apiType ?? API_TYPES.OPENAI_COMPATIBLE,
+  )
   const [modelId, setModelId] = useState("")
   const [probes, setProbes] = useState<ProbeItemState[]>([])
   const [modelOptions, setModelOptions] = useState<string[]>([])
@@ -160,6 +166,15 @@ export function VerifyApiCredentialProfileDialog({
   const canClose = !isRunning && !isAnyProbeRunning
 
   const hasAnyResult = probes.some((p) => p.result !== null)
+  const hasApiTypeOverride = Boolean(profile && apiType !== profile.apiType)
+  const savedApiTypeLabel = profile
+    ? t(
+        `aiApiVerification:verifyDialog.apiTypes.${apiTypeLabelKey(profile.apiType)}`,
+      )
+    : ""
+  const currentApiTypeLabel = t(
+    `aiApiVerification:verifyDialog.apiTypes.${apiTypeLabelKey(apiType)}`,
+  )
 
   const header = useMemo(() => {
     if (!profile) return null
@@ -175,81 +190,58 @@ export function VerifyApiCredentialProfileDialog({
     )
   }, [profile, t])
 
-  const fetchModels = useCallback(async () => {
-    if (!profile) return
+  const fetchModels = useCallback(
+    async (nextApiType: ApiVerificationApiType) => {
+      if (!profile) return
 
-    const requestId = (fetchModelsRequestIdRef.current += 1)
-    setFetchModelsError(null)
-    setIsFetchingModels(true)
+      const requestId = (fetchModelsRequestIdRef.current += 1)
+      setFetchModelsError(null)
+      setIsFetchingModels(true)
 
-    try {
-      const modelIds = await (async () => {
-        if (
-          profile.apiType === API_TYPES.OPENAI_COMPATIBLE ||
-          profile.apiType === API_TYPES.OPENAI
-        ) {
-          return fetchOpenAICompatibleModelIds({
+      try {
+        const normalized = normalizeApiCredentialModelIds(
+          await fetchApiCredentialModelIds({
+            apiType: nextApiType,
             baseUrl: profile.baseUrl,
             apiKey: profile.apiKey,
-          })
+          }),
+        )
+
+        if (fetchModelsRequestIdRef.current !== requestId) return
+
+        setModelOptions(normalized)
+        const suggestedModelId = pickSuggestedModelId(nextApiType, normalized)
+        if (suggestedModelId) {
+          setModelId((current) => (current.trim() ? current : suggestedModelId))
         }
+      } catch (error) {
+        const message =
+          toSanitizedErrorSummary(error, [profile.apiKey, profile.baseUrl]) ||
+          t("apiCredentialProfiles:verify.modelsFetchFailed")
 
-        if (profile.apiType === API_TYPES.ANTHROPIC) {
-          return fetchAnthropicModelIds({
-            baseUrl: profile.baseUrl,
-            apiKey: profile.apiKey,
-          })
+        logger.error("Failed to fetch models", { message })
+
+        if (fetchModelsRequestIdRef.current !== requestId) return
+
+        setFetchModelsError(message)
+      } finally {
+        if (fetchModelsRequestIdRef.current === requestId) {
+          setIsFetchingModels(false)
         }
-
-        if (profile.apiType === API_TYPES.GOOGLE) {
-          return fetchGoogleModelIds({
-            baseUrl: profile.baseUrl,
-            apiKey: profile.apiKey,
-          })
-        }
-
-        throw new Error("Unsupported apiType")
-      })()
-
-      const normalized = Array.from(
-        new Set(
-          modelIds
-            .filter((id) => typeof id === "string" && id.trim())
-            .map((id) => id.trim()),
-        ),
-      )
-
-      if (fetchModelsRequestIdRef.current !== requestId) return
-
-      setModelOptions(normalized)
-      const suggestedModelId = pickSuggestedModelId(profile.apiType, normalized)
-      if (suggestedModelId) {
-        setModelId((current) => (current.trim() ? current : suggestedModelId))
       }
-    } catch (error) {
-      const message = toSanitizedErrorSummary(error, [profile.apiKey])
-      logger.error("Failed to fetch models", { message })
-
-      if (fetchModelsRequestIdRef.current !== requestId) return
-
-      setFetchModelsError(
-        message || t("apiCredentialProfiles:verify.modelsFetchFailed"),
-      )
-    } finally {
-      if (fetchModelsRequestIdRef.current === requestId) {
-        setIsFetchingModels(false)
-      }
-    }
-  }, [profile, t])
+    },
+    [profile, t],
+  )
 
   useEffect(() => {
     if (!isOpen || !profile) return
-    setModelId("")
+    setApiType(profile.apiType)
+    setModelId(initialModelId?.trim() ?? "")
     setModelOptions([])
     setFetchModelsError(null)
     setProbes(buildProbeState(profile.apiType))
-    void fetchModels()
-  }, [fetchModels, isOpen, profile])
+    void fetchModels(profile.apiType)
+  }, [fetchModels, initialModelId, isOpen, profile])
 
   const runProbe = async (
     probeId: ApiVerificationProbeId,
@@ -270,7 +262,7 @@ export function VerifyApiCredentialProfileDialog({
       const result = await runApiVerificationProbe({
         baseUrl: profile.baseUrl,
         apiKey: profile.apiKey,
-        apiType: profile.apiType,
+        apiType,
         modelId: modelForProbe || undefined,
         probeId,
       })
@@ -301,7 +293,10 @@ export function VerifyApiCredentialProfileDialog({
     } catch (error) {
       logger.error("Probe failed", {
         probeId,
-        message: toSanitizedErrorSummary(error, [profile.apiKey]),
+        message: toSanitizedErrorSummary(error, [
+          profile.apiKey,
+          profile.baseUrl,
+        ]),
       })
 
       const fallback: ApiVerificationProbeResult = {
@@ -334,7 +329,7 @@ export function VerifyApiCredentialProfileDialog({
     )
 
     try {
-      const ordered = getApiVerificationProbeDefinitions(profile.apiType)
+      const ordered = getApiVerificationProbeDefinitions(apiType)
       let modelIdForSuite = modelId.trim()
 
       for (const probe of ordered) {
@@ -392,27 +387,61 @@ export function VerifyApiCredentialProfileDialog({
         <div className="space-y-3">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="space-y-1.5">
-              <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
-                {t("aiApiVerification:verifyDialog.meta.apiType")}
+              <div className="flex min-h-7 items-center gap-2">
+                <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                  {t("aiApiVerification:verifyDialog.meta.apiType")}
+                </div>
+                {hasApiTypeOverride ? (
+                  <Badge variant="warning" size="sm">
+                    {t("apiCredentialProfiles:verify.override.badge")}
+                  </Badge>
+                ) : null}
               </div>
               <SearchableSelect
                 options={[
                   {
-                    value: profile.apiType,
+                    value: API_TYPES.OPENAI_COMPATIBLE,
                     label: t(
-                      `aiApiVerification:verifyDialog.apiTypes.${apiTypeLabelKey(profile.apiType)}`,
+                      `aiApiVerification:verifyDialog.apiTypes.${apiTypeLabelKey(API_TYPES.OPENAI_COMPATIBLE)}`,
+                    ),
+                  },
+                  {
+                    value: API_TYPES.OPENAI,
+                    label: t(
+                      `aiApiVerification:verifyDialog.apiTypes.${apiTypeLabelKey(API_TYPES.OPENAI)}`,
+                    ),
+                  },
+                  {
+                    value: API_TYPES.ANTHROPIC,
+                    label: t(
+                      `aiApiVerification:verifyDialog.apiTypes.${apiTypeLabelKey(API_TYPES.ANTHROPIC)}`,
+                    ),
+                  },
+                  {
+                    value: API_TYPES.GOOGLE,
+                    label: t(
+                      `aiApiVerification:verifyDialog.apiTypes.${apiTypeLabelKey(API_TYPES.GOOGLE)}`,
                     ),
                   },
                 ]}
-                value={profile.apiType}
-                onChange={() => {}}
-                disabled={true}
+                value={apiType}
+                onChange={(value) => {
+                  const nextApiType = value as ApiVerificationApiType
+                  setApiType(nextApiType)
+                  setModelOptions([])
+                  setFetchModelsError(null)
+                  setProbes(buildProbeState(nextApiType))
+                  void fetchModels(nextApiType)
+                }}
+                disabled={!canClose}
               />
             </div>
 
             <div className="space-y-1.5 sm:col-span-2">
-              <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
-                {t("aiApiVerification:verifyDialog.meta.model")}
+              <div className="flex min-h-7 items-center">
+                <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                  {t("aiApiVerification:verifyDialog.meta.model")}
+                </div>
               </div>
 
               <SearchableSelect
@@ -437,6 +466,20 @@ export function VerifyApiCredentialProfileDialog({
               ) : null}
             </div>
           </div>
+
+          {hasApiTypeOverride ? (
+            <Alert
+              variant="warning"
+              title={t("apiCredentialProfiles:verify.override.title")}
+              description={t(
+                "apiCredentialProfiles:verify.override.description",
+                {
+                  savedApiType: savedApiTypeLabel,
+                  currentApiType: currentApiTypeLabel,
+                },
+              )}
+            />
+          ) : null}
 
           {!hasAnyResult && (
             <div className="dark:text-dark-text-secondary text-sm text-gray-600">

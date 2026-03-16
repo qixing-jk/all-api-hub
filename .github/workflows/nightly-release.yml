@@ -1,0 +1,154 @@
+name: nightly-release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "src/**"
+      - "src/public/**"
+      - "plugins/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "tsconfig.json"
+      - "postcss.config.js"
+      - "tailwind.config.js"
+      - "wxt.config.ts"
+      - ".github/actions/package-extension/**"
+      - ".github/workflows/nightly-release.yml"
+  schedule:
+    - cron: "15 3 * * *"
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Commit SHA, branch, or tag to build. Leave empty to use the latest main commit."
+        required: false
+        default: ""
+
+concurrency:
+  group: nightly-release
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  nightly:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+
+      - name: Refresh refs
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          BRANCH="${DEFAULT_BRANCH:-main}"
+          git fetch origin "$BRANCH" --tags --force
+
+      - name: Determine target ref
+        id: target
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          MANUAL_REF: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.ref || '' }}
+        run: |
+          BRANCH="${DEFAULT_BRANCH:-main}"
+          CHECKOUT_REF="$MANUAL_REF"
+
+          if [ -z "$CHECKOUT_REF" ]; then
+            if [ "${{ github.event_name }}" = "push" ]; then
+              CHECKOUT_REF="${GITHUB_SHA}"
+            else
+              CHECKOUT_REF="$(git rev-parse "origin/$BRANCH")"
+            fi
+          fi
+
+          echo "checkout_ref=$CHECKOUT_REF" >> "$GITHUB_OUTPUT"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout target ref
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ steps.target.outputs.checkout_ref }}
+          path: source
+          fetch-depth: 0
+
+      - name: Resolve checked out commit
+        id: commit
+        working-directory: source
+        run: |
+          RESOLVED_SHA="$(git rev-parse HEAD)"
+
+          echo "ref=$RESOLVED_SHA" >> "$GITHUB_OUTPUT"
+          echo "short_sha=$(git rev-parse --short "$RESOLVED_SHA")" >> "$GITHUB_OUTPUT"
+
+      - name: Package extension
+        id: package
+        uses: ./.github/actions/package-extension
+        with:
+          working-directory: source
+
+      - name: Collect build metadata
+        id: metadata
+        run: |
+          BUILT_AT="$(date -u +"%Y-%m-%d %H:%M UTC")"
+
+          echo "built_at=$BUILT_AT" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare stable nightly asset names
+        run: |
+          shopt -s nullglob
+          mkdir -p source/.output/nightly
+          rm -f source/.output/nightly/*
+
+          cp "${{ steps.package.outputs.chrome-zip }}" "source/.output/nightly/all-api-hub-nightly-chrome.zip"
+          cp "${{ steps.package.outputs.firefox-zip }}" "source/.output/nightly/all-api-hub-nightly-firefox.zip"
+          cp "${{ steps.package.outputs.sources-zip }}" "source/.output/nightly/all-api-hub-nightly-sources.zip"
+
+      - name: Write nightly release notes
+        run: |
+          cat <<EOF > "$RUNNER_TEMP/nightly-notes.md"
+          Rolling prerelease build for commit \`${{ steps.commit.outputs.short_sha }}\`.
+
+          - Package version: \`${{ steps.package.outputs.package-version }}\`
+          - Commit: https://github.com/${{ github.repository }}/commit/${{ steps.commit.outputs.ref }}
+          - Built at: \`${{ steps.metadata.outputs.built_at }}\`
+          - Source branch: \`${{ steps.target.outputs.branch }}\`
+          - Trigger: \`${{ github.event_name }}\`
+          EOF
+
+      - name: Move nightly tag
+        working-directory: source
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -f nightly "${{ steps.commit.outputs.ref }}"
+          git push --force origin refs/tags/nightly
+
+      - name: Create or update nightly release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view nightly > /dev/null 2>&1; then
+            gh release edit nightly \
+              --title "Nightly" \
+              --notes-file "$RUNNER_TEMP/nightly-notes.md" \
+              --prerelease \
+              --target "${{ steps.commit.outputs.ref }}"
+          else
+            gh release create nightly \
+              --title "Nightly" \
+              --notes-file "$RUNNER_TEMP/nightly-notes.md" \
+              --prerelease \
+              --latest=false \
+              --target "${{ steps.commit.outputs.ref }}"
+          fi
+
+      - name: Upload nightly assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload nightly source/.output/nightly/*.zip --clobber

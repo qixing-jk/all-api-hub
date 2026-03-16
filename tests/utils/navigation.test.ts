@@ -103,18 +103,32 @@ describe("navigation utilities", () => {
     expect(mockedCreateTab).toHaveBeenCalledWith(url, true)
   })
 
-  it("openModelsPage should open models page with optional accountId", async () => {
+  it("openModelsPage should open models page for the default view, accounts, and stored profiles", async () => {
     await openModelsPage()
     await openModelsPage("42")
+    await openModelsPage({ accountId: "43" })
+    await openModelsPage({ profileId: "profile-7" })
 
-    expect(mockedGetExtensionURL).toHaveBeenCalledTimes(2)
+    expect(mockedGetExtensionURL).toHaveBeenCalledTimes(4)
     expect(mockedGetExtensionURL).toHaveBeenCalledWith("options.html")
     const baseUrl = mockedGetExtensionURL.mock.results[0].value
     const baseUrl2 = mockedGetExtensionURL.mock.results[1].value
+    const baseUrl3 = mockedGetExtensionURL.mock.results[2].value
+    const baseUrl4 = mockedGetExtensionURL.mock.results[3].value
     expect(baseUrl2).toBe(baseUrl)
+    expect(baseUrl3).toBe(baseUrl)
+    expect(baseUrl4).toBe(baseUrl)
     expect(mockedCreateTab).toHaveBeenCalledWith(`${baseUrl}#models`, true)
     expect(mockedCreateTab).toHaveBeenCalledWith(
       `${baseUrl}?accountId=42#models`,
+      true,
+    )
+    expect(mockedCreateTab).toHaveBeenCalledWith(
+      `${baseUrl}?accountId=43#models`,
+      true,
+    )
+    expect(mockedCreateTab).toHaveBeenCalledWith(
+      `${baseUrl}?profileId=profile-7#models`,
       true,
     )
   })

@@ -1,6 +1,6 @@
 # Getting Started
 
-An open-source browser extension designed to optimize the experience of managing AI proxy station accounts like New API. Users can easily manage and view account balances, models, and keys in a centralized location, with automatic site addition support. Compatible with mobile devices via Kiwi or mobile Firefox browsers.
+An open-source browser extension designed to optimize the experience of managing AI proxy station accounts like New API. Users can easily manage and view account balances, models, and keys in a centralized location, with automatic site addition. Supports mobile devices via Kiwi or mobile Firefox browsers.
 
 ## 1. Download
 
@@ -14,7 +14,7 @@ An open-source browser extension designed to optimize the experience of managing
 | GitHub Release | [Release Download](https://github.com/qixing-jk/all-api-hub/releases) | [![GitHub version](https://img.shields.io/github/v/release/qixing-jk/all-api-hub?label=GitHub&logo=github&style=flat)](https://github.com/qixing-jk/all-api-hub/releases) | [![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/qixing-jk/all-api-hub/total?label=Total%20Downloads)](https://github.com/qixing-jk/all-api-hub/releases) |
 
 ::: warning Tip
-Store versions may have a delay of 1-3 days due to review processes. For the earliest access to new features or fixes, it is recommended to prioritize using the GitHub Release version or building from the repository source.
+Store versions may have a 1-3 day delay due to review processes. For the earliest access to new features or fixes, it is recommended to prioritize using the GitHub Release version or building from the repository source.
 :::
 
 ## 2. Supported Sites
@@ -25,13 +25,18 @@ Supports proxy stations deployed based on the following projects:
 - [Veloera](https://github.com/Veloera/Veloera)
 - [one-hub](https://github.com/MartialBE/one-hub)
 - [done-hub](https://github.com/deanxv/done-hub)
+- WONG Public Welfare Station
 - [Sub2API](https://github.com/Wei-Shaw/sub2api)
 - [AnyRouter](https://anyrouter.top)
 - [VoAPI](https://github.com/VoAPI/VoAPI)
 - [Super-API](https://github.com/SuperAI-Api/Super-API)
+- Neo-API
+- RIX_API (Basic functionality support)
+
+For a complete list of compatible sites, please refer to [Supported Sites and System Types](./supported-sites.md).
 
 ::: warning
-If a site has undergone secondary development that alters critical interfaces (e.g., `/api/user`), the extension may not be able to add the site correctly.
+If a site has undergone secondary development that alters key interfaces (e.g., `/api/user`), the extension may not be able to add the site correctly.
 :::
 
 ## 3. Adding a Site
@@ -42,7 +47,7 @@ You must log in to the target website yourself using the browser first. This all
 
 ### 3.1 Automatic Recognition and Addition
 
-1. Open the extension's main page and click `Add Account`
+1. Open the main extension page and click `Add Account`
 
 ![Add Account Button](../static/image/add-account-btn.png)
 
@@ -60,51 +65,57 @@ The extension will automatically recognize various information about your accoun
 - Top-up amount ratio
 :::
 
-> If the target site has Cloudflare's 5-second bypass enabled, the extension will automatically pop up an independent window to assist with bypassing the protection. Once bypassed, the recognition process can continue.
-> If the IP quality is poor or for other reasons, you may need to manually complete the bypass within the pop-up window before the timeout.
+> If the target site has Cloudflare's 5-second protection enabled, the extension will automatically pop up an independent window to assist with bypassing the protection. Once bypassed, the recognition process can continue.
+> If the IP quality is poor or for other reasons, you may need to manually complete the protection in the pop-up window before the timeout.
 
 ### 3.2 Cloudflare Bypass Assistant Overview
 
-- When Cloudflare's 5-second bypass is detected, the extension will automatically launch a temporary window to help complete the verification. If human intervention is required for the challenge, click to verify within the pop-up window.
-- After successful verification, the process will automatically return to the original flow to continue obtaining the Access Token and site information.
+- When Cloudflare's 5-second protection is detected, the extension will automatically launch a temporary window to help complete the verification. If manual intervention is required for the challenge, click to verify within the pop-up window.
+- After successful verification, the process will return to the original flow to continue obtaining the Access Token and site information.
 - For more details, refer to [Cloudflare Protection and Temporary Window Downgrade](#cloudflare-window-downgrade).
 
 <a id="manual-addition"></a>
 ### 3.3 Manual Addition
 
 ::: info Tip
-If automatic recognition fails, you can manually enter and add the site account. You will need to obtain the following information first. (The UI may vary for each site, please find it yourself.)
+If automatic recognition fails, you can manually enter site account details. You will need to obtain the following information first. (The UI may vary slightly for each site; please locate them yourself.)
 :::
-![Site User Info](../static/image/site-user-info.png)
+![User Information](../static/image/site-user-info.png)
 
-If the target site is a modified version (e.g., AnyRouter), please manually switch to **Cookie Mode** when adding the account, and then perform automatic recognition or manual entry. When encountering sites with strict protection, you can also use the Cloudflare Bypass Assistant in conjunction. For details, see [FAQ](./faq.md#anyrouter-error).
+If the target site is a modified version (e.g., AnyRouter), please switch to **Cookie Mode** when adding the account, and then proceed with automatic recognition or manual input. When encountering sites with strict protection, you can also use the Cloudflare Bypass Assistant. For details, see [FAQ](./faq.md#anyrouter-error).
 
 <a id="quick-export-sites"></a>
-## 4. Quick Export Sites
+## 4. Quick Export and Integration
 
-This extension supports one-click export of added site API configurations to [CherryStudio](https://github.com/CherryHQ/cherry-studio), [CC Switch](https://github.com/ccswitch/ccswitch), and [New API](https://github.com/QuantumNous/new-api), simplifying the process of adding upstream providers in these platforms.
+This extension supports exporting added site API configurations to local clients, CLI tools, and self-hosted sites, reducing the effort of repeatedly entering `Base URL`, keys, and model configurations. For a current, complete list, please refer to [Supported Export Tools and Integration Targets](./supported-export-tools.md).
 
 ### 4.1 Configuration
 
-Before using the quick export feature, you need to configure the **Server Address**, **Admin Token**, and **User ID** for the target platform (New API) on the extension's **Basic Settings** page.
+Before using the export/integration features, complete the corresponding configurations based on the target type:
+
+- **CherryStudio / CC Switch**: Ensure the target client is available to facilitate importing via Deeplink.
+- **Kilo Code / Roo Code**: It is recommended to confirm the model ID corresponding to each key in advance.
+- **CLIProxyAPI / Claude Code Router**: Fill in the respective management addresses and credentials in the basic settings.
+- **Self-hosted Sites (New API / DoneHub / Veloera / Octopus)**: Complete the backend configuration in `Settings -> Basic Settings -> Self-hosted Site Management`.
 
 ### 4.2 Export Process
 
-1. **Navigate to Key Management**: In the extension's **Key Management** page, find the API key corresponding to the site you wish to export.
-2. **Click Export**: In the key operation menu, select **"Export to CherryStudio / CC Switch / New API"**.
-3. **Automatic Processing**:
-   * **For New API**: The extension will automatically detect if a channel with the same `Base URL` already exists on the target platform to avoid duplicate additions. If it doesn't exist, a new channel will be created, and the site name, `Base URL`, API key, and available model list will be automatically populated.
-   * **For CherryStudio / CC Switch**: The extension will send the site and key directly to the local program or clipboard according to the target application's protocol, eliminating the need for manual copy-pasting.
+1. **Navigate to Key Management**: In the extension's **Key Management** page, find the API key for the site you wish to export.
+2. **Click Corresponding Action**: In the key action menu, select **"Export to CherryStudio"**, **"Export to CC Switch"**, **"Export Kilo Code JSON"**, **"Import to CLIProxyAPI"**, **"Import to Claude Code Router"**, or **"Import to Current Self-hosted Site"**.
+3. **Automatic Handling**:
+   * **For CherryStudio / CC Switch**: The extension will automatically transfer site information and API keys according to the target application's Deeplink protocol.
+   * **For Kilo Code / Roo Code**: The extension will generate a configurable JSON that can be copied or downloaded for manual import.
+   * **For CLIProxyAPI / Claude Code Router / Self-hosted Sites**: The extension will call the corresponding management interface to create or update the Provider / Channel.
 
-With this feature, you can easily import API provider configurations into other platforms without manual copy-pasting, significantly improving work efficiency.
+Through these integration capabilities, you can synchronize the same upstream site to multiple downstream tools or backend systems without manual copy-pasting.
 
 ## 5. Feature Overview
 
 ### 5.1 Automatic Refresh and Health Status
 
-- Open **Settings → Auto Refresh** to enable timed refreshing of account data. The default interval is 6 minutes (360 seconds), with a minimum support of 60 seconds.
-- Checking **"Auto-refresh on extension open"** will synchronize data when the pop-up window is opened.
-- Enabling **"Show Health Status"** will display health status indicators (Normal/Warning/Error/Unknown) on account cards.
+- Enable **Settings → Auto Refresh** to activate periodic refreshing of account data. The default interval is 6 minutes (360 seconds), with a minimum supported interval of 60 seconds.
+- Checking **"Auto refresh when opening the extension"** will synchronize data when the popup is opened.
+- With **"Display Health Status"** enabled, account cards will show health status indicators (Normal/Warning/Error/Unknown).
 
 ### 5.2 Check-in Detection
 
@@ -112,22 +123,22 @@ With this feature, you can easily import API provider configurations into other 
 - Supports setting **Custom Check-in URL** and **Custom Top-up URL** to adapt to modified sites.
 - Accounts requiring check-in will display a prompt in the list, which can be clicked to jump to the check-in page.
 
-### 5.3 WebDAV Backup and Multi-Device Sync
+### 5.3 WebDAV Backup and Multi-device Synchronization
 
-- Go to **Settings → WebDAV Backup** to configure the WebDAV address, username, and password.
+- Go to **Settings → WebDAV Backup**, and configure the WebDAV address, username, and password.
 - You can choose synchronization strategies (Merge/Upload Only/Download Only) and set the automatic synchronization interval.
-- It is recommended to use JSON import/export for double backup.
+- It is recommended to use JSON import/export in conjunction for double backup.
 
 ### 5.4 Sorting Priority
 
-- Adjust the account sorting logic in **Settings → Sorting Priority Settings**.
+- Adjust account sorting logic in **Settings → Sorting Priority Settings**.
 - Supports combining conditions such as current site, health status, check-in requirements, and custom fields.
 - Drag and drop to adjust priority and disable unwanted sorting rules at any time.
 
 ### 5.5 Data Import and Export
 
-- In the **Settings → Data & Backup** section under "Import and Export," you can export all current account configurations to JSON with one click.
-- Supports importing data exported from older versions or other devices for quick migration or restoration.
+- In the **Settings → Data and Backup** section, under "Import and Export," you can export all current account configurations to JSON with one click.
+- Supports importing data exported from previous versions or other devices for quick migration or restoration.
 
 ### 5.6 New API Model List Synchronization
 
@@ -135,18 +146,20 @@ For detailed documentation on the New API model list synchronization feature, pl
 
 ### 5.7 New API Channel Management (Beta)
 
-Create/edit/delete channels directly within the extension. Combined with model whitelisting and single-channel sync debugging, this can significantly reduce the frequency of returning to the New API backend. Refer to [New API Channel Management](./new-api-channel-management.md) for detailed operations and precautions.
+Create/edit/delete channels directly within the extension. Combined with model whitelisting and single-channel synchronization debugging, this can significantly reduce the frequency of back-and-forth operations with the New API backend. Refer to [New API Channel Management](./new-api-channel-management.md) for detailed operations and precautions.
 
 <a id="cloudflare-window-downgrade"></a>
 ### 5.8 Cloudflare Protection and Temporary Window Downgrade
 
-- When Cloudflare intercepts requests (common status codes 401/403/429), the extension will automatically switch to a temporary window for retries, maintaining the target domain's cookies. Manual operation is generally not required. For the principle, see [Cloudflare Bypass Assistant](./cloudflare-helper.md).
-- If a scenario requires human verification, please complete the challenge in the pop-up assistance window. If it fails frequently, try changing your network or reducing the request frequency.
+- When Cloudflare intercepts requests (common status codes 401/403/429), the extension will automatically switch to a temporary window for retries, preserving the target domain's cookies. Generally, no manual operation is required; see [Cloudflare Bypass Assistant](./cloudflare-helper.md) for the underlying principles.
+- If a scenario requiring human-machine verification occurs, please complete the challenge in the pop-up assistance window. If failures are frequent, try changing networks or reducing request frequency.
 
 ## 6. In-depth Documentation
 
+- [Supported Export Tools and Integration Targets](./supported-export-tools.md)
+- [Supported Sites and System Types](./supported-sites.md)
 - [Cloudflare Bypass Assistant](./cloudflare-helper.md)
-- [Quick Export Site Configuration](./quick-export.md)
+- [Quick Export Site Configurations](./quick-export.md)
 - [Automatic Refresh and Real-time Data](./auto-refresh.md)
 - [Automatic Check-in and Check-in Monitoring](./auto-checkin.md)
 - [WebDAV Backup and Automatic Synchronization](./webdav-sync.md)
@@ -154,15 +167,15 @@ Create/edit/delete channels directly within the extension. Combined with model w
 - [New API Model List Synchronization](./new-api-model-sync.md)
 - [New API Channel Management](./new-api-channel-management.md)
 - [CLIProxyAPI Integration](./cliproxyapi-integration.md)
-- [Model Redirect](./model-redirect.md)
+- [Model Redirection](./model-redirect.md)
 - [Sorting Priority Settings](./sorting-priority.md)
-- [Permission Management (Optional Permissions)](./permissions.md)
+- [Permissions Management (Optional Permissions)](./permissions.md)
 
 ## 7. FAQ and Support
 
 - Refer to the more detailed [FAQ](./faq.md) for information on authentication methods, AnyRouter adaptation, feature usage tips, and more.
 - If you encounter issues or need new features, feel free to provide feedback on [GitHub Issues](https://github.com/qixing-jk/all-api-hub/issues).
-- For historical updates, please check the [Changelog](./changelog.md).
+- To view historical updates, please check the [Changelog](./changelog.md).
 
 ::: tip Next Steps
 After completing the basic setup, you can proceed to configure automatic refresh, check-in detection, or WebDAV synchronization for a more comprehensive user experience.

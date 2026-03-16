@@ -6,6 +6,7 @@ import { generateDefaultTokenRequest } from "~/services/accounts/accountKeyAutoP
 import {
   canManageDisplayAccountTokens,
   createDisplayAccountApiContext,
+  resolveDisplayAccountTokenForSecret,
 } from "~/services/accounts/utils/apiServiceRequest"
 import type { ApiToken, DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
@@ -32,7 +33,7 @@ export function useCopyKeyDialog(
   const [error, setError] = useState<string | null>(null)
   const [isCreating, setIsCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
-  const [copiedKey, setCopiedKey] = useState<string | null>(null)
+  const [copiedTokenId, setCopiedTokenId] = useState<number | null>(null)
   const [expandedTokens, setExpandedTokens] = useState<Set<number>>(new Set())
 
   const canCreateDefaultKey = useMemo(
@@ -83,27 +84,33 @@ export function useCopyKeyDialog(
       setError(null)
       setIsCreating(false)
       setCreateError(null)
-      setCopiedKey(null)
+      setCopiedTokenId(null)
       setExpandedTokens(new Set())
     }
   }, [isOpen, account, fetchTokens])
 
   const copyKey = useCallback(
-    async (key: string) => {
+    async (token: ApiToken) => {
+      if (!account) return
+
       try {
-        await navigator.clipboard.writeText(key)
-        setCopiedKey(key)
+        const resolvedToken = await resolveDisplayAccountTokenForSecret(
+          account,
+          token,
+        )
+        await navigator.clipboard.writeText(resolvedToken.key)
+        setCopiedTokenId(token.id)
         toast.success(t("ui:dialog.copyKey.keyCopied"))
 
         setTimeout(() => {
-          setCopiedKey(null)
+          setCopiedTokenId(null)
         }, 2000)
       } catch (error) {
         logger.error("Failed to copy key to clipboard", { error })
         toast.error(t("ui:dialog.copyKey.copyFailedManual"))
       }
     },
-    [t],
+    [account, t],
   )
 
   /**
@@ -137,7 +144,7 @@ export function useCopyKeyDialog(
       }
 
       if (refreshedTokens.length === 1) {
-        await copyKey(refreshedTokens[0].key)
+        await copyKey(refreshedTokens[0])
         return
       }
 
@@ -212,7 +219,7 @@ export function useCopyKeyDialog(
     error,
     isCreating,
     createError,
-    copiedKey,
+    copiedTokenId,
     expandedTokens,
     canCreateDefaultKey,
     fetchTokens,

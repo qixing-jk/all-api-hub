@@ -16,7 +16,9 @@ interface ModelItemHeaderProps {
   model: ModelPricing
   isAvailableForUser: boolean
   handleCopyModelName: () => void
-  accountName?: string
+  sourceLabel?: string
+  showPricingMetadata: boolean
+  showAvailabilityBadge: boolean
   onOpenKeyDialog?: () => void
   onVerifyApi?: () => void
   onVerifyCliSupport?: () => void
@@ -26,7 +28,9 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
   model,
   isAvailableForUser,
   handleCopyModelName,
-  accountName,
+  sourceLabel,
+  showPricingMetadata,
+  showAvailabilityBadge,
   onOpenKeyDialog,
   onVerifyApi,
   onVerifyCliSupport,
@@ -118,27 +122,31 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
         {/* 标签 */}
         <div className="flex shrink-0 flex-wrap items-center gap-1.5 sm:gap-2">
           {/* 计费模式标签 */}
-          <Badge
-            variant={getBillingVariant(model.quota_type)}
-            size="sm"
-            className="text-[10px] sm:text-xs"
-          >
-            {getBillingModeText(model.quota_type)}
-          </Badge>
+          {showPricingMetadata && (
+            <Badge
+              variant={getBillingVariant(model.quota_type)}
+              size="sm"
+              className="text-[10px] sm:text-xs"
+            >
+              {getBillingModeText(model.quota_type)}
+            </Badge>
+          )}
 
           {/* 可用状态标签 */}
-          <Badge
-            variant={isAvailableForUser ? "success" : "secondary"}
-            size="sm"
-            className="text-[10px] sm:text-xs"
-          >
-            {isAvailableForUser ? t("available") : t("unavailable")}
-          </Badge>
+          {showAvailabilityBadge && (
+            <Badge
+              variant={isAvailableForUser ? "success" : "secondary"}
+              size="sm"
+              className="text-[10px] sm:text-xs"
+            >
+              {isAvailableForUser ? t("available") : t("unavailable")}
+            </Badge>
+          )}
 
           {/* 账号标签 */}
-          {accountName && (
+          {sourceLabel && (
             <Badge variant="outline" size="default">
-              {accountName}
+              {sourceLabel}
             </Badge>
           )}
         </div>

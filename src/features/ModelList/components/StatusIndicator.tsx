@@ -6,12 +6,14 @@ import {
 import { useTranslation } from "react-i18next"
 
 import { Alert, Button, EmptyState, Spinner } from "~/components/ui"
+import type { ModelManagementSource } from "~/features/ModelList/modelManagementSources"
 import type { DisplaySiteData } from "~/types"
 
 interface StatusIndicatorProps {
-  selectedAccount: string
+  selectedSource: ModelManagementSource | null
   isLoading: boolean
   dataFormatError: boolean
+  loadErrorMessage: string | null
   currentAccount: DisplaySiteData | undefined
   loadPricingData: () => void
 }
@@ -19,22 +21,24 @@ interface StatusIndicatorProps {
 /**
  * Displays loading or error feedback for model pricing fetch status.
  * @param props Component props.
- * @param props.selectedAccount Currently selected account id.
+ * @param props.selectedSource Currently selected source.
  * @param props.isLoading Whether pricing data is loading.
  * @param props.dataFormatError Flag indicating invalid data format.
+ * @param props.loadErrorMessage Current load error message, if any.
  * @param props.currentAccount Account details for navigation links.
  * @param props.loadPricingData Retry handler.
  * @returns Status UI for loading/error or null when idle.
  */
 export function StatusIndicator({
-  selectedAccount,
+  selectedSource,
   isLoading,
   dataFormatError,
+  loadErrorMessage,
   currentAccount,
   loadPricingData,
 }: StatusIndicatorProps) {
   const { t } = useTranslation("modelList")
-  if (!selectedAccount) {
+  if (!selectedSource) {
     return (
       <EmptyState
         icon={<CpuChipIcon className="h-12 w-12" />}
@@ -51,6 +55,31 @@ export function StatusIndicator({
           {t("status.loading")}
         </p>
       </div>
+    )
+  }
+
+  if (loadErrorMessage) {
+    return (
+      <Alert
+        variant="destructive"
+        className="mb-6"
+        title={
+          selectedSource.kind === "profile"
+            ? t("status.profileLoadFailedTitle")
+            : t("status.genericLoadFailedTitle")
+        }
+        description={loadErrorMessage}
+      >
+        <div className="mt-4">
+          <Button
+            variant="secondary"
+            onClick={loadPricingData}
+            leftIcon={<ArrowPathIcon className="h-4 w-4" />}
+          >
+            {t("status.retryLoad")}
+          </Button>
+        </div>
+      </Alert>
     )
   }
 

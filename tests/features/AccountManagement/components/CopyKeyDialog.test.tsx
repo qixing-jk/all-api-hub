@@ -10,6 +10,7 @@ const {
   createApiTokenMock,
   fetchAccountAvailableModelsMock,
   fetchUserGroupsMock,
+  resolveApiTokenKeyMock,
   toastSuccessMock,
   toastErrorMock,
 } = vi.hoisted(() => ({
@@ -17,6 +18,7 @@ const {
   createApiTokenMock: vi.fn(),
   fetchAccountAvailableModelsMock: vi.fn(),
   fetchUserGroupsMock: vi.fn(),
+  resolveApiTokenKeyMock: vi.fn(),
   toastSuccessMock: vi.fn(),
   toastErrorMock: vi.fn(),
 }))
@@ -35,6 +37,7 @@ vi.mock("~/services/apiService", () => ({
     fetchAccountAvailableModels: (...args: any[]) =>
       fetchAccountAvailableModelsMock(...args),
     fetchUserGroups: (...args: any[]) => fetchUserGroupsMock(...args),
+    resolveApiTokenKey: (...args: any[]) => resolveApiTokenKeyMock(...args),
   }),
 }))
 
@@ -74,6 +77,10 @@ describe("CopyKeyDialog", () => {
     createApiTokenMock.mockReset()
     fetchAccountAvailableModelsMock.mockReset()
     fetchUserGroupsMock.mockReset()
+    resolveApiTokenKeyMock.mockReset()
+    resolveApiTokenKeyMock.mockImplementation(
+      async (_request, token: { key: string }) => token.key,
+    )
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
   })
@@ -172,6 +179,65 @@ describe("CopyKeyDialog", () => {
       expect(createApiTokenMock).toHaveBeenCalledTimes(2)
       expect(fetchAccountTokensMock).toHaveBeenCalledTimes(3)
       expect(writeText).toHaveBeenCalledWith("sk-test")
+    })
+  })
+
+  it("copies the resolved full key when inventory is masked", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([
+      {
+        ...TOKEN,
+        key: "sk-abcd************wxyz",
+      },
+    ])
+    resolveApiTokenKeyMock.mockResolvedValueOnce("sk-full-secret")
+
+    const user = userEvent.setup()
+    const writeText = vi
+      .spyOn(navigator.clipboard, "writeText")
+      .mockResolvedValue(undefined)
+
+    render(<CopyKeyDialog isOpen={true} onClose={() => {}} account={ACCOUNT} />)
+
+    await user.click(await screen.findByText("default"))
+    await user.click(
+      await screen.findByRole("button", { name: "ui:dialog.copyKey.copy" }),
+    )
+
+    await waitFor(() => {
+      expect(resolveApiTokenKeyMock).toHaveBeenCalled()
+      expect(writeText).toHaveBeenCalledWith("sk-full-secret")
+    })
+  })
+
+  it("keeps masked-key copy failures localized to the action", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([
+      {
+        ...TOKEN,
+        key: "sk-abcd************wxyz",
+      },
+    ])
+    resolveApiTokenKeyMock.mockRejectedValueOnce(
+      new Error("masked fetch failed"),
+    )
+
+    const user = userEvent.setup()
+    const writeText = vi
+      .spyOn(navigator.clipboard, "writeText")
+      .mockResolvedValue(undefined)
+
+    render(<CopyKeyDialog isOpen={true} onClose={() => {}} account={ACCOUNT} />)
+
+    await user.click(await screen.findByText("default"))
+    await user.click(
+      await screen.findByRole("button", { name: "ui:dialog.copyKey.copy" }),
+    )
+
+    await waitFor(() => {
+      expect(resolveApiTokenKeyMock).toHaveBeenCalled()
+      expect(writeText).not.toHaveBeenCalled()
+      expect(toastErrorMock).toHaveBeenCalledWith(
+        "ui:dialog.copyKey.copyFailedManual",
+      )
     })
   })
 

@@ -1,71 +1,172 @@
 import { useEffect, useMemo } from "react"
 
+import { useApiCredentialProfiles } from "~/features/ApiCredentialProfiles/hooks/useApiCredentialProfiles"
 import { useAccountData } from "~/hooks/useAccountData"
 
+import {
+  EMPTY_MODEL_MANAGEMENT_CAPABILITIES,
+  isProfileSourceValue,
+  resolveModelManagementSource,
+  toAccountSourceValue,
+  toProfileSourceValue,
+  type ModelManagementSource,
+} from "../modelManagementSources"
 import { useFilteredModels } from "./useFilteredModels"
 import { useModelData } from "./useModelData"
 import { useModelListState } from "./useModelListState"
 
+const ROUTE_SOURCE_PENDING = Symbol("route-source-pending")
+
 /**
  * Aggregates model list state, data loading, and filtering in one hook.
+ * Route-driven source selection lives here so it can wait for profile storage
+ * before deciding whether a profile deep link is valid or stale.
  * @returns Combined account data, UI state, model data, and filtered results.
  */
-export function useModelListData() {
+export function useModelListData(routeParams?: Record<string, string>) {
   // Single source of account data
   const { enabledDisplayData } = useAccountData()
   const accounts = useMemo(() => enabledDisplayData || [], [enabledDisplayData])
+  const { profiles, isLoading: profilesLoading } = useApiCredentialProfiles()
 
   // UI state
   const state = useModelListState()
+  const {
+    selectedSourceValue,
+    setSelectedSourceValue,
+    selectedGroup,
+    searchTerm,
+    selectedProvider,
+    allAccountsFilterAccountId,
+    setAllAccountsFilterAccountId,
+  } = state
 
-  // Compute current account
-  const currentAccount = useMemo(
-    () => accounts.find((acc) => acc.id === state.selectedAccount),
-    [accounts, state.selectedAccount],
+  const routeSelectedSourceValue = useMemo(() => {
+    const requestedProfileId = routeParams?.profileId?.trim()
+    const requestedAccountId = routeParams?.accountId?.trim()
+
+    if (requestedProfileId) {
+      const matchedProfile = profiles.find(
+        (profile) => profile.id === requestedProfileId,
+      )
+      if (matchedProfile) {
+        return toProfileSourceValue(matchedProfile.id)
+      }
+
+      // Profile deep links take precedence, so wait until profile storage
+      // finishes loading before falling back to any account target.
+      if (profilesLoading) {
+        return ROUTE_SOURCE_PENDING
+      }
+
+      const matchedAccount = requestedAccountId
+        ? accounts.find((account) => account.id === requestedAccountId)
+        : null
+      return matchedAccount ? toAccountSourceValue(matchedAccount.id) : ""
+    }
+
+    if (requestedAccountId) {
+      const matchedAccount = accounts.find(
+        (account) => account.id === requestedAccountId,
+      )
+      return matchedAccount ? toAccountSourceValue(matchedAccount.id) : null
+    }
+
+    return null
+  }, [
+    accounts,
+    profiles,
+    profilesLoading,
+    routeParams?.accountId,
+    routeParams?.profileId,
+  ])
+
+  useEffect(() => {
+    if (
+      routeSelectedSourceValue === null ||
+      routeSelectedSourceValue === ROUTE_SOURCE_PENDING
+    ) {
+      return
+    }
+
+    setSelectedSourceValue(routeSelectedSourceValue)
+  }, [routeSelectedSourceValue, setSelectedSourceValue])
+
+  const selectedSource = useMemo<ModelManagementSource | null>(
+    () =>
+      resolveModelManagementSource({
+        value: selectedSourceValue,
+        accounts,
+        profiles,
+      }),
+    [accounts, profiles, selectedSourceValue],
   )
 
   useEffect(() => {
-    if (!state.selectedAccount || state.selectedAccount === "all") return
+    if (!selectedSourceValue) return
+    // Keep unresolved profile-backed selections intact while profile storage is
+    // still hydrating so a valid deep link is not cleared prematurely.
+    if (profilesLoading && isProfileSourceValue(selectedSourceValue)) return
+    if (selectedSource) return
 
-    const accountExists = accounts.some(
-      (acc) => acc.id === state.selectedAccount,
-    )
-    if (!accountExists) {
-      state.setSelectedAccount("")
-    }
-  }, [accounts, state, state.selectedAccount, state.setSelectedAccount])
+    setSelectedSourceValue("")
+  }, [
+    profilesLoading,
+    selectedSource,
+    selectedSourceValue,
+    setSelectedSourceValue,
+  ])
 
-  // Data loading (no longer calls useAccountData internally)
+  useEffect(() => {
+    if (selectedSource?.kind === "all-accounts") return
+    if (allAccountsFilterAccountId === null) return
+    setAllAccountsFilterAccountId(null)
+  }, [
+    allAccountsFilterAccountId,
+    selectedSource?.kind,
+    setAllAccountsFilterAccountId,
+  ])
+
+  const currentAccount = useMemo(
+    () =>
+      selectedSource?.kind === "account" ? selectedSource.account : undefined,
+    [selectedSource],
+  )
+
+  const currentProfile = useMemo(
+    () =>
+      selectedSource?.kind === "profile" ? selectedSource.profile : undefined,
+    [selectedSource],
+  )
+
+  const sourceCapabilities =
+    selectedSource?.capabilities ?? EMPTY_MODEL_MANAGEMENT_CAPABILITIES
+
   const modelData = useModelData({
-    selectedAccount: state.selectedAccount,
+    selectedSource,
     accounts,
-    selectedGroup: state.selectedGroup,
   })
 
-  // Filtering
   const filteredData = useFilteredModels({
     pricingData: modelData.pricingData,
     pricingContexts: modelData.pricingContexts,
-    currentAccount,
-    selectedGroup: state.selectedGroup,
-    searchTerm: state.searchTerm,
-    selectedProvider: state.selectedProvider,
-    accountFilterAccountId: state.allAccountsFilterAccountId,
+    selectedSource,
+    selectedGroup,
+    searchTerm,
+    selectedProvider,
+    accountFilterAccountId: allAccountsFilterAccountId,
   })
 
-  // Return unified state
   return {
-    // Account data
     accounts,
+    profiles,
+    selectedSource,
     currentAccount,
+    currentProfile,
+    sourceCapabilities,
 
-    // Spread UI state
     ...state,
-
-    // Spread model data
     ...modelData,
-
-    // Spread filtered data
     ...filteredData,
   }
 }

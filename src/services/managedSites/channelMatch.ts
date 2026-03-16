@@ -56,6 +56,20 @@ export type ManagedSiteChannelKeyMatchReasonValue =
 export type ManagedSiteChannelModelsMatchReasonValue =
   (typeof MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS)[keyof typeof MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS]
 
+export const MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS = {
+  VERIFICATION_REQUIRED: "verification-required",
+} as const
+
+export type ManagedSiteChannelMatchUnresolvedReason =
+  (typeof MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS)[keyof typeof MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS]
+
+export class MatchResolutionUnresolvedError extends Error {
+  constructor(public reason: ManagedSiteChannelMatchUnresolvedReason) {
+    super(reason)
+    this.name = "MatchResolutionUnresolvedError"
+  }
+}
+
 export interface ManagedSiteChannelMatchResult {
   level: ManagedSiteChannelMatchLevelValue
   reason: ManagedSiteChannelMatchReasonValue

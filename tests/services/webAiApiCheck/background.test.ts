@@ -296,7 +296,7 @@ describe("webAiApiCheck background handlers", () => {
 
     vi.mocked(apiCredentialProfilesStorage.createProfile).mockResolvedValue({
       id: "p-1",
-      name: "proxy.example.com (OpenAI-compatible)",
+      name: "proxy.example.com",
       apiType: "openai-compatible",
       baseUrl: "https://proxy.example.com/api",
       apiKey: "sk-secret-xyz",
@@ -323,7 +323,7 @@ describe("webAiApiCheck background handlers", () => {
     )
 
     expect(apiCredentialProfilesStorage.createProfile).toHaveBeenCalledWith({
-      name: "proxy.example.com (OpenAI-compatible)",
+      name: "proxy.example.com",
       apiType: "openai-compatible",
       baseUrl: "https://proxy.example.com/api",
       apiKey: "sk-secret-xyz",
@@ -336,7 +336,7 @@ describe("webAiApiCheck background handlers", () => {
     expect(response?.profileId).toBe("p-1")
     expect(response?.baseUrl).toBe("https://proxy.example.com/api")
     expect(response?.apiType).toBe("openai-compatible")
-    expect(response?.name).toBe("proxy.example.com (OpenAI-compatible)")
+    expect(response?.name).toBe("proxy.example.com")
     expect(response?.apiKey).toBeUndefined()
   })
 })

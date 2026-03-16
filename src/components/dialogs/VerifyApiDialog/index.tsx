@@ -11,6 +11,7 @@ import {
   SearchableSelect,
 } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
+import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
 import { getApiService } from "~/services/apiService"
 import { identifyProvider } from "~/services/models/utils/modelProviders"
 import {
@@ -142,6 +143,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
 
   const runProbe = async (probeId: ApiVerificationProbeId) => {
     if (!selectedToken) return
+    let resolvedToken = selectedToken
 
     setProbes((prev) =>
       prev.map((p) =>
@@ -152,16 +154,20 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
     )
 
     try {
+      resolvedToken = await resolveDisplayAccountTokenForSecret(
+        account,
+        selectedToken,
+      )
       const result = await runApiVerificationProbe({
         baseUrl: account.baseUrl,
-        apiKey: selectedToken.key,
+        apiKey: resolvedToken.key,
         apiType,
         modelId: modelId.trim() || undefined,
         tokenMeta: {
-          id: selectedToken.id,
-          name: selectedToken.name,
-          model_limits: selectedToken.model_limits,
-          models: selectedToken.models,
+          id: resolvedToken.id,
+          name: resolvedToken.name,
+          model_limits: resolvedToken.model_limits,
+          models: resolvedToken.models,
         },
         probeId,
       })
@@ -178,6 +184,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
           error,
           [
             selectedToken.key,
+            resolvedToken.key,
             account.token,
             account.cookieAuthSessionCookie,
           ].filter(Boolean) as string[],

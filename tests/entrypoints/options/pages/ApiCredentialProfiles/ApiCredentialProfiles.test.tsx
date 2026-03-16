@@ -12,8 +12,10 @@ import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 
 let store: ApiCredentialProfile[] = []
+const mockOpenModelsPage = vi.fn()
 
 const mockListProfiles = vi.fn(async () => store)
+const mockFetchApiCredentialModelIds = vi.fn(async () => [])
 const mockListTags = vi.fn(async (): Promise<Tag[]> => [])
 const mockCreateTag = vi.fn(async (name: string) => ({
   id: `t-${name}`,
@@ -82,6 +84,7 @@ const mockDeleteProfile = vi.fn(async (id: string) => {
 vi.mock(
   "~/services/apiCredentialProfiles/apiCredentialProfilesStorage",
   () => ({
+    subscribeToApiCredentialProfilesChanges: () => () => {},
     apiCredentialProfilesStorage: {
       listProfiles: () => mockListProfiles(),
       createProfile: (input: any) => mockCreateProfile(input),
@@ -92,6 +95,18 @@ vi.mock(
   }),
 )
 
+vi.mock("~/services/apiCredentialProfiles/modelCatalog", async () => {
+  const actual = await vi.importActual<
+    typeof import("~/services/apiCredentialProfiles/modelCatalog")
+  >("~/services/apiCredentialProfiles/modelCatalog")
+
+  return {
+    ...actual,
+    fetchApiCredentialModelIds: (...args: any[]) =>
+      mockFetchApiCredentialModelIds(...args),
+  }
+})
+
 vi.mock("~/services/tags/tagStorage", () => ({
   tagStorage: {
     listTags: () => mockListTags(),
@@ -101,10 +116,16 @@ vi.mock("~/services/tags/tagStorage", () => ({
   },
 }))
 
+vi.mock("~/utils/navigation", () => ({
+  openModelsPage: (...args: unknown[]) => mockOpenModelsPage(...args),
+}))
+
 describe("ApiCredentialProfiles page", () => {
   beforeEach(() => {
     store = []
     mockListProfiles.mockClear()
+    mockFetchApiCredentialModelIds.mockReset()
+    mockFetchApiCredentialModelIds.mockResolvedValue([])
     mockCreateProfile.mockClear()
     mockUpdateProfile.mockClear()
     mockDeleteProfile.mockClear()
@@ -112,6 +133,7 @@ describe("ApiCredentialProfiles page", () => {
     mockCreateTag.mockClear()
     mockRenameTag.mockClear()
     mockDeleteTag.mockClear()
+    mockOpenModelsPage.mockReset()
   })
 
   it("creates a profile via the add dialog and renders it", async () => {
@@ -386,6 +408,98 @@ describe("ApiCredentialProfiles page", () => {
     expect(
       await screen.findByText("ui:dialog.kiloCode.title"),
     ).toBeInTheDocument()
+  })
+
+  it("opens shared CLI verification for a stored profile", async () => {
+    const user = userEvent.setup()
+    mockFetchApiCredentialModelIds.mockResolvedValueOnce(["gpt-4o-mini"])
+
+    store = [
+      {
+        id: "p-1",
+        name: "CLI Profile",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: "https://example.com",
+        apiKey: "sk-test",
+        tagIds: [],
+        notes: "",
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    ]
+
+    render(<ApiCredentialProfiles />)
+
+    expect(await screen.findByText("CLI Profile")).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", {
+        name: "apiCredentialProfiles:actions.verifyApi",
+      }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", {
+        name: "apiCredentialProfiles:actions.verifyCliSupport",
+      }),
+    ).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "apiCredentialProfiles:actions.verifyCliSupport",
+      }),
+    )
+
+    expect(
+      await screen.findByText("cliSupportVerification:verifyDialog.title"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("combobox", {
+        name: "cliSupportVerification:verifyDialog.meta.model",
+      }),
+    ).toBeInTheDocument()
+    await user.click(
+      screen.getByRole("combobox", {
+        name: "cliSupportVerification:verifyDialog.meta.model",
+      }),
+    )
+    expect(
+      await screen.findByRole("option", { name: "gpt-4o-mini" }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText("cliSupportVerification:verifyDialog.meta.token"),
+    ).not.toBeInTheDocument()
+  })
+
+  it("opens Model Management for a stored profile without exposing credentials", async () => {
+    const user = userEvent.setup()
+
+    store = [
+      {
+        id: "p-1",
+        name: "Model Profile",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: "https://example.com",
+        apiKey: "sk-secret",
+        tagIds: [],
+        notes: "",
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    ]
+
+    render(<ApiCredentialProfiles />)
+
+    expect(await screen.findByText("Model Profile")).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "apiCredentialProfiles:actions.openModelManagement",
+      }),
+    )
+
+    expect(mockOpenModelsPage).toHaveBeenCalledWith({ profileId: "p-1" })
+    expect(mockOpenModelsPage).not.toHaveBeenCalledWith(
+      expect.objectContaining({ apiKey: "sk-secret" }),
+    )
   })
 
   it("filters profiles by tags", async () => {

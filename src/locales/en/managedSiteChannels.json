@@ -79,7 +79,8 @@
     "syncCompleted": "Model sync completed ({{success}}/{{total}})",
     "syncFailed": "Model sync failed: {{error}}",
     "loadFailed": "Failed to load channels: {{error}}",
-    "genericError": "Request failed: {{error}}"
+    "genericError": "Request failed: {{error}}",
+    "revealKeyFailed": "Failed to load the real channel key: {{error}}"
   },
   "filters": {
     "title": "Channel filters",

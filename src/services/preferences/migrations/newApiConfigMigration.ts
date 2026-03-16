@@ -54,8 +54,12 @@ export function migrateNewApiConfig(prefs: UserPreferences): UserPreferences {
     hasAdminToken: Boolean(newApiSettings.adminToken),
   })
 
-  const { newApiBaseUrl, newApiAdminToken, newApiUserId, ...restOfPrefs } =
-    prefs
+  const {
+    newApiBaseUrl: _newApiBaseUrl,
+    newApiAdminToken: _newApiAdminToken,
+    newApiUserId: _newApiUserId,
+    ...restOfPrefs
+  } = prefs
 
   return {
     ...restOfPrefs,

@@ -6,6 +6,7 @@ import { generateDefaultTokenRequest } from "~/services/accounts/accountKeyAutoP
 import {
   canManageDisplayAccountTokens,
   createDisplayAccountApiContext,
+  resolveDisplayAccountTokenForSecret,
 } from "~/services/accounts/utils/apiServiceRequest"
 import { isTokenCompatibleWithModel } from "~/services/models/utils/tokenModelCompatibility"
 import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/types"
@@ -147,10 +148,14 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
   )
 
   const copySelectedKey = useCallback(async () => {
-    if (!selectedToken) return
+    if (!account || !selectedToken) return
 
     try {
-      await navigator.clipboard.writeText(selectedToken.key)
+      const resolvedToken = await resolveDisplayAccountTokenForSecret(
+        account,
+        selectedToken,
+      )
+      await navigator.clipboard.writeText(resolvedToken.key)
       toast.success(t("modelList:keyDialog.keyCopied"))
     } catch (error) {
       const errorMessage = getErrorMessage(error)
@@ -159,7 +164,7 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
       })
       toast.error(t("modelList:keyDialog.copyFailed"))
     }
-  }, [selectedToken, t])
+  }, [account, selectedToken, t])
 
   const refreshTokensAfterCreate = useCallback(async () => {
     if (!account) return

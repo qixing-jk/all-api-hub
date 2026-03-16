@@ -17,6 +17,7 @@ export function ChannelDialogContainer() {
       initialValues={state.initialValues}
       initialModels={state.initialModels}
       initialGroups={state.initialGroups}
+      onRequestRealKey={state.onRequestRealKey ?? undefined}
       onSuccess={handleSuccess}
     />
   )

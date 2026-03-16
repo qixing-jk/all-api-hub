@@ -2,6 +2,7 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import ModelList from "~/entrypoints/options/pages/ModelList"
+import { createAccountSource } from "~/features/ModelList/modelManagementSources"
 import { AuthTypeEnum } from "~/types"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
@@ -80,15 +81,18 @@ const TOKEN = {
   group: "",
 } as any
 
+const ACCOUNT_SOURCE = createAccountSource(ACCOUNT)
+
 vi.mock("~/features/ModelList/hooks/useModelListData", () => ({
   useModelListData: vi.fn(() => ({
-    // Account data
     accounts: [ACCOUNT],
+    profiles: [],
+    selectedSource: ACCOUNT_SOURCE,
     currentAccount: ACCOUNT,
+    sourceCapabilities: ACCOUNT_SOURCE.capabilities,
 
-    // UI state
-    selectedAccount: ACCOUNT.id,
-    setSelectedAccount: vi.fn(),
+    selectedSourceValue: ACCOUNT_SOURCE.value,
+    setSelectedSourceValue: vi.fn(),
     searchTerm: "",
     setSearchTerm: vi.fn(),
     selectedProvider: "all",
@@ -109,13 +113,12 @@ vi.mock("~/features/ModelList/hooks/useModelListData", () => ({
     pricingContexts: [],
     isLoading: false,
     dataFormatError: null,
+    loadErrorMessage: null,
 
-    // Computed data
     filteredModels: [],
     baseFilteredModels: [],
     availableGroups: [],
 
-    // Operations
     loadPricingData: vi.fn(),
     getProviderFilteredCount: vi.fn(() => 0),
     accountQueryStates: [],
@@ -125,10 +128,10 @@ vi.mock("~/features/ModelList/hooks/useModelListData", () => ({
 }))
 
 vi.mock("~/features/ModelList/components/ModelDisplay", () => ({
-  ModelDisplay: ({ currentAccount, onOpenModelKeyDialog }: any) => (
+  ModelDisplay: ({ onOpenModelKeyDialog }: any) => (
     <button
       type="button"
-      onClick={() => onOpenModelKeyDialog(currentAccount, "gpt-4", ["vip"])}
+      onClick={() => onOpenModelKeyDialog(ACCOUNT, "gpt-4", ["vip"])}
     >
       Open key dialog
     </button>

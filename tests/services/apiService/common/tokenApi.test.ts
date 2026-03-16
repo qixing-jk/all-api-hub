@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import {
   fetchAccountTokens,
   fetchTokenById,
+  resolveApiTokenKey,
 } from "~/services/apiService/common"
 import { fetchApiData } from "~/services/apiService/common/utils"
 import { AuthTypeEnum } from "~/types"
@@ -102,5 +103,91 @@ describe("apiService common token APIs", () => {
       endpoint: "/api/token/99",
     })
     expect((result as any).key).toBe("sk-abc")
+  })
+
+  it("resolveApiTokenKey fetches the explicit secret when inventory key is masked", async () => {
+    mockedFetchApiData.mockResolvedValueOnce({ key: "resolved-secret" })
+
+    const request = {
+      baseUrl: "https://example.com",
+      accountId: "account-1",
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        userId: 1,
+        accessToken: "token",
+      },
+    }
+
+    const result = await resolveApiTokenKey(
+      request as any,
+      {
+        id: 7,
+        key: "sk-abcd************wxyz",
+      } as any,
+    )
+
+    expect(mockedFetchApiData).toHaveBeenCalledWith(request, {
+      endpoint: "/api/token/7/key",
+      options: {
+        method: "POST",
+      },
+    })
+    expect(result).toBe("sk-resolved-secret")
+  })
+
+  it("resolveApiTokenKey passes through legacy full keys without an extra fetch", async () => {
+    const request = {
+      baseUrl: "https://example.com",
+      accountId: "account-2",
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        userId: 1,
+        accessToken: "token",
+      },
+    }
+
+    const result = await resolveApiTokenKey(
+      request as any,
+      {
+        id: 8,
+        key: "sk-direct-secret",
+      } as any,
+    )
+
+    expect(mockedFetchApiData).not.toHaveBeenCalled()
+    expect(result).toBe("sk-direct-secret")
+  })
+
+  it("resolveApiTokenKey deduplicates concurrent masked-key fetches", async () => {
+    mockedFetchApiData.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          setTimeout(() => resolve({ key: "deduped-secret" }), 0)
+        }),
+    )
+
+    const request = {
+      baseUrl: "https://example.com",
+      accountId: "account-3",
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        userId: 1,
+        accessToken: "token",
+      },
+    }
+
+    const maskedToken = {
+      id: 9,
+      key: "sk-zzzz************yyyy",
+    }
+
+    const [first, second] = await Promise.all([
+      resolveApiTokenKey(request as any, maskedToken as any),
+      resolveApiTokenKey(request as any, maskedToken as any),
+    ])
+
+    expect(mockedFetchApiData).toHaveBeenCalledTimes(1)
+    expect(first).toBe("sk-deduped-secret")
+    expect(second).toBe("sk-deduped-secret")
   })
 })

@@ -48,6 +48,8 @@ export default defineUserConfig({
           {
             text: '专题指南',
             children: [
+              { text: '支持的工具', link: '/supported-export-tools' },
+              { text: '支持的站点', link: '/supported-sites' },
               { text: 'Cloudflare 过盾助手', link: '/cloudflare-helper' },
               { text: '快速导出站点', link: '/quick-export' },
               { text: '自动刷新', link: '/auto-refresh' },
@@ -78,6 +80,8 @@ export default defineUserConfig({
           {
             text: 'Guides',
             children: [
+              { text: 'Supported Tools', link: '/en/supported-export-tools' },
+              { text: 'Supported Sites', link: '/en/supported-sites' },
               { text: 'Cloudflare Helper', link: '/en/cloudflare-helper' },
               { text: 'Quick Export', link: '/en/quick-export' },
               { text: 'Auto Refresh', link: '/en/auto-refresh' },
@@ -108,6 +112,8 @@ export default defineUserConfig({
           {
             text: '機能ガイド',
             children: [
+              { text: '対応ツール', link: '/ja/supported-export-tools' },
+              { text: '対応サイト', link: '/ja/supported-sites' },
               { text: 'Cloudflare ヘルパー', link: '/ja/cloudflare-helper' },
               { text: 'クイックエクスポート', link: '/ja/quick-export' },
               { text: '自動更新', link: '/ja/auto-refresh' },

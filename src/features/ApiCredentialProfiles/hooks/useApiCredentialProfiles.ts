@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useState } from "react"
 
-import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+import {
+  apiCredentialProfilesStorage,
+  subscribeToApiCredentialProfilesChanges,
+} from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { createLogger } from "~/utils/core/logger"
@@ -46,6 +49,12 @@ export function useApiCredentialProfiles() {
 
   useEffect(() => {
     void reload()
+  }, [reload])
+
+  useEffect(() => {
+    return subscribeToApiCredentialProfilesChanges(() => {
+      void reload()
+    })
   }, [reload])
 
   const createProfile = useCallback(

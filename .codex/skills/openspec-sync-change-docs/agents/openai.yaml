@@ -1,0 +1,4 @@
+interface:
+  display_name: "openspec-sync-change-docs"
+  short_description: "Sync active OpenSpec change docs to implemented code"
+  default_prompt: "Use $openspec-sync-change-docs to rewrite the active OpenSpec change docs so they match the implemented code relative to main."

@@ -23,7 +23,7 @@ interface TokenListProps {
   filteredTokens: AccountToken[]
   visibleKeys: Set<string>
   toggleKeyVisibility: (identityKey: string) => void
-  copyKey: (key: string, name: string) => void
+  copyKey: (account: DisplaySiteData, token: AccountToken) => Promise<void>
   handleEditToken: (token: AccountToken) => void
   handleDeleteToken: (token: AccountToken) => void
   handleAddToken: () => void
@@ -37,6 +37,10 @@ interface TokenListProps {
     }
   >
   onManagedSiteImportSuccess?: (token: AccountToken) => void | Promise<void>
+  onManagedSiteVerificationRetry?: (
+    token: AccountToken,
+    managedSiteStatus: ManagedSiteTokenChannelStatus,
+  ) => void | Promise<void>
   allAccountsFilterAccountId?: string | null
 }
 
@@ -142,6 +146,7 @@ export function TokenList(props: TokenListProps) {
     displayData,
     managedSiteTokenStatuses,
     onManagedSiteImportSuccess,
+    onManagedSiteVerificationRetry,
     allAccountsFilterAccountId,
   } = props
   const { t } = useTranslation("keyManagement")
@@ -381,6 +386,9 @@ export function TokenList(props: TokenListProps) {
                             onManagedSiteImportSuccess={
                               onManagedSiteImportSuccess
                             }
+                            onManagedSiteVerificationRetry={
+                              onManagedSiteVerificationRetry
+                            }
                             onOpenCCSwitchDialog={() =>
                               handleOpenCCSwitchDialog(token, account)
                             }
@@ -424,6 +432,7 @@ export function TokenList(props: TokenListProps) {
                   managedSiteStatusEntry?.isChecking === true
                 }
                 onManagedSiteImportSuccess={onManagedSiteImportSuccess}
+                onManagedSiteVerificationRetry={onManagedSiteVerificationRetry}
                 onOpenCCSwitchDialog={() =>
                   handleOpenCCSwitchDialog(token, account)
                 }

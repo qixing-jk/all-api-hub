@@ -9,6 +9,7 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import {
+  Alert,
   Button,
   Card,
   CardContent,
@@ -18,8 +19,14 @@ import {
   SearchableSelect,
   Switch,
 } from "~/components/ui"
+import type {
+  ModelManagementSource,
+  ModelManagementSourceCapabilities,
+} from "~/features/ModelList/modelManagementSources"
 
 interface ControlPanelProps {
+  selectedSource: ModelManagementSource | null
+  sourceCapabilities: ModelManagementSourceCapabilities
   searchTerm: string
   setSearchTerm: (term: string) => void
   selectedGroup: string
@@ -41,6 +48,8 @@ interface ControlPanelProps {
 /**
  * Top control strip for searching, filtering, and refreshing model pricing data.
  * @param props Component props bundle.
+ * @param props.selectedSource Active model-management source.
+ * @param props.sourceCapabilities Capability flags for the active source.
  * @param props.searchTerm Current search keyword.
  * @param props.setSearchTerm Setter to update search keyword.
  * @param props.selectedGroup Active user group filter.
@@ -60,6 +69,8 @@ interface ControlPanelProps {
  * @returns Card with filters, toggles, and actions.
  */
 export function ControlPanel({
+  selectedSource,
+  sourceCapabilities,
   searchTerm,
   setSearchTerm,
   selectedGroup,
@@ -78,6 +89,8 @@ export function ControlPanel({
   filteredModels,
 }: ControlPanelProps) {
   const { t } = useTranslation("modelList")
+  const isProfileSource = selectedSource?.kind === "profile"
+
   const handleCopyModelNames = () => {
     if (filteredModels.length === 0) {
       toast.error(t("noMatchingModels"))
@@ -93,6 +106,15 @@ export function ControlPanel({
   return (
     <Card className="mb-6">
       <CardContent>
+        {isProfileSource && (
+          <Alert
+            variant="info"
+            className="mb-4"
+            title={t("profileSourceNotice.title")}
+            description={t("profileSourceNotice.description")}
+          />
+        )}
+
         <div className="mb-4 flex flex-col gap-4 lg:flex-row">
           <FormField label={t("searchModels")} className="flex-1">
             <Input
@@ -104,20 +126,22 @@ export function ControlPanel({
             />
           </FormField>
 
-          <FormField label={t("userGroup")} className="w-full lg:w-64">
-            <SearchableSelect
-              options={[
-                { value: "all", label: t("allGroups") },
-                ...availableGroups.map((group) => ({
-                  value: group,
-                  label: `${group} (${pricingData?.group_ratio?.[group] || 1}x)`,
-                })),
-              ]}
-              value={selectedGroup ?? ""}
-              onChange={setSelectedGroup}
-              placeholder={t("allGroups")}
-            />
-          </FormField>
+          {sourceCapabilities.supportsGroupFiltering && (
+            <FormField label={t("userGroup")} className="w-full lg:w-64">
+              <SearchableSelect
+                options={[
+                  { value: "all", label: t("allGroups") },
+                  ...availableGroups.map((group) => ({
+                    value: group,
+                    label: `${group} (${pricingData?.group_ratio?.[group] || 1}x)`,
+                  })),
+                ]}
+                value={selectedGroup ?? ""}
+                onChange={setSelectedGroup}
+                placeholder={t("allGroups")}
+              />
+            </FormField>
+          )}
 
           <div className="w-full lg:flex lg:w-auto lg:items-end">
             <Button
@@ -141,23 +165,27 @@ export function ControlPanel({
               </span>
             </div>
 
-            <label className="flex cursor-pointer items-center space-x-2">
-              <Switch
-                checked={showRealPrice}
-                onChange={setShowRealPrice}
-                size="sm"
-              />
-              <Label className="cursor-pointer">{t("realAmount")}</Label>
-            </label>
+            {sourceCapabilities.supportsPricing && (
+              <label className="flex cursor-pointer items-center space-x-2">
+                <Switch
+                  checked={showRealPrice}
+                  onChange={setShowRealPrice}
+                  size="sm"
+                />
+                <Label className="cursor-pointer">{t("realAmount")}</Label>
+              </label>
+            )}
 
-            <label className="flex cursor-pointer items-center space-x-2">
-              <Switch
-                checked={showRatioColumn}
-                onChange={setShowRatioColumn}
-                size="sm"
-              />
-              <Label className="cursor-pointer">{t("showRatio")}</Label>
-            </label>
+            {sourceCapabilities.supportsPricing && (
+              <label className="flex cursor-pointer items-center space-x-2">
+                <Switch
+                  checked={showRatioColumn}
+                  onChange={setShowRatioColumn}
+                  size="sm"
+                />
+                <Label className="cursor-pointer">{t("showRatio")}</Label>
+              </label>
+            )}
 
             <label className="flex cursor-pointer items-center space-x-2">
               <Switch

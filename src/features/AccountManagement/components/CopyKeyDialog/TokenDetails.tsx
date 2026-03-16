@@ -18,6 +18,7 @@ import { ManagedSiteIcon } from "~/components/icons/ManagedSiteIcon"
 import { KiloCodeExportDialog } from "~/components/KiloCodeExportDialog"
 import { IconButton } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
 import { OpenInCherryStudio } from "~/services/integrations/cherryStudio"
 import { getManagedSiteLabelKey } from "~/services/managedSites/utils/managedSite"
 import type { ApiToken, DisplaySiteData } from "~/types"
@@ -30,8 +31,8 @@ import { showResultToast } from "~/utils/core/toastHelpers"
 
 interface TokenDetailsProps {
   token: ApiToken
-  copiedKey: string | null
-  onCopyKey: (key: string) => void
+  copiedTokenId: number | null
+  onCopyKey: (token: ApiToken) => void
   account: DisplaySiteData
   onOpenCCSwitchDialog?: (token: ApiToken, account: DisplaySiteData) => void
 }
@@ -41,7 +42,7 @@ interface TokenDetailsProps {
  */
 export function TokenDetails({
   token,
-  copiedKey,
+  copiedTokenId,
   onCopyKey,
   account,
   onOpenCCSwitchDialog,
@@ -64,12 +65,26 @@ export function TokenDetails({
 
   const handleCopy = (event: MouseEvent) => {
     event.stopPropagation()
-    onCopyKey(token.key)
+    void onCopyKey(token)
   }
 
-  const handleUseInCherry = (event: MouseEvent) => {
+  const handleUseInCherry = async (event: MouseEvent) => {
     event.stopPropagation()
-    OpenInCherryStudio(account, token)
+
+    try {
+      const resolvedToken = await resolveDisplayAccountTokenForSecret(
+        account,
+        token,
+      )
+      OpenInCherryStudio(account, resolvedToken)
+    } catch (error) {
+      showResultToast({
+        success: false,
+        message: t("messages:errors.operation.failed", {
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      })
+    }
   }
 
   const handleExportToCCSwitch = (event: MouseEvent) => {
@@ -174,7 +189,7 @@ export function TokenDetails({
           <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
             <IconButton
               aria-label={
-                copiedKey === token.key
+                copiedTokenId === token.id
                   ? t("dialog.copyKey.copied")
                   : t("dialog.copyKey.copy")
               }
@@ -182,7 +197,7 @@ export function TokenDetails({
               size="sm"
               onClick={handleCopy}
             >
-              {copiedKey === token.key ? (
+              {copiedTokenId === token.id ? (
                 <CheckIcon className="h-4 w-4 text-green-500" />
               ) : (
                 <DocumentDuplicateIcon className="dark:text-dark-text-tertiary h-4 w-4 text-gray-500" />

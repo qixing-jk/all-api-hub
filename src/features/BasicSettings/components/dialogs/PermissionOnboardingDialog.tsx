@@ -147,27 +147,25 @@ export function PermissionOnboardingDialog({
   )
 
   const footer = (
-    <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex flex-1 gap-2">
-        <Button
-          onClick={handleGrantAll}
-          loading={isRequesting}
-          className="flex-1"
-        >
-          {t("permissionsOnboarding.actions.allowAll")}
-        </Button>
-        <Button
-          variant="outline"
-          onClick={onClose}
-          className="flex-1"
-          disabled={isRequesting}
-        >
-          {t("permissionsOnboarding.actions.maybeLater")}
-        </Button>
-      </div>
+    <div className="grid w-full gap-2 sm:grid-cols-2">
+      <Button
+        onClick={handleGrantAll}
+        loading={isRequesting}
+        className="h-auto min-h-9 w-full py-2 text-center whitespace-normal"
+      >
+        {t("permissionsOnboarding.actions.allowAll")}
+      </Button>
+      <Button
+        variant="outline"
+        onClick={onClose}
+        className="w-full"
+        disabled={isRequesting}
+      >
+        {t("permissionsOnboarding.actions.maybeLater")}
+      </Button>
       <Button
         variant="secondary"
-        className="flex-1"
+        className="h-auto min-h-9 w-full py-2 text-center whitespace-normal sm:col-span-2"
         onClick={handleOpenGithub}
         disabled={isRequesting}
         leftIcon={<Star className="h-4 w-4" />}

@@ -60,10 +60,10 @@ export function migrateAutoRefreshConfig(
   )
 
   const {
-    autoRefresh,
-    refreshInterval,
-    minRefreshInterval,
-    refreshOnOpen,
+    autoRefresh: _autoRefresh,
+    refreshInterval: _refreshInterval,
+    minRefreshInterval: _minRefreshInterval,
+    refreshOnOpen: _refreshOnOpen,
     ...restOfPrefs
   } = prefs
 

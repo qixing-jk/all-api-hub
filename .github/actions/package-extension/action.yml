@@ -1,0 +1,102 @@
+name: package-extension
+description: Set up Node and pnpm, build the extension archives, and expose artifact metadata.
+
+inputs:
+  node-version:
+    description: Node.js version to use
+    required: false
+    default: "20"
+  pnpm-version:
+    description: pnpm version to use
+    required: false
+    default: "10"
+  working-directory:
+    description: Directory containing package.json and pnpm-lock.yaml
+    required: false
+    default: "."
+
+outputs:
+  artifact-files:
+    description: Newline-delimited list of built archive file names
+    value: ${{ steps.collect.outputs.artifact_files }}
+  chrome-zip:
+    description: Path to the Chrome archive relative to the repository root
+    value: ${{ steps.collect.outputs.chrome_zip }}
+  firefox-zip:
+    description: Path to the Firefox archive relative to the repository root
+    value: ${{ steps.collect.outputs.firefox_zip }}
+  sources-zip:
+    description: Path to the sources archive relative to the repository root
+    value: ${{ steps.collect.outputs.sources_zip }}
+  package-version:
+    description: Package version from package.json
+    value: ${{ steps.collect.outputs.package_version }}
+
+runs:
+  using: composite
+  steps:
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: ${{ inputs.pnpm-version }}
+        run_install: false
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: "pnpm"
+        cache-dependency-path: ${{ inputs.working-directory }}/pnpm-lock.yaml
+
+    - name: Install dependencies
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: pnpm install
+
+    - name: Package extension
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: pnpm zip:all
+
+    - name: Collect artifact metadata
+      id: collect
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        shopt -s nullglob
+
+        files=(.output/*.zip)
+        chrome=(.output/*-chrome.zip)
+        firefox=(.output/*-firefox.zip)
+        sources=(.output/*-sources.zip)
+
+        if [ "${#files[@]}" -eq 0 ]; then
+          echo "No zip artifacts found in .output."
+          exit 1
+        fi
+
+        if [ "${#chrome[@]}" -ne 1 ] || [ "${#firefox[@]}" -ne 1 ] || [ "${#sources[@]}" -ne 1 ]; then
+          echo "Expected exactly one chrome, firefox, and sources archive in .output."
+          ls -la .output
+          exit 1
+        fi
+
+        PREFIX=""
+        if [ "${{ inputs.working-directory }}" != "." ]; then
+          PREFIX="${{ inputs.working-directory }}/"
+        fi
+
+        PACKAGE_VERSION="$(node -e "console.log(JSON.parse(require('node:fs').readFileSync('package.json', 'utf8')).version)")"
+
+        {
+          echo "artifact_files<<EOF"
+          for file in "${files[@]}"; do
+            basename "$file"
+          done
+          echo "EOF"
+        } >> "$GITHUB_OUTPUT"
+
+        echo "chrome_zip=${PREFIX}${chrome[0]}" >> "$GITHUB_OUTPUT"
+        echo "firefox_zip=${PREFIX}${firefox[0]}" >> "$GITHUB_OUTPUT"
+        echo "sources_zip=${PREFIX}${sources[0]}" >> "$GITHUB_OUTPUT"
+        echo "package_version=$PACKAGE_VERSION" >> "$GITHUB_OUTPUT"

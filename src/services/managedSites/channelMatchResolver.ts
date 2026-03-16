@@ -1,5 +1,6 @@
 import {
   MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS,
+  MatchResolutionUnresolvedError,
   type ManagedSiteChannelMatchInspection,
 } from "~/services/managedSites/channelMatch"
 import type {
@@ -19,6 +20,32 @@ interface ResolveManagedSiteChannelMatchParams {
   accountBaseUrl: string
   models: string[]
   key?: string
+  resolvedChannelKeysById?: Record<number, string>
+}
+
+const applyResolvedChannelKeys = <T extends { id: number; key?: string }>(
+  channels: T[],
+  resolvedChannelKeysById?: Record<number, string>,
+) => {
+  if (
+    !resolvedChannelKeysById ||
+    Object.keys(resolvedChannelKeysById).length === 0
+  ) {
+    return channels
+  }
+
+  return channels.map((channel) => {
+    const resolvedKey = resolvedChannelKeysById[channel.id]
+
+    if (typeof resolvedKey !== "string") {
+      return channel
+    }
+
+    return {
+      ...channel,
+      key: resolvedKey,
+    }
+  })
 }
 
 /**
@@ -28,7 +55,8 @@ interface ResolveManagedSiteChannelMatchParams {
 export async function resolveManagedSiteChannelMatch(
   params: ResolveManagedSiteChannelMatchParams,
 ): Promise<ManagedSiteChannelMatchInspection> {
-  const { service, managedConfig, models, key } = params
+  const { service, managedConfig, models, key, resolvedChannelKeysById } =
+    params
   const searchBaseUrl = normalizeManagedSiteChannelBaseUrl(
     params.accountBaseUrl,
   )
@@ -62,7 +90,10 @@ export async function resolveManagedSiteChannelMatch(
     }
   }
 
-  const channels = Array.isArray(searchResults.items) ? searchResults.items : []
+  const channels = applyResolvedChannelKeys(
+    Array.isArray(searchResults.items) ? searchResults.items : [],
+    resolvedChannelKeysById,
+  )
   const urlBucket = findManagedSiteChannelsByBaseUrl({
     channels,
     accountBaseUrl: searchBaseUrl,
@@ -87,14 +118,22 @@ export async function resolveManagedSiteChannelMatch(
     keyAssessment.channel.id === modelsAssessment.channel?.id
 
   if (key?.trim() && models.length > 0 && !hasLocalExactMatch) {
-    const exactMatch = await service.findMatchingChannel(
-      managedConfig.baseUrl,
-      managedConfig.token,
-      managedConfig.userId,
-      searchBaseUrl,
-      models,
-      key,
-    )
+    let exactMatch = null
+
+    try {
+      exactMatch = await service.findMatchingChannel(
+        managedConfig.baseUrl,
+        managedConfig.token,
+        managedConfig.userId,
+        searchBaseUrl,
+        models,
+        key,
+      )
+    } catch (error) {
+      if (!(error instanceof MatchResolutionUnresolvedError)) {
+        throw error
+      }
+    }
 
     if (exactMatch) {
       keyAssessment = inspectManagedSiteChannelKeyMatch({

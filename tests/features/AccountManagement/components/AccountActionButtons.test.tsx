@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import AccountActionButtons from "~/features/AccountManagement/components/AccountActionButtons"
+import type { UserPreferences } from "~/services/preferences/userPreferences"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import { render } from "~~/tests/test-utils/render"
@@ -40,7 +41,7 @@ const {
         adminToken: "t",
         userId: "1",
       },
-    },
+    } as Partial<UserPreferences>,
   },
   toastDismissMock: vi.fn(),
   toastLoadingMock: vi.fn(),
@@ -61,6 +62,8 @@ vi.mock("react-hot-toast", () => ({
 vi.mock("~/services/apiService", () => ({
   getApiService: () => ({
     fetchAccountTokens: fetchAccountTokensMock,
+    resolveApiTokenKey: async (_request: unknown, token: { key: string }) =>
+      token.key,
   }),
 }))
 
@@ -125,7 +128,7 @@ describe("AccountActionButtons", () => {
         adminToken: "t",
         userId: "1",
       },
-    }
+    } as Partial<UserPreferences>
     hasValidManagedSiteConfigMock.mockReturnValue(true)
   })
 
@@ -1094,7 +1097,7 @@ describe("AccountActionButtons", () => {
         adminToken: "veloera-admin-token",
         userId: "1",
       },
-    }
+    } as Partial<UserPreferences>
 
     const user = userEvent.setup()
 

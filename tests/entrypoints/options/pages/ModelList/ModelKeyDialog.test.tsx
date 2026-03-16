@@ -10,11 +10,13 @@ const {
   createApiTokenMock,
   toastSuccessMock,
   toastErrorMock,
+  resolveDisplayAccountTokenForSecretMock,
 } = vi.hoisted(() => ({
   fetchAccountTokensMock: vi.fn(),
   createApiTokenMock: vi.fn(),
   toastSuccessMock: vi.fn(),
   toastErrorMock: vi.fn(),
+  resolveDisplayAccountTokenForSecretMock: vi.fn(),
 }))
 
 vi.mock("react-hot-toast", () => ({
@@ -23,6 +25,21 @@ vi.mock("react-hot-toast", () => ({
     error: toastErrorMock,
   },
 }))
+
+vi.mock(
+  "~/services/accounts/utils/apiServiceRequest",
+  async (importOriginal) => {
+    const original =
+      await importOriginal<
+        typeof import("~/services/accounts/utils/apiServiceRequest")
+      >()
+    return {
+      ...original,
+      resolveDisplayAccountTokenForSecret: (...args: any[]) =>
+        resolveDisplayAccountTokenForSecretMock(...args),
+    }
+  },
+)
 
 vi.mock("~/services/apiService", () => ({
   getApiService: () => ({
@@ -70,6 +87,10 @@ describe("ModelKeyDialog", () => {
     createApiTokenMock.mockReset()
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
+    resolveDisplayAccountTokenForSecretMock.mockReset()
+    resolveDisplayAccountTokenForSecretMock.mockImplementation(
+      async (_account, token) => token,
+    )
   })
 
   it("copies selected key when exactly one compatible token exists", async () => {

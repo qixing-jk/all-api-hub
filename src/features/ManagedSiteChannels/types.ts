@@ -5,6 +5,7 @@ export type ChannelRow = ManagedSiteChannel
 export type CheckboxState = boolean | "indeterminate"
 
 export type RowActionsLabels = {
+  trigger: string
   edit: string
   sync: string
   syncing: string

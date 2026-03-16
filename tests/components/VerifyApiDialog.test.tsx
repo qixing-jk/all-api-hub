@@ -14,6 +14,8 @@ const mockFetchAccountTokens = vi.fn()
 vi.mock("~/services/apiService", () => ({
   getApiService: () => ({
     fetchAccountTokens: (...args: any[]) => mockFetchAccountTokens(...args),
+    resolveApiTokenKey: async (_request: unknown, token: { key: string }) =>
+      token.key,
   }),
 }))
 

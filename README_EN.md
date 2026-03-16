@@ -28,18 +28,7 @@
 
 ---
 
-**[Documentation](https://all-api-hub.qixing1217.top/en) | [Getting Started](https://all-api-hub.qixing1217.top/en/get-started.html) | [FAQ](https://all-api-hub.qixing1217.top/en/faq.html) | [Changelog](https://all-api-hub.qixing1217.top/en/changelog.html) | [Contributing](CONTRIBUTING.md)**
-
-<a id="community"></a>
-<p align="center">
-  <strong>💬 Community:</strong> 
-  <a href="./resources/wechat_group.png">
-    <img alt="WeChat-Chinese Group" src="https://img.shields.io/badge/WeChat-Chinese%20Group-green" />
-  </a>
-  <a href="https://t.me/qixing_chat">
-    <img alt="Telegram-Multilingual Group" src="https://img.shields.io/badge/Telegram-Multilingual%20Group-blue?logo=telegram">
-  </a>
-</p>
+**[Documentation](https://all-api-hub.qixing1217.top/en) | [Supported Tools](https://all-api-hub.qixing1217.top/supported-export-tools.html) | [Supported Sites](https://all-api-hub.qixing1217.top/supported-sites.html) | [Getting Started](https://all-api-hub.qixing1217.top/en/get-started.html) | [FAQ](https://all-api-hub.qixing1217.top/en/faq.html) | [Changelog](https://all-api-hub.qixing1217.top/en/changelog.html) | [Contributing](CONTRIBUTING.md)**
 
 ---
 
@@ -59,10 +48,16 @@ All API Hub is a browser extension for one-stop management of New API-style rela
 - [done-hub](https://github.com/deanxv/done-hub)
 - [Sub2API](https://github.com/Wei-Shaw/sub2api)
 - [AnyRouter](https://anyrouter.top)
+- WONG Public Welfare Site
 - Neo-API (closed source)
 - Super-API (closed source)
 - RIX_API (closed source, basic functionality supported)
 - VoAPI (closed source, old versions supported)
+
+For the latest compatibility references, see:
+
+- [Supported Sites](https://all-api-hub.qixing1217.top/supported-sites.html)
+- [Supported Tools](https://all-api-hub.qixing1217.top/supported-export-tools.html)
 
 <a id="features"></a>
 ## ✨ Features
@@ -89,10 +84,10 @@ All API Hub is a browser extension for one-stop management of New API-style rela
   Aggregate usage across multiple sites/accounts: filter by site, account, token, and date range, compare usage/cost/model breakdowns and trends, and inspect latency/slow requests when needed.
 
 - 🚀 **Quick Export Integration**  
-  Export configuration to CherryStudio, CC Switch, CLIProxyAPI, Claude Code Router, Kilo Code, New API, Veloera, and Octopus.
+  Export configuration to CherryStudio, CC Switch, CLIProxyAPI, Claude Code Router, Kilo Code, and the currently selected managed site target (New API / DoneHub / Veloera / Octopus).
 
-- 🔄 **New API, Veloera & Octopus Management (Self‑Hosted)**  
-  For your self‑hosted New API, Veloera, and Octopus instances: model sync, channel management, and model redirect.
+- 🔄 **Self-Hosted Site Management**  
+  For your self-hosted New API, DoneHub, Veloera, and Octopus instances: channel import, management workflows, and managed-site integrations.
 
 - 🛡️ **Cloudflare Bypass Assistant**  
   Opens a helper window when Cloudflare challenges block detection or refresh, then continues after you complete the challenge.

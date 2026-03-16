@@ -27,7 +27,8 @@
     "actions": {
       "refresh": "刷新管理站点渠道状态",
       "refreshing": "正在刷新管理站点渠道状态",
-      "reviewChannels": "查看候选渠道"
+      "reviewChannels": "查看候选渠道",
+      "verifyNow": "立即验证"
     },
     "badges": {
       "checking": "管理站点：检查中",
@@ -48,7 +49,7 @@
       "configMissing": "请先配置管理站点管理员凭据后再进行校验。",
       "inputPreparationFailed": "无法准备可比对的渠道输入，暂时无法完成校验。",
       "exactVerificationUnavailable": "当前无法执行精确密钥校验，且未找到次级或模糊渠道匹配。",
-      "newApiRetrieveKeyHint": "对于 New API，渠道 key 只有完成 2FA 验证后才能查看，因此暂无法进行精确校验。",
+      "newApiRetrieveKeyHint": "对于 New API，完整的 key 比对依赖渠道 key，而查看渠道 key 本身需要先完成 2FA 验证，因此当前暂无法完成完整 key 比对。",
       "veloeraBaseUrlSearchUnsupported": "该功能在 Veloera 上不受支持，因为 Veloera 不支持按基础地址搜索渠道。",
       "backendSearchFailed": "管理站点校验暂时无法完成。"
     },
@@ -83,6 +84,10 @@
         "tooltipUnavailable": "由于没有可比较的 URL 范围，当前无法完成模型比对。",
         "tooltipNotProvided": "当前 token 没有可用于比较的模型列表。"
       }
+    },
+    "recovery": {
+      "verificationRequired": "完整的 key 比对需要先完成一次短时有效的 New API 验证，因为 New API 查看渠道 key 本身就需要 2FA 验证。",
+      "configureLogin": "请先在设置中填写 New API 登录与两步验证辅助信息，否则当前无法读取渠道 key，也无法完成完整的 key 比对。"
     }
   },
   "repairMissingKeys": {

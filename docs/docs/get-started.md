@@ -26,10 +26,15 @@
 - [Veloera](https://github.com/Veloera/Veloera)
 - [one-hub](https://github.com/MartialBE/one-hub)
 - [done-hub](https://github.com/deanxv/done-hub)
+- WONG公益站
 - [Sub2API](https://github.com/Wei-Shaw/sub2api)
 - [AnyRouter](https://anyrouter.top)
 - [VoAPI](https://github.com/VoAPI/VoAPI)
 - [Super-API](https://github.com/SuperAI-Api/Super-API)
+- Neo-API
+- RIX_API（基本功能支持）
+
+完整的兼容站点请查看 [支持的站点与系统类型](./supported-sites.md)。
 
 ::: warning
 如果站点进行了二次开发导致一些关键接口（例如 `/api/user`）发生了改变，则插件可能无法正常添加此站点。
@@ -81,23 +86,29 @@
 如果目标站点为魔改版本（如 AnyRouter），请在添加账号时手动切换到 **Cookie 模式**，再执行自动识别或手动填写。遇到严格防护的站点时，也可以结合 Cloudflare 过盾助手配合使用。详情可查看 [常见问题](./faq.md#anyrouter-error)。
 
 <a id="quick-export-sites"></a>
-## 4. 快速导出站点
+## 4. 快速导出与集成
 
-本插件支持将已添加的站点 API 配置一键导出到 [CherryStudio](https://github.com/CherryHQ/cherry-studio)、[CC Switch](https://github.com/ccswitch/ccswitch) 和 [New API](https://github.com/QuantumNous/new-api)，从而简化在这些平台中添加上游供应商的流程。
+本插件支持将已添加的站点 API 配置导出到本地客户端、CLI 工具和自建托管站点，从而减少重复录入 `Base URL`、密钥与模型配置的工作量。当前完整列表请查看 [支持的导出工具与集成目标](./supported-export-tools.md)。
 
 ### 4.1 配置
 
-在使用快速导出功能前，您需要先在插件的 **基础设置** 页面中，配置目标平台（New API）的 **服务器地址**、**管理员令牌** 和 **用户 ID**。
+在使用导出 / 集成功能前，请根据目标类型完成对应配置：
+
+- **CherryStudio / CC Switch**：保持目标客户端可用，便于通过 Deeplink 唤起导入。
+- **Kilo Code / Roo Code**：建议提前确认每个密钥对应的模型 ID。
+- **CLIProxyAPI / Claude Code Router**：在基础设置中填写对应的管理地址与凭证。
+- **自建托管站点（New API / DoneHub / Veloera / Octopus）**：在 `设置 -> 基础设置 -> 自建站点管理` 中完成后台配置。
 
 ### 4.2 导出流程
 
 1. **导航至密钥管理**：在插件的 **密钥管理** 页面，找到您想要导出的站点对应的 API 密钥。
-2. **点击导出**：在密钥操作菜单中，选择 **“导出到 CherryStudio / CC Switch / New API”**。
+2. **点击对应操作**：在密钥操作菜单中，选择 **“导出到 CherryStudio”**、**“导出到 CC Switch”**、**“导出 Kilo Code JSON”**、**“导入到 CLIProxyAPI”**、**“导入到 Claude Code Router”** 或 **“导入到当前自建站点”**。
 3. **自动处理**：
-   * **对于 New API**：插件会自动检测目标平台是否已存在相同 `Base URL` 的渠道，避免重复添加。如果不存在，则会创建一个新渠道，并自动填充站点名称、`Base URL`、API 密钥以及可用模型列表。
-   * **对于 CherryStudio / CC Switch**：插件会根据目标应用的协议，将站点和密钥直接发送到本地程序或剪贴板，省去逐项粘贴。
+   * **对于 CherryStudio / CC Switch**：插件会按照目标应用的 Deeplink 协议，自动传递站点信息和 API 密钥。
+   * **对于 Kilo Code / Roo Code**：插件会生成可复制或下载的配置 JSON，便于手动导入。
+   * **对于 CLIProxyAPI / Claude Code Router / 自建托管站点**：插件会调用对应管理接口，创建或更新 Provider / Channel。
 
-通过此功能，您可以轻松地将 API 供应商配置导入到其他平台，无需手动复制粘贴，提高了工作效率。
+通过这些集成能力，您可以把同一个上游站点同步到多个下游工具或后台系统，无需手动重复粘贴。
 
 ## 5. 功能速览
 
@@ -146,6 +157,8 @@
 
 ## 6. 深入文档
 
+- [支持的导出工具与集成目标](./supported-export-tools.md)
+- [支持的站点与系统类型](./supported-sites.md)
 - [Cloudflare 过盾助手](./cloudflare-helper.md)
 - [快速导出站点配置](./quick-export.md)
 - [自动刷新与实时数据](./auto-refresh.md)

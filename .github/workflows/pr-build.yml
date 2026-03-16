@@ -5,7 +5,7 @@ on:
     types: [opened, synchronize, ready_for_review]
     paths:
       - "src/**"
-      - "public/**"
+      - "src/public/**"
       - "plugins/**"
       - "package.json"
       - "pnpm-lock.yaml"
@@ -13,6 +13,7 @@ on:
       - "postcss.config.js"
       - "tailwind.config.js"
       - "wxt.config.ts"
+      - ".github/actions/package-extension/**"
       - ".github/workflows/pr-build.yml"
   workflow_dispatch:
     inputs:
@@ -60,44 +61,15 @@ jobs:
         if: github.event_name == 'pull_request'
         uses: actions/checkout@v5
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10
-          run_install: false
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: "pnpm"
-
-      - name: Install dependencies
-        run: pnpm install
-
       - name: Build extension bundles
-        run: pnpm zip:all
-
-      - name: Collect artifact names
-        id: collect_artifacts
-        run: |
-          if ls .output/*.zip 1> /dev/null 2>&1; then
-            {
-              echo "files<<EOF"
-              for file in .output/*.zip; do
-                basename "$file"
-              done
-              echo "EOF"
-            } >> "$GITHUB_OUTPUT"
-          else
-            echo "files=No artifacts found" >> "$GITHUB_OUTPUT"
-          fi
+        id: package
+        uses: ./.github/actions/package-extension
 
       - name: Write PR build metadata (for workflow_run commenter)
         # pull_request runs from forks use a read-only GITHUB_TOKEN, so comment publishing must be done
         # in a separate workflow triggered by workflow_run (runs in the base repo context).
         env:
-          ARTIFACT_LIST: ${{ steps.collect_artifacts.outputs.files }}
+          ARTIFACT_LIST: ${{ steps.package.outputs.artifact-files }}
           PR_NUMBER: ${{ github.event_name == 'workflow_dispatch' && inputs.pr_number || github.event.pull_request.number }}
           COMMIT_SHA: ${{ github.event_name == 'workflow_dispatch' && steps.pr_details.outputs.sha || github.event.pull_request.head.sha }}
         run: |
@@ -138,7 +110,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         uses: actions/github-script@v7
         env:
-          ARTIFACT_LIST: ${{ steps.collect_artifacts.outputs.files }}
+          ARTIFACT_LIST: ${{ steps.package.outputs.artifact-files }}
           PR_NUMBER: ${{ github.event_name == 'workflow_dispatch' && inputs.pr_number || github.event.pull_request.number }}
           COMMIT_SHA: ${{ github.event_name == 'workflow_dispatch' && steps.pr_details.outputs.sha || github.event.pull_request.head.sha }}
         with:
