@@ -18,6 +18,7 @@ export const fetchOpenAICompatibleModels = async (params: OpenAIAuthParams) => {
     auth: {
       authType: AuthTypeEnum.AccessToken,
       accessToken: params.apiKey,
+      userId: params.userId,
     },
   }
   try {
