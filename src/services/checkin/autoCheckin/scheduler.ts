@@ -791,7 +791,9 @@ class AutoCheckinScheduler {
     try {
       const provider = resolveAutoCheckinProvider(account)
       if (!provider) {
-        const messageKey = "autoCheckin:skipReasons.no_provider"
+        const messageKey = getAutoCheckinSkipReasonTranslationKey(
+          AUTO_CHECKIN_SKIP_REASON.NO_PROVIDER,
+        )
         logger.warn("No check-in provider; skipping", {
           accountId: account.id,
           siteName: account.site_name,

@@ -87,7 +87,7 @@ type BalanceHistoryTrendSeriesScope = "accounts" | "total"
 type BalanceHistoryQuickRangeId = (typeof QUICK_RANGES)[number]["id"]
 
 /**
- * Resolve the localized label for a supported balance-history metric.
+ *
  */
 function getBalanceHistoryMetricLabel(
   t: (key: string, options?: any) => string,
@@ -102,11 +102,13 @@ function getBalanceHistoryMetricLabel(
       return t("balanceHistory:metrics.outcome")
     case "net":
       return t("balanceHistory:metrics.net")
+    default:
+      return t("common:labels.unknown")
   }
 }
 
 /**
- * Resolve the localized label for a supported trend scope.
+ *
  */
 function getBalanceHistoryTrendScopeLabel(
   t: (key: string, options?: any) => string,
@@ -117,11 +119,13 @@ function getBalanceHistoryTrendScopeLabel(
       return t("balanceHistory:trend.scopes.accounts")
     case "total":
       return t("balanceHistory:trend.scopes.total")
+    default:
+      return t("common:labels.unknown")
   }
 }
 
 /**
- * Resolve the localized label for a predefined quick date range.
+ *
  */
 function getBalanceHistoryQuickRangeLabel(
   t: (key: string, options?: any) => string,
@@ -138,6 +142,8 @@ function getBalanceHistoryQuickRangeLabel(
       return t("balanceHistory:filters.quickRanges.180d")
     case "365d":
       return t("balanceHistory:filters.quickRanges.365d")
+    default:
+      return t("common:labels.unknown")
   }
 }
 

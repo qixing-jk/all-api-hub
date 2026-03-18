@@ -7,6 +7,7 @@ import {
   LightBulbIcon,
   StarIcon,
 } from "@heroicons/react/24/outline"
+import type { TFunction } from "i18next"
 import { Info } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
@@ -29,10 +30,7 @@ import PluginIntroCard from "./components/PluginIntroCard"
 import PrivacyNotice from "./components/PrivacyNotice"
 import TechStackGrid from "./components/TechStackGrid"
 
-const getStoreLabel = (
-  t: (key: string, options?: any) => string,
-  storeId: ExtensionStoreId,
-) => {
+const getStoreLabel = (t: TFunction, storeId: ExtensionStoreId) => {
   switch (storeId) {
     case "chrome":
       return t("about:stores.chrome")
@@ -179,20 +177,24 @@ export default function About() {
               buttonVariant="default"
               iconClass="text-yellow-500 dark:text-yellow-400"
             />
-            {otherStoreIds.map((storeId) => (
-              <LinkCard
-                key={storeId}
-                Icon={ArrowDownTrayIcon}
-                title={getStoreLabel(t, storeId)}
-                description={t("storesSection.download.description", {
-                  store: getStoreLabel(t, storeId),
-                })}
-                href={EXTENSION_STORE_LISTING_URLS[storeId]}
-                buttonText={t("storesSection.download.button")}
-                buttonVariant="secondary"
-                iconClass="text-blue-600 dark:text-blue-400"
-              />
-            ))}
+            {otherStoreIds.map((storeId) => {
+              const storeLabel = getStoreLabel(t, storeId)
+
+              return (
+                <LinkCard
+                  key={storeId}
+                  Icon={ArrowDownTrayIcon}
+                  title={storeLabel}
+                  description={t("storesSection.download.description", {
+                    store: storeLabel,
+                  })}
+                  href={EXTENSION_STORE_LISTING_URLS[storeId]}
+                  buttonText={t("storesSection.download.button")}
+                  buttonVariant="secondary"
+                  iconClass="text-blue-600 dark:text-blue-400"
+                />
+              )
+            })}
           </div>
         </section>
 

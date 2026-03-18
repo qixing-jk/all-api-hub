@@ -42,7 +42,7 @@ export const AUTO_CHECKIN_SKIP_REASONS = Object.values(
  */
 export function getAutoCheckinSkipReasonTranslationKey(
   reason: AutoCheckinSkipReason,
-) {
+): string {
   switch (reason) {
     case AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DISABLED:
       return "autoCheckin:skipReasons.account_disabled"
@@ -87,6 +87,23 @@ export type AutoCheckinRunResult =
 export const AUTO_CHECKIN_RUN_RESULTS = Object.values(
   AUTO_CHECKIN_RUN_RESULT,
 ) as AutoCheckinRunResult[]
+
+/**
+ * Returns the localized label for a persisted auto check-in run result.
+ */
+export function getAutoCheckinRunResultLabel(
+  t: (key: string, options?: any) => string,
+  result: AutoCheckinRunResult,
+): string {
+  switch (result) {
+    case AUTO_CHECKIN_RUN_RESULT.SUCCESS:
+      return t("autoCheckin:status.result.success")
+    case AUTO_CHECKIN_RUN_RESULT.PARTIAL:
+      return t("autoCheckin:status.result.partial")
+    case AUTO_CHECKIN_RUN_RESULT.FAILED:
+      return t("autoCheckin:status.result.failed")
+  }
+}
 
 /**
  * Auto check-in execution run type.

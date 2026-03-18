@@ -1,4 +1,5 @@
 import { Tab } from "@headlessui/react"
+import type { TFunction } from "i18next"
 import { ChevronLeft, ChevronRight, Settings } from "lucide-react"
 import {
   Fragment,
@@ -24,6 +25,7 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useHorizontalScrollControls } from "~/hooks/useHorizontalScrollControls"
 import { setLastSeenOptionalPermissions } from "~/services/permissions/optionalPermissionState"
 import { OPTIONAL_PERMISSIONS } from "~/services/permissions/permissionManager"
+import { assertNever } from "~/utils/core/assert"
 import {
   navigateToAnchor,
   parseTabFromUrl,
@@ -122,10 +124,7 @@ interface SettingsTabItem {
 /**
  * Resolve the localized label for a known settings tab id.
  */
-function getSettingsTabLabel(
-  t: (key: string, options?: any) => string,
-  tabId: TabId,
-) {
+function getSettingsTabLabel(t: TFunction, tabId: TabId): string {
   switch (tabId) {
     case "general":
       return t("settings:tabs.general")
@@ -151,6 +150,8 @@ function getSettingsTabLabel(
       return t("settings:tabs.claudeCodeRouter")
     case "permissions":
       return t("settings:tabs.permissions")
+    default:
+      return assertNever(tabId, `Unexpected settings tab id: ${tabId}`)
   }
 }
 

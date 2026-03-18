@@ -1,5 +1,7 @@
 import type { TFunction } from "i18next"
 
+import { assertNever } from "~/utils/core/assert"
+
 import {
   API_TYPES,
   type ApiVerificationApiType,
@@ -12,7 +14,7 @@ import {
 export function getApiVerificationApiTypeLabel(
   t: TFunction,
   apiType: ApiVerificationApiType,
-) {
+): string {
   switch (apiType) {
     case API_TYPES.OPENAI_COMPATIBLE:
       return t("aiApiVerification:verifyDialog.apiTypes.openaiCompatible")
@@ -22,6 +24,11 @@ export function getApiVerificationApiTypeLabel(
       return t("aiApiVerification:verifyDialog.apiTypes.anthropic")
     case API_TYPES.GOOGLE:
       return t("aiApiVerification:verifyDialog.apiTypes.google")
+    default:
+      return assertNever(
+        apiType,
+        `Unexpected API verification type: ${apiType}`,
+      )
   }
 }
 
@@ -31,7 +38,7 @@ export function getApiVerificationApiTypeLabel(
 export function getApiVerificationProbeLabel(
   t: TFunction,
   probeId: ApiVerificationProbeId,
-) {
+): string {
   switch (probeId) {
     case "models":
       return t("aiApiVerification:verifyDialog.probes.models")
@@ -43,5 +50,10 @@ export function getApiVerificationProbeLabel(
       return t("aiApiVerification:verifyDialog.probes.structured-output")
     case "web-search":
       return t("aiApiVerification:verifyDialog.probes.web-search")
+    default:
+      return assertNever(
+        probeId,
+        `Unexpected API verification probe id: ${probeId}`,
+      )
   }
 }
