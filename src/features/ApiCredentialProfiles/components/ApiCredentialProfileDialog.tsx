@@ -24,6 +24,7 @@ import {
   API_TYPES,
   type ApiVerificationApiType,
 } from "~/services/verification/aiApiVerification"
+import { getApiVerificationApiTypeLabel } from "~/services/verification/aiApiVerification/i18n"
 import {
   normalizeGoogleFamilyBaseUrl,
   normalizeOpenAiFamilyBaseUrl,
@@ -68,13 +69,6 @@ function normalizeBaseUrl(
   return apiType === API_TYPES.GOOGLE
     ? normalizeGoogleFamilyBaseUrl(baseUrl)
     : normalizeOpenAiFamilyBaseUrl(baseUrl)
-}
-
-/**
- * Maps apiType values to the i18n key segment used by `aiApiVerification` labels.
- */
-function apiTypeLabelKey(apiType: ApiVerificationApiType) {
-  return apiType === API_TYPES.OPENAI_COMPATIBLE ? "openaiCompatible" : apiType
 }
 
 /**
@@ -377,9 +371,7 @@ export function ApiCredentialProfileDialog({
 
         <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
           {t("apiCredentialProfiles:dialog.meta.apiTypeHint", {
-            apiType: t(
-              `aiApiVerification:verifyDialog.apiTypes.${apiTypeLabelKey(apiType)}`,
-            ),
+            apiType: getApiVerificationApiTypeLabel(t, apiType),
           })}
         </div>
       </div>

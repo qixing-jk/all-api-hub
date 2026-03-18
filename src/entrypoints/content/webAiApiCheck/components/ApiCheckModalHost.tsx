@@ -21,6 +21,7 @@ import {
   type ApiVerificationProbeId,
   type ApiVerificationProbeResult,
 } from "~/services/verification/aiApiVerification"
+import { getApiVerificationProbeLabel } from "~/services/verification/aiApiVerification/i18n"
 import { extractApiCheckCredentialsFromText } from "~/services/verification/webAiApiCheck/extractCredentials"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 
@@ -673,7 +674,6 @@ export function ApiCheckModalHost() {
               <div className="space-y-2">
                 {probes.map((probe) => {
                   const result = probe.result
-                  const nameKey = `verifyDialog.probes.${probe.id}` as const
 
                   const summary = result?.summaryKey
                     ? t(
@@ -694,7 +694,7 @@ export function ApiCheckModalHost() {
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
                             <div className="text-foreground min-w-0 truncate text-sm font-medium">
-                              {t(`aiApiVerification:${nameKey}`)}
+                              {getApiVerificationProbeLabel(t, probe.id)}
                             </div>
                             {result ? (
                               <ProbeStatusBadge result={result} />

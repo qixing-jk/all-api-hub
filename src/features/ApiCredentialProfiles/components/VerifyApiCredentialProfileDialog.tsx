@@ -27,6 +27,10 @@ import {
   type ApiVerificationProbeId,
   type ApiVerificationProbeResult,
 } from "~/services/verification/aiApiVerification"
+import {
+  getApiVerificationApiTypeLabel,
+  getApiVerificationProbeLabel,
+} from "~/services/verification/aiApiVerification/i18n"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { createLogger } from "~/utils/core/logger"
@@ -53,13 +57,6 @@ interface VerifyApiCredentialProfileDialogProps {
 type ModelsProbeOutput = {
   suggestedModelId?: string
   modelIdsPreview?: string[]
-}
-
-/**
- * Maps apiType values to the i18n key segment used by `aiApiVerification` labels.
- */
-function apiTypeLabelKey(apiType: ApiVerificationApiType) {
-  return apiType === API_TYPES.OPENAI_COMPATIBLE ? "openaiCompatible" : apiType
 }
 
 /**
@@ -168,13 +165,9 @@ export function VerifyApiCredentialProfileDialog({
   const hasAnyResult = probes.some((p) => p.result !== null)
   const hasApiTypeOverride = Boolean(profile && apiType !== profile.apiType)
   const savedApiTypeLabel = profile
-    ? t(
-        `aiApiVerification:verifyDialog.apiTypes.${apiTypeLabelKey(profile.apiType)}`,
-      )
+    ? getApiVerificationApiTypeLabel(t, profile.apiType)
     : ""
-  const currentApiTypeLabel = t(
-    `aiApiVerification:verifyDialog.apiTypes.${apiTypeLabelKey(apiType)}`,
-  )
+  const currentApiTypeLabel = getApiVerificationApiTypeLabel(t, apiType)
 
   const header = useMemo(() => {
     if (!profile) return null
@@ -401,27 +394,25 @@ export function VerifyApiCredentialProfileDialog({
                 options={[
                   {
                     value: API_TYPES.OPENAI_COMPATIBLE,
-                    label: t(
-                      `aiApiVerification:verifyDialog.apiTypes.${apiTypeLabelKey(API_TYPES.OPENAI_COMPATIBLE)}`,
+                    label: getApiVerificationApiTypeLabel(
+                      t,
+                      API_TYPES.OPENAI_COMPATIBLE,
                     ),
                   },
                   {
                     value: API_TYPES.OPENAI,
-                    label: t(
-                      `aiApiVerification:verifyDialog.apiTypes.${apiTypeLabelKey(API_TYPES.OPENAI)}`,
-                    ),
+                    label: getApiVerificationApiTypeLabel(t, API_TYPES.OPENAI),
                   },
                   {
                     value: API_TYPES.ANTHROPIC,
-                    label: t(
-                      `aiApiVerification:verifyDialog.apiTypes.${apiTypeLabelKey(API_TYPES.ANTHROPIC)}`,
+                    label: getApiVerificationApiTypeLabel(
+                      t,
+                      API_TYPES.ANTHROPIC,
                     ),
                   },
                   {
                     value: API_TYPES.GOOGLE,
-                    label: t(
-                      `aiApiVerification:verifyDialog.apiTypes.${apiTypeLabelKey(API_TYPES.GOOGLE)}`,
-                    ),
+                    label: getApiVerificationApiTypeLabel(t, API_TYPES.GOOGLE),
                   },
                 ]}
                 value={apiType}
@@ -508,8 +499,9 @@ export function VerifyApiCredentialProfileDialog({
                     ? t(
                         "aiApiVerification:verifyDialog.unsupportedProbeForApiType",
                         {
-                          probe: t(
-                            `aiApiVerification:verifyDialog.probes.${probe.definition.id}`,
+                          probe: getApiVerificationProbeLabel(
+                            t,
+                            probe.definition.id,
                           ),
                         },
                       )
@@ -527,9 +519,7 @@ export function VerifyApiCredentialProfileDialog({
                     <div className="min-w-0 flex-1">
                       <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                         <div className="dark:text-dark-text-primary min-w-0 truncate text-sm font-medium text-gray-900">
-                          {t(
-                            `aiApiVerification:verifyDialog.probes.${probe.definition.id}`,
-                          )}
+                          {getApiVerificationProbeLabel(t, probe.definition.id)}
                         </div>
 
                         <div className="flex items-center gap-2">

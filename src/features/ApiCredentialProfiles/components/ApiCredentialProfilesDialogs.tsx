@@ -5,10 +5,7 @@ import { ClaudeCodeRouterImportDialog } from "~/components/ClaudeCodeRouterImpor
 import { CliProxyExportDialog } from "~/components/CliProxyExportDialog"
 import { VerifyCliSupportDialog } from "~/components/dialogs/VerifyCliSupportDialog"
 import { DestructiveConfirmDialog } from "~/components/ui"
-import {
-  API_TYPES,
-  type ApiVerificationApiType,
-} from "~/services/verification/aiApiVerification"
+import { getApiVerificationApiTypeLabel } from "~/services/verification/aiApiVerification/i18n"
 
 import type { ApiCredentialProfilesController } from "../hooks/useApiCredentialProfilesController"
 import {
@@ -19,13 +16,6 @@ import {
 import { ApiCredentialProfileDialog } from "./ApiCredentialProfileDialog"
 import { KiloCodeProfileExportDialog } from "./KiloCodeProfileExportDialog"
 import { VerifyApiCredentialProfileDialog } from "./VerifyApiCredentialProfileDialog"
-
-/**
- * Maps apiType values to the i18n key segment used by `aiApiVerification` labels.
- */
-function apiTypeLabelKey(apiType: ApiVerificationApiType) {
-  return apiType === API_TYPES.OPENAI_COMPATIBLE ? "openaiCompatible" : apiType
-}
 
 interface ApiCredentialProfilesDialogsProps {
   controller: ApiCredentialProfilesController
@@ -130,8 +120,9 @@ export function ApiCredentialProfilesDialogs({
                 {controller.deletingProfile.name}
               </div>
               <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
-                {t(
-                  `aiApiVerification:verifyDialog.apiTypes.${apiTypeLabelKey(controller.deletingProfile.apiType)}`,
+                {getApiVerificationApiTypeLabel(
+                  t,
+                  controller.deletingProfile.apiType,
                 )}{" "}
                 · {controller.deletingProfile.baseUrl}
               </div>

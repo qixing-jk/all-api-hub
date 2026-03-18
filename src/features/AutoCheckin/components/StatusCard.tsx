@@ -10,6 +10,23 @@ import {
 } from "~/types/autoCheckin"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
 
+/**
+ * Resolve the localized label for a persisted auto-checkin run result.
+ */
+function getAutoCheckinRunResultLabel(
+  t: (key: string, options?: any) => string,
+  result: AutoCheckinRunResult,
+) {
+  switch (result) {
+    case AUTO_CHECKIN_RUN_RESULT.SUCCESS:
+      return t("autoCheckin:status.result.success")
+    case AUTO_CHECKIN_RUN_RESULT.PARTIAL:
+      return t("autoCheckin:status.result.partial")
+    case AUTO_CHECKIN_RUN_RESULT.FAILED:
+      return t("autoCheckin:status.result.failed")
+  }
+}
+
 interface StatusCardProps {
   status: AutoCheckinStatus
   preferences: AutoCheckinPreferences
@@ -153,7 +170,7 @@ export default function StatusCard({ status, preferences }: StatusCardProps) {
                 <span
                   className={`inline-block rounded px-2 py-1 text-sm font-medium ${getResultBadgeColor(status.lastRunResult)}`}
                 >
-                  {t(`status.result.${status.lastRunResult}`)}
+                  {getAutoCheckinRunResultLabel(t, status.lastRunResult)}
                 </span>
               )}
               {!status.lastRunResult && (

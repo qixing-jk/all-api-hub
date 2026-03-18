@@ -30,9 +30,6 @@ export default defineConfig({
     // until we decide to tighten dynamic-key handling more aggressively.
     removeUnusedKeys: false,
     preservePatterns: [
-      "aiApiVerification:verifyDialog.apiTypes.*",
-      "aiApiVerification:verifyDialog.probes.*",
-      "autoCheckin:status.result.*",
       "balanceHistory:filters.quickRanges.*",
       "balanceHistory:metrics.*",
       "balanceHistory:trend.scopes.*",

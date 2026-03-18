@@ -24,6 +24,10 @@ import type {
   ApiVerificationApiType,
   ApiVerificationProbeId,
 } from "~/services/verification/aiApiVerification"
+import {
+  getApiVerificationApiTypeLabel,
+  getApiVerificationProbeLabel,
+} from "~/services/verification/aiApiVerification/i18n"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import type { ApiToken } from "~/types"
 import { createLogger } from "~/utils/core/logger"
@@ -320,19 +324,22 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
                 // Keep a fixed display order for the supported API types.
                 {
                   value: API_TYPES.OPENAI_COMPATIBLE,
-                  label: t("verifyDialog.apiTypes.openaiCompatible"),
+                  label: getApiVerificationApiTypeLabel(
+                    t,
+                    API_TYPES.OPENAI_COMPATIBLE,
+                  ),
                 },
                 {
                   value: API_TYPES.OPENAI,
-                  label: t("verifyDialog.apiTypes.openai"),
+                  label: getApiVerificationApiTypeLabel(t, API_TYPES.OPENAI),
                 },
                 {
                   value: API_TYPES.ANTHROPIC,
-                  label: t("verifyDialog.apiTypes.anthropic"),
+                  label: getApiVerificationApiTypeLabel(t, API_TYPES.ANTHROPIC),
                 },
                 {
                   value: API_TYPES.GOOGLE,
-                  label: t("verifyDialog.apiTypes.google"),
+                  label: getApiVerificationApiTypeLabel(t, API_TYPES.GOOGLE),
                 },
               ]}
               value={apiType}
@@ -381,7 +388,10 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
                 ? t(result.summaryKey, result.summaryParams)
                 : result?.status === "unsupported"
                   ? t("verifyDialog.unsupportedProbeForApiType", {
-                      probe: t(`verifyDialog.probes.${probe.definition.id}`),
+                      probe: getApiVerificationProbeLabel(
+                        t,
+                        probe.definition.id,
+                      ),
                     })
                   : result
                     ? result.summary
@@ -396,7 +406,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
                   <div className="min-w-0 flex-1">
                     <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                       <div className="dark:text-dark-text-primary min-w-0 truncate text-sm font-medium text-gray-900">
-                        {t(`verifyDialog.probes.${probe.definition.id}`)}
+                        {getApiVerificationProbeLabel(t, probe.definition.id)}
                       </div>
 
                       <div className="flex items-center gap-2">

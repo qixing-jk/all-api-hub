@@ -26,10 +26,7 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
 import type { ManagedSiteType } from "~/constants/siteType"
-import {
-  API_TYPES,
-  type ApiVerificationApiType,
-} from "~/services/verification/aiApiVerification"
+import { getApiVerificationApiTypeLabel } from "~/services/verification/aiApiVerification/i18n"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 
 /**
@@ -45,13 +42,6 @@ function formatSecret(
   return `${secret.substring(0, 8)}${"*".repeat(16)}${secret.substring(
     secret.length - 4,
   )}`
-}
-
-/**
- * Maps apiType values to the i18n key segment used by `aiApiVerification` labels.
- */
-function apiTypeLabelKey(apiType: ApiVerificationApiType) {
-  return apiType === API_TYPES.OPENAI_COMPATIBLE ? "openaiCompatible" : apiType
 }
 
 export type ApiCredentialProfileExportAction =
@@ -118,9 +108,7 @@ export function ApiCredentialProfileListItem({
             <div className="flex min-w-0 flex-wrap items-center gap-2">
               <Heading6 className="min-w-0 truncate">{profile.name}</Heading6>
               <Badge variant="outline" size="sm">
-                {t(
-                  `aiApiVerification:verifyDialog.apiTypes.${apiTypeLabelKey(profile.apiType)}`,
-                )}
+                {getApiVerificationApiTypeLabel(t, profile.apiType)}
               </Badge>
               {tagNames.map((tag) => (
                 <Badge key={tag} variant="secondary" size="sm">
