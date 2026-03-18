@@ -1,78 +1,78 @@
 {
   "verifyDialog": {
-    "title": "接口验证",
-    "loadingTokensHint": "正在加载密钥...",
-    "idleHint": "请选择密钥开始验证；模型相关探测需要填写模型 ID。",
-    "warning": "此功能为 Beta。检测到支持时，高概率为真实支持；未检测到支持时，也可能实际支持。结果仅供参考，请以工具的实际使用情况为准。",
-    "notRunYet": "尚未运行",
-    "requiresModelId": "请输入模型 ID 后运行该测试。",
-    "unsupportedProbeForApiType": "当前接口类型不支持 {{probe}} 探测。",
-    "errors": {
-      "unexpected": "发生未知错误"
-    },
-    "summaries": {
-      "modelsFetched": "成功获取 {{count}} 个模型。",
-      "noModelsReturned": "未返回任何模型。",
-      "textGenerationSucceeded": "文本生成成功。",
-      "textGenerationUnexpectedResponse": "返回内容不符合预期。",
-      "noToolCallDetected": "未检测到工具调用（模型可能不支持工具）。",
-      "toolCallSucceeded": "工具调用成功。",
-      "structuredOutputSucceeded": "结构化输出成功。",
-      "structuredOutputInvalid": "输出内容无效。",
-      "webSearchUnsupportedAnthropic": "Anthropic 接口不支持联网搜索探测。",
-      "webSearchSucceeded": "联网搜索成功。",
-      "webSearchNoResults": "未获取到联网搜索结果。",
-      "webSearchGroundingSucceeded": "联网搜索 / Grounding 成功。",
-      "webSearchGroundingNoResults": "未获取到联网搜索 / Grounding 结果。",
-      "webSearchUnsupportedForApiType": "当前接口类型不支持联网搜索探测。",
-      "webSearchRequiresExplicitSupport": "联网搜索探测需要显式的接口类型支持。",
-      "modelsProbeUnsupportedForApiType": "当前接口类型不支持模型列表探测。",
-      "noModelIdProvided": "未提供模型 ID，无法运行探测。",
-      "noModelIdProvidedToRunProbe": "未提供模型 ID，无法运行探测。",
-      "noModelIdProvidedToRunProbes": "未提供模型 ID，无法运行探测。",
-      "noModelAvailableToRunProbes": "没有可用模型，无法运行探测。",
-      "unauthorized": "未授权（401）：密钥无效或缺少认证",
-      "forbidden": "禁止访问（403）：访问被拒绝",
-      "endpointNotFound": "端点不存在（404）：此 API 可能不受支持",
-      "httpError": "HTTP 错误（{{status}}）"
-    },
-    "meta": {
-      "token": "密钥",
-      "tokenPlaceholder": "选择密钥",
-      "apiType": "接口类型",
-      "apiTypePlaceholder": "选择接口类型",
-      "model": "模型",
-      "modelPlaceholder": "输入模型 ID"
-    },
-    "apiTypes": {
-      "openaiCompatible": "OpenAI 兼容",
-      "openai": "OpenAI",
-      "anthropic": "Anthropic",
-      "google": "Google/Gemini"
-    },
     "actions": {
       "close": "关闭",
-      "run": "开始验证",
-      "runOne": "运行",
       "retry": "重试",
-      "running": "运行中..."
+      "run": "开始验证",
+      "running": "运行中...",
+      "runOne": "运行"
     },
-    "status": {
-      "pass": "通过",
-      "fail": "失败",
-      "pending": "待运行",
-      "unsupported": "不支持"
+    "apiTypes": {
+      "anthropic": "Anthropic",
+      "google": "Google/Gemini",
+      "openai": "OpenAI",
+      "openaiCompatible": "OpenAI 兼容"
     },
     "details": {
       "input": "输入",
       "output": "输出"
     },
+    "errors": {
+      "unexpected": "发生未知错误"
+    },
+    "idleHint": "请选择密钥开始验证；模型相关探测需要填写模型 ID。",
+    "loadingTokensHint": "正在加载密钥...",
+    "meta": {
+      "apiType": "接口类型",
+      "apiTypePlaceholder": "选择接口类型",
+      "model": "模型",
+      "modelPlaceholder": "输入模型 ID",
+      "token": "密钥",
+      "tokenPlaceholder": "选择密钥"
+    },
+    "notRunYet": "尚未运行",
     "probes": {
       "models": "模型列表接口 (/v1/models)",
+      "structured-output": "结构化输出（JSON Schema）",
       "text-generation": "文本生成",
       "tool-calling": "工具/函数调用",
-      "structured-output": "结构化输出（JSON Schema）",
       "web-search": "联网搜索 / Grounding"
-    }
+    },
+    "requiresModelId": "请输入模型 ID 后运行该测试。",
+    "status": {
+      "fail": "失败",
+      "pass": "通过",
+      "pending": "待运行",
+      "unsupported": "不支持"
+    },
+    "summaries": {
+      "endpointNotFound": "端点不存在（404）：此 API 可能不受支持",
+      "forbidden": "禁止访问（403）：访问被拒绝",
+      "httpError": "HTTP 错误（{{status}}）",
+      "modelsFetched": "成功获取 {{count}} 个模型。",
+      "modelsProbeUnsupportedForApiType": "当前接口类型不支持模型列表探测。",
+      "noModelAvailableToRunProbes": "没有可用模型，无法运行探测。",
+      "noModelIdProvided": "未提供模型 ID，无法运行探测。",
+      "noModelIdProvidedToRunProbe": "未提供模型 ID，无法运行探测。",
+      "noModelIdProvidedToRunProbes": "未提供模型 ID，无法运行探测。",
+      "noModelsReturned": "未返回任何模型。",
+      "noToolCallDetected": "未检测到工具调用（模型可能不支持工具）。",
+      "structuredOutputInvalid": "输出内容无效。",
+      "structuredOutputSucceeded": "结构化输出成功。",
+      "textGenerationSucceeded": "文本生成成功。",
+      "textGenerationUnexpectedResponse": "返回内容不符合预期。",
+      "toolCallSucceeded": "工具调用成功。",
+      "unauthorized": "未授权（401）：密钥无效或缺少认证",
+      "webSearchGroundingNoResults": "未获取到联网搜索 / Grounding 结果。",
+      "webSearchGroundingSucceeded": "联网搜索 / Grounding 成功。",
+      "webSearchNoResults": "未获取到联网搜索结果。",
+      "webSearchRequiresExplicitSupport": "联网搜索探测需要显式的接口类型支持。",
+      "webSearchSucceeded": "联网搜索成功。",
+      "webSearchUnsupportedAnthropic": "Anthropic 接口不支持联网搜索探测。",
+      "webSearchUnsupportedForApiType": "当前接口类型不支持联网搜索探测。"
+    },
+    "title": "接口验证",
+    "unsupportedProbeForApiType": "当前接口类型不支持 {{probe}} 探测。",
+    "warning": "此功能为 Beta。检测到支持时，高概率为真实支持；未检测到支持时，也可能实际支持。结果仅供参考，请以工具的实际使用情况为准。"
   }
 }

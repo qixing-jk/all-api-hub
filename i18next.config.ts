@@ -24,8 +24,8 @@ export default defineConfig({
     primaryLanguage: "zh-CN",
     secondaryLanguages: ["en"],
     indentation: 2,
-    sort: false,
+    sort: true,
     disablePlurals: true,
-    removeUnusedKeys: false,
+    removeUnusedKeys: true,
   },
 })

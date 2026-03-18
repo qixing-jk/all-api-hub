@@ -1,231 +1,199 @@
 {
-  "toast": {
-    "loading": {
-      "refreshingAccount": "正在刷新 {{accountName}}...",
-      "fetchingAccountData": "正在获取账号数据..."
-    },
-    "success": {
-      "refreshAccount": "{{accountName}} 刷新成功！",
-      "refreshSkipped": "刷新间隔未到，已跳过",
-      "urlCopied": "{{accountName}} 的 URL 已复制到剪贴板",
-      "bookmarkUrlCopied": "{{name}} 的链接已复制到剪贴板",
-      "accountAdded": "账号 {{name}} 添加成功!",
-      "accountUpdated": "账号 {{name}} 更新成功!",
-      "bookmarkAdded": "书签 {{name}} 添加成功!",
-      "bookmarkUpdated": "书签 {{name}} 更新成功!",
-      "bookmarkDeleted": "书签 {{name}} 已删除",
-      "accountSaveSuccess": "账号保存成功",
-      "accountUpdateSuccess": "账号更新成功",
-      "autoDetectSuccess": "自动识别成功！",
-      "keyCopied": "密钥 {{name}} 已复制到剪贴板",
-      "deleteKeySuccess": "密钥 {{name}} 删除成功",
-      "importedAccounts": "已导入并迁移 {{migratedCount}} 个账号",
-      "importSuccess": "导入成功",
-      "accountPinned": "已置顶 {{accountName}}",
-      "accountUnpinned": "已取消置顶 {{accountName}}",
-      "bookmarkPinned": "已置顶 {{name}}",
-      "bookmarkUnpinned": "已取消置顶 {{name}}",
-      "accountDisabled": "已禁用 {{accountName}}",
-      "accountEnabled": "已启用 {{accountName}}",
-      "shareSnapshotCopied": "快照已复制到剪贴板",
-      "shareSnapshotDownloaded": "快照已下载",
-      "shareSnapshotCaptionCopied": "文案已复制",
-      "externalCheckInOpened": "已为 {{count}} 个账号打开外部签到（{{mode}}）。",
-      "externalCheckInModeAll": "全部",
-      "externalCheckInModeUnchecked": "仅未签到",
-      "duplicateCleanupSuccess": "已从 {{groups}} 组重复中删除 {{count}} 个账号。"
-    },
-    "error": {
-      "externalCheckInNonePending": "没有今日未打开过的外部签到站。",
-      "refreshAccount": "刷新 {{accountName}} 失败",
-      "loadAccountFailed": "加载账号数据失败",
-      "operationFailed": "操作失败: {{error}}",
-      "saveFailed": "保存失败",
-      "saveAccountFailed": "保存账号失败",
-      "copyFailed": "复制失败",
-      "accountNotFound": "找不到对应账号信息",
-      "deleteKeyFailed": "删除密钥失败，请稍后重试",
-      "loadKeyFailed": "加载密钥列表失败",
-      "findAccountDetailsFailed": "找不到账户详情",
-      "importFailed": "导入失败: {{error}}",
-      "shareSnapshotNoEnabledAccounts": "没有可分享的已启用账号",
-      "shareSnapshotAccountDisabled": "账号已禁用",
-      "duplicateCleanupFailed": "删除重复账号失败：{{error}}"
-    }
-  },
-  "errors": {
-    "validation": {
-      "urlRequired": "站点地址不能为空",
-      "bookmarkNameRequired": "书签名称不能为空",
-      "bookmarkUrlRequired": "书签链接不能为空",
-      "userIdNumeric": "用户 ID 必须是数字",
-      "incompleteAccountInfo": "请填写完整的账号信息",
-      "updateAccountFailed": "更新账号失败 {{error}}",
-      "newApiBaseUrlRequired": "New API 基础 URL 未配置",
-      "newApiAdminTokenRequired": "New API 管理员令牌未配置",
-      "newApiUserIdRequired": "New API 用户 ID 未配置",
-      "doneHubBaseUrlRequired": "Done Hub 基础 URL 未配置",
-      "doneHubAdminTokenRequired": "Done Hub 管理员令牌未配置",
-      "doneHubUserIdRequired": "Done Hub 用户 ID 未配置",
-      "veloeraBaseUrlRequired": "Veloera 基础 URL 未配置",
-      "veloeraAdminTokenRequired": "Veloera 管理员令牌未配置",
-      "veloeraUserIdRequired": "Veloera 用户 ID 未配置"
-    },
-    "api": {
-      "fetchUserInfoFailed": "获取用户信息失败",
-      "getAccessTokenFailed": "获取访问令牌失败",
-      "invalidResponseFormat": "响应数据格式错误",
-      "onlyJsonSupported": "仅支持 JSON 响应数据"
-    },
-    "operation": {
-      "autoDetectFailed": "自动识别失败: {{error}}",
-      "saveFailed": "保存失败: {{error}}",
-      "updateFailed": "更新失败: {{error}}",
-      "deleteFailed": "删除失败: {{error}}",
-      "failed": "操作失败: {{error}}",
-      "noResponseMessage": "删除操作未返回成功响应"
-    },
-    "unknown": "未知错误"
-  },
-  "cherryStudio": {
-    "missingCredentials": "缺少必要的账户或密钥信息",
-    "attemptingRedirect": "正在尝试跳转到 Cherry Studio",
-    "unableToOpen": "无法打开,请确保已安装 Cherry Studio"
-  },
-  "ccswitch": {
-    "missingCredentials": "缺少必要的账户或密钥信息",
-    "invalidApp": "不支持的 CC Switch 目标应用",
-    "invalidEndpoint": "接口地址无效或未填写",
-    "invalidHomepage": "主页地址无效或未填写",
-    "attemptingRedirect": "正在尝试跳转到 CC Switch",
-    "unableToOpen": "无法打开 CC Switch，请确认已安装"
-  },
   "accountOperations": {
-    "checkingApiKeys": "正在检查 API 密钥...",
-    "importingToNewApi": "正在导入到 New API...",
-    "importingToDoneHub": "正在导入到 Done Hub...",
-    "importingToVeloera": "正在导入到 Veloera...",
-    "importingToOctopus": "正在导入到 Octopus...",
-    "autoProvisionCreated": "已为 {{accountName}} 自动创建默认 API 密钥。",
     "autoProvisionAlreadyHad": "{{accountName}} 已存在 API 密钥，已跳过自动创建。",
+    "autoProvisionCreated": "已为 {{accountName}} 自动创建默认 API 密钥。",
     "autoProvisionFailed": "账号已保存，但自动创建 API 密钥失败。你可以在密钥管理中使用“{{actionLabel}}”重试。",
+    "checkingApiKeys": "正在检查 API 密钥...",
     "createTokenFailed": "创建 API 令牌失败",
-    "tokenNotFound": "无法创建或找到 API 令牌",
-    "retrying": "出现错误，进行第{{attempt}}次重试"
-  },
-  "operations": {
-    "account": {
-      "deleting": "正在删除账号 {{name}}..."
-    },
-    "token": {
-      "createFailed": "创建 API 令牌失败"
-    },
-    "detection": {
-      "failed": "自动检测失败，请手动输入信息或确保已在目标站点登录",
-      "getUserIdFailed": "无法获取用户 ID",
-      "getInfoFailed": "未能获取到用户名或访问令牌"
-    }
-  },
-  "sub2api": {
-    "loginRequired": "请先登录 Sub2API 控制台（插件会读取 auth_token/auth_user 用于导入会话）后再重试。",
-    "refreshTokenInvalid": "Sub2API refresh_token 已失效/已轮转。请从控制台重新导入会话（推荐无痕/隐私窗口），或粘贴新的 refresh_token 后重试。",
-    "groupMissing": "Sub2API 分组“{{group}}”已不可用。请刷新分组列表后重试。"
-  },
-  "newapi": {
-    "configMissing": "请先在基础设置中配置 New API 地址、管理员令牌和用户 ID",
-    "dataFetchFailed": "获取 New API 数据失败，请检查配置是否正确",
-    "noAnyModels": "暂无可用模型",
-    "noChannelsToSync": "没有可同步的渠道",
-    "channelExists": "渠道 {{channelName}} 已存在，无需再次导入",
-    "channelMatchUnresolved": "可能已经存在重复渠道，但当前需要先完成 New API 验证才能确认。请先完成验证后再重试导入。",
-    "importSuccess": "成功导入新渠道 {{channelName}}",
-    "importFailed": "导入失败，发生未知错误"
-  },
-  "donehub": {
-    "configMissing": "请先在基础设置中配置 Done Hub 地址、管理员令牌和用户 ID",
-    "dataFetchFailed": "获取 Done Hub 数据失败，请检查配置是否正确",
-    "noAnyModels": "暂无可用模型",
-    "noChannelsToSync": "没有可同步的渠道",
-    "channelExists": "渠道 {{channelName}} 已存在，无需再次导入",
-    "importSuccess": "成功导入新渠道 {{channelName}}",
-    "importFailed": "导入失败，发生未知错误"
-  },
-  "veloera": {
-    "configMissing": "请先在基础设置中配置 Veloera 地址、管理员令牌和用户 ID",
-    "dataFetchFailed": "获取 Veloera 数据失败，请检查配置是否正确",
-    "noAnyModels": "暂无可用模型",
-    "noChannelsToSync": "没有可同步的渠道",
-    "channelExists": "渠道 {{channelName}} 已存在，无需再次导入",
-    "importSuccess": "成功导入新渠道 {{channelName}}",
-    "importFailed": "导入失败，发生未知错误"
-  },
-  "octopus": {
-    "configMissing": "请先在基础设置中配置 Octopus 地址、用户名和密码",
-    "dataFetchFailed": "获取 Octopus 数据失败，请检查配置是否正确",
-    "noAnyModels": "暂无可用模型",
-    "noChannelsToSync": "没有可同步的渠道",
-    "channelExists": "渠道 {{channelName}} 已存在，无需再次导入",
-    "importSuccess": "成功导入新渠道 {{channelName}}",
-    "importFailed": "导入失败，发生未知错误",
-    "loginFailed": "登录 Octopus 失败，请检查用户名和密码",
-    "tokenExpired": "Octopus 登录已过期，正在重新登录...",
-    "corsError": "这可能是 CORS 配置问题。请在 Octopus 设置中检查 CORS 白名单配置。"
-  },
-  "cliproxy": {
-    "configMissing": "请先在设置中配置 CLIProxyAPI 管理接口地址和密钥",
-    "updateSuccess": "已成功更新 CLIProxy 提供商 {{name}}",
-    "importSuccess": "已成功将提供商 {{name}} 导入到 CLIProxyAPI",
-    "importFailed": "导入到 CLIProxyAPI 失败"
-  },
-  "claudeCodeRouter": {
-    "configMissing": "请先在设置中配置 Claude Code Router 基础 URL",
-    "modelsMissing": "请至少填写一个模型",
-    "updateSuccess": "已成功更新 Claude Code Router 提供商 {{name}}",
-    "importSuccess": "已成功将提供商 {{name}} 导入到 Claude Code Router",
-    "importFailed": "导入到 Claude Code Router 失败"
+    "importingToDoneHub": "正在导入到 Done Hub...",
+    "importingToNewApi": "正在导入到 New API...",
+    "importingToOctopus": "正在导入到 Octopus...",
+    "importingToVeloera": "正在导入到 Veloera...",
+    "retrying": "出现错误，进行第{{attempt}}次重试",
+    "tokenNotFound": "无法创建或找到 API 令牌"
   },
   "autodetect": {
-    "timeout": "自动识别超时,请尝试手动添加",
-    "notLoggedIn": "您未在当前站点登录,或者登录信息已过期,无法自动添加,可查看帮助文档或点击先进行登录",
-    "loginThisSite": "登录此站点",
-    "unexpectedData": "自动识别未成功,站点返回数据不符合预期,请手动输入信息或确保已在目标站点登录",
-    "networkError": "网络连接失败,请检查网络连接后重试",
+    "failed": "自动识别失败:",
     "forbidden": "访问被拒绝,请确认是否是网站防火墙是否阻止了相关请求",
+    "loginThisSite": "登录此站点",
+    "networkError": "网络连接失败,请检查网络连接后重试",
     "notFound": "未找到相关资源,请确认所填写的站点地址是否正确",
+    "notLoggedIn": "您未在当前站点登录,或者登录信息已过期,无法自动添加,可查看帮助文档或点击先进行登录",
     "serverError": "服务器错误,请稍后重试",
-    "failed": "自动识别失败:"
-  },
-  "webdav": {
-    "configIncomplete": "请先完整填写 WebDAV URL、用户名和密码",
-    "syncDataSelectionRequired": "请至少选择一个要同步的数据类型",
-    "authFailed": "鉴权失败，请检查用户名/密码",
-    "connectionFailed": "连接失败，状态码: {{status}}",
-    "fileNotFound": "远程备份文件不存在",
-    "downloadFailed": "下载失败，状态码: {{status}}",
-    "uploadFailed": "上传失败，状态码: {{status}}",
-    "encryptFailedNoPassword": "已开启加密，但未设置密码",
-    "decryptFailedNoPassword": "备份已加密，但未设置密码",
-    "decryptFailed": "解密备份失败，请检查密码"
-  },
-  "storage": {
-    "accountNotFound": "账号 {{id}} 不存在",
-    "accountDisabled": "账号 {{id}} 已禁用",
-    "updateFailed": "更新账号失败"
+    "timeout": "自动识别超时,请尝试手动添加",
+    "unexpectedData": "自动识别未成功,站点返回数据不符合预期,请手动输入信息或确保已在目标站点登录"
   },
   "background": {
     "cannotCreateWindow": "无法创建窗口",
     "cannotCreateWindowOrTab": "无法创建窗口或获取标签页",
-    "pageLoadTimeout": "页面加载超时",
-    "windowNotFound": "未找到对应窗口或标签页",
     "incognitoAccessRequired": "需要允许扩展在无痕模式运行才能使用无痕临时窗口，请在扩展管理页开启“允许在无痕模式运行”后重试",
-    "invalidFetchRequest": "无效的请求参数"
+    "invalidFetchRequest": "无效的请求参数",
+    "pageLoadTimeout": "页面加载超时",
+    "windowNotFound": "未找到对应窗口或标签页"
+  },
+  "ccswitch": {
+    "attemptingRedirect": "正在尝试跳转到 CC Switch",
+    "invalidApp": "不支持的 CC Switch 目标应用",
+    "invalidEndpoint": "接口地址无效或未填写",
+    "invalidHomepage": "主页地址无效或未填写",
+    "missingCredentials": "缺少必要的账户或密钥信息",
+    "unableToOpen": "无法打开 CC Switch，请确认已安装"
+  },
+  "cherryStudio": {
+    "attemptingRedirect": "正在尝试跳转到 Cherry Studio",
+    "missingCredentials": "缺少必要的账户或密钥信息",
+    "unableToOpen": "无法打开,请确保已安装 Cherry Studio"
+  },
+  "claudeCodeRouter": {
+    "configMissing": "请先在设置中配置 Claude Code Router 基础 URL",
+    "importFailed": "导入到 Claude Code Router 失败",
+    "importSuccess": "已成功将提供商 {{name}} 导入到 Claude Code Router",
+    "modelsMissing": "请至少填写一个模型",
+    "updateSuccess": "已成功更新 Claude Code Router 提供商 {{name}}"
+  },
+  "cliproxy": {
+    "configMissing": "请先在设置中配置 CLIProxyAPI 管理接口地址和密钥",
+    "importFailed": "导入到 CLIProxyAPI 失败",
+    "importSuccess": "已成功将提供商 {{name}} 导入到 CLIProxyAPI",
+    "updateSuccess": "已成功更新 CLIProxy 提供商 {{name}}"
   },
   "content": {
     "userInfoNotFound": "未找到用户信息，请确保已登录",
     "waitUserInfoTimeout": "等待用户信息超时，请确保已登录"
   },
+  "donehub": {
+    "channelExists": "渠道 {{channelName}} 已存在，无需再次导入",
+    "configMissing": "请先在基础设置中配置 Done Hub 地址、管理员令牌和用户 ID",
+    "importFailed": "导入失败，发生未知错误",
+    "importSuccess": "成功导入新渠道 {{channelName}}",
+    "noAnyModels": "暂无可用模型",
+    "noChannelsToSync": "没有可同步的渠道"
+  },
+  "errors": {
+    "api": {
+      "invalidResponseFormat": "响应数据格式错误",
+      "onlyJsonSupported": "仅支持 JSON 响应数据"
+    },
+    "operation": {
+      "failed": "操作失败: {{error}}",
+      "saveFailed": "保存失败: {{error}}"
+    },
+    "unknown": "未知错误",
+    "validation": {
+      "bookmarkNameRequired": "书签名称不能为空",
+      "bookmarkUrlRequired": "书签链接不能为空",
+      "doneHubAdminTokenRequired": "Done Hub 管理员令牌未配置",
+      "doneHubBaseUrlRequired": "Done Hub 基础 URL 未配置",
+      "doneHubUserIdRequired": "Done Hub 用户 ID 未配置",
+      "incompleteAccountInfo": "请填写完整的账号信息",
+      "newApiAdminTokenRequired": "New API 管理员令牌未配置",
+      "newApiBaseUrlRequired": "New API 基础 URL 未配置",
+      "newApiUserIdRequired": "New API 用户 ID 未配置",
+      "updateAccountFailed": "更新账号失败 {{error}}",
+      "urlRequired": "站点地址不能为空",
+      "userIdNumeric": "用户 ID 必须是数字",
+      "veloeraAdminTokenRequired": "Veloera 管理员令牌未配置",
+      "veloeraBaseUrlRequired": "Veloera 基础 URL 未配置",
+      "veloeraUserIdRequired": "Veloera 用户 ID 未配置"
+    }
+  },
+  "newapi": {
+    "channelExists": "渠道 {{channelName}} 已存在，无需再次导入",
+    "channelMatchUnresolved": "可能已经存在重复渠道，但当前需要先完成 New API 验证才能确认。请先完成验证后再重试导入。",
+    "configMissing": "请先在基础设置中配置 New API 地址、管理员令牌和用户 ID",
+    "importFailed": "导入失败，发生未知错误",
+    "importSuccess": "成功导入新渠道 {{channelName}}",
+    "noAnyModels": "暂无可用模型",
+    "noChannelsToSync": "没有可同步的渠道"
+  },
+  "octopus": {
+    "channelExists": "渠道 {{channelName}} 已存在，无需再次导入",
+    "configMissing": "请先在基础设置中配置 Octopus 地址、用户名和密码",
+    "corsError": "这可能是 CORS 配置问题。请在 Octopus 设置中检查 CORS 白名单配置。",
+    "importFailed": "导入失败，发生未知错误",
+    "importSuccess": "成功导入新渠道 {{channelName}}",
+    "noAnyModels": "暂无可用模型",
+    "noChannelsToSync": "没有可同步的渠道"
+  },
+  "operations": {
+    "detection": {
+      "failed": "自动检测失败，请手动输入信息或确保已在目标站点登录",
+      "getInfoFailed": "未能获取到用户名或访问令牌",
+      "getUserIdFailed": "无法获取用户 ID"
+    }
+  },
+  "storage": {
+    "accountDisabled": "账号 {{id}} 已禁用",
+    "accountNotFound": "账号 {{id}} 不存在",
+    "updateFailed": "更新账号失败"
+  },
+  "sub2api": {
+    "groupMissing": "Sub2API 分组“{{group}}”已不可用。请刷新分组列表后重试。",
+    "loginRequired": "请先登录 Sub2API 控制台（插件会读取 auth_token/auth_user 用于导入会话）后再重试。",
+    "refreshTokenInvalid": "Sub2API refresh_token 已失效/已轮转。请从控制台重新导入会话（推荐无痕/隐私窗口），或粘贴新的 refresh_token 后重试。"
+  },
+  "toast": {
+    "error": {
+      "copyFailed": "复制失败",
+      "duplicateCleanupFailed": "删除重复账号失败：{{error}}",
+      "externalCheckInNonePending": "没有今日未打开过的外部签到站。",
+      "findAccountDetailsFailed": "找不到账户详情",
+      "operationFailed": "操作失败: {{error}}",
+      "refreshAccount": "刷新 {{accountName}} 失败",
+      "saveFailed": "保存失败",
+      "shareSnapshotAccountDisabled": "账号已禁用",
+      "shareSnapshotNoEnabledAccounts": "没有可分享的已启用账号"
+    },
+    "loading": {
+      "refreshingAccount": "正在刷新 {{accountName}}..."
+    },
+    "success": {
+      "accountDisabled": "已禁用 {{accountName}}",
+      "accountEnabled": "已启用 {{accountName}}",
+      "accountPinned": "已置顶 {{accountName}}",
+      "accountSaveSuccess": "账号保存成功",
+      "accountUnpinned": "已取消置顶 {{accountName}}",
+      "accountUpdateSuccess": "账号更新成功",
+      "bookmarkAdded": "书签 {{name}} 添加成功!",
+      "bookmarkDeleted": "书签 {{name}} 已删除",
+      "bookmarkPinned": "已置顶 {{name}}",
+      "bookmarkUnpinned": "已取消置顶 {{name}}",
+      "bookmarkUpdated": "书签 {{name}} 更新成功!",
+      "bookmarkUrlCopied": "{{name}} 的链接已复制到剪贴板",
+      "duplicateCleanupSuccess": "已从 {{groups}} 组重复中删除 {{count}} 个账号。",
+      "externalCheckInModeAll": "全部",
+      "externalCheckInModeUnchecked": "仅未签到",
+      "externalCheckInOpened": "已为 {{count}} 个账号打开外部签到（{{mode}}）。",
+      "refreshAccount": "{{accountName}} 刷新成功！",
+      "refreshSkipped": "刷新间隔未到，已跳过",
+      "shareSnapshotCaptionCopied": "文案已复制",
+      "shareSnapshotCopied": "快照已复制到剪贴板",
+      "shareSnapshotDownloaded": "快照已下载",
+      "urlCopied": "{{accountName}} 的 URL 已复制到剪贴板"
+    }
+  },
+  "veloera": {
+    "channelExists": "渠道 {{channelName}} 已存在，无需再次导入",
+    "configMissing": "请先在基础设置中配置 Veloera 地址、管理员令牌和用户 ID",
+    "importFailed": "导入失败，发生未知错误",
+    "importSuccess": "成功导入新渠道 {{channelName}}",
+    "noAnyModels": "暂无可用模型",
+    "noChannelsToSync": "没有可同步的渠道"
+  },
   "warnings": {
-    "accountUpdatedWithoutDataRefresh": "账号配置已保存，但刷新最新数据失败",
-    "accountSavedWithoutDataRefresh": "账号保存成功，但获取账号数据失败。您可以稍后从账号列表刷新数据。"
+    "accountSavedWithoutDataRefresh": "账号保存成功，但获取账号数据失败。您可以稍后从账号列表刷新数据。",
+    "accountUpdatedWithoutDataRefresh": "账号配置已保存，但刷新最新数据失败"
+  },
+  "webdav": {
+    "authFailed": "鉴权失败，请检查用户名/密码",
+    "configIncomplete": "请先完整填写 WebDAV URL、用户名和密码",
+    "connectionFailed": "连接失败，状态码: {{status}}",
+    "decryptFailed": "解密备份失败，请检查密码",
+    "decryptFailedNoPassword": "备份已加密，但未设置密码",
+    "downloadFailed": "下载失败，状态码: {{status}}",
+    "encryptFailedNoPassword": "已开启加密，但未设置密码",
+    "fileNotFound": "远程备份文件不存在",
+    "syncDataSelectionRequired": "请至少选择一个要同步的数据类型",
+    "uploadFailed": "上传失败，状态码: {{status}}"
   }
 }

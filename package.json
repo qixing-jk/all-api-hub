@@ -25,6 +25,7 @@
     "i18n:status": "i18next-cli status",
     "i18n:extract": "i18next-cli extract",
     "i18n:extract:ci": "i18next-cli extract --dry-run --ci --quiet",
+    "i18n:prune:report": "node scripts/i18n-prune-report.mjs",
     "i18n:sync": "i18next-cli sync",
     "test": "vitest --run",
     "test:watch": "vitest --watch",

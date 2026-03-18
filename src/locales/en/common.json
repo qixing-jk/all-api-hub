@@ -1,75 +1,60 @@
 {
   "actions": {
-    "add": "Add",
-    "edit": "Edit",
-    "delete": "Delete",
-    "save": "Save",
     "cancel": "Cancel",
-    "confirm": "Confirm",
-    "refresh": "Refresh",
-    "copy": "Copy",
-    "copyKey": "Copy Key",
+    "clear": "Clear",
     "close": "Close",
-    "retry": "Retry",
+    "copyKey": "Copy Key",
+    "delete": "Delete",
+    "edit": "Edit",
     "export": "Export",
     "import": "Import",
     "more": "More",
-    "clear": "Clear",
+    "openSidePanel": "Open in SidePanel",
+    "refresh": "Refresh",
     "reset": "Reset",
-    "openSidePanel": "Open in SidePanel"
+    "retry": "Retry",
+    "save": "Save"
   },
-  "status": {
-    "loading": "Loading...",
-    "success": "Success",
-    "error": "Error",
-    "failed": "Failed",
-    "saving": "Saving...",
-    "deleting": "Deleting...",
-    "updating": "Updating...",
-    "creating": "Creating...",
-    "resetting": "Resetting...",
-    "processing": "Processing...",
-    "exporting": "Exporting...",
-    "importing": "Importing...",
-    "testing": "Testing...",
-    "uploading": "Uploading...",
-    "refreshing": "Refreshing...",
-    "enabled": "Enabled",
-    "disabled": "Disabled"
-  },
-  "labels": {
-    "settings": "Settings",
-    "account": "Account",
-    "balance": "Balance",
-    "token": "Token",
-    "apiKey": "API Key",
-    "username": "Username",
-    "password": "Password",
-    "status": "Status",
-    "unknown": "Unknown",
-    "notAvailable": "N/A"
-  },
-  "enabled": "Enabled",
-  "disabled": "Disabled",
-  "error": "Error",
   "currency": {
+    "clickToSwitch": "Click to switch to {{currency}}",
     "cny": "CNY",
-    "usd": "USD",
-    "clickToSwitch": "Click to switch to {{currency}}"
+    "usd": "USD"
+  },
+  "disabled": "Disabled",
+  "enabled": "Enabled",
+  "error": "Error",
+  "labels": {
+    "apiKey": "API Key",
+    "notAvailable": "N/A",
+    "settings": "Settings",
+    "token": "Token",
+    "unknown": "Unknown"
   },
   "quota": {
     "unlimited": "Unlimited"
   },
-  "time": {
-    "today": "Today",
-    "seconds": "seconds",
-    "updatedAt": "Updated at {{time}}",
-    "neverExpires": "Never Expires"
+  "status": {
+    "creating": "Creating...",
+    "disabled": "Disabled",
+    "enabled": "Enabled",
+    "error": "Error",
+    "exporting": "Exporting...",
+    "failed": "Failed",
+    "importing": "Importing...",
+    "loading": "Loading...",
+    "processing": "Processing...",
+    "refreshing": "Refreshing...",
+    "resetting": "Resetting...",
+    "saving": "Saving...",
+    "success": "Success",
+    "testing": "Testing...",
+    "updating": "Updating...",
+    "uploading": "Uploading..."
   },
-  "validation": {
-    "required": "This field is required",
-    "invalidFormat": "Invalid format",
-    "mustBeNumber": "Must be a number"
+  "time": {
+    "neverExpires": "Never Expires",
+    "seconds": "seconds",
+    "updatedAt": "Updated at {{time}}"
   },
   "total": "Total"
 }

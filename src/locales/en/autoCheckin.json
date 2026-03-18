@@ -1,198 +1,192 @@
 {
   "description": "Automatically check in eligible accounts every day within a configurable time window.",
-  "settings": {
-    "title": "Auto Check-in",
-    "enable": "Enable auto check-in",
-    "enableDesc": "Toggle the global auto check-in feature. When disabled, no check-in tasks will run.",
-    "pretriggerDailyOnUiOpen": "Pre-trigger daily run when UI opens",
-    "pretriggerDailyOnUiOpenDesc": "When you open the extension UI during today's time window and the daily run has not executed yet, start it immediately.",
-    "notifyUiOnCompletion": "Refresh data and interface upon auto check-in completion",
-    "notifyUiOnCompletionDesc": "When automatic check-in is completed, immediately refresh the check-in account's data and relevant interfaces.",
-    "windowStart": "Time window start",
-    "windowStartDesc": "The earliest local time when the daily check-in can start.",
-    "windowEnd": "Time window end",
-    "windowEndDesc": "The latest local time when the daily check-in can start.",
-    "scheduleModeTitle": "Schedule mode",
-    "scheduleModeDesc": "Choose how the next run time inside the window is calculated.",
-    "scheduleModeRandom": "Random",
-    "scheduleModeDeterministic": "Deterministic",
-    "deterministicTimeTitle": "Deterministic time",
-    "deterministicTimeDesc": "Pick the exact time (HH:mm) to start check-in when deterministic mode is enabled.",
-    "retryTitle": "Retry strategy",
-    "retryDesc": "Automatically retry failed accounts a few times during the same day.",
-    "retryEnable": "Enable retry",
-    "retryInterval": "Retry interval (minutes)",
-    "retryIntervalDesc": "How long to wait before the next retry attempt.",
-    "retryMaxAttempts": "Max attempts per day",
-    "retryMaxAttemptsDesc": "Max attempts per account per day (initial + retries).",
-    "viewExecution": "Auto check-in history",
-    "viewExecutionDesc": "View detailed results and logs for each automatic check-in run.",
-    "viewExecutionButton": "Open results"
-  },
-  "status": {
-    "lastRun": "Last run",
-    "nextDaily": "Next daily run",
-    "nextRetry": "Next retry run",
-    "notScheduled": "Not scheduled",
-    "disabled": "Disabled",
-    "retryDisabled": "Retry disabled",
-    "noPendingRetry": "No pending retries",
-    "pendingRetry": "Retry pending",
-    "result": {
-      "success": "Success",
-      "partial": "Partial",
-      "failed": "Failed"
-    },
-    "summary": {
-      "title": "Execution summary",
-      "eligible": "Eligible",
-      "executed": "Executed",
-      "success": "Success",
-      "failed": "Failed",
-      "skipped": "Skipped"
-    }
-  },
   "execution": {
-    "title": "Auto Check-in",
-    "runNow": "Run now",
-    "refresh": "Refresh",
+    "actions": {
+      "devModeHint": "Dev mode: action buttons are always shown for testing.",
+      "openManual": "Manual sign-in",
+      "retryAccount": "Retry"
+    },
     "debug": {
+      "evaluateUiOpenPretrigger": "Dev: Evaluate if 'Pre-trigger today's check-in when UI opens' conditions are met",
+      "resetLastDailyRunDay": "Dev: Clear 'Daily check-in already run today' flag",
+      "scheduleDailyAlarmForToday": "Dev: Schedule daily check-in alarm for later today",
       "triggerDailyAlarmNow": "Dev: Run daily check-in now (simulate daily check-in alarm callback)",
       "triggerRetryAlarmNow": "Dev: Run retry check-in now (simulate check-in retry alarm callback)",
-      "scheduleDailyAlarmForToday": "Dev: Schedule daily check-in alarm for later today",
-      "evaluateUiOpenPretrigger": "Dev: Evaluate if 'Pre-trigger today's check-in when UI opens' conditions are met",
       "triggerUiOpenPretrigger": "Dev: Immediately try 'Pre-trigger today's check-in when UI opens'",
-      "resetLastDailyRunDay": "Dev: Clear 'Daily check-in already run today' flag",
-      "uiOpenPretriggerDiagnosticsTitle": "Pre-trigger today's check-in when UI opens",
-      "uiOpenPretriggerDiagnosticsDesc": "Shows whether conditions are met, and the input information used for judgment."
-    },
-    "statistics": {
-      "result": "Result",
-      "accounts": "Accounts (Success / Failed / Total)"
-    },
-    "status": {
-      "success": "Success",
-      "alreadyChecked": "Already checked in",
-      "failed": "Failed",
-      "skipped": "Skipped"
-    },
-    "table": {
-      "accountName": "Account Name",
-      "status": "Status",
-      "message": "Message",
-      "time": "Time",
-      "actions": "Actions"
-    },
-    "actions": {
-      "retryAccount": "Retry",
-      "openManual": "Manual sign-in",
-      "devModeHint": "Dev mode: action buttons are always shown for testing."
-    },
-    "hints": {
-      "invalidAccessToken": "Solution: The Access Token may have expired. Please log in to the site again, then in 'Account Management → Edit Account', automatically re-identify/refresh the Access Token. If this issue still occurs after automatic identification, please manually obtain and modify the Access Token.",
-      "noTabWithId": "Tip: Don't close any tab/window opened automatically by the extension. The extension will close them after a short time. If you must close them manually, wait at least 1 minute before closing."
-    },
-    "filters": {
-      "all": "All",
-      "success": "Success",
-      "failed": "Failed",
-      "skipped": "Skipped",
-      "searchPlaceholder": "Search by account name or message..."
+      "uiOpenPretriggerDiagnosticsDesc": "Shows whether conditions are met, and the input information used for judgment.",
+      "uiOpenPretriggerDiagnosticsTitle": "Pre-trigger today's check-in when UI opens"
     },
     "empty": {
       "noHistory": "No execution history",
       "noHistoryDesc": "Click \"Run now\" to execute automatic check-in for all eligible accounts",
       "noResults": "No matching results",
       "noResultsDesc": "Try adjusting your filters or search query"
-    }
-  },
-  "snapshot": {
-    "title": "Account readiness",
-    "description": "Every detection-enabled account is listed below so you can see why it might be skipped before the next run.",
-    "empty": "No detection-enabled accounts yet",
-    "emptyDesc": "Enable check-in detection for at least one account to see eligibility diagnostics.",
-    "table": {
-      "detection": "Detection",
-      "autoCheckin": "Auto check-in",
-      "provider": "Provider",
-      "status": "Status",
-      "skipReason": "Skip reason",
-      "lastResult": "Last result"
     },
-    "badges": {
-      "enabled": "Enabled",
-      "disabled": "Disabled",
-      "providerAvailable": "Available",
-      "providerUnavailable": "Unavailable",
-      "pending": "Pending"
-    }
+    "filters": {
+      "all": "All",
+      "failed": "Failed",
+      "searchPlaceholder": "Search by account name or message...",
+      "skipped": "Skipped",
+      "success": "Success"
+    },
+    "hints": {
+      "invalidAccessToken": "Solution: The Access Token may have expired. Please log in to the site again, then in 'Account Management → Edit Account', automatically re-identify/refresh the Access Token. If this issue still occurs after automatic identification, please manually obtain and modify the Access Token.",
+      "noTabWithId": "Tip: Don't close any tab/window opened automatically by the extension. The extension will close them after a short time. If you must close them manually, wait at least 1 minute before closing."
+    },
+    "refresh": "Refresh",
+    "runNow": "Run now",
+    "statistics": {
+      "result": "Result"
+    },
+    "status": {
+      "alreadyChecked": "Already checked in",
+      "failed": "Failed",
+      "skipped": "Skipped",
+      "success": "Success"
+    },
+    "table": {
+      "accountName": "Account Name",
+      "actions": "Actions",
+      "message": "Message",
+      "status": "Status",
+      "time": "Time"
+    },
+    "title": "Auto Check-in"
   },
-  "skipReasons": {
-    "account_disabled": "Account is disabled",
-    "detection_disabled": "Detection disabled",
-    "auto_checkin_disabled": "Auto check-in disabled",
-    "already_checked_today": "Already checked today",
-    "no_provider": "The account's site type currently does not support check-in",
-    "provider_not_ready": "Account configuration currently does not support check-in",
-    "unknown": "Unknown"
+  "messages": {
+    "error": {
+      "accountDisabled": "Account is disabled",
+      "dailyAlarmScheduleForTodayFailed": "Failed to schedule daily alarm for today: {{error}}",
+      "dailyAlarmTriggerFailed": "Failed to trigger daily alarm: {{error}}",
+      "deterministicTimeOutsideWindow": "The deterministic time must fall within the configured window.",
+      "invalidDeterministicTime": "Please provide a valid deterministic time in HH:mm format.",
+      "invalidNumber": "Please enter a valid positive number.",
+      "invalidTimeWindow": "Invalid time window. Start and end cannot be the same.",
+      "lastDailyRunDayResetFailed": "Failed to reset last daily marker: {{error}}",
+      "openManualFailed": "Failed to open manual sign-in page: {{error}}",
+      "retryAlarmTriggerFailed": "Failed to trigger retry alarm: {{error}}",
+      "retryFailed": "Retry failed: {{error}}",
+      "runFailed": "Failed to run auto check-in: {{error}}",
+      "uiOpenPretriggerDidNotStart": "UI-open pre-trigger did not start: {{reason}}",
+      "uiOpenPretriggerEvaluationFailed": "Failed to evaluate UI-open pre-trigger: {{error}}",
+      "uiOpenPretriggerIneligible": "UI-open pre-trigger is not eligible: {{reason}}",
+      "uiOpenPretriggerTriggerFailed": "Failed to trigger UI-open pre-trigger: {{error}}"
+    },
+    "loading": {
+      "evaluatingUiOpenPretrigger": "Evaluating UI-open pre-trigger...",
+      "resettingLastDailyRunDay": "Resetting last daily marker...",
+      "running": "Running auto check-in...",
+      "schedulingDailyAlarmForToday": "Scheduling daily alarm for today...",
+      "triggeringDailyAlarm": "Triggering daily alarm...",
+      "triggeringRetryAlarm": "Triggering retry alarm...",
+      "triggeringUiOpenPretrigger": "Triggering UI-open pre-trigger..."
+    },
+    "success": {
+      "dailyAlarmScheduledForToday": "Daily alarm scheduled for today.",
+      "dailyAlarmTriggered": "Daily alarm execution triggered.",
+      "lastDailyRunDayReset": "Last daily marker reset.",
+      "pretriggerStarted": "Auto check-in started early.",
+      "retryAlarmTriggered": "Retry alarm execution triggered.",
+      "retryCompleted": "Retry completed.",
+      "runCompleted": "Auto check-in completed.",
+      "settingsSaved": "Auto check-in settings have been saved.",
+      "uiOpenPretriggerEligible": "UI-open pre-trigger is eligible."
+    }
   },
   "providerFallback": {
+    "alreadyCheckedToday": "Already checked in today",
     "checkinFailed": "Check-in failed",
     "checkinSuccessful": "Check-in successful",
-    "alreadyCheckedToday": "Already checked in today",
-    "turnstileManualRequired": "Cloudflare Turnstile verification is required. Please open the check-in page to complete verification: {{checkInUrl}}",
-    "turnstileIncognitoAccessRequired": "The extension must be allowed to run in Incognito/Private windows to fetch the Turnstile token in a private temporary window (multi-account scenario). Please enable \"Allow in incognito\" for this extension and retry, or open the check-in page to complete verification: {{checkInUrl}}",
     "endpointNotSupported": "This check-in endpoint is not supported. Please check if your account's site type is the same as the actual site.",
+    "turnstileIncognitoAccessRequired": "The extension must be allowed to run in Incognito/Private windows to fetch the Turnstile token in a private temporary window (multi-account scenario). Please enable \"Allow in incognito\" for this extension and retry, or open the check-in page to complete verification: {{checkInUrl}}",
+    "turnstileManualRequired": "Cloudflare Turnstile verification is required. Please open the check-in page to complete verification: {{checkInUrl}}",
     "unknownError": "Unknown error occurred"
   },
   "providerWong": {
     "checkinDisabled": "Check-in feature is disabled"
   },
-  "messages": {
-    "error": {
-      "accountDisabled": "Account is disabled",
-      "loadFailed": "Failed to load auto check-in settings: {{error}}",
-      "runFailed": "Failed to run auto check-in: {{error}}",
-      "retryFailed": "Retry failed: {{error}}",
-      "dailyAlarmTriggerFailed": "Failed to trigger daily alarm: {{error}}",
-      "retryAlarmTriggerFailed": "Failed to trigger retry alarm: {{error}}",
-      "dailyAlarmScheduleForTodayFailed": "Failed to schedule daily alarm for today: {{error}}",
-      "uiOpenPretriggerIneligible": "UI-open pre-trigger is not eligible: {{reason}}",
-      "uiOpenPretriggerEvaluationFailed": "Failed to evaluate UI-open pre-trigger: {{error}}",
-      "uiOpenPretriggerTriggerFailed": "Failed to trigger UI-open pre-trigger: {{error}}",
-      "uiOpenPretriggerDidNotStart": "UI-open pre-trigger did not start: {{reason}}",
-      "lastDailyRunDayResetFailed": "Failed to reset last daily marker: {{error}}",
-      "openManualFailed": "Failed to open manual sign-in page: {{error}}",
-      "invalidTimeWindow": "Invalid time window. Start and end cannot be the same.",
-      "invalidDeterministicTime": "Please provide a valid deterministic time in HH:mm format.",
-      "deterministicTimeOutsideWindow": "The deterministic time must fall within the configured window.",
-      "invalidNumber": "Please enter a valid positive number."
+  "settings": {
+    "deterministicTimeDesc": "Pick the exact time (HH:mm) to start check-in when deterministic mode is enabled.",
+    "deterministicTimeTitle": "Deterministic time",
+    "enable": "Enable auto check-in",
+    "enableDesc": "Toggle the global auto check-in feature. When disabled, no check-in tasks will run.",
+    "notifyUiOnCompletion": "Refresh data and interface upon auto check-in completion",
+    "notifyUiOnCompletionDesc": "When automatic check-in is completed, immediately refresh the check-in account's data and relevant interfaces.",
+    "pretriggerDailyOnUiOpen": "Pre-trigger daily run when UI opens",
+    "pretriggerDailyOnUiOpenDesc": "When you open the extension UI during today's time window and the daily run has not executed yet, start it immediately.",
+    "retryDesc": "Automatically retry failed accounts a few times during the same day.",
+    "retryInterval": "Retry interval (minutes)",
+    "retryIntervalDesc": "How long to wait before the next retry attempt.",
+    "retryMaxAttempts": "Max attempts per day",
+    "retryMaxAttemptsDesc": "Max attempts per account per day (initial + retries).",
+    "retryTitle": "Retry strategy",
+    "scheduleModeDesc": "Choose how the next run time inside the window is calculated.",
+    "scheduleModeDeterministic": "Deterministic",
+    "scheduleModeRandom": "Random",
+    "scheduleModeTitle": "Schedule mode",
+    "title": "Auto Check-in",
+    "viewExecution": "Auto check-in history",
+    "viewExecutionButton": "Open results",
+    "viewExecutionDesc": "View detailed results and logs for each automatic check-in run.",
+    "windowEnd": "Time window end",
+    "windowEndDesc": "The latest local time when the daily check-in can start.",
+    "windowStart": "Time window start",
+    "windowStartDesc": "The earliest local time when the daily check-in can start."
+  },
+  "skipReasons": {
+    "account_disabled": "Account is disabled",
+    "already_checked_today": "Already checked today",
+    "auto_checkin_disabled": "Auto check-in disabled",
+    "detection_disabled": "Detection disabled",
+    "no_provider": "The account's site type currently does not support check-in",
+    "provider_not_ready": "Account configuration currently does not support check-in"
+  },
+  "snapshot": {
+    "badges": {
+      "disabled": "Disabled",
+      "enabled": "Enabled",
+      "pending": "Pending",
+      "providerAvailable": "Available",
+      "providerUnavailable": "Unavailable"
     },
-    "success": {
-      "settingsSaved": "Auto check-in settings have been saved.",
-      "runCompleted": "Auto check-in completed.",
-      "retryCompleted": "Retry completed.",
-      "dailyAlarmTriggered": "Daily alarm execution triggered.",
-      "retryAlarmTriggered": "Retry alarm execution triggered.",
-      "dailyAlarmScheduledForToday": "Daily alarm scheduled for today.",
-      "pretriggerStarted": "Auto check-in started early.",
-      "uiOpenPretriggerEligible": "UI-open pre-trigger is eligible.",
-      "lastDailyRunDayReset": "Last daily marker reset."
+    "description": "Every detection-enabled account is listed below so you can see why it might be skipped before the next run.",
+    "table": {
+      "autoCheckin": "Auto check-in",
+      "detection": "Detection",
+      "lastResult": "Last result",
+      "provider": "Provider",
+      "skipReason": "Skip reason",
+      "status": "Status"
     },
-    "loading": {
-      "running": "Running auto check-in...",
-      "triggeringDailyAlarm": "Triggering daily alarm...",
-      "triggeringRetryAlarm": "Triggering retry alarm...",
-      "schedulingDailyAlarmForToday": "Scheduling daily alarm for today...",
-      "evaluatingUiOpenPretrigger": "Evaluating UI-open pre-trigger...",
-      "triggeringUiOpenPretrigger": "Triggering UI-open pre-trigger...",
-      "resettingLastDailyRunDay": "Resetting last daily marker..."
+    "title": "Account readiness"
+  },
+  "status": {
+    "disabled": "Disabled",
+    "lastRun": "Last run",
+    "nextDaily": "Next daily run",
+    "nextRetry": "Next retry run",
+    "noPendingRetry": "No pending retries",
+    "notScheduled": "Not scheduled",
+    "pendingRetry": "Retry pending",
+    "result": {
+      "failed": "Failed",
+      "partial": "Partial",
+      "success": "Success"
+    },
+    "retryDisabled": "Retry disabled",
+    "summary": {
+      "eligible": "Eligible",
+      "executed": "Executed",
+      "failed": "Failed",
+      "skipped": "Skipped",
+      "success": "Success",
+      "title": "Execution summary"
     }
   },
   "uiOpenPretrigger": {
-    "dialogTitle": "Auto check-in finished",
+    "close": "Close",
     "dialogDescription": "Today's scheduled daily run was triggered early when the UI opened.",
-    "viewDetails": "View details",
-    "close": "Close"
+    "dialogTitle": "Auto check-in finished",
+    "viewDetails": "View details"
   }
 }

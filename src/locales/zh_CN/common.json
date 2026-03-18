@@ -1,75 +1,60 @@
 {
   "actions": {
-    "add": "添加",
-    "edit": "编辑",
-    "delete": "删除",
-    "save": "保存",
     "cancel": "取消",
-    "confirm": "确认",
-    "refresh": "刷新",
-    "copy": "复制",
-    "copyKey": "复制密钥",
+    "clear": "清空",
     "close": "关闭",
-    "retry": "重试",
+    "copyKey": "复制密钥",
+    "delete": "删除",
+    "edit": "编辑",
     "export": "导出",
     "import": "导入",
     "more": "更多",
-    "clear": "清空",
+    "openSidePanel": "在侧边栏中打开",
+    "refresh": "刷新",
     "reset": "重置",
-    "openSidePanel": "在侧边栏中打开"
+    "retry": "重试",
+    "save": "保存"
   },
-  "status": {
-    "loading": "加载中...",
-    "success": "成功",
-    "error": "错误",
-    "failed": "失败",
-    "saving": "保存中...",
-    "deleting": "删除中...",
-    "updating": "更新中...",
-    "creating": "创建中...",
-    "resetting": "重置中...",
-    "processing": "处理中...",
-    "exporting": "导出中...",
-    "importing": "导入中...",
-    "testing": "测试中...",
-    "uploading": "上传中...",
-    "refreshing": "刷新中...",
-    "enabled": "已启用",
-    "disabled": "已禁用"
-  },
-  "labels": {
-    "settings": "设置",
-    "account": "账号",
-    "balance": "余额",
-    "token": "令牌",
-    "apiKey": "API Key",
-    "username": "用户名",
-    "password": "密码",
-    "status": "状态",
-    "unknown": "未知",
-    "notAvailable": "N/A"
-  },
-  "enabled": "已启用",
-  "disabled": "已禁用",
-  "error": "错误",
   "currency": {
+    "clickToSwitch": "点击切换到{{currency}}",
     "cny": "人民币",
-    "usd": "美元",
-    "clickToSwitch": "点击切换到{{currency}}"
+    "usd": "美元"
+  },
+  "disabled": "已禁用",
+  "enabled": "已启用",
+  "error": "错误",
+  "labels": {
+    "apiKey": "API Key",
+    "notAvailable": "N/A",
+    "settings": "设置",
+    "token": "令牌",
+    "unknown": "未知"
   },
   "quota": {
     "unlimited": "无限额度"
   },
-  "time": {
-    "today": "今日",
-    "seconds": "秒",
-    "updatedAt": "更新于 {{time}}",
-    "neverExpires": "永不过期"
+  "status": {
+    "creating": "创建中...",
+    "disabled": "已禁用",
+    "enabled": "已启用",
+    "error": "错误",
+    "exporting": "导出中...",
+    "failed": "失败",
+    "importing": "导入中...",
+    "loading": "加载中...",
+    "processing": "处理中...",
+    "refreshing": "刷新中...",
+    "resetting": "重置中...",
+    "saving": "保存中...",
+    "success": "成功",
+    "testing": "测试中...",
+    "updating": "更新中...",
+    "uploading": "上传中..."
   },
-  "validation": {
-    "required": "此字段为必填项",
-    "invalidFormat": "格式无效",
-    "mustBeNumber": "必须是数字"
+  "time": {
+    "neverExpires": "永不过期",
+    "seconds": "秒",
+    "updatedAt": "更新于 {{time}}"
   },
   "total": "总数"
 }

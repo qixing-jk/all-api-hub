@@ -1,76 +1,74 @@
 {
-  "settings": {
-    "title": "网页 AI API 功能可用性测试",
-    "description": "手动右键菜单始终可用。自动检测为可选功能，仅在白名单页面运行，并在打开弹窗前请求确认。默认不会保存提取到的 API Key。",
-    "contextMenu": {
-      "enable": "在浏览器右键菜单中显示",
-      "enableDesc": "启用后，在网页右键菜单中显示“AI API 检测”入口。"
-    },
-    "autoDetect": {
-      "enable": "启用自动检测",
-      "enableDesc": "启用后，扩展可能从复制操作中识别凭据，并在打开弹窗前请求确认。",
-      "whitelist": {
-        "patterns": "URL 白名单规则",
-        "patternsDesc": "每行一个 JavaScript RegExp。匹配时默认使用不区分大小写。无效规则会被忽略（视为不匹配）。",
-        "patternsPlaceholder": "^https://example\\.com/console",
-        "invalidTitle": "无效规则",
-        "invalidMore": "…以及更多"
-      }
-    }
+  "confirmToast": {
+    "body": "是否打开 AI API 测试面板，以检查并测试 AI API 可用性？",
+    "open": "打开",
+    "title": "检测到有效 AI API 网址和API Key"
   },
   "messages": {
     "success": {
       "settingsSaved": "AI API 检测设置已保存。"
     }
   },
-  "confirmToast": {
-    "title": "检测到有效 AI API 网址和API Key",
-    "body": "是否打开 AI API 测试面板，以检查并测试 AI API 可用性？",
-    "open": "打开"
-  },
   "modal": {
-    "title": "AI API 功能可用性测试",
-    "sourceText": {
-      "label": "用于提取的文本",
-      "placeholder": "将 Base URL 和 API Key 粘贴到这里，或使用右键菜单从选中文本预填。"
-    },
-    "fields": {
-      "baseUrl": "Base URL",
-      "apiKey": "API Key",
-      "apiType": "API 类型",
-      "modelId": "模型 ID"
-    },
     "actions": {
-      "reextract": "重新提取",
-      "showKey": "显示 Key",
-      "hideKey": "隐藏 Key",
-      "fetchModels": "获取模型列表",
       "fetchingModels": "获取中…",
-      "test": "测试",
-      "testing": "测试中…",
-      "saveToProfiles": "保存到 API 凭证",
+      "fetchModels": "获取模型列表",
+      "hideKey": "隐藏 Key",
       "openApiProfiles": "打开 API 凭证",
-      "saving": "保存中…",
-      "running": "运行中…",
       "retry": "重试",
-      "runOne": "运行"
-    },
-    "messages": {
-      "savedToProfiles": "已保存 {{name}} 到 API 凭证"
+      "running": "运行中…",
+      "runOne": "运行",
+      "saveToProfiles": "保存到 API 凭证",
+      "saving": "保存中…",
+      "showKey": "显示 Key",
+      "test": "测试",
+      "testing": "测试中…"
     },
     "errors": {
-      "missingBaseUrlOrKey": "请先填写 Base URL 与 API Key。",
-      "runTestBeforeSave": "请先测试后再保存。",
       "fetchModelsFailed": "获取模型列表失败。",
-      "saveToProfilesFailed": "保存到 API 凭证失败",
-      "runProbeFailed": "探测失败。"
+      "missingBaseUrlOrKey": "请先填写 Base URL 与 API Key。",
+      "runProbeFailed": "探测失败。",
+      "saveToProfilesFailed": "保存到 API 凭证失败"
+    },
+    "fields": {
+      "apiKey": "API Key",
+      "apiType": "API 类型",
+      "baseUrl": "Base URL",
+      "modelId": "模型 ID"
     },
     "hints": {
       "saveWithoutTest": "提示：只要填写 Base URL 与 API Key 就能保存到 API 凭证（无需先测试或获取模型列表）。测试仅用于验证可用性。"
     },
+    "messages": {
+      "savedToProfiles": "已保存 {{name}} 到 API 凭证"
+    },
+    "privacyHint": "API Key 会被视为敏感信息：默认隐藏，且除非你主动保存到 API 凭证，否则不会持久化保存任何数据。",
     "probes": {
       "notRunYet": "尚未运行"
     },
-    "privacyHint": "API Key 会被视为敏感信息：默认隐藏，且除非你主动保存到 API 凭证，否则不会持久化保存任何数据。"
+    "sourceText": {
+      "label": "用于提取的文本",
+      "placeholder": "将 Base URL 和 API Key 粘贴到这里，或使用右键菜单从选中文本预填。"
+    },
+    "title": "AI API 功能可用性测试"
+  },
+  "settings": {
+    "autoDetect": {
+      "enable": "启用自动检测",
+      "enableDesc": "启用后，扩展可能从复制操作中识别凭据，并在打开弹窗前请求确认。",
+      "whitelist": {
+        "invalidMore": "…以及更多",
+        "invalidTitle": "无效规则",
+        "patterns": "URL 白名单规则",
+        "patternsDesc": "每行一个 JavaScript RegExp。匹配时默认使用不区分大小写。无效规则会被忽略（视为不匹配）。",
+        "patternsPlaceholder": "^https://example\\.com/console"
+      }
+    },
+    "contextMenu": {
+      "enable": "在浏览器右键菜单中显示",
+      "enableDesc": "启用后，在网页右键菜单中显示“AI API 检测”入口。"
+    },
+    "description": "手动右键菜单始终可用。自动检测为可选功能，仅在白名单页面运行，并在打开弹窗前请求确认。默认不会保存提取到的 API Key。",
+    "title": "网页 AI API 功能可用性测试"
   }
 }

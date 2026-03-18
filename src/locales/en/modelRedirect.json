@@ -1,77 +1,71 @@
 {
-  "title": "Model Redirect",
+  "bulkClear": {
+    "action": "Clear model redirect maps",
+    "actionDesc": "Set selected channels' model_mapping to an empty object ({}). This cannot be undone.",
+    "actions": {
+      "cancel": "Cancel",
+      "close": "Close",
+      "confirm": "Clear",
+      "continue": "Continue",
+      "selectAll": "Select all",
+      "selectNone": "Select none"
+    },
+    "confirm": {
+      "description": "This will clear model redirect maps for {{count}} channel(s). This cannot be undone.",
+      "details": "Selected channels: {{count}}",
+      "title": "Clear model redirect maps?",
+      "warningTitle": "Destructive action"
+    },
+    "messages": {
+      "allSuccess": "Cleared model redirect maps for {{count}} channel(s).",
+      "failed": "Failed to clear model redirect maps: {{error}}",
+      "nothingToClear": "Nothing to clear (selected channels are already empty).",
+      "partialFailure": "Cleared {{success}}/{{total}} channel(s); {{failed}} failed.",
+      "successWithSkips": "Cleared {{cleared}} channel(s); {{skipped}} already empty."
+    },
+    "preview": {
+      "channelListLabel": "Channels",
+      "description": "Select which channels to clear. Unselected channels will not be changed.",
+      "mappingCount": "Mappings: {{count}}",
+      "mappingEmptyInline": "Current model_mapping is empty ({}).",
+      "mappingInvalid": "Current model_mapping is not valid JSON; showing raw text.",
+      "mappingInvalidBadge": "Invalid JSON",
+      "mappingToggle": "Preview current model_mapping",
+      "selectedCount": "{{selected}}/{{total}} selected",
+      "title": "Clear model redirect maps"
+    },
+    "result": {
+      "title": "Failed channels"
+    },
+    "search": {
+      "filteredCount": "Showing {{filtered}}/{{total}}",
+      "label": "Search channels",
+      "noResults": "No matching channels.",
+      "placeholder": "Search channels (name or ID)..."
+    },
+    "status": {
+      "clearing": "Clearing...",
+      "emptySelection": "Select at least one channel to continue.",
+      "loadFailed": "Failed to load channels: {{error}}",
+      "loading": "Loading channels...",
+      "noChannels": "No channels found."
+    }
+  },
   "description": "Automatic model redirect mapping, solving the problem of inability to uniformly call models due to model names",
   "enable": "Enable Model Redirect",
   "enableDesc": "Enable the model redirect mapping feature, which will run automatically during model synchronization and allow manual execution",
-  "standardModels": "Standard Models",
-  "standardModelsDesc": "Select the standard models to generate redirect mappings for",
-  "standardModelsPlaceholder": "Select models...",
+  "messages": {
+    "regenerateFailed": "Failed to regenerate model mapping: {{error}}",
+    "regenerateSuccess": "Model mapping regenerated successfully",
+    "updateFailed": "Failed to update model redirect settings",
+    "updateSuccess": "Model redirect settings updated"
+  },
   "pruneMissingTargetsOnModelSync": "Prune invalid redirect targets after sync",
   "pruneMissingTargetsOnModelSyncDesc": "Destructive: after a model sync refresh, deletes existing model_mapping entries whose target models are missing from the refreshed model list",
   "regenerateButton": "Regenerate Mapping Now",
   "regenerating": "Regenerating...",
-  "lastUpdated": "Last Updated",
-  "never": "Never",
-  "noMapping": "No mapping generated yet",
-  "messages": {
-    "regenerateSuccess": "Model mapping regenerated successfully",
-    "regenerateFailed": "Failed to regenerate model mapping: {{error}}",
-    "updateSuccess": "Model redirect settings updated",
-    "updateFailed": "Failed to update model redirect settings",
-    "noModelsSelected": "Please select at least one standard model",
-    "featureDisabled": "Model redirect feature is disabled",
-    "alreadyGenerating": "Mapping generation already in progress"
-  },
-  "bulkClear": {
-    "action": "Clear model redirect maps",
-    "actionDesc": "Set selected channels' model_mapping to an empty object ({}). This cannot be undone.",
-    "search": {
-      "label": "Search channels",
-      "placeholder": "Search channels (name or ID)...",
-      "noResults": "No matching channels.",
-      "filteredCount": "Showing {{filtered}}/{{total}}"
-    },
-    "preview": {
-      "title": "Clear model redirect maps",
-      "description": "Select which channels to clear. Unselected channels will not be changed.",
-      "channelListLabel": "Channels",
-      "selectedCount": "{{selected}}/{{total}} selected",
-      "mappingCount": "Mappings: {{count}}",
-      "mappingInvalidBadge": "Invalid JSON",
-      "mappingToggle": "Preview current model_mapping",
-      "mappingEmptyInline": "Current model_mapping is empty ({}).",
-      "mappingInvalid": "Current model_mapping is not valid JSON; showing raw text."
-    },
-    "confirm": {
-      "title": "Clear model redirect maps?",
-      "description": "This will clear model redirect maps for {{count}} channel(s). This cannot be undone.",
-      "warningTitle": "Destructive action",
-      "details": "Selected channels: {{count}}"
-    },
-    "actions": {
-      "close": "Close",
-      "continue": "Continue",
-      "selectAll": "Select all",
-      "selectNone": "Select none",
-      "cancel": "Cancel",
-      "confirm": "Clear"
-    },
-    "status": {
-      "loading": "Loading channels...",
-      "clearing": "Clearing...",
-      "loadFailed": "Failed to load channels: {{error}}",
-      "noChannels": "No channels found.",
-      "emptySelection": "Select at least one channel to continue."
-    },
-    "messages": {
-      "allSuccess": "Cleared model redirect maps for {{count}} channel(s).",
-      "successWithSkips": "Cleared {{cleared}} channel(s); {{skipped}} already empty.",
-      "nothingToClear": "Nothing to clear (selected channels are already empty).",
-      "partialFailure": "Cleared {{success}}/{{total}} channel(s); {{failed}} failed.",
-      "failed": "Failed to clear model redirect maps: {{error}}"
-    },
-    "result": {
-      "title": "Failed channels"
-    }
-  }
+  "standardModels": "Standard Models",
+  "standardModelsDesc": "Select the standard models to generate redirect mappings for",
+  "standardModelsPlaceholder": "Select models...",
+  "title": "Model Redirect"
 }

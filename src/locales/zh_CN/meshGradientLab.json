@@ -1,22 +1,22 @@
 {
-  "title": "Mesh Gradient 实验室（Dev）",
   "actions": {
     "shuffleSeed": "随机种子"
   },
-  "labels": {
-    "view": "视图",
-    "seed": "种子",
-    "layout": "布局",
-    "palette": "调色板",
-    "overlay": "叠加层"
+  "captions": {
+    "layoutIndex": "布局 #{{index}}",
+    "paletteIndex": "#{{index}}"
   },
-  "view": {
-    "palettes": "调色板",
-    "layouts": "布局"
+  "labels": {
+    "layout": "布局",
+    "overlay": "叠加层",
+    "palette": "调色板",
+    "seed": "种子",
+    "view": "视图"
   },
   "summary": "{{paletteCount}} 个调色板 · {{layoutCount}} 种布局",
-  "captions": {
-    "paletteIndex": "#{{index}}",
-    "layoutIndex": "布局 #{{index}}"
+  "title": "Mesh Gradient 实验室（Dev）",
+  "view": {
+    "layouts": "布局",
+    "palettes": "调色板"
   }
 }

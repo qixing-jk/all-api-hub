@@ -1,77 +1,71 @@
 {
-  "title": "模型重定向",
+  "bulkClear": {
+    "action": "清空模型重定向映射",
+    "actionDesc": "将所选渠道的 model_mapping 设置为空对象（{}）。此操作不可撤销。",
+    "actions": {
+      "cancel": "取消",
+      "close": "关闭",
+      "confirm": "清空",
+      "continue": "继续",
+      "selectAll": "全选",
+      "selectNone": "全不选"
+    },
+    "confirm": {
+      "description": "即将清空 {{count}} 个渠道的模型重定向映射（model_mapping）。此操作不可撤销。",
+      "details": "已选择渠道数：{{count}}",
+      "title": "确认清空模型重定向映射？",
+      "warningTitle": "危险操作"
+    },
+    "messages": {
+      "allSuccess": "已成功清空 {{count}} 个渠道的模型重定向映射",
+      "failed": "清空模型重定向映射失败：{{error}}",
+      "nothingToClear": "无需清空（所选渠道的 model_mapping 已为空）",
+      "partialFailure": "已清空 {{success}}/{{total}} 个渠道，{{failed}} 个失败",
+      "successWithSkips": "已清空 {{cleared}} 个渠道，{{skipped}} 个本来就是空的"
+    },
+    "preview": {
+      "channelListLabel": "渠道列表",
+      "description": "请选择需要清空的渠道。未选择的渠道不会被修改。",
+      "mappingCount": "映射数：{{count}}",
+      "mappingEmptyInline": "当前 model_mapping 为空（{}）",
+      "mappingInvalid": "当前 model_mapping 不是有效 JSON，将展示原始文本。",
+      "mappingInvalidBadge": "JSON 无效",
+      "mappingToggle": "预览当前 model_mapping",
+      "selectedCount": "已选择 {{selected}}/{{total}}",
+      "title": "清空模型重定向映射"
+    },
+    "result": {
+      "title": "失败详情"
+    },
+    "search": {
+      "filteredCount": "当前显示 {{filtered}}/{{total}}",
+      "label": "搜索渠道",
+      "noResults": "未找到匹配的渠道",
+      "placeholder": "搜索渠道（名称或 ID）…"
+    },
+    "status": {
+      "clearing": "正在清空…",
+      "emptySelection": "请至少选择一个渠道后继续。",
+      "loadFailed": "加载渠道失败：{{error}}",
+      "loading": "正在加载渠道…",
+      "noChannels": "未找到任何渠道"
+    }
+  },
   "description": "自动模型重定向映射，解决因模型名称导致无法统一调用的问题",
   "enable": "启用模型重定向",
   "enableDesc": "启用模型重定向映射功能，将在模型同步时自动运行并允许手动运行",
-  "standardModels": "标准模型",
-  "standardModelsDesc": "选择需要生成重定向映射的标准模型",
-  "standardModelsPlaceholder": "请选择模型…",
+  "messages": {
+    "regenerateFailed": "重新生成模型映射失败：{{error}}",
+    "regenerateSuccess": "模型映射已成功重新生成",
+    "updateFailed": "更新模型重定向设置失败",
+    "updateSuccess": "模型重定向设置已更新"
+  },
   "pruneMissingTargetsOnModelSync": "同步后清理无效的重定向目标",
   "pruneMissingTargetsOnModelSyncDesc": "危险操作：在模型同步刷新后，将删除 model_mapping 中目标模型不在最新模型列表里的映射",
   "regenerateButton": "立即重新生成映射",
   "regenerating": "正在重新生成…",
-  "lastUpdated": "上次更新",
-  "never": "暂无",
-  "noMapping": "尚未生成任何映射",
-  "messages": {
-    "regenerateSuccess": "模型映射已成功重新生成",
-    "regenerateFailed": "重新生成模型映射失败：{{error}}",
-    "updateSuccess": "模型重定向设置已更新",
-    "updateFailed": "更新模型重定向设置失败",
-    "noModelsSelected": "请至少选择一个标准模型",
-    "featureDisabled": "模型重定向功能未启用",
-    "alreadyGenerating": "映射生成正在进行中"
-  },
-  "bulkClear": {
-    "action": "清空模型重定向映射",
-    "actionDesc": "将所选渠道的 model_mapping 设置为空对象（{}）。此操作不可撤销。",
-    "search": {
-      "label": "搜索渠道",
-      "placeholder": "搜索渠道（名称或 ID）…",
-      "noResults": "未找到匹配的渠道",
-      "filteredCount": "当前显示 {{filtered}}/{{total}}"
-    },
-    "preview": {
-      "title": "清空模型重定向映射",
-      "description": "请选择需要清空的渠道。未选择的渠道不会被修改。",
-      "channelListLabel": "渠道列表",
-      "selectedCount": "已选择 {{selected}}/{{total}}",
-      "mappingCount": "映射数：{{count}}",
-      "mappingInvalidBadge": "JSON 无效",
-      "mappingToggle": "预览当前 model_mapping",
-      "mappingEmptyInline": "当前 model_mapping 为空（{}）",
-      "mappingInvalid": "当前 model_mapping 不是有效 JSON，将展示原始文本。"
-    },
-    "confirm": {
-      "title": "确认清空模型重定向映射？",
-      "description": "即将清空 {{count}} 个渠道的模型重定向映射（model_mapping）。此操作不可撤销。",
-      "warningTitle": "危险操作",
-      "details": "已选择渠道数：{{count}}"
-    },
-    "actions": {
-      "close": "关闭",
-      "continue": "继续",
-      "selectAll": "全选",
-      "selectNone": "全不选",
-      "cancel": "取消",
-      "confirm": "清空"
-    },
-    "status": {
-      "loading": "正在加载渠道…",
-      "clearing": "正在清空…",
-      "loadFailed": "加载渠道失败：{{error}}",
-      "noChannels": "未找到任何渠道",
-      "emptySelection": "请至少选择一个渠道后继续。"
-    },
-    "messages": {
-      "allSuccess": "已成功清空 {{count}} 个渠道的模型重定向映射",
-      "successWithSkips": "已清空 {{cleared}} 个渠道，{{skipped}} 个本来就是空的",
-      "nothingToClear": "无需清空（所选渠道的 model_mapping 已为空）",
-      "partialFailure": "已清空 {{success}}/{{total}} 个渠道，{{failed}} 个失败",
-      "failed": "清空模型重定向映射失败：{{error}}"
-    },
-    "result": {
-      "title": "失败详情"
-    }
-  }
+  "standardModels": "标准模型",
+  "standardModelsDesc": "选择需要生成重定向映射的标准模型",
+  "standardModelsPlaceholder": "请选择模型…",
+  "title": "模型重定向"
 }
