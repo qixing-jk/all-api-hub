@@ -24,20 +24,7 @@ export default defineConfig({
     primaryLanguage: "zh-CN",
     secondaryLanguages: ["en"],
     indentation: 2,
-    // Keep intentional runtime-indirection families until they are refactored
-    // into extractor-visible static calls.
-    preservePatterns: [
-      "account:actions.channelLocate*",
-      "aiApiVerification:verifyDialog.summaries.*",
-      "autoCheckin:providerFallback.*",
-      "autoCheckin:providerWong.*",
-      "autoCheckin:skipReasons.*",
-      "importExport:webdav.syncData.*",
-      "settings:appearanceLanguage.switcher.options.*",
-      "settings:permissions.items.*",
-      "ui:dialog.cliproxy.*",
-      "ui:dialog.dedupeAccounts.strategy.*",
-    ],
+    preservePatterns: [],
     sort: true,
     disablePlurals: true,
     removeUnusedKeys: true,

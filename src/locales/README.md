@@ -88,6 +88,5 @@ function MyComponent() {
 - `primaryLanguage` 为 `zh-CN`，并映射到仓库目录 `src/locales/zh_CN/`
 - `sort` 为 `true`，保持提取结果稳定有序
 - `removeUnusedKeys` 为 `true`，清理不再被代码使用的静态 key
-- `preservePatterns` 会保留少量有意保留的动态 key 家族
 
-如果新增了运行时拼接或元数据驱动的翻译 key，请先将其改成可静态提取的写法，或同步更新 `i18next.config.ts` 里的 `preservePatterns`，再执行提取。
+如果新增了运行时拼接或元数据驱动的翻译 key，请先将其改成可静态提取的写法，再执行提取。
