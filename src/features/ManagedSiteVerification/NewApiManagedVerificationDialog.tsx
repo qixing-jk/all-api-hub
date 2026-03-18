@@ -12,10 +12,10 @@ const getDialogTitle = (
   request: OpenNewApiManagedVerificationParams | null,
 ) =>
   request?.kind === "token"
-    ? t("dialog.title.token")
+    ? t("newApiManagedVerification:dialog.title.token")
     : request?.kind === "channel"
-      ? t("dialog.title.channel")
-      : t("dialog.title.settings")
+      ? t("newApiManagedVerification:dialog.title.channel")
+      : t("newApiManagedVerification:dialog.title.settings")
 
 const getStepBodyCopy = (
   t: ReturnType<typeof useTranslation>["t"],
@@ -24,28 +24,28 @@ const getStepBodyCopy = (
 ) => {
   switch (step) {
     case NEW_API_MANAGED_VERIFICATION_STEPS.CREDENTIALS_MISSING:
-      return t("dialog.body.credentialsMissing")
+      return t("newApiManagedVerification:dialog.body.credentialsMissing")
     case NEW_API_MANAGED_VERIFICATION_STEPS.LOGIN_2FA:
-      return t("dialog.body.loginTwoFactor")
+      return t("newApiManagedVerification:dialog.body.loginTwoFactor")
     case NEW_API_MANAGED_VERIFICATION_STEPS.SECURE_VERIFICATION:
-      return t("dialog.body.secureVerification")
+      return t("newApiManagedVerification:dialog.body.secureVerification")
     case NEW_API_MANAGED_VERIFICATION_STEPS.PASSKEY_MANUAL:
-      return t("dialog.body.passkeyManual")
+      return t("newApiManagedVerification:dialog.body.passkeyManual")
     case NEW_API_MANAGED_VERIFICATION_STEPS.SUCCESS:
       return request?.kind === "token"
-        ? t("dialog.body.successToken", {
+        ? t("newApiManagedVerification:dialog.body.successToken", {
             label: request.label ?? "",
           })
         : request?.kind === "channel"
-          ? t("dialog.body.successChannel", {
+          ? t("newApiManagedVerification:dialog.body.successChannel", {
               label: request.label ?? "",
             })
-          : t("dialog.body.successSettings")
+          : t("newApiManagedVerification:dialog.body.successSettings")
     case NEW_API_MANAGED_VERIFICATION_STEPS.FAILURE:
-      return t("dialog.body.failure")
+      return t("newApiManagedVerification:dialog.body.failure")
     case NEW_API_MANAGED_VERIFICATION_STEPS.LOGGING_IN:
     default:
-      return t("dialog.body.loggingIn")
+      return t("newApiManagedVerification:dialog.body.loggingIn")
   }
 }
 

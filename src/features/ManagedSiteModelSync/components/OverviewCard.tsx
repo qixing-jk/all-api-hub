@@ -21,9 +21,13 @@ const formatInterval = (
   const minutes = Math.round(ms / 1000 / 60)
   if (minutes % 60 === 0) {
     const hours = minutes / 60
-    return t("execution.overview.everyHours", { count: hours })
+    return t("managedSiteModelSync:execution.overview.everyHours", {
+      count: hours,
+    })
   }
-  return t("execution.overview.everyMinutes", { count: minutes })
+  return t("managedSiteModelSync:execution.overview.everyMinutes", {
+    count: minutes,
+  })
 }
 
 /**

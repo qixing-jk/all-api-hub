@@ -161,24 +161,24 @@ const getManagedSiteStatusLabel = (
   },
 ) => {
   if (params.isChecking) {
-    return t("managedSiteStatus.badges.checking")
+    return t("keyManagement:managedSiteStatus.badges.checking")
   }
 
   if (
     params.managedSiteStatus?.status ===
     MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED
   ) {
-    return t("managedSiteStatus.badges.added")
+    return t("keyManagement:managedSiteStatus.badges.added")
   }
 
   if (
     params.managedSiteStatus?.status ===
     MANAGED_SITE_TOKEN_CHANNEL_STATUSES.NOT_ADDED
   ) {
-    return t("managedSiteStatus.badges.notAdded")
+    return t("keyManagement:managedSiteStatus.badges.notAdded")
   }
 
-  return t("managedSiteStatus.badges.unknown")
+  return t("keyManagement:managedSiteStatus.badges.unknown")
 }
 
 const getManagedSiteStatusDescription = (
@@ -195,13 +195,19 @@ const getManagedSiteStatusDescription = (
 
   switch (managedSiteStatus.reason) {
     case MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.CONFIG_MISSING:
-      return t("managedSiteStatus.descriptions.configMissing")
+      return t("keyManagement:managedSiteStatus.descriptions.configMissing")
     case MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.INPUT_PREPARATION_FAILED:
-      return t("managedSiteStatus.descriptions.inputPreparationFailed")
+      return t(
+        "keyManagement:managedSiteStatus.descriptions.inputPreparationFailed",
+      )
     case MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.VELOERA_BASE_URL_SEARCH_UNSUPPORTED:
-      return t("managedSiteStatus.descriptions.veloeraBaseUrlSearchUnsupported")
+      return t(
+        "keyManagement:managedSiteStatus.descriptions.veloeraBaseUrlSearchUnsupported",
+      )
     case MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.BACKEND_SEARCH_FAILED:
-      return t("managedSiteStatus.descriptions.backendSearchFailed")
+      return t(
+        "keyManagement:managedSiteStatus.descriptions.backendSearchFailed",
+      )
     default:
       return null
   }
@@ -221,7 +227,7 @@ const appendManagedSiteKeyHintToTooltip = (
     return message
   }
 
-  return `${message} ${t("managedSiteStatus.descriptions.newApiRetrieveKeyHint")}`
+  return `${message} ${t("keyManagement:managedSiteStatus.descriptions.newApiRetrieveKeyHint")}`
 }
 
 const getManagedSiteSignalBadgeVariant = (params: {
@@ -275,8 +281,8 @@ const getManagedSiteUrlSignalLabel = (
   assessment: ManagedSiteTokenChannelAssessment,
 ) =>
   assessment.url.matched
-    ? t("managedSiteStatus.signals.url.matched")
-    : t("managedSiteStatus.signals.url.noMatch")
+    ? t("keyManagement:managedSiteStatus.signals.url.matched")
+    : t("keyManagement:managedSiteStatus.signals.url.noMatch")
 
 const getManagedSiteKeySignalLabel = (
   t: TFunction,
@@ -284,13 +290,13 @@ const getManagedSiteKeySignalLabel = (
 ) => {
   switch (assessment.key.reason) {
     case MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.MATCHED:
-      return t("managedSiteStatus.signals.key.matched")
+      return t("keyManagement:managedSiteStatus.signals.key.matched")
     case MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.NO_KEY_PROVIDED:
-      return t("managedSiteStatus.signals.key.notProvided")
+      return t("keyManagement:managedSiteStatus.signals.key.notProvided")
     case MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.COMPARISON_UNAVAILABLE:
-      return t("managedSiteStatus.signals.key.unavailable")
+      return t("keyManagement:managedSiteStatus.signals.key.unavailable")
     default:
-      return t("managedSiteStatus.signals.key.noMatch")
+      return t("keyManagement:managedSiteStatus.signals.key.noMatch")
   }
 }
 
@@ -300,17 +306,17 @@ const getManagedSiteModelsSignalLabel = (
 ) => {
   switch (assessment.models.reason) {
     case MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT:
-      return t("managedSiteStatus.signals.models.exact")
+      return t("keyManagement:managedSiteStatus.signals.models.exact")
     case MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.CONTAINED:
-      return t("managedSiteStatus.signals.models.contained")
+      return t("keyManagement:managedSiteStatus.signals.models.contained")
     case MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.SIMILAR:
-      return t("managedSiteStatus.signals.models.similar")
+      return t("keyManagement:managedSiteStatus.signals.models.similar")
     case MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.NO_MODELS_PROVIDED:
-      return t("managedSiteStatus.signals.models.notProvided")
+      return t("keyManagement:managedSiteStatus.signals.models.notProvided")
     case MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.COMPARISON_UNAVAILABLE:
-      return t("managedSiteStatus.signals.models.unavailable")
+      return t("keyManagement:managedSiteStatus.signals.models.unavailable")
     default:
-      return t("managedSiteStatus.signals.models.noMatch")
+      return t("keyManagement:managedSiteStatus.signals.models.noMatch")
   }
 }
 
@@ -319,13 +325,13 @@ const getManagedSiteUrlSignalTooltip = (
   assessment: ManagedSiteTokenChannelAssessment,
 ) => {
   if (assessment.url.matched) {
-    return t("managedSiteStatus.signals.url.tooltipMatched", {
+    return t("keyManagement:managedSiteStatus.signals.url.tooltipMatched", {
       count: assessment.url.candidateCount,
       channelName: assessment.url.channel?.name ?? "",
     })
   }
 
-  return t("managedSiteStatus.signals.url.tooltipNoMatch")
+  return t("keyManagement:managedSiteStatus.signals.url.tooltipNoMatch")
 }
 
 const getManagedSiteKeySignalTooltip = (
@@ -335,20 +341,20 @@ const getManagedSiteKeySignalTooltip = (
 ) => {
   switch (assessment.key.reason) {
     case MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.MATCHED:
-      return t("managedSiteStatus.signals.key.tooltipMatched", {
+      return t("keyManagement:managedSiteStatus.signals.key.tooltipMatched", {
         channelName: assessment.key.channel?.name ?? "",
       })
     case MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.NO_KEY_PROVIDED:
-      return t("managedSiteStatus.signals.key.tooltipNotProvided")
+      return t("keyManagement:managedSiteStatus.signals.key.tooltipNotProvided")
     case MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.COMPARISON_UNAVAILABLE:
       return appendManagedSiteKeyHintToTooltip(
         t,
         managedSiteType,
-        t("managedSiteStatus.signals.key.tooltipUnavailable"),
+        t("keyManagement:managedSiteStatus.signals.key.tooltipUnavailable"),
         assessment,
       )
     default:
-      return t("managedSiteStatus.signals.key.tooltipNoMatch")
+      return t("keyManagement:managedSiteStatus.signals.key.tooltipNoMatch")
   }
 }
 
@@ -358,24 +364,34 @@ const getManagedSiteModelsSignalTooltip = (
 ) => {
   switch (assessment.models.reason) {
     case MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT:
-      return t("managedSiteStatus.signals.models.tooltipExact", {
+      return t("keyManagement:managedSiteStatus.signals.models.tooltipExact", {
         channelName: assessment.models.channel?.name ?? "",
       })
     case MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.CONTAINED:
-      return t("managedSiteStatus.signals.models.tooltipContained", {
-        channelName: assessment.models.channel?.name ?? "",
-      })
+      return t(
+        "keyManagement:managedSiteStatus.signals.models.tooltipContained",
+        {
+          channelName: assessment.models.channel?.name ?? "",
+        },
+      )
     case MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.SIMILAR:
-      return t("managedSiteStatus.signals.models.tooltipSimilar", {
-        channelName: assessment.models.channel?.name ?? "",
-        score: Math.round((assessment.models.similarityScore ?? 0) * 100),
-      })
+      return t(
+        "keyManagement:managedSiteStatus.signals.models.tooltipSimilar",
+        {
+          channelName: assessment.models.channel?.name ?? "",
+          score: Math.round((assessment.models.similarityScore ?? 0) * 100),
+        },
+      )
     case MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.NO_MODELS_PROVIDED:
-      return t("managedSiteStatus.signals.models.tooltipNotProvided")
+      return t(
+        "keyManagement:managedSiteStatus.signals.models.tooltipNotProvided",
+      )
     case MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.COMPARISON_UNAVAILABLE:
-      return t("managedSiteStatus.signals.models.tooltipUnavailable")
+      return t(
+        "keyManagement:managedSiteStatus.signals.models.tooltipUnavailable",
+      )
     default:
-      return t("managedSiteStatus.signals.models.tooltipNoMatch")
+      return t("keyManagement:managedSiteStatus.signals.models.tooltipNoMatch")
   }
 }
 
