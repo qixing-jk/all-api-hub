@@ -41,6 +41,7 @@ export default function FilterBar({
 
   const renderFilterButton = (
     value: FilterStatus,
+    label: string,
     color: string,
     icon: ReactNode,
     count?: number,
@@ -54,7 +55,7 @@ export default function FilterBar({
       }`}
     >
       {icon}
-      <span>{t(`execution.filters.${value}`)}</span>
+      <span>{label}</span>
       {count !== undefined && count > 0 && (
         <span
           className={`ml-1 rounded-full px-1.5 py-0.5 text-xs font-semibold ${
@@ -74,18 +75,21 @@ export default function FilterBar({
       <div className="flex gap-2">
         {renderFilterButton(
           "all",
+          t("execution.filters.all"),
           "bg-blue-600",
           <ListBulletIcon className="h-4 w-4" />,
           statistics.total,
         )}
         {renderFilterButton(
           "success",
+          t("execution.filters.success"),
           "bg-green-600",
           <CheckCircleIcon className="h-4 w-4" />,
           statistics.successCount,
         )}
         {renderFilterButton(
           "failed",
+          t("execution.filters.failed"),
           "bg-red-600",
           <XCircleIcon className="h-4 w-4" />,
           statistics.failureCount,

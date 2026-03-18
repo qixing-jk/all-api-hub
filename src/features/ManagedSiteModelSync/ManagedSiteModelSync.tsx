@@ -493,6 +493,8 @@ export default function ManagedSiteModelSync({
   const hasHistory = !!(lastExecution && lastExecution.items.length > 0)
   const hasResults = !!(filteredItems && filteredItems.length > 0)
   const manualHasResults = manualItems.length > 0
+  const historyTabLabel = t("execution.tabs.history")
+  const manualTabLabel = t("execution.tabs.manual")
 
   const handleManualSelectAll = (checked: boolean) => {
     if (checked) {
@@ -515,20 +517,28 @@ export default function ManagedSiteModelSync({
   const renderTabs = () => (
     <Tab.Group selectedIndex={selectedTab} onChange={setSelectedTab}>
       <Tab.List className="mb-4 flex space-x-2 rounded-xl bg-gray-100 p-1 dark:bg-gray-800">
-        {["history", "manual"].map((key) => (
-          <Tab
-            key={key}
-            className={({ selected }) =>
-              `flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-                selected
-                  ? "bg-white text-blue-700 shadow dark:bg-gray-900 dark:text-blue-400"
-                  : "text-gray-600 hover:text-gray-900 dark:text-gray-300"
-              }`
-            }
-          >
-            {t(`execution.tabs.${key as "history" | "manual"}`)}
-          </Tab>
-        ))}
+        <Tab
+          className={({ selected }) =>
+            `flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+              selected
+                ? "bg-white text-blue-700 shadow dark:bg-gray-900 dark:text-blue-400"
+                : "text-gray-600 hover:text-gray-900 dark:text-gray-300"
+            }`
+          }
+        >
+          {historyTabLabel}
+        </Tab>
+        <Tab
+          className={({ selected }) =>
+            `flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+              selected
+                ? "bg-white text-blue-700 shadow dark:bg-gray-900 dark:text-blue-400"
+                : "text-gray-600 hover:text-gray-900 dark:text-gray-300"
+            }`
+          }
+        >
+          {manualTabLabel}
+        </Tab>
       </Tab.List>
       <Tab.Panels>
         <Tab.Panel>

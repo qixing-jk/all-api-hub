@@ -30,10 +30,8 @@ export default defineConfig({
     // until we decide to tighten dynamic-key handling more aggressively.
     removeUnusedKeys: false,
     preservePatterns: [
-      "about:stores.*",
       "aiApiVerification:verifyDialog.apiTypes.*",
       "aiApiVerification:verifyDialog.probes.*",
-      "autoCheckin:execution.filters.*",
       "autoCheckin:skipReasons.*",
       "autoCheckin:status.result.*",
       "balanceHistory:filters.quickRanges.*",
@@ -42,14 +40,8 @@ export default defineConfig({
       "cliSupportVerification:verifyDialog.apiTypes.*",
       "cliSupportVerification:verifyDialog.tools.*",
       "managedSiteChannels:table.columns.*",
-      "managedSiteModelSync:execution.filters.*",
-      "managedSiteModelSync:execution.tabs.*",
       "settings:logging.levels.*",
       "settings:tabs.*",
-      "settings:theme.*",
-      "ui:dialog.ccswitch.appOptions.*",
-      "ui:navigation.*",
-      "ui:pageTitle.*",
     ],
   },
 })

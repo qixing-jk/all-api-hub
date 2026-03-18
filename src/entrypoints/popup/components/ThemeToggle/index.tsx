@@ -9,23 +9,37 @@ import { IconButton } from "~/components/ui"
 import { useTheme } from "~/contexts/ThemeContext"
 import type { ThemeMode } from "~/types/theme"
 
+const getThemeLabel = (
+  t: (key: string, options?: any) => string,
+  mode: ThemeMode,
+) => {
+  switch (mode) {
+    case "light":
+      return t("settings:theme.light")
+    case "dark":
+      return t("settings:theme.dark")
+    case "system":
+      return t("settings:theme.followSystem")
+  }
+}
+
 const getThemeOptions = (t: (key: string) => string) => {
   return [
     {
       mode: "light" as ThemeMode,
-      label: t("settings:theme.light"),
+      label: getThemeLabel(t, "light"),
       icon: SunIcon,
       description: t("settings:theme.useLightTheme"),
     },
     {
       mode: "dark" as ThemeMode,
-      label: t("settings:theme.dark"),
+      label: getThemeLabel(t, "dark"),
       icon: MoonIcon,
       description: t("settings:theme.useDarkTheme"),
     },
     {
       mode: "system" as ThemeMode,
-      label: t("settings:theme.followSystem"),
+      label: getThemeLabel(t, "system"),
       icon: ComputerDesktopIcon,
       description: t("settings:theme.followSystemTheme"),
     },
@@ -54,9 +68,9 @@ const CompactThemeToggle = () => {
   const resolvedThemeLabel =
     themeMode === "system"
       ? resolvedTheme === "dark"
-        ? t("theme.dark")
-        : t("theme.light")
-      : t(`theme.${currentTheme?.mode}`)
+        ? getThemeLabel(t, "dark")
+        : getThemeLabel(t, "light")
+      : getThemeLabel(t, currentTheme?.mode ?? "system")
 
   return (
     <IconButton
@@ -65,15 +79,15 @@ const CompactThemeToggle = () => {
       size="sm"
       title={
         t("theme.current", {
-          theme: t(`theme.${currentTheme?.mode}`),
+          theme: getThemeLabel(t, currentTheme?.mode ?? "system"),
           resolvedTheme: resolvedThemeLabel,
         }) +
         "\n" +
-        t("theme.clickSwitch", { nextMode: t(`theme.${nextTheme.mode}`) })
+        t("theme.clickSwitch", { nextMode: getThemeLabel(t, nextTheme.mode) })
       }
       aria-label={t("theme.toggle", {
-        currentMode: t(`theme.${currentTheme?.mode}`),
-        nextMode: t(`theme.${nextTheme.mode}`),
+        currentMode: getThemeLabel(t, currentTheme?.mode ?? "system"),
+        nextMode: getThemeLabel(t, nextTheme.mode),
       })}
     >
       {/* Match header icon sizing, but keep a subtle mode color cue. */}

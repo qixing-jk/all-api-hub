@@ -29,6 +29,20 @@ import PluginIntroCard from "./components/PluginIntroCard"
 import PrivacyNotice from "./components/PrivacyNotice"
 import TechStackGrid from "./components/TechStackGrid"
 
+const getStoreLabel = (
+  t: (key: string, options?: any) => string,
+  storeId: ExtensionStoreId,
+) => {
+  switch (storeId) {
+    case "chrome":
+      return t("about:stores.chrome")
+    case "edge":
+      return t("about:stores.edge")
+    case "firefox":
+      return t("about:stores.firefox")
+  }
+}
+
 /**
  * Options/About page: displays app metadata, links, features, tech stack, credits, and privacy notice.
  */
@@ -42,7 +56,7 @@ export default function About() {
 
   // Store CTA: ask for a positive review on the current store, and provide download links for other stores.
   const currentStoreId = detectExtensionStore()
-  const currentStoreName = t(`stores.${currentStoreId}`)
+  const currentStoreName = getStoreLabel(t, currentStoreId)
   const otherStoreIds = (
     Object.keys(EXTENSION_STORE_LISTING_URLS) as ExtensionStoreId[]
   ).filter((storeId) => storeId !== currentStoreId)
@@ -169,9 +183,9 @@ export default function About() {
               <LinkCard
                 key={storeId}
                 Icon={ArrowDownTrayIcon}
-                title={t(`stores.${storeId}`)}
+                title={getStoreLabel(t, storeId)}
                 description={t("storesSection.download.description", {
-                  store: t(`stores.${storeId}`),
+                  store: getStoreLabel(t, storeId),
                 })}
                 href={EXTENSION_STORE_LISTING_URLS[storeId]}
                 buttonText={t("storesSection.download.button")}

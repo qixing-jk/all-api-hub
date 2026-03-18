@@ -45,6 +45,20 @@ const logger = createLogger("CCSwitchExportDialog")
 
 const DEFAULT_APP: CCSwitchApp = "claude"
 
+const getCCSwitchAppLabel = (
+  t: (key: string, options?: any) => string,
+  app: CCSwitchApp,
+) => {
+  switch (app) {
+    case "claude":
+      return t("ui:dialog.ccswitch.appOptions.claude")
+    case "codex":
+      return t("ui:dialog.ccswitch.appOptions.codex")
+    case "gemini":
+      return t("ui:dialog.ccswitch.appOptions.gemini")
+  }
+}
+
 /**
  * Presents a modal for exporting an account token into CCSwitch-compatible apps.
  * Prefills provider metadata and lets the user tweak app, endpoint, model, and helper notes.
@@ -267,7 +281,7 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
             <SelectContent>
               {CCSWITCH_APPS.map((value) => (
                 <SelectItem key={value} value={value}>
-                  {t(`ui:dialog.ccswitch.appOptions.${value}`)}
+                  {getCCSwitchAppLabel(t, value)}
                 </SelectItem>
               ))}
             </SelectContent>
