@@ -1,45 +1,45 @@
 {
   "dialog": {
-    "title": {
-      "settings": "New API 会话检测",
-      "token": "New API 验证重试",
-      "channel": "New API 渠道 key 验证"
+    "actions": {
+      "close": "关闭",
+      "openSite": "打开站点",
+      "retry": "重试",
+      "retryAfterPasskey": "完成 Passkey 后重试",
+      "submitLoginCode": "提交登录验证码",
+      "submitVerificationCode": "提交安全验证码"
     },
     "body": {
-      "loggingIn": "正在检查当前 New API 会话，并在需要时准备验证流程。",
       "credentialsMissing": "请先在设置中填写 New API 登录用户名和密码，再运行会话辅助验证。",
+      "failure": "New API 验证流程未能完成。",
+      "loggingIn": "正在检查当前 New API 会话，并在需要时准备验证流程。",
       "loginTwoFactor": "New API 登录步骤需要先提交一次验证码，浏览器会话才能继续。",
-      "secureVerification": "管理员会话已经登录，但在读取隐藏渠道密钥之前，New API 仍需要一次安全验证码验证。",
       "passkeyManual": "当前账号在该步骤使用 Passkey 验证。请先在站点上完成 Passkey 校验，然后返回这里重试。",
-      "successSettings": "New API 登录与验证流程已成功完成。现在可以继续执行需要登录与验证的相关操作。",
-      "successToken": "{{label}} 的验证已成功，管理站点状态已刷新。",
+      "secureVerification": "管理员会话已经登录，但在读取隐藏渠道密钥之前，New API 仍需要一次安全验证码验证。",
       "successChannel": "{{label}} 的验证已成功，真实渠道 key 已加载。",
-      "failure": "New API 验证流程未能完成。"
+      "successSettings": "New API 登录与验证流程已成功完成。现在可以继续执行需要登录与验证的相关操作。",
+      "successToken": "{{label}} 的验证已成功，管理站点状态已刷新。"
     },
     "fields": {
       "codeLabel": "验证码",
       "codePlaceholder": "输入验证码"
     },
-    "actions": {
-      "close": "关闭",
-      "retry": "重试",
-      "submitLoginCode": "提交登录验证码",
-      "submitVerificationCode": "提交安全验证码",
-      "retryAfterPasskey": "完成 Passkey 后重试",
-      "openSite": "打开站点"
-    },
-    "messages": {
-      "starting": "正在启动 New API 验证流程...",
-      "submitting": "正在提交验证码...",
-      "refreshingToken": "正在刷新该密钥的管理站点状态...",
-      "refreshingChannel": "正在加载真实渠道 key...",
-      "finishing": "正在完成 New API 会话检测...",
-      "missingBaseUrl": "请先填写 New API 基础 URL，再测试会话流程。",
-      "missingCode": "请先输入验证码。"
-    },
     "hints": {
       "manualFallback": "即使已配置自动 TOTP，仍然可以手动输入验证码。",
       "passkey": "请打开站点，在那里完成 Passkey 提示后，再返回这里重试。"
+    },
+    "messages": {
+      "finishing": "正在完成 New API 会话检测...",
+      "missingBaseUrl": "请先填写 New API 基础 URL，再测试会话流程。",
+      "missingCode": "请先输入验证码。",
+      "refreshingChannel": "正在加载真实渠道 key...",
+      "refreshingToken": "正在刷新该密钥的管理站点状态...",
+      "starting": "正在启动 New API 验证流程...",
+      "submitting": "正在提交验证码..."
+    },
+    "title": {
+      "channel": "New API 渠道 key 验证",
+      "settings": "New API 会话检测",
+      "token": "New API 验证重试"
     }
   }
 }

@@ -1,422 +1,379 @@
 {
-  "title": "Settings",
-  "description": "Manage the basic configuration options of the plugin",
-  "tabs": {
-    "general": "General",
-    "balanceHistory": "Balance History",
-    "accountManagement": "Account Management",
-    "refresh": "Data Refresh",
-    "checkinRedeem": "Check-in & Redeem",
-    "webAiApiCheck": "AI API Test",
-    "accountUsage": "Account usage",
-    "dataBackup": "Data & Backup",
-    "managedSite": "Managed site",
-    "cliProxy": "CLIProxyAPI",
-    "claudeCodeRouter": "Claude Code Router",
-    "more": "More",
-    "permissions": "Permissions",
-    "scrollLeft": "Scroll tabs left",
-    "scrollRight": "Scroll tabs right",
-    "select": "Select a tab"
+  "accountManagement": {
+    "description": "Manage accounts, balances, API keys, and configure sorting priorities in the dedicated management console.",
+    "openPage": "Open Account Management Page",
+    "title": "Account Management"
   },
-  "display": {
-    "title": "Display Settings",
-    "description": "Customize the appearance and display preferences of the plugin",
-    "defaultCurrency": "Default Currency Unit",
-    "currencyUnit": "Currency Unit",
-    "currencyDesc": "Set the default currency unit for balance and cashflow display",
-    "usd": "USD ($)",
-    "cny": "CNY (¥)",
-    "defaultTab": "Default Tab",
-    "defaultTabDesc": "Set the default tab displayed when the plugin starts",
-    "todayCashflow": "Today's Cashflow",
-    "totalBalance": "Total Balance",
-    "todayCashflowEnabled": "Show Today's Cashflow",
-    "todayCashflowEnabledDesc": "Controls whether today's consumption/income stats are displayed and fetched. When disabled, today stats are hidden and refresh skips the data requests used to compute them."
-  },
-  "refresh": {
-    "title": "Refresh Settings",
-    "description": "Configure auto-refresh related settings, such as refresh interval and behavior at startup",
-    "autoRefresh": "Auto Refresh",
-    "autoRefreshDesc": "Regularly auto-refresh account data",
-    "refreshInterval": "Refresh Interval",
-    "refreshIntervalDesc": "Set the time interval for auto-refresh (default {{defaultInterval}} seconds, it is recommended not to set too small to avoid frequent requests)",
-    "refreshIntervalInvalid": "Please enter a valid refresh interval (at least {{minSeconds}} seconds).",
-    "refreshOnOpen": "Auto-refresh when opening plugin",
-    "refreshOnOpenDesc": "Auto-refresh account data when opening the plugin popup",
-    "minRefreshInterval": "Minimum Refresh Interval",
-    "minRefreshIntervalDesc": "Minimum time interval between refreshes to avoid frequent requests (at least {{minSeconds}} seconds)",
-    "minRefreshIntervalInvalid": "Please enter a valid minimum refresh interval (at least {{minSeconds}} seconds).",
-    "shieldTitle": "Temp-window protection bypass",
-    "shieldDescription": "This feature may open a temporary popup window to bypass website protection pages. On Firefox, it also uses the Cookie Interceptor so requests can include the required cookies.",
-    "shieldDescriptionTempWindowOnly": "When enabled, a temporary popup window may open briefly to bypass website protection pages (e.g., Cloudflare's 5-second shield) before the extension retrieves data.",
-    "shieldDescriptionWithCookieInterceptor": "On Firefox, a temporary popup window may open briefly to pass protection pages and obtain cookies. The Cookie Interceptor then attaches those cookies to requests.",
-    "shieldEnabled": "Enable protection bypass (temp window)",
-    "shieldEnabledDesc": "When disabled, the extension will not open the temporary popup window for protection bypass.",
-    "shieldEnabledDescTempWindowOnly": "When disabled, the extension will not open the temporary popup window to bypass website protection pages.",
-    "shieldEnabledDescWithCookieInterceptor": "When disabled, Firefox will not open the temporary popup window to obtain cookies for Cookie Interceptor based requests.",
-    "shieldMethodTitle": "Bypass method",
-    "shieldMethodDesc": "Choose which temporary context to use when running the protection bypass.",
-    "shieldMethodTab": "Temp tab",
-    "shieldMethodWindow": "Popup window",
-    "shieldMethodComposite": "Shared window (tabs)",
-    "shieldMethodHintTab": "Use the background tab of the current window to complete the shield, with less interface interference.",
-    "shieldMethodHintWindow": "Use multiple new windows to complete the shield; a new window will pop up each time the shield is completed.",
-    "shieldMethodHintComposite": "Uses a shared window and opens each bypass run as a tab inside it.",
-    "shieldContextsTitle": "Use protection bypass in these contexts",
-    "shieldContextsDesc": "Choose where the temp-window protection bypass is allowed. Individual options are ignored when the main switch is disabled.",
-    "shieldPopup": "Use in popup",
-    "shieldSidepanel": "Use in side panel",
-    "shieldOptions": "Use on options page",
-    "shieldAutoRefresh": "Use for automatic refresh",
-    "shieldManualRefresh": "Use for manual refresh",
-    "shieldPopupFirefoxNote": "In Firefox popup, shielded data requests are always disabled to avoid closing the popup. This setting is still saved for other browsers.",
-    "shieldPermissionWarningTitle": "Cookie interceptor permissions required",
-    "shieldPermissionWarningDesc": "Grant the Cookies/Web Request permissions so the temporary window bypass can attach authenticated cookies before sending requests.",
-    "shieldPermissionAction": "Open Permissions Tab"
-  },
-  "sorting": {
-    "title": "Sorting Priority Settings",
-    "description": "Define the sorting priority of accounts in the list to organize the display of accounts",
-    "priority": "Priority",
-    "disabledAccount": "Move Disabled Accounts to Bottom",
-    "disabledAccountDesc": "Disabled accounts will be uniformly moved to the bottom of the list",
-    "pinnedPriority": "Pinned Priority",
-    "pinnedDesc": "Place pinned accounts at the top of the list in the order they were pinned",
-    "currentSitePriority": "Current Site Priority",
-    "currentSiteDesc": "Place the currently accessed site at the top of the list",
-    "healthStatus": "Health Status",
-    "healthDesc": "Sort by site health status (Error > Warning > Unknown > Healthy)",
-    "checkInRequirement": "Check-in Requirement",
-    "checkInDesc": "Place sites that need check-in at the front",
-    "manualOrder": "Manual order",
-    "manualOrderDesc": "Sort accounts according to your manually defined list order",
-    "userCustomSort": "User Custom Sort",
-    "customSortDesc": "Sort according to the field (such as balance) selected by the user in the list view",
-    "customCheckInUrl": "External check-in URL",
-    "customCheckInDesc": "Place sites using external check-in links at the front",
-    "customRedeemUrl": "Custom Redeem URL",
-    "customRedeemDesc": "Place sites using custom redeem links at the front",
-    "matchedOpenTabs": "Matched Open Tabs",
-    "matchedOpenTabsDesc": "Place sites that match any open tab (by title or URL) at the front",
-    "unknownSortRule": "Unknown sorting rule"
-  },
-  "dataBackup": {
-    "title": "Data & Backup",
-    "description": "Manage backups, WebDAV sync, and import/export entry points.",
-    "importExport": {
-      "title": "Import & Export",
-      "description": "Access the dedicated page for importing and exporting data.",
-      "openPage": "Open Import / Export Page",
-      "openImport": "Go to Import Section",
-      "openExport": "Go to Export Section",
-      "info": "The Import/Export page provides full access to data import, exporting to different formats, and backup management."
-    }
+  "actionClick": {
+    "actionIconClickDesc": "Choose open behavior when extension icon is clicked",
+    "actionIconClickTitle": "Opens when extension icon is clicked",
+    "description": "Choose what happens when you click the extension icon.",
+    "popupLabel": "Popup",
+    "popupTitle": "Open popup",
+    "sidepanelFallbackToast": "Side panel preference saved. This device will fall back to opening the popup.",
+    "sidepanelLabel": "Side panel",
+    "sidepanelTitle": "Open side panel",
+    "sidepanelUnsupportedHelper": "Side panel is not supported on this device. Toolbar icon clicks will fall back to opening the popup.",
+    "title": "Toolbar icon behavior"
   },
   "appearanceLanguage": {
     "language": "Language",
     "languageDesc": "Choose your preferred language",
-    "onboardingLabel": "Choose your language",
     "onboardingHelper": "Update the onboarding text immediately and keep this language for later settings pages.",
+    "onboardingLabel": "Choose your language",
     "switcher": {
-      "groupLabel": "Interface language selector",
       "currentLanguage": "Current interface language: {{language}}",
-      "switchToLanguage": "Switch interface language to {{language}}",
-      "options": {
-        "en": {
-          "label": "EN",
-          "name": "English"
-        },
-        "zh_CN": {
-          "label": "中文",
-          "name": "Chinese"
-        }
-      }
+      "groupLabel": "Interface language selector",
+      "switchToLanguage": "Switch interface language to {{language}}"
     }
   },
-  "accountManagement": {
-    "title": "Account Management",
-    "description": "Manage accounts, balances, API keys, and configure sorting priorities in the dedicated management console.",
-    "openPage": "Open Account Management Page"
+  "autoProvisionKeyOnAccountAdd": {
+    "description": "Control whether All API Hub automatically provisions a default API key after you add an account.",
+    "title": "API keys",
+    "toggleDesc": "When enabled, All API Hub checks your token inventory after saving an account and creates a default token if none exist.",
+    "toggleLabel": "Auto-create a default key on account add"
   },
-  "newApi": {
-    "title": "New API Integration Settings",
-    "description": "Configure integration settings for connecting to New API compatible services.",
-    "urlDesc": "Set the base URL for New API integration",
-    "tokenDesc": "System access token for the administrator user",
-    "userIdDesc": "Administrator user ID (numeric only)",
-    "adminCredentialsLink": {
-      "title": "Quick access",
-      "description": "Open the admin personal settings page to find the system access token and user ID.",
-      "open": "Open page"
-    },
-    "fields": {
-      "baseUrlLabel": "Base URL",
-      "baseUrlPlaceholder": "https://api.example.com",
-      "adminTokenLabel": "Administrator's system access token",
-      "userIdLabel": "Administrator user ID",
-      "usernameLabel": "Login username",
-      "usernameDesc": "Optional. Used to sign in to the New API admin console and complete 2FA when needed. This is mainly used for viewing the real channel key in Channel Management and for checking whether a key is already used by a channel in Key Management.",
-      "usernamePlaceholder": "admin",
-      "passwordLabel": "Login password",
-      "passwordDesc": "Optional. Used together with the login username to sign in to the New API admin console and establish a login session when viewing a channel key or running full key comparison.",
-      "passwordPlaceholder": "Enter password",
-      "showPassword": "Show login password",
-      "hidePassword": "Hide login password",
-      "totpSecretLabel": "TOTP secret",
-      "totpSecretDesc": "Optional. When provided, All API Hub can automatically generate TOTP codes for login 2FA and the secure verification required to view channel keys.",
-      "totpSecretPlaceholder": "Paste Base32 TOTP secret",
-      "showTotpSecret": "Show TOTP secret",
-      "hideTotpSecret": "Hide TOTP secret",
-      "showToken": "Show system access token",
-      "hideToken": "Hide system access token"
-    },
-    "sessionTest": {
-      "title": "Test login & 2FA config",
-      "description": "Test whether the entered login username, password, and TOTP secret are correct and usable. After a successful check, you can continue with actions that require login and 2FA.",
-      "action": "Test config",
-      "testing": "Testing config..."
-    }
-  },
-  "veloera": {
-    "title": "Veloera Integration Settings",
-    "description": "Configure integration settings for connecting to Veloera compatible services.",
-    "urlDesc": "Set the base URL for Veloera integration",
-    "tokenDesc": "System access token for the administrator user",
-    "userIdDesc": "Administrator user ID (numeric only)",
-    "adminCredentialsLink": {
-      "title": "Quick access",
-      "description": "Open the admin personal settings page to find the system access token and user ID.",
-      "open": "Open page"
-    },
-    "fields": {
-      "baseUrlLabel": "Base URL",
-      "baseUrlPlaceholder": "https://api.example.com",
-      "adminTokenLabel": "Administrator's system access token",
-      "userIdLabel": "Administrator user ID",
-      "showToken": "Show system access token",
-      "hideToken": "Hide system access token"
-    }
-  },
-  "doneHub": {
-    "title": "Done Hub Integration Settings",
-    "description": "Configure integration settings for connecting to Done Hub compatible services.",
-    "urlDesc": "Set the base URL for Done Hub integration",
-    "tokenDesc": "System access token for the administrator user. Find it in Done Hub dashboard → Personal settings → Token.",
-    "userIdDesc": "Administrator user ID (numeric only). Root admin is usually 1.",
-    "adminCredentialsLink": {
-      "title": "Quick access",
-      "description": "Open the profile page to find the system access token and user ID.",
-      "open": "Open page"
-    },
-    "fields": {
-      "baseUrlLabel": "Base URL",
-      "baseUrlPlaceholder": "https://api.example.com",
-      "adminTokenLabel": "Administrator's system access token",
-      "userIdLabel": "Administrator user ID",
-      "showToken": "Show system access token",
-      "hideToken": "Hide system access token"
-    }
-  },
-  "managedSite": {
-    "title": "Managed Site Configuration",
-    "description": "Select which API aggregator platform you want to manage. This determines which configuration will be used for channel management and model syncing.",
-    "siteTypeLabel": "Managed Site Type",
-    "siteTypeDesc": "Choose the platform used for channel management and model sync",
-    "newApi": "New API",
-    "doneHub": "Done Hub",
-    "veloera": "Veloera",
-    "octopus": "Octopus"
-  },
-  "octopus": {
-    "title": "Octopus Integration Settings",
-    "description": "Configure integration settings for connecting to Octopus self-hosted sites. The system will automatically log in using your credentials and manage the JWT Token.",
-    "fields": {
-      "baseUrlLabel": "Base URL",
-      "baseUrlDesc": "Set the base URL for Octopus site",
-      "baseUrlPlaceholder": "https://octopus.example.com",
-      "usernameLabel": "Username",
-      "usernameDesc": "Octopus admin username for automatic login",
-      "usernamePlaceholder": "admin",
-      "passwordLabel": "Password",
-      "passwordDesc": "Octopus admin password for automatic login",
-      "passwordPlaceholder": "Enter password",
-      "showPassword": "Show password",
-      "hidePassword": "Hide password"
-    },
-    "validation": {
-      "title": "Validate Configuration",
-      "description": "Test if username and password are correct",
-      "validate": "Validate",
-      "validating": "Validating...",
-      "success": "Configuration validated successfully, connection is working",
-      "failed": "Configuration validation failed, please check username and password",
-      "error": "An error occurred during validation",
-      "missingFields": "Please fill in all required fields"
-    }
-  },
-  "cliProxy": {
-    "title": "CLIProxyAPI Settings",
-    "description": "Configure connection to CLIProxyAPI Management API",
-    "baseUrlLabel": "Management API Base URL",
-    "managementKeyLabel": "Management Key",
-    "urlDesc": "Set the Management API base URL, e.g. http://localhost:8317/v0/management",
-    "keyDesc": "Management key for interface access authentication"
+  "changelogOnUpdate": {
+    "description": "Control whether All API Hub shows a What's New dialog the first time you open the extension UI after updates.",
+    "title": "Changelog",
+    "toggleDesc": "When enabled, the update log is shown inline on first UI open after an update (once per version). You can still open the full docs changelog manually.",
+    "toggleLabel": "Show What's New after updates"
   },
   "claudeCodeRouter": {
-    "title": "Claude Code Router",
-    "description": "Configure connection to Claude Code Router admin API",
-    "baseUrlLabel": "Base URL",
-    "baseUrlPlaceholder": "http://localhost:3000",
     "apiKeyLabel": "API key",
     "apiKeyPlaceholder": "sk-123456",
-    "urlDesc": "Claude Code Router server base URL, e.g. http://localhost:3000",
-    "keyDesc": "Optional API key for /api/config (APIKEY)"
+    "baseUrlLabel": "Base URL",
+    "baseUrlPlaceholder": "http://localhost:3000",
+    "description": "Configure connection to Claude Code Router admin API",
+    "keyDesc": "Optional API key for /api/config (APIKEY)",
+    "title": "Claude Code Router",
+    "urlDesc": "Claude Code Router server base URL, e.g. http://localhost:3000"
   },
-  "actionClick": {
-    "title": "Toolbar icon behavior",
-    "description": "Choose what happens when you click the extension icon.",
-    "actionIconClickTitle": "Opens when extension icon is clicked",
-    "actionIconClickDesc": "Choose open behavior when extension icon is clicked",
-    "popupTitle": "Open popup",
-    "popupLabel": "Popup",
-    "sidepanelTitle": "Open side panel",
-    "sidepanelLabel": "Side panel",
-    "sidepanelUnsupportedHelper": "Side panel is not supported on this device. Toolbar icon clicks will fall back to opening the popup.",
-    "sidepanelFallbackToast": "Side panel preference saved. This device will fall back to opening the popup."
+  "cliProxy": {
+    "baseUrlLabel": "Management API Base URL",
+    "description": "Configure connection to CLIProxyAPI Management API",
+    "keyDesc": "Management key for interface access authentication",
+    "managementKeyLabel": "Management Key",
+    "title": "CLIProxyAPI Settings",
+    "urlDesc": "Set the Management API base URL, e.g. http://localhost:8317/v0/management"
+  },
+  "danger": {
+    "resetAllSettings": "Reset All Settings",
+    "resetDesc": "Reset all configurations to default values, this operation cannot be undone",
+    "resetFailed": "Failed to reset settings",
+    "resetSettings": "Reset Settings",
+    "title": "Danger Zone"
+  },
+  "dataBackup": {
+    "importExport": {
+      "description": "Access the dedicated page for importing and exporting data.",
+      "info": "The Import/Export page provides full access to data import, exporting to different formats, and backup management.",
+      "openPage": "Open Import / Export Page",
+      "title": "Import & Export"
+    }
+  },
+  "description": "Manage the basic configuration options of the plugin",
+  "display": {
+    "cny": "CNY (¥)",
+    "currencyDesc": "Set the default currency unit for balance and cashflow display",
+    "currencyUnit": "Currency Unit",
+    "defaultTab": "Default Tab",
+    "defaultTabDesc": "Set the default tab displayed when the plugin starts",
+    "description": "Customize the appearance and display preferences of the plugin",
+    "title": "Display Settings",
+    "todayCashflow": "Today's Cashflow",
+    "todayCashflowEnabled": "Show Today's Cashflow",
+    "todayCashflowEnabledDesc": "Controls whether today's consumption/income stats are displayed and fetched. When disabled, today stats are hidden and refresh skips the data requests used to compute them.",
+    "totalBalance": "Total Balance",
+    "usd": "USD ($)"
+  },
+  "doneHub": {
+    "adminCredentialsLink": {
+      "description": "Open the profile page to find the system access token and user ID.",
+      "open": "Open page",
+      "title": "Quick access"
+    },
+    "description": "Configure integration settings for connecting to Done Hub compatible services.",
+    "fields": {
+      "adminTokenLabel": "Administrator's system access token",
+      "baseUrlLabel": "Base URL",
+      "baseUrlPlaceholder": "https://api.example.com",
+      "hideToken": "Hide system access token",
+      "showToken": "Show system access token",
+      "userIdLabel": "Administrator user ID"
+    },
+    "title": "Done Hub Integration Settings",
+    "tokenDesc": "System access token for the administrator user. Find it in Done Hub dashboard → Personal settings → Token.",
+    "urlDesc": "Set the base URL for Done Hub integration",
+    "userIdDesc": "Administrator user ID (numeric only). Root admin is usually 1."
+  },
+  "duplicateAccountWarningOnAdd": {
+    "description": "Control whether All API Hub asks for confirmation when you add an account for a site that already exists.",
+    "title": "Accounts",
+    "toggleDesc": "When enabled, All API Hub shows a confirmation dialog if you try to add another account for the same site URL.",
+    "toggleLabel": "Warn before adding duplicates"
+  },
+  "logging": {
+    "consoleEnabled": "Enable console logging",
+    "consoleEnabledDesc": "When disabled, All API Hub will not emit any console output at any level (including errors).",
+    "description": "Control console logging for troubleshooting and diagnostics.",
+    "levels": {
+      "debug": "Debug",
+      "error": "Error",
+      "info": "Info",
+      "warn": "Warn"
+    },
+    "minLevel": "Minimum log level",
+    "minLevelDesc": "When console logging is enabled, logs below this level are suppressed.",
+    "title": "Logging"
+  },
+  "managedSite": {
+    "description": "Select which API aggregator platform you want to manage. This determines which configuration will be used for channel management and model syncing.",
+    "doneHub": "Done Hub",
+    "newApi": "New API",
+    "octopus": "Octopus",
+    "siteTypeDesc": "Choose the platform used for channel management and model sync",
+    "siteTypeLabel": "Managed Site Type",
+    "title": "Managed Site Configuration",
+    "veloera": "Veloera"
+  },
+  "messages": {
+    "confirmReset": "Confirm Reset",
+    "resetConfirmDesc": "Are you sure you want to reset {{name}} to default settings? This operation cannot be undone.",
+    "resetFailed": "Failed to reset {{name}}",
+    "resetSuccess": "{{name}} has been reset to default settings",
+    "saveSettingsFailed": "Failed to save settings",
+    "updateFailed": "{{name}} Update failed",
+    "updateSuccess": "{{name}} Update successful"
+  },
+  "newApi": {
+    "adminCredentialsLink": {
+      "description": "Open the admin personal settings page to find the system access token and user ID.",
+      "open": "Open page",
+      "title": "Quick access"
+    },
+    "description": "Configure integration settings for connecting to New API compatible services.",
+    "fields": {
+      "adminTokenLabel": "Administrator's system access token",
+      "baseUrlLabel": "Base URL",
+      "baseUrlPlaceholder": "https://api.example.com",
+      "hidePassword": "Hide login password",
+      "hideToken": "Hide system access token",
+      "hideTotpSecret": "Hide TOTP secret",
+      "passwordDesc": "Optional. Used together with the login username to sign in to the New API admin console and establish a login session when viewing a channel key or running full key comparison.",
+      "passwordLabel": "Login password",
+      "passwordPlaceholder": "Enter password",
+      "showPassword": "Show login password",
+      "showToken": "Show system access token",
+      "showTotpSecret": "Show TOTP secret",
+      "totpSecretDesc": "Optional. When provided, All API Hub can automatically generate TOTP codes for login 2FA and the secure verification required to view channel keys.",
+      "totpSecretLabel": "TOTP secret",
+      "totpSecretPlaceholder": "Paste Base32 TOTP secret",
+      "userIdLabel": "Administrator user ID",
+      "usernameDesc": "Optional. Used to sign in to the New API admin console and complete 2FA when needed. This is mainly used for viewing the real channel key in Channel Management and for checking whether a key is already used by a channel in Key Management.",
+      "usernameLabel": "Login username",
+      "usernamePlaceholder": "admin"
+    },
+    "sessionTest": {
+      "action": "Test config",
+      "description": "Test whether the entered login username, password, and TOTP secret are correct and usable. After a successful check, you can continue with actions that require login and 2FA.",
+      "testing": "Testing config...",
+      "title": "Test login & 2FA config"
+    },
+    "title": "New API Integration Settings",
+    "tokenDesc": "System access token for the administrator user",
+    "urlDesc": "Set the base URL for New API integration",
+    "userIdDesc": "Administrator user ID (numeric only)"
+  },
+  "octopus": {
+    "description": "Configure integration settings for connecting to Octopus self-hosted sites. The system will automatically log in using your credentials and manage the JWT Token.",
+    "fields": {
+      "baseUrlDesc": "Set the base URL for Octopus site",
+      "baseUrlLabel": "Base URL",
+      "baseUrlPlaceholder": "https://octopus.example.com",
+      "hidePassword": "Hide password",
+      "passwordDesc": "Octopus admin password for automatic login",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "Enter password",
+      "showPassword": "Show password",
+      "usernameDesc": "Octopus admin username for automatic login",
+      "usernameLabel": "Username",
+      "usernamePlaceholder": "admin"
+    },
+    "title": "Octopus Integration Settings",
+    "validation": {
+      "description": "Test if username and password are correct",
+      "error": "An error occurred during validation",
+      "failed": "Configuration validation failed, please check username and password",
+      "missingFields": "Please fill in all required fields",
+      "success": "Configuration validated successfully, connection is working",
+      "title": "Validate Configuration",
+      "validate": "Validate",
+      "validating": "Validating..."
+    }
   },
   "permissions": {
-    "title": "Permissions",
-    "description": "Only grant these optional capabilities when you need All API Hub to handle cookies, headers, or temp-window bypass flows for you.",
-    "helper": "Once enabled, the extension simply attaches your existing session cookies and headers in the background. You can disable any permission later without affecting core features.",
-    "statusCaption": "Permission status is synced with the browser. Click refresh if you changed permissions outside this page.",
-    "status": {
-      "checking": "Checking…",
-      "granted": "Granted",
-      "denied": "Not granted"
-    },
     "actions": {
       "allow": "Allow (recommended)",
-      "remove": "Revoke",
-      "refresh": "Refresh status"
+      "refresh": "Refresh status",
+      "remove": "Revoke"
     },
+    "description": "Only grant these optional capabilities when you need All API Hub to handle cookies, headers, or temp-window bypass flows for you.",
+    "helper": "Once enabled, the extension simply attaches your existing session cookies and headers in the background. You can disable any permission later without affecting core features.",
     "messages": {
       "granted": "{{name}} enabled. Related workflows will now run as expected.",
       "grantFailed": "Couldn’t enable {{name}}. Please retry later if you still need it.",
       "revoked": "{{name}} permission revoked",
       "revokeFailed": "Failed to revoke {{name}} permission"
     },
-    "items": {
-      "cookies": {
-        "title": "Cookies",
-        "description": "Allows All API Hub to read the necessary cookies for your connected accounts so authentication headers can be added when required."
-      },
-      "declarativeNetRequestWithHostAccess": {
-        "title": "Declarative Net Request",
-        "description": "Allow applying request header rules by pressing Tab during the temporary window shield, attaching the correct cookies for different accounts, and avoiding data anomalies under multiple accounts."
-      },
-      "webRequest": {
-        "title": "Web Request",
-        "description": "Lets the extension observe outgoing requests only when temp-window bypass or auto-refresh needs to add required headers."
-      },
-      "webRequestBlocking": {
-        "title": "Web Request Blocking",
-        "description": "Allows synchronous modification so cookies can be attached before a request leaves the browser, keeping firewall-bypass flows reliable."
-      },
-      "clipboardRead": {
-        "title": "Clipboard Read",
-        "description": "Allow the redemption assistant to detect copied redemption codes, thereby prompting automatic redemption of the codes."
-      }
-    }
+    "status": {
+      "checking": "Checking…",
+      "denied": "Not granted",
+      "granted": "Granted"
+    },
+    "statusCaption": "Permission status is synced with the browser. Click refresh if you changed permissions outside this page.",
+    "title": "Permissions"
   },
   "permissionsOnboarding": {
-    "title": "Welcome to All API Hub",
-    "subtitle": "This open-source extension needs a few optional permissions to enable features like the temp-window bypass and other advanced workflows.",
-    "openSourceBadge": "Open-source & community-driven",
+    "actions": {
+      "allowAll": "Allow recommended permissions",
+      "maybeLater": "Maybe later"
+    },
     "intro": "As an open-source project, we only ask for the minimal optional permissions needed to enable advanced workflows. You stay in full control.",
+    "openSourceBadge": "Open-source & community-driven",
+    "permissionListDescription": "These permissions are required for firewall-bypass flows so data refresh jobs keep working on protected sites.",
+    "permissionListTitle": "What these permissions do",
     "project": {
-      "label": "Project",
       "cta": "Go to the repository to follow versions, submit issues, or participate in development.",
+      "label": "Project",
       "starCta": "Star us on GitHub to support the project!"
     },
     "reason": {
       "newPermissions": "We added new optional permissions to support recent features. Please review and confirm to keep everything working."
     },
-    "actions": {
-      "allowAll": "Allow recommended permissions",
-      "maybeLater": "Maybe later"
-    },
-    "permissionListTitle": "What these permissions do",
-    "permissionListDescription": "These permissions are required for firewall-bypass flows so data refresh jobs keep working on protected sites.",
+    "subtitle": "This open-source extension needs a few optional permissions to enable features like the temp-window bypass and other advanced workflows.",
+    "title": "Welcome to All API Hub",
     "toasts": {
-      "success": "All recommended permissions granted",
-      "error": "Permission request was dismissed"
+      "error": "Permission request was dismissed",
+      "success": "All recommended permissions granted"
     }
   },
-  "danger": {
-    "title": "Danger Zone",
-    "resetAllSettings": "Reset All Settings",
-    "resetDesc": "Reset all configurations to default values, this operation cannot be undone",
-    "resetSettings": "Reset Settings",
-    "resetAllConfirm": "Reset All Settings",
-    "resetSuccess": "All settings have been reset to default values",
-    "resetFailed": "Failed to reset settings"
+  "refresh": {
+    "autoRefresh": "Auto Refresh",
+    "autoRefreshDesc": "Regularly auto-refresh account data",
+    "description": "Configure auto-refresh related settings, such as refresh interval and behavior at startup",
+    "minRefreshInterval": "Minimum Refresh Interval",
+    "minRefreshIntervalDesc": "Minimum time interval between refreshes to avoid frequent requests (at least {{minSeconds}} seconds)",
+    "minRefreshIntervalInvalid": "Please enter a valid minimum refresh interval (at least {{minSeconds}} seconds).",
+    "refreshInterval": "Refresh Interval",
+    "refreshIntervalDesc": "Set the time interval for auto-refresh (default {{defaultInterval}} seconds, it is recommended not to set too small to avoid frequent requests)",
+    "refreshIntervalInvalid": "Please enter a valid refresh interval (at least {{minSeconds}} seconds).",
+    "refreshOnOpen": "Auto-refresh when opening plugin",
+    "refreshOnOpenDesc": "Auto-refresh account data when opening the plugin popup",
+    "shieldAutoRefresh": "Use for automatic refresh",
+    "shieldContextsDesc": "Choose where the temp-window protection bypass is allowed. Individual options are ignored when the main switch is disabled.",
+    "shieldContextsTitle": "Use protection bypass in these contexts",
+    "shieldDescriptionTempWindowOnly": "When enabled, a temporary popup window may open briefly to bypass website protection pages (e.g., Cloudflare's 5-second shield) before the extension retrieves data.",
+    "shieldDescriptionWithCookieInterceptor": "On Firefox, a temporary popup window may open briefly to pass protection pages and obtain cookies. The Cookie Interceptor then attaches those cookies to requests.",
+    "shieldEnabled": "Enable protection bypass (temp window)",
+    "shieldEnabledDescTempWindowOnly": "When disabled, the extension will not open the temporary popup window to bypass website protection pages.",
+    "shieldEnabledDescWithCookieInterceptor": "When disabled, Firefox will not open the temporary popup window to obtain cookies for Cookie Interceptor based requests.",
+    "shieldManualRefresh": "Use for manual refresh",
+    "shieldMethodComposite": "Shared window (tabs)",
+    "shieldMethodDesc": "Choose which temporary context to use when running the protection bypass.",
+    "shieldMethodHintComposite": "Uses a shared window and opens each bypass run as a tab inside it.",
+    "shieldMethodHintTab": "Use the background tab of the current window to complete the shield, with less interface interference.",
+    "shieldMethodHintWindow": "Use multiple new windows to complete the shield; a new window will pop up each time the shield is completed.",
+    "shieldMethodTab": "Temp tab",
+    "shieldMethodTitle": "Bypass method",
+    "shieldMethodWindow": "Popup window",
+    "shieldOptions": "Use on options page",
+    "shieldPermissionAction": "Open Permissions Tab",
+    "shieldPermissionWarningDesc": "Grant the Cookies/Web Request permissions so the temporary window bypass can attach authenticated cookies before sending requests.",
+    "shieldPermissionWarningTitle": "Cookie interceptor permissions required",
+    "shieldPopup": "Use in popup",
+    "shieldPopupFirefoxNote": "In Firefox popup, shielded data requests are always disabled to avoid closing the popup. This setting is still saved for other browsers.",
+    "shieldSidepanel": "Use in side panel",
+    "shieldTitle": "Temp-window protection bypass",
+    "title": "Refresh Settings"
+  },
+  "sorting": {
+    "checkInDesc": "Place sites that need check-in at the front",
+    "checkInRequirement": "Check-in Requirement",
+    "currentSiteDesc": "Place the currently accessed site at the top of the list",
+    "currentSitePriority": "Current Site Priority",
+    "customCheckInDesc": "Place sites using external check-in links at the front",
+    "customCheckInUrl": "External check-in URL",
+    "customRedeemDesc": "Place sites using custom redeem links at the front",
+    "customRedeemUrl": "Custom Redeem URL",
+    "customSortDesc": "Sort according to the field (such as balance) selected by the user in the list view",
+    "description": "Define the sorting priority of accounts in the list to organize the display of accounts",
+    "disabledAccount": "Move Disabled Accounts to Bottom",
+    "disabledAccountDesc": "Disabled accounts will be uniformly moved to the bottom of the list",
+    "healthDesc": "Sort by site health status (Error > Warning > Unknown > Healthy)",
+    "healthStatus": "Health Status",
+    "manualOrder": "Manual order",
+    "manualOrderDesc": "Sort accounts according to your manually defined list order",
+    "matchedOpenTabs": "Matched Open Tabs",
+    "matchedOpenTabsDesc": "Place sites that match any open tab (by title or URL) at the front",
+    "pinnedDesc": "Place pinned accounts at the top of the list in the order they were pinned",
+    "pinnedPriority": "Pinned Priority",
+    "priority": "Priority",
+    "title": "Sorting Priority Settings",
+    "unknownSortRule": "Unknown sorting rule",
+    "userCustomSort": "User Custom Sort"
+  },
+  "tabs": {
+    "accountManagement": "Account Management",
+    "accountUsage": "Account usage",
+    "balanceHistory": "Balance History",
+    "checkinRedeem": "Check-in & Redeem",
+    "claudeCodeRouter": "Claude Code Router",
+    "cliProxy": "CLIProxyAPI",
+    "dataBackup": "Data & Backup",
+    "general": "General",
+    "managedSite": "Managed site",
+    "permissions": "Permissions",
+    "refresh": "Data Refresh",
+    "scrollLeft": "Scroll tabs left",
+    "scrollRight": "Scroll tabs right",
+    "select": "Select a tab",
+    "webAiApiCheck": "AI API Test"
   },
   "theme": {
     "appearance": "Appearance",
-    "selectTheme": "Select an appearance theme",
-    "currentTheme": "Current: Follow system ({{theme}})",
-    "light": "Light",
-    "dark": "Dark",
-    "system": "System",
-    "followSystem": "Follow system",
-    "useLightTheme": "Use light theme",
-    "useDarkTheme": "Use dark theme",
-    "followSystemTheme": "Follow system theme settings",
-    "switchTo": "Switch to {{theme}} theme: {{description}}",
-    "current": "Current: {{theme}} ({{resolvedTheme}})",
     "clickSwitch": "Click to switch to {{nextMode}} mode",
-    "toggle": "Theme toggle, current {{currentMode}} mode, click to switch to {{nextMode}} mode"
+    "current": "Current: {{theme}} ({{resolvedTheme}})",
+    "currentTheme": "Current: Follow system ({{theme}})",
+    "dark": "Dark",
+    "followSystem": "Follow system",
+    "followSystemTheme": "Follow system theme settings",
+    "light": "Light",
+    "selectTheme": "Select an appearance theme",
+    "switchTo": "Switch to {{theme}} theme: {{description}}",
+    "toggle": "Theme toggle, current {{currentMode}} mode, click to switch to {{nextMode}} mode",
+    "useDarkTheme": "Use dark theme",
+    "useLightTheme": "Use light theme"
   },
-  "logging": {
-    "title": "Logging",
-    "description": "Control console logging for troubleshooting and diagnostics.",
-    "consoleEnabled": "Enable console logging",
-    "consoleEnabledDesc": "When disabled, All API Hub will not emit any console output at any level (including errors).",
-    "minLevel": "Minimum log level",
-    "minLevelDesc": "When console logging is enabled, logs below this level are suppressed.",
-    "levels": {
-      "debug": "Debug",
-      "info": "Info",
-      "warn": "Warn",
-      "error": "Error"
-    }
-  },
-  "changelogOnUpdate": {
-    "title": "Changelog",
-    "description": "Control whether All API Hub shows a What's New dialog the first time you open the extension UI after updates.",
-    "toggleLabel": "Show What's New after updates",
-    "toggleDesc": "When enabled, the update log is shown inline on first UI open after an update (once per version). You can still open the full docs changelog manually."
-  },
-  "autoProvisionKeyOnAccountAdd": {
-    "title": "API keys",
-    "description": "Control whether All API Hub automatically provisions a default API key after you add an account.",
-    "toggleLabel": "Auto-create a default key on account add",
-    "toggleDesc": "When enabled, All API Hub checks your token inventory after saving an account and creates a default token if none exist."
-  },
-  "duplicateAccountWarningOnAdd": {
-    "title": "Accounts",
-    "description": "Control whether All API Hub asks for confirmation when you add an account for a site that already exists.",
-    "toggleLabel": "Warn before adding duplicates",
-    "toggleDesc": "When enabled, All API Hub shows a confirmation dialog if you try to add another account for the same site URL."
-  },
-  "messages": {
-    "updateSuccess": "{{name}} Update successful",
-    "updateFailed": "{{name}} Update failed",
-    "saveSettingsFailed": "Failed to save settings",
-    "resetSuccess": "{{name}} has been reset to default settings",
-    "resetFailed": "Failed to reset {{name}}",
-    "confirmReset": "Confirm Reset",
-    "resetConfirmDesc": "Are you sure you want to reset {{name}} to default settings? This operation cannot be undone."
+  "title": "Settings",
+  "veloera": {
+    "adminCredentialsLink": {
+      "description": "Open the admin personal settings page to find the system access token and user ID.",
+      "open": "Open page",
+      "title": "Quick access"
+    },
+    "description": "Configure integration settings for connecting to Veloera compatible services.",
+    "fields": {
+      "adminTokenLabel": "Administrator's system access token",
+      "baseUrlLabel": "Base URL",
+      "baseUrlPlaceholder": "https://api.example.com",
+      "hideToken": "Hide system access token",
+      "showToken": "Show system access token",
+      "userIdLabel": "Administrator user ID"
+    },
+    "title": "Veloera Integration Settings",
+    "tokenDesc": "System access token for the administrator user",
+    "urlDesc": "Set the base URL for Veloera integration",
+    "userIdDesc": "Administrator user ID (numeric only)"
   }
 }

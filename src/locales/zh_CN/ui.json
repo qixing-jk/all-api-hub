@@ -1,382 +1,340 @@
 {
   "app": {
-    "name": "All API Hub",
-    "description": "统一管理第三方中转站与自建站点的账号与余额"
+    "description": "统一管理第三方中转站与自建站点的账号与余额",
+    "name": "All API Hub"
   },
-  "pageTitle": {
-    "options": "中转站管理器 - All API Hub | 设置",
-    "popup": "中转站管理器 - All API Hub | 弹窗",
-    "sidepanel": "中转站管理器 - All API Hub | 侧边栏"
-  },
-  "navigation": {
-    "home": "首页",
-    "settings": "设置",
-    "about": "关于",
-    "meshGradientLab": "网格渐变实验室 (Dev)",
-    "settingsOptions": "设置选项",
-    "basic": "基础设置",
-    "account": "账户管理",
-    "bookmark": "书签管理",
-    "usageAnalytics": "用量分析",
-    "balanceHistory": "余额历史",
-    "models": "模型列表",
-    "keys": "密钥管理",
-    "apiCredentialProfiles": "API 凭证",
-    "autoCheckin": "自动签到",
-    "autoCheckinRunNow": "快速签到",
-    "managedSiteChannels": "渠道管理",
-    "managedSiteModelSync": "模型同步",
-    "externalCheckinAll": "一键打开外部签到",
-    "externalCheckinAllHint": "默认仅打开未签到；Ctrl/Cmd 打开全部；Shift 在新窗口打开；Ctrl/Cmd+Shift 同时生效。",
-    "externalCheckinAllDisabled": "未配置外部签到地址",
-    "importExport": "导入/导出",
-    "collapseSidebar": "折叠侧边栏",
-    "expandSidebar": "展开侧边栏",
-    "sidebarCollapsedHint": "侧边栏已折叠，仅显示图标"
-  },
-  "feedback": {
-    "trigger": "反馈",
-    "triggerTooltip": "打开反馈快捷入口",
-    "bugReport": "反馈问题",
-    "featureRequest": "提出功能建议",
-    "discussion": "参与讨论"
+  "billing": {
+    "notProvided": "未提供",
+    "perCall": "按次计费",
+    "tokenBased": "按量计费"
   },
   "dialog": {
-    "delete": {
-      "title": "删除账号",
-      "warning": "您即将删除账号 {{accountName}}. 请核对后确认是否删除此账号",
-      "confirmDeletion": "删除确认",
-      "siteName": "站点名称",
-      "username": "用户名",
-      "siteUrl": "站点地址",
-      "confirmDelete": "确认删除",
-      "deleting": "正在删除账号 {{name}}...",
-      "noResponse": "删除操作未成功返回",
-      "deleteSuccess": "账号 {{name}} 删除成功!",
-      "deleteFailed": "删除失败: {{error}}",
-      "deleteFailedGeneric": "删除账号失败: {{error}}"
-    },
-    "dedupeAccounts": {
-      "title": "重复账号清理",
-      "description": "按 URL 源站 + 用户 ID 扫描重复账号，并在预览确认后删除重复项。",
-      "strategyLabel": "保留策略",
-      "strategy": {
-        "keepPinned": "优先保留置顶（如有）",
-        "keepEnabled": "优先保留启用（如有）",
-        "keepMostRecentlyUpdated": "优先保留最近更新"
-      },
-      "summary": "{{groups}} 组重复 · 待删除 {{deleteCount}} 个账号",
-      "manualPickHint": "你可以在每组中手动选择要保留的账号（手动选择会覆盖保留策略）。",
-      "empty": "未发现重复账号。",
-      "userId": "用户 ID：{{userId}}",
-      "duplicateCount": "{{count}} 个账号",
-      "keep": "保留",
-      "delete": "删除",
-      "recommended": "推荐",
-      "unscannableHint": "{{count}} 个账号无法扫描，已跳过。",
-      "previewDelete": "预览删除",
-      "detailsToggle": {
-        "show": "更多信息",
-        "hide": "收起信息"
-      },
-      "details": {
-        "accountId": "账号 ID",
-        "siteType": "站点类型",
-        "authType": "认证方式",
-        "health": "健康状态",
-        "healthReason": "原因",
-        "lastSync": "最后同步",
-        "updatedAt": "更新时间",
-        "createdAt": "创建时间",
-        "userId": "用户 ID",
-        "quota": "余额点数",
-        "todayConsumption": "今日消耗点数",
-        "todayRequests": "今日请求次数",
-        "todayTokens": "今日 Tokens",
-        "checkinDetection": "签到检测",
-        "autoCheckin": "自动签到",
-        "customCheckinUrl": "自定义签到 URL",
-        "notes": "备注",
-        "excludeFromTotalBalance": "从总余额中排除"
-      },
-      "deleting": "正在删除重复账号...",
-      "confirm": {
-        "title": "删除重复账号",
-        "description": "将删除 {{deleteCount}} 个账号（共 {{groups}} 组重复）。",
-        "confirmDelete": "确认删除",
-        "warningPinned": "将删除 {{count}} 个已置顶的账号。",
-        "warningOrder": "自定义排序将被自动调整。"
-      }
-    },
-    "updateLog": {
-      "title": "更新内容",
-      "updatedTo": "已更新至 v{{version}}",
-      "loading": "正在加载更新日志…",
-      "openFullChangelog": "打开完整更新日志",
-      "disableAutoOpen": "不再自动打开",
-      "enableAutoOpen": "重新启用自动打开",
-      "missingSection": "更新日志预览加载失败（v{{version}}）。你可以打开完整更新日志查看。"
-    },
-    "tempWindowFallbackReminder": {
-      "title": "启用临时窗口模式以完成网络请求",
-      "titleTempWindowOnly": "启用临时窗口模式以完成网络请求",
-      "titleWithCookieInterceptor": "启用过盾流程以完成网络请求",
-      "descriptionDisabled": "{{accountName}} 的网络请求需要弹出临时窗口来通过防护，确保请求成功完成，请在 设置 > 数据刷新 中启用",
-      "descriptionDisabledTempWindowOnly": "{{accountName}} 的网络请求需要弹出临时窗口来通过防护，确保请求成功完成，请在 设置 > 数据刷新 中启用",
-      "descriptionDisabledWithCookieInterceptor": "{{accountName}} 在 Firefox 中需要启用过盾流程。扩展会弹出临时窗口来获取 Cookie，并由 Cookie 拦截器在发送请求时自动附加这些 Cookie，请在 设置 > 数据刷新 中启用",
-      "descriptionPermission": "{{accountName}} 需要 Cookie 拦截权限，临时窗口才能弹出并让请求成功完成，请在 设置 > 权限 中授予",
-      "descriptionPermissionTempWindowOnly": "{{accountName}} 需要弹出临时窗口的权限才能完成请求，请在 设置 > 权限 中授予",
-      "descriptionPermissionWithCookieInterceptor": "{{accountName}} 在 Firefox 中需要 Cookie 拦截权限。扩展需要弹出临时窗口获取 Cookie，并在发送请求时自动附加认证信息，请在 设置 > 权限 中授予",
-      "neverRemindCheckbox": "不再提醒",
-      "actions": {
-        "openSettings": "打开设置",
-        "notNow": "稍后再说",
-        "neverRemind": "不再提醒"
-      }
-    },
-    "copyKey": {
-      "title": "密钥列表",
-      "loading": "正在获取密钥列表...",
-      "noKeys": "暂无密钥数据",
-      "noKeysDescription": "该账号暂无可用密钥，可快速创建默认密钥或自定义创建后再复制。",
-      "createKey": "快速创建默认密钥",
-      "createCustomKey": "自定义创建密钥",
-      "creatingKey": "正在快速创建默认密钥...",
-      "createSuccess": "密钥已创建",
-      "createFailed": "创建密钥失败：{{error}}",
-      "noKeyFoundAfterCreate": "创建成功但未获取到密钥，请重试。",
-      "createNotSupported": "该账号暂不支持在此处创建密钥。",
-      "totalKeys": "共 {{count}} 个密钥",
-      "close": "关闭",
-      "getFailed": "获取失败",
-      "retry": "重试",
-      "defaultGroup": "默认组",
-      "enabled": "启用",
-      "disabled": "禁用",
-      "expireTime": "过期时间: {{time}}",
-      "usedQuota": "已用额度",
-      "remainingQuota": "剩余额度",
-      "apiKey": "API 密钥",
-      "copied": "已复制",
-      "copy": "复制",
-      "useInCherry": "在Cherry Studio中使用",
-      "loadFailed": "加载密钥列表失败: {{error}}",
-      "keyCopied": "密钥已复制到剪贴板",
-      "copyFailed": "复制失败: {{error}}",
-      "copyFailedManual": "复制失败，请手动复制",
-      "exportToCCSwitch": "导出到 CC Switch"
-    },
-    "expand": "展开",
-    "collapse": "收起",
     "ccswitch": {
-      "title": "导出到 CC Switch",
-      "description": "通过深链接一键导入当前站点配置到 CC Switch",
-      "fields": {
-        "name": "供应商名称",
-        "homepage": "主页地址",
-        "endpoint": "接口地址",
-        "app": "目标应用",
-        "model": "默认模型（可选）",
-        "notes": "备注（可选）"
-      },
-      "descriptions": {
-        "model": "若可用，会自动从 /v1/models 获取模型列表供选择；也可以直接输入自定义模型名称。"
-      },
-      "placeholders": {
-        "name": "例如 Acme 中转",
-        "homepage": "https://example.com",
-        "endpoint": "https://example.com",
-        "model": "例如 claude-3-opus",
-        "notes": "添加导入说明"
-      },
-      "modelOptions": {
-        "none": "不设置默认模型"
+      "actions": {
+        "export": "导出"
       },
       "appOptions": {
         "claude": "Claude",
         "codex": "Codex",
         "gemini": "Gemini"
       },
-      "actions": {
-        "export": "导出"
-      },
-      "cliSupport": {
-        "title": "CLI 兼容性提示",
-        "loading": "正在读取缓存的 CLI 兼容性结果...",
-        "noCached": "未找到该密钥的 CLI 兼容性缓存结果。可在模型列表中点击“验证 CLI 兼容性”先进行测试，再导出到 CC Switch。",
-        "cachedHint": "显示该密钥最近一次 CLI 兼容性验证的缓存结果。",
-        "apiTypeHint": "缓存检测使用的接口类型：{{apiType}}"
-      }
-    },
-    "kiloCode": {
-      "title": "导出 Kilo Code JSON",
-      "description": "根据选中的站点和密钥生成 Kilo Code / Roo Code 的 providerProfiles 配置。",
-      "warning": {
-        "title": "明文 API Key",
-        "description": "导出的 JSON 含有明文 API Key，请妥善保存，切勿泄露。"
-      },
-      "help": {
-        "perSiteTitle": "按站点导出",
-        "perSiteDescription": "选择要导出的站点后将自动加载密钥，并默认选择第一个密钥（每个站点支持多选）。",
-        "afterExportTitle": "导出后怎么用",
-        "afterExportDescription": "推荐两种方式：",
-        "manualTitle": "方式一：手动粘贴（复制 apiConfigs）",
-        "manualDescription": "点击“复制 apiConfigs”，在 Kilo Code / Roo Code 的导出配置中找到 providerProfiles.apiConfigs 并粘贴进去。",
-        "importTitle": "方式二：导入文件（下载设置）",
-        "importDescription": "点击“下载设置”保存 {{filename}}，再在 Kilo Code 中导入。导入是增量添加 provider：不会清空/删除你已有的 provider（同名条目可能会被更新）。"
-      },
-      "labels": {
-        "selectedSites": "已选择的站点",
-        "selectedTokens": "已选择的密钥",
-        "modelId": "模型 ID",
-        "currentApiConfigName": "当前配置"
-      },
+      "description": "通过深链接一键导入当前站点配置到 CC Switch",
       "descriptions": {
-        "selectedSites": "已选站点：{{sites}}，已选密钥：{{keys}}。",
-        "modelId": "推荐选择（按密钥，Kilo Code 实际使用通常需要模型 ID）。默认使用该密钥上游模型列表的第一个。",
-        "currentApiConfigName": "在下载的 {{filename}} 中将作为 providerProfiles.currentApiConfigName。"
+        "model": "若可用，会自动从 /v1/models 获取模型列表供选择；也可以直接输入自定义模型名称。"
+      },
+      "fields": {
+        "app": "目标应用",
+        "endpoint": "接口地址",
+        "homepage": "主页地址",
+        "model": "默认模型（可选）",
+        "name": "供应商名称",
+        "notes": "备注（可选）"
+      },
+      "modelOptions": {
+        "none": "不设置默认模型"
       },
       "placeholders": {
-        "selectSites": "请选择站点",
-        "selectTokens": "请选择密钥",
-        "modelId": "搜索或输入模型 ID",
-        "currentApiConfigName": "请选择当前配置"
+        "endpoint": "https://example.com",
+        "homepage": "https://example.com",
+        "model": "例如 claude-3-opus",
+        "name": "例如 Acme 中转",
+        "notes": "添加导入说明"
       },
-      "actions": {
-        "createDefaultToken": "创建默认密钥",
-        "copyApiConfigs": "复制 apiConfigs",
-        "downloadSettings": "下载设置"
+      "title": "导出到 CC Switch"
+    },
+    "claudeCodeRouter": {
+      "description": "在 Claude Code Router 中创建或更新 Provider（必须填写模型）。",
+      "descriptions": {
+        "models": "每行一个模型，或用逗号分隔。",
+        "providerApiBaseUrl": "需填写完整的 /v1/chat/completions 端点。",
+        "restartAfterSave": "部分场景下需要重启才能使配置生效。"
       },
-      "messages": {
-        "accountNotFound": "未找到账号。",
-        "loadTokensFailed": "加载密钥失败。",
-        "loadModelsFailed": "加载该密钥的模型列表失败。",
-        "loadingTokens": "正在加载密钥列表…",
-        "noTokensTitle": "暂无密钥",
-        "noTokensDescription": "该站点将被跳过，直到创建密钥。",
-        "noModelsTitle": "无模型",
-        "noModelsDescription": "该密钥未返回可用模型。Kilo Code 实际使用通常需要模型 ID，请手动输入。",
-        "modelIdRequiredTitle": "需要模型 ID",
-        "modelIdRequiredDescription": "请为所有已选择的密钥选择或输入模型 ID 后再导出（还缺 {{count}} 个）。",
-        "tokenCreated": "密钥创建成功",
-        "createTokenFailed": "创建密钥失败。",
-        "copiedApiConfigs": "已复制 apiConfigs",
-        "copyFailed": "复制失败",
-        "downloadedSettings": "已下载设置文件",
-        "downloadFailed": "设置文件下载失败",
-        "nothingToExportTitle": "无可导出的内容",
-        "nothingToExportDescription": "请至少选择一个可导出的站点/密钥后再进行复制/下载。"
-      }
+      "fields": {
+        "models": "模型列表",
+        "providerApiBaseUrl": "Provider 接口地址",
+        "providerName": "Provider 名称",
+        "restartAfterSave": "保存后重启"
+      },
+      "placeholders": {
+        "modelsPicker": "输入以添加模型",
+        "providerApiBaseUrl": "https://example.com/v1/chat/completions",
+        "providerName": "例如 我的中转"
+      },
+      "title": "导入到 Claude Code Router"
     },
     "cliproxy": {
-      "title": "导入到 CLIProxyAPI",
-      "description": "在 CLIProxyAPI 中创建或更新一个 Provider 条目。",
-      "fields": {
-        "providerType": "Provider 类型",
-        "name": "Provider 名称",
-        "baseUrl": "Provider 基础 URL",
-        "proxyUrl": "代理 URL（可选）",
-        "models": "模型映射（可选）"
-      },
-      "descriptions": {
-        "providerType": "选择要导入到哪个 CLIProxyAPI Provider 类型。",
-        "baseUrlOpenAICompatibility": "必填。CLIProxyAPI 会保存 OpenAI 兼容的基础 URL，并将请求路径统一规范为 /v1 后缀。",
-        "baseUrlCodexApiKey": "必填。可粘贴 Codex 主机地址或完整后端接口；系统会自动去掉 /backend-api/codex 路径。",
-        "baseUrlClaudeApiKey": "可选。留空时使用 CLIProxyAPI 默认的 Claude 上游。若粘贴 /v1/messages 端点，会自动收敛为 Provider 基础地址。",
-        "baseUrlGeminiApiKey": "可选。留空时使用 CLIProxyAPI 默认的 Gemini 上游。若粘贴 /v1beta/models 端点，会自动收敛为 Provider 基础地址。",
-        "proxyUrl": "可选。用于此 API Key 条目的代理 URL。",
-        "models": "将上游模型名称映射到可选别名（name -> alias）。若可用，会加载上游可用模型供选择。",
-        "modelsManual": "将上游模型名称映射到可选别名（name -> alias）。当前版本中此 Provider 类型需手动输入上游模型。"
-      },
-      "providerTypes": {
-        "openaiCompatibility": {
-          "label": "OpenAI 兼容",
-          "description": "适用于暴露 /v1 风格上游 API 的 OpenAI 兼容中转。"
-        },
-        "codexApiKey": {
-          "label": "Codex API Key",
-          "description": "使用 CLIProxyAPI 专用的 Codex 执行器和管理列表。"
-        },
-        "claudeApiKey": {
-          "label": "Claude API Key",
-          "description": "使用 Claude 专用的 Provider 列表，并支持留空基础 URL 以使用默认上游。"
-        },
-        "geminiApiKey": {
-          "label": "Gemini API Key",
-          "description": "使用 Gemini 专用的 Provider 列表，并支持留空基础 URL 以使用默认上游。"
-        }
-      },
-      "placeholders": {
-        "providerType": "选择 Provider 类型",
-        "name": "例如：Acme Relay",
-        "baseUrlOpenAICompatibility": "https://example.com/v1",
-        "baseUrlCodexApiKey": "https://example.com/router",
-        "baseUrlClaudeApiKey": "https://example.com/proxy",
-        "baseUrlGeminiApiKey": "https://example.com/genai",
-        "proxyUrl": "http://localhost:3000",
-        "modelName": "模型名称，例如 claude",
-        "modelAlias": "模型别名（可选）"
-      },
       "actions": {
         "addModel": "添加模型",
         "removeModel": "删除模型",
         "reorderModel": "调整模型顺序"
-      }
-    },
-    "claudeCodeRouter": {
-      "title": "导入到 Claude Code Router",
-      "description": "在 Claude Code Router 中创建或更新 Provider（必须填写模型）。",
-      "fields": {
-        "providerName": "Provider 名称",
-        "providerApiBaseUrl": "Provider 接口地址",
-        "models": "模型列表",
-        "modelsPicker": "选择模型",
-        "restartAfterSave": "保存后重启"
       },
+      "description": "在 CLIProxyAPI 中创建或更新一个 Provider 条目。",
       "descriptions": {
-        "providerApiBaseUrl": "需填写完整的 /v1/chat/completions 端点。",
-        "models": "每行一个模型，或用逗号分隔。",
-        "restartAfterSave": "部分场景下需要重启才能使配置生效。"
+        "models": "将上游模型名称映射到可选别名（name -> alias）。若可用，会加载上游可用模型供选择。",
+        "modelsManual": "将上游模型名称映射到可选别名（name -> alias）。当前版本中此 Provider 类型需手动输入上游模型。",
+        "providerType": "选择要导入到哪个 CLIProxyAPI Provider 类型。",
+        "proxyUrl": "可选。用于此 API Key 条目的代理 URL。"
+      },
+      "fields": {
+        "baseUrl": "Provider 基础 URL",
+        "models": "模型映射（可选）",
+        "name": "Provider 名称",
+        "providerType": "Provider 类型",
+        "proxyUrl": "代理 URL（可选）"
       },
       "placeholders": {
-        "providerName": "例如 我的中转",
-        "providerApiBaseUrl": "https://example.com/v1/chat/completions",
-        "modelsPicker": "输入以添加模型"
+        "modelAlias": "模型别名（可选）",
+        "modelName": "模型名称，例如 claude",
+        "name": "例如：Acme Relay",
+        "providerType": "选择 Provider 类型",
+        "proxyUrl": "http://localhost:3000"
+      },
+      "title": "导入到 CLIProxyAPI"
+    },
+    "collapse": "收起",
+    "copyKey": {
+      "apiKey": "API 密钥",
+      "copied": "已复制",
+      "copy": "复制",
+      "copyFailedManual": "复制失败，请手动复制",
+      "createCustomKey": "自定义创建密钥",
+      "createFailed": "创建密钥失败：{{error}}",
+      "createKey": "快速创建默认密钥",
+      "createNotSupported": "该账号暂不支持在此处创建密钥。",
+      "createSuccess": "密钥已创建",
+      "creatingKey": "正在快速创建默认密钥...",
+      "defaultGroup": "默认组",
+      "disabled": "禁用",
+      "enabled": "启用",
+      "expireTime": "过期时间: {{time}}",
+      "exportToCCSwitch": "导出到 CC Switch",
+      "getFailed": "获取失败",
+      "keyCopied": "密钥已复制到剪贴板",
+      "loadFailed": "加载密钥列表失败: {{error}}",
+      "loading": "正在获取密钥列表...",
+      "noKeyFoundAfterCreate": "创建成功但未获取到密钥，请重试。",
+      "noKeys": "暂无密钥数据",
+      "noKeysDescription": "该账号暂无可用密钥，可快速创建默认密钥或自定义创建后再复制。",
+      "remainingQuota": "剩余额度",
+      "retry": "重试",
+      "title": "密钥列表",
+      "totalKeys": "共 {{count}} 个密钥",
+      "usedQuota": "已用额度",
+      "useInCherry": "在Cherry Studio中使用"
+    },
+    "dedupeAccounts": {
+      "confirm": {
+        "confirmDelete": "确认删除",
+        "description": "将删除 {{deleteCount}} 个账号（共 {{groups}} 组重复）。",
+        "title": "删除重复账号",
+        "warningOrder": "自定义排序将被自动调整。",
+        "warningPinned": "将删除 {{count}} 个已置顶的账号。"
+      },
+      "delete": "删除",
+      "deleting": "正在删除重复账号...",
+      "description": "按 URL 源站 + 用户 ID 扫描重复账号，并在预览确认后删除重复项。",
+      "details": {
+        "accountId": "账号 ID",
+        "authType": "认证方式",
+        "autoCheckin": "自动签到",
+        "checkinDetection": "签到检测",
+        "createdAt": "创建时间",
+        "customCheckinUrl": "自定义签到 URL",
+        "excludeFromTotalBalance": "从总余额中排除",
+        "health": "健康状态",
+        "healthReason": "原因",
+        "lastSync": "最后同步",
+        "notes": "备注",
+        "quota": "余额点数",
+        "siteType": "站点类型",
+        "todayConsumption": "今日消耗点数",
+        "todayRequests": "今日请求次数",
+        "todayTokens": "今日 Tokens",
+        "updatedAt": "更新时间",
+        "userId": "用户 ID"
+      },
+      "detailsToggle": {
+        "hide": "收起信息",
+        "show": "更多信息"
+      },
+      "duplicateCount": "{{count}} 个账号",
+      "empty": "未发现重复账号。",
+      "keep": "保留",
+      "manualPickHint": "你可以在每组中手动选择要保留的账号（手动选择会覆盖保留策略）。",
+      "previewDelete": "预览删除",
+      "recommended": "推荐",
+      "strategyLabel": "保留策略",
+      "summary": "{{groups}} 组重复 · 待删除 {{deleteCount}} 个账号",
+      "title": "重复账号清理",
+      "unscannableHint": "{{count}} 个账号无法扫描，已跳过。",
+      "userId": "用户 ID：{{userId}}"
+    },
+    "delete": {
+      "confirmDelete": "确认删除",
+      "confirmDeletion": "删除确认",
+      "deleteFailed": "删除失败: {{error}}",
+      "deleteSuccess": "账号 {{name}} 删除成功!",
+      "deleting": "正在删除账号 {{name}}...",
+      "noResponse": "删除操作未成功返回",
+      "siteName": "站点名称",
+      "siteUrl": "站点地址",
+      "title": "删除账号",
+      "username": "用户名",
+      "warning": "您即将删除账号 {{accountName}}. 请核对后确认是否删除此账号"
+    },
+    "expand": "展开",
+    "firefox": {
+      "confirm": "确定",
+      "howOpenSidebar": "如何打开侧边栏",
+      "limitation": "Firefox 浏览器功能限制",
+      "openSidebar": "打开侧边栏",
+      "popupLimitation": "在 Firefox 浏览器的弹窗中无法正常使用此功能。请使用侧边栏模式来添加账号",
+      "sidebarInstruction": "点击浏览器工具栏中的插件图标，然后选择\"侧边栏\"选项来打开侧边栏模式",
+      "warningTitle": "功能限制提醒"
+    },
+    "kiloCode": {
+      "actions": {
+        "copyApiConfigs": "复制 apiConfigs",
+        "createDefaultToken": "创建默认密钥",
+        "downloadSettings": "下载设置"
+      },
+      "description": "根据选中的站点和密钥生成 Kilo Code / Roo Code 的 providerProfiles 配置。",
+      "descriptions": {
+        "currentApiConfigName": "在下载的 {{filename}} 中将作为 providerProfiles.currentApiConfigName。",
+        "modelId": "推荐选择（按密钥，Kilo Code 实际使用通常需要模型 ID）。默认使用该密钥上游模型列表的第一个。",
+        "selectedSites": "已选站点：{{sites}}，已选密钥：{{keys}}。"
+      },
+      "help": {
+        "afterExportDescription": "推荐两种方式：",
+        "afterExportTitle": "导出后怎么用",
+        "importDescription": "点击“下载设置”保存 {{filename}}，再在 Kilo Code 中导入。导入是增量添加 provider：不会清空/删除你已有的 provider（同名条目可能会被更新）。",
+        "importTitle": "方式二：导入文件（下载设置）",
+        "manualDescription": "点击“复制 apiConfigs”，在 Kilo Code / Roo Code 的导出配置中找到 providerProfiles.apiConfigs 并粘贴进去。",
+        "manualTitle": "方式一：手动粘贴（复制 apiConfigs）",
+        "perSiteDescription": "选择要导出的站点后将自动加载密钥，并默认选择第一个密钥（每个站点支持多选）。",
+        "perSiteTitle": "按站点导出"
+      },
+      "labels": {
+        "currentApiConfigName": "当前配置",
+        "modelId": "模型 ID",
+        "selectedSites": "已选择的站点",
+        "selectedTokens": "已选择的密钥"
+      },
+      "messages": {
+        "accountNotFound": "未找到账号。",
+        "copiedApiConfigs": "已复制 apiConfigs",
+        "copyFailed": "复制失败",
+        "createTokenFailed": "创建密钥失败。",
+        "downloadedSettings": "已下载设置文件",
+        "downloadFailed": "设置文件下载失败",
+        "loadingTokens": "正在加载密钥列表…",
+        "loadModelsFailed": "加载该密钥的模型列表失败。",
+        "loadTokensFailed": "加载密钥失败。",
+        "modelIdRequiredDescription": "请为所有已选择的密钥选择或输入模型 ID 后再导出（还缺 {{count}} 个）。",
+        "modelIdRequiredTitle": "需要模型 ID",
+        "noModelsDescription": "该密钥未返回可用模型。Kilo Code 实际使用通常需要模型 ID，请手动输入。",
+        "noModelsTitle": "无模型",
+        "nothingToExportDescription": "请至少选择一个可导出的站点/密钥后再进行复制/下载。",
+        "nothingToExportTitle": "无可导出的内容",
+        "noTokensDescription": "该站点将被跳过，直到创建密钥。",
+        "noTokensTitle": "暂无密钥",
+        "tokenCreated": "密钥创建成功"
+      },
+      "placeholders": {
+        "currentApiConfigName": "请选择当前配置",
+        "modelId": "搜索或输入模型 ID",
+        "selectSites": "请选择站点",
+        "selectTokens": "请选择密钥"
+      },
+      "title": "导出 Kilo Code JSON",
+      "warning": {
+        "description": "导出的 JSON 含有明文 API Key，请妥善保存，切勿泄露。",
+        "title": "明文 API Key"
       }
     },
-    "firefox": {
-      "warningTitle": "功能限制提醒",
-      "limitation": "Firefox 浏览器功能限制",
-      "popupLimitation": "在 Firefox 浏览器的弹窗中无法正常使用此功能。请使用侧边栏模式来添加账号",
-      "howOpenSidebar": "如何打开侧边栏",
-      "sidebarInstruction": "点击浏览器工具栏中的插件图标，然后选择\"侧边栏\"选项来打开侧边栏模式",
-      "confirm": "确定",
-      "openSidebar": "打开侧边栏"
+    "tempWindowFallbackReminder": {
+      "actions": {
+        "neverRemind": "不再提醒",
+        "notNow": "稍后再说",
+        "openSettings": "打开设置"
+      },
+      "descriptionDisabledTempWindowOnly": "{{accountName}} 的网络请求需要弹出临时窗口来通过防护，确保请求成功完成，请在 设置 > 数据刷新 中启用",
+      "descriptionDisabledWithCookieInterceptor": "{{accountName}} 在 Firefox 中需要启用过盾流程。扩展会弹出临时窗口来获取 Cookie，并由 Cookie 拦截器在发送请求时自动附加这些 Cookie，请在 设置 > 数据刷新 中启用",
+      "descriptionPermissionTempWindowOnly": "{{accountName}} 需要弹出临时窗口的权限才能完成请求，请在 设置 > 权限 中授予",
+      "descriptionPermissionWithCookieInterceptor": "{{accountName}} 在 Firefox 中需要 Cookie 拦截权限。扩展需要弹出临时窗口获取 Cookie，并在发送请求时自动附加认证信息，请在 设置 > 权限 中授予",
+      "titleTempWindowOnly": "启用临时窗口模式以完成网络请求",
+      "titleWithCookieInterceptor": "启用过盾流程以完成网络请求"
+    },
+    "updateLog": {
+      "disableAutoOpen": "不再自动打开",
+      "enableAutoOpen": "重新启用自动打开",
+      "loading": "正在加载更新日志…",
+      "missingSection": "更新日志预览加载失败（v{{version}}）。你可以打开完整更新日志查看。",
+      "openFullChangelog": "打开完整更新日志",
+      "title": "更新内容",
+      "updatedTo": "已更新至 v{{version}}"
     }
   },
-  "billing": {
-    "tokenBased": "按量计费",
-    "perCall": "按次计费",
-    "notProvided": "未提供"
+  "feedback": {
+    "bugReport": "反馈问题",
+    "discussion": "参与讨论",
+    "featureRequest": "提出功能建议",
+    "trigger": "反馈",
+    "triggerTooltip": "打开反馈快捷入口"
+  },
+  "modelListInput": {
+    "actions": {
+      "add": "添加模型",
+      "remove": "删除模型",
+      "reorder": "拖动排序"
+    },
+    "description": "示例：gpt-4o-mini 或 moonshotai/kimi-k2:free, kimi-k2",
+    "placeholders": {
+      "alias": "模型别名（可选）",
+      "name": "模型名称，例如 claude"
+    },
+    "title": "模型列表（每行一个 name[, alias]）："
   },
   "multiSelect": {
-    "copySuccess": "已复制已选择的内容",
-    "copyError": "复制失败，请重试",
-    "emptyWithQueryAllowCustom": "按 Enter 键添加“{{value}}”",
-    "noOptionsAllowCustom": "暂无可选项，可输入创建",
-    "noOptions": "暂无可选项",
-    "placeholder": "请选择...",
+    "cancelSelected": "取消当前选中",
     "clearInput": "清空输入",
     "clearSelected": "清空所有已选项",
-    "selectAll": "全选",
-    "cancelSelected": "取消当前选中"
-  },
-  "searchableSelect": {
-    "searchPlaceholder": "搜索...",
-    "empty": "未找到匹配项",
-    "noOptionsAllowCustom": "暂无可选项，可输入创建",
+    "copyError": "复制失败，请重试",
+    "copySuccess": "已复制已选择的内容",
+    "emptyWithQueryAllowCustom": "按 Enter 键添加“{{value}}”",
     "noOptions": "暂无可选项",
-    "useValue": "使用“{{value}}”"
+    "noOptionsAllowCustom": "暂无可选项，可输入创建",
+    "placeholder": "请选择...",
+    "selectAll": "全选"
+  },
+  "navigation": {
+    "about": "关于",
+    "account": "账户管理",
+    "apiCredentialProfiles": "API 凭证",
+    "autoCheckin": "自动签到",
+    "autoCheckinRunNow": "快速签到",
+    "balanceHistory": "余额历史",
+    "basic": "基础设置",
+    "bookmark": "书签管理",
+    "collapseSidebar": "折叠侧边栏",
+    "expandSidebar": "展开侧边栏",
+    "externalCheckinAll": "一键打开外部签到",
+    "externalCheckinAllHint": "默认仅打开未签到；Ctrl/Cmd 打开全部；Shift 在新窗口打开；Ctrl/Cmd+Shift 同时生效。",
+    "importExport": "导入/导出",
+    "keys": "密钥管理",
+    "managedSiteChannels": "渠道管理",
+    "managedSiteModelSync": "模型同步",
+    "meshGradientLab": "网格渐变实验室 (Dev)",
+    "models": "模型列表",
+    "settings": "设置",
+    "settingsOptions": "设置选项",
+    "sidebarCollapsedHint": "侧边栏已折叠，仅显示图标",
+    "usageAnalytics": "用量分析"
+  },
+  "pageTitle": {
+    "options": "中转站管理器 - All API Hub | 设置",
+    "popup": "中转站管理器 - All API Hub | 弹窗",
+    "sidepanel": "中转站管理器 - All API Hub | 侧边栏"
   },
   "repeatableInput": {
     "actions": {
@@ -385,17 +343,11 @@
       "reorder": "拖动排序"
     }
   },
-  "modelListInput": {
-    "title": "模型列表（每行一个 name[, alias]）：",
-    "description": "示例：gpt-4o-mini 或 moonshotai/kimi-k2:free, kimi-k2",
-    "actions": {
-      "add": "添加模型",
-      "remove": "删除模型",
-      "reorder": "拖动排序"
-    },
-    "placeholders": {
-      "name": "模型名称，例如 claude",
-      "alias": "模型别名（可选）"
-    }
+  "searchableSelect": {
+    "empty": "未找到匹配项",
+    "noOptions": "暂无可选项",
+    "noOptionsAllowCustom": "暂无可选项，可输入创建",
+    "searchPlaceholder": "搜索...",
+    "useValue": "使用“{{value}}”"
   }
 }

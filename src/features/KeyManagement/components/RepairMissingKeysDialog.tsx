@@ -46,9 +46,9 @@ function getSkipReasonLabel(
 ) {
   switch (reason) {
     case "sub2api":
-      return t("repairMissingKeys.skipReasons.sub2api")
+      return t("keyManagement:repairMissingKeys.skipReasons.sub2api")
     case "noneAuth":
-      return t("repairMissingKeys.skipReasons.noneAuth")
+      return t("keyManagement:repairMissingKeys.skipReasons.noneAuth")
     default:
       return ""
   }
@@ -63,13 +63,13 @@ function getOutcomeLabel(
 ) {
   switch (outcome) {
     case "created":
-      return t("repairMissingKeys.outcomes.created")
+      return t("keyManagement:repairMissingKeys.outcomes.created")
     case "alreadyHad":
-      return t("repairMissingKeys.outcomes.alreadyHad")
+      return t("keyManagement:repairMissingKeys.outcomes.alreadyHad")
     case "skipped":
-      return t("repairMissingKeys.outcomes.skipped")
+      return t("keyManagement:repairMissingKeys.outcomes.skipped")
     default:
-      return t("repairMissingKeys.outcomes.failed")
+      return t("keyManagement:repairMissingKeys.outcomes.failed")
   }
 }
 

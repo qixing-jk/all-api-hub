@@ -1,61 +1,60 @@
 {
-  "title": "关于",
-  "intro": "All API Hub 是一款同时面向第三方 New API 系列中转站和自建 New API 实例的浏览器插件。它集中展示账号与余额、智能排序和当前站点识别，并提供自动刷新与临时窗口防火墙绕过等自动化能力；对于自建 New API，还支持渠道管理和模型列表同步，并集成 CLIProxyAPI、WebDAV 备份以及数据导入导出等工具。",
-  "version": "版本号:",
-  "projectLinks": "项目链接",
-  "githubRepo": "GitHub 仓库",
-  "githubDesc": "查看源代码、提交问题或参与项目开发",
-  "starRepo": "去点个Star",
-  "homepage": "项目官网",
-  "homepageDesc": "查看详细文档、使用指南和更多信息",
-  "visitHomepage": "访问官网",
-  "features": "功能特性",
-  "implementedFeatures": "已实现功能",
-  "upcomingFeatures": "即将支持",
   "copyrightAck": "版权与致谢",
   "devMaintenance": "开发与维护",
-  "thanksDesc": "感谢所有为开源社区做出贡献的开发者们，本插件的开发得益于这些优秀的开源项目和工具",
-  "privacyNotice": "隐私声明",
+  "features": "功能特性",
+  "feedbackSection": {
+    "bugReport": {
+      "button": "打开问题反馈",
+      "description": "使用问题反馈模板提交异常行为、报错或与预期不符的结果。"
+    },
+    "discussion": {
+      "button": "打开讨论区",
+      "description": "前往 GitHub Discussions 提问、交流配置经验，或发起更广泛的社区讨论。"
+    },
+    "featureRequest": {
+      "button": "打开功能建议",
+      "description": "通过功能建议模板分享你的改进想法或使用场景需求。"
+    },
+    "title": "反馈与支持"
+  },
+  "githubDesc": "查看源代码、提交问题或参与项目开发",
+  "githubRepo": "GitHub 仓库",
+  "homepage": "项目官网",
+  "homepageDesc": "查看详细文档、使用指南和更多信息",
+  "implementedFeatures": "已实现功能",
+  "intro": "All API Hub 是一款同时面向第三方 New API 系列中转站和自建 New API 实例的浏览器插件。它集中展示账号与余额、智能排序和当前站点识别，并提供自动刷新与临时窗口防火墙绕过等自动化能力；对于自建 New API，还支持渠道管理和模型列表同步，并集成 CLIProxyAPI、WebDAV 备份以及数据导入导出等工具。",
   "privacyText": "本插件所有数据均存储在本地浏览器中，不会主动上传到任何服务器。您的账号信息和使用数据完全由您自己掌控，确保隐私安全",
   "privacyTitle": "隐私保护",
+  "projectLinks": "项目链接",
+  "starRepo": "去点个Star",
   "stores": {
     "chrome": "Chrome 应用商店",
     "edge": "Edge 扩展商店",
     "firefox": "Firefox 附加组件"
   },
   "storesSection": {
-    "title": "评分与下载",
-    "review": {
-      "title": "给我们一个好评",
-      "description": "如果 All API Hub 对你有帮助，欢迎在 {{store}} 留下正向评价，支持我们持续更新。",
-      "button": "前往 {{store}} 评分"
-    },
     "download": {
-      "description": "从 {{store}} 下载/安装。",
-      "button": "打开商店"
-    }
-  },
-  "feedbackSection": {
-    "title": "反馈与支持",
-    "bugReport": {
-      "description": "使用问题反馈模板提交异常行为、报错或与预期不符的结果。",
-      "button": "打开问题反馈"
+      "button": "打开商店",
+      "description": "从 {{store}} 下载/安装。"
     },
-    "featureRequest": {
-      "description": "通过功能建议模板分享你的改进想法或使用场景需求。",
-      "button": "打开功能建议"
+    "review": {
+      "button": "前往 {{store}} 评分",
+      "description": "如果 All API Hub 对你有帮助，欢迎在 {{store}} 留下正向评价，支持我们持续更新。",
+      "title": "给我们一个好评"
     },
-    "discussion": {
-      "description": "前往 GitHub Discussions 提问、交流配置经验，或发起更广泛的社区讨论。",
-      "button": "打开讨论区"
-    }
+    "title": "评分与下载"
   },
   "techStack": {
-    "title": "技术栈",
-    "wxt": "浏览器扩展开发框架",
+    "headlessui": "无样式UI组件",
     "react": "用户界面库",
-    "typescript": "类型安全的JavaScript",
     "tailwindcss": "原子化CSS框架",
-    "headlessui": "无样式UI组件"
-  }
+    "title": "技术栈",
+    "typescript": "类型安全的JavaScript",
+    "wxt": "浏览器扩展开发框架"
+  },
+  "thanksDesc": "感谢所有为开源社区做出贡献的开发者们，本插件的开发得益于这些优秀的开源项目和工具",
+  "title": "关于",
+  "upcomingFeatures": "即将支持",
+  "version": "版本号:",
+  "visitHomepage": "访问官网"
 }

@@ -1,16 +1,43 @@
 {
-  "description": "在支持的签到与兑换页面自动识别 32 位兑换码并提供兑换辅助提示",
+  "accountSelect": {
+    "confirm": "确认兑换",
+    "noResults": "未找到匹配的账号，请调整搜索条件",
+    "title": "选择要用于兑换的账号",
+    "titleFallback": "未找到与当前站点匹配的账号，请手动选择一个账号",
+    "titleMultiple": "检测到多个可用账号，请选择一个用于兑换"
+  },
+  "actions": {
+    "autoRedeem": "自动兑换"
+  },
+  "messages": {
+    "batchResultSummary": "共 {{total}} 个，成功 {{success}} 个，失败 {{failed}} 个。",
+    "batchResultTitle": "兑换结果",
+    "cancelled": "已取消",
+    "noAccountForUrl": "当前站点未在 All API Hub 中配置账号，请先在扩展中添加该站点后再试。",
+    "promptConfirm": "检测到疑似兑换码 {{code}}，是否为当前站点尝试自动兑换？",
+    "promptConfirmBatch": "检测到 {{count}} 个疑似兑换码，请选择要为当前站点尝试自动兑换的兑换码。",
+    "promptSettingsLink": "打开兑换助手设置",
+    "promptSource": "此提示来自 All API Hub 浏览器扩展",
+    "promptTitle": "兑换助手",
+    "redeemFailed": "兑换失败，请稍后重试。",
+    "redeemLoading": "正在尝试兑换，请稍候…",
+    "redeemSuccess": "兑换成功，到账额度：{{amount}}",
+    "selectAll": "全选",
+    "success": {
+      "settingsSaved": "兑换助手设置已保存"
+    }
+  },
   "settings": {
-    "title": "兑换助手",
-    "enable": "启用兑换助手",
-    "enableDesc": "在支持的页面上自动检测兑换码并弹出兑换提示",
     "contextMenu": {
       "enable": "在浏览器右键菜单中显示",
       "enableDesc": "启用后，在选中文本时的右键菜单中显示“兑换助手”入口。"
     },
+    "description": "配置扩展在支持的页面上如何检测并辅助兑换兑换码",
+    "enable": "启用兑换助手",
+    "enableDesc": "在支持的页面上自动检测兑换码并弹出兑换提示",
     "relaxedCodeValidation": "放宽兑换码格式限制",
     "relaxedCodeValidationDesc": "启用后，只要是 32 位字符的内容就会被视为可能的兑换码（不校验字符集）。",
-    "description": "配置扩展在支持的页面上如何检测并辅助兑换兑换码",
+    "title": "兑换助手",
     "urlWhitelist": {
       "enable": "启用 URL 白名单",
       "enableDesc": "启用后，兑换助手仅会在下方规则允许的页面 URL 上生效。",
@@ -22,36 +49,5 @@
       "patternsDesc": "每行一条 JavaScript RegExp 语法的正则表达式（匹配时会忽略大小写）。",
       "patternsPlaceholder": "^https://example\\.com/console/topup"
     }
-  },
-  "messages": {
-    "redeemSuccess": "兑换成功，到账额度：{{amount}}",
-    "redeemFailed": "兑换失败，请稍后重试。",
-    "redeemLoading": "正在尝试兑换，请稍候…",
-    "promptConfirm": "检测到疑似兑换码 {{code}}，是否为当前站点尝试自动兑换？",
-    "promptConfirmBatch": "检测到 {{count}} 个疑似兑换码，请选择要为当前站点尝试自动兑换的兑换码。",
-    "promptSource": "此提示来自 All API Hub 浏览器扩展",
-    "promptSettingsLink": "打开兑换助手设置",
-    "promptTitle": "兑换助手",
-    "selectAll": "全选",
-    "batchResultTitle": "兑换结果",
-    "batchResultSummary": "共 {{total}} 个，成功 {{success}} 个，失败 {{failed}} 个。",
-    "cancelled": "已取消",
-    "noAccountForUrl": "当前站点未在 All API Hub 中配置账号，请先在扩展中添加该站点后再试。",
-    "success": {
-      "settingsSaved": "兑换助手设置已保存"
-    },
-    "error": {
-      "saveFailed": "保存兑换助手设置失败"
-    }
-  },
-  "actions": {
-    "autoRedeem": "自动兑换"
-  },
-  "accountSelect": {
-    "title": "选择要用于兑换的账号",
-    "confirm": "确认兑换",
-    "titleMultiple": "检测到多个可用账号，请选择一个用于兑换",
-    "titleFallback": "未找到与当前站点匹配的账号，请手动选择一个账号",
-    "noResults": "未找到匹配的账号，请调整搜索条件"
   }
 }

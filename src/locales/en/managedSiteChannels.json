@@ -1,141 +1,136 @@
 {
-  "title": "Channels management",
-  "description": "Search, edit, delete, and manually sync channels connected to your managed site.",
   "alerts": {
     "configMissing": {
-      "title": "Missing configuration",
-      "description": "Please configure your managed site credentials in settings before managing channels."
+      "description": "Please configure your managed site credentials in settings before managing channels.",
+      "title": "Missing configuration"
     },
     "loadError": {
-      "title": "Unable to load channels",
-      "description": "{{error}}"
+      "description": "{{error}}",
+      "title": "Unable to load channels"
     }
   },
-  "toolbar": {
-    "searchPlaceholder": "Search by name, URL or group",
-    "clearSearch": "Clear search",
-    "status": "Status",
-    "statusSubtitle": "Filter by status",
-    "columns": "Columns",
-    "toggleColumns": "Toggle columns",
-    "deleteSelected": "Delete selected",
-    "syncSelected": "Sync selected",
-    "refresh": "Refresh",
-    "addChannel": "Add channel"
+  "description": "Search, edit, delete, and manually sync channels connected to your managed site.",
+  "dialog": {
+    "cancel": "Cancel",
+    "confirm": "Delete",
+    "deleteDescription": "This action cannot be undone. The selected configuration will be removed permanently.",
+    "deleteTitle": "Delete channel?",
+    "deleteTitlePlural": "Delete channels?"
   },
   "filter": {
     "statusLabel": "Filter by status"
   },
-  "statusLabels": {
-    "unknown": "Unknown",
-    "enabled": "Enabled",
-    "manualPause": "Manual Pause",
-    "autoDisabled": "Auto Disabled"
-  },
-  "table": {
-    "columns": {
-      "id": "ID",
-      "name": "Channel",
-      "type": "Type",
-      "models": "Models",
-      "group": "Available Groups",
-      "status": "Status",
-      "priority": "Priority",
-      "weight": "Weight",
-      "actions": "Actions"
-    },
-    "selectAll": "Select all rows",
-    "selectRow": "Select Row",
-    "loading": "Loading channels...",
-    "empty": "No channels found. Try adjusting your filters.",
-    "noEntries": "No entries",
-    "rowsPerPage": "Rows per page",
-    "paginationSummary": "{{start}} - {{end}} of {{total}} channels",
-    "paginationPrev": "Previous page",
-    "paginationNext": "Next page",
-    "rowActions": {
-      "edit": "Edit",
-      "sync": "Sync model list immediately",
-      "syncing": "Syncing...",
-      "openSync": "Open model sync interface",
-      "filters": "Edit channel filtering rules",
-      "delete": "Delete"
-    }
-  },
-  "dialog": {
-    "deleteTitle": "Delete channel?",
-    "deleteTitlePlural": "Delete channels?",
-    "deleteDescription": "This action cannot be undone. The selected configuration will be removed permanently.",
-    "cancel": "Cancel",
-    "confirm": "Delete"
-  },
-  "toasts": {
-    "channelSaved": "Channel saved",
-    "channelUpdated": "Channel updated",
-    "configMissing": "Managed site configuration is missing",
-    "channelDeleted": "Channel deleted",
-    "channelsDeleted": "{{count}} channels deleted",
-    "someDeletesFailed": "Failed to delete {{count}} channel(s): {{error}}",
-    "syncCompleted": "Model sync completed ({{success}}/{{total}})",
-    "syncFailed": "Model sync failed: {{error}}",
-    "loadFailed": "Failed to load channels: {{error}}",
-    "genericError": "Request failed: {{error}}",
-    "revealKeyFailed": "Failed to load the real channel key: {{error}}"
-  },
   "filters": {
-    "title": "Channel filters",
-    "subtitle": "Customize filtering rules for {{channel}}",
-    "loading": "Loading channel filters...",
-    "empty": {
-      "title": "No filters yet",
-      "description": "Add include/exclude rules with optional regex to control synced models."
-    },
-    "addRule": "Add filter rule",
-    "labels": {
-      "name": "Filter name",
-      "pattern": "Match pattern",
-      "description": "Description",
-      "action": "Action",
-      "enabled": "Enabled",
-      "regex": "Regex mode",
-      "delete": "Delete filter"
-    },
-    "placeholders": {
-      "name": "e.g. Allow GPT-4",
-      "pattern": "Exact string or regex pattern",
-      "description": "Optional notes about this rule"
-    },
     "actionOptions": {
-      "include": "Include matching models",
-      "exclude": "Exclude matching models"
-    },
-    "hints": {
-      "regex": "Regex rules support advanced matching using JavaScript syntax.",
-      "substring": "Plain rules match case-sensitive substrings inside model names."
-    },
-    "viewMode": {
-      "label": "Edit mode",
-      "visual": "Visual edit",
-      "json": "JSON edit"
-    },
-    "jsonEditor": {
-      "label": "Advanced JSON editor",
-      "placeholder": "Paste or edit an array of filter rule objects here to quickly reuse the same configuration across channels.",
-      "hint": "The JSON must be an array of objects with at least 'name' and 'pattern'. Optional fields: id, description, isRegex, action ('include' | 'exclude'), enabled, createdAt, updatedAt.",
-      "syncFromForm": "Sync from form"
+      "exclude": "Exclude matching models",
+      "include": "Include matching models"
     },
     "actions": {
       "cancel": "Cancel",
       "save": "Save filters"
     },
+    "addRule": "Add filter rule",
+    "empty": {
+      "description": "Add include/exclude rules with optional regex to control synced models.",
+      "title": "No filters yet"
+    },
+    "hints": {
+      "regex": "Regex rules support advanced matching using JavaScript syntax.",
+      "substring": "Plain rules match case-sensitive substrings inside model names."
+    },
+    "jsonEditor": {
+      "hint": "The JSON must be an array of objects with at least 'name' and 'pattern'. Optional fields: id, description, isRegex, action ('include' | 'exclude'), enabled, createdAt, updatedAt.",
+      "label": "Advanced JSON editor",
+      "placeholder": "Paste or edit an array of filter rule objects here to quickly reuse the same configuration across channels."
+    },
+    "labels": {
+      "action": "Action",
+      "delete": "Delete filter",
+      "description": "Description",
+      "enabled": "Enabled",
+      "name": "Filter name",
+      "pattern": "Match pattern",
+      "regex": "Regex mode"
+    },
+    "loading": "Loading channel filters...",
     "messages": {
+      "jsonInvalid": "Invalid filter JSON: {{error}}",
       "loadFailed": "Failed to load filters: {{error}}",
-      "saveFailed": "Failed to save filters: {{error}}",
       "saved": "Filters saved",
+      "saveFailed": "Failed to save filters: {{error}}",
       "validationName": "Please provide a name for each filter.",
       "validationPattern": "Filter pattern cannot be empty.",
-      "validationRegex": "Invalid regex pattern: {{error}}",
-      "jsonInvalid": "Invalid filter JSON: {{error}}"
+      "validationRegex": "Invalid regex pattern: {{error}}"
+    },
+    "placeholders": {
+      "description": "Optional notes about this rule",
+      "name": "e.g. Allow GPT-4",
+      "pattern": "Exact string or regex pattern"
+    },
+    "subtitle": "Customize filtering rules for {{channel}}",
+    "title": "Channel filters",
+    "viewMode": {
+      "json": "JSON edit",
+      "label": "Edit mode",
+      "visual": "Visual edit"
     }
+  },
+  "statusLabels": {
+    "autoDisabled": "Auto Disabled",
+    "enabled": "Enabled",
+    "manualPause": "Manual Pause",
+    "unknown": "Unknown"
+  },
+  "table": {
+    "columns": {
+      "actions": "Actions",
+      "group": "Available Groups",
+      "id": "ID",
+      "models": "Models",
+      "name": "Channel",
+      "priority": "Priority",
+      "status": "Status",
+      "type": "Type",
+      "weight": "Weight"
+    },
+    "empty": "No channels found. Try adjusting your filters.",
+    "loading": "Loading channels...",
+    "noEntries": "No entries",
+    "paginationNext": "Next page",
+    "paginationPrev": "Previous page",
+    "paginationSummary": "{{start}} - {{end}} of {{total}} channels",
+    "rowActions": {
+      "delete": "Delete",
+      "edit": "Edit",
+      "filters": "Edit channel filtering rules",
+      "openSync": "Open model sync interface",
+      "sync": "Sync model list immediately",
+      "syncing": "Syncing..."
+    },
+    "rowsPerPage": "Rows per page",
+    "selectAll": "Select all rows",
+    "selectRow": "Select Row"
+  },
+  "title": "Channels management",
+  "toasts": {
+    "channelDeleted": "Channel deleted",
+    "channelSaved": "Channel saved",
+    "channelsDeleted": "{{count}} channels deleted",
+    "channelUpdated": "Channel updated",
+    "revealKeyFailed": "Failed to load the real channel key: {{error}}",
+    "someDeletesFailed": "Failed to delete {{count}} channel(s): {{error}}",
+    "syncCompleted": "Model sync completed ({{success}}/{{total}})",
+    "syncFailed": "Model sync failed: {{error}}"
+  },
+  "toolbar": {
+    "addChannel": "Add channel",
+    "clearSearch": "Clear search",
+    "columns": "Columns",
+    "deleteSelected": "Delete selected",
+    "refresh": "Refresh",
+    "searchPlaceholder": "Search by name, URL or group",
+    "status": "Status",
+    "syncSelected": "Sync selected",
+    "toggleColumns": "Toggle columns"
   }
 }

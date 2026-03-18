@@ -1,72 +1,43 @@
 {
   "verifyDialog": {
-    "title": "CLI Support Simulation",
-    "loadingModelsHint": "Loading models...",
-    "loadingTokensHint": "Loading tokens...",
-    "idleHint": "Select a token, then run the simulation. Provide a model id if the token cannot be used to infer one.",
-    "profileIdleHint": "Choose a model, then run the simulation. You can still enter a model id manually if the fetched list misses it.",
-    "warning": "This feature is Beta. A detected pass is likely real; a fail may still work in some clients. Treat the result as guidance and verify with the actual CLI when possible.",
-    "notRunYet": "Not run yet",
-    "requiresModelId": "Provide a model id before running this check.",
-    "modelsFetchFailed": "Failed to fetch models",
-    "modelPickerPlaceholder": "Select or enter model id",
-    "unsupportedToolForApiType": "The selected API type does not support {{tool}} simulation.",
-    "modelHint": "Model hint from token: {{modelId}}",
-    "meta": {
-      "token": "Token",
-      "tokenPlaceholder": "Select token",
-      "apiType": "API type",
-      "apiTypePlaceholder": "Select API type",
-      "model": "Model",
-      "modelPlaceholder": "Enter model id",
-      "models": {
-        "claude": "Claude model",
-        "codex": "Codex model",
-        "gemini": "Gemini model"
-      }
-    },
-    "apiTypes": {
-      "openaiCompatible": "OpenAI-compatible",
-      "openai": "OpenAI",
-      "anthropic": "Anthropic",
-      "google": "Google/Gemini"
-    },
     "actions": {
       "close": "Close",
-      "run": "Run simulation",
-      "runOne": "Run",
       "retry": "Retry",
-      "running": "Running..."
-    },
-    "status": {
-      "pass": "Pass",
-      "fail": "Fail",
-      "pending": "Pending",
-      "unsupported": "Unsupported"
+      "run": "Run simulation",
+      "running": "Running...",
+      "runOne": "Run"
     },
     "details": {
       "input": "Input",
       "output": "Output"
     },
+    "idleHint": "Select a token, then run the simulation. Provide a model id if the token cannot be used to infer one.",
+    "loadingModelsHint": "Loading models...",
+    "loadingTokensHint": "Loading tokens...",
+    "meta": {
+      "model": "Model",
+      "modelPlaceholder": "Enter model id",
+      "token": "Token",
+      "tokenPlaceholder": "Select token"
+    },
+    "modelHint": "Model hint from token: {{modelId}}",
+    "modelPickerPlaceholder": "Select or enter model id",
+    "modelsFetchFailed": "Failed to fetch models",
+    "notRunYet": "Not run yet",
+    "profileIdleHint": "Choose a model, then run the simulation. You can still enter a model id manually if the fetched list misses it.",
+    "requiresModelId": "Provide a model id before running this check.",
+    "status": {
+      "fail": "Fail",
+      "pass": "Pass",
+      "pending": "Pending",
+      "unsupported": "Unsupported"
+    },
+    "title": "CLI Support Simulation",
     "tools": {
       "claude": "Claude Code",
       "codex": "Codex (Codex CLI)",
       "gemini": "Gemini CLI"
     },
-    "summaries": {
-      "supported": "Supported",
-      "supportedStreaming": "Supported (streaming)",
-      "noToolCallDetected": "No tool call detected (tool calling may not be supported)",
-      "toolCallSucceeded": "Tool call succeeded.",
-      "unauthorized": "Unauthorized (401): invalid key or missing auth",
-      "forbidden": "Forbidden (403): access denied",
-      "endpointNotFound": "Endpoint not found (404): this API may not be supported",
-      "httpError": "HTTP error ({{status}})",
-      "invalidResponse": "Unexpected response format",
-      "networkError": "Network error / blocked request",
-      "unexpectedError": "Unexpected error: {{message}}",
-      "noModelIdProvided": "No model id available",
-      "unsupportedForApiType": "Unsupported for selected API type ({{apiType}})"
-    }
+    "warning": "This feature is Beta. A detected pass is likely real; a fail may still work in some clients. Treat the result as guidance and verify with the actual CLI when possible."
   }
 }

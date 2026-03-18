@@ -48,13 +48,13 @@ function getUsageHistorySyncStateLabel(
 ) {
   switch (state) {
     case "success":
-      return t("status.states.success")
+      return t("usageAnalytics:status.states.success")
     case "error":
-      return t("status.states.error")
+      return t("usageAnalytics:status.states.error")
     case "unsupported":
-      return t("status.states.unsupported")
+      return t("usageAnalytics:status.states.unsupported")
     default:
-      return t("status.states.never")
+      return t("usageAnalytics:status.states.never")
   }
 }
 

@@ -1,91 +1,89 @@
 {
-  "title": {
-    "add": "创建渠道",
-    "edit": "编辑渠道"
+  "actions": {
+    "create": "创建渠道",
+    "deselectAll": "全不选",
+    "hideKey": "隐藏密钥",
+    "inverse": "反选",
+    "loadingRealKey": "正在加载真实 key...",
+    "loadRealKey": "加载真实 key",
+    "selectAll": "全选",
+    "showKey": "显示密钥",
+    "update": "保存更改"
   },
   "description": {
     "add": "为您管理的站点配置新的转发渠道",
     "edit": "更新渠道设置和路由信息"
   },
-  "actions": {
-    "create": "创建渠道",
-    "update": "保存更改",
-    "showKey": "显示密钥",
-    "hideKey": "隐藏密钥",
-    "loadRealKey": "加载真实 key",
-    "loadingRealKey": "正在加载真实 key...",
-    "selectAll": "全选",
-    "inverse": "反选",
-    "deselectAll": "全不选"
-  },
-  "messages": {
-    "createSuccess": "渠道创建成功",
-    "updateSuccess": "渠道更新成功",
-    "saveFailed": "保存渠道失败：{{error}}",
-    "missingChannelId": "缺少现有渠道 ID",
-    "loadRealKeyFailed": "加载真实渠道 key 失败：{{error}}"
-  },
-  "validation": {
-    "nameRequired": "渠道名称必填",
-    "keyRequired": "API 密钥必填",
-    "baseUrlRequired": "此渠道类型需要填写基础 URL"
-  },
-  "warnings": {
-    "channelExists": {
-      "title": "渠道已存在",
-      "warningTitle": "可能存在重复渠道",
-      "description": "管理站点中已存在渠道 {{channelName}}。你仍可以继续创建新渠道，但可能会造成重复路由。是否继续？",
-      "actions": {
-        "continue": "继续添加"
-      }
-    }
-  },
   "fields": {
-    "name": {
-      "label": "渠道名称",
-      "placeholder": "输入一个描述性的渠道名称"
+    "baseUrl": {
+      "label": "基础 URL",
+      "placeholder": "https://api.example.com"
     },
-    "type": {
-      "label": "渠道类型",
-      "placeholder": "选择渠道类型",
-      "hint": "选择此渠道将转发到的上游提供商"
+    "groups": {
+      "hint": "分组来源于您管理的站点",
+      "label": "渠道分组",
+      "loading": "加载分组中...",
+      "placeholder": "选择分组"
     },
     "key": {
       "label": "API 密钥",
       "placeholder": "输入上游提供商的 API 密钥",
       "realKeyHint": "对于 New API，查看真实渠道 key 本身需要先完成 2FA 验证；如果未在设置中填写登录与两步验证辅助信息，则无法读取该 key。"
     },
-    "baseUrl": {
-      "label": "基础 URL",
-      "placeholder": "https://api.example.com"
-    },
     "models": {
+      "hint": "输入搜索或按 Enter 添加自定义模型名称",
       "label": "可用模型",
-      "placeholder": "选择或输入模型名称",
       "loading": "加载模型中...",
-      "hint": "输入搜索或按 Enter 添加自定义模型名称"
+      "placeholder": "选择或输入模型名称"
     },
-    "groups": {
-      "label": "渠道分组",
-      "placeholder": "选择分组",
-      "loading": "加载分组中...",
-      "hint": "分组来源于您管理的站点"
+    "name": {
+      "label": "渠道名称",
+      "placeholder": "输入一个描述性的渠道名称"
     },
     "priority": {
-      "label": "优先级",
-      "hint": "优先级数字越大的渠道优先使用"
-    },
-    "weight": {
-      "label": "权重",
-      "hint": "控制相同优先级内的负载均衡（0 = 平均分配）"
+      "hint": "优先级数字越大的渠道优先使用",
+      "label": "优先级"
     },
     "status": {
-      "label": "状态",
+      "disabled": "禁用",
       "enabled": "启用",
-      "disabled": "禁用"
+      "label": "状态"
+    },
+    "type": {
+      "hint": "选择此渠道将转发到的上游提供商",
+      "label": "渠道类型",
+      "placeholder": "选择渠道类型"
+    },
+    "weight": {
+      "hint": "控制相同优先级内的负载均衡（0 = 平均分配）",
+      "label": "权重"
     }
+  },
+  "messages": {
+    "loadRealKeyFailed": "加载真实渠道 key 失败：{{error}}",
+    "missingChannelId": "缺少现有渠道 ID",
+    "saveFailed": "保存渠道失败：{{error}}"
   },
   "sections": {
     "advanced": "高级设置"
+  },
+  "title": {
+    "add": "创建渠道",
+    "edit": "编辑渠道"
+  },
+  "validation": {
+    "baseUrlRequired": "此渠道类型需要填写基础 URL",
+    "keyRequired": "API 密钥必填",
+    "nameRequired": "渠道名称必填"
+  },
+  "warnings": {
+    "channelExists": {
+      "actions": {
+        "continue": "继续添加"
+      },
+      "description": "管理站点中已存在渠道 {{channelName}}。你仍可以继续创建新渠道，但可能会造成重复路由。是否继续？",
+      "title": "渠道已存在",
+      "warningTitle": "可能存在重复渠道"
+    }
   }
 }

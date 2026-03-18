@@ -1,14 +1,73 @@
 {
-  "title": "账户管理",
-  "description": "一键管理所有AI中转站",
-  "emptyState": "暂无站点账号",
-  "addFirstAccount": "添加你的第一个站点账号",
+  "actions": {
+    "channelLocateConfigMissing": "托管站点管理员配置不可用，已按 URL 过滤渠道列表供你确认。",
+    "channelLocateFailed": "定位渠道失败",
+    "channelLocateInputPreparationFallback": "无法准备排序匹配所需的输入，已仅按 URL 过滤渠道列表。",
+    "channelLocateMultipleKeysFallback": "检测到多个密钥，已仅按 URL 过滤渠道列表。",
+    "channelLocateNoKeyFallback": "当前没有可用于排序匹配的 API 密钥，已仅按 URL 过滤渠道列表。",
+    "copyKey": "复制密钥",
+    "copyUrl": "复制网址",
+    "delete": "删除",
+    "disableAccount": "禁用账号",
+    "edit": "编辑",
+    "enableAccount": "启用账号",
+    "fetchKeyInfoFailed": "获取密钥信息失败",
+    "fetchKeyListFailed": "获取密钥列表失败: {{errorMessage}}",
+    "keyCopied": "密钥已复制到剪贴板",
+    "keyList": "密钥列表",
+    "keyManagement": "密钥管理",
+    "locateManagedSiteChannel": "定位对应渠道",
+    "locateManagedSiteChannelUnsupported": "因为 Veloera 暂不支持使用URL搜索渠道，相关功能无法正常工作",
+    "locateManagedSiteChannelUnsupportedHint": "不支持",
+    "modelManagement": "模型管理",
+    "openAllExternalCheckIn": "一键打开外部签到",
+    "openAllExternalCheckInHint": "默认仅打开未签到；Ctrl/Cmd 打开全部；Shift 在新窗口打开；Ctrl/Cmd+Shift 同时生效。",
+    "pin": "置顶账号",
+    "pinned": "已置顶",
+    "quickCheckin": "快速签到",
+    "redeemPage": "充值页面",
+    "refresh": "刷新",
+    "scanDuplicates": "扫描重复账号",
+    "scanDuplicatesHint": "按 URL 源站 + 用户 ID 扫描重复账号并安全清理。",
+    "unpin": "取消置顶",
+    "urlCopied": "网址已复制到剪贴板",
+    "usageLog": "用量日志",
+    "viewOnLdoh": "在 LDOH 查看"
+  },
   "addAccount": "新增账号",
+  "addFirstAccount": "添加你的第一个站点账号",
+  "currentLoginAdded": "⚠️当前登录账号已添加（{{siteName}}）",
   "currentSiteAdded": "⚠️当前站点 {{siteName}} 已存在已添加账号",
   "currentSiteAddedCount": "⚠️当前站点已存在已添加账号（{{count}} 个）",
-  "currentLoginAdded": "⚠️当前登录账号已添加（{{siteName}}）",
+  "description": "一键管理所有AI中转站",
+  "emptyState": "暂无站点账号",
+  "filter": {
+    "summary": "共 {{count}} 个账号",
+    "tagsAllLabel": "全部"
+  },
+  "filteredTotals": {
+    "balance": "余额",
+    "consumption": "今日消耗"
+  },
+  "healthStatus": {
+    "apiError": "API错误",
+    "error": "错误",
+    "healthy": "健康",
+    "httpError": "HTTP {{statusCode}}: {{message}}",
+    "networkFailed": "网络连接失败",
+    "normal": "账号状态正常",
+    "tempWindowDisabled": "过盾功能已关闭，请在 设置 > 数据刷新 中启用",
+    "tempWindowPermissionRequired": "Firefox 过盾功能需要 Cookie 拦截权限，请在 设置 > 权限管理 中授予",
+    "unknown": "未知",
+    "unknownError": "未知错误",
+    "warning": "警告"
+  },
   "list": {
-    "sort": "排序",
+    "balance": {
+      "refreshBalance": "点击刷新余额",
+      "refreshCashflow": "点击刷新今日消费",
+      "refreshIncome": "点击刷新今日收入"
+    },
     "dragHandle": "拖动排序",
     "header": {
       "account": "账号",
@@ -16,128 +75,50 @@
       "todayConsumption": "今日消费",
       "todayIncome": "今日收入"
     },
-    "balance": {
-      "refreshBalance": "点击刷新余额",
-      "refreshCashflow": "点击刷新今日消费",
-      "refreshIncome": "点击刷新今日收入"
-    },
     "site": {
-      "currentSiteExists": "与当前标签页站点相同",
+      "checkedInToday": "今日已签到，点我查看",
+      "checkInStatusOutdated": "签到状态不是今日检测（上次检测时间：{{time}}），点我刷新",
+      "checkInUnsupported": "站点可能不支持签到",
       "currentSite": "当前站点",
+      "currentSiteExists": "与当前标签页站点相同",
       "disabled": "已禁用",
       "lastSync": "上次同步",
-      "status": "状态",
-      "reason": "原因",
-      "unknown": "未知",
       "notAvailable": "不可用",
-      "refreshHealthStatus": "点击刷新健康状态",
-      "customCheckInUrl": "外部签到地址，点我去签到: {{url}}",
-      "checkInUnsupported": "站点可能不支持签到",
-      "checkedInToday": "今日已签到，点我查看",
       "notCheckedInToday": "今日未签到，点我去签到",
-      "checkInStatusOutdated": "签到状态不是今日检测（上次检测时间：{{time}}），点我刷新"
-    }
-  },
-  "stats": {
-    "totalBalance": "总余额",
-    "todayCashflow": "今日收支",
-    "todayConsumption": "今日消耗",
-    "todayIncome": "今日收入",
-    "prompt": "提示",
-    "completion": "补全"
-  },
-  "refresh": {
-    "refreshingAll": "正在刷新所有账号...",
-    "refreshComplete": "刷新完成: {{success}} 成功, {{failed}} 失败",
-    "refreshPartialSkipped": "刷新完成: {{success}} 成功, {{skipped}} 跳过",
-    "refreshSuccess": "所有账号刷新成功！",
-    "refreshFailed": "刷新失败，请稍后重试"
-  },
-  "healthStatus": {
-    "healthy": "健康",
-    "warning": "警告",
-    "error": "错误",
-    "unknown": "未知",
-    "normal": "账号状态正常",
-    "httpError": "HTTP {{statusCode}}: {{message}}",
-    "tempWindowDisabled": "过盾功能已关闭，请在 设置 > 数据刷新 中启用",
-    "tempWindowPermissionRequired": "Firefox 过盾功能需要 Cookie 拦截权限，请在 设置 > 权限管理 中授予",
-    "apiError": "API错误",
-    "networkFailed": "网络连接失败",
-    "unknownError": "未知错误"
-  },
-  "actions": {
-    "edit": "编辑",
-    "delete": "删除",
-    "disableAccount": "禁用账号",
-    "enableAccount": "启用账号",
-    "copyUrl": "复制网址",
-    "copyKey": "复制密钥",
-    "refresh": "刷新",
-    "quickCheckin": "快速签到",
-    "viewDetails": "查看详情",
-    "keyCopied": "密钥已复制到剪贴板",
-    "noKeyFound": "未找到可用密钥",
-    "fetchKeyInfoFailed": "获取密钥信息失败",
-    "fetchKeyListFailed": "获取密钥列表失败: {{errorMessage}}",
-    "urlCopied": "网址已复制到剪贴板",
-    "keyList": "密钥列表",
-    "keyManagement": "密钥管理",
-    "modelManagement": "模型管理",
-    "usageLog": "用量日志",
-    "redeemPage": "充值页面",
-    "locateManagedSiteChannel": "定位对应渠道",
-    "locateManagedSiteChannelUnsupportedHint": "不支持",
-    "locateManagedSiteChannelUnsupported": "因为 Veloera 暂不支持使用URL搜索渠道，相关功能无法正常工作",
-    "channelLocateNoKeyFallback": "当前没有可用于排序匹配的 API 密钥，已仅按 URL 过滤渠道列表。",
-    "channelLocateMultipleKeysFallback": "检测到多个密钥，已仅按 URL 过滤渠道列表。",
-    "channelLocateConfigMissing": "托管站点管理员配置不可用，已按 URL 过滤渠道列表供你确认。",
-    "channelLocateInputPreparationFallback": "无法准备排序匹配所需的输入，已仅按 URL 过滤渠道列表。",
-    "channelLocateSecondaryExactModels": "已找到一个按模型集合完全一致的次级匹配，已按 URL 过滤渠道列表供你确认。",
-    "channelLocateSecondaryModelsContained": "已找到一个按模型包含关系命中的次级匹配，已按 URL 过滤渠道列表供你确认。",
-    "channelLocateSecondaryModelsSimilar": "已找到一个按模型相似度命中的次级匹配，已按 URL 过滤渠道列表供你确认。",
-    "channelLocateKeyMatchOnly": "在同一 URL 范围内找到了 key 命中的渠道，但模型集合不匹配，已按 URL 过滤渠道列表供你确认。",
-    "channelLocateKeyMatchedModelsDrifted": "同一渠道命中了 key，但模型集合只达到了近似匹配，已按 URL 过滤渠道列表供你确认。",
-    "channelLocateSignalsConflict": "key 和模型检查分别指向了不同的候选渠道，已按 URL 过滤渠道列表供你确认。",
-    "channelLocateFuzzyUrlOnly": "目前只能确认 URL 级别的模糊匹配，已按 URL 过滤渠道列表供你确认。",
-    "channelLocateUnresolved": "暂时无法确认最可能的渠道，已仅按 URL 过滤渠道列表。",
-    "channelLocateKeyUnavailable": "已按 URL 过滤渠道列表。按 key 精确定位不可用或需要验证。",
-    "channelLocateFailed": "定位渠道失败",
-    "channelLocateFailedWithError": "定位渠道失败: {{errorMessage}}",
-    "viewOnLdoh": "在 LDOH 查看",
-    "openAllExternalCheckIn": "一键打开外部签到",
-    "openAllExternalCheckInHint": "默认仅打开未签到；Ctrl/Cmd 打开全部；Shift 在新窗口打开；Ctrl/Cmd+Shift 同时生效。",
-    "scanDuplicates": "扫描重复账号",
-    "scanDuplicatesHint": "按 URL 源站 + 用户 ID 扫描重复账号并安全清理。",
-    "pin": "置顶账号",
-    "unpin": "取消置顶",
-    "pinned": "已置顶",
-    "unpinned": "已取消置顶"
-  },
-  "search": {
-    "placeholder": "输入站点信息或账号信息进行搜索",
-    "noResults": "没有找到匹配的账号"
-  },
-  "filter": {
-    "tagsLabel": "标签筛选",
-    "tagsPlaceholder": "选择标签",
-    "tagsAllLabel": "全部",
-    "clearTags": "清除",
-    "summary": "共 {{count}} 个账号"
-  },
-  "filteredTotals": {
-    "title": "筛选统计",
-    "balance": "余额",
-    "consumption": "今日消耗"
+      "reason": "原因",
+      "refreshHealthStatus": "点击刷新健康状态",
+      "status": "状态",
+      "unknown": "未知"
+    },
+    "sort": "排序"
   },
   "newcomerSupport": {
-    "title": "欢迎使用 All API Hub",
+    "actions": {
+      "about": "访问项目主页",
+      "docs": "打开新手指引",
+      "star": "在 GitHub 上查看"
+    },
     "description": "可以先为项目点个 Star，也可以先看看文档，了解如何管理中转站和 New API 账号",
     "hint": "在添加账号之前，也可以先随意看看文档和项目信息",
-    "actions": {
-      "star": "在 GitHub 上查看",
-      "docs": "打开新手指引",
-      "about": "访问项目主页"
-    }
-  }
+    "title": "欢迎使用 All API Hub"
+  },
+  "refresh": {
+    "refreshComplete": "刷新完成: {{success}} 成功, {{failed}} 失败",
+    "refreshFailed": "刷新失败，请稍后重试",
+    "refreshingAll": "正在刷新所有账号...",
+    "refreshPartialSkipped": "刷新完成: {{success}} 成功, {{skipped}} 跳过",
+    "refreshSuccess": "所有账号刷新成功！"
+  },
+  "search": {
+    "noResults": "没有找到匹配的账号",
+    "placeholder": "输入站点信息或账号信息进行搜索"
+  },
+  "stats": {
+    "completion": "补全",
+    "prompt": "提示",
+    "todayConsumption": "今日消耗",
+    "todayIncome": "今日收入",
+    "totalBalance": "总余额"
+  },
+  "title": "账户管理"
 }

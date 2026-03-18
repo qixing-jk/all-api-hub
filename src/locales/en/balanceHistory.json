@@ -1,99 +1,96 @@
 {
-  "title": "Balance History",
-  "description": "Record daily snapshots of balance and cashflow and visualize trends over time.",
   "actions": {
-    "refreshNow": "Refresh now",
+    "applySettings": "Apply settings",
     "prune": "Prune",
-    "applySettings": "Apply settings"
+    "refreshNow": "Refresh now"
   },
-  "settings": {
-    "enabled": "Enable Balance History",
-    "enabledHint": "When disabled, no snapshots are recorded and scheduled capture is turned off.",
-    "endOfDayCapture": "End-of-day capture",
-    "endOfDayCaptureHint": "Best-effort daily capture near {{time}} (requires Alarms API).",
-    "alarmUnsupported": "Alarms API is not available in this browser; end-of-day capture cannot be enabled.",
-    "retentionDays": "Retention (days)"
+  "breakdown": {
+    "chartTypes": {
+      "histogram": "Histogram",
+      "pie": "Pie"
+    },
+    "controls": {
+      "chartType": "Chart type",
+      "reference": "Reference"
+    },
+    "coverage": "{{covered}}/{{total}} accounts with data",
+    "empty": "No data to display for this breakdown.",
+    "hints": {
+      "pieDisabledForNegative": "Pie charts are unavailable for negative values."
+    },
+    "title": "Account breakdown"
   },
-  "warnings": {
-    "cashflowDisabled": {
-      "title": "Income/outcome history will be empty",
-      "description": "Today cashflow fetching is disabled and end-of-day capture is disabled. Enable either \"Show today cashflow\" or \"End-of-day capture\" to record income/outcome values."
-    }
+  "description": "Record daily snapshots of balance and cashflow and visualize trends over time.",
+  "empty": {
+    "description": "Enable Balance History and refresh an account to record the first snapshot.",
+    "title": "No snapshots yet"
+  },
+  "emptyRange": {
+    "description": "Snapshots exist, but none fall within the selected date range. Try widening the range or refreshing an account.",
+    "title": "No snapshots in this range"
   },
   "filters": {
-    "tags": "Tags",
-    "tagsHint": "Filter accounts by tags.",
-    "allTags": "All tags",
     "accounts": "Accounts",
     "accountsHint": "Select accounts to include in charts.",
     "allAccounts": "All accounts",
+    "allTags": "All tags",
+    "endDay": "End Date",
     "noDataInRange": "No data in this range",
+    "quickRanges": {
+      "180d": "180 days",
+      "30d": "30 days",
+      "365d": "1 year",
+      "7d": "7 days",
+      "90d": "90 days"
+    },
     "range": "Date range",
     "rangeHint": "Bounded by retention window ({{days}} days).",
-    "quickRanges": {
-      "7d": "7 days",
-      "30d": "30 days",
-      "90d": "90 days",
-      "180d": "180 days",
-      "365d": "1 year"
-    },
     "startDay": "Start Date",
-    "endDay": "End Date"
-  },
-  "summary": {
-    "coverage": "Days with data: balance {{snapshotAvailableDays}}/{{totalDays}} (complete {{snapshotCompleteDays}}/{{totalDays}}), cashflow {{cashflowAvailableDays}}/{{totalDays}} (complete {{cashflowCompleteDays}}/{{totalDays}})."
-  },
-  "emptyRange": {
-    "title": "No snapshots in this range",
-    "description": "Snapshots exist, but none fall within the selected date range. Try widening the range or refreshing an account."
+    "tags": "Tags",
+    "tagsHint": "Filter accounts by tags."
   },
   "hints": {
     "disabled": {
-      "title": "Balance History is disabled",
-      "description": "Enable Balance History in settings to start recording snapshots.",
       "actions": {
         "openSettings": "Open settings"
-      }
+      },
+      "description": "Enable Balance History in settings to start recording snapshots.",
+      "title": "Balance History is disabled"
     },
     "incompleteSelection": {
-      "title": "Total may be incomplete",
       "description": "Totals are computed on a best-effort basis by summing accounts that have data on each day. When coverage is incomplete ({{minCovered}}–{{maxCovered}}/{{totalAccounts}} accounts), totals may be underestimated.",
-      "actions": {
-        "viewBestAccount": "View best-covered account"
-      }
+      "title": "Total may be incomplete"
     }
   },
-  "empty": {
-    "title": "No snapshots yet",
-    "description": "Enable Balance History and refresh an account to record the first snapshot."
-  },
-  "charts": {
-    "balance": {
-      "title": "Balance trend",
-      "series": "Balance",
-      "yAxis": "Amount"
+  "messages": {
+    "error": {
+      "pruneFailed": "Prune failed: {{error}}",
+      "refreshFailed": "Refresh failed: {{error}}",
+      "settingsSaveFailed": "Failed to save settings: {{error}}"
     },
-    "cashflow": {
-      "title": "Daily cashflow",
-      "income": "Income",
-      "outcome": "Outcome",
-      "yAxis": "Amount"
+    "loading": {
+      "loadingData": "Loading…",
+      "pruning": "Pruning…",
+      "refreshing": "Refreshing…",
+      "savingSettings": "Saving settings…"
+    },
+    "success": {
+      "pruneCompleted": "Prune completed",
+      "refreshCompleted": "Refresh completed",
+      "settingsSaved": "Settings saved"
     }
   },
   "metrics": {
     "balance": "Balance",
     "income": "Income",
-    "outcome": "Outcome",
-    "net": "Net change"
+    "net": "Net change",
+    "outcome": "Outcome"
   },
   "overview": {
-    "title": "Overview",
     "kpis": {
+      "coverageAccounts": "{{covered}}/{{total}} accounts",
       "endBalance": {
         "label": "End balance"
-      },
-      "rangeNet": {
-        "label": "Range net"
       },
       "incomeTotal": {
         "label": "Income total"
@@ -101,84 +98,62 @@
       "outcomeTotal": {
         "label": "Outcome total"
       },
-      "coverageAccounts": "{{covered}}/{{total}} accounts"
-    }
+      "rangeNet": {
+        "label": "Range net"
+      }
+    },
+    "title": "Overview"
   },
-  "breakdown": {
-    "title": "Account breakdown",
-    "coverage": "{{covered}}/{{total}} accounts with data",
-    "empty": "No data to display for this breakdown.",
-    "controls": {
-      "metric": "Metric",
-      "reference": "Reference",
-      "chartType": "Chart type"
-    },
-    "references": {
-      "start": "Start",
-      "end": "End"
-    },
-    "chartTypes": {
-      "pie": "Pie",
-      "histogram": "Histogram"
-    },
-    "hints": {
-      "pieDisabledForNegative": "Pie charts are unavailable for negative values."
-    }
+  "settings": {
+    "alarmUnsupported": "Alarms API is not available in this browser; end-of-day capture cannot be enabled.",
+    "enabled": "Enable Balance History",
+    "enabledHint": "When disabled, no snapshots are recorded and scheduled capture is turned off.",
+    "endOfDayCapture": "End-of-day capture",
+    "endOfDayCaptureHint": "Best-effort daily capture near {{time}} (requires Alarms API).",
+    "retentionDays": "Retention (days)"
   },
+  "summary": {
+    "coverage": "Days with data: balance {{snapshotAvailableDays}}/{{totalDays}} (complete {{snapshotCompleteDays}}/{{totalDays}}), cashflow {{cashflowAvailableDays}}/{{totalDays}} (complete {{cashflowCompleteDays}}/{{totalDays}})."
+  },
+  "table": {
+    "columns": {
+      "account": "Account",
+      "cashflowCoverage": "Cashflow coverage",
+      "endBalance": "End balance",
+      "incomeTotal": "Income total",
+      "outcomeTotal": "Outcome total",
+      "rangeNet": "Range net",
+      "snapshotCoverage": "Snapshot coverage",
+      "startBalance": "Start balance"
+    },
+    "coverageFormat": "{{covered}}/{{total}}",
+    "empty": "No account summaries to display.",
+    "loading": "Loading…",
+    "title": "Account summary"
+  },
+  "title": "Balance History",
   "trend": {
-    "title": "Trend",
-    "subtitle": "Per-account series with gaps for missing days.",
-    "subtitleTotal": "Total (sum) across selected accounts; values may be underestimated on days with incomplete coverage.",
-    "emptyMetric": "No {{metric}} data in this range.",
-    "controls": {
-      "metric": "Metric",
-      "scope": "View",
-      "chartType": "Chart type"
+    "chartTypes": {
+      "bar": "Bar",
+      "line": "Line"
     },
+    "controls": {
+      "chartType": "Chart type",
+      "scope": "View"
+    },
+    "emptyMetric": "No {{metric}} data in this range.",
     "scopes": {
       "accounts": "By account",
       "total": "Total"
     },
-    "chartTypes": {
-      "line": "Line",
-      "bar": "Bar"
-    }
+    "subtitle": "Per-account series with gaps for missing days.",
+    "subtitleTotal": "Total (sum) across selected accounts; values may be underestimated on days with incomplete coverage.",
+    "title": "Trend"
   },
-  "table": {
-    "title": "Account summary",
-    "loading": "Loading…",
-    "empty": "No account summaries to display.",
-    "coverageFormat": "{{covered}}/{{total}}",
-    "columns": {
-      "account": "Account",
-      "startBalance": "Start balance",
-      "endBalance": "End balance",
-      "rangeNet": "Range net",
-      "incomeTotal": "Income total",
-      "outcomeTotal": "Outcome total",
-      "snapshotCoverage": "Snapshot coverage",
-      "cashflowCoverage": "Cashflow coverage"
-    }
-  },
-  "messages": {
-    "loading": {
-      "loadingData": "Loading…",
-      "savingSettings": "Saving settings…",
-      "refreshing": "Refreshing…",
-      "pruning": "Pruning…"
-    },
-    "success": {
-      "settingsSaved": "Settings saved",
-      "refreshCompleted": "Refresh completed",
-      "pruneCompleted": "Prune completed"
-    },
-    "warning": {
-      "settingsSavedWithWarning": "Settings saved ({{warning}})"
-    },
-    "error": {
-      "settingsSaveFailed": "Failed to save settings: {{error}}",
-      "refreshFailed": "Refresh failed: {{error}}",
-      "pruneFailed": "Prune failed: {{error}}"
+  "warnings": {
+    "cashflowDisabled": {
+      "description": "Today cashflow fetching is disabled and end-of-day capture is disabled. Enable either \"Show today cashflow\" or \"End-of-day capture\" to record income/outcome values.",
+      "title": "Income/outcome history will be empty"
     }
   }
 }
