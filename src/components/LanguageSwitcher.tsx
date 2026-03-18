@@ -19,6 +19,36 @@ interface LanguageSwitcherProps {
 }
 
 /**
+ * Resolve the short visible label for a supported interface language.
+ */
+function getLanguageOptionLabel(
+  t: (key: string, options?: any) => string,
+  language: SupportedUiLanguage,
+) {
+  switch (language) {
+    case "en":
+      return t("appearanceLanguage.switcher.options.en.label")
+    default:
+      return t("appearanceLanguage.switcher.options.zh_CN.label")
+  }
+}
+
+/**
+ * Resolve the localized language name used in accessibility copy.
+ */
+function getLanguageOptionName(
+  t: (key: string, options?: any) => string,
+  language: SupportedUiLanguage,
+) {
+  switch (language) {
+    case "en":
+      return t("appearanceLanguage.switcher.options.en.name")
+    default:
+      return t("appearanceLanguage.switcher.options.zh_CN.name")
+  }
+}
+
+/**
  * LanguageSwitcher toggles the UI language and persists the preference.
  */
 export function LanguageSwitcher({
@@ -61,10 +91,10 @@ export function LanguageSwitcher({
           !compact && "sm:p-1",
         )}
       >
-        {UI_LANGUAGE_OPTIONS.map(({ code, translationKey }) => {
+        {UI_LANGUAGE_OPTIONS.map(({ code }) => {
           const isActive = activeLanguage === code
-          const label = t(`${translationKey}.label`)
-          const languageName = t(`${translationKey}.name`)
+          const label = getLanguageOptionLabel(t, code)
+          const languageName = getLanguageOptionName(t, code)
           const accessibleLabel = t(
             isActive
               ? "appearanceLanguage.switcher.currentLanguage"

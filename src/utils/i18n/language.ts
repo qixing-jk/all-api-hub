@@ -16,15 +16,12 @@ const isLanguageFamily = (
 export const UI_LANGUAGE_OPTIONS = [
   {
     code: ENGLISH_LANG,
-    translationKey: "appearanceLanguage.switcher.options.en",
   },
   {
     code: DEFAULT_LANG,
-    translationKey: "appearanceLanguage.switcher.options.zh_CN",
   },
 ] as const satisfies ReadonlyArray<{
   code: SupportedUiLanguage
-  translationKey: string
 }>
 
 /**

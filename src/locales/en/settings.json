@@ -24,6 +24,16 @@
     "switcher": {
       "currentLanguage": "Current interface language: {{language}}",
       "groupLabel": "Interface language selector",
+      "options": {
+        "en": {
+          "label": "EN",
+          "name": "English"
+        },
+        "zh_CN": {
+          "label": "中文",
+          "name": "Chinese"
+        }
+      },
       "switchToLanguage": "Switch interface language to {{language}}"
     }
   },

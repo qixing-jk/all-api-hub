@@ -24,6 +24,16 @@
     "switcher": {
       "currentLanguage": "当前界面语言：{{language}}",
       "groupLabel": "界面语言选择",
+      "options": {
+        "en": {
+          "label": "EN",
+          "name": "英文"
+        },
+        "zh_CN": {
+          "label": "中文",
+          "name": "中文"
+        }
+      },
       "switchToLanguage": "切换界面语言为{{language}}"
     }
   },
