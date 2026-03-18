@@ -21,6 +21,9 @@ interface VerificationCredentialsEditorProps {
   isSaving?: boolean
 }
 
+/**
+ *
+ */
 export default function VerificationCredentialsEditor({
   credentials,
   onSave,

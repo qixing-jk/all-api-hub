@@ -222,6 +222,9 @@ interface FilterRuleCardProps {
   onRemoveFilter: (id: string) => void
 }
 
+/**
+ *
+ */
 function FilterRuleCard({
   filter,
   isGlobalFilter = false,

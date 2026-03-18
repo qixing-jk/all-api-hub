@@ -487,7 +487,6 @@ export class ModelSyncService {
   /**
    * Applies global filters (both pattern and probe types) to the provided models.
    * For probe rules, credentials are resolved from the channel's verificationCredentials.
-   *
    * @param models Models after allow-list filtering.
    * @param channel Channel object for probe credential resolution.
    * @returns Filtered model list.

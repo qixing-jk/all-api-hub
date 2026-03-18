@@ -25,7 +25,6 @@ export interface ResolveProbeCredentialsParams {
  * 2. ChannelConfig.verificationCredentials
  * 3. Channel credentials (base_url, key) - if available
  * 4. Return null if any required field is missing
- *
  * @param params Resolution parameters
  * @returns Resolved credentials or null if incomplete
  */

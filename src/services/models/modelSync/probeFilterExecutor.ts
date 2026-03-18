@@ -28,7 +28,6 @@ export interface RunProbeForModelParams {
 
 /**
  * Run a single probe for a single model.
- *
  * @param params Probe execution parameters
  * @returns true if probe passed, false if failed or unsupported
  */
@@ -81,7 +80,6 @@ export interface FilterModelsByProbeRulesParams {
  *    - Skip if credentials incomplete
  *    - Run probe for each model
  *    - Apply include/exclude logic based on probe results
- *
  * @param params Filter parameters
  * @returns Filtered model list
  */

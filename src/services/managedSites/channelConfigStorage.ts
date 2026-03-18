@@ -407,6 +407,9 @@ function sanitizeChannelConfig(
   }
 }
 
+/**
+ *
+ */
 function sanitizeVerificationCredentials(
   raw: unknown,
 ): VerificationCredentials | undefined {
