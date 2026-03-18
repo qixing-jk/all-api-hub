@@ -1,3 +1,4 @@
+import type { TFunction } from "i18next"
 import {
   ChevronDown,
   LineChart,
@@ -56,6 +57,7 @@ import type { CurrencyType, SiteAccount, TagStore } from "~/types"
 import { DEFAULT_BALANCE_HISTORY_PREFERENCES } from "~/types/dailyBalanceHistory"
 import type { DailyBalanceHistoryStore } from "~/types/dailyBalanceHistory"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { assertNever } from "~/utils/core/assert"
 import { getErrorMessage } from "~/utils/core/error"
 import { getCurrencySymbol } from "~/utils/core/formatters"
 import { createLogger } from "~/utils/core/logger"
@@ -87,10 +89,10 @@ type BalanceHistoryTrendSeriesScope = "accounts" | "total"
 type BalanceHistoryQuickRangeId = (typeof QUICK_RANGES)[number]["id"]
 
 /**
- *
+ * Returns the localized label for a supported balance-history metric.
  */
 function getBalanceHistoryMetricLabel(
-  t: (key: string, options?: any) => string,
+  t: TFunction,
   metric: DailyBalanceHistoryMetric,
 ) {
   switch (metric) {
@@ -103,15 +105,15 @@ function getBalanceHistoryMetricLabel(
     case "net":
       return t("balanceHistory:metrics.net")
     default:
-      return t("common:labels.unknown")
+      return assertNever(metric, `Unexpected balance history metric: ${metric}`)
   }
 }
 
 /**
- *
+ * Returns the localized label for the current trend aggregation scope.
  */
 function getBalanceHistoryTrendScopeLabel(
-  t: (key: string, options?: any) => string,
+  t: TFunction,
   scope: BalanceHistoryTrendSeriesScope,
 ) {
   switch (scope) {
@@ -120,15 +122,15 @@ function getBalanceHistoryTrendScopeLabel(
     case "total":
       return t("balanceHistory:trend.scopes.total")
     default:
-      return t("common:labels.unknown")
+      return assertNever(scope, `Unexpected trend scope: ${scope}`)
   }
 }
 
 /**
- *
+ * Returns the localized label for a preset date range chip.
  */
 function getBalanceHistoryQuickRangeLabel(
-  t: (key: string, options?: any) => string,
+  t: TFunction,
   rangeId: BalanceHistoryQuickRangeId,
 ) {
   switch (rangeId) {
@@ -143,7 +145,7 @@ function getBalanceHistoryQuickRangeLabel(
     case "365d":
       return t("balanceHistory:filters.quickRanges.365d")
     default:
-      return t("common:labels.unknown")
+      return assertNever(rangeId, `Unexpected quick range id: ${rangeId}`)
   }
 }
 

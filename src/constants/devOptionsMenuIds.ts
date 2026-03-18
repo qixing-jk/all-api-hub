@@ -7,3 +7,6 @@
 export const DEV_MENU_ITEM_IDS = {
   MESH_GRADIENT_LAB: "meshGradientLab",
 } as const
+
+export type DevOptionsMenuItemId =
+  (typeof DEV_MENU_ITEM_IDS)[keyof typeof DEV_MENU_ITEM_IDS]

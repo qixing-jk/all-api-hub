@@ -1,3 +1,5 @@
+import type { DevOptionsMenuItemId } from "./devOptionsMenuIds"
+
 /**
  * Stable Options page menu ids.
  *
@@ -22,3 +24,8 @@ export const MENU_ITEM_IDS = {
 
 export type OptionsMenuItemId =
   (typeof MENU_ITEM_IDS)[keyof typeof MENU_ITEM_IDS]
+
+/**
+ * Runtime menu ids rendered in the options sidebar, including dev-only entries.
+ */
+export type OptionsPageMenuItemId = OptionsMenuItemId | DevOptionsMenuItemId

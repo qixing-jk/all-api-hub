@@ -1,14 +1,19 @@
 import type { TFunction } from "i18next"
 
 import { DEV_MENU_ITEM_IDS } from "~/constants/devOptionsMenuIds"
-import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import {
+  MENU_ITEM_IDS,
+  type OptionsPageMenuItemId,
+} from "~/constants/optionsMenuIds"
+import { assertNever } from "~/utils/core/assert"
 
 /**
- * Returns the localized label for a given options menu item ID.
- * @param t i18next translation function
- * @param itemId the menu item ID to get the label for
+ * Returns the localized label for a given options menu item id.
  */
-export function getMenuItemLabel(t: TFunction, itemId: string) {
+export function getMenuItemLabel(
+  t: TFunction,
+  itemId: OptionsPageMenuItemId,
+): string {
   switch (itemId) {
     case MENU_ITEM_IDS.BASIC:
       return t("ui:navigation.basic")
@@ -39,6 +44,6 @@ export function getMenuItemLabel(t: TFunction, itemId: string) {
     case DEV_MENU_ITEM_IDS.MESH_GRADIENT_LAB:
       return t("ui:navigation.meshGradientLab")
     default:
-      return undefined
+      return assertNever(itemId, `Unexpected menu item id: ${itemId}`)
   }
 }

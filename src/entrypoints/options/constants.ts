@@ -17,7 +17,10 @@ import {
 import { createElement, lazy, Suspense, type ComponentType } from "react"
 
 import { DEV_MENU_ITEM_IDS } from "~/constants/devOptionsMenuIds"
-import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import {
+  MENU_ITEM_IDS,
+  type OptionsPageMenuItemId,
+} from "~/constants/optionsMenuIds"
 
 import About from "./pages/About"
 import AccountManagement from "./pages/AccountManagement"
@@ -35,7 +38,7 @@ import UsageAnalytics from "./pages/UsageAnalytics"
 
 // 菜单项类型定义
 export interface MenuItem {
-  id: string
+  id: OptionsPageMenuItemId
   name: string
   icon: ComponentType<{ className?: string }>
   component: ComponentType<any>

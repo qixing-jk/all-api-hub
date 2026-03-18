@@ -9,11 +9,11 @@ import { useTranslation } from "react-i18next"
 import { Button, Heading3, IconButton, Separator } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { getMenuItemLabel } from "~/features/OptionsMenu/getMenuItemLabel"
 import { cn } from "~/lib/utils"
 import { hasValidManagedSiteConfig } from "~/services/managedSites/managedSiteService"
 
 import { menuItems } from "../constants"
-import { getMenuItemLabel } from "../utils/getMenuItemLabel"
 
 interface SidebarProps {
   activeMenuItem: string
@@ -165,7 +165,7 @@ function Sidebar({
               {menuItems.map((item) => {
                 const Icon = item.icon
                 const isActive = activeMenuItem === item.id
-                const label = getMenuItemLabel(t, item.id) ?? item.name
+                const label = getMenuItemLabel(t, item.id)
 
                 if (
                   item.id === MENU_ITEM_IDS.AUTO_CHECKIN &&

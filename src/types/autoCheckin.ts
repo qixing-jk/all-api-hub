@@ -3,6 +3,8 @@
  * Types for automatic daily check-in feature
  */
 
+import type { TFunction } from "i18next"
+
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 
 /**
@@ -57,6 +59,8 @@ export function getAutoCheckinSkipReasonTranslationKey(
     case AUTO_CHECKIN_SKIP_REASON.PROVIDER_NOT_READY:
       return "autoCheckin:skipReasons.provider_not_ready"
   }
+
+  return "autoCheckin:skipReasons.unknown"
 }
 
 /**
@@ -92,7 +96,7 @@ export const AUTO_CHECKIN_RUN_RESULTS = Object.values(
  * Returns the localized label for a persisted auto check-in run result.
  */
 export function getAutoCheckinRunResultLabel(
-  t: (key: string, options?: any) => string,
+  t: TFunction,
   result: AutoCheckinRunResult,
 ): string {
   switch (result) {
@@ -103,6 +107,8 @@ export function getAutoCheckinRunResultLabel(
     case AUTO_CHECKIN_RUN_RESULT.FAILED:
       return t("autoCheckin:status.result.failed")
   }
+
+  return t("common:labels.unknown")
 }
 
 /**
