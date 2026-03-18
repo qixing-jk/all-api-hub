@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "~/features/KeyManagement/constants"
 import { useKeyManagement } from "~/features/KeyManagement/hooks/useKeyManagement"
+import { buildTokenIdentityKey } from "~/features/KeyManagement/utils"
 import { useAccountData } from "~/hooks/useAccountData"
 import { getApiService } from "~/services/apiService"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
@@ -573,6 +574,90 @@ describe("useKeyManagement enabled account filtering", () => {
 
     await waitFor(() => expect(result.current.filteredTokens).toHaveLength(1))
     expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("reveals the resolved full key when the inventory value is masked", async () => {
+    const mockedUseAccountData = vi.mocked(useAccountData)
+    const account = createDisplayAccount({
+      id: "reveal-acc",
+      name: "Reveal Account",
+    })
+
+    mockedUseUserPreferencesContext.mockReturnValue({
+      managedSiteType: "Veloera",
+      newApiBaseUrl: "",
+      newApiAdminToken: "",
+      newApiUserId: "",
+      newApiUsername: "",
+      newApiPassword: "",
+      newApiTotpSecret: "",
+      doneHubBaseUrl: "",
+      doneHubAdminToken: "",
+      doneHubUserId: "",
+      veloeraBaseUrl: "https://veloera.example",
+      veloeraAdminToken: "veloera-admin-token",
+      veloeraUserId: "1",
+      octopusBaseUrl: "",
+      octopusUsername: "",
+      octopusPassword: "",
+    })
+    mockedUseAccountData.mockReturnValue({
+      enabledDisplayData: [account],
+    } as any)
+
+    const maskedKey = "sk-maske****************7890"
+    const resolvedKey = "sk-resolved-12345678901234567890"
+    const fetchAccountTokens = vi.fn().mockResolvedValue([
+      createToken({
+        id: 505,
+        key: maskedKey,
+        name: "Reveal Token",
+        expired_time: 0,
+      }),
+    ])
+    const resolveApiTokenKey = vi.fn().mockResolvedValue(resolvedKey)
+    vi.mocked(getApiService).mockReturnValue({
+      fetchAccountTokens,
+      resolveApiTokenKey,
+    } as any)
+
+    const { result } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => {
+      result.current.setSelectedAccount(account.id)
+    })
+
+    await waitFor(() => expect(result.current.tokens).toHaveLength(1))
+    const token = result.current.tokens[0]!
+    const tokenIdentityKey = buildTokenIdentityKey(token.accountId, token.id)
+
+    expect(result.current.getVisibleTokenKey(token)).toBe(maskedKey)
+
+    await act(async () => {
+      await result.current.toggleKeyVisibility(account, token)
+    })
+
+    await waitFor(() =>
+      expect(result.current.visibleKeys.has(tokenIdentityKey)).toBe(true),
+    )
+    expect(resolveApiTokenKey).toHaveBeenCalledTimes(1)
+    expect(result.current.getVisibleTokenKey(token)).toBe(resolvedKey)
+
+    await act(async () => {
+      await result.current.toggleKeyVisibility(account, token)
+    })
+    expect(result.current.visibleKeys.has(tokenIdentityKey)).toBe(false)
+
+    await act(async () => {
+      await result.current.toggleKeyVisibility(account, token)
+    })
+
+    await waitFor(() =>
+      expect(result.current.visibleKeys.has(tokenIdentityKey)).toBe(true),
+    )
+    expect(resolveApiTokenKey).toHaveBeenCalledTimes(1)
   })
 
   it("reruns managed-site status checks on manual refresh and replaces the prior result", async () => {

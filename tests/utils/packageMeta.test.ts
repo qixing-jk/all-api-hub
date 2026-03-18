@@ -20,6 +20,8 @@ describe("packageMeta", () => {
       expect(getHomepage("en")).toMatch(/\/en\/$/)
       expect(getHomepage("ja")).toMatch(/\/ja\/$/)
       expect(getHomepage("zh_CN")).not.toMatch(/\/(en|ja)\/$/)
+      expect(getHomepage("zh-SG")).not.toMatch(/\/(en|ja)\/$/)
+      expect(getHomepage("fr-FR")).toMatch(/\/en\/$/)
       expect(getHomepage("zh_CN")).toBe(
         `${getDocsBaseUrl().replace(/\/+$/, "")}/`,
       )

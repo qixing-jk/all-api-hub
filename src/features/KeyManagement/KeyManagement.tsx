@@ -124,6 +124,7 @@ export default function KeyManagement(props: {
     tokens,
     isLoading,
     visibleKeys,
+    resolvingVisibleKeys,
     isAddTokenOpen,
     editingToken,
     tokenLoadProgress,
@@ -136,6 +137,7 @@ export default function KeyManagement(props: {
     setAllAccountsFilterAccountId,
     loadTokens,
     filteredTokens,
+    getVisibleTokenKey,
     refreshManagedSiteTokenStatuses,
     refreshManagedSiteTokenStatusForToken,
     copyKey,
@@ -313,6 +315,8 @@ export default function KeyManagement(props: {
         tokens={tokens}
         filteredTokens={filteredTokens}
         visibleKeys={visibleKeys}
+        resolvingVisibleKeys={resolvingVisibleKeys}
+        getVisibleTokenKey={getVisibleTokenKey}
         toggleKeyVisibility={toggleKeyVisibility}
         copyKey={copyKey}
         handleEditToken={handleEditToken}

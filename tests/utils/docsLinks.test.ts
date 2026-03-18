@@ -27,11 +27,15 @@ describe("docsLinks", () => {
     expect(getDocsLocalePath("ja-JP")).toBe("ja/")
     expect(getDocsLocalePath("zh_CN")).toBe("")
     expect(getDocsLocalePath("zh-CN")).toBe("")
+    expect(getDocsLocalePath("zh-SG")).toBe("")
+    expect(getDocsLocalePath("zh-Hant-TW")).toBe("")
+    expect(getDocsLocalePath("fr-FR")).toBe("en/")
   })
 
   it("builds locale-aware docs page urls", () => {
     expect(getDocsPageUrl("faq.html", "en")).toContain("/en/faq.html")
     expect(getDocsPageUrl("faq.html", "ja")).toContain("/ja/faq.html")
     expect(getDocsPageUrl("faq.html", "zh_CN")).toContain("/faq.html")
+    expect(getDocsPageUrl("faq.html", "fr-FR")).toContain("/en/faq.html")
   })
 })

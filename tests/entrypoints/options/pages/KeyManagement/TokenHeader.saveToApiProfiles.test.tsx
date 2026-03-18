@@ -381,7 +381,7 @@ describe("TokenHeader save to API profiles", () => {
       )?.getAttribute("title"),
     ).toContain("keyManagement:managedSiteStatus.signals.key.tooltipNoMatch")
     const button = screen.getByRole("button", {
-      name: `${testI18n.t("managedSiteModelSync:actions.manageChannel")}: keyManagement:managedSiteStatus.actions.reviewChannels`,
+      name: `${testI18n.t("managedSiteModelSync:execution.table.manageChannel")}: keyManagement:managedSiteStatus.actions.reviewChannels`,
     })
     expect(button).toHaveTextContent(
       "keyManagement:managedSiteStatus.actions.reviewChannels",
@@ -444,7 +444,7 @@ describe("TokenHeader save to API profiles", () => {
     ).toBeNull()
     expect(
       screen.queryByRole("button", {
-        name: `${testI18n.t("managedSiteModelSync:actions.manageChannel")}: keyManagement:managedSiteStatus.actions.reviewChannels`,
+        name: `${testI18n.t("managedSiteModelSync:execution.table.manageChannel")}: keyManagement:managedSiteStatus.actions.reviewChannels`,
       }),
     ).toBeNull()
   })
@@ -531,7 +531,7 @@ describe("TokenHeader save to API profiles", () => {
 
     await userEvent.setup().click(
       screen.getByRole("button", {
-        name: `${testI18n.t("managedSiteModelSync:actions.manageChannel")}: Managed Channel 99`,
+        name: `${testI18n.t("managedSiteModelSync:execution.table.manageChannel")}: Managed Channel 99`,
       }),
     )
 
@@ -836,7 +836,7 @@ describe("TokenHeader save to API profiles", () => {
     ).toBeNull()
     expect(
       screen.getByRole("button", {
-        name: "common:settings",
+        name: "common:labels.settings",
       }),
     ).toBeInTheDocument()
   })
@@ -897,7 +897,7 @@ describe("TokenHeader save to API profiles", () => {
 
     await user.click(
       screen.getByRole("button", {
-        name: "common:settings",
+        name: "common:labels.settings",
       }),
     )
 

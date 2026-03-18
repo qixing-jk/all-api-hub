@@ -598,7 +598,7 @@ function TokenActionButtons({
         </IconButton>
       )}
       <IconButton
-        aria-label={t("keyManagement:exportToKiloCode")}
+        aria-label={t("keyManagement:actions.exportToKiloCode")}
         size="sm"
         variant="ghost"
         onClick={() => setIsKiloCodeDialogOpen(true)}
@@ -881,7 +881,7 @@ export function TokenHeader({
                 onClick={handleOpenManagedSiteSettings}
                 title={managedSiteRecoveryMessage ?? undefined}
               >
-                {t("common:settings")}
+                {t("common:labels.settings")}
               </Button>
             ) : null}
           </div>

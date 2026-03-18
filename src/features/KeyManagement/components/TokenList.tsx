@@ -22,7 +22,12 @@ interface TokenListProps {
   tokens: AccountToken[]
   filteredTokens: AccountToken[]
   visibleKeys: Set<string>
-  toggleKeyVisibility: (identityKey: string) => void
+  resolvingVisibleKeys: Set<string>
+  getVisibleTokenKey: (token: AccountToken) => string
+  toggleKeyVisibility: (
+    account: DisplaySiteData,
+    token: AccountToken,
+  ) => Promise<void>
   copyKey: (account: DisplaySiteData, token: AccountToken) => Promise<void>
   handleEditToken: (token: AccountToken) => void
   handleDeleteToken: (token: AccountToken) => void
@@ -123,6 +128,8 @@ function TokenEmptyState({
  * @param props.tokens Tokens belonging to the selected account.
  * @param props.filteredTokens Tokens after search/filter is applied.
  * @param props.visibleKeys Set of token IDs whose values are currently unmasked.
+ * @param props.resolvingVisibleKeys Set of token IDs currently resolving to a usable secret.
+ * @param props.getVisibleTokenKey Returns the best available source value for a token key.
  * @param props.toggleKeyVisibility Toggles a token between visible/hidden states.
  * @param props.copyKey Copies the token value to the clipboard.
  * @param props.handleEditToken Opens the edit modal for the given token.
@@ -137,6 +144,8 @@ export function TokenList(props: TokenListProps) {
     tokens,
     filteredTokens,
     visibleKeys,
+    resolvingVisibleKeys,
+    getVisibleTokenKey,
     toggleKeyVisibility,
     copyKey,
     handleEditToken,
@@ -373,7 +382,11 @@ export function TokenList(props: TokenListProps) {
                           <TokenListItem
                             key={tokenIdentityKey}
                             token={token}
+                            displayTokenKey={getVisibleTokenKey(token)}
                             visibleKeys={visibleKeys}
+                            isKeyVisibilityLoading={resolvingVisibleKeys.has(
+                              tokenIdentityKey,
+                            )}
                             toggleKeyVisibility={toggleKeyVisibility}
                             copyKey={copyKey}
                             handleEditToken={handleEditToken}
@@ -421,7 +434,11 @@ export function TokenList(props: TokenListProps) {
               <TokenListItem
                 key={tokenIdentityKey}
                 token={token}
+                displayTokenKey={getVisibleTokenKey(token)}
                 visibleKeys={visibleKeys}
+                isKeyVisibilityLoading={resolvingVisibleKeys.has(
+                  tokenIdentityKey,
+                )}
                 toggleKeyVisibility={toggleKeyVisibility}
                 copyKey={copyKey}
                 handleEditToken={handleEditToken}

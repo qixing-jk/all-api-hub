@@ -28,7 +28,23 @@
 
 ---
 
-**[Documentation](https://all-api-hub.qixing1217.top/en) | [Supported Tools](https://all-api-hub.qixing1217.top/supported-export-tools.html) | [Supported Sites](https://all-api-hub.qixing1217.top/supported-sites.html) | [Getting Started](https://all-api-hub.qixing1217.top/en/get-started.html) | [FAQ](https://all-api-hub.qixing1217.top/en/faq.html) | [Changelog](https://all-api-hub.qixing1217.top/en/changelog.html) | [Contributing](CONTRIBUTING.md)**
+**[Documentation](https://all-api-hub.qixing1217.top/en/) | [Supported Tools](https://all-api-hub.qixing1217.top/en/supported-export-tools.html) | [Supported Sites](https://all-api-hub.qixing1217.top/en/supported-sites.html) | [Getting Started](https://all-api-hub.qixing1217.top/en/get-started.html) | [FAQ](https://all-api-hub.qixing1217.top/en/faq.html) | [Changelog](https://all-api-hub.qixing1217.top/en/changelog.html) | [Contributing](CONTRIBUTING.md)**
+
+<p align="center">
+  <strong>📢 Discussion:</strong>
+  <a href="https://linux.do/t/topic/1001042">All API Hub Thread on Linux.do</a>
+</p>
+
+<a id="community"></a>
+<p align="center">
+  <strong>💬 Community:</strong> 
+  <a href="./resources/wechat_group.png">
+    <img alt="WeChat-Chinese Group" src="https://img.shields.io/badge/WeChat-Chinese%20Group-green" />
+  </a>
+  <a href="https://t.me/qixing_chat">
+    <img alt="Telegram-Multilingual Group" src="https://img.shields.io/badge/Telegram-Multilingual%20Group-blue?logo=telegram">
+  </a>
+</p>
 
 ---
 
@@ -56,8 +72,8 @@ All API Hub is a browser extension for one-stop management of New API-style rela
 
 For the latest compatibility references, see:
 
-- [Supported Sites](https://all-api-hub.qixing1217.top/supported-sites.html)
-- [Supported Tools](https://all-api-hub.qixing1217.top/supported-export-tools.html)
+- [Supported Sites](https://all-api-hub.qixing1217.top/en/supported-sites.html)
+- [Supported Tools](https://all-api-hub.qixing1217.top/en/supported-export-tools.html)
 
 <a id="features"></a>
 ## ✨ Features
@@ -198,6 +214,7 @@ Please refer to the [CONTRIBUTING](CONTRIBUTING.md) for more information.
 ## 🙏 Acknowledgements
 
 - Thanks to [@AngleNaris](https://github.com/AngleNaris) for designing the project logo 🎨
+- Thanks to the [Linux.do community](https://linux.do) for feedback, testing, and word-of-mouth support, especially through the [All API Hub thread on Linux.do](https://linux.do/t/topic/1001042).
 - [WXT](https://wxt.dev) - The modern browser extension development framework.
 
 ---

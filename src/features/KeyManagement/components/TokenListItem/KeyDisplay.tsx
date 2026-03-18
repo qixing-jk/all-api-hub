@@ -1,4 +1,8 @@
-import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline"
+import {
+  ArrowPathIcon,
+  EyeIcon,
+  EyeSlashIcon,
+} from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
 import { IconButton } from "~/components/ui"
@@ -19,9 +23,13 @@ interface KeyDisplayProps {
    */
   visibleKeys: Set<string>
   /**
-   * Toggle callback to switch visibility for the given token identity key.
+   * Whether the reveal action is currently resolving a usable secret key.
    */
-  toggleKeyVisibility: (identityKey: string) => void
+  isKeyVisibilityLoading?: boolean
+  /**
+   * Toggle callback to switch visibility for this key.
+   */
+  toggleKeyVisibility: () => void
 }
 
 /**
@@ -30,12 +38,14 @@ interface KeyDisplayProps {
  * @param props.tokenKey Raw token key value.
  * @param props.tokenIdentityKey Identifier for visibility tracking.
  * @param props.visibleKeys Set of currently visible key IDs.
+ * @param props.isKeyVisibilityLoading Whether the reveal action is currently loading.
  * @param props.toggleKeyVisibility Handler to toggle visibility.
  */
 export function KeyDisplay({
   tokenKey,
   tokenIdentityKey,
   visibleKeys,
+  isKeyVisibilityLoading = false,
   toggleKeyVisibility,
 }: KeyDisplayProps) {
   const { t } = useTranslation("keyManagement")
@@ -52,15 +62,19 @@ export function KeyDisplay({
         <IconButton
           variant="ghost"
           size="sm"
-          onClick={() => toggleKeyVisibility(tokenIdentityKey)}
+          onClick={toggleKeyVisibility}
           aria-label={
             visibleKeys.has(tokenIdentityKey)
               ? t("actions.hideKey")
               : t("actions.showKey")
           }
+          aria-busy={isKeyVisibilityLoading}
+          disabled={isKeyVisibilityLoading}
           className="shrink-0"
         >
-          {visibleKeys.has(tokenIdentityKey) ? (
+          {isKeyVisibilityLoading ? (
+            <ArrowPathIcon className="h-3.5 w-3.5 animate-spin sm:h-4 sm:w-4" />
+          ) : visibleKeys.has(tokenIdentityKey) ? (
             <EyeSlashIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           ) : (
             <EyeIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />

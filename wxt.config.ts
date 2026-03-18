@@ -19,7 +19,7 @@ export default defineConfig({
     return {
       name: "__MSG_manifest_name__",
       description,
-      default_locale: "zh_CN",
+      default_locale: "en",
       permissions: [
         "tabs",
         "storage",

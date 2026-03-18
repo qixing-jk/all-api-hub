@@ -1,0 +1,20 @@
+{
+  "manifest_name": {
+    "message": "All API Hub – AI 中轉站與 New API 管理器"
+  },
+  "manifest_description": {
+    "message": "一站式管理 New API 相容中轉站帳號：餘額/用量看板、自動簽到、金鑰一鍵匯出到常用應用、網頁內 API 可用性測試、渠道與模型同步/重新導向"
+  },
+  "manifest_commands_sidebar_action": {
+    "message": "在側邊欄中開啟 All API Hub"
+  },
+  "manifest_commands_browser_action": {
+    "message": "在彈出視窗中開啟 All API Hub"
+  },
+  "context_menu_redeem_selection": {
+    "message": "使用兌換助手兌換選取文字"
+  },
+  "context_menu_ai_api_check": {
+    "message": "快速測試 AI API 的功能可用性"
+  }
+}

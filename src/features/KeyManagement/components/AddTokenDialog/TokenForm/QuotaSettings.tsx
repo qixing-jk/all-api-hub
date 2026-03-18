@@ -59,7 +59,7 @@ export function QuotaSettings({
       {!unlimitedQuota && (
         <div>
           <FormField
-            label={t("dialog.quotaSettingsLabel")}
+            label={t("dialog.quotaSettings")}
             htmlFor="quotaInput"
             error={error}
             description={t("dialog.quotaRate", {

@@ -14,6 +14,8 @@ const TOKEN_B_KEY = "sk-b-12345678901234567890"
  */
 function TestKeyDisplayList() {
   const [visibleKeys, setVisibleKeys] = useState<Set<string>>(new Set())
+  const tokenAIdentityKey = buildTokenIdentityKey("acc-a", 1)
+  const tokenBIdentityKey = buildTokenIdentityKey("acc-b", 1)
 
   const toggleKeyVisibility = (identityKey: string) => {
     setVisibleKeys((prev) => {
@@ -32,17 +34,17 @@ function TestKeyDisplayList() {
       <div>
         <KeyDisplay
           tokenKey={TOKEN_A_KEY}
-          tokenIdentityKey={buildTokenIdentityKey("acc-a", 1)}
+          tokenIdentityKey={tokenAIdentityKey}
           visibleKeys={visibleKeys}
-          toggleKeyVisibility={toggleKeyVisibility}
+          toggleKeyVisibility={() => toggleKeyVisibility(tokenAIdentityKey)}
         />
       </div>
       <div>
         <KeyDisplay
           tokenKey={TOKEN_B_KEY}
-          tokenIdentityKey={buildTokenIdentityKey("acc-b", 1)}
+          tokenIdentityKey={tokenBIdentityKey}
           visibleKeys={visibleKeys}
-          toggleKeyVisibility={toggleKeyVisibility}
+          toggleKeyVisibility={() => toggleKeyVisibility(tokenBIdentityKey)}
         />
       </div>
     </div>

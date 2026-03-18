@@ -11,10 +11,16 @@ describe("i18n language helpers", () => {
     expect(normalizeAppLanguage("en")).toBe("en")
     expect(normalizeAppLanguage("zh-CN")).toBe("zh_CN")
     expect(normalizeAppLanguage("zh_CN")).toBe("zh_CN")
+    expect(normalizeAppLanguage("zh-SG")).toBe("zh_CN")
+    expect(normalizeAppLanguage("zh-Hans-SG")).toBe("zh_CN")
+    expect(normalizeAppLanguage("zh-TW")).toBe("zh_CN")
+    expect(normalizeAppLanguage("zh-HK")).toBe("zh_CN")
+    expect(normalizeAppLanguage("zh-Hant-TW")).toBe("zh_CN")
   })
 
   it("returns undefined for unsupported languages", () => {
     expect(normalizeAppLanguage("fr-FR")).toBeUndefined()
+    expect(normalizeAppLanguage("ja-JP")).toBeUndefined()
     expect(normalizeAppLanguage("english")).toBeUndefined()
     expect(normalizeAppLanguage("zhongwen")).toBeUndefined()
     expect(normalizeAppLanguage("")).toBeUndefined()
@@ -38,11 +44,15 @@ describe("i18n language helpers", () => {
     ).toBe("en")
   })
 
-  it("falls back to the default locale when detection is unsupported", () => {
+  it("falls back to English when detection is unsupported", () => {
     expect(
       resolveInitialAppLanguage({
         detectedLanguage: "fr-FR",
       }),
-    ).toBe("zh_CN")
+    ).toBe("en")
+  })
+
+  it("falls back to English when no language signal exists", () => {
+    expect(resolveInitialAppLanguage({})).toBe("en")
   })
 })

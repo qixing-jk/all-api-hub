@@ -90,7 +90,8 @@ Prereqs: Node.js 20+ and pnpm 10+.
 
 - Inspect nearby existing abstractions before planning or implementing new helpers, modules, or UI patterns; prefer reuse or small extensions over parallel implementations.
 - Add brief inline comments or short code-block comments when non-obvious intent, invariants, edge cases, or protocol/browser constraints need clarification; do not narrate obvious code.
-- the minimum validation bar is `pnpm lint` plus the smallest related automated test scope that exercises the touched behavior.
+- the minimum validation bar is the repo's `pre-commit`-equivalent validation flow when available; if no such flow exists, fall back to `pnpm lint` plus the repo's affected-file or related-test validation command for the touched files.
+- When the repo defines a `pre-commit` validation flow, prefer running the equivalent `pre-commit` checks directly without creating a commit instead of assembling a hand-picked validation command set.
 
 ## Testing Guidelines
 
@@ -98,7 +99,9 @@ Prereqs: Node.js 20+ and pnpm 10+.
 - HTTP mocking uses MSW from `tests/msw/handlers.ts` and `tests/msw/server.ts`.
 - Shared test rendering utilities live in `tests/test-utils/render.tsx`.
 - Global test setup lives in `tests/setup.ts` and uses `wxt/testing/fake-browser` for WebExtension API mocking.
-- Start with the smallest affected test set, then broaden only if the change is cross-cutting.
+- Start with the repo-defined `pre-commit`, affected-file, or `related` validation flow for the touched files, then broaden only if the change is cross-cutting.
+- For TS/TSX edits in this repo, if `pre-commit` is wired through Husky, `lint-staged`, or an equivalent workflow, treat that `pre-commit` path as the default affected validation flow and prefer `vitest related --run` style checks over a manually assembled test file list.
+- If a change modifies shared component or hook props, validation must cover direct render/use sites and standalone harness tests that instantiate the changed API surface.
 - Current coverage baseline is configured in `vitest.config.ts`.
 
 ## Documentation Guidelines

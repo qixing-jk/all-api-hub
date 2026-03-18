@@ -43,7 +43,7 @@ export default function ManagedSiteChannelLinkButton({
       className={className}
       onClick={handleClick}
       disabled={channelId == null && !search}
-      aria-label={`${t("actions.manageChannel")}: ${channelName}`}
+      aria-label={`${t("managedSiteModelSync:execution.table.manageChannel")}: ${channelName}`}
       rightIcon={
         <ArrowTopRightOnSquareIcon className="h-4 w-4" aria-hidden="true" />
       }

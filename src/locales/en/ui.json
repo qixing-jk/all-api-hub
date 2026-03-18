@@ -166,6 +166,8 @@
       "copyFailedManual": "Copy failed, please copy manually",
       "exportToCCSwitch": "Export to CC Switch"
     },
+    "expand": "Expand",
+    "collapse": "Collapse",
     "ccswitch": {
       "title": "Export to CC Switch",
       "description": "Send this provider configuration directly to CC Switch via deep link",

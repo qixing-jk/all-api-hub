@@ -15,13 +15,24 @@ interface TokenListItemProps {
    */
   token: AccountToken
   /**
+   * Current source key used for display, resolved if the secret has been fetched.
+   */
+  displayTokenKey: string
+  /**
    * Set of token identity keys currently visible (unmasked).
    */
   visibleKeys: Set<string>
   /**
+   * Whether the reveal action is currently resolving a usable secret key.
+   */
+  isKeyVisibilityLoading: boolean
+  /**
    * Toggles visibility of a token by identity key.
    */
-  toggleKeyVisibility: (identityKey: string) => void
+  toggleKeyVisibility: (
+    account: DisplaySiteData,
+    token: AccountToken,
+  ) => Promise<void>
   /**
    * Copies the token key to clipboard.
    */
@@ -70,7 +81,9 @@ interface TokenListItemProps {
 export function TokenListItem(props: TokenListItemProps) {
   const {
     token,
+    displayTokenKey,
     visibleKeys,
+    isKeyVisibilityLoading,
     toggleKeyVisibility,
     copyKey,
     handleEditToken,
@@ -104,10 +117,13 @@ export function TokenListItem(props: TokenListItemProps) {
           <div className="min-w-0 flex-1">
             <div className="dark:text-dark-text-secondary space-y-2 text-xs text-gray-600 sm:text-sm">
               <KeyDisplay
-                tokenKey={token.key}
+                tokenKey={displayTokenKey}
                 tokenIdentityKey={tokenIdentityKey}
                 visibleKeys={visibleKeys}
-                toggleKeyVisibility={toggleKeyVisibility}
+                isKeyVisibilityLoading={isKeyVisibilityLoading}
+                toggleKeyVisibility={() =>
+                  void toggleKeyVisibility(account, token)
+                }
               />
               <TokenDetails token={token} />
               {token.group && (

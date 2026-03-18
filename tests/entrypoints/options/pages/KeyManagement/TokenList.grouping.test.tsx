@@ -15,6 +15,8 @@ vi.mock("~/features/KeyManagement/components/TokenListItem", () => ({
   ),
 }))
 
+const getVisibleTokenKey = (token: { key: string }) => token.key
+
 describe("TokenList grouped all-accounts UX", () => {
   it("groups tokens by account and supports collapse/expand all", async () => {
     const user = userEvent.setup()
@@ -50,6 +52,8 @@ describe("TokenList grouped all-accounts UX", () => {
         tokens={[tokenA1, tokenA2, tokenB1] as any}
         filteredTokens={[tokenA1, tokenA2, tokenB1] as any}
         visibleKeys={new Set()}
+        resolvingVisibleKeys={new Set()}
+        getVisibleTokenKey={getVisibleTokenKey as any}
         toggleKeyVisibility={vi.fn()}
         copyKey={vi.fn()}
         handleEditToken={vi.fn()}
@@ -117,6 +121,8 @@ describe("TokenList grouped all-accounts UX", () => {
         tokens={[tokenA1, tokenB1] as any}
         filteredTokens={[tokenA1, tokenB1] as any}
         visibleKeys={new Set()}
+        resolvingVisibleKeys={new Set()}
+        getVisibleTokenKey={getVisibleTokenKey as any}
         toggleKeyVisibility={vi.fn()}
         copyKey={vi.fn()}
         handleEditToken={vi.fn()}
@@ -162,6 +168,8 @@ describe("TokenList grouped all-accounts UX", () => {
         tokens={[tokenA1] as any}
         filteredTokens={[tokenA1] as any}
         visibleKeys={new Set()}
+        resolvingVisibleKeys={new Set()}
+        getVisibleTokenKey={getVisibleTokenKey as any}
         toggleKeyVisibility={vi.fn()}
         copyKey={vi.fn()}
         handleEditToken={vi.fn()}

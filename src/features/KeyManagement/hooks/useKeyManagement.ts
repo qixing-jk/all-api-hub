@@ -126,6 +126,12 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
   const tokenInventoriesRef = useRef(tokenInventories)
   tokenInventoriesRef.current = tokenInventories
   const [visibleKeys, setVisibleKeys] = useState<Set<string>>(new Set())
+  const [resolvedVisibleKeys, setResolvedVisibleKeys] = useState<
+    Record<string, string>
+  >({})
+  const [resolvingVisibleKeys, setResolvingVisibleKeys] = useState<Set<string>>(
+    new Set(),
+  )
   const [isAddTokenOpen, setIsAddTokenOpen] = useState(false)
   const [editingToken, setEditingToken] = useState<AccountToken | null>(null)
   const [managedSiteTokenStatuses, setManagedSiteTokenStatuses] = useState<
@@ -581,6 +587,8 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
 
       const loadEpoch = startNewLoadEpoch()
       setVisibleKeys(new Set())
+      setResolvedVisibleKeys({})
+      setResolvingVisibleKeys(new Set())
 
       if (targetAccountId === KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE) {
         setTokenInventories((prev) => {
@@ -700,6 +708,8 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     } else {
       setTokenInventories({})
       setVisibleKeys(new Set())
+      setResolvedVisibleKeys({})
+      setResolvingVisibleKeys(new Set())
     }
   }, [selectedAccount, enabledDisplayData])
 
@@ -927,15 +937,116 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     }
   }
 
-  const toggleKeyVisibility = (tokenIdentityKey: string) => {
+  const getVisibleTokenKey = useCallback(
+    (token: Pick<AccountToken, "accountId" | "id" | "key">) => {
+      const tokenIdentityKey = buildTokenIdentityKey(token.accountId, token.id)
+      return resolvedVisibleKeys[tokenIdentityKey] ?? token.key
+    },
+    [resolvedVisibleKeys],
+  )
+
+  const toggleKeyVisibility = async (
+    account: DisplaySiteData,
+    token: AccountToken,
+  ) => {
+    const tokenIdentityKey = buildTokenIdentityKey(token.accountId, token.id)
+
+    if (visibleKeys.has(tokenIdentityKey)) {
+      setVisibleKeys((prev) => {
+        const newSet = new Set(prev)
+        newSet.delete(tokenIdentityKey)
+        return newSet
+      })
+      return
+    }
+
+    if (resolvedVisibleKeys[tokenIdentityKey] !== undefined) {
+      setVisibleKeys((prev) => {
+        const newSet = new Set(prev)
+        newSet.add(tokenIdentityKey)
+        return newSet
+      })
+      return
+    }
+
+    if (resolvingVisibleKeys.has(tokenIdentityKey)) {
+      return
+    }
+
+    const visibilityRequestEpoch = selectionEpochRef.current
+    setResolvingVisibleKeys((prev) => {
+      const next = new Set(prev)
+      next.add(tokenIdentityKey)
+      return next
+    })
+
+    try {
+      const resolvedToken = await resolveDisplayAccountTokenForSecret(
+        account,
+        token,
+      )
+
+      if (!isMountedRef.current || !isEpochActive(visibilityRequestEpoch)) {
+        return
+      }
+
+      setResolvedVisibleKeys((prev) => ({
+        ...prev,
+        [tokenIdentityKey]: resolvedToken.key,
+      }))
+      setVisibleKeys((prev) => {
+        const newSet = new Set(prev)
+        newSet.add(tokenIdentityKey)
+        return newSet
+      })
+    } catch (error) {
+      toast.error(t("keyManagement:messages.revealFailed"))
+      logger.warn("Failed to resolve key for visibility", error)
+    } finally {
+      if (isMountedRef.current) {
+        setResolvingVisibleKeys((prev) => {
+          if (!prev.has(tokenIdentityKey)) {
+            return prev
+          }
+
+          const next = new Set(prev)
+          next.delete(tokenIdentityKey)
+          return next
+        })
+      }
+    }
+  }
+
+  const clearTokenVisibilityState = (
+    token: Pick<AccountToken, "accountId" | "id">,
+  ) => {
+    const tokenIdentityKey = buildTokenIdentityKey(token.accountId, token.id)
+
     setVisibleKeys((prev) => {
       const newSet = new Set(prev)
-      if (newSet.has(tokenIdentityKey)) {
-        newSet.delete(tokenIdentityKey)
-      } else {
-        newSet.add(tokenIdentityKey)
+      if (!newSet.has(tokenIdentityKey)) {
+        return prev
       }
+
+      newSet.delete(tokenIdentityKey)
       return newSet
+    })
+    setResolvingVisibleKeys((prev) => {
+      if (!prev.has(tokenIdentityKey)) {
+        return prev
+      }
+
+      const next = new Set(prev)
+      next.delete(tokenIdentityKey)
+      return next
+    })
+    setResolvedVisibleKeys((prev) => {
+      if (!(tokenIdentityKey in prev)) {
+        return prev
+      }
+
+      const { [tokenIdentityKey]: _removedKey, ...rest } = prev
+      return rest
     })
   }
 
@@ -976,6 +1087,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
 
       const { service, request } = createDisplayAccountApiContext(account)
       await service.deleteApiToken(request, token.id)
+      clearTokenVisibilityState(token)
       invalidateManagedSiteStatusForToken(token)
       toast.success(
         t("keyManagement:messages.deleteSuccess", { name: token.name }),
@@ -1006,6 +1118,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     tokens,
     isLoading,
     visibleKeys,
+    resolvingVisibleKeys,
     isAddTokenOpen,
     editingToken,
     tokenInventories,
@@ -1019,6 +1132,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     setAllAccountsFilterAccountId,
     loadTokens,
     filteredTokens,
+    getVisibleTokenKey,
     refreshManagedSiteTokenStatuses,
     refreshManagedSiteTokenStatusForToken,
     copyKey,

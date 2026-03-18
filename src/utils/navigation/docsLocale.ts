@@ -1,6 +1,11 @@
-import { DEFAULT_LANG } from "~/constants"
 import { I18NEXT_LANGUAGE_STORAGE_KEY } from "~/services/core/storageKeys"
 import i18n from "~/utils/i18n/core"
+import {
+  isChineseLanguage,
+  isEnglishLanguage,
+  isJapaneseLanguage,
+  normalizeLanguageTag,
+} from "~/utils/i18n/language"
 
 /**
  * resolvePreferredLanguage determines the most appropriate language to use for the documentation interface.
@@ -21,7 +26,11 @@ export function resolvePreferredLanguage(language?: string): string {
 
   if (i18n.isInitialized && i18n.language) return i18n.language
 
-  return DEFAULT_LANG
+  if (typeof navigator !== "undefined" && navigator.language) {
+    return navigator.language
+  }
+
+  return "en"
 }
 
 /**
@@ -29,7 +38,7 @@ export function resolvePreferredLanguage(language?: string): string {
  * @param language - The language code to normalize (e.g., " en_US " becomes "en-us").
  */
 export function normalizeLanguage(language: string): string {
-  return language.trim().toLowerCase().replace(/_/g, "-")
+  return normalizeLanguageTag(language) ?? ""
 }
 
 /**
@@ -37,9 +46,11 @@ export function normalizeLanguage(language: string): string {
  * @param language - An optional language code to determine the locale path (e.g., "en", "ja"). If not provided, it will be resolved using resolvePreferredLanguage.
  */
 export function getDocsLocalePath(language?: string): string {
-  const normalized = normalizeLanguage(resolvePreferredLanguage(language))
+  const resolvedLanguage = resolvePreferredLanguage(language)
+  const normalized = normalizeLanguage(resolvedLanguage)
 
-  if (normalized.startsWith("en")) return "en/"
-  if (normalized.startsWith("ja")) return "ja/"
-  return ""
+  if (isChineseLanguage(normalized)) return ""
+  if (isJapaneseLanguage(normalized)) return "ja/"
+  if (isEnglishLanguage(normalized)) return "en/"
+  return "en/"
 }

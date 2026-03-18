@@ -167,6 +167,7 @@
     "loadFailed": "加载密钥列表失败",
     "keyCopied": "密钥 {{name}} 已复制到剪贴板",
     "copyFailed": "复制失败",
+    "revealFailed": "显示密钥失败",
     "savedToApiProfiles": "已保存 {{name}} 到 API 凭证",
     "saveToApiProfilesFailed": "保存到 API 凭证失败",
     "deleteConfirm": "确定要删除密钥 {{name}} 吗？此操作不可撤销",

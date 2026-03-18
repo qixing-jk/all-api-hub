@@ -4,9 +4,18 @@ export const SUPPORTED_UI_LANGUAGES = ["en", DEFAULT_LANG] as const
 
 export type SupportedUiLanguage = (typeof SUPPORTED_UI_LANGUAGES)[number]
 
+const ENGLISH_LANG: SupportedUiLanguage = "en"
+
+const isLanguageFamily = (
+  language: string | undefined,
+  family: string,
+): boolean => {
+  return language === family || language?.startsWith(`${family}-`) === true
+}
+
 export const UI_LANGUAGE_OPTIONS = [
   {
-    code: "en",
+    code: ENGLISH_LANG,
     translationKey: "appearanceLanguage.switcher.options.en",
   },
   {
@@ -19,17 +28,44 @@ export const UI_LANGUAGE_OPTIONS = [
 }>
 
 /**
+ * Normalize a runtime language tag into a lowercase, hyphenated form.
+ */
+export function normalizeLanguageTag(
+  language?: string | null,
+): string | undefined {
+  const normalized = language?.trim().toLowerCase().replace(/_/g, "-")
+  return normalized || undefined
+}
+
+/**
+ * Return true when the language belongs to the Chinese locale family.
+ */
+export function isChineseLanguage(language?: string | null): boolean {
+  return isLanguageFamily(normalizeLanguageTag(language), "zh")
+}
+
+/**
+ * Return true when the language belongs to the English locale family.
+ */
+export function isEnglishLanguage(language?: string | null): boolean {
+  return isLanguageFamily(normalizeLanguageTag(language), "en")
+}
+
+/**
+ * Return true when the language belongs to the Japanese locale family.
+ */
+export function isJapaneseLanguage(language?: string | null): boolean {
+  return isLanguageFamily(normalizeLanguageTag(language), "ja")
+}
+
+/**
  * Normalize runtime/browser language codes to the app's supported locale keys.
  */
 export function normalizeAppLanguage(
   language?: string | null,
 ): SupportedUiLanguage | undefined {
-  if (!language) return undefined
-
-  const normalized = language.trim().toLowerCase().replace(/_/g, "-")
-
-  if (/^en(?:-|$)/.test(normalized)) return "en"
-  if (/^zh(?:-|$)/.test(normalized)) return DEFAULT_LANG
+  if (isEnglishLanguage(language)) return ENGLISH_LANG
+  if (isChineseLanguage(language)) return DEFAULT_LANG
 
   return undefined
 }
@@ -44,6 +80,6 @@ export function resolveInitialAppLanguage(input: {
   return (
     normalizeAppLanguage(input.userPreferenceLanguage) ??
     normalizeAppLanguage(input.detectedLanguage) ??
-    DEFAULT_LANG
+    ENGLISH_LANG
   )
 }

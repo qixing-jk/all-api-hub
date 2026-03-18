@@ -11,8 +11,6 @@
   "allAccountsProgress": "{{loaded}}/{{total}} accounts loaded",
   "allAccountsLoading": "{{count}} loading",
   "allAccountsFailed": "{{count}} failed",
-  "allAccountsLoadFailedTitle": "{{count}} account(s) failed to load",
-  "allAccountsLoadFailedDescription": "Failed: {{accounts}}",
   "accountSummary": {
     "title": "Accounts overview",
     "keys": "{{count}} keys",
@@ -169,6 +167,7 @@
     "loadFailed": "Failed to load key list",
     "keyCopied": "Key {{name}} copied to clipboard",
     "copyFailed": "Copy failed",
+    "revealFailed": "Failed to reveal key",
     "savedToApiProfiles": "Saved {{name}} to API profiles",
     "saveToApiProfilesFailed": "Failed to save to API profiles",
     "deleteConfirm": "Are you sure you want to delete key {{name}}? This action cannot be undone",

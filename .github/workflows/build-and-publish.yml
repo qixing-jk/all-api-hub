@@ -92,12 +92,12 @@ jobs:
       # 提交到浏览器商店
       - name: Browser Platform Publish
         if: ${{ steps.get_ref.outputs.ref != '' }}
-        continue-on-error: true
+        working-directory: source
         run: |
           echo "Chrome review: $([ "$CHROME_SKIP_SUBMIT_REVIEW" = "true" ] && echo skipped || echo submitted)"
           echo "Edge review: $([ "$EDGE_SKIP_SUBMIT_REVIEW" = "true" ] && echo skipped || echo submitted)"
 
-          pnpm --dir source wxt submit \
+          pnpm wxt submit \
             --chrome-zip .output/*-chrome.zip \
             --firefox-zip .output/*-firefox.zip --firefox-sources-zip .output/*-sources.zip \
             --edge-zip .output/*-chrome.zip

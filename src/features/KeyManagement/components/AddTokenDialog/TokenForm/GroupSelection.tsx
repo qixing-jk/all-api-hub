@@ -91,7 +91,7 @@ export function GroupSelection({
         options={options}
         value={group ?? ""}
         onChange={handleSelectChange}
-        placeholder={t("dialog.groupPlaceholder") ?? t("dialog.groupLabel")}
+        placeholder={t("dialog.groupLabel")}
       />
     </FormField>
   )
