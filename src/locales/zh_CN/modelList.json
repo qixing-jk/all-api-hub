@@ -34,7 +34,7 @@
     "createDisabledTitle": "无法创建密钥",
     "createErrorTitle": "创建密钥失败",
     "createFailed": "创建失败：{{error}}",
-    "createGroupHint": "请选择分组（仅列出该模型可用分组）。",
+    "createGroupHint": "请选择分组（仅列出该模型可用的分组）。",
     "createGroupLabel": "新密钥分组",
     "createGroupPlaceholder": "请选择分组",
     "createGroupRequired": "请先选择分组再创建密钥。",
@@ -62,7 +62,7 @@
   "messages": {
     "copyFailed": "复制失败",
     "modelNameCopied": "模型名称已复制",
-    "modelNamesCopied": "模型名称已复制"
+    "modelNamesCopied": "所有模型名称已复制"
   },
   "noMatchingModels": "没有找到匹配的模型",
   "output": "输出:",

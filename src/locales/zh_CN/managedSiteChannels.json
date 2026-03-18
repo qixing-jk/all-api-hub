@@ -13,7 +13,7 @@
   "dialog": {
     "cancel": "取消",
     "confirm": "删除",
-    "deleteDescription": "此操作无法撤销，所选配置将被永久删除。",
+    "deleteDescription": "此操作无法撤销，所选渠道将被永久删除。",
     "deleteTitle": "删除渠道？",
     "deleteTitlePlural": "删除这些渠道？"
   },

@@ -1,5 +1,18 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
 
+const i18nCoreMocks = vi.hoisted(() => ({
+  t: vi.fn(),
+}))
+
+vi.mock("~/utils/i18n/core", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/i18n/core")>()
+
+  return {
+    ...actual,
+    t: i18nCoreMocks.t,
+  }
+})
+
 import {
   analyzeAutoDetectError,
   AutoDetectErrorType,
@@ -22,6 +35,18 @@ afterAll(() => {
 })
 
 describe("autoDetectUtils", () => {
+  beforeEach(() => {
+    i18nCoreMocks.t.mockImplementation(
+      (key: string, options?: { error?: string }) => {
+        if (key === "messages:autodetect.failed" && options?.error) {
+          return `${key}: ${options.error}`
+        }
+
+        return key
+      },
+    )
+  })
+
   describe("analyzeAutoDetectError", () => {
     describe("Timeout errors", () => {
       it("should detect timeout error with Chinese text", () => {
@@ -159,8 +184,12 @@ describe("autoDetectUtils", () => {
         const result = analyzeAutoDetectError(error)
 
         expect(result.type).toBe(AutoDetectErrorType.UNKNOWN)
-        expect(result.message).toContain("messages:autodetect.failed")
-        expect(result.message).toContain("Something went wrong")
+        expect(i18nCoreMocks.t).toHaveBeenCalledWith("messages:autodetect.failed", {
+          error: "Something went wrong",
+        })
+        expect(result.message).toBe(
+          "messages:autodetect.failed: Something went wrong",
+        )
         expect(result.helpDocUrl).toBe(getDocsAutoDetectUrl())
       })
 
@@ -176,7 +205,12 @@ describe("autoDetectUtils", () => {
         const result = analyzeAutoDetectError(error)
 
         expect(result.type).toBe(AutoDetectErrorType.UNKNOWN)
-        expect(result.message).toContain("Random error string")
+        expect(i18nCoreMocks.t).toHaveBeenCalledWith("messages:autodetect.failed", {
+          error: "Random error string",
+        })
+        expect(result.message).toBe(
+          "messages:autodetect.failed: Random error string",
+        )
       })
 
       it("should handle null/undefined errors", () => {

@@ -40,7 +40,7 @@
     "sub2apiImportRefreshToken": "Import from current logged-in account",
     "sub2apiRefreshToken": "Refresh Token",
     "sub2apiRefreshTokenMode": "Extension-managed session (multi-account)",
-    "sub2apiRefreshTokenModeDesc": "Optional. Store the refresh_token of the current dashboard session in the extension so each Sub2API account can refresh/renew independently in the background (supports multiple accounts on one site).",
+    "sub2apiRefreshTokenModeDesc": "Optional. Enable \"Extension-managed session (multi-account)\" to store the refresh_token of the current dashboard session in the extension so each Sub2API account can refresh/renew independently in the background (supports multiple accounts on one site).",
     "sub2apiRefreshTokenPlaceholder": "Paste refresh_token value",
     "sub2apiRefreshTokenWarningDesc": "Refresh tokens are long-lived credentials used for extension-managed sessions. They are saved with the account (e.g. backups/exports). To avoid rotation conflicts, import from an incognito/private window and close it; avoid using the same dashboard session in parallel.",
     "sub2apiRefreshTokenWarningTitle": "Note",
@@ -120,7 +120,7 @@
     "editNow": "Edit Now",
     "siteUrl": "Site URL",
     "sub2apiAuthOnly": "Sub2API only supports Access Token authentication (JWT)",
-    "sub2apiHint": "Sub2API uses short-term JWTs. When they expire, the extension will automatically try to obtain a new JWT using a temporary window (requires being logged in on the site). With \"Plugin Hosted Session\" enabled, each account can automatically refresh and renew authentication independently in the background, supporting multiple accounts on the same site.",
+    "sub2apiHint": "Sub2API uses short-term JWTs. When they expire, the extension will automatically try to obtain a new JWT using a temporary window (requires being logged in on the site). With \"Extension-managed session (multi-account)\" enabled, each account can automatically refresh and renew authentication independently in the background, supporting multiple accounts on the same site.",
     "unknown": "Unable to get",
     "useCurrent": "Use Current Site"
   },

@@ -13,7 +13,7 @@
     "tokenNotFound": "Failed to create or find an API token"
   },
   "autodetect": {
-    "failed": "Auto-detection failed: ",
+    "failed": "Auto-detection failed: {{error}}",
     "forbidden": "Access denied. Please confirm whether the website firewall is blocking the request",
     "loginThisSite": "Login to this site",
     "networkError": "Network connection failed, please check your network connection and try again",
@@ -55,7 +55,7 @@
     "configMissing": "Please configure CLIProxyAPI Management API base URL and key in settings first",
     "importFailed": "Failed to import provider to CLIProxyAPI",
     "importSuccess": "Successfully imported provider {{name}} to CLIProxyAPI",
-    "updateSuccess": "Successfully updated CLIProxy provider {{name}}"
+    "updateSuccess": "Successfully updated CLIProxyAPI provider {{name}}"
   },
   "content": {
     "userInfoNotFound": "User information not found, please ensure you are logged in",
