@@ -8,6 +8,7 @@ import {
   type ChannelConfig,
   type ChannelConfigMap,
   type ChannelModelFilterSettings,
+  type VerificationCredentials,
 } from "~/types/channelConfig"
 import type {
   ChannelModelFilterInput,
@@ -15,6 +16,7 @@ import type {
 } from "~/types/channelModelFilters"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
+import { redactSecrets } from "~/services/verification/aiApiVerification/utils"
 
 const logger = createLogger("ChannelConfigStorage")
 
@@ -100,6 +102,40 @@ class ChannelConfigStorage {
 
     return this.saveConfig(updated)
   }
+
+  async upsertVerificationCredentials(
+    channelId: number,
+    credentials: VerificationCredentials,
+  ): Promise<boolean> {
+    const timestamp = Date.now()
+    const current = await this.getConfig(channelId)
+
+    const updated: ChannelConfig = {
+      ...current,
+      channelId,
+      verificationCredentials: {
+        ...credentials,
+        updatedAt: timestamp,
+      },
+      updatedAt: timestamp,
+      createdAt: current.createdAt || timestamp,
+    }
+
+    return this.saveConfig(updated)
+  }
+
+  async clearVerificationCredentials(channelId: number): Promise<boolean> {
+    const current = await this.getConfig(channelId)
+
+    const updated: ChannelConfig = {
+      ...current,
+      channelId,
+      verificationCredentials: undefined,
+      updatedAt: Date.now(),
+    }
+
+    return this.saveConfig(updated)
+  }
 }
 
 export const channelConfigStorage = new ChannelConfigStorage()
@@ -132,36 +168,67 @@ function normalizeFilters(
       throw new Error("Filter name is required")
     }
 
-    const pattern = (filter.pattern ?? "").trim()
-    if (!pattern) {
-      throw new Error("Filter pattern is required")
-    }
+    const ruleType = filter.ruleType || "pattern"
 
-    if (filter.isRegex) {
-      try {
-        new RegExp(pattern)
-      } catch (error) {
-        throw new Error(`Invalid regex pattern: ${(error as Error).message}`)
+    if (ruleType === "pattern") {
+      const pattern = (filter.pattern ?? "").trim()
+      if (!pattern) {
+        throw new Error("Filter pattern is required for pattern rules")
+      }
+
+      if (filter.isRegex) {
+        try {
+          new RegExp(pattern)
+        } catch (error) {
+          throw new Error(`Invalid regex pattern: ${(error as Error).message}`)
+        }
+      }
+
+      const description = filter.description?.trim()
+      const createdAt =
+        typeof filter.createdAt === "number" && filter.createdAt > 0
+          ? filter.createdAt
+          : now
+
+      return {
+        id: (filter.id ?? "").trim() || nanoid(),
+        ruleType: "pattern",
+        name,
+        description: description || undefined,
+        pattern,
+        isRegex: Boolean(filter.isRegex),
+        action: filter.action === "exclude" ? "exclude" : "include",
+        enabled: filter.enabled !== false,
+        createdAt,
+        updatedAt: now,
       }
     }
 
-    const description = filter.description?.trim()
-    const createdAt =
-      typeof filter.createdAt === "number" && filter.createdAt > 0
-        ? filter.createdAt
-        : now
+    if (ruleType === "probe") {
+      if (!filter.probeId) {
+        throw new Error("Filter probeId is required for probe rules")
+      }
 
-    return {
-      id: (filter.id ?? "").trim() || nanoid(),
-      name,
-      description: description || undefined,
-      pattern,
-      isRegex: Boolean(filter.isRegex),
-      action: filter.action === "exclude" ? "exclude" : "include",
-      enabled: filter.enabled !== false,
-      createdAt,
-      updatedAt: now,
+      const description = filter.description?.trim()
+      const createdAt =
+        typeof filter.createdAt === "number" && filter.createdAt > 0
+          ? filter.createdAt
+          : now
+
+      return {
+        id: (filter.id ?? "").trim() || nanoid(),
+        ruleType: "probe",
+        name,
+        description: description || undefined,
+        probeId: filter.probeId,
+        action: filter.action === "exclude" ? "exclude" : "include",
+        enabled: filter.enabled !== false,
+        createdAt,
+        updatedAt: now,
+      }
     }
+
+    throw new Error(`Unknown rule type: ${ruleType}`)
   })
 }
 
@@ -175,6 +242,18 @@ export async function handleChannelConfigMessage(
   request: any,
   sendResponse: (response: any) => void,
 ) {
+  const secrets: string[] = []
+  if (request.filters) {
+    for (const filter of request.filters) {
+      if (filter.verificationApiKey) {
+        secrets.push(filter.verificationApiKey)
+      }
+    }
+  }
+  if (request.credentials?.apiKey) {
+    secrets.push(request.credentials.apiKey)
+  }
+
   try {
     switch (request.action) {
       case RuntimeActionIds.ChannelConfigGet: {
@@ -208,13 +287,56 @@ export async function handleChannelConfigMessage(
         break
       }
 
+      case RuntimeActionIds.ChannelConfigUpsertVerificationCredentials: {
+        const channelId = Number(request.channelId)
+        if (!Number.isFinite(channelId) || channelId <= 0) {
+          throw new Error("channelId is required")
+        }
+
+        if (!request.credentials) {
+          throw new Error("credentials is required")
+        }
+
+        const success = await channelConfigStorage.upsertVerificationCredentials(
+          channelId,
+          request.credentials,
+        )
+
+        if (!success) {
+          throw new Error("Failed to save verification credentials")
+        }
+
+        sendResponse({ success: true })
+        break
+      }
+
+      case RuntimeActionIds.ChannelConfigClearVerificationCredentials: {
+        const channelId = Number(request.channelId)
+        if (!Number.isFinite(channelId) || channelId <= 0) {
+          throw new Error("channelId is required")
+        }
+
+        const success =
+          await channelConfigStorage.clearVerificationCredentials(channelId)
+
+        if (!success) {
+          throw new Error("Failed to clear verification credentials")
+        }
+
+        sendResponse({ success: true })
+        break
+      }
+
       default: {
         sendResponse({ success: false, error: "Unknown action" })
       }
     }
   } catch (error) {
-    logger.error("Message handling failed", error)
-    sendResponse({ success: false, error: getErrorMessage(error) })
+    const errorMessage = getErrorMessage(error)
+    const redactedMessage =
+      secrets.length > 0 ? redactSecrets(errorMessage, secrets) : errorMessage
+    logger.error("Message handling failed", { error: redactedMessage })
+    sendResponse({ success: false, error: redactedMessage })
   }
 }
 
@@ -266,9 +388,14 @@ function sanitizeChannelConfig(
     timestamp,
   )
 
+  const verificationCredentials = sanitizeVerificationCredentials(
+    payload.verificationCredentials,
+  )
+
   return {
     channelId,
     modelFilterSettings,
+    verificationCredentials,
     createdAt:
       typeof payload.createdAt === "number" && payload.createdAt > 0
         ? payload.createdAt
@@ -277,6 +404,43 @@ function sanitizeChannelConfig(
       typeof payload.updatedAt === "number" && payload.updatedAt > 0
         ? payload.updatedAt
         : modelFilterSettings.updatedAt,
+  }
+}
+
+/**
+ *
+ */
+function sanitizeVerificationCredentials(
+  raw: unknown,
+): VerificationCredentials | undefined {
+  if (!raw || typeof raw !== "object") {
+    return undefined
+  }
+
+  const payload = raw as Partial<VerificationCredentials>
+  const baseUrl =
+    typeof payload.baseUrl === "string" ? payload.baseUrl.trim() : ""
+  const apiKey =
+    typeof payload.apiKey === "string" ? payload.apiKey.trim() : ""
+  const apiType =
+    typeof payload.apiType === "string" ? payload.apiType.trim() : ""
+
+  if (!baseUrl || !apiKey || !apiType) {
+    return undefined
+  }
+
+  return {
+    baseUrl,
+    apiKey,
+    apiType,
+    sourceProfileId:
+      typeof payload.sourceProfileId === "string"
+        ? payload.sourceProfileId.trim()
+        : undefined,
+    updatedAt:
+      typeof payload.updatedAt === "number" && payload.updatedAt > 0
+        ? payload.updatedAt
+        : Date.now(),
   }
 }
 
@@ -342,36 +506,83 @@ function sanitizeFilter(
 
   const payload = filter as Partial<ChannelModelFilterRule>
   const name = typeof payload.name === "string" ? payload.name.trim() : ""
-  const pattern =
-    typeof payload.pattern === "string" ? payload.pattern.trim() : ""
 
-  if (!name || !pattern) {
+  if (!name) {
     return null
   }
 
-  const description =
-    typeof payload.description === "string" && payload.description.trim()
-      ? payload.description.trim()
-      : undefined
+  const ruleType = payload.ruleType || "pattern"
 
-  return {
-    id:
-      typeof payload.id === "string" && payload.id.trim()
-        ? payload.id.trim()
-        : nanoid(),
-    name,
-    description,
-    pattern,
-    isRegex: Boolean(payload.isRegex),
-    action: payload.action === "exclude" ? "exclude" : "include",
-    enabled: payload.enabled !== false,
-    createdAt:
-      typeof payload.createdAt === "number" && payload.createdAt > 0
-        ? payload.createdAt
-        : fallbackTimestamp,
-    updatedAt:
-      typeof payload.updatedAt === "number" && payload.updatedAt > 0
-        ? payload.updatedAt
-        : fallbackTimestamp,
+  if (ruleType === "pattern") {
+    const pattern =
+      typeof payload.pattern === "string" ? payload.pattern.trim() : ""
+
+    if (!pattern) {
+      return null
+    }
+
+    const description =
+      typeof payload.description === "string" && payload.description.trim()
+        ? payload.description.trim()
+        : undefined
+
+    return {
+      id:
+        typeof payload.id === "string" && payload.id.trim()
+          ? payload.id.trim()
+          : nanoid(),
+      ruleType: "pattern",
+      name,
+      description,
+      pattern,
+      isRegex: Boolean(payload.isRegex),
+      action: payload.action === "exclude" ? "exclude" : "include",
+      enabled: payload.enabled !== false,
+      createdAt:
+        typeof payload.createdAt === "number" && payload.createdAt > 0
+          ? payload.createdAt
+          : fallbackTimestamp,
+      updatedAt:
+        typeof payload.updatedAt === "number" && payload.updatedAt > 0
+          ? payload.updatedAt
+          : fallbackTimestamp,
+    }
   }
+
+  if (ruleType === "probe") {
+    if (!payload.probeId || !payload.apiType) {
+      return null
+    }
+
+    const description =
+      typeof payload.description === "string" && payload.description.trim()
+        ? payload.description.trim()
+        : undefined
+
+    return {
+      id:
+        typeof payload.id === "string" && payload.id.trim()
+          ? payload.id.trim()
+          : nanoid(),
+      ruleType: "probe",
+      name,
+      description,
+      probeId: payload.probeId,
+      apiType: payload.apiType,
+      verificationBaseUrl: payload.verificationBaseUrl?.trim() || undefined,
+      verificationApiKey: payload.verificationApiKey?.trim() || undefined,
+      action: payload.action === "exclude" ? "exclude" : "include",
+      enabled: payload.enabled !== false,
+      createdAt:
+        typeof payload.createdAt === "number" && payload.createdAt > 0
+          ? payload.createdAt
+          : fallbackTimestamp,
+      updatedAt:
+        typeof payload.updatedAt === "number" && payload.updatedAt > 0
+          ? payload.updatedAt
+          : fallbackTimestamp,
+    }
+  }
+
+  return null
 }

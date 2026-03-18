@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
@@ -82,6 +82,9 @@ export function useChannelForm({
     buildInitialFormData(),
   )
 
+  // Track base channel name (without group suffix) using ref to avoid re-renders
+  const baseChannelNameRef = useRef<string>("")
+
   // UI state
   const [isSaving, setIsSaving] = useState(false)
   const [isLoadingGroups, setIsLoadingGroups] = useState(false)
@@ -102,6 +105,21 @@ export function useChannelForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, initialValues, initialModels, initialGroups])
 
+  /**
+   * Extract base channel name by removing group suffix [xxx]
+   */
+  const extractBaseName = useCallback((fullName: string): string => {
+    return fullName.replace(/\s*\[.*?\]\s*$/, "").trim()
+  }, [])
+
+  /**
+   * Build channel name with groups suffix
+   */
+  const buildNameWithGroups = useCallback((baseName: string, groups: string[]): string => {
+    const groupsText = groups.length > 0 ? groups.join(",") : "default"
+    return `${baseName} [${groupsText}]`
+  }, [])
+
   // Load form data when dialog opens
   useEffect(() => {
     if (!isOpen) {
@@ -109,8 +127,11 @@ export function useChannelForm({
     }
 
     if (mode === DIALOG_MODES.EDIT && channel) {
+      const channelName = channel.name
+      baseChannelNameRef.current = extractBaseName(channelName)
+
       setFormData({
-        name: channel.name,
+        name: channelName,
         type: channel.type,
         key: channel.key,
         base_url: channel.base_url || "",
@@ -121,9 +142,11 @@ export function useChannelForm({
         status: channel.status ?? DEFAULT_CHANNEL_FIELDS.status,
       })
     } else {
-      setFormData(buildInitialFormData())
+      const initialData = buildInitialFormData()
+      baseChannelNameRef.current = extractBaseName(initialData.name)
+      setFormData(initialData)
     }
-  }, [isOpen, mode, channel, buildInitialFormData])
+  }, [isOpen, mode, channel, buildInitialFormData, extractBaseName])
 
   const resetForm = useCallback(() => {
     setFormData(buildInitialFormData())
@@ -227,7 +250,17 @@ export function useChannelForm({
     field: K,
     value: ChannelFormData[K],
   ) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
+    setFormData((prev) => {
+      const updated = { ...prev, [field]: value }
+
+      // Auto-update channel name when groups change
+      if (field === "groups" && baseChannelNameRef.current) {
+        const newGroups = value as string[]
+        updated.name = buildNameWithGroups(baseChannelNameRef.current, newGroups)
+      }
+
+      return updated
+    })
   }
 
   const handleTypeChange = (newType: ChannelType | OctopusOutboundType) => {
@@ -308,7 +341,35 @@ export function useChannelForm({
       }
 
       if (response.success) {
-        onSuccess?.(response)
+        // New API / Veloera / DoneHub 创建渠道接口不返回新渠道 id，需通过查询补全
+        let responseToNotify = response
+        if (
+          mode === DIALOG_MODES.ADD &&
+          (!response.data || (response.data as any)?.id == null)
+        ) {
+          // 通过 searchChannel 查询渠道列表，取 id 最大的即为新创建的渠道
+          const searchResults = await service.searchChannel(
+            apiConfig.baseUrl,
+            apiConfig.token,
+            apiConfig.userId,
+            formData.base_url?.trim() ?? "",
+          )
+          
+          if (searchResults?.items && searchResults.items.length > 0) {
+            // 找到 id 最大的渠道
+            const maxIdChannel = searchResults.items.reduce((max, current) => {
+              return current.id > max.id ? current : max
+            })
+            
+            if (maxIdChannel?.id != null) {
+              responseToNotify = {
+                ...response,
+                data: { ...(response.data && typeof response.data === "object" ? response.data : {}), id: maxIdChannel.id },
+              }
+            }
+          }
+        }
+        onSuccess?.(responseToNotify)
         onClose()
         resetForm()
       } else {

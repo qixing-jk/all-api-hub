@@ -394,11 +394,22 @@ export async function fetchAvailableModels(
 export function buildChannelName(
   account: DisplaySiteData,
   token: ApiToken,
+  groups?: string[],
 ): string {
   let channelName = `${account.name} | ${token.name}`.trim()
   if (!channelName.endsWith("(auto)")) {
     channelName += " (auto)"
   }
+
+  // 添加分组后缀
+  if (groups && groups.length > 0) {
+    const groupsText = groups.join(",")
+    channelName += ` [${groupsText}]`
+  } else if (groups !== undefined) {
+    // 只有明确传递了 groups 参数时才添加 [default]
+    channelName += " [default]"
+  }
+
   return channelName
 }
 
@@ -418,8 +429,10 @@ export async function prepareChannelFormData(
     throw new Error(t("messages:octopus.noAnyModels"))
   }
 
+  const defaultGroups = ["default"]
+
   return {
-    name: buildChannelName(account, token),
+    name: buildChannelName(account, token, defaultGroups),
     type: DEFAULT_OCTOPUS_CHANNEL_FIELDS.type,
     key: token.key,
     base_url: buildOctopusBaseUrl(account.baseUrl), // Octopus 需要 /v1 后缀

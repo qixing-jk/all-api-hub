@@ -7,6 +7,7 @@ import { ensureAccountApiToken } from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
 import { MatchResolutionUnresolvedError } from "~/services/managedSites/channelMatch"
+import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
 import { getManagedSiteService } from "~/services/managedSites/managedSiteService"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import {
@@ -17,6 +18,7 @@ import {
   type DisplaySiteData,
   type SiteAccount,
 } from "~/types"
+import type { VerificationCredentials } from "~/types/channelConfig"
 import type { ManagedSiteChannel } from "~/types/managedSite"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -168,13 +170,36 @@ export function useChannelDialog() {
         toast.dismiss(toastId)
       }
 
+      // Capture displaySiteData for closure
+      const capturedDisplaySiteData = displaySiteData
+
       // Open dialog
       openDialog({
         mode: DIALOG_MODES.ADD,
         initialValues: formData,
         initialModels: formData.models,
         initialGroups: formData.groups,
-        onSuccess: (result) => {
+        onSuccess: async (result) => {
+          // Save verification credentials for the created channel
+          if (result.data?.id) {
+            const verificationCreds: VerificationCredentials = {
+              baseUrl: capturedDisplaySiteData.baseUrl,
+              apiKey: formData.key,
+              apiType: capturedDisplaySiteData.siteType,
+              updatedAt: Date.now(),
+            }
+
+            await channelConfigStorage.upsertVerificationCredentials(
+              result.data.id,
+              verificationCreds,
+            )
+
+            logger.info("Saved verification credentials for channel", {
+              channelId: result.data.id,
+              apiType: capturedDisplaySiteData.siteType,
+            })
+          }
+
           if (onSuccess) {
             onSuccess(result)
           }
@@ -210,7 +235,13 @@ export function useChannelDialog() {
    * without requiring a SiteAccount entry in storage.
    */
   const openWithCredentials = async (
-    credentials: { name: string; baseUrl: string; apiKey: string },
+    credentials: {
+      name: string
+      baseUrl: string
+      apiKey: string
+      apiType?: string
+      profileId?: string
+    },
     onSuccess?: (result: any) => void,
   ) => {
     const toastId = toast.loading(
@@ -273,7 +304,27 @@ export function useChannelDialog() {
         initialValues: formData,
         initialModels: formData.models,
         initialGroups: formData.groups,
-        onSuccess: (result) => {
+        onSuccess: async (result) => {
+          if (credentials.apiType && result.data?.id) {
+            const verificationCreds: VerificationCredentials = {
+              baseUrl: credentials.baseUrl,
+              apiKey: credentials.apiKey,
+              apiType: credentials.apiType,
+              sourceProfileId: credentials.profileId,
+              updatedAt: Date.now(),
+            }
+
+            await channelConfigStorage.upsertVerificationCredentials(
+              result.data.id,
+              verificationCreds,
+            )
+
+            logger.info("Saved verification credentials for channel", {
+              channelId: result.data.id,
+              sourceProfileId: credentials.profileId,
+            })
+          }
+
           onSuccess?.(result)
         },
       })

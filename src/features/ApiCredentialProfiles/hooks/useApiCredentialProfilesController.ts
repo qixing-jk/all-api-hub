@@ -283,6 +283,8 @@ export function useApiCredentialProfilesController() {
             name: profile.name,
             baseUrl: profile.baseUrl,
             apiKey: profile.apiKey,
+            apiType: profile.apiType,
+            profileId: profile.id,
           },
           (result) => {
             showResultToast(result)

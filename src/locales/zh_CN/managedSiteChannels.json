@@ -91,27 +91,81 @@
       "description": "新增包含或排除规则（可选正则）以控制同步到该渠道的模型。"
     },
     "addRule": "新增规则",
+    "ruleTypes": {
+      "pattern": "模式匹配规则",
+      "probe": "探测型规则"
+    },
     "labels": {
+      "ruleType": "规则类型",
       "name": "规则名称",
       "pattern": "匹配模式",
       "description": "描述",
       "action": "执行动作",
       "enabled": "启用",
       "regex": "使用正则",
-      "delete": "删除规则"
+      "delete": "删除规则",
+      "probeType": "探测类型",
+      "apiType": "API 类型",
+      "verificationBaseUrl": "校验用 Base URL",
+      "verificationApiKey": "校验用密钥"
     },
     "placeholders": {
       "name": "如：仅允许 GPT-4",
       "pattern": "精确字符串或正则表达式",
-      "description": "可选备注"
+      "description": "可选备注",
+      "verificationBaseUrl": "留空则使用渠道默认凭证",
+      "verificationApiKey": "留空则使用渠道默认凭证"
     },
     "actionOptions": {
       "include": "包含匹配的模型",
       "exclude": "排除匹配的模型"
     },
+    "probeTypes": {
+      "models": "模型列表探测",
+      "text-generation": "文本生成探测",
+      "tool-calling": "工具调用探测",
+      "structured-output": "结构化输出探测",
+      "web-search": "联网搜索探测"
+    },
     "hints": {
       "regex": "正则模式使用 JavaScript 语法，可实现更灵活的匹配。",
-      "substring": "普通模式将执行区分大小写的子串匹配。"
+      "substring": "普通模式将执行区分大小写的子串匹配。",
+      "probeCredentials": "探测规则需要凭证才能运行。如果规则本身未填写凭证，将使用渠道默认校验凭证。如果渠道也没有配置，则使用渠道自身的 Base URL 和 Key（如果可用）。",
+      "probeCredentialsFromChannel": "探测规则将使用上方配置的渠道校验凭证。如果未配置校验凭证，该规则将被跳过。",
+      "globalProbeCredentials": "全局探测规则将使用各渠道的校验凭证（verificationCredentials）。如果渠道未配置校验凭证，该渠道将跳过此探测规则。",
+      "probePerformance": "探测规则会对每个模型执行实际 API 调用，可能较慢且消耗配额。建议先使用模式匹配规则缩小范围，再应用探测规则。"
+    },
+    "verificationCredentials": {
+      "title": "渠道校验凭证",
+      "description": "为探测型规则配置默认的校验凭证。如果未配置，探测规则将使用渠道自身的 Base URL 和 Key（如果可用）。",
+      "labels": {
+        "baseUrl": "Base URL",
+        "apiKey": "API 密钥",
+        "apiType": "API 类型",
+        "sourceProfile": "来源配置",
+        "updatedAt": "更新时间"
+      },
+      "placeholders": {
+        "baseUrl": "如：https://api.openai.com/v1",
+        "apiKey": "sk-...",
+        "apiType": "选择 API 类型"
+      },
+      "actions": {
+        "edit": "编辑校验凭证",
+        "save": "保存校验凭证",
+        "clear": "清除校验凭证",
+        "cancel": "取消"
+      },
+      "messages": {
+        "saved": "校验凭证已保存",
+        "cleared": "校验凭证已清除",
+        "saveFailed": "保存校验凭证失败：{{error}}",
+        "clearFailed": "清除校验凭证失败：{{error}}",
+        "validationBaseUrl": "Base URL 不能为空",
+        "validationApiKey": "API 密钥不能为空",
+        "validationApiType": "请选择 API 类型"
+      },
+      "sourceProfileLabel": "来自 API 凭证：{{name}}"
     },
     "viewMode": {
       "label": "编辑模式",
@@ -135,6 +189,8 @@
       "validationName": "请为每个规则填写名称。",
       "validationPattern": "匹配模式不能为空。",
       "validationRegex": "无效的正则表达式：{{error}}",
+      "validationProbeId": "请选择探测类型。",
+      "validationApiType": "请选择 API 类型。",
       "jsonInvalid": "无效的过滤规则 JSON：{{error}}"
     }
   }

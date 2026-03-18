@@ -1,15 +1,28 @@
 export type ChannelFilterAction = "include" | "exclude"
 
+export type ChannelFilterRuleType = "pattern" | "probe"
+
+export type ChannelFilterProbeId =
+  | "models"
+  | "text-generation"
+  | "tool-calling"
+  | "structured-output"
+  | "web-search"
+
 export interface ChannelModelFilterRule {
   id: string
+  ruleType?: ChannelFilterRuleType
   name: string
   description?: string
-  pattern: string
-  isRegex: boolean
   action: ChannelFilterAction
   enabled: boolean
   createdAt: number
   updatedAt: number
+
+  pattern?: string
+  isRegex?: boolean
+
+  probeId?: ChannelFilterProbeId
 }
 
 export type ChannelModelFilterInput = Omit<

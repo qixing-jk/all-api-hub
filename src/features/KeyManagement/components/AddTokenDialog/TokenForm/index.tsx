@@ -37,7 +37,22 @@ export function TokenForm({
     }
 
   const handleSelectChange = (field: keyof FormData) => (value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
+    setFormData((prev) => {
+      const updated = { ...prev, [field]: value }
+      
+      // When group changes, update the group suffix in token name
+      if (field === "group") {
+        const currentName = prev.name
+        // Extract base name by removing existing group suffix (pattern: -groupname at the end)
+        const baseNameMatch = currentName.match(/^(.+?)-[^-]+$/)
+        if (baseNameMatch) {
+          const baseName = baseNameMatch[1]
+          updated.name = `${baseName}-${value}`
+        }
+      }
+      
+      return updated
+    })
   }
 
   const handleSwitchChange = (field: keyof FormData) => (checked: boolean) => {

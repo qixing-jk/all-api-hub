@@ -90,6 +90,9 @@ describe("CopyKeyDialog", () => {
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([TOKEN])
     createApiTokenMock.mockResolvedValueOnce(true)
+    fetchUserGroupsMock.mockResolvedValueOnce({
+      default: { desc: "default", ratio: 1 },
+    })
 
     const user = userEvent.setup()
     const writeText = vi
@@ -260,10 +263,9 @@ describe("CopyKeyDialog", () => {
     })
     await user.click(customCreateButton)
 
-    await user.type(
-      await screen.findByLabelText(/keyManagement:dialog\.tokenName/),
-      "My Key",
-    )
+    const nameInput = await screen.findByLabelText(/keyManagement:dialog\.tokenName/)
+    await user.clear(nameInput)
+    await user.type(nameInput, "My Key")
 
     await user.click(
       screen.getByRole("button", { name: "keyManagement:dialog.createToken" }),

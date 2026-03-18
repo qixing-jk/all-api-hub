@@ -200,6 +200,14 @@ export const RuntimeActionIds = {
     RuntimeActionPrefixes.ChannelConfig,
     "upsertFilters",
   ),
+  ChannelConfigUpsertVerificationCredentials: composeRuntimeAction(
+    RuntimeActionPrefixes.ChannelConfig,
+    "upsertVerificationCredentials",
+  ),
+  ChannelConfigClearVerificationCredentials: composeRuntimeAction(
+    RuntimeActionPrefixes.ChannelConfig,
+    "clearVerificationCredentials",
+  ),
 
   ExternalCheckInOpenAndMark: composeRuntimeAction(
     RuntimeActionPrefixes.ExternalCheckIn,

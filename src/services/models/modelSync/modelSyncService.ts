@@ -17,6 +17,7 @@ import {
 } from "~/types/managedSiteModelSync"
 import { createLogger } from "~/utils/core/logger"
 
+import { filterModelsByProbeRules } from "./probeFilterExecutor"
 import { RateLimiter } from "./rateLimiter"
 
 /**
@@ -250,13 +251,14 @@ export class ModelSyncService {
       try {
         const fetchedModels = await this.fetchChannelModels(channel.id)
         const allowListedModels = this.filterAllowedModels(fetchedModels)
-        const globallyScopedModels = this.applyFilters(
-          this.globalChannelModelFilters,
+        const globallyScopedModels = await this.applyGlobalFilters(
           allowListedModels,
+          channel,
         )
-        const channelScopedModels = this.applyChannelFilters(
+        const channelScopedModels = await this.applyChannelFilters(
           channel.id,
           globallyScopedModels,
+          channel,
         )
 
         if (this.haveModelsChanged(oldModels, channelScopedModels)) {
@@ -429,6 +431,7 @@ export class ModelSyncService {
 
   /**
    * Applies a list of include/exclude rules to the provided model list.
+   * Only processes pattern-type rules; probe rules are ignored.
    *
    * Steps:
    * 1. Normalize incoming model names (trim + dedupe).
@@ -453,8 +456,11 @@ export class ModelSyncService {
       return normalized
     }
 
-    const includeRules = filters.filter((rule) => rule.action === "include")
-    const excludeRules = filters.filter((rule) => rule.action === "exclude")
+    const patternRules = filters.filter(
+      (rule) => !rule.ruleType || rule.ruleType === "pattern",
+    )
+    const includeRules = patternRules.filter((rule) => rule.action === "include")
+    const excludeRules = patternRules.filter((rule) => rule.action === "exclude")
 
     let result = normalized
 
@@ -479,15 +485,79 @@ export class ModelSyncService {
   }
 
   /**
+   * Applies global filters (both pattern and probe types) to the provided models.
+   * For probe rules, credentials are resolved from the channel's verificationCredentials.
+   * @param models Models after allow-list filtering.
+   * @param channel Channel object for probe credential resolution.
+   * @returns Filtered model list.
+   */
+  private async applyGlobalFilters(
+    models: string[],
+    channel: ManagedSiteChannel,
+  ): Promise<string[]> {
+    const rules = this.globalChannelModelFilters
+    if (!rules || rules.length === 0) {
+      return models
+    }
+
+    const patternFiltered = this.applyFilters(rules, models)
+
+    const probeRules = rules.filter(
+      (rule) => rule.enabled && rule.ruleType === "probe",
+    )
+
+    if (probeRules.length === 0) {
+      return patternFiltered
+    }
+
+    const channelConfig = this.channelConfigs?.[channel.id]
+
+    const probeFiltered = await filterModelsByProbeRules({
+      models: patternFiltered,
+      channel,
+      probeRules,
+      channelConfig,
+      rateLimiter: this.rateLimiter ?? undefined,
+    })
+
+    return probeFiltered
+  }
+
+  /**
    * Applies the per-channel include/exclude filters defined in channel configs
    * to the provided models.
    * @param channelId Channel id for looking up config rules.
    * @param models Models after global filtering.
+   * @param channel Full channel object for probe credential resolution.
    */
-  private applyChannelFilters(channelId: number, models: string[]): string[] {
+  private async applyChannelFilters(
+    channelId: number,
+    models: string[],
+    channel: ManagedSiteChannel,
+  ): Promise<string[]> {
     const rules =
       this.channelConfigs?.[channelId]?.modelFilterSettings?.rules ?? []
-    return this.applyFilters(rules, models)
+    const patternFiltered = this.applyFilters(rules, models)
+
+    const probeRules = rules.filter(
+      (rule) => rule.enabled && rule.ruleType === "probe",
+    )
+
+    if (probeRules.length === 0) {
+      return patternFiltered
+    }
+
+    const channelConfig = this.channelConfigs?.[channelId]
+
+    const probeFiltered = await filterModelsByProbeRules({
+      models: patternFiltered,
+      channel,
+      probeRules,
+      channelConfig,
+      rateLimiter: this.rateLimiter ?? undefined,
+    })
+
+    return probeFiltered
   }
 
   /**
