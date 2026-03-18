@@ -208,9 +208,6 @@ function normalizeFilters(
       if (!filter.probeId) {
         throw new Error("Filter probeId is required for probe rules")
       }
-      if (!filter.apiType) {
-        throw new Error("Filter apiType is required for probe rules")
-      }
 
       const description = filter.description?.trim()
       const createdAt =
@@ -224,9 +221,6 @@ function normalizeFilters(
         name,
         description: description || undefined,
         probeId: filter.probeId,
-        apiType: filter.apiType,
-        verificationBaseUrl: filter.verificationBaseUrl?.trim() || undefined,
-        verificationApiKey: filter.verificationApiKey?.trim() || undefined,
         action: filter.action === "exclude" ? "exclude" : "include",
         enabled: filter.enabled !== false,
         createdAt,

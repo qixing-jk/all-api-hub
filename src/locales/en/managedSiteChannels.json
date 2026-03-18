@@ -131,6 +131,8 @@
       "regex": "Regex rules support advanced matching using JavaScript syntax.",
       "substring": "Plain rules match case-sensitive substrings inside model names.",
       "probeCredentials": "Probe rules require credentials to run. If the rule itself doesn't specify credentials, the channel's default verification credentials will be used. If the channel has no verification credentials configured, the channel's own Base URL and Key will be used (if available).",
+      "probeCredentialsFromChannel": "Probe rules will use the channel verification credentials configured above. If no verification credentials are configured, this rule will be skipped.",
+      "globalProbeCredentials": "Global probe rules will use each channel's verification credentials. If a channel has no verification credentials configured, this probe rule will be skipped for that channel.",
       "probePerformance": "Probe rules make actual API calls for each model, which can be slow and consume quota. It's recommended to use pattern matching rules first to narrow down the list, then apply probe rules."
     },
     "verificationCredentials": {

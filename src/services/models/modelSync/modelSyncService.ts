@@ -251,9 +251,9 @@ export class ModelSyncService {
       try {
         const fetchedModels = await this.fetchChannelModels(channel.id)
         const allowListedModels = this.filterAllowedModels(fetchedModels)
-        const globallyScopedModels = this.applyFilters(
-          this.globalChannelModelFilters,
+        const globallyScopedModels = await this.applyGlobalFilters(
           allowListedModels,
+          channel,
         )
         const channelScopedModels = await this.applyChannelFilters(
           channel.id,
@@ -431,6 +431,7 @@ export class ModelSyncService {
 
   /**
    * Applies a list of include/exclude rules to the provided model list.
+   * Only processes pattern-type rules; probe rules are ignored.
    *
    * Steps:
    * 1. Normalize incoming model names (trim + dedupe).
@@ -481,6 +482,46 @@ export class ModelSyncService {
     }
 
     return result
+  }
+
+  /**
+   * Applies global filters (both pattern and probe types) to the provided models.
+   * For probe rules, credentials are resolved from the channel's verificationCredentials.
+   *
+   * @param models Models after allow-list filtering.
+   * @param channel Channel object for probe credential resolution.
+   * @returns Filtered model list.
+   */
+  private async applyGlobalFilters(
+    models: string[],
+    channel: ManagedSiteChannel,
+  ): Promise<string[]> {
+    const rules = this.globalChannelModelFilters
+    if (!rules || rules.length === 0) {
+      return models
+    }
+
+    const patternFiltered = this.applyFilters(rules, models)
+
+    const probeRules = rules.filter(
+      (rule) => rule.enabled && rule.ruleType === "probe",
+    )
+
+    if (probeRules.length === 0) {
+      return patternFiltered
+    }
+
+    const channelConfig = this.channelConfigs?.[channel.id]
+
+    const probeFiltered = await filterModelsByProbeRules({
+      models: patternFiltered,
+      channel,
+      probeRules,
+      channelConfig,
+      rateLimiter: this.rateLimiter ?? undefined,
+    })
+
+    return probeFiltered
   }
 
   /**

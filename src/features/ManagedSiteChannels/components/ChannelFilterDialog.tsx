@@ -170,9 +170,6 @@ export default function ChannelFilterDialog({
         if (!filter.probeId) {
           return t("filters.messages.validationProbeId")
         }
-        if (!filter.apiType) {
-          return t("filters.messages.validationApiType")
-        }
       }
     }
     return null

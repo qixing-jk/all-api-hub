@@ -23,7 +23,10 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { modelMetadataService } from "~/services/models/modelMetadata"
 import type { ModelMetadata } from "~/services/models/modelMetadata/types"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
-import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
+import type {
+  ChannelFilterRuleType,
+  ChannelModelFilterRule,
+} from "~/types/channelModelFilters"
 import type { ManagedSiteModelSyncPreferences } from "~/types/managedSiteModelSync"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
@@ -243,19 +246,24 @@ export default function ManagedSiteModelSyncSettings() {
     )
   }
 
-  const handleAddGlobalFilter = () => {
+  const handleAddGlobalFilter = (ruleType: ChannelFilterRuleType) => {
     const now = Date.now()
-    const newFilter: EditableFilter = {
+    const baseFilter = {
       id: nanoid(),
       name: "",
-      pattern: "",
-      isRegex: false,
-      action: "include",
+      action: "include" as const,
       enabled: true,
       createdAt: now,
       updatedAt: now,
       description: "",
+      ruleType,
     }
+
+    const newFilter: EditableFilter =
+      ruleType === "probe"
+        ? { ...baseFilter, probeId: undefined }
+        : { ...baseFilter, pattern: "", isRegex: false }
+
     setGlobalChannelModelFiltersDraft((prev) => [...prev, newFilter])
   }
 
@@ -294,9 +302,6 @@ export default function ManagedSiteModelSyncSettings() {
       } else if (ruleType === "probe") {
         if (!filter.probeId) {
           return t("managedSiteChannels:filters.messages.validationProbeId")
-        }
-        if (!filter.apiType) {
-          return t("managedSiteChannels:filters.messages.validationApiType")
         }
       }
     }
@@ -644,6 +649,7 @@ export default function ManagedSiteModelSyncSettings() {
           viewMode={viewMode}
           jsonText={jsonText}
           isLoading={false}
+          isGlobalFilter={true}
           onAddFilter={handleAddGlobalFilter}
           onRemoveFilter={handleRemoveGlobalFilter}
           onFieldChange={handleGlobalFilterFieldChange}

@@ -1,11 +1,8 @@
-import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline"
 import { Loader2, Plus, Settings2, Trash2 } from "lucide-react"
-import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Input, Textarea } from "~/components/ui"
 import { Button } from "~/components/ui/button"
-import { IconButton } from "~/components/ui/IconButton"
 import { Label } from "~/components/ui/label"
 import {
   Select,
@@ -15,7 +12,6 @@ import {
   SelectValue,
 } from "~/components/ui/select"
 import { Switch } from "~/components/ui/Switch"
-import { API_TYPES } from "~/services/verification/aiApiVerification/types"
 import type {
   ChannelFilterProbeId,
   ChannelFilterRuleType,
@@ -29,6 +25,11 @@ interface ChannelFiltersEditorProps {
   viewMode: "visual" | "json"
   jsonText: string
   isLoading?: boolean
+  /**
+   * When true, probe rules hide apiType/baseUrl/apiKey fields and show a hint
+   * that credentials will be sourced from each channel's verificationCredentials.
+   */
+  isGlobalFilter?: boolean
   onAddFilter: (ruleType: ChannelFilterRuleType) => void
   onRemoveFilter: (id: string) => void
   onFieldChange: (id: string, field: keyof EditableFilter, value: any) => void
@@ -67,6 +68,7 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
     viewMode,
     jsonText,
     isLoading,
+    isGlobalFilter = false,
     onAddFilter,
     onRemoveFilter,
     onFieldChange,
@@ -159,6 +161,7 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
               <FilterRuleCard
                 key={filter.id}
                 filter={filter}
+                isGlobalFilter={isGlobalFilter}
                 onFieldChange={onFieldChange}
                 onRemoveFilter={onRemoveFilter}
               />
@@ -214,17 +217,18 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
 
 interface FilterRuleCardProps {
   filter: EditableFilter
+  isGlobalFilter?: boolean
   onFieldChange: (id: string, field: keyof EditableFilter, value: any) => void
   onRemoveFilter: (id: string) => void
 }
 
 function FilterRuleCard({
   filter,
+  isGlobalFilter = false,
   onFieldChange,
   onRemoveFilter,
 }: FilterRuleCardProps) {
   const { t } = useTranslation("managedSiteChannels")
-  const [showApiKey, setShowApiKey] = useState(false)
 
   const ruleType = filter.ruleType || "pattern"
 
@@ -359,100 +363,32 @@ function FilterRuleCard({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>{t("filters.labels.apiType")}</Label>
+              <Label>{t("filters.labels.action")}</Label>
               <Select
-                value={filter.apiType ?? ""}
-                onValueChange={(value: string) =>
-                  onFieldChange(filter.id, "apiType", value)
+                value={filter.action}
+                onValueChange={(value: "include" | "exclude") =>
+                  onFieldChange(filter.id, "action", value)
                 }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={t("filters.labels.apiType")} />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.values(API_TYPES).map((apiType) => (
-                    <SelectItem key={apiType} value={apiType}>
-                      {apiType}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="include">
+                    {t("filters.actionOptions.include")}
+                  </SelectItem>
+                  <SelectItem value="exclude">
+                    {t("filters.actionOptions.exclude")}
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>{t("filters.labels.action")}</Label>
-            <Select
-              value={filter.action}
-              onValueChange={(value: "include" | "exclude") =>
-                onFieldChange(filter.id, "action", value)
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="include">
-                  {t("filters.actionOptions.include")}
-                </SelectItem>
-                <SelectItem value="exclude">
-                  {t("filters.actionOptions.exclude")}
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>{t("filters.labels.verificationBaseUrl")}</Label>
-            <Input
-              value={filter.verificationBaseUrl ?? ""}
-              onChange={(event) =>
-                onFieldChange(
-                  filter.id,
-                  "verificationBaseUrl",
-                  event.target.value,
-                )
-              }
-              placeholder={t("filters.placeholders.verificationBaseUrl")}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>{t("filters.labels.verificationApiKey")}</Label>
-            <div className="relative">
-              <Input
-                type={showApiKey ? "text" : "password"}
-                value={filter.verificationApiKey ?? ""}
-                onChange={(event) =>
-                  onFieldChange(
-                    filter.id,
-                    "verificationApiKey",
-                    event.target.value,
-                  )
-                }
-                placeholder={t("filters.placeholders.verificationApiKey")}
-                className="pr-10"
-              />
-              <div className="absolute right-0 top-0 flex h-full items-center pr-2">
-                <IconButton
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setShowApiKey(!showApiKey)}
-                  aria-label={showApiKey ? "Hide API key" : "Show API key"}
-                >
-                  {showApiKey ? (
-                    <EyeSlashIcon className="h-4 w-4" />
-                  ) : (
-                    <EyeIcon className="h-4 w-4" />
-                  )}
-                </IconButton>
-              </div>
-            </div>
-          </div>
-
           <div className="bg-muted text-muted-foreground rounded-lg p-3 text-xs">
-            {t("filters.hints.probeCredentials")}
+            {isGlobalFilter
+              ? t("filters.hints.globalProbeCredentials")
+              : t("filters.hints.probeCredentialsFromChannel")}
           </div>
 
           <div className="bg-amber-50 dark:bg-amber-950/20 text-amber-800 dark:text-amber-200 rounded-lg p-3 text-xs">

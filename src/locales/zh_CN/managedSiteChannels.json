@@ -131,6 +131,8 @@
       "regex": "正则模式使用 JavaScript 语法，可实现更灵活的匹配。",
       "substring": "普通模式将执行区分大小写的子串匹配。",
       "probeCredentials": "探测规则需要凭证才能运行。如果规则本身未填写凭证，将使用渠道默认校验凭证。如果渠道也没有配置，则使用渠道自身的 Base URL 和 Key（如果可用）。",
+      "probeCredentialsFromChannel": "探测规则将使用上方配置的渠道校验凭证。如果未配置校验凭证，该规则将被跳过。",
+      "globalProbeCredentials": "全局探测规则将使用各渠道的校验凭证（verificationCredentials）。如果渠道未配置校验凭证，该渠道将跳过此探测规则。",
       "probePerformance": "探测规则会对每个模型执行实际 API 调用，可能较慢且消耗配额。建议先使用模式匹配规则缩小范围，再应用探测规则。"
     },
     "verificationCredentials": {

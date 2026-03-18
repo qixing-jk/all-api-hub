@@ -1,6 +1,6 @@
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline"
 import { Pencil, Trash2 } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Button, IconButton, Input, Label } from "~/components/ui"
@@ -34,6 +34,20 @@ export default function VerificationCredentialsEditor({
   const [baseUrl, setBaseUrl] = useState(credentials?.baseUrl ?? "")
   const [apiKey, setApiKey] = useState(credentials?.apiKey ?? "")
   const [apiType, setApiType] = useState(credentials?.apiType ?? "")
+
+  useEffect(() => {
+    if (credentials) {
+      setBaseUrl(credentials.baseUrl ?? "")
+      setApiKey(credentials.apiKey ?? "")
+      setApiType(credentials.apiType ?? "")
+      setIsEditing(false)
+    } else {
+      setBaseUrl("")
+      setApiKey("")
+      setApiType("")
+      setIsEditing(true)
+    }
+  }, [credentials])
 
   const handleSave = async () => {
     if (!baseUrl.trim()) {

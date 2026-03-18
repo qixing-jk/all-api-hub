@@ -23,9 +23,6 @@ export interface ChannelModelFilterRule {
   isRegex?: boolean
 
   probeId?: ChannelFilterProbeId
-  apiType?: string
-  verificationBaseUrl?: string
-  verificationApiKey?: string
 }
 
 export type ChannelModelFilterInput = Omit<
