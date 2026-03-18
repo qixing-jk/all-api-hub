@@ -33,8 +33,6 @@ export default defineConfig({
       "balanceHistory:filters.quickRanges.*",
       "balanceHistory:metrics.*",
       "balanceHistory:trend.scopes.*",
-      "cliSupportVerification:verifyDialog.apiTypes.*",
-      "cliSupportVerification:verifyDialog.tools.*",
     ],
   },
 })

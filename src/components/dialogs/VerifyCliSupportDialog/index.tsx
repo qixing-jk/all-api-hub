@@ -28,6 +28,7 @@ import {
   runCliSupportTool,
 } from "~/services/verification/cliSupportVerification"
 import type { CliSupportResult } from "~/services/verification/cliSupportVerification"
+import { getCliSupportToolLabel } from "~/services/verification/cliSupportVerification/i18n"
 import type { ApiToken } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 
@@ -509,7 +510,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
                   <div className="min-w-0 flex-1">
                     <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                       <div className="dark:text-dark-text-primary min-w-0 truncate text-sm font-medium text-gray-900">
-                        {t(`verifyDialog.tools.${tool.toolId}`)}
+                        {getCliSupportToolLabel(t, tool.toolId)}
                       </div>
 
                       <div className="flex items-center gap-2">
