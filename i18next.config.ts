@@ -32,16 +32,12 @@ export default defineConfig({
     preservePatterns: [
       "aiApiVerification:verifyDialog.apiTypes.*",
       "aiApiVerification:verifyDialog.probes.*",
-      "autoCheckin:skipReasons.*",
       "autoCheckin:status.result.*",
       "balanceHistory:filters.quickRanges.*",
       "balanceHistory:metrics.*",
       "balanceHistory:trend.scopes.*",
       "cliSupportVerification:verifyDialog.apiTypes.*",
       "cliSupportVerification:verifyDialog.tools.*",
-      "managedSiteChannels:table.columns.*",
-      "settings:logging.levels.*",
-      "settings:tabs.*",
     ],
   },
 })

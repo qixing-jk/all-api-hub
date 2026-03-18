@@ -112,6 +112,33 @@ interface ManagedSiteChannelsProps {
 }
 
 /**
+ * Resolve the localized label for a hideable managed-site channel table column.
+ */
+function getManagedSiteChannelColumnLabel(
+  t: (key: string, options?: any) => string,
+  columnId: string,
+) {
+  switch (columnId) {
+    case "id":
+      return t("managedSiteChannels:table.columns.id")
+    case "type":
+      return t("managedSiteChannels:table.columns.type")
+    case "models":
+      return t("managedSiteChannels:table.columns.models")
+    case "group":
+      return t("managedSiteChannels:table.columns.group")
+    case "status":
+      return t("managedSiteChannels:table.columns.status")
+    case "priority":
+      return t("managedSiteChannels:table.columns.priority")
+    case "weight":
+      return t("managedSiteChannels:table.columns.weight")
+    default:
+      return columnId
+  }
+}
+
+/**
  * Render the managed site channels page with data loading, filtering, and actions.
  */
 export default function ManagedSiteChannels({
@@ -837,9 +864,7 @@ export default function ManagedSiteChannels({
                     }
                     onSelect={(event: Event) => event.preventDefault()}
                   >
-                    {t(`table.columns.${column.id}`, {
-                      defaultValue: column.id,
-                    })}
+                    {getManagedSiteChannelColumnLabel(t, column.id)}
                   </DropdownMenuCheckboxItem>
                 ))}
             </DropdownMenuContent>

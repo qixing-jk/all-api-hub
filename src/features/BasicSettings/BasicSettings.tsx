@@ -120,6 +120,41 @@ interface SettingsTabItem {
 }
 
 /**
+ * Resolve the localized label for a known settings tab id.
+ */
+function getSettingsTabLabel(
+  t: (key: string, options?: any) => string,
+  tabId: TabId,
+) {
+  switch (tabId) {
+    case "general":
+      return t("settings:tabs.general")
+    case "balanceHistory":
+      return t("settings:tabs.balanceHistory")
+    case "accountManagement":
+      return t("settings:tabs.accountManagement")
+    case "refresh":
+      return t("settings:tabs.refresh")
+    case "checkinRedeem":
+      return t("settings:tabs.checkinRedeem")
+    case "webAiApiCheck":
+      return t("settings:tabs.webAiApiCheck")
+    case "accountUsage":
+      return t("settings:tabs.accountUsage")
+    case "dataBackup":
+      return t("settings:tabs.dataBackup")
+    case "managedSite":
+      return t("settings:tabs.managedSite")
+    case "cliProxy":
+      return t("settings:tabs.cliProxy")
+    case "claudeCodeRouter":
+      return t("settings:tabs.claudeCodeRouter")
+    case "permissions":
+      return t("settings:tabs.permissions")
+  }
+}
+
+/**
  * Renders the desktop tabs.
  */
 function DesktopTabs({
@@ -209,7 +244,7 @@ export default function BasicSettings() {
     () =>
       TAB_CONFIGS.map((config) => ({
         id: config.id,
-        label: t(`tabs.${config.id}`),
+        label: getSettingsTabLabel(t, config.id),
       })),
     [t],
   )
@@ -329,7 +364,7 @@ export default function BasicSettings() {
               <SelectContent>
                 {TAB_CONFIGS.map((config) => (
                   <SelectItem key={config.id} value={config.id}>
-                    {t(`tabs.${config.id}`)}
+                    {getSettingsTabLabel(t, config.id)}
                   </SelectItem>
                 ))}
               </SelectContent>

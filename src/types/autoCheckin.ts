@@ -38,6 +38,28 @@ export const AUTO_CHECKIN_SKIP_REASONS = Object.values(
 ) as AutoCheckinSkipReason[]
 
 /**
+ * Returns the localized skip-reason key for a stable auto-check-in reason code.
+ */
+export function getAutoCheckinSkipReasonTranslationKey(
+  reason: AutoCheckinSkipReason,
+) {
+  switch (reason) {
+    case AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DISABLED:
+      return "autoCheckin:skipReasons.account_disabled"
+    case AUTO_CHECKIN_SKIP_REASON.DETECTION_DISABLED:
+      return "autoCheckin:skipReasons.detection_disabled"
+    case AUTO_CHECKIN_SKIP_REASON.AUTO_CHECKIN_DISABLED:
+      return "autoCheckin:skipReasons.auto_checkin_disabled"
+    case AUTO_CHECKIN_SKIP_REASON.ALREADY_CHECKED_TODAY:
+      return "autoCheckin:skipReasons.already_checked_today"
+    case AUTO_CHECKIN_SKIP_REASON.NO_PROVIDER:
+      return "autoCheckin:skipReasons.no_provider"
+    case AUTO_CHECKIN_SKIP_REASON.PROVIDER_NOT_READY:
+      return "autoCheckin:skipReasons.provider_not_ready"
+  }
+}
+
+/**
  * Single account check-in result
  */
 export interface CheckinAccountResult {

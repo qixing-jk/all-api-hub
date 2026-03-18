@@ -12,7 +12,9 @@ import { Card } from "~/components/ui"
 import { compareAccountDisplayNames } from "~/services/accounts/utils/accountDisplayName"
 import {
   CHECKIN_RESULT_STATUS,
+  getAutoCheckinSkipReasonTranslationKey,
   type AutoCheckinAccountSnapshot,
+  type AutoCheckinSkipReason,
 } from "~/types/autoCheckin"
 
 import { formatTimestamp } from "../utils/tableUtils"
@@ -40,11 +42,9 @@ export default function AccountSnapshotTable({
     )
   }, [snapshots])
 
-  const getSkipReasonLabel = (reason?: string) => {
+  const getSkipReasonLabel = (reason?: AutoCheckinSkipReason) => {
     if (!reason) return "-"
-    return t(`skipReasons.${reason}`, {
-      defaultValue: t("skipReasons.unknown") as string,
-    })
+    return t(getAutoCheckinSkipReasonTranslationKey(reason))
   }
 
   const renderStatusBadge = (snapshot: AutoCheckinAccountSnapshot) => {

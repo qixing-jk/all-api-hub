@@ -18,6 +18,25 @@ import { LOG_LEVELS, type LogLevel } from "~/types/logging"
 import { showUpdateToast } from "~/utils/core/toastHelpers"
 
 /**
+ * Resolve the localized label for a supported log level.
+ */
+function getLogLevelLabel(
+  t: (key: string, options?: any) => string,
+  level: LogLevel,
+) {
+  switch (level) {
+    case "debug":
+      return t("settings:logging.levels.debug")
+    case "info":
+      return t("settings:logging.levels.info")
+    case "warn":
+      return t("settings:logging.levels.warn")
+    case "error":
+      return t("settings:logging.levels.error")
+  }
+}
+
+/**
  * Settings section for unified logger preferences (console enablement + minimum level).
  */
 export default function LoggingSettings() {
@@ -80,7 +99,7 @@ export default function LoggingSettings() {
                   <SelectContent>
                     {LOG_LEVELS.map((level) => (
                       <SelectItem key={level} value={level}>
-                        {t(`logging.levels.${level}`)}
+                        {getLogLevelLabel(t, level)}
                       </SelectItem>
                     ))}
                   </SelectContent>
