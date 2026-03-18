@@ -165,10 +165,10 @@
   "status": {
     "never": "从未",
     "states": {
-      "error": "usageAnalytics:status.states.error",
-      "never": "usageAnalytics:status.states.never",
-      "success": "usageAnalytics:status.states.success",
-      "unsupported": "usageAnalytics:status.states.unsupported"
+      "error": "错误",
+      "never": "从未",
+      "success": "成功",
+      "unsupported": "不支持"
     }
   },
   "summary": {

@@ -173,8 +173,8 @@
     "searchLabel": "搜索",
     "searchPlaceholder": "搜索账号、域名或站点类型...",
     "skipReasons": {
-      "noneAuth": "keyManagement:repairMissingKeys.skipReasons.noneAuth",
-      "sub2api": "keyManagement:repairMissingKeys.skipReasons.sub2api"
+      "noneAuth": "无凭证（认证类型：none）",
+      "sub2api": "不支持的站点类型（Sub2API）"
     },
     "title": "确保至少有一个密钥",
     "totalsLabels": {

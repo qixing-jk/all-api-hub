@@ -173,8 +173,8 @@
     "searchLabel": "Search",
     "searchPlaceholder": "Search account, origin, or site type...",
     "skipReasons": {
-      "noneAuth": "",
-      "sub2api": ""
+      "noneAuth": "No credentials (auth type: none)",
+      "sub2api": "Unsupported site type (Sub2API)"
     },
     "title": "Ensure at least one key",
     "totalsLabels": {

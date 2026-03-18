@@ -165,10 +165,10 @@
   "status": {
     "never": "Never",
     "states": {
-      "error": "",
-      "never": "",
-      "success": "",
-      "unsupported": ""
+      "error": "Error",
+      "never": "Never",
+      "success": "Success",
+      "unsupported": "Unsupported"
     }
   },
   "summary": {
