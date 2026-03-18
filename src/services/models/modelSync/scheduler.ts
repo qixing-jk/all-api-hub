@@ -5,6 +5,9 @@ import {
   getManagedSiteAdminConfig,
   getManagedSiteConfig,
   getManagedSiteContext,
+  translateManagedSiteConfigMissing,
+  translateManagedSiteNoChannelsToSync,
+  type ManagedSiteMessagesKey,
 } from "~/services/managedSites/utils/managedSite"
 import { ModelRedirectService } from "~/services/models/modelRedirect"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
@@ -69,7 +72,7 @@ class ModelSyncScheduler {
     const managedConfig = getManagedSiteAdminConfig(userPrefs)
 
     if (!managedConfig) {
-      throw new Error(t(`messages:${messagesKey}.configMissing`))
+      throw new Error(translateManagedSiteConfigMissing(t, messagesKey))
     }
 
     const { baseUrl, adminToken, userId } = managedConfig
@@ -215,7 +218,7 @@ class ModelSyncScheduler {
         !octopusConfig?.username ||
         !octopusConfig?.password
       ) {
-        throw new Error(t(`messages:${messagesKey}.configMissing`))
+        throw new Error(translateManagedSiteConfigMissing(t, messagesKey))
       }
 
       const channels = await octopusApi.listChannels(octopusConfig)
@@ -275,7 +278,7 @@ class ModelSyncScheduler {
     }
 
     if (channels.length === 0) {
-      throw new Error(t(`messages:${messagesKey}.noChannelsToSync`))
+      throw new Error(translateManagedSiteNoChannelsToSync(t, messagesKey))
     }
 
     // Placeholder for model redirect config, will generate after sync if enabled
@@ -446,7 +449,7 @@ class ModelSyncScheduler {
   private async executeSyncForOctopus(
     channelIds: number[] | undefined,
     prefs: Awaited<ReturnType<typeof userPreferences.getPreferences>>,
-    messagesKey: string,
+    messagesKey: ManagedSiteMessagesKey,
     concurrency: number,
     maxRetries: number,
   ): Promise<ExecutionResult> {
@@ -459,7 +462,7 @@ class ModelSyncScheduler {
       !octopusConfig?.username ||
       !octopusConfig?.password
     ) {
-      throw new Error(t(`messages:${messagesKey}.configMissing`))
+      throw new Error(translateManagedSiteConfigMissing(t, messagesKey))
     }
 
     // List channels using Octopus API
@@ -475,7 +478,7 @@ class ModelSyncScheduler {
     }
 
     if (channels.length === 0) {
-      throw new Error(t(`messages:${messagesKey}.noChannelsToSync`))
+      throw new Error(translateManagedSiteNoChannelsToSync(t, messagesKey))
     }
 
     // Update progress

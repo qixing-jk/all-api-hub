@@ -40,8 +40,8 @@ import {
   type ManagedSiteTokenChannelStatus,
 } from "~/services/managedSites/tokenChannelStatus"
 import {
-  getManagedSiteLabelKey,
   supportsManagedSiteBaseUrlChannelLookup,
+  translateManagedSiteLabel,
 } from "~/services/managedSites/utils/managedSite"
 import {
   API_TYPES,
@@ -448,7 +448,7 @@ function TokenActionButtons({
   const [isCliProxyDialogOpen, setIsCliProxyDialogOpen] = useState(false)
   const [isKiloCodeDialogOpen, setIsKiloCodeDialogOpen] = useState(false)
 
-  const managedSiteLabel = t(getManagedSiteLabelKey(managedSiteType))
+  const managedSiteLabel = translateManagedSiteLabel(t, managedSiteType)
 
   const handleImportToManagedSite = async () => {
     await openWithAccount(account, token, (result) => {

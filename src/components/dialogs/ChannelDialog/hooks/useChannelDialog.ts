@@ -8,6 +8,7 @@ import { accountStorage } from "~/services/accounts/accountStorage"
 import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
 import { MatchResolutionUnresolvedError } from "~/services/managedSites/channelMatch"
 import { getManagedSiteService } from "~/services/managedSites/managedSiteService"
+import { translateManagedSiteConfigMissing } from "~/services/managedSites/utils/managedSite"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import {
   AuthTypeEnum,
@@ -114,7 +115,7 @@ export function useChannelDialog() {
       serviceKey = service.messagesKey
       const managedConfig = await service.getConfig()
       if (!managedConfig) {
-        toast.error(t(`messages:${service.messagesKey}.configMissing`), {
+        toast.error(translateManagedSiteConfigMissing(t, service.messagesKey), {
           id: toastId,
         })
         return
@@ -224,7 +225,7 @@ export function useChannelDialog() {
       serviceKey = service.messagesKey
       const managedConfig = await service.getConfig()
       if (!managedConfig) {
-        toast.error(t(`messages:${service.messagesKey}.configMissing`), {
+        toast.error(translateManagedSiteConfigMissing(t, service.messagesKey), {
           id: toastId,
         })
         return

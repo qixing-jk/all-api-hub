@@ -20,7 +20,7 @@ import { IconButton } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
 import { OpenInCherryStudio } from "~/services/integrations/cherryStudio"
-import { getManagedSiteLabelKey } from "~/services/managedSites/utils/managedSite"
+import { translateManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
 import type { ApiToken, DisplaySiteData } from "~/types"
 import {
   formatKeyTime,
@@ -61,7 +61,7 @@ export function TokenDetails({
   const [isCliProxyDialogOpen, setIsCliProxyDialogOpen] = useState(false)
   const [isKiloCodeDialogOpen, setIsKiloCodeDialogOpen] = useState(false)
 
-  const managedSiteLabel = t(getManagedSiteLabelKey(managedSiteType))
+  const managedSiteLabel = translateManagedSiteLabel(t, managedSiteType)
 
   const handleCopy = (event: MouseEvent) => {
     event.stopPropagation()

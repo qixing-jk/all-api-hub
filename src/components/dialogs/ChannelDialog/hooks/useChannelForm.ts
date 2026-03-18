@@ -8,6 +8,7 @@ import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { ChannelType, DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
 import { getApiService } from "~/services/apiService"
 import { getManagedSiteService } from "~/services/managedSites/managedSiteService"
+import { translateManagedSiteConfigMissing } from "~/services/managedSites/utils/managedSite"
 import { AuthTypeEnum } from "~/types"
 import type {
   ChannelFormData,
@@ -270,7 +271,9 @@ export function useChannelForm({
       const service = await getManagedSiteService()
       const apiConfig = await service.getConfig()
       if (!apiConfig) {
-        throw new Error(t(`messages:${service.messagesKey}.configMissing`))
+        throw new Error(
+          translateManagedSiteConfigMissing(t, service.messagesKey),
+        )
       }
 
       // Build payload

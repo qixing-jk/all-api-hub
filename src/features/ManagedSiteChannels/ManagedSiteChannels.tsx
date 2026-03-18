@@ -85,6 +85,7 @@ import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerificat
 import { useNewApiManagedVerification } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
 import { cn } from "~/lib/utils"
 import { getManagedSiteService } from "~/services/managedSites/managedSiteService"
+import { translateManagedSiteConfigMissing } from "~/services/managedSites/utils/managedSite"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import {
@@ -94,7 +95,8 @@ import {
 
 import ChannelFilterDialog from "./components/ChannelFilterDialog"
 import RowActions from "./components/RowActions"
-import StatusBadge, { STATUS_VARIANTS } from "./components/StatusBadge"
+import StatusBadge from "./components/StatusBadge"
+import { getManagedSiteChannelStatusLabel } from "./constants"
 import type { ChannelRow, CheckboxState, RowActionsLabels } from "./types"
 import {
   channelIdFilterFn,
@@ -200,7 +202,7 @@ export default function ManagedSiteChannels({
       if (!config) {
         setConfigMissing(true)
         setConfigMissingMessage(
-          t(`messages:${service.messagesKey}.configMissing`),
+          translateManagedSiteConfigMissing(t, service.messagesKey),
         )
         setChannels([])
         return
@@ -337,7 +339,9 @@ export default function ManagedSiteChannels({
       const service = await getManagedSiteService()
       const config = await service.getConfig()
       if (!config) {
-        throw new Error(t(`messages:${service.messagesKey}.configMissing`))
+        throw new Error(
+          translateManagedSiteConfigMissing(t, service.messagesKey),
+        )
       }
 
       const results = await Promise.allSettled(
@@ -821,10 +825,7 @@ export default function ManagedSiteChannels({
                           htmlFor={`status-${value}`}
                           className="text-sm font-normal"
                         >
-                          {t(
-                            STATUS_VARIANTS[Number(value)]?.labelKey ??
-                              STATUS_VARIANTS[0].labelKey,
-                          )}
+                          {getManagedSiteChannelStatusLabel(t, Number(value))}
                         </Label>
                       </div>
                       <span className="text-muted-foreground text-xs">

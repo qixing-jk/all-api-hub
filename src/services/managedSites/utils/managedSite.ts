@@ -14,6 +14,8 @@ import type { NewApiConfig } from "~/types/newApiConfig"
 import type { OctopusConfig } from "~/types/octopusConfig"
 import type { VeloeraConfig } from "~/types/veloeraConfig"
 
+type TranslateFn = (key: string) => string
+
 export type ManagedSiteLabelKey =
   | "settings:managedSite.newApi"
   | "settings:managedSite.doneHub"
@@ -93,6 +95,25 @@ export function getManagedSiteLabelKey(
 }
 
 /**
+ * Translate the managed site label using explicit keys so extraction does not
+ * depend on indirect key construction.
+ */
+export function translateManagedSiteLabel(
+  t: TranslateFn,
+  siteType: ManagedSiteType,
+): string {
+  if (siteType === OCTOPUS) {
+    return t("settings:managedSite.octopus")
+  }
+  if (siteType === DONE_HUB) {
+    return t("settings:managedSite.doneHub")
+  }
+  return siteType === VELOERA
+    ? t("settings:managedSite.veloera")
+    : t("settings:managedSite.newApi")
+}
+
+/**
  * Returns the `messages` namespace key for the selected managed site type.
  */
 export function getManagedSiteMessagesKeyFromSiteType(
@@ -105,6 +126,44 @@ export function getManagedSiteMessagesKeyFromSiteType(
     return "donehub"
   }
   return siteType === VELOERA ? "veloera" : "newapi"
+}
+
+/**
+ * Translate the "config missing" message for the selected managed site.
+ */
+export function translateManagedSiteConfigMissing(
+  t: TranslateFn,
+  messagesKey: ManagedSiteMessagesKey,
+): string {
+  switch (messagesKey) {
+    case "octopus":
+      return t("messages:octopus.configMissing")
+    case "donehub":
+      return t("messages:donehub.configMissing")
+    case "veloera":
+      return t("messages:veloera.configMissing")
+    default:
+      return t("messages:newapi.configMissing")
+  }
+}
+
+/**
+ * Translate the "no channels to sync" message for the selected managed site.
+ */
+export function translateManagedSiteNoChannelsToSync(
+  t: TranslateFn,
+  messagesKey: ManagedSiteMessagesKey,
+): string {
+  switch (messagesKey) {
+    case "octopus":
+      return t("messages:octopus.noChannelsToSync")
+    case "donehub":
+      return t("messages:donehub.noChannelsToSync")
+    case "veloera":
+      return t("messages:veloera.noChannelsToSync")
+    default:
+      return t("messages:newapi.noChannelsToSync")
+  }
 }
 
 /**

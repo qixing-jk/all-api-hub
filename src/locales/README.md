@@ -83,9 +83,11 @@ function MyComponent() {
 - 手动提取代码中的静态 key：`pnpm run i18n:extract`
 - 以 `zh_CN` 为主语言同步 `en` 结构：`pnpm run i18n:sync`
 
-当前配置刻意保持保守：
+当前配置会主动维护 locale 结构：
 
 - `primaryLanguage` 为 `zh-CN`，并映射到仓库目录 `src/locales/zh_CN/`
-- `removeUnusedKeys` 为 `false`
+- `sort` 为 `true`，保持提取结果稳定有序
+- `removeUnusedKeys` 为 `true`，清理不再被代码使用的静态 key
+- `preservePatterns` 会保留少量有意保留的动态 key 家族
 
-原因：仓库里仍存在若干动态拼接的 key，暂不自动删除未被静态分析命中的翻译项，避免误删。
+如果新增了运行时拼接或元数据驱动的翻译 key，请先将其改成可静态提取的写法，或同步更新 `i18next.config.ts` 里的 `preservePatterns`，再执行提取。

@@ -44,8 +44,33 @@ function getSkipReasonLabel(
   t: (key: string, options?: any) => string,
   reason: string | undefined,
 ) {
-  if (!reason) return ""
-  return t(`repairMissingKeys.skipReasons.${reason}`)
+  switch (reason) {
+    case "sub2api":
+      return t("repairMissingKeys.skipReasons.sub2api")
+    case "noneAuth":
+      return t("repairMissingKeys.skipReasons.noneAuth")
+    default:
+      return ""
+  }
+}
+
+/**
+ * Resolve the localized outcome label for a repair result.
+ */
+function getOutcomeLabel(
+  t: (key: string, options?: any) => string,
+  outcome: AccountKeyRepairOutcome,
+) {
+  switch (outcome) {
+    case "created":
+      return t("repairMissingKeys.outcomes.created")
+    case "alreadyHad":
+      return t("repairMissingKeys.outcomes.alreadyHad")
+    case "skipped":
+      return t("repairMissingKeys.outcomes.skipped")
+    default:
+      return t("repairMissingKeys.outcomes.failed")
+  }
 }
 
 type BadgeVariant = React.ComponentProps<typeof Badge>["variant"]
@@ -480,9 +505,7 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
                 ) : (
                   <ul className="dark:divide-dark-bg-tertiary divide-y">
                     {filteredResults.map((result) => {
-                      const outcomeLabel = t(
-                        `repairMissingKeys.outcomes.${result.outcome}`,
-                      )
+                      const outcomeLabel = getOutcomeLabel(t, result.outcome)
                       const details =
                         result.outcome === "skipped"
                           ? getSkipReasonLabel(t, result.skipReason)

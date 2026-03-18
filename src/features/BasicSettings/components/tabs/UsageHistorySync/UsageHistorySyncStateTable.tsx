@@ -39,6 +39,25 @@ export type UsageHistoryAccountRow = {
   lastWarning?: string
 }
 
+/**
+ * Resolve the localized usage-history sync state label for a row badge.
+ */
+function getUsageHistorySyncStateLabel(
+  t: (key: string) => string,
+  state: UsageHistorySyncState,
+) {
+  switch (state) {
+    case "success":
+      return t("status.states.success")
+    case "error":
+      return t("status.states.error")
+    case "unsupported":
+      return t("status.states.unsupported")
+    default:
+      return t("status.states.never")
+  }
+}
+
 type CheckboxState = boolean | "indeterminate"
 
 interface UsageHistorySyncStateTableProps {
@@ -128,7 +147,7 @@ export default function UsageHistorySyncStateTable({
             variant={getStatusBadgeVariant(row.original.state) as any}
             className="shrink-0"
           >
-            {t(`status.states.${row.original.state}`)}
+            {getUsageHistorySyncStateLabel(t, row.original.state)}
           </Badge>
         ),
       },

@@ -6,7 +6,7 @@ import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
 import { RuntimeMessageTypes } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { OpenInCherryStudio } from "~/services/integrations/cherryStudio"
-import { getManagedSiteLabelKey } from "~/services/managedSites/utils/managedSite"
+import { translateManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
 import { tagStorage } from "~/services/tags/tagStorage"
 import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification"
 import type { Tag } from "~/types"
@@ -53,7 +53,7 @@ export function useApiCredentialProfilesController() {
   } = useUserPreferencesContext()
   const { openWithCredentials } = useChannelDialog()
 
-  const managedSiteLabel = t(getManagedSiteLabelKey(managedSiteType))
+  const managedSiteLabel = translateManagedSiteLabel(t, managedSiteType)
 
   const { profiles, isLoading, createProfile, updateProfile, deleteProfile } =
     useApiCredentialProfiles()
