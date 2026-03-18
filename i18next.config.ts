@@ -26,13 +26,6 @@ export default defineConfig({
     indentation: 2,
     sort: false,
     disablePlurals: true,
-    // This repo has several runtime-composed keys. Keep extraction conservative
-    // until we decide to tighten dynamic-key handling more aggressively.
     removeUnusedKeys: false,
-    preservePatterns: [
-      "balanceHistory:filters.quickRanges.*",
-      "balanceHistory:metrics.*",
-      "balanceHistory:trend.scopes.*",
-    ],
   },
 })

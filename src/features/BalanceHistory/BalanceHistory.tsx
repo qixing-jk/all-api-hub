@@ -84,6 +84,62 @@ const QUICK_RANGES = [
 
 type BalanceHistoryBreakdownChartType = "pie" | "bar"
 type BalanceHistoryTrendSeriesScope = "accounts" | "total"
+type BalanceHistoryQuickRangeId = (typeof QUICK_RANGES)[number]["id"]
+
+/**
+ * Resolve the localized label for a supported balance-history metric.
+ */
+function getBalanceHistoryMetricLabel(
+  t: (key: string, options?: any) => string,
+  metric: DailyBalanceHistoryMetric,
+) {
+  switch (metric) {
+    case "balance":
+      return t("balanceHistory:metrics.balance")
+    case "income":
+      return t("balanceHistory:metrics.income")
+    case "outcome":
+      return t("balanceHistory:metrics.outcome")
+    case "net":
+      return t("balanceHistory:metrics.net")
+  }
+}
+
+/**
+ * Resolve the localized label for a supported trend scope.
+ */
+function getBalanceHistoryTrendScopeLabel(
+  t: (key: string, options?: any) => string,
+  scope: BalanceHistoryTrendSeriesScope,
+) {
+  switch (scope) {
+    case "accounts":
+      return t("balanceHistory:trend.scopes.accounts")
+    case "total":
+      return t("balanceHistory:trend.scopes.total")
+  }
+}
+
+/**
+ * Resolve the localized label for a predefined quick date range.
+ */
+function getBalanceHistoryQuickRangeLabel(
+  t: (key: string, options?: any) => string,
+  rangeId: BalanceHistoryQuickRangeId,
+) {
+  switch (rangeId) {
+    case "7d":
+      return t("balanceHistory:filters.quickRanges.7d")
+    case "30d":
+      return t("balanceHistory:filters.quickRanges.30d")
+    case "90d":
+      return t("balanceHistory:filters.quickRanges.90d")
+    case "180d":
+      return t("balanceHistory:filters.quickRanges.180d")
+    case "365d":
+      return t("balanceHistory:filters.quickRanges.365d")
+  }
+}
 
 /**
  * Clamp a retention-days value coming from user preferences or input.
@@ -583,7 +639,7 @@ export default function BalanceHistory() {
   ])
 
   const trendOption = useMemo(() => {
-    const metricLabel = t(`metrics.${trendMetric}`)
+    const metricLabel = getBalanceHistoryMetricLabel(t, trendMetric)
     return buildMultiSeriesTrendOption({
       dayKeys: perAccountSeries.dayKeys,
       series: trendSeries,
@@ -676,7 +732,7 @@ export default function BalanceHistory() {
   const breakdownOption = useMemo(() => {
     if (!breakdownData.values.length) return null
 
-    const valueLabel = `${t(`metrics.${breakdownMetric}`)} (${currencySymbol})`
+    const valueLabel = `${getBalanceHistoryMetricLabel(t, breakdownMetric)} (${currencySymbol})`
 
     return breakdownChartType === "pie"
       ? buildAccountBreakdownPieOption({
@@ -1009,7 +1065,7 @@ export default function BalanceHistory() {
 
               <div className="flex flex-wrap gap-2">
                 {QUICK_RANGES.map((preset) => {
-                  const label = t(`filters.quickRanges.${preset.id}`)
+                  const label = getBalanceHistoryQuickRangeLabel(t, preset.id)
                   return (
                     <Button
                       key={preset.id}
@@ -1157,7 +1213,10 @@ export default function BalanceHistory() {
                             >
                               <span className="min-w-0 truncate">
                                 {t("breakdown.title")}:{" "}
-                                {t(`metrics.${breakdownMetric}`)}
+                                {getBalanceHistoryMetricLabel(
+                                  t,
+                                  breakdownMetric,
+                                )}
                               </span>
                               <ChevronDown className="h-4 w-4 shrink-0 opacity-70" />
                             </button>
@@ -1274,7 +1333,7 @@ export default function BalanceHistory() {
                               >
                                 <span className="min-w-0 truncate">
                                   {t("trend.title")}:{" "}
-                                  {t(`metrics.${trendMetric}`)}
+                                  {getBalanceHistoryMetricLabel(t, trendMetric)}
                                 </span>
                                 <ChevronDown className="h-4 w-4 shrink-0 opacity-70" />
                               </button>
@@ -1312,7 +1371,10 @@ export default function BalanceHistory() {
                               >
                                 <span className="min-w-0 truncate">
                                   {t("trend.controls.scope")}:{" "}
-                                  {t(`trend.scopes.${trendScope}`)}
+                                  {getBalanceHistoryTrendScopeLabel(
+                                    t,
+                                    trendScope,
+                                  )}
                                 </span>
                                 <ChevronDown className="h-4 w-4 shrink-0 opacity-70" />
                               </button>
@@ -1394,7 +1456,7 @@ export default function BalanceHistory() {
                     ) : (
                       <div className="dark:text-dark-text-secondary text-sm text-gray-600">
                         {t("trend.emptyMetric", {
-                          metric: t(`metrics.${trendMetric}`),
+                          metric: getBalanceHistoryMetricLabel(t, trendMetric),
                         })}
                       </div>
                     )}
