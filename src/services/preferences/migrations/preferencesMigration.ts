@@ -23,6 +23,7 @@ import {
   resolveWebdavSyncDataSelection,
 } from "~/types/webdav"
 import { createLogger } from "~/utils/core/logger"
+import { normalizeAppLanguage } from "~/utils/i18n/language"
 
 import type { UserPreferences } from "../userPreferences"
 import { normalizeSharedPreferencesMetadata } from "../webdavSharedPreferences"
@@ -31,7 +32,7 @@ import { migrateSortingConfig } from "./sortingConfigMigration"
 const logger = createLogger("PreferencesMigration")
 
 // Current version of the preferences schema
-export const CURRENT_PREFERENCES_VERSION = 16
+export const CURRENT_PREFERENCES_VERSION = 17
 
 /**
  * Migration function type
@@ -373,6 +374,19 @@ const migrations: Record<number, PreferencesMigrationFunction> = {
     return {
       ...normalizeSharedPreferencesMetadata(prefs),
       preferencesVersion: 16,
+    }
+  },
+
+  // Version 16 -> 17: Canonicalize stored locale naming to zh-CN / en
+  17: (prefs: UserPreferences): UserPreferences => {
+    logger.debug(
+      "Migrating preferences from v16 to v17 (canonicalize locale naming)",
+    )
+
+    return {
+      ...prefs,
+      language: normalizeAppLanguage(prefs.language) ?? prefs.language,
+      preferencesVersion: 17,
     }
   },
 }

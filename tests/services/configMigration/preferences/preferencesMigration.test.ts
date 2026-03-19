@@ -445,6 +445,16 @@ describe("preferencesMigration", () => {
       expect(result.language).toBe("zh-CN")
     })
 
+    it("canonicalizes legacy zh_CN language values during migration", () => {
+      const prefs = createV0Preferences({
+        language: "zh_CN",
+      })
+
+      const result = migratePreferences(prefs)
+
+      expect(result.language).toBe("zh-CN")
+    })
+
     it("handles partial migrations correctly", () => {
       // Create a v2 preferences with only some of the legacy fields
       // Manually build prefs without relying on helper to avoid pre-populated structures
