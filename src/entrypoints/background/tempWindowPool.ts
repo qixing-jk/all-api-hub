@@ -342,6 +342,73 @@ export function setupTempWindowListeners() {
 }
 
 /**
+ * Best-effort cleanup for tracked temp contexts when the background is about to
+ * suspend. This supplements the normal delayed release flow rather than
+ * replacing it.
+ */
+export async function cleanupTempContextsOnSuspend() {
+  const trackedContexts = Array.from(tempContextById.values())
+  const initialTrackedRequestCount = tempRequestContextMap.size
+
+  if (trackedContexts.length === 0) {
+    const clearedRequestMappings = clearStaleTempRequestMappings()
+    logTempWindow("suspendCleanupNoTrackedContexts", {
+      trackedContextCount: 0,
+      trackedRequestCount: initialTrackedRequestCount,
+      clearedRequestMappings,
+    })
+    return
+  }
+
+  const contextsByOrigin = new Map<string, TempContext[]>()
+  for (const context of trackedContexts) {
+    const pool = contextsByOrigin.get(context.origin) ?? []
+    pool.push(context)
+    contextsByOrigin.set(context.origin, pool)
+  }
+
+  logTempWindow("suspendCleanupStart", {
+    trackedContextCount: trackedContexts.length,
+    trackedRequestCount: initialTrackedRequestCount,
+    originCount: contextsByOrigin.size,
+  })
+
+  const results = await Promise.all(
+    Array.from(contextsByOrigin.entries()).map(async ([origin, pool]) => {
+      try {
+        await withOriginLock(origin, async () => {
+          destroyingOrigins.add(origin)
+          try {
+            await destroyOriginPool(origin, pool, "runtimeSuspend")
+          } finally {
+            destroyingOrigins.delete(origin)
+          }
+        })
+        return { origin, poolSize: pool.length, ok: true }
+      } catch (error) {
+        logTempWindow("suspendCleanupOriginError", {
+          origin,
+          poolSize: pool.length,
+          error: getErrorMessage(error),
+        })
+        return { origin, poolSize: pool.length, ok: false }
+      }
+    }),
+  )
+
+  const clearedRequestMappings = clearStaleTempRequestMappings()
+  logTempWindow("suspendCleanupComplete", {
+    trackedContextCount: trackedContexts.length,
+    trackedRequestCount: initialTrackedRequestCount,
+    cleanedOriginCount: results.filter((result) => result.ok).length,
+    failedOriginCount: results.filter((result) => !result.ok).length,
+    remainingContextCount: tempContextById.size,
+    remainingRequestCount: tempRequestContextMap.size,
+    clearedRequestMappings,
+  })
+}
+
+/**
  * 处理临时窗口关闭事件，移除 tempWindows 记录并销毁对应的 window 上下文。
  */
 function handleTempWindowRemoved(windowId: number) {
@@ -1556,6 +1623,23 @@ async function destroyContext(
       logger.warn("Failed to remove temp context", error)
     }
   }
+}
+
+/**
+ * Remove request-to-context entries that still point at contexts already
+ * destroyed from the active in-memory pool.
+ */
+function clearStaleTempRequestMappings() {
+  let cleared = 0
+
+  for (const [requestId, context] of tempRequestContextMap.entries()) {
+    if (!tempContextById.has(context.id)) {
+      tempRequestContextMap.delete(requestId)
+      cleared += 1
+    }
+  }
+
+  return cleared
 }
 
 /**

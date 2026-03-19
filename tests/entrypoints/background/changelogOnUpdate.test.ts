@@ -15,6 +15,7 @@ const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0))
 describe("background onInstalled changelog opening", () => {
   let onInstalledListener: InstalledListener | undefined
   let onStartupListener: (() => void | Promise<void>) | undefined
+  let onSuspendListener: (() => void | Promise<void>) | undefined
 
   let createTabMock: ReturnType<typeof vi.fn>
   let getDocsChangelogUrlMock: ReturnType<typeof vi.fn>
@@ -25,6 +26,7 @@ describe("background onInstalled changelog opening", () => {
   beforeEach(() => {
     onInstalledListener = undefined
     onStartupListener = undefined
+    onSuspendListener = undefined
 
     createTabMock = vi.fn().mockResolvedValue(undefined)
     getDocsChangelogUrlMock = vi.fn((version?: string) =>
@@ -56,6 +58,9 @@ describe("background onInstalled changelog opening", () => {
         onStartup: vi.fn((listener: () => void | Promise<void>) => {
           onStartupListener = listener
         }),
+        onSuspend: vi.fn((listener: () => void | Promise<void>) => {
+          onSuspendListener = listener
+        }),
       }
     })
 
@@ -79,6 +84,7 @@ describe("background onInstalled changelog opening", () => {
       setupRuntimeMessageListeners: vi.fn(),
     }))
     vi.doMock("~/entrypoints/background/tempWindowPool", () => ({
+      cleanupTempContextsOnSuspend: vi.fn().mockResolvedValue(undefined),
       setupTempWindowListeners: vi.fn(),
     }))
     vi.doMock("~/entrypoints/background/contextMenus", () => ({
@@ -158,6 +164,7 @@ describe("background onInstalled changelog opening", () => {
 
     expect(onInstalledListener).toBeTypeOf("function")
     expect(onStartupListener).toBeTypeOf("function")
+    expect(onSuspendListener).toBeTypeOf("function")
     await onInstalledListener?.({ reason: "update" })
     await flushPromises()
 
@@ -178,6 +185,7 @@ describe("background onInstalled changelog opening", () => {
 
     expect(onInstalledListener).toBeTypeOf("function")
     expect(onStartupListener).toBeTypeOf("function")
+    expect(onSuspendListener).toBeTypeOf("function")
     await onInstalledListener?.({ reason: "update" })
     await flushPromises()
 

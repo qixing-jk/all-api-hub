@@ -1,6 +1,9 @@
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { setupRuntimeMessageListeners } from "~/entrypoints/background/runtimeMessages"
-import { setupTempWindowListeners } from "~/entrypoints/background/tempWindowPool"
+import {
+  cleanupTempContextsOnSuspend,
+  setupTempWindowListeners,
+} from "~/entrypoints/background/tempWindowPool"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { migrateAccountsConfig } from "~/services/accounts/migrations/accountDataMigration"
 import {
@@ -14,7 +17,12 @@ import {
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { tagStorage } from "~/services/tags/tagStorage"
 import { changelogOnUpdateState } from "~/services/updates/changelogOnUpdateState"
-import { getManifest, onInstalled, onStartup } from "~/utils/browser/browserApi"
+import {
+  getManifest,
+  onInstalled,
+  onStartup,
+  onSuspend,
+} from "~/utils/browser/browserApi"
 import { createLogger } from "~/utils/core/logger"
 import { openOrFocusOptionsMenuItem } from "~/utils/navigation"
 
@@ -143,6 +151,14 @@ export default defineBackground(() => {
     } catch (error) {
       logger.error("Failed to initialize services on startup", error)
     }
+  })
+
+  onSuspend(() => {
+    // runtime.onSuspend cannot rely on awaited async work, so start the temp-context
+    // sweep best-effort without changing the normal delayed request-release flow.
+    void cleanupTempContextsOnSuspend().catch((error) => {
+      logger.warn("Failed to cleanup temp contexts on suspend", error)
+    })
   })
 
   main()

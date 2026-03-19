@@ -8,6 +8,7 @@ import {
   getAllAlarms,
   hasAlarmsAPI,
   onAlarm,
+  onSuspend,
   sendRuntimeActionMessage,
   sendTabMessageWithRetry,
 } from "~/utils/browser/browserApi"
@@ -163,6 +164,51 @@ describe("browserApi alarms helpers", () => {
   afterAll(() => {
     ;(globalThis as any).browser = originalBrowser
     ;(globalThis as any).chrome = originalChrome
+  })
+})
+
+describe("browserApi onSuspend", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+    ;(globalThis as any).browser = undefined
+  })
+
+  afterAll(() => {
+    ;(globalThis as any).browser = originalBrowser
+    ;(globalThis as any).chrome = originalChrome
+  })
+
+  it("returns a no-op cleanup when runtime.onSuspend is unavailable", () => {
+    ;(globalThis as any).browser = {
+      runtime: {},
+    }
+
+    const cleanup = onSuspend(vi.fn())
+
+    expect(typeof cleanup).toBe("function")
+    cleanup()
+  })
+
+  it("registers and unregisters runtime.onSuspend when supported", () => {
+    const addListenerMock = vi.fn()
+    const removeListenerMock = vi.fn()
+    const callback = vi.fn()
+
+    ;(globalThis as any).browser = {
+      runtime: {
+        onSuspend: {
+          addListener: addListenerMock,
+          removeListener: removeListenerMock,
+        },
+      },
+    }
+
+    const cleanup = onSuspend(callback)
+
+    expect(addListenerMock).toHaveBeenCalledWith(callback)
+
+    cleanup()
+    expect(removeListenerMock).toHaveBeenCalledWith(callback)
   })
 })
 

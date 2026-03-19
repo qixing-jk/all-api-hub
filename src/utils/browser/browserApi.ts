@@ -484,6 +484,33 @@ export function onInstalled(
   }
 }
 
+/**
+ * 监听扩展即将挂起事件（如果支持）
+ * 返回清理函数
+ * @param callback 扩展即将挂起时调用的处理函数。
+ */
+export function onSuspend(callback: () => void | Promise<void>): () => void {
+  const onSuspendEvent = (globalThis as any).browser?.runtime?.onSuspend as
+    | {
+        addListener?: (listener: typeof callback) => void
+        removeListener?: (listener: typeof callback) => void
+      }
+    | undefined
+
+  if (
+    typeof onSuspendEvent?.addListener !== "function" ||
+    typeof onSuspendEvent?.removeListener !== "function"
+  ) {
+    logger.warn("runtime.onSuspend not supported")
+    return () => {}
+  }
+
+  onSuspendEvent.addListener(callback)
+  return () => {
+    onSuspendEvent.removeListener?.(callback)
+  }
+}
+
 export type SidePanelSupport =
   | { supported: true; kind: "firefox-sidebar-action" }
   | { supported: true; kind: "chromium-side-panel" }
