@@ -5,11 +5,11 @@ import type { ReactNode } from "react"
 import { I18nextProvider, initReactI18next } from "react-i18next"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import type { SupportedUiLanguage } from "~/constants/i18n"
 import { PermissionOnboardingDialog } from "~/features/BasicSettings/components/dialogs/PermissionOnboardingDialog"
 import GeneralTab from "~/features/BasicSettings/components/tabs/General/GeneralTab"
 import enSettings from "~/locales/en/settings.json"
-import zhCnSettings from "~/locales/zh_CN/settings.json"
-import type { SupportedUiLanguage } from "~/utils/i18n/language"
+import zhCnSettings from "~/locales/zh-CN/settings.json"
 
 const permissionMocks = vi.hoisted(() => ({
   ensurePermissions: vi.fn(),
@@ -100,7 +100,7 @@ vi.mock("~/utils/core/toastHelpers", () => ({
 
 const SETTINGS_RESOURCES = {
   en: { settings: enSettings },
-  zh_CN: { settings: zhCnSettings },
+  "zh-CN": { settings: zhCnSettings },
 } as const
 
 /**
@@ -194,8 +194,8 @@ describe("PermissionOnboardingDialog language selection", () => {
     expect(
       screen.getByRole("button", { name: "授予推荐权限" }),
     ).toBeInTheDocument()
-    expect(persistedLanguage).toBe("zh_CN")
-    expect(preferenceMocks.setLanguage).toHaveBeenCalledWith("zh_CN")
+    expect(persistedLanguage).toBe("zh-CN")
+    expect(preferenceMocks.setLanguage).toHaveBeenCalledWith("zh-CN")
   })
 
   it("persists an explicitly confirmed language even when that language is already active", async () => {
@@ -232,7 +232,7 @@ describe("PermissionOnboardingDialog language selection", () => {
       }),
     )
 
-    expect(persistedLanguage).toBe("zh_CN")
+    expect(persistedLanguage).toBe("zh-CN")
 
     unmount()
 

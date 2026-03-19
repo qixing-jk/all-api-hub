@@ -3,13 +3,13 @@ import { useTranslation } from "react-i18next"
 
 import { ToggleButton } from "~/components/ui"
 import { DEFAULT_LANG } from "~/constants"
+import type { SupportedUiLanguage } from "~/constants"
 import { ANIMATIONS, COLORS } from "~/constants/designTokens"
 import { cn } from "~/lib/utils"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import {
   normalizeAppLanguage,
   UI_LANGUAGE_OPTIONS,
-  type SupportedUiLanguage,
 } from "~/utils/i18n/language"
 
 interface LanguageSwitcherProps {
@@ -29,7 +29,7 @@ function getLanguageOptionLabel(
     case "en":
       return t("settings:appearanceLanguage.switcher.options.en.label")
     case DEFAULT_LANG:
-      return t("settings:appearanceLanguage.switcher.options.zh_CN.label")
+      return t("settings:appearanceLanguage.switcher.options.zh-CN.label")
   }
 }
 
@@ -44,7 +44,7 @@ function getLanguageOptionName(
     case "en":
       return t("settings:appearanceLanguage.switcher.options.en.name")
     case DEFAULT_LANG:
-      return t("settings:appearanceLanguage.switcher.options.zh_CN.name")
+      return t("settings:appearanceLanguage.switcher.options.zh-CN.name")
   }
 }
 

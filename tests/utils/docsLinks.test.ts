@@ -35,7 +35,10 @@ describe("docsLinks", () => {
   it("builds locale-aware docs page urls", () => {
     expect(getDocsPageUrl("faq.html", "en")).toContain("/en/faq.html")
     expect(getDocsPageUrl("faq.html", "ja")).toContain("/ja/faq.html")
-    expect(getDocsPageUrl("faq.html", "zh_CN")).toContain("/faq.html")
+    expect(getDocsPageUrl("faq.html", "zh-CN")).toContain("/faq.html")
+    expect(getDocsPageUrl("faq.html", "zh_CN")).toBe(
+      getDocsPageUrl("faq.html", "zh-CN"),
+    )
     expect(getDocsPageUrl("faq.html", "fr-FR")).toContain("/en/faq.html")
   })
 })

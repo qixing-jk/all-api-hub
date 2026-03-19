@@ -19,12 +19,13 @@ describe("packageMeta", () => {
     it("builds locale-aware homepage urls", () => {
       expect(getHomepage("en")).toMatch(/\/en\/$/)
       expect(getHomepage("ja")).toMatch(/\/ja\/$/)
-      expect(getHomepage("zh_CN")).not.toMatch(/\/(en|ja)\/$/)
+      expect(getHomepage("zh-CN")).not.toMatch(/\/(en|ja)\/$/)
       expect(getHomepage("zh-SG")).not.toMatch(/\/(en|ja)\/$/)
       expect(getHomepage("fr-FR")).toMatch(/\/en\/$/)
-      expect(getHomepage("zh_CN")).toBe(
+      expect(getHomepage("zh-CN")).toBe(
         `${getDocsBaseUrl().replace(/\/+$/, "")}/`,
       )
+      expect(getHomepage("zh_CN")).toBe(getHomepage("zh-CN"))
     })
   })
 

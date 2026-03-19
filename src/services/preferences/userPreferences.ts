@@ -75,6 +75,7 @@ import {
 } from "~/types/webdav"
 import { deepOverride } from "~/utils"
 import { createLogger } from "~/utils/core/logger"
+import { normalizeAppLanguage } from "~/utils/i18n/language"
 
 const logger = createLogger("UserPreferences")
 
@@ -880,14 +881,16 @@ class UserPreferencesService {
    */
   async getLanguage(): Promise<string | undefined> {
     const preferences = await this.getPreferences()
-    return preferences.language
+    return normalizeAppLanguage(preferences.language) ?? preferences.language
   }
 
   /**
    * Set language preference.
    */
   async setLanguage(language: string): Promise<boolean> {
-    return this.savePreferences({ language })
+    return this.savePreferences({
+      language: normalizeAppLanguage(language) ?? language,
+    })
   }
 
   /**

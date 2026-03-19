@@ -1,8 +1,4 @@
-import { DEFAULT_LANG } from "~/constants"
-
-export const SUPPORTED_UI_LANGUAGES = ["en", DEFAULT_LANG] as const
-
-export type SupportedUiLanguage = (typeof SUPPORTED_UI_LANGUAGES)[number]
+import { DEFAULT_LANG, type SupportedUiLanguage } from "~/constants"
 
 const ENGLISH_LANG: SupportedUiLanguage = "en"
 

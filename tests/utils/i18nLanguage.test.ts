@@ -9,13 +9,13 @@ describe("i18n language helpers", () => {
   it("normalizes browser language variants to supported app locales", () => {
     expect(normalizeAppLanguage("en-US")).toBe("en")
     expect(normalizeAppLanguage("en")).toBe("en")
-    expect(normalizeAppLanguage("zh-CN")).toBe("zh_CN")
-    expect(normalizeAppLanguage("zh_CN")).toBe("zh_CN")
-    expect(normalizeAppLanguage("zh-SG")).toBe("zh_CN")
-    expect(normalizeAppLanguage("zh-Hans-SG")).toBe("zh_CN")
-    expect(normalizeAppLanguage("zh-TW")).toBe("zh_CN")
-    expect(normalizeAppLanguage("zh-HK")).toBe("zh_CN")
-    expect(normalizeAppLanguage("zh-Hant-TW")).toBe("zh_CN")
+    expect(normalizeAppLanguage("zh-CN")).toBe("zh-CN")
+    expect(normalizeAppLanguage("zh_CN")).toBe("zh-CN")
+    expect(normalizeAppLanguage("zh-SG")).toBe("zh-CN")
+    expect(normalizeAppLanguage("zh-Hans-SG")).toBe("zh-CN")
+    expect(normalizeAppLanguage("zh-TW")).toBe("zh-CN")
+    expect(normalizeAppLanguage("zh-HK")).toBe("zh-CN")
+    expect(normalizeAppLanguage("zh-Hant-TW")).toBe("zh-CN")
   })
 
   it("returns undefined for unsupported languages", () => {
@@ -33,7 +33,7 @@ describe("i18n language helpers", () => {
         userPreferenceLanguage: "zh_CN",
         detectedLanguage: "en-US",
       }),
-    ).toBe("zh_CN")
+    ).toBe("zh-CN")
   })
 
   it("keeps detected english when no explicit preference exists", () => {

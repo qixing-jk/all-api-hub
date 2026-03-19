@@ -3,17 +3,20 @@ import path from "node:path"
 import ts from "typescript"
 import { describe, expect, it } from "vitest"
 
+import {
+  SUPPORTED_UI_LANGUAGES,
+  type SupportedUiLanguage,
+} from "~/constants/i18n"
+
 const REPO_ROOT = process.cwd()
 const LOCALES_DIR = path.join(REPO_ROOT, "src", "locales")
 const SRC_DIR = path.join(REPO_ROOT, "src")
-const UI_LANGUAGES = ["en", "zh_CN"] as const
 const PLURAL_CATEGORIES_BY_LANGUAGE = Object.fromEntries(
-  UI_LANGUAGES.map((language) => [
+  SUPPORTED_UI_LANGUAGES.map((language) => [
     language,
-    new Intl.PluralRules(language.replace("_", "-")).resolvedOptions()
-      .pluralCategories,
+    new Intl.PluralRules(language).resolvedOptions().pluralCategories,
   ]),
-) as Record<(typeof UI_LANGUAGES)[number], string[]>
+) as Record<SupportedUiLanguage, string[]>
 const ALL_CARDINAL_SUFFIXES = [
   ...new Set(Object.values(PLURAL_CATEGORIES_BY_LANGUAGE).flat()),
 ].sort()
@@ -46,7 +49,7 @@ function flattenLocaleKeys(
 /**
  * Loads one language's locale bundles keyed by namespace.
  */
-async function readLocaleMap(language: (typeof UI_LANGUAGES)[number]) {
+async function readLocaleMap(language: SupportedUiLanguage) {
   const languageDir = path.join(LOCALES_DIR, language)
   const files = (await fs.readdir(languageDir))
     .filter((name) => name.endsWith(".json"))
@@ -261,7 +264,7 @@ function jsxElementUsesPluralCount(
 
 describe("i18n locale validation", () => {
   it("keeps locale namespaces and normalized key families aligned", async () => {
-    const [baseLanguage, ...otherLanguages] = UI_LANGUAGES
+    const [baseLanguage, ...otherLanguages] = SUPPORTED_UI_LANGUAGES
     const baseLocaleMap = await readLocaleMap(baseLanguage)
     const baseNamespaces = Object.keys(baseLocaleMap).sort()
 
@@ -283,12 +286,12 @@ describe("i18n locale validation", () => {
   it("resolves static translation keys referenced in src", async () => {
     const localeMapsByLanguage = Object.fromEntries(
       await Promise.all(
-        UI_LANGUAGES.map(async (language) => [
+        SUPPORTED_UI_LANGUAGES.map(async (language) => [
           language,
           await readLocaleMap(language),
         ]),
       ),
-    ) as Record<(typeof UI_LANGUAGES)[number], LocaleMap>
+    ) as Record<SupportedUiLanguage, LocaleMap>
     const sourceFiles = await listSourceFiles(SRC_DIR)
     const missingKeys: string[] = []
 
@@ -315,7 +318,7 @@ describe("i18n locale validation", () => {
         const [, namespace, localeKey] = match
 
         if (options?.usesPlural) {
-          for (const language of UI_LANGUAGES) {
+          for (const language of SUPPORTED_UI_LANGUAGES) {
             const localeKeys = localeMapsByLanguage[language][namespace]
             const pluralCategories = PLURAL_CATEGORIES_BY_LANGUAGE[language]
 
@@ -350,7 +353,7 @@ describe("i18n locale validation", () => {
           return
         }
 
-        for (const language of UI_LANGUAGES) {
+        for (const language of SUPPORTED_UI_LANGUAGES) {
           const localeKeys = localeMapsByLanguage[language][namespace]
           if (!localeKeys?.has(localeKey)) {
             missingKeys.push(
