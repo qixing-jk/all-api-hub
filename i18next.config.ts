@@ -25,7 +25,7 @@ export default defineConfig({
     secondaryLanguages: ["en"],
     indentation: 2,
     sort: true,
-    disablePlurals: true,
+    disablePlurals: false,
     removeUnusedKeys: true,
   },
 })

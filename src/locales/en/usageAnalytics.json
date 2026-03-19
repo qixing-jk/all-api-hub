@@ -204,7 +204,8 @@
       "noMessage": "—",
       "rowActions": "Row actions",
       "selectAll": "Select all accounts",
-      "selectedCount": "Selected: {{count}}",
+      "selectedCount_one": "Selected: {{count}}",
+      "selectedCount_other": "Selected: {{count}}",
       "selectRow": "Select account: {{name}}"
     }
   },

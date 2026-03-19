@@ -118,7 +118,8 @@
       "remainingQuota": "Remaining Quota",
       "retry": "Retry",
       "title": "Key List",
-      "totalKeys": "Total {{count}} keys",
+      "totalKeys_one": "Total {{count}} key",
+      "totalKeys_other": "Total {{count}} keys",
       "usedQuota": "Used Quota",
       "useInCherry": "Use in Cherry Studio"
     },
@@ -128,7 +129,8 @@
         "description": "This will delete {{deleteCount}} account(s) across {{groups}} duplicate set(s).",
         "title": "Delete duplicate accounts",
         "warningOrder": "Manual ordering will be adjusted.",
-        "warningPinned": "{{count}} pinned account(s) will be deleted."
+        "warningPinned_one": "{{count}} pinned account will be deleted.",
+        "warningPinned_other": "{{count}} pinned accounts will be deleted."
       },
       "delete": "Delete",
       "deleting": "Deleting duplicate accounts...",
@@ -157,7 +159,8 @@
         "hide": "Hide info",
         "show": "More info"
       },
-      "duplicateCount": "{{count}} accounts",
+      "duplicateCount_one": "{{count}} account",
+      "duplicateCount_other": "{{count}} accounts",
       "empty": "No duplicate accounts found.",
       "keep": "Keep",
       "manualPickHint": "You can manually choose which account to keep in each set. Manual choices override the keep strategy.",
@@ -171,7 +174,8 @@
       "strategyLabel": "Keep strategy",
       "summary": "{{groups}} duplicate set(s) · {{deleteCount}} account(s) to delete",
       "title": "Duplicate account cleanup",
-      "unscannableHint": "{{count}} account(s) could not be scanned and were skipped.",
+      "unscannableHint_one": "{{count}} account could not be scanned and was skipped.",
+      "unscannableHint_other": "{{count}} accounts could not be scanned and were skipped.",
       "userId": "User ID: {{userId}}"
     },
     "delete": {
@@ -235,7 +239,8 @@
         "loadingTokens": "Loading token list…",
         "loadModelsFailed": "Failed to load upstream models for this API key.",
         "loadTokensFailed": "Failed to load tokens for this site.",
-        "modelIdRequiredDescription": "Select or enter a model ID for all selected API keys to enable export (missing: {{count}}).",
+        "modelIdRequiredDescription_one": "Select or enter a model ID for all selected API keys to enable export (missing: {{count}}).",
+        "modelIdRequiredDescription_other": "Select or enter a model ID for all selected API keys to enable export (missing: {{count}}).",
         "modelIdRequiredTitle": "Model ID required",
         "noModelsDescription": "No upstream models were returned for this API key. Kilo Code typically requires a model ID — please enter one manually.",
         "noModelsTitle": "No models",

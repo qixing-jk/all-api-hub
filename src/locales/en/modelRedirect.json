@@ -11,13 +11,16 @@
       "selectNone": "Select none"
     },
     "confirm": {
-      "description": "This will clear model redirect maps for {{count}} channel(s). This cannot be undone.",
-      "details": "Selected channels: {{count}}",
+      "description_one": "This will clear model redirect maps for {{count}} channel. This cannot be undone.",
+      "description_other": "This will clear model redirect maps for {{count}} channels. This cannot be undone.",
+      "details_one": "Selected channel: {{count}}",
+      "details_other": "Selected channels: {{count}}",
       "title": "Clear model redirect maps?",
       "warningTitle": "Destructive action"
     },
     "messages": {
-      "allSuccess": "Cleared model redirect maps for {{count}} channel(s).",
+      "allSuccess_one": "Cleared model redirect maps for {{count}} channel.",
+      "allSuccess_other": "Cleared model redirect maps for {{count}} channels.",
       "failed": "Failed to clear model redirect maps: {{error}}",
       "nothingToClear": "Nothing to clear (selected channels are already empty).",
       "partialFailure": "Cleared {{success}}/{{total}} channel(s); {{failed}} failed.",
@@ -26,7 +29,8 @@
     "preview": {
       "channelListLabel": "Channels",
       "description": "Select which channels to clear. Unselected channels will not be changed.",
-      "mappingCount": "Mappings: {{count}}",
+      "mappingCount_one": "Mapping: {{count}}",
+      "mappingCount_other": "Mappings: {{count}}",
       "mappingEmptyInline": "Current model_mapping is empty ({}).",
       "mappingInvalid": "Current model_mapping is not valid JSON; showing raw text.",
       "mappingInvalidBadge": "Invalid JSON",

@@ -115,10 +115,12 @@
   "toasts": {
     "channelDeleted": "Channel deleted",
     "channelSaved": "Channel saved",
-    "channelsDeleted": "{{count}} channels deleted",
+    "channelsDeleted_one": "{{count}} channel deleted",
+    "channelsDeleted_other": "{{count}} channels deleted",
     "channelUpdated": "Channel updated",
     "revealKeyFailed": "Failed to load the real channel key: {{error}}",
-    "someDeletesFailed": "Failed to delete {{count}} channel(s): {{error}}",
+    "someDeletesFailed_one": "Failed to delete {{count}} channel: {{error}}",
+    "someDeletesFailed_other": "Failed to delete {{count}} channels: {{error}}",
     "syncCompleted": "Model sync completed ({{success}}/{{total}})",
     "syncFailed": "Model sync failed: {{error}}"
   },

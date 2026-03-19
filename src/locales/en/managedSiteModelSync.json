@@ -36,8 +36,10 @@
       "autoSync": "Auto-sync",
       "disabled": "Disabled",
       "enabled": "Enabled",
-      "everyHours": "Every {{count}}h",
-      "everyMinutes": "Every {{count}}m",
+      "everyHours_one": "Every {{count}}h",
+      "everyHours_other": "Every {{count}}h",
+      "everyMinutes_one": "Every {{count}}m",
+      "everyMinutes_other": "Every {{count}}m",
       "lastRun": "Last run",
       "never": "Never"
     },

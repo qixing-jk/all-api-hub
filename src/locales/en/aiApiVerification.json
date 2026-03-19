@@ -50,6 +50,8 @@
       "forbidden": "Forbidden (403): access denied",
       "httpError": "HTTP error ({{status}})",
       "modelsFetched": "Fetched {{count}} models.",
+      "modelsFetched_one": "Fetched {{count}} model.",
+      "modelsFetched_other": "Fetched {{count}} models.",
       "modelsProbeUnsupportedForApiType": "Models probe is not supported for this API type.",
       "noModelAvailableToRunProbes": "No model available to run probes.",
       "noModelIdProvided": "No model id provided.",

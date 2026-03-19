@@ -2,7 +2,8 @@
   "accountSummary": {
     "incompatible": "format incompatible",
     "loadFailed": "load failed",
-    "models": "{{count}} models",
+    "models_one": "{{count}} model",
+    "models_other": "{{count}} models",
     "title": "Accounts overview"
   },
   "actions": {
@@ -13,7 +14,8 @@
   },
   "allAccounts": "All accounts",
   "allGroups": "All Groups",
-  "allProviders": "All Providers ({{count}})",
+  "allProviders_one": "All Providers ({{count}})",
+  "allProviders_other": "All Providers ({{count}})",
   "available": "Available",
   "availableGroups": "Available Groups",
   "clickSwitchGroup": "Click to switch to {{group}} group",
@@ -86,7 +88,8 @@
   "searchModels": "Search Models",
   "searchPlaceholder": "Enter model name or description...",
   "selectSource": "Select Source",
-  "showing": "Showing {{count}}",
+  "showing_one": "Showing {{count}}",
+  "showing_other": "Showing {{count}}",
   "showRatio": "Show Ratio",
   "sourceLabels": {
     "profileBadge": "Profile: {{name}} · {{host}}",
@@ -106,7 +109,8 @@
     "retryLoad": "Retry Load"
   },
   "title": "Model List",
-  "totalModels": "Total {{count}} models",
+  "totalModels_one": "Total {{count}} model",
+  "totalModels_other": "Total {{count}} models",
   "unavailable": "Unavailable",
   "userGroup": "User Group"
 }

@@ -171,7 +171,7 @@
       "strategyLabel": "保留策略",
       "summary": "{{groups}} 组重复 · 待删除 {{deleteCount}} 个账号",
       "title": "重复账号清理",
-      "unscannableHint": "{{count}} 个账号无法扫描，已跳过。",
+      "unscannableHint_other": "{{count}} 个账号无法扫描，已跳过。",
       "userId": "用户 ID：{{userId}}"
     },
     "delete": {

@@ -60,7 +60,8 @@
     "tagsRenameCancel": "Cancel",
     "tagsRenameSave": "Save",
     "tagsSearchPlaceholder": "Search tags...",
-    "tagsSelectedCount": "{{count}} tag(s) selected",
+    "tagsSelectedCount_one": "{{count}} tag selected",
+    "tagsSelectedCount_other": "{{count}} tags selected",
     "toggleAccessTokenVisibility": "Toggle Access Token Visibility",
     "toggleRefreshTokenVisibility": "Toggle Refresh Token Visibility",
     "userId": "User ID",
@@ -133,7 +134,8 @@
       "actions": {
         "continue": "Continue"
       },
-      "description": "You already have {{count}} account(s) for {{siteUrl}}. Adding another may create duplicates. Do you want to continue?",
+      "description_one": "You already have {{count}} account for {{siteUrl}}. Adding another may create duplicates. Do you want to continue?",
+      "description_other": "You already have {{count}} accounts for {{siteUrl}}. Adding another may create duplicates. Do you want to continue?",
       "descriptionExact": "An account for {{siteUrl}} with user ID {{userId}} already exists ({{username}}). Adding another may create duplicates. Do you want to continue?",
       "title": "Duplicate account",
       "warningTitle": "This site already has accounts"

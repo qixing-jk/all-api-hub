@@ -46,11 +46,13 @@
   "addFirstAccount": "Add your first account",
   "currentLoginAdded": "⚠️Current login already added for {{siteName}}",
   "currentSiteAdded": "⚠️Saved accounts exist for {{siteName}}",
-  "currentSiteAddedCount": "⚠️Saved accounts exist for this site ({{count}})",
+  "currentSiteAddedCount_one": "⚠️Saved account exists for this site ({{count}})",
+  "currentSiteAddedCount_other": "⚠️Saved accounts exist for this site ({{count}})",
   "description": "Manage all AI redistribution stations with one click",
   "emptyState": "No accounts yet",
   "filter": {
-    "summary": "{{count}} account(s)",
+    "summary_one": "{{count}} account",
+    "summary_other": "{{count}} accounts",
     "tagsAllLabel": "All"
   },
   "filteredTotals": {

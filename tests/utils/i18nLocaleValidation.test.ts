@@ -7,6 +7,16 @@ const REPO_ROOT = process.cwd()
 const LOCALES_DIR = path.join(REPO_ROOT, "src", "locales")
 const SRC_DIR = path.join(REPO_ROOT, "src")
 const UI_LANGUAGES = ["en", "zh_CN"] as const
+const PLURAL_CATEGORIES_BY_LANGUAGE = Object.fromEntries(
+  UI_LANGUAGES.map((language) => [
+    language,
+    new Intl.PluralRules(language.replace("_", "-")).resolvedOptions()
+      .pluralCategories,
+  ]),
+) as Record<(typeof UI_LANGUAGES)[number], string[]>
+const ALL_CARDINAL_SUFFIXES = [
+  ...new Set(Object.values(PLURAL_CATEGORIES_BY_LANGUAGE).flat()),
+].sort()
 
 type LocaleMap = Record<string, Set<string>>
 
@@ -52,6 +62,28 @@ async function readLocaleMap(language: (typeof UI_LANGUAGES)[number]) {
   }
 
   return localeMap
+}
+
+/**
+ * Normalizes locale keys for cross-language comparison by collapsing plural
+ * variants (e.g. `items_one`, `items_other`) back to their base key.
+ */
+function normalizeLocaleKey(key: string) {
+  for (const suffix of ALL_CARDINAL_SUFFIXES) {
+    const token = `_${suffix}`
+    if (key.endsWith(token)) {
+      return key.slice(0, -token.length)
+    }
+  }
+
+  return key
+}
+
+/**
+ * Converts a locale key set into normalized base-key families.
+ */
+function normalizeLocaleKeySet(keys: Set<string>) {
+  return [...new Set([...keys].map(normalizeLocaleKey))].sort()
 }
 
 /**
@@ -113,6 +145,46 @@ function readNamespaceOption(node: ts.Expression | undefined) {
 }
 
 /**
+ * Returns true when an object literal contains a specific property name.
+ */
+function objectLiteralHasProperty(
+  node: ts.ObjectLiteralExpression,
+  propertyName: string,
+) {
+  for (const property of node.properties) {
+    if (ts.isShorthandPropertyAssignment(property)) {
+      if (property.name.text === propertyName) {
+        return true
+      }
+      continue
+    }
+
+    if (!ts.isPropertyAssignment(property)) continue
+
+    const name =
+      (ts.isIdentifier(property.name) || ts.isStringLiteral(property.name)) &&
+      property.name.text
+
+    if (name === propertyName) {
+      return true
+    }
+  }
+
+  return false
+}
+
+/**
+ * Detects whether a translation options object enables cardinal plurals.
+ */
+function hasCountOption(node: ts.Expression | undefined) {
+  return Boolean(
+    node &&
+      ts.isObjectLiteralExpression(node) &&
+      objectLiteralHasProperty(node, "count"),
+  )
+}
+
+/**
  * Resolves the default namespace list passed to `useTranslation(...)`.
  */
 function readUseTranslationNamespaces(call: ts.CallExpression) {
@@ -155,8 +227,40 @@ function getRelativePath(filePath: string) {
   return path.relative(REPO_ROOT, filePath).replaceAll("\\", "/")
 }
 
+/**
+ * Detects whether a Trans component passes `count` for plural resolution.
+ */
+function jsxElementUsesPluralCount(
+  node: ts.JsxOpeningElement | ts.JsxSelfClosingElement,
+) {
+  for (const property of node.attributes.properties) {
+    if (!ts.isJsxAttribute(property) || !ts.isIdentifier(property.name)) {
+      continue
+    }
+
+    if (property.name.text === "count") {
+      return true
+    }
+
+    if (property.name.text !== "values") {
+      continue
+    }
+
+    const expression =
+      property.initializer && ts.isJsxExpression(property.initializer)
+        ? property.initializer.expression
+        : undefined
+
+    if (expression && ts.isObjectLiteralExpression(expression)) {
+      return objectLiteralHasProperty(expression, "count")
+    }
+  }
+
+  return false
+}
+
 describe("i18n locale validation", () => {
-  it("keeps locale namespaces and key sets aligned", async () => {
+  it("keeps locale namespaces and normalized key families aligned", async () => {
     const [baseLanguage, ...otherLanguages] = UI_LANGUAGES
     const baseLocaleMap = await readLocaleMap(baseLanguage)
     const baseNamespaces = Object.keys(baseLocaleMap).sort()
@@ -169,15 +273,22 @@ describe("i18n locale validation", () => {
 
       for (const namespace of baseNamespaces) {
         expect(
-          [...localeMap[namespace]].sort(),
+          normalizeLocaleKeySet(localeMap[namespace]),
           `${language}:${namespace} keys`,
-        ).toEqual([...baseLocaleMap[namespace]].sort())
+        ).toEqual(normalizeLocaleKeySet(baseLocaleMap[namespace]))
       }
     }
   })
 
   it("resolves static translation keys referenced in src", async () => {
-    const localeMap = await readLocaleMap("zh_CN")
+    const localeMapsByLanguage = Object.fromEntries(
+      await Promise.all(
+        UI_LANGUAGES.map(async (language) => [
+          language,
+          await readLocaleMap(language),
+        ]),
+      ),
+    ) as Record<(typeof UI_LANGUAGES)[number], LocaleMap>
     const sourceFiles = await listSourceFiles(SRC_DIR)
     const missingKeys: string[] = []
 
@@ -193,15 +304,59 @@ describe("i18n locale validation", () => {
       const translationBindings = new Map<string, string[] | null>()
       const transComponentBindings = new Set<string>()
 
-      const verifyKey = (key: string, line: number) => {
+      const verifyKey = (
+        key: string,
+        line: number,
+        options?: { usesPlural?: boolean },
+      ) => {
         const match = key.match(/^([^:]+):(.+)$/)
         if (!match) return
 
         const [, namespace, localeKey] = match
-        const localeKeys = localeMap[namespace]
 
-        if (!localeKeys?.has(localeKey)) {
-          missingKeys.push(`${getRelativePath(file)}:${line} ${key}`)
+        if (options?.usesPlural) {
+          for (const language of UI_LANGUAGES) {
+            const localeKeys = localeMapsByLanguage[language][namespace]
+            const pluralCategories = PLURAL_CATEGORIES_BY_LANGUAGE[language]
+
+            if (
+              pluralCategories.length === 1 &&
+              pluralCategories[0] === "other"
+            ) {
+              if (
+                !localeKeys?.has(localeKey) &&
+                !localeKeys?.has(`${localeKey}_other`)
+              ) {
+                missingKeys.push(
+                  `${getRelativePath(file)}:${line} ${language} ${key} (${localeKey} or ${localeKey}_other)`,
+                )
+              }
+              continue
+            }
+
+            const missingPluralKeys = pluralCategories.filter(
+              (suffix) => !localeKeys?.has(`${localeKey}_${suffix}`),
+            )
+
+            if (missingPluralKeys.length > 0) {
+              missingKeys.push(
+                `${getRelativePath(file)}:${line} ${language} ${key} (${missingPluralKeys
+                  .map((suffix) => `${localeKey}_${suffix}`)
+                  .join(", ")})`,
+              )
+            }
+          }
+
+          return
+        }
+
+        for (const language of UI_LANGUAGES) {
+          const localeKeys = localeMapsByLanguage[language][namespace]
+          if (!localeKeys?.has(localeKey)) {
+            missingKeys.push(
+              `${getRelativePath(file)}:${line} ${language} ${key}`,
+            )
+          }
         }
       }
 
@@ -287,7 +442,9 @@ describe("i18n locale validation", () => {
               const line =
                 sourceFile.getLineAndCharacterOfPosition(node.getStart()).line +
                 1
-              verifyKey(normalizedKey, line)
+              verifyKey(normalizedKey, line, {
+                usesPlural: hasCountOption(secondArg),
+              })
             }
           }
         }
@@ -299,6 +456,8 @@ describe("i18n locale validation", () => {
             ts.isIdentifier(tagName) &&
             transComponentBindings.has(tagName.text)
           ) {
+            const usesPlural = jsxElementUsesPluralCount(node)
+
             for (const property of node.attributes.properties) {
               if (
                 ts.isJsxAttribute(property) &&
@@ -310,7 +469,7 @@ describe("i18n locale validation", () => {
                 const line =
                   sourceFile.getLineAndCharacterOfPosition(property.getStart())
                     .line + 1
-                verifyKey(property.initializer.text, line)
+                verifyKey(property.initializer.text, line, { usesPlural })
               }
             }
           }

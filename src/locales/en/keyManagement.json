@@ -1,6 +1,7 @@
 {
   "accountSummary": {
-    "keys": "{{count}} keys",
+    "keys_one": "{{count}} key",
+    "keys_other": "{{count}} keys",
     "loadFailed": "Load failed",
     "title": "Accounts overview"
   },
@@ -24,8 +25,10 @@
     "useInCherry": "Use in Cherry Studio"
   },
   "allAccounts": "All accounts",
-  "allAccountsFailed": "{{count}} failed",
-  "allAccountsLoading": "{{count}} loading",
+  "allAccountsFailed_one": "{{count}} failed",
+  "allAccountsFailed_other": "{{count}} failed",
+  "allAccountsLoading_one": "{{count}} loading",
+  "allAccountsLoading_other": "{{count}} loading",
   "allAccountsProgress": "{{loaded}}/{{total}} accounts loaded",
   "createFirstKey": "Create first key",
   "description": "This page displays API key information for all accounts, including usage and expiration time. You can create new keys for specific accounts by clicking the 'Add Key' button in the upper right corner or the '+' button next to each key item. Please keep your API keys safe and avoid leaking them to others",
@@ -50,7 +53,8 @@
     "ipPlaceholder": "Leave empty for no limit, separate multiple IPs with commas",
     "loadDataFailed": "Failed to load data, please try again later",
     "modelLimits": "Model Limits",
-    "modelSelectHint": "{{count}} models selected",
+    "modelSelectHint_one": "{{count}} model selected",
+    "modelSelectHint_other": "{{count}} models selected",
     "nameRequired": "Key name cannot be empty",
     "quotaPlaceholder": "Please enter quota amount (USD)",
     "quotaRate": "1 USD = {{rate}} quota points",
@@ -68,7 +72,8 @@
     "warningText": "Please keep API keys safe and avoid leaking",
     "warningTitle": "Notes"
   },
-  "enabledCount": "Enabled {{count}}",
+  "enabledCount_one": "Enabled {{count}}",
+  "enabledCount_other": "Enabled {{count}}",
   "keyDetails": {
     "createTime": "Create Time:",
     "expireTime": "Expire Time:",
@@ -131,7 +136,8 @@
       "url": {
         "matched": "URL matched",
         "noMatch": "URL not found",
-        "tooltipMatched": "Found {{count}} candidate channel(s) under the same normalized URL bucket. Example candidate: {{channelName}}.",
+        "tooltipMatched_one": "Found {{count}} candidate channel under the same normalized URL bucket. Example candidate: {{channelName}}.",
+        "tooltipMatched_other": "Found {{count}} candidate channels under the same normalized URL bucket. Example candidate: {{channelName}}.",
         "tooltipNoMatch": "No channel was found under the same normalized URL bucket."
       }
     }
@@ -185,7 +191,9 @@
   },
   "searchPlaceholder": "Search key name...",
   "selectAccount": "Select Account",
-  "showingCount": "Showing {{count}}",
+  "showingCount_one": "Showing {{count}}",
+  "showingCount_other": "Showing {{count}}",
   "title": "Key Management",
-  "totalKeys": "Total {{count}} keys"
+  "totalKeys_one": "Total {{count}} key",
+  "totalKeys_other": "Total {{count}} keys"
 }
