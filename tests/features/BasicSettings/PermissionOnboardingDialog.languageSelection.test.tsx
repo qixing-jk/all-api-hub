@@ -170,21 +170,17 @@ describe("PermissionOnboardingDialog language selection", () => {
     ).toBeInTheDocument()
     expect(screen.getByText("Choose your language")).toBeInTheDocument()
 
-    const selectorGroup = screen.getByRole("group", {
-      name: "Interface language selector",
+    const selector = screen.getByRole("combobox", {
+      name: "Current interface language: English",
     })
-    const selectorButtons = within(selectorGroup).getAllByRole("button")
 
-    expect(selectorButtons).toHaveLength(2)
-    expect(
-      within(selectorGroup).getByRole("button", {
-        name: "Current interface language: English",
-      }),
-    ).toHaveAttribute("aria-pressed", "true")
+    expect(selector).toBeInTheDocument()
+    expect(selector).toHaveTextContent("English")
 
+    await user.click(selector)
     await user.click(
-      within(selectorGroup).getByRole("button", {
-        name: "Switch interface language to Chinese",
+      await screen.findByRole("option", {
+        name: "Chinese",
       }),
     )
 
@@ -205,8 +201,13 @@ describe("PermissionOnboardingDialog language selection", () => {
     renderWithI18n(<PermissionOnboardingDialog open onClose={vi.fn()} />, i18n)
 
     await user.click(
-      await screen.findByRole("button", {
+      await screen.findByRole("combobox", {
         name: "Current interface language: English",
+      }),
+    )
+    await user.click(
+      await screen.findByRole("option", {
+        name: "English",
       }),
     )
 
@@ -227,8 +228,13 @@ describe("PermissionOnboardingDialog language selection", () => {
     )
 
     await user.click(
-      await screen.findByRole("button", {
-        name: "Switch interface language to Chinese",
+      await screen.findByRole("combobox", {
+        name: "Current interface language: English",
+      }),
+    )
+    await user.click(
+      await screen.findByRole("option", {
+        name: "Chinese",
       }),
     )
 

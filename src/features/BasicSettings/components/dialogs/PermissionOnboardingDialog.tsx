@@ -246,8 +246,10 @@ export function PermissionOnboardingDialog({
           </CardHeader>
           <CardContent padding="sm" spacing="sm" className="space-y-3">
             <LanguageSwitcher
+              variant="select"
+              compact
               showIcon={false}
-              className="w-full justify-between sm:w-auto sm:justify-start"
+              className="w-full sm:w-40"
             />
           </CardContent>
         </Card>

@@ -1,7 +1,15 @@
 import { Languages } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
-import { IconButton, ToggleButton } from "~/components/ui"
+import {
+  IconButton,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  ToggleButton,
+} from "~/components/ui"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,7 +31,7 @@ interface LanguageSwitcherProps {
   className?: string
   compact?: boolean
   showIcon?: boolean
-  variant?: "inline" | "icon-dropdown"
+  variant?: "inline" | "icon-dropdown" | "select"
 }
 
 /**
@@ -69,6 +77,12 @@ export function LanguageSwitcher({
   const activeLanguage =
     normalizeAppLanguage(i18n.resolvedLanguage || i18n.language) ?? DEFAULT_LANG
   const activeLanguageName = getLanguageOptionName(t, activeLanguage)
+  const currentLanguageLabel = t(
+    "appearanceLanguage.switcher.currentLanguage",
+    {
+      language: activeLanguageName,
+    },
+  )
 
   const handleLanguageChange = async (language: SupportedUiLanguage) => {
     if (language !== activeLanguage) {
@@ -78,12 +92,7 @@ export function LanguageSwitcher({
   }
 
   if (variant === "icon-dropdown") {
-    const triggerLabel = `${t("appearanceLanguage.switcher.groupLabel")}: ${t(
-      "appearanceLanguage.switcher.currentLanguage",
-      {
-        language: activeLanguageName,
-      },
-    )}`
+    const triggerLabel = `${t("appearanceLanguage.switcher.groupLabel")}: ${currentLanguageLabel}`
 
     return (
       <DropdownMenu>
@@ -123,6 +132,66 @@ export function LanguageSwitcher({
           </DropdownMenuRadioGroup>
         </DropdownMenuContent>
       </DropdownMenu>
+    )
+  }
+
+  if (variant === "select") {
+    return (
+      <div
+        className={cn(
+          "flex items-center gap-1.5 sm:gap-2",
+          showIcon && "w-full",
+        )}
+      >
+        {showIcon && (
+          <Languages
+            className={cn(
+              "dark:text-dark-text-secondary h-4 w-4 shrink-0",
+              !compact && "sm:h-[1.2rem] sm:w-[1.2rem]",
+            )}
+          />
+        )}
+        <Select
+          value={activeLanguage}
+          onValueChange={(value: string) => {
+            const nextLanguage = UI_LANGUAGE_OPTIONS.find(
+              ({ code }) => code === value,
+            )?.code
+
+            if (nextLanguage) {
+              void handleLanguageChange(nextLanguage)
+            }
+          }}
+        >
+          <SelectTrigger
+            size={compact ? "sm" : "default"}
+            aria-label={currentLanguageLabel}
+            title={currentLanguageLabel}
+            className={cn(showIcon && "flex-1", className)}
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent align="end">
+            {UI_LANGUAGE_OPTIONS.map(({ code }) => {
+              const languageName = getLanguageOptionName(t, code)
+
+              return (
+                <SelectItem
+                  key={code}
+                  value={code}
+                  onPointerUp={() => {
+                    if (code === activeLanguage) {
+                      void handleLanguageChange(code)
+                    }
+                  }}
+                >
+                  {languageName}
+                </SelectItem>
+              )
+            })}
+          </SelectContent>
+        </Select>
+      </div>
     )
   }
 
