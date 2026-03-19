@@ -22,19 +22,52 @@ import {
   type OptionsPageMenuItemId,
 } from "~/constants/optionsMenuIds"
 
-import About from "./pages/About"
-import AccountManagement from "./pages/AccountManagement"
-import ApiCredentialProfiles from "./pages/ApiCredentialProfiles"
-import AutoCheckin from "./pages/AutoCheckin"
-import BalanceHistory from "./pages/BalanceHistory"
 import BasicSettings from "./pages/BasicSettings"
-import BookmarkManagement from "./pages/BookmarkManagement"
-import ImportExport from "./pages/ImportExport"
-import KeyManagement from "./pages/KeyManagement"
-import managedSiteChannels from "./pages/ManagedSiteChannels"
-import ManagedSiteModelSync from "./pages/ManagedSiteModelSync"
-import ModelList from "./pages/ModelList"
-import UsageAnalytics from "./pages/UsageAnalytics"
+
+/**
+ * Wrap a lazily imported options page so the menu config can treat it like a normal component.
+ */
+function createLazyMenuComponent(
+  loader: () => Promise<{ default: ComponentType<any> }>,
+): ComponentType<any> {
+  const LazyPage = lazy(loader)
+
+  const LazyMenuComponent: ComponentType<any> = (props) =>
+    createElement(LazyPage, props)
+
+  return LazyMenuComponent
+}
+
+const About = createLazyMenuComponent(() => import("./pages/About"))
+const AccountManagement = createLazyMenuComponent(
+  () => import("./pages/AccountManagement"),
+)
+const ApiCredentialProfiles = createLazyMenuComponent(
+  () => import("./pages/ApiCredentialProfiles"),
+)
+const AutoCheckin = createLazyMenuComponent(() => import("./pages/AutoCheckin"))
+const BalanceHistory = createLazyMenuComponent(
+  () => import("./pages/BalanceHistory"),
+)
+const BookmarkManagement = createLazyMenuComponent(
+  () => import("./pages/BookmarkManagement"),
+)
+const ImportExport = createLazyMenuComponent(
+  () => import("./pages/ImportExport"),
+)
+const KeyManagement = createLazyMenuComponent(
+  () => import("./pages/KeyManagement"),
+)
+const ManagedSiteChannels = createLazyMenuComponent(
+  () => import("./pages/ManagedSiteChannels"),
+)
+const ManagedSiteModelSync = createLazyMenuComponent(
+  () => import("./pages/ManagedSiteModelSync"),
+)
+const ModelList = createLazyMenuComponent(() => import("./pages/ModelList"))
+const UsageAnalytics = createLazyMenuComponent(
+  () => import("./pages/UsageAnalytics"),
+)
 
 // 菜单项类型定义
 export interface MenuItem {
@@ -104,7 +137,7 @@ const BASE_MENU_ITEMS: MenuItem[] = [
     id: MENU_ITEM_IDS.MANAGED_SITE_CHANNELS,
     name: "渠道管理",
     icon: Layers,
-    component: managedSiteChannels,
+    component: ManagedSiteChannels,
   },
   {
     id: MENU_ITEM_IDS.MANAGED_SITE_MODEL_SYNC,

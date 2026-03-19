@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { Suspense, useState } from "react"
 
 import { AppLayout } from "~/components/AppLayout"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
@@ -12,6 +12,20 @@ import BasicSettings from "./pages/BasicSettings"
 /**
  * Main Options page shell: renders header, sidebar, and routed content panes.
  * Handles hash navigation, mobile sidebar toggles, and collapse state.
+ */
+/**
+ * Localized fallback used while a lazily loaded options page chunk is being fetched.
+ */
+function OptionsPageContentFallback() {
+  return (
+    <div className="dark:text-dark-text-tertiary flex min-h-[400px] items-center justify-center text-sm text-gray-500 md:min-h-[600px]">
+      Loading...
+    </div>
+  )
+}
+
+/**
+ * Options page shell with a local Suspense boundary for route-level lazy chunks.
  */
 function OptionsPage() {
   const { activeMenuItem, routeParams, handleMenuItemChange, refreshKey } =
@@ -55,10 +69,12 @@ function OptionsPage() {
         <main className="flex-1">
           <div className="mx-auto w-full max-w-7xl px-2 py-3 sm:px-4 sm:py-5 md:px-6 md:py-6">
             <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary min-h-[400px] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm md:min-h-[600px]">
-              <ActiveComponent
-                routeParams={routeParams}
-                refreshKey={refreshKey}
-              />
+              <Suspense fallback={<OptionsPageContentFallback />}>
+                <ActiveComponent
+                  routeParams={routeParams}
+                  refreshKey={refreshKey}
+                />
+              </Suspense>
             </div>
           </div>
         </main>

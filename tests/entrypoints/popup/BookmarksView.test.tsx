@@ -1,9 +1,4 @@
-import {
-  forwardRef,
-  useImperativeHandle,
-  useState,
-  type ReactNode,
-} from "react"
+import { useState, type ReactNode } from "react"
 import { describe, expect, it, vi } from "vitest"
 
 import { BookmarkDialogStateProvider } from "~/features/SiteBookmarks/hooks/BookmarkDialogStateContext"
@@ -30,6 +25,11 @@ vi.mock("~/hooks/useAddAccountHandler", () => ({
   }),
 }))
 
+vi.mock("~/hooks/useMediaQuery", () => ({
+  useIsDesktop: () => false,
+  useIsSmallScreen: () => false,
+}))
+
 vi.mock("~/entrypoints/popup/components/HeaderSection", () => ({
   default: ({ showRefresh }: { showRefresh?: boolean }) => (
     <div>{`HeaderRefresh:${String(showRefresh)}`}</div>
@@ -44,12 +44,12 @@ vi.mock("~/entrypoints/popup/components/ShareOverviewSnapshotButton", () => ({
   default: () => <div>ShareOverviewSnapshotButton</div>,
 }))
 
-vi.mock("~/entrypoints/popup/components/BookmarkStatsSection", () => ({
+vi.mock(import("~/entrypoints/popup/components/BookmarkStatsSection"), () => ({
   default: () => <div>BookmarkStatsSection</div>,
 }))
 
 vi.mock(
-  "~/entrypoints/popup/components/ApiCredentialProfilesStatsSection",
+  import("~/entrypoints/popup/components/ApiCredentialProfilesStatsSection"),
   () => ({
     default: () => <div>ApiCredentialProfilesStatsSection</div>,
   }),
@@ -74,30 +74,89 @@ vi.mock("~/features/AccountManagement/components/AccountList", () => ({
   default: () => <div>AccountList</div>,
 }))
 
-vi.mock("~/features/SiteBookmarks/components/BookmarksList", () => ({
-  default: () => <div>BookmarksList</div>,
+vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
+  useAccountDataContext: () => ({
+    bookmarks: [],
+    pinnedAccountIds: [],
+    orderedAccountIds: [],
+    tags: [],
+    tagStore: { version: 1, tagsById: {} },
+    isInitialLoad: false,
+    isAccountPinned: () => false,
+    togglePinAccount: vi.fn(),
+    handleBookmarkReorder: vi.fn(),
+    loadAccountData: vi.fn(),
+  }),
 }))
 
 vi.mock(
-  "~/features/ApiCredentialProfiles/components/ApiCredentialProfilesPopupView",
+  "~/features/ApiCredentialProfiles/hooks/useApiCredentialProfilesController",
   () => ({
-    default: forwardRef((_, ref) => {
+    useApiCredentialProfilesController: () => {
       const [isAddOpen, setIsAddOpen] = useState(false)
-      useImperativeHandle(
-        ref,
-        () => ({
-          openAddDialog: () => setIsAddOpen(true),
-        }),
-        [],
-      )
 
-      return (
-        <div>
-          <div>ApiCredentialProfilesPopupView</div>
-          {isAddOpen ? <div>ApiCredentialProfileDialogOpen</div> : null}
-        </div>
-      )
-    }),
+      return {
+        profiles: [],
+        isLoading: false,
+        tags: [],
+        tagNameById: new Map(),
+        createTag: vi.fn(),
+        renameTag: vi.fn(),
+        deleteTag: vi.fn(),
+        visibleKeys: new Set(),
+        toggleKeyVisibility: vi.fn(),
+        managedSiteType: "new-api",
+        managedSiteLabel: "new-api",
+        isEditorOpen: isAddOpen,
+        setIsEditorOpen: vi.fn(),
+        editingProfile: null,
+        openAddDialog: () => setIsAddOpen(true),
+        openEditDialog: vi.fn(),
+        handleSave: vi.fn(),
+        verifyingProfile: null,
+        setVerifyingProfile: vi.fn(),
+        cliVerifyingProfile: null,
+        setCliVerifyingProfile: vi.fn(),
+        ccSwitchProfile: null,
+        setCCSwitchProfile: vi.fn(),
+        kiloCodeProfile: null,
+        setKiloCodeProfile: vi.fn(),
+        cliProxyProfile: null,
+        setCliProxyProfile: vi.fn(),
+        claudeCodeRouterProfile: null,
+        setClaudeCodeRouterProfile: vi.fn(),
+        claudeCodeRouterBaseUrl: "",
+        claudeCodeRouterApiKey: "",
+        handleCopyBaseUrl: vi.fn(),
+        handleCopyApiKey: vi.fn(),
+        handleCopyBundle: vi.fn(),
+        handleOpenModelManagement: vi.fn(),
+        handleExport: vi.fn(),
+        deletingProfile: null,
+        isDeleting: false,
+        handleRequestDelete: vi.fn(),
+        closeDeleteDialog: vi.fn(),
+        handleConfirmDelete: vi.fn(),
+      }
+    },
+  }),
+)
+
+vi.mock(
+  "~/features/ApiCredentialProfiles/components/ApiCredentialProfilesListView",
+  () => ({
+    ApiCredentialProfilesListView: ({
+      controller,
+    }: {
+      controller: { isEditorOpen: boolean }
+    }) => (
+      <div>
+        <div>ApiCredentialProfilesListView</div>
+        {controller.isEditorOpen ? (
+          <div>ApiCredentialProfileDialogOpen</div>
+        ) : null}
+      </div>
+    ),
   }),
 )
 
@@ -120,21 +179,21 @@ describe("popup bookmarks view", () => {
     ).not.toBeInTheDocument()
     expect(screen.getByText("ActionButtons")).toBeInTheDocument()
     expect(screen.getByText("AccountList")).toBeInTheDocument()
-    expect(screen.queryByText("BookmarksList")).not.toBeInTheDocument()
+    expect(screen.queryByText("bookmark:emptyState")).not.toBeInTheDocument()
 
     fireEvent.click(
       await screen.findByRole("tab", { name: "bookmark:switch.bookmarks" }),
     )
 
     expect(await screen.findByText("HeaderRefresh:false")).toBeInTheDocument()
+    expect(await screen.findByText("BookmarkStatsSection")).toBeInTheDocument()
+    expect(await screen.findByText("bookmark:emptyState")).toBeInTheDocument()
     expect(screen.queryByText("BalanceSection")).not.toBeInTheDocument()
-    expect(screen.getByText("BookmarkStatsSection")).toBeInTheDocument()
     expect(
       screen.queryByText("ApiCredentialProfilesStatsSection"),
     ).not.toBeInTheDocument()
     expect(screen.getByText("ActionButtons")).toBeInTheDocument()
     expect(screen.queryByText("AccountList")).not.toBeInTheDocument()
-    expect(screen.getByText("BookmarksList")).toBeInTheDocument()
 
     fireEvent.click(
       await screen.findByRole("tab", {
@@ -143,17 +202,17 @@ describe("popup bookmarks view", () => {
     )
 
     expect(await screen.findByText("HeaderRefresh:false")).toBeInTheDocument()
+    expect(
+      await screen.findByText("ApiCredentialProfilesStatsSection"),
+    ).toBeInTheDocument()
+    expect(
+      await screen.findByText("ApiCredentialProfilesListView"),
+    ).toBeInTheDocument()
     expect(screen.queryByText("BalanceSection")).not.toBeInTheDocument()
     expect(screen.queryByText("BookmarkStatsSection")).not.toBeInTheDocument()
-    expect(
-      screen.getByText("ApiCredentialProfilesStatsSection"),
-    ).toBeInTheDocument()
     expect(screen.getByText("ActionButtons")).toBeInTheDocument()
     expect(screen.queryByText("AccountList")).not.toBeInTheDocument()
-    expect(screen.queryByText("BookmarksList")).not.toBeInTheDocument()
-    expect(
-      screen.getByText("ApiCredentialProfilesPopupView"),
-    ).toBeInTheDocument()
+    expect(screen.queryByText("bookmark:emptyState")).not.toBeInTheDocument()
 
     fireEvent.click(
       await screen.findByRole("button", {
@@ -167,6 +226,7 @@ describe("popup bookmarks view", () => {
     fireEvent.click(
       await screen.findByRole("tab", { name: "bookmark:switch.bookmarks" }),
     )
+    expect(await screen.findByText("bookmark:emptyState")).toBeInTheDocument()
 
     fireEvent.click(
       await screen.findByRole("button", { name: "bookmark:actions.add" }),
