@@ -8,8 +8,10 @@ import { isExtensionPopup, OPTIONS_PAGE_URL } from "~/utils/browser"
 import {
   openSidePanel as _openSidePanel,
   createTab as createTabApi,
+  createWindow,
   focusTab,
   getExtensionURL,
+  hasWindowsAPI,
 } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -492,14 +494,90 @@ const _openUsagePage = async (account: DisplaySiteData) => {
 }
 
 /**
+ * Resolves the default check-in URL for a given account.
+ * @param account Account metadata used to resolve the check-in URL.
+ */
+const getCheckInPageUrl = (account: DisplaySiteData) =>
+  joinUrl(account.baseUrl, getSiteApiRouter(account.siteType).checkInPath)
+
+/**
+ * Best-effort URL opener for grouped navigation flows.
+ *
+ * When `openInNewWindow` is enabled and the Windows API is available, the first
+ * URL is opened in a dedicated browser window and later URLs reuse that window
+ * as tabs. Failures are logged and counted so callers can report partial
+ * completion without aborting the remaining URLs.
+ */
+const openUrlsBestEffort = async (
+  urls: string[],
+  options?: { openInNewWindow?: boolean },
+): Promise<{ openedCount: number; failedCount: number }> => {
+  let openedCount = 0
+  let targetWindowId: number | null = null
+
+  for (const url of urls) {
+    try {
+      if (options?.openInNewWindow && hasWindowsAPI()) {
+        if (targetWindowId == null) {
+          const createdWindow = await createWindow({ url, focused: true })
+          if (createdWindow?.id != null) {
+            targetWindowId = createdWindow.id
+            openedCount += 1
+            continue
+          }
+        } else {
+          try {
+            const tab = await createTabApi(url, true, {
+              windowId: targetWindowId,
+            })
+            if (tab?.id != null) {
+              openedCount += 1
+              continue
+            }
+          } catch (error) {
+            logger.debug("Failed to reuse grouped navigation window", {
+              url,
+              targetWindowId,
+              error,
+            })
+          }
+
+          const recreatedWindow = await createWindow({ url, focused: true })
+          if (recreatedWindow?.id != null) {
+            targetWindowId = recreatedWindow.id
+            openedCount += 1
+            continue
+          }
+        }
+      }
+
+      const tab = await createTabApi(url, true)
+      if (tab?.id != null) {
+        openedCount += 1
+        continue
+      }
+
+      logger.warn("Browser did not return a tab while opening URL", { url })
+    } catch (error) {
+      logger.warn("Failed to open URL during grouped navigation", {
+        url,
+        error: getErrorMessage(error),
+      })
+    }
+  }
+
+  return {
+    openedCount,
+    failedCount: Math.max(0, urls.length - openedCount),
+  }
+}
+
+/**
  * Opens the default check-in page for a given account.
  * @param account Account metadata used to resolve the check-in URL.
  */
 const _openCheckInPage = async (account: DisplaySiteData) => {
-  const checkInUrl = joinUrl(
-    account.baseUrl,
-    getSiteApiRouter(account.siteType).checkInPath,
-  )
+  const checkInUrl = getCheckInPageUrl(account)
   await createActiveTab(checkInUrl)
 }
 
@@ -688,6 +766,27 @@ export const openUsagePage = withPopupClose(_openUsagePage)
  * popup shell once the navigation has been requested.
  */
 export const openCheckInPage = withPopupClose(_openCheckInPage)
+
+/**
+ * Open multiple accounts' default check-in pages, optionally grouping them into
+ * a dedicated window when requested by the triggering interaction.
+ * @param accounts Accounts whose default check-in pages should be opened.
+ * @param options Bulk open options derived from the user's interaction.
+ * @param options.openInNewWindow When true, open the first page in a new
+ * dedicated window and reuse that window for the remaining pages when
+ * supported by the browser.
+ */
+export const openCheckInPages = async (
+  accounts: DisplaySiteData[],
+  options?: { openInNewWindow?: boolean },
+) => {
+  const result = await openUrlsBestEffort(
+    accounts.map(getCheckInPageUrl),
+    options,
+  )
+  closeIfPopup()
+  return result
+}
 
 /**
  * Open the account's custom check-in location when defined (falling back to

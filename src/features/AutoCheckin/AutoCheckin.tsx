@@ -1,5 +1,11 @@
 import { CalendarCheck2 } from "lucide-react"
-import { useCallback, useEffect, useRef, useState } from "react"
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent,
+} from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
@@ -12,6 +18,7 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { translateAutoCheckinMessageKey } from "~/features/AutoCheckin/utils/autoCheckin"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import type { DisplaySiteData } from "~/types"
 import {
   AutoCheckinRunSummary,
   AutoCheckinStatus,
@@ -24,7 +31,12 @@ import {
 import { getErrorMessage } from "~/utils/core/error"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
-import { navigateWithinOptionsPage, openCheckInPage } from "~/utils/navigation"
+import { getExternalCheckInOpenOptions } from "~/utils/core/shortcutKeys"
+import {
+  navigateWithinOptionsPage,
+  openCheckInPage,
+  openCheckInPages,
+} from "~/utils/navigation"
 
 import AccountSnapshotTable from "./components/AccountSnapshotTable"
 import ActionBar from "./components/ActionBar"
@@ -63,6 +75,8 @@ export default function AutoCheckin(props: {
   const [isLoading, setIsLoading] = useState(true)
   const [isRunning, setIsRunning] = useState(false)
   const [isDebugTriggering, setIsDebugTriggering] = useState(false)
+  const [isOpeningFailedManualSignIns, setIsOpeningFailedManualSignIns] =
+    useState(false)
   const [retryingAccountId, setRetryingAccountId] = useState<string | null>(
     null,
   )
@@ -415,6 +429,15 @@ export default function AutoCheckin(props: {
     void handleRunNow()
   }, [handleRunNow, routeParams])
 
+  // Keep the bulk action tied to the full latest failure set rather than the
+  // currently filtered table rows, so "open all failed" has a stable meaning.
+  const accountResults = status?.perAccount
+    ? Object.values(status.perAccount)
+    : []
+  const failedManualAccountIds = accountResults
+    .filter((result) => result.status === CHECKIN_RESULT_STATUS.FAILED)
+    .map((result) => result.accountId)
+
   const handleRefresh = () => {
     void loadStatus()
   }
@@ -444,9 +467,8 @@ export default function AutoCheckin(props: {
     }
   }
 
-  const handleOpenManualSignIn = async (accountId: string) => {
-    try {
-      setOpeningManualAccountId(accountId)
+  const resolveManualSignInAccount = useCallback(
+    async (accountId: string): Promise<DisplaySiteData> => {
       const response = await sendRuntimeMessage({
         action: RuntimeActionIds.AutoCheckinGetAccountInfo,
         accountId,
@@ -456,8 +478,23 @@ export default function AutoCheckin(props: {
         throw new Error(response.error || "Unknown error")
       }
 
-      const displayData = response.data
+      return response.data as DisplaySiteData
+    },
+    [],
+  )
+
+  const openManualSignInForAccount = useCallback(
+    async (accountId: string) => {
+      const displayData = await resolveManualSignInAccount(accountId)
       await openCheckInPage(displayData)
+    },
+    [resolveManualSignInAccount],
+  )
+
+  const handleOpenManualSignIn = async (accountId: string) => {
+    try {
+      setOpeningManualAccountId(accountId)
+      await openManualSignInForAccount(accountId)
     } catch (error: unknown) {
       toast.error(
         t("messages.error.openManualFailed", { error: getErrorMessage(error) }),
@@ -467,10 +504,93 @@ export default function AutoCheckin(props: {
     }
   }
 
-  // Filter and search results
-  const accountResults = status?.perAccount
-    ? Object.values(status.perAccount)
-    : []
+  const handleOpenFailedManualSignIns = async (
+    event: MouseEvent<HTMLButtonElement>,
+  ) => {
+    const { openInNewWindow } = getExternalCheckInOpenOptions(event)
+
+    if (!failedManualAccountIds.length) {
+      toast.error(t("messages.error.openFailedManualNone"))
+      return
+    }
+
+    try {
+      setIsOpeningFailedManualSignIns(true)
+      toast.loading(
+        t("messages.loading.openingFailedManual", {
+          count: failedManualAccountIds.length,
+        }),
+      )
+
+      let openedCount = 0
+      let failedCount = 0
+      const accountsToOpen: DisplaySiteData[] = []
+
+      // Best-effort bulk open: one failing account should not block the rest.
+      for (const accountId of failedManualAccountIds) {
+        try {
+          accountsToOpen.push(await resolveManualSignInAccount(accountId))
+        } catch (error) {
+          failedCount += 1
+          logger.warn(
+            "Failed to resolve manual sign-in page during bulk action",
+            {
+              accountId,
+              error,
+            },
+          )
+        }
+      }
+
+      if (accountsToOpen.length > 0) {
+        const openResult = await openCheckInPages(accountsToOpen, {
+          openInNewWindow,
+        })
+        openedCount += openResult.openedCount
+        failedCount += openResult.failedCount
+      }
+
+      toast.dismiss()
+
+      if (failedCount === 0) {
+        toast.success(
+          t("messages.success.openFailedManualCompleted", {
+            count: openedCount,
+          }),
+        )
+        return
+      }
+
+      if (openedCount > 0) {
+        toast.error(
+          t("messages.error.openFailedManualPartial", {
+            openedCount,
+            failedCount,
+          }),
+        )
+        return
+      }
+
+      toast.error(
+        t("messages.error.openFailedManualFailed", {
+          failedCount,
+        }),
+      )
+    } catch (error) {
+      toast.dismiss()
+      logger.error(
+        "Unexpected failure while bulk-opening manual sign-ins",
+        error,
+      )
+      toast.error(
+        t("messages.error.openFailedManualFailed", {
+          failedCount: failedManualAccountIds.length,
+        }),
+      )
+    } finally {
+      setIsOpeningFailedManualSignIns(false)
+    }
+  }
 
   const filteredResults = accountResults.filter((result) => {
     // Filter by status
@@ -503,7 +623,7 @@ export default function AutoCheckin(props: {
               result.messageKey,
               result.messageParams,
             )
-          : (result.message ?? ""))
+          : result.message ?? "")
       return (
         result.accountName.toLowerCase().includes(keyword) ||
         String(result.accountId).toLowerCase().includes(keyword) ||
@@ -540,8 +660,11 @@ export default function AutoCheckin(props: {
         <ActionBar
           isRunning={isRunning}
           isDebugTriggering={isDebugTriggering}
+          isOpeningFailedManualSignIns={isOpeningFailedManualSignIns}
+          canOpenFailedManualSignIns={failedManualAccountIds.length > 0}
           onRunNow={handleRunNow}
           onRefresh={handleRefresh}
+          onOpenFailedManualSignIns={handleOpenFailedManualSignIns}
           showDebugButtons={showDebugButtons}
           onDebugTriggerDailyAlarmNow={handleDebugTriggerDailyAlarmNow}
           onDebugTriggerRetryAlarmNow={handleDebugTriggerRetryAlarmNow}

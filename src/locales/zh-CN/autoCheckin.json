@@ -3,6 +3,7 @@
   "execution": {
     "actions": {
       "devModeHint": "开发模式：为便于测试，操作按钮将始终显示。",
+      "openFailedManual": "打开失败账号的手动签到页",
       "openManual": "手动签到",
       "retryAccount": "重新尝试"
     },
@@ -31,7 +32,8 @@
     },
     "hints": {
       "invalidAccessToken": "解决方案：Access Token 可能已失效。请重新登录该站点，然后在「账号管理 → 编辑账号」中重新自动识别/刷新 Access Token；如自动识别后仍出现此问题，请手动获取并修改 Access Token。",
-      "noTabWithId": "提示：请不要关闭扩展自动创建的标签页/窗口，扩展会在一段时间后自动关闭。如需手动关闭，请至少等待 1 分钟后再关闭。"
+      "noTabWithId": "提示：请不要关闭扩展自动创建的标签页/窗口，扩展会在一段时间后自动关闭。如需手动关闭，请至少等待 1 分钟后再关闭。",
+      "openFailedManualNewWindow": "提示：按住 Shift 点击“打开失败账号的手动签到页”，可在新窗口中打开。"
     },
     "refresh": "刷新",
     "runNow": "立即执行",
@@ -63,6 +65,9 @@
       "invalidNumber": "请输入有效的正数。",
       "invalidTimeWindow": "无效的时间窗口，开始时间和结束时间不能相同。",
       "lastDailyRunDayResetFailed": "重置每日执行标记失败：{{error}}",
+      "openFailedManualFailed": "{{failedCount}} 个失败账号的手动签到页均打开失败。",
+      "openFailedManualNone": "没有可打开手动签到页的失败账号。",
+      "openFailedManualPartial": "已打开 {{openedCount}} 个失败账号的页面，另有 {{failedCount}} 个打开失败。",
       "openManualFailed": "打开手动签到页面失败：{{error}}",
       "retryAlarmTriggerFailed": "触发重试闹钟失败：{{error}}",
       "retryFailed": "重新尝试失败：{{error}}",
@@ -74,6 +79,7 @@
     },
     "loading": {
       "evaluatingUiOpenPretrigger": "正在评估界面打开预触发...",
+      "openingFailedManual": "正在为 {{count}} 个失败账号打开手动签到页...",
       "resettingLastDailyRunDay": "正在重置每日执行标记...",
       "running": "正在执行自动签到...",
       "schedulingDailyAlarmForToday": "正在计划今日每日闹钟...",
@@ -85,6 +91,7 @@
       "dailyAlarmScheduledForToday": "已计划今日每日闹钟。",
       "dailyAlarmTriggered": "已触发每日闹钟执行。",
       "lastDailyRunDayReset": "已重置每日执行标记。",
+      "openFailedManualCompleted": "已打开 {{count}} 个失败账号的手动签到页。",
       "pretriggerStarted": "已提前触发自动签到。",
       "retryAlarmTriggered": "已触发重试闹钟执行。",
       "retryCompleted": "重新尝试已完成。",

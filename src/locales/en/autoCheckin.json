@@ -3,6 +3,7 @@
   "execution": {
     "actions": {
       "devModeHint": "Dev mode: action buttons are always shown for testing.",
+      "openFailedManual": "Open failed manual sign-ins",
       "openManual": "Manual sign-in",
       "retryAccount": "Retry"
     },
@@ -31,7 +32,8 @@
     },
     "hints": {
       "invalidAccessToken": "Solution: The Access Token may have expired. Please log in to the site again, then in 'Account Management → Edit Account', automatically re-identify/refresh the Access Token. If this issue still occurs after automatic identification, please manually obtain and modify the Access Token.",
-      "noTabWithId": "Tip: Don't close any tab/window opened automatically by the extension. The extension will close them after a short time. If you must close them manually, wait at least 1 minute before closing."
+      "noTabWithId": "Tip: Don't close any tab/window opened automatically by the extension. The extension will close them after a short time. If you must close them manually, wait at least 1 minute before closing.",
+      "openFailedManualNewWindow": "Tip: Shift-click \"Open failed manual sign-ins\" to open them in a new window."
     },
     "refresh": "Refresh",
     "runNow": "Run now",
@@ -63,6 +65,9 @@
       "invalidNumber": "Please enter a valid positive number.",
       "invalidTimeWindow": "Invalid time window. Start and end cannot be the same.",
       "lastDailyRunDayResetFailed": "Failed to reset last daily marker: {{error}}",
+      "openFailedManualFailed": "Failed to open manual sign-in pages for {{failedCount}} failed accounts.",
+      "openFailedManualNone": "No failed accounts are available for manual sign-in.",
+      "openFailedManualPartial": "Opened manual sign-in pages for {{openedCount}} failed accounts, but {{failedCount}} failed to open.",
       "openManualFailed": "Failed to open manual sign-in page: {{error}}",
       "retryAlarmTriggerFailed": "Failed to trigger retry alarm: {{error}}",
       "retryFailed": "Retry failed: {{error}}",
@@ -74,6 +79,8 @@
     },
     "loading": {
       "evaluatingUiOpenPretrigger": "Evaluating UI-open pre-trigger...",
+      "openingFailedManual_one": "Opening the manual sign-in page for {{count}} failed account...",
+      "openingFailedManual_other": "Opening manual sign-in pages for {{count}} failed accounts...",
       "resettingLastDailyRunDay": "Resetting last daily marker...",
       "running": "Running auto check-in...",
       "schedulingDailyAlarmForToday": "Scheduling daily alarm for today...",
@@ -85,6 +92,8 @@
       "dailyAlarmScheduledForToday": "Daily alarm scheduled for today.",
       "dailyAlarmTriggered": "Daily alarm execution triggered.",
       "lastDailyRunDayReset": "Last daily marker reset.",
+      "openFailedManualCompleted_one": "Opened the manual sign-in page for {{count}} failed account.",
+      "openFailedManualCompleted_other": "Opened manual sign-in pages for {{count}} failed accounts.",
       "pretriggerStarted": "Auto check-in started early.",
       "retryAlarmTriggered": "Retry alarm execution triggered.",
       "retryCompleted": "Retry completed.",

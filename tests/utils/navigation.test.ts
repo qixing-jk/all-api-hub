@@ -4,12 +4,15 @@ import { getSiteApiRouter } from "~/constants/siteType"
 import { isExtensionPopup } from "~/utils/browser"
 import {
   createTab as createTabApi,
+  createWindow,
   getExtensionURL,
+  hasWindowsAPI,
   openSidePanel as openSidePanelApi,
 } from "~/utils/browser/browserApi"
 import { joinUrl } from "~/utils/core/url"
 import {
   openCheckInAndRedeem,
+  openCheckInPages,
   openKeysPage,
   openModelsPage,
   openMultiplePages,
@@ -27,15 +30,19 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("~/utils/browser/browserApi")>()
   const createTab = vi.fn()
+  const createWindow = vi.fn()
   const focusTab = vi.fn()
   const getExtensionURL = vi.fn((path: string) => `ext://${path}`)
+  const hasWindowsAPI = vi.fn(() => false)
   const openSidePanel = vi.fn()
 
   return {
     ...actual,
     createTab,
+    createWindow,
     focusTab,
     getExtensionURL,
+    hasWindowsAPI,
     openSidePanel,
   }
 })
@@ -54,7 +61,9 @@ vi.mock("~/utils/core/url", () => ({
 
 const mockedIsExtensionPopup = vi.mocked(isExtensionPopup)
 const mockedCreateTab = vi.mocked(createTabApi)
+const mockedCreateWindow = vi.mocked(createWindow)
 const mockedGetExtensionURL = vi.mocked(getExtensionURL)
+const mockedHasWindowsAPI = vi.mocked(hasWindowsAPI)
 const mockedOpenSidePanel = vi.mocked(openSidePanelApi)
 const mockedGetSiteApiRouter = vi.mocked(getSiteApiRouter)
 const mockedJoinUrl = vi.mocked(joinUrl)
@@ -62,6 +71,7 @@ const mockedJoinUrl = vi.mocked(joinUrl)
 describe("navigation utilities", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockedHasWindowsAPI.mockReturnValue(false)
     mockedIsExtensionPopup.mockReturnValue(false)
   })
 
@@ -178,6 +188,64 @@ describe("navigation utilities", () => {
     const calls = mockedCreateTab.mock.calls.map((call) => call[0] as string)
     expect(calls).toContain("https://redeem.custom")
     expect(calls).toContain("https://checkin.custom")
+  })
+
+  it("openCheckInPages should open grouped check-in tabs by default", async () => {
+    mockedCreateTab
+      .mockResolvedValueOnce({ id: 11 } as any)
+      .mockResolvedValueOnce({ id: 12 } as any)
+
+    const result = await openCheckInPages([
+      {
+        baseUrl: "https://example.com",
+        siteType: "one-api",
+      } as any,
+      {
+        baseUrl: "https://example.org",
+        siteType: "one-api",
+      } as any,
+    ])
+
+    expect(mockedCreateTab).toHaveBeenCalledWith(
+      "https://example.com/checkin",
+      true,
+    )
+    expect(mockedCreateTab).toHaveBeenCalledWith(
+      "https://example.org/checkin",
+      true,
+    )
+    expect(result).toEqual({ openedCount: 2, failedCount: 0 })
+  })
+
+  it("openCheckInPages should reuse a dedicated window when requested", async () => {
+    mockedHasWindowsAPI.mockReturnValue(true)
+    mockedCreateWindow.mockResolvedValue({ id: 77 } as any)
+    mockedCreateTab.mockResolvedValueOnce({ id: 21 } as any)
+
+    const result = await openCheckInPages(
+      [
+        {
+          baseUrl: "https://example.com",
+          siteType: "one-api",
+        } as any,
+        {
+          baseUrl: "https://example.org",
+          siteType: "one-api",
+        } as any,
+      ],
+      { openInNewWindow: true },
+    )
+
+    expect(mockedCreateWindow).toHaveBeenCalledWith({
+      url: "https://example.com/checkin",
+      focused: true,
+    })
+    expect(mockedCreateTab).toHaveBeenCalledWith(
+      "https://example.org/checkin",
+      true,
+      { windowId: 77 },
+    )
+    expect(result).toEqual({ openedCount: 2, failedCount: 0 })
   })
 
   it("openSidePanelWithFallback should open settings when side panel opening fails", async () => {
