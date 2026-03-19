@@ -7,6 +7,8 @@ import { BodySmall, Heading5, IconButton } from "~/components/ui"
 import { VersionBadge } from "~/components/VersionBadge"
 import { getRepository } from "~/utils/navigation/packageMeta"
 
+import HeaderThemeSwitcher from "./HeaderThemeSwitcher"
+
 interface HeaderProps {
   onTitleClick: () => void
   onMenuToggle?: () => void
@@ -14,7 +16,7 @@ interface HeaderProps {
 }
 
 /**
- * Sticky options-page header with menu toggle, app identity, and language switcher.
+ * Sticky options-page header with menu toggle, app identity, and quick theme/language controls.
  * @param props Component props bundle.
  * @param props.onTitleClick Callback triggered when the app icon is clicked.
  * @param props.onMenuToggle Optional handler for toggling the mobile sidebar.
@@ -81,7 +83,10 @@ function Header({
               </BodySmall>
             </div>
           </div>
-          <LanguageSwitcher />
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+            <HeaderThemeSwitcher />
+            <LanguageSwitcher variant="icon-dropdown" />
+          </div>
         </div>
       </div>
     </header>

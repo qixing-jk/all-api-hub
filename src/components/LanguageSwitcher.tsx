@@ -1,7 +1,15 @@
 import { Languages } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
-import { ToggleButton } from "~/components/ui"
+import { IconButton, ToggleButton } from "~/components/ui"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu"
 import { DEFAULT_LANG } from "~/constants"
 import type { SupportedUiLanguage } from "~/constants"
 import { ANIMATIONS, COLORS } from "~/constants/designTokens"
@@ -16,6 +24,7 @@ interface LanguageSwitcherProps {
   className?: string
   compact?: boolean
   showIcon?: boolean
+  variant?: "inline" | "icon-dropdown"
 }
 
 /**
@@ -55,16 +64,76 @@ export function LanguageSwitcher({
   className,
   compact = false,
   showIcon = true,
+  variant = "inline",
 }: LanguageSwitcherProps) {
   const { i18n, t } = useTranslation("settings")
   const activeLanguage =
     normalizeAppLanguage(i18n.resolvedLanguage || i18n.language) ?? DEFAULT_LANG
+  const activeLanguageName = getLanguageOptionName(t, activeLanguage)
 
   const handleLanguageChange = async (language: SupportedUiLanguage) => {
     if (language !== activeLanguage) {
       await i18n.changeLanguage(language)
     }
     await userPreferences.setLanguage(language)
+  }
+
+  if (variant === "icon-dropdown") {
+    const triggerLabel = `${t("appearanceLanguage.switcher.groupLabel")}: ${t(
+      "appearanceLanguage.switcher.currentLanguage",
+      {
+        language: activeLanguageName,
+      },
+    )}`
+
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <IconButton
+            variant="outline"
+            size="sm"
+            aria-label={triggerLabel}
+            title={triggerLabel}
+            className={className}
+          >
+            <Languages className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+          </IconButton>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-44">
+          <DropdownMenuLabel>
+            {t("appearanceLanguage.language")}
+          </DropdownMenuLabel>
+          <DropdownMenuRadioGroup
+            value={activeLanguage}
+            onValueChange={(value: string) => {
+              const nextLanguage = UI_LANGUAGE_OPTIONS.find(
+                ({ code }) => code === value,
+              )?.code
+
+              if (nextLanguage) {
+                void handleLanguageChange(nextLanguage)
+              }
+            }}
+          >
+            {UI_LANGUAGE_OPTIONS.map(({ code }) => {
+              const label = getLanguageOptionLabel(t, code)
+              const languageName = getLanguageOptionName(t, code)
+
+              return (
+                <DropdownMenuRadioItem key={code} value={code}>
+                  <span className="flex w-full items-center justify-between gap-3">
+                    <span>{languageName}</span>
+                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                      {label}
+                    </span>
+                  </span>
+                </DropdownMenuRadioItem>
+              )
+            })}
+          </DropdownMenuRadioGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    )
   }
 
   return (
