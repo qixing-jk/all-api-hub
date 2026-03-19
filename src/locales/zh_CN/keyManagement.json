@@ -43,9 +43,9 @@
     "expiration": "过期时间",
     "expirationPlaceholder": "留空表示永不过期",
     "groupLabel": "分组",
-    "groupRate": "倍率:",
+    "groupRate": "倍率：",
     "groupRestrictedNote": "仅可选择该模型可用的分组，其他分组已禁用。",
-    "ipExample": "例如: 192.168.1.1,10.0.0.1 或使用 * 表示不限制",
+    "ipExample": "例如：192.168.1.1,10.0.0.1 或使用 * 表示不限制",
     "ipLimits": "IP 限制",
     "ipPlaceholder": "留空表示不限制，多个 IP 用逗号分隔",
     "loadDataFailed": "加载数据失败，请稍后重试",
@@ -70,13 +70,13 @@
   },
   "enabledCount": "启用 {{count}} 个",
   "keyDetails": {
-    "createTime": "创建时间:",
-    "expireTime": "过期时间:",
-    "group": "分组:",
-    "key": "密钥:",
+    "createTime": "创建时间：",
+    "expireTime": "过期时间：",
+    "group": "分组：",
+    "key": "密钥：",
     "neverExpires": "永不过期",
-    "remainingQuota": "剩余额度:",
-    "usedQuota": "已用额度:"
+    "remainingQuota": "剩余额度：",
+    "usedQuota": "已用额度："
   },
   "managedSiteStatus": {
     "actions": {
@@ -98,7 +98,7 @@
       "newApiRetrieveKeyHint": "对于 New API，完整的 key 比对依赖渠道 key，而查看渠道 key 本身需要先完成 2FA 验证，因此当前暂无法完成完整 key 比对。",
       "veloeraBaseUrlSearchUnsupported": "该功能在 Veloera 上不受支持，因为 Veloera 不支持按基础地址搜索渠道。"
     },
-    "pageUnsupported": "由于 Veloera 暂不支持使用URL搜索渠道，暂不提供管理站点渠道检查功能。",
+    "pageUnsupported": "由于 Veloera 暂不支持使用 URL 搜索渠道，暂不提供管理站点渠道检查功能。",
     "recovery": {
       "configureLogin": "请先在设置中填写 New API 登录与两步验证辅助信息，否则当前无法读取渠道 key，也无法完成完整的 key 比对。",
       "verificationRequired": "完整的 key 比对需要先完成一次短时有效的 New API 验证，因为 New API 查看渠道 key 本身就需要 2FA 验证。"

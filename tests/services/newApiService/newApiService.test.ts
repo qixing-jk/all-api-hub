@@ -1578,7 +1578,9 @@ describe("newApiService", () => {
       const result = await autoConfigToNewApi(account)
 
       expect(result.success).toBe(false)
-      expect(result.message).toContain("messages:errors.validation")
+      expect(result.message).toContain(
+        "messages:errors.validation.newApiBaseUrlRequired",
+      )
     })
 
     it("should succeed on first attempt when all goes well", async () => {
