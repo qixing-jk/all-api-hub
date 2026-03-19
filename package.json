@@ -33,6 +33,7 @@
     "test:ci": "vitest --run --coverage",
     "e2e:install": "playwright install --with-deps chromium",
     "e2e": "playwright test",
+    "e2e:lazy-compare": "node scripts/compare-lazy-loading.mjs",
     "e2e:ui": "playwright test --ui",
     "prepare": "husky"
   },

@@ -11,6 +11,7 @@
 /coverage
 /playwright-report
 /test-results
+/lazy-loading-compare-results
 
 # playwright-cli
 .playwright-cli/
