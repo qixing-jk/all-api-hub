@@ -1,5 +1,24 @@
 # Changelog
 
+## [3.29.0](https://github.com/qixing-jk/all-api-hub/compare/v3.28.0...v3.29.0) (2026-03-19)
+
+
+### Features
+
+* add community feedback channel across UI and docs ([feb32b5](https://github.com/qixing-jk/all-api-hub/commit/feb32b50a889edee282d304196e476a8730913c9))
+* **auto-checkin:** add bulk manual sign-in for failed accounts ([#624](https://github.com/qixing-jk/all-api-hub/issues/624)) ([5ccfa10](https://github.com/qixing-jk/all-api-hub/commit/5ccfa104915f795ad1744f23f3e9ae2442a11416))
+* **i18n:** add Traditional Chinese locale and update default locale ([795c9c7](https://github.com/qixing-jk/all-api-hub/commit/795c9c73b523a5471397f4dd8d7d3d49306505dc))
+* **i18n:** enhance language detection and docs locale handling ([8b575b3](https://github.com/qixing-jk/all-api-hub/commit/8b575b329a5138e72438633844388c83b81f6729))
+* **i18n:** migrate to function-based translations ([425663a](https://github.com/qixing-jk/all-api-hub/commit/425663ad2a7d2ca4f0d0e47ca2ed7b19de8a0b28))
+
+
+### Bug Fixes
+
+* **browser:** add onSuspend lifecycle handler for temp context cleanup ([#625](https://github.com/qixing-jk/all-api-hub/issues/625)) ([ae69fee](https://github.com/qixing-jk/all-api-hub/commit/ae69feea5f75da59409534c232eac6b8c755423b))
+* correct i18n keys and add missing translations ([de89bf5](https://github.com/qixing-jk/all-api-hub/commit/de89bf55898c85d89e6f773f6bde3beee4560053))
+* **KeyManagement:** enhance token visibility with loading state ([8a379e9](https://github.com/qixing-jk/all-api-hub/commit/8a379e9d11b9c88af720b7522cdf34965faf7f4b))
+* **toolbar:** preserve user gesture to open side panel in Chromium ([2d455e3](https://github.com/qixing-jk/all-api-hub/commit/2d455e38e6b625744c04bce9e2d35ed273d4e87e))
+
 ## [3.28.0](https://github.com/qixing-jk/all-api-hub/compare/v3.27.0...v3.28.0) (2026-03-16)
 
 
