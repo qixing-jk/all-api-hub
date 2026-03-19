@@ -1,6 +1,6 @@
 ## Why
 
-When an auto check-in run fails for multiple accounts, the user currently has to click the per-row "Manual sign-in" action one account at a time and keep switching between the results page and newly opened tabs. That is slow and error-prone for the exact cases where manual recovery is already needed, especially for公益站 deployments where several accounts can fail together.
+When an auto check-in run fails for multiple accounts, the user currently has to click the per-row "Manual sign-in" action one account at a time and keep switching between the results page and newly opened tabs. That is slow and error-prone for the exact cases where manual recovery is already needed, especially when several accounts can fail together.
 
 ## What Changes
 
