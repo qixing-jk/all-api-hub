@@ -171,6 +171,14 @@ const getBadgeTooltip = (label: string) => {
   return element.closest("span[title]")
 }
 
+const expectNoVisibleManagedSiteDescription = () => {
+  expect(
+    screen.queryAllByText((content) =>
+      content.includes("managedSiteStatus.descriptions."),
+    ),
+  ).toHaveLength(0)
+}
+
 describe("TokenHeader save to API profiles", () => {
   beforeEach(() => {
     mockCreateProfile.mockReset()
@@ -358,11 +366,7 @@ describe("TokenHeader save to API profiles", () => {
     expect(
       screen.getByText("keyManagement:managedSiteStatus.badges.unknown"),
     ).toBeInTheDocument()
-    expect(
-      screen.queryByText(
-        "keyManagement:managedSiteStatus.descriptions.secondaryExactModelsMatch",
-      ),
-    ).toBeNull()
+    expectNoVisibleManagedSiteDescription()
     expect(
       screen.getByText("keyManagement:managedSiteStatus.signals.url.matched"),
     ).toBeInTheDocument()
@@ -517,11 +521,7 @@ describe("TokenHeader save to API profiles", () => {
     expect(
       screen.getByText("keyManagement:managedSiteStatus.badges.added"),
     ).toBeInTheDocument()
-    expect(
-      screen.queryByText(
-        "keyManagement:managedSiteStatus.descriptions.exactKeyMatch",
-      ),
-    ).toBeNull()
+    expectNoVisibleManagedSiteDescription()
     expect(
       screen.getByText("keyManagement:managedSiteStatus.signals.key.matched"),
     ).toBeInTheDocument()
@@ -590,16 +590,7 @@ describe("TokenHeader save to API profiles", () => {
       />,
     )
 
-    expect(
-      screen.queryByText(
-        "keyManagement:managedSiteStatus.descriptions.exactVerificationUnavailable",
-      ),
-    ).toBeNull()
-    expect(
-      screen.queryByText(
-        "keyManagement:managedSiteStatus.descriptions.newApiRetrieveKeyHint",
-      ),
-    ).toBeNull()
+    expectNoVisibleManagedSiteDescription()
     expect(
       screen.getByText(
         "keyManagement:managedSiteStatus.signals.key.unavailable",
@@ -964,11 +955,7 @@ describe("TokenHeader save to API profiles", () => {
       />,
     )
 
-    expect(
-      screen.queryByText(
-        "keyManagement:managedSiteStatus.descriptions.fuzzyUrlOnlyMatch",
-      ),
-    ).toBeNull()
+    expectNoVisibleManagedSiteDescription()
     expect(
       screen.getByText(
         "keyManagement:managedSiteStatus.signals.models.noMatch",
@@ -1016,11 +1003,7 @@ describe("TokenHeader save to API profiles", () => {
       />,
     )
 
-    expect(
-      screen.queryByText(
-        "keyManagement:managedSiteStatus.descriptions.secondaryModelsSimilarMatch",
-      ),
-    ).toBeNull()
+    expectNoVisibleManagedSiteDescription()
     expect(
       screen.getByText(
         "keyManagement:managedSiteStatus.signals.models.similar",
@@ -1077,11 +1060,7 @@ describe("TokenHeader save to API profiles", () => {
       />,
     )
 
-    expect(
-      screen.queryByText(
-        "keyManagement:managedSiteStatus.descriptions.keyMatchedModelsMismatch",
-      ),
-    ).toBeNull()
+    expectNoVisibleManagedSiteDescription()
     expect(
       screen.getByText("keyManagement:managedSiteStatus.signals.key.matched"),
     ).toBeInTheDocument()
