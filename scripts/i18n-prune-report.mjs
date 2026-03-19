@@ -383,12 +383,16 @@ const beforeSnapshot = await captureLocaleSnapshot()
 
 try {
   const configSource = await fs.readFile(configPath, "utf8")
+  const removeUnusedKeysPattern = /removeUnusedKeys\s*:\s*(false|true)/
+  const removeUnusedKeysEnabledPattern = /removeUnusedKeys\s*:\s*true\b/
+  const hasRemoveUnusedKeysEnabled =
+    removeUnusedKeysEnabledPattern.test(configSource)
   const nextConfigSource = configSource.replace(
-    /removeUnusedKeys:\s*(false|true)/,
+    removeUnusedKeysPattern,
     "removeUnusedKeys: true",
   )
 
-  if (nextConfigSource === configSource) {
+  if (nextConfigSource === configSource && !hasRemoveUnusedKeysEnabled) {
     throw new Error(
       "Could not enable removeUnusedKeys in temporary i18next config.",
     )

@@ -66,7 +66,7 @@ function MyComponent() {
 | `keyManagement` | 密钥管理 | `t("keyManagement:selectAccount")` |
 | `modelList` | 模型列表 | `t("modelList:searchModels")` |
 | `settings` | 设置 | `t("settings:display.title")` |
-| `messages` | 消息提示 | `t("messages:toast.success.accountAdded")` |
+| `messages` | 消息提示 | `t("messages:toast.success.accountSaveSuccess")` |
 | `ui` | UI 元素 | `t("ui:navigation.home")` |
 | `importExport` | 导入/导出 | `t("importExport:export.title")` |
 | `shareSnapshots` | 共享快照 | `t("shareSnapshots:<key>")` |

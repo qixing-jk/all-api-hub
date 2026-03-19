@@ -75,8 +75,8 @@
       "onlyJsonSupported": "仅支持 JSON 响应数据"
     },
     "operation": {
-      "failed": "操作失败: {{error}}",
-      "saveFailed": "保存失败: {{error}}"
+      "failed": "操作失败：{{error}}",
+      "saveFailed": "保存失败：{{error}}"
     },
     "unknown": "未知错误",
     "validation": {
@@ -138,7 +138,7 @@
       "duplicateCleanupFailed": "删除重复账号失败：{{error}}",
       "externalCheckInNonePending": "没有今日未打开过的外部签到站。",
       "findAccountDetailsFailed": "找不到账户详情",
-      "operationFailed": "操作失败: {{error}}",
+      "operationFailed": "操作失败：{{error}}",
       "refreshAccount": "刷新 {{accountName}} 失败",
       "saveFailed": "保存失败",
       "shareSnapshotAccountDisabled": "账号已禁用",
