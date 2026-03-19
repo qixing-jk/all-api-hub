@@ -384,7 +384,7 @@ const beforeSnapshot = await captureLocaleSnapshot()
 try {
   const configSource = await fs.readFile(configPath, "utf8")
   const nextConfigSource = configSource.replace(
-    /removeUnusedKeys:\s*false/,
+    /removeUnusedKeys:\s*(false|true)/,
     "removeUnusedKeys: true",
   )
 

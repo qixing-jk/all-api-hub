@@ -42,7 +42,7 @@
   "cherryStudio": {
     "attemptingRedirect": "正在尝试跳转到 Cherry Studio",
     "missingCredentials": "缺少必要的账户或密钥信息",
-    "unableToOpen": "无法打开,请确保已安装 Cherry Studio"
+    "unableToOpen": "无法打开，请确保已安装 Cherry Studio。"
   },
   "claudeCodeRouter": {
     "configMissing": "请先在设置中配置 Claude Code Router 基础 URL",

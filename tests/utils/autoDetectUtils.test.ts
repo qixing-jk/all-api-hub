@@ -8,6 +8,18 @@ import {
 } from "~/services/accounts/utils/autoDetectUtils"
 import { getDocsAutoDetectUrl } from "~/utils/navigation/docsLinks"
 
+const { tMock } = vi.hoisted(() => ({
+  tMock: vi.fn((key: string) => key),
+}))
+
+vi.mock("~/utils/i18n/core", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/i18n/core")>()
+  return {
+    ...actual,
+    t: tMock,
+  }
+})
+
 // Mock browser.tabs
 const originalBrowser = (globalThis as any).browser
 vi.stubGlobal("browser", {
@@ -161,6 +173,9 @@ describe("autoDetectUtils", () => {
         expect(result.type).toBe(AutoDetectErrorType.UNKNOWN)
         expect(result.message).toBe("messages:autodetect.failed")
         expect(result.helpDocUrl).toBe(getDocsAutoDetectUrl())
+        expect(tMock).toHaveBeenCalledWith("messages:autodetect.failed", {
+          error: "Something went wrong",
+        })
       })
 
       it("should handle non-Error objects", () => {
@@ -176,6 +191,9 @@ describe("autoDetectUtils", () => {
 
         expect(result.type).toBe(AutoDetectErrorType.UNKNOWN)
         expect(result.message).toBe("messages:autodetect.failed")
+        expect(tMock).toHaveBeenCalledWith("messages:autodetect.failed", {
+          error: "Random error string",
+        })
       })
 
       it("should handle null/undefined errors", () => {
