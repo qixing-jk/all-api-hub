@@ -202,7 +202,9 @@ describe("AccountList", () => {
 
     expect(screen.getAllByTestId("account-row")).toHaveLength(3)
 
-    await user.click(screen.getByRole("button", { name: "common:enabled" }))
+    await user.click(
+      screen.getByRole("button", { name: "common:status.enabled" }),
+    )
 
     expect(screen.getAllByTestId("account-row")).toHaveLength(2)
     expect(screen.getByText("Enabled Alpha")).toBeInTheDocument()
@@ -228,14 +230,18 @@ describe("AccountList", () => {
     expect(screen.getByText("Disabled Beta")).toBeInTheDocument()
     expect(screen.getByText("common:total: 1")).toBeInTheDocument()
 
-    await user.click(screen.getByRole("button", { name: "common:enabled" }))
+    await user.click(
+      screen.getByRole("button", { name: "common:status.enabled" }),
+    )
 
     expect(screen.queryByText("Disabled Beta")).not.toBeInTheDocument()
     expect(screen.queryAllByTestId("account-row")).toHaveLength(0)
     expect(screen.getByText("account:search.noResults")).toBeInTheDocument()
     expect(screen.getByText("common:total: 0")).toBeInTheDocument()
 
-    await user.click(screen.getByRole("button", { name: "common:disabled" }))
+    await user.click(
+      screen.getByRole("button", { name: "common:status.disabled" }),
+    )
 
     expect(screen.getAllByTestId("account-row")).toHaveLength(1)
     expect(screen.getByText("Disabled Beta")).toBeInTheDocument()

@@ -6,8 +6,63 @@ const repoRoot = process.cwd()
 const localesRoot = path.join(repoRoot, "src", "locales")
 const configPath = path.join(repoRoot, "i18next.config.ts")
 const reportPathArgIndex = process.argv.indexOf("--report")
-const reportPath =
-  reportPathArgIndex >= 0 ? process.argv[reportPathArgIndex + 1] : undefined
+const reportPath = resolveReportPathArg(process.argv, reportPathArgIndex)
+
+/**
+ * Print a usage error and exit the script.
+ * @param message Human-readable validation error.
+ */
+function exitWithUsage(message) {
+  console.error(message)
+  console.error("Usage: node scripts/i18n-prune-report.mjs [--report <path>]")
+  process.exit(1)
+}
+
+/**
+ * Resolve the optional report path CLI flag.
+ * @param argv Raw process arguments.
+ * @param argIndex Index of the --report flag.
+ * @returns Report path when provided.
+ */
+function resolveReportPathArg(argv, argIndex) {
+  if (argIndex < 0) {
+    return undefined
+  }
+
+  const nextArg = argv[argIndex + 1]
+  if (!nextArg || nextArg.startsWith("-")) {
+    exitWithUsage("Missing value for --report.")
+  }
+
+  return nextArg
+}
+
+/**
+ * Normalize unknown thrown values into a message string.
+ * @param error Thrown value.
+ * @returns Error message.
+ */
+function getErrorMessage(error) {
+  return error instanceof Error ? error.message : String(error)
+}
+
+/**
+ * Warn when a locale file cannot be parsed as JSON.
+ * @param details Parse error context.
+ * @param details.absolutePath Absolute file path.
+ * @param details.relativePath Repo-relative file path.
+ * @param details.error Parse error.
+ */
+function logLocaleJsonParseError({ absolutePath, relativePath, error }) {
+  console.warn(
+    [
+      `Skipping invalid locale JSON: ${relativePath}`,
+      `  absolutePath: ${absolutePath}`,
+      `  repoRoot: ${repoRoot}`,
+      `  error: ${getErrorMessage(error)}`,
+    ].join("\n"),
+  )
+}
 
 /**
  * Execute pnpm subcommands in a cross-platform way.
@@ -25,9 +80,13 @@ function runPnpm(args) {
   }
 
   if (process.platform === "win32") {
-    execFileSync("cmd.exe", ["/d", "/s", "/c", `pnpm ${args.join(" ")}`], {
-      stdio: "inherit",
-    })
+    execFileSync(
+      process.env.comspec ?? "cmd.exe",
+      ["/d", "/s", "/c", "pnpm", ...args],
+      {
+        stdio: "inherit",
+      },
+    )
     return
   }
 
@@ -86,32 +145,48 @@ function flattenLocaleObject(value, prefix = "", output = new Map()) {
 
 /**
  * Read current locale files into raw + flattened snapshots.
- * @returns Snapshot keyed by repo-relative locale file path.
+ * @returns Raw and parsed snapshots keyed by repo-relative locale file path.
  */
 async function captureLocaleSnapshot() {
   const files = await listLocaleFiles(localesRoot)
-  const snapshot = new Map()
+  const rawFiles = new Map()
+  const parsedFiles = new Map()
+  const skippedFiles = new Set()
 
   for (const absolutePath of files) {
     const raw = await fs.readFile(absolutePath, "utf8")
     const relativePath = path
       .relative(repoRoot, absolutePath)
       .replaceAll("\\", "/")
-    const parsed = JSON.parse(raw)
-    snapshot.set(relativePath, {
+    rawFiles.set(relativePath, raw)
+
+    let parsed
+    try {
+      parsed = JSON.parse(raw)
+    } catch (error) {
+      skippedFiles.add(relativePath)
+      logLocaleJsonParseError({
+        absolutePath,
+        relativePath,
+        error,
+      })
+      continue
+    }
+
+    parsedFiles.set(relativePath, {
       raw,
       flat: flattenLocaleObject(parsed),
     })
   }
 
-  return snapshot
+  return { rawFiles, parsedFiles, skippedFiles }
 }
 
 /**
  * Restore locale files exactly as they were before probing.
- * @param snapshot Original locale snapshot.
+ * @param rawFiles Original raw locale snapshot.
  */
-async function restoreLocaleSnapshot(snapshot) {
+async function restoreLocaleSnapshot(rawFiles) {
   const currentFiles = new Set(
     (await listLocaleFiles(localesRoot)).map((absolutePath) =>
       path.relative(repoRoot, absolutePath).replaceAll("\\", "/"),
@@ -119,15 +194,15 @@ async function restoreLocaleSnapshot(snapshot) {
   )
 
   for (const relativePath of currentFiles) {
-    if (!snapshot.has(relativePath)) {
+    if (!rawFiles.has(relativePath)) {
       await fs.unlink(path.join(repoRoot, relativePath))
     }
   }
 
-  for (const [relativePath, data] of snapshot.entries()) {
+  for (const [relativePath, raw] of rawFiles.entries()) {
     const absolutePath = path.join(repoRoot, relativePath)
     await fs.mkdir(path.dirname(absolutePath), { recursive: true })
-    await fs.writeFile(absolutePath, data.raw, "utf8")
+    await fs.writeFile(absolutePath, raw, "utf8")
   }
 }
 
@@ -147,12 +222,20 @@ function serializeLocaleValue(value) {
  * @returns Semantic file-by-file report.
  */
 function diffSnapshots(before, after) {
-  const allFiles = new Set([...before.keys(), ...after.keys()])
+  const skippedFiles = new Set([...before.skippedFiles, ...after.skippedFiles])
+  const allFiles = new Set([
+    ...before.parsedFiles.keys(),
+    ...after.parsedFiles.keys(),
+  ])
   const fileReports = []
 
   for (const file of [...allFiles].sort()) {
-    const beforeFile = before.get(file)
-    const afterFile = after.get(file)
+    if (skippedFiles.has(file)) {
+      continue
+    }
+
+    const beforeFile = before.parsedFiles.get(file)
+    const afterFile = after.parsedFiles.get(file)
 
     if (!beforeFile || !afterFile) {
       fileReports.push({
@@ -334,6 +417,6 @@ try {
     console.log(`saved report: ${absoluteReportPath}`)
   }
 } finally {
-  await restoreLocaleSnapshot(beforeSnapshot)
+  await restoreLocaleSnapshot(beforeSnapshot.rawFiles)
   await fs.rm(tempConfigPath, { force: true })
 }

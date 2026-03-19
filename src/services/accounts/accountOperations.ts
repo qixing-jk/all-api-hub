@@ -212,7 +212,7 @@ export async function autoDetectAccount(
         userId: userId.toString(),
         exchangeRate: defaultExchangeRate,
         checkIn: {
-          enableDetection: isSub2Api ? false : (checkSupport ?? false),
+          enableDetection: isSub2Api ? false : checkSupport ?? false,
           autoCheckInEnabled: isSub2Api ? false : true,
           siteStatus: {
             isCheckedInToday: false,
@@ -229,9 +229,12 @@ export async function autoDetectAccount(
       },
     }
   } catch (error) {
-    logger.error(t("messages:autodetect.failed"), error)
-    const detailedError = analyzeAutoDetectError(error)
     const errorMessage = getErrorMessage(error)
+    logger.error(
+      t("messages:autodetect.failed", { error: errorMessage }),
+      error,
+    )
+    const detailedError = analyzeAutoDetectError(error)
     return {
       success: false,
       message: t("accountDialog:messages.autoDetectFailed", {
@@ -873,7 +876,7 @@ export async function getSiteName(
   input: browser.tabs.Tab | string,
 ): Promise<string> {
   // 1. 统一提取信息
-  const urlString = typeof input === "string" ? input : (input.url ?? "")
+  const urlString = typeof input === "string" ? input : input.url ?? ""
   const tabTitle = typeof input === "string" ? null : input.title
 
   // 2. 优先从 Tab 标题获取

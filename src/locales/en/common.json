@@ -20,9 +20,6 @@
     "cny": "CNY",
     "usd": "USD"
   },
-  "disabled": "Disabled",
-  "enabled": "Enabled",
-  "error": "Error",
   "labels": {
     "apiKey": "API Key",
     "notAvailable": "N/A",

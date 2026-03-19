@@ -4,7 +4,7 @@
   },
   "captions": {
     "layoutIndex": "布局 #{{index}}",
-    "paletteIndex": "#{{index}}"
+    "paletteIndex": "调色板 #{{index}}"
   },
   "labels": {
     "layout": "布局",

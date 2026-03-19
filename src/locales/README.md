@@ -72,6 +72,8 @@ function MyComponent() {
 | `shareSnapshots` | 共享快照 | `t("shareSnapshots:<key>")` |
 | `about` | 关于 | `t("about:title")` |
 
+- `common.status.*` 是状态类文案（如 `enabled` / `disabled` / `error`）的唯一来源；不要再在 `common` 根级新增同名别名，避免中英文翻译漂移。
+
 ---
 
 ## 🔍 CLI 校验

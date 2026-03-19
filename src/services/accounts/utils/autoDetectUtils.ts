@@ -134,7 +134,7 @@ export function analyzeAutoDetectError(error: any): AutoDetectError {
   // 默认未知错误
   return {
     type: AutoDetectErrorType.UNKNOWN,
-    message: t("messages:autodetect.failed") + errorMessage,
+    message: t("messages:autodetect.failed", { error: errorMessage }),
     helpDocUrl: docsUrl,
   }
 }

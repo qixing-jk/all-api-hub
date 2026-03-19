@@ -152,7 +152,7 @@
   },
   "warnings": {
     "cashflowDisabled": {
-      "description": "Today cashflow fetching is disabled and end-of-day capture is disabled. Enable either \"Show today cashflow\" or \"End-of-day capture\" to record income/outcome values.",
+      "description": "Today's cashflow fetching is disabled and end-of-day capture is disabled. Enable either \"Show today cashflow\" or \"End-of-day capture\" to record income/outcome values.",
       "title": "Income/outcome history will be empty"
     }
   }

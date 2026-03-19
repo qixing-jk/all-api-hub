@@ -20,9 +20,6 @@
     "cny": "人民币",
     "usd": "美元"
   },
-  "disabled": "已禁用",
-  "enabled": "已启用",
-  "error": "错误",
   "labels": {
     "apiKey": "API Key",
     "notAvailable": "N/A",

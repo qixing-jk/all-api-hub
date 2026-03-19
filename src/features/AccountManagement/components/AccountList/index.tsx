@@ -152,12 +152,12 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
     return [
       {
         value: ACCOUNT_STATUS_FILTER_OPTION_VALUES.enabled,
-        label: t("common:enabled"),
+        label: t("common:status.enabled"),
         count: enabledCount,
       },
       {
         value: ACCOUNT_STATUS_FILTER_OPTION_VALUES.disabled,
-        label: t("common:disabled"),
+        label: t("common:status.disabled"),
         count: disabledCount,
       },
       ...tagFilterOptions,

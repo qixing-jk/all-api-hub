@@ -11,7 +11,7 @@
     "editKey": "编辑密钥",
     "enable": "启用",
     "expandAll": "全部展开",
-    "exportToCCSwitch": "导出到CC Switch",
+    "exportToCCSwitch": "导出到 CC Switch",
     "exportToKiloCode": "导出到 Kilo Code",
     "hideKey": "隐藏密钥",
     "importToClaudeCodeRouter": "导入到 Claude Code Router",
@@ -21,7 +21,7 @@
     "retryFailed": "重试失败账号",
     "saveToApiProfiles": "保存到 API 凭证",
     "showKey": "显示密钥",
-    "useInCherry": "在Cherry Studio中使用"
+    "useInCherry": "在 Cherry Studio 中使用"
   },
   "allAccounts": "所有账号",
   "allAccountsFailed": "{{count}} 个失败",

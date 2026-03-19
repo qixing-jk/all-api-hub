@@ -159,8 +159,7 @@ describe("autoDetectUtils", () => {
         const result = analyzeAutoDetectError(error)
 
         expect(result.type).toBe(AutoDetectErrorType.UNKNOWN)
-        expect(result.message).toContain("messages:autodetect.failed")
-        expect(result.message).toContain("Something went wrong")
+        expect(result.message).toBe("messages:autodetect.failed")
         expect(result.helpDocUrl).toBe(getDocsAutoDetectUrl())
       })
 
@@ -176,7 +175,7 @@ describe("autoDetectUtils", () => {
         const result = analyzeAutoDetectError(error)
 
         expect(result.type).toBe(AutoDetectErrorType.UNKNOWN)
-        expect(result.message).toContain("Random error string")
+        expect(result.message).toBe("messages:autodetect.failed")
       })
 
       it("should handle null/undefined errors", () => {

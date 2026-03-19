@@ -2,7 +2,7 @@
   "confirmToast": {
     "body": "Do you want to open the AI API test Panel to check and test the AI API's availability?",
     "open": "Open",
-    "title": "Valid AI API URL and API Key Detected"
+    "title": "AI API URL and API Key Detected"
   },
   "messages": {
     "success": {

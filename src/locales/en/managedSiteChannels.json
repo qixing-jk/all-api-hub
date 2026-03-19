@@ -13,7 +13,7 @@
   "dialog": {
     "cancel": "Cancel",
     "confirm": "Delete",
-    "deleteDescription": "This action cannot be undone. The selected configuration will be removed permanently.",
+    "deleteDescription": "This action cannot be undone. The selected channels will be removed permanently.",
     "deleteTitle": "Delete channel?",
     "deleteTitlePlural": "Delete channels?"
   },

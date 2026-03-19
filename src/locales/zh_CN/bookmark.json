@@ -38,7 +38,7 @@
     "placeholder": "搜索书签..."
   },
   "stats": {
-    "pinnedBookmarks": "置顶",
+    "pinnedBookmarks": "置顶书签",
     "totalBookmarks": "书签总数",
     "usedTags": "使用标签"
   },

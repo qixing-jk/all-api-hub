@@ -120,7 +120,7 @@
       "title": "密钥列表",
       "totalKeys": "共 {{count}} 个密钥",
       "usedQuota": "已用额度",
-      "useInCherry": "在Cherry Studio中使用"
+      "useInCherry": "在 Cherry Studio 中使用"
     },
     "dedupeAccounts": {
       "confirm": {

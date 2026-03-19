@@ -200,7 +200,9 @@ export default function WebDAVAutoSyncSettings() {
           <div className="flex items-center gap-2">
             <Switch checked={autoSyncEnabled} onChange={setAutoSyncEnabled} />
             <span className="text-sm text-gray-700 dark:text-gray-300">
-              {autoSyncEnabled ? t("common:enabled") : t("common:disabled")}
+              {autoSyncEnabled
+                ? t("common:status.enabled")
+                : t("common:status.disabled")}
             </span>
           </div>
         </FormField>
@@ -269,7 +271,9 @@ export default function WebDAVAutoSyncSettings() {
             </p>
             {lastSyncError && (
               <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-                <span className="font-medium">{t("common:error")}: </span>
+                <span className="font-medium">
+                  {t("common:status.error")}:{" "}
+                </span>
                 {lastSyncError}
               </p>
             )}

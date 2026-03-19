@@ -276,8 +276,8 @@ export function DedupeAccountCard({
               </dt>
               <dd className="dark:text-dark-text-secondary text-gray-800">
                 {account.checkIn?.enableDetection
-                  ? t("common:enabled")
-                  : t("common:disabled")}
+                  ? t("common:status.enabled")
+                  : t("common:status.disabled")}
               </dd>
             </div>
 
@@ -287,8 +287,8 @@ export function DedupeAccountCard({
               </dt>
               <dd className="dark:text-dark-text-secondary text-gray-800">
                 {autoCheckinEnabled
-                  ? t("common:enabled")
-                  : t("common:disabled")}
+                  ? t("common:status.enabled")
+                  : t("common:status.disabled")}
               </dd>
             </div>
 
@@ -317,8 +317,8 @@ export function DedupeAccountCard({
               </dt>
               <dd className="dark:text-dark-text-secondary text-gray-800">
                 {account.excludeFromTotalBalance === true
-                  ? t("common:enabled")
-                  : t("common:disabled")}
+                  ? t("common:status.enabled")
+                  : t("common:status.disabled")}
               </dd>
             </div>
           </dl>
