@@ -5,7 +5,6 @@ import { IconButton, ToggleButton } from "~/components/ui"
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
@@ -96,13 +95,10 @@ export function LanguageSwitcher({
             title={triggerLabel}
             className={className}
           >
-            <Languages className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+            <Languages className="h-4 w-4" />
           </IconButton>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-44">
-          <DropdownMenuLabel>
-            {t("appearanceLanguage.language")}
-          </DropdownMenuLabel>
+        <DropdownMenuContent align="end" className="w-36">
           <DropdownMenuRadioGroup
             value={activeLanguage}
             onValueChange={(value: string) => {
@@ -116,17 +112,11 @@ export function LanguageSwitcher({
             }}
           >
             {UI_LANGUAGE_OPTIONS.map(({ code }) => {
-              const label = getLanguageOptionLabel(t, code)
               const languageName = getLanguageOptionName(t, code)
 
               return (
                 <DropdownMenuRadioItem key={code} value={code}>
-                  <span className="flex w-full items-center justify-between gap-3">
-                    <span>{languageName}</span>
-                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                      {label}
-                    </span>
-                  </span>
+                  {languageName}
                 </DropdownMenuRadioItem>
               )
             })}

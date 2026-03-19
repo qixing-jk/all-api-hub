@@ -9,7 +9,6 @@ import { IconButton } from "~/components/ui"
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
@@ -38,19 +37,16 @@ const getThemeOptions = (t: (key: string) => string) => {
       mode: "light" as ThemeMode,
       label: getThemeLabel(t, "light"),
       icon: SunIcon,
-      description: t("settings:theme.useLightTheme"),
     },
     {
       mode: "dark" as ThemeMode,
       label: getThemeLabel(t, "dark"),
       icon: MoonIcon,
-      description: t("settings:theme.useDarkTheme"),
     },
     {
       mode: "system" as ThemeMode,
       label: getThemeLabel(t, "system"),
       icon: ComputerDesktopIcon,
-      description: t("settings:theme.followSystemTheme"),
     },
   ]
 }
@@ -113,8 +109,7 @@ export default function HeaderThemeSwitcher() {
           />
         </IconButton>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel>{t("theme.appearance")}</DropdownMenuLabel>
+      <DropdownMenuContent align="end" className="w-44">
         <DropdownMenuRadioGroup
           value={themeMode}
           onValueChange={(value: string) => {
@@ -123,21 +118,16 @@ export default function HeaderThemeSwitcher() {
             }
           }}
         >
-          {themeOptions.map(({ mode, label, icon: Icon, description }) => (
+          {themeOptions.map(({ mode, label, icon: Icon }) => (
             <DropdownMenuRadioItem key={mode} value={mode}>
-              <div className="flex min-w-0 items-start gap-2">
+              <div className="flex min-w-0 items-center gap-2">
                 <Icon
                   className={cn(
-                    "mt-0.5 h-4 w-4 shrink-0 transition-colors",
+                    "h-4 w-4 shrink-0 transition-colors",
                     getThemeIconClassName(mode),
                   )}
                 />
-                <div className="min-w-0">
-                  <div>{label}</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
-                    {description}
-                  </div>
-                </div>
+                <span>{label}</span>
               </div>
             </DropdownMenuRadioItem>
           ))}
