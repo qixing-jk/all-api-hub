@@ -245,7 +245,7 @@
         "modelIdRequiredTitle": "需要模型 ID",
         "noModelsDescription": "該金鑰未返回可用模型。Kilo Code 實際使用通常需要模型 ID，請手動輸入。",
         "noModelsTitle": "無模型",
-        "nothingToExportDescription": "請至少選擇一個可匯出的站點/金鑰後再進行復制/下載。",
+        "nothingToExportDescription": "請至少選擇一個可匯出的站點/金鑰後再進行複製/下載。",
         "nothingToExportTitle": "無可匯出的內容",
         "noTokensDescription": "該站點將被跳過，直到建立金鑰。",
         "noTokensTitle": "暫無金鑰",

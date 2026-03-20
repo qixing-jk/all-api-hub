@@ -13,7 +13,7 @@
       "scheduleDailyAlarmForToday": "開發：將每日簽到的鬧鐘設為今天稍後時間",
       "triggerDailyAlarmNow": "開發：立即執行每日自動簽到（模擬每日簽到鬧鐘回撥）",
       "triggerRetryAlarmNow": "開發：立即執行重試簽到（模擬簽到重試鬧鐘回撥）",
-      "triggerUiOpenPretrigger": "開發：立即嘗試“開啟介面時提前觸發今日簽到",
+      "triggerUiOpenPretrigger": "開發：立即嘗試“開啟介面時提前觸發今日簽到”",
       "uiOpenPretriggerDiagnosticsDesc": "展示是否滿足條件，以及用於判斷的輸入資訊。",
       "uiOpenPretriggerDiagnosticsTitle": "開啟介面時提前觸發今日簽到"
     },
@@ -79,7 +79,7 @@
     },
     "loading": {
       "evaluatingUiOpenPretrigger": "正在評估介面開啟預觸發...",
-      "openingFailedManual_other": "messages.loading.openingFailedManual",
+      "openingFailedManual_other": "正在為 {{count}} 個失敗帳號開啟手動簽到頁...",
       "resettingLastDailyRunDay": "正在重置每日執行標記...",
       "running": "正在執行自動簽到...",
       "schedulingDailyAlarmForToday": "正在計劃今日每日鬧鐘...",
@@ -91,7 +91,7 @@
       "dailyAlarmScheduledForToday": "已計劃今日每日鬧鐘。",
       "dailyAlarmTriggered": "已觸發每日鬧鐘執行。",
       "lastDailyRunDayReset": "已重置每日執行標記。",
-      "openFailedManualCompleted_other": "messages.success.openFailedManualCompleted",
+      "openFailedManualCompleted_other": "已開啟 {{count}} 個失敗帳號的手動簽到頁。",
       "pretriggerStarted": "已提前觸發自動簽到。",
       "retryAlarmTriggered": "已觸發重試鬧鐘執行。",
       "retryCompleted": "重新嘗試已完成。",

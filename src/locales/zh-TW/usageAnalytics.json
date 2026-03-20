@@ -204,7 +204,7 @@
       "noMessage": "—",
       "rowActions": "行操作",
       "selectAll": "全選帳號",
-      "selectedCount_other": "syncTab.table.selectedCount",
+      "selectedCount_other": "已選擇 {{count}} 個帳號",
       "selectRow": "選擇帳號：{{name}}"
     }
   },

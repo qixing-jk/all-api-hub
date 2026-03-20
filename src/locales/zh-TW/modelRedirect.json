@@ -11,13 +11,13 @@
       "selectNone": "全不選"
     },
     "confirm": {
-      "description_other": "bulkClear.confirm.description",
-      "details_other": "bulkClear.confirm.details",
+      "description_other": "即將清空 {{count}} 個渠道的模型重定向對映（model_mapping）。此操作不可撤銷。",
+      "details_other": "已選擇渠道數：{{count}}",
       "title": "確認清空模型重定向對映？",
       "warningTitle": "危險操作"
     },
     "messages": {
-      "allSuccess_other": "bulkClear.messages.allSuccess",
+      "allSuccess_other": "已成功清空 {{count}} 個渠道的模型重定向對映",
       "failed": "清空模型重定向對映失敗：{{error}}",
       "nothingToClear": "無需清空（所選渠道的 model_mapping 已為空）",
       "partialFailure": "已清空 {{success}}/{{total}} 個渠道，{{failed}} 個失敗",
@@ -26,7 +26,7 @@
     "preview": {
       "channelListLabel": "渠道列表",
       "description": "請選擇需要清空的渠道。未選擇的渠道不會被修改。",
-      "mappingCount_other": "bulkClear.preview.mappingCount",
+      "mappingCount_other": "對映數：{{count}}",
       "mappingEmptyInline": "當前 model_mapping 為空（{}）",
       "mappingInvalid": "當前 model_mapping 不是有效 JSON，將展示原始文字。",
       "mappingInvalidBadge": "JSON 無效",

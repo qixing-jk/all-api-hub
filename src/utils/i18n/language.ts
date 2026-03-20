@@ -55,6 +55,8 @@ export function isTraditionalChineseLanguage(
   if (!normalized || !isChineseLanguage(normalized)) return false
 
   const subtags = normalized.split("-")
+  if (subtags.includes("hans")) return false
+
   return (
     subtags.includes("hant") ||
     subtags.some((tag) => TRADITIONAL_CHINESE_REGIONS.has(tag))

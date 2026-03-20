@@ -60,7 +60,7 @@
     "tagsRenameCancel": "取消",
     "tagsRenameSave": "儲存",
     "tagsSearchPlaceholder": "搜尋標籤…",
-    "tagsSelectedCount_other": "form.tagsSelectedCount",
+    "tagsSelectedCount_other": "已選擇 {{count}} 個標籤",
     "toggleAccessTokenVisibility": "切換訪問令牌的可見性",
     "toggleRefreshTokenVisibility": "切換 Refresh Token 的可見性",
     "userId": "使用者 ID",
@@ -133,7 +133,7 @@
       "actions": {
         "continue": "繼續"
       },
-      "description_other": "accountDialog:warnings.duplicateAccount.description",
+      "description_other": "你已在 {{siteUrl}} 新增了 {{count}} 個帳號。繼續新增可能會造成重複，是否繼續？",
       "descriptionExact": "在 {{siteUrl}} 上，使用者 ID {{userId}} 的帳號已存在（{{username}}）。繼續新增可能會造成重複，是否繼續？",
       "title": "重複帳號",
       "warningTitle": "該站點已存在帳號"

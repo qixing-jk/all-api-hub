@@ -14,6 +14,8 @@ describe("i18n language helpers", () => {
     expect(normalizeAppLanguage("zh-SG")).toBe("zh-CN")
     expect(normalizeAppLanguage("zh-MY")).toBe("zh-CN")
     expect(normalizeAppLanguage("zh-Hans-SG")).toBe("zh-CN")
+    expect(normalizeAppLanguage("zh-Hans-TW")).toBe("zh-CN")
+    expect(normalizeAppLanguage("zh-Hans-HK")).toBe("zh-CN")
     expect(normalizeAppLanguage("zh")).toBe("zh-CN")
     expect(normalizeAppLanguage("zh-TW")).toBe("zh-TW")
     expect(normalizeAppLanguage("zh-HK")).toBe("zh-TW")

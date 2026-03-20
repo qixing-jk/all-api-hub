@@ -15,7 +15,7 @@
     "cancelled": "已取消",
     "noAccountForUrl": "當前站點未在 All API Hub 中配置帳號，請先在擴充套件中新增該站點後再試。",
     "promptConfirm": "檢測到疑似兌換碼 {{code}}，是否為當前站點嘗試自動兌換？",
-    "promptConfirmBatch_other": "redemptionAssist:messages.promptConfirmBatch",
+    "promptConfirmBatch_other": "檢測到 {{count}} 個疑似兌換碼，請選擇要為當前站點嘗試自動兌換的兌換碼。",
     "promptSettingsLink": "開啟兌換助手設定",
     "promptSource": "此提示來自 All API Hub 瀏覽器擴充套件",
     "promptTitle": "兌換助手",

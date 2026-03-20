@@ -265,7 +265,7 @@ describe("PermissionOnboardingDialog language selection", () => {
     ).toBeInTheDocument()
   })
 
-  it("offers traditional chinese in onboarding and updates shared settings copy", async () => {
+  it("offers traditional chinese in onboarding and persists the selected language", async () => {
     const user = userEvent.setup()
     const i18n = await createSettingsI18n("en")
 

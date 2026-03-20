@@ -46,11 +46,11 @@
   "addFirstAccount": "新增你的第一個站點帳號",
   "currentLoginAdded": "⚠️當前登入帳號已新增（{{siteName}}）",
   "currentSiteAdded": "⚠️當前站點 {{siteName}} 已存在已新增帳號",
-  "currentSiteAddedCount_other": "currentSiteAddedCount",
+  "currentSiteAddedCount_other": "⚠️此站點已存在已新增帳號（{{count}} 個）",
   "description": "一鍵管理所有AI中轉站",
   "emptyState": "暫無站點帳號",
   "filter": {
-    "summary_other": "account:filter.summary",
+    "summary_other": "共 {{count}} 個帳號",
     "tagsAllLabel": "全部"
   },
   "filteredTotals": {

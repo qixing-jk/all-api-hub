@@ -36,8 +36,8 @@
       "autoSync": "自動同步",
       "disabled": "已禁用",
       "enabled": "已啟用",
-      "everyHours_other": "managedSiteModelSync:execution.overview.everyHours",
-      "everyMinutes_other": "managedSiteModelSync:execution.overview.everyMinutes",
+      "everyHours_other": "每 {{count}} 小時",
+      "everyMinutes_other": "每 {{count}} 分鐘",
       "lastRun": "上次執行",
       "never": "從未"
     },
