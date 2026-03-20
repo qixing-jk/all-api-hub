@@ -1,20 +1,54 @@
-import * as React from "react"
 import toast from "react-hot-toast/headless"
 
 import type { DisplaySiteData } from "~/types"
 
 import { ensureRedemptionToastUi } from "../../shared/uiRoot"
-import { RedemptionAccountSelectToast } from "../components/RedemptionAccountSelectToast"
+import type { RedemptionBatchResultItem } from "../components/RedemptionBatchResultToast"
 import {
-  RedemptionBatchResultToast,
-  type RedemptionBatchResultItem,
-} from "../components/RedemptionBatchResultToast"
-import { RedemptionLoadingToast } from "../components/RedemptionLoadingToast"
-import {
-  RedemptionPromptToast,
   type RedemptionPromptCodeItem,
   type RedemptionPromptResult,
 } from "../components/RedemptionPromptToast"
+
+let redemptionToastModulesPromise: Promise<{
+  createElement: typeof import("react").createElement
+  RedemptionAccountSelectToast: typeof import("../components/RedemptionAccountSelectToast").RedemptionAccountSelectToast
+  RedemptionBatchResultToast: typeof import("../components/RedemptionBatchResultToast").RedemptionBatchResultToast
+  RedemptionLoadingToast: typeof import("../components/RedemptionLoadingToast").RedemptionLoadingToast
+  RedemptionPromptToast: typeof import("../components/RedemptionPromptToast").RedemptionPromptToast
+}> | null = null
+
+/**
+ * Defer the redemption toast React tree until a toast is actually shown.
+ */
+async function loadRedemptionToastModules() {
+  if (!redemptionToastModulesPromise) {
+    redemptionToastModulesPromise = Promise.all([
+      import("react"),
+      import("../components/RedemptionAccountSelectToast"),
+      import("../components/RedemptionBatchResultToast"),
+      import("../components/RedemptionLoadingToast"),
+      import("../components/RedemptionPromptToast"),
+    ]).then(
+      ([
+        reactModule,
+        accountSelectModule,
+        batchResultModule,
+        loadingModule,
+        promptModule,
+      ]) => ({
+        createElement: reactModule.createElement,
+        RedemptionAccountSelectToast:
+          accountSelectModule.RedemptionAccountSelectToast,
+        RedemptionBatchResultToast:
+          batchResultModule.RedemptionBatchResultToast,
+        RedemptionLoadingToast: loadingModule.RedemptionLoadingToast,
+        RedemptionPromptToast: promptModule.RedemptionPromptToast,
+      }),
+    )
+  }
+
+  return redemptionToastModulesPromise
+}
 
 /**
  * Shows an indefinite loading toast while auto-redeem runs.
@@ -23,8 +57,10 @@ import {
  */
 export async function showRedeemLoadingToast(message: string) {
   await ensureRedemptionToastUi()
+  const { createElement, RedemptionLoadingToast } =
+    await loadRedemptionToastModules()
   return toast.custom(
-    () => React.createElement(RedemptionLoadingToast, { message }),
+    () => createElement(RedemptionLoadingToast, { message }),
     {
       duration: Infinity,
     },
@@ -52,6 +88,8 @@ export async function showAccountSelectToast(
   options?: { title?: string; message?: string },
 ): Promise<DisplaySiteData | null> {
   await ensureRedemptionToastUi()
+  const { createElement, RedemptionAccountSelectToast } =
+    await loadRedemptionToastModules()
 
   return new Promise((resolve) => {
     let resolved = false
@@ -69,7 +107,7 @@ export async function showAccountSelectToast(
     toast.custom(
       (toastInstance) => {
         const toastId = toastInstance.id
-        return React.createElement(RedemptionAccountSelectToast, {
+        return createElement(RedemptionAccountSelectToast, {
           title: options?.title,
           message: options?.message,
           accounts,
@@ -95,6 +133,8 @@ export async function showRedemptionPromptToast(
   codes: RedemptionPromptCodeItem[],
 ): Promise<RedemptionPromptResult> {
   await ensureRedemptionToastUi()
+  const { createElement, RedemptionPromptToast } =
+    await loadRedemptionToastModules()
 
   return new Promise((resolve) => {
     let resolved = false
@@ -108,7 +148,7 @@ export async function showRedemptionPromptToast(
 
     toast.custom((toastInstance) => {
       const toastId = toastInstance.id
-      return React.createElement(RedemptionPromptToast, {
+      return createElement(RedemptionPromptToast, {
         message,
         codes,
         onAction: (result: RedemptionPromptResult) =>
@@ -146,10 +186,12 @@ export async function showRedeemBatchResultToast(
   onRetry: (code: string) => Promise<RedemptionBatchResultItem>,
 ) {
   await ensureRedemptionToastUi()
+  const { createElement, RedemptionBatchResultToast } =
+    await loadRedemptionToastModules()
 
   return toast.custom(
     (toastInstance) =>
-      React.createElement(RedemptionBatchResultToast, {
+      createElement(RedemptionBatchResultToast, {
         results,
         onRetry,
         onClose: () => toast.dismiss(toastInstance.id),

@@ -1,8 +1,30 @@
-import * as React from "react"
 import toast from "react-hot-toast/headless"
 
 import { ensureRedemptionToastUi } from "~/entrypoints/content/shared/uiRoot"
-import { ApiCheckConfirmToast } from "~/entrypoints/content/webAiApiCheck/components/ApiCheckConfirmToast"
+
+let apiCheckToastModulesPromise: Promise<{
+  createElement: typeof import("react").createElement
+  ApiCheckConfirmToast: typeof import("~/entrypoints/content/webAiApiCheck/components/ApiCheckConfirmToast").ApiCheckConfirmToast
+}> | null = null
+
+/**
+ * Load the API-check toast component tree only when auto-detect needs to prompt.
+ */
+async function loadApiCheckToastModules() {
+  if (!apiCheckToastModulesPromise) {
+    apiCheckToastModulesPromise = Promise.all([
+      import("react"),
+      import(
+        "~/entrypoints/content/webAiApiCheck/components/ApiCheckConfirmToast"
+      ),
+    ]).then(([reactModule, confirmToastModule]) => ({
+      createElement: reactModule.createElement,
+      ApiCheckConfirmToast: confirmToastModule.ApiCheckConfirmToast,
+    }))
+  }
+
+  return apiCheckToastModulesPromise
+}
 
 /**
  * Show the top-right confirmation toast used by auto-detect.
@@ -10,6 +32,8 @@ import { ApiCheckConfirmToast } from "~/entrypoints/content/webAiApiCheck/compon
  */
 export async function showApiCheckConfirmToast(): Promise<boolean> {
   await ensureRedemptionToastUi()
+  const { createElement, ApiCheckConfirmToast } =
+    await loadApiCheckToastModules()
 
   return new Promise((resolve) => {
     let resolved = false
@@ -23,7 +47,7 @@ export async function showApiCheckConfirmToast(): Promise<boolean> {
 
     toast.custom(
       (toastInstance) =>
-        React.createElement(ApiCheckConfirmToast, {
+        createElement(ApiCheckConfirmToast, {
           onAction: (action) => finish(action === "confirm", toastInstance.id),
         }),
       {

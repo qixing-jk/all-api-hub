@@ -1,9 +1,7 @@
-import * as React from "react"
 import { createRoot, type Root } from "react-dom/client"
 import { ContentScriptContext } from "wxt/utils/content-script-context"
 import { createShadowRootUi } from "wxt/utils/content-script-ui/shadow-root"
 
-import { ContentReactRoot } from "~/entrypoints/content/shared/ContentReactRoot"
 import { CONTENT_UI_HOST_TAG } from "~/entrypoints/content/shared/contentUi"
 import { createLogger } from "~/utils/core/logger"
 
@@ -15,6 +13,27 @@ const logger = createLogger("RedemptionAssistUiRoot")
 let ctxRef: ContentScriptContext | null = null
 let redemptionToastRoot: Root | null = null
 let mountingPromise: Promise<void> | null = null
+let contentUiModulesPromise: Promise<{
+  createElement: typeof import("react").createElement
+  ContentReactRoot: typeof import("~/entrypoints/content/shared/ContentReactRoot").ContentReactRoot
+}> | null = null
+
+/**
+ * Load the heavy content UI tree only when the page actually needs a toast/modal.
+ */
+async function loadContentUiModules() {
+  if (!contentUiModulesPromise) {
+    contentUiModulesPromise = Promise.all([
+      import("react"),
+      import("~/entrypoints/content/shared/ContentReactRoot"),
+    ]).then(([reactModule, contentReactRootModule]) => ({
+      createElement: reactModule.createElement,
+      ContentReactRoot: contentReactRootModule.ContentReactRoot,
+    }))
+  }
+
+  return contentUiModulesPromise
+}
 
 /**
  * Stores the WXT ContentScriptContext so other helpers can mount UI later.
@@ -40,6 +59,8 @@ export async function ensureRedemptionToastUi(): Promise<void> {
   }
 
   mountingPromise = (async () => {
+    const { createElement, ContentReactRoot } = await loadContentUiModules()
+
     const ui = await createShadowRootUi(ctxRef as ContentScriptContext, {
       name: CONTENT_UI_HOST_TAG,
       position: "overlay",
@@ -47,7 +68,7 @@ export async function ensureRedemptionToastUi(): Promise<void> {
       anchor: "body",
       onMount(container) {
         const root = createRoot(container)
-        root.render(React.createElement(ContentReactRoot))
+        root.render(createElement(ContentReactRoot))
         redemptionToastRoot = root
         return root
       },
