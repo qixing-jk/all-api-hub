@@ -14,6 +14,10 @@ import {
 } from "~/services/core/storageKeys"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import {
+  DEFAULT_REDEMPTION_ASSIST_PREFERENCES,
+  DEFAULT_WEB_AI_API_CHECK_PREFERENCES,
+} from "~/services/preferences/contentScriptFeatureDefaults"
+import {
   CURRENT_PREFERENCES_VERSION,
   migratePreferences,
 } from "~/services/preferences/migrations/preferencesMigration"
@@ -492,31 +496,8 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
     },
   },
   modelRedirect: DEFAULT_MODEL_REDIRECT_PREFERENCES,
-  redemptionAssist: {
-    enabled: true,
-    contextMenu: {
-      enabled: true,
-    },
-    relaxedCodeValidation: true,
-    urlWhitelist: {
-      enabled: true,
-      patterns: ["cdk.linux.do"],
-      includeAccountSiteUrls: true,
-      includeCheckInAndRedeemUrls: true,
-    },
-  },
-  webAiApiCheck: {
-    enabled: true,
-    contextMenu: {
-      enabled: true,
-    },
-    autoDetect: {
-      enabled: false,
-      urlWhitelist: {
-        patterns: [],
-      },
-    },
-  },
+  redemptionAssist: DEFAULT_REDEMPTION_ASSIST_PREFERENCES,
+  webAiApiCheck: DEFAULT_WEB_AI_API_CHECK_PREFERENCES,
   sortingPriorityConfig: undefined,
   themeMode: "system",
   language: undefined, // Default to undefined to trigger browser detection

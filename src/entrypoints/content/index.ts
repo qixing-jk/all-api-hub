@@ -3,6 +3,12 @@ import { defineContentScript } from "wxt/utils/define-content-script"
 import { setupRedemptionAssistContent } from "~/entrypoints/content/redemptionAssist"
 import { setupWebAiApiCheckContent } from "~/entrypoints/content/webAiApiCheck"
 import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
+import {
+  DEFAULT_CONTENT_FEATURE_PREFERENCES,
+  resolveContentFeaturePreferences,
+  type ContentFeaturePreferences,
+  type ContentFeaturePreferenceSource,
+} from "~/services/preferences/contentScriptFeatureDefaults"
 import { createLogger } from "~/utils/core/logger"
 
 import { setupContentMessageHandlers } from "./messageHandlers"
@@ -12,38 +18,6 @@ import { setContentScriptContext } from "./shared/uiRoot"
  * Unified logger scoped to the content-script entrypoint.
  */
 const logger = createLogger("ContentEntrypoint")
-
-type ContentFeaturePreferences = {
-  redemptionAssistDetectionEnabled: boolean
-  redemptionAssistContextMenuEnabled: boolean
-  webAiApiCheckDetectionEnabled: boolean
-  webAiApiCheckContextMenuEnabled: boolean
-}
-
-type RawUserPreferences = {
-  redemptionAssist?: {
-    enabled?: boolean
-    contextMenu?: {
-      enabled?: boolean
-    }
-  }
-  webAiApiCheck?: {
-    enabled?: boolean
-    contextMenu?: {
-      enabled?: boolean
-    }
-    autoDetect?: {
-      enabled?: boolean
-    }
-  }
-}
-
-const DEFAULT_CONTENT_FEATURE_PREFERENCES: ContentFeaturePreferences = {
-  redemptionAssistDetectionEnabled: true,
-  redemptionAssistContextMenuEnabled: true,
-  webAiApiCheckDetectionEnabled: false,
-  webAiApiCheckContextMenuEnabled: true,
-}
 
 /**
  * Shallow compare the listener-toggle preferences that matter to content scripts.
@@ -72,26 +46,11 @@ async function readContentFeaturePreferences(): Promise<ContentFeaturePreference
   try {
     const stored = (await browser.storage.local.get(
       USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
-    )) as Record<string, RawUserPreferences | undefined>
+    )) as Record<string, ContentFeaturePreferenceSource | undefined>
 
-    const preferences =
-      stored[USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES] ?? {}
-
-    const redemptionEnabled = preferences.redemptionAssist?.enabled ?? true
-    const webAiApiCheckEnabled = preferences.webAiApiCheck?.enabled ?? true
-
-    return {
-      redemptionAssistDetectionEnabled: redemptionEnabled,
-      redemptionAssistContextMenuEnabled:
-        redemptionEnabled &&
-        (preferences.redemptionAssist?.contextMenu?.enabled ?? true),
-      webAiApiCheckDetectionEnabled:
-        webAiApiCheckEnabled &&
-        (preferences.webAiApiCheck?.autoDetect?.enabled ?? false),
-      webAiApiCheckContextMenuEnabled:
-        webAiApiCheckEnabled &&
-        (preferences.webAiApiCheck?.contextMenu?.enabled ?? true),
-    }
+    return resolveContentFeaturePreferences(
+      stored[USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES],
+    )
   } catch (error) {
     logger.warn("Failed to read content feature preferences", error)
     return DEFAULT_CONTENT_FEATURE_PREFERENCES
