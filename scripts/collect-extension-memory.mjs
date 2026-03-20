@@ -9,8 +9,14 @@ import { formatBytes } from "./extension-memory-report-utils.mjs"
 const repoRoot = process.cwd()
 const EXTENSION_PAGE_WAIT_MS = 1000
 const NEUTRAL_PAGE_WAIT_MS = 1500
+const STABLE_PAGE_POLL_MS = 200
+const STABLE_PAGE_MAX_WAIT_MS = 15_000
 const HASHED_ASSET_PATTERN =
   /(.+)-([A-Za-z0-9_]{6,})(\.(?:js|css|png|svg|jpg|jpeg|webp))$/i
+const APP_SHELL_SELECTOR_BY_PAGE_PATH = {
+  "options.html": '[data-testid="options-app"]',
+  "popup.html": '[data-testid="popup-view-accounts"]',
+}
 
 /**
  * Parse CLI flags for the single-run memory probe.
@@ -356,6 +362,56 @@ async function summarizeResponses({
 }
 
 /**
+ * Wait until an extension page's app shell is present and its DOM stops changing.
+ */
+async function waitForStableExtensionPageState(page, pagePath) {
+  const appShellSelector =
+    APP_SHELL_SELECTOR_BY_PAGE_PATH[pagePath] ?? "#root > *"
+
+  await page.waitForSelector(appShellSelector, { timeout: 30_000 })
+
+  let previousSignature = null
+  let stableIterations = 0
+  const deadline = Date.now() + STABLE_PAGE_MAX_WAIT_MS
+
+  while (Date.now() < deadline) {
+    const signature = await page.evaluate(() => {
+      const rootHtmlLength =
+        document.getElementById("root")?.innerHTML.length ?? 0
+      const loadingCount = Array.from(document.querySelectorAll("*")).filter(
+        (element) => element.textContent?.trim() === "Loading...",
+      ).length
+      const nodeCount = document.getElementsByTagName("*").length
+
+      return {
+        rootHtmlLength,
+        loadingCount,
+        nodeCount,
+      }
+    })
+
+    if (
+      previousSignature &&
+      previousSignature.rootHtmlLength === signature.rootHtmlLength &&
+      previousSignature.nodeCount === signature.nodeCount &&
+      signature.loadingCount === 0
+    ) {
+      stableIterations += 1
+      if (stableIterations >= 2) {
+        return
+      }
+    } else {
+      stableIterations = 0
+    }
+
+    previousSignature = signature
+    await page.waitForTimeout(STABLE_PAGE_POLL_MS)
+  }
+
+  await page.waitForTimeout(EXTENSION_PAGE_WAIT_MS)
+}
+
+/**
  * Capture an extension page snapshot in a fresh context.
  */
 async function collectExtensionPageSnapshot({ extensionDir, pagePath }) {
@@ -375,7 +431,7 @@ async function collectExtensionPageSnapshot({ extensionDir, pagePath }) {
 
         try {
           await page.goto(pageUrl, { waitUntil: "networkidle" })
-          await page.waitForTimeout(EXTENSION_PAGE_WAIT_MS)
+          await waitForStableExtensionPageState(page, pagePath)
 
           const metrics = await capturePageMetrics(context, page)
           const resources = await summarizeResponses({
