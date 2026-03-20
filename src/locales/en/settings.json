@@ -30,8 +30,12 @@
           "name": "English"
         },
         "zh-CN": {
-          "label": "中文",
-          "name": "Chinese"
+          "label": "SC",
+          "name": "Simplified Chinese"
+        },
+        "zh-TW": {
+          "label": "TC",
+          "name": "Traditional Chinese"
         }
       },
       "switchToLanguage": "Switch interface language to {{language}}"

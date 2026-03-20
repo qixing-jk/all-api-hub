@@ -1,0 +1,159 @@
+{
+  "actions": {
+    "applySettings": "應用設定",
+    "prune": "立即清理",
+    "refreshNow": "立即重新整理"
+  },
+  "breakdown": {
+    "chartTypes": {
+      "histogram": "直方圖",
+      "pie": "餅圖"
+    },
+    "controls": {
+      "chartType": "圖表型別",
+      "reference": "參考"
+    },
+    "coverage": "{{covered}}/{{total}} 個帳戶有資料",
+    "empty": "該分佈暫無可展示的資料。",
+    "hints": {
+      "pieDisabledForNegative": "存在負值時無法使用餅圖。"
+    },
+    "title": "帳戶分佈"
+  },
+  "description": "記錄每日餘額與收支快照，並視覺化趨勢。",
+  "empty": {
+    "description": "啟用餘額歷史並重新整理任意帳戶，即可記錄第一條快照。",
+    "title": "暫無快照"
+  },
+  "emptyRange": {
+    "description": "已有快照資料，但當前選擇的時間範圍內沒有記錄。請擴大時間範圍或重新整理任意帳戶以生成快照。",
+    "title": "該範圍內暫無快照"
+  },
+  "filters": {
+    "accounts": "帳戶",
+    "accountsHint": "選擇要納入圖表的帳戶。",
+    "allAccounts": "全部帳戶",
+    "allTags": "全部標籤",
+    "endDay": "結束時間",
+    "noDataInRange": "該範圍內無快照",
+    "quickRanges": {
+      "180d": "近180天",
+      "30d": "近30天",
+      "365d": "近1年",
+      "7d": "近7天",
+      "90d": "近90天"
+    },
+    "range": "時間範圍",
+    "rangeHint": "受保留視窗限制（{{days}} 天）。",
+    "startDay": "開始時間",
+    "tags": "標籤",
+    "tagsHint": "按標籤過濾帳戶。"
+  },
+  "hints": {
+    "disabled": {
+      "actions": {
+        "openSettings": "開啟設定"
+      },
+      "description": "請在設定中啟用“餘額歷史”，以開始記錄快照。",
+      "title": "餘額歷史已禁用"
+    },
+    "incompleteSelection": {
+      "description": "彙總曲線會盡力按當日有資料的帳戶求和；覆蓋不足時（{{minCovered}}–{{maxCovered}}/{{totalAccounts}} 個帳戶）可能低估。",
+      "title": "彙總可能不完整"
+    }
+  },
+  "messages": {
+    "error": {
+      "pruneFailed": "清理失敗：{{error}}",
+      "refreshFailed": "重新整理失敗：{{error}}",
+      "settingsSaveFailed": "儲存設定失敗：{{error}}"
+    },
+    "loading": {
+      "loadingData": "載入中…",
+      "pruning": "清理中…",
+      "refreshing": "重新整理中…",
+      "savingSettings": "儲存設定中…"
+    },
+    "success": {
+      "pruneCompleted": "清理完成",
+      "refreshCompleted": "重新整理完成",
+      "settingsSaved": "設定已儲存"
+    }
+  },
+  "metrics": {
+    "balance": "餘額",
+    "income": "收入",
+    "net": "淨變化",
+    "outcome": "支出"
+  },
+  "overview": {
+    "kpis": {
+      "coverageAccounts": "{{covered}}/{{total}} 個帳戶",
+      "endBalance": {
+        "label": "結束餘額"
+      },
+      "incomeTotal": {
+        "label": "區間收入"
+      },
+      "outcomeTotal": {
+        "label": "區間支出"
+      },
+      "rangeNet": {
+        "label": "區間淨變化"
+      }
+    },
+    "title": "概覽"
+  },
+  "settings": {
+    "alarmUnsupported": "當前瀏覽器不支援 Alarms API，無法啟用日終抓取。",
+    "enabled": "啟用餘額歷史",
+    "enabledHint": "關閉後不會記錄快照，也不會安排日終抓取。",
+    "endOfDayCapture": "日終抓取",
+    "endOfDayCaptureHint": "在每天 {{time}} 左右盡力抓取一次（需要瀏覽器支援 Alarms API）。",
+    "retentionDays": "保留天數"
+  },
+  "summary": {
+    "coverage": "有資料天數：餘額 {{snapshotAvailableDays}}/{{totalDays}}（完整 {{snapshotCompleteDays}}/{{totalDays}}），收支 {{cashflowAvailableDays}}/{{totalDays}}（完整 {{cashflowCompleteDays}}/{{totalDays}}）。"
+  },
+  "table": {
+    "columns": {
+      "account": "帳戶",
+      "cashflowCoverage": "收支覆蓋",
+      "endBalance": "結束餘額",
+      "incomeTotal": "區間收入",
+      "outcomeTotal": "區間支出",
+      "rangeNet": "區間淨變化",
+      "snapshotCoverage": "快照覆蓋",
+      "startBalance": "開始餘額"
+    },
+    "coverageFormat": "{{covered}}/{{total}}",
+    "empty": "暫無可展示的帳戶彙總。",
+    "loading": "載入中…",
+    "title": "帳戶彙總"
+  },
+  "title": "餘額歷史",
+  "trend": {
+    "chartTypes": {
+      "bar": "柱狀",
+      "line": "折線"
+    },
+    "controls": {
+      "chartType": "圖表型別",
+      "scope": "檢視"
+    },
+    "emptyMetric": "該時間範圍內暫無{{metric}}資料。",
+    "scopes": {
+      "accounts": "按帳戶",
+      "total": "彙總"
+    },
+    "subtitle": "按帳戶展示，缺失日期以空白斷點表示。",
+    "subtitleTotal": "所選帳戶彙總（求和）展示；覆蓋不足的日期可能低估。",
+    "title": "趨勢"
+  },
+  "warnings": {
+    "cashflowDisabled": {
+      "description": "已關閉“顯示今日收支”，且未啟用“日終抓取”。請啟用其中任意一項以記錄收入/支出。",
+      "title": "收入/支出歷史將為空"
+    }
+  }
+}

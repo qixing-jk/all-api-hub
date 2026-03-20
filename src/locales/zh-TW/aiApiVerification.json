@@ -1,0 +1,78 @@
+{
+  "verifyDialog": {
+    "actions": {
+      "close": "關閉",
+      "retry": "重試",
+      "run": "開始驗證",
+      "running": "執行中...",
+      "runOne": "執行"
+    },
+    "apiTypes": {
+      "anthropic": "Anthropic",
+      "google": "Google/Gemini",
+      "openai": "OpenAI",
+      "openaiCompatible": "OpenAI 相容"
+    },
+    "details": {
+      "input": "輸入",
+      "output": "輸出"
+    },
+    "errors": {
+      "unexpected": "發生未知錯誤"
+    },
+    "idleHint": "請選擇金鑰開始驗證；模型相關探測需要填寫模型 ID。",
+    "loadingTokensHint": "正在載入金鑰...",
+    "meta": {
+      "apiType": "介面型別",
+      "apiTypePlaceholder": "選擇介面型別",
+      "model": "模型",
+      "modelPlaceholder": "輸入模型 ID",
+      "token": "金鑰",
+      "tokenPlaceholder": "選擇金鑰"
+    },
+    "notRunYet": "尚未執行",
+    "probes": {
+      "models": "模型列表介面 (/v1/models)",
+      "structured-output": "結構化輸出（JSON Schema）",
+      "text-generation": "文字生成",
+      "tool-calling": "工具/函式呼叫",
+      "web-search": "聯網搜尋 / Grounding"
+    },
+    "requiresModelId": "請輸入模型 ID 後執行該測試。",
+    "status": {
+      "fail": "失敗",
+      "pass": "透過",
+      "pending": "待執行",
+      "unsupported": "不支援"
+    },
+    "summaries": {
+      "endpointNotFound": "端點不存在（404）：此 API 可能不受支援",
+      "forbidden": "禁止訪問（403）：訪問被拒絕",
+      "httpError": "HTTP 錯誤（{{status}}）",
+      "modelsFetched": "成功獲取 {{count}} 個模型。",
+      "modelsProbeUnsupportedForApiType": "當前介面型別不支援模型列表探測。",
+      "noModelAvailableToRunProbes": "沒有可用模型，無法執行探測。",
+      "noModelIdProvided": "未提供模型 ID，無法執行探測。",
+      "noModelIdProvidedToRunProbe": "未提供模型 ID，無法執行探測。",
+      "noModelIdProvidedToRunProbes": "未提供模型 ID，無法執行探測。",
+      "noModelsReturned": "未返回任何模型。",
+      "noToolCallDetected": "未檢測到工具呼叫（模型可能不支援工具）。",
+      "structuredOutputInvalid": "輸出內容無效。",
+      "structuredOutputSucceeded": "結構化輸出成功。",
+      "textGenerationSucceeded": "文字生成成功。",
+      "textGenerationUnexpectedResponse": "返回內容不符合預期。",
+      "toolCallSucceeded": "工具呼叫成功。",
+      "unauthorized": "未授權（401）：金鑰無效或缺少認證",
+      "webSearchGroundingNoResults": "未獲取到聯網搜尋 / Grounding 結果。",
+      "webSearchGroundingSucceeded": "聯網搜尋 / Grounding 成功。",
+      "webSearchNoResults": "未獲取到聯網搜尋結果。",
+      "webSearchRequiresExplicitSupport": "聯網搜尋探測需要顯式的介面型別支援。",
+      "webSearchSucceeded": "聯網搜尋成功。",
+      "webSearchUnsupportedAnthropic": "Anthropic 介面不支援聯網搜尋探測。",
+      "webSearchUnsupportedForApiType": "當前介面型別不支援聯網搜尋探測。"
+    },
+    "title": "介面驗證",
+    "unsupportedProbeForApiType": "當前介面型別不支援 {{probe}} 探測。",
+    "warning": "此功能為 Beta。檢測到支援時，高機率為真實支援；未檢測到支援時，也可能實際支援。結果僅供參考，請以工具的實際使用情況為準。"
+  }
+}

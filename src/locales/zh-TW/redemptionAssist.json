@@ -1,0 +1,53 @@
+{
+  "accountSelect": {
+    "confirm": "確認兌換",
+    "noResults": "未找到匹配的帳號，請調整搜尋條件",
+    "title": "選擇要用於兌換的帳號",
+    "titleFallback": "未找到與當前站點匹配的帳號，請手動選擇一個帳號",
+    "titleMultiple": "檢測到多個可用帳號，請選擇一個用於兌換"
+  },
+  "actions": {
+    "autoRedeem": "自動兌換"
+  },
+  "messages": {
+    "batchResultSummary": "共 {{total}} 個，成功 {{success}} 個，失敗 {{failed}} 個。",
+    "batchResultTitle": "兌換結果",
+    "cancelled": "已取消",
+    "noAccountForUrl": "當前站點未在 All API Hub 中配置帳號，請先在擴充套件中新增該站點後再試。",
+    "promptConfirm": "檢測到疑似兌換碼 {{code}}，是否為當前站點嘗試自動兌換？",
+    "promptConfirmBatch_other": "redemptionAssist:messages.promptConfirmBatch",
+    "promptSettingsLink": "開啟兌換助手設定",
+    "promptSource": "此提示來自 All API Hub 瀏覽器擴充套件",
+    "promptTitle": "兌換助手",
+    "redeemFailed": "兌換失敗，請稍後重試。",
+    "redeemLoading": "正在嘗試兌換，請稍候…",
+    "redeemSuccess": "兌換成功，到帳額度：{{amount}}",
+    "selectAll": "全選",
+    "success": {
+      "settingsSaved": "兌換助手設定已儲存"
+    }
+  },
+  "settings": {
+    "contextMenu": {
+      "enable": "在瀏覽器右鍵選單中顯示",
+      "enableDesc": "啟用後，在選中文字時的右鍵選單中顯示“兌換助手”入口。"
+    },
+    "description": "配置擴充套件在支援的頁面上如何檢測兌換碼並輔助完成兌換",
+    "enable": "啟用兌換助手",
+    "enableDesc": "在支援的頁面上自動檢測兌換碼並彈出兌換提示",
+    "relaxedCodeValidation": "放寬兌換碼格式限制",
+    "relaxedCodeValidationDesc": "啟用後，只要是 32 位字元的內容就會被視為可能的兌換碼（不校驗字符集）。",
+    "title": "兌換助手",
+    "urlWhitelist": {
+      "enable": "啟用 URL 白名單",
+      "enableDesc": "啟用後，兌換助手僅會在下方規則允許的頁面 URL 上生效。",
+      "includeAccountSiteUrls": "包含帳號站點 URL",
+      "includeAccountSiteUrlsDesc": "允許每個帳號站點 URL（同源）下的所有頁面。",
+      "includeCheckInAndRedeemUrls": "包含簽到/兌換 URL",
+      "includeCheckInAndRedeemUrlsDesc": "允許每個帳號的簽到與兌換頁面（自定義或預設）。",
+      "patterns": "自定義正則規則",
+      "patternsDesc": "每行一條 JavaScript RegExp 語法的正規表示式（匹配時會忽略大小寫）。",
+      "patternsPlaceholder": "^https://example\\.com/console/topup"
+    }
+  }
+}

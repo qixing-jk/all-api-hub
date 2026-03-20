@@ -1,0 +1,54 @@
+{
+  "actions": {
+    "add": "新增書籤",
+    "copyUrl": "複製連結",
+    "open": "開啟",
+    "pin": "置頂",
+    "unpin": "取消置頂"
+  },
+  "addFirstBookmark": "新增第一個書籤",
+  "delete": {
+    "description": "將永久刪除“{{name}}”。",
+    "title": "刪除書籤？"
+  },
+  "description": "儲存站點控制台/文件/管理頁等快捷連結，無需建立完整帳號。",
+  "dialog": {
+    "description": "書籤可以是任何連結，例如站點控制台、文件、管理頁等。適用於無法建立完整帳號的情況。",
+    "titleAdd": "新增書籤",
+    "titleEdit": "編輯書籤"
+  },
+  "emptyState": "暫無書籤",
+  "filter": {
+    "tagsAllLabel": "全部標籤"
+  },
+  "form": {
+    "nameLabel": "名稱",
+    "namePlaceholder": "例如：站點控制台",
+    "notesLabel": "備註",
+    "notesPlaceholder": "可選備註...",
+    "tagsLabel": "標籤",
+    "tagsPlaceholder": "選擇標籤...",
+    "urlLabel": "連結",
+    "urlPlaceholder": "https://example.com/..."
+  },
+  "list": {
+    "dragHandle": "拖拽排序書籤"
+  },
+  "search": {
+    "placeholder": "搜尋書籤..."
+  },
+  "stats": {
+    "pinnedBookmarks": "置頂書籤",
+    "totalBookmarks": "書籤總數",
+    "usedTags": "使用標籤"
+  },
+  "switch": {
+    "accounts": "帳號",
+    "bookmarks": "書籤"
+  },
+  "title": "書籤管理",
+  "validation": {
+    "nameRequired": "名稱不能為空",
+    "urlRequired": "連結不能為空"
+  }
+}

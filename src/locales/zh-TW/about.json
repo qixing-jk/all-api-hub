@@ -1,0 +1,64 @@
+{
+  "copyrightAck": "版權與致謝",
+  "devMaintenance": "開發與維護",
+  "features": "功能特性",
+  "feedbackSection": {
+    "bugReport": {
+      "button": "開啟問題反饋",
+      "description": "使用問題反饋模板提交異常行為、報錯或與預期不符的結果。"
+    },
+    "community": {
+      "button": "檢視交流渠道",
+      "description": "檢視微信群二維碼、Telegram 群和其他社羣交流入口，適合快速提問或交流使用經驗。"
+    },
+    "discussion": {
+      "button": "開啟討論區",
+      "description": "前往 GitHub Discussions 提問、交流配置經驗，或發起更廣泛的社羣討論。"
+    },
+    "featureRequest": {
+      "button": "開啟功能建議",
+      "description": "透過功能建議模板分享你的改進想法或使用場景需求。"
+    },
+    "title": "反饋與支援"
+  },
+  "githubDesc": "檢視原始碼、提交問題或參與專案開發",
+  "githubRepo": "GitHub 倉庫",
+  "homepage": "專案官網",
+  "homepageDesc": "檢視詳細文件、使用指南和更多資訊",
+  "implementedFeatures": "已實現功能",
+  "intro": "All API Hub 是一款同時面向第三方 New API 系列中轉站和自建 New API 例項的瀏覽器外掛。它集中展示帳號與餘額、智慧排序和當前站點識別，並提供自動重新整理與臨時視窗防火牆繞過等自動化能力；對於自建 New API，還支援渠道管理和模型列表同步，並整合 CLIProxyAPI、WebDAV 備份以及資料匯入匯出等工具。",
+  "privacyText": "本外掛所有資料均儲存在本地瀏覽器中，不會主動上傳到任何伺服器。您的帳號資訊和使用資料完全由您自己掌控，確保隱私安全",
+  "privacyTitle": "隱私保護",
+  "projectLinks": "專案連結",
+  "starRepo": "去點個Star",
+  "stores": {
+    "chrome": "Chrome 應用商店",
+    "edge": "Edge 擴充套件商店",
+    "firefox": "Firefox 附加元件"
+  },
+  "storesSection": {
+    "download": {
+      "button": "開啟商店",
+      "description": "從 {{store}} 下載/安裝。"
+    },
+    "review": {
+      "button": "前往 {{store}} 評分",
+      "description": "如果 All API Hub 對你有幫助，歡迎在 {{store}} 留下正向評價，支援我們持續更新。",
+      "title": "給我們一個好評"
+    },
+    "title": "評分與下載"
+  },
+  "techStack": {
+    "headlessui": "無樣式UI元件",
+    "react": "使用者介面庫",
+    "tailwindcss": "原子化CSS框架",
+    "title": "技術棧",
+    "typescript": "型別安全的JavaScript",
+    "wxt": "瀏覽器擴充套件開發框架"
+  },
+  "thanksDesc": "感謝所有為開源社羣做出貢獻的開發者們，本外掛的開發得益於這些優秀的開源專案和工具",
+  "title": "關於",
+  "upcomingFeatures": "即將支援",
+  "version": "版本號:",
+  "visitHomepage": "訪問官網"
+}

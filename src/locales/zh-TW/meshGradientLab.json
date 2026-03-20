@@ -1,0 +1,22 @@
+{
+  "actions": {
+    "shuffleSeed": "隨機種子"
+  },
+  "captions": {
+    "layoutIndex": "佈局 #{{index}}",
+    "paletteIndex": "調色盤 #{{index}}"
+  },
+  "labels": {
+    "layout": "佈局",
+    "overlay": "疊加層",
+    "palette": "調色盤",
+    "seed": "種子",
+    "view": "檢視"
+  },
+  "summary": "{{paletteCount}} 個調色盤 · {{layoutCount}} 種佈局",
+  "title": "Mesh Gradient 實驗室（Dev）",
+  "view": {
+    "layouts": "佈局",
+    "palettes": "調色盤"
+  }
+}

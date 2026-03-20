@@ -1,0 +1,45 @@
+{
+  "dialog": {
+    "actions": {
+      "close": "關閉",
+      "openSite": "開啟站點",
+      "retry": "重試",
+      "retryAfterPasskey": "完成 Passkey 後重試",
+      "submitLoginCode": "提交登入驗證碼",
+      "submitVerificationCode": "提交安全驗證碼"
+    },
+    "body": {
+      "credentialsMissing": "請先在設定中填寫 New API 登入使用者名稱和密碼，再執行會話輔助驗證。",
+      "failure": "New API 驗證流程未能完成。",
+      "loggingIn": "正在檢查當前 New API 會話，並在需要時準備驗證流程。",
+      "loginTwoFactor": "New API 登入步驟需要先提交一次驗證碼，瀏覽器會話才能繼續。",
+      "passkeyManual": "當前帳號在該步驟使用 Passkey 驗證。請先在站點上完成 Passkey 校驗，然後返回這裡重試。",
+      "secureVerification": "管理員會話已經登入，但在讀取隱藏渠道金鑰之前，New API 仍需要一次安全驗證碼驗證。",
+      "successChannel": "{{label}} 的驗證已成功，真實渠道 key 已載入。",
+      "successSettings": "New API 登入與驗證流程已成功完成。現在可以繼續執行需要登入與驗證的相關操作。",
+      "successToken": "{{label}} 的驗證已成功，管理站點狀態已重新整理。"
+    },
+    "fields": {
+      "codeLabel": "驗證碼",
+      "codePlaceholder": "輸入驗證碼"
+    },
+    "hints": {
+      "manualFallback": "即使已配置自動 TOTP，仍然可以手動輸入驗證碼。",
+      "passkey": "請開啟站點，在那裡完成 Passkey 提示後，再返回這裡重試。"
+    },
+    "messages": {
+      "finishing": "正在完成 New API 會話檢測...",
+      "missingBaseUrl": "請先填寫 New API 基礎 URL，再測試會話流程。",
+      "missingCode": "請先輸入驗證碼。",
+      "refreshingChannel": "正在載入真實渠道 key...",
+      "refreshingToken": "正在重新整理該金鑰的管理站點狀態...",
+      "starting": "正在啟動 New API 驗證流程...",
+      "submitting": "正在提交驗證碼..."
+    },
+    "title": {
+      "channel": "New API 渠道 key 驗證",
+      "settings": "New API 會話檢測",
+      "token": "New API 驗證重試"
+    }
+  }
+}

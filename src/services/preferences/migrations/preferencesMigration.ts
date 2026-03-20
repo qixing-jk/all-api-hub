@@ -377,7 +377,7 @@ const migrations: Record<number, PreferencesMigrationFunction> = {
     }
   },
 
-  // Version 16 -> 17: Canonicalize stored locale naming to zh-CN / en
+  // Version 16 -> 17: Canonicalize stored locale naming to supported app locales
   17: (prefs: UserPreferences): UserPreferences => {
     logger.debug(
       "Migrating preferences from v16 to v17 (canonicalize locale naming)",

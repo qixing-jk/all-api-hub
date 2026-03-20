@@ -1,0 +1,22 @@
+{
+  "actions": {
+    "shareAccountSnapshot": "分享帳號快照",
+    "shareOverviewSnapshot": "分享總覽快照"
+  },
+  "labels": {
+    "accounts": "帳號數",
+    "asOf": "截止",
+    "balance": "餘額",
+    "income": "收入",
+    "net": "淨額",
+    "outcome": "支出",
+    "overview": "總覽",
+    "site": "站點",
+    "today": "今日",
+    "totalBalance": "總餘額"
+  },
+  "toast": {
+    "captionHint": "標題文案未自動複製。複製文案可能會覆蓋剪貼簿中的圖片。",
+    "copyCaption": "複製文案"
+  }
+}

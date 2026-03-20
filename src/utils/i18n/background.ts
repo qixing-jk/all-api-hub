@@ -1,6 +1,7 @@
 import dayjs from "dayjs"
 
 import "dayjs/locale/zh-cn"
+import "dayjs/locale/zh-tw"
 
 import { DEFAULT_LANG } from "~/constants"
 import { userPreferences } from "~/services/preferences/userPreferences"

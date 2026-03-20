@@ -1,0 +1,89 @@
+{
+  "actions": {
+    "create": "建立渠道",
+    "deselectAll": "全不選",
+    "hideKey": "隱藏金鑰",
+    "inverse": "反選",
+    "loadingRealKey": "正在載入真實 key...",
+    "loadRealKey": "載入真實 key",
+    "selectAll": "全選",
+    "showKey": "顯示金鑰",
+    "update": "儲存更改"
+  },
+  "description": {
+    "add": "為您管理的站點配置新的轉發渠道",
+    "edit": "更新渠道設定和路由資訊"
+  },
+  "fields": {
+    "baseUrl": {
+      "label": "基礎 URL",
+      "placeholder": "https://api.example.com"
+    },
+    "groups": {
+      "hint": "分組來源於您管理的站點",
+      "label": "渠道分組",
+      "loading": "載入分組中...",
+      "placeholder": "選擇分組"
+    },
+    "key": {
+      "label": "API 金鑰",
+      "placeholder": "輸入上游提供商的 API 金鑰",
+      "realKeyHint": "對於 New API，檢視真實渠道 key 本身需要先完成 2FA 驗證；如果未在設定中填寫登入與兩步驗證輔助資訊，則無法讀取該 key。"
+    },
+    "models": {
+      "hint": "輸入搜尋或按 Enter 新增自定義模型名稱",
+      "label": "可用模型",
+      "loading": "載入模型中...",
+      "placeholder": "選擇或輸入模型名稱"
+    },
+    "name": {
+      "label": "渠道名稱",
+      "placeholder": "輸入一個描述性的渠道名稱"
+    },
+    "priority": {
+      "hint": "優先順序數字越大的渠道優先使用",
+      "label": "優先順序"
+    },
+    "status": {
+      "disabled": "禁用",
+      "enabled": "啟用",
+      "label": "狀態"
+    },
+    "type": {
+      "hint": "選擇此渠道將轉發到的上游提供商",
+      "label": "渠道型別",
+      "placeholder": "選擇渠道型別"
+    },
+    "weight": {
+      "hint": "控制相同優先順序內的負載均衡（0 = 平均分配）",
+      "label": "權重"
+    }
+  },
+  "messages": {
+    "loadRealKeyFailed": "載入真實渠道 key 失敗：{{error}}",
+    "missingChannelId": "缺少現有渠道 ID",
+    "saveFailed": "儲存渠道失敗：{{error}}"
+  },
+  "sections": {
+    "advanced": "高階設定"
+  },
+  "title": {
+    "add": "建立渠道",
+    "edit": "編輯渠道"
+  },
+  "validation": {
+    "baseUrlRequired": "此渠道型別需要填寫基礎 URL",
+    "keyRequired": "API 金鑰必填",
+    "nameRequired": "渠道名稱必填"
+  },
+  "warnings": {
+    "channelExists": {
+      "actions": {
+        "continue": "繼續新增"
+      },
+      "description": "管理站點中已存在渠道 {{channelName}}。你仍可以繼續建立新渠道，但可能會造成重複路由。是否繼續？",
+      "title": "渠道已存在",
+      "warningTitle": "可能存在重複渠道"
+    }
+  }
+}

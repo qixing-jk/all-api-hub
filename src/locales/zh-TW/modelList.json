@@ -1,0 +1,112 @@
+{
+  "accountSummary": {
+    "incompatible": "格式不相容",
+    "loadFailed": "載入失敗",
+    "models_other": "accountSummary.models",
+    "title": "帳號概覽"
+  },
+  "actions": {
+    "copyModelName": "複製模型名稱",
+    "keyForModel": "模型對應金鑰",
+    "verifyApi": "驗證介面",
+    "verifyCliSupport": "驗證 CLI 相容性"
+  },
+  "allAccounts": "所有帳號",
+  "allGroups": "所有分組",
+  "allProviders_other": "allProviders",
+  "available": "可用",
+  "availableGroups": "可用分組",
+  "clickSwitchGroup": "點擊切換到 {{group}} 分組",
+  "collapseDetails": "收起詳細資訊",
+  "copyAllNames": "複製所有模型名稱",
+  "description": "檢視和管理可用的AI模型",
+  "detailedPricing": "詳細定價",
+  "displayOptions": "顯示選項:",
+  "endpointType": "端點型別",
+  "endpointTypes": "端點型別",
+  "expandDetails": "展開詳細資訊",
+  "input": "輸入:",
+  "input1MTokens": "輸入(1M tokens)",
+  "keyDialog": {
+    "copyFailed": "複製失敗",
+    "createAnotherKey": "再建立一個金鑰",
+    "createCustomKey": "自定義建立",
+    "createDisabledTitle": "無法建立金鑰",
+    "createErrorTitle": "建立金鑰失敗",
+    "createFailed": "建立失敗：{{error}}",
+    "createGroupHint": "請選擇分組（僅列出該模型可用分組）。",
+    "createGroupLabel": "新金鑰分組",
+    "createGroupPlaceholder": "請選擇分組",
+    "createGroupRequired": "請先選擇分組再建立金鑰。",
+    "createKey": "建立金鑰",
+    "createNotSupported": "該帳號暫不支援建立金鑰。",
+    "createSuccess": "金鑰建立成功",
+    "getFailed": "載入金鑰失敗",
+    "ineligible": {
+      "accountDisabled": "該帳號已被禁用。",
+      "missingAuth": "該帳號未配置認證資訊。",
+      "missingCredentials": "該帳號缺少必要的憑據。"
+    },
+    "keyCopied": "金鑰已複製",
+    "loadFailed": "載入金鑰失敗：{{error}}",
+    "loading": "正在載入金鑰...",
+    "noCompatibleDescription": "為該模型建立一個金鑰，或調整已有金鑰的模型限制。",
+    "noCompatibleFoundAfterCreate": "金鑰建立成功，但仍未找到可用於 {{modelId}} 的金鑰。",
+    "noCompatibleTitle": "{{modelId}} 無可用金鑰",
+    "selectHint": "請選擇要用於該模型的金鑰。",
+    "selectLabel": "可用金鑰",
+    "selectPlaceholder": "請選擇金鑰",
+    "subtitle": "帳號：{{accountName}} · 模型：{{modelId}}",
+    "title": "模型對應金鑰"
+  },
+  "messages": {
+    "copyFailed": "複製失敗",
+    "modelNameCopied": "模型名稱已複製",
+    "modelNamesCopied": "模型名稱已複製"
+  },
+  "noMatchingModels": "沒有找到匹配的模型",
+  "output": "輸出:",
+  "output1MTokens": "輸出(1M tokens)",
+  "perCall": "每次呼叫:",
+  "pleaseSelectFirst": "請先選擇一個帳號或 API 憑據檢視模型列表",
+  "pleaseSelectSource": "請選擇資料來源",
+  "pricingDescription": "價格資訊來源於站點提供的 API 介面，實際費用以各站點公佈的價格為準。按量計費模型的價格為每 1M tokens 的費用，按次計費模型顯示每次呼叫的費用",
+  "pricingNote": "模型定價說明",
+  "profileSourceNotice": {
+    "description": "已儲存的 API 憑據僅支援模型發現與驗證，不提供定價、分組篩選、帳號概覽或金鑰相容效能力。",
+    "title": "API 憑據模型目錄"
+  },
+  "providerTabs": {
+    "scrollLeft": "向左滾動廠商標籤",
+    "scrollRight": "向右滾動廠商標籤"
+  },
+  "ratio": "倍率:",
+  "realAmount": "真實充值金額",
+  "refreshData": "重新整理資料",
+  "searchModels": "搜尋模型",
+  "searchPlaceholder": "輸入模型名稱或描述...",
+  "selectSource": "選擇資料來源",
+  "showing_other": "showing",
+  "showRatio": "顯示倍率",
+  "sourceLabels": {
+    "profileBadge": "憑據：{{name}} · {{host}}",
+    "profileOption": "API 憑據：{{name}} · {{host}}"
+  },
+  "status": {
+    "dataLoaded": "模型資料載入成功",
+    "formatNotStandard": "當前站點的模型資料格式不符合標準，請手動檢視站點定價頁面",
+    "genericLoadFailedTitle": "載入模型資料失敗",
+    "goToSitePricing": "前往站點檢視定價資訊",
+    "incompatibleDesc": "當前站點的模型資料介面返回格式不符合標準規範，可能是經過二次開發的站點。外掛暫時無法解析該站點的模型定價資訊",
+    "incompatibleFormat": "資料格式不相容",
+    "loadFailed": "載入模型資料失敗，請稍後重試",
+    "loading": "正在載入模型資料...",
+    "profileLoadFailed": "載入該 API 憑據的模型失敗：{{errorMessage}}",
+    "profileLoadFailedTitle": "載入該 API 憑據的模型失敗",
+    "retryLoad": "重新嘗試載入"
+  },
+  "title": "模型列表",
+  "totalModels_other": "totalModels",
+  "unavailable": "不可用",
+  "userGroup": "使用者分組"
+}

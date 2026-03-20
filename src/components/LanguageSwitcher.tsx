@@ -44,8 +44,10 @@ function getLanguageOptionLabel(
   switch (language) {
     case "en":
       return t("settings:appearanceLanguage.switcher.options.en.label")
-    case DEFAULT_LANG:
+    case "zh-CN":
       return t("settings:appearanceLanguage.switcher.options.zh-CN.label")
+    case "zh-TW":
+      return t("settings:appearanceLanguage.switcher.options.zh-TW.label")
   }
 }
 
@@ -59,8 +61,10 @@ function getLanguageOptionName(
   switch (language) {
     case "en":
       return t("settings:appearanceLanguage.switcher.options.en.name")
-    case DEFAULT_LANG:
+    case "zh-CN":
       return t("settings:appearanceLanguage.switcher.options.zh-CN.name")
+    case "zh-TW":
+      return t("settings:appearanceLanguage.switcher.options.zh-TW.name")
   }
 }
 

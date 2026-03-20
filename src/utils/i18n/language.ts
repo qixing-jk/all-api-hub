@@ -1,6 +1,11 @@
-import { DEFAULT_LANG, type SupportedUiLanguage } from "~/constants"
+import {
+  DEFAULT_LANG,
+  TRADITIONAL_CHINESE_LANG,
+  type SupportedUiLanguage,
+} from "~/constants"
 
 const ENGLISH_LANG: SupportedUiLanguage = "en"
+const TRADITIONAL_CHINESE_REGIONS = new Set(["hk", "mo", "tw"])
 
 const isLanguageFamily = (
   language: string | undefined,
@@ -15,6 +20,9 @@ export const UI_LANGUAGE_OPTIONS = [
   },
   {
     code: DEFAULT_LANG,
+  },
+  {
+    code: TRADITIONAL_CHINESE_LANG,
   },
 ] as const satisfies ReadonlyArray<{
   code: SupportedUiLanguage
@@ -38,6 +46,22 @@ export function isChineseLanguage(language?: string | null): boolean {
 }
 
 /**
+ * Return true when the language belongs to a Traditional Chinese variant.
+ */
+export function isTraditionalChineseLanguage(
+  language?: string | null,
+): boolean {
+  const normalized = normalizeLanguageTag(language)
+  if (!normalized || !isChineseLanguage(normalized)) return false
+
+  const subtags = normalized.split("-")
+  return (
+    subtags.includes("hant") ||
+    subtags.some((tag) => TRADITIONAL_CHINESE_REGIONS.has(tag))
+  )
+}
+
+/**
  * Return true when the language belongs to the English locale family.
  */
 export function isEnglishLanguage(language?: string | null): boolean {
@@ -58,6 +82,7 @@ export function normalizeAppLanguage(
   language?: string | null,
 ): SupportedUiLanguage | undefined {
   if (isEnglishLanguage(language)) return ENGLISH_LANG
+  if (isTraditionalChineseLanguage(language)) return TRADITIONAL_CHINESE_LANG
   if (isChineseLanguage(language)) return DEFAULT_LANG
 
   return undefined

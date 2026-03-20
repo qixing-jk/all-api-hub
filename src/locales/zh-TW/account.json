@@ -1,0 +1,132 @@
+{
+  "actions": {
+    "channelLocateConfigMissing": "託管站點管理員配置不可用，已按 URL 過濾渠道列表供你確認。",
+    "channelLocateFailed": "定位渠道失敗",
+    "channelLocateFuzzyUrlOnly": "目前只能確認 URL 級別的模糊匹配，已按 URL 過濾渠道列表供你確認。",
+    "channelLocateInputPreparationFallback": "無法準備排序匹配所需的輸入，已僅按 URL 過濾渠道列表。",
+    "channelLocateKeyMatchedModelsDrifted": "同一渠道命中了 key，但模型集合只達到了近似匹配，已按 URL 過濾渠道列表供你確認。",
+    "channelLocateKeyMatchOnly": "在同一 URL 範圍內找到了 key 命中的渠道，但模型集合不匹配，已按 URL 過濾渠道列表供你確認。",
+    "channelLocateMultipleKeysFallback": "檢測到多個金鑰，已僅按 URL 過濾渠道列表。",
+    "channelLocateNoKeyFallback": "當前沒有可用於排序匹配的 API 金鑰，已僅按 URL 過濾渠道列表。",
+    "channelLocateSecondaryExactModels": "已找到一個按模型集合完全一致的次級匹配，已按 URL 過濾渠道列表供你確認。",
+    "channelLocateSecondaryModelsContained": "已找到一個按模型包含關係命中的次級匹配，已按 URL 過濾渠道列表供你確認。",
+    "channelLocateSecondaryModelsSimilar": "已找到一個按模型相似度命中的次級匹配，已按 URL 過濾渠道列表供你確認。",
+    "channelLocateSignalsConflict": "key 和模型檢查分別指向了不同的候選渠道，已按 URL 過濾渠道列表供你確認。",
+    "channelLocateUnresolved": "暫時無法確認最可能的渠道，已僅按 URL 過濾渠道列表。",
+    "copyKey": "複製金鑰",
+    "copyUrl": "複製網址",
+    "delete": "刪除",
+    "disableAccount": "禁用帳號",
+    "edit": "編輯",
+    "enableAccount": "啟用帳號",
+    "fetchKeyInfoFailed": "獲取金鑰資訊失敗",
+    "fetchKeyListFailed": "獲取金鑰列表失敗: {{errorMessage}}",
+    "keyCopied": "金鑰已複製到剪貼簿",
+    "keyList": "金鑰列表",
+    "keyManagement": "金鑰管理",
+    "locateManagedSiteChannel": "定位對應渠道",
+    "locateManagedSiteChannelUnsupported": "因為 Veloera 暫不支援使用URL搜尋渠道，相關功能無法正常工作",
+    "locateManagedSiteChannelUnsupportedHint": "不支援",
+    "modelManagement": "模型管理",
+    "openAllExternalCheckIn": "一鍵開啟外部簽到",
+    "openAllExternalCheckInHint": "預設僅開啟未簽到；Ctrl/Cmd 開啟全部；Shift 在新視窗開啟；Ctrl/Cmd+Shift 同時生效。",
+    "pin": "置頂帳號",
+    "pinned": "已置頂",
+    "quickCheckin": "快速簽到",
+    "redeemPage": "充值頁面",
+    "refresh": "重新整理",
+    "scanDuplicates": "掃描重複帳號",
+    "scanDuplicatesHint": "按 URL 源站 + 使用者 ID 掃描重複帳號並安全清理。",
+    "unpin": "取消置頂",
+    "urlCopied": "網址已複製到剪貼簿",
+    "usageLog": "用量日誌",
+    "viewOnLdoh": "在 LDOH 檢視"
+  },
+  "addAccount": "新增帳號",
+  "addFirstAccount": "新增你的第一個站點帳號",
+  "currentLoginAdded": "⚠️當前登入帳號已新增（{{siteName}}）",
+  "currentSiteAdded": "⚠️當前站點 {{siteName}} 已存在已新增帳號",
+  "currentSiteAddedCount_other": "currentSiteAddedCount",
+  "description": "一鍵管理所有AI中轉站",
+  "emptyState": "暫無站點帳號",
+  "filter": {
+    "summary_other": "account:filter.summary",
+    "tagsAllLabel": "全部"
+  },
+  "filteredTotals": {
+    "balance": "餘額",
+    "consumption": "今日消耗"
+  },
+  "healthStatus": {
+    "apiError": "API錯誤",
+    "error": "錯誤",
+    "healthy": "健康",
+    "httpError": "HTTP {{statusCode}}: {{message}}",
+    "networkFailed": "網路連線失敗",
+    "normal": "帳號狀態正常",
+    "tempWindowDisabled": "過盾功能已關閉，請在 設定 > 資料重新整理 中啟用",
+    "tempWindowPermissionRequired": "Firefox 過盾功能需要 Cookie 攔截權限，請在 設定 > 權限管理 中授予",
+    "unknown": "未知",
+    "unknownError": "未知錯誤",
+    "warning": "警告"
+  },
+  "list": {
+    "balance": {
+      "refreshBalance": "點擊重新整理餘額",
+      "refreshCashflow": "點擊重新整理今日消費",
+      "refreshIncome": "點擊重新整理今日收入"
+    },
+    "dragHandle": "拖動排序",
+    "header": {
+      "account": "帳號",
+      "balance": "餘額",
+      "todayConsumption": "今日消費",
+      "todayIncome": "今日收入"
+    },
+    "site": {
+      "checkedInToday": "今日已簽到，點我檢視",
+      "checkInStatusOutdated": "簽到狀態不是今日檢測（上次檢測時間：{{time}}），點我重新整理",
+      "checkInUnsupported": "站點可能不支援簽到",
+      "currentSite": "當前站點",
+      "currentSiteExists": "與當前標籤頁站點相同",
+      "disabled": "已禁用",
+      "lastSync": "上次同步",
+      "notAvailable": "不可用",
+      "notCheckedInToday": "今日未簽到，點我去簽到",
+      "reason": "原因",
+      "refreshHealthStatus": "點擊重新整理健康狀態",
+      "status": "狀態",
+      "unknown": "未知"
+    },
+    "sort": "排序"
+  },
+  "newcomerSupport": {
+    "actions": {
+      "about": "訪問專案主頁",
+      "docs": "開啟新手指引",
+      "star": "給專案點個 Star"
+    },
+    "description": "可以先為專案點個 Star，也可以先看看文件，瞭解如何管理中轉站和 New API 帳號",
+    "hint": "在新增帳號之前，也可以先隨意看看文件和專案資訊",
+    "title": "歡迎使用 All API Hub"
+  },
+  "refresh": {
+    "refreshComplete": "重新整理完成: {{success}} 成功, {{failed}} 失敗",
+    "refreshFailed": "重新整理失敗，請稍後重試",
+    "refreshingAll": "正在重新整理所有帳號...",
+    "refreshPartialSkipped": "重新整理完成: {{success}} 成功, {{skipped}} 跳過",
+    "refreshSuccess": "所有帳號重新整理成功！"
+  },
+  "search": {
+    "noResults": "沒有找到匹配的帳號",
+    "placeholder": "輸入站點資訊或帳號資訊進行搜尋"
+  },
+  "stats": {
+    "completion": "補全",
+    "prompt": "提示",
+    "todayConsumption": "今日消耗",
+    "todayIncome": "今日收入",
+    "totalBalance": "總餘額"
+  },
+  "title": "帳戶管理"
+}

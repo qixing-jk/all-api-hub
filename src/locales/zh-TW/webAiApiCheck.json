@@ -1,0 +1,74 @@
+{
+  "confirmToast": {
+    "body": "是否開啟 AI API 測試面板，以檢查並測試 AI API 可用性？",
+    "open": "開啟",
+    "title": "檢測到有效 AI API 網址和API Key"
+  },
+  "messages": {
+    "success": {
+      "settingsSaved": "AI API 檢測設定已儲存。"
+    }
+  },
+  "modal": {
+    "actions": {
+      "fetchingModels": "獲取中…",
+      "fetchModels": "獲取模型列表",
+      "hideKey": "隱藏 Key",
+      "openApiProfiles": "開啟 API 憑證",
+      "retry": "重試",
+      "running": "執行中…",
+      "runOne": "執行",
+      "saveToProfiles": "儲存到 API 憑證",
+      "saving": "儲存中…",
+      "showKey": "顯示 Key",
+      "test": "測試",
+      "testing": "測試中…"
+    },
+    "errors": {
+      "fetchModelsFailed": "獲取模型列表失敗。",
+      "missingBaseUrlOrKey": "請先填寫 Base URL 與 API Key。",
+      "runProbeFailed": "探測失敗。",
+      "saveToProfilesFailed": "儲存到 API 憑證失敗"
+    },
+    "fields": {
+      "apiKey": "API Key",
+      "apiType": "API 型別",
+      "baseUrl": "Base URL",
+      "modelId": "模型 ID"
+    },
+    "hints": {
+      "saveWithoutTest": "提示：只要填寫 Base URL 與 API Key 就能儲存到 API 憑證（無需先測試或獲取模型列表）。測試僅用於驗證可用性。"
+    },
+    "messages": {
+      "savedToProfiles": "已儲存 {{name}} 到 API 憑證"
+    },
+    "privacyHint": "API Key 會被視為敏感資訊：預設隱藏，且除非你主動儲存到 API 憑證，否則不會持久化儲存任何資料。",
+    "probes": {
+      "notRunYet": "尚未執行"
+    },
+    "sourceText": {
+      "label": "用於提取的文字",
+      "placeholder": "將 Base URL 和 API Key 貼上到這裡，或使用右鍵選單從選中文字預填。"
+    },
+    "title": "AI API 功能可用性測試"
+  },
+  "settings": {
+    "autoDetect": {
+      "enable": "啟用自動檢測",
+      "enableDesc": "啟用後，擴充套件可能從複製操作中識別憑據，並在開啟彈窗前請求確認。",
+      "whitelist": {
+        "invalidMore": "…以及更多",
+        "invalidTitle": "無效規則",
+        "patterns": "URL 白名單規則",
+        "patternsDesc": "每行一個 JavaScript RegExp。匹配時預設使用不區分大小寫。無效規則會被忽略（視為不匹配）。",
+        "patternsPlaceholder": "^https://example\\.com/console"
+      }
+    },
+    "contextMenu": {
+      "enable": "在瀏覽器右鍵選單中顯示",
+      "enableDesc": "啟用後，在網頁右鍵選單中顯示“AI API 檢測”入口。"
+    },
+    "description": "手動右鍵選單始終可用。自動檢測為可選功能，僅在白名單頁面執行，並在開啟彈窗前請求確認。預設不會儲存提取到的 API Key。",
+    "title": "網頁 AI API 功能可用性測試"
+  }
+}

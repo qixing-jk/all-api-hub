@@ -30,8 +30,12 @@
           "name": "英文"
         },
         "zh-CN": {
-          "label": "中文",
-          "name": "中文"
+          "label": "简中",
+          "name": "简体中文"
+        },
+        "zh-TW": {
+          "label": "繁中",
+          "name": "繁体中文"
         }
       },
       "switchToLanguage": "切换界面语言为{{language}}"

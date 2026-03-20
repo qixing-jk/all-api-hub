@@ -1,0 +1,136 @@
+{
+  "alerts": {
+    "configMissing": {
+      "description": "請先在設定中配置託管站點憑據，然後再管理渠道。",
+      "title": "缺少配置"
+    },
+    "loadError": {
+      "description": "{{error}}",
+      "title": "無法載入渠道"
+    }
+  },
+  "description": "在此搜尋、編輯、刪除或手動同步與你的託管站點相連的所有渠道。",
+  "dialog": {
+    "cancel": "取消",
+    "confirm": "刪除",
+    "deleteDescription": "此操作無法撤銷，所選配置將被永久刪除。",
+    "deleteTitle": "刪除渠道？",
+    "deleteTitlePlural": "刪除這些渠道？"
+  },
+  "filter": {
+    "statusLabel": "按狀態篩選"
+  },
+  "filters": {
+    "actionOptions": {
+      "exclude": "排除匹配的模型",
+      "include": "包含匹配的模型"
+    },
+    "actions": {
+      "cancel": "取消",
+      "save": "儲存規則"
+    },
+    "addRule": "新增規則",
+    "empty": {
+      "description": "新增包含或排除規則（可選正則）以控制同步到該渠道的模型。",
+      "title": "尚未新增規則"
+    },
+    "hints": {
+      "regex": "正則模式使用 JavaScript 語法，可實現更靈活的匹配。",
+      "substring": "普通模式將執行區分大小寫的子串匹配。"
+    },
+    "jsonEditor": {
+      "hint": "JSON 必須是一個物件陣列，至少包含 name 和 pattern 欄位。可選欄位包括：id、description、isRegex、action（include | exclude）、enabled、createdAt、updatedAt。",
+      "label": "高階 JSON 編輯器",
+      "placeholder": "在此貼上或編輯過濾規則物件陣列，以便在多個渠道之間快速複用同一套配置。"
+    },
+    "labels": {
+      "action": "執行動作",
+      "delete": "刪除規則",
+      "description": "描述",
+      "enabled": "啟用",
+      "name": "規則名稱",
+      "pattern": "匹配模式",
+      "regex": "使用正則"
+    },
+    "loading": "正在載入渠道過濾規則…",
+    "messages": {
+      "jsonInvalid": "無效的過濾規則 JSON：{{error}}",
+      "loadFailed": "過濾規則載入失敗：{{error}}",
+      "saved": "過濾規則已儲存",
+      "saveFailed": "儲存過濾規則失敗：{{error}}",
+      "validationName": "請為每個規則填寫名稱。",
+      "validationPattern": "匹配模式不能為空。",
+      "validationRegex": "無效的正規表示式：{{error}}"
+    },
+    "placeholders": {
+      "description": "可選備註",
+      "name": "如：僅允許 GPT-4",
+      "pattern": "精確字串或正規表示式"
+    },
+    "subtitle": "為 {{channel}} 配置包含/排除規則",
+    "title": "渠道過濾規則",
+    "viewMode": {
+      "json": "JSON 編輯",
+      "label": "編輯模式",
+      "visual": "視覺化編輯"
+    }
+  },
+  "statusLabels": {
+    "autoDisabled": "自動禁用",
+    "enabled": "啟用",
+    "manualPause": "手動暫停",
+    "unknown": "未知"
+  },
+  "table": {
+    "columns": {
+      "actions": "操作",
+      "group": "可用分組",
+      "id": "ID",
+      "models": "模型數量",
+      "name": "渠道",
+      "priority": "優先順序",
+      "status": "狀態",
+      "type": "型別",
+      "weight": "權重"
+    },
+    "empty": "未找到渠道，請嘗試調整篩選條件。",
+    "loading": "正在載入渠道…",
+    "noEntries": "暫無資料",
+    "paginationNext": "下一頁",
+    "paginationPrev": "上一頁",
+    "paginationSummary": "第 {{start}} - {{end}} 條 / 共 {{total}} 條",
+    "rowActions": {
+      "delete": "刪除",
+      "edit": "編輯",
+      "filters": "編輯渠道過濾規則",
+      "openSync": "開啟模型同步介面",
+      "sync": "立即同步模型列表",
+      "syncing": "正在同步…"
+    },
+    "rowsPerPage": "每頁行數",
+    "selectAll": "選擇所有行",
+    "selectRow": "選擇行"
+  },
+  "title": "渠道管理",
+  "toasts": {
+    "channelDeleted": "已刪除 1 個渠道",
+    "channelSaved": "渠道已儲存",
+    "channelsDeleted_other": "toasts.channelsDeleted",
+    "channelUpdated": "渠道已更新",
+    "revealKeyFailed": "載入真實渠道 key 失敗：{{error}}",
+    "someDeletesFailed_other": "toasts.someDeletesFailed",
+    "syncCompleted": "模型同步完成（{{success}}/{{total}}）",
+    "syncFailed": "模型同步失敗：{{error}}"
+  },
+  "toolbar": {
+    "addChannel": "新增渠道",
+    "clearSearch": "清除搜尋",
+    "columns": "顯示列",
+    "deleteSelected": "刪除所選",
+    "refresh": "重新整理",
+    "searchPlaceholder": "按名稱、URL 或分組搜尋",
+    "status": "狀態",
+    "syncSelected": "同步所選",
+    "toggleColumns": "切換列"
+  }
+}

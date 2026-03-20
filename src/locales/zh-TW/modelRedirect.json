@@ -1,0 +1,71 @@
+{
+  "bulkClear": {
+    "action": "清空模型重定向對映",
+    "actionDesc": "將所選渠道的 model_mapping 設定為空物件（{}）。此操作不可撤銷。",
+    "actions": {
+      "cancel": "取消",
+      "close": "關閉",
+      "confirm": "清空",
+      "continue": "繼續",
+      "selectAll": "全選",
+      "selectNone": "全不選"
+    },
+    "confirm": {
+      "description_other": "bulkClear.confirm.description",
+      "details_other": "bulkClear.confirm.details",
+      "title": "確認清空模型重定向對映？",
+      "warningTitle": "危險操作"
+    },
+    "messages": {
+      "allSuccess_other": "bulkClear.messages.allSuccess",
+      "failed": "清空模型重定向對映失敗：{{error}}",
+      "nothingToClear": "無需清空（所選渠道的 model_mapping 已為空）",
+      "partialFailure": "已清空 {{success}}/{{total}} 個渠道，{{failed}} 個失敗",
+      "successWithSkips": "已清空 {{cleared}} 個渠道，{{skipped}} 個本來就是空的"
+    },
+    "preview": {
+      "channelListLabel": "渠道列表",
+      "description": "請選擇需要清空的渠道。未選擇的渠道不會被修改。",
+      "mappingCount_other": "bulkClear.preview.mappingCount",
+      "mappingEmptyInline": "當前 model_mapping 為空（{}）",
+      "mappingInvalid": "當前 model_mapping 不是有效 JSON，將展示原始文字。",
+      "mappingInvalidBadge": "JSON 無效",
+      "mappingToggle": "預覽當前 model_mapping",
+      "selectedCount": "已選擇 {{selected}}/{{total}}",
+      "title": "清空模型重定向對映"
+    },
+    "result": {
+      "title": "失敗詳情"
+    },
+    "search": {
+      "filteredCount": "當前顯示 {{filtered}}/{{total}}",
+      "label": "搜尋渠道",
+      "noResults": "未找到匹配的渠道",
+      "placeholder": "搜尋渠道（名稱或 ID）…"
+    },
+    "status": {
+      "clearing": "正在清空…",
+      "emptySelection": "請至少選擇一個渠道後繼續。",
+      "loadFailed": "載入渠道失敗：{{error}}",
+      "loading": "正在載入渠道…",
+      "noChannels": "未找到任何渠道"
+    }
+  },
+  "description": "自動模型重定向對映，解決因模型名稱導致無法統一呼叫的問題",
+  "enable": "啟用模型重定向",
+  "enableDesc": "啟用模型重定向對映功能，將在模型同步時自動執行並允許手動執行",
+  "messages": {
+    "regenerateFailed": "重新生成模型對映失敗：{{error}}",
+    "regenerateSuccess": "模型對映已成功重新生成",
+    "updateFailed": "更新模型重定向設定失敗",
+    "updateSuccess": "模型重定向設定已更新"
+  },
+  "pruneMissingTargetsOnModelSync": "同步後清理無效的重定向目標",
+  "pruneMissingTargetsOnModelSyncDesc": "危險操作：在模型同步重新整理後，將刪除 model_mapping 中目標模型不在最新模型列表裡的對映",
+  "regenerateButton": "立即重新生成對映",
+  "regenerating": "正在重新生成…",
+  "standardModels": "標準模型",
+  "standardModelsDesc": "選擇需要生成重定向對映的標準模型",
+  "standardModelsPlaceholder": "請選擇模型…",
+  "title": "模型重定向"
+}

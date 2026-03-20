@@ -1,0 +1,199 @@
+{
+  "accountOperations": {
+    "autoProvisionAlreadyHad": "{{accountName}} 已存在 API 金鑰，已跳過自動建立。",
+    "autoProvisionCreated": "已為 {{accountName}} 自動建立預設 API 金鑰。",
+    "autoProvisionFailed": "帳號已儲存，但自動建立 API 金鑰失敗。你可以在金鑰管理中使用“{{actionLabel}}”重試。",
+    "checkingApiKeys": "正在檢查 API 金鑰...",
+    "createTokenFailed": "建立 API 令牌失敗",
+    "importingToDoneHub": "正在匯入到 Done Hub...",
+    "importingToNewApi": "正在匯入到 New API...",
+    "importingToOctopus": "正在匯入到 Octopus...",
+    "importingToVeloera": "正在匯入到 Veloera...",
+    "retrying": "出現錯誤，進行第{{attempt}}次重試",
+    "tokenNotFound": "無法建立或找到 API 令牌"
+  },
+  "autodetect": {
+    "failed": "自動識別失敗：{{error}}",
+    "forbidden": "訪問被拒絕。請確認是否為網站防火牆攔截了相關請求。",
+    "loginThisSite": "登入此站點",
+    "networkError": "網路連線失敗，請檢查網路連線後重試。",
+    "notFound": "未找到相關資源，請確認填寫的站點地址是否正確。",
+    "notLoggedIn": "您尚未登入當前站點，或登入資訊已過期，無法自動新增。請先登入，或檢視幫助文件。",
+    "serverError": "伺服器錯誤，請稍後重試。",
+    "timeout": "自動識別超時，請嘗試手動新增。",
+    "unexpectedData": "自動識別失敗，站點返回的資料不符合預期。請手動輸入資訊，或確保已登入目標站點。"
+  },
+  "background": {
+    "cannotCreateWindow": "無法建立視窗",
+    "cannotCreateWindowOrTab": "無法建立視窗或獲取標籤頁",
+    "incognitoAccessRequired": "需要允許擴充套件在無痕模式執行才能使用無痕臨時視窗，請在擴充套件管理頁開啟“允許在無痕模式執行”後重試",
+    "invalidFetchRequest": "無效的請求引數",
+    "pageLoadTimeout": "頁面載入超時",
+    "windowNotFound": "未找到對應視窗或標籤頁"
+  },
+  "ccswitch": {
+    "attemptingRedirect": "正在嘗試跳轉到 CC Switch",
+    "invalidApp": "不支援的 CC Switch 目標應用",
+    "invalidEndpoint": "介面地址無效或未填寫",
+    "invalidHomepage": "主頁地址無效或未填寫",
+    "missingCredentials": "缺少必要的帳戶或金鑰資訊",
+    "unableToOpen": "無法開啟 CC Switch，請確認已安裝"
+  },
+  "cherryStudio": {
+    "attemptingRedirect": "正在嘗試跳轉到 Cherry Studio",
+    "missingCredentials": "缺少必要的帳戶或金鑰資訊",
+    "unableToOpen": "無法開啟，請確保已安裝 Cherry Studio。"
+  },
+  "claudeCodeRouter": {
+    "configMissing": "請先在設定中配置 Claude Code Router 基礎 URL",
+    "importFailed": "匯入到 Claude Code Router 失敗",
+    "importSuccess": "已成功將提供商 {{name}} 匯入到 Claude Code Router",
+    "modelsMissing": "請至少填寫一個模型",
+    "updateSuccess": "已成功更新 Claude Code Router 提供商 {{name}}"
+  },
+  "cliproxy": {
+    "configMissing": "請先在設定中配置 CLIProxyAPI 管理介面地址和金鑰",
+    "importFailed": "匯入到 CLIProxyAPI 失敗",
+    "importSuccess": "已成功將提供商 {{name}} 匯入到 CLIProxyAPI",
+    "updateSuccess": "已成功更新 CLIProxy 提供商 {{name}}"
+  },
+  "content": {
+    "userInfoNotFound": "未找到使用者資訊，請確保已登入",
+    "waitUserInfoTimeout": "等待使用者資訊超時，請確保已登入"
+  },
+  "donehub": {
+    "channelExists": "渠道 {{channelName}} 已存在，無需再次匯入",
+    "configMissing": "請先在基礎設定中配置 Done Hub 地址、管理員令牌和使用者 ID",
+    "importFailed": "匯入失敗，發生未知錯誤",
+    "importSuccess": "成功匯入新渠道 {{channelName}}",
+    "noAnyModels": "暫無可用模型",
+    "noChannelsToSync": "沒有可同步的渠道"
+  },
+  "errors": {
+    "api": {
+      "invalidResponseFormat": "響應資料格式錯誤",
+      "onlyJsonSupported": "僅支援 JSON 響應資料"
+    },
+    "operation": {
+      "failed": "操作失敗：{{error}}",
+      "saveFailed": "儲存失敗：{{error}}"
+    },
+    "unknown": "未知錯誤",
+    "validation": {
+      "bookmarkNameRequired": "書籤名稱不能為空",
+      "bookmarkUrlRequired": "書籤連結不能為空",
+      "doneHubAdminTokenRequired": "Done Hub 管理員令牌未配置",
+      "doneHubBaseUrlRequired": "Done Hub 基礎 URL 未配置",
+      "doneHubUserIdRequired": "Done Hub 使用者 ID 未配置",
+      "incompleteAccountInfo": "請填寫完整的帳號資訊",
+      "newApiAdminTokenRequired": "New API 管理員令牌未配置",
+      "newApiBaseUrlRequired": "New API 基礎 URL 未配置",
+      "newApiUserIdRequired": "New API 使用者 ID 未配置",
+      "updateAccountFailed": "更新帳號失敗 {{error}}",
+      "urlRequired": "站點地址不能為空",
+      "userIdNumeric": "使用者 ID 必須是數字",
+      "veloeraAdminTokenRequired": "Veloera 管理員令牌未配置",
+      "veloeraBaseUrlRequired": "Veloera 基礎 URL 未配置",
+      "veloeraUserIdRequired": "Veloera 使用者 ID 未配置"
+    }
+  },
+  "newapi": {
+    "channelExists": "渠道 {{channelName}} 已存在，無需再次匯入",
+    "channelMatchUnresolved": "可能已經存在重複渠道，但當前需要先完成 New API 驗證才能確認。請先完成驗證後再重試匯入。",
+    "configMissing": "請先在基礎設定中配置 New API 地址、管理員令牌和使用者 ID",
+    "importFailed": "匯入失敗，發生未知錯誤",
+    "importSuccess": "成功匯入新渠道 {{channelName}}",
+    "noAnyModels": "暫無可用模型",
+    "noChannelsToSync": "沒有可同步的渠道"
+  },
+  "octopus": {
+    "channelExists": "渠道 {{channelName}} 已存在，無需再次匯入",
+    "configMissing": "請先在基礎設定中配置 Octopus 地址、使用者名稱和密碼",
+    "corsError": "這可能是 CORS 配置問題。請在 Octopus 設定中檢查 CORS 白名單配置。",
+    "importFailed": "匯入失敗，發生未知錯誤",
+    "importSuccess": "成功匯入新渠道 {{channelName}}",
+    "noAnyModels": "暫無可用模型",
+    "noChannelsToSync": "沒有可同步的渠道"
+  },
+  "operations": {
+    "detection": {
+      "failed": "自動檢測失敗，請手動輸入資訊或確保已在目標站點登入",
+      "getInfoFailed": "未能獲取到使用者名稱或訪問令牌",
+      "getUserIdFailed": "無法獲取使用者 ID"
+    }
+  },
+  "storage": {
+    "accountDisabled": "帳號 {{id}} 已禁用",
+    "accountNotFound": "帳號 {{id}} 不存在",
+    "updateFailed": "更新帳號失敗"
+  },
+  "sub2api": {
+    "groupMissing": "Sub2API 分組“{{group}}”已不可用。請重新整理分組列表後重試。",
+    "loginRequired": "請先登入 Sub2API 控制台（外掛會讀取 auth_token/auth_user 用於匯入會話）後再重試。",
+    "refreshTokenInvalid": "Sub2API refresh_token 已失效/已輪轉。請從控制台重新匯入會話（推薦無痕/隱私視窗），或貼上新的 refresh_token 後重試。"
+  },
+  "toast": {
+    "error": {
+      "copyFailed": "複製失敗",
+      "duplicateCleanupFailed": "刪除重複帳號失敗：{{error}}",
+      "externalCheckInNonePending": "沒有今日未開啟過的外部簽到站。",
+      "findAccountDetailsFailed": "找不到帳戶詳情",
+      "operationFailed": "操作失敗：{{error}}",
+      "refreshAccount": "重新整理 {{accountName}} 失敗",
+      "saveFailed": "儲存失敗",
+      "shareSnapshotAccountDisabled": "帳號已禁用",
+      "shareSnapshotNoEnabledAccounts": "沒有可分享的已啟用帳號"
+    },
+    "loading": {
+      "refreshingAccount": "正在重新整理 {{accountName}}..."
+    },
+    "success": {
+      "accountDisabled": "已禁用 {{accountName}}",
+      "accountEnabled": "已啟用 {{accountName}}",
+      "accountPinned": "已置頂 {{accountName}}",
+      "accountSaveSuccess": "帳號儲存成功",
+      "accountUnpinned": "已取消置頂 {{accountName}}",
+      "accountUpdateSuccess": "帳號更新成功",
+      "bookmarkAdded": "書籤 {{name}} 新增成功!",
+      "bookmarkDeleted": "書籤 {{name}} 已刪除",
+      "bookmarkPinned": "已置頂 {{name}}",
+      "bookmarkUnpinned": "已取消置頂 {{name}}",
+      "bookmarkUpdated": "書籤 {{name}} 更新成功!",
+      "bookmarkUrlCopied": "{{name}} 的連結已複製到剪貼簿",
+      "duplicateCleanupSuccess_other": "messages:toast.success.duplicateCleanupSuccess",
+      "externalCheckInModeAll": "全部",
+      "externalCheckInModeUnchecked": "僅未簽到",
+      "externalCheckInOpened_other": "messages:toast.success.externalCheckInOpened",
+      "refreshAccount": "{{accountName}} 重新整理成功！",
+      "refreshSkipped": "重新整理間隔未到，已跳過",
+      "shareSnapshotCaptionCopied": "文案已複製",
+      "shareSnapshotCopied": "快照已複製到剪貼簿",
+      "shareSnapshotDownloaded": "快照已下載",
+      "urlCopied": "{{accountName}} 的 URL 已複製到剪貼簿"
+    }
+  },
+  "veloera": {
+    "channelExists": "渠道 {{channelName}} 已存在，無需再次匯入",
+    "configMissing": "請先在基礎設定中配置 Veloera 地址、管理員令牌和使用者 ID",
+    "importFailed": "匯入失敗，發生未知錯誤",
+    "importSuccess": "成功匯入新渠道 {{channelName}}",
+    "noAnyModels": "暫無可用模型",
+    "noChannelsToSync": "沒有可同步的渠道"
+  },
+  "warnings": {
+    "accountSavedWithoutDataRefresh": "帳號儲存成功，但獲取帳號資料失敗。您可以稍後從帳號列表重新整理資料。",
+    "accountUpdatedWithoutDataRefresh": "帳號配置已儲存，但重新整理最新資料失敗"
+  },
+  "webdav": {
+    "authFailed": "鑑權失敗，請檢查使用者名稱/密碼",
+    "configIncomplete": "請先完整填寫 WebDAV URL、使用者名稱和密碼",
+    "connectionFailed": "連線失敗，狀態碼: {{status}}",
+    "decryptFailed": "解密備份失敗，請檢查密碼",
+    "decryptFailedNoPassword": "備份已加密，但未設定密碼",
+    "downloadFailed": "下載失敗，狀態碼: {{status}}",
+    "encryptFailedNoPassword": "已開啟加密，但未設定密碼",
+    "fileNotFound": "遠端備份檔案不存在",
+    "syncDataSelectionRequired": "請至少選擇一個要同步的資料型別",
+    "uploadFailed": "上傳失敗，狀態碼: {{status}}"
+  }
+}

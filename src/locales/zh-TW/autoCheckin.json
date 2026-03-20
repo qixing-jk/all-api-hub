@@ -1,0 +1,199 @@
+{
+  "description": "在每天的指定時間視窗內，自動為符合條件的帳號執行簽到。",
+  "execution": {
+    "actions": {
+      "devModeHint": "開發模式：為便於測試，操作按鈕將始終顯示。",
+      "openFailedManual": "開啟失敗帳號的手動簽到頁",
+      "openManual": "手動簽到",
+      "retryAccount": "重新嘗試"
+    },
+    "debug": {
+      "evaluateUiOpenPretrigger": "開發：解釋“開啟介面時提前觸發今日簽到”是否滿足條件",
+      "resetLastDailyRunDay": "開發：清除“今天已執行過每日簽到”標記",
+      "scheduleDailyAlarmForToday": "開發：將每日簽到的鬧鐘設為今天稍後時間",
+      "triggerDailyAlarmNow": "開發：立即執行每日自動簽到（模擬每日簽到鬧鐘回撥）",
+      "triggerRetryAlarmNow": "開發：立即執行重試簽到（模擬簽到重試鬧鐘回撥）",
+      "triggerUiOpenPretrigger": "開發：立即嘗試“開啟介面時提前觸發今日簽到",
+      "uiOpenPretriggerDiagnosticsDesc": "展示是否滿足條件，以及用於判斷的輸入資訊。",
+      "uiOpenPretriggerDiagnosticsTitle": "開啟介面時提前觸發今日簽到"
+    },
+    "empty": {
+      "noHistory": "暫無執行歷史",
+      "noHistoryDesc": "點擊\"立即執行\"對所有符合條件的帳號進行自動簽到",
+      "noResults": "沒有匹配的結果",
+      "noResultsDesc": "嘗試修改篩選條件或搜尋關鍵字"
+    },
+    "filters": {
+      "all": "全部",
+      "failed": "失敗",
+      "searchPlaceholder": "搜尋帳號名稱或訊息...",
+      "skipped": "已跳過",
+      "success": "成功"
+    },
+    "hints": {
+      "invalidAccessToken": "解決方案：Access Token 可能已失效。請重新登入該站點，然後在「帳號管理 → 編輯帳號」中重新自動識別/重新整理 Access Token；如自動識別後仍出現此問題，請手動獲取並修改 Access Token。",
+      "noTabWithId": "提示：請不要關閉擴充套件自動建立的標籤頁/視窗，擴充套件會在一段時間後自動關閉。如需手動關閉，請至少等待 1 分鐘後再關閉。",
+      "openFailedManualNewWindow": "提示：按住 Shift 點擊“開啟失敗帳號的手動簽到頁”，可在新視窗中開啟。"
+    },
+    "refresh": "重新整理",
+    "runNow": "立即執行",
+    "statistics": {
+      "result": "執行結果"
+    },
+    "status": {
+      "alreadyChecked": "已簽到",
+      "failed": "失敗",
+      "skipped": "已跳過",
+      "success": "成功"
+    },
+    "table": {
+      "accountName": "帳號名稱",
+      "actions": "操作",
+      "message": "訊息",
+      "status": "狀態",
+      "time": "時間"
+    },
+    "title": "自動簽到"
+  },
+  "messages": {
+    "error": {
+      "accountDisabled": "帳號已禁用",
+      "dailyAlarmScheduleForTodayFailed": "計劃今日每日鬧鐘失敗：{{error}}",
+      "dailyAlarmTriggerFailed": "觸發每日鬧鐘失敗：{{error}}",
+      "deterministicTimeOutsideWindow": "固定時間必須位於配置的時間視窗內。",
+      "invalidDeterministicTime": "請輸入合法的 HH:mm 格式時間。",
+      "invalidNumber": "請輸入有效的正數。",
+      "invalidTimeWindow": "無效的時間視窗，開始時間和結束時間不能相同。",
+      "lastDailyRunDayResetFailed": "重置每日執行標記失敗：{{error}}",
+      "openFailedManualFailed": "{{failedCount}} 個失敗帳號的手動簽到頁均開啟失敗。",
+      "openFailedManualNone": "沒有可開啟手動簽到頁的失敗帳號。",
+      "openFailedManualPartial": "已開啟 {{openedCount}} 個失敗帳號的頁面，另有 {{failedCount}} 個開啟失敗。",
+      "openManualFailed": "開啟手動簽到頁面失敗：{{error}}",
+      "retryAlarmTriggerFailed": "觸發重試鬧鐘失敗：{{error}}",
+      "retryFailed": "重新嘗試失敗：{{error}}",
+      "runFailed": "執行自動簽到失敗：{{error}}",
+      "uiOpenPretriggerDidNotStart": "介面開啟預觸發未啟動：{{reason}}",
+      "uiOpenPretriggerEvaluationFailed": "評估介面開啟預觸發失敗：{{error}}",
+      "uiOpenPretriggerIneligible": "介面開啟預觸發條件不滿足：{{reason}}",
+      "uiOpenPretriggerTriggerFailed": "觸發介面開啟預觸發失敗：{{error}}"
+    },
+    "loading": {
+      "evaluatingUiOpenPretrigger": "正在評估介面開啟預觸發...",
+      "openingFailedManual_other": "messages.loading.openingFailedManual",
+      "resettingLastDailyRunDay": "正在重置每日執行標記...",
+      "running": "正在執行自動簽到...",
+      "schedulingDailyAlarmForToday": "正在計劃今日每日鬧鐘...",
+      "triggeringDailyAlarm": "正在觸發每日鬧鐘...",
+      "triggeringRetryAlarm": "正在觸發重試鬧鐘...",
+      "triggeringUiOpenPretrigger": "正在觸發介面開啟預觸發..."
+    },
+    "success": {
+      "dailyAlarmScheduledForToday": "已計劃今日每日鬧鐘。",
+      "dailyAlarmTriggered": "已觸發每日鬧鐘執行。",
+      "lastDailyRunDayReset": "已重置每日執行標記。",
+      "openFailedManualCompleted_other": "messages.success.openFailedManualCompleted",
+      "pretriggerStarted": "已提前觸發自動簽到。",
+      "retryAlarmTriggered": "已觸發重試鬧鐘執行。",
+      "retryCompleted": "重新嘗試已完成。",
+      "runCompleted": "自動簽到已完成。",
+      "settingsSaved": "自動簽到設定已儲存。",
+      "uiOpenPretriggerEligible": "介面開啟預觸發條件滿足。"
+    }
+  },
+  "providerFallback": {
+    "alreadyCheckedToday": "今日已簽到",
+    "checkinFailed": "簽到失敗",
+    "checkinSuccessful": "簽到成功",
+    "endpointNotSupported": "不支援該簽到介面，請檢查帳號的站點型別與實際站點是否相同",
+    "turnstileIncognitoAccessRequired": "需要允許擴充套件在無痕模式執行，才能在無痕頁面獲取 Turnstile Token（多帳號場景）。請在擴充套件管理頁開啟“允許在無痕模式執行”後重試；或手動開啟簽到頁面完成驗證：{{checkInUrl}}",
+    "turnstileManualRequired": "需要完成 Cloudflare Turnstile 驗證，請開啟簽到頁面完成驗證：{{checkInUrl}}",
+    "unknownError": "發生未知錯誤"
+  },
+  "providerWong": {
+    "checkinDisabled": "該站點未開啟簽到功能"
+  },
+  "settings": {
+    "deterministicTimeDesc": "啟用固定模式時，選擇開始簽到的具體時間（HH:mm）。",
+    "deterministicTimeTitle": "固定時間",
+    "enable": "啟用自動簽到",
+    "enableDesc": "控制全域性自動簽到功能開關，關閉後不會執行任何自動簽到任務。",
+    "notifyUiOnCompletion": "自動簽到完成後重新整理資料和介面",
+    "notifyUiOnCompletionDesc": "當自動簽到執行完成後，立即重新整理簽到帳號的資料並重新整理相關介面。",
+    "pretriggerDailyOnUiOpen": "開啟介面時提前觸發今日簽到",
+    "pretriggerDailyOnUiOpenDesc": "當你在今日時間視窗內開啟擴充套件介面且今日每日計劃尚未執行時，立即觸發一次每日自動簽到。",
+    "retryDesc": "在同一天內自動重試失敗的帳號。",
+    "retryInterval": "重試間隔（分鐘）",
+    "retryIntervalDesc": "每次重試之間等待的時間。",
+    "retryMaxAttempts": "每日最大嘗試次數",
+    "retryMaxAttemptsDesc": "每個帳號每天允許的最大嘗試次數（首次 + 重試）。",
+    "retryTitle": "重試策略",
+    "scheduleModeDesc": "選擇在時間視窗內如何計算下一次執行時間。",
+    "scheduleModeDeterministic": "固定時間",
+    "scheduleModeRandom": "隨機",
+    "scheduleModeTitle": "計劃模式",
+    "title": "自動簽到",
+    "viewExecution": "檢視簽到歷史",
+    "viewExecutionButton": "開啟記錄",
+    "viewExecutionDesc": "檢視每次自動簽到的詳細結果與日誌。",
+    "windowEnd": "時間視窗結束",
+    "windowEndDesc": "允許每日自動簽到開始的最晚本地時間。",
+    "windowStart": "時間視窗開始",
+    "windowStartDesc": "允許每日自動簽到開始的最早本地時間。"
+  },
+  "skipReasons": {
+    "account_disabled": "帳號已禁用",
+    "already_checked_today": "今日已簽到",
+    "auto_checkin_disabled": "自動簽到已關閉",
+    "detection_disabled": "檢測已關閉",
+    "no_provider": "帳號所屬站點型別暫不支援簽到",
+    "provider_not_ready": "帳號配置暫不支援簽到"
+  },
+  "snapshot": {
+    "badges": {
+      "disabled": "未啟用",
+      "enabled": "已啟用",
+      "pending": "待執行",
+      "providerAvailable": "可用",
+      "providerUnavailable": "不可用"
+    },
+    "description": "列出所有已啟用檢測的帳號，幫助快速定位為什麼某些帳號會被跳過。",
+    "table": {
+      "autoCheckin": "自動簽到",
+      "detection": "檢測",
+      "lastResult": "最近結果",
+      "provider": "提供方",
+      "skipReason": "跳過原因",
+      "status": "狀態"
+    },
+    "title": "帳號檢測狀態"
+  },
+  "status": {
+    "disabled": "已禁用",
+    "lastRun": "最近執行",
+    "nextDaily": "下次每日計劃",
+    "nextRetry": "下次重試計劃",
+    "noPendingRetry": "無待重試",
+    "notScheduled": "未計劃",
+    "pendingRetry": "等待重試",
+    "result": {
+      "failed": "失敗",
+      "partial": "部分成功",
+      "success": "成功"
+    },
+    "retryDisabled": "重試未啟用",
+    "summary": {
+      "eligible": "可參與",
+      "executed": "已執行",
+      "failed": "失敗",
+      "skipped": "跳過",
+      "success": "成功",
+      "title": "執行統計"
+    }
+  },
+  "uiOpenPretrigger": {
+    "close": "關閉",
+    "dialogDescription": "開啟擴充套件介面時觸發了今日計劃的自動簽到。",
+    "dialogTitle": "自動簽到已完成",
+    "viewDetails": "檢視詳情"
+  }
+}

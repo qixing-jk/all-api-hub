@@ -10,6 +10,7 @@ import { PermissionOnboardingDialog } from "~/features/BasicSettings/components/
 import GeneralTab from "~/features/BasicSettings/components/tabs/General/GeneralTab"
 import enSettings from "~/locales/en/settings.json"
 import zhCnSettings from "~/locales/zh-CN/settings.json"
+import zhTwSettings from "~/locales/zh-TW/settings.json"
 
 const permissionMocks = vi.hoisted(() => ({
   ensurePermissions: vi.fn(),
@@ -101,6 +102,7 @@ vi.mock("~/utils/core/toastHelpers", () => ({
 const SETTINGS_RESOURCES = {
   en: { settings: enSettings },
   "zh-CN": { settings: zhCnSettings },
+  "zh-TW": { settings: zhTwSettings },
 } as const
 
 /**
@@ -180,7 +182,7 @@ describe("PermissionOnboardingDialog language selection", () => {
     await user.click(selector)
     await user.click(
       await screen.findByRole("option", {
-        name: "Chinese",
+        name: "Simplified Chinese",
       }),
     )
 
@@ -234,7 +236,7 @@ describe("PermissionOnboardingDialog language selection", () => {
     )
     await user.click(
       await screen.findByRole("option", {
-        name: "Chinese",
+        name: "Simplified Chinese",
       }),
     )
 
@@ -253,7 +255,7 @@ describe("PermissionOnboardingDialog language selection", () => {
 
     expect(
       within(selectorGroup).getByRole("button", {
-        name: "当前界面语言：中文",
+        name: "当前界面语言：简体中文",
       }),
     ).toHaveAttribute("aria-pressed", "true")
     expect(
@@ -261,5 +263,32 @@ describe("PermissionOnboardingDialog language selection", () => {
         name: "切换界面语言为英文",
       }),
     ).toBeInTheDocument()
+  })
+
+  it("offers traditional chinese in onboarding and updates shared settings copy", async () => {
+    const user = userEvent.setup()
+    const i18n = await createSettingsI18n("en")
+
+    renderWithI18n(<PermissionOnboardingDialog open onClose={vi.fn()} />, i18n)
+
+    await user.click(
+      await screen.findByRole("combobox", {
+        name: "Current interface language: English",
+      }),
+    )
+    await user.click(
+      await screen.findByRole("option", {
+        name: "Traditional Chinese",
+      }),
+    )
+
+    expect(
+      await screen.findByRole("heading", { name: "歡迎加入 All API Hub" }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "授予推薦權限" }),
+    ).toBeInTheDocument()
+    expect(persistedLanguage).toBe("zh-TW")
+    expect(preferenceMocks.setLanguage).toHaveBeenCalledWith("zh-TW")
   })
 })

@@ -1,0 +1,221 @@
+{
+  "actions": {
+    "applySettings": "應用設定",
+    "export": "匯出",
+    "openAccountUsageSettings": "用量設定",
+    "refresh": "重新整理",
+    "syncNow": "立即同步"
+  },
+  "charts": {
+    "accountComparison": {
+      "description": "對比當前選擇下各帳號的合計用量。",
+      "series": {
+        "tokens": "總 Tokens"
+      },
+      "title": "帳號對比"
+    },
+    "common": {
+      "chartType": {
+        "ariaLabel": "圖表型別",
+        "histogram": "直方圖",
+        "pie": "餅圖"
+      }
+    },
+    "dailyOverview": {
+      "axes": {
+        "requests": "請求數",
+        "tokens": "Tokens / 額度"
+      },
+      "description": "多指標趨勢，支援提示與縮放。",
+      "series": {
+        "completionTokens": "Completion Tokens",
+        "promptTokens": "Prompt Tokens",
+        "quota": "額度",
+        "requests": "請求數",
+        "totalTokens": "總 Tokens"
+      },
+      "title": "每日總覽"
+    },
+    "latencyHistogram": {
+      "description": "當前選擇下單次請求延遲（use_time）的直方圖。",
+      "series": {
+        "count": "數量"
+      },
+      "title": "延遲分佈"
+    },
+    "latencyTrend": {
+      "axes": {
+        "seconds": "秒",
+        "slowCount": "慢請求數"
+      },
+      "description": "每日平均/最大延遲與慢請求數量。",
+      "series": {
+        "avg": "平均",
+        "max": "最大",
+        "slow": "慢"
+      },
+      "title": "延遲趨勢"
+    },
+    "modelCostDistribution": {
+      "description": "按所選日期範圍內額度消耗（折算 USD）統計的 Top 模型。",
+      "series": {
+        "usd": "花費（USD）"
+      },
+      "title": "模型花費分佈"
+    },
+    "modelDistribution": {
+      "description": "按所選日期範圍內總 Tokens 統計的 Top 模型。",
+      "series": {
+        "tokens": "總 Tokens"
+      },
+      "title": "模型分佈"
+    },
+    "modelHeatmap": {
+      "description": "Top 模型在時間維度的 Tokens 強度（點擊模型可聚焦）。",
+      "series": {
+        "tokens": "總 Tokens"
+      },
+      "title": "模型 × 日期熱力圖"
+    },
+    "other": "其他",
+    "slowModels": {
+      "description": "當前選擇下慢請求最多的模型。",
+      "series": {
+        "slowCount": "慢請求數"
+      },
+      "title": "慢模型排行"
+    },
+    "slowTokens": {
+      "description": "當前選擇下慢請求最多的 API Token。",
+      "series": {
+        "slowCount": "慢請求數"
+      },
+      "title": "慢 Token 排行"
+    },
+    "usageTimeHeatmap": {
+      "description": "按星期 × 小時（本地時間）彙總的 Tokens 熱力圖。",
+      "series": {
+        "tokens": "總 Tokens"
+      },
+      "title": "使用時間熱點"
+    }
+  },
+  "description": "同步並視覺化本地聚合的用量歷史，支援匯出。",
+  "empty": {
+    "description": "請先在 設定 → 帳號用量 中開啟同步，然後點擊“立即同步”拉取最近的用量歷史。",
+    "title": "暫無用量歷史資料"
+  },
+  "filters": {
+    "accounts": "帳號",
+    "accountsHint": "可選擇部分帳號（不選擇表示站點範圍內全部）。",
+    "allAccounts": "全部帳號",
+    "allSites": "全部站點",
+    "allTokens": "全部 Token",
+    "endDay": "結束日期",
+    "sites": "站點",
+    "sitesHint": "可選擇部分站點（不選擇表示全部）。",
+    "startDay": "開始日期",
+    "tokens": "API Token",
+    "tokensHint": "可按帳號 Token 過濾（不選擇表示帳號範圍內全部）。",
+    "unknownToken": "未知 Token"
+  },
+  "hover": {
+    "account": "帳號",
+    "notes": "備註",
+    "owners": "所屬帳號",
+    "site": "站點",
+    "token": "Token",
+    "type": "型別",
+    "url": "URL"
+  },
+  "messages": {
+    "error": {
+      "exportFailed": "匯出失敗：{{error}}",
+      "exportNoData": "當前選擇下沒有可匯出的資料",
+      "settingsSaveFailed": "儲存設定失敗：{{error}}",
+      "syncFailed": "同步失敗：{{error}}"
+    },
+    "loading": {
+      "syncing": "正在同步用量歷史..."
+    },
+    "success": {
+      "exported": "已匯出",
+      "settingsSaved": "設定已儲存",
+      "syncCompleted": "同步完成（成功：{{success}}，跳過：{{skipped}}，失敗：{{error}}，不支援：{{unsupported}}）",
+      "syncCompletedNoSummary": "同步完成"
+    },
+    "warning": {
+      "scheduleFallback": "已應用排程回退：{{warning}}"
+    }
+  },
+  "settings": {
+    "alarmUnsupported": "當前瀏覽器不支援 Alarms API，無法使用類 Cron 排程。",
+    "enabled": "用量歷史同步",
+    "enabledHint": "開啟後僅儲存有限的每日聚合資料（不會儲存原始日誌）。",
+    "retentionDays": "保留天數",
+    "scheduleMode": "自動同步方式",
+    "scheduleModePlaceholder": "請選擇自動同步方式",
+    "scheduleModes": {
+      "afterRefresh": "在帳號重新整理後",
+      "alarm": "類 Cron（需要 Alarms API）",
+      "manual": "僅手動"
+    },
+    "syncIntervalHours": "最小同步間隔（小時）"
+  },
+  "status": {
+    "never": "從未",
+    "states": {
+      "error": "失敗",
+      "never": "從未",
+      "success": "成功",
+      "unsupported": "不支援"
+    }
+  },
+  "summary": {
+    "completionTokens": "輸出 Token",
+    "cost": "花費",
+    "promptTokens": "輸入 Token",
+    "requests": "請求數",
+    "totalTokens": "Token 總量"
+  },
+  "syncTab": {
+    "actions": {
+      "clearSelection": "清空選擇",
+      "refreshStatus": "重新整理狀態",
+      "syncAccount": "同步該帳號",
+      "syncing": "同步中...",
+      "syncSelected": "同步已選"
+    },
+    "noAccounts": "未找到任何帳號。",
+    "searchPlaceholder": "輸入關鍵詞搜尋…",
+    "settingsDescription": "配置用量歷史聚合資料的儲存與排程方式。",
+    "settingsTitle": "用量歷史同步設定",
+    "stateDescription": "檢視各帳號的同步狀態與最後同步時間。",
+    "stateTitle": "同步狀態",
+    "table": {
+      "columns": {
+        "account": "帳號",
+        "lastSyncAt": "最後同步",
+        "message": "資訊",
+        "state": "狀態"
+      },
+      "empty": "沒有匹配當前搜尋的帳號。",
+      "loading": "載入中…",
+      "noMessage": "—",
+      "rowActions": "行操作",
+      "selectAll": "全選帳號",
+      "selectedCount_other": "syncTab.table.selectedCount",
+      "selectRow": "選擇帳號：{{name}}"
+    }
+  },
+  "title": "用量分析",
+  "weekdays": {
+    "fri": "週五",
+    "mon": "週一",
+    "sat": "週六",
+    "sun": "週日",
+    "thu": "週四",
+    "tue": "週二",
+    "wed": "週三"
+  }
+}

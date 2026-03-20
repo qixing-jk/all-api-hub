@@ -1,0 +1,57 @@
+{
+  "actions": {
+    "cancel": "取消",
+    "clear": "清空",
+    "close": "關閉",
+    "copyKey": "複製金鑰",
+    "delete": "刪除",
+    "edit": "編輯",
+    "export": "匯出",
+    "import": "匯入",
+    "more": "更多",
+    "openSidePanel": "在側邊欄中開啟",
+    "refresh": "重新整理",
+    "reset": "重置",
+    "retry": "重試",
+    "save": "儲存"
+  },
+  "currency": {
+    "clickToSwitch": "點擊切換到{{currency}}",
+    "cny": "人民幣",
+    "usd": "美元"
+  },
+  "labels": {
+    "apiKey": "API Key",
+    "notAvailable": "N/A",
+    "settings": "設定",
+    "token": "令牌",
+    "unknown": "未知"
+  },
+  "quota": {
+    "unlimited": "無限額度"
+  },
+  "status": {
+    "creating": "建立中...",
+    "disabled": "已禁用",
+    "enabled": "已啟用",
+    "error": "錯誤",
+    "exporting": "匯出中...",
+    "failed": "失敗",
+    "importing": "匯入中...",
+    "loading": "載入中...",
+    "processing": "處理中...",
+    "refreshing": "重新整理中...",
+    "resetting": "重置中...",
+    "saving": "儲存中...",
+    "success": "成功",
+    "testing": "測試中...",
+    "updating": "更新中...",
+    "uploading": "上傳中..."
+  },
+  "time": {
+    "neverExpires": "永不過期",
+    "seconds": "秒",
+    "updatedAt": "更新於 {{time}}"
+  },
+  "total": "總數"
+}

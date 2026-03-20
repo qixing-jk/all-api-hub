@@ -19,6 +19,8 @@ locales/
 │   └── about.json          # 关于
 ├── zh-CN/                  # 中文翻译
 │   └── (同上结构)
+├── zh-TW/                  # 繁体中文翻译
+│   └── (同上结构)
 └── README.md               # 本文件
 ```
 
@@ -83,11 +85,10 @@ function MyComponent() {
 - 查看翻译状态：`pnpm run i18n:status`
 - 只读校验提取结果（适合 CI）：`pnpm run i18n:extract:ci`
 - 手动提取代码中的静态 key：`pnpm run i18n:extract`
-- 以 `zh-CN` 为主语言同步 `en` 结构：`pnpm run i18n:sync`
+- 以 `zh-CN` 为主语言同步 `en`、`zh-TW` 结构：`pnpm run i18n:sync`
 
 当前配置刻意保持保守：
 
 - `primaryLanguage` 为 `zh-CN`，对应仓库目录 `src/locales/zh-CN/`
-- `removeUnusedKeys` 为 `false`
-
-原因：仓库里仍存在若干动态拼接的 key，暂不自动删除未被静态分析命中的翻译项，避免误删。
+- `secondaryLanguages` 由 `SUPPORTED_UI_LANGUAGES` 自动推导，当前为 `en` 与 `zh-TW`
+- `removeUnusedKeys` 为 `true`

@@ -1,0 +1,367 @@
+{
+  "app": {
+    "description": "統一管理第三方中轉站與自建站點的帳號與餘額",
+    "name": "All API Hub"
+  },
+  "billing": {
+    "notProvided": "未提供",
+    "perCall": "按次計費",
+    "tokenBased": "按量計費"
+  },
+  "dialog": {
+    "ccswitch": {
+      "actions": {
+        "export": "匯出"
+      },
+      "appOptions": {
+        "claude": "Claude",
+        "codex": "Codex",
+        "gemini": "Gemini",
+        "openclaw": "OpenClaw",
+        "opencode": "OpenCode"
+      },
+      "description": "透過深連結一鍵匯入當前站點配置到 CC Switch",
+      "descriptions": {
+        "model": "若可用，會自動從 /v1/models 獲取模型列表供選擇；也可以直接輸入自定義模型名稱。"
+      },
+      "fields": {
+        "app": "目標應用",
+        "endpoint": "介面地址",
+        "homepage": "主頁地址",
+        "model": "預設模型（可選）",
+        "name": "供應商名稱",
+        "notes": "備註（可選）"
+      },
+      "modelOptions": {
+        "none": "不設定預設模型"
+      },
+      "notices": {
+        "openclaw": "CC Switch 當前不支援透過外部匯入的方式配置 OpenClaw AI 服務的 API 介面格式；如有需要，請在匯入後到 CC Switch 中手動調整。",
+        "opencode": "CC Switch 當前不支援透過外部匯入的方式配置 OpenCode AI 服務的 API 介面格式；如有需要，請在匯入後到 CC Switch 中手動調整。"
+      },
+      "placeholders": {
+        "endpoint": "https://example.com",
+        "homepage": "https://example.com",
+        "model": "例如 claude-3-opus",
+        "name": "例如 Acme 中轉",
+        "notes": "新增匯入說明"
+      },
+      "title": "匯出到 CC Switch"
+    },
+    "claudeCodeRouter": {
+      "description": "在 Claude Code Router 中建立或更新 Provider（必須填寫模型）。",
+      "descriptions": {
+        "models": "每行一個模型，或用逗號分隔。",
+        "providerApiBaseUrl": "需填寫完整的 /v1/chat/completions 端點。",
+        "restartAfterSave": "部分場景下需要重啟才能使配置生效。"
+      },
+      "fields": {
+        "models": "模型列表",
+        "providerApiBaseUrl": "Provider 介面地址",
+        "providerName": "Provider 名稱",
+        "restartAfterSave": "儲存後重啟"
+      },
+      "placeholders": {
+        "modelsPicker": "輸入以新增模型",
+        "providerApiBaseUrl": "https://example.com/v1/chat/completions",
+        "providerName": "例如 我的中轉"
+      },
+      "title": "匯入到 Claude Code Router"
+    },
+    "cliproxy": {
+      "actions": {
+        "addModel": "新增模型",
+        "removeModel": "刪除模型",
+        "reorderModel": "調整模型順序"
+      },
+      "description": "在 CLIProxyAPI 中建立或更新一個 Provider 條目。",
+      "descriptions": {
+        "models": "將上游模型名稱對映到可選別名（name -> alias）。若可用，會載入上游可用模型供選擇。",
+        "modelsManual": "將上游模型名稱對映到可選別名（name -> alias）。當前版本中此 Provider 型別需手動輸入上游模型。",
+        "providerType": "選擇要匯入到哪個 CLIProxyAPI Provider 型別。",
+        "proxyUrl": "可選。用於此 API Key 條目的代理 URL。"
+      },
+      "fields": {
+        "baseUrl": "Provider 基礎 URL",
+        "models": "模型對映（可選）",
+        "name": "Provider 名稱",
+        "providerType": "Provider 型別",
+        "proxyUrl": "代理 URL（可選）"
+      },
+      "placeholders": {
+        "modelAlias": "模型別名（可選）",
+        "modelName": "模型名稱，例如 claude",
+        "name": "例如：Acme Relay",
+        "providerType": "選擇 Provider 型別",
+        "proxyUrl": "http://localhost:3000"
+      },
+      "title": "匯入到 CLIProxyAPI"
+    },
+    "collapse": "收起",
+    "copyKey": {
+      "apiKey": "API 金鑰",
+      "copied": "已複製",
+      "copy": "複製",
+      "copyFailedManual": "複製失敗，請手動複製",
+      "createCustomKey": "自定義建立金鑰",
+      "createFailed": "建立金鑰失敗：{{error}}",
+      "createKey": "快速建立預設金鑰",
+      "createNotSupported": "該帳號暫不支援在此處建立金鑰。",
+      "createSuccess": "金鑰已建立",
+      "creatingKey": "正在快速建立預設金鑰...",
+      "defaultGroup": "預設組",
+      "disabled": "禁用",
+      "enabled": "啟用",
+      "expireTime": "過期時間: {{time}}",
+      "exportToCCSwitch": "匯出到 CC Switch",
+      "getFailed": "獲取失敗",
+      "keyCopied": "金鑰已複製到剪貼簿",
+      "loadFailed": "載入金鑰列表失敗: {{error}}",
+      "loading": "正在獲取金鑰列表...",
+      "noKeyFoundAfterCreate": "建立成功但未獲取到金鑰，請重試。",
+      "noKeys": "暫無金鑰資料",
+      "noKeysDescription": "該帳號暫無可用金鑰，可快速建立預設金鑰或自定義建立後再複製。",
+      "remainingQuota": "剩餘額度",
+      "retry": "重試",
+      "title": "金鑰列表",
+      "totalKeys_other": "ui:dialog.copyKey.totalKeys",
+      "usedQuota": "已用額度",
+      "useInCherry": "在 Cherry Studio 中使用"
+    },
+    "dedupeAccounts": {
+      "confirm": {
+        "confirmDelete": "確認刪除",
+        "description": "將刪除 {{deleteCount}} 個帳號（共 {{groups}} 組重複）。",
+        "title": "刪除重複帳號",
+        "warningOrder": "自定義排序將被自動調整。",
+        "warningPinned_other": "ui:dialog.dedupeAccounts.confirm.warningPinned"
+      },
+      "delete": "刪除",
+      "deleting": "正在刪除重複帳號...",
+      "description": "按 URL 源站 + 使用者 ID 掃描重複帳號，並在預覽確認後刪除重複項。",
+      "details": {
+        "accountId": "帳號 ID",
+        "authType": "認證方式",
+        "autoCheckin": "自動簽到",
+        "checkinDetection": "簽到檢測",
+        "createdAt": "建立時間",
+        "customCheckinUrl": "自定義簽到 URL",
+        "excludeFromTotalBalance": "從總餘額中排除",
+        "health": "健康狀態",
+        "healthReason": "原因",
+        "lastSync": "最後同步",
+        "notes": "備註",
+        "quota": "餘額點數",
+        "siteType": "站點型別",
+        "todayConsumption": "今日消耗點數",
+        "todayRequests": "今日請求次數",
+        "todayTokens": "今日 Tokens",
+        "updatedAt": "更新時間",
+        "userId": "使用者 ID"
+      },
+      "detailsToggle": {
+        "hide": "收起資訊",
+        "show": "更多資訊"
+      },
+      "duplicateCount_other": "ui:dialog.dedupeAccounts.duplicateCount",
+      "empty": "未發現重複帳號。",
+      "keep": "保留",
+      "manualPickHint": "你可以在每組中手動選擇要保留的帳號（手動選擇會覆蓋保留策略）。",
+      "previewDelete": "預覽刪除",
+      "recommended": "推薦",
+      "strategy": {
+        "keepEnabled": "優先保留啟用（如有）",
+        "keepMostRecentlyUpdated": "優先保留最近更新",
+        "keepPinned": "優先保留置頂（如有）"
+      },
+      "strategyLabel": "保留策略",
+      "summary": "{{groups}} 組重複 · 待刪除 {{deleteCount}} 個帳號",
+      "title": "重複帳號清理",
+      "unscannableHint_other": "{{count}} 個帳號無法掃描，已跳過。",
+      "userId": "使用者 ID：{{userId}}"
+    },
+    "delete": {
+      "confirmDelete": "確認刪除",
+      "confirmDeletion": "刪除確認",
+      "deleteFailed": "刪除失敗: {{error}}",
+      "deleteSuccess": "帳號 {{name}} 刪除成功!",
+      "deleting": "正在刪除帳號 {{name}}...",
+      "noResponse": "刪除操作未成功返回",
+      "siteName": "站點名稱",
+      "siteUrl": "站點地址",
+      "title": "刪除帳號",
+      "username": "使用者名稱",
+      "warning": "您即將刪除帳號 {{accountName}}. 請核對後確認是否刪除此帳號"
+    },
+    "expand": "展開",
+    "firefox": {
+      "confirm": "確定",
+      "howOpenSidebar": "如何開啟側邊欄",
+      "limitation": "Firefox 瀏覽器功能限制",
+      "openSidebar": "開啟側邊欄",
+      "popupLimitation": "在 Firefox 瀏覽器的彈窗中無法正常使用此功能。請使用側邊欄模式來新增帳號",
+      "sidebarInstruction": "點擊瀏覽器工具欄中的外掛圖示，然後選擇\"側邊欄\"選項來開啟側邊欄模式",
+      "warningTitle": "功能限制提醒"
+    },
+    "kiloCode": {
+      "actions": {
+        "copyApiConfigs": "複製 apiConfigs",
+        "createDefaultToken": "建立預設金鑰",
+        "downloadSettings": "下載設定"
+      },
+      "description": "根據選中的站點和金鑰生成 Kilo Code / Roo Code 的 providerProfiles 配置。",
+      "descriptions": {
+        "currentApiConfigName": "在下載的 {{filename}} 中將作為 providerProfiles.currentApiConfigName。",
+        "modelId": "推薦選擇（按金鑰，Kilo Code 實際使用通常需要模型 ID）。預設使用該金鑰上游模型列表的第一個。",
+        "selectedSites": "已選站點：{{sites}}，已選金鑰：{{keys}}。"
+      },
+      "help": {
+        "afterExportDescription": "推薦兩種方式：",
+        "afterExportTitle": "匯出後怎麼用",
+        "importDescription": "點擊“下載設定”儲存 {{filename}}，再在 Kilo Code 中匯入。匯入是增量新增 provider：不會清空/刪除你已有的 provider（同名條目可能會被更新）。",
+        "importTitle": "方式二：匯入檔案（下載設定）",
+        "manualDescription": "點擊“複製 apiConfigs”，在 Kilo Code / Roo Code 的匯出配置中找到 providerProfiles.apiConfigs 並貼上進去。",
+        "manualTitle": "方式一：手動貼上（複製 apiConfigs）",
+        "perSiteDescription": "選擇要匯出的站點後將自動載入金鑰，並預設選擇第一個金鑰（每個站點支援多選）。",
+        "perSiteTitle": "按站點匯出"
+      },
+      "labels": {
+        "currentApiConfigName": "當前配置",
+        "modelId": "模型 ID",
+        "selectedSites": "已選擇的站點",
+        "selectedTokens": "已選擇的金鑰"
+      },
+      "messages": {
+        "accountNotFound": "未找到帳號。",
+        "copiedApiConfigs": "已複製 apiConfigs",
+        "copyFailed": "複製失敗",
+        "createTokenFailed": "建立金鑰失敗。",
+        "downloadedSettings": "已下載設定檔案",
+        "downloadFailed": "設定檔案下載失敗",
+        "loadingTokens": "正在載入金鑰列表…",
+        "loadModelsFailed": "載入該金鑰的模型列表失敗。",
+        "loadTokensFailed": "載入金鑰失敗。",
+        "modelIdRequiredDescription_other": "ui:dialog.kiloCode.messages.modelIdRequiredDescription",
+        "modelIdRequiredTitle": "需要模型 ID",
+        "noModelsDescription": "該金鑰未返回可用模型。Kilo Code 實際使用通常需要模型 ID，請手動輸入。",
+        "noModelsTitle": "無模型",
+        "nothingToExportDescription": "請至少選擇一個可匯出的站點/金鑰後再進行復制/下載。",
+        "nothingToExportTitle": "無可匯出的內容",
+        "noTokensDescription": "該站點將被跳過，直到建立金鑰。",
+        "noTokensTitle": "暫無金鑰",
+        "tokenCreated": "金鑰建立成功"
+      },
+      "placeholders": {
+        "currentApiConfigName": "請選擇當前配置",
+        "modelId": "搜尋或輸入模型 ID",
+        "selectSites": "請選擇站點",
+        "selectTokens": "請選擇金鑰"
+      },
+      "title": "匯出 Kilo Code JSON",
+      "warning": {
+        "description": "匯出的 JSON 含有明文 API Key，請妥善儲存，切勿洩露。",
+        "title": "明文 API Key"
+      }
+    },
+    "tempWindowFallbackReminder": {
+      "actions": {
+        "neverRemind": "不再提醒",
+        "notNow": "稍後再說",
+        "openSettings": "開啟設定"
+      },
+      "descriptionDisabledTempWindowOnly": "{{accountName}} 的網路請求需要彈出臨時視窗來透過防護，確保請求成功完成，請在 設定 > 資料重新整理 中啟用",
+      "descriptionDisabledWithCookieInterceptor": "{{accountName}} 在 Firefox 中需要啟用過盾流程。擴充套件會彈出臨時視窗來獲取 Cookie，並由 Cookie 攔截器在傳送請求時自動附加這些 Cookie，請在 設定 > 資料重新整理 中啟用",
+      "descriptionPermissionTempWindowOnly": "{{accountName}} 需要彈出臨時視窗的權限才能完成請求，請在 設定 > 權限 中授予",
+      "descriptionPermissionWithCookieInterceptor": "{{accountName}} 在 Firefox 中需要 Cookie 攔截權限。擴充套件需要彈出臨時視窗獲取 Cookie，並在傳送請求時自動附加認證資訊，請在 設定 > 權限 中授予",
+      "titleTempWindowOnly": "啟用臨時視窗模式以完成網路請求",
+      "titleWithCookieInterceptor": "啟用過盾流程以完成網路請求"
+    },
+    "updateLog": {
+      "disableAutoOpen": "不再自動開啟",
+      "enableAutoOpen": "重新啟用自動開啟",
+      "loading": "正在載入更新日誌…",
+      "missingSection": "更新日誌預覽載入失敗（v{{version}}）。你可以開啟完整更新日誌檢視。",
+      "openFullChangelog": "開啟完整更新日誌",
+      "title": "更新內容",
+      "updatedTo": "已更新至 v{{version}}"
+    }
+  },
+  "feedback": {
+    "bugReport": "反饋問題",
+    "community": "社羣交流群",
+    "discussion": "參與討論",
+    "featureRequest": "提出功能建議",
+    "trigger": "反饋",
+    "triggerTooltip": "開啟反饋快捷入口"
+  },
+  "modelListInput": {
+    "actions": {
+      "add": "新增模型",
+      "remove": "刪除模型",
+      "reorder": "拖動排序"
+    },
+    "description": "示例：gpt-4o-mini 或 moonshotai/kimi-k2:free, kimi-k2",
+    "placeholders": {
+      "alias": "模型別名（可選）",
+      "name": "模型名稱，例如 claude"
+    },
+    "title": "模型列表（每行一個 name[, alias]）："
+  },
+  "multiSelect": {
+    "cancelSelected": "取消當前選中",
+    "clearInput": "清空輸入",
+    "clearSelected": "清空所有已選項",
+    "copyError": "複製失敗，請重試",
+    "copySuccess": "已複製已選擇的內容",
+    "emptyWithQueryAllowCustom": "按 Enter 鍵新增“{{value}}”",
+    "noOptions": "暫無可選項",
+    "noOptionsAllowCustom": "暫無可選項，可輸入建立",
+    "placeholder": "請選擇...",
+    "selectAll": "全選"
+  },
+  "navigation": {
+    "about": "關於",
+    "account": "帳戶管理",
+    "apiCredentialProfiles": "API 憑證",
+    "autoCheckin": "自動簽到",
+    "autoCheckinRunNow": "快速簽到",
+    "balanceHistory": "餘額歷史",
+    "basic": "基礎設定",
+    "bookmark": "書籤管理",
+    "collapseSidebar": "摺疊側邊欄",
+    "expandSidebar": "展開側邊欄",
+    "externalCheckinAll": "一鍵開啟外部簽到",
+    "externalCheckinAllHint": "預設僅開啟未簽到；Ctrl/Cmd 開啟全部；Shift 在新視窗開啟；Ctrl/Cmd+Shift 同時生效。",
+    "importExport": "匯入/匯出",
+    "keys": "金鑰管理",
+    "managedSiteChannels": "渠道管理",
+    "managedSiteModelSync": "模型同步",
+    "meshGradientLab": "網格漸變實驗室 (Dev)",
+    "models": "模型列表",
+    "settings": "設定",
+    "settingsOptions": "設定選項",
+    "sidebarCollapsedHint": "側邊欄已摺疊，僅顯示圖示",
+    "usageAnalytics": "用量分析"
+  },
+  "pageTitle": {
+    "app": "中轉站管理器 - All API Hub",
+    "options": "設定",
+    "popup": "彈窗",
+    "sidepanel": "側邊欄",
+    "template": "{{page}} | {{app}}"
+  },
+  "repeatableInput": {
+    "actions": {
+      "add": "新增",
+      "remove": "刪除",
+      "reorder": "拖動排序"
+    }
+  },
+  "searchableSelect": {
+    "empty": "未找到匹配項",
+    "noOptions": "暫無可選項",
+    "noOptionsAllowCustom": "暫無可選項，可輸入建立",
+    "searchPlaceholder": "搜尋...",
+    "useValue": "使用“{{value}}”"
+  }
+}

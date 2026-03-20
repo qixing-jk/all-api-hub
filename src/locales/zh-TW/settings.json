@@ -1,0 +1,415 @@
+{
+  "accountManagement": {
+    "description": "在專用管理控制台中管理帳號、餘額、API 金鑰並配置排序優先順序。",
+    "openPage": "開啟帳號管理頁面",
+    "title": "帳號管理"
+  },
+  "actionClick": {
+    "actionIconClickDesc": "選擇擴充套件圖示時的開啟行為，彈出視窗或側邊欄。",
+    "actionIconClickTitle": "點擊擴充套件圖示時開啟",
+    "description": "選擇點擊擴充套件圖示時的行為。",
+    "popupLabel": "彈窗",
+    "popupTitle": "開啟彈出視窗",
+    "sidepanelFallbackToast": "已儲存側邊欄偏好設定。本裝置不支援側邊欄，將回退為開啟彈窗。",
+    "sidepanelLabel": "側邊欄",
+    "sidepanelTitle": "開啟側邊欄",
+    "sidepanelUnsupportedHelper": "當前裝置不支援側邊欄。點擊工具欄圖示將回退為開啟彈窗。",
+    "title": "工具欄圖示行為"
+  },
+  "appearanceLanguage": {
+    "language": "語言",
+    "languageDesc": "選擇您偏好的顯示語言",
+    "onboardingHelper": "切換後會立即更新引導內容，並作為後續設定頁面的顯示語言。",
+    "onboardingLabel": "選擇介面語言",
+    "switcher": {
+      "currentLanguage": "當前介面語言：{{language}}",
+      "groupLabel": "介面語言選擇",
+      "options": {
+        "en": {
+          "label": "EN",
+          "name": "英文"
+        },
+        "zh-CN": {
+          "label": "簡中",
+          "name": "簡體中文"
+        },
+        "zh-TW": {
+          "label": "繁中",
+          "name": "繁體中文"
+        }
+      },
+      "switchToLanguage": "切換介面語言為{{language}}"
+    }
+  },
+  "autoProvisionKeyOnAccountAdd": {
+    "description": "控制新增帳號後是否自動建立預設 API 金鑰。",
+    "title": "API 金鑰",
+    "toggleDesc": "開啟後，帳號儲存完成會檢查遠端金鑰列表；若沒有金鑰則自動建立一個預設金鑰。",
+    "toggleLabel": "新增帳號後自動建立預設金鑰"
+  },
+  "changelogOnUpdate": {
+    "description": "控制外掛更新完成後，首次開啟外掛介面時是否在外掛內顯示更新內容。",
+    "title": "更新日誌",
+    "toggleDesc": "開啟後，外掛更新完成後首次開啟外掛介面時，會在外掛內彈出更新內容（每個版本僅一次），並可手動開啟完整更新日誌頁面。",
+    "toggleLabel": "更新後自動顯示更新內容"
+  },
+  "claudeCodeRouter": {
+    "apiKeyLabel": "API Key",
+    "apiKeyPlaceholder": "sk-123456",
+    "baseUrlLabel": "基礎 URL",
+    "baseUrlPlaceholder": "http://localhost:3000",
+    "description": "配置 Claude Code Router 管理介面連線資訊",
+    "keyDesc": "用於 /api/config 的可選 APIKEY（如未啟用可留空）",
+    "title": "Claude Code Router",
+    "urlDesc": "Claude Code Router 服務基礎 URL，例如 http://localhost:3000"
+  },
+  "cliProxy": {
+    "baseUrlLabel": "管理介面基礎 URL",
+    "description": "配置到 CLIProxyAPI 管理介面的連線資訊。",
+    "keyDesc": "用於管理介面訪問認證的管理金鑰",
+    "managementKeyLabel": "管理金鑰",
+    "title": "CLIProxyAPI 設定",
+    "urlDesc": "設定管理介面基礎 URL，例如 http://localhost:8317/v0/management"
+  },
+  "danger": {
+    "resetAllSettings": "重置所有設定",
+    "resetDesc": "將所有配置重置為預設值，此操作不可撤銷",
+    "resetFailed": "重置設定失敗",
+    "resetSettings": "重置設定",
+    "title": "危險操作"
+  },
+  "dataBackup": {
+    "importExport": {
+      "description": "訪問專用的匯入和匯出資料頁面。",
+      "info": "匯入/匯出頁面提供資料匯入、匯出為不同格式和備份管理的完整功能。",
+      "openPage": "開啟匯入/匯出頁面",
+      "title": "匯入與匯出"
+    }
+  },
+  "description": "管理外掛的基本配置選項",
+  "display": {
+    "cny": "人民幣 (¥)",
+    "currencyDesc": "設定餘額和收支顯示的預設貨幣單位",
+    "currencyUnit": "貨幣單位",
+    "defaultTab": "預設標籤頁",
+    "defaultTabDesc": "設定外掛啟動時顯示的預設標籤頁",
+    "description": "自定義外掛的外觀和顯示偏好",
+    "title": "顯示設定",
+    "todayCashflow": "今日收支",
+    "todayCashflowEnabled": "顯示今日收支",
+    "todayCashflowEnabledDesc": "控制是否顯示並獲取今日消耗/收入等統計。關閉後將隱藏今日統計，並在重新整理時跳過相關資料請求。",
+    "totalBalance": "總餘額",
+    "usd": "美元 ($)"
+  },
+  "doneHub": {
+    "adminCredentialsLink": {
+      "description": "開啟管理後臺個人資料頁面，快速獲取系統訪問令牌和使用者 ID。",
+      "open": "開啟頁面",
+      "title": "快速獲取"
+    },
+    "description": "配置用於連線 Done Hub 相容服務的整合設定。",
+    "fields": {
+      "adminTokenLabel": "管理員的系統訪問令牌",
+      "baseUrlLabel": "基礎 URL",
+      "baseUrlPlaceholder": "https://api.example.com",
+      "hideToken": "隱藏系統訪問令牌",
+      "showToken": "顯示系統訪問令牌",
+      "userIdLabel": "管理員使用者 ID"
+    },
+    "title": "Done Hub 整合設定",
+    "tokenDesc": "管理員使用者的系統訪問令牌，請在 Done Hub 管理後臺 -> 個人設定 -> 令牌 處生成",
+    "urlDesc": "設定用於 Done Hub 整合的基礎 URL",
+    "userIdDesc": "管理員使用者 ID (純數字)，root 管理員通常為 1"
+  },
+  "duplicateAccountWarningOnAdd": {
+    "description": "控制新增帳號時，如果該站點已存在帳號，是否需要彈窗確認。",
+    "title": "帳號",
+    "toggleDesc": "開啟後，當你嘗試為同一站點 URL 再次新增帳號時，會彈出確認對話方塊。",
+    "toggleLabel": "新增重複帳號前提醒"
+  },
+  "logging": {
+    "consoleEnabled": "啟用控制台日誌",
+    "consoleEnabledDesc": "關閉後，All API Hub 不會在瀏覽器控制台輸出任何日誌（包括錯誤）。",
+    "description": "控制是否在瀏覽器控制台輸出日誌，用於排查問題。",
+    "levels": {
+      "debug": "除錯",
+      "error": "錯誤",
+      "info": "資訊",
+      "warn": "警告"
+    },
+    "minLevel": "最小日誌級別",
+    "minLevelDesc": "啟用控制台日誌後，僅輸出不低於該級別的日誌。",
+    "title": "日誌"
+  },
+  "managedSite": {
+    "description": "選擇您要管理的 API 聚合平台站點。這將決定用於渠道管理和模型同步的配置。",
+    "doneHub": "Done Hub",
+    "newApi": "New API",
+    "octopus": "Octopus",
+    "siteTypeDesc": "選擇用於渠道管理和模型同步的平台",
+    "siteTypeLabel": "站點型別",
+    "title": "自建站點配置",
+    "veloera": "Veloera"
+  },
+  "messages": {
+    "confirmReset": "確認重置",
+    "resetConfirmDesc": "確定要將{{name}}重置為預設設定嗎？此操作無法撤銷。",
+    "resetFailed": "重置{{name}}失敗",
+    "resetSuccess": "{{name}}已重置為預設設定",
+    "saveSettingsFailed": "儲存設定失敗",
+    "updateFailed": "{{name}}更新失敗",
+    "updateSuccess": "{{name}}更新成功"
+  },
+  "newApi": {
+    "adminCredentialsLink": {
+      "description": "開啟管理後臺個人設定頁面，快速獲取系統訪問令牌和使用者 ID。",
+      "open": "開啟頁面",
+      "title": "快速獲取"
+    },
+    "description": "配置用於連線 New API 相容服務的整合設定。",
+    "fields": {
+      "adminTokenLabel": "管理員的系統訪問令牌",
+      "baseUrlLabel": "基礎 URL",
+      "baseUrlPlaceholder": "https://api.example.com",
+      "hidePassword": "隱藏登入密碼",
+      "hideToken": "隱藏系統訪問令牌",
+      "hideTotpSecret": "隱藏 TOTP 金鑰",
+      "passwordDesc": "可選。與登入使用者名稱配合使用，用於登入 New API 管理後臺，並在需要檢視渠道 key 或執行完整 key 比對時建立登入會話。",
+      "passwordLabel": "登入密碼",
+      "passwordPlaceholder": "輸入密碼",
+      "showPassword": "顯示登入密碼",
+      "showToken": "顯示系統訪問令牌",
+      "showTotpSecret": "顯示 TOTP 金鑰",
+      "totpSecretDesc": "可選。填寫後，All API Hub 可自動生成 TOTP 驗證碼，用於完成登入 2FA，以及檢視渠道 key 所需的安全驗證。",
+      "totpSecretLabel": "TOTP 金鑰",
+      "totpSecretPlaceholder": "貼上 Base32 TOTP 金鑰",
+      "userIdLabel": "管理員使用者 ID",
+      "usernameDesc": "可選。用於登入 New API 管理後臺，並在需要時完成兩步驗證。主要用於渠道管理中檢視真實渠道 key，以及金鑰管理中判斷某個 key 是否已在渠道中使用。",
+      "usernameLabel": "登入使用者名稱",
+      "usernamePlaceholder": "admin"
+    },
+    "sessionTest": {
+      "action": "測試配置",
+      "description": "測試已填寫的登入使用者名稱、密碼和 TOTP 金鑰是否正確可用。驗證成功後，即可繼續執行需要登入和兩步驗證的相關操作。",
+      "testing": "正在測試配置...",
+      "title": "測試登入與兩步驗證配置"
+    },
+    "title": "New API 整合設定",
+    "tokenDesc": "管理員使用者的系統訪問令牌，請在 New API 管理後臺 -> 個人設定 -> 安全設定 -> 系統訪問令牌 處生成",
+    "urlDesc": "設定用於 New API 整合的基礎 URL",
+    "userIdDesc": "管理員使用者 ID (純數字)，請在 New API 管理後臺 -> 個人設定 處檢視"
+  },
+  "octopus": {
+    "description": "配置用於連線 Octopus 自建站點的整合設定。系統將自動使用您的憑據登入並管理 JWT Token。",
+    "fields": {
+      "baseUrlDesc": "設定 Octopus 站點的基礎 URL",
+      "baseUrlLabel": "基礎 URL",
+      "baseUrlPlaceholder": "https://octopus.example.com",
+      "hidePassword": "隱藏密碼",
+      "passwordDesc": "Octopus 管理員密碼，用於自動登入",
+      "passwordLabel": "密碼",
+      "passwordPlaceholder": "輸入密碼",
+      "showPassword": "顯示密碼",
+      "usernameDesc": "Octopus 管理員使用者名稱，用於自動登入",
+      "usernameLabel": "使用者名稱",
+      "usernamePlaceholder": "admin"
+    },
+    "title": "Octopus 整合設定",
+    "validation": {
+      "description": "測試使用者名稱和密碼是否正確",
+      "error": "驗證過程中發生錯誤",
+      "failed": "配置驗證失敗，請檢查使用者名稱和密碼",
+      "missingFields": "請填寫所有必填欄位",
+      "success": "配置驗證成功，連線正常",
+      "title": "驗證配置",
+      "validate": "驗證配置",
+      "validating": "驗證中..."
+    }
+  },
+  "permissions": {
+    "actions": {
+      "allow": "允許（推薦）",
+      "refresh": "重新整理狀態",
+      "remove": "撤銷"
+    },
+    "description": "在需要臨時視窗過盾流程時，再授予這些可選權限。",
+    "helper": "開啟後，權限只用於完成過盾必要的 Cookie/請求頭操作，而且可以隨時關閉，隨時可以關閉，不會影響基礎功能。",
+    "items": {
+      "clipboardRead": {
+        "description": "允許兌換助手檢測複製的兌換碼，從而提示自動兌換兌換碼。",
+        "title": "讀取剪貼簿"
+      },
+      "cookies": {
+        "description": "允許讀取必要的 Cookie，用於在需要時自動附加認證資訊。",
+        "title": "Cookies"
+      },
+      "declarativeNetRequestWithHostAccess": {
+        "description": "允許在臨時視窗過盾期間按 Tab 應用請求頭規則，為不同帳號附加正確的 Cookie，避免多帳號下的資料異常問題。",
+        "title": "Declarative Net Request"
+      },
+      "webRequest": {
+        "description": "僅在臨時視窗過盾或自動重新整理需要時，監聽請求並追加必要的請求頭。",
+        "title": "網路請求"
+      },
+      "webRequestBlocking": {
+        "description": "在請求發出前同步附加 Cookie，確保繞過防護頁面的流程穩定可行。",
+        "title": "網路請求阻斷"
+      }
+    },
+    "messages": {
+      "granted": "已開啟 {{name}}，相關流程將按預期執行",
+      "grantFailed": "未能開啟 {{name}}，如仍需使用請稍後重試",
+      "revoked": "已撤銷 {{name}} 權限",
+      "revokeFailed": "撤銷 {{name}} 權限失敗"
+    },
+    "status": {
+      "checking": "檢測中…",
+      "denied": "未授予",
+      "granted": "已授予"
+    },
+    "statusCaption": "權限狀態與瀏覽器同步，如在此頁面外修改請點擊重新整理。",
+    "title": "權限管理"
+  },
+  "permissionsOnboarding": {
+    "actions": {
+      "allowAll": "授予推薦權限",
+      "maybeLater": "稍後再說"
+    },
+    "intro": "權限只用於完成過盾必要的 Cookie/請求頭操作，而且可以隨時關閉。",
+    "openSourceBadge": "開源 · 社羣共建",
+    "permissionListDescription": "繞過防火牆防護等功能的必要權限，讓資料獲取能在存在防火牆的網站上正常工作。",
+    "permissionListTitle": "這些權限的作用",
+    "project": {
+      "cta": "前往倉庫關注版本、提交 Issue 或參與開發。",
+      "label": "專案倉庫",
+      "starCta": "去 GitHub 點亮 Star"
+    },
+    "reason": {
+      "newPermissions": "我們新增了一些可選權限以支援新的功能，請再次確認授權以確保一切正常執行。"
+    },
+    "subtitle": "這是一個開源擴充套件，需要可選權限來啟用臨時視窗過盾等高階功能。",
+    "title": "歡迎加入 All API Hub",
+    "toasts": {
+      "error": "權限請求被取消",
+      "success": "已授予全部推薦權限"
+    }
+  },
+  "refresh": {
+    "autoRefresh": "自動重新整理",
+    "autoRefreshDesc": "定期自動重新整理帳號資料",
+    "description": "配置自動資料重新整理相關的設定，例如重新整理間隔和啟動時的行為。",
+    "minRefreshInterval": "最小重新整理間隔",
+    "minRefreshIntervalDesc": "限制連續重新整理最小間隔，避免頻繁請求（至少 {{minSeconds}} 秒）",
+    "minRefreshIntervalInvalid": "請輸入有效的最小重新整理間隔（至少 {{minSeconds}} 秒）。",
+    "refreshInterval": "重新整理間隔",
+    "refreshIntervalDesc": "設定自動重新整理的時間間隔（預設{{defaultInterval}}秒，建議不要設定過小以避免頻繁請求）",
+    "refreshIntervalInvalid": "請輸入有效的重新整理間隔（至少 {{minSeconds}} 秒）。",
+    "refreshOnOpen": "開啟外掛時自動重新整理",
+    "refreshOnOpenDesc": "當開啟外掛彈出視窗時自動重新整理帳號資料",
+    "shieldAutoRefresh": "用於自動重新整理",
+    "shieldContextsDesc": "選擇允許使用臨時視窗防護繞過的場景。當總開關關閉時，這些選項將被忽略。",
+    "shieldContextsTitle": "在以下場景使用防護繞過",
+    "shieldDescriptionTempWindowOnly": "啟用後，擴充套件可能會彈出一個臨時視窗，透過防護頁面（例如 Cloudflare 5 秒盾）後再獲取資料",
+    "shieldDescriptionWithCookieInterceptor": "在 Firefox 中，擴充套件會彈出一個臨時視窗透過防護頁面並獲取必要 Cookie，然後由 Cookie 攔截器在傳送請求時自動附加這些 Cookie",
+    "shieldEnabled": "啟用防護繞過（臨時視窗）",
+    "shieldEnabledDescTempWindowOnly": "關閉後，擴充套件不會彈出臨時視窗來繞過網站防護頁面",
+    "shieldEnabledDescWithCookieInterceptor": "關閉後，擴充套件不會彈出臨時視窗來獲取 Cookie，因此 Cookie 攔截器也無法為請求附加認證資訊",
+    "shieldManualRefresh": "用於手動重新整理",
+    "shieldMethodComposite": "共享視窗（標籤頁）",
+    "shieldMethodDesc": "選擇在執行防護繞過時使用臨時標籤頁還是彈窗視窗。",
+    "shieldMethodHintComposite": "使用一個共享視窗，並將每次過盾流程放在該視窗的標籤頁中執行。",
+    "shieldMethodHintTab": "使用當前視窗的後臺標籤頁完成過盾，介面干擾更小。",
+    "shieldMethodHintWindow": "使用多個新視窗完成過盾，每次過盾都會彈出一個新視窗。",
+    "shieldMethodTab": "臨時標籤頁",
+    "shieldMethodTitle": "繞過方式",
+    "shieldMethodWindow": "彈窗視窗",
+    "shieldOptions": "在設定頁面中使用",
+    "shieldPermissionAction": "前往權限設定",
+    "shieldPermissionWarningDesc": "需要授予 Cookies / Web Request 權限，臨時視窗繞過功能才能附加認證 Cookies 併傳送請求。",
+    "shieldPermissionWarningTitle": "請先授予 Cookie 攔截權限",
+    "shieldPopup": "在彈出視窗中使用",
+    "shieldPopupFirefoxNote": "在 Firefox 彈出視窗中，為避免彈窗被關閉，在彈出視窗中使用始終處於禁用狀態。此設定仍會儲存在其他瀏覽器中生效。",
+    "shieldSidepanel": "在側邊欄中使用",
+    "shieldTitle": "臨時視窗繞過防火牆防護",
+    "title": "重新整理設定"
+  },
+  "sorting": {
+    "checkInDesc": "將需要簽到的站點排在前面",
+    "checkInRequirement": "簽到需求",
+    "currentSiteDesc": "將當前訪問的站點置於列表頂部",
+    "currentSitePriority": "當前站點優先",
+    "customCheckInDesc": "將使用外部簽到連結的站點排在前面",
+    "customCheckInUrl": "外部簽到連結",
+    "customRedeemDesc": "將使用自定義兌換連結的站點排在前面",
+    "customRedeemUrl": "自定義兌換連結",
+    "customSortDesc": "根據使用者在列表檢視中選擇的欄位（如餘額）進行排序",
+    "description": "定義帳戶列表的排序優先順序，以組織帳戶的顯示方式。",
+    "disabledAccount": "禁用帳號沉底",
+    "disabledAccountDesc": "將被禁用的帳號統一放到列表底部",
+    "healthDesc": "按站點的健康狀況排序（錯誤 > 警告 > 未知 > 健康）",
+    "healthStatus": "健康狀態",
+    "manualOrder": "手動排序",
+    "manualOrderDesc": "按照您在帳號列表中手動調整的順序進行排序",
+    "matchedOpenTabs": "匹配的開啟標籤頁",
+    "matchedOpenTabsDesc": "將與任意開啟標籤頁（標題或URL）匹配的站點排在前面",
+    "pinnedDesc": "將已置頂的帳號按置頂順序排在列表頂部",
+    "pinnedPriority": "置頂優先",
+    "priority": "優先順序",
+    "title": "排序優先順序設定",
+    "unknownSortRule": "未知排序規則",
+    "userCustomSort": "使用者自定義排序"
+  },
+  "tabs": {
+    "accountManagement": "帳號管理",
+    "accountUsage": "帳號用量",
+    "balanceHistory": "餘額歷史",
+    "checkinRedeem": "簽到與兌換",
+    "claudeCodeRouter": "Claude Code Router",
+    "cliProxy": "CLIProxyAPI",
+    "dataBackup": "資料與備份",
+    "general": "通用",
+    "managedSite": "自建站點管理",
+    "permissions": "權限管理",
+    "refresh": "資料重新整理",
+    "scrollLeft": "向左滾動標籤",
+    "scrollRight": "向右滾動標籤",
+    "select": "選擇一個分組",
+    "webAiApiCheck": "AI API 測試"
+  },
+  "theme": {
+    "appearance": "外觀",
+    "clickSwitch": "點擊切換到{{nextMode}}模式",
+    "current": "當前: {{theme}} ({{resolvedTheme}})",
+    "currentTheme": "當前: 跟隨系統 ({{theme}})",
+    "dark": "深色",
+    "followSystem": "跟隨系統",
+    "followSystemTheme": "跟隨系統主題設定",
+    "light": "淺色",
+    "selectTheme": "選擇一個外觀主題",
+    "switchTo": "切換到{{theme}}主題: {{description}}",
+    "toggle": "主題切換，當前{{currentMode}}模式，點擊切換到{{nextMode}}模式",
+    "useDarkTheme": "使用深色主題",
+    "useLightTheme": "使用淺色主題"
+  },
+  "title": "設定",
+  "veloera": {
+    "adminCredentialsLink": {
+      "description": "開啟管理後臺個人設定頁面，快速獲取系統訪問令牌和使用者 ID。",
+      "open": "開啟頁面",
+      "title": "快速獲取"
+    },
+    "description": "配置用於連線 Veloera 相容服務的整合設定。",
+    "fields": {
+      "adminTokenLabel": "管理員的系統訪問令牌",
+      "baseUrlLabel": "基礎 URL",
+      "baseUrlPlaceholder": "https://api.example.com",
+      "hideToken": "隱藏系統訪問令牌",
+      "showToken": "顯示系統訪問令牌",
+      "userIdLabel": "管理員使用者 ID"
+    },
+    "title": "Veloera 整合設定",
+    "tokenDesc": "管理員使用者的系統訪問令牌，請在 Veloera 管理後臺 -> 個人設定 -> 個人資訊 處生成",
+    "urlDesc": "設定用於 Veloera 整合的基礎 URL",
+    "userIdDesc": "管理員使用者 ID (純數字)，請在 Veloera 管理後臺 -> 個人設定 處檢視"
+  }
+}
