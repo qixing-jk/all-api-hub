@@ -1,0 +1,22 @@
+{
+  "actions": {
+    "shareAccountSnapshot": "Share account snapshot",
+    "shareOverviewSnapshot": "Share overview snapshot"
+  },
+  "labels": {
+    "accounts": "Accounts",
+    "asOf": "As of",
+    "balance": "Balance",
+    "income": "Income",
+    "net": "Net",
+    "outcome": "Spending",
+    "overview": "Overview",
+    "site": "Site",
+    "today": "Today",
+    "totalBalance": "Total balance"
+  },
+  "toast": {
+    "captionHint": "Caption wasn't copied automatically. Copying it may replace your clipboard image.",
+    "copyCaption": "Copy caption"
+  }
+}

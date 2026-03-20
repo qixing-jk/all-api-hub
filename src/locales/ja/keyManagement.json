@@ -1,0 +1,191 @@
+{
+  "accountSummary": {
+    "keys_other": "{{count}} keys",
+    "loadFailed": "Load failed",
+    "title": "Accounts overview"
+  },
+  "actions": {
+    "collapseAll": "Collapse all",
+    "deleteKey": "Delete Key",
+    "disable": "Disable",
+    "editKey": "Edit Key",
+    "enable": "Enable",
+    "expandAll": "Expand all",
+    "exportToCCSwitch": "Export to CC Switch",
+    "exportToKiloCode": "Export to Kilo Code",
+    "hideKey": "Hide Key",
+    "importToClaudeCodeRouter": "Import to Claude Code Router",
+    "importToCliProxy": "Import to CLIProxyAPI",
+    "importToManagedSite": "Import to {{site}}",
+    "openApiProfiles": "Open API profiles",
+    "retryFailed": "Retry failed",
+    "saveToApiProfiles": "Save to API profiles",
+    "showKey": "Show Key",
+    "useInCherry": "Use in Cherry Studio"
+  },
+  "allAccounts": "All accounts",
+  "allAccountsFailed_other": "{{count}} failed",
+  "allAccountsLoading_other": "{{count}} loading",
+  "allAccountsProgress": "{{loaded}}/{{total}} accounts loaded",
+  "createFirstKey": "Create first key",
+  "description": "This page displays API key information for all accounts, including usage and expiration time. You can create new keys for specific accounts by clicking the 'Add Key' button in the upper right corner or the '+' button next to each key item. Please keep your API keys safe and avoid leaking them to others",
+  "dialog": {
+    "accountSelect": "Select Account",
+    "addToken": "Add API Key",
+    "advancedSettings": "Advanced Settings",
+    "availableModels": "Available Models",
+    "basicInfo": "Basic Information",
+    "createFailed": "Failed to create key, please try again later",
+    "createSuccess": "Key created successfully",
+    "createToken": "Create Key",
+    "editModeNoChange": "Cannot change account in edit mode",
+    "editToken": "Edit API Key",
+    "expiration": "Expiration Time",
+    "expirationPlaceholder": "Leave empty for never expires",
+    "groupLabel": "Group",
+    "groupRate": "Rate:",
+    "groupRestrictedNote": "Only groups compatible with this model are selectable.",
+    "ipExample": "Example: 192.168.1.1,10.0.0.1 or use * for no limit",
+    "ipLimits": "IP Limits",
+    "ipPlaceholder": "Leave empty for no limit, separate multiple IPs with commas",
+    "loadDataFailed": "Failed to load data, please try again later",
+    "modelLimits": "Model Limits",
+    "modelSelectHint_other": "{{count}} models selected",
+    "nameRequired": "Key name cannot be empty",
+    "quotaPlaceholder": "Please enter quota amount (USD)",
+    "quotaRate": "1 USD = {{rate}} quota points",
+    "quotaSettings": "Quota Settings",
+    "selectAccountError": "Please select account",
+    "selectModels": "Select models",
+    "tokenName": "Token Name",
+    "unlimitedQuota": "Unlimited Quota",
+    "updateFailed": "Failed to update key, please try again later",
+    "updateSuccess": "Key updated successfully",
+    "updateToken": "Update Key",
+    "validExpiration": "Expiration time must be greater than current time",
+    "validIp": "Please enter valid IP addresses, separate multiple IPs with commas",
+    "validQuota": "Please enter valid quota amount",
+    "warningText": "Please keep API keys safe and avoid leaking",
+    "warningTitle": "Notes"
+  },
+  "enabledCount_other": "Enabled {{count}}",
+  "keyDetails": {
+    "createTime": "Create Time:",
+    "expireTime": "Expire Time:",
+    "group": "Group:",
+    "key": "Key:",
+    "neverExpires": "Never Expires",
+    "remainingQuota": "Remaining Quota:",
+    "usedQuota": "Used Quota:"
+  },
+  "managedSiteStatus": {
+    "actions": {
+      "refresh": "Refresh Managed-Site Channel Status",
+      "refreshing": "Refreshing Managed-Site Channel Status",
+      "reviewChannels": "Review channels",
+      "verifyNow": "Verify now"
+    },
+    "badges": {
+      "added": "Managed site: added",
+      "checking": "Managed site: checking",
+      "notAdded": "Managed site: not added",
+      "unknown": "Managed site: unknown"
+    },
+    "descriptions": {
+      "backendSearchFailed": "Managed-site checks could not be completed.",
+      "configMissing": "Configure managed-site admin credentials before checks can run.",
+      "inputPreparationFailed": "Verification could not prepare comparable channel inputs.",
+      "newApiRetrieveKeyHint": "For New API, full key comparison depends on the channel key, and viewing that channel key itself requires 2FA verification, so full key comparison is currently unavailable.",
+      "veloeraBaseUrlSearchUnsupported": "This feature is not supported on Veloera because Veloera does not support base URL search for channel lookup."
+    },
+    "pageUnsupported": "Managed-site channel checks are unavailable on this page because Veloera does not currently support searching channels by URL.",
+    "recovery": {
+      "configureLogin": "Add the New API login and 2FA-assist fields in Settings first. Until then, the channel key cannot be read and full key comparison cannot be completed.",
+      "verificationRequired": "Full key comparison first needs a short-lived New API verification step, because viewing a New API channel key itself requires 2FA."
+    },
+    "signals": {
+      "key": {
+        "matched": "Key matched",
+        "noMatch": "Key no match",
+        "notProvided": "Key missing",
+        "tooltipMatched": "A channel under the same normalized URL bucket matched this key: {{channelName}}.",
+        "tooltipNoMatch": "Comparable channel keys were available, but none matched this key.",
+        "tooltipNotProvided": "No comparable key was available for this token.",
+        "tooltipUnavailable": "Key comparison could not be completed because comparable channel keys were unavailable.",
+        "unavailable": "Key unavailable"
+      },
+      "models": {
+        "contained": "Models contained",
+        "exact": "Models exact",
+        "noMatch": "Models no match",
+        "notProvided": "Models missing",
+        "similar": "Models similar",
+        "tooltipContained": "The normalized model set matched channel {{channelName}} by containment.",
+        "tooltipExact": "The normalized model set exactly matched channel {{channelName}}.",
+        "tooltipNoMatch": "No model match was confirmed inside the normalized URL bucket.",
+        "tooltipNotProvided": "No comparable model list was available for this token.",
+        "tooltipSimilar": "The normalized model set matched channel {{channelName}} by similarity ({{score}}%).",
+        "tooltipUnavailable": "Model comparison could not be completed because no comparable URL bucket was available.",
+        "unavailable": "Models unavailable"
+      },
+      "url": {
+        "matched": "URL matched",
+        "noMatch": "URL not found",
+        "tooltipMatched_other": "Found {{count}} candidate channels under the same normalized URL bucket. Example candidate: {{channelName}}.",
+        "tooltipNoMatch": "No channel was found under the same normalized URL bucket."
+      }
+    }
+  },
+  "messages": {
+    "accountNotFound": "Account information not found",
+    "copyFailed": "Copy failed",
+    "deleteConfirm": "Are you sure you want to delete key {{name}}? This action cannot be undone",
+    "deleteSuccess": "Key {{name}} deleted successfully",
+    "keyCopied": "Key {{name}} copied to clipboard",
+    "loadFailed": "Failed to load key list",
+    "revealFailed": "Failed to reveal key",
+    "savedToApiProfiles": "Saved {{name}} to API profiles",
+    "saveToApiProfilesFailed": "Failed to save to API profiles"
+  },
+  "noKeys": "No key data yet",
+  "noMatchingKeys": "No matching keys found",
+  "pleaseAddAccount": "Please add an account first",
+  "pleaseSelectAccount": "Please select account",
+  "refreshTokenList": "Refresh Key List",
+  "repairMissingKeys": {
+    "action": "Ensure at least one key",
+    "description": "Scan stored accounts and create a default key for any eligible account with no keys, ensuring each eligible account has at least one key.",
+    "messages": {
+      "loadFailed": "Failed to load repair progress",
+      "startFailed": "Failed to start repair job"
+    },
+    "noMatchingResults": "No matching results",
+    "outcomeLabel": "Outcome",
+    "outcomes": {
+      "alreadyHad": "Already had keys",
+      "created": "Created",
+      "failed": "Failed",
+      "skipped": "Skipped"
+    },
+    "progressLabel": "Progress",
+    "resultsTitle": "Results",
+    "runningNote": "This job runs in the background. Closing this dialog will not cancel it.",
+    "searchLabel": "Search",
+    "searchPlaceholder": "Search account, origin, or site type...",
+    "skipReasons": {
+      "noneAuth": "No credentials (auth type: none)",
+      "sub2api": "Unsupported site type (Sub2API)"
+    },
+    "title": "Ensure at least one key",
+    "totalsLabels": {
+      "eligibleAccounts": "Eligible accounts",
+      "enabledAccounts": "Enabled accounts",
+      "processedAccounts": "Processed"
+    }
+  },
+  "searchPlaceholder": "Search key name...",
+  "selectAccount": "Select Account",
+  "showingCount_other": "Showing {{count}}",
+  "title": "Key Management",
+  "totalKeys_other": "Total {{count}} keys"
+}

@@ -29,6 +29,10 @@
           "label": "EN",
           "name": "英文"
         },
+        "ja": {
+          "label": "日文",
+          "name": "日语"
+        },
         "zh-CN": {
           "label": "简中",
           "name": "简体中文"

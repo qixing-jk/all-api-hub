@@ -1,0 +1,53 @@
+{
+  "accountSelect": {
+    "confirm": "Confirm redemption",
+    "noResults": "No matching accounts found",
+    "title": "Select an account to use for redemption",
+    "titleFallback": "No account matched this site, please select one manually",
+    "titleMultiple": "Multiple accounts available, please select one for redemption"
+  },
+  "actions": {
+    "autoRedeem": "Auto redeem"
+  },
+  "messages": {
+    "batchResultSummary": "Total {{total}}. Succeeded {{success}}. Failed {{failed}}.",
+    "batchResultTitle": "Redemption results",
+    "cancelled": "Cancelled",
+    "noAccountForUrl": "No matching account found for this site. Please add the site as an account in All API Hub, then try again.",
+    "promptConfirm": "Detected a possible redemption code {{code}} on this page. Try auto redeem for this site?",
+    "promptConfirmBatch_other": "Detected {{count}} possible redemption codes on this page. Select codes to auto redeem for this site.",
+    "promptSettingsLink": "Open Redemption Assist settings",
+    "promptSource": "This prompt is provided by the All API Hub extension",
+    "promptTitle": "Redemption Assist",
+    "redeemFailed": "Redemption failed. Please try again later.",
+    "redeemLoading": "Trying to redeem…",
+    "redeemSuccess": "Redeemed successfully. Credited amount: {{amount}}",
+    "selectAll": "Select all",
+    "success": {
+      "settingsSaved": "Redemption assist settings have been saved"
+    }
+  },
+  "settings": {
+    "contextMenu": {
+      "enable": "Show in browser right-click menu",
+      "enableDesc": "Adds a “Redemption Assist” item to the browser context menu."
+    },
+    "description": "Configure how the extension detects and assists with redeeming codes on supported pages",
+    "enable": "Enable redemption assist",
+    "enableDesc": "Automatically detect redemption codes on supported pages and show a redeem prompt",
+    "relaxedCodeValidation": "Relax code format restrictions",
+    "relaxedCodeValidationDesc": "When enabled, any 32-character code will be treated as a possible redemption code (no charset check).",
+    "title": "Redemption Assist",
+    "urlWhitelist": {
+      "enable": "Enable URL whitelist",
+      "enableDesc": "When enabled, redemption assist only runs on URLs allowed by the rules below.",
+      "includeAccountSiteUrls": "Include account site URLs",
+      "includeAccountSiteUrlsDesc": "Allow all pages under each account's site URL origin.",
+      "includeCheckInAndRedeemUrls": "Include check-in & redeem URLs",
+      "includeCheckInAndRedeemUrlsDesc": "Allow the check-in and redeem pages (custom or default) for each account.",
+      "patterns": "Custom regex patterns",
+      "patternsDesc": "One JavaScript RegExp pattern per line. Case-insensitive match is applied.",
+      "patternsPlaceholder": "^https://example\\.com/console/topup"
+    }
+  }
+}

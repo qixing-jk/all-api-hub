@@ -1,0 +1,419 @@
+{
+  "accountManagement": {
+    "description": "専用の管理コンソールで、アカウント、残高、API キー、並び順の優先度を管理します。",
+    "openPage": "アカウント管理ページを開く",
+    "title": "アカウント管理"
+  },
+  "actionClick": {
+    "actionIconClickDesc": "拡張機能アイコンをクリックしたときの開き方を選択します",
+    "actionIconClickTitle": "拡張機能アイコンをクリックしたときの動作",
+    "description": "拡張機能アイコンをクリックしたときの挙動を選択します。",
+    "popupLabel": "ポップアップ",
+    "popupTitle": "ポップアップを開く",
+    "sidepanelFallbackToast": "サイドパネル設定を保存しました。この端末ではポップアップ表示にフォールバックします。",
+    "sidepanelLabel": "サイドパネル",
+    "sidepanelTitle": "サイドパネルを開く",
+    "sidepanelUnsupportedHelper": "この端末ではサイドパネルを利用できません。ツールバーアイコンをクリックするとポップアップ表示にフォールバックします。",
+    "title": "ツールバーアイコンの動作"
+  },
+  "appearanceLanguage": {
+    "language": "言語",
+    "languageDesc": "表示に使用する言語を選択します",
+    "onboardingHelper": "切り替えると案内文がすぐに更新され、以後の設定ページでもこの言語が使われます。",
+    "onboardingLabel": "言語を選択",
+    "switcher": {
+      "currentLanguage": "現在の表示言語: {{language}}",
+      "groupLabel": "表示言語セレクター",
+      "options": {
+        "en": {
+          "label": "EN",
+          "name": "英語"
+        },
+        "ja": {
+          "label": "JA",
+          "name": "日本語"
+        },
+        "zh-CN": {
+          "label": "SC",
+          "name": "簡体字中国語"
+        },
+        "zh-TW": {
+          "label": "TC",
+          "name": "繁体字中国語"
+        }
+      },
+      "switchToLanguage": "表示言語を {{language}} に切り替える"
+    }
+  },
+  "autoProvisionKeyOnAccountAdd": {
+    "description": "Control whether All API Hub automatically provisions a default API key after you add an account.",
+    "title": "API keys",
+    "toggleDesc": "When enabled, All API Hub checks your token inventory after saving an account and creates a default token if none exist.",
+    "toggleLabel": "Auto-create a default key on account add"
+  },
+  "changelogOnUpdate": {
+    "description": "Control whether All API Hub shows a What's New dialog the first time you open the extension UI after updates.",
+    "title": "Changelog",
+    "toggleDesc": "When enabled, the update log is shown inline on first UI open after an update (once per version). You can still open the full docs changelog manually.",
+    "toggleLabel": "Show What's New after updates"
+  },
+  "claudeCodeRouter": {
+    "apiKeyLabel": "API key",
+    "apiKeyPlaceholder": "sk-123456",
+    "baseUrlLabel": "Base URL",
+    "baseUrlPlaceholder": "http://localhost:3000",
+    "description": "Configure connection to Claude Code Router admin API",
+    "keyDesc": "Optional API key for /api/config (APIKEY)",
+    "title": "Claude Code Router",
+    "urlDesc": "Claude Code Router server base URL, e.g. http://localhost:3000"
+  },
+  "cliProxy": {
+    "baseUrlLabel": "Management API Base URL",
+    "description": "Configure connection to CLIProxyAPI Management API",
+    "keyDesc": "Management key for interface access authentication",
+    "managementKeyLabel": "Management Key",
+    "title": "CLIProxyAPI Settings",
+    "urlDesc": "Set the Management API base URL, e.g. http://localhost:8317/v0/management"
+  },
+  "danger": {
+    "resetAllSettings": "すべての設定をリセット",
+    "resetDesc": "すべての設定を初期値に戻します。この操作は元に戻せません。",
+    "resetFailed": "設定のリセットに失敗しました",
+    "resetSettings": "設定をリセット",
+    "title": "危険な操作"
+  },
+  "dataBackup": {
+    "importExport": {
+      "description": "データのインポートとエクスポート専用ページを開きます。",
+      "info": "インポート / エクスポートページでは、データの取り込み、各種形式への書き出し、バックアップ管理をまとめて行えます。",
+      "openPage": "インポート / エクスポートページを開く",
+      "title": "インポートとエクスポート"
+    }
+  },
+  "description": "拡張機能の基本設定を管理します",
+  "display": {
+    "cny": "CNY (¥)",
+    "currencyDesc": "残高とキャッシュフロー表示の既定通貨を設定します",
+    "currencyUnit": "通貨単位",
+    "defaultTab": "既定タブ",
+    "defaultTabDesc": "拡張機能起動時に表示するタブを設定します",
+    "description": "拡張機能の見た目と表示設定をカスタマイズします",
+    "title": "表示設定",
+    "todayCashflow": "本日のキャッシュフロー",
+    "todayCashflowEnabled": "本日のキャッシュフローを表示",
+    "todayCashflowEnabledDesc": "本日の支出・収入統計を表示し、取得するかどうかを制御します。無効にすると本日の統計は非表示になり、更新時に関連リクエストを行いません。",
+    "totalBalance": "総残高",
+    "usd": "USD ($)"
+  },
+  "doneHub": {
+    "adminCredentialsLink": {
+      "description": "Open the profile page to find the system access token and user ID.",
+      "open": "Open page",
+      "title": "Quick access"
+    },
+    "description": "Configure integration settings for connecting to Done Hub compatible services.",
+    "fields": {
+      "adminTokenLabel": "Administrator's system access token",
+      "baseUrlLabel": "Base URL",
+      "baseUrlPlaceholder": "https://api.example.com",
+      "hideToken": "Hide system access token",
+      "showToken": "Show system access token",
+      "userIdLabel": "Administrator user ID"
+    },
+    "title": "Done Hub Integration Settings",
+    "tokenDesc": "System access token for the administrator user. Find it in Done Hub dashboard → Personal settings → Token.",
+    "urlDesc": "Set the base URL for Done Hub integration",
+    "userIdDesc": "Administrator user ID (numeric only). Root admin is usually 1."
+  },
+  "duplicateAccountWarningOnAdd": {
+    "description": "既に登録済みのサイトにアカウントを追加するとき、確認を求めるかどうかを制御します。",
+    "title": "アカウント",
+    "toggleDesc": "有効にすると、同じサイト URL に別のアカウントを追加しようとしたときに確認ダイアログを表示します。",
+    "toggleLabel": "重複追加前に警告する"
+  },
+  "logging": {
+    "consoleEnabled": "コンソールログを有効化",
+    "consoleEnabledDesc": "無効にすると、All API Hub はエラーを含むすべてのレベルでコンソール出力を行いません。",
+    "description": "トラブルシューティングと診断のためのコンソールログを制御します。",
+    "levels": {
+      "debug": "デバッグ",
+      "error": "エラー",
+      "info": "情報",
+      "warn": "警告"
+    },
+    "minLevel": "最小ログレベル",
+    "minLevelDesc": "コンソールログ有効時、このレベル未満のログは抑制されます。",
+    "title": "ログ"
+  },
+  "managedSite": {
+    "description": "管理したい API 中継プラットフォームを選択します。この設定により、チャネル管理やモデル同期で使われる構成が決まります。",
+    "doneHub": "Done Hub",
+    "newApi": "New API",
+    "octopus": "Octopus",
+    "siteTypeDesc": "チャネル管理とモデル同期に使用するプラットフォームを選択します",
+    "siteTypeLabel": "管理対象サイト種別",
+    "title": "管理対象サイト設定",
+    "veloera": "Veloera"
+  },
+  "messages": {
+    "confirmReset": "リセットの確認",
+    "resetConfirmDesc": "{{name}} を既定設定に戻しますか？ この操作は元に戻せません。",
+    "resetFailed": "{{name}} のリセットに失敗しました",
+    "resetSuccess": "{{name}} を既定設定にリセットしました",
+    "saveSettingsFailed": "設定の保存に失敗しました",
+    "updateFailed": "{{name}} の更新に失敗しました",
+    "updateSuccess": "{{name}} を更新しました"
+  },
+  "newApi": {
+    "adminCredentialsLink": {
+      "description": "Open the admin personal settings page to find the system access token and user ID.",
+      "open": "Open page",
+      "title": "Quick access"
+    },
+    "description": "Configure integration settings for connecting to New API compatible services.",
+    "fields": {
+      "adminTokenLabel": "Administrator's system access token",
+      "baseUrlLabel": "Base URL",
+      "baseUrlPlaceholder": "https://api.example.com",
+      "hidePassword": "Hide login password",
+      "hideToken": "Hide system access token",
+      "hideTotpSecret": "Hide TOTP secret",
+      "passwordDesc": "Optional. Used together with the login username to sign in to the New API admin console and establish a login session when viewing a channel key or running full key comparison.",
+      "passwordLabel": "Login password",
+      "passwordPlaceholder": "Enter password",
+      "showPassword": "Show login password",
+      "showToken": "Show system access token",
+      "showTotpSecret": "Show TOTP secret",
+      "totpSecretDesc": "Optional. When provided, All API Hub can automatically generate TOTP codes for login 2FA and the secure verification required to view channel keys.",
+      "totpSecretLabel": "TOTP secret",
+      "totpSecretPlaceholder": "Paste Base32 TOTP secret",
+      "userIdLabel": "Administrator user ID",
+      "usernameDesc": "Optional. Used to sign in to the New API admin console and complete 2FA when needed. This is mainly used for viewing the real channel key in Channel Management and for checking whether a key is already used by a channel in Key Management.",
+      "usernameLabel": "Login username",
+      "usernamePlaceholder": "admin"
+    },
+    "sessionTest": {
+      "action": "Test config",
+      "description": "Test whether the entered login username, password, and TOTP secret are correct and usable. After a successful check, you can continue with actions that require login and 2FA.",
+      "testing": "Testing config...",
+      "title": "Test login & 2FA config"
+    },
+    "title": "New API Integration Settings",
+    "tokenDesc": "System access token for the administrator user",
+    "urlDesc": "Set the base URL for New API integration",
+    "userIdDesc": "Administrator user ID (numeric only)"
+  },
+  "octopus": {
+    "description": "Configure integration settings for connecting to Octopus self-hosted sites. The system will automatically log in using your credentials and manage the JWT Token.",
+    "fields": {
+      "baseUrlDesc": "Set the base URL for Octopus site",
+      "baseUrlLabel": "Base URL",
+      "baseUrlPlaceholder": "https://octopus.example.com",
+      "hidePassword": "Hide password",
+      "passwordDesc": "Octopus admin password for automatic login",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "Enter password",
+      "showPassword": "Show password",
+      "usernameDesc": "Octopus admin username for automatic login",
+      "usernameLabel": "Username",
+      "usernamePlaceholder": "admin"
+    },
+    "title": "Octopus Integration Settings",
+    "validation": {
+      "description": "Test if username and password are correct",
+      "error": "An error occurred during validation",
+      "failed": "Configuration validation failed, please check username and password",
+      "missingFields": "Please fill in all required fields",
+      "success": "Configuration validated successfully, connection is working",
+      "title": "Validate Configuration",
+      "validate": "Validate",
+      "validating": "Validating..."
+    }
+  },
+  "permissions": {
+    "actions": {
+      "allow": "許可（推奨）",
+      "refresh": "状態を更新",
+      "remove": "取り消し"
+    },
+    "description": "All API Hub に Cookie、ヘッダー、または一時ウィンドウの保護回避を任せる必要がある場合にのみ、これらの任意権限を許可してください。",
+    "helper": "有効化すると、拡張機能は既存のセッション Cookie とヘッダーをバックグラウンドで付与します。後から無効化しても主要機能には影響しません。",
+    "items": {
+      "clipboardRead": {
+        "description": "引き換えアシスタントがコピーされた引き換えコードを検出し、自動引き換えを提案できるようにします。",
+        "title": "クリップボード読み取り"
+      },
+      "cookies": {
+        "description": "必要に応じて認証ヘッダーを付与できるよう、接続済みアカウントに必要な Cookie を All API Hub が読み取れるようにします。",
+        "title": "Cookies"
+      },
+      "declarativeNetRequestWithHostAccess": {
+        "description": "一時ウィンドウでの保護回避中に Tab キーでリクエストヘッダールールを適用し、アカウントごとに正しい Cookie を付与して複数アカウント時のデータ異常を防ぎます。",
+        "title": "Declarative Net Request"
+      },
+      "webRequest": {
+        "description": "一時ウィンドウによる回避や自動更新で必要なヘッダーを追加する必要がある場合にのみ、拡張機能が送信リクエストを監視できるようにします。",
+        "title": "Web Request"
+      },
+      "webRequestBlocking": {
+        "description": "リクエスト送信前に Cookie を同期的に付与できるようにし、保護回避フローの信頼性を保ちます。",
+        "title": "Web Request Blocking"
+      }
+    },
+    "messages": {
+      "granted": "{{name}} を有効化しました。関連ワークフローが正常に動作します。",
+      "grantFailed": "{{name}} を有効化できませんでした。必要であれば後でもう一度お試しください。",
+      "revoked": "{{name}} の権限を取り消しました",
+      "revokeFailed": "{{name}} の権限取り消しに失敗しました"
+    },
+    "status": {
+      "checking": "確認中…",
+      "denied": "未許可",
+      "granted": "許可済み"
+    },
+    "statusCaption": "権限状態はブラウザと同期されています。このページ以外で変更した場合は更新を押してください。",
+    "title": "権限"
+  },
+  "permissionsOnboarding": {
+    "actions": {
+      "allowAll": "推奨権限を許可",
+      "maybeLater": "あとで"
+    },
+    "intro": "オープンソースプロジェクトとして、高度なワークフローに必要な最小限の任意権限のみを要求します。最終的な制御権は常にあなたにあります。",
+    "openSourceBadge": "オープンソース / コミュニティ主導",
+    "permissionListDescription": "これらの権限は、保護されたサイトでもデータ更新処理を継続できるようにするために必要です。",
+    "permissionListTitle": "各権限の役割",
+    "project": {
+      "cta": "リポジトリで更新情報の確認、Issue の報告、開発への参加ができます。",
+      "label": "プロジェクト",
+      "starCta": "GitHub で Star を付けてプロジェクトを応援してください"
+    },
+    "reason": {
+      "newPermissions": "最近追加した機能を支えるために、新しい任意権限を追加しました。引き続き正常に使えるよう、内容を確認して許可してください。"
+    },
+    "subtitle": "このオープンソース拡張機能は、一時ウィンドウによる保護回避などの高度な機能を有効にするため、いくつかの任意権限を必要とします。",
+    "title": "All API Hub へようこそ",
+    "toasts": {
+      "error": "権限リクエストがキャンセルされました",
+      "success": "推奨権限をすべて許可しました"
+    }
+  },
+  "refresh": {
+    "autoRefresh": "自動更新",
+    "autoRefreshDesc": "アカウントデータを定期的に自動更新します",
+    "description": "更新間隔や起動時の挙動など、自動更新に関する設定を行います",
+    "minRefreshInterval": "最小更新間隔",
+    "minRefreshIntervalDesc": "リクエストの過剰発生を防ぐための最小更新間隔です（{{minSeconds}} 秒以上）",
+    "minRefreshIntervalInvalid": "有効な最小更新間隔を入力してください（{{minSeconds}} 秒以上）。",
+    "refreshInterval": "更新間隔",
+    "refreshIntervalDesc": "自動更新の間隔を設定します（既定値 {{defaultInterval}} 秒。過剰なリクエストを避けるため短くしすぎないことを推奨します）",
+    "refreshIntervalInvalid": "有効な更新間隔を入力してください（{{minSeconds}} 秒以上）。",
+    "refreshOnOpen": "拡張機能を開いたときに自動更新",
+    "refreshOnOpenDesc": "拡張機能のポップアップを開いたときにアカウントデータを自動更新します",
+    "shieldAutoRefresh": "自動更新で使用",
+    "shieldContextsDesc": "一時ウィンドウによる保護回避を許可する場面を選択します。メインスイッチが無効な場合、個別設定は無視されます。",
+    "shieldContextsTitle": "保護回避を使用する場所",
+    "shieldDescriptionTempWindowOnly": "有効にすると、拡張機能がデータを取得する前に、一時的なポップアップウィンドウを短時間開いて Web サイトの保護ページ（例: Cloudflare の 5 秒シールド）を回避することがあります。",
+    "shieldDescriptionWithCookieInterceptor": "Firefox では、保護ページを通過して Cookie を取得するために一時的なポップアップウィンドウを短時間開くことがあります。その後 Cookie Interceptor がリクエストに Cookie を付与します。",
+    "shieldEnabled": "保護回避（一時ウィンドウ）を有効化",
+    "shieldEnabledDescTempWindowOnly": "無効にすると、拡張機能は保護ページ回避のために一時ポップアップウィンドウを開きません。",
+    "shieldEnabledDescWithCookieInterceptor": "無効にすると、Firefox は Cookie Interceptor 用 Cookie を取得するための一時ポップアップウィンドウを開きません。",
+    "shieldManualRefresh": "手動更新で使用",
+    "shieldMethodComposite": "共有ウィンドウ（タブ）",
+    "shieldMethodDesc": "保護回避を実行する際に使用する一時コンテキストを選択します。",
+    "shieldMethodHintComposite": "共有ウィンドウを使い、各回避処理をその中のタブとして開きます。",
+    "shieldMethodHintTab": "現在のウィンドウのバックグラウンドタブで処理し、画面への干渉を抑えます。",
+    "shieldMethodHintWindow": "回避のたびに新しいウィンドウを開いて処理します。",
+    "shieldMethodTab": "一時タブ",
+    "shieldMethodTitle": "回避方法",
+    "shieldMethodWindow": "ポップアップウィンドウ",
+    "shieldOptions": "オプションページで使用",
+    "shieldPermissionAction": "権限タブを開く",
+    "shieldPermissionWarningDesc": "一時ウィンドウによる保護回避で認証済み Cookie を送信できるようにするため、Cookies / Web Request 権限を許可してください。",
+    "shieldPermissionWarningTitle": "Cookie Interceptor の権限が必要です",
+    "shieldPopup": "ポップアップで使用",
+    "shieldPopupFirefoxNote": "Firefox のポップアップでは、ポップアップが閉じるのを防ぐため、保護対象データのリクエストは常に無効化されます。この設定自体は他のブラウザ向けに保存されます。",
+    "shieldSidepanel": "サイドパネルで使用",
+    "shieldTitle": "一時ウィンドウによる保護回避",
+    "title": "更新設定"
+  },
+  "sorting": {
+    "checkInDesc": "チェックインが必要なサイトを先頭に表示します",
+    "checkInRequirement": "チェックイン要件",
+    "currentSiteDesc": "現在アクセス中のサイトをリストの先頭に表示します",
+    "currentSitePriority": "現在のサイト優先",
+    "customCheckInDesc": "外部チェックインリンクを使うサイトを先頭に表示します",
+    "customCheckInUrl": "外部チェックイン URL",
+    "customRedeemDesc": "カスタム引き換えリンクを使うサイトを先頭に表示します",
+    "customRedeemUrl": "カスタム引き換え URL",
+    "customSortDesc": "リスト表示で選択した項目（残高など）に基づいて並び替えます",
+    "description": "リスト内のアカウント表示順を決める優先度を設定します",
+    "disabledAccount": "無効なアカウントを末尾へ移動",
+    "disabledAccountDesc": "無効なアカウントをまとめてリストの末尾へ移動します",
+    "healthDesc": "サイトの健全性で並び替えます（エラー > 警告 > 不明 > 正常）",
+    "healthStatus": "健全性",
+    "manualOrder": "手動順",
+    "manualOrderDesc": "手動で決めた順序に従ってアカウントを並び替えます",
+    "matchedOpenTabs": "一致するタブ",
+    "matchedOpenTabsDesc": "開いているタブのタイトルまたは URL に一致するサイトを先頭に表示します",
+    "pinnedDesc": "ピン留めしたアカウントを、ピン留めした順にリストの先頭へ表示します",
+    "pinnedPriority": "ピン留め優先",
+    "priority": "優先度",
+    "title": "並び順の優先設定",
+    "unknownSortRule": "不明な並び替えルール",
+    "userCustomSort": "ユーザー指定の並び替え"
+  },
+  "tabs": {
+    "accountManagement": "アカウント管理",
+    "accountUsage": "アカウント利用状況",
+    "balanceHistory": "残高履歴",
+    "checkinRedeem": "チェックインと引き換え",
+    "claudeCodeRouter": "Claude Code Router",
+    "cliProxy": "CLIProxyAPI",
+    "dataBackup": "データとバックアップ",
+    "general": "一般",
+    "managedSite": "管理対象サイト",
+    "permissions": "権限",
+    "refresh": "データ更新",
+    "scrollLeft": "タブを左へスクロール",
+    "scrollRight": "タブを右へスクロール",
+    "select": "タブを選択",
+    "webAiApiCheck": "AI API テスト"
+  },
+  "theme": {
+    "appearance": "外観",
+    "clickSwitch": "クリックして {{nextMode}} モードへ切り替え",
+    "current": "現在: {{theme}}（{{resolvedTheme}}）",
+    "currentTheme": "現在: システムに従う（{{theme}}）",
+    "dark": "ダーク",
+    "followSystem": "システムに従う",
+    "followSystemTheme": "システムのテーマ設定に従う",
+    "light": "ライト",
+    "selectTheme": "外観テーマを選択",
+    "switchTo": "{{theme}} テーマへ切り替え: {{description}}",
+    "toggle": "テーマ切り替え。現在は {{currentMode}} モードです。クリックして {{nextMode}} モードへ切り替えます",
+    "useDarkTheme": "ダークテーマを使用",
+    "useLightTheme": "ライトテーマを使用"
+  },
+  "title": "設定",
+  "veloera": {
+    "adminCredentialsLink": {
+      "description": "Open the admin personal settings page to find the system access token and user ID.",
+      "open": "Open page",
+      "title": "Quick access"
+    },
+    "description": "Configure integration settings for connecting to Veloera compatible services.",
+    "fields": {
+      "adminTokenLabel": "Administrator's system access token",
+      "baseUrlLabel": "Base URL",
+      "baseUrlPlaceholder": "https://api.example.com",
+      "hideToken": "Hide system access token",
+      "showToken": "Show system access token",
+      "userIdLabel": "Administrator user ID"
+    },
+    "title": "Veloera Integration Settings",
+    "tokenDesc": "System access token for the administrator user",
+    "urlDesc": "Set the base URL for Veloera integration",
+    "userIdDesc": "Administrator user ID (numeric only)"
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "confirmToast": {
+    "body": "Do you want to open the AI API test Panel to check and test the AI API's availability?",
+    "open": "Open",
+    "title": "AI API URL and API Key Detected"
+  },
+  "messages": {
+    "success": {
+      "settingsSaved": "AI API Check settings have been saved."
+    }
+  },
+  "modal": {
+    "actions": {
+      "fetchingModels": "Fetching…",
+      "fetchModels": "Fetch models",
+      "hideKey": "Hide key",
+      "openApiProfiles": "Open API profiles",
+      "retry": "Retry",
+      "running": "Running…",
+      "runOne": "Run",
+      "saveToProfiles": "Save to API profiles",
+      "saving": "Saving…",
+      "showKey": "Show key",
+      "test": "Test",
+      "testing": "Testing…"
+    },
+    "errors": {
+      "fetchModelsFailed": "Failed to fetch models.",
+      "missingBaseUrlOrKey": "Please provide base URL and API key first.",
+      "runProbeFailed": "Probe failed.",
+      "saveToProfilesFailed": "Failed to save to API profiles."
+    },
+    "fields": {
+      "apiKey": "API key",
+      "apiType": "API type",
+      "baseUrl": "Base URL",
+      "modelId": "Model ID"
+    },
+    "hints": {
+      "saveWithoutTest": "Tip: you can save once base URL + API key are provided (no need to test or fetch models first). Testing is optional and only helps verify availability."
+    },
+    "messages": {
+      "savedToProfiles": "Saved {{name}} to API profiles."
+    },
+    "privacyHint": "API Keys will be considered sensitive information: hidden by default, and nothing is stored unless you choose to save to API profiles.",
+    "probes": {
+      "notRunYet": "Not run yet"
+    },
+    "sourceText": {
+      "label": "Text to extract from",
+      "placeholder": "Paste a base URL and API key here, or use the context menu to prefill from selection."
+    },
+    "title": "AI API Functionality Availability Test"
+  },
+  "settings": {
+    "autoDetect": {
+      "enable": "Enable auto-detect",
+      "enableDesc": "When enabled, the extension may detect credentials from copy actions and will ask for confirmation before opening the modal.",
+      "whitelist": {
+        "invalidMore": "…and more",
+        "invalidTitle": "Invalid patterns",
+        "patterns": "URL whitelist patterns",
+        "patternsDesc": "One JavaScript RegExp pattern per line. Case-insensitive match is applied. Invalid patterns are ignored (treated as non-matching).",
+        "patternsPlaceholder": "^https://example\\.com/console"
+      }
+    },
+    "contextMenu": {
+      "enable": "Show in browser right-click menu",
+      "enableDesc": "Adds an “AI API Check” item to the browser context menu."
+    },
+    "description": "Manual context-menu trigger is always available. Auto-detect is opt-in and only runs on whitelisted pages. Extracted API keys are not saved by default.",
+    "title": "Web AI API Functionality Availability Test"
+  }
+}

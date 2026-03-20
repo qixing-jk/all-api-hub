@@ -1,0 +1,89 @@
+{
+  "actions": {
+    "create": "Create Channel",
+    "deselectAll": "Deselect All",
+    "hideKey": "Hide Key",
+    "inverse": "Inverse",
+    "loadingRealKey": "Loading real key...",
+    "loadRealKey": "Load real key",
+    "selectAll": "Select All",
+    "showKey": "Show Key",
+    "update": "Save Changes"
+  },
+  "description": {
+    "add": "Configure a new channel for your managed site",
+    "edit": "Update channel settings and routing information"
+  },
+  "fields": {
+    "baseUrl": {
+      "label": "Base URL",
+      "placeholder": "https://api.example.com"
+    },
+    "groups": {
+      "hint": "Groups are sourced from your managed site",
+      "label": "Channel Groups",
+      "loading": "Loading groups...",
+      "placeholder": "Select groups"
+    },
+    "key": {
+      "label": "API Key",
+      "placeholder": "Enter the upstream provider API key",
+      "realKeyHint": "For New API, viewing the real channel key itself requires 2FA. If the login and 2FA-assist fields are not filled in under Settings, this key cannot be read."
+    },
+    "models": {
+      "hint": "Type to search or press Enter to add a custom model name",
+      "label": "Available Models",
+      "loading": "Loading models...",
+      "placeholder": "Select or type model names"
+    },
+    "name": {
+      "label": "Channel Name",
+      "placeholder": "Enter a descriptive channel name"
+    },
+    "priority": {
+      "hint": "Channels with larger priority numbers are used before others",
+      "label": "Priority"
+    },
+    "status": {
+      "disabled": "Disabled",
+      "enabled": "Enabled",
+      "label": "Status"
+    },
+    "type": {
+      "hint": "Choose the upstream provider that this channel will forward to",
+      "label": "Channel Type",
+      "placeholder": "Select channel type"
+    },
+    "weight": {
+      "hint": "Controls load balancing within the same priority (0 = equal distribution)",
+      "label": "Weight"
+    }
+  },
+  "messages": {
+    "loadRealKeyFailed": "Failed to load the real channel key: {{error}}",
+    "missingChannelId": "Existing channel ID is missing",
+    "saveFailed": "Failed to save channel: {{error}}"
+  },
+  "sections": {
+    "advanced": "Advanced Settings"
+  },
+  "title": {
+    "add": "Create Channel",
+    "edit": "Edit Channel"
+  },
+  "validation": {
+    "baseUrlRequired": "Base URL is required for this channel type",
+    "keyRequired": "API key is required",
+    "nameRequired": "Channel name is required"
+  },
+  "warnings": {
+    "channelExists": {
+      "actions": {
+        "continue": "Continue"
+      },
+      "description": "A channel named {{channelName}} already exists in your managed site. You can still create another channel, but duplicate routing may occur. Continue anyway?",
+      "title": "Channel already exists",
+      "warningTitle": "Potential duplicate"
+    }
+  }
+}

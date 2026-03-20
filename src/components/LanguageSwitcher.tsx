@@ -44,6 +44,8 @@ function getLanguageOptionLabel(
   switch (language) {
     case "en":
       return t("settings:appearanceLanguage.switcher.options.en.label")
+    case "ja":
+      return t("settings:appearanceLanguage.switcher.options.ja.label")
     case "zh-CN":
       return t("settings:appearanceLanguage.switcher.options.zh-CN.label")
     case "zh-TW":
@@ -61,6 +63,8 @@ function getLanguageOptionName(
   switch (language) {
     case "en":
       return t("settings:appearanceLanguage.switcher.options.en.name")
+    case "ja":
+      return t("settings:appearanceLanguage.switcher.options.ja.name")
     case "zh-CN":
       return t("settings:appearanceLanguage.switcher.options.zh-CN.name")
     case "zh-TW":

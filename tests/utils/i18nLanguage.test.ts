@@ -9,6 +9,9 @@ describe("i18n language helpers", () => {
   it("normalizes browser language variants to supported app locales", () => {
     expect(normalizeAppLanguage("en-US")).toBe("en")
     expect(normalizeAppLanguage("en")).toBe("en")
+    expect(normalizeAppLanguage("ja")).toBe("ja")
+    expect(normalizeAppLanguage("ja-JP")).toBe("ja")
+    expect(normalizeAppLanguage("ja_JP")).toBe("ja")
     expect(normalizeAppLanguage("zh-CN")).toBe("zh-CN")
     expect(normalizeAppLanguage("zh_CN")).toBe("zh-CN")
     expect(normalizeAppLanguage("zh-SG")).toBe("zh-CN")
@@ -26,7 +29,6 @@ describe("i18n language helpers", () => {
 
   it("returns undefined for unsupported languages", () => {
     expect(normalizeAppLanguage("fr-FR")).toBeUndefined()
-    expect(normalizeAppLanguage("ja-JP")).toBeUndefined()
     expect(normalizeAppLanguage("english")).toBeUndefined()
     expect(normalizeAppLanguage("zhongwen")).toBeUndefined()
     expect(normalizeAppLanguage("")).toBeUndefined()
@@ -57,6 +59,14 @@ describe("i18n language helpers", () => {
         detectedLanguage: "en-US",
       }),
     ).toBe("en")
+  })
+
+  it("keeps detected japanese when no explicit preference exists", () => {
+    expect(
+      resolveInitialAppLanguage({
+        detectedLanguage: "ja-JP",
+      }),
+    ).toBe("ja")
   })
 
   it("falls back to English when detection is unsupported", () => {

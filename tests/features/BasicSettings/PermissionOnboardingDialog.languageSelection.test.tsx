@@ -9,6 +9,7 @@ import type { SupportedUiLanguage } from "~/constants/i18n"
 import { PermissionOnboardingDialog } from "~/features/BasicSettings/components/dialogs/PermissionOnboardingDialog"
 import GeneralTab from "~/features/BasicSettings/components/tabs/General/GeneralTab"
 import enSettings from "~/locales/en/settings.json"
+import jaSettings from "~/locales/ja/settings.json"
 import zhCnSettings from "~/locales/zh-CN/settings.json"
 import zhTwSettings from "~/locales/zh-TW/settings.json"
 
@@ -101,6 +102,7 @@ vi.mock("~/utils/core/toastHelpers", () => ({
 
 const SETTINGS_RESOURCES = {
   en: { settings: enSettings },
+  ja: { settings: jaSettings },
   "zh-CN": { settings: zhCnSettings },
   "zh-TW": { settings: zhTwSettings },
 } as const
@@ -290,5 +292,32 @@ describe("PermissionOnboardingDialog language selection", () => {
     ).toBeInTheDocument()
     expect(persistedLanguage).toBe("zh-TW")
     expect(preferenceMocks.setLanguage).toHaveBeenCalledWith("zh-TW")
+  })
+
+  it("offers japanese in onboarding and persists the selected language", async () => {
+    const user = userEvent.setup()
+    const i18n = await createSettingsI18n("en")
+
+    renderWithI18n(<PermissionOnboardingDialog open onClose={vi.fn()} />, i18n)
+
+    await user.click(
+      await screen.findByRole("combobox", {
+        name: "Current interface language: English",
+      }),
+    )
+    await user.click(
+      await screen.findByRole("option", {
+        name: "Japanese",
+      }),
+    )
+
+    expect(
+      await screen.findByRole("heading", { name: "All API Hub へようこそ" }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "推奨権限を許可" }),
+    ).toBeInTheDocument()
+    expect(persistedLanguage).toBe("ja")
+    expect(preferenceMocks.setLanguage).toHaveBeenCalledWith("ja")
   })
 })

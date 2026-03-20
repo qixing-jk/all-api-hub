@@ -1,0 +1,20 @@
+{
+  "manifest_name": {
+    "message": "All API Hub – AI 中継サイト / New API マネージャー"
+  },
+  "manifest_description": {
+    "message": "残高 / 使用量、自動チェックイン、主要クライアント向けキーのワンクリック書き出し、ページ内 API テスト、チャネル / モデル同期とリダイレクト"
+  },
+  "manifest_commands_sidebar_action": {
+    "message": "サイドバーで All API Hub を開く"
+  },
+  "manifest_commands_browser_action": {
+    "message": "ポップアップで All API Hub を開く"
+  },
+  "context_menu_redeem_selection": {
+    "message": "選択したテキストを Redemption Assist で引き換える"
+  },
+  "context_menu_ai_api_check": {
+    "message": "AI API の機能可用性をすばやくテスト"
+  }
+}

@@ -1,0 +1,132 @@
+{
+  "actions": {
+    "channelLocateConfigMissing": "Managed-site admin config is unavailable. Filtered channels by URL for review.",
+    "channelLocateFailed": "Failed to locate channel",
+    "channelLocateFuzzyUrlOnly": "Found only a fuzzy URL-level match. Filtered channels by URL for review.",
+    "channelLocateInputPreparationFallback": "Ranked matching inputs could not be prepared. Filtered channels by URL only.",
+    "channelLocateKeyMatchedModelsDrifted": "The same channel matched the key, but the model set only matched approximately. Filtered channels by URL for review.",
+    "channelLocateKeyMatchOnly": "Found a key match under the same URL bucket, but the model set did not match. Filtered channels by URL for review.",
+    "channelLocateMultipleKeysFallback": "Multiple keys found. Filtered channels by URL only.",
+    "channelLocateNoKeyFallback": "No API key is available for ranked matching. Filtered channels by URL only.",
+    "channelLocateSecondaryExactModels": "Found a secondary match by exact model set. Filtered channels by URL for review.",
+    "channelLocateSecondaryModelsContained": "Found a secondary match by model containment. Filtered channels by URL for review.",
+    "channelLocateSecondaryModelsSimilar": "Found a secondary match by model similarity. Filtered channels by URL for review.",
+    "channelLocateSignalsConflict": "Key and model checks pointed to different channel candidates. Filtered channels by URL for review.",
+    "channelLocateUnresolved": "No likely channel could be confirmed. Filtered channels by URL only.",
+    "copyKey": "Copy Key",
+    "copyUrl": "Copy URL",
+    "delete": "Delete",
+    "disableAccount": "Disable account",
+    "edit": "Edit",
+    "enableAccount": "Enable account",
+    "fetchKeyInfoFailed": "Failed to fetch key info",
+    "fetchKeyListFailed": "Failed to fetch key list: {{errorMessage}}",
+    "keyCopied": "Key copied to clipboard",
+    "keyList": "Key List",
+    "keyManagement": "Key Management",
+    "locateManagedSiteChannel": "Locate channel",
+    "locateManagedSiteChannelUnsupported": "These features are unavailable because Veloera does not currently support searching channels by URL.",
+    "locateManagedSiteChannelUnsupportedHint": "Unsupported",
+    "modelManagement": "Model Management",
+    "openAllExternalCheckIn": "Open all external check-ins",
+    "openAllExternalCheckInHint": "Open unchecked external check-ins. Ctrl/Cmd: open all. Shift: open in new window. Ctrl/Cmd+Shift: open all in new window.",
+    "pin": "Pin account",
+    "pinned": "Pinned",
+    "quickCheckin": "Quick check-in",
+    "redeemPage": "Redeem/Top-up",
+    "refresh": "Refresh",
+    "scanDuplicates": "Scan duplicates",
+    "scanDuplicatesHint": "Scan accounts for duplicates (origin + upstream user id) and clean them up safely.",
+    "unpin": "Unpin account",
+    "urlCopied": "URL copied to clipboard",
+    "usageLog": "Usage Log",
+    "viewOnLdoh": "View on LDOH"
+  },
+  "addAccount": "Add Account",
+  "addFirstAccount": "Add your first account",
+  "currentLoginAdded": "⚠️Current login already added for {{siteName}}",
+  "currentSiteAdded": "⚠️Saved accounts exist for {{siteName}}",
+  "currentSiteAddedCount_other": "⚠️Saved accounts exist for this site ({{count}})",
+  "description": "Manage all AI redistribution stations with one click",
+  "emptyState": "No accounts yet",
+  "filter": {
+    "summary_other": "{{count}} accounts",
+    "tagsAllLabel": "All"
+  },
+  "filteredTotals": {
+    "balance": "Balance",
+    "consumption": "Today's consumption"
+  },
+  "healthStatus": {
+    "apiError": "API error",
+    "error": "Error",
+    "healthy": "Healthy",
+    "httpError": "HTTP {{statusCode}}: {{message}}",
+    "networkFailed": "Network connection failed",
+    "normal": "Account status is normal",
+    "tempWindowDisabled": "Protection bypass is disabled. Enable it in Settings > Data Refresh",
+    "tempWindowPermissionRequired": "Protection bypass needs cookie interceptor permissions on Firefox. Grant them in Settings > Permissions",
+    "unknown": "Unknown",
+    "unknownError": "Unknown error",
+    "warning": "Warning"
+  },
+  "list": {
+    "balance": {
+      "refreshBalance": "Click to refresh balance",
+      "refreshCashflow": "Click to refresh today's consumption",
+      "refreshIncome": "Click to refresh today's income"
+    },
+    "dragHandle": "Drag to reorder",
+    "header": {
+      "account": "Account",
+      "balance": "Balance",
+      "todayConsumption": "Today's Consumption",
+      "todayIncome": "Today's Income"
+    },
+    "site": {
+      "checkedInToday": "Checked in today, click to view",
+      "checkInStatusOutdated": "Check-in status wasn't detected today (last check time: {{time}}). Click to refresh",
+      "checkInUnsupported": "Site may not support check-in",
+      "currentSite": "Current Site",
+      "currentSiteExists": "Same site as the current tab",
+      "disabled": "Disabled",
+      "lastSync": "Last Sync",
+      "notAvailable": "N/A",
+      "notCheckedInToday": "Not checked in today, click to go",
+      "reason": "Reason",
+      "refreshHealthStatus": "Click to refresh health status",
+      "status": "Status",
+      "unknown": "Unknown"
+    },
+    "sort": "Sort"
+  },
+  "newcomerSupport": {
+    "actions": {
+      "about": "Visit website",
+      "docs": "Open getting started",
+      "star": "View on GitHub"
+    },
+    "description": "You can star the project and browse the guides to learn how to manage your relay and New API accounts",
+    "hint": "Feel free to look around the website and docs before adding any accounts",
+    "title": "Welcome to All API Hub"
+  },
+  "refresh": {
+    "refreshComplete": "Refresh complete: {{success}} success, {{failed}} failed",
+    "refreshFailed": "Refresh failed, please try again later",
+    "refreshingAll": "Refreshing all accounts...",
+    "refreshPartialSkipped": "Refresh complete: {{success}} success, {{skipped}} skipped",
+    "refreshSuccess": "All accounts refreshed successfully!"
+  },
+  "search": {
+    "noResults": "No matching accounts found",
+    "placeholder": "Enter site information or account information to search"
+  },
+  "stats": {
+    "completion": "Completion",
+    "prompt": "Prompt",
+    "todayConsumption": "Today's Consumption",
+    "todayIncome": "Today's Income",
+    "totalBalance": "Total Balance"
+  },
+  "title": "Account Management"
+}

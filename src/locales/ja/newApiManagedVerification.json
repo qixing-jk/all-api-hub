@@ -1,0 +1,45 @@
+{
+  "dialog": {
+    "actions": {
+      "close": "Close",
+      "openSite": "Open site",
+      "retry": "Retry",
+      "retryAfterPasskey": "Retry after passkey",
+      "submitLoginCode": "Submit login code",
+      "submitVerificationCode": "Submit verification code"
+    },
+    "body": {
+      "credentialsMissing": "Add a New API login username and password in Settings before session-assisted verification can run.",
+      "failure": "The New API verification flow could not be completed.",
+      "loggingIn": "Checking the current New API session and preparing verification if it is needed.",
+      "loginTwoFactor": "The New API login step requires a verification code before the browser-backed admin session can continue.",
+      "passkeyManual": "This account currently exposes passkey verification for the secure step. Complete the passkey check on the site, then return here and retry.",
+      "secureVerification": "The admin session is logged in, but New API still requires a secure verification code before hidden channel keys can be read.",
+      "successChannel": "Verification succeeded for {{label}}. The real channel key has been loaded.",
+      "successSettings": "The New API login and verification flow completed successfully. You can now continue with actions that require login and verification.",
+      "successToken": "Verification succeeded for {{label}}. The managed-site status has been refreshed."
+    },
+    "fields": {
+      "codeLabel": "Verification code",
+      "codePlaceholder": "Enter code"
+    },
+    "hints": {
+      "manualFallback": "Manual code entry stays available even when automatic TOTP is configured.",
+      "passkey": "Open the site, complete the passkey prompt there, then come back here and retry."
+    },
+    "messages": {
+      "finishing": "Finalizing the New API session check...",
+      "missingBaseUrl": "Add the New API base URL before testing the session flow.",
+      "missingCode": "Enter the verification code first.",
+      "refreshingChannel": "Loading the real channel key...",
+      "refreshingToken": "Refreshing this token's managed-site status...",
+      "starting": "Starting the New API verification flow...",
+      "submitting": "Submitting verification code..."
+    },
+    "title": {
+      "channel": "New API channel key verification",
+      "settings": "New API session check",
+      "token": "New API verification retry"
+    }
+  }
+}

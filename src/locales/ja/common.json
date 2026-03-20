@@ -1,0 +1,57 @@
+{
+  "actions": {
+    "cancel": "キャンセル",
+    "clear": "クリア",
+    "close": "閉じる",
+    "copyKey": "キーをコピー",
+    "delete": "削除",
+    "edit": "編集",
+    "export": "エクスポート",
+    "import": "インポート",
+    "more": "その他",
+    "openSidePanel": "サイドパネルで開く",
+    "refresh": "更新",
+    "reset": "リセット",
+    "retry": "再試行",
+    "save": "保存"
+  },
+  "currency": {
+    "clickToSwitch": "{{currency}} に切り替える",
+    "cny": "CNY",
+    "usd": "USD"
+  },
+  "labels": {
+    "apiKey": "API キー",
+    "notAvailable": "N/A",
+    "settings": "設定",
+    "token": "トークン",
+    "unknown": "不明"
+  },
+  "quota": {
+    "unlimited": "無制限"
+  },
+  "status": {
+    "creating": "作成中...",
+    "disabled": "無効",
+    "enabled": "有効",
+    "error": "エラー",
+    "exporting": "エクスポート中...",
+    "failed": "失敗",
+    "importing": "インポート中...",
+    "loading": "読み込み中...",
+    "processing": "処理中...",
+    "refreshing": "更新中...",
+    "resetting": "リセット中...",
+    "saving": "保存中...",
+    "success": "成功",
+    "testing": "テスト中...",
+    "updating": "更新中...",
+    "uploading": "アップロード中..."
+  },
+  "time": {
+    "neverExpires": "期限なし",
+    "seconds": "秒",
+    "updatedAt": "{{time}} に更新"
+  },
+  "total": "合計"
+}

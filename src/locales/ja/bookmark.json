@@ -1,0 +1,54 @@
+{
+  "actions": {
+    "add": "Add Bookmark",
+    "copyUrl": "Copy URL",
+    "open": "Open",
+    "pin": "Pin",
+    "unpin": "Unpin"
+  },
+  "addFirstBookmark": "Add your first bookmark",
+  "delete": {
+    "description": "This will permanently delete \"{{name}}\".",
+    "title": "Delete bookmark?"
+  },
+  "description": "Save quick links (console/docs/admin pages) without creating full accounts.",
+  "dialog": {
+    "description": "Bookmarks can be any link, such as to a site console, documentation, or an administration page. This is useful for situations where a full account cannot be created.",
+    "titleAdd": "Add Bookmark",
+    "titleEdit": "Edit Bookmark"
+  },
+  "emptyState": "No bookmarks yet",
+  "filter": {
+    "tagsAllLabel": "All tags"
+  },
+  "form": {
+    "nameLabel": "Name",
+    "namePlaceholder": "e.g. Admin Console",
+    "notesLabel": "Notes",
+    "notesPlaceholder": "Optional notes...",
+    "tagsLabel": "Tags",
+    "tagsPlaceholder": "Select tags...",
+    "urlLabel": "URL",
+    "urlPlaceholder": "https://example.com/..."
+  },
+  "list": {
+    "dragHandle": "Reorder bookmarks"
+  },
+  "search": {
+    "placeholder": "Search bookmarks..."
+  },
+  "stats": {
+    "pinnedBookmarks": "Pinned",
+    "totalBookmarks": "Total Bookmarks",
+    "usedTags": "Tags"
+  },
+  "switch": {
+    "accounts": "Accounts",
+    "bookmarks": "Bookmarks"
+  },
+  "title": "Bookmark Management",
+  "validation": {
+    "nameRequired": "Name cannot be empty",
+    "urlRequired": "URL cannot be empty"
+  }
+}

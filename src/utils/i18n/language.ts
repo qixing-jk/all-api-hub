@@ -1,5 +1,6 @@
 import {
   DEFAULT_LANG,
+  JAPANESE_LANG,
   TRADITIONAL_CHINESE_LANG,
   type SupportedUiLanguage,
 } from "~/constants"
@@ -17,6 +18,9 @@ const isLanguageFamily = (
 export const UI_LANGUAGE_OPTIONS = [
   {
     code: ENGLISH_LANG,
+  },
+  {
+    code: JAPANESE_LANG,
   },
   {
     code: DEFAULT_LANG,
@@ -84,6 +88,7 @@ export function normalizeAppLanguage(
   language?: string | null,
 ): SupportedUiLanguage | undefined {
   if (isEnglishLanguage(language)) return ENGLISH_LANG
+  if (isJapaneseLanguage(language)) return JAPANESE_LANG
   if (isTraditionalChineseLanguage(language)) return TRADITIONAL_CHINESE_LANG
   if (isChineseLanguage(language)) return DEFAULT_LANG
 

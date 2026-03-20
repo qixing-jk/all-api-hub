@@ -1,0 +1,79 @@
+{
+  "verifyDialog": {
+    "actions": {
+      "close": "Close",
+      "retry": "Retry",
+      "run": "Run",
+      "running": "Running...",
+      "runOne": "Run"
+    },
+    "apiTypes": {
+      "anthropic": "Anthropic",
+      "google": "Google/Gemini",
+      "openai": "OpenAI",
+      "openaiCompatible": "OpenAI-compatible"
+    },
+    "details": {
+      "input": "Input",
+      "output": "Output"
+    },
+    "errors": {
+      "unexpected": "Unexpected error"
+    },
+    "idleHint": "Select a token to start verification. Model id is required for model-dependent probes.",
+    "loadingTokensHint": "Loading tokens...",
+    "meta": {
+      "apiType": "API type",
+      "apiTypePlaceholder": "Select API type",
+      "model": "Model",
+      "modelPlaceholder": "Enter model id",
+      "token": "Token",
+      "tokenPlaceholder": "Select token"
+    },
+    "notRunYet": "Not run yet",
+    "probes": {
+      "models": "Models endpoint (/v1/models)",
+      "structured-output": "Structured output (schema JSON)",
+      "text-generation": "Text generation",
+      "tool-calling": "Tool/function calling",
+      "web-search": "Web search / grounding"
+    },
+    "requiresModelId": "Enter a model id to run this test.",
+    "status": {
+      "fail": "Fail",
+      "pass": "Pass",
+      "pending": "Pending",
+      "unsupported": "Unsupported"
+    },
+    "summaries": {
+      "endpointNotFound": "Endpoint not found (404): this API may not be supported",
+      "forbidden": "Forbidden (403): access denied",
+      "httpError": "HTTP error ({{status}})",
+      "modelsFetched": "Fetched {{count}} models.",
+      "modelsFetched_other": "Fetched {{count}} models.",
+      "modelsProbeUnsupportedForApiType": "Models probe is not supported for this API type.",
+      "noModelAvailableToRunProbes": "No model available to run probes.",
+      "noModelIdProvided": "No model id provided.",
+      "noModelIdProvidedToRunProbe": "No model id provided to run probe.",
+      "noModelIdProvidedToRunProbes": "No model id provided to run probes.",
+      "noModelsReturned": "No models returned.",
+      "noToolCallDetected": "No tool call detected (model may not support tools).",
+      "structuredOutputInvalid": "Invalid output.",
+      "structuredOutputSucceeded": "Structured output succeeded.",
+      "textGenerationSucceeded": "Text generation succeeded.",
+      "textGenerationUnexpectedResponse": "Unexpected response text.",
+      "toolCallSucceeded": "Tool call succeeded.",
+      "unauthorized": "Unauthorized (401): invalid key or missing auth",
+      "webSearchGroundingNoResults": "No web search/grounding results.",
+      "webSearchGroundingSucceeded": "Web search/grounding succeeded.",
+      "webSearchNoResults": "No web search results.",
+      "webSearchRequiresExplicitSupport": "Web search probe requires explicit API type support.",
+      "webSearchSucceeded": "Web search succeeded.",
+      "webSearchUnsupportedAnthropic": "Web search probe is not supported for Anthropic endpoints.",
+      "webSearchUnsupportedForApiType": "Web search probe is not supported for this API type."
+    },
+    "title": "API Verification",
+    "unsupportedProbeForApiType": "{{probe}} probe is not supported for this API type.",
+    "warning": "This feature is in beta. When support is detected, it is highly likely to be genuine. When support is not detected, it may still be supported. Results are for reference only; rely on actual tool usage."
+  }
+}

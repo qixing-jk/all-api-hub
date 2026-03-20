@@ -1,0 +1,22 @@
+{
+  "actions": {
+    "shuffleSeed": "Shuffle Seed"
+  },
+  "captions": {
+    "layoutIndex": "layout #{{index}}",
+    "paletteIndex": "#{{index}}"
+  },
+  "labels": {
+    "layout": "Layout",
+    "overlay": "Overlay",
+    "palette": "Palette",
+    "seed": "Seed",
+    "view": "View"
+  },
+  "summary": "{{paletteCount}} palettes · {{layoutCount}} layouts",
+  "title": "Mesh Gradient Lab (Dev)",
+  "view": {
+    "layouts": "Layouts",
+    "palettes": "Palettes"
+  }
+}

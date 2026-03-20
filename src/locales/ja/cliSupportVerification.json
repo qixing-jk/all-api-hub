@@ -1,0 +1,58 @@
+{
+  "verifyDialog": {
+    "actions": {
+      "close": "Close",
+      "retry": "Retry",
+      "run": "Run simulation",
+      "running": "Running...",
+      "runOne": "Run"
+    },
+    "details": {
+      "input": "Input",
+      "output": "Output"
+    },
+    "idleHint": "Select a token, then run the simulation. Provide a model id if the token cannot be used to infer one.",
+    "loadingModelsHint": "Loading models...",
+    "loadingTokensHint": "Loading tokens...",
+    "meta": {
+      "model": "Model",
+      "modelPlaceholder": "Enter model id",
+      "token": "Token",
+      "tokenPlaceholder": "Select token"
+    },
+    "modelHint": "Model hint from token: {{modelId}}",
+    "modelPickerPlaceholder": "Select or enter model id",
+    "modelsFetchFailed": "Failed to fetch models",
+    "notRunYet": "Not run yet",
+    "profileIdleHint": "Choose a model, then run the simulation. You can still enter a model id manually if the fetched list misses it.",
+    "requiresModelId": "Provide a model id before running this check.",
+    "status": {
+      "fail": "Fail",
+      "pass": "Pass",
+      "pending": "Pending",
+      "unsupported": "Unsupported"
+    },
+    "summaries": {
+      "endpointNotFound": "Endpoint not found (404): this API may not be supported",
+      "forbidden": "Forbidden (403): access denied",
+      "httpError": "HTTP error ({{status}})",
+      "invalidResponse": "Unexpected response format",
+      "networkError": "Network error / blocked request",
+      "noModelIdProvided": "No model id available",
+      "noToolCallDetected": "No tool call detected (tool calling may not be supported)",
+      "supported": "Supported",
+      "supportedStreaming": "Supported (streaming)",
+      "toolCallSucceeded": "Tool call succeeded.",
+      "unauthorized": "Unauthorized (401): invalid key or missing auth",
+      "unexpectedError": "Unexpected error: {{message}}",
+      "unsupportedForApiType": "Unsupported for selected API type ({{apiType}})"
+    },
+    "title": "CLI Support Simulation",
+    "tools": {
+      "claude": "Claude Code",
+      "codex": "Codex (Codex CLI)",
+      "gemini": "Gemini CLI"
+    },
+    "warning": "This feature is Beta. A detected pass is likely real; a fail may still work in some clients. Treat the result as guidance and verify with the actual CLI when possible."
+  }
+}
