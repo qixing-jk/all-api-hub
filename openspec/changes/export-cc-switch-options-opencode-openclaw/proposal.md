@@ -6,7 +6,7 @@ All API Hub already lets users export site credentials into CC Switch, but the c
 
 - Extend the CC Switch export target list to include `opencode` and `openclaw` anywhere the shared CC Switch export dialog is used.
 - Preserve the existing deeplink-based export flow so Key Management and API credential profile exports continue to open CC Switch with the selected account, token, endpoint, and optional model metadata.
-- Define per-app export behavior for the new targets so the generated deeplink payload remains compatible with CC Switch's provider import protocol.
+- Define per-app export behavior for the new targets so the generated deeplink payload remains compatible with CC Switch's current provider import protocol, including clearly warning users when CC Switch still does not support configuring the relevant AI service API format through external import.
 - Add or update user-facing labels, descriptions, and validation coverage for the expanded app list without introducing secret leakage in logs or UI errors.
 
 ## Capabilities

@@ -28,15 +28,21 @@ If the selected app identifier is not one of the supported CC Switch apps, the s
 
 Optional model and notes fields MAY be included when the user provides them.
 
+For `opencode` and `openclaw`, the system MUST treat AI service API format configuration as limited by CC Switch's current external import support.
+
+The system MUST inform the user about this limitation before export so they understand that CC Switch does not support configuring that API format through external import and it still needs to be adjusted inside CC Switch after import.
+
 #### Scenario: Export to OpenCode
 - **WHEN** the user selects `opencode` in the CC Switch export dialog and submits the export
 - **THEN** the generated deeplink contains `app=opencode`
 - **AND** the deeplink still includes the resolved provider name, homepage, endpoint, and API key fields
+- **AND** the dialog informs the user that CC Switch does not support configuring this AI service API format through external import
 
 #### Scenario: Export to OpenClaw
 - **WHEN** the user selects `openclaw` in the CC Switch export dialog and submits the export
 - **THEN** the generated deeplink contains `app=openclaw`
 - **AND** the deeplink still includes the resolved provider name, homepage, endpoint, and API key fields
+- **AND** the dialog informs the user that CC Switch does not support configuring this AI service API format through external import
 
 ### Requirement: CC Switch export keeps app-specific default endpoint behavior
 

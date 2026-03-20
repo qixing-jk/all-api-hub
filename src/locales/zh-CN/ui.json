@@ -35,6 +35,10 @@
       "modelOptions": {
         "none": "不设置默认模型"
       },
+      "notices": {
+        "openclaw": "CC Switch 当前不支持通过外部导入的方式配置 OpenClaw AI 服务的 API 接口格式；如有需要，请在导入后到 CC Switch 中手动调整。",
+        "opencode": "CC Switch 当前不支持通过外部导入的方式配置 OpenCode AI 服务的 API 接口格式；如有需要，请在导入后到 CC Switch 中手动调整。"
+      },
       "placeholders": {
         "endpoint": "https://example.com",
         "homepage": "https://example.com",

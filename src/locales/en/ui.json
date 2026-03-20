@@ -35,6 +35,10 @@
       "modelOptions": {
         "none": "No default model"
       },
+      "notices": {
+        "openclaw": "CC Switch currently does not support configuring OpenClaw AI service API formats through external import. Adjust it in CC Switch after import if needed.",
+        "opencode": "CC Switch currently does not support configuring OpenCode AI service API formats through external import. Adjust it in CC Switch after import if needed."
+      },
       "placeholders": {
         "endpoint": "https://example.com",
         "homepage": "https://example.com",

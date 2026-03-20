@@ -52,6 +52,14 @@ Alternative considered:
 
 - Force `/v1` for every OpenAI-compatible-looking target. Rejected because that can over-normalize deployments that intentionally expose a different path and would diverge from the upstream `opencode` / `openclaw` import handling.
 
+### Decision: Warn users instead of pretending CC Switch can configure these app-specific API formats through external import
+
+Upstream CC Switch currently exposes richer type-selection controls in its own UI for OpenCode and OpenClaw, but the current external import path still cannot configure those app-specific AI service API formats from All API Hub. Because All API Hub cannot fix that upstream capability gap on its own, the correct local behavior is to keep the export entry point available while showing an explicit warning that users still need to adjust the API format inside CC Switch after import.
+
+Alternative considered:
+
+- Hide or remove the `opencode` / `openclaw` export targets entirely. Rejected because the default import path is still useful, and the user explicitly asked to keep the targets while warning about the limitation.
+
 ### Decision: Expand the existing focused tests and locale keys instead of relying on manual verification
 
 The repo already has dedicated utility tests for `openInCCSwitch` and component tests for `CCSwitchExportDialog`. Extending those tests to cover new app ids and endpoint defaults is the smallest reliable validation surface. The dialog also reads app labels from i18n keys, so the locale namespace must be extended in place rather than hard-coding new strings.
@@ -62,7 +70,8 @@ Alternative considered:
 
 ## Risks / Trade-offs
 
-- [Upstream CC Switch changes app ids or adds app-specific required fields later] -> Keep app ids centralized in `ccSwitch.ts` and cover the deeplink app parameter explicitly in tests so later protocol updates stay localized.
+- [Upstream CC Switch changes app ids or adds app-specific required fields later] -> Keep app ids centralized in `ccSwitch.ts`, surface limitations in UI copy, and cover the deeplink app parameter explicitly in tests so later protocol updates stay localized.
+- [Users assume OpenCode/OpenClaw imports configure the needed AI service API format automatically] -> Show an app-specific warning in the export dialog that states CC Switch does not support configuring that format through external import and points users to adjust it in CC Switch after import.
 - [The chosen default endpoint for `opencode` or `openclaw` is not ideal for every deployment] -> Preserve manual endpoint editing in the dialog and avoid locking users into an irreversible transformation.
 - [UI labels and validation drift apart] -> Drive the selector from the shared app union and extend locale-backed tests so missing labels or invalid ids fail early.
 
@@ -73,9 +82,10 @@ No storage or backup migration is required. This is an additive UI/service chang
 1. Extend the shared CC Switch app union and label mapping.
 2. Apply any app-specific default-endpoint rule in the existing dialog.
 3. Update locale resources and focused tests.
+4. Keep the warning copy in sync with upstream CC Switch deeplink behavior as that protocol evolves.
 
 Rollback is straightforward: remove the new app ids from the shared union and label mapping if interoperability issues are found.
 
 ## Open Questions
 
-- No blocker is outstanding for artifact creation. If implementation testing later shows CC Switch requires extra optional payload fields for `opencode` or `openclaw`, that can be handled as a follow-up refinement without changing the core artifact plan.
+- No blocker remains for this repo. Full provider-type preservation for OpenCode/OpenClaw still depends on future CC Switch upstream deeplink support.

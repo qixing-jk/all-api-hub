@@ -1,5 +1,5 @@
 import userEvent from "@testing-library/user-event"
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
@@ -11,6 +11,41 @@ vi.mock("~/services/apiService/openaiCompatible", () => ({
 }))
 
 describe("CCSwitchExportDialog", () => {
+  beforeEach(() => {
+    mockFetchOpenAICompatibleModelIds.mockReset()
+  })
+
+  it("places the app selector before provider details", async () => {
+    vi.resetModules()
+    const { CCSwitchExportDialog } = await import(
+      "~/components/CCSwitchExportDialog"
+    )
+    mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce([])
+
+    render(
+      <CCSwitchExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={
+          { id: "acc", name: "Example", baseUrl: "https://x.test/v1" } as any
+        }
+        token={{ id: "tok", key: "sk-test" } as any}
+      />,
+    )
+
+    const appSelect = await screen.findByLabelText(
+      "ui:dialog.ccswitch.fields.app",
+    )
+    const nameInput = await screen.findByLabelText(
+      "ui:dialog.ccswitch.fields.name",
+    )
+
+    expect(
+      appSelect.compareDocumentPosition(nameInput) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).not.toBe(0)
+  })
+
   it("loads upstream model ids and exposes them as a selectable default model", async () => {
     vi.resetModules()
     const { CCSwitchExportDialog } = await import(
@@ -125,6 +160,85 @@ describe("CCSwitchExportDialog", () => {
       })
     },
   )
+
+  it.each([
+    {
+      appLabel: "ui:dialog.ccswitch.appOptions.opencode",
+      notice: "ui:dialog.ccswitch.notices.opencode",
+    },
+    {
+      appLabel: "ui:dialog.ccswitch.appOptions.openclaw",
+      notice: "ui:dialog.ccswitch.notices.openclaw",
+    },
+  ])(
+    "shows the protocol limitation notice for $appLabel",
+    async ({ appLabel, notice }) => {
+      vi.resetModules()
+      const { CCSwitchExportDialog } = await import(
+        "~/components/CCSwitchExportDialog"
+      )
+      const user = userEvent.setup()
+      mockFetchOpenAICompatibleModelIds.mockResolvedValue([])
+
+      render(
+        <CCSwitchExportDialog
+          isOpen={true}
+          onClose={() => {}}
+          account={
+            { id: "acc", name: "Example", baseUrl: "https://x.test" } as any
+          }
+          token={{ id: "tok", key: "sk-test" } as any}
+        />,
+      )
+
+      expect(screen.queryByText(notice)).toBeNull()
+
+      const appSelect = await screen.findByLabelText(
+        "ui:dialog.ccswitch.fields.app",
+      )
+      await user.click(appSelect)
+      await user.click(
+        await screen.findByRole("option", {
+          name: appLabel,
+        }),
+      )
+
+      expect(await screen.findByText(notice)).toBeInTheDocument()
+    },
+  )
+
+  it("does not show the limitation notice for Codex", async () => {
+    vi.resetModules()
+    const { CCSwitchExportDialog } = await import(
+      "~/components/CCSwitchExportDialog"
+    )
+    const user = userEvent.setup()
+    mockFetchOpenAICompatibleModelIds.mockResolvedValue([])
+
+    render(
+      <CCSwitchExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={
+          { id: "acc", name: "Example", baseUrl: "https://x.test" } as any
+        }
+        token={{ id: "tok", key: "sk-test" } as any}
+      />,
+    )
+
+    const appSelect = await screen.findByLabelText(
+      "ui:dialog.ccswitch.fields.app",
+    )
+    await user.click(appSelect)
+    await user.click(
+      await screen.findByRole("option", {
+        name: "ui:dialog.ccswitch.appOptions.codex",
+      }),
+    )
+
+    expect(screen.queryByText("ui:dialog.ccswitch.notices.opencode")).toBeNull()
+    expect(screen.queryByText("ui:dialog.ccswitch.notices.openclaw")).toBeNull()
+  })
 
   it("preserves a custom endpoint when switching between CC Switch apps", async () => {
     vi.resetModules()
