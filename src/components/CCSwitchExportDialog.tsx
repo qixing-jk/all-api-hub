@@ -44,6 +44,7 @@ interface CCSwitchExportDialogProps {
 const logger = createLogger("CCSwitchExportDialog")
 
 const DEFAULT_APP: CCSwitchApp = "claude"
+const APP_LIMITATION_NOTICE_ID = "ccswitch-app-limitation"
 
 const getCCSwitchAppLabel = (
   t: (key: string, options?: any) => string,
@@ -254,7 +255,13 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
             value={app ?? ""}
             onValueChange={(value) => setApp(value as CCSwitchApp)}
           >
-            <SelectTrigger id="ccswitch-app" className="mt-1">
+            <SelectTrigger
+              id="ccswitch-app"
+              className="mt-1"
+              aria-describedby={
+                limitationNotice ? APP_LIMITATION_NOTICE_ID : undefined
+              }
+            >
               <SelectValue placeholder={t("ui:dialog.ccswitch.fields.app")} />
             </SelectTrigger>
             <SelectContent>
@@ -268,7 +275,13 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
         </div>
 
         {limitationNotice ? (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-800/80 dark:bg-amber-950/30 dark:text-amber-100">
+          <div
+            id={APP_LIMITATION_NOTICE_ID}
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-800/80 dark:bg-amber-950/30 dark:text-amber-100"
+          >
             {limitationNotice}
           </div>
         ) : null}

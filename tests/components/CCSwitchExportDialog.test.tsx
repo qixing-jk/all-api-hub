@@ -203,7 +203,14 @@ describe("CCSwitchExportDialog", () => {
         }),
       )
 
-      expect(await screen.findByText(notice)).toBeInTheDocument()
+      const noticeElement = await screen.findByText(notice)
+      expect(noticeElement).toBeInTheDocument()
+      expect(noticeElement).toHaveAttribute("id", "ccswitch-app-limitation")
+      expect(noticeElement).toHaveAttribute("role", "status")
+      expect(appSelect).toHaveAttribute(
+        "aria-describedby",
+        "ccswitch-app-limitation",
+      )
     },
   )
 
@@ -238,6 +245,7 @@ describe("CCSwitchExportDialog", () => {
 
     expect(screen.queryByText("ui:dialog.ccswitch.notices.opencode")).toBeNull()
     expect(screen.queryByText("ui:dialog.ccswitch.notices.openclaw")).toBeNull()
+    expect(appSelect).not.toHaveAttribute("aria-describedby")
   })
 
   it("preserves a custom endpoint when switching between CC Switch apps", async () => {
