@@ -182,4 +182,15 @@ describe("BasicSettings tab mounting", () => {
       screen.queryByTestId("data-backup-tab-content"),
     ).not.toBeInTheDocument()
   })
+
+  it("seeds the selected and mounted tab from the URL tab parameter", async () => {
+    window.history.replaceState(null, "", "/?tab=managedSite#basic")
+
+    render(<BasicSettings />)
+
+    expect(
+      await screen.findByTestId("managed-site-tab-content"),
+    ).toBeInTheDocument()
+    expect(screen.queryByTestId("general-tab-content")).not.toBeInTheDocument()
+  })
 })

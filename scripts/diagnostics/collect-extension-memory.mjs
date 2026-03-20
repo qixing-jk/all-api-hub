@@ -17,6 +17,10 @@ const APP_SHELL_SELECTOR_BY_PAGE_PATH = {
   "options.html": '[data-testid="options-app"]',
   "popup.html": '[data-testid="popup-view-accounts"]',
 }
+const READY_SELECTOR_BY_PAGE_PATH = {
+  "options.html": '[data-testid="basic-settings-page"]',
+  "popup.html": '[data-testid="account-list-view"]',
+}
 
 /**
  * Parse CLI flags for the single-run memory probe.
@@ -367,6 +371,7 @@ async function summarizeResponses({
 async function waitForStableExtensionPageState(page, pagePath) {
   const appShellSelector =
     APP_SHELL_SELECTOR_BY_PAGE_PATH[pagePath] ?? "#root > *"
+  const readySelector = READY_SELECTOR_BY_PAGE_PATH[pagePath] ?? null
 
   await page.waitForSelector(appShellSelector, { timeout: 30_000 })
 
@@ -375,31 +380,42 @@ async function waitForStableExtensionPageState(page, pagePath) {
   const deadline = Date.now() + STABLE_PAGE_MAX_WAIT_MS
 
   while (Date.now() < deadline) {
-    const signature = await page.evaluate(() => {
-      const rootHtmlLength =
-        document.getElementById("root")?.innerHTML.length ?? 0
-      const loadingCount = Array.from(document.querySelectorAll("*")).filter(
-        (element) => element.textContent?.trim() === "Loading...",
-      ).length
-      const nodeCount = document.getElementsByTagName("*").length
+    const signature = await page.evaluate(
+      ({ readySelector }) => {
+        const rootHtmlLength =
+          document.getElementById("root")?.innerHTML.length ?? 0
+        const nodeCount = document.getElementsByTagName("*").length
+        const hasReadySelector = readySelector
+          ? !!document.querySelector(readySelector)
+          : true
 
-      return {
-        rootHtmlLength,
-        loadingCount,
-        nodeCount,
-      }
-    })
+        return {
+          rootHtmlLength,
+          nodeCount,
+          hasReadySelector,
+        }
+      },
+      { readySelector },
+    )
 
-    if (
+    const isDomStable =
       previousSignature &&
       previousSignature.rootHtmlLength === signature.rootHtmlLength &&
-      previousSignature.nodeCount === signature.nodeCount &&
-      signature.loadingCount === 0
-    ) {
+      previousSignature.nodeCount === signature.nodeCount
+
+    const isReadyAndStable = readySelector
+      ? signature.hasReadySelector &&
+        previousSignature?.hasReadySelector &&
+        isDomStable
+      : isDomStable
+
+    if (isReadyAndStable) {
       stableIterations += 1
       if (stableIterations >= 2) {
         return
       }
+    } else if (signature.hasReadySelector) {
+      stableIterations = 1
     } else {
       stableIterations = 0
     }

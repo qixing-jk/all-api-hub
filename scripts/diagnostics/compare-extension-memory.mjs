@@ -26,6 +26,7 @@ function parseArgs(argv) {
     baseline: null,
     baselineExplicit: false,
     outputDir: null,
+    historyRoot: null,
     skipCurrentBuild: false,
     skipBaselineBuild: false,
     targetUrl: "https://example.com/",
@@ -40,6 +41,14 @@ function parseArgs(argv) {
 
     if (arg.startsWith("--output-dir=")) {
       options.outputDir = arg.slice("--output-dir=".length) || null
+      continue
+    }
+
+    if (arg.startsWith("--history-root=") || arg.startsWith("--root-dir=")) {
+      const value = arg.includes("--history-root=")
+        ? arg.slice("--history-root=".length)
+        : arg.slice("--root-dir=".length)
+      options.historyRoot = value || null
       continue
     }
 
@@ -312,9 +321,12 @@ async function main() {
   const options = parseArgs(process.argv.slice(2))
   const baselineRef = await resolveBaseline(options)
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-")
+  const historyRoot = path.resolve(
+    options.historyRoot ??
+      path.join("diagnostics-results", "memory", "compare"),
+  )
   const outputDir = path.resolve(
-    options.outputDir ??
-      path.join("diagnostics-results", "memory", "compare", timestamp),
+    options.outputDir ?? path.join(historyRoot, timestamp),
   )
   const baselineSrcDir = path.join(outputDir, "baseline-src")
   const baselineArchivePath = path.join(outputDir, "baseline.tar")
@@ -362,6 +374,7 @@ async function main() {
     generatedAt: new Date().toISOString(),
     baselineRef,
     outputDir,
+    historyRoot,
     targetUrl: options.targetUrl,
     baseline: baselineReport,
     current: currentReport,
@@ -386,7 +399,7 @@ async function main() {
   await fs.writeFile(summaryPath, JSON.stringify(summary, null, 2), "utf8")
 
   const summaryHtmlPath = await writeSummaryReport(summaryPath, summary)
-  const historyReport = await writeHistoryReport(path.dirname(outputDir))
+  const historyReport = await writeHistoryReport(historyRoot)
 
   printComparison(summary)
   console.log(`Summary written to ${summaryPath}`)

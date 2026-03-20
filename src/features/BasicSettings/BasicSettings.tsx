@@ -157,6 +157,40 @@ interface SettingsTabItem {
 }
 
 /**
+ * Resolve the currently requested Basic Settings tab from the URL state.
+ */
+function resolveSelectedTabIndexFromUrl(): number {
+  if (typeof window === "undefined") {
+    return 0
+  }
+
+  const { tab, anchor, isHeadingAnchor } = parseTabFromUrl({
+    ignoreAnchors: [MENU_ITEM_IDS.BASIC],
+    defaultHashPage: MENU_ITEM_IDS.BASIC,
+  })
+
+  if (tab) {
+    const normalizedTab = tab === "sync" ? "accountUsage" : tab
+    const index = TAB_CONFIGS.findIndex((config) => config.id === normalizedTab)
+    if (index >= 0) {
+      return index
+    }
+  }
+
+  if (isHeadingAnchor && anchor) {
+    const targetTab = ANCHOR_TO_TAB[anchor]
+    if (targetTab) {
+      const index = TAB_CONFIGS.findIndex((config) => config.id === targetTab)
+      if (index >= 0) {
+        return index
+      }
+    }
+  }
+
+  return 0
+}
+
+/**
  * Resolve the localized label for a known settings tab id.
  */
 function getSettingsTabLabel(t: TFunction, tabId: TabId): string {
@@ -288,6 +322,9 @@ function SettingsTabContentFallback() {
 export default function BasicSettings() {
   const { t } = useTranslation("settings")
   const { isLoading } = useUserPreferencesContext()
+  const initialSelectedTabIndex = useMemo(resolveSelectedTabIndexFromUrl, [])
+  const initialSelectedTabId =
+    TAB_CONFIGS[initialSelectedTabIndex]?.id ?? "general"
 
   const tabs = useMemo<SettingsTabItem[]>(
     () =>
@@ -298,11 +335,13 @@ export default function BasicSettings() {
     [t],
   )
 
-  const [selectedTabIndex, setSelectedTabIndex] = useState(0)
+  const [selectedTabIndex, setSelectedTabIndex] = useState(
+    initialSelectedTabIndex,
+  )
   const selectedTab = TAB_CONFIGS[selectedTabIndex]
   const selectedTabId = selectedTab?.id ?? "general"
   const [mountedTabIds, setMountedTabIds] = useState<TabId[]>([
-    TAB_CONFIGS[0]?.id ?? "general",
+    initialSelectedTabId,
   ])
   const [showPermissionsOnboarding, setShowPermissionsOnboarding] =
     useState(false)
@@ -312,36 +351,30 @@ export default function BasicSettings() {
   const applyUrlState = useCallback(() => {
     const searchParams = new URLSearchParams(window.location.search)
     const pendingAnchor = searchParams.get("anchor")
-    const { tab, anchor, isHeadingAnchor } = parseTabFromUrl({
+    const { anchor, isHeadingAnchor } = parseTabFromUrl({
       ignoreAnchors: [MENU_ITEM_IDS.BASIC],
       defaultHashPage: MENU_ITEM_IDS.BASIC,
     })
+    const nextIndex = resolveSelectedTabIndexFromUrl()
+    const nextTab = TAB_CONFIGS[nextIndex]
 
-    if (tab) {
-      const normalizedTab = tab === "sync" ? "accountUsage" : tab
-      const index = TAB_CONFIGS.findIndex((cfg) => cfg.id === normalizedTab)
-      if (index >= 0) {
-        setSelectedTabIndex(index)
-      }
+    if (nextTab) {
+      setSelectedTabIndex(nextIndex)
+      setMountedTabIds((previous) =>
+        previous.includes(nextTab.id) ? previous : [...previous, nextTab.id],
+      )
 
       if (pendingAnchor) {
         window.setTimeout(() => {
           navigateToAnchor(pendingAnchor)
         }, 150)
+        return
       }
-      return
-    }
 
-    if (isHeadingAnchor && anchor) {
-      const targetTab = ANCHOR_TO_TAB[anchor]
-      if (targetTab) {
-        const index = TAB_CONFIGS.findIndex((cfg) => cfg.id === targetTab)
-        if (index >= 0) {
-          setSelectedTabIndex(index)
-          window.setTimeout(() => {
-            navigateToAnchor(anchor)
-          }, 150)
-        }
+      if (isHeadingAnchor && anchor) {
+        window.setTimeout(() => {
+          navigateToAnchor(anchor)
+        }, 150)
       }
     }
   }, [])
@@ -364,14 +397,6 @@ export default function BasicSettings() {
     }
   }, [])
 
-  useEffect(() => {
-    setMountedTabIds((previous) =>
-      previous.includes(selectedTabId)
-        ? previous
-        : [...previous, selectedTabId],
-    )
-  }, [selectedTabId])
-
   const handleCloseOnboarding = useCallback(() => {
     setShowPermissionsOnboarding(false)
     void setLastSeenOptionalPermissions()
@@ -390,6 +415,9 @@ export default function BasicSettings() {
     if (index < 0 || index >= TAB_CONFIGS.length) return
     setSelectedTabIndex(index)
     const tab = TAB_CONFIGS[index]
+    setMountedTabIds((previous) =>
+      previous.includes(tab.id) ? previous : [...previous, tab.id],
+    )
     updateUrlWithTab(tab.id, { hashPage: MENU_ITEM_IDS.BASIC })
   }, [])
 
@@ -398,7 +426,7 @@ export default function BasicSettings() {
   }
 
   return (
-    <div className="p-4 sm:p-6">
+    <div className="p-4 sm:p-6" data-testid="basic-settings-page">
       <PageHeader
         icon={Settings}
         title={t("title")}

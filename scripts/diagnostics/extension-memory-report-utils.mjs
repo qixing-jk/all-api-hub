@@ -509,8 +509,17 @@ function renderHistoryHtml(rootDir, entries) {
 async function collectSummaryPaths(rootDir) {
   const items = await fs.readdir(rootDir, { withFileTypes: true })
   const summaryPaths = []
+  const excludedDirectoryNames = new Set([
+    "baseline-src",
+    "node_modules",
+    ".git",
+  ])
 
   for (const item of items) {
+    if (item.isDirectory() && excludedDirectoryNames.has(item.name)) {
+      continue
+    }
+
     const itemPath = path.join(rootDir, item.name)
 
     if (item.isDirectory()) {

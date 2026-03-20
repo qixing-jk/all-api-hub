@@ -4,6 +4,7 @@ import fs from "node:fs/promises"
 import path from "node:path"
 
 const repoRoot = process.cwd()
+const DEPENDENCY_MANIFEST_FILES = ["package.json", "pnpm-lock.yaml"]
 
 /**
  * Spawn a child process and stream output to the current terminal.
@@ -162,6 +163,42 @@ export async function materializeBaselineSource({
   await runCommand("tar", ["-xf", tarPath, "-C", baselineSrcDir], {
     cwd: sourceRepoRoot,
   })
+
+  const driftedFiles = []
+  for (const relativePath of DEPENDENCY_MANIFEST_FILES) {
+    const baselinePath = path.join(baselineSrcDir, relativePath)
+    const currentPath = path.join(sourceRepoRoot, relativePath)
+    const baselineExists = await pathExists(baselinePath)
+    const currentExists = await pathExists(currentPath)
+
+    if (baselineExists !== currentExists) {
+      driftedFiles.push(relativePath)
+      continue
+    }
+
+    if (!baselineExists) {
+      continue
+    }
+
+    const [baselineContents, currentContents] = await Promise.all([
+      fs.readFile(baselinePath, "utf8"),
+      fs.readFile(currentPath, "utf8"),
+    ])
+
+    if (baselineContents !== currentContents) {
+      driftedFiles.push(relativePath)
+    }
+  }
+
+  if (driftedFiles.length > 0) {
+    throw new Error(
+      [
+        `Baseline dependency manifests differ from the current workspace: ${driftedFiles.join(", ")}.`,
+        "Comparison builds only reuse the current node_modules tree when package.json and pnpm-lock.yaml match exactly.",
+        "Update dependencies in the current workspace to match the baseline ref, or compare against a ref with the same dependency manifests.",
+      ].join(" "),
+    )
+  }
 
   const baselineNodeModules = path.join(baselineSrcDir, "node_modules")
   await fs.rm(baselineNodeModules, { recursive: true, force: true })
