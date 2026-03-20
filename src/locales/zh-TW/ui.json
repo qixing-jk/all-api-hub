@@ -124,7 +124,7 @@
       "remainingQuota": "剩餘額度",
       "retry": "重試",
       "title": "金鑰列表",
-      "totalKeys_other": "ui:dialog.copyKey.totalKeys",
+      "totalKeys_other": "共 {{count}} 個金鑰",
       "usedQuota": "已用額度",
       "useInCherry": "在 Cherry Studio 中使用"
     },
@@ -134,7 +134,7 @@
         "description": "將刪除 {{deleteCount}} 個帳號（共 {{groups}} 組重複）。",
         "title": "刪除重複帳號",
         "warningOrder": "自定義排序將被自動調整。",
-        "warningPinned_other": "ui:dialog.dedupeAccounts.confirm.warningPinned"
+        "warningPinned_other": "將刪除 {{count}} 個已置頂的帳號。"
       },
       "delete": "刪除",
       "deleting": "正在刪除重複帳號...",
@@ -163,7 +163,7 @@
         "hide": "收起資訊",
         "show": "更多資訊"
       },
-      "duplicateCount_other": "ui:dialog.dedupeAccounts.duplicateCount",
+      "duplicateCount_other": "{{count}} 個帳號",
       "empty": "未發現重複帳號。",
       "keep": "保留",
       "manualPickHint": "你可以在每組中手動選擇要保留的帳號（手動選擇會覆蓋保留策略）。",
@@ -241,7 +241,7 @@
         "loadingTokens": "正在載入金鑰列表…",
         "loadModelsFailed": "載入該金鑰的模型列表失敗。",
         "loadTokensFailed": "載入金鑰失敗。",
-        "modelIdRequiredDescription_other": "ui:dialog.kiloCode.messages.modelIdRequiredDescription",
+        "modelIdRequiredDescription_other": "請為所有已選擇的金鑰選擇或輸入模型 ID 後再匯出（還缺 {{count}} 個）。",
         "modelIdRequiredTitle": "需要模型 ID",
         "noModelsDescription": "該金鑰未返回可用模型。Kilo Code 實際使用通常需要模型 ID，請手動輸入。",
         "noModelsTitle": "無模型",

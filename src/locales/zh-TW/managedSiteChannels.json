@@ -115,10 +115,10 @@
   "toasts": {
     "channelDeleted": "已刪除 1 個渠道",
     "channelSaved": "渠道已儲存",
-    "channelsDeleted_other": "toasts.channelsDeleted",
+    "channelsDeleted_other": "已刪除 {{count}} 個渠道",
     "channelUpdated": "渠道已更新",
     "revealKeyFailed": "載入真實渠道 key 失敗：{{error}}",
-    "someDeletesFailed_other": "toasts.someDeletesFailed",
+    "someDeletesFailed_other": "刪除 {{count}} 個渠道失敗：{{error}}",
     "syncCompleted": "模型同步完成（{{success}}/{{total}}）",
     "syncFailed": "模型同步失敗：{{error}}"
   },

@@ -1,6 +1,6 @@
 {
   "accountSummary": {
-    "keys_other": "accountSummary.keys",
+    "keys_other": "{{count}} 個金鑰",
     "loadFailed": "載入失敗",
     "title": "帳號概覽"
   },
@@ -24,8 +24,8 @@
     "useInCherry": "在 Cherry Studio 中使用"
   },
   "allAccounts": "所有帳號",
-  "allAccountsFailed_other": "allAccountsFailed",
-  "allAccountsLoading_other": "allAccountsLoading",
+  "allAccountsFailed_other": "{{count}} 個失敗",
+  "allAccountsLoading_other": "{{count}} 個載入中",
   "allAccountsProgress": "已載入 {{loaded}}/{{total}} 個帳號",
   "createFirstKey": "建立第一個金鑰",
   "description": "此頁面顯示所有帳號的 API 金鑰資訊，包括使用情況和過期時間。可以透過右上角的\"新增金鑰\"按鈕或點擊各金鑰專案旁的\"+\"按鈕為指定帳號建立新金鑰。請妥善保管您的 API 金鑰，避免洩露給他人",
@@ -50,7 +50,7 @@
     "ipPlaceholder": "留空表示不限制，多個 IP 用逗號分隔",
     "loadDataFailed": "載入資料失敗，請稍後重試",
     "modelLimits": "模型限制",
-    "modelSelectHint_other": "dialog.modelSelectHint",
+    "modelSelectHint_other": "已選擇 {{count}} 個模型",
     "nameRequired": "金鑰名稱不能為空",
     "quotaPlaceholder": "請輸入額度金額（美元）",
     "quotaRate": "1美元 = {{rate}} 配額點數",
@@ -68,7 +68,7 @@
     "warningText": "請妥善保管 API 金鑰，避免洩露",
     "warningTitle": "注意事項"
   },
-  "enabledCount_other": "enabledCount",
+  "enabledCount_other": "啟用 {{count}} 個",
   "keyDetails": {
     "createTime": "建立時間：",
     "expireTime": "過期時間：",
@@ -131,7 +131,7 @@
       "url": {
         "matched": "URL 已命中",
         "noMatch": "URL 未找到",
-        "tooltipMatched_other": "keyManagement:managedSiteStatus.signals.url.tooltipMatched",
+        "tooltipMatched_other": "在相同規範化 URL 範圍內找到了 {{count}} 個候選渠道。示例候選：{{channelName}}。",
         "tooltipNoMatch": "在相同規範化 URL 範圍內未找到任何渠道。"
       }
     }
@@ -185,7 +185,7 @@
   },
   "searchPlaceholder": "搜尋金鑰名稱...",
   "selectAccount": "選擇帳號",
-  "showingCount_other": "showingCount",
+  "showingCount_other": "顯示 {{count}} 個",
   "title": "金鑰管理",
-  "totalKeys_other": "totalKeys"
+  "totalKeys_other": "總計 {{count}} 個金鑰"
 }
