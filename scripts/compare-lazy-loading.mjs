@@ -3,6 +3,13 @@ import { spawn } from "node:child_process"
 import fs from "node:fs/promises"
 import path from "node:path"
 
+import {
+  formatBytes,
+  getComparisonSections,
+  writeHistoryReport,
+  writeSummaryReport,
+} from "./lazy-loading-report-utils.mjs"
+
 const repoRoot = process.cwd()
 
 /**
@@ -40,26 +47,6 @@ function parseArgs(argv) {
   }
 
   return options
-}
-
-/**
- * Render a byte count into a human-readable string.
- */
-function formatBytes(value) {
-  if (!Number.isFinite(value)) {
-    return "n/a"
-  }
-
-  const units = ["B", "KB", "MB", "GB"]
-  let size = value
-  let unitIndex = 0
-
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024
-    unitIndex += 1
-  }
-
-  return `${size.toFixed(unitIndex === 0 ? 0 : 2)} ${units[unitIndex]}`
 }
 
 /**
@@ -414,21 +401,7 @@ function printComparison(summary) {
   console.log(`Output dir: ${summary.outputDir}`)
   console.log("")
 
-  const sections = [
-    ["Popup initial", summary.comparison.popup.initial],
-    ["Popup bookmarks deferred", summary.comparison.popup.bookmarksDeferred],
-    [
-      "Popup API credentials deferred",
-      summary.comparison.popup.apiCredentialProfilesDeferred,
-    ],
-    ["Options initial", summary.comparison.options.initial],
-    [
-      "Options usage analytics deferred",
-      summary.comparison.options.usageAnalyticsDeferred,
-    ],
-  ]
-
-  for (const [title, section] of sections) {
+  for (const { title, section } of getComparisonSections(summary)) {
     console.log(title)
 
     if ("countDelta" in section) {
@@ -473,8 +446,7 @@ async function main() {
   const baselineRef = await resolveBaseline(options)
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-")
   const outputDir = path.resolve(
-    options.outputDir ??
-      path.join("lazy-loading-compare-results", timestamp),
+    options.outputDir ?? path.join("lazy-loading-compare-results", timestamp),
   )
   const baselineSrcDir = path.join(outputDir, "baseline-src")
   const baselineArchivePath = path.join(outputDir, "baseline.tar")
@@ -506,7 +478,8 @@ async function main() {
     await runCommand("pnpm", ["build"])
   }
 
-  const resolvedCurrentBuildDir = await resolveBuiltExtensionDir(currentBuildDir)
+  const resolvedCurrentBuildDir =
+    await resolveBuiltExtensionDir(currentBuildDir)
 
   console.log("Running current probe...")
   const currentResolvedReportDir = await runProbe({
@@ -567,9 +540,15 @@ async function main() {
 
   const summaryPath = path.join(outputDir, "summary.json")
   await fs.writeFile(summaryPath, JSON.stringify(summary, null, 2), "utf8")
+  const summaryHtmlPath = await writeSummaryReport(summaryPath, summary)
+  const historyReport = await writeHistoryReport(path.dirname(outputDir))
 
   printComparison(summary)
   console.log(`Summary written to ${summaryPath}`)
+  console.log(`HTML report written to ${summaryHtmlPath}`)
+  console.log(
+    `History index refreshed at ${historyReport.indexPath} (${historyReport.count} report${historyReport.count === 1 ? "" : "s"})`,
+  )
 }
 
 main().catch((error) => {

@@ -34,6 +34,7 @@
     "e2e:install": "playwright install --with-deps chromium",
     "e2e": "playwright test",
     "e2e:lazy-compare": "node scripts/compare-lazy-loading.mjs",
+    "e2e:lazy-report": "node scripts/render-lazy-loading-report.mjs",
     "e2e:ui": "playwright test --ui",
     "prepare": "husky"
   },
