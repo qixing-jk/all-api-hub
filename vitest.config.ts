@@ -51,6 +51,7 @@ export default defineConfig({
       "**/dist/**",
       "**/.output/**",
       "**/e2e/**",
+      "**/lazy-loading-compare-results/**",
       "**/*.config.*",
     ],
   },
