@@ -35,9 +35,25 @@ const logger = createLogger("RedemptionAssistContent")
 /**
  * Initializes redemption assist in content scripts (event listeners, toasts, etc.).
  */
-export function setupRedemptionAssistContent() {
-  setupRedemptionAssistDetection()
-  registerContextMenuTriggerListener()
+export function setupRedemptionAssistContent(options?: {
+  enableDetection?: boolean
+  enableContextMenu?: boolean
+}) {
+  const cleanups: Array<() => void> = []
+
+  if (options?.enableDetection ?? true) {
+    cleanups.push(setupRedemptionAssistDetection())
+  }
+
+  if (options?.enableContextMenu ?? true) {
+    cleanups.push(registerContextMenuTriggerListener())
+  }
+
+  return () => {
+    for (const cleanup of cleanups) {
+      cleanup()
+    }
+  }
 }
 
 /**
@@ -123,6 +139,12 @@ function setupRedemptionAssistDetection() {
   document.addEventListener("click", handleClick, true)
   document.addEventListener("copy", handleClipboardEvent, true)
   document.addEventListener("cut", handleClipboardEvent, true)
+
+  return () => {
+    document.removeEventListener("click", handleClick, true)
+    document.removeEventListener("copy", handleClipboardEvent, true)
+    document.removeEventListener("cut", handleClipboardEvent, true)
+  }
 }
 
 /**
@@ -131,7 +153,7 @@ function setupRedemptionAssistDetection() {
  * selection to the background auto-redeem flow directly.
  */
 function registerContextMenuTriggerListener() {
-  browser.runtime.onMessage.addListener((request) => {
+  const listener = (request: any) => {
     if (request?.action !== RuntimeActionIds.RedemptionAssistContextMenuTrigger)
       return
 
@@ -144,7 +166,16 @@ function registerContextMenuTriggerListener() {
     }
 
     void handleContextMenuRedemption(selectionText, pageUrl)
-  })
+  }
+
+  browser.runtime.onMessage.addListener(listener)
+  return () => {
+    try {
+      browser.runtime.onMessage.removeListener(listener)
+    } catch (error) {
+      logger.debug("Failed to remove redemption context menu listener", error)
+    }
+  }
 }
 
 /**

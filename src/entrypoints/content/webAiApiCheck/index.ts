@@ -28,13 +28,24 @@ const SCAN_DEDUP_INTERVAL_MS = 1000
 /**
  * Initializes Web AI API Check in content scripts (context menu listener + optional auto-detect).
  */
-export function setupWebAiApiCheckContent() {
-  const cleanupDetection = setupWebAiApiCheckDetection()
-  const cleanupContextMenu = registerContextMenuTriggerListener()
+export function setupWebAiApiCheckContent(options?: {
+  enableDetection?: boolean
+  enableContextMenu?: boolean
+}) {
+  const cleanups: Array<() => void> = []
+
+  if (options?.enableDetection ?? true) {
+    cleanups.push(setupWebAiApiCheckDetection())
+  }
+
+  if (options?.enableContextMenu ?? true) {
+    cleanups.push(registerContextMenuTriggerListener())
+  }
 
   return () => {
-    cleanupDetection()
-    cleanupContextMenu()
+    for (const cleanup of cleanups) {
+      cleanup()
+    }
   }
 }
 
