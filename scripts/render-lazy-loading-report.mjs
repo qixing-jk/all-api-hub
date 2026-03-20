@@ -11,7 +11,7 @@ import {
  */
 function parseArgs(argv) {
   const options = {
-    rootDir: path.resolve("lazy-loading-compare-results"),
+    rootDir: path.resolve("diagnostics-results", "lazy-loading", "compare"),
     summary: null,
   }
 

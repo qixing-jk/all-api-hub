@@ -11,7 +11,7 @@ import {
  */
 function parseArgs(argv) {
   const options = {
-    rootDir: path.resolve("extension-memory-compare-results"),
+    rootDir: path.resolve("diagnostics-results", "memory", "compare"),
     summary: null,
   }
 

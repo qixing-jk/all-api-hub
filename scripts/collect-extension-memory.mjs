@@ -22,7 +22,9 @@ function parseArgs(argv) {
       : path.resolve(repoRoot, ".output", "chrome-mv3"),
     outputDir: path.resolve(
       repoRoot,
-      "extension-memory-diagnostics-results",
+      "diagnostics-results",
+      "memory",
+      "snapshot",
       new Date().toISOString().replace(/[:.]/g, "-"),
     ),
     targetUrl: "https://example.com/",

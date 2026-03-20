@@ -11,6 +11,7 @@
 /coverage
 /playwright-report
 /test-results
+/diagnostics-results
 /lazy-loading-compare-results
 /extension-memory-diagnostics-results
 /extension-memory-compare-results

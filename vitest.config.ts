@@ -51,6 +51,7 @@ export default defineConfig({
       "**/dist/**",
       "**/.output/**",
       "**/e2e/**",
+      "**/diagnostics-results/**",
       "**/test-results/**",
       "**/lazy-loading-compare-results/**",
       "**/extension-memory-diagnostics-results/**",

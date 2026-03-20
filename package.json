@@ -33,11 +33,7 @@
     "test:ci": "vitest --run --coverage",
     "e2e:install": "playwright install --with-deps chromium",
     "e2e": "playwright test",
-    "e2e:memory-diagnostics": "node scripts/collect-extension-memory.mjs",
-    "e2e:memory-compare": "node scripts/compare-extension-memory.mjs",
-    "e2e:memory-report": "node scripts/render-extension-memory-report.mjs",
-    "e2e:lazy-compare": "node scripts/compare-lazy-loading.mjs",
-    "e2e:lazy-report": "node scripts/render-lazy-loading-report.mjs",
+    "e2e:diagnostics": "node scripts/e2e-diagnostics.mjs",
     "e2e:ui": "playwright test --ui",
     "prepare": "husky"
   },

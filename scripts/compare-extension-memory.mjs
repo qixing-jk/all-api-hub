@@ -314,7 +314,7 @@ async function main() {
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-")
   const outputDir = path.resolve(
     options.outputDir ??
-      path.join("extension-memory-compare-results", timestamp),
+      path.join("diagnostics-results", "memory", "compare", timestamp),
   )
   const baselineSrcDir = path.join(outputDir, "baseline-src")
   const baselineArchivePath = path.join(outputDir, "baseline.tar")

@@ -287,7 +287,8 @@ async function main() {
   const baselineRef = await resolveBaseline(options)
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-")
   const outputDir = path.resolve(
-    options.outputDir ?? path.join("lazy-loading-compare-results", timestamp),
+    options.outputDir ??
+      path.join("diagnostics-results", "lazy-loading", "compare", timestamp),
   )
   const baselineSrcDir = path.join(outputDir, "baseline-src")
   const baselineArchivePath = path.join(outputDir, "baseline.tar")
