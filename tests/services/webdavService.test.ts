@@ -151,6 +151,42 @@ describe("webdavService", () => {
       expect(error.message).toBe("messages:webdav.fileNotFound")
     })
 
+    it("treats Nutstore 409 AncestorsNotFound as fileNotFound", async () => {
+      mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
+      const text = vi
+        .fn()
+        .mockResolvedValue(
+          '<?xml version="1.0"?><d:error><s:exception>AncestorsNotFound</s:exception></d:error>',
+        )
+      globalAny.fetch.mockResolvedValue({
+        status: 409,
+        text,
+      })
+
+      const error = await downloadBackup().catch((thrown) => thrown)
+
+      expect(text).toHaveBeenCalledTimes(1)
+      expect(error).toBeInstanceOf(WebdavFileNotFoundError)
+      expect(error.code).toBe(WEBDAV_FILE_NOT_FOUND_ERROR_CODE)
+      expect(error.message).toBe("messages:webdav.fileNotFound")
+    })
+
+    it("keeps unrelated 409 responses as downloadFailed", async () => {
+      mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
+      globalAny.fetch.mockResolvedValue({
+        status: 409,
+        text: vi
+          .fn()
+          .mockResolvedValue(
+            '<?xml version="1.0"?><d:error><s:exception>Conflict</s:exception></d:error>',
+          ),
+      })
+
+      await expect(downloadBackup()).rejects.toThrow(
+        "messages:webdav.downloadFailed",
+      )
+    })
+
     it("throws authFailed for 401/403", async () => {
       mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
       globalAny.fetch.mockResolvedValue({ status: 403 })

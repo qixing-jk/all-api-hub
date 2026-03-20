@@ -25,6 +25,12 @@ function buildAuthHeader(username: string, password: string) {
 const CONFIG_VERSION = "1-0"
 
 /**
+ * Jianguoyun/Nutstore returns this DAV exception inside a 409 XML payload when
+ * a requested file's parent collection has not been created yet.
+ */
+const WEBDAV_ANCESTORS_NOT_FOUND_MARKER = "AncestorsNotFound"
+
+/**
  * Program identifier used in default WebDAV backup paths.
  */
 export const PROGRAM_NAME = "all-api-hub"
@@ -159,6 +165,31 @@ async function getWebDavConfig(): Promise<WebDAVConfig> {
 }
 
 /**
+ * Detects "missing remote backup" responses across WebDAV providers.
+ *
+ * Jianguoyun/Nutstore returns `409 Conflict` with an XML body containing
+ * `AncestorsNotFound` for a first-time GET before the backup directory exists.
+ */
+async function isMissingWebdavBackupResponse(
+  response: Pick<Response, "status" | "text">,
+) {
+  if (response.status === 404) {
+    return true
+  }
+
+  if (response.status !== 409) {
+    return false
+  }
+
+  try {
+    const body = await response.text()
+    return body.includes(WEBDAV_ANCESTORS_NOT_FOUND_MARKER)
+  } catch {
+    return false
+  }
+}
+
+/**
  * Read WebDAV backup encryption settings from user preferences.
  *
  * When enabled, uploads will wrap the backup JSON in an encrypted envelope.
@@ -227,7 +258,8 @@ export async function downloadBackupRaw(custom?: Partial<WebDAVConfig>) {
   if (res.status === 200) {
     return await res.text()
   }
-  if (res.status === 404) throw new WebdavFileNotFoundError()
+  if (await isMissingWebdavBackupResponse(res))
+    throw new WebdavFileNotFoundError()
   if (res.status === 401 || res.status === 403)
     throw new Error(t("messages:webdav.authFailed"))
   throw new Error(t("messages:webdav.downloadFailed", { status: res.status }))
