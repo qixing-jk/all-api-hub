@@ -6,13 +6,13 @@ const repoRoot = process.cwd()
 
 const commandRegistry = {
   memory: {
-    snapshot: "scripts/collect-extension-memory.mjs",
-    compare: "scripts/compare-extension-memory.mjs",
-    report: "scripts/render-extension-memory-report.mjs",
+    snapshot: "scripts/diagnostics/collect-extension-memory.mjs",
+    compare: "scripts/diagnostics/compare-extension-memory.mjs",
+    report: "scripts/diagnostics/render-extension-memory-report.mjs",
   },
   lazy: {
-    compare: "scripts/compare-lazy-loading.mjs",
-    report: "scripts/render-lazy-loading-report.mjs",
+    compare: "scripts/diagnostics/compare-lazy-loading.mjs",
+    report: "scripts/diagnostics/render-lazy-loading-report.mjs",
   },
 }
 

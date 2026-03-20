@@ -143,6 +143,8 @@ async function syncProbeFilesToBaseline(baselineSrcDir) {
       "e2e/utils/extension.ts",
       "e2e/utils/lazyLoading.ts",
       "playwright.config.ts",
+      "scripts/diagnostics/compare-worktree-utils.mjs",
+      "scripts/diagnostics/lazy-loading-report-utils.mjs",
     ],
     baselineSrcDir,
   )

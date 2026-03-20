@@ -238,8 +238,8 @@ async function resolveBuiltExtensionDir(preferredDir) {
 async function syncProbeFilesToBaseline(baselineSrcDir) {
   await copyFilesToDir(
     [
-      "scripts/collect-extension-memory.mjs",
-      "scripts/extension-memory-report-utils.mjs",
+      "scripts/diagnostics/collect-extension-memory.mjs",
+      "scripts/diagnostics/extension-memory-report-utils.mjs",
     ],
     baselineSrcDir,
   )
@@ -252,7 +252,7 @@ async function runProbe({ cwd, outputDir, extensionDir = null, targetUrl }) {
   await ensureCleanDir(outputDir)
 
   const args = [
-    "scripts/collect-extension-memory.mjs",
+    "scripts/diagnostics/collect-extension-memory.mjs",
     `--output-dir=${outputDir}`,
     `--web-url=${targetUrl}`,
   ]
