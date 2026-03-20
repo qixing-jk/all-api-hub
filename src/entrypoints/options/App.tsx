@@ -1,6 +1,8 @@
 import { Suspense, useState } from "react"
+import { useTranslation } from "react-i18next"
 
 import { AppLayout } from "~/components/AppLayout"
+import { Spinner } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 
 import Header from "./components/Header"
@@ -17,9 +19,11 @@ import BasicSettings from "./pages/BasicSettings"
  * Localized fallback used while a lazily loaded options page chunk is being fetched.
  */
 function OptionsPageContentFallback() {
+  const { t } = useTranslation("common")
+
   return (
-    <div className="dark:text-dark-text-tertiary flex min-h-[400px] items-center justify-center text-sm text-gray-500 md:min-h-[600px]">
-      Loading...
+    <div className="flex min-h-[400px] items-center justify-center md:min-h-[600px]">
+      <Spinner size="lg" aria-label={t("status.loading")} />
     </div>
   )
 }
@@ -48,7 +52,10 @@ function OptionsPage() {
   }
 
   return (
-    <div className="dark:bg-dark-bg-primary flex min-h-screen flex-col bg-gray-50">
+    <div
+      className="dark:bg-dark-bg-primary flex min-h-screen flex-col bg-gray-50"
+      data-testid="options-app"
+    >
       <Header
         onTitleClick={handleTitleClick}
         onMenuToggle={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}

@@ -2,6 +2,8 @@ import fs from "node:fs/promises"
 import path from "node:path"
 import type { Page, TestInfo } from "@playwright/test"
 
+import { OPTIONS_PAGE_PATH, POPUP_PAGE_PATH } from "~/constants/extensionPages"
+
 export interface ExtensionMemorySnapshot {
   usedJSHeapSize: number
   totalJSHeapSize: number
@@ -30,6 +32,46 @@ export interface ExtensionRequestTracker {
   getResources: () => string[]
 }
 
+interface ProbeSettleOptions {
+  expectedHash?: string
+  expectedSelector?: string
+}
+
+const APP_SHELL_SELECTOR_BY_PAGE_PATH: Record<string, string> = {
+  [OPTIONS_PAGE_PATH]: '[data-testid="options-app"]',
+  [POPUP_PAGE_PATH]: '[data-testid="popup-view-accounts"]',
+}
+const PROBE_POLL_INTERVAL_MS = 50
+
+/**
+ * Resolve the stable app-shell selector for the current extension page.
+ */
+function resolveAppShellSelector(page: Page) {
+  const pathname = new URL(page.url()).pathname.replace(/^\//, "")
+  return APP_SHELL_SELECTOR_BY_PAGE_PATH[pathname] ?? "#root > *"
+}
+
+/**
+ * Count extension-origin resource timing entries currently visible from the page context.
+ */
+async function getTrackedResourceCountFromPage(page: Page) {
+  return await page.evaluate(() => {
+    const extensionOrigin = window.location.origin
+
+    return performance.getEntriesByType("resource").filter((entry) => {
+      if (!entry.name) {
+        return false
+      }
+
+      try {
+        return new URL(entry.name, extensionOrigin).origin === extensionOrigin
+      } catch {
+        return false
+      }
+    }).length
+  })
+}
+
 /**
  * Returns whether the lazy-loading probe should enforce strict assertions.
  */
@@ -38,18 +80,50 @@ export function shouldAssertLazyLoading(): boolean {
 }
 
 /**
- * Wait until the extension root has mounted its first visible child.
+ * Wait until the extension page renders its stable app shell instead of the outer Suspense fallback.
  */
 export async function waitForExtensionRoot(page: Page) {
-  await page.waitForSelector("#root > *", { timeout: 30_000 })
+  await page.waitForSelector(resolveAppShellSelector(page), { timeout: 30_000 })
   await page.waitForTimeout(300)
 }
 
 /**
- * Give the extension page a short window to settle after a view switch in non-strict probe mode.
+ * Give the extension page a bounded window to settle after a view switch in non-strict probe mode.
  */
-export async function waitForProbeSettle(page: Page, delayMs = 500) {
-  await page.waitForTimeout(delayMs)
+export async function waitForProbeSettle(
+  page: Page,
+  delayMs = 500,
+  options: ProbeSettleOptions = {},
+) {
+  const initialTrackedResourceCount =
+    await getTrackedResourceCountFromPage(page)
+  const deadline = Date.now() + delayMs
+
+  while (Date.now() < deadline) {
+    const trackedResourceCount = await getTrackedResourceCountFromPage(page)
+    if (trackedResourceCount > initialTrackedResourceCount) {
+      return
+    }
+
+    if (
+      options.expectedSelector &&
+      (await page.locator(options.expectedSelector).count()) > 0
+    ) {
+      return
+    }
+
+    if (
+      options.expectedHash &&
+      (await page.evaluate(
+        (expectedHash) => window.location.hash === expectedHash,
+        options.expectedHash,
+      ))
+    ) {
+      return
+    }
+
+    await page.waitForTimeout(PROBE_POLL_INTERVAL_MS)
+  }
 }
 
 /**

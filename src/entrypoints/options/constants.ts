@@ -30,12 +30,7 @@ import BasicSettings from "./pages/BasicSettings"
 function createLazyMenuComponent(
   loader: () => Promise<{ default: ComponentType<any> }>,
 ): ComponentType<any> {
-  const LazyPage = lazy(loader)
-
-  const LazyMenuComponent: ComponentType<any> = (props) =>
-    createElement(LazyPage, props)
-
-  return LazyMenuComponent
+  return lazy(loader) as ComponentType<any>
 }
 
 const About = createLazyMenuComponent(() => import("./pages/About"))

@@ -355,16 +355,18 @@ export default function BookmarksList({
 
   if (resolvedBookmarks.length === 0) {
     return (
-      <EmptyState
-        icon={<InboxIcon className="h-12 w-12" />}
-        title={t("bookmark:emptyState")}
-        action={{
-          label: t("bookmark:addFirstBookmark"),
-          onClick: openAddBookmark,
-          variant: "default",
-          icon: <PlusIcon className="h-4 w-4" />,
-        }}
-      />
+      <div data-testid="bookmarks-list-view">
+        <EmptyState
+          icon={<InboxIcon className="h-12 w-12" />}
+          title={t("bookmark:emptyState")}
+          action={{
+            label: t("bookmark:addFirstBookmark"),
+            onClick: openAddBookmark,
+            variant: "default",
+            icon: <PlusIcon className="h-4 w-4" />,
+          }}
+        />
+      </div>
     )
   }
 
@@ -389,7 +391,7 @@ export default function BookmarksList({
   )
 
   return (
-    <>
+    <div data-testid="bookmarks-list-view">
       <Card>
         <CardContent padding={"none"} spacing={"none"}>
           <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-primary border-b border-gray-200 bg-white px-3 py-2 sm:px-5 sm:py-3">
@@ -443,6 +445,6 @@ export default function BookmarksList({
           void handleConfirmDelete()
         }}
       />
-    </>
+    </div>
   )
 }

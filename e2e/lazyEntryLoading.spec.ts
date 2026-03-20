@@ -64,13 +64,20 @@ test("popup defers non-default tab chunks until users select them", async ({
       ).toBeFalsy()
     }
 
-    const popupTabs = page.getByRole("tab")
+    const bookmarksTab = page.getByRole("tab", {
+      name: /^(Bookmarks|书签)$/,
+    })
+    const apiCredentialProfilesTab = page.getByRole("tab", {
+      name: /^(API Credentials|API 凭证)$/,
+    })
 
-    await popupTabs.nth(1).click()
+    await bookmarksTab.click()
     if (strictMode) {
       await waitForTrackedResourceCountIncrease(tracker, initial.resourceCount)
     } else {
-      await waitForProbeSettle(page)
+      await waitForProbeSettle(page, 500, {
+        expectedSelector: '[data-testid="bookmarks-list-view"]',
+      })
     }
 
     const afterBookmarks = await captureExtensionResourceSnapshot(
@@ -96,14 +103,16 @@ test("popup defers non-default tab chunks until users select them", async ({
       ).toBeTruthy()
     }
 
-    await popupTabs.nth(2).click()
+    await apiCredentialProfilesTab.click()
     if (strictMode) {
       await waitForTrackedResourceCountIncrease(
         tracker,
         afterBookmarks.resourceCount,
       )
     } else {
-      await waitForProbeSettle(page)
+      await waitForProbeSettle(page, 500, {
+        expectedSelector: '[data-testid="api-credential-profiles-popup-view"]',
+      })
     }
 
     const afterApiCredentialProfiles = await captureExtensionResourceSnapshot(
@@ -169,7 +178,9 @@ test("options defers heavy page chunks until hash navigation loads them", async 
     if (strictMode) {
       await waitForTrackedResourceCountIncrease(tracker, initial.resourceCount)
     } else {
-      await waitForProbeSettle(page)
+      await waitForProbeSettle(page, 500, {
+        expectedSelector: '[data-testid="usage-analytics-page"]',
+      })
     }
 
     const afterUsageAnalytics = await captureExtensionResourceSnapshot(

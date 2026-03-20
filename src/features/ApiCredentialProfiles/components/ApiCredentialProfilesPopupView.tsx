@@ -26,7 +26,10 @@ const ApiCredentialProfilesPopupView = forwardRef<
   )
 
   return (
-    <div className="space-y-4 p-3 sm:p-4">
+    <div
+      className="space-y-4 p-3 sm:p-4"
+      data-testid="api-credential-profiles-popup-view"
+    >
       <ApiCredentialProfilesListView
         controller={controller}
         variant="popup"
