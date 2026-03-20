@@ -10,7 +10,8 @@ const repoRoot = process.cwd()
  */
 function parseArgs(argv) {
   const options = {
-    baseline: "HEAD",
+    baseline: null,
+    baselineExplicit: false,
     outputDir: null,
     skipCurrentBuild: false,
     skipBaselineBuild: false,
@@ -19,6 +20,7 @@ function parseArgs(argv) {
   for (const arg of argv) {
     if (arg.startsWith("--baseline=")) {
       options.baseline = arg.slice("--baseline=".length) || "HEAD"
+      options.baselineExplicit = true
       continue
     }
 
@@ -164,6 +166,43 @@ async function runCommand(command, args, options = {}) {
 }
 
 /**
+ * Spawn a child process and capture stdout/stderr for decision-making.
+ */
+async function runCommandCapture(command, args, options = {}) {
+  return await new Promise((resolve, reject) => {
+    const child = spawn(command, args, {
+      cwd: options.cwd ?? repoRoot,
+      env: { ...process.env, ...(options.env ?? {}) },
+      stdio: ["ignore", "pipe", "pipe"],
+      shell: process.platform === "win32",
+    })
+
+    let stdout = ""
+    let stderr = ""
+
+    child.stdout?.on("data", (chunk) => {
+      stdout += String(chunk)
+    })
+    child.stderr?.on("data", (chunk) => {
+      stderr += String(chunk)
+    })
+
+    child.on("error", reject)
+    child.on("exit", (code) => {
+      if (code === 0) {
+        resolve({ stdout, stderr, code })
+        return
+      }
+      reject(
+        new Error(
+          `Command failed (${code ?? "unknown"}): ${command} ${args.join(" ")}\n${stderr || stdout}`,
+        ),
+      )
+    })
+  })
+}
+
+/**
  * Recreate a directory from scratch.
  */
 async function ensureCleanDir(dir) {
@@ -181,6 +220,57 @@ async function pathExists(targetPath) {
   } catch {
     return false
   }
+}
+
+/**
+ * Returns whether the current worktree has no tracked or untracked changes.
+ */
+async function isWorktreeClean() {
+  const result = await runCommandCapture("git", ["status", "--porcelain"])
+  return result.stdout.trim() === ""
+}
+
+/**
+ * Returns whether a git ref can be resolved locally.
+ */
+async function gitRefExists(ref) {
+  try {
+    await runCommandCapture("git", ["rev-parse", "--verify", ref])
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Pick a baseline when the caller did not pass one explicitly.
+ */
+async function resolveBaseline(options) {
+  if (options.baselineExplicit && options.baseline) {
+    console.log(`Using explicit baseline ref '${options.baseline}'.`)
+    return options.baseline
+  }
+
+  const cleanWorktree = await isWorktreeClean()
+
+  if (cleanWorktree && (await gitRefExists("origin/main"))) {
+    console.log(
+      "No --baseline specified. Worktree is clean and 'origin/main' exists, so using 'origin/main'.",
+    )
+    return "origin/main"
+  }
+
+  if (cleanWorktree && (await gitRefExists("main"))) {
+    console.log(
+      "No --baseline specified. Worktree is clean and 'origin/main' is unavailable, so using 'main'.",
+    )
+    return "main"
+  }
+
+  console.log(
+    "No --baseline specified. Falling back to 'HEAD' for local self-comparison because the worktree is dirty or no mainline ref is available.",
+  )
+  return "HEAD"
 }
 
 /**
@@ -380,6 +470,7 @@ function printComparison(summary) {
  */
 async function main() {
   const options = parseArgs(process.argv.slice(2))
+  const baselineRef = await resolveBaseline(options)
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-")
   const outputDir = path.resolve(
     options.outputDir ??
@@ -393,14 +484,14 @@ async function main() {
 
   await ensureCleanDir(outputDir)
   await materializeBaselineSource({
-    baselineRef: options.baseline,
+    baselineRef,
     baselineSrcDir,
     tarPath: baselineArchivePath,
   })
   await syncProbeFilesToBaseline(baselineSrcDir)
 
   if (!options.skipBaselineBuild) {
-    console.log(`Building baseline ref '${options.baseline}'...`)
+    console.log(`Building baseline ref '${baselineRef}'...`)
     await runCommand("pnpm", ["build"], { cwd: baselineSrcDir })
   }
 
@@ -439,7 +530,7 @@ async function main() {
 
   const summary = {
     generatedAt: new Date().toISOString(),
-    baselineRef: options.baseline,
+    baselineRef,
     outputDir,
     baseline: {
       popup: baselinePopup,
