@@ -253,6 +253,9 @@ export default function BasicSettings() {
   const [selectedTabIndex, setSelectedTabIndex] = useState(0)
   const selectedTab = TAB_CONFIGS[selectedTabIndex]
   const selectedTabId = selectedTab?.id ?? "general"
+  const [mountedTabIds, setMountedTabIds] = useState<TabId[]>([
+    TAB_CONFIGS[0]?.id ?? "general",
+  ])
   const [showPermissionsOnboarding, setShowPermissionsOnboarding] =
     useState(false)
   const [permissionsOnboardingReason, setPermissionsOnboardingReason] =
@@ -312,6 +315,14 @@ export default function BasicSettings() {
       setShowPermissionsOnboarding(true)
     }
   }, [])
+
+  useEffect(() => {
+    setMountedTabIds((previous) =>
+      previous.includes(selectedTabId)
+        ? previous
+        : [...previous, selectedTabId],
+    )
+  }, [selectedTabId])
 
   const handleCloseOnboarding = useCallback(() => {
     setShowPermissionsOnboarding(false)
@@ -380,7 +391,7 @@ export default function BasicSettings() {
             const Component = config.component
             return (
               <Tab.Panel key={config.id} unmount={false}>
-                <Component />
+                {mountedTabIds.includes(config.id) ? <Component /> : null}
               </Tab.Panel>
             )
           })}
