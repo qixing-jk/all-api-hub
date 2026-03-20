@@ -1,199 +1,199 @@
 {
   "accountOperations": {
-    "autoProvisionAlreadyHad": "{{accountName}} already has an API key. Skipped auto-creation.",
-    "autoProvisionCreated": "Created a default API key for {{accountName}}.",
-    "autoProvisionFailed": "Account saved, but failed to auto-create an API key. You can use “{{actionLabel}}” in Key Management to retry.",
-    "checkingApiKeys": "Checking API key...",
-    "createTokenFailed": "Failed to create API token",
-    "importingToDoneHub": "Importing to Done Hub...",
-    "importingToNewApi": "Importing to New API...",
-    "importingToOctopus": "Importing to Octopus...",
-    "importingToVeloera": "Importing to Veloera...",
-    "retrying": "An error occurred, attempting retry #{{attempt}}",
-    "tokenNotFound": "Failed to create or find an API token"
+    "autoProvisionAlreadyHad": "{{accountName}} にはすでに API キーがあります。自動作成をスキップしました。",
+    "autoProvisionCreated": "{{accountName}} 用の既定 API キーを作成しました。",
+    "autoProvisionFailed": "アカウントは保存されましたが、API キーの自動作成に失敗しました。キー管理の「{{actionLabel}}」から再試行できます。",
+    "checkingApiKeys": "API キーを確認中...",
+    "createTokenFailed": "API トークンの作成に失敗しました",
+    "importingToDoneHub": "Done Hub にインポート中...",
+    "importingToNewApi": "New API にインポート中...",
+    "importingToOctopus": "Octopus にインポート中...",
+    "importingToVeloera": "Veloera にインポート中...",
+    "retrying": "エラーが発生したため、再試行 #{{attempt}} を行います",
+    "tokenNotFound": "API トークンの作成または検索に失敗しました"
   },
   "autodetect": {
-    "failed": "Auto-detection failed: {{error}}",
-    "forbidden": "Access denied. Please confirm whether the website firewall is blocking the request",
-    "loginThisSite": "Login to this site",
-    "networkError": "Network connection failed, please check your network connection and try again",
-    "notFound": "Resource not found. Please confirm whether the site address entered is correct",
-    "notLoggedIn": "You are not logged in to the current site, or the login information has expired. Cannot auto-add. Please check the help documentation or click to login first",
-    "serverError": "Server error. Please try again later",
-    "timeout": "Auto-detection timeout, please try adding manually",
-    "unexpectedData": "Auto-detection failed, site returned unexpected data. Please enter information manually or ensure you are logged in to the target site"
+    "failed": "自動検出に失敗しました: {{error}}",
+    "forbidden": "アクセスが拒否されました。サイトのファイアウォールがリクエストを遮断していないか確認してください",
+    "loginThisSite": "このサイトにログイン",
+    "networkError": "ネットワーク接続に失敗しました。接続状況を確認して再試行してください",
+    "notFound": "リソースが見つかりません。入力したサイトアドレスが正しいか確認してください",
+    "notLoggedIn": "現在のサイトにログインしていないか、ログイン情報の有効期限が切れています。自動追加できません。ヘルプドキュメントを確認するか、先にログインしてください",
+    "serverError": "サーバーエラーです。しばらくしてからもう一度お試しください",
+    "timeout": "自動検出がタイムアウトしました。手動追加をお試しください",
+    "unexpectedData": "自動検出に失敗しました。サイトが予期しないデータを返しました。情報を手動入力するか、対象サイトにログインしていることを確認してください"
   },
   "background": {
-    "cannotCreateWindow": "Unable to create window",
-    "cannotCreateWindowOrTab": "Unable to create window or get tab",
-    "incognitoAccessRequired": "Incognito access is required to use a private temporary window. Please enable \"Allow in incognito\" for this extension and retry.",
-    "invalidFetchRequest": "Invalid fetch request",
-    "pageLoadTimeout": "Page load timeout",
-    "windowNotFound": "Window or tab not found"
+    "cannotCreateWindow": "ウィンドウを作成できません",
+    "cannotCreateWindowOrTab": "ウィンドウを作成できないか、タブを取得できません",
+    "incognitoAccessRequired": "プライベート一時ウィンドウを使うにはシークレットモード権限が必要です。この拡張機能で「シークレットモードでの実行を許可」を有効にして再試行してください。",
+    "invalidFetchRequest": "無効な fetch リクエストです",
+    "pageLoadTimeout": "ページ読み込みがタイムアウトしました",
+    "windowNotFound": "ウィンドウまたはタブが見つかりません"
   },
   "ccswitch": {
-    "attemptingRedirect": "Attempting to redirect to CC Switch",
-    "invalidApp": "Unsupported CC Switch target app",
-    "invalidEndpoint": "Invalid or missing API endpoint",
-    "invalidHomepage": "Invalid or missing homepage URL",
-    "missingCredentials": "Missing required account or key information",
-    "unableToOpen": "Unable to open CC Switch, please ensure it is installed"
+    "attemptingRedirect": "CC Switch へリダイレクトを試行中",
+    "invalidApp": "未対応の CC Switch 対象アプリです",
+    "invalidEndpoint": "API エンドポイントが無効、または不足しています",
+    "invalidHomepage": "ホームページ URL が無効、または不足しています",
+    "missingCredentials": "必要なアカウント情報またはキー情報が不足しています",
+    "unableToOpen": "CC Switch を開けません。インストールされているか確認してください"
   },
   "cherryStudio": {
-    "attemptingRedirect": "Attempting to redirect to Cherry Studio",
-    "missingCredentials": "Missing required account or key information",
-    "unableToOpen": "Unable to open, please ensure Cherry Studio is installed"
+    "attemptingRedirect": "Cherry Studio へリダイレクトを試行中",
+    "missingCredentials": "必要なアカウント情報またはキー情報が不足しています",
+    "unableToOpen": "開けません。Cherry Studio がインストールされているか確認してください"
   },
   "claudeCodeRouter": {
-    "configMissing": "Please configure Claude Code Router base URL in settings first",
-    "importFailed": "Failed to import provider to Claude Code Router",
-    "importSuccess": "Successfully imported provider {{name}} to Claude Code Router",
-    "modelsMissing": "Please provide at least one model",
-    "updateSuccess": "Successfully updated Claude Code Router provider {{name}}"
+    "configMissing": "先に設定で Claude Code Router の Base URL を設定してください",
+    "importFailed": "Claude Code Router へのプロバイダーインポートに失敗しました",
+    "importSuccess": "プロバイダー {{name}} を Claude Code Router に正常にインポートしました",
+    "modelsMissing": "少なくとも 1 つのモデルを指定してください",
+    "updateSuccess": "Claude Code Router のプロバイダー {{name}} を正常に更新しました"
   },
   "cliproxy": {
-    "configMissing": "Please configure CLIProxyAPI Management API base URL and key in settings first",
-    "importFailed": "Failed to import provider to CLIProxyAPI",
-    "importSuccess": "Successfully imported provider {{name}} to CLIProxyAPI",
-    "updateSuccess": "Successfully updated CLIProxy provider {{name}}"
+    "configMissing": "先に設定で CLIProxyAPI Management API の Base URL とキーを設定してください",
+    "importFailed": "CLIProxyAPI へのプロバイダーインポートに失敗しました",
+    "importSuccess": "プロバイダー {{name}} を CLIProxyAPI に正常にインポートしました",
+    "updateSuccess": "CLIProxy プロバイダー {{name}} を正常に更新しました"
   },
   "content": {
-    "userInfoNotFound": "User information not found, please ensure you are logged in",
-    "waitUserInfoTimeout": "Waiting for user information timeout, please ensure you are logged in"
+    "userInfoNotFound": "ユーザー情報が見つかりません。ログイン済みか確認してください",
+    "waitUserInfoTimeout": "ユーザー情報待機がタイムアウトしました。ログイン済みか確認してください"
   },
   "donehub": {
-    "channelExists": "Channel {{channelName}} already exists, no need to import again",
-    "configMissing": "Please configure Done Hub address, admin token, and user ID in basic settings first",
-    "importFailed": "Import failed, an unknown error occurred",
-    "importSuccess": "Successfully imported new channel {{channelName}}",
-    "noAnyModels": "No models available",
-    "noChannelsToSync": "No channels to sync"
+    "channelExists": "チャネル {{channelName}} はすでに存在するため、再インポートは不要です",
+    "configMissing": "先に基本設定で Done Hub のアドレス、管理者トークン、ユーザー ID を設定してください",
+    "importFailed": "インポートに失敗しました。不明なエラーが発生しました",
+    "importSuccess": "新しいチャネル {{channelName}} を正常にインポートしました",
+    "noAnyModels": "利用可能なモデルがありません",
+    "noChannelsToSync": "同期するチャネルがありません"
   },
   "errors": {
     "api": {
-      "invalidResponseFormat": "Invalid response format",
-      "onlyJsonSupported": "Only JSON responses are supported"
+      "invalidResponseFormat": "無効な応答形式です",
+      "onlyJsonSupported": "JSON 応答のみサポートしています"
     },
     "operation": {
-      "failed": "Operation failed: {{error}}",
-      "saveFailed": "Save failed: {{error}}"
+      "failed": "操作に失敗しました: {{error}}",
+      "saveFailed": "保存に失敗しました: {{error}}"
     },
-    "unknown": "Unknown error",
+    "unknown": "不明なエラー",
     "validation": {
-      "bookmarkNameRequired": "Bookmark name cannot be empty",
-      "bookmarkUrlRequired": "Bookmark URL cannot be empty",
-      "doneHubAdminTokenRequired": "Done Hub admin token not configured",
-      "doneHubBaseUrlRequired": "Done Hub base URL not configured",
-      "doneHubUserIdRequired": "Done Hub user ID not configured",
-      "incompleteAccountInfo": "Please fill in all account information",
-      "newApiAdminTokenRequired": "New API admin token not configured",
-      "newApiBaseUrlRequired": "New API base URL not configured",
-      "newApiUserIdRequired": "New API user ID not configured",
-      "updateAccountFailed": "Failed to update account {{error}}",
-      "urlRequired": "Site URL cannot be empty",
-      "userIdNumeric": "User ID must be a number",
-      "veloeraAdminTokenRequired": "Veloera admin token not configured",
-      "veloeraBaseUrlRequired": "Veloera base URL not configured",
-      "veloeraUserIdRequired": "Veloera user ID not configured"
+      "bookmarkNameRequired": "ブックマーク名は空にできません",
+      "bookmarkUrlRequired": "ブックマーク URL は空にできません",
+      "doneHubAdminTokenRequired": "Done Hub 管理者トークンが設定されていません",
+      "doneHubBaseUrlRequired": "Done Hub Base URL が設定されていません",
+      "doneHubUserIdRequired": "Done Hub ユーザー ID が設定されていません",
+      "incompleteAccountInfo": "アカウント情報をすべて入力してください",
+      "newApiAdminTokenRequired": "New API 管理者トークンが設定されていません",
+      "newApiBaseUrlRequired": "New API Base URL が設定されていません",
+      "newApiUserIdRequired": "New API ユーザー ID が設定されていません",
+      "updateAccountFailed": "アカウントの更新に失敗しました {{error}}",
+      "urlRequired": "サイト URL は空にできません",
+      "userIdNumeric": "ユーザー ID は数値である必要があります",
+      "veloeraAdminTokenRequired": "Veloera 管理者トークンが設定されていません",
+      "veloeraBaseUrlRequired": "Veloera Base URL が設定されていません",
+      "veloeraUserIdRequired": "Veloera ユーザー ID が設定されていません"
     }
   },
   "newapi": {
-    "channelExists": "Channel {{channelName}} already exists, no need to import again",
-    "channelMatchUnresolved": "A potential duplicate channel exists, but confirming it requires a New API verification step. Complete verification first, then retry the import.",
-    "configMissing": "Please configure New API address, admin token, and user ID in basic settings first",
-    "importFailed": "Import failed, an unknown error occurred",
-    "importSuccess": "Successfully imported new channel {{channelName}}",
-    "noAnyModels": "No models available",
-    "noChannelsToSync": "No channels to sync"
+    "channelExists": "チャネル {{channelName}} はすでに存在するため、再インポートは不要です",
+    "channelMatchUnresolved": "重複の可能性があるチャネルが存在しますが、確認には New API の検証手順が必要です。先に検証を完了してから再度インポートしてください。",
+    "configMissing": "先に基本設定で New API のアドレス、管理者トークン、ユーザー ID を設定してください",
+    "importFailed": "インポートに失敗しました。不明なエラーが発生しました",
+    "importSuccess": "新しいチャネル {{channelName}} を正常にインポートしました",
+    "noAnyModels": "利用可能なモデルがありません",
+    "noChannelsToSync": "同期するチャネルがありません"
   },
   "octopus": {
-    "channelExists": "Channel {{channelName}} already exists, no need to import again",
-    "configMissing": "Please configure Octopus address, username, and password in basic settings first",
-    "corsError": "This may be caused by CORS configuration. Please check the CORS whitelist setting in Octopus settings.",
-    "importFailed": "Import failed, an unknown error occurred",
-    "importSuccess": "Successfully imported new channel {{channelName}}",
-    "noAnyModels": "No models available",
-    "noChannelsToSync": "No channels to sync"
+    "channelExists": "チャネル {{channelName}} はすでに存在するため、再インポートは不要です",
+    "configMissing": "先に基本設定で Octopus のアドレス、ユーザー名、パスワードを設定してください",
+    "corsError": "これは CORS 設定が原因の可能性があります。Octopus 設定の CORS ホワイトリストを確認してください。",
+    "importFailed": "インポートに失敗しました。不明なエラーが発生しました",
+    "importSuccess": "新しいチャネル {{channelName}} を正常にインポートしました",
+    "noAnyModels": "利用可能なモデルがありません",
+    "noChannelsToSync": "同期するチャネルがありません"
   },
   "operations": {
     "detection": {
-      "failed": "Auto-detection failed, please enter information manually or ensure you are logged in to the target site",
-      "getInfoFailed": "Failure to get username or access token",
-      "getUserIdFailed": "Could not get user ID"
+      "failed": "自動検出に失敗しました。情報を手動入力するか、対象サイトにログインしていることを確認してください",
+      "getInfoFailed": "ユーザー名または Access Token の取得に失敗しました",
+      "getUserIdFailed": "ユーザー ID を取得できませんでした"
     }
   },
   "storage": {
-    "accountDisabled": "Account {{id}} is disabled",
-    "accountNotFound": "Account {{id}} does not exist",
-    "updateFailed": "Failed to update account"
+    "accountDisabled": "アカウント {{id}} は無効です",
+    "accountNotFound": "アカウント {{id}} は存在しません",
+    "updateFailed": "アカウントの更新に失敗しました"
   },
   "sub2api": {
-    "groupMissing": "Sub2API group '{{group}}' is no longer available. Refresh the group list and try again.",
-    "loginRequired": "Please log in to the Sub2API dashboard first (so the extension can read auth_token/auth_user from localStorage) and try again.",
-    "refreshTokenInvalid": "Sub2API refresh token is invalid/rotated. Re-import the session from the dashboard (recommended: incognito/private window) or paste an updated refresh_token, then try again."
+    "groupMissing": "Sub2API グループ '{{group}}' は現在利用できません。グループ一覧を更新して再試行してください。",
+    "loginRequired": "先に Sub2API ダッシュボードへログインして（拡張機能が localStorage から auth_token / auth_user を読めるようにして）、再試行してください。",
+    "refreshTokenInvalid": "Sub2API の Refresh Token が無効または更新済みです。ダッシュボードからセッションを再取り込み（推奨: シークレット / プライベートウィンドウ）するか、新しい refresh_token を貼り付けて再試行してください。"
   },
   "toast": {
     "error": {
-      "copyFailed": "Copy failed",
-      "duplicateCleanupFailed": "Failed to delete duplicate accounts: {{error}}",
-      "externalCheckInNonePending": "There are no external check-in stations that haven't been opened today.",
-      "findAccountDetailsFailed": "Could not find account details",
-      "operationFailed": "Operation failed: {{error}}",
-      "refreshAccount": "Failed to refresh {{accountName}}",
-      "saveFailed": "Save failed",
-      "shareSnapshotAccountDisabled": "This account is disabled",
-      "shareSnapshotNoEnabledAccounts": "No enabled accounts to share"
+      "copyFailed": "コピーに失敗しました",
+      "duplicateCleanupFailed": "重複アカウントの削除に失敗しました: {{error}}",
+      "externalCheckInNonePending": "本日まだ開いていない外部チェックイン先はありません。",
+      "findAccountDetailsFailed": "アカウント詳細が見つかりませんでした",
+      "operationFailed": "操作に失敗しました: {{error}}",
+      "refreshAccount": "{{accountName}} の更新に失敗しました",
+      "saveFailed": "保存に失敗しました",
+      "shareSnapshotAccountDisabled": "このアカウントは無効です",
+      "shareSnapshotNoEnabledAccounts": "共有可能な有効アカウントがありません"
     },
     "loading": {
-      "refreshingAccount": "Refreshing {{accountName}}..."
+      "refreshingAccount": "{{accountName}} を更新中..."
     },
     "success": {
-      "accountDisabled": "{{accountName}} disabled",
-      "accountEnabled": "{{accountName}} enabled",
-      "accountPinned": "{{accountName}} pinned",
-      "accountSaveSuccess": "Account saved successfully",
-      "accountUnpinned": "{{accountName}} unpinned",
-      "accountUpdateSuccess": "Account updated successfully",
-      "bookmarkAdded": "Bookmark {{name}} added successfully!",
-      "bookmarkDeleted": "Bookmark {{name}} deleted",
-      "bookmarkPinned": "{{name}} pinned",
-      "bookmarkUnpinned": "{{name}} unpinned",
-      "bookmarkUpdated": "Bookmark {{name}} updated successfully!",
-      "bookmarkUrlCopied": "{{name}} URL copied to clipboard",
-      "duplicateCleanupSuccess_other": "Deleted {{count}} accounts from {{groups}} duplicate set(s).",
-      "externalCheckInModeAll": "all",
-      "externalCheckInModeUnchecked": "unchecked only",
-      "externalCheckInOpened_other": "Opened external check-ins for {{count}} accounts ({{mode}}).",
-      "refreshAccount": "{{accountName}} refreshed successfully!",
-      "refreshSkipped": "Refresh interval not reached, skipped",
-      "shareSnapshotCaptionCopied": "Caption copied",
-      "shareSnapshotCopied": "Snapshot copied to clipboard",
-      "shareSnapshotDownloaded": "Snapshot downloaded",
-      "urlCopied": "{{accountName}} URL copied to clipboard"
+      "accountDisabled": "{{accountName}} を無効化しました",
+      "accountEnabled": "{{accountName}} を有効化しました",
+      "accountPinned": "{{accountName}} をピン留めしました",
+      "accountSaveSuccess": "アカウントを正常に保存しました",
+      "accountUnpinned": "{{accountName}} のピン留めを解除しました",
+      "accountUpdateSuccess": "アカウントを正常に更新しました",
+      "bookmarkAdded": "ブックマーク {{name}} を正常に追加しました",
+      "bookmarkDeleted": "ブックマーク {{name}} を削除しました",
+      "bookmarkPinned": "{{name}} をピン留めしました",
+      "bookmarkUnpinned": "{{name}} のピン留めを解除しました",
+      "bookmarkUpdated": "ブックマーク {{name}} を正常に更新しました",
+      "bookmarkUrlCopied": "{{name}} の URL をクリップボードにコピーしました",
+      "duplicateCleanupSuccess_other": "{{groups}} 組の重複セットから {{count}} 件のアカウントを削除しました。",
+      "externalCheckInModeAll": "すべて",
+      "externalCheckInModeUnchecked": "未開封のみ",
+      "externalCheckInOpened_other": "{{count}} 件のアカウントで外部チェックインを開きました（{{mode}}）。",
+      "refreshAccount": "{{accountName}} を正常に更新しました",
+      "refreshSkipped": "更新間隔に達していないためスキップしました",
+      "shareSnapshotCaptionCopied": "キャプションをコピーしました",
+      "shareSnapshotCopied": "スナップショットをクリップボードにコピーしました",
+      "shareSnapshotDownloaded": "スナップショットをダウンロードしました",
+      "urlCopied": "{{accountName}} の URL をクリップボードにコピーしました"
     }
   },
   "veloera": {
-    "channelExists": "Channel {{channelName}} already exists, no need to import again",
-    "configMissing": "Please configure Veloera address, admin token, and user ID in basic settings first",
-    "importFailed": "Import failed, an unknown error occurred",
-    "importSuccess": "Successfully imported new channel {{channelName}}",
-    "noAnyModels": "No models available",
-    "noChannelsToSync": "No channels to sync"
+    "channelExists": "チャネル {{channelName}} はすでに存在するため、再インポートは不要です",
+    "configMissing": "先に基本設定で Veloera のアドレス、管理者トークン、ユーザー ID を設定してください",
+    "importFailed": "インポートに失敗しました。不明なエラーが発生しました",
+    "importSuccess": "新しいチャネル {{channelName}} を正常にインポートしました",
+    "noAnyModels": "利用可能なモデルがありません",
+    "noChannelsToSync": "同期するチャネルがありません"
   },
   "warnings": {
-    "accountSavedWithoutDataRefresh": "Account saved successfully, but failed to fetch account data. You can refresh the data later from the account list.",
-    "accountUpdatedWithoutDataRefresh": "Account configuration saved, but failed to refresh latest data"
+    "accountSavedWithoutDataRefresh": "アカウントは正常に保存されましたが、アカウントデータの取得に失敗しました。後でアカウント一覧から更新できます。",
+    "accountUpdatedWithoutDataRefresh": "アカウント設定は保存されましたが、最新データの更新に失敗しました"
   },
   "webdav": {
-    "authFailed": "Authentication failed, please check username/password",
-    "configIncomplete": "Please fill in WebDAV URL, username and password completely",
-    "connectionFailed": "Connection failed, status code: {{status}}",
-    "decryptFailed": "Failed to decrypt backup, please check your password",
-    "decryptFailedNoPassword": "Backup is encrypted but no password is set",
-    "downloadFailed": "Download failed, status code: {{status}}",
-    "encryptFailedNoPassword": "Encryption is enabled but no password is set",
-    "fileNotFound": "Remote backup file does not exist",
-    "syncDataSelectionRequired": "Select at least one data domain to sync",
-    "uploadFailed": "Upload failed, status code: {{status}}"
+    "authFailed": "認証に失敗しました。ユーザー名 / パスワードを確認してください",
+    "configIncomplete": "WebDAV URL、ユーザー名、パスワードをすべて入力してください",
+    "connectionFailed": "接続に失敗しました。ステータスコード: {{status}}",
+    "decryptFailed": "バックアップの復号に失敗しました。パスワードを確認してください",
+    "decryptFailedNoPassword": "バックアップは暗号化されていますが、パスワードが設定されていません",
+    "downloadFailed": "ダウンロードに失敗しました。ステータスコード: {{status}}",
+    "encryptFailedNoPassword": "暗号化が有効ですが、パスワードが設定されていません",
+    "fileNotFound": "リモートのバックアップファイルが存在しません",
+    "syncDataSelectionRequired": "同期するデータ領域を少なくとも 1 つ選択してください",
+    "uploadFailed": "アップロードに失敗しました。ステータスコード: {{status}}"
   }
 }

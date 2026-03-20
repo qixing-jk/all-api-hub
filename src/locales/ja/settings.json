@@ -46,34 +46,34 @@
     }
   },
   "autoProvisionKeyOnAccountAdd": {
-    "description": "Control whether All API Hub automatically provisions a default API key after you add an account.",
-    "title": "API keys",
-    "toggleDesc": "When enabled, All API Hub checks your token inventory after saving an account and creates a default token if none exist.",
-    "toggleLabel": "Auto-create a default key on account add"
+    "description": "アカウント追加後に All API Hub が既定の API キーを自動作成するかどうかを制御します。",
+    "title": "API キー",
+    "toggleDesc": "有効にすると、アカウント保存後にトークン一覧を確認し、存在しない場合は既定のトークンを自動作成します。",
+    "toggleLabel": "アカウント追加時に既定キーを自動作成"
   },
   "changelogOnUpdate": {
-    "description": "Control whether All API Hub shows a What's New dialog the first time you open the extension UI after updates.",
-    "title": "Changelog",
-    "toggleDesc": "When enabled, the update log is shown inline on first UI open after an update (once per version). You can still open the full docs changelog manually.",
-    "toggleLabel": "Show What's New after updates"
+    "description": "更新後に拡張機能 UI を初めて開いた際、「What's New」ダイアログを表示するかどうかを制御します。",
+    "title": "更新ログ",
+    "toggleDesc": "有効にすると、更新後最初の UI 起動時に更新ログをインライン表示します（各バージョン 1 回のみ）。完全版の更新ログは手動でも開けます。",
+    "toggleLabel": "更新後に What's New を表示"
   },
   "claudeCodeRouter": {
-    "apiKeyLabel": "API key",
+    "apiKeyLabel": "API キー",
     "apiKeyPlaceholder": "sk-123456",
     "baseUrlLabel": "Base URL",
     "baseUrlPlaceholder": "http://localhost:3000",
-    "description": "Configure connection to Claude Code Router admin API",
-    "keyDesc": "Optional API key for /api/config (APIKEY)",
+    "description": "Claude Code Router 管理 API への接続を設定します",
+    "keyDesc": "/api/config (APIKEY) 用の任意 API キー",
     "title": "Claude Code Router",
-    "urlDesc": "Claude Code Router server base URL, e.g. http://localhost:3000"
+    "urlDesc": "Claude Code Router サーバーの Base URL。例: http://localhost:3000"
   },
   "cliProxy": {
     "baseUrlLabel": "Management API Base URL",
-    "description": "Configure connection to CLIProxyAPI Management API",
-    "keyDesc": "Management key for interface access authentication",
-    "managementKeyLabel": "Management Key",
-    "title": "CLIProxyAPI Settings",
-    "urlDesc": "Set the Management API base URL, e.g. http://localhost:8317/v0/management"
+    "description": "CLIProxyAPI Management API への接続を設定します",
+    "keyDesc": "インターフェースアクセス認証用の管理キー",
+    "managementKeyLabel": "管理キー",
+    "title": "CLIProxyAPI 設定",
+    "urlDesc": "Management API の Base URL を設定します。例: http://localhost:8317/v0/management"
   },
   "danger": {
     "resetAllSettings": "すべての設定をリセット",
@@ -107,23 +107,23 @@
   },
   "doneHub": {
     "adminCredentialsLink": {
-      "description": "Open the profile page to find the system access token and user ID.",
-      "open": "Open page",
-      "title": "Quick access"
+      "description": "プロフィールページを開いてシステムアクセストークンとユーザー ID を確認します。",
+      "open": "ページを開く",
+      "title": "クイックアクセス"
     },
-    "description": "Configure integration settings for connecting to Done Hub compatible services.",
+    "description": "Done Hub 互換サービスへ接続するための統合設定を行います。",
     "fields": {
-      "adminTokenLabel": "Administrator's system access token",
+      "adminTokenLabel": "管理者のシステムアクセストークン",
       "baseUrlLabel": "Base URL",
       "baseUrlPlaceholder": "https://api.example.com",
-      "hideToken": "Hide system access token",
-      "showToken": "Show system access token",
-      "userIdLabel": "Administrator user ID"
+      "hideToken": "システムアクセストークンを隠す",
+      "showToken": "システムアクセストークンを表示",
+      "userIdLabel": "管理者ユーザー ID"
     },
-    "title": "Done Hub Integration Settings",
-    "tokenDesc": "System access token for the administrator user. Find it in Done Hub dashboard → Personal settings → Token.",
-    "urlDesc": "Set the base URL for Done Hub integration",
-    "userIdDesc": "Administrator user ID (numeric only). Root admin is usually 1."
+    "title": "Done Hub 統合設定",
+    "tokenDesc": "管理者ユーザー用のシステムアクセストークンです。Done Hub ダッシュボード → 個人設定 → Token で確認できます。",
+    "urlDesc": "Done Hub 統合用の Base URL を設定します",
+    "userIdDesc": "管理者ユーザー ID（数値のみ）。通常 root admin は 1 です。"
   },
   "duplicateAccountWarningOnAdd": {
     "description": "既に登録済みのサイトにアカウントを追加するとき、確認を求めるかどうかを制御します。",
@@ -166,68 +166,68 @@
   },
   "newApi": {
     "adminCredentialsLink": {
-      "description": "Open the admin personal settings page to find the system access token and user ID.",
-      "open": "Open page",
-      "title": "Quick access"
+      "description": "管理者の個人設定ページを開いてシステムアクセストークンとユーザー ID を確認します。",
+      "open": "ページを開く",
+      "title": "クイックアクセス"
     },
-    "description": "Configure integration settings for connecting to New API compatible services.",
+    "description": "New API 互換サービスへ接続するための統合設定を行います。",
     "fields": {
-      "adminTokenLabel": "Administrator's system access token",
+      "adminTokenLabel": "管理者のシステムアクセストークン",
       "baseUrlLabel": "Base URL",
       "baseUrlPlaceholder": "https://api.example.com",
-      "hidePassword": "Hide login password",
-      "hideToken": "Hide system access token",
-      "hideTotpSecret": "Hide TOTP secret",
-      "passwordDesc": "Optional. Used together with the login username to sign in to the New API admin console and establish a login session when viewing a channel key or running full key comparison.",
-      "passwordLabel": "Login password",
-      "passwordPlaceholder": "Enter password",
-      "showPassword": "Show login password",
-      "showToken": "Show system access token",
-      "showTotpSecret": "Show TOTP secret",
-      "totpSecretDesc": "Optional. When provided, All API Hub can automatically generate TOTP codes for login 2FA and the secure verification required to view channel keys.",
-      "totpSecretLabel": "TOTP secret",
-      "totpSecretPlaceholder": "Paste Base32 TOTP secret",
-      "userIdLabel": "Administrator user ID",
-      "usernameDesc": "Optional. Used to sign in to the New API admin console and complete 2FA when needed. This is mainly used for viewing the real channel key in Channel Management and for checking whether a key is already used by a channel in Key Management.",
-      "usernameLabel": "Login username",
+      "hidePassword": "ログインパスワードを隠す",
+      "hideToken": "システムアクセストークンを隠す",
+      "hideTotpSecret": "TOTP シークレットを隠す",
+      "passwordDesc": "任意です。ログインユーザー名と組み合わせて New API 管理コンソールへサインインし、チャネルキーの表示や完全なキー比較時にログインセッションを確立するために使います。",
+      "passwordLabel": "ログインパスワード",
+      "passwordPlaceholder": "パスワードを入力",
+      "showPassword": "ログインパスワードを表示",
+      "showToken": "システムアクセストークンを表示",
+      "showTotpSecret": "TOTP シークレットを表示",
+      "totpSecretDesc": "任意です。指定すると、ログイン 2FA やチャネルキー表示に必要な保護認証のための TOTP コードを All API Hub が自動生成できます。",
+      "totpSecretLabel": "TOTP シークレット",
+      "totpSecretPlaceholder": "Base32 の TOTP シークレットを貼り付け",
+      "userIdLabel": "管理者ユーザー ID",
+      "usernameDesc": "任意です。New API 管理コンソールへサインインし、必要に応じて 2FA を完了するために使います。主にチャネル管理で実際のチャネルキーを表示したり、キー管理でそのキーが既にチャネルに使われているか確認したりする用途です。",
+      "usernameLabel": "ログインユーザー名",
       "usernamePlaceholder": "admin"
     },
     "sessionTest": {
-      "action": "Test config",
-      "description": "Test whether the entered login username, password, and TOTP secret are correct and usable. After a successful check, you can continue with actions that require login and 2FA.",
-      "testing": "Testing config...",
-      "title": "Test login & 2FA config"
+      "action": "設定をテスト",
+      "description": "入力したログインユーザー名、パスワード、TOTP シークレットが正しく利用可能かテストします。成功後はログインや 2FA を必要とする操作を続行できます。",
+      "testing": "設定をテスト中...",
+      "title": "ログインと 2FA 設定をテスト"
     },
-    "title": "New API Integration Settings",
-    "tokenDesc": "System access token for the administrator user",
-    "urlDesc": "Set the base URL for New API integration",
-    "userIdDesc": "Administrator user ID (numeric only)"
+    "title": "New API 統合設定",
+    "tokenDesc": "管理者ユーザー用のシステムアクセストークン",
+    "urlDesc": "New API 統合用の Base URL を設定します",
+    "userIdDesc": "管理者ユーザー ID（数値のみ）"
   },
   "octopus": {
-    "description": "Configure integration settings for connecting to Octopus self-hosted sites. The system will automatically log in using your credentials and manage the JWT Token.",
+    "description": "Octopus セルフホストサイトへ接続するための統合設定を行います。システムは認証情報を使って自動ログインし、JWT Token を管理します。",
     "fields": {
-      "baseUrlDesc": "Set the base URL for Octopus site",
+      "baseUrlDesc": "Octopus サイトの Base URL を設定します",
       "baseUrlLabel": "Base URL",
       "baseUrlPlaceholder": "https://octopus.example.com",
-      "hidePassword": "Hide password",
-      "passwordDesc": "Octopus admin password for automatic login",
-      "passwordLabel": "Password",
-      "passwordPlaceholder": "Enter password",
-      "showPassword": "Show password",
-      "usernameDesc": "Octopus admin username for automatic login",
-      "usernameLabel": "Username",
+      "hidePassword": "パスワードを隠す",
+      "passwordDesc": "自動ログイン用の Octopus 管理者パスワード",
+      "passwordLabel": "パスワード",
+      "passwordPlaceholder": "パスワードを入力",
+      "showPassword": "パスワードを表示",
+      "usernameDesc": "自動ログイン用の Octopus 管理者ユーザー名",
+      "usernameLabel": "ユーザー名",
       "usernamePlaceholder": "admin"
     },
-    "title": "Octopus Integration Settings",
+    "title": "Octopus 統合設定",
     "validation": {
-      "description": "Test if username and password are correct",
-      "error": "An error occurred during validation",
-      "failed": "Configuration validation failed, please check username and password",
-      "missingFields": "Please fill in all required fields",
-      "success": "Configuration validated successfully, connection is working",
-      "title": "Validate Configuration",
-      "validate": "Validate",
-      "validating": "Validating..."
+      "description": "ユーザー名とパスワードが正しいかテストします",
+      "error": "検証中にエラーが発生しました",
+      "failed": "設定検証に失敗しました。ユーザー名とパスワードを確認してください",
+      "missingFields": "必須項目をすべて入力してください",
+      "success": "設定検証に成功しました。接続は正常です",
+      "title": "設定を検証",
+      "validate": "検証",
+      "validating": "検証中..."
     }
   },
   "permissions": {
@@ -245,19 +245,19 @@
       },
       "cookies": {
         "description": "必要に応じて認証ヘッダーを付与できるよう、接続済みアカウントに必要な Cookie を All API Hub が読み取れるようにします。",
-        "title": "Cookies"
+        "title": "Cookie"
       },
       "declarativeNetRequestWithHostAccess": {
         "description": "一時ウィンドウでの保護回避中に Tab キーでリクエストヘッダールールを適用し、アカウントごとに正しい Cookie を付与して複数アカウント時のデータ異常を防ぎます。",
-        "title": "Declarative Net Request"
+        "title": "宣言的ネットワークリクエスト"
       },
       "webRequest": {
         "description": "一時ウィンドウによる回避や自動更新で必要なヘッダーを追加する必要がある場合にのみ、拡張機能が送信リクエストを監視できるようにします。",
-        "title": "Web Request"
+        "title": "Web リクエスト"
       },
       "webRequestBlocking": {
         "description": "リクエスト送信前に Cookie を同期的に付与できるようにし、保護回避フローの信頼性を保ちます。",
-        "title": "Web Request Blocking"
+        "title": "Web リクエストブロッキング"
       }
     },
     "messages": {
@@ -398,22 +398,22 @@
   "title": "設定",
   "veloera": {
     "adminCredentialsLink": {
-      "description": "Open the admin personal settings page to find the system access token and user ID.",
-      "open": "Open page",
-      "title": "Quick access"
+      "description": "管理者の個人設定ページを開いてシステムアクセストークンとユーザー ID を確認します。",
+      "open": "ページを開く",
+      "title": "クイックアクセス"
     },
-    "description": "Configure integration settings for connecting to Veloera compatible services.",
+    "description": "Veloera 互換サービスへ接続するための統合設定を行います。",
     "fields": {
-      "adminTokenLabel": "Administrator's system access token",
+      "adminTokenLabel": "管理者のシステムアクセストークン",
       "baseUrlLabel": "Base URL",
       "baseUrlPlaceholder": "https://api.example.com",
-      "hideToken": "Hide system access token",
-      "showToken": "Show system access token",
-      "userIdLabel": "Administrator user ID"
+      "hideToken": "システムアクセストークンを隠す",
+      "showToken": "システムアクセストークンを表示",
+      "userIdLabel": "管理者ユーザー ID"
     },
-    "title": "Veloera Integration Settings",
-    "tokenDesc": "System access token for the administrator user",
-    "urlDesc": "Set the base URL for Veloera integration",
-    "userIdDesc": "Administrator user ID (numeric only)"
+    "title": "Veloera 統合設定",
+    "tokenDesc": "管理者ユーザー用のシステムアクセストークン",
+    "urlDesc": "Veloera 統合用の Base URL を設定します",
+    "userIdDesc": "管理者ユーザー ID（数値のみ）"
   }
 }

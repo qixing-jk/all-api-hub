@@ -1,136 +1,136 @@
 {
   "alerts": {
     "configMissing": {
-      "description": "Please configure your managed site credentials in settings before managing channels.",
-      "title": "Missing configuration"
+      "description": "チャネルを管理する前に、設定で管理対象サイトの認証情報を構成してください。",
+      "title": "設定が不足しています"
     },
     "loadError": {
       "description": "{{error}}",
-      "title": "Unable to load channels"
+      "title": "チャネルを読み込めません"
     }
   },
-  "description": "Search, edit, delete, and manually sync channels connected to your managed site.",
+  "description": "管理対象サイトに接続されたチャネルを検索、編集、削除し、手動同期できます。",
   "dialog": {
-    "cancel": "Cancel",
-    "confirm": "Delete",
-    "deleteDescription": "This action cannot be undone. The selected channels will be removed permanently.",
-    "deleteTitle": "Delete channel?",
-    "deleteTitlePlural": "Delete channels?"
+    "cancel": "キャンセル",
+    "confirm": "削除",
+    "deleteDescription": "この操作は元に戻せません。選択したチャネルは完全に削除されます。",
+    "deleteTitle": "チャネルを削除しますか？",
+    "deleteTitlePlural": "チャネルを削除しますか？"
   },
   "filter": {
-    "statusLabel": "Filter by status"
+    "statusLabel": "状態で絞り込む"
   },
   "filters": {
     "actionOptions": {
-      "exclude": "Exclude matching models",
-      "include": "Include matching models"
+      "exclude": "一致したモデルを除外",
+      "include": "一致したモデルを含める"
     },
     "actions": {
-      "cancel": "Cancel",
-      "save": "Save filters"
+      "cancel": "キャンセル",
+      "save": "フィルターを保存"
     },
-    "addRule": "Add filter rule",
+    "addRule": "フィルタールールを追加",
     "empty": {
-      "description": "Add include/exclude rules with optional regex to control synced models.",
-      "title": "No filters yet"
+      "description": "必要に応じて正規表現を使った include / exclude ルールを追加し、同期モデルを制御します。",
+      "title": "まだフィルターがありません"
     },
     "hints": {
-      "regex": "Regex rules support advanced matching using JavaScript syntax.",
-      "substring": "Plain rules match case-sensitive substrings inside model names."
+      "regex": "正規表現ルールでは JavaScript 構文による高度な一致指定が可能です。",
+      "substring": "通常ルールではモデル名内の大文字小文字を区別する部分文字列に一致します。"
     },
     "jsonEditor": {
-      "hint": "The JSON must be an array of objects with at least 'name' and 'pattern'. Optional fields: id, description, isRegex, action ('include' | 'exclude'), enabled, createdAt, updatedAt.",
-      "label": "Advanced JSON editor",
-      "placeholder": "Paste or edit an array of filter rule objects here to quickly reuse the same configuration across channels."
+      "hint": "JSON は少なくとも 'name' と 'pattern' を持つオブジェクト配列である必要があります。任意フィールド: id, description, isRegex, action ('include' | 'exclude'), enabled, createdAt, updatedAt。",
+      "label": "高度な JSON エディター",
+      "placeholder": "ここにフィルタールールオブジェクト配列を貼り付けるか編集して、同じ設定を複数チャネルで素早く再利用できます。"
     },
     "labels": {
-      "action": "Action",
-      "delete": "Delete filter",
-      "description": "Description",
-      "enabled": "Enabled",
-      "name": "Filter name",
-      "pattern": "Match pattern",
-      "regex": "Regex mode"
+      "action": "動作",
+      "delete": "フィルターを削除",
+      "description": "説明",
+      "enabled": "有効",
+      "name": "フィルター名",
+      "pattern": "一致パターン",
+      "regex": "正規表現モード"
     },
-    "loading": "Loading channel filters...",
+    "loading": "チャネルフィルターを読み込み中...",
     "messages": {
-      "jsonInvalid": "Invalid filter JSON: {{error}}",
-      "loadFailed": "Failed to load filters: {{error}}",
-      "saved": "Filters saved",
-      "saveFailed": "Failed to save filters: {{error}}",
-      "validationName": "Please provide a name for each filter.",
-      "validationPattern": "Filter pattern cannot be empty.",
-      "validationRegex": "Invalid regex pattern: {{error}}"
+      "jsonInvalid": "無効なフィルター JSON です: {{error}}",
+      "loadFailed": "フィルターの読み込みに失敗しました: {{error}}",
+      "saved": "フィルターを保存しました",
+      "saveFailed": "フィルターの保存に失敗しました: {{error}}",
+      "validationName": "各フィルターに名前を入力してください。",
+      "validationPattern": "フィルターパターンは空にできません。",
+      "validationRegex": "無効な正規表現パターンです: {{error}}"
     },
     "placeholders": {
-      "description": "Optional notes about this rule",
-      "name": "e.g. Allow GPT-4",
-      "pattern": "Exact string or regex pattern"
+      "description": "このルールに関する任意メモ",
+      "name": "例: GPT-4 を許可",
+      "pattern": "完全一致文字列または正規表現パターン"
     },
-    "subtitle": "Customize filtering rules for {{channel}}",
-    "title": "Channel filters",
+    "subtitle": "{{channel}} のフィルタールールをカスタマイズ",
+    "title": "チャネルフィルター",
     "viewMode": {
-      "json": "JSON edit",
-      "label": "Edit mode",
-      "visual": "Visual edit"
+      "json": "JSON 編集",
+      "label": "編集モード",
+      "visual": "ビジュアル編集"
     }
   },
   "statusLabels": {
-    "autoDisabled": "Auto Disabled",
-    "enabled": "Enabled",
-    "manualPause": "Manual Pause",
-    "unknown": "Unknown"
+    "autoDisabled": "自動無効",
+    "enabled": "有効",
+    "manualPause": "手動停止",
+    "unknown": "不明"
   },
   "table": {
     "columns": {
-      "actions": "Actions",
-      "group": "Available Groups",
+      "actions": "操作",
+      "group": "利用可能グループ",
       "id": "ID",
-      "models": "Models",
-      "name": "Channel",
-      "priority": "Priority",
-      "status": "Status",
-      "type": "Type",
-      "weight": "Weight"
+      "models": "モデル",
+      "name": "チャネル",
+      "priority": "優先度",
+      "status": "状態",
+      "type": "種別",
+      "weight": "重み"
     },
-    "empty": "No channels found. Try adjusting your filters.",
-    "loading": "Loading channels...",
-    "noEntries": "No entries",
-    "paginationNext": "Next page",
-    "paginationPrev": "Previous page",
-    "paginationSummary": "{{start}} - {{end}} of {{total}} channels",
+    "empty": "チャネルが見つかりません。フィルター条件を調整してください。",
+    "loading": "チャネルを読み込み中...",
+    "noEntries": "エントリがありません",
+    "paginationNext": "次のページ",
+    "paginationPrev": "前のページ",
+    "paginationSummary": "{{total}} 件中 {{start}} - {{end}}",
     "rowActions": {
-      "delete": "Delete",
-      "edit": "Edit",
-      "filters": "Edit channel filtering rules",
-      "openSync": "Open model sync interface",
-      "sync": "Sync model list immediately",
-      "syncing": "Syncing..."
+      "delete": "削除",
+      "edit": "編集",
+      "filters": "チャネルのフィルタールールを編集",
+      "openSync": "モデル同期画面を開く",
+      "sync": "モデル一覧を今すぐ同期",
+      "syncing": "同期中..."
     },
-    "rowsPerPage": "Rows per page",
-    "selectAll": "Select all rows",
-    "selectRow": "Select Row"
+    "rowsPerPage": "1 ページあたりの行数",
+    "selectAll": "すべての行を選択",
+    "selectRow": "行を選択"
   },
-  "title": "Channels management",
+  "title": "チャネル管理",
   "toasts": {
-    "channelDeleted": "Channel deleted",
-    "channelSaved": "Channel saved",
-    "channelsDeleted_other": "{{count}} channels deleted",
-    "channelUpdated": "Channel updated",
-    "revealKeyFailed": "Failed to load the real channel key: {{error}}",
-    "someDeletesFailed_other": "Failed to delete {{count}} channels: {{error}}",
-    "syncCompleted": "Model sync completed ({{success}}/{{total}})",
-    "syncFailed": "Model sync failed: {{error}}"
+    "channelDeleted": "チャネルを削除しました",
+    "channelSaved": "チャネルを保存しました",
+    "channelsDeleted_other": "{{count}} 個のチャネルを削除しました",
+    "channelUpdated": "チャネルを更新しました",
+    "revealKeyFailed": "実際のチャネルキーの読み込みに失敗しました: {{error}}",
+    "someDeletesFailed_other": "{{count}} 個のチャネル削除に失敗しました: {{error}}",
+    "syncCompleted": "モデル同期が完了しました ({{success}}/{{total}})",
+    "syncFailed": "モデル同期に失敗しました: {{error}}"
   },
   "toolbar": {
-    "addChannel": "Add channel",
-    "clearSearch": "Clear search",
-    "columns": "Columns",
-    "deleteSelected": "Delete selected",
-    "refresh": "Refresh",
-    "searchPlaceholder": "Search by name, URL or group",
-    "status": "Status",
-    "syncSelected": "Sync selected",
-    "toggleColumns": "Toggle columns"
+    "addChannel": "チャネルを追加",
+    "clearSearch": "検索をクリア",
+    "columns": "列",
+    "deleteSelected": "選択項目を削除",
+    "refresh": "更新",
+    "searchPlaceholder": "名前、URL、またはグループで検索",
+    "status": "状態",
+    "syncSelected": "選択項目を同期",
+    "toggleColumns": "列の表示切替"
   }
 }

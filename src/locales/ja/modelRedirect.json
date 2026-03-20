@@ -1,71 +1,71 @@
 {
   "bulkClear": {
-    "action": "Clear model redirect maps",
-    "actionDesc": "Set selected channels' model_mapping to an empty object ({}). This cannot be undone.",
+    "action": "モデルリダイレクトマップをクリア",
+    "actionDesc": "選択したチャネルの model_mapping を空オブジェクト ({}) に設定します。この操作は元に戻せません。",
     "actions": {
-      "cancel": "Cancel",
-      "close": "Close",
-      "confirm": "Clear",
-      "continue": "Continue",
-      "selectAll": "Select all",
-      "selectNone": "Select none"
+      "cancel": "キャンセル",
+      "close": "閉じる",
+      "confirm": "クリア",
+      "continue": "続行",
+      "selectAll": "すべて選択",
+      "selectNone": "選択解除"
     },
     "confirm": {
-      "description_other": "This will clear model redirect maps for {{count}} channels. This cannot be undone.",
-      "details_other": "Selected channels: {{count}}",
-      "title": "Clear model redirect maps?",
-      "warningTitle": "Destructive action"
+      "description_other": "{{count}} 個のチャネルのモデルリダイレクトマップをクリアします。この操作は元に戻せません。",
+      "details_other": "選択中のチャネル数: {{count}}",
+      "title": "モデルリダイレクトマップをクリアしますか？",
+      "warningTitle": "破壊的な操作"
     },
     "messages": {
-      "allSuccess_other": "Cleared model redirect maps for {{count}} channels.",
-      "failed": "Failed to clear model redirect maps: {{error}}",
-      "nothingToClear": "Nothing to clear (selected channels are already empty).",
-      "partialFailure": "Cleared {{success}}/{{total}} channel(s); {{failed}} failed.",
-      "successWithSkips": "Cleared {{cleared}} channel(s); {{skipped}} already empty."
+      "allSuccess_other": "{{count}} 個のチャネルのモデルリダイレクトマップをクリアしました。",
+      "failed": "モデルリダイレクトマップのクリアに失敗しました: {{error}}",
+      "nothingToClear": "クリアするものがありません（選択したチャネルはすでに空です）。",
+      "partialFailure": "{{success}}/{{total}} 個のチャネルをクリアしましたが、{{failed}} 件失敗しました。",
+      "successWithSkips": "{{cleared}} 件のチャネルをクリアしました。{{skipped}} 件はすでに空でした。"
     },
     "preview": {
-      "channelListLabel": "Channels",
-      "description": "Select which channels to clear. Unselected channels will not be changed.",
-      "mappingCount_other": "Mappings: {{count}}",
-      "mappingEmptyInline": "Current model_mapping is empty ({}).",
-      "mappingInvalid": "Current model_mapping is not valid JSON; showing raw text.",
-      "mappingInvalidBadge": "Invalid JSON",
-      "mappingToggle": "Preview current model_mapping",
-      "selectedCount": "{{selected}}/{{total}} selected",
-      "title": "Clear model redirect maps"
+      "channelListLabel": "チャネル",
+      "description": "クリアするチャネルを選択してください。未選択のチャネルは変更されません。",
+      "mappingCount_other": "マッピング数: {{count}}",
+      "mappingEmptyInline": "現在の model_mapping は空です ({}).",
+      "mappingInvalid": "現在の model_mapping は有効な JSON ではないため、生テキストを表示しています。",
+      "mappingInvalidBadge": "無効な JSON",
+      "mappingToggle": "現在の model_mapping をプレビュー",
+      "selectedCount": "{{selected}}/{{total}} を選択中",
+      "title": "モデルリダイレクトマップをクリア"
     },
     "result": {
-      "title": "Failed channels"
+      "title": "失敗したチャネル"
     },
     "search": {
-      "filteredCount": "Showing {{filtered}}/{{total}}",
-      "label": "Search channels",
-      "noResults": "No matching channels.",
-      "placeholder": "Search channels (name or ID)..."
+      "filteredCount": "{{filtered}}/{{total}} を表示中",
+      "label": "チャネルを検索",
+      "noResults": "一致するチャネルがありません。",
+      "placeholder": "チャネルを検索（名前または ID）..."
     },
     "status": {
-      "clearing": "Clearing...",
-      "emptySelection": "Select at least one channel to continue.",
-      "loadFailed": "Failed to load channels: {{error}}",
-      "loading": "Loading channels...",
-      "noChannels": "No channels found."
+      "clearing": "クリア中...",
+      "emptySelection": "続行するには少なくとも 1 つのチャネルを選択してください。",
+      "loadFailed": "チャネルの読み込みに失敗しました: {{error}}",
+      "loading": "チャネルを読み込み中...",
+      "noChannels": "チャネルが見つかりません。"
     }
   },
-  "description": "Automatic model redirect mapping, solving the problem of inability to uniformly call models due to model names",
-  "enable": "Enable Model Redirect",
-  "enableDesc": "Enable the model redirect mapping feature, which will run automatically during model synchronization and allow manual execution",
+  "description": "モデル名の違いで統一呼び出しできない問題を解決するための自動モデルリダイレクトマッピング",
+  "enable": "モデルリダイレクトを有効化",
+  "enableDesc": "モデル同期中に自動実行され、手動実行も可能なモデルリダイレクトマッピング機能を有効にします",
   "messages": {
-    "regenerateFailed": "Failed to regenerate model mapping: {{error}}",
-    "regenerateSuccess": "Model mapping regenerated successfully",
-    "updateFailed": "Failed to update model redirect settings",
-    "updateSuccess": "Model redirect settings updated"
+    "regenerateFailed": "モデルマッピングの再生成に失敗しました: {{error}}",
+    "regenerateSuccess": "モデルマッピングを正常に再生成しました",
+    "updateFailed": "モデルリダイレクト設定の更新に失敗しました",
+    "updateSuccess": "モデルリダイレクト設定を更新しました"
   },
-  "pruneMissingTargetsOnModelSync": "Prune invalid redirect targets after sync",
-  "pruneMissingTargetsOnModelSyncDesc": "Destructive: after a model sync refresh, deletes existing model_mapping entries whose target models are missing from the refreshed model list",
-  "regenerateButton": "Regenerate Mapping Now",
-  "regenerating": "Regenerating...",
-  "standardModels": "Standard Models",
-  "standardModelsDesc": "Select the standard models to generate redirect mappings for",
-  "standardModelsPlaceholder": "Select models...",
-  "title": "Model Redirect"
+  "pruneMissingTargetsOnModelSync": "同期後に無効なリダイレクト先を削除",
+  "pruneMissingTargetsOnModelSyncDesc": "破壊的操作: モデル同期更新後、更新済みモデル一覧に存在しないリダイレクト先を持つ model_mapping エントリを削除します",
+  "regenerateButton": "今すぐマッピングを再生成",
+  "regenerating": "再生成中...",
+  "standardModels": "標準モデル",
+  "standardModelsDesc": "リダイレクトマッピングを生成する標準モデルを選択します",
+  "standardModelsPlaceholder": "モデルを選択...",
+  "title": "モデルリダイレクト"
 }

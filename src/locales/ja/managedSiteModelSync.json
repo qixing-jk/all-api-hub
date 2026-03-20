@@ -1,120 +1,120 @@
 {
-  "description": "Automatically synchronize model lists for all channels in your managed site, ensuring consistency with upstream",
+  "description": "管理対象サイト内のすべてのチャネルのモデル一覧を自動同期し、上流との整合性を保ちます",
   "execution": {
     "actions": {
-      "refresh": "Refresh Results",
-      "retryFailed": "Retry Failed Only",
-      "runAll": "Run All",
-      "runSelected": "Run Selected"
+      "refresh": "結果を更新",
+      "retryFailed": "失敗分のみ再試行",
+      "runAll": "すべて実行",
+      "runSelected": "選択分を実行"
     },
     "empty": {
-      "configWarningDesc": "Please configure your managed site base URL, admin token, and user ID before running model list sync",
-      "goToSettings": "Go to Settings",
-      "noData": "No execution history yet",
-      "noDataDesc": "Click \"Run All\" to start synchronizing all channels",
-      "noResults": "No matching results",
-      "noResultsDesc": "Try adjusting your filters or search query"
+      "configWarningDesc": "モデル一覧同期を実行する前に、管理対象サイトの Base URL、管理者トークン、ユーザー ID を設定してください",
+      "goToSettings": "設定へ移動",
+      "noData": "まだ実行履歴がありません",
+      "noDataDesc": "「すべて実行」をクリックして全チャネルの同期を開始してください",
+      "noResults": "一致する結果がありません",
+      "noResultsDesc": "フィルターまたは検索条件を調整してください"
     },
     "filters": {
-      "all": "All",
-      "failed": "Failed",
-      "searchPlaceholder": "Search by channel name, ID, or error message...",
-      "success": "Success"
+      "all": "すべて",
+      "failed": "失敗",
+      "searchPlaceholder": "チャネル名、ID、またはエラーメッセージで検索...",
+      "success": "成功"
     },
-    "lastExecution": "Last Execution",
+    "lastExecution": "前回実行",
     "manual": {
-      "description": "Choose channels below to trigger a one-off sync. Selections are not saved.",
+      "description": "以下のチャネルを選択して一回限りの同期を実行します。選択内容は保存されません。",
       "empty": {
-        "description": "Refresh the list or adjust your filters to find channels.",
-        "title": "No channels available"
+        "description": "一覧を再読み込みするか、フィルターを調整してチャネルを探してください。",
+        "title": "利用可能なチャネルがありません"
       },
-      "loading": "Loading channels...",
-      "reload": "Reload Channels",
-      "searchPlaceholder": "Search channels by name or ID..."
+      "loading": "チャネルを読み込み中...",
+      "reload": "チャネルを再読み込み",
+      "searchPlaceholder": "チャネル名または ID で検索..."
     },
     "overview": {
-      "autoSync": "Auto-sync",
-      "disabled": "Disabled",
-      "enabled": "Enabled",
-      "everyHours_other": "Every {{count}}h",
-      "everyMinutes_other": "Every {{count}}m",
-      "lastRun": "Last run",
-      "never": "Never"
+      "autoSync": "自動同期",
+      "disabled": "無効",
+      "enabled": "有効",
+      "everyHours_other": "{{count}} 時間ごと",
+      "everyMinutes_other": "{{count}} 分ごと",
+      "lastRun": "前回実行",
+      "never": "未実行"
     },
     "progress": {
-      "running": "Syncing... {{completed}}/{{total}}"
+      "running": "同期中... {{completed}}/{{total}}"
     },
     "statistics": {
-      "duration": "Duration",
-      "endTime": "End Time",
-      "failed": "Failed",
-      "nextRun": "Next Scheduled Run",
-      "notScheduled": "Not scheduled",
-      "startTime": "Start Time",
-      "success": "Successful",
-      "total": "Total Channels"
+      "duration": "所要時間",
+      "endTime": "終了時刻",
+      "failed": "失敗",
+      "nextRun": "次回予定実行",
+      "notScheduled": "未スケジュール",
+      "startTime": "開始時刻",
+      "success": "成功",
+      "total": "チャネル総数"
     },
     "status": {
-      "failed": "Failed",
-      "running": "Running...",
-      "success": "Success"
+      "failed": "失敗",
+      "running": "実行中...",
+      "success": "成功"
     },
     "table": {
-      "actions": "Actions",
-      "attempts": "Attempts",
-      "channelId": "Channel ID",
-      "channelName": "Channel Name",
-      "finishedAt": "Finished At",
-      "manageChannel": "Manage channel",
-      "message": "Message",
-      "status": "Status",
-      "syncChannel": "Sync"
+      "actions": "操作",
+      "attempts": "試行回数",
+      "channelId": "チャネル ID",
+      "channelName": "チャネル名",
+      "finishedAt": "完了時刻",
+      "manageChannel": "チャネルを管理",
+      "message": "メッセージ",
+      "status": "状態",
+      "syncChannel": "同期"
     },
     "tabs": {
-      "history": "Execution History",
-      "manual": "Manual Execution"
+      "history": "実行履歴",
+      "manual": "手動実行"
     },
-    "title": "Model List Synchronization"
+    "title": "モデル一覧同期"
   },
   "messages": {
     "error": {
-      "loadFailed": "Failed to load data: {{error}}",
-      "noSelection": "Please select at least one channel",
-      "syncFailed": "Sync failed: {{error}}"
+      "loadFailed": "データの読み込みに失敗しました: {{error}}",
+      "noSelection": "少なくとも 1 つのチャネルを選択してください",
+      "syncFailed": "同期に失敗しました: {{error}}"
     },
     "success": {
-      "settingsSaved": "Settings saved successfully",
-      "syncCompleted": "Sync completed: {{success}}/{{total}} succeeded"
+      "settingsSaved": "設定を正常に保存しました",
+      "syncCompleted": "同期完了: {{success}}/{{total}} 成功"
     }
   },
   "settings": {
-    "allowedModels": "Allowed Model List",
-    "allowedModelsDesc": "Optional allow-list. Leave empty to sync all upstream models.",
-    "allowedModelsHint": "Only models listed here will be written to each channel during sync.",
-    "allowedModelsLoadFailed": "Failed to load model metadata: {{error}}",
-    "allowedModelsLoading": "Loading model metadata...",
-    "allowedModelsPlaceholder": "Search and select models, or type to add custom",
-    "burst": "Burst Capacity",
-    "burstDesc": "Token bucket size: allowed burst requests before throttling",
-    "concurrency": "Concurrency",
-    "concurrencyDesc": "Number of channels to process in parallel (recommend 1-3 to avoid rate limits)",
-    "enable": "Enable Auto-Sync",
-    "enableDesc": "Automatically sync model lists at specified intervals",
-    "globalChannelModelFilters": "Global Filters",
-    "globalChannelModelFiltersButton": "Edit global filters",
-    "globalChannelModelFiltersDesc": "Include/exclude rules applied to all channels before per-channel filters.",
-    "globalChannelModelFiltersDialogSubtitle": "Rules defined here apply to every channel before its own channel-specific filters.",
-    "globalChannelModelFiltersDialogTitle": "Global model filters",
-    "interval": "Sync Interval",
-    "intervalDesc": "Time between automatic synchronizations",
-    "intervalUnit": "hours",
-    "maxRetries": "Max Retries",
-    "maxRetriesDesc": "Maximum automatic retry attempts on failure",
-    "requestsPerMinute": "Requests per Minute",
-    "requestsPerMinuteDesc": "Rate limit: maximum number of requests per minute (recommend 10-30)",
-    "title": "Model List Sync Settings",
-    "viewExecution": "View Execution & Results",
-    "viewExecutionButton": "Open",
-    "viewExecutionDesc": "View detailed execution results and trigger manual syncs"
+    "allowedModels": "許可モデル一覧",
+    "allowedModelsDesc": "任意の許可リストです。空のままにすると上流モデルをすべて同期します。",
+    "allowedModelsHint": "ここに列挙したモデルのみが同期時に各チャネルへ書き込まれます。",
+    "allowedModelsLoadFailed": "モデルメタデータの読み込みに失敗しました: {{error}}",
+    "allowedModelsLoading": "モデルメタデータを読み込み中...",
+    "allowedModelsPlaceholder": "モデルを検索・選択するか、入力してカスタム追加",
+    "burst": "バースト容量",
+    "burstDesc": "トークンバケットのサイズ: 制限がかかる前に許可するバースト要求数",
+    "concurrency": "並列数",
+    "concurrencyDesc": "並列処理するチャネル数（レート制限回避のため 1〜3 を推奨）",
+    "enable": "自動同期を有効化",
+    "enableDesc": "指定した間隔でモデル一覧を自動同期します",
+    "globalChannelModelFilters": "グローバルフィルター",
+    "globalChannelModelFiltersButton": "グローバルフィルターを編集",
+    "globalChannelModelFiltersDesc": "チャネルごとのフィルター前に、全チャネルへ適用される include / exclude ルールです。",
+    "globalChannelModelFiltersDialogSubtitle": "ここで定義したルールは、各チャネル固有のフィルターより先に全チャネルへ適用されます。",
+    "globalChannelModelFiltersDialogTitle": "グローバルモデルフィルター",
+    "interval": "同期間隔",
+    "intervalDesc": "自動同期の間隔",
+    "intervalUnit": "時間",
+    "maxRetries": "最大再試行回数",
+    "maxRetriesDesc": "失敗時の自動再試行最大回数",
+    "requestsPerMinute": "1 分あたりのリクエスト数",
+    "requestsPerMinuteDesc": "レート制限: 1 分あたりの最大リクエスト数（10〜30 推奨）",
+    "title": "モデル一覧同期設定",
+    "viewExecution": "実行と結果を表示",
+    "viewExecutionButton": "開く",
+    "viewExecutionDesc": "詳細な実行結果を確認し、手動同期を実行します"
   }
 }

@@ -1,45 +1,45 @@
 {
   "dialog": {
     "actions": {
-      "close": "Close",
-      "openSite": "Open site",
-      "retry": "Retry",
-      "retryAfterPasskey": "Retry after passkey",
-      "submitLoginCode": "Submit login code",
-      "submitVerificationCode": "Submit verification code"
+      "close": "閉じる",
+      "openSite": "サイトを開く",
+      "retry": "再試行",
+      "retryAfterPasskey": "パスキー完了後に再試行",
+      "submitLoginCode": "ログインコードを送信",
+      "submitVerificationCode": "認証コードを送信"
     },
     "body": {
-      "credentialsMissing": "Add a New API login username and password in Settings before session-assisted verification can run.",
-      "failure": "The New API verification flow could not be completed.",
-      "loggingIn": "Checking the current New API session and preparing verification if it is needed.",
-      "loginTwoFactor": "The New API login step requires a verification code before the browser-backed admin session can continue.",
-      "passkeyManual": "This account currently exposes passkey verification for the secure step. Complete the passkey check on the site, then return here and retry.",
-      "secureVerification": "The admin session is logged in, but New API still requires a secure verification code before hidden channel keys can be read.",
-      "successChannel": "Verification succeeded for {{label}}. The real channel key has been loaded.",
-      "successSettings": "The New API login and verification flow completed successfully. You can now continue with actions that require login and verification.",
-      "successToken": "Verification succeeded for {{label}}. The managed-site status has been refreshed."
+      "credentialsMissing": "セッション補助付き検証を実行する前に、設定で New API のログインユーザー名とパスワードを追加してください。",
+      "failure": "New API の検証フローを完了できませんでした。",
+      "loggingIn": "現在の New API セッションを確認し、必要であれば検証を準備しています。",
+      "loginTwoFactor": "ブラウザ依存の管理セッションを続行するには、New API のログイン手順で認証コードが必要です。",
+      "passkeyManual": "このアカウントでは現在、保護手順にパスキー認証が表示されます。サイト上でパスキー認証を完了してから、ここに戻って再試行してください。",
+      "secureVerification": "管理セッションにはログイン済みですが、非表示のチャネルキーを読み取る前に、New API で追加の認証コードが必要です。",
+      "successChannel": "{{label}} の検証に成功しました。実際のチャネルキーを読み込みました。",
+      "successSettings": "New API のログインと検証フローが正常に完了しました。これでログインと検証が必要な操作を続けられます。",
+      "successToken": "{{label}} の検証に成功しました。管理対象サイトの状態を更新しました。"
     },
     "fields": {
-      "codeLabel": "Verification code",
-      "codePlaceholder": "Enter code"
+      "codeLabel": "認証コード",
+      "codePlaceholder": "コードを入力"
     },
     "hints": {
-      "manualFallback": "Manual code entry stays available even when automatic TOTP is configured.",
-      "passkey": "Open the site, complete the passkey prompt there, then come back here and retry."
+      "manualFallback": "自動 TOTP が設定されていても、手動入力は引き続き利用できます。",
+      "passkey": "サイトを開いてパスキー認証を完了した後、ここに戻って再試行してください。"
     },
     "messages": {
-      "finishing": "Finalizing the New API session check...",
-      "missingBaseUrl": "Add the New API base URL before testing the session flow.",
-      "missingCode": "Enter the verification code first.",
-      "refreshingChannel": "Loading the real channel key...",
-      "refreshingToken": "Refreshing this token's managed-site status...",
-      "starting": "Starting the New API verification flow...",
-      "submitting": "Submitting verification code..."
+      "finishing": "New API セッション確認を完了しています...",
+      "missingBaseUrl": "セッションフローをテストする前に New API の Base URL を追加してください。",
+      "missingCode": "先に認証コードを入力してください。",
+      "refreshingChannel": "実際のチャネルキーを読み込み中...",
+      "refreshingToken": "このトークンの管理対象サイト状態を更新中...",
+      "starting": "New API 検証フローを開始しています...",
+      "submitting": "認証コードを送信中..."
     },
     "title": {
-      "channel": "New API channel key verification",
-      "settings": "New API session check",
-      "token": "New API verification retry"
+      "channel": "New API チャネルキー検証",
+      "settings": "New API セッション確認",
+      "token": "New API 検証の再試行"
     }
   }
 }

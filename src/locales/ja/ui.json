@@ -4,14 +4,14 @@
     "name": "All API Hub"
   },
   "billing": {
-    "notProvided": "Not provided",
-    "perCall": "Per-call billing",
-    "tokenBased": "Token-based billing"
+    "notProvided": "未提供",
+    "perCall": "コール課金",
+    "tokenBased": "トークン課金"
   },
   "dialog": {
     "ccswitch": {
       "actions": {
-        "export": "Export"
+        "export": "エクスポート"
       },
       "appOptions": {
         "claude": "Claude",
@@ -20,328 +20,328 @@
         "openclaw": "OpenClaw",
         "opencode": "OpenCode"
       },
-      "description": "Send this provider configuration directly to CC Switch via deep link",
+      "description": "このプロバイダー設定をディープリンク経由で CC Switch に直接送信します",
       "descriptions": {
-        "model": "When available, models are loaded from /v1/models for selection. You can also type a custom model id."
+        "model": "利用可能な場合、/v1/models からモデルを読み込んで選択できます。カスタムモデル ID を直接入力することも可能です。"
       },
       "fields": {
-        "app": "Target app",
-        "endpoint": "API endpoint",
-        "homepage": "Homepage URL",
-        "model": "Default model (optional)",
-        "name": "Provider name",
-        "notes": "Notes (optional)"
+        "app": "対象アプリ",
+        "endpoint": "API エンドポイント",
+        "homepage": "ホームページ URL",
+        "model": "既定モデル（任意）",
+        "name": "プロバイダー名",
+        "notes": "メモ（任意）"
       },
       "modelOptions": {
-        "none": "No default model"
+        "none": "既定モデルなし"
       },
       "notices": {
-        "openclaw": "CC Switch currently does not support configuring OpenClaw AI service API formats through external import. Adjust it in CC Switch after import if needed.",
-        "opencode": "CC Switch currently does not support configuring OpenCode AI service API formats through external import. Adjust it in CC Switch after import if needed."
+        "openclaw": "CC Switch は現在、外部インポート経由で OpenClaw AI サービス API 形式を設定できません。必要に応じて、インポート後に CC Switch 側で調整してください。",
+        "opencode": "CC Switch は現在、外部インポート経由で OpenCode AI サービス API 形式を設定できません。必要に応じて、インポート後に CC Switch 側で調整してください。"
       },
       "placeholders": {
         "endpoint": "https://example.com",
         "homepage": "https://example.com",
-        "model": "e.g. claude-3-opus",
-        "name": "e.g. Acme Relay",
-        "notes": "Add import notes"
+        "model": "例: claude-3-opus",
+        "name": "例: Acme Relay",
+        "notes": "インポートメモを追加"
       },
-      "title": "Export to CC Switch"
+      "title": "CC Switch にエクスポート"
     },
     "claudeCodeRouter": {
-      "description": "Create or update a provider in Claude Code Router. Models are required.",
+      "description": "Claude Code Router にプロバイダーを作成または更新します。モデルは必須です。",
       "descriptions": {
-        "models": "Enter one model per line or separate by commas.",
-        "providerApiBaseUrl": "This should be the full /v1/chat/completions endpoint.",
-        "restartAfterSave": "Router may require restart for config changes to take effect."
+        "models": "モデルは 1 行に 1 つ、またはカンマ区切りで入力してください。",
+        "providerApiBaseUrl": "完全な /v1/chat/completions エンドポイントである必要があります。",
+        "restartAfterSave": "設定変更を反映するには Router の再起動が必要な場合があります。"
       },
       "fields": {
-        "models": "Models",
-        "providerApiBaseUrl": "Provider API endpoint",
-        "providerName": "Provider name",
-        "restartAfterSave": "Restart after save"
+        "models": "モデル",
+        "providerApiBaseUrl": "プロバイダー API エンドポイント",
+        "providerName": "プロバイダー名",
+        "restartAfterSave": "保存後に再起動"
       },
       "placeholders": {
-        "modelsPicker": "Type to add models",
+        "modelsPicker": "入力してモデルを追加",
         "providerApiBaseUrl": "https://example.com/v1/chat/completions",
-        "providerName": "e.g. My Relay"
+        "providerName": "例: My Relay"
       },
-      "title": "Import to Claude Code Router"
+      "title": "Claude Code Router にインポート"
     },
     "cliproxy": {
       "actions": {
-        "addModel": "Add Model",
-        "removeModel": "Remove model",
-        "reorderModel": "Reorder model"
+        "addModel": "モデルを追加",
+        "removeModel": "モデルを削除",
+        "reorderModel": "モデルを並び替え"
       },
-      "description": "Create or update a provider entry in CLIProxyAPI.",
+      "description": "CLIProxyAPI にプロバイダーエントリを作成または更新します。",
       "descriptions": {
-        "models": "Map upstream model names to optional aliases (name -> alias). When available, upstream models are loaded from /v1/models for selection.",
-        "modelsManual": "Map upstream model names to optional aliases (name -> alias). Enter values manually for this provider family in this release.",
-        "providerType": "Choose which CLIProxyAPI provider family to import into.",
-        "proxyUrl": "Optional proxy URL used for this API key entry."
+        "models": "上流モデル名を任意の別名へマッピングします（name -> alias）。利用可能な場合は /v1/models から上流モデルを読み込んで選択できます。",
+        "modelsManual": "上流モデル名を任意の別名へマッピングします（name -> alias）。このリリースでは、このプロバイダーファミリーは手動入力してください。",
+        "providerType": "どの CLIProxyAPI プロバイダーファミリーにインポートするか選択します。",
+        "proxyUrl": "この API キーエントリで使う任意のプロキシ URL です。"
       },
       "fields": {
-        "baseUrl": "Provider base URL",
-        "models": "Model mapping (optional)",
-        "name": "Provider name",
-        "providerType": "Provider type",
-        "proxyUrl": "Proxy URL (optional)"
+        "baseUrl": "プロバイダー Base URL",
+        "models": "モデルマッピング（任意）",
+        "name": "プロバイダー名",
+        "providerType": "プロバイダー種別",
+        "proxyUrl": "プロキシ URL（任意）"
       },
       "placeholders": {
-        "modelAlias": "Model alias (optional)",
-        "modelName": "Model name, e.g. claude",
-        "name": "e.g. Acme Relay",
-        "providerType": "Select a provider family",
+        "modelAlias": "モデル別名（任意）",
+        "modelName": "モデル名。例: claude",
+        "name": "例: Acme Relay",
+        "providerType": "プロバイダーファミリーを選択",
         "proxyUrl": "http://localhost:3000"
       },
-      "title": "Import to CLIProxyAPI"
+      "title": "CLIProxyAPI にインポート"
     },
-    "collapse": "Collapse",
+    "collapse": "折りたたむ",
     "copyKey": {
-      "apiKey": "API Key",
-      "copied": "Copied",
-      "copy": "Copy",
-      "copyFailedManual": "Copy failed, please copy manually",
-      "createCustomKey": "Create custom key",
-      "createFailed": "Failed to create key: {{error}}",
-      "createKey": "Create default key",
-      "createNotSupported": "This account does not support creating keys from this dialog.",
-      "createSuccess": "Key created",
-      "creatingKey": "Creating default key...",
-      "defaultGroup": "Default Group",
-      "disabled": "Disabled",
-      "enabled": "Enabled",
-      "expireTime": "Expire time: {{time}}",
-      "exportToCCSwitch": "Export to CC Switch",
-      "getFailed": "Failed to get",
-      "keyCopied": "Key copied to clipboard",
-      "loadFailed": "Failed to load key list: {{error}}",
-      "loading": "Loading key list...",
-      "noKeyFoundAfterCreate": "No key was found after creating one. Please try again.",
-      "noKeys": "No key data yet",
-      "noKeysDescription": "Create a default key quickly, or create a custom key with advanced settings.",
-      "remainingQuota": "Remaining Quota",
-      "retry": "Retry",
-      "title": "Key List",
-      "totalKeys_other": "Total {{count}} keys",
-      "usedQuota": "Used Quota",
-      "useInCherry": "Use in Cherry Studio"
+      "apiKey": "API キー",
+      "copied": "コピー済み",
+      "copy": "コピー",
+      "copyFailedManual": "コピーに失敗しました。手動でコピーしてください",
+      "createCustomKey": "カスタムキーを作成",
+      "createFailed": "キーの作成に失敗しました: {{error}}",
+      "createKey": "既定キーを作成",
+      "createNotSupported": "このアカウントでは、このダイアログからキーを作成できません。",
+      "createSuccess": "キーを作成しました",
+      "creatingKey": "既定キーを作成中...",
+      "defaultGroup": "既定グループ",
+      "disabled": "無効",
+      "enabled": "有効",
+      "expireTime": "有効期限: {{time}}",
+      "exportToCCSwitch": "CC Switch にエクスポート",
+      "getFailed": "取得に失敗しました",
+      "keyCopied": "キーをクリップボードにコピーしました",
+      "loadFailed": "キー一覧の読み込みに失敗しました: {{error}}",
+      "loading": "キー一覧を読み込み中...",
+      "noKeyFoundAfterCreate": "作成後にキーが見つかりませんでした。再試行してください。",
+      "noKeys": "まだキーデータがありません",
+      "noKeysDescription": "既定キーをすばやく作成するか、詳細設定付きのカスタムキーを作成してください。",
+      "remainingQuota": "残りクォータ",
+      "retry": "再試行",
+      "title": "キー一覧",
+      "totalKeys_other": "合計 {{count}} キー",
+      "usedQuota": "使用済みクォータ",
+      "useInCherry": "Cherry Studio で使う"
     },
     "dedupeAccounts": {
       "confirm": {
-        "confirmDelete": "Delete",
-        "description": "This will delete {{deleteCount}} account(s) across {{groups}} duplicate set(s).",
-        "title": "Delete duplicate accounts",
-        "warningOrder": "Manual ordering will be adjusted.",
-        "warningPinned_other": "{{count}} pinned accounts will be deleted."
+        "confirmDelete": "削除",
+        "description": "{{groups}} 組の重複セットにまたがる {{deleteCount}} 件のアカウントを削除します。",
+        "title": "重複アカウントを削除",
+        "warningOrder": "手動並び順は調整されます。",
+        "warningPinned_other": "{{count}} 件のピン留めアカウントが削除されます。"
       },
-      "delete": "Delete",
-      "deleting": "Deleting duplicate accounts...",
-      "description": "Scan duplicate accounts by origin + user id, then delete duplicates after preview.",
+      "delete": "削除",
+      "deleting": "重複アカウントを削除中...",
+      "description": "origin + user id で重複アカウントをスキャンし、プレビュー後に削除します。",
       "details": {
-        "accountId": "Account ID",
-        "authType": "Auth Type",
-        "autoCheckin": "Auto Check-in",
-        "checkinDetection": "Check-in Detection",
-        "createdAt": "Created At",
-        "customCheckinUrl": "Custom Check-in URL",
-        "excludeFromTotalBalance": "Exclude from Total Balance",
-        "health": "Health",
-        "healthReason": "Reason",
-        "lastSync": "Last Sync",
-        "notes": "Notes",
-        "quota": "Quota",
-        "siteType": "Site Type",
-        "todayConsumption": "Today's Consumption",
-        "todayRequests": "Today's Requests",
-        "todayTokens": "Today's Tokens",
-        "updatedAt": "Updated At",
-        "userId": "User ID"
+        "accountId": "アカウント ID",
+        "authType": "認証方式",
+        "autoCheckin": "自動チェックイン",
+        "checkinDetection": "チェックイン検出",
+        "createdAt": "作成日時",
+        "customCheckinUrl": "カスタムチェックイン URL",
+        "excludeFromTotalBalance": "総残高から除外",
+        "health": "健全性",
+        "healthReason": "理由",
+        "lastSync": "前回同期",
+        "notes": "メモ",
+        "quota": "クォータ",
+        "siteType": "サイト種別",
+        "todayConsumption": "本日の消費",
+        "todayRequests": "本日のリクエスト数",
+        "todayTokens": "本日のトークン数",
+        "updatedAt": "更新日時",
+        "userId": "ユーザー ID"
       },
       "detailsToggle": {
-        "hide": "Hide info",
-        "show": "More info"
+        "hide": "情報を隠す",
+        "show": "詳細情報"
       },
-      "duplicateCount_other": "{{count}} accounts",
-      "empty": "No duplicate accounts found.",
-      "keep": "Keep",
-      "manualPickHint": "You can manually choose which account to keep in each set. Manual choices override the keep strategy.",
-      "previewDelete": "Preview deletion",
-      "recommended": "Recommended",
+      "duplicateCount_other": "{{count}} アカウント",
+      "empty": "重複アカウントは見つかりませんでした。",
+      "keep": "保持",
+      "manualPickHint": "各セットで保持するアカウントを手動で選べます。手動選択は保持戦略より優先されます。",
+      "previewDelete": "削除をプレビュー",
+      "recommended": "推奨",
       "strategy": {
-        "keepEnabled": "Keep enabled (if any)",
-        "keepMostRecentlyUpdated": "Keep most recently updated",
-        "keepPinned": "Keep pinned (if any)"
+        "keepEnabled": "有効なものを保持（存在する場合）",
+        "keepMostRecentlyUpdated": "最後に更新されたものを保持",
+        "keepPinned": "ピン留めされたものを保持（存在する場合）"
       },
-      "strategyLabel": "Keep strategy",
-      "summary": "{{groups}} duplicate set(s) · {{deleteCount}} account(s) to delete",
-      "title": "Duplicate account cleanup",
-      "unscannableHint_other": "{{count}} accounts could not be scanned and were skipped.",
-      "userId": "User ID: {{userId}}"
+      "strategyLabel": "保持戦略",
+      "summary": "{{groups}} 組の重複セット · 削除対象 {{deleteCount}} アカウント",
+      "title": "重複アカウントの整理",
+      "unscannableHint_other": "{{count}} 件のアカウントはスキャンできず、スキップされました。",
+      "userId": "ユーザー ID: {{userId}}"
     },
     "delete": {
-      "confirmDelete": "Confirm Delete",
-      "confirmDeletion": "Delete Confirmation",
-      "deleteFailed": "Delete failed: {{error}}",
-      "deleteSuccess": "Account {{name}} deleted successfully!",
-      "deleting": "Deleting account {{name}}...",
-      "noResponse": "Delete operation did not return successfully",
-      "siteName": "Site Name",
-      "siteUrl": "Site URL",
-      "title": "Delete Account",
-      "username": "Username",
-      "warning": "You are about to delete account {{accountName}}. Please verify before confirming to delete this account"
+      "confirmDelete": "削除を確認",
+      "confirmDeletion": "削除確認",
+      "deleteFailed": "削除に失敗しました: {{error}}",
+      "deleteSuccess": "アカウント {{name}} を正常に削除しました",
+      "deleting": "アカウント {{name}} を削除中...",
+      "noResponse": "削除操作が正常に完了しませんでした",
+      "siteName": "サイト名",
+      "siteUrl": "サイト URL",
+      "title": "アカウントを削除",
+      "username": "ユーザー名",
+      "warning": "アカウント {{accountName}} を削除しようとしています。削除前に必ず内容を確認してください"
     },
-    "expand": "Expand",
+    "expand": "展開",
     "firefox": {
-      "confirm": "Confirm",
-      "howOpenSidebar": "How to Open Sidebar",
-      "limitation": "Firefox Browser Feature Limitation",
-      "openSidebar": "Open Sidebar",
-      "popupLimitation": "This feature cannot be used normally in the popup of Firefox browser. Please use the sidebar mode to add accounts",
-      "sidebarInstruction": "Click on the extension icon in the browser toolbar, then select the 'Sidebar' option to open the sidebar mode",
-      "warningTitle": "Feature Limitation Reminder"
+      "confirm": "確認",
+      "howOpenSidebar": "サイドバーの開き方",
+      "limitation": "Firefox ブラウザの機能制限",
+      "openSidebar": "サイドバーを開く",
+      "popupLimitation": "この機能は Firefox ブラウザのポップアップでは正常に利用できません。アカウント追加にはサイドバーモードを使用してください",
+      "sidebarInstruction": "ブラウザツールバーの拡張機能アイコンをクリックし、「サイドバー」オプションを選んでサイドバーモードを開いてください",
+      "warningTitle": "機能制限のお知らせ"
     },
     "kiloCode": {
       "actions": {
-        "copyApiConfigs": "Copy apiConfigs",
-        "createDefaultToken": "Create default token",
-        "downloadSettings": "Download settings"
+        "copyApiConfigs": "apiConfigs をコピー",
+        "createDefaultToken": "既定トークンを作成",
+        "downloadSettings": "設定をダウンロード"
       },
-      "description": "Generate Kilo Code / Roo Code provider profiles from your selected sites and tokens.",
+      "description": "選択したサイトとトークンから Kilo Code / Roo Code のプロバイダープロファイルを生成します。",
       "descriptions": {
-        "currentApiConfigName": "Used as providerProfiles.currentApiConfigName in {{filename}}.",
-        "modelId": "Recommended per API key (Kilo Code typically requires a model ID). Defaults to the first model from this API key's upstream model list.",
-        "selectedSites": "Selected sites: {{sites}}, selected keys: {{keys}}."
+        "currentApiConfigName": "{{filename}} 内の providerProfiles.currentApiConfigName として使用されます。",
+        "modelId": "API キーごとの推奨値です（Kilo Code では通常モデル ID が必要です）。既定では、この API キーの上流モデル一覧の最初のモデルを使用します。",
+        "selectedSites": "選択したサイト: {{sites}}、選択したキー: {{keys}}。"
       },
       "help": {
-        "afterExportDescription": "Choose one of the following:",
-        "afterExportTitle": "After export: how to use it",
-        "importDescription": "Click “Download settings” to save {{filename}}, then import it in Kilo Code. Import is incremental: it adds providers and won’t remove your existing providers (same-name entries may be updated).",
-        "importTitle": "2) Import file (Download settings)",
-        "manualDescription": "Click \"Copy apiConfigs\" and find providerProfiles.apiConfigs in the Kilo Code / Roo Code export configurations and paste them in.",
-        "manualTitle": "1) Manual (Copy apiConfigs)",
-        "perSiteDescription": "Select sites to load tokens automatically. The first token is preselected, and you can select multiple tokens per site.",
-        "perSiteTitle": "Per-site export"
+        "afterExportDescription": "次のいずれかを選択してください:",
+        "afterExportTitle": "エクスポート後の使い方",
+        "importDescription": "「設定をダウンロード」をクリックして {{filename}} を保存し、Kilo Code にインポートしてください。インポートは加算方式で、既存プロバイダーを削除しません（同名エントリは更新される場合があります）。",
+        "importTitle": "2) ファイルをインポート（設定をダウンロード）",
+        "manualDescription": "「apiConfigs をコピー」をクリックし、Kilo Code / Roo Code のエクスポート設定にある providerProfiles.apiConfigs を探して貼り付けてください。",
+        "manualTitle": "1) 手動（apiConfigs をコピー）",
+        "perSiteDescription": "サイトを選択してトークンを自動読み込みします。最初のトークンが事前選択され、サイトごとに複数トークンを選択できます。",
+        "perSiteTitle": "サイト別エクスポート"
       },
       "labels": {
-        "currentApiConfigName": "Current profile",
-        "modelId": "Model ID",
-        "selectedSites": "Selected sites",
-        "selectedTokens": "Selected tokens"
+        "currentApiConfigName": "現在のプロファイル",
+        "modelId": "モデル ID",
+        "selectedSites": "選択したサイト",
+        "selectedTokens": "選択したトークン"
       },
       "messages": {
-        "accountNotFound": "Account not found.",
-        "copiedApiConfigs": "apiConfigs copied to clipboard",
-        "copyFailed": "Copy failed",
-        "createTokenFailed": "Failed to create token.",
-        "downloadedSettings": "Settings file downloaded",
-        "downloadFailed": "Failed to download settings file",
-        "loadingTokens": "Loading token list…",
-        "loadModelsFailed": "Failed to load upstream models for this API key.",
-        "loadTokensFailed": "Failed to load tokens for this site.",
-        "modelIdRequiredDescription_other": "Select or enter a model ID for all selected API keys to enable export (missing: {{count}}).",
-        "modelIdRequiredTitle": "Model ID required",
-        "noModelsDescription": "No upstream models were returned for this API key. Kilo Code typically requires a model ID — please enter one manually.",
-        "noModelsTitle": "No models",
-        "nothingToExportDescription": "Select at least one exportable token/site to enable copy/download.",
-        "nothingToExportTitle": "Nothing to export",
-        "noTokensDescription": "This site will be skipped until a token is created.",
-        "noTokensTitle": "No tokens available",
-        "tokenCreated": "Token created"
+        "accountNotFound": "アカウントが見つかりません。",
+        "copiedApiConfigs": "apiConfigs をクリップボードにコピーしました",
+        "copyFailed": "コピーに失敗しました",
+        "createTokenFailed": "トークンの作成に失敗しました。",
+        "downloadedSettings": "設定ファイルをダウンロードしました",
+        "downloadFailed": "設定ファイルのダウンロードに失敗しました",
+        "loadingTokens": "トークン一覧を読み込み中…",
+        "loadModelsFailed": "この API キーの上流モデル読み込みに失敗しました。",
+        "loadTokensFailed": "このサイトのトークン読み込みに失敗しました。",
+        "modelIdRequiredDescription_other": "エクスポートを有効にするには、選択したすべての API キーにモデル ID を選択または入力してください（不足: {{count}}）。",
+        "modelIdRequiredTitle": "モデル ID が必要です",
+        "noModelsDescription": "この API キーでは上流モデルが返されませんでした。Kilo Code では通常モデル ID が必要なため、手動入力してください。",
+        "noModelsTitle": "モデルがありません",
+        "nothingToExportDescription": "コピー / ダウンロードを有効にするには、エクスポート可能なトークンまたはサイトを少なくとも 1 つ選択してください。",
+        "nothingToExportTitle": "エクスポート対象がありません",
+        "noTokensDescription": "トークンが作成されるまで、このサイトはスキップされます。",
+        "noTokensTitle": "利用可能なトークンがありません",
+        "tokenCreated": "トークンを作成しました"
       },
       "placeholders": {
-        "currentApiConfigName": "Select current profile",
-        "modelId": "Search or enter model ID",
-        "selectSites": "Select sites",
-        "selectTokens": "Select tokens"
+        "currentApiConfigName": "現在のプロファイルを選択",
+        "modelId": "モデル ID を検索または入力",
+        "selectSites": "サイトを選択",
+        "selectTokens": "トークンを選択"
       },
-      "title": "Export Kilo Code JSON",
+      "title": "Kilo Code JSON をエクスポート",
       "warning": {
-        "description": "The exported JSON contains API keys in plaintext. Store it securely and do not share it.",
-        "title": "Plaintext API keys"
+        "description": "エクスポートされた JSON には API キーが平文で含まれます。安全に保管し、共有しないでください。",
+        "title": "平文 API キー"
       }
     },
     "tempWindowFallbackReminder": {
       "actions": {
-        "neverRemind": "Never remind",
-        "notNow": "Not now",
-        "openSettings": "Open settings"
+        "neverRemind": "今後表示しない",
+        "notNow": "今はしない",
+        "openSettings": "設定を開く"
       },
-      "descriptionDisabledTempWindowOnly": "{{accountName}} needs a temporary popup window to open and pass protection so requests can complete successfully. Enable it in Settings > Data Refresh",
-      "descriptionDisabledWithCookieInterceptor": "{{accountName}} needs the protection-bypass flow on Firefox. A temporary popup window will open to obtain cookies, and Cookie Interceptor will attach them to requests. Enable it in Settings > Data Refresh",
-      "descriptionPermissionTempWindowOnly": "{{accountName}} needs permission to open a temporary popup window so requests can complete successfully. Grant it in Settings > Permissions",
-      "descriptionPermissionWithCookieInterceptor": "{{accountName}} needs Cookie Interceptor permissions on Firefox. The temporary popup window must open to obtain cookies, and requests will attach them. Grant it in Settings > Permissions",
-      "titleTempWindowOnly": "Enable temporary window mode for requests",
-      "titleWithCookieInterceptor": "Enable protection bypass for requests"
+      "descriptionDisabledTempWindowOnly": "{{accountName}} では、リクエストを正常に完了するために一時ポップアップウィンドウを開いて保護を通過する必要があります。設定 > データ更新 で有効にしてください",
+      "descriptionDisabledWithCookieInterceptor": "{{accountName}} では Firefox の保護回避フローが必要です。一時ポップアップウィンドウが開いて Cookie を取得し、Cookie Interceptor がそれをリクエストへ付与します。設定 > データ更新 で有効にしてください",
+      "descriptionPermissionTempWindowOnly": "{{accountName}} では、リクエストを正常に完了するために一時ポップアップウィンドウを開く権限が必要です。設定 > 権限 で付与してください",
+      "descriptionPermissionWithCookieInterceptor": "{{accountName}} では Firefox の Cookie Interceptor 権限が必要です。Cookie 取得のために一時ポップアップウィンドウを開き、リクエストに付与します。設定 > 権限 で付与してください",
+      "titleTempWindowOnly": "リクエスト用の一時ウィンドウモードを有効にする",
+      "titleWithCookieInterceptor": "リクエスト用の保護回避を有効にする"
     },
     "updateLog": {
-      "disableAutoOpen": "Don't show after updates",
-      "enableAutoOpen": "Re-enable after updates",
-      "loading": "Loading changelog…",
-      "missingSection": "Couldn't load the changelog preview for v{{version}}. You can open the full changelog.",
-      "openFullChangelog": "Open full changelog",
-      "title": "What's New",
-      "updatedTo": "Updated to v{{version}}"
+      "disableAutoOpen": "更新後に表示しない",
+      "enableAutoOpen": "更新後の自動表示を再有効化",
+      "loading": "更新ログを読み込み中…",
+      "missingSection": "v{{version}} の更新ログプレビューを読み込めませんでした。完全版の更新ログを開けます。",
+      "openFullChangelog": "完全な更新ログを開く",
+      "title": "新着情報",
+      "updatedTo": "v{{version}} に更新しました"
     }
   },
   "feedback": {
-    "bugReport": "Report a bug",
-    "community": "Community groups",
-    "discussion": "Start a discussion",
-    "featureRequest": "Request a feature",
-    "trigger": "Feedback",
-    "triggerTooltip": "Open feedback shortcuts"
+    "bugReport": "不具合を報告",
+    "community": "コミュニティグループ",
+    "discussion": "ディスカッションを開始",
+    "featureRequest": "機能要望を送る",
+    "trigger": "フィードバック",
+    "triggerTooltip": "フィードバックショートカットを開く"
   },
   "modelListInput": {
     "actions": {
-      "add": "Add Model",
-      "remove": "Remove model",
-      "reorder": "Reorder model"
+      "add": "モデルを追加",
+      "remove": "モデルを削除",
+      "reorder": "モデルを並び替え"
     },
-    "description": "Example: gpt-4o-mini or moonshotai/kimi-k2:free, kimi-k2",
+    "description": "例: gpt-4o-mini または moonshotai/kimi-k2:free, kimi-k2",
     "placeholders": {
-      "alias": "Model alias (optional)",
-      "name": "Model name, e.g. claude"
+      "alias": "モデル別名（任意）",
+      "name": "モデル名。例: claude"
     },
-    "title": "Model List (name[, alias] one per line):"
+    "title": "モデル一覧（1 行に 1 つ、name[, alias] 形式）:"
   },
   "multiSelect": {
-    "cancelSelected": "Cancel selection",
-    "clearInput": "Clear input",
-    "clearSelected": "Clear all selected values",
-    "copyError": "Copy failed, please try again",
-    "copySuccess": "Selected values copied",
-    "emptyWithQueryAllowCustom": "Press Enter to add \"{{value}}\"",
-    "noOptions": "No options available",
-    "noOptionsAllowCustom": "No options available. Type to create one",
-    "placeholder": "Select...",
-    "selectAll": "Select all"
+    "cancelSelected": "選択をキャンセル",
+    "clearInput": "入力をクリア",
+    "clearSelected": "選択済みの値をすべてクリア",
+    "copyError": "コピーに失敗しました。再試行してください",
+    "copySuccess": "選択した値をコピーしました",
+    "emptyWithQueryAllowCustom": "Enter を押して「{{value}}」を追加",
+    "noOptions": "利用可能なオプションがありません",
+    "noOptionsAllowCustom": "利用可能なオプションがありません。入力して作成してください",
+    "placeholder": "選択...",
+    "selectAll": "すべて選択"
   },
   "navigation": {
-    "about": "About",
-    "account": "Account Management",
-    "apiCredentialProfiles": "API Credential Profiles",
-    "autoCheckin": "Auto Check-in",
-    "autoCheckinRunNow": "Quick check-in",
-    "balanceHistory": "Balance History",
-    "basic": "Basic Settings",
-    "bookmark": "Bookmark Management",
-    "collapseSidebar": "Collapse sidebar",
-    "expandSidebar": "Expand sidebar",
-    "externalCheckinAll": "Open all external check-ins",
-    "externalCheckinAllHint": "Open unchecked external check-ins. Ctrl/Cmd: open all. Shift: open in new window. Ctrl/Cmd+Shift: open all in new window.",
-    "importExport": "Import/Export",
-    "keys": "Key Management",
-    "managedSiteChannels": "Channels Management",
-    "managedSiteModelSync": "Model sync",
-    "meshGradientLab": "Mesh Gradient Lab (Dev)",
-    "models": "Model List",
-    "settings": "Settings",
-    "settingsOptions": "Settings Options",
-    "sidebarCollapsedHint": "Sidebar collapsed, showing icons only",
-    "usageAnalytics": "Usage Analytics"
+    "about": "この拡張機能について",
+    "account": "アカウント管理",
+    "apiCredentialProfiles": "API 認証情報プロファイル",
+    "autoCheckin": "自動チェックイン",
+    "autoCheckinRunNow": "クイックチェックイン",
+    "balanceHistory": "残高履歴",
+    "basic": "基本設定",
+    "bookmark": "ブックマーク管理",
+    "collapseSidebar": "サイドバーを折りたたむ",
+    "expandSidebar": "サイドバーを展開",
+    "externalCheckinAll": "すべての外部チェックインを開く",
+    "externalCheckinAllHint": "未開封の外部チェックインを開きます。Ctrl/Cmd: すべて開く。Shift: 新しいウィンドウで開く。Ctrl/Cmd+Shift: すべてを新しいウィンドウで開く。",
+    "importExport": "インポート / エクスポート",
+    "keys": "キー管理",
+    "managedSiteChannels": "チャネル管理",
+    "managedSiteModelSync": "モデル同期",
+    "meshGradientLab": "Mesh Gradient Lab（開発用）",
+    "models": "モデル一覧",
+    "settings": "設定",
+    "settingsOptions": "設定オプション",
+    "sidebarCollapsedHint": "サイドバーは折りたたまれており、アイコンのみ表示されています",
+    "usageAnalytics": "利用分析"
   },
   "pageTitle": {
     "app": "All API Hub",
@@ -352,16 +352,16 @@
   },
   "repeatableInput": {
     "actions": {
-      "add": "Add",
-      "remove": "Remove",
-      "reorder": "Drag to reorder"
+      "add": "追加",
+      "remove": "削除",
+      "reorder": "ドラッグして並び替え"
     }
   },
   "searchableSelect": {
-    "empty": "No results found",
-    "noOptions": "No options available",
-    "noOptionsAllowCustom": "No options available. Type to create one",
-    "searchPlaceholder": "Search...",
-    "useValue": "Use \"{{value}}\""
+    "empty": "結果が見つかりません",
+    "noOptions": "利用可能なオプションがありません",
+    "noOptionsAllowCustom": "利用可能なオプションがありません。入力して作成してください",
+    "searchPlaceholder": "検索...",
+    "useValue": "「{{value}}」を使用"
   }
 }

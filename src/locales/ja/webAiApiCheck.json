@@ -1,74 +1,74 @@
 {
   "confirmToast": {
-    "body": "Do you want to open the AI API test Panel to check and test the AI API's availability?",
-    "open": "Open",
-    "title": "AI API URL and API Key Detected"
+    "body": "AI API の可用性を確認・テストするために、AI API テストパネルを開きますか？",
+    "open": "開く",
+    "title": "AI API の URL と API キーを検出しました"
   },
   "messages": {
     "success": {
-      "settingsSaved": "AI API Check settings have been saved."
+      "settingsSaved": "AI API Check の設定を保存しました。"
     }
   },
   "modal": {
     "actions": {
-      "fetchingModels": "Fetching…",
-      "fetchModels": "Fetch models",
-      "hideKey": "Hide key",
-      "openApiProfiles": "Open API profiles",
-      "retry": "Retry",
-      "running": "Running…",
-      "runOne": "Run",
-      "saveToProfiles": "Save to API profiles",
-      "saving": "Saving…",
-      "showKey": "Show key",
-      "test": "Test",
-      "testing": "Testing…"
+      "fetchingModels": "取得中…",
+      "fetchModels": "モデルを取得",
+      "hideKey": "キーを隠す",
+      "openApiProfiles": "API プロファイルを開く",
+      "retry": "再試行",
+      "running": "実行中…",
+      "runOne": "実行",
+      "saveToProfiles": "API プロファイルに保存",
+      "saving": "保存中…",
+      "showKey": "キーを表示",
+      "test": "テスト",
+      "testing": "テスト中…"
     },
     "errors": {
-      "fetchModelsFailed": "Failed to fetch models.",
-      "missingBaseUrlOrKey": "Please provide base URL and API key first.",
-      "runProbeFailed": "Probe failed.",
-      "saveToProfilesFailed": "Failed to save to API profiles."
+      "fetchModelsFailed": "モデルの取得に失敗しました。",
+      "missingBaseUrlOrKey": "先に Base URL と API キーを入力してください。",
+      "runProbeFailed": "プローブに失敗しました。",
+      "saveToProfilesFailed": "API プロファイルへの保存に失敗しました。"
     },
     "fields": {
-      "apiKey": "API key",
-      "apiType": "API type",
+      "apiKey": "API キー",
+      "apiType": "API 種別",
       "baseUrl": "Base URL",
-      "modelId": "Model ID"
+      "modelId": "モデル ID"
     },
     "hints": {
-      "saveWithoutTest": "Tip: you can save once base URL + API key are provided (no need to test or fetch models first). Testing is optional and only helps verify availability."
+      "saveWithoutTest": "ヒント: Base URL と API キーが入力されていれば、その時点で保存できます（先にテストやモデル取得を行う必要はありません）。テストは任意で、可用性確認の補助にすぎません。"
     },
     "messages": {
-      "savedToProfiles": "Saved {{name}} to API profiles."
+      "savedToProfiles": "{{name}} を API プロファイルに保存しました。"
     },
-    "privacyHint": "API Keys will be considered sensitive information: hidden by default, and nothing is stored unless you choose to save to API profiles.",
+    "privacyHint": "API キーは機密情報として扱われます。既定では非表示で、API プロファイルに保存する操作を行わない限り、何も保存されません。",
     "probes": {
-      "notRunYet": "Not run yet"
+      "notRunYet": "未実行"
     },
     "sourceText": {
-      "label": "Text to extract from",
-      "placeholder": "Paste a base URL and API key here, or use the context menu to prefill from selection."
+      "label": "抽出元テキスト",
+      "placeholder": "ここに Base URL と API キーを貼り付けるか、コンテキストメニューから選択内容を使って事前入力してください。"
     },
-    "title": "AI API Functionality Availability Test"
+    "title": "AI API 機能可用性テスト"
   },
   "settings": {
     "autoDetect": {
-      "enable": "Enable auto-detect",
-      "enableDesc": "When enabled, the extension may detect credentials from copy actions and will ask for confirmation before opening the modal.",
+      "enable": "自動検出を有効化",
+      "enableDesc": "有効にすると、拡張機能はコピー操作から認証情報を検出する場合があり、モーダルを開く前に確認を求めます。",
       "whitelist": {
-        "invalidMore": "…and more",
-        "invalidTitle": "Invalid patterns",
-        "patterns": "URL whitelist patterns",
-        "patternsDesc": "One JavaScript RegExp pattern per line. Case-insensitive match is applied. Invalid patterns are ignored (treated as non-matching).",
+        "invalidMore": "…他",
+        "invalidTitle": "無効なパターン",
+        "patterns": "URL ホワイトリストパターン",
+        "patternsDesc": "1 行につき 1 つの JavaScript RegExp パターンを入力します。大文字小文字を区別しない一致が適用されます。無効なパターンは無視されます（常に不一致扱い）。",
         "patternsPlaceholder": "^https://example\\.com/console"
       }
     },
     "contextMenu": {
-      "enable": "Show in browser right-click menu",
-      "enableDesc": "Adds an “AI API Check” item to the browser context menu."
+      "enable": "ブラウザの右クリックメニューに表示",
+      "enableDesc": "ブラウザのコンテキストメニューに「AI API Check」を追加します。"
     },
-    "description": "Manual context-menu trigger is always available. Auto-detect is opt-in and only runs on whitelisted pages. Extracted API keys are not saved by default.",
-    "title": "Web AI API Functionality Availability Test"
+    "description": "手動のコンテキストメニュー起動は常に利用可能です。自動検出はオプトイン方式で、ホワイトリスト対象ページでのみ動作します。抽出した API キーは既定では保存されません。",
+    "title": "Web AI API 機能可用性テスト"
   }
 }

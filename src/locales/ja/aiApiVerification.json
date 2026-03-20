@@ -1,79 +1,79 @@
 {
   "verifyDialog": {
     "actions": {
-      "close": "Close",
-      "retry": "Retry",
-      "run": "Run",
-      "running": "Running...",
-      "runOne": "Run"
+      "close": "閉じる",
+      "retry": "再試行",
+      "run": "実行",
+      "running": "実行中...",
+      "runOne": "実行"
     },
     "apiTypes": {
       "anthropic": "Anthropic",
       "google": "Google/Gemini",
       "openai": "OpenAI",
-      "openaiCompatible": "OpenAI-compatible"
+      "openaiCompatible": "OpenAI 互換"
     },
     "details": {
-      "input": "Input",
-      "output": "Output"
+      "input": "入力",
+      "output": "出力"
     },
     "errors": {
-      "unexpected": "Unexpected error"
+      "unexpected": "予期しないエラー"
     },
-    "idleHint": "Select a token to start verification. Model id is required for model-dependent probes.",
-    "loadingTokensHint": "Loading tokens...",
+    "idleHint": "検証を開始するにはトークンを選択してください。モデル依存のプローブにはモデル ID が必要です。",
+    "loadingTokensHint": "トークンを読み込み中...",
     "meta": {
-      "apiType": "API type",
-      "apiTypePlaceholder": "Select API type",
-      "model": "Model",
-      "modelPlaceholder": "Enter model id",
-      "token": "Token",
-      "tokenPlaceholder": "Select token"
+      "apiType": "API 種別",
+      "apiTypePlaceholder": "API 種別を選択",
+      "model": "モデル",
+      "modelPlaceholder": "モデル ID を入力",
+      "token": "トークン",
+      "tokenPlaceholder": "トークンを選択"
     },
-    "notRunYet": "Not run yet",
+    "notRunYet": "未実行",
     "probes": {
-      "models": "Models endpoint (/v1/models)",
-      "structured-output": "Structured output (schema JSON)",
-      "text-generation": "Text generation",
-      "tool-calling": "Tool/function calling",
-      "web-search": "Web search / grounding"
+      "models": "Models エンドポイント (/v1/models)",
+      "structured-output": "構造化出力（スキーマ JSON）",
+      "text-generation": "テキスト生成",
+      "tool-calling": "ツール / 関数呼び出し",
+      "web-search": "Web 検索 / grounding"
     },
-    "requiresModelId": "Enter a model id to run this test.",
+    "requiresModelId": "このテストを実行するにはモデル ID を入力してください。",
     "status": {
-      "fail": "Fail",
-      "pass": "Pass",
-      "pending": "Pending",
-      "unsupported": "Unsupported"
+      "fail": "失敗",
+      "pass": "成功",
+      "pending": "保留中",
+      "unsupported": "未対応"
     },
     "summaries": {
-      "endpointNotFound": "Endpoint not found (404): this API may not be supported",
-      "forbidden": "Forbidden (403): access denied",
-      "httpError": "HTTP error ({{status}})",
-      "modelsFetched": "Fetched {{count}} models.",
-      "modelsFetched_other": "Fetched {{count}} models.",
-      "modelsProbeUnsupportedForApiType": "Models probe is not supported for this API type.",
-      "noModelAvailableToRunProbes": "No model available to run probes.",
-      "noModelIdProvided": "No model id provided.",
-      "noModelIdProvidedToRunProbe": "No model id provided to run probe.",
-      "noModelIdProvidedToRunProbes": "No model id provided to run probes.",
-      "noModelsReturned": "No models returned.",
-      "noToolCallDetected": "No tool call detected (model may not support tools).",
-      "structuredOutputInvalid": "Invalid output.",
-      "structuredOutputSucceeded": "Structured output succeeded.",
-      "textGenerationSucceeded": "Text generation succeeded.",
-      "textGenerationUnexpectedResponse": "Unexpected response text.",
-      "toolCallSucceeded": "Tool call succeeded.",
-      "unauthorized": "Unauthorized (401): invalid key or missing auth",
-      "webSearchGroundingNoResults": "No web search/grounding results.",
-      "webSearchGroundingSucceeded": "Web search/grounding succeeded.",
-      "webSearchNoResults": "No web search results.",
-      "webSearchRequiresExplicitSupport": "Web search probe requires explicit API type support.",
-      "webSearchSucceeded": "Web search succeeded.",
-      "webSearchUnsupportedAnthropic": "Web search probe is not supported for Anthropic endpoints.",
-      "webSearchUnsupportedForApiType": "Web search probe is not supported for this API type."
+      "endpointNotFound": "エンドポイントが見つかりません (404): この API は未対応の可能性があります",
+      "forbidden": "禁止されています (403): アクセスが拒否されました",
+      "httpError": "HTTP エラー ({{status}})",
+      "modelsFetched": "{{count}} 件のモデルを取得しました。",
+      "modelsFetched_other": "{{count}} 件のモデルを取得しました。",
+      "modelsProbeUnsupportedForApiType": "この API 種別では models プローブはサポートされていません。",
+      "noModelAvailableToRunProbes": "プローブを実行できるモデルがありません。",
+      "noModelIdProvided": "モデル ID が指定されていません。",
+      "noModelIdProvidedToRunProbe": "このプローブを実行するためのモデル ID が指定されていません。",
+      "noModelIdProvidedToRunProbes": "プローブを実行するためのモデル ID が指定されていません。",
+      "noModelsReturned": "モデルが返されませんでした。",
+      "noToolCallDetected": "ツール呼び出しが検出されませんでした（モデルがツールに対応していない可能性があります）。",
+      "structuredOutputInvalid": "出力が不正です。",
+      "structuredOutputSucceeded": "構造化出力に成功しました。",
+      "textGenerationSucceeded": "テキスト生成に成功しました。",
+      "textGenerationUnexpectedResponse": "予期しない応答テキストです。",
+      "toolCallSucceeded": "ツール呼び出しに成功しました。",
+      "unauthorized": "認証されていません (401): 無効なキーまたは認証不足です",
+      "webSearchGroundingNoResults": "Web 検索 / grounding の結果がありません。",
+      "webSearchGroundingSucceeded": "Web 検索 / grounding に成功しました。",
+      "webSearchNoResults": "Web 検索結果がありません。",
+      "webSearchRequiresExplicitSupport": "Web 検索プローブには API 種別での明示的な対応が必要です。",
+      "webSearchSucceeded": "Web 検索に成功しました。",
+      "webSearchUnsupportedAnthropic": "Anthropic エンドポイントでは Web 検索プローブはサポートされていません。",
+      "webSearchUnsupportedForApiType": "この API 種別では Web 検索プローブはサポートされていません。"
     },
-    "title": "API Verification",
-    "unsupportedProbeForApiType": "{{probe}} probe is not supported for this API type.",
-    "warning": "This feature is in beta. When support is detected, it is highly likely to be genuine. When support is not detected, it may still be supported. Results are for reference only; rely on actual tool usage."
+    "title": "API 検証",
+    "unsupportedProbeForApiType": "{{probe}} プローブはこの API 種別ではサポートされていません。",
+    "warning": "この機能はベータ版です。対応が検出された場合は実際に対応している可能性が高いですが、未検出でも実際には対応している場合があります。結果は参考情報として扱い、最終的には実際のツール利用結果を優先してください。"
   }
 }

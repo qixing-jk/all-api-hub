@@ -1,11 +1,11 @@
 {
-  "titlePrefix": "All API Hub · Shield Bypass",
+  "titlePrefix": "All API Hub · 保護回避",
   "toast": {
     "actions": {
-      "dismiss": "Dismiss",
-      "openSettings": "Open shield bypass settings"
+      "dismiss": "閉じる",
+      "openSettings": "保護回避設定を開く"
     },
-    "body": "This page was opened automatically by All API Hub to pass protection pages (e.g., Cloudflare challenges) and obtain the required cookies/session.\n\nIt’s necessary so All API Hub can make successful requests and detect data on protected sites.\n\nIf a verification step appears, complete it in this window; once passed, All API Hub continues and this window may close automatically.",
-    "title": "All API Hub shielded bypass helper (temporary window)"
+    "body": "このページは、保護ページ（例: Cloudflare のチャレンジ）を通過し、必要な Cookie / セッションを取得するために、All API Hub が自動的に開いたものです。\n\n保護されたサイトで All API Hub が正常にリクエストを行い、データを検出できるようにするために必要です。\n\n確認手順が表示された場合は、このウィンドウ内で完了してください。通過後、All API Hub は処理を続行し、このウィンドウは自動的に閉じることがあります。",
+    "title": "All API Hub 保護回避ヘルパー（一時ウィンドウ）"
   }
 }

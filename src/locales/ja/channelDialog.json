@@ -1,18 +1,18 @@
 {
   "actions": {
-    "create": "Create Channel",
-    "deselectAll": "Deselect All",
-    "hideKey": "Hide Key",
-    "inverse": "Inverse",
-    "loadingRealKey": "Loading real key...",
-    "loadRealKey": "Load real key",
-    "selectAll": "Select All",
-    "showKey": "Show Key",
-    "update": "Save Changes"
+    "create": "チャネルを作成",
+    "deselectAll": "すべての選択を解除",
+    "hideKey": "キーを隠す",
+    "inverse": "選択を反転",
+    "loadingRealKey": "実際のキーを読み込み中...",
+    "loadRealKey": "実際のキーを読み込む",
+    "selectAll": "すべて選択",
+    "showKey": "キーを表示",
+    "update": "変更を保存"
   },
   "description": {
-    "add": "Configure a new channel for your managed site",
-    "edit": "Update channel settings and routing information"
+    "add": "管理対象サイト用の新しいチャネルを設定します",
+    "edit": "チャネル設定とルーティング情報を更新します"
   },
   "fields": {
     "baseUrl": {
@@ -20,70 +20,70 @@
       "placeholder": "https://api.example.com"
     },
     "groups": {
-      "hint": "Groups are sourced from your managed site",
-      "label": "Channel Groups",
-      "loading": "Loading groups...",
-      "placeholder": "Select groups"
+      "hint": "グループは管理対象サイトから取得されます",
+      "label": "チャネルグループ",
+      "loading": "グループを読み込み中...",
+      "placeholder": "グループを選択"
     },
     "key": {
-      "label": "API Key",
-      "placeholder": "Enter the upstream provider API key",
-      "realKeyHint": "For New API, viewing the real channel key itself requires 2FA. If the login and 2FA-assist fields are not filled in under Settings, this key cannot be read."
+      "label": "API キー",
+      "placeholder": "上流プロバイダーの API キーを入力",
+      "realKeyHint": "New API では、実際のチャネルキーの表示自体に 2FA が必要です。設定でログイン情報と 2FA 補助項目が未入力の場合、このキーは読み取れません。"
     },
     "models": {
-      "hint": "Type to search or press Enter to add a custom model name",
-      "label": "Available Models",
-      "loading": "Loading models...",
-      "placeholder": "Select or type model names"
+      "hint": "入力して検索するか、Enter でカスタムモデル名を追加します",
+      "label": "利用可能モデル",
+      "loading": "モデルを読み込み中...",
+      "placeholder": "モデル名を選択または入力"
     },
     "name": {
-      "label": "Channel Name",
-      "placeholder": "Enter a descriptive channel name"
+      "label": "チャネル名",
+      "placeholder": "説明しやすいチャネル名を入力"
     },
     "priority": {
-      "hint": "Channels with larger priority numbers are used before others",
-      "label": "Priority"
+      "hint": "優先度の数値が大きいチャネルほど先に使用されます",
+      "label": "優先度"
     },
     "status": {
-      "disabled": "Disabled",
-      "enabled": "Enabled",
-      "label": "Status"
+      "disabled": "無効",
+      "enabled": "有効",
+      "label": "状態"
     },
     "type": {
-      "hint": "Choose the upstream provider that this channel will forward to",
-      "label": "Channel Type",
-      "placeholder": "Select channel type"
+      "hint": "このチャネルが転送する上流プロバイダーを選択します",
+      "label": "チャネル種別",
+      "placeholder": "チャネル種別を選択"
     },
     "weight": {
-      "hint": "Controls load balancing within the same priority (0 = equal distribution)",
-      "label": "Weight"
+      "hint": "同一優先度内の負荷分散を制御します（0 = 均等分散）",
+      "label": "重み"
     }
   },
   "messages": {
-    "loadRealKeyFailed": "Failed to load the real channel key: {{error}}",
-    "missingChannelId": "Existing channel ID is missing",
-    "saveFailed": "Failed to save channel: {{error}}"
+    "loadRealKeyFailed": "実際のチャネルキーの読み込みに失敗しました: {{error}}",
+    "missingChannelId": "既存チャネルの ID がありません",
+    "saveFailed": "チャネルの保存に失敗しました: {{error}}"
   },
   "sections": {
-    "advanced": "Advanced Settings"
+    "advanced": "詳細設定"
   },
   "title": {
-    "add": "Create Channel",
-    "edit": "Edit Channel"
+    "add": "チャネルを作成",
+    "edit": "チャネルを編集"
   },
   "validation": {
-    "baseUrlRequired": "Base URL is required for this channel type",
-    "keyRequired": "API key is required",
-    "nameRequired": "Channel name is required"
+    "baseUrlRequired": "このチャネル種別では Base URL が必須です",
+    "keyRequired": "API キーは必須です",
+    "nameRequired": "チャネル名は必須です"
   },
   "warnings": {
     "channelExists": {
       "actions": {
-        "continue": "Continue"
+        "continue": "続行"
       },
-      "description": "A channel named {{channelName}} already exists in your managed site. You can still create another channel, but duplicate routing may occur. Continue anyway?",
-      "title": "Channel already exists",
-      "warningTitle": "Potential duplicate"
+      "description": "管理対象サイトにはすでに {{channelName}} という名前のチャネルがあります。別のチャネルを作成することはできますが、重複したルーティングが発生する可能性があります。このまま続行しますか？",
+      "title": "チャネルはすでに存在します",
+      "warningTitle": "重複の可能性があります"
     }
   }
 }

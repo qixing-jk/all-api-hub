@@ -1,22 +1,22 @@
 {
   "actions": {
-    "shuffleSeed": "Shuffle Seed"
+    "shuffleSeed": "Seed をシャッフル"
   },
   "captions": {
-    "layoutIndex": "layout #{{index}}",
+    "layoutIndex": "レイアウト #{{index}}",
     "paletteIndex": "#{{index}}"
   },
   "labels": {
-    "layout": "Layout",
-    "overlay": "Overlay",
-    "palette": "Palette",
+    "layout": "レイアウト",
+    "overlay": "オーバーレイ",
+    "palette": "パレット",
     "seed": "Seed",
-    "view": "View"
+    "view": "表示"
   },
-  "summary": "{{paletteCount}} palettes · {{layoutCount}} layouts",
-  "title": "Mesh Gradient Lab (Dev)",
+  "summary": "{{paletteCount}} パレット・{{layoutCount}} レイアウト",
+  "title": "Mesh Gradient Lab（開発用）",
   "view": {
-    "layouts": "Layouts",
-    "palettes": "Palettes"
+    "layouts": "レイアウト",
+    "palettes": "パレット"
   }
 }

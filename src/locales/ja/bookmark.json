@@ -1,54 +1,54 @@
 {
   "actions": {
-    "add": "Add Bookmark",
-    "copyUrl": "Copy URL",
-    "open": "Open",
-    "pin": "Pin",
-    "unpin": "Unpin"
+    "add": "ブックマークを追加",
+    "copyUrl": "URL をコピー",
+    "open": "開く",
+    "pin": "ピン留め",
+    "unpin": "ピン留め解除"
   },
-  "addFirstBookmark": "Add your first bookmark",
+  "addFirstBookmark": "最初のブックマークを追加",
   "delete": {
-    "description": "This will permanently delete \"{{name}}\".",
-    "title": "Delete bookmark?"
+    "description": "\"{{name}}\" は完全に削除されます。",
+    "title": "ブックマークを削除しますか？"
   },
-  "description": "Save quick links (console/docs/admin pages) without creating full accounts.",
+  "description": "完全なアカウントを作成しなくても、よく使うリンク（コンソール / ドキュメント / 管理ページ）を保存できます。",
   "dialog": {
-    "description": "Bookmarks can be any link, such as to a site console, documentation, or an administration page. This is useful for situations where a full account cannot be created.",
-    "titleAdd": "Add Bookmark",
-    "titleEdit": "Edit Bookmark"
+    "description": "ブックマークには、サイトのコンソール、ドキュメント、管理ページなど、任意のリンクを登録できます。完全なアカウントを作成できない場面で便利です。",
+    "titleAdd": "ブックマークを追加",
+    "titleEdit": "ブックマークを編集"
   },
-  "emptyState": "No bookmarks yet",
+  "emptyState": "まだブックマークがありません",
   "filter": {
-    "tagsAllLabel": "All tags"
+    "tagsAllLabel": "すべてのタグ"
   },
   "form": {
-    "nameLabel": "Name",
-    "namePlaceholder": "e.g. Admin Console",
-    "notesLabel": "Notes",
-    "notesPlaceholder": "Optional notes...",
-    "tagsLabel": "Tags",
-    "tagsPlaceholder": "Select tags...",
+    "nameLabel": "名前",
+    "namePlaceholder": "例: 管理コンソール",
+    "notesLabel": "メモ",
+    "notesPlaceholder": "任意のメモ...",
+    "tagsLabel": "タグ",
+    "tagsPlaceholder": "タグを選択...",
     "urlLabel": "URL",
     "urlPlaceholder": "https://example.com/..."
   },
   "list": {
-    "dragHandle": "Reorder bookmarks"
+    "dragHandle": "ブックマークの順序を変更"
   },
   "search": {
-    "placeholder": "Search bookmarks..."
+    "placeholder": "ブックマークを検索..."
   },
   "stats": {
-    "pinnedBookmarks": "Pinned",
-    "totalBookmarks": "Total Bookmarks",
-    "usedTags": "Tags"
+    "pinnedBookmarks": "ピン留め",
+    "totalBookmarks": "ブックマーク総数",
+    "usedTags": "タグ"
   },
   "switch": {
-    "accounts": "Accounts",
-    "bookmarks": "Bookmarks"
+    "accounts": "アカウント",
+    "bookmarks": "ブックマーク"
   },
-  "title": "Bookmark Management",
+  "title": "ブックマーク管理",
   "validation": {
-    "nameRequired": "Name cannot be empty",
-    "urlRequired": "URL cannot be empty"
+    "nameRequired": "名前は空にできません",
+    "urlRequired": "URL は空にできません"
   }
 }

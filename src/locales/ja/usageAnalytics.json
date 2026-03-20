@@ -1,221 +1,221 @@
 {
   "actions": {
-    "applySettings": "Apply settings",
-    "export": "Export",
-    "openAccountUsageSettings": "Usage settings",
-    "refresh": "Refresh",
-    "syncNow": "Sync now"
+    "applySettings": "設定を適用",
+    "export": "エクスポート",
+    "openAccountUsageSettings": "利用設定",
+    "refresh": "更新",
+    "syncNow": "今すぐ同期"
   },
   "charts": {
     "accountComparison": {
-      "description": "Compare totals across accounts for the current selection.",
+      "description": "現在の選択範囲でアカウントごとの合計値を比較します。",
       "series": {
-        "tokens": "Total tokens"
+        "tokens": "総トークン数"
       },
-      "title": "Per-account comparison"
+      "title": "アカウント別比較"
     },
     "common": {
       "chartType": {
-        "ariaLabel": "Chart type",
-        "histogram": "Histogram",
-        "pie": "Pie"
+        "ariaLabel": "グラフ種別",
+        "histogram": "ヒストグラム",
+        "pie": "円グラフ"
       }
     },
     "dailyOverview": {
       "axes": {
-        "requests": "Requests",
-        "tokens": "Tokens / Quota"
+        "requests": "リクエスト数",
+        "tokens": "トークン / クォータ"
       },
-      "description": "Multi-metric trends with tooltip and zoom.",
+      "description": "ツールチップとズーム対応の複数指標トレンドです。",
       "series": {
-        "completionTokens": "Completion tokens",
-        "promptTokens": "Prompt tokens",
-        "quota": "Quota",
-        "requests": "Requests",
-        "totalTokens": "Total tokens"
+        "completionTokens": "出力トークン",
+        "promptTokens": "入力トークン",
+        "quota": "クォータ",
+        "requests": "リクエスト数",
+        "totalTokens": "総トークン数"
       },
-      "title": "Daily overview"
+      "title": "日次概要"
     },
     "latencyHistogram": {
-      "description": "Histogram of per-request latency (`use_time`) for the current selection.",
+      "description": "現在の選択範囲におけるリクエストごとの遅延（`use_time`）ヒストグラムです。",
       "series": {
-        "count": "Count"
+        "count": "件数"
       },
-      "title": "Latency distribution"
+      "title": "遅延分布"
     },
     "latencyTrend": {
       "axes": {
-        "seconds": "Seconds",
-        "slowCount": "Slow count"
+        "seconds": "秒",
+        "slowCount": "低速件数"
       },
-      "description": "Daily avg/max latency and slow counts.",
+      "description": "日次の平均 / 最大遅延と低速件数です。",
       "series": {
-        "avg": "Avg",
-        "max": "Max",
-        "slow": "Slow"
+        "avg": "平均",
+        "max": "最大",
+        "slow": "低速"
       },
-      "title": "Latency trend"
+      "title": "遅延トレンド"
     },
     "modelCostDistribution": {
-      "description": "Top models by quota consumption (converted to USD) in the selected date range.",
+      "description": "選択した期間内で、クォータ消費量（USD 換算）が多い上位モデルです。",
       "series": {
-        "usd": "Cost (USD)"
+        "usd": "コスト (USD)"
       },
-      "title": "Model cost distribution"
+      "title": "モデルコスト分布"
     },
     "modelDistribution": {
-      "description": "Top models by total tokens in the selected date range.",
+      "description": "選択した期間内で、総トークン数が多い上位モデルです。",
       "series": {
-        "tokens": "Total tokens"
+        "tokens": "総トークン数"
       },
-      "title": "Model distribution"
+      "title": "モデル分布"
     },
     "modelHeatmap": {
-      "description": "Token usage intensity over time for top models (click a model to focus).",
+      "description": "上位モデルの時間推移に沿ったトークン使用量ヒートマップです（モデルをクリックして絞り込み可能）。",
       "series": {
-        "tokens": "Total tokens"
+        "tokens": "総トークン数"
       },
-      "title": "Model × day heatmap"
+      "title": "モデル × 日別ヒートマップ"
     },
-    "other": "Other",
+    "other": "その他",
     "slowModels": {
-      "description": "Models with the most slow requests in the current selection.",
+      "description": "現在の選択範囲で低速リクエストが最も多いモデルです。",
       "series": {
-        "slowCount": "Slow count"
+        "slowCount": "低速件数"
       },
-      "title": "Slow models"
+      "title": "低速モデル"
     },
     "slowTokens": {
-      "description": "API tokens with the most slow requests in the current selection.",
+      "description": "現在の選択範囲で低速リクエストが最も多い API トークンです。",
       "series": {
-        "slowCount": "Slow count"
+        "slowCount": "低速件数"
       },
-      "title": "Slow tokens"
+      "title": "低速トークン"
     },
     "usageTimeHeatmap": {
-      "description": "Total tokens aggregated by weekday and hour (local time).",
+      "description": "曜日と時間帯（ローカル時刻）別に集計した総トークン数です。",
       "series": {
-        "tokens": "Total tokens"
+        "tokens": "総トークン数"
       },
-      "title": "Usage time heatmap"
+      "title": "利用時間ヒートマップ"
     }
   },
-  "description": "Sync and visualize aggregated usage history across accounts, with export support.",
+  "description": "アカウント横断で集計された利用履歴を同期・可視化し、エクスポートにも対応します。",
   "empty": {
-    "description": "Enable sync in Settings → Account usage, then click \"Sync now\" to pull recent usage history.",
-    "title": "No usage history data yet"
+    "description": "設定 → アカウント利用状況 で同期を有効化し、「今すぐ同期」をクリックして最近の利用履歴を取得してください。",
+    "title": "まだ利用履歴データがありません"
   },
   "filters": {
-    "accounts": "Accounts",
-    "accountsHint": "Pick a subset of accounts (empty selection means all within selected sites).",
-    "allAccounts": "All accounts",
-    "allSites": "All sites",
-    "allTokens": "All tokens",
-    "endDay": "End date",
-    "sites": "Sites",
-    "sitesHint": "Pick a subset of sites (empty selection means all).",
-    "startDay": "Start date",
-    "tokens": "API tokens",
-    "tokensHint": "Optional token filter derived from usage-history aggregates (empty selection means all within selected accounts).",
-    "unknownToken": "Unknown token"
+    "accounts": "アカウント",
+    "accountsHint": "アカウントの一部を選択します（未選択は、選択中サイト内の全アカウントを意味します）。",
+    "allAccounts": "すべてのアカウント",
+    "allSites": "すべてのサイト",
+    "allTokens": "すべてのトークン",
+    "endDay": "終了日",
+    "sites": "サイト",
+    "sitesHint": "サイトの一部を選択します（未選択は全サイトを意味します）。",
+    "startDay": "開始日",
+    "tokens": "API トークン",
+    "tokensHint": "利用履歴集計から導出された任意のトークンフィルターです（未選択は、選択中アカウント内の全トークンを意味します）。",
+    "unknownToken": "不明なトークン"
   },
   "hover": {
-    "account": "Account",
-    "notes": "Notes",
-    "owners": "Accounts",
-    "site": "Site",
-    "token": "Token",
-    "type": "Type",
+    "account": "アカウント",
+    "notes": "メモ",
+    "owners": "アカウント",
+    "site": "サイト",
+    "token": "トークン",
+    "type": "種別",
     "url": "URL"
   },
   "messages": {
     "error": {
-      "exportFailed": "Export failed: {{error}}",
-      "exportNoData": "No data to export for the current selection",
-      "settingsSaveFailed": "Failed to save settings: {{error}}",
-      "syncFailed": "Sync failed: {{error}}"
+      "exportFailed": "エクスポートに失敗しました: {{error}}",
+      "exportNoData": "現在の選択範囲にエクスポート可能なデータがありません",
+      "settingsSaveFailed": "設定の保存に失敗しました: {{error}}",
+      "syncFailed": "同期に失敗しました: {{error}}"
     },
     "loading": {
-      "syncing": "Syncing usage history..."
+      "syncing": "利用履歴を同期中..."
     },
     "success": {
-      "exported": "Exported",
-      "settingsSaved": "Settings saved",
-      "syncCompleted": "Sync completed (success: {{success}}, skipped: {{skipped}}, error: {{error}}, unsupported: {{unsupported}})",
-      "syncCompletedNoSummary": "Sync completed"
+      "exported": "エクスポートしました",
+      "settingsSaved": "設定を保存しました",
+      "syncCompleted": "同期完了（成功: {{success}}、スキップ: {{skipped}}、エラー: {{error}}、未対応: {{unsupported}}）",
+      "syncCompletedNoSummary": "同期が完了しました"
     },
     "warning": {
-      "scheduleFallback": "Schedule fallback applied: {{warning}}"
+      "scheduleFallback": "スケジュールのフォールバックを適用しました: {{warning}}"
     }
   },
   "settings": {
-    "alarmUnsupported": "Alarms API is not supported in this browser; cron-like scheduling is unavailable.",
-    "enabled": "Usage history sync",
-    "enabledHint": "When enabled, the extension stores bounded daily aggregates (no raw logs).",
-    "retentionDays": "Retention (days)",
-    "scheduleMode": "Auto-sync schedule",
-    "scheduleModePlaceholder": "Select a schedule mode",
+    "alarmUnsupported": "このブラウザでは Alarms API をサポートしていないため、cron 風スケジュールは利用できません。",
+    "enabled": "利用履歴同期",
+    "enabledHint": "有効にすると、拡張機能は日次集計データのみを保存します（生ログは保存しません）。",
+    "retentionDays": "保持日数",
+    "scheduleMode": "自動同期スケジュール",
+    "scheduleModePlaceholder": "スケジュールモードを選択",
     "scheduleModes": {
-      "afterRefresh": "After account refresh",
-      "alarm": "Cron-like (Alarms API)",
-      "manual": "Manual only"
+      "afterRefresh": "アカウント更新後",
+      "alarm": "Cron 風（Alarms API）",
+      "manual": "手動のみ"
     },
-    "syncIntervalHours": "Minimum sync interval (hours)"
+    "syncIntervalHours": "最小同期間隔（時間）"
   },
   "status": {
-    "never": "Never",
+    "never": "未実行",
     "states": {
-      "error": "Error",
-      "never": "Never",
-      "success": "Success",
-      "unsupported": "Unsupported"
+      "error": "エラー",
+      "never": "未実行",
+      "success": "成功",
+      "unsupported": "未対応"
     }
   },
   "summary": {
-    "completionTokens": "Output tokens",
-    "cost": "Cost",
-    "promptTokens": "Input tokens",
-    "requests": "Requests",
-    "totalTokens": "Total tokens"
+    "completionTokens": "出力トークン",
+    "cost": "コスト",
+    "promptTokens": "入力トークン",
+    "requests": "リクエスト数",
+    "totalTokens": "総トークン数"
   },
   "syncTab": {
     "actions": {
-      "clearSelection": "Clear selection",
-      "refreshStatus": "Refresh status",
-      "syncAccount": "Sync account",
-      "syncing": "Syncing...",
-      "syncSelected": "Sync selected"
+      "clearSelection": "選択をクリア",
+      "refreshStatus": "状態を更新",
+      "syncAccount": "アカウントを同期",
+      "syncing": "同期中...",
+      "syncSelected": "選択分を同期"
     },
-    "noAccounts": "No accounts found.",
-    "searchPlaceholder": "Type to search…",
-    "settingsDescription": "Configure how aggregated usage history is stored and scheduled.",
-    "settingsTitle": "Usage history synchronization",
-    "stateDescription": "View per-account sync state and the last sync timestamp.",
-    "stateTitle": "Sync state",
+    "noAccounts": "アカウントが見つかりません。",
+    "searchPlaceholder": "入力して検索…",
+    "settingsDescription": "集計済み利用履歴の保存方法とスケジュールを設定します。",
+    "settingsTitle": "利用履歴の同期",
+    "stateDescription": "アカウントごとの同期状態と最終同期時刻を確認します。",
+    "stateTitle": "同期状態",
     "table": {
       "columns": {
-        "account": "Account",
-        "lastSyncAt": "Last sync",
-        "message": "Message",
-        "state": "State"
+        "account": "アカウント",
+        "lastSyncAt": "最終同期",
+        "message": "メッセージ",
+        "state": "状態"
       },
-      "empty": "No accounts match the current search.",
-      "loading": "Loading…",
+      "empty": "現在の検索条件に一致するアカウントがありません。",
+      "loading": "読み込み中…",
       "noMessage": "—",
-      "rowActions": "Row actions",
-      "selectAll": "Select all accounts",
-      "selectedCount_other": "Selected: {{count}}",
-      "selectRow": "Select account: {{name}}"
+      "rowActions": "行操作",
+      "selectAll": "すべてのアカウントを選択",
+      "selectedCount_other": "選択中: {{count}}",
+      "selectRow": "アカウントを選択: {{name}}"
     }
   },
-  "title": "Usage Analytics",
+  "title": "利用分析",
   "weekdays": {
-    "fri": "Fri",
-    "mon": "Mon",
-    "sat": "Sat",
-    "sun": "Sun",
-    "thu": "Thu",
-    "tue": "Tue",
-    "wed": "Wed"
+    "fri": "金",
+    "mon": "月",
+    "sat": "土",
+    "sun": "日",
+    "thu": "木",
+    "tue": "火",
+    "wed": "水"
   }
 }

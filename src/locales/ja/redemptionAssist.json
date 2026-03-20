@@ -1,52 +1,52 @@
 {
   "accountSelect": {
-    "confirm": "Confirm redemption",
-    "noResults": "No matching accounts found",
-    "title": "Select an account to use for redemption",
-    "titleFallback": "No account matched this site, please select one manually",
-    "titleMultiple": "Multiple accounts available, please select one for redemption"
+    "confirm": "引き換えを確認",
+    "noResults": "一致するアカウントが見つかりません",
+    "title": "引き換えに使用するアカウントを選択してください",
+    "titleFallback": "このサイトに一致するアカウントがありません。手動で選択してください",
+    "titleMultiple": "利用可能なアカウントが複数あります。引き換えに使うアカウントを選択してください"
   },
   "actions": {
-    "autoRedeem": "Auto redeem"
+    "autoRedeem": "自動引き換え"
   },
   "messages": {
-    "batchResultSummary": "Total {{total}}. Succeeded {{success}}. Failed {{failed}}.",
-    "batchResultTitle": "Redemption results",
-    "cancelled": "Cancelled",
-    "noAccountForUrl": "No matching account found for this site. Please add the site as an account in All API Hub, then try again.",
-    "promptConfirm": "Detected a possible redemption code {{code}} on this page. Try auto redeem for this site?",
-    "promptConfirmBatch_other": "Detected {{count}} possible redemption codes on this page. Select codes to auto redeem for this site.",
-    "promptSettingsLink": "Open Redemption Assist settings",
-    "promptSource": "This prompt is provided by the All API Hub extension",
+    "batchResultSummary": "合計 {{total}} 件。成功 {{success}} 件。失敗 {{failed}} 件。",
+    "batchResultTitle": "引き換え結果",
+    "cancelled": "キャンセルしました",
+    "noAccountForUrl": "このサイトに一致するアカウントが見つかりません。All API Hub にこのサイトをアカウントとして追加してから、もう一度お試しください。",
+    "promptConfirm": "このページで引き換えコード候補 {{code}} を検出しました。このサイトで自動引き換えを試しますか？",
+    "promptConfirmBatch_other": "このページで {{count}} 件の引き換えコード候補を検出しました。このサイトで自動引き換えするコードを選択してください。",
+    "promptSettingsLink": "Redemption Assist の設定を開く",
+    "promptSource": "この案内は All API Hub 拡張機能によって表示されています",
     "promptTitle": "Redemption Assist",
-    "redeemFailed": "Redemption failed. Please try again later.",
-    "redeemLoading": "Trying to redeem…",
-    "redeemSuccess": "Redeemed successfully. Credited amount: {{amount}}",
-    "selectAll": "Select all",
+    "redeemFailed": "引き換えに失敗しました。しばらくしてからもう一度お試しください。",
+    "redeemLoading": "引き換えを試行中…",
+    "redeemSuccess": "引き換えに成功しました。反映額: {{amount}}",
+    "selectAll": "すべて選択",
     "success": {
-      "settingsSaved": "Redemption assist settings have been saved"
+      "settingsSaved": "Redemption Assist の設定を保存しました"
     }
   },
   "settings": {
     "contextMenu": {
-      "enable": "Show in browser right-click menu",
-      "enableDesc": "Adds a “Redemption Assist” item to the browser context menu."
+      "enable": "ブラウザの右クリックメニューに表示",
+      "enableDesc": "ブラウザのコンテキストメニューに「Redemption Assist」を追加します。"
     },
-    "description": "Configure how the extension detects and assists with redeeming codes on supported pages",
-    "enable": "Enable redemption assist",
-    "enableDesc": "Automatically detect redemption codes on supported pages and show a redeem prompt",
-    "relaxedCodeValidation": "Relax code format restrictions",
-    "relaxedCodeValidationDesc": "When enabled, any 32-character code will be treated as a possible redemption code (no charset check).",
+    "description": "対応ページ上でコードを検出し、引き換えを補助する方法を設定します",
+    "enable": "Redemption Assist を有効化",
+    "enableDesc": "対応ページ上の引き換えコードを自動検出し、引き換えプロンプトを表示します",
+    "relaxedCodeValidation": "コード形式の制限を緩和",
+    "relaxedCodeValidationDesc": "有効にすると、任意の 32 文字コードを引き換えコード候補として扱います（文字種チェックなし）。",
     "title": "Redemption Assist",
     "urlWhitelist": {
-      "enable": "Enable URL whitelist",
-      "enableDesc": "When enabled, redemption assist only runs on URLs allowed by the rules below.",
-      "includeAccountSiteUrls": "Include account site URLs",
-      "includeAccountSiteUrlsDesc": "Allow all pages under each account's site URL origin.",
-      "includeCheckInAndRedeemUrls": "Include check-in & redeem URLs",
-      "includeCheckInAndRedeemUrlsDesc": "Allow the check-in and redeem pages (custom or default) for each account.",
-      "patterns": "Custom regex patterns",
-      "patternsDesc": "One JavaScript RegExp pattern per line. Case-insensitive match is applied.",
+      "enable": "URL ホワイトリストを有効化",
+      "enableDesc": "有効にすると、Redemption Assist は以下のルールで許可された URL でのみ動作します。",
+      "includeAccountSiteUrls": "アカウントのサイト URL を含める",
+      "includeAccountSiteUrlsDesc": "各アカウントのサイト URL オリジン配下のすべてのページを許可します。",
+      "includeCheckInAndRedeemUrls": "チェックイン / 引き換え URL を含める",
+      "includeCheckInAndRedeemUrlsDesc": "各アカウントのチェックインページと引き換えページ（カスタムまたは既定）を許可します。",
+      "patterns": "カスタム正規表現パターン",
+      "patternsDesc": "1 行につき 1 つの JavaScript RegExp パターンを入力します。大文字小文字を区別しない一致が適用されます。",
       "patternsPlaceholder": "^https://example\\.com/console/topup"
     }
   }

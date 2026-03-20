@@ -1,64 +1,64 @@
 {
-  "copyrightAck": "Copyright & Acknowledgements",
-  "devMaintenance": "Development & Maintenance",
-  "features": "Features",
+  "copyrightAck": "著作権と謝辞",
+  "devMaintenance": "開発と保守",
+  "features": "機能",
   "feedbackSection": {
     "bugReport": {
-      "button": "Open bug report",
-      "description": "Report broken behavior, errors, or unexpected results with the bug-report template."
+      "button": "不具合報告を開く",
+      "description": "bug-report テンプレートを使って、壊れた挙動、エラー、予期しない結果を報告してください。"
     },
     "community": {
-      "button": "Open community hub",
-      "description": "See the WeChat QR code, Telegram group, and other community channels for quick questions and setup discussions."
+      "button": "コミュニティハブを開く",
+      "description": "WeChat の QR コード、Telegram グループ、その他のコミュニティ窓口を確認して、簡単な質問やセットアップ相談を行えます。"
     },
     "discussion": {
-      "button": "Open discussions",
-      "description": "Ask questions, compare setups, or start a broader community discussion on GitHub Discussions."
+      "button": "ディスカッションを開く",
+      "description": "質問したり、構成を比較したり、GitHub Discussions でより広いコミュニティの議論を始められます。"
     },
     "featureRequest": {
-      "button": "Open feature request",
-      "description": "Share an improvement idea or workflow request through the feature-request template."
+      "button": "機能要望を開く",
+      "description": "feature-request テンプレートを通じて、改善案やワークフロー要望を共有してください。"
     },
-    "title": "Feedback & Support"
+    "title": "フィードバックとサポート"
   },
-  "githubDesc": "View source code, submit issues or participate in project development",
-  "githubRepo": "GitHub Repository",
-  "homepage": "Project Homepage",
-  "homepageDesc": "View detailed documentation, user guides and more information",
-  "implementedFeatures": "Implemented Features",
-  "intro": "All API Hub is a browser extension for managing both third-party New API-compatible relay sites and your own New API instance. It centralizes account and balance monitoring, smart sorting, and site detection, and provides automation features such as auto-refresh and temp-window firewall bypass. For self-hosted New API, it also offers channel management and model list synchronization, and integrates with CLIProxyAPI, WebDAV backup, and import/export tools.",
-  "privacyText": "All data of this plugin is stored locally in the browser and will not be actively uploaded to any server. Your account information and usage data are completely under your control, ensuring privacy and security",
-  "privacyTitle": "Privacy Protection",
-  "projectLinks": "Project Links",
-  "starRepo": "Go star it",
+  "githubDesc": "ソースコードの確認、Issue の報告、プロジェクト開発への参加ができます",
+  "githubRepo": "GitHub リポジトリ",
+  "homepage": "プロジェクトホームページ",
+  "homepageDesc": "詳細なドキュメント、ユーザーガイド、その他の情報を確認できます",
+  "implementedFeatures": "実装済み機能",
+  "intro": "All API Hub は、サードパーティーの New API 互換中継サイトと、自分で構築した New API インスタンスの両方を管理するためのブラウザ拡張機能です。アカウントと残高の監視、スマートな並び替え、サイト検出を一元化し、自動更新や一時ウィンドウによるファイアウォール回避などの自動化機能も提供します。セルフホストの New API に対しては、チャネル管理やモデル一覧同期も行え、CLIProxyAPI、WebDAV バックアップ、インポート / エクスポートツールとも連携できます。",
+  "privacyText": "このプラグインのすべてのデータはブラウザ内にローカル保存され、いかなるサーバーにも積極的に送信されることはありません。アカウント情報と利用データは完全にあなたの管理下にあり、プライバシーと安全性を確保します。",
+  "privacyTitle": "プライバシー保護",
+  "projectLinks": "プロジェクトリンク",
+  "starRepo": "Star を付けに行く",
   "stores": {
-    "chrome": "Chrome Web Store",
-    "edge": "Microsoft Edge Add-ons",
+    "chrome": "Chrome ウェブストア",
+    "edge": "Microsoft Edge アドオン",
     "firefox": "Firefox Add-ons"
   },
   "storesSection": {
     "download": {
-      "button": "Open store",
-      "description": "Download from {{store}}."
+      "button": "ストアを開く",
+      "description": "{{store}} からダウンロードします。"
     },
     "review": {
-      "button": "Rate on {{store}}",
-      "description": "If All API Hub helps you, a positive review on {{store}} really helps.",
-      "title": "Leave a positive review"
+      "button": "{{store}} で評価する",
+      "description": "All API Hub が役に立っている場合は、{{store}} での高評価レビューが大きな助けになります。",
+      "title": "高評価レビューをお願いします"
     },
-    "title": "Rate & Download"
+    "title": "評価とダウンロード"
   },
   "techStack": {
-    "headlessui": "Unstyled UI components",
-    "react": "User interface library",
-    "tailwindcss": "Atomic CSS framework",
-    "title": "Tech Stack",
-    "typescript": "Type-safe JavaScript",
-    "wxt": "Browser extension development framework"
+    "headlessui": "スタイルなし UI コンポーネント",
+    "react": "ユーザーインターフェースライブラリ",
+    "tailwindcss": "ユーティリティファースト CSS フレームワーク",
+    "title": "技術スタック",
+    "typescript": "型安全な JavaScript",
+    "wxt": "ブラウザ拡張開発フレームワーク"
   },
-  "thanksDesc": "Thanks to all developers who have contributed to the open source community, the development of this plugin benefits from these excellent open source projects and tools",
-  "title": "About",
-  "upcomingFeatures": "Upcoming Features",
-  "version": "Version:",
-  "visitHomepage": "Visit Homepage"
+  "thanksDesc": "オープンソースコミュニティに貢献してくださったすべての開発者に感謝します。このプラグインの開発は、これらの優れたオープンソースプロジェクトとツールの恩恵を受けています。",
+  "title": "この拡張機能について",
+  "upcomingFeatures": "今後の機能",
+  "version": "バージョン:",
+  "visitHomepage": "ホームページを開く"
 }

@@ -1,22 +1,22 @@
 {
   "actions": {
-    "shareAccountSnapshot": "Share account snapshot",
-    "shareOverviewSnapshot": "Share overview snapshot"
+    "shareAccountSnapshot": "アカウントスナップショットを共有",
+    "shareOverviewSnapshot": "概要スナップショットを共有"
   },
   "labels": {
-    "accounts": "Accounts",
-    "asOf": "As of",
-    "balance": "Balance",
-    "income": "Income",
-    "net": "Net",
-    "outcome": "Spending",
-    "overview": "Overview",
-    "site": "Site",
-    "today": "Today",
-    "totalBalance": "Total balance"
+    "accounts": "アカウント",
+    "asOf": "時点",
+    "balance": "残高",
+    "income": "収入",
+    "net": "純額",
+    "outcome": "支出",
+    "overview": "概要",
+    "site": "サイト",
+    "today": "本日",
+    "totalBalance": "総残高"
   },
   "toast": {
-    "captionHint": "Caption wasn't copied automatically. Copying it may replace your clipboard image.",
-    "copyCaption": "Copy caption"
+    "captionHint": "キャプションは自動コピーされませんでした。コピーするとクリップボード上の画像が置き換わる可能性があります。",
+    "copyCaption": "キャプションをコピー"
   }
 }
