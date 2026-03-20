@@ -3,6 +3,8 @@ import type { TFunction } from "i18next"
 import { ChevronLeft, ChevronRight, Settings } from "lucide-react"
 import {
   Fragment,
+  lazy,
+  Suspense,
   useCallback,
   useEffect,
   useMemo,
@@ -19,6 +21,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Spinner,
 } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
@@ -34,18 +37,7 @@ import {
 
 import { PermissionOnboardingDialog } from "./components/dialogs/PermissionOnboardingDialog"
 import LoadingSkeleton from "./components/shared/LoadingSkeleton"
-import AccountManagementTab from "./components/tabs/AccountManagement/AccountManagementTab"
-import BalanceHistoryTab from "./components/tabs/BalanceHistory/BalanceHistoryTab"
-import CheckinRedeemTab from "./components/tabs/CheckinRedeem/CheckinRedeemTab"
-import ClaudeCodeRouterTab from "./components/tabs/ClaudeCodeRouter/ClaudeCodeRouterTab"
-import CliProxyTab from "./components/tabs/CliProxy/CliProxyTab"
-import DataBackupTab from "./components/tabs/DataBackup/DataBackupTab"
 import GeneralTab from "./components/tabs/General/GeneralTab"
-import ManagedSiteTab from "./components/tabs/ManagedSite/ManagedSiteTab"
-import PermissionsTab from "./components/tabs/Permissions/PermissionsTab"
-import AutoRefreshTab from "./components/tabs/Refresh/AutoRefreshTab"
-import UsageHistorySyncTab from "./components/tabs/UsageHistorySync/UsageHistorySyncTab"
-import WebAiApiCheckTab from "./components/tabs/WebAiApiCheck/WebAiApiCheckTab"
 
 type TabId =
   | "general"
@@ -66,7 +58,50 @@ interface TabConfig {
   component: ComponentType
 }
 
+/**
+ * Wrap a lazily imported settings tab so it can be stored in the shared tab config.
+ */
+function createLazyTabComponent(
+  loader: () => Promise<{ default: ComponentType<any> }>,
+): ComponentType {
+  return lazy(loader) as ComponentType
+}
+
 const hasOptionalPermissions = OPTIONAL_PERMISSIONS.length > 0
+
+const AccountManagementTab = createLazyTabComponent(
+  () => import("./components/tabs/AccountManagement/AccountManagementTab"),
+)
+const BalanceHistoryTab = createLazyTabComponent(
+  () => import("./components/tabs/BalanceHistory/BalanceHistoryTab"),
+)
+const CheckinRedeemTab = createLazyTabComponent(
+  () => import("./components/tabs/CheckinRedeem/CheckinRedeemTab"),
+)
+const ClaudeCodeRouterTab = createLazyTabComponent(
+  () => import("./components/tabs/ClaudeCodeRouter/ClaudeCodeRouterTab"),
+)
+const CliProxyTab = createLazyTabComponent(
+  () => import("./components/tabs/CliProxy/CliProxyTab"),
+)
+const DataBackupTab = createLazyTabComponent(
+  () => import("./components/tabs/DataBackup/DataBackupTab"),
+)
+const ManagedSiteTab = createLazyTabComponent(
+  () => import("./components/tabs/ManagedSite/ManagedSiteTab"),
+)
+const PermissionsTab = createLazyTabComponent(
+  () => import("./components/tabs/Permissions/PermissionsTab"),
+)
+const AutoRefreshTab = createLazyTabComponent(
+  () => import("./components/tabs/Refresh/AutoRefreshTab"),
+)
+const UsageHistorySyncTab = createLazyTabComponent(
+  () => import("./components/tabs/UsageHistorySync/UsageHistorySyncTab"),
+)
+const WebAiApiCheckTab = createLazyTabComponent(
+  () => import("./components/tabs/WebAiApiCheck/WebAiApiCheckTab"),
+)
 
 const PERMISSIONS_TAB_CONFIG: TabConfig = {
   id: "permissions",
@@ -235,6 +270,19 @@ function DesktopTabs({
 }
 
 /**
+ * Localized fallback shown while a lazily loaded settings tab chunk is being fetched.
+ */
+function SettingsTabContentFallback() {
+  const { t } = useTranslation("common")
+
+  return (
+    <div className="flex min-h-[240px] items-center justify-center">
+      <Spinner size="lg" aria-label={t("status.loading")} />
+    </div>
+  )
+}
+
+/**
  * Basic Settings page: renders tabs for all settings sections and handles URL syncing/onboarding.
  */
 export default function BasicSettings() {
@@ -391,7 +439,11 @@ export default function BasicSettings() {
             const Component = config.component
             return (
               <Tab.Panel key={config.id} unmount={false}>
-                {mountedTabIds.includes(config.id) ? <Component /> : null}
+                {mountedTabIds.includes(config.id) ? (
+                  <Suspense fallback={<SettingsTabContentFallback />}>
+                    <Component />
+                  </Suspense>
+                ) : null}
               </Tab.Panel>
             )
           })}

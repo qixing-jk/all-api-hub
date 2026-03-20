@@ -167,7 +167,9 @@ describe("BasicSettings tab mounting", () => {
       screen.getByRole("tab", { name: "settings:tabs.managedSite" }),
     )
 
-    expect(screen.getByTestId("managed-site-tab-content")).toBeInTheDocument()
+    expect(
+      await screen.findByTestId("managed-site-tab-content"),
+    ).toBeInTheDocument()
     expect(
       screen.queryByTestId("data-backup-tab-content"),
     ).not.toBeInTheDocument()
