@@ -16,7 +16,9 @@
       "appOptions": {
         "claude": "Claude",
         "codex": "Codex",
-        "gemini": "Gemini"
+        "gemini": "Gemini",
+        "openclaw": "OpenClaw",
+        "opencode": "OpenCode"
       },
       "description": "通过深链接一键导入当前站点配置到 CC Switch",
       "descriptions": {

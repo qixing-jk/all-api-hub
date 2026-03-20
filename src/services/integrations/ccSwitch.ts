@@ -13,7 +13,13 @@ const logger = createLogger("CcSwitch")
 /**
  * Supported CC Switch client identifiers.
  */
-export const CCSWITCH_APPS = ["claude", "codex", "gemini"] as const
+export const CCSWITCH_APPS = [
+  "claude",
+  "codex",
+  "gemini",
+  "opencode",
+  "openclaw",
+] as const
 export type CCSwitchApp = (typeof CCSWITCH_APPS)[number]
 
 /**

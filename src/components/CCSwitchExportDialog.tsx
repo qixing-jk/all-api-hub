@@ -56,6 +56,10 @@ const getCCSwitchAppLabel = (
       return t("ui:dialog.ccswitch.appOptions.codex")
     case "gemini":
       return t("ui:dialog.ccswitch.appOptions.gemini")
+    case "opencode":
+      return t("ui:dialog.ccswitch.appOptions.opencode")
+    case "openclaw":
+      return t("ui:dialog.ccswitch.appOptions.openclaw")
   }
 }
 
@@ -102,6 +106,8 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
     if (!isOpen) return
     if (isEndpointCustomized) return
 
+    // CC Switch expects Codex exports to default to an OpenAI-style /v1 endpoint,
+    // while OpenCode/OpenClaw should keep the stored base URL unless the user overrides it.
     const defaultEndpoint =
       app === "codex"
         ? coerceBaseUrlToPathSuffix(account.baseUrl, "/v1")

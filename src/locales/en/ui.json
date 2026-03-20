@@ -16,7 +16,9 @@
       "appOptions": {
         "claude": "Claude",
         "codex": "Codex",
-        "gemini": "Gemini"
+        "gemini": "Gemini",
+        "openclaw": "OpenClaw",
+        "opencode": "OpenCode"
       },
       "description": "Send this provider configuration directly to CC Switch via deep link",
       "descriptions": {

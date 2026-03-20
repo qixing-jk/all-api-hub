@@ -82,6 +82,102 @@ describe("CCSwitchExportDialog", () => {
     })
   })
 
+  it.each([
+    "ui:dialog.ccswitch.appOptions.opencode",
+    "ui:dialog.ccswitch.appOptions.openclaw",
+  ])(
+    "keeps the stored base URL as the default endpoint for %s",
+    async (appLabel) => {
+      vi.resetModules()
+      const { CCSwitchExportDialog } = await import(
+        "~/components/CCSwitchExportDialog"
+      )
+      const user = userEvent.setup()
+      mockFetchOpenAICompatibleModelIds.mockResolvedValue([])
+
+      render(
+        <CCSwitchExportDialog
+          isOpen={true}
+          onClose={() => {}}
+          account={
+            { id: "acc", name: "Example", baseUrl: "https://x.test" } as any
+          }
+          token={{ id: "tok", key: "sk-test" } as any}
+        />,
+      )
+
+      const endpointInput = await screen.findByLabelText(
+        "ui:dialog.ccswitch.fields.endpoint",
+      )
+      const appSelect = await screen.findByLabelText(
+        "ui:dialog.ccswitch.fields.app",
+      )
+
+      await user.click(appSelect)
+      await user.click(
+        await screen.findByRole("option", {
+          name: appLabel,
+        }),
+      )
+
+      await waitFor(() => {
+        expect(endpointInput).toHaveValue("https://x.test")
+      })
+    },
+  )
+
+  it("preserves a custom endpoint when switching between CC Switch apps", async () => {
+    vi.resetModules()
+    const { CCSwitchExportDialog } = await import(
+      "~/components/CCSwitchExportDialog"
+    )
+    const user = userEvent.setup()
+    mockFetchOpenAICompatibleModelIds.mockResolvedValue([])
+
+    render(
+      <CCSwitchExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={
+          { id: "acc", name: "Example", baseUrl: "https://x.test" } as any
+        }
+        token={{ id: "tok", key: "sk-test" } as any}
+      />,
+    )
+
+    const endpointInput = await screen.findByLabelText(
+      "ui:dialog.ccswitch.fields.endpoint",
+    )
+    const appSelect = await screen.findByLabelText(
+      "ui:dialog.ccswitch.fields.app",
+    )
+
+    await user.click(appSelect)
+    await user.click(
+      await screen.findByRole("option", {
+        name: "ui:dialog.ccswitch.appOptions.codex",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(endpointInput).toHaveValue("https://x.test/v1")
+    })
+
+    await user.clear(endpointInput)
+    await user.type(endpointInput, "https://custom.test/router")
+
+    await user.click(appSelect)
+    await user.click(
+      await screen.findByRole("option", {
+        name: "ui:dialog.ccswitch.appOptions.opencode",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(endpointInput).toHaveValue("https://custom.test/router")
+    })
+  })
+
   it("keeps the model picker usable when upstream model fetch fails", async () => {
     vi.resetModules()
     const { CCSwitchExportDialog } = await import(

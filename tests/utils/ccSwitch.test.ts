@@ -33,6 +33,26 @@ const mockToken: ApiToken = {
 
 describe("ccSwitch", () => {
   describe("openInCCSwitch", () => {
+    it.each(["opencode", "openclaw"] as const)(
+      "uses the selected app parameter for %s exports",
+      (app) => {
+        const openSpy = vi.spyOn(window, "open").mockImplementation(() => null)
+
+        openInCCSwitch({
+          account: mockAccount,
+          token: mockToken,
+          app,
+        })
+
+        expect(openSpy).toHaveBeenCalled()
+        const deeplink = openSpy.mock.calls[0][0] as string
+        const parsed = new URL(deeplink)
+        expect(parsed.searchParams.get("app")).toBe(app)
+
+        openSpy.mockRestore()
+      },
+    )
+
     it("exports the provided endpoint without app-specific coercion", () => {
       const openSpy = vi.spyOn(window, "open").mockImplementation(() => null)
 
