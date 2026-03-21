@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui"
-import { ChannelTypeNames } from "~/constants/managedSite"
+import { ChannelTypeNames, type ChannelType } from "~/constants/managedSite"
 import { OctopusOutboundTypeNames } from "~/constants/octopus"
 import { OCTOPUS } from "~/constants/siteType"
 import {
@@ -179,7 +179,7 @@ const getChannelTypeText = (
 
   return siteType === OCTOPUS
     ? OctopusOutboundTypeNames[type] ?? String(type)
-    : ChannelTypeNames[type] ?? String(type)
+    : ChannelTypeNames[type as ChannelType] ?? String(type)
 }
 
 const formatDelimitedValues = (value: string | null | undefined) => {
@@ -354,6 +354,7 @@ export function ManagedSiteChannelMigrationDialog({
 
   const handleRefreshPreview = () => {
     if (isLoadingPreview || isRunning) return
+    setExecutionResult(null)
     setPreviewRefreshKey((value) => value + 1)
   }
 
@@ -469,7 +470,10 @@ export function ManagedSiteChannelMigrationDialog({
                 value={targetSiteType}
                 onValueChange={setTargetSiteType}
                 disabled={
-                  isLoadingPreview || isRunning || !availableTargets.length
+                  isLoadingPreview ||
+                  isRunning ||
+                  !!executionResult ||
+                  !availableTargets.length
                 }
               >
                 <SelectTrigger
@@ -495,7 +499,12 @@ export function ManagedSiteChannelMigrationDialog({
               type="button"
               variant="outline"
               leftIcon={<RefreshCcw className="h-4 w-4" />}
-              disabled={!targetSiteType || isLoadingPreview || isRunning}
+              disabled={
+                !targetSiteType ||
+                isLoadingPreview ||
+                isRunning ||
+                !!executionResult
+              }
               onClick={handleRefreshPreview}
             >
               {t("managedSiteChannels:migration.actions.refreshPreview")}

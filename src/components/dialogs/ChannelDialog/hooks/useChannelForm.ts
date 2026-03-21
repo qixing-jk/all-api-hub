@@ -116,7 +116,7 @@ export function useChannelForm({
         key: channel.key,
         base_url: channel.base_url || "",
         models: channel.models ? channel.models.split(",") : [],
-        groups: channel.group?.split(",") ?? DEFAULT_CHANNEL_FIELDS.groups,
+        groups: channel.group?.split(",") ?? [...DEFAULT_CHANNEL_FIELDS.groups],
         priority: channel.priority ?? DEFAULT_CHANNEL_FIELDS.priority,
         weight: channel.weight ?? DEFAULT_CHANNEL_FIELDS.weight,
         status: channel.status ?? DEFAULT_CHANNEL_FIELDS.status,

@@ -128,7 +128,7 @@ export function ChannelDialog({
   }, [channel?.id, isOpen, mode])
 
   const handleLoadRealKey = async () => {
-    if (!onRequestRealKey) return
+    if (isViewMode || !onRequestRealKey) return
 
     const requestId = requestIdRef.current + 1
     requestIdRef.current = requestId
@@ -317,7 +317,7 @@ export function ChannelDialog({
               </IconButton>
             }
           />
-          {!isAddMode && onRequestRealKey ? (
+          {!isAddMode && !isViewMode && onRequestRealKey ? (
             <div className="mt-2 flex items-center justify-between gap-2">
               <p className="dark:text-dark-text-secondary text-xs text-gray-500">
                 {t("channelDialog:fields.key.realKeyHint")}

@@ -61,6 +61,7 @@ export interface ManagedSiteChannelMigrationExecutionItem {
   channelName: string
   success: boolean
   skipped: boolean
+  blockingReasonCode?: ManagedSiteChannelMigrationBlockedReasonCode
   error?: string
 }
 

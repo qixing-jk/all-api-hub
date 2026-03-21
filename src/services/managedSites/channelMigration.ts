@@ -64,6 +64,41 @@ const hasMultiKeyState = (channel: ManagedSiteChannel) =>
       channel.channel_info?.multi_key_mode,
   )
 
+const PREVIEW_BUILD_CONCURRENCY = 5
+
+const mapWithConcurrency = async <TItem, TResult>(
+  items: TItem[],
+  concurrency: number,
+  mapper: (item: TItem, index: number) => Promise<TResult>,
+): Promise<TResult[]> => {
+  if (items.length === 0) {
+    return []
+  }
+
+  const results = new Array<TResult>(items.length)
+  let nextIndex = 0
+
+  const workers = Array.from(
+    { length: Math.min(concurrency, items.length) },
+    async () => {
+      while (true) {
+        const index = nextIndex
+        nextIndex += 1
+
+        if (index >= items.length) {
+          return
+        }
+
+        results[index] = await mapper(items[index], index)
+      }
+    },
+  )
+
+  await Promise.all(workers)
+
+  return results
+}
+
 const getSharedChannelType = (
   sourceSiteType: ManagedSiteType,
   channel: ManagedSiteChannel,
@@ -378,6 +413,21 @@ async function buildPreviewItem(
   }
 }
 
+const buildExecutionFailureItem = (
+  item: ManagedSiteChannelMigrationPreviewItem,
+  params: {
+    skipped: boolean
+    fallbackError?: string
+  },
+): ManagedSiteChannelMigrationExecutionItem => ({
+  channelId: item.channelId,
+  channelName: item.channelName,
+  success: false,
+  skipped: params.skipped,
+  blockingReasonCode: item.blockingReasonCode,
+  error: item.blockingMessage || params.fallbackError,
+})
+
 /**
  * Converts a target-config failure into per-channel execution results so the UI
  * can still show which rows were blocked versus which ready rows failed.
@@ -387,25 +437,11 @@ const buildCreateFailureResults = (
   message: string,
 ): ManagedSiteChannelMigrationExecutionResult => {
   const items: ManagedSiteChannelMigrationExecutionItem[] = preview.items.map(
-    (item) => {
-      if (item.status !== "ready") {
-        return {
-          channelId: item.channelId,
-          channelName: item.channelName,
-          success: false,
-          skipped: true,
-          error: item.blockingMessage,
-        }
-      }
-
-      return {
-        channelId: item.channelId,
-        channelName: item.channelName,
-        success: false,
-        skipped: false,
-        error: message,
-      }
-    },
+    (item) =>
+      buildExecutionFailureItem(item, {
+        skipped: item.status !== "ready",
+        fallbackError: message,
+      }),
   )
 
   return {
@@ -425,13 +461,14 @@ const buildCreateFailureResults = (
 export async function prepareManagedSiteChannelMigrationPreview(
   params: PrepareManagedSiteChannelMigrationPreviewParams,
 ): Promise<ManagedSiteChannelMigrationPreview> {
-  const items = await Promise.all(
-    params.channels.map((channel) =>
+  const items = await mapWithConcurrency(
+    params.channels,
+    PREVIEW_BUILD_CONCURRENCY,
+    (channel) =>
       buildPreviewItem({
         ...params,
         channel,
       }),
-    ),
   )
 
   const readyCount = items.filter((item) => item.status === "ready").length
@@ -481,13 +518,11 @@ export async function executeManagedSiteChannelMigration(
   for (const item of preview.items) {
     if (item.status !== "ready" || !item.draft) {
       skippedCount += 1
-      items.push({
-        channelId: item.channelId,
-        channelName: item.channelName,
-        success: false,
-        skipped: true,
-        error: item.blockingMessage,
-      })
+      items.push(
+        buildExecutionFailureItem(item, {
+          skipped: true,
+        }),
+      )
       continue
     }
 

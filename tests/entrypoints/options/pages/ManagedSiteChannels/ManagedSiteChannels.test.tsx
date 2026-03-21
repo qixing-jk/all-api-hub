@@ -655,6 +655,11 @@ describe("ManagedSiteChannels", () => {
         name: "channelDialog:actions.update",
       }),
     ).not.toBeInTheDocument()
+    expect(
+      within(viewDialog).queryByRole("button", {
+        name: "channelDialog:actions.loadRealKey",
+      }),
+    ).not.toBeInTheDocument()
 
     await user.click(
       within(viewDialog).getByRole("button", {
@@ -773,6 +778,16 @@ describe("ManagedSiteChannels", () => {
         within(dialog).getByText("managedSiteChannels:migration.results.title"),
       ).toBeInTheDocument()
     })
+    expect(
+      within(dialog).getByLabelText(
+        "managedSiteChannels:migration.target.label",
+      ),
+    ).toBeDisabled()
+    expect(
+      within(dialog).getByRole("button", {
+        name: "managedSiteChannels:migration.actions.refreshPreview",
+      }),
+    ).toBeDisabled()
 
     expect(getManagedSiteServiceForType).toHaveBeenCalledWith("done-hub")
   })
