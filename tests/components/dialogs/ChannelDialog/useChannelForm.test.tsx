@@ -1,3 +1,4 @@
+import type { FormEvent } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useChannelForm } from "~/components/dialogs/ChannelDialog/hooks/useChannelForm"
@@ -56,17 +57,27 @@ const buildManagedSiteChannel = (
   }) satisfies ManagedSiteChannel
 
 describe("useChannelForm", () => {
+  const mockCheckValidConfig = vi.fn()
+  const mockGetConfig = vi.fn()
+  const mockBuildChannelPayload = vi.fn()
+  const mockCreateChannel = vi.fn()
+  const mockUpdateChannel = vi.fn()
+
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(getManagedSiteService).mockResolvedValue({
       siteType: NEW_API,
-      checkValidConfig: vi.fn().mockResolvedValue(false),
+      checkValidConfig: mockCheckValidConfig.mockResolvedValue(false),
+      getConfig: mockGetConfig,
+      buildChannelPayload: mockBuildChannelPayload,
+      createChannel: mockCreateChannel,
+      updateChannel: mockUpdateChannel,
     } as any)
   })
 
-  it("clones default groups when an existing channel has no group", async () => {
+  it("falls back to cloned default groups when an existing channel group is empty", async () => {
     const channel = buildManagedSiteChannel({
-      group: undefined as unknown as string,
+      group: "",
     })
     const onClose = vi.fn()
 
@@ -89,5 +100,41 @@ describe("useChannelForm", () => {
     expect(result.current.formData.groups).not.toBe(
       DEFAULT_CHANNEL_FIELDS.groups,
     )
+  })
+
+  it("treats handleSubmit as a no-op in view mode", async () => {
+    const channel = buildManagedSiteChannel()
+    const onClose = vi.fn()
+    const preventDefault = vi.fn()
+
+    const { result } = renderHook(() =>
+      useChannelForm({
+        mode: DIALOG_MODES.VIEW,
+        channel,
+        isOpen: true,
+        onClose,
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.formData.name).toBe("Alpha")
+    })
+
+    vi.mocked(getManagedSiteService).mockClear()
+    mockGetConfig.mockClear()
+    mockBuildChannelPayload.mockClear()
+    mockCreateChannel.mockClear()
+    mockUpdateChannel.mockClear()
+
+    await result.current.handleSubmit({
+      preventDefault,
+    } as unknown as FormEvent)
+
+    expect(preventDefault).toHaveBeenCalledTimes(1)
+    expect(getManagedSiteService).not.toHaveBeenCalled()
+    expect(mockGetConfig).not.toHaveBeenCalled()
+    expect(mockBuildChannelPayload).not.toHaveBeenCalled()
+    expect(mockCreateChannel).not.toHaveBeenCalled()
+    expect(mockUpdateChannel).not.toHaveBeenCalled()
   })
 })

@@ -1,6 +1,6 @@
 import userEvent from "@testing-library/user-event"
 import toast from "react-hot-toast"
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ChannelDialogContainer } from "~/components/dialogs/ChannelDialog"
 import { DONE_HUB, NEW_API, VELOERA } from "~/constants/siteType"
@@ -77,6 +77,10 @@ const waitForRowText = (text: string) =>
   })
 
 describe("ManagedSiteChannels", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
   const buildPreferences = (options?: {
     managedSiteType?: string
     withMigrationTarget?: boolean

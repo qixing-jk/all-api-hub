@@ -60,6 +60,17 @@ export function useChannelForm({
 }: UseChannelFormProps) {
   const { t } = useTranslation(["channelDialog", "messages"])
 
+  const normalizeChannelGroups = (group: string | null | undefined) => {
+    const groups = group?.trim()
+      ? group
+          .split(",")
+          .map((value) => value.trim())
+          .filter(Boolean)
+      : []
+
+    return groups.length > 0 ? groups : [...DEFAULT_CHANNEL_FIELDS.groups]
+  }
+
   const buildInitialFormData = useCallback(
     (): ChannelFormData => ({
       name: initialValues?.name ?? "",
@@ -116,7 +127,7 @@ export function useChannelForm({
         key: channel.key,
         base_url: channel.base_url || "",
         models: channel.models ? channel.models.split(",") : [],
-        groups: channel.group?.split(",") ?? [...DEFAULT_CHANNEL_FIELDS.groups],
+        groups: normalizeChannelGroups(channel.group),
         priority: channel.priority ?? DEFAULT_CHANNEL_FIELDS.priority,
         weight: channel.weight ?? DEFAULT_CHANNEL_FIELDS.weight,
         status: channel.status ?? DEFAULT_CHANNEL_FIELDS.status,
