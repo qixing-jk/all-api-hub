@@ -20,6 +20,7 @@ interface RowActionsProps {
   onOpenSync: (channelId: number) => Promise<void>
   onFilters: (channel: ChannelRow) => void
   canMigrate: boolean
+  showMigrationAction: boolean
   isSyncing: boolean
   labels: RowActionsLabels
 }
@@ -36,6 +37,7 @@ export default function RowActions({
   onOpenSync,
   onFilters,
   canMigrate,
+  showMigrationAction,
   isSyncing,
   labels,
 }: RowActionsProps) {
@@ -59,12 +61,14 @@ export default function RowActions({
         <DropdownMenuItem onClick={() => onFilters(channel)}>
           {labels.filters}
         </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={() => onMigrate(channel)}
-          disabled={!canMigrate}
-        >
-          {labels.migrate}
-        </DropdownMenuItem>
+        {showMigrationAction && (
+          <DropdownMenuItem
+            onClick={() => onMigrate(channel)}
+            disabled={!canMigrate}
+          >
+            {labels.migrate}
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem onClick={() => void onOpenSync(channel.id)}>
           {labels.openSync}
         </DropdownMenuItem>

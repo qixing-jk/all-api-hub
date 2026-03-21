@@ -85,8 +85,7 @@
     },
     "alerts": {
       "noTargets": {
-        "description": "Configure another managed-site target in settings before channel migration can be used.",
-        "title": "No migration target available"
+        "description": "Configure another managed-site target in settings before channel migration can be used."
       }
     },
     "blockedReasons": {
@@ -201,6 +200,8 @@
     "clearSearch": "Clear search",
     "columns": "Columns",
     "deleteSelected": "Delete selected",
+    "enterMigrationMode": "Channel migration",
+    "exitMigrationMode": "Exit migration mode",
     "migrateFiltered": "Migrate filtered",
     "migrateSelected": "Migrate selected",
     "refresh": "Refresh",

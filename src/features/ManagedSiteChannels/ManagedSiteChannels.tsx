@@ -222,6 +222,7 @@ export default function ManagedSiteChannels({
     useState<ChannelRow | null>(null)
   const [migrationChannels, setMigrationChannels] = useState<ChannelRow[]>([])
   const [isMigrationDialogOpen, setIsMigrationDialogOpen] = useState(false)
+  const [isMigrationMode, setIsMigrationMode] = useState(false)
   const verification = useNewApiManagedVerification()
   const { openNewApiManagedVerification } = verification
 
@@ -547,6 +548,17 @@ export default function ManagedSiteChannels({
     [hasMigrationTargets],
   )
 
+  const handleToggleMigrationMode = useCallback(() => {
+    if (!hasMigrationTargets) {
+      toast.error(
+        t("managedSiteChannels:migration.alerts.noTargets.description"),
+      )
+      return
+    }
+
+    setIsMigrationMode((prev) => !prev)
+  }, [hasMigrationTargets, t])
+
   const handleCloseMigrationDialog = useCallback(() => {
     setIsMigrationDialogOpen(false)
     setMigrationChannels([])
@@ -747,6 +759,7 @@ export default function ManagedSiteChannels({
             onOpenSync={openManagedSiteModelSyncForChannel}
             onFilters={handleOpenFilterDialog}
             canMigrate={hasMigrationTargets}
+            showMigrationAction={isMigrationMode}
             isSyncing={syncingIds.has(row.original.id)}
             labels={rowActionLabels}
           />
@@ -762,6 +775,7 @@ export default function ManagedSiteChannels({
       handleOpenSingleChannelMigration,
       handleSyncChannels,
       hasMigrationTargets,
+      isMigrationMode,
       isOctopus,
       rowActionLabels,
       scheduleDelete,
@@ -920,17 +934,6 @@ export default function ManagedSiteChannels({
         </Alert>
       )}
 
-      {!configMissing && !hasMigrationTargets && (
-        <Alert variant="warning">
-          <AlertTitle>
-            {t("managedSiteChannels:migration.alerts.noTargets.title")}
-          </AlertTitle>
-          <AlertDescription>
-            {t("managedSiteChannels:migration.alerts.noTargets.description")}
-          </AlertDescription>
-        </Alert>
-      )}
-
       {/* Responsive toolbar: search input takes its own row on small screens, buttons wrap in a 2-column grid. */}
       <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center">
         <div className="relative w-full md:max-w-sm">
@@ -1039,25 +1042,38 @@ export default function ManagedSiteChannels({
 
           <div className="col-span-2 grid grid-cols-2 gap-2 md:ml-auto md:flex md:items-center md:justify-end md:gap-2">
             <Button
-              variant="outline"
-              disabled={!selectedCount || !hasMigrationTargets}
-              onClick={() =>
-                openMigrationDialog(selectedRows.map((row) => row.original))
-              }
+              variant={isMigrationMode ? "default" : "outline"}
+              onClick={handleToggleMigrationMode}
               leftIcon={<ArrowRightLeft className="h-4 w-4" />}
             >
-              {t("toolbar.migrateSelected")}
+              {isMigrationMode
+                ? t("toolbar.exitMigrationMode")
+                : t("toolbar.enterMigrationMode")}
             </Button>
-            <Button
-              variant="outline"
-              disabled={!filteredCount || !hasMigrationTargets}
-              onClick={() =>
-                openMigrationDialog(filteredRows.map((row) => row.original))
-              }
-              leftIcon={<ArrowRightLeft className="h-4 w-4" />}
-            >
-              {t("toolbar.migrateFiltered")}
-            </Button>
+            {isMigrationMode && hasMigrationTargets && (
+              <Button
+                variant="outline"
+                disabled={!selectedCount}
+                onClick={() =>
+                  openMigrationDialog(selectedRows.map((row) => row.original))
+                }
+                leftIcon={<ArrowRightLeft className="h-4 w-4" />}
+              >
+                {t("toolbar.migrateSelected")}
+              </Button>
+            )}
+            {isMigrationMode && hasMigrationTargets && (
+              <Button
+                variant="outline"
+                disabled={!filteredCount}
+                onClick={() =>
+                  openMigrationDialog(filteredRows.map((row) => row.original))
+                }
+                leftIcon={<ArrowRightLeft className="h-4 w-4" />}
+              >
+                {t("toolbar.migrateFiltered")}
+              </Button>
+            )}
             <Button
               variant="outline"
               disabled={!selectedCount}

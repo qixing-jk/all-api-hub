@@ -85,8 +85,7 @@
     },
     "alerts": {
       "noTargets": {
-        "description": "請先在設定中配置另一個可用的託管站點目標，才能啟用渠道遷移。",
-        "title": "沒有可用的遷移目標"
+        "description": "請先在設定中配置另一個可用的託管站點目標，才能啟用渠道遷移。"
       }
     },
     "blockedReasons": {
@@ -199,6 +198,8 @@
     "clearSearch": "清除搜尋",
     "columns": "顯示列",
     "deleteSelected": "刪除所選",
+    "enterMigrationMode": "渠道遷移",
+    "exitMigrationMode": "退出遷移模式",
     "migrateFiltered": "遷移篩選結果",
     "migrateSelected": "遷移所選",
     "refresh": "重新整理",

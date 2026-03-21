@@ -85,8 +85,7 @@
     },
     "alerts": {
       "noTargets": {
-        "description": "チャネル移行を使う前に、設定で別の管理対象サイトを移行先として構成してください。",
-        "title": "移行先がありません"
+        "description": "チャネル移行を使う前に、設定で別の管理対象サイトを移行先として構成してください。"
       }
     },
     "blockedReasons": {
@@ -199,6 +198,8 @@
     "clearSearch": "検索をクリア",
     "columns": "列",
     "deleteSelected": "選択項目を削除",
+    "enterMigrationMode": "チャネル移行",
+    "exitMigrationMode": "移行モードを終了",
     "migrateFiltered": "絞り込み結果を移行",
     "migrateSelected": "選択項目を移行",
     "refresh": "更新",

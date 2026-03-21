@@ -1,4 +1,5 @@
 import userEvent from "@testing-library/user-event"
+import toast from "react-hot-toast"
 import { describe, expect, it, vi } from "vitest"
 
 import { ChannelDialogContainer } from "~/components/dialogs/ChannelDialog"
@@ -501,7 +502,8 @@ describe("ManagedSiteChannels", () => {
     },
   )
 
-  it("shows migration guidance and disables migration buttons when no target is configured", async () => {
+  it("shows the migration entry and explains when no target is configured", async () => {
+    const user = userEvent.setup()
     mockChannels(
       [{ id: 1, name: "Alpha", base_url: "https://example.com", key: "k" }],
       { withMigrationTarget: false },
@@ -511,22 +513,19 @@ describe("ManagedSiteChannels", () => {
 
     await waitForRowText("Alpha")
 
-    expect(
-      screen.getByText("managedSiteChannels:migration.alerts.noTargets.title"),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole("button", {
-        name: "managedSiteChannels:toolbar.migrateSelected",
-      }),
-    ).toBeDisabled()
-    expect(
-      screen.getByRole("button", {
-        name: "managedSiteChannels:toolbar.migrateFiltered",
-      }),
-    ).toBeDisabled()
+    const entry = screen.getByRole("button", {
+      name: "managedSiteChannels:toolbar.enterMigrationMode",
+    })
+    expect(entry).toBeInTheDocument()
+
+    await user.click(entry)
+
+    expect(toast.error).toHaveBeenCalledWith(
+      "managedSiteChannels:migration.alerts.noTargets.description",
+    )
   })
 
-  it("opens a single-channel migration flow from the row action", async () => {
+  it("reveals migration controls only after entering migration mode", async () => {
     const user = userEvent.setup()
 
     mockChannels(
@@ -541,6 +540,29 @@ describe("ManagedSiteChannels", () => {
 
     await waitForRowText("Alpha")
     await waitForRowText("Beta")
+
+    expect(
+      screen.queryByRole("button", {
+        name: "managedSiteChannels:toolbar.migrateSelected",
+      }),
+    ).not.toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:toolbar.enterMigrationMode",
+      }),
+    )
+
+    expect(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:toolbar.exitMigrationMode",
+      }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:toolbar.migrateSelected",
+      }),
+    ).toBeInTheDocument()
 
     const betaRow = screen.getByText("Beta").closest("tr")
     expect(betaRow).toBeTruthy()
@@ -608,6 +630,12 @@ describe("ManagedSiteChannels", () => {
     await waitFor(() => {
       expect(screen.queryByText("Beta")).not.toBeInTheDocument()
     })
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:toolbar.enterMigrationMode",
+      }),
+    )
 
     await user.click(
       screen.getByRole("button", {
