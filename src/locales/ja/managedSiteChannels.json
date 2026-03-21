@@ -208,7 +208,7 @@
     "deleteSelected": "選択項目を削除",
     "enterMigrationMode": "チャネル移行",
     "exitMigrationMode": "移行モードを終了",
-    "migrateFiltered": "絞り込み結果を移行",
+    "migrateFiltered": "絞り込み中のチャネルをすべて移行",
     "migrateSelected": "選択項目を移行",
     "refresh": "更新",
     "searchPlaceholder": "名前、URL、またはグループで検索",

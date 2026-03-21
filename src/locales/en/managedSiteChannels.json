@@ -210,7 +210,7 @@
     "deleteSelected": "Delete selected",
     "enterMigrationMode": "Channel migration",
     "exitMigrationMode": "Exit migration mode",
-    "migrateFiltered": "Migrate filtered",
+    "migrateFiltered": "Migrate all filtered channels",
     "migrateSelected": "Migrate selected",
     "refresh": "Refresh",
     "searchPlaceholder": "Search by name, URL or group",

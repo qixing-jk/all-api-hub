@@ -208,7 +208,7 @@
     "deleteSelected": "刪除所選",
     "enterMigrationMode": "渠道遷移",
     "exitMigrationMode": "退出遷移模式",
-    "migrateFiltered": "遷移篩選結果",
+    "migrateFiltered": "遷移目前篩選出的所有渠道",
     "migrateSelected": "遷移所選",
     "refresh": "重新整理",
     "searchPlaceholder": "按名稱、URL 或分組搜尋",
