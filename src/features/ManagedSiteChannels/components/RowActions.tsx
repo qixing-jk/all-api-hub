@@ -54,37 +54,40 @@ export default function RowActions({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-44">
-        <DropdownMenuItem onClick={() => onEdit(channel)}>
-          {labels.edit}
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => onFilters(channel)}>
-          {labels.filters}
-        </DropdownMenuItem>
-        {showMigrationAction && (
+        {showMigrationAction ? (
           <DropdownMenuItem
             onClick={() => onMigrate(channel)}
             disabled={!canMigrate}
           >
             {labels.migrate}
           </DropdownMenuItem>
+        ) : (
+          <>
+            <DropdownMenuItem onClick={() => onEdit(channel)}>
+              {labels.edit}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => onFilters(channel)}>
+              {labels.filters}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => void onOpenSync(channel.id)}>
+              {labels.openSync}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => onSync([channel.id])}
+              disabled={isSyncing}
+            >
+              {isSyncing ? labels.syncing : labels.sync}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              onClick={() => onDelete([channel.id])}
+            >
+              {labels.delete}
+            </DropdownMenuItem>
+          </>
         )}
-        <DropdownMenuItem onClick={() => void onOpenSync(channel.id)}>
-          {labels.openSync}
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={() => onSync([channel.id])}
-          disabled={isSyncing}
-        >
-          {isSyncing ? labels.syncing : labels.sync}
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          className="text-destructive focus:text-destructive"
-          onClick={() => onDelete([channel.id])}
-        >
-          {labels.delete}
-        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

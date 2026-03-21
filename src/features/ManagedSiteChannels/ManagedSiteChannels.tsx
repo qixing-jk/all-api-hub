@@ -1074,39 +1074,47 @@ export default function ManagedSiteChannels({
                 {t("toolbar.migrateFiltered")}
               </Button>
             )}
-            <Button
-              variant="outline"
-              disabled={!selectedCount}
-              onClick={() =>
-                scheduleDelete(selectedRows.map((row) => row.original.id))
-              }
-              leftIcon={<Trash2 className="h-4 w-4" />}
-            >
-              {t("toolbar.deleteSelected")}
-            </Button>
-            <Button
-              variant="outline"
-              disabled={!selectedCount}
-              onClick={() =>
-                handleSyncChannels(selectedRows.map((row) => row.original.id))
-              }
-              leftIcon={<RefreshCcw className="h-4 w-4" />}
-            >
-              {t("toolbar.syncSelected")}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => void refreshChannels()}
-              leftIcon={<RefreshCcw className="h-4 w-4" />}
-            >
-              {t("toolbar.refresh")}
-            </Button>
-            <Button
-              onClick={handleOpenCreateDialog}
-              leftIcon={<Plus className="h-4 w-4" />}
-            >
-              {t("toolbar.addChannel")}
-            </Button>
+            {!isMigrationMode && (
+              <Button
+                variant="outline"
+                disabled={!selectedCount}
+                onClick={() =>
+                  scheduleDelete(selectedRows.map((row) => row.original.id))
+                }
+                leftIcon={<Trash2 className="h-4 w-4" />}
+              >
+                {t("toolbar.deleteSelected")}
+              </Button>
+            )}
+            {!isMigrationMode && (
+              <Button
+                variant="outline"
+                disabled={!selectedCount}
+                onClick={() =>
+                  handleSyncChannels(selectedRows.map((row) => row.original.id))
+                }
+                leftIcon={<RefreshCcw className="h-4 w-4" />}
+              >
+                {t("toolbar.syncSelected")}
+              </Button>
+            )}
+            {!isMigrationMode && (
+              <Button
+                variant="outline"
+                onClick={() => void refreshChannels()}
+                leftIcon={<RefreshCcw className="h-4 w-4" />}
+              >
+                {t("toolbar.refresh")}
+              </Button>
+            )}
+            {!isMigrationMode && (
+              <Button
+                onClick={handleOpenCreateDialog}
+                leftIcon={<Plus className="h-4 w-4" />}
+              >
+                {t("toolbar.addChannel")}
+              </Button>
+            )}
           </div>
         </div>
       </div>
