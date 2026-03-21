@@ -175,6 +175,28 @@ describe("useNewApiManagedVerification", () => {
     })
   })
 
+  it("keeps the open trigger stable across verification state changes", async () => {
+    ensureNewApiManagedSessionMock.mockResolvedValue({
+      status: NEW_API_MANAGED_SESSION_STATUSES.LOGIN_2FA_REQUIRED,
+      automaticAttempted: false,
+    })
+
+    const { result } = renderHook(() => useNewApiManagedVerification())
+    const initialOpen = result.current.openNewApiManagedVerification
+
+    act(() => {
+      result.current.openNewApiManagedVerification(BASE_REQUEST)
+    })
+
+    await waitFor(() => {
+      expect(result.current.dialogState.step).toBe(
+        NEW_API_MANAGED_VERIFICATION_STEPS.LOGIN_2FA,
+      )
+    })
+
+    expect(result.current.openNewApiManagedVerification).toBe(initialOpen)
+  })
+
   it("opens the passkey-manual step when passkey verification is required", async () => {
     ensureNewApiManagedSessionMock.mockResolvedValue({
       status: NEW_API_MANAGED_SESSION_STATUSES.PASSKEY_MANUAL_REQUIRED,
