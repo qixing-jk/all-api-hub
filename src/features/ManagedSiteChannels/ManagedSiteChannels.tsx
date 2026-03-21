@@ -932,15 +932,24 @@ export default function ManagedSiteChannels({
         title={t("title")}
         description={t("description")}
         actions={
-          <Button
-            variant={isMigrationMode ? "default" : "outline"}
-            onClick={handleToggleMigrationMode}
-            leftIcon={<ArrowRightLeft className="h-4 w-4" />}
-          >
-            {isMigrationMode
-              ? t("toolbar.exitMigrationMode")
-              : t("toolbar.enterMigrationMode")}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => void refreshChannels()}
+              leftIcon={<RefreshCcw className="h-4 w-4" />}
+            >
+              {t("toolbar.refresh")}
+            </Button>
+            <Button
+              variant={isMigrationMode ? "default" : "outline"}
+              onClick={handleToggleMigrationMode}
+              leftIcon={<ArrowRightLeft className="h-4 w-4" />}
+            >
+              {isMigrationMode
+                ? t("toolbar.exitMigrationMode")
+                : t("toolbar.enterMigrationMode")}
+            </Button>
+          </div>
         }
       />
 
@@ -1117,13 +1126,6 @@ export default function ManagedSiteChannels({
                 {t("toolbar.syncSelected")}
               </Button>
             )}
-            <Button
-              variant="outline"
-              onClick={() => void refreshChannels()}
-              leftIcon={<RefreshCcw className="h-4 w-4" />}
-            >
-              {t("toolbar.refresh")}
-            </Button>
             {!isMigrationMode && (
               <Button
                 onClick={handleOpenCreateDialog}
