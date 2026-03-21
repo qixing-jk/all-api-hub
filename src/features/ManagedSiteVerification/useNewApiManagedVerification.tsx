@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react"
+import { useCallback, useRef, useState } from "react"
 import toast from "react-hot-toast"
 
 import {
@@ -93,8 +93,10 @@ const mapSessionResultToStep = (
 export function useNewApiManagedVerification() {
   const [state, setState] =
     useState<NewApiManagedVerificationState>(INITIAL_STATE)
+  const activeRequestScopeRef = useRef<string | null>(null)
 
   const closeDialog = useCallback(() => {
+    activeRequestScopeRef.current = null
     setState(INITIAL_STATE)
   }, [])
 
@@ -285,6 +287,16 @@ export function useNewApiManagedVerification() {
 
   const openNewApiManagedVerification = useCallback(
     (request: OpenNewApiManagedVerificationParams) => {
+      const requestScope = request.config.baseUrl.trim()
+      if (
+        requestScope &&
+        activeRequestScopeRef.current &&
+        activeRequestScopeRef.current === requestScope
+      ) {
+        return
+      }
+
+      activeRequestScopeRef.current = requestScope
       void runInitialFlow(request)
     },
     [runInitialFlow],
