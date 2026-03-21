@@ -914,6 +914,17 @@ export default function ManagedSiteChannels({
         icon={Layers}
         title={t("title")}
         description={t("description")}
+        actions={
+          <Button
+            variant={isMigrationMode ? "default" : "outline"}
+            onClick={handleToggleMigrationMode}
+            leftIcon={<ArrowRightLeft className="h-4 w-4" />}
+          >
+            {isMigrationMode
+              ? t("toolbar.exitMigrationMode")
+              : t("toolbar.enterMigrationMode")}
+          </Button>
+        }
       />
 
       {configMissing && (
@@ -1041,15 +1052,6 @@ export default function ManagedSiteChannels({
           </DropdownMenu>
 
           <div className="col-span-2 grid grid-cols-2 gap-2 md:ml-auto md:flex md:items-center md:justify-end md:gap-2">
-            <Button
-              variant={isMigrationMode ? "default" : "outline"}
-              onClick={handleToggleMigrationMode}
-              leftIcon={<ArrowRightLeft className="h-4 w-4" />}
-            >
-              {isMigrationMode
-                ? t("toolbar.exitMigrationMode")
-                : t("toolbar.enterMigrationMode")}
-            </Button>
             {isMigrationMode && hasMigrationTargets && (
               <Button
                 variant="outline"
