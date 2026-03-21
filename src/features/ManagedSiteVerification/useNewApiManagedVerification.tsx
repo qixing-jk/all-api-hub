@@ -33,7 +33,13 @@ export interface OpenNewApiManagedVerificationParams {
   >
   label?: string
   onVerified?: () => Promise<void> | void
+  initialSessionResult?: EnsureNewApiManagedSessionResult
 }
+
+type StoredNewApiManagedVerificationRequest = Omit<
+  OpenNewApiManagedVerificationParams,
+  "initialSessionResult"
+>
 
 interface NewApiManagedVerificationState {
   isOpen: boolean
@@ -42,7 +48,7 @@ interface NewApiManagedVerificationState {
   busyMessage?: string
   code: string
   errorMessage?: string
-  request: OpenNewApiManagedVerificationParams | null
+  request: StoredNewApiManagedVerificationRequest | null
 }
 
 const INITIAL_STATE: NewApiManagedVerificationState = {
@@ -66,6 +72,15 @@ const normalizeConfig = (
   username: config.username?.trim() ?? "",
   password: config.password ?? "",
   totpSecret: config.totpSecret?.trim() ?? "",
+})
+
+const createStoredRequest = (
+  request: OpenNewApiManagedVerificationParams,
+): StoredNewApiManagedVerificationRequest => ({
+  kind: request.kind,
+  label: request.label,
+  onVerified: request.onVerified,
+  config: normalizeConfig(request.config),
 })
 
 const mapSessionResultToStep = (
@@ -112,7 +127,7 @@ export function useNewApiManagedVerification() {
   }, [state.request?.config.baseUrl])
 
   const showSuccessToast = useCallback(
-    (request: OpenNewApiManagedVerificationParams) => {
+    (request: StoredNewApiManagedVerificationRequest) => {
       const message =
         request.kind === "token"
           ? t("newApiManagedVerification:dialog.body.successToken", {
@@ -130,7 +145,7 @@ export function useNewApiManagedVerification() {
   )
 
   const finishVerifiedFlow = useCallback(
-    async (request: OpenNewApiManagedVerificationParams) => {
+    async (request: StoredNewApiManagedVerificationRequest) => {
       if (request.onVerified) {
         setState((prev) => ({
           ...prev,
@@ -156,7 +171,7 @@ export function useNewApiManagedVerification() {
 
   const applySessionResult = useCallback(
     async (
-      request: OpenNewApiManagedVerificationParams,
+      request: StoredNewApiManagedVerificationRequest,
       result: EnsureNewApiManagedSessionResult,
     ) => {
       if (result.status === NEW_API_MANAGED_SESSION_STATUSES.VERIFIED) {
@@ -179,10 +194,8 @@ export function useNewApiManagedVerification() {
 
   const runInitialFlow = useCallback(
     async (request: OpenNewApiManagedVerificationParams) => {
-      const normalizedRequest: OpenNewApiManagedVerificationParams = {
-        ...request,
-        config: normalizeConfig(request.config),
-      }
+      const normalizedRequest = createStoredRequest(request)
+      const initialSessionResult = request.initialSessionResult
 
       if (!normalizedRequest.config.baseUrl) {
         setState({
@@ -210,9 +223,9 @@ export function useNewApiManagedVerification() {
       })
 
       try {
-        const result = await ensureNewApiManagedSession(
-          normalizedRequest.config,
-        )
+        const result =
+          initialSessionResult ??
+          (await ensureNewApiManagedSession(normalizedRequest.config))
         await applySessionResult(normalizedRequest, result)
       } catch (error) {
         setState((prev) => ({

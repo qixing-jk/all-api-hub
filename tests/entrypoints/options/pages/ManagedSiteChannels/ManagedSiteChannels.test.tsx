@@ -10,7 +10,12 @@ import {
   getManagedSiteService,
   getManagedSiteServiceForType,
 } from "~/services/managedSites/managedSiteService"
-import { fetchNewApiChannelKey } from "~/services/managedSites/providers/newApiSession"
+import {
+  ensureNewApiManagedSession,
+  fetchNewApiChannelKey,
+  isNewApiVerifiedSessionActive,
+  NEW_API_MANAGED_SESSION_STATUSES,
+} from "~/services/managedSites/providers/newApiSession"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { navigateWithinOptionsPage } from "~/utils/navigation"
 import {
@@ -37,7 +42,9 @@ vi.mock(
     const actual = (await importActual()) as any
     return {
       ...actual,
+      ensureNewApiManagedSession: vi.fn(),
       fetchNewApiChannelKey: vi.fn(),
+      isNewApiVerifiedSessionActive: vi.fn(),
     }
   },
 )
@@ -161,6 +168,15 @@ describe("ManagedSiteChannels", () => {
     vi.mocked(sendRuntimeMessage).mockResolvedValue({
       success: true,
       data: { items: channels },
+    } as any)
+
+    vi.mocked(isNewApiVerifiedSessionActive).mockReturnValue(true)
+    vi.mocked(ensureNewApiManagedSession).mockResolvedValue({
+      status: NEW_API_MANAGED_SESSION_STATUSES.VERIFIED,
+      methods: {
+        twoFactorEnabled: true,
+        passkeyEnabled: false,
+      },
     } as any)
 
     vi.mocked(getManagedSiteServiceForType).mockReturnValue({

@@ -175,6 +175,32 @@ describe("useNewApiManagedVerification", () => {
     })
   })
 
+  it("reuses a prefetched session result instead of re-running the initial session check", async () => {
+    const { result } = renderHook(() => useNewApiManagedVerification())
+
+    act(() => {
+      result.current.openNewApiManagedVerification({
+        ...BASE_REQUEST,
+        initialSessionResult: {
+          status: NEW_API_MANAGED_SESSION_STATUSES.SECURE_VERIFICATION_REQUIRED,
+          automaticAttempted: false,
+          methods: {
+            twoFactorEnabled: true,
+            passkeyEnabled: false,
+          },
+        },
+      })
+    })
+
+    await waitFor(() => {
+      expect(result.current.dialogState.step).toBe(
+        NEW_API_MANAGED_VERIFICATION_STEPS.SECURE_VERIFICATION,
+      )
+    })
+
+    expect(ensureNewApiManagedSessionMock).not.toHaveBeenCalled()
+  })
+
   it("keeps the open trigger stable across verification state changes", async () => {
     ensureNewApiManagedSessionMock.mockResolvedValue({
       status: NEW_API_MANAGED_SESSION_STATUSES.LOGIN_2FA_REQUIRED,

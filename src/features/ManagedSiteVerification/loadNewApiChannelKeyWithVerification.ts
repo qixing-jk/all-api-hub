@@ -1,5 +1,8 @@
 import {
+  ensureNewApiManagedSession,
   fetchNewApiChannelKey,
+  isNewApiVerifiedSessionActive,
+  NEW_API_MANAGED_SESSION_STATUSES,
   NewApiChannelKeyRequirementError,
 } from "~/services/managedSites/providers/newApiSession"
 import type { NewApiConfig } from "~/types/newApiConfig"
@@ -39,21 +42,36 @@ export async function loadNewApiChannelKeyWithVerification(
     await Promise.resolve(params.onLoaded?.())
   }
 
+  const openVerification = async (
+    request?: OpenNewApiManagedVerificationParams["initialSessionResult"],
+  ) => {
+    await Promise.resolve(
+      params.openVerification({
+        kind: params.requestKind ?? "channel",
+        label: params.label,
+        config: params.config,
+        initialSessionResult: request,
+        onVerified: async () => {
+          await loadKey()
+        },
+      }),
+    )
+  }
+
+  if (!isNewApiVerifiedSessionActive(params.config.baseUrl)) {
+    const sessionResult = await ensureNewApiManagedSession(params.config)
+    if (sessionResult.status !== NEW_API_MANAGED_SESSION_STATUSES.VERIFIED) {
+      await openVerification(sessionResult)
+      return false
+    }
+  }
+
   try {
     await loadKey()
     return true
   } catch (error) {
     if (error instanceof NewApiChannelKeyRequirementError) {
-      await Promise.resolve(
-        params.openVerification({
-          kind: params.requestKind ?? "channel",
-          label: params.label,
-          config: params.config,
-          onVerified: async () => {
-            await loadKey()
-          },
-        }),
-      )
+      await openVerification()
       return false
     }
 
