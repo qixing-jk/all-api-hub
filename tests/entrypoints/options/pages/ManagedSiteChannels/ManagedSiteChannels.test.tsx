@@ -17,10 +17,7 @@ import {
   NEW_API_MANAGED_SESSION_STATUSES,
 } from "~/services/managedSites/providers/newApiSession"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
-import {
-  navigateWithinOptionsPage,
-  openManagedSiteModelSyncForChannel,
-} from "~/utils/navigation"
+import { navigateWithinOptionsPage } from "~/utils/navigation"
 import {
   fireEvent,
   render,
@@ -62,7 +59,6 @@ vi.mock("~/utils/navigation", async (importActual) => {
   return {
     ...actual,
     navigateWithinOptionsPage: vi.fn(),
-    openManagedSiteModelSyncForChannel: vi.fn().mockResolvedValue(undefined),
   }
 })
 
@@ -565,12 +561,16 @@ describe("ManagedSiteChannels", () => {
       { withMigrationTarget: true },
     )
 
-    render(<ManagedSiteChannels />)
+    render(
+      <>
+        <ManagedSiteChannels />
+        <ChannelDialogContainer />
+      </>,
+    )
 
     await waitForRowText("Alpha")
     await waitForRowText("Beta")
     const initialRequestCount = vi.mocked(sendRuntimeMessage).mock.calls.length
-    vi.mocked(openManagedSiteModelSyncForChannel).mockClear()
 
     expect(
       screen.queryByRole("button", {
@@ -620,7 +620,7 @@ describe("ManagedSiteChannels", () => {
 
     expect(
       await screen.findByRole("menuitem", {
-        name: "managedSiteChannels:table.rowActions.openSync",
+        name: "managedSiteChannels:table.rowActions.view",
       }),
     ).toBeInTheDocument()
     expect(
@@ -628,15 +628,42 @@ describe("ManagedSiteChannels", () => {
         name: "managedSiteChannels:table.rowActions.edit",
       }),
     ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("menuitem", {
+        name: "managedSiteChannels:table.rowActions.openSync",
+      }),
+    ).not.toBeInTheDocument()
 
     await user.click(
       screen.getByRole("menuitem", {
-        name: "managedSiteChannels:table.rowActions.openSync",
+        name: "managedSiteChannels:table.rowActions.view",
+      }),
+    )
+
+    const viewDialog = await screen.findByRole("dialog")
+    expect(
+      within(viewDialog).getByText("channelDialog:title.view"),
+    ).toBeInTheDocument()
+    expect(screen.getByDisplayValue("Beta")).toBeInTheDocument()
+    expect(
+      within(viewDialog).getByRole("button", {
+        name: "common:actions.close",
+      }),
+    ).toBeInTheDocument()
+    expect(
+      within(viewDialog).queryByRole("button", {
+        name: "channelDialog:actions.update",
+      }),
+    ).not.toBeInTheDocument()
+
+    await user.click(
+      within(viewDialog).getByRole("button", {
+        name: "common:actions.close",
       }),
     )
 
     await waitFor(() => {
-      expect(openManagedSiteModelSyncForChannel).toHaveBeenCalledWith(2)
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
     })
 
     await user.click(

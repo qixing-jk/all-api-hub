@@ -75,6 +75,7 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui/table"
+import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { ChannelTypeNames } from "~/constants/managedSite"
 import { OctopusOutboundTypeNames } from "~/constants/octopus"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
@@ -294,8 +295,8 @@ export default function ManagedSiteChannels({
     })
   }, [openWithCustom, refreshChannels, t])
 
-  const handleOpenEditDialog = useCallback(
-    (channel: ChannelRow) => {
+  const openChannelDialogForMode = useCallback(
+    (channel: ChannelRow, mode: DialogMode) => {
       const groups =
         channel.group?.split(",").map((value) => value.trim()) ?? []
       const models =
@@ -305,7 +306,7 @@ export default function ManagedSiteChannels({
         (isNewApiManagedSite || supportsDetailBackedRealKeyLoading)
 
       openWithCustom({
-        mode: "edit",
+        mode,
         channel,
         initialValues: {
           name: channel.name,
@@ -378,10 +379,13 @@ export default function ManagedSiteChannels({
               return loadRealKey()
             }
           : undefined,
-        onSuccess: () => {
-          toast.success(t("toasts.channelUpdated"))
-          void refreshChannels()
-        },
+        onSuccess:
+          mode === DIALOG_MODES.EDIT
+            ? () => {
+                toast.success(t("toasts.channelUpdated"))
+                void refreshChannels()
+              }
+            : undefined,
       })
     },
     [
@@ -397,6 +401,20 @@ export default function ManagedSiteChannels({
       t,
       openNewApiManagedVerification,
     ],
+  )
+
+  const handleOpenEditDialog = useCallback(
+    (channel: ChannelRow) => {
+      openChannelDialogForMode(channel, DIALOG_MODES.EDIT)
+    },
+    [openChannelDialogForMode],
+  )
+
+  const handleOpenViewDialog = useCallback(
+    (channel: ChannelRow) => {
+      openChannelDialogForMode(channel, DIALOG_MODES.VIEW)
+    },
+    [openChannelDialogForMode],
   )
 
   const scheduleDelete = useCallback((ids: number[]) => {
@@ -512,6 +530,7 @@ export default function ManagedSiteChannels({
     () => ({
       trigger: t("table.columns.actions"),
       edit: t("table.rowActions.edit"),
+      view: t("table.rowActions.view"),
       migrate: t("table.rowActions.migrate"),
       sync: t("table.rowActions.sync"),
       syncing: t("table.rowActions.syncing"),
@@ -749,6 +768,7 @@ export default function ManagedSiteChannels({
           <RowActions
             channel={row.original}
             onEdit={handleOpenEditDialog}
+            onView={handleOpenViewDialog}
             onMigrate={handleOpenSingleChannelMigration}
             onDelete={scheduleDelete}
             onSync={handleSyncChannels}
@@ -769,6 +789,7 @@ export default function ManagedSiteChannels({
       handleOpenEditDialog,
       handleOpenFilterDialog,
       handleOpenSingleChannelMigration,
+      handleOpenViewDialog,
       handleSyncChannels,
       hasMigrationTargets,
       isMigrationMode,

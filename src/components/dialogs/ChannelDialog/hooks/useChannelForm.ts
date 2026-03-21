@@ -109,14 +109,14 @@ export function useChannelForm({
       return
     }
 
-    if (mode === DIALOG_MODES.EDIT && channel) {
+    if ((mode === DIALOG_MODES.EDIT || mode === DIALOG_MODES.VIEW) && channel) {
       setFormData({
         name: channel.name,
         type: channel.type,
         key: channel.key,
         base_url: channel.base_url || "",
         models: channel.models ? channel.models.split(",") : [],
-        groups: channel.group.split(",") ?? DEFAULT_CHANNEL_FIELDS.groups,
+        groups: channel.group?.split(",") ?? DEFAULT_CHANNEL_FIELDS.groups,
         priority: channel.priority ?? DEFAULT_CHANNEL_FIELDS.priority,
         weight: channel.weight ?? DEFAULT_CHANNEL_FIELDS.weight,
         status: channel.status ?? DEFAULT_CHANNEL_FIELDS.status,
@@ -249,6 +249,10 @@ export function useChannelForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    if (mode === DIALOG_MODES.VIEW) {
+      return
+    }
+
     // Validation
     if (!formData.name.trim()) {
       toast.error(t("channelDialog:validation.nameRequired"))
@@ -331,8 +335,8 @@ export function useChannelForm({
 
   const isFormValid = Boolean(
     formData.name.trim() &&
-    (!isKeyFieldRequired || formData.key.trim()) &&
-    (!isBaseUrlRequired || formData?.base_url?.trim()),
+      (!isKeyFieldRequired || formData.key.trim()) &&
+      (!isBaseUrlRequired || formData?.base_url?.trim()),
   )
 
   return {

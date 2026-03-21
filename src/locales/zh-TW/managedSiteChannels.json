@@ -184,7 +184,8 @@
       "migrate": "遷移到其他站點",
       "openSync": "開啟模型同步介面",
       "sync": "立即同步模型列表",
-      "syncing": "正在同步…"
+      "syncing": "正在同步…",
+      "view": "查看渠道"
     },
     "rowsPerPage": "每頁行數",
     "selectAll": "選擇所有行",

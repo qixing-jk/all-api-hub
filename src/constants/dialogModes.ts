@@ -4,6 +4,7 @@
 export const DIALOG_MODES = {
   ADD: "add",
   EDIT: "edit",
+  VIEW: "view",
 } as const
 
 /**

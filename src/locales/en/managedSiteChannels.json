@@ -184,7 +184,8 @@
       "migrate": "Migrate to another site",
       "openSync": "Open model sync interface",
       "sync": "Sync model list immediately",
-      "syncing": "Syncing..."
+      "syncing": "Syncing...",
+      "view": "View channel"
     },
     "rowsPerPage": "Rows per page",
     "selectAll": "Select all rows",

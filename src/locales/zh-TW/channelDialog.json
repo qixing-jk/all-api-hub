@@ -12,7 +12,8 @@
   },
   "description": {
     "add": "為您管理的站點配置新的轉發渠道",
-    "edit": "更新渠道設定和路由資訊"
+    "edit": "更新渠道設定和路由資訊",
+    "view": "查看目前渠道的設定和路由資訊"
   },
   "fields": {
     "baseUrl": {
@@ -69,7 +70,8 @@
   },
   "title": {
     "add": "建立渠道",
-    "edit": "編輯渠道"
+    "edit": "編輯渠道",
+    "view": "查看渠道"
   },
   "validation": {
     "baseUrlRequired": "此渠道型別需要填寫基礎 URL",

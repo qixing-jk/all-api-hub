@@ -12,7 +12,8 @@
   },
   "description": {
     "add": "Configure a new channel for your managed site",
-    "edit": "Update channel settings and routing information"
+    "edit": "Update channel settings and routing information",
+    "view": "Review the current channel settings and routing information"
   },
   "fields": {
     "baseUrl": {
@@ -69,7 +70,8 @@
   },
   "title": {
     "add": "Create Channel",
-    "edit": "Edit Channel"
+    "edit": "Edit Channel",
+    "view": "View Channel"
   },
   "validation": {
     "baseUrlRequired": "Base URL is required for this channel type",

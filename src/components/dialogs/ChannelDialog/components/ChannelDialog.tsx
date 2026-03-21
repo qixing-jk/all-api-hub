@@ -76,6 +76,8 @@ export function ChannelDialog({
   const requestIdRef = useRef(0)
   const { managedSiteType } = useUserPreferencesContext()
   const isOctopus = managedSiteType === OCTOPUS
+  const isAddMode = mode === DIALOG_MODES.ADD
+  const isViewMode = mode === DIALOG_MODES.VIEW
 
   const {
     formData,
@@ -162,14 +164,18 @@ export function ChannelDialog({
   const header = (
     <div>
       <h3 className="dark:text-dark-text-primary text-lg font-semibold text-gray-900">
-        {mode === DIALOG_MODES.ADD
+        {isAddMode
           ? t("channelDialog:title.add")
-          : t("channelDialog:title.edit")}
+          : isViewMode
+            ? t("channelDialog:title.view")
+            : t("channelDialog:title.edit")}
       </h3>
       <p className="dark:text-dark-text-secondary mt-1 text-sm text-gray-500">
-        {mode === DIALOG_MODES.ADD
+        {isAddMode
           ? t("channelDialog:description.add")
-          : t("channelDialog:description.edit")}
+          : isViewMode
+            ? t("channelDialog:description.view")
+            : t("channelDialog:description.edit")}
       </p>
     </div>
   )
@@ -182,18 +188,20 @@ export function ChannelDialog({
         disabled={isSaving}
         type="button"
       >
-        {t("common:actions.cancel")}
+        {isViewMode ? t("common:actions.close") : t("common:actions.cancel")}
       </Button>
-      <Button
-        onClick={handleSubmit}
-        disabled={!isFormValid || isSaving}
-        loading={isSaving}
-        type="submit"
-      >
-        {mode === DIALOG_MODES.ADD
-          ? t("channelDialog:actions.create")
-          : t("channelDialog:actions.update")}
-      </Button>
+      {!isViewMode && (
+        <Button
+          onClick={handleSubmit}
+          disabled={!isFormValid || isSaving}
+          loading={isSaving}
+          type="submit"
+        >
+          {isAddMode
+            ? t("channelDialog:actions.create")
+            : t("channelDialog:actions.update")}
+        </Button>
+      )}
     </div>
   )
 
@@ -207,10 +215,13 @@ export function ChannelDialog({
       closeOnBackdropClick={!isSaving}
       closeOnEsc={!isSaving}
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form
+        onSubmit={isViewMode ? (event) => event.preventDefault() : handleSubmit}
+        className="space-y-4"
+      >
         {/* Channel Name */}
         <div>
-          <Label htmlFor="channel-name" required>
+          <Label htmlFor="channel-name" required={!isViewMode}>
             {t("channelDialog:fields.name.label")}
           </Label>
           <Input
@@ -220,13 +231,14 @@ export function ChannelDialog({
             onChange={(e) => updateField("name", e.target.value)}
             placeholder={t("channelDialog:fields.name.placeholder")}
             disabled={isSaving}
-            required
+            readOnly={isViewMode}
+            required={!isViewMode}
           />
         </div>
 
         {/* Channel Type */}
         <div>
-          <Label htmlFor="channel-type" required>
+          <Label htmlFor="channel-type" required={!isViewMode}>
             {t("channelDialog:fields.type.label")}
           </Label>
           <Select
@@ -240,8 +252,8 @@ export function ChannelDialog({
                 Number(value) as ChannelType | OctopusOutboundType,
               )
             }
-            disabled={isSaving || mode === DIALOG_MODES.EDIT}
-            required
+            disabled={isSaving || !isAddMode}
+            required={!isViewMode}
           >
             <SelectTrigger id="channel-type">
               <SelectValue
@@ -269,7 +281,10 @@ export function ChannelDialog({
 
         {/* API Key */}
         <div>
-          <Label htmlFor="channel-key" required={isKeyFieldRequired}>
+          <Label
+            htmlFor="channel-key"
+            required={!isViewMode && isKeyFieldRequired}
+          >
             {t("channelDialog:fields.key.label")}
           </Label>
           <Input
@@ -279,7 +294,8 @@ export function ChannelDialog({
             onChange={(e) => updateField("key", e.target.value)}
             placeholder={t("channelDialog:fields.key.placeholder")}
             disabled={isSaving}
-            required={isKeyFieldRequired}
+            readOnly={isViewMode}
+            required={!isViewMode && isKeyFieldRequired}
             rightIcon={
               <IconButton
                 variant="ghost"
@@ -301,7 +317,7 @@ export function ChannelDialog({
               </IconButton>
             }
           />
-          {mode === DIALOG_MODES.EDIT && onRequestRealKey ? (
+          {!isAddMode && onRequestRealKey ? (
             <div className="mt-2 flex items-center justify-between gap-2">
               <p className="dark:text-dark-text-secondary text-xs text-gray-500">
                 {t("channelDialog:fields.key.realKeyHint")}
@@ -323,7 +339,10 @@ export function ChannelDialog({
 
         {/* Base URL */}
         <div>
-          <Label htmlFor="channel-base-url" required={isBaseUrlRequired}>
+          <Label
+            htmlFor="channel-base-url"
+            required={!isViewMode && isBaseUrlRequired}
+          >
             {t("channelDialog:fields.baseUrl.label")}
           </Label>
           <Input
@@ -333,7 +352,8 @@ export function ChannelDialog({
             onChange={(e) => updateField("base_url", e.target.value)}
             placeholder={t("channelDialog:fields.baseUrl.placeholder")}
             disabled={isSaving}
-            required={isBaseUrlRequired}
+            readOnly={isViewMode}
+            required={!isViewMode && isBaseUrlRequired}
           />
         </div>
 
@@ -343,41 +363,43 @@ export function ChannelDialog({
             <Label className="mb-0">
               {t("channelDialog:fields.models.label")}
             </Label>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleSelectAllModels}
-                disabled={
-                  isSaving || isLoadingModels || availableModels.length === 0
-                }
-                type="button"
-              >
-                {t("channelDialog:actions.selectAll")}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleInverseModels}
-                disabled={
-                  isSaving || isLoadingModels || availableModels.length === 0
-                }
-                type="button"
-              >
-                {t("channelDialog:actions.inverse")}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleDeselectAllModels}
-                disabled={
-                  isSaving || isLoadingModels || formData.models.length === 0
-                }
-                type="button"
-              >
-                {t("channelDialog:actions.deselectAll")}
-              </Button>
-            </div>
+            {!isViewMode && (
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSelectAllModels}
+                  disabled={
+                    isSaving || isLoadingModels || availableModels.length === 0
+                  }
+                  type="button"
+                >
+                  {t("channelDialog:actions.selectAll")}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleInverseModels}
+                  disabled={
+                    isSaving || isLoadingModels || availableModels.length === 0
+                  }
+                  type="button"
+                >
+                  {t("channelDialog:actions.inverse")}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDeselectAllModels}
+                  disabled={
+                    isSaving || isLoadingModels || formData.models.length === 0
+                  }
+                  type="button"
+                >
+                  {t("channelDialog:actions.deselectAll")}
+                </Button>
+              </div>
+            )}
           </div>
           <CompactMultiSelect
             options={availableModels}
@@ -388,7 +410,7 @@ export function ChannelDialog({
                 ? t("channelDialog:fields.models.loading")
                 : t("channelDialog:fields.models.placeholder")
             }
-            disabled={isSaving || isLoadingModels}
+            disabled={isViewMode || isSaving || isLoadingModels}
             allowCustom
           />
           <p className="dark:text-dark-text-secondary mt-1 text-xs text-gray-500">
@@ -409,7 +431,7 @@ export function ChannelDialog({
                   ? t("channelDialog:fields.groups.loading")
                   : t("channelDialog:fields.groups.placeholder")
               }
-              disabled={isSaving || isLoadingGroups}
+              disabled={isViewMode || isSaving || isLoadingGroups}
               allowCustom
             />
             <p className="dark:text-dark-text-secondary mt-1 text-xs text-gray-500">
@@ -439,6 +461,7 @@ export function ChannelDialog({
                   }
                   placeholder="0"
                   disabled={isSaving}
+                  readOnly={isViewMode}
                   min="0"
                 />
                 <p className="dark:text-dark-text-secondary mt-1 text-xs text-gray-500">
@@ -462,6 +485,7 @@ export function ChannelDialog({
                   }
                   placeholder="0"
                   disabled={isSaving}
+                  readOnly={isViewMode}
                   min="0"
                 />
                 <p className="dark:text-dark-text-secondary mt-1 text-xs text-gray-500">
@@ -484,7 +508,7 @@ export function ChannelDialog({
                 onValueChange={(value) =>
                   updateField("status", Number(value) as ChannelStatus)
                 }
-                disabled={isSaving}
+                disabled={isViewMode || isSaving}
               >
                 <SelectTrigger id="channel-status">
                   <SelectValue />

@@ -7,6 +7,7 @@ export type CheckboxState = boolean | "indeterminate"
 export type RowActionsLabels = {
   trigger: string
   edit: string
+  view: string
   migrate: string
   sync: string
   syncing: string
