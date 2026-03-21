@@ -9,7 +9,9 @@ import type { ApiResponse } from "~/services/apiService/common/type"
 import type { ManagedSiteMessagesKey } from "~/services/managedSites/utils/managedSite"
 import {
   getManagedSiteAdminConfig,
+  getManagedSiteAdminConfigForType,
   getManagedSiteContext,
+  getManagedSiteMessagesKeyFromSiteType,
 } from "~/services/managedSites/utils/managedSite"
 import type {
   AccountToken,
@@ -120,12 +122,17 @@ export interface ManagedSiteService {
  */
 export function hasValidManagedSiteConfig(
   prefs: UserPreferences | null,
+  siteType?: ManagedSiteType,
 ): boolean {
   if (!prefs) {
     return false
   }
 
-  return Boolean(getManagedSiteAdminConfig(prefs))
+  return Boolean(
+    siteType
+      ? getManagedSiteAdminConfigForType(prefs, siteType)
+      : getManagedSiteAdminConfig(prefs),
+  )
 }
 
 /**
@@ -133,7 +140,19 @@ export function hasValidManagedSiteConfig(
  */
 export async function getManagedSiteService(): Promise<ManagedSiteService> {
   const prefs = await userPreferences.getPreferences()
-  const { siteType, messagesKey } = getManagedSiteContext(prefs)
+  const { siteType } = getManagedSiteContext(prefs)
+
+  return getManagedSiteServiceForType(siteType)
+}
+
+/**
+ * Resolve the managed site service implementation for an explicit site type.
+ */
+export function getManagedSiteServiceForType(
+  siteType: ManagedSiteType,
+): ManagedSiteService {
+  const messagesKey: ManagedSiteMessagesKey =
+    getManagedSiteMessagesKeyFromSiteType(siteType)
 
   if (siteType === OCTOPUS) {
     return {

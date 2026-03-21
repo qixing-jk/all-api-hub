@@ -75,6 +75,77 @@
       "visual": "可视化编辑"
     }
   },
+  "migration": {
+    "actions": {
+      "cancel": "取消",
+      "close": "关闭",
+      "refreshPreview": "刷新预览",
+      "running": "迁移中…",
+      "start": "开始迁移"
+    },
+    "alerts": {
+      "noTargets": {
+        "description": "请先在设置中配置另一个可用的托管站点目标，才能启用渠道迁移。",
+        "title": "没有可用的迁移目标"
+      }
+    },
+    "blockedReasons": {
+      "sourceKeyMissing": "缺少源渠道密钥，当前无法迁移。",
+      "sourceKeyResolutionFailed": "无法获取源渠道密钥。若刚完成验证，请刷新预览后重试。"
+    },
+    "confirm": {
+      "confirm": "确认迁移",
+      "description": "将为 {{ready}} 个可迁移渠道在目标站点创建新渠道；共选中 {{total}} 个渠道。",
+      "title": "开始渠道迁移？",
+      "warningTitle": "该流程只会创建新渠道，不会同步、去重或回滚。"
+    },
+    "description": "将当前托管站点中的 {{selectedCount}} 个渠道复制到另一个已配置的托管站点。",
+    "generalWarnings": {
+      "createOnly": "本次迁移仅在目标站点创建新渠道，不会修改源渠道。",
+      "noDedupeOrSync": "本次迁移不会查重、覆盖或同步目标站点中已存在的渠道。",
+      "noRollback": "本次迁移不提供自动回滚，请根据结果列表手动处理后续工作。",
+      "title": "迁移限制"
+    },
+    "itemWarnings": {
+      "dropsAdvancedSettings": "高级渠道设置无法直接迁移到目标站点，将被忽略。",
+      "dropsModelMapping": "模型映射配置不会一并迁移。",
+      "dropsMultiKeyState": "多密钥轮询或状态信息不会一并迁移。",
+      "dropsStatusCodeMapping": "状态码映射配置不会一并迁移。",
+      "targetForcesDefaultGroup": "目标站点会改用默认分组。",
+      "targetIgnoresPriority": "目标站点不保留源渠道的优先级。",
+      "targetIgnoresWeight": "目标站点不保留源渠道的权重。",
+      "targetNormalizesBaseUrl": "目标站点会对基础 URL 做规范化处理。",
+      "targetRemapsChannelType": "目标站点会将渠道类型映射为最接近的兼容类型。",
+      "targetSimplifiesStatus": "目标站点会将源渠道状态简化为启用或停用。"
+    },
+    "preview": {
+      "loadFailed": "迁移预览加载失败：{{error}}",
+      "loading": "正在构建迁移预览…",
+      "selectedCount": "已选择 {{selectedCount}} 个渠道",
+      "status": {
+        "blocked": "已阻止",
+        "ready": "可迁移"
+      },
+      "summary": "预览结果：{{ready}} 个可迁移，{{blocked}} 个已阻止，共 {{total}} 个渠道。"
+    },
+    "results": {
+      "status": {
+        "failed": "失败",
+        "skipped": "已跳过",
+        "success": "已创建"
+      },
+      "summary": "迁移结果：成功 {{created}} 个，失败 {{failed}} 个，跳过 {{skipped}} 个，共 {{total}} 个。",
+      "title": "迁移结果"
+    },
+    "target": {
+      "destinationLabel": "目标站点",
+      "label": "迁移目标",
+      "placeholder": "选择目标托管站点",
+      "sourceLabel": "源站点",
+      "unselected": "未选择"
+    },
+    "title": "迁移渠道"
+  },
   "statusLabels": {
     "autoDisabled": "自动禁用",
     "enabled": "启用",
@@ -103,6 +174,7 @@
       "delete": "删除",
       "edit": "编辑",
       "filters": "编辑渠道过滤规则",
+      "migrate": "迁移到其他站点",
       "openSync": "打开模型同步界面",
       "sync": "立即同步模型列表",
       "syncing": "正在同步…"
@@ -127,6 +199,8 @@
     "clearSearch": "清除搜索",
     "columns": "显示列",
     "deleteSelected": "删除所选",
+    "migrateFiltered": "迁移筛选结果",
+    "migrateSelected": "迁移所选",
     "refresh": "刷新",
     "searchPlaceholder": "按名称、URL 或分组搜索",
     "status": "状态",

@@ -5,7 +5,10 @@ import { ChannelDialogContainer } from "~/components/dialogs/ChannelDialog"
 import { DONE_HUB, NEW_API, VELOERA } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import ManagedSiteChannels from "~/entrypoints/options/pages/ManagedSiteChannels"
-import { getManagedSiteService } from "~/services/managedSites/managedSiteService"
+import {
+  getManagedSiteService,
+  getManagedSiteServiceForType,
+} from "~/services/managedSites/managedSiteService"
 import { fetchNewApiChannelKey } from "~/services/managedSites/providers/newApiSession"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { navigateWithinOptionsPage } from "~/utils/navigation"
@@ -24,6 +27,7 @@ vi.mock("~/utils/browser/browserApi", async (importActual) => {
 
 vi.mock("~/services/managedSites/managedSiteService", () => ({
   getManagedSiteService: vi.fn(),
+  getManagedSiteServiceForType: vi.fn(),
 }))
 
 vi.mock(
@@ -62,11 +66,60 @@ const waitForRowText = (text: string) =>
   })
 
 describe("ManagedSiteChannels", () => {
+  const buildPreferences = (options?: {
+    managedSiteType?: string
+    withMigrationTarget?: boolean
+  }) => {
+    const managedSiteType = options?.managedSiteType ?? NEW_API
+
+    return {
+      managedSiteType,
+      newApi: {
+        baseUrl: "https://admin.example",
+        adminToken: "new-api-token",
+        userId: "1",
+        username: "admin",
+        password: "secret-password",
+        totpSecret: "JBSWY3DPEHPK3PXP",
+      },
+      doneHub:
+        options?.withMigrationTarget || managedSiteType === DONE_HUB
+          ? {
+              baseUrl: "https://donehub.example",
+              adminToken: "donehub-token",
+              userId: "9",
+            }
+          : {
+              baseUrl: "",
+              adminToken: "",
+              userId: "",
+            },
+      veloera:
+        managedSiteType === VELOERA
+          ? {
+              baseUrl: "https://veloera.example",
+              adminToken: "veloera-token",
+              userId: "5",
+            }
+          : {
+              baseUrl: "",
+              adminToken: "",
+              userId: "",
+            },
+      octopus: {
+        baseUrl: "",
+        username: "",
+        password: "",
+      },
+    }
+  }
+
   const mockChannels = (
     channels: any[],
     options?: {
       managedSiteType?: string
       messagesKey?: string
+      withMigrationTarget?: boolean
       fetchChannelSecretKey?: (...args: unknown[]) => Promise<string>
     },
   ) => {
@@ -78,14 +131,19 @@ describe("ManagedSiteChannels", () => {
         : managedSiteType === VELOERA
           ? "veloera"
           : "newapi")
+    const preferences = buildPreferences({
+      managedSiteType,
+      withMigrationTarget: options?.withMigrationTarget,
+    })
 
     vi.mocked(useUserPreferencesContext).mockReturnValue({
+      preferences,
       managedSiteType,
-      newApiBaseUrl: "https://admin.example",
-      newApiUserId: "1",
-      newApiUsername: "admin",
-      newApiPassword: "secret-password",
-      newApiTotpSecret: "JBSWY3DPEHPK3PXP",
+      newApiBaseUrl: preferences.newApi.baseUrl,
+      newApiUserId: preferences.newApi.userId,
+      newApiUsername: preferences.newApi.username,
+      newApiPassword: preferences.newApi.password,
+      newApiTotpSecret: preferences.newApi.totpSecret,
     } as any)
 
     vi.mocked(getManagedSiteService).mockResolvedValue({
@@ -102,6 +160,27 @@ describe("ManagedSiteChannels", () => {
     vi.mocked(sendRuntimeMessage).mockResolvedValue({
       success: true,
       data: { items: channels },
+    } as any)
+
+    vi.mocked(getManagedSiteServiceForType).mockReturnValue({
+      siteType: DONE_HUB,
+      messagesKey: "donehub",
+      getConfig: vi.fn().mockResolvedValue({
+        baseUrl: "https://donehub.example",
+        token: "donehub-token",
+        userId: "9",
+      }),
+      buildChannelPayload: vi.fn((draft: any) => ({
+        mode: "single",
+        channel: {
+          name: draft.name,
+          key: draft.key,
+        },
+      })),
+      createChannel: vi.fn().mockResolvedValue({
+        success: true,
+        message: "ok",
+      }),
     } as any)
   }
 
@@ -421,4 +500,143 @@ describe("ManagedSiteChannels", () => {
       })
     },
   )
+
+  it("shows migration guidance and disables migration buttons when no target is configured", async () => {
+    mockChannels(
+      [{ id: 1, name: "Alpha", base_url: "https://example.com", key: "k" }],
+      { withMigrationTarget: false },
+    )
+
+    render(<ManagedSiteChannels />)
+
+    await waitForRowText("Alpha")
+
+    expect(
+      screen.getByText("managedSiteChannels:migration.alerts.noTargets.title"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:toolbar.migrateSelected",
+      }),
+    ).toBeDisabled()
+    expect(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:toolbar.migrateFiltered",
+      }),
+    ).toBeDisabled()
+  })
+
+  it("opens a single-channel migration flow from the row action", async () => {
+    const user = userEvent.setup()
+
+    mockChannels(
+      [
+        { id: 1, name: "Alpha", base_url: "https://alpha.example", key: "a" },
+        { id: 2, name: "Beta", base_url: "https://beta.example", key: "b" },
+      ],
+      { withMigrationTarget: true },
+    )
+
+    render(<ManagedSiteChannels />)
+
+    await waitForRowText("Alpha")
+    await waitForRowText("Beta")
+
+    const betaRow = screen.getByText("Beta").closest("tr")
+    expect(betaRow).toBeTruthy()
+    await user.click(
+      within(betaRow!).getByRole("button", {
+        name: "managedSiteChannels:table.columns.actions",
+      }),
+    )
+
+    await user.click(
+      await screen.findByRole("menuitem", {
+        name: "managedSiteChannels:table.rowActions.migrate",
+      }),
+    )
+
+    const dialog = await screen.findByRole("dialog")
+    expect(
+      within(dialog).getByText("managedSiteChannels:migration.title"),
+    ).toBeInTheDocument()
+    expect(within(dialog).getByText("Beta")).toBeInTheDocument()
+  })
+
+  it("uses filtered rows for migrate filtered and shows an execution summary", async () => {
+    const user = userEvent.setup()
+
+    mockChannels(
+      [
+        {
+          id: 1,
+          name: "Alpha",
+          base_url: "https://site-a.example",
+          key: "alpha-key",
+          type: 1,
+          models: "gpt-4o",
+          group: "default",
+          status: 1,
+          priority: 0,
+          weight: 0,
+        },
+        {
+          id: 2,
+          name: "Beta",
+          base_url: "https://site-b.example",
+          key: "beta-key",
+          type: 1,
+          models: "gpt-4o-mini",
+          group: "default",
+          status: 1,
+          priority: 0,
+          weight: 0,
+        },
+      ],
+      { withMigrationTarget: true },
+    )
+
+    render(<ManagedSiteChannels />)
+
+    await waitForRowText("Alpha")
+    await waitForRowText("Beta")
+
+    fireEvent.change(screen.getByRole("textbox"), {
+      target: { value: "site-a" },
+    })
+
+    await waitFor(() => {
+      expect(screen.queryByText("Beta")).not.toBeInTheDocument()
+    })
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:toolbar.migrateFiltered",
+      }),
+    )
+
+    const dialog = await screen.findByRole("dialog")
+    expect(within(dialog).getByText("Alpha")).toBeInTheDocument()
+    expect(within(dialog).queryByText("Beta")).not.toBeInTheDocument()
+
+    await user.click(
+      within(dialog).getByRole("button", {
+        name: "managedSiteChannels:migration.actions.start",
+      }),
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "managedSiteChannels:migration.confirm.confirm",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(
+        within(dialog).getByText("managedSiteChannels:migration.results.title"),
+      ).toBeInTheDocument()
+    })
+
+    expect(getManagedSiteServiceForType).toHaveBeenCalledWith("done-hub")
+  })
 })

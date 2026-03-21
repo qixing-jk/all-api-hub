@@ -75,6 +75,77 @@
       "visual": "ビジュアル編集"
     }
   },
+  "migration": {
+    "actions": {
+      "cancel": "キャンセル",
+      "close": "閉じる",
+      "refreshPreview": "プレビューを再読み込み",
+      "running": "移行中...",
+      "start": "移行を開始"
+    },
+    "alerts": {
+      "noTargets": {
+        "description": "チャネル移行を使う前に、設定で別の管理対象サイトを移行先として構成してください。",
+        "title": "移行先がありません"
+      }
+    },
+    "blockedReasons": {
+      "sourceKeyMissing": "元チャネルのキーが取得できないため、このチャネルはまだ移行できません。",
+      "sourceKeyResolutionFailed": "元チャネルのキーを読み込めませんでした。確認が完了した直後であれば、プレビューを更新して再試行してください。"
+    },
+    "confirm": {
+      "confirm": "移行を確認",
+      "description": "{{total}} 件中、移行可能な {{ready}} 件のチャネルについて移行先に新しいチャネルを作成します。",
+      "title": "チャネル移行を開始しますか？",
+      "warningTitle": "このフローは新しいチャネルを作成するだけで、同期・重複解消・ロールバックは行いません。"
+    },
+    "description": "現在の管理対象サイトから {{selectedCount}} 件のチャネルを別の構成済み管理対象サイトへコピーします。",
+    "generalWarnings": {
+      "createOnly": "この移行は移行先サイトで新しいチャネルを作成するだけで、元チャネルは変更しません。",
+      "noDedupeOrSync": "この移行では重複検出、既存チャネルの上書き、既存移行先チャネルとの同期は行いません。",
+      "noRollback": "このフローでは自動ロールバックを提供しません。結果一覧を見て必要な手動対応を行ってください。",
+      "title": "移行の制限"
+    },
+    "itemWarnings": {
+      "dropsAdvancedSettings": "高度なプロバイダー固有設定はそのまま移行できないため破棄されます。",
+      "dropsModelMapping": "モデルマッピング設定はコピーされません。",
+      "dropsMultiKeyState": "マルチキーの実行状態はコピーされません。",
+      "dropsStatusCodeMapping": "ステータスコードマッピング設定はコピーされません。",
+      "targetForcesDefaultGroup": "移行先サイトではデフォルトグループに置き換えられます。",
+      "targetIgnoresPriority": "移行先サイトでは元チャネルの優先度を保持しません。",
+      "targetIgnoresWeight": "移行先サイトでは元チャネルの重みを保持しません。",
+      "targetNormalizesBaseUrl": "移行先サイトは作成前にベース URL を正規化します。",
+      "targetRemapsChannelType": "移行先サイトはチャネル種別を最も近い対応種別へ再マッピングします。",
+      "targetSimplifiesStatus": "移行先サイトは元チャネルの状態を有効/無効へ単純化します。"
+    },
+    "preview": {
+      "loadFailed": "移行プレビューの読み込みに失敗しました: {{error}}",
+      "loading": "移行プレビューを構築中...",
+      "selectedCount": "{{selectedCount}} 件のチャネルを選択中",
+      "status": {
+        "blocked": "ブロック済み",
+        "ready": "移行可能"
+      },
+      "summary": "プレビュー: 移行可能 {{ready}} 件、ブロック {{blocked}} 件、合計 {{total}} 件。"
+    },
+    "results": {
+      "status": {
+        "failed": "失敗",
+        "skipped": "スキップ",
+        "success": "作成済み"
+      },
+      "summary": "結果: 作成 {{created}} 件、失敗 {{failed}} 件、スキップ {{skipped}} 件、合計 {{total}} 件。",
+      "title": "移行結果"
+    },
+    "target": {
+      "destinationLabel": "移行先サイト",
+      "label": "移行先",
+      "placeholder": "管理対象サイトを選択",
+      "sourceLabel": "元サイト",
+      "unselected": "未選択"
+    },
+    "title": "チャネル移行"
+  },
   "statusLabels": {
     "autoDisabled": "自動無効",
     "enabled": "有効",
@@ -103,6 +174,7 @@
       "delete": "削除",
       "edit": "編集",
       "filters": "チャネルのフィルタールールを編集",
+      "migrate": "別サイトへ移行",
       "openSync": "モデル同期画面を開く",
       "sync": "モデル一覧を今すぐ同期",
       "syncing": "同期中..."
@@ -127,6 +199,8 @@
     "clearSearch": "検索をクリア",
     "columns": "列",
     "deleteSelected": "選択項目を削除",
+    "migrateFiltered": "絞り込み結果を移行",
+    "migrateSelected": "選択項目を移行",
     "refresh": "更新",
     "searchPlaceholder": "名前、URL、またはグループで検索",
     "status": "状態",

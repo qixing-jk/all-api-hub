@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { NEW_API, VELOERA } from "~/constants/siteType"
+import { DONE_HUB, NEW_API, VELOERA } from "~/constants/siteType"
 
 const mockGetPreferences = vi.fn()
 
@@ -50,6 +50,44 @@ vi.mock("~/services/managedSites/providers/veloera", () => ({
   autoConfigToVeloera: vi.fn(),
 }))
 
+vi.mock("~/services/managedSites/providers/doneHubService", () => ({
+  checkValidDoneHubConfig: vi.fn(async () => true),
+  getDoneHubConfig: vi.fn(async () => ({
+    baseUrl: "d",
+    token: "t",
+    userId: "u",
+  })),
+  searchChannel: vi.fn(),
+  createChannel: vi.fn(),
+  updateChannel: vi.fn(),
+  deleteChannel: vi.fn(),
+  fetchAvailableModels: vi.fn(),
+  buildChannelName: vi.fn(),
+  prepareChannelFormData: vi.fn(),
+  buildChannelPayload: vi.fn(),
+  findMatchingChannel: vi.fn(),
+  autoConfigToDoneHub: vi.fn(),
+}))
+
+vi.mock("~/services/managedSites/providers/octopus", () => ({
+  checkValidOctopusConfig: vi.fn(async () => true),
+  getOctopusConfig: vi.fn(async () => ({
+    baseUrl: "o",
+    token: "",
+    userId: "admin",
+  })),
+  searchChannel: vi.fn(),
+  createChannel: vi.fn(),
+  updateChannel: vi.fn(),
+  deleteChannel: vi.fn(),
+  fetchAvailableModels: vi.fn(),
+  buildChannelName: vi.fn(),
+  prepareChannelFormData: vi.fn(),
+  buildChannelPayload: vi.fn(),
+  findMatchingChannel: vi.fn(),
+  autoConfigToOctopus: vi.fn(),
+}))
+
 describe("managedSiteService", () => {
   it("routes to New API service by default", async () => {
     const { getManagedSiteService } = await import(
@@ -79,5 +117,18 @@ describe("managedSiteService", () => {
 
     const config = await service.getConfig()
     expect(config?.baseUrl).toBe("v")
+  })
+
+  it("can resolve an explicit target service without changing active preferences", async () => {
+    const { getManagedSiteServiceForType } = await import(
+      "~/services/managedSites/managedSiteService"
+    )
+
+    const service = getManagedSiteServiceForType(DONE_HUB)
+    expect(service.siteType).toBe(DONE_HUB)
+    expect(service.messagesKey).toBe("donehub")
+
+    const config = await service.getConfig()
+    expect(config?.baseUrl).toBe("d")
   })
 })

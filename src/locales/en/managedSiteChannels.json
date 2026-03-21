@@ -75,6 +75,77 @@
       "visual": "Visual edit"
     }
   },
+  "migration": {
+    "actions": {
+      "cancel": "Cancel",
+      "close": "Close",
+      "refreshPreview": "Refresh preview",
+      "running": "Migrating...",
+      "start": "Start migration"
+    },
+    "alerts": {
+      "noTargets": {
+        "description": "Configure another managed-site target in settings before channel migration can be used.",
+        "title": "No migration target available"
+      }
+    },
+    "blockedReasons": {
+      "sourceKeyMissing": "The source channel key is unavailable, so this channel cannot be migrated yet.",
+      "sourceKeyResolutionFailed": "The source channel key could not be loaded. If you just completed verification, refresh the preview and try again."
+    },
+    "confirm": {
+      "confirm": "Confirm migration",
+      "description": "This will create new target channels for {{ready}} ready channels out of {{total}} selected channels.",
+      "title": "Start channel migration?",
+      "warningTitle": "This flow only creates new channels. It does not sync, deduplicate, or roll back."
+    },
+    "description": "Copy {{selectedCount}} channels from the current managed site into another configured managed site.",
+    "generalWarnings": {
+      "createOnly": "This migration only creates new channels on the target site and does not modify the source channels.",
+      "noDedupeOrSync": "This migration does not check for duplicates, overwrite existing target channels, or sync existing target channels.",
+      "noRollback": "Automatic rollback is not available in this flow. Use the result list to review any manual follow-up.",
+      "title": "Migration limitations"
+    },
+    "itemWarnings": {
+      "dropsAdvancedSettings": "Advanced provider-specific channel settings cannot be copied directly and will be dropped.",
+      "dropsModelMapping": "Model redirect mappings will not be copied.",
+      "dropsMultiKeyState": "Multi-key runtime state will not be copied.",
+      "dropsStatusCodeMapping": "Status-code mapping settings will not be copied.",
+      "targetForcesDefaultGroup": "The target site will replace the source groups with its default group.",
+      "targetIgnoresPriority": "The target site will not preserve the source priority value.",
+      "targetIgnoresWeight": "The target site will not preserve the source weight value.",
+      "targetNormalizesBaseUrl": "The target site will normalize the base URL before creation.",
+      "targetRemapsChannelType": "The target site will remap the channel type to the closest supported type.",
+      "targetSimplifiesStatus": "The target site will simplify the source status to enabled or disabled."
+    },
+    "preview": {
+      "loadFailed": "Failed to load migration preview: {{error}}",
+      "loading": "Building migration preview...",
+      "selectedCount": "{{selectedCount}} channels selected",
+      "status": {
+        "blocked": "Blocked",
+        "ready": "Ready"
+      },
+      "summary": "Preview: {{ready}} ready, {{blocked}} blocked, {{total}} selected."
+    },
+    "results": {
+      "status": {
+        "failed": "Failed",
+        "skipped": "Skipped",
+        "success": "Created"
+      },
+      "summary": "Results: {{created}} created, {{failed}} failed, {{skipped}} skipped, {{total}} total.",
+      "title": "Migration results"
+    },
+    "target": {
+      "destinationLabel": "Destination site",
+      "label": "Migration target",
+      "placeholder": "Select a managed-site target",
+      "sourceLabel": "Source site",
+      "unselected": "Not selected"
+    },
+    "title": "Migrate channels"
+  },
   "statusLabels": {
     "autoDisabled": "Auto Disabled",
     "enabled": "Enabled",
@@ -103,6 +174,7 @@
       "delete": "Delete",
       "edit": "Edit",
       "filters": "Edit channel filtering rules",
+      "migrate": "Migrate to another site",
       "openSync": "Open model sync interface",
       "sync": "Sync model list immediately",
       "syncing": "Syncing..."
@@ -129,6 +201,8 @@
     "clearSearch": "Clear search",
     "columns": "Columns",
     "deleteSelected": "Delete selected",
+    "migrateFiltered": "Migrate filtered",
+    "migrateSelected": "Migrate selected",
     "refresh": "Refresh",
     "searchPlaceholder": "Search by name, URL or group",
     "status": "Status",

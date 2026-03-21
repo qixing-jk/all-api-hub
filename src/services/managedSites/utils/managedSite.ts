@@ -35,11 +35,42 @@ export interface ManagedSiteAdminConfig {
   userId: string
 }
 
+export interface ManagedSiteTargetOption {
+  siteType: ManagedSiteType
+  labelKey: ManagedSiteLabelKey
+  messagesKey: ManagedSiteMessagesKey
+  config: ManagedSiteAdminConfig
+}
+
 export type ManagedSiteConfig =
   | NewApiConfig
   | DoneHubConfig
   | VeloeraConfig
   | OctopusConfig
+
+/**
+ * Extracts the selected managed site type and its corresponding config from a
+ * given preferences snapshot.
+ */
+export function getManagedSiteConfigFromPreferencesForType(
+  preferences: UserPreferences,
+  siteType: ManagedSiteType,
+): {
+  siteType: ManagedSiteType
+  config: ManagedSiteConfig
+} {
+  let config: ManagedSiteConfig
+  if (siteType === OCTOPUS) {
+    config = preferences.octopus || { baseUrl: "", username: "", password: "" }
+  } else if (siteType === DONE_HUB) {
+    config = preferences.doneHub ?? DEFAULT_DONE_HUB_CONFIG
+  } else if (siteType === VELOERA) {
+    config = preferences.veloera
+  } else {
+    config = preferences.newApi
+  }
+  return { siteType, config }
+}
 
 /**
  * Extracts the selected managed site type and its corresponding config from a
@@ -52,17 +83,7 @@ export function getManagedSiteConfigFromPreferences(
   config: ManagedSiteConfig
 } {
   const siteType: ManagedSiteType = preferences.managedSiteType || NEW_API
-  let config: ManagedSiteConfig
-  if (siteType === OCTOPUS) {
-    config = preferences.octopus || { baseUrl: "", username: "", password: "" }
-  } else if (siteType === DONE_HUB) {
-    config = preferences.doneHub ?? DEFAULT_DONE_HUB_CONFIG
-  } else if (siteType === VELOERA) {
-    config = preferences.veloera
-  } else {
-    config = preferences.newApi
-  }
-  return { siteType, config }
+  return getManagedSiteConfigFromPreferencesForType(preferences, siteType)
 }
 
 /**
@@ -136,7 +157,21 @@ export function getManagedSiteMessagesKeyFromSiteType(
 export function getManagedSiteAdminConfig(
   preferences: UserPreferences,
 ): ManagedSiteAdminConfig | null {
-  const { siteType, config } = getManagedSiteConfigFromPreferences(preferences)
+  const siteType = getManagedSiteType(preferences)
+  return getManagedSiteAdminConfigForType(preferences, siteType)
+}
+
+/**
+ * Extracts a managed-site admin config for an explicit target site type.
+ */
+export function getManagedSiteAdminConfigForType(
+  preferences: UserPreferences,
+  siteType: ManagedSiteType,
+): ManagedSiteAdminConfig | null {
+  const { config } = getManagedSiteConfigFromPreferencesForType(
+    preferences,
+    siteType,
+  )
 
   // Octopus 使用不同的配置结构
   if (siteType === OCTOPUS) {
@@ -197,6 +232,16 @@ export function getManagedSiteContext(prefs: UserPreferences): {
   messagesKey: ManagedSiteMessagesKey
 } {
   const siteType = getManagedSiteType(prefs)
+  return getManagedSiteContextForType(siteType)
+}
+
+/**
+ * Returns managed-site UI + i18n context for an explicit site type.
+ */
+export function getManagedSiteContextForType(siteType: ManagedSiteType): {
+  siteType: ManagedSiteType
+  messagesKey: ManagedSiteMessagesKey
+} {
   return {
     siteType,
     messagesKey: getManagedSiteMessagesKeyFromSiteType(siteType),
@@ -211,6 +256,35 @@ export function getManagedSiteMessagesKey(
 ): ManagedSiteMessagesKey {
   const { messagesKey } = getManagedSiteContext(prefs)
   return messagesKey
+}
+
+/**
+ * Enumerates fully configured managed-site targets that can be used for
+ * cross-site operations such as channel migration.
+ */
+export function getManagedSiteTargetOptions(
+  preferences: UserPreferences,
+  options?: {
+    excludeSiteTypes?: ManagedSiteType[]
+  },
+): ManagedSiteTargetOption[] {
+  const excluded = new Set(options?.excludeSiteTypes ?? [])
+  const siteTypes: ManagedSiteType[] = [NEW_API, VELOERA, DONE_HUB, OCTOPUS]
+
+  return siteTypes
+    .filter((siteType) => !excluded.has(siteType))
+    .map((siteType) => {
+      const config = getManagedSiteAdminConfigForType(preferences, siteType)
+      if (!config) return null
+
+      return {
+        siteType,
+        labelKey: getManagedSiteLabelKey(siteType),
+        messagesKey: getManagedSiteMessagesKeyFromSiteType(siteType),
+        config,
+      } satisfies ManagedSiteTargetOption
+    })
+    .filter((item): item is ManagedSiteTargetOption => item !== null)
 }
 
 /**

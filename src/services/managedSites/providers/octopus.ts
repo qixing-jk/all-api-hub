@@ -57,7 +57,7 @@ const logger = createLogger("OctopusService")
  * @param isOctopusType - 如果为 true，表示 channelType 已经是 OctopusOutboundType，直接返回
  * @returns 对应的 OctopusOutboundType 值
  */
-function mapChannelTypeToOctopusOutboundType(
+export function mapChannelTypeToOctopusOutboundType(
   channelType: ChannelType | OctopusOutboundType | number | undefined,
   isOctopusType = false,
 ): OctopusOutboundType {
@@ -98,10 +98,32 @@ function mapChannelTypeToOctopusOutboundType(
 }
 
 /**
+ * Converts an Octopus outbound type back into the closest shared channel type
+ * used by non-Octopus managed-site providers.
+ */
+export function mapOctopusOutboundTypeToChannelType(
+  channelType: OctopusOutboundType | number | undefined,
+): ChannelType {
+  switch (channelType) {
+    case OctopusOutboundType.Anthropic:
+      return ChannelType.Anthropic
+    case OctopusOutboundType.Gemini:
+      return ChannelType.Gemini
+    case OctopusOutboundType.Volcengine:
+      return ChannelType.VolcEngine
+    case OctopusOutboundType.OpenAIEmbedding:
+    case OctopusOutboundType.OpenAIResponse:
+    case OctopusOutboundType.OpenAIChat:
+    default:
+      return ChannelType.OpenAI
+  }
+}
+
+/**
  * 为 Octopus 渠道构建 base URL
  * Octopus 的 URL 规则需要添加 /v1 后缀
  */
-function buildOctopusBaseUrl(baseUrl: string): string {
+export function buildOctopusBaseUrl(baseUrl: string): string {
   let url = baseUrl.trim()
   // 移除尾部斜杠
   while (url.endsWith("/")) {

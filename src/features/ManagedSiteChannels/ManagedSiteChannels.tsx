@@ -17,6 +17,7 @@ import {
   type HeaderGroup,
 } from "@tanstack/react-table"
 import {
+  ArrowRightLeft,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -85,7 +86,10 @@ import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerificat
 import { useNewApiManagedVerification } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
 import { cn } from "~/lib/utils"
 import { getManagedSiteService } from "~/services/managedSites/managedSiteService"
-import { getManagedSiteConfigMissingMessage } from "~/services/managedSites/utils/managedSite"
+import {
+  getManagedSiteConfigMissingMessage,
+  getManagedSiteTargetOptions,
+} from "~/services/managedSites/utils/managedSite"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import {
@@ -94,6 +98,7 @@ import {
 } from "~/utils/navigation"
 
 import ChannelFilterDialog from "./components/ChannelFilterDialog"
+import { ManagedSiteChannelMigrationDialog } from "./components/ManagedSiteChannelMigrationDialog"
 import RowActions from "./components/RowActions"
 import StatusBadge from "./components/StatusBadge"
 import type { ChannelRow, CheckboxState, RowActionsLabels } from "./types"
@@ -173,6 +178,7 @@ export default function ManagedSiteChannels({
 }: ManagedSiteChannelsProps) {
   const { t } = useTranslation(["managedSiteChannels", "messages", "common"])
   const {
+    preferences,
     managedSiteType,
     newApiBaseUrl,
     newApiUserId,
@@ -214,10 +220,20 @@ export default function ManagedSiteChannels({
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false)
   const [filterDialogChannel, setFilterDialogChannel] =
     useState<ChannelRow | null>(null)
+  const [migrationChannels, setMigrationChannels] = useState<ChannelRow[]>([])
+  const [isMigrationDialogOpen, setIsMigrationDialogOpen] = useState(false)
   const verification = useNewApiManagedVerification()
   const { openNewApiManagedVerification } = verification
 
   const { openWithCustom } = useChannelDialog()
+  const migrationTargets = useMemo(
+    () =>
+      getManagedSiteTargetOptions(preferences, {
+        excludeSiteTypes: [managedSiteType],
+      }),
+    [managedSiteType, preferences],
+  )
+  const hasMigrationTargets = migrationTargets.length > 0
 
   const refreshChannels = useCallback(async () => {
     setIsLoading(true)
@@ -499,6 +515,7 @@ export default function ManagedSiteChannels({
     () => ({
       trigger: t("table.columns.actions"),
       edit: t("table.rowActions.edit"),
+      migrate: t("table.rowActions.migrate"),
       sync: t("table.rowActions.sync"),
       syncing: t("table.rowActions.syncing"),
       openSync: t("table.rowActions.openSync"),
@@ -517,6 +534,78 @@ export default function ManagedSiteChannels({
     setIsFilterDialogOpen(false)
     setFilterDialogChannel(null)
   }, [])
+
+  const openMigrationDialog = useCallback(
+    (nextChannels: ChannelRow[]) => {
+      if (!nextChannels.length || !hasMigrationTargets) {
+        return
+      }
+
+      setMigrationChannels(nextChannels)
+      setIsMigrationDialogOpen(true)
+    },
+    [hasMigrationTargets],
+  )
+
+  const handleCloseMigrationDialog = useCallback(() => {
+    setIsMigrationDialogOpen(false)
+    setMigrationChannels([])
+  }, [])
+
+  const handleOpenSingleChannelMigration = useCallback(
+    (channel: ChannelRow) => {
+      openMigrationDialog([channel])
+    },
+    [openMigrationDialog],
+  )
+
+  const resolveNewApiMigrationSourceKey = useCallback(
+    async ({
+      channelId,
+      channelName,
+    }: {
+      channelId: number
+      channelName: string
+    }) => {
+      let resolvedKey = ""
+
+      const loaded = await loadNewApiChannelKeyWithVerification({
+        channelId,
+        label: channelName,
+        requestKind: "channel",
+        config: {
+          baseUrl: newApiBaseUrl,
+          userId: newApiUserId,
+          username: newApiUsername,
+          password: newApiPassword,
+          totpSecret: newApiTotpSecret,
+        },
+        setKey: (key) => {
+          resolvedKey = key
+        },
+        openVerification: openNewApiManagedVerification,
+      })
+
+      if (loaded && resolvedKey.trim()) {
+        return resolvedKey.trim()
+      }
+
+      throw new Error(
+        t(
+          "managedSiteChannels:migration.blockedReasons.sourceKeyResolutionFailed",
+        ),
+      )
+    },
+    [
+      newApiBaseUrl,
+      newApiPassword,
+      newApiTotpSecret,
+      newApiUserId,
+      newApiUsername,
+      openNewApiManagedVerification,
+      t,
+    ],
+  )
 
   const columns = useMemo<ColumnDef<ChannelRow, unknown>[]>(
     () => [
@@ -652,10 +741,12 @@ export default function ManagedSiteChannels({
           <RowActions
             channel={row.original}
             onEdit={handleOpenEditDialog}
+            onMigrate={handleOpenSingleChannelMigration}
             onDelete={scheduleDelete}
             onSync={handleSyncChannels}
             onOpenSync={openManagedSiteModelSyncForChannel}
             onFilters={handleOpenFilterDialog}
+            canMigrate={hasMigrationTargets}
             isSyncing={syncingIds.has(row.original.id)}
             labels={rowActionLabels}
           />
@@ -668,7 +759,9 @@ export default function ManagedSiteChannels({
     [
       handleOpenEditDialog,
       handleOpenFilterDialog,
+      handleOpenSingleChannelMigration,
       handleSyncChannels,
+      hasMigrationTargets,
       isOctopus,
       rowActionLabels,
       scheduleDelete,
@@ -766,7 +859,9 @@ export default function ManagedSiteChannels({
   }, [statusColumn])
 
   const selectedRows = table.getSelectedRowModel().rows
+  const filteredRows = table.getFilteredRowModel().rows
   const selectedCount = selectedRows.length
+  const filteredCount = filteredRows.length
   const searchValue =
     (table.getColumn("name")?.getFilterValue() as string) ?? ""
   const rowsPerPageOptions = [10, 25, 50, 100]
@@ -821,6 +916,17 @@ export default function ManagedSiteChannels({
           <AlertTitle>{t("alerts.loadError.title")}</AlertTitle>
           <AlertDescription>
             {t("alerts.loadError.description", { error })}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {!configMissing && !hasMigrationTargets && (
+        <Alert variant="warning">
+          <AlertTitle>
+            {t("managedSiteChannels:migration.alerts.noTargets.title")}
+          </AlertTitle>
+          <AlertDescription>
+            {t("managedSiteChannels:migration.alerts.noTargets.description")}
           </AlertDescription>
         </Alert>
       )}
@@ -932,6 +1038,26 @@ export default function ManagedSiteChannels({
           </DropdownMenu>
 
           <div className="col-span-2 grid grid-cols-2 gap-2 md:ml-auto md:flex md:items-center md:justify-end md:gap-2">
+            <Button
+              variant="outline"
+              disabled={!selectedCount || !hasMigrationTargets}
+              onClick={() =>
+                openMigrationDialog(selectedRows.map((row) => row.original))
+              }
+              leftIcon={<ArrowRightLeft className="h-4 w-4" />}
+            >
+              {t("toolbar.migrateSelected")}
+            </Button>
+            <Button
+              variant="outline"
+              disabled={!filteredCount || !hasMigrationTargets}
+              onClick={() =>
+                openMigrationDialog(filteredRows.map((row) => row.original))
+              }
+              leftIcon={<ArrowRightLeft className="h-4 w-4" />}
+            >
+              {t("toolbar.migrateFiltered")}
+            </Button>
             <Button
               variant="outline"
               disabled={!selectedCount}
@@ -1169,6 +1295,18 @@ export default function ManagedSiteChannels({
         channel={filterDialogChannel}
         open={isFilterDialogOpen}
         onClose={handleCloseFilterDialog}
+      />
+
+      <ManagedSiteChannelMigrationDialog
+        isOpen={isMigrationDialogOpen}
+        onClose={handleCloseMigrationDialog}
+        channels={migrationChannels}
+        preferences={preferences}
+        sourceSiteType={managedSiteType}
+        availableTargets={migrationTargets}
+        resolveNewApiSourceKey={
+          isNewApiManagedSite ? resolveNewApiMigrationSourceKey : undefined
+        }
       />
 
       <NewApiManagedVerificationDialog

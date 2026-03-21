@@ -14,10 +14,12 @@ import type { ChannelRow, RowActionsLabels } from "../types"
 interface RowActionsProps {
   channel: ChannelRow
   onEdit: (channel: ChannelRow) => void
+  onMigrate: (channel: ChannelRow) => void
   onDelete: (ids: number[]) => void
   onSync: (channelIds: number[]) => void
   onOpenSync: (channelId: number) => Promise<void>
   onFilters: (channel: ChannelRow) => void
+  canMigrate: boolean
   isSyncing: boolean
   labels: RowActionsLabels
 }
@@ -28,10 +30,12 @@ interface RowActionsProps {
 export default function RowActions({
   channel,
   onEdit,
+  onMigrate,
   onDelete,
   onSync,
   onOpenSync,
   onFilters,
+  canMigrate,
   isSyncing,
   labels,
 }: RowActionsProps) {
@@ -54,6 +58,12 @@ export default function RowActions({
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => onFilters(channel)}>
           {labels.filters}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => onMigrate(channel)}
+          disabled={!canMigrate}
+        >
+          {labels.migrate}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => void onOpenSync(channel.id)}>
           {labels.openSync}
