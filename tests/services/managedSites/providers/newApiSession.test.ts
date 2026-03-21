@@ -266,25 +266,46 @@ describe("newApiSession", () => {
 
   it("fetches hidden channel keys when the browser session is already verified", async () => {
     server.use(
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/2fa/status`, () =>
+        jsonData({ enabled: true }),
+      ),
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/passkey`, () =>
+        jsonData({ enabled: false }),
+      ),
+      http.post(`${BASE_CONFIG.baseUrl}/api/verify`, () =>
+        jsonData({ verified: true, expires_at: 1_700_000_000 }),
+      ),
       http.post(`${BASE_CONFIG.baseUrl}/api/channel/12/key`, () =>
         jsonData("hidden-channel-key"),
       ),
     )
+    generateNewApiTotpCodeMock.mockReturnValue("123456")
 
     await expect(
       fetchNewApiChannelKey({
-        baseUrl: BASE_CONFIG.baseUrl,
-        userId: BASE_CONFIG.userId,
+        ...BASE_CONFIG,
         channelId: 12,
       }),
     ).resolves.toBe("hidden-channel-key")
   })
 
-  it("classifies missing login requirements when reading a hidden channel key", async () => {
+  it("skips the per-channel key endpoint when preflight determines login 2FA is still required", async () => {
+    let keyEndpointCalls = 0
+
     server.use(
-      http.post(`${BASE_CONFIG.baseUrl}/api/channel/12/key`, () =>
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/2fa/status`, () =>
         unauthorizedResponse(),
       ),
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/passkey`, () =>
+        unauthorizedResponse(),
+      ),
+      http.post(`${BASE_CONFIG.baseUrl}/api/user/login`, () =>
+        jsonData({ require_2fa: true }),
+      ),
+      http.post(`${BASE_CONFIG.baseUrl}/api/channel/12/key`, () => {
+        keyEndpointCalls += 1
+        return jsonData("should-not-be-requested")
+      }),
     )
 
     await expect(
@@ -295,11 +316,60 @@ describe("newApiSession", () => {
       }),
     ).rejects.toMatchObject({
       kind: NEW_API_CHANNEL_KEY_ERROR_KINDS.LOGIN_REQUIRED,
+      sessionResult: {
+        status: NEW_API_MANAGED_SESSION_STATUSES.CREDENTIALS_MISSING,
+      },
     } satisfies Pick<NewApiChannelKeyRequirementError, "kind">)
+
+    expect(keyEndpointCalls).toBe(0)
   })
 
-  it("classifies secure verification requirements when reading a hidden channel key", async () => {
+  it("skips the per-channel key endpoint when preflight determines secure verification is still required", async () => {
+    let keyEndpointCalls = 0
+
     server.use(
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/2fa/status`, () =>
+        jsonData({ enabled: true }),
+      ),
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/passkey`, () =>
+        jsonData({ enabled: false }),
+      ),
+      http.post(`${BASE_CONFIG.baseUrl}/api/channel/12/key`, () => {
+        keyEndpointCalls += 1
+        return jsonData("should-not-be-requested")
+      }),
+    )
+
+    await expect(
+      fetchNewApiChannelKey({
+        baseUrl: BASE_CONFIG.baseUrl,
+        userId: BASE_CONFIG.userId,
+        username: BASE_CONFIG.username,
+        password: BASE_CONFIG.password,
+        totpSecret: "",
+        channelId: 12,
+      }),
+    ).rejects.toMatchObject({
+      kind: NEW_API_CHANNEL_KEY_ERROR_KINDS.SECURE_VERIFICATION_REQUIRED,
+      sessionResult: {
+        status: NEW_API_MANAGED_SESSION_STATUSES.SECURE_VERIFICATION_REQUIRED,
+      },
+    } satisfies Pick<NewApiChannelKeyRequirementError, "kind">)
+
+    expect(keyEndpointCalls).toBe(0)
+  })
+
+  it("still classifies key-endpoint verification failures after a verified session preflight", async () => {
+    server.use(
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/2fa/status`, () =>
+        jsonData({ enabled: true }),
+      ),
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/passkey`, () =>
+        jsonData({ enabled: false }),
+      ),
+      http.post(`${BASE_CONFIG.baseUrl}/api/verify`, () =>
+        jsonData({ verified: true, expires_at: 1_700_000_000 }),
+      ),
       http.post(`${BASE_CONFIG.baseUrl}/api/channel/12/key`, () =>
         HttpResponse.json({
           success: false,
@@ -308,11 +378,11 @@ describe("newApiSession", () => {
         }),
       ),
     )
+    generateNewApiTotpCodeMock.mockReturnValue("123456")
 
     await expect(
       fetchNewApiChannelKey({
-        baseUrl: BASE_CONFIG.baseUrl,
-        userId: BASE_CONFIG.userId,
+        ...BASE_CONFIG,
         channelId: 12,
       }),
     ).rejects.toMatchObject({

@@ -303,6 +303,9 @@ describe("ManagedSiteChannels", () => {
       expect(fetchNewApiChannelKey).toHaveBeenCalledWith({
         baseUrl: "https://admin.example",
         userId: "1",
+        username: "admin",
+        password: "secret-password",
+        totpSecret: "JBSWY3DPEHPK3PXP",
         channelId: 208,
       })
     })
@@ -397,6 +400,9 @@ describe("ManagedSiteChannels", () => {
       expect(fetchNewApiChannelKey).toHaveBeenCalledWith({
         baseUrl: "https://admin.example",
         userId: "1",
+        username: "admin",
+        password: "secret-password",
+        totpSecret: "JBSWY3DPEHPK3PXP",
         channelId: 208,
       })
     })

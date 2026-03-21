@@ -62,8 +62,18 @@ export const NEW_API_CHANNEL_KEY_ERROR_KINDS = {
 export type NewApiChannelKeyErrorKind =
   (typeof NEW_API_CHANNEL_KEY_ERROR_KINDS)[keyof typeof NEW_API_CHANNEL_KEY_ERROR_KINDS]
 
+type NewApiChannelKeyRequirementSessionResult = Exclude<
+  EnsureNewApiManagedSessionResult,
+  {
+    status: typeof NEW_API_MANAGED_SESSION_STATUSES.VERIFIED
+  }
+>
+
 export class NewApiChannelKeyRequirementError extends Error {
-  constructor(public kind: NewApiChannelKeyErrorKind) {
+  constructor(
+    public kind: NewApiChannelKeyErrorKind,
+    public sessionResult?: NewApiChannelKeyRequirementSessionResult,
+  ) {
     super(kind)
     this.name = "NewApiChannelKeyRequirementError"
   }
@@ -220,6 +230,45 @@ export async function hasNewApiAuthenticatedBrowserSession(
 export const isNewApiVerifiedSessionActive = (baseUrl: string) => {
   const verifiedUntil = getSessionState(baseUrl).verifiedUntil
   return Boolean(verifiedUntil && verifiedUntil > Date.now())
+}
+
+const getNewApiChannelKeyRequirementKind = (
+  result: NewApiChannelKeyRequirementSessionResult,
+): NewApiChannelKeyErrorKind => {
+  switch (result.status) {
+    case NEW_API_MANAGED_SESSION_STATUSES.SECURE_VERIFICATION_REQUIRED:
+    case NEW_API_MANAGED_SESSION_STATUSES.PASSKEY_MANUAL_REQUIRED:
+      return NEW_API_CHANNEL_KEY_ERROR_KINDS.SECURE_VERIFICATION_REQUIRED
+    case NEW_API_MANAGED_SESSION_STATUSES.CREDENTIALS_MISSING:
+    case NEW_API_MANAGED_SESSION_STATUSES.LOGIN_2FA_REQUIRED:
+    default:
+      return NEW_API_CHANNEL_KEY_ERROR_KINDS.LOGIN_REQUIRED
+  }
+}
+
+/**
+ * Ensures the current origin has enough managed-session state to read hidden
+ * channel keys before callers touch the per-channel key endpoint.
+ */
+export async function ensureNewApiChannelKeyAccess(
+  config: Pick<
+    NewApiConfig,
+    "baseUrl" | "userId" | "username" | "password" | "totpSecret"
+  >,
+): Promise<void> {
+  if (isNewApiVerifiedSessionActive(config.baseUrl)) {
+    return
+  }
+
+  const sessionResult = await ensureNewApiManagedSession(config)
+  if (sessionResult.status === NEW_API_MANAGED_SESSION_STATUSES.VERIFIED) {
+    return
+  }
+
+  throw new NewApiChannelKeyRequirementError(
+    getNewApiChannelKeyRequirementKind(sessionResult),
+    sessionResult,
+  )
 }
 
 /**
@@ -614,7 +663,18 @@ export async function fetchNewApiChannelKey(params: {
   baseUrl: string
   userId?: number | string
   channelId: number
+  username?: string
+  password?: string
+  totpSecret?: string
 }): Promise<string> {
+  await ensureNewApiChannelKeyAccess({
+    baseUrl: params.baseUrl,
+    userId: params.userId?.toString() ?? "",
+    username: params.username?.trim() ?? "",
+    password: params.password ?? "",
+    totpSecret: params.totpSecret?.trim() ?? "",
+  })
+
   try {
     const response = await fetchApiData<{ key?: string } | string>(
       createCookieAuthRequest(params.baseUrl, params.userId),

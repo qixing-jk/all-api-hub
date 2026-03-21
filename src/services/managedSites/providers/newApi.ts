@@ -36,6 +36,7 @@ import type {
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeList, parseDelimitedList } from "~/utils/core/string"
+import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
 import { t } from "~/utils/i18n/core"
 
 import {
@@ -158,9 +159,10 @@ export async function fetchChannelSecretKey(
   userId: number | string,
   channelId: number,
 ): Promise<string> {
+  const sessionConfig = await getNewApiManagedSessionConfig(baseUrl, userId)
+
   return await fetchNewApiChannelKey({
-    baseUrl,
-    userId,
+    ...sessionConfig,
     channelId,
   })
 }
@@ -230,7 +232,7 @@ export async function getNewApiLoginAssistConfig(): Promise<Pick<
 > | null> {
   try {
     const prefs = await userPreferences.getPreferences()
-    const { newApi } = prefs
+    const newApi = prefs?.newApi
 
     if (!newApi?.baseUrl) {
       return null
@@ -245,6 +247,39 @@ export async function getNewApiLoginAssistConfig(): Promise<Pick<
   } catch (error) {
     logger.error("Error getting New API login-assist config", error)
     return null
+  }
+}
+
+const sharesNewApiOrigin = (leftBaseUrl: string, rightBaseUrl: string) => {
+  const leftOrigin =
+    normalizeUrlForOriginKey(leftBaseUrl, { stripTrailingSlashes: true }) ||
+    leftBaseUrl.trim()
+  const rightOrigin =
+    normalizeUrlForOriginKey(rightBaseUrl, { stripTrailingSlashes: true }) ||
+    rightBaseUrl.trim()
+
+  return Boolean(leftOrigin && rightOrigin && leftOrigin === rightOrigin)
+}
+
+const getNewApiManagedSessionConfig = async (
+  baseUrl: string,
+  userId: number | string,
+): Promise<
+  Pick<
+    NewApiConfig,
+    "baseUrl" | "userId" | "username" | "password" | "totpSecret"
+  >
+> => {
+  const loginAssistConfig = await getNewApiLoginAssistConfig()
+  const canReuseLoginAssist =
+    loginAssistConfig && sharesNewApiOrigin(loginAssistConfig.baseUrl, baseUrl)
+
+  return {
+    baseUrl,
+    userId: userId?.toString() ?? "",
+    username: canReuseLoginAssist ? loginAssistConfig.username ?? "" : "",
+    password: canReuseLoginAssist ? loginAssistConfig.password ?? "" : "",
+    totpSecret: canReuseLoginAssist ? loginAssistConfig.totpSecret ?? "" : "",
   }
 }
 
@@ -427,13 +462,13 @@ export async function findMatchingChannel(
     return null
   }
 
+  const sessionConfig = await getNewApiManagedSessionConfig(baseUrl, userId)
   const resolvedCandidates: ManagedSiteChannel[] = []
 
   for (const candidate of narrowedCandidates) {
     try {
       const resolvedKey = await fetchNewApiChannelKey({
-        baseUrl,
-        userId,
+        ...sessionConfig,
         channelId: candidate.id,
       })
 

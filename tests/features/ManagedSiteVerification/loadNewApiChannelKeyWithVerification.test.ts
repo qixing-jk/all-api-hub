@@ -2,36 +2,22 @@ import { describe, expect, it, vi } from "vitest"
 
 import { loadNewApiChannelKeyWithVerification } from "~/features/ManagedSiteVerification/loadNewApiChannelKeyWithVerification"
 
-const {
-  ensureNewApiManagedSessionMock,
-  fetchNewApiChannelKeyMock,
-  isNewApiVerifiedSessionActiveMock,
-} = vi.hoisted(() => ({
-  ensureNewApiManagedSessionMock: vi.fn(),
+const { fetchNewApiChannelKeyMock } = vi.hoisted(() => ({
   fetchNewApiChannelKeyMock: vi.fn(),
-  isNewApiVerifiedSessionActiveMock: vi.fn(),
 }))
 
 vi.mock("~/services/managedSites/providers/newApiSession", () => ({
-  NEW_API_MANAGED_SESSION_STATUSES: {
-    VERIFIED: "verified",
-    CREDENTIALS_MISSING: "credentials-missing",
-    LOGIN_2FA_REQUIRED: "login-2fa-required",
-    SECURE_VERIFICATION_REQUIRED: "secure-verification-required",
-    PASSKEY_MANUAL_REQUIRED: "passkey-manual-required",
-  },
   NewApiChannelKeyRequirementError: class NewApiChannelKeyRequirementError extends Error {
-    constructor(public kind: string) {
+    constructor(
+      public kind: string,
+      public sessionResult?: Record<string, unknown>,
+    ) {
       super(kind)
       this.name = "NewApiChannelKeyRequirementError"
     }
   },
-  ensureNewApiManagedSession: (...args: unknown[]) =>
-    ensureNewApiManagedSessionMock(...args),
   fetchNewApiChannelKey: (...args: unknown[]) =>
     fetchNewApiChannelKeyMock(...args),
-  isNewApiVerifiedSessionActive: (...args: unknown[]) =>
-    isNewApiVerifiedSessionActiveMock(...args),
 }))
 
 const BASE_PARAMS = {
@@ -48,12 +34,16 @@ const BASE_PARAMS = {
 }
 
 describe("loadNewApiChannelKeyWithVerification", () => {
-  it("opens verification from the prefetched session result before reading a concrete key", async () => {
-    isNewApiVerifiedSessionActiveMock.mockReturnValue(false)
-    ensureNewApiManagedSessionMock.mockResolvedValue({
-      status: "login-2fa-required",
-      automaticAttempted: false,
-    })
+  it("opens verification from the requirement result returned by the provider layer", async () => {
+    const { NewApiChannelKeyRequirementError } = await import(
+      "~/services/managedSites/providers/newApiSession"
+    )
+    fetchNewApiChannelKeyMock.mockRejectedValue(
+      new NewApiChannelKeyRequirementError("login-required", {
+        status: "login-2fa-required",
+        automaticAttempted: false,
+      }),
+    )
 
     const setKey = vi.fn()
     const openVerification = vi.fn()
@@ -65,10 +55,14 @@ describe("loadNewApiChannelKeyWithVerification", () => {
     })
 
     expect(loaded).toBe(false)
-    expect(ensureNewApiManagedSessionMock).toHaveBeenCalledWith(
-      BASE_PARAMS.config,
-    )
-    expect(fetchNewApiChannelKeyMock).not.toHaveBeenCalled()
+    expect(fetchNewApiChannelKeyMock).toHaveBeenCalledWith({
+      baseUrl: BASE_PARAMS.config.baseUrl,
+      userId: BASE_PARAMS.config.userId,
+      username: BASE_PARAMS.config.username,
+      password: BASE_PARAMS.config.password,
+      totpSecret: BASE_PARAMS.config.totpSecret,
+      channelId: BASE_PARAMS.channelId,
+    })
     expect(openVerification).toHaveBeenCalledWith({
       kind: "channel",
       label: "Channel A",
@@ -82,8 +76,7 @@ describe("loadNewApiChannelKeyWithVerification", () => {
     expect(setKey).not.toHaveBeenCalled()
   })
 
-  it("skips the session preflight when the verified window is already active", async () => {
-    isNewApiVerifiedSessionActiveMock.mockReturnValue(true)
+  it("passes session credentials through to the provider-layer key loader", async () => {
     fetchNewApiChannelKeyMock.mockResolvedValue("hidden-channel-key")
 
     const setKey = vi.fn()
@@ -96,10 +89,12 @@ describe("loadNewApiChannelKeyWithVerification", () => {
     })
 
     expect(loaded).toBe(true)
-    expect(ensureNewApiManagedSessionMock).not.toHaveBeenCalled()
     expect(fetchNewApiChannelKeyMock).toHaveBeenCalledWith({
       baseUrl: BASE_PARAMS.config.baseUrl,
       userId: BASE_PARAMS.config.userId,
+      username: BASE_PARAMS.config.username,
+      password: BASE_PARAMS.config.password,
+      totpSecret: BASE_PARAMS.config.totpSecret,
       channelId: BASE_PARAMS.channelId,
     })
     expect(setKey).toHaveBeenCalledWith("hidden-channel-key")
