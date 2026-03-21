@@ -214,7 +214,7 @@
     "refresh": "更新",
     "searchPlaceholder": "名前、URL、またはグループで検索",
     "status": "状態",
-    "syncSelected": "選択項目を同期",
+    "syncSelected": "選択チャネルのモデルを同期",
     "toggleColumns": "列の表示切替"
   }
 }

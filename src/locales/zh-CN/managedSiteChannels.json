@@ -214,7 +214,7 @@
     "refresh": "刷新",
     "searchPlaceholder": "按名称、URL 或分组搜索",
     "status": "状态",
-    "syncSelected": "同步所选",
+    "syncSelected": "同步所选渠道模型",
     "toggleColumns": "切换列"
   }
 }

@@ -216,7 +216,7 @@
     "refresh": "Refresh",
     "searchPlaceholder": "Search by name, URL or group",
     "status": "Status",
-    "syncSelected": "Sync selected",
+    "syncSelected": "Sync selected channel models",
     "toggleColumns": "Toggle columns"
   }
 }
