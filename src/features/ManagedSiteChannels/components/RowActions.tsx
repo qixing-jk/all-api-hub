@@ -55,12 +55,18 @@ export default function RowActions({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-44">
         {showMigrationAction ? (
-          <DropdownMenuItem
-            onClick={() => onMigrate(channel)}
-            disabled={!canMigrate}
-          >
-            {labels.migrate}
-          </DropdownMenuItem>
+          <>
+            <DropdownMenuItem
+              onClick={() => onMigrate(channel)}
+              disabled={!canMigrate}
+            >
+              {labels.migrate}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => void onOpenSync(channel.id)}>
+              {labels.openSync}
+            </DropdownMenuItem>
+          </>
         ) : (
           <>
             <DropdownMenuItem onClick={() => onEdit(channel)}>

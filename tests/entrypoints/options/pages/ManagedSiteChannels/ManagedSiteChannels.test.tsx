@@ -17,7 +17,10 @@ import {
   NEW_API_MANAGED_SESSION_STATUSES,
 } from "~/services/managedSites/providers/newApiSession"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
-import { navigateWithinOptionsPage } from "~/utils/navigation"
+import {
+  navigateWithinOptionsPage,
+  openManagedSiteModelSyncForChannel,
+} from "~/utils/navigation"
 import {
   fireEvent,
   render,
@@ -56,7 +59,11 @@ vi.mock("~/contexts/UserPreferencesContext", async (importActual) => {
 
 vi.mock("~/utils/navigation", async (importActual) => {
   const actual = (await importActual()) as any
-  return { ...actual, navigateWithinOptionsPage: vi.fn() }
+  return {
+    ...actual,
+    navigateWithinOptionsPage: vi.fn(),
+    openManagedSiteModelSyncForChannel: vi.fn().mockResolvedValue(undefined),
+  }
 })
 
 vi.mock("react-hot-toast", () => ({
@@ -547,7 +554,7 @@ describe("ManagedSiteChannels", () => {
     )
   })
 
-  it("reveals migration controls only after entering migration mode", async () => {
+  it("keeps refresh and read-only channel viewing available in migration mode", async () => {
     const user = userEvent.setup()
 
     mockChannels(
@@ -562,12 +569,19 @@ describe("ManagedSiteChannels", () => {
 
     await waitForRowText("Alpha")
     await waitForRowText("Beta")
+    const initialRequestCount = vi.mocked(sendRuntimeMessage).mock.calls.length
+    vi.mocked(openManagedSiteModelSyncForChannel).mockClear()
 
     expect(
       screen.queryByRole("button", {
         name: "managedSiteChannels:toolbar.migrateSelected",
       }),
     ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:toolbar.refresh",
+      }),
+    ).toBeInTheDocument()
 
     await user.click(
       screen.getByRole("button", {
@@ -585,9 +599,46 @@ describe("ManagedSiteChannels", () => {
         name: "managedSiteChannels:toolbar.migrateSelected",
       }),
     ).toBeInTheDocument()
+    const refreshButton = screen.getByRole("button", {
+      name: "managedSiteChannels:toolbar.refresh",
+    })
+    expect(refreshButton).toBeInTheDocument()
+
+    await user.click(refreshButton)
+
+    await waitFor(() => {
+      expect(sendRuntimeMessage).toHaveBeenCalledTimes(initialRequestCount + 1)
+    })
 
     const betaRow = screen.getByText("Beta").closest("tr")
     expect(betaRow).toBeTruthy()
+    await user.click(
+      within(betaRow!).getByRole("button", {
+        name: "managedSiteChannels:table.columns.actions",
+      }),
+    )
+
+    expect(
+      await screen.findByRole("menuitem", {
+        name: "managedSiteChannels:table.rowActions.openSync",
+      }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("menuitem", {
+        name: "managedSiteChannels:table.rowActions.edit",
+      }),
+    ).not.toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("menuitem", {
+        name: "managedSiteChannels:table.rowActions.openSync",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(openManagedSiteModelSyncForChannel).toHaveBeenCalledWith(2)
+    })
+
     await user.click(
       within(betaRow!).getByRole("button", {
         name: "managedSiteChannels:table.columns.actions",

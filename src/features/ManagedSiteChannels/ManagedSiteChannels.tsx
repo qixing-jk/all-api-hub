@@ -1096,15 +1096,13 @@ export default function ManagedSiteChannels({
                 {t("toolbar.syncSelected")}
               </Button>
             )}
-            {!isMigrationMode && (
-              <Button
-                variant="outline"
-                onClick={() => void refreshChannels()}
-                leftIcon={<RefreshCcw className="h-4 w-4" />}
-              >
-                {t("toolbar.refresh")}
-              </Button>
-            )}
+            <Button
+              variant="outline"
+              onClick={() => void refreshChannels()}
+              leftIcon={<RefreshCcw className="h-4 w-4" />}
+            >
+              {t("toolbar.refresh")}
+            </Button>
             {!isMigrationMode && (
               <Button
                 onClick={handleOpenCreateDialog}
