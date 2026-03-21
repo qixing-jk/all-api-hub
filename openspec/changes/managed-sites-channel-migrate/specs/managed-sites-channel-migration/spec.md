@@ -23,11 +23,18 @@ The managed-site channels page MUST expose migration entry points for single-cha
 - **THEN** the system MUST include all channels in the current filtered dataset
 - **AND** the system MUST NOT limit the operation to only the current pagination page
 
-#### Scenario: Migration actions are unavailable without an eligible target
+#### Scenario: Migration entry explains when no target is configured
 - **GIVEN** no other managed-site target is currently eligible for migration
-- **WHEN** the user views the managed-site channels page
-- **THEN** the system MUST disable or suppress migration actions
-- **AND** the UI MUST show guidance that another managed-site target must be configured first
+- **WHEN** the user attempts to enter migration mode
+- **THEN** the system MUST keep the migration workflow unavailable
+- **AND** the UI MUST explain that another managed-site target must be configured first
+
+#### Scenario: Migration mode keeps source-channel review available
+- **GIVEN** the user has entered migration mode
+- **WHEN** the user uses the managed-site channels page toolbar or row actions
+- **THEN** the system MUST keep refresh available
+- **AND** the system MUST allow read-only inspection of source channels
+- **AND** the system MUST NOT expose edit, sync, or delete row actions while migration mode is active
 
 ### Requirement: Migration targets come from configured managed-site admin contexts
 The system MUST let the operator choose a target only from configured managed-site admin contexts that have complete credentials and are different from the current active managed site.
@@ -84,7 +91,7 @@ If the required source data cannot be resolved, the system MUST block only the a
 ### Requirement: Migration execution creates new target channels without mutating source or existing targets
 When the user confirms migration, the system MUST attempt to create a new target channel for each ready selected source channel.
 
-This flow MUST NOT update, delete, disable, or otherwise mutate the source channels, and it MUST NOT update or merge into existing target channels as part of this change.
+This flow MUST NOT update, delete, disable, or otherwise mutate the source channels, and it MUST NOT update or merge into existing target channels as part of this change. While execution is in progress, the dialog MUST prevent accidental dismissal until the run reaches a result state.
 
 #### Scenario: Successful migration creates new target channels and leaves source unchanged
 - **GIVEN** one or more selected channels are ready in preview
@@ -103,6 +110,11 @@ This flow MUST NOT update, delete, disable, or otherwise mutate the source chann
 - **WHEN** the user confirms migration
 - **THEN** the system MUST NOT update or overwrite that existing target channel as part of this flow
 - **AND** the system MUST report the create failure if the target backend rejects the new channel
+
+#### Scenario: In-flight migration cannot be dismissed accidentally
+- **GIVEN** the user has confirmed migration and execution is in progress
+- **WHEN** the migration dialog is shown
+- **THEN** the system MUST prevent backdrop, escape-key, or explicit close dismissal until execution finishes
 
 ### Requirement: Migration reports per-channel outcomes after execution
 After execution finishes, the system MUST present an overall summary and per-channel results for the selected migration run.

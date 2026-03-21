@@ -6,12 +6,13 @@ The nearest existing reuse points are:
 
 - `src/features/ManagedSiteChannels/ManagedSiteChannels.tsx`: reuse the existing table data, row selection, filter state, and bulk action surface; extend it with a migration dialog entry point instead of adding a separate page.
 - `src/features/ManagedSiteChannels/components/RowActions.tsx`: extend it with a single-channel migration action that preselects one row.
+- `src/components/dialogs/ChannelDialog/**` and `src/constants/dialogModes.ts`: reuse the existing channel dialog shell and add a read-only view mode so operators can inspect source channels while migration mode hides edit/sync actions.
 - `src/services/managedSites/managedSiteService.ts`: extend the service resolver so callers can obtain a managed-site service for an explicit target site type instead of only the currently active one.
 - `src/services/managedSites/utils/managedSite.ts`: extend the config helpers to read admin credentials for a specified managed-site type and enumerate configured migration targets from existing preferences.
 - `src/services/managedSites/providers/{newApi,doneHubService,veloera,octopus}.ts`: reuse provider-specific `createChannel` and `buildChannelPayload` logic rather than adding parallel payload builders.
 - `src/components/dialogs/ChannelDialog/hooks/useChannelForm.ts`: reuse the shared `ChannelFormData` contract, but do not reuse the dialog itself because it is bound to the active managed-site context and manual edit/create UX.
 - `src/features/BasicSettings/components/dialogs/ClearModelRedirectMappingsDialog.tsx`: reuse its preview -> confirm -> result modal pattern for a managed-site batch action.
-- `src/features/ManagedSiteVerification/loadNewApiChannelKeyWithVerification.ts`, `src/services/managedSites/providers/newApiSession.ts`, and `src/services/apiService/doneHub/index.ts`: reuse these for source-channel key hydration when list payloads do not expose the raw key.
+- `src/features/ManagedSiteVerification/loadNewApiChannelKeyWithVerification.ts`, `src/features/ManagedSiteVerification/useNewApiManagedVerification.tsx`, `src/services/managedSites/providers/newApiSession.ts`, and provider `fetchChannelSecretKey(...)` helpers: reuse these for source-channel key hydration when list payloads do not expose the raw key.
 
 A key constraint is that user preferences already store one admin config per managed-site type (`newApi`, `doneHub`, `veloera`, `octopus`), but not multiple profiles per type. That means the first migration release can target other configured managed-site types, but it cannot yet target two different deployments of the same type.
 
@@ -21,6 +22,7 @@ A key constraint is that user preferences already store one admin config per man
 
 - Add a basic channel migration flow from the currently active managed site to another configured managed site.
 - Support migrating one row, selected rows, or the full currently filtered channel list.
+- Keep refresh and read-only source-channel inspection available while migration mode is active.
 - Reuse the existing provider-specific channel creation logic so migration stays aligned with each backend's current create semantics.
 - Show a preflight preview with warnings for dropped or remapped fields before any target channel is created.
 - Return per-channel success and failure results after execution.
@@ -108,14 +110,14 @@ Those omissions will be surfaced as preview warnings when they matter.
 
 ### 5. Resolve hidden source keys during preview, before execution starts
 
-**Decision:** The preview step will hydrate any missing source `key` values needed for channel creation before the user confirms execution.
+**Decision:** The preview step will hydrate any missing source `key` values needed for channel creation before the user confirms execution, using the shared New API managed-session loader and provider secret-detail loaders where available.
 
 Resolution strategy:
 
-- `new-api`: reuse the existing verification-backed key loader flow used by channel edit.
-- `done-hub`: reuse channel-detail fetch to hydrate omitted keys from the detail payload.
+- `new-api`: reuse `loadNewApiChannelKeyWithVerification(...)` and the shared managed-session helper so preview benefits from cached verified sessions and only opens the interactive verification dialog when the provider still requires it.
+- `done-hub`: reuse `fetchChannelSecretKey(...)` to hydrate omitted keys from the detail payload.
+- `Veloera`: reuse `fetchChannelSecretKey(...)` so masked keys are resolved through the provider service instead of being permanently blocked.
 - `octopus`: reuse the list payload because it already includes channel key data in the normalized channel.
-- `Veloera`: use the list payload in the first version; if a deployment hides keys, the channel remains blocked with a clear reason.
 
 **Rationale:** A migration that starts creating target channels and only then discovers that source secrets are unavailable creates confusing partial failures. Preview-time hydration keeps the result predictable and gives the user a chance to resolve verification requirements before the batch starts.
 
@@ -129,7 +131,7 @@ Resolution strategy:
 
 **Alternative considered:** Add a new background runtime-action namespace for channel migration. Rejected for this change because resumable or long-lived background execution is not required for the initial create-only feature.
 
-**Operational detail:** The dialog should disable close while execution is running, but the code still treats page teardown as an interruption rather than something to recover from automatically.
+**Operational detail:** The page switches into a dedicated migration mode that keeps refresh and read-only channel viewing available while swapping edit/sync/delete row actions for view + migrate entry points. The dialog disables close while execution is running, but the code still treats page teardown as an interruption rather than something to recover from automatically.
 
 ### 7. Define "migrate all" as the full currently filtered dataset
 
@@ -159,4 +161,4 @@ Resolution strategy:
 
 ## Open Questions
 
-- Does any supported `Veloera` deployment hide channel keys in list payloads the same way New API can? If yes, the migration service will need a Veloera-specific key-hydration hook similar to the New API and Done Hub branches.
+- None at the time of sync. Masked `Veloera` keys now reuse the provider secret loader during preview just like other backends with detail-backed key access.
