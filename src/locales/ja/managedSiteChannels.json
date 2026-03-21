@@ -118,6 +118,9 @@
       "targetSimplifiesStatus": "移行先サイトは元チャネルの状態を有効/無効へ単純化します。"
     },
     "preview": {
+      "compare": {
+        "fieldLabel": "項目"
+      },
       "loadFailed": "移行プレビューの読み込みに失敗しました: {{error}}",
       "loading": "移行プレビューを構築中...",
       "selectedCount": "{{selectedCount}} 件のチャネルを選択中",

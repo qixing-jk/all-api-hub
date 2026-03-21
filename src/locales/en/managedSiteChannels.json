@@ -118,6 +118,9 @@
       "targetSimplifiesStatus": "The target site will simplify the source status to enabled or disabled."
     },
     "preview": {
+      "compare": {
+        "fieldLabel": "Field"
+      },
       "loadFailed": "Failed to load migration preview: {{error}}",
       "loading": "Building migration preview...",
       "selectedCount": "{{selectedCount}} channels selected",

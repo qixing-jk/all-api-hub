@@ -605,6 +605,15 @@ describe("ManagedSiteChannels", () => {
       within(dialog).getByText("managedSiteChannels:migration.title"),
     ).toBeInTheDocument()
     expect(within(dialog).getByText("Beta")).toBeInTheDocument()
+
+    const betaDetailsToggle = within(dialog).getByText("Beta").closest("button")
+    expect(betaDetailsToggle).toBeTruthy()
+
+    await user.click(betaDetailsToggle!)
+
+    expect(
+      within(dialog).getByText("channelDialog:fields.priority.label"),
+    ).toBeInTheDocument()
   })
 
   it("uses filtered rows for migrate filtered and shows an execution summary", async () => {

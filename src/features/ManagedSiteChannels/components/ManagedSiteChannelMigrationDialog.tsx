@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next"
 import {
   Badge,
   Button,
+  CollapsibleSection,
   DestructiveConfirmDialog,
   Modal,
   Select,
@@ -13,6 +14,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui"
+import { ChannelTypeNames } from "~/constants/managedSite"
+import { OctopusOutboundTypeNames } from "~/constants/octopus"
+import { OCTOPUS } from "~/constants/siteType"
 import {
   executeManagedSiteChannelMigration,
   prepareManagedSiteChannelMigrationPreview,
@@ -147,6 +151,76 @@ const getExecutionBadge = (
   }
 }
 
+const getStatusText = (
+  t: (key: string, options?: any) => string,
+  status?: number,
+) => {
+  switch (status) {
+    case 1:
+      return t("managedSiteChannels:statusLabels.enabled")
+    case 2:
+      return t("managedSiteChannels:statusLabels.manualPause")
+    case 3:
+      return t("managedSiteChannels:statusLabels.autoDisabled")
+    case 0:
+    default:
+      return t("managedSiteChannels:statusLabels.unknown")
+  }
+}
+
+const getChannelTypeText = (
+  siteType: ManagedSiteTargetOption["siteType"],
+  type?: number,
+) => {
+  if (typeof type !== "number") {
+    return "—"
+  }
+
+  return siteType === OCTOPUS
+    ? OctopusOutboundTypeNames[type] ?? String(type)
+    : ChannelTypeNames[type] ?? String(type)
+}
+
+const formatDelimitedValues = (value: string | null | undefined) => {
+  const items =
+    value
+      ?.split(",")
+      .map((item) => item.trim())
+      .filter(Boolean) ?? []
+
+  return items.length > 0 ? items.join(", ") : "—"
+}
+
+const formatArrayValues = (items: string[] | null | undefined) =>
+  items && items.length > 0 ? items.join(", ") : "—"
+
+/**
+ *
+ */
+function PreviewComparisonRow({
+  label,
+  sourceValue,
+  targetValue,
+}: {
+  label: string
+  sourceValue: string
+  targetValue: string
+}) {
+  return (
+    <div className="bg-border grid gap-px md:grid-cols-[minmax(0,120px)_minmax(0,1fr)_minmax(0,1fr)]">
+      <div className="bg-muted/50 px-3 py-2 text-[11px] font-medium uppercase">
+        {label}
+      </div>
+      <div className="bg-background px-3 py-2 text-sm break-words">
+        {sourceValue}
+      </div>
+      <div className="bg-background px-3 py-2 text-sm break-words">
+        {targetValue}
+      </div>
+    </div>
+  )
+}
+
 /**
  * Modal flow for selecting a managed-site migration target, reviewing the
  * create-only preview, and showing per-channel execution results.
@@ -160,7 +234,11 @@ export function ManagedSiteChannelMigrationDialog({
   availableTargets,
   resolveNewApiSourceKey,
 }: ManagedSiteChannelMigrationDialogProps) {
-  const { t } = useTranslation(["managedSiteChannels", "settings"])
+  const { t } = useTranslation([
+    "managedSiteChannels",
+    "settings",
+    "channelDialog",
+  ])
   const [targetSiteType, setTargetSiteType] = useState<string>("")
   const [preview, setPreview] =
     useState<ManagedSiteChannelMigrationPreview | null>(null)
@@ -467,51 +545,172 @@ export function ManagedSiteChannelMigrationDialog({
                     key={item.channelId}
                     className="space-y-2 rounded-md border p-3"
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="truncate text-sm font-medium">
-                          {item.channelName}
-                        </div>
-                        <div className="text-muted-foreground text-xs">
-                          #{item.channelId}
-                        </div>
-                      </div>
-                      <Badge
-                        variant={
-                          item.status === "ready" ? "success" : "warning"
-                        }
-                        size="sm"
-                      >
-                        {item.status === "ready"
-                          ? t(
-                              "managedSiteChannels:migration.preview.status.ready",
-                            )
-                          : t(
-                              "managedSiteChannels:migration.preview.status.blocked",
+                    <CollapsibleSection
+                      title={
+                        <div className="flex min-w-0 items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="truncate text-sm font-medium">
+                              {item.channelName}
+                            </div>
+                            <div className="text-muted-foreground mt-0.5 flex flex-wrap gap-2 text-xs">
+                              <span>#{item.channelId}</span>
+                              <span className="truncate">
+                                {item.sourceChannel.base_url || "—"}
+                              </span>
+                            </div>
+                            {item.status === "blocked" && (
+                              <div className="mt-1 text-xs text-amber-700 dark:text-amber-200">
+                                {getBlockedReasonText(
+                                  t,
+                                  item.blockingReasonCode,
+                                )}
+                              </div>
                             )}
-                      </Badge>
-                    </div>
-
-                    {item.status === "blocked" && (
-                      <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
-                        <div className="font-medium">
-                          {getBlockedReasonText(t, item.blockingReasonCode)}
+                          </div>
+                          <div className="flex shrink-0 items-center gap-2">
+                            {item.warningCodes.length > 0 && (
+                              <Badge variant="secondary" size="sm">
+                                {item.warningCodes.length}
+                              </Badge>
+                            )}
+                            <Badge
+                              variant={
+                                item.status === "ready" ? "success" : "warning"
+                              }
+                              size="sm"
+                            >
+                              {item.status === "ready"
+                                ? t(
+                                    "managedSiteChannels:migration.preview.status.ready",
+                                  )
+                                : t(
+                                    "managedSiteChannels:migration.preview.status.blocked",
+                                  )}
+                            </Badge>
+                          </div>
                         </div>
-                        {item.blockingMessage && (
-                          <div className="mt-1">{item.blockingMessage}</div>
+                      }
+                      defaultOpen={item.status === "blocked"}
+                      buttonClassName="px-0 py-0 hover:bg-transparent dark:hover:bg-transparent"
+                      panelClassName="mt-3 space-y-3 border-0 bg-transparent p-0"
+                    >
+                      <div className="space-y-3">
+                        <div className="overflow-hidden rounded-md border">
+                          <div className="bg-border grid gap-px md:grid-cols-[minmax(0,120px)_minmax(0,1fr)_minmax(0,1fr)]">
+                            <div className="bg-muted/50 px-3 py-2 text-[11px] font-medium uppercase">
+                              {t(
+                                "managedSiteChannels:migration.preview.compare.fieldLabel",
+                              )}
+                            </div>
+                            <div className="bg-muted/50 px-3 py-2 text-xs font-medium">
+                              {t(
+                                "managedSiteChannels:migration.target.sourceLabel",
+                              )}
+                            </div>
+                            <div className="bg-muted/50 px-3 py-2 text-xs font-medium">
+                              {t(
+                                "managedSiteChannels:migration.target.destinationLabel",
+                              )}
+                            </div>
+                          </div>
+                          <PreviewComparisonRow
+                            label={t("channelDialog:fields.baseUrl.label")}
+                            sourceValue={
+                              item.sourceChannel.base_url?.trim() || "—"
+                            }
+                            targetValue={item.draft?.base_url.trim() || "—"}
+                          />
+                          <PreviewComparisonRow
+                            label={t("channelDialog:fields.type.label")}
+                            sourceValue={getChannelTypeText(
+                              sourceSiteType,
+                              item.sourceChannel.type,
+                            )}
+                            targetValue={
+                              item.draft
+                                ? getChannelTypeText(
+                                    preview.targetSiteType,
+                                    item.draft.type,
+                                  )
+                                : "—"
+                            }
+                          />
+                          <PreviewComparisonRow
+                            label={t("channelDialog:fields.models.label")}
+                            sourceValue={formatDelimitedValues(
+                              item.sourceChannel.models,
+                            )}
+                            targetValue={
+                              item.draft
+                                ? formatArrayValues(item.draft.models)
+                                : "—"
+                            }
+                          />
+                          <PreviewComparisonRow
+                            label={t("channelDialog:fields.groups.label")}
+                            sourceValue={formatDelimitedValues(
+                              item.sourceChannel.group,
+                            )}
+                            targetValue={
+                              item.draft
+                                ? formatArrayValues(item.draft.groups)
+                                : "—"
+                            }
+                          />
+                          <PreviewComparisonRow
+                            label={t("channelDialog:fields.priority.label")}
+                            sourceValue={String(
+                              item.sourceChannel.priority ?? 0,
+                            )}
+                            targetValue={
+                              item.draft ? String(item.draft.priority) : "—"
+                            }
+                          />
+                          <PreviewComparisonRow
+                            label={t("channelDialog:fields.weight.label")}
+                            sourceValue={String(item.sourceChannel.weight ?? 0)}
+                            targetValue={
+                              item.draft ? String(item.draft.weight) : "—"
+                            }
+                          />
+                          <PreviewComparisonRow
+                            label={t("channelDialog:fields.status.label")}
+                            sourceValue={getStatusText(
+                              t,
+                              item.sourceChannel.status,
+                            )}
+                            targetValue={
+                              item.draft
+                                ? getStatusText(t, item.draft.status)
+                                : t(
+                                    "managedSiteChannels:migration.preview.status.blocked",
+                                  )
+                            }
+                          />
+                        </div>
+
+                        {item.status === "blocked" && (
+                          <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
+                            <div className="font-medium">
+                              {getBlockedReasonText(t, item.blockingReasonCode)}
+                            </div>
+                            {item.blockingMessage && (
+                              <div className="mt-1">{item.blockingMessage}</div>
+                            )}
+                          </div>
+                        )}
+
+                        {item.warningCodes.length > 0 && (
+                          <ul className="text-muted-foreground list-disc space-y-1 pl-5 text-xs">
+                            {item.warningCodes.map((warningCode) => (
+                              <li key={warningCode}>
+                                {getItemWarningText(t, warningCode)}
+                              </li>
+                            ))}
+                          </ul>
                         )}
                       </div>
-                    )}
-
-                    {item.warningCodes.length > 0 && (
-                      <ul className="text-muted-foreground list-disc space-y-1 pl-5 text-xs">
-                        {item.warningCodes.map((warningCode) => (
-                          <li key={warningCode}>
-                            {getItemWarningText(t, warningCode)}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
+                    </CollapsibleSection>
                   </div>
                 ))}
               </div>

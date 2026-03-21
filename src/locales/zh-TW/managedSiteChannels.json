@@ -118,6 +118,9 @@
       "targetSimplifiesStatus": "目標站點會將來源渠道狀態簡化為啟用或停用。"
     },
     "preview": {
+      "compare": {
+        "fieldLabel": "欄位"
+      },
       "loadFailed": "載入遷移預覽失敗：{{error}}",
       "loading": "正在建立遷移預覽…",
       "selectedCount": "已選取 {{selectedCount}} 個渠道",
