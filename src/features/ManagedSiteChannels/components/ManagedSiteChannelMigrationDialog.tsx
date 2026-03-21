@@ -2,6 +2,7 @@ import { ArrowRightLeft, Loader2, RefreshCcw } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import Tooltip from "~/components/Tooltip"
 import {
   Badge,
   Button,
@@ -218,6 +219,19 @@ function PreviewComparisonRow({
         {targetValue}
       </div>
     </div>
+  )
+}
+
+/**
+ *
+ */
+function WarningTooltipContent({ items }: { items: string[] }) {
+  return (
+    <ul className="max-w-sm list-disc space-y-1 pl-4 text-left">
+      {items.map((item) => (
+        <li key={item}>{item}</li>
+      ))}
+    </ul>
   )
 }
 
@@ -529,14 +543,40 @@ export function ManagedSiteChannelMigrationDialog({
           {!executionResult && preview && (
             <>
               <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
-                <div className="font-medium">
-                  {t("managedSiteChannels:migration.generalWarnings.title")}
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-medium">
+                      {t("managedSiteChannels:migration.generalWarnings.title")}
+                    </div>
+                    <div className="mt-1 text-xs">
+                      {t(
+                        "managedSiteChannels:migration.generalWarnings.compactSummary",
+                      )}
+                    </div>
+                  </div>
+                  <Tooltip
+                    content={
+                      <WarningTooltipContent
+                        items={preview.generalWarningCodes.map((code) =>
+                          getGeneralWarningText(t, code),
+                        )}
+                      />
+                    }
+                    position="left"
+                    wrapperClassName="inline-flex"
+                  >
+                    <Badge
+                      variant="secondary"
+                      size="sm"
+                      className="cursor-help whitespace-nowrap"
+                    >
+                      {preview.generalWarningCodes.length}{" "}
+                      {t(
+                        "managedSiteChannels:migration.preview.badges.limitsLabel",
+                      )}
+                    </Badge>
+                  </Tooltip>
                 </div>
-                <ul className="mt-2 list-disc space-y-1 pl-5">
-                  {preview.generalWarningCodes.map((code) => (
-                    <li key={code}>{getGeneralWarningText(t, code)}</li>
-                  ))}
-                </ul>
               </div>
 
               <div className="max-h-96 space-y-3 overflow-y-auto rounded-md border p-3">
@@ -558,35 +598,68 @@ export function ManagedSiteChannelMigrationDialog({
                                 {item.sourceChannel.base_url || "—"}
                               </span>
                             </div>
-                            {item.status === "blocked" && (
-                              <div className="mt-1 text-xs text-amber-700 dark:text-amber-200">
-                                {getBlockedReasonText(
-                                  t,
-                                  item.blockingReasonCode,
-                                )}
-                              </div>
-                            )}
                           </div>
                           <div className="flex shrink-0 items-center gap-2">
                             {item.warningCodes.length > 0 && (
-                              <Badge variant="secondary" size="sm">
-                                {item.warningCodes.length}
-                              </Badge>
+                              <Tooltip
+                                content={
+                                  <WarningTooltipContent
+                                    items={item.warningCodes.map(
+                                      (warningCode) =>
+                                        getItemWarningText(t, warningCode),
+                                    )}
+                                  />
+                                }
+                                position="left"
+                                wrapperClassName="inline-flex"
+                              >
+                                <Badge
+                                  variant="secondary"
+                                  size="sm"
+                                  className="cursor-help whitespace-nowrap"
+                                >
+                                  {item.warningCodes.length}{" "}
+                                  {t(
+                                    "managedSiteChannels:migration.preview.badges.warningsLabel",
+                                  )}
+                                </Badge>
+                              </Tooltip>
                             )}
-                            <Badge
-                              variant={
-                                item.status === "ready" ? "success" : "warning"
-                              }
-                              size="sm"
-                            >
-                              {item.status === "ready"
-                                ? t(
-                                    "managedSiteChannels:migration.preview.status.ready",
-                                  )
-                                : t(
+                            {item.status === "ready" ? (
+                              <Badge variant="success" size="sm">
+                                {t(
+                                  "managedSiteChannels:migration.preview.status.ready",
+                                )}
+                              </Badge>
+                            ) : (
+                              <Tooltip
+                                content={
+                                  <div className="max-w-sm space-y-2 text-left">
+                                    <div className="font-medium">
+                                      {getBlockedReasonText(
+                                        t,
+                                        item.blockingReasonCode,
+                                      )}
+                                    </div>
+                                    {item.blockingMessage && (
+                                      <div>{item.blockingMessage}</div>
+                                    )}
+                                  </div>
+                                }
+                                position="left"
+                                wrapperClassName="inline-flex"
+                              >
+                                <Badge
+                                  variant="warning"
+                                  size="sm"
+                                  className="cursor-help whitespace-nowrap"
+                                >
+                                  {t(
                                     "managedSiteChannels:migration.preview.status.blocked",
                                   )}
-                            </Badge>
+                                </Badge>
+                              </Tooltip>
+                            )}
                           </div>
                         </div>
                       }

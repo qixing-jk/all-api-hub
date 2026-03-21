@@ -100,6 +100,7 @@
     },
     "description": "現在の管理対象サイトから {{selectedCount}} 件のチャネルを別の構成済み管理対象サイトへコピーします。",
     "generalWarnings": {
+      "compactSummary": "新規作成のみ。ホバーで詳細を確認できます。",
       "createOnly": "この移行は移行先サイトで新しいチャネルを作成するだけで、元チャネルは変更しません。",
       "noDedupeOrSync": "この移行では重複検出、既存チャネルの上書き、既存移行先チャネルとの同期は行いません。",
       "noRollback": "このフローでは自動ロールバックを提供しません。結果一覧を見て必要な手動対応を行ってください。",
@@ -118,6 +119,10 @@
       "targetSimplifiesStatus": "移行先サイトは元チャネルの状態を有効/無効へ単純化します。"
     },
     "preview": {
+      "badges": {
+        "limitsLabel": "件の制限",
+        "warningsLabel": "件の警告"
+      },
       "compare": {
         "fieldLabel": "項目"
       },

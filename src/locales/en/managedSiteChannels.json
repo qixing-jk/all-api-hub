@@ -100,6 +100,7 @@
     },
     "description": "Copy {{selectedCount}} channels from the current managed site into another configured managed site.",
     "generalWarnings": {
+      "compactSummary": "Create-only. Hover for details.",
       "createOnly": "This migration only creates new channels on the target site and does not modify the source channels.",
       "noDedupeOrSync": "This migration does not check for duplicates, overwrite existing target channels, or sync existing target channels.",
       "noRollback": "Automatic rollback is not available in this flow. Use the result list to review any manual follow-up.",
@@ -118,6 +119,10 @@
       "targetSimplifiesStatus": "The target site will simplify the source status to enabled or disabled."
     },
     "preview": {
+      "badges": {
+        "limitsLabel": "limits",
+        "warningsLabel": "warnings"
+      },
       "compare": {
         "fieldLabel": "Field"
       },

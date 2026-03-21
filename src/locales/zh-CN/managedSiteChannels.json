@@ -100,6 +100,7 @@
     },
     "description": "将当前托管站点中的 {{selectedCount}} 个渠道复制到另一个已配置的托管站点。",
     "generalWarnings": {
+      "compactSummary": "仅创建，不查重。悬停看详情。",
       "createOnly": "本次迁移仅在目标站点创建新渠道，不会修改源渠道。",
       "noDedupeOrSync": "本次迁移不会查重、覆盖或同步目标站点中已存在的渠道。",
       "noRollback": "本次迁移不提供自动回滚，请根据结果列表手动处理后续工作。",
@@ -118,6 +119,10 @@
       "targetSimplifiesStatus": "目标站点会将源渠道状态简化为启用或停用。"
     },
     "preview": {
+      "badges": {
+        "limitsLabel": "项限制",
+        "warningsLabel": "条警告"
+      },
       "compare": {
         "fieldLabel": "字段"
       },
