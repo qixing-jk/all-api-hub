@@ -5,6 +5,7 @@ import {
   VELOERA,
   type ManagedSiteType,
 } from "~/constants/siteType"
+import { hasUsableApiTokenKey } from "~/services/apiService/common/apiKey"
 import type { UserPreferences } from "~/services/preferences/userPreferences"
 import {
   DEFAULT_DONE_HUB_CONFIG,
@@ -285,6 +286,25 @@ export function getManagedSiteTargetOptions(
       } satisfies ManagedSiteTargetOption
     })
     .filter((item): item is ManagedSiteTargetOption => item !== null)
+}
+
+/**
+ * Returns true when a managed-site channel key can be used directly as a real
+ * credential rather than a masked inventory placeholder.
+ */
+export function hasUsableManagedSiteChannelKey(key?: string | null): boolean {
+  const trimmed = key?.trim() ?? ""
+  return hasUsableApiTokenKey(trimmed)
+}
+
+/**
+ * Returns true when the source channel key must be hydrated from a detail or
+ * verification flow before it can be reused safely.
+ */
+export function needsManagedSiteChannelKeyResolution(
+  key?: string | null,
+): boolean {
+  return !hasUsableManagedSiteChannelKey(key)
 }
 
 /**

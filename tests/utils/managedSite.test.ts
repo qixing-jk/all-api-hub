@@ -10,6 +10,8 @@ import {
   getManagedSiteLabelKey,
   getManagedSiteMessagesKeyFromSiteType,
   getManagedSiteTargetOptions,
+  hasUsableManagedSiteChannelKey,
+  needsManagedSiteChannelKeyResolution,
 } from "~/services/managedSites/utils/managedSite"
 import {
   DEFAULT_PREFERENCES,
@@ -155,6 +157,19 @@ describe("managedSite", () => {
         },
       },
     ])
+  })
+
+  it("reuses shared masked-key detection for managed-site channel keys", () => {
+    expect(hasUsableManagedSiteChannelKey("sk-********")).toBe(false)
+    expect(needsManagedSiteChannelKeyResolution("sk-********")).toBe(true)
+
+    expect(hasUsableManagedSiteChannelKey("AIza-real-provider-key")).toBe(true)
+    expect(needsManagedSiteChannelKeyResolution("AIza-real-provider-key")).toBe(
+      false,
+    )
+
+    expect(hasUsableManagedSiteChannelKey("")).toBe(false)
+    expect(needsManagedSiteChannelKeyResolution("")).toBe(true)
   })
 
   it("preserves existing behavior for New API selection", () => {

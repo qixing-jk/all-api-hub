@@ -89,6 +89,7 @@ import { getManagedSiteService } from "~/services/managedSites/managedSiteServic
 import {
   getManagedSiteConfigMissingMessage,
   getManagedSiteTargetOptions,
+  needsManagedSiteChannelKeyResolution,
 } from "~/services/managedSites/utils/managedSite"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
@@ -162,11 +163,6 @@ function getManagedSiteChannelStatusFilterLabel(
     default:
       return t("managedSiteChannels:statusLabels.unknown")
   }
-}
-
-const channelNeedsRealKeyResolution = (key?: string | null) => {
-  const trimmedKey = key?.trim() ?? ""
-  return trimmedKey.length === 0 || trimmedKey.includes("*")
 }
 
 /**
@@ -305,7 +301,7 @@ export default function ManagedSiteChannels({
       const models =
         channel.models?.split(",").map((value) => value.trim()) ?? []
       const shouldOfferRealKeyLoading =
-        channelNeedsRealKeyResolution(channel.key) &&
+        needsManagedSiteChannelKeyResolution(channel.key) &&
         (isNewApiManagedSite || supportsDetailBackedRealKeyLoading)
 
       openWithCustom({

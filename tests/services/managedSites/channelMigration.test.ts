@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ChannelType } from "~/constants/managedSite"
-import { DONE_HUB, NEW_API, OCTOPUS } from "~/constants/siteType"
+import { DONE_HUB, NEW_API, OCTOPUS, VELOERA } from "~/constants/siteType"
 import {
   DEFAULT_PREFERENCES,
   type UserPreferences,
@@ -13,14 +13,15 @@ import {
 } from "~/types/managedSiteMigration"
 
 const mockGetManagedSiteServiceForType = vi.fn()
-const mockFetchDoneHubChannel = vi.fn()
+const mockDoneHubBuildChannelPayload = vi.fn()
+const mockDoneHubCreateChannel = vi.fn()
+const mockDoneHubFetchChannelSecretKey = vi.fn()
+const mockDoneHubGetConfig = vi.fn()
+const mockVeloeraFetchChannelSecretKey = vi.fn()
+const mockVeloeraGetConfig = vi.fn()
 
 vi.mock("~/services/managedSites/managedSiteService", () => ({
   getManagedSiteServiceForType: mockGetManagedSiteServiceForType,
-}))
-
-vi.mock("~/services/apiService/doneHub", () => ({
-  fetchChannel: mockFetchDoneHubChannel,
 }))
 
 const buildManagedSiteChannel = (
@@ -82,27 +83,79 @@ const buildPreferences = (
 describe("channelMigration", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockGetManagedSiteServiceForType.mockReturnValue({
-      getConfig: vi.fn().mockResolvedValue({
-        baseUrl: "https://target.example.com",
-        token: "target-token",
-        userId: "1",
-      }),
-      buildChannelPayload: vi.fn((draft: any) => ({
-        mode: "single",
-        channel: {
-          name: draft.name,
-          key: draft.key,
-        },
-      })),
-      createChannel: vi.fn().mockResolvedValue({
-        success: true,
-        message: "ok",
-      }),
+    mockDoneHubGetConfig.mockResolvedValue({
+      baseUrl: "https://donehub.example.com",
+      token: "donehub-token",
+      userId: "9",
+    })
+    mockDoneHubBuildChannelPayload.mockImplementation((draft: any) => ({
+      mode: "single",
+      channel: {
+        name: draft.name,
+        key: draft.key,
+      },
+    }))
+    mockDoneHubCreateChannel.mockResolvedValue({
+      success: true,
+      message: "ok",
+    })
+    mockDoneHubFetchChannelSecretKey.mockResolvedValue("real-donehub-key")
+    mockVeloeraGetConfig.mockResolvedValue({
+      baseUrl: "https://veloera.example.com",
+      token: "veloera-token",
+      userId: "8",
+    })
+    mockVeloeraFetchChannelSecretKey.mockResolvedValue("real-veloera-key")
+    mockGetManagedSiteServiceForType.mockImplementation((siteType: string) => {
+      if (siteType === DONE_HUB) {
+        return {
+          getConfig: mockDoneHubGetConfig,
+          buildChannelPayload: mockDoneHubBuildChannelPayload,
+          createChannel: mockDoneHubCreateChannel,
+          fetchChannelSecretKey: mockDoneHubFetchChannelSecretKey,
+        }
+      }
+
+      if (siteType === VELOERA) {
+        return {
+          getConfig: mockVeloeraGetConfig,
+          buildChannelPayload: vi.fn((draft: any) => ({
+            mode: "single",
+            channel: {
+              name: draft.name,
+              key: draft.key,
+            },
+          })),
+          createChannel: vi.fn().mockResolvedValue({
+            success: true,
+            message: "ok",
+          }),
+          fetchChannelSecretKey: mockVeloeraFetchChannelSecretKey,
+        }
+      }
+
+      return {
+        getConfig: vi.fn().mockResolvedValue({
+          baseUrl: "https://target.example.com",
+          token: "target-token",
+          userId: "1",
+        }),
+        buildChannelPayload: vi.fn((draft: any) => ({
+          mode: "single",
+          channel: {
+            name: draft.name,
+            key: draft.key,
+          },
+        })),
+        createChannel: vi.fn().mockResolvedValue({
+          success: true,
+          message: "ok",
+        }),
+      }
     })
   })
 
-  it("blocks New API preview items when source-key verification does not complete", async () => {
+  it("blocks New API preview items when a masked source key still requires verification", async () => {
     const { prepareManagedSiteChannelMigrationPreview } = await import(
       "~/services/managedSites/channelMigration"
     )
@@ -114,7 +167,7 @@ describe("channelMigration", () => {
       channels: [
         buildManagedSiteChannel({
           id: 11,
-          key: "",
+          key: "sk-********",
         }),
       ],
       resolveNewApiSourceKey: vi
@@ -133,16 +186,9 @@ describe("channelMigration", () => {
     })
   })
 
-  it("hydrates Done Hub keys and warns about Octopus-specific field normalization", async () => {
+  it("hydrates masked Done Hub keys and warns about Octopus-specific field normalization", async () => {
     const { prepareManagedSiteChannelMigrationPreview } = await import(
       "~/services/managedSites/channelMigration"
-    )
-
-    mockFetchDoneHubChannel.mockResolvedValue(
-      buildManagedSiteChannel({
-        id: 21,
-        key: "real-donehub-key",
-      }),
     )
 
     const preview = await prepareManagedSiteChannelMigrationPreview({
@@ -152,7 +198,7 @@ describe("channelMigration", () => {
       channels: [
         buildManagedSiteChannel({
           id: 21,
-          key: "",
+          key: "sk-********",
           type: ChannelType.Gemini,
           base_url: "https://provider.example.com",
           group: "vip,default",
@@ -164,6 +210,12 @@ describe("channelMigration", () => {
       ],
     })
 
+    expect(mockDoneHubFetchChannelSecretKey).toHaveBeenCalledWith(
+      "https://donehub.example.com",
+      "donehub-token",
+      "9",
+      21,
+    )
     expect(preview.readyCount).toBe(1)
     expect(preview.items[0].draft).toMatchObject({
       key: "real-donehub-key",
@@ -187,12 +239,78 @@ describe("channelMigration", () => {
     )
   })
 
+  it("hydrates masked Veloera keys through the managed-site service loader", async () => {
+    const { prepareManagedSiteChannelMigrationPreview } = await import(
+      "~/services/managedSites/channelMigration"
+    )
+
+    const preview = await prepareManagedSiteChannelMigrationPreview({
+      preferences: buildPreferences({
+        veloera: {
+          baseUrl: "https://veloera.example.com",
+          adminToken: "veloera-token",
+          userId: "8",
+        },
+      }),
+      sourceSiteType: VELOERA,
+      targetSiteType: DONE_HUB,
+      channels: [
+        buildManagedSiteChannel({
+          id: 22,
+          key: "sk-********",
+        }),
+      ],
+    })
+
+    expect(mockVeloeraFetchChannelSecretKey).toHaveBeenCalledWith(
+      "https://veloera.example.com",
+      "veloera-token",
+      "8",
+      22,
+    )
+    expect(preview.readyCount).toBe(1)
+    expect(preview.items[0].draft?.key).toBe("real-veloera-key")
+  })
+
+  it("blocks preview items when hydrated source keys are still masked", async () => {
+    const { prepareManagedSiteChannelMigrationPreview } = await import(
+      "~/services/managedSites/channelMigration"
+    )
+
+    mockVeloeraFetchChannelSecretKey.mockResolvedValue("sk-********")
+
+    const preview = await prepareManagedSiteChannelMigrationPreview({
+      preferences: buildPreferences({
+        veloera: {
+          baseUrl: "https://veloera.example.com",
+          adminToken: "veloera-token",
+          userId: "8",
+        },
+      }),
+      sourceSiteType: VELOERA,
+      targetSiteType: DONE_HUB,
+      channels: [
+        buildManagedSiteChannel({
+          id: 23,
+          key: "sk-********",
+        }),
+      ],
+    })
+
+    expect(preview.readyCount).toBe(0)
+    expect(preview.blockedCount).toBe(1)
+    expect(preview.items[0]).toMatchObject({
+      channelId: 23,
+      status: "blocked",
+      blockingReasonCode:
+        MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_MISSING,
+    })
+  })
+
   it("creates only ready channels and skips blocked rows during execution", async () => {
     const { executeManagedSiteChannelMigration } = await import(
       "~/services/managedSites/channelMigration"
     )
-
-    const targetService = mockGetManagedSiteServiceForType()
 
     const result = await executeManagedSiteChannelMigration({
       preview: {
@@ -236,8 +354,8 @@ describe("channelMigration", () => {
       },
     })
 
-    expect(targetService.buildChannelPayload).toHaveBeenCalledTimes(1)
-    expect(targetService.createChannel).toHaveBeenCalledTimes(1)
+    expect(mockDoneHubBuildChannelPayload).toHaveBeenCalledTimes(1)
+    expect(mockDoneHubCreateChannel).toHaveBeenCalledTimes(1)
     expect(result).toMatchObject({
       totalSelected: 2,
       attemptedCount: 1,

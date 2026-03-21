@@ -66,6 +66,7 @@ vi.mock("~/services/managedSites/providers/doneHubService", () => ({
   prepareChannelFormData: vi.fn(),
   buildChannelPayload: vi.fn(),
   findMatchingChannel: vi.fn(),
+  fetchChannelSecretKey: vi.fn(),
   autoConfigToDoneHub: vi.fn(),
 }))
 

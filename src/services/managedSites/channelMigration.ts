@@ -1,12 +1,5 @@
 import { ChannelType, DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
-import {
-  DONE_HUB,
-  NEW_API,
-  OCTOPUS,
-  type ManagedSiteType,
-} from "~/constants/siteType"
-import type { ApiServiceRequest } from "~/services/apiService/common/type"
-import { fetchChannel as fetchDoneHubChannel } from "~/services/apiService/doneHub"
+import { NEW_API, OCTOPUS, type ManagedSiteType } from "~/constants/siteType"
 import {
   getManagedSiteServiceForType,
   type ManagedSiteService,
@@ -16,9 +9,11 @@ import {
   mapChannelTypeToOctopusOutboundType,
   mapOctopusOutboundTypeToChannelType,
 } from "~/services/managedSites/providers/octopus"
-import { getManagedSiteAdminConfigForType } from "~/services/managedSites/utils/managedSite"
+import {
+  getManagedSiteAdminConfigForType,
+  needsManagedSiteChannelKeyResolution,
+} from "~/services/managedSites/utils/managedSite"
 import type { UserPreferences } from "~/services/preferences/userPreferences"
-import { AuthTypeEnum } from "~/types"
 import type { ChannelFormData, ManagedSiteChannel } from "~/types/managedSite"
 import {
   MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES,
@@ -68,19 +63,6 @@ const hasMultiKeyState = (channel: ManagedSiteChannel) =>
       channel.channel_info?.multi_key_status_list?.length ||
       channel.channel_info?.multi_key_mode,
   )
-
-const createAccessTokenRequest = (
-  baseUrl: string,
-  adminToken: string,
-  userId: number | string,
-): ApiServiceRequest => ({
-  baseUrl,
-  auth: {
-    authType: AuthTypeEnum.AccessToken,
-    accessToken: adminToken,
-    userId,
-  },
-})
 
 const getSharedChannelType = (
   sourceSiteType: ManagedSiteType,
@@ -238,8 +220,8 @@ const resolveSourceChannelKey = async (params: {
 }): Promise<SourceKeyResolutionResult> => {
   const { preferences, sourceSiteType, channel, resolveNewApiSourceKey } =
     params
-  const existingKey = channel.key?.trim()
-  if (existingKey) {
+  const existingKey = channel.key?.trim() ?? ""
+  if (!needsManagedSiteChannelKeyResolution(existingKey)) {
     return { key: existingKey }
   }
 
@@ -258,7 +240,7 @@ const resolveSourceChannelKey = async (params: {
         channelName: channel.name,
       })
       const resolvedKey = key.trim()
-      if (!resolvedKey) {
+      if (needsManagedSiteChannelKeyResolution(resolvedKey)) {
         return {
           key: null,
           blockingReasonCode:
@@ -279,50 +261,52 @@ const resolveSourceChannelKey = async (params: {
     }
   }
 
-  if (sourceSiteType === DONE_HUB) {
-    const sourceConfig = getManagedSiteAdminConfigForType(preferences, DONE_HUB)
-    if (!sourceConfig) {
-      return {
-        key: null,
-        blockingReasonCode:
-          MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_RESOLUTION_FAILED,
-        blockingMessage: "Source managed-site configuration is missing.",
-      }
+  const sourceConfig = getManagedSiteAdminConfigForType(
+    preferences,
+    sourceSiteType,
+  )
+  if (!sourceConfig) {
+    return {
+      key: null,
+      blockingReasonCode:
+        MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_RESOLUTION_FAILED,
+      blockingMessage: "Source managed-site configuration is missing.",
     }
+  }
 
-    try {
-      const detailedChannel = await fetchDoneHubChannel(
-        createAccessTokenRequest(
-          sourceConfig.baseUrl,
-          sourceConfig.adminToken,
-          sourceConfig.userId,
-        ),
-        channel.id,
-      )
-      const resolvedKey = detailedChannel.key?.trim()
-      if (resolvedKey) {
-        return { key: resolvedKey }
-      }
+  const sourceService = getManagedSiteServiceForType(sourceSiteType)
+  if (!sourceService.fetchChannelSecretKey) {
+    return {
+      key: null,
+      blockingReasonCode:
+        MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_MISSING,
+    }
+  }
 
+  try {
+    const key = await sourceService.fetchChannelSecretKey(
+      sourceConfig.baseUrl,
+      sourceConfig.adminToken,
+      sourceConfig.userId,
+      channel.id,
+    )
+    const resolvedKey = key.trim()
+    if (needsManagedSiteChannelKeyResolution(resolvedKey)) {
       return {
         key: null,
         blockingReasonCode:
           MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_MISSING,
       }
-    } catch (error) {
-      return {
-        key: null,
-        blockingReasonCode:
-          MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_RESOLUTION_FAILED,
-        blockingMessage: getErrorMessage(error),
-      }
     }
-  }
 
-  return {
-    key: null,
-    blockingReasonCode:
-      MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_MISSING,
+    return { key: resolvedKey }
+  } catch (error) {
+    return {
+      key: null,
+      blockingReasonCode:
+        MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_RESOLUTION_FAILED,
+      blockingMessage: getErrorMessage(error),
+    }
   }
 }
 
