@@ -209,6 +209,7 @@ export const UserPreferencesProvider = ({
   const [isLoading, setIsLoading] = useState(initialPreferences == null)
   const isMountedRef = useRef(true)
   const loadRequestIdRef = useRef(0)
+  const normalizationRequestIdRef = useRef(0)
 
   useEffect(() => {
     return () => {
@@ -1388,12 +1389,26 @@ export const UserPreferencesProvider = ({
       ...(needsSortFallback ? { sortField: DATA_TYPE_BALANCE } : {}),
     }
 
+    const requestId = ++normalizationRequestIdRef.current
+    const expectedLastUpdated = preferences.lastUpdated
     let cancelled = false
 
     void (async () => {
-      const success = await userPreferences.savePreferences(updates)
-      if (success && !cancelled) {
-        setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
+      const success = await userPreferences.savePreferences(updates, {
+        expectedLastUpdated,
+      })
+      if (
+        success &&
+        !cancelled &&
+        requestId === normalizationRequestIdRef.current
+      ) {
+        setPreferences((prev) => {
+          if (!prev || prev.lastUpdated !== expectedLastUpdated) {
+            return prev
+          }
+
+          return deepOverride(prev, updates)
+        })
       }
     })()
 

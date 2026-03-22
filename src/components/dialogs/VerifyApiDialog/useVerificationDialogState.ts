@@ -32,18 +32,50 @@ export function useVerificationDialogState(
 
   const probesRef = useRef<ProbeItemState[]>([])
   const persistedSummaryRef = useRef<ApiVerificationHistorySummary | null>(null)
+  const loadTokenRef = useRef(0)
 
-  const setProbes = useCallback((next: ProbeItemState[]) => {
-    probesRef.current = next
-    setProbeState(next)
-  }, [])
+  const applyProbes = useCallback(
+    (next: ProbeItemState[], invalidatePendingLoad = true) => {
+      if (invalidatePendingLoad) {
+        loadTokenRef.current += 1
+      }
 
-  const setPersistedSummary = useCallback(
-    (next: ApiVerificationHistorySummary | null) => {
+      probesRef.current = next
+      setProbeState(next)
+    },
+    [],
+  )
+
+  const setProbes = useCallback(
+    (next: ProbeItemState[], invalidatePendingLoad = true) => {
+      applyProbes(next, invalidatePendingLoad)
+    },
+    [applyProbes],
+  )
+
+  const applyPersistedSummary = useCallback(
+    (
+      next: ApiVerificationHistorySummary | null,
+      invalidatePendingLoad = true,
+    ) => {
+      if (invalidatePendingLoad) {
+        loadTokenRef.current += 1
+      }
+
       persistedSummaryRef.current = next
       setPersistedSummaryState(next)
     },
     [],
+  )
+
+  const setPersistedSummary = useCallback(
+    (
+      next: ApiVerificationHistorySummary | null,
+      invalidatePendingLoad = true,
+    ) => {
+      applyPersistedSummary(next, invalidatePendingLoad)
+    },
+    [applyPersistedSummary],
   )
 
   const persistCurrentResults = useCallback(
@@ -51,11 +83,13 @@ export function useVerificationDialogState(
       nextApiType: ApiVerificationApiType,
       nextProbes: ProbeItemState[],
       preferredModelId?: string,
+      nextHistoryTarget: ApiVerificationHistoryTarget | null = historyTarget,
     ) => {
-      if (!historyTarget) return null
+      if (!nextHistoryTarget) return null
 
+      const requestToken = ++loadTokenRef.current
       const nextSummary = createVerificationHistorySummary({
-        target: historyTarget,
+        target: nextHistoryTarget,
         apiType: nextApiType,
         results: extractProbeResults(nextProbes),
         preferredModelId,
@@ -64,10 +98,14 @@ export function useVerificationDialogState(
 
       const persisted =
         await verificationResultHistoryStorage.upsertLatestSummary(nextSummary)
-      setPersistedSummary(persisted)
+      if (loadTokenRef.current !== requestToken) {
+        return persisted
+      }
+
+      applyPersistedSummary(persisted, false)
       return persisted
     },
-    [historyTarget, setPersistedSummary],
+    [applyPersistedSummary, historyTarget],
   )
 
   const loadVerificationHistory = useCallback(
@@ -79,35 +117,39 @@ export function useVerificationDialogState(
     }: LoadVerificationHistoryParams) => {
       if (!historyTarget) return null
 
+      const requestToken = ++loadTokenRef.current
+
       try {
         const summary =
           await verificationResultHistoryStorage.getLatestSummary(historyTarget)
-        if (isCancelled?.()) return summary
+        if (isCancelled?.() || loadTokenRef.current !== requestToken) {
+          return summary
+        }
 
-        setPersistedSummary(summary)
-        setProbes(
-          buildProbeState(
-            apiType,
-            summary && (shouldApplySummaryToProbes?.(summary) ?? true)
-              ? summary
-              : null,
-          ),
+        const shouldApplySummary =
+          summary && (shouldApplySummaryToProbes?.(summary) ?? true)
+
+        applyPersistedSummary(summary, false)
+        applyProbes(
+          buildProbeState(apiType, shouldApplySummary ? summary : null),
+          false,
         )
 
-        if (summary?.resolvedModelId) {
+        if (shouldApplySummary && summary?.resolvedModelId) {
           onResolvedModelId?.(summary.resolvedModelId)
         }
 
         return summary
       } catch {
-        if (isCancelled?.()) return null
+        if (isCancelled?.() || loadTokenRef.current !== requestToken)
+          return null
 
-        setPersistedSummary(null)
-        setProbes(buildProbeState(apiType))
+        applyPersistedSummary(null, false)
+        applyProbes(buildProbeState(apiType), false)
         return null
       }
     },
-    [historyTarget, setPersistedSummary, setProbes],
+    [applyPersistedSummary, applyProbes, historyTarget],
   )
 
   return {

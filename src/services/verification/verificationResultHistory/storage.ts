@@ -291,8 +291,15 @@ class VerificationResultHistoryStorageService {
     target: ApiVerificationHistoryTarget,
   ): Promise<ApiVerificationHistorySummary | null> {
     const targetKey = serializeVerificationHistoryTarget(target)
-    const summaries = await this.listSummaries()
-    return summaries.find((summary) => summary.targetKey === targetKey) ?? null
+    const { summaries } = await this.readConfig()
+
+    for (const summary of summaries) {
+      if (summary.targetKey === targetKey) {
+        return summary
+      }
+    }
+
+    return null
   }
 
   async getLatestSummaries(

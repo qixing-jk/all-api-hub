@@ -124,6 +124,19 @@ function pickSuggestedModelId(
 }
 
 /**
+ * Resolves the persisted history target for the profile and optional model.
+ */
+function createCurrentProfileVerificationHistoryTarget(
+  profileId: string,
+  modelId?: string,
+) {
+  const trimmedModelId = modelId?.trim()
+  return trimmedModelId
+    ? createProfileModelVerificationHistoryTarget(profileId, trimmedModelId)
+    : createProfileVerificationHistoryTarget(profileId)
+}
+
+/**
  * Modal dialog that runs AI API verification probes using a stored profile's
  * baseUrl + apiKey (no SiteAccount required).
  */
@@ -148,10 +161,10 @@ export function VerifyApiCredentialProfileDialog({
   const historyTarget = useMemo(() => {
     if (!profile) return null
 
-    const trimmedModelId = initialModelId?.trim()
-    return trimmedModelId
-      ? createProfileModelVerificationHistoryTarget(profile.id, trimmedModelId)
-      : createProfileVerificationHistoryTarget(profile.id)
+    return createCurrentProfileVerificationHistoryTarget(
+      profile.id,
+      initialModelId,
+    )
   }, [initialModelId, profile])
   const {
     probes,
@@ -165,6 +178,16 @@ export function VerifyApiCredentialProfileDialog({
 
   const isAnyProbeRunning = probes.some((p) => p.isRunning)
   const canClose = !isRunning && !isAnyProbeRunning
+  const getHistoryTargetForModel = useCallback(
+    (nextModelId?: string) => {
+      if (!profile) return null
+      return createCurrentProfileVerificationHistoryTarget(
+        profile.id,
+        nextModelId,
+      )
+    },
+    [profile],
+  )
 
   const hasAnyResult = probes.some((p) => p.result !== null)
   const hasApiTypeOverride = Boolean(profile && apiType !== profile.apiType)
@@ -284,6 +307,7 @@ export function VerifyApiCredentialProfileDialog({
 
     try {
       const modelForProbe = (modelIdOverride ?? modelId).trim()
+      const historyTargetForProbe = getHistoryTargetForModel(modelForProbe)
       const result = await runApiVerificationProbe({
         baseUrl: profile.baseUrl,
         apiKey: profile.apiKey,
@@ -319,6 +343,7 @@ export function VerifyApiCredentialProfileDialog({
         apiType,
         nextProbes,
         modelForProbe || initialModelId?.trim(),
+        historyTargetForProbe,
       )
 
       return result
@@ -347,10 +372,12 @@ export function VerifyApiCredentialProfileDialog({
         }
       })
       replaceProbes(nextProbes)
+      const modelForProbe = (modelIdOverride ?? modelId).trim()
       await persistCurrentResults(
         apiType,
         nextProbes,
-        (modelIdOverride ?? modelId).trim() || initialModelId?.trim(),
+        modelForProbe || initialModelId?.trim(),
+        getHistoryTargetForModel(modelForProbe),
       )
 
       return fallback
@@ -358,8 +385,10 @@ export function VerifyApiCredentialProfileDialog({
   }
 
   const clearHistory = async () => {
-    if (!historyTarget) return
-    await verificationResultHistoryStorage.clearTarget(historyTarget)
+    const targetToClear = persistedSummary?.target ?? historyTarget
+    if (!targetToClear) return
+
+    await verificationResultHistoryStorage.clearTarget(targetToClear)
     setPersistedSummary(null)
     replaceProbes(buildProbeState(apiType))
   }
@@ -571,11 +600,11 @@ export function VerifyApiCredentialProfileDialog({
               const resultSummary = isDisabledForModel
                 ? t("aiApiVerification:verifyDialog.requiresModelId")
                 : result?.summaryKey
-                  ? (translateApiVerificationSummary(
+                  ? translateApiVerificationSummary(
                       t,
                       result.summaryKey,
                       result.summaryParams,
-                    ) ?? result.summary)
+                    ) ?? result.summary
                   : result?.status === "unsupported"
                     ? t(
                         "aiApiVerification:verifyDialog.unsupportedProbeForApiType",

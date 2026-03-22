@@ -24,6 +24,7 @@ export function useVerificationResultHistorySummaries(
   const [summariesByKey, setSummariesByKey] = useState<
     Record<string, ApiVerificationHistorySummary>
   >({})
+  const latestRequestIdRef = useRef(0)
 
   const { stableTargets, stableTargetSignature } = useMemo(() => {
     const seen = new Set<string>()
@@ -41,7 +42,7 @@ export function useVerificationResultHistorySummaries(
 
     return {
       stableTargets: next.map(({ target }) => target),
-      stableTargetSignature: next.map(({ key }) => key).join("|"),
+      stableTargetSignature: JSON.stringify(next.map(({ key }) => key)),
     }
   }, [targets])
   const stableTargetsRef = useRef(stableTargets)
@@ -52,8 +53,11 @@ export function useVerificationResultHistorySummaries(
 
   const reload = useCallback(async () => {
     const currentTargets = stableTargetsRef.current
+    const requestId = ++latestRequestIdRef.current
 
-    if (stableTargetSignature.length === 0 || currentTargets.length === 0) {
+    if (stableTargetSignature === "[]" || currentTargets.length === 0) {
+      if (requestId !== latestRequestIdRef.current) return
+
       setSummariesByKey((prev) => (Object.keys(prev).length === 0 ? prev : {}))
       return
     }
@@ -63,8 +67,12 @@ export function useVerificationResultHistorySummaries(
         await verificationResultHistoryStorage.getLatestSummaries(
           currentTargets,
         )
+      if (requestId !== latestRequestIdRef.current) return
+
       setSummariesByKey(nextSummaries)
     } catch (error) {
+      if (requestId !== latestRequestIdRef.current) return
+
       logger.error("Failed to load verification result history", error)
       setSummariesByKey((prev) => (Object.keys(prev).length === 0 ? prev : {}))
     }

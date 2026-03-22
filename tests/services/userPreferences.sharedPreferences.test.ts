@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { Storage } from "@plasmohq/storage"
 
+import { DATA_TYPE_BALANCE, DATA_TYPE_CASHFLOW } from "~/constants"
 import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
 import { CURRENT_PREFERENCES_VERSION } from "~/services/preferences/migrations/preferencesMigration"
 import {
@@ -169,6 +170,44 @@ describe("userPreferences shared preference timestamps", () => {
     )) as any
     expect(storedAfter.lastUpdated).toBe(mixedUpdateTimestamp)
     expect(storedAfter.sharedPreferencesLastUpdated).toBe(mixedUpdateTimestamp)
+  })
+
+  it("skips stale guarded saves after a newer write wins", async () => {
+    const initialTimestamp = 6100
+    const newerUpdateTimestamp = 6200
+    const staleAttemptTimestamp = 6300
+
+    await storage.set(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES, {
+      ...DEFAULT_PREFERENCES,
+      activeTab: DATA_TYPE_BALANCE,
+      lastUpdated: initialTimestamp,
+      sharedPreferencesLastUpdated: initialTimestamp,
+    })
+
+    vi.setSystemTime(newerUpdateTimestamp)
+    const newerWriteSuccess = await userPreferences.savePreferences({
+      activeTab: DATA_TYPE_CASHFLOW,
+    })
+
+    expect(newerWriteSuccess).toBe(true)
+
+    vi.setSystemTime(staleAttemptTimestamp)
+    const staleWriteSuccess = await userPreferences.savePreferences(
+      {
+        activeTab: DATA_TYPE_BALANCE,
+      },
+      {
+        expectedLastUpdated: initialTimestamp,
+      },
+    )
+
+    expect(staleWriteSuccess).toBe(false)
+
+    const storedAfter = (await storage.get(
+      USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
+    )) as any
+    expect(storedAfter.lastUpdated).toBe(newerUpdateTimestamp)
+    expect(storedAfter.activeTab).toBe(DATA_TYPE_CASHFLOW)
   })
 
   it("refreshes sharedPreferencesLastUpdated for manual imports", async () => {

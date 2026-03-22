@@ -14,6 +14,7 @@ import {
 } from "~/services/verification/webAiApiCheck/extractCredentials"
 import type { Tag } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
+import { requireHistoryTarget } from "~~/tests/test-utils/history"
 import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 
 let store: ApiCredentialProfile[] = []
@@ -133,14 +134,6 @@ vi.mock("~/services/tags/tagStorage", () => ({
 vi.mock("~/utils/navigation", () => ({
   openModelsPage: (...args: unknown[]) => mockOpenModelsPage(...args),
 }))
-
-function requireHistoryTarget<T>(target: T | null) {
-  if (!target) {
-    throw new Error("Expected history target")
-  }
-
-  return target
-}
 
 describe("ApiCredentialProfiles page", () => {
   beforeEach(async () => {

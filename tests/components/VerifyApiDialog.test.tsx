@@ -7,6 +7,7 @@ import {
   createVerificationHistorySummary,
   verificationResultHistoryStorage,
 } from "~/services/verification/verificationResultHistory"
+import { requireHistoryTarget } from "~~/tests/test-utils/history"
 import {
   fireEvent,
   render,
@@ -38,14 +39,6 @@ vi.mock("~/services/verification/aiApiVerification", async (importOriginal) => {
       mockRunApiVerificationProbe(...args),
   }
 })
-
-function requireHistoryTarget<T>(target: T | null) {
-  if (!target) {
-    throw new Error("Expected history target")
-  }
-
-  return target
-}
 
 describe("VerifyApiDialog", () => {
   beforeEach(async () => {

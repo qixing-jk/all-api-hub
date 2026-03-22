@@ -312,6 +312,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
           ? persistedSummaryRef.current
           : null,
       ),
+      false,
     )
   }, [apiType, isOpen, persistedSummaryRef, replaceProbes])
 
@@ -458,11 +459,11 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
             const resultSummary = isDisabledForModel
               ? t("verifyDialog.requiresModelId")
               : result?.summaryKey
-                ? (translateApiVerificationSummary(
+                ? translateApiVerificationSummary(
                     t,
                     result.summaryKey,
                     result.summaryParams,
-                  ) ?? result.summary)
+                  ) ?? result.summary
                 : result?.status === "unsupported"
                   ? t("verifyDialog.unsupportedProbeForApiType", {
                       probe: getApiVerificationProbeLabel(
