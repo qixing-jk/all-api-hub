@@ -4,7 +4,6 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useRef,
   useState,
 } from "react"
 
@@ -198,55 +197,31 @@ const UserPreferencesContext = createContext<
  */
 export const UserPreferencesProvider = ({
   children,
-  initialPreferences,
 }: {
   children: ReactNode
-  initialPreferences?: UserPreferences
 }) => {
-  const [preferences, setPreferences] = useState<UserPreferences | null>(
-    initialPreferences ?? null,
-  )
-  const [isLoading, setIsLoading] = useState(initialPreferences == null)
-  const isMountedRef = useRef(true)
-  const loadRequestIdRef = useRef(0)
-  const normalizationRequestIdRef = useRef(0)
-
-  useEffect(() => {
-    return () => {
-      isMountedRef.current = false
-    }
-  }, [])
+  const [preferences, setPreferences] = useState<UserPreferences | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
   /**
    * Fetch the latest preference snapshot from storage and hydrate local state.
    * Guards against repeated calls by toggling an `isLoading` flag.
    */
   const loadPreferences = useCallback(async () => {
-    const requestId = ++loadRequestIdRef.current
-
     try {
-      if (isMountedRef.current) {
-        setIsLoading(true)
-      }
+      setIsLoading(true)
       const prefs = await userPreferences.getPreferences()
-      if (isMountedRef.current && requestId === loadRequestIdRef.current) {
-        setPreferences(prefs)
-      }
+      setPreferences(prefs)
     } catch (error) {
       logger.error("加载用户偏好设置失败", error)
     } finally {
-      if (isMountedRef.current && requestId === loadRequestIdRef.current) {
-        setIsLoading(false)
-      }
+      setIsLoading(false)
     }
   }, [])
 
   useEffect(() => {
-    if (initialPreferences) {
-      return
-    }
     void loadPreferences()
-  }, [initialPreferences, loadPreferences])
+  }, [loadPreferences])
 
   /**
    * Persist the currently visible balance tab and mirror it in React state.
@@ -1389,32 +1364,12 @@ export const UserPreferencesProvider = ({
       ...(needsSortFallback ? { sortField: DATA_TYPE_BALANCE } : {}),
     }
 
-    const requestId = ++normalizationRequestIdRef.current
-    const expectedLastUpdated = preferences.lastUpdated
-    let cancelled = false
-
     void (async () => {
-      const success = await userPreferences.savePreferences(updates, {
-        expectedLastUpdated,
-      })
-      if (
-        success &&
-        !cancelled &&
-        requestId === normalizationRequestIdRef.current
-      ) {
-        setPreferences((prev) => {
-          if (!prev || prev.lastUpdated !== expectedLastUpdated) {
-            return prev
-          }
-
-          return deepOverride(prev, updates)
-        })
+      const success = await userPreferences.savePreferences(updates)
+      if (success) {
+        setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
       }
     })()
-
-    return () => {
-      cancelled = true
-    }
   }, [preferences])
 
   if (isLoading || !preferences) {

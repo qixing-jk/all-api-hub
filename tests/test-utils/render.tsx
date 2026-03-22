@@ -1,10 +1,4 @@
-import {
-  render,
-  renderHook,
-  type RenderHookOptions,
-  type RenderHookResult,
-  type RenderOptions,
-} from "@testing-library/react"
+import { render, renderHook, type RenderOptions } from "@testing-library/react"
 import type { ReactElement, ReactNode } from "react"
 import { I18nextProvider } from "react-i18next"
 
@@ -12,23 +6,17 @@ import { ChannelDialogProvider } from "~/components/dialogs/ChannelDialog"
 import { DeviceProvider } from "~/contexts/DeviceContext"
 import { ThemeProvider } from "~/contexts/ThemeContext"
 import { UserPreferencesProvider } from "~/contexts/UserPreferencesContext"
-import type { UserPreferences } from "~/services/preferences/userPreferences"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
 interface AppProvidersProps {
   children: ReactNode
-  initialPreferences?: UserPreferences
 }
 
-interface AppRenderOptions extends RenderOptions {
-  initialPreferences?: UserPreferences
-}
-
-const AppProviders = ({ children, initialPreferences }: AppProvidersProps) => {
+const AppProviders = ({ children }: AppProvidersProps) => {
   return (
     <I18nextProvider i18n={testI18n}>
       <DeviceProvider>
-        <UserPreferencesProvider initialPreferences={initialPreferences}>
+        <UserPreferencesProvider>
           <ChannelDialogProvider>
             <ThemeProvider>{children}</ThemeProvider>
           </ChannelDialogProvider>
@@ -38,29 +26,12 @@ const AppProviders = ({ children, initialPreferences }: AppProvidersProps) => {
   )
 }
 
-const customRender = (ui: ReactElement, options?: AppRenderOptions) => {
-  const { initialPreferences, ...renderOptions } = options ?? {}
-  const wrapper = ({ children }: { children: ReactNode }) => (
-    <AppProviders initialPreferences={initialPreferences}>
-      {children}
-    </AppProviders>
-  )
-
-  return render(ui, { wrapper, ...renderOptions })
+const customRender = (ui: ReactElement, options?: RenderOptions) => {
+  return render(ui, { wrapper: AppProviders, ...options })
 }
 
-const customRenderHook = <Result, Props>(
-  callback: (initialProps: Props) => Result,
-  options?: RenderHookOptions<Props> & AppRenderOptions,
-): RenderHookResult<Result, Props> => {
-  const { initialPreferences, ...renderHookOptions } = options ?? {}
-  const wrapper = ({ children }: { children: ReactNode }) => (
-    <AppProviders initialPreferences={initialPreferences}>
-      {children}
-    </AppProviders>
-  )
-
-  return renderHook(callback, { wrapper, ...renderHookOptions })
+const customRenderHook: typeof renderHook = (callback, options) => {
+  return renderHook(callback, { wrapper: AppProviders, ...options })
 }
 
 // eslint-disable-next-line import/export

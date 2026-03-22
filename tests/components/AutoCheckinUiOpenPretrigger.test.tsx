@@ -68,16 +68,7 @@ describe("AutoCheckinUiOpenPretrigger", () => {
       return { success: true }
     })
 
-    render(<AutoCheckinUiOpenPretrigger />, {
-      initialPreferences: {
-        ...DEFAULT_PREFERENCES,
-        autoCheckin: {
-          ...DEFAULT_PREFERENCES.autoCheckin!,
-          globalEnabled: true,
-          pretriggerDailyOnUiOpen: true,
-        },
-      },
-    })
+    render(<AutoCheckinUiOpenPretrigger />)
 
     await waitFor(() => {
       expect(sendRuntimeMessageSpy).toHaveBeenCalledWith(
