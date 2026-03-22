@@ -399,6 +399,7 @@ export async function fetchAvailableModels(
     const upstreamModels = await fetchOpenAICompatibleModelIds({
       baseUrl: account.baseUrl,
       apiKey: token.key,
+      userId: account.userId,
     })
     if (upstreamModels?.length > 0) {
       candidateSources.push(upstreamModels)
@@ -434,6 +435,7 @@ export async function prepareChannelFormData(
   const availableModels = await fetchOpenAICompatibleModelIds({
     baseUrl: account.baseUrl,
     apiKey: token.key,
+    userId: account.userId,
   })
 
   if (!availableModels.length) {
