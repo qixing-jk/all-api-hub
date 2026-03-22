@@ -4,6 +4,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react"
 
@@ -197,31 +198,54 @@ const UserPreferencesContext = createContext<
  */
 export const UserPreferencesProvider = ({
   children,
+  initialPreferences,
 }: {
   children: ReactNode
+  initialPreferences?: UserPreferences
 }) => {
-  const [preferences, setPreferences] = useState<UserPreferences | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [preferences, setPreferences] = useState<UserPreferences | null>(
+    initialPreferences ?? null,
+  )
+  const [isLoading, setIsLoading] = useState(initialPreferences == null)
+  const isMountedRef = useRef(true)
+  const loadRequestIdRef = useRef(0)
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
 
   /**
    * Fetch the latest preference snapshot from storage and hydrate local state.
    * Guards against repeated calls by toggling an `isLoading` flag.
    */
   const loadPreferences = useCallback(async () => {
+    const requestId = ++loadRequestIdRef.current
+
     try {
-      setIsLoading(true)
+      if (isMountedRef.current) {
+        setIsLoading(true)
+      }
       const prefs = await userPreferences.getPreferences()
-      setPreferences(prefs)
+      if (isMountedRef.current && requestId === loadRequestIdRef.current) {
+        setPreferences(prefs)
+      }
     } catch (error) {
       logger.error("加载用户偏好设置失败", error)
     } finally {
-      setIsLoading(false)
+      if (isMountedRef.current && requestId === loadRequestIdRef.current) {
+        setIsLoading(false)
+      }
     }
   }, [])
 
   useEffect(() => {
-    loadPreferences()
-  }, [loadPreferences])
+    if (initialPreferences) {
+      return
+    }
+    void loadPreferences()
+  }, [initialPreferences, loadPreferences])
 
   /**
    * Persist the currently visible balance tab and mirror it in React state.
@@ -1364,12 +1388,18 @@ export const UserPreferencesProvider = ({
       ...(needsSortFallback ? { sortField: DATA_TYPE_BALANCE } : {}),
     }
 
+    let cancelled = false
+
     void (async () => {
       const success = await userPreferences.savePreferences(updates)
-      if (success) {
+      if (success && !cancelled) {
         setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
       }
     })()
+
+    return () => {
+      cancelled = true
+    }
   }, [preferences])
 
   if (isLoading || !preferences) {

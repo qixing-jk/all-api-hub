@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import { createLogger } from "~/utils/core/logger"
 
@@ -25,7 +25,7 @@ export function useVerificationResultHistorySummaries(
     Record<string, ApiVerificationHistorySummary>
   >({})
 
-  const stableTargets = useMemo(() => {
+  const { stableTargets, stableTargetSignature } = useMemo(() => {
     const seen = new Set<string>()
     const next: Array<{ target: ApiVerificationHistoryTarget; key: string }> =
       []
@@ -39,24 +39,36 @@ export function useVerificationResultHistorySummaries(
 
     next.sort((a, b) => a.key.localeCompare(b.key))
 
-    return next.map(({ target }) => target)
+    return {
+      stableTargets: next.map(({ target }) => target),
+      stableTargetSignature: next.map(({ key }) => key).join("|"),
+    }
   }, [targets])
+  const stableTargetsRef = useRef(stableTargets)
+
+  useEffect(() => {
+    stableTargetsRef.current = stableTargets
+  }, [stableTargets, stableTargetSignature])
 
   const reload = useCallback(async () => {
-    if (stableTargets.length === 0) {
-      setSummariesByKey({})
+    const currentTargets = stableTargetsRef.current
+
+    if (stableTargetSignature.length === 0 || currentTargets.length === 0) {
+      setSummariesByKey((prev) => (Object.keys(prev).length === 0 ? prev : {}))
       return
     }
 
     try {
       const nextSummaries =
-        await verificationResultHistoryStorage.getLatestSummaries(stableTargets)
+        await verificationResultHistoryStorage.getLatestSummaries(
+          currentTargets,
+        )
       setSummariesByKey(nextSummaries)
     } catch (error) {
       logger.error("Failed to load verification result history", error)
-      setSummariesByKey({})
+      setSummariesByKey((prev) => (Object.keys(prev).length === 0 ? prev : {}))
     }
-  }, [stableTargets])
+  }, [stableTargetSignature])
 
   useEffect(() => {
     void reload()
