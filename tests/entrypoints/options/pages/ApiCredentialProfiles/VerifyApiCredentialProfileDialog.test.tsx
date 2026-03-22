@@ -60,6 +60,14 @@ vi.mock("~/utils/core/logger", async (importOriginal) => {
   }
 })
 
+function requireHistoryTarget<T>(target: T | null) {
+  if (!target) {
+    throw new Error("Expected history target")
+  }
+
+  return target
+}
+
 describe("VerifyApiCredentialProfileDialog", () => {
   beforeEach(async () => {
     loggerErrorMock.mockReset()
@@ -524,7 +532,10 @@ describe("VerifyApiCredentialProfileDialog", () => {
   it("restores persisted history and clears it", async () => {
     const user = userEvent.setup()
 
-    const target = createProfileVerificationHistoryTarget("p-1")
+    const target = requireHistoryTarget(
+      createProfileVerificationHistoryTarget("p-1"),
+    )
+
     const summary = createVerificationHistorySummary({
       target,
       apiType: API_TYPES.OPENAI_COMPATIBLE,

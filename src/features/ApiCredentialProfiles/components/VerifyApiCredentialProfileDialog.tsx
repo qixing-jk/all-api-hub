@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import { buildProbeState } from "~/components/dialogs/VerifyApiDialog/probeState"
 import { ProbeStatusBadge } from "~/components/dialogs/VerifyApiDialog/ProbeStatusBadge"
+import { useVerificationDialogState } from "~/components/dialogs/VerifyApiDialog/useVerificationDialogState"
 import {
   formatLatency,
   safeJsonStringify,
@@ -37,9 +39,7 @@ import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerificati
 import {
   createProfileModelVerificationHistoryTarget,
   createProfileVerificationHistoryTarget,
-  createVerificationHistorySummary,
   verificationResultHistoryStorage,
-  type ApiVerificationHistorySummary,
 } from "~/services/verification/verificationResultHistory"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
@@ -49,13 +49,6 @@ import { createLogger } from "~/utils/core/logger"
  * Unified logger scoped to API credential profile verification dialog.
  */
 const logger = createLogger("VerifyApiCredentialProfileDialog")
-
-type ProbeItemState = {
-  definition: { id: ApiVerificationProbeId; requiresModelId: boolean }
-  isRunning: boolean
-  attempts: number
-  result: ApiVerificationProbeResult | null
-}
 
 interface VerifyApiCredentialProfileDialogProps {
   isOpen: boolean
@@ -131,45 +124,6 @@ function pickSuggestedModelId(
 }
 
 /**
- * Initializes the per-probe UI state for a given API type.
- */
-function buildProbeState(
-  apiType: ApiVerificationApiType,
-  persistedSummary?: ApiVerificationHistorySummary | null,
-): ProbeItemState[] {
-  const defs = getApiVerificationProbeDefinitions(apiType)
-  const persistedById = new Map(
-    (persistedSummary?.probes ?? []).map((probe) => [probe.id, probe]),
-  )
-
-  return defs.map((definition): ProbeItemState => {
-    const persistedProbe = persistedById.get(definition.id)
-    return {
-      definition,
-      isRunning: false,
-      attempts: 0,
-      result: persistedProbe
-        ? {
-            id: persistedProbe.id,
-            status: persistedProbe.status,
-            latencyMs: persistedProbe.latencyMs,
-            summary: persistedProbe.summary,
-            summaryKey: persistedProbe.summaryKey,
-            summaryParams: persistedProbe.summaryParams,
-          }
-        : null,
-    }
-  })
-}
-
-/**
- *
- */
-function extractProbeResults(probes: ProbeItemState[]) {
-  return probes.flatMap((probe) => (probe.result ? [probe.result] : []))
-}
-
-/**
  * Modal dialog that runs AI API verification probes using a stored profile's
  * baseUrl + apiKey (no SiteAccount required).
  */
@@ -186,15 +140,11 @@ export function VerifyApiCredentialProfileDialog({
     profile?.apiType ?? API_TYPES.OPENAI_COMPATIBLE,
   )
   const [modelId, setModelId] = useState("")
-  const [probes, setProbes] = useState<ProbeItemState[]>([])
   const [modelOptions, setModelOptions] = useState<string[]>([])
   const [isFetchingModels, setIsFetchingModels] = useState(false)
   const [fetchModelsError, setFetchModelsError] = useState<string | null>(null)
-  const [persistedSummary, setPersistedSummary] =
-    useState<ApiVerificationHistorySummary | null>(null)
 
   const fetchModelsRequestIdRef = useRef(0)
-  const probesRef = useRef<ProbeItemState[]>([])
   const historyTarget = useMemo(() => {
     if (!profile) return null
 
@@ -203,6 +153,15 @@ export function VerifyApiCredentialProfileDialog({
       ? createProfileModelVerificationHistoryTarget(profile.id, trimmedModelId)
       : createProfileVerificationHistoryTarget(profile.id)
   }, [initialModelId, profile])
+  const {
+    probes,
+    setProbes: replaceProbes,
+    probesRef,
+    persistedSummary,
+    setPersistedSummary,
+    persistCurrentResults,
+    loadVerificationHistory,
+  } = useVerificationDialogState(historyTarget)
 
   const isAnyProbeRunning = probes.some((p) => p.isRunning)
   const canClose = !isRunning && !isAnyProbeRunning
@@ -227,31 +186,6 @@ export function VerifyApiCredentialProfileDialog({
       </div>
     )
   }, [profile, t])
-
-  const replaceProbes = (next: ProbeItemState[]) => {
-    probesRef.current = next
-    setProbes(next)
-  }
-
-  const persistCurrentResults = async (
-    nextApiType: ApiVerificationApiType,
-    nextProbes: ProbeItemState[],
-    preferredModelId?: string,
-  ) => {
-    if (!historyTarget) return
-
-    const nextSummary = createVerificationHistorySummary({
-      target: historyTarget,
-      apiType: nextApiType,
-      results: extractProbeResults(nextProbes),
-      preferredModelId,
-    })
-    if (!nextSummary) return
-
-    const persisted =
-      await verificationResultHistoryStorage.upsertLatestSummary(nextSummary)
-    setPersistedSummary(persisted)
-  }
 
   const fetchModels = useCallback(
     async (nextApiType: ApiVerificationApiType) => {
@@ -310,37 +244,30 @@ export function VerifyApiCredentialProfileDialog({
     setPersistedSummary(null)
     replaceProbes(buildProbeState(nextApiType))
 
-    if (historyTarget) {
-      void verificationResultHistoryStorage
-        .getLatestSummary(historyTarget)
-        .then((summary) => {
-          if (cancelled) return
-          setPersistedSummary(summary)
-          replaceProbes(
-            buildProbeState(
-              nextApiType,
-              summary?.apiType === nextApiType ? summary : null,
-            ),
-          )
-          if (summary?.resolvedModelId) {
-            setModelId(
-              (current) => current.trim() || summary.resolvedModelId || "",
-            )
-          }
-        })
-        .catch(() => {
-          if (cancelled) return
-          setPersistedSummary(null)
-          replaceProbes(buildProbeState(nextApiType))
-        })
-    }
+    void loadVerificationHistory({
+      apiType: nextApiType,
+      isCancelled: () => cancelled,
+      onResolvedModelId: (resolvedModelId) => {
+        setModelId((current) => current.trim() || resolvedModelId)
+      },
+      shouldApplySummaryToProbes: (summary) => summary.apiType === nextApiType,
+    })
 
     void fetchModels(nextApiType)
 
     return () => {
       cancelled = true
     }
-  }, [fetchModels, historyTarget, initialModelId, isOpen, profile])
+  }, [
+    fetchModels,
+    historyTarget,
+    initialModelId,
+    isOpen,
+    loadVerificationHistory,
+    profile,
+    replaceProbes,
+    setPersistedSummary,
+  ])
 
   const runProbe = async (
     probeId: ApiVerificationProbeId,
@@ -644,11 +571,11 @@ export function VerifyApiCredentialProfileDialog({
               const resultSummary = isDisabledForModel
                 ? t("aiApiVerification:verifyDialog.requiresModelId")
                 : result?.summaryKey
-                  ? translateApiVerificationSummary(
+                  ? (translateApiVerificationSummary(
                       t,
                       result.summaryKey,
                       result.summaryParams,
-                    ) ?? result.summary
+                    ) ?? result.summary)
                   : result?.status === "unsupported"
                     ? t(
                         "aiApiVerification:verifyDialog.unsupportedProbeForApiType",

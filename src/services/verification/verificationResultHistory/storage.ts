@@ -9,6 +9,7 @@ import type {
   ApiVerificationProbeId,
   ApiVerificationProbeStatus,
 } from "~/services/verification/aiApiVerification"
+import { apiVerificationProbeRegistry } from "~/services/verification/aiApiVerification/probeRegistry"
 
 import {
   API_VERIFICATION_RESULT_HISTORY_CONFIG_VERSION,
@@ -23,13 +24,9 @@ import {
   serializeVerificationHistoryTarget,
 } from "./utils"
 
-const KNOWN_PROBE_IDS = new Set<ApiVerificationProbeId>([
-  "models",
-  "text-generation",
-  "tool-calling",
-  "structured-output",
-  "web-search",
-])
+const KNOWN_PROBE_IDS = new Set<ApiVerificationProbeId>(
+  Object.keys(apiVerificationProbeRegistry) as ApiVerificationProbeId[],
+)
 const MAX_STORED_SUMMARIES = 500
 
 const createDefaultConfig = (): ApiVerificationHistoryConfig => ({

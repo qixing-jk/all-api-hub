@@ -91,10 +91,21 @@ function extractResolvedModelId(
 /**
  *
  */
+function sanitizeTargetId(value: string) {
+  const trimmedValue = value.trim()
+  return trimmedValue || null
+}
+
+/**
+ *
+ */
 export function createProfileVerificationHistoryTarget(profileId: string) {
+  const sanitizedProfileId = sanitizeTargetId(profileId)
+  if (!sanitizedProfileId) return null
+
   return {
     kind: "profile",
-    profileId: profileId.trim(),
+    profileId: sanitizedProfileId,
   } satisfies ApiVerificationHistoryTarget
 }
 
@@ -105,10 +116,14 @@ export function createProfileModelVerificationHistoryTarget(
   profileId: string,
   modelId: string,
 ) {
+  const sanitizedProfileId = sanitizeTargetId(profileId)
+  const sanitizedModelId = sanitizeTargetId(modelId)
+  if (!sanitizedProfileId || !sanitizedModelId) return null
+
   return {
     kind: "profile-model",
-    profileId: profileId.trim(),
-    modelId: modelId.trim(),
+    profileId: sanitizedProfileId,
+    modelId: sanitizedModelId,
   } satisfies ApiVerificationHistoryTarget
 }
 
@@ -119,10 +134,14 @@ export function createAccountModelVerificationHistoryTarget(
   accountId: string,
   modelId: string,
 ) {
+  const sanitizedAccountId = sanitizeTargetId(accountId)
+  const sanitizedModelId = sanitizeTargetId(modelId)
+  if (!sanitizedAccountId || !sanitizedModelId) return null
+
   return {
     kind: "account-model",
-    accountId: accountId.trim(),
-    modelId: modelId.trim(),
+    accountId: sanitizedAccountId,
+    modelId: sanitizedModelId,
   } satisfies ApiVerificationHistoryTarget
 }
 

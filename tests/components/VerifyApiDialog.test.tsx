@@ -39,6 +39,14 @@ vi.mock("~/services/verification/aiApiVerification", async (importOriginal) => {
   }
 })
 
+function requireHistoryTarget<T>(target: T | null) {
+  if (!target) {
+    throw new Error("Expected history target")
+  }
+
+  return target
+}
+
 describe("VerifyApiDialog", () => {
   beforeEach(async () => {
     // Prevent cross-test leakage from `mockResolvedValueOnce` and call counts.
@@ -280,7 +288,10 @@ describe("VerifyApiDialog", () => {
       },
     ])
 
-    const target = createAccountModelVerificationHistoryTarget("a1", "gpt-test")
+    const target = requireHistoryTarget(
+      createAccountModelVerificationHistoryTarget("a1", "gpt-test"),
+    )
+
     const summary = createVerificationHistorySummary({
       target,
       apiType: API_TYPES.OPENAI_COMPATIBLE,

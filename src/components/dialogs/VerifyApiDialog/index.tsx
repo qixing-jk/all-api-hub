@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { ProbeStatusBadge } from "~/components/dialogs/VerifyApiDialog/ProbeStatusBadge"
@@ -35,61 +35,21 @@ import {
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import {
   createAccountModelVerificationHistoryTarget,
-  createVerificationHistorySummary,
   verificationResultHistoryStorage,
-  type ApiVerificationHistorySummary,
 } from "~/services/verification/verificationResultHistory"
 import type { ApiToken } from "~/types"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
 import { createLogger } from "~/utils/core/logger"
 
-import type { ProbeItemState, VerifyApiDialogProps } from "./types"
+import { buildProbeState } from "./probeState"
+import type { VerifyApiDialogProps } from "./types"
+import { useVerificationDialogState } from "./useVerificationDialogState"
 import { formatLatency, safeJsonStringify } from "./utils"
 
 /**
  * Unified logger scoped to the API verification dialog.
  */
 const logger = createLogger("VerifyApiDialog")
-
-/**
- * Build the probe list state for the selected API type.
- * The list is shown immediately so users can run/retry individual items.
- */
-function buildProbeState(
-  nextApiType: ApiVerificationApiType,
-  persistedSummary?: ApiVerificationHistorySummary | null,
-): ProbeItemState[] {
-  const defs = getApiVerificationProbeDefinitions(nextApiType)
-  const persistedById = new Map(
-    (persistedSummary?.probes ?? []).map((probe) => [probe.id, probe]),
-  )
-
-  return defs.map((definition): ProbeItemState => {
-    const persistedProbe = persistedById.get(definition.id)
-    return {
-      definition,
-      isRunning: false,
-      attempts: 0,
-      result: persistedProbe
-        ? {
-            id: persistedProbe.id,
-            status: persistedProbe.status,
-            latencyMs: persistedProbe.latencyMs,
-            summary: persistedProbe.summary,
-            summaryKey: persistedProbe.summaryKey,
-            summaryParams: persistedProbe.summaryParams,
-          }
-        : null,
-    }
-  })
-}
-
-/**
- *
- */
-function extractProbeResults(probes: ProbeItemState[]) {
-  return probes.flatMap((probe) => (probe.result ? [probe.result] : []))
-}
 
 /**
  * Modal dialog that runs API verification for a selected account token + model.
@@ -106,18 +66,22 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
     API_TYPES.OPENAI_COMPATIBLE,
   )
   const [modelId, setModelId] = useState<string>(initialModelId?.trim() ?? "")
-  const [probes, setProbes] = useState<ProbeItemState[]>([])
-  const [persistedSummary, setPersistedSummary] =
-    useState<ApiVerificationHistorySummary | null>(null)
-
-  const probesRef = useRef<ProbeItemState[]>([])
-  const persistedSummaryRef = useRef<ApiVerificationHistorySummary | null>(null)
   const historyTarget = useMemo(() => {
     const trimmedModelId = initialModelId?.trim()
     return trimmedModelId
       ? createAccountModelVerificationHistoryTarget(account.id, trimmedModelId)
       : null
   }, [account.id, initialModelId])
+  const {
+    probes,
+    setProbes: replaceProbes,
+    probesRef,
+    persistedSummary,
+    setPersistedSummary: applyPersistedSummary,
+    persistedSummaryRef,
+    persistCurrentResults,
+    loadVerificationHistory,
+  } = useVerificationDialogState(historyTarget)
 
   const selectedToken = tokens.find(
     (tok) => tok.id.toString() === selectedTokenId,
@@ -146,38 +110,6 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
       </div>
     )
   }, [account.baseUrl, account.name, t])
-
-  const replaceProbes = (next: ProbeItemState[]) => {
-    probesRef.current = next
-    setProbes(next)
-  }
-
-  const applyPersistedSummary = (
-    next: ApiVerificationHistorySummary | null,
-  ) => {
-    persistedSummaryRef.current = next
-    setPersistedSummary(next)
-  }
-
-  const persistCurrentResults = async (
-    nextApiType: ApiVerificationApiType,
-    nextProbes: ProbeItemState[],
-    preferredModelId?: string,
-  ) => {
-    if (!historyTarget) return
-
-    const nextSummary = createVerificationHistorySummary({
-      target: historyTarget,
-      apiType: nextApiType,
-      results: extractProbeResults(nextProbes),
-      preferredModelId,
-    })
-    if (!nextSummary) return
-
-    const persisted =
-      await verificationResultHistoryStorage.upsertLatestSummary(nextSummary)
-    applyPersistedSummary(persisted)
-  }
 
   const loadTokens = async () => {
     setIsLoadingTokens(true)
@@ -355,25 +287,13 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
     setApiType(initialApiType)
     replaceProbes(buildProbeState(initialApiType))
 
-    if (historyTarget) {
-      void verificationResultHistoryStorage
-        .getLatestSummary(historyTarget)
-        .then((summary) => {
-          if (cancelled) return
-          applyPersistedSummary(summary)
-          replaceProbes(buildProbeState(initialApiType, summary))
-          if (summary?.resolvedModelId) {
-            setModelId(
-              (current) => current.trim() || summary.resolvedModelId || "",
-            )
-          }
-        })
-        .catch(() => {
-          if (cancelled) return
-          applyPersistedSummary(null)
-          replaceProbes(buildProbeState(initialApiType))
-        })
-    }
+    void loadVerificationHistory({
+      apiType: initialApiType,
+      isCancelled: () => cancelled,
+      onResolvedModelId: (resolvedModelId) => {
+        setModelId((current) => current.trim() || resolvedModelId)
+      },
+    })
 
     void loadTokens()
 
@@ -393,7 +313,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
           : null,
       ),
     )
-  }, [apiType, isOpen])
+  }, [apiType, isOpen, persistedSummaryRef, replaceProbes])
 
   const footer = (
     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -538,11 +458,11 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
             const resultSummary = isDisabledForModel
               ? t("verifyDialog.requiresModelId")
               : result?.summaryKey
-                ? translateApiVerificationSummary(
+                ? (translateApiVerificationSummary(
                     t,
                     result.summaryKey,
                     result.summaryParams,
-                  ) ?? result.summary
+                  ) ?? result.summary)
                 : result?.status === "unsupported"
                   ? t("verifyDialog.unsupportedProbeForApiType", {
                       probe: getApiVerificationProbeLabel(

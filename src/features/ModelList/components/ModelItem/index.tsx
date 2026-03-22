@@ -7,6 +7,7 @@ import type { ModelManagementItemSource } from "~/features/ModelList/modelManage
 import type { ModelPricing } from "~/services/apiService/common/type"
 import type { CalculatedPrice } from "~/services/models/utils/modelPricing"
 import type { ApiVerificationHistorySummary } from "~/services/verification/verificationResultHistory"
+import { tryParseUrl } from "~/utils/core/urlParsing"
 
 import { ModelItemDescription } from "./ModelItemDescription"
 import { ModelItemDetails } from "./ModelItemDetails"
@@ -74,11 +75,17 @@ export default function ModelItem(props: ModelItemProps) {
   }
 
   // 账号来源信息（若为 profile，则展示 profile 标识）
+  const profileBaseUrl =
+    source.kind === "profile" ? source.profile.baseUrl.trim() : ""
+  const profileHost =
+    source.kind === "profile"
+      ? tryParseUrl(source.profile.baseUrl)?.host || profileBaseUrl || undefined
+      : undefined
   const sourceLabel =
     source.kind === "profile"
       ? t("sourceLabels.profileBadge", {
           name: source.profile.name,
-          host: new URL(source.profile.baseUrl).host,
+          host: profileHost,
         })
       : undefined
 

@@ -64,9 +64,10 @@ export function useApiCredentialProfilesController() {
     useApiCredentialProfiles()
   const profileVerificationTargets = useMemo(
     () =>
-      profiles.map((profile) =>
-        createProfileVerificationHistoryTarget(profile.id),
-      ),
+      profiles.flatMap((profile) => {
+        const target = createProfileVerificationHistoryTarget(profile.id)
+        return target ? [target] : []
+      }),
     [profiles],
   )
   const { summariesByKey: verificationSummariesByKey } =
@@ -231,12 +232,14 @@ export function useApiCredentialProfilesController() {
   )
 
   const getProfileVerificationSummary = useCallback(
-    (profileId: string) =>
-      verificationSummariesByKey[
-        serializeVerificationHistoryTarget(
-          createProfileVerificationHistoryTarget(profileId),
-        )
-      ] ?? null,
+    (profileId: string) => {
+      const target = createProfileVerificationHistoryTarget(profileId)
+      return target
+        ? (verificationSummariesByKey[
+            serializeVerificationHistoryTarget(target)
+          ] ?? null)
+        : null
+    },
     [verificationSummariesByKey],
   )
 

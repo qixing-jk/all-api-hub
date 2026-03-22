@@ -5,6 +5,8 @@ import { Storage } from "@plasmohq/storage"
 import { API_VERIFICATION_HISTORY_STORAGE_KEYS } from "~/services/core/storageKeys"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import {
+  createAccountModelVerificationHistoryTarget,
+  createProfileModelVerificationHistoryTarget,
   createProfileVerificationHistoryTarget,
   createVerificationHistorySummary,
   verificationResultHistoryStorage,
@@ -17,6 +19,10 @@ describe("verificationResultHistoryStorage", () => {
 
   it("stores and returns the latest sanitized summary for a target", async () => {
     const target = createProfileVerificationHistoryTarget("p-1")
+    if (!target) {
+      throw new Error("Expected history target")
+    }
+
     const summary = createVerificationHistorySummary({
       target,
       apiType: API_TYPES.OPENAI_COMPATIBLE,
@@ -56,6 +62,10 @@ describe("verificationResultHistoryStorage", () => {
 
   it("replaces an existing summary for the same target and clears it", async () => {
     const target = createProfileVerificationHistoryTarget("p-1")
+    if (!target) {
+      throw new Error("Expected history target")
+    }
+
     const firstSummary = createVerificationHistorySummary({
       target,
       apiType: API_TYPES.OPENAI_COMPATIBLE,
@@ -102,6 +112,10 @@ describe("verificationResultHistoryStorage", () => {
   it("stores data under the dedicated storage key", async () => {
     const storage = new Storage({ area: "local" })
     const target = createProfileVerificationHistoryTarget("p-2")
+    if (!target) {
+      throw new Error("Expected history target")
+    }
+
     const summary = createVerificationHistorySummary({
       target,
       apiType: API_TYPES.OPENAI_COMPATIBLE,
@@ -126,5 +140,15 @@ describe("verificationResultHistoryStorage", () => {
         API_VERIFICATION_HISTORY_STORAGE_KEYS.VERIFICATION_RESULT_HISTORY,
       ),
     ).toBeTruthy()
+  })
+
+  it("returns null for empty trimmed target identifiers", () => {
+    expect(createProfileVerificationHistoryTarget("   ")).toBeNull()
+    expect(
+      createProfileModelVerificationHistoryTarget("profile-1", "   "),
+    ).toBeNull()
+    expect(
+      createAccountModelVerificationHistoryTarget("   ", "model-1"),
+    ).toBeNull()
   })
 })

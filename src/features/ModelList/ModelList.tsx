@@ -133,7 +133,7 @@ export default function ModelList(props: {
         const modelId = item.model.model_name?.trim()
         if (!modelId) return acc
 
-        acc.push(
+        const historyTarget =
           source.kind === "profile"
             ? createProfileModelVerificationHistoryTarget(
                 source.profile.id,
@@ -142,8 +142,10 @@ export default function ModelList(props: {
             : createAccountModelVerificationHistoryTarget(
                 source.account.id,
                 modelId,
-              ),
-        )
+              )
+        if (historyTarget) {
+          acc.push(historyTarget)
+        }
 
         return acc
       },

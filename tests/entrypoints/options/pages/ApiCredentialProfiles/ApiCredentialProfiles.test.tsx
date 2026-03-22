@@ -134,6 +134,14 @@ vi.mock("~/utils/navigation", () => ({
   openModelsPage: (...args: unknown[]) => mockOpenModelsPage(...args),
 }))
 
+function requireHistoryTarget<T>(target: T | null) {
+  if (!target) {
+    throw new Error("Expected history target")
+  }
+
+  return target
+}
+
 describe("ApiCredentialProfiles page", () => {
   beforeEach(async () => {
     store = []
@@ -585,8 +593,12 @@ describe("ApiCredentialProfiles page", () => {
       },
     ]
 
+    const target = requireHistoryTarget(
+      createProfileVerificationHistoryTarget("p-1"),
+    )
+
     const summary = createVerificationHistorySummary({
-      target: createProfileVerificationHistoryTarget("p-1"),
+      target,
       apiType: API_TYPES.OPENAI_COMPATIBLE,
       results: [
         {

@@ -27,22 +27,19 @@ export function useVerificationResultHistorySummaries(
 
   const stableTargets = useMemo(() => {
     const seen = new Set<string>()
-    const next: ApiVerificationHistoryTarget[] = []
+    const next: Array<{ target: ApiVerificationHistoryTarget; key: string }> =
+      []
 
     for (const target of targets) {
       const key = serializeVerificationHistoryTarget(target)
       if (seen.has(key)) continue
       seen.add(key)
-      next.push(target)
+      next.push({ target, key })
     }
 
-    next.sort((a, b) =>
-      serializeVerificationHistoryTarget(a).localeCompare(
-        serializeVerificationHistoryTarget(b),
-      ),
-    )
+    next.sort((a, b) => a.key.localeCompare(b.key))
 
-    return next
+    return next.map(({ target }) => target)
   }, [targets])
 
   const reload = useCallback(async () => {

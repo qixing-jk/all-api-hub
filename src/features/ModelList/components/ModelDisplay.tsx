@@ -89,22 +89,21 @@ export function ModelDisplay(props: ModelDisplayProps) {
               ? accountForModel.balance.CNY / accountForModel.balance.USD
               : UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
           const modelId = item.model.model_name
-          const verificationSummary =
-            verificationSummariesByKey[
-              sourceForModel.kind === "profile"
-                ? serializeVerificationHistoryTarget(
-                    createProfileModelVerificationHistoryTarget(
-                      sourceForModel.profile.id,
-                      modelId,
-                    ),
-                  )
-                : serializeVerificationHistoryTarget(
-                    createAccountModelVerificationHistoryTarget(
-                      sourceForModel.account.id,
-                      modelId,
-                    ),
-                  )
-            ] ?? null
+          const historyTarget =
+            sourceForModel.kind === "profile"
+              ? createProfileModelVerificationHistoryTarget(
+                  sourceForModel.profile.id,
+                  modelId,
+                )
+              : createAccountModelVerificationHistoryTarget(
+                  sourceForModel.account.id,
+                  modelId,
+                )
+          const verificationSummary = historyTarget
+            ? (verificationSummariesByKey[
+                serializeVerificationHistoryTarget(historyTarget)
+              ] ?? null)
+            : null
 
           return (
             <ModelItem
