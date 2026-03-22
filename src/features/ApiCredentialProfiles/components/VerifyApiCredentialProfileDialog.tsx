@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next"
 
 import { buildProbeState } from "~/components/dialogs/VerifyApiDialog/probeState"
 import { ProbeStatusBadge } from "~/components/dialogs/VerifyApiDialog/ProbeStatusBadge"
+import type { ProbeItemState } from "~/components/dialogs/VerifyApiDialog/types"
 import { useVerificationDialogState } from "~/components/dialogs/VerifyApiDialog/useVerificationDialogState"
 import {
   formatLatency,
@@ -137,6 +138,18 @@ function createCurrentProfileVerificationHistoryTarget(
 }
 
 /**
+ * Tracks the persisted-history context separately from the storage target so
+ * API type switches still force a history refresh.
+ */
+function createVerificationHistoryContextKey(
+  profileId: string,
+  apiType: ApiVerificationApiType,
+  modelId?: string,
+) {
+  return `${profileId}::${apiType}::${modelId?.trim() ?? ""}`
+}
+
+/**
  * Modal dialog that runs AI API verification probes using a stored profile's
  * baseUrl + apiKey (no SiteAccount required).
  */
@@ -156,16 +169,31 @@ export function VerifyApiCredentialProfileDialog({
   const [modelOptions, setModelOptions] = useState<string[]>([])
   const [isFetchingModels, setIsFetchingModels] = useState(false)
   const [fetchModelsError, setFetchModelsError] = useState<string | null>(null)
+  const [isPersisting, setIsPersisting] = useState(false)
 
   const fetchModelsRequestIdRef = useRef(0)
+  const pendingHistoryContextKeyRef = useRef<string | null>(null)
+  const lastLoadedHistoryContextKeyRef = useRef<string | null>(null)
+  const trimmedModelId = modelId.trim()
   const historyTarget = useMemo(() => {
     if (!profile) return null
 
+    // API type does not change the storage key, but it does change which
+    // persisted summary should be shown for the active dialog context.
+    void apiType
     return createCurrentProfileVerificationHistoryTarget(
       profile.id,
-      initialModelId,
+      trimmedModelId,
     )
-  }, [initialModelId, profile])
+  }, [apiType, profile, trimmedModelId])
+  const historyContextKey = useMemo(() => {
+    if (!profile) return null
+    return createVerificationHistoryContextKey(
+      profile.id,
+      apiType,
+      trimmedModelId,
+    )
+  }, [apiType, profile, trimmedModelId])
   const {
     probes,
     setProbes: replaceProbes,
@@ -177,7 +205,7 @@ export function VerifyApiCredentialProfileDialog({
   } = useVerificationDialogState(historyTarget)
 
   const isAnyProbeRunning = probes.some((p) => p.isRunning)
-  const canClose = !isRunning && !isAnyProbeRunning
+  const canClose = !isRunning && !isAnyProbeRunning && !isPersisting
   const getHistoryTargetForModel = useCallback(
     (nextModelId?: string) => {
       if (!profile) return null
@@ -254,11 +282,20 @@ export function VerifyApiCredentialProfileDialog({
   )
 
   useEffect(() => {
-    if (!isOpen || !profile) return
+    if (!isOpen || !profile) {
+      pendingHistoryContextKeyRef.current = null
+      lastLoadedHistoryContextKeyRef.current = null
+      return
+    }
 
-    let cancelled = false
     const nextApiType = profile.apiType
     const nextModelId = initialModelId?.trim() ?? ""
+    pendingHistoryContextKeyRef.current = createVerificationHistoryContextKey(
+      profile.id,
+      nextApiType,
+      nextModelId,
+    )
+    lastLoadedHistoryContextKeyRef.current = null
 
     setApiType(nextApiType)
     setModelId(nextModelId)
@@ -266,31 +303,105 @@ export function VerifyApiCredentialProfileDialog({
     setFetchModelsError(null)
     setPersistedSummary(null)
     replaceProbes(buildProbeState(nextApiType))
+    void fetchModels(nextApiType)
+  }, [
+    fetchModels,
+    initialModelId,
+    isOpen,
+    profile,
+    replaceProbes,
+    setPersistedSummary,
+  ])
+
+  useEffect(() => {
+    if (
+      !isOpen ||
+      !profile ||
+      !historyTarget ||
+      !historyContextKey ||
+      isRunning ||
+      isAnyProbeRunning ||
+      isPersisting
+    ) {
+      return
+    }
+
+    if (
+      pendingHistoryContextKeyRef.current &&
+      pendingHistoryContextKeyRef.current !== historyContextKey
+    ) {
+      return
+    }
+
+    if (lastLoadedHistoryContextKeyRef.current === historyContextKey) {
+      return
+    }
+
+    pendingHistoryContextKeyRef.current = null
+    lastLoadedHistoryContextKeyRef.current = historyContextKey
+
+    let cancelled = false
+    setPersistedSummary(null)
+    replaceProbes(buildProbeState(apiType))
 
     void loadVerificationHistory({
-      apiType: nextApiType,
+      apiType,
       isCancelled: () => cancelled,
       onResolvedModelId: (resolvedModelId) => {
         setModelId((current) => current.trim() || resolvedModelId)
       },
-      shouldApplySummaryToProbes: (summary) => summary.apiType === nextApiType,
-    })
+      shouldApplySummaryToProbes: (summary) => summary.apiType === apiType,
+    }).then((summary) => {
+      if (cancelled || !summary || summary.apiType === apiType) {
+        return
+      }
 
-    void fetchModels(nextApiType)
+      setPersistedSummary(null, false)
+    })
 
     return () => {
       cancelled = true
     }
   }, [
-    fetchModels,
+    apiType,
+    historyContextKey,
     historyTarget,
-    initialModelId,
+    isAnyProbeRunning,
     isOpen,
+    isPersisting,
+    isRunning,
     loadVerificationHistory,
     profile,
     replaceProbes,
     setPersistedSummary,
   ])
+
+  const persistProbeResults = useCallback(
+    async (nextProbes: ProbeItemState[], modelIdOverride?: string) => {
+      const modelForProbe = (modelIdOverride ?? modelId).trim()
+      setIsPersisting(true)
+
+      try {
+        await persistCurrentResults(
+          apiType,
+          nextProbes,
+          modelForProbe || initialModelId?.trim(),
+          getHistoryTargetForModel(modelForProbe),
+        )
+      } catch (error) {
+        logger.error("Failed to persist verification history", { error })
+      } finally {
+        setIsPersisting(false)
+      }
+    },
+    [
+      apiType,
+      getHistoryTargetForModel,
+      initialModelId,
+      modelId,
+      persistCurrentResults,
+    ],
+  )
 
   const runProbe = async (
     probeId: ApiVerificationProbeId,
@@ -307,7 +418,6 @@ export function VerifyApiCredentialProfileDialog({
 
     try {
       const modelForProbe = (modelIdOverride ?? modelId).trim()
-      const historyTargetForProbe = getHistoryTargetForModel(modelForProbe)
       const result = await runApiVerificationProbe({
         baseUrl: profile.baseUrl,
         apiKey: profile.apiKey,
@@ -339,13 +449,7 @@ export function VerifyApiCredentialProfileDialog({
         }
       }
 
-      await persistCurrentResults(
-        apiType,
-        nextProbes,
-        modelForProbe || initialModelId?.trim(),
-        historyTargetForProbe,
-      )
-
+      await persistProbeResults(nextProbes, modelIdOverride)
       return result
     } catch (error) {
       logger.error("Probe failed", {
@@ -372,14 +476,7 @@ export function VerifyApiCredentialProfileDialog({
         }
       })
       replaceProbes(nextProbes)
-      const modelForProbe = (modelIdOverride ?? modelId).trim()
-      await persistCurrentResults(
-        apiType,
-        nextProbes,
-        modelForProbe || initialModelId?.trim(),
-        getHistoryTargetForModel(modelForProbe),
-      )
-
+      await persistProbeResults(nextProbes, modelIdOverride)
       return fallback
     }
   }
@@ -400,6 +497,7 @@ export function VerifyApiCredentialProfileDialog({
   const runAll = async () => {
     if (!profile) return
     setIsRunning(true)
+    setPersistedSummary(null)
     replaceProbes(buildProbeState(apiType))
 
     try {
@@ -446,7 +544,7 @@ export function VerifyApiCredentialProfileDialog({
         <Button
           variant="success"
           onClick={runAll}
-          disabled={isRunning || isAnyProbeRunning || !profile}
+          disabled={isRunning || isPersisting || isAnyProbeRunning || !profile}
         >
           {isRunning
             ? t("aiApiVerification:verifyDialog.actions.running")
@@ -527,14 +625,8 @@ export function VerifyApiCredentialProfileDialog({
                   setApiType(nextApiType)
                   setModelOptions([])
                   setFetchModelsError(null)
-                  replaceProbes(
-                    buildProbeState(
-                      nextApiType,
-                      persistedSummary?.apiType === nextApiType
-                        ? persistedSummary
-                        : null,
-                    ),
-                  )
+                  setPersistedSummary(null)
+                  replaceProbes(buildProbeState(nextApiType))
                   void fetchModels(nextApiType)
                 }}
                 disabled={!canClose}
@@ -553,7 +645,10 @@ export function VerifyApiCredentialProfileDialog({
                 data-testid="profile-verify-model-id"
                 options={modelOptions.map((id) => ({ value: id, label: id }))}
                 value={modelId}
-                onChange={setModelId}
+                onChange={(value) => {
+                  setModelId(value)
+                  setPersistedSummary(null)
+                }}
                 placeholder={
                   isFetchingModels
                     ? t("apiCredentialProfiles:verify.fetchingModels")
@@ -663,6 +758,7 @@ export function VerifyApiCredentialProfileDialog({
                       onClick={() => runProbe(probe.definition.id)}
                       disabled={
                         isRunning ||
+                        isPersisting ||
                         probe.isRunning ||
                         isDisabledForModel ||
                         !profile
