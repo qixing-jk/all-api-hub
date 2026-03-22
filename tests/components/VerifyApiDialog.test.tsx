@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { VerifyApiDialog } from "~/components/dialogs/VerifyApiDialog"
+import { API_TYPES } from "~/services/verification/aiApiVerification"
+import {
+  createAccountModelVerificationHistoryTarget,
+  createVerificationHistorySummary,
+  verificationResultHistoryStorage,
+} from "~/services/verification/verificationResultHistory"
 import {
   fireEvent,
   render,
@@ -34,10 +40,11 @@ vi.mock("~/services/verification/aiApiVerification", async (importOriginal) => {
 })
 
 describe("VerifyApiDialog", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     // Prevent cross-test leakage from `mockResolvedValueOnce` and call counts.
     mockFetchAccountTokens.mockReset()
     mockRunApiVerificationProbe.mockReset()
+    await verificationResultHistoryStorage.clearAllData()
   })
 
   it("renders probe items before running", async () => {
@@ -254,5 +261,86 @@ describe("VerifyApiDialog", () => {
         "aiApiVerification:verifyDialog.unsupportedProbeForApiType",
       ),
     ).toBeInTheDocument()
+  })
+
+  it("restores persisted history and clears it", async () => {
+    mockFetchAccountTokens.mockResolvedValueOnce([
+      {
+        id: 1,
+        user_id: 1,
+        key: "secret",
+        status: 1,
+        name: "token-1",
+        created_time: 0,
+        accessed_time: 0,
+        expired_time: 0,
+        remain_quota: 0,
+        unlimited_quota: true,
+        used_quota: 0,
+      },
+    ])
+
+    const target = createAccountModelVerificationHistoryTarget("a1", "gpt-test")
+    const summary = createVerificationHistorySummary({
+      target,
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      results: [
+        {
+          id: "models",
+          status: "pass",
+          latencyMs: 5,
+          summary: "Stored history",
+        },
+      ],
+    })
+
+    if (!summary) {
+      throw new Error("Expected history summary")
+    }
+
+    await verificationResultHistoryStorage.upsertLatestSummary(summary)
+
+    render(
+      <VerifyApiDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={{
+          id: "a1",
+          name: "Account",
+          username: "u",
+          balance: { USD: 0, CNY: 0 },
+          todayConsumption: { USD: 0, CNY: 0 },
+          todayIncome: { USD: 0, CNY: 0 },
+          todayTokens: { upload: 0, download: 0 },
+          health: { status: "healthy" as any },
+          siteType: "newapi",
+          baseUrl: "https://example.com",
+          token: "t",
+          userId: 1,
+          authType: "access_token" as any,
+          checkIn: { enableDetection: false } as any,
+        }}
+        initialModelId="gpt-test"
+      />,
+    )
+
+    expect(
+      await screen.findByText(
+        "aiApiVerification:verifyDialog.history.lastVerified",
+      ),
+    ).toBeInTheDocument()
+    expect(await screen.findByText("Stored history")).toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "aiApiVerification:verifyDialog.history.clear",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("aiApiVerification:verifyDialog.history.unverified"),
+      ).toBeInTheDocument()
+    })
   })
 })

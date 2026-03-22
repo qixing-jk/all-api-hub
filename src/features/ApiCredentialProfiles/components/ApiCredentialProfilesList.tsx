@@ -21,6 +21,9 @@ export function ApiCredentialProfilesList({
         <ApiCredentialProfileListItem
           key={profile.id}
           profile={profile}
+          verificationSummary={controller.getProfileVerificationSummary(
+            profile.id,
+          )}
           tagNames={
             (profile.tagIds ?? [])
               .map((id) => controller.tagNameById.get(id))

@@ -27,6 +27,11 @@ export const STORAGE_LOCKS = {
    */
   API_CREDENTIAL_PROFILES: "all-api-hub:api-credential-profiles",
   /**
+   * Exclusive lock used for read-modify-write sequences touching persisted API
+   * verification result history.
+   */
+  API_VERIFICATION_HISTORY: "all-api-hub:api-verification-history",
+  /**
    * Exclusive lock used for read-modify-write sequences touching user
    * preferences storage.
    */
@@ -69,6 +74,10 @@ export const API_CREDENTIAL_PROFILES_STORAGE_KEYS = {
   API_CREDENTIAL_PROFILES: "api_credential_profiles",
 } as const
 
+export const API_VERIFICATION_HISTORY_STORAGE_KEYS = {
+  VERIFICATION_RESULT_HISTORY: "api_verification_result_history",
+} as const
+
 export const LDOH_SITE_LOOKUP_STORAGE_KEYS = {
   SITE_LIST_CACHE: "ldohSiteLookup_siteListCache_v1",
 } as const
@@ -91,6 +100,7 @@ export const STORAGE_KEYS = {
   ...ACCOUNT_STORAGE_KEYS,
   ...TAG_STORAGE_KEYS,
   ...API_CREDENTIAL_PROFILES_STORAGE_KEYS,
+  ...API_VERIFICATION_HISTORY_STORAGE_KEYS,
   ...LDOH_SITE_LOOKUP_STORAGE_KEYS,
   ...ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS,
   ...USER_PREFERENCES_STORAGE_KEYS,

@@ -20,6 +20,11 @@
     "errors": {
       "unexpected": "Unexpected error"
     },
+    "history": {
+      "clear": "Clear history",
+      "lastVerified": "Last verified",
+      "unverified": "Not verified yet"
+    },
     "idleHint": "Select a token to start verification. Model id is required for model-dependent probes.",
     "loadingTokensHint": "Loading tokens...",
     "meta": {
@@ -43,7 +48,8 @@
       "fail": "Fail",
       "pass": "Pass",
       "pending": "Pending",
-      "unsupported": "Unsupported"
+      "unsupported": "Unsupported",
+      "unverified": "Unverified"
     },
     "summaries": {
       "endpointNotFound": "Endpoint not found (404): this API may not be supported",

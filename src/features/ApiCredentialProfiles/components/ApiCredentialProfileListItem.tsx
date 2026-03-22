@@ -11,6 +11,7 @@ import {
 } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
+import { VerificationStatusBadge } from "~/components/dialogs/VerifyApiDialog/VerificationStatusBadge"
 import { CCSwitchIcon } from "~/components/icons/CCSwitchIcon"
 import { CherryIcon } from "~/components/icons/CherryIcon"
 import { ClaudeCodeRouterIcon } from "~/components/icons/ClaudeCodeRouterIcon"
@@ -27,7 +28,9 @@ import {
 } from "~/components/ui/dropdown-menu"
 import type { ManagedSiteType } from "~/constants/siteType"
 import { getApiVerificationApiTypeLabel } from "~/services/verification/aiApiVerification/i18n"
+import type { ApiVerificationHistorySummary } from "~/services/verification/verificationResultHistory"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
+import { formatLocaleDateTime } from "~/utils/core/formatters"
 
 /**
  * Formats a secret for display (masked by default, revealable per-profile).
@@ -54,6 +57,7 @@ export type ApiCredentialProfileExportAction =
 
 interface ApiCredentialProfileListItemProps {
   profile: ApiCredentialProfile
+  verificationSummary: ApiVerificationHistorySummary | null
   tagNames: string[]
   visibleKeys: Set<string>
   toggleKeyVisibility: (id: string) => void
@@ -78,6 +82,7 @@ interface ApiCredentialProfileListItemProps {
  */
 export function ApiCredentialProfileListItem({
   profile,
+  verificationSummary,
   tagNames,
   visibleKeys,
   toggleKeyVisibility,
@@ -172,6 +177,22 @@ export function ApiCredentialProfileListItem({
                   >
                     <DocumentDuplicateIcon className="h-4 w-4" />
                   </IconButton>
+                </div>
+              </div>
+
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="dark:text-dark-text-tertiary shrink-0 whitespace-nowrap text-gray-500">
+                  {t("aiApiVerification:verifyDialog.history.lastVerified")}
+                </span>
+                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                  <VerificationStatusBadge
+                    status={verificationSummary?.status ?? "unverified"}
+                  />
+                  <span className="dark:text-dark-text-secondary text-gray-600">
+                    {verificationSummary
+                      ? formatLocaleDateTime(verificationSummary.verifiedAt)
+                      : t("aiApiVerification:verifyDialog.history.unverified")}
+                  </span>
                 </div>
               </div>
             </div>

@@ -4,6 +4,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import ApiCredentialProfiles from "~/entrypoints/options/pages/ApiCredentialProfiles"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import {
+  createProfileVerificationHistoryTarget,
+  createVerificationHistorySummary,
+  verificationResultHistoryStorage,
+} from "~/services/verification/verificationResultHistory"
+import {
   normalizeGoogleFamilyBaseUrl,
   normalizeOpenAiFamilyBaseUrl,
 } from "~/services/verification/webAiApiCheck/extractCredentials"
@@ -130,7 +135,7 @@ vi.mock("~/utils/navigation", () => ({
 }))
 
 describe("ApiCredentialProfiles page", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     store = []
     mockListProfiles.mockClear()
     mockFetchApiCredentialModelIds.mockReset()
@@ -143,6 +148,7 @@ describe("ApiCredentialProfiles page", () => {
     mockRenameTag.mockClear()
     mockDeleteTag.mockClear()
     mockOpenModelsPage.mockReset()
+    await verificationResultHistoryStorage.clearAllData()
   })
 
   it("creates a profile via the add dialog and renders it", async () => {
@@ -563,5 +569,51 @@ describe("ApiCredentialProfiles page", () => {
         screen.queryByRole("heading", { name: "Google" }),
       ).not.toBeInTheDocument()
     })
+  })
+  it("shows persisted verification status in the profile list", async () => {
+    store = [
+      {
+        id: "p-1",
+        name: "History Profile",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: "https://example.com",
+        apiKey: "sk-test",
+        tagIds: [],
+        notes: "",
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    ]
+
+    const summary = createVerificationHistorySummary({
+      target: createProfileVerificationHistoryTarget("p-1"),
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      results: [
+        {
+          id: "models",
+          status: "pass",
+          latencyMs: 6,
+          summary: "Stored list history",
+        },
+      ],
+    })
+
+    if (!summary) {
+      throw new Error("Expected history summary")
+    }
+
+    await verificationResultHistoryStorage.upsertLatestSummary(summary)
+
+    render(<ApiCredentialProfiles />)
+
+    expect(await screen.findByText("History Profile")).toBeInTheDocument()
+    expect(
+      await screen.findByText(
+        "aiApiVerification:verifyDialog.history.lastVerified",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("aiApiVerification:verifyDialog.status.pass"),
+    ).toBeInTheDocument()
   })
 })

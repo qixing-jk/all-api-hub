@@ -9,6 +9,12 @@ import { PageHeader } from "~/components/PageHeader"
 import { VerifyApiCredentialProfileDialog } from "~/features/ApiCredentialProfiles/components/VerifyApiCredentialProfileDialog"
 import { type ModelManagementItemSource } from "~/features/ModelList/modelManagementSources"
 import { getAllProviders } from "~/services/models/utils/modelProviders"
+import {
+  createAccountModelVerificationHistoryTarget,
+  createProfileModelVerificationHistoryTarget,
+  useVerificationResultHistorySummaries,
+  type ApiVerificationHistoryTarget,
+} from "~/services/verification/verificationResultHistory"
 import type { DisplaySiteData } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 
@@ -119,6 +125,33 @@ export default function ModelList(props: {
       errorType: state.errorType,
     }))
   }, [baseFilteredModels, accountQueryStates])
+
+  const modelVerificationTargets = useMemo(() => {
+    return filteredModels.reduce<ApiVerificationHistoryTarget[]>(
+      (acc, item) => {
+        const source = item.source as ModelManagementItemSource
+        const modelId = item.model.model_name?.trim()
+        if (!modelId) return acc
+
+        acc.push(
+          source.kind === "profile"
+            ? createProfileModelVerificationHistoryTarget(
+                source.profile.id,
+                modelId,
+              )
+            : createAccountModelVerificationHistoryTarget(
+                source.account.id,
+                modelId,
+              ),
+        )
+
+        return acc
+      },
+      [],
+    )
+  }, [filteredModels])
+  const { summariesByKey: verificationSummariesByKey } =
+    useVerificationResultHistorySummaries(modelVerificationTargets)
 
   const [verifyContext, setVerifyContext] = useState<{
     account: DisplaySiteData
@@ -285,6 +318,7 @@ export default function ModelList(props: {
               <Tab.Panel>
                 <ModelDisplay
                   models={filteredModels}
+                  verificationSummariesByKey={verificationSummariesByKey}
                   onVerifyModel={handleVerifyModel}
                   onVerifyCliSupport={handleVerifyCliSupport}
                   onOpenModelKeyDialog={handleOpenModelKeyDialog}
@@ -300,6 +334,7 @@ export default function ModelList(props: {
                 <Tab.Panel key={provider}>
                   <ModelDisplay
                     models={filteredModels}
+                    verificationSummariesByKey={verificationSummariesByKey}
                     onVerifyModel={handleVerifyModel}
                     onVerifyCliSupport={handleVerifyCliSupport}
                     onOpenModelKeyDialog={handleOpenModelKeyDialog}

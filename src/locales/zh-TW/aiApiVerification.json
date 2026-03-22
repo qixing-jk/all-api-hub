@@ -20,6 +20,11 @@
     "errors": {
       "unexpected": "發生未知錯誤"
     },
+    "history": {
+      "clear": "清除歷史",
+      "lastVerified": "最近驗證",
+      "unverified": "尚未驗證"
+    },
     "idleHint": "請選擇金鑰開始驗證；模型相關探測需要填寫模型 ID。",
     "loadingTokensHint": "正在載入金鑰...",
     "meta": {
@@ -43,7 +48,8 @@
       "fail": "失敗",
       "pass": "透過",
       "pending": "待執行",
-      "unsupported": "不支援"
+      "unsupported": "不支援",
+      "unverified": "未驗證"
     },
     "summaries": {
       "endpointNotFound": "端點不存在（404）：此 API 可能不受支援",

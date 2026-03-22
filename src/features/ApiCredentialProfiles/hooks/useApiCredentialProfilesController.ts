@@ -9,6 +9,11 @@ import { OpenInCherryStudio } from "~/services/integrations/cherryStudio"
 import { getManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
 import { tagStorage } from "~/services/tags/tagStorage"
 import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification"
+import {
+  createProfileVerificationHistoryTarget,
+  serializeVerificationHistoryTarget,
+  useVerificationResultHistorySummaries,
+} from "~/services/verification/verificationResultHistory"
 import type { Tag } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { onRuntimeMessage } from "~/utils/browser/browserApi"
@@ -57,6 +62,15 @@ export function useApiCredentialProfilesController() {
 
   const { profiles, isLoading, createProfile, updateProfile, deleteProfile } =
     useApiCredentialProfiles()
+  const profileVerificationTargets = useMemo(
+    () =>
+      profiles.map((profile) =>
+        createProfileVerificationHistoryTarget(profile.id),
+      ),
+    [profiles],
+  )
+  const { summariesByKey: verificationSummariesByKey } =
+    useVerificationResultHistorySummaries(profileVerificationTargets)
 
   const [tags, setTags] = useState<Tag[]>([])
 
@@ -216,6 +230,16 @@ export function useApiCredentialProfilesController() {
     [],
   )
 
+  const getProfileVerificationSummary = useCallback(
+    (profileId: string) =>
+      verificationSummariesByKey[
+        serializeVerificationHistoryTarget(
+          createProfileVerificationHistoryTarget(profileId),
+        )
+      ] ?? null,
+    [verificationSummariesByKey],
+  )
+
   const [verifyingProfile, setVerifyingProfile] =
     useState<ApiCredentialProfile | null>(null)
   const [cliVerifyingProfile, setCliVerifyingProfile] =
@@ -372,6 +396,7 @@ export function useApiCredentialProfilesController() {
     handleCopyApiKey,
     handleCopyBundle,
     handleOpenModelManagement,
+    getProfileVerificationSummary,
     handleExport,
 
     deletingProfile,

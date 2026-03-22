@@ -2,23 +2,17 @@ import { useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { Card, CardContent } from "~/components/ui"
+import { Badge, Card, CardContent } from "~/components/ui"
 import type { ModelManagementItemSource } from "~/features/ModelList/modelManagementSources"
 import type { ModelPricing } from "~/services/apiService/common/type"
 import type { CalculatedPrice } from "~/services/models/utils/modelPricing"
-import { createLogger } from "~/utils/core/logger"
-import { tryParseUrl } from "~/utils/core/urlParsing"
+import type { ApiVerificationHistorySummary } from "~/services/verification/verificationResultHistory"
 
 import { ModelItemDescription } from "./ModelItemDescription"
 import { ModelItemDetails } from "./ModelItemDetails"
 import { ModelItemExpandButton } from "./ModelItemExpandButton"
 import { ModelItemHeader } from "./ModelItemHeader"
 import { ModelItemPricing } from "./ModelItemPricing"
-
-/**
- * Unified logger scoped to model list item interactions.
- */
-const logger = createLogger("ModelItem")
 
 interface ModelItemProps {
   model: ModelPricing
@@ -32,6 +26,7 @@ interface ModelItemProps {
   availableGroups?: string[] // 新增：用户的所有可用分组列表
   isAllGroupsMode?: boolean // 新增：是否为"所有分组"模式
   source: ModelManagementItemSource
+  verificationSummary?: ApiVerificationHistorySummary | null
   onVerifyModel?: (source: ModelManagementItemSource, modelId: string) => void
   onVerifyCliSupport?: (
     source: ModelManagementItemSource,
@@ -62,6 +57,7 @@ export default function ModelItem(props: ModelItemProps) {
     availableGroups = [],
     isAllGroupsMode = false,
     source,
+    verificationSummary,
     onVerifyModel,
     onVerifyCliSupport,
     onOpenModelKeyDialog,
@@ -72,27 +68,24 @@ export default function ModelItem(props: ModelItemProps) {
     try {
       await navigator.clipboard.writeText(model.model_name)
       toast.success(t("messages.modelNameCopied"))
-    } catch (error) {
+    } catch {
       toast.error(t("messages.copyFailed"))
-      logger.warn("Failed to copy model name to clipboard", error)
     }
   }
 
+  // 账号来源信息（若为 profile，则展示 profile 标识）
   const sourceLabel =
     source.kind === "profile"
       ? t("sourceLabels.profileBadge", {
           name: source.profile.name,
-          host:
-            tryParseUrl(source.profile.baseUrl)?.hostname ??
-            source.profile.baseUrl,
+          host: new URL(source.profile.baseUrl).host,
         })
-      : source.account.name
+      : undefined
 
-  const showGroupDetails = source.capabilities.supportsGroupFiltering
-  const showPricing = source.capabilities.supportsPricing
-  const canExpand =
-    source.kind !== "profile" &&
-    (showEndpointTypes || showGroupDetails || showPricing)
+  // profile 来源不展示价格/组别等仅账号语义的元信息
+  const showPricing = source.kind === "account" && showRealPrice !== undefined
+  const showGroupDetails = source.kind === "account"
+  const canExpand = source.kind === "account"
 
   // 检查模型是否对当前用户分组可用
   const isAvailableForUser = showGroupDetails
@@ -120,6 +113,7 @@ export default function ModelItem(props: ModelItemProps) {
             sourceLabel={sourceLabel}
             showPricingMetadata={showPricing}
             showAvailabilityBadge={showGroupDetails}
+            verificationSummary={verificationSummary}
             onOpenKeyDialog={
               source.kind === "account" &&
               source.capabilities.supportsTokenCompatibility &&
@@ -165,17 +159,34 @@ export default function ModelItem(props: ModelItemProps) {
           isAvailableForUser={isAvailableForUser}
         />
 
-        {/* 展开的详细信息 */}
-        {isExpanded && (
-          <ModelItemDetails
-            model={model}
-            calculatedPrice={calculatedPrice}
-            showEndpointTypes={showEndpointTypes}
-            userGroup={userGroup}
-            showGroupDetails={showGroupDetails}
-            showPricingDetails={showPricing}
-            onGroupClick={onGroupClick}
-          />
+        {/* 折叠展开的详细信息 */}
+        {isExpanded && source.kind === "account" && (
+          <div className="border-t pt-4 dark:border-gray-700">
+            <ModelItemDetails
+              model={model}
+              calculatedPrice={calculatedPrice}
+              showEndpointTypes={showEndpointTypes}
+              userGroup={userGroup}
+              showGroupDetails={showGroupDetails}
+              showPricingDetails={showPricing}
+              onGroupClick={onGroupClick}
+            />
+          </div>
+        )}
+
+        {/* 不可用时的提示 */}
+        {!isAvailableForUser && showGroupDetails && (
+          <div className="mt-3 rounded-lg border border-yellow-200 bg-yellow-50 p-3 dark:border-yellow-800 dark:bg-yellow-900/20">
+            <div className="mb-2 flex items-center gap-2 text-sm text-yellow-700 dark:text-yellow-300">
+              <Badge variant="warning" size="sm">
+                {t("unavailable")}
+              </Badge>
+              <span>{t("clickSwitchGroup", { group: userGroup })}</span>
+            </div>
+            <div className="text-sm text-yellow-600 dark:text-yellow-400">
+              {t("availableGroups")}: {model.enable_groups.join(", ")}
+            </div>
+          </div>
         )}
       </CardContent>
     </Card>

@@ -7,10 +7,13 @@ import {
 import React from "react"
 import { useTranslation } from "react-i18next"
 
+import { VerificationStatusBadge } from "~/components/dialogs/VerifyApiDialog/VerificationStatusBadge"
 import { Badge, IconButton } from "~/components/ui"
 import type { ModelPricing } from "~/services/apiService/common/type"
 import { getBillingModeText } from "~/services/models/utils/modelPricing"
 import { getProviderConfig } from "~/services/models/utils/modelProviders"
+import type { ApiVerificationHistorySummary } from "~/services/verification/verificationResultHistory"
+import { formatLocaleDateTime } from "~/utils/core/formatters"
 
 interface ModelItemHeaderProps {
   model: ModelPricing
@@ -19,6 +22,7 @@ interface ModelItemHeaderProps {
   sourceLabel?: string
   showPricingMetadata: boolean
   showAvailabilityBadge: boolean
+  verificationSummary?: ApiVerificationHistorySummary | null
   onOpenKeyDialog?: () => void
   onVerifyApi?: () => void
   onVerifyCliSupport?: () => void
@@ -31,11 +35,12 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
   sourceLabel,
   showPricingMetadata,
   showAvailabilityBadge,
+  verificationSummary,
   onOpenKeyDialog,
   onVerifyApi,
   onVerifyCliSupport,
 }) => {
-  const { t } = useTranslation("modelList")
+  const { t } = useTranslation(["modelList", "aiApiVerification"])
   const providerConfig = getProviderConfig(model.model_name)
   const IconComponent = providerConfig.icon
 
@@ -46,7 +51,7 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
   }
 
   return (
-    <div className="min-w-0 flex-1">
+    <div className="min-w-0 flex-1 space-y-1.5">
       <div className="flex items-center gap-2 sm:gap-3">
         {/* 厂商图标 */}
         <div className={`shrink-0 rounded-lg p-1.5 ${providerConfig.bgColor}`}>
@@ -72,8 +77,8 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
             variant="ghost"
             size="sm"
             onClick={handleCopyModelName}
-            title={t("actions.copyModelName")}
-            aria-label={t("actions.copyModelName")}
+            title={t("modelList:actions.copyModelName")}
+            aria-label={t("modelList:actions.copyModelName")}
             className="shrink-0"
           >
             <DocumentDuplicateIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
@@ -84,8 +89,8 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
               variant="ghost"
               size="sm"
               onClick={onOpenKeyDialog}
-              title={t("actions.keyForModel")}
-              aria-label={t("actions.keyForModel")}
+              title={t("modelList:actions.keyForModel")}
+              aria-label={t("modelList:actions.keyForModel")}
               className="shrink-0"
             >
               <KeyIcon className="h-3 w-3 text-violet-600 sm:h-3.5 sm:w-3.5 dark:text-violet-400" />
@@ -97,8 +102,8 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
               variant="ghost"
               size="sm"
               onClick={onVerifyApi}
-              title={t("actions.verifyApi")}
-              aria-label={t("actions.verifyApi")}
+              title={t("modelList:actions.verifyApi")}
+              aria-label={t("modelList:actions.verifyApi")}
               className="shrink-0"
             >
               <WrenchScrewdriverIcon className="h-3 w-3 text-emerald-600 sm:h-3.5 sm:w-3.5 dark:text-emerald-400" />
@@ -110,8 +115,8 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
               variant="ghost"
               size="sm"
               onClick={onVerifyCliSupport}
-              title={t("actions.verifyCliSupport")}
-              aria-label={t("actions.verifyCliSupport")}
+              title={t("modelList:actions.verifyCliSupport")}
+              aria-label={t("modelList:actions.verifyCliSupport")}
               className="shrink-0"
             >
               <CommandLineIcon className="h-3 w-3 text-sky-600 sm:h-3.5 sm:w-3.5 dark:text-sky-400" />
@@ -139,7 +144,9 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
               size="sm"
               className="text-[10px] sm:text-xs"
             >
-              {isAvailableForUser ? t("available") : t("unavailable")}
+              {isAvailableForUser
+                ? t("modelList:available")
+                : t("modelList:unavailable")}
             </Badge>
           )}
 
@@ -151,6 +158,22 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
           )}
         </div>
       </div>
+
+      {onVerifyApi && (
+        <div className="ml-8 flex flex-wrap items-center gap-2 text-[11px] sm:text-xs">
+          <span className="dark:text-dark-text-tertiary text-gray-500">
+            {t("aiApiVerification:verifyDialog.history.lastVerified")}
+          </span>
+          <VerificationStatusBadge
+            status={verificationSummary?.status ?? "unverified"}
+          />
+          <span className="dark:text-dark-text-secondary text-gray-600">
+            {verificationSummary
+              ? formatLocaleDateTime(verificationSummary.verifiedAt)
+              : t("aiApiVerification:verifyDialog.history.unverified")}
+          </span>
+        </div>
+      )}
     </div>
   )
 }

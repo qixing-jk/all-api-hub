@@ -4,13 +4,20 @@ import { Virtuoso } from "react-virtuoso"
 
 import { EmptyState } from "~/components/ui"
 import { UI_CONSTANTS } from "~/constants/ui"
-import type { ModelManagementItemSource } from "~/features/ModelList/modelManagementSources"
 import type { CalculatedModelItem } from "~/features/ModelList/hooks/useFilteredModels"
+import type { ModelManagementItemSource } from "~/features/ModelList/modelManagementSources"
+import type { ApiVerificationHistorySummary } from "~/services/verification/verificationResultHistory"
+import {
+  createAccountModelVerificationHistoryTarget,
+  createProfileModelVerificationHistoryTarget,
+  serializeVerificationHistoryTarget,
+} from "~/services/verification/verificationResultHistory"
 
 import ModelItem from "./ModelItem"
 
 interface ModelDisplayProps {
   models: CalculatedModelItem[]
+  verificationSummariesByKey: Record<string, ApiVerificationHistorySummary>
   onVerifyModel?: (source: ModelManagementItemSource, modelId: string) => void
   onVerifyCliSupport?: (
     source: ModelManagementItemSource,
@@ -39,6 +46,7 @@ interface ModelDisplayProps {
 export function ModelDisplay(props: ModelDisplayProps) {
   const {
     models,
+    verificationSummariesByKey,
     onVerifyModel,
     onVerifyCliSupport,
     onOpenModelKeyDialog,
@@ -80,6 +88,23 @@ export function ModelDisplay(props: ModelDisplayProps) {
             accountForModel && accountForModel.balance?.USD > 0
               ? accountForModel.balance.CNY / accountForModel.balance.USD
               : UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
+          const modelId = item.model.model_name
+          const verificationSummary =
+            verificationSummariesByKey[
+              sourceForModel.kind === "profile"
+                ? serializeVerificationHistoryTarget(
+                    createProfileModelVerificationHistoryTarget(
+                      sourceForModel.profile.id,
+                      modelId,
+                    ),
+                  )
+                : serializeVerificationHistoryTarget(
+                    createAccountModelVerificationHistoryTarget(
+                      sourceForModel.account.id,
+                      modelId,
+                    ),
+                  )
+            ] ?? null
 
           return (
             <ModelItem
@@ -95,6 +120,7 @@ export function ModelDisplay(props: ModelDisplayProps) {
               availableGroups={availableGroups}
               isAllGroupsMode={selectedGroup === "all"}
               source={sourceForModel}
+              verificationSummary={verificationSummary}
               onVerifyModel={onVerifyModel}
               onVerifyCliSupport={onVerifyCliSupport}
               onOpenModelKeyDialog={onOpenModelKeyDialog}
