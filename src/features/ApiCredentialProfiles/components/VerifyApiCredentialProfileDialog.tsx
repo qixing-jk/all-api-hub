@@ -388,9 +388,13 @@ export function VerifyApiCredentialProfileDialog({
     const targetToClear = persistedSummary?.target ?? historyTarget
     if (!targetToClear) return
 
-    await verificationResultHistoryStorage.clearTarget(targetToClear)
-    setPersistedSummary(null)
-    replaceProbes(buildProbeState(apiType))
+    try {
+      await verificationResultHistoryStorage.clearTarget(targetToClear)
+      setPersistedSummary(null)
+      replaceProbes(buildProbeState(apiType))
+    } catch (error) {
+      logger.error("Failed to clear verification history", { error })
+    }
   }
 
   const runAll = async () => {
