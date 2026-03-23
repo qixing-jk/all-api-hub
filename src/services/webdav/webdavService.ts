@@ -164,6 +164,48 @@ async function getWebDavConfig(): Promise<WebDAVConfig> {
   return prefs.webdav
 }
 
+type WebdavBackupRequestOptions = {
+  prepareForWrite?: boolean
+}
+
+type ResolvedWebdavBackupRequestContext = {
+  cfg: WebDAVConfig
+  targetUrl: string
+}
+
+/**
+ * Resolves the effective WebDAV config and normalized backup target path.
+ */
+async function resolveWebdavBackupRequestContext(
+  custom?: Partial<WebDAVConfig>,
+): Promise<ResolvedWebdavBackupRequestContext> {
+  const cfg = { ...(await getWebDavConfig()), ...custom }
+  if (!cfg.url || !cfg.username || !cfg.password) {
+    throw new Error(t("messages:webdav.configIncomplete"))
+  }
+
+  return {
+    cfg,
+    targetUrl: ensureFilename(cfg.url),
+  }
+}
+
+/**
+ * Prepares the backup collection for flows that are expected to upload later.
+ *
+ * This prevents first-time syncs from depending on provider-specific `GET`
+ * responses when the backup directory has not been created yet.
+ */
+async function prepareWebdavBackupTargetForWrite(
+  context: ResolvedWebdavBackupRequestContext,
+) {
+  await ensureBackupDirectory(
+    context.targetUrl,
+    context.cfg.username,
+    context.cfg.password,
+  )
+}
+
 /**
  * Detects "missing remote backup" responses across WebDAV providers.
  *
@@ -213,11 +255,7 @@ async function getWebdavEncryptionConfig() {
  * errors.
  */
 export async function testWebdavConnection(custom?: Partial<WebDAVConfig>) {
-  const cfg = { ...(await getWebDavConfig()), ...custom }
-  if (!cfg.url || !cfg.username || !cfg.password) {
-    throw new Error(t("messages:webdav.configIncomplete"))
-  }
-  const targetUrl = ensureFilename(cfg.url)
+  const { cfg, targetUrl } = await resolveWebdavBackupRequestContext(custom)
 
   const res = await fetch(targetUrl, {
     method: "GET",
@@ -239,14 +277,19 @@ export async function testWebdavConnection(custom?: Partial<WebDAVConfig>) {
  *
  * This function does not attempt to detect or decrypt encrypted envelopes.
  * It is intended for UI flows that need to decide how to prompt the user when
- * no password is available or decryption fails.
+ * no password is available or decryption fails. Pass `prepareForWrite` when
+ * the caller is about to upload after reading the current remote payload.
  */
-export async function downloadBackupRaw(custom?: Partial<WebDAVConfig>) {
-  const cfg = { ...(await getWebDavConfig()), ...custom }
-  if (!cfg.url || !cfg.username || !cfg.password) {
-    throw new Error(t("messages:webdav.configIncomplete"))
+export async function downloadBackupRaw(
+  custom?: Partial<WebDAVConfig>,
+  options: WebdavBackupRequestOptions = {},
+) {
+  const context = await resolveWebdavBackupRequestContext(custom)
+  const { cfg, targetUrl } = context
+
+  if (options.prepareForWrite) {
+    await prepareWebdavBackupTargetForWrite(context)
   }
-  const targetUrl = ensureFilename(cfg.url)
 
   const res = await fetch(targetUrl, {
     method: "GET",
@@ -274,8 +317,11 @@ export async function downloadBackupRaw(custom?: Partial<WebDAVConfig>) {
  *   using the stored encryption password and throw a localized error message on
  *   missing/incorrect passwords.
  */
-export async function downloadBackup(custom?: Partial<WebDAVConfig>) {
-  const raw = await downloadBackupRaw(custom)
+export async function downloadBackup(
+  custom?: Partial<WebDAVConfig>,
+  options: WebdavBackupRequestOptions = {},
+) {
+  const raw = await downloadBackupRaw(custom, options)
   const envelope = tryParseEncryptedWebdavBackupEnvelope(raw)
   if (!envelope) return raw
 
@@ -306,11 +352,8 @@ export async function uploadBackup(
   content: string,
   custom?: Partial<WebDAVConfig>,
 ) {
-  const cfg = { ...(await getWebDavConfig()), ...custom }
-  if (!cfg.url || !cfg.username || !cfg.password) {
-    throw new Error(t("messages:webdav.configIncomplete"))
-  }
-  const targetUrl = ensureFilename(cfg.url)
+  const context = await resolveWebdavBackupRequestContext(custom)
+  const { cfg, targetUrl } = context
 
   const encCfg = await getWebdavEncryptionConfig()
   let contentToUpload = content
@@ -326,7 +369,7 @@ export async function uploadBackup(
   }
 
   // Ensure backup directory exists when using folder-style input
-  await ensureBackupDirectory(targetUrl, cfg.username, cfg.password)
+  await prepareWebdavBackupTargetForWrite(context)
 
   const res = await fetch(targetUrl, {
     method: "PUT",

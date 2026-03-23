@@ -301,7 +301,9 @@ class WebdavAutoSyncService {
     let remoteData: any | null = null
 
     try {
-      const content = await downloadBackup()
+      const content = await downloadBackup(undefined, {
+        prepareForWrite: true,
+      })
       remoteData = JSON.parse(content)
       logger.info("成功下载远程数据", { timestamp: remoteData?.timestamp })
     } catch (error: any) {

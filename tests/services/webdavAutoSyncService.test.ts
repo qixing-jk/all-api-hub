@@ -442,6 +442,9 @@ describe("WebdavAutoSyncService.syncWithWebdav (selective sync)", () => {
     })
 
     await expect(service.syncWithWebdav()).resolves.toBeUndefined()
+    expect(mockDownloadBackup).toHaveBeenCalledWith(undefined, {
+      prepareForWrite: true,
+    })
 
     const uploaded = JSON.parse(mockUploadBackup.mock.calls[0][0])
     expect(
