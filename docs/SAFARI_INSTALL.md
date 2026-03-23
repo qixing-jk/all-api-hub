@@ -15,9 +15,18 @@
 
 ## 安装方式
 
-### 方式一：从源码构建安装（推荐，无账号也可）
+Safari 当前建议按下面两种方式使用：
 
-#### 1. 构建 Safari 扩展
+1. 从源码自己构建，再用 Xcode 运行
+2. 从 GitHub Releases 下载已经打好的 Safari Xcode bundle，解压后直接用 Xcode 打开
+
+> **建议**
+> 如果你只是想尽快在自己的 Mac 上跑起来，优先使用“方式二：下载 Release bundle”。
+> 如果你要改代码、调试、验证本地修改，再用“方式一：从源码构建”。
+
+### 方式一：从源码构建安装
+
+#### 1. 获取源码并构建 Safari 产物
 
 ```bash
 # 克隆或下载项目源码
@@ -31,53 +40,105 @@ pnpm install
 pnpm run build:safari
 ```
 
-构建完成后，扩展文件将输出到 `.output/safari-mv2/` 目录。
+构建完成后，编译产物会输出到 `.output/safari-mv2/`。
 
-#### 2. 使用 Xcode 转换器创建 Safari 应用
+#### 2. 使用 Safari 转换器生成 Xcode 工程
 
 ```bash
-# 运行 Safari Web Extension 转换器
 xcrun safari-web-extension-converter .output/safari-mv2/
 ```
 
-该命令会：
-1. 自动打开 Xcode
-2. 创建一个新的 Xcode 项目
-3. 生成一个 macOS 应用（用于承载扩展）
+如果你想自定义输出目录、App 名和 Bundle Identifier，也可以使用：
+
+```bash
+xcrun safari-web-extension-converter .output/safari-mv2/ \
+  --project-location /path/to/all-api-hub-safari-project \
+  --app-name "All API Hub" \
+  --bundle-identifier "com.yourcompany.allapihub"
+```
+
+这一步会生成一个 Xcode 工程，用来承载 Safari 扩展。
 
 #### 3. 在 Xcode 中构建并运行
 
-1. 在 Xcode 中，确保目标设备选择的是你的 Mac
-2. 点击 Product > Run（或按 `Cmd + R`）
-3. 首次运行时，Xcode 会处理签名；没有付费账号时可使用 `Personal Team` 做本机调试
-4. 构建成功后，Safari 会自动打开并提示安装扩展
+1. 打开刚生成的 Xcode 工程
+2. 确保目标设备选择的是你的 Mac
+3. 点击 `Product > Run`，或按 `Cmd + R`
+4. 首次运行时，Xcode 会要求你处理签名；没有付费账号时通常可使用 `Personal Team` 做本机调试
+5. 构建成功后，Safari 会提示你启用扩展
 
-#### 4. 启用扩展
+#### 4. 在 Safari 中启用扩展
 
 1. 打开 Safari
 2. 在菜单栏点击 `Safari > 设置`
 3. 如果是本地未正式分发版本，再到 `开发` 菜单打开 `允许未签名的扩展`
-4. 选择 `扩展` 标签
-5. 找到 `All API Hub` 并启用它
-6. 根据需要配置扩展权限
+4. 打开 `扩展` 标签页
+5. 找到 `All API Hub` 并启用
+6. 根据需要授予权限
 
-### 方式二：临时调试（仅开发用途）
+### 方式二：从 GitHub Releases 下载 Safari Xcode bundle
+
+#### 1. 下载正确的 Safari 资产
+
+打开 Releases 页面，下载类似下面名字的文件：
+
+```text
+all-api-hub-<version>-safari-xcode-bundle.zip
+```
+
+例如：
+
+```text
+all-api-hub-3.29.0-safari-xcode-bundle.zip
+```
+
+不要只下载 `all-api-hub-<version>-safari.zip`。
+
+WHY：
+`all-api-hub-<version>-safari.zip` 只是 Safari 编译产物本身，不包含可直接运行的 Xcode 工程；真正适合直接解压后打开 Xcode 的，是 `safari-xcode-bundle.zip`。
+
+#### 2. 解压后你会看到什么
+
+解压 `all-api-hub-<version>-safari-xcode-bundle.zip` 后，目录里通常会同时包含：
+
+- `all-api-hub-<version>-safari.zip`
+- `safari-mv2/`
+- converter 生成的 Xcode 工程目录
+
+这样设计的目的是把“编译好的 Safari 扩展文件”和“Xcode 工程”放在同一个 bundle 里，避免工程打开后找不到扩展资源而报丢失文件。
+
+#### 3. 直接用 Xcode 打开 bundle 内工程
+
+1. 在解压目录中找到 Xcode 工程
+2. 双击工程文件，或用 Xcode 打开它
+3. 确保目标设备选择的是你的 Mac
+4. 点击 `Product > Run`
+5. Safari 提示后，在 `Safari > 设置 > 扩展` 中启用扩展
+
+#### 4. 什么时候还需要 bundle 里的其他文件
+
+- `safari-mv2/`：Xcode 工程引用的编译后扩展目录
+- `all-api-hub-<version>-safari.zip`：便于你留档、比对或二次分发编译产物
+
+通常情况下，你只需要解压整个 bundle，不要单独移动其中某一个目录。
+
+### 方式三：临时调试（仅开发用途）
 
 部分 macOS / Safari 版本支持临时调试加载，但不适合作为正式安装或分发方式：
 
 ```bash
-# 构建 Safari 扩展
 pnpm run build:safari
-
-# 在 Safari 中启用开发者模式
-# Safari > 设置 > 高级 > 勾选 "在菜单栏中显示开发菜单"
 ```
 
-1. 打开 Safari
-2. 在菜单栏点击 `开发 > 允许未签名的扩展`
-3. 在 `Safari > 设置 > 扩展` 中启用扩展
+然后在 Safari 中启用开发者模式：
 
-> **注意**：如果该方式不可用，请回到上面的 Xcode 流程；正式发布仍应使用签名分发。
+1. 打开 `Safari > 设置 > 高级`
+2. 勾选“在菜单栏中显示开发菜单”
+3. 在菜单栏点击 `开发 > 允许未签名的扩展`
+4. 在 `Safari > 设置 > 扩展` 中启用扩展
+
+> **注意**
+> 如果该方式不可用，请回到上面的 Xcode 流程；正式发布仍应使用签名分发。
 
 ## 开发模式调试
 
@@ -130,7 +191,9 @@ A: 基本功能完全一致。但由于 Safari WebExtensions API 的一些限制
 
 ### Q: 如何更新扩展？
 
-A: 重新构建并运行 Xcode 项目即可更新已安装的扩展。
+A:
+- 如果你是从源码安装：重新构建 Safari 产物并重新运行 Xcode 工程
+- 如果你是从 Releases 下载 bundle：下载新的 `safari-xcode-bundle.zip`，解压后重新打开新的 Xcode 工程运行
 
 ## 卸载
 
