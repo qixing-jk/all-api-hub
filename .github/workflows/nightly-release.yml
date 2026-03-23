@@ -22,7 +22,7 @@ on:
   workflow_dispatch:
     inputs:
       ref:
-        description: "Commit SHA, branch, or tag to build. Leave empty to use the latest main commit."
+        description: "Examples: v3.30.0 (tag), main or feat/safari-support (branch), a1b2c3d or full commit SHA. Leave empty to use the latest main commit."
         required: false
         default: ""
 
@@ -113,11 +113,17 @@ jobs:
           cp "${{ steps.package.outputs.firefox-zip }}" "source/.output/nightly/all-api-hub-nightly-firefox.zip"
           cp "${{ steps.package.outputs.sources-zip }}" "source/.output/nightly/all-api-hub-nightly-sources.zip"
 
-      - name: Pack Safari workflow artifact
+      - name: Validate Safari build inputs
         working-directory: source
         run: |
           shopt -s nullglob
           safari_zips=(.output/*-safari.zip)
+
+          if [ ! -d .output/safari-mv2 ]; then
+            echo "Expected Safari build directory at .output/safari-mv2."
+            ls -la .output
+            exit 1
+          fi
 
           if [ "${#safari_zips[@]}" -ne 1 ]; then
             echo "Expected exactly one Safari zip in .output."
@@ -125,16 +131,13 @@ jobs:
             exit 1
           fi
 
-          tar -czf "$RUNNER_TEMP/safari-build-inputs.tar.gz" \
-            -C . \
-            .output/safari-mv2 \
-            ".output/$(basename "${safari_zips[0]}")"
-
-      - name: Upload Safari workflow artifact
+      - name: Upload Safari build inputs
         uses: actions/upload-artifact@v4
         with:
           name: safari-build-inputs
-          path: ${{ runner.temp }}/safari-build-inputs.tar.gz
+          path: |
+            source/.output/safari-mv2
+            source/.output/*-safari.zip
           if-no-files-found: error
 
       - name: Write nightly release notes
@@ -198,11 +201,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: safari-build-inputs
-          path: ${{ runner.temp }}/safari-build-inputs
-
-      - name: Restore Safari build inputs
-        run: |
-          tar -xzf "${{ runner.temp }}/safari-build-inputs/safari-build-inputs.tar.gz" -C source
+          path: source/.output
 
       - name: Prepare Safari nightly assets
         working-directory: source

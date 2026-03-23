@@ -5,10 +5,20 @@ on:
     types: [created] # 自动监听 GitHub Release 发布
   workflow_dispatch: # 允许手动触发
     inputs:
-      tag:
-        description: "Release tag or commit hash to build. Leave empty to auto-detect latest."
+      # ref 示例：
+      # - v3.30.0（tag）
+      # - main / feat/safari-support（branch）
+      # - a1b2c3d 或完整 40 位 commit SHA
+      # - latest（默认分支最新 commit）
+      ref:
+        description: "Examples: v3.30.0 (tag), main or feat/safari-support (branch), a1b2c3d or full commit SHA, latest (default branch HEAD). Leave empty to auto-detect the latest semver tag."
         required: false
         default: ""
+      dry_run:
+        description: "Build artifacts only; skip Release upload and browser-store submission."
+        required: false
+        type: boolean
+        default: true
       review_chrome:
         description: "Submit Chrome build for review"
         required: false
@@ -42,8 +52,13 @@ jobs:
       - name: Determine ref (tag or commit)
         id: get_ref
         run: |
-          # 优先级：workflow 输入 tag/ref > release tag > 自动找最新 tag
-          REF="${{ github.event.inputs.tag || github.event.inputs.ref || github.event.release.tag_name }}"
+          # 支持的 ref 示例：
+          # - v3.30.0（tag）
+          # - main / feat/safari-support（branch）
+          # - a1b2c3d 或完整 40 位 commit SHA
+          # - latest（默认分支最新 commit）
+          # 优先级：workflow 输入 ref > release tag > 自动找最新 tag
+          REF="${{ github.event.inputs.ref || github.event.release.tag_name }}"
 
           if [ "$REF" = "latest" ]; then
             # 特殊值 latest → 使用默认分支最新 commit
@@ -82,12 +97,18 @@ jobs:
         with:
           working-directory: source
 
-      - name: Pack Safari workflow artifact
+      - name: Validate Safari build inputs
         if: ${{ steps.get_ref.outputs.ref != '' }}
         working-directory: source
         run: |
           shopt -s nullglob
           safari_zips=(.output/*-safari.zip)
+
+          if [ ! -d .output/safari-mv2 ]; then
+            echo "Expected Safari build directory at .output/safari-mv2."
+            ls -la .output
+            exit 1
+          fi
 
           if [ "${#safari_zips[@]}" -ne 1 ]; then
             echo "Expected exactly one Safari zip in .output."
@@ -95,22 +116,27 @@ jobs:
             exit 1
           fi
 
-          tar -czf "$RUNNER_TEMP/safari-build-inputs.tar.gz" \
-            -C . \
-            .output/safari-mv2 \
-            ".output/$(basename "${safari_zips[0]}")"
-
-      - name: Upload Safari workflow artifact
+      - name: Upload Safari build inputs
         if: ${{ steps.get_ref.outputs.ref != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: safari-build-inputs
-          path: ${{ runner.temp }}/safari-build-inputs.tar.gz
+          path: |
+            source/.output/safari-mv2
+            source/.output/*-safari.zip
+          if-no-files-found: error
+
+      - name: Upload packaged archives
+        if: ${{ steps.get_ref.outputs.ref != '' && github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: packaged-archives
+          path: source/.output/*.zip
           if-no-files-found: error
 
       # 上传 Release Artifact（仅当有 ref 时）
       - name: Upload Release Artifact
-        if: ${{ steps.get_ref.outputs.ref != '' }}
+        if: ${{ steps.get_ref.outputs.ref != '' && (github.event_name != 'workflow_dispatch' || github.event.inputs.dry_run != 'true') }}
         continue-on-error: true
         run: |
           echo "Uploading source/.output/*.zip to release ${{ steps.get_ref.outputs.ref }}"
@@ -120,7 +146,7 @@ jobs:
 
       # 提交到浏览器商店
       - name: Browser Platform Publish
-        if: ${{ steps.get_ref.outputs.ref != '' && !github.event.repository.fork }}
+        if: ${{ steps.get_ref.outputs.ref != '' && !github.event.repository.fork && (github.event_name != 'workflow_dispatch' || github.event.inputs.dry_run != 'true') }}
         working-directory: source
         run: |
           echo "Chrome review: $([ "$CHROME_SKIP_SUBMIT_REVIEW" = "true" ] && echo skipped || echo submitted)"
@@ -161,11 +187,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: safari-build-inputs
-          path: ${{ runner.temp }}/safari-build-inputs
-
-      - name: Restore Safari build inputs
-        run: |
-          tar -xzf "${{ runner.temp }}/safari-build-inputs/safari-build-inputs.tar.gz" -C source
+          path: source/.output
 
       - name: Prepare Safari release assets
         working-directory: source
@@ -177,7 +199,16 @@ jobs:
           SAFARI_APP_NAME: ${{ vars.SAFARI_APP_NAME }}
           SAFARI_BUNDLE_IDENTIFIER: ${{ vars.SAFARI_BUNDLE_IDENTIFIER }}
 
+      - name: Upload Safari release assets
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: safari-release-assets
+          path: source/.output/release-assets/*.zip
+          if-no-files-found: error
+
       - name: Upload Safari Release Artifact
+        if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.dry_run != 'true' }}
         continue-on-error: true
         working-directory: source
         run: |
