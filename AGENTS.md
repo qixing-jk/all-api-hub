@@ -116,6 +116,7 @@ Prereqs: Node.js 20+ and pnpm 10+.
 
 ## i18n Guidelines
 
+- When a helper explicitly accepts a translation function, type it as `TFunction` from `i18next`. Do not hand-write signatures like `(key: string, options?: any) => string` or `ReturnType<typeof useTranslation>["t"]` unless a narrower type is intentionally required.
 - When adding short badge, chip, button, or helper-copy translations, avoid `t(key, { count })` unless plural key families are explicitly intended and already modeled in locale files.
 - For compact UI labels that include a number, prefer rendering the numeric count separately and translating only the static label text so `i18n:extract` does not rewrite the key into `_one` / `_other` variants unexpectedly.
 - Treat any unexpected `_one`, `_other`, or similar extract-generated key-family rewrites as a signal to change the calling pattern or key shape, not as something to patch manually in locale JSON.
