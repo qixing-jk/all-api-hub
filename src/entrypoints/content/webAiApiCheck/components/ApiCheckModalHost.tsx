@@ -48,6 +48,21 @@ type ProbeItemState = {
 const MODEL_AUTO_FETCH_DEBOUNCE_MS = import.meta.env.MODE === "test" ? 0 : 300
 
 /**
+ * Build the initial probe UI state for the selected API type.
+ */
+function buildProbeState(apiType: ApiVerificationApiType): ProbeItemState[] {
+  return getApiVerificationProbeDefinitions(apiType).map(
+    (def): ProbeItemState => ({
+      id: def.id,
+      requiresModelId: def.requiresModelId,
+      isRunning: false,
+      attempts: 0,
+      result: null,
+    }),
+  )
+}
+
+/**
  * Always-mounted modal host rendered inside the content-script Shadow DOM root.
  *
  * The host listens for CustomEvents to open/close, so the rest of the content
@@ -100,10 +115,13 @@ export function ApiCheckModalHost() {
     [],
   )
 
-  const [probes, setProbes] = useState<ProbeItemState[]>([])
+  const [probes, setProbes] = useState<ProbeItemState[]>(() =>
+    buildProbeState(API_TYPES.OPENAI_COMPATIBLE),
+  )
   const [isRunningAll, setIsRunningAll] = useState(false)
   const [isSavingProfile, setIsSavingProfile] = useState(false)
   const [validationError, setValidationError] = useState<string | null>(null)
+  const hasInitializedApiTypeRef = useRef(false)
 
   const probeDefinitions = useMemo(
     () => getApiVerificationProbeDefinitions(apiType),
@@ -125,23 +143,17 @@ export function ApiCheckModalHost() {
     apiType === API_TYPES.GOOGLE
 
   const resetProbeState = (nextApiType: ApiVerificationApiType) => {
-    const defs = getApiVerificationProbeDefinitions(nextApiType)
-    setProbes(
-      defs.map(
-        (def): ProbeItemState => ({
-          id: def.id,
-          requiresModelId: def.requiresModelId,
-          isRunning: false,
-          attempts: 0,
-          result: null,
-        }),
-      ),
-    )
+    setProbes(buildProbeState(nextApiType))
   }
 
   useEffect(() => {
+    if (!hasInitializedApiTypeRef.current) {
+      hasInitializedApiTypeRef.current = true
+      return
+    }
     resetProbeState(apiType)
     // Reset model list UI when apiType changes.
+    setModelId("")
     setModelIds([])
     setFetchModelsError(null)
     setValidationError(null)

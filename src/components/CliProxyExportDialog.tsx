@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from "react"
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { CliProxyIcon } from "~/components/icons/CliProxyIcon"
@@ -162,6 +162,27 @@ export function CliProxyExportDialog(props: CliProxyExportDialogProps) {
     token.id,
   ])
   const [readyFormKey, setReadyFormKey] = useState<string | null>(null)
+  const lastModelSuggestionsKeyRef = useRef<string | null>(null)
+  const modelSuggestionsAccount = useMemo(
+    () => ({
+      siteType: account.siteType,
+      baseUrl: account.baseUrl,
+      id: account.id,
+      authType: account.authType,
+      userId: account.userId,
+      token: account.token,
+      cookieAuthSessionCookie: account.cookieAuthSessionCookie,
+    }),
+    [
+      account.siteType,
+      account.baseUrl,
+      account.id,
+      account.authType,
+      account.userId,
+      account.token,
+      account.cookieAuthSessionCookie,
+    ],
+  )
 
   const formId = useMemo(() => `cliproxy-export-form-${token.id}`, [token.id])
   const providerTypeFieldId = useMemo(
@@ -217,9 +238,31 @@ export function CliProxyExportDialog(props: CliProxyExportDialogProps) {
       readyFormKey !== formResetKey ||
       !providerTypeMetadata.supportsModelSuggestions
     ) {
+      lastModelSuggestionsKeyRef.current = null
       setAvailableUpstreamModels([])
       return
     }
+
+    const resolvedProviderBaseUrl = providerBaseUrl.trim() || account.baseUrl
+    const nextFetchKey = [
+      providerType,
+      resolvedProviderBaseUrl,
+      account.baseUrl,
+      account.siteType,
+      account.id,
+      account.authType,
+      account.userId,
+      account.token,
+      account.cookieAuthSessionCookie ?? "",
+      token.id,
+      token.key,
+    ].join("::")
+
+    if (lastModelSuggestionsKeyRef.current === nextFetchKey) {
+      return
+    }
+
+    lastModelSuggestionsKeyRef.current = nextFetchKey
 
     let isActive = true
     setAvailableUpstreamModels([])
@@ -228,9 +271,13 @@ export function CliProxyExportDialog(props: CliProxyExportDialogProps) {
       try {
         const modelIds = await fetchProviderModelSuggestions({
           providerType,
-          baseUrl: providerBaseUrl.trim() || account.baseUrl,
-          apiKey: (await resolveDisplayAccountTokenForSecret(account, token))
-            .key,
+          baseUrl: resolvedProviderBaseUrl,
+          apiKey: (
+            await resolveDisplayAccountTokenForSecret(
+              modelSuggestionsAccount,
+              token,
+            )
+          ).key,
         })
 
         const normalized = normalizeSuggestedModelIds(modelIds)
@@ -254,7 +301,14 @@ export function CliProxyExportDialog(props: CliProxyExportDialogProps) {
     providerTypeMetadata.supportsModelSuggestions,
     readyFormKey,
     formResetKey,
-    account,
+    account.baseUrl,
+    account.siteType,
+    account.id,
+    account.authType,
+    account.userId,
+    account.token,
+    account.cookieAuthSessionCookie,
+    modelSuggestionsAccount,
     token,
   ])
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
@@ -35,11 +35,21 @@ export function useCopyKeyDialog(
   const [createError, setCreateError] = useState<string | null>(null)
   const [copiedTokenId, setCopiedTokenId] = useState<number | null>(null)
   const [expandedTokens, setExpandedTokens] = useState<Set<number>>(new Set())
+  const copiedTokenResetTimeoutRef = useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null)
 
   const canCreateDefaultKey = useMemo(
     () => canManageDisplayAccountTokens(account),
     [account],
   )
+
+  const clearCopiedTokenResetTimeout = useCallback(() => {
+    if (copiedTokenResetTimeoutRef.current === null) return
+
+    clearTimeout(copiedTokenResetTimeoutRef.current)
+    copiedTokenResetTimeoutRef.current = null
+  }, [])
 
   const fetchTokens = useCallback(async () => {
     if (!account) return
@@ -80,6 +90,7 @@ export function useCopyKeyDialog(
     if (isOpen && account) {
       fetchTokens()
     } else {
+      clearCopiedTokenResetTimeout()
       setTokens([])
       setError(null)
       setIsCreating(false)
@@ -87,7 +98,13 @@ export function useCopyKeyDialog(
       setCopiedTokenId(null)
       setExpandedTokens(new Set())
     }
-  }, [isOpen, account, fetchTokens])
+  }, [account, clearCopiedTokenResetTimeout, fetchTokens, isOpen])
+
+  useEffect(() => {
+    return () => {
+      clearCopiedTokenResetTimeout()
+    }
+  }, [clearCopiedTokenResetTimeout])
 
   const copyKey = useCallback(
     async (token: ApiToken) => {
@@ -102,15 +119,17 @@ export function useCopyKeyDialog(
         setCopiedTokenId(token.id)
         toast.success(t("ui:dialog.copyKey.keyCopied"))
 
-        setTimeout(() => {
+        clearCopiedTokenResetTimeout()
+        copiedTokenResetTimeoutRef.current = setTimeout(() => {
           setCopiedTokenId(null)
+          copiedTokenResetTimeoutRef.current = null
         }, 2000)
       } catch (error) {
         logger.error("Failed to copy key to clipboard", { error })
         toast.error(t("ui:dialog.copyKey.copyFailedManual"))
       }
     },
-    [account, t],
+    [account, clearCopiedTokenResetTimeout, t],
   )
 
   /**

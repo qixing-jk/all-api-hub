@@ -1,8 +1,23 @@
 import userEvent from "@testing-library/user-event"
+import type { ReactNode } from "react"
 import { describe, expect, it, vi } from "vitest"
 
 import SiteInfo from "~/features/AccountManagement/components/AccountList/SiteInfo"
 import { fireEvent, render, screen } from "~~/tests/test-utils/render"
+
+vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/contexts/UserPreferencesContext")>()
+  return {
+    ...actual,
+    UserPreferencesProvider: ({ children }: { children: ReactNode }) =>
+      children,
+    useUserPreferencesContext: () => ({
+      themeMode: "system",
+      updateThemeMode: vi.fn().mockResolvedValue(true),
+    }),
+  }
+})
 
 const {
   mockOpenAccountBaseUrl,

@@ -1,4 +1,5 @@
 import userEvent from "@testing-library/user-event"
+import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import HeaderSection from "~/entrypoints/popup/components/HeaderSection"
@@ -14,6 +15,20 @@ import {
   openSidePanelPage,
 } from "~/utils/navigation"
 import { fireEvent, render, screen } from "~~/tests/test-utils/render"
+
+vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/contexts/UserPreferencesContext")>()
+  return {
+    ...actual,
+    UserPreferencesProvider: ({ children }: { children: ReactNode }) =>
+      children,
+    useUserPreferencesContext: () => ({
+      themeMode: "system",
+      updateThemeMode: vi.fn().mockResolvedValue(true),
+    }),
+  }
+})
 
 vi.mock("~/assets/icon.png", () => ({
   default: "icon.png",

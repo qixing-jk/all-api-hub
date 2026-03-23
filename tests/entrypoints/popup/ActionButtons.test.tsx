@@ -1,6 +1,21 @@
+import type { ReactNode } from "react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { fireEvent, render, screen } from "~~/tests/test-utils/render"
+
+vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/contexts/UserPreferencesContext")>()
+  return {
+    ...actual,
+    UserPreferencesProvider: ({ children }: { children: ReactNode }) =>
+      children,
+    useUserPreferencesContext: () => ({
+      themeMode: "system",
+      updateThemeMode: vi.fn().mockResolvedValue(true),
+    }),
+  }
+})
 
 // Shared mocks to control account data and capture bulk check-in clicks.
 let displayDataMock: any[] = []

@@ -1,4 +1,5 @@
 import userEvent from "@testing-library/user-event"
+import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { CliProxyExportDialog } from "~/components/CliProxyExportDialog"
@@ -9,6 +10,20 @@ import {
   buildDisplaySiteData,
 } from "~~/tests/test-utils/factories"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
+
+vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/contexts/UserPreferencesContext")>()
+  return {
+    ...actual,
+    UserPreferencesProvider: ({ children }: { children: ReactNode }) =>
+      children,
+    useUserPreferencesContext: () => ({
+      themeMode: "system",
+      updateThemeMode: vi.fn().mockResolvedValue(true),
+    }),
+  }
+})
 
 const mockFetchAnthropicModelIds = vi.fn()
 const mockFetchGoogleModelIds = vi.fn()

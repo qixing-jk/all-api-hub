@@ -6,6 +6,7 @@ import {
   within,
 } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import type { ReactNode } from "react"
 import toast from "react-hot-toast/headless"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -18,6 +19,20 @@ import {
 } from "~/entrypoints/content/webAiApiCheck/events"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { render } from "~~/tests/test-utils/render"
+
+vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/contexts/UserPreferencesContext")>()
+  return {
+    ...actual,
+    UserPreferencesProvider: ({ children }: { children: ReactNode }) =>
+      children,
+    useUserPreferencesContext: () => ({
+      themeMode: "system",
+      updateThemeMode: vi.fn().mockResolvedValue(true),
+    }),
+  }
+})
 
 vi.mock("react-hot-toast/headless", () => ({
   default: {
