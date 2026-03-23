@@ -54,7 +54,7 @@ If you want to control the output location, app name, or bundle identifier, you 
 xcrun safari-web-extension-converter .output/safari-mv2/ \
   --project-location /path/to/all-api-hub-safari-project \
   --app-name "All API Hub" \
-  --bundle-identifier "com.yourcompany.allapihub"
+  --bundle-identifier "io.github.qixingjk.allapihub"
 ```
 
 This generates the Xcode project that hosts the Safari extension.

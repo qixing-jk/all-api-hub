@@ -54,7 +54,7 @@ xcrun safari-web-extension-converter .output/safari-mv2/
 xcrun safari-web-extension-converter .output/safari-mv2/ \
   --project-location /path/to/all-api-hub-safari-project \
   --app-name "All API Hub" \
-  --bundle-identifier "com.yourcompany.allapihub"
+  --bundle-identifier "io.github.qixingjk.allapihub"
 ```
 
 这一步会生成一个 Xcode 工程，用来承载 Safari 扩展。

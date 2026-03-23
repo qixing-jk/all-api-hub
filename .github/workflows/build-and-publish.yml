@@ -111,7 +111,13 @@ jobs:
           fi
 
           if [ "${#safari_zips[@]}" -ne 1 ]; then
-            echo "Expected exactly one Safari zip in .output."
+            echo "Expected exactly one Safari zip in .output, found ${#safari_zips[@]}."
+            if [ "${#safari_zips[@]}" -gt 0 ]; then
+              echo "Matching Safari zip(s):"
+              printf ' - %s\n' "${safari_zips[@]}"
+            else
+              echo "Matching Safari zip(s): (none)"
+            fi
             ls -la .output
             exit 1
           fi
@@ -196,8 +202,8 @@ jobs:
           PACKAGE_VERSION: ${{ needs.build.outputs.package_version }}
           SAFARI_RELEASE_ASSETS_DIR: .output/release-assets
           SAFARI_PROJECT_DIR: ${{ runner.temp }}/all-api-hub-safari-project
-          SAFARI_APP_NAME: ${{ vars.SAFARI_APP_NAME }}
-          SAFARI_BUNDLE_IDENTIFIER: ${{ vars.SAFARI_BUNDLE_IDENTIFIER }}
+          SAFARI_APP_NAME: ${{ vars.SAFARI_APP_NAME || 'All API Hub' }}
+          SAFARI_BUNDLE_IDENTIFIER: ${{ vars.SAFARI_BUNDLE_IDENTIFIER || 'io.github.qixingjk.allapihub' }}
 
       - name: Upload Safari release assets
         if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run == 'true' }}

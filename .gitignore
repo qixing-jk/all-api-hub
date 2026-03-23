@@ -75,4 +75,4 @@ web-ext.config.ts
 .env.*
 src/public/react-devtools*
 .ace-tool/
-All API Hub – AI Relay & New API Manager/
+/All API Hub – AI Relay & New API Manager/
