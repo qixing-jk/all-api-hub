@@ -1,5 +1,35 @@
 # Changelog
 
+## [3.30.0](https://github.com/qixing-jk/all-api-hub/compare/v3.29.0...v3.30.0) (2026-03-23)
+
+
+### Features
+
+* Add managed-site channel migration mode and preview ([#642](https://github.com/qixing-jk/all-api-hub/issues/642)) ([607d0b3](https://github.com/qixing-jk/all-api-hub/commit/607d0b39ced0cb9934d01ed315826fe8ffd4b854))
+* Add OpenCode/OpenClaw support to CC Switch export ([#635](https://github.com/qixing-jk/all-api-hub/issues/635)) ([6c8e079](https://github.com/qixing-jk/all-api-hub/commit/6c8e0792ff0ed932b210fc96023855bce87e1eb9))
+* **i18n:** add Japanese language support ([#640](https://github.com/qixing-jk/all-api-hub/issues/640)) ([e227cbc](https://github.com/qixing-jk/all-api-hub/commit/e227cbc49769ed18b044d5575a265e411b37c57f))
+* **i18n:** add Traditional Chinese (zh-TW) localization ([#636](https://github.com/qixing-jk/all-api-hub/issues/636)) ([9b1a6ba](https://github.com/qixing-jk/all-api-hub/commit/9b1a6ba083897d8680793b0a6589b87f799ef582))
+* **i18n:** remove beta disclaimers and add beta badges for migration ([6cadb21](https://github.com/qixing-jk/all-api-hub/commit/6cadb21e5162edc7bbf1ada42eed2ef980a67c69))
+* **managed-site:** add site type switcher and reset state on change ([2bcc655](https://github.com/qixing-jk/all-api-hub/commit/2bcc6553a336519a438741903e0cb1a08ef15808))
+* **managed-sites:** support real key loading for Done Hub & Veloera ([d3bb0a0](https://github.com/qixing-jk/all-api-hub/commit/d3bb0a0dd60e52a9a0e74a96a680c9ede8b412ae))
+* replace options header action with theme and language controls and add onboarding language select ([#629](https://github.com/qixing-jk/all-api-hub/issues/629)) ([6d28835](https://github.com/qixing-jk/all-api-hub/commit/6d28835e81b0154a894da13a816376c8f01ad33b))
+* **ui:** implement consistent document title formatting ([8d2fadd](https://github.com/qixing-jk/all-api-hub/commit/8d2faddce14bf3cdbd75ef9ff9cfda571821a811))
+* **verification:** persist probe results for durable targets ([#643](https://github.com/qixing-jk/all-api-hub/issues/643)) ([ecc476d](https://github.com/qixing-jk/all-api-hub/commit/ecc476d5452565d9862d3574940fb40f55c6daf0))
+
+
+### Bug Fixes
+
+* **react-devtools:** improve auto-start reliability and backend validation ([4ccf1c6](https://github.com/qixing-jk/all-api-hub/commit/4ccf1c6cf37f1cedc660660913f785939be67100))
+* **url:** retry anchor scrolling for lazy-loaded content ([66caef8](https://github.com/qixing-jk/all-api-hub/commit/66caef82766cf8db3af8cd6bade229ee7119dcc6))
+* **webdav:** handle Nutstore 409 AncestorsNotFound as missing backup ([#637](https://github.com/qixing-jk/all-api-hub/issues/637)) ([d3da9fa](https://github.com/qixing-jk/all-api-hub/commit/d3da9fad699babcd187bee9aed6201f3318081ee))
+
+
+### Performance Improvements
+
+* Add diagnostics tooling and lazy-load settings tabs ([#638](https://github.com/qixing-jk/all-api-hub/issues/638)) ([5f81c75](https://github.com/qixing-jk/all-api-hub/commit/5f81c75e9d10fd6ae72c797f209a26f54286f2a2))
+* Add lazy-loaded popup and options views and comparison reports ([#634](https://github.com/qixing-jk/all-api-hub/issues/634)) ([9304b91](https://github.com/qixing-jk/all-api-hub/commit/9304b9129c1ec2a46e1992edc33c17de10cdc110))
+* Make content script features configurable via prefs ([#641](https://github.com/qixing-jk/all-api-hub/issues/641)) ([64a2c38](https://github.com/qixing-jk/all-api-hub/commit/64a2c387e89b5d103e73567c7b94bdc672648558))
+
 ## [3.29.0](https://github.com/qixing-jk/all-api-hub/compare/v3.28.0...v3.29.0) (2026-03-19)
 
 
