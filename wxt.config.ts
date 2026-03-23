@@ -25,7 +25,9 @@ export default defineConfig({
         "storage",
         "alarms",
         "contextMenus",
-        ...(env.browser === "firefox" ? [] : ["sidePanel"]),
+        ...(env.browser === "firefox" || env.browser === "safari"
+          ? []
+          : ["sidePanel"]),
       ],
       ...(env.browser === "firefox"
         ? {

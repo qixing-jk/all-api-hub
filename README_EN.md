@@ -111,8 +111,8 @@ For the latest compatibility references, see:
 - ☁️ **Data Backup and Synchronization**  
   Import/export and WebDAV sync for backup and migration across devices.
 
-- 🌐 **Cross‑Platform Compatible**  
-  Works on Chrome, Edge, Firefox, and mobile browsers such as mobile Edge, Firefox for Android, and Kiwi, with dark mode.
+- 🌐 **Cross‑Platform Compatible**
+  Works on Chrome, Edge, Firefox, Safari, and mobile browsers such as mobile Edge, Firefox for Android, and Kiwi, with dark mode.
 
 - 🔒 **Privacy‑First Local Storage**  
   Local‑first by default with no telemetry; WebDAV and external APIs are only used when configured.
@@ -188,6 +188,19 @@ For the latest compatibility references, see:
 3. Enable "Developer mode".
 4. Click "Load unpacked".
 5. Select the unzipped extension folder.
+
+</details>
+
+<details>
+<summary>Safari Installation</summary>
+
+Safari must be installed through Xcode rather than a normal unpacked flow. With a paid Apple Developer Program account, you can properly sign and distribute it through TestFlight / App Store; without one, it is typically limited to local development or personal use. For details, see [Safari Installation Guide](docs/SAFARI_INSTALL_EN.md).
+
+Quick steps:
+1. Build the project: `pnpm run build:safari`
+2. Run the converter: `xcrun safari-web-extension-converter .output/safari-mv2/`
+3. Build and run in Xcode
+4. Enable the extension in Safari Settings; for a local non-distributed build, also enable `Allow Unsigned Extensions` from the Develop menu.
 
 </details>
 
