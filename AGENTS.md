@@ -119,6 +119,8 @@ Prereqs: Node.js 20+ and pnpm 10+.
 - When adding short badge, chip, button, or helper-copy translations, avoid `t(key, { count })` unless plural key families are explicitly intended and already modeled in locale files.
 - For compact UI labels that include a number, prefer rendering the numeric count separately and translating only the static label text so `i18n:extract` does not rewrite the key into `_one` / `_other` variants unexpectedly.
 - Treat any unexpected `_one`, `_other`, or similar extract-generated key-family rewrites as a signal to change the calling pattern or key shape, not as something to patch manually in locale JSON.
+- After running `pnpm run i18n:extract`, inspect the locale diff before proceeding. Confirm the intended new keys are still present and no required keys were removed as "unused" by the extractor.
+- If `i18n:extract` removes keys you expected to keep, fix the source usage or extractor configuration instead of re-adding locale JSON by hand. In this repo, prefer direct extractable calls such as `t("ns:key")` over wrapper names like `translate("ns:key")` unless the wrapper is explicitly configured in `i18next.config.ts`.
 - After changing translation keys, locale JSON, or any UI code that adds new `t(...)` usages, run `pnpm run i18n:extract:ci` and ensure it reports no unexpected updates before handoff.
 - Keep locale key shapes stable across languages; do not let one language drift into a pluralized or structurally different key family unless that family is intentionally introduced for every locale.
 

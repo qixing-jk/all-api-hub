@@ -76,6 +76,10 @@
       },
       "description": "CLIProxyAPI にプロバイダーエントリを作成または更新します。",
       "descriptions": {
+        "baseUrlClaudeApiKey": "通常は /v1/messages を含まない Anthropic API のルート URL を入力します。",
+        "baseUrlCodexApiKey": "通常は Provider のルート URL を入力します。一般的な既定値は https://api.openai.com です。",
+        "baseUrlGeminiApiKey": "通常は /v1/models/... を含まない Gemini API のルート URL を入力します。",
+        "baseUrlOpenAICompatibility": "通常は /v1 で終わる OpenAI 互換の上流ベース URL を入力します。",
         "models": "上流モデル名を任意の別名へマッピングします（name -> alias）。利用可能な場合は /v1/models から上流モデルを読み込んで選択できます。",
         "modelsManual": "上流モデル名を任意の別名へマッピングします（name -> alias）。このリリースでは、このプロバイダーファミリーは手動入力してください。",
         "providerType": "どの CLIProxyAPI プロバイダーファミリーにインポートするか選択します。",
@@ -89,11 +93,33 @@
         "proxyUrl": "プロキシ URL（任意）"
       },
       "placeholders": {
+        "baseUrlClaudeApiKey": "https://api.anthropic.com",
+        "baseUrlCodexApiKey": "https://api.openai.com",
+        "baseUrlGeminiApiKey": "https://generativelanguage.googleapis.com",
+        "baseUrlOpenAICompatibility": "https://example.com/v1",
         "modelAlias": "モデル別名（任意）",
         "modelName": "モデル名。例: claude",
         "name": "例: Acme Relay",
         "providerType": "プロバイダーファミリーを選択",
         "proxyUrl": "http://localhost:3000"
+      },
+      "providerTypes": {
+        "claudeApiKey": {
+          "description": "Anthropic Claude 形式の API Key Provider エントリを使います。",
+          "label": "Claude API Key"
+        },
+        "codexApiKey": {
+          "description": "Codex / OpenAI 形式の API Key Provider エントリを使います。",
+          "label": "Codex API Key"
+        },
+        "geminiApiKey": {
+          "description": "Google Gemini 形式の API Key Provider エントリを使います。",
+          "label": "Gemini API Key"
+        },
+        "openaiCompatibility": {
+          "description": "Provider 名を自由に設定できる標準的な OpenAI 互換 Provider を使います。",
+          "label": "OpenAI 互換"
+        }
       },
       "title": "CLIProxyAPI にインポート"
     },

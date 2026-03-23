@@ -76,6 +76,10 @@
       },
       "description": "在 CLIProxyAPI 中建立或更新一個 Provider 條目。",
       "descriptions": {
+        "baseUrlClaudeApiKey": "通常填寫不帶 /v1/messages 的 Anthropic API 根位址。",
+        "baseUrlCodexApiKey": "通常填寫 Provider 根位址，常見預設值如 https://api.openai.com。",
+        "baseUrlGeminiApiKey": "通常填寫不帶 /v1/models/... 的 Gemini API 根位址。",
+        "baseUrlOpenAICompatibility": "通常填寫以上游 /v1 結尾的 OpenAI 相容基礎位址。",
         "models": "將上游模型名稱對映到可選別名（name -> alias）。若可用，會載入上游可用模型供選擇。",
         "modelsManual": "將上游模型名稱對映到可選別名（name -> alias）。當前版本中此 Provider 型別需手動輸入上游模型。",
         "providerType": "選擇要匯入到哪個 CLIProxyAPI Provider 型別。",
@@ -89,11 +93,33 @@
         "proxyUrl": "代理 URL（可選）"
       },
       "placeholders": {
+        "baseUrlClaudeApiKey": "https://api.anthropic.com",
+        "baseUrlCodexApiKey": "https://api.openai.com",
+        "baseUrlGeminiApiKey": "https://generativelanguage.googleapis.com",
+        "baseUrlOpenAICompatibility": "https://example.com/v1",
         "modelAlias": "模型別名（可選）",
         "modelName": "模型名稱，例如 claude",
         "name": "例如：Acme Relay",
         "providerType": "選擇 Provider 型別",
         "proxyUrl": "http://localhost:3000"
+      },
+      "providerTypes": {
+        "claudeApiKey": {
+          "description": "適用於 Anthropic Claude 風格的 API Key Provider 條目。",
+          "label": "Claude API Key"
+        },
+        "codexApiKey": {
+          "description": "適用於 Codex / OpenAI 風格的 API Key Provider 條目。",
+          "label": "Codex API Key"
+        },
+        "geminiApiKey": {
+          "description": "適用於 Google Gemini 風格的 API Key Provider 條目。",
+          "label": "Gemini API Key"
+        },
+        "openaiCompatibility": {
+          "description": "適用於標準 OpenAI 相容 Provider，可自訂 Provider 名稱。",
+          "label": "OpenAI 相容"
+        }
       },
       "title": "匯入到 CLIProxyAPI"
     },

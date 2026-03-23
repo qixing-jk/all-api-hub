@@ -76,6 +76,10 @@
       },
       "description": "Create or update a provider entry in CLIProxyAPI.",
       "descriptions": {
+        "baseUrlClaudeApiKey": "Usually the Anthropic API root URL without /v1/messages.",
+        "baseUrlCodexApiKey": "Usually the provider root URL. A common default is https://api.openai.com.",
+        "baseUrlGeminiApiKey": "Usually the Gemini API root URL without /v1/models/....",
+        "baseUrlOpenAICompatibility": "Usually the upstream OpenAI-compatible base URL ending in /v1.",
         "models": "Map upstream model names to optional aliases (name -> alias). When available, upstream models are loaded from /v1/models for selection.",
         "modelsManual": "Map upstream model names to optional aliases (name -> alias). Enter values manually for this provider family in this release.",
         "providerType": "Choose which CLIProxyAPI provider family to import into.",
@@ -89,11 +93,33 @@
         "proxyUrl": "Proxy URL (optional)"
       },
       "placeholders": {
+        "baseUrlClaudeApiKey": "https://api.anthropic.com",
+        "baseUrlCodexApiKey": "https://api.openai.com",
+        "baseUrlGeminiApiKey": "https://generativelanguage.googleapis.com",
+        "baseUrlOpenAICompatibility": "https://example.com/v1",
         "modelAlias": "Model alias (optional)",
         "modelName": "Model name, e.g. claude",
         "name": "e.g. Acme Relay",
         "providerType": "Select a provider family",
         "proxyUrl": "http://localhost:3000"
+      },
+      "providerTypes": {
+        "claudeApiKey": {
+          "description": "Use an Anthropic Claude API key style provider entry.",
+          "label": "Claude API Key"
+        },
+        "codexApiKey": {
+          "description": "Use a Codex / OpenAI API key style provider entry.",
+          "label": "Codex API Key"
+        },
+        "geminiApiKey": {
+          "description": "Use a Google Gemini API key style provider entry.",
+          "label": "Gemini API Key"
+        },
+        "openaiCompatibility": {
+          "description": "Use a standard OpenAI-compatible provider with a configurable provider name.",
+          "label": "OpenAI Compatibility"
+        }
       },
       "title": "Import to CLIProxyAPI"
     },

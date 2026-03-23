@@ -64,21 +64,19 @@ export const CLI_PROXY_PROVIDER_METADATA: Record<
  * Resolve the localized provider-type label used by CLI proxy UI surfaces.
  */
 export function getCliProxyProviderTypeLabel(
-  translate: (key: string) => string,
+  t: (key: string) => string,
   providerType: CliProxyProviderType,
 ) {
   switch (providerType) {
     case CLI_PROXY_PROVIDER_TYPES.CODEX_API_KEY:
-      return translate("ui:dialog.cliproxy.providerTypes.codexApiKey.label")
+      return t("ui:dialog.cliproxy.providerTypes.codexApiKey.label")
     case CLI_PROXY_PROVIDER_TYPES.CLAUDE_API_KEY:
-      return translate("ui:dialog.cliproxy.providerTypes.claudeApiKey.label")
+      return t("ui:dialog.cliproxy.providerTypes.claudeApiKey.label")
     case CLI_PROXY_PROVIDER_TYPES.GEMINI_API_KEY:
-      return translate("ui:dialog.cliproxy.providerTypes.geminiApiKey.label")
+      return t("ui:dialog.cliproxy.providerTypes.geminiApiKey.label")
     case CLI_PROXY_PROVIDER_TYPES.OPENAI_COMPATIBILITY:
     default:
-      return translate(
-        "ui:dialog.cliproxy.providerTypes.openaiCompatibility.label",
-      )
+      return t("ui:dialog.cliproxy.providerTypes.openaiCompatibility.label")
   }
 }
 
@@ -86,25 +84,19 @@ export function getCliProxyProviderTypeLabel(
  * Resolve the localized provider-type description used by CLI proxy UI surfaces.
  */
 export function getCliProxyProviderTypeDescription(
-  translate: (key: string) => string,
+  t: (key: string) => string,
   providerType: CliProxyProviderType,
 ) {
   switch (providerType) {
     case CLI_PROXY_PROVIDER_TYPES.CODEX_API_KEY:
-      return translate(
-        "ui:dialog.cliproxy.providerTypes.codexApiKey.description",
-      )
+      return t("ui:dialog.cliproxy.providerTypes.codexApiKey.description")
     case CLI_PROXY_PROVIDER_TYPES.CLAUDE_API_KEY:
-      return translate(
-        "ui:dialog.cliproxy.providerTypes.claudeApiKey.description",
-      )
+      return t("ui:dialog.cliproxy.providerTypes.claudeApiKey.description")
     case CLI_PROXY_PROVIDER_TYPES.GEMINI_API_KEY:
-      return translate(
-        "ui:dialog.cliproxy.providerTypes.geminiApiKey.description",
-      )
+      return t("ui:dialog.cliproxy.providerTypes.geminiApiKey.description")
     case CLI_PROXY_PROVIDER_TYPES.OPENAI_COMPATIBILITY:
     default:
-      return translate(
+      return t(
         "ui:dialog.cliproxy.providerTypes.openaiCompatibility.description",
       )
   }
@@ -114,21 +106,19 @@ export function getCliProxyProviderTypeDescription(
  * Resolve the localized base-URL description for a CLI proxy provider type.
  */
 export function getCliProxyProviderBaseUrlDescription(
-  translate: (key: string) => string,
+  t: (key: string) => string,
   providerType: CliProxyProviderType,
 ) {
   switch (providerType) {
     case CLI_PROXY_PROVIDER_TYPES.CODEX_API_KEY:
-      return translate("ui:dialog.cliproxy.descriptions.baseUrlCodexApiKey")
+      return t("ui:dialog.cliproxy.descriptions.baseUrlCodexApiKey")
     case CLI_PROXY_PROVIDER_TYPES.CLAUDE_API_KEY:
-      return translate("ui:dialog.cliproxy.descriptions.baseUrlClaudeApiKey")
+      return t("ui:dialog.cliproxy.descriptions.baseUrlClaudeApiKey")
     case CLI_PROXY_PROVIDER_TYPES.GEMINI_API_KEY:
-      return translate("ui:dialog.cliproxy.descriptions.baseUrlGeminiApiKey")
+      return t("ui:dialog.cliproxy.descriptions.baseUrlGeminiApiKey")
     case CLI_PROXY_PROVIDER_TYPES.OPENAI_COMPATIBILITY:
     default:
-      return translate(
-        "ui:dialog.cliproxy.descriptions.baseUrlOpenAICompatibility",
-      )
+      return t("ui:dialog.cliproxy.descriptions.baseUrlOpenAICompatibility")
   }
 }
 
@@ -136,21 +126,19 @@ export function getCliProxyProviderBaseUrlDescription(
  * Resolve the localized base-URL placeholder for a CLI proxy provider type.
  */
 export function getCliProxyProviderBaseUrlPlaceholder(
-  translate: (key: string) => string,
+  t: (key: string) => string,
   providerType: CliProxyProviderType,
 ) {
   switch (providerType) {
     case CLI_PROXY_PROVIDER_TYPES.CODEX_API_KEY:
-      return translate("ui:dialog.cliproxy.placeholders.baseUrlCodexApiKey")
+      return t("ui:dialog.cliproxy.placeholders.baseUrlCodexApiKey")
     case CLI_PROXY_PROVIDER_TYPES.CLAUDE_API_KEY:
-      return translate("ui:dialog.cliproxy.placeholders.baseUrlClaudeApiKey")
+      return t("ui:dialog.cliproxy.placeholders.baseUrlClaudeApiKey")
     case CLI_PROXY_PROVIDER_TYPES.GEMINI_API_KEY:
-      return translate("ui:dialog.cliproxy.placeholders.baseUrlGeminiApiKey")
+      return t("ui:dialog.cliproxy.placeholders.baseUrlGeminiApiKey")
     case CLI_PROXY_PROVIDER_TYPES.OPENAI_COMPATIBILITY:
     default:
-      return translate(
-        "ui:dialog.cliproxy.placeholders.baseUrlOpenAICompatibility",
-      )
+      return t("ui:dialog.cliproxy.placeholders.baseUrlOpenAICompatibility")
   }
 }
 
@@ -352,7 +340,7 @@ export function getCliProxyProviderDisplayName(
     providerBaseUrl?: string | null
     providerName?: string | null
   },
-  translate: (key: string) => string,
+  t: (key: string) => string,
 ) {
   const { providerBaseUrl, providerName } = options
   const normalizedName = providerName?.trim() ?? ""
@@ -364,7 +352,7 @@ export function getCliProxyProviderDisplayName(
     return normalizedName
   }
 
-  const label = getCliProxyProviderTypeLabel(translate, providerType)
+  const label = getCliProxyProviderTypeLabel(t, providerType)
   const normalizedBaseUrl = normalizeCliProxyProviderBaseUrl(
     providerType,
     providerBaseUrl,
