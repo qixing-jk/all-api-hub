@@ -3,22 +3,55 @@ import path from "path"
 import { defineConfig } from "vitest/config"
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url))
+const domOnlyTsTests = [
+  "tests/entrypoints/content/index.test.ts",
+  "tests/entrypoints/content/messageHandlers/utils/capGuard.test.ts",
+  "tests/entrypoints/content/messageHandlers/utils/turnstileGuard.test.ts",
+  "tests/entrypoints/content/webAiApiCheck/index.test.ts",
+  "tests/entrypoints/content/messageHandlers/handlers/storage.test.ts",
+  "tests/entrypoints/options/pages/ModelList/useFilteredModels.test.ts",
+  "tests/services/ldohSiteLookup.background.test.ts",
+  "tests/services/shareSnapshotExport.test.ts",
+  "tests/utils/browserApi.test.ts",
+  "tests/utils/ccSwitch.test.ts",
+  "tests/utils/cherryStudio.test.ts",
+  "tests/utils/documentTitle.test.ts",
+  "tests/utils/importExportUtils.test.ts",
+  "tests/utils/navigation.test.ts",
+  "tests/utils/url.test.ts",
+]
 
 export default defineConfig({
   test: {
-    // Test environment
-    environment: "jsdom",
-
     pool: "threads",
 
     testTimeout: 15_000,
     hookTimeout: 15_000,
 
-    // Setup files to run before tests
-    setupFiles: [path.resolve(rootDir, "tests/setup.ts")],
-
     // Global test APIs (describe, it, expect, etc.)
     globals: true,
+
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: "dom",
+          include: ["tests/**/*.test.tsx", ...domOnlyTsTests],
+          environment: "jsdom",
+          setupFiles: [path.resolve(rootDir, "tests/setup.ts")],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "node",
+          include: ["tests/**/*.test.ts"],
+          exclude: domOnlyTsTests,
+          environment: "node",
+          setupFiles: [path.resolve(rootDir, "tests/setup.node.ts")],
+        },
+      },
+    ],
 
     // Coverage configuration
     coverage: {
