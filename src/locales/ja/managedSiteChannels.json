@@ -54,7 +54,11 @@
     },
     "loading": "チャネルフィルターを読み込み中...",
     "messages": {
+      "jsonArrayRequired": "JSON はフィルタールールの配列である必要があります。",
       "jsonInvalid": "無効なフィルター JSON です: {{error}}",
+      "jsonItemNotObject": "インデックス {{index}} のフィルターはオブジェクトである必要があります。",
+      "jsonMissingName": "インデックス {{index}} のフィルターに name がありません。",
+      "jsonMissingPattern": "インデックス {{index}} のフィルターに pattern がありません。",
       "loadFailed": "フィルターの読み込みに失敗しました: {{error}}",
       "saved": "フィルターを保存しました",
       "saveFailed": "フィルターの保存に失敗しました: {{error}}",

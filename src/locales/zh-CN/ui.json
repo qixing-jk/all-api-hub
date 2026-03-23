@@ -338,12 +338,15 @@
     "clearInput": "清空输入",
     "clearSelected": "清空所有已选项",
     "copyError": "复制失败，请重试",
+    "copySelectedValues": "复制已选项",
     "copySuccess": "已复制已选择的内容",
     "emptyWithQueryAllowCustom": "按 Enter 键添加“{{value}}”",
     "noOptions": "暂无可选项",
     "noOptionsAllowCustom": "暂无可选项，可输入创建",
     "placeholder": "请选择...",
-    "selectAll": "全选"
+    "removeValue": "移除 {{value}}",
+    "selectAll": "全选",
+    "selected": "已选"
   },
   "navigation": {
     "about": "关于",
@@ -367,6 +370,7 @@
     "settings": "设置",
     "settingsOptions": "设置选项",
     "sidebarCollapsedHint": "侧边栏已折叠，仅显示图标",
+    "toggleMenu": "切换菜单",
     "usageAnalytics": "用量分析"
   },
   "pageTitle": {
@@ -375,6 +379,12 @@
     "popup": "弹窗",
     "sidepanel": "侧边栏",
     "template": "{{page}} | {{app}}"
+  },
+  "pagination": {
+    "morePages": "更多页面",
+    "navigation": "分页",
+    "next": "下一页",
+    "previous": "上一页"
   },
   "repeatableInput": {
     "actions": {

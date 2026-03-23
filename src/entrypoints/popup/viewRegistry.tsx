@@ -59,9 +59,11 @@ function PopupStatsFallback() {
  * Lightweight placeholder shown while a non-default popup tab chunk is loading.
  */
 function PopupContentFallback() {
+  const { t } = useTranslation("common")
+
   return (
     <div className="flex min-h-40 items-center justify-center px-4 py-8 text-sm text-gray-500 dark:text-gray-400">
-      Loading...
+      {t("status.loading")}
     </div>
   )
 }

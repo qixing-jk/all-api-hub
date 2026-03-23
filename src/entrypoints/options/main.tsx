@@ -4,6 +4,7 @@ import ReactDOM from "react-dom/client"
 
 import "~/utils/i18n"
 
+import { t } from "~/utils/i18n/core"
 import { setDocumentTitle } from "~/utils/navigation/documentTitle"
 
 import App from "./App"
@@ -15,7 +16,7 @@ const queryClient = new QueryClient()
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <Suspense fallback={<div>Loading...</div>}>
+      <Suspense fallback={<div>{t("common:status.loading")}</div>}>
         <App />
       </Suspense>
     </QueryClientProvider>

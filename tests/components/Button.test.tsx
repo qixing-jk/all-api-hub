@@ -12,7 +12,7 @@ describe("Button", () => {
     ).toBeInTheDocument()
     expect(screen.getByTestId("left-icon")).toBeInTheDocument()
     expect(
-      screen.queryByRole("status", { name: "Loading" }),
+      screen.queryByRole("status", { name: "common:status.loading" }),
     ).not.toBeInTheDocument()
   })
 
@@ -27,7 +27,9 @@ describe("Button", () => {
       await screen.findByRole("button", { name: /Save/ }),
     ).toBeInTheDocument()
     expect(screen.queryByTestId("left-icon")).not.toBeInTheDocument()
-    expect(screen.getAllByRole("status", { name: "Loading" })).toHaveLength(1)
+    expect(
+      screen.getAllByRole("status", { name: "common:status.loading" }),
+    ).toHaveLength(1)
   })
 
   it("renders Spinner when loading without leftIcon", async () => {
@@ -36,6 +38,8 @@ describe("Button", () => {
     expect(
       await screen.findByRole("button", { name: /Save/ }),
     ).toBeInTheDocument()
-    expect(screen.getAllByRole("status", { name: "Loading" })).toHaveLength(1)
+    expect(
+      screen.getAllByRole("status", { name: "common:status.loading" }),
+    ).toHaveLength(1)
   })
 })

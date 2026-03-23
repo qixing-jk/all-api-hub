@@ -54,7 +54,11 @@
     },
     "loading": "正在載入渠道過濾規則…",
     "messages": {
+      "jsonArrayRequired": "JSON 必須是過濾規則陣列。",
       "jsonInvalid": "無效的過濾規則 JSON：{{error}}",
+      "jsonItemNotObject": "索引 {{index}} 處的過濾規則必須是物件。",
+      "jsonMissingName": "索引 {{index}} 處的過濾規則缺少 name。",
+      "jsonMissingPattern": "索引 {{index}} 處的過濾規則缺少 pattern。",
       "loadFailed": "過濾規則載入失敗：{{error}}",
       "saved": "過濾規則已儲存",
       "saveFailed": "儲存過濾規則失敗：{{error}}",

@@ -338,12 +338,15 @@
     "clearInput": "入力をクリア",
     "clearSelected": "選択済みの値をすべてクリア",
     "copyError": "コピーに失敗しました。再試行してください",
+    "copySelectedValues": "選択した値をコピー",
     "copySuccess": "選択した値をコピーしました",
     "emptyWithQueryAllowCustom": "Enter を押して「{{value}}」を追加",
     "noOptions": "利用可能なオプションがありません",
     "noOptionsAllowCustom": "利用可能なオプションがありません。入力して作成してください",
     "placeholder": "選択...",
-    "selectAll": "すべて選択"
+    "removeValue": "{{value}} を削除",
+    "selectAll": "すべて選択",
+    "selected": "選択済み"
   },
   "navigation": {
     "about": "この拡張機能について",
@@ -367,6 +370,7 @@
     "settings": "設定",
     "settingsOptions": "設定オプション",
     "sidebarCollapsedHint": "サイドバーは折りたたまれており、アイコンのみ表示されています",
+    "toggleMenu": "メニューを切り替え",
     "usageAnalytics": "利用分析"
   },
   "pageTitle": {
@@ -375,6 +379,12 @@
     "popup": "ポップアップ",
     "sidepanel": "サイドバー",
     "template": "{{page}} | {{app}}"
+  },
+  "pagination": {
+    "morePages": "さらにページがあります",
+    "navigation": "ページネーション",
+    "next": "次のページ",
+    "previous": "前のページ"
   },
   "repeatableInput": {
     "actions": {

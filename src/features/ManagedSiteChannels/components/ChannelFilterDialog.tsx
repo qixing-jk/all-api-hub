@@ -154,14 +154,14 @@ export default function ChannelFilterDialog({
     }
 
     if (!Array.isArray(parsed)) {
-      throw new Error("JSON must be an array of filter rules")
+      throw new Error(t("filters.messages.jsonArrayRequired"))
     }
 
     const now = Date.now()
 
     return parsed.map((item, index) => {
       if (!item || typeof item !== "object") {
-        throw new Error(`Filter at index ${index} is not an object`)
+        throw new Error(t("filters.messages.jsonItemNotObject", { index }))
       }
 
       const anyItem = item as any
@@ -170,11 +170,11 @@ export default function ChannelFilterDialog({
         typeof anyItem.pattern === "string" ? anyItem.pattern.trim() : ""
 
       if (!name) {
-        throw new Error(`Filter at index ${index} is missing a name`)
+        throw new Error(t("filters.messages.jsonMissingName", { index }))
       }
 
       if (!pattern) {
-        throw new Error(`Filter at index ${index} is missing a pattern`)
+        throw new Error(t("filters.messages.jsonMissingPattern", { index }))
       }
 
       return {

@@ -3,6 +3,7 @@ import { Loader2Icon } from "lucide-react"
 import React from "react"
 
 import { cn } from "~/lib/utils"
+import { t } from "~/utils/i18n/core"
 
 const spinnerVariants = cva("animate-spin", {
   variants: {
@@ -34,11 +35,17 @@ export interface SpinnerProps
 /**
  * Spinner renders a rotating loader icon with customizable size and color variants, and appropriate ARIA attributes for accessibility.
  */
-function Spinner({ className, size, variant, ...props }: SpinnerProps) {
+function Spinner({
+  className,
+  size,
+  variant,
+  "aria-label": ariaLabel,
+  ...props
+}: SpinnerProps) {
   return (
     <Loader2Icon
       role="status"
-      aria-label="Loading"
+      aria-label={ariaLabel ?? t("common:status.loading")}
       className={cn(spinnerVariants({ size, variant, className }))}
       {...props}
     />

@@ -89,8 +89,7 @@ function renderHighlightedFragments(
  * Site info row combining metadata, status chips, and context actions for a display account entry.
  */
 export default function SiteInfo({ site, highlights }: SiteInfoProps) {
-  const { t } = useTranslation("account")
-  const { t: tMessages } = useTranslation("messages")
+  const { t } = useTranslation(["account", "messages"])
   const {
     detectedSiteAccounts,
     isAccountPinned,
@@ -162,10 +161,10 @@ export default function SiteInfo({ site, highlights }: SiteInfoProps) {
     const success = await togglePinAccount(site.id)
     if (success) {
       const message = isPinned
-        ? tMessages("toast.success.accountUnpinned", {
+        ? t("messages:toast.success.accountUnpinned", {
             accountName: site.name,
           })
-        : tMessages("toast.success.accountPinned", {
+        : t("messages:toast.success.accountPinned", {
             accountName: site.name,
           })
       toast.success(message)

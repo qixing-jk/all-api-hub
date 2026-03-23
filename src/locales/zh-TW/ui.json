@@ -338,12 +338,15 @@
     "clearInput": "清空輸入",
     "clearSelected": "清空所有已選項",
     "copyError": "複製失敗，請重試",
+    "copySelectedValues": "複製已選項",
     "copySuccess": "已複製已選擇的內容",
     "emptyWithQueryAllowCustom": "按 Enter 鍵新增“{{value}}”",
     "noOptions": "暫無可選項",
     "noOptionsAllowCustom": "暫無可選項，可輸入建立",
     "placeholder": "請選擇...",
-    "selectAll": "全選"
+    "removeValue": "移除 {{value}}",
+    "selectAll": "全選",
+    "selected": "已選"
   },
   "navigation": {
     "about": "關於",
@@ -367,6 +370,7 @@
     "settings": "設定",
     "settingsOptions": "設定選項",
     "sidebarCollapsedHint": "側邊欄已摺疊，僅顯示圖示",
+    "toggleMenu": "切換選單",
     "usageAnalytics": "用量分析"
   },
   "pageTitle": {
@@ -375,6 +379,12 @@
     "popup": "彈窗",
     "sidepanel": "側邊欄",
     "template": "{{page}} | {{app}}"
+  },
+  "pagination": {
+    "morePages": "更多頁面",
+    "navigation": "分頁",
+    "next": "下一頁",
+    "previous": "上一頁"
   },
   "repeatableInput": {
     "actions": {

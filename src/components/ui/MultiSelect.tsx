@@ -50,7 +50,7 @@ export function MultiSelect({
   options,
   selected,
   onChange,
-  placeholder = "Select...",
+  placeholder,
   label,
   disabled = false,
   allowCustom = false,
@@ -163,6 +163,8 @@ export function MultiSelect({
     onChange(newSelected.map((opt) => opt.value))
   }
 
+  const resolvedPlaceholder = placeholder ?? t("multiSelect.placeholder")
+
   const handleRemove = (value: string) => {
     onChange(selected.filter((v) => v !== value))
   }
@@ -240,7 +242,7 @@ export function MultiSelect({
           <div className="relative w-full">
             <Combobox.Input
               className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary dark:text-dark-text-primary w-full rounded-md border border-gray-300 bg-white py-2 pr-10 pl-3 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-              placeholder={placeholder}
+              placeholder={resolvedPlaceholder}
               onChange={(event) => setQuery(event.target.value)}
               onKeyDown={handleInputKeyDown}
               displayValue={() => query}
@@ -413,7 +415,7 @@ export function MultiSelect({
                   )}
                 />
                 <span className="truncate">
-                  Selected ({selectedOptions.length})
+                  {t("multiSelect.selected")} ({selectedOptions.length})
                 </span>
               </span>
               {!isSelectedExpanded && (
@@ -452,8 +454,8 @@ export function MultiSelect({
               type="button"
               onClick={handleCopySelected}
               className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary/60 dark:text-dark-text-primary dark:hover:bg-dark-bg-secondary inline-flex items-center justify-center rounded-md border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-              title="Copy selected values"
-              aria-label="Copy selected values"
+              title={t("multiSelect.copySelectedValues")}
+              aria-label={t("multiSelect.copySelectedValues")}
             >
               <DocumentDuplicateIcon className="h-4 w-4" />
             </button>
@@ -476,7 +478,9 @@ export function MultiSelect({
                       type="button"
                       onClick={() => handleRemove(option.value)}
                       className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-blue-400 hover:bg-blue-200 hover:text-blue-500 focus:bg-blue-500 focus:text-white focus:outline-none dark:hover:bg-blue-800"
-                      aria-label={`Remove ${option.label}`}
+                      aria-label={t("multiSelect.removeValue", {
+                        value: option.label,
+                      })}
                     >
                       <XMarkIcon className="h-3 w-3" />
                     </button>

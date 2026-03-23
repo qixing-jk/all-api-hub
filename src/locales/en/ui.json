@@ -343,12 +343,15 @@
     "clearInput": "Clear input",
     "clearSelected": "Clear all selected values",
     "copyError": "Copy failed, please try again",
+    "copySelectedValues": "Copy selected values",
     "copySuccess": "Selected values copied",
     "emptyWithQueryAllowCustom": "Press Enter to add \"{{value}}\"",
     "noOptions": "No options available",
     "noOptionsAllowCustom": "No options available. Type to create one",
     "placeholder": "Select...",
-    "selectAll": "Select all"
+    "removeValue": "Remove {{value}}",
+    "selectAll": "Select all",
+    "selected": "Selected"
   },
   "navigation": {
     "about": "About",
@@ -372,6 +375,7 @@
     "settings": "Settings",
     "settingsOptions": "Settings Options",
     "sidebarCollapsedHint": "Sidebar collapsed, showing icons only",
+    "toggleMenu": "Toggle menu",
     "usageAnalytics": "Usage Analytics"
   },
   "pageTitle": {
@@ -380,6 +384,12 @@
     "popup": "Popup",
     "sidepanel": "Sidebar",
     "template": "{{page}} | {{app}}"
+  },
+  "pagination": {
+    "morePages": "More pages",
+    "navigation": "Pagination",
+    "next": "Next",
+    "previous": "Previous"
   },
   "repeatableInput": {
     "actions": {

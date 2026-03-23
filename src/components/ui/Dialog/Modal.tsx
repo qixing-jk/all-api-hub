@@ -3,6 +3,7 @@ import { XMarkIcon } from "@heroicons/react/24/outline"
 import { Fragment, ReactNode } from "react"
 
 import { cn } from "~/lib/utils"
+import { t } from "~/utils/i18n/core"
 
 type Size = "sm" | "md" | "lg"
 
@@ -101,7 +102,7 @@ export function Modal({
               {showCloseButton && (
                 <button
                   onClick={onClose}
-                  aria-label="Close"
+                  aria-label={t("common:actions.close")}
                   className="dark:hover:bg-dark-bg-tertiary dark:hover:text-dark-text-secondary absolute top-3 right-3 z-10 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 sm:top-4 sm:right-4"
                 >
                   <XMarkIcon className="h-5 w-5" />

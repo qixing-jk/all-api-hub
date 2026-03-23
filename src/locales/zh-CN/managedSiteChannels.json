@@ -54,7 +54,11 @@
     },
     "loading": "正在加载渠道过滤规则…",
     "messages": {
+      "jsonArrayRequired": "JSON 必须是过滤规则数组。",
       "jsonInvalid": "无效的过滤规则 JSON：{{error}}",
+      "jsonItemNotObject": "索引 {{index}} 处的过滤规则必须是对象。",
+      "jsonMissingName": "索引 {{index}} 处的过滤规则缺少 name。",
+      "jsonMissingPattern": "索引 {{index}} 处的过滤规则缺少 pattern。",
       "loadFailed": "过滤规则加载失败：{{error}}",
       "saved": "过滤规则已保存",
       "saveFailed": "保存过滤规则失败：{{error}}",

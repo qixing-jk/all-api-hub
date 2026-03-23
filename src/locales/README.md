@@ -94,3 +94,10 @@ function MyComponent() {
 - `primaryLanguage` 为 `zh-CN`，对应仓库目录 `src/locales/zh-CN/`
 - `secondaryLanguages` 由 `SUPPORTED_UI_LANGUAGES` 自动推导，当前为 `en`、`ja` 与 `zh-TW`
 - `removeUnusedKeys` 为 `true`
+
+### Extract 可见性规则
+
+- 优先让静态 key 直接出现在 extractor 可识别的调用里，例如 `t("ui:dialog.title")`、`i18next.t("messages:error")` 或 `params.t("ns:key")`。
+- 避免把 `t` 重命名后再承载唯一引用，例如 `const { t: tMessages } = useTranslation("messages")` 后只写 `tMessages("toast.success")`；这类调用不一定会被提取器识别。
+- 如果必须封装翻译 helper，要么保证 helper 内部仍然出现可提取的 `t("ns:key")`，要么同步更新 `i18next.config.ts` 的 `functions` / `useTranslationNames` 配置。
+- 每次修改 `t(...)` 调用、locale JSON 或提取配置后，都要运行 `pnpm run i18n:extract` 并检查 locale diff；如果必需 key 被删掉，修源码调用方式或提取配置，不要只手动把 locale 补回来。

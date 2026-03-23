@@ -54,7 +54,11 @@
     },
     "loading": "Loading channel filters...",
     "messages": {
+      "jsonArrayRequired": "JSON must be an array of filter rules.",
       "jsonInvalid": "Invalid filter JSON: {{error}}",
+      "jsonItemNotObject": "Filter at index {{index}} must be an object.",
+      "jsonMissingName": "Filter at index {{index}} is missing a name.",
+      "jsonMissingPattern": "Filter at index {{index}} is missing a pattern.",
       "loadFailed": "Failed to load filters: {{error}}",
       "saved": "Filters saved",
       "saveFailed": "Failed to save filters: {{error}}",
