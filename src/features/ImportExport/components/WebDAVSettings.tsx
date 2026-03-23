@@ -254,7 +254,9 @@ export default function WebDAVSettings() {
       let remoteBackup: any | null = null
 
       try {
-        const remoteContent = await downloadBackup(webdavConfig)
+        const remoteContent = await downloadBackup(webdavConfig, {
+          prepareForWrite: true,
+        })
         remoteBackup = JSON.parse(remoteContent)
       } catch (error: any) {
         if (!isWebdavFileNotFoundError(error)) {
