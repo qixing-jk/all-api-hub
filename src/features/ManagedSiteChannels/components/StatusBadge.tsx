@@ -1,3 +1,4 @@
+import type { TFunction } from "i18next"
 import { useTranslation } from "react-i18next"
 
 import { Badge } from "~/components/ui/badge"
@@ -28,10 +29,7 @@ export const STATUS_VARIANTS: Record<
 /**
  * Resolve the localized label for a managed-site channel status code.
  */
-function getManagedSiteChannelStatusLabel(
-  t: (key: string, options?: any) => string,
-  status: number,
-) {
+function getManagedSiteChannelStatusLabel(t: TFunction, status: number) {
   switch (status) {
     case 1:
       return t("managedSiteChannels:statusLabels.enabled")

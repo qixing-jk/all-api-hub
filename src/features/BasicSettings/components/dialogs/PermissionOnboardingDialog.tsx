@@ -1,3 +1,4 @@
+import type { TFunction } from "i18next"
 import { Github, Languages, Sparkles, Star } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
@@ -32,10 +33,7 @@ const GITHUB_URL = "https://github.com/qixing-jk/all-api-hub"
 /**
  * Resolve the localized title for a supported optional permission.
  */
-function getPermissionTitle(
-  t: (key: string, options?: any) => string,
-  id: ManifestOptionalPermissions,
-) {
+function getPermissionTitle(t: TFunction, id: ManifestOptionalPermissions) {
   switch (id) {
     case "cookies":
       return t("settings:permissions.items.cookies.title")
@@ -56,7 +54,7 @@ function getPermissionTitle(
  * Resolve the localized description for a supported optional permission.
  */
 function getPermissionDescription(
-  t: (key: string, options?: any) => string,
+  t: TFunction,
   id: ManifestOptionalPermissions,
 ) {
   switch (id) {

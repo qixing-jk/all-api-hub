@@ -1,3 +1,4 @@
+import type { TFunction } from "i18next"
 import { ArrowRightLeft, Loader2, RefreshCcw } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
@@ -56,7 +57,7 @@ interface ManagedSiteChannelMigrationDialogProps {
 }
 
 const getGeneralWarningText = (
-  t: (key: string, options?: any) => string,
+  t: TFunction,
   code: ManagedSiteChannelMigrationGeneralWarningCode,
 ) => {
   switch (code) {
@@ -71,7 +72,7 @@ const getGeneralWarningText = (
 }
 
 const getItemWarningText = (
-  t: (key: string, options?: any) => string,
+  t: TFunction,
   code: ManagedSiteChannelMigrationItemWarningCode,
 ) => {
   switch (code) {
@@ -114,7 +115,7 @@ const getItemWarningText = (
 }
 
 const getBlockedReasonText = (
-  t: (key: string, options?: any) => string,
+  t: TFunction,
   code?: ManagedSiteChannelMigrationBlockedReasonCode,
 ) => {
   switch (code) {
@@ -129,7 +130,7 @@ const getBlockedReasonText = (
 }
 
 const getExecutionBadge = (
-  t: (key: string, options?: any) => string,
+  t: TFunction,
   item: ManagedSiteChannelMigrationExecutionItem,
 ) => {
   if (item.success) {
@@ -152,10 +153,7 @@ const getExecutionBadge = (
   }
 }
 
-const getStatusText = (
-  t: (key: string, options?: any) => string,
-  status?: number,
-) => {
+const getStatusText = (t: TFunction, status?: number) => {
   switch (status) {
     case 1:
       return t("managedSiteChannels:statusLabels.enabled")

@@ -3,6 +3,7 @@ import {
   EyeIcon,
   EyeSlashIcon,
 } from "@heroicons/react/24/outline"
+import type { TFunction } from "i18next"
 import { useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
@@ -76,10 +77,7 @@ const WEBDAV_SYNC_DATA_INPUT_IDS: Record<WebDAVSyncDataKey, string> = {
 /**
  * Resolve the localized label for a selectable WebDAV sync data section.
  */
-function getWebdavSyncDataLabel(
-  t: (key: string, options?: any) => string,
-  key: WebDAVSyncDataKey,
-) {
+function getWebdavSyncDataLabel(t: TFunction, key: WebDAVSyncDataKey) {
   switch (key) {
     case "accounts":
       return t("importExport:webdav.syncData.accounts")

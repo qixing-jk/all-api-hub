@@ -1,3 +1,5 @@
+import type { TFunction } from "i18next"
+
 import {
   DONE_HUB,
   NEW_API,
@@ -117,10 +119,7 @@ export function getManagedSiteLabelKey(
 /**
  * Returns the translated managed-site label for the given site type.
  */
-export function getManagedSiteLabel(
-  t: (key: string, options?: any) => string,
-  siteType: ManagedSiteType,
-) {
+export function getManagedSiteLabel(t: TFunction, siteType: ManagedSiteType) {
   switch (siteType) {
     case OCTOPUS:
       return t("settings:managedSite.octopus")
@@ -311,7 +310,7 @@ export function needsManagedSiteChannelKeyResolution(
  * Returns the translated config-missing message for the selected managed-site backend.
  */
 export function getManagedSiteConfigMissingMessage(
-  t: (key: string, options?: any) => string,
+  t: TFunction,
   messagesKey: ManagedSiteMessagesKey,
 ) {
   switch (messagesKey) {
@@ -331,7 +330,7 @@ export function getManagedSiteConfigMissingMessage(
  * Returns the translated no-channels-to-sync message for the selected managed-site backend.
  */
 export function getManagedSiteNoChannelsToSyncMessage(
-  t: (key: string, options?: any) => string,
+  t: TFunction,
   messagesKey: ManagedSiteMessagesKey,
 ) {
   switch (messagesKey) {

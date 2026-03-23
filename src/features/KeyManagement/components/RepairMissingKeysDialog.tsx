@@ -1,4 +1,5 @@
 import { MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline"
+import type { TFunction } from "i18next"
 import { useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -42,7 +43,7 @@ interface RepairMissingKeysDialogProps {
  * Returns the localized skip reason label used when a repair result is skipped.
  */
 function getSkipReasonLabel(
-  t: (key: string, options?: any) => string,
+  t: TFunction,
   reason: AccountKeyRepairSkipReason | undefined,
 ) {
   if (!reason) return ""
@@ -66,10 +67,7 @@ const OUTCOME_BADGE_VARIANTS: Record<AccountKeyRepairOutcome, BadgeVariant> = {
 /**
  * Returns the localized outcome label shown for each repair result row.
  */
-function getRepairOutcomeLabel(
-  t: (key: string, options?: any) => string,
-  outcome: AccountKeyRepairOutcome,
-) {
+function getRepairOutcomeLabel(t: TFunction, outcome: AccountKeyRepairOutcome) {
   switch (outcome) {
     case "created":
       return t("keyManagement:repairMissingKeys.outcomes.created")

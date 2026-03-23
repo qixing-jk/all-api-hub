@@ -16,6 +16,7 @@ import {
   type CellContext,
   type HeaderGroup,
 } from "@tanstack/react-table"
+import type { TFunction } from "i18next"
 import {
   ArrowRightLeft,
   ChevronDown,
@@ -124,10 +125,7 @@ interface ManagedSiteChannelsProps {
 /**
  * Resolve the localized label for a hideable managed-site channel table column.
  */
-function getManagedSiteChannelColumnLabel(
-  t: (key: string, options?: any) => string,
-  columnId: string,
-) {
+function getManagedSiteChannelColumnLabel(t: TFunction, columnId: string) {
   switch (columnId) {
     case "id":
       return t("managedSiteChannels:table.columns.id")
@@ -151,10 +149,7 @@ function getManagedSiteChannelColumnLabel(
 /**
  * Resolve the localized status label shown in the status-filter popover.
  */
-function getManagedSiteChannelStatusFilterLabel(
-  t: (key: string, options?: any) => string,
-  value: string,
-) {
+function getManagedSiteChannelStatusFilterLabel(t: TFunction, value: string) {
   switch (value) {
     case "1":
       return t("managedSiteChannels:statusLabels.enabled")

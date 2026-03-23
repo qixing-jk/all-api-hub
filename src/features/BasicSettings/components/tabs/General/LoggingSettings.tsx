@@ -1,4 +1,5 @@
 import { BugAntIcon } from "@heroicons/react/24/outline"
+import type { TFunction } from "i18next"
 import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
@@ -20,10 +21,7 @@ import { showUpdateToast } from "~/utils/core/toastHelpers"
 /**
  * Resolve the localized label for a supported log level.
  */
-function getLogLevelLabel(
-  t: (key: string, options?: any) => string,
-  level: LogLevel,
-) {
+function getLogLevelLabel(t: TFunction, level: LogLevel) {
   switch (level) {
     case "debug":
       return t("settings:logging.levels.debug")

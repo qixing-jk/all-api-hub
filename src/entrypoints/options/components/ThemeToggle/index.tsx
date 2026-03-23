@@ -3,6 +3,7 @@ import {
   MoonIcon,
   SunIcon,
 } from "@heroicons/react/24/outline"
+import type { TFunction } from "i18next"
 import { useTranslation } from "react-i18next"
 
 import { Caption, CardItem, ToggleButton } from "~/components/ui"
@@ -10,7 +11,7 @@ import { ANIMATIONS, COLORS } from "~/constants/designTokens"
 import { useTheme } from "~/contexts/ThemeContext"
 import type { ThemeMode } from "~/types/theme"
 
-const getThemeOptions = (t: (key: string) => string) => {
+const getThemeOptions = (t: TFunction) => {
   return [
     {
       mode: "light" as ThemeMode,

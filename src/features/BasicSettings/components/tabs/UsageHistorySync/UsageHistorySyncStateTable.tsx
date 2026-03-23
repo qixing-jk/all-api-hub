@@ -7,6 +7,7 @@ import {
   type Row,
   type SortingState,
 } from "@tanstack/react-table"
+import type { TFunction } from "i18next"
 import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -54,7 +55,7 @@ interface UsageHistorySyncStateTableProps {
  * Resolve the localized label for a usage-history sync state badge.
  */
 function getUsageHistorySyncStateLabel(
-  t: (key: string, options?: any) => string,
+  t: TFunction,
   state: UsageHistorySyncState,
 ) {
   switch (state) {

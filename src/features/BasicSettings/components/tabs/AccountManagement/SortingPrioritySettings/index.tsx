@@ -1,5 +1,6 @@
 import type { DragEndEvent } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
+import type { TFunction } from "i18next"
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -14,7 +15,7 @@ import { SortingPriorityDragList } from "./SortingPriorityDragList"
 // Maps sorting criteria IDs to their UI display text (label and description).
 // This keeps UI concerns separate from the data-only sorting configuration.
 const getSortingCriteriaUiText = (
-  t: (key: string) => string,
+  t: TFunction,
 ): Record<SortingCriteriaType, { label: string; description?: string }> => ({
   [SortingCriteriaType.DISABLED_ACCOUNT]: {
     label: t("settings:sorting.disabledAccount"),

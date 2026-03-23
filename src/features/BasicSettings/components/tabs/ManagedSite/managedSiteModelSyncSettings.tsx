@@ -1,4 +1,5 @@
 import { ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline"
+import type { TFunction } from "i18next"
 import { nanoid } from "nanoid"
 import { useEffect, useState } from "react"
 import toast from "react-hot-toast"
@@ -679,7 +680,7 @@ export default function ManagedSiteModelSyncSettings() {
  * @throws {Error} When JSON is invalid or missing required fields.
  */
 function parseJsonGlobalChannelModelFilters(
-  t: (key: string, options?: any) => string,
+  t: TFunction,
   rawJson: string,
 ): EditableFilter[] {
   const trimmed = rawJson.trim()

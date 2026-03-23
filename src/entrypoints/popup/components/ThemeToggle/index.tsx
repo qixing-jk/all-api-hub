@@ -3,16 +3,14 @@ import {
   MoonIcon,
   SunIcon,
 } from "@heroicons/react/24/outline"
+import type { TFunction } from "i18next"
 import { useTranslation } from "react-i18next"
 
 import { IconButton } from "~/components/ui"
 import { useTheme } from "~/contexts/ThemeContext"
 import type { ThemeMode } from "~/types/theme"
 
-const getThemeLabel = (
-  t: (key: string, options?: any) => string,
-  mode: ThemeMode,
-) => {
+const getThemeLabel = (t: TFunction, mode: ThemeMode) => {
   switch (mode) {
     case "light":
       return t("settings:theme.light")
@@ -23,7 +21,7 @@ const getThemeLabel = (
   }
 }
 
-const getThemeOptions = (t: (key: string) => string) => {
+const getThemeOptions = (t: TFunction) => {
   return [
     {
       mode: "light" as ThemeMode,

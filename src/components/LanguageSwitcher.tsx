@@ -1,3 +1,4 @@
+import type { TFunction } from "i18next"
 import { Languages } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
@@ -37,10 +38,7 @@ interface LanguageSwitcherProps {
 /**
  * Resolve the localized short label shown on each language toggle.
  */
-function getLanguageOptionLabel(
-  t: (key: string, options?: any) => string,
-  language: SupportedUiLanguage,
-) {
+function getLanguageOptionLabel(t: TFunction, language: SupportedUiLanguage) {
   switch (language) {
     case "en":
       return t("settings:appearanceLanguage.switcher.options.en.label")
@@ -56,10 +54,7 @@ function getLanguageOptionLabel(
 /**
  * Resolve the localized language name used in accessibility copy.
  */
-function getLanguageOptionName(
-  t: (key: string, options?: any) => string,
-  language: SupportedUiLanguage,
-) {
+function getLanguageOptionName(t: TFunction, language: SupportedUiLanguage) {
   switch (language) {
     case "en":
       return t("settings:appearanceLanguage.switcher.options.en.name")

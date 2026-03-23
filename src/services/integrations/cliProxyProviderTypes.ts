@@ -1,3 +1,5 @@
+import type { TFunction } from "i18next"
+
 import {
   API_TYPES,
   type ApiVerificationApiType,
@@ -64,7 +66,7 @@ export const CLI_PROXY_PROVIDER_METADATA: Record<
  * Resolve the localized provider-type label used by CLI proxy UI surfaces.
  */
 export function getCliProxyProviderTypeLabel(
-  t: (key: string) => string,
+  t: TFunction,
   providerType: CliProxyProviderType,
 ) {
   switch (providerType) {
@@ -84,7 +86,7 @@ export function getCliProxyProviderTypeLabel(
  * Resolve the localized provider-type description used by CLI proxy UI surfaces.
  */
 export function getCliProxyProviderTypeDescription(
-  t: (key: string) => string,
+  t: TFunction,
   providerType: CliProxyProviderType,
 ) {
   switch (providerType) {
@@ -106,7 +108,7 @@ export function getCliProxyProviderTypeDescription(
  * Resolve the localized base-URL description for a CLI proxy provider type.
  */
 export function getCliProxyProviderBaseUrlDescription(
-  t: (key: string) => string,
+  t: TFunction,
   providerType: CliProxyProviderType,
 ) {
   switch (providerType) {
@@ -126,7 +128,7 @@ export function getCliProxyProviderBaseUrlDescription(
  * Resolve the localized base-URL placeholder for a CLI proxy provider type.
  */
 export function getCliProxyProviderBaseUrlPlaceholder(
-  t: (key: string) => string,
+  t: TFunction,
   providerType: CliProxyProviderType,
 ) {
   switch (providerType) {
@@ -340,7 +342,7 @@ export function getCliProxyProviderDisplayName(
     providerBaseUrl?: string | null
     providerName?: string | null
   },
-  t: (key: string) => string,
+  t: TFunction,
 ) {
   const { providerBaseUrl, providerName } = options
   const normalizedName = providerName?.trim() ?? ""

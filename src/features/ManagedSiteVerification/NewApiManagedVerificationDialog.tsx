@@ -1,3 +1,4 @@
+import type { TFunction } from "i18next"
 import { useTranslation } from "react-i18next"
 
 import { Button, Input, Modal } from "~/components/ui"
@@ -8,7 +9,7 @@ import {
 } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
 
 const getDialogTitle = (
-  t: ReturnType<typeof useTranslation>["t"],
+  t: TFunction,
   request: OpenNewApiManagedVerificationParams | null,
 ) =>
   request?.kind === "token"
@@ -18,7 +19,7 @@ const getDialogTitle = (
       : t("newApiManagedVerification:dialog.title.settings")
 
 const getStepBodyCopy = (
-  t: ReturnType<typeof useTranslation>["t"],
+  t: TFunction,
   request: OpenNewApiManagedVerificationParams | null,
   step: NewApiManagedVerificationStep,
 ) => {

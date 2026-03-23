@@ -1,3 +1,4 @@
+import type { TFunction } from "i18next"
 import { useTranslation } from "react-i18next"
 
 import { Card, CardContent } from "~/components/ui"
@@ -13,10 +14,7 @@ interface OverviewCardProps {
 /**
  * Convert an interval (ms) into a short, localized cadence label (e.g. Every 2h).
  */
-const formatInterval = (
-  t: (key: string, options?: any) => string,
-  ms?: number,
-) => {
+const formatInterval = (t: TFunction, ms?: number) => {
   if (!ms || ms <= 0) return "-"
   const minutes = Math.round(ms / 1000 / 60)
   if (minutes % 60 === 0) {

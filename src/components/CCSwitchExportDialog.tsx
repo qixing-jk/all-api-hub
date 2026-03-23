@@ -1,3 +1,4 @@
+import type { TFunction } from "i18next"
 import { FormEvent, useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
@@ -50,10 +51,7 @@ const APP_LIMITATION_NOTICE_ID = "ccswitch-app-limitation"
 const UPSTREAM_MODEL_FETCH_DEBOUNCE_MS =
   import.meta.env.MODE === "test" ? 0 : 300
 
-const getCCSwitchAppLabel = (
-  t: (key: string, options?: any) => string,
-  app: CCSwitchApp,
-) => {
+const getCCSwitchAppLabel = (t: TFunction, app: CCSwitchApp) => {
   switch (app) {
     case "claude":
       return t("ui:dialog.ccswitch.appOptions.claude")
@@ -68,10 +66,7 @@ const getCCSwitchAppLabel = (
   }
 }
 
-const getCCSwitchLimitationNotice = (
-  t: (key: string, options?: any) => string,
-  app: CCSwitchApp,
-) => {
+const getCCSwitchLimitationNotice = (t: TFunction, app: CCSwitchApp) => {
   switch (app) {
     case "opencode":
       return t("ui:dialog.ccswitch.notices.opencode")

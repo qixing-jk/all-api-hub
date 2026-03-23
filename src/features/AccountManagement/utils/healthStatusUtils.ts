@@ -3,6 +3,8 @@
  * This module encapsulates health status logic and provides i18n support
  */
 
+import type { TFunction } from "i18next"
+
 // Local configuration object for health status
 const HEALTH_STATUS_CONFIG = {
   healthy: {
@@ -27,7 +29,7 @@ const HEALTH_STATUS_CONFIG = {
  */
 export function getHealthStatusDisplay(
   status: string | undefined,
-  t: (key: string) => string,
+  t: TFunction,
 ) {
   if (!status) {
     return {
