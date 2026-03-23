@@ -80,20 +80,18 @@ The project aims for reasonable test coverage targets (currently set to 5% globa
 
 #### Unit Tests
 
-Unit tests should be placed in a `__tests__` directory next to the file being tested:
+Unit tests should be placed under the repo-level `tests/` tree. Mirror the source area in the path when it helps readability:
 
 ```
-src/utils/
-├── formatters.ts
-└── __tests__/
-    └── formatters.test.ts
+src/utils/formatters.ts
+tests/utils/formatters.test.ts
 ```
 
 Example unit test:
 
 ```typescript
 import { describe, it, expect } from "vitest"
-import { formatTokenCount } from "../formatters"
+import { formatTokenCount } from "~/utils/formatters"
 
 describe("formatTokenCount", () => {
   it("should format large numbers with M suffix", () => {
@@ -108,13 +106,11 @@ describe("formatTokenCount", () => {
 
 #### Component Tests
 
-Component tests should also be in `__tests__` directories. Use the custom render function from `tests/test-utils/render.tsx` which wraps components with required providers:
+Component tests should also live under `tests/`. Use the custom render function from `tests/test-utils/render.tsx` which wraps components with required providers:
 
 ```
-src/components/
-├── LinkCard.tsx
-└── __tests__/
-    └── LinkCard.test.tsx
+src/components/LinkCard.tsx
+tests/components/LinkCard.test.tsx
 ```
 
 Example component test:
@@ -122,7 +118,7 @@ Example component test:
 ```typescript
 import { describe, it, expect } from "vitest"
 import { render, screen } from "~~/tests/test-utils/render"
-import LinkCard from "../LinkCard"
+import LinkCard from "~/components/LinkCard"
 
 describe("LinkCard", () => {
   it("should render correctly with required props", async () => {

@@ -83,7 +83,7 @@ Prereqs: Node.js 20+ and pnpm 10+.
 - TypeScript + React with Prettier formatting and ESLint enforcement.
 - Follow the existing repo style: 2 spaces, no semicolons, double quotes.
 - Prefer `~/` for `src/` imports and `~~/` for repo-root imports such as tests and tooling.
-- Tests typically use `*.test.ts` or `*.test.tsx` and are either colocated in `__tests__/` or organized under `tests/` for cross-cutting coverage.
+- Tests typically use `*.test.ts` or `*.test.tsx` and are organized under `tests/`; do not add colocated `__tests__/` directories under `src/`.
 - Keep options-page entrypoints thin; shared logic should not depend on `src/entrypoints/options/pages/**`.
 
 ## Implementation Expectations
