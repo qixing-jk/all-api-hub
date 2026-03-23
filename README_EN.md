@@ -194,7 +194,7 @@ For the latest compatibility references, see:
 <details>
 <summary>Safari Installation</summary>
 
-Safari must be installed through Xcode rather than a normal unpacked flow. With a paid Apple Developer Program account, you can properly sign and distribute it through TestFlight / App Store; without one, it is typically limited to local development or personal use. For details, see [Safari Installation Guide](docs/SAFARI_INSTALL_EN.md).
+Safari must be installed through Xcode rather than a normal unpacked flow. With a paid Apple Developer Program account, you can properly sign and distribute it through TestFlight / App Store; without one, it is typically limited to local development or personal use. For details, see [Safari Installation Guide](docs/docs/en/safari-install.md).
 
 Two supported paths:
 
