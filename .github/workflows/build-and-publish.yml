@@ -26,6 +26,9 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      package_version: ${{ steps.package.outputs.package-version }}
+      release_ref: ${{ steps.get_ref.outputs.ref }}
 
     steps:
       # 先 checkout 完整仓库，后面要用 git 命令找 tag
@@ -79,19 +82,45 @@ jobs:
         with:
           working-directory: source
 
+      - name: Pack Safari workflow artifact
+        if: ${{ steps.get_ref.outputs.ref != '' }}
+        working-directory: source
+        run: |
+          shopt -s nullglob
+          safari_zips=(.output/*-safari.zip)
+
+          if [ "${#safari_zips[@]}" -ne 1 ]; then
+            echo "Expected exactly one Safari zip in .output."
+            ls -la .output
+            exit 1
+          fi
+
+          tar -czf "$RUNNER_TEMP/safari-build-inputs.tar.gz" \
+            -C . \
+            .output/safari-mv2 \
+            ".output/$(basename "${safari_zips[0]}")"
+
+      - name: Upload Safari workflow artifact
+        if: ${{ steps.get_ref.outputs.ref != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: safari-build-inputs
+          path: ${{ runner.temp }}/safari-build-inputs.tar.gz
+          if-no-files-found: error
+
       # 上传 Release Artifact（仅当有 ref 时）
       - name: Upload Release Artifact
         if: ${{ steps.get_ref.outputs.ref != '' }}
         continue-on-error: true
         run: |
           echo "Uploading source/.output/*.zip to release ${{ steps.get_ref.outputs.ref }}"
-          gh release upload "${{ steps.get_ref.outputs.ref }}" source/.output/*.zip
+          gh release upload "${{ steps.get_ref.outputs.ref }}" source/.output/*.zip --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # 提交到浏览器商店
       - name: Browser Platform Publish
-        if: ${{ steps.get_ref.outputs.ref != '' }}
+        if: ${{ steps.get_ref.outputs.ref != '' && !github.event.repository.fork }}
         working-directory: source
         run: |
           echo "Chrome review: $([ "$CHROME_SKIP_SUBMIT_REVIEW" = "true" ] && echo skipped || echo submitted)"
@@ -114,3 +143,46 @@ jobs:
           EDGE_PRODUCT_ID: ${{ secrets.EDGE_PRODUCT_ID }}
           EDGE_CLIENT_ID: ${{ secrets.EDGE_CLIENT_ID }}
           EDGE_API_KEY: ${{ secrets.EDGE_API_KEY }}
+
+  safari-release-assets:
+    needs: build
+    if: ${{ needs.build.outputs.release_ref != '' }}
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout specific ref
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.build.outputs.release_ref }}
+          path: source
+          fetch-depth: 0
+
+      - name: Download Safari workflow artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: safari-build-inputs
+          path: ${{ runner.temp }}/safari-build-inputs
+
+      - name: Restore Safari build inputs
+        run: |
+          tar -xzf "${{ runner.temp }}/safari-build-inputs/safari-build-inputs.tar.gz" -C source
+
+      - name: Prepare Safari release assets
+        working-directory: source
+        run: bash scripts/prepare-safari-release-assets.sh
+        env:
+          PACKAGE_VERSION: ${{ needs.build.outputs.package_version }}
+          SAFARI_RELEASE_ASSETS_DIR: .output/release-assets
+          SAFARI_PROJECT_DIR: ${{ runner.temp }}/all-api-hub-safari-project
+          SAFARI_APP_NAME: ${{ vars.SAFARI_APP_NAME }}
+          SAFARI_BUNDLE_IDENTIFIER: ${{ vars.SAFARI_BUNDLE_IDENTIFIER }}
+
+      - name: Upload Safari Release Artifact
+        continue-on-error: true
+        working-directory: source
+        run: |
+          echo "Uploading .output/release-assets/*.zip to release ${{ needs.build.outputs.release_ref }}"
+          gh release upload "${{ needs.build.outputs.release_ref }}" .output/release-assets/*.zip --clobber
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}

@@ -14,6 +14,7 @@ on:
       - "postcss.config.js"
       - "tailwind.config.js"
       - "wxt.config.ts"
+      - "scripts/prepare-safari-release-assets.sh"
       - ".github/actions/package-extension/**"
       - ".github/workflows/nightly-release.yml"
   schedule:
@@ -35,6 +36,9 @@ permissions:
 jobs:
   nightly:
     runs-on: ubuntu-latest
+    outputs:
+      commit_ref: ${{ steps.commit.outputs.ref }}
+      package_version: ${{ steps.package.outputs.package-version }}
 
     steps:
       - name: Checkout code
@@ -109,6 +113,30 @@ jobs:
           cp "${{ steps.package.outputs.firefox-zip }}" "source/.output/nightly/all-api-hub-nightly-firefox.zip"
           cp "${{ steps.package.outputs.sources-zip }}" "source/.output/nightly/all-api-hub-nightly-sources.zip"
 
+      - name: Pack Safari workflow artifact
+        working-directory: source
+        run: |
+          shopt -s nullglob
+          safari_zips=(.output/*-safari.zip)
+
+          if [ "${#safari_zips[@]}" -ne 1 ]; then
+            echo "Expected exactly one Safari zip in .output."
+            ls -la .output
+            exit 1
+          fi
+
+          tar -czf "$RUNNER_TEMP/safari-build-inputs.tar.gz" \
+            -C . \
+            .output/safari-mv2 \
+            ".output/$(basename "${safari_zips[0]}")"
+
+      - name: Upload Safari workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: safari-build-inputs
+          path: ${{ runner.temp }}/safari-build-inputs.tar.gz
+          if-no-files-found: error
+
       - name: Write nightly release notes
         run: |
           cat <<EOF > "$RUNNER_TEMP/nightly-notes.md"
@@ -152,3 +180,45 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release upload nightly source/.output/nightly/*.zip --clobber
+
+  safari-nightly-assets:
+    needs: nightly
+    if: ${{ needs.nightly.outputs.commit_ref != '' }}
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout target ref
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.nightly.outputs.commit_ref }}
+          path: source
+          fetch-depth: 0
+
+      - name: Download Safari workflow artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: safari-build-inputs
+          path: ${{ runner.temp }}/safari-build-inputs
+
+      - name: Restore Safari build inputs
+        run: |
+          tar -xzf "${{ runner.temp }}/safari-build-inputs/safari-build-inputs.tar.gz" -C source
+
+      - name: Prepare Safari nightly assets
+        working-directory: source
+        run: bash scripts/prepare-safari-release-assets.sh
+        env:
+          PACKAGE_VERSION: ${{ needs.nightly.outputs.package_version }}
+          SAFARI_RELEASE_BASENAME: all-api-hub-nightly
+          SAFARI_RELEASE_ASSETS_DIR: .output/nightly
+          SAFARI_PROJECT_DIR: ${{ runner.temp }}/all-api-hub-nightly-safari-project
+          SAFARI_ZIP_TARGET_NAME: all-api-hub-nightly-safari.zip
+          SAFARI_APP_NAME: ${{ vars.SAFARI_APP_NAME }}
+          SAFARI_BUNDLE_IDENTIFIER: ${{ vars.SAFARI_BUNDLE_IDENTIFIER }}
+
+      - name: Upload Safari nightly assets
+        working-directory: source
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: gh release upload nightly .output/nightly/*.zip --clobber
