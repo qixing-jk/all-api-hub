@@ -1,7 +1,8 @@
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
+import { CCSwitchExportDialog } from "~/components/CCSwitchExportDialog"
+import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const mockFetchOpenAICompatibleModelIds = vi.fn()
 
@@ -16,10 +17,6 @@ describe("CCSwitchExportDialog", () => {
   })
 
   it("places the app selector before provider details", async () => {
-    vi.resetModules()
-    const { CCSwitchExportDialog } = await import(
-      "~/components/CCSwitchExportDialog"
-    )
     mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce([])
 
     render(
@@ -47,10 +44,7 @@ describe("CCSwitchExportDialog", () => {
   })
 
   it("loads upstream model ids and exposes them as a selectable default model", async () => {
-    vi.resetModules()
-    const { CCSwitchExportDialog } = await import(
-      "~/components/CCSwitchExportDialog"
-    )
+    const user = userEvent.setup()
     mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce(["gpt-4", "claude"])
 
     render(
@@ -74,15 +68,11 @@ describe("CCSwitchExportDialog", () => {
     const modelCombo = await screen.findByLabelText(
       "ui:dialog.ccswitch.fields.model",
     )
-    fireEvent.click(modelCombo)
+    await user.click(modelCombo)
     expect(await screen.findByText("gpt-4")).toBeInTheDocument()
   })
 
   it("appends /v1 to the default endpoint when switching to Codex", async () => {
-    vi.resetModules()
-    const { CCSwitchExportDialog } = await import(
-      "~/components/CCSwitchExportDialog"
-    )
     const user = userEvent.setup()
     mockFetchOpenAICompatibleModelIds.mockResolvedValue([])
 
@@ -123,10 +113,6 @@ describe("CCSwitchExportDialog", () => {
   ])(
     "keeps the stored base URL as the default endpoint for %s",
     async (appLabel) => {
-      vi.resetModules()
-      const { CCSwitchExportDialog } = await import(
-        "~/components/CCSwitchExportDialog"
-      )
       const user = userEvent.setup()
       mockFetchOpenAICompatibleModelIds.mockResolvedValue([])
 
@@ -173,10 +159,6 @@ describe("CCSwitchExportDialog", () => {
   ])(
     "shows the protocol limitation notice for $appLabel",
     async ({ appLabel, notice }) => {
-      vi.resetModules()
-      const { CCSwitchExportDialog } = await import(
-        "~/components/CCSwitchExportDialog"
-      )
       const user = userEvent.setup()
       mockFetchOpenAICompatibleModelIds.mockResolvedValue([])
 
@@ -215,10 +197,6 @@ describe("CCSwitchExportDialog", () => {
   )
 
   it("does not show the limitation notice for Codex", async () => {
-    vi.resetModules()
-    const { CCSwitchExportDialog } = await import(
-      "~/components/CCSwitchExportDialog"
-    )
     const user = userEvent.setup()
     mockFetchOpenAICompatibleModelIds.mockResolvedValue([])
 
@@ -249,10 +227,6 @@ describe("CCSwitchExportDialog", () => {
   })
 
   it("preserves a custom endpoint when switching between CC Switch apps", async () => {
-    vi.resetModules()
-    const { CCSwitchExportDialog } = await import(
-      "~/components/CCSwitchExportDialog"
-    )
     const user = userEvent.setup()
     mockFetchOpenAICompatibleModelIds.mockResolvedValue([])
 
@@ -286,7 +260,8 @@ describe("CCSwitchExportDialog", () => {
     })
 
     await user.clear(endpointInput)
-    await user.type(endpointInput, "https://custom.test/router")
+    await user.click(endpointInput)
+    await user.paste("https://custom.test/router")
 
     await user.click(appSelect)
     await user.click(
@@ -301,10 +276,6 @@ describe("CCSwitchExportDialog", () => {
   })
 
   it("keeps the model picker usable when upstream model fetch fails", async () => {
-    vi.resetModules()
-    const { CCSwitchExportDialog } = await import(
-      "~/components/CCSwitchExportDialog"
-    )
     mockFetchOpenAICompatibleModelIds.mockRejectedValueOnce(
       new Error("network error"),
     )
@@ -334,10 +305,6 @@ describe("CCSwitchExportDialog", () => {
   })
 
   it("prefills notes from the API token note field", async () => {
-    vi.resetModules()
-    const { CCSwitchExportDialog } = await import(
-      "~/components/CCSwitchExportDialog"
-    )
     mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce([])
 
     render(

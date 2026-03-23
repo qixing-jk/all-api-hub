@@ -45,6 +45,10 @@ const logger = createLogger("CCSwitchExportDialog")
 
 const DEFAULT_APP: CCSwitchApp = "claude"
 const APP_LIMITATION_NOTICE_ID = "ccswitch-app-limitation"
+// Preserve the real debounce in dev/prod so endpoint edits do not spam model-list
+// requests, but skip the wall-clock delay in Vitest.
+const UPSTREAM_MODEL_FETCH_DEBOUNCE_MS =
+  import.meta.env.MODE === "test" ? 0 : 300
 
 const getCCSwitchAppLabel = (
   t: (key: string, options?: any) => string,
@@ -176,7 +180,7 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
           }
         }
       })()
-    }, 300)
+    }, UPSTREAM_MODEL_FETCH_DEBOUNCE_MS)
 
     return () => {
       isMounted = false

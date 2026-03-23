@@ -19,6 +19,13 @@ import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 
 let store: ApiCredentialProfile[] = []
 const mockOpenModelsPage = vi.fn()
+const mockFetchOpenAICompatibleModelIds = vi.fn(
+  async (
+    _params: Parameters<
+      typeof import("~/services/apiService/openaiCompatible").fetchOpenAICompatibleModelIds
+    >[0],
+  ): Promise<string[]> => [],
+)
 
 const mockListProfiles = vi.fn(async () => store)
 const mockFetchApiCredentialModelIds = vi.fn(
@@ -135,10 +142,20 @@ vi.mock("~/utils/navigation", () => ({
   openModelsPage: (...args: unknown[]) => mockOpenModelsPage(...args),
 }))
 
+vi.mock("~/services/apiService/openaiCompatible", () => ({
+  fetchOpenAICompatibleModelIds: (
+    params: Parameters<
+      typeof import("~/services/apiService/openaiCompatible").fetchOpenAICompatibleModelIds
+    >[0],
+  ) => mockFetchOpenAICompatibleModelIds(params),
+}))
+
 describe("ApiCredentialProfiles page", () => {
   beforeEach(async () => {
     store = []
     mockListProfiles.mockClear()
+    mockFetchOpenAICompatibleModelIds.mockReset()
+    mockFetchOpenAICompatibleModelIds.mockResolvedValue([])
     mockFetchApiCredentialModelIds.mockReset()
     mockFetchApiCredentialModelIds.mockResolvedValue([])
     mockCreateProfile.mockClear()
@@ -170,24 +187,22 @@ describe("ApiCredentialProfiles page", () => {
       await screen.findByText("apiCredentialProfiles:dialog.addTitle"),
     ).toBeInTheDocument()
 
-    await user.type(
-      screen.getByPlaceholderText(
-        "apiCredentialProfiles:dialog.placeholders.name",
-      ),
-      "My Profile",
+    const nameInput = screen.getByPlaceholderText(
+      "apiCredentialProfiles:dialog.placeholders.name",
     )
-    await user.type(
-      screen.getByPlaceholderText(
-        "apiCredentialProfiles:dialog.placeholders.baseUrl",
-      ),
-      "https://example.com/v1/models",
+    const baseUrlInput = screen.getByPlaceholderText(
+      "apiCredentialProfiles:dialog.placeholders.baseUrl",
     )
-    await user.type(
-      screen.getByPlaceholderText(
-        "apiCredentialProfiles:dialog.placeholders.apiKey",
-      ),
-      "sk-test",
+    const apiKeyInput = screen.getByPlaceholderText(
+      "apiCredentialProfiles:dialog.placeholders.apiKey",
     )
+
+    await user.click(nameInput)
+    await user.paste("My Profile")
+    await user.click(baseUrlInput)
+    await user.paste("https://example.com/v1/models")
+    await user.click(apiKeyInput)
+    await user.paste("sk-test")
 
     await user.click(
       screen.getByRole("button", { name: "common:actions.save" }),
@@ -234,7 +249,8 @@ describe("ApiCredentialProfiles page", () => {
       "apiCredentialProfiles:dialog.placeholders.name",
     )
     await user.clear(nameInput)
-    await user.type(nameInput, "Updated")
+    await user.click(nameInput)
+    await user.paste("Updated")
 
     await user.click(
       screen.getByRole("button", { name: "common:actions.save" }),
@@ -332,12 +348,11 @@ describe("ApiCredentialProfiles page", () => {
       await screen.findByRole("heading", { name: "Google" }),
     ).toBeInTheDocument()
 
-    await user.type(
-      screen.getByPlaceholderText(
-        "apiCredentialProfiles:controls.searchPlaceholder",
-      ),
-      "goog",
+    const searchInput = screen.getByPlaceholderText(
+      "apiCredentialProfiles:controls.searchPlaceholder",
     )
+    await user.click(searchInput)
+    await user.paste("goog")
 
     await waitFor(() => {
       expect(
@@ -348,11 +363,7 @@ describe("ApiCredentialProfiles page", () => {
       ).toBeInTheDocument()
     })
 
-    await user.clear(
-      screen.getByPlaceholderText(
-        "apiCredentialProfiles:controls.searchPlaceholder",
-      ),
-    )
+    await user.clear(searchInput)
 
     const filter = screen.getAllByRole("combobox")[0]!
     await user.click(filter)

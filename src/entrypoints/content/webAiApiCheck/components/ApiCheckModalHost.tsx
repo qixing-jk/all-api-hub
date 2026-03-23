@@ -43,6 +43,10 @@ type ProbeItemState = {
   result: ApiVerificationProbeResult | null
 }
 
+// Preserve the real debounce in dev/prod to avoid bursty background requests
+// while typing, but skip the wall-clock delay in Vitest.
+const MODEL_AUTO_FETCH_DEBOUNCE_MS = import.meta.env.MODE === "test" ? 0 : 300
+
 /**
  * Always-mounted modal host rendered inside the content-script Shadow DOM root.
  *
@@ -292,7 +296,7 @@ export function ApiCheckModalHost() {
       if (lastAutoFetchKeyRef.current === fetchKey) return
       lastAutoFetchKeyRef.current = fetchKey
       void fetchModels("auto")
-    }, 300)
+    }, MODEL_AUTO_FETCH_DEBOUNCE_MS)
 
     return () => {
       window.clearTimeout(timeoutId)
@@ -679,11 +683,11 @@ export function ApiCheckModalHost() {
                   const result = probe.result
 
                   const summary = result?.summaryKey
-                    ? (translateApiVerificationSummary(
+                    ? translateApiVerificationSummary(
                         t,
                         result.summaryKey,
                         result.summaryParams,
-                      ) ?? result.summary)
+                      ) ?? result.summary
                     : result?.summary
 
                   const notRunYet = t("webAiApiCheck:modal.probes.notRunYet")

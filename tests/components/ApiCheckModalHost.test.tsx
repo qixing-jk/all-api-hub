@@ -73,7 +73,6 @@ describe("ApiCheckModalHost", () => {
 
     await act(async () => {
       dispatchOpenApiCheckModal({ ...defaultDetail, ...detailOverrides })
-      dispatchOpenApiCheckModal({ ...defaultDetail, ...detailOverrides })
     })
   }
 
@@ -102,8 +101,8 @@ describe("ApiCheckModalHost", () => {
       "webAiApiCheck:modal.sourceText.placeholder",
     )
 
-    await user.type(
-      textarea,
+    await user.click(textarea)
+    await user.paste(
       "Base URL: https://proxy.example.com/api/v1\nAPI Key: sk-abcdef1234567890",
     )
 
@@ -136,8 +135,10 @@ describe("ApiCheckModalHost", () => {
     )
     const apiKeyInput = await screen.findByPlaceholderText("sk-...")
 
-    await user.type(baseUrlInput, "https://proxy.example.com/api")
-    await user.type(apiKeyInput, "sk-abcdef1234567890")
+    await user.click(baseUrlInput)
+    await user.paste("https://proxy.example.com/api")
+    await user.click(apiKeyInput)
+    await user.paste("sk-abcdef1234567890")
 
     await waitFor(() => {
       expect(sendRuntimeMessage).toHaveBeenCalledWith({
@@ -187,8 +188,10 @@ describe("ApiCheckModalHost", () => {
     )
     const apiKeyInput = await screen.findByPlaceholderText("sk-...")
 
-    await user.type(baseUrlInput, "https://proxy.example.com/api")
-    await user.type(apiKeyInput, "sk-secret-xyz")
+    await user.click(baseUrlInput)
+    await user.paste("https://proxy.example.com/api")
+    await user.click(apiKeyInput)
+    await user.paste("sk-secret-xyz")
 
     const probeCard = await screen.findByTestId(
       "api-check-probe-text-generation",
@@ -239,8 +242,10 @@ describe("ApiCheckModalHost", () => {
     )
     const apiKeyInput = await screen.findByPlaceholderText("sk-...")
 
-    await user.type(baseUrlInput, "https://proxy.example.com/api")
-    await user.type(apiKeyInput, "sk-secret-xyz")
+    await user.click(baseUrlInput)
+    await user.paste("https://proxy.example.com/api")
+    await user.click(apiKeyInput)
+    await user.paste("sk-secret-xyz")
 
     await waitFor(() => {
       expect(sendRuntimeMessage).toHaveBeenCalledWith({
@@ -302,8 +307,10 @@ describe("ApiCheckModalHost", () => {
     )
     const apiKeyInput = await screen.findByPlaceholderText("sk-...")
 
-    await user.type(baseUrlInput, "https://proxy.example.com/api")
-    await user.type(apiKeyInput, "sk-secret-xyz")
+    await user.click(baseUrlInput)
+    await user.paste("https://proxy.example.com/api")
+    await user.click(apiKeyInput)
+    await user.paste("sk-secret-xyz")
 
     const saveButton = await screen.findByRole("button", {
       name: "webAiApiCheck:modal.actions.saveToProfiles",
@@ -390,8 +397,10 @@ describe("ApiCheckModalHost", () => {
     )
     const apiKeyInput = await screen.findByPlaceholderText("sk-...")
 
-    await user.type(baseUrlInput, "https://proxy.example.com/api")
-    await user.type(apiKeyInput, "sk-secret-xyz")
+    await user.click(baseUrlInput)
+    await user.paste("https://proxy.example.com/api")
+    await user.click(apiKeyInput)
+    await user.paste("sk-secret-xyz")
 
     const saveButton = await screen.findByRole("button", {
       name: "webAiApiCheck:modal.actions.saveToProfiles",
