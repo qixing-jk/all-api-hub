@@ -44,6 +44,30 @@ const config: KnipConfig = {
     "vite",
     "web-ext",
   ],
+  ignoreIssues: {
+    // Shared/public component surfaces are intentionally broader than current
+    // local usage; do not let Knip collapse those APIs.
+    "src/components/**": ["exports", "types", "duplicates"],
+    "src/features/**/components/**": ["exports", "types", "duplicates"],
+
+    // Utility entrypoints often carry semantic names even when current callers
+    // are sparse.
+    "src/utils/navigation/index.ts": ["exports"],
+    "src/utils/browser/index.ts": ["exports"],
+    "src/utils/browser/device.ts": ["exports", "types"],
+
+    // Explicitly protected site vocabulary.
+    "src/constants/siteType.ts": ["exports"],
+
+    // Site override modules are wired dynamically through getApiService(), so
+    // many override exports appear unused to static analysis.
+    "src/services/apiService/anyrouter/index.ts": ["exports"],
+    "src/services/apiService/doneHub/index.ts": ["exports"],
+    "src/services/apiService/octopus/index.ts": ["exports"],
+    "src/services/apiService/sub2api/index.ts": ["exports"],
+    "src/services/apiService/veloera/index.ts": ["exports"],
+    "src/services/apiService/wong/index.ts": ["exports"],
+  },
   eslint: {
     config: ["eslint.config.js"],
   },
