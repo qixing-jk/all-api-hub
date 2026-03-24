@@ -385,12 +385,6 @@
     "sidepanel": "Sidebar",
     "template": "{{page}} | {{app}}"
   },
-  "pagination": {
-    "morePages": "More pages",
-    "navigation": "Pagination",
-    "next": "Next",
-    "previous": "Previous"
-  },
   "repeatableInput": {
     "actions": {
       "add": "Add",

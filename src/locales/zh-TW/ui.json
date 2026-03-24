@@ -380,12 +380,6 @@
     "sidepanel": "側邊欄",
     "template": "{{page}} | {{app}}"
   },
-  "pagination": {
-    "morePages": "更多頁面",
-    "navigation": "分頁",
-    "next": "下一頁",
-    "previous": "上一頁"
-  },
   "repeatableInput": {
     "actions": {
       "add": "新增",

@@ -380,12 +380,6 @@
     "sidepanel": "サイドバー",
     "template": "{{page}} | {{app}}"
   },
-  "pagination": {
-    "morePages": "さらにページがあります",
-    "navigation": "ページネーション",
-    "next": "次のページ",
-    "previous": "前のページ"
-  },
   "repeatableInput": {
     "actions": {
       "add": "追加",

@@ -1,4 +1,4 @@
-import { isArray, mergeWith } from "lodash"
+import { mergeWith } from "lodash-es"
 
 import { DeepPartial } from "~/types/utils"
 
@@ -63,7 +63,7 @@ export function deepOverride<T extends Record<string, any>>(
 ): T {
   return mergeWith({}, target, ...sources, (_objValue: any, srcValue: any) => {
     // 数组：完全替换
-    if (isArray(srcValue)) {
+    if (Array.isArray(srcValue)) {
       return srcValue
     }
     // 对象：继续深度合并（默认行为）

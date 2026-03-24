@@ -2,7 +2,7 @@ import { ChildProcess, spawn } from "child_process"
 import fs from "fs/promises"
 import { Socket } from "net"
 import path from "path"
-import { Plugin } from "vite"
+import type { PluginOption, ResolvedConfig, ViteDevServer } from "vite"
 
 interface ReactDevToolsOptions {
   autoStart?: boolean // 是否自动启动 standalone
@@ -19,7 +19,9 @@ let ownsDevtoolsProcess = false
  * Vite plugin that auto-starts React DevTools standalone and injects the backend script during dev.
  * Handles caching of backend bundle to avoid repeated fetches between sessions.
  */
-export function reactDevToolsAuto(options: ReactDevToolsOptions = {}): Plugin {
+export function reactDevToolsAuto(
+  options: ReactDevToolsOptions = {},
+): PluginOption {
   const env = process.env
 
   // ======== 参数合并与优先级 ========
@@ -178,15 +180,15 @@ export function reactDevToolsAuto(options: ReactDevToolsOptions = {}): Plugin {
   }
 
   // ======== Vite 插件逻辑 ========
-  return {
+  const plugin = {
     name: "wxt-react-devtools-auto",
     apply: "serve",
 
-    configResolved(config) {
+    configResolved(config: ResolvedConfig) {
       if (config.publicDir) resolvedPublicDir = config.publicDir
     },
 
-    async configureServer(server) {
+    async configureServer(server: ViteDevServer) {
       const { mode } = server.config
       // 只在 development 模式运行
       if (mode !== "development") {
@@ -249,7 +251,7 @@ export function reactDevToolsAuto(options: ReactDevToolsOptions = {}): Plugin {
 
     transformIndexHtml: {
       order: "pre",
-      handler(html) {
+      handler(html: string) {
         if (html.includes("react-devtools-backend.js")) return html
         return [
           {
@@ -260,5 +262,7 @@ export function reactDevToolsAuto(options: ReactDevToolsOptions = {}): Plugin {
         ]
       },
     },
-  }
+  } satisfies PluginOption
+
+  return plugin
 }
