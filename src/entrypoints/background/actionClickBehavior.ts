@@ -9,7 +9,7 @@ import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { openSidePanelWithFallback } from "~/utils/navigation"
 
-export type ActionClickBehavior = "popup" | "sidepanel"
+type ActionClickBehavior = "popup" | "sidepanel"
 
 /**
  * Unified logger scoped to toolbar action click behavior wiring.

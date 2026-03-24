@@ -3,7 +3,7 @@ import { UI_CONSTANTS } from "~/constants/ui"
 /**
  * Formatting options for money-like numeric values used across the UI.
  */
-export type MoneyFormatOptions = {
+type MoneyFormatOptions = {
   decimals: number
   minNonZero: number
 }

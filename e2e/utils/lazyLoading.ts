@@ -4,13 +4,13 @@ import type { Page, TestInfo } from "@playwright/test"
 
 import { OPTIONS_PAGE_PATH, POPUP_PAGE_PATH } from "~/constants/extensionPages"
 
-export interface ExtensionMemorySnapshot {
+interface ExtensionMemorySnapshot {
   usedJSHeapSize: number
   totalJSHeapSize: number
   jsHeapSizeLimit: number
 }
 
-export interface ExtensionResourceSnapshot {
+interface ExtensionResourceSnapshot {
   label: string
   hash: string
   resourceCount: number
@@ -20,13 +20,13 @@ export interface ExtensionResourceSnapshot {
   memory: ExtensionMemorySnapshot | null
 }
 
-export interface ExtensionResourceDelta {
+interface ExtensionResourceDelta {
   newResources: string[]
   newJsResources: string[]
   newCssResources: string[]
 }
 
-export interface ExtensionRequestTracker {
+interface ExtensionRequestTracker {
   dispose: () => void
   getResourceCount: () => number
   getResources: () => string[]

@@ -6,18 +6,13 @@ import toast from "react-hot-toast"
 
 import { ChannelType } from "~/constants"
 import { DEFAULT_OCTOPUS_CHANNEL_FIELDS } from "~/constants/octopus"
-import { OCTOPUS } from "~/constants/siteType"
 import { ensureAccountApiToken } from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import type { ApiResponse } from "~/services/apiService/common/type"
 import * as octopusApi from "~/services/apiService/octopus"
 import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompatible"
-import type {
-  ManagedSiteConfig,
-  ManagedSiteService,
-} from "~/services/managedSites/managedSiteService"
+import type { ManagedSiteConfig } from "~/services/managedSites/managedSiteService"
 import { findManagedSiteChannelByComparableInputs } from "~/services/managedSites/utils/channelMatching"
-import type { ManagedSiteMessagesKey } from "~/services/managedSites/utils/managedSite"
 import {
   userPreferences,
   type UserPreferences,
@@ -140,7 +135,7 @@ export function buildOctopusBaseUrl(baseUrl: string): string {
 /**
  * 检查偏好设置中是否有有效的 Octopus 配置
  */
-export function hasValidOctopusConfig(prefs: UserPreferences | null): boolean {
+function hasValidOctopusConfig(prefs: UserPreferences | null): boolean {
   if (!prefs?.octopus) return false
   const { baseUrl, username, password } = prefs.octopus
   return Boolean(baseUrl?.trim() && username?.trim() && password?.trim())
@@ -578,25 +573,4 @@ export async function autoConfigToOctopus(
     toast.error(message, { id: toastId })
     return { success: false, message }
   }
-}
-
-/**
- * Octopus ManagedSiteService 实现
- */
-export const octopus: ManagedSiteService = {
-  siteType: OCTOPUS,
-  messagesKey: "octopus" as ManagedSiteMessagesKey,
-
-  searchChannel,
-  createChannel,
-  updateChannel,
-  deleteChannel,
-  checkValidConfig: checkValidOctopusConfig,
-  getConfig: getOctopusConfig,
-  fetchAvailableModels,
-  buildChannelName,
-  prepareChannelFormData,
-  buildChannelPayload,
-  findMatchingChannel,
-  autoConfigToManagedSite: autoConfigToOctopus,
 }

@@ -21,9 +21,6 @@ export const NEW_API_MANAGED_SESSION_STATUSES = {
   PASSKEY_MANUAL_REQUIRED: "passkey-manual-required",
 } as const
 
-export type NewApiManagedSessionStatus =
-  (typeof NEW_API_MANAGED_SESSION_STATUSES)[keyof typeof NEW_API_MANAGED_SESSION_STATUSES]
-
 export interface NewApiVerificationMethods {
   twoFactorEnabled: boolean
   passkeyEnabled: boolean
@@ -59,7 +56,7 @@ export const NEW_API_CHANNEL_KEY_ERROR_KINDS = {
   SECURE_VERIFICATION_REQUIRED: "secure-verification-required",
 } as const
 
-export type NewApiChannelKeyErrorKind =
+type NewApiChannelKeyErrorKind =
   (typeof NEW_API_CHANNEL_KEY_ERROR_KINDS)[keyof typeof NEW_API_CHANNEL_KEY_ERROR_KINDS]
 
 type NewApiChannelKeyRequirementSessionResult = Exclude<
@@ -250,7 +247,7 @@ const getNewApiChannelKeyRequirementKind = (
  * Ensures the current origin has enough managed-session state to read hidden
  * channel keys before callers touch the per-channel key endpoint.
  */
-export async function ensureNewApiChannelKeyAccess(
+async function ensureNewApiChannelKeyAccess(
   config: Pick<
     NewApiConfig,
     "baseUrl" | "userId" | "username" | "password" | "totpSecret"

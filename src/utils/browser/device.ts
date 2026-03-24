@@ -1,6 +1,6 @@
-export type DeviceType = "mobile" | "tablet" | "desktop"
+type DeviceType = "mobile" | "tablet" | "desktop"
 
-export interface DeviceTypeInfo {
+interface DeviceTypeInfo {
   type: DeviceType
   isMobile: boolean
   isTablet: boolean
@@ -8,7 +8,7 @@ export interface DeviceTypeInfo {
   isTouchDevice: boolean
 }
 
-export interface DeviceDetectionOptions {
+interface DeviceDetectionOptions {
   userAgent?: string
   userAgentDataMobile?: boolean | null
   maxTouchPoints?: number

@@ -3,7 +3,7 @@ import type { LoggingPreferences, LogLevel } from "~/types/logging"
 import { getDefaultLoggingPreferences } from "~/types/logging"
 import { sanitizeUrlForLog } from "~/utils/core/sanitizeUrlForLog"
 
-export type ExtensionLogContext =
+type ExtensionLogContext =
   | "Background"
   | "Content"
   | "Popup"
@@ -11,7 +11,7 @@ export type ExtensionLogContext =
   | "SidePanel"
   | "Unknown"
 
-export interface Logger {
+interface Logger {
   debug: (message: string, details?: unknown) => void
   info: (message: string, details?: unknown) => void
   warn: (message: string, details?: unknown) => void

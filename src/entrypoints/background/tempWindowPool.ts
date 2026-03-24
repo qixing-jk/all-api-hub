@@ -300,7 +300,7 @@ function logTempWindow(event: string, details?: Record<string, unknown>) {
   }
 }
 
-export type TempContext = {
+type TempContext = {
   id: number
   tabId: number
   origin: string
@@ -1672,7 +1672,7 @@ type GuardCheckMessageResponse = {
   error?: string
 }
 
-export type TempContextProtectionGuardStatus = {
+type TempContextProtectionGuardStatus = {
   passed: boolean
   capPassed: boolean
   cloudflarePassed: boolean

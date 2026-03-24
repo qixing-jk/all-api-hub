@@ -1,7 +1,7 @@
 import * as OTPAuth from "otpauth"
 
-export const NEW_API_TOTP_DIGITS = 6
-export const NEW_API_TOTP_PERIOD_SECONDS = 30
+const NEW_API_TOTP_DIGITS = 6
+const NEW_API_TOTP_PERIOD_SECONDS = 30
 
 const normalizeNewApiTotpSecret = (secret: string) =>
   secret.trim().replace(/\s+/g, "").toUpperCase()

@@ -7,11 +7,6 @@ import {
   requestPermissions,
 } from "~/utils/browser/browserApi"
 
-/**
- * Aliases to manifest permission types for clearer signatures.
- */
-export type ManifestPermissions = browser._manifest.Permission
-
 export const OPTIONAL_PERMISSION_IDS = {
   Cookies: "cookies",
   declarativeNetRequestWithHostAccess: "declarativeNetRequestWithHostAccess",
@@ -53,7 +48,7 @@ export async function hasCookieInterceptorPermissions(): Promise<boolean> {
   return await hasPermissions(COOKIE_INTERCEPTOR_PERMISSIONS)
 }
 
-export interface PermissionDefinition {
+interface PermissionDefinition {
   id: ManifestOptionalPermissions
   titleKey: string
   descriptionKey: string

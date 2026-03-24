@@ -178,7 +178,7 @@ export async function fetchChannelSecretKey(
 /**
  * Checks whether the given user preferences contain a complete Done Hub config.
  */
-export function hasValidDoneHubConfig(
+function hasValidDoneHubConfig(
   prefs: UserPreferences | null,
 ): prefs is UserPreferences & { doneHub: DoneHubConfig } {
   if (!prefs) {
@@ -456,7 +456,7 @@ export async function findMatchingChannel(
 /**
  * Imports an account as a channel into Done Hub.
  */
-export async function importToDoneHub(
+async function importToDoneHub(
   account: DisplaySiteData,
   token: ApiToken,
 ): Promise<ServiceResponse<void>> {

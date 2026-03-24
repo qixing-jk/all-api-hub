@@ -383,7 +383,7 @@ export async function findMatchingChannel(
 /**
  * Imports an account as a channel into Veloera.
  */
-export async function importToVeloera(
+async function importToVeloera(
   account: DisplaySiteData,
   token: ApiToken,
 ): Promise<ServiceResponse<void>> {
