@@ -2,7 +2,7 @@ import { getApiService } from "~/services/apiService"
 import type { CreateTokenRequest } from "~/services/apiService/common/type"
 import type { ApiToken, DisplaySiteData, SiteAccount } from "~/types"
 
-export const DEFAULT_AUTO_PROVISION_TOKEN_NAME = "user group (auto)"
+const DEFAULT_AUTO_PROVISION_TOKEN_NAME = "user group (auto)"
 
 /**
  * Generates the default token payload used by key auto-provisioning flows.

@@ -5,7 +5,7 @@
  * the same `userId` value across multiple known keys.
  */
 
-export const COMPAT_USER_ID_HEADER_NAMES = [
+const COMPAT_USER_ID_HEADER_NAMES = [
   "New-API-User",
   "Veloera-User",
   "voapi-user",
@@ -14,8 +14,7 @@ export const COMPAT_USER_ID_HEADER_NAMES = [
   "neo-api-user",
 ] as const
 
-export type CompatUserIdHeaderName =
-  (typeof COMPAT_USER_ID_HEADER_NAMES)[number]
+type CompatUserIdHeaderName = (typeof COMPAT_USER_ID_HEADER_NAMES)[number]
 
 /**
  * Build compatibility headers that fan-out the same `userId` across all known

@@ -17,7 +17,7 @@ export interface RedeemResult {
  * Encapsulates redemption flows that convert codes into account credits while
  * handling storage lookups, API invocation, and success/error localization.
  */
-export class RedeemService {
+class RedeemService {
   /**
    * Redeems a code for the specified account, returning localized results with
    * credited amount and display-ready account info when successful.

@@ -6,7 +6,7 @@ import {
 } from "~/services/tags/tagStoreUtils"
 import type { SiteAccount, TagStore } from "~/types"
 
-export const CURRENT_ACCOUNT_TAG_DATA_VERSION = 1
+const CURRENT_ACCOUNT_TAG_DATA_VERSION = 1
 
 type MigrationInput = {
   accounts: SiteAccount[]

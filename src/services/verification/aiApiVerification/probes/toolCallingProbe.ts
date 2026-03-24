@@ -22,7 +22,7 @@ type RunToolCallingProbeParams = {
 /**
  * Check whether the verification tool was called in the AI SDK result.
  */
-export function toolCalled(result: {
+function toolCalled(result: {
   toolCalls?: Array<{ toolName?: string }>
   toolResults?: Array<{ toolName?: string }>
 }): boolean {

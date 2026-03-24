@@ -2,13 +2,11 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useRef,
   useState,
   type ReactNode,
 } from "react"
-import ReactDOM from "react-dom/client"
 
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import AccountDialog from "~/features/AccountManagement/components/AccountDialog"
@@ -148,31 +146,4 @@ export const useDialogStateContext = () => {
     )
   }
   return context
-}
-
-// Imperative API
-let dialogRoot = document.getElementById("dialog-root")
-if (!dialogRoot) {
-  dialogRoot = document.createElement("div")
-  dialogRoot.id = "dialog-root"
-  document.body.appendChild(dialogRoot)
-}
-const root = ReactDOM.createRoot(dialogRoot)
-
-export const showAccountDialog = (options: DialogOptions): Promise<any> => {
-  return new Promise((resolve, reject) => {
-    const DialogWrapper = () => {
-      const { openAccountDialog } = useDialogStateContext()
-      useEffect(() => {
-        openAccountDialog(options).then(resolve).catch(reject)
-      }, [openAccountDialog])
-      return null
-    }
-    // We need to wrap it in the provider to access the context
-    root.render(
-      <DialogStateProvider>
-        <DialogWrapper />
-      </DialogStateProvider>,
-    )
-  })
 }

@@ -20,7 +20,7 @@ import type { CurrencyType } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 import i18n, { t } from "~/utils/i18n/core"
 
-export const SHARE_SNAPSHOT_IMAGE = {
+const SHARE_SNAPSHOT_IMAGE = {
   width: 1200,
   height: 1200,
 } as const
@@ -250,7 +250,7 @@ export const generateShareSnapshotCaption = (
 /**
  * Renders the snapshot payload to a `1200x1200` PNG blob using a mesh gradient background.
  */
-export const renderShareSnapshotToPng = async (
+const renderShareSnapshotToPng = async (
   payload: ShareSnapshotPayload,
 ): Promise<Blob> => {
   const canvas = document.createElement("canvas")

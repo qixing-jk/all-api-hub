@@ -27,7 +27,7 @@ export function normalizeFetchOptions(options: RequestInit = {}): RequestInit {
  * @param headers Headers instance, tuple array, or object.
  * @returns Plain key/value header map.
  */
-export function sanitizeHeaders(headers: HeadersInit): Record<string, string> {
+function sanitizeHeaders(headers: HeadersInit): Record<string, string> {
   if (headers instanceof Headers) {
     const result: Record<string, string> = {}
     headers.forEach((value, key) => {

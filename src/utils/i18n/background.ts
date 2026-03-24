@@ -40,5 +40,3 @@ export async function initBackgroundI18n() {
 i18n.on("languageChanged", (lng) => {
   dayjs.locale(mapToDayjsLocale(lng))
 })
-
-export default i18n
