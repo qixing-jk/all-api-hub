@@ -29,6 +29,7 @@
     "incognitoAccessRequired": "需要允許擴充套件在無痕模式執行才能使用無痕臨時視窗，請在擴充套件管理頁開啟“允許在無痕模式執行”後重試",
     "invalidFetchRequest": "無效的請求引數",
     "pageLoadTimeout": "頁面載入超時",
+    "windowCreationUnavailable": "目前這個流程需要瀏覽器開啟一個臨時視窗，但視窗建立不可用。請允許擴充套件建立視窗，或改用支援此能力的瀏覽器後再試一次。",
     "windowNotFound": "未找到對應視窗或標籤頁"
   },
   "ccswitch": {

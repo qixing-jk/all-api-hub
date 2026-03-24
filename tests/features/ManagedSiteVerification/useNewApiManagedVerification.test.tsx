@@ -6,6 +6,7 @@ import {
   NEW_API_MANAGED_VERIFICATION_STEPS,
   useNewApiManagedVerification,
 } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
+import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import { NEW_API_MANAGED_SESSION_STATUSES } from "~/services/managedSites/providers/newApiSession"
 
 const {
@@ -273,6 +274,54 @@ describe("useNewApiManagedVerification", () => {
         NEW_API_MANAGED_VERIFICATION_STEPS.PASSKEY_MANUAL,
       )
       expect(onVerified).not.toHaveBeenCalled()
+    })
+  })
+
+  it("opens the failure step immediately when a localized failure message is prefetched", async () => {
+    const { result } = renderHook(() => useNewApiManagedVerification())
+
+    act(() => {
+      result.current.openNewApiManagedVerification({
+        ...BASE_REQUEST,
+        initialFailureMessage: "messages:background.windowCreationUnavailable",
+      })
+    })
+
+    await waitFor(() => {
+      expect(result.current.dialogState.step).toBe(
+        NEW_API_MANAGED_VERIFICATION_STEPS.FAILURE,
+      )
+      expect(result.current.dialogState.errorMessage).toBe(
+        "messages:background.windowCreationUnavailable",
+      )
+    })
+
+    expect(ensureNewApiManagedSessionMock).not.toHaveBeenCalled()
+  })
+
+  it("maps unsupported temp-window errors to localized verification guidance", async () => {
+    ensureNewApiManagedSessionMock.mockRejectedValue(
+      new ApiError(
+        "raw browser window error",
+        undefined,
+        undefined,
+        API_ERROR_CODES.TEMP_WINDOW_WINDOW_CREATION_UNAVAILABLE,
+      ),
+    )
+
+    const { result } = renderHook(() => useNewApiManagedVerification())
+
+    act(() => {
+      result.current.openNewApiManagedVerification(BASE_REQUEST)
+    })
+
+    await waitFor(() => {
+      expect(result.current.dialogState.step).toBe(
+        NEW_API_MANAGED_VERIFICATION_STEPS.FAILURE,
+      )
+      expect(result.current.dialogState.errorMessage).toBe(
+        "messages:background.windowCreationUnavailable",
+      )
     })
   })
 

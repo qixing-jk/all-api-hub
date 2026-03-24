@@ -52,6 +52,7 @@ export interface TempWindowTurnstileFetchParams extends TempWindowFetchParams {
 export interface TempWindowFetch {
   success: boolean
   status?: number
+  code?: ApiErrorCode
   headers?: Record<string, string>
   data?: any
   error?: string

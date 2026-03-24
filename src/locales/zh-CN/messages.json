@@ -29,6 +29,7 @@
     "incognitoAccessRequired": "需要允许扩展在无痕模式运行才能使用无痕临时窗口，请在扩展管理页开启“允许在无痕模式运行”后重试",
     "invalidFetchRequest": "无效的请求参数",
     "pageLoadTimeout": "页面加载超时",
+    "windowCreationUnavailable": "当前流程需要浏览器打开一个临时窗口，但窗口创建不可用。请允许扩展创建窗口，或改用支持该能力的浏览器后重试。",
     "windowNotFound": "未找到对应窗口或标签页"
   },
   "ccswitch": {

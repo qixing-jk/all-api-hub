@@ -177,6 +177,66 @@ export function hasWindowsAPI(): boolean {
   return !!browser.windows
 }
 
+export const WINDOW_CREATION_FAILURE_REASONS = {
+  WINDOWS_API_UNAVAILABLE: "windows-api-unavailable",
+  WINDOW_CREATION_UNAVAILABLE: "window-creation-unavailable",
+  WINDOW_HANDLE_UNAVAILABLE: "window-handle-unavailable",
+} as const
+
+export type WindowCreationFailureReason =
+  (typeof WINDOW_CREATION_FAILURE_REASONS)[keyof typeof WINDOW_CREATION_FAILURE_REASONS]
+
+const WINDOW_CREATION_CONTEXT_PATTERNS = [/popup/i, /\bwindows?\b/i]
+const WINDOW_CREATION_UNAVAILABLE_PATTERNS = [
+  /not allowed/i,
+  /not permitted/i,
+  /not supported/i,
+  /unsupported/i,
+  /permission denied/i,
+  /\bdenied\b/i,
+  /\bforbidden\b/i,
+  /failed to create/i,
+  /cannot create/i,
+]
+
+/**
+ * Classifies window-creation failures that can safely fall back to a plain tab.
+ *
+ * This centralizes browser-specific wording and missing-handle checks so
+ * background callers do not have to duplicate popup/window failure heuristics.
+ */
+export function classifyRecoverableWindowCreationFailure(params: {
+  error?: unknown
+  windowsApiAvailable?: boolean
+  missingHandle?: boolean
+}): WindowCreationFailureReason | null {
+  if (params.windowsApiAvailable === false) {
+    return WINDOW_CREATION_FAILURE_REASONS.WINDOWS_API_UNAVAILABLE
+  }
+
+  if (params.missingHandle) {
+    return WINDOW_CREATION_FAILURE_REASONS.WINDOW_HANDLE_UNAVAILABLE
+  }
+
+  const message = getErrorMessage(params.error).trim()
+  if (!message) {
+    return null
+  }
+
+  const hasWindowContext = WINDOW_CREATION_CONTEXT_PATTERNS.some((pattern) =>
+    pattern.test(message),
+  )
+  const hasUnavailableSignal = WINDOW_CREATION_UNAVAILABLE_PATTERNS.some(
+    (pattern) => pattern.test(message),
+  )
+
+  if (!hasWindowContext || !hasUnavailableSignal) {
+    return null
+  }
+
+  return WINDOW_CREATION_FAILURE_REASONS.WINDOW_CREATION_UNAVAILABLE
+}
+
 /**
  * 聚焦标签页
  * 同时聚焦窗口（如果支持）和激活标签页

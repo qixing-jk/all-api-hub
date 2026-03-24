@@ -4,6 +4,10 @@ import {
 } from "~/services/managedSites/providers/newApiSession"
 import type { NewApiConfig } from "~/types/newApiConfig"
 
+import {
+  getNewApiManagedVerificationErrorMessage,
+  isNewApiManagedVerificationWindowError,
+} from "./errorMessages"
 import type { OpenNewApiManagedVerificationParams } from "./useNewApiManagedVerification"
 
 interface LoadNewApiChannelKeyWithVerificationParams {
@@ -44,6 +48,7 @@ export async function loadNewApiChannelKeyWithVerification(
 
   const openVerification = async (
     request?: OpenNewApiManagedVerificationParams["initialSessionResult"],
+    initialFailureMessage?: string,
   ) => {
     await Promise.resolve(
       params.openVerification({
@@ -51,6 +56,7 @@ export async function loadNewApiChannelKeyWithVerification(
         label: params.label,
         config: params.config,
         initialSessionResult: request ?? undefined,
+        initialFailureMessage,
         onVerified: async () => {
           await loadKey()
         },
@@ -64,6 +70,14 @@ export async function loadNewApiChannelKeyWithVerification(
   } catch (error) {
     if (error instanceof NewApiChannelKeyRequirementError) {
       await openVerification(error.sessionResult)
+      return false
+    }
+
+    if (isNewApiManagedVerificationWindowError(error)) {
+      await openVerification(
+        undefined,
+        getNewApiManagedVerificationErrorMessage(error),
+      )
       return false
     }
 

@@ -12,6 +12,8 @@ import type { NewApiConfig } from "~/types/newApiConfig"
 import { createTab } from "~/utils/browser/browserApi"
 import { t } from "~/utils/i18n/core"
 
+import { getNewApiManagedVerificationErrorMessage } from "./errorMessages"
+
 export const NEW_API_MANAGED_VERIFICATION_STEPS = {
   LOGGING_IN: "logging-in",
   CREDENTIALS_MISSING: "credentials-missing",
@@ -34,11 +36,12 @@ export interface OpenNewApiManagedVerificationParams {
   label?: string
   onVerified?: () => Promise<void> | void
   initialSessionResult?: EnsureNewApiManagedSessionResult
+  initialFailureMessage?: string
 }
 
 type StoredNewApiManagedVerificationRequest = Omit<
   OpenNewApiManagedVerificationParams,
-  "initialSessionResult"
+  "initialFailureMessage" | "initialSessionResult"
 >
 
 interface NewApiManagedVerificationState {
@@ -212,6 +215,19 @@ export function useNewApiManagedVerification() {
         return
       }
 
+      if (request.initialFailureMessage) {
+        setState({
+          isOpen: true,
+          step: NEW_API_MANAGED_VERIFICATION_STEPS.FAILURE,
+          isBusy: false,
+          busyMessage: undefined,
+          code: "",
+          errorMessage: request.initialFailureMessage,
+          request: normalizedRequest,
+        })
+        return
+      }
+
       setState({
         isOpen: true,
         step: NEW_API_MANAGED_VERIFICATION_STEPS.LOGGING_IN,
@@ -233,8 +249,7 @@ export function useNewApiManagedVerification() {
           step: NEW_API_MANAGED_VERIFICATION_STEPS.FAILURE,
           isBusy: false,
           busyMessage: undefined,
-          errorMessage:
-            error instanceof Error ? error.message : String(error ?? ""),
+          errorMessage: getNewApiManagedVerificationErrorMessage(error),
         }))
       }
     },
@@ -280,8 +295,7 @@ export function useNewApiManagedVerification() {
         isBusy: false,
         busyMessage: undefined,
         code: "",
-        errorMessage:
-          error instanceof Error ? error.message : String(error ?? ""),
+        errorMessage: getNewApiManagedVerificationErrorMessage(error),
       }))
     }
   }, [applySessionResult, state.code, state.request, state.step])

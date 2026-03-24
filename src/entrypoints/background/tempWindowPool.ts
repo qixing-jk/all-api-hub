@@ -2,6 +2,10 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { TURNSTILE_DEFAULT_QUERY_PARAM_NAME } from "~/constants/turnstile"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import {
+  API_ERROR_CODES,
+  type ApiErrorCode,
+} from "~/services/apiService/common/errors"
+import {
   DEFAULT_PREFERENCES,
   TempWindowFallbackPreferences,
   userPreferences,
@@ -16,6 +20,7 @@ import type {
   TempWindowTurnstileMeta,
 } from "~/types/tempWindowFetch"
 import {
+  classifyRecoverableWindowCreationFailure,
   createTab,
   createWindow,
   hasWindowsAPI,
@@ -23,6 +28,8 @@ import {
   onTabRemoved,
   onWindowRemoved,
   removeTabOrWindow,
+  WINDOW_CREATION_FAILURE_REASONS,
+  type WindowCreationFailureReason,
 } from "~/utils/browser/browserApi"
 import {
   addAuthMethodHeader,
@@ -308,6 +315,121 @@ type TempContext = {
   busy: boolean
   lastUsed: number
   releaseTimer?: ReturnType<typeof setTimeout>
+}
+
+type TempContextOpenMode = "window" | "composite" | "tab"
+
+type TempContextOpenResult = {
+  id: number
+  tabId: number
+  type: "window" | "tab"
+}
+
+type RecoverableWindowCreationError = Error & {
+  reason: WindowCreationFailureReason
+}
+
+type UnsupportedTempContextError = Error & {
+  code: ApiErrorCode
+  reason: WindowCreationFailureReason
+}
+
+const TEMP_WINDOW_UNSUPPORTED_CODE_BY_REASON: Record<
+  WindowCreationFailureReason,
+  ApiErrorCode
+> = {
+  [WINDOW_CREATION_FAILURE_REASONS.WINDOWS_API_UNAVAILABLE]:
+    API_ERROR_CODES.TEMP_WINDOW_WINDOWS_API_UNAVAILABLE,
+  [WINDOW_CREATION_FAILURE_REASONS.WINDOW_CREATION_UNAVAILABLE]:
+    API_ERROR_CODES.TEMP_WINDOW_WINDOW_CREATION_UNAVAILABLE,
+  [WINDOW_CREATION_FAILURE_REASONS.WINDOW_HANDLE_UNAVAILABLE]:
+    API_ERROR_CODES.TEMP_WINDOW_WINDOW_HANDLE_UNAVAILABLE,
+}
+
+/**
+ * Wraps a recoverable window-creation failure with its normalized reason.
+ */
+function createRecoverableWindowCreationError(
+  reason: WindowCreationFailureReason,
+  error?: unknown,
+): RecoverableWindowCreationError {
+  const recoverableError = new Error(
+    getErrorMessage(error) ||
+      t("messages:background.windowCreationUnavailable"),
+  ) as RecoverableWindowCreationError
+
+  recoverableError.name = "RecoverableWindowCreationError"
+  recoverableError.reason = reason
+
+  return recoverableError
+}
+
+/**
+ * Type guard for normalized recoverable window-creation failures.
+ */
+function isRecoverableWindowCreationError(
+  error: unknown,
+): error is RecoverableWindowCreationError {
+  return Boolean(
+    error &&
+      typeof error === "object" &&
+      "reason" in error &&
+      typeof (error as { reason?: unknown }).reason === "string",
+  )
+}
+
+/**
+ * Builds the structured error returned when a window-only temp context cannot
+ * fall back to a plain tab.
+ */
+function createUnsupportedTempContextError(
+  reason: WindowCreationFailureReason,
+): UnsupportedTempContextError {
+  const unsupportedError = new Error(
+    t("messages:background.windowCreationUnavailable"),
+  ) as UnsupportedTempContextError
+
+  unsupportedError.name = "UnsupportedTempContextError"
+  unsupportedError.code = TEMP_WINDOW_UNSUPPORTED_CODE_BY_REASON[reason]
+  unsupportedError.reason = reason
+
+  return unsupportedError
+}
+
+/**
+ * Type guard for structured temp-context failures exposed to callers.
+ */
+function isUnsupportedTempContextError(
+  error: unknown,
+): error is UnsupportedTempContextError {
+  return Boolean(
+    error &&
+      typeof error === "object" &&
+      "code" in error &&
+      typeof (error as { code?: unknown }).code === "string" &&
+      "reason" in error &&
+      typeof (error as { reason?: unknown }).reason === "string",
+  )
+}
+
+/**
+ * Converts temp-context failures into the runtime response shape sent back to
+ * higher-level callers.
+ */
+function toTempWindowFailureResponse(error: unknown): {
+  error: string
+  code?: ApiErrorCode
+} {
+  if (isUnsupportedTempContextError(error)) {
+    return {
+      error: error.message,
+      code: error.code,
+    }
+  }
+
+  return {
+    error: getErrorMessage(error),
+  }
 }
 
 // 手动打开的临时窗口/标签页
@@ -743,15 +865,22 @@ export async function handleTempWindowFetch(
 
     sendResponse(response)
   } catch (error) {
+    const failure = toTempWindowFailureResponse(error)
+
     logTempWindow("tempWindowFetchError", {
       requestId: tempRequestId,
-      error: getErrorMessage(error),
+      error: failure.error,
+      code: failure.code ?? null,
     })
     await releaseTempContext(tempRequestId, {
       forceClose: true,
       reason: "tempWindowFetchError",
     })
-    sendResponse({ success: false, error: getErrorMessage(error) })
+    sendResponse({
+      success: false,
+      error: failure.error,
+      code: failure.code,
+    })
   } finally {
     for (const ruleId of ruleIds) {
       await removeTempWindowCookieRule(ruleId)
@@ -921,15 +1050,23 @@ export async function handleTempWindowTurnstileFetch(
 
     sendResponse({ ...response, turnstile } satisfies TempWindowTurnstileFetch)
   } catch (error) {
+    const failure = toTempWindowFailureResponse(error)
+
     logTempWindow("tempWindowTurnstileFetchError", {
       requestId: tempRequestId,
-      error: getErrorMessage(error),
+      error: failure.error,
+      code: failure.code ?? null,
     })
     await releaseTempContext(tempRequestId, {
       forceClose: true,
       reason: "tempWindowTurnstileFetchError",
     })
-    sendResponse({ success: false, error: getErrorMessage(error), turnstile })
+    sendResponse({
+      success: false,
+      error: failure.error,
+      code: failure.code,
+      turnstile,
+    })
   } finally {
     for (const ruleId of ruleIds) {
       await removeTempWindowCookieRule(ruleId)
@@ -1264,6 +1401,238 @@ async function getReusableContext(origin: string) {
 /**
  * 创建新的临时窗口/标签页上下文，并等待页面加载及 Cloudflare 校验通过。
  */
+/**
+ * Resolves the first temp-context mode the background should try to create.
+ */
+function resolveTempContextOpenMode(params: {
+  preferredMode: TempWindowFallbackPreferences["tempContextMode"]
+  incognito?: boolean
+}): TempContextOpenMode {
+  if (params.incognito) {
+    return "window"
+  }
+
+  if (params.preferredMode === "window") {
+    return "window"
+  }
+
+  if (params.preferredMode === "composite") {
+    return "composite"
+  }
+
+  return "tab"
+}
+
+/**
+ * Maps a low-level browser failure or missing handle into a recoverable
+ * window-creation category when possible.
+ */
+function classifyWindowCreationFailure(params: {
+  error?: unknown
+  missingHandle?: boolean
+}): WindowCreationFailureReason | null {
+  return classifyRecoverableWindowCreationFailure({
+    error: params.error,
+    windowsApiAvailable: hasWindowsAPI(),
+    missingHandle: params.missingHandle,
+  })
+}
+
+/**
+ * Opens a standard tab-backed temp context.
+ */
+async function openPlainTabTempContext(
+  url: string,
+): Promise<TempContextOpenResult> {
+  const tab = await createTab(url, false)
+
+  if (!tab?.id) {
+    throw new Error(t("messages:background.cannotCreateWindowOrTab"))
+  }
+
+  return {
+    id: tab.id,
+    tabId: tab.id,
+    type: "tab",
+  }
+}
+
+/**
+ * Opens a popup-backed temp context and cleans up partial windows on failure.
+ */
+async function openPopupWindowTempContext(params: {
+  url: string
+  origin: string
+  requestId: string
+  suppressMinimize?: boolean
+  incognito?: boolean
+}): Promise<TempContextOpenResult> {
+  let windowId: number | null = null
+
+  try {
+    let popupWindow: browser.windows.Window | null = null
+
+    try {
+      popupWindow = await createWindow({
+        url: params.url,
+        type: "popup",
+        width: 420,
+        height: 520,
+        focused: false,
+        incognito: Boolean(params.incognito),
+      })
+    } catch (error) {
+      const reason = classifyWindowCreationFailure({ error })
+      if (reason) {
+        throw createRecoverableWindowCreationError(reason, error)
+      }
+      throw error
+    }
+
+    const missingWindowReason = classifyWindowCreationFailure({
+      missingHandle: !popupWindow?.id,
+    })
+    const popupWindowId = popupWindow?.id
+    if (missingWindowReason || popupWindowId == null) {
+      throw createRecoverableWindowCreationError(
+        missingWindowReason ??
+          WINDOW_CREATION_FAILURE_REASONS.WINDOW_HANDLE_UNAVAILABLE,
+      )
+    }
+
+    windowId = popupWindowId
+
+    const tabs = await browser.tabs.query({
+      windowId,
+      active: true,
+    })
+    const tabId = tabs[0]?.id
+
+    const missingTabReason = classifyWindowCreationFailure({
+      missingHandle: !tabId,
+    })
+    if (missingTabReason || tabId == null) {
+      throw createRecoverableWindowCreationError(
+        missingTabReason ??
+          WINDOW_CREATION_FAILURE_REASONS.WINDOW_HANDLE_UNAVAILABLE,
+      )
+    }
+
+    // Best-effort minimize to reduce disturbance unless suppressed (e.g., popup context).
+    if (!params.suppressMinimize) {
+      try {
+        await browser.windows.update(windowId, { state: "minimized" })
+        logTempWindow("quietWindowMinimized", {
+          requestId: params.requestId,
+          origin: params.origin,
+          windowId,
+        })
+      } catch (minErr) {
+        logTempWindow("quietWindowMinimizeFailed", {
+          requestId: params.requestId,
+          origin: params.origin,
+          windowId,
+          error: getErrorMessage(minErr),
+        })
+      }
+    }
+
+    return {
+      id: windowId,
+      tabId,
+      type: "window",
+    }
+  } catch (error) {
+    if (windowId != null) {
+      try {
+        await removeTabOrWindow(windowId)
+      } catch (cleanupError) {
+        logger.warn(
+          "Failed to cleanup temp context after popup creation error",
+          cleanupError,
+        )
+      }
+    }
+
+    throw error
+  }
+}
+
+/**
+ * Runs the preferred temp-context mode first, then retries once as a plain tab
+ * when the failure is recoverable and the flow allows rollback.
+ */
+async function openFallbackAwareTempContext(params: {
+  url: string
+  origin: string
+  requestId: string
+  requestedMode: TempContextOpenMode
+  allowWindowRollback: boolean
+  suppressMinimize?: boolean
+  incognito?: boolean
+}): Promise<TempContextOpenResult> {
+  if (params.requestedMode === "tab") {
+    return await openPlainTabTempContext(params.url)
+  }
+
+  try {
+    if (params.requestedMode === "composite") {
+      const opened = await openTabInCompositeWindow({
+        url: params.url,
+        origin: params.origin,
+        requestId: params.requestId,
+        suppressMinimize: params.suppressMinimize,
+      })
+
+      return {
+        id: opened.tabId,
+        tabId: opened.tabId,
+        type: "tab",
+      }
+    }
+
+    return await openPopupWindowTempContext({
+      url: params.url,
+      origin: params.origin,
+      requestId: params.requestId,
+      suppressMinimize: params.suppressMinimize,
+      incognito: params.incognito,
+    })
+  } catch (error) {
+    if (!isRecoverableWindowCreationError(error)) {
+      throw error
+    }
+
+    logTempWindow("tempContextWindowCreationRecoverable", {
+      requestId: params.requestId,
+      origin: params.origin,
+      requestedMode: params.requestedMode,
+      allowWindowRollback: params.allowWindowRollback,
+      reason: error.reason,
+      error: error.message,
+    })
+
+    if (!params.allowWindowRollback) {
+      throw createUnsupportedTempContextError(error.reason)
+    }
+
+    const fallbackContext = await openPlainTabTempContext(params.url)
+
+    logTempWindow("tempContextWindowCreationRolledBackToTab", {
+      requestId: params.requestId,
+      origin: params.origin,
+      requestedMode: params.requestedMode,
+      fallbackType: fallbackContext.type,
+      reason: error.reason,
+    })
+
+    return fallbackContext
+  }
+}
+
+/**
+ * Creates a ready-to-use temp context, including load/guard readiness checks.
+ */
 async function createTempContextInstance(
   url: string,
   origin: string,
@@ -1276,76 +1645,28 @@ async function createTempContextInstance(
   let tabId: number | undefined
   let type: "window" | "tab" = "window"
   const useIncognito = Boolean(options.incognito)
+  const requestedMode = resolveTempContextOpenMode({
+    preferredMode,
+    incognito: useIncognito,
+  })
+  // Incognito/private temp contexts must stay window-backed so storage/session
+  // isolation does not silently collapse back into the regular profile.
+  const allowWindowRollback = !useIncognito && requestedMode !== "tab"
 
   try {
-    const canUseWindow =
-      hasWindowsAPI() && (useIncognito || preferredMode === "window")
-    const canUseComposite =
-      !useIncognito && preferredMode === "composite" && hasWindowsAPI()
+    const opened = await openFallbackAwareTempContext({
+      url,
+      origin,
+      requestId,
+      requestedMode,
+      allowWindowRollback,
+      suppressMinimize,
+      incognito: useIncognito,
+    })
 
-    if (canUseComposite) {
-      const opened = await openTabInCompositeWindow({
-        url,
-        origin,
-        requestId,
-        suppressMinimize,
-      })
-
-      contextId = opened.tabId
-      tabId = opened.tabId
-      type = "tab"
-    } else if (canUseWindow) {
-      const window = await createWindow({
-        url,
-        type: "popup",
-        width: 420,
-        height: 520,
-        focused: false,
-        incognito: useIncognito,
-      })
-
-      if (!window?.id) {
-        throw new Error(t("messages:background.cannotCreateWindowOrTab"))
-      }
-
-      contextId = window.id
-      const tabs = await browser.tabs.query({
-        windowId: window.id,
-        active: true,
-      })
-      tabId = tabs[0]?.id
-
-      // Best-effort minimize to reduce disturbance unless suppressed (e.g., popup context).
-      if (!suppressMinimize) {
-        try {
-          await browser.windows.update(window.id, { state: "minimized" })
-          logTempWindow("quietWindowMinimized", {
-            requestId,
-            origin,
-            windowId: window.id,
-          })
-        } catch (minErr) {
-          logTempWindow("quietWindowMinimizeFailed", {
-            requestId,
-            origin,
-            windowId: window.id,
-            error: getErrorMessage(minErr),
-          })
-        }
-      }
-    } else {
-      if (useIncognito) {
-        throw new Error("Incognito temp context requires window API support")
-      }
-      const tab = await createTab(url, false)
-      contextId = tab?.id
-      tabId = tab?.id
-      type = "tab"
-    }
-
-    if (!contextId || !tabId) {
-      throw new Error(t("messages:background.cannotCreateWindowOrTab"))
-    }
+    contextId = opened.id
+    tabId = opened.tabId
+    type = opened.type
 
     logTempWindow("createTempContextInstance", {
       requestId,
@@ -1354,6 +1675,7 @@ async function createTempContextInstance(
       tabId,
       type,
       preferredMode,
+      requestedMode,
       url: sanitizeUrlForLog(url),
     })
 
@@ -1369,6 +1691,7 @@ async function createTempContextInstance(
       tabId,
       type,
       preferredMode,
+      requestedMode,
     })
 
     return {
@@ -1388,6 +1711,7 @@ async function createTempContextInstance(
       type,
       error: getErrorMessage(error),
       preferredMode,
+      requestedMode,
     })
     if (contextId) {
       try {
@@ -1433,7 +1757,9 @@ async function openTabInCompositeWindow(params: {
   suppressMinimize?: boolean
 }): Promise<{ windowId: number; tabId: number }> {
   if (!hasWindowsAPI()) {
-    throw new Error(t("messages:background.cannotCreateWindowOrTab"))
+    throw createRecoverableWindowCreationError(
+      WINDOW_CREATION_FAILURE_REASONS.WINDOWS_API_UNAVAILABLE,
+    )
   }
 
   if (compositeWindowId != null) {
@@ -1442,11 +1768,18 @@ async function openTabInCompositeWindow(params: {
       const tab = await createTab(params.url, false, {
         windowId: compositeWindowId,
       })
-      if (!tab?.id) {
-        throw new Error(t("messages:background.cannotCreateWindowOrTab"))
+      const tabId = tab?.id
+      const missingTabReason = classifyWindowCreationFailure({
+        missingHandle: !tabId,
+      })
+      if (missingTabReason || tabId == null) {
+        throw createRecoverableWindowCreationError(
+          missingTabReason ??
+            WINDOW_CREATION_FAILURE_REASONS.WINDOW_HANDLE_UNAVAILABLE,
+        )
       }
 
-      return { windowId: compositeWindowId, tabId: tab.id }
+      return { windowId: compositeWindowId, tabId }
     } catch (error) {
       logTempWindow("compositeWindowNotAlive", {
         requestId: params.requestId,
@@ -1461,57 +1794,107 @@ async function openTabInCompositeWindow(params: {
   if (compositeWindowCreatePromise) {
     const { windowId } = await compositeWindowCreatePromise
     const tab = await createTab(params.url, false, { windowId })
-    if (!tab?.id) {
-      throw new Error(t("messages:background.cannotCreateWindowOrTab"))
+    const tabId = tab?.id
+    const missingTabReason = classifyWindowCreationFailure({
+      missingHandle: !tabId,
+    })
+    if (missingTabReason || tabId == null) {
+      throw createRecoverableWindowCreationError(
+        missingTabReason ??
+          WINDOW_CREATION_FAILURE_REASONS.WINDOW_HANDLE_UNAVAILABLE,
+      )
     }
 
-    return { windowId, tabId: tab.id }
+    return { windowId, tabId }
   }
 
   compositeWindowCreatePromise = (async () => {
-    const window = await createWindow({
-      url: params.url,
-      type: "normal",
-      width: 420,
-      height: 520,
-      focused: false,
-    })
+    let windowId: number | null = null
 
-    if (!window?.id) {
-      throw new Error(t("messages:background.cannotCreateWindowOrTab"))
-    }
+    try {
+      let compositeWindow: browser.windows.Window | null = null
 
-    compositeWindowId = window.id
-
-    if (!params.suppressMinimize) {
       try {
-        await browser.windows.update(window.id, { state: "minimized" })
-        logTempWindow("compositeWindowMinimized", {
-          requestId: params.requestId,
-          origin: params.origin,
-          windowId: window.id,
+        compositeWindow = await createWindow({
+          url: params.url,
+          type: "normal",
+          width: 420,
+          height: 520,
+          focused: false,
         })
-      } catch (minErr) {
-        logTempWindow("compositeWindowMinimizeFailed", {
-          requestId: params.requestId,
-          origin: params.origin,
-          windowId: window.id,
-          error: getErrorMessage(minErr),
-        })
+      } catch (error) {
+        const reason = classifyWindowCreationFailure({ error })
+        if (reason) {
+          throw createRecoverableWindowCreationError(reason, error)
+        }
+        throw error
       }
+
+      const missingWindowReason = classifyWindowCreationFailure({
+        missingHandle: !compositeWindow?.id,
+      })
+      const compositeWindowHandle = compositeWindow?.id
+      if (missingWindowReason || compositeWindowHandle == null) {
+        throw createRecoverableWindowCreationError(
+          missingWindowReason ??
+            WINDOW_CREATION_FAILURE_REASONS.WINDOW_HANDLE_UNAVAILABLE,
+        )
+      }
+
+      windowId = compositeWindowHandle
+      compositeWindowId = windowId
+
+      if (!params.suppressMinimize) {
+        try {
+          await browser.windows.update(windowId, { state: "minimized" })
+          logTempWindow("compositeWindowMinimized", {
+            requestId: params.requestId,
+            origin: params.origin,
+            windowId,
+          })
+        } catch (minErr) {
+          logTempWindow("compositeWindowMinimizeFailed", {
+            requestId: params.requestId,
+            origin: params.origin,
+            windowId,
+            error: getErrorMessage(minErr),
+          })
+        }
+      }
+
+      const tabs = await browser.tabs.query({
+        windowId,
+        active: true,
+      })
+      const tabId = tabs[0]?.id
+
+      const missingTabReason = classifyWindowCreationFailure({
+        missingHandle: !tabId,
+      })
+      if (missingTabReason || tabId == null) {
+        throw createRecoverableWindowCreationError(
+          missingTabReason ??
+            WINDOW_CREATION_FAILURE_REASONS.WINDOW_HANDLE_UNAVAILABLE,
+        )
+      }
+
+      return { windowId, tabId }
+    } catch (error) {
+      if (windowId != null) {
+        compositeWindowId = null
+
+        try {
+          await removeTabOrWindow(windowId)
+        } catch (cleanupError) {
+          logger.warn(
+            "Failed to cleanup composite temp context after creation error",
+            cleanupError,
+          )
+        }
+      }
+
+      throw error
     }
-
-    const tabs = await browser.tabs.query({
-      windowId: window.id,
-      active: true,
-    })
-    const tabId = tabs[0]?.id
-
-    if (!tabId) {
-      throw new Error(t("messages:background.cannotCreateWindowOrTab"))
-    }
-
-    return { windowId: window.id, tabId }
   })()
 
   try {

@@ -29,6 +29,7 @@
     "incognitoAccessRequired": "Incognito access is required to use a private temporary window. Please enable \"Allow in incognito\" for this extension and retry.",
     "invalidFetchRequest": "Invalid fetch request",
     "pageLoadTimeout": "Page load timeout",
+    "windowCreationUnavailable": "This flow needs the browser to open a temporary window, but window creation is unavailable. Allow extension-created windows or retry in a browser that supports them.",
     "windowNotFound": "Window or tab not found"
   },
   "ccswitch": {

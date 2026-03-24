@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { loadNewApiChannelKeyWithVerification } from "~/features/ManagedSiteVerification/loadNewApiChannelKeyWithVerification"
+import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 
 const { fetchNewApiChannelKeyMock } = vi.hoisted(() => ({
   fetchNewApiChannelKeyMock: vi.fn(),
@@ -99,5 +100,36 @@ describe("loadNewApiChannelKeyWithVerification", () => {
     })
     expect(setKey).toHaveBeenCalledWith("hidden-channel-key")
     expect(openVerification).not.toHaveBeenCalled()
+  })
+
+  it("opens the verification dialog with localized guidance when temp-window rollback is impossible", async () => {
+    fetchNewApiChannelKeyMock.mockRejectedValue(
+      new ApiError(
+        "raw browser window error",
+        undefined,
+        undefined,
+        API_ERROR_CODES.TEMP_WINDOW_WINDOW_CREATION_UNAVAILABLE,
+      ),
+    )
+
+    const setKey = vi.fn()
+    const openVerification = vi.fn()
+
+    const loaded = await loadNewApiChannelKeyWithVerification({
+      ...BASE_PARAMS,
+      setKey,
+      openVerification,
+    })
+
+    expect(loaded).toBe(false)
+    expect(openVerification).toHaveBeenCalledWith({
+      kind: "channel",
+      label: "Channel A",
+      config: BASE_PARAMS.config,
+      initialSessionResult: undefined,
+      initialFailureMessage: "messages:background.windowCreationUnavailable",
+      onVerified: expect.any(Function),
+    })
+    expect(setKey).not.toHaveBeenCalled()
   })
 })

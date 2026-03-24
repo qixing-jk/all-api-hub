@@ -1,6 +1,11 @@
 import { http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { RuntimeActionIds } from "~/constants/runtimeActions"
+import {
+  API_ERROR_CODES,
+  type ApiError,
+} from "~/services/apiService/common/errors"
 import {
   clearNewApiManagedSessionState,
   ensureNewApiManagedSession,
@@ -14,9 +19,12 @@ import {
 } from "~/services/managedSites/providers/newApiSession"
 import { server } from "~~/tests/msw/server"
 
-const { generateNewApiTotpCodeMock } = vi.hoisted(() => ({
-  generateNewApiTotpCodeMock: vi.fn<(secret: string) => string>(),
-}))
+const { generateNewApiTotpCodeMock, sendRuntimeMessageMock } = vi.hoisted(
+  () => ({
+    generateNewApiTotpCodeMock: vi.fn<(secret: string) => string>(),
+    sendRuntimeMessageMock: vi.fn(),
+  }),
+)
 
 vi.mock(
   "~/services/managedSites/providers/newApiTotp",
@@ -32,6 +40,25 @@ vi.mock(
     }
   },
 )
+
+vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/browser/browserApi")>()
+
+  return {
+    ...actual,
+    sendRuntimeMessage: (...args: unknown[]) => sendRuntimeMessageMock(...args),
+  }
+})
+
+vi.mock("~/utils/browser/index", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/browser/index")>()
+
+  return {
+    ...actual,
+    isExtensionBackground: () => false,
+  }
+})
 
 const BASE_CONFIG = {
   baseUrl: "https://managed.example",
@@ -60,6 +87,7 @@ describe("newApiSession", () => {
   beforeEach(() => {
     clearNewApiManagedSessionState()
     generateNewApiTotpCodeMock.mockReset()
+    sendRuntimeMessageMock.mockReset()
     vi.useRealTimers()
   })
 
@@ -287,6 +315,96 @@ describe("newApiSession", () => {
         channelId: 12,
       }),
     ).resolves.toBe("hidden-channel-key")
+  })
+
+  it("retries hidden channel-key reads through the shared temp-context pipeline when the direct request is blocked", async () => {
+    server.use(
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/2fa/status`, () =>
+        jsonData({ enabled: true }),
+      ),
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/passkey`, () =>
+        jsonData({ enabled: false }),
+      ),
+      http.post(`${BASE_CONFIG.baseUrl}/api/verify`, () =>
+        jsonData({ verified: true, expires_at: 1_700_000_000 }),
+      ),
+      http.post(
+        `${BASE_CONFIG.baseUrl}/api/channel/12/key`,
+        () =>
+          new HttpResponse("<html>blocked</html>", {
+            status: 403,
+            headers: {
+              "content-type": "text/html",
+            },
+          }),
+      ),
+    )
+    generateNewApiTotpCodeMock.mockReturnValue("123456")
+    sendRuntimeMessageMock.mockResolvedValueOnce({
+      success: true,
+      data: {
+        success: true,
+        message: "",
+        data: "hidden-channel-key-via-temp-context",
+      },
+    })
+
+    await expect(
+      fetchNewApiChannelKey({
+        ...BASE_CONFIG,
+        channelId: 12,
+      }),
+    ).resolves.toBe("hidden-channel-key-via-temp-context")
+
+    expect(sendRuntimeMessageMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: RuntimeActionIds.TempWindowFetch,
+        originUrl: BASE_CONFIG.baseUrl,
+        fetchUrl: `${BASE_CONFIG.baseUrl}/api/channel/12/key`,
+      }),
+    )
+  })
+
+  it("preserves structured temp-context errors when rollback is impossible for a hidden key read", async () => {
+    server.use(
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/2fa/status`, () =>
+        jsonData({ enabled: true }),
+      ),
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/passkey`, () =>
+        jsonData({ enabled: false }),
+      ),
+      http.post(`${BASE_CONFIG.baseUrl}/api/verify`, () =>
+        jsonData({ verified: true, expires_at: 1_700_000_000 }),
+      ),
+      http.post(
+        `${BASE_CONFIG.baseUrl}/api/channel/12/key`,
+        () =>
+          new HttpResponse("<html>blocked</html>", {
+            status: 403,
+            headers: {
+              "content-type": "text/html",
+            },
+          }),
+      ),
+    )
+    generateNewApiTotpCodeMock.mockReturnValue("123456")
+    sendRuntimeMessageMock.mockResolvedValueOnce({
+      success: false,
+      error: "messages:background.windowCreationUnavailable",
+      code: API_ERROR_CODES.TEMP_WINDOW_WINDOW_CREATION_UNAVAILABLE,
+    })
+
+    await expect(
+      fetchNewApiChannelKey({
+        ...BASE_CONFIG,
+        channelId: 12,
+      }),
+    ).rejects.toEqual(
+      expect.objectContaining({
+        message: "messages:background.windowCreationUnavailable",
+        code: API_ERROR_CODES.TEMP_WINDOW_WINDOW_CREATION_UNAVAILABLE,
+      } satisfies Pick<ApiError, "code" | "message">),
+    )
   })
 
   it("skips the per-channel key endpoint when preflight determines login 2FA is still required", async () => {

@@ -558,6 +558,7 @@ async function fetchViaTempWindow<T>(
       response.error || "Temp window fetch failed",
       response.status,
       context.endpoint,
+      response.code,
     )
   }
 
