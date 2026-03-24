@@ -80,11 +80,6 @@ export type Sub2ApiKeyListData =
   | Sub2ApiPaginatedData<Sub2ApiKeyData>
   | Sub2ApiKeyData[]
 
-export type Sub2ApiKeyListResponse = Sub2ApiEnvelope<Sub2ApiKeyListData>
-export type Sub2ApiKeyDetailResponse = Sub2ApiEnvelope<Sub2ApiKeyData>
-export type Sub2ApiAvailableGroupsResponse = Sub2ApiEnvelope<Sub2ApiGroupData[]>
-export type Sub2ApiGroupRatesResponse = Sub2ApiEnvelope<Record<string, number>>
-
 export type Sub2ApiKeyWritePayloadBase = {
   name: string
   group_id?: number

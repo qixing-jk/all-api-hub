@@ -19,7 +19,7 @@ import { getErrorMessage } from "~/utils/core/error"
 
 import type { AutoCheckinProvider } from "./index"
 
-export type CheckinResult = AutoCheckinProviderResult
+type CheckinResult = AutoCheckinProviderResult
 
 const ENDPOINT = "/api/user/check_in"
 

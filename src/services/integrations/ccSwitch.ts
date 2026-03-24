@@ -25,7 +25,7 @@ export type CCSwitchApp = (typeof CCSWITCH_APPS)[number]
 /**
  * Minimal payload required by CC Switch deeplink import protocol.
  */
-export interface CCSwitchDeeplinkPayload {
+interface CCSwitchDeeplinkPayload {
   app: CCSwitchApp
   name: string
   homepage: string
@@ -39,7 +39,7 @@ export interface CCSwitchDeeplinkPayload {
  * Options for opening in CC Switch
  * @see https://github.com/farion1231/cc-switch/blob/99b5f881e8efb0fe14953081640a997b635af19c/src-tauri/src/deeplink.rs#L19
  */
-export interface OpenInCCSwitchOptions {
+interface OpenInCCSwitchOptions {
   account: DisplaySiteData
   token: ApiToken
   app: CCSwitchApp

@@ -11,7 +11,7 @@ import {
  * The extractor is intentionally "best-effort" and returns candidate lists
  * (deduplicated) plus a suggested best match for each field.
  */
-export type ApiCheckExtractionResult = {
+type ApiCheckExtractionResult = {
   baseUrlCandidates: string[]
   apiKeyCandidates: string[]
   baseUrl: string | null

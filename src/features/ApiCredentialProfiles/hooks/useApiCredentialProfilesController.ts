@@ -24,7 +24,7 @@ import type { ApiCredentialProfileExportAction } from "../components/ApiCredenti
 import { createExportAccount, createExportToken } from "../utils/exportShims"
 import { useApiCredentialProfiles } from "./useApiCredentialProfiles"
 
-export type SaveApiCredentialProfileInput = {
+type SaveApiCredentialProfileInput = {
   id?: string
   name: string
   apiType: ApiVerificationApiType
@@ -235,9 +235,9 @@ export function useApiCredentialProfilesController() {
     (profileId: string) => {
       const target = createProfileVerificationHistoryTarget(profileId)
       return target
-        ? (verificationSummariesByKey[
+        ? verificationSummariesByKey[
             serializeVerificationHistoryTarget(target)
-          ] ?? null)
+          ] ?? null
         : null
     },
     [verificationSummariesByKey],

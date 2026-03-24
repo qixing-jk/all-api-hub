@@ -28,13 +28,6 @@ export interface PaginatedTokenDate {
   total_count: number
 }
 
-// 分页令牌响应类型
-export interface PaginatedTokenResponse {
-  data: PaginatedTokenDate
-  message: string
-  success: boolean
-}
-
 export type OneHubUserGroupInfo = {
   id: number
   symbol: string

@@ -16,7 +16,7 @@ import { getSafeErrorMessage } from "./redaction"
  */
 const logger = createLogger("Sub2ApiTokenResync")
 
-export type Sub2ApiResyncedToken = {
+type Sub2ApiResyncedToken = {
   accessToken: string
   source: "existing_tab" | "temp_window"
 }

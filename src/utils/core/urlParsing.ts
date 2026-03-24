@@ -1,4 +1,4 @@
-export type NormalizeUrlForOriginKeyOptions = {
+type NormalizeUrlForOriginKeyOptions = {
   lowerCase?: boolean
   stripTrailingSlashes?: boolean
 }

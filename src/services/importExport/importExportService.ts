@@ -18,7 +18,7 @@ import { createLogger } from "~/utils/core/logger"
  */
 const logger = createLogger("ImportExportService")
 
-export type ImportExportErrorCode = "FORMAT_NOT_CORRECT" | "NO_IMPORTABLE_DATA"
+type ImportExportErrorCode = "FORMAT_NOT_CORRECT" | "NO_IMPORTABLE_DATA"
 
 export class ImportExportError extends Error {
   readonly code: ImportExportErrorCode
@@ -41,7 +41,7 @@ export class ImportExportError extends Error {
  */
 export const BACKUP_VERSION = "2.0"
 
-export interface ParsedBackupSummary {
+interface ParsedBackupSummary {
   valid: boolean
   hasAccounts: boolean
   hasPreferences: boolean

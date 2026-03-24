@@ -24,7 +24,7 @@ type RunApiVerificationParams = {
 /**
  * Inputs for running a single verification probe.
  */
-export type RunApiVerificationProbeParams = RunApiVerificationParams & {
+type RunApiVerificationProbeParams = RunApiVerificationParams & {
   probeId: ApiVerificationProbeId
 }
 

@@ -40,7 +40,7 @@ const toObjectRecord = <T extends object>(
   return value as T
 }
 
-export type Sub2ApiUserIdentity = {
+type Sub2ApiUserIdentity = {
   userId: number
   username: string
   balanceUsd: number

@@ -41,7 +41,7 @@ const NEW_API_MESSAGE_KEYS = {
  * - `messageKey` should be an i18n key (e.g. `autoCheckin:providerFallback.*`).
  * - `rawMessage` is kept when the backend returns a human readable message.
  */
-export type CheckinResult = AutoCheckinProviderResult
+type CheckinResult = AutoCheckinProviderResult
 
 /**
  * daily check-in endpoint.

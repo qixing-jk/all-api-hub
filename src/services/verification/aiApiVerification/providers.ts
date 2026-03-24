@@ -14,7 +14,7 @@ import {
 /**
  * Input for creating a provider-backed model instance.
  */
-export type CreateModelParams = {
+type CreateModelParams = {
   baseUrl: string
   apiKey: string
   apiType: ApiVerificationApiType

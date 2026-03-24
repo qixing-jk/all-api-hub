@@ -22,7 +22,7 @@ export interface MeshGradientBlob {
   rotation: number
 }
 
-export interface MeshGradientPlan {
+interface MeshGradientPlan {
   base: {
     start: string
     end: string

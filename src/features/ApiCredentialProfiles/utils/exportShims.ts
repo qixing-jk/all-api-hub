@@ -7,7 +7,7 @@ import {
 } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 
-export type CliProxyExportPayload = {
+type CliProxyExportPayload = {
   account: DisplaySiteData
   token: ApiToken
   apiTypeHint: ApiVerificationApiType

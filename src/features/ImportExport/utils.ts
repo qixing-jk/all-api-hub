@@ -14,7 +14,6 @@ import {
   type BackupV2,
   type ImportFromBackupOptions,
   type ImportResult,
-  type ParsedBackupSummary,
   type RawBackupData,
 } from "~/services/importExport/importExportService"
 import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
@@ -30,14 +29,10 @@ const logger = createLogger("ImportExportUtils")
 
 export { BACKUP_VERSION, normalizeBackupForMerge, parseBackupSummary }
 export type {
-  ParsedBackupSummary,
   BackupFullV2,
-  BackupAccountsPartialV2,
   BackupPreferencesPartialV2,
   BackupV2,
   RawBackupData,
-  ImportResult,
-  ImportFromBackupOptions,
 }
 
 /**

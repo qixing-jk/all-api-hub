@@ -645,7 +645,7 @@ const resolveSelectedGroupId = async (
   return groupId
 }
 
-export type Sub2ApiCurrentUser = {
+type Sub2ApiCurrentUser = {
   userId: number
   username: string
   balanceUsd: number

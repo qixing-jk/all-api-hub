@@ -8,7 +8,7 @@ import {
   mulberry32,
 } from "~/services/sharing/shareSnapshots/utils"
 
-export type DrawMeshGradientBackgroundOptions = {
+type DrawMeshGradientBackgroundOptions = {
   seed: number
   width: number
   height: number

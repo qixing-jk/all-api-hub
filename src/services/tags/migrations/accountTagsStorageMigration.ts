@@ -16,7 +16,7 @@ import {
 } from "~/services/tags/tagStoreUtils"
 import type { AccountStorageConfig, TagStore } from "~/types"
 
-export type LegacyTagsMigrationResult = {
+type LegacyTagsMigrationResult = {
   migratedAccountCount: number
   createdTagCount: number
 }

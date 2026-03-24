@@ -1,6 +1,6 @@
 import type { ApiVerificationApiType, ApiVerificationProbeId } from "./types"
 
-export type ApiVerificationProbeDefinition = {
+type ApiVerificationProbeDefinition = {
   /**
    * Stable identifier used for execution and i18n lookup.
    */
