@@ -7,7 +7,7 @@ import type { ApiToken } from "~/types"
  * them at ingestion time keeps UI and integrations free from scattered `sk-`
  * prefix handling.
  */
-export function ensureSkPrefixedKey(key: string): string {
+function ensureSkPrefixedKey(key: string): string {
   const trimmed = key.trim()
   if (!trimmed) return trimmed
   return /^sk-/i.test(trimmed) ? trimmed : `sk-${trimmed}`

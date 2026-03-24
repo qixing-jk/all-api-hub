@@ -1,8 +1,5 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import {
-  CONTENT_UI_HOST_TAG,
-  isEventFromAllApiHubContentUi,
-} from "~/entrypoints/content/shared/contentUi"
+import { isEventFromAllApiHubContentUi } from "~/entrypoints/content/shared/contentUi"
 import { isLikelyCopyActionTarget } from "~/entrypoints/content/shared/copyActionTarget"
 import type {
   RedemptionAssistShouldPromptRequest,
@@ -24,8 +21,6 @@ import {
   showRedeemResultToast,
   showRedemptionPromptToast,
 } from "./utils/redemptionToasts"
-
-export const REDEMPTION_TOAST_HOST_TAG = CONTENT_UI_HOST_TAG
 
 /**
  * Unified logger scoped to redemption assist content-script flows.

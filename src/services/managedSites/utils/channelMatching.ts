@@ -20,11 +20,6 @@ interface FindManagedSiteChannelByComparableInputsParams {
   key?: string
 }
 
-interface FindManagedSiteChannelByBaseUrlParams {
-  channels: ManagedSiteChannel[]
-  accountBaseUrl: string
-}
-
 interface FindManagedSiteChannelsByBaseUrlParams {
   channels: ManagedSiteChannel[]
   accountBaseUrl: string
@@ -201,20 +196,6 @@ export function findManagedSiteChannelByComparableInputs(
 
       return candidates.includes(normalizedDesiredKey)
     }) ?? null
-  )
-}
-
-/**
- * Finds a managed-site channel by normalized base URL only.
- */
-export function findManagedSiteChannelByBaseUrl(
-  params: FindManagedSiteChannelByBaseUrlParams,
-): ManagedSiteChannel | null {
-  return (
-    findManagedSiteChannelsByBaseUrl({
-      channels: params.channels,
-      accountBaseUrl: params.accountBaseUrl,
-    })[0] ?? null
   )
 }
 

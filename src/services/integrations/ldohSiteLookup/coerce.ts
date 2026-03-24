@@ -10,7 +10,7 @@ import type {
  * - LDOH API responses (untrusted input)
  * - extension storage reads (may contain stale/invalid data)
  */
-export function coerceLdohSiteSummary(raw: unknown): LdohSiteSummary | null {
+function coerceLdohSiteSummary(raw: unknown): LdohSiteSummary | null {
   if (!raw || typeof raw !== "object") return null
   const obj = raw as Record<string, unknown>
   const id = typeof obj.id === "string" ? obj.id.trim() : ""

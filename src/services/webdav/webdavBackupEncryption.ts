@@ -4,7 +4,7 @@
  * These values are written into the envelope and validated on parse to ensure
  * the client can distinguish encrypted backups from plain JSON backups.
  */
-export const WEBDAV_BACKUP_ENCRYPTION = {
+const WEBDAV_BACKUP_ENCRYPTION = {
   TYPE: "all-api-hub-webdav-backup-encrypted",
   VERSION: 1,
   KDF: "PBKDF2",

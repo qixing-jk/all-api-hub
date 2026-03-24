@@ -113,17 +113,6 @@ export interface ManagedSiteChannelMatchInspection {
   models: ManagedSiteChannelModelsAssessment
 }
 
-export const hasManagedSiteChannelMatch = (
-  match: ManagedSiteChannelMatchResult,
-): match is ManagedSiteChannelMatchResult & {
-  level: ManagedSiteMatchedChannelMatchLevel
-  reason: ManagedSiteMatchedChannelMatchReason
-  channel: ManagedSiteChannel
-} =>
-  match.level !== MANAGED_SITE_CHANNEL_MATCH_LEVELS.NONE &&
-  match.reason !== MANAGED_SITE_CHANNEL_MATCH_REASONS.UNRESOLVED &&
-  match.channel != null
-
 export const getManagedSiteChannelExactMatch = (
   inspection: ManagedSiteChannelMatchInspection,
 ): ManagedSiteChannel | null => {

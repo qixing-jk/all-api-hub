@@ -59,7 +59,7 @@ export function extractItemsFromArrayOrItemsPayload<T>(
  * @param options - Pagination options
  * @returns Aggregated result
  */
-export async function fetchAllPaginated<T, R>(
+async function fetchAllPaginated<T, R>(
   fetchPage: (page: number) => Promise<PageData<T>>,
   aggregator: (accumulator: R, items: T[]) => R,
   initialValue: R,

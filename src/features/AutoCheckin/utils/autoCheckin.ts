@@ -1,22 +1,5 @@
 import type { TFunction } from "i18next"
 
-export const AUTO_CHECKIN_MESSAGE_KEY_PREFIX = "autoCheckin:" as const
-
-/**
- * Strip the `autoCheckin:` prefix from message keys.
- *
- * Auto check-in results store message keys with a namespace prefix (for
- * example `autoCheckin:providerFallback.checkinFailed`). For UI translation
- * calls that already scope to the `autoCheckin` namespace, this helper returns
- * the suffix (`providerFallback.checkinFailed`).
- */
-export function stripAutoCheckinMessageKeyPrefix(messageKey: string): string {
-  if (!messageKey) return messageKey
-  return messageKey.startsWith(AUTO_CHECKIN_MESSAGE_KEY_PREFIX)
-    ? messageKey.slice(AUTO_CHECKIN_MESSAGE_KEY_PREFIX.length)
-    : messageKey
-}
-
 /**
  * Translate a known auto-checkin i18n key while preserving non-i18n backend
  * messages as-is.
@@ -105,7 +88,7 @@ export function isInvalidAccessTokenMessage(message: string): boolean {
   )
 }
 
-export const NO_TAB_WITH_ID_REGEX = /no tab with id[: ]\s*\d+/i
+const NO_TAB_WITH_ID_REGEX = /no tab with id[: ]\s*\d+/i
 
 /**
  * Detect a "No tab with id: N" error, usually emitted when a temporary

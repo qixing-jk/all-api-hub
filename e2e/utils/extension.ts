@@ -42,7 +42,7 @@ export async function getExtensionIdFromServiceWorker(
 /**
  * Reads and parses the built Chromium MV3 manifest.json from the provided extension directory.
  */
-export async function getBuiltManifest(
+async function getBuiltManifest(
   extensionDir: string,
 ): Promise<Record<string, unknown>> {
   const manifestPath = path.join(extensionDir, "manifest.json")

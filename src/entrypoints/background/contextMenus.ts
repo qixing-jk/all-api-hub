@@ -50,7 +50,7 @@ const handleContextMenuClick = async (info: any, tab: any) => {
 /**
  * Ensures the context menu click listener is installed, with best-effort error handling.
  */
-export function ensureContextMenuClickListener() {
+function ensureContextMenuClickListener() {
   if (!browser?.contextMenus) {
     return
   }

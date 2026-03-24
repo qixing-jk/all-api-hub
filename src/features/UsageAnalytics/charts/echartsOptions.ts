@@ -220,7 +220,7 @@ export function resolveFusedHourlyForTokens(
  * When filtered, the output is derived from `exportData.fused.byTokenByModel` by summing
  * per-token model totals, rather than attempting to re-aggregate from the time series.
  */
-export function resolveFusedByModelForTokens(
+function resolveFusedByModelForTokens(
   exportData: UsageHistoryExport,
   tokenIds: UsageAnalyticsTokenSelection,
 ): Record<string, UsageHistoryAggregate> {

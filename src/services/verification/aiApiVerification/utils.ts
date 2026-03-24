@@ -4,7 +4,7 @@ import { coerceBaseUrlToPathSuffix } from "~/utils/core/url"
 /**
  * Redact any known secret strings from a message.
  */
-export function redactSecrets(text: string, secrets: string[]): string {
+function redactSecrets(text: string, secrets: string[]): string {
   if (!text) return ""
 
   return secrets

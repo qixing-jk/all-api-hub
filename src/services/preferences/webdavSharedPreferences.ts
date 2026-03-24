@@ -34,7 +34,7 @@ function getFinitePreferenceTimestamp(value: unknown): number | undefined {
  * device during WebDAV upload/download/merge flows, even though manual file
  * import/export continues to operate on the full preferences object.
  */
-export function isWebdavLocalPreferencePath(path: string[]): boolean {
+function isWebdavLocalPreferencePath(path: string[]): boolean {
   return path.length > 0 && WEBDAV_LOCAL_ONLY_PREFERENCE_ROOT_KEYS.has(path[0])
 }
 

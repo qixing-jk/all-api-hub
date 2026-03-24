@@ -53,7 +53,7 @@ const CLI_TOOL_CONFIG: Record<
  * - API family compatibility (unsupported => no request sent)
  * - Whether a model id is required
  */
-export const cliSupportToolRegistry: Record<CliToolId, CliToolRegistryEntry> = {
+const cliSupportToolRegistry: Record<CliToolId, CliToolRegistryEntry> = {
   claude: {
     run: async (params) => {
       return runCliToolCallingSimulation({

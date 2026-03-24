@@ -21,8 +21,6 @@ import {
   TAG_STORE_VERSION,
 } from "./tagStoreUtils"
 
-export { TAG_STORAGE_KEYS }
-
 /**
  * Unified logger scoped to the global account tag storage service.
  */

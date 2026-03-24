@@ -45,7 +45,7 @@ export interface FormData {
   group: string
 }
 
-export const initialFormData: FormData = {
+const initialFormData: FormData = {
   accountId: "",
   name: "",
   quota: "",

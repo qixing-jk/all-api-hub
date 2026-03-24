@@ -18,7 +18,7 @@ export type ModifierState = {
  * - Windows/Linux: Ctrl
  * - macOS: Cmd (Meta)
  */
-export function isPrimaryModifierPressed(modifiers: ModifierState): boolean {
+function isPrimaryModifierPressed(modifiers: ModifierState): boolean {
   return Boolean(modifiers.ctrlKey || modifiers.metaKey)
 }
 

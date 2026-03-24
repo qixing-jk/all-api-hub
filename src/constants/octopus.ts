@@ -50,13 +50,6 @@ export const OctopusOutboundTypeNames: Record<number, string> = {
 }
 
 /**
- * 获取渠道类型的显示名称
- */
-export function getOctopusTypeName(type: OctopusOutboundType): string {
-  return OctopusOutboundTypeNames[type] || `Unknown (${type})`
-}
-
-/**
  * Octopus 默认渠道字段值
  */
 export const DEFAULT_OCTOPUS_CHANNEL_FIELDS = {
