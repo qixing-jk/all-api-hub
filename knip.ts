@@ -59,6 +59,23 @@ const config: KnipConfig = {
     // Explicitly protected site vocabulary.
     "src/constants/siteType.ts": ["exports"],
 
+    // Domain vocabularies and contract/type sources are intentionally kept as
+    // stable naming surfaces for gradual modularization, even when current
+    // local references are sparse.
+    "src/constants/designTokens.ts": ["exports"],
+    "src/types/index.ts": ["types"],
+    "src/types/managedSite.ts": ["exports", "types"],
+    "src/types/autoCheckin.ts": ["exports", "types"],
+    "src/types/managedSiteModelRedirect.ts": ["exports"],
+    "src/types/managedSiteModelSync.ts": ["types"],
+    "src/types/octopus.ts": ["enumMembers"],
+    "src/services/apiService/common/type.ts": ["types"],
+    "src/services/models/modelMetadata/index.ts": ["types"],
+
+    // Shared hook option typing is part of the hook surface even when callers
+    // currently rely on inference instead of importing the interface.
+    "src/hooks/useHorizontalScrollControls.ts": ["types"],
+
     // Site override modules are wired dynamically through getApiService(), so
     // many override exports appear unused to static analysis.
     "src/services/apiService/anyrouter/index.ts": ["exports"],
