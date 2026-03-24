@@ -363,6 +363,15 @@ describe("browserApi sendTabMessageWithRetry", () => {
 })
 
 describe("browserApi classifyRecoverableWindowCreationFailure", () => {
+  it("returns null instead of throwing when the error message is undefined", () => {
+    expect(
+      classifyRecoverableWindowCreationFailure({
+        error: undefined,
+        windowsApiAvailable: true,
+      }),
+    ).toBeNull()
+  })
+
   it("classifies blocked popup errors as recoverable window creation failures", () => {
     expect(
       classifyRecoverableWindowCreationFailure({

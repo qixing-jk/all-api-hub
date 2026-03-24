@@ -17,7 +17,8 @@ export function getErrorMessage(error: unknown): string {
   }
 
   try {
-    return JSON.stringify(error)
+    const serialized = JSON.stringify(error)
+    return typeof serialized === "string" ? serialized : String(error)
   } catch {
     return String(error)
   }

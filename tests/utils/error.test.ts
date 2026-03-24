@@ -103,9 +103,8 @@ describe("getErrorMessage", () => {
     })
 
     it("should serialize undefined to string", () => {
-      // JSON.stringify(undefined) returns undefined, not "undefined"
       const result = getErrorMessage(undefined)
-      expect(result).toBeUndefined()
+      expect(result).toBe("undefined")
     })
   })
 
@@ -129,17 +128,15 @@ describe("getErrorMessage", () => {
 
   describe("Edge cases", () => {
     it("should handle symbol value", () => {
-      // JSON.stringify(Symbol) returns undefined
       const sym = Symbol("test")
       const result = getErrorMessage(sym)
-      expect(result).toBeUndefined()
+      expect(result).toBe("Symbol(test)")
     })
 
     it("should handle function value", () => {
-      // JSON.stringify(Function) returns undefined
       const fn = () => "test"
       const result = getErrorMessage(fn)
-      expect(result).toBeUndefined()
+      expect(result).toContain("test")
     })
 
     it("should handle BigInt value", () => {
