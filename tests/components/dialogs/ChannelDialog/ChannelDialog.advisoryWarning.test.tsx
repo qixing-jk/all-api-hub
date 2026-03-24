@@ -196,9 +196,50 @@ describe("ChannelDialog advisory verification action", () => {
           title: "channelDialog:warnings.verificationRequired.title",
           description:
             "channelDialog:warnings.verificationRequired.description",
+          assessment: {
+            url: {
+              matched: true,
+              candidateCount: 1,
+              channel: {
+                id: 7,
+                name: "Existing channel",
+              },
+            },
+            key: {
+              comparable: false,
+              matched: false,
+              reason: "comparison-unavailable",
+            },
+            models: {
+              comparable: true,
+              matched: true,
+              reason: "exact",
+              channel: {
+                id: 7,
+                name: "Existing channel",
+              },
+              similarityScore: 1,
+            },
+          },
         }}
       />,
     )
+
+    expect(
+      await screen.findByText(
+        "keyManagement:managedSiteStatus.signals.url.matched",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      await screen.findByText(
+        "keyManagement:managedSiteStatus.signals.key.unavailable",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      await screen.findByText(
+        "keyManagement:managedSiteStatus.signals.models.exact",
+      ),
+    ).toBeInTheDocument()
 
     await userEvent.click(
       await screen.findByRole("button", {

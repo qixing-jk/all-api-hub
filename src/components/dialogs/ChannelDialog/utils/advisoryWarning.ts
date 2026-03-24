@@ -1,6 +1,7 @@
 import type { TFunction } from "i18next"
 
 import type { ChannelDialogAdvisoryWarning } from "~/components/dialogs/ChannelDialog/context/ChannelDialogContext"
+import type { ManagedSiteChannelAssessmentSignals } from "~/services/managedSites/channelAssessmentSignals"
 
 export const CHANNEL_DIALOG_ADVISORY_WARNING_KINDS = {
   REVIEW_SUGGESTED: "reviewSuggested",
@@ -19,6 +20,7 @@ export function buildChannelDialogAdvisoryWarning(
   t: TFunction,
   kind: ChannelDialogAdvisoryWarningKind,
   options?: {
+    assessment?: ManagedSiteChannelAssessmentSignals | null
     channelName?: string
   },
 ): ChannelDialogAdvisoryWarning {
@@ -27,6 +29,7 @@ export function buildChannelDialogAdvisoryWarning(
       kind,
       title: t("channelDialog:warnings.verificationRequired.title"),
       description: t("channelDialog:warnings.verificationRequired.description"),
+      assessment: options?.assessment ?? null,
     }
   }
 
@@ -37,6 +40,7 @@ export function buildChannelDialogAdvisoryWarning(
       description: t("channelDialog:warnings.exactDuplicate.description", {
         channelName: options?.channelName ?? "",
       }),
+      assessment: options?.assessment ?? null,
     }
   }
 
@@ -44,5 +48,6 @@ export function buildChannelDialogAdvisoryWarning(
     kind,
     title: t("channelDialog:warnings.reviewSuggested.title"),
     description: t("channelDialog:warnings.reviewSuggested.description"),
+    assessment: options?.assessment ?? null,
   }
 }

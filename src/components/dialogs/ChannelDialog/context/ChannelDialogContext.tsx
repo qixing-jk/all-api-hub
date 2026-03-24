@@ -8,12 +8,14 @@ import React, {
 } from "react"
 
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
+import type { ManagedSiteChannelAssessmentSignals } from "~/services/managedSites/channelAssessmentSignals"
 import type { ChannelFormData, ManagedSiteChannel } from "~/types/managedSite"
 
 export interface ChannelDialogAdvisoryWarning {
   kind: string
   title: string
   description: string
+  assessment?: ManagedSiteChannelAssessmentSignals | null
 }
 
 interface ChannelDialogState {

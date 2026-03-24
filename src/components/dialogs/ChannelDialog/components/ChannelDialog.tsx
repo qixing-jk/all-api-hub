@@ -10,6 +10,7 @@ import {
   buildChannelDialogAdvisoryWarning,
   CHANNEL_DIALOG_ADVISORY_WARNING_KINDS,
 } from "~/components/dialogs/ChannelDialog/utils/advisoryWarning"
+import { ManagedSiteChannelAssessmentSignalsRow } from "~/components/ManagedSiteChannelAssessmentSignals"
 import {
   Alert,
   Button,
@@ -31,6 +32,7 @@ import { NEW_API, OCTOPUS } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
 import { useNewApiManagedVerification } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
+import { toManagedSiteChannelAssessmentSignals } from "~/services/managedSites/channelAssessmentSignals"
 import { getManagedSiteChannelExactMatch } from "~/services/managedSites/channelMatch"
 import { resolveManagedSiteChannelMatch } from "~/services/managedSites/channelMatchResolver"
 import { getManagedSiteService } from "~/services/managedSites/managedSiteService"
@@ -220,6 +222,7 @@ export function ChannelDialog({
       return {
         exactDuplicateChannelName: exactMatch.name,
         advisoryWarning: null,
+        assessment: toManagedSiteChannelAssessmentSignals(resolution),
       }
     }
 
@@ -234,7 +237,11 @@ export function ChannelDialog({
         advisoryWarning: buildChannelDialogAdvisoryWarning(
           t,
           CHANNEL_DIALOG_ADVISORY_WARNING_KINDS.VERIFICATION_REQUIRED,
+          {
+            assessment: toManagedSiteChannelAssessmentSignals(resolution),
+          },
         ),
+        assessment: toManagedSiteChannelAssessmentSignals(resolution),
       }
     }
 
@@ -249,13 +256,18 @@ export function ChannelDialog({
         advisoryWarning: buildChannelDialogAdvisoryWarning(
           t,
           CHANNEL_DIALOG_ADVISORY_WARNING_KINDS.REVIEW_SUGGESTED,
+          {
+            assessment: toManagedSiteChannelAssessmentSignals(resolution),
+          },
         ),
+        assessment: toManagedSiteChannelAssessmentSignals(resolution),
       }
     }
 
     return {
       exactDuplicateChannelName: null,
       advisoryWarning: null,
+      assessment: toManagedSiteChannelAssessmentSignals(resolution),
     }
   }
 
@@ -294,6 +306,7 @@ export function ChannelDialog({
                 t,
                 CHANNEL_DIALOG_ADVISORY_WARNING_KINDS.EXACT_DUPLICATE,
                 {
+                  assessment: duplicateState.assessment,
                   channelName: duplicateState.exactDuplicateChannelName,
                 },
               ),
@@ -368,23 +381,32 @@ export function ChannelDialog({
           description={currentAdvisoryWarning.description}
           className="mb-4"
         >
-          {currentAdvisoryWarning.kind ===
-            CHANNEL_DIALOG_ADVISORY_WARNING_KINDS.VERIFICATION_REQUIRED &&
-          canRunManagedVerification ? (
-            <div className="pt-2">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={handleRunVerification}
-                disabled={verification.dialogState.isBusy}
-              >
-                {t(
-                  "channelDialog:warnings.verificationRequired.actions.verifyNow",
-                )}
-              </Button>
-            </div>
-          ) : null}
+          <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+            {currentAdvisoryWarning.assessment ? (
+              <ManagedSiteChannelAssessmentSignalsRow
+                assessment={currentAdvisoryWarning.assessment}
+                managedSiteType={managedSiteType}
+                className="min-w-0"
+              />
+            ) : null}
+            {currentAdvisoryWarning.kind ===
+              CHANNEL_DIALOG_ADVISORY_WARNING_KINDS.VERIFICATION_REQUIRED &&
+            canRunManagedVerification ? (
+              <div className="sm:ml-auto">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={handleRunVerification}
+                  disabled={verification.dialogState.isBusy}
+                >
+                  {t(
+                    "channelDialog:warnings.verificationRequired.actions.verifyNow",
+                  )}
+                </Button>
+              </div>
+            ) : null}
+          </div>
         </Alert>
       ) : null}
       <form

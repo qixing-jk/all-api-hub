@@ -11,6 +11,7 @@ import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { ensureAccountApiToken } from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
+import { toManagedSiteChannelAssessmentSignals } from "~/services/managedSites/channelAssessmentSignals"
 import { getManagedSiteChannelExactMatch } from "~/services/managedSites/channelMatch"
 import { resolveManagedSiteChannelMatch } from "~/services/managedSites/channelMatchResolver"
 import {
@@ -109,7 +110,11 @@ export function useChannelDialog() {
     kind:
       | typeof CHANNEL_DIALOG_ADVISORY_WARNING_KINDS.REVIEW_SUGGESTED
       | typeof CHANNEL_DIALOG_ADVISORY_WARNING_KINDS.VERIFICATION_REQUIRED,
-  ): ChannelDialogAdvisoryWarning => buildChannelDialogAdvisoryWarning(t, kind)
+    options?: {
+      assessment?: ChannelDialogAdvisoryWarning["assessment"]
+    },
+  ): ChannelDialogAdvisoryWarning =>
+    buildChannelDialogAdvisoryWarning(t, kind, options)
 
   const buildAdvisoryWarningFromManagedSiteStatus = (
     managedSiteStatus?: ManagedSiteTokenChannelStatus,
@@ -127,6 +132,9 @@ export function useChannelDialog() {
     ) {
       return buildAdvisoryWarning(
         CHANNEL_DIALOG_ADVISORY_WARNING_KINDS.VERIFICATION_REQUIRED,
+        {
+          assessment: managedSiteStatus.assessment,
+        },
       )
     }
 
@@ -138,6 +146,9 @@ export function useChannelDialog() {
     ) {
       return buildAdvisoryWarning(
         CHANNEL_DIALOG_ADVISORY_WARNING_KINDS.REVIEW_SUGGESTED,
+        {
+          assessment: managedSiteStatus.assessment,
+        },
       )
     }
 
@@ -204,6 +215,9 @@ export function useChannelDialog() {
         existingChannelName: null,
         advisoryWarning: buildAdvisoryWarning(
           CHANNEL_DIALOG_ADVISORY_WARNING_KINDS.VERIFICATION_REQUIRED,
+          {
+            assessment: toManagedSiteChannelAssessmentSignals(resolution),
+          },
         ),
       }
     }
@@ -218,6 +232,9 @@ export function useChannelDialog() {
         existingChannelName: null,
         advisoryWarning: buildAdvisoryWarning(
           CHANNEL_DIALOG_ADVISORY_WARNING_KINDS.REVIEW_SUGGESTED,
+          {
+            assessment: toManagedSiteChannelAssessmentSignals(resolution),
+          },
         ),
       }
     }
