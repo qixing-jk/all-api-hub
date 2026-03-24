@@ -78,6 +78,7 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui/table"
+import { Z_INDEX } from "~/constants/designTokens"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { ChannelTypeNames } from "~/constants/managedSite"
 import { OctopusOutboundTypeNames } from "~/constants/octopus"
@@ -1175,7 +1176,10 @@ export default function ManagedSiteChannels({
                       key={header.id}
                       className={cn(
                         header.column.id === "actions" &&
-                          "bg-background sticky right-0 z-20 border-l",
+                          cn(
+                            "bg-background sticky right-0 border-l",
+                            Z_INDEX.tableStickyHeader,
+                          ),
                       )}
                       style={{ width: header.getSize() }}
                     >
@@ -1240,7 +1244,10 @@ export default function ManagedSiteChannels({
                         className={cn(
                           "py-3",
                           cell.column.id === "actions" &&
-                            "bg-background group-hover:bg-muted/50 data-[state=selected]:bg-muted sticky right-0 z-10 border-l",
+                            cn(
+                              "bg-background group-hover:bg-muted/50 data-[state=selected]:bg-muted sticky right-0 border-l",
+                              Z_INDEX.tableStickyCell,
+                            ),
                         )}
                       >
                         {flexRender(

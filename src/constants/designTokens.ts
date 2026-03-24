@@ -236,12 +236,15 @@ export const LAYOUT = {
   },
 } as const
 
-// Z-index tokens
+// App-level layering order from lower to higher priority.
+// Prefer these roles for page-shell and portal surfaces instead of raw z-* classes.
 export const Z_INDEX = {
-  dropdown: "z-50",
-  sticky: "z-40",
-  fixed: "z-30",
-  modal: "z-50",
-  popover: "z-40",
-  tooltip: "z-50",
+  tableStickyCell: "z-10",
+  tableStickyHeader: "z-20",
+  pageHeader: "z-30",
+  backdrop: "z-40",
+  sidebar: "z-50",
+  floating: "z-[60]",
+  modal: "z-[70]",
+  tooltip: "z-[80]",
 } as const

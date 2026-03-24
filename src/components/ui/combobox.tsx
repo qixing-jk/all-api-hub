@@ -11,6 +11,7 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "~/components/ui/input-group"
+import { Z_INDEX } from "~/constants/designTokens"
 import { cn } from "~/lib/utils"
 
 const Combobox = ComboboxPrimitive.Root
@@ -129,7 +130,7 @@ function ComboboxContent({
         align={align}
         alignOffset={alignOffset}
         anchor={anchor}
-        className="isolate z-50"
+        className={cn("isolate", Z_INDEX.floating)}
       >
         <ComboboxPrimitive.Popup
           data-slot="combobox-content"

@@ -20,6 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui/table"
+import { Z_INDEX } from "~/constants/designTokens"
 import { cn } from "~/lib/utils"
 
 import UsageHistorySyncRowActions from "./UsageHistorySyncRowActions"
@@ -266,7 +267,10 @@ export default function UsageHistorySyncStateTable({
                     key={header.id}
                     className={cn(
                       header.column.id === "actions" &&
-                        "bg-background sticky right-0 z-20 border-l",
+                        cn(
+                          "bg-background sticky right-0 border-l",
+                          Z_INDEX.tableStickyHeader,
+                        ),
                     )}
                   >
                     {header.isPlaceholder
@@ -301,7 +305,10 @@ export default function UsageHistorySyncStateTable({
                       className={cn(
                         "py-3",
                         cell.column.id === "actions" &&
-                          "bg-background group-hover:bg-muted/50 data-[state=selected]:bg-muted sticky right-0 z-20 border-l",
+                          cn(
+                            "bg-background group-hover:bg-muted/50 data-[state=selected]:bg-muted sticky right-0 border-l",
+                            Z_INDEX.tableStickyCell,
+                          ),
                       )}
                     >
                       {flexRender(

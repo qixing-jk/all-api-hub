@@ -1,6 +1,7 @@
 import { useId, type ReactElement, type ReactNode } from "react"
 import { Tooltip as ReactTooltip } from "react-tooltip"
 
+import { Z_INDEX } from "~/constants/designTokens"
 import { cn } from "~/lib/utils"
 
 interface TooltipProps {
@@ -39,7 +40,7 @@ export default function Tooltip({
 
   const isString = typeof content === "string"
 
-  const defaultClassName = `z-9999 max-w-[90vw] bg-gray-900 dark:bg-dark-bg-tertiary text-white dark:text-dark-text-primary text-xs rounded-lg shadow-lg px-3 py-2 ${className}`
+  const defaultClassName = `${Z_INDEX.tooltip} max-w-[90vw] rounded-lg bg-gray-900 px-3 py-2 text-xs text-white shadow-lg dark:bg-dark-bg-tertiary dark:text-dark-text-primary ${className}`
   return (
     <>
       <div

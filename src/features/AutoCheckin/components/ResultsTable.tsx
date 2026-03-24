@@ -9,7 +9,9 @@ import { useTranslation } from "react-i18next"
 
 import AccountLinkButton from "~/components/AccountLinkButton"
 import { Button, Card } from "~/components/ui"
+import { Z_INDEX } from "~/constants/designTokens"
 import { translateAutoCheckinMessageKey } from "~/features/AutoCheckin/utils/autoCheckin"
+import { cn } from "~/lib/utils"
 import {
   CHECKIN_RESULT_STATUS,
   CheckinAccountResult,
@@ -152,7 +154,12 @@ export default function ResultsTable({
               <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
                 {t("execution.table.time")}
               </th>
-              <th className="sticky right-0 z-20 border-l border-gray-200 bg-gray-50 px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
+              <th
+                className={cn(
+                  "sticky right-0 border-l border-gray-200 bg-gray-50 px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400",
+                  Z_INDEX.tableStickyHeader,
+                )}
+              >
                 {t("execution.table.actions")}
               </th>
             </tr>
@@ -188,7 +195,12 @@ export default function ResultsTable({
                   <td className="px-6 py-4 text-sm whitespace-nowrap text-gray-500 dark:text-gray-400">
                     {formatTimestamp(result.timestamp)}
                   </td>
-                  <td className="sticky right-0 z-10 border-l border-gray-200 bg-white px-6 py-4 text-sm text-gray-500 group-hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400 dark:group-hover:bg-gray-800">
+                  <td
+                    className={cn(
+                      "sticky right-0 border-l border-gray-200 bg-white px-6 py-4 text-sm text-gray-500 group-hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400 dark:group-hover:bg-gray-800",
+                      Z_INDEX.tableStickyCell,
+                    )}
+                  >
                     <div className="flex flex-wrap gap-2">
                       {onRetryAccount &&
                         (forceShowActions ||

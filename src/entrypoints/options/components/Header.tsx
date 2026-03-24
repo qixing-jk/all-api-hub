@@ -5,6 +5,8 @@ import iconImage from "~/assets/icon.png"
 import { LanguageSwitcher } from "~/components/LanguageSwitcher"
 import { BodySmall, Heading5, IconButton } from "~/components/ui"
 import { VersionBadge } from "~/components/VersionBadge"
+import { Z_INDEX } from "~/constants/designTokens"
+import { cn } from "~/lib/utils"
 import { getRepository } from "~/utils/navigation/packageMeta"
 
 import HeaderThemeSwitcher from "./HeaderThemeSwitcher"
@@ -31,7 +33,12 @@ function Header({
   const repositoryUrl = getRepository()
 
   return (
-    <header className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary sticky top-0 z-50 h-(--options-header-height) border-b border-gray-200 bg-white shadow-sm">
+    <header
+      className={cn(
+        "dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary sticky top-0 h-(--options-header-height) border-b border-gray-200 bg-white shadow-sm",
+        Z_INDEX.pageHeader,
+      )}
+    >
       <div className="mx-auto h-full px-2 sm:px-4 md:px-6 lg:px-8">
         <div className="flex h-full items-center justify-between">
           {/* 移动端菜单按钮 */}

@@ -7,6 +7,7 @@ import { useEffect } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Button, Heading3, IconButton, Separator } from "~/components/ui"
+import { Z_INDEX } from "~/constants/designTokens"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { getMenuItemLabel } from "~/features/OptionsMenu/getMenuItemLabel"
@@ -98,7 +99,10 @@ function Sidebar({
       {/* 移动端遮罩层 */}
       {isMobileOpen && (
         <div
-          className="fixed inset-0 z-30 bg-black/20 md:hidden"
+          className={cn(
+            "fixed inset-0 bg-black/20 md:hidden",
+            Z_INDEX.backdrop,
+          )}
           onClick={onMobileClose}
         />
       )}
@@ -109,7 +113,8 @@ function Sidebar({
         animate={{ width: targetWidth }}
         style={{ width: targetWidth, height: sidebarHeight, top: sidebarTop }}
         className={cn(
-          "z-40 shrink-0 transform transition-transform duration-300 ease-in-out",
+          "shrink-0 transform transition-transform duration-300 ease-in-out",
+          Z_INDEX.sidebar,
           isMobileOpen
             ? "fixed inset-y-0 left-0 translate-x-0"
             : "fixed inset-y-0 left-0 -translate-x-full md:translate-x-0",

@@ -2,6 +2,7 @@ import { Dialog, Transition } from "@headlessui/react"
 import { XMarkIcon } from "@heroicons/react/24/outline"
 import { Fragment, ReactNode } from "react"
 
+import { Z_INDEX } from "~/constants/designTokens"
 import { cn } from "~/lib/utils"
 import { t } from "~/utils/i18n/core"
 
@@ -67,7 +68,7 @@ export function Modal({
     <Transition show={isOpen} as={Fragment}>
       <Dialog
         onClose={onClose}
-        className="relative z-50"
+        className={cn("relative", Z_INDEX.modal)}
         onKeyDown={handleKeyDown}
       >
         {/* backdrop */}
