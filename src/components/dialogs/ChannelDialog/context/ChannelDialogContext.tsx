@@ -11,6 +11,7 @@ import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import type { ChannelFormData, ManagedSiteChannel } from "~/types/managedSite"
 
 export interface ChannelDialogAdvisoryWarning {
+  kind: string
   title: string
   description: string
 }

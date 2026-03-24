@@ -87,11 +87,18 @@
       "title": "Channel already exists",
       "warningTitle": "Potential duplicate"
     },
+    "exactDuplicate": {
+      "description": "A duplicate candidate channel, {{channelName}}, has now been confirmed in the managed site. If you want to avoid duplication, adjust the name, models, or key before saving; otherwise, you can still continue creating the channel.",
+      "title": "Confirmed duplicate channel"
+    },
     "reviewSuggested": {
       "description": "Candidate channels were found under the same upstream URL or model setup, but an exact duplicate could not be confirmed automatically. You can still continue creating the channel, but review the name, models, and key before saving.",
       "title": "Review potential duplicate candidates"
     },
     "verificationRequired": {
+      "actions": {
+        "verifyNow": "Verify now"
+      },
       "description": "Candidate channels were found, but New API requires an extra verification step before the real channel key can be read, so exact duplicate confirmation is currently unavailable. You can still continue creating the channel; complete verification first if you need an exact deduplication check.",
       "title": "Potential duplicate needs verification"
     }

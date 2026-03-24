@@ -359,6 +359,7 @@ describe("useChannelDialog duplicate channel warning", () => {
       initialModels: ["gpt-4"],
       initialGroups: ["default"],
       advisoryWarning: {
+        kind: "verificationRequired",
         title: "channelDialog:warnings.verificationRequired.title",
         description: "channelDialog:warnings.verificationRequired.description",
       },

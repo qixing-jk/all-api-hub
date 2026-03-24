@@ -198,4 +198,53 @@ describe("resolveManagedSiteChannelMatch", () => {
       },
     })
   })
+
+  it("reuses the recoverable unique-URL candidate when hidden-key resolution is requested", async () => {
+    const hiddenUrlOnlyCandidate = buildManagedSiteChannel({
+      id: 21,
+      name: "Hidden URL Candidate",
+      base_url: "https://api.example.com",
+      models: "claude-3",
+      key: "",
+    })
+    const fetchChannelSecretKey = vi.fn().mockResolvedValue("sk-match")
+    const service = createManagedSiteServiceStub({
+      searchChannel: vi.fn().mockResolvedValue({
+        items: [hiddenUrlOnlyCandidate],
+        total: 1,
+        type_counts: {},
+      }),
+      fetchChannelSecretKey,
+    })
+
+    const result = await resolveManagedSiteChannelMatch({
+      service,
+      managedConfig,
+      accountBaseUrl: "https://api.example.com",
+      models: ["gpt-4"],
+      key: "sk-match",
+      resolveHiddenKeys: true,
+    })
+
+    expect(fetchChannelSecretKey).toHaveBeenCalledWith(
+      managedConfig.baseUrl,
+      managedConfig.token,
+      managedConfig.userId,
+      21,
+    )
+    expect(result.url).toEqual({
+      matched: true,
+      channel: expect.objectContaining({ id: 21 }),
+      candidateCount: 1,
+    })
+    expect(result.key).toEqual({
+      comparable: true,
+      matched: true,
+      reason: MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.MATCHED,
+      channel: expect.objectContaining({ id: 21 }),
+    })
+    expect(result.models.reason).toBe(
+      MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.NO_MATCH,
+    )
+  })
 })

@@ -3,6 +3,10 @@ import { useTranslation } from "react-i18next"
 
 import type { ChannelDialogAdvisoryWarning } from "~/components/dialogs/ChannelDialog/context/ChannelDialogContext"
 import { useChannelDialogContext } from "~/components/dialogs/ChannelDialog/context/ChannelDialogContext"
+import {
+  buildChannelDialogAdvisoryWarning,
+  CHANNEL_DIALOG_ADVISORY_WARNING_KINDS,
+} from "~/components/dialogs/ChannelDialog/utils/advisoryWarning"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { ensureAccountApiToken } from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accounts/accountStorage"
@@ -102,22 +106,10 @@ export function useChannelDialog() {
   }
 
   const buildAdvisoryWarning = (
-    kind: "reviewSuggested" | "verificationRequired",
-  ): ChannelDialogAdvisoryWarning => {
-    if (kind === "verificationRequired") {
-      return {
-        title: t("channelDialog:warnings.verificationRequired.title"),
-        description: t(
-          "channelDialog:warnings.verificationRequired.description",
-        ),
-      }
-    }
-
-    return {
-      title: t("channelDialog:warnings.reviewSuggested.title"),
-      description: t("channelDialog:warnings.reviewSuggested.description"),
-    }
-  }
+    kind:
+      | typeof CHANNEL_DIALOG_ADVISORY_WARNING_KINDS.REVIEW_SUGGESTED
+      | typeof CHANNEL_DIALOG_ADVISORY_WARNING_KINDS.VERIFICATION_REQUIRED,
+  ): ChannelDialogAdvisoryWarning => buildChannelDialogAdvisoryWarning(t, kind)
 
   const buildAdvisoryWarningFromManagedSiteStatus = (
     managedSiteStatus?: ManagedSiteTokenChannelStatus,
@@ -133,7 +125,9 @@ export function useChannelDialog() {
         MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE &&
       managedSiteStatus.assessment?.url.matched
     ) {
-      return buildAdvisoryWarning("verificationRequired")
+      return buildAdvisoryWarning(
+        CHANNEL_DIALOG_ADVISORY_WARNING_KINDS.VERIFICATION_REQUIRED,
+      )
     }
 
     if (
@@ -142,7 +136,9 @@ export function useChannelDialog() {
       managedSiteStatus.reason ===
         MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.MATCH_REQUIRES_CONFIRMATION
     ) {
-      return buildAdvisoryWarning("reviewSuggested")
+      return buildAdvisoryWarning(
+        CHANNEL_DIALOG_ADVISORY_WARNING_KINDS.REVIEW_SUGGESTED,
+      )
     }
 
     return null
@@ -206,7 +202,9 @@ export function useChannelDialog() {
     ) {
       return {
         existingChannelName: null,
-        advisoryWarning: buildAdvisoryWarning("verificationRequired"),
+        advisoryWarning: buildAdvisoryWarning(
+          CHANNEL_DIALOG_ADVISORY_WARNING_KINDS.VERIFICATION_REQUIRED,
+        ),
       }
     }
 
@@ -218,7 +216,9 @@ export function useChannelDialog() {
     ) {
       return {
         existingChannelName: null,
-        advisoryWarning: buildAdvisoryWarning("reviewSuggested"),
+        advisoryWarning: buildAdvisoryWarning(
+          CHANNEL_DIALOG_ADVISORY_WARNING_KINDS.REVIEW_SUGGESTED,
+        ),
       }
     }
 

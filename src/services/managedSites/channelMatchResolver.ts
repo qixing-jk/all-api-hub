@@ -1,4 +1,5 @@
 import {
+  getRecoverableManagedSiteChannelCandidate,
   MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS,
   MatchResolutionUnresolvedError,
   type ManagedSiteChannelMatchInspection,
@@ -21,6 +22,7 @@ interface ResolveManagedSiteChannelMatchParams {
   models: string[]
   key?: string
   resolvedChannelKeysById?: Record<number, string>
+  resolveHiddenKeys?: boolean
 }
 
 const applyResolvedChannelKeys = <T extends { id: number; key?: string }>(
@@ -55,8 +57,14 @@ const applyResolvedChannelKeys = <T extends { id: number; key?: string }>(
 export async function resolveManagedSiteChannelMatch(
   params: ResolveManagedSiteChannelMatchParams,
 ): Promise<ManagedSiteChannelMatchInspection> {
-  const { service, managedConfig, models, key, resolvedChannelKeysById } =
-    params
+  const {
+    service,
+    managedConfig,
+    models,
+    key,
+    resolvedChannelKeysById,
+    resolveHiddenKeys = false,
+  } = params
   const searchBaseUrl = normalizeManagedSiteChannelBaseUrl(
     params.accountBaseUrl,
   )
@@ -90,11 +98,18 @@ export async function resolveManagedSiteChannelMatch(
     }
   }
 
+  const searchResultItems = Array.isArray(searchResults.items)
+    ? searchResults.items
+    : []
+  const mergedResolvedChannelKeysById: Record<number, string> = {
+    ...(resolvedChannelKeysById ?? {}),
+  }
+
   const channels = applyResolvedChannelKeys(
-    Array.isArray(searchResults.items) ? searchResults.items : [],
-    resolvedChannelKeysById,
+    searchResultItems,
+    mergedResolvedChannelKeysById,
   )
-  const urlBucket = findManagedSiteChannelsByBaseUrl({
+  let urlBucket = findManagedSiteChannelsByBaseUrl({
     channels,
     accountBaseUrl: searchBaseUrl,
   })
@@ -108,6 +123,60 @@ export async function resolveManagedSiteChannelMatch(
     accountBaseUrl: searchBaseUrl,
     models,
   })
+
+  if (
+    resolveHiddenKeys &&
+    typeof service.fetchChannelSecretKey === "function" &&
+    key?.trim()
+  ) {
+    const resolvedUrlChannel =
+      urlBucket[0] ?? keyAssessment.channel ?? modelsAssessment.channel
+    const recoverableCandidate = getRecoverableManagedSiteChannelCandidate({
+      url: {
+        channel: resolvedUrlChannel,
+        candidateCount:
+          urlBucket.length > 0 ? urlBucket.length : resolvedUrlChannel ? 1 : 0,
+      },
+      models: {
+        channel: modelsAssessment.channel,
+        reason: modelsAssessment.reason,
+      },
+    })
+
+    if (
+      recoverableCandidate?.id != null &&
+      !recoverableCandidate.key?.trim() &&
+      typeof mergedResolvedChannelKeysById[recoverableCandidate.id] !== "string"
+    ) {
+      mergedResolvedChannelKeysById[recoverableCandidate.id] =
+        await service.fetchChannelSecretKey(
+          managedConfig.baseUrl,
+          managedConfig.token,
+          managedConfig.userId,
+          recoverableCandidate.id,
+        )
+
+      const channelsWithResolvedKey = applyResolvedChannelKeys(
+        searchResultItems,
+        mergedResolvedChannelKeysById,
+      )
+
+      urlBucket = findManagedSiteChannelsByBaseUrl({
+        channels: channelsWithResolvedKey,
+        accountBaseUrl: searchBaseUrl,
+      })
+      keyAssessment = inspectManagedSiteChannelKeyMatch({
+        channels: channelsWithResolvedKey,
+        accountBaseUrl: searchBaseUrl,
+        key,
+      })
+      modelsAssessment = inspectManagedSiteChannelModelsMatch({
+        channels: channelsWithResolvedKey,
+        accountBaseUrl: searchBaseUrl,
+        models,
+      })
+    }
+  }
 
   const hasLocalExactMatch =
     keyAssessment.matched &&

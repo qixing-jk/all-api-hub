@@ -96,6 +96,17 @@ export interface ManagedSiteChannelMatchInspection {
   models: ManagedSiteChannelModelsAssessment
 }
 
+interface RecoverableManagedSiteChannelAssessment<TChannel> {
+  url: {
+    channel?: TChannel | null | undefined
+    candidateCount: number
+  }
+  models: {
+    channel?: TChannel | null | undefined
+    reason: ManagedSiteChannelModelsMatchReasonValue
+  }
+}
+
 export const getManagedSiteChannelExactMatch = (
   inspection: ManagedSiteChannelMatchInspection,
 ): ManagedSiteChannel | null => {
@@ -116,4 +127,29 @@ export const getManagedSiteChannelExactMatch = (
   }
 
   return inspection.key.channel
+}
+
+export const getRecoverableManagedSiteChannelCandidate = <TChannel>(
+  assessment?: RecoverableManagedSiteChannelAssessment<TChannel> | null,
+): TChannel | null => {
+  if (!assessment) {
+    return null
+  }
+
+  const exactModelsChannel = assessment.models.channel
+
+  if (
+    exactModelsChannel &&
+    assessment.models.reason === MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT
+  ) {
+    return exactModelsChannel
+  }
+
+  const urlChannel = assessment.url.channel
+
+  if (urlChannel && assessment.url.candidateCount === 1) {
+    return urlChannel
+  }
+
+  return null
 }

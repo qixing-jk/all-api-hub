@@ -87,11 +87,18 @@
       "title": "渠道已存在",
       "warningTitle": "可能存在重复渠道"
     },
+    "exactDuplicate": {
+      "description": "已确认管理站点中存在重复候选渠道 {{channelName}}。如需避免重复，请先调整名称、模型或 key；若确认仍要保留重复渠道，也可以继续创建。",
+      "title": "已确认存在重复渠道"
+    },
     "reviewSuggested": {
       "description": "已发现与当前上游地址或模型配置接近的候选渠道，但尚不能自动确认是否为重复渠道。你仍可以继续创建，请在保存前检查名称、模型和 key。",
       "title": "请检查可能重复的渠道"
     },
     "verificationRequired": {
+      "actions": {
+        "verifyNow": "立即验证"
+      },
       "description": "已发现候选渠道，但 New API 读取真实渠道 key 需要先完成验证，因此暂时无法自动确认是否重复。你仍可以继续创建；若要精确去重，请先完成验证后再重试。",
       "title": "可能存在重复渠道，需验证后才能精确确认"
     }

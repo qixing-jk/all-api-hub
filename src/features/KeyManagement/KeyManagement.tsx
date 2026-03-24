@@ -8,7 +8,7 @@ import AddTokenDialog from "~/features/KeyManagement/components/AddTokenDialog"
 import { loadNewApiChannelKeyWithVerification } from "~/features/ManagedSiteVerification/loadNewApiChannelKeyWithVerification"
 import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
 import { useNewApiManagedVerification } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
-import { MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS } from "~/services/managedSites/channelMatch"
+import { getRecoverableManagedSiteChannelCandidate } from "~/services/managedSites/channelMatch"
 import {
   MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS,
   MANAGED_SITE_TOKEN_CHANNEL_STATUSES,
@@ -73,23 +73,7 @@ const getRecoverableNewApiCandidateChannel = (
     return null
   }
 
-  const exactModelsChannel = managedSiteStatus.assessment?.models.channel
-
-  if (
-    exactModelsChannel &&
-    managedSiteStatus.assessment?.models.reason ===
-      MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT
-  ) {
-    return exactModelsChannel
-  }
-
-  const urlChannel = managedSiteStatus.assessment?.url.channel
-
-  if (urlChannel && managedSiteStatus.assessment?.url.candidateCount === 1) {
-    return urlChannel
-  }
-
-  return null
+  return getRecoverableManagedSiteChannelCandidate(managedSiteStatus.assessment)
 }
 
 /**
