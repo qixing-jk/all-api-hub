@@ -1,9 +1,9 @@
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { coerceBaseUrlToPathSuffix } from "~/utils/core/url"
 
-export type KiloCodeApiProvider = "openai"
+type KiloCodeApiProvider = "openai"
 
-export interface KiloCodeApiConfig {
+interface KiloCodeApiConfig {
   id: string
   apiProvider: KiloCodeApiProvider
   openAiBaseUrl: string
@@ -17,12 +17,12 @@ export interface KiloCodeApiConfig {
   openAiModelId?: string
 }
 
-export interface KiloCodeProviderProfiles {
+interface KiloCodeProviderProfiles {
   currentApiConfigName: string
   apiConfigs: Record<string, KiloCodeApiConfig>
 }
 
-export interface KiloCodeSettingsFile {
+interface KiloCodeSettingsFile {
   providerProfiles: KiloCodeProviderProfiles
 }
 
@@ -39,12 +39,12 @@ export interface KiloCodeExportTuple {
   modelId?: string
 }
 
-export interface BuildKiloCodeApiConfigsOptions {
+interface BuildKiloCodeApiConfigsOptions {
   selections: KiloCodeExportTuple[]
   generateId?: (profileName: string) => string
 }
 
-export interface BuildKiloCodeApiConfigsResult {
+interface BuildKiloCodeApiConfigsResult {
   apiConfigs: Record<string, KiloCodeApiConfig>
   profileNames: string[]
 }

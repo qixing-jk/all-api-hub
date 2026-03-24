@@ -40,16 +40,6 @@ export type ManagedSiteChannelMatchLevelValue =
 export type ManagedSiteChannelMatchReasonValue =
   (typeof MANAGED_SITE_CHANNEL_MATCH_REASONS)[keyof typeof MANAGED_SITE_CHANNEL_MATCH_REASONS]
 
-export type ManagedSiteMatchedChannelMatchLevel = Exclude<
-  ManagedSiteChannelMatchLevelValue,
-  typeof MANAGED_SITE_CHANNEL_MATCH_LEVELS.NONE
->
-
-export type ManagedSiteMatchedChannelMatchReason = Exclude<
-  ManagedSiteChannelMatchReasonValue,
-  typeof MANAGED_SITE_CHANNEL_MATCH_REASONS.UNRESOLVED
->
-
 export type ManagedSiteChannelKeyMatchReasonValue =
   (typeof MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS)[keyof typeof MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS]
 
@@ -60,7 +50,7 @@ export const MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS = {
   VERIFICATION_REQUIRED: "verification-required",
 } as const
 
-export type ManagedSiteChannelMatchUnresolvedReason =
+type ManagedSiteChannelMatchUnresolvedReason =
   (typeof MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS)[keyof typeof MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS]
 
 export class MatchResolutionUnresolvedError extends Error {
@@ -75,13 +65,6 @@ export interface ManagedSiteChannelMatchResult {
   reason: ManagedSiteChannelMatchReasonValue
   channel: ManagedSiteChannel | null
   similarityScore?: number
-}
-
-export interface ManagedSiteChannelMatchResolution {
-  searchBaseUrl: string
-  exactKeyComparable: boolean
-  searchCompleted: boolean
-  match: ManagedSiteChannelMatchResult
 }
 
 export interface ManagedSiteChannelUrlAssessment {

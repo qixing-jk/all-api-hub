@@ -5,7 +5,7 @@ import {
 import { normalizeHttpUrl } from "~/utils/core/url"
 import { tryParseUrl } from "~/utils/core/urlParsing"
 
-export type NormalizedUrlMatchParts = {
+type NormalizedUrlMatchParts = {
   origin: string | null
   hostname: string | null
 }

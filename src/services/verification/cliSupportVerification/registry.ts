@@ -6,7 +6,7 @@ import type { CliSupportResult, CliToolId } from "./types"
 /**
  * Inputs passed into a tool runner from the registry.
  */
-export type CliToolRunnerParams = {
+type CliToolRunnerParams = {
   baseUrl: string
   apiKey: string
   modelId?: string

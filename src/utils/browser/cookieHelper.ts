@@ -31,7 +31,7 @@ export const AUTH_MODE = {
   TOKEN_AUTH_MODE: "token",
 } as const
 
-export type AuthMode = (typeof AUTH_MODE)[keyof typeof AUTH_MODE]
+type AuthMode = (typeof AUTH_MODE)[keyof typeof AUTH_MODE]
 
 // 拦截器注册状态
 let isInterceptorRegistered = false

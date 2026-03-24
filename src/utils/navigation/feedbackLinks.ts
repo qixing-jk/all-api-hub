@@ -4,7 +4,7 @@ import { getRepository } from "~/utils/navigation/packageMeta"
 const BUG_REPORT_TEMPLATE = "bug_report.yml"
 const FEATURE_REQUEST_TEMPLATE = "feature_request.yml"
 
-export interface FeedbackDestinationUrls {
+interface FeedbackDestinationUrls {
   repository: string
   bugReport: string
   featureRequest: string

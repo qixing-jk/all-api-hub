@@ -7,7 +7,7 @@ import { CLI_TOOL_IDS } from "./types"
 /**
  * Shared inputs for running CLI support simulations.
  */
-export type RunCliSupportSimulationParams = {
+type RunCliSupportSimulationParams = {
   baseUrl: string
   apiKey: string
   /**
@@ -22,7 +22,7 @@ export type RunCliSupportSimulationParams = {
 /**
  * Inputs for running a single tool simulation.
  */
-export type RunCliSupportToolParams = RunCliSupportSimulationParams & {
+type RunCliSupportToolParams = RunCliSupportSimulationParams & {
   toolId: CliToolId
 }
 

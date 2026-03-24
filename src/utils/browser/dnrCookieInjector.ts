@@ -20,7 +20,7 @@ const logger = createLogger("DnrCookieInjector")
 
 export const TEMP_WINDOW_DNR_RULE_ID_BASE = 1_000_000 as const
 
-export interface TempWindowCookieRuleParams {
+interface TempWindowCookieRuleParams {
   tabId: number
   url: string
   cookieHeader: string

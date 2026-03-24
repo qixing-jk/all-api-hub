@@ -12,7 +12,7 @@ import type {
 /**
  * Input passed into a probe runner from the registry.
  */
-export type ProbeRunnerParams = {
+type ProbeRunnerParams = {
   baseUrl: string
   apiKey: string
   apiType: ApiVerificationApiType
@@ -22,7 +22,7 @@ export type ProbeRunnerParams = {
 /**
  * Registry entry for a probe runner with metadata about inputs.
  */
-export type ProbeRegistryEntry = {
+type ProbeRegistryEntry = {
   requiresModelId: boolean
   run: (params: ProbeRunnerParams) => Promise<ApiVerificationProbeResult>
 }

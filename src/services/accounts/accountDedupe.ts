@@ -18,7 +18,7 @@ export type DuplicateAccountGroup = {
   deleteAccountIds: string[]
 }
 
-export type DuplicateAccountsScanResult = {
+type DuplicateAccountsScanResult = {
   groups: DuplicateAccountGroup[]
   unscannable: SiteAccount[]
 }

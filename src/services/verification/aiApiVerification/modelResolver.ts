@@ -5,7 +5,7 @@ import { guessModelIdFromToken } from "./utils"
 /**
  * Inputs used to resolve a model id for verification runs.
  */
-export type ModelIdContext = {
+type ModelIdContext = {
   modelId?: string
   tokenMeta?: Pick<ApiToken, "models" | "model_limits" | "name" | "id">
 }

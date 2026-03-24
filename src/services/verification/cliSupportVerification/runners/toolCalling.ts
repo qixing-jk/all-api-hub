@@ -3,7 +3,7 @@ import { runApiVerificationProbe } from "~/services/verification/aiApiVerificati
 
 import type { CliSupportResult, CliSupportStatus, CliToolId } from "../types"
 
-export type RunCliToolCallingSimulationParams = {
+type RunCliToolCallingSimulationParams = {
   toolId: CliToolId
   baseUrl: string
   apiKey: string

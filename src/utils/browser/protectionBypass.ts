@@ -12,7 +12,7 @@ export const ProtectionBypassUiVariants = {
   TempWindowWithCookieInterceptor: "tempWindowWithCookieInterceptor",
 } as const
 
-export type ProtectionBypassUiVariant =
+type ProtectionBypassUiVariant =
   (typeof ProtectionBypassUiVariants)[keyof typeof ProtectionBypassUiVariants]
 
 /**

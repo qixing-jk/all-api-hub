@@ -170,7 +170,7 @@ export function normalizeWebdavOrderedEntryIds(input: {
   return ordered
 }
 
-export type WebdavBackupPresence = {
+type WebdavBackupPresence = {
   hasAccounts: boolean
   hasAccountsList: boolean
   hasBookmarksList: boolean

@@ -24,7 +24,7 @@ import {
 
 const logger = createLogger("UsageHistoryScheduler")
 
-export interface UsageHistoryBatchSyncResult {
+interface UsageHistoryBatchSyncResult {
   totals: {
     success: number
     skipped: number

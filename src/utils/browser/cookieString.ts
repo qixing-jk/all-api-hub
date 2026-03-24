@@ -5,7 +5,7 @@
  * cookie authentication without mutating the browser's global cookie jar.
  */
 
-export type CookieMap = Map<string, string>
+type CookieMap = Map<string, string>
 
 /**
  * Normalizes a user-provided Cookie header value by stripping a leading

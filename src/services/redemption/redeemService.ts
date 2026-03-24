@@ -6,7 +6,7 @@ import { getErrorMessage } from "~/utils/core/error"
 import { formatMoneyFixed } from "~/utils/core/money"
 import { t } from "~/utils/i18n/core"
 
-export interface RedeemResult {
+interface RedeemResult {
   success: boolean
   message: string
   creditedAmount?: number

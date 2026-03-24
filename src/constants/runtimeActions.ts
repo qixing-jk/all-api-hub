@@ -28,7 +28,7 @@ export const RuntimeActionPrefixes = {
   WebdavAutoSync: "webdavAutoSync:",
 } as const
 
-export type RuntimeActionPrefix =
+type RuntimeActionPrefix =
   (typeof RuntimeActionPrefixes)[keyof typeof RuntimeActionPrefixes]
 
 /**

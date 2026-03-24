@@ -1,7 +1,7 @@
 // noinspection ES6PreferShortImport wxt config file dependency, can't parse any alias like
 import { APP_SHORT_NAME } from "../../constants/branding"
 
-export type DevBuildInfo = {
+type DevBuildInfo = {
   /**
    * Git branch name, for example: `feat/account-disable`.
    * This value is expected to be injected by the build tooling in dev mode.

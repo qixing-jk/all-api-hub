@@ -167,5 +167,3 @@ for (const key in commonAPI) {
     ;(exportedAPI as any)[key] = func
   }
 }
-
-export type ApiService = typeof exportedAPI
