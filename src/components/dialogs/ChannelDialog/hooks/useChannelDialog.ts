@@ -250,7 +250,7 @@ export function useChannelDialog() {
    */
   const openWithAccount = async (
     account: DisplaySiteData | SiteAccount,
-    accoutToken: AccountToken | ApiToken | null,
+    accountToken: AccountToken | ApiToken | null,
     onSuccess?: (result: any) => void,
     options?: PrefilledChannelOpenOptions,
   ) => {
@@ -290,7 +290,7 @@ export function useChannelDialog() {
         return
       }
 
-      let apiToken = accoutToken
+      let apiToken = accountToken
 
       if (!apiToken) {
         // Ensure API token exists

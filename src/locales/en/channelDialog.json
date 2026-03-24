@@ -88,7 +88,7 @@
       "warningTitle": "Potential duplicate"
     },
     "exactDuplicate": {
-      "description": "A duplicate candidate channel, {{channelName}}, has now been confirmed in the managed site. If you want to avoid duplication, adjust the name, models, or key before saving; otherwise, you can still continue creating the channel.",
+      "description": "A duplicate candidate channel {{channelName}} has now been confirmed in the managed site. If you want to avoid duplication, adjust the name, models, or key before saving; otherwise, you can still continue creating the channel.",
       "title": "Confirmed duplicate channel"
     },
     "reviewSuggested": {

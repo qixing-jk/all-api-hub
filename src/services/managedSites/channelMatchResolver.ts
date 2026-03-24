@@ -1,5 +1,6 @@
 import {
   getRecoverableManagedSiteChannelCandidate,
+  MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS,
   MatchResolutionUnresolvedError,
   type ManagedSiteChannelMatchInspection,
@@ -48,6 +49,29 @@ const applyResolvedChannelKeys = <T extends { id: number; key?: string }>(
       key: resolvedKey,
     }
   })
+}
+
+const fetchRecoverableCandidateSecretKey = async (params: {
+  service: ManagedSiteService
+  managedConfig: ManagedSiteConfig
+  channelId: number
+}) => {
+  try {
+    return await params.service.fetchChannelSecretKey!(
+      params.managedConfig.baseUrl,
+      params.managedConfig.token,
+      params.managedConfig.userId,
+      params.channelId,
+    )
+  } catch (error) {
+    if (error instanceof MatchResolutionUnresolvedError) {
+      throw error
+    }
+
+    throw new MatchResolutionUnresolvedError(
+      MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.VERIFICATION_REQUIRED,
+    )
+  }
 }
 
 /**
@@ -148,33 +172,38 @@ export async function resolveManagedSiteChannelMatch(
       !recoverableCandidate.key?.trim() &&
       typeof mergedResolvedChannelKeysById[recoverableCandidate.id] !== "string"
     ) {
-      mergedResolvedChannelKeysById[recoverableCandidate.id] =
-        await service.fetchChannelSecretKey(
-          managedConfig.baseUrl,
-          managedConfig.token,
-          managedConfig.userId,
-          recoverableCandidate.id,
+      try {
+        mergedResolvedChannelKeysById[recoverableCandidate.id] =
+          await fetchRecoverableCandidateSecretKey({
+            service,
+            managedConfig,
+            channelId: recoverableCandidate.id,
+          })
+
+        const channelsWithResolvedKey = applyResolvedChannelKeys(
+          searchResultItems,
+          mergedResolvedChannelKeysById,
         )
 
-      const channelsWithResolvedKey = applyResolvedChannelKeys(
-        searchResultItems,
-        mergedResolvedChannelKeysById,
-      )
-
-      urlBucket = findManagedSiteChannelsByBaseUrl({
-        channels: channelsWithResolvedKey,
-        accountBaseUrl: searchBaseUrl,
-      })
-      keyAssessment = inspectManagedSiteChannelKeyMatch({
-        channels: channelsWithResolvedKey,
-        accountBaseUrl: searchBaseUrl,
-        key,
-      })
-      modelsAssessment = inspectManagedSiteChannelModelsMatch({
-        channels: channelsWithResolvedKey,
-        accountBaseUrl: searchBaseUrl,
-        models,
-      })
+        urlBucket = findManagedSiteChannelsByBaseUrl({
+          channels: channelsWithResolvedKey,
+          accountBaseUrl: searchBaseUrl,
+        })
+        keyAssessment = inspectManagedSiteChannelKeyMatch({
+          channels: channelsWithResolvedKey,
+          accountBaseUrl: searchBaseUrl,
+          key,
+        })
+        modelsAssessment = inspectManagedSiteChannelModelsMatch({
+          channels: channelsWithResolvedKey,
+          accountBaseUrl: searchBaseUrl,
+          models,
+        })
+      } catch (error) {
+        if (!(error instanceof MatchResolutionUnresolvedError)) {
+          throw error
+        }
+      }
     }
   }
 

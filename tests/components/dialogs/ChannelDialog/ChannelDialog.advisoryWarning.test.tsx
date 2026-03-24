@@ -8,15 +8,25 @@ import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
 const {
   capturedVerificationRequests,
   fetchChannelSecretKeyMock,
+  hasNewApiAuthenticatedBrowserSessionMock,
   handleSubmitMock,
+  mockUserPreferences,
+  isNewApiVerifiedSessionActiveMock,
   requestDuplicateChannelWarningMock,
   updateFieldMock,
 } = vi.hoisted(() => ({
   capturedVerificationRequests: [] as any[],
   fetchChannelSecretKeyMock: vi.fn(async () => "sk-test"),
+  hasNewApiAuthenticatedBrowserSessionMock: vi.fn(),
   handleSubmitMock: vi.fn((event?: { preventDefault?: () => void }) =>
     event?.preventDefault?.(),
   ),
+  mockUserPreferences: {
+    newApiUsername: "admin",
+    newApiPassword: "password",
+    newApiTotpSecret: "",
+  },
+  isNewApiVerifiedSessionActiveMock: vi.fn(),
   requestDuplicateChannelWarningMock: vi.fn(),
   updateFieldMock: vi.fn(),
 }))
@@ -75,10 +85,24 @@ vi.mock("~/contexts/UserPreferencesContext", async () => {
       managedSiteType: NEW_API,
       newApiBaseUrl: "https://managed.example.com",
       newApiUserId: "1",
-      newApiUsername: "admin",
-      newApiPassword: "password",
-      newApiTotpSecret: "",
+      newApiUsername: mockUserPreferences.newApiUsername,
+      newApiPassword: mockUserPreferences.newApiPassword,
+      newApiTotpSecret: mockUserPreferences.newApiTotpSecret,
     }),
+  }
+})
+
+vi.mock("~/services/managedSites/providers/newApiSession", async () => {
+  const actual = await vi.importActual<
+    typeof import("~/services/managedSites/providers/newApiSession")
+  >("~/services/managedSites/providers/newApiSession")
+
+  return {
+    ...actual,
+    hasNewApiAuthenticatedBrowserSession: (...args: unknown[]) =>
+      hasNewApiAuthenticatedBrowserSessionMock(...args),
+    isNewApiVerifiedSessionActive: (...args: unknown[]) =>
+      isNewApiVerifiedSessionActiveMock(...args),
   }
 })
 
@@ -183,6 +207,11 @@ describe("ChannelDialog advisory verification action", () => {
     vi.clearAllMocks()
     capturedVerificationRequests.length = 0
     fetchChannelSecretKeyMock.mockResolvedValue("sk-test")
+    hasNewApiAuthenticatedBrowserSessionMock.mockResolvedValue(false)
+    isNewApiVerifiedSessionActiveMock.mockReturnValue(false)
+    mockUserPreferences.newApiUsername = "admin"
+    mockUserPreferences.newApiPassword = "password"
+    mockUserPreferences.newApiTotpSecret = ""
     requestDuplicateChannelWarningMock.mockResolvedValue(false)
   })
 
@@ -269,5 +298,61 @@ describe("ChannelDialog advisory verification action", () => {
     expect(
       screen.getByText("channelDialog:warnings.exactDuplicate.title"),
     ).toBeInTheDocument()
+  })
+
+  it("hides the verification CTA when recovery is unavailable", async () => {
+    mockUserPreferences.newApiUsername = ""
+    mockUserPreferences.newApiPassword = ""
+
+    render(
+      <ChannelDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        advisoryWarning={{
+          kind: "verificationRequired",
+          title: "channelDialog:warnings.verificationRequired.title",
+          description:
+            "channelDialog:warnings.verificationRequired.description",
+          assessment: {
+            url: {
+              matched: true,
+              candidateCount: 1,
+              channel: {
+                id: 7,
+                name: "Existing channel",
+              },
+            },
+            key: {
+              comparable: false,
+              matched: false,
+              reason: "comparison-unavailable",
+            },
+            models: {
+              comparable: true,
+              matched: true,
+              reason: "exact",
+              channel: {
+                id: 7,
+                name: "Existing channel",
+              },
+              similarityScore: 1,
+            },
+          },
+        }}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(hasNewApiAuthenticatedBrowserSessionMock).toHaveBeenCalledWith({
+        baseUrl: "https://managed.example.com",
+        userId: "1",
+      })
+    })
+
+    expect(
+      screen.queryByRole("button", {
+        name: "channelDialog:warnings.verificationRequired.actions.verifyNow",
+      }),
+    ).toBeNull()
   })
 })

@@ -36,6 +36,11 @@ import { toManagedSiteChannelAssessmentSignals } from "~/services/managedSites/c
 import { getManagedSiteChannelExactMatch } from "~/services/managedSites/channelMatch"
 import { resolveManagedSiteChannelMatch } from "~/services/managedSites/channelMatchResolver"
 import { getManagedSiteService } from "~/services/managedSites/managedSiteService"
+import {
+  hasNewApiAuthenticatedBrowserSession,
+  hasNewApiLoginAssistCredentials,
+  isNewApiVerifiedSessionActive,
+} from "~/services/managedSites/providers/newApiSession"
 import { getManagedSiteConfigMissingMessage } from "~/services/managedSites/utils/managedSite"
 import {
   CHANNEL_STATUS,
@@ -95,6 +100,8 @@ export function ChannelDialog({
   const [currentAdvisoryWarning, setCurrentAdvisoryWarning] = useState(
     advisoryWarning ?? null,
   )
+  const [canRecoverManagedVerification, setCanRecoverManagedVerification] =
+    useState(false)
   const requestIdRef = useRef(0)
   const verification = useNewApiManagedVerification()
   const {
@@ -106,7 +113,8 @@ export function ChannelDialog({
     newApiTotpSecret,
   } = useUserPreferencesContext()
   const isOctopus = managedSiteType === OCTOPUS
-  const canRunManagedVerification = managedSiteType === NEW_API
+  const canRunManagedVerification =
+    managedSiteType === NEW_API && canRecoverManagedVerification
   const isAddMode = mode === DIALOG_MODES.ADD
   const isViewMode = mode === DIALOG_MODES.VIEW
 
@@ -161,6 +169,62 @@ export function ChannelDialog({
   useEffect(() => {
     setCurrentAdvisoryWarning(advisoryWarning ?? null)
   }, [advisoryWarning, isOpen, mode, channel?.id])
+
+  useEffect(() => {
+    let cancelled = false
+    const managedBaseUrl = newApiBaseUrl.trim()
+
+    if (
+      !isOpen ||
+      managedSiteType !== NEW_API ||
+      currentAdvisoryWarning?.kind !==
+        CHANNEL_DIALOG_ADVISORY_WARNING_KINDS.VERIFICATION_REQUIRED ||
+      !managedBaseUrl
+    ) {
+      setCanRecoverManagedVerification(false)
+      return
+    }
+
+    if (
+      hasNewApiLoginAssistCredentials({
+        username: newApiUsername,
+        password: newApiPassword,
+      }) ||
+      isNewApiVerifiedSessionActive(managedBaseUrl)
+    ) {
+      setCanRecoverManagedVerification(true)
+      return
+    }
+
+    setCanRecoverManagedVerification(false)
+
+    void hasNewApiAuthenticatedBrowserSession({
+      baseUrl: managedBaseUrl,
+      userId: newApiUserId,
+    })
+      .then((authenticatedBrowserSessionExists) => {
+        if (!cancelled) {
+          setCanRecoverManagedVerification(authenticatedBrowserSessionExists)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCanRecoverManagedVerification(false)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [
+    currentAdvisoryWarning?.kind,
+    isOpen,
+    managedSiteType,
+    newApiBaseUrl,
+    newApiPassword,
+    newApiUserId,
+    newApiUsername,
+  ])
 
   const handleLoadRealKey = async () => {
     if (isViewMode || !onRequestRealKey) return
