@@ -1,6 +1,5 @@
 import { ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline"
 import type { TFunction } from "i18next"
-import { nanoid } from "nanoid"
 import { useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
@@ -28,6 +27,7 @@ import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 import type { ManagedSiteModelSyncPreferences } from "~/types/managedSiteModelSync"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
+import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
 import { navigateWithinOptionsPage } from "~/utils/navigation"
 
@@ -247,7 +247,7 @@ export default function ManagedSiteModelSyncSettings() {
   const handleAddGlobalFilter = () => {
     const now = Date.now()
     const newFilter: EditableFilter = {
-      id: nanoid(),
+      id: safeRandomUUID("global-channel-filter"),
       name: "",
       pattern: "",
       isRegex: false,
@@ -729,7 +729,7 @@ function parseJsonGlobalChannelModelFilters(
       id:
         typeof anyItem.id === "string" && anyItem.id.trim()
           ? anyItem.id.trim()
-          : nanoid(),
+          : safeRandomUUID("global-channel-filter"),
       name,
       description:
         typeof anyItem.description === "string"

@@ -1,5 +1,3 @@
-import { nanoid } from "nanoid"
-
 import { Storage } from "@plasmohq/storage"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
@@ -14,6 +12,7 @@ import type {
   ChannelModelFilterRule,
 } from "~/types/channelModelFilters"
 import { getErrorMessage } from "~/utils/core/error"
+import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("ChannelConfigStorage")
@@ -152,7 +151,7 @@ function normalizeFilters(
         : now
 
     return {
-      id: (filter.id ?? "").trim() || nanoid(),
+      id: (filter.id ?? "").trim() || safeRandomUUID("channel-filter"),
       name,
       description: description || undefined,
       pattern,
@@ -358,7 +357,7 @@ function sanitizeFilter(
     id:
       typeof payload.id === "string" && payload.id.trim()
         ? payload.id.trim()
-        : nanoid(),
+        : safeRandomUUID("channel-filter"),
     name,
     description,
     pattern,

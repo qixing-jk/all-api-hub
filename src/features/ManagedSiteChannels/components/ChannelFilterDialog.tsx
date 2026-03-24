@@ -1,4 +1,3 @@
-import { nanoid } from "nanoid"
 import { useCallback, useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
@@ -8,6 +7,7 @@ import { Modal } from "~/components/ui"
 import { Button } from "~/components/ui/button"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 import { getErrorMessage } from "~/utils/core/error"
+import { safeRandomUUID } from "~/utils/core/identifier"
 
 import type { ChannelRow } from "../types"
 import {
@@ -102,7 +102,7 @@ export default function ChannelFilterDialog({
     setFilters((prev) => [
       ...prev,
       {
-        id: nanoid(),
+        id: safeRandomUUID("channel-filter"),
         name: "",
         description: "",
         pattern: "",
@@ -181,7 +181,7 @@ export default function ChannelFilterDialog({
         id:
           typeof anyItem.id === "string" && anyItem.id.trim()
             ? anyItem.id.trim()
-            : nanoid(),
+            : safeRandomUUID("channel-filter"),
         name,
         description:
           typeof anyItem.description === "string"
