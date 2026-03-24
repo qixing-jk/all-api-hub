@@ -141,5 +141,3 @@ export function AutoCheckinPretriggerCompletionDialog({
     </Modal>
   )
 }
-
-export default AutoCheckinPretriggerCompletionDialog

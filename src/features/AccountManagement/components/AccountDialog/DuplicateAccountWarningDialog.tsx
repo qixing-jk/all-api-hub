@@ -90,5 +90,3 @@ export function DuplicateAccountWarningDialog({
     </Modal>
   )
 }
-
-export default DuplicateAccountWarningDialog

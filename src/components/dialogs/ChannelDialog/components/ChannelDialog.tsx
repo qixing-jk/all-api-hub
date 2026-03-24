@@ -529,5 +529,3 @@ export function ChannelDialog({
     </Modal>
   )
 }
-
-export default ChannelDialog

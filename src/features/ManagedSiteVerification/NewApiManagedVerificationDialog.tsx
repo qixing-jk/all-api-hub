@@ -192,5 +192,3 @@ export function NewApiManagedVerificationDialog(
     </Modal>
   )
 }
-
-export default NewApiManagedVerificationDialog

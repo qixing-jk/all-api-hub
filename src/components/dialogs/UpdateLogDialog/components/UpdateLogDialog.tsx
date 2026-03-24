@@ -166,5 +166,3 @@ export function UpdateLogDialog({
     </Modal>
   )
 }
-
-export default UpdateLogDialog
