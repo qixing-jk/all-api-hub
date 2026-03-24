@@ -36,7 +36,7 @@ const LazyApiCredentialProfilesStatsSection = lazy(
   () => import("./components/ApiCredentialProfilesStatsSection"),
 )
 
-export interface PopupViewConfig {
+interface PopupViewConfig {
   showRefresh: boolean
   headerAction?: ReactNode
   statsSection?: ReactNode

@@ -4,7 +4,7 @@ import type { DailyBalanceHistoryStore } from "~/types/dailyBalanceHistory"
 
 import { listDayKeysInRange } from "./dayKeys"
 
-export interface DailyBalanceHistoryCoverage {
+interface DailyBalanceHistoryCoverage {
   totalAccounts: number
   snapshotAccounts: number
   cashflowAccounts: number
@@ -14,14 +14,14 @@ type ExchangeRateLookup = Record<string, number> | Map<string, number>
 
 export type DailyBalanceHistoryMetric = "balance" | "income" | "outcome" | "net"
 
-export interface PerAccountDailyBalanceMoneySeries {
+interface PerAccountDailyBalanceMoneySeries {
   balance: Array<number | null>
   income: Array<number | null>
   outcome: Array<number | null>
   net: Array<number | null>
 }
 
-export interface AccountRangeSummary {
+interface AccountRangeSummary {
   accountId: string
   startBalance: number | null
   endBalance: number | null

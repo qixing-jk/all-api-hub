@@ -31,7 +31,7 @@ import { usageHistoryStorage } from "./storage"
 
 export type UsageHistorySyncTrigger = "manual" | "afterRefresh" | "alarm"
 
-export interface UsageHistoryAccountSyncSummary {
+interface UsageHistoryAccountSyncSummary {
   accountId: string
   status: "success" | "skipped" | "error" | "unsupported"
   ingestedCount: number

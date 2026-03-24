@@ -3,7 +3,7 @@
  */
 export const REDEMPTION_CODE_LENGTH = 32
 
-export interface RedemptionCodeValidationOptions {
+interface RedemptionCodeValidationOptions {
   /**
    * When enabled, accept any 32-character non-whitespace token instead of strict hex.
    */

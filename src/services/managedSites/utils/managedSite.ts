@@ -45,7 +45,7 @@ export interface ManagedSiteTargetOption {
   config: ManagedSiteAdminConfig
 }
 
-export type ManagedSiteConfig =
+type ManagedSiteConfig =
   | NewApiConfig
   | DoneHubConfig
   | VeloeraConfig

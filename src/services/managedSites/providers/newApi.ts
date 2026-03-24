@@ -504,15 +504,6 @@ export async function findMatchingChannel(
 }
 
 /**
- * Additional options for importToNewApi to allow customization.
- */
-export interface ImportToNewApiOptions {
-  formOverrides?: Partial<ChannelFormData>
-  mode?: ChannelMode
-  skipExistingCheck?: boolean
-}
-
-/**
  * 将账户导入到 New API 作为渠道。
  * @param account 站点数据。
  * @param token API 令牌，用于访问上游模型与构建渠道。

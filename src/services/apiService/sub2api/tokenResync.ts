@@ -47,7 +47,7 @@ async function readUserFromTab(tabId: number, baseUrl: string) {
 /**
  * Best-effort: read `auth_token` from an already-open tab with the same origin.
  */
-export async function readSub2ApiAuthTokenFromExistingTab(
+async function readSub2ApiAuthTokenFromExistingTab(
   baseUrl: string,
 ): Promise<string | null> {
   const origin = tryParseOrigin(baseUrl)
@@ -88,7 +88,7 @@ export async function readSub2ApiAuthTokenFromExistingTab(
  * Reuses the existing auto-detect runtime flow, which already knows how to
  * acquire a temp context and read localStorage in a site page environment.
  */
-export async function readSub2ApiAuthTokenFromTempWindow(
+async function readSub2ApiAuthTokenFromTempWindow(
   baseUrl: string,
 ): Promise<string | null> {
   try {

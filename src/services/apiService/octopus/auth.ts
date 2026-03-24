@@ -12,7 +12,7 @@ const logger = createLogger("OctopusAuth")
 /**
  * Octopus 登录请求
  */
-export interface OctopusLoginRequest {
+interface OctopusLoginRequest {
   username: string
   password: string
   expire?: number

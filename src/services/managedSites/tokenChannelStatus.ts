@@ -82,9 +82,6 @@ export interface ManagedSiteTokenChannelRecovery {
   automaticCodeConfigured: boolean
 }
 
-export type ManagedSiteTokenChannelStatusValue =
-  (typeof MANAGED_SITE_TOKEN_CHANNEL_STATUSES)[keyof typeof MANAGED_SITE_TOKEN_CHANNEL_STATUSES]
-
 export type ManagedSiteTokenChannelStatus =
   | {
       status: typeof MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED

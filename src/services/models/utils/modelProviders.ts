@@ -26,7 +26,7 @@ import {
 export type ProviderType = keyof typeof PROVIDER_CONFIGS
 
 // 厂商配置接口
-export interface ProviderConfig {
+interface ProviderConfig {
   name: string
   icon: React.ComponentType<any>
   patterns: RegExp[]

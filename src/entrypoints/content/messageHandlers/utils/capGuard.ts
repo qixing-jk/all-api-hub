@@ -3,7 +3,7 @@ import { sanitizeUrlForLog } from "~/utils/core/sanitizeUrlForLog"
 
 const logger = createLogger("CapGuard")
 
-export type CapChallengeDetection = {
+type CapChallengeDetection = {
   isChallenge: boolean
   score: number
   reasons: string[]

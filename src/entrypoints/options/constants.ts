@@ -65,7 +65,7 @@ const UsageAnalytics = createLazyMenuComponent(
 )
 
 // 菜单项类型定义
-export interface MenuItem {
+interface MenuItem {
   id: OptionsPageMenuItemId
   name: string
   icon: ComponentType<{ className?: string }>

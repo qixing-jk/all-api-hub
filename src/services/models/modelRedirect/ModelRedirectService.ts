@@ -39,7 +39,7 @@ import { isEmptyModelMapping } from "./utils"
  */
 const logger = createLogger("ModelRedirect")
 
-export interface ModelRedirectChannelResult {
+interface ModelRedirectChannelResult {
   channelId: number
   channelName: string
   success: boolean
@@ -47,7 +47,7 @@ export interface ModelRedirectChannelResult {
   error?: string
 }
 
-export interface ModelRedirectBulkClearResult {
+interface ModelRedirectBulkClearResult {
   success: boolean
   totalSelected: number
   clearedChannels: number

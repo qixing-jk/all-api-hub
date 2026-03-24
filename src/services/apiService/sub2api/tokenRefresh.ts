@@ -18,7 +18,7 @@ type Sub2ApiRefreshTokenData = {
   expires_in: number
 }
 
-export type Sub2ApiRefreshedCredentials = {
+type Sub2ApiRefreshedCredentials = {
   accessToken: string
   refreshToken: string
   tokenExpiresAt: number

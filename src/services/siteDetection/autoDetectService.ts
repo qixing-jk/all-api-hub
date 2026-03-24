@@ -26,7 +26,7 @@ import { getSiteType } from "./detectSiteType"
  */
 const logger = createLogger("AutoDetectService")
 
-export interface AutoDetectResult {
+interface AutoDetectResult {
   success: boolean
   data?: {
     userId: number
@@ -38,7 +38,7 @@ export interface AutoDetectResult {
   error?: string
 }
 
-export interface UserDataResult {
+interface UserDataResult {
   userId: number
   user: any
   accessToken?: string

@@ -1,4 +1,4 @@
-import type { EChartsOption, EChartsType, SetOptionOpts } from "echarts"
+import type { EChartsOption, SetOptionOpts } from "echarts"
 import { BarChart, HeatmapChart, LineChart, PieChart } from "echarts/charts"
 import {
   DatasetComponent,
@@ -41,4 +41,4 @@ echarts.use([
 ])
 
 export { echarts }
-export type { EChartsOption, EChartsType, SetOptionOpts }
+export type { EChartsOption, SetOptionOpts }

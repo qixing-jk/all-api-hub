@@ -66,7 +66,7 @@ export const USER_PREFERENCES_STORAGE_KEYS = {
   USER_PREFERENCES: "user_preferences",
 } as const
 
-export const DAILY_BALANCE_HISTORY_STORAGE_KEYS = {
+const DAILY_BALANCE_HISTORY_STORAGE_KEYS = {
   STORE: "dailyBalanceHistory_store",
 } as const
 
@@ -86,7 +86,7 @@ export const ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS = {
   REPAIR_PROGRESS: "accountKeyRepair_progress",
 } as const
 
-export const CHANGELOG_ON_UPDATE_STORAGE_KEYS = {
+const CHANGELOG_ON_UPDATE_STORAGE_KEYS = {
   PENDING_VERSION: "changelogOnUpdate_pendingVersion",
 } as const
 

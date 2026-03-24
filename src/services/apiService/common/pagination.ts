@@ -8,30 +8,19 @@ import { REQUEST_CONFIG } from "./constant"
 
 const logger = createLogger("ApiPagination")
 
-export interface PaginationOptions {
+interface PaginationOptions {
   pageSize?: number
   maxPages?: number
   startPage?: number
 }
 
-export interface PaginatedResult<T> {
-  data: T[]
-  totalPages: number
-  currentPage: number
-  hasMore: boolean
-}
-
-export interface PageData<T> {
+interface PageData<T> {
   items: T[]
   total?: number
   hasMore?: boolean
 }
 
-export type ArrayOrItemsPayload<T> =
-  | T[]
-  | { items?: T[] | null }
-  | null
-  | undefined
+type ArrayOrItemsPayload<T> = T[] | { items?: T[] | null } | null | undefined
 
 /**
  * Normalize list responses that may be either a bare array or an object with

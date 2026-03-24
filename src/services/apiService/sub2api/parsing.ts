@@ -166,7 +166,7 @@ export const convertUsdBalanceToQuota = (balanceUsd: number): number => {
 /**
  * Convert a shared internal quota value back into Sub2API's USD quota value.
  */
-export const convertQuotaToUsdAmount = (quota: number): number => {
+const convertQuotaToUsdAmount = (quota: number): number => {
   const safe = Number.isFinite(quota) && quota > 0 ? quota : 0
   return Number(
     (safe / UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR).toFixed(6),
@@ -189,7 +189,7 @@ export const convertExpirySecondsToSub2ApiDays = (
   return Math.ceil(msUntilExpiry / MS_PER_DAY)
 }
 
-export const toSub2ApiIsoTimestamp = (expiredTime: number): string => {
+const toSub2ApiIsoTimestamp = (expiredTime: number): string => {
   if (!Number.isFinite(expiredTime) || expiredTime <= 0) {
     return ""
   }
@@ -265,7 +265,7 @@ export const parseSub2ApiEnvelope = <T>(
   return envelope.data as T
 }
 
-export const parseSub2ApiKeyStatus = (value: unknown): number => {
+const parseSub2ApiKeyStatus = (value: unknown): number => {
   if (typeof value === "number" && Number.isFinite(value)) {
     return value === 1 ? 1 : 0
   }
@@ -320,7 +320,7 @@ export const parseSub2ApiKey = (
   })
 }
 
-export const parseSub2ApiGroupList = (
+const parseSub2ApiGroupList = (
   payload: unknown,
   endpoint: string,
 ): Sub2ApiGroupData[] => {
@@ -336,7 +336,7 @@ export const parseSub2ApiGroupList = (
   })
 }
 
-export const parseSub2ApiGroupRates = (
+const parseSub2ApiGroupRates = (
   payload: unknown,
   endpoint: string,
 ): Record<string, number> => {

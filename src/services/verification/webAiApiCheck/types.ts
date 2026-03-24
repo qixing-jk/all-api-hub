@@ -6,15 +6,6 @@ import type {
 } from "~/services/verification/aiApiVerification"
 
 /**
- * Runtime message sent from background → content to open the in-page AI API Check modal.
- */
-export type ApiCheckContextMenuTriggerRequest = {
-  action: typeof RuntimeActionIds.ApiCheckContextMenuTrigger
-  selectionText: string
-  pageUrl: string
-}
-
-/**
  * Runtime request from content → background to decide whether auto-detect can prompt.
  */
 export type ApiCheckShouldPromptRequest = {
