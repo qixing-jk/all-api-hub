@@ -2,7 +2,34 @@ import {
   ApiError,
   isTempWindowUnsupportedErrorCode,
 } from "~/services/apiService/common/errors"
+import { getErrorMessage } from "~/utils/core/error"
 import { t } from "~/utils/i18n/core"
+
+const DEFAULT_MANAGED_VERIFICATION_ERROR_KEY =
+  "newApiManagedVerification:dialog.body.failure"
+
+/**
+ * Collapses obviously unusable error payloads so the dialog can fall back to
+ * stable localized copy instead of rendering blank/object-like text.
+ */
+function getSafeManagedVerificationErrorMessage(error: unknown): string | null {
+  const normalized = getErrorMessage(error).replace(/\s+/g, " ").trim()
+  const looksLikeStructuredPayload =
+    (normalized.startsWith("{") && normalized.endsWith("}")) ||
+    (normalized.startsWith("[") && normalized.endsWith("]"))
+
+  if (
+    !normalized ||
+    normalized === "[object Object]" ||
+    normalized === "undefined" ||
+    normalized === "null" ||
+    looksLikeStructuredPayload
+  ) {
+    return null
+  }
+
+  return normalized
+}
 
 /**
  * Detects temp-context failures that should be surfaced as localized browser
@@ -24,9 +51,6 @@ export function getNewApiManagedVerificationErrorMessage(error: unknown) {
     return t("messages:background.windowCreationUnavailable")
   }
 
-  if (error instanceof Error) {
-    return error.message
-  }
-
-  return String(error ?? "")
+  const fallbackMessage = t(DEFAULT_MANAGED_VERIFICATION_ERROR_KEY)
+  return getSafeManagedVerificationErrorMessage(error) ?? fallbackMessage
 }

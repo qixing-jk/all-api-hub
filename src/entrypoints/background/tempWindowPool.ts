@@ -1763,10 +1763,14 @@ async function openTabInCompositeWindow(params: {
   }
 
   if (compositeWindowId != null) {
+    const previousCompositeWindowId = compositeWindowId
+    let existingCompositeWindowConfirmed = false
+
     try {
-      await browser.windows.get(compositeWindowId)
+      await browser.windows.get(previousCompositeWindowId)
+      existingCompositeWindowConfirmed = true
       const tab = await createTab(params.url, false, {
-        windowId: compositeWindowId,
+        windowId: previousCompositeWindowId,
       })
       const tabId = tab?.id
       const missingTabReason = classifyWindowCreationFailure({
@@ -1779,14 +1783,26 @@ async function openTabInCompositeWindow(params: {
         )
       }
 
-      return { windowId: compositeWindowId, tabId }
+      return { windowId: previousCompositeWindowId, tabId }
     } catch (error) {
       logTempWindow("compositeWindowNotAlive", {
         requestId: params.requestId,
         origin: params.origin,
-        windowId: compositeWindowId,
+        windowId: previousCompositeWindowId,
         error: getErrorMessage(error),
       })
+
+      if (existingCompositeWindowConfirmed) {
+        try {
+          await removeTabOrWindow(previousCompositeWindowId)
+        } catch (cleanupError) {
+          logger.warn(
+            "Failed to cleanup stale composite temp window after reuse error",
+            cleanupError,
+          )
+        }
+      }
+
       compositeWindowId = null
     }
   }

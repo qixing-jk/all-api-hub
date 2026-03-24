@@ -2,6 +2,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
+  classifyRecoverableWindowCreationFailure,
   clearAlarm,
   createAlarm,
   getAlarm,
@@ -11,6 +12,7 @@ import {
   onSuspend,
   sendRuntimeActionMessage,
   sendTabMessageWithRetry,
+  WINDOW_CREATION_FAILURE_REASONS,
 } from "~/utils/browser/browserApi"
 
 const originalBrowser = (globalThis as any).browser
@@ -357,6 +359,26 @@ describe("browserApi sendTabMessageWithRetry", () => {
         return result
       })(),
     ).resolves.toEqual({ ok: true })
+  })
+})
+
+describe("browserApi classifyRecoverableWindowCreationFailure", () => {
+  it("classifies blocked popup errors as recoverable window creation failures", () => {
+    expect(
+      classifyRecoverableWindowCreationFailure({
+        error: new Error("Popup blocked by user settings"),
+        windowsApiAvailable: true,
+      }),
+    ).toBe(WINDOW_CREATION_FAILURE_REASONS.WINDOW_CREATION_UNAVAILABLE)
+  })
+
+  it("classifies unavailable popup errors as recoverable window creation failures", () => {
+    expect(
+      classifyRecoverableWindowCreationFailure({
+        error: new Error("Popup window unavailable on this runtime"),
+        windowsApiAvailable: true,
+      }),
+    ).toBe(WINDOW_CREATION_FAILURE_REASONS.WINDOW_CREATION_UNAVAILABLE)
   })
 })
 

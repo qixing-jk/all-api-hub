@@ -195,6 +195,10 @@ const WINDOW_CREATION_UNAVAILABLE_PATTERNS = [
   /permission denied/i,
   /\bdenied\b/i,
   /\bforbidden\b/i,
+  /\bblocked\b/i,
+  /popup blocked/i,
+  /\bblocked by\b/i,
+  /\bunavailable\b/i,
   /failed to create/i,
   /cannot create/i,
 ]
