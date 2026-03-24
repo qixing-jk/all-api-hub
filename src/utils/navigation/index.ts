@@ -378,7 +378,7 @@ const _openSettingsTab = (tabId: string) => {
 }
 
 /**
- * Opens the About section inside the options page.
+ * Opens the repository bug report template in a new browser tab.
  */
 const _openAboutPage = () => {
   const targetHash = getAboutHash()
@@ -637,8 +637,8 @@ export const openFullBookmarkManagerPage = withPopupClose(() =>
 )
 
 /**
- * Open the bookmark manager filtered by the provided search string before
- * closing the popup, keeping the flow consistent with popup interactions.
+ * Navigate to the default settings landing section and close the popup if
+ * applicable, so the user ends up in the options page only.
  */
 export const openBookmarkManagerWithSearch = withPopupClose((search: string) =>
   _openFullBookmarkManagerPage({ search }),
@@ -689,8 +689,7 @@ export const openSidePanelWithFallback = async (
 export const openSidePanelPage = withPopupClose(openSidePanelWithFallback)
 
 /**
- * Jump straight to the About section inside the options page and close the
- * popup to keep focus on the destination UI.
+ * Open the bug-report issue template and close the popup afterward when needed.
  */
 export const openAboutPage = withPopupClose(_openAboutPage)
 
@@ -705,7 +704,7 @@ export const openBugReportPage = withPopupClose(_openBugReportPage)
 export const openFeatureRequestPage = withPopupClose(_openFeatureRequestPage)
 
 /**
- * Open the GitHub Discussions page and close the popup afterward when needed.
+ * Open the docs community hub and close the popup afterward when needed.
  */
 export const openDiscussionsPage = withPopupClose(_openDiscussionsPage)
 
@@ -753,7 +752,7 @@ export const openManagedSiteChannelsForChannel = withPopupClose(
 )
 
 /**
- * Open Managed Site model sync dashboard and close the popup afterwards.
+ * Open Managed Site model sync dashboard focused on a single channel.
  */
 export const openManagedSiteModelSyncPage = withPopupClose(
   _openManagedSiteModelSyncPage,

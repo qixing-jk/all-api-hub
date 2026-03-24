@@ -16,7 +16,7 @@ type AccountCardGroup = Pick<
   "groupId" | "keepAccountId" | "recommendedKeepAccountId" | "hasManualOverride"
 >
 
-export interface DedupeAccountCardProps {
+interface DedupeAccountCardProps {
   account: SiteAccount
   group: AccountCardGroup
   accountLabelById: Map<string, string>

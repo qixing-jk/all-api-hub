@@ -47,7 +47,7 @@ function getDedupeStrategyLabel(
   }
 }
 
-export interface DedupeAccountsDialogBodyProps {
+interface DedupeAccountsDialogBodyProps {
   strategy: AccountDedupeKeepStrategy
   onStrategyChange: (strategy: AccountDedupeKeepStrategy) => void
   groups: DedupeAccountsDialogGroup[]

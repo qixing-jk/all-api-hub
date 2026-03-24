@@ -23,7 +23,7 @@ const permissionIconMap: Partial<
   clipboardRead: <ClipboardCheck className="h-5 w-5 text-indigo-500" />,
 }
 
-export interface PermissionListItem {
+interface PermissionListItem {
   id: ManifestOptionalPermissions
   title: string
   description: string

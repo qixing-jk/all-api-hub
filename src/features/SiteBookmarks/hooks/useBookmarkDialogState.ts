@@ -3,7 +3,7 @@ import { useCallback, useMemo, useState } from "react"
 import type { BookmarkDialogMode } from "~/features/SiteBookmarks/components/BookmarkDialog"
 import type { SiteBookmark } from "~/types"
 
-export interface BookmarkDialogState {
+interface BookmarkDialogState {
   isOpen: boolean
   mode: BookmarkDialogMode
   bookmark: SiteBookmark | null

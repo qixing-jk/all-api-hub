@@ -10,28 +10,28 @@ import type {
   UsageHistoryLatencyAggregate,
 } from "~/types/usageHistory"
 
-export type UsageAnalyticsTokenSelection = string[]
+type UsageAnalyticsTokenSelection = string[]
 
-export interface UsageAnalyticsModelTotalsRow {
+interface UsageAnalyticsModelTotalsRow {
   modelName: string
   totalTokens: number
   quotaConsumed: number
 }
 
-export interface UsageAnalyticsTokenTotalsRow {
+interface UsageAnalyticsTokenTotalsRow {
   tokenId: string
   tokenLabel: string
   totalTokens: number
 }
 
-export interface UsageAnalyticsSlowTotalsRow {
+interface UsageAnalyticsSlowTotalsRow {
   key: string
   label: string
   slowCount: number
   totalCount: number
 }
 
-export interface UsageAnalyticsAccountTotalsRow {
+interface UsageAnalyticsAccountTotalsRow {
   accountId: string
   accountLabel: string
   totalTokens: number

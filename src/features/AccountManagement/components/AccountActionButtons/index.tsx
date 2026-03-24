@@ -122,7 +122,7 @@ function resolveAutoCheckinResultMessage(params: {
   return params.t("autoCheckin:providerFallback.unknownError")
 }
 
-export interface ActionButtonsProps {
+interface ActionButtonsProps {
   site: DisplaySiteData
   onCopyKey: (site: DisplaySiteData) => void
   onDeleteAccount: (site: DisplaySiteData) => void
@@ -496,10 +496,10 @@ export default function AccountActionButtons({
       balance: site.balance?.[currencyType] ?? 0,
       includeTodayCashflow: includeToday,
       todayIncome: includeToday
-        ? (site.todayIncome?.[currencyType] ?? 0)
+        ? site.todayIncome?.[currencyType] ?? 0
         : undefined,
       todayOutcome: includeToday
-        ? (site.todayConsumption?.[currencyType] ?? 0)
+        ? site.todayConsumption?.[currencyType] ?? 0
         : undefined,
       asOf:
         site.last_sync_time && site.last_sync_time > 0

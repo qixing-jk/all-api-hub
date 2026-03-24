@@ -27,9 +27,9 @@ export interface AccountPricingContext {
   pricing: PricingResponse
 }
 
-export type AccountErrorType = "invalid-format" | "load-failed"
+type AccountErrorType = "invalid-format" | "load-failed"
 
-export interface AccountQueryState {
+interface AccountQueryState {
   account: DisplaySiteData
   hasData: boolean
   hasError: boolean

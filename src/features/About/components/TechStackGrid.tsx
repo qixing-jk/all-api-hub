@@ -1,12 +1,12 @@
 import { Badge, Card, CardContent } from "~/components/ui"
 
-export interface TechItem {
+interface TechItem {
   name: string
   version: string
   description: string
 }
 
-export interface TechStackGridProps {
+interface TechStackGridProps {
   items: TechItem[]
 }
 

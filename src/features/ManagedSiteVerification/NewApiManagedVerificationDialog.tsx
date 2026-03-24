@@ -50,7 +50,7 @@ const getStepBodyCopy = (
   }
 }
 
-export interface NewApiManagedVerificationDialogProps {
+interface NewApiManagedVerificationDialogProps {
   isOpen: boolean
   step: NewApiManagedVerificationStep
   request: OpenNewApiManagedVerificationParams | null

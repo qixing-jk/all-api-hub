@@ -296,6 +296,8 @@ export async function fetchGroups(config: OctopusConfig): Promise<string[]> {
   }
 }
 
+export { octopusAuthManager } from "./auth"
+
 /**
  * 获取站点分组列表（符合 common API 签名）
  * 使用 Octopus JWT 认证调用 /api/v1/group/list
@@ -355,6 +357,3 @@ export async function fetchAccountAvailableModels(
     return []
   }
 }
-
-// 重新导出认证管理器
-export { octopusAuthManager } from "./auth"

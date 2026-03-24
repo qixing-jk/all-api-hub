@@ -12,7 +12,7 @@ import type { SiteBookmark } from "~/types"
 
 import { useBookmarkDialogState } from "./useBookmarkDialogState"
 
-export interface OpenBookmarkDialogOptions {
+interface OpenBookmarkDialogOptions {
   mode: BookmarkDialogMode
   bookmark?: SiteBookmark | null
 }

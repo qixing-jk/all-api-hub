@@ -9,7 +9,7 @@ import type {
   DedupeAccountsKeepChangeInput,
 } from "./types"
 
-export interface DedupeAccountsGroupsListProps {
+interface DedupeAccountsGroupsListProps {
   groups: DedupeAccountsDialogGroup[]
   accountLabelById: Map<string, string>
   orderedIndexByAccountId: Map<string, number>
