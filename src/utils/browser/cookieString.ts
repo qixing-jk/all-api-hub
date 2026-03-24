@@ -77,7 +77,7 @@ export function extractSessionCookieHeader(header: string): string {
  * @param cookies Map of cookie name -> value.
  * @returns Cookie header string.
  */
-export function stringifyCookieHeader(cookies: CookieMap): string {
+function stringifyCookieHeader(cookies: CookieMap): string {
   if (!cookies || cookies.size === 0) return ""
   return Array.from(cookies.entries())
     .map(([name, value]) => `${name}=${value}`)

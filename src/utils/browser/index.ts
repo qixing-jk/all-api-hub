@@ -18,17 +18,6 @@ export type ExtensionStoreId = "chrome" | "edge" | "firefox"
 export { getDeviceTypeInfo, isDesktopDevice, isMobileDevice, isTabletDevice }
 
 /**
- * Detects Firefox-like user agents using UA string heuristics.
- * Useful in early bootstrapping before browser APIs are available.
- */
-export function isFirefoxByUA(): boolean {
-  return (
-    navigator.userAgent.indexOf(" Firefox/") !== -1 ||
-    navigator.userAgent.indexOf(" Gecko/") !== -1
-  )
-}
-
-/**
  * Checks whether the current extension runtime is Firefox.
  * Relies on the moz-extension protocol prefix exposed by WebExtensions.
  */
@@ -87,7 +76,7 @@ export function detectExtensionStore(options?: {
  * @param url URL instance to check.
  * @returns True when the protocol contains "-extension:".
  */
-export function isExtensionPage(url: URL) {
+function isExtensionPage(url: URL) {
   return url.protocol.includes("-extension:")
 }
 

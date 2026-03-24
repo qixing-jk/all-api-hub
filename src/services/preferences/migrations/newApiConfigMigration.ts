@@ -17,7 +17,7 @@ const logger = createLogger("NewApiConfigMigration")
  * @param prefs - User preferences object to check
  * @returns - True if the user preferences object needs to be migrated, false otherwise
  */
-export function needNewApiConfigMigration(prefs: UserPreferences): boolean {
+function needNewApiConfigMigration(prefs: UserPreferences): boolean {
   return (
     "newApiBaseUrl" in prefs ||
     "newApiAdminToken" in prefs ||

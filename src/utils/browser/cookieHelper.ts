@@ -103,7 +103,7 @@ export async function getCookieHeaderForUrl(
 /**
  * WebRequest 拦截处理函数
  */
-export async function handleWebRequest(
+async function handleWebRequest(
   details: browser.webRequest._OnBeforeSendHeadersDetails,
 ) {
   const headers = details.requestHeaders || []

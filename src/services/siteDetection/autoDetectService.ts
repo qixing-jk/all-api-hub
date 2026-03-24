@@ -53,7 +53,7 @@ export interface UserDataResult {
  * Detect available browser APIs to choose a compatible auto-detect strategy.
  * @returns Capability flags indicating windows/tabs/runtime availability.
  */
-export function detectPlatformCapabilities() {
+function detectPlatformCapabilities() {
   const b = (globalThis as any).browser
   return {
     hasWindows: !!b?.windows,
@@ -142,7 +142,7 @@ async function getUserDataViaAPI(
  * 2) Extract userId and user payload
  * 3) Detect site type and return unified result
  */
-export async function autoDetectDirect(url: string): Promise<AutoDetectResult> {
+async function autoDetectDirect(url: string): Promise<AutoDetectResult> {
   logger.debug("使用直接方式", { url })
 
   try {
@@ -221,9 +221,7 @@ async function getUserDataViaBackground(
  * 1) Background script opens temp window/tab to read localStorage
  * 2) Falls back to API-based fetch when storage read fails
  */
-export async function autoDetectViaBackground(
-  url: string,
-): Promise<AutoDetectResult> {
+async function autoDetectViaBackground(url: string): Promise<AutoDetectResult> {
   logger.debug("使用 Background 方式", { url })
 
   // 检测站点类型，避免在未知站点上下文中使用默认 API
@@ -301,7 +299,7 @@ async function getUserDataFromCurrentTab(
  * 1) Ask content script for user info from localStorage in active tab
  * 2) Fall back to API call if content script response is missing
  */
-export async function autoDetectFromCurrentTab(
+async function autoDetectFromCurrentTab(
   url: string,
 ): Promise<AutoDetectResult> {
   logger.debug("使用当前标签页方式", { url })

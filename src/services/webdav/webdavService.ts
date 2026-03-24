@@ -33,7 +33,7 @@ const WEBDAV_ANCESTORS_NOT_FOUND_MARKER = "AncestorsNotFound"
 /**
  * Program identifier used in default WebDAV backup paths.
  */
-export const PROGRAM_NAME = "all-api-hub"
+const PROGRAM_NAME = "all-api-hub"
 
 export const WEBDAV_FILE_NOT_FOUND_ERROR_CODE = "WEBDAV_FILE_NOT_FOUND"
 

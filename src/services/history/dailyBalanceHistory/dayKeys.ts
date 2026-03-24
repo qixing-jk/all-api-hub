@@ -16,7 +16,7 @@ function pad2(value: number): string {
 /**
  * Format a Date into a day bucket (`YYYY-MM-DD`) using UTC fields.
  */
-export function formatDayKeyUtc(date: Date): string {
+function formatDayKeyUtc(date: Date): string {
   return `${date.getUTCFullYear()}-${pad2(date.getUTCMonth() + 1)}-${pad2(date.getUTCDate())}`
 }
 

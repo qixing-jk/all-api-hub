@@ -39,7 +39,7 @@ export function normalizeUrlForLdohMatch(
 /**
  * Builds an LDOH search URL for a given hostname.
  */
-export function buildLdohSiteSearchUrl(hostname: string): string {
+function buildLdohSiteSearchUrl(hostname: string): string {
   const query = String(hostname ?? "")
     .trim()
     .toLowerCase()

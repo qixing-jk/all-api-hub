@@ -8,7 +8,7 @@ const hasNonEmptyString = (value: unknown): value is string =>
 /**
  * Build the shared ApiService request DTO used by account-scoped UI flows.
  */
-export const buildApiRequestFromDisplayAccount = (
+const buildApiRequestFromDisplayAccount = (
   account: Pick<
     DisplaySiteData,
     | "baseUrl"

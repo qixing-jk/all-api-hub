@@ -82,7 +82,7 @@ function getTurnstileAutoStartStateMap(): Map<string, TurnstileAutoStartState> {
 /**
  * Clears any stored Turnstile auto-start throttling state for a request.
  */
-export function clearTurnstileAutoStartState(requestId?: string | null): void {
+function clearTurnstileAutoStartState(requestId?: string | null): void {
   const normalized = (requestId || "").trim()
   if (!normalized) return
   try {
@@ -111,7 +111,7 @@ function getTurnstilePreTriggerStateMap(): Map<
 /**
  * Clears stored Turnstile pre-trigger throttling state for a request.
  */
-export function clearTurnstilePreTriggerState(requestId?: string | null): void {
+function clearTurnstilePreTriggerState(requestId?: string | null): void {
   const normalized = (requestId || "").trim()
   if (!normalized) return
   try {

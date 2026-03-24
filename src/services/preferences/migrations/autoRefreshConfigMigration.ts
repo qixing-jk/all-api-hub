@@ -17,9 +17,7 @@ const logger = createLogger("AutoRefreshConfigMigration")
  * @param prefs - User preferences object to check
  * @returns - True if the user preferences object needs to be migrated, false otherwise
  */
-export function needAutoRefreshConfigMigration(
-  prefs: UserPreferences,
-): boolean {
+function needAutoRefreshConfigMigration(prefs: UserPreferences): boolean {
   return (
     "autoRefresh" in prefs ||
     "refreshInterval" in prefs ||

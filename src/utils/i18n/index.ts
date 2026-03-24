@@ -54,7 +54,6 @@ i18n
   })
 
 export default i18n
-export { mapToDayjsLocale }
 
 i18n.on("languageChanged", async (lng) => {
   dayjs.locale(mapToDayjsLocale(lng))

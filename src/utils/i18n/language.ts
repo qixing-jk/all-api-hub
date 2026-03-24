@@ -52,9 +52,7 @@ export function isChineseLanguage(language?: string | null): boolean {
 /**
  * Return true when the language belongs to a Traditional Chinese variant.
  */
-export function isTraditionalChineseLanguage(
-  language?: string | null,
-): boolean {
+function isTraditionalChineseLanguage(language?: string | null): boolean {
   const normalized = normalizeLanguageTag(language)
   if (!normalized || !isChineseLanguage(normalized)) return false
 

@@ -136,20 +136,6 @@ export function createProfileSource(
 }
 
 /**
- * Combine selectable model-management sources in selector order.
- */
-export function createModelManagementSources(
-  accounts: DisplaySiteData[],
-  profiles: ApiCredentialProfile[],
-): ModelManagementSource[] {
-  return [
-    createAllAccountsSource(),
-    ...accounts.map((account) => createAccountSource(account)),
-    ...profiles.map((profile) => createProfileSource(profile)),
-  ]
-}
-
-/**
  * Resolve a serialized selector value against live account/profile storage.
  */
 export function resolveModelManagementSource(params: {

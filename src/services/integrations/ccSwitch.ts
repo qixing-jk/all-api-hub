@@ -55,7 +55,7 @@ export interface OpenInCCSwitchOptions {
  * @param payload Structured payload including provider metadata.
  * @returns Formatted ccswitch:// URL.
  */
-export function generateCCSwitchURL(payload: CCSwitchDeeplinkPayload) {
+function generateCCSwitchURL(payload: CCSwitchDeeplinkPayload) {
   const params = new URLSearchParams()
   params.set("resource", "provider")
   params.set("app", payload.app)

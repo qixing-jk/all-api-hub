@@ -22,9 +22,7 @@ const storage = new Storage({
 /**
  * Read the last acknowledged optional permissions from local (non-synced) storage.
  */
-export async function getLastSeenOptionalPermissions(): Promise<
-  string[] | null
-> {
+async function getLastSeenOptionalPermissions(): Promise<string[] | null> {
   try {
     const state = (await storage.get(
       STORAGE_KEY,
@@ -47,17 +45,6 @@ export async function setLastSeenOptionalPermissions(
     await storage.set(STORAGE_KEY, { lastSeen: sorted })
   } catch (error) {
     logger.error("Failed to store last seen optional permissions", error)
-  }
-}
-
-/**
- * Remove the stored snapshot (useful for tests or retrying prompts).
- */
-export async function clearLastSeenOptionalPermissions(): Promise<void> {
-  try {
-    await storage.remove(STORAGE_KEY)
-  } catch (error) {
-    logger.error("Failed to clear last seen optional permissions", error)
   }
 }
 

@@ -75,16 +75,6 @@ const coerceStringArray = (input: unknown): string[] => {
 }
 
 /**
- * Returns the canonical default `CheckInConfig` used by account normalization.
- *
- * This intentionally disables check-in detection (`enableDetection: false`) so
- * legacy accounts missing a `checkIn` object remain opted-out by default.
- */
-export function createDefaultCheckInConfig(): CheckInConfig {
-  return { ...DEFAULT_CHECK_IN_CONFIG }
-}
-
-/**
  * Creates the canonical default shape for `AccountStorageConfig`.
  *
  * All top-level collections are present as arrays and `last_updated` is set to `now`.
@@ -155,7 +145,7 @@ export function normalizeAccountStorageConfigForWrite(
  * Ensures all required numeric counters exist and are numbers; missing values
  * default to `0`.
  */
-export function normalizeAccountInfo(raw: Partial<AccountInfo> | undefined) {
+function normalizeAccountInfo(raw: Partial<AccountInfo> | undefined) {
   const merged = deepOverride(DEFAULT_ACCOUNT_INFO, raw ?? undefined)
   return {
     id: coerceNumber(merged.id, 0),
@@ -176,7 +166,7 @@ export function normalizeAccountInfo(raw: Partial<AccountInfo> | undefined) {
  * Validates `status` against {@link SiteHealthStatus} and drops invalid
  * optional fields without throwing.
  */
-export function normalizeHealthStatus(raw: Partial<HealthStatus> | undefined) {
+function normalizeHealthStatus(raw: Partial<HealthStatus> | undefined) {
   const merged = deepOverride(DEFAULT_HEALTH_STATUS, raw ?? undefined)
   return {
     status:
@@ -196,9 +186,7 @@ export function normalizeHealthStatus(raw: Partial<HealthStatus> | undefined) {
  * - `autoCheckInEnabled` defaults to true unless explicitly set to false
  * - `customCheckIn.openRedeemWithCheckIn` defaults to true unless explicitly set to false
  */
-export function normalizeCheckInConfig(
-  raw: DeepPartial<CheckInConfig> | undefined,
-) {
+function normalizeCheckInConfig(raw: DeepPartial<CheckInConfig> | undefined) {
   const merged = deepOverride(DEFAULT_CHECK_IN_CONFIG, raw ?? undefined)
 
   const customCheckIn = merged.customCheckIn

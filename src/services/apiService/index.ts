@@ -121,7 +121,7 @@ const createSiteScopedFunction = <T extends (...args: any[]) => any>(
   }) as T
 }
 
-export const apiForSite = (site: ApiOverrideSite) => {
+const apiForSite = (site: ApiOverrideSite) => {
   const scopedAPI = {} as {
     [K in keyof typeof commonAPI]: (typeof commonAPI)[K]
   }
@@ -142,7 +142,7 @@ export const apiForSite = (site: ApiOverrideSite) => {
   return scopedAPI
 }
 
-export const isApiOverrideSite = (value: unknown): value is ApiOverrideSite =>
+const isApiOverrideSite = (value: unknown): value is ApiOverrideSite =>
   typeof value === "string" && value in siteOverrideMap
 
 export const getApiService = (site: unknown) =>

@@ -138,13 +138,6 @@ export async function ensurePermissions(
 }
 
 /**
- * Get i18n definition for an optional permission.
- */
-export function getPermissionDefinition(id: ManifestOptionalPermissions) {
-  return OPTIONAL_PERMISSION_DEFINITIONS.find((perm) => perm.id === id)
-}
-
-/**
  * Subscribe to optional permission changes (added/removed).
  * Returns an unsubscribe function to detach both listeners.
  */

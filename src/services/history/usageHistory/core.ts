@@ -131,7 +131,7 @@ export function getDayKeyFromUnixSeconds(
  *
  * When `timeZone` is omitted, the current environment's local timezone is used.
  */
-export function getHourKeyFromUnixSeconds(
+function getHourKeyFromUnixSeconds(
   unixSeconds: number,
   timeZone?: string,
 ): string {
@@ -204,7 +204,7 @@ export function createEmptyUsageHistoryLatencyAggregate(): UsageHistoryLatencyAg
 /**
  * Create an empty incremental cursor.
  */
-export function createEmptyUsageHistoryCursor(): UsageHistoryCursor {
+function createEmptyUsageHistoryCursor(): UsageHistoryCursor {
   return {
     lastSeenCreatedAt: 0,
     fingerprintsAtLastSeenCreatedAt: [],

@@ -11,7 +11,7 @@ import {
  * resolvePreferredLanguage determines the most appropriate language to use for the documentation interface.
  * @param language - An optional language code provided directly (e.g., from a query parameter or user selection).
  */
-export function resolvePreferredLanguage(language?: string): string {
+function resolvePreferredLanguage(language?: string): string {
   if (language) return language
 
   try {
@@ -37,7 +37,7 @@ export function resolvePreferredLanguage(language?: string): string {
  * normalizeLanguage standardizes a language code by trimming whitespace, converting to lowercase, and replacing underscores with hyphens.
  * @param language - The language code to normalize (e.g., " en_US " becomes "en-us").
  */
-export function normalizeLanguage(language: string): string {
+function normalizeLanguage(language: string): string {
   return normalizeLanguageTag(language) ?? ""
 }
 

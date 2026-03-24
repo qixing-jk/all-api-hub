@@ -35,10 +35,7 @@ import type {
 } from "~/types"
 import type { ApiCredentialProfilesConfig } from "~/types/apiCredentialProfiles"
 import type { ChannelConfigMap } from "~/types/channelConfig"
-import {
-  resolveWebdavSyncDataSelection,
-  type WebDAVSyncDataSelection,
-} from "~/types/webdav"
+import { type WebDAVSyncDataSelection } from "~/types/webdav"
 
 type WebdavImportLocalState = {
   accountsConfig: AccountStorageConfig
@@ -75,7 +72,7 @@ function readBackupSection(raw: unknown, key: string): unknown {
 /**
  * Normalizes a raw input into a list of unique, non-empty string IDs.
  */
-export function normalizeWebdavStringIdList(raw: unknown): string[] {
+function normalizeWebdavStringIdList(raw: unknown): string[] {
   if (!Array.isArray(raw)) return []
   const ids: string[] = []
   const seen = new Set<string>()
@@ -94,10 +91,7 @@ export function normalizeWebdavStringIdList(raw: unknown): string[] {
 /**
  * Filters a list of IDs to only include those present in the allowList, ensuring uniqueness and order.
  */
-export function filterWebdavIdList(
-  ids: string[],
-  allowList: Set<string>,
-): string[] {
+function filterWebdavIdList(ids: string[], allowList: Set<string>): string[] {
   const filtered: string[] = []
   const seen = new Set<string>()
 
@@ -114,7 +108,7 @@ export function filterWebdavIdList(
 /**
  * Extracts string IDs from a list of entries, ignoring invalid entries and duplicates.
  */
-export function collectWebdavEntryIds(entries: unknown): string[] {
+function collectWebdavEntryIds(entries: unknown): string[] {
   if (!Array.isArray(entries)) return []
 
   return entries
@@ -486,26 +480,6 @@ export function detectWebdavBackupPresence(raw: unknown): WebdavBackupPresence {
     hasPinnedAccountIds,
     hasOrderedAccountIds,
   }
-}
-
-/**
- * Build a selective-sync WebDAV payload from a canonical full V2 backup.
- *
- * The returned payload:
- * - Always includes `version` and `timestamp`.
- * - Omits unselected sections.
- * - Keeps `channelConfigs` unchanged for compatibility.
- * - Filters pinned/ordered ids to only include ids present in the included accounts/bookmarks.
- */
-export function createWebdavSelectiveBackupPayload(input: {
-  backup: BackupFullV2
-  syncData: unknown
-}): RawBackupData {
-  const selection = resolveWebdavSyncDataSelection(input.syncData)
-  return filterWebdavBackupPayloadBySelection({
-    backup: input.backup,
-    selection,
-  })
 }
 
 /**
