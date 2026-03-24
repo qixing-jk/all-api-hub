@@ -8,7 +8,7 @@ import {
   AccountDataProvider,
   useAccountDataContext,
 } from "~/features/AccountManagement/hooks/AccountDataContext"
-import i18nInstance from "~~/tests/test-utils/i18n"
+import { testI18n } from "~~/tests/test-utils/i18n"
 
 const {
   mockGetAllAccounts,
@@ -155,7 +155,7 @@ describe("AccountDataContext handleReorder", () => {
     let latestCtx: ReturnType<typeof useAccountDataContext> | null = null
 
     render(
-      <I18nextProvider i18n={i18nInstance}>
+      <I18nextProvider i18n={testI18n}>
         <AccountDataProvider>
           <ContextProbe onChange={(ctx) => (latestCtx = ctx)} />
         </AccountDataProvider>
@@ -207,7 +207,7 @@ describe("AccountDataContext handleReorder", () => {
     let latestCtx: ReturnType<typeof useAccountDataContext> | null = null
 
     render(
-      <I18nextProvider i18n={i18nInstance}>
+      <I18nextProvider i18n={testI18n}>
         <AccountDataProvider>
           <ContextProbe onChange={(ctx) => (latestCtx = ctx)} />
         </AccountDataProvider>
@@ -280,7 +280,7 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
     let latestCtx: ReturnType<typeof useAccountDataContext> | null = null
 
     render(
-      <I18nextProvider i18n={i18nInstance}>
+      <I18nextProvider i18n={testI18n}>
         <AccountDataProvider>
           <ContextProbe onChange={(ctx) => (latestCtx = ctx)} />
         </AccountDataProvider>
@@ -333,7 +333,7 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
     mockConvertToDisplayData.mockReturnValue([{ id: "a" }, { id: "b" }])
 
     render(
-      <I18nextProvider i18n={i18nInstance}>
+      <I18nextProvider i18n={testI18n}>
         <AccountDataProvider>
           <ContextProbe onChange={vi.fn()} />
         </AccountDataProvider>
@@ -422,7 +422,7 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
     let latestCtx: ReturnType<typeof useAccountDataContext> | null = null
 
     render(
-      <I18nextProvider i18n={i18nInstance}>
+      <I18nextProvider i18n={testI18n}>
         <AccountDataProvider>
           <ContextProbe onChange={(ctx) => (latestCtx = ctx)} />
         </AccountDataProvider>

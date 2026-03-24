@@ -334,5 +334,3 @@ export function PermissionOnboardingDialog({
     </Modal>
   )
 }
-
-export default PermissionOnboardingDialog

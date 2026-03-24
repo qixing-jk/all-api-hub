@@ -36,7 +36,7 @@ export async function runCommand(command, args, options = {}) {
 /**
  * Spawn a child process and capture stdout/stderr for decision-making.
  */
-export async function runCommandCapture(command, args, options = {}) {
+async function runCommandCapture(command, args, options = {}) {
   return await new Promise((resolve, reject) => {
     const child = spawn(command, args, {
       cwd: options.cwd ?? repoRoot,
@@ -93,7 +93,7 @@ export async function pathExists(targetPath) {
 /**
  * Returns whether the current worktree has no tracked or untracked changes.
  */
-export async function isWorktreeClean(cwd = repoRoot) {
+async function isWorktreeClean(cwd = repoRoot) {
   const result = await runCommandCapture("git", ["status", "--porcelain"], {
     cwd,
   })
@@ -103,7 +103,7 @@ export async function isWorktreeClean(cwd = repoRoot) {
 /**
  * Returns whether a git ref can be resolved locally.
  */
-export async function gitRefExists(ref, cwd = repoRoot) {
+async function gitRefExists(ref, cwd = repoRoot) {
   try {
     await runCommandCapture("git", ["rev-parse", "--verify", ref], { cwd })
     return true

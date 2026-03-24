@@ -62,7 +62,7 @@ const DEFAULT_REDEEM_PATH = "/console/topup"
 const DEFAULT_ADMIN_CREDENTIALS_PATH = DEFAULT_CHECKIN_PATH
 
 // 定义各站点对应的 API 路径
-export const SITE_API_ROUTER: Record<string, any> = {
+const SITE_API_ROUTER: Record<string, any> = {
   [ONE_API]: { usagePath: DEFAULT_USAGE_PATH },
   [NEW_API]: {
     usagePath: DEFAULT_USAGE_PATH,

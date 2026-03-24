@@ -46,5 +46,3 @@ export function AppLayout({ children }: AppLayoutProps) {
     </DeviceProvider>
   )
 }
-
-export default AppLayout

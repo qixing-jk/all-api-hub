@@ -8,7 +8,7 @@ import {
   useAccountDataContext,
 } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
-import i18nInstance from "~~/tests/test-utils/i18n"
+import { testI18n } from "~~/tests/test-utils/i18n"
 
 let activeTabs: any[] = []
 let tabUpdatedListener: any = null
@@ -189,7 +189,7 @@ describe("AccountDataContext current tab detection", () => {
     let latestCtx: ReturnType<typeof useAccountDataContext> | null = null
 
     render(
-      <I18nextProvider i18n={i18nInstance}>
+      <I18nextProvider i18n={testI18n}>
         <AccountDataProvider>
           <ContextProbe onChange={(ctx) => (latestCtx = ctx)} />
         </AccountDataProvider>
@@ -242,7 +242,7 @@ describe("AccountDataContext current tab detection", () => {
     let latestCtx: ReturnType<typeof useAccountDataContext> | null = null
 
     render(
-      <I18nextProvider i18n={i18nInstance}>
+      <I18nextProvider i18n={testI18n}>
         <AccountDataProvider>
           <ContextProbe onChange={(ctx) => (latestCtx = ctx)} />
         </AccountDataProvider>
@@ -295,7 +295,7 @@ describe("AccountDataContext current tab detection", () => {
     let latestCtx: ReturnType<typeof useAccountDataContext> | null = null
 
     render(
-      <I18nextProvider i18n={i18nInstance}>
+      <I18nextProvider i18n={testI18n}>
         <AccountDataProvider>
           <ContextProbe onChange={(ctx) => (latestCtx = ctx)} />
         </AccountDataProvider>

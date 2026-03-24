@@ -52,5 +52,3 @@ export function PermissionList({ items }: PermissionListProps) {
     </CardList>
   )
 }
-
-export default PermissionList

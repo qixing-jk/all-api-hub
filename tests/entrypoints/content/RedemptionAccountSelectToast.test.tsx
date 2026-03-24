@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import { RedemptionAccountSelectToast } from "~/entrypoints/content/redemptionAssist/components/RedemptionAccountSelectToast"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
-import testI18nInstance from "~~/tests/test-utils/i18n"
+import { testI18n } from "~~/tests/test-utils/i18n"
 
 const makeAccount = (
   overrides: Partial<DisplaySiteData> & Pick<DisplaySiteData, "id" | "name">,
@@ -28,7 +28,7 @@ const makeAccount = (
 }
 
 const renderWithI18n = (ui: ReactElement) => {
-  return render(<I18nextProvider i18n={testI18nInstance}>{ui}</I18nextProvider>)
+  return render(<I18nextProvider i18n={testI18n}>{ui}</I18nextProvider>)
 }
 
 describe("RedemptionAccountSelectToast", () => {

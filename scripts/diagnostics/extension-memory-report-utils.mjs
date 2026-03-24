@@ -301,7 +301,7 @@ function renderSection({ title, kind, section }) {
   `
 }
 
-export function getComparisonSections(summary) {
+function getComparisonSections(summary) {
   return comparisonSectionConfigs.map((config) => ({
     ...config,
     section: config.getSection(summary),

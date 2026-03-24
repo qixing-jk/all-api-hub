@@ -17,5 +17,3 @@ export function AutoCheckinUiOpenPretrigger() {
     />
   )
 }
-
-export default AutoCheckinUiOpenPretrigger

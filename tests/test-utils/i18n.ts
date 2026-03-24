@@ -13,5 +13,3 @@ await testI18n.use(initReactI18next).init({
     escapeValue: false,
   },
 })
-
-export default testI18n
