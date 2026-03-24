@@ -3,8 +3,10 @@ import { useEffect, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
+import type { ChannelDialogAdvisoryWarning } from "~/components/dialogs/ChannelDialog/context/ChannelDialogContext"
 import { useChannelForm } from "~/components/dialogs/ChannelDialog/hooks/useChannelForm"
 import {
+  Alert,
   Button,
   CompactMultiSelect,
   IconButton,
@@ -39,6 +41,7 @@ export interface ChannelDialogProps {
   initialValues?: Partial<ChannelFormData>
   initialModels?: string[]
   initialGroups?: string[]
+  advisoryWarning?: ChannelDialogAdvisoryWarning | null
   onRequestRealKey?: (options: {
     setKey: (key: string) => void
   }) => Promise<void>
@@ -56,6 +59,7 @@ export interface ChannelDialogProps {
  * @param props.initialValues Pre-filled form values when reusing data.
  * @param props.initialModels Models to seed multi-select state.
  * @param props.initialGroups Groups to seed multi-select state.
+ * @param props.advisoryWarning Optional non-blocking duplicate-risk warning shown above the form.
  * @param props.onRequestRealKey Optional edit-mode hook that can load the real
  * managed-site key into the dialog when the list payload only provides a masked value.
  */
@@ -68,6 +72,7 @@ export function ChannelDialog({
   initialValues,
   initialModels,
   initialGroups,
+  advisoryWarning,
   onRequestRealKey,
 }: ChannelDialogProps) {
   const { t } = useTranslation(["channelDialog", "common"])
@@ -215,6 +220,14 @@ export function ChannelDialog({
       closeOnBackdropClick={!isSaving}
       closeOnEsc={!isSaving}
     >
+      {advisoryWarning ? (
+        <Alert
+          variant="warning"
+          title={advisoryWarning.title}
+          description={advisoryWarning.description}
+          className="mb-4"
+        />
+      ) : null}
       <form
         onSubmit={isViewMode ? (event) => event.preventDefault() : handleSubmit}
         className="space-y-4"

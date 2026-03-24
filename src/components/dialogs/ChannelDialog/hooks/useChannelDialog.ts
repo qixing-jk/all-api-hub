@@ -1,14 +1,28 @@
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
+import type { ChannelDialogAdvisoryWarning } from "~/components/dialogs/ChannelDialog/context/ChannelDialogContext"
 import { useChannelDialogContext } from "~/components/dialogs/ChannelDialog/context/ChannelDialogContext"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { ensureAccountApiToken } from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
-import { MatchResolutionUnresolvedError } from "~/services/managedSites/channelMatch"
-import { getManagedSiteService } from "~/services/managedSites/managedSiteService"
-import { getManagedSiteConfigMissingMessage } from "~/services/managedSites/utils/managedSite"
+import { getManagedSiteChannelExactMatch } from "~/services/managedSites/channelMatch"
+import { resolveManagedSiteChannelMatch } from "~/services/managedSites/channelMatchResolver"
+import {
+  getManagedSiteService,
+  type ManagedSiteConfig,
+  type ManagedSiteService,
+} from "~/services/managedSites/managedSiteService"
+import {
+  MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS,
+  MANAGED_SITE_TOKEN_CHANNEL_STATUSES,
+  type ManagedSiteTokenChannelStatus,
+} from "~/services/managedSites/tokenChannelStatus"
+import {
+  getManagedSiteConfigMissingMessage,
+  supportsManagedSiteBaseUrlChannelLookup,
+} from "~/services/managedSites/utils/managedSite"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import {
   AuthTypeEnum,
@@ -26,6 +40,15 @@ import { createLogger } from "~/utils/core/logger"
  * Unified logger scoped to channel dialog open helpers.
  */
 const logger = createLogger("ChannelDialogHook")
+
+interface PrefilledChannelOpenOptions {
+  managedSiteStatus?: ManagedSiteTokenChannelStatus
+}
+
+interface PrefilledDialogDuplicateState {
+  existingChannelName: string | null
+  advisoryWarning: ChannelDialogAdvisoryWarning | null
+}
 
 /**
  * Hook to easily trigger channel creation dialog from anywhere
@@ -78,6 +101,133 @@ export function useChannelDialog() {
     }
   }
 
+  const buildAdvisoryWarning = (
+    kind: "reviewSuggested" | "verificationRequired",
+  ): ChannelDialogAdvisoryWarning => {
+    if (kind === "verificationRequired") {
+      return {
+        title: t("channelDialog:warnings.verificationRequired.title"),
+        description: t(
+          "channelDialog:warnings.verificationRequired.description",
+        ),
+      }
+    }
+
+    return {
+      title: t("channelDialog:warnings.reviewSuggested.title"),
+      description: t("channelDialog:warnings.reviewSuggested.description"),
+    }
+  }
+
+  const buildAdvisoryWarningFromManagedSiteStatus = (
+    managedSiteStatus?: ManagedSiteTokenChannelStatus,
+  ): ChannelDialogAdvisoryWarning | null => {
+    if (!managedSiteStatus) {
+      return null
+    }
+
+    if (
+      managedSiteStatus.status ===
+        MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN &&
+      managedSiteStatus.reason ===
+        MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE &&
+      managedSiteStatus.assessment?.url.matched
+    ) {
+      return buildAdvisoryWarning("verificationRequired")
+    }
+
+    if (
+      managedSiteStatus.status ===
+        MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN &&
+      managedSiteStatus.reason ===
+        MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.MATCH_REQUIRES_CONFIRMATION
+    ) {
+      return buildAdvisoryWarning("reviewSuggested")
+    }
+
+    return null
+  }
+
+  const resolvePrefilledDialogDuplicateState = async (params: {
+    service: ManagedSiteService
+    managedConfig: ManagedSiteConfig
+    accountBaseUrl: string
+    models: string[]
+    key?: string
+    managedSiteStatus?: ManagedSiteTokenChannelStatus
+  }): Promise<PrefilledDialogDuplicateState> => {
+    if (params.managedSiteStatus) {
+      if (
+        params.managedSiteStatus.status ===
+        MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED
+      ) {
+        return {
+          existingChannelName: params.managedSiteStatus.matchedChannel.name,
+          advisoryWarning: null,
+        }
+      }
+
+      return {
+        existingChannelName: null,
+        advisoryWarning: buildAdvisoryWarningFromManagedSiteStatus(
+          params.managedSiteStatus,
+        ),
+      }
+    }
+
+    if (!supportsManagedSiteBaseUrlChannelLookup(params.service.siteType)) {
+      return {
+        existingChannelName: null,
+        advisoryWarning: null,
+      }
+    }
+
+    const resolution = await resolveManagedSiteChannelMatch({
+      service: params.service,
+      managedConfig: params.managedConfig,
+      accountBaseUrl: params.accountBaseUrl,
+      models: params.models,
+      key: params.key,
+    })
+    const exactMatch = getManagedSiteChannelExactMatch(resolution)
+
+    if (exactMatch) {
+      return {
+        existingChannelName: exactMatch.name,
+        advisoryWarning: null,
+      }
+    }
+
+    if (
+      params.service.messagesKey === "newapi" &&
+      resolution.searchCompleted &&
+      resolution.url.matched &&
+      !resolution.key.comparable
+    ) {
+      return {
+        existingChannelName: null,
+        advisoryWarning: buildAdvisoryWarning("verificationRequired"),
+      }
+    }
+
+    if (
+      resolution.searchCompleted &&
+      (resolution.url.matched ||
+        resolution.key.matched ||
+        resolution.models.matched)
+    ) {
+      return {
+        existingChannelName: null,
+        advisoryWarning: buildAdvisoryWarning("reviewSuggested"),
+      }
+    }
+
+    return {
+      existingChannelName: null,
+      advisoryWarning: null,
+    }
+  }
+
   /**
    * Prepare and open channel dialog with account data
    */
@@ -85,12 +235,12 @@ export function useChannelDialog() {
     account: DisplaySiteData | SiteAccount,
     accoutToken: AccountToken | ApiToken | null,
     onSuccess?: (result: any) => void,
+    options?: PrefilledChannelOpenOptions,
   ) => {
     const toastId = toast.loading(
       t("messages:accountOperations.checkingApiKeys"),
     )
     let displaySiteData: DisplaySiteData | null = null
-    let serviceKey: string | null = null
     let secretsToRedact: string[] = []
 
     try {
@@ -112,7 +262,6 @@ export function useChannelDialog() {
       }
 
       const service = await getManagedSiteService()
-      serviceKey = service.messagesKey
       const managedConfig = await service.getConfig()
       if (!managedConfig) {
         toast.error(
@@ -151,19 +300,19 @@ export function useChannelDialog() {
         resolvedToken,
       )
 
-      const existingChannel = await service.findMatchingChannel(
-        managedConfig.baseUrl,
-        managedConfig.token,
-        managedConfig.userId,
-        displaySiteData.baseUrl,
-        formData.models,
-        formData.key,
-      )
+      const duplicateState = await resolvePrefilledDialogDuplicateState({
+        service,
+        managedConfig,
+        accountBaseUrl: formData.base_url,
+        models: formData.models,
+        key: formData.key,
+        managedSiteStatus: options?.managedSiteStatus,
+      })
 
-      if (existingChannel) {
+      if (duplicateState.existingChannelName) {
         toast.dismiss(toastId)
         const shouldContinue = await requestDuplicateChannelWarning({
-          existingChannelName: existingChannel.name,
+          existingChannelName: duplicateState.existingChannelName,
         })
         if (!shouldContinue) {
           return
@@ -178,6 +327,7 @@ export function useChannelDialog() {
         initialValues: formData,
         initialModels: formData.models,
         initialGroups: formData.groups,
+        advisoryWarning: duplicateState.advisoryWarning,
         onSuccess: (result) => {
           if (onSuccess) {
             onSuccess(result)
@@ -185,16 +335,6 @@ export function useChannelDialog() {
         },
       })
     } catch (error) {
-      if (
-        error instanceof MatchResolutionUnresolvedError &&
-        serviceKey === "newapi"
-      ) {
-        toast.error(t("messages:newapi.channelMatchUnresolved"), {
-          id: toastId,
-        })
-        return
-      }
-
       const diagnostic = toSanitizedErrorSummary(error, secretsToRedact)
       toast.error(
         t("messages:errors.operation.failed", {
@@ -220,12 +360,10 @@ export function useChannelDialog() {
     const toastId = toast.loading(
       t("messages:accountOperations.checkingApiKeys"),
     )
-    let serviceKey: string | null = null
     let secretsToRedact: string[] = []
 
     try {
       const service = await getManagedSiteService()
-      serviceKey = service.messagesKey
       const managedConfig = await service.getConfig()
       if (!managedConfig) {
         toast.error(
@@ -254,19 +392,18 @@ export function useChannelDialog() {
         apiToken,
       )
 
-      const existingChannel = await service.findMatchingChannel(
-        managedConfig.baseUrl,
-        managedConfig.token,
-        managedConfig.userId,
-        displaySiteData.baseUrl,
-        formData.models,
-        formData.key,
-      )
+      const duplicateState = await resolvePrefilledDialogDuplicateState({
+        service,
+        managedConfig,
+        accountBaseUrl: formData.base_url,
+        models: formData.models,
+        key: formData.key,
+      })
 
-      if (existingChannel) {
+      if (duplicateState.existingChannelName) {
         toast.dismiss(toastId)
         const shouldContinue = await requestDuplicateChannelWarning({
-          existingChannelName: existingChannel.name,
+          existingChannelName: duplicateState.existingChannelName,
         })
         if (!shouldContinue) {
           return
@@ -280,21 +417,12 @@ export function useChannelDialog() {
         initialValues: formData,
         initialModels: formData.models,
         initialGroups: formData.groups,
+        advisoryWarning: duplicateState.advisoryWarning,
         onSuccess: (result) => {
           onSuccess?.(result)
         },
       })
     } catch (error) {
-      if (
-        error instanceof MatchResolutionUnresolvedError &&
-        serviceKey === "newapi"
-      ) {
-        toast.error(t("messages:newapi.channelMatchUnresolved"), {
-          id: toastId,
-        })
-        return
-      }
-
       const diagnostic = toSanitizedErrorSummary(error, secretsToRedact)
       toast.error(
         t("messages:errors.operation.failed", {
@@ -315,6 +443,7 @@ export function useChannelDialog() {
     initialValues?: any
     initialModels?: string[]
     initialGroups?: string[]
+    advisoryWarning?: ChannelDialogAdvisoryWarning | null
     onRequestRealKey?: (options: {
       setKey: (key: string) => void
     }) => Promise<void>

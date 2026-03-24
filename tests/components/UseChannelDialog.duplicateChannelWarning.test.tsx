@@ -8,6 +8,10 @@ import { ChannelType } from "~/constants"
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import * as accountOperations from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import {
+  MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
+  MatchResolutionUnresolvedError,
+} from "~/services/managedSites/channelMatch"
 import * as managedSiteService from "~/services/managedSites/managedSiteService"
 import type { ManagedSiteService } from "~/services/managedSites/managedSiteService"
 import {
@@ -109,6 +113,23 @@ const buildApiToken = (overrides: Partial<ApiToken> = {}): ApiToken => ({
   ...overrides,
 })
 
+const buildManagedSiteChannel = (
+  overrides: Partial<ManagedSiteChannel> = {},
+): ManagedSiteChannel =>
+  ({
+    id: 11,
+    name: "Existing channel",
+    base_url: "https://upstream.example.com",
+    models: "gpt-4",
+    key: "sk-test",
+    type: ChannelType.OpenAI,
+    status: 1,
+    priority: 0,
+    weight: 0,
+    group: "default",
+    ...overrides,
+  }) as ManagedSiteChannel
+
 vi.mock("react-hot-toast", () => ({
   default: {
     loading: mockToastLoading,
@@ -129,6 +150,7 @@ describe("useChannelDialog duplicate channel warning", () => {
   })
 
   it("shows warning and cancels when user does not continue", async () => {
+    const existingChannel = buildManagedSiteChannel()
     const mockService: Partial<ManagedSiteService> = {
       messagesKey: "newapi",
       getConfig: vi.fn(async () => ({
@@ -150,9 +172,11 @@ describe("useChannelDialog duplicate channel warning", () => {
             status: 1,
           }) satisfies ChannelFormData,
       ),
-      findMatchingChannel: vi.fn(
-        async () => ({ name: "Existing channel" }) as ManagedSiteChannel,
-      ),
+      searchChannel: vi.fn(async () => ({
+        items: [existingChannel],
+        total: 1,
+        type_counts: {},
+      })),
     }
     getManagedSiteServiceSpy.mockResolvedValue(
       mockService as ManagedSiteService,
@@ -190,6 +214,7 @@ describe("useChannelDialog duplicate channel warning", () => {
   })
 
   it("opens ChannelDialog when user continues despite duplicate", async () => {
+    const existingChannel = buildManagedSiteChannel()
     const mockService: Partial<ManagedSiteService> = {
       messagesKey: "newapi",
       getConfig: vi.fn(async () => ({
@@ -211,9 +236,11 @@ describe("useChannelDialog duplicate channel warning", () => {
             status: 1,
           }) satisfies ChannelFormData,
       ),
-      findMatchingChannel: vi.fn(
-        async () => ({ name: "Existing channel" }) as ManagedSiteChannel,
-      ),
+      searchChannel: vi.fn(async () => ({
+        items: [existingChannel],
+        total: 1,
+        type_counts: {},
+      })),
     }
     getManagedSiteServiceSpy.mockResolvedValue(
       mockService as ManagedSiteService,
@@ -255,6 +282,86 @@ describe("useChannelDialog duplicate channel warning", () => {
       },
       initialModels: ["gpt-4"],
       initialGroups: ["default"],
+    })
+    expect(mockToastError).not.toHaveBeenCalled()
+    expect(mockToastDismiss).toHaveBeenCalledWith("toast-id")
+  })
+
+  it("opens ChannelDialog when New API exact duplicate verification is unavailable", async () => {
+    const hiddenKeyChannel = buildManagedSiteChannel({
+      id: 22,
+      key: "",
+    })
+    const mockService: Partial<ManagedSiteService> = {
+      messagesKey: "newapi",
+      getConfig: vi.fn(async () => ({
+        baseUrl: "https://managed.example.com",
+        token: "admin-token",
+        userId: "1",
+      })),
+      prepareChannelFormData: vi.fn(
+        async () =>
+          ({
+            name: "Auto channel",
+            type: ChannelType.OpenAI,
+            key: "sk-test",
+            base_url: "https://upstream.example.com",
+            models: ["gpt-4"],
+            groups: ["default"],
+            priority: 0,
+            weight: 0,
+            status: 1,
+          }) satisfies ChannelFormData,
+      ),
+      searchChannel: vi.fn(async () => ({
+        items: [hiddenKeyChannel],
+        total: 1,
+        type_counts: {},
+      })),
+      findMatchingChannel: vi.fn(async () => {
+        throw new MatchResolutionUnresolvedError(
+          MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.VERIFICATION_REQUIRED,
+        )
+      }),
+    }
+    getManagedSiteServiceSpy.mockResolvedValue(
+      mockService as ManagedSiteService,
+    )
+
+    const { result } = renderHook(() => ({
+      dialog: useChannelDialog(),
+      context: useChannelDialogContext(),
+    }))
+
+    await waitFor(() => {
+      expect(result.current).not.toBeNull()
+    })
+
+    await act(async () => {
+      await result.current.dialog.openWithAccount(
+        buildDisplaySiteData(),
+        buildApiToken(),
+      )
+    })
+
+    expect(result.current.context.duplicateChannelWarning).toEqual({
+      isOpen: false,
+      existingChannelName: null,
+    })
+    expect(result.current.context.state).toMatchObject({
+      isOpen: true,
+      mode: DIALOG_MODES.ADD,
+      initialValues: {
+        name: "Auto channel",
+        models: ["gpt-4"],
+        groups: ["default"],
+      },
+      initialModels: ["gpt-4"],
+      initialGroups: ["default"],
+      advisoryWarning: {
+        title: "channelDialog:warnings.verificationRequired.title",
+        description: "channelDialog:warnings.verificationRequired.description",
+      },
     })
     expect(mockToastError).not.toHaveBeenCalled()
     expect(mockToastDismiss).toHaveBeenCalledWith("toast-id")

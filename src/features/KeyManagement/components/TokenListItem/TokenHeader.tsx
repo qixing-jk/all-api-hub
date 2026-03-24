@@ -422,6 +422,7 @@ function ManagedSiteSignalBadge(props: {
  * @param props.handleEditToken Edit action callback.
  * @param props.handleDeleteToken Delete action callback.
  * @param props.account Account context for integrations.
+ * @param props.managedSiteStatus Current managed-site status used to reuse duplicate-review results when available.
  * @param props.onOpenCCSwitchDialog Optional CCSwitch export opener.
  * @param props.onManagedSiteImportSuccess Optional managed-site import success callback.
  */
@@ -431,6 +432,7 @@ function TokenActionButtons({
   handleEditToken,
   handleDeleteToken,
   account,
+  managedSiteStatus,
   onOpenCCSwitchDialog,
   onManagedSiteImportSuccess,
 }: TokenHeaderProps) {
@@ -451,15 +453,26 @@ function TokenActionButtons({
   const managedSiteLabel = getManagedSiteLabel(t, managedSiteType)
 
   const handleImportToManagedSite = async () => {
-    await openWithAccount(account, token, (result) => {
-      showResultToast(result)
+    await openWithAccount(
+      account,
+      token,
+      (result) => {
+        showResultToast(result)
 
-      if (result?.success && onManagedSiteImportSuccess) {
-        void Promise.resolve(onManagedSiteImportSuccess(token)).catch((error) =>
-          logger.error("Managed-site import success callback failed", error),
-        )
-      }
-    })
+        if (result?.success && onManagedSiteImportSuccess) {
+          void Promise.resolve(onManagedSiteImportSuccess(token)).catch(
+            (error) =>
+              logger.error(
+                "Managed-site import success callback failed",
+                error,
+              ),
+          )
+        }
+      },
+      {
+        managedSiteStatus,
+      },
+    )
   }
 
   const handleOpenCliProxyDialog = () => {
@@ -717,7 +730,7 @@ export function TokenHeader({
       : undefined
   const canRetryManagedSiteVerification = Boolean(
     managedSiteRecovery?.loginCredentialsConfigured ||
-    managedSiteRecovery?.authenticatedBrowserSessionExists,
+      managedSiteRecovery?.authenticatedBrowserSessionExists,
   )
   const matchedManagedSiteChannel =
     managedSiteStatus && "matchedChannel" in managedSiteStatus
@@ -725,8 +738,8 @@ export function TokenHeader({
       : undefined
   const shouldShowManagedSiteVerificationRetry = Boolean(
     canRetryManagedSiteVerification &&
-    managedSiteStatus &&
-    onManagedSiteVerificationRetry,
+      managedSiteStatus &&
+      onManagedSiteVerificationRetry,
   )
   const shouldShowManagedSiteSettingsAction = Boolean(
     managedSiteRecovery && !canRetryManagedSiteVerification,
@@ -910,6 +923,7 @@ export function TokenHeader({
         handleEditToken={handleEditToken}
         handleDeleteToken={handleDeleteToken}
         account={account}
+        managedSiteStatus={managedSiteStatus}
         onOpenCCSwitchDialog={onOpenCCSwitchDialog}
         onManagedSiteImportSuccess={onManagedSiteImportSuccess}
       />

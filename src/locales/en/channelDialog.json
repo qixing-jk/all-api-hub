@@ -86,6 +86,14 @@
       "description": "A channel named {{channelName}} already exists in your managed site. You can still create another channel, but duplicate routing may occur. Continue anyway?",
       "title": "Channel already exists",
       "warningTitle": "Potential duplicate"
+    },
+    "reviewSuggested": {
+      "description": "Candidate channels were found under the same upstream URL or model setup, but an exact duplicate could not be confirmed automatically. You can still continue creating the channel, but review the name, models, and key before saving.",
+      "title": "Review potential duplicate candidates"
+    },
+    "verificationRequired": {
+      "description": "Candidate channels were found, but New API requires an extra verification step before the real channel key can be read, so exact duplicate confirmation is currently unavailable. You can still continue creating the channel; complete verification first if you need an exact deduplication check.",
+      "title": "Potential duplicate needs verification"
     }
   }
 }
