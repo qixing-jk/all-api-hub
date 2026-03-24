@@ -71,3 +71,5 @@ export function DuplicateChannelWarningDialog({
     </Modal>
   )
 }
+
+export default DuplicateChannelWarningDialog

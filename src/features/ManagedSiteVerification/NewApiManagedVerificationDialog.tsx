@@ -50,7 +50,7 @@ const getStepBodyCopy = (
   }
 }
 
-interface NewApiManagedVerificationDialogProps {
+export interface NewApiManagedVerificationDialogProps {
   isOpen: boolean
   step: NewApiManagedVerificationStep
   request: OpenNewApiManagedVerificationParams | null
@@ -192,3 +192,5 @@ export function NewApiManagedVerificationDialog(
     </Modal>
   )
 }
+
+export default NewApiManagedVerificationDialog

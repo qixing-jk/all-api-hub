@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next"
 import iconImage from "~/assets/icon.png"
 import { Body, Card, CardContent, Heading2 } from "~/components/ui"
 
-interface PluginIntroCardProps {
+export interface PluginIntroCardProps {
   version: string
 }
 

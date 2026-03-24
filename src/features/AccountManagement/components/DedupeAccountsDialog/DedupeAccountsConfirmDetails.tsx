@@ -4,7 +4,7 @@ import { Separator } from "~/components/ui"
 
 import type { DedupeAccountsDialogGroup } from "./types"
 
-interface DedupeAccountsConfirmDetailsProps {
+export interface DedupeAccountsConfirmDetailsProps {
   groups: DedupeAccountsDialogGroup[]
   accountLabelById: Map<string, string>
   pinnedToDeleteCount: number

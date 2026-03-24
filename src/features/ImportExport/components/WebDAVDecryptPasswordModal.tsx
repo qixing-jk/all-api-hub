@@ -16,7 +16,7 @@ import {
 /**
  * Props for {@link WebDAVDecryptPasswordModal}.
  */
-type WebDAVDecryptPasswordModalProps = {
+export type WebDAVDecryptPasswordModalProps = {
   /** Whether the modal is visible. */
   isOpen: boolean
   /** Whether a decrypt/import attempt is currently in progress. */

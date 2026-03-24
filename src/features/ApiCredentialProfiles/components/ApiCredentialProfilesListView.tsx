@@ -18,7 +18,7 @@ import type { ApiCredentialProfilesController } from "../hooks/useApiCredentialP
 import { ApiCredentialProfilesDialogs } from "./ApiCredentialProfilesDialogs"
 import { ApiCredentialProfilesList } from "./ApiCredentialProfilesList"
 
-interface ApiCredentialProfilesListViewProps {
+export interface ApiCredentialProfilesListViewProps {
   controller: ApiCredentialProfilesController
   variant?: "options" | "popup"
   autoFocusSearch?: boolean

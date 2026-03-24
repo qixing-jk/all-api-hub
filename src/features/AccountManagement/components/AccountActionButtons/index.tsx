@@ -122,7 +122,7 @@ function resolveAutoCheckinResultMessage(params: {
   return params.t("autoCheckin:providerFallback.unknownError")
 }
 
-interface ActionButtonsProps {
+export interface ActionButtonsProps {
   site: DisplaySiteData
   onCopyKey: (site: DisplaySiteData) => void
   onDeleteAccount: (site: DisplaySiteData) => void

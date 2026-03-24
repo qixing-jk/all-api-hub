@@ -218,7 +218,7 @@ export function deriveVerificationHistoryStatus(
  * @param result - Probe result to sanitize for storage.
  * @returns The persisted probe summary without transient diagnostics.
  */
-function toPersistedProbeSummary(
+export function toPersistedProbeSummary(
   result: ApiVerificationProbeResult,
 ): PersistedApiVerificationProbeSummary {
   return {

@@ -19,3 +19,5 @@ export function DuplicateChannelWarningDialogContainer() {
     />
   )
 }
+
+export default DuplicateChannelWarningDialogContainer

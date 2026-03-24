@@ -136,3 +136,5 @@ export function Modal({
     </Transition>
   )
 }
+
+export default Modal

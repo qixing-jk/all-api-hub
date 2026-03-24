@@ -17,3 +17,5 @@ export function UpdateLogDialogContainer() {
     />
   )
 }
+
+export default UpdateLogDialogContainer

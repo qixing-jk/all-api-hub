@@ -23,7 +23,7 @@ import { AccountActionMenuItem } from "~/features/AccountManagement/components/A
 import { cn } from "~/lib/utils"
 import type { SiteBookmark } from "~/types"
 
-interface BookmarkListItemProps {
+export interface BookmarkListItemProps {
   bookmark: SiteBookmark & { tags?: string[] }
   isPinned: boolean
   onOpen: () => void

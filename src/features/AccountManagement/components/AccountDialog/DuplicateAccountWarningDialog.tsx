@@ -6,7 +6,7 @@ import { Alert } from "~/components/ui/Alert"
 import { Button } from "~/components/ui/button"
 import { Modal } from "~/components/ui/Dialog/Modal"
 
-interface DuplicateAccountWarningDialogProps {
+export interface DuplicateAccountWarningDialogProps {
   isOpen: boolean
   siteUrl: string
   existingAccountsCount: number
@@ -90,3 +90,5 @@ export function DuplicateAccountWarningDialog({
     </Modal>
   )
 }
+
+export default DuplicateAccountWarningDialog

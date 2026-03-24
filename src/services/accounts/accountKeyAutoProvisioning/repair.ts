@@ -386,7 +386,7 @@ class AccountKeyRepairRunner {
   }
 }
 
-const accountKeyRepairRunner = new AccountKeyRepairRunner()
+export const accountKeyRepairRunner = new AccountKeyRepairRunner()
 
 export const handleAccountKeyRepairMessage = async (
   request: any,

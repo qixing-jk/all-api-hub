@@ -1,6 +1,6 @@
-type DeviceType = "mobile" | "tablet" | "desktop"
+export type DeviceType = "mobile" | "tablet" | "desktop"
 
-interface DeviceTypeInfo {
+export interface DeviceTypeInfo {
   type: DeviceType
   isMobile: boolean
   isTablet: boolean
@@ -8,7 +8,7 @@ interface DeviceTypeInfo {
   isTouchDevice: boolean
 }
 
-interface DeviceDetectionOptions {
+export interface DeviceDetectionOptions {
   userAgent?: string
   userAgentDataMobile?: boolean | null
   maxTouchPoints?: number
@@ -152,7 +152,7 @@ export function isMobileDevice(options?: DeviceDetectionOptions): boolean {
 }
 
 /**
- * Convenience wrapper for desktop-only flows such as popup-specific warnings.
+ * Convenience wrapper for callers that only need tablet detection.
  */
 export function isTabletDevice(options?: DeviceDetectionOptions): boolean {
   return getDeviceTypeInfo(options).isTablet

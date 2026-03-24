@@ -11,7 +11,7 @@ import { CardItem } from "~/components/ui/CardItem"
 import { CardList } from "~/components/ui/CardList"
 import type { ManifestOptionalPermissions } from "~/services/permissions/permissionManager"
 
-const permissionIconMap: Partial<
+export const permissionIconMap: Partial<
   Record<ManifestOptionalPermissions, ReactNode>
 > = {
   cookies: <Cookie className="h-5 w-5 text-amber-500" />,
@@ -23,7 +23,7 @@ const permissionIconMap: Partial<
   clipboardRead: <ClipboardCheck className="h-5 w-5 text-indigo-500" />,
 }
 
-interface PermissionListItem {
+export interface PermissionListItem {
   id: ManifestOptionalPermissions
   title: string
   description: string
@@ -52,3 +52,5 @@ export function PermissionList({ items }: PermissionListProps) {
     </CardList>
   )
 }
+
+export default PermissionList

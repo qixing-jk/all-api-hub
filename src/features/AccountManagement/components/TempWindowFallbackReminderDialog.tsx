@@ -10,7 +10,7 @@ import {
 } from "~/utils/browser/protectionBypass"
 import { openSettingsTab } from "~/utils/navigation"
 
-interface TempWindowFallbackReminderDialogProps {
+export interface TempWindowFallbackReminderDialogProps {
   isOpen: boolean
   issue: TempWindowFallbackIssue
   onClose: () => void

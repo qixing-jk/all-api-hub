@@ -56,3 +56,5 @@ export function ChangelogOnUpdateUiOpenHandler() {
 
   return null
 }
+
+export default ChangelogOnUpdateUiOpenHandler

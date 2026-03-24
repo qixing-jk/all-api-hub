@@ -49,6 +49,8 @@ const config: KnipConfig = {
     // local usage; do not let Knip collapse those APIs.
     "src/components/**": ["exports", "types", "duplicates"],
     "src/features/**/components/**": ["exports", "types", "duplicates"],
+    "src/features/ManagedSiteVerification/NewApiManagedVerificationDialog.tsx":
+      ["exports", "types", "duplicates"],
 
     // Utility entrypoints often carry semantic names even when current callers
     // are sparse.
@@ -84,6 +86,20 @@ const config: KnipConfig = {
     "src/services/apiService/sub2api/index.ts": ["exports"],
     "src/services/apiService/veloera/index.ts": ["exports"],
     "src/services/apiService/wong/index.ts": ["exports"],
+
+    // Explicit barrels/entrypoints retained as future module boundaries.
+    "src/features/ApiCredentialProfiles/index.ts": ["exports", "types"],
+    "src/services/accounts/accountKeyAutoProvisioning/index.ts": ["exports"],
+    "src/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken.ts": [
+      "exports",
+    ],
+    "src/services/accounts/accountKeyAutoProvisioning/repair.ts": ["exports"],
+    "src/services/models/modelSync/index.ts": ["exports"],
+    "src/services/verification/verificationResultHistory/index.ts": [
+      "exports",
+      "types",
+    ],
+    "src/services/verification/verificationResultHistory/utils.ts": ["exports"],
   },
   eslint: {
     config: ["eslint.config.js"],
