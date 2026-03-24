@@ -8,6 +8,8 @@ Define requirements for retrying protected New API managed-site actions after se
 ### Requirement: Secure verification can resume the blocked New API managed-site action
 When a New API managed-site action is blocked by secure verification, the extension MUST provide a verification flow that retries the same protected action against the same browser-backed session after verification succeeds.
 
+When the protected action depends on the shared browser-backed temp-context path, the extension MUST accept a recoverable window-to-tab rollback whenever popup-window creation is unavailable and the protected action does not require window-only isolation.
+
 Protected actions covered by this requirement MUST include hidden channel-key reads from managed-site channel edit or reveal flows and any exact-match flow that depends on the hidden managed-site channel key.
 
 #### Scenario: Manual secure verification retries the blocked action
@@ -31,6 +33,13 @@ Protected actions covered by this requirement MUST include hidden channel-key re
 - **THEN** the extension MUST first attempt the hidden channel-key read immediately
 - **AND** if login or secure verification is still required, the extension MUST open the shared verification flow in channel context
 - **AND** after verification succeeds, the extension MUST retry the same hidden channel-key read and populate the dialog with the resolved key
+
+#### Scenario: Hidden channel-key retry survives recoverable popup-window denial
+- **GIVEN** a hidden channel-key read or exact-match retry uses the shared browser-backed temp-context path
+- **AND** popup-window creation fails for a recoverable browser reason
+- **WHEN** the extension retries the protected action
+- **THEN** the extension MUST continue through a tab-backed temp context when the action does not require window-only isolation
+- **AND** the extension MUST NOT fail the protected action solely because popup-window creation was unavailable
 
 ### Requirement: Passkey-only secure verification remains manual guidance
 The extension MUST NOT attempt to automate passkey verification for New API secure-verification flows.
