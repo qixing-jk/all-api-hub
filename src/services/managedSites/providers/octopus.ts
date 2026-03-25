@@ -390,7 +390,11 @@ export async function fetchAvailableModels(
     candidateSources.push(tokenModelList)
   }
 
-  candidateSources.push(await fetchTokenScopedModels(account, token))
+  const { models: tokenScopedModels } = await fetchTokenScopedModels(
+    account,
+    token,
+  )
+  candidateSources.push(tokenScopedModels)
 
   return normalizeList(candidateSources.flat())
 }
@@ -416,7 +420,10 @@ export async function prepareChannelFormData(
   account: DisplaySiteData,
   token: ApiToken | AccountToken,
 ): Promise<ChannelFormData> {
-  const availableModels = await fetchTokenScopedModels(account, token)
+  const { models: availableModels, fetchFailed } = await fetchTokenScopedModels(
+    account,
+    token,
+  )
 
   return {
     name: buildChannelName(account, token),
@@ -424,6 +431,7 @@ export async function prepareChannelFormData(
     key: token.key,
     base_url: buildOctopusBaseUrl(account.baseUrl), // Octopus 需要 /v1 后缀
     models: normalizeList(availableModels),
+    ...(fetchFailed ? { modelPrefillFetchFailed: true } : {}),
     groups: ["default"],
     priority: 0,
     weight: 0,

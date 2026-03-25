@@ -298,7 +298,11 @@ export async function fetchAvailableModels(
     candidateSources.push(tokenModelList)
   }
 
-  candidateSources.push(await fetchTokenScopedModels(account, token))
+  const { models: tokenScopedModels } = await fetchTokenScopedModels(
+    account,
+    token,
+  )
+  candidateSources.push(tokenScopedModels)
 
   try {
     const fallbackModels = await getApiService(
@@ -347,7 +351,10 @@ export async function prepareChannelFormData(
 ): Promise<ChannelFormData> {
   // Channel import prefill must reflect only the selected key's live upstream
   // model list; on failure we keep the dialog editable and require manual input.
-  const availableModels = await fetchTokenScopedModels(account, token)
+  const { models: availableModels, fetchFailed } = await fetchTokenScopedModels(
+    account,
+    token,
+  )
 
   const resolvedGroups = await resolveDefaultChannelGroups({
     siteType: NEW_API,
@@ -363,6 +370,7 @@ export async function prepareChannelFormData(
     key: token.key,
     base_url: account.baseUrl,
     models: normalizeList(availableModels),
+    ...(fetchFailed ? { modelPrefillFetchFailed: true } : {}),
     groups: normalizeList(resolvedGroups),
     priority: DEFAULT_CHANNEL_FIELDS.priority,
     weight: DEFAULT_CHANNEL_FIELDS.weight,

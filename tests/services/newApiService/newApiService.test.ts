@@ -918,6 +918,7 @@ describe("newApiService", () => {
       const result = await prepareChannelFormData(account, token)
 
       expect(result.models).toEqual([])
+      expect(result.modelPrefillFetchFailed).toBe(true)
     })
 
     it("should keep models empty when only account-level fallback models exist", async () => {
@@ -933,12 +934,12 @@ describe("newApiService", () => {
       mockFetchOpenAICompatibleModelIds.mockRejectedValueOnce(
         new Error("Upstream failed"),
       )
-      mockFetchAccountAvailableModels.mockResolvedValueOnce(["claude-3-opus"])
       mockFetchSiteUserGroups.mockResolvedValueOnce(["default"])
 
       const result = await prepareChannelFormData(account, token)
 
       expect(result.models).toEqual([])
+      expect(result.modelPrefillFetchFailed).toBe(true)
     })
 
     it("should use the first target group when default is unavailable", async () => {

@@ -368,7 +368,72 @@ describe("useChannelDialog duplicate channel warning", () => {
     expect(mockToastDismiss).toHaveBeenCalledWith("toast-id")
   })
 
-  it("opens ChannelDialog even when provider model prefill is empty", async () => {
+  it("opens ChannelDialog with a prefill warning when the provider marks model preload as failed", async () => {
+    const mockService: Partial<ManagedSiteService> = {
+      messagesKey: "newapi",
+      getConfig: vi.fn(async () => ({
+        baseUrl: "https://managed.example.com",
+        token: "admin-token",
+        userId: "1",
+      })),
+      prepareChannelFormData: vi.fn(
+        async () =>
+          ({
+            name: "Auto channel",
+            type: ChannelType.OpenAI,
+            key: "sk-test",
+            base_url: "https://upstream.example.com",
+            models: [],
+            modelPrefillFetchFailed: true,
+            groups: ["default"],
+            priority: 0,
+            weight: 0,
+            status: 1,
+          }) satisfies ChannelFormData,
+      ),
+      searchChannel: vi.fn(async () => ({
+        items: [],
+        total: 0,
+        type_counts: {},
+      })),
+    }
+    getManagedSiteServiceSpy.mockResolvedValue(
+      mockService as ManagedSiteService,
+    )
+
+    const { result } = renderHook(() => ({
+      dialog: useChannelDialog(),
+      context: useChannelDialogContext(),
+    }))
+
+    await waitFor(() => {
+      expect(result.current).not.toBeNull()
+    })
+
+    await act(async () => {
+      await result.current.dialog.openWithAccount(
+        buildDisplaySiteData(),
+        buildApiToken(),
+      )
+    })
+
+    expect(result.current.context.state).toMatchObject({
+      isOpen: true,
+      mode: DIALOG_MODES.ADD,
+      initialValues: {
+        name: "Auto channel",
+        models: [],
+        groups: ["default"],
+      },
+      initialModels: [],
+      initialGroups: ["default"],
+      showModelPrefillWarning: true,
+    })
+    expect(mockToastError).not.toHaveBeenCalled()
+    expect(mockToastDismiss).toHaveBeenCalledWith("toast-id")
+  })
+
+  it("does not show a prefill warning for an intentionally empty model list", async () => {
     const mockService: Partial<ManagedSiteService> = {
       messagesKey: "newapi",
       getConfig: vi.fn(async () => ({
@@ -426,7 +491,7 @@ describe("useChannelDialog duplicate channel warning", () => {
       },
       initialModels: [],
       initialGroups: ["default"],
-      showModelPrefillWarning: true,
+      showModelPrefillWarning: false,
     })
     expect(mockToastError).not.toHaveBeenCalled()
     expect(mockToastDismiss).toHaveBeenCalledWith("toast-id")

@@ -66,6 +66,7 @@ export interface ChannelFormData {
   key: string
   base_url: string
   models: string[]
+  modelPrefillFetchFailed?: boolean
   groups: string[]
   priority: number
   weight: number

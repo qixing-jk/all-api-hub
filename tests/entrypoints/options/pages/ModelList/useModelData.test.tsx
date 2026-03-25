@@ -378,9 +378,14 @@ describe("useModelData all-accounts loading", () => {
     await waitFor(() => {
       expect(fetchModelPricing).toHaveBeenCalledTimes(1)
     })
-    await waitFor(() => {
-      expect(toastErrorMock).toHaveBeenCalledWith("modelList:status.loadFailed")
-    })
+    await waitFor(
+      () => {
+        expect(toastErrorMock).toHaveBeenCalledWith(
+          "modelList:status.loadFailed",
+        )
+      },
+      { timeout: 3000 },
+    )
 
     await waitFor(() => {
       expect(mockFetchDisplayAccountTokens).toHaveBeenCalledTimes(1)

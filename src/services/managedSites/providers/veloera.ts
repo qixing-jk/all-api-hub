@@ -224,7 +224,11 @@ export async function fetchAvailableModels(
     candidateSources.push(tokenModelList)
   }
 
-  candidateSources.push(await fetchTokenScopedModels(account, token))
+  const { models: tokenScopedModels } = await fetchTokenScopedModels(
+    account,
+    token,
+  )
+  candidateSources.push(tokenScopedModels)
 
   try {
     const fallbackModels = await getApiService(
@@ -271,7 +275,13 @@ export async function prepareChannelFormData(
   account: DisplaySiteData,
   token: ApiToken | AccountToken,
 ): Promise<ChannelFormData> {
-  const availableModels = await fetchTokenScopedModels(account, token)
+  const tokenModelList = parseDelimitedList(token.models)
+  const { models: availableModels, fetchFailed } = await fetchTokenScopedModels(
+    account,
+    token,
+  )
+  const resolvedModels =
+    availableModels.length > 0 ? availableModels : tokenModelList
 
   const resolvedGroups = await resolveDefaultChannelGroups({
     siteType: VELOERA,
@@ -286,7 +296,8 @@ export async function prepareChannelFormData(
     type: DEFAULT_CHANNEL_FIELDS.type,
     key: token.key,
     base_url: account.baseUrl,
-    models: normalizeList(availableModels),
+    models: normalizeList(resolvedModels),
+    ...(fetchFailed ? { modelPrefillFetchFailed: true } : {}),
     groups: normalizeList(resolvedGroups),
     priority: DEFAULT_CHANNEL_FIELDS.priority,
     weight: DEFAULT_CHANNEL_FIELDS.weight,

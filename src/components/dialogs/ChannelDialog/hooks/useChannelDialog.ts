@@ -344,7 +344,7 @@ export function useChannelDialog() {
         initialValues: formData,
         initialModels: formData.models,
         initialGroups: formData.groups,
-        showModelPrefillWarning: formData.models.length === 0,
+        showModelPrefillWarning: formData.modelPrefillFetchFailed === true,
         advisoryWarning: duplicateState.advisoryWarning,
         onSuccess: (result) => {
           if (onSuccess) {
@@ -435,7 +435,7 @@ export function useChannelDialog() {
         initialValues: formData,
         initialModels: formData.models,
         initialGroups: formData.groups,
-        showModelPrefillWarning: formData.models.length === 0,
+        showModelPrefillWarning: formData.modelPrefillFetchFailed === true,
         advisoryWarning: duplicateState.advisoryWarning,
         onSuccess: (result) => {
           onSuccess?.(result)

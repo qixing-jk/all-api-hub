@@ -5,6 +5,11 @@ import { normalizeList } from "~/utils/core/string"
 
 const logger = createLogger("ManagedSites.fetchTokenScopedModels")
 
+type TokenScopedModelsResult = {
+  models: string[]
+  fetchFailed: boolean
+}
+
 /**
  * Fetches live upstream models for the selected API key only.
  *
@@ -15,15 +20,21 @@ const logger = createLogger("ManagedSites.fetchTokenScopedModels")
 export async function fetchTokenScopedModels(
   account: Pick<DisplaySiteData, "baseUrl">,
   token: Pick<ApiToken | AccountToken, "key">,
-): Promise<string[]> {
+): Promise<TokenScopedModelsResult> {
   try {
     const upstreamModels = await fetchOpenAICompatibleModelIds({
       baseUrl: account.baseUrl,
       apiKey: token.key,
     })
-    return normalizeList(upstreamModels ?? [])
+    return {
+      models: normalizeList(upstreamModels ?? []),
+      fetchFailed: false,
+    }
   } catch (error) {
     logger.warn("Failed to fetch upstream models", error)
-    return []
+    return {
+      models: [],
+      fetchFailed: true,
+    }
   }
 }

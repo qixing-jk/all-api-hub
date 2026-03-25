@@ -48,10 +48,10 @@ If the live upstream model-list cannot be loaded, the dialog should still open w
 
 Why this approach:
 
-- It matches the user's intent: fetch failure must not block the export/import action itself.
-- It avoids inventing a fake placeholder model that could create an incorrect channel silently.
-- It keeps the current safety bar that a final channel submission still requires intentional model input.
-- It lets the UI tell the user exactly why the model field is empty instead of leaving them to infer it from a failed save attempt.
+- Matches the user's intent: fetch failure must not block the export/import action itself.
+- Avoids inventing a fake placeholder model that could create an incorrect channel silently.
+- Preserves the current safety bar that a final channel submission still requires intentional model input.
+- Enables clear user guidance about why the model field is empty instead of leaving operators to infer it from a failed save attempt.
 
 Alternative considered:
 
@@ -64,9 +64,9 @@ Model preload failures during dialog preparation should be logged as non-fatal d
 
 Why this approach:
 
-- It keeps the flow unblocked without hiding that automatic prefill failed.
-- It gives the operator immediate guidance before they try to save.
-- It keeps the warning scoped to the affected entry paths instead of turning the generic dialog hint into conditional logic everywhere.
+- Keeps the flow unblocked without hiding that automatic prefill failed.
+- Gives the operator immediate guidance before they try to save.
+- Keeps the warning scoped to the affected entry paths instead of turning the generic dialog hint into conditional logic everywhere.
 
 Alternative considered:
 
@@ -79,8 +79,8 @@ Model preload failures during dialog preparation should be logged as non-fatal d
 
 Why this approach:
 
-- It prevents a noisy fatal toast for a recoverable situation.
-- It keeps user-visible failure semantics aligned with the true failure point: creating a channel without models.
+- Prevents a noisy fatal toast for a recoverable situation.
+- Keeps user-visible failure semantics aligned with the true failure point: creating a channel without models.
 
 Alternative considered:
 

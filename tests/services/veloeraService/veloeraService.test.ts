@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import type { ApiToken, DisplaySiteData } from "~/types"
 import type { CreateChannelPayload, UpdateChannelPayload } from "~/types/newApi"
 
 // ============================================================================
@@ -69,6 +70,53 @@ function createMockUserPreferencesWithVeloera(
   }
 }
 
+/**
+ *
+ */
+function createMockDisplaySiteData(
+  overrides: Partial<DisplaySiteData> = {},
+): DisplaySiteData {
+  return {
+    id: "site-1",
+    icon: "icon",
+    name: "Test Site",
+    username: "testuser",
+    balance: { USD: 0, CNY: 0 },
+    todayConsumption: { USD: 0, CNY: 0 },
+    todayIncome: { USD: 0, CNY: 0 },
+    todayTokens: { upload: 0, download: 0 },
+    health: { status: "healthy" as any },
+    last_sync_time: Date.now(),
+    siteType: "veloera",
+    baseUrl: "https://api.example.com",
+    token: "access-token",
+    userId: 1,
+    authType: "access_token" as any,
+    checkIn: { enableDetection: false },
+    ...overrides,
+  }
+}
+
+/**
+ *
+ */
+function createMockApiToken(overrides: Partial<ApiToken> = {}): ApiToken {
+  return {
+    id: 1,
+    user_id: 1,
+    key: "sk-test-key-123",
+    status: 1,
+    name: "Test Token",
+    created_time: Date.now() - 86400000,
+    accessed_time: Date.now(),
+    expired_time: Date.now() + 31536000000,
+    remain_quota: 100,
+    unlimited_quota: false,
+    used_quota: 0,
+    ...overrides,
+  }
+}
+
 // ============================================================================
 // TESTS
 // ============================================================================
@@ -76,6 +124,8 @@ function createMockUserPreferencesWithVeloera(
 describe("veloeraService", () => {
   beforeEach(() => {
     mockFetchVeloeraChannel.mockReset()
+    mockFetchOpenAICompatibleModelIds.mockReset()
+    mockGetPreferences.mockReset()
   })
 
   describe("hasValidVeloeraConfig", () => {
@@ -285,6 +335,46 @@ describe("veloeraService", () => {
         88,
       )
       expect(result).toBe("sk-veloera-channel-key")
+    })
+  })
+
+  describe("prepareChannelFormData", () => {
+    it("falls back to token.models when the live model probe fails", async () => {
+      const { prepareChannelFormData } = await import(
+        "~/services/managedSites/providers/veloera"
+      )
+      const account = createMockDisplaySiteData()
+      const token = createMockApiToken({ models: "gpt-4,gpt-3.5" })
+
+      mockGetPreferences.mockResolvedValueOnce(
+        createMockUserPreferencesWithVeloera(),
+      )
+      mockFetchOpenAICompatibleModelIds.mockRejectedValueOnce(
+        new Error("Upstream failed"),
+      )
+
+      const result = await prepareChannelFormData(account, token)
+
+      expect(result.models).toEqual(["gpt-4", "gpt-3.5"])
+      expect(result.modelPrefillFetchFailed).toBe(true)
+    })
+
+    it("falls back to token.models when the live model probe returns empty", async () => {
+      const { prepareChannelFormData } = await import(
+        "~/services/managedSites/providers/veloera"
+      )
+      const account = createMockDisplaySiteData()
+      const token = createMockApiToken({ models: "gpt-4o-mini,gpt-4o" })
+
+      mockGetPreferences.mockResolvedValueOnce(
+        createMockUserPreferencesWithVeloera(),
+      )
+      mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce([])
+
+      const result = await prepareChannelFormData(account, token)
+
+      expect(result.models).toEqual(["gpt-4o-mini", "gpt-4o"])
+      expect(result.modelPrefillFetchFailed).toBeUndefined()
     })
   })
 })
