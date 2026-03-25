@@ -3,7 +3,10 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { Badge, Card, CardContent } from "~/components/ui"
-import type { ModelManagementItemSource } from "~/features/ModelList/modelManagementSources"
+import type {
+  ModelManagementItemSource,
+  ModelManagementSourceCapabilities,
+} from "~/features/ModelList/modelManagementSources"
 import type { ModelPricing } from "~/services/apiService/common/type"
 import type { CalculatedPrice } from "~/services/models/utils/modelPricing"
 import type { ApiVerificationHistorySummary } from "~/services/verification/verificationResultHistory"
@@ -27,6 +30,7 @@ interface ModelItemProps {
   availableGroups?: string[] // 新增：用户的所有可用分组列表
   isAllGroupsMode?: boolean // 新增：是否为"所有分组"模式
   source: ModelManagementItemSource
+  displayCapabilities?: ModelManagementSourceCapabilities
   verificationSummary?: ApiVerificationHistorySummary | null
   onVerifyModel?: (source: ModelManagementItemSource, modelId: string) => void
   onVerifyCliSupport?: (
@@ -58,6 +62,7 @@ export default function ModelItem(props: ModelItemProps) {
     availableGroups = [],
     isAllGroupsMode = false,
     source,
+    displayCapabilities = source.capabilities,
     verificationSummary,
     onVerifyModel,
     onVerifyCliSupport,
@@ -89,10 +94,13 @@ export default function ModelItem(props: ModelItemProps) {
         })
       : undefined
 
-  // profile 来源不展示价格/组别等仅账号语义的元信息
-  const showPricing = source.kind === "account" && showRealPrice !== undefined
-  const showGroupDetails = source.kind === "account"
-  const canExpand = source.kind === "account"
+  // Card rendering follows the active display capabilities so fallback catalogs
+  // can keep account ownership while reusing the catalog-only visual treatment.
+  const showPricing =
+    source.kind === "account" && displayCapabilities.supportsPricing
+  const showGroupDetails =
+    source.kind === "account" && displayCapabilities.supportsGroupFiltering
+  const canExpand = source.kind === "account" && showGroupDetails
 
   // 检查模型是否对当前用户分组可用
   const isAvailableForUser = showGroupDetails

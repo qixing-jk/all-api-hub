@@ -76,6 +76,21 @@ const PROFILE_SOURCE_CAPABILITIES: ModelManagementSourceCapabilities = {
 }
 
 /**
+ * Downgrades a source to catalog-only capabilities while preserving actions
+ * that still make sense for the owning source, such as verification or token tools.
+ */
+export function toCatalogOnlyCapabilities(
+  capabilities: ModelManagementSourceCapabilities,
+): ModelManagementSourceCapabilities {
+  return {
+    ...capabilities,
+    supportsPricing: false,
+    supportsGroupFiltering: false,
+    supportsAccountSummary: false,
+  }
+}
+
+/**
  * Create the serialized selector value for an account-backed source.
  */
 export function toAccountSourceValue(accountId: string) {

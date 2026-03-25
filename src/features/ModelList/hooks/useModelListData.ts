@@ -8,6 +8,7 @@ import {
   isProfileSourceValue,
   resolveModelManagementSource,
   toAccountSourceValue,
+  toCatalogOnlyCapabilities,
   toProfileSourceValue,
   type ModelManagementSource,
 } from "../modelManagementSources"
@@ -139,13 +140,23 @@ export function useModelListData(routeParams?: Record<string, string>) {
     [selectedSource],
   )
 
-  const sourceCapabilities =
-    selectedSource?.capabilities ?? EMPTY_MODEL_MANAGEMENT_CAPABILITIES
-
   const modelData = useModelData({
     selectedSource,
     accounts,
   })
+
+  const isFallbackCatalogActive = modelData.accountFallback?.isActive === true
+
+  const sourceCapabilities = useMemo(() => {
+    const baseCapabilities =
+      selectedSource?.capabilities ?? EMPTY_MODEL_MANAGEMENT_CAPABILITIES
+
+    // Account-key fallback keeps the same owning account selected, but the
+    // rendered catalog is no longer pricing-authoritative.
+    return isFallbackCatalogActive
+      ? toCatalogOnlyCapabilities(baseCapabilities)
+      : baseCapabilities
+  }, [isFallbackCatalogActive, selectedSource?.capabilities])
 
   const filteredData = useFilteredModels({
     pricingData: modelData.pricingData,
@@ -164,6 +175,8 @@ export function useModelListData(routeParams?: Record<string, string>) {
     currentAccount,
     currentProfile,
     sourceCapabilities,
+    isFallbackCatalogActive,
+    fallbackTokenName: modelData.accountFallback?.activeTokenName ?? null,
 
     ...state,
     ...modelData,

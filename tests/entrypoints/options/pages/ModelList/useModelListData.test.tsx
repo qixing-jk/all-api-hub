@@ -80,6 +80,7 @@ describe("useModelListData", () => {
       accountQueryStates: [],
       loadPricingData: vi.fn(),
       loadErrorMessage: null,
+      accountFallback: null,
     })
     mockUseFilteredModels.mockReturnValue({
       filteredModels: [],
@@ -234,5 +235,57 @@ describe("useModelListData", () => {
     })
 
     expect(result.current.selectedSource?.kind).toBe("account")
+  })
+
+  it("downgrades account capabilities while a fallback catalog is active", async () => {
+    mockUseModelData.mockReturnValue({
+      pricingData: {
+        data: [],
+        group_ratio: {},
+        success: true,
+        usable_group: {},
+      },
+      pricingContexts: [],
+      isLoading: false,
+      dataFormatError: false,
+      accountQueryStates: [],
+      loadPricingData: vi.fn(),
+      loadErrorMessage: null,
+      accountFallback: {
+        isAvailable: true,
+        isActive: true,
+        hasLoadedTokens: true,
+        isLoadingTokens: false,
+        isLoadingCatalog: false,
+        tokenLoadErrorMessage: null,
+        catalogLoadErrorMessage: null,
+        tokens: [],
+        selectedTokenId: null,
+        activeTokenName: "Fallback key",
+        loadTokens: vi.fn(),
+        setSelectedTokenId: vi.fn(),
+        loadCatalog: vi.fn(),
+      },
+    })
+
+    const { result } = renderHook(() => useModelListData())
+
+    act(() => {
+      result.current.setSelectedSourceValue("account:acc-1")
+    })
+
+    await waitFor(() => {
+      expect(result.current.selectedSource?.kind).toBe("account")
+    })
+
+    expect(result.current.isFallbackCatalogActive).toBe(true)
+    expect(result.current.sourceCapabilities).toMatchObject({
+      supportsPricing: false,
+      supportsGroupFiltering: false,
+      supportsAccountSummary: false,
+      supportsTokenCompatibility: true,
+      supportsCredentialVerification: true,
+      supportsCliVerification: true,
+    })
   })
 })

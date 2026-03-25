@@ -25,6 +25,10 @@
   "endpointType": "端点类型",
   "endpointTypes": "端点类型",
   "expandDetails": "展开详细信息",
+  "fallbackSourceNotice": {
+    "description": "当前模型目录通过账号密钥回退加载，仅支持模型发现与验证。点击刷新数据会重新尝试账号接口。",
+    "title": "账号密钥回退目录"
+  },
   "input": "输入:",
   "input1MTokens": "输入(1M tokens)",
   "keyDialog": {
@@ -94,6 +98,24 @@
   },
   "status": {
     "dataLoaded": "模型数据加载成功",
+    "fallback": {
+      "catalogLoadFailedTitle": "使用密钥加载模型失败",
+      "description": "如果账号定价接口暂时不可用，可以改用该账号下的密钥加载一个仅供浏览的模型目录。",
+      "loadingKeys": "正在加载账号密钥...",
+      "loadKeysFailed": "加载账号密钥失败：{{errorMessage}}",
+      "loadKeysFailedFallback": "加载账号密钥失败，请稍后重试。",
+      "loadModelsFailedFallback": "使用所选密钥加载模型失败，请稍后重试。",
+      "loadWithKey": "使用所选密钥加载",
+      "noKeysDescription": "当前账号下没有可用于回退加载的可用密钥。",
+      "noKeysTitle": "未找到可用密钥",
+      "reloadKeys": "重新加载密钥",
+      "retryLoadWithKey": "重试所选密钥",
+      "selectHint": "该账号存在多个可用密钥，请先明确选择要使用的密钥。",
+      "selectLabel": "用于回退加载的密钥",
+      "selectPlaceholder": "请选择密钥",
+      "title": "改用账号密钥加载模型",
+      "tokensLoadFailedTitle": "加载账号密钥失败"
+    },
     "formatNotStandard": "当前站点的模型数据格式不符合标准，请手动查看站点定价页面",
     "genericLoadFailedTitle": "加载模型数据失败",
     "goToSitePricing": "前往站点查看定价信息",

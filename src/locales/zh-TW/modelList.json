@@ -25,6 +25,10 @@
   "endpointType": "端點型別",
   "endpointTypes": "端點型別",
   "expandDetails": "展開詳細資訊",
+  "fallbackSourceNotice": {
+    "description": "目前模型目錄是透過帳號金鑰回退載入，僅支援模型發現與驗證。點擊重新整理資料會重新嘗試帳號介面。",
+    "title": "帳號金鑰回退目錄"
+  },
   "input": "輸入:",
   "input1MTokens": "輸入(1M tokens)",
   "keyDialog": {
@@ -94,6 +98,24 @@
   },
   "status": {
     "dataLoaded": "模型資料載入成功",
+    "fallback": {
+      "catalogLoadFailedTitle": "使用金鑰載入模型失敗",
+      "description": "如果帳號定價介面暫時不可用，可以改用該帳號底下的金鑰載入一個僅供瀏覽的模型目錄。",
+      "loadingKeys": "正在載入帳號金鑰...",
+      "loadKeysFailed": "載入帳號金鑰失敗：{{errorMessage}}",
+      "loadKeysFailedFallback": "載入帳號金鑰失敗，請稍後再試。",
+      "loadModelsFailedFallback": "使用所選金鑰載入模型失敗，請稍後再試。",
+      "loadWithKey": "使用所選金鑰載入",
+      "noKeysDescription": "目前帳號下沒有可用於回退載入的可用金鑰。",
+      "noKeysTitle": "找不到可用金鑰",
+      "reloadKeys": "重新載入金鑰",
+      "retryLoadWithKey": "重試所選金鑰",
+      "selectHint": "此帳號有多個可用金鑰，請先明確選擇要使用的金鑰。",
+      "selectLabel": "用於回退載入的金鑰",
+      "selectPlaceholder": "請選擇金鑰",
+      "title": "改用帳號金鑰載入模型",
+      "tokensLoadFailedTitle": "載入帳號金鑰失敗"
+    },
     "formatNotStandard": "當前站點的模型資料格式不符合標準，請手動檢視站點定價頁面",
     "genericLoadFailedTitle": "載入模型資料失敗",
     "goToSitePricing": "前往站點檢視定價資訊",

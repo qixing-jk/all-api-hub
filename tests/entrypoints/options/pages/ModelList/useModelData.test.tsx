@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
-import { renderHook, waitFor } from "@testing-library/react"
+import { act, renderHook, waitFor } from "@testing-library/react"
 import type { ReactNode } from "react"
 import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
@@ -20,6 +20,14 @@ const { toastSuccessMock, toastErrorMock } = vi.hoisted(() => ({
   toastErrorMock: vi.fn(),
 }))
 
+const {
+  mockFetchDisplayAccountTokens,
+  mockLoadAccountTokenFallbackPricingResponse,
+} = vi.hoisted(() => ({
+  mockFetchDisplayAccountTokens: vi.fn(),
+  mockLoadAccountTokenFallbackPricingResponse: vi.fn(),
+}))
+
 vi.mock("react-hot-toast", () => ({
   default: {
     success: (...args: unknown[]) => toastSuccessMock(...args),
@@ -30,6 +38,22 @@ vi.mock("react-hot-toast", () => ({
 vi.mock("~/services/apiService", () => ({
   getApiService: vi.fn(),
 }))
+
+vi.mock(
+  "~/services/accounts/utils/apiServiceRequest",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/accounts/utils/apiServiceRequest")
+      >()
+
+    return {
+      ...actual,
+      fetchDisplayAccountTokens: (...args: unknown[]) =>
+        mockFetchDisplayAccountTokens(...args),
+    }
+  },
+)
 
 const mockFetchApiCredentialModelIds = vi.fn()
 
@@ -45,6 +69,8 @@ vi.mock(
       ...actual,
       fetchApiCredentialModelIds: (...args: unknown[]) =>
         mockFetchApiCredentialModelIds(...args),
+      loadAccountTokenFallbackPricingResponse: (...args: unknown[]) =>
+        mockLoadAccountTokenFallbackPricingResponse(...args),
     }
   },
 )
@@ -88,6 +114,8 @@ const createWrapper = () => {
 describe("useModelData all-accounts loading", () => {
   beforeEach(() => {
     mockFetchApiCredentialModelIds.mockReset()
+    mockFetchDisplayAccountTokens.mockReset()
+    mockLoadAccountTokenFallbackPricingResponse.mockReset()
     vi.mocked(getApiService).mockReset()
   })
 
@@ -265,5 +293,219 @@ describe("useModelData all-accounts loading", () => {
       expect(result.current.loadErrorMessage).toBeNull()
       expect(result.current.dataFormatError).toBe(false)
     })
+  })
+
+  it("loads an account-key fallback catalog after a single-account failure", async () => {
+    toastSuccessMock.mockReset()
+    toastErrorMock.mockReset()
+
+    const fetchModelPricing = vi.fn().mockRejectedValue(new Error("boom"))
+    vi.mocked(getApiService).mockReturnValue({ fetchModelPricing } as any)
+
+    const account = createDisplayAccount({
+      id: "fallback-account",
+      baseUrl: "https://fallback.example.com",
+      userId: 11,
+    })
+
+    const fallbackTokens = [
+      {
+        id: 1,
+        user_id: 11,
+        key: "sk-first",
+        status: 1,
+        name: "First key",
+        created_time: 0,
+        accessed_time: 0,
+        expired_time: -1,
+        remain_quota: 0,
+        unlimited_quota: true,
+        used_quota: 0,
+      },
+      {
+        id: 2,
+        user_id: 11,
+        key: "sk-second",
+        status: 1,
+        name: "Second key",
+        created_time: 0,
+        accessed_time: 0,
+        expired_time: -1,
+        remain_quota: 0,
+        unlimited_quota: true,
+        used_quota: 0,
+      },
+    ]
+
+    mockFetchDisplayAccountTokens.mockResolvedValueOnce(fallbackTokens)
+    mockLoadAccountTokenFallbackPricingResponse.mockResolvedValueOnce({
+      data: [
+        {
+          model_name: "gpt-4o-mini",
+          quota_type: 0,
+          model_ratio: 0,
+          model_price: 0,
+          completion_ratio: 1,
+          enable_groups: [],
+          supported_endpoint_types: [],
+        },
+      ],
+      group_ratio: {},
+      success: true,
+      usable_group: {},
+    })
+
+    const { result } = renderHook(
+      () =>
+        useModelData({
+          selectedSource: createAccountSource(account),
+          accounts: [account],
+        }),
+      { wrapper: createWrapper() },
+    )
+
+    await waitFor(() => {
+      expect(fetchModelPricing).toHaveBeenCalledTimes(1)
+    })
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith("modelList:status.loadFailed")
+    })
+
+    await waitFor(() => {
+      expect(mockFetchDisplayAccountTokens).toHaveBeenCalledTimes(1)
+    })
+
+    await waitFor(() => {
+      expect(result.current.accountFallback?.tokens).toHaveLength(2)
+    })
+
+    expect(result.current.accountFallback?.selectedTokenId).toBeNull()
+
+    act(() => {
+      result.current.accountFallback?.setSelectedTokenId(2)
+    })
+    await act(async () => {
+      await result.current.accountFallback?.loadCatalog()
+    })
+
+    await waitFor(() => {
+      expect(mockLoadAccountTokenFallbackPricingResponse).toHaveBeenCalledWith({
+        account,
+        token: fallbackTokens[1],
+      })
+    })
+
+    await waitFor(() => {
+      expect(result.current.accountFallback?.isActive).toBe(true)
+    })
+
+    expect(result.current.loadErrorMessage).toBeNull()
+    expect(
+      result.current.pricingData?.data.map((item) => item.model_name),
+    ).toEqual(["gpt-4o-mini"])
+  })
+
+  it("clears fallback state after a successful direct-account retry", async () => {
+    toastSuccessMock.mockReset()
+    toastErrorMock.mockReset()
+
+    const fetchModelPricing = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("boom"))
+      .mockRejectedValueOnce(new Error("boom"))
+      .mockResolvedValueOnce({
+        data: [
+          {
+            model_name: "account-model",
+            quota_type: 0,
+            model_ratio: 1,
+            model_price: 1,
+            completion_ratio: 1,
+            enable_groups: ["default"],
+            supported_endpoint_types: [],
+          },
+        ],
+        group_ratio: { default: 1 },
+        success: true,
+        usable_group: { default: true },
+      })
+    vi.mocked(getApiService).mockReturnValue({ fetchModelPricing } as any)
+
+    const account = createDisplayAccount({
+      id: "fallback-reset-account",
+      baseUrl: "https://fallback-reset.example.com",
+      userId: 15,
+    })
+
+    const fallbackToken = {
+      id: 7,
+      user_id: 15,
+      key: "sk-only",
+      status: 1,
+      name: "Only key",
+      created_time: 0,
+      accessed_time: 0,
+      expired_time: -1,
+      remain_quota: 0,
+      unlimited_quota: true,
+      used_quota: 0,
+    }
+
+    mockFetchDisplayAccountTokens.mockResolvedValueOnce([fallbackToken])
+    mockLoadAccountTokenFallbackPricingResponse.mockResolvedValueOnce({
+      data: [
+        {
+          model_name: "fallback-model",
+          quota_type: 0,
+          model_ratio: 0,
+          model_price: 0,
+          completion_ratio: 1,
+          enable_groups: [],
+          supported_endpoint_types: [],
+        },
+      ],
+      group_ratio: {},
+      success: true,
+      usable_group: {},
+    })
+
+    const { result } = renderHook(
+      () =>
+        useModelData({
+          selectedSource: createAccountSource(account),
+          accounts: [account],
+        }),
+      { wrapper: createWrapper() },
+    )
+
+    await waitFor(() => {
+      expect(fetchModelPricing).toHaveBeenCalledTimes(1)
+    })
+    await waitFor(() => {
+      expect(mockFetchDisplayAccountTokens).toHaveBeenCalledTimes(1)
+    })
+    await waitFor(() => {
+      expect(result.current.accountFallback?.selectedTokenId).toBe(7)
+    })
+
+    await act(async () => {
+      await result.current.accountFallback?.loadCatalog()
+    })
+    await waitFor(() => {
+      expect(result.current.accountFallback?.isActive).toBe(true)
+    })
+
+    await act(async () => {
+      await result.current.loadPricingData()
+    })
+
+    await waitFor(() => {
+      expect(result.current.accountFallback?.isActive).toBe(false)
+    })
+
+    expect(result.current.loadErrorMessage).toBeNull()
+    expect(
+      result.current.pricingData?.data.map((item) => item.model_name),
+    ).toEqual(["account-model"])
   })
 })

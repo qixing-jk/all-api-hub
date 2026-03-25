@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next"
 import { VerifyApiDialog } from "~/components/dialogs/VerifyApiDialog"
 import { VerifyCliSupportDialog } from "~/components/dialogs/VerifyCliSupportDialog"
 import { PageHeader } from "~/components/PageHeader"
+import { Alert } from "~/components/ui"
 import { VerifyApiCredentialProfileDialog } from "~/features/ApiCredentialProfiles/components/VerifyApiCredentialProfileDialog"
 import { type ModelManagementItemSource } from "~/features/ModelList/modelManagementSources"
 import { getAllProviders } from "~/services/models/utils/modelProviders"
@@ -69,6 +70,8 @@ export default function ModelList(props: {
     isLoading,
     dataFormatError,
     loadErrorMessage,
+    accountFallback,
+    isFallbackCatalogActive,
 
     filteredModels,
     baseFilteredModels,
@@ -226,11 +229,21 @@ export default function ModelList(props: {
           loadErrorMessage={loadErrorMessage}
           currentAccount={currentAccount}
           loadPricingData={loadPricingData}
+          accountFallback={accountFallback}
         />
       )}
 
       {selectedSourceValue && hasModelData && (
         <>
+          {isFallbackCatalogActive && (
+            <Alert
+              variant="info"
+              className="mb-6"
+              title={t("fallbackSourceNotice.title")}
+              description={t("fallbackSourceNotice.description")}
+            />
+          )}
+
           {verifyContext && (
             <VerifyApiDialog
               isOpen={true}
@@ -330,6 +343,7 @@ export default function ModelList(props: {
                   selectedGroup={selectedGroup}
                   handleGroupClick={handleGroupClick}
                   availableGroups={availableGroups}
+                  displayCapabilities={sourceCapabilities}
                 />
               </Tab.Panel>
               {providers.map((provider) => (
@@ -346,6 +360,7 @@ export default function ModelList(props: {
                     selectedGroup={selectedGroup}
                     handleGroupClick={handleGroupClick}
                     availableGroups={availableGroups}
+                    displayCapabilities={sourceCapabilities}
                   />
                 </Tab.Panel>
               ))}

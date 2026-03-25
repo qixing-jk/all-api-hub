@@ -1,3 +1,4 @@
+import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
 import { fetchAnthropicModelIds } from "~/services/apiService/anthropic"
 import type {
   ModelPricing,
@@ -9,12 +10,32 @@ import {
   API_TYPES,
   type ApiVerificationApiType,
 } from "~/services/verification/aiApiVerification"
+import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
+import type { ApiToken, DisplaySiteData } from "~/types"
+import { parseDelimitedList } from "~/utils/core/string"
 
 type FetchApiCredentialModelCatalogParams = {
   apiType: ApiVerificationApiType
   baseUrl: string
   apiKey: string
 }
+
+type LoadAccountTokenFallbackPricingParams = {
+  account: Pick<
+    DisplaySiteData,
+    | "siteType"
+    | "baseUrl"
+    | "id"
+    | "authType"
+    | "userId"
+    | "token"
+    | "cookieAuthSessionCookie"
+  >
+  token: ApiToken
+}
+
+export const ACCOUNT_TOKEN_FALLBACK_LOAD_FAILED =
+  "ACCOUNT_TOKEN_FALLBACK_LOAD_FAILED"
 
 /**
  * Fetch raw model ids using a stored API credential profile.
@@ -47,6 +68,51 @@ export async function fetchApiCredentialModelIds(
   }
 
   throw new Error("Unsupported apiType")
+}
+
+/**
+ * Loads a minimal model catalog for an account token by combining token-declared
+ * model ids with an upstream-compatible key lookup against the same base URL.
+ */
+export async function loadAccountTokenFallbackPricingResponse(
+  params: LoadAccountTokenFallbackPricingParams,
+): Promise<PricingResponse> {
+  const declaredModelIds = parseDelimitedList(params.token.models)
+  let resolvedTokenKey = ""
+
+  try {
+    const resolvedToken = await resolveDisplayAccountTokenForSecret(
+      params.account,
+      params.token,
+    )
+    resolvedTokenKey = resolvedToken.key
+
+    let upstreamModelIds: string[] = []
+    try {
+      upstreamModelIds = await fetchApiCredentialModelIds({
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: params.account.baseUrl,
+        apiKey: resolvedToken.key,
+      })
+    } catch (error) {
+      if (declaredModelIds.length === 0) {
+        throw error
+      }
+    }
+
+    return buildApiCredentialProfilePricingResponse([
+      ...declaredModelIds,
+      ...upstreamModelIds,
+    ])
+  } catch (error) {
+    const sanitizedMessage = toSanitizedErrorSummary(error, [
+      params.account.baseUrl,
+      params.token.key,
+      resolvedTokenKey,
+    ])
+
+    throw new Error(sanitizedMessage || ACCOUNT_TOKEN_FALLBACK_LOAD_FAILED)
+  }
 }
 
 /**

@@ -27,6 +27,10 @@
   "endpointType": "Endpoint Type",
   "endpointTypes": "Endpoint Types",
   "expandDetails": "Expand details",
+  "fallbackSourceNotice": {
+    "description": "This catalog is currently loaded through an account-key fallback, so it only supports model discovery and verification. Refresh Data will retry the direct account route.",
+    "title": "Account-key fallback catalog"
+  },
   "input": "Input:",
   "input1MTokens": "Input (1M tokens)",
   "keyDialog": {
@@ -97,6 +101,24 @@
   },
   "status": {
     "dataLoaded": "Model data loaded successfully",
+    "fallback": {
+      "catalogLoadFailedTitle": "Failed to load models with the selected key",
+      "description": "If the account pricing endpoint is temporarily unavailable, you can load a browse-only catalog with one of this account’s keys instead.",
+      "loadingKeys": "Loading account keys...",
+      "loadKeysFailed": "Failed to load account keys: {{errorMessage}}",
+      "loadKeysFailedFallback": "Failed to load account keys. Please try again later.",
+      "loadModelsFailedFallback": "Failed to load models with the selected key. Please try again later.",
+      "loadWithKey": "Load with selected key",
+      "noKeysDescription": "No enabled keys are currently available on this account for fallback loading.",
+      "noKeysTitle": "No available keys found",
+      "reloadKeys": "Reload keys",
+      "retryLoadWithKey": "Retry selected key",
+      "selectHint": "This account has multiple eligible keys. Choose the one you want to use before loading the fallback catalog.",
+      "selectLabel": "Key for fallback loading",
+      "selectPlaceholder": "Select a key",
+      "title": "Load models with an account key",
+      "tokensLoadFailedTitle": "Failed to load account keys"
+    },
     "formatNotStandard": "The model data format of the current site does not meet the standard, please manually check the site pricing page",
     "genericLoadFailedTitle": "Failed to load model data",
     "goToSitePricing": "Go to site to view pricing information",

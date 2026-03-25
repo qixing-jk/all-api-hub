@@ -2,12 +2,17 @@ import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
 import ModelItem from "~/features/ModelList/components/ModelItem"
-import { createProfileSource } from "~/features/ModelList/modelManagementSources"
+import {
+  createAccountSource,
+  createProfileSource,
+  toCatalogOnlyCapabilities,
+} from "~/features/ModelList/modelManagementSources"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import {
   createProfileModelVerificationHistoryTarget,
   createVerificationHistorySummary,
 } from "~/services/verification/verificationResultHistory"
+import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import { render, screen } from "~~/tests/test-utils/render"
 
@@ -232,5 +237,74 @@ describe("ModelItem profile actions", () => {
     expect(
       await screen.findByText("Profile: Legacy Key · not-a-valid-url"),
     ).toBeInTheDocument()
+  })
+
+  it("renders account-key fallback rows as catalog-only cards", async () => {
+    const accountSource = createAccountSource({
+      id: "account-1",
+      name: "Example Account",
+      username: "tester",
+      balance: { USD: 0, CNY: 0 },
+      todayConsumption: { USD: 0, CNY: 0 },
+      todayIncome: { USD: 0, CNY: 0 },
+      todayTokens: { upload: 0, download: 0 },
+      health: { status: SiteHealthStatus.Healthy },
+      siteType: "new-api",
+      baseUrl: "https://example.com",
+      token: "token",
+      userId: 1,
+      authType: AuthTypeEnum.AccessToken,
+      checkIn: { enableDetection: false },
+    })
+
+    render(
+      <ModelItem
+        model={{
+          model_name: "claude-haiku-4-5-20251001",
+          quota_type: 0,
+          model_ratio: 0,
+          model_price: 0,
+          completion_ratio: 1,
+          enable_groups: [],
+          supported_endpoint_types: [],
+        }}
+        calculatedPrice={{
+          inputUSD: 0,
+          outputUSD: 0,
+          inputCNY: 0,
+          outputCNY: 0,
+        }}
+        exchangeRate={1}
+        showRealPrice={false}
+        showRatioColumn={true}
+        showEndpointTypes={true}
+        userGroup="default"
+        availableGroups={["default"]}
+        source={accountSource}
+        displayCapabilities={toCatalogOnlyCapabilities(
+          accountSource.capabilities,
+        )}
+        onVerifyModel={() => {}}
+        onVerifyCliSupport={() => {}}
+        onOpenModelKeyDialog={() => {}}
+      />,
+    )
+
+    expect(
+      await screen.findByRole("button", {
+        name: "modelList:actions.keyForModel",
+      }),
+    ).toBeInTheDocument()
+    expect(screen.queryByText("ui:tokenBased")).not.toBeInTheDocument()
+    expect(screen.queryByText("modelList:ratio")).not.toBeInTheDocument()
+    expect(screen.queryByText("modelList:unavailable")).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(/modelList:availableGroups/),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: "modelList:expandDetails",
+      }),
+    ).not.toBeInTheDocument()
   })
 })

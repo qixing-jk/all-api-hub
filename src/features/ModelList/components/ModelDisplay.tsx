@@ -5,7 +5,10 @@ import { Virtuoso } from "react-virtuoso"
 import { EmptyState } from "~/components/ui"
 import { UI_CONSTANTS } from "~/constants/ui"
 import type { CalculatedModelItem } from "~/features/ModelList/hooks/useFilteredModels"
-import type { ModelManagementItemSource } from "~/features/ModelList/modelManagementSources"
+import type {
+  ModelManagementItemSource,
+  ModelManagementSourceCapabilities,
+} from "~/features/ModelList/modelManagementSources"
 import type { ApiVerificationHistorySummary } from "~/services/verification/verificationResultHistory"
 import {
   createAccountModelVerificationHistoryTarget,
@@ -36,6 +39,7 @@ interface ModelDisplayProps {
   selectedGroup: string
   handleGroupClick: (group: string) => void
   availableGroups: string[]
+  displayCapabilities?: ModelManagementSourceCapabilities
 }
 
 /**
@@ -56,6 +60,7 @@ export function ModelDisplay(props: ModelDisplayProps) {
     selectedGroup,
     handleGroupClick,
     availableGroups,
+    displayCapabilities,
   } = props
   const { t } = useTranslation("modelList")
   if (models.length === 0) {
@@ -100,9 +105,9 @@ export function ModelDisplay(props: ModelDisplayProps) {
                   modelId,
                 )
           const verificationSummary = historyTarget
-            ? (verificationSummariesByKey[
+            ? verificationSummariesByKey[
                 serializeVerificationHistoryTarget(historyTarget)
-              ] ?? null)
+              ] ?? null
             : null
 
           return (
@@ -119,6 +124,7 @@ export function ModelDisplay(props: ModelDisplayProps) {
               availableGroups={availableGroups}
               isAllGroupsMode={selectedGroup === "all"}
               source={sourceForModel}
+              displayCapabilities={displayCapabilities}
               verificationSummary={verificationSummary}
               onVerifyModel={onVerifyModel}
               onVerifyCliSupport={onVerifyCliSupport}

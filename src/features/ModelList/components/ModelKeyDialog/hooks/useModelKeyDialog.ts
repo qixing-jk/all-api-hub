@@ -6,6 +6,7 @@ import { generateDefaultTokenRequest } from "~/services/accounts/accountKeyAutoP
 import {
   canManageDisplayAccountTokens,
   createDisplayAccountApiContext,
+  fetchDisplayAccountTokens,
   resolveDisplayAccountTokenForSecret,
 } from "~/services/accounts/utils/apiServiceRequest"
 import { isTokenCompatibleWithModel } from "~/services/models/utils/tokenModelCompatibility"
@@ -67,20 +68,7 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
     setCreateError(null)
 
     try {
-      const { service, request } = createDisplayAccountApiContext(account)
-      const tokensResponse = await service.fetchAccountTokens(request)
-
-      if (Array.isArray(tokensResponse)) {
-        setTokens(tokensResponse)
-      } else {
-        logger.warn("Token response is not an array", {
-          accountId: account.id,
-          baseUrl: account.baseUrl,
-          responseType: typeof tokensResponse,
-          siteType: account.siteType,
-        })
-        setTokens([])
-      }
+      setTokens(await fetchDisplayAccountTokens(account))
     } catch (error) {
       const errorMessage = getErrorMessage(error)
       logger.error("Failed to load token list for model key dialog", {
@@ -178,12 +166,7 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
     setIsLoading(true)
 
     try {
-      const { service, request } = createDisplayAccountApiContext(account)
-      const refreshedTokens = await service.fetchAccountTokens(request)
-      if (!Array.isArray(refreshedTokens)) {
-        throw new Error("token_refresh_failed")
-      }
-
+      const refreshedTokens = await fetchDisplayAccountTokens(account)
       setTokens(refreshedTokens)
 
       const refreshedCompatible = refreshedTokens.filter((token) =>

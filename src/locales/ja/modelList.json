@@ -25,6 +25,10 @@
   "endpointType": "エンドポイント種別",
   "endpointTypes": "エンドポイント種別",
   "expandDetails": "詳細を展開",
+  "fallbackSourceNotice": {
+    "description": "このカタログは現在アカウントキーのフォールバック経由で読み込まれているため、モデル検出と検証のみ利用できます。[データを更新] を押すと直接のアカウント経路を再試行します。",
+    "title": "アカウントキーフォールバックのカタログ"
+  },
   "input": "入力:",
   "input1MTokens": "入力（100 万トークン）",
   "keyDialog": {
@@ -94,6 +98,24 @@
   },
   "status": {
     "dataLoaded": "モデルデータを正常に読み込みました",
+    "fallback": {
+      "catalogLoadFailedTitle": "選択したキーでモデルを読み込めませんでした",
+      "description": "アカウントの料金エンドポイントが一時的に使えない場合は、このアカウントのキーを使って閲覧専用のカタログを読み込めます。",
+      "loadingKeys": "アカウントキーを読み込み中...",
+      "loadKeysFailed": "アカウントキーの読み込みに失敗しました: {{errorMessage}}",
+      "loadKeysFailedFallback": "アカウントキーの読み込みに失敗しました。しばらくしてからもう一度お試しください。",
+      "loadModelsFailedFallback": "選択したキーでモデルを読み込めませんでした。しばらくしてからもう一度お試しください。",
+      "loadWithKey": "選択したキーで読み込む",
+      "noKeysDescription": "このアカウントには、フォールバック読み込みに使える有効なキーがありません。",
+      "noKeysTitle": "利用可能なキーが見つかりません",
+      "reloadKeys": "キーを再読み込み",
+      "retryLoadWithKey": "選択したキーで再試行",
+      "selectHint": "このアカウントには利用可能なキーが複数あります。フォールバックカタログを読み込む前に使うキーを選択してください。",
+      "selectLabel": "フォールバック読み込みに使うキー",
+      "selectPlaceholder": "キーを選択",
+      "title": "アカウントキーでモデルを読み込む",
+      "tokensLoadFailedTitle": "アカウントキーの読み込みに失敗しました"
+    },
     "formatNotStandard": "現在のサイトのモデルデータ形式は標準仕様に準拠していません。サイトの料金ページを手動で確認してください",
     "genericLoadFailedTitle": "モデルデータの読み込みに失敗しました",
     "goToSitePricing": "サイトで料金情報を見る",
