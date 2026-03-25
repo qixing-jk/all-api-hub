@@ -284,6 +284,11 @@ export function useChannelForm({
       return
     }
 
+    if (formData.models.length === 0) {
+      toast.error(t("channelDialog:validation.modelsRequired"))
+      return
+    }
+
     setIsSaving(true)
 
     try {
@@ -360,6 +365,7 @@ export function useChannelForm({
 
   const isFormValid = Boolean(
     formData.name.trim() &&
+      formData.models.length > 0 &&
       (!isKeyFieldRequired || formData.key.trim()) &&
       (!isBaseUrlRequired || formData?.base_url?.trim()),
   )

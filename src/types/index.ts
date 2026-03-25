@@ -458,7 +458,18 @@ export interface ApiToken {
   used_quota: number
   group?: string // 可选字段，某些站点可能没有
   DeletedAt?: null
-  models?: string // 某些站点使用 models 而不是 model_limits
+  /**
+   * Token-scoped model allow-list / restriction field returned by some backends.
+   *
+   * Semantic notes:
+   * - This is equivalent to `model_limits` for compatible backends that serialize
+   *   the token's model restriction list under `models` instead.
+   * - It describes models allowed for this specific API key/token, not the
+   *   account-wide available model list.
+   * - It is metadata returned by the token API payload, not a live upstream
+   *   `/models` probe result.
+   */
+  models?: string
 }
 
 export type DashboardTabType =

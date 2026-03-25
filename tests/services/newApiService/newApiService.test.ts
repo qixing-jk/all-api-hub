@@ -900,16 +900,45 @@ describe("newApiService", () => {
       expect(result.base_url).toBe(account.baseUrl)
     })
 
-    it("should throw error when no models available", async () => {
+    it("should keep models empty when only token metadata exists and upstream loading fails", async () => {
       const { prepareChannelFormData } = await import(
         "~/services/managedSites/providers/newApi"
       )
       const account = createMockDisplaySiteData()
-      const token = createMockApiToken()
+      const token = createMockApiToken({ models: "gpt-4o-mini,gpt-4o" })
 
-      mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce([])
+      mockGetPreferences.mockResolvedValueOnce(
+        createMockUserPreferencesWithNewApi(),
+      )
+      mockFetchOpenAICompatibleModelIds.mockRejectedValueOnce(
+        new Error("Upstream failed"),
+      )
+      mockFetchSiteUserGroups.mockResolvedValueOnce(["default"])
 
-      await expect(prepareChannelFormData(account, token)).rejects.toThrow()
+      const result = await prepareChannelFormData(account, token)
+
+      expect(result.models).toEqual([])
+    })
+
+    it("should keep models empty when only account-level fallback models exist", async () => {
+      const { prepareChannelFormData } = await import(
+        "~/services/managedSites/providers/newApi"
+      )
+      const account = createMockDisplaySiteData()
+      const token = createMockApiToken({ models: "" })
+
+      mockGetPreferences.mockResolvedValueOnce(
+        createMockUserPreferencesWithNewApi(),
+      )
+      mockFetchOpenAICompatibleModelIds.mockRejectedValueOnce(
+        new Error("Upstream failed"),
+      )
+      mockFetchAccountAvailableModels.mockResolvedValueOnce(["claude-3-opus"])
+      mockFetchSiteUserGroups.mockResolvedValueOnce(["default"])
+
+      const result = await prepareChannelFormData(account, token)
+
+      expect(result.models).toEqual([])
     })
 
     it("should use the first target group when default is unavailable", async () => {

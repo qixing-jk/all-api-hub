@@ -76,6 +76,7 @@
   "validation": {
     "baseUrlRequired": "Base URL is required for this channel type",
     "keyRequired": "API key is required",
+    "modelsRequired": "At least one model is required",
     "nameRequired": "Channel name is required"
   },
   "warnings": {
@@ -90,6 +91,10 @@
     "exactDuplicate": {
       "description": "A duplicate candidate channel {{channelName}} has now been confirmed in the managed site. If you want to avoid duplication, adjust the name, models, or key before saving; otherwise, you can still continue creating the channel.",
       "title": "Confirmed duplicate channel"
+    },
+    "modelsPrefillFailed": {
+      "description": "No usable upstream model list was loaded for this API key. You can still create the channel, but enter and confirm the models manually before saving.",
+      "title": "Models Require Manual Input"
     },
     "reviewSuggested": {
       "description": "Candidate channels were found under the same upstream URL or model setup, but an exact duplicate could not be confirmed automatically. You can still continue creating the channel, but review the name, models, and key before saving.",

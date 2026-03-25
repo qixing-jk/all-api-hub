@@ -76,6 +76,7 @@
   "validation": {
     "baseUrlRequired": "このチャネル種別では Base URL が必須です",
     "keyRequired": "API キーは必須です",
+    "modelsRequired": "少なくとも 1 つのモデルを入力してください",
     "nameRequired": "チャネル名は必須です"
   },
   "warnings": {
@@ -90,6 +91,10 @@
     "exactDuplicate": {
       "description": "管理対象サイトに重複候補チャネル {{channelName}} が存在することが確認されました。重複を避けたい場合は保存前に名前、モデル、キーを調整してください。重複したままでも作成を続けることはできます。",
       "title": "重複チャネルが確認されました"
+    },
+    "modelsPrefillFailed": {
+      "description": "この API キーの上流モデル一覧を取得できませんでした。チャネル作成は続行できますが、保存前にモデルを手動で入力して確認してください。",
+      "title": "モデルを手動入力してください"
     },
     "reviewSuggested": {
       "description": "同じ上流 URL またはモデル構成に近い候補チャネルが見つかりましたが、重複かどうかはまだ自動で確定できません。作成は続行できますが、保存前に名前、モデル、キーを確認してください。",

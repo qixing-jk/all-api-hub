@@ -1,4 +1,5 @@
 import type { FormEvent } from "react"
+import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useChannelForm } from "~/components/dialogs/ChannelDialog/hooks/useChannelForm"
@@ -14,6 +15,12 @@ import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
 vi.mock("~/services/managedSites/managedSiteService", () => ({
   getManagedSiteService: vi.fn(),
+}))
+
+vi.mock("react-hot-toast", () => ({
+  default: {
+    error: vi.fn(),
+  },
 }))
 
 const buildManagedSiteChannel = (
@@ -76,6 +83,50 @@ describe("useChannelForm", () => {
       createChannel: mockCreateChannel,
       updateChannel: mockUpdateChannel,
     } as any)
+  })
+
+  it("requires at least one model before an add form becomes submittable", async () => {
+    const onClose = vi.fn()
+    const preventDefault = vi.fn()
+
+    const { result } = renderHook(() =>
+      useChannelForm({
+        mode: DIALOG_MODES.ADD,
+        channel: null,
+        isOpen: true,
+        onClose,
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.formData.name).toBe("")
+    })
+
+    await act(async () => {
+      result.current.updateField("name", "Alpha")
+      result.current.updateField("key", "sk-test")
+    })
+
+    expect(result.current.isFormValid).toBe(false)
+
+    await act(async () => {
+      await result.current.handleSubmit({
+        preventDefault,
+      } as unknown as FormEvent)
+    })
+
+    expect(preventDefault).toHaveBeenCalledTimes(1)
+    expect(mockBuildChannelPayload).not.toHaveBeenCalled()
+    expect(mockCreateChannel).not.toHaveBeenCalled()
+    expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
+      "channelDialog:validation.modelsRequired",
+    )
+
+    await act(async () => {
+      result.current.updateField("models", ["gpt-4o"])
+    })
+
+    expect(result.current.isFormValid).toBe(true)
   })
 
   it("falls back to cloned default groups when an existing channel group is empty", async () => {
@@ -184,6 +235,7 @@ describe("useChannelForm", () => {
     await act(async () => {
       result.current.updateField("name", "Alpha")
       result.current.updateField("key", "sk-test")
+      result.current.updateField("models", ["gpt-4o"])
     })
 
     await act(async () => {

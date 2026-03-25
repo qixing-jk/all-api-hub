@@ -10,9 +10,9 @@ import { ensureAccountApiToken } from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import type { ApiResponse } from "~/services/apiService/common/type"
 import * as octopusApi from "~/services/apiService/octopus"
-import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompatible"
 import type { ManagedSiteConfig } from "~/services/managedSites/managedSiteService"
 import { findManagedSiteChannelByComparableInputs } from "~/services/managedSites/utils/channelMatching"
+import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
 import {
   userPreferences,
   type UserPreferences,
@@ -390,17 +390,7 @@ export async function fetchAvailableModels(
     candidateSources.push(tokenModelList)
   }
 
-  try {
-    const upstreamModels = await fetchOpenAICompatibleModelIds({
-      baseUrl: account.baseUrl,
-      apiKey: token.key,
-    })
-    if (upstreamModels?.length > 0) {
-      candidateSources.push(upstreamModels)
-    }
-  } catch (error) {
-    logger.warn("Failed to fetch upstream models", error)
-  }
+  candidateSources.push(await fetchTokenScopedModels(account, token))
 
   return normalizeList(candidateSources.flat())
 }
@@ -426,14 +416,7 @@ export async function prepareChannelFormData(
   account: DisplaySiteData,
   token: ApiToken | AccountToken,
 ): Promise<ChannelFormData> {
-  const availableModels = await fetchOpenAICompatibleModelIds({
-    baseUrl: account.baseUrl,
-    apiKey: token.key,
-  })
-
-  if (!availableModels.length) {
-    throw new Error(t("messages:octopus.noAnyModels"))
-  }
+  const availableModels = await fetchTokenScopedModels(account, token)
 
   return {
     name: buildChannelName(account, token),

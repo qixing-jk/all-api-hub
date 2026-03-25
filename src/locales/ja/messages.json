@@ -67,7 +67,6 @@
     "configMissing": "先に基本設定で Done Hub のアドレス、管理者トークン、ユーザー ID を設定してください",
     "importFailed": "インポートに失敗しました。不明なエラーが発生しました",
     "importSuccess": "新しいチャネル {{channelName}} を正常にインポートしました",
-    "noAnyModels": "利用可能なモデルがありません",
     "noChannelsToSync": "同期するチャネルがありません"
   },
   "errors": {
@@ -104,7 +103,6 @@
     "configMissing": "先に基本設定で New API のアドレス、管理者トークン、ユーザー ID を設定してください",
     "importFailed": "インポートに失敗しました。不明なエラーが発生しました",
     "importSuccess": "新しいチャネル {{channelName}} を正常にインポートしました",
-    "noAnyModels": "利用可能なモデルがありません",
     "noChannelsToSync": "同期するチャネルがありません"
   },
   "octopus": {
@@ -113,7 +111,6 @@
     "corsError": "これは CORS 設定が原因の可能性があります。Octopus 設定の CORS ホワイトリストを確認してください。",
     "importFailed": "インポートに失敗しました。不明なエラーが発生しました",
     "importSuccess": "新しいチャネル {{channelName}} を正常にインポートしました",
-    "noAnyModels": "利用可能なモデルがありません",
     "noChannelsToSync": "同期するチャネルがありません"
   },
   "operations": {
@@ -180,7 +177,6 @@
     "configMissing": "先に基本設定で Veloera のアドレス、管理者トークン、ユーザー ID を設定してください",
     "importFailed": "インポートに失敗しました。不明なエラーが発生しました",
     "importSuccess": "新しいチャネル {{channelName}} を正常にインポートしました",
-    "noAnyModels": "利用可能なモデルがありません",
     "noChannelsToSync": "同期するチャネルがありません"
   },
   "warnings": {

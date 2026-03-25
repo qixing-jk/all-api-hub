@@ -33,6 +33,9 @@ export function parseTokenModelAllowList(
 const getTokenActiveModelAllowList = (
   token: Pick<ApiToken, "model_limits_enabled" | "model_limits" | "models">,
 ): string[] | null => {
+  // Some compatible backends expose the token's own allow-list under `models`
+  // instead of `model_limits`. This remains token-scoped restriction metadata,
+  // not an account-wide model catalog or a live upstream fetch result.
   if (typeof token.models === "string" && token.models.trim().length > 0) {
     return parseTokenModelAllowList(token.models)
   }

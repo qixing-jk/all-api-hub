@@ -67,7 +67,6 @@
     "configMissing": "Please configure Done Hub address, admin token, and user ID in basic settings first",
     "importFailed": "Import failed, an unknown error occurred",
     "importSuccess": "Successfully imported new channel {{channelName}}",
-    "noAnyModels": "No models available",
     "noChannelsToSync": "No channels to sync"
   },
   "errors": {
@@ -104,7 +103,6 @@
     "configMissing": "Please configure New API address, admin token, and user ID in basic settings first",
     "importFailed": "Import failed, an unknown error occurred",
     "importSuccess": "Successfully imported new channel {{channelName}}",
-    "noAnyModels": "No models available",
     "noChannelsToSync": "No channels to sync"
   },
   "octopus": {
@@ -113,7 +111,6 @@
     "corsError": "This may be caused by CORS configuration. Please check the CORS whitelist setting in Octopus settings.",
     "importFailed": "Import failed, an unknown error occurred",
     "importSuccess": "Successfully imported new channel {{channelName}}",
-    "noAnyModels": "No models available",
     "noChannelsToSync": "No channels to sync"
   },
   "operations": {
@@ -182,7 +179,6 @@
     "configMissing": "Please configure Veloera address, admin token, and user ID in basic settings first",
     "importFailed": "Import failed, an unknown error occurred",
     "importSuccess": "Successfully imported new channel {{channelName}}",
-    "noAnyModels": "No models available",
     "noChannelsToSync": "No channels to sync"
   },
   "warnings": {

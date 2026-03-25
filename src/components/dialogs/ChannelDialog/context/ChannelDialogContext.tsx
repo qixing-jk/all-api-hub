@@ -25,6 +25,7 @@ interface ChannelDialogState {
   initialValues?: Partial<ChannelFormData>
   initialModels?: string[]
   initialGroups?: string[]
+  showModelPrefillWarning?: boolean
   advisoryWarning?: ChannelDialogAdvisoryWarning | null
   onRequestRealKey?:
     | ((options: { setKey: (key: string) => void }) => Promise<void>)
@@ -46,6 +47,7 @@ interface ChannelDialogContextValue {
     initialValues?: Partial<ChannelFormData>
     initialModels?: string[]
     initialGroups?: string[]
+    showModelPrefillWarning?: boolean
     advisoryWarning?: ChannelDialogAdvisoryWarning | null
     onRequestRealKey?: (options: {
       setKey: (key: string) => void
@@ -91,6 +93,7 @@ export function ChannelDialogProvider({
       initialValues?: Partial<ChannelFormData>
       initialModels?: string[]
       initialGroups?: string[]
+      showModelPrefillWarning?: boolean
       advisoryWarning?: ChannelDialogAdvisoryWarning | null
       onRequestRealKey?: (options: {
         setKey: (key: string) => void
@@ -104,6 +107,7 @@ export function ChannelDialogProvider({
         initialValues: config.initialValues,
         initialModels: config.initialModels,
         initialGroups: config.initialGroups,
+        showModelPrefillWarning: config.showModelPrefillWarning ?? false,
         advisoryWarning: config.advisoryWarning ?? null,
         onRequestRealKey: config.onRequestRealKey ?? null,
         onSuccessCallback: config.onSuccess,

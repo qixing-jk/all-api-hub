@@ -67,7 +67,6 @@
     "configMissing": "請先在基礎設定中配置 Done Hub 地址、管理員令牌和使用者 ID",
     "importFailed": "匯入失敗，發生未知錯誤",
     "importSuccess": "成功匯入新渠道 {{channelName}}",
-    "noAnyModels": "暫無可用模型",
     "noChannelsToSync": "沒有可同步的渠道"
   },
   "errors": {
@@ -104,7 +103,6 @@
     "configMissing": "請先在基礎設定中配置 New API 地址、管理員令牌和使用者 ID",
     "importFailed": "匯入失敗，發生未知錯誤",
     "importSuccess": "成功匯入新渠道 {{channelName}}",
-    "noAnyModels": "暫無可用模型",
     "noChannelsToSync": "沒有可同步的渠道"
   },
   "octopus": {
@@ -113,7 +111,6 @@
     "corsError": "這可能是 CORS 配置問題。請在 Octopus 設定中檢查 CORS 白名單配置。",
     "importFailed": "匯入失敗，發生未知錯誤",
     "importSuccess": "成功匯入新渠道 {{channelName}}",
-    "noAnyModels": "暫無可用模型",
     "noChannelsToSync": "沒有可同步的渠道"
   },
   "operations": {
@@ -180,7 +177,6 @@
     "configMissing": "請先在基礎設定中配置 Veloera 地址、管理員令牌和使用者 ID",
     "importFailed": "匯入失敗，發生未知錯誤",
     "importSuccess": "成功匯入新渠道 {{channelName}}",
-    "noAnyModels": "暫無可用模型",
     "noChannelsToSync": "沒有可同步的渠道"
   },
   "warnings": {

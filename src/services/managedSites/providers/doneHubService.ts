@@ -6,11 +6,11 @@ import { ensureAccountApiToken } from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { getApiService } from "~/services/apiService"
 import { fetchChannel as fetchDoneHubChannel } from "~/services/apiService/doneHub"
-import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompatible"
 import {
   findManagedSiteChannelByComparableInputs,
   findManagedSiteChannelsByBaseUrlAndModels,
 } from "~/services/managedSites/utils/channelMatching"
+import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
 import {
   UserPreferences,
   userPreferences,
@@ -246,17 +246,7 @@ export async function fetchAvailableModels(
     candidateSources.push(tokenModelList)
   }
 
-  try {
-    const upstreamModels = await fetchOpenAICompatibleModelIds({
-      baseUrl: account.baseUrl,
-      apiKey: token.key,
-    })
-    if (upstreamModels && upstreamModels.length > 0) {
-      candidateSources.push(upstreamModels)
-    }
-  } catch (error) {
-    logger.warn("Failed to fetch upstream models", error)
-  }
+  candidateSources.push(await fetchTokenScopedModels(account, token))
 
   try {
     const fallbackModels = await getApiService(
@@ -303,14 +293,7 @@ export async function prepareChannelFormData(
   account: DisplaySiteData,
   token: ApiToken | AccountToken,
 ): Promise<ChannelFormData> {
-  const availableModels = await fetchOpenAICompatibleModelIds({
-    baseUrl: account.baseUrl,
-    apiKey: token.key,
-  })
-
-  if (!availableModels.length) {
-    throw new Error(t("messages:donehub.noAnyModels"))
-  }
+  const availableModels = await fetchTokenScopedModels(account, token)
 
   const resolvedGroups = await resolveDefaultChannelGroups({
     siteType: DONE_HUB,

@@ -5,7 +5,6 @@ import { NEW_API } from "~/constants/siteType"
 import { ensureAccountApiToken } from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { getApiService } from "~/services/apiService"
-import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompatible"
 import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MatchResolutionUnresolvedError,
@@ -18,6 +17,7 @@ import {
   findManagedSiteChannelByComparableInputs,
   findManagedSiteChannelsByBaseUrlAndModels,
 } from "~/services/managedSites/utils/channelMatching"
+import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
 import { ApiToken, AuthTypeEnum, DisplaySiteData, SiteAccount } from "~/types"
 import type { AccountToken } from "~/types"
 import type {
@@ -298,17 +298,7 @@ export async function fetchAvailableModels(
     candidateSources.push(tokenModelList)
   }
 
-  try {
-    const upstreamModels = await fetchOpenAICompatibleModelIds({
-      baseUrl: account.baseUrl,
-      apiKey: token.key,
-    })
-    if (upstreamModels && upstreamModels.length > 0) {
-      candidateSources.push(upstreamModels)
-    }
-  } catch (error) {
-    logger.warn("Failed to fetch upstream models", error)
-  }
+  candidateSources.push(await fetchTokenScopedModels(account, token))
 
   try {
     const fallbackModels = await getApiService(
@@ -355,14 +345,9 @@ export async function prepareChannelFormData(
   account: DisplaySiteData,
   token: ApiToken | AccountToken,
 ): Promise<ChannelFormData> {
-  const availableModels = await fetchOpenAICompatibleModelIds({
-    baseUrl: account.baseUrl,
-    apiKey: token.key,
-  })
-
-  if (!availableModels.length) {
-    throw new Error(t("messages:newapi.noAnyModels"))
-  }
+  // Channel import prefill must reflect only the selected key's live upstream
+  // model list; on failure we keep the dialog editable and require manual input.
+  const availableModels = await fetchTokenScopedModels(account, token)
 
   const resolvedGroups = await resolveDefaultChannelGroups({
     siteType: NEW_API,

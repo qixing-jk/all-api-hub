@@ -76,6 +76,7 @@
   "validation": {
     "baseUrlRequired": "此渠道类型需要填写基础 URL",
     "keyRequired": "API 密钥必填",
+    "modelsRequired": "请至少填写一个模型",
     "nameRequired": "渠道名称必填"
   },
   "warnings": {
@@ -90,6 +91,10 @@
     "exactDuplicate": {
       "description": "已确认管理站点中存在重复候选渠道 {{channelName}}。如需避免重复，请先调整名称、模型或 key；若确认仍要保留重复渠道，也可以继续创建。",
       "title": "已确认存在重复渠道"
+    },
+    "modelsPrefillFailed": {
+      "description": "未能获取该密钥的上游模型列表。你仍可继续创建渠道，但请在保存前手动填写并确认模型。",
+      "title": "需要手动填写模型"
     },
     "reviewSuggested": {
       "description": "已发现与当前上游地址或模型配置接近的候选渠道，但尚不能自动确认是否为重复渠道。你仍可以继续创建，请在保存前检查名称、模型和 key。",

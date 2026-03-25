@@ -76,6 +76,7 @@
   "validation": {
     "baseUrlRequired": "此渠道型別需要填寫基礎 URL",
     "keyRequired": "API 金鑰必填",
+    "modelsRequired": "請至少填寫一個模型",
     "nameRequired": "渠道名稱必填"
   },
   "warnings": {
@@ -90,6 +91,10 @@
     "exactDuplicate": {
       "description": "已確認管理站點中存在重複候選渠道 {{channelName}}。如需避免重複，請先調整名稱、模型或 key；若確認仍要保留重複渠道，也可以繼續建立。",
       "title": "已確認存在重複渠道"
+    },
+    "modelsPrefillFailed": {
+      "description": "未能取得此金鑰的上游模型清單。你仍可繼續建立渠道，但請在儲存前手動填寫並確認模型。",
+      "title": "需要手動填寫模型"
     },
     "reviewSuggested": {
       "description": "已發現與目前上游位址或模型設定接近的候選渠道，但尚不能自動確認是否為重複渠道。你仍可以繼續建立，請在儲存前檢查名稱、模型和 key。",

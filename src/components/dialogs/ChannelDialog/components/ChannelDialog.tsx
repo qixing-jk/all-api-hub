@@ -59,6 +59,7 @@ export interface ChannelDialogProps {
   initialValues?: Partial<ChannelFormData>
   initialModels?: string[]
   initialGroups?: string[]
+  showModelPrefillWarning?: boolean
   advisoryWarning?: ChannelDialogAdvisoryWarning | null
   onRequestRealKey?: (options: {
     setKey: (key: string) => void
@@ -77,6 +78,7 @@ export interface ChannelDialogProps {
  * @param props.initialValues Pre-filled form values when reusing data.
  * @param props.initialModels Models to seed multi-select state.
  * @param props.initialGroups Groups to seed multi-select state.
+ * @param props.showModelPrefillWarning Whether to show a non-blocking warning that automatic model prefill failed.
  * @param props.advisoryWarning Optional non-blocking duplicate-risk warning shown above the form.
  * @param props.onRequestRealKey Optional edit-mode hook that can load the real
  * managed-site key into the dialog when the list payload only provides a masked value.
@@ -90,6 +92,7 @@ export function ChannelDialog({
   initialValues,
   initialModels,
   initialGroups,
+  showModelPrefillWarning = false,
   advisoryWarning,
   onRequestRealKey,
 }: ChannelDialogProps) {
@@ -659,6 +662,16 @@ export function ChannelDialog({
               </div>
             )}
           </div>
+          {showModelPrefillWarning ? (
+            <Alert
+              variant="warning"
+              title={t("channelDialog:warnings.modelsPrefillFailed.title")}
+              description={t(
+                "channelDialog:warnings.modelsPrefillFailed.description",
+              )}
+              className="mb-3"
+            />
+          ) : null}
           <CompactMultiSelect
             options={availableModels}
             selected={formData.models}

@@ -355,4 +355,25 @@ describe("ChannelDialog advisory verification action", () => {
       }),
     ).toBeNull()
   })
+
+  it("shows a non-blocking warning when automatic model prefill failed", async () => {
+    render(
+      <ChannelDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        showModelPrefillWarning={true}
+      />,
+    )
+
+    expect(
+      await screen.findByText(
+        "channelDialog:warnings.modelsPrefillFailed.title",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      await screen.findByText(
+        "channelDialog:warnings.modelsPrefillFailed.description",
+      ),
+    ).toBeInTheDocument()
+  })
 })
