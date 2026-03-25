@@ -17,6 +17,7 @@ import {
   findManagedSiteChannelByComparableInputs,
   findManagedSiteChannelsByBaseUrlAndModels,
 } from "~/services/managedSites/utils/channelMatching"
+import { fetchManagedSiteAvailableModels } from "~/services/managedSites/utils/fetchManagedSiteAvailableModels"
 import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
 import { ApiToken, AuthTypeEnum, DisplaySiteData, SiteAccount } from "~/types"
 import type { AccountToken } from "~/types"
@@ -35,7 +36,7 @@ import type {
 } from "~/types/serviceResponse"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
-import { normalizeList, parseDelimitedList } from "~/utils/core/string"
+import { normalizeList } from "~/utils/core/string"
 import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
 import { t } from "~/utils/i18n/core"
 
@@ -285,47 +286,13 @@ const getNewApiManagedSessionConfig = async (
 
 /**
  * 获取账号支持的模型列表。
- * 优先使用 API 密钥携带的模型列表，回退到上游接口与账号可用模型。
+ * 仅基于实时探测结果返回模型，不读取 token.models 这类静态限制元数据。
  */
 export async function fetchAvailableModels(
   account: DisplaySiteData,
   token: ApiToken,
 ): Promise<string[]> {
-  const candidateSources: string[][] = []
-
-  const tokenModelList = parseDelimitedList(token.models)
-  if (tokenModelList.length > 0) {
-    candidateSources.push(tokenModelList)
-  }
-
-  const { models: tokenScopedModels } = await fetchTokenScopedModels(
-    account,
-    token,
-  )
-  candidateSources.push(tokenScopedModels)
-
-  try {
-    const fallbackModels = await getApiService(
-      account.siteType,
-    ).fetchAccountAvailableModels({
-      baseUrl: account.baseUrl,
-      accountId: account.id,
-      auth: {
-        authType: account.authType,
-        userId: account.userId,
-        accessToken: account.token,
-        cookie: account.cookieAuthSessionCookie,
-      },
-    })
-    if (fallbackModels && fallbackModels.length > 0) {
-      candidateSources.push(fallbackModels)
-    }
-  } catch (error) {
-    logger.warn("Failed to fetch fallback models", error)
-  }
-
-  const merged = candidateSources.flat()
-  return normalizeList(merged)
+  return await fetchManagedSiteAvailableModels(account, token)
 }
 
 /**

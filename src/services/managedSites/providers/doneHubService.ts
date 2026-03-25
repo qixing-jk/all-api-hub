@@ -10,6 +10,7 @@ import {
   findManagedSiteChannelByComparableInputs,
   findManagedSiteChannelsByBaseUrlAndModels,
 } from "~/services/managedSites/utils/channelMatching"
+import { fetchManagedSiteAvailableModels } from "~/services/managedSites/utils/fetchManagedSiteAvailableModels"
 import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
 import {
   UserPreferences,
@@ -32,7 +33,7 @@ import type {
 } from "~/types/serviceResponse"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
-import { normalizeList, parseDelimitedList } from "~/utils/core/string"
+import { normalizeList } from "~/utils/core/string"
 import { t } from "~/utils/i18n/core"
 
 import { resolveDefaultChannelGroups } from "./defaultChannelGroups"
@@ -239,41 +240,7 @@ export async function fetchAvailableModels(
   account: DisplaySiteData,
   token: ApiToken,
 ): Promise<string[]> {
-  const candidateSources: string[][] = []
-
-  const tokenModelList = parseDelimitedList(token.models)
-  if (tokenModelList.length > 0) {
-    candidateSources.push(tokenModelList)
-  }
-
-  const { models: tokenScopedModels } = await fetchTokenScopedModels(
-    account,
-    token,
-  )
-  candidateSources.push(tokenScopedModels)
-
-  try {
-    const fallbackModels = await getApiService(
-      account.siteType,
-    ).fetchAccountAvailableModels({
-      baseUrl: account.baseUrl,
-      accountId: account.id,
-      auth: {
-        authType: account.authType,
-        userId: account.userId,
-        accessToken: account.token,
-        cookie: account.cookieAuthSessionCookie,
-      },
-    })
-    if (fallbackModels && fallbackModels.length > 0) {
-      candidateSources.push(fallbackModels)
-    }
-  } catch (error) {
-    logger.warn("Failed to fetch fallback models", error)
-  }
-
-  const merged = candidateSources.flat()
-  return normalizeList(merged)
+  return await fetchManagedSiteAvailableModels(account, token)
 }
 
 /**

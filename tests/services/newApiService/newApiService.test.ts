@@ -718,20 +718,21 @@ describe("newApiService", () => {
   // ========================================================================
 
   describe("fetchAvailableModels", () => {
-    it("should return token models when available", async () => {
+    it("should ignore token.models metadata and return live upstream models", async () => {
       const { fetchAvailableModels } = await import(
         "~/services/managedSites/providers/newApi"
       )
       const account = createMockDisplaySiteData()
-      const token = createMockApiToken({ models: "gpt-4,gpt-3.5-turbo" })
+      const token = createMockApiToken({ models: "declared-a,declared-b" })
+
+      mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce(["gpt-4o-mini"])
 
       const result = await fetchAvailableModels(account, token)
 
-      expect(result).toContain("gpt-4")
-      expect(result).toContain("gpt-3.5-turbo")
+      expect(result).toEqual(["gpt-4o-mini"])
     })
 
-    it("should fallback to upstream models when token models empty", async () => {
+    it("should return upstream models when the live probe succeeds", async () => {
       const { fetchAvailableModels } = await import(
         "~/services/managedSites/providers/newApi"
       )
@@ -771,24 +772,22 @@ describe("newApiService", () => {
         "~/services/managedSites/providers/newApi"
       )
       const account = createMockDisplaySiteData()
-      const token = createMockApiToken({ models: "gpt-4,gpt-3.5-turbo" })
+      const token = createMockApiToken({ models: "declared-only-model" })
 
       mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce([
         "gpt-4",
         "gpt-4-turbo",
       ])
-      mockFetchAccountAvailableModels.mockResolvedValueOnce([
-        "gpt-3.5-turbo",
-        "gpt-4",
-      ])
+      mockFetchAccountAvailableModels.mockResolvedValueOnce(["gpt-4o", "gpt-4"])
 
       const result = await fetchAvailableModels(account, token)
 
       const uniqueModels = new Set(result)
       expect(uniqueModels.size).toBe(result.length) // No duplicates
       expect(result).toContain("gpt-4")
-      expect(result).toContain("gpt-3.5-turbo")
       expect(result).toContain("gpt-4-turbo")
+      expect(result).toContain("gpt-4o")
+      expect(result).not.toContain("declared-only-model")
     })
 
     it("should handle errors swallowing and continue", async () => {
@@ -810,19 +809,23 @@ describe("newApiService", () => {
       expect(result).toEqual([])
     })
 
-    it("should normalize models list", async () => {
+    it("should normalize models returned by live sources", async () => {
       const { fetchAvailableModels } = await import(
         "~/services/managedSites/providers/newApi"
       )
       const account = createMockDisplaySiteData()
-      const token = createMockApiToken({
-        models: "  gpt-4  ,  gpt-3.5-turbo  , ",
-      })
+      const token = createMockApiToken({ models: "ignored-model" })
+
+      mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce([
+        "  gpt-4  ",
+        "gpt-3.5-turbo",
+        "",
+        "gpt-4",
+      ])
 
       const result = await fetchAvailableModels(account, token)
 
-      expect(result).toContain("gpt-4")
-      expect(result).toContain("gpt-3.5-turbo")
+      expect(result).toEqual(["gpt-4", "gpt-3.5-turbo"])
     })
   })
 
@@ -1788,8 +1791,8 @@ describe("newApiService", () => {
   // Helper Functions
   // ========================================================================
 
-  describe("parseDelimitedList (via fetchAvailableModels)", () => {
-    it("should parse comma-delimited string", async () => {
+  describe("fetchAvailableModels metadata handling", () => {
+    it("should not fall back to token.models when live sources are unavailable", async () => {
       const { fetchAvailableModels } = await import(
         "~/services/managedSites/providers/newApi"
       )
@@ -1798,11 +1801,14 @@ describe("newApiService", () => {
         models: "gpt-4, gpt-3.5-turbo , claude-3",
       })
 
+      mockFetchOpenAICompatibleModelIds.mockRejectedValueOnce(
+        new Error("Upstream failed"),
+      )
+      mockFetchAccountAvailableModels.mockResolvedValueOnce([])
+
       const result = await fetchAvailableModels(account, token)
 
-      expect(result).toContain("gpt-4")
-      expect(result).toContain("gpt-3.5-turbo")
-      expect(result).toContain("claude-3")
+      expect(result).toEqual([])
     })
 
     it("should handle empty models string", async () => {

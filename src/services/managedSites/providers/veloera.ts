@@ -7,6 +7,7 @@ import { accountStorage } from "~/services/accounts/accountStorage"
 import { getApiService } from "~/services/apiService"
 import { fetchChannel as fetchVeloeraChannel } from "~/services/apiService/veloera"
 import { findManagedSiteChannelByComparableInputs } from "~/services/managedSites/utils/channelMatching"
+import { fetchManagedSiteAvailableModels } from "~/services/managedSites/utils/fetchManagedSiteAvailableModels"
 import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
 import { ApiToken, AuthTypeEnum, DisplaySiteData, SiteAccount } from "~/types"
 import type { AccountToken } from "~/types"
@@ -217,41 +218,7 @@ export async function fetchAvailableModels(
   account: DisplaySiteData,
   token: ApiToken,
 ): Promise<string[]> {
-  const candidateSources: string[][] = []
-
-  const tokenModelList = parseDelimitedList(token.models)
-  if (tokenModelList.length > 0) {
-    candidateSources.push(tokenModelList)
-  }
-
-  const { models: tokenScopedModels } = await fetchTokenScopedModels(
-    account,
-    token,
-  )
-  candidateSources.push(tokenScopedModels)
-
-  try {
-    const fallbackModels = await getApiService(
-      account.siteType,
-    ).fetchAccountAvailableModels({
-      baseUrl: account.baseUrl,
-      accountId: account.id,
-      auth: {
-        authType: account.authType,
-        userId: account.userId,
-        accessToken: account.token,
-        cookie: account.cookieAuthSessionCookie,
-      },
-    })
-    if (fallbackModels && fallbackModels.length > 0) {
-      candidateSources.push(fallbackModels)
-    }
-  } catch (error) {
-    logger.warn("Failed to fetch fallback models", error)
-  }
-
-  const merged = candidateSources.flat()
-  return normalizeList(merged)
+  return await fetchManagedSiteAvailableModels(account, token)
 }
 
 /**
