@@ -246,5 +246,6 @@ export const Z_INDEX = {
   sidebar: "z-50",
   floating: "z-[60]",
   modal: "z-[70]",
+  modalFloating: "z-[75]",
   tooltip: "z-[80]",
 } as const

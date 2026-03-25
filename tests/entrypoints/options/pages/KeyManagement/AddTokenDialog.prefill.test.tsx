@@ -1,9 +1,10 @@
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { Z_INDEX } from "~/components/ui"
 import AddTokenDialog from "~/features/KeyManagement/components/AddTokenDialog"
 import { AuthTypeEnum } from "~/types"
-import { render, screen, waitFor } from "~~/tests/test-utils/render"
+import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 
 const {
   createApiTokenMock,
@@ -182,6 +183,67 @@ describe("AddTokenDialog prefill", () => {
       expect(toastErrorMock).toHaveBeenCalledWith(
         "keyManagement:dialog.createFailed",
       )
+    })
+  })
+
+  it("keeps the group selector popover above the modal and allows changing the group", async () => {
+    fetchAccountAvailableModelsMock.mockResolvedValueOnce(["gpt-4", "gpt-3.5"])
+    fetchUserGroupsMock.mockResolvedValueOnce({
+      default: { desc: "default", ratio: 1 },
+      level3: { desc: "User Group", ratio: 1.5 },
+    })
+    createApiTokenMock.mockResolvedValueOnce(true)
+
+    const user = userEvent.setup()
+
+    render(
+      <AddTokenDialog
+        isOpen={true}
+        onClose={() => {}}
+        availableAccounts={[ACCOUNT]}
+        preSelectedAccountId={ACCOUNT.id}
+        createPrefill={{ modelId: "gpt-4", defaultName: "layering test token" }}
+      />,
+    )
+
+    const modal = await screen.findByRole("dialog")
+    expect(modal).toHaveClass(Z_INDEX.modal)
+
+    await screen.findByLabelText(/keyManagement:dialog\.tokenName/)
+
+    const groupField = screen
+      .getByText("keyManagement:dialog.groupLabel")
+      .closest("div")
+    expect(groupField).toBeTruthy()
+
+    const groupTrigger = within(groupField as HTMLElement).getByRole("combobox")
+    await user.click(groupTrigger)
+
+    const popoverContent = document.querySelector(
+      '[data-slot="popover-content"]',
+    )
+    expect(popoverContent).toBeInTheDocument()
+    expect(popoverContent).toHaveClass(Z_INDEX.modalFloating)
+    expect(popoverContent).not.toHaveClass(Z_INDEX.floating)
+
+    await user.click(
+      await screen.findByText(
+        "level3 - User Group (keyManagement:dialog.groupRate 1.5)",
+      ),
+    )
+
+    expect(groupTrigger).toHaveTextContent("level3 - User Group")
+
+    await user.click(
+      screen.getByRole("button", { name: "keyManagement:dialog.createToken" }),
+    )
+
+    await waitFor(() => {
+      expect(createApiTokenMock).toHaveBeenCalledTimes(1)
+    })
+
+    expect(createApiTokenMock.mock.calls[0]?.[1]).toMatchObject({
+      group: "level3",
     })
   })
 })

@@ -11,8 +11,9 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "~/components/ui/input-group"
-import { Z_INDEX } from "~/constants/designTokens"
 import { cn } from "~/lib/utils"
+
+import { useFloatingLayerClass } from "./floating-layer"
 
 const Combobox = ComboboxPrimitive.Root
 
@@ -122,6 +123,8 @@ function ComboboxContent({
     ComboboxPrimitive.Positioner.Props,
     "side" | "align" | "sideOffset" | "alignOffset" | "anchor"
   >) {
+  const floatingLayerClass = useFloatingLayerClass()
+
   return (
     <ComboboxPrimitive.Portal>
       <ComboboxPrimitive.Positioner
@@ -130,7 +133,7 @@ function ComboboxContent({
         align={align}
         alignOffset={alignOffset}
         anchor={anchor}
-        className={cn("isolate", Z_INDEX.floating)}
+        className={cn("isolate", floatingLayerClass)}
       >
         <ComboboxPrimitive.Popup
           data-slot="combobox-content"

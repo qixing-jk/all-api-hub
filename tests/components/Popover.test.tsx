@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 
+import { Z_INDEX } from "~/components/ui"
 import {
   Popover,
   PopoverContent,
@@ -25,5 +26,6 @@ describe("Popover", () => {
     const content = document.querySelector('[data-slot="popover-content"]')
     expect(content).toBeInTheDocument()
     expect(content).toHaveClass("w-(--radix-popper-anchor-width)")
+    expect(content).toHaveClass(Z_INDEX.floating)
   })
 })

@@ -6,6 +6,8 @@ import { Z_INDEX } from "~/constants/designTokens"
 import { cn } from "~/lib/utils"
 import { t } from "~/utils/i18n/core"
 
+import { FloatingLayerProvider } from "../floating-layer"
+
 type Size = "sm" | "md" | "lg"
 
 interface ModalProps {
@@ -99,37 +101,39 @@ export function Modal({
             leaveTo="opacity-0 scale-95 translate-y-4"
           >
             <Dialog.Panel className={panelBaseClass}>
-              {/* close button */}
-              {showCloseButton && (
-                <button
-                  onClick={onClose}
-                  aria-label={t("common:actions.close")}
-                  className="dark:hover:bg-dark-bg-tertiary dark:hover:text-dark-text-secondary absolute top-3 right-3 z-10 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 sm:top-4 sm:right-4"
-                >
-                  <XMarkIcon className="h-5 w-5" />
-                </button>
-              )}
+              <FloatingLayerProvider layer="modal-contained">
+                {/* close button */}
+                {showCloseButton && (
+                  <button
+                    onClick={onClose}
+                    aria-label={t("common:actions.close")}
+                    className="dark:hover:bg-dark-bg-tertiary dark:hover:text-dark-text-secondary absolute top-3 right-3 z-10 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 sm:top-4 sm:right-4"
+                  >
+                    <XMarkIcon className="h-5 w-5" />
+                  </button>
+                )}
 
-              {/* header area - 固定不滚动 */}
-              {header && (
-                <div className="dark:border-dark-bg-tertiary shrink-0 border-b border-gray-100 px-4 py-3 sm:px-6 sm:py-4">
-                  <div className="flex items-start justify-between">
-                    {header}
+                {/* header area - 固定不滚动 */}
+                {header && (
+                  <div className="dark:border-dark-bg-tertiary shrink-0 border-b border-gray-100 px-4 py-3 sm:px-6 sm:py-4">
+                    <div className="flex items-start justify-between">
+                      {header}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* content area - 可滚动 */}
-              <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 sm:space-y-4 sm:p-6">
-                {children}
-              </div>
-
-              {/* footer area - 固定不滚动 */}
-              {footer && (
-                <div className="dark:border-dark-bg-tertiary shrink-0 border-t border-gray-100 px-4 py-3 sm:px-6 sm:py-4">
-                  {footer}
+                {/* content area - 可滚动 */}
+                <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 sm:space-y-4 sm:p-6">
+                  {children}
                 </div>
-              )}
+
+                {/* footer area - 固定不滚动 */}
+                {footer && (
+                  <div className="dark:border-dark-bg-tertiary shrink-0 border-t border-gray-100 px-4 py-3 sm:px-6 sm:py-4">
+                    {footer}
+                  </div>
+                )}
+              </FloatingLayerProvider>
             </Dialog.Panel>
           </Transition.Child>
         </div>
