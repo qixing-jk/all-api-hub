@@ -71,11 +71,12 @@ Alternatives considered:
 
 ### Decision: Validate with a real modal-contained selector path
 
-The verification surface will include an interaction test that opens a modal-contained selector and changes the selected value.
+The verification surface will include both shared-primitive coverage for modal-hosted floating layers and an interaction test that opens a modal-contained selector and changes the selected value in the built extension runtime.
 
 Why:
 - Pure unit assertions on options are insufficient for layering regressions.
 - The token-management group selector already reproduces the problem and is a stable regression target.
+- A browser-runtime check reduces the risk that portal layering appears correct in jsdom but regresses in the actual extension page.
 
 ## Risks / Trade-offs
 
@@ -87,7 +88,7 @@ Why:
 
 - Add the missing modal-contained floating layer token.
 - Update shared floating primitives to use that token for modal-contained usage.
-- Verify modal-contained selectors and page-shell layering together.
+- Verify modal-contained selectors and page-shell layering together with shared primitive tests and a browser-runtime Add Token selector flow.
 - If a regression is discovered, rollback can target the new modal-contained floating token wiring without removing the broader `#658` page-shell ordering.
 
 ## Open Questions

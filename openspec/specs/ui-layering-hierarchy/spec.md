@@ -1,7 +1,7 @@
 # ui-layering-hierarchy Specification
 
 ## Purpose
-Ensure the Options page shell surfaces, sticky table layers, and shared floating primitives consume the same semantic layering source so their relative stacking order is predictable and configurable from the existing design-token system.
+Ensure the Options page shell surfaces, sticky table layers, and shared floating primitives consume the same semantic layering source so their relative stacking order is predictable and configurable from the existing design-token system, including modal-contained floating overlays that must remain interactive above their owning dialogs.
 
 ## Requirements
 ### Requirement: Options layering roles MUST use a shared semantic source
@@ -38,13 +38,30 @@ The system MUST keep sticky action columns visible during horizontal scrolling w
 
 ### Requirement: Shared floating primitives MUST participate in the same hierarchy across portal boundaries
 The system MUST assign common floating primitives such as dropdown, popover, select, combobox, dialog, and tooltip to shared semantic overlay tiers so their ordering remains predictable even when they render through portals or inside transformed or isolated containers.
+The system MUST distinguish page-level floating overlays from modal-contained floating overlays so page-level floaters stay below open modals while modal-contained floaters remain visible and interactive above the owning modal surface.
 
 #### Scenario: Portal-based floating content uses shared overlay tiers
 - **WHEN** a shared floating primitive renders its content through a portal
 - **THEN** the rendered content MUST use the shared semantic overlay tier assigned to its role
 - **AND** it MUST NOT rely on an unrelated hard-coded global z-index value
 
+#### Scenario: Modal-contained group selector remains selectable
+- **WHEN** a user opens a modal that contains a searchable group selector
+- **AND** the selector opens its floating overlay
+- **THEN** the floating overlay MUST render above the modal surface
+- **AND** the user MUST be able to select a non-default option from that overlay
+
+#### Scenario: Modal-contained floating layer is exercised in shared primitives
+- **WHEN** a shared select, dropdown menu, or combobox popup is opened from within a modal host
+- **THEN** the shared primitive MUST use the modal-contained floating layer
+- **AND** the validation suite MUST cover that shared behavior without relying only on one feature-specific dialog path
+
 #### Scenario: Modal and tooltip tiers remain ordered above ordinary floating content
 - **WHEN** ordinary floating content, dialog content, and tooltip content are all present in the application
 - **THEN** dialog or modal surfaces MUST render above ordinary floating content
 - **AND** tooltip surfaces MUST render above both ordinary floating content and modal surfaces
+
+#### Scenario: Browser-runtime Add Token flow remains clickable
+- **WHEN** the built extension opens the Add Token dialog in the Key Management page
+- **AND** the dialog-hosted group selector opens its floating overlay
+- **THEN** the user MUST be able to click and apply a non-default group selection in the real browser runtime
