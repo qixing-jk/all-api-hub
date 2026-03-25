@@ -366,6 +366,8 @@ export interface OpenAIAuthParams {
   baseUrl: string
   /** API Key */
   apiKey: string
+  /** Optional user id for New-API style compatibility headers */
+  userId?: number | string
 }
 
 // 上游模型列表（OpenAI格式）
