@@ -7,6 +7,7 @@ import {
   canManageDisplayAccountTokens,
   createDisplayAccountApiContext,
   fetchDisplayAccountTokens,
+  InvalidTokenPayloadError,
   resolveDisplayAccountTokenForSecret,
 } from "~/services/accounts/utils/apiServiceRequest"
 import { isTokenCompatibleWithModel } from "~/services/models/utils/tokenModelCompatibility"
@@ -34,7 +35,7 @@ type UseModelKeyDialogParams = {
  */
 export function useModelKeyDialog(params: UseModelKeyDialogParams) {
   const { isOpen, account, modelId, modelEnableGroups } = params
-  const { t } = useTranslation(["modelList", "common"])
+  const { t } = useTranslation(["modelList", "common", "messages"])
 
   const [tokens, setTokens] = useState<ApiToken[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -70,12 +71,23 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
     try {
       setTokens(await fetchDisplayAccountTokens(account))
     } catch (error) {
-      const errorMessage = getErrorMessage(error)
+      const errorMessage =
+        error instanceof InvalidTokenPayloadError
+          ? t("messages:errors.unknown")
+          : getErrorMessage(error)
       logger.error("Failed to load token list for model key dialog", {
         message: errorMessage,
         accountId: account.id,
         baseUrl: account.baseUrl,
         siteType: account.siteType,
+        ...(error instanceof InvalidTokenPayloadError
+          ? {
+              payloadAccountId: error.accountId,
+              payloadBaseUrl: error.baseUrl,
+              payloadSiteType: error.siteType,
+              payloadResponseType: error.responseType,
+            }
+          : {}),
       })
       setError(t("modelList:keyDialog.loadFailed", { error: errorMessage }))
     } finally {
@@ -182,7 +194,10 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
 
       toast.success(t("modelList:keyDialog.createSuccess"))
     } catch (error) {
-      const errorMessage = getErrorMessage(error)
+      const errorMessage =
+        error instanceof InvalidTokenPayloadError
+          ? t("messages:errors.unknown")
+          : getErrorMessage(error)
       logger.error(
         "Failed to refresh token list after create (model key dialog)",
         {
@@ -190,6 +205,14 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
           accountId: account.id,
           baseUrl: account.baseUrl,
           siteType: account.siteType,
+          ...(error instanceof InvalidTokenPayloadError
+            ? {
+                payloadAccountId: error.accountId,
+                payloadBaseUrl: error.baseUrl,
+                payloadSiteType: error.siteType,
+                payloadResponseType: error.responseType,
+              }
+            : {}),
         },
       )
       setCreateError(

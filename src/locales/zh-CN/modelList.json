@@ -13,7 +13,7 @@
   },
   "allAccounts": "所有账号",
   "allGroups": "所有分组",
-  "allProviders": "所有厂商 ({{count}})",
+  "allProviders": "所有厂商",
   "available": "可用",
   "availableGroups": "可用分组",
   "clickSwitchGroup": "点击切换到 {{group}} 分组",
@@ -90,7 +90,7 @@
   "searchModels": "搜索模型",
   "searchPlaceholder": "输入模型名称或描述...",
   "selectSource": "选择数据源",
-  "showing": "显示 {{count}} 个",
+  "showing": "显示 {{count}} 个模型",
   "showRatio": "显示倍率",
   "sourceLabels": {
     "profileBadge": "凭据：{{name}} · {{host}}",

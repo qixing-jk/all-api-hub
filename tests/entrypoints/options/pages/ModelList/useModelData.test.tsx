@@ -95,6 +95,17 @@ const createDisplayAccount = (
   ...overrides,
 })
 
+const createDeferred = <T,>() => {
+  let resolve!: (value: T | PromiseLike<T>) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res
+    reject = rej
+  })
+
+  return { promise, resolve, reject }
+}
+
 const createWrapper = () => {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -507,5 +518,97 @@ describe("useModelData all-accounts loading", () => {
     expect(
       result.current.pricingData?.data.map((item) => item.model_name),
     ).toEqual(["account-model"])
+  })
+
+  it("discards stale fallback token results after switching accounts", async () => {
+    toastSuccessMock.mockReset()
+    toastErrorMock.mockReset()
+
+    const deferredTokens = createDeferred<any[]>()
+    const fetchModelPricing = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("boom"))
+      .mockRejectedValueOnce(new Error("boom"))
+      .mockResolvedValueOnce({
+        data: [],
+        group_ratio: {},
+        success: true,
+        usable_group: {},
+      })
+    vi.mocked(getApiService).mockReturnValue({ fetchModelPricing } as any)
+    mockFetchDisplayAccountTokens.mockReturnValueOnce(deferredTokens.promise)
+
+    const firstAccount = createDisplayAccount({
+      id: "first-account",
+      baseUrl: "https://first.example.com",
+      userId: 21,
+    })
+    const secondAccount = createDisplayAccount({
+      id: "second-account",
+      baseUrl: "https://second.example.com",
+      userId: 22,
+    })
+
+    type HookProps = {
+      selectedSource: ReturnType<typeof createAccountSource> | null
+      accounts: DisplaySiteData[]
+    }
+
+    const { result, rerender } = renderHook(
+      ({ selectedSource, accounts }: HookProps) =>
+        useModelData({
+          selectedSource,
+          accounts,
+        }),
+      {
+        initialProps: {
+          selectedSource: createAccountSource(firstAccount),
+          accounts: [firstAccount, secondAccount],
+        },
+        wrapper: createWrapper(),
+      },
+    )
+
+    await waitFor(
+      () => {
+        expect(mockFetchDisplayAccountTokens).toHaveBeenCalledTimes(1)
+      },
+      { timeout: 3000 },
+    )
+
+    rerender({
+      selectedSource: createAccountSource(secondAccount),
+      accounts: [firstAccount, secondAccount],
+    })
+
+    await act(async () => {
+      deferredTokens.resolve([
+        {
+          id: 9,
+          user_id: 21,
+          key: "sk-stale",
+          status: 1,
+          name: "Stale key",
+          created_time: 0,
+          accessed_time: 0,
+          expired_time: -1,
+          remain_quota: 0,
+          unlimited_quota: true,
+          used_quota: 0,
+        },
+      ])
+      await deferredTokens.promise
+    })
+
+    await waitFor(() => {
+      expect(result.current.accountFallback?.tokens).toEqual([])
+      expect(result.current.accountFallback?.selectedTokenId).toBeNull()
+      expect(result.current.pricingData).toEqual({
+        data: [],
+        group_ratio: {},
+        success: true,
+        usable_group: {},
+      })
+    })
   })
 })

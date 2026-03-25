@@ -13,7 +13,7 @@
   },
   "allAccounts": "所有帳號",
   "allGroups": "所有分組",
-  "allProviders_other": "所有廠商 ({{count}})",
+  "allProviders": "所有廠商",
   "available": "可用",
   "availableGroups": "可用分組",
   "clickSwitchGroup": "點擊切換到 {{group}} 分組",
@@ -90,7 +90,7 @@
   "searchModels": "搜尋模型",
   "searchPlaceholder": "輸入模型名稱或描述...",
   "selectSource": "選擇資料來源",
-  "showing_other": "顯示 {{count}} 個",
+  "showing_other": "顯示 {{count}} 個模型",
   "showRatio": "顯示倍率",
   "sourceLabels": {
     "profileBadge": "憑據：{{name}} · {{host}}",

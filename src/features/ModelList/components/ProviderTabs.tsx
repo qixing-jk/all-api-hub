@@ -85,7 +85,9 @@ function ProviderTabList({
         >
           <div className="flex items-center justify-center space-x-2">
             <CpuChipIcon className="dark:text-dark-text-secondary h-4 w-4 text-gray-600" />
-            <span>{t("allProviders", { count: baseFilteredModelsCount })}</span>
+            <span>
+              {t("allProviders")} ({baseFilteredModelsCount})
+            </span>
           </div>
         </Tab>
         {providers.map((provider) => {

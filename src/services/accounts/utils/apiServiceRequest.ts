@@ -8,6 +8,28 @@ const hasNonEmptyString = (value: unknown): value is string =>
 
 const logger = createLogger("DisplayAccountApiContext")
 
+export class InvalidTokenPayloadError extends Error {
+  readonly code = "INVALID_TOKEN_PAYLOAD"
+  readonly accountId: string
+  readonly baseUrl: string
+  readonly siteType: string
+  readonly responseType: string
+
+  constructor(params: {
+    accountId: string
+    baseUrl: string
+    siteType: string
+    responseType: string
+  }) {
+    super("invalid_token_payload")
+    this.name = "InvalidTokenPayloadError"
+    this.accountId = params.accountId
+    this.baseUrl = params.baseUrl
+    this.siteType = params.siteType
+    this.responseType = params.responseType
+  }
+}
+
 /**
  * Build the shared ApiService request DTO used by account-scoped UI flows.
  */
@@ -52,8 +74,7 @@ export const createDisplayAccountApiContext = (
 })
 
 /**
- * Fetches the current token inventory for a display account and normalizes
- * non-array responses to an empty list so UI callers can stay defensive.
+ * Fetches the current token inventory for a display account.
  */
 export async function fetchDisplayAccountTokens(
   account: Pick<
@@ -81,7 +102,12 @@ export async function fetchDisplayAccountTokens(
     siteType: account.siteType,
   })
 
-  return []
+  throw new InvalidTokenPayloadError({
+    accountId: account.id,
+    baseUrl: account.baseUrl,
+    siteType: account.siteType,
+    responseType: typeof tokensResponse,
+  })
 }
 
 /**

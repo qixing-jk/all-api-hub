@@ -13,7 +13,7 @@
   },
   "allAccounts": "すべてのアカウント",
   "allGroups": "すべてのグループ",
-  "allProviders_other": "すべてのプロバイダー ({{count}})",
+  "allProviders": "すべてのプロバイダー",
   "available": "利用可能",
   "availableGroups": "利用可能なグループ",
   "clickSwitchGroup": "{{group}} グループへ切り替える",
@@ -90,7 +90,7 @@
   "searchModels": "モデルを検索",
   "searchPlaceholder": "モデル名または説明を入力...",
   "selectSource": "ソースを選択",
-  "showing_other": "{{count}} 件を表示中",
+  "showing_other": "{{count}} モデルを表示中",
   "showRatio": "倍率を表示",
   "sourceLabels": {
     "profileBadge": "プロファイル: {{name}} · {{host}}",

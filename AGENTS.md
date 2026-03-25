@@ -122,9 +122,9 @@ Prereqs: Node.js 20+ and pnpm 10+.
 ## i18n Guidelines
 
 - When a helper explicitly accepts a translation function, type it as `TFunction` from `i18next`. Do not hand-write signatures like `(key: string, options?: any) => string` or `ReturnType<typeof useTranslation>["t"]` unless a narrower type is intentionally required.
-- When adding short badge, chip, button, or helper-copy translations, avoid `t(key, { count })` unless plural key families are explicitly intended and already modeled in locale files.
-- For compact UI labels that include a number, prefer rendering the numeric count separately and translating only the static label text so `i18n:extract` does not rewrite the key into `_one` / `_other` variants unexpectedly.
-- Treat any unexpected `_one`, `_other`, or similar extract-generated key-family rewrites as a signal to change the calling pattern or key shape, not as something to patch manually in locale JSON.
+- When a visible phrase depends on `count` for grammar or wording, prefer a proper pluralized translation (`t(key, { count })`, ICU/message-format equivalent, or explicit plural key family) so the locale controls the full rendered phrase.
+- Only split the numeric value out of the translation when the number is a genuinely separate visual metric, such as a standalone badge/counter or a parenthesized metric that does not need grammatical agreement with the adjacent label.
+- Treat unexpected `_one`, `_other`, or similar extract-generated rewrites as a signal to clarify intent in source code: either model the phrase explicitly as pluralized copy, or remove `count` from the translation call because the number is visually independent. Do not patch locale JSON blindly without fixing the source usage pattern.
 - After running `pnpm run i18n:extract`, inspect the locale diff before proceeding. Confirm the intended new keys are still present and no required keys were removed as "unused" by the extractor.
 - If `i18n:extract` removes keys you expected to keep, fix the source usage or extractor configuration instead of re-adding locale JSON by hand. In this repo, prefer direct extractable calls such as `t("ns:key")` over wrapper names like `translate("ns:key")` unless the wrapper is explicitly configured in `i18next.config.ts`.
 - After changing translation keys, locale JSON, or any UI code that adds new `t(...)` usages, run `pnpm run i18n:extract:ci` and ensure it reports no unexpected updates before handoff.
