@@ -84,7 +84,11 @@ export default function AccountFilterBar({
       </SelectTrigger>
       <SelectContent className="min-w-[220px]">
         {options.map((option) => (
-          <SelectItem key={option.value} value={option.value}>
+          <SelectItem
+            key={option.value}
+            value={option.value}
+            data-count={option.count}
+          >
             <div className="flex min-w-0 items-center justify-between gap-3">
               <span className="truncate">{option.label}</span>
               {typeof option.count === "number" && (

@@ -99,6 +99,9 @@ const ACCOUNT_REFRESH_FILTER_OPTION_ORDER: AccountRefreshFilterValue[] = [
   "unknown",
 ]
 
+const ACCOUNT_REFRESH_FILTER_OPTION_VALUE_SET =
+  new Set<AccountRefreshFilterValue>(ACCOUNT_REFRESH_FILTER_OPTION_ORDER)
+
 const ACCOUNT_CHECK_IN_FILTER_OPTION_ORDER: AccountCheckInFilterValue[] = [
   "checked-in",
   "not-checked-in",
@@ -120,6 +123,18 @@ function isCheckInStatusDetectedToday(detectedAt?: number): boolean {
 }
 
 /**
+ * Guards runtime values coming back from Select so only known refresh buckets
+ * flow into AccountRefreshFilterValue state.
+ */
+function isAccountRefreshFilterValue(
+  value: string,
+): value is AccountRefreshFilterValue {
+  return ACCOUNT_REFRESH_FILTER_OPTION_VALUE_SET.has(
+    value as AccountRefreshFilterValue,
+  )
+}
+
+/**
  * Maps persisted account sync metadata to a user-facing refresh-state filter bucket.
  */
 function getAccountRefreshFilterValue(
@@ -134,7 +149,7 @@ function getAccountRefreshFilterValue(
     return "never-synced"
   }
 
-  switch (account.health?.status) {
+  switch (account.health.status) {
     case "healthy":
       return "healthy"
     case "warning":
@@ -170,6 +185,12 @@ function getAccountCheckInFilterValue(
     return "outdated"
   }
 
+  // `siteCheckInEnabled`, `siteStatusKnown`, and `hasCustomCheckIn` can all be
+  // false in two different ways:
+  // 1) detection is off and there is no custom check-in configured
+  // 2) detection is on but no device status has ever been detected, and there is
+  //    still no custom check-in configured
+  // Both cases should resolve to "unsupported", but for different reasons.
   if (!siteCheckInEnabled && !hasCustomCheckIn) {
     return "unsupported"
   }
@@ -638,7 +659,9 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
                     setRefreshStatusFilter(
                       value === "all"
                         ? null
-                        : (value as AccountRefreshFilterValue),
+                        : isAccountRefreshFilterValue(value)
+                          ? value
+                          : null,
                     )
                   }
                   onCheckInChange={(value) =>
