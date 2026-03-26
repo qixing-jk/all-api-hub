@@ -72,6 +72,10 @@ export function useTokenData(
         }
 
         if (hasAllowedGroups) {
+          if (!currentGroup) {
+            return prev
+          }
+
           if (allowedGroupSet.has("default") && groupsData.default) {
             return { ...prev, group: "default" }
           }

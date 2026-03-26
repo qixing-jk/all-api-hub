@@ -8,6 +8,7 @@ interface GroupSelectionProps {
   handleSelectChange: (value: string) => void
   groups: Record<string, UserGroupInfo>
   allowedGroups?: string[]
+  error?: string
 }
 
 /**
@@ -20,6 +21,7 @@ interface GroupSelectionProps {
  * @param props.handleSelectChange Change handler invoked when a group is chosen.
  * @param props.groups Available groups keyed by id.
  * @param props.allowedGroups Optional allow-list restricting selectable groups.
+ * @param props.error Optional validation message shown below the field.
  * @returns Searchable select listing groups with ratios.
  */
 export function GroupSelection({
@@ -27,6 +29,7 @@ export function GroupSelection({
   handleSelectChange,
   groups,
   allowedGroups,
+  error,
 }: GroupSelectionProps) {
   const { t } = useTranslation("keyManagement")
 
@@ -83,6 +86,7 @@ export function GroupSelection({
     <FormField
       label={t("dialog.groupLabel")}
       htmlFor="groupSelect"
+      error={error}
       description={
         allowedGroupSet ? t("dialog.groupRestrictedNote") : undefined
       }
@@ -92,6 +96,7 @@ export function GroupSelection({
         value={group ?? ""}
         onChange={handleSelectChange}
         placeholder={t("dialog.groupLabel")}
+        aria-invalid={Boolean(error)}
       />
     </FormField>
   )

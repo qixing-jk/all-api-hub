@@ -44,31 +44,45 @@ vi.mock("~/services/apiService", async (importOriginal) => {
   }
 })
 
-const DISPLAY_ACCOUNT = buildSub2ApiAccount()
-const SITE_ACCOUNT = buildSiteAccount({
-  id: DISPLAY_ACCOUNT.id,
-  site_type: "sub2api",
-  site_url: DISPLAY_ACCOUNT.baseUrl,
-  authType: AuthTypeEnum.AccessToken,
-  account_info: {
-    id: DISPLAY_ACCOUNT.userId,
-    access_token: DISPLAY_ACCOUNT.token,
-    username: DISPLAY_ACCOUNT.username,
-    quota: 0,
-    today_prompt_tokens: 0,
-    today_completion_tokens: 0,
-    today_quota_consumption: 0,
-    today_requests_count: 0,
-    today_income: 0,
-  },
-})
+const createTestAccounts = () => {
+  const displayAccount = buildSub2ApiAccount()
+  const siteAccount = buildSiteAccount({
+    id: displayAccount.id,
+    site_type: "sub2api",
+    site_url: displayAccount.baseUrl,
+    authType: AuthTypeEnum.AccessToken,
+    account_info: {
+      id: displayAccount.userId,
+      access_token: displayAccount.token,
+      username: displayAccount.username,
+      quota: 0,
+      today_prompt_tokens: 0,
+      today_completion_tokens: 0,
+      today_quota_consumption: 0,
+      today_requests_count: 0,
+      today_income: 0,
+    },
+  })
+
+  return {
+    displayAccount,
+    siteAccount,
+  }
+}
 
 describe("accountOperations Sub2API token creation guards", () => {
+  let DISPLAY_ACCOUNT: ReturnType<typeof buildSub2ApiAccount>
+  let SITE_ACCOUNT: ReturnType<typeof buildSiteAccount>
+
   beforeEach(() => {
     fetchAccountTokensMock.mockReset()
     createApiTokenMock.mockReset()
     fetchUserGroupsMock.mockReset()
     toastLoadingMock.mockReset()
+
+    const testAccounts = createTestAccounts()
+    DISPLAY_ACCOUNT = testAccounts.displayAccount
+    SITE_ACCOUNT = testAccounts.siteAccount
   })
 
   it("blocks implicit Sub2API default-token creation in background helpers", async () => {

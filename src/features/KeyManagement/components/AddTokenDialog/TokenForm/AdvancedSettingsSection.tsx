@@ -57,6 +57,7 @@ export function AdvancedSettingsSection({
         handleSelectChange={handleSelectChange("group")}
         groups={groups}
         allowedGroups={allowedGroups}
+        error={errors.group}
       />
       {isNotEmptyArray(availableModels) && (
         <ModelLimits

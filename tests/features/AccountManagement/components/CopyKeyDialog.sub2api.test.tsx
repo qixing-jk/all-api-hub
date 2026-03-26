@@ -159,6 +159,24 @@ describe("CopyKeyDialog sub2api support", () => {
       }),
     )
 
+    await screen.findByRole("button", {
+      name: "keyManagement:dialog.createToken",
+    })
+
+    const groupTrigger = screen
+      .getAllByRole("combobox")
+      .find((element) =>
+        element.textContent?.includes("keyManagement:dialog.groupLabel"),
+      )
+    expect(groupTrigger).toBeTruthy()
+
+    await user.click(groupTrigger as HTMLElement)
+    await user.click(
+      await screen.findByText(
+        "default - Default (keyManagement:dialog.groupRate 1)",
+      ),
+    )
+
     await user.click(
       await screen.findByRole("button", {
         name: "keyManagement:dialog.createToken",

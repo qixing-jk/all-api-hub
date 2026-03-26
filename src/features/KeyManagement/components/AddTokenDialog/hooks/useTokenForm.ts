@@ -92,7 +92,7 @@ export function useTokenForm({
   editingToken,
   createPrefill,
 }: AddTokenDialogProps) {
-  const { t } = useTranslation("keyManagement")
+  const { t } = useTranslation(["keyManagement", "messages"])
   const [formData, setFormData] = useState<FormData>(initialFormData)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const isEditMode = !!editingToken
@@ -154,13 +154,20 @@ export function useTokenForm({
           typeof createPrefill?.group === "string"
             ? createPrefill.group.trim()
             : ""
+        const hasRestrictedGroupSelection =
+          Array.isArray(createPrefill?.allowedGroups) &&
+          createPrefill.allowedGroups.some(
+            (group) => typeof group === "string" && group.trim().length > 0,
+          )
         setFormData({
           ...initialFormData,
           accountId: defaultAccountId,
           name: resolvedDefaultName,
           modelLimitsEnabled: shouldPrefillModel,
           modelLimits: shouldPrefillModel ? [normalizedModelId] : [],
-          group: normalizedGroup || initialFormData.group,
+          group:
+            normalizedGroup ||
+            (hasRestrictedGroupSelection ? "" : initialFormData.group),
         })
       }
     }
@@ -173,6 +180,7 @@ export function useTokenForm({
     createPrefill?.modelId,
     createPrefill?.defaultName,
     createPrefill?.group,
+    createPrefill?.allowedGroups,
   ])
 
   const validateForm = (): boolean => {
@@ -197,6 +205,9 @@ export function useTokenForm({
     }
     if (formData.allowIps && !isValidIpList(formData.allowIps)) {
       newErrors.allowIps = t("dialog.validIp")
+    }
+    if (!formData.group.trim()) {
+      newErrors.group = t("messages:sub2api.createRequiresGroupSelection")
     }
 
     setErrors(newErrors)

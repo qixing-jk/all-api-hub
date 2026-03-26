@@ -246,4 +246,63 @@ describe("AddTokenDialog prefill", () => {
       group: "level3",
     })
   })
+
+  it("requires a manual group choice when restricted groups are provided without a prefill group", async () => {
+    fetchAccountAvailableModelsMock.mockResolvedValueOnce(["gpt-4"])
+    fetchUserGroupsMock.mockResolvedValueOnce({
+      default: { desc: "default", ratio: 1 },
+      vip: { desc: "VIP", ratio: 2 },
+    })
+    createApiTokenMock.mockResolvedValueOnce(true)
+
+    const user = userEvent.setup()
+
+    render(
+      <AddTokenDialog
+        isOpen={true}
+        onClose={() => {}}
+        availableAccounts={[ACCOUNT]}
+        preSelectedAccountId={ACCOUNT.id}
+        createPrefill={{
+          modelId: "gpt-4",
+          defaultName: "restricted token",
+          allowedGroups: ["default", "vip"],
+        }}
+      />,
+    )
+
+    const createButton = await screen.findByRole("button", {
+      name: "keyManagement:dialog.createToken",
+    })
+
+    const groupTrigger = screen
+      .getAllByRole("combobox")
+      .find((element) =>
+        element.textContent?.includes("keyManagement:dialog.groupLabel"),
+      )
+    expect(groupTrigger).toBeTruthy()
+    expect(groupTrigger).toHaveTextContent("keyManagement:dialog.groupLabel")
+
+    await user.click(createButton)
+
+    expect(createApiTokenMock).not.toHaveBeenCalled()
+    expect(
+      await screen.findByText("messages:sub2api.createRequiresGroupSelection"),
+    ).toBeInTheDocument()
+
+    await user.click(groupTrigger as HTMLElement)
+    await user.click(
+      await screen.findByText("vip - VIP (keyManagement:dialog.groupRate 2)"),
+    )
+
+    await user.click(createButton)
+
+    await waitFor(() => {
+      expect(createApiTokenMock).toHaveBeenCalledTimes(1)
+    })
+
+    expect(createApiTokenMock.mock.calls[0]?.[1]).toMatchObject({
+      group: "vip",
+    })
+  })
 })

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { CCSwitchExportDialog } from "~/components/CCSwitchExportDialog"
@@ -30,6 +30,7 @@ export default function CopyKeyDialog({
 }: CopyKeyDialogProps) {
   const { t } = useTranslation("messages")
   const [isAddTokenDialogOpen, setIsAddTokenDialogOpen] = useState(false)
+  const isMountedRef = useRef(true)
   const [ccSwitchContext, setCCSwitchContext] = useState<{
     token: ApiToken
     account: DisplaySiteData
@@ -66,6 +67,14 @@ export default function CopyKeyDialog({
   }
 
   useEffect(() => {
+    isMountedRef.current = true
+
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
+
+  useEffect(() => {
     if (!isOpen || !account) {
       clearSub2ApiCreateAllowedGroups()
       setIsAddTokenDialogOpen(false)
@@ -74,6 +83,9 @@ export default function CopyKeyDialog({
 
   useEffect(() => {
     if (
+      !isMountedRef.current ||
+      !isOpen ||
+      !account ||
       !sub2apiCreateAllowedGroups ||
       sub2apiCreateAllowedGroups.length === 0
     ) {
@@ -81,16 +93,13 @@ export default function CopyKeyDialog({
     }
 
     setIsAddTokenDialogOpen(true)
-  }, [sub2apiCreateAllowedGroups])
+  }, [account, isOpen, sub2apiCreateAllowedGroups])
 
   const sub2apiQuickCreatePrefill =
     sub2apiCreateAllowedGroups && sub2apiCreateAllowedGroups.length > 0
       ? {
           modelId: "",
           defaultName: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
-          group: sub2apiCreateAllowedGroups.includes("default")
-            ? "default"
-            : sub2apiCreateAllowedGroups[0],
           allowedGroups: sub2apiCreateAllowedGroups,
         }
       : undefined
