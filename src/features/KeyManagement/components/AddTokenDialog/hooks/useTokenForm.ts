@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { UI_CONSTANTS } from "~/constants/ui"
@@ -103,6 +103,14 @@ export function useTokenForm({
         .sort()
         .join("\n")
     : ""
+  const allowedGroups = useMemo(
+    () => (allowedGroupsPrefillKey ? allowedGroupsPrefillKey.split("\n") : []),
+    [allowedGroupsPrefillKey],
+  )
+  const hasRestrictedGroupSelection = useMemo(
+    () => allowedGroups.length > 0,
+    [allowedGroups],
+  )
 
   useEffect(() => {
     if (isOpen) {
@@ -161,7 +169,8 @@ export function useTokenForm({
           typeof createPrefill?.group === "string"
             ? createPrefill.group.trim()
             : ""
-        const hasRestrictedGroupSelection = allowedGroupsPrefillKey.length > 0
+        const isRestrictedPrefilledGroup =
+          allowedGroups.includes(normalizedGroup)
         setFormData({
           ...initialFormData,
           accountId: defaultAccountId,
@@ -169,7 +178,11 @@ export function useTokenForm({
           modelLimitsEnabled: shouldPrefillModel,
           modelLimits: shouldPrefillModel ? [normalizedModelId] : [],
           group:
-            normalizedGroup ||
+            (hasRestrictedGroupSelection
+              ? isRestrictedPrefilledGroup
+                ? normalizedGroup
+                : ""
+              : normalizedGroup) ||
             (hasRestrictedGroupSelection ? "" : initialFormData.group),
         })
       }
@@ -184,6 +197,8 @@ export function useTokenForm({
     createPrefill?.defaultName,
     createPrefill?.group,
     allowedGroupsPrefillKey,
+    allowedGroups,
+    hasRestrictedGroupSelection,
   ])
 
   const validateForm = (): boolean => {
@@ -209,7 +224,12 @@ export function useTokenForm({
     if (formData.allowIps && !isValidIpList(formData.allowIps)) {
       newErrors.allowIps = t("dialog.validIp")
     }
-    if (!formData.group.trim()) {
+    const normalizedSelectedGroup = formData.group.trim()
+    const isRestrictedGroupValid =
+      !hasRestrictedGroupSelection ||
+      allowedGroups.includes(normalizedSelectedGroup)
+
+    if (!normalizedSelectedGroup || !isRestrictedGroupValid) {
       newErrors.group = t("messages:sub2api.createRequiresGroupSelection")
     }
 
