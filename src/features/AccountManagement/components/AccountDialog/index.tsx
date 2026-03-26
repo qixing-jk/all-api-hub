@@ -15,8 +15,6 @@ import { useAccountDialog } from "./hooks/useAccountDialog"
 import InfoPanel from "./InfoPanel"
 import SiteInfoInput from "./SiteInfoInput"
 
-const ACCOUNT_DIALOG_TOASTER_ID = "account-dialog"
-
 interface AccountDialogProps {
   isOpen: boolean
   onClose: () => void
@@ -86,7 +84,6 @@ export default function AccountDialog({
         onClose={handlers.handleClose}
         floatingContent={
           <ThemeAwareToaster
-            toasterId={ACCOUNT_DIALOG_TOASTER_ID}
             position="top-right"
             containerStyle={{ zIndex: 75 }}
           />

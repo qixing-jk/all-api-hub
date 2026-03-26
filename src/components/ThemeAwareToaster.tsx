@@ -6,7 +6,6 @@ import { useTheme } from "~/contexts/ThemeContext"
 
 interface ThemeAwareToasterProps {
   reverseOrder?: boolean
-  toasterId?: string
   position?:
     | "top-left"
     | "top-center"
@@ -20,7 +19,6 @@ interface ThemeAwareToasterProps {
 
 export const ThemeAwareToaster = ({
   reverseOrder = false,
-  toasterId,
   position = "bottom-center",
   containerClassName = "",
   containerStyle,
@@ -44,7 +42,6 @@ export const ThemeAwareToaster = ({
 
   return (
     <Toaster
-      toasterId={toasterId}
       position={position}
       reverseOrder={reverseOrder}
       gutter={8}

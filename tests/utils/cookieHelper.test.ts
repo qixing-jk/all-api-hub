@@ -134,6 +134,7 @@ describe("cookieHelper", () => {
 
     expect(contains).not.toHaveBeenCalled()
   })
+
   it("does not cache cookie values between calls", async () => {
     const getAll = vi
       .fn()
