@@ -1,5 +1,39 @@
 # Changelog
 
+## [3.31.0](https://github.com/qixing-jk/all-api-hub/compare/v3.30.0...v3.31.0) (2026-03-26)
+
+
+### Features
+
+* **account:** add advanced filtering for account list ([#668](https://github.com/qixing-jk/all-api-hub/issues/668)) ([1adaacf](https://github.com/qixing-jk/all-api-hub/commit/1adaacfca6bb670253920fcbdcc66ca77687f093))
+* **AccountManagement:** improve responsive layout for filter components ([fd74c5e](https://github.com/qixing-jk/all-api-hub/commit/fd74c5e31193a3ac7a6f0a5f2571aca65ff311a6))
+* **auto-checkin:** sort skipped accounts to table end ([ada8d9d](https://github.com/qixing-jk/all-api-hub/commit/ada8d9d30b42980ef4891f9d0320147bfef1800d)), closes [#667](https://github.com/qixing-jk/all-api-hub/issues/667)
+* **cliProxy:** add connection check for management API ([#669](https://github.com/qixing-jk/all-api-hub/issues/669)) ([09671b5](https://github.com/qixing-jk/all-api-hub/commit/09671b5426c1071091d23936acd8cc7da052872e))
+* **ManagedSiteChannels:** sort channels by id desc by default ([59ee7f9](https://github.com/qixing-jk/all-api-hub/commit/59ee7f9ef93a09ec9376bcd41f330a8a499c0e97))
+* **model-list:** add fallback to account keys for model loading ([#661](https://github.com/qixing-jk/all-api-hub/issues/661)) ([eda4d48](https://github.com/qixing-jk/all-api-hub/commit/eda4d482770d6b07c195fae62d176aeb30959013))
+* **safari:** add Safari release packaging and installation guide                                                                                                                         ([6089c0a](https://github.com/qixing-jk/all-api-hub/commit/6089c0a848de76250dfe96b7198c13c5820af153))
+* **toast:** add generic fallback messages and improve toast handling ([1159021](https://github.com/qixing-jk/all-api-hub/commit/1159021c7c687f041eea04b3b3f245409ce7d9fa))
+
+
+### Bug Fixes
+
+* **account-dialog:** enhance cookie import with detailed error handling ([#670](https://github.com/qixing-jk/all-api-hub/issues/670)) ([2d538b2](https://github.com/qixing-jk/all-api-hub/commit/2d538b28168b13568112eb81513259234818551b))
+* Align managed-site duplicate verification flow and warning status display ([#656](https://github.com/qixing-jk/all-api-hub/issues/656)) ([e43f6f7](https://github.com/qixing-jk/all-api-hub/commit/e43f6f76ec513d50e2829ec899f7c76d1dadfc7b))
+* **channel-dialog:** add fallback success message for channel operations ([da6e212](https://github.com/qixing-jk/all-api-hub/commit/da6e212a9477062ab32fa73296f7da5a76c090c3))
+* fall back from temp windows to tabs when browser windows are blocked ([#657](https://github.com/qixing-jk/all-api-hub/issues/657)) ([26b5ea5](https://github.com/qixing-jk/all-api-hub/commit/26b5ea518734b799d29a6bc9882b8a46768c9b2e))
+* **i18n:** restore mistakenly removed CLI proxy provider i18n keys ([#651](https://github.com/qixing-jk/all-api-hub/issues/651)) ([640ebcb](https://github.com/qixing-jk/all-api-hub/commit/640ebcbaf6a21009d48b997d09bbac17f40ac96d))
+* internationalize UI strings and error messages ([#652](https://github.com/qixing-jk/all-api-hub/issues/652)) ([4eeea94](https://github.com/qixing-jk/all-api-hub/commit/4eeea94c75e25c5c986790d135aeb07a4d004856))
+* **managed-site:** don't block channel import when key model loading fails ([#662](https://github.com/qixing-jk/all-api-hub/issues/662)) ([98ccfe6](https://github.com/qixing-jk/all-api-hub/commit/98ccfe616bc95b715fee024c07fcc6d5cb8a929d))
+* **managedSites:** replace token.models with live model discovery ([#664](https://github.com/qixing-jk/all-api-hub/issues/664)) ([ab80a79](https://github.com/qixing-jk/all-api-hub/commit/ab80a798a2859c1c091fc0690728bf6c582d18f5))
+* modal-contained floating layers for dialogs and add regression coverage ([#663](https://github.com/qixing-jk/all-api-hub/issues/663)) ([0b6f6e0](https://github.com/qixing-jk/all-api-hub/commit/0b6f6e0c53468648db158ef33f5ff2a715774704))
+* **options:** prevent sticky table actions from overlapping the sidebar overlay ([23d8cc2](https://github.com/qixing-jk/all-api-hub/commit/23d8cc21edba8d72400e0ffc4f4a9e4cab0d8c80))
+* remove React act warnings in tests and clean up CopyKeyDialog timeout ([#650](https://github.com/qixing-jk/all-api-hub/issues/650)) ([7aafb56](https://github.com/qixing-jk/all-api-hub/commit/7aafb5638362cabbacf31ad575e3ab6b2aa4516a))
+* **sub2api:** require explicit group selection for key creation ([#666](https://github.com/qixing-jk/all-api-hub/issues/666)) ([5b09dca](https://github.com/qixing-jk/all-api-hub/commit/5b09dca8a338aa1126fcf6cef1d98391ae00c561))
+* **ui:** stabilize layering for sticky tables and shared overlays ([#658](https://github.com/qixing-jk/all-api-hub/issues/658)) ([0c82fa8](https://github.com/qixing-jk/all-api-hub/commit/0c82fa85c4fb04bb2d8f78f47392d8ff04ac0bf6))
+* **UpdateLogDialog:** make footer layout responsive to prevent overflow ([82c6deb](https://github.com/qixing-jk/all-api-hub/commit/82c6deb67f8700f0b5c989223e90c70f5fd9a847))
+* **webdav:** prepare backup directory before write-like reads ([#646](https://github.com/qixing-jk/all-api-hub/issues/646)) ([bb8f5ae](https://github.com/qixing-jk/all-api-hub/commit/bb8f5ae2bfb1a375e137a12ce0afc49d5b6daeb6))
+* **workflows:** include hidden files in artifact uploads ([c6249c4](https://github.com/qixing-jk/all-api-hub/commit/c6249c444d7648663a17eb31c04e216895e0bffe))
+
 ## [3.30.0](https://github.com/qixing-jk/all-api-hub/compare/v3.29.0...v3.30.0) (2026-03-23)
 
 
