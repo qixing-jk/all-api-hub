@@ -31,6 +31,10 @@ const { mockToastLoading, mockToastDismiss, mockToastError } = vi.hoisted(
     mockToastError: vi.fn(),
   }),
 )
+const { mockFetchAccountTokens, mockResolveApiTokenKey } = vi.hoisted(() => ({
+  mockFetchAccountTokens: vi.fn(),
+  mockResolveApiTokenKey: vi.fn(),
+}))
 
 const getManagedSiteServiceSpy = vi.spyOn(
   managedSiteService,
@@ -40,6 +44,10 @@ const getAccountByIdSpy = vi.spyOn(accountStorage, "getAccountById")
 const ensureAccountApiTokenSpy = vi.spyOn(
   accountOperations,
   "ensureAccountApiToken",
+)
+const resolveSub2ApiQuickCreateResolutionSpy = vi.spyOn(
+  accountOperations,
+  "resolveSub2ApiQuickCreateResolution",
 )
 
 const buildSiteAccount = (
@@ -138,6 +146,18 @@ vi.mock("react-hot-toast", () => ({
   },
 }))
 
+vi.mock("~/services/apiService", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/services/apiService")>()
+
+  return {
+    ...actual,
+    getApiService: vi.fn(() => ({
+      fetchAccountTokens: (...args: any[]) => mockFetchAccountTokens(...args),
+      resolveApiTokenKey: (...args: any[]) => mockResolveApiTokenKey(...args),
+    })),
+  }
+})
+
 describe("useChannelDialog duplicate channel warning", () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -147,6 +167,13 @@ describe("useChannelDialog duplicate channel warning", () => {
     ensureAccountApiTokenSpy.mockImplementation(() => {
       throw new Error("ensureAccountApiToken should not be called in this test")
     })
+    resolveSub2ApiQuickCreateResolutionSpy.mockReset()
+    mockFetchAccountTokens.mockReset()
+    mockFetchAccountTokens.mockResolvedValue([])
+    mockResolveApiTokenKey.mockReset()
+    mockResolveApiTokenKey.mockImplementation(
+      async (_request: unknown, token: { key: string }) => token.key,
+    )
   })
 
   it("shows warning and cancels when user does not continue", async () => {
@@ -495,5 +522,122 @@ describe("useChannelDialog duplicate channel warning", () => {
     })
     expect(mockToastError).not.toHaveBeenCalled()
     expect(mockToastDismiss).toHaveBeenCalledWith("toast-id")
+  })
+
+  it("opens the global Sub2API token dialog when multiple groups are available", async () => {
+    const mockService: Partial<ManagedSiteService> = {
+      messagesKey: "newapi",
+      getConfig: vi.fn(async () => ({
+        baseUrl: "https://managed.example.com",
+        token: "admin-token",
+        userId: "1",
+      })),
+      prepareChannelFormData: vi.fn(),
+      searchChannel: vi.fn(),
+    }
+    getManagedSiteServiceSpy.mockResolvedValue(
+      mockService as ManagedSiteService,
+    )
+    getAccountByIdSpy.mockResolvedValue(
+      buildSiteAccount({ site_type: "sub2api" }),
+    )
+    resolveSub2ApiQuickCreateResolutionSpy.mockResolvedValueOnce({
+      kind: "selection_required",
+      allowedGroups: ["default", "vip"],
+    })
+
+    const { result } = renderHook(() => ({
+      dialog: useChannelDialog(),
+      context: useChannelDialogContext(),
+    }))
+
+    await waitFor(() => {
+      expect(result.current).not.toBeNull()
+    })
+
+    await act(async () => {
+      await result.current.dialog.openWithAccount(
+        buildDisplaySiteData({ siteType: "sub2api" }),
+        null,
+      )
+    })
+
+    expect(result.current.context.sub2apiTokenDialog).toMatchObject({
+      isOpen: true,
+      allowedGroups: ["default", "vip"],
+      notice: "messages:sub2api.createRequiresGroupSelection",
+    })
+    expect(ensureAccountApiTokenSpy).not.toHaveBeenCalled()
+    expect(mockToastDismiss).toHaveBeenCalledWith("toast-id")
+  })
+
+  it("resumes the Sub2API token ensure flow after the token dialog succeeds", async () => {
+    const mockService: Partial<ManagedSiteService> = {
+      messagesKey: "newapi",
+      getConfig: vi.fn(async () => ({
+        baseUrl: "https://managed.example.com",
+        token: "admin-token",
+        userId: "1",
+      })),
+      prepareChannelFormData: vi.fn(
+        async () =>
+          ({
+            name: "Auto channel",
+            type: ChannelType.OpenAI,
+            key: "sk-test",
+            base_url: "https://upstream.example.com",
+            models: ["gpt-4"],
+            groups: ["default"],
+            priority: 0,
+            weight: 0,
+            status: 1,
+          }) satisfies ChannelFormData,
+      ),
+      searchChannel: vi.fn(async () => ({
+        items: [],
+        total: 0,
+        type_counts: {},
+      })),
+    }
+    getManagedSiteServiceSpy.mockResolvedValue(
+      mockService as ManagedSiteService,
+    )
+    getAccountByIdSpy.mockResolvedValue(
+      buildSiteAccount({ site_type: "sub2api" }),
+    )
+    mockFetchAccountTokens
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([buildApiToken()])
+    resolveSub2ApiQuickCreateResolutionSpy.mockResolvedValueOnce({
+      kind: "selection_required",
+      allowedGroups: ["default", "vip"],
+    })
+
+    const { result } = renderHook(() => ({
+      dialog: useChannelDialog(),
+      context: useChannelDialogContext(),
+    }))
+
+    await waitFor(() => {
+      expect(result.current).not.toBeNull()
+    })
+
+    await act(async () => {
+      await result.current.dialog.openWithAccount(
+        buildDisplaySiteData({ siteType: "sub2api" }),
+        null,
+      )
+    })
+
+    expect(result.current.context.sub2apiTokenDialog.isOpen).toBe(true)
+
+    await act(async () => {
+      await result.current.context.handleSub2ApiTokenSuccess()
+    })
+
+    expect(result.current.context.sub2apiTokenDialog.isOpen).toBe(false)
+    expect(resolveSub2ApiQuickCreateResolutionSpy).toHaveBeenCalledTimes(1)
+    expect(ensureAccountApiTokenSpy).not.toHaveBeenCalled()
+    expect(mockFetchAccountTokens).toHaveBeenCalledTimes(2)
   })
 })

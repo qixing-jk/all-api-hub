@@ -9,9 +9,12 @@ import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { server } from "~~/tests/msw/server"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
-const { mockOpenWithAccount } = vi.hoisted(() => ({
-  mockOpenWithAccount: vi.fn(),
-}))
+const { mockOpenWithAccount, mockOpenSub2ApiTokenCreationDialog } = vi.hoisted(
+  () => ({
+    mockOpenWithAccount: vi.fn(),
+    mockOpenSub2ApiTokenCreationDialog: vi.fn(),
+  }),
+)
 
 vi.mock("react-hot-toast", () => ({
   default: {
@@ -23,7 +26,10 @@ vi.mock("react-hot-toast", () => ({
 
 vi.mock("~/components/dialogs/ChannelDialog", () => ({
   ChannelDialogProvider: ({ children }: { children: ReactNode }) => children,
-  useChannelDialog: () => ({ openWithAccount: mockOpenWithAccount }),
+  useChannelDialog: () => ({
+    openWithAccount: mockOpenWithAccount,
+    openSub2ApiTokenCreationDialog: mockOpenSub2ApiTokenCreationDialog,
+  }),
 }))
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {

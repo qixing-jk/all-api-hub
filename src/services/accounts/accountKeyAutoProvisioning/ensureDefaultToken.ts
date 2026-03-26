@@ -1,6 +1,8 @@
+import { SUB2API } from "~/constants/siteType"
 import { getApiService } from "~/services/apiService"
 import type { CreateTokenRequest } from "~/services/apiService/common/type"
 import type { ApiToken, DisplaySiteData, SiteAccount } from "~/types"
+import { t } from "~/utils/i18n/core"
 
 export const DEFAULT_AUTO_PROVISION_TOKEN_NAME = "user group (auto)"
 
@@ -50,6 +52,10 @@ export async function ensureDefaultApiTokenForAccount(params: {
   let apiToken: ApiToken | undefined = tokens.at(-1)
   if (apiToken) {
     return { token: apiToken, created: false }
+  }
+
+  if (displaySiteData.siteType === SUB2API) {
+    throw new Error(t("messages:sub2api.createRequiresGroup"))
   }
 
   const newTokenData = generateDefaultTokenRequest()

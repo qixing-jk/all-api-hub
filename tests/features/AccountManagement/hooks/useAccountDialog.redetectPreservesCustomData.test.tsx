@@ -8,9 +8,14 @@ import { AuthTypeEnum, SiteHealthStatus, type CheckInConfig } from "~/types"
 import type { TurnstilePreTrigger } from "~/types/turnstile"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
-const { mockAutoDetectAccount, mockOpenWithAccount } = vi.hoisted(() => ({
+const {
+  mockAutoDetectAccount,
+  mockOpenWithAccount,
+  mockOpenSub2ApiTokenCreationDialog,
+} = vi.hoisted(() => ({
   mockAutoDetectAccount: vi.fn(),
   mockOpenWithAccount: vi.fn(),
+  mockOpenSub2ApiTokenCreationDialog: vi.fn(),
 }))
 
 vi.mock("react-hot-toast", () => ({
@@ -23,7 +28,10 @@ vi.mock("react-hot-toast", () => ({
 
 vi.mock("~/components/dialogs/ChannelDialog", () => ({
   ChannelDialogProvider: ({ children }: { children: ReactNode }) => children,
-  useChannelDialog: () => ({ openWithAccount: mockOpenWithAccount }),
+  useChannelDialog: () => ({
+    openWithAccount: mockOpenWithAccount,
+    openSub2ApiTokenCreationDialog: mockOpenSub2ApiTokenCreationDialog,
+  }),
 }))
 
 vi.mock("~/services/accounts/accountOperations", async (importOriginal) => {

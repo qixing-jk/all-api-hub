@@ -2,6 +2,7 @@ import { useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
+import { Alert } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { createDisplayAccountApiContext } from "~/services/accounts/utils/apiServiceRequest"
@@ -39,6 +40,7 @@ interface AddTokenDialogProps {
      */
     allowedGroups?: string[]
   }
+  prefillNotice?: string
   onSuccess?: () => void | Promise<void>
 }
 
@@ -160,6 +162,10 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
             }
             availableModels={availableModels}
           />
+          {typeof props.prefillNotice === "string" &&
+          props.prefillNotice.trim().length > 0 ? (
+            <Alert variant="info" description={props.prefillNotice} />
+          ) : null}
           <WarningNote />
         </div>
       )}

@@ -31,6 +31,12 @@ The system SHALL fetch token inventories only for selected sites and MUST surfac
 If a site has no API tokens, the system MUST skip that site by default (it MUST NOT create tokens automatically).
 
 The system SHALL provide a per-site action to create a default token and, when successful, MUST refresh the token list for that site and preselect the newly created token for export.
+For `sub2api` sites, that create action MUST resolve a valid current Sub2API group before creating the token. After the user triggers the action:
+- If exactly one valid group is available, the flow MUST use it without an extra selection step.
+- If multiple valid groups are available, the flow MUST require explicit user selection of one before creating the token.
+- If no valid groups are available, the flow MUST block creation and surface an actionable error instead of creating an ungrouped token.
+
+When token creation succeeds, the system MUST refresh the token list for that site and preselect the newly created token for export.
 
 #### Scenario: Site has no tokens and is skipped
 - **WHEN** the user loads tokens for a site and the token list is empty
@@ -39,6 +45,26 @@ The system SHALL provide a per-site action to create a default token and, when s
 #### Scenario: Create a default token and select it
 - **WHEN** the user clicks “Create default token” for a site with no tokens
 - **THEN** the system creates a token, reloads the site’s tokens, and selects the created token for export
+
+#### Scenario: Sub2API create-token action requires explicit group selection
+- **WHEN** the user clicks the create-token action for a `sub2api` site with no tokens
+- **AND** multiple valid current Sub2API groups are available
+- **THEN** the system MUST require the user to choose a valid Sub2API group before sending the create request
+- **AND** it MUST NOT create an ungrouped token
+- **AND** after successful creation it MUST reload the site’s tokens and select the created token for export
+
+#### Scenario: Sub2API create-token action auto-uses the only valid group
+- **WHEN** the user clicks the create-token action for a `sub2api` site with no tokens
+- **AND** exactly one valid current Sub2API group is available
+- **THEN** the system MUST create the token using that single group
+- **AND** it MUST NOT require an extra group-selection step
+- **AND** after successful creation it MUST reload the site’s tokens and select the created token for export
+
+#### Scenario: Sub2API create-token action fails when no valid groups exist
+- **WHEN** the user clicks the create-token action for a `sub2api` site with no tokens
+- **AND** no valid current Sub2API groups are available
+- **THEN** the system MUST show a user-facing error
+- **AND** it MUST NOT create a token
 
 ### Requirement: Export selection UX supports multi-site and multi-key export
 

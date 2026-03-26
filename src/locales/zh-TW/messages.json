@@ -126,6 +126,9 @@
     "updateFailed": "更新帳號失敗"
   },
   "sub2api": {
+    "createRequiresAvailableGroup": "目前這個帳號沒有可用於建立金鑰的分組，請先確認帳號分組情況後再試。",
+    "createRequiresGroup": "建立金鑰前需要先確認分組，請先選擇一個可用分組後再繼續。",
+    "createRequiresGroupSelection": "目前這個帳號有多個可用分組。請先選擇要使用的分組，再建立金鑰。",
     "groupMissing": "Sub2API 分組“{{group}}”已不可用。請重新整理分組列表後重試。",
     "loginRequired": "請先登入 Sub2API 控制台（外掛會讀取 auth_token/auth_user 用於匯入會話）後再重試。",
     "refreshTokenInvalid": "Sub2API refresh_token 已失效/已輪轉。請從控制台重新匯入會話（推薦無痕/隱私視窗），或貼上新的 refresh_token 後重試。"

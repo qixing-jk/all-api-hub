@@ -9,6 +9,7 @@ import React, {
 
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import type { ManagedSiteChannelAssessmentSignals } from "~/services/managedSites/channelAssessmentSignals"
+import type { DisplaySiteData } from "~/types"
 import type { ChannelFormData, ManagedSiteChannel } from "~/types/managedSite"
 
 export interface ChannelDialogAdvisoryWarning {
@@ -38,9 +39,18 @@ interface DuplicateChannelWarningState {
   existingChannelName: string | null
 }
 
+interface Sub2ApiTokenDialogState {
+  isOpen: boolean
+  account: DisplaySiteData | null
+  allowedGroups: string[]
+  notice?: string
+  onSuccessCallback?: (() => void | Promise<void>) | null
+}
+
 interface ChannelDialogContextValue {
   state: ChannelDialogState
   duplicateChannelWarning: DuplicateChannelWarningState
+  sub2apiTokenDialog: Sub2ApiTokenDialogState
   openDialog: (config: {
     mode?: DialogMode
     channel?: ManagedSiteChannel | null
@@ -56,6 +66,14 @@ interface ChannelDialogContextValue {
   }) => void
   closeDialog: () => void
   handleSuccess: (result: any) => void
+  openSub2ApiTokenDialog: (config: {
+    account: DisplaySiteData
+    allowedGroups: string[]
+    notice?: string
+    onSuccess?: () => void | Promise<void>
+  }) => void
+  closeSub2ApiTokenDialog: () => void
+  handleSub2ApiTokenSuccess: () => Promise<void>
   requestDuplicateChannelWarning: (options: {
     existingChannelName: string
   }) => Promise<boolean>
@@ -84,6 +102,14 @@ export function ChannelDialogProvider({
     useState<DuplicateChannelWarningState>({
       isOpen: false,
       existingChannelName: null,
+    })
+  const [sub2apiTokenDialog, setSub2apiTokenDialog] =
+    useState<Sub2ApiTokenDialogState>({
+      isOpen: false,
+      account: null,
+      allowedGroups: [],
+      notice: undefined,
+      onSuccessCallback: null,
     })
 
   const openDialog = useCallback(
@@ -137,6 +163,46 @@ export function ChannelDialogProvider({
     [closeDialog],
   )
 
+  const openSub2ApiTokenDialog = useCallback(
+    (config: {
+      account: DisplaySiteData
+      allowedGroups: string[]
+      notice?: string
+      onSuccess?: () => void | Promise<void>
+    }) => {
+      setSub2apiTokenDialog({
+        isOpen: true,
+        account: config.account,
+        allowedGroups: config.allowedGroups,
+        notice: config.notice,
+        onSuccessCallback: config.onSuccess ?? null,
+      })
+    },
+    [],
+  )
+
+  const closeSub2ApiTokenDialog = useCallback(() => {
+    setSub2apiTokenDialog({
+      isOpen: false,
+      account: null,
+      allowedGroups: [],
+      notice: undefined,
+      onSuccessCallback: null,
+    })
+  }, [])
+
+  const sub2apiTokenOnSuccessRef = useRef(sub2apiTokenDialog.onSuccessCallback)
+
+  useEffect(() => {
+    sub2apiTokenOnSuccessRef.current = sub2apiTokenDialog.onSuccessCallback
+  }, [sub2apiTokenDialog.onSuccessCallback])
+
+  const handleSub2ApiTokenSuccess = useCallback(async () => {
+    const callback = sub2apiTokenOnSuccessRef.current
+    closeSub2ApiTokenDialog()
+    await callback?.()
+  }, [closeSub2ApiTokenDialog])
+
   const duplicateWarningResolverRef = useRef<
     ((shouldContinue: boolean) => void) | null
   >(null)
@@ -184,9 +250,13 @@ export function ChannelDialogProvider({
       value={{
         state,
         duplicateChannelWarning,
+        sub2apiTokenDialog,
         openDialog,
         closeDialog,
         handleSuccess,
+        openSub2ApiTokenDialog,
+        closeSub2ApiTokenDialog,
+        handleSub2ApiTokenSuccess,
         requestDuplicateChannelWarning,
         resolveDuplicateChannelWarning,
       }}

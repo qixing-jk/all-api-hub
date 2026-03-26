@@ -12,6 +12,7 @@ import {
   generateDefaultTokenRequest,
 } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import { createDisplayAccountApiContext } from "~/services/accounts/utils/apiServiceRequest"
 import { analyzeAutoDetectError } from "~/services/accounts/utils/autoDetectUtils"
 import { getApiService } from "~/services/apiService"
 import {
@@ -360,6 +361,64 @@ function parsePositiveExchangeRate(input: string): number | undefined {
  */
 function resolveExchangeRate(input: string): number {
   return parsePositiveExchangeRate(input) ?? UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
+}
+
+export type Sub2ApiQuickCreateResolution =
+  | { kind: "ready"; group: string }
+  | { kind: "selection_required"; allowedGroups: string[] }
+  | { kind: "blocked"; message: string }
+
+const normalizeSub2ApiGroupNames = (
+  groups: Record<string, unknown>,
+): string[] => {
+  return Array.from(
+    new Set(
+      Object.keys(groups)
+        .map((group) => group.trim())
+        .filter(Boolean),
+    ),
+  )
+}
+
+/**
+ * Resolves the current Sub2API quick-create state from upstream groups without
+ * guessing a fallback group when multiple choices exist.
+ */
+export async function resolveSub2ApiQuickCreateResolution(
+  account: Pick<
+    DisplaySiteData,
+    | "siteType"
+    | "baseUrl"
+    | "id"
+    | "authType"
+    | "userId"
+    | "token"
+    | "cookieAuthSessionCookie"
+  >,
+): Promise<Sub2ApiQuickCreateResolution> {
+  if (account.siteType !== SUB2API) {
+    throw new Error("sub2api_quick_create_not_applicable")
+  }
+
+  const { service, request } = createDisplayAccountApiContext(account)
+  const groups = await service.fetchUserGroups(request)
+  const validGroups = normalizeSub2ApiGroupNames(groups)
+
+  if (validGroups.length === 0) {
+    return {
+      kind: "blocked",
+      message: t("messages:sub2api.createRequiresAvailableGroup"),
+    }
+  }
+
+  if (validGroups.length === 1) {
+    return { kind: "ready", group: validGroups[0] }
+  }
+
+  return {
+    kind: "selection_required",
+    allowedGroups: validGroups,
+  }
 }
 
 /**
@@ -922,17 +981,22 @@ export function isValidExchangeRate(rate: string): boolean {
  * Provides toast updates for the long-running request to improve UX feedback.
  * @param account - The underlying account record (includes credentials).
  * @param displaySiteData - Derived display data used by token APIs.
- * @param toastId - Optional toast identifier to reuse existing notifications.
+ * @param toastIdOrOptions - Optional toast identifier or Sub2API create options.
  * @returns The ensured ApiToken ready for downstream use.
  * @throws {Error} 当密钥获取或生成都失败时抛出异常
  */
 export async function ensureAccountApiToken(
   account: SiteAccount,
   displaySiteData: DisplaySiteData,
-  toastId?: string,
+  toastIdOrOptions?: string | { toastId?: string; sub2apiGroup?: string },
 ): Promise<ApiToken> {
+  const options =
+    typeof toastIdOrOptions === "string"
+      ? { toastId: toastIdOrOptions }
+      : toastIdOrOptions ?? {}
+
   toast.loading(t("messages:accountOperations.checkingApiKeys"), {
-    id: toastId,
+    id: options.toastId,
   })
 
   const tokens = await getApiService(
@@ -951,6 +1015,22 @@ export async function ensureAccountApiToken(
 
   if (!apiToken) {
     const newTokenData = generateDefaultTokenRequest()
+    if (displaySiteData.siteType === SUB2API) {
+      const normalizedGroup =
+        typeof options.sub2apiGroup === "string"
+          ? options.sub2apiGroup.trim()
+          : ""
+
+      // Sub2API key creation must use a current upstream-valid group. The UI
+      // may auto-resolve the only valid group, but this shared helper must not
+      // silently create an ungrouped key.
+      if (!normalizedGroup) {
+        throw new Error(t("messages:sub2api.createRequiresGroup"))
+      }
+
+      newTokenData.group = normalizedGroup
+    }
+
     const createApiTokenResult = await getApiService(
       displaySiteData.siteType,
     ).createApiToken(

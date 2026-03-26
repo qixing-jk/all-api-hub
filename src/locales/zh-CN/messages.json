@@ -126,6 +126,9 @@
     "updateFailed": "更新账号失败"
   },
   "sub2api": {
+    "createRequiresAvailableGroup": "当前账号没有可用于创建密钥的分组，请先确认账号分组情况后再试。",
+    "createRequiresGroup": "创建密钥前需要先确定分组，请先选择一个可用分组后再继续。",
+    "createRequiresGroupSelection": "当前账号有多个可用分组，请先选择要使用的分组，再创建密钥。",
     "groupMissing": "Sub2API 分组“{{group}}”已不可用。请刷新分组列表后重试。",
     "loginRequired": "请先登录 Sub2API 控制台（插件会读取 auth_token/auth_user 用于导入会话）后再重试。",
     "refreshTokenInvalid": "Sub2API refresh_token 已失效/已轮转。请从控制台重新导入会话（推荐无痕/隐私窗口），或粘贴新的 refresh_token 后重试。"

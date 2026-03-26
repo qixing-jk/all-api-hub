@@ -314,7 +314,8 @@ export function useAccountDialog({
     null,
   )
 
-  const { openWithAccount: openChannelDialog } = useChannelDialog()
+  const { openWithAccount: openChannelDialog, openSub2ApiTokenCreationDialog } =
+    useChannelDialog()
 
   const resetForm = useCallback(() => {
     duplicateAccountWarningAcknowledgedSiteUrlRef.current = null
@@ -818,7 +819,9 @@ export function useAccountDialog({
     }
   }
 
-  const handleSaveAccount = async () => {
+  const handleSaveAccount = async (options?: {
+    skipSub2ApiKeyPrompt?: boolean
+  }) => {
     try {
       setIsSaving(true)
       const sub2apiAuth: Sub2ApiAuthConfig | undefined =
@@ -885,6 +888,21 @@ export function useAccountDialog({
                 name: siteName,
               })),
       )
+
+      if (
+        siteType === SUB2API &&
+        !options?.skipSub2ApiKeyPrompt &&
+        typeof result.accountId === "string" &&
+        result.accountId.trim().length > 0
+      ) {
+        const savedDisplaySiteData =
+          (await accountStorage.getDisplayDataById(result.accountId)) ?? null
+
+        if (savedDisplaySiteData) {
+          await openSub2ApiTokenCreationDialog(savedDisplaySiteData)
+        }
+      }
+
       return result
     } catch (error: any) {
       toast.error(
@@ -903,7 +921,9 @@ export function useAccountDialog({
         account || newAccountRef.current
       // 如果是新增（account 不存在），就先保存
       if (!targetAccount) {
-        targetAccount = (await handleSaveAccount()).accountId
+        targetAccount = (
+          await handleSaveAccount({ skipSub2ApiKeyPrompt: true })
+        ).accountId
         if (!targetAccount) {
           toast.error(t("messages.saveAccountFailed"))
           return

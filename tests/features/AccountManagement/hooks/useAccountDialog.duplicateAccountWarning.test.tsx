@@ -10,9 +10,12 @@ import { server } from "~~/tests/msw/server"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
-const { mockOpenWithAccount } = vi.hoisted(() => ({
-  mockOpenWithAccount: vi.fn(),
-}))
+const { mockOpenWithAccount, mockOpenSub2ApiTokenCreationDialog } = vi.hoisted(
+  () => ({
+    mockOpenWithAccount: vi.fn(),
+    mockOpenSub2ApiTokenCreationDialog: vi.fn(),
+  }),
+)
 
 vi.mock("react-hot-toast", () => ({
   default: {
@@ -24,7 +27,10 @@ vi.mock("react-hot-toast", () => ({
 
 vi.mock("~/components/dialogs/ChannelDialog", () => ({
   ChannelDialogProvider: ({ children }: { children: ReactNode }) => children,
-  useChannelDialog: () => ({ openWithAccount: mockOpenWithAccount }),
+  useChannelDialog: () => ({
+    openWithAccount: mockOpenWithAccount,
+    openSub2ApiTokenCreationDialog: mockOpenSub2ApiTokenCreationDialog,
+  }),
 }))
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
@@ -185,5 +191,60 @@ describe("useAccountDialog duplicate account warning", () => {
 
     const afterAccounts = await accountStorage.getAllAccounts()
     expect(afterAccounts).toHaveLength(2)
+  })
+
+  it("opens the Sub2API key creation dialog after saving a Sub2API account", async () => {
+    server.use(
+      http.get("https://sub2.example.com/api/v1/auth/me", () =>
+        HttpResponse.json({
+          code: 0,
+          message: "ok",
+          data: {
+            id: 1,
+            username: "",
+            email: "sub2@example.com",
+            balance: 0,
+          },
+        }),
+      ),
+    )
+
+    const onClose = vi.fn()
+    const onSuccess = vi.fn()
+
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose,
+        onSuccess,
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://sub2.example.com")
+      result.current.setters.setSiteType("sub2api")
+      result.current.setters.setSiteName("Sub2")
+      result.current.setters.setUsername("")
+      result.current.setters.setAccessToken("jwt-token")
+      result.current.setters.setUserId("1")
+      result.current.setters.setExchangeRate("7")
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    expect(mockOpenSub2ApiTokenCreationDialog).toHaveBeenCalledTimes(1)
+    expect(mockOpenSub2ApiTokenCreationDialog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        siteType: "sub2api",
+        baseUrl: "https://sub2.example.com",
+      }),
+    )
   })
 })

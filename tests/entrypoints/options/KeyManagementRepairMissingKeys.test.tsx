@@ -1,4 +1,5 @@
-import { describe, expect, it, vi } from "vitest"
+import type { ReactNode } from "react"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   RuntimeActionIds,
@@ -22,6 +23,9 @@ const { sendRuntimeActionMessageMock, runtimeMessageState } = vi.hoisted(
     },
   }),
 )
+const { mockOpenSub2ApiTokenCreationDialog } = vi.hoisted(() => ({
+  mockOpenSub2ApiTokenCreationDialog: vi.fn(),
+}))
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   const actual =
@@ -40,12 +44,46 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   }
 })
 
+vi.mock("~/components/dialogs/ChannelDialog", () => ({
+  ChannelDialogProvider: ({ children }: { children: ReactNode }) => children,
+  useChannelDialog: () => ({
+    openSub2ApiTokenCreationDialog: mockOpenSub2ApiTokenCreationDialog,
+  }),
+}))
+
 vi.mock("~/features/KeyManagement/hooks/useKeyManagement", () => ({
   useKeyManagement: vi.fn(() => ({
     displayData: [
-      { id: "account-enabled", name: "Enabled Site", disabled: false },
-      { id: "account-disabled", name: "Disabled Site", disabled: true },
-      { id: "account-enabled-2", name: "Another Site", disabled: false },
+      {
+        id: "account-enabled",
+        name: "Enabled Site",
+        disabled: false,
+        siteType: "unknown",
+        baseUrl: "https://enabled.example.com",
+        token: "token",
+        userId: 1,
+        authType: "access_token",
+      },
+      {
+        id: "account-disabled",
+        name: "Disabled Site",
+        disabled: true,
+        siteType: "unknown",
+        baseUrl: "https://disabled.example.com",
+        token: "token",
+        userId: 1,
+        authType: "access_token",
+      },
+      {
+        id: "account-enabled-2",
+        name: "Another Site",
+        disabled: false,
+        siteType: "sub2api",
+        baseUrl: "https://another.example.com",
+        token: "jwt-token",
+        userId: 1,
+        authType: "access_token",
+      },
     ],
     selectedAccount: "",
     setSelectedAccount: vi.fn(),
@@ -244,7 +282,42 @@ const inflatedProgress: AccountKeyRepairProgress = {
   ],
 }
 
+const sub2apiSkippedProgress: AccountKeyRepairProgress = {
+  jobId: "job-4",
+  state: "completed",
+  startedAt: 1,
+  updatedAt: 1,
+  finishedAt: 1,
+  totals: {
+    enabledAccounts: 2,
+    eligibleAccounts: 1,
+    processedAccounts: 2,
+    processedEligibleAccounts: 1,
+  },
+  summary: {
+    created: 0,
+    alreadyHad: 0,
+    skipped: 1,
+    failed: 0,
+  },
+  results: [
+    {
+      accountId: "account-enabled-2",
+      accountName: "Another Site",
+      siteType: "sub2api",
+      siteUrlOrigin: "https://another.example.com",
+      outcome: "skipped",
+      skipReason: "sub2api",
+      finishedAt: 1,
+    },
+  ],
+}
+
 describe("KeyManagement repair missing keys entry point", () => {
+  beforeEach(() => {
+    mockOpenSub2ApiTokenCreationDialog.mockReset()
+  })
+
   it("opens dialog, subscribes to progress, and hides disabled accounts", async () => {
     sendRuntimeActionMessageMock.mockImplementation(async (message: any) => {
       if (message?.action === RuntimeActionIds.AccountKeyRepairGetProgress) {
@@ -413,6 +486,46 @@ describe("KeyManagement repair missing keys entry point", () => {
     await waitFor(() => {
       expect(screen.getByText("Enabled Site")).toBeInTheDocument()
       expect(screen.getByText("Another Site")).toBeInTheDocument()
+    })
+  })
+
+  it("offers a create-key action for skipped Sub2API accounts", async () => {
+    sendRuntimeActionMessageMock.mockImplementation(async (message: any) => {
+      if (message?.action === RuntimeActionIds.AccountKeyRepairGetProgress) {
+        return { success: true, data: idleProgress }
+      }
+      if (message?.action === RuntimeActionIds.AccountKeyRepairStart) {
+        return { success: true, data: sub2apiSkippedProgress }
+      }
+      return { success: false }
+    })
+
+    render(<KeyManagement />)
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:repairMissingKeys.action",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText("Another Site")).toBeInTheDocument()
+    })
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "keyManagement:dialog.createToken",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockOpenSub2ApiTokenCreationDialog).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: "account-enabled-2",
+          siteType: "sub2api",
+          baseUrl: "https://another.example.com",
+        }),
+      )
     })
   })
 })

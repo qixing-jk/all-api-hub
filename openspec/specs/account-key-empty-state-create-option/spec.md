@@ -16,12 +16,38 @@ When a user triggers the account “copy key” action and the token inventory i
 When the token inventory is empty, the dialog MUST support:
 - A quick-create action that provisions a default token.
 - A custom-create action that allows the user to manually configure token fields before creating.
+For `sub2api` accounts, the quick-create action MUST become a group-aware create flow that refuses to submit a token with an empty group. When the user triggers quick-create:
+- If exactly one valid current Sub2API group is available, the flow MUST use it automatically.
+- If multiple valid current groups exist, the flow MUST require the user to explicitly select one before creating the token.
+- If no valid current groups are available, the flow MUST block creation and show an actionable error instead of creating an ungrouped token.
 
 #### Scenario: User sees quick-create and custom-create options
 - **GIVEN** the copy-key dialog is open for an account with zero tokens
 - **WHEN** the empty token list view is rendered
 - **THEN** the dialog presents a quick-create action for creating a default token
 - **AND** the dialog presents a custom-create action for opening the token configuration form
+
+#### Scenario: Sub2API quick-create auto-uses the only valid group
+- **GIVEN** the copy-key dialog is open for a `sub2api` account with zero tokens
+- **WHEN** the user selects the quick-create action
+- **AND** exactly one valid current Sub2API group is available
+- **THEN** the system MUST create the token using that group
+- **AND** it MUST not show an extra group-selection step
+
+#### Scenario: Sub2API quick-create requires explicit choice for multiple groups
+- **GIVEN** the copy-key dialog is open for a `sub2api` account with zero tokens
+- **WHEN** the user selects the quick-create action
+- **AND** multiple valid current Sub2API groups are available
+- **THEN** the dialog MUST keep token creation user-triggered
+- **AND** it MUST require the user to choose one of the valid groups before creating
+- **AND** the dialog MUST not create a token while the group remains unresolved
+
+#### Scenario: Sub2API quick-create fails when no valid groups exist
+- **GIVEN** the copy-key dialog is open for a `sub2api` account with zero tokens
+- **WHEN** the user selects the quick-create action
+- **AND** no valid current Sub2API groups are available
+- **THEN** the dialog MUST show an actionable error
+- **AND** the dialog MUST NOT create a token
 
 ### Requirement: Creating a key requires explicit user intent
 The system MUST NOT create a key automatically solely because the token list is empty. The system MUST create a key only after the user explicitly selects the create-key action.
@@ -32,6 +58,8 @@ The system MUST NOT create a key automatically solely because the token list is 
 
 ### Requirement: Create actions provision a token and refresh inventory
 When the user selects either create-key action (quick-create or custom-create), the system MUST create a token for that account and then refresh the token inventory presented in the dialog.
+
+For `sub2api` accounts, the token creation step MUST use a resolved valid group obtained from the group-aware quick-create or custom-create flow.
 
 #### Scenario: Quick-create provisions a default token and reloads list
 - **GIVEN** the copy-key dialog is open for an account with zero tokens
@@ -76,3 +104,8 @@ If token creation fails, or if the refreshed token inventory still contains no t
 - **WHEN** the subsequent token inventory refresh returns zero tokens
 - **THEN** the system shows an error message indicating that no key could be found
 - **AND** the system keeps the dialog open and allows retrying the create-key action
+#### Scenario: Sub2API create provisions a grouped token and reloads list
+- **GIVEN** the copy-key dialog is open for a `sub2api` account with zero tokens
+- **WHEN** the user completes the required Sub2API group resolution and confirms creation
+- **THEN** the system creates the token using the resolved valid group
+- **AND** the system reloads the token inventory for the account and renders the updated list

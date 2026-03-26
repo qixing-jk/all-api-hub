@@ -3,9 +3,11 @@ import type { TFunction } from "i18next"
 import { useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
 import {
   Alert,
   Badge,
+  Button,
   Card,
   CardContent,
   CardHeader,
@@ -86,6 +88,7 @@ function getRepairOutcomeLabel(t: TFunction, outcome: AccountKeyRepairOutcome) {
 export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
   const { isOpen, onClose, accounts, startOnOpen } = props
   const { t } = useTranslation(["keyManagement", "common"])
+  const { openSub2ApiTokenCreationDialog } = useChannelDialog()
 
   const [progress, setProgress] = useState<AccountKeyRepairProgress | null>(
     null,
@@ -94,11 +97,18 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [outcomeFilter, setOutcomeFilter] =
     useState<AccountKeyRepairOutcome | null>(null)
+  const [openingSub2ApiAccountId, setOpeningSub2ApiAccountId] = useState<
+    string | null
+  >(null)
 
   const disabledAccountIds = useMemo(() => {
     return new Set(
       accounts.filter((account) => account.disabled).map((a) => a.id),
     )
+  }, [accounts])
+
+  const accountById = useMemo(() => {
+    return new Map(accounts.map((account) => [account.id, account]))
   }, [accounts])
 
   const visibleResults = useMemo(() => {
@@ -132,6 +142,20 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
       )
     })
   }, [outcomeFilter, searchTerm, visibleResults])
+
+  const handleOpenSub2ApiTokenDialog = async (accountId: string) => {
+    const account = accountById.get(accountId)
+    if (!account) return
+
+    setOpeningSub2ApiAccountId(accountId)
+    try {
+      await openSub2ApiTokenCreationDialog(account)
+    } finally {
+      setOpeningSub2ApiAccountId((current) =>
+        current === accountId ? null : current,
+      )
+    }
+  }
 
   /**
    * Builds filter option counts based on currently visible (enabled) accounts.
@@ -513,6 +537,10 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
                           : result.outcome === "failed"
                             ? result.errorMessage || ""
                             : ""
+                      const canCreateSub2ApiKey =
+                        result.outcome === "skipped" &&
+                        result.skipReason === "sub2api" &&
+                        accountById.has(result.accountId)
 
                       const badgeVariant =
                         OUTCOME_BADGE_VARIANTS[result.outcome]
@@ -549,6 +577,29 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
                               {outcomeLabel}
                             </Badge>
                           </div>
+
+                          {canCreateSub2ApiKey ? (
+                            <div className="mt-2">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() =>
+                                  void handleOpenSub2ApiTokenDialog(
+                                    result.accountId,
+                                  )
+                                }
+                                disabled={
+                                  openingSub2ApiAccountId === result.accountId
+                                }
+                                loading={
+                                  openingSub2ApiAccountId === result.accountId
+                                }
+                              >
+                                {t("dialog.createToken")}
+                              </Button>
+                            </div>
+                          ) : null}
 
                           {details ? (
                             <div

@@ -8,9 +8,15 @@ import {
   CHANNEL_DIALOG_ADVISORY_WARNING_KINDS,
 } from "~/components/dialogs/ChannelDialog/utils/advisoryWarning"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
-import { ensureAccountApiToken } from "~/services/accounts/accountOperations"
+import {
+  ensureAccountApiToken,
+  resolveSub2ApiQuickCreateResolution,
+} from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accounts/accountStorage"
-import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
+import {
+  createDisplayAccountApiContext,
+  resolveDisplayAccountTokenForSecret,
+} from "~/services/accounts/utils/apiServiceRequest"
 import { toManagedSiteChannelAssessmentSignals } from "~/services/managedSites/channelAssessmentSignals"
 import { getManagedSiteChannelExactMatch } from "~/services/managedSites/channelMatch"
 import { resolveManagedSiteChannelMatch } from "~/services/managedSites/channelMatchResolver"
@@ -60,8 +66,44 @@ interface PrefilledDialogDuplicateState {
  */
 export function useChannelDialog() {
   const { t } = useTranslation(["messages", "channelDialog"])
-  const { openDialog, requestDuplicateChannelWarning } =
+  const { openDialog, openSub2ApiTokenDialog, requestDuplicateChannelWarning } =
     useChannelDialogContext()
+
+  const openSub2ApiTokenCreationDialog = async (
+    account: DisplaySiteData,
+    options?: {
+      notice?: string
+      onSuccess?: () => void | Promise<void>
+    },
+  ): Promise<boolean> => {
+    const { service, request } = createDisplayAccountApiContext(account)
+    const existingTokens = await service.fetchAccountTokens(request)
+    if (Array.isArray(existingTokens) && existingTokens.length > 0) {
+      return false
+    }
+
+    const resolution = await resolveSub2ApiQuickCreateResolution(account)
+    if (resolution.kind === "blocked") {
+      toast.error(resolution.message)
+      return false
+    }
+
+    openSub2ApiTokenDialog({
+      account,
+      allowedGroups:
+        resolution.kind === "selection_required"
+          ? resolution.allowedGroups
+          : [resolution.group],
+      notice:
+        options?.notice ??
+        (resolution.kind === "selection_required"
+          ? t("messages:sub2api.createRequiresGroupSelection")
+          : undefined),
+      onSuccess: options?.onSuccess,
+    })
+
+    return true
+  }
 
   const createCredentialDisplaySiteData = (options: {
     name: string
@@ -293,12 +335,56 @@ export function useChannelDialog() {
       let apiToken = accountToken
 
       if (!apiToken) {
-        // Ensure API token exists
-        apiToken = await ensureAccountApiToken(
-          siteAccount,
-          displaySiteData,
-          toastId,
-        )
+        const { service: accountApiService, request: accountApiRequest } =
+          createDisplayAccountApiContext(displaySiteData)
+        const existingTokens =
+          await accountApiService.fetchAccountTokens(accountApiRequest)
+
+        apiToken = Array.isArray(existingTokens)
+          ? existingTokens.at(-1) ?? null
+          : null
+      }
+
+      if (!apiToken) {
+        if (displaySiteData.siteType === "sub2api") {
+          const resolution =
+            await resolveSub2ApiQuickCreateResolution(displaySiteData)
+
+          if (resolution.kind === "blocked") {
+            toast.error(resolution.message, { id: toastId })
+            return
+          }
+
+          if (resolution.kind === "selection_required") {
+            toast.dismiss(toastId)
+            openSub2ApiTokenDialog({
+              account: displaySiteData,
+              allowedGroups: resolution.allowedGroups,
+              notice: t("messages:sub2api.createRequiresGroupSelection"),
+              onSuccess: async () => {
+                await openWithAccount(
+                  displaySiteData!,
+                  null,
+                  onSuccess,
+                  options,
+                )
+              },
+            })
+            return
+          }
+
+          apiToken = await ensureAccountApiToken(siteAccount, displaySiteData, {
+            toastId,
+            sub2apiGroup: resolution.group,
+          })
+        } else {
+          // Ensure API token exists
+          apiToken = await ensureAccountApiToken(
+            siteAccount,
+            displaySiteData,
+            toastId,
+          )
+        }
       }
 
       const resolvedToken = await resolveDisplayAccountTokenForSecret(
@@ -473,6 +559,7 @@ export function useChannelDialog() {
 
   return {
     openWithAccount,
+    openSub2ApiTokenCreationDialog,
     openWithCredentials,
     openWithCustom,
   }

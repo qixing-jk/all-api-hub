@@ -7,13 +7,19 @@ import { accountStorage } from "~/services/accounts/accountStorage"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { renderHook, waitFor } from "~~/tests/test-utils/render"
 
-const { mockOpenWithAccount } = vi.hoisted(() => ({
-  mockOpenWithAccount: vi.fn(),
-}))
+const { mockOpenWithAccount, mockOpenSub2ApiTokenCreationDialog } = vi.hoisted(
+  () => ({
+    mockOpenWithAccount: vi.fn(),
+    mockOpenSub2ApiTokenCreationDialog: vi.fn(),
+  }),
+)
 
 vi.mock("~/components/dialogs/ChannelDialog", () => ({
   ChannelDialogProvider: ({ children }: { children: ReactNode }) => children,
-  useChannelDialog: () => ({ openWithAccount: mockOpenWithAccount }),
+  useChannelDialog: () => ({
+    openWithAccount: mockOpenWithAccount,
+    openSub2ApiTokenCreationDialog: mockOpenSub2ApiTokenCreationDialog,
+  }),
 }))
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {

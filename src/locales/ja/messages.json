@@ -126,6 +126,9 @@
     "updateFailed": "アカウントの更新に失敗しました"
   },
   "sub2api": {
+    "createRequiresAvailableGroup": "このアカウントにはキー作成に使えるグループがありません。利用可能なグループ設定を確認してから再試行してください。",
+    "createRequiresGroup": "キー作成にはグループの確定が必要です。続行する前に利用可能なグループを選択してください。",
+    "createRequiresGroupSelection": "このアカウントには利用可能なグループが複数あります。キーを作成する前に 1 つ選択してください。",
     "groupMissing": "Sub2API グループ '{{group}}' は現在利用できません。グループ一覧を更新して再試行してください。",
     "loginRequired": "先に Sub2API ダッシュボードへログインして（拡張機能が localStorage から auth_token / auth_user を読めるようにして）、再試行してください。",
     "refreshTokenInvalid": "Sub2API の Refresh Token が無効または更新済みです。ダッシュボードからセッションを再取り込み（推奨: シークレット / プライベートウィンドウ）するか、新しい refresh_token を貼り付けて再試行してください。"

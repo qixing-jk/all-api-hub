@@ -3,6 +3,7 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { generateDefaultTokenRequest } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
+import { resolveSub2ApiQuickCreateResolution } from "~/services/accounts/accountOperations"
 import {
   canManageDisplayAccountTokens,
   createDisplayAccountApiContext,
@@ -33,6 +34,9 @@ export function useCopyKeyDialog(
   const [error, setError] = useState<string | null>(null)
   const [isCreating, setIsCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
+  const [sub2apiCreateAllowedGroups, setSub2apiCreateAllowedGroups] = useState<
+    string[] | null
+  >(null)
   const [copiedTokenId, setCopiedTokenId] = useState<number | null>(null)
   const [expandedTokens, setExpandedTokens] = useState<Set<number>>(new Set())
   const copiedTokenResetTimeoutRef = useRef<ReturnType<
@@ -51,12 +55,17 @@ export function useCopyKeyDialog(
     copiedTokenResetTimeoutRef.current = null
   }, [])
 
+  const clearSub2ApiCreateAllowedGroups = useCallback(() => {
+    setSub2apiCreateAllowedGroups(null)
+  }, [])
+
   const fetchTokens = useCallback(async () => {
     if (!account) return
 
     setIsLoading(true)
     setError(null)
     setCreateError(null)
+    clearSub2ApiCreateAllowedGroups()
 
     try {
       const { service, request } = createDisplayAccountApiContext(account)
@@ -84,7 +93,7 @@ export function useCopyKeyDialog(
     } finally {
       setIsLoading(false)
     }
-  }, [account, t])
+  }, [account, clearSub2ApiCreateAllowedGroups, t])
 
   useEffect(() => {
     if (isOpen && account) {
@@ -95,10 +104,17 @@ export function useCopyKeyDialog(
       setError(null)
       setIsCreating(false)
       setCreateError(null)
+      clearSub2ApiCreateAllowedGroups()
       setCopiedTokenId(null)
       setExpandedTokens(new Set())
     }
-  }, [account, clearCopiedTokenResetTimeout, fetchTokens, isOpen])
+  }, [
+    account,
+    clearCopiedTokenResetTimeout,
+    clearSub2ApiCreateAllowedGroups,
+    fetchTokens,
+    isOpen,
+  ])
 
   useEffect(() => {
     return () => {
@@ -194,10 +210,28 @@ export function useCopyKeyDialog(
 
     setIsCreating(true)
     setCreateError(null)
+    clearSub2ApiCreateAllowedGroups()
 
     try {
       const { service, request } = createDisplayAccountApiContext(account)
       const tokenRequest = generateDefaultTokenRequest()
+      if (account.siteType === "sub2api") {
+        // Sub2API quick-create may skip the chooser only when the current
+        // upstream group set has collapsed to a single valid option.
+        const resolution = await resolveSub2ApiQuickCreateResolution(account)
+        if (resolution.kind === "blocked") {
+          setCreateError(resolution.message)
+          return
+        }
+
+        if (resolution.kind === "selection_required") {
+          setSub2apiCreateAllowedGroups(resolution.allowedGroups)
+          return
+        }
+
+        tokenRequest.group = resolution.group
+      }
+
       const created = await service.createApiToken(request, tokenRequest)
       if (!created) {
         throw new Error("create_token_failed")
@@ -218,7 +252,14 @@ export function useCopyKeyDialog(
     } finally {
       setIsCreating(false)
     }
-  }, [account, canCreateDefaultKey, isCreating, refreshTokensAfterCreate, t])
+  }, [
+    account,
+    canCreateDefaultKey,
+    clearSub2ApiCreateAllowedGroups,
+    isCreating,
+    refreshTokensAfterCreate,
+    t,
+  ])
 
   const toggleTokenExpansion = (tokenId: number) => {
     setExpandedTokens((prev) => {
@@ -238,6 +279,7 @@ export function useCopyKeyDialog(
     error,
     isCreating,
     createError,
+    sub2apiCreateAllowedGroups,
     copiedTokenId,
     expandedTokens,
     canCreateDefaultKey,
@@ -246,5 +288,6 @@ export function useCopyKeyDialog(
     createDefaultKey,
     refreshTokensAfterCreate,
     toggleTokenExpansion,
+    clearSub2ApiCreateAllowedGroups,
   }
 }

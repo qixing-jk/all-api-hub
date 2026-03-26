@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react"
+import { useTranslation } from "react-i18next"
 
 import { CCSwitchExportDialog } from "~/components/CCSwitchExportDialog"
 import { Modal } from "~/components/ui"
 import { useCopyKeyDialog } from "~/features/AccountManagement/components/CopyKeyDialog/hooks/useCopyKeyDialog"
 import AddTokenDialog from "~/features/KeyManagement/components/AddTokenDialog"
+import { DEFAULT_AUTO_PROVISION_TOKEN_NAME } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import type { ApiToken, DisplaySiteData } from "~/types"
 
 import { DialogFooter } from "./DialogFooter"
@@ -26,6 +28,7 @@ export default function CopyKeyDialog({
   onClose,
   account,
 }: CopyKeyDialogProps) {
+  const { t } = useTranslation("messages")
   const [isAddTokenDialogOpen, setIsAddTokenDialogOpen] = useState(false)
   const [ccSwitchContext, setCCSwitchContext] = useState<{
     token: ApiToken
@@ -37,6 +40,7 @@ export default function CopyKeyDialog({
     error,
     isCreating,
     createError,
+    sub2apiCreateAllowedGroups,
     copiedTokenId,
     expandedTokens,
     canCreateDefaultKey,
@@ -45,17 +49,51 @@ export default function CopyKeyDialog({
     createDefaultKey,
     refreshTokensAfterCreate,
     toggleTokenExpansion,
+    clearSub2ApiCreateAllowedGroups,
   } = useCopyKeyDialog(isOpen, account)
 
-  const handleOpenAddTokenDialog = () => setIsAddTokenDialogOpen(true)
-  const handleCloseAddTokenDialog = () => setIsAddTokenDialogOpen(false)
-  const handleAddTokenSuccess = () => refreshTokensAfterCreate()
+  const handleOpenAddTokenDialog = () => {
+    clearSub2ApiCreateAllowedGroups()
+    setIsAddTokenDialogOpen(true)
+  }
+  const handleCloseAddTokenDialog = () => {
+    clearSub2ApiCreateAllowedGroups()
+    setIsAddTokenDialogOpen(false)
+  }
+  const handleAddTokenSuccess = () => {
+    clearSub2ApiCreateAllowedGroups()
+    return refreshTokensAfterCreate()
+  }
 
   useEffect(() => {
     if (!isOpen || !account) {
+      clearSub2ApiCreateAllowedGroups()
       setIsAddTokenDialogOpen(false)
     }
-  }, [isOpen, account])
+  }, [account, clearSub2ApiCreateAllowedGroups, isOpen])
+
+  useEffect(() => {
+    if (
+      !sub2apiCreateAllowedGroups ||
+      sub2apiCreateAllowedGroups.length === 0
+    ) {
+      return
+    }
+
+    setIsAddTokenDialogOpen(true)
+  }, [sub2apiCreateAllowedGroups])
+
+  const sub2apiQuickCreatePrefill =
+    sub2apiCreateAllowedGroups && sub2apiCreateAllowedGroups.length > 0
+      ? {
+          modelId: "",
+          defaultName: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
+          group: sub2apiCreateAllowedGroups.includes("default")
+            ? "default"
+            : sub2apiCreateAllowedGroups[0] ?? "default",
+          allowedGroups: sub2apiCreateAllowedGroups,
+        }
+      : undefined
 
   const handleOpenCCSwitchDialog = (
     token: ApiToken,
@@ -119,6 +157,12 @@ export default function CopyKeyDialog({
           onClose={handleCloseAddTokenDialog}
           availableAccounts={[account]}
           preSelectedAccountId={account.id}
+          createPrefill={sub2apiQuickCreatePrefill}
+          prefillNotice={
+            sub2apiQuickCreatePrefill
+              ? t("sub2api.createRequiresGroupSelection")
+              : undefined
+          }
           onSuccess={handleAddTokenSuccess}
         />
       ) : null}
