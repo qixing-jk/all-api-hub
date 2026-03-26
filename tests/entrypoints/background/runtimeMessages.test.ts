@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { COOKIE_IMPORT_FAILURE_REASONS } from "~/constants/cookieImport"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 
 type RuntimeMessageListener = (
@@ -11,12 +12,16 @@ type RuntimeMessageListener = (
 describe("setupRuntimeMessageListeners routing", () => {
   let runtimeMessageListener: RuntimeMessageListener | undefined
   let applyActionClickBehavior: ReturnType<typeof vi.fn>
+  let getCookieHeaderForUrlResult: ReturnType<typeof vi.fn>
+  let hasCookieReadPermissionForUrl: ReturnType<typeof vi.fn>
   let handleManagedSiteModelSyncMessage: ReturnType<typeof vi.fn>
   let setupContextMenus: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
     runtimeMessageListener = undefined
     applyActionClickBehavior = vi.fn()
+    getCookieHeaderForUrlResult = vi.fn()
+    hasCookieReadPermissionForUrl = vi.fn().mockResolvedValue(true)
     handleManagedSiteModelSyncMessage = vi.fn()
     setupContextMenus = vi.fn().mockResolvedValue(undefined)
 
@@ -36,6 +41,16 @@ describe("setupRuntimeMessageListeners routing", () => {
     vi.doMock("~/entrypoints/background/actionClickBehavior", () => ({
       applyActionClickBehavior,
     }))
+
+    vi.doMock("~/utils/browser/cookieHelper", async (importOriginal) => {
+      const actual =
+        await importOriginal<typeof import("~/utils/browser/cookieHelper")>()
+      return {
+        ...actual,
+        getCookieHeaderForUrlResult,
+        hasCookieReadPermissionForUrl,
+      }
+    })
 
     vi.doMock("~/entrypoints/background/contextMenus", () => ({
       setupContextMenus,
@@ -72,6 +87,7 @@ describe("setupRuntimeMessageListeners routing", () => {
   afterEach(() => {
     vi.doUnmock("~/utils/browser/browserApi")
     vi.doUnmock("~/entrypoints/background/actionClickBehavior")
+    vi.doUnmock("~/utils/browser/cookieHelper")
     vi.doUnmock("~/entrypoints/background/contextMenus")
     vi.doUnmock("~/services/models/modelSync")
     vi.doUnmock("~/services/checkin/autoCheckin/scheduler")
@@ -184,5 +200,107 @@ describe("setupRuntimeMessageListeners routing", () => {
 
     expect(sendResponse).not.toHaveBeenCalled()
     expect(result).toBeUndefined()
+  })
+
+  it("returns a structured no-cookie failure for cookie import requests", async () => {
+    getCookieHeaderForUrlResult.mockResolvedValueOnce({ header: "" })
+
+    const { setupRuntimeMessageListeners } = await import(
+      "~/entrypoints/background/runtimeMessages"
+    )
+
+    setupRuntimeMessageListeners()
+    expect(runtimeMessageListener).toBeTypeOf("function")
+
+    const sendResponse = vi.fn()
+    const result = runtimeMessageListener?.(
+      {
+        action: RuntimeActionIds.AccountDialogImportCookieAuthSessionCookie,
+        url: "https://example.com",
+      },
+      {},
+      sendResponse,
+    )
+
+    expect(result).toBe(true)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(getCookieHeaderForUrlResult).toHaveBeenCalledWith(
+      "https://example.com",
+      {
+        includeSession: true,
+      },
+    )
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: false,
+      errorCode: COOKIE_IMPORT_FAILURE_REASONS.NoCookiesFound,
+    })
+  })
+
+  it("returns a permission failure before reading cookies when access is missing", async () => {
+    hasCookieReadPermissionForUrl.mockResolvedValueOnce(false)
+
+    const { setupRuntimeMessageListeners } = await import(
+      "~/entrypoints/background/runtimeMessages"
+    )
+
+    setupRuntimeMessageListeners()
+    expect(runtimeMessageListener).toBeTypeOf("function")
+
+    const sendResponse = vi.fn()
+    const result = runtimeMessageListener?.(
+      {
+        action: RuntimeActionIds.AccountDialogImportCookieAuthSessionCookie,
+        url: "https://example.com",
+      },
+      {},
+      sendResponse,
+    )
+
+    expect(result).toBe(true)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(hasCookieReadPermissionForUrl).toHaveBeenCalledWith(
+      "https://example.com",
+    )
+    expect(getCookieHeaderForUrlResult).not.toHaveBeenCalled()
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: false,
+      errorCode: COOKIE_IMPORT_FAILURE_REASONS.PermissionDenied,
+    })
+  })
+
+  it("preserves permission-denied diagnostics for cookie import requests", async () => {
+    getCookieHeaderForUrlResult.mockResolvedValueOnce({
+      header: "",
+      failureReason: COOKIE_IMPORT_FAILURE_REASONS.PermissionDenied,
+      errorMessage: "Missing host permission for the tab",
+    })
+
+    const { setupRuntimeMessageListeners } = await import(
+      "~/entrypoints/background/runtimeMessages"
+    )
+
+    setupRuntimeMessageListeners()
+    expect(runtimeMessageListener).toBeTypeOf("function")
+
+    const sendResponse = vi.fn()
+    const result = runtimeMessageListener?.(
+      {
+        action: RuntimeActionIds.AccountDialogImportCookieAuthSessionCookie,
+        url: "https://example.com",
+      },
+      {},
+      sendResponse,
+    )
+
+    expect(result).toBe(true)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: false,
+      errorCode: COOKIE_IMPORT_FAILURE_REASONS.PermissionDenied,
+      error: "Missing host permission for the tab",
+    })
   })
 })

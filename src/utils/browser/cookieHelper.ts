@@ -1,6 +1,8 @@
 import { hasCookieInterceptorPermissions } from "~/services/permissions/permissionManager"
+import { containsPermissions } from "~/utils/browser/browserApi"
 import { mergeCookieHeaders } from "~/utils/browser/cookieString"
 import { isProtectionBypassFirefoxEnv } from "~/utils/browser/protectionBypass"
+import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
 /**
@@ -33,6 +35,81 @@ export const AUTH_MODE = {
 
 type AuthMode = (typeof AUTH_MODE)[keyof typeof AUTH_MODE]
 
+export const COOKIE_HEADER_READ_FAILURE_REASONS = {
+  PermissionDenied: "permission-denied",
+  ReadFailed: "read-failed",
+} as const
+
+type CookieHeaderReadFailureReason =
+  (typeof COOKIE_HEADER_READ_FAILURE_REASONS)[keyof typeof COOKIE_HEADER_READ_FAILURE_REASONS]
+
+interface CookieHeaderReadResult {
+  header: string
+  errorMessage?: string
+  failureReason?: CookieHeaderReadFailureReason
+}
+
+const COOKIE_PERMISSION_DENIED_PATTERNS = [
+  /permission denied/i,
+  /does not have permission/i,
+  /missing host permission/i,
+  /host permission/i,
+  /not allowed/i,
+  /not permitted/i,
+  /cookies?.*permission/i,
+  /extension.*permission/i,
+]
+
+/**
+ * Classifies cookie-read failures so callers can distinguish permission issues
+ * from empty-cookie states and other browser/runtime errors.
+ */
+function classifyCookieHeaderReadFailure(
+  error: unknown,
+): CookieHeaderReadFailureReason {
+  const message = getErrorMessage(error).trim()
+
+  if (
+    message &&
+    COOKIE_PERMISSION_DENIED_PATTERNS.some((pattern) => pattern.test(message))
+  ) {
+    return COOKIE_HEADER_READ_FAILURE_REASONS.PermissionDenied
+  }
+
+  return COOKIE_HEADER_READ_FAILURE_REASONS.ReadFailed
+}
+
+/**
+ * Converts a URL into an origin pattern suitable for cookie permissions, e.g.
+ * "https://example.com/some/path" -> "https://example.com/*"
+ * Returns null if the URL is invalid and cannot be parsed.
+ */
+function getCookiePermissionOriginPattern(url: string): string | null {
+  try {
+    const parsed = new URL(url)
+    return `${parsed.origin}/*`
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Checks whether the extension can read cookies for the target URL.
+ *
+ * This combines the optional `cookies` permission with the target origin so
+ * callers can short-circuit before attempting `browser.cookies.getAll`.
+ */
+export async function hasCookieReadPermissionForUrl(
+  url: string,
+): Promise<boolean> {
+  const originPattern = getCookiePermissionOriginPattern(url)
+
+  return await containsPermissions({
+    permissions: ["cookies" as unknown as browser._manifest.OptionalPermission],
+    ...(originPattern ? { origins: [originPattern] } : {}),
+  })
+}
+
 // 拦截器注册状态
 let isInterceptorRegistered = false
 
@@ -64,6 +141,18 @@ export async function getCookieHeaderForUrl(
   url: string,
   options: { includeSession?: boolean } = {},
 ): Promise<string> {
+  const result = await getCookieHeaderForUrlResult(url, options)
+  return result.header
+}
+
+/**
+ * Reads the browser cookie header for a URL and preserves failure diagnostics
+ * for callers that need to distinguish permission issues from empty results.
+ */
+export async function getCookieHeaderForUrlResult(
+  url: string,
+  options: { includeSession?: boolean } = {},
+): Promise<CookieHeaderReadResult> {
   const includeSession = options.includeSession ?? true
 
   try {
@@ -93,10 +182,20 @@ export async function getCookieHeaderForUrl(
 
     logger.debug("获取到 Cookie", { url, cookieCount: validCookies.length })
 
-    return cookieHeader
+    return { header: cookieHeader }
   } catch (error) {
-    logger.warn("获取 Cookie 失败", error)
-    return ""
+    const errorMessage = getErrorMessage(error)
+    const failureReason = classifyCookieHeaderReadFailure(error)
+    logger.warn("获取 Cookie 失败", {
+      url,
+      error: errorMessage,
+      failureReason,
+    })
+    return {
+      header: "",
+      errorMessage,
+      failureReason,
+    }
   }
 }
 

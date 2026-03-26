@@ -182,11 +182,15 @@ export default function AccountDialog({
                 onSiteTypeChange={setters.setSiteType}
                 cookieAuthSessionCookie={state.cookieAuthSessionCookie}
                 isImportingCookies={state.isImportingCookies}
+                showCookiePermissionWarning={state.showCookiePermissionWarning}
                 onCookieAuthSessionCookieChange={
                   setters.setCookieAuthSessionCookie
                 }
                 onImportCookieAuthSessionCookie={
                   handlers.handleImportCookieAuthSessionCookie
+                }
+                onOpenCookiePermissionSettings={
+                  handlers.handleOpenCookiePermissionSettings
                 }
               />
             )}

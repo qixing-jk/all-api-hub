@@ -47,6 +47,7 @@ interface AccountFormProps {
   excludeFromTotalBalance: boolean
   cookieAuthSessionCookie: string
   isImportingCookies: boolean
+  showCookiePermissionWarning: boolean
   sub2apiUseRefreshToken: boolean
   sub2apiRefreshToken: string
   sub2apiTokenExpiresAt: number | null
@@ -63,6 +64,7 @@ interface AccountFormProps {
   onExcludeFromTotalBalanceChange: (value: boolean) => void
   onCookieAuthSessionCookieChange: (value: string) => void
   onImportCookieAuthSessionCookie: () => void
+  onOpenCookiePermissionSettings: () => void
   onSub2apiUseRefreshTokenChange: (value: boolean) => void
   onSub2apiRefreshTokenChange: (value: string) => void
   onImportSub2apiSession: () => void
@@ -95,6 +97,7 @@ export default function AccountForm({
   excludeFromTotalBalance,
   cookieAuthSessionCookie,
   isImportingCookies,
+  showCookiePermissionWarning,
   sub2apiUseRefreshToken,
   sub2apiRefreshToken,
   sub2apiTokenExpiresAt,
@@ -111,6 +114,7 @@ export default function AccountForm({
   onExcludeFromTotalBalanceChange,
   onCookieAuthSessionCookieChange,
   onImportCookieAuthSessionCookie,
+  onOpenCookiePermissionSettings,
   onSub2apiUseRefreshTokenChange,
   onSub2apiRefreshTokenChange,
   onImportSub2apiSession,
@@ -336,6 +340,23 @@ export default function AccountForm({
                 ? t("messages.importCookiesLoading")
                 : t("form.importCookieAuthSessionCookie")}
             </Button>
+            {showCookiePermissionWarning && (
+              <Alert
+                variant="warning"
+                description={t("messages.importCookiesPermissionDenied")}
+              >
+                <div className="pt-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={onOpenCookiePermissionSettings}
+                  >
+                    {t("form.cookiePermissionHelpAction")}
+                  </Button>
+                </div>
+              </Alert>
+            )}
             <Textarea
               value={cookieAuthSessionCookie}
               onChange={(e) => onCookieAuthSessionCookieChange(e.target.value)}

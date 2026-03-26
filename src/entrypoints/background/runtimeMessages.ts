@@ -1,3 +1,4 @@
+import { COOKIE_IMPORT_FAILURE_REASONS } from "~/constants/cookieImport"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import {
   hasRuntimeActionPrefix,
@@ -18,7 +19,10 @@ import { handleRedemptionAssistMessage } from "~/services/redemption/redemptionA
 import { handleWebAiApiCheckMessage } from "~/services/verification/webAiApiCheck/background"
 import { handleWebdavAutoSyncMessage } from "~/services/webdav/webdavAutoSyncService"
 import { onRuntimeMessage } from "~/utils/browser/browserApi"
-import { getCookieHeaderForUrl } from "~/utils/browser/cookieHelper"
+import {
+  getCookieHeaderForUrlResult,
+  hasCookieReadPermissionForUrl,
+} from "~/utils/browser/cookieHelper"
 import { extractSessionCookieHeader } from "~/utils/browser/cookieString"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -156,14 +160,32 @@ export function setupRuntimeMessageListeners() {
       ) {
         void (async () => {
           try {
-            const cookieHeader = await getCookieHeaderForUrl(request.url, {
+            const hasCookiePermission = await hasCookieReadPermissionForUrl(
+              request.url,
+            )
+
+            if (!hasCookiePermission) {
+              sendResponse({
+                success: false,
+                errorCode: COOKIE_IMPORT_FAILURE_REASONS.PermissionDenied,
+              })
+              return
+            }
+
+            const result = await getCookieHeaderForUrlResult(request.url, {
               includeSession: true,
             })
-            const sessionOnly = extractSessionCookieHeader(cookieHeader)
+            const sessionOnly = extractSessionCookieHeader(result.header)
             if (sessionOnly) {
               sendResponse({ success: true, data: sessionOnly })
             } else {
-              sendResponse({ success: false, error: "No cookies found" })
+              sendResponse({
+                success: false,
+                errorCode:
+                  result.failureReason ??
+                  COOKIE_IMPORT_FAILURE_REASONS.NoCookiesFound,
+                ...(result.errorMessage ? { error: result.errorMessage } : {}),
+              })
             }
           } catch (error) {
             sendResponse({ success: false, error: getErrorMessage(error) })

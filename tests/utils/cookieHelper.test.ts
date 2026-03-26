@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { getCookieHeaderForUrl } from "~/utils/browser/cookieHelper"
+import {
+  COOKIE_HEADER_READ_FAILURE_REASONS,
+  getCookieHeaderForUrl,
+  getCookieHeaderForUrlResult,
+  hasCookieReadPermissionForUrl,
+} from "~/utils/browser/cookieHelper"
 
 describe("cookieHelper", () => {
   beforeEach(() => {
@@ -8,6 +13,9 @@ describe("cookieHelper", () => {
     globalAny.browser ??= {}
     globalAny.browser.cookies = {
       getAll: vi.fn(),
+    }
+    globalAny.browser.permissions = {
+      contains: vi.fn().mockResolvedValue(true),
     }
   })
 
@@ -70,6 +78,50 @@ describe("cookieHelper", () => {
     ;(globalThis as any).browser.cookies.getAll = getAll
 
     await expect(getCookieHeaderForUrl("https://example.com")).resolves.toBe("")
+  })
+
+  it("reports permission-denied failures when cookie access is not granted", async () => {
+    const getAll = vi
+      .fn()
+      .mockRejectedValue(new Error("Missing host permission for the tab"))
+    ;(globalThis as any).browser.cookies.getAll = getAll
+
+    await expect(
+      getCookieHeaderForUrlResult("https://example.com"),
+    ).resolves.toMatchObject({
+      header: "",
+      failureReason: COOKIE_HEADER_READ_FAILURE_REASONS.PermissionDenied,
+      errorMessage: "Missing host permission for the tab",
+    })
+  })
+
+  it("reports read-failed for non-permission cookie read errors", async () => {
+    const getAll = vi
+      .fn()
+      .mockRejectedValue(new Error("storage backend failed"))
+    ;(globalThis as any).browser.cookies.getAll = getAll
+
+    await expect(
+      getCookieHeaderForUrlResult("https://example.com"),
+    ).resolves.toMatchObject({
+      header: "",
+      failureReason: COOKIE_HEADER_READ_FAILURE_REASONS.ReadFailed,
+      errorMessage: "storage backend failed",
+    })
+  })
+
+  it("checks both cookies permission and target origin before cookie reads", async () => {
+    const contains = vi.fn().mockResolvedValue(true)
+    ;(globalThis as any).browser.permissions.contains = contains
+
+    await expect(
+      hasCookieReadPermissionForUrl("https://example.com/path?foo=bar"),
+    ).resolves.toBe(true)
+
+    expect(contains).toHaveBeenCalledWith({
+      permissions: ["cookies"],
+      origins: ["https://example.com/*"],
+    })
   })
 
   it("does not cache cookie values between calls", async () => {

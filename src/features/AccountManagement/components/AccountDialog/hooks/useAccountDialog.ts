@@ -3,6 +3,7 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
+import { COOKIE_IMPORT_FAILURE_REASONS } from "~/constants/cookieImport"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SUB2API } from "~/constants/siteType"
@@ -40,6 +41,7 @@ import {
   normalizeUrlForOriginKey,
   tryParseOrigin,
 } from "~/utils/core/urlParsing"
+import { openSettingsTab } from "~/utils/navigation"
 
 const AUTO_DETECT_SLOW_HINT_DELAY_MS = 10_000
 
@@ -47,6 +49,13 @@ const AUTO_DETECT_SLOW_HINT_DELAY_MS = 10_000
  * Logger scoped to the account dialog lifecycle. Ensure we never include raw tokens/cookies in log details.
  */
 const logger = createLogger("AccountDialogHook")
+
+interface CookieImportResponse {
+  success?: boolean
+  data?: string
+  error?: string
+  errorCode?: string
+}
 
 interface UseAccountDialogProps {
   mode: DialogMode
@@ -116,6 +125,8 @@ export function useAccountDialog({
   const [isAutoConfiguring, setIsAutoConfiguring] = useState(false)
   const [cookieAuthSessionCookie, setCookieAuthSessionCookie] = useState("")
   const [isImportingCookies, setIsImportingCookies] = useState(false)
+  const [showCookiePermissionWarning, setShowCookiePermissionWarning] =
+    useState(false)
   const [isImportingSub2apiSession, setIsImportingSub2apiSession] =
     useState(false)
   const [sub2apiUseRefreshToken, setSub2apiUseRefreshToken] = useState(false)
@@ -352,6 +363,7 @@ export function useAccountDialog({
     setIsAutoConfiguring(false)
     setCookieAuthSessionCookie("")
     setIsImportingCookies(false)
+    setShowCookiePermissionWarning(false)
     setSub2apiUseRefreshToken(false)
     setSub2apiRefreshToken("")
     setSub2apiTokenExpiresAt(null)
@@ -539,21 +551,42 @@ export function useAccountDialog({
     }
     setIsImportingCookies(true)
     try {
-      const response = await sendRuntimeMessage({
+      const response = await sendRuntimeMessage<CookieImportResponse>({
         action: RuntimeActionIds.AccountDialogImportCookieAuthSessionCookie,
         url: url.trim(),
       })
       if (response?.success && response.data) {
         setCookieAuthSessionCookie(response.data)
+        setShowCookiePermissionWarning(false)
         toast.success(t("messages.importCookiesSuccess"))
-      } else if (response?.error) {
-        toast.error(response.error)
       } else {
-        toast.error(t("messages.importCookiesEmpty"))
+        switch (response?.errorCode) {
+          case COOKIE_IMPORT_FAILURE_REASONS.PermissionDenied:
+            setShowCookiePermissionWarning(true)
+            // TODO: Revisit a direct shortcut to the permissions tab after we
+            // have a reliable cross-browser solution for interactive toasts and
+            // modal layering in extension pages.
+            // because https://github.com/timolins/react-hot-toast/issues/325
+            toast.error(t("messages.importCookiesPermissionDenied"))
+            break
+          case COOKIE_IMPORT_FAILURE_REASONS.ReadFailed:
+            toast.error(
+              response.error
+                ? t("messages.importCookiesFailed", { error: response.error })
+                : t("messages.importCookiesFailedUnknown"),
+            )
+            break
+          case COOKIE_IMPORT_FAILURE_REASONS.NoCookiesFound:
+          default:
+            toast.error(t("messages.importCookiesEmpty"))
+            break
+        }
       }
     } catch (error) {
       logger.warn("Failed to import cookies", { error, url: url.trim() })
-      toast.error(t("messages.importCookiesPermissionDenied"))
+      toast.error(
+        t("messages.importCookiesFailed", { error: getErrorMessage(error) }),
+      )
     } finally {
       setIsImportingCookies(false)
     }
@@ -779,6 +812,16 @@ export function useAccountDialog({
                 : ""
             if (header) {
               setCookieAuthSessionCookie(header)
+              setShowCookiePermissionWarning(false)
+            } else if (
+              cookieResponse?.errorCode ===
+              COOKIE_IMPORT_FAILURE_REASONS.PermissionDenied
+            ) {
+              setShowCookiePermissionWarning(true)
+              logger.info(
+                "Cookie auto-import skipped because cookie permissions were denied",
+                { url: url.trim() },
+              )
             }
           } catch (error) {
             logger.warn("Auto-import cookie failed", {
@@ -1019,6 +1062,11 @@ export function useAccountDialog({
     }
   }
 
+  const handleOpenCookiePermissionSettings = () => {
+    handleClose()
+    void openSettingsTab("permissions")
+  }
+
   const isFormValid = isValidAccount({
     siteName,
     username,
@@ -1069,6 +1117,7 @@ export function useAccountDialog({
       isAutoConfiguring,
       cookieAuthSessionCookie,
       isImportingCookies,
+      showCookiePermissionWarning,
       isImportingSub2apiSession,
       duplicateAccountWarning,
     },
@@ -1102,6 +1151,7 @@ export function useAccountDialog({
       handleAutoConfig,
       handleClose,
       handleImportCookieAuthSessionCookie,
+      handleOpenCookiePermissionSettings,
       handleImportSub2apiSession,
       handleSub2apiUseRefreshTokenChange,
       handleDuplicateAccountWarningCancel,
