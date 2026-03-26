@@ -344,6 +344,7 @@ export default function NewApiSettings() {
         onSubmit={verification.submitCode}
         onRetry={verification.retryVerification}
         onOpenSite={verification.openBaseUrl}
+        onUpdateRequestConfig={verification.patchRequestConfig}
       />
     </SettingSection>
   )

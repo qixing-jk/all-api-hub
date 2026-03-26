@@ -5,6 +5,7 @@
       "openSite": "サイトを開く",
       "retry": "再試行",
       "retryAfterPasskey": "パスキー完了後に再試行",
+      "saveAndRetry": "保存して再試行",
       "submitLoginCode": "ログインコードを送信",
       "submitVerificationCode": "認証コードを送信"
     },
@@ -25,12 +26,15 @@
     },
     "hints": {
       "manualFallback": "自動 TOTP が設定されていても、手動入力は引き続き利用できます。",
+      "openSettingsShortcut": "不足している設定をここで直接補完して、そのまま検証を続けられます。",
       "passkey": "サイトを開いてパスキー認証を完了した後、ここに戻って再試行してください。"
     },
     "messages": {
+      "completeRequiredConfig": "不足している設定項目を先に入力してください。",
       "finishing": "New API セッション確認を完了しています...",
       "missingBaseUrl": "セッションフローをテストする前に New API の Base URL を追加してください。",
       "missingCode": "先に認証コードを入力してください。",
+      "quickConfigSaveFailed": "クイック設定の保存に失敗しました。しばらくしてから再試行してください。",
       "refreshingChannel": "実際のチャネルキーを読み込み中...",
       "refreshingToken": "このトークンの管理対象サイト状態を更新中...",
       "starting": "New API 検証フローを開始しています...",

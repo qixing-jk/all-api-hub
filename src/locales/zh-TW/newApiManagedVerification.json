@@ -5,6 +5,7 @@
       "openSite": "開啟站點",
       "retry": "重試",
       "retryAfterPasskey": "完成 Passkey 後重試",
+      "saveAndRetry": "儲存並重試",
       "submitLoginCode": "提交登入驗證碼",
       "submitVerificationCode": "提交安全驗證碼"
     },
@@ -25,12 +26,15 @@
     },
     "hints": {
       "manualFallback": "即使已配置自動 TOTP，仍然可以手動輸入驗證碼。",
+      "openSettingsShortcut": "你可以直接在這裡補齊所需設定，然後繼續驗證。",
       "passkey": "請開啟站點，在那裡完成 Passkey 提示後，再返回這裡重試。"
     },
     "messages": {
+      "completeRequiredConfig": "請先補齊目前缺失的設定項目。",
       "finishing": "正在完成 New API 會話檢測...",
       "missingBaseUrl": "請先填寫 New API 基礎 URL，再測試會話流程。",
       "missingCode": "請先輸入驗證碼。",
+      "quickConfigSaveFailed": "儲存快捷設定失敗，請稍後再試。",
       "refreshingChannel": "正在載入真實渠道 key...",
       "refreshingToken": "正在重新整理該金鑰的管理站點狀態...",
       "starting": "正在啟動 New API 驗證流程...",

@@ -1397,6 +1397,7 @@ export default function ManagedSiteChannels({
         onSubmit={verification.submitCode}
         onRetry={verification.retryVerification}
         onOpenSite={verification.openBaseUrl}
+        onUpdateRequestConfig={verification.patchRequestConfig}
       />
     </div>
   )

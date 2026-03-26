@@ -811,6 +811,7 @@ export function ChannelDialog({
         onSubmit={verification.submitCode}
         onRetry={verification.retryVerification}
         onOpenSite={verification.openBaseUrl}
+        onUpdateRequestConfig={verification.patchRequestConfig}
       />
     </Modal>
   )

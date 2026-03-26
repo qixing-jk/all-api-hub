@@ -5,6 +5,7 @@
       "openSite": "Open site",
       "retry": "Retry",
       "retryAfterPasskey": "Retry after passkey",
+      "saveAndRetry": "Save and retry",
       "submitLoginCode": "Submit login code",
       "submitVerificationCode": "Submit verification code"
     },
@@ -25,12 +26,15 @@
     },
     "hints": {
       "manualFallback": "Manual code entry stays available even when automatic TOTP is configured.",
+      "openSettingsShortcut": "You can complete the missing configuration here and continue verification immediately.",
       "passkey": "Open the site, complete the passkey prompt there, then come back here and retry."
     },
     "messages": {
+      "completeRequiredConfig": "Complete the missing configuration fields first.",
       "finishing": "Finalizing the New API session check...",
       "missingBaseUrl": "Add the New API base URL before testing the session flow.",
       "missingCode": "Enter the verification code first.",
+      "quickConfigSaveFailed": "Failed to save the quick configuration. Please try again.",
       "refreshingChannel": "Loading the real channel key...",
       "refreshingToken": "Refreshing this token's managed-site status...",
       "starting": "Starting the New API verification flow...",
