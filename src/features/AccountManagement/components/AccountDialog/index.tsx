@@ -84,7 +84,7 @@ export default function AccountDialog({
         onClose={handlers.handleClose}
         floatingContent={
           <ThemeAwareToaster
-            position="top-right"
+            position="top-center"
             containerStyle={{ zIndex: 75 }}
           />
         }
