@@ -96,6 +96,13 @@ export function useTokenForm({
   const [formData, setFormData] = useState<FormData>(initialFormData)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const isEditMode = !!editingToken
+  const allowedGroupsPrefillKey = Array.isArray(createPrefill?.allowedGroups)
+    ? createPrefill.allowedGroups
+        .map((group) => (typeof group === "string" ? group.trim() : ""))
+        .filter(Boolean)
+        .sort()
+        .join("\n")
+    : ""
 
   useEffect(() => {
     if (isOpen) {
@@ -154,11 +161,7 @@ export function useTokenForm({
           typeof createPrefill?.group === "string"
             ? createPrefill.group.trim()
             : ""
-        const hasRestrictedGroupSelection =
-          Array.isArray(createPrefill?.allowedGroups) &&
-          createPrefill.allowedGroups.some(
-            (group) => typeof group === "string" && group.trim().length > 0,
-          )
+        const hasRestrictedGroupSelection = allowedGroupsPrefillKey.length > 0
         setFormData({
           ...initialFormData,
           accountId: defaultAccountId,
@@ -180,7 +183,7 @@ export function useTokenForm({
     createPrefill?.modelId,
     createPrefill?.defaultName,
     createPrefill?.group,
-    createPrefill?.allowedGroups,
+    allowedGroupsPrefillKey,
   ])
 
   const validateForm = (): boolean => {
