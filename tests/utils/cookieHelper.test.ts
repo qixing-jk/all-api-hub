@@ -124,6 +124,17 @@ describe("cookieHelper", () => {
     })
   })
 
+  it("returns false for invalid URLs before checking permissions", async () => {
+    const contains = vi.fn().mockResolvedValue(true)
+    ;(globalThis as any).browser.permissions.contains = contains
+
+    await expect(
+      hasCookieReadPermissionForUrl("not-a-valid-url"),
+    ).resolves.toBe(false)
+
+    expect(contains).not.toHaveBeenCalled()
+  })
+
   it("does not cache cookie values between calls", async () => {
     const getAll = vi
       .fn()

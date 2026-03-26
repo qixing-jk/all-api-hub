@@ -136,4 +136,86 @@ describe("useAccountDialog cookie import feedback", () => {
     expect(onClose).toHaveBeenCalledTimes(1)
     expect(mockOpenSettingsTab).toHaveBeenCalledWith("permissions")
   })
+
+  it("clears the permission warning when a later import fails for a non-permission reason", async () => {
+    vi.mocked(toast.error).mockClear()
+    const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
+    vi.mocked(sendRuntimeMessage)
+      .mockResolvedValueOnce({
+        success: false,
+        errorCode: COOKIE_IMPORT_FAILURE_REASONS.PermissionDenied,
+        error: "Missing host permission for the tab",
+      })
+      .mockResolvedValueOnce({
+        success: false,
+        errorCode: COOKIE_IMPORT_FAILURE_REASONS.NoCookiesFound,
+      })
+
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+        onSuccess: vi.fn(),
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://example.com")
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleImportCookieAuthSessionCookie()
+    })
+
+    expect(result.current.state.showCookiePermissionWarning).toBe(true)
+
+    await act(async () => {
+      await result.current.handlers.handleImportCookieAuthSessionCookie()
+    })
+
+    expect(result.current.state.showCookiePermissionWarning).toBe(false)
+    expect(toast.error).toHaveBeenLastCalledWith(
+      "accountDialog:messages.importCookiesEmpty",
+    )
+  })
+
+  it("shows a generic import failure toast when the response has an error without an error code", async () => {
+    vi.mocked(toast.error).mockClear()
+    const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
+    vi.mocked(sendRuntimeMessage).mockResolvedValueOnce({
+      success: false,
+      error: "storage backend failed",
+    })
+
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+        onSuccess: vi.fn(),
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://example.com")
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleImportCookieAuthSessionCookie()
+    })
+
+    expect(result.current.state.showCookiePermissionWarning).toBe(false)
+    expect(toast.error).toHaveBeenCalledWith(
+      "accountDialog:messages.importCookiesFailed",
+    )
+  })
 })

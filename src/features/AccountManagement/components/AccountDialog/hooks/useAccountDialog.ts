@@ -560,7 +560,18 @@ export function useAccountDialog({
         setShowCookiePermissionWarning(false)
         toast.success(t("messages.importCookiesSuccess"))
       } else {
-        switch (response?.errorCode) {
+        setShowCookiePermissionWarning(false)
+
+        if (!response?.errorCode) {
+          toast.error(
+            response?.error
+              ? t("messages.importCookiesFailed", { error: response.error })
+              : t("messages.importCookiesEmpty"),
+          )
+          return
+        }
+
+        switch (response.errorCode) {
           case COOKIE_IMPORT_FAILURE_REASONS.PermissionDenied:
             setShowCookiePermissionWarning(true)
             // TODO: Revisit a direct shortcut to the permissions tab after we

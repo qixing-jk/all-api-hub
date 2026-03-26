@@ -1,3 +1,4 @@
+import { COOKIE_IMPORT_FAILURE_REASONS } from "~/constants/cookieImport"
 import { hasCookieInterceptorPermissions } from "~/services/permissions/permissionManager"
 import { containsPermissions } from "~/utils/browser/browserApi"
 import { mergeCookieHeaders } from "~/utils/browser/cookieString"
@@ -35,13 +36,10 @@ export const AUTH_MODE = {
 
 type AuthMode = (typeof AUTH_MODE)[keyof typeof AUTH_MODE]
 
-export const COOKIE_HEADER_READ_FAILURE_REASONS = {
-  PermissionDenied: "permission-denied",
-  ReadFailed: "read-failed",
-} as const
+export const COOKIE_HEADER_READ_FAILURE_REASONS = COOKIE_IMPORT_FAILURE_REASONS
 
 type CookieHeaderReadFailureReason =
-  (typeof COOKIE_HEADER_READ_FAILURE_REASONS)[keyof typeof COOKIE_HEADER_READ_FAILURE_REASONS]
+  (typeof COOKIE_IMPORT_FAILURE_REASONS)[keyof typeof COOKIE_IMPORT_FAILURE_REASONS]
 
 interface CookieHeaderReadResult {
   header: string
@@ -104,9 +102,13 @@ export async function hasCookieReadPermissionForUrl(
 ): Promise<boolean> {
   const originPattern = getCookiePermissionOriginPattern(url)
 
+  if (!originPattern) {
+    return false
+  }
+
   return await containsPermissions({
     permissions: ["cookies" as unknown as browser._manifest.OptionalPermission],
-    ...(originPattern ? { origins: [originPattern] } : {}),
+    origins: [originPattern],
   })
 }
 

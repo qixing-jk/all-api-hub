@@ -303,4 +303,47 @@ describe("setupRuntimeMessageListeners routing", () => {
       error: "Missing host permission for the tab",
     })
   })
+
+  it("preserves read-failed diagnostics for cookie import requests", async () => {
+    getCookieHeaderForUrlResult.mockResolvedValueOnce({
+      header: "",
+      failureReason: COOKIE_IMPORT_FAILURE_REASONS.ReadFailed,
+      errorMessage: "storage backend failed",
+    })
+
+    const { setupRuntimeMessageListeners } = await import(
+      "~/entrypoints/background/runtimeMessages"
+    )
+
+    setupRuntimeMessageListeners()
+    expect(runtimeMessageListener).toBeTypeOf("function")
+
+    const sendResponse = vi.fn()
+    const result = runtimeMessageListener?.(
+      {
+        action: RuntimeActionIds.AccountDialogImportCookieAuthSessionCookie,
+        url: "https://example.com",
+      },
+      {},
+      sendResponse,
+    )
+
+    expect(result).toBe(true)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(hasCookieReadPermissionForUrl).toHaveBeenCalledWith(
+      "https://example.com",
+    )
+    expect(getCookieHeaderForUrlResult).toHaveBeenCalledWith(
+      "https://example.com",
+      {
+        includeSession: true,
+      },
+    )
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: false,
+      errorCode: COOKIE_IMPORT_FAILURE_REASONS.ReadFailed,
+      error: "storage backend failed",
+    })
+  })
 })
