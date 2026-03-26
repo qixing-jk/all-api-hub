@@ -193,6 +193,46 @@ describe("useNewApiManagedVerification", () => {
     })
   })
 
+  it("uses the patched config even when retry starts in the same act", async () => {
+    ensureNewApiManagedSessionMock
+      .mockResolvedValueOnce({
+        status: NEW_API_MANAGED_SESSION_STATUSES.CREDENTIALS_MISSING,
+      })
+      .mockResolvedValueOnce({
+        status: NEW_API_MANAGED_SESSION_STATUSES.LOGIN_2FA_REQUIRED,
+        automaticAttempted: false,
+      })
+
+    const { result } = renderHook(() => useNewApiManagedVerification())
+
+    act(() => {
+      result.current.openNewApiManagedVerification(BASE_REQUEST)
+    })
+
+    await waitFor(() => {
+      expect(result.current.dialogState.step).toBe(
+        NEW_API_MANAGED_VERIFICATION_STEPS.CREDENTIALS_MISSING,
+      )
+    })
+
+    act(() => {
+      result.current.patchRequestConfig({
+        username: "same-act-user",
+        password: "same-act-pass",
+      })
+      void result.current.retryVerification()
+    })
+
+    await waitFor(() => {
+      expect(ensureNewApiManagedSessionMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          username: "same-act-user",
+          password: "same-act-pass",
+        }),
+      )
+    })
+  })
+
   it("opens the secure-verification step when login succeeded but verification is still required", async () => {
     ensureNewApiManagedSessionMock.mockResolvedValue({
       status: NEW_API_MANAGED_SESSION_STATUSES.SECURE_VERIFICATION_REQUIRED,

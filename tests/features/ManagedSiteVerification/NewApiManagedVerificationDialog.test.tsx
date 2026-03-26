@@ -15,12 +15,15 @@ vi.mock("react-i18next", () => ({
 const updateNewApiBaseUrlMock = vi.fn()
 const updateNewApiUsernameMock = vi.fn()
 const updateNewApiPasswordMock = vi.fn()
+let currentNewApiBaseUrl = "https://managed.example"
+let currentNewApiUsername = ""
+let currentNewApiPassword = ""
 
 vi.mock("~/contexts/UserPreferencesContext", () => ({
   useUserPreferencesContext: () => ({
-    newApiBaseUrl: "https://managed.example",
-    newApiUsername: "",
-    newApiPassword: "",
+    newApiBaseUrl: currentNewApiBaseUrl,
+    newApiUsername: currentNewApiUsername,
+    newApiPassword: currentNewApiPassword,
     updateNewApiBaseUrl: (...args: unknown[]) =>
       updateNewApiBaseUrlMock(...args),
     updateNewApiUsername: (...args: unknown[]) =>
@@ -92,6 +95,9 @@ const createProps = (
 
 describe("NewApiManagedVerificationDialog", () => {
   beforeEach(() => {
+    currentNewApiBaseUrl = "https://managed.example"
+    currentNewApiUsername = ""
+    currentNewApiPassword = ""
     updateNewApiBaseUrlMock.mockReset()
     updateNewApiUsernameMock.mockReset()
     updateNewApiPasswordMock.mockReset()
@@ -143,6 +149,44 @@ describe("NewApiManagedVerificationDialog", () => {
     expect(props.onRetry).toHaveBeenCalledTimes(1)
   })
 
+  it("patches stale request config even when storage already has the same values", async () => {
+    const user = userEvent.setup()
+    currentNewApiUsername = "admin"
+    currentNewApiPassword = "secret"
+    const props = createProps({
+      request: {
+        ...BASE_REQUEST,
+        config: {
+          ...BASE_REQUEST.config,
+          username: "stale-user",
+          password: "stale-pass",
+        },
+      },
+    })
+
+    render(<NewApiManagedVerificationDialog {...props} />)
+
+    expect(
+      screen.getByLabelText("settings:newApi.fields.usernameLabel"),
+    ).toHaveValue("admin")
+    expect(
+      screen.getByLabelText("settings:newApi.fields.passwordLabel"),
+    ).toHaveValue("secret")
+    await user.click(
+      screen.getByRole("button", {
+        name: "dialog.actions.saveAndRetry",
+      }),
+    )
+
+    expect(updateNewApiUsernameMock).not.toHaveBeenCalled()
+    expect(updateNewApiPasswordMock).not.toHaveBeenCalled()
+    expect(props.onUpdateRequestConfig).toHaveBeenCalledWith({
+      username: "admin",
+      password: "secret",
+    })
+    expect(props.onRetry).toHaveBeenCalledTimes(1)
+  })
+
   it("shows inline base-url config when the base URL is missing", () => {
     render(
       <NewApiManagedVerificationDialog
@@ -169,6 +213,43 @@ describe("NewApiManagedVerificationDialog", () => {
         name: "dialog.actions.retry",
       }),
     ).toBeNull()
+  })
+
+  it("patches a stale base-url request even when the stored base URL already matches", async () => {
+    const user = userEvent.setup()
+    currentNewApiBaseUrl = "https://managed.example"
+    const props = createProps({
+      step: NEW_API_MANAGED_VERIFICATION_STEPS.FAILURE,
+      request: {
+        ...BASE_REQUEST,
+        config: {
+          ...BASE_REQUEST.config,
+          baseUrl: "",
+        },
+      },
+      errorMessage: "newApiManagedVerification:dialog.messages.missingBaseUrl",
+    })
+
+    render(<NewApiManagedVerificationDialog {...props} />)
+
+    await user.clear(
+      screen.getByLabelText("settings:newApi.fields.baseUrlLabel"),
+    )
+    await user.type(
+      screen.getByLabelText("settings:newApi.fields.baseUrlLabel"),
+      "https://managed.example",
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "dialog.actions.saveAndRetry",
+      }),
+    )
+
+    expect(updateNewApiBaseUrlMock).not.toHaveBeenCalled()
+    expect(props.onUpdateRequestConfig).toHaveBeenCalledWith({
+      baseUrl: "https://managed.example",
+    })
+    expect(props.onRetry).toHaveBeenCalledTimes(1)
   })
 
   it("does not show an open-settings action during code entry", () => {

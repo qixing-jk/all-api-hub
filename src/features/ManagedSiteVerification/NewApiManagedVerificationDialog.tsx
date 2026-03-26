@@ -139,7 +139,8 @@ export function NewApiManagedVerificationDialog(
   const handleSaveQuickConfig = async () => {
     const nextBaseUrl = quickBaseUrl.trim()
     const nextUsername = quickUsername.trim()
-    const updates: NewApiManagedVerificationConfigUpdate = {}
+    const requestConfig = props.request?.config
+    const requestUpdates: NewApiManagedVerificationConfigUpdate = {}
 
     if (needsBaseUrl && !nextBaseUrl) {
       setQuickConfigError(t("dialog.messages.completeRequiredConfig"))
@@ -160,7 +161,6 @@ export function NewApiManagedVerificationDialog(
         if (!success) {
           throw new Error(t("dialog.messages.quickConfigSaveFailed"))
         }
-        updates.baseUrl = nextBaseUrl
       }
 
       if (needsCredentials && nextUsername !== newApiUsername) {
@@ -168,7 +168,6 @@ export function NewApiManagedVerificationDialog(
         if (!success) {
           throw new Error(t("dialog.messages.quickConfigSaveFailed"))
         }
-        updates.username = nextUsername
       }
 
       if (needsCredentials && quickPassword !== newApiPassword) {
@@ -176,11 +175,28 @@ export function NewApiManagedVerificationDialog(
         if (!success) {
           throw new Error(t("dialog.messages.quickConfigSaveFailed"))
         }
-        updates.password = quickPassword
       }
 
-      if (Object.keys(updates).length > 0) {
-        props.onUpdateRequestConfig(updates)
+      if (needsBaseUrl && nextBaseUrl !== requestConfig?.baseUrl.trim()) {
+        requestUpdates.baseUrl = nextBaseUrl
+      }
+
+      if (
+        needsCredentials &&
+        nextUsername !== (requestConfig?.username?.trim() ?? "")
+      ) {
+        requestUpdates.username = nextUsername
+      }
+
+      if (
+        needsCredentials &&
+        quickPassword !== (requestConfig?.password ?? "")
+      ) {
+        requestUpdates.password = quickPassword
+      }
+
+      if (Object.keys(requestUpdates).length > 0) {
+        props.onUpdateRequestConfig(requestUpdates)
       }
 
       await Promise.resolve(props.onRetry())

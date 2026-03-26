@@ -315,19 +315,24 @@ export function useNewApiManagedVerification() {
 
   const patchRequestConfig = useCallback(
     (updates: NewApiManagedVerificationConfigUpdate) => {
+      const currentRequest = requestRef.current ?? state.request
+      if (!currentRequest) {
+        return
+      }
+
+      const nextRequest = {
+        ...currentRequest,
+        config: normalizeConfig({
+          ...currentRequest.config,
+          ...updates,
+        }),
+      }
+      requestRef.current = nextRequest
+
       setState((prev) => {
         if (!prev.request) {
           return prev
         }
-
-        const nextRequest = {
-          ...prev.request,
-          config: normalizeConfig({
-            ...prev.request.config,
-            ...updates,
-          }),
-        }
-        requestRef.current = nextRequest
 
         return {
           ...prev,
@@ -335,7 +340,7 @@ export function useNewApiManagedVerification() {
         }
       })
     },
-    [],
+    [state.request],
   )
 
   const setCode = useCallback((code: string) => {
