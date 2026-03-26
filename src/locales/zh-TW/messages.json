@@ -56,6 +56,14 @@
     "configMissing": "請先在設定中配置 CLIProxyAPI 管理介面地址和金鑰",
     "importFailed": "匯入到 CLIProxyAPI 失敗",
     "importSuccess": "已成功將提供商 {{name}} 匯入到 CLIProxyAPI",
+    "managementApiConnectionSuccess": "CLIProxyAPI Management API 連線正常",
+    "managementApiForbidden": "CLIProxyAPI 拒絕了目前請求。請檢查管理金鑰是否多次填寫錯誤，或目前存取是否被服務端限制。",
+    "managementApiHttpError": "CLIProxyAPI Management API 回傳了異常狀態碼（HTTP {{status}}）",
+    "managementApiInvalidKey": "CLIProxyAPI Management Key 無效，請檢查設定中的管理金鑰是否正確。",
+    "managementApiNotFound": "找不到 CLIProxyAPI Management API。請確認基礎 URL 以 /v0/management 結尾，且 CLIProxyAPI 已配置管理金鑰。",
+    "managementApiRemoteAccessDisabled": "CLIProxyAPI 拒絕了遠端管理存取。請檢查 CLIProxyAPI 設定中的 remote-management.allow-remote: true 是否已啟用，或是否已透過 MANAGEMENT_PASSWORD 開啟遠端管理，然後再試一次。",
+    "managementApiServerError": "CLIProxyAPI Management API 回傳了服務端錯誤（HTTP {{status}}）",
+    "managementApiUnreachable": "無法連線到 CLIProxyAPI Management API。請檢查基礎 URL、服務狀態，以及瀏覽器到該地址的網路連通性。",
     "updateSuccess": "已成功更新 CLIProxy 提供商 {{name}}"
   },
   "content": {

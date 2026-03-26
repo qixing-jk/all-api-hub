@@ -56,6 +56,14 @@
     "configMissing": "Please configure CLIProxyAPI Management API base URL and key in settings first",
     "importFailed": "Failed to import provider to CLIProxyAPI",
     "importSuccess": "Successfully imported provider {{name}} to CLIProxyAPI",
+    "managementApiConnectionSuccess": "CLIProxyAPI Management API connection succeeded",
+    "managementApiForbidden": "CLIProxyAPI rejected the request. Check whether the management key has been entered incorrectly too many times or whether access is restricted on the server.",
+    "managementApiHttpError": "CLIProxyAPI Management API returned an unexpected status code (HTTP {{status}})",
+    "managementApiInvalidKey": "The CLIProxyAPI Management Key is invalid. Please verify the key in settings.",
+    "managementApiNotFound": "CLIProxyAPI Management API was not found. Make sure the base URL ends with /v0/management and that CLIProxyAPI has a management key configured.",
+    "managementApiRemoteAccessDisabled": "CLIProxyAPI rejected remote management access. Check whether remote-management.allow-remote: true is enabled in the CLIProxyAPI config, or whether remote management is enabled via MANAGEMENT_PASSWORD, then try again.",
+    "managementApiServerError": "CLIProxyAPI Management API returned a server error (HTTP {{status}})",
+    "managementApiUnreachable": "Could not reach the CLIProxyAPI Management API. Check the base URL, service status, and browser network access to that address.",
     "updateSuccess": "Successfully updated CLIProxy provider {{name}}"
   },
   "content": {

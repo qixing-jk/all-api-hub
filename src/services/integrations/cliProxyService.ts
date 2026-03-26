@@ -18,6 +18,7 @@ import {
 } from "./cliProxyProviderTypes"
 
 const logger = createLogger("CliProxyService")
+const CLI_PROXY_REMOTE_MANAGEMENT_KEYWORD = "allow-remote-management"
 
 type CliProxyOpenAICompatibilityProviderApiKeyEntry = {
   "api-key": string
@@ -48,6 +49,85 @@ type CliProxyManagedProvider =
   | CliProxyOpenAICompatibilityProvider
 
 type CliProxyProviderListResponse<TProvider> = Record<string, TProvider[]>
+
+class CliProxyManagementApiError extends Error {
+  status?: number
+  responseText?: string
+
+  constructor(
+    message: string,
+    options?: {
+      status?: number
+      responseText?: string
+      cause?: unknown
+    },
+  ) {
+    super(message)
+    this.name = "CliProxyManagementApiError"
+    this.status = options?.status
+    this.responseText = options?.responseText
+
+    if (options?.cause !== undefined) {
+      this.cause = options.cause
+    }
+  }
+}
+
+/**
+ * Read best-effort error text from a failed management API response.
+ */
+async function readCliProxyErrorResponseText(res: Response) {
+  try {
+    return (await res.text()).trim()
+  } catch {
+    return ""
+  }
+}
+
+/**
+ * Convert a low-level management API failure into a localized user-facing message.
+ */
+function getCliProxyManagementApiErrorMessage(error: unknown) {
+  if (error instanceof CliProxyManagementApiError) {
+    const responseText = error.responseText?.toLowerCase() || ""
+    const mentionsRemoteManagement =
+      responseText.includes(CLI_PROXY_REMOTE_MANAGEMENT_KEYWORD) ||
+      responseText.includes("remote management")
+
+    switch (error.status) {
+      case 401:
+        return t("messages:cliproxy.managementApiInvalidKey")
+      case 403:
+        return mentionsRemoteManagement
+          ? t("messages:cliproxy.managementApiRemoteAccessDisabled")
+          : t("messages:cliproxy.managementApiForbidden")
+      case 404:
+        return t("messages:cliproxy.managementApiNotFound")
+      default:
+        if (typeof error.status === "number" && error.status >= 500) {
+          return t("messages:cliproxy.managementApiServerError", {
+            status: error.status,
+          })
+        }
+
+        if (typeof error.status === "number") {
+          return t("messages:cliproxy.managementApiHttpError", {
+            status: error.status,
+          })
+        }
+    }
+  }
+
+  const message = getErrorMessage(error)
+  if (
+    error instanceof TypeError ||
+    /failed to fetch|networkerror|network request failed/i.test(message)
+  ) {
+    return t("messages:cliproxy.managementApiUnreachable")
+  }
+
+  return message || t("messages:cliproxy.importFailed")
+}
 
 /**
  * build a provider name from account data, falling back to baseUrl if name is not available
@@ -92,7 +172,13 @@ async function fetchProviders<TProvider extends Record<string, unknown>>(
   })
 
   if (!res.ok) {
-    throw new Error(`CLIProxy Management API request failed: ${res.status}`)
+    throw new CliProxyManagementApiError(
+      `CLIProxy Management API request failed: ${res.status}`,
+      {
+        status: res.status,
+        responseText: await readCliProxyErrorResponseText(res),
+      },
+    )
   }
 
   const data = (await res.json()) as
@@ -128,7 +214,13 @@ async function putProviders<TProvider extends Record<string, unknown>>(
   })
 
   if (!res.ok) {
-    throw new Error(`CLIProxy Management API PUT failed: ${res.status}`)
+    throw new CliProxyManagementApiError(
+      `CLIProxy Management API PUT failed: ${res.status}`,
+      {
+        status: res.status,
+        responseText: await readCliProxyErrorResponseText(res),
+      },
+    )
   }
 }
 
@@ -154,7 +246,13 @@ async function patchProviderByIndex<TProvider extends Record<string, unknown>>(
   })
 
   if (!res.ok) {
-    throw new Error(`CLIProxy Management API PATCH failed: ${res.status}`)
+    throw new CliProxyManagementApiError(
+      `CLIProxy Management API PATCH failed: ${res.status}`,
+      {
+        status: res.status,
+        responseText: await readCliProxyErrorResponseText(res),
+      },
+    )
   }
 }
 
@@ -462,6 +560,52 @@ export interface ImportToCliProxyOptions {
 }
 
 /**
+ * Probe the CLIProxyAPI management connection with the given config.
+ */
+export async function verifyCliProxyManagementConnection(
+  overrides?: Partial<{
+    baseUrl: string
+    managementKey: string
+  }>,
+): Promise<ServiceResponse<void>> {
+  try {
+    const storedConfig = await getCliProxyConfig()
+    const baseUrl =
+      overrides && "baseUrl" in overrides
+        ? overrides.baseUrl?.trim() || ""
+        : storedConfig?.baseUrl || ""
+    const managementKey =
+      overrides && "managementKey" in overrides
+        ? overrides.managementKey?.trim() || ""
+        : storedConfig?.managementKey || ""
+
+    if (!baseUrl || !managementKey) {
+      return {
+        success: false,
+        message: t("messages:cliproxy.configMissing"),
+      }
+    }
+
+    await fetchProviders<Record<string, unknown>>(
+      baseUrl,
+      managementKey,
+      CLI_PROXY_PROVIDER_TYPES.OPENAI_COMPATIBILITY,
+    )
+
+    return {
+      success: true,
+      message: t("messages:cliproxy.managementApiConnectionSuccess"),
+    }
+  } catch (error) {
+    logger.warn("CLIProxy management connection check failed", error)
+    return {
+      success: false,
+      message: getCliProxyManagementApiErrorMessage(error),
+    }
+  }
+}
+
+/**
  * Imports an API credential profile into the CLI Proxy by either creating a new provider or updating an existing one that matches based on API key and optionally base URL or name. The function handles both OpenAI-compatibility providers and API key-based providers, normalizes model mappings, and provides user feedback through success or error messages.
  */
 export async function importToCliProxy(
@@ -620,7 +764,7 @@ export async function importToCliProxy(
     logger.error("Import failed", error)
     return {
       success: false,
-      message: getErrorMessage(error) || t("messages:cliproxy.importFailed"),
+      message: getCliProxyManagementApiErrorMessage(error),
     }
   }
 }

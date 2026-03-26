@@ -3,9 +3,20 @@ import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
-import { Card, CardItem, CardList, IconButton, Input } from "~/components/ui"
+import {
+  Button,
+  Card,
+  CardItem,
+  CardList,
+  IconButton,
+  Input,
+  Link,
+} from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { showUpdateToast } from "~/utils/core/toastHelpers"
+import { verifyCliProxyManagementConnection } from "~/services/integrations/cliProxyService"
+import { showResultToast, showUpdateToast } from "~/utils/core/toastHelpers"
+
+const CLI_PROXY_MANAGEMENT_DOC_URL = "https://help.router-for.me/management/api"
 
 /**
  * Settings section for CLI Proxy base URL and management key entries.
@@ -24,6 +35,7 @@ export default function CliProxySettings() {
   const [localBaseUrl, setLocalBaseUrl] = useState(cliProxyBaseUrl)
   const [localKey, setLocalKey] = useState(cliProxyManagementKey)
   const [showKey, setShowKey] = useState(false)
+  const [isCheckingConnection, setIsCheckingConnection] = useState(false)
 
   useEffect(() => {
     setLocalBaseUrl(cliProxyBaseUrl)
@@ -33,16 +45,55 @@ export default function CliProxySettings() {
     setLocalKey(cliProxyManagementKey)
   }, [cliProxyManagementKey])
 
+  const runConnectionCheck = async (overrides?: {
+    baseUrl?: string
+    managementKey?: string
+  }) => {
+    const baseUrl = overrides?.baseUrl ?? localBaseUrl
+    const managementKey = overrides?.managementKey ?? localKey
+
+    setIsCheckingConnection(true)
+    try {
+      const result = await verifyCliProxyManagementConnection({
+        baseUrl,
+        managementKey,
+      })
+      return result
+    } finally {
+      setIsCheckingConnection(false)
+    }
+  }
+
   const handleBaseUrlChange = async (url: string) => {
-    if (url === cliProxyBaseUrl) return
-    const success = await updateCliProxyBaseUrl(url)
+    const trimmedUrl = url.trim()
+    setLocalBaseUrl(trimmedUrl)
+
+    if (trimmedUrl === cliProxyBaseUrl.trim()) return
+    const success = await updateCliProxyBaseUrl(trimmedUrl)
     showUpdateToast(success, t("cliProxy.baseUrlLabel"))
+
+    if (success && trimmedUrl && localKey.trim()) {
+      await runConnectionCheck({
+        baseUrl: trimmedUrl,
+        managementKey: localKey,
+      })
+    }
   }
 
   const handleKeyChange = async (key: string) => {
-    if (key === cliProxyManagementKey) return
-    const success = await updateCliProxyManagementKey(key)
+    const trimmedKey = key.trim()
+    setLocalKey(trimmedKey)
+
+    if (trimmedKey === cliProxyManagementKey.trim()) return
+    const success = await updateCliProxyManagementKey(trimmedKey)
     showUpdateToast(success, t("cliProxy.managementKeyLabel"))
+
+    if (success && localBaseUrl.trim() && trimmedKey) {
+      await runConnectionCheck({
+        baseUrl: localBaseUrl,
+        managementKey: trimmedKey,
+      })
+    }
   }
 
   return (
@@ -93,6 +144,36 @@ export default function CliProxySettings() {
                     </IconButton>
                   }
                 />
+              </div>
+            }
+          />
+
+          <CardItem
+            title={t("cliProxy.checkConnectionLabel")}
+            description={t("cliProxy.checkConnectionDesc")}
+            rightContent={
+              <div className="flex flex-col items-start gap-2 sm:items-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  loading={isCheckingConnection}
+                  onClick={() => {
+                    void runConnectionCheck().then((result) => {
+                      showResultToast(result)
+                    })
+                  }}
+                >
+                  {t("cliProxy.checkConnectionAction")}
+                </Button>
+                <Link
+                  href={CLI_PROXY_MANAGEMENT_DOC_URL}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="text-xs"
+                >
+                  {t("cliProxy.managementDocsLinkLabel")}
+                </Link>
               </div>
             }
           />

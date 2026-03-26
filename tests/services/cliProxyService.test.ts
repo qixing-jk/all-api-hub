@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { CLI_PROXY_PROVIDER_TYPES } from "~/services/integrations/cliProxyProviderTypes"
 import {
   importToCliProxy,
+  verifyCliProxyManagementConnection,
   type ImportToCliProxyOptions,
 } from "~/services/integrations/cliProxyService"
 import { userPreferences } from "~/services/preferences/userPreferences"
@@ -485,5 +486,48 @@ describe("cliProxyService.importToCliProxy", () => {
       "base-url": "https://example.com/genai",
       models: [],
     })
+  })
+
+  it("maps remote-management access errors to a specific hint", async () => {
+    mockCliProxyPreferences()
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response("allow-remote-management must be enabled", {
+          status: 403,
+          headers: { "Content-Type": "text/plain" },
+        }),
+      ) as any,
+    )
+
+    const result = await importToCliProxy(createBaseOptions())
+
+    expect(result.success).toBe(false)
+    expect(result.message).toContain(
+      "messages:cliproxy.managementApiRemoteAccessDisabled",
+    )
+  })
+
+  it("can verify the management API connection with explicit settings", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify([]), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      ) as any,
+    )
+
+    const result = await verifyCliProxyManagementConnection({
+      baseUrl: "http://localhost:8317/v0/management",
+      managementKey: "k",
+    })
+
+    expect(result.success).toBe(true)
+    expect(result.message).toContain(
+      "messages:cliproxy.managementApiConnectionSuccess",
+    )
   })
 })

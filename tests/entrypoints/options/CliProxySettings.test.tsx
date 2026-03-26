@@ -1,0 +1,122 @@
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { I18nextProvider } from "react-i18next"
+import { beforeEach, describe, expect, it, vi } from "vitest"
+
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import CliProxySettings from "~/features/BasicSettings/components/tabs/CliProxy/CliProxySettings"
+import { verifyCliProxyManagementConnection } from "~/services/integrations/cliProxyService"
+import { showResultToast, showUpdateToast } from "~/utils/core/toastHelpers"
+import { testI18n } from "~~/tests/test-utils/i18n"
+
+vi.mock("~/contexts/UserPreferencesContext", () => ({
+  useUserPreferencesContext: vi.fn(),
+}))
+
+vi.mock("~/services/integrations/cliProxyService", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("~/services/integrations/cliProxyService")
+    >()
+  return {
+    ...actual,
+    verifyCliProxyManagementConnection: vi.fn(),
+  }
+})
+
+vi.mock("~/utils/core/toastHelpers", () => ({
+  showResultToast: vi.fn(),
+  showUpdateToast: vi.fn(),
+}))
+
+describe("CliProxySettings", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+
+    vi.mocked(useUserPreferencesContext).mockReturnValue({
+      cliProxyBaseUrl: "http://localhost:8317/v0/management",
+      cliProxyManagementKey: "secret-key",
+      updateCliProxyBaseUrl: vi.fn().mockResolvedValue(true),
+      updateCliProxyManagementKey: vi.fn().mockResolvedValue(true),
+      resetCliProxyConfig: vi.fn().mockResolvedValue(true),
+    } as any)
+
+    vi.mocked(verifyCliProxyManagementConnection).mockResolvedValue({
+      success: true,
+      message: "messages:cliproxy.managementApiConnectionSuccess",
+    })
+  })
+
+  const renderSubject = () =>
+    render(
+      <I18nextProvider i18n={testI18n}>
+        <CliProxySettings />
+      </I18nextProvider>,
+    )
+
+  it("trims the base URL before persisting and re-checks the connection", async () => {
+    const updateCliProxyBaseUrl = vi.fn().mockResolvedValue(true)
+    vi.mocked(useUserPreferencesContext).mockReturnValue({
+      cliProxyBaseUrl: "http://localhost:8317/v0/management",
+      cliProxyManagementKey: "secret-key",
+      updateCliProxyBaseUrl,
+      updateCliProxyManagementKey: vi.fn().mockResolvedValue(true),
+      resetCliProxyConfig: vi.fn().mockResolvedValue(true),
+    } as any)
+
+    renderSubject()
+
+    const input = screen.getByPlaceholderText(
+      "http://localhost:8317/v0/management",
+    )
+
+    fireEvent.change(input, {
+      target: { value: "  http://localhost:9000/v0/management  " },
+    })
+    fireEvent.blur(input)
+
+    await waitFor(() => {
+      expect(updateCliProxyBaseUrl).toHaveBeenCalledWith(
+        "http://localhost:9000/v0/management",
+      )
+    })
+
+    await waitFor(() => {
+      expect(verifyCliProxyManagementConnection).toHaveBeenCalledWith({
+        baseUrl: "http://localhost:9000/v0/management",
+        managementKey: "secret-key",
+      })
+    })
+
+    expect(vi.mocked(showUpdateToast)).toHaveBeenCalledWith(
+      true,
+      "settings:cliProxy.baseUrlLabel",
+    )
+  })
+
+  it("shows the returned connection-check result via toast", async () => {
+    vi.mocked(verifyCliProxyManagementConnection).mockResolvedValue({
+      success: false,
+      message: "messages:cliproxy.managementApiRemoteAccessDisabled",
+    })
+
+    renderSubject()
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "settings:cliProxy.checkConnectionAction",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(showResultToast).toHaveBeenCalledWith({
+        success: false,
+        message: "messages:cliproxy.managementApiRemoteAccessDisabled",
+      })
+    })
+
+    expect(verifyCliProxyManagementConnection).toHaveBeenCalledWith({
+      baseUrl: "http://localhost:8317/v0/management",
+      managementKey: "secret-key",
+    })
+  })
+})

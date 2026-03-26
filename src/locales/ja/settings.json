@@ -69,8 +69,12 @@
   },
   "cliProxy": {
     "baseUrlLabel": "Management API Base URL",
+    "checkConnectionAction": "接続を確認",
+    "checkConnectionDesc": "保存後に、現在の URL と管理キーで CLIProxyAPI Management API に接続できるか確認します。",
+    "checkConnectionLabel": "接続確認",
     "description": "CLIProxyAPI Management API への接続を設定します",
     "keyDesc": "インターフェースアクセス認証用の管理キー",
+    "managementDocsLinkLabel": "Management API ドキュメントを開く",
     "managementKeyLabel": "管理キー",
     "title": "CLIProxyAPI 設定",
     "urlDesc": "Management API の Base URL を設定します。例: http://localhost:8317/v0/management"

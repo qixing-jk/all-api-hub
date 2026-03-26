@@ -56,6 +56,14 @@
     "configMissing": "先に設定で CLIProxyAPI Management API の Base URL とキーを設定してください",
     "importFailed": "CLIProxyAPI へのプロバイダーインポートに失敗しました",
     "importSuccess": "プロバイダー {{name}} を CLIProxyAPI に正常にインポートしました",
+    "managementApiConnectionSuccess": "CLIProxyAPI Management API に接続できました",
+    "managementApiForbidden": "CLIProxyAPI がリクエストを拒否しました。管理キーの誤入力が多すぎないか、またはサーバー側でアクセス制限されていないか確認してください。",
+    "managementApiHttpError": "CLIProxyAPI Management API が想定外のステータスコードを返しました（HTTP {{status}}）",
+    "managementApiInvalidKey": "CLIProxyAPI の管理キーが無効です。設定内の管理キーを確認してください。",
+    "managementApiNotFound": "CLIProxyAPI Management API が見つかりません。Base URL が /v0/management で終わっていること、および CLIProxyAPI 側で管理キーが設定されていることを確認してください。",
+    "managementApiRemoteAccessDisabled": "CLIProxyAPI がリモート管理アクセスを拒否しました。CLIProxyAPI の設定で remote-management.allow-remote: true が有効か、または MANAGEMENT_PASSWORD によってリモート管理が有効になっているか確認してから再試行してください。",
+    "managementApiServerError": "CLIProxyAPI Management API がサーバーエラーを返しました（HTTP {{status}}）",
+    "managementApiUnreachable": "CLIProxyAPI Management API に接続できません。Base URL、サービス状態、ブラウザーからそのアドレスへのネットワーク到達性を確認してください。",
     "updateSuccess": "CLIProxy プロバイダー {{name}} を正常に更新しました"
   },
   "content": {
