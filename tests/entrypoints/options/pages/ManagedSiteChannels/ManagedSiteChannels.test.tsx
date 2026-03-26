@@ -87,7 +87,8 @@ const openRowActionsMenu = (row: HTMLElement) => {
     name: "managedSiteChannels:table.columns.actions",
   })
 
-  fireEvent.pointerDown(trigger)
+  fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false })
+  fireEvent.click(trigger, { button: 0, ctrlKey: false })
 }
 
 describe("ManagedSiteChannels", () => {
