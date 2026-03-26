@@ -139,8 +139,7 @@ export function NewApiManagedVerificationDialog(
   const handleSaveQuickConfig = async () => {
     const nextBaseUrl = quickBaseUrl.trim()
     const nextUsername = quickUsername.trim()
-    const requestConfig = props.request?.config
-    const requestUpdates: NewApiManagedVerificationConfigUpdate = {}
+    const requestConfigUpdates: NewApiManagedVerificationConfigUpdate = {}
 
     if (needsBaseUrl && !nextBaseUrl) {
       setQuickConfigError(t("dialog.messages.completeRequiredConfig"))
@@ -150,6 +149,15 @@ export function NewApiManagedVerificationDialog(
     if (needsCredentials && (!nextUsername || !quickPassword)) {
       setQuickConfigError(t("dialog.messages.completeRequiredConfig"))
       return
+    }
+
+    if (needsBaseUrl) {
+      requestConfigUpdates.baseUrl = nextBaseUrl
+    }
+
+    if (needsCredentials) {
+      requestConfigUpdates.username = nextUsername
+      requestConfigUpdates.password = quickPassword
     }
 
     setIsSavingQuickConfig(true)
@@ -177,26 +185,8 @@ export function NewApiManagedVerificationDialog(
         }
       }
 
-      if (needsBaseUrl && nextBaseUrl !== requestConfig?.baseUrl.trim()) {
-        requestUpdates.baseUrl = nextBaseUrl
-      }
-
-      if (
-        needsCredentials &&
-        nextUsername !== (requestConfig?.username?.trim() ?? "")
-      ) {
-        requestUpdates.username = nextUsername
-      }
-
-      if (
-        needsCredentials &&
-        quickPassword !== (requestConfig?.password ?? "")
-      ) {
-        requestUpdates.password = quickPassword
-      }
-
-      if (Object.keys(requestUpdates).length > 0) {
-        props.onUpdateRequestConfig(requestUpdates)
+      if (Object.keys(requestConfigUpdates).length > 0) {
+        props.onUpdateRequestConfig(requestConfigUpdates)
       }
 
       await Promise.resolve(props.onRetry())
