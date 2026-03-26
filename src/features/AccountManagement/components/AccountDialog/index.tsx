@@ -1,3 +1,4 @@
+import { ThemeAwareToaster } from "~/components/ThemeAwareToaster"
 import { Modal } from "~/components/ui/Dialog/Modal"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
@@ -13,6 +14,8 @@ import { DuplicateAccountWarningDialog } from "./DuplicateAccountWarningDialog"
 import { useAccountDialog } from "./hooks/useAccountDialog"
 import InfoPanel from "./InfoPanel"
 import SiteInfoInput from "./SiteInfoInput"
+
+const ACCOUNT_DIALOG_TOASTER_ID = "account-dialog"
 
 interface AccountDialogProps {
   isOpen: boolean
@@ -81,6 +84,13 @@ export default function AccountDialog({
       <Modal
         isOpen={isOpen}
         onClose={handlers.handleClose}
+        floatingContent={
+          <ThemeAwareToaster
+            toasterId={ACCOUNT_DIALOG_TOASTER_ID}
+            position="top-right"
+            containerStyle={{ zIndex: 75 }}
+          />
+        }
         header={<DialogHeader mode={mode} />}
         footer={
           <ActionButtons

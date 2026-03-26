@@ -544,6 +544,21 @@ export function useAccountDialog({
     }
   }
 
+  const handleClose = useCallback(() => {
+    handleDuplicateAccountWarningCancel()
+    cancelPendingDuplicateAccountWarning()
+    targetAccountRef.current = null
+    onClose()
+  }, [
+    cancelPendingDuplicateAccountWarning,
+    handleDuplicateAccountWarningCancel,
+    onClose,
+  ])
+
+  const handleOpenCookiePermissionSettings = useCallback(() => {
+    void openSettingsTab("permissions")
+  }, [])
+
   const handleImportCookieAuthSessionCookie = async () => {
     if (!url.trim()) {
       toast.error(t("messages.urlRequired"))
@@ -574,10 +589,6 @@ export function useAccountDialog({
         switch (response.errorCode) {
           case COOKIE_IMPORT_FAILURE_REASONS.PermissionDenied:
             setShowCookiePermissionWarning(true)
-            // TODO: Revisit a direct shortcut to the permissions tab after we
-            // have a reliable cross-browser solution for interactive toasts and
-            // modal layering in extension pages.
-            // because https://github.com/timolins/react-hot-toast/issues/325
             toast.error(t("messages.importCookiesPermissionDenied"))
             break
           case COOKIE_IMPORT_FAILURE_REASONS.ReadFailed:
@@ -829,6 +840,7 @@ export function useAccountDialog({
               COOKIE_IMPORT_FAILURE_REASONS.PermissionDenied
             ) {
               setShowCookiePermissionWarning(true)
+              toast.error(t("messages.importCookiesPermissionDenied"))
               logger.info(
                 "Cookie auto-import skipped because cookie permissions were denied",
                 { url: url.trim() },
@@ -1055,13 +1067,6 @@ export function useAccountDialog({
     handleSaveAccount()
   }
 
-  const handleClose = () => {
-    handleDuplicateAccountWarningCancel()
-    cancelPendingDuplicateAccountWarning()
-    targetAccountRef.current = null
-    onClose()
-  }
-
   const handleSub2apiUseRefreshTokenChange = (enabled: boolean) => {
     setSub2apiUseRefreshToken(enabled)
 
@@ -1071,11 +1076,6 @@ export function useAccountDialog({
       setSub2apiRefreshToken("")
       setSub2apiTokenExpiresAt(null)
     }
-  }
-
-  const handleOpenCookiePermissionSettings = () => {
-    handleClose()
-    void openSettingsTab("permissions")
   }
 
   const isFormValid = isValidAccount({

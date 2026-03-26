@@ -24,6 +24,8 @@ vi.mock("react-hot-toast", () => ({
     success: vi.fn(),
     error: vi.fn(),
     loading: vi.fn(),
+    custom: vi.fn(),
+    dismiss: vi.fn(),
   },
 }))
 
@@ -128,12 +130,13 @@ describe("useAccountDialog cookie import feedback", () => {
     expect(toast.error).toHaveBeenCalledWith(
       "accountDialog:messages.importCookiesPermissionDenied",
     )
+    expect(toast.custom).not.toHaveBeenCalled()
 
     await act(async () => {
       result.current.handlers.handleOpenCookiePermissionSettings()
     })
 
-    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(onClose).not.toHaveBeenCalled()
     expect(mockOpenSettingsTab).toHaveBeenCalledWith("permissions")
   })
 

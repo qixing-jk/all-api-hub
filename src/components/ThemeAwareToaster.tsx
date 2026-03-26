@@ -1,14 +1,29 @@
 import { XMarkIcon } from "@heroicons/react/24/outline"
+import type { CSSProperties } from "react"
 import toast, { ToastBar, Toaster } from "react-hot-toast"
 
 import { useTheme } from "~/contexts/ThemeContext"
 
 interface ThemeAwareToasterProps {
   reverseOrder?: boolean
+  toasterId?: string
+  position?:
+    | "top-left"
+    | "top-center"
+    | "top-right"
+    | "bottom-left"
+    | "bottom-center"
+    | "bottom-right"
+  containerClassName?: string
+  containerStyle?: CSSProperties
 }
 
 export const ThemeAwareToaster = ({
   reverseOrder = false,
+  toasterId,
+  position = "bottom-center",
+  containerClassName = "",
+  containerStyle,
 }: ThemeAwareToasterProps) => {
   const { resolvedTheme } = useTheme()
 
@@ -29,11 +44,12 @@ export const ThemeAwareToaster = ({
 
   return (
     <Toaster
-      position="bottom-center"
+      toasterId={toasterId}
+      position={position}
       reverseOrder={reverseOrder}
       gutter={8}
-      containerClassName=""
-      containerStyle={{}}
+      containerClassName={containerClassName}
+      containerStyle={containerStyle}
       toastOptions={{
         className: "rounded-lg shadow-lg",
         duration: 4000,

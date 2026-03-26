@@ -16,6 +16,7 @@ interface ModalProps {
   children?: ReactNode
   header?: ReactNode
   footer?: ReactNode
+  floatingContent?: ReactNode
   panelClassName?: string
   showCloseButton?: boolean
   closeOnEsc?: boolean
@@ -38,6 +39,7 @@ export function Modal({
   children,
   header,
   footer,
+  floatingContent,
   panelClassName,
   showCloseButton = true,
   closeOnEsc = true,
@@ -89,6 +91,8 @@ export function Modal({
             onClick={overlayClickHandler}
           />
         </Transition.Child>
+
+        {floatingContent}
 
         <div className="fixed inset-0 flex items-center justify-center p-4">
           <Transition.Child
