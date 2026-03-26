@@ -90,7 +90,7 @@ export default function CopyKeyDialog({
           defaultName: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
           group: sub2apiCreateAllowedGroups.includes("default")
             ? "default"
-            : sub2apiCreateAllowedGroups[0] ?? "default",
+            : sub2apiCreateAllowedGroups[0],
           allowedGroups: sub2apiCreateAllowedGroups,
         }
       : undefined

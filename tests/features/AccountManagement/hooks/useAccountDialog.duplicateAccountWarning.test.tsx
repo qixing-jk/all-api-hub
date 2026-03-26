@@ -247,4 +247,70 @@ describe("useAccountDialog duplicate account warning", () => {
       }),
     )
   })
+
+  it("keeps the save successful when the Sub2API follow-up dialog throws", async () => {
+    server.use(
+      http.get("https://sub2.example.com/api/v1/auth/me", () =>
+        HttpResponse.json({
+          code: 0,
+          message: "ok",
+          data: {
+            id: 1,
+            username: "",
+            email: "sub2@example.com",
+            balance: 0,
+          },
+        }),
+      ),
+    )
+    mockOpenSub2ApiTokenCreationDialog.mockRejectedValueOnce(
+      new Error("dialog failed"),
+    )
+
+    const onClose = vi.fn()
+    const onSuccess = vi.fn()
+
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose,
+        onSuccess,
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://sub2.example.com")
+      result.current.setters.setSiteType("sub2api")
+      result.current.setters.setSiteName("Sub2")
+      result.current.setters.setUsername("")
+      result.current.setters.setAccessToken("jwt-token")
+      result.current.setters.setUserId("1")
+      result.current.setters.setExchangeRate("7")
+    })
+
+    let saveResult:
+      | Awaited<
+          ReturnType<(typeof result.current.handlers)["handleSaveAccount"]>
+        >
+      | undefined
+    await act(async () => {
+      saveResult = await result.current.handlers.handleSaveAccount()
+    })
+
+    expect(saveResult).toMatchObject({ success: true })
+    expect(mockOpenSub2ApiTokenCreationDialog).toHaveBeenCalledTimes(1)
+
+    const savedAccounts = await accountStorage.getAllAccounts()
+    expect(savedAccounts).toHaveLength(1)
+    expect(savedAccounts[0]).toMatchObject({
+      site_name: "Sub2",
+      site_type: "sub2api",
+      site_url: "https://sub2.example.com",
+    })
+  })
 })

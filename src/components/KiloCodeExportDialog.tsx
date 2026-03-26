@@ -725,7 +725,7 @@ export function KiloCodeExportDialog({
           defaultName: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
           group: sub2apiCreateContext.allowedGroups.includes("default")
             ? "default"
-            : sub2apiCreateContext.allowedGroups[0] ?? "default",
+            : sub2apiCreateContext.allowedGroups[0],
           allowedGroups: sub2apiCreateContext.allowedGroups,
         }
       : undefined

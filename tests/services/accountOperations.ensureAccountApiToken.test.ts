@@ -81,6 +81,22 @@ describe("accountOperations Sub2API token creation guards", () => {
       }),
     ).rejects.toThrow("messages:sub2api.createRequiresGroup")
 
+    expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
+    expect(createApiTokenMock).not.toHaveBeenCalled()
+  })
+
+  it("treats existing Sub2API tokens as already satisfying background ensure", async () => {
+    const token = buildSub2ApiToken({ id: 5, group: "vip" })
+    fetchAccountTokensMock.mockResolvedValueOnce([token])
+
+    await expect(
+      ensureDefaultApiTokenForAccount({
+        account: SITE_ACCOUNT,
+        displaySiteData: DISPLAY_ACCOUNT,
+      }),
+    ).resolves.toEqual({ token, created: false })
+
+    expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
     expect(createApiTokenMock).not.toHaveBeenCalled()
   })
 

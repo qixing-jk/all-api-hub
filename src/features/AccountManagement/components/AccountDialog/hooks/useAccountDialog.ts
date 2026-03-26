@@ -895,11 +895,18 @@ export function useAccountDialog({
         typeof result.accountId === "string" &&
         result.accountId.trim().length > 0
       ) {
-        const savedDisplaySiteData =
-          (await accountStorage.getDisplayDataById(result.accountId)) ?? null
+        try {
+          const savedDisplaySiteData =
+            (await accountStorage.getDisplayDataById(result.accountId)) ?? null
 
-        if (savedDisplaySiteData) {
-          await openSub2ApiTokenCreationDialog(savedDisplaySiteData)
+          if (savedDisplaySiteData) {
+            await openSub2ApiTokenCreationDialog(savedDisplaySiteData)
+          }
+        } catch (error) {
+          logger.error("Post-save Sub2API token dialog failed", {
+            accountId: result.accountId,
+            error: getErrorMessage(error),
+          })
         }
       }
 
