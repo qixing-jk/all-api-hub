@@ -73,9 +73,11 @@
     "checkConnectionDesc": "儲存後可主動檢測目前 URL 與管理金鑰是否能存取 CLIProxyAPI Management API。",
     "checkConnectionLabel": "連線檢測",
     "description": "配置到 CLIProxyAPI 管理介面的連線資訊。",
+    "hideKey": "隱藏管理金鑰",
     "keyDesc": "用於管理介面訪問認證的管理金鑰",
     "managementDocsLinkLabel": "查看 Management API 文件",
     "managementKeyLabel": "管理金鑰",
+    "showKey": "顯示管理金鑰",
     "title": "CLIProxyAPI 設定",
     "urlDesc": "設定管理介面基礎 URL，例如 http://localhost:8317/v0/management"
   },

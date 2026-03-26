@@ -64,6 +64,15 @@ export default function CliProxySettings() {
     }
   }
 
+  const runConnectionCheckWithToast = async (overrides?: {
+    baseUrl?: string
+    managementKey?: string
+  }) => {
+    const result = await runConnectionCheck(overrides)
+    showResultToast(result)
+    return result
+  }
+
   const handleBaseUrlChange = async (url: string) => {
     const trimmedUrl = url.trim()
     setLocalBaseUrl(trimmedUrl)
@@ -73,7 +82,7 @@ export default function CliProxySettings() {
     showUpdateToast(success, t("cliProxy.baseUrlLabel"))
 
     if (success && trimmedUrl && localKey.trim()) {
-      await runConnectionCheck({
+      await runConnectionCheckWithToast({
         baseUrl: trimmedUrl,
         managementKey: localKey,
       })
@@ -89,7 +98,7 @@ export default function CliProxySettings() {
     showUpdateToast(success, t("cliProxy.managementKeyLabel"))
 
     if (success && localBaseUrl.trim() && trimmedKey) {
-      await runConnectionCheck({
+      await runConnectionCheckWithToast({
         baseUrl: localBaseUrl,
         managementKey: trimmedKey,
       })
@@ -134,7 +143,9 @@ export default function CliProxySettings() {
                       variant="ghost"
                       size="sm"
                       onClick={() => setShowKey(!showKey)}
-                      aria-label={showKey ? "Hide key" : "Show key"}
+                      aria-label={
+                        showKey ? t("cliProxy.hideKey") : t("cliProxy.showKey")
+                      }
                     >
                       {showKey ? (
                         <EyeSlashIcon className="h-4 w-4" />
@@ -158,10 +169,8 @@ export default function CliProxySettings() {
                   variant="outline"
                   size="sm"
                   loading={isCheckingConnection}
-                  onClick={() => {
-                    void runConnectionCheck().then((result) => {
-                      showResultToast(result)
-                    })
+                  onClick={async () => {
+                    await runConnectionCheckWithToast()
                   }}
                 >
                   {t("cliProxy.checkConnectionAction")}

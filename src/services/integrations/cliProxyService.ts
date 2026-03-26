@@ -87,7 +87,10 @@ async function readCliProxyErrorResponseText(res: Response) {
 /**
  * Convert a low-level management API failure into a localized user-facing message.
  */
-function getCliProxyManagementApiErrorMessage(error: unknown) {
+function getCliProxyManagementApiErrorMessage(
+  error: unknown,
+  fallbackMessage = t("messages:toast.error.operationFailedGeneric"),
+) {
   if (error instanceof CliProxyManagementApiError) {
     const responseText = error.responseText?.toLowerCase() || ""
     const mentionsRemoteManagement =
@@ -126,7 +129,7 @@ function getCliProxyManagementApiErrorMessage(error: unknown) {
     return t("messages:cliproxy.managementApiUnreachable")
   }
 
-  return message || t("messages:cliproxy.importFailed")
+  return message || fallbackMessage
 }
 
 /**
@@ -600,7 +603,10 @@ export async function verifyCliProxyManagementConnection(
     logger.warn("CLIProxy management connection check failed", error)
     return {
       success: false,
-      message: getCliProxyManagementApiErrorMessage(error),
+      message: getCliProxyManagementApiErrorMessage(
+        error,
+        t("messages:toast.error.operationFailedGeneric"),
+      ),
     }
   }
 }
@@ -764,7 +770,10 @@ export async function importToCliProxy(
     logger.error("Import failed", error)
     return {
       success: false,
-      message: getCliProxyManagementApiErrorMessage(error),
+      message: getCliProxyManagementApiErrorMessage(
+        error,
+        t("messages:cliproxy.importFailed"),
+      ),
     }
   }
 }

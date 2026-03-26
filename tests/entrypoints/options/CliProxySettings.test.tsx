@@ -91,6 +91,72 @@ describe("CliProxySettings", () => {
       true,
       "settings:cliProxy.baseUrlLabel",
     )
+    expect(vi.mocked(showResultToast)).toHaveBeenCalledWith({
+      success: true,
+      message: "messages:cliproxy.managementApiConnectionSuccess",
+    })
+  })
+
+  it("trims the management key before persisting and surfaces the connection-check result", async () => {
+    const updateCliProxyManagementKey = vi.fn().mockResolvedValue(true)
+    vi.mocked(verifyCliProxyManagementConnection).mockResolvedValue({
+      success: false,
+      message: "messages:toast.error.operationFailedGeneric",
+    })
+    vi.mocked(useUserPreferencesContext).mockReturnValue({
+      cliProxyBaseUrl: "http://localhost:8317/v0/management",
+      cliProxyManagementKey: "secret-key",
+      updateCliProxyBaseUrl: vi.fn().mockResolvedValue(true),
+      updateCliProxyManagementKey,
+      resetCliProxyConfig: vi.fn().mockResolvedValue(true),
+    } as any)
+
+    renderSubject()
+
+    const input = screen.getByDisplayValue("secret-key")
+
+    fireEvent.change(input, {
+      target: { value: "  next-secret-key  " },
+    })
+    fireEvent.blur(input)
+
+    await waitFor(() => {
+      expect(updateCliProxyManagementKey).toHaveBeenCalledWith(
+        "next-secret-key",
+      )
+    })
+
+    await waitFor(() => {
+      expect(verifyCliProxyManagementConnection).toHaveBeenCalledWith({
+        baseUrl: "http://localhost:8317/v0/management",
+        managementKey: "next-secret-key",
+      })
+    })
+
+    expect(vi.mocked(showUpdateToast)).toHaveBeenCalledWith(
+      true,
+      "settings:cliProxy.managementKeyLabel",
+    )
+    expect(vi.mocked(showResultToast)).toHaveBeenCalledWith({
+      success: false,
+      message: "messages:toast.error.operationFailedGeneric",
+    })
+  })
+
+  it("uses localized labels for the management key visibility toggle", () => {
+    renderSubject()
+
+    const toggle = screen.getByRole("button", {
+      name: "settings:cliProxy.showKey",
+    })
+
+    fireEvent.click(toggle)
+
+    expect(
+      screen.getByRole("button", {
+        name: "settings:cliProxy.hideKey",
+      }),
+    ).toBeInTheDocument()
   })
 
   it("shows the returned connection-check result via toast", async () => {
