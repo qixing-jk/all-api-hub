@@ -34,6 +34,7 @@ import {
   DATA_TYPE_CONSUMPTION,
   DATA_TYPE_INCOME,
 } from "~/constants"
+import { SITE_TITLE_RULES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
@@ -41,9 +42,11 @@ import {
   useAccountSearch,
   type SearchResultWithHighlight,
 } from "~/features/AccountManagement/hooks/useAccountSearch"
+import { getHealthStatusDisplay } from "~/features/AccountManagement/utils/healthStatusUtils"
 import { useAddAccountHandler } from "~/hooks/useAddAccountHandler"
 import { useIsDesktop, useIsSmallScreen } from "~/hooks/useMediaQuery"
 import { cn } from "~/lib/utils"
+import { getDayKeyFromUnixSeconds } from "~/services/history/usageHistory/core"
 import type { DisplaySiteData, SortField } from "~/types"
 import {
   calculateTotalBalanceForSites,
@@ -54,6 +57,7 @@ import { formatMoneyFixed } from "~/utils/core/money"
 import CopyKeyDialog from "../CopyKeyDialog"
 import DelAccountDialog from "../DelAccountDialog"
 import { NewcomerSupportCard } from "../NewcomerSupportCard"
+import AccountFilterBar from "./AccountFilterBar"
 import AccountSearchInput from "./AccountSearchInput"
 import SortableAccountListItem from "./SortableAccountListItem"
 
@@ -61,28 +65,189 @@ interface AccountListProps {
   initialSearchQuery?: string
 }
 
+type AccountListResultItem = {
+  account: DisplaySiteData
+  highlights?: SearchResultWithHighlight["highlights"]
+}
+
 type AccountDisabledFilterValue = "enabled" | "disabled"
+type AccountRefreshFilterValue =
+  | "never-synced"
+  | "healthy"
+  | "warning"
+  | "error"
+  | "unknown"
+type AccountCheckInFilterValue =
+  | "checked-in"
+  | "not-checked-in"
+  | "outdated"
+  | "unsupported"
 
-const ACCOUNT_STATUS_FILTER_OPTION_VALUES = {
-  enabled: "__account_status_enabled",
-  disabled: "__account_status_disabled",
-} as const
+interface AccountListFilterState {
+  disabledFilter: AccountDisabledFilterValue | null
+  siteTypeFilter: string | null
+  refreshStatusFilter: AccountRefreshFilterValue | null
+  checkInFilter: AccountCheckInFilterValue | null
+  selectedTagIds: string[]
+}
 
-const ACCOUNT_STATUS_FILTER_OPTION_VALUE_SET = new Set(
-  Object.values(ACCOUNT_STATUS_FILTER_OPTION_VALUES),
-)
+const ACCOUNT_REFRESH_FILTER_OPTION_ORDER: AccountRefreshFilterValue[] = [
+  "never-synced",
+  "healthy",
+  "warning",
+  "error",
+  "unknown",
+]
+
+const ACCOUNT_CHECK_IN_FILTER_OPTION_ORDER: AccountCheckInFilterValue[] = [
+  "checked-in",
+  "not-checked-in",
+  "outdated",
+  "unsupported",
+]
 
 /**
- * Type guard to determine if a filter option value is one of the account status options.
- * @param value - The filter option value to check.
- * @returns True if the value is an account status filter option, false otherwise.
+ * Checks whether a persisted site check-in detection timestamp belongs to today.
  */
-function isAccountStatusFilterOptionValue(
-  value: string,
-): value is (typeof ACCOUNT_STATUS_FILTER_OPTION_VALUES)[keyof typeof ACCOUNT_STATUS_FILTER_OPTION_VALUES] {
-  return ACCOUNT_STATUS_FILTER_OPTION_VALUE_SET.has(
-    value as (typeof ACCOUNT_STATUS_FILTER_OPTION_VALUES)[keyof typeof ACCOUNT_STATUS_FILTER_OPTION_VALUES],
-  )
+function isCheckInStatusDetectedToday(detectedAt?: number): boolean {
+  if (typeof detectedAt !== "number" || !Number.isFinite(detectedAt)) {
+    return false
+  }
+
+  const todayKey = getDayKeyFromUnixSeconds(Math.floor(Date.now() / 1000))
+  const detectedKey = getDayKeyFromUnixSeconds(Math.floor(detectedAt / 1000))
+  return detectedKey === todayKey
+}
+
+/**
+ * Maps persisted account sync metadata to a user-facing refresh-state filter bucket.
+ */
+function getAccountRefreshFilterValue(
+  account: DisplaySiteData,
+): AccountRefreshFilterValue {
+  const hasSynced =
+    typeof account.last_sync_time === "number" &&
+    Number.isFinite(account.last_sync_time) &&
+    account.last_sync_time > 0
+
+  if (!hasSynced) {
+    return "never-synced"
+  }
+
+  switch (account.health?.status) {
+    case "healthy":
+      return "healthy"
+    case "warning":
+      return "warning"
+    case "error":
+      return "error"
+    case "unknown":
+    default:
+      return "unknown"
+  }
+}
+
+/**
+ * Maps combined site/custom check-in state into one stable filter bucket.
+ */
+function getAccountCheckInFilterValue(
+  account: DisplaySiteData,
+): AccountCheckInFilterValue {
+  const hasCustomCheckIn =
+    typeof account.checkIn?.customCheckIn?.url === "string" &&
+    account.checkIn.customCheckIn.url.trim() !== ""
+  const siteCheckInEnabled = account.checkIn?.enableDetection === true
+  const siteCheckedInToday = account.checkIn?.siteStatus?.isCheckedInToday
+  const siteStatusKnown = typeof siteCheckedInToday === "boolean"
+  const siteStatusOutdated =
+    siteCheckInEnabled &&
+    siteStatusKnown &&
+    !isCheckInStatusDetectedToday(account.checkIn?.siteStatus?.lastDetectedAt)
+  const customCheckedIn =
+    account.checkIn?.customCheckIn?.isCheckedInToday === true
+
+  if (siteStatusOutdated) {
+    return "outdated"
+  }
+
+  if (!siteCheckInEnabled && !hasCustomCheckIn) {
+    return "unsupported"
+  }
+
+  if (!siteStatusKnown && !hasCustomCheckIn) {
+    return "unsupported"
+  }
+
+  const siteFlowChecked = !siteStatusKnown || siteCheckedInToday === true
+  const customFlowChecked = !hasCustomCheckIn || customCheckedIn
+
+  return siteFlowChecked && customFlowChecked ? "checked-in" : "not-checked-in"
+}
+
+/**
+ * Applies the account-list filters to a result set while allowing faceted counts
+ * to ignore one dimension at a time.
+ */
+function applyAccountListFilters(
+  results: AccountListResultItem[],
+  filters: AccountListFilterState,
+  options?: {
+    skipDisabled?: boolean
+    skipSiteType?: boolean
+    skipRefresh?: boolean
+    skipCheckIn?: boolean
+    skipTags?: boolean
+  },
+) {
+  const {
+    skipDisabled = false,
+    skipSiteType = false,
+    skipRefresh = false,
+    skipCheckIn = false,
+    skipTags = false,
+  } = options ?? {}
+
+  const disabledFilteredResults =
+    skipDisabled || filters.disabledFilter === null
+      ? results
+      : results.filter(({ account }) =>
+          filters.disabledFilter === "disabled"
+            ? account.disabled === true
+            : account.disabled !== true,
+        )
+
+  const siteTypeFilteredResults =
+    skipSiteType || filters.siteTypeFilter === null
+      ? disabledFilteredResults
+      : disabledFilteredResults.filter(
+          ({ account }) => account.siteType === filters.siteTypeFilter,
+        )
+
+  const refreshFilteredResults =
+    skipRefresh || filters.refreshStatusFilter === null
+      ? siteTypeFilteredResults
+      : siteTypeFilteredResults.filter(
+          ({ account }) =>
+            getAccountRefreshFilterValue(account) ===
+            filters.refreshStatusFilter,
+        )
+
+  const checkInFilteredResults =
+    skipCheckIn || filters.checkInFilter === null
+      ? refreshFilteredResults
+      : refreshFilteredResults.filter(
+          ({ account }) =>
+            getAccountCheckInFilterValue(account) === filters.checkInFilter,
+        )
+
+  if (skipTags || filters.selectedTagIds.length === 0) {
+    return checkInFilteredResults
+  }
+
+  return checkInFilteredResults.filter(({ account }) => {
+    const ids = account.tagIds || []
+    return filters.selectedTagIds.some((tagId) => ids.includes(tagId))
+  })
 }
 
 /**
@@ -113,6 +278,11 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
   const [copyKeyDialogAccount, setCopyKeyDialogAccount] =
     useState<DisplaySiteData | null>(null)
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
+  const [siteTypeFilter, setSiteTypeFilter] = useState<string | null>(null)
+  const [refreshStatusFilter, setRefreshStatusFilter] =
+    useState<AccountRefreshFilterValue | null>(null)
+  const [checkInFilter, setCheckInFilter] =
+    useState<AccountCheckInFilterValue | null>(null)
   const [disabledFilter, setDisabledFilter] =
     useState<AccountDisabledFilterValue | null>(null)
 
@@ -131,6 +301,63 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
     setCopyKeyDialogAccount(site)
   }
 
+  const baseResults = useMemo<AccountListResultItem[]>(() => {
+    if (inSearchMode) {
+      return searchResults.map((result) => ({
+        account: result.account,
+        highlights: result.highlights,
+      }))
+    }
+
+    return sortedData.map((account) => ({ account, highlights: undefined }))
+  }, [inSearchMode, searchResults, sortedData])
+
+  const filterState = useMemo<AccountListFilterState>(
+    () => ({
+      disabledFilter,
+      siteTypeFilter,
+      refreshStatusFilter,
+      checkInFilter,
+      selectedTagIds,
+    }),
+    [
+      checkInFilter,
+      disabledFilter,
+      refreshStatusFilter,
+      siteTypeFilter,
+      selectedTagIds,
+    ],
+  )
+
+  const displayedResults = useMemo(
+    () => applyAccountListFilters(baseResults, filterState),
+    [baseResults, filterState],
+  )
+
+  const disabledCountResults = useMemo(
+    () =>
+      applyAccountListFilters(baseResults, filterState, { skipDisabled: true }),
+    [baseResults, filterState],
+  )
+
+  const siteTypeCountResults = useMemo(
+    () =>
+      applyAccountListFilters(baseResults, filterState, { skipSiteType: true }),
+    [baseResults, filterState],
+  )
+
+  const refreshCountResults = useMemo(
+    () =>
+      applyAccountListFilters(baseResults, filterState, { skipRefresh: true }),
+    [baseResults, filterState],
+  )
+
+  const checkInCountResults = useMemo(
+    () =>
+      applyAccountListFilters(baseResults, filterState, { skipCheckIn: true }),
+    [baseResults, filterState],
+  )
+
   const tagFilterOptions = useMemo(() => {
     if (tags.length === 0) {
       return []
@@ -143,88 +370,124 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
     }))
   }, [tags, tagCountsById])
 
-  const filterOptions = useMemo(() => {
-    const enabledCount = displayData.filter(
-      (account) => account.disabled !== true,
-    ).length
-    const disabledCount = displayData.length - enabledCount
+  const siteTypeFilterOptions = useMemo(() => {
+    const siteTypeCounts = siteTypeCountResults.reduce(
+      (counts, { account }) => {
+        counts.set(account.siteType, (counts.get(account.siteType) ?? 0) + 1)
+        return counts
+      },
+      new Map<string, number>(),
+    )
+
+    const availableSiteTypes = Array.from(
+      new Set(displayData.map((account) => account.siteType)),
+    )
+    const knownSiteTypes = SITE_TITLE_RULES.map((rule) => rule.name).filter(
+      (siteType) => availableSiteTypes.includes(siteType),
+    )
+    const extraSiteTypes = availableSiteTypes
+      .filter((siteType) => !knownSiteTypes.includes(siteType))
+      .sort((a, b) => a.localeCompare(b))
 
     return [
       {
-        value: ACCOUNT_STATUS_FILTER_OPTION_VALUES.enabled,
+        value: "all",
+        label: t("filter.siteType.all"),
+        count: siteTypeCountResults.length,
+      },
+      ...[...knownSiteTypes, ...extraSiteTypes].map((siteType) => ({
+        value: siteType,
+        label: siteType,
+        count: siteTypeCounts.get(siteType) ?? 0,
+      })),
+    ]
+  }, [displayData, siteTypeCountResults, t])
+
+  const refreshFilterOptions = useMemo(() => {
+    const refreshCounts = refreshCountResults.reduce((counts, { account }) => {
+      const refreshStatus = getAccountRefreshFilterValue(account)
+      counts.set(refreshStatus, (counts.get(refreshStatus) ?? 0) + 1)
+      return counts
+    }, new Map<AccountRefreshFilterValue, number>())
+
+    return [
+      {
+        value: "all",
+        label: t("filter.refresh.all"),
+        count: refreshCountResults.length,
+      },
+      ...ACCOUNT_REFRESH_FILTER_OPTION_ORDER.map((refreshStatus) => ({
+        value: refreshStatus,
+        label:
+          refreshStatus === "never-synced"
+            ? t("account:filter.refresh.neverSynced")
+            : getHealthStatusDisplay(refreshStatus, t).text,
+        count: refreshCounts.get(refreshStatus) ?? 0,
+      })),
+    ]
+  }, [refreshCountResults, t])
+
+  const checkInFilterOptions = useMemo(() => {
+    const checkInCounts = checkInCountResults.reduce((counts, { account }) => {
+      const checkInStatus = getAccountCheckInFilterValue(account)
+      counts.set(checkInStatus, (counts.get(checkInStatus) ?? 0) + 1)
+      return counts
+    }, new Map<AccountCheckInFilterValue, number>())
+
+    const getCheckInFilterLabel = (
+      checkInStatus: AccountCheckInFilterValue,
+    ) => {
+      switch (checkInStatus) {
+        case "checked-in":
+          return t("filter.checkIn.checked-in")
+        case "not-checked-in":
+          return t("filter.checkIn.not-checked-in")
+        case "outdated":
+          return t("filter.checkIn.outdated")
+        case "unsupported":
+        default:
+          return t("filter.checkIn.unsupported")
+      }
+    }
+
+    return [
+      {
+        value: "all",
+        label: t("filter.checkIn.all"),
+        count: checkInCountResults.length,
+      },
+      ...ACCOUNT_CHECK_IN_FILTER_OPTION_ORDER.map((checkInStatus) => ({
+        value: checkInStatus,
+        label: getCheckInFilterLabel(checkInStatus),
+        count: checkInCounts.get(checkInStatus) ?? 0,
+      })),
+    ]
+  }, [checkInCountResults, t])
+
+  const disabledFilterOptions = useMemo(() => {
+    const enabledCount = disabledCountResults.filter(
+      ({ account }) => account.disabled !== true,
+    ).length
+    const disabledCount = disabledCountResults.length - enabledCount
+
+    return [
+      {
+        value: "all",
+        label: t("filter.disabled.all"),
+        count: disabledCountResults.length,
+      },
+      {
+        value: "enabled",
         label: t("common:status.enabled"),
         count: enabledCount,
       },
       {
-        value: ACCOUNT_STATUS_FILTER_OPTION_VALUES.disabled,
+        value: "disabled",
         label: t("common:status.disabled"),
         count: disabledCount,
       },
-      ...tagFilterOptions,
     ]
-  }, [displayData, t, tagFilterOptions])
-
-  const selectedFilterValues = useMemo(() => {
-    const values = [...selectedTagIds]
-
-    if (disabledFilter !== null) {
-      values.push(ACCOUNT_STATUS_FILTER_OPTION_VALUES[disabledFilter])
-    }
-
-    return values
-  }, [disabledFilter, selectedTagIds])
-
-  const handleFilterChange = (nextValues: string[]) => {
-    const statusValues = nextValues.filter(isAccountStatusFilterOptionValue)
-    const resolvedStatusValue = statusValues.at(-1) ?? null
-
-    setDisabledFilter(
-      resolvedStatusValue === ACCOUNT_STATUS_FILTER_OPTION_VALUES.enabled
-        ? "enabled"
-        : resolvedStatusValue === ACCOUNT_STATUS_FILTER_OPTION_VALUES.disabled
-          ? "disabled"
-          : null,
-    )
-
-    setSelectedTagIds(
-      nextValues.filter((value) => !isAccountStatusFilterOptionValue(value)),
-    )
-  }
-
-  const baseResults = useMemo<
-    Array<{
-      account: DisplaySiteData
-      highlights?: SearchResultWithHighlight["highlights"]
-    }>
-  >(() => {
-    if (inSearchMode) {
-      return searchResults.map((result) => ({
-        account: result.account,
-        highlights: result.highlights,
-      }))
-    }
-
-    return sortedData.map((account) => ({ account, highlights: undefined }))
-  }, [inSearchMode, searchResults, sortedData])
-
-  const displayedResults = useMemo(() => {
-    const disabledFilteredResults =
-      disabledFilter === null
-        ? baseResults
-        : baseResults.filter(({ account }) =>
-            disabledFilter === "disabled"
-              ? account.disabled === true
-              : account.disabled !== true,
-          )
-
-    if (selectedTagIds.length === 0) {
-      return disabledFilteredResults
-    }
-    return disabledFilteredResults.filter(({ account }) => {
-      const ids = account.tagIds || []
-      return selectedTagIds.some((tagId) => ids.includes(tagId))
-    })
-  }, [baseResults, disabledFilter, selectedTagIds])
+  }, [disabledCountResults, t])
 
   const filteredSites = useMemo(
     () => displayedResults.map((item) => item.account),
@@ -246,7 +509,12 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
 
   const hasAccounts = displayData.length > 0
   const showFilteredSummary =
-    inSearchMode || selectedTagIds.length > 0 || disabledFilter !== null
+    inSearchMode ||
+    selectedTagIds.length > 0 ||
+    checkInFilter !== null ||
+    siteTypeFilter !== null ||
+    refreshStatusFilter !== null ||
+    disabledFilter !== null
   const dragDisabled = inSearchMode || !isManualSortFeatureEnabled
   const handleLabel = t("account:list.dragHandle")
 
@@ -335,22 +603,58 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
       data-testid="account-list-view"
     >
       <CardContent padding={"none"} spacing={"none"}>
-        {/* Search Bar */}
+        {/* Search + Filters */}
         <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-primary border-b border-gray-200 bg-white px-3 py-2 sm:px-5 sm:py-3">
-          <AccountSearchInput
-            value={query}
-            onChange={setQuery}
-            onClear={clearSearch}
-          />
-        </div>
-
-        {/* Tag Filter */}
-        <div className="dark:border-dark-bg-tertiary border-b border-gray-200 px-3 py-2 sm:px-5">
           <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-3">
+              <div className="min-w-0 lg:w-72 lg:shrink-0 xl:w-80">
+                <AccountSearchInput
+                  value={query}
+                  onChange={setQuery}
+                  onClear={clearSearch}
+                />
+              </div>
+              <div className="min-w-0 flex-1">
+                <AccountFilterBar
+                  disabledValue={disabledFilter ?? "all"}
+                  siteTypeValue={siteTypeFilter ?? "all"}
+                  refreshValue={refreshStatusFilter ?? "all"}
+                  checkInValue={checkInFilter ?? "all"}
+                  disabledOptions={disabledFilterOptions}
+                  siteTypeOptions={siteTypeFilterOptions}
+                  refreshOptions={refreshFilterOptions}
+                  checkInOptions={checkInFilterOptions}
+                  onDisabledChange={(value) =>
+                    setDisabledFilter(
+                      value === "enabled" || value === "disabled"
+                        ? value
+                        : null,
+                    )
+                  }
+                  onSiteTypeChange={(value) =>
+                    setSiteTypeFilter(value === "all" ? null : value)
+                  }
+                  onRefreshChange={(value) =>
+                    setRefreshStatusFilter(
+                      value === "all"
+                        ? null
+                        : (value as AccountRefreshFilterValue),
+                    )
+                  }
+                  onCheckInChange={(value) =>
+                    setCheckInFilter(
+                      value === "all"
+                        ? null
+                        : (value as AccountCheckInFilterValue),
+                    )
+                  }
+                />
+              </div>
+            </div>
             <TagFilter
-              options={filterOptions}
-              value={selectedFilterValues}
-              onChange={handleFilterChange}
+              options={tagFilterOptions}
+              value={selectedTagIds}
+              onChange={setSelectedTagIds}
               maxVisibleLines={maxTagFilterLines}
               allLabel={t("account:filter.tagsAllLabel")}
               allCount={displayData.length}

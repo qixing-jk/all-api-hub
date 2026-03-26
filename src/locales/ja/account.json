@@ -50,6 +50,27 @@
   "description": "すべての AI 中継サイトをワンクリックで管理",
   "emptyState": "まだアカウントがありません",
   "filter": {
+    "checkIn": {
+      "all": "すべてのチェックイン状態",
+      "checked-in": "チェックイン済み",
+      "not-checked-in": "未チェックイン",
+      "outdated": "状態期限切れ",
+      "placeholder": "チェックイン状態",
+      "unsupported": "未対応"
+    },
+    "disabled": {
+      "all": "すべてのアカウント",
+      "placeholder": "アカウント状態"
+    },
+    "refresh": {
+      "all": "すべての更新状態",
+      "neverSynced": "未同期",
+      "placeholder": "更新状態"
+    },
+    "siteType": {
+      "all": "すべてのサイト種別",
+      "placeholder": "サイト種別"
+    },
     "summary_other": "{{count}} アカウント",
     "tagsAllLabel": "すべて"
   },

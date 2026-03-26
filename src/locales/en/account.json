@@ -51,6 +51,27 @@
   "description": "Manage all AI redistribution stations with one click",
   "emptyState": "No accounts yet",
   "filter": {
+    "checkIn": {
+      "all": "All check-in states",
+      "checked-in": "Checked in",
+      "not-checked-in": "Not checked in",
+      "outdated": "Status outdated",
+      "placeholder": "Check-in status",
+      "unsupported": "Unsupported"
+    },
+    "disabled": {
+      "all": "All accounts",
+      "placeholder": "Account status"
+    },
+    "refresh": {
+      "all": "All refresh states",
+      "neverSynced": "Never synced",
+      "placeholder": "Refresh status"
+    },
+    "siteType": {
+      "all": "All site types",
+      "placeholder": "Site type"
+    },
     "summary_one": "{{count}} account",
     "summary_other": "{{count}} accounts",
     "tagsAllLabel": "All"

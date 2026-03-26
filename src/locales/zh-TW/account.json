@@ -50,6 +50,27 @@
   "description": "一鍵管理所有AI中轉站",
   "emptyState": "暫無站點帳號",
   "filter": {
+    "checkIn": {
+      "all": "全部簽到狀態",
+      "checked-in": "已簽到",
+      "not-checked-in": "未簽到",
+      "outdated": "狀態過期",
+      "placeholder": "簽到狀態",
+      "unsupported": "不支援"
+    },
+    "disabled": {
+      "all": "全部帳號",
+      "placeholder": "帳號狀態"
+    },
+    "refresh": {
+      "all": "全部重新整理狀態",
+      "neverSynced": "未同步",
+      "placeholder": "重新整理狀態"
+    },
+    "siteType": {
+      "all": "全部站點類型",
+      "placeholder": "站點類型"
+    },
     "summary_other": "共 {{count}} 個帳號",
     "tagsAllLabel": "全部"
   },
