@@ -316,24 +316,28 @@ const RECOVERABLE_MESSAGE_SNIPPETS = [
 ]
 
 /**
+ * Detects WebExtension messaging failures where the receiver is unavailable,
+ * for example because a content script has not attached yet or the listening
+ * UI page is already closed.
+ * @param error Unknown messaging error to inspect.
+ * @returns True when the error indicates there is no active message receiver.
+ */
+export function isMessageReceiverUnavailableError(error: unknown): boolean {
+  const message = getErrorMessage(error).toLowerCase()
+
+  return RECOVERABLE_MESSAGE_SNIPPETS.some((snippet) =>
+    message.includes(snippet.toLowerCase()),
+  )
+}
+
+/**
  * Determines whether a WebExtension messaging error is transient and worth retrying.
  *
  * Applies to both `browser.runtime.sendMessage` and `browser.tabs.sendMessage`,
  * where content scripts may not be ready yet.
  */
 function isRecoverableMessageError(error: unknown): boolean {
-  const messageValue =
-    typeof error === "object" &&
-    error !== null &&
-    "message" in error &&
-    typeof (error as { message?: unknown }).message === "string"
-      ? (error as { message?: unknown }).message
-      : null
-
-  const message = String(messageValue ?? error ?? "").toLowerCase()
-  return RECOVERABLE_MESSAGE_SNIPPETS.some((snippet) =>
-    message.includes(snippet.toLowerCase()),
-  )
+  return isMessageReceiverUnavailableError(error)
 }
 
 type MessageRetryDefaults = {

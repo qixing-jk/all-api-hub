@@ -8,6 +8,7 @@ import {
   getAlarm,
   getAllAlarms,
   hasAlarmsAPI,
+  isMessageReceiverUnavailableError,
   onAlarm,
   onSuspend,
   sendRuntimeActionMessage,
@@ -285,6 +286,24 @@ describe("browserApi sendRuntimeActionMessage", () => {
         return result
       })(),
     ).resolves.toEqual({ ok: true })
+  })
+})
+
+describe("browserApi isMessageReceiverUnavailableError", () => {
+  it("matches receiver-missing messaging errors", () => {
+    expect(
+      isMessageReceiverUnavailableError(
+        new Error(
+          "Could not establish connection. Receiving end does not exist.",
+        ),
+      ),
+    ).toBe(true)
+  })
+
+  it("returns false for unrelated errors", () => {
+    expect(
+      isMessageReceiverUnavailableError(new Error("Network timeout")),
+    ).toBe(false)
   })
 })
 

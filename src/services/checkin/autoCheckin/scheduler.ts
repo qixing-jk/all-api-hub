@@ -32,6 +32,7 @@ import {
   createAlarm,
   getAlarm,
   hasAlarmsAPI,
+  isMessageReceiverUnavailableError,
   onAlarm,
   sendRuntimeMessage,
 } from "~/utils/browser/browserApi"
@@ -232,10 +233,7 @@ class AutoCheckinScheduler {
     } catch (error) {
       const errorMessage = getErrorMessage(error)
       // Ignore "no receiver" errors (popup/options closed). Log others for diagnostics.
-      if (
-        /Receiving end does not exist/i.test(errorMessage) ||
-        /Could not establish connection/i.test(errorMessage)
-      ) {
+      if (isMessageReceiverUnavailableError(error)) {
         logger.debug("Run-completed UI notification ignored (no receiver)", {
           runKind: message.runKind,
           error: errorMessage,

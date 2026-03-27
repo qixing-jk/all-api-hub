@@ -12,6 +12,7 @@ import { AuthTypeEnum, type Sub2ApiAuthConfig } from "~/types"
 import {
   getActiveOrAllTabs,
   getActiveTabs,
+  isMessageReceiverUnavailableError,
   sendRuntimeMessage,
 } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
@@ -50,24 +51,6 @@ interface UserDataResult {
 interface CurrentTabUserDataResult {
   userData: UserDataResult | null
   contentScriptUnavailable: boolean
-}
-
-const CURRENT_TAB_CONTENT_SCRIPT_ERROR_SNIPPETS = [
-  "Receiving end does not exist",
-  "Could not establish connection",
-]
-
-/**
- * Detects the browser messaging errors that usually mean the current tab does
- * not have a live content script yet, for example because the page was opened
- * before the extension was installed or updated.
- */
-function isCurrentTabContentScriptUnavailableError(error: unknown): boolean {
-  const message = getErrorMessage(error).toLowerCase()
-
-  return CURRENT_TAB_CONTENT_SCRIPT_ERROR_SNIPPETS.some((snippet) =>
-    message.includes(snippet.toLowerCase()),
-  )
 }
 
 /**
@@ -310,8 +293,7 @@ async function getUserDataFromCurrentTab(
         }
       }
     } catch (error) {
-      contentScriptUnavailable =
-        isCurrentTabContentScriptUnavailableError(error)
+      contentScriptUnavailable = isMessageReceiverUnavailableError(error)
 
       if (contentScriptUnavailable) {
         logger.warn("当前标签页 content script 不可用，尝试 API 降级", {

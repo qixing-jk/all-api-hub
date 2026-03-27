@@ -36,6 +36,7 @@ import {
   createAlarm,
   getAlarm,
   hasAlarmsAPI,
+  isMessageReceiverUnavailableError,
   onAlarm,
   sendRuntimeMessage,
 } from "~/utils/browser/browserApi"
@@ -1116,13 +1117,8 @@ class WebdavAutoSyncService {
         },
         { maxAttempts: 1 },
       ).catch((error) => {
-        const errorMessage = getErrorMessage(error)
-
         // 静默处理"没有接收者"的错误（popup可能没打开）
-        if (
-          /Receiving end does not exist/i.test(errorMessage) ||
-          /Could not establish connection/i.test(errorMessage)
-        ) {
+        if (isMessageReceiverUnavailableError(error)) {
           logger.debug("前端未打开，跳过通知")
           return
         }

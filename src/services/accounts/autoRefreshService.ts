@@ -1,7 +1,10 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { usageHistoryScheduler } from "~/services/history/usageHistory/scheduler"
 import { AccountAutoRefresh } from "~/types/accountAutoRefresh"
-import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import {
+  isMessageReceiverUnavailableError,
+  sendRuntimeMessage,
+} from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
@@ -186,13 +189,8 @@ class AutoRefreshService {
         },
         { maxAttempts: 1 },
       ).catch((error) => {
-        const errorMessage = getErrorMessage(error)
-
         // 静默处理"没有接收者"的错误（popup可能没打开）
-        if (
-          /Receiving end does not exist/i.test(errorMessage) ||
-          /Could not establish connection/i.test(errorMessage)
-        ) {
+        if (isMessageReceiverUnavailableError(error)) {
           logger.debug("前端未打开，跳过通知")
           return
         }
