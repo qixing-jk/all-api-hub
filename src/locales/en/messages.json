@@ -13,6 +13,7 @@
     "tokenNotFound": "Failed to create or find an API token"
   },
   "autodetect": {
+    "currentTabNeedsReload": "This page may have been opened before the extension was installed or updated, so the extension cannot read data from this tab yet. Reload the current page, then try auto-detect again.",
     "failed": "Auto-detection failed: {{error}}",
     "forbidden": "Access denied. Please confirm whether the website firewall is blocking the request",
     "loginThisSite": "Login to this site",

@@ -13,6 +13,7 @@
     "tokenNotFound": "无法创建或找到 API 令牌"
   },
   "autodetect": {
+    "currentTabNeedsReload": "当前页面可能是在安装或更新扩展前打开的，插件暂时无法读取该标签页的信息。请刷新当前页面后再重试自动识别。",
     "failed": "自动识别失败：{{error}}",
     "forbidden": "访问被拒绝。请确认是否为网站防火墙拦截了相关请求。",
     "loginThisSite": "登录此站点",

@@ -5,6 +5,7 @@ import {
   AutoDetectErrorType,
   getLoginUrl,
   openLoginTab,
+  reloadCurrentTab,
 } from "~/services/accounts/utils/autoDetectUtils"
 import { getDocsAutoDetectUrl } from "~/utils/navigation/docsLinks"
 
@@ -25,6 +26,8 @@ const originalBrowser = (globalThis as any).browser
 vi.stubGlobal("browser", {
   tabs: {
     create: vi.fn(),
+    query: vi.fn(),
+    reload: vi.fn(),
   },
 })
 
@@ -86,6 +89,37 @@ describe("autoDetectUtils", () => {
         const result = analyzeAutoDetectError(error)
 
         expect(result.type).toBe(AutoDetectErrorType.UNAUTHORIZED)
+      })
+    })
+
+    describe("Current-tab reload hints", () => {
+      it("should detect content-script connection errors", () => {
+        const error = new Error(
+          "Could not establish connection. Receiving end does not exist.",
+        )
+        const result = analyzeAutoDetectError(error)
+
+        expect(result.type).toBe(
+          AutoDetectErrorType.CURRENT_TAB_RELOAD_REQUIRED,
+        )
+        expect(result.message).toBe("messages:autodetect.currentTabNeedsReload")
+        expect(result.actionText).toBe(
+          "accountDialog:actions.reloadCurrentPage",
+        )
+        expect(result.helpDocUrl).toBe(getDocsAutoDetectUrl())
+      })
+
+      it("should detect the localized reload hint directly", () => {
+        const result = analyzeAutoDetectError(
+          "messages:autodetect.currentTabNeedsReload",
+        )
+
+        expect(result.type).toBe(
+          AutoDetectErrorType.CURRENT_TAB_RELOAD_REQUIRED,
+        )
+        expect(result.actionText).toBe(
+          "accountDialog:actions.reloadCurrentPage",
+        )
       })
     })
 
@@ -420,10 +454,39 @@ describe("autoDetectUtils", () => {
     })
   })
 
+  describe("reloadCurrentTab", () => {
+    beforeEach(() => {
+      vi.clearAllMocks()
+    })
+
+    it("reloads the active tab in the current window", async () => {
+      vi.mocked(browser.tabs.query).mockResolvedValueOnce([{ id: 123 } as any])
+
+      await reloadCurrentTab()
+
+      expect(browser.tabs.query).toHaveBeenCalledWith({
+        active: true,
+        currentWindow: true,
+      })
+      expect(browser.tabs.reload).toHaveBeenCalledWith(123)
+    })
+
+    it("does nothing when no active tab is available", async () => {
+      vi.mocked(browser.tabs.query).mockResolvedValueOnce([])
+
+      await reloadCurrentTab()
+
+      expect(browser.tabs.reload).not.toHaveBeenCalled()
+    })
+  })
+
   describe("Error types enum", () => {
     it("should have all error types defined", () => {
       expect(AutoDetectErrorType.TIMEOUT).toBe("timeout")
       expect(AutoDetectErrorType.UNAUTHORIZED).toBe("unauthorized")
+      expect(AutoDetectErrorType.CURRENT_TAB_RELOAD_REQUIRED).toBe(
+        "current_tab_reload_required",
+      )
       expect(AutoDetectErrorType.INVALID_RESPONSE).toBe("invalid_response")
       expect(AutoDetectErrorType.NETWORK_ERROR).toBe("network_error")
       expect(AutoDetectErrorType.UNKNOWN).toBe("unknown")

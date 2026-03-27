@@ -23,6 +23,7 @@ import { getDocsAutoDetectUrl } from "~/utils/navigation/docsLinks"
 export enum AutoDetectErrorType {
   TIMEOUT = "timeout",
   UNAUTHORIZED = "unauthorized",
+  CURRENT_TAB_RELOAD_REQUIRED = "current_tab_reload_required",
   INVALID_RESPONSE = "invalid_response",
   NETWORK_ERROR = "network_error",
   UNKNOWN = "unknown",
@@ -43,6 +44,14 @@ export interface AutoDetectError {
 const ERROR_KEYWORDS: Record<string, string[]> = {
   TIMEOUT: ["超时", "timeout", "请求超时", "request timeout", "timed out"],
   UNAUTHORIZED: ["401", "未授权", "Unauthorized", "未登录", "login required"],
+  CURRENT_TAB_RELOAD_REQUIRED: [
+    "receiving end does not exist",
+    "could not establish connection",
+    "content script",
+    "刷新当前页面",
+    "refresh the current page",
+    "reload the current page",
+  ],
   INVALID_RESPONSE: [
     "格式",
     "解析",
@@ -79,9 +88,22 @@ export function analyzeAutoDetectError(error: any): AutoDetectError {
 
   const msg = errorMessage.toLowerCase()
   const docsUrl = getDocsAutoDetectUrl()
+  const currentTabReloadMessage = t("messages:autodetect.currentTabNeedsReload")
 
   // Iterate known keyword buckets and return the first matching structured error
   for (const [type, keywords] of Object.entries(ERROR_KEYWORDS)) {
+    if (
+      errorMessage === currentTabReloadMessage &&
+      type === "CURRENT_TAB_RELOAD_REQUIRED"
+    ) {
+      return {
+        type: AutoDetectErrorType.CURRENT_TAB_RELOAD_REQUIRED,
+        message: currentTabReloadMessage,
+        actionText: t("accountDialog:actions.reloadCurrentPage"),
+        helpDocUrl: docsUrl,
+      }
+    }
+
     if (keywords.some((k) => msg.includes(k.toLowerCase()))) {
       switch (type) {
         case "TIMEOUT":
@@ -95,6 +117,13 @@ export function analyzeAutoDetectError(error: any): AutoDetectError {
             type: AutoDetectErrorType.UNAUTHORIZED,
             message: t("messages:autodetect.notLoggedIn"),
             actionText: t("messages:autodetect.loginThisSite"),
+            helpDocUrl: docsUrl,
+          }
+        case "CURRENT_TAB_RELOAD_REQUIRED":
+          return {
+            type: AutoDetectErrorType.CURRENT_TAB_RELOAD_REQUIRED,
+            message: currentTabReloadMessage,
+            actionText: t("accountDialog:actions.reloadCurrentPage"),
             helpDocUrl: docsUrl,
           }
         case "INVALID_RESPONSE":
@@ -173,4 +202,20 @@ export function getLoginUrl(siteUrl: string): string {
 export async function openLoginTab(siteUrl: string): Promise<void> {
   const loginUrl = getLoginUrl(siteUrl)
   await browser.tabs.create({ url: loginUrl, active: true })
+}
+
+/**
+ * Reload the currently active page so a freshly installed or updated content
+ * script can attach before the next auto-detect attempt.
+ */
+export async function reloadCurrentTab(): Promise<void> {
+  const tabs = await browser.tabs.query({
+    active: true,
+    currentWindow: true,
+  })
+
+  const activeTab = tabs[0]
+  if (typeof activeTab?.id === "number") {
+    await browser.tabs.reload(activeTab.id)
+  }
 }

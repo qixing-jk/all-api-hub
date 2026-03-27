@@ -76,4 +76,24 @@ describe("accountOperations autoDetectAccount", () => {
     expect(result.data?.accessToken).toBe("jwt-token")
     expect(result.data?.exchangeRate).toBe(UI_CONSTANTS.EXCHANGE_RATE.DEFAULT)
   })
+
+  it("maps current-tab content-script failures to a reload hint", async () => {
+    mockSendRuntimeMessage.mockResolvedValueOnce(null)
+    mockAutoDetectSmart.mockResolvedValueOnce({
+      success: false,
+      error: "messages:autodetect.currentTabNeedsReload",
+    })
+
+    const result = await autoDetectAccount(
+      "https://example.com",
+      AuthTypeEnum.AccessToken,
+    )
+
+    expect(result.success).toBe(false)
+    expect(result.detailedError).toMatchObject({
+      type: "current_tab_reload_required",
+      message: "messages:autodetect.currentTabNeedsReload",
+      actionText: "accountDialog:actions.reloadCurrentPage",
+    })
+  })
 })
