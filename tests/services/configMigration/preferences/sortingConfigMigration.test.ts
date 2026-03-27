@@ -45,7 +45,7 @@ describe("sortingConfigMigration", () => {
       expect(result).toBe(false)
     })
 
-    it("returns true when config still uses legacy MANUAL_ORDER before USER_SORT_FIELD priority", () => {
+    it("returns true when MANUAL_ORDER still precedes USER_SORT_FIELD", () => {
       const config = {
         ...DEFAULT_SORTING_PRIORITY_CONFIG,
         criteria: [
@@ -91,6 +91,54 @@ describe("sortingConfigMigration", () => {
       }
       const result = needsSortingConfigMigration(config)
       expect(result).toBe(true)
+    })
+
+    it("returns true for custom user order that still keeps MANUAL_ORDER ahead of USER_SORT_FIELD", () => {
+      const config = {
+        ...DEFAULT_SORTING_PRIORITY_CONFIG,
+        criteria: [
+          {
+            id: SortingCriteriaType.DISABLED_ACCOUNT,
+            enabled: true,
+            priority: 0,
+          },
+          {
+            id: SortingCriteriaType.CURRENT_SITE,
+            enabled: true,
+            priority: 1,
+          },
+          {
+            id: SortingCriteriaType.MANUAL_ORDER,
+            enabled: true,
+            priority: 2,
+          },
+          {
+            id: SortingCriteriaType.PINNED,
+            enabled: true,
+            priority: 3,
+          },
+          {
+            id: SortingCriteriaType.USER_SORT_FIELD,
+            enabled: true,
+            priority: 4,
+          },
+          ...DEFAULT_SORTING_PRIORITY_CONFIG.criteria
+            .filter(
+              (c) =>
+                c.id !== SortingCriteriaType.DISABLED_ACCOUNT &&
+                c.id !== SortingCriteriaType.CURRENT_SITE &&
+                c.id !== SortingCriteriaType.PINNED &&
+                c.id !== SortingCriteriaType.MANUAL_ORDER &&
+                c.id !== SortingCriteriaType.USER_SORT_FIELD,
+            )
+            .map((c, index) => ({
+              ...c,
+              priority: index + 5,
+            })),
+        ],
+      }
+
+      expect(needsSortingConfigMigration(config)).toBe(true)
     })
   })
 
@@ -150,6 +198,75 @@ describe("sortingConfigMigration", () => {
             enabled: true,
             priority: 4,
           },
+          {
+            id: SortingCriteriaType.CHECK_IN_REQUIREMENT,
+            enabled: true,
+            priority: 5,
+          },
+          {
+            id: SortingCriteriaType.MATCHED_OPEN_TABS,
+            enabled: true,
+            priority: 6,
+          },
+          {
+            id: SortingCriteriaType.HEALTH_STATUS,
+            enabled: true,
+            priority: 7,
+          },
+          {
+            id: SortingCriteriaType.CUSTOM_CHECK_IN_URL,
+            enabled: true,
+            priority: 8,
+          },
+          {
+            id: SortingCriteriaType.CUSTOM_REDEEM_URL,
+            enabled: true,
+            priority: 9,
+          },
+        ],
+        lastModified: 1000,
+      }
+
+      const result = migrateSortingConfig(config)
+      const ids = result.criteria.map((criterion) => criterion.id)
+
+      expect(ids.indexOf(SortingCriteriaType.USER_SORT_FIELD)).toBe(3)
+      expect(ids.indexOf(SortingCriteriaType.MANUAL_ORDER)).toBe(4)
+      expect(ids.indexOf(SortingCriteriaType.CHECK_IN_REQUIREMENT)).toBe(5)
+      expect(ids.indexOf(SortingCriteriaType.MATCHED_OPEN_TABS)).toBe(6)
+      expect(ids.indexOf(SortingCriteriaType.HEALTH_STATUS)).toBe(7)
+      expect(ids.indexOf(SortingCriteriaType.CUSTOM_CHECK_IN_URL)).toBe(8)
+      expect(ids.indexOf(SortingCriteriaType.CUSTOM_REDEEM_URL)).toBe(9)
+    })
+
+    it("canonicalizes custom user ordering when MANUAL_ORDER still precedes USER_SORT_FIELD", () => {
+      const config = {
+        criteria: [
+          {
+            id: SortingCriteriaType.DISABLED_ACCOUNT,
+            enabled: true,
+            priority: 0,
+          },
+          {
+            id: SortingCriteriaType.CURRENT_SITE,
+            enabled: true,
+            priority: 1,
+          },
+          {
+            id: SortingCriteriaType.MANUAL_ORDER,
+            enabled: true,
+            priority: 2,
+          },
+          {
+            id: SortingCriteriaType.PINNED,
+            enabled: true,
+            priority: 3,
+          },
+          {
+            id: SortingCriteriaType.USER_SORT_FIELD,
+            enabled: true,
+            priority: 4,
+          },
           ...DEFAULT_SORTING_PRIORITY_CONFIG.criteria
             .filter(
               (c) =>
@@ -170,6 +287,7 @@ describe("sortingConfigMigration", () => {
       const result = migrateSortingConfig(config)
       const ids = result.criteria.map((criterion) => criterion.id)
 
+      expect(ids.indexOf(SortingCriteriaType.PINNED)).toBe(2)
       expect(ids.indexOf(SortingCriteriaType.USER_SORT_FIELD)).toBe(3)
       expect(ids.indexOf(SortingCriteriaType.MANUAL_ORDER)).toBe(4)
     })

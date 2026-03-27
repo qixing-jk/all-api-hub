@@ -731,7 +731,7 @@ describe("preferencesMigration", () => {
 
     it("reorders legacy MANUAL_ORDER priority during v17->v18 migration", () => {
       const prefs = createV0Preferences({
-        preferencesVersion: CURRENT_PREFERENCES_VERSION - 1,
+        preferencesVersion: 17,
         sortingPriorityConfig: {
           lastModified: 1000,
           criteria: [
@@ -760,19 +760,31 @@ describe("preferencesMigration", () => {
               enabled: true,
               priority: 4,
             },
-            ...DEFAULT_SORTING_PRIORITY_CONFIG.criteria
-              .filter(
-                (criterion) =>
-                  criterion.id !== SortingCriteriaType.DISABLED_ACCOUNT &&
-                  criterion.id !== SortingCriteriaType.CURRENT_SITE &&
-                  criterion.id !== SortingCriteriaType.PINNED &&
-                  criterion.id !== SortingCriteriaType.MANUAL_ORDER &&
-                  criterion.id !== SortingCriteriaType.USER_SORT_FIELD,
-              )
-              .map((criterion, index) => ({
-                ...criterion,
-                priority: index + 5,
-              })),
+            {
+              id: SortingCriteriaType.CHECK_IN_REQUIREMENT,
+              enabled: true,
+              priority: 5,
+            },
+            {
+              id: SortingCriteriaType.MATCHED_OPEN_TABS,
+              enabled: true,
+              priority: 6,
+            },
+            {
+              id: SortingCriteriaType.HEALTH_STATUS,
+              enabled: true,
+              priority: 7,
+            },
+            {
+              id: SortingCriteriaType.CUSTOM_CHECK_IN_URL,
+              enabled: true,
+              priority: 8,
+            },
+            {
+              id: SortingCriteriaType.CUSTOM_REDEEM_URL,
+              enabled: true,
+              priority: 9,
+            },
           ],
         },
       })
@@ -785,6 +797,11 @@ describe("preferencesMigration", () => {
       expect(result.preferencesVersion).toBe(CURRENT_PREFERENCES_VERSION)
       expect(ids?.indexOf(SortingCriteriaType.USER_SORT_FIELD)).toBe(3)
       expect(ids?.indexOf(SortingCriteriaType.MANUAL_ORDER)).toBe(4)
+      expect(ids?.indexOf(SortingCriteriaType.CHECK_IN_REQUIREMENT)).toBe(5)
+      expect(ids?.indexOf(SortingCriteriaType.MATCHED_OPEN_TABS)).toBe(6)
+      expect(ids?.indexOf(SortingCriteriaType.HEALTH_STATUS)).toBe(7)
+      expect(ids?.indexOf(SortingCriteriaType.CUSTOM_CHECK_IN_URL)).toBe(8)
+      expect(ids?.indexOf(SortingCriteriaType.CUSTOM_REDEEM_URL)).toBe(9)
     })
 
     it("removes all deprecated fields after full migration", () => {

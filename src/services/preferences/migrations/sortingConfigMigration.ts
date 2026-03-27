@@ -13,7 +13,11 @@ import { createLogger } from "~/utils/core/logger"
 const logger = createLogger("SortingConfigMigration")
 
 /**
+ * Detects configs that still prioritize MANUAL_ORDER ahead of USER_SORT_FIELD.
  *
+ * This is intentionally broad: v18 treats the new canonical order as
+ * authoritative and upgrades all older layouts to it, even if the user had
+ * customized this relative ordering before.
  */
 function hasLegacyManualOrderPriority(
   config: SortingPriorityConfig | undefined,
