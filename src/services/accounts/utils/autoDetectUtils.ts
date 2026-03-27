@@ -15,6 +15,10 @@
  * - AddAccountDialog 和 EditAccountDialog 中的自动识别错误处理
  * - AutoDetectErrorAlert 组件中的错误展示和操作
  */
+import {
+  AUTO_DETECT_ERROR_CODES,
+  type AutoDetectErrorCode,
+} from "~/constants/autoDetect"
 import { getErrorMessage } from "~/utils/core/error"
 import { t } from "~/utils/i18n/core"
 import { getDocsAutoDetectUrl } from "~/utils/navigation/docsLinks"
@@ -76,6 +80,36 @@ const ERROR_KEYWORDS: Record<string, string[]> = {
 }
 
 /**
+ * Builds the structured UI error shown when the active tab likely needs a
+ * manual reload so the content script can attach.
+ */
+function createCurrentTabReloadRequiredError(): AutoDetectError {
+  return {
+    type: AutoDetectErrorType.CURRENT_TAB_RELOAD_REQUIRED,
+    message: t("messages:autodetect.currentTabNeedsReload"),
+    actionText: t("accountDialog:actions.reloadCurrentPage"),
+    helpDocUrl: getDocsAutoDetectUrl(),
+  }
+}
+
+/**
+ * Maps a machine-readable auto-detect error code to a structured UI error when
+ * the caller already knows the exact failure category.
+ * @param errorCode Optional service-layer auto-detect error code.
+ * @returns Structured UI error when the code is recognized; otherwise null.
+ */
+export function getAutoDetectErrorByCode(
+  errorCode?: AutoDetectErrorCode,
+): AutoDetectError | null {
+  switch (errorCode) {
+    case AUTO_DETECT_ERROR_CODES.CURRENT_TAB_CONTENT_SCRIPT_UNAVAILABLE:
+      return createCurrentTabReloadRequiredError()
+    default:
+      return null
+  }
+}
+
+/**
  * Convert a raw error into a structured {@link AutoDetectError}.
  *
  * Scans known keyword buckets to infer the most likely failure type and
@@ -91,12 +125,7 @@ export function analyzeAutoDetectError(error: any): AutoDetectError {
   const currentTabReloadMessage = t("messages:autodetect.currentTabNeedsReload")
 
   if (errorMessage === currentTabReloadMessage) {
-    return {
-      type: AutoDetectErrorType.CURRENT_TAB_RELOAD_REQUIRED,
-      message: currentTabReloadMessage,
-      actionText: t("accountDialog:actions.reloadCurrentPage"),
-      helpDocUrl: docsUrl,
-    }
+    return createCurrentTabReloadRequiredError()
   }
 
   // Iterate known keyword buckets and return the first matching structured error
@@ -117,12 +146,7 @@ export function analyzeAutoDetectError(error: any): AutoDetectError {
             helpDocUrl: docsUrl,
           }
         case "CURRENT_TAB_RELOAD_REQUIRED":
-          return {
-            type: AutoDetectErrorType.CURRENT_TAB_RELOAD_REQUIRED,
-            message: currentTabReloadMessage,
-            actionText: t("accountDialog:actions.reloadCurrentPage"),
-            helpDocUrl: docsUrl,
-          }
+          return createCurrentTabReloadRequiredError()
         case "INVALID_RESPONSE":
           return {
             type: AutoDetectErrorType.INVALID_RESPONSE,

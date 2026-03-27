@@ -13,7 +13,10 @@ import {
 } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { createDisplayAccountApiContext } from "~/services/accounts/utils/apiServiceRequest"
-import { analyzeAutoDetectError } from "~/services/accounts/utils/autoDetectUtils"
+import {
+  analyzeAutoDetectError,
+  getAutoDetectErrorByCode,
+} from "~/services/accounts/utils/autoDetectUtils"
 import { getApiService } from "~/services/apiService"
 import {
   DEFAULT_PREFERENCES,
@@ -101,7 +104,9 @@ export async function autoDetectAccount(
     if (!detectResult.success || !detectResult.data) {
       const errorMsg =
         detectResult.error || t("messages:operations.detection.failed")
-      const detailedError = analyzeAutoDetectError(errorMsg)
+      const detailedError =
+        getAutoDetectErrorByCode(detectResult.errorCode) ??
+        analyzeAutoDetectError(errorMsg)
       return {
         success: false,
         message: errorMsg,

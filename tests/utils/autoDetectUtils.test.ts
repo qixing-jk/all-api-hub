@@ -1,8 +1,10 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { AUTO_DETECT_ERROR_CODES } from "~/constants/autoDetect"
 import {
   analyzeAutoDetectError,
   AutoDetectErrorType,
+  getAutoDetectErrorByCode,
   getLoginUrl,
   openLoginTab,
   reloadCurrentTab,
@@ -297,6 +299,25 @@ describe("autoDetectUtils", () => {
           AutoDetectErrorType.NETWORK_ERROR,
         )
       })
+    })
+  })
+
+  describe("getAutoDetectErrorByCode", () => {
+    it("maps current-tab receiver-unavailable error code", () => {
+      const result = getAutoDetectErrorByCode(
+        AUTO_DETECT_ERROR_CODES.CURRENT_TAB_CONTENT_SCRIPT_UNAVAILABLE,
+      )
+
+      expect(result).toMatchObject({
+        type: AutoDetectErrorType.CURRENT_TAB_RELOAD_REQUIRED,
+        message: "messages:autodetect.currentTabNeedsReload",
+        actionText: "accountDialog:actions.reloadCurrentPage",
+        helpDocUrl: getDocsAutoDetectUrl(),
+      })
+    })
+
+    it("returns null for unknown codes", () => {
+      expect(getAutoDetectErrorByCode(undefined)).toBeNull()
     })
   })
 

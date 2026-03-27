@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { AUTO_DETECT_ERROR_CODES } from "~/constants/autoDetect"
 import { SUB2API } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { autoDetectAccount } from "~/services/accounts/accountOperations"
@@ -81,7 +82,8 @@ describe("accountOperations autoDetectAccount", () => {
     mockSendRuntimeMessage.mockResolvedValueOnce(null)
     mockAutoDetectSmart.mockResolvedValueOnce({
       success: false,
-      error: "messages:autodetect.currentTabNeedsReload",
+      error: "some generic failure",
+      errorCode: AUTO_DETECT_ERROR_CODES.CURRENT_TAB_CONTENT_SCRIPT_UNAVAILABLE,
     })
 
     const result = await autoDetectAccount(
